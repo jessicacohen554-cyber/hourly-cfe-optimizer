@@ -79,6 +79,11 @@
             display: block;
         }
 
+        /* Mobile vertical connector (replaces Y-fork on narrow screens) */
+        .fork-mobile-connector {
+            display: none;
+        }
+
         /* Flowing dash animation */
         @keyframes flowDash {
             to { stroke-dashoffset: -30; }
@@ -87,33 +92,17 @@
             animation: flowDash 1.6s linear infinite;
         }
 
-        /* Draw-in animation for fork paths */
-        @keyframes drawPath {
-            from { stroke-dashoffset: var(--path-len); }
-            to { stroke-dashoffset: 0; }
-        }
-        .fork-path-draw {
-            stroke-dasharray: var(--path-len);
-            stroke-dashoffset: var(--path-len);
-        }
-        .fork-diagram.visible .fork-path-draw {
-            animation: drawPath 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-        }
-        .fork-diagram.visible .fork-path-draw-delayed {
-            animation: drawPath 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.5s forwards;
-        }
-
         /* Glow pulse on arrowheads */
-        @keyframes arrowGlow1b {
-            0%, 100% { filter: drop-shadow(0 0 4px rgba(99,102,241,0)); }
-            50% { filter: drop-shadow(0 0 12px rgba(99,102,241,0.5)); }
+        @keyframes arrowPulse1b {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
         }
-        @keyframes arrowGlow2c {
-            0%, 100% { filter: drop-shadow(0 0 4px rgba(14,165,233,0)); }
-            50% { filter: drop-shadow(0 0 12px rgba(14,165,233,0.5)); }
+        @keyframes arrowPulse2c {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
         }
-        .arrow-glow-1b { animation: arrowGlow1b 2.5s ease-in-out infinite; }
-        .arrow-glow-2c { animation: arrowGlow2c 2.5s ease-in-out infinite; }
+        .arrow-tip-1b { animation: arrowPulse1b 2.5s ease-in-out infinite; }
+        .arrow-tip-2c { animation: arrowPulse2c 2.5s ease-in-out infinite; }
 
         /* ===== Outcome Panels (below fork) ===== */
         .outcome-panels {
@@ -298,7 +287,19 @@
             .hero-stats-row .stat-value { font-size: 2.2rem; }
             .outcome-panels { grid-template-columns: 1fr; max-width: 480px; }
             .outcome-panel { padding: 24px 20px; }
-            .fork-diagram { padding: var(--space-md) 0 0; }
+            /* Swap Y-fork for vertical connector on mobile */
+            .fork-diagram { display: none; }
+            .fork-mobile-connector {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: var(--space-lg) 0 var(--space-md);
+            }
+            .fork-mobile-connector svg {
+                width: 56px;
+                height: auto;
+                display: block;
+            }
         }
         @media (max-width: 480px) {
             .hero-stats-row { grid-template-columns: 1fr; max-width: 300px; }
@@ -524,8 +525,7 @@
                 animation: none !important;
             }
             .road-median { animation: none !important; }
-            .fork-path-draw, .fork-path-draw-delayed { animation: none !important; stroke-dashoffset: 0 !important; }
-            .arrow-glow-1b, .arrow-glow-2c { animation: none !important; }
+            .arrow-tip-1b, .arrow-tip-2c { animation: none !important; opacity: 1 !important; }
             .fork-diagram { opacity: 1; transform: none; }
             .iso-bar-row { opacity: 1; transform: none; transition-delay: 0s !important; }
             .iso-bar-segment { transition: none !important; }
@@ -1023,111 +1023,102 @@
         <p>The same procurement dollar can build two very different grids.</p>
     </div>
     <section class="content-section" id="fork-section">
+        <!-- Desktop: Y-fork SVG (hidden on mobile via media query) -->
         <div class="fork-diagram" id="forkDiagram">
-            <svg viewBox="0 0 800 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Forking path: corporate procurement splitting into consequential vs hourly matching strategies">
+            <svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Forking path: corporate procurement splitting into consequential vs hourly matching strategies">
                 <defs>
-                    <!-- Outer glow filters -->
-                    <filter id="glow1b" x="-30%" y="-30%" width="160%" height="160%">
-                        <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
-                        <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-                    </filter>
-                    <filter id="glow2c" x="-30%" y="-30%" width="160%" height="160%">
-                        <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
-                        <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-                    </filter>
                     <filter id="labelShadow" x="-10%" y="-20%" width="120%" height="160%">
-                        <feDropShadow dx="0" dy="3" stdDeviation="6" flood-opacity="0.12"/>
+                        <feDropShadow dx="0" dy="3" stdDeviation="6" flood-opacity="0.10"/>
                     </filter>
-                    <!-- Arrowhead markers -->
-                    <marker id="arrow1b" viewBox="0 0 16 12" refX="14" refY="6" markerWidth="18" markerHeight="14" orient="auto">
-                        <path d="M0,1 L14,6 L0,11 L3,6Z" fill="#6366F1"/>
-                    </marker>
-                    <marker id="arrow2c" viewBox="0 0 16 12" refX="14" refY="6" markerWidth="18" markerHeight="14" orient="auto">
-                        <path d="M0,1 L14,6 L0,11 L3,6Z" fill="#0EA5E9"/>
-                    </marker>
                 </defs>
 
-                <!-- ═══ TRUNK (neutral) ═══ -->
-                <!-- Trunk road fill -->
-                <rect x="372" y="10" width="56" height="190" rx="4" fill="rgba(0,0,0,0.04)"/>
-                <!-- Trunk borders -->
-                <line x1="372" y1="10" x2="372" y2="200" stroke="rgba(0,0,0,0.18)" stroke-width="3" stroke-linecap="round"/>
-                <line x1="428" y1="10" x2="428" y2="200" stroke="rgba(0,0,0,0.18)" stroke-width="3" stroke-linecap="round"/>
+                <!-- ═══ TRUNK (neutral, top center) ═══ -->
+                <!-- Trunk fill -->
+                <path d="M375,20 L425,20 L425,200 L375,200 Z" fill="rgba(0,0,0,0.035)" rx="4"/>
+                <!-- Trunk left edge -->
+                <line x1="375" y1="20" x2="375" y2="200" stroke="rgba(0,0,0,0.15)" stroke-width="2.5"/>
+                <!-- Trunk right edge -->
+                <line x1="425" y1="20" x2="425" y2="200" stroke="rgba(0,0,0,0.15)" stroke-width="2.5"/>
                 <!-- Trunk dashed center line -->
-                <line x1="400" y1="18" x2="400" y2="190" stroke="rgba(0,0,0,0.18)" stroke-width="3" stroke-dasharray="14 10" stroke-linecap="round" class="road-median"/>
+                <line x1="400" y1="28" x2="400" y2="195" stroke="rgba(0,0,0,0.15)" stroke-width="2.5" stroke-dasharray="12 10" stroke-linecap="round" class="road-median"/>
 
                 <!-- ═══ LEFT BRANCH (1B: Consequential) ═══ -->
-                <!-- Fill shape -->
-                <path d="M372,195 C372,260 320,310 260,360 C200,410 165,440 140,480
-                         L196,480 C215,445 245,415 300,370 C360,320 428,265 428,195 Z"
-                      fill="rgba(99,102,241,0.07)"/>
-                <!-- Outer border (left edge) -->
-                <path d="M372,195 C372,260 320,310 260,360 C200,410 165,440 140,480"
-                      fill="none" stroke="#6366F1" stroke-width="3.5" stroke-linecap="round"
-                      style="--path-len:380" class="fork-path-draw"/>
-                <!-- Inner border (right edge) -->
-                <path d="M428,195 C428,265 360,320 300,370 C245,415 215,445 196,480"
-                      fill="none" stroke="#6366F1" stroke-width="3.5" stroke-linecap="round"
-                      style="--path-len:380" class="fork-path-draw"/>
-                <!-- Center dashed line with arrowhead -->
-                <path d="M396,200 C394,265 338,315 278,365 C220,410 190,440 168,478"
-                      fill="none" stroke="#6366F1" stroke-width="3" stroke-dasharray="14 10" stroke-linecap="round"
-                      class="road-median" marker-end="url(#arrow1b)"/>
-                <!-- Arrowhead tip outline (left) -->
-                <g class="arrow-glow-1b">
-                    <path d="M125,510 L168,478 L125,460" fill="none" stroke="#6366F1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-                </g>
+                <!--
+                    Geometry: outer edge starts at trunk left (375,200), inner edge starts at trunk center (400,200).
+                    Both curve left-downward. No crossing with the right branch.
+                -->
+                <!-- Fill -->
+                <path d="M375,200 Q310,310 155,460
+                         L200,460 Q340,320 400,200 Z"
+                      fill="rgba(99,102,241,0.06)"/>
+                <!-- Outer edge (left) -->
+                <path d="M375,200 Q310,310 155,460"
+                      fill="none" stroke="#6366F1" stroke-width="3" stroke-linecap="round"/>
+                <!-- Inner edge (right, from center) -->
+                <path d="M400,200 Q340,320 200,460"
+                      fill="none" stroke="#6366F1" stroke-width="3" stroke-linecap="round"/>
+                <!-- Center dashed line -->
+                <path d="M387,200 Q324,314 178,458"
+                      fill="none" stroke="#6366F1" stroke-width="2.5" stroke-dasharray="12 10" stroke-linecap="round" class="road-median"/>
+                <!-- Arrow tip -->
+                <polygon points="145,470 175,455 155,445" fill="#6366F1" class="arrow-tip-1b"/>
 
                 <!-- ═══ RIGHT BRANCH (2C: Hourly Matching) ═══ -->
-                <!-- Fill shape -->
-                <path d="M428,195 C428,260 480,310 540,360 C600,410 635,440 660,480
-                         L604,480 C585,445 555,415 500,370 C440,320 372,265 372,195 Z"
-                      fill="rgba(14,165,233,0.07)"/>
-                <!-- Outer border (right edge) -->
-                <path d="M428,195 C428,260 480,310 540,360 C600,410 635,440 660,480"
-                      fill="none" stroke="#0EA5E9" stroke-width="3.5" stroke-linecap="round"
-                      style="--path-len:380" class="fork-path-draw"/>
-                <!-- Inner border (left edge) -->
-                <path d="M372,195 C372,265 440,320 500,370 C555,415 585,445 604,480"
-                      fill="none" stroke="#0EA5E9" stroke-width="3.5" stroke-linecap="round"
-                      style="--path-len:380" class="fork-path-draw"/>
-                <!-- Center dashed line with arrowhead -->
-                <path d="M404,200 C406,265 462,315 522,365 C580,410 610,440 632,478"
-                      fill="none" stroke="#0EA5E9" stroke-width="3" stroke-dasharray="14 10" stroke-linecap="round"
-                      class="road-median" marker-end="url(#arrow2c)"/>
-                <!-- Arrowhead tip outline (right) -->
-                <g class="arrow-glow-2c">
-                    <path d="M675,510 L632,478 L675,460" fill="none" stroke="#0EA5E9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-                </g>
+                <!--
+                    Mirror of left branch. Inner edge starts at trunk center (400,200),
+                    outer edge starts at trunk right (425,200). Both curve right-downward.
+                -->
+                <!-- Fill -->
+                <path d="M400,200 Q460,320 600,460
+                         L645,460 Q490,310 425,200 Z"
+                      fill="rgba(14,165,233,0.06)"/>
+                <!-- Inner edge (left, from center) -->
+                <path d="M400,200 Q460,320 600,460"
+                      fill="none" stroke="#0EA5E9" stroke-width="3" stroke-linecap="round"/>
+                <!-- Outer edge (right) -->
+                <path d="M425,200 Q490,310 645,460"
+                      fill="none" stroke="#0EA5E9" stroke-width="3" stroke-linecap="round"/>
+                <!-- Center dashed line -->
+                <path d="M413,200 Q476,314 622,458"
+                      fill="none" stroke="#0EA5E9" stroke-width="2.5" stroke-dasharray="12 10" stroke-linecap="round" class="road-median"/>
+                <!-- Arrow tip -->
+                <polygon points="655,470 625,455 645,445" fill="#0EA5E9" class="arrow-tip-2c"/>
 
-                <!-- ═══ FORK JUNCTION (clean V-notch) ═══ -->
-                <path d="M400,198 L385,230 L400,215 L415,230 Z" fill="var(--bg-page, #F8F9FC)"/>
-
-                <!-- ═══ TOP LABEL: CORPORATE PROCUREMENT ═══ -->
+                <!-- ═══ TOP LABEL ═══ -->
                 <g filter="url(#labelShadow)">
-                    <rect x="275" y="0" width="250" height="42" rx="21" fill="rgba(255,255,255,0.95)" stroke="rgba(0,0,0,0.10)" stroke-width="1.5"/>
-                    <text x="400" y="27" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="12" font-weight="600" letter-spacing="1.2" fill="rgba(0,0,0,0.60)">CORPORATE PROCUREMENT</text>
+                    <rect x="280" y="4" width="240" height="38" rx="19" fill="rgba(255,255,255,0.95)" stroke="rgba(0,0,0,0.10)" stroke-width="1.5"/>
+                    <text x="400" y="29" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="11" font-weight="600" letter-spacing="1.2" fill="rgba(0,0,0,0.55)">CORPORATE PROCUREMENT</text>
                 </g>
 
                 <!-- ═══ JUNCTION LABEL ═══ -->
                 <g filter="url(#labelShadow)">
-                    <rect x="300" y="168" width="200" height="36" rx="18" fill="rgba(255,255,255,0.95)" stroke="rgba(0,0,0,0.14)" stroke-width="1.5"/>
-                    <text x="400" y="192" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="11" font-weight="600" letter-spacing="0.8" fill="rgba(0,0,0,0.55)">ACCOUNTING FRAMEWORK</text>
+                    <rect x="305" y="175" width="190" height="34" rx="17" fill="rgba(255,255,255,0.95)" stroke="rgba(0,0,0,0.12)" stroke-width="1.5"/>
+                    <text x="400" y="197" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="600" letter-spacing="0.8" fill="rgba(0,0,0,0.50)">ACCOUNTING FRAMEWORK</text>
                 </g>
 
-                <!-- ═══ STRATEGY BUTTONS (integrated onto paths) ═══ -->
-                <!-- 1B Button -->
-                <g filter="url(#labelShadow)" transform="translate(195, 340)">
-                    <rect x="0" y="0" width="140" height="52" rx="12" fill="rgba(99,102,241,0.08)" stroke="#6366F1" stroke-width="2.5"/>
-                    <text x="70" y="22" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="16" font-weight="700" fill="#6366F1" letter-spacing="0.5">1B</text>
-                    <text x="70" y="40" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="600" fill="#6366F1" opacity="0.7" letter-spacing="0.8">CONSEQUENTIAL</text>
+                <!-- ═══ STRATEGY LABELS (positioned on each branch) ═══ -->
+                <!-- 1B label -->
+                <g filter="url(#labelShadow)">
+                    <rect x="200" y="330" width="130" height="48" rx="10" fill="rgba(99,102,241,0.06)" stroke="#6366F1" stroke-width="2.5"/>
+                    <text x="265" y="352" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="15" font-weight="700" fill="#6366F1" letter-spacing="0.5">1B</text>
+                    <text x="265" y="368" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="9" font-weight="600" fill="#6366F1" opacity="0.65" letter-spacing="0.8">CONSEQUENTIAL</text>
                 </g>
-                <!-- 2C Button -->
-                <g filter="url(#labelShadow)" transform="translate(465, 340)">
-                    <rect x="0" y="0" width="140" height="52" rx="12" fill="rgba(14,165,233,0.08)" stroke="#0EA5E9" stroke-width="2.5"/>
-                    <text x="70" y="22" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="16" font-weight="700" fill="#0EA5E9" letter-spacing="0.5">2C</text>
-                    <text x="70" y="40" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="600" fill="#0EA5E9" opacity="0.7" letter-spacing="0.8">HOURLY MATCHING</text>
+                <!-- 2C label -->
+                <g filter="url(#labelShadow)">
+                    <rect x="470" y="330" width="130" height="48" rx="10" fill="rgba(14,165,233,0.06)" stroke="#0EA5E9" stroke-width="2.5"/>
+                    <text x="535" y="352" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="15" font-weight="700" fill="#0EA5E9" letter-spacing="0.5">2C</text>
+                    <text x="535" y="368" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="9" font-weight="600" fill="#0EA5E9" opacity="0.65" letter-spacing="0.8">HOURLY MATCHING</text>
                 </g>
+            </svg>
+        </div>
+
+        <!-- Mobile: simple vertical connector (shown only on narrow screens) -->
+        <div class="fork-mobile-connector" aria-hidden="true">
+            <svg viewBox="0 0 56 100" xmlns="http://www.w3.org/2000/svg">
+                <!-- Vertical line with gradient from neutral to split -->
+                <line x1="28" y1="0" x2="28" y2="80" stroke="rgba(0,0,0,0.12)" stroke-width="2.5" stroke-dasharray="10 8" stroke-linecap="round" class="road-median"/>
+                <!-- Downward arrow -->
+                <polygon points="28,96 18,78 38,78" fill="rgba(0,0,0,0.15)"/>
             </svg>
         </div>
 
