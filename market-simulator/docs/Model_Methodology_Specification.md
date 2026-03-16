@@ -20,7 +20,7 @@
    - 4.4 Hourly Dispatch Reconstruction
    - 4.5 Fleet Model (BA → ISO mapping, EIA 860)
    - 4.6 Plant-Level Dispatch Economics (status classification)
-   - 4.8–4.9 Scenario Construction, Configuration
+   - 4.7–4.8 Scenario Construction, Configuration
 5. [Cost & Input Tables](#5-cost--input-tables)
    - 5.1–5.8 Renewable/Firm LCOE, Storage, Transmission, Fuel, Capacity, Incentives, FOAK
    - 5.9 Fossil New-Build LCOE (Gas CCGT, Gas CT, Coal)
@@ -551,7 +551,7 @@ Total: 2 × 3 × 5 × 3 × ~3 = 270 base scenarios (with gas friction sub-levels
 
 A shared LMP cache across scenarios avoids redundant 8,760-hour computation.
 
-### 4.9 Configuration & Constants (`pipeline_config.py`)
+### 4.8 Configuration & Constants (`pipeline_config.py`)
 
 Single source of truth for all shared constants. All scripts import from here — no local constant definitions.
 
