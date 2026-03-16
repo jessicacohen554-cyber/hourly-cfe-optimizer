@@ -559,6 +559,9 @@
             max-width: 700px;
             margin: 0 auto;
             text-align: center;
+            background: white;
+            border-radius: var(--radius-md, 12px);
+            padding: var(--space-sm, 8px);
         }
         .crossover-container svg {
             width: 100%;
@@ -587,8 +590,10 @@
             .tank-body { height: 160px; }
             .coal-wall-finding { padding: 18px 16px; }
             .crossover-container { max-width: 100%; }
+            .crossover-container svg text { font-size: 12px !important; }
         }
         @media (max-width: 480px) {
+            .crossover-container svg text { font-size: 13px !important; }
             .iso-bar-label { width: 40px; font-size: 10px; }
             .iso-bar-track { height: 24px; }
             .iso-bar-gap { width: 38px; font-size: 10px; }
@@ -816,91 +821,6 @@
         }
         @media (max-width: 1024px) {
             .learning-cards { grid-template-columns: 1fr; max-width: 640px; }
-        }
-
-        /* ===== Section 8: The Swing Variable — Nuclear ===== */
-        .fulcrum-container {
-            max-width: 500px;
-            margin: var(--space-xl) auto 0;
-            text-align: center;
-        }
-        .fulcrum-container svg {
-            width: 100%;
-            height: auto;
-            display: block;
-        }
-        .nuclear-stat-cards {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: var(--space-lg);
-            max-width: 900px;
-            margin: var(--space-xl) auto 0;
-        }
-        .nuclear-stat-card {
-            background: rgba(255,255,255,0.85);
-            border-radius: 16px;
-            padding: var(--space-xl) var(--space-lg);
-            text-align: center;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-        }
-        .nuclear-stat-card-rose { border-top: 3px solid #EF4444; }
-        .nuclear-stat-card-1b { border-top: 3px solid #6366F1; }
-        .nuclear-stat-card .stat-value {
-            font-family: var(--font-mono);
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: var(--navy, #0B1120);
-            margin-bottom: 4px;
-        }
-        .nuclear-stat-card .stat-label {
-            font-size: 0.82rem;
-            color: var(--text-secondary, #475569);
-            line-height: 1.5;
-        }
-        .rolloff-timeline {
-            max-width: 720px;
-            margin: var(--space-xl) auto 0;
-            position: relative;
-            padding: 24px 0 24px 48px;
-        }
-        .rolloff-line {
-            position: absolute;
-            left: 24px;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: linear-gradient(to bottom, #EF4444, rgba(239,68,68,0.2));
-        }
-        .rolloff-event {
-            position: relative;
-            padding: 0 0 24px 24px;
-        }
-        .rolloff-event:last-child { padding-bottom: 0; }
-        .rolloff-dot {
-            position: absolute;
-            left: -30px;
-            top: 4px;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #EF4444;
-        }
-        .rolloff-year {
-            font-family: var(--font-mono);
-            font-size: 0.85rem;
-            font-weight: 700;
-            color: #EF4444;
-            margin-bottom: 2px;
-        }
-        .rolloff-desc {
-            font-size: 0.85rem;
-            color: var(--text-secondary, #475569);
-            line-height: 1.5;
-        }
-
-        @media (max-width: 768px) {
-            .nuclear-stat-cards { grid-template-columns: 1fr; max-width: 480px; }
         }
 
         /* Reduced motion for new sections */
@@ -1138,87 +1058,6 @@
             <h3 style="font-size: 1.05rem; color: var(--navy); margin: var(--space-lg) 0 var(--space-md)">Three Competing Visions</h3>
             <p>The debate has crystallized into three camps. <strong>Hourly matching</strong> (Google, Microsoft, EnergyTag) ties procurement to the hour the electron is consumed — maximizing grid-cleaning incentive but raising costs. <strong>Emissions-first</strong> (Amazon, Meta, Emissions First Partnership) argues the goal should be maximum tonnes avoided per dollar, even if that means buying clean energy in a different hour or region. <strong>Annual matching</strong> (CRS, legacy RE100) defends the status quo of annual certificate retirement — simple, cheap, and increasingly disconnected from physical reality. This project quantifies what each path actually costs and what grid it builds.</p>
 
-            <h3 style="font-size: 1.05rem; color: var(--navy); margin: var(--space-lg) 0 var(--space-md)">Convergence Signals</h3>
-            <p>The direction is becoming clear. <strong>SBTi's Net-Zero Standard V2.0</strong> (expected Spring 2026) will require 50% hourly matching by 2030 for large consumers and 90% by 2040. The <strong>EU CBAM</strong> begins binding hourly matching for electricity imports in January 2026. <strong>EnergyTag</strong> is now accrediting certificate issuers across 6 markets. Three independent frameworks — voluntary, regulatory, and market infrastructure — are all moving toward the same destination. The question isn't <em>whether</em> hourly matching arrives, but <em>how fast</em> and <em>at what cost</em>.</p>
-            <!-- QA FLAG: verify SBTi V2.0 dates, EU CBAM Jan 2026 binding date -->
-        </div>
-
-        <div class="card" style="padding: var(--space-xl); margin-top: var(--space-xl)">
-            <h3 style="font-size: 1.05rem; color: var(--navy); margin-bottom: var(--space-md)">Framework Comparison</h3>
-            <div class="table-wrap">
-                <table class="comparison-table" style="min-width: 680px">
-                    <thead>
-                        <tr>
-                            <th>Framework</th>
-                            <th>Temporal Granularity</th>
-                            <th>Deliverability</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td><strong>GHG Protocol</strong></td><td>Hourly (proposed)</td><td>Grid-connected / BA</td><td>Draft — final 2027</td></tr>
-                        <tr><td><strong>SBTi V2.0</strong></td><td>50% hourly by 2030 → 90% by 2040</td><td>Regional</td><td>Consultation — Spring 2026</td></tr>
-                        <tr><td><strong>RE100</strong></td><td>Annual</td><td>Same market</td><td>Active — 430+ members</td></tr>
-                        <tr><td><strong>UN 24/7 CFE Compact</strong></td><td>Hourly</td><td>Same grid</td><td>Active — 170+ signatories</td></tr>
-                        <tr><td><strong>EU CBAM</strong></td><td>Hourly</td><td>Direct line / PPA</td><td>Binding Jan 2026</td></tr>
-                        <tr><td><strong>EnergyTag</strong></td><td>Hourly</td><td>Issuer-verified</td><td>6 markets accredited</td></tr>
-                    </tbody>
-                </table>
-            </div>
-            <p style="margin-top: var(--space-md); font-size: 0.85rem">
-                <a href="policy_context.html#framework-comparison" class="explore-link">See complete framework comparison with 9 frameworks <span class="arrow">&rarr;</span></a>
-            </p>
-        </div>
-    </section>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- Section 0: The Policy Moment                                           -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <div class="section-header fade-in">
-        <div class="section-number">0</div>
-        <h2>The Policy Moment</h2>
-        <p>Three frameworks are converging on hourly matching — and the window to shape them is closing.</p>
-    </div>
-    <section class="content-section" id="policy-moment">
-        <div class="card" style="padding: var(--space-xl)">
-            <h3 style="font-size: 1.05rem; color: var(--navy); margin-bottom: var(--space-md)">GHG Protocol Scope 2 Revision</h3>
-            <p>The GHG Protocol is rewriting its Scope 2 standard for the first time since 2015. The draft proposes <strong>hourly temporal matching</strong> and <strong>deliverability requirements</strong> (grid-connected or same balancing authority). If adopted, every corporate renewable energy claim worldwide changes. The final standard is expected in <strong>2027</strong>. The consultation period is open now — meaning the methodology this project models could become the global default within 18 months.</p>
-            <!-- QA FLAG: verify GHG Protocol revision timeline — 2027 final expected -->
-
-            <h3 style="font-size: 1.05rem; color: var(--navy); margin: var(--space-lg) 0 var(--space-md)">Three Competing Visions</h3>
-            <p>The debate has crystallized into three camps. <strong>Hourly matching</strong> (Google, Microsoft, EnergyTag) ties procurement to the hour the electron is consumed — maximizing grid-cleaning incentive but raising costs. <strong>Emissions-first</strong> (Amazon, Meta, Emissions First Partnership) argues the goal should be maximum tonnes avoided per dollar, even if that means buying clean energy in a different hour or region. <strong>Annual matching</strong> (CRS, legacy RE100) defends the status quo of annual certificate retirement — simple, cheap, and increasingly disconnected from physical reality. This project quantifies what each path actually costs and what grid it builds.</p>
-
-            <h3 style="font-size: 1.05rem; color: var(--navy); margin: var(--space-lg) 0 var(--space-md)">Convergence Signals</h3>
-            <p>The direction is becoming clear. <strong>SBTi's Net-Zero Standard V2.0</strong> (expected Spring 2026) will require 50% hourly matching by 2030 for large consumers and 90% by 2040. The <strong>EU CBAM</strong> begins binding hourly matching for electricity imports in January 2026. <strong>EnergyTag</strong> is now accrediting certificate issuers across 6 markets. Three independent frameworks — voluntary, regulatory, and market infrastructure — are all moving toward the same destination. The question isn't <em>whether</em> hourly matching arrives, but <em>how fast</em> and <em>at what cost</em>.</p>
-            <!-- QA FLAG: verify SBTi V2.0 dates, EU CBAM Jan 2026 binding date -->
-        </div>
-
-        <div class="card" style="padding: var(--space-xl); margin-top: var(--space-xl)">
-            <h3 style="font-size: 1.05rem; color: var(--navy); margin-bottom: var(--space-md)">Framework Comparison</h3>
-            <div class="table-wrap">
-                <table class="comparison-table" style="min-width: 680px">
-                    <thead>
-                        <tr>
-                            <th>Framework</th>
-                            <th>Temporal Granularity</th>
-                            <th>Deliverability</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr><td><strong>GHG Protocol</strong></td><td>Hourly (proposed)</td><td>Grid-connected / BA</td><td>Draft — final 2027</td></tr>
-                        <tr><td><strong>SBTi V2.0</strong></td><td>50% hourly by 2030 → 90% by 2040</td><td>Regional</td><td>Consultation — Spring 2026</td></tr>
-                        <tr><td><strong>RE100</strong></td><td>Annual</td><td>Same market</td><td>Active — 430+ members</td></tr>
-                        <tr><td><strong>UN 24/7 CFE Compact</strong></td><td>Hourly</td><td>Same grid</td><td>Active — 170+ signatories</td></tr>
-                        <tr><td><strong>EU CBAM</strong></td><td>Hourly</td><td>Direct line / PPA</td><td>Binding Jan 2026</td></tr>
-                        <tr><td><strong>EnergyTag</strong></td><td>Hourly</td><td>Issuer-verified</td><td>6 markets accredited</td></tr>
-                    </tbody>
-                </table>
-            </div>
-            <p style="margin-top: var(--space-md); font-size: 0.85rem">
-                <a href="policy_context.html#framework-comparison" class="explore-link">See complete framework comparison with 9 frameworks <span class="arrow">&rarr;</span></a>
-            </p>
-            <!-- TODO: link to gas lock-in page when built -->
         </div>
     </section>
 
@@ -1797,101 +1636,6 @@
     </section>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- Section 8: The Swing Variable — Nuclear                               -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <div class="section-header fade-in">
-        <div class="section-number">8</div>
-        <h2>The Swing Variable</h2>
-        <p>Existing nuclear provides roughly half of US clean electricity. Its fate depends on procurement framework.</p>
-    </div>
-    <section class="content-section" id="swingVariable">
-
-        <!-- The Fulcrum SVG -->
-        <div class="fulcrum-container fade-in" id="fulcrumContainer">
-            <svg viewBox="0 0 500 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fulcrum balance showing nuclear fleet weighed against revenue sources">
-                <!-- Fulcrum triangle -->
-                <polygon points="250,200 225,170 275,170" fill="rgba(0,0,0,0.06)" stroke="rgba(0,0,0,0.15)" stroke-width="1.5"/>
-
-                <!-- Beam -->
-                <g id="fulcrumBeam" style="transform-origin: 250px 170px; transition: transform 1.5s ease-out;">
-                    <line x1="60" y1="170" x2="440" y2="170" stroke="rgba(0,0,0,0.2)" stroke-width="3" stroke-linecap="round"/>
-
-                    <!-- Left: nuclear plant silhouette -->
-                    <g transform="translate(80, 120)">
-                        <!-- Simplified plant silhouette -->
-                        <rect x="0" y="20" width="30" height="30" rx="2" fill="none" stroke="#0EA5E9" stroke-width="2"/>
-                        <path d="M5,20 Q15,0 25,20" fill="none" stroke="#0EA5E9" stroke-width="2"/>
-                        <rect x="35" y="30" width="15" height="20" rx="1" fill="none" stroke="#0EA5E9" stroke-width="1.5"/>
-                        <line x1="42" y1="22" x2="42" y2="30" stroke="#0EA5E9" stroke-width="1.5"/>
-                    </g>
-                    <text x="95" y="165" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="11" fill="rgba(0,0,0,0.5)" font-weight="600">Nuclear fleet</text>
-
-                    <!-- Right: stacked revenue rectangles -->
-                    <g transform="translate(340, 100)">
-                        <!-- Capacity (bottom) -->
-                        <rect x="0" y="52" width="80" height="14" rx="3" fill="rgba(0,0,0,0.06)" stroke="rgba(0,0,0,0.15)" stroke-width="1"/>
-                        <text x="40" y="63" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="8" fill="rgba(0,0,0,0.4)">Capacity</text>
-
-                        <!-- 45U PTC -->
-                        <rect x="0" y="36" width="80" height="14" rx="3" fill="rgba(59,130,246,0.15)" stroke="rgba(59,130,246,0.4)" stroke-width="1"/>
-                        <text x="40" y="47" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="8" fill="rgba(59,130,246,0.7)">45U PTC</text>
-
-                        <!-- ZEC/CMC -->
-                        <rect x="0" y="20" width="80" height="14" rx="3" fill="rgba(99,102,241,0.15)" stroke="rgba(99,102,241,0.4)" stroke-width="1"/>
-                        <text x="40" y="31" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="8" fill="rgba(99,102,241,0.7)">ZEC / CMC</text>
-
-                        <!-- Corporate PPAs (tallest, glowing) -->
-                        <rect x="0" y="0" width="80" height="18" rx="3" fill="rgba(14,165,233,0.15)" stroke="#0EA5E9" stroke-width="2">
-                            <animate attributeName="stroke-opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite"/>
-                        </rect>
-                        <text x="40" y="13" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="9" fill="#0EA5E9" font-weight="700">Corporate PPAs</text>
-                    </g>
-                </g>
-            </svg>
-        </div>
-
-        <!-- Three stat cards -->
-        <div class="nuclear-stat-cards">
-            <div class="nuclear-stat-card nuclear-stat-card-rose fade-in">
-                <div class="stat-value">+$8&ndash;15/MWh</div>
-                <div class="stat-label">Cost increase if nuclear retires</div>
-            </div>
-            <div class="nuclear-stat-card nuclear-stat-card-1b fade-in">
-                <div class="stat-value">~107 TWh</div>
-                <div class="stat-label">CO&#8322; displacement lost</div>
-            </div>
-            <div class="nuclear-stat-card nuclear-stat-card-1b fade-in">
-                <div class="stat-value">+45 GW</div>
-                <div class="stat-label">Additional gas on grid</div>
-            </div>
-        </div>
-
-        <!-- Roll-off timeline -->
-        <div class="rolloff-timeline fade-in">
-            <div class="rolloff-line"></div>
-            <div class="rolloff-event">
-                <div class="rolloff-dot"></div>
-                <div class="rolloff-year">2026</div>
-                <div class="rolloff-desc">NJ ZEC expires (&minus;15 TWh PJM)</div>
-            </div>
-            <div class="rolloff-event">
-                <div class="rolloff-dot"></div>
-                <div class="rolloff-year">2028</div>
-                <div class="rolloff-desc">IL CMC expires (&minus;50 TWh PJM, &minus;15 TWh MISO)</div>
-            </div>
-            <div class="rolloff-event">
-                <div class="rolloff-dot"></div>
-                <div class="rolloff-year">2030</div>
-                <div class="rolloff-desc">NY ZEC Tier 3 expires (&minus;42 TWh NYISO)</div>
-            </div>
-        </div>
-
-        <p class="fade-in" style="max-width:720px; margin:var(--space-xl) auto 0; font-size:0.9rem; color:var(--text-secondary); line-height:1.7">
-            These plants don&rsquo;t retire. They move from SSS to merchant under 45U PTC. But without corporate PPA demand for long-term revenue certainty, fleet reinvestment tilts toward deferral. The procurement framework determines whether existing nuclear is an asset or a liability.
-        </p>
-    </section>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- Synthesis: Rowing in the Same Direction — Synthesis                  -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <section class="synthesis-section" id="synthesisSection">
@@ -2459,41 +2203,6 @@
                 entries.forEach(function(entry) {
                     if (entry.isIntersecting) {
                         animateCurves();
-                        observer.unobserve(entry.target);
-                    }
-                });
-            }, { threshold: 0.25 });
-            observer.observe(container);
-        })();
-
-        // ===== MODULE 9: Fulcrum Tilt Animation (Section 8) =====
-        (function initFulcrum() {
-            var container = document.getElementById('fulcrumContainer');
-            if (!container) return;
-
-            var beam = document.getElementById('fulcrumBeam');
-            if (!beam) return;
-
-            var triggered = false;
-            var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-            function animateFulcrum() {
-                if (triggered) return;
-                triggered = true;
-
-                if (reducedMotion) {
-                    beam.style.transform = 'rotate(-3deg)';
-                    return;
-                }
-
-                beam.style.transition = 'transform 1.5s ease-out';
-                beam.style.transform = 'rotate(-3deg)';
-            }
-
-            var observer = new IntersectionObserver(function(entries) {
-                entries.forEach(function(entry) {
-                    if (entry.isIntersecting) {
-                        animateFulcrum();
                         observer.unobserve(entry.target);
                     }
                 });
