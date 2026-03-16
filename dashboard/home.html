@@ -61,17 +61,17 @@
 
         /* ===== Fork Road Diagram ===== */
         .fork-diagram {
-            max-width: 800px;
+            max-width: 860px;
             margin: 0 auto;
             text-align: center;
-            padding: var(--space-lg) 0;
+            padding: var(--space-xl) 0 0;
             opacity: 0;
-            transform: scale(0.97);
-            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+            transform: translateY(24px);
+            transition: opacity 1s ease-out, transform 1s ease-out;
         }
         .fork-diagram.visible {
             opacity: 1;
-            transform: scale(1);
+            transform: translateY(0);
         }
         .fork-diagram svg {
             width: 100%;
@@ -79,75 +79,132 @@
             display: block;
         }
 
-        /* Flowing dash animation for road medians */
+        /* Flowing dash animation */
         @keyframes flowDash {
-            to { stroke-dashoffset: -26; }
+            to { stroke-dashoffset: -30; }
         }
         .road-median {
-            animation: flowDash 2s linear infinite;
+            animation: flowDash 1.6s linear infinite;
         }
 
-        /* ===== Outcome Panels (light, below SVG) ===== */
+        /* Draw-in animation for fork paths */
+        @keyframes drawPath {
+            from { stroke-dashoffset: var(--path-len); }
+            to { stroke-dashoffset: 0; }
+        }
+        .fork-path-draw {
+            stroke-dasharray: var(--path-len);
+            stroke-dashoffset: var(--path-len);
+        }
+        .fork-diagram.visible .fork-path-draw {
+            animation: drawPath 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+        .fork-diagram.visible .fork-path-draw-delayed {
+            animation: drawPath 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.5s forwards;
+        }
+
+        /* Glow pulse on arrowheads */
+        @keyframes arrowGlow1b {
+            0%, 100% { filter: drop-shadow(0 0 4px rgba(99,102,241,0)); }
+            50% { filter: drop-shadow(0 0 12px rgba(99,102,241,0.5)); }
+        }
+        @keyframes arrowGlow2c {
+            0%, 100% { filter: drop-shadow(0 0 4px rgba(14,165,233,0)); }
+            50% { filter: drop-shadow(0 0 12px rgba(14,165,233,0.5)); }
+        }
+        .arrow-glow-1b { animation: arrowGlow1b 2.5s ease-in-out infinite; }
+        .arrow-glow-2c { animation: arrowGlow2c 2.5s ease-in-out infinite; }
+
+        /* ===== Outcome Panels (below fork) ===== */
         .outcome-panels {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 24px;
-            max-width: 800px;
-            margin: var(--space-lg) auto 0;
+            gap: 28px;
+            max-width: 860px;
+            margin: -20px auto 0;
+            position: relative;
+            z-index: 2;
         }
         .outcome-panel {
-            background: rgba(255,255,255,0.85);
-            border-radius: 16px;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            padding: 28px;
+            border-radius: 20px;
+            padding: 32px 28px;
             color: var(--text-primary, #1e293b);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .outcome-panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 20px;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .outcome-panel > * { position: relative; z-index: 1; }
+        .outcome-panel:hover {
+            transform: translateY(-4px);
         }
         .outcome-panel.strat-1b {
-            border: 2px solid #6366F1;
-            box-shadow: 0 0 20px -4px rgba(99,102,241,0.15);
+            background: rgba(99,102,241,0.04);
+            border: 3px solid #6366F1;
+            box-shadow: 0 4px 32px -8px rgba(99,102,241,0.18), 0 0 0 1px rgba(99,102,241,0.06);
+        }
+        .outcome-panel.strat-1b::before {
+            background: linear-gradient(135deg, rgba(99,102,241,0.06) 0%, transparent 60%);
+        }
+        .outcome-panel.strat-1b:hover {
+            box-shadow: 0 8px 40px -8px rgba(99,102,241,0.28), 0 0 0 1px rgba(99,102,241,0.12);
         }
         .outcome-panel.strat-2c {
-            border: 2px solid #0EA5E9;
-            box-shadow: 0 0 20px -4px rgba(14,165,233,0.15);
+            background: rgba(14,165,233,0.04);
+            border: 3px solid #0EA5E9;
+            box-shadow: 0 4px 32px -8px rgba(14,165,233,0.18), 0 0 0 1px rgba(14,165,233,0.06);
         }
-        .outcome-icons {
-            display: flex;
-            gap: 10px;
-            margin-bottom: var(--space-sm);
-            align-items: center;
+        .outcome-panel.strat-2c::before {
+            background: linear-gradient(135deg, rgba(14,165,233,0.06) 0%, transparent 60%);
         }
-        .outcome-icons svg { flex-shrink: 0; }
+        .outcome-panel.strat-2c:hover {
+            box-shadow: 0 8px 40px -8px rgba(14,165,233,0.28), 0 0 0 1px rgba(14,165,233,0.12);
+        }
         .outcome-tag {
             display: inline-block;
             font-family: 'IBM Plex Mono', var(--font-mono, monospace);
             font-size: 0.72rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.8px;
-            padding: 4px 12px;
+            letter-spacing: 1px;
+            padding: 6px 14px;
             border-radius: var(--radius-pill);
-            margin-bottom: var(--space-sm);
+            margin-bottom: var(--space-md);
         }
-        .outcome-tag-1b { background: rgba(99,102,241,0.12); color: #6366F1; }
-        .outcome-tag-2c { background: rgba(14,165,233,0.12); color: #0EA5E9; }
+        .outcome-tag-1b { background: rgba(99,102,241,0.12); color: #6366F1; border: 1.5px solid rgba(99,102,241,0.25); }
+        .outcome-tag-2c { background: rgba(14,165,233,0.12); color: #0EA5E9; border: 1.5px solid rgba(14,165,233,0.25); }
         .outcome-headline {
             font-family: var(--font-heading);
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             font-weight: 700;
             color: var(--navy, #0B1120);
             margin-bottom: var(--space-xs);
+            line-height: 1.3;
         }
         .outcome-text {
-            font-size: 0.88rem;
+            font-size: 0.9rem;
             color: var(--text-secondary, #475569);
-            line-height: 1.65;
-            margin-bottom: var(--space-sm);
+            line-height: 1.7;
+            margin-bottom: var(--space-md);
+        }
+        .outcome-stat-row {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+            padding-top: var(--space-sm);
+            border-top: 1px solid rgba(0,0,0,0.06);
         }
         .outcome-stat {
-            font-family: var(--font-heading);
-            font-size: 1.6rem;
-            font-weight: 800;
+            font-family: 'IBM Plex Mono', var(--font-mono, monospace);
+            font-size: 1.8rem;
+            font-weight: 700;
             line-height: 1.2;
         }
         .outcome-stat-label {
@@ -158,13 +215,6 @@
         }
         .outcome-stat-1b { color: #6366F1; }
         .outcome-stat-2c { color: #0EA5E9; }
-
-        /* Gas plant pulse */
-        @keyframes gasPulse {
-            0%, 100% { filter: drop-shadow(0 0 3px rgba(239,68,68,0.0)); }
-            50% { filter: drop-shadow(0 0 8px rgba(239,68,68,0.6)); }
-        }
-        .gas-icon-pulse { animation: gasPulse 2s ease-in-out infinite; }
 
         /* ===== Signal Grid ===== */
         .signal-grid {
@@ -246,7 +296,9 @@
         @media (max-width: 768px) {
             .hero-stats-row { grid-template-columns: 1fr 1fr; }
             .hero-stats-row .stat-value { font-size: 2.2rem; }
-            .outcome-panels { grid-template-columns: 1fr; }
+            .outcome-panels { grid-template-columns: 1fr; max-width: 480px; }
+            .outcome-panel { padding: 24px 20px; }
+            .fork-diagram { padding: var(--space-md) 0 0; }
         }
         @media (max-width: 480px) {
             .hero-stats-row { grid-template-columns: 1fr; max-width: 300px; }
@@ -468,11 +520,13 @@
             .outcome-panel {
                 transition-delay: 0s !important;
             }
-            .gas-icon-pulse, .factory-pulse {
+            .factory-pulse {
                 animation: none !important;
             }
             .road-median { animation: none !important; }
-            .fork-diagram { opacity: 1; transform: scale(1); }
+            .fork-path-draw, .fork-path-draw-delayed { animation: none !important; stroke-dashoffset: 0 !important; }
+            .arrow-glow-1b, .arrow-glow-2c { animation: none !important; }
+            .fork-diagram { opacity: 1; transform: none; }
             .iso-bar-row { opacity: 1; transform: none; transition-delay: 0s !important; }
             .iso-bar-segment { transition: none !important; }
             .iso-annotation { opacity: 1; transform: none; transition-delay: 0s !important; }
@@ -969,192 +1023,135 @@
         <p>The same procurement dollar can build two very different grids.</p>
     </div>
     <section class="content-section" id="fork-section">
-        <!-- Highway Fork SVG — filled road surface with dashed medians -->
         <div class="fork-diagram" id="forkDiagram">
-            <svg viewBox="0 0 800 680" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Highway fork diagram: corporate procurement splitting into two accounting strategies">
+            <svg viewBox="0 0 800 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Forking path: corporate procurement splitting into consequential vs hourly matching strategies">
                 <defs>
-                    <!-- Road fill gradients -->
-                    <linearGradient id="grad1B" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#000" stop-opacity="0.06"/>
-                        <stop offset="100%" stop-color="#6366F1" stop-opacity="0.10"/>
-                    </linearGradient>
-                    <linearGradient id="gradEdge1B" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#000" stop-opacity="0.15"/>
-                        <stop offset="100%" stop-color="#6366F1" stop-opacity="0.30"/>
-                    </linearGradient>
-                    <linearGradient id="grad2C" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#000" stop-opacity="0.06"/>
-                        <stop offset="100%" stop-color="#0EA5E9" stop-opacity="0.10"/>
-                    </linearGradient>
-                    <linearGradient id="gradEdge2C" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#000" stop-opacity="0.15"/>
-                        <stop offset="100%" stop-color="#0EA5E9" stop-opacity="0.30"/>
-                    </linearGradient>
-                    <!-- Label badge shadow -->
-                    <filter id="badgeShadow" x="-10%" y="-20%" width="120%" height="160%">
-                        <feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.08"/>
+                    <!-- Outer glow filters -->
+                    <filter id="glow1b" x="-30%" y="-30%" width="160%" height="160%">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
+                        <feComposite in="SourceGraphic" in2="blur" operator="over"/>
                     </filter>
-                    <!-- Arrow markers with orient="auto" -->
-                    <marker id="arrow-1b" viewBox="0 0 14 10" refX="13" refY="5" markerWidth="16" markerHeight="12" orient="auto">
-                        <path d="M 0 0.5 L 12 5 L 0 9.5 L 3 5 Z" fill="#6366F1" opacity="0.85"/>
+                    <filter id="glow2c" x="-30%" y="-30%" width="160%" height="160%">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
+                        <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                    </filter>
+                    <filter id="labelShadow" x="-10%" y="-20%" width="120%" height="160%">
+                        <feDropShadow dx="0" dy="3" stdDeviation="6" flood-opacity="0.12"/>
+                    </filter>
+                    <!-- Arrowhead markers -->
+                    <marker id="arrow1b" viewBox="0 0 16 12" refX="14" refY="6" markerWidth="18" markerHeight="14" orient="auto">
+                        <path d="M0,1 L14,6 L0,11 L3,6Z" fill="#6366F1"/>
                     </marker>
-                    <marker id="arrow-2c" viewBox="0 0 14 10" refX="13" refY="5" markerWidth="16" markerHeight="12" orient="auto">
-                        <path d="M 0 0.5 L 12 5 L 0 9.5 L 3 5 Z" fill="#0EA5E9" opacity="0.85"/>
+                    <marker id="arrow2c" viewBox="0 0 16 12" refX="14" refY="6" markerWidth="18" markerHeight="14" orient="auto">
+                        <path d="M0,1 L14,6 L0,11 L3,6Z" fill="#0EA5E9"/>
                     </marker>
                 </defs>
 
-                <!-- ═══════════════════════════════════════════════ -->
-                <!-- LABEL: CORPORATE PROCUREMENT — badge at top    -->
-                <!-- ═══════════════════════════════════════════════ -->
-                <g filter="url(#badgeShadow)">
-                    <rect x="270" y="12" width="260" height="44" rx="22" fill="rgba(255,255,255,0.92)" stroke="rgba(0,0,0,0.12)" stroke-width="1.5"/>
-                    <text x="400" y="40" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="13" font-weight="600" letter-spacing="1.2" fill="rgba(0,0,0,0.70)">CORPORATE PROCUREMENT</text>
+                <!-- ═══ TRUNK (neutral) ═══ -->
+                <!-- Trunk road fill -->
+                <rect x="372" y="10" width="56" height="190" rx="4" fill="rgba(0,0,0,0.04)"/>
+                <!-- Trunk borders -->
+                <line x1="372" y1="10" x2="372" y2="200" stroke="rgba(0,0,0,0.18)" stroke-width="3" stroke-linecap="round"/>
+                <line x1="428" y1="10" x2="428" y2="200" stroke="rgba(0,0,0,0.18)" stroke-width="3" stroke-linecap="round"/>
+                <!-- Trunk dashed center line -->
+                <line x1="400" y1="18" x2="400" y2="190" stroke="rgba(0,0,0,0.18)" stroke-width="3" stroke-dasharray="14 10" stroke-linecap="round" class="road-median"/>
+
+                <!-- ═══ LEFT BRANCH (1B: Consequential) ═══ -->
+                <!-- Fill shape -->
+                <path d="M372,195 C372,260 320,310 260,360 C200,410 165,440 140,480
+                         L196,480 C215,445 245,415 300,370 C360,320 428,265 428,195 Z"
+                      fill="rgba(99,102,241,0.07)"/>
+                <!-- Outer border (left edge) -->
+                <path d="M372,195 C372,260 320,310 260,360 C200,410 165,440 140,480"
+                      fill="none" stroke="#6366F1" stroke-width="3.5" stroke-linecap="round"
+                      style="--path-len:380" class="fork-path-draw"/>
+                <!-- Inner border (right edge) -->
+                <path d="M428,195 C428,265 360,320 300,370 C245,415 215,445 196,480"
+                      fill="none" stroke="#6366F1" stroke-width="3.5" stroke-linecap="round"
+                      style="--path-len:380" class="fork-path-draw"/>
+                <!-- Center dashed line with arrowhead -->
+                <path d="M396,200 C394,265 338,315 278,365 C220,410 190,440 168,478"
+                      fill="none" stroke="#6366F1" stroke-width="3" stroke-dasharray="14 10" stroke-linecap="round"
+                      class="road-median" marker-end="url(#arrow1b)"/>
+                <!-- Arrowhead tip outline (left) -->
+                <g class="arrow-glow-1b">
+                    <path d="M125,510 L168,478 L125,460" fill="none" stroke="#6366F1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
                 </g>
 
-                <!-- ═══ ROAD SURFACE ═══ -->
-                <!-- Trunk: 60px wide, from badge bottom to fork junction -->
-                <path d="M370,56 L430,56 L430,270 L370,270 Z" fill="rgba(0,0,0,0.06)"/>
-                <line x1="370" y1="56" x2="370" y2="270" stroke="rgba(0,0,0,0.15)" stroke-width="2"/>
-                <line x1="430" y1="56" x2="430" y2="270" stroke="rgba(0,0,0,0.15)" stroke-width="2"/>
-
-                <!-- Left branch (1B) — single filled shape for consistent 60px width -->
-                <!-- Outer edge: C(370,340 310,380 240,430) C(170,480 150,530 135,590)
-                     Inner edge reverse: C(210,530 230,480 300,430) C(370,380 430,340 430,270) -->
-                <path d="M370,270
-                         C370,340 310,380 240,430
-                         C170,480 150,530 135,590
-                         L195,610
-                         C210,550 230,490 300,440
-                         C370,390 430,330 430,270 Z" fill="url(#grad1B)"/>
-                <path d="M370,270 C370,340 310,380 240,430 C170,480 150,530 135,590" fill="none" stroke="url(#gradEdge1B)" stroke-width="2"/>
-                <path d="M430,270 C430,330 370,390 300,440 C230,490 210,550 195,610" fill="none" stroke="url(#gradEdge1B)" stroke-width="2"/>
-
-                <!-- Right branch (2C) — single filled shape for consistent 60px width -->
-                <path d="M430,270
-                         C430,340 490,380 560,430
-                         C630,480 650,530 665,590
-                         L605,610
-                         C590,550 570,490 500,440
-                         C430,390 370,330 370,270 Z" fill="url(#grad2C)"/>
-                <path d="M430,270 C430,340 490,380 560,430 C630,480 650,530 665,590" fill="none" stroke="url(#gradEdge2C)" stroke-width="2"/>
-                <path d="M370,270 C370,330 430,390 500,440 C570,490 590,550 605,610" fill="none" stroke="url(#gradEdge2C)" stroke-width="2"/>
-
-                <!-- Gore point — clean triangular negative space at fork -->
-                <path d="M400,275
-                         C395,310 385,340 350,375
-                         L400,290
-                         L450,375
-                         C415,340 405,310 400,275 Z" fill="#F8F9FC"/>
-
-                <!-- ═══ WHITE DASHED CENTER MEDIANS ═══ -->
-                <line x1="400" y1="64" x2="400" y2="265" stroke="white" stroke-width="3" stroke-dasharray="16 10" stroke-linecap="round" class="road-median"/>
-                <!-- Left branch median — follows center of 60px road -->
-                <path d="M396,280 C392,340 335,385 268,433 C200,480 180,535 165,598" fill="none" stroke="white" stroke-width="3" stroke-dasharray="16 10" stroke-linecap="round" class="road-median" marker-end="url(#arrow-1b)"/>
-                <!-- Right branch median — follows center of 60px road -->
-                <path d="M404,280 C408,340 465,385 532,433 C600,480 620,535 635,598" fill="none" stroke="white" stroke-width="3" stroke-dasharray="16 10" stroke-linecap="round" class="road-median" marker-end="url(#arrow-2c)"/>
-
-                <!-- ═══════════════════════════════════════════════ -->
-                <!-- LABEL: ACCOUNTING FRAMEWORK — decision badge   -->
-                <!-- ═══════════════════════════════════════════════ -->
-                <g filter="url(#badgeShadow)">
-                    <rect x="283" y="234" width="234" height="40" rx="20" fill="rgba(255,255,255,0.92)" stroke="rgba(0,0,0,0.18)" stroke-width="1.5"/>
-                    <!-- Small diamond accent on each side -->
-                    <rect x="293" y="249" width="10" height="10" rx="1.5" fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="1" transform="rotate(45,298,254)"/>
-                    <rect x="497" y="249" width="10" height="10" rx="1.5" fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="1" transform="rotate(45,502,254)"/>
-                    <text x="400" y="260" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="12" font-weight="600" letter-spacing="1" fill="rgba(0,0,0,0.65)">ACCOUNTING FRAMEWORK</text>
+                <!-- ═══ RIGHT BRANCH (2C: Hourly Matching) ═══ -->
+                <!-- Fill shape -->
+                <path d="M428,195 C428,260 480,310 540,360 C600,410 635,440 660,480
+                         L604,480 C585,445 555,415 500,370 C440,320 372,265 372,195 Z"
+                      fill="rgba(14,165,233,0.07)"/>
+                <!-- Outer border (right edge) -->
+                <path d="M428,195 C428,260 480,310 540,360 C600,410 635,440 660,480"
+                      fill="none" stroke="#0EA5E9" stroke-width="3.5" stroke-linecap="round"
+                      style="--path-len:380" class="fork-path-draw"/>
+                <!-- Inner border (left edge) -->
+                <path d="M372,195 C372,265 440,320 500,370 C555,415 585,445 604,480"
+                      fill="none" stroke="#0EA5E9" stroke-width="3.5" stroke-linecap="round"
+                      style="--path-len:380" class="fork-path-draw"/>
+                <!-- Center dashed line with arrowhead -->
+                <path d="M404,200 C406,265 462,315 522,365 C580,410 610,440 632,478"
+                      fill="none" stroke="#0EA5E9" stroke-width="3" stroke-dasharray="14 10" stroke-linecap="round"
+                      class="road-median" marker-end="url(#arrow2c)"/>
+                <!-- Arrowhead tip outline (right) -->
+                <g class="arrow-glow-2c">
+                    <path d="M675,510 L632,478 L675,460" fill="none" stroke="#0EA5E9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
                 </g>
 
-                <!-- ═══ BRANCH LABELS — bold strategy identifiers ═══ -->
-                <!-- 1B label on left branch -->
-                <g transform="translate(270,420) rotate(-28)">
-                    <text x="0" y="0" font-family="'IBM Plex Mono', monospace" font-size="18" font-weight="700" fill="#6366F1" opacity="0.90">1B</text>
-                    <text x="0" y="14" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="500" fill="#6366F1" opacity="0.60">Consequential</text>
-                </g>
-                <!-- 2C label on right branch -->
-                <g transform="translate(500,420) rotate(28)">
-                    <text x="0" y="0" font-family="'IBM Plex Mono', monospace" font-size="18" font-weight="700" fill="#0EA5E9" opacity="0.90">2C</text>
-                    <text x="0" y="14" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="500" fill="#0EA5E9" opacity="0.60">Hourly Matching</text>
+                <!-- ═══ FORK JUNCTION (clean V-notch) ═══ -->
+                <path d="M400,198 L385,230 L400,215 L415,230 Z" fill="var(--bg-page, #F8F9FC)"/>
+
+                <!-- ═══ TOP LABEL: CORPORATE PROCUREMENT ═══ -->
+                <g filter="url(#labelShadow)">
+                    <rect x="275" y="0" width="250" height="42" rx="21" fill="rgba(255,255,255,0.95)" stroke="rgba(0,0,0,0.10)" stroke-width="1.5"/>
+                    <text x="400" y="27" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="12" font-weight="600" letter-spacing="1.2" fill="rgba(0,0,0,0.60)">CORPORATE PROCUREMENT</text>
                 </g>
 
-                <!-- Branch endpoint labels (below arrows) -->
-                <text x="165" y="640" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="14" font-weight="700" fill="#6366F1" opacity="0.90">1B</text>
-                <text x="635" y="640" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="14" font-weight="700" fill="#0EA5E9" opacity="0.90">2C</text>
+                <!-- ═══ JUNCTION LABEL ═══ -->
+                <g filter="url(#labelShadow)">
+                    <rect x="300" y="168" width="200" height="36" rx="18" fill="rgba(255,255,255,0.95)" stroke="rgba(0,0,0,0.14)" stroke-width="1.5"/>
+                    <text x="400" y="192" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="11" font-weight="600" letter-spacing="0.8" fill="rgba(0,0,0,0.55)">ACCOUNTING FRAMEWORK</text>
+                </g>
+
+                <!-- ═══ STRATEGY BUTTONS (integrated onto paths) ═══ -->
+                <!-- 1B Button -->
+                <g filter="url(#labelShadow)" transform="translate(195, 340)">
+                    <rect x="0" y="0" width="140" height="52" rx="12" fill="rgba(99,102,241,0.08)" stroke="#6366F1" stroke-width="2.5"/>
+                    <text x="70" y="22" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="16" font-weight="700" fill="#6366F1" letter-spacing="0.5">1B</text>
+                    <text x="70" y="40" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="600" fill="#6366F1" opacity="0.7" letter-spacing="0.8">CONSEQUENTIAL</text>
+                </g>
+                <!-- 2C Button -->
+                <g filter="url(#labelShadow)" transform="translate(465, 340)">
+                    <rect x="0" y="0" width="140" height="52" rx="12" fill="rgba(14,165,233,0.08)" stroke="#0EA5E9" stroke-width="2.5"/>
+                    <text x="70" y="22" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="16" font-weight="700" fill="#0EA5E9" letter-spacing="0.5">2C</text>
+                    <text x="70" y="40" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="600" fill="#0EA5E9" opacity="0.7" letter-spacing="0.8">HOURLY MATCHING</text>
+                </g>
             </svg>
         </div>
 
-        <!-- Outcome Panels — light with colored outlines -->
+        <!-- Outcome Panels -->
         <div class="outcome-panels">
             <!-- 1B Panel -->
             <div class="outcome-panel strat-1b fade-in">
-                <div class="outcome-icons">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#6366F1" stroke-width="1.8" stroke-linecap="round">
-                        <circle cx="14" cy="14" r="5"/>
-                        <line x1="14" y1="2" x2="14" y2="6"/><line x1="14" y1="22" x2="14" y2="26"/>
-                        <line x1="2" y1="14" x2="6" y2="14"/><line x1="22" y1="14" x2="26" y2="14"/>
-                        <line x1="5.5" y1="5.5" x2="8.3" y2="8.3"/><line x1="19.7" y1="19.7" x2="22.5" y2="22.5"/>
-                        <line x1="22.5" y1="5.5" x2="19.7" y2="8.3"/><line x1="8.3" y1="19.7" x2="5.5" y2="22.5"/>
-                    </svg>
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#6366F1" stroke-width="1.8" stroke-linecap="round">
-                        <line x1="14" y1="14" x2="14" y2="26"/>
-                        <path d="M14 14 L8 4 Q14 2 16 8Z" fill="rgba(99,102,241,0.15)"/>
-                        <path d="M14 14 L22 8 Q26 14 20 16Z" fill="rgba(99,102,241,0.15)"/>
-                        <path d="M14 14 L6 20 Q4 14 10 12Z" fill="rgba(99,102,241,0.15)"/>
-                    </svg>
-                    <svg class="gas-icon-pulse" width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#EF4444" stroke-width="1.8" stroke-linecap="round">
-                        <rect x="4" y="14" width="18" height="14" rx="1"/>
-                        <rect x="8" y="6" width="5" height="8"/>
-                        <path d="M10.5 6 Q10.5 2 12 1" stroke-width="1.5" opacity="0.6"/>
-                        <path d="M10.5 6 Q10.5 1 9 0" stroke-width="1.5" opacity="0.4"/>
-                        <rect x="22" y="18" width="6" height="10" rx="1"/>
-                    </svg>
-                </div>
                 <span class="outcome-tag outcome-tag-1b">1B: CONSEQUENTIAL</span>
                 <div class="outcome-headline">Cheap today. More gas tomorrow.</div>
                 <div class="outcome-text">Deploys VRE cross-regionally at lowest cost. IPPs build gas to backstop intermittency. Gas becomes an asset its owners will defend.</div>
-                <div class="outcome-stat-label">Gas remaining</div>
-                <div class="outcome-stat outcome-stat-1b">12&ndash;18 GW</div>
+                <div class="outcome-stat-row">
+                    <div class="outcome-stat outcome-stat-1b">12&ndash;18 GW</div>
+                    <div class="outcome-stat-label">gas remaining</div>
+                </div>
             </div>
             <!-- 2C Panel -->
             <div class="outcome-panel strat-2c fade-in">
-                <div class="outcome-icons">
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#0EA5E9" stroke-width="1.8" stroke-linecap="round">
-                        <circle cx="14" cy="14" r="5"/>
-                        <line x1="14" y1="2" x2="14" y2="6"/><line x1="14" y1="22" x2="14" y2="26"/>
-                        <line x1="2" y1="14" x2="6" y2="14"/><line x1="22" y1="14" x2="26" y2="14"/>
-                        <line x1="5.5" y1="5.5" x2="8.3" y2="8.3"/><line x1="19.7" y1="19.7" x2="22.5" y2="22.5"/>
-                        <line x1="22.5" y1="5.5" x2="19.7" y2="8.3"/><line x1="8.3" y1="19.7" x2="5.5" y2="22.5"/>
-                    </svg>
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#0EA5E9" stroke-width="1.8" stroke-linecap="round">
-                        <line x1="14" y1="14" x2="14" y2="26"/>
-                        <path d="M14 14 L8 4 Q14 2 16 8Z" fill="rgba(14,165,233,0.15)"/>
-                        <path d="M14 14 L22 8 Q26 14 20 16Z" fill="rgba(14,165,233,0.15)"/>
-                        <path d="M14 14 L6 20 Q4 14 10 12Z" fill="rgba(14,165,233,0.15)"/>
-                    </svg>
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#0EA5E9" stroke-width="1.8" stroke-linecap="round">
-                        <circle cx="14" cy="14" r="10"/>
-                        <circle cx="14" cy="14" r="3" fill="rgba(14,165,233,0.2)"/>
-                        <circle cx="14" cy="6" r="1.5" fill="#0EA5E9"/>
-                        <circle cx="7" cy="18" r="1.5" fill="#0EA5E9"/>
-                        <circle cx="21" cy="18" r="1.5" fill="#0EA5E9"/>
-                    </svg>
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#0EA5E9" stroke-width="1.8" stroke-linecap="round">
-                        <rect x="5" y="8" width="18" height="16" rx="2"/>
-                        <line x1="10" y1="5" x2="10" y2="8"/><line x1="18" y1="5" x2="18" y2="8"/>
-                        <rect x="8" y="12" width="12" height="8" rx="1" fill="rgba(14,165,233,0.15)"/>
-                        <path d="M14 13 v6 M11 16 h6" stroke-width="1.5"/>
-                    </svg>
-                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#0EA5E9" stroke-width="1.8" stroke-linecap="round">
-                        <rect x="6" y="4" width="16" height="20" rx="3"/>
-                        <line x1="6" y1="10" x2="22" y2="10"/>
-                        <line x1="6" y1="16" x2="22" y2="16"/>
-                        <rect x="9" y="12" width="10" height="2" fill="rgba(14,165,233,0.2)" rx="0.5"/>
-                    </svg>
-                </div>
                 <span class="outcome-tag outcome-tag-2c">2C: HOURLY MATCHING</span>
                 <div class="outcome-headline">Costs more now. Builds the grid we need.</div>
                 <div class="outcome-text">Matches load every hour in the buyer&rsquo;s grid. Forces firm clean + storage. Displaces gas directly. Learning curves bend cost down over time.</div>
-                <div class="outcome-stat-label">Gas remaining</div>
-                <div class="outcome-stat outcome-stat-2c">3&ndash;7 GW</div>
+                <div class="outcome-stat-row">
+                    <div class="outcome-stat outcome-stat-2c">3&ndash;7 GW</div>
+                    <div class="outcome-stat-label">gas remaining</div>
+                </div>
             </div>
         </div>
     </section>
