@@ -24,7 +24,7 @@ from typing import Any, Dict, List
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -184,6 +184,15 @@ async def serve_guide_page():
         # Fallback to setup if guide doesn't exist yet
         return FileResponse(str(FRONTEND_DIR / "setup.html"), media_type="text/html")
     return FileResponse(str(guide_path), media_type="text/html")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Serve favicon if it exists, otherwise return 204 No Content."""
+    favicon_path = FRONTEND_DIR / "brand-assets" / "favicon.ico"
+    if favicon_path.exists():
+        return FileResponse(str(favicon_path))
+    return Response(status_code=204)
 
 
 @app.get("/setup", response_class=HTMLResponse)
@@ -596,10 +605,50 @@ async def simulate(req: SimulationRequest):
         plant_level_data = []
         plant_summary = None
         try:
-            from scripts.market_simulation import compute_plant_level_economics
-            from scripts.lmp_engine import build_plant_level_merit_order
-            plant_stack = build_plant_level_merit_order(iso, results.get(iso, []))
-            plant_level_data = compute_plant_level_economics(plant_stack, response.avg_lmp)
+            import numpy as np
+            from market_simulation import compute_plant_level_economics
+            from lmp_engine import build_plant_level_merit_order
+
+            # Extract clean_pct from the response
+            clean_pct = (response.market_outcome_clean_pct or 50.0) / 100.0
+
+            # Get fuel/carbon parameters from the conditions
+            fuel_level = conditions.get("fuel_level", "Medium")
+            carbon_price_val = conditions.get("carbon_price", 0)
+
+            plant_stack, total_cap = build_plant_level_merit_order(
+                iso, clean_pct,
+                fuel_level=fuel_level,
+                carbon_price=carbon_price_val,
+            )
+
+            # Build synthetic hourly data from the simulation summary.
+            # The simulation doesn't return 8760 arrays, so we approximate:
+            avg_lmp = response.avg_lmp or WHOLESALE_PRICES.get(iso, 30.0)
+            hourly_lmp = np.full(8760, avg_lmp)
+
+            # Demand MW profile — flat approximation from regional demand
+            demand_twh = response.demand_twh or REGIONAL_DEMAND_TWH.get(iso, 300)
+            avg_demand_mw = demand_twh * 1e6 / 8760
+            demand_mw_profile = np.full(8760, avg_demand_mw)
+
+            # Residual (fossil) demand: fraction of demand not served by clean
+            fossil_frac = max(0, 1.0 - clean_pct)
+            residual_demand = np.full(8760, fossil_frac)
+            dispatch = {'residual_demand': residual_demand}
+
+            # Fuel prices
+            fuel_prices_dict = {}
+            if conditions.get("custom_fuel_prices"):
+                fuel_prices_dict = conditions["custom_fuel_prices"]
+            else:
+                fuel_prices_dict = FUEL_PRICES.get(fuel_level, FUEL_PRICES.get("Medium", {}))
+
+            plant_level_data = compute_plant_level_economics(
+                plant_stack, hourly_lmp, dispatch,
+                demand_mw_profile, fuel_prices_dict, carbon_price_val,
+            )
+
             # Compute summary counts
             operating = sum(1 for p in plant_level_data if p.get("status") == "operating")
             at_risk = sum(1 for p in plant_level_data if p.get("status") == "at_risk")
@@ -612,8 +661,10 @@ async def simulate(req: SimulationRequest):
             }
             response.plant_level_summary = plant_summary
         except Exception as plant_err:
+            import traceback as tb
             # Plant-level economics is optional — don't fail the simulation
             print(f"Note: Plant-level economics not available: {plant_err}")
+            tb.print_exc()
 
         # Save results to indexed run directory
         try:
@@ -996,23 +1047,54 @@ def _save_plant_level_csv(filepath: Path, plant_data: list):
 
 
 def _save_results_csv(filepath: Path, response_data: dict):
-    """Save result data as CSV."""
+    """Save comprehensive result data as CSV with multiple sections."""
     with open(filepath, "w", newline="") as f:
         w = csv.writer(f)
-        # Generator economics
+
+        # ── Section 1: Summary Metrics ──
+        w.writerow(["=== Summary Metrics ==="])
+        w.writerow(["metric", "value", "unit"])
+        w.writerow(["iso", response_data.get("iso", ""), ""])
+        w.writerow(["existing_clean_pct", response_data.get("existing_clean_pct", 0), "%"])
+        w.writerow(["market_outcome_clean_pct", response_data.get("market_outcome_clean_pct", 0), "%"])
+        w.writerow(["avg_lmp", response_data.get("avg_lmp", 0), "$/MWh"])
+        w.writerow(["emissions_mt", response_data.get("emissions_mt", 0), "MT CO2"])
+        w.writerow(["demand_twh", response_data.get("demand_twh", 0), "TWh"])
+        w.writerow(["nuclear_revenue_mwh", response_data.get("nuclear_revenue_mwh", 0), "$/MWh"])
+        ccs_be = response_data.get("ccs_breakeven_carbon_price", 0)
+        w.writerow(["ccs_breakeven_carbon_price", ccs_be, "$/ton"])
+        w.writerow([])
+
+        # ── Section 2: Resource Mix ──
+        rmix = response_data.get("resource_mix_twh", {})
+        if rmix:
+            w.writerow(["=== Resource Mix (TWh) ==="])
+            w.writerow(["resource", "generation_twh", "pct_of_total"])
+            total_twh = sum(rmix.values()) or 1
+            for r, v in sorted(rmix.items(), key=lambda x: -x[1]):
+                w.writerow([r, round(v, 1), round(v / total_twh * 100, 1)])
+            w.writerow([])
+
+        # ── Section 3: Generator Economics ──
         gen_econ = response_data.get("generator_economics", [])
         if gen_econ:
             w.writerow(["=== Generator Economics ==="])
-            w.writerow(["unit_type", "capacity_mw", "marginal_cost", "dispatch_hours",
-                         "capacity_factor", "avg_revenue_mwh", "profit_mwh", "status"])
+            w.writerow(["unit_type", "capacity_mw", "marginal_cost_mwh",
+                         "dispatch_hours", "capacity_factor",
+                         "avg_revenue_mwh", "vom_mwh", "fuel_cost_mwh",
+                         "profit_mwh", "status"])
             for g in gen_econ:
                 if isinstance(g, dict):
-                    w.writerow([g.get("unit_type"), g.get("capacity_mw"), g.get("marginal_cost"),
-                                g.get("dispatch_hours"), g.get("capacity_factor"),
-                                g.get("avg_revenue_mwh"), g.get("profit_mwh"), g.get("status")])
+                    w.writerow([
+                        g.get("unit_type"), g.get("capacity_mw"),
+                        g.get("marginal_cost"), g.get("dispatch_hours"),
+                        g.get("capacity_factor"), g.get("avg_revenue_mwh"),
+                        g.get("vom_mwh", ""), g.get("fuel_cost_mwh", ""),
+                        g.get("profit_mwh"), g.get("status"),
+                    ])
             w.writerow([])
 
-        # Supply stack
+        # ── Section 4: Supply Stack ──
         supply = response_data.get("supply_stack_summary", [])
         if supply:
             w.writerow(["=== Supply Stack ==="])
@@ -1022,24 +1104,71 @@ def _save_results_csv(filepath: Path, response_data: dict):
                     w.writerow([s.get("resource"), s.get("generation_twh")])
             w.writerow([])
 
-        # Resource mix
-        rmix = response_data.get("resource_mix_twh", {})
-        if rmix:
-            w.writerow(["=== Resource Mix (TWh) ==="])
-            w.writerow(["resource", "twh"])
-            for r, v in sorted(rmix.items(), key=lambda x: -x[1]):
-                w.writerow([r, round(v, 1)])
+        # ── Section 5: Year-by-Year Trajectory ──
+        years = response_data.get("year_results", [])
+        if years:
+            w.writerow(["=== Year-by-Year Trajectory ==="])
+            w.writerow([
+                "year", "clean_pct", "demand_twh", "emissions_mt",
+                "emission_rate_tco2_mwh", "avg_lmp", "lmp_p90",
+                "cost_per_mwh", "revenue_per_mwh",
+                "energy_rev_mwh", "capacity_rev_mwh", "rec_rev_mwh",
+                "gas_built_gw", "market_stop",
+                "zones_deployed", "nuclear_retired",
+                "rps_mandated_pct", "rps_eligible_pct", "rps_shortfall_pct",
+                "acp_cost_million",
+            ])
+            for yr in years:
+                if isinstance(yr, dict):
+                    w.writerow([
+                        yr.get("year"), yr.get("clean_pct"),
+                        yr.get("demand_twh"), yr.get("emissions_mt"),
+                        yr.get("emission_rate_tco2_mwh"), yr.get("avg_lmp"),
+                        yr.get("lmp_p90"), yr.get("cost_per_mwh"),
+                        yr.get("revenue_per_mwh"), yr.get("energy_rev_mwh"),
+                        yr.get("capacity_rev_mwh"), yr.get("rec_rev_mwh"),
+                        yr.get("gas_built_gw"), yr.get("market_stop"),
+                        "|".join(str(z) for z in yr.get("zones_deployed", [])),
+                        yr.get("nuclear_retired"),
+                        yr.get("rps_mandated_pct"), yr.get("rps_eligible_pct"),
+                        yr.get("rps_shortfall_pct"), yr.get("acp_cost_million"),
+                    ])
             w.writerow([])
 
-        # Summary metrics
-        w.writerow(["=== Summary Metrics ==="])
-        w.writerow(["metric", "value"])
-        w.writerow(["iso", response_data.get("iso", "")])
-        w.writerow(["existing_clean_pct", response_data.get("existing_clean_pct", 0)])
-        w.writerow(["market_outcome_clean_pct", response_data.get("market_outcome_clean_pct", 0)])
-        w.writerow(["avg_lmp", response_data.get("avg_lmp", 0)])
-        w.writerow(["emissions_mt", response_data.get("emissions_mt", 0)])
-        w.writerow(["demand_twh", response_data.get("demand_twh", 0)])
+        # ── Section 6: Zone Economics Detail ──
+        zone_details = response_data.get("zone_details", [])
+        if zone_details:
+            w.writerow(["=== Zone Economics Detail ==="])
+            w.writerow(["threshold", "revenue_mwh", "cost_mwh", "profit_mwh",
+                         "new_gw", "avg_lmp",
+                         "energy_rev_mwh", "capacity_rev_mwh", "rec_rev_mwh"])
+            for zd in zone_details:
+                if isinstance(zd, dict):
+                    w.writerow([
+                        zd.get("threshold"), zd.get("revenue"),
+                        zd.get("cost"), zd.get("profit"),
+                        zd.get("new_gw"), zd.get("avg_lmp"),
+                        zd.get("energy_rev_mwh"), zd.get("capacity_rev_mwh"),
+                        zd.get("rec_rev_mwh"),
+                    ])
+            w.writerow([])
+
+        # ── Section 7: Nuclear Revenue Breakdown ──
+        nuc_rev = response_data.get("nuclear_revenue", {})
+        if nuc_rev:
+            w.writerow(["=== Nuclear Revenue Breakdown ==="])
+            w.writerow(["component", "value_mwh"])
+            for k, v in nuc_rev.items():
+                w.writerow([k, v])
+            w.writerow([])
+
+        # ── Section 8: Plant-Level Summary ──
+        plant_summary = response_data.get("plant_level_summary")
+        if plant_summary:
+            w.writerow(["=== Plant-Level Summary ==="])
+            w.writerow(["status", "count"])
+            for status in ["operating", "at_risk", "stranded", "total"]:
+                w.writerow([status, plant_summary.get(status, 0)])
 
 
 def _save_params_csv(filepath: Path, params: dict):
