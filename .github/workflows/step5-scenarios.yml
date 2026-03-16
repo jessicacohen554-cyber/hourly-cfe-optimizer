@@ -1,5 +1,9 @@
 name: "Step 5: Scenarios"
 
+# ARCHIVED — scenario_comparison.html removed from live site.
+# Both scripts (step5_1 + step5_2a) feed only the archived page.
+# This workflow does NOT need to run for normal pipeline operations.
+#
 # Runs scenario scripts to populate the Scenarios comparison page:
 #   1. Scenario A: READ from step5d MAC queue (data/step3-dispatch/scenario_a_*.json)
 #      — produced by step5d_mac_queue.py, NOT computed here.

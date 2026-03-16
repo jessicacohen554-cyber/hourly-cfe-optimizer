@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# LEGACY — building_blocks.html archived. Output (building-blocks-data.js) not used by any live page.
 """Step 4.1F — Extract building blocks data for the Building Blocks dashboard page.
 
 Uses Step 1's EXACT generation profiles (via step1_pfs_generator.load_data +
