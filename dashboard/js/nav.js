@@ -226,7 +226,8 @@
         {
             label: 'Demand Side',
             children: [
-                { label: 'Carbon Accounting', href: 'consequential_accounting.html' },
+                { label: 'Carbon Accounting', href: 'GHG-accounting-overview.html' },
+                { label: 'Consequential Scaling Analysis', href: 'consequential_vacuum.html' },
                 { label: 'Strategy Deep Dive', href: 'strategy_deep_dive.html' },
                 { label: 'Procurement Strategy Dashboard', href: 'procurement_deployment.html' },
                 { label: 'Strategy Assessment', href: 'cfe_strategy_assessment.html' }
