@@ -22,7 +22,7 @@
         { href: 'GHG-accounting-overview.html', label: 'Carbon Accounting' },
         { href: 'lmp_trends.html',            label: 'LMP Trends' },
         { href: 'reference.html',             label: 'Reference' },
-        { href: 'research_paper.html',        label: 'Research Paper' }
+        { href: 'archive/research_paper.html',  label: 'Research Paper' }
     ];
 
     var DEFAULT_NOTE = 'The 8,760 Problem \u2014 Hourly Clean Energy Optimization';
