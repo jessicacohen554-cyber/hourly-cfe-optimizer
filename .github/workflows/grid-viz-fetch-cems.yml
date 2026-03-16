@@ -1,0 +1,137 @@
+name: "Grid Viz: Fetch CEMS Hourly Data"
+
+# Fetches plant-level hourly emissions + generation data for ERCOT fossil plants.
+# Used by the grid animation visualization.
+#
+# Data sources (tries in order):
+# 1. PUDL bulk Parquet (fastest, no API key) — downloads full year from AWS
+# 2. CAMD Streaming API (fallback) — requires CAMD_API_KEY secret
+#
+# Scenarios: Winter Storm Uri (Feb 2021), Summer 2023 heat dome, Normal spring day
+# Output: grid_viz/data/cems/cems_*.csv
+
+on:
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: 'Scenario to fetch (all = all three)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - uri_2021
+          - summer_2023_heat
+          - normal_spring
+          - battery_2025
+      source:
+        description: 'Data source preference'
+        required: true
+        default: 'pudl'
+        type: choice
+        options:
+          - pudl
+          - api
+      campd_api_key:
+        description: 'CAMPD/data.gov API key (only needed for API mode, overrides secret)'
+        required: false
+        type: string
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+jobs:
+  fetch-cems:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pandas requests pyarrow
+
+      - name: Fetch CEMS data
+        env:
+          CAMD_API_KEY: ${{ inputs.campd_api_key || secrets.CAMD_API_KEY }}
+        run: |
+          NO_PUDL_FLAG=""
+          if [ "${{ inputs.source }}" = "api" ]; then
+            NO_PUDL_FLAG="--no-pudl"
+          fi
+
+          if [ "${{ inputs.scenario }}" = "all" ]; then
+            python grid_viz/fetch/fetch_cems_hourly.py $NO_PUDL_FLAG
+          else
+            python -c "
+          import sys, os
+          sys.path.insert(0, 'grid_viz')
+          from fetch.fetch_cems_hourly import fetch_all_scenarios, fetch_pudl_cems, extract_scenario_from_pudl, load_ercot_oris_codes
+          from config import SCENARIO_DAYS, CEMS_DIR
+
+          os.makedirs(CEMS_DIR, exist_ok=True)
+          use_pudl = '${{ inputs.source }}' != 'api'
+          results = fetch_all_scenarios(use_pudl=use_pudl)
+          for sid, df in results.items():
+              print(f'{sid}: {len(df)} records')
+          "
+          fi
+
+      - name: Show results
+        run: |
+          echo "=== CEMS Data Files ==="
+          ls -lh grid_viz/data/cems/ 2>/dev/null || echo "No files produced"
+          for f in grid_viz/data/cems/cems_*.csv; do
+            if [ -f "$f" ]; then
+              echo ""
+              echo "--- $(basename $f) ---"
+              head -1 "$f"
+              wc -l "$f"
+            fi
+          done
+
+      - name: Create branch and commit
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-grid-viz-cems-${{ inputs.scenario }}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+          git add -f grid_viz/data/cems/ 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "No new data to commit"
+            exit 0
+          fi
+
+          git commit -m "Grid Viz: Fetch CEMS hourly data for ${{ inputs.scenario }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "$TARGET_BRANCH" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done

@@ -1,0 +1,287 @@
+name: Squash All History (Protected HEAD)
+
+# Replaces the entire commit history with a single fresh commit containing
+# the exact current HEAD tree. All files in HEAD are preserved byte-for-byte.
+# All prior commits, blobs not in HEAD, and intermediate history are removed.
+#
+# How it works:
+#   1. Record the HEAD tree hash for integrity verification
+#   2. Create a new orphan branch with the full HEAD working tree
+#   3. Commit as a single root commit (no parents = no history)
+#   4. Verify the new commit's tree hash matches the original HEAD
+#   5. Force-push master (and optionally other branches)
+#
+# This is the nuclear option — use cleanup-large-files.yml if you only
+# want to strip dead blobs while preserving commit history.
+#
+# WARNING: This is irreversible. All commit history is permanently lost.
+# All collaborators must re-clone afterward.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type SQUASH-ALL-HISTORY to confirm (irreversible)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run only — show what would happen without changing anything'
+        required: false
+        type: boolean
+        default: true
+      delete_other_branches:
+        description: 'Also delete all non-master remote branches'
+        required: false
+        type: boolean
+        default: false
+      commit_message:
+        description: 'Commit message for the squashed root commit'
+        required: false
+        type: string
+        default: 'Initial commit — squashed from full project history'
+
+jobs:
+  squash:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Validate confirmation
+        if: ${{ inputs.dry_run == false && inputs.confirm != 'SQUASH-ALL-HISTORY' }}
+        run: |
+          echo "::error::You must type 'SQUASH-ALL-HISTORY' to confirm. Aborting."
+          exit 1
+
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Ensure latest master HEAD
+        run: |
+          git fetch origin master --force
+          git reset --hard origin/master
+          echo "HEAD: $(git rev-parse HEAD)"
+          echo "Commit: $(git log -1 --oneline)"
+          if ! git diff --quiet; then
+            echo "::error::Working tree has unexpected changes. Aborting."
+            exit 1
+          fi
+
+      - name: Record HEAD state
+        id: record
+        run: |
+          HEAD_TREE=$(git rev-parse HEAD^{tree})
+          HEAD_SHA=$(git rev-parse HEAD)
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          FILE_COUNT=$(git ls-tree -r HEAD | wc -l)
+
+          echo "head_tree=$HEAD_TREE" >> "$GITHUB_OUTPUT"
+          echo "head_sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+          echo "commit_count=$COMMIT_COUNT" >> "$GITHUB_OUTPUT"
+          echo "file_count=$FILE_COUNT" >> "$GITHUB_OUTPUT"
+
+          echo "=== Current HEAD State ==="
+          echo "  HEAD commit:  $HEAD_SHA"
+          echo "  HEAD tree:    $HEAD_TREE"
+          echo "  Total commits: $COMMIT_COUNT"
+          echo "  Files in HEAD: $FILE_COUNT"
+
+      - name: Measure repo size before
+        id: size_before
+        run: |
+          SIZE_BEFORE=$(git count-objects -vH | grep size-pack | awk '{print $2, $3}')
+          echo "size=$SIZE_BEFORE" >> "$GITHUB_OUTPUT"
+          echo "=== Repo size BEFORE ==="
+          git count-objects -vH
+
+      - name: List other branches
+        id: branches
+        run: |
+          echo "=== Remote branches ==="
+          OTHER_BRANCHES=$(git for-each-ref --format='%(refname:short)' refs/remotes/origin/ \
+            | grep -v HEAD | grep -v 'origin/master' | grep -v 'origin/main' | sed 's|origin/||' || true)
+          BRANCH_COUNT=$(echo "$OTHER_BRANCHES" | grep -c . 2>/dev/null || echo 0)
+          echo "Non-master branches: $BRANCH_COUNT"
+          if [ -n "$OTHER_BRANCHES" ]; then
+            echo "$OTHER_BRANCHES" | head -20
+            [ "$BRANCH_COUNT" -gt 20 ] && echo "  ... and $((BRANCH_COUNT - 20)) more"
+          fi
+          echo "branch_count=$BRANCH_COUNT" >> "$GITHUB_OUTPUT"
+
+      - name: "Dry run: show what would happen"
+        if: ${{ inputs.dry_run == true }}
+        run: |
+          echo "============================================================"
+          echo "  DRY RUN — No changes will be made"
+          echo "============================================================"
+          echo ""
+          echo "  Current state:"
+          echo "    Commits:  ${{ steps.record.outputs.commit_count }}"
+          echo "    Files:    ${{ steps.record.outputs.file_count }}"
+          echo "    Repo size: ${{ steps.size_before.outputs.size }}"
+          echo ""
+          echo "  After squash:"
+          echo "    Commits:  1"
+          echo "    Files:    ${{ steps.record.outputs.file_count }} (unchanged)"
+          echo "    HEAD tree: ${{ steps.record.outputs.head_tree }} (unchanged)"
+          echo "    Other branches: ${{ steps.branches.outputs.branch_count }} will be ${{ inputs.delete_other_branches == true && 'DELETED' || 'kept (unchanged — may still reference old history)' }}"
+          echo ""
+          echo "  What happens:"
+          echo "    1. All ${{ steps.record.outputs.commit_count }} commits collapsed into 1 root commit"
+          echo "    2. All dead/intermediate blobs removed (only HEAD files survive)"
+          echo "    3. Every file currently in HEAD preserved byte-for-byte"
+          echo "    4. Commit messages, authors, dates — all lost"
+          echo "    5. All collaborators must re-clone"
+          echo ""
+          echo "  Re-run with dry_run=false and confirm=SQUASH-ALL-HISTORY to execute."
+
+      - name: Create orphan branch with HEAD tree
+        if: ${{ inputs.dry_run == false }}
+        run: |
+          echo "=== Creating orphan branch with current HEAD content ==="
+
+          # Configure git for the commit
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create orphan branch (no parents, no history)
+          git checkout --orphan squashed-master
+
+          # Stage all files (they're already in the working tree from the checkout)
+          git add -A
+
+          # Create the single root commit
+          COMMIT_MSG="${{ inputs.commit_message }}"
+          git commit -m "$COMMIT_MSG
+
+          Squashed ${{ steps.record.outputs.commit_count }} commits into 1.
+          Original HEAD was ${{ steps.record.outputs.head_sha }}.
+          Tree hash preserved: ${{ steps.record.outputs.head_tree }}.
+          Files: ${{ steps.record.outputs.file_count }}."
+
+          echo "New root commit: $(git rev-parse HEAD)"
+          echo "New tree hash:   $(git rev-parse HEAD^{tree})"
+
+      - name: Verify HEAD tree integrity
+        if: ${{ inputs.dry_run == false }}
+        run: |
+          EXPECTED_TREE="${{ steps.record.outputs.head_tree }}"
+          ACTUAL_TREE=$(git rev-parse HEAD^{tree})
+
+          echo "=== Tree Integrity Check ==="
+          echo "  Expected (before): $EXPECTED_TREE"
+          echo "  Actual (after):    $ACTUAL_TREE"
+
+          if [ "$EXPECTED_TREE" = "$ACTUAL_TREE" ]; then
+            echo "  PASSED — tree is identical. All files preserved."
+          else
+            echo "::error::FAILED — tree hash mismatch! Aborting."
+            exit 1
+          fi
+
+          # Double-check file count
+          EXPECTED_FILES="${{ steps.record.outputs.file_count }}"
+          ACTUAL_FILES=$(git ls-tree -r HEAD | wc -l)
+          echo "  Files expected: $EXPECTED_FILES"
+          echo "  Files actual:   $ACTUAL_FILES"
+
+          if [ "$EXPECTED_FILES" != "$ACTUAL_FILES" ]; then
+            echo "::error::FAILED — file count mismatch! Aborting."
+            exit 1
+          fi
+
+      - name: Replace master with squashed branch
+        if: ${{ inputs.dry_run == false }}
+        run: |
+          # Rename squashed branch to master
+          git branch -M squashed-master master
+
+          echo "master now points to single root commit: $(git rev-parse HEAD)"
+          echo "Commits in master: $(git rev-list --count HEAD)"
+
+      - name: Force push master
+        if: ${{ inputs.dry_run == false }}
+        run: |
+          git remote add origin-rw https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git 2>/dev/null || true
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            if git push --force origin-rw master:master 2>&1; then
+              echo "Push successful."
+              break
+            fi
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "::error::Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+
+      - name: Delete other remote branches
+        if: ${{ inputs.dry_run == false && inputs.delete_other_branches == true }}
+        run: |
+          echo "=== Deleting non-master remote branches ==="
+          git fetch origin --prune
+
+          OTHER_BRANCHES=$(git for-each-ref --format='%(refname:short)' refs/remotes/origin/ \
+            | grep -v HEAD | grep -v 'origin/master' | grep -v 'origin/main' | sed 's|origin/||' || true)
+
+          if [ -z "$OTHER_BRANCHES" ]; then
+            echo "No other branches to delete."
+            exit 0
+          fi
+
+          DELETED=0
+          FAILED=0
+          while IFS= read -r branch; do
+            [ -z "$branch" ] && continue
+            if git push origin-rw --delete "$branch" 2>&1; then
+              echo "  Deleted: $branch"
+              DELETED=$((DELETED + 1))
+            else
+              echo "  Failed to delete: $branch"
+              FAILED=$((FAILED + 1))
+            fi
+          done <<< "$OTHER_BRANCHES"
+
+          echo ""
+          echo "Deleted $DELETED branches, $FAILED failures."
+
+      - name: Repo size after
+        if: ${{ inputs.dry_run == false }}
+        run: |
+          echo "=== Repo size AFTER ==="
+          git gc --aggressive --prune=now 2>/dev/null || true
+          git count-objects -vH
+          echo ""
+          echo "Files in HEAD: $(git ls-tree -r HEAD | wc -l)"
+          echo "Commits: $(git rev-list --count HEAD)"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo ""
+          echo "============================================================"
+          echo "  SQUASH HISTORY SUMMARY"
+          echo "============================================================"
+          echo "  Dry run:          ${{ inputs.dry_run }}"
+          echo "  Commits before:   ${{ steps.record.outputs.commit_count }}"
+          echo "  Commits after:    1"
+          echo "  Files preserved:  ${{ steps.record.outputs.file_count }}"
+          echo "  Tree hash:        ${{ steps.record.outputs.head_tree }}"
+          echo "  Delete branches:  ${{ inputs.delete_other_branches }}"
+          echo ""
+          if [ "${{ inputs.dry_run }}" = "false" ]; then
+            echo "  Status: COMPLETED"
+            echo "  WARNING: All collaborators must re-clone the repository."
+          else
+            echo "  Status: DRY RUN (no changes made)"
+            echo "  Re-run with dry_run=false and confirm=SQUASH-ALL-HISTORY to execute."
+          fi
+          echo "============================================================"
