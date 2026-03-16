@@ -671,14 +671,39 @@
             height: 20px;
             border-radius: 50%;
             transition: all 0.6s ease-out;
+            position: relative;
         }
-        .fleet-circle-nuclear { background: rgba(14,165,233,0.35); }
-        .fleet-circle-gas { background: rgba(99,102,241,0.35); }
-        .fleet-circle-renewable { background: rgba(59,130,246,0.35); }
-        .fleet-circle.faded { background: rgba(0,0,0,0.08) !important; opacity: 0.4; }
-        .fleet-circle.grown { transform: scale(1.15); }
-        .fleet-circle.brightened { box-shadow: 0 0 8px rgba(14,165,233,0.35); transform: scale(1.05); }
-        .fleet-circle.shrunk { transform: scale(0.7); opacity: 0.3; }
+        .fleet-circle-constellation { background: rgba(14,165,233,0.35); }
+        .fleet-circle-vistra { background: rgba(99,102,241,0.35); }
+        .fleet-circle-nextera { background: rgba(34,197,94,0.35); }
+        .fleet-circle-nrg { background: rgba(245,158,11,0.35); }
+        .fleet-circle-aes { background: rgba(233,30,99,0.35); }
+        .fleet-circle-talen { background: rgba(156,39,176,0.35); }
+        .fleet-circle-pseg { background: rgba(20,184,166,0.35); }
+        .fleet-circle.faded { background: rgba(0,0,0,0.08) !important; opacity: 0.4; transform: scale(0.7); }
+        .fleet-circle.brightened { box-shadow: 0 0 8px currentColor; transform: scale(1.05); }
+        .fleet-circle.shrunk { transform: scale(0.55); opacity: 0.2; }
+        .fleet-company-label {
+            font-family: var(--font-mono);
+            font-size: 0.62rem;
+            font-weight: 600;
+            color: var(--text-muted, #94a3b8);
+            margin-top: 8px;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .fleet-company-group {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin-bottom: 6px;
+        }
+        .fleet-company-dots {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
         .ipp-counter {
             font-family: var(--font-mono);
             font-size: clamp(28px, 4vw, 36px);
@@ -705,21 +730,10 @@
         }
         .fleet-circle.gas-pulse {
             animation: gasBorderPulse 2s ease-in-out infinite;
-            border: 2px solid #6366F1;
+            border: 2px solid currentColor;
         }
-        .new-firm-hex {
-            width: 22px;
-            height: 22px;
-            background: rgba(14,165,233,0.25);
-            border: 2px solid #0EA5E9;
-            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-            transition: transform 0.6s ease-out, opacity 0.6s ease-out;
-            transform: scale(0);
-            opacity: 0;
-        }
-        .new-firm-hex.visible { transform: scale(1); opacity: 1; }
 
-        /* 3.5x callout */
+        /* 3.4x callout */
         .ipp-stat-callout {
             background: rgba(11,17,32,0.92);
             border-radius: 16px;
@@ -1654,79 +1668,53 @@
             Independent power producers are not passive recipients of policy. They are strategic actors who invest based on revenue signals, defend assets they&rsquo;ve built, and lobby for market rules that protect their portfolio. The real question is what incentive structure each procurement framework creates for the companies that actually build and operate the grid at scale.
         </p>
 
-        <h3 class="fade-in" style="text-align:center; font-family:var(--font-heading); font-size:1.15rem; font-weight:700; color:var(--navy,#0B1120); margin-bottom:var(--space-sm)">Two Futures for the Same Fleet</h3>
-        <p class="fade-in" style="text-align:center; font-size:0.88rem; color:var(--text-muted,#94a3b8); margin-bottom:var(--space-md)">Constellation case study</p>
+        <h3 class="fade-in" style="text-align:center; font-family:var(--font-heading); font-size:1.15rem; font-weight:700; color:var(--navy,#0B1120); margin-bottom:var(--space-sm)">The Same Companies, Two Demand Signals</h3>
+        <p class="fade-in" style="text-align:center; font-size:0.88rem; color:var(--text-muted,#94a3b8); margin-bottom:var(--space-md)">P50 annual emissions at 2040 across all 7 IPP fleets</p>
 
         <div class="ipp-fleet-grid" id="ippFleetGrid">
-            <!-- Left — Low PPA Depth (1B) -->
+            <!-- Left — Low PPA Depth -->
             <div class="ipp-fleet-panel panel-1b fade-in">
                 <div class="ipp-panel-label ipp-panel-label-1b">LOW PPA DEPTH</div>
                 <div class="ipp-panel-sublabel">Weak demand for hourly clean &rarr; revenue uncertainty</div>
                 <div class="fleet-circles" id="fleetCircles1B">
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-gas"></div>
-                    <div class="fleet-circle fleet-circle-gas"></div>
-                    <div class="fleet-circle fleet-circle-gas"></div>
-                    <div class="fleet-circle fleet-circle-renewable"></div>
+                    <!-- Circles injected by JS: 1 circle ≈ 2 Mt CO₂, colored by company -->
                 </div>
-                <div class="ipp-counter ipp-counter-1b" id="ippCounter1B">34.3 Mt CO&#8322;</div>
-                <div class="ipp-counter-label">Annual fleet emissions</div>
-                <p class="ipp-panel-caption">Without strong PPA demand for 24/7 clean, merchant nuclear faces revenue uncertainty as state support programs expire (NJ ZEC 2026, IL CMC 2028, NY ZEC 2030). Plants stay online under 45U PTC but without fleet reinvestment certainty. New gas fills reliability gaps.</p>
+                <div class="ipp-counter ipp-counter-1b" id="ippCounter1B">80.6 Mt CO&#8322;</div>
+                <div class="ipp-counter-label">Annual emissions across 7 IPPs (2040)</div>
+                <p class="ipp-panel-caption">Without strong PPA demand for 24/7 clean, merchant nuclear faces revenue uncertainty across multiple operators, clean firm investment stalls, and gas fills reliability gaps. Gas-heavy fleets&mdash;Vistra (17.2 Mt), NextEra (15.9 Mt), and NRG (11.0 Mt)&mdash;account for 55% of total fleet emissions under this scenario.</p>
             </div>
 
-            <!-- Right — High PPA Depth (2C) -->
+            <!-- Right — High PPA Depth -->
             <div class="ipp-fleet-panel panel-2c fade-in">
                 <div class="ipp-panel-label ipp-panel-label-2c">HIGH PPA DEPTH</div>
                 <div class="ipp-panel-sublabel">Strong demand for hourly clean &rarr; revenue certainty</div>
                 <div class="fleet-circles" id="fleetCircles2C">
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-nuclear"></div>
-                    <div class="fleet-circle fleet-circle-gas"></div>
-                    <div class="fleet-circle fleet-circle-gas"></div>
-                    <div class="fleet-circle fleet-circle-gas"></div>
-                    <div class="fleet-circle fleet-circle-renewable"></div>
+                    <!-- Circles injected by JS: 1 circle ≈ 2 Mt CO₂, colored by company -->
                 </div>
-                <div class="ipp-counter ipp-counter-2c" id="ippCounter2C">9.8 Mt CO&#8322;</div>
-                <div class="ipp-counter-label">Annual fleet emissions</div>
-                <p class="ipp-panel-caption">Corporate demand for hourly-matched clean creates long-term PPA revenue ($10&ndash;40/MWh premium for dispatchable clean over VRE). This underwrites nuclear fleet maintenance, enables restarts like Crane/Three Mile Island. Microsoft&rsquo;s 20-year Constellation PPA alone: ~14 TWh/year of 24/7 carbon-free generation.</p>
+                <div class="ipp-counter ipp-counter-2c" id="ippCounter2C">23.8 Mt CO&#8322;</div>
+                <div class="ipp-counter-label">Annual emissions across 7 IPPs (2040)</div>
+                <p class="ipp-panel-caption">Corporate demand for hourly-matched clean creates PPA revenue certainty across all 7 fleets, underwriting nuclear maintenance, enabling firm clean investment, and displacing gas buildout. Every major fleet improves&mdash;NextEra sees the largest percentage drop (76%), while Constellation and Vistra deliver the largest absolute reductions.</p>
             </div>
         </div>
 
-        <!-- 3.5x Stat Callout — dark panel for maximum impact -->
+        <!-- 3.4x Stat Callout — dark panel for maximum impact -->
         <div class="ipp-stat-callout fade-in">
-            <div class="ipp-stat-big">3.5&times;</div>
-            <div class="ipp-stat-desc">emissions differential from the same fleet</div>
-            <div class="ipp-stat-sub">driven entirely by demand signal</div>
+            <div class="ipp-stat-big">3.4&times;</div>
+            <div class="ipp-stat-desc">emissions differential across all 7 IPPs</div>
+            <div class="ipp-stat-sub">driven entirely by demand signal quality</div>
         </div>
 
         <p class="fade-in" style="max-width:720px; margin:var(--space-xl) auto 0; font-size:0.9rem; color:var(--text-secondary); line-height:1.7">
             IPPs that have built gas have a rational incentive to oppose policies that strand those assets: carbon pricing, accelerated retirement, stricter emissions standards. IPPs whose revenue depends on clean generation have the opposite incentive, because decarbonization policy protects their investment. Strategy 1B&rsquo;s demand signals are more likely to create conditions for new gas development. It doesn&rsquo;t penalize temporal mismatch, so gas backup is an acceptable complement to VRE-heavy portfolios. Strategy 2C&rsquo;s hourly constraint makes gas backup a cost, not a complement, driving IPPs toward firm clean resources that can actually match load patterns.
         </p>
+        <p class="fade-in" style="max-width:720px; margin:var(--space-md) auto 0; font-size:0.9rem; color:var(--text-secondary); line-height:1.7">
+            This isn&rsquo;t about one company. Across all 7 IPPs, the demand signal determines whether the fleet decarbonizes or locks in gas. The 56.8 Mt gap between these two futures is equivalent to eliminating all CO&#8322; from 12 average U.S. coal plants&mdash;created not by regulation, but by what corporate buyers choose to procure.
+        </p>
 
         <p class="fade-in" style="text-align:center; margin-top:var(--space-xl); display:flex; gap:var(--space-lg); justify-content:center; flex-wrap:wrap">
-            <a href="ipp_climate_transition.html" class="explore-link">IPP climate transition <span class="arrow">&rarr;</span></a>
-            <a href="ipp_constellation.html" class="explore-link">Constellation deep dive <span class="arrow">&rarr;</span></a>
+            <a href="ipp_climate_transition.html" class="explore-link">IPP climate transition overview <span class="arrow">&rarr;</span></a>
+            <a href="gas_lockin_buyer_influence.html" class="explore-link">Gas lock-in &amp; buyer influence <span class="arrow">&rarr;</span></a>
+            <a href="ipp_climate_transition.html" class="explore-link">Individual company deep dives <span class="arrow">&rarr;</span></a>
         </p>
     </section>
 
@@ -2335,6 +2323,38 @@
             var grid = document.getElementById('ippFleetGrid');
             if (!grid) return;
 
+            // P50 emissions at 2040 (Mt CO₂) — from ipp-smartargets-data.js
+            var companies = [
+                { id: 'constellation', name: 'CEG',  low: 33.42, high: 9.78 },
+                { id: 'vistra',        name: 'VST',  low: 17.21, high: 5.19 },
+                { id: 'nextera',       name: 'NEE',  low: 15.93, high: 3.82 },
+                { id: 'nrg',           name: 'NRG',  low: 10.97, high: 3.56 },
+                { id: 'aes',           name: 'AES',  low: 2.35,  high: 0.74 },
+                { id: 'talen',         name: 'TLN',  low: 0.46,  high: 0.46 },
+                { id: 'pseg',          name: 'PEG',  low: 0.25,  high: 0.25 }
+            ];
+
+            var mtPerCircle = 2; // each circle ≈ 2 Mt CO₂
+
+            function buildCircles(containerId, scenario) {
+                var container = document.getElementById(containerId);
+                if (!container) return;
+                companies.forEach(function(c) {
+                    var val = scenario === 'low' ? c.low : c.high;
+                    var count = Math.max(1, Math.round(val / mtPerCircle));
+                    for (var i = 0; i < count; i++) {
+                        var dot = document.createElement('div');
+                        dot.className = 'fleet-circle fleet-circle-' + c.id;
+                        dot.title = c.name + ': ' + val.toFixed(1) + ' Mt';
+                        dot.style.color = getComputedStyle(dot).backgroundColor;
+                        container.appendChild(dot);
+                    }
+                });
+            }
+
+            buildCircles('fleetCircles1B', 'low');
+            buildCircles('fleetCircles2C', 'high');
+
             var triggered = false;
             var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -2344,38 +2364,25 @@
 
                 var delay = reducedMotion ? 0 : 500;
 
-                // 1B panel: 3 nuclear fade, 1 gas grows with pulse
+                // 1B panel: fade some circles to show stagnation
                 setTimeout(function() {
-                    var circles1B = document.querySelectorAll('#fleetCircles1B .fleet-circle');
-                    // Fade nuclear circles 9, 10, 11 (index 9-11)
-                    [9, 10, 11].forEach(function(i) {
-                        if (circles1B[i]) circles1B[i].classList.add('faded');
+                    var circles = document.querySelectorAll('#fleetCircles1B .fleet-circle');
+                    // Pulse a few gas-heavy company circles to show gas lock-in
+                    var idx = 0;
+                    circles.forEach(function(c) {
+                        if (idx > circles.length * 0.7) {
+                            c.classList.add('gas-pulse');
+                        }
+                        idx++;
                     });
-                    // Gas circle grows with pulse (index 12)
-                    if (circles1B[12]) {
-                        circles1B[12].classList.add('grown', 'gas-pulse');
-                    }
                 }, delay);
 
-                // 2C panel: all nuclear brighten, 2 gas shrink, new hex appears
+                // 2C panel: shrink most circles (emissions drop), brighten survivors
                 setTimeout(function() {
-                    var circles2C = document.querySelectorAll('#fleetCircles2C .fleet-circle');
-                    // Brighten all nuclear (0-11)
-                    for (var i = 0; i < 12; i++) {
-                        if (circles2C[i]) circles2C[i].classList.add('brightened');
-                    }
-                    // Shrink gas circles 12, 13
-                    if (circles2C[12]) circles2C[12].classList.add('shrunk');
-                    if (circles2C[13]) circles2C[13].classList.add('shrunk');
-
-                    // Add hex icon for new firm clean
-                    var container2C = document.getElementById('fleetCircles2C');
-                    if (container2C) {
-                        var hex = document.createElement('div');
-                        hex.className = 'new-firm-hex';
-                        container2C.appendChild(hex);
-                        setTimeout(function() { hex.classList.add('visible'); }, 100);
-                    }
+                    var circles = document.querySelectorAll('#fleetCircles2C .fleet-circle');
+                    circles.forEach(function(c) {
+                        c.classList.add('brightened');
+                    });
                 }, delay);
             }
 
