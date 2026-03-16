@@ -468,6 +468,282 @@
             .iso-annotation { opacity: 1; transform: none; transition-delay: 0s !important; }
             .coal-wall-side-note { opacity: 1; }
         }
+
+        /* ===== Section 7: The IPP Response ===== */
+        .ipp-fleet-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            max-width: 900px;
+            margin: var(--space-xl) auto 0;
+        }
+        .ipp-fleet-panel {
+            background: rgba(255,255,255,0.7);
+            border-radius: 16px;
+            padding: 28px;
+            min-height: 380px;
+            color: var(--text-primary, #1e293b);
+        }
+        .ipp-fleet-panel.panel-1b {
+            border: 2px solid #6366F1;
+            box-shadow: 0 0 20px -4px rgba(99,102,241,0.15);
+        }
+        .ipp-fleet-panel.panel-2c {
+            border: 2px solid #0EA5E9;
+            box-shadow: 0 0 20px -4px rgba(14,165,233,0.15);
+        }
+        .ipp-panel-label {
+            font-family: 'IBM Plex Mono', var(--font-mono, monospace);
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 4px;
+        }
+        .ipp-panel-label-1b { color: #6366F1; }
+        .ipp-panel-label-2c { color: #0EA5E9; }
+        .ipp-panel-sublabel {
+            font-size: 0.82rem;
+            color: var(--text-secondary, #475569);
+            margin-bottom: var(--space-md);
+            line-height: 1.5;
+        }
+        .fleet-circles {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: var(--space-lg);
+        }
+        .fleet-circle {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            transition: all 0.6s ease-out;
+        }
+        .fleet-circle-nuclear { background: rgba(14,165,233,0.35); }
+        .fleet-circle-gas { background: rgba(99,102,241,0.35); }
+        .fleet-circle-renewable { background: rgba(59,130,246,0.35); }
+        .fleet-circle.faded { background: rgba(0,0,0,0.08) !important; opacity: 0.4; }
+        .fleet-circle.grown { transform: scale(1.15); }
+        .fleet-circle.brightened { box-shadow: 0 0 8px rgba(14,165,233,0.35); transform: scale(1.05); }
+        .fleet-circle.shrunk { transform: scale(0.7); opacity: 0.3; }
+        .ipp-counter {
+            font-family: 'IBM Plex Mono', var(--font-mono, monospace);
+            font-size: clamp(28px, 4vw, 36px);
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .ipp-counter-1b { color: #6366F1; }
+        .ipp-counter-2c { color: #0EA5E9; }
+        .ipp-counter-label {
+            font-size: 0.78rem;
+            color: var(--text-muted, #94a3b8);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: var(--space-md);
+        }
+        .ipp-panel-caption {
+            font-size: 0.85rem;
+            color: var(--text-secondary, #475569);
+            line-height: 1.65;
+        }
+        @keyframes gasBorderPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+            50% { box-shadow: 0 0 8px 2px rgba(99,102,241,0.3); }
+        }
+        .fleet-circle.gas-pulse {
+            animation: gasBorderPulse 2s ease-in-out infinite;
+            border: 2px solid #6366F1;
+        }
+        .new-firm-hex {
+            width: 22px;
+            height: 22px;
+            background: rgba(14,165,233,0.25);
+            border: 2px solid #0EA5E9;
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            transition: transform 0.6s ease-out, opacity 0.6s ease-out;
+            transform: scale(0);
+            opacity: 0;
+        }
+        .new-firm-hex.visible { transform: scale(1); opacity: 1; }
+
+        /* 3.5x callout */
+        .ipp-stat-callout {
+            background: rgba(11,17,32,0.92);
+            border-radius: 16px;
+            max-width: 560px;
+            text-align: center;
+            padding: 44px;
+            margin: var(--space-xl) auto 0;
+            box-shadow: 0 0 40px -10px rgba(239,68,68,0.15);
+        }
+        .ipp-stat-big {
+            font-family: 'IBM Plex Mono', var(--font-mono, monospace);
+            font-size: clamp(48px, 6vw, 64px);
+            font-weight: 500;
+            color: #EF4444;
+            line-height: 1.1;
+            margin-bottom: 8px;
+        }
+        .ipp-stat-desc {
+            font-size: 18px;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        .ipp-stat-sub {
+            font-size: 15px;
+            color: rgba(255,255,255,0.7);
+        }
+
+        @media (max-width: 768px) {
+            .ipp-fleet-grid { grid-template-columns: 1fr; max-width: 480px; }
+            .ipp-fleet-panel { min-height: auto; }
+        }
+
+        /* ===== Section 8: Learning Curve Dividend ===== */
+        .learning-svg-container {
+            max-width: 700px;
+            margin: var(--space-xl) auto 0;
+            text-align: center;
+        }
+        .learning-svg-container svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        @keyframes criticalMassPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+        .critical-mass-marker {
+            animation: criticalMassPulse 2s ease-in-out infinite;
+            transform-origin: center;
+        }
+        .learning-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-lg);
+            max-width: 1100px;
+            margin: var(--space-xl) auto 0;
+        }
+        .learning-card {
+            background: rgba(255,255,255,0.85);
+            border-radius: 16px;
+            padding: var(--space-xl) var(--space-lg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .learning-card-violet { border-top: 3px solid #6366F1; }
+        .learning-card-2c { border-top: 3px solid #0EA5E9; }
+        .learning-card-blue { border-top: 3px solid #3B82F6; }
+        .learning-card h3 {
+            font-family: var(--font-heading);
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--navy, #0B1120);
+            margin-bottom: var(--space-sm);
+        }
+        .learning-card p {
+            font-size: 0.88rem;
+            color: var(--text-secondary, #475569);
+            line-height: 1.65;
+        }
+        @media (max-width: 1024px) {
+            .learning-cards { grid-template-columns: 1fr; max-width: 640px; }
+        }
+
+        /* ===== Section 9: The Swing Variable — Nuclear ===== */
+        .fulcrum-container {
+            max-width: 500px;
+            margin: var(--space-xl) auto 0;
+            text-align: center;
+        }
+        .fulcrum-container svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .nuclear-stat-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-lg);
+            max-width: 900px;
+            margin: var(--space-xl) auto 0;
+        }
+        .nuclear-stat-card {
+            background: rgba(255,255,255,0.85);
+            border-radius: 16px;
+            padding: var(--space-xl) var(--space-lg);
+            text-align: center;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .nuclear-stat-card-rose { border-top: 3px solid #EF4444; }
+        .nuclear-stat-card-1b { border-top: 3px solid #6366F1; }
+        .nuclear-stat-card .stat-value {
+            font-family: 'IBM Plex Mono', var(--font-mono, monospace);
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--navy, #0B1120);
+            margin-bottom: 4px;
+        }
+        .nuclear-stat-card .stat-label {
+            font-size: 0.82rem;
+            color: var(--text-secondary, #475569);
+            line-height: 1.5;
+        }
+        .rolloff-timeline {
+            max-width: 720px;
+            margin: var(--space-xl) auto 0;
+            position: relative;
+            padding: 24px 0 24px 48px;
+        }
+        .rolloff-line {
+            position: absolute;
+            left: 24px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, #EF4444, rgba(239,68,68,0.2));
+        }
+        .rolloff-event {
+            position: relative;
+            padding: 0 0 24px 24px;
+        }
+        .rolloff-event:last-child { padding-bottom: 0; }
+        .rolloff-dot {
+            position: absolute;
+            left: -30px;
+            top: 4px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #EF4444;
+        }
+        .rolloff-year {
+            font-family: 'IBM Plex Mono', var(--font-mono, monospace);
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #EF4444;
+            margin-bottom: 2px;
+        }
+        .rolloff-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary, #475569);
+            line-height: 1.5;
+        }
+
+        @media (max-width: 768px) {
+            .nuclear-stat-cards { grid-template-columns: 1fr; max-width: 480px; }
+        }
+
+        /* Reduced motion for new sections */
+        @media (prefers-reduced-motion: reduce) {
+            .fleet-circle { transition: none !important; }
+            .new-firm-hex { transition: none !important; }
+            .critical-mass-marker { animation: none !important; }
+            .fleet-circle.gas-pulse { animation: none !important; }
+        }
     </style>
 </head>
 <body>
@@ -1059,6 +1335,259 @@
         </p>
     </section>
 
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 7: The IPP Response                                           -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <section class="content-section" id="ippResponse">
+        <h2 class="section-title fade-in">The IPP Response</h2>
+        <p class="section-subtitle fade-in">540 scenarios. 7 generators. One consistent finding: demand signals shape what gets built.</p>
+
+        <p class="fade-in" style="max-width:720px; margin:0 auto var(--space-lg); font-size:0.95rem; color:var(--text-secondary); line-height:1.8">
+            Independent power producers are not passive recipients of policy. They are strategic actors who invest based on revenue signals, defend assets they&rsquo;ve built, and lobby for market rules that protect their portfolio. The question isn&rsquo;t just &ldquo;what gets built&rdquo; &mdash; it&rsquo;s what incentive structure each procurement framework creates for the companies that actually build and operate the grid at scale.
+        </p>
+
+        <h3 class="fade-in" style="text-align:center; font-family:var(--font-heading); font-size:1.15rem; font-weight:700; color:var(--navy,#0B1120); margin-bottom:var(--space-sm)">Two Futures for the Same Fleet</h3>
+        <p class="fade-in" style="text-align:center; font-size:0.88rem; color:var(--text-muted,#94a3b8); margin-bottom:var(--space-md)">Constellation case study</p>
+
+        <div class="ipp-fleet-grid" id="ippFleetGrid">
+            <!-- Left — Low PPA Depth (1B) -->
+            <div class="ipp-fleet-panel panel-1b fade-in">
+                <div class="ipp-panel-label ipp-panel-label-1b">LOW PPA DEPTH</div>
+                <div class="ipp-panel-sublabel">Weak demand for hourly clean &rarr; revenue uncertainty</div>
+                <div class="fleet-circles" id="fleetCircles1B">
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-gas"></div>
+                    <div class="fleet-circle fleet-circle-gas"></div>
+                    <div class="fleet-circle fleet-circle-gas"></div>
+                    <div class="fleet-circle fleet-circle-renewable"></div>
+                </div>
+                <div class="ipp-counter ipp-counter-1b" id="ippCounter1B">34.3 Mt CO&#8322;</div>
+                <div class="ipp-counter-label">Annual fleet emissions</div>
+                <p class="ipp-panel-caption">Without strong PPA demand for 24/7 clean, merchant nuclear faces revenue uncertainty as state support programs expire (NJ ZEC 2026, IL CMC 2028, NY ZEC 2030). Plants stay online under 45U PTC but without fleet reinvestment certainty. New gas fills reliability gaps.</p>
+            </div>
+
+            <!-- Right — High PPA Depth (2C) -->
+            <div class="ipp-fleet-panel panel-2c fade-in">
+                <div class="ipp-panel-label ipp-panel-label-2c">HIGH PPA DEPTH</div>
+                <div class="ipp-panel-sublabel">Strong demand for hourly clean &rarr; revenue certainty</div>
+                <div class="fleet-circles" id="fleetCircles2C">
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-nuclear"></div>
+                    <div class="fleet-circle fleet-circle-gas"></div>
+                    <div class="fleet-circle fleet-circle-gas"></div>
+                    <div class="fleet-circle fleet-circle-gas"></div>
+                    <div class="fleet-circle fleet-circle-renewable"></div>
+                </div>
+                <div class="ipp-counter ipp-counter-2c" id="ippCounter2C">9.8 Mt CO&#8322;</div>
+                <div class="ipp-counter-label">Annual fleet emissions</div>
+                <p class="ipp-panel-caption">Corporate demand for hourly-matched clean creates long-term PPA revenue ($10&ndash;40/MWh premium for dispatchable clean over VRE). This underwrites nuclear fleet maintenance, enables restarts like Crane/Three Mile Island. Microsoft&rsquo;s 20-year Constellation PPA alone: ~14 TWh/year of 24/7 carbon-free generation.</p>
+            </div>
+        </div>
+
+        <!-- 3.5x Stat Callout — dark panel for maximum impact -->
+        <div class="ipp-stat-callout fade-in">
+            <div class="ipp-stat-big">3.5&times;</div>
+            <div class="ipp-stat-desc">emissions differential from the same fleet</div>
+            <div class="ipp-stat-sub">driven entirely by demand signal</div>
+        </div>
+
+        <p class="fade-in" style="max-width:720px; margin:var(--space-xl) auto 0; font-size:0.9rem; color:var(--text-secondary); line-height:1.7">
+            IPPs that have built gas have a rational incentive to oppose policies that strand those assets &mdash; carbon pricing, accelerated retirement, stricter emissions standards. IPPs whose revenue depends on clean generation have the opposite incentive: decarbonization policy protects their investment. Strategy 1B&rsquo;s demand signals are more likely to create conditions for new gas development &mdash; it doesn&rsquo;t penalize temporal mismatch, so gas backup is an acceptable complement to VRE-heavy portfolios. Strategy 2C&rsquo;s hourly constraint makes gas backup a cost, not a complement &mdash; driving IPPs toward firm clean resources that can actually match load patterns.
+        </p>
+
+        <p class="fade-in" style="text-align:center; margin-top:var(--space-xl); display:flex; gap:var(--space-lg); justify-content:center; flex-wrap:wrap">
+            <a href="ipp_climate_transition.html" class="explore-link">IPP climate transition <span class="arrow">&rarr;</span></a>
+            <a href="ipp_constellation.html" class="explore-link">Constellation deep dive <span class="arrow">&rarr;</span></a>
+        </p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 8: The Learning Curve Dividend                                -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <section class="content-section" id="learningCurve">
+        <h2 class="section-title fade-in">The Learning Curve Dividend</h2>
+        <p class="section-subtitle fade-in">Clean firm technologies are still on steep learning curves. Which strategy reaches critical mass fastest?</p>
+
+        <p class="fade-in" style="max-width:720px; margin:0 auto var(--space-lg); font-size:0.95rem; color:var(--text-secondary); line-height:1.8">
+            Wright&rsquo;s Law: costs decline predictably with cumulative deployment. Solar and wind are far down their curves &mdash; mature, cheap. Nuclear, CCS, and long-duration storage are still in the steep part where each doubling drives 15&ndash;25% cost reduction. The strategy that reaches critical mass first pulls costs down for the entire grid.
+        </p>
+
+        <!-- Diverging Curves SVG -->
+        <div class="learning-svg-container fade-in" id="learningCurvesContainer">
+            <svg viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Two diverging learning curves comparing Strategy 1B and 2C cost trajectories">
+                <!-- Axes -->
+                <line x1="60" y1="20" x2="60" y2="270" stroke="rgba(0,0,0,0.08)" stroke-width="1"/>
+                <line x1="60" y1="270" x2="660" y2="270" stroke="rgba(0,0,0,0.08)" stroke-width="1"/>
+                <text x="30" y="150" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="11" fill="rgba(0,0,0,0.4)" transform="rotate(-90,30,150)">Cost premium ($/MWh)</text>
+                <text x="360" y="305" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="11" fill="rgba(0,0,0,0.4)">Cumulative deployment (GW)</text>
+
+                <!-- Zero line -->
+                <line x1="60" y1="210" x2="660" y2="210" stroke="rgba(0,0,0,0.08)" stroke-width="1"/>
+                <text x="665" y="213" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)" text-anchor="start">Cost parity with fossil</text>
+
+                <!-- Gap shading between curves -->
+                <path d="M80,60 C180,80 300,110 400,145 C500,175 580,195 640,205
+                         L640,220 C580,225 500,240 400,248 C300,255 180,260 80,262 Z"
+                      fill="rgba(14,165,233,0.05)" id="learningGap"/>
+                <text x="300" y="195" font-family="'DM Sans', sans-serif" font-size="13" fill="#0EA5E9" font-style="italic" opacity="0.7">Learning curve dividend</text>
+
+                <!-- 1B curve — shallow -->
+                <path id="curve1B" d="M80,60 C180,80 300,120 400,160 C500,200 580,230 640,248"
+                      fill="none" stroke="#6366F1" stroke-width="2.5" stroke-linecap="round"
+                      stroke-dasharray="800" stroke-dashoffset="800"/>
+                <text x="645" y="258" font-family="'IBM Plex Mono', monospace" font-size="12" font-weight="700" fill="#6366F1" text-anchor="start">1B</text>
+
+                <!-- 2C curve — steep, crosses zero -->
+                <path id="curve2C" d="M80,60 C180,75 300,110 400,145 C500,175 560,198 620,210 C640,213 650,212 660,210"
+                      fill="none" stroke="#0EA5E9" stroke-width="2.5" stroke-linecap="round"
+                      stroke-dasharray="800" stroke-dashoffset="800"/>
+                <text x="645" y="205" font-family="'IBM Plex Mono', monospace" font-size="12" font-weight="700" fill="#0EA5E9" text-anchor="start">2C</text>
+
+                <!-- Critical mass marker at zero crossing -->
+                <g id="criticalMassGroup" opacity="0">
+                    <circle cx="620" cy="210" r="6" fill="#0EA5E9" class="critical-mass-marker" opacity="0.6"/>
+                    <circle cx="620" cy="210" r="3" fill="#0EA5E9"/>
+                    <text x="600" y="290" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="#0EA5E9" font-weight="600">Critical mass: learning</text>
+                    <text x="600" y="302" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="#0EA5E9" font-weight="600">curves outpace premiums</text>
+                </g>
+            </svg>
+        </div>
+
+        <!-- Three cards -->
+        <div class="learning-cards">
+            <div class="learning-card learning-card-violet fade-in">
+                <h3>IRA Accelerates the Timeline</h3>
+                <p>Federal credits cut clean LCOE 30&ndash;40%. Section 45Y PTC (~$28/MWh), 48E ITC (up to 50%), 45Q ($85/tonne CCS) compress the gap between VRE-only and diversified portfolios.</p>
+            </div>
+            <div class="learning-card learning-card-2c fade-in">
+                <h3>Hyperscale Demand Is Already 2C-Aligned</h3>
+                <p>Microsoft&rsquo;s PPA restarted Crane nuclear (1.8 GW). Google contracts for Fervo geothermal and Kairos nuclear. Amazon invests in SMRs. These buyers are pulling the 2C learning curve down now.</p>
+            </div>
+            <div class="learning-card learning-card-blue fade-in">
+                <h3>Policy Is Converging on Hourly</h3>
+                <p>GHG Protocol Scope 2 revision (~2027) proposes hourly matching. SBTi Power Sector v2 moves toward hourly. 14 states have 100% clean laws. EU rules require temporal correlation. 2C&rsquo;s premium is early-mover positioning.</p>
+            </div>
+        </div>
+
+        <p class="fade-in" style="text-align:center; margin-top:var(--space-xl); display:flex; gap:var(--space-lg); justify-content:center; flex-wrap:wrap">
+            <a href="gen_policy_conditions.html" class="explore-link">Policy landscape <span class="arrow">&rarr;</span></a>
+            <a href="strategy_deep_dive.html" class="explore-link">Strategy deep dive <span class="arrow">&rarr;</span></a>
+        </p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 9: The Swing Variable — Nuclear                               -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <section class="content-section" id="swingVariable">
+        <h2 class="section-title fade-in">The Swing Variable</h2>
+        <p class="section-subtitle fade-in">Existing nuclear provides roughly half of US clean electricity. Its fate depends on procurement framework.</p>
+
+        <!-- The Fulcrum SVG -->
+        <div class="fulcrum-container fade-in" id="fulcrumContainer">
+            <svg viewBox="0 0 500 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fulcrum balance showing nuclear fleet weighed against revenue sources">
+                <!-- Fulcrum triangle -->
+                <polygon points="250,200 225,170 275,170" fill="rgba(0,0,0,0.06)" stroke="rgba(0,0,0,0.15)" stroke-width="1.5"/>
+
+                <!-- Beam -->
+                <g id="fulcrumBeam" style="transform-origin: 250px 170px; transition: transform 1.5s ease-out;">
+                    <line x1="60" y1="170" x2="440" y2="170" stroke="rgba(0,0,0,0.2)" stroke-width="3" stroke-linecap="round"/>
+
+                    <!-- Left: nuclear plant silhouette -->
+                    <g transform="translate(80, 120)">
+                        <!-- Simplified plant silhouette -->
+                        <rect x="0" y="20" width="30" height="30" rx="2" fill="none" stroke="#0EA5E9" stroke-width="2"/>
+                        <path d="M5,20 Q15,0 25,20" fill="none" stroke="#0EA5E9" stroke-width="2"/>
+                        <rect x="35" y="30" width="15" height="20" rx="1" fill="none" stroke="#0EA5E9" stroke-width="1.5"/>
+                        <line x1="42" y1="22" x2="42" y2="30" stroke="#0EA5E9" stroke-width="1.5"/>
+                    </g>
+                    <text x="95" y="165" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="11" fill="rgba(0,0,0,0.5)" font-weight="600">Nuclear fleet</text>
+
+                    <!-- Right: stacked revenue rectangles -->
+                    <g transform="translate(340, 100)">
+                        <!-- Capacity (bottom) -->
+                        <rect x="0" y="52" width="80" height="14" rx="3" fill="rgba(0,0,0,0.06)" stroke="rgba(0,0,0,0.15)" stroke-width="1"/>
+                        <text x="40" y="63" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="8" fill="rgba(0,0,0,0.4)">Capacity</text>
+
+                        <!-- 45U PTC -->
+                        <rect x="0" y="36" width="80" height="14" rx="3" fill="rgba(59,130,246,0.15)" stroke="rgba(59,130,246,0.4)" stroke-width="1"/>
+                        <text x="40" y="47" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="8" fill="rgba(59,130,246,0.7)">45U PTC</text>
+
+                        <!-- ZEC/CMC -->
+                        <rect x="0" y="20" width="80" height="14" rx="3" fill="rgba(99,102,241,0.15)" stroke="rgba(99,102,241,0.4)" stroke-width="1"/>
+                        <text x="40" y="31" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="8" fill="rgba(99,102,241,0.7)">ZEC / CMC</text>
+
+                        <!-- Corporate PPAs (tallest, glowing) -->
+                        <rect x="0" y="0" width="80" height="18" rx="3" fill="rgba(14,165,233,0.15)" stroke="#0EA5E9" stroke-width="2">
+                            <animate attributeName="stroke-opacity" values="1;0.5;1" dur="2s" repeatCount="indefinite"/>
+                        </rect>
+                        <text x="40" y="13" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="9" fill="#0EA5E9" font-weight="700">Corporate PPAs</text>
+                    </g>
+                </g>
+            </svg>
+        </div>
+
+        <!-- Three stat cards -->
+        <div class="nuclear-stat-cards">
+            <div class="nuclear-stat-card nuclear-stat-card-rose fade-in">
+                <div class="stat-value">+$8&ndash;15/MWh</div>
+                <div class="stat-label">Cost increase if nuclear retires</div>
+            </div>
+            <div class="nuclear-stat-card nuclear-stat-card-1b fade-in">
+                <div class="stat-value">~107 TWh</div>
+                <div class="stat-label">CO&#8322; displacement lost</div>
+            </div>
+            <div class="nuclear-stat-card nuclear-stat-card-1b fade-in">
+                <div class="stat-value">+45 GW</div>
+                <div class="stat-label">Additional gas on grid</div>
+            </div>
+        </div>
+
+        <!-- Roll-off timeline -->
+        <div class="rolloff-timeline fade-in">
+            <div class="rolloff-line"></div>
+            <div class="rolloff-event">
+                <div class="rolloff-dot"></div>
+                <div class="rolloff-year">2026</div>
+                <div class="rolloff-desc">NJ ZEC expires (&minus;15 TWh PJM)</div>
+            </div>
+            <div class="rolloff-event">
+                <div class="rolloff-dot"></div>
+                <div class="rolloff-year">2028</div>
+                <div class="rolloff-desc">IL CMC expires (&minus;50 TWh PJM, &minus;15 TWh MISO)</div>
+            </div>
+            <div class="rolloff-event">
+                <div class="rolloff-dot"></div>
+                <div class="rolloff-year">2030</div>
+                <div class="rolloff-desc">NY ZEC Tier 3 expires (&minus;42 TWh NYISO)</div>
+            </div>
+        </div>
+
+        <p class="fade-in" style="max-width:720px; margin:var(--space-xl) auto 0; font-size:0.9rem; color:var(--text-secondary); line-height:1.7">
+            These plants don&rsquo;t retire &mdash; they move from SSS to merchant under 45U PTC. But without corporate PPA demand for long-term revenue certainty, fleet reinvestment tilts toward deferral. The procurement framework determines whether existing nuclear is an asset or a liability.
+        </p>
+    </section>
+
     <footer id="siteFooter"></footer>
 
     <script src="js/cinematic-bg.js"></script>
@@ -1393,6 +1922,170 @@
                 entries.forEach(function(entry) {
                     if (entry.isIntersecting) {
                         animateCrossover();
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.25 });
+            observer.observe(container);
+        })();
+
+        // ===== MODULE 7: IPP Fleet Circle Animation (Section 7) =====
+        (function initIPPFleet() {
+            var grid = document.getElementById('ippFleetGrid');
+            if (!grid) return;
+
+            var triggered = false;
+            var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            function animateFleet() {
+                if (triggered) return;
+                triggered = true;
+
+                var delay = reducedMotion ? 0 : 500;
+
+                // 1B panel: 3 nuclear fade, 1 gas grows with pulse
+                setTimeout(function() {
+                    var circles1B = document.querySelectorAll('#fleetCircles1B .fleet-circle');
+                    // Fade nuclear circles 9, 10, 11 (index 9-11)
+                    [9, 10, 11].forEach(function(i) {
+                        if (circles1B[i]) circles1B[i].classList.add('faded');
+                    });
+                    // Gas circle grows with pulse (index 12)
+                    if (circles1B[12]) {
+                        circles1B[12].classList.add('grown', 'gas-pulse');
+                    }
+                }, delay);
+
+                // 2C panel: all nuclear brighten, 2 gas shrink, new hex appears
+                setTimeout(function() {
+                    var circles2C = document.querySelectorAll('#fleetCircles2C .fleet-circle');
+                    // Brighten all nuclear (0-11)
+                    for (var i = 0; i < 12; i++) {
+                        if (circles2C[i]) circles2C[i].classList.add('brightened');
+                    }
+                    // Shrink gas circles 12, 13
+                    if (circles2C[12]) circles2C[12].classList.add('shrunk');
+                    if (circles2C[13]) circles2C[13].classList.add('shrunk');
+
+                    // Add hex icon for new firm clean
+                    var container2C = document.getElementById('fleetCircles2C');
+                    if (container2C) {
+                        var hex = document.createElement('div');
+                        hex.className = 'new-firm-hex';
+                        container2C.appendChild(hex);
+                        setTimeout(function() { hex.classList.add('visible'); }, 100);
+                    }
+                }, delay);
+            }
+
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        animateFleet();
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.25 });
+            observer.observe(grid);
+        })();
+
+        // ===== MODULE 8: Learning Curve Draw Animation (Section 8) =====
+        (function initLearningCurves() {
+            var container = document.getElementById('learningCurvesContainer');
+            if (!container) return;
+
+            var curve1B = document.getElementById('curve1B');
+            var curve2C = document.getElementById('curve2C');
+            var critGroup = document.getElementById('criticalMassGroup');
+            if (!curve1B || !curve2C) return;
+
+            var triggered = false;
+            var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            // Compute actual path lengths
+            var len1B = curve1B.getTotalLength();
+            var len2C = curve2C.getTotalLength();
+            curve1B.style.strokeDasharray = len1B;
+            curve1B.style.strokeDashoffset = len1B;
+            curve2C.style.strokeDasharray = len2C;
+            curve2C.style.strokeDashoffset = len2C;
+
+            function animateCurves() {
+                if (triggered) return;
+                triggered = true;
+
+                if (reducedMotion) {
+                    curve1B.style.strokeDashoffset = '0';
+                    curve2C.style.strokeDashoffset = '0';
+                    if (critGroup) critGroup.setAttribute('opacity', '1');
+                    return;
+                }
+
+                var duration = 2500;
+                var start = null;
+
+                function step(timestamp) {
+                    if (!start) start = timestamp;
+                    var t = Math.min((timestamp - start) / duration, 1);
+                    var eased = 1 - Math.pow(1 - t, 3);
+
+                    curve1B.style.strokeDashoffset = len1B * (1 - eased);
+                    curve2C.style.strokeDashoffset = len2C * (1 - eased);
+
+                    if (t < 1) {
+                        requestAnimationFrame(step);
+                    } else {
+                        // Show critical mass marker after draw completes
+                        setTimeout(function() {
+                            if (critGroup) {
+                                critGroup.style.transition = 'opacity 0.5s ease-out';
+                                critGroup.setAttribute('opacity', '1');
+                            }
+                        }, 500);
+                    }
+                }
+                requestAnimationFrame(step);
+            }
+
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        animateCurves();
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.25 });
+            observer.observe(container);
+        })();
+
+        // ===== MODULE 9: Fulcrum Tilt Animation (Section 9) =====
+        (function initFulcrum() {
+            var container = document.getElementById('fulcrumContainer');
+            if (!container) return;
+
+            var beam = document.getElementById('fulcrumBeam');
+            if (!beam) return;
+
+            var triggered = false;
+            var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            function animateFulcrum() {
+                if (triggered) return;
+                triggered = true;
+
+                if (reducedMotion) {
+                    beam.style.transform = 'rotate(-3deg)';
+                    return;
+                }
+
+                beam.style.transition = 'transform 1.5s ease-out';
+                beam.style.transform = 'rotate(-3deg)';
+            }
+
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        animateFulcrum();
                         observer.unobserve(entry.target);
                     }
                 });
