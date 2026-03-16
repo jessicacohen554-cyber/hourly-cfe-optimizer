@@ -24,7 +24,7 @@ from typing import Any, Dict, List
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -184,6 +184,15 @@ async def serve_guide_page():
         # Fallback to setup if guide doesn't exist yet
         return FileResponse(str(FRONTEND_DIR / "setup.html"), media_type="text/html")
     return FileResponse(str(guide_path), media_type="text/html")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Serve favicon if it exists, otherwise return 204 No Content."""
+    favicon_path = FRONTEND_DIR / "brand-assets" / "favicon.ico"
+    if favicon_path.exists():
+        return FileResponse(str(favicon_path))
+    return Response(status_code=204)
 
 
 @app.get("/setup", response_class=HTMLResponse)
@@ -407,6 +416,243 @@ def _extract_nuclear_revenue(nuc_raw: dict) -> NuclearRevenue:
     )
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Chart data computation helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _compute_threshold_sweep(year_results, zone_details, existing_clean, base_lmp):
+    """Build threshold → avg_lmp map from zone details across all years.
+
+    JS expects: {threshold_str: {avg_lmp: float}}
+    """
+    sweep = {}
+    # Start with baseline
+    sweep[str(round(existing_clean, 1))] = {"avg_lmp": round(base_lmp, 1)}
+
+    # Collect zone details from ALL year results (trajectory has multiple years)
+    for yr in year_results:
+        for zd in yr.get("zone_details", []):
+            t = zd.get("threshold", 0)
+            lmp = zd.get("avg_lmp", 0)
+            if t > 0 and lmp > 0:
+                sweep[str(round(t, 1))] = {"avg_lmp": round(lmp, 1)}
+
+    # Also use zone_details from the response-level list
+    for zd in zone_details:
+        t = zd.threshold if hasattr(zd, 'threshold') else zd.get("threshold", 0)
+        lmp = zd.avg_lmp if hasattr(zd, 'avg_lmp') else zd.get("avg_lmp", 0)
+        if t > 0 and lmp > 0:
+            sweep[str(round(t, 1))] = {"avg_lmp": round(lmp, 1)}
+
+    return sweep if len(sweep) > 1 else None
+
+
+def _compute_what_gets_built(final_year):
+    """Extract cumulative GW deployed by resource type.
+
+    JS expects: {resource_name: gw_float}
+    """
+    cum_gw = final_year.get("cumulative_gw", {})
+    if not cum_gw:
+        # Fallback: derive from resource_mix_twh using typical capacity factors
+        rmix = final_year.get("resource_mix_twh", {})
+        cf_map = {
+            'solar': 0.25, 'wind': 0.35, 'offshore_wind': 0.45,
+            'clean_firm': 0.90, 'nuclear': 0.92, 'ccs_ccgt': 0.85,
+            'hydro': 0.40, 'geothermal': 0.90,
+        }
+        cum_gw = {}
+        for res, twh in rmix.items():
+            cf = cf_map.get(res, 0.30)
+            gw = twh / (cf * 8.760) if cf > 0 else 0
+            if gw > 0.01:
+                cum_gw[res] = round(gw, 1)
+
+    # Filter out zero/negative values
+    built = {k: round(v, 1) for k, v in cum_gw.items() if v > 0.01}
+    return built if built else None
+
+
+def _compute_cost_ladder(year_results):
+    """Build cost ladder: cumulative GW vs $/MWh cost and revenue.
+
+    JS expects: [{cumulative_gw, cost_mwh, revenue_mwh}, ...]
+    """
+    # Collect all zone details with cost/revenue data
+    zones = []
+    for yr in year_results:
+        for zd in yr.get("zone_details", []):
+            cost = zd.get("cost", 0)
+            rev = zd.get("revenue", 0)
+            new_gw = zd.get("new_gw", 0)
+            t = zd.get("threshold", 0)
+            if new_gw > 0 and (cost > 0 or rev > 0):
+                zones.append({
+                    "threshold": t,
+                    "cost": cost,
+                    "revenue": rev,
+                    "new_gw": new_gw,
+                })
+
+    if not zones:
+        return None
+
+    # Sort by threshold (ascending clean %) and compute cumulative GW
+    zones.sort(key=lambda z: z["threshold"])
+    ladder = []
+    cum_gw = 0
+    for z in zones:
+        cum_gw += z["new_gw"]
+        ladder.append({
+            "cumulative_gw": round(cum_gw, 1),
+            "cost_mwh": round(z["cost"], 1),
+            "revenue_mwh": round(z["revenue"], 1),
+        })
+
+    return ladder if ladder else None
+
+
+def _compute_gas_fleet_shift(iso, final_year):
+    """Compute gas fleet capacity factors by efficiency tier at different carbon prices.
+
+    JS expects: [{carbon_price, efficient_cf, avg_cf, old_cf}, ...]
+    """
+    # Get baseline generator economics to establish capacity factors
+    gen_econ = final_year.get("generator_economics", {})
+
+    # Efficient = gas_ccgt (HR ~7.0), Average = fleet avg (~8.5), Old = gas_ct (HR ~10.5)
+    efficient_hr = HEAT_RATES.get('gas_ccgt', 7.0)
+    avg_hr = (HEAT_RATES.get('gas_ccgt', 7.0) + HEAT_RATES.get('gas_ct', 10.5)) / 2
+    old_hr = HEAT_RATES.get('gas_ct', 10.5)
+
+    base_gas_price = FUEL_PRICES.get('Medium', {}).get('gas', 3.5)
+    base_lmp = final_year.get("avg_lmp", WHOLESALE_PRICES.get(iso, 30))
+
+    carbon_prices = [0, 10, 25, 50, 75, 100, 150, 200]
+    shift_data = []
+
+    for cp in carbon_prices:
+        # Marginal cost at each efficiency tier
+        mc_efficient = efficient_hr * base_gas_price + VOM.get('gas_ccgt', 3.5) + CO2_RATES.get('gas_ccgt', 0.37) * cp
+        mc_avg = avg_hr * base_gas_price + 4.0 + 0.46 * cp
+        mc_old = old_hr * base_gas_price + VOM.get('gas_ct', 5.0) + CO2_RATES.get('gas_ct', 0.55) * cp
+
+        # LMP increases with carbon price (pass-through from marginal generator)
+        # Marginal generator is typically mid-efficiency gas
+        lmp_at_cp = base_lmp + 0.46 * cp  # ~0.46 tCO2/MWh avg fossil
+
+        # CF approximation: higher profit margin → higher dispatch
+        # CF = clamp(0.05, (lmp - mc) / lmp * base_cf_factor, 0.95)
+        def cf_from_margin(mc, lmp):
+            if lmp <= 0:
+                return 0.05
+            margin_ratio = max(0, (lmp - mc) / lmp)
+            return min(0.90, max(0.02, margin_ratio * 0.85))
+
+        shift_data.append({
+            "carbon_price": cp,
+            "efficient_cf": round(cf_from_margin(mc_efficient, lmp_at_cp), 3),
+            "avg_cf": round(cf_from_margin(mc_avg, lmp_at_cp), 3),
+            "old_cf": round(cf_from_margin(mc_old, lmp_at_cp), 3),
+        })
+
+    return shift_data
+
+
+def _compute_sensitivity_matrix(iso, base_clean_pct, base_lmp):
+    """Compute clean % sensitivity to gas price × carbon price.
+
+    JS expects: {values: number[][], gas_prices: number[], carbon_prices: number[]}
+    """
+    gas_prices = [2.0, 3.0, 3.5, 4.5, 6.0]
+    carbon_prices = [0, 25, 50, 75, 100]
+
+    # Base parameters
+    base_gas = 3.5
+    base_carbon = 0
+
+    # Sensitivity: higher gas → higher LMP → more clean competitive
+    # Higher carbon → higher fossil cost → more clean competitive
+    values = []
+    for cp in carbon_prices:
+        row = []
+        for gp in gas_prices:
+            # Each $1/MMBtu gas increase raises avg fossil MC by ~$7-8/MWh (HR ~7-8)
+            gas_delta = (gp - base_gas) * 7.5  # $/MWh LMP increase
+            # Each $10/ton carbon raises MC by ~$3.7-5.5/MWh (avg ~$4.5/MWh)
+            carbon_delta = (cp - base_carbon) * 0.45  # $/MWh
+
+            # LMP increase makes clean more competitive → more clean deployed
+            # Approximate: each $10/MWh LMP increase → +3-5% clean
+            lmp_increase = gas_delta + carbon_delta
+            pct_increase = lmp_increase * 0.35  # ~3.5% per $10/MWh
+
+            clean_pct = min(99.9, max(10, base_clean_pct + pct_increase))
+            row.append(round(clean_pct, 1))
+        values.append(row)
+
+    return {
+        "values": values,
+        "gas_prices": gas_prices,
+        "carbon_prices": carbon_prices,
+    }
+
+
+def _compute_ccs_analysis(iso):
+    """Compute CCS retrofit vs new gas cost curves at different carbon prices.
+
+    JS expects: {carbon_prices: [], existing_ccgt_cost: [], ccs_retrofit_cost: [], new_gas_cost: []}
+    """
+    carbon_prices = [0, 10, 25, 50, 75, 100, 150, 200]
+
+    gas_price = FUEL_PRICES.get('Medium', {}).get('gas', 3.5)
+
+    # Existing CCGT: HR=7.0, VOM=$3.50, CO2=0.37 t/MWh (no capture)
+    ccgt_hr = HEAT_RATES.get('gas_ccgt', 7.0)
+    ccgt_vom = VOM.get('gas_ccgt', 3.5)
+    ccgt_co2 = CO2_RATES.get('gas_ccgt', 0.37)
+
+    # CCS retrofit: HR=8.4 (20% energy penalty), VOM=$8, CO2=0.037 (90% capture)
+    # Plus ~$30/MWh capex amortization for retrofit
+    ccs_hr = ccgt_hr * 1.20  # 20% efficiency penalty
+    ccs_vom = 8.0
+    ccs_co2 = ccgt_co2 * 0.10  # 90% capture
+    ccs_capex_mwh = 30.0  # Amortized retrofit cost
+    ccs_45q = 27.5  # 45Q credit per ton captured (§45Q at $85/ton × capture rate)
+
+    # New gas CCGT: HR=6.4 (newer fleet), VOM=$3.0, CO2=0.34
+    new_hr = 6.4
+    new_vom = 3.0
+    new_co2 = 0.34
+    new_capex_mwh = 12.0  # Amortized new-build cost
+
+    existing_costs = []
+    ccs_costs = []
+    new_gas_costs = []
+
+    for cp in carbon_prices:
+        # Existing CCGT total cost
+        existing = ccgt_hr * gas_price + ccgt_vom + ccgt_co2 * cp
+        existing_costs.append(round(existing, 1))
+
+        # CCS retrofit total cost (with 45Q credit offset)
+        tons_captured = (ccgt_co2 - ccs_co2)  # tons captured per MWh
+        ccs_credit = min(ccs_45q, tons_captured * 85)  # $85/ton × captured
+        ccs_total = ccs_hr * gas_price + ccs_vom + ccs_co2 * cp + ccs_capex_mwh - ccs_credit
+        ccs_costs.append(round(ccs_total, 1))
+
+        # New gas CCGT
+        new_total = new_hr * gas_price + new_vom + new_co2 * cp + new_capex_mwh
+        new_gas_costs.append(round(new_total, 1))
+
+    return {
+        "carbon_prices": carbon_prices,
+        "existing_ccgt_cost": existing_costs,
+        "ccs_retrofit_cost": ccs_costs,
+        "new_gas_cost": new_gas_costs,
+    }
+
+
 def _build_simulation_response(iso: str, year_results: list) -> SimulationResponse:
     """Build a SimulationResponse from raw simulation year_results for one ISO."""
     if not year_results:
@@ -538,6 +784,32 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
             label="Capacity Revenue by Year",
         )
 
+    # ── Compute additional chart data ──
+
+    # 1. Threshold sweep: LMP at each threshold from zone_details
+    threshold_sweep = _compute_threshold_sweep(
+        year_results, zone_details, existing_clean,
+        final.get("avg_lmp", WHOLESALE_PRICES.get(iso, 30)),
+    )
+
+    # 2. What gets built: cumulative GW by resource
+    what_gets_built = _compute_what_gets_built(final)
+
+    # 3. Cost ladder: cost vs cumulative GW from zone details
+    cost_ladder = _compute_cost_ladder(year_results)
+
+    # 4. Gas fleet shift: CF by efficiency tier at different carbon prices
+    gas_fleet_shift = _compute_gas_fleet_shift(iso, final)
+
+    # 5. Sensitivity matrix: clean % at gas × carbon price grid
+    sensitivity_matrix = _compute_sensitivity_matrix(
+        iso, final.get("clean_pct", existing_clean),
+        final.get("avg_lmp", 30),
+    )
+
+    # 6. CCS analysis: cost curves at different carbon prices
+    ccs_analysis = _compute_ccs_analysis(iso)
+
     return SimulationResponse(
         iso=iso,
         existing_clean_pct=round(existing_clean, 1),
@@ -555,6 +827,12 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
         capacity_rev_time_series=cap_rev_ts,
         supply_stack_summary=supply_stack,
         fuel_bin_table=fuel_bins,
+        threshold_sweep=threshold_sweep,
+        what_gets_built=what_gets_built,
+        cost_ladder=cost_ladder,
+        gas_fleet_shift=gas_fleet_shift,
+        sensitivity_matrix=sensitivity_matrix,
+        ccs_analysis=ccs_analysis,
     )
 
 
@@ -596,10 +874,50 @@ async def simulate(req: SimulationRequest):
         plant_level_data = []
         plant_summary = None
         try:
-            from scripts.market_simulation import compute_plant_level_economics
-            from scripts.lmp_engine import build_plant_level_merit_order
-            plant_stack = build_plant_level_merit_order(iso, results.get(iso, []))
-            plant_level_data = compute_plant_level_economics(plant_stack, response.avg_lmp)
+            import numpy as np
+            from market_simulation import compute_plant_level_economics
+            from lmp_engine import build_plant_level_merit_order
+
+            # Extract clean_pct from the response
+            clean_pct = (response.market_outcome_clean_pct or 50.0) / 100.0
+
+            # Get fuel/carbon parameters from the conditions
+            fuel_level = conditions.get("fuel_level", "Medium")
+            carbon_price_val = conditions.get("carbon_price", 0)
+
+            plant_stack, total_cap = build_plant_level_merit_order(
+                iso, clean_pct,
+                fuel_level=fuel_level,
+                carbon_price=carbon_price_val,
+            )
+
+            # Build synthetic hourly data from the simulation summary.
+            # The simulation doesn't return 8760 arrays, so we approximate:
+            avg_lmp = response.avg_lmp or WHOLESALE_PRICES.get(iso, 30.0)
+            hourly_lmp = np.full(8760, avg_lmp)
+
+            # Demand MW profile — flat approximation from regional demand
+            demand_twh = response.demand_twh or REGIONAL_DEMAND_TWH.get(iso, 300)
+            avg_demand_mw = demand_twh * 1e6 / 8760
+            demand_mw_profile = np.full(8760, avg_demand_mw)
+
+            # Residual (fossil) demand: fraction of demand not served by clean
+            fossil_frac = max(0, 1.0 - clean_pct)
+            residual_demand = np.full(8760, fossil_frac)
+            dispatch = {'residual_demand': residual_demand}
+
+            # Fuel prices
+            fuel_prices_dict = {}
+            if conditions.get("custom_fuel_prices"):
+                fuel_prices_dict = conditions["custom_fuel_prices"]
+            else:
+                fuel_prices_dict = FUEL_PRICES.get(fuel_level, FUEL_PRICES.get("Medium", {}))
+
+            plant_level_data = compute_plant_level_economics(
+                plant_stack, hourly_lmp, dispatch,
+                demand_mw_profile, fuel_prices_dict, carbon_price_val,
+            )
+
             # Compute summary counts
             operating = sum(1 for p in plant_level_data if p.get("status") == "operating")
             at_risk = sum(1 for p in plant_level_data if p.get("status") == "at_risk")
@@ -612,8 +930,10 @@ async def simulate(req: SimulationRequest):
             }
             response.plant_level_summary = plant_summary
         except Exception as plant_err:
+            import traceback as tb
             # Plant-level economics is optional — don't fail the simulation
             print(f"Note: Plant-level economics not available: {plant_err}")
+            tb.print_exc()
 
         # Save results to indexed run directory
         try:
@@ -996,23 +1316,54 @@ def _save_plant_level_csv(filepath: Path, plant_data: list):
 
 
 def _save_results_csv(filepath: Path, response_data: dict):
-    """Save result data as CSV."""
+    """Save comprehensive result data as CSV with multiple sections."""
     with open(filepath, "w", newline="") as f:
         w = csv.writer(f)
-        # Generator economics
+
+        # ── Section 1: Summary Metrics ──
+        w.writerow(["=== Summary Metrics ==="])
+        w.writerow(["metric", "value", "unit"])
+        w.writerow(["iso", response_data.get("iso", ""), ""])
+        w.writerow(["existing_clean_pct", response_data.get("existing_clean_pct", 0), "%"])
+        w.writerow(["market_outcome_clean_pct", response_data.get("market_outcome_clean_pct", 0), "%"])
+        w.writerow(["avg_lmp", response_data.get("avg_lmp", 0), "$/MWh"])
+        w.writerow(["emissions_mt", response_data.get("emissions_mt", 0), "MT CO2"])
+        w.writerow(["demand_twh", response_data.get("demand_twh", 0), "TWh"])
+        w.writerow(["nuclear_revenue_mwh", response_data.get("nuclear_revenue_mwh", 0), "$/MWh"])
+        ccs_be = response_data.get("ccs_breakeven_carbon_price", 0)
+        w.writerow(["ccs_breakeven_carbon_price", ccs_be, "$/ton"])
+        w.writerow([])
+
+        # ── Section 2: Resource Mix ──
+        rmix = response_data.get("resource_mix_twh", {})
+        if rmix:
+            w.writerow(["=== Resource Mix (TWh) ==="])
+            w.writerow(["resource", "generation_twh", "pct_of_total"])
+            total_twh = sum(rmix.values()) or 1
+            for r, v in sorted(rmix.items(), key=lambda x: -x[1]):
+                w.writerow([r, round(v, 1), round(v / total_twh * 100, 1)])
+            w.writerow([])
+
+        # ── Section 3: Generator Economics ──
         gen_econ = response_data.get("generator_economics", [])
         if gen_econ:
             w.writerow(["=== Generator Economics ==="])
-            w.writerow(["unit_type", "capacity_mw", "marginal_cost", "dispatch_hours",
-                         "capacity_factor", "avg_revenue_mwh", "profit_mwh", "status"])
+            w.writerow(["unit_type", "capacity_mw", "marginal_cost_mwh",
+                         "dispatch_hours", "capacity_factor",
+                         "avg_revenue_mwh", "vom_mwh", "fuel_cost_mwh",
+                         "profit_mwh", "status"])
             for g in gen_econ:
                 if isinstance(g, dict):
-                    w.writerow([g.get("unit_type"), g.get("capacity_mw"), g.get("marginal_cost"),
-                                g.get("dispatch_hours"), g.get("capacity_factor"),
-                                g.get("avg_revenue_mwh"), g.get("profit_mwh"), g.get("status")])
+                    w.writerow([
+                        g.get("unit_type"), g.get("capacity_mw"),
+                        g.get("marginal_cost"), g.get("dispatch_hours"),
+                        g.get("capacity_factor"), g.get("avg_revenue_mwh"),
+                        g.get("vom_mwh", ""), g.get("fuel_cost_mwh", ""),
+                        g.get("profit_mwh"), g.get("status"),
+                    ])
             w.writerow([])
 
-        # Supply stack
+        # ── Section 4: Supply Stack ──
         supply = response_data.get("supply_stack_summary", [])
         if supply:
             w.writerow(["=== Supply Stack ==="])
@@ -1022,24 +1373,71 @@ def _save_results_csv(filepath: Path, response_data: dict):
                     w.writerow([s.get("resource"), s.get("generation_twh")])
             w.writerow([])
 
-        # Resource mix
-        rmix = response_data.get("resource_mix_twh", {})
-        if rmix:
-            w.writerow(["=== Resource Mix (TWh) ==="])
-            w.writerow(["resource", "twh"])
-            for r, v in sorted(rmix.items(), key=lambda x: -x[1]):
-                w.writerow([r, round(v, 1)])
+        # ── Section 5: Year-by-Year Trajectory ──
+        years = response_data.get("year_results", [])
+        if years:
+            w.writerow(["=== Year-by-Year Trajectory ==="])
+            w.writerow([
+                "year", "clean_pct", "demand_twh", "emissions_mt",
+                "emission_rate_tco2_mwh", "avg_lmp", "lmp_p90",
+                "cost_per_mwh", "revenue_per_mwh",
+                "energy_rev_mwh", "capacity_rev_mwh", "rec_rev_mwh",
+                "gas_built_gw", "market_stop",
+                "zones_deployed", "nuclear_retired",
+                "rps_mandated_pct", "rps_eligible_pct", "rps_shortfall_pct",
+                "acp_cost_million",
+            ])
+            for yr in years:
+                if isinstance(yr, dict):
+                    w.writerow([
+                        yr.get("year"), yr.get("clean_pct"),
+                        yr.get("demand_twh"), yr.get("emissions_mt"),
+                        yr.get("emission_rate_tco2_mwh"), yr.get("avg_lmp"),
+                        yr.get("lmp_p90"), yr.get("cost_per_mwh"),
+                        yr.get("revenue_per_mwh"), yr.get("energy_rev_mwh"),
+                        yr.get("capacity_rev_mwh"), yr.get("rec_rev_mwh"),
+                        yr.get("gas_built_gw"), yr.get("market_stop"),
+                        "|".join(str(z) for z in yr.get("zones_deployed", [])),
+                        yr.get("nuclear_retired"),
+                        yr.get("rps_mandated_pct"), yr.get("rps_eligible_pct"),
+                        yr.get("rps_shortfall_pct"), yr.get("acp_cost_million"),
+                    ])
             w.writerow([])
 
-        # Summary metrics
-        w.writerow(["=== Summary Metrics ==="])
-        w.writerow(["metric", "value"])
-        w.writerow(["iso", response_data.get("iso", "")])
-        w.writerow(["existing_clean_pct", response_data.get("existing_clean_pct", 0)])
-        w.writerow(["market_outcome_clean_pct", response_data.get("market_outcome_clean_pct", 0)])
-        w.writerow(["avg_lmp", response_data.get("avg_lmp", 0)])
-        w.writerow(["emissions_mt", response_data.get("emissions_mt", 0)])
-        w.writerow(["demand_twh", response_data.get("demand_twh", 0)])
+        # ── Section 6: Zone Economics Detail ──
+        zone_details = response_data.get("zone_details", [])
+        if zone_details:
+            w.writerow(["=== Zone Economics Detail ==="])
+            w.writerow(["threshold", "revenue_mwh", "cost_mwh", "profit_mwh",
+                         "new_gw", "avg_lmp",
+                         "energy_rev_mwh", "capacity_rev_mwh", "rec_rev_mwh"])
+            for zd in zone_details:
+                if isinstance(zd, dict):
+                    w.writerow([
+                        zd.get("threshold"), zd.get("revenue"),
+                        zd.get("cost"), zd.get("profit"),
+                        zd.get("new_gw"), zd.get("avg_lmp"),
+                        zd.get("energy_rev_mwh"), zd.get("capacity_rev_mwh"),
+                        zd.get("rec_rev_mwh"),
+                    ])
+            w.writerow([])
+
+        # ── Section 7: Nuclear Revenue Breakdown ──
+        nuc_rev = response_data.get("nuclear_revenue", {})
+        if nuc_rev:
+            w.writerow(["=== Nuclear Revenue Breakdown ==="])
+            w.writerow(["component", "value_mwh"])
+            for k, v in nuc_rev.items():
+                w.writerow([k, v])
+            w.writerow([])
+
+        # ── Section 8: Plant-Level Summary ──
+        plant_summary = response_data.get("plant_level_summary")
+        if plant_summary:
+            w.writerow(["=== Plant-Level Summary ==="])
+            w.writerow(["status", "count"])
+            for status in ["operating", "at_risk", "stranded", "total"]:
+                w.writerow([status, plant_summary.get(status, 0)])
 
 
 def _save_params_csv(filepath: Path, params: dict):
