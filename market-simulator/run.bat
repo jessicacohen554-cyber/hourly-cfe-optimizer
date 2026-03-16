@@ -28,7 +28,7 @@ echo [OK] Found Python
 
 REM ── Install dependencies ───────────────────────────────────────────────
 echo Installing dependencies...
-%PYTHON% -m pip install -r requirements.txt --quiet 2>nul
+%PYTHON% -m pip install -r app-startup\requirements.txt --quiet 2>nul
 echo [OK] Dependencies installed
 
 REM ── Generate synthetic data if needed ──────────────────────────────────
