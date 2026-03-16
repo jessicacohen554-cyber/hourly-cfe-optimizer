@@ -26,7 +26,7 @@ html {
 body {
     font-family: var(--font-body);
     color: var(--text-primary);
-    line-height: 1.55;
+    line-height: 1.75;
     min-height: 100vh;
     background: var(--bg-page);
     -webkit-font-smoothing: antialiased;
@@ -186,7 +186,7 @@ body {
     --max-content: 1440px;
     --max-content-wide: 1600px;
     --max-prose: 1080px;
-    --max-narrow: 820px;
+    --max-narrow: 940px;
 }
 
 /* ========== TYPOGRAPHY ========== */
@@ -196,7 +196,7 @@ h1, h2, h3, h4, h5, h6 {
     letter-spacing: -0.3px;
 }
 h2 {
-    font-size: 1.55rem;
+    font-size: 1.6rem;
     font-weight: 700;
     color: var(--navy);
     margin-bottom: var(--space-sm);
@@ -204,7 +204,7 @@ h2 {
 h3 {
     color: var(--red-dark);
     font-weight: 600;
-    font-size: 1.05rem;
+    font-size: 1.15rem;
 }
 p {
     margin-bottom: var(--space-md);
@@ -570,16 +570,36 @@ p {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
+    align-items: stretch;
 }
 .grid-3col {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 20px;
+    align-items: stretch;
 }
 .grid-auto {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 20px;
+    align-items: stretch;
+}
+.grid-2col > .card,
+.grid-3col > .card,
+.grid-auto > .card,
+.grid-2col > .chart-panel,
+.grid-3col > .chart-panel,
+.grid-auto > .chart-panel {
+    display: flex;
+    flex-direction: column;
+}
+.grid-2col > .card > :last-child,
+.grid-3col > .card > :last-child,
+.grid-auto > .card > :last-child,
+.grid-2col > .chart-panel > :last-child,
+.grid-3col > .chart-panel > :last-child,
+.grid-auto > .chart-panel > :last-child {
+    flex-grow: 1;
 }
 .grid-stats {
     display: grid;

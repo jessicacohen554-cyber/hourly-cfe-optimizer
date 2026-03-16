@@ -18,7 +18,7 @@
 body { background: var(--bg-page-white); }
 
 .ref-intro {
-    max-width: 800px;
+    max-width: 940px;
     margin: 0 auto;
     padding: 56px 24px 32px;
     text-align: center;
@@ -47,6 +47,7 @@ body { background: var(--bg-page-white); }
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 24px;
+    align-items: stretch;
 }
 .ref-card {
     background: var(--bg-card);
@@ -55,7 +56,8 @@ body { background: var(--bg-page-white); }
     padding: 28px;
     transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
     text-decoration: none;
-    display: block;
+    display: flex;
+    flex-direction: column;
     opacity: 0;
     transform: translateY(24px);
 }

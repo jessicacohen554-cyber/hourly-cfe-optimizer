@@ -59,6 +59,7 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 24px;
+    align-items: stretch;
     max-width: 1100px;
     margin: 0 auto;
     padding: 0 24px 40px;
@@ -67,6 +68,8 @@
     background: #fff; /* contrast-fix: cards need opaque bg on cinematic dark background */
     border-radius: 12px;
     padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 .explore-card:hover {
