@@ -50,7 +50,7 @@ const PLOTLY_LAYOUT_BASE = {
     font: { family: "'Source Sans Pro', Calibri, Arial, sans-serif", color: '#1A232F' },
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor: 'rgba(0,0,0,0)',
-    margin: { t: 30, r: 30, b: 50, l: 60 },
+    margin: { t: 40, r: 30, b: 50, l: 60 },
     autosize: true,
 };
 
@@ -189,6 +189,19 @@ function updateStats(data) {
     setText('statEmissions', fmtNum(data.emissions_mt, 1));
     setText('statDemand', fmtNum(data.demand_twh, 0));
     setText('statNucRev', '$' + fmtNum(data.nuclear_revenue?.total_mwh));
+
+    // Plant-level summary KPI cards
+    const plantStats = document.getElementById('plantStats');
+    const ps = data.plant_level_summary;
+    if (plantStats && ps) {
+        setText('statPlantOperating', fmtNum(ps.operating, 0));
+        setText('statPlantAtRisk', fmtNum(ps.at_risk, 0));
+        setText('statPlantStranded', fmtNum(ps.stranded, 0));
+        setText('statPlantTotal', fmtNum(ps.total, 0));
+        plantStats.style.display = '';
+    } else if (plantStats) {
+        plantStats.style.display = 'none';
+    }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -233,6 +246,7 @@ function renderLMPTimeSeries(data) {
         const xTitle = hours.length > 48 ? 'Hour of Year' : 'Hour of Day';
         Plotly.newPlot(container, traces, {
             ...PLOTLY_LAYOUT_BASE,
+            title: { text: `LMP & Capacity Revenue — ${currentISO}`, font: { size: 14 } },
             xaxis: { title: xTitle, gridcolor: '#f0f0f0' },
             yaxis: { title: 'LMP ($/MWh)', gridcolor: '#f0f0f0' },
             yaxis2: capRevProfile ? { title: 'Capacity Rev ($/MWh)', overlaying: 'y', side: 'right' } : undefined,
@@ -267,6 +281,7 @@ function renderLMPTimeSeries(data) {
 
         Plotly.newPlot(container, traces, {
             ...PLOTLY_LAYOUT_BASE,
+            title: { text: `LMP & Revenue Trajectory — ${currentISO}`, font: { size: 14 } },
             xaxis: { title: 'Year', gridcolor: '#f0f0f0' },
             yaxis: { title: '$/MWh', gridcolor: '#f0f0f0' },
             legend: { x: 0, y: 1.12, orientation: 'h' },
@@ -283,6 +298,7 @@ function renderLMPTimeSeries(data) {
             textposition: 'outside',
         }], {
             ...PLOTLY_LAYOUT_BASE,
+            title: { text: `Average LMP — ${currentISO}`, font: { size: 14 } },
             yaxis: { title: '$/MWh', gridcolor: '#f0f0f0' },
         }, { responsive: true });
     }
@@ -308,6 +324,7 @@ function renderSupplyStack(data) {
             hovertemplate: '%{x}: %{y:.1f} TWh<extra></extra>',
         }], {
             ...PLOTLY_LAYOUT_BASE,
+            title: { text: `Supply Stack — ${currentISO}`, font: { size: 14 } },
             yaxis: { title: 'Generation (TWh)', gridcolor: '#f0f0f0' },
             xaxis: { title: '' },
         }, { responsive: true });
@@ -335,6 +352,7 @@ function renderSupplyStack(data) {
 
         Plotly.newPlot(container, traces, {
             ...PLOTLY_LAYOUT_BASE,
+            title: { text: `Supply Stack Trajectory — ${currentISO}`, font: { size: 14 } },
             xaxis: { title: 'Year', gridcolor: '#f0f0f0' },
             yaxis: { title: 'Generation (TWh)', gridcolor: '#f0f0f0' },
             legend: { x: 0, y: 1.15, orientation: 'h' },
@@ -353,6 +371,7 @@ function renderSupplyStack(data) {
             hovertemplate: '%{x}: %{y:.1f} TWh<extra></extra>',
         }], {
             ...PLOTLY_LAYOUT_BASE,
+            title: { text: `Resource Mix — ${currentISO}`, font: { size: 14 } },
             yaxis: { title: 'Generation (TWh)', gridcolor: '#f0f0f0' },
         }, { responsive: true });
     } else {
@@ -430,6 +449,7 @@ function renderMeritOrder(data) {
     const avgLMP = data.avg_lmp || 0;
     Plotly.newPlot('chartMeritOrder', traces, {
         ...PLOTLY_LAYOUT_BASE,
+        title: { text: `Merit-Order Stack — ${currentISO}`, font: { size: 14 } },
         yaxis: { title: 'Capacity (GW)', gridcolor: '#f0f0f0' },
         annotations: [{
             x: sorted.length - 1,
@@ -457,6 +477,7 @@ function renderProfitability(data) {
         { x: names, y: profit, name: 'Profit $/MWh', type: 'bar', marker: { color: profit.map(p => p >= 0 ? '#6BA543' : '#F47B27') } },
     ], {
         ...PLOTLY_LAYOUT_BASE,
+        title: { text: `Generator Profitability — ${currentISO}`, font: { size: 14 } },
         barmode: 'group',
         yaxis: { title: '$/MWh', gridcolor: '#f0f0f0' },
     }, { responsive: true });
@@ -477,6 +498,7 @@ function renderNuclearRevenue(data) {
         hovertemplate: '%{x}: $%{y:.1f}/MWh<extra></extra>',
     }], {
         ...PLOTLY_LAYOUT_BASE,
+        title: { text: `Nuclear Revenue Stack — ${currentISO}`, font: { size: 14 } },
         yaxis: { title: '$/MWh', gridcolor: '#f0f0f0' },
     }, { responsive: true });
 }
@@ -496,6 +518,7 @@ function renderLMPImpact(data) {
         hovertemplate: '%{x}% clean: $%{y:.1f}/MWh<extra></extra>',
     }], {
         ...PLOTLY_LAYOUT_BASE,
+        title: { text: `LMP Impact Curve — ${currentISO}`, font: { size: 14 } },
         xaxis: { title: 'Clean Energy %', gridcolor: '#f0f0f0' },
         yaxis: { title: 'Avg LMP ($/MWh)', gridcolor: '#f0f0f0' },
     }, { responsive: true });
@@ -517,6 +540,7 @@ function renderCCSBreakeven(data) {
         { x: carbonPrices, y: newGasCost, name: 'New Efficient Gas', mode: 'lines', line: { color: '#6BA543', width: 3 } },
     ], {
         ...PLOTLY_LAYOUT_BASE,
+        title: { text: `CCS Retrofit vs New Gas — ${currentISO}`, font: { size: 14 } },
         xaxis: { title: 'Carbon Price ($/ton)', gridcolor: '#f0f0f0' },
         yaxis: { title: '$/MWh Total Cost', gridcolor: '#f0f0f0' },
     }, { responsive: true });
@@ -538,7 +562,10 @@ function renderWhatBuilt(data) {
         marker: { colors: colors },
         textinfo: 'label+percent',
         hovertemplate: '%{label}: %{value:.1f} GW (%{percent})<extra></extra>',
-    }], PLOTLY_LAYOUT_BASE, { responsive: true });
+    }], {
+        ...PLOTLY_LAYOUT_BASE,
+        title: { text: `What Gets Built — ${currentISO}`, font: { size: 14 } },
+    }, { responsive: true });
 }
 
 // ── Fossil Bin Economics ──
@@ -553,6 +580,7 @@ function renderFossilBins(data) {
         { x: names, y: bins.map(b => (b.capacity_factor || 0) * 100), name: 'CF %', type: 'scatter', mode: 'lines+markers', yaxis: 'y2', line: { color: '#F47B27', width: 3 }, marker: { size: 8 } },
     ], {
         ...PLOTLY_LAYOUT_BASE,
+        title: { text: `Fossil Fleet Economics — ${currentISO}`, font: { size: 14 } },
         yaxis: { title: 'Dispatch Hours', gridcolor: '#f0f0f0' },
         yaxis2: { title: 'Capacity Factor %', overlaying: 'y', side: 'right', range: [0, 100] },
         barmode: 'group',
@@ -573,6 +601,7 @@ function renderCostLadder(data) {
         { x: cumGW, y: revenues, name: 'Revenue $/MWh', type: 'scatter', mode: 'lines+markers', line: { color: '#6BA543', width: 3 } },
     ], {
         ...PLOTLY_LAYOUT_BASE,
+        title: { text: `Clean Energy Cost Ladder — ${currentISO}`, font: { size: 14 } },
         xaxis: { title: 'Cumulative New Clean GW', gridcolor: '#f0f0f0' },
         yaxis: { title: '$/MWh', gridcolor: '#f0f0f0' },
     }, { responsive: true });
@@ -590,6 +619,7 @@ function renderGasShift(data) {
             { x: shift.map(s => s.carbon_price), y: shift.map(s => s.old_cf * 100), name: 'Old CCGT', mode: 'lines', line: { color: '#9CA3AF', width: 3, dash: 'dash' } },
         ], {
             ...PLOTLY_LAYOUT_BASE,
+            title: { text: `Gas Fleet Efficiency Shift — ${currentISO}`, font: { size: 14 } },
             xaxis: { title: 'Carbon Price ($/ton)', gridcolor: '#f0f0f0' },
             yaxis: { title: 'Capacity Factor %', gridcolor: '#f0f0f0', range: [0, 100] },
         }, { responsive: true });
@@ -613,6 +643,7 @@ function renderSensitivity(data) {
         hovertemplate: 'Gas: $%{x}/MMBtu<br>Carbon: $%{y}/ton<br>Clean: %{z:.1f}%<extra></extra>',
     }], {
         ...PLOTLY_LAYOUT_BASE,
+        title: { text: `Gas vs Carbon Price Sensitivity — ${currentISO}`, font: { size: 14 } },
         xaxis: { title: 'Gas Price ($/MMBtu)' },
         yaxis: { title: 'Carbon Price ($/ton)' },
     }, { responsive: true });
@@ -781,6 +812,34 @@ function setupExportButtons(data) {
                 btnExport.disabled = false;
             }, 2000);
         });
+    }
+
+    // Download Plant-Level CSV button
+    const btnPlantCSV = document.getElementById('btnDownloadPlantCSV');
+    if (btnPlantCSV && data.run_id) {
+        btnPlantCSV.addEventListener('click', async () => {
+            try {
+                const resp = await fetch(`/api/runs/${data.run_id}/plant-csv`);
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    alert(err.detail || 'Plant-level CSV not available for this run.');
+                    return;
+                }
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${data.run_id}_plant_results.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (e) {
+                console.warn('Failed to download plant CSV:', e);
+                alert('Failed to download plant-level CSV.');
+            }
+        });
+    } else if (btnPlantCSV) {
+        btnPlantCSV.disabled = true;
+        btnPlantCSV.title = 'No run ID — run a simulation first';
     }
 
     // Download CSV button
