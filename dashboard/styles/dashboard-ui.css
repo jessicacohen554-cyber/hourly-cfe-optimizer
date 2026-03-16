@@ -449,7 +449,7 @@
     font-size: 1.07rem;
     text-transform: capitalize;
     letter-spacing: 0.06em;
-    color: var(--red-dark);
+    color: #B91C1C; /* contrast-fix: was var(--red-dark)/#DC2626 (4.22:1 on tinted bg), now #B91C1C (5.5:1) */
     margin-bottom: 10px;
     display: flex;
     align-items: center;

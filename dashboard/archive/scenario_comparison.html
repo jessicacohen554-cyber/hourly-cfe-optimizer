@@ -20,7 +20,59 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <style>
-/* Page background overridden by cinematic.css */
+/* ========== CONTRAST FIXES — cinematic.css transparency override ========== */
+/* Content sections need solid white bg so dark text is readable */
+.content-section:not(.section-dark):not(.panel-navy),
+.story-section:not(.section-dark):not(.panel-navy) {
+    background: #FFFFFF !important;
+    border-radius: 16px;
+    margin-bottom: 8px;
+    padding: 36px 32px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+/* Hero needs its own dark bg reinforced against cinematic override */
+.hero {
+    background: linear-gradient(180deg, var(--navy-dark, #0B1120) 0%, var(--navy, #1A2744) 60%, var(--navy-mid, #1E3055) 100%) !important;
+}
+/* Metric tiles wrapper needs solid bg */
+.metric-tiles {
+    background: #F8F9FC !important;
+    border-radius: 16px;
+    padding-top: 24px !important;
+    padding-bottom: 24px !important;
+}
+/* Key findings panel — solid bg */
+.key-findings {
+    background: linear-gradient(135deg, rgba(26,39,68,0.04) 0%, rgba(14,165,233,0.06) 100%) !important;
+    border: 1px solid rgba(14,165,233,0.15) !important;
+}
+/* Scenario tags — ensure contrast */
+.scenario-tag.tag-a {
+    background: rgba(79,70,229,0.15) !important;
+    color: #4F46E5 !important;
+    border: 1px solid rgba(79,70,229,0.3) !important;
+}
+.scenario-tag.tag-b {
+    background: rgba(8,145,178,0.15) !important;
+    color: #0E7490 !important;
+    border: 1px solid rgba(8,145,178,0.3) !important;
+}
+/* Section-dark methodology table — light text on dark */
+.section-dark h2, .section-dark h3 { color: #fff !important; }
+.section-dark p, .section-dark li { color: rgba(255,255,255,0.92) !important; }
+.section-dark strong { color: rgba(255,255,255,0.97) !important; }
+.section-dark th { color: rgba(255,255,255,0.95) !important; }
+.section-dark td { color: rgba(255,255,255,0.92) !important; }
+.section-dark a { color: #60A5FA !important; }
+.section-dark code { color: rgba(255,255,255,0.9) !important; background: rgba(255,255,255,0.1) !important; }
+.section-dark ol, .section-dark ul { color: rgba(255,255,255,0.92) !important; }
+/* Section-dark table cells with inline color — force light */
+.section-dark td[style*="color"] { color: rgba(255,255,255,0.92) !important; }
+.section-dark th[style*="color"] { color: rgba(255,255,255,0.95) !important; }
+/* Story badge amber — darken */
+.story-badge { color: #92400E !important; }
+/* Teal strategy span — darken for white bg */
+span[style*="0891B2"] { color: #0E7490 !important; }
 
 /* ===== PAGE-SPECIFIC: Hero (article intro below dark header) ===== */
 .hero { background: linear-gradient(180deg, var(--navy-dark) 0%, var(--navy) 60%, var(--navy-mid) 100%); padding: 48px var(--pad-page) 40px; text-align: center; }
@@ -184,6 +236,157 @@
     .hero-stats { gap: 12px; }
     .hero-stat .stat-val { font-size: 1.3rem; }
 }
+
+/* ================================================================
+   CONTRAST / READABILITY FIXES
+   cinematic.css makes many sections transparent, exposing the dark
+   parallax background image. These overrides give every content
+   region an opaque background so text is always readable.
+   ================================================================ */
+
+/* --- Hero section: keep its own dark gradient (page-specific rule
+   already sets it, but reinforce in case cinematic.css strips it) --- */
+.hero {
+    background: linear-gradient(135deg, #0F172A 0%, #1A2744 60%, #1E3055 100%) !important;
+}
+
+/* --- Story section: opaque white panel so dark text is readable --- */
+section.content-section.story-section {
+    background: #FFFFFF !important;
+}
+
+/* --- Dashboard header (section-light without panel-navy): opaque white --- */
+.dashboard-header.section-light {
+    background: #FFFFFF !important;
+}
+
+/* --- Metric tiles wrapper: sits outside any section, give it a bg --- */
+.metric-tiles {
+    background: #F8F9FC;
+}
+
+/* --- Key-findings panel inside hero: ensure opaque light bg --- */
+.key-findings {
+    background: linear-gradient(135deg, rgba(26,39,68,0.95) 0%, rgba(14,165,233,0.18) 100%) !important;
+}
+.kf-text {
+    color: rgba(255,255,255,0.92) !important;
+}
+.kf-text strong {
+    color: #fff !important;
+}
+.key-findings-title {
+    color: #60A5FA !important;
+}
+
+/* --- "Five Modes of Failure" cards in hero: ensure colored <strong>
+   elements have sufficient contrast on dark bg --- */
+.hero div[style*="border-left"] strong[style*="color: #FF6B6B"],
+.hero .stat-val[style*="color:#FF6B6B"] {
+    color: #FCA5A5 !important;  /* brighter red — 8.5:1 on dark hero bg */
+}
+
+/* --- Table inside .section-dark methodology: inline styles use dark
+   colors (rgba(0,0,0,...), #15803D, #DC2626). cinematic.css .section-dark
+   rules with !important already handle td/th. But the thead th with
+   inline color: rgba(0,0,0,0.45) needs override. Force white text. --- */
+/* Force all inline-styled table text white on dark bg */
+.section-dark table th[style],
+.section-dark table td[style] {
+    color: rgba(255,255,255,0.92) !important;
+}
+/* Strategy header columns: brighter versions of brand colors for dark bg */
+.section-dark table th[style*="color: #4F46E5"],
+.section-dark table th[style*="color:#4F46E5"] {
+    color: #A5B4FC !important;  /* light indigo — 8.1:1 on dark */
+}
+.section-dark table th[style*="color: #0891B2"],
+.section-dark table th[style*="color:#0891B2"] {
+    color: #67E8F9 !important;  /* light teal — 11.3:1 on dark */
+}
+/* Preserve semantic green/red but ensure contrast on dark bg */
+.section-dark td[style*="color:#15803D"] {
+    color: #4ADE80 !important;  /* bright green — 7.1:1 on dark */
+}
+.section-dark td[style*="color:#DC2626"] {
+    color: #FCA5A5 !important;  /* bright red — 8.5:1 on dark */
+}
+
+/* --- Scenario tags (.tag-a, .tag-b) on dark backgrounds:
+   These have semi-transparent bg + colored text. On dark bg the
+   semi-transparent bg is nearly invisible. Make text white. --- */
+.section-dark .scenario-tag.tag-a,
+.section-dark .scenario-tag.tag-b,
+.panel-navy .scenario-tag.tag-a,
+.panel-navy .scenario-tag.tag-b {
+    color: #fff !important;
+    border-color: rgba(255,255,255,0.3) !important;
+}
+.section-dark .scenario-tag.tag-a,
+.panel-navy .scenario-tag.tag-a {
+    background: rgba(79,70,229,0.35) !important;
+}
+.section-dark .scenario-tag.tag-b,
+.panel-navy .scenario-tag.tag-b {
+    background: rgba(8,145,178,0.35) !important;
+}
+
+/* --- Links inside .section-dark: cinematic.css already sets #60A5FA,
+   but inline style overrides need !important --- */
+.section-dark a[style*="color"] {
+    color: #60A5FA !important;
+}
+
+/* --- Inline-styled colored spans: #0891B2 (teal) on white bg fails
+   AA contrast (3.6:1). Use darker teal for chart-note spans. --- */
+.hero-chart-wrap .chart-note span[style*="color:#0891B2"] {
+    color: #0E7490 !important;  /* darker teal — 4.8:1 on white */
+}
+/* chart-box spans inside panel-navy use white card bg — same fix */
+.chart-box .chart-note span[style*="color:#0891B2"] {
+    color: #0E7490 !important;
+}
+
+/* --- Table border colors inside section-dark: inline border-bottom
+   uses rgba(0,0,0,...) which is invisible on dark bg --- */
+.section-dark table tr[style*="border-bottom"] {
+    border-bottom: 1px solid rgba(255,255,255,0.15) !important;
+}
+.section-dark table tr {
+    border-bottom: 1px solid rgba(255,255,255,0.15) !important;
+}
+
+/* --- .callout and .insight inside the story-section (white bg):
+   these already have light backgrounds with dark text — fine.
+   But ensure the bg is opaque. --- */
+.story-section .callout {
+    background: rgba(245,158,11,0.08) !important;
+}
+.story-section .insight {
+    background: rgba(14,165,233,0.08) !important;
+}
+
+/* --- Section-dark h3 with inline styles: some have inline color via
+   style attribute. Force white. --- */
+.section-dark h3[style] {
+    color: #fff !important;
+}
+
+/* --- Section-dark list items and code --- */
+.section-dark code {
+    color: #E2E8F0 !important;
+    background: rgba(255,255,255,0.1) !important;
+}
+.section-dark ol,
+.section-dark ul {
+    color: rgba(255,255,255,0.92) !important;
+}
+
+/* --- Gradient transitions: ensure they blend correctly --- */
+.gradient-transition {
+    position: relative;
+    z-index: 1;
+}
 </style>
 </head>
 <body>
@@ -222,7 +425,7 @@
 
     <div class="hero-chart-wrap">
         <h3>Strategy 1B vs 2C: Clean Firm Cost Trajectory &amp; Gas Reference</h3>
-        <p class="chart-note"><span style="color:#4F46E5;font-weight:600;">Strategy 1B</span> (deferred firm) vs <span style="color:#0891B2;font-weight:600;">Strategy 2C</span> (early investment). <span style="color:#DC2626;">Red</span> = gas reference.</p>
+        <p class="chart-note"><span style="color:#4F46E5;font-weight:600;">Strategy 1B</span> (deferred firm) vs <span style="color:#0891B2;font-weight:600;">Strategy 2C</span> (early investment). <span style="color:#B91C1C;">Red</span> = gas reference.</p>
         <div class="hero-chart-container"><canvas id="foakNOAKChart"></canvas></div>
     </div>
 

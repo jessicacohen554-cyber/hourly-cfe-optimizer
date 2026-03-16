@@ -17,6 +17,10 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
+/* contrast-fix: region-tag in dark section needs lighter text */
+.panel-navy .region-tag { color: #86EFAC !important; background: rgba(34,197,94,0.2) !important; }
+/* contrast-fix: finding-highlight green on tinted bg */
+.finding-highlight { color: #166534 !important; }
 /* Page-specific: prevent horizontal overflow on this page */
 html, body {
     overflow-x: hidden;

@@ -225,7 +225,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 /* Chart subtitle (centered below chart title) */
 .chart-subtitle {
     font-size: 0.78rem;
-    color: rgba(0,0,0,0.45);
+    color: rgba(0,0,0,0.63);
     text-align: center;
     margin-bottom: 16px;
 }
@@ -248,7 +248,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 .stat-badge-green { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); color: var(--green-pos); }
 .stat-badge-amber { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.18); color: var(--amber-warn); }
-.stat-badge-red { background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); color: var(--red-dark); }
+.stat-badge-red { background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); color: #B91C1C; } /* contrast-fix: was var(--red-dark)/#DC2626 (4.47:1 on tinted bg), now #B91C1C (5.54:1) */
 .stat-badge-blue { background: rgba(14,165,233,0.08); border: 1px solid rgba(14,165,233,0.2); color: #0369A1; } /* contrast-fix: was #0284c7 (4.10:1), now #0369A1, ratio 5.93:1 on bg #FFFFFF */
 .stat-badge-purple { background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.2); color: #7C3AED; }
 
@@ -258,6 +258,10 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 .section-dark .stat-badge-red { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.35); color: #FCA5A5; }
 .section-dark .stat-badge-blue { background: rgba(14,165,233,0.15); border-color: rgba(14,165,233,0.35); color: #7DD3FC; }
 .section-dark .stat-badge-purple { background: rgba(139,92,246,0.15); border-color: rgba(139,92,246,0.35); color: #06B6D4; }
+
+/* Synthesis cards in section-dark have glass bg (cinematic override).
+   Do NOT revert stat-badge to light-bg colors — let section-dark overrides (above) win.
+   For light-bg synthesis cards, the stat-badge base colors work fine. */
 
 /* ========== SYNTHESIS (dark-bg summary cards) ========== */
 .synthesis-section {
@@ -379,7 +383,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     line-height: 1.7;
 }
 .insight-callout .highlight {
-    color: var(--solar);
+    color: #92400E; /* contrast-fix: was var(--solar)/#F59E0B (1.84:1 on tinted bg), now #92400E (7.3:1) */
     font-weight: 600;
 }
 
@@ -470,7 +474,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     font-size: 0.72rem;
     font-weight: 600;
 }
-.badge.attr { background: var(--red-light); color: var(--red-text, #DC2626); } /* contrast-fix: was var(--red) #EF4444, now #DC2626, ratio 4.83:1 on bg #FFFFFF */
+.badge.attr { background: var(--red-light); color: var(--red-text, #B91C1C); } /* contrast-fix: was #DC2626 (4.83:1), now #B91C1C (6.05:1) on bg #FFFFFF */
 .badge.hourly { background: var(--hydro-bg); color: var(--hydro-text, #0369A1); } /* contrast-fix: was var(--hydro), ratio 5.48:1 */
 .badge.conseq { background: var(--wind-bg); color: var(--green-text, #15803D); } /* contrast-fix: was var(--wind) #22C55E, now #15803D, ratio 4.56:1 on wind-bg */
 .badge.both { background: var(--hydro-bg); color: var(--hydro-text, #0369A1); } /* contrast-fix: was var(--hydro), ratio 5.48:1 */
@@ -501,12 +505,12 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     text-transform: uppercase;
     margin-bottom: 10px;
 }
-.compare-box.attr h4 { color: var(--red-text, #DC2626); } /* contrast-fix: was var(--red), ratio 4.83:1 */
+.compare-box.attr h4 { color: var(--red-text, #B91C1C); } /* contrast-fix: was #DC2626 (4.83:1), now #B91C1C (6.05:1) */
 .compare-box.hourly h4 { color: var(--hydro-text, #0369A1); } /* contrast-fix: was var(--hydro), ratio 5.93:1 */
 .compare-box.conseq h4 { color: var(--green-text, #15803D); } /* contrast-fix: was var(--wind), ratio 5.02:1 */
 .compare-box p {
     font-size: 0.82rem;
-    color: rgba(0,0,0,0.55);
+    color: rgba(0,0,0,0.7); /* contrast-fix: was 0.55 (~4.0:1), now 0.7 (~7.3:1) on white */
     line-height: 1.6;
 }
 
@@ -779,7 +783,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     font-family: var(--font-heading);
     font-size: 0.85rem;
     font-weight: 700;
-    color: rgba(0,0,0,0.5);
+    color: rgba(0,0,0,0.63);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     margin-bottom: 16px;
@@ -787,7 +791,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 .sources-section ol { list-style: decimal; padding-left: 20px; }
 .sources-section li {
     font-size: 0.78rem;
-    color: rgba(0,0,0,0.45);
+    color: rgba(0,0,0,0.63);
     line-height: 1.6;
     margin-bottom: 6px;
 }
@@ -826,12 +830,12 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 .hero-section.section-light .hero-stat-value {
     color: var(--navy);
 }
-.hero-section.section-light .hero-stat-value.green { color: #16a34a; }
-.hero-section.section-light .hero-stat-value.amber { color: #d97706; }
-.hero-section.section-light .hero-stat-value.red   { color: #dc2626; }
-.hero-section.section-light .hero-stat-value.blue  { color: #0284c7; }
+.hero-section.section-light .hero-stat-value.green { color: #15803D; } /* contrast-fix: was #16a34a (3.9:1), now 5.02:1 */
+.hero-section.section-light .hero-stat-value.amber { color: #B45309; } /* contrast-fix: was #d97706 (3.2:1), now 5.02:1 */
+.hero-section.section-light .hero-stat-value.red   { color: #DC2626; }
+.hero-section.section-light .hero-stat-value.blue  { color: #0369A1; } /* contrast-fix: was #0284c7 (4.1:1), now 5.93:1 */
 .hero-section.section-light .hero-stat-label {
-    color: rgba(15,23,42,0.55);
+    color: rgba(15,23,42,0.65); /* contrast-fix: was 0.55 opacity */
 }
 
 /* ============================================================================

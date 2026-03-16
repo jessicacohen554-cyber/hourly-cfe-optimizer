@@ -41,7 +41,7 @@
     font-family: var(--font-heading);
     font-size: 1.2rem;
     font-weight: 700;
-    color: rgba(0,0,0,0.3);
+    color: rgba(0,0,0,0.5); /* contrast-fix: was 0.3 (~2.5:1), now 0.5 (~4.6:1) */
 }
 
 /* ========== STRATEGY ACCORDION ========== */
@@ -109,9 +109,9 @@
     border-radius: var(--radius-pill);
     white-space: nowrap;
 }
-.strategy-accordion-badge.conseq { background: rgba(34,197,94,0.1); color: var(--green-pos); }
-.strategy-accordion-badge.hourly { background: rgba(14,165,233,0.1); color: var(--sky); }
-.strategy-accordion-badge.annual { background: rgba(239,68,68,0.1); color: var(--red-neg); }
+.strategy-accordion-badge.conseq { background: rgba(34,197,94,0.1); color: #166534; } /* contrast-fix: was var(--green-pos), use --green-text 5.02:1 */
+.strategy-accordion-badge.hourly { background: rgba(14,165,233,0.1); color: var(--hydro-text, #0369A1); } /* contrast-fix: was var(--sky) undefined, use --hydro-text 5.93:1 */
+.strategy-accordion-badge.annual { background: rgba(239,68,68,0.1); color: var(--red-text, #B91C1C); } /* contrast-fix: was var(--red-neg) undefined, use #B91C1C 6.05:1 */
 
 .strategy-accordion-chevron {
     flex-shrink: 0;
@@ -288,7 +288,7 @@
         <div class="compare-box attr">
             <h4>Annual Attribution</h4>
             <p>"We purchased RECs equal to 100% of our annual consumption."</p>
-            <p style="margin-top:10px; font-size:0.72rem; color:#DC2626 /* contrast-fix: was rgba(239,68,68,0.7), now #DC2626, ratio 4.83:1 on bg #FFFFFF */;">Current Scope 2 MBM<br>&#10007; No temporal matching<br>&#10007; No deliverability<br>&#8226; Lowest cost &amp; barrier to entry</p>
+            <p style="margin-top:10px; font-size:0.72rem; color:#B91C1C /* contrast-fix: was #DC2626 (4.83:1), now #B91C1C (6.05:1) for 0.72rem text */;">Current Scope 2 MBM<br>&#10007; No temporal matching<br>&#10007; No deliverability<br>&#8226; Lowest cost &amp; barrier to entry</p>
         </div>
         <div class="compare-box hourly">
             <h4>Hourly Attribution</h4>
@@ -364,7 +364,7 @@
 <section class="concept-section section-light fade-in panel-navy">
     <div class="concept-grid">
         <div class="concept-card">
-            <h3 style="color: var(--red-neg);">1. Annual Attribution <span class="badge attr">Current</span></h3>
+            <h3 style="color: var(--red-text, #B91C1C);">1. Annual Attribution <span class="badge attr">Current</span></h3>
             <p>The status quo. Buy RECs equal to your annual consumption. No requirement for when, where, or whether the clean energy was actually delivered to your grid.</p>
             <ul>
                 <li>GHG Protocol Scope 2 market-based method (2015)</li>
@@ -375,7 +375,7 @@
             </ul>
         </div>
         <div class="concept-card">
-            <h3 style="color: var(--sky);">2. Hourly Attribution <span class="badge hourly">Proposed</span></h3>
+            <h3 style="color: var(--hydro-text, #0369A1);">2. Hourly Attribution <span class="badge hourly">Proposed</span></h3>
             <p>The proposed Scope 2 revision. Match consumption with CFE hour-by-hour within deliverability regions. Still attributional inventory accounting — but aligned to grid physics.</p>
             <ul>
                 <li>Proposed GHG Protocol Scope 2 revision (expected ~2027)</li>
@@ -391,7 +391,7 @@
             </p>
         </div>
         <div class="concept-card">
-            <h3 style="color: var(--green-pos);">3. Consequential / Impact <span class="badge conseq">Impact-Based</span></h3>
+            <h3 style="color: #166534;">3. Consequential / Impact <span class="badge conseq">Impact-Based</span></h3>
             <p>Championed by WattTime and the Emissions First Partnership. Estimate marginal emissions impact of procurement decisions. Optimize for cheapest $/tCO&#8322; abated — anywhere, anytime.</p>
             <ul>
                 <li>Separate GHG Protocol consultation track (parallel to Scope 2 revision)</li>
@@ -569,19 +569,19 @@
             </p>
 
             <div class="strat-variant-card">
-                <div class="strat-tag" style="background: rgba(34,197,94,0.1); color: var(--green-pos);">Strategy 1A</div>
+                <div class="strat-tag" style="background: rgba(34,197,94,0.1); color: #166534;">Strategy 1A</div>
                 <h4>Grid-Average Baseline</h4>
                 <p>Credits emission reductions against the <strong>full grid emission rate</strong> — total emissions divided by total generation (including existing clean energy in the denominator). This produces a lower baseline rate, making displacement appear cheaper per ton. A grid already 40% clean has a lower "average" rate than its fossil fleet actually emits. Lower bar for claiming displacement, but dilutes the signal.</p>
             </div>
 
             <div class="strat-variant-card">
-                <div class="strat-tag" style="background: rgba(34,197,94,0.15); color: var(--green-pos);">Strategy 1B</div>
+                <div class="strat-tag" style="background: rgba(34,197,94,0.15); color: #166534;">Strategy 1B</div>
                 <h4>Fossil-Average Baseline</h4>
                 <p>Credits reductions against <strong>only the fossil fleet's emission rate</strong>. Uses actual marginal dispatch rates from 8,760-hour models where available; falls back to fossil-fleet average as proxy. At 80% C&amp;I participation, 1B attributes ~33% more emissions to corporate load than 1A — setting a higher bar for displacement and providing a more honest picture of what fossil generation is actually being displaced.</p>
             </div>
 
             <div class="strat-variant-card">
-                <div class="strat-tag" style="background: rgba(34,197,94,0.2); color: var(--green-pos);">Strategy 1C</div>
+                <div class="strat-tag" style="background: rgba(34,197,94,0.2); color: #166534;">Strategy 1C</div>
                 <h4>Marginal Emission Baseline</h4>
                 <p>Credits reductions against <strong>marginal emission rates</strong> — the emission rate of the specific generator that would have run next absent the clean intervention. Sets the highest bar for displacement claims: in MISO, marginal rates are ~17% higher than the fossil fleet average; in SPP, ~22% higher. Each MWh of clean energy displaces more CO&#8322; under marginal accounting, but the baseline is harder to clear. In gas-dominated grids (CAISO, NEISO), marginal and fossil-average rates are nearly identical since gas CCGTs are the marginal unit in most hours.</p>
             </div>
@@ -647,19 +647,19 @@
             </p>
 
             <div class="strat-variant-card">
-                <div class="strat-tag" style="background: rgba(14,165,233,0.1); color: var(--sky);">Strategy 2A</div>
+                <div class="strat-tag" style="background: rgba(14,165,233,0.1); color: var(--hydro-text, #0369A1);">Strategy 2A</div>
                 <h4>Pure New-Build (100% Additionality)</h4>
                 <p>Every MWh of clean energy must come from <strong>new-build resources</strong> contracted by the buyer. No credit for existing grid clean energy. Highest cost, but the strongest investment signal — every dollar drives new capacity. This variant models what happens when corporations can't claim credit for existing nuclear, hydro, or renewable generation. It produces the highest resource mix costs but also the highest marginal grid impact.</p>
             </div>
 
             <div class="strat-variant-card">
-                <div class="strat-tag" style="background: rgba(14,165,233,0.12); color: var(--sky);">Strategy 2B</div>
+                <div class="strat-tag" style="background: rgba(14,165,233,0.12); color: var(--hydro-text, #0369A1);">Strategy 2B</div>
                 <h4>Grid Baseline Credit</h4>
                 <p>Buyers receive credit for the existing clean energy already embedded in their grid's generation mix. The hourly matching requirement applies only to the <strong>incremental clean energy above the grid baseline</strong>. In a grid that's already 40% clean, the buyer needs to procure resources for the remaining 60% of hours where grid supply doesn't match demand. Lower cost than 2A, but weaker additionality signal — existing clean counts for free.</p>
             </div>
 
             <div class="strat-variant-card">
-                <div class="strat-tag" style="background: rgba(14,165,233,0.15); color: var(--sky);">Strategy 2C</div>
+                <div class="strat-tag" style="background: rgba(14,165,233,0.15); color: var(--hydro-text, #0369A1);">Strategy 2C</div>
                 <h4>Pro-Rata Allocation with SSS (GHG Protocol Proposed)</h4>
                 <p>The model aligned with the GHG Protocol's proposed Scope 2 revision. The grid's clean energy supply splits into <strong>four distinct pools</strong> — each with different pricing, availability, and incentive effects. Standard Supply Service (SSS) — policy-supported clean energy — is free to all ratepayers. Corporate buyers wanting to claim <em>beyond</em> SSS must procure additional clean energy hour-by-hour. This analysis also includes a <strong>roll-off sensitivity</strong> (Strategy 2C Roll-Off) that models the impact of scheduled nuclear support program expirations — see below.</p>
             </div>
@@ -674,7 +674,7 @@
             <div class="grid-2col" style="margin-top: 16px;">
                 <div class="pool-card" style="border-left: 4px solid var(--nuclear);">
                     <h4>Pool 1: SSS (Policy-Supported)</h4>
-                    <div class="pool-val" style="color: var(--nuclear);">227 TWh</div>
+                    <div class="pool-val" style="color: #4F46E5;">227 TWh</div>
                     <div class="pool-sub">across all 7 ISOs &bull; $0 incremental</div>
                     <div class="pool-desc">Nuclear ZEC/CMC programs (Dresden, Byron, Millstone), NYPA hydro, BPA contracts, state-contracted large hydro, 40% of new RPS-mandated build. <strong>Not</strong> merchant nuclear like LaSalle or Peach Bottom.</div>
                 </div>
@@ -686,13 +686,13 @@
                 </div>
                 <div class="pool-card" style="border-left: 4px solid var(--solar);">
                     <h4>Pool 3: Existing Merchant Clean</h4>
-                    <div class="pool-val" style="color: var(--solar);">Varies by ISO</div>
+                    <div class="pool-val" style="color: #B45309;">Varies by ISO</div>
                     <div class="pool-sub">$3–5/MWh EAC premium</div>
                     <div class="pool-desc">Merchant nuclear (LaSalle, Peach Bottom, South Texas), existing solar/wind on grid. <strong>Massive in ERCOT</strong> (~183 TWh solar+wind) and SPP (~120 TWh wind). Available for hourly matching via EAC procurement.</div>
                 </div>
                 <div class="pool-card" style="border-left: 4px solid var(--storage);">
                     <h4>Pool 4: New-Build (Investment Signal)</h4>
-                    <div class="pool-val" style="color: var(--storage);">The Gap</div>
+                    <div class="pool-val" style="color: #B91C1C;">The Gap</div>
                     <div class="pool-sub">LCOE + PPA premium &bull; learning curves apply</div>
                     <div class="pool-desc">What hourly matching <em>incentivizes</em> above Pools 1–3. The hourly constraint forces firm clean + storage for night/winter coverage — VRE-only can't fill these gaps. This is where the investment signal lives.</div>
                 </div>
@@ -722,7 +722,7 @@
                     <li><strong>IL CMC</strong> — expires 2028 (−50 TWh PJM, −15 TWh MISO)</li>
                     <li><strong>NY ZEC Tier 3</strong> — expires 2030 (−42 TWh from NYISO SSS)</li>
                 </ul>
-                Strategy 2C includes a <strong>roll-off sensitivity variant</strong> that models these expirations. Critically, rolled-off plants do not retire — they continue operating under the federal 45U PTC ($15/MWh) and capacity market revenue, moving from the SSS pool (Pool 1, free) to the merchant pool (Pool 3, ~$4–5/MWh EAC premium). The impact is cost reallocation across supply pools, not capacity loss. See the <a href="procurement_deployment.html" style="color: var(--sky);">Procurement Deployment</a> dashboard for the interactive roll-off toggle.
+                Strategy 2C includes a <strong>roll-off sensitivity variant</strong> that models these expirations. Critically, rolled-off plants do not retire — they continue operating under the federal 45U PTC ($15/MWh) and capacity market revenue, moving from the SSS pool (Pool 1, free) to the merchant pool (Pool 3, ~$4–5/MWh EAC premium). The impact is cost reallocation across supply pools, not capacity loss. See the <a href="procurement_deployment.html" style="color: var(--hydro-text, #0369A1);">Procurement Deployment</a> dashboard for the interactive roll-off toggle.
             </div>
 
             <div class="insight-box" style="margin-top: 16px;">
@@ -758,25 +758,25 @@
             </p>
 
             <div class="strat-variant-card">
-                <div class="strat-tag" style="background: rgba(239,68,68,0.1); color: var(--red-neg);">Strategy 3A</div>
+                <div class="strat-tag" style="background: rgba(239,68,68,0.1); color: var(--red-text, #B91C1C);">Strategy 3A</div>
                 <h4>Same-ISO New Build (Additionality)</h4>
                 <p>Annual matching within the buyer's own ISO with an <strong>additionality requirement</strong>: only newly built clean energy counts toward the corporate claim. This drives real capital investment within the buyer's region, but the temporal mismatch means it can claim 100% annual matching while running on gas every winter evening. Cost is moderate (new VRE is cheap), but the annual flexibility means solar/wind surplus covers all hours on paper — creating <strong>limited signal for firm clean power or storage</strong>.</p>
             </div>
 
             <div class="strat-variant-card">
-                <div class="strat-tag" style="background: rgba(239,68,68,0.15); color: var(--red-neg);">Strategy 3B</div>
+                <div class="strat-tag" style="background: rgba(239,68,68,0.15); color: var(--red-text, #B91C1C);">Strategy 3B</div>
                 <h4>Cross-Regional New Build (No Additionality)</h4>
                 <p>Annual matching from any US ISO with <strong>no additionality requirement</strong> — existing clean generation counts. Can purchase bundled RECs from existing generators at low cost. Cross-regional flexibility keeps costs low, but the lack of additionality means procurement may not drive any new clean energy deployment.</p>
             </div>
 
             <div class="strat-variant-card">
-                <div class="strat-tag" style="background: rgba(239,68,68,0.2); color: var(--red-neg);">Strategy 3C</div>
+                <div class="strat-tag" style="background: rgba(239,68,68,0.2); color: var(--red-text, #B91C1C);">Strategy 3C</div>
                 <h4>Same-ISO + No Additionality</h4>
                 <p>Annual matching constrained to the buyer's own ISO region, with <strong>existing clean energy counting</strong> toward the claim. Limits geographic arbitrage (can't claim cross-regional RECs), but still allows temporal mismatch and provides no additionality signal. The same-ISO constraint means costs vary significantly by region — cheap in ERCOT/SPP (abundant merchant clean), expensive in supply-constrained NEISO/NYISO.</p>
             </div>
 
             <div class="strat-variant-card">
-                <div class="strat-tag" style="background: rgba(239,68,68,0.25); color: var(--red-neg);">Strategy 3D</div>
+                <div class="strat-tag" style="background: rgba(239,68,68,0.25); color: var(--red-text, #B91C1C);">Strategy 3D</div>
                 <h4>Cross-Regional + No Additionality (Status Quo)</h4>
                 <p>The loosest standard and the <strong>de facto status quo</strong> for most corporate procurement today. Buy unbundled RECs from any ISO, any vintage, existing or new — equal to annual consumption. Cheapest option by far ($1–5/MWh for unbundled RECs vs. $30–80/MWh for new-build hourly-matched CFE). Near-zero consequential emissions impact (Xu et al. 2024). A data center in Virginia buys West Texas wind RECs at 2 AM to cover a January 6 PM gas peak — and claims "100% renewable."</p>
             </div>

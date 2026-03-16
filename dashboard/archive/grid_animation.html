@@ -248,7 +248,7 @@
         .stat-mini-label {
             font-size: 0.72rem;
             font-weight: 600;
-            color: var(--text-muted, #6B7280);
+            color: var(--text-muted, #4B5563); /* contrast-fix: was #6B7280, now #4B5563, ratio 7.1:1 on white */
             text-transform: uppercase;
             letter-spacing: 0.3px;
             font-family: var(--font-body);
@@ -262,7 +262,7 @@
         }
         .stat-mini-unit {
             font-size: 0.7rem;
-            color: var(--text-muted, #6B7280);
+            color: var(--text-muted, #4B5563); /* contrast-fix: was #6B7280, now #4B5563, ratio 7.1:1 on white */
             margin-left: 3px;
             font-weight: 500;
         }
@@ -283,7 +283,7 @@
         }
         .annotation-time {
             font-size: 0.72rem;
-            color: var(--text-muted, #6B7280);
+            color: var(--text-muted, #4B5563); /* contrast-fix: was #6B7280, now #4B5563, ratio 7.1:1 on white */
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.02em;
@@ -432,7 +432,7 @@
             gap: 4px;
             font-family: var(--font-body, 'DM Sans', sans-serif);
             font-size: 11px;
-            color: #6B7280;
+            color: #4B5563; /* contrast-fix: was #6B7280, now #4B5563 */
             transition: opacity 0.3s;
         }
         .fmb-fuel-label.inactive {
@@ -488,7 +488,7 @@
             font-weight: 600;
             margin-bottom: 6px;
         }
-        .badge-danger { background: rgba(239,68,68,0.1); color: #DC2626; }
+        .badge-danger { background: rgba(239,68,68,0.1); color: #B91C1C; }
         .badge-warning { background: rgba(245,158,11,0.1); color: #B45309; /* contrast-fix: was #D97706, now #B45309, ratio 5.02:1 on white */ }
         .badge-success { background: rgba(34,197,94,0.1); color: #15803D; /* contrast-fix: was #16A34A, now #15803D, ratio 5.02:1 on white */ }
         .scenario-pick h3 {
@@ -499,7 +499,7 @@
             margin: 4px 0;
         }
         .scenario-pick p {
-            color: var(--text-muted, #6B7280);
+            color: var(--text-muted, #4B5563); /* contrast-fix: was #6B7280, now #4B5563, ratio 7.1:1 on white */
             font-size: 0.82rem;
             line-height: 1.55;
             margin: 0;
@@ -523,7 +523,7 @@
             border-top-color: rgba(255,255,255,0.96);
         }
         .plant-tooltip .fuel-tag {
-            color: var(--text-muted, #6B7280);
+            color: var(--text-muted, #4B5563); /* contrast-fix: was #6B7280, now #4B5563, ratio 7.1:1 on white */
         }
 
         /* ── Mobile stats overlay (shown on top of map) ─────────── */
@@ -552,7 +552,7 @@
             background: rgba(0,0,0,0.04);
             white-space: nowrap;
         }
-        .mobile-stat .ms-label { color: var(--text-muted, #6B7280); font-weight: 400; }
+        .mobile-stat .ms-label { color: var(--text-muted, #4B5563); /* contrast-fix: was #6B7280, now #4B5563, ratio 7.1:1 on white */ font-weight: 400; }
 
         /* ── Event marker popup (tap circle on timeline) ──────── */
         .event-popup {
@@ -593,7 +593,7 @@
             background: none;
             border: none;
             font-size: 1rem;
-            color: var(--text-muted, #6B7280);
+            color: var(--text-muted, #4B5563); /* contrast-fix: was #6B7280, now #4B5563, ratio 7.1:1 on white */
             cursor: pointer;
             padding: 4px;
             line-height: 1;
@@ -607,7 +607,7 @@
             font-family: var(--font-body);
             font-size: 11px;
             font-weight: 600;
-            color: var(--text-muted, #6B7280);
+            color: var(--text-muted, #4B5563); /* contrast-fix: was #6B7280, now #4B5563, ratio 7.1:1 on white */
             text-transform: uppercase;
             letter-spacing: 0.06em;
             white-space: nowrap;
@@ -622,7 +622,7 @@
             margin: 0 0 4px;
         }
         .sidebar-section-desc {
-            color: var(--text-muted, #6B7280);
+            color: var(--text-muted, #4B5563); /* contrast-fix: was #6B7280, now #4B5563, ratio 7.1:1 on white */
             font-size: 0.78rem;
             margin: 0 0 12px;
             line-height: 1.5;
@@ -739,7 +739,7 @@
         .story-text {
             font-size: 0.84rem;
             line-height: 1.6;
-            color: var(--text-muted, #6B7280);
+            color: var(--text-muted, #4B5563); /* contrast-fix: was #6B7280, now #4B5563, ratio 7.1:1 on white */
             margin-bottom: 12px;
         }
 
@@ -766,7 +766,7 @@
         .story-hint {
             text-align: center;
             font-size: 0.72rem;
-            color: rgba(0,0,0,0.3);
+            color: rgba(0,0,0,0.55);
             margin-top: 8px;
             user-select: none;
         }
@@ -837,7 +837,7 @@
                     <p>Strong wind and solar, moderate demand, comfortable reserves. The grid as designed.</p>
                 </div>
                 <div class="scenario-pick" data-scenario="battery_2025">
-                    <span class="badge" style="background:rgba(6,182,212,0.1);color:#06B6D4">Mar 8–9, 2025</span>
+                    <span class="badge" style="background:rgba(6,182,212,0.1);color:#0E7490">Mar 8–9, 2025</span>
                     <h3>Solar + Battery Peak</h3>
                     <p>25+ GW solar, record battery dispatch. Batteries charge midday, discharge into evening. The future grid.</p>
                 </div>
@@ -871,13 +871,13 @@
 
         <!-- Legend -->
         <div class="map-legend">
-            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#F59E0B;color:#F59E0B"></div>Solar</div>
-            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#22C55E;color:#22C55E"></div>Wind</div>
-            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#6366F1;color:#6366F1"></div>Nuclear</div>
-            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#F97316;color:#F97316"></div>Gas</div>
-            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#881337;color:#881337"></div>Coal</div>
-            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#0EA5E9;color:#0EA5E9"></div>Hydro</div>
-            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#06B6D4;color:#06B6D4"></div>Battery</div>
+            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#F59E0B"></div>Solar</div>
+            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#22C55E"></div>Wind</div>
+            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#6366F1"></div>Nuclear</div>
+            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#F97316"></div>Gas</div>
+            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#881337"></div>Coal</div>
+            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#0EA5E9"></div>Hydro</div>
+            <div class="legend-item-fuel"><div class="legend-dot-fuel" style="background:#06B6D4"></div>Battery</div>
             <div class="legend-item-fuel" style="margin-left:12px;opacity:0.7"><div class="legend-dot-fuel" style="background:#1A2744;width:8px;height:8px;border-radius:50%"></div>Load Center</div>
             <div class="legend-item-fuel" style="opacity:0.7"><div style="width:18px;height:2px;background:linear-gradient(90deg,#F59E0B,#1A2744);border-radius:1px;margin-right:6px"></div>Flow</div>
         </div>
@@ -906,7 +906,7 @@
                     <div class="mobile-stat"><span class="ms-label">Demand</span> <span id="msDemand">—</span></div>
                     <div class="mobile-stat"><span class="ms-label">Gen</span> <span id="msGen" style="color:#15803D; /* contrast-fix: was #16A34A, now #15803D, ratio 5.02:1 on white */">—</span></div>
                     <div class="mobile-stat"><span class="ms-label">Renew</span> <span id="msRen" style="color:#0369A1; /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on white */">—</span></div>
-                    <div class="mobile-stat"><span class="ms-label">Fossil</span> <span id="msFossil" style="color:#6B7280">—</span></div>
+                    <div class="mobile-stat"><span class="ms-label">Fossil</span> <span id="msFossil" style="color:#4B5563">—</span></div>
                     <div class="mobile-stat"><span class="ms-label">CO₂</span> <span id="msCo2" style="color:#DC2626">—</span></div>
                 </div>
                 <div class="slider-bar">
@@ -929,7 +929,7 @@
                     </div>
                     <div class="stat-mini">
                         <div class="stat-mini-label">Fossil</div>
-                        <div class="stat-mini-val" id="statFossil" data-unit="MW" data-prev="0" style="color:#6B7280">—<span class="stat-mini-unit">MW</span></div>
+                        <div class="stat-mini-val" id="statFossil" data-unit="MW" data-prev="0" style="color:#4B5563">—<span class="stat-mini-unit">MW</span></div>
                     </div>
                 </div>
                 <div class="stat-mini" style="margin-top:10px">

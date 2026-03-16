@@ -30,7 +30,7 @@
     border-color: rgba(74,144,217,0.10);
 }
 .synthesis-card h3 { color: var(--text-secondary); }
-.synthesis-card p { color: rgba(15,23,42,0.68); }
+.synthesis-card p { color: rgba(15,23,42,0.78); }
 
 /* Hero section padding override */
 .hero-section { padding: 56px var(--pad-page) 48px; }
@@ -109,13 +109,13 @@
 }
 .paradox-callout .insight-box p {
     font-size: 0.88rem;
-    color: rgba(15,23,42,0.68);
+    color: rgba(15,23,42,0.78);
     line-height: 1.7;
     margin-bottom: 8px;
 }
 .paradox-callout .insight-box p:last-child { margin-bottom: 0; }
 .paradox-callout .insight-box a {
-    color: var(--accent-cyan);
+    color: #0369A1; /* contrast-fix: was var(--accent-cyan) #38bdf8, too light on white */
     text-decoration: underline;
     font-weight: 600;
 }
@@ -199,6 +199,8 @@
 @media (max-width: 480px) {
     .ctr-finding-tiles { grid-template-columns: 1fr; }
 }
+/* contrast-fix: chart-legend in panel-navy chart-panels (glass bg on dark bg) */
+.panel-navy .chart-panel .chart-legend-item { color: rgba(255,255,255,0.85) !important; }
 </style>
 </head>
 <body>
@@ -220,15 +222,15 @@
     <p class="section-subtitle">Our synthetic LMP model simulates 150,000+ scenarios per ISO to project how wholesale electricity prices evolve as clean energy penetration increases from 50% to &ge;99.99%. The results are structurally consistent across all 7 ISOs.</p>
     <div class="key-findings-grid">
         <div class="key-finding-tile">
-            <div class="kf-value" style="color:#16a34a;">&minus;44% to &minus;56%</div>
+            <div class="kf-value" style="color:#15803D;">&minus;44% to &minus;56%</div>
             <div class="kf-label">Median wholesale price decline from 50% to 95% clean &mdash; consistent across all 7 ISOs</div>
         </div>
         <div class="key-finding-tile">
-            <div class="kf-value" style="color:#d97706;">4&ndash;8&times;</div>
+            <div class="kf-value" style="color:#B45309;">4&ndash;8&times;</div>
             <div class="kf-label">Increase in zero/negative price hours as clean energy grows &mdash; up to 91% of all hours at &ge;99.99%</div>
         </div>
         <div class="key-finding-tile">
-            <div class="kf-value" style="color:#0284c7;">$25&ndash;35/MWh</div>
+            <div class="kf-value" style="color:#0369A1;">$25&ndash;35/MWh</div>
             <div class="kf-label">Peak uncertainty band (P10&ndash;P90) at 75&ndash;80% clean &mdash; exactly where most buyers are planning</div>
         </div>
         <div class="key-finding-tile">
@@ -334,7 +336,7 @@
         </div>
         <div class="scroll-narrative-col" id="sect1Narrative">
             <div class="narrative-card">
-                <span class="section-tag" style="background:rgba(14,165,233,0.08);color:#38bdf8;">Price Drivers</span>
+                <span class="section-tag" style="background:rgba(14,165,233,0.08);color:#0369A1;">Price Drivers</span>
                 <h3>Fuel prices explain 88&ndash;100% of wholesale cost variation — until they don't</h3>
                 <p>From 50% to 95% clean energy, the single biggest determinant of wholesale prices is the fossil fuel price assumption. At 50% clean, fuel level explains <strong>100%</strong> of the variance in average LMP. At 80%, it still accounts for <strong>88%</strong>.</p>
                 <p>The gap between Low and High fuel scenarios in PJM is massive: at 80% clean, Low fuel yields $17/MWh while High fuel yields $37/MWh — a 2.2&times; difference driven entirely by what marginal gas plants cost to run.</p>
@@ -372,7 +374,7 @@
         </div>
         <div class="scroll-narrative-col" id="sect2Narrative">
             <div class="narrative-card">
-                <span class="section-tag" style="background:rgba(34,197,94,0.08);color:#4ade80;">Market Structure</span>
+                <span class="section-tag" style="background:rgba(34,197,94,0.08);color:#15803D;">Market Structure</span>
                 <h3>PJM zero-price hours explode from 265 to 7,980 — and the market flips inside out</h3>
                 <p>At 50% clean, PJM sees about 265 zero-or-negative-price hours per year — roughly 3% of the time, typically overnight with must-run nuclear surplus. By 95%, that figure hits <strong>4,268 hours</strong> — nearly half the year. At &ge;99.99%, it's <strong>7,980 hours</strong>: 91% of all hours produce free or negatively-priced electricity.</p>
                 <p>This isn't a gradual shift. The curve accelerates sharply past 75%, as each incremental percentage of clean energy adds more zero-marginal-cost generation to hours where fossil was already barely dispatching.</p>
@@ -409,7 +411,7 @@
         </div>
         <div class="scroll-narrative-col" id="sect3Narrative">
             <div class="narrative-card">
-                <span class="section-tag" style="background:rgba(245,158,11,0.08);color:#fbbf24;">Price Structure</span>
+                <span class="section-tag" style="background:rgba(245,158,11,0.08);color:#B45309;">Price Structure</span>
                 <h3>The peak premium persists — and that's the arbitrage signal</h3>
                 <p>Off-peak prices crash faster than peak: at 95% clean, off-peak hits $14/MWh while peak holds at $22/MWh. The median spread between peak and off-peak actually <em>widens</em> from 80% to 97.5% before collapsing only at &ge;99.99%.</p>
                 <p>For storage operators and demand-response providers, this is the signal: the economic case for time-shifting energy <strong>strengthens</strong> through most of the clean energy transition, even as absolute prices fall.</p>
@@ -438,13 +440,13 @@
         </div>
         <div class="grid-2col" style="margin-top:var(--space-lg);">
             <div class="narrative-card">
-                <span class="section-tag" style="background:rgba(99,102,241,0.08);color:#818cf8;">Revenue Streams</span>
+                <span class="section-tag" style="background:rgba(99,102,241,0.2);color:#A5B4FC;">Revenue Streams</span>
                 <h3>Capacity payments cushion the price decline — but only where markets exist</h3>
                 <p>ISOs with capacity markets (PJM, NYISO, CAISO, NEISO, MISO) provide generators with additional revenue beyond the energy spot market. For nuclear plants, capacity revenue adds <strong id="nucCapRevPJM">$12/MWh</strong> in PJM at 50% clean — enough to delay the retirement threshold by ~10 percentage points.</p>
                 <p>In energy-only markets (ERCOT, SPP), generators must survive on energy revenue alone. This amplifies retirement risk as clean energy depresses wholesale prices.</p>
             </div>
             <div class="narrative-card">
-                <span class="section-tag" style="background:rgba(239,68,68,0.08);color:#f87171;">Nuclear Viability</span>
+                <span class="section-tag" style="background:rgba(239,68,68,0.2);color:#FCA5A5;">Nuclear Viability</span>
                 <h3>Nuclear retirement risk shifts with total market revenue</h3>
                 <p>When capacity payments are included, nuclear viability extends further into the clean energy transition. In PJM, the total market revenue (energy + capacity) crosses below nuclear's all-in cost of <strong>$38–44/MWh</strong> at approximately <strong id="nucViableCapPct">78%</strong> clean — compared to ~68% under energy-only pricing.</p>
                 <p>The 45U PTC ($15/MWh) combined with capacity payments creates a stronger floor, potentially extending nuclear viability to ~85% clean.</p>
@@ -476,13 +478,13 @@
         </div>
         <div class="grid-2col" style="margin-top:var(--space-lg);">
             <div class="narrative-card">
-                <span class="section-tag" style="background:rgba(14,165,233,0.08);color:#38bdf8;">Apples-to-Apples</span>
+                <span class="section-tag" style="background:rgba(14,165,233,0.08);color:#0369A1;">Apples-to-Apples</span>
                 <h3>Same metric, different models</h3>
                 <p>Both curves show <strong>pure power market revenue</strong> — energy payments + capacity payments only. REC revenue is excluded from Step 10 to ensure a fair comparison with Step 5B's wholesale LMP model.</p>
                 <p>Step 5B models wholesale prices under a policy-driven decarbonization pathway (SBTi milestones). Step 10 models what markets deliver without emission constraints. The comparison reveals where policy and markets agree on power prices — and where they structurally diverge.</p>
             </div>
             <div class="narrative-card">
-                <span class="section-tag" style="background:rgba(34,197,94,0.08);color:#4ade80;">Convergence Zone</span>
+                <span class="section-tag" style="background:rgba(34,197,94,0.08);color:#15803D;">Convergence Zone</span>
                 <h3>Models converge below ~65% clean</h3>
                 <p>At lower clean energy penetrations (50–65%), both models produce similar wholesale prices — the grid is still fossil-dominated and the merit order functions the same way regardless of whether clean energy was mandated or market-driven.</p>
                 <p>Above 75% clean, the models diverge: Step 5B's policy pathway forces deployment past the market equilibrium, pushing wholesale prices lower than what Step 10's market-only pathway would produce at the same clean%. The <strong>capacity market premium</strong> (purple dashed line) partially offsets this decline.</p>
@@ -511,7 +513,7 @@
         </div>
         <div class="scroll-narrative-col">
             <div class="narrative-card">
-                <span class="section-tag" style="background:rgba(245,158,11,0.08);color:#fbbf24;">Cannibalization</span>
+                <span class="section-tag" style="background:rgba(245,158,11,0.08);color:#B45309;">Cannibalization</span>
                 <h3>Every megawatt of solar and wind pushes wholesale prices lower &mdash; undermining its own revenue case</h3>
                 <p>As clean energy grows from 50% to 95%, average wholesale LMPs decline 44&ndash;56% across all 7 ISOs. Zero-price hours explode from ~200&ndash;600 at 50% clean to 4,000&ndash;6,000 at 95%. At &ge;99.99%, over 8,000 hours per year produce free or negative-priced electricity &mdash; 91% of the year.</p>
                 <p>This is the cannibalization paradox: renewables are victims of their own success. Each additional MW of solar or wind depresses the price during the hours when it generates, reducing the revenue available to finance the next project.</p>
@@ -549,7 +551,7 @@
         </div>
         <div class="scroll-narrative-col">
             <div class="narrative-card">
-                <span class="section-tag" style="background:rgba(139,92,246,0.08);color:#a78bfa;">Storage Economics</span>
+                <span class="section-tag" style="background:rgba(139,92,246,0.2);color:#C4B5FD;">Storage Economics</span>
                 <h3>Storage deployment grows with CFE targets &mdash; and the arbitrage signal persists</h3>
                 <p>Battery dispatch grows from near-zero at 50% clean to 7&ndash;10% of annual demand at &ge;99.99%. Long-duration storage (LDES) only appears at 95%+ thresholds, where multi-day supply gaps become the binding constraint. Green H&#8322; enters at &ge;95% for seasonal balancing.</p>
                 <p>The peak-to-offpeak spread &mdash; the arbitrage signal for storage operators &mdash; actually <em>widens</em> through most of the transition before collapsing only at extreme penetrations. The economic case for time-shifting energy strengthens through 97.5% clean.</p>
@@ -585,7 +587,7 @@
         </div>
         <div class="scroll-narrative-col">
             <div class="narrative-card">
-                <span class="section-tag" style="background:rgba(107,114,128,0.08);color:#9ca3af;">Gas Fleet Risk</span>
+                <span class="section-tag" style="background:rgba(107,114,128,0.08);color:#4B5563;">Gas Fleet Risk</span>
                 <h3>Gas plants face a utilization cliff &mdash; but capacity is still needed for reliability</h3>
                 <p>As clean energy scales, gas capacity utilization plummets &mdash; but the fleet can't simply retire. Resource adequacy requirements (15% reserve margin) mean gas backup remains necessary even at 95%+ clean, but it runs fewer and fewer hours per year. The result: gas plants that cost billions to maintain but generate almost no revenue.</p>
                 <p>CAISO and ERCOT face the earliest stranding signals, where abundant wind and solar displace gas capacity most rapidly. PJM's large nuclear fleet delays the transition. NEISO faces a unique constraint: winter gas pipeline bottlenecks add a $13.13/MWh CCS premium.</p>
@@ -610,7 +612,7 @@
 <div class="scroll-section section-light" id="nuclear-crossover">
     <div class="scroll-section-inner">
         <div class="narrative-card">
-            <span class="section-tag" style="background:rgba(239,68,68,0.08);color:#f87171;">Revenue Crossover</span>
+            <span class="section-tag" style="background:rgba(239,68,68,0.08);color:#B91C1C;">Revenue Crossover</span>
             <h2 class="section-title">The Nuclear Revenue Crossover</h2>
             <p class="section-subtitle">As clean energy targets rise, wholesale energy prices and capacity market revenue shift. This analysis identifies where total market revenue falls below the $38&ndash;44/MWh threshold needed to sustain existing nuclear &mdash; and what replacement costs when it does.</p>
             <div style="display:flex; flex-wrap:wrap; gap:var(--space-sm) var(--space-lg); margin-top:var(--space-sm);">
@@ -846,9 +848,9 @@
                 scales: {
                     x: {
                         min: 40, max: 105,
-                        title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                        title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.65)', font: { size: 11 } },
                         grid: { color: 'rgba(0,0,0,0.04)' },
-                        ticks: { color: 'rgba(15,23,42,0.5)', callback: function(v) { return v + '%'; } }
+                        ticks: { color: 'rgba(15,23,42,0.63)', callback: function(v) { return v + '%'; } }
                     },
                     y: {
                         grid: { display: false },
@@ -859,7 +861,7 @@
                     legend: { display: false },
                     datalabels: {
                         anchor: 'end', align: 'right', offset: 6,
-                        color: 'rgba(15,23,42,0.6)',
+                        color: 'rgba(15,23,42,0.7)',
                         font: { size: 11, weight: '600', family: 'var(--font-mono)' },
                         formatter: function(v) { return v >= 100 ? 'Always viable' : v.toFixed(0) + '%'; }
                     },
@@ -874,9 +876,9 @@
                     },
                     annotation: {
                         annotations: {
-                            sbti2030: { type: 'line', xMin: 50, xMax: 50, borderColor: 'rgba(0,0,0,0.08)', borderWidth: 1, borderDash: [4,4], label: { content: '2030', display: true, position: 'start', color: 'rgba(0,0,0,0.25)', font: { size: 9 }, backgroundColor: 'transparent' } },
-                            sbti2035: { type: 'line', xMin: 70, xMax: 70, borderColor: 'rgba(0,0,0,0.08)', borderWidth: 1, borderDash: [4,4], label: { content: '2035', display: true, position: 'start', color: 'rgba(0,0,0,0.25)', font: { size: 9 }, backgroundColor: 'transparent' } },
-                            sbti2040: { type: 'line', xMin: 90, xMax: 90, borderColor: 'rgba(0,0,0,0.08)', borderWidth: 1, borderDash: [4,4], label: { content: '2040', display: true, position: 'start', color: 'rgba(0,0,0,0.25)', font: { size: 9 }, backgroundColor: 'transparent' } }
+                            sbti2030: { type: 'line', xMin: 50, xMax: 50, borderColor: 'rgba(0,0,0,0.08)', borderWidth: 1, borderDash: [4,4], label: { content: '2030', display: true, position: 'start', color: 'rgba(0,0,0,0.65)', font: { size: 9 }, backgroundColor: 'transparent' } },
+                            sbti2035: { type: 'line', xMin: 70, xMax: 70, borderColor: 'rgba(0,0,0,0.08)', borderWidth: 1, borderDash: [4,4], label: { content: '2035', display: true, position: 'start', color: 'rgba(0,0,0,0.65)', font: { size: 9 }, backgroundColor: 'transparent' } },
+                            sbti2040: { type: 'line', xMin: 90, xMax: 90, borderColor: 'rgba(0,0,0,0.08)', borderWidth: 1, borderDash: [4,4], label: { content: '2040', display: true, position: 'start', color: 'rgba(0,0,0,0.65)', font: { size: 9 }, backgroundColor: 'transparent' } }
                         }
                     }
                 }
@@ -1031,15 +1033,15 @@
                 scales: {
                     x: {
                         type: 'linear', min: 48, max: 100.5,
-                        title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                        title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.65)', font: { size: 11 } },
                         grid: { color: 'rgba(0,0,0,0.03)' },
-                        ticks: { color: 'rgba(15,23,42,0.4)', font: { size: 10 }, callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; } },
+                        ticks: { color: 'rgba(15,23,42,0.63)', font: { size: 10 }, callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; } },
                         afterBuildTicks: function(a) { a.ticks = [50,60,70,80,90,95,99.99].map(function(v) { return {value:v}; }); }
                     },
                     y: {
-                        title: { display: true, text: '$/MWh', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                        title: { display: true, text: '$/MWh', color: 'rgba(15,23,42,0.65)', font: { size: 11 } },
                         grid: { color: 'rgba(0,0,0,0.03)' },
-                        ticks: { color: 'rgba(15,23,42,0.4)', font: { size: 10 }, callback: function(v) { return '$' + v; } },
+                        ticks: { color: 'rgba(15,23,42,0.63)', font: { size: 10 }, callback: function(v) { return '$' + v; } },
                         min: 0
                     }
                 },
@@ -1211,15 +1213,15 @@
                 scales: {
                     x: {
                         type: 'linear', min: 48, max: 100.5,
-                        title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                        title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.65)', font: { size: 11 } },
                         grid: { color: 'rgba(0,0,0,0.03)' },
-                        ticks: { color: 'rgba(15,23,42,0.4)', font: { size: 10 }, callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; } },
+                        ticks: { color: 'rgba(15,23,42,0.63)', font: { size: 10 }, callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; } },
                         afterBuildTicks: function(a) { a.ticks = [50,60,70,80,90,95,99.99].map(function(v) { return {value:v}; }); }
                     },
                     y: {
-                        title: { display: true, text: '$/MWh', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                        title: { display: true, text: '$/MWh', color: 'rgba(15,23,42,0.65)', font: { size: 11 } },
                         grid: { color: 'rgba(0,0,0,0.03)' },
-                        ticks: { color: 'rgba(15,23,42,0.4)', font: { size: 10 }, callback: function(v) { return '$' + v; } },
+                        ticks: { color: 'rgba(15,23,42,0.63)', font: { size: 10 }, callback: function(v) { return '$' + v; } },
                         min: 0
                     }
                 },
@@ -1237,9 +1239,9 @@
                     },
                     annotation: {
                         annotations: {
-                            sbti2030: { type: 'line', xMin: 50, xMax: 50, borderColor: 'rgba(0,0,0,0.06)', borderWidth: 1, borderDash: [3,3], label: { content: 'SBTi 2030', display: true, position: 'start', color: 'rgba(0,0,0,0.25)', font: { size: 8 }, backgroundColor: 'transparent' } },
-                            sbti2035: { type: 'line', xMin: 70, xMax: 70, borderColor: 'rgba(0,0,0,0.06)', borderWidth: 1, borderDash: [3,3], label: { content: 'SBTi 2035', display: true, position: 'start', color: 'rgba(0,0,0,0.25)', font: { size: 8 }, backgroundColor: 'transparent' } },
-                            sbti2040: { type: 'line', xMin: 90, xMax: 90, borderColor: 'rgba(0,0,0,0.06)', borderWidth: 1, borderDash: [3,3], label: { content: 'SBTi 2040', display: true, position: 'start', color: 'rgba(0,0,0,0.25)', font: { size: 8 }, backgroundColor: 'transparent' } }
+                            sbti2030: { type: 'line', xMin: 50, xMax: 50, borderColor: 'rgba(0,0,0,0.06)', borderWidth: 1, borderDash: [3,3], label: { content: 'SBTi 2030', display: true, position: 'start', color: 'rgba(0,0,0,0.65)', font: { size: 8 }, backgroundColor: 'transparent' } },
+                            sbti2035: { type: 'line', xMin: 70, xMax: 70, borderColor: 'rgba(0,0,0,0.06)', borderWidth: 1, borderDash: [3,3], label: { content: 'SBTi 2035', display: true, position: 'start', color: 'rgba(0,0,0,0.65)', font: { size: 8 }, backgroundColor: 'transparent' } },
+                            sbti2040: { type: 'line', xMin: 90, xMax: 90, borderColor: 'rgba(0,0,0,0.06)', borderWidth: 1, borderDash: [3,3], label: { content: 'SBTi 2040', display: true, position: 'start', color: 'rgba(0,0,0,0.65)', font: { size: 8 }, backgroundColor: 'transparent' } }
                         }
                     }
                 }

@@ -23,7 +23,7 @@ body { background: var(--bg-page-white); }
 /* Page-specific: mechanism cards */
 .mechanism-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin: 24px 0; }
 .mechanism-card { background: rgba(0,0,0,0.025); border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; padding: 24px; }
-.mechanism-card h4 { font-family: var(--font-heading); font-size: 1rem; font-weight: 700; color: var(--red); margin-bottom: 10px; }
+.mechanism-card h4 { font-family: var(--font-heading); font-size: 1rem; font-weight: 700; color: var(--red-text, #DC2626); margin-bottom: 10px; }
 .mechanism-card p { font-size: 0.88rem; color: var(--text-secondary); line-height: 1.7; margin-bottom: 8px; }
 .mechanism-card .evidence { font-size: 0.8rem; color: var(--hydro); border-top: 1px solid var(--border-light); padding-top: 10px; margin-top: 10px; }
 
@@ -33,7 +33,8 @@ body { background: var(--bg-page-white); }
 .chart-narrative-below strong { color: var(--text-primary); }
 
 /* Page-specific: highlight utility */
-.highlight { background: rgba(245,158,11,0.2); padding: 2px 6px; border-radius: 4px; font-weight: 600; color: var(--solar); }
+.highlight { background: rgba(245,158,11,0.2); padding: 2px 6px; border-radius: 4px; font-weight: 600; color: #92400E; } /* contrast-fix: was var(--solar)/#F59E0B (1.84:1 on amber bg), now #92400E (6.5:1) */
+.section-dark .highlight { background: rgba(245,158,11,0.25); color: #FCD34D; } /* contrast-fix: light amber text on dark amber bg for dark sections */
 
 /* Page-specific: comparison table */
 .comparison-table-wrap { overflow-x: auto; margin: 24px 0; -webkit-overflow-scrolling: touch; }
@@ -47,7 +48,7 @@ body { background: var(--bg-page-white); }
 
 /* Dark panel overrides */
 .section-dark .mechanism-card { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.22); }
-.section-dark .mechanism-card h4 { color: var(--red); }
+.section-dark .mechanism-card h4 { color: #FCA5A5; }
 .section-dark .mechanism-card p { color: rgba(255,255,255,0.88); }
 .section-dark .mechanism-card .evidence { color: rgba(14,165,233,0.9); border-top-color: rgba(255,255,255,0.15); }
 .section-dark blockquote { color: rgba(255,255,255,0.88); border-left-color: rgba(56,189,248,0.5); background: rgba(255,255,255,0.10); }
@@ -227,7 +228,7 @@ body { background: var(--bg-page-white); }
     font-family: var(--font-heading);
     font-size: 0.75rem;
     font-weight: 700;
-    color: var(--red, #EF4444);
+    color: var(--red-text, #DC2626);
     white-space: nowrap;
 }
 
@@ -238,7 +239,7 @@ body { background: var(--bg-page-white); }
     font-family: var(--font-heading);
     font-size: 1.15rem;
     font-weight: 700;
-    color: var(--red, #EF4444);
+    color: var(--red-text, #DC2626);
     opacity: 0;
     transform: translateY(12px);
     transition: opacity 0.6s ease-out 2.8s, transform 0.6s ease-out 2.8s;
@@ -274,9 +275,9 @@ body { background: var(--bg-page-white); }
     font-weight: 800;
     line-height: 1.1;
 }
-.fg-stat-val.red { color: var(--red, #EF4444); }
-.fg-stat-val.amber { color: var(--solar, #F59E0B); }
-.fg-stat-val.blue { color: var(--hydro, #0EA5E9); }
+.fg-stat-val.red { color: var(--red-text, #DC2626); }
+.fg-stat-val.amber { color: var(--solar-text, #B45309); }
+.fg-stat-val.blue { color: var(--hydro-text, #0369A1); }
 .fg-stat-lbl {
     font-size: 0.75rem;
     color: var(--text-muted);
@@ -337,7 +338,7 @@ body { background: var(--bg-page-white); }
         <div class="hero-breadcrumb" style="margin-bottom:var(--space-sm)">
             <a href="GHG-accounting-overview.html">Consequential Accounting</a>
             <span>›</span>
-            <span style="color: rgba(0,0,0,0.55);">Deep Dive</span>
+            <span style="color: rgba(0,0,0,0.63);">Deep Dive</span>
         </div>
         <h2>The Coal Wall: Every Grid Converges to Gas</h2>
         <p class="hero-lead">The consequential "discount" has an expiration date. All coal-bearing ISOs hit the wall at ~70% clean energy. After that, every grid displaces the same efficient gas at ~860 lb/MWh — and the bargain vanishes entirely.</p>
@@ -513,25 +514,25 @@ body { background: var(--bg-page-white); }
         <td><strong>SPP</strong></td>
         <td>296</td>
         <td>178 TWh</td>
-        <td style="color:#EF4444;">27%</td>
+        <td style="color:#DC2626;">27%</td>
         <td>73%</td>
         <td>1,237</td>
-        <td style="color:#22C55E;"><strong>Highest — cheap wind displaces coal</strong></td>
+        <td style="color:#15803D;"><strong>Highest — cheap wind displaces coal</strong></td>
     </tr>
     <tr>
         <td><strong>MISO</strong></td>
         <td>660</td>
         <td>396 TWh</td>
-        <td style="color:#EF4444;">28%</td>
+        <td style="color:#DC2626;">28%</td>
         <td>72%</td>
         <td>1,253</td>
-        <td style="color:#22C55E;"><strong>Very High — large grid, coal-heavy</strong></td>
+        <td style="color:#15803D;"><strong>Very High — large grid, coal-heavy</strong></td>
     </tr>
     <tr>
         <td><strong>PJM</strong></td>
         <td>843</td>
         <td>506 TWh</td>
-        <td style="color:#F59E0B;">28%</td>
+        <td style="color:#B45309;">28%</td>
         <td>71%</td>
         <td>1,251</td>
         <td>Moderate — largest US grid</td>
@@ -540,7 +541,7 @@ body { background: var(--bg-page-white); }
         <td><strong>ERCOT</strong></td>
         <td>488</td>
         <td>293 TWh</td>
-        <td style="color:#F59E0B;">26%</td>
+        <td style="color:#B45309;">26%</td>
         <td>74%</td>
         <td>1,242</td>
         <td>Moderate — strong wind already</td>
@@ -550,32 +551,32 @@ body { background: var(--bg-page-white); }
         <td>115</td>
         <td>69 TWh</td>
         <td>&lt;1%</td>
-        <td style="color:#0EA5E9;">98%</td>
+        <td style="color:#0369A1;">98%</td>
         <td>873</td>
-        <td style="color:#EF4444;"><strong>Lowest — expensive, gas-only</strong></td>
+        <td style="color:#DC2626;"><strong>Lowest — expensive, gas-only</strong></td>
     </tr>
     <tr>
         <td><strong>NYISO</strong></td>
         <td>152</td>
         <td>91 TWh</td>
         <td>0%</td>
-        <td style="color:#0EA5E9;">99.8%</td>
+        <td style="color:#0369A1;">99.8%</td>
         <td>915</td>
-        <td style="color:#EF4444;"><strong>Very Low — no coal to displace</strong></td>
+        <td style="color:#DC2626;"><strong>Very Low — no coal to displace</strong></td>
     </tr>
     <tr>
         <td><strong>CAISO</strong></td>
         <td>224</td>
         <td>134 TWh</td>
         <td>0%</td>
-        <td style="color:#0EA5E9;">99.5%</td>
+        <td style="color:#0369A1;">99.5%</td>
         <td>867</td>
-        <td style="color:#EF4444;"><strong>Low — gas-only, high solar</strong></td>
+        <td style="color:#DC2626;"><strong>Low — gas-only, high solar</strong></td>
     </tr>
     </tbody>
     </table>
     </div>
-    <p style="font-size:0.72rem; color:rgba(0,0,0,0.6); margin-top:8px; text-align:center;">Sources: Model data from consequential deployment queue (EIA 860/861 profiles, eGRID 2022 emission rates). C&amp;I load estimated at 60% of total (EIA CBECS/MECS). Coal/gas shares are of fossil generation only.</p>
+    <p style="font-size:0.72rem; color:rgba(0,0,0,0.63); margin-top:8px; text-align:center;">Sources: Model data from consequential deployment queue (EIA 860/861 profiles, eGRID 2022 emission rates). C&amp;I load estimated at 60% of total (EIA CBECS/MECS). Coal/gas shares are of fossil generation only.</p>
 </section>
 
 <section class="chart-section section-light fade-in">
