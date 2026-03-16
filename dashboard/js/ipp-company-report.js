@@ -248,12 +248,12 @@
         if (renewGen > 5) strengths.push(`Existing renewable generation (${fmt(renewGen, 1)} TWh solar+wind) provides foundation for scaling clean output.`);
         if (batteryGen > 0.5) strengths.push(`Battery storage dispatch (${fmt(batteryGen, 1)} TWh) positions for flexible grid services and peak shaving.`);
         if (gasCCGTGen > 10) strengths.push(`Efficient gas CCGT fleet (${fmt(gasCCGTGen, 1)} TWh) provides reliable dispatchable generation with moderate emissions intensity.`);
-        if (cleanPct > 50) strengths.push(`Already ${cleanPct}% clean by generation — ahead of most peers in decarbonization.`);
+        if (cleanPct > 50) strengths.push(`Already ${cleanPct}% clean by generation, ahead of most peers in decarbonization.`);
 
         // Weaknesses
         if (hasCoal) weaknesses.push(`Coal generation (${coalPct}% of output, ${fmt(coalGen, 1)} TWh, ${fmt(byFuel.coal.co2_mt, 1)} Mt CO₂) represents the highest transition risk and stranded asset potential.`);
         if (isos.length === 1) weaknesses.push(`Single-ISO concentration (${isos[0]}) creates regulatory and market concentration risk.`);
-        if (co.intensity_kg > 400) weaknesses.push(`High fleet intensity (${co.intensity_kg} kg/MWh) — among the most carbon-intensive large generators.`);
+        if (co.intensity_kg > 400) weaknesses.push(`High fleet intensity (${co.intensity_kg} kg/MWh), among the most carbon-intensive large generators.`);
         if (gasPeakerGen > 3) weaknesses.push(`Gas peaker generation (${fmt(gasPeakerGen, 1)} TWh) faces declining utilization as battery storage scales.`);
         if (cleanPct < 20 && !hasNuclear) weaknesses.push(`Very low clean generation share (${cleanPct}%) with no nuclear hedge.`);
 
@@ -261,7 +261,7 @@
         if (hasCoal) opportunities.push(`Coal retirement + site repowering with solar/battery co-location can leverage existing grid interconnection and land.`);
         if (gasPeakerGen > 1) opportunities.push(`Gas peaker → battery replacement at highest-heat-rate sites captures cost savings and emissions reduction.`);
         if (hasNuclear) opportunities.push(`Nuclear uprates and life extensions leverage highest-value zero-carbon asset under 45U PTC ($15/MWh).`);
-        if (renewGen < 3) opportunities.push(`Significant greenfield renewable opportunity — current clean generation is undersized relative to fleet.`);
+        if (renewGen < 3) opportunities.push(`Significant greenfield renewable opportunity: current clean generation is undersized relative to fleet.`);
         if (isos.some(i => i === 'ERCOT')) opportunities.push(`ERCOT market exposure provides high-value solar+battery opportunity due to peak pricing dynamics.`);
         if (isos.some(i => i === 'PJM')) opportunities.push(`PJM capacity market provides revenue stability for new firm clean generation investments.`);
 
@@ -651,15 +651,15 @@
 
         let riskItems = [];
         if (hasCoal) riskItems.push(`<strong>Coal stranding risk:</strong> ${fmt(coalGen, 1)} TWh of coal generation (${fmt(byFuel.coal.cap_mw)} MW nameplate) faces retirement pressure. Under median scenarios, ${fmt(stranded2050)} MW total becomes stranded by 2050.`);
-        if (profit2050_p10 < 0) riskItems.push(`<strong>Downside scenario loss:</strong> In the P10 (worst-case) scenario, annual profit falls to $${fmt(profit2050_p10)}M by 2050 — the fleet loses money under adverse conditions.`);
-        if (profit2050_p10 > 0) riskItems.push(`<strong>Profit resilience:</strong> Even in the P10 (worst-case) scenario, the fleet maintains $${fmt(profit2050_p10)}M annual profit by 2050 — no money-losing scenarios.`);
+        if (profit2050_p10 < 0) riskItems.push(`<strong>Downside scenario loss:</strong> In the P10 (worst-case) scenario, annual profit falls to $${fmt(profit2050_p10)}M by 2050. The fleet loses money under adverse conditions.`);
+        if (profit2050_p10 > 0) riskItems.push(`<strong>Profit resilience:</strong> Even in the P10 (worst-case) scenario, the fleet maintains $${fmt(profit2050_p10)}M annual profit by 2050, with no money-losing scenarios.`);
 
         riskItems.push(`<strong>Profit margin trajectory:</strong> 2050 fleet profit margin ranges from ${pctGrowth_p10 >= 0 ? '+' : ''}${fmt(pctGrowth_p10, 0)}% (P10) to ${pctGrowth_p90 >= 0 ? '+' : ''}${fmt(pctGrowth_p90, 0)}% (P90) vs 2023 baseline, with a median of ${pctGrowth_p50 >= 0 ? '+' : ''}${fmt(pctGrowth_p50, 0)}% ($${fmt(profit2050_p50)}M).`);
 
         // Retail hedge analysis
         const gasGen = (byFuel.gas_ccgt ? byFuel.gas_ccgt.gen_twh : 0) + (byFuel.gas_peaker ? byFuel.gas_peaker.gen_twh : 0);
         if (gasGen > 5) {
-            riskItems.push(`<strong>Retail hedge position:</strong> ${fmt(gasGen, 1)} TWh of gas generation provides a natural hedge for retail power obligations — when wholesale prices spike (gas on the margin), generation revenue offsets retail exposure. This hedge value declines as gas dispatch falls under higher CFE thresholds.`);
+            riskItems.push(`<strong>Retail hedge position:</strong> ${fmt(gasGen, 1)} TWh of gas generation provides a natural hedge for retail power obligations. When wholesale prices spike (gas on the margin), generation revenue offsets retail exposure. This hedge value declines as gas dispatch falls under higher CFE thresholds.`);
         }
 
         el.innerHTML = riskItems.map(r => `<p>${r}</p>`).join('');
@@ -798,7 +798,7 @@
 
         el.innerHTML = `
             <p>The proposed qualified target for <strong>${co.shortName}</strong> follows the P50 (median) emission trajectory across
-            all reference scenarios — representing what market forces, existing policy, and announced retirements will organically deliver
+            all reference scenarios, representing what market forces, existing policy, and announced retirements will organically deliver
             without additional mandates or subsidies.</p>
 
             <p><strong>2030 target: ${fmt(qualifiedPcts[1], 0)}% reduction</strong> (${fmt(target2030, 1)} Mt from ${fmt(baseline, 1)} Mt baseline).
@@ -813,16 +813,16 @@
             'This meets or exceeds the SBTi Power Sector v2 net-zero-by-2040 trajectory.'}</p>
 
             <p><strong>2050 target: ${fmt(qualifiedPcts[5], 0)}% reduction</strong> (${fmt(target2050, 1)} Mt).
-            ${gap2050_at > 0.5 ? `This leaves a ${fmt(gap2050_at, 1)} Mt gap to the SMARTargets AT trajectory — bridging this gap requires the enabling conditions described in Section 6.` :
-            'This meets or exceeds the SMARTargets AT trajectory — no additional enabling conditions required.'}</p>
+            ${gap2050_at > 0.5 ? `This leaves a ${fmt(gap2050_at, 1)} Mt gap to the SMARTargets AT trajectory. Bridging this gap requires the enabling conditions described in Section 7.` :
+            'This meets or exceeds the SMARTargets AT trajectory; no additional enabling conditions required.'}</p>
 
             <div class="insight-box" style="margin-top:var(--space-md)">
                 <strong>Why this target is achievable:</strong>
                 <ul style="margin:8px 0 0 16px">
                     <li><strong>Reliability:</strong> Maintains sufficient firm dispatchable generation (${fmt(gasGen, 0)} TWh gas output) for grid adequacy</li>
-                    <li><strong>Affordability:</strong> Follows market economics — no cross-subsidy or above-market procurement required</li>
+                    <li><strong>Affordability:</strong> Follows market economics with no cross-subsidy or above-market procurement required</li>
                     <li><strong>Cost competitiveness:</strong> Aligned with market deployment curve; new clean investments at or below market clearing prices</li>
-                    ${gasGen > 5 ? `<li><strong>Retail hedge:</strong> Gas fleet provides wholesale price hedge for retail obligations — retiring too fast exposes retail book to unhedged spot prices</li>` : ''}
+                    ${gasGen > 5 ? `<li><strong>Retail hedge:</strong> Gas fleet provides wholesale price hedge for retail obligations. Retiring too fast exposes retail book to unhedged spot prices</li>` : ''}
                 </ul>
             </div>
         `;
@@ -938,7 +938,7 @@
         if (hasNuclear) {
             sections.push(`<div class="insight-box insight-success" style="margin-bottom:var(--space-md)">
                 <strong>3. Nuclear uprate + life extension value</strong>
-                <p style="margin-top:6px">${co.shortName}'s nuclear fleet (${fmt(byFuel.nuclear.gen_twh, 1)} TWh) receives $15/MWh under the 45U PTC. Uprating existing reactors by 5-10% is the cheapest firm clean generation available — no new site permitting, existing grid connection, and immediate output increase.</p>
+                <p style="margin-top:6px">${co.shortName}'s nuclear fleet (${fmt(byFuel.nuclear.gen_twh, 1)} TWh) receives $15/MWh under the 45U PTC. Uprating existing reactors by 5-10% is the cheapest firm clean generation available: no new site permitting, existing grid connection, and immediate output increase.</p>
             </div>`);
         } else {
             sections.push(`<div class="insight-box insight-success" style="margin-bottom:var(--space-md)">
@@ -1205,6 +1205,14 @@
                             `Low LCOE (Wright's Law outperformance): ${fmt(low, 1)} Mt vs. High LCOE: ${fmt(high, 1)} Mt by 2040. AT compliance requires LCOE trajectories at or below the low case.`, 'at'));
                     }
                 }
+                if (dims.ppa_level) {
+                    const lowP = dims.ppa_level.Low ? dims.ppa_level.Low.emissions.p50[3] : null;
+                    const highP = dims.ppa_level.High ? dims.ppa_level.High.emissions.p50[3] : null;
+                    if (lowP !== null && highP !== null) {
+                        atCards.push(condCard('High PPA Market Depth', `${fmt(Math.abs(highP - lowP), 1)} Mt range at 2040`,
+                            `SMARTargets requires faster decarbonization than SBTi, which means clean investment must be pulled forward by market demand, not just policy. High corporate PPA commitment: ${fmt(highP, 1)} Mt vs. Low PPA: ${fmt(lowP, 1)} Mt by 2040. Deep PPA markets create bankable revenue certainty for new clean projects, accelerating deployment to meet the AT pace.`, 'at'));
+                    }
+                }
             }
             html += atCards.join('');
             elAT.innerHTML = html;
@@ -1216,7 +1224,7 @@
             html += `<p style="font-size:0.88rem;color:var(--text-secondary);margin-bottom:var(--space-md);grid-column:1/-1">
                 SBTi Power Sector v2 requires net-zero emissions by 2040.
                 ${gap2040_ps > 0.5 ? `${co.shortName} has a ${fmt(gap2040_ps, 1)} Mt gap at 2040 under market conditions.` : `${co.shortName}'s market trajectory aligns with net-zero by 2040.`}
-                Achieving this <em>competitively</em> — without destroying shareholder value — requires specific enabling conditions.
+                Achieving this <em>competitively</em>, without destroying shareholder value, requires specific enabling conditions.
             </p>`;
 
             let nzCards = [];
@@ -1225,7 +1233,7 @@
                     `Net-zero by 2040 requires eliminating all remaining gas generation revenue within 14 years. A carbon price of $50-100/tCO₂ would internalize the externality and make gas CCGT uneconomic relative to clean firm alternatives. Without it, retiring profitable gas assets destroys ~$${fmt(gap2040_ps * 150, 0)}M in annual revenue.`, 'nz'));
             }
             nzCards.push(condCard('Clean Firm Technology at Scale', 'Required by 2035',
-                `Net-zero by 2040 requires firm clean generation to replace gas CCGT for grid reliability. This means commercially available advanced nuclear (SMR), CCS at scale, or LDES (iron-air) by 2035 — five years before the deadline — to allow buildout.`, 'nz'));
+                `Net-zero by 2040 requires firm clean generation to replace gas CCGT for grid reliability. This means commercially available advanced nuclear (SMR), CCS at scale, or LDES (iron-air) by 2035, five years before the deadline, to allow buildout.`, 'nz'));
 
             if (dims && dims.ppa_level) {
                 const lowP = dims.ppa_level.Low ? dims.ppa_level.Low.emissions.p50[3] : null;
@@ -1367,12 +1375,12 @@
         };
 
         let recs = [];
-        if (isos.includes('ERCOT')) recs.push('Leverage ERCOT\'s energy-only market for solar+battery deployment — high-value peak pricing creates strong returns.');
+        if (isos.includes('ERCOT')) recs.push('Leverage ERCOT\'s energy-only market for solar+battery deployment. High-value peak pricing creates strong returns.');
         if (isos.includes('PJM')) recs.push('Utilize PJM capacity market revenue to support firm clean generation investments (nuclear uprates, CCS).');
-        if (byFuel.coal && byFuel.coal.gen_twh > 1) recs.push('Accelerate coal retirement and site repowering — retiring coal sites have existing grid interconnection, land, and workforce.');
-        if (byFuel.nuclear && byFuel.nuclear.gen_twh > 10) recs.push('Pursue nuclear uprates (5-10% output increase) — cheapest firm clean generation available at ~$10/MWh incremental cost.');
+        if (byFuel.coal && byFuel.coal.gen_twh > 1) recs.push('Accelerate coal retirement and site repowering. Retiring coal sites have existing grid interconnection, land, and workforce.');
+        if (byFuel.nuclear && byFuel.nuclear.gen_twh > 10) recs.push('Pursue nuclear uprates (5-10% output increase) at ~$10/MWh incremental cost, the cheapest firm clean generation available.');
         if (byFuel.gas_peaker && byFuel.gas_peaker.gen_twh > 3) recs.push('Replace highest-heat-rate gas peakers with 4-hour battery storage at sites with declining dispatch.');
-        recs.push('Build out corporate PPA pipeline — voluntary procurement creates revenue certainty for new clean projects.');
+        recs.push('Build out corporate PPA pipeline. Voluntary procurement creates revenue certainty for new clean projects.');
 
         el.innerHTML = `
             <p><strong>${co.shortName}'s</strong> strongest strategic position is its ${strengthLabels[topStrength[0]]} (score: ${fmt(topStrength[1], 0)}/100).
@@ -1633,7 +1641,7 @@
                 <div class="insight-box insight-warn" style="margin: var(--space-lg) 0">
                     <strong>Trajectory Impact:</strong> New gas development would slow decarbonization by extending the fossil generation tail.
                     Each 1 GW of new CCGT operating at 50% capacity factor adds approximately ${fmt(0.4 * 0.5 * 8.76, 1)} Mt CO₂/year
-                    to the fleet's emissions — potentially widening the gap to 1.5°C alignment by ${fmt(0.4 * 0.5 * 8.76 / (co.co2_2024_mt || 55) * 100, 0)}%
+                    to the fleet's emissions, potentially widening the gap to 1.5°C alignment by ${fmt(0.4 * 0.5 * 8.76 / (co.co2_2024_mt || 55) * 100, 0)}%
                     of current total emissions. However, if new gas displaces higher-emitting coal or older peakers in neighboring regions,
                     the net system-wide impact may be partially offset through consequential accounting.
                 </div>
@@ -1650,7 +1658,7 @@
     // ─── Initialize ──────────────────────────────────────────
     function init() {
         // Set page title
-        document.title = `${co.name} — IPP Climate Transition Analysis`;
+        document.title = `${co.name} | IPP Climate Transition Analysis`;
         const companyNameEl = document.getElementById('companyName');
         if (companyNameEl) companyNameEl.textContent = co.name;
         const companyTargetEl = document.getElementById('companyTarget');
