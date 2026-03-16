@@ -485,6 +485,18 @@ CCS_RESIDUAL_EMISSION_RATE = 0.037
 # Above this threshold, coal and oil are fully retired from the fossil fleet
 COAL_OIL_RETIREMENT_THRESHOLD = 70.0
 
+# Unit commitment: minimum generation as fraction of nameplate capacity
+# Nuclear: fully must-run (can't economically cycle)
+# Coal steam: min stable generation ~40% (thermal inertia, boiler constraints)
+# Gas CCGT/CT: fully dispatchable (can cycle off)
+MUST_RUN_PCT = {
+    'nuclear': 1.0,
+    'coal_steam': 0.40,
+    'gas_ccgt': 0.0,
+    'gas_ct': 0.0,
+    'oil_ct': 0.0,
+}
+
 # Dispatch cache version
 DISPATCH_CACHE_VERSION = 3
 
