@@ -212,6 +212,7 @@
             label: 'About',
             children: [
                 { label: 'Research Overview', href: 'about.html' },
+                { label: 'Literature Review', href: 'research_paper.html' },
                 { label: 'Optimizer Methodology', href: 'optimizer_methodology.html' }
             ]
         },

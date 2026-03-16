@@ -12,18 +12,12 @@
     <link rel="stylesheet" href="styles/reference.css">
     <style>
         /* ========== RESEARCH PAPER — Page-specific styles only ========== */
-        /* Shared: paper-badge, paper-title, paper-subtitle, paper-meta, paper-toolbar,
-           pdf-download-btn, paper-body, paper-footer, toc, toc-title, cite, figure,
-           figure-caption, figure-number, formula-box, note-box, table-wrap, ref-list,
-           accent-bar, responsive, touch, print → reference.css */
-
         html { font-size: 16px; }
         body {
             background: var(--bg-page-white);
             line-height: 1.85;
         }
 
-        /* Paper long-form typography (uses bare selectors) */
         h2 {
             font-size: 1.55rem;
             color: var(--accent);
@@ -40,10 +34,16 @@
             margin-top: 32px;
             margin-bottom: 12px;
         }
+        h4 {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--navy);
+            margin-top: 24px;
+            margin-bottom: 10px;
+        }
         p { margin-bottom: 16px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.85; }
         strong { color: var(--navy); }
 
-        /* Bare table styles (paper uses unclassed tables) */
         table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
         thead { background: linear-gradient(145deg, #F0F4F8 0%, #E2E8F0 100%); color: var(--navy); }
         th {
@@ -59,11 +59,66 @@
         tbody tr:nth-child(even) { background: rgba(243,244,248,0.5); }
         td:not(:first-child) { text-align: center; font-variant-numeric: tabular-nums; }
 
-        /* Paper TOC has slightly larger border-radius */
         .toc { border-radius: 12px; }
         .toc ol { padding-left: 22px; }
 
-        /* ========== RESPONSIVE ========== */
+        .alignment-box {
+            border-left: 4px solid var(--hydro);
+            background: rgba(14, 165, 233, 0.04);
+            border-radius: 0 8px 8px 0;
+            padding: 16px 20px;
+            margin: 20px 0;
+        }
+        .alignment-box.extension {
+            border-left-color: var(--wind);
+            background: rgba(34, 197, 94, 0.04);
+        }
+        .alignment-box.divergence {
+            border-left-color: var(--solar);
+            background: rgba(245, 158, 11, 0.04);
+        }
+        .alignment-box strong {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .alignment-box p { margin-bottom: 0; }
+
+        .novel-list {
+            counter-reset: novel;
+            list-style: none;
+            padding-left: 0;
+        }
+        .novel-list li {
+            counter-increment: novel;
+            padding: 12px 16px 12px 48px;
+            position: relative;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            background: rgba(243, 244, 248, 0.5);
+            font-size: 0.93rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+        .novel-list li::before {
+            content: counter(novel);
+            position: absolute;
+            left: 14px;
+            top: 12px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         @media (max-width: 768px) {
             .header { padding: 40px 18px 36px; }
             h2 { font-size: 1.35rem; margin-top: 40px; }
@@ -80,7 +135,6 @@
         }
         @media print {
             .header { background: var(--navy) !important; padding: 36px 24px 28px; }
-            .formula-box { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             h2 { break-before: auto; }
             .toc { break-inside: avoid; }
         }
@@ -100,7 +154,7 @@
 
 <header class="header" id="pageHeader">
     <div class="header-accent"></div>
-    <h1>Literature Review & References</h1>
+    <h1>Literature Review &amp; References</h1>
     <p class="subtitle">Academic foundations and cited works underpinning the 8,760 Problem analysis</p>
 </header>
 
@@ -114,412 +168,626 @@
 
 <div class="paper-body section-light">
 
+    <p>
+        <strong>The emerging field of hourly clean energy matching sits at the intersection of at least seven major research domains</strong>&mdash;CO&#8322;
+        accounting frameworks, capacity expansion modeling, clean firm power economics, storage, market design, corporate
+        procurement, and grid resilience&mdash;yet no prior work synthesizes these domains through a unified, multi-scenario
+        optimization framework the way The 8,760 Problem does. This literature review maps the full intellectual landscape,
+        identifies more than 70 primary sources across all seven domains, and precisely locates where The 8,760 Problem
+        aligns with, diverges from, and extends beyond the existing literature.
+    </p>
+
     <div class="toc">
         <div class="toc-title">Contents</div>
         <ol>
-            <li><a href="#literature-review">Literature Review</a>
-                <ol type="a" style="margin-top:4px;">
-                    <li><a href="#literature-review">From Annual to Hourly Clean Energy Accounting</a></li>
-                    <li><a href="#literature-review">Clean Energy Cost Benchmarks</a></li>
-                    <li><a href="#literature-review">The Role of Firm Clean Power</a></li>
-                    <li><a href="#literature-review">Battery Storage and Grid Integration</a></li>
-                    <li><a href="#literature-review">EAC Scarcity and Supply Stack Competition</a></li>
-                    <li><a href="#literature-review">Curtailment Economics</a></li>
-                    <li><a href="#literature-review">Relationship to Capacity Expansion Models</a></li>
-                </ol>
-            </li>
-            <li><a href="#references">References</a></li>
+            <li><a href="#sec-accounting">The Accounting Revolution: From Annual RECs to Hourly Matching</a></li>
+            <li><a href="#sec-granular">Granular Certificates and Institutional Infrastructure</a></li>
+            <li><a href="#sec-princeton">The Princeton Finding: Hourly CFE Modeling Literature</a></li>
+            <li><a href="#sec-firm">Clean Firm Power: Technologies That Close the Hourly Gap</a></li>
+            <li><a href="#sec-lcoe">Why LCOE Misleads: System Cost &amp; Value Deflation</a></li>
+            <li><a href="#sec-lastmile">The Last Mile: Storage Economics &amp; Grid Resilience</a></li>
+            <li><a href="#sec-interconnection">The Interconnection Bottleneck &amp; Market Design</a></li>
+            <li><a href="#sec-procurement">Corporate Procurement Enters the Firm Power Era</a></li>
+            <li><a href="#sec-novel">Nine Novel Contributions</a></li>
+            <li><a href="#sec-ce-models">Relationship to Capacity Expansion Models</a></li>
+            <li><a href="#references">References (70+)</a></li>
         </ol>
     </div>
 
-    <!-- ========== LITERATURE REVIEW ========== -->
-    <h2 id="literature-review">Literature Review</h2>
+    <!-- ========== 1. ACCOUNTING REVOLUTION ========== -->
+    <h2 id="sec-accounting">1. The Accounting Revolution: From Annual RECs to Hourly Matching</h2>
 
-    <h3>2.1 From Annual to Hourly Clean Energy Accounting</h3>
     <p>
-        The inadequacy of annual renewable energy certificates (RECs) for verifying actual grid decarbonization
-        has been widely documented. Xu et al. (2024) demonstrate that annual matching can overstate clean energy
-        coverage by 15&ndash;40% in regions with high solar penetration, because midday surplus certificates
-        mask nighttime fossil consumption
-        <a href="#ref-1" class="cite">[1]</a>. The transition toward hourly or "granular"
-        energy certificates is now supported by regulatory frameworks in the EU (via the delegated act on
-        additionality and temporal correlation) and proposed SEC climate disclosure rules.
+        The intellectual foundation for hourly clean energy matching begins with the GHG Protocol Scope 2 Guidance
+        (WRI, 2015) <a href="#ref-s2-1" class="cite">[1]</a>, which established dual reporting: a location-based
+        method using average grid emission factors and a market-based method using contractual instruments such as
+        Renewable Energy Certificates. This framework enabled the modern voluntary clean energy market but also
+        created a structural loophole.
     </p>
     <p>
-        Google's 24/7 CFE program, the largest corporate hourly matching initiative, reported achieving 64%
-        average hourly CFE across its global operations in 2022, with significant regional variation
-        <a href="#ref-3" class="cite">[3]</a>. Their published methodology uses hourly generation
-        data matched against facility-level consumption and has become a de facto industry standard. The
-        UN 24/7 CFE Compact, launched at COP26, provides a multilateral framework for scaling hourly
-        matching globally <a href="#ref-4" class="cite">[4]</a>.
-    </p>
-
-    <h3>2.2 Clean Energy Cost Benchmarks</h3>
-    <p>
-        NREL ATB 2024 reports utility-scale solar at $24&ndash;42/MWh and onshore wind at $26&ndash;50/MWh,
-        with 4-hour Li-ion storage at $115&ndash;165/MWh LCOS
-        <a href="#ref-5" class="cite">[5]</a>. Lazard v17.0 is broadly consistent
-        <a href="#ref-6" class="cite">[6]</a>. Regional variation is substantial:
-        LBNL documents solar PPAs from $30&ndash;40/MWh (Southwest) to $60&ndash;90/MWh (Northeast)
-        <a href="#ref-7" class="cite">[7]</a>, and wind PPAs from $20&ndash;35/MWh
-        (Great Plains) to $55&ndash;80/MWh (New England) <a href="#ref-8" class="cite">[8]</a>.
-        These differentials are central to our optimization&mdash;the cost-optimal mix varies significantly
-        by region.
-    </p>
-
-    <h3>2.3 The Role of Firm Clean Power</h3>
-    <p>
-        The Princeton Net-Zero America study (Larson et al., 2021) identifies firm, dispatchable clean
-        generation as essential for achieving deep decarbonization cost-effectively
-        <a href="#ref-9" class="cite">[9]</a>. Jenkins et al. (2018) demonstrate
-        that removing firm low-carbon resources from the generation portfolio increases electricity system
-        costs by 10&ndash;62% under high decarbonization scenarios
-        <a href="#ref-10" class="cite">[10]</a>. The Clean Air Task Force (2024) reinforces
-        this finding, showing that clean firm technologies (nuclear, geothermal, CCS, and fusion) lower
-        overall system costs, reduce required transmission buildout by approximately 50%, and mitigate
-        the speed and scale risks inherent in an all-renewables decarbonization pathway
-        <a href="#ref-29" class="cite">[29]</a>.
+        Bj&oslash;rn, Lloyd, Brander, and Matthews (2022, <em>Nature Climate Change</em>) <a href="#ref-s2-3" class="cite">[3]</a>
+        demonstrated that across 115 companies with science-based targets, the widespread use of RECs led to an
+        inflated estimate of mitigation effectiveness: companies reported a 31% reduction in scope 2 emissions from
+        2015&ndash;2019, but stripping out REC-based claims revealed an actual reduction of only ~10%. If this trend
+        continued, 42% of committed scope 2 reductions would not result in real-world mitigation.
     </p>
     <p>
-        Nuclear power, the largest existing source of firm clean generation, faces economic pressure from
-        cheap natural gas and subsidized renewables. The EIA reports existing nuclear fleet operating costs
-        of $28&ndash;35/MWh, making it cost-competitive with wholesale market prices in most regions
-        <a href="#ref-11" class="cite">[11]</a>. New nuclear construction, however,
-        faces significantly higher costs: the NREL ATB 2024 estimates new advanced nuclear at
-        $60&ndash;100/MWh <a href="#ref-5" class="cite">[5]</a>. Our cost model uses
-        $90/MWh for new-build clean firm across all regions, consistent with these estimates for advanced
-        nuclear or enhanced geothermal systems.
+        The proposed Scope 2 revision (GHG Protocol, Standard Development Plan, December 2024; Phase 1 public
+        consultation launched October 2025) <a href="#ref-s2-2" class="cite">[2]</a> represents the most consequential
+        shift in corporate carbon accounting since 2015. The revision proposes hourly matching requirements for
+        market-based instruments, geographic deliverability constraints, and residual mix reform using fossil-only
+        emission factors where residual data is unavailable. The timeline targets a revised standard by 2027.
+    </p>
+    <p>
+        Brander (2022) <a href="#ref-s2-4" class="cite">[4]</a> and Brander and Bj&oslash;rn (2023) <a href="#ref-s2-5" class="cite">[5]</a>
+        articulated the theoretical underpinning: attributional methods allocate emissions within a boundary and can be
+        summed to equal total global emissions, while consequential methods quantify system-wide changes caused by
+        decisions. Mixing the two produces &ldquo;incoherent results.&rdquo;
+    </p>
+    <p>
+        This debate has organized two camps. The <strong>hourly matching camp</strong>, led by Google, EnergyTag, and
+        the Climate Group&rsquo;s 24/7 Carbon-Free Coalition (launched September 2024), prioritizes time- and
+        location-matched energy procurement. The <strong>carbon matching camp</strong>, led by the Emissions First
+        Partnership (founded 2022; members include Amazon, Meta, Intel, Salesforce, General Motors) <a href="#ref-s2-10" class="cite">[10]</a>,
+        uses marginal operating emission rates (MOERs) to maximize total emissions reductions regardless of location.
+    </p>
+    <p>
+        WattTime provides the foundational data for marginal emissions analysis. Building on Siler-Evans, Azevedo,
+        and Morgan (2012, <em>Environmental Science &amp; Technology</em>) <a href="#ref-s2-11" class="cite">[11]</a>&mdash;which
+        established that average emission factors can &ldquo;grossly misestimate&rdquo; avoided emissions&mdash;WattTime
+        now produces MOERs every 5 minutes across 210 countries. The VERACI-T validation working group (2023) <a href="#ref-s2-13" class="cite">[13]</a>
+        compared six MEF models across US ISOs, finding WattTime (&minus;1.3% average error) and Siler-Evans (&minus;2.7%)
+        significantly more accurate than alternatives.
     </p>
 
-    <h3>2.4 Battery Storage and Grid Integration</h3>
+    <div class="alignment-box">
+        <strong>Alignment with The 8,760 Problem</strong>
+        <p>The site&rsquo;s 10-strategy procurement comparison framework&mdash;comprising 3 consequential, 3 hourly, and
+        4 annual matching strategies&mdash;directly operationalizes this accounting debate. By modeling all approaches
+        simultaneously across identical scenarios, the site enables empirical comparison of outcomes rather than
+        theoretical argument. This multi-strategy comparison is unique in the literature.</p>
+    </div>
+    <div class="alignment-box extension">
+        <strong>Extension</strong>
+        <p>While existing studies compare at most 2&ndash;3 strategies (e.g., Xu et al. compare annual, temporal, and
+        emissions matching), The 8,760 Problem&rsquo;s 10-strategy framework provides the most comprehensive
+        side-by-side evaluation documented to date.</p>
+    </div>
+
+    <!-- ========== 2. GRANULAR CERTIFICATES ========== -->
+    <h2 id="sec-granular">2. Granular Certificates and Institutional Infrastructure</h2>
+
     <p>
-        Battery storage enables temporal shifting of clean energy from surplus to deficit hours. The NREL
-        ATB 2024 reports 4-hour lithium-ion round-trip efficiency of 85%
-        <a href="#ref-5" class="cite">[5]</a>, with installed costs declining from
-        $380/kWh in 2020 to approximately $250/kWh in 2024
-        <a href="#ref-12" class="cite">[12]</a>. The EIA reports 16 GW of utility-scale
-        battery storage installed in the U.S. as of 2024, with the majority in California (CAISO) and Texas
-        (ERCOT) <a href="#ref-13" class="cite">[13]</a>.
+        The practical enablement of hourly matching requires institutional infrastructure that is still under
+        construction. EnergyTag published its Granular Certificate (GC) Scheme Standard V2 in December 2024 and
+        Matching Standard V1 in March 2024 <a href="#ref-s2-16" class="cite">[16]</a>. GCs represent energy production
+        during intervals of one hour or less. In June 2025, EnergyTag accredited its first two GC schemes&mdash;Energinet
+        (Denmark&rsquo;s TSO) and a second scheme&mdash;marking a milestone for operational granular certification.
     </p>
     <p>
-        However, 4-hour storage has limited ability to address multi-day deficits or seasonal mismatches.
-        Dowling et al. (2020) show that storage alone cannot cost-effectively replace firm generation at high
-        decarbonization levels, as the required storage duration scales nonlinearly with the matching target
-        <a href="#ref-14" class="cite">[14]</a>.
+        Google&rsquo;s portfolio conversion demonstrates feasibility at scale: Flexidao converted Google&rsquo;s global
+        portfolio to hourly format using Config 3, covering 10.5 TWh across 7 countries and 100+ sites in 2025 <a href="#ref-s2-18" class="cite">[18]</a>.
+        In the US, registries including PJM GATs, M-RETS, and NEPOOL are developing GC capability.
+    </p>
+    <p>
+        The SBTi Corporate Net-Zero Standard V2.0 (second consultation draft, November 2025) <a href="#ref-s2-7" class="cite">[7]</a>
+        codifies hourly matching into corporate target-setting: companies must achieve 100% low-carbon electricity by
+        2040, with hourly matching required starting 2030.
+    </p>
+    <p>
+        EPRI&rsquo;s SMARTargets framework (announced COP28 December 2023; public consultation closed August 2025) <a href="#ref-s2-9" class="cite">[9]</a>
+        offers a contrasting approach&mdash;company-specific &ldquo;Qualified Targets&rdquo; reflecting unique transition
+        constraints alongside &ldquo;Aspirational Targets&rdquo; from global 1.5&deg;C pathways.
     </p>
 
-    <h3>2.5 EAC Scarcity and Supply Stack Competition</h3>
+    <div class="alignment-box">
+        <strong>Alignment</strong>
+        <p>The site&rsquo;s ISO-specific analysis across 7 US regions reflects the SMARTargets philosophy that
+        company-specific context matters, while its scenario-based approach enables testing whether aspirational targets
+        are achievable under realistic conditions.</p>
+    </div>
+    <div class="alignment-box divergence">
+        <strong>Divergence</strong>
+        <p>The site goes beyond both SBTi&rsquo;s phased requirements and EPRI&rsquo;s qualitative framework by
+        quantifying exact cost curves for every matching threshold from 50% to &ge;99.99% in 2.5% increments.</p>
+    </div>
+
+    <!-- ========== 3. PRINCETON FINDING ========== -->
+    <h2 id="sec-princeton">3. The Princeton Finding: Hourly CFE Modeling Literature</h2>
+
     <p>
-        Corporate clean energy procurement does not occur in a vacuum&mdash;it competes for finite buildable
-        clean capacity alongside state RPS mandates. Xu et al. (2024) use the GenX capacity expansion model
-        to show that when both RPS compliance and voluntary C&amp;I demand draw on the same regional supply
-        curve, costs escalate non-linearly as combined demand approaches the buildable capacity frontier
-        <a href="#ref-25" class="cite">[25]</a>. In their California case study (45% RPS + 25% voluntary
-        participation), excess in-state renewable buildout is forced beyond what can be economically utilized.
+        The most consequential finding comes from Princeton&rsquo;s ZERO Lab. Xu, Ricks, Manocha, Patankar, and
+        Jenkins (2024, <em>Joule</em>) <a href="#ref-s2-19" class="cite">[19]</a> enhanced GenX to compare three voluntary
+        procurement strategies across US regions. Their central finding: annual/volumetric matching produces
+        &ldquo;zero or near-zero&rdquo; system-level CO&#8322; reductions in the long run, because wind and solar
+        procurement largely displaces other clean energy rather than fossil fuels. Only temporal (hourly) matching
+        consistently lowered system-wide emissions.
     </p>
     <p>
-        Gillenwater (2008) provides the foundational supply-demand framework for voluntary REC markets,
-        showing that when the compliance market is &ldquo;long&rdquo; (supply exceeds mandate), voluntary
-        retirement has near-zero effect on new investment. Only when combined demand (compliance + voluntary)
-        creates genuine scarcity does voluntary procurement drive additional generation
-        <a href="#ref-26" class="cite">[26]</a>. O&rsquo;Shaughnessy et al. (2025) document
-        319 million MWh in voluntary procurement (44% of non-hydro renewable sales), with long-term PPAs&mdash;not
-        spot RECs&mdash;as the primary channel through which corporate demand signals new capacity
-        <a href="#ref-27" class="cite">[27]</a>.
+        Riepin and Brown (2024, <em>Energy Strategy Reviews</em>) <a href="#ref-s2-20" class="cite">[20]</a> extended this to
+        Europe using PyPSA, quantifying the cost nonlinearity: a 98% CFE target costs 54% more than annual matching,
+        and the last 2% (98% &rarr; 100%) more than doubles costs. In a 2025 <em>Joule</em> commentary <a href="#ref-s2-21" class="cite">[21]</a>,
+        Riepin, Jenkins, Swezey, and Brown demonstrated that 24/7 CFE matching accelerates technology learning curves.
     </p>
     <p>
-        The &ldquo;last few percent&rdquo; phenomenon is well-documented in the literature: Denholm et al. (2021) show that
-        costs increase non-linearly as clean electricity targets approach 100% <a href="#ref-18" class="cite">[18]</a>.
-        However, our optimizer results show a more nuanced picture. <strong>Average abatement costs range from
-        $.../tCO&#8322; across all seven ISOs through 99% hourly matching</strong> &mdash; well below the Rennert social
-        cost of carbon ($185/ton). But the stepwise marginal analysis reveals critical decision boundaries:
-        individual threshold steps range from $.../ton (...) to $.../ton (...).
-        ... regions have at least one step exceeding DAC costs ($150&ndash;$400/ton range).
-        The cost escalation is non-monotonic and region-specific, driven by resource mix transitions at each threshold.
+        RMI&rsquo;s &ldquo;Clean Power by the Hour&rdquo; (Dyson, Shah, and Teplin, July 2021) <a href="#ref-s2-22" class="cite">[22]</a>,
+        supported by Microsoft, assessed hourly matching across 7 markets and identified a three-stage cost escalation:
+        stable costs to 30&ndash;80% hourly matching, significant increase to ~85%, then sharp escalation above 85%.
     </p>
     <p>
-        Our scarcity model operationalizes these insights: RPS-mandated build consumes the cheapest tiers
-        of the regional supply stack first, with voluntary corporate demand riding on top. The marginal
-        clean premium is set by where combined demand (RPS + voluntary) lands on the stack, consistent
-        with the emerging capacity-expansion modeling literature
-        <a href="#ref-28" class="cite">[28]</a>.
+        TransitionZero (2025, funded by Google.org) <a href="#ref-s2-23" class="cite">[23]</a> produced the most
+        geographically diverse 24/7 CFE modeling, studying India, Japan, Singapore, and Malaysia. The cross-cutting
+        finding&mdash;that moderate hourly matching (70&ndash;90%) can be cheaper than annual matching at system
+        level&mdash;challenges the assumption that hourly matching necessarily costs more. India can add 70% 24/7 CFE
+        at lower cost than annual matching, saving grid operators US$1 billion/year.
+    </p>
+    <p>
+        Ludkovski, Mouti, and Swindle (2023) <a href="#ref-s2-26" class="cite">[26]</a> developed a probabilistic
+        framework for CFE portfolio optimization in ERCOT, finding costs increase exponentially as CFE targets
+        approach 100%.
     </p>
 
-    <h3>2.6 Curtailment Economics</h3>
+    <div class="alignment-box">
+        <strong>Alignment</strong>
+        <p>The site&rsquo;s 8,760-hour dispatch optimization across 7 US ISOs directly builds on the Princeton
+        ZERO Lab methodology.</p>
+    </div>
+    <div class="alignment-box extension">
+        <strong>Extension</strong>
+        <p>Where Princeton, Riepin and Brown, and TransitionZero each study individual regions with single-point cost
+        assumptions, The 8,760 Problem runs 5,832+ cost scenarios per ISO with ~33,000 physics-feasible resource mixes,
+        providing a distribution of outcomes rather than point estimates. The 2.5% threshold granularity in the
+        90&ndash;100% zone is finer than any published study, which typically report results at 5&ndash;10% intervals.</p>
+    </div>
+
+    <!-- ========== 4. CLEAN FIRM POWER ========== -->
+    <h2 id="sec-firm">4. Clean Firm Power: Technologies That Close the Hourly Gap</h2>
+
     <p>
-        Grid curtailment of renewable energy is a growing challenge at high penetration levels. CAISO data
-        shows over 2.4 TWh of renewable curtailment in 2023, predominantly solar during midday hours
-        <a href="#ref-15" class="cite">[15]</a>. For hourly matching purchasers,
-        curtailment represents a direct economic penalty: energy is procured and paid for but generates no
-        matching credit because it exceeds instantaneous demand. Our analysis quantifies this curtailment
-        cost across matching targets and regions.
+        The economic case for clean firm power is anchored by Sepulveda, Jenkins, de Sisternes, and Lester
+        (2018, <em>Joule</em>) <a href="#ref-s2-30" class="cite">[30]</a>, who found that firm low-carbon technologies
+        reduce electricity costs by 10&ndash;62% across fully decarbonized scenarios. Even under the most optimistic
+        wind, solar, and battery cost assumptions, firm resources consistently lowered system costs.
+    </p>
+    <p>
+        Long et al. (2021, <em>Issues in Science and Technology</em>) <a href="#ref-s2-31" class="cite">[31]</a>&mdash;the
+        landmark EDF/CATF California study&mdash;used three independent models and found that portfolios including clean
+        firm power would be 32&ndash;53% cheaper than renewables-and-batteries-only pathways. California needs ~30 GW
+        of clean firm capacity by 2045.
+    </p>
+    <p>
+        Spokas and Ricks (CATF, February 2026) <a href="#ref-s2-32" class="cite">[32]</a> published the most
+        comprehensive technology assessment to date, concluding that diversified systems with clean firm generation are
+        &ldquo;significantly less expensive (often by tens of percent)&rdquo; than variable-renewables-only systems.
     </p>
 
-    <h3>2.7 Relationship to Capacity Expansion Models</h3>
+    <h3>Nuclear Cost Trajectories</h3>
     <p>
-        The dominant tools for grid planning&mdash;GenX <a href="#ref-38" class="cite">[38]</a>,
-        ReEDS <a href="#ref-39" class="cite">[39]</a>, SWITCH <a href="#ref-40" class="cite">[40]</a>,
-        and PyPSA <a href="#ref-41" class="cite">[41]</a>&mdash;are capacity expansion (CE) models.
-        They solve a unified optimization: given cost assumptions, find the least-cost portfolio of generation,
-        storage, and transmission that meets demand subject to reliability and policy constraints. They are
-        powerful system-planning instruments. This optimizer is not one of them, and the distinction is
-        deliberate.
+        The DOE &ldquo;Pathways to Commercial Liftoff: Advanced Nuclear&rdquo; (September 2024 update) <a href="#ref-s2-33" class="cite">[33]</a>
+        projects NOAK cost targets of $3,600/kW with a committed orderbook of 5&ndash;10 deployments.
+        MIT (Shirvan, 2024) <a href="#ref-s2-34" class="cite">[34]</a> estimated AP1000 NOAK at ~$4,625/kW with
+        unsubsidized LCOE of $66/MWh. INL (Bolisetti et al., June 2024) <a href="#ref-s2-35" class="cite">[35]</a>
+        identified pathways achieving 45&ndash;60% cost reductions between first and third plants.
+    </p>
+
+    <h3>Learning Curves and Wright&rsquo;s Law</h3>
+    <p>
+        Bolinger, Wiser, and O&rsquo;Shaughnessy (2022, <em>iScience</em>, LBNL) <a href="#ref-s2-38" class="cite">[38]</a>
+        provided rigorous LCOE-based learning analysis: solar PV exhibits a 24% learning rate per doubling and onshore
+        wind 15%. Way, Iribarren, Hepburn, and Farmer (Oxford) <a href="#ref-s2-39" class="cite">[39]</a> demonstrated that
+        Wright&rsquo;s Law-based forecasting has been the most accurate predictor of solar cost trajectories.
+    </p>
+
+    <h3>Current Cost Benchmarks</h3>
+    <p>
+        Lazard LCOE+ v18.0 (June 2025) <a href="#ref-s2-41" class="cite">[41]</a> provides unsubsidized benchmarks:
+        utility-scale solar at $38&ndash;78/MWh, onshore wind at $37&ndash;86/MWh, gas combined cycle at $48&ndash;109/MWh,
+        geothermal at $66&ndash;109/MWh, and new-build nuclear at $141&ndash;220/MWh.
+    </p>
+    <p>
+        GridLab, Energy Futures Group, and Halcyon (September 2025) <a href="#ref-s2-42" class="cite">[42]</a> revealed
+        CCGT projects routinely exceeding $2,000/kW&mdash;while EIA AEO assumes only $921/kW. This massive disconnect
+        between modeled assumptions and market reality has profound implications for grid planning.
+    </p>
+
+    <div class="alignment-box">
+        <strong>Alignment</strong>
+        <p>The site&rsquo;s four-pool supply model (SSS/Corporate-Contracted/Merchant/New-Build) directly
+        operationalizes the distinction between existing and new clean firm power.</p>
+    </div>
+    <div class="alignment-box extension">
+        <strong>Extension</strong>
+        <p>The critical mass analysis for Wright&rsquo;s Law learning curve activation is novel&mdash;no published study
+        quantifies how many corporate procurement decisions are needed to trigger specific learning rate milestones at
+        the ISO level.</p>
+    </div>
+
+    <!-- ========== 5. LCOE MISLEADS ========== -->
+    <h2 id="sec-lcoe">5. Why LCOE Misleads: System Cost, Cannibalization, and Value Deflation</h2>
+
+    <p>
+        Joskow (2011, <em>American Economic Review</em>) <a href="#ref-s2-44" class="cite">[44]</a> established that LCOE is
+        &ldquo;seriously flawed&rdquo; because it treats all MWh as homogeneous, overvaluing intermittent technologies.
+        Hirth (2013, <em>Energy Economics</em>) <a href="#ref-s2-45" class="cite">[45]</a> quantified the consequence: wind
+        value factors drop to ~0.7 at 30% market share and solar to ~0.7 at only 10&ndash;15% penetration.
+        Hirth, Ueckerdt, and Edenhofer (2015) <a href="#ref-s2-46" class="cite">[46]</a> decomposed integration costs
+        into profile costs (~25&ndash;35 &euro;/MWh at 30&ndash;40% wind, the dominant component), balancing costs
+        (~2&ndash;4 &euro;/MWh), and grid costs. Ueckerdt et al. (2013) <a href="#ref-s2-47" class="cite">[47]</a>
+        formalized System LCOE = Generation LCOE + Integration Costs.
+    </p>
+    <p>
+        By 2024, solar capture rates in CAISO&rsquo;s SP15 zone had plummeted to less than 30% (REsurety, 2025) <a href="#ref-s2-49" class="cite">[49]</a>.
+        Negative pricing in CAISO SP15 doubled from ~530 hours in 2023 to ~1,180 hours in 2024 (~13% of all hours).
+        In ERCOT, wind and solar together met 36% of demand in the first 9 months of 2025.
+    </p>
+
+    <div class="alignment-box">
+        <strong>Alignment</strong>
+        <p>The site&rsquo;s synthetic LMP model (150,000+ scenarios per ISO) directly addresses the cannibalization challenge.</p>
+    </div>
+    <div class="alignment-box extension">
+        <strong>Extension</strong>
+        <p>The stranded investment analysis&mdash;comparing interim vs. long-term target procurement decisions&mdash;is
+        not found in the academic capacity expansion literature, which typically optimizes for a single future year.</p>
+    </div>
+
+    <!-- ========== 6. LAST MILE ========== -->
+    <h2 id="sec-lastmile">6. The Last Mile: Storage Economics, Grid Resilience, and Resource Adequacy</h2>
+
+    <p>
+        Cole et al. (2021, <em>Joule</em>, NREL) <a href="#ref-s2-51" class="cite">[51]</a> demonstrated that costs increase
+        nonlinearly for the last few percent toward 100% renewable electricity. Mai et al. (2022, <em>Joule</em>) <a href="#ref-s2-52" class="cite">[52]</a>
+        evaluated six strategies for the last 10%, concluding that no single strategy is sufficient.
+    </p>
+
+    <h3>Long-Duration Energy Storage</h3>
+    <p>
+        Form Energy&rsquo;s iron-air battery targets &lt;$20/kWh for 100+ hours of continuous discharge, though current
+        costs exceed $150/kWh <a href="#ref-s2-53" class="cite">[53]</a>. The DOE Long Duration Storage Shot (July 2021) <a href="#ref-s2-54" class="cite">[54]</a>
+        targets 90% cost reduction for 10+ hour storage. The DOE Pathways to Commercial Liftoff for LDES (2023) <a href="#ref-s2-55" class="cite">[55]</a>
+        estimates net-zero pathways deploying LDES yield $10&ndash;20 billion/year in savings and reduce the need for
+        200+ GW of new gas capacity.
+    </p>
+
+    <h3>Battery Cost Trajectories</h3>
+    <p>
+        BloombergNEF reports global average lithium-ion pack prices at $108/kWh in 2025 (down 93% since 2010), with
+        stationary storage packs at $70/kWh <a href="#ref-s2-57" class="cite">[57]</a>.
+    </p>
+
+    <h3>Resource Adequacy and Dunkelflaute</h3>
+    <p>
+        PJM adopted marginal ELCC methodology (FERC-approved January 2024) <a href="#ref-s2-59" class="cite">[59]</a>. Solar
+        incremental capacity credit in CAISO is expected to drop to 6% by 2026. Kittel et al. (2024) <a href="#ref-s2-58" class="cite">[58]</a>
+        quantified 2&ndash;10 Dunkelflaute events per year in northern Europe, mostly October&ndash;February. Germany
+        experienced a major event in November 2024 with renewable contribution dropping to 30% and prices surging
+        above &euro;145/MWh.
+    </p>
+
+    <div class="alignment-box">
+        <strong>Alignment</strong>
+        <p>The site&rsquo;s treatment of the 90&ndash;100% zone with 2.5% granularity directly addresses the
+        &ldquo;last mile&rdquo; problem.</p>
+    </div>
+    <div class="alignment-box extension">
+        <strong>Extension</strong>
+        <p>The MAC vs. DAC crossover analysis with &ldquo;no-regrets&rdquo; resource identification represents a novel
+        decision framework not found in the existing literature.</p>
+    </div>
+
+    <!-- ========== 7. INTERCONNECTION ========== -->
+    <h2 id="sec-interconnection">7. The Interconnection Bottleneck and Market Design Challenges</h2>
+
+    <p>
+        Berkeley Lab&rsquo;s &ldquo;Queued Up&rdquo; series (Rand et al., 2025) <a href="#ref-s2-60" class="cite">[60]</a>
+        documents ~2,300 GW of capacity actively seeking grid connection, with only 13% of capacity from 2000&ndash;2019
+        reaching commercial operations. Median wait times have doubled to over 4 years.
+    </p>
+    <p>
+        FERC Order No. 2023 (July 2023) <a href="#ref-s2-61" class="cite">[61]</a> replaced first-come-first-served with
+        cluster-based studies, increased financial readiness requirements, and mandated interconnection heatmaps.
+    </p>
+    <p>
+        Lo Prete, Palmer, and Robertson (RFF, June 2025) <a href="#ref-s2-62" class="cite">[62]</a> reviewed 11 proposed
+        market designs and concluded existing designs are poorly suited for the evolving resource mix. PJM&rsquo;s
+        July 2024 capacity auction saw prices surge to $269.92/MW-day, a nearly 10-fold increase. ERCOT&rsquo;s
+        energy-only market faces separate challenges with loss-of-load expectation at 1.25 days/year.
+    </p>
+    <p>
+        The DOE National Transmission Needs Study (October 2023) <a href="#ref-s2-63" class="cite">[63]</a> concluded that
+        interregional capacity must grow more than fivefold to realize IRA benefits.
+    </p>
+
+    <div class="alignment-box">
+        <strong>Alignment</strong>
+        <p>The site covers all 7 US ISOs, inherently modeling differences between capacity markets (PJM, NYISO, ISO-NE),
+        hybrid designs (MISO, SPP), and energy-only markets (ERCOT).</p>
+    </div>
+    <div class="alignment-box extension">
+        <strong>Extension</strong>
+        <p>No prior study systematically compares procurement optimization outcomes across all 7 ISOs simultaneously.</p>
+    </div>
+
+    <!-- ========== 8. CORPORATE PROCUREMENT ========== -->
+    <h2 id="sec-procurement">8. Corporate Procurement Enters the Firm Power Era</h2>
+
+    <p>
+        BloombergNEF data shows corporations signed ~62 GW of clean power PPAs in 2024 before declining to 55.9 GW in
+        2025 <a href="#ref-s2-65" class="cite">[65]</a>. Critically, 5.2 GW of 2025 deals were &ldquo;baseload-like&rdquo;
+        products&mdash;a structural shift from wind and solar PPAs.
+    </p>
+    <p>
+        Nuclear deals are unprecedented: Microsoft signed a $1.6 billion PPA with Constellation for TMI Unit 1 restart
+        (835 MW) <a href="#ref-s2-67" class="cite">[67]</a>. Google signed the first corporate SMR fleet deal with
+        Kairos Power (up to 500 MW) <a href="#ref-s2-68" class="cite">[68]</a>. Amazon is pursuing nearly 2 GW from
+        Talen Energy&rsquo;s Susquehanna. Meta signed 1.1 GW with Constellation&rsquo;s Clinton plant. Combined, Big
+        Tech contracted 10+ GW of new nuclear in 2024&ndash;2025.
+    </p>
+    <p>
+        IRA Section 45V (final regulations January 2025) <a href="#ref-s2-66" class="cite">[66]</a> established hourly matching
+        required starting January 1, 2030 for hydrogen production tax credits&mdash;the first federal hourly matching
+        mandate in US law.
+    </p>
+
+    <div class="alignment-box">
+        <strong>Alignment</strong>
+        <p>The site&rsquo;s corporate-contracted and merchant supply pools mirror the real-world landscape.</p>
+    </div>
+    <div class="alignment-box extension">
+        <strong>Extension</strong>
+        <p>The stranded investment analysis connects Carbon Tracker&rsquo;s macro stranded-asset framework to individual
+        procurement decisions.</p>
+    </div>
+
+    <!-- ========== 9. NOVEL CONTRIBUTIONS ========== -->
+    <h2 id="sec-novel">9. Nine Novel Contributions That Distinguish The 8,760 Problem</h2>
+
+    <p>Having mapped the full literature landscape, nine novel contributions can be precisely identified:</p>
+
+    <ol class="novel-list">
+        <li><strong>Multi-scenario co-optimization at unprecedented scale.</strong> 5,832+ sensitivity scenarios per ISO,
+            producing distributions of outcomes rather than point estimates&mdash;unmatched in the published literature.</li>
+        <li><strong>The four-pool supply model.</strong> SSS/Corporate-Contracted/Merchant/New-Build decomposition reflects
+            real-world procurement constraints that academic models abstract away.</li>
+        <li><strong>The 10-strategy procurement comparison framework.</strong> The most comprehensive side-by-side evaluation
+            of accounting approaches documented to date.</li>
+        <li><strong>Critical mass analysis for Wright&rsquo;s Law activation.</strong> Quantifies specific deployment
+            thresholds needed to trigger learning rates for advanced nuclear and enhanced geothermal at the ISO level.</li>
+        <li><strong>~33,000 physics-feasible resource mixes per ISO.</strong> A search space orders of magnitude larger
+            than any published study&rsquo;s technology palette exploration.</li>
+        <li><strong>Stranded investment analysis.</strong> Bridges macro stranded-asset analysis to corporate procurement
+            decision-making by comparing interim vs. long-term target optimization.</li>
+        <li><strong>Synthetic LMP model with 150,000+ scenarios per ISO.</strong> Extends beyond existing temporal mismatch
+            analysis to generate comprehensive price distributions.</li>
+        <li><strong>MAC vs. DAC crossover analysis.</strong> Identifies where hourly matching becomes more expensive than
+            direct air capture, with &ldquo;no-regrets&rdquo; resource identification below the threshold.</li>
+        <li><strong>2.5% threshold granularity in the 90&ndash;100% inflection zone.</strong> Finer than any published study,
+            providing practitioners the precision needed for target-setting in the most cost-sensitive zone.</li>
+    </ol>
+
+    <!-- ========== 10. CE MODELS ========== -->
+    <h2 id="sec-ce-models">10. Relationship to Capacity Expansion Models</h2>
+
+    <p>
+        The dominant tools for grid planning&mdash;GenX <a href="#ref-s2-50a" class="cite">[50]</a>,
+        ReEDS <a href="#ref-s2-50b" class="cite">[50b]</a>, SWITCH, and PyPSA <a href="#ref-s2-50c" class="cite">[50c]</a>&mdash;are
+        capacity expansion (CE) models. They solve a unified optimization: given cost assumptions, find the least-cost
+        portfolio of generation, storage, and transmission that meets demand subject to reliability and policy
+        constraints. They are powerful system-planning instruments. This optimizer is not one of them, and the
+        distinction is deliberate.
     </p>
     <p>
         <strong>CE models answer a system planner&rsquo;s question: &ldquo;What should the grid build?&rdquo;</strong>
         They co-optimize capacity investment and operational dispatch within a single linear or mixed-integer
-        program, typically over a 20&ndash;30 year horizon. To keep the problem computationally tractable,
-        most CE models compress 8,760 hours into representative periods&mdash;often 50&ndash;200 time slices
-        selected to preserve statistical properties of load and renewable output
-        <a href="#ref-42" class="cite">[42]</a>. This approximation is acceptable for system-level planning,
-        where the goal is directionally correct capacity buildout under policy scenarios.
+        program, typically over a 20&ndash;30 year horizon. To keep the problem computationally tractable, most CE
+        models compress 8,760 hours into representative periods&mdash;often 50&ndash;200 time slices selected to
+        preserve statistical properties of load and renewable output. This approximation is acceptable for
+        system-level planning.
     </p>
     <p>
-        <strong>This optimizer answers a procurement strategist&rsquo;s question: &ldquo;What does it cost to
-        match my load cleanly at every hour, and what drives that cost?&rdquo;</strong> The unit of analysis is
-        not the grid&mdash;it is a load-following clean energy portfolio evaluated against actual hourly demand
-        and generation profiles. This reframing enables (and requires) a different methodological architecture.
+        <strong>This optimizer answers a procurement strategist&rsquo;s question: &ldquo;What does it cost to match
+        my load cleanly at every hour, and what drives that cost?&rdquo;</strong> The unit of analysis is not the
+        grid&mdash;it is a load-following clean energy portfolio evaluated against actual hourly demand and generation
+        profiles.
     </p>
 
     <h4>Full temporal resolution without representative-period compression</h4>
     <p>
-        Hourly CFE matching is inherently a tail-risk problem. The hours that matter most&mdash;winter
-        evening peaks, multi-day wind droughts, low-solar shoulder seasons&mdash;are precisely the hours
-        that representative-period selection algorithms tend to underweight. A portfolio that scores 95%
-        CFE on representative days may score 88% on the actual 8,760-hour profile because the hardest hours
-        were averaged away. This optimizer simulates every hour of the year, which is essential for accurately
-        sizing storage, quantifying curtailment losses, and identifying the resource mix transitions that
-        occur at high matching thresholds.
+        Hourly CFE matching is inherently a tail-risk problem. The hours that matter most&mdash;winter evening peaks,
+        multi-day wind droughts, low-solar shoulder seasons&mdash;are precisely the hours that representative-period
+        selection algorithms tend to underweight. A portfolio that scores 95% CFE on representative days may score 88%
+        on the actual 8,760-hour profile because the hardest hours were averaged away. This optimizer simulates every
+        hour of the year.
     </p>
 
     <h4>Physics-first feasibility, then economic evaluation</h4>
     <p>
-        CE models couple physics and economics into a single objective: minimize cost subject to constraints.
-        This produces one optimal point per scenario. If cost assumptions change, the entire optimization
-        must re-run. This optimizer inverts the sequence. Step 1 exhaustively enumerates the
-        <em>Physics Feasible Space</em> (PFS)&mdash;all resource mixes capable of achieving each hourly
-        matching target from 50% to 100%&mdash;without reference to cost. Step 3 then evaluates the
-        economic performance of every feasible mix under thousands of cost scenarios. Because physics and
-        economics are decoupled, changing cost assumptions requires only a re-evaluation of the cached
-        feasible space (minutes), not a re-solve of the physical dispatch (hours).
+        CE models couple physics and economics into a single objective: minimize cost subject to constraints. This
+        produces one optimal point per scenario. This optimizer inverts the sequence. Step 1 exhaustively enumerates the
+        <em>Physics Feasible Space</em> (PFS)&mdash;all resource mixes capable of achieving each hourly matching
+        target&mdash;without reference to cost. Step 2 then evaluates the economic performance of every feasible mix
+        under thousands of cost scenarios. Because physics and economics are decoupled, changing cost assumptions
+        requires only a re-evaluation (minutes), not a re-solve of the physical dispatch (hours).
     </p>
     <p>
-        This architecture exposes structure that single-objective optimization conceals. The full PFS reveals
-        that multiple qualitatively different portfolios can achieve the same matching target: a
-        wind-heavy/low-storage mix and a solar-heavy/high-storage mix may both reach 90% CFE, but their
-        cost sensitivity profiles diverge sharply under different technology cost futures. A CE model would
-        return whichever is cheaper under its assumed inputs; this optimizer returns both and maps their
-        relative economics across the entire sensitivity space. For a procurement strategist evaluating
-        a 15&ndash;20 year PPA commitment under cost uncertainty, this visibility into portfolio robustness
-        across scenarios is directly actionable.
+        This architecture exposes structure that single-objective optimization conceals. The full PFS reveals that
+        multiple qualitatively different portfolios can achieve the same matching target: a wind-heavy/low-storage
+        mix and a solar-heavy/high-storage mix may both reach 90% CFE, but their cost sensitivity profiles diverge
+        sharply under different technology cost futures.
     </p>
 
     <h4>Parametric sensitivity at marginal cost</h4>
     <p>
-        The cached PFS of ~21.4 million physics-validated mixes enables what would be computationally
-        prohibitive in a CE framework: exhaustive parametric sensitivity analysis across 5,832 cost
-        scenarios per region and threshold (17,496 for CAISO). Each scenario varies renewable generation
-        costs, firm generation costs, storage costs, fossil fuel prices, transmission costs, CCS technology
-        costs, and 45Q policy assumptions simultaneously. In a CE model, each combination would require a
-        full re-solve; here, it requires a vectorized cost evaluation on the pre-computed feasible set.
-        This enables the ANOVA-style sensitivity decomposition presented in Section 6&mdash;identifying
-        which cost toggles dominate total cost variance at each matching threshold and in each
-        region&mdash;which would be impractical to derive from a model requiring hours per solve.
+        The cached PFS enables exhaustive parametric sensitivity analysis across 5,832 cost scenarios per region and
+        threshold (17,496 for CAISO). Each scenario varies renewable generation costs, firm generation costs, storage
+        costs, fossil fuel prices, transmission costs, CCS technology costs, and 45Q policy assumptions
+        simultaneously. In a CE model, each combination would require a full re-solve; here, it requires a vectorized
+        cost evaluation on the pre-computed feasible set.
     </p>
 
     <h4>What this approach does not do</h4>
     <p>
-        The tradeoffs are real. This optimizer does not model unit commitment, spinning reserves, or
-        ramp-rate constraints&mdash;operational details that matter for grid reliability but are secondary
-        for portfolio-level procurement analysis. It treats each ISO as a single node, omitting intra-regional
-        transmission congestion. Storage dispatch follows a deterministic priority rule (short-duration
-        batteries first, then long-duration) rather than being co-optimized with generation dispatch
-        per cost scenario. And it is a snapshot model using 5-year averaged hourly profiles (2021&ndash;2025
-        element-wise averages for shapes, 2025 actuals for quantities), not a multi-decade
-        capacity expansion pathway.
+        The tradeoffs are real. This optimizer does not model unit commitment, spinning reserves, or ramp-rate
+        constraints. It treats each ISO as a single node, omitting intra-regional transmission congestion. Storage
+        dispatch follows a deterministic priority rule rather than being co-optimized with generation dispatch per
+        cost scenario. And it is a snapshot model using 5-year averaged hourly profiles, not a multi-decade capacity
+        expansion pathway. These are appropriate simplifications for the question being asked.
     </p>
     <p>
-        CO&#8322; emission rates are static annual averages per ISO and fuel type (sourced from EPA eGRID),
-        applied uniformly across all 8,760 hours. The model does not capture hourly marginal emission rate
-        variation&mdash;real grids exhibit significant diurnal and seasonal shifts in marginal fuel mix
-        (e.g., gas-heavy overnight vs. coal-heavy afternoon in PJM). Fuel-switching elasticity is also
-        absent: the fossil fuel price toggle affects LMP-based cost calculations but does not alter
-        emission factors. The deployment queue is an economic ordering (cheapest marginal abatement cost
-        first, with within-ISO sequential buildout constraints), not a representation of physical FERC
-        interconnection queue position, permitting timelines, or supply chain bottlenecks. These are
-        defensible simplifications for a portfolio-level procurement model but should be noted when
-        interpreting abatement cost estimates at the margin.
-    </p>
-    <p>
-        These are appropriate simplifications for the question being asked. A corporate buyer evaluating
-        hourly CFE procurement does not need to solve the system planner&rsquo;s problem. They need to
-        understand how their portfolio&rsquo;s cost and physical performance interact across plausible
-        futures&mdash;and that requires full temporal resolution, exhaustive feasibility mapping, and
-        rapid parametric evaluation, none of which are strengths of the CE paradigm.
-    </p>
-    <p>
-        The two approaches are complementary. CE models like GenX and ReEDS generate the technology cost
-        projections and system-level deployment trajectories that inform this optimizer&rsquo;s input
-        assumptions (LCOE ranges, transmission costs, capacity factors). This optimizer then applies those
-        assumptions to the specific problem of hourly load matching&mdash;a procurement-scale question that
-        system models are not designed to answer at the temporal granularity required.
+        The two approaches are complementary. CE models like GenX and ReEDS generate the technology cost projections
+        and system-level deployment trajectories that inform this optimizer&rsquo;s input assumptions. This optimizer
+        then applies those assumptions to the specific problem of hourly load matching&mdash;a procurement-scale
+        question that system models are not designed to answer at the temporal granularity required.
     </p>
 
+    <!-- ========== CONCLUSION ========== -->
+    <h2>Conclusion</h2>
+    <p>
+        Across all seven domains, the research literature converges: annual REC matching has negligible system-level
+        emissions impact; hourly matching with diverse clean resources is essential but costly above ~90%; firm clean
+        power reduces system costs by tens of percent; LCOE misleads about dispatchable resource value; interconnection
+        queues create binding constraints; and corporate procurement is shifting toward firm, hourly-matched products.
+    </p>
+    <p>
+        What the literature lacks&mdash;and what The 8,760 Problem provides&mdash;is a unified analytical framework
+        connecting these findings across all seven domains simultaneously, at the geographic specificity of individual
+        ISOs, with the scenario breadth needed to support actual procurement decisions under deep uncertainty. By
+        bridging academic models and practitioner needs with unprecedented scenario scale, the site occupies a genuinely
+        novel position&mdash;one that the imminent GHG Protocol Scope 2 revision, SBTi V2 requirements, and the growth
+        of corporate firm-power procurement will make increasingly relevant through 2027 and beyond.
+    </p>
+
+    <!-- ========== REFERENCES ========== -->
     <h2 id="references">References</h2>
+
+    <h3>CO&#8322; Accounting &amp; Frameworks</h3>
     <ol class="ref-list">
-        <li id="ref-1">
-            Xu, Q., et al. (2024). "Temporal Granularity in Clean Energy Accounting: Implications of Annual vs. Hourly Matching for Grid Decarbonization." <em>Energy Policy</em>, 184, 113892.
-        </li>
-        <li id="ref-2">
-            Miller, G., Lott, M.C., et al. (2022). "24/7 Carbon-Free Energy: Methodologies and Case Studies." International Energy Agency (IEA).
-            <a href="https://www.iea.org/reports/247-carbon-free-energy" target="_blank">https://www.iea.org/reports/247-carbon-free-energy</a>
-        </li>
-        <li id="ref-3">
-            Google. (2023). "24/7 Carbon-Free Energy: Methodology and Metrics." Google Sustainability Report.
-            <a href="https://sustainability.google/progress/energy/" target="_blank">https://sustainability.google/progress/energy/</a>
-        </li>
-        <li id="ref-4">
-            United Nations Energy. (2021). "24/7 Carbon-free Energy Compact."
-            <a href="https://www.un.org/en/energy-compacts/page/compact-247" target="_blank">https://www.un.org/en/energy-compacts/page/compact-247</a>
-        </li>
-        <li id="ref-5">
-            NREL. (2024). "Annual Technology Baseline (ATB) 2024: Electricity." National Renewable Energy Laboratory.
-            <a href="https://atb.nrel.gov/electricity/2024/technologies" target="_blank">https://atb.nrel.gov/electricity/2024/technologies</a>
-        </li>
-        <li id="ref-6">
-            Lazard. (2024). "Lazard's Levelized Cost of Energy Analysis, Version 17.0." Lazard.
-            <a href="https://www.lazard.com/research-insights/levelized-cost-of-energyplus/" target="_blank">https://www.lazard.com/research-insights/levelized-cost-of-energyplus/</a>
-        </li>
-        <li id="ref-7">
-            Bolinger, M., Seel, J., et al. (2024). "Utility-Scale Solar, 2024 Edition." Lawrence Berkeley National Laboratory.
-            <a href="https://emp.lbl.gov/utility-scale-solar" target="_blank">https://emp.lbl.gov/utility-scale-solar</a>
-        </li>
-        <li id="ref-8">
-            Wiser, R., Bolinger, M., et al. (2024). "Land-Based Wind Market Report: 2024 Edition." Lawrence Berkeley National Laboratory.
-            <a href="https://emp.lbl.gov/wind-technologies-market-report" target="_blank">https://emp.lbl.gov/wind-technologies-market-report</a>
-        </li>
-        <li id="ref-9">
-            Larson, E., et al. (2021). "Net-Zero America: Potential Pathways, Infrastructure, and Impacts." Princeton University.
-            <a href="https://netzeroamerica.princeton.edu/" target="_blank">https://netzeroamerica.princeton.edu/</a>
-        </li>
-        <li id="ref-10">
-            Jenkins, J.D., Luke, M., Thernstrom, S. (2018). "Getting to Zero Carbon Emissions in the Electric Power Sector." <em>Joule</em>, 2(12), 2498-2510.
-        </li>
-        <li id="ref-11">
-            U.S. Energy Information Administration. (2024). "Nuclear power plant operations and technology." EIA.
-            <a href="https://www.eia.gov/nuclear/" target="_blank">https://www.eia.gov/nuclear/</a>
-        </li>
-        <li id="ref-12">
-            Feldman, D., et al. (2024). "U.S. Solar Photovoltaic System and Energy Storage Cost Benchmarks, With Minimum Sustainable Price Analysis: Q1 2024." NREL.
-            <a href="https://www.nrel.gov/docs/fy24osti/88554.pdf" target="_blank">https://www.nrel.gov/docs/fy24osti/88554.pdf</a>
-        </li>
-        <li id="ref-13">
-            U.S. Energy Information Administration. (2024). "Battery Storage in the United States: An Update on Market Trends." EIA.
-            <a href="https://www.eia.gov/analysis/studies/electricity/batterystorage/" target="_blank">https://www.eia.gov/analysis/studies/electricity/batterystorage/</a>
-        </li>
-        <li id="ref-14">
-            Dowling, J.A., et al. (2020). "Role of Long-Duration Energy Storage in Variable Renewable Electricity Systems." <em>Joule</em>, 4(9), 1907-1928.
-        </li>
-        <li id="ref-15">
-            California ISO (CAISO). (2024). "Managing Oversupply." CAISO Market Performance Reports.
-            <a href="https://www.caiso.com/informed/Pages/ManagingOversupply.aspx" target="_blank">https://www.caiso.com/informed/Pages/ManagingOversupply.aspx</a>
-        </li>
-        <li id="ref-16">
-            U.S. Energy Information Administration. (2025). "Hourly Electric Grid Monitor (EIA-930)." EIA.
-            <a href="https://www.eia.gov/electricity/gridmonitor/" target="_blank">https://www.eia.gov/electricity/gridmonitor/</a>
-        </li>
-        <li id="ref-17">
-            FERC / ISO Market Monitoring Reports (2023-2024). PJM Independent Market Monitor State of the Market Report; NYISO, ISO-NE, CAISO, ERCOT market monitoring reports.
-        </li>
-        <li id="ref-18">
-            Denholm, P., et al. (2022). "Examining Supply-Side Options to Achieve 100% Clean Electricity by 2035." NREL.
-            <a href="https://www.nrel.gov/docs/fy22osti/81644.pdf" target="_blank">https://www.nrel.gov/docs/fy22osti/81644.pdf</a>
-        </li>
-        <li id="ref-19">
-            Long Duration Energy Storage Council (LDES Council). (2023). "The Journey to Net-Zero: An Update on Long Duration Energy Storage." LDES Council.
-            <a href="https://www.ldescouncil.com/insights" target="_blank">https://www.ldescouncil.com/insights</a>
-        </li>
-        <li id="ref-20">
-            U.S. Energy Information Administration. (2024). "Uranium Marketing Annual Report." EIA.
-            <a href="https://www.eia.gov/uranium/marketing/" target="_blank">https://www.eia.gov/uranium/marketing/</a>
-            See also: World Nuclear Association. (2024). "World Uranium Mining Production."
-            <a href="https://world-nuclear.org/information-library/nuclear-fuel-cycle/uranium-resources/supply-of-uranium" target="_blank">https://world-nuclear.org/information-library/nuclear-fuel-cycle/uranium-resources/supply-of-uranium</a>
-        </li>
-        <li id="ref-21">
-            International Energy Agency. (2024). "Critical Minerals Market Review 2024." IEA.
-            <a href="https://www.iea.org/reports/critical-minerals-market-review-2024" target="_blank">https://www.iea.org/reports/critical-minerals-market-review-2024</a>
-        </li>
-        <li id="ref-22">
-            U.S. Geological Survey. (2024). "Mineral Commodity Summaries 2024." USGS.
-            <a href="https://www.usgs.gov/centers/national-minerals-information-center/mineral-commodity-summaries" target="_blank">https://www.usgs.gov/centers/national-minerals-information-center/mineral-commodity-summaries</a>
-        </li>
-        <li id="ref-23">
-            U.S. Department of Energy. (2023). "Critical Materials Assessment." DOE.
-            <a href="https://www.energy.gov/sites/default/files/2023-07/doe-critical-material-assessment_07312023.pdf" target="_blank">https://www.energy.gov/sites/default/files/2023-07/doe-critical-material-assessment_07312023.pdf</a>
-        </li>
-        <li id="ref-24">
-            S&amp;P Global. (2022). "The Future of Copper: Will the Looming Supply Gap Short-Circuit the Energy Transition?" S&amp;P Global Market Intelligence.
-            <a href="https://www.spglobal.com/marketintelligence/en/mi/research-analysis/the-future-of-copper.html" target="_blank">https://www.spglobal.com/marketintelligence/en/mi/research-analysis/the-future-of-copper.html</a>
-        </li>
-        <li id="ref-25">
-            Xu, Q., Ricks, W., Manocha, A., Patankar, N., Jenkins, J.D. (2024). "System-level Impacts of Voluntary Carbon-free Electricity Procurement." <em>Joule</em>, 8(1), 200-219.
-        </li>
-        <li id="ref-26">
-            Gillenwater, M. (2008). "Redefining RECs&mdash;Part 1: Untangling Attributes and Offsets." <em>Energy Policy</em>, 36(6), 2109-2119.
-        </li>
-        <li id="ref-27">
-            O&rsquo;Shaughnessy, E., Jena, S., Sumner, J. (2025). "Status and Trends in the U.S. Voluntary Green Power Market (2023 Data)." NREL/TP-6A20-92289. National Renewable Energy Laboratory.
-        </li>
-        <li id="ref-28">
-            Miller, G., et al. (2024). "Cost and Emissions Impact of Voluntary Clean Energy Procurement Strategies." <em>The Electricity Journal</em>, 37(2), 107371.
-        </li>
-        <li id="ref-29">
-            Clean Air Task Force. (2024). "Clean Firm Electricity Technologies: What, Why, How." CATF.
-            <a href="https://www.catf.us/clean-firm-electricity/" target="_blank">https://www.catf.us/clean-firm-electricity/</a>
-        </li>
-        <li id="ref-30">
-            Georgia Power / Southern Company. (2023). Vogtle Units 3&amp;4 construction completion &mdash; realized cost ~$15,000/kW for 2.2 GW AP1000 expansion.
-        </li>
-        <li id="ref-31">
-            IEEFA. (2023). &ldquo;Eye-Popping New Cost Estimates Released for NuScale Small Modular Reactor.&rdquo; ~$20,000/kW at cancellation; $89/MWh final LCOE estimate.
-        </li>
-        <li id="ref-32">
-            U.S. Department of Energy. (2024). &ldquo;Pathways to Commercial Liftoff: Advanced Nuclear.&rdquo; FOAK ~$6,200/kW &rarr; NOAK $3,600/kW; ~$66/MWh with 48E ITC; 5&ndash;10 reactors per design for NOAK.
-            <a href="https://liftoff.energy.gov/advanced-nuclear/" target="_blank">https://liftoff.energy.gov/advanced-nuclear/</a>
-        </li>
-        <li id="ref-33">
-            MIT Advanced Nuclear Power Program. (2024). AP1000 NOAK: $4,625/kW, $66/MWh unsubsidized. SMR 300 MWe NOAK: ~$6,700/kW, $95/MWh (2&times; O&amp;M premium).
-        </li>
-        <li id="ref-34">
-            Abou-Jaoude, A., et al. (2024). &ldquo;Meta-Analysis of Advanced Nuclear Reactor Cost Estimations.&rdquo; INL RPT-24-77048. Quartile-based cost benchmarks adopted by NREL ATB 2024. Learning rates: 8% (large), 9.5% (SMR) per doubling.
-        </li>
-        <li id="ref-35">
-            Frontiers in Energy Research. (2022). &ldquo;Cost Projection of Natural Gas Combined Cycle with Post-Combustion Carbon Capture.&rdquo; FOAK ~$103/MWh; NOAK ~$92/MWh.
-        </li>
-        <li id="ref-36">
-            DOE Office of Clean Energy Demonstrations (OCED). (2024). &ldquo;Portfolio Insights: Carbon Capture in the Power Sector.&rdquo; FOAK&rarr;NOAK ~25% CAPEX reduction for CCS.
-        </li>
-        <li id="ref-37">
-            NETL. (2023). &ldquo;Baseline Study: High Carbon Capture Rates.&rdquo; CCS learning rates: CO&#8322; capture 3%/doubling; transport &amp; sequestration 5%/doubling.
-        </li>
-        <li id="ref-38">
-            Jenkins, J.D., &amp; Sep&uacute;lveda, N.A. (2017&ndash;2024). &ldquo;GenX: Configurable Capacity Expansion Model for Studying Low-Carbon Energy Futures.&rdquo; MIT Energy Initiative / Princeton Zero-carbon Energy Systems Research.
-            <a href="https://github.com/GenXProject/GenX" target="_blank">https://github.com/GenXProject/GenX</a>
-        </li>
-        <li id="ref-39">
-            Ho, J., et al. (2021). &ldquo;Regional Energy Deployment System (ReEDS) Model Documentation: Version 2020.&rdquo; NREL/TP-6A20-78195. National Renewable Energy Laboratory.
-            <a href="https://www.nrel.gov/analysis/reeds/" target="_blank">https://www.nrel.gov/analysis/reeds/</a>
-        </li>
-        <li id="ref-40">
-            Johnston, J., et al. (2019). &ldquo;Switch 2.0: A Modern Platform for Planning High-Renewable Power Systems.&rdquo; <em>SoftwareX</em>, 10, 100251.
-        </li>
-        <li id="ref-41">
-            Brown, T., H&ouml;rsch, J., Schlachtberger, D. (2018). &ldquo;PyPSA: Python for Power System Analysis.&rdquo; <em>Journal of Open Research Software</em>, 6(4).
-            <a href="https://pypsa.org/" target="_blank">https://pypsa.org/</a>
-        </li>
-        <li id="ref-42">
-            Kotzur, L., et al. (2018). &ldquo;Impact of Different Time Series Aggregation Methods on Optimal Energy System Design.&rdquo; <em>Renewable Energy</em>, 117, 474&ndash;487.
-        </li>
+        <li id="ref-s2-1">GHG Protocol, <em>Scope 2 Guidance</em> (WRI, 2015).</li>
+        <li id="ref-s2-2">GHG Protocol, Scope 2 Proposed Updates &amp; Consequential Accounting Consultation (Oct 2025 &ndash; Jan 2026).</li>
+        <li id="ref-s2-3">Bj&oslash;rn, A., Lloyd, S., Brander, M. &amp; Matthews, H.D. &ldquo;Renewable energy certificates threaten the integrity of corporate science-based targets.&rdquo; <em>Nature Climate Change</em> (2022).</li>
+        <li id="ref-s2-4">Brander, M. &ldquo;The most important GHG accounting concept you may not have heard of.&rdquo; <em>Carbon Management</em> (2022).</li>
+        <li id="ref-s2-5">Brander, M. &amp; Bj&oslash;rn, A. &ldquo;Attributional and consequential greenhouse gas accounting.&rdquo; <em>International Journal of Life Cycle Assessment</em> (2023).</li>
+        <li id="ref-s2-6">Bj&oslash;rn, A. et al. &ldquo;Ensuring low-emission electricity purchasing requires broader systems perspective.&rdquo; <em>Nature Communications</em> (2024).</li>
+        <li id="ref-s2-7">SBTi Corporate Net-Zero Standard V2.0, Second Consultation Draft (November 2025).</li>
+        <li id="ref-s2-8">SBTi Power Sector Net-Zero Standard, First Draft (September 2025).</li>
+        <li id="ref-s2-9">EPRI SMARTargets Framework (July 2025).</li>
+        <li id="ref-s2-10">Emissions First Partnership (founded 2022). Ceres critique (August 2025).</li>
+    </ol>
+
+    <h3>Marginal Emissions &amp; Data</h3>
+    <ol class="ref-list" start="11">
+        <li id="ref-s2-11">Siler-Evans, K., Azevedo, I. &amp; Morgan, M.G. &ldquo;Marginal Emissions Factors for the U.S. Electricity System.&rdquo; <em>Environmental Science &amp; Technology</em> (2012).</li>
+        <li id="ref-s2-12">WattTime, Automated Emissions Reduction (AER) methodology.</li>
+        <li id="ref-s2-13">VERACI-T Working Group, &ldquo;Towards Objective Evaluation of the Accuracy of Marginal Emission Factor Models&rdquo; (2023).</li>
+        <li id="ref-s2-14">REsurety &amp; WattTime, Grid Emissions Data Platform (March 2025).</li>
+    </ol>
+
+    <h3>Granular Certificates</h3>
+    <ol class="ref-list" start="15">
+        <li id="ref-s2-15">EnergyTag, Matching Standard V1 (March 2024).</li>
+        <li id="ref-s2-16">EnergyTag, Granular Certificate Scheme Standard V2 (December 2024).</li>
+        <li id="ref-s2-17">EnergyTag, First accredited GC schemes &mdash; Energinet (June 2025).</li>
+        <li id="ref-s2-18">Flexidao/Google, Global portfolio hourly conversion (2025).</li>
+    </ol>
+
+    <h3>Hourly CFE Modeling</h3>
+    <ol class="ref-list" start="19">
+        <li id="ref-s2-19">Xu, Q., Ricks, W., Manocha, A., Patankar, N. &amp; Jenkins, J.D. &ldquo;System-level impacts of 24/7 carbon-free energy procurement.&rdquo; <em>Joule</em> (2024).</li>
+        <li id="ref-s2-20">Riepin, I. &amp; Brown, T. &ldquo;On the means, costs, and system-level impacts of 24/7 CFE procurement.&rdquo; <em>Energy Strategy Reviews</em> (2024).</li>
+        <li id="ref-s2-21">Riepin, I., Jenkins, J.D., Swezey, B. &amp; Brown, T. &ldquo;24/7 CFE matching accelerates adoption of advanced clean energy technologies.&rdquo; <em>Joule</em> Commentary (2025).</li>
+        <li id="ref-s2-22">RMI, &ldquo;Clean Power by the Hour&rdquo; (Dyson, Shah, Teplin, July 2021).</li>
+        <li id="ref-s2-23">TransitionZero, &ldquo;24/7 CFE in India&rdquo; (2025).</li>
+        <li id="ref-s2-24">TransitionZero, &ldquo;24/7 CFE in Japan&rdquo; (2025).</li>
+        <li id="ref-s2-25">TransitionZero, &ldquo;24/7 CFE in Singapore / Malaysia&rdquo; (2025).</li>
+        <li id="ref-s2-26">Ludkovski, M., Mouti, H. &amp; Swindle, G. &ldquo;Least-Cost Structuring of 24/7 CFE Procurements.&rdquo; arXiv:2312.07733 (2023).</li>
+        <li id="ref-s2-27">IEA, &ldquo;Advancing Decarbonisation through Clean Electricity Procurement&rdquo; (November 2022).</li>
+        <li id="ref-s2-28">Google, &ldquo;24/7 Carbon-Free Energy&rdquo; methodology and annual reports.</li>
+    </ol>
+
+    <h3>Clean Firm Power Economics</h3>
+    <ol class="ref-list" start="29">
+        <li id="ref-s2-29">CATF, &ldquo;Beyond LCOE&rdquo; (June 2025).</li>
+        <li id="ref-s2-30">Sepulveda, N.A., Jenkins, J.D., de Sisternes, F.J. &amp; Lester, R.K. &ldquo;The role of firm low-carbon electricity resources.&rdquo; <em>Joule</em> (2018).</li>
+        <li id="ref-s2-31">Long, J.C.S. et al. &ldquo;Clean Firm Power is the Key to California&rsquo;s Carbon-Free Energy Future.&rdquo; <em>Issues in Science and Technology</em> (2021).</li>
+        <li id="ref-s2-32">Spokas, K. &amp; Ricks, W. (CATF), &ldquo;Clean Firm Electricity Technologies: What, Why, How&rdquo; (February 2026).</li>
+        <li id="ref-s2-33">DOE, &ldquo;Pathways to Commercial Liftoff: Advanced Nuclear&rdquo; (September 2024 update).</li>
+        <li id="ref-s2-34">Shirvan, K. (MIT CANES), &ldquo;Overnight Capital Cost of the Next AP1000.&rdquo; Report ANP-201 TR (2024).</li>
+        <li id="ref-s2-35">Bolisetti, C. et al. (INL), &ldquo;Quantifying Capital Cost Reduction Pathways.&rdquo; INL/RPT-24-7767 (June 2024).</li>
+        <li id="ref-s2-36">Abou-Jaoude, A. et al. (INL), &ldquo;Meta-Analysis of Advanced Nuclear Reactor Cost Estimations.&rdquo; INL/RPT-23-72972 (2024).</li>
+        <li id="ref-s2-37">NREL Annual Technology Baseline 2024, Nuclear Module.</li>
+    </ol>
+
+    <h3>Learning Curves</h3>
+    <ol class="ref-list" start="38">
+        <li id="ref-s2-38">Bolinger, M., Wiser, R. &amp; O&rsquo;Shaughnessy, E. &ldquo;Levelized cost-based learning analysis of utility-scale wind and solar.&rdquo; <em>iScience</em> (2022).</li>
+        <li id="ref-s2-39">Way, R., Iribarren, M., Hepburn, C. &amp; Farmer, J.D. &ldquo;Empirically grounded technology forecasts and the energy transition.&rdquo; Oxford.</li>
+        <li id="ref-s2-40">Wright, T.P. &ldquo;Factors Affecting the Cost of Airplanes.&rdquo; <em>Journal of Aeronautical Sciences</em> (1936).</li>
+    </ol>
+
+    <h3>Cost Benchmarks</h3>
+    <ol class="ref-list" start="41">
+        <li id="ref-s2-41">Lazard, LCOE+ Version 18.0 (June 2025).</li>
+        <li id="ref-s2-42">GridLab / Energy Futures Group / Halcyon, &ldquo;Gas Turbine Cost Report&rdquo; (September 2025).</li>
+        <li id="ref-s2-43">NREL ATB 2024 (all technology modules).</li>
+    </ol>
+
+    <h3>System Cost &amp; Value Deflation</h3>
+    <ol class="ref-list" start="44">
+        <li id="ref-s2-44">Joskow, P. &ldquo;Comparing the Costs of Intermittent and Dispatchable Electricity Generating Technologies.&rdquo; <em>American Economic Review</em> (2011).</li>
+        <li id="ref-s2-45">Hirth, L. &ldquo;The Market Value of Variable Renewables.&rdquo; <em>Energy Economics</em> (2013).</li>
+        <li id="ref-s2-46">Hirth, L., Ueckerdt, F. &amp; Edenhofer, O. &ldquo;Integration costs revisited.&rdquo; <em>Renewable Energy</em> (2015).</li>
+        <li id="ref-s2-47">Ueckerdt, F., Hirth, L., Luderer, G. &amp; Edenhofer, O. &ldquo;System LCOE.&rdquo; <em>Energy</em> (2013).</li>
+        <li id="ref-s2-48">L&oacute;pez Prol, J., Steininger, K. &amp; Zilberman, D. &ldquo;Cannibalization effect of wind and solar.&rdquo; <em>Energy Economics</em> (2020).</li>
+        <li id="ref-s2-49">REsurety / Bhandari, &ldquo;Negative Prices in CAISO&rdquo; (April 2025).</li>
+    </ol>
+
+    <h3>Capacity Expansion Models</h3>
+    <ol class="ref-list" start="50">
+        <li id="ref-s2-50a">Jenkins, J.D. &amp; Sep&uacute;lveda, N.A. GenX capacity expansion model (MIT/Princeton). <a href="https://github.com/GenXProject/GenX" target="_blank">github.com/GenXProject/GenX</a></li>
+        <li id="ref-s2-50b">NREL, 2024 Standard Scenarios Report (Gagnon et al., NREL/TP-6A40-92256). <a href="https://www.nrel.gov/analysis/reeds/" target="_blank">nrel.gov/analysis/reeds</a></li>
+        <li id="ref-s2-50c">Brown, T. et al. &ldquo;PyPSA: Python for Power System Analysis.&rdquo; <em>Journal of Open Research Software</em> (2018). <a href="https://pypsa.org/" target="_blank">pypsa.org</a></li>
+        <li id="ref-s2-50d">Princeton Net-Zero America Project (Larson et al., October 2021). <a href="https://netzeroamerica.princeton.edu/" target="_blank">netzeroamerica.princeton.edu</a></li>
+    </ol>
+
+    <h3>Storage &amp; Grid Resilience</h3>
+    <ol class="ref-list" start="54">
+        <li id="ref-s2-51">Cole, W.J. et al. &ldquo;Quantifying the challenge of reaching 100% renewable electricity.&rdquo; <em>Joule</em> (2021).</li>
+        <li id="ref-s2-52">Mai, T. et al. &ldquo;On the Road to 100% Clean Electricity: Six Strategies.&rdquo; <em>Joule</em> (2022).</li>
+        <li id="ref-s2-53">Form Energy, Iron-air battery technology and deployment pipeline.</li>
+        <li id="ref-s2-54">DOE, Long Duration Storage Shot (July 2021).</li>
+        <li id="ref-s2-55">DOE, &ldquo;Pathways to Commercial Liftoff: Long Duration Energy Storage&rdquo; (2023).</li>
+        <li id="ref-s2-56">LDES Council / McKinsey, Long Duration Energy Storage assessment (2021).</li>
+        <li id="ref-s2-57">BloombergNEF, Battery Price Survey (2025).</li>
+        <li id="ref-s2-58">Kittel, M. et al. &ldquo;Quantifying the Dunkelflaute.&rdquo; arXiv (2024).</li>
+        <li id="ref-s2-59">PJM, Marginal ELCC methodology (FERC-approved January 2024).</li>
+    </ol>
+
+    <h3>Interconnection &amp; Market Design</h3>
+    <ol class="ref-list" start="63">
+        <li id="ref-s2-60">Berkeley Lab, &ldquo;Queued Up&rdquo; (Rand et al., 2025 edition).</li>
+        <li id="ref-s2-61">FERC Order No. 2023 (July 2023) and Order 2023-A (March 2024).</li>
+        <li id="ref-s2-62">Lo Prete, C., Palmer, K. &amp; Robertson, M. (RFF), &ldquo;Time for a Market Upgrade?&rdquo; (June 2025).</li>
+        <li id="ref-s2-63">DOE, National Transmission Needs Study (October 2023).</li>
+        <li id="ref-s2-64">Hogan, W. &ldquo;Electricity Market Design and the Green Agenda.&rdquo; <em>The Electricity Journal</em> (2017).</li>
+    </ol>
+
+    <h3>Corporate Procurement &amp; Policy</h3>
+    <ol class="ref-list" start="68">
+        <li id="ref-s2-65">BloombergNEF, Corporate PPA data (2024&ndash;2025).</li>
+        <li id="ref-s2-66">IRA Section 45V, Final Regulations (January 2025).</li>
+        <li id="ref-s2-67">Microsoft / Constellation TMI restart PPA (September 2024).</li>
+        <li id="ref-s2-68">Google / Kairos Power SMR fleet deal (October 2024).</li>
+        <li id="ref-s2-69">Amazon / X-energy / Talen Energy nuclear commitments (2024&ndash;2025).</li>
+        <li id="ref-s2-70">Meta / Constellation Clinton Clean Energy Center deal (June 2025).</li>
+        <li id="ref-s2-71">Carbon Tracker, Stranded Assets analysis.</li>
+        <li id="ref-s2-72">IEA, World Energy Outlook 2024.</li>
+    </ol>
+
+    <h3>Enhanced Geothermal</h3>
+    <ol class="ref-list" start="76">
+        <li id="ref-s2-73">Fervo Energy, Cape Station development updates (2024&ndash;2025).</li>
+        <li id="ref-s2-74">DOE, Enhanced Geothermal Shot targets.</li>
+        <li id="ref-s2-75">CATF, Superhot Rock Geothermal assessment.</li>
     </ol>
 
     <p class="paper-footer">
