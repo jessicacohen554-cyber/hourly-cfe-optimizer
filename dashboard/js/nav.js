@@ -211,11 +211,10 @@
         {
             label: 'About',
             children: [
+                { label: 'Methodology', href: 'optimizer_methodology.html' },
                 { label: 'Research Overview', href: 'about.html' },
-                { label: 'Optimizer Methodology', href: 'optimizer_methodology.html' },
-                { separator: true, label: 'Reference' },
-                { label: 'Methodology', href: 'reference.html' },
-                { label: 'Policy Frameworks', href: 'policy_context.html' }
+                { label: 'Literature Review', href: 'lit-review.html' },
+                { label: 'Reference Library', href: 'reference.html' }
             ]
         },
         {
