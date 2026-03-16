@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market Simulator &mdash; Detailed System Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: #fff; }
+  body {
+    font-family: 'Franklin Gothic Book', 'Libre Franklin', 'Segoe UI', sans-serif;
+    background: #FFFFFF;
+    color: #1a1a2e;
+    width: 864px;
+    padding: 0;
+    font-size: 10px;
+  }
+  h1, h2, h3, .section-hdr, .sc-title {
+    font-family: 'Franklin Gothic Demi', 'Libre Franklin', 'Segoe UI Semibold', sans-serif;
+    font-weight: 700;
+  }
+  .page {
+    width: 864px;
+    height: 576px;
+    padding: 18px 22px 14px;
+    overflow: hidden;
+    position: relative;
+    page-break-after: always;
+    display: flex;
+    flex-direction: column;
+  }
+  .page:last-child { page-break-after: avoid; }
+  .page-title {
+    font-size: 13px;
+    color: #1a1a2e;
+    margin-bottom: 6px;
+    flex-shrink: 0;
+  }
+  .page-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 0;
+  }
+  .section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #e2e6ec;
+    border-radius: 5px;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .section-hdr {
+    padding: 5px 12px;
+    color: #fff;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .section-hdr .runtime {
+    font-family: 'Franklin Gothic Book', 'Libre Franklin', sans-serif;
+    font-weight: 400;
+    font-size: 9px;
+    opacity: 0.8;
+    margin-left: auto;
+  }
+  .section-body {
+    flex: 1;
+    padding: 6px 8px;
+    background: #fafbfc;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-height: 0;
+  }
+  .step-row {
+    flex: 1;
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+    min-height: 0;
+  }
+  .step-card {
+    background: #fff;
+    border: 1px solid #dce0e6;
+    border-radius: 4px;
+    padding: 5px 8px;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow: hidden;
+  }
+  .step-card .sc-id {
+    font-family: 'Franklin Gothic Demi', 'Libre Franklin', sans-serif;
+    font-weight: 700;
+    font-size: 9.5px;
+    color: #2372B9;
+    margin-bottom: 1px;
+    flex-shrink: 0;
+  }
+  .step-card .sc-title {
+    font-size: 11px;
+    color: #1a1a2e;
+    margin-bottom: 1px;
+    line-height: 1.2;
+    flex-shrink: 0;
+  }
+  .step-card .sc-script {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 8.5px;
+    color: #007FA4;
+    margin-bottom: 2px;
+    flex-shrink: 0;
+  }
+  .step-card .sc-detail {
+    font-size: 9px;
+    color: #555;
+    line-height: 1.35;
+    flex: 1;
+    overflow: hidden;
+  }
+  .step-card .sc-io {
+    font-size: 8.5px;
+    color: #7E8083;
+    line-height: 1.3;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+  .step-card .sc-io span { color: #6BA543; font-weight: 600; }
+  .step-card .sc-io .out { color: #F47B27; }
+
+  .arrow-down {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    height: 8px;
+    align-items: center;
+    line-height: 0;
+  }
+
+  .module-ref {
+    display: inline;
+    font-family: 'Consolas', monospace;
+    font-size: 8.5px;
+    color: #2372B9;
+    background: #f0f4f8;
+    padding: 0 3px;
+    border-radius: 2px;
+  }
+
+  .bg-data { background: #7E8083; }
+  .bg-engine { background: #2372B9; }
+  .bg-scenarios { background: #F47B27; }
+  .bg-frontend { background: #6BA543; }
+  .bg-api { background: #007FA4; }
+
+  .footnote {
+    text-align: center;
+    font-size: 8px;
+    color: #bbb;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+
+  .step-card.highlight {
+    border-color: #2372B9;
+    border-width: 1.5px;
+  }
+  .step-card .sc-id.accent { color: #F47B27; }
+</style>
+</head>
+<body>
+
+<!-- PAGE 1: Data Foundation & Configuration -->
+<div class="page">
+  <div class="page-title">Market Simulator &mdash; Detailed System Architecture</div>
+  <div class="page-body">
+
+    <div class="section">
+      <div class="section-hdr bg-data">Data Foundation &mdash; Pre-Computed Physics &amp; Cost Data<span class="runtime">Generated upstream, consumed at runtime</span></div>
+      <div class="section-body">
+        <div class="step-row">
+          <div class="step-card">
+            <div class="sc-id">Physics Feasible Space (PFS)</div>
+            <div class="sc-detail">
+              Exhaustive 4&ndash;6D combinatorial search over resource fractions (solar, wind, nuclear, hydro, offshore, geothermal).
+              <strong>Coarse grid</strong> (5% step): 12K&ndash;1.6M combos per ISO.
+              <strong>Zone search</strong> (1% step): Fine grid in 3 score bands (50&ndash;70%, 70&ndash;90%, 90&ndash;100%).
+              <strong>Floor-aware</strong>: Incremental additions above existing grid mix.
+              <strong>Storage refinement</strong>: 3-pass adaptive sweep &mdash; bat4, bat8, LDES, H&sub2;.
+              Each mix scored via vectorized 8,760-hour matching: HMS = &sum;min(1, clean[h]/demand[h])/8760.
+            </div>
+            <div class="sc-io">
+              <span class="out">Out:</span> {ISO}_coarse_cache.parquet, {ISO}_t{T}_raw_pfs.parquet, {ISO}_t{T}_storage.parquet
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">Efficient Frontier &amp; Cost Optimization</div>
+            <div class="sc-detail">
+              <strong>EF extraction:</strong> Threshold gate &rarr; resource cap filter (solar 100%, total 350%, hydro existing) &rarr; global dedup.
+              <strong>Cost optimization:</strong> Cross-evaluate EF mixes under 5,832 (non-CAISO) or 17,496 (CAISO) sensitivity combos.
+              <strong>9-dim key:</strong> {Ren}{Firm}{Batt}{LDES}_{Fuel}_{Tx}_{CCS}{45Q}_{Geo}.
+              Cheapest mix per (ISO, threshold, sensitivity). Demand growth sweep with Wright&rsquo;s Law FOAK&rarr;NOAK.
+            </div>
+            <div class="sc-io">
+              <span class="out">Out:</span> step_2_1_EF_{ISO}_{T}.parquet, step_2_2a_CO_{ISO}.parquet
+            </div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-card">
+            <div class="sc-id">EIA-930 Hourly Profiles</div>
+            <div class="sc-script">eia_data_io.py</div>
+            <div class="sc-detail">
+              8,760-hour demand &amp; generation profiles by ISO (2021&ndash;2025 multi-year average).
+              Normalized shapes: demand sums to 8760, generation sums to 1.0.
+              Solar DST-aware zeroing. Nuclear monthly CF derate from NRC.
+              Fossil mix: hourly coal/gas/oil shares for merit-order dispatch.
+            </div>
+            <div class="sc-io">
+              <span class="out">Out:</span> eia_demand_profiles.json, eia_gen_profiles.json, eia_fossil_mix.json
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">Configuration &amp; Constants</div>
+            <div class="sc-script">pipeline_config.py</div>
+            <div class="sc-detail">
+              <strong>Single source of truth.</strong> 7 ISOs, 21 thresholds.
+              LCOE tables (L/M/H &times; 7 ISOs &times; 10 resources).
+              Transmission adders, FOAK/NOAK costs, Wright&rsquo;s Law params.
+              Demand growth rates, storage parameters, grid mix shares, capacity caps.
+              All scripts import from here &mdash; no local constant definitions.
+            </div>
+            <div class="sc-io">
+              <span>Sources:</span> NREL ATB 2024, Lazard v17-18, EIA AEO 2025, EPA eGRID, LBNL
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">Fleet Inventory (Optional)</div>
+            <div class="sc-script">fleet_model.py</div>
+            <div class="sc-detail">
+              Real generator data from EIA 860 (capacity, fuel, prime mover), EIA 923 (generation, fuel consumption &rarr; revealed heat rates), EPA CAMPD (hourly emissions).
+              Cross-references to build unit-level merit-order stacks.
+              BA_TO_ISO mapping. Falls back to stylized bins when data unavailable.
+            </div>
+            <div class="sc-io">
+              <span>In:</span> data/eia-860/{state}/, data/eia-923/{state}/, data/epa-campd/{state}/
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="footnote">Constellation Energy &mdash; Market Simulator v1.0 &mdash; Page 1 of 3</div>
+</div>
+
+<!-- PAGE 2: Simulation Engine -->
+<div class="page">
+  <div class="page-body">
+
+    <div class="section" style="flex:1.4;">
+      <div class="section-hdr bg-engine">Simulation Engine &mdash; Core Market Modeling<span class="runtime">5 sec&ndash;30 min depending on mode</span></div>
+      <div class="section-body">
+        <div class="step-row">
+          <div class="step-card highlight">
+            <div class="sc-id accent">Core &mdash; Market Simulation</div>
+            <div class="sc-script">market_simulation.py</div>
+            <div class="sc-detail">
+              <strong>Entry point:</strong> <span class="module-ref">run_market_simulation()</span> (single), <span class="module-ref">run_full_sweep()</span> (270&times;).
+              <strong>Flow:</strong> load_common_data() &rarr; build_market_scenarios() &rarr; build_single_scenario() &times; N &rarr; save_results().
+              Profit-driven: clean resources deploy where revenue &gt; cost. Deployment stops at first unprofitable zone.
+              Clean energy level is an OUTPUT, not a target constraint.
+            </div>
+            <div class="sc-io">
+              <span>In:</span> EF parquets, EIA profiles, user params &nbsp;
+              <span class="out">Out:</span> data/results/run_NNN/ (CSV, JSON, text)
+            </div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-card">
+            <div class="sc-id">LMP Engine</div>
+            <div class="sc-script">lmp_engine.py</div>
+            <div class="sc-detail">
+              <strong>build_merit_order_stack():</strong> Sort fossil units by marginal cost = HR &times; fuel + VOM + CO&sub2; &times; carbon.
+              Coal &rarr; oil &rarr; gas CT &rarr; gas CCGT merit order.<br>
+              <strong>compute_hourly_lmp_vectorized():</strong> 8,760-hour clearing price from dispatch.
+              Residual demand filled by fossil stack; LMP = marginal unit&rsquo;s cost.<br>
+              <strong>ISO PriceModels:</strong> PJM (RPM $120), ERCOT (energy-only, scarcity), CAISO (RA $75, duck curve),
+              NYISO (ICAP $85), NEISO (FCM $55, gas pipeline +$13.13), MISO ($25), SPP ($0).
+            </div>
+            <div class="sc-io">
+              <span>Constants:</span> HEAT_RATES, VOM, CO2_RATES, FUEL_PRICES, INSTALLED_FOSSIL_MW, FOSSIL_CAPACITY_SHARES
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">Hourly Dispatch</div>
+            <div class="sc-script">dispatch_utils.py</div>
+            <div class="sc-detail">
+              <strong>reconstruct_hourly_dispatch():</strong> 4-phase storage dispatch:
+              bat4 (4hr, 85% RTE, daily) &rarr; bat8 (8hr, 85% RTE, daily) &rarr;
+              LDES (100hr, 50% RTE, 7-day) &rarr; H&sub2; (1000hr, 35% RTE, 30-day, &ge;95% only).
+              SOC carried across window boundaries.<br>
+              <strong>compute_fossil_retirement():</strong> Coal retires first (&gt;60% clean), then oil, then gas.
+              Returns remaining capacity per fuel type.<br>
+              <strong>load_common_data():</strong> EIA demand, supply, emission rates, fossil mix.
+            </div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-card">
+            <div class="sc-id">Revenue Model</div>
+            <div class="sc-detail">
+              Per zone / threshold step:<br>
+              <strong>1. Energy:</strong> Hourly LMP &times; resource generation profile (generation-weighted LMP).<br>
+              <strong>2. Capacity market:</strong> ISO-specific $/kW-yr, degraded by clean share: price &times; max(0, 1 &minus; &alpha; &times; clean%).<br>
+              <strong>3. Incentives:</strong> PTC &sect;45Y ($26/MWh wind/solar/nuclear), &sect;45U (existing nuclear floor $40/MWh, max $15/MWh credit), ITC 30% (storage/offshore).<br>
+              <strong>4. REC:</strong> Scarcity-driven: ACP &times; (1 &minus; exp(&minus;k &times; gap%)).
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">Cost Model</div>
+            <div class="sc-detail">
+              <strong>LCOE:</strong> From <span class="module-ref">pipeline_config.py</span> tables (L/M/H &times; 7 ISOs &times; resource).
+              Wright&rsquo;s Law adjustment in trajectory mode: C(Q) = FOAK &times; (Q/Q_ref)^(-b).<br>
+              <strong>Transmission:</strong> Per-resource, per-ISO flat adders ($/MWh).<br>
+              <strong>Gas backup:</strong> Existing gas FOM ($/kW-yr) on used capacity; new CCGT capital on new-build.
+              Peak capacity credits (ELCC) reduce backup requirements.<br>
+              <strong>PPA discount:</strong> Regional market depth scaling (ERCOT=1.0 &rarr; SPP=0.50).
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">Scenario Modes</div>
+            <div class="sc-detail">
+              <strong>Snapshot:</strong> Single point-in-time, user inputs, no learning. 5&ndash;15 sec.<br>
+              <strong>Trajectory:</strong> 6 timesteps (2023&ndash;2050). Wright&rsquo;s Law + demand growth + queue caps.
+              Deploy zone-by-zone; stop at first loss. 30&ndash;120 sec.<br>
+              <strong>Sweep:</strong> 270 scenarios = 2 conditions &times; 3 demand &times; 5 price &times; 3 PPA &times; ~3 gas friction.
+              Shared LMP cache avoids redundant 8,760h computation. 5&ndash;30 min.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-down"><svg width="14" height="8"><polygon points="7,7 2,1 12,1" fill="#2372B9"/></svg></div>
+
+    <div class="section" style="flex:0.6;">
+      <div class="section-hdr bg-scenarios">Scenario Parameters &amp; Sweep Grid<span class="runtime">270 scenario combinations</span></div>
+      <div class="section-body">
+        <div class="step-row">
+          <div class="step-card">
+            <div class="sc-id">Fuel &amp; Carbon</div>
+            <div class="sc-detail">
+              Gas: $2&ndash;6/MMBtu (L/M/H). Coal: $2&ndash;2.50. Oil: $8&ndash;13.<br>
+              Carbon: $0 (none), $5.50 (RGGI), $14 (full RGGI), $51 (EPA SCC), $100 (EU ETS), $185 (Rennert).
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">Clean Energy &amp; Storage</div>
+            <div class="sc-detail">
+              Solar, Wind, Offshore, Nuclear, CCS LCOE (L/M/H per ISO).<br>
+              Battery 4hr $295, Battery 8hr $456, LDES $220 ($/kW-yr defaults).<br>
+              Geothermal: CAISO only, $63&ndash;$110/MWh.
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">Market &amp; Policy</div>
+            <div class="sc-detail">
+              Demand growth: L/M/H (0.5&ndash;5.5%/yr by ISO).<br>
+              Transmission: None/L/M/H adder.<br>
+              PPA availability: L/M/H. Gas friction: L/M/H.<br>
+              45Q on/off. Nuclear retirement floor: $10&ndash;60/MWh.
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">Queue &amp; Learning</div>
+            <div class="sc-detail">
+              Interconnection caps: 2&ndash;8 GW/yr per ISO (Facilitating vs Challenging).<br>
+              Wright&rsquo;s Law: nuclear 10&ndash;15%, CCS 10&ndash;12%, LDES 15&ndash;20%, battery 18&ndash;20%, offshore 8&ndash;12%.<br>
+              2025 baselines: nuclear 2 GW, battery 50 GW, solar/wind 150 GW.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="footnote">Constellation Energy &mdash; Market Simulator v1.0 &mdash; Page 2 of 3</div>
+</div>
+
+<!-- PAGE 3: Frontend & API -->
+<div class="page">
+  <div class="page-body">
+
+    <div class="section">
+      <div class="section-hdr bg-api">API Layer &mdash; FastAPI REST Backend<span class="runtime">backend/main.py</span></div>
+      <div class="section-body">
+        <div class="step-row">
+          <div class="step-card">
+            <div class="sc-id">POST /api/simulate</div>
+            <div class="sc-script">SimulationRequest &rarr; SimulationResponse</div>
+            <div class="sc-detail">
+              Single simulation (snapshot or trajectory). Accepts full parameter set:
+              ISO, fuel prices, carbon price, heat rates, VOM, clean LCOEs, incentives, storage costs,
+              capacity market price, transmission, demand growth, PPA level, gas friction, condition,
+              nuclear retirement threshold, mode, years, custom overrides.
+              Returns: generator economics, LMP profile, supply mix, KPIs, zone details, year results.
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">POST /api/sweep</div>
+            <div class="sc-script">SweepRequest &rarr; SweepJob</div>
+            <div class="sc-detail">
+              Launches async 270-scenario sweep. Returns job_id immediately.
+              Client polls GET /api/sweep/{job_id} for progress (0&ndash;100%) until completion.
+              Accepts: ISOs list, nuclear threshold, snapshot flag, optional bounds overrides
+              (conditions, demand levels, price keys, PPA levels, gas friction levels).
+              Background execution via asyncio thread pool.
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">POST /api/sensitivity</div>
+            <div class="sc-script">SensitivityRequest &rarr; SensitivityResponse</div>
+            <div class="sc-detail">
+              Single-parameter variation: base_params + vary_param + values[].
+              E.g., vary gas_price across [2.0, 3.0, 4.0, 5.0, 6.0].
+              Returns: per-value results (clean %, LMP, emissions, cost, revenue).
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">GET /api/iso-defaults</div>
+            <div class="sc-script">ISODefaults</div>
+            <div class="sc-detail">
+              Returns ISO metadata: demand TWh, grid mix shares, capacity market price,
+              installed fossil MW, fossil capacity shares, fuel prices, heat rates, VOM, CO&sub2; rates,
+              NOx/SOx rates. Used by frontend to populate form defaults per ISO.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-down"><svg width="14" height="8"><polygon points="7,7 2,1 12,1" fill="#007FA4"/></svg></div>
+
+    <div class="section">
+      <div class="section-hdr bg-frontend">Frontend &mdash; Web Interface<span class="runtime">HTML + JavaScript + CSS</span></div>
+      <div class="section-body">
+        <div class="step-row">
+          <div class="step-card">
+            <div class="sc-id">Guide Page</div>
+            <div class="sc-script">frontend/guide.html</div>
+            <div class="sc-detail">
+              Landing page with tool overview, input reference, and methodology summary.
+              Links to setup page for simulation launch.
+              Serves as onboarding for new users.
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">Setup Page</div>
+            <div class="sc-script">frontend/setup.html + js/setup.js</div>
+            <div class="sc-detail">
+              3-mode selector (Snapshot / Trajectory / Sweep).
+              ISO multi-select with summary cards (demand, clean%, fossil GW, cap mkt price).
+              Fuel price inputs with L/M/H presets. Carbon price pills ($0&ndash;$185).
+              Clean LCOE, storage, transmission, incentive toggles.
+              Nuclear retirement slider ($10&ndash;60). Learning curve on/off.
+              Custom CSV file upload. Form validation.
+              POST to /api/simulate or /api/sweep &rarr; redirect to results.
+            </div>
+          </div>
+          <div class="step-card" style="flex:1.5;">
+            <div class="sc-id">Results Page</div>
+            <div class="sc-script">frontend/results.html + js/results.js</div>
+            <div class="sc-detail">
+              <strong>10 interactive Plotly.js charts:</strong><br>
+              1. Merit-Order Stack (capacity bars + MC line + LMP clearance)<br>
+              2. Generator Profitability (revenue/cost/profit grouped bars)<br>
+              3. Nuclear Revenue Stack (energy/capacity/PTC stacked)<br>
+              4. LMP Impact Curve (clean% vs avg LMP)<br>
+              5. CCS Breakeven (existing CCGT vs CCS retrofit vs new gas)<br>
+              6. What Gets Built (resource mix pie chart)<br>
+              7. Fossil Bin Economics (dispatch hours + CF by heat rate bin)<br>
+              8. Cost Ladder (cost/revenue vs cumulative clean GW)<br>
+              9. Gas Fleet Shift (dispatch across efficiency tiers vs carbon)<br>
+              10. Sensitivity Heatmap (gas price &times; carbon &rarr; clean%)
+            </div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-card">
+            <div class="sc-id">Demo Engine</div>
+            <div class="sc-script">frontend/js/demo-engine.js</div>
+            <div class="sc-detail">
+              Client-side synthetic simulation for instant feedback without Python backend.
+              Uses hardcoded ISO profiles (demand, clean%, fossil MW, heat rates, LMP).
+              Generates directionally-correct results: clean%, LMP, generator economics,
+              resource mix, sensitivity matrices. Used for demo page standalone mode.
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">Design System</div>
+            <div class="sc-script">frontend/styles/shared.css, CEG-style.css</div>
+            <div class="sc-detail">
+              Constellation Energy branded design system. Dark navy + electric blue + warm orange accent.
+              Plus Jakarta Sans / DM Sans fonts. Responsive grid layout.
+              Component library: cards, toggles, ISO pills, chart containers, stat cards.
+              44px min tap targets for mobile.
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">Shared Utilities</div>
+            <div class="sc-script">js/chart-colors.js, js/shared-header.js</div>
+            <div class="sc-detail">
+              <strong>chart-colors.js:</strong> RESOURCE_COLORS (solar #F59E0B, wind #22C55E, nuclear #6366F1, etc.)
+              and ISO_COLORS (CAISO #F59E0B, ERCOT #22C55E, PJM #0EA5E9, etc.).<br>
+              <strong>shared-header.js:</strong> SVG waveform overlay injection for page headers.
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">Export Pipeline</div>
+            <div class="sc-detail">
+              <strong>Per-run output:</strong> data/results/run_NNN/<br>
+              &bull; results_data.csv (full economics table)<br>
+              &bull; input_parameters.csv (tabular params)<br>
+              &bull; inputs.txt (formatted summary)<br>
+              &bull; narrative.txt (auto-generated interpretation)<br>
+              &bull; charts/*.png (user-triggered export)<br>
+              &bull; custom_*.csv (copies of uploaded files)
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-down"><svg width="14" height="8"><polygon points="7,7 2,1 12,1" fill="#6BA543"/></svg></div>
+
+    <div class="section" style="flex:0.4;">
+      <div class="section-hdr" style="background: linear-gradient(90deg, #2372B9, #007FA4);">Deployment &amp; Infrastructure</div>
+      <div class="section-body">
+        <div class="step-row">
+          <div class="step-card">
+            <div class="sc-id">Launchers</div>
+            <div class="sc-detail">
+              <span class="module-ref">start.py</span> Cross-platform launcher with dependency check.<br>
+              <span class="module-ref">run.sh</span> Mac/Linux. <span class="module-ref">run.bat</span> Windows.<br>
+              Auto-installs requirements, starts uvicorn on port 8000, opens browser.
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">Docker</div>
+            <div class="sc-detail">
+              <span class="module-ref">Dockerfile</span> + <span class="module-ref">docker-compose.yml</span><br>
+              Python 3.11 base image. Exposes port 8000. Volume mounts for data/ and results/.
+              <code>docker-compose up</code> for one-command deployment.
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">Dependencies</div>
+            <div class="sc-detail">
+              <span class="module-ref">requirements.txt</span>: fastapi, uvicorn, numpy, pandas, pyarrow, pydantic.
+              Optional: numba (10&ndash;50&times; speedup for dispatch), plotly (chart export).
+              Python 3.9+ required.
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">Data Layout</div>
+            <div class="sc-detail">
+              data/profiles/ &mdash; cached EIA demand, gen, fossil, emission profiles<br>
+              data/eia-860/, eia-923/, epa-campd/ &mdash; fleet model by state<br>
+              data/eia-natgas-prices/ &mdash; gas price series<br>
+              data/results/ &mdash; simulation output (auto-populated per run)
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="footnote">Constellation Energy &mdash; Market Simulator v1.0 &mdash; Page 3 of 3</div>
+</div>
+
+</body>
+</html>

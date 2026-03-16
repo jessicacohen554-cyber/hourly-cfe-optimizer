@@ -1,0 +1,249 @@
+name: "Clear Data Directories (EMPTY-FOR-CLONING)"
+
+# Removes selected pipeline output data from the EMPTY-FOR-CLONING branch to
+# create a clean clone-ready copy of the repo. Each directory can be toggled
+# individually. Directory structure and .gitkeep files are always preserved.
+#
+# SAFETY: This workflow ONLY operates on the EMPTY-FOR-CLONING branch.
+# It will refuse to run on master or any other branch.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Preview only — list files that would be deleted without changing anything'
+        default: true
+        type: boolean
+      clear_eia_930:
+        description: 'Clear data/eia-930/ (raw EIA source profiles)'
+        default: false
+        type: boolean
+      clear_step1_pfs:
+        description: 'Clear data/step1-pfs/ (physics feasible space)'
+        default: true
+        type: boolean
+      clear_step2_1_ef:
+        description: 'Clear data/step2.1-ef/ (efficient frontier)'
+        default: true
+        type: boolean
+      clear_step2_2_cost:
+        description: 'Clear data/step2.2-cost/ (cost optimization)'
+        default: true
+        type: boolean
+      clear_step3_dispatch:
+        description: 'Clear data/step3-dispatch/ (dispatch cache + MAC queue)'
+        default: true
+        type: boolean
+      clear_step4_analysis:
+        description: 'Clear data/step4-analysis/ (CO2, LMP, MAC, targets, tracks, building blocks)'
+        default: true
+        type: boolean
+      clear_step5_scenarios:
+        description: 'Clear data/step5-scenarios/ (scenario comparison + procurement)'
+        default: true
+        type: boolean
+      clear_step5_wrights:
+        description: "Clear data/step5-wrights/ (Wright's Law learning curves)"
+        default: true
+        type: boolean
+      clear_step6_smartargets:
+        description: 'Clear data/step6-smartargets/ (SMARTargets, IPP, nuclear retirement)'
+        default: true
+        type: boolean
+
+jobs:
+  clear-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout EMPTY-FOR-CLONING branch
+        uses: actions/checkout@v4
+        with:
+          ref: EMPTY-FOR-CLONING
+          fetch-depth: 1
+
+      - name: Verify branch safety
+        run: |
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          echo "Current branch: $BRANCH"
+          if [ "$BRANCH" != "EMPTY-FOR-CLONING" ]; then
+            echo "::error::This workflow ONLY runs on the EMPTY-FOR-CLONING branch. Current branch: $BRANCH"
+            exit 1
+          fi
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Enumerate files to clear
+        id: enumerate
+        run: |
+          FILES="/tmp/files_to_clear.txt"
+          > "$FILES"
+
+          DIRS=()
+          [ "${{ inputs.clear_eia_930 }}" = "true" ]        && DIRS+=("data/eia-930")
+          [ "${{ inputs.clear_step1_pfs }}" = "true" ]      && DIRS+=("data/step1-pfs")
+          [ "${{ inputs.clear_step2_1_ef }}" = "true" ]     && DIRS+=("data/step2.1-ef")
+          [ "${{ inputs.clear_step2_2_cost }}" = "true" ]   && DIRS+=("data/step2.2-cost")
+          [ "${{ inputs.clear_step3_dispatch }}" = "true" ]  && DIRS+=("data/step3-dispatch")
+          [ "${{ inputs.clear_step4_analysis }}" = "true" ]  && DIRS+=("data/step4-analysis")
+          [ "${{ inputs.clear_step5_scenarios }}" = "true" ] && DIRS+=("data/step5-scenarios")
+          [ "${{ inputs.clear_step5_wrights }}" = "true" ]   && DIRS+=("data/step5-wrights")
+          [ "${{ inputs.clear_step6_smartargets }}" = "true" ] && DIRS+=("data/step6-smartargets")
+
+          if [ ${#DIRS[@]} -eq 0 ]; then
+            echo "No directories selected. Nothing to do."
+            echo "count=0" >> "$GITHUB_OUTPUT"
+            echo "dirs=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Selected directories:"
+          for dir in "${DIRS[@]}"; do
+            echo "  • $dir/"
+          done
+
+          for dir in "${DIRS[@]}"; do
+            if [ -d "$dir" ]; then
+              find "$dir" -type f ! -name ".gitkeep" >> "$FILES" 2>/dev/null || true
+            fi
+          done
+
+          sort -u -o "$FILES" "$FILES"
+          COUNT=$(grep -c . "$FILES" 2>/dev/null || echo 0)
+
+          # Pass selected dir names for commit message
+          DIR_LIST=$(IFS=','; echo "${DIRS[*]}")
+
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "dirs=$DIR_LIST" >> "$GITHUB_OUTPUT"
+          echo "Found $COUNT file(s) to clear."
+
+      - name: Preview (dry run)
+        if: ${{ inputs.dry_run && steps.enumerate.outputs.count != '0' }}
+        run: |
+          FILES="/tmp/files_to_clear.txt"
+
+          echo "═══════════════════════════════════════════════"
+          echo "  DRY RUN — No files will be deleted"
+          echo "═══════════════════════════════════════════════"
+          echo ""
+
+          # Show breakdown by directory (including subdirs of step4-analysis)
+          for dir in data/eia-930 data/step1-pfs data/step2.1-ef \
+                     data/step2.2-cost data/step3-dispatch \
+                     data/step4-analysis/co2_results \
+                     data/step4-analysis/lmp \
+                     data/step4-analysis/building-blocks \
+                     data/step4-analysis/resource-density \
+                     data/step4-analysis \
+                     data/step5-scenarios data/step5-wrights \
+                     data/step6-smartargets; do
+            matched=$(grep "^${dir}/" "$FILES" 2>/dev/null || true)
+            if [ -n "$matched" ]; then
+              count=$(echo "$matched" | wc -l)
+              size=0
+              while IFS= read -r f; do
+                if [ -f "$f" ]; then
+                  s=$(stat -c%s "$f" 2>/dev/null || echo 0)
+                  size=$((size + s))
+                fi
+              done <<< "$matched"
+              size_mb=$(awk "BEGIN{printf \"%.1f\", $size/1048576}")
+              echo "  ${dir}/  →  ${count} file(s), ${size_mb} MB"
+            fi
+          done
+
+          TOTAL=${{ steps.enumerate.outputs.count }}
+          echo ""
+          echo "═══════════════════════════════════════════════"
+          echo "  Total: $TOTAL file(s)"
+          echo "  Re-run with dry_run=false to delete."
+          echo "═══════════════════════════════════════════════"
+
+      - name: Nothing to clear
+        if: ${{ steps.enumerate.outputs.count == '0' }}
+        run: |
+          echo "No data files found in selected directories."
+
+      - name: Delete files and commit
+        if: ${{ !inputs.dry_run && steps.enumerate.outputs.count != '0' }}
+        run: |
+          FILES="/tmp/files_to_clear.txt"
+          COUNT=${{ steps.enumerate.outputs.count }}
+
+          echo "Deleting $COUNT file(s)..."
+
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            rm -f "$f"
+          done < "$FILES"
+
+          # Stage all deletions
+          git add -u data/
+
+          # Check if there are staged changes
+          if git diff --cached --quiet; then
+            echo "No tracked file changes to commit."
+            exit 0
+          fi
+
+          # Build human-readable list of cleared dirs for commit message
+          CLEARED=""
+          [ "${{ inputs.clear_eia_930 }}" = "true" ]          && CLEARED="${CLEARED}eia-930, "
+          [ "${{ inputs.clear_step1_pfs }}" = "true" ]        && CLEARED="${CLEARED}step1-pfs, "
+          [ "${{ inputs.clear_step2_1_ef }}" = "true" ]       && CLEARED="${CLEARED}step2.1-ef, "
+          [ "${{ inputs.clear_step2_2_cost }}" = "true" ]     && CLEARED="${CLEARED}step2.2-cost, "
+          [ "${{ inputs.clear_step3_dispatch }}" = "true" ]    && CLEARED="${CLEARED}step3-dispatch, "
+          [ "${{ inputs.clear_step4_analysis }}" = "true" ]    && CLEARED="${CLEARED}step4-analysis, "
+          [ "${{ inputs.clear_step5_scenarios }}" = "true" ]   && CLEARED="${CLEARED}step5-scenarios, "
+          [ "${{ inputs.clear_step5_wrights }}" = "true" ]     && CLEARED="${CLEARED}step5-wrights, "
+          [ "${{ inputs.clear_step6_smartargets }}" = "true" ] && CLEARED="${CLEARED}step6-smartargets, "
+          CLEARED="${CLEARED%, }"  # trim trailing comma
+
+          git commit -m "Clear selected data directories for clean clone
+
+          Removed $COUNT files from: ${CLEARED}.
+          Directory structure and .gitkeep files preserved."
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push origin EMPTY-FOR-CLONING 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "::error::Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+
+      - name: Summary
+        if: always()
+        run: |
+          echo ""
+          echo "═══════════════════════════════════════════════"
+          echo "  CLEAR DATA DIRECTORIES — SUMMARY"
+          echo "═══════════════════════════════════════════════"
+          echo "  Branch:      EMPTY-FOR-CLONING"
+          echo "  Files found: ${{ steps.enumerate.outputs.count }}"
+          echo "  Dry run:     ${{ inputs.dry_run }}"
+          echo ""
+          echo "  Directory selections:"
+          [ "${{ inputs.clear_eia_930 }}" = "true" ]          && echo "    ✓ data/eia-930/"          || echo "    ○ data/eia-930/ (skipped)"
+          [ "${{ inputs.clear_step1_pfs }}" = "true" ]        && echo "    ✓ data/step1-pfs/"        || echo "    ○ data/step1-pfs/ (skipped)"
+          [ "${{ inputs.clear_step2_1_ef }}" = "true" ]       && echo "    ✓ data/step2.1-ef/"       || echo "    ○ data/step2.1-ef/ (skipped)"
+          [ "${{ inputs.clear_step2_2_cost }}" = "true" ]     && echo "    ✓ data/step2.2-cost/"     || echo "    ○ data/step2.2-cost/ (skipped)"
+          [ "${{ inputs.clear_step3_dispatch }}" = "true" ]    && echo "    ✓ data/step3-dispatch/"   || echo "    ○ data/step3-dispatch/ (skipped)"
+          [ "${{ inputs.clear_step4_analysis }}" = "true" ]    && echo "    ✓ data/step4-analysis/"   || echo "    ○ data/step4-analysis/ (skipped)"
+          [ "${{ inputs.clear_step5_scenarios }}" = "true" ]   && echo "    ✓ data/step5-scenarios/"  || echo "    ○ data/step5-scenarios/ (skipped)"
+          [ "${{ inputs.clear_step5_wrights }}" = "true" ]     && echo "    ✓ data/step5-wrights/"    || echo "    ○ data/step5-wrights/ (skipped)"
+          [ "${{ inputs.clear_step6_smartargets }}" = "true" ] && echo "    ✓ data/step6-smartargets/" || echo "    ○ data/step6-smartargets/ (skipped)"
+          echo "═══════════════════════════════════════════════"

@@ -1,0 +1,42 @@
+name: Model Validation Tests
+on:
+  push:
+    paths:
+      - 'scripts/**'
+      - 'pytest.ini'
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - 'pytest.ini'
+  workflow_dispatch:
+
+jobs:
+  unit-tests:
+    name: Unit & Physics Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow pandas pytest
+
+      - name: Run test suite
+        working-directory: scripts
+        run: python -m pytest tests/ -v --tb=short
+
+      - name: Run existing e2e validation (schema-only)
+        working-directory: scripts
+        run: |
+          python -c "
+          import sys
+          sys.path.insert(0, '.')
+          from pipeline_config import ISOS, THRESHOLDS, ACTIVE_THRESHOLDS
+          print(f'Pipeline config loaded: {len(ISOS)} ISOs, {len(THRESHOLDS)} thresholds')
+          print(f'Active thresholds: {ACTIVE_THRESHOLDS}')
+          print('Config validation passed')
+          "

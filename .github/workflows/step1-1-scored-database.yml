@@ -1,0 +1,196 @@
+name: "Step 1.1: Build Scored Mix Database"
+
+# Generates all resource fraction combos (1a) and scores them (1b) → coarse_cache.parquet.
+# This is the database that Step 1B (zone search) mines per-threshold.
+# Run once after physics changes or code updates.
+# Output: data/step1-pfs/{ISO}_mixes.parquet, {ISO}_coarse_cache.parquet
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region to build'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      script:
+        description: 'Which stage to run'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - generate-mixes
+          - score-mixes
+      chunk_size:
+        description: 'Scoring chunk size (default 20000)'
+        required: false
+        default: '20000'
+        type: string
+      force_1a:
+        description: 'Force regenerate mixes even if parquet exists'
+        required: false
+        default: false
+        type: boolean
+      force_1b:
+        description: 'Force rescore even if coarse_cache exists'
+        required: false
+        default: false
+        type: boolean
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+jobs:
+  build-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch || 'master' }}
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: pip install numpy numba pyarrow pandas
+
+    - name: Create output directories
+      run: mkdir -p data/step1-pfs
+
+    - name: "Stage 1a: Generate mix combinations"
+      if: ${{ inputs.script == 'ALL' || inputs.script == 'generate-mixes' }}
+      run: |
+        ISO="${{ inputs.iso }}"
+        FORCE_FLAG=""
+        if [ "${{ inputs.force_1a }}" = "true" ]; then FORCE_FLAG="--force"; fi
+
+        if [ "$ISO" = "ALL" ]; then
+          for iso in CAISO ERCOT PJM NYISO NEISO MISO SPP; do
+            echo "=== Generating mixes for $iso ==="
+            python scripts/step1_1a_generate_mixes.py --iso "$iso" $FORCE_FLAG
+          done
+        else
+          python scripts/step1_1a_generate_mixes.py --iso "$ISO" $FORCE_FLAG
+        fi
+
+    - name: "Stage 1b: Score mix combinations (chunked)"
+      if: ${{ inputs.script == 'ALL' || inputs.script == 'score-mixes' }}
+      run: |
+        ISO="${{ inputs.iso }}"
+        CHUNK="${{ inputs.chunk_size || '20000' }}"
+        FORCE_FLAG=""
+        if [ "${{ inputs.force_1b }}" = "true" ]; then FORCE_FLAG="--force"; fi
+
+        if [ "$ISO" = "ALL" ]; then
+          for iso in CAISO ERCOT PJM NYISO NEISO MISO SPP; do
+            echo "=== Scoring mixes for $iso ==="
+            python scripts/step1_1b_score_mixes.py --iso "$iso" --chunk-size "$CHUNK" $FORCE_FLAG
+          done
+        else
+          python scripts/step1_1b_score_mixes.py --iso "$ISO" --chunk-size "$CHUNK" $FORCE_FLAG
+        fi
+
+    - name: Commit and push scored database (batched by ISO)
+      run: |
+        set -euo pipefail
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config http.postBuffer 524288000
+        git config push.default current
+
+        TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+        ISO_LABEL="${{ inputs.iso }}"
+        SCRIPT_LABEL="${{ inputs.script }}"
+        TARGET_BRANCH="auto/${TIMESTAMP}-step1a-scored-db-${SCRIPT_LABEL}-${ISO_LABEL}"
+        git checkout -b "$TARGET_BRANCH"
+
+        if [ "$ISO_LABEL" = "ALL" ]; then
+          ISOS="CAISO ERCOT PJM NYISO NEISO MISO SPP"
+        else
+          ISOS="$ISO_LABEL"
+        fi
+
+        push_with_retry() {
+          local label="$1"
+          local MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "  Push attempt $i/$MAX_RETRIES for ${label}..."
+            git push -u origin "$TARGET_BRANCH" 2>&1 && return 0
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "  ERROR: Push failed for ${label} after $MAX_RETRIES attempts"
+              return 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "  Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+        }
+
+        PUSHED=false
+
+        for iso in $ISOS; do
+          echo ""
+          echo "--- Batching commit for $iso ---"
+
+          FILES=$(ls data/step1-pfs/${iso}_mixes.parquet data/step1-pfs/${iso}_coarse_cache.parquet 2>/dev/null || true)
+          if [ -z "$FILES" ]; then
+            echo "  No database files for $iso — skipping"
+            continue
+          fi
+
+          git add -f $FILES
+          if git diff --cached --quiet; then
+            echo "  No changes for $iso — skipping"
+            continue
+          fi
+
+          BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
+          echo "  Staging ~${BATCH_MB} MB for $iso"
+          git commit -m "Step 1A Scored DB: ${iso} (${{ inputs.script }}) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          if push_with_retry "$iso"; then
+            PUSHED=true
+          else
+            echo "  Per-ISO push failed for $iso — falling back to per-file batching"
+            git reset HEAD~1
+            for f in $FILES; do
+              FNAME=$(basename "$f")
+              git add -f "$f"
+              if git diff --cached --quiet; then continue; fi
+              git commit -m "Step 1A: ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              if push_with_retry "$FNAME"; then
+                PUSHED=true
+              else
+                git reset HEAD~1
+              fi
+            done
+          fi
+        done
+
+        if [ "$PUSHED" = true ]; then
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+        else
+          echo "No changes were pushed"
+        fi
+

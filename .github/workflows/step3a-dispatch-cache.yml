@@ -1,0 +1,159 @@
+name: "Step 3A: Build Dispatch Cache"
+
+# Pre-computes 8760-hour dispatch for all unique mixes per ISO.
+# Fans out parallel matrix jobs (one per ISO), merges artifacts, commits.
+#
+# Prerequisite: Step 3 must have produced parquets.
+# Output: data/step3-dispatch/{ISO}_dispatch_cache.parquet
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region to process (ALL = parallel)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      force:
+        description: 'Force rebuild dispatch cache (ignore existing)'
+        required: false
+        default: true
+        type: boolean
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: step3-dispatch
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix=["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix=["${{ inputs.iso }}"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  process:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      matrix:
+        iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+
+      - name: Verify upstream data
+        run: |
+          if [ ! -d "data/step2.2-cost" ] || ! ls data/step2.2-cost/*.parquet >/dev/null 2>&1; then
+            echo "ERROR: No step-3 parquets found."
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow pandas
+
+      - name: Ensure output directories
+        run: mkdir -p data/step3-dispatch
+
+      - name: "Build Dispatch Cache — ${{ matrix.iso }}"
+        run: |
+          FORCE_FLAG="${{ inputs.force == true && '--force' || '' }}"
+          python scripts/step3a_build_dispatch_cache.py $FORCE_FLAG --iso ${{ matrix.iso }}
+
+      - name: Scope output to current ISO only
+        run: |
+          find data/step3-dispatch/ -name "*.parquet" -o -name "*.npz" | grep -v "${{ matrix.iso }}" | xargs rm -f 2>/dev/null || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dispatch-${{ matrix.iso }}
+          path: data/step3-dispatch/
+          retention-days: 1
+
+  commit:
+    needs: [prepare, process]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Create output branch
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.iso }}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+      - name: Download dispatch cache artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: dispatch-*
+          path: data/step3-dispatch/
+          merge-multiple: true
+
+      - name: Commit and push
+        run: |
+          git config http.postBuffer 524288000
+
+          git add -f data/step3-dispatch/ 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Step 4 Dispatch Cache: ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "$TARGET_BRANCH" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
