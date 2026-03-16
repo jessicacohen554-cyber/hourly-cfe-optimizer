@@ -376,6 +376,12 @@ class FleetModel:
             'retirement_year': ['planned-retirement-year-month', 'Planned Retirement Year',
                                 'Retirement Year', 'retirement_year', 'RETIREMENT_YEAR',
                                 'Expected Retirement Year', 'Planned Retirement Date'],
+            'entity_name':    ['entityName', 'Entity Name', 'Utility Name', 'entity_name',
+                               'ENTITY_NAME', 'Owner', 'Operator'],
+            'plant_name':     ['plantName', 'Plant Name', 'plant_name', 'PLANT_NAME'],
+            'latitude':       ['latitude', 'Latitude', 'LATITUDE', 'Lat'],
+            'longitude':      ['longitude', 'Longitude', 'LONGITUDE', 'Lon', 'Long'],
+            'county':         ['county', 'County', 'COUNTY'],
             'ba':             ['balancing_authority_code', 'Balancing Authority Code',
                                'Balancing Authority', 'ba', 'BA_CODE', 'BA Code',
                                'Balancing Authority Name'],
@@ -958,6 +964,53 @@ class FleetModel:
             'merit_order': stacks,
             'unit_type_totals': type_totals,
         }
+
+
+def load_iso_fleet(iso, data_root=None):
+    """Load all EIA 860 generators for an ISO by filtering on balancing_authority_code.
+
+    Loads data from ALL available states and filters by BA_TO_ISO mapping.
+    This correctly handles multi-BA states (e.g., TX has ERCOT + SPP).
+
+    Returns DataFrame of generators belonging to the requested ISO, or None.
+    """
+    if data_root is None:
+        data_root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
+
+    eia860_dir = os.path.join(data_root, 'eia-860')
+    if not os.path.isdir(eia860_dir):
+        return None
+
+    frames = []
+    for state_dir in sorted(os.listdir(eia860_dir)):
+        state_path = os.path.join(eia860_dir, state_dir)
+        if not os.path.isdir(state_path):
+            continue
+        # Skip empty directories (only .gitkeep)
+        files = [f for f in os.listdir(state_path) if not f.startswith('.')]
+        if not files:
+            continue
+        try:
+            fm = FleetModel(state_dir, data_root=data_root)
+            df = fm.load_eia860()
+            if df is not None and len(df) > 0:
+                df['state'] = state_dir
+                frames.append(df)
+        except Exception:
+            continue
+
+    if not frames:
+        return None
+
+    merged = pd.concat(frames, ignore_index=True)
+    # Filter to generators whose BA maps to the requested ISO
+    iso_mask = merged['iso'] == iso
+    result = merged[iso_mask].copy()
+
+    if len(result) == 0:
+        return None
+
+    return result
 
 
 # ══════════════════════════════════════════════════════════════════════════════
