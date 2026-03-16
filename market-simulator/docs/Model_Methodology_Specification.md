@@ -249,21 +249,30 @@ Data transformations:
 
 | Generator Type | CO₂ (tons/MWh) | NOx (lbs/MWh) | SOx (lbs/MWh) |
 |---|---|---|---|
-| Coal Steam | 0.95 | 1.2 | 2.0 |
-| Gas CCGT | 0.37 | 0.2 | 0.01 |
-| Gas CT | 0.55 | 0.5 | 0.02 |
-| Oil CT | 0.65 | 0.6 | 0.5 |
-| CCS-CCGT (90% capture) | 0.036 | 0.2 | 0.01 |
+| Coal Steam | 0.95 | 0.80 | 1.80 |
+| Gas CCGT | 0.37 | 0.10 | 0.01 |
+| Gas CT | 0.55 | 0.25 | 0.01 |
+| Oil CT | 0.65 | 1.20 | 0.80 |
+| CCS-CCGT (90% capture) | 0.036 | 0.10 | 0.01 |
+
+NOx rates represent fleet averages with modern controls (SCR/SNCR for coal, DLN burners for gas). SOx rates reflect fleet averages with FGD scrubbers for coal and low-sulfur distillate for oil. Source: EPA CAMPD 2023.
 
 ### 3.5 Generator Inventory (EIA 860/923 + EPA CAMPD)
 
-The Fleet Model (`fleet_model.py`) provides optional real unit-level data:
+The Fleet Model (`fleet_model.py`) provides real unit-level data for plant-level dispatch economics:
 
-- **EIA Form 860**: Generator inventory — capacity (MW), fuel type, prime mover, operating status, location, balancing authority
+- **EIA Form 860**: Generator inventory — capacity (MW), fuel type, prime mover, operating status, location, balancing authority code, online year, heat rate
 - **EIA Form 923**: Monthly generation and fuel consumption — revealed heat rates, capacity factors
 - **EPA CAMPD**: Hourly continuous emissions monitoring — stack CO₂, NOx, SOx at unit level
 
-When real fleet data is available (currently Texas), the simulator uses unit-level merit-order stacks instead of stylized efficiency bins. Otherwise, it falls back to ISO-level aggregate parameters.
+**ISO Fleet Loading** (`load_iso_fleet()`): Generators are assigned to ISOs via a `BA_TO_ISO` mapping that converts EIA `balancing_authority_code` values to the 7 model ISOs. This correctly handles multi-BA states (e.g., Texas has both ERCOT and SPP balancing authorities). The function loads EIA 860 data from all available states and filters by BA membership, returning a DataFrame of generators belonging to the requested ISO.
+
+**Unit Classification** (`_classify_unit()`): Each generator is classified by its prime mover code and fuel type:
+- Prime mover `CA`/`CS`/`CT`/`CC` → `gas_ccgt` (combined cycle)
+- Prime mover `GT`/`IC`/`OT`/`CE` → `gas_ct` (combustion turbine)
+- Prime mover `ST` → resolved by fuel type: coal fuels (`BIT`/`SUB`/`LIG`/`ANT`/`RC`) → `coal_steam`, gas fuels (`NG`/`BFG`) → `gas_ccgt`, oil fuels (`DFO`/`RFO`) → `oil_ct`
+
+When real fleet data is available, the simulator uses unit-level merit-order stacks with per-generator heat rates instead of stylized efficiency bins. Otherwise, it falls back to ISO-level aggregate parameters with default heat rates.
 
 ### 3.6 Natural Gas Price Data
 
