@@ -5,7 +5,7 @@
 
 // ===== CHART DEFAULTS =====
 Chart.defaults.font.family = "'Plus Jakarta Sans', 'Helvetica Neue', sans-serif";
-Chart.defaults.color = 'rgba(15,23,42,0.5)';
+Chart.defaults.color = 'rgba(15,23,42,0.65)';
 
 var BLUE = '#0EA5E9', GREEN = '#22C55E', AMBER = '#F59E0B', RED = '#EF4444', PURPLE = '#9C27B0';
 
@@ -24,7 +24,7 @@ function sbtiAnnotations() {
             type: 'line', xMin: ms.threshold, xMax: ms.threshold,
             borderColor: 'rgba(0,0,0,0.08)', borderWidth: 1, borderDash: [3, 3],
             label: { display: true, content: ms.label, position: 'start',
-                color: 'rgba(15,23,42,0.35)', font: { size: 9, weight: '600' },
+                color: 'rgba(15,23,42,0.65)', font: { size: 9, weight: '600' },
                 backgroundColor: 'rgba(255,255,255,0.92)', padding: 3, yAdjust: -4 }
         };
     });
@@ -39,15 +39,15 @@ function baseScales(yLabel, yMin, yMax) {
     return {
         x: {
             type: 'linear', min: 48, max: 100.5,
-            title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+            title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.65)', font: { size: 11 } },
             grid: { color: 'rgba(0,0,0,0.025)' },
-            ticks: { callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; }, color: 'rgba(15,23,42,0.4)', font: { size: 10 } },
+            ticks: { callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; }, color: 'rgba(15,23,42,0.63)', font: { size: 10 } },
             afterBuildTicks: function(axis) { axis.ticks = [50,60,70,80,90,95,99.99].map(function(v) { return { value: v }; }); }
         },
         y: {
-            title: { display: true, text: yLabel, color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+            title: { display: true, text: yLabel, color: 'rgba(15,23,42,0.65)', font: { size: 11 } },
             grid: { color: 'rgba(0,0,0,0.025)' },
-            ticks: { color: 'rgba(15,23,42,0.4)', font: { size: 10 } },
+            ticks: { color: 'rgba(15,23,42,0.63)', font: { size: 10 } },
             min: yMin, max: yMax
         }
     };
@@ -166,14 +166,14 @@ function buildRegimeChart(D) {
             animation: { duration: 1000, easing: 'easeOutQuart' },
             scales: {
                 x: baseScales('', 0, 0).x,
-                y: { title: { display: true, text: 'Hours per Year', color: 'rgba(15,23,42,0.45)', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.025)' },
-                    ticks: { color: 'rgba(15,23,42,0.4)', font: { size: 10 }, callback: function(v) { return v >= 1000 ? (v/1000).toFixed(1) + 'k' : v; } }, min: 0, max: 8500 }
+                y: { title: { display: true, text: 'Hours per Year', color: 'rgba(15,23,42,0.65)', font: { size: 11 } }, grid: { color: 'rgba(0,0,0,0.025)' },
+                    ticks: { color: 'rgba(15,23,42,0.63)', font: { size: 10 }, callback: function(v) { return v >= 1000 ? (v/1000).toFixed(1) + 'k' : v; } }, min: 0, max: 8500 }
             },
             plugins: { legend: { display: false },
                 tooltip: { backgroundColor: 'rgba(255,255,255,0.98)', titleColor: '#1E293B', bodyColor: 'rgba(15,23,42,0.75)', borderColor: 'rgba(74,144,217,0.18)', borderWidth: 1, padding: 12, cornerRadius: 8,
                     filter: function(item) { return item.dataset._type !== 'band'; },
                     callbacks: { title: function(items) { return items[0] ? items[0].raw.x + '% Clean Energy' : ''; }, label: function(item) { if (item.dataset._type === 'band') return null; return item.dataset.label + ': ' + Math.round(item.raw.y) + ' hours/year'; } } },
-                annotation: { annotations: Object.assign({ halfYear: { type: 'line', yMin: 4380, yMax: 4380, borderColor: 'rgba(0,0,0,0.1)', borderWidth: 1, borderDash: [6, 4], label: { display: true, content: '50% of year', position: 'end', color: 'rgba(15,23,42,0.35)', font: { size: 10 }, backgroundColor: 'transparent' } } }, sbtiAnnotations()) } }
+                annotation: { annotations: Object.assign({ halfYear: { type: 'line', yMin: 4380, yMax: 4380, borderColor: 'rgba(0,0,0,0.1)', borderWidth: 1, borderDash: [6, 4], label: { display: true, content: '50% of year', position: 'end', color: 'rgba(15,23,42,0.65)', font: { size: 10 }, backgroundColor: 'transparent' } } }, sbtiAnnotations()) } }
         }
     });
 }
@@ -226,16 +226,16 @@ function buildCannibalizationChart(D, accent) {
             scales: {
                 x: {
                     type: 'linear', min: 48, max: 100.5,
-                    title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                    title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.65)', font: { size: 11 } },
                     grid: { color: 'rgba(0,0,0,0.025)' },
-                    ticks: { callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; }, color: 'rgba(15,23,42,0.4)', font: { size: 10 } },
+                    ticks: { callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; }, color: 'rgba(15,23,42,0.63)', font: { size: 10 } },
                     afterBuildTicks: function(axis) { axis.ticks = [50,60,70,80,90,95,99.99].map(function(v) { return { value: v }; }); }
                 },
                 y: {
                     position: 'left',
-                    title: { display: true, text: 'Average Wholesale Price ($/MWh)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                    title: { display: true, text: 'Average Wholesale Price ($/MWh)', color: 'rgba(15,23,42,0.65)', font: { size: 11 } },
                     grid: { color: 'rgba(0,0,0,0.025)' },
-                    ticks: { color: 'rgba(15,23,42,0.4)', font: { size: 10 } },
+                    ticks: { color: 'rgba(15,23,42,0.63)', font: { size: 10 } },
                     min: -15, max: 55
                 },
                 y1: {
@@ -324,16 +324,16 @@ function buildStorageArbitrageChart(D, iso) {
             scales: {
                 x: {
                     type: 'linear', min: 48, max: 100.5,
-                    title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                    title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.65)', font: { size: 11 } },
                     grid: { color: 'rgba(0,0,0,0.025)' },
-                    ticks: { callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; }, color: 'rgba(15,23,42,0.4)', font: { size: 10 } },
+                    ticks: { callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; }, color: 'rgba(15,23,42,0.63)', font: { size: 10 } },
                     afterBuildTicks: function(axis) { axis.ticks = [50,60,70,80,90,95,99.99].map(function(v) { return { value: v }; }); }
                 },
                 y: {
                     position: 'left',
-                    title: { display: true, text: 'Storage Dispatch (% of demand)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                    title: { display: true, text: 'Storage Dispatch (% of demand)', color: 'rgba(15,23,42,0.65)', font: { size: 11 } },
                     grid: { color: 'rgba(0,0,0,0.025)' },
-                    ticks: { color: 'rgba(15,23,42,0.4)', font: { size: 10 },
+                    ticks: { color: 'rgba(15,23,42,0.63)', font: { size: 10 },
                         callback: function(v) { return v + '%'; } },
                     min: 0
                 },
@@ -411,15 +411,15 @@ function buildGasStrandingChart(iso) {
             scales: {
                 x: {
                     type: 'linear', min: 48, max: 100.5,
-                    title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                    title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.65)', font: { size: 11 } },
                     grid: { color: 'rgba(0,0,0,0.025)' },
-                    ticks: { callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; }, color: 'rgba(15,23,42,0.4)', font: { size: 10 } },
+                    ticks: { callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; }, color: 'rgba(15,23,42,0.63)', font: { size: 10 } },
                     afterBuildTicks: function(axis) { axis.ticks = [50,60,70,80,90,95,99.99].map(function(v) { return { value: v }; }); }
                 },
                 y: {
-                    title: { display: true, text: 'Gas Capacity (GW)', color: 'rgba(15,23,42,0.45)', font: { size: 11 } },
+                    title: { display: true, text: 'Gas Capacity (GW)', color: 'rgba(15,23,42,0.65)', font: { size: 11 } },
                     grid: { color: 'rgba(0,0,0,0.025)' },
-                    ticks: { color: 'rgba(15,23,42,0.4)', font: { size: 10 },
+                    ticks: { color: 'rgba(15,23,42,0.63)', font: { size: 10 },
                         callback: function(v) { return v + ' GW'; } },
                     min: 0
                 }

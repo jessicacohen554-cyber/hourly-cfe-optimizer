@@ -59,8 +59,8 @@
             border-radius: var(--radius-pill);
             margin-bottom: var(--space-sm);
         }
-        .strat-tag-purple { background: rgba(99,102,241,0.12); color: #6366F1; }
-        .strat-tag-blue { background: rgba(14,165,233,0.12); color: #0EA5E9; }
+        .strat-tag-purple { background: rgba(99,102,241,0.12); color: #4F46E5; } /* contrast-fix: was #6366F1 (3.84:1), now 5.68:1 */
+        .strat-tag-blue { background: rgba(14,165,233,0.12); color: #0369A1; } /* contrast-fix: was #0EA5E9 (2.46:1), now 5.12:1 */
         .crossover-section-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -120,12 +120,12 @@
         <div class="strategy-pair">
             <div class="card strat-1b fade-in" style="padding: var(--space-xl)">
                 <span class="strat-tag strat-tag-purple">Strategy 1B</span>
-                <h3 style="font-family: var(--font-heading); font-size: 1.15rem; color: #6366F1; margin: 0 0 var(--space-sm)">1B &mdash; Consequential</h3>
+                <h3 style="font-family: var(--font-heading); font-size: 1.15rem; color: #4F46E5; margin: 0 0 var(--space-sm)">1B &mdash; Consequential</h3>
                 <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.7; margin: 0">Cross-regional new-build deployment via queue-ordered procurement using a fossil-average emission baseline. Deploys mostly mature VRE (solar, onshore wind) across any ISO. Cheapest per-MWh, but annual accounting misses hourly mismatches between clean generation and actual load. Minimal firm clean or storage deployment &mdash; relying instead on existing grid infrastructure for reliability.</p>
             </div>
             <div class="card strat-2c fade-in" style="padding: var(--space-xl)">
                 <span class="strat-tag strat-tag-blue">Strategy 2C</span>
-                <h3 style="font-family: var(--font-heading); font-size: 1.15rem; color: #0EA5E9; margin: 0 0 var(--space-sm)">2C &mdash; Hourly Matching with SSS</h3>
+                <h3 style="font-family: var(--font-heading); font-size: 1.15rem; color: #0369A1; margin: 0 0 var(--space-sm)">2C &mdash; Hourly Matching with SSS</h3>
                 <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.7; margin: 0">Same-ISO hourly matching blending existing clean resources (Surplus Supply Stack, merchant EAC, nuclear uprate) with new-build. Clean generation must match load every hour in the buyer's grid &mdash; forcing deployment of firm clean and storage. Proposed framework for the GHG Protocol Scope 2 revision.</p>
             </div>
         </div>

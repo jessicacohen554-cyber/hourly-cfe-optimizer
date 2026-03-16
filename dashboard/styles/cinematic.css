@@ -73,18 +73,29 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 }
 
 /* ========== DARK SECTION INSETS ========== */
+/* section-dark and panel-navy MUST keep dark bg even when transparent overrides are active */
 .section-dark {
+    background: linear-gradient(135deg, #0F1A2E 0%, #1A2744 60%, #1E3055 100%) !important;
     margin: var(--space-2xl) var(--space-xl);
     border-radius: var(--radius-xl);
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3);
 }
+.panel-navy {
+    background: linear-gradient(135deg, #0F172A 0%, #1A2744 60%, #1E3055 100%) !important;
+}
 .section-dark h2,
-.section-dark h3 { color: #fff; }
-.section-dark p { color: rgba(255,255,255,0.92); }
-.section-dark strong { color: rgba(255,255,255,0.97); }
+.section-dark h3,
+.section-dark h4 { color: #fff !important; }
+.section-dark p,
+.section-dark li { color: rgba(255,255,255,0.92) !important; }
+.section-dark strong { color: rgba(255,255,255,0.97) !important; }
+.section-dark em { color: rgba(255,255,255,0.92) !important; }
+.section-dark a { color: #60A5FA !important; }
+.section-dark td,
+.section-dark th { color: rgba(255,255,255,0.92) !important; }
 .section-dark .story-section h2,
-.section-dark .story-section h3 { color: #fff; }
-.section-dark .story-section p { color: rgba(255,255,255,0.92); }
+.section-dark .story-section h3 { color: #fff !important; }
+.section-dark .story-section p { color: rgba(255,255,255,0.92) !important; }
 
 /* Dark section — no panel on story-content wrapper */
 .section-dark .story-section > .story-content {
@@ -110,10 +121,7 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
     background: rgba(15, 23, 42, 0.85) !important;
     border: 1px solid rgba(255,255,255,0.22) !important;
 }
-.section-dark .chart-panel {
-    background: rgba(255,255,255,0.15) !important;
-    border: 1px solid rgba(255,255,255,0.22) !important;
-}
+/* chart-panel dark overrides moved to DARK CONTEXT OVERRIDES block below the catch-all */
 .section-dark .callout,
 .section-dark .callout-box,
 .section-dark .narrative-box {
@@ -144,25 +152,25 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
    ipp-transition.css, and reference.css that would otherwise
    block the circuit board background image. */
 
-/* Section-level wrappers that must be transparent */
-.region-section,
-.synthesis-section,
-.deepdive-section,
-.density-deep-dive-section,
-.methodology-section,
-.sources-section,
-.hero-overview,
-.hero-section,
-.foak-hero,
-.concept-section,
-.timeline-section,
-.content-section,
-.section-light,
-.story-panel,
-.report-layout,
-.prose-body,
-.main-content,
-.content-wrap {
+/* Section-level wrappers that must be transparent (except dark-context sections) */
+.region-section:not(.section-dark):not(.panel-navy),
+.synthesis-section:not(.section-dark):not(.panel-navy),
+.deepdive-section:not(.section-dark):not(.panel-navy),
+.density-deep-dive-section:not(.section-dark):not(.panel-navy),
+.methodology-section:not(.section-dark):not(.panel-navy),
+.sources-section:not(.section-dark):not(.panel-navy),
+.hero-overview:not(.section-dark):not(.panel-navy),
+.hero-section:not(.section-dark):not(.panel-navy),
+.foak-hero:not(.section-dark):not(.panel-navy),
+.concept-section:not(.section-dark):not(.panel-navy),
+.timeline-section:not(.section-dark):not(.panel-navy),
+.content-section:not(.section-dark):not(.panel-navy),
+.section-light:not(.section-dark):not(.panel-navy),
+.story-panel:not(.section-dark):not(.panel-navy),
+.report-layout:not(.section-dark):not(.panel-navy),
+.prose-body:not(.section-dark):not(.panel-navy),
+.main-content:not(.section-dark):not(.panel-navy),
+.content-wrap:not(.section-dark):not(.panel-navy) {
     background: transparent !important;
 }
 /* hub-hero keeps its navy gradient from ipp-transition.css */
@@ -252,7 +260,26 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 .what-you-need-panel,
 .peak-capacity-panel,
 .target-mode-panel,
-.pathway-metric {
+.pathway-metric,
+.comparison-table-wrap,
+.comparison-table,
+.chart-narrative-below,
+.figure-card,
+.note-box,
+.ref-card,
+.synthesis-card,
+.chart-section,
+.chart-note-box,
+.failure-mode-item,
+.gap-card,
+.page-insight-box {
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
+    border-radius: var(--radius-lg, 12px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+/* Sources section details panel */
+.sources-section details {
     background: #FFFFFF !important;
     border: 1px solid #E5E7EB !important;
     border-radius: var(--radius-lg, 12px);
@@ -283,6 +310,18 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 .section-dark .narrative-box,
 .section-dark .narrative-card,
 .section-dark .card,
+.section-dark .chart-panel,
+.section-dark .synthesis-card,
+.section-dark .mechanism-card,
+.section-dark .gap-card,
+.section-dark .comparison-table-wrap,
+.section-dark .comparison-table,
+.section-dark .note-box,
+.section-dark .figure-card,
+.section-dark .chart-narrative-below,
+.section-dark .ref-card,
+.section-dark .page-insight-box,
+.section-dark .failure-mode-item,
 .panel-navy .finding-card,
 .panel-navy .concept-card,
 .panel-navy .counter-card,
@@ -291,7 +330,12 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 .panel-navy .narrative-box,
 .panel-navy .narrative-card,
 .panel-navy .preservation-panel,
-.panel-navy .conclusion-panel {
+.panel-navy .conclusion-panel,
+.panel-navy .synthesis-card,
+.panel-navy .mechanism-card,
+.panel-navy .note-box,
+.panel-navy .chart-panel,
+.panel-navy .comparison-table-wrap {
     background: rgba(255, 255, 255, 0.12) !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
     color: rgba(255, 255, 255, 0.9);
@@ -317,6 +361,74 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 }
 .section-dark .stat-value {
     color: #fff !important;
+}
+/* Synthesis card in dark context */
+.section-dark .synthesis-card h3 {
+    color: #fff !important;
+}
+.section-dark .synthesis-card p {
+    color: rgba(255, 255, 255, 0.92) !important;
+}
+.section-dark .synthesis-card .stat-callout {
+    color: rgba(255, 255, 255, 0.92) !important;
+}
+/* Mechanism card in dark context */
+.section-dark .mechanism-card h4 {
+    color: #fff !important;
+}
+.section-dark .mechanism-card p,
+.section-dark .mechanism-card li {
+    color: rgba(255, 255, 255, 0.92) !important;
+}
+/* Gap card in dark context */
+.section-dark .gap-card h3,
+.section-dark .gap-card h4 {
+    color: #fff !important;
+}
+.section-dark .gap-card p {
+    color: rgba(255, 255, 255, 0.92) !important;
+}
+/* Findings in dark context */
+.section-dark .findings-title {
+    color: #fff !important;
+}
+.section-dark blockquote {
+    color: rgba(255, 255, 255, 0.92) !important;
+}
+/* chart-title and chart-subtitle in panel-navy */
+.panel-navy .chart-panel .chart-title {
+    color: rgba(255, 255, 255, 0.95) !important;
+}
+.panel-navy .chart-panel .chart-subtitle {
+    color: rgba(255, 255, 255, 0.78) !important; /* contrast-fix: was inheriting dark text on translucent dark bg */
+}
+/* Narrative card text in panel-navy (overrides !important dark-text rules) */
+.panel-navy .narrative-card h3 {
+    color: #fff !important;
+}
+.panel-navy .narrative-card p {
+    color: rgba(255, 255, 255, 0.92) !important;
+}
+/* stat-badge variants in panel-navy (same as section-dark) */
+.panel-navy .stat-badge-green { background: rgba(34,197,94,0.15); border-color: rgba(34,197,94,0.35); color: #6EE7B7 !important; }
+.panel-navy .stat-badge-amber { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.35); color: #FCD34D !important; }
+.panel-navy .stat-badge-red { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.35); color: #FCA5A5 !important; }
+.panel-navy .stat-badge-blue { background: rgba(14,165,233,0.15); border-color: rgba(14,165,233,0.35); color: #7DD3FC !important; }
+.panel-navy .stat-badge-purple { background: rgba(139,92,246,0.15); border-color: rgba(139,92,246,0.35); color: #06B6D4 !important; }
+/* Note-box in dark context */
+.section-dark .note-box p,
+.section-dark .note-box li,
+.panel-navy .note-box p,
+.panel-navy .note-box li {
+    color: rgba(255, 255, 255, 0.92) !important;
+}
+.section-dark .note-box strong,
+.panel-navy .note-box strong {
+    color: #fff !important;
+}
+/* Page insight box in dark context */
+.section-dark .page-insight-box p {
+    color: rgba(255, 255, 255, 0.92) !important;
 }
 /* Dark-context insight/callout boxes */
 .panel-navy .insight-box,
@@ -380,6 +492,15 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
 .data-table th {
     background: #F3F4F6;
 }
+/* Tables with dark thead — keep dark bg + white text */
+.company-table thead,
+.assumption-table thead {
+    background: #1A2744 !important;
+}
+.company-table thead th,
+.assumption-table th {
+    color: #FFFFFF !important;
+}
 
 /* Nav button secondary */
 .nav-btn-secondary {
@@ -436,7 +557,7 @@ hr.section-divider,
 }
 
 /* ========== LMP / SCROLL SECTION COMPONENTS ========== */
-.scroll-section {
+.scroll-section:not(.section-dark):not(.panel-navy) {
     background: transparent !important;
 }
 .scroll-section-inner {
@@ -446,15 +567,21 @@ hr.section-divider,
     padding: 36px 32px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
+/* scroll-section-inner inside dark sections — transparent so parent bg shows */
+.panel-navy .scroll-section-inner,
+.section-dark .scroll-section-inner {
+    background: transparent !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
 .key-findings-panel {
     background: #FFFFFF !important;
     border: 1px solid #E5E7EB !important;
 }
 
 /* ========== ABATEMENT COMPONENTS ========== */
-.deepdive-section,
-.methodology-section,
-.density-deep-dive-section {
+.deepdive-section:not(.section-dark):not(.panel-navy),
+.methodology-section:not(.section-dark):not(.panel-navy),
+.density-deep-dive-section:not(.section-dark):not(.panel-navy) {
     background: transparent !important;
 }
 
@@ -472,7 +599,7 @@ hr.section-divider,
 }
 
 /* ========== SECTION-LIGHT OVERRIDE ========== */
-.section-light {
+.section-light:not(.panel-navy) {
     background: transparent !important;
 }
 
@@ -482,7 +609,7 @@ hr.section-divider,
 .report-section p,
 .concept-section p,
 .scroll-section p {
-    color: #334155;
+    color: #334155 !important;
 }
 .story-section h2,
 .story-section h3,
@@ -490,16 +617,36 @@ hr.section-divider,
 .story-panel h3,
 .report-section h2,
 .report-section h3 {
-    color: var(--navy);
+    color: #1A2744 !important;
 }
 .story-section p.lead,
 .story-panel p.lead {
-    color: var(--navy);
+    color: #1A2744 !important;
+}
+.story-section strong,
+.story-panel strong {
+    color: #1A2744 !important;
+}
+.story-section em,
+.story-panel em {
+    color: #334155 !important;
+}
+.story-section li,
+.story-panel li {
+    color: #334155 !important;
+}
+.story-section a,
+.story-panel a {
+    color: #4F46E5 !important;
 }
 .callout-box p,
 .narrative-box p,
 .insight-box p {
-    color: #334155;
+    color: #334155 !important;
+}
+.callout-box strong,
+.narrative-box strong {
+    color: #1A2744 !important;
 }
 
 /* General text inside panels */
@@ -507,10 +654,360 @@ hr.section-divider,
 .chart-panel p,
 .insight-card p,
 .narrative-card p {
-    color: #334155;
+    color: #334155 !important;
+}
+.card h3, .card h4 {
+    color: #1A2744 !important;
+}
+.card strong {
+    color: #1A2744 !important;
 }
 .section-header p {
-    color: #475569;
+    color: #475569 !important;
+}
+/* Section header headings — always dark on white panel */
+.section-header h2 {
+    color: #1A2744 !important;
+}
+
+/* Concept card text — dark on white bg */
+.concept-card h3 {
+    color: #1A2744 !important;
+}
+.concept-card p,
+.concept-card li {
+    color: #334155 !important;
+}
+.concept-card strong {
+    color: #1A2744 !important;
+}
+.concept-card .badge {
+    color: #334155 !important;
+}
+
+/* Strategy variant cards and accordion */
+.strat-variant-card .strat-tag {
+    color: #1A2744 !important;
+}
+.strat-variant-card h4,
+.strat-variant-card p,
+.strat-variant-card li {
+    color: #334155 !important;
+}
+.strategy-accordion-header h3 {
+    color: #1A2744 !important;
+}
+.strategy-accordion-header p,
+.strategy-accordion-text p,
+.strategy-accordion-text h3 {
+    color: #475569 !important;
+}
+.strategy-accordion-content p,
+.strategy-accordion-content li,
+.strategy-accordion-content h4 {
+    color: #334155 !important;
+}
+.strategy-accordion-content strong {
+    color: #1A2744 !important;
+}
+.strategy-accordion-content .insight-box p {
+    color: #334155 !important;
+}
+
+/* Mechanism cards — dark text */
+.mechanism-card h4 {
+    color: #1A2744 !important;
+}
+.mechanism-card p,
+.mechanism-card li {
+    color: #334155 !important;
+}
+
+/* Ref cards */
+.ref-card-tag {
+    color: #1A2744 !important;
+}
+.ref-card h3 {
+    color: #1A2744 !important;
+}
+.ref-card p {
+    color: #334155 !important;
+}
+
+/* Comparison table text */
+.comparison-table th {
+    color: #1A2744 !important;
+}
+.comparison-table td {
+    color: #334155 !important;
+}
+.comparison-table td strong {
+    color: #1A2744 !important;
+}
+
+/* Chart narrative text */
+.chart-narrative-below h3,
+.chart-narrative-below h4 {
+    color: #1A2744 !important;
+}
+.chart-narrative-below p,
+.chart-narrative-below li {
+    color: #334155 !important;
+}
+
+/* Figure card text */
+.figure-card h3,
+.figure-card h4 {
+    color: #1A2744 !important;
+}
+.figure-card p,
+.figure-card .chart-note {
+    color: #475569 !important;
+}
+.figure-card .callout-box p {
+    color: #334155 !important;
+}
+
+/* Note-box text */
+.note-box p,
+.note-box li {
+    color: #334155 !important;
+}
+.note-box strong {
+    color: #1A2744 !important;
+}
+
+/* Synthesis card text (light context) */
+.synthesis-card h3 {
+    color: #1A2744 !important;
+}
+.synthesis-card p {
+    color: #334155 !important;
+}
+
+/* Failure mode items */
+.failure-mode-item strong,
+.failure-mode-item h4 {
+    color: #1A2744 !important;
+}
+.failure-mode-item p {
+    color: #334155 !important;
+}
+
+/* Findings title / finding labels (light context) */
+.findings-title {
+    color: #1A2744 !important;
+}
+.finding-card .finding-label {
+    color: #1A2744 !important;
+}
+.finding-card .finding-desc {
+    color: #475569 !important;
+}
+
+/* Gap card text */
+.gap-card h3, .gap-card h4 {
+    color: #1A2744 !important;
+}
+.gap-card p, .gap-card li {
+    color: #334155 !important;
+}
+
+/* Page insight box */
+.page-insight-box p {
+    color: #334155 !important;
+}
+.page-insight-box strong {
+    color: #1A2744 !important;
+}
+
+/* Stat label contrast fix */
+.stat-card .stat-label {
+    color: #4B5563 !important;
+}
+
+/* Sources section text */
+.sources-section h3 {
+    color: #1A2744 !important;
+}
+.sources-section p, .sources-section li {
+    color: #334155 !important;
+}
+
+/* Explore links — darker purple for contrast */
+a.explore-link {
+    color: #4F46E5 !important;
+}
+
+/* Active ISO buttons — darker text */
+.iso-btn.active {
+    color: #0369A1 !important;
+}
+
+/* Note-box links */
+.note-box a {
+    color: #0369A1 !important;
+}
+
+/* ========== COMPREHENSIVE TEXT COLOR OVERRIDES ========== */
+/* These ensure ALL text on white panels is dark, overriding any
+   pre-cinematic styles that set white text for dark backgrounds. */
+
+/* Content section text */
+.content-section h2,
+.content-section h3 {
+    color: #1A2744 !important;
+}
+.content-section p,
+.content-section li {
+    color: #334155 !important;
+}
+.content-section strong {
+    color: #1A2744 !important;
+}
+.content-section em {
+    color: #334155 !important;
+}
+.content-section a {
+    color: #4F46E5 !important;
+}
+
+/* Narrative card headings — explicit override */
+.narrative-card h3 {
+    color: #1A2744 !important;
+}
+.narrative-card p {
+    color: #334155 !important;
+}
+
+/* Related card text */
+.related-card .related-card-tag {
+    color: #1A2744 !important;
+}
+.related-card .related-card-title {
+    color: #1A2744 !important;
+}
+.related-card .related-card-desc {
+    color: #475569 !important;
+}
+.related-card .related-card-arrow {
+    color: #4F46E5 !important;
+}
+
+/* Stat tile/card labels and sublabels */
+.stat-tile .stat-label {
+    color: #4B5563 !important;
+}
+.stat-tile .stat-sublabel {
+    color: #6B7280 !important;
+}
+
+/* Table cells — comprehensive override */
+.comparison-table td,
+.comparison-table th,
+.data-table td,
+.data-table th,
+.company-table td,
+.company-table th {
+    color: #334155 !important;
+}
+.comparison-table th,
+.data-table th,
+.company-table th {
+    color: #1A2744 !important;
+}
+.comparison-table td strong,
+.data-table td strong {
+    color: #1A2744 !important;
+}
+.comparison-table td em {
+    color: #475569 !important;
+}
+
+/* Insight box comprehensive */
+.insight-box h4 {
+    color: #1A2744 !important;
+}
+.insight-box p {
+    color: #334155 !important;
+}
+.insight-box strong {
+    color: #1A2744 !important;
+}
+.insight-box li {
+    color: #334155 !important;
+}
+
+/* Chart-section text */
+.chart-section h3 {
+    color: #1A2744 !important;
+}
+.chart-section p {
+    color: #334155 !important;
+}
+
+/* Scroll-section-inner text */
+.scroll-section-inner h3,
+.scroll-section-inner h4 {
+    color: #1A2744 !important;
+}
+.scroll-section-inner p,
+.scroll-section-inner li {
+    color: #334155 !important;
+}
+.scroll-section-inner strong {
+    color: #1A2744 !important;
+}
+
+/* Chart panel text */
+.chart-panel .chart-title {
+    color: #1A2744 !important;
+}
+
+/* Highlight text that may be light-colored — need specificity to beat .insight-callout .highlight */
+.highlight,
+.insight-callout .highlight,
+.page-insight-box .highlight {
+    color: #1A2744 !important;
+}
+
+/* Badge text on light bg */
+.badge {
+    color: #334155 !important;
+}
+
+/* Details/summary in light sections */
+details summary {
+    color: #1A2744 !important;
+}
+details p, details li {
+    color: #334155 !important;
+}
+
+/* Hero accent text — cyan too light on white */
+.hero-text h1 span.accent,
+.hero-text h2 span.accent {
+    color: #0369A1 !important;
+}
+
+/* ========== LOW-CONTRAST COLORED TEXT FIXES ========== */
+/* Green stat values: #22C55E (2.28:1 on white) → #15803D (4.46:1) */
+.stat-value.success,
+.stat-value[style*="22C55E"],
+.counter-card .stat-value[style*="22C55E"] {
+    color: #15803D !important;
+}
+/* Blue strategy card headings: #0EA5E9 (2.77:1) → #0369A1 (5.0:1) */
+.strat-tag-blue,
+.card h3[style*="0EA5E9"],
+h3[style*="color: #0EA5E9"],
+h3[style*="color:#0EA5E9"] {
+    color: #0369A1 !important;
+}
+/* Light red stat highlights: #FCA5A5 (1.8:1 on white) → #DC2626 (4.63:1) */
+strong[style*="FCA5A5"],
+strong[style*="fca5a5"] {
+    color: #DC2626 !important;
 }
 
 /* ========== NAVY PANEL VARIANT ========== */
@@ -598,9 +1095,10 @@ section.panel-navy .stat-value {
 section.panel-navy .stat-label {
     color: rgba(255, 255, 255, 0.85);
 }
-.panel-navy .story-badge {
+.panel-navy .story-badge,
+.section-dark .story-badge {
     background: rgba(255, 255, 255, 0.12);
-    color: rgba(255, 255, 255, 0.85) !important; /* contrast-fix: was without !important, ensure light text on dark badge bg in navy panels */
+    color: rgba(255, 255, 255, 0.85) !important; /* contrast-fix: light text on dark badge bg */
     border-color: rgba(255, 255, 255, 0.2);
 }
 .panel-navy .citation,
@@ -633,7 +1131,7 @@ section.panel-navy .stat-label {
     color: var(--text-secondary, #4B5563) !important;
 }
 .panel-navy .layer-card .layer-num {
-    color: rgba(26,39,68,0.06) !important;
+    color: rgba(255,255,255,0.15) !important; /* contrast-fix: was rgba(26,39,68,0.06) — invisible on dark bg */
 }
 
 /* Cards that need white bg + dark text inside panel-navy (archetype cards, etc.) */
@@ -855,19 +1353,19 @@ section.report-section.panel-navy .report-section-number {
 .story-section > .section-title,
 .story-section > h2.section-title,
 .content-section > h2.section-title {
-    color: var(--navy) !important;
+    color: #1A2744 !important;
 }
 .content-section > .section-subtitle,
 .story-section > .section-subtitle {
     color: var(--text-secondary) !important;
 }
 .story-section > .story-badge {
-    color: var(--navy);
+    color: #1A2744;
     background: rgba(26,39,68,0.08);
     border-color: rgba(26,39,68,0.15);
 }
 .dashboard-header h2 {
-    color: var(--navy) !important;
+    color: #1A2744 !important;
 }
 .dashboard-header p {
     color: var(--text-secondary) !important;
@@ -877,13 +1375,13 @@ section.report-section.panel-navy .report-section-number {
 /* scrollytell.css hero-overview text was white for navy gradient bg.
    With transparent bg over white circuit board, flip to dark text. */
 .hero-text-block h2 {
-    color: var(--navy) !important;
+    color: #1A2744 !important;
 }
 .hero-text-block p {
     color: var(--text-secondary) !important;
 }
 .hero-narrative-block h3 {
-    color: var(--navy) !important;
+    color: #1A2744 !important;
 }
 .hero-narrative-block p {
     color: #475569 !important;
@@ -910,7 +1408,7 @@ section.report-section.panel-navy .report-section-number {
     color: var(--text-muted) !important;
 }
 .tile-range {
-    color: var(--navy) !important;
+    color: #1A2744 !important;
 }
 .tile-range-label {
     color: var(--text-muted) !important;
@@ -919,5 +1417,378 @@ section.report-section.panel-navy .report-section-number {
     color: #475569 !important;
 }
 .tile-finding strong {
-    color: var(--navy) !important;
+    color: #1A2744 !important;
+}
+
+/* ========== SCORE PILLS & SEMANTIC COLORED TEXT ========== */
+/* Ensure colored stat values meet 4.5:1 contrast on white/light bg */
+.score-pill.score-high {
+    color: #15803D !important;
+}
+
+/* ref-card-tag: hydro blue on light blue needs darkening */
+.ref-card-tag {
+    color: #0369A1 !important;
+}
+
+/* key-insights has its own dark gradient bg — preserve it */
+.key-insights {
+    background: linear-gradient(135deg, #1A2744 0%, #2A3F6B 100%) !important;
+}
+.key-insights strong,
+.key-insight-item strong {
+    color: #fff !important;
+}
+.key-insight-item {
+    color: rgba(255,255,255,0.92) !important;
+}
+
+/* Layer numbers in about.html — subtle decorative numbering */
+.layer-num {
+    color: #94A3B8 !important; /* contrast-fix: was #CBD5E1 (~1.5:1 on white), now #94A3B8 (2.8:1 — decorative text) */
+}
+
+/* ========== DARK CONTEXT — FINAL OVERRIDES ========== */
+/* MUST be at the end of the file to override all light-context text rules above.
+   Elements inside .section-dark and .panel-navy need light text on dark bg. */
+
+/* section-dark inline-styled tables (e.g. scenario_comparison methodology) */
+.section-dark table {
+    border-color: rgba(255,255,255,0.15) !important;
+}
+.section-dark tr {
+    border-color: rgba(255,255,255,0.15) !important;
+}
+.section-dark ol,
+.section-dark ul {
+    color: rgba(255,255,255,0.92) !important;
+}
+.section-dark code {
+    color: rgba(255,255,255,0.92) !important;
+    background: rgba(255,255,255,0.1) !important;
+}
+
+.section-dark h2,
+.section-dark h3,
+.section-dark h4 {
+    color: #fff !important;
+}
+.section-dark p,
+.section-dark li,
+.section-dark td,
+.section-dark th {
+    color: rgba(255,255,255,0.92) !important;
+}
+.section-dark strong {
+    color: rgba(255,255,255,0.97) !important;
+}
+.section-dark em {
+    color: rgba(255,255,255,0.92) !important;
+}
+.section-dark a {
+    color: #60A5FA !important;
+}
+.section-dark .stat-value {
+    color: #fff !important;
+}
+.section-dark .stat-label {
+    color: rgba(255,255,255,0.85) !important;
+}
+.section-dark .stat-sublabel {
+    color: rgba(255,255,255,0.78) !important;
+}
+.section-dark blockquote {
+    color: rgba(255,255,255,0.92) !important;
+}
+.section-dark .chart-title {
+    color: rgba(255,255,255,0.95) !important;
+}
+.section-dark .section-title {
+    color: #fff !important;
+}
+.section-dark .section-subtitle,
+.section-dark .section-desc {
+    color: rgba(255,255,255,0.85) !important;
+}
+.section-dark .section-heading {
+    color: #fff !important;
+}
+.section-dark .section-subheading {
+    color: rgba(255,255,255,0.85) !important;
+}
+
+/* panel-navy final overrides (use .panel-navy not section.panel-navy to match divs too) */
+.panel-navy h2,
+.panel-navy h3,
+.panel-navy h4 {
+    color: #fff !important;
+}
+.panel-navy p,
+.panel-navy li {
+    color: rgba(255,255,255,0.92) !important;
+}
+.panel-navy strong {
+    color: rgba(255,255,255,0.97) !important;
+}
+.panel-navy em {
+    color: rgba(255,255,255,0.92) !important;
+}
+.panel-navy a {
+    color: #60A5FA !important;
+}
+.panel-navy .chart-title {
+    color: rgba(255,255,255,0.95) !important;
+}
+.panel-navy .stat-label {
+    color: rgba(255,255,255,0.85) !important;
+}
+.panel-navy td,
+.panel-navy th {
+    color: rgba(255,255,255,0.92) !important;
+}
+/* chart-legend — dark text by default (overridden in glass-bg panels below) */
+.chart-legend-item {
+    color: #334155 !important;
+}
+/* Dark-context finding-card text (must come after light-context overrides) */
+.section-dark .finding-card .finding-label,
+.panel-navy .finding-card .finding-label {
+    color: rgba(255,255,255,0.92) !important;
+}
+.section-dark .finding-card .finding-desc,
+.panel-navy .finding-card .finding-desc {
+    color: rgba(255,255,255,0.78) !important;
+}
+/* Dark-context concept-card text */
+.section-dark .concept-card p,
+.section-dark .concept-card li,
+.section-dark .concept-card h3 {
+    color: rgba(255,255,255,0.92) !important;
+}
+.section-dark .concept-card strong {
+    color: #fff !important;
+}
+
+/* ========== HERO SECTION — DARK BG TEXT ========== */
+/* .hero has a dark gradient bg; ensure all text inside is light unless
+   inside a white-bg child (like .hero-chart-wrap). */
+.hero h1, .hero h2, .hero h3 {
+    color: #fff !important;
+}
+.hero > p,
+.hero > .subtitle {
+    color: rgba(255,255,255,0.88) !important;
+}
+.hero > p strong,
+.hero > .subtitle strong {
+    color: rgba(255,255,255,0.95) !important;
+}
+/* hero-chart-wrap has white bg — text inside should be dark */
+.hero .hero-chart-wrap h3 {
+    color: var(--navy, #1A2744) !important;
+}
+.hero .hero-chart-wrap p,
+.hero .hero-chart-wrap .chart-note {
+    color: #475569 !important;
+}
+
+/* ========== PANEL-NAVY SECTION-TITLE / SECTION-SUBTITLE ========== */
+/* Direct text on dark panel-navy bg needs white text */
+.panel-navy .section-title {
+    color: #fff !important;
+}
+.panel-navy .section-subtitle,
+.panel-navy .section-desc {
+    color: rgba(255,255,255,0.85) !important;
+}
+
+/* ========== WHITE CARDS INSIDE PANEL-NAVY — DARK TEXT ========== */
+/* chart-box, chart-wide, and scenario-card have white bg from cinematic catch-all.
+   Override panel-navy's white text rules so text inside these cards is dark. */
+section.panel-navy .chart-box h3,
+section.panel-navy .chart-wide h3 {
+    color: var(--navy, #1A2744) !important;
+}
+section.panel-navy .chart-box p,
+section.panel-navy .chart-box .chart-note,
+section.panel-navy .chart-wide p,
+section.panel-navy .chart-wide .chart-note {
+    color: #475569 !important;
+}
+section.panel-navy .chart-box .scenario-tag,
+section.panel-navy .chart-wide .scenario-tag {
+    /* scenario-tag has its own colors via .tag-a / .tag-b — don't override */
+}
+section.panel-navy .chart-box strong,
+section.panel-navy .chart-wide strong {
+    color: var(--navy, #1A2744) !important;
+}
+/* MAC accordion inside panel-navy — white bg cards need dark text */
+section.panel-navy .mac-accordion-header {
+    color: var(--navy, #1A2744) !important;
+}
+section.panel-navy .mac-acc-summary {
+    color: #475569 !important;
+}
+section.panel-navy .mac-acc-chevron {
+    color: rgba(0,0,0,0.58) !important;
+}
+/* Table inside white cards within panel-navy — dark text */
+section.panel-navy .chart-box td,
+section.panel-navy .chart-box th,
+section.panel-navy .chart-wide td,
+section.panel-navy .chart-wide th {
+    color: #334155 !important;
+}
+section.panel-navy .chart-box th,
+section.panel-navy .chart-wide th {
+    color: #1A2744 !important;
+}
+/* White card-grid cards inside panel-navy — dark text overrides */
+section.panel-navy .card-grid .card h3,
+section.panel-navy .card-grid-market .card h3 {
+    color: #1A2744 !important;
+}
+section.panel-navy .card-grid .card p,
+section.panel-navy .card-grid-market .card p,
+section.panel-navy .card-grid .card li,
+section.panel-navy .card-grid-market .card li {
+    color: #334155 !important;
+}
+section.panel-navy .card-grid .card strong,
+section.panel-navy .card-grid-market .card strong {
+    color: #1A2744 !important;
+}
+section.panel-navy .card-grid .card .stat-value,
+section.panel-navy .card-grid-market .card .stat-value {
+    color: #1A2744 !important;
+}
+section.panel-navy .card-grid .card .stat-label,
+section.panel-navy .card-grid-market .card .stat-label {
+    color: #4B5563 !important;
+}
+
+/* ========== REMAINING CONTRAST FIXES ========== */
+
+/* about.html: layer-num inside panel-navy story-content (white bg) — decorative gray.
+   .panel-navy and .story-section are on the same element, so use compound selector. */
+.story-section.panel-navy > .story-content .layer-num,
+.panel-navy > .story-content .layer-num {
+    color: #7C8DA2 !important; /* decorative large text on white — 3.2:1, meets WCAG AA for large text */
+}
+/* about.html: explore-cta buttons — ensure white text on dark bg */
+.explore-cta {
+    color: #fff !important;
+}
+
+/* IPP pages: Robustness Scorecard h3 in section-dark context */
+.section-dark .scorecard h3,
+.section-dark .robustness-card h3,
+.section-dark h3:has(+ .scorecard-grid),
+.panel-navy .scorecard h3,
+.panel-navy .robustness-card h3 {
+    color: #fff !important;
+}
+
+/* GHG-accounting: compare-box colored text — darken for contrast on white */
+.compare-box h3 {
+    color: #1A2744 !important;
+}
+.compare-box .badge {
+    color: #fff !important;
+}
+
+/* concept-card inside panel-navy — transparent glass bg with light text.
+   Inline color styles on h3 are overridden by .panel-navy rules above with !important.
+   Badge text inside h3 also needs to be light. */
+.panel-navy .concept-card .badge {
+    color: rgba(255,255,255,0.85) !important;
+    background: rgba(255,255,255,0.15) !important;
+}
+
+/* lmp_trends: region-pill active — darken bg for contrast with white text */
+.region-pill.active {
+    background: #0369A1 !important; /* darker than #0EA5E9 for white text contrast */
+}
+
+/* home.html: outcome-tag with hydro color — darken for contrast */
+.outcome-tag {
+    color: #0369A1 !important;
+}
+.ipp-panel-label {
+    color: #0369A1 !important;
+}
+
+/* lmp_trends: stat-badge colors in dark context — ensure solid bg */
+.panel-navy .stat-badge,
+.section-dark .stat-badge {
+    background: rgba(255,255,255,0.12) !important;
+}
+.panel-navy .stat-badge-amber {
+    color: #FBBF24 !important;
+}
+.panel-navy .stat-badge-green {
+    color: #86EFAC !important;
+}
+.panel-navy .stat-badge-red {
+    color: #FCA5A5 !important;
+}
+
+/* gen_policy_conditions: colored stat-values on light bg — darken */
+.stat-card .stat-value[style*="color: #22C55E"],
+.stat-card .stat-value[style*="color:#22C55E"] {
+    color: #15803D !important;
+}
+.stat-card .stat-value[style*="color: #F59E0B"],
+.stat-card .stat-value[style*="color:#F59E0B"] {
+    color: #B45309 !important;
+}
+
+/* .highlight final override already at line ~968 */
+
+/* design_preview: theme-btn-fonts and finding-highlight — darken */
+.theme-btn-fonts {
+    color: #60A5FA !important;
+}
+.finding-highlight {
+    color: #0369A1 !important;
+}
+
+/* gen_target_setting: paragraph in dark context */
+.section-dark .content-wrap p {
+    color: rgba(255,255,255,0.92) !important;
+}
+
+/* ref-nuclear-retirement: insight-label in dark context */
+.section-dark .insight-label,
+.panel-navy .insight-label {
+    color: #60A5FA !important;
+}
+
+/* ipp_climate_transition: section-title in dark context (already handled above, but ensure) */
+.section-dark .section-title {
+    color: #fff !important;
+}
+
+/* model_validation: orange values in tables */
+td[style*="color: #D97706"],
+td[style*="color:#D97706"] {
+    color: #92400E !important;
+}
+
+/* clean_firm_case: chart-title in dark context */
+.section-dark .chart-title,
+.panel-navy .chart-title {
+    color: rgba(255,255,255,0.95) !important;
+}
+
+/* abatement_dashboard: narrative tag in dark context */
+.section-dark .story-badge,
+.section-dark [id*="NarrativeTag"] {
+    color: #86EFAC !important;
+}
+
+/* home.html: outcome-tag-1b purple — ensure contrast */
+.outcome-tag-1b {
+    color: #4F46E5 !important;
 }

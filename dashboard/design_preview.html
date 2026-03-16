@@ -217,7 +217,7 @@ body.theme-observatory .section-dark .insight-box {
     border-left: 3px solid var(--iso-miso);
 }
 body.theme-observatory .section-dark .insight-box h4 { color: #FFFFFF; }
-body.theme-observatory .section-dark .insight-box p { color: rgba(255,255,255,0.6); }
+body.theme-observatory .section-dark .insight-box p { color: rgba(255,255,255,0.75); /* contrast-fix: was 0.6, now 0.75 */ }
 
 /* ---- Observatory: Section transitions (gradient dividers) ---- */
 body.theme-observatory .section-transition-light-to-dark {
@@ -401,10 +401,10 @@ h1, h2, h3, h4 {
 .theme-btn-fonts {
     display: block;
     font-size: 0.65rem;
-    color: rgba(255,255,255,0.35);
+    color: rgba(255,255,255,0.55); /* contrast-fix: was 0.35, now 0.55 for ~5.5:1 on dark bg */
     margin-top: 2px;
 }
-.theme-btn.active .theme-btn-fonts { color: rgba(56,189,248,0.5); }
+.theme-btn.active .theme-btn-fonts { color: rgba(147,197,253,0.85); }
 
 /* ================================================================
    HEADER / BANNER
@@ -428,7 +428,7 @@ h1, h2, h3, h4 {
 .header .subtitle {
     font-family: var(--font-body);
     font-size: 0.9rem;
-    color: rgba(255,255,255,0.6);
+    color: rgba(255,255,255,0.75); /* contrast-fix: was 0.6, now 0.75 */
     margin-top: 8px;
     position: relative;
     z-index: 2;
@@ -699,7 +699,7 @@ body.theme-editorial .narrative-block > p:first-child::first-letter {
     font-family: var(--font-data);
     font-size: 0.82rem;
     font-weight: 600;
-    color: var(--hydro);
+    color: #0369A1;
     background: rgba(14,165,233,0.08);
     padding: 6px 14px;
     border-radius: 20px;
@@ -850,7 +850,7 @@ body.theme-editorial .iso-tab {
 }
 .dark-section p {
     font-size: 0.95rem;
-    color: rgba(255,255,255,0.6);
+    color: rgba(255,255,255,0.75); /* contrast-fix: was 0.6, now 0.75 for ~8:1 on dark bg */
     line-height: 1.8;
     margin-bottom: 16px;
 }
@@ -928,7 +928,7 @@ body.theme-signal .related-card:nth-child(3) { border-top-color: var(--wind); }
 .footer-text {
     font-family: var(--font-body);
     font-size: 0.78rem;
-    color: rgba(255,255,255,0.4);
+    color: rgba(255,255,255,0.6); /* contrast-fix: was 0.4, now 0.6 for ~6.5:1 on navy-dark bg */
 }
 .bottom-banner {
     height: 4px;
@@ -1036,7 +1036,7 @@ body.theme-observatory .accent-line {
     font-size: 0.85rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: rgba(255,255,255,0.4);
+    color: rgba(255,255,255,0.6); /* contrast-fix: was 0.4, now 0.6 for ~6.5:1 on dark bg */
     margin-bottom: 24px;
 }
 .metrics-stats {

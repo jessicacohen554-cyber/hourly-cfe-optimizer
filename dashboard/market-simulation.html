@@ -29,8 +29,8 @@
 .year-pills { display: flex; gap: 4px; }
 .year-pill { padding: 6px 12px; border: 1.5px solid var(--glass-border); border-radius: var(--radius-pill); background: white; cursor: pointer; font-family: var(--font); font-weight: 600; font-size: 0.82rem; color: #585B5F; /* contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white */ transition: all 0.15s; min-height: 40px; display: flex; align-items: center; }
 .year-pill:hover { border-color: var(--ceg-teal); color: #006680; /* contrast-fix: was var(--ceg-teal) #007FA4, now #006680, ratio 5.9:1 on white */ }
-.year-pill.active { background: var(--ceg-teal); border-color: var(--ceg-teal); color: #F8F9FA; /* contrast-fix: was white #FFFFFF, now #F8F9FA, ratio 4.4:1 on #007FA4 — avoids pure white text */ }
-.demo-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: var(--radius-pill); background: rgba(244,123,39,0.12); color: #B45A1A; /* contrast-fix: was var(--ceg-orange) #F47B27, now #B45A1A, ratio 4.6:1 on rgba(244,123,39,0.12) */ font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+.year-pill.active { background: #006680; border-color: #006680; color: #FFFFFF; /* contrast-fix: darkened bg from #007FA4 to #006680, white text = 5.8:1 */ }
+.demo-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: var(--radius-pill); background: rgba(244,123,39,0.12); color: #92400E; /* contrast-fix: was #B45A1A (4.23:1 on tinted bg), now #92400E (6.2:1) */ font-size: 0.75rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
 .scenario-display { font-size: 0.9rem; color: #585B5F; /* contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white */ font-weight: 300; margin-top: var(--space-xs); }
 .scenario-display strong { color: var(--ceg-blue); font-weight: 600; }
 

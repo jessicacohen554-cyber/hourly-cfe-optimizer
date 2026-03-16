@@ -8,16 +8,16 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles/shared.css">
-<link rel="stylesheet" href="styles/scrollytell.css">
+<link rel="stylesheet" href="../styles/shared.css">
+<link rel="stylesheet" href="../styles/scrollytell.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
-<script src="js/nav.js"></script>
-<script src="js/chart-colors.js"></script>
-<script src="js/shared-header.js"></script>
-<script src="js/scroll-observer.js"></script>
-<script src="js/shared-footer.js"></script>
-<script src="js/validation-data.js"></script>
+<script src="../js/nav.js"></script>
+<script src="../js/chart-colors.js"></script>
+<script src="../js/shared-header.js"></script>
+<script src="../js/scroll-observer.js"></script>
+<script src="../js/shared-footer.js"></script>
+<script src="../js/validation-data.js"></script>
 <style>
 body { background: var(--bg-page-white); }
 
@@ -167,8 +167,8 @@ body { background: var(--bg-page-white); }
     margin: var(--space-md) 0;
 }
 .assumption-table th {
-    background: var(--navy-dark);
-    color: white;
+    background: var(--navy-dark, #0F1A2E); /* fallback for broken path resolution in archive/ */
+    color: #FFFFFF;
     font-family: var(--font-heading);
     font-weight: 600;
     padding: 10px 12px;

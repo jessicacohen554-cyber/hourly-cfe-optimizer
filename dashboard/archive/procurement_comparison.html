@@ -18,6 +18,61 @@
 <style>
 body { background: var(--bg-page); }
 
+/* ========== CONTRAST / READABILITY FIXES (WCAG AA 4.5:1 minimum) ========== */
+/* Light-bg text: bump rgba(0,0,0,<low-alpha>) to ≥0.58 for 5.3:1 ratio on white */
+.act-number { color: rgba(0,0,0,0.58) !important; }
+.act-subtitle { color: rgba(0,0,0,0.58) !important; }
+.strat-col-header .strat-subtitle { color: rgba(0,0,0,0.58) !important; }
+.family-card .family-code { color: rgba(0,0,0,0.58) !important; }
+.family-card p { color: rgba(0,0,0,0.65) !important; }
+.figure-card .chart-note { color: rgba(0,0,0,0.58) !important; }
+.participation-readout .pct-label { color: rgba(0,0,0,0.58) !important; }
+.participation-context { color: rgba(0,0,0,0.58) !important; }
+.role-bar-item .bar-pct { color: rgba(0,0,0,0.58) !important; }
+.timeline-table th { color: rgba(0,0,0,0.58) !important; }
+.timeline-table .milestone-label { color: rgba(0,0,0,0.58) !important; }
+.zone p { color: rgba(0,0,0,0.58) !important; }
+.strat-variant-item .variant-name { color: rgba(0,0,0,0.65) !important; }
+.callout-box p { color: rgba(0,0,0,0.7) !important; }
+.page-insight-box p { color: rgba(0,0,0,0.7) !important; }
+.comparison-table td { color: rgba(0,0,0,0.7) !important; }
+
+/* Strategy code colors on white bg — darken for ≥4.5:1 */
+.code-2a, .code-2b, .code-2c { color: #0E7490 !important; }
+.code-3a, .code-3b, .code-3c, .code-3d { color: #B45309 !important; }
+.comparison-table th.col-2a { color: #0E7490 !important; }
+.timeline-table th.col-hourly { color: #0E7490 !important; }
+.timeline-table th.col-delayed { color: #4338CA !important; }
+.cell-mixed { color: #92400E !important; }
+
+/* Participation pct-val: var(--hydro) #0EA5E9 fails on white (3.0:1) — use darker */
+.participation-readout .pct-val { color: #0284C7 !important; }
+
+/* Dark-bg text: bump rgba(255,255,255,<low-alpha>) to ≥0.75 for AA on navy */
+.hero-opening .lead { color: rgba(255,255,255,0.78) !important; }
+.counter-unit { color: rgba(255,255,255,0.78) !important; }
+.counter-context { color: rgba(255,255,255,0.78) !important; }
+.finding-card p { color: rgba(255,255,255,0.78) !important; }
+.act-divider-dark .act-number { color: rgba(255,255,255,0.65) !important; }
+.act-divider-dark .act-subtitle { color: rgba(255,255,255,0.78) !important; }
+.findings-hero .findings-label { color: #67E8F9 !important; }
+.hero-counter .counter-value { color: #fff !important; }
+
+/* .section-dark overrides for elements inside white figure-cards */
+.section-dark .figure-card .chart-note { color: rgba(0,0,0,0.58) !important; }
+.section-dark .figure-card p { color: rgba(0,0,0,0.7) !important; }
+.section-dark .callout-box p { color: rgba(0,0,0,0.7) !important; }
+.section-dark .page-insight-box p { color: rgba(0,0,0,0.7) !important; }
+.section-dark .timeline-table th { color: rgba(0,0,0,0.58) !important; }
+.section-dark .timeline-table th.col-delayed { color: #4338CA !important; }
+.section-dark .timeline-table th.col-hourly { color: #0E7490 !important; }
+.section-dark .timeline-table td { color: rgba(0,0,0,0.7) !important; }
+.section-dark .milestone-label { color: rgba(0,0,0,0.58) !important; }
+.section-dark .zone p { color: rgba(0,0,0,0.58) !important; }
+
+/* Inline-style overrides for elements that used inline color */
+p[style*="color:rgba(0,0,0,0.6)"] { color: rgba(0,0,0,0.65) !important; }
+
 /* ====== SCROLLYTELL CORE ====== */
 .scroll-section {
     max-width: 860px;
@@ -43,7 +98,7 @@ body { background: var(--bg-page); }
 /* Dark act dividers */
 .act-divider-dark {
     max-width: 100%;
-    background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy) 100%);
+    background: linear-gradient(135deg, #0B1120 0%, #1A2744 100%);
     padding: 80px 24px 40px;
     text-align: center;
 }
@@ -77,7 +132,7 @@ body { background: var(--bg-page); }
 
 /* ====== HERO ====== */
 .hero-opening {
-    background: linear-gradient(180deg, var(--navy-dark) 0%, var(--navy) 60%, var(--navy-mid) 100%);
+    background: linear-gradient(180deg, #0B1120 0%, #1A2744 60%, #1E3055 100%);
     padding: 80px 24px 60px;
     text-align: center;
 }
@@ -126,7 +181,7 @@ body { background: var(--bg-page); }
 
 /* ====== KEY FINDINGS HERO ====== */
 .findings-hero {
-    background: linear-gradient(135deg, var(--navy-dark) 0%, #162440 50%, var(--navy-mid) 100%);
+    background: linear-gradient(135deg, #0B1120 0%, #162440 50%, #1E3055 100%);
     padding: 60px 24px;
 }
 .findings-inner {
@@ -139,7 +194,7 @@ body { background: var(--bg-page); }
     font-weight: 700;
     letter-spacing: 0.15em;
     text-transform: uppercase;
-    color: var(--accent-cyan);
+    color: #67E8F9; /* was var(--accent-cyan) which may be undefined */
     margin-bottom: 12px;
 }
 .findings-hero h2 {
@@ -284,8 +339,8 @@ body { background: var(--bg-page); }
 .code-1a, .code-1b, .code-1c { color: #4F46E5; }
 .code-2a, .code-2b, .code-2c { color: #0891B2; }
 .code-3a, .code-3b, .code-3c, .code-3d { color: #D97706; }
-.badge-data { background: rgba(22,163,74,0.1); color: #16A34A; }
-.badge-pending { background: rgba(245,158,11,0.1); color: #D97706; }
+.badge-data { background: rgba(22,163,74,0.1); color: #166534; } /* contrast-fix: was #15803D (4.33:1 on tinted bg), now #166534 (5.5:1) */
+.badge-pending { background: rgba(245,158,11,0.1); color: #92400E; }
 @media (max-width: 768px) {
     .strategy-columns { grid-template-columns: 1fr; }
     .hero-opening h1 { font-size: 1.8rem; }
@@ -349,7 +404,7 @@ body { background: var(--bg-page); }
     border-radius: 20px;
     font-size: 0.72rem;
     font-weight: 700;
-    color: #0284C7;
+    color: #0369A1;
 }
 @media (max-width: 768px) {
     .family-cards { grid-template-columns: 1fr; }
@@ -486,7 +541,7 @@ body { background: var(--bg-page); }
     text-transform: uppercase;
     margin-bottom: 10px;
     background: rgba(14,165,233,0.08);
-    color: #0284C7;
+    color: #0369A1;
 }
 
 /* Callout boxes (amber insight) */
@@ -520,7 +575,7 @@ body { background: var(--bg-page); }
     line-height: 1.7;
     margin: 0;
 }
-.page-insight-box strong { color: #0284C7; }
+.page-insight-box strong { color: #0369A1; }
 
 /* ====== RESPONSIVE TABLE WRAPPER ====== */
 .table-scroll-wrapper {
@@ -549,7 +604,7 @@ body { background: var(--bg-page); }
 .comparison-table th:first-child { text-align: left; }
 .comparison-table th.col-2a { color: #0891B2; }
 .comparison-table th.col-2b { color: #6B7280; }
-.comparison-table th.col-2c { color: #16A34A; }
+.comparison-table th.col-2c { color: #15803D; }
 .comparison-table td {
     padding: 14px;
     border-bottom: 1px solid rgba(0,0,0,0.06);
@@ -573,7 +628,7 @@ body { background: var(--bg-page); }
     opacity: 1;
     transform: translateX(0);
 }
-.cell-good { background: rgba(22,163,74,0.06); color: #16A34A; font-weight: 600; }
+.cell-good { background: rgba(22,163,74,0.06); color: #15803D; font-weight: 600; }
 .cell-mixed { background: rgba(245,158,11,0.06); color: #D97706; font-weight: 600; }
 .cell-bad { background: rgba(220,38,38,0.06); color: #DC2626; font-weight: 600; }
 .cell-worst { background: rgba(220,38,38,0.12); color: #DC2626; font-weight: 700; }
@@ -620,7 +675,7 @@ body { background: var(--bg-page); }
     font-family: var(--font-body);
     font-weight: 400;
 }
-.td-green { background: rgba(22,163,74,0.06); color: #16A34A; }
+.td-green { background: rgba(22,163,74,0.06); color: #15803D; }
 .td-amber { background: rgba(245,158,11,0.06); color: #92400E; }
 .td-red { background: rgba(220,38,38,0.08); color: #DC2626; font-weight: 600; }
 .timeline-table tr {
@@ -660,7 +715,7 @@ body { background: var(--bg-page); }
     margin-bottom: 6px;
 }
 .zone-maintenance h4 { color: #DC2626; }
-.zone-learning h4 { color: #16A34A; }
+.zone-learning h4 { color: #15803D; }
 .zone p {
     font-size: 0.82rem;
     color: rgba(0,0,0,0.55);
@@ -750,7 +805,7 @@ body { background: var(--bg-page); }
     min-height: 36px;
 }
 .strat-check:hover { background: rgba(255,255,255,0.95); }
-.strat-check.active { border-color: rgba(14,165,233,0.4); background: rgba(14,165,233,0.08); color: #0284C7; }
+.strat-check.active { border-color: rgba(14,165,233,0.4); background: rgba(14,165,233,0.08); color: #0369A1; }
 .strat-check input { display: none; }
 .explorer-results {
     display: grid;
@@ -795,6 +850,33 @@ body { background: var(--bg-page); }
     color: rgba(0,0,0,0.4);
     margin-top: 4px;
 }
+
+/* ====== CONTRAST FIXES: .figure-card inside .section-dark ====== */
+/* .section-dark inherits white text, but .figure-card has a white bg.
+   Reset text colors to dark for readability (WCAG AA). */
+.section-dark .figure-card { color: rgba(0,0,0,0.7); }
+.section-dark .figure-card h3 { color: var(--navy); }
+.section-dark .figure-card .chart-note { color: rgba(0,0,0,0.4); }
+.section-dark .figure-card .fig-badge { color: #0369A1; }
+.section-dark .figure-card p { color: rgba(0,0,0,0.65); }
+.section-dark .figure-card strong { color: var(--navy); }
+.section-dark .callout-box p { color: rgba(0,0,0,0.65); }
+.section-dark .callout-box strong { color: #92400E; }
+.section-dark .page-insight-box p { color: rgba(0,0,0,0.65); }
+.section-dark .page-insight-box strong { color: #0369A1; }
+.section-dark .zone h4 { color: var(--navy); }
+.section-dark .zone-maintenance h4 { color: #DC2626; }
+.section-dark .zone-learning h4 { color: #15803D; }
+.section-dark .zone p { color: rgba(0,0,0,0.55); }
+.section-dark .timeline-table th { color: rgba(0,0,0,0.45); }
+.section-dark .timeline-table th.col-delayed { color: #4F46E5; }
+.section-dark .timeline-table th.col-hourly { color: #0891B2; }
+.section-dark .timeline-table td { color: rgba(0,0,0,0.7); }
+.section-dark .timeline-table td:first-child { color: var(--navy); }
+.section-dark .milestone-label { color: rgba(0,0,0,0.35); }
+.section-dark .td-green { color: #15803D; }
+.section-dark .td-amber { color: #92400E; }
+.section-dark .td-red { color: #DC2626; }
 </style>
 </head>
 <body>
@@ -858,7 +940,7 @@ body { background: var(--bg-page); }
 <!-- 1.3 The Variant Tree (3-column by strategy) -->
 <div class="scroll-section wide" id="taxonomySection">
     <div style="text-align:center; margin-bottom: 24px;">
-        <p style="font-size:0.92rem; color:rgba(0,0,0,0.6); max-width:620px; margin:0 auto; line-height:1.7;">
+        <p style="font-size:0.92rem; color:rgba(0,0,0,0.65); max-width:620px; margin:0 auto; line-height:1.7;">
             Within each family, design choices matter enormously. There are 10 distinct strategy variants &mdash;
             and the differences <em>within</em> a family can be larger than the differences between families.
         </p>
@@ -1425,7 +1507,7 @@ body { background: var(--bg-page); }
                         background:linear-gradient(90deg,#22C55E,#F59E0B,#EF4444); border-radius:3px; outline:none; cursor:pointer;">
                     <span id="co2TargetValue"
                         style="font-family:var(--font-heading);
-                        font-size:1.2rem; font-weight:800; color:var(--hydro);">30%</span>
+                        font-size:1.2rem; font-weight:800; color:#0284C7;">30%</span>
                 </div>
             </div>
             <div class="figure-chart-container">
@@ -1485,7 +1567,7 @@ body { background: var(--bg-page); }
                         <div style="display:flex; align-items:center; gap:8px;">
                             <input type="range" id="explorerThreshold" min="50" max="99" value="90" step="5">
                             <span id="explorerThresholdVal"
-                                style="font-family:'Rajdhani',monospace; font-weight:700; font-size:1rem; color:#0284C7; min-width:40px;">90%</span>
+                                style="font-family:'Rajdhani',monospace; font-weight:700; font-size:1rem; color:#0369A1; min-width:40px;">90%</span>
                         </div>
                     </div>
 
@@ -1553,9 +1635,9 @@ body { background: var(--bg-page); }
 
 // ── Strategy color palette ──
 const STRATEGY_COLORS = {
-    '1A': '#6366F1', '1B': '#818CF8', '1C': '#A5B4FC',
-    '2A': '#0891B2', '2B': '#67E8F9', '2C': '#14B8A6',
-    '3A': '#D97706', '3B': '#FBBF24', '3C': '#F59E0B', '3D': '#FCD34D'
+    '1A': '#6366F1', '1B': '#818CF8', '1C': '#7C83DB',
+    '2A': '#0891B2', '2B': '#0E9AA5', '2C': '#14B8A6',
+    '3A': '#D97706', '3B': '#B8860B', '3C': '#C27C09', '3D': '#B8860B'
 };
 const STRATEGY_LABELS = {
     '1A': '1A — Consequential (Grid Avg)',
@@ -1755,7 +1837,7 @@ if (counterEl) setTimeout(() => animateCounter(counterEl, 13, 1500), 400);
 // ── Chart defaults ──
 Chart.defaults.font.family = getComputedStyle(document.documentElement).getPropertyValue('--font-body').trim() || "'Plus Jakarta Sans', 'Helvetica Neue', sans-serif";
 Chart.defaults.font.size = 12;
-Chart.defaults.color = 'rgba(0,0,0,0.5)';
+Chart.defaults.color = 'rgba(0,0,0,0.58)'; /* contrast-fix: was 0.5, now 5.3:1 on white */
 Chart.defaults.plugins.legend.labels.usePointStyle = true;
 Chart.defaults.plugins.legend.labels.pointStyleWidth = 10;
 
@@ -1960,8 +2042,8 @@ function updateAct2Charts() {
         // Add DAC / SCC reference bands
         chartMAC.options.plugins.annotation = {
             annotations: {
-                dacBand: { type: 'box', yMin: 250, yMax: 600, backgroundColor: 'rgba(239,68,68,0.08)', borderWidth: 0, label: { display: true, content: 'DAC range', position: { x: 'end', y: 'start' }, font: { size: 10 }, color: 'rgba(239,68,68,0.6)' } },
-                sccLine: { type: 'line', yMin: 185, yMax: 185, borderColor: 'rgba(34,197,94,0.4)', borderWidth: 1.5, borderDash: [6,4], label: { display: true, content: 'SCC $185', position: 'start', font: { size: 10 }, backgroundColor: 'rgba(34,197,94,0.7)' } }
+                dacBand: { type: 'box', yMin: 250, yMax: 600, backgroundColor: 'rgba(239,68,68,0.08)', borderWidth: 0, label: { display: true, content: 'DAC range', position: { x: 'end', y: 'start' }, font: { size: 10 }, color: '#B91C1C' } },
+                sccLine: { type: 'line', yMin: 185, yMax: 185, borderColor: 'rgba(34,197,94,0.4)', borderWidth: 1.5, borderDash: [6,4], label: { display: true, content: 'SCC $185', position: 'start', font: { size: 10 }, backgroundColor: '#15803D' } }
             }
         };
         chartMAC.update('none');
@@ -1984,7 +2066,7 @@ function updateAct2Charts() {
         chartMix.data.datasets = catArr.map(cat => ({
             label: RES_LABELS[cat] || cat.replace(/_/g, ' '),
             data: mixData.map(m => (m[cat] || 0).toFixed(2)),
-            backgroundColor: RES_COLORS[cat] || '#999',
+            backgroundColor: RES_COLORS[cat] || '#6B7280',
             borderRadius: 2
         }));
         chartMix.update('none');
@@ -2046,7 +2128,7 @@ function updateAct3Charts() {
         chartRoles.data.datasets = catArr.map(cat => ({
             label: RES_LABELS[cat] || cat.replace(/_/g, ' '),
             data: isoMixes.map(m => (m[cat] || 0).toFixed(0)),
-            backgroundColor: RES_COLORS[cat] || '#999',
+            backgroundColor: RES_COLORS[cat] || '#6B7280',
             borderRadius: 2
         }));
         chartRoles.update('none');
@@ -2083,8 +2165,8 @@ function updateAct4Charts() {
         // SBTi milestone markers
         chartFOAK.options.plugins.annotation = {
             annotations: {
-                sbti2030: { type: 'line', xMin: years.indexOf(2030), xMax: years.indexOf(2030), borderColor: 'rgba(0,0,0,0.15)', borderWidth: 1, borderDash: [4,4], label: { display: true, content: 'SBTi 50%', position: 'start', font: { size: 9 }, color: 'rgba(0,0,0,0.5)' } },
-                sbti2040: { type: 'line', xMin: years.indexOf(2040), xMax: years.indexOf(2040), borderColor: 'rgba(0,0,0,0.15)', borderWidth: 1, borderDash: [4,4], label: { display: true, content: 'SBTi 90%', position: 'start', font: { size: 9 }, color: 'rgba(0,0,0,0.5)' } }
+                sbti2030: { type: 'line', xMin: years.indexOf(2030), xMax: years.indexOf(2030), borderColor: 'rgba(0,0,0,0.15)', borderWidth: 1, borderDash: [4,4], label: { display: true, content: 'SBTi 50%', position: 'start', font: { size: 9 }, color: 'rgba(0,0,0,0.65)' } },
+                sbti2040: { type: 'line', xMin: years.indexOf(2040), xMax: years.indexOf(2040), borderColor: 'rgba(0,0,0,0.15)', borderWidth: 1, borderDash: [4,4], label: { display: true, content: 'SBTi 90%', position: 'start', font: { size: 9 }, color: 'rgba(0,0,0,0.65)' } }
             }
         };
         chartFOAK.update('none');
@@ -2262,7 +2344,7 @@ function updateExplorer() {
         expMixChart.data.datasets = catArr.map(cat => ({
             label: RES_LABELS[cat] || cat.replace(/_/g, ' '),
             data: mixArr.map(m => (m[cat] || 0).toFixed(2)),
-            backgroundColor: RES_COLORS[cat] || '#999',
+            backgroundColor: RES_COLORS[cat] || '#6B7280',
             borderRadius: 2
         }));
         expMixChart.update('none');
