@@ -208,8 +208,7 @@
             label: 'About',
             children: [
                 { label: 'Overview', href: 'about.html' },
-                { label: 'Methodology', href: 'optimizer_methodology.html' },
-                { label: 'Forecast Validation', href: 'forecast_validation.html' }
+                { label: 'Methodology', href: 'optimizer_methodology.html' }
             ]
         },
         {
