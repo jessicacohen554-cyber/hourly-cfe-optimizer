@@ -1,0 +1,161 @@
+name: "LMP Calibration: Validate Model"
+
+# Validates synthetic LMP model against calibration targets for each ISO.
+# Two modes:
+#   - weather-normalized: Compare against SOM calibration targets
+#   - qa-actual: Compare against actual historical LMP (needs fetched data)
+#
+# iso=ALL fans out parallel matrix jobs, then merges into one branch + PR.
+# Output: data/step4-analysis/lmp/{ISO}_calibration.json
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region to calibrate (ALL = parallel)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      mode:
+        description: 'Calibration mode'
+        required: true
+        default: 'weather-normalized'
+        type: choice
+        options:
+          - weather-normalized
+          - qa-actual
+      year:
+        description: 'Year for qa-actual mode'
+        required: false
+        default: '2024'
+        type: string
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: lmp-calibration
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix=["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix=["${{ inputs.iso }}"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  process:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy pandas pyarrow numba
+
+      - name: "Run LMP calibration — ${{ matrix.iso }}"
+        run: |
+          if [ "${{ inputs.mode }}" = "qa-actual" ]; then
+            python scripts/calibrate_lmp_model.py \
+              --iso ${{ matrix.iso }} \
+              --qa-actual \
+              --year ${{ inputs.year }}
+          else
+            python scripts/calibrate_lmp_model.py \
+              --iso ${{ matrix.iso }}
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lmp-cal-${{ matrix.iso }}
+          path: data/step4-analysis/lmp/
+          retention-days: 1
+
+  merge:
+    needs: [prepare, process]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Create output branch
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}-${{ inputs.iso }}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: lmp-cal-*
+          path: data/step4-analysis/lmp/
+          merge-multiple: true
+
+      - name: Commit and push
+        run: |
+          git config http.postBuffer 524288000
+
+          git add -f data/step4-analysis/lmp/ 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "No calibration reports to commit"
+            exit 0
+          fi
+
+          git commit -m "LMP Calibration: ${{ inputs.iso }} (${{ inputs.mode }}) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "$TARGET_BRANCH" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
