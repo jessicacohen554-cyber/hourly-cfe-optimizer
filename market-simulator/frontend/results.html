@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation Results — Constellation Energy</title>
+    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/simulator.css">
+    <link rel="stylesheet" href="styles/results.css">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="js/chart-colors.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <link rel="stylesheet" href="styles/simulator.css">
+</head>
+<body>
+
+    <!-- Progress bar -->
+    <div class="progress-bar"><div class="progress-bar-fill"></div></div>
+
+    <!-- Nav -->
+    <nav>
+        <div class="nav-logo">
+            <a href="/" style="display:flex;align-items:center;gap:0.75rem;text-decoration:none;">
+                <img src="/brand-assets/logo.png" alt="Constellation Energy" style="height:36px;" onerror="this.style.display='none'">
+                <div>
+                    <div class="nav-title">Constellation Energy</div>
+                    <div class="nav-subtitle">Market Simulation Tool</div>
+                </div>
+            </a>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/">Guide</a></li>
+            <li><a href="/setup">Setup</a></li>
+            <li><a href="/results" class="active">Results</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero section -->
+    <div class="hero-section" style="padding-bottom: 0;">
+        <div class="hero-inner" style="padding-bottom: 1.5rem;">
+            <div class="hero-eyebrow">Simulation Output</div>
+            <h1>Results</h1>
+            <p class="hero-desc" id="resultsSubtitle">Loading...</p>
+        </div>
+    </div>
+
+    <!-- ISO Tab Switcher + Controls -->
+    <div class="iso-tab-bar" id="controlsBar">
+        <div class="content-section" style="padding-top: 0; padding-bottom: 0;">
+            <div class="iso-tabs" id="resultsIsoSelector"></div>
+            <div class="controls-row">
+                <div class="control-group" id="yearControl" style="display:none;">
+                    <label>Year</label>
+                    <select id="yearSelect" class="control-select"></select>
+                </div>
+                <div class="control-group">
+                    <label>View</label>
+                    <div class="toggle-btn-group" id="viewToggle">
+                        <button type="button" class="toggle-btn active" data-view="hourly">Hourly</button>
+                        <button type="button" class="toggle-btn" data-view="monthly">Monthly</button>
+                    </div>
+                </div>
+                <a href="/setup" class="back-link">&larr; Modify Inputs</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="content-section">
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid" id="topStats">
+            <div class="kpi-card">
+                <div class="kpi-value" id="statCleanPct">--</div>
+                <div class="kpi-unit">%</div>
+                <div class="kpi-label">Market Clean</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value" id="statAvgLMP">--</div>
+                <div class="kpi-unit">$/MWh</div>
+                <div class="kpi-label">Avg LMP</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value" id="statEmissions">--</div>
+                <div class="kpi-unit">MT CO2</div>
+                <div class="kpi-label">Annual Emissions</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value" id="statDemand">--</div>
+                <div class="kpi-unit">TWh</div>
+                <div class="kpi-label">Demand</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value" id="statNucRev">--</div>
+                <div class="kpi-unit">$/MWh</div>
+                <div class="kpi-label">Nuclear Rev</div>
+            </div>
+        </div>
+
+        <!-- Run ID & Export Bar -->
+        <div class="run-bar" id="runBar" style="display:none;">
+            <div class="run-id-badge" id="runIdBadge"></div>
+            <div class="run-actions">
+                <button class="btn-export" id="btnExportCharts" title="Save all charts as PNG images to the results directory">Export Charts</button>
+                <button class="btn-export" id="btnDownloadCSV" title="Download results data as CSV">Download CSV</button>
+            </div>
+        </div>
+
+        <!-- Narrative Interpretation -->
+        <div class="narrative-box" id="narrativeBox" style="display:none;">
+            <div class="narrative-header">
+                <h3>Results Interpretation</h3>
+                <span class="info-icon" data-tooltip="Auto-generated plain-English summary of the simulation results. Also saved to narrative.txt in the results directory.">i</span>
+            </div>
+            <pre class="narrative-text" id="narrativeText"></pre>
+        </div>
+
+        <!-- Input Summary (collapsible) -->
+        <details class="input-summary-panel" id="inputSummaryPanel">
+            <summary class="input-summary-toggle">
+                <span>Your Input Parameters</span>
+                <span class="info-icon" data-tooltip="Summary of the parameters you selected on the Setup page. These drove the simulation results below.">i</span>
+            </summary>
+            <div class="input-summary-grid" id="inputSummaryGrid"></div>
+        </details>
+
+        <!-- ════════════════════════════════════════════════════════════════ -->
+        <!-- LEVEL 1: MARKET-WIDE RESULTS                                   -->
+        <!-- ════════════════════════════════════════════════════════════════ -->
+
+        <div class="results-section-header">
+            <h2>Market Overview</h2>
+            <p>System-wide price and generation dynamics based on your inputs</p>
+        </div>
+
+        <!-- Chart 1: LMP + Capacity Revenue Time Series -->
+        <div class="chart-card">
+            <div class="chart-card-header">
+                <h3>LMP &amp; Capacity Revenue <span class="info-icon" data-tooltip="Locational Marginal Price (LMP) represents the cost of serving the next MWh of load. Set by the marginal fossil generator's cost. Capacity revenue is an additional payment for being available during peak demand.">i</span></h3>
+                <p>Hourly energy price profile (snapshot) or year-over-year price evolution (trajectory).
+                   Capacity revenue overlay shows total generator revenue stack.</p>
+            </div>
+            <div class="chart-container-lg" id="chartLMPTimeSeries"></div>
+        </div>
+
+        <!-- Chart 2: Supply Stack Time Series -->
+        <div class="chart-card">
+            <div class="chart-card-header">
+                <h3>Supply Stack <span class="info-icon" data-tooltip="Generation mix by fuel source (TWh). Shows how the supply portfolio splits between clean and fossil resources under your market assumptions.">i</span></h3>
+                <p>Generation mix by fuel source — how the supply portfolio changes under market conditions</p>
+            </div>
+            <div class="chart-container-lg" id="chartSupplyStack"></div>
+        </div>
+
+        <!-- Table 3: Fuel Source / Heat Rate Bin Breakdown -->
+        <div class="chart-card">
+            <div class="chart-card-header">
+                <h3>Generation by Fuel Source &amp; Heat Rate</h3>
+                <p>Capacity, capacity factor, and TWh generation for each generator class</p>
+            </div>
+            <div class="table-responsive" id="fuelBinTableContainer">
+                <table class="data-table" id="fuelBinTable">
+                    <thead>
+                        <tr>
+                            <th>Fuel Source</th>
+                            <th>Heat Rate Bin</th>
+                            <th>Capacity (GW)</th>
+                            <th>CF (%)</th>
+                            <th>Generation (TWh)</th>
+                            <th>Marginal Cost ($/MWh)</th>
+                            <th>Avg Revenue ($/MWh)</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fuelBinTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Chart 4: Merit-Order Stack -->
+        <div class="chart-card">
+            <div class="chart-card-header">
+                <h3>Merit-Order Stack <span class="info-icon" data-tooltip="Fossil generators sorted by marginal cost (cheapest to most expensive). The LMP line shows where the market clears — generators above this line lose money and face retirement.">i</span></h3>
+                <p>Fossil generators ordered by marginal cost. Generators above the LMP line are uneconomic.</p>
+            </div>
+            <div class="chart-container-lg" id="chartMeritOrder"></div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════════ -->
+        <!-- LEVEL 2: YEAR DRILL-DOWN                                        -->
+        <!-- ════════════════════════════════════════════════════════════════ -->
+
+        <div class="results-section-header" id="yearDrilldownHeader" style="display:none;">
+            <h2>Year-by-Year Detail</h2>
+            <p>Drill into each projection year for deployment, pricing, and fleet economics</p>
+        </div>
+
+        <!-- Charts Row: Profitability + What Gets Built -->
+        <div class="grid-2col">
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3>Generator Profitability</h3>
+                    <p>Revenue vs cost per generator class</p>
+                </div>
+                <div class="chart-container" id="chartProfitability"></div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3>What Gets Built</h3>
+                    <p>Resource mix from existing baseline through market-cleared level</p>
+                </div>
+                <div class="chart-container" id="chartWhatBuilt"></div>
+            </div>
+        </div>
+
+        <!-- LMP Impact + CCS Breakeven -->
+        <div class="grid-2col">
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3>LMP Impact Curve</h3>
+                    <p>How average LMP changes as clean penetration increases</p>
+                </div>
+                <div class="chart-container" id="chartLMPImpact"></div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3>CCS Retrofit vs New Gas</h3>
+                    <p>Carbon price crossover: when does CCS beat unabated CCGT?</p>
+                </div>
+                <div class="chart-container" id="chartCCSBreakeven"></div>
+            </div>
+        </div>
+
+        <!-- Fossil Bin Economics -->
+        <div class="chart-card">
+            <div class="chart-card-header">
+                <h3>Fossil Fleet Economics by Heat Rate Bin</h3>
+                <p>Per-bin dispatch hours, revenue, cost, and margin</p>
+            </div>
+            <div class="chart-container-lg" id="chartFossilBins"></div>
+        </div>
+
+        <!-- Clean Cost Ladder + Gas Shift -->
+        <div class="grid-2col">
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3>Clean Energy Cost Ladder</h3>
+                    <p>$/MWh vs cumulative GW — market stops where cost exceeds revenue</p>
+                </div>
+                <div class="chart-container" id="chartCostLadder"></div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3>Gas Fleet Efficiency Shift</h3>
+                    <p>Dispatch shift between heat rate bins as carbon price rises</p>
+                </div>
+                <div class="chart-container" id="chartGasShift"></div>
+            </div>
+        </div>
+
+        <!-- Nuclear Revenue + Sensitivity -->
+        <div class="grid-2col">
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3>Nuclear Revenue Stack</h3>
+                    <p>Energy + capacity + PTC breakdown</p>
+                </div>
+                <div class="chart-container" id="chartNuclearRevenue"></div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3>Sensitivity: Gas Price vs Carbon Price</h3>
+                    <p>Market-cleared clean % under different fuel/carbon combinations</p>
+                </div>
+                <div class="chart-container" id="chartSensitivity"></div>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════════ -->
+        <!-- LEVEL 3: IPP FLEET ANALYSIS                                     -->
+        <!-- ════════════════════════════════════════════════════════════════ -->
+
+        <div class="results-section-header">
+            <h2>IPP Fleet Analysis</h2>
+            <p>How individual generator fleets perform under these market conditions (EIA-860 data)</p>
+        </div>
+
+        <!-- IPP Toggle (future: select specific company fleets) -->
+        <div class="chart-card">
+            <div class="chart-card-header">
+                <h3>Generator Economics Detail</h3>
+                <p>Full fleet breakdown — all generator types with dispatch, revenue, and profitability</p>
+            </div>
+            <table class="data-table" id="generatorTable">
+                <thead>
+                    <tr>
+                        <th>Generator</th>
+                        <th>Capacity (GW)</th>
+                        <th>Marginal Cost</th>
+                        <th>Dispatch Hours</th>
+                        <th>Capacity Factor</th>
+                        <th>Avg Revenue</th>
+                        <th>Profit $/MWh</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="generatorTableBody"></tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-brand"><strong>Constellation Energy</strong> · Market Simulation Tool</div>
+        <div class="footer-note">Directionally correct economics for targeted IPM/GenX analysis</div>
+    </footer>
+    <div class="bottom-banner"></div>
+
+    <script src="js/results.js"></script>
+</body>
+</html>

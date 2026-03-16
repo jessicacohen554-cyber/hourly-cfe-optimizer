@@ -1,0 +1,498 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CFE Optimizer &mdash; Detailed Pipeline Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { background: #fff; }
+  body {
+    font-family: 'Franklin Gothic Book', 'Libre Franklin', 'Segoe UI', sans-serif;
+    background: #FFFFFF;
+    color: #1a1a2e;
+    width: 864px;
+    padding: 0;
+    font-size: 10px;
+  }
+  h1, h2, h3, .section-hdr, .sc-title {
+    font-family: 'Franklin Gothic Demi', 'Libre Franklin', 'Segoe UI Semibold', sans-serif;
+    font-weight: 700;
+  }
+  .page {
+    width: 864px;
+    height: 576px;
+    padding: 20px 24px 14px;
+    overflow: hidden;
+    position: relative;
+    page-break-after: always;
+    display: flex;
+    flex-direction: column;
+  }
+  .page:last-child { page-break-after: avoid; }
+  .page-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-height: 0;
+  }
+  .section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #e2e6ec;
+    border-radius: 5px;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .section-hdr {
+    padding: 5px 12px;
+    color: #fff;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .section-hdr .runtime {
+    font-family: 'Franklin Gothic Book', 'Libre Franklin', sans-serif;
+    font-weight: 400;
+    font-size: 9px;
+    opacity: 0.8;
+    margin-left: auto;
+  }
+  .section-body {
+    flex: 1;
+    padding: 6px 8px;
+    background: #fafbfc;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-height: 0;
+  }
+  .step-row {
+    flex: 1;
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+    min-height: 0;
+  }
+  .step-card {
+    background: #fff;
+    border: 1px solid #dce0e6;
+    border-radius: 4px;
+    padding: 5px 8px;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    overflow: hidden;
+  }
+  .step-card .sc-id {
+    font-family: 'Franklin Gothic Demi', 'Libre Franklin', sans-serif;
+    font-weight: 700;
+    font-size: 9.5px;
+    color: #2372B9;
+    margin-bottom: 1px;
+    flex-shrink: 0;
+  }
+  .step-card .sc-title {
+    font-size: 11px;
+    color: #1a1a2e;
+    margin-bottom: 1px;
+    line-height: 1.2;
+    flex-shrink: 0;
+  }
+  .step-card .sc-script {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 8.5px;
+    color: #007FA4;
+    margin-bottom: 2px;
+    flex-shrink: 0;
+  }
+  .step-card .sc-detail {
+    font-size: 9px;
+    color: #555;
+    line-height: 1.35;
+    flex: 1;
+    overflow: hidden;
+  }
+  .step-card .sc-io {
+    font-size: 8.5px;
+    color: #7E8083;
+    line-height: 1.3;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+  .step-card .sc-io span { color: #6BA543; font-weight: 600; }
+  .step-card .sc-io .out { color: #F47B27; }
+  .arrow-down {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    height: 10px;
+    align-items: center;
+    line-height: 0;
+  }
+  .module-ref {
+    display: inline;
+    font-family: 'Consolas', monospace;
+    font-size: 8.5px;
+    color: #2372B9;
+    background: #f0f4f8;
+    padding: 0 3px;
+    border-radius: 2px;
+  }
+  .bg-data { background: #7E8083; }
+  .bg-physics { background: #2372B9; }
+  .bg-opt { background: #F47B27; }
+  .bg-dispatch { background: #6BA543; }
+  .bg-analysis { background: #007FA4; }
+  .bg-scenarios { background: #7F8F97; }
+  .bg-sim { background: linear-gradient(90deg, #2372B9, #007FA4); }
+  .footnote {
+    text-align: center;
+    font-size: 8px;
+    color: #bbb;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+  .step-card.highlight {
+    border-color: #2372B9;
+    border-width: 1.5px;
+  }
+  .step-card .sc-id.accent { color: #F47B27; }
+</style>
+</head>
+<body>
+
+<!-- PAGE 1: Steps 0 and 1 -->
+<div class="page">
+  <div class="page-body">
+
+    <div class="section">
+      <div class="section-hdr bg-data">Step 0 &mdash; Data Ingestion &amp; Configuration<span class="runtime">Pre-pipeline</span></div>
+      <div class="section-body">
+        <div class="step-row">
+          <div class="step-card">
+            <div class="sc-id">0.1 &mdash; EIA-930 Hourly Data</div>
+            <div class="sc-script">eia_data_io.py</div>
+            <div class="sc-detail">
+              Ingests EIA Hourly Electric Grid Monitor data (2021&ndash;2025) for 7 ISOs.
+              8,760-hour normalized demand and generation profiles by fuel type.
+              Multi-year averaging smooths weather anomalies. Nuclear monthly CF derate from NRC.
+              Solar DST-aware nighttime zeroing.
+            </div>
+            <div class="sc-io">
+              <span class="out">Out:</span> eia_generation_profiles.parquet, eia_demand_profiles.parquet
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">0.2 &mdash; Pipeline Configuration</div>
+            <div class="sc-script">pipeline_config.py</div>
+            <div class="sc-detail">
+              Single source of truth: 7 ISOs, 21 thresholds, LCOE tables (L/M/H &times; 7 ISOs &times; 10 resources),
+              transmission adders, FOAK/NOAK costs, Wright&rsquo;s Law parameters, demand growth rates,
+              storage parameters, grid mix shares, capacity caps. All scripts import from here.
+            </div>
+            <div class="sc-io">
+              <span>Sources:</span> NREL ATB 2024, Lazard v17-18, EIA AEO 2025, EPA eGRID, LBNL
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">0.3 &mdash; Shared Modules</div>
+            <div class="sc-detail">
+              <span class="module-ref">dispatch_utils.py</span> 4-phase storage dispatch, fossil retirement<br>
+              <span class="module-ref">lmp_engine.py</span> Merit-order stack LMP pricing<br>
+              <span class="module-ref">scenario_common.py</span> Threshold definitions, dispatch cache I/O<br>
+              <span class="module-ref">procurement_utils.py</span> PPA pricing, learning curves, RPS<br>
+              <span class="module-ref">step1_pfs_generator.py</span> Core PFS engine, vectorized scoring
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-down"><svg width="14" height="8"><polygon points="7,7 2,1 12,1" fill="#7E8083"/></svg></div>
+
+    <div class="section" style="flex: 1.6;">
+      <div class="section-hdr bg-physics">Step 1 &mdash; Physics Feasible Space Generation<span class="runtime">~3&ndash;8 hours (compute-heavy)</span></div>
+      <div class="section-body">
+        <div class="step-row">
+          <div class="step-card">
+            <div class="sc-id">1.1a &mdash; Generate Mixes</div>
+            <div class="sc-script">step1_1a_generate_mixes.py</div>
+            <div class="sc-detail">
+              Cartesian product at 5% step. 4D ISOs: ~12K combos. 6D CAISO: ~1.6M.
+              Prior-window narrowing saves ~30%. Adds seed combos from prior EF research.
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">1.1b &mdash; Score Mixes</div>
+            <div class="sc-script">step1_1b_score_mixes.py</div>
+            <div class="sc-detail">
+              Vectorized 8,760-hour matching in 20K-mix chunks (peak ~1.4 GiB).
+              Score = &sum; min(1, clean_supply[h] / demand[h]) / 8760.
+            </div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-card">
+            <div class="sc-id">1.2 &mdash; Zone Search</div>
+            <div class="sc-script">step1_2_zone_search.py</div>
+            <div class="sc-detail">
+              Three score-band zones (A: 50&ndash;70%, B: 70&ndash;90%, C: 90&ndash;100%). 1% fine grid.
+              Collision-free int64 hash dedup. Dominance filter per threshold.
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">1.3 &mdash; Floor-Aware PFS</div>
+            <div class="sc-script">step1_3_floor_aware_pfs.py</div>
+            <div class="sc-detail">
+              Incremental additions above existing grid floor. Solar 0&ndash;80% (2% step),
+              wind 0&ndash;80%, clean firm 0&ndash;40%. Hydro fixed. Targets 50&ndash;70%.
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">1.4 &mdash; Fine Grid PFS</div>
+            <div class="sc-script">step1_4_fine_grid_pfs.py</div>
+            <div class="sc-detail">
+              1% grid for 40&ndash;70% thresholds. Solar 0&ndash;60%, wind 0&ndash;60%, CF 0&ndash;30%.
+              Offshore 0&ndash;20% (2%), geo 0&ndash;15% (3%, CAISO).
+            </div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-card highlight">
+            <div class="sc-id accent">1.5 &mdash; Storage Refinement &#9733;</div>
+            <div class="sc-script">step1_5_storage_refinement.py</div>
+            <div class="sc-detail">
+              <strong>Pass 0:</strong> Ceiling storage (bat4=0.10%, bat8=0.15%, LDES=1.0%, H&sub2;=1.0% of demand). Eliminates mixes that can&rsquo;t reach any threshold.
+              <strong>Pass 1:</strong> Group by gap buckets (0&ndash;5pp, 5&ndash;10pp, 10&ndash;25pp, 25&ndash;50pp). Right-sized storage grid per bucket.
+              <strong>Pass 2:</strong> 0.05% resolution near boundaries. Dominance filter after each pass.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="footnote">Constellation Energy &mdash; Hourly CFE Optimizer v1.0 &mdash; Page 1 of 3</div>
+</div>
+
+<!-- PAGE 2: Steps 2 and 3 -->
+<div class="page">
+  <div class="page-body">
+
+    <div class="section">
+      <div class="section-hdr bg-opt">Step 2 &mdash; Efficient Frontier &amp; Cost Optimization<span class="runtime">~5&ndash;15 min per ISO</span></div>
+      <div class="section-body">
+        <div class="step-row">
+          <div class="step-card" style="flex:1.4;">
+            <div class="sc-id">2.1 &mdash; Efficient Frontier</div>
+            <div class="sc-script">step2_1_efficient_frontier.py</div>
+            <div class="sc-detail">
+              <strong>Phase 1:</strong> Threshold gate &mdash; keep rows with scores in target ranges.<br>
+              <strong>Phase 2:</strong> Resource cap filter &mdash; solar cap (100%), total procurement (350%), hydro (existing).<br>
+              <strong>Phase 3:</strong> Global dedup &mdash; for each unique allocation, keep highest score. Each physical
+              configuration stored once. No dominance removal across mixes &mdash; cost-based selection in Step 2.2.
+              Output partitioned into non-overlapping threshold bands.
+            </div>
+            <div class="sc-io"><span class="out">Out:</span> step_2_1_EF_{ISO}_{T}.parquet per band</div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-card">
+            <div class="sc-id">2.2a &mdash; Cost Optimization</div>
+            <div class="sc-script">step2_2a_cost_optimization.py</div>
+            <div class="sc-detail">
+              For each (ISO, threshold): loads EF mixes &ge; target score. Evaluates 5,832 (non-CAISO) or 17,496 (CAISO) cost combos.
+              <strong>9-dim key:</strong> {Ren}{Firm}{Batt}{LDES}_{Fuel}_{Tx}_{CCS}{45Q}_{Geo}.<br>
+              <strong>Phase 1:</strong> Static 2025 &rarr; cheapest per sensitivity.<br>
+              <strong>Phase 2:</strong> Extract unique winners &rarr; demand growth sweep (L/M/H &times; 2026&ndash;2050). Wright&rsquo;s Law FOAK&rarr;NOAK.
+            </div>
+            <div class="sc-io"><span class="out">Out:</span> step_2_2a_CO_{ISO}.parquet</div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">2.2b &mdash; Track NB / CTR</div>
+            <div class="sc-script">step2_2b_track_nb_ctr.py</div>
+            <div class="sc-detail">
+              <strong>New-Build Track:</strong> Only new resources (no existing credit).<br>
+              <strong>Cost-to-Replace Track:</strong> Replace existing nuclear with new clean.<br>
+              Demand growth sweep with Wright&rsquo;s Law learning. P10/P50/P90 cost envelopes.
+            </div>
+            <div class="sc-io"><span class="out">Out:</span> track_scenarios.parquet &rarr; Step 4.1e/4.2c</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-down"><svg width="14" height="8"><polygon points="7,7 2,1 12,1" fill="#F47B27"/></svg></div>
+
+    <div class="section">
+      <div class="section-hdr bg-dispatch">Step 3 &mdash; Dispatch Cache &amp; Marginal Abatement Cost Queue<span class="runtime">~10&ndash;30 min</span></div>
+      <div class="section-body">
+        <div class="step-row">
+          <div class="step-card">
+            <div class="sc-id">3a &mdash; Dispatch Cache</div>
+            <div class="sc-script">step3a_build_dispatch_cache.py</div>
+            <div class="sc-detail">
+              Pre-computes full 8,760-hour dispatch for every unique mix from Step 2.2.
+              Uses <span class="module-ref">dispatch_utils.reconstruct_hourly_dispatch</span> with detailed=True.<br>
+              <strong>4-phase storage:</strong> bat4 &rarr; bat8 &rarr; LDES &rarr; H&sub2;. SOC carried across window boundaries, round-trip
+              efficiency per discharge event.<br>
+              <strong>Capacity translation:</strong> Step 1&ndash;2.1 stores capacity as % of annual demand. Step 3 converts:
+              MW = (pct/100) &times; annual_MWh / duration_hours.
+            </div>
+            <div class="sc-io">
+              <span>In:</span> step_2_2a_CO_{ISO}.parquet, EIA profiles<br>
+              <span class="out">Out:</span> {ISO}_dispatch_cache.parquet, {ISO}_annual_manifest.parquet
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">3b &mdash; MAC Queue</div>
+            <div class="sc-script">step3b_mac_queue.py</div>
+            <div class="sc-detail">
+              Path-dependent deployment queue: per ISO &times; 5 price &times; 3 demand growth = 15 pathways.<br>
+              At each threshold: dispatch floor &rarr; baseline CO&sub2; &rarr; sample archetypes &rarr;
+              score new_build_cost / CO&sub2;_avoided &rarr; winner = argmin(MAC) &le;1% overshoot &rarr; ratchet floor.<br>
+              <strong>Clean firm tranching:</strong> uprate &rarr; geothermal (CAISO) &rarr; min(nuclear, CCS). Cumulative caps tracked.<br>
+              <strong>CO&sub2; model:</strong> Merit-order fossil retirement (coal &rarr; oil &rarr; gas). CCS residual: 0.036 tCO&sub2;/MWh.
+            </div>
+            <div class="sc-io">
+              <span class="out">Out:</span> mac_queue_{ISO}.parquet, scenario_a_{ISO}.json
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="footnote">Constellation Energy &mdash; Hourly CFE Optimizer v1.0 &mdash; Page 2 of 3</div>
+</div>
+
+<!-- PAGE 3: Steps 4, 5, and 6 -->
+<div class="page">
+  <div class="page-body">
+
+    <div class="section">
+      <div class="section-hdr bg-analysis">Step 4 &mdash; Derived Analytics<span class="runtime">~5&ndash;10 min</span></div>
+      <div class="section-body">
+        <div class="step-row">
+          <div class="step-card">
+            <div class="sc-id">4.1a &mdash; Fossil Dispatch (CO&sub2; + LMP)</div>
+            <div class="sc-script">step4_1a_fossil_dispatch.py</div>
+            <div class="sc-detail">
+              Reads clean dispatch from Step 3a cache. residual = max(0, demand &minus; clean).
+              Merit-order: coal &rarr; oil &rarr; gas. CO&sub2; = &sum; dispatch &times; emission_rate.
+              LMP = marginal cost of last fossil unit per hour.
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">4.1b&ndash;d &mdash; Profiles, MAC Stats, Targets</div>
+            <div class="sc-detail">
+              <strong>4.1b:</strong> 8,760h &rarr; 24h compressed day profiles (demand, matched, surplus, gap).<br>
+              <strong>4.1c:</strong> Marginal MAC via PCHIP splines. 3 grid &times; 3 DAC = 9 crossover points.<br>
+              <strong>4.1d:</strong> Optimal crossover threshold per ISO (grid MAC = DAC cost).
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">4.1e&ndash;f, 4.2a&ndash;c &mdash; Tracks &amp; Storage</div>
+            <div class="sc-detail">
+              <strong>4.1e&rarr;4.2c:</strong> Export tracks &rarr; P10/P50/P90 cost envelopes.<br>
+              <strong>4.1f:</strong> Building blocks &mdash; Step 1 generation shapes for dashboard.<br>
+              <strong>4.2a:</strong> Resource density strips per scenario.<br>
+              <strong>4.2b:</strong> Battery/LDES dispatch, seasonal storage, H&sub2; thresholds.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-down"><svg width="14" height="8"><polygon points="7,7 2,1 12,1" fill="#007FA4"/></svg></div>
+
+    <div class="section" style="flex:1.2;">
+      <div class="section-hdr bg-scenarios">Step 5 &mdash; Procurement Strategy Evaluation<span class="runtime">~10&ndash;20 min</span></div>
+      <div class="section-body">
+        <div class="step-row">
+          <div class="step-card">
+            <div class="sc-id">5.1 &mdash; Scenario B (Hourly Matching)</div>
+            <div class="sc-script">step5_1_scenario_hourly.py</div>
+            <div class="sc-detail">
+              GHG Protocol hourly Scope 2 incentive-driven grid buildout. Four supply pools:
+              (1) SSS at $0; (2) Contracted &mdash; excluded; (3) Existing merchant &mdash; EAC premium $3&ndash;5/MWh;
+              (4) New-build &mdash; hourly gap investment signal. Forces early firm clean + storage.
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">5.2a &mdash; Scenario Comparison</div>
+            <div class="sc-script">step5_2a_scenario_comparison.py</div>
+            <div class="sc-detail">
+              Reads Scenario A (Step 3b) and Scenario B (Step 5.1).
+              Side-by-side: resource mix, effective cost, gas backup, MAC trajectories.
+              Consequential queue domino sequence. Stranding analysis.
+            </div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-card">
+            <div class="sc-id">5.2b &mdash; Strategy 1: Consequential</div>
+            <div class="sc-script">step5_2b_strategy_consequential.py</div>
+            <div class="sc-detail">
+              Three variants: 1A grid-average, 1B fossil-average, 1C marginal emission baseline.
+              Cross-regional netting (cheapest $/tCO&sub2; US-wide). Scenario A learning (delayed FOAK).
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">5.2c &mdash; Strategy 2: Hourly</div>
+            <div class="sc-script">step5_2c_strategy_hourly.py</div>
+            <div class="sc-detail">
+              Three variants: 2A 100% new-build, 2B grid baseline, 2C SSS + premium tranches.
+              Same-ISO, hourly temporal matching. Scenario B learning (accelerated FOAK&rarr;NOAK).
+            </div>
+          </div>
+          <div class="step-card">
+            <div class="sc-id">5.2d&ndash;e</div>
+            <div class="sc-detail">
+              <strong>5.2d:</strong> Strategy 3 &mdash; Annual bundled RECs.<br>
+              <strong>5.2e:</strong> Wright&rsquo;s Law FOAK&rarr;NOAK learning curve exports for dashboard.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-down"><svg width="14" height="8"><polygon points="7,7 2,1 12,1" fill="#7F8F97"/></svg></div>
+
+    <div class="section" style="flex:0.8;">
+      <div class="section-hdr bg-sim">Step 6 &mdash; SMARTargets Market Simulation<span class="runtime">~20&ndash;60 min (sweep: hours)</span></div>
+      <div class="section-body">
+        <div class="step-row">
+          <div class="step-card highlight">
+            <div class="sc-id accent">6.1 &mdash; Market Simulation Engine</div>
+            <div class="sc-script">step6_1_smartargets.py</div>
+            <div class="sc-detail">
+              Market-driven clean energy deployment across 7 ISOs, 2023&ndash;2050.
+              <strong>Reference (R1/R2):</strong> Profit-driven &mdash; deploy where revenue &gt; cost (LMP + capacity + REC vs LCOE + TX + learning).
+              <strong>Aspirational (AT1&ndash;AT4):</strong> Profit first, then mandated to meet emission cap; DAC backstop or queue overshoot.
+              <strong>Quick Transition (QT1&ndash;QT4):</strong> 19 reduction targets (5&ndash;95% in 5% steps).
+              <strong>Sweep:</strong> 270 scenarios = 2 conditions &times; 3 demand &times; 5 price &times; 3 PPA &times; 3 gas friction.
+            </div>
+            <div class="sc-io">
+              <span>In:</span> step_2_2a_CO, EIA profiles, pipeline_config &nbsp;
+              <span class="out">Out:</span> smartargets_{scenario}.parquet, sweep_{type}_{ISO}.parquet
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="footnote">Constellation Energy &mdash; Hourly CFE Optimizer v1.0 &mdash; Page 3 of 3</div>
+</div>
+
+</body>
+</html>

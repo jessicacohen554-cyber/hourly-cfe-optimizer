@@ -1,0 +1,3125 @@
+{
+  "summary": {
+    "isos_compared": 7,
+    "benchmarks_used": [
+      "EIA_AEO_2025",
+      "NREL_CAMBIUM_2024",
+      "PRINCETON_REPEAT",
+      "LBNL_QUEUED_UP",
+      "EPA_IPM"
+    ],
+    "avg_alignment_score": 53.4,
+    "total_deviations": 73,
+    "significant_deviations": 51
+  },
+  "by_iso": {
+    "CAISO": {
+      "dimensions": {
+        "clean_penetration": [
+          {
+            "year": 2030,
+            "our_p50": 65.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 68,
+                "score": "GOOD",
+                "pct_diff": 4.4,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 75,
+                "score": "GOOD",
+                "pct_diff": 13.3,
+                "fan_overlap": "WITHIN_IQR"
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 80.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 75,
+                "score": "GOOD",
+                "pct_diff": 6.7,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 83,
+                "score": "GOOD",
+                "pct_diff": 3.6,
+                "fan_overlap": "WITHIN_IQR"
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 90.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 80,
+                "score": "GOOD",
+                "pct_diff": 12.5,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 88,
+                "score": "GOOD",
+                "pct_diff": 2.3,
+                "fan_overlap": "WITHIN_IQR"
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 80.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 88,
+                "score": "GOOD",
+                "pct_diff": 9.1,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 95,
+                "score": "FAIR",
+                "pct_diff": 15.8,
+                "fan_overlap": "ABOVE_P90"
+              }
+            }
+          }
+        ],
+        "lmp_trajectory": [
+          {
+            "year": 2030,
+            "our_p50": 30.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 35,
+                "score": "GOOD",
+                "pct_diff": 14.3,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 28,
+                "score": "GOOD",
+                "pct_diff": 7.1,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 30.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 33,
+                "score": "GOOD",
+                "pct_diff": 9.1,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 22,
+                "score": "FAIR",
+                "pct_diff": 36.4,
+                "fan_overlap": "WITHIN_IQR",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 30.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 32,
+                "score": "GOOD",
+                "pct_diff": 6.2,
+                "fan_overlap": "WITHIN_P10_P90"
+              },
+              "NREL_Cambium": {
+                "value": 18,
+                "score": "ADJUST",
+                "pct_diff": 66.7,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 30.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 30,
+                "score": "GOOD",
+                "pct_diff": 0.0,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 12,
+                "score": "FAIL",
+                "pct_diff": 150.0,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          }
+        ],
+        "emissions": [
+          {
+            "year": 2030,
+            "our_p50": 34.34,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 30,
+                "score": "GOOD",
+                "pct_diff": 14.5,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 22,
+                "score": "ADJUST",
+                "pct_diff": 56.1,
+                "fan_overlap": "WITHIN_IQR"
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 22.13,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 22,
+                "score": "GOOD",
+                "pct_diff": 0.6,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 13,
+                "score": "FAIL",
+                "pct_diff": 70.2,
+                "fan_overlap": "WITHIN_IQR"
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 13.39,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 16,
+                "score": "GOOD",
+                "pct_diff": 16.3,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 8,
+                "score": "FAIL",
+                "pct_diff": 67.4,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 25.69,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 8,
+                "score": "FAIL",
+                "pct_diff": 221.1,
+                "fan_overlap": "BELOW_P10"
+              },
+              "NREL_Cambium": {
+                "value": 3,
+                "score": "FAIL",
+                "pct_diff": 756.3,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          }
+        ],
+        "demand": [
+          {
+            "year": 2030,
+            "our_p50": 255.6,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 310,
+                "score": "FAIR",
+                "pct_diff": 17.5
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 280.8,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 340,
+                "score": "FAIR",
+                "pct_diff": 17.4
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 308.5,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 375,
+                "score": "FAIR",
+                "pct_diff": 17.7
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 372.4,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 430,
+                "score": "FAIR",
+                "pct_diff": 13.4
+              }
+            }
+          }
+        ]
+      },
+      "directional_clean_penetration": {
+        "aligned": 3,
+        "total": 3,
+        "pct": 100.0
+      },
+      "directional_emissions": {
+        "aligned": 2,
+        "total": 3,
+        "pct": 67.0
+      },
+      "overall_grade": 75.0
+    },
+    "ERCOT": {
+      "dimensions": {
+        "clean_penetration": [
+          {
+            "year": 2030,
+            "our_p50": 46.1,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 45,
+                "score": "GOOD",
+                "pct_diff": 2.4,
+                "fan_overlap": "BELOW_P10"
+              },
+              "NREL_Cambium": {
+                "value": 52,
+                "score": "GOOD",
+                "pct_diff": 11.3,
+                "fan_overlap": "ABOVE_P90"
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 46.1,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 52,
+                "score": "GOOD",
+                "pct_diff": 11.3,
+                "fan_overlap": "WITHIN_P10_P90"
+              },
+              "NREL_Cambium": {
+                "value": 62,
+                "score": "FAIR",
+                "pct_diff": 25.6,
+                "fan_overlap": "ABOVE_P90"
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 46.1,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 58,
+                "score": "FAIR",
+                "pct_diff": 20.5,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 70,
+                "score": "ADJUST",
+                "pct_diff": 34.1,
+                "fan_overlap": "WITHIN_P10_P90"
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 60.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 65,
+                "score": "GOOD",
+                "pct_diff": 7.7,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 82,
+                "score": "FAIR",
+                "pct_diff": 26.8,
+                "fan_overlap": "ABOVE_P90"
+              }
+            }
+          }
+        ],
+        "lmp_trajectory": [
+          {
+            "year": 2030,
+            "our_p50": 27.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 28,
+                "score": "GOOD",
+                "pct_diff": 3.6,
+                "fan_overlap": "ABOVE_P90"
+              },
+              "NREL_Cambium": {
+                "value": 22,
+                "score": "GOOD",
+                "pct_diff": 22.7,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 27.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 30,
+                "score": "GOOD",
+                "pct_diff": 10.0,
+                "fan_overlap": "WITHIN_P10_P90"
+              },
+              "NREL_Cambium": {
+                "value": 18,
+                "score": "ADJUST",
+                "pct_diff": 50.0,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 27.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 32,
+                "score": "GOOD",
+                "pct_diff": 15.6,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 15,
+                "score": "FAIL",
+                "pct_diff": 80.0,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 27.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 35,
+                "score": "FAIR",
+                "pct_diff": 22.9,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 10,
+                "score": "FAIL",
+                "pct_diff": 170.0,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          }
+        ],
+        "emissions": [
+          {
+            "year": 2030,
+            "our_p50": 176.35,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 130,
+                "score": "FAIR",
+                "pct_diff": 35.7,
+                "fan_overlap": "BELOW_P10"
+              },
+              "NREL_Cambium": {
+                "value": 105,
+                "score": "FAIL",
+                "pct_diff": 68.0,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 201.06,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 110,
+                "score": "FAIL",
+                "pct_diff": 82.8,
+                "fan_overlap": "BELOW_P10"
+              },
+              "NREL_Cambium": {
+                "value": 78,
+                "score": "FAIL",
+                "pct_diff": 157.8,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 203.34,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 95,
+                "score": "FAIL",
+                "pct_diff": 114.0,
+                "fan_overlap": "BELOW_P10"
+              },
+              "NREL_Cambium": {
+                "value": 55,
+                "score": "FAIL",
+                "pct_diff": 269.7,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 247.62,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 70,
+                "score": "FAIL",
+                "pct_diff": 253.7,
+                "fan_overlap": "BELOW_P10"
+              },
+              "NREL_Cambium": {
+                "value": 25,
+                "score": "FAIL",
+                "pct_diff": 890.5,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          }
+        ],
+        "demand": [
+          {
+            "year": 2030,
+            "our_p50": 620.9,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 520,
+                "score": "FAIR",
+                "pct_diff": 19.4
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 737.4,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 580,
+                "score": "ADJUST",
+                "pct_diff": 27.1
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 875.8,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 650,
+                "score": "FAIL",
+                "pct_diff": 34.7
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 1235.5,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 800,
+                "score": "FAIL",
+                "pct_diff": 54.4
+              }
+            }
+          }
+        ]
+      },
+      "directional_clean_penetration": {
+        "aligned": 1,
+        "total": 3,
+        "pct": 33.0
+      },
+      "directional_emissions": {
+        "aligned": 0,
+        "total": 3,
+        "pct": 0.0
+      },
+      "overall_grade": 50.0
+    },
+    "PJM": {
+      "dimensions": {
+        "clean_penetration": [
+          {
+            "year": 2030,
+            "our_p50": 40.6,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 42,
+                "score": "GOOD",
+                "pct_diff": 3.3,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 48,
+                "score": "FAIR",
+                "pct_diff": 15.4,
+                "fan_overlap": "WITHIN_IQR"
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 50.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 47,
+                "score": "GOOD",
+                "pct_diff": 6.4,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 56,
+                "score": "GOOD",
+                "pct_diff": 10.7,
+                "fan_overlap": "WITHIN_IQR"
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 55.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 52,
+                "score": "GOOD",
+                "pct_diff": 5.8,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 63,
+                "score": "GOOD",
+                "pct_diff": 12.7,
+                "fan_overlap": "WITHIN_IQR"
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 65.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 58,
+                "score": "GOOD",
+                "pct_diff": 12.1,
+                "fan_overlap": "WITHIN_P10_P90"
+              },
+              "NREL_Cambium": {
+                "value": 75,
+                "score": "GOOD",
+                "pct_diff": 13.3,
+                "fan_overlap": "WITHIN_IQR"
+              }
+            }
+          }
+        ],
+        "lmp_trajectory": [
+          {
+            "year": 2030,
+            "our_p50": 34.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 36,
+                "score": "GOOD",
+                "pct_diff": 5.6,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 32,
+                "score": "GOOD",
+                "pct_diff": 6.2,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 41.3,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 38,
+                "score": "GOOD",
+                "pct_diff": 8.7,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 28,
+                "score": "FAIR",
+                "pct_diff": 47.5,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 41.1,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 40,
+                "score": "GOOD",
+                "pct_diff": 2.8,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 25,
+                "score": "ADJUST",
+                "pct_diff": 64.4,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 55.5,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 43,
+                "score": "FAIR",
+                "pct_diff": 29.1,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 20,
+                "score": "FAIL",
+                "pct_diff": 177.5,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          }
+        ],
+        "emissions": [
+          {
+            "year": 2030,
+            "our_p50": 319.91,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 230,
+                "score": "FAIR",
+                "pct_diff": 39.1,
+                "fan_overlap": "BELOW_P10"
+              },
+              "NREL_Cambium": {
+                "value": 195,
+                "score": "FAIL",
+                "pct_diff": 64.1,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 447.67,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 200,
+                "score": "FAIL",
+                "pct_diff": 123.8,
+                "fan_overlap": "BELOW_P10"
+              },
+              "NREL_Cambium": {
+                "value": 155,
+                "score": "FAIL",
+                "pct_diff": 188.8,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 465.13,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 175,
+                "score": "FAIL",
+                "pct_diff": 165.8,
+                "fan_overlap": "BELOW_P10"
+              },
+              "NREL_Cambium": {
+                "value": 120,
+                "score": "FAIL",
+                "pct_diff": 287.6,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 322.13,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 140,
+                "score": "FAIL",
+                "pct_diff": 130.1,
+                "fan_overlap": "BELOW_P10"
+              },
+              "NREL_Cambium": {
+                "value": 70,
+                "score": "FAIL",
+                "pct_diff": 360.2,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          }
+        ],
+        "demand": [
+          {
+            "year": 2030,
+            "our_p50": 995.6,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 900,
+                "score": "FAIR",
+                "pct_diff": 10.6
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 1121.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 955,
+                "score": "FAIR",
+                "pct_diff": 17.4
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 1262.1,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 1020,
+                "score": "ADJUST",
+                "pct_diff": 23.7
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 1599.9,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 1140,
+                "score": "FAIL",
+                "pct_diff": 40.3
+              }
+            }
+          }
+        ]
+      },
+      "directional_clean_penetration": {
+        "aligned": 3,
+        "total": 3,
+        "pct": 100.0
+      },
+      "directional_emissions": {
+        "aligned": 0,
+        "total": 3,
+        "pct": 0.0
+      },
+      "overall_grade": 69.0
+    },
+    "NYISO": {
+      "dimensions": {
+        "clean_penetration": [
+          {
+            "year": 2030,
+            "our_p50": 70.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 58,
+                "score": "FAIR",
+                "pct_diff": 20.7,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 62,
+                "score": "GOOD",
+                "pct_diff": 12.9,
+                "fan_overlap": "WITHIN_IQR"
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 77.5,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 65,
+                "score": "FAIR",
+                "pct_diff": 19.2,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 72,
+                "score": "GOOD",
+                "pct_diff": 7.6,
+                "fan_overlap": "WITHIN_IQR"
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 82.5,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 70,
+                "score": "FAIR",
+                "pct_diff": 17.9,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 78,
+                "score": "GOOD",
+                "pct_diff": 5.8,
+                "fan_overlap": "WITHIN_IQR"
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 92.5,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 78,
+                "score": "FAIR",
+                "pct_diff": 18.6,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 88,
+                "score": "GOOD",
+                "pct_diff": 5.1,
+                "fan_overlap": "WITHIN_IQR"
+              }
+            }
+          }
+        ],
+        "lmp_trajectory": [
+          {
+            "year": 2030,
+            "our_p50": 40.2,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 44,
+                "score": "GOOD",
+                "pct_diff": 8.6,
+                "fan_overlap": "WITHIN_P10_P90"
+              },
+              "NREL_Cambium": {
+                "value": 38,
+                "score": "GOOD",
+                "pct_diff": 5.8,
+                "fan_overlap": "WITHIN_IQR",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 40.9,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 46,
+                "score": "GOOD",
+                "pct_diff": 11.1,
+                "fan_overlap": "WITHIN_P10_P90"
+              },
+              "NREL_Cambium": {
+                "value": 34,
+                "score": "GOOD",
+                "pct_diff": 20.3,
+                "fan_overlap": "WITHIN_IQR",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 42.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 48,
+                "score": "GOOD",
+                "pct_diff": 12.5,
+                "fan_overlap": "WITHIN_P10_P90"
+              },
+              "NREL_Cambium": {
+                "value": 30,
+                "score": "FAIR",
+                "pct_diff": 40.0,
+                "fan_overlap": "WITHIN_P10_P90",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 42.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 50,
+                "score": "GOOD",
+                "pct_diff": 16.0,
+                "fan_overlap": "WITHIN_P10_P90"
+              },
+              "NREL_Cambium": {
+                "value": 24,
+                "score": "FAIL",
+                "pct_diff": 75.0,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          }
+        ],
+        "emissions": [
+          {
+            "year": 2030,
+            "our_p50": 21.67,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 20,
+                "score": "GOOD",
+                "pct_diff": 8.4,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 16,
+                "score": "FAIR",
+                "pct_diff": 35.4,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 21.08,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 16,
+                "score": "FAIR",
+                "pct_diff": 31.7,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 10,
+                "score": "FAIL",
+                "pct_diff": 110.8,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 16.32,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 13,
+                "score": "FAIR",
+                "pct_diff": 25.5,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 7,
+                "score": "FAIL",
+                "pct_diff": 133.1,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 11.14,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 8,
+                "score": "FAIR",
+                "pct_diff": 39.3,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 3,
+                "score": "FAIL",
+                "pct_diff": 271.3,
+                "fan_overlap": "WITHIN_IQR"
+              }
+            }
+          }
+        ],
+        "demand": [
+          {
+            "year": 2030,
+            "our_p50": 174.1,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 172,
+                "score": "GOOD",
+                "pct_diff": 1.2
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 192.3,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 185,
+                "score": "GOOD",
+                "pct_diff": 3.9
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 212.3,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 200,
+                "score": "GOOD",
+                "pct_diff": 6.2
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 258.8,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 225,
+                "score": "FAIR",
+                "pct_diff": 15.0
+              }
+            }
+          }
+        ]
+      },
+      "directional_clean_penetration": {
+        "aligned": 3,
+        "total": 3,
+        "pct": 100.0
+      },
+      "directional_emissions": {
+        "aligned": 3,
+        "total": 3,
+        "pct": 100.0
+      },
+      "overall_grade": 62.0
+    },
+    "NEISO": {
+      "dimensions": {
+        "clean_penetration": [
+          {
+            "year": 2030,
+            "our_p50": 55.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 55,
+                "score": "GOOD",
+                "pct_diff": 0.0,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 60,
+                "score": "GOOD",
+                "pct_diff": 8.3,
+                "fan_overlap": "WITHIN_IQR"
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 80.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 62,
+                "score": "FAIR",
+                "pct_diff": 29.0,
+                "fan_overlap": "WITHIN_P10_P90"
+              },
+              "NREL_Cambium": {
+                "value": 70,
+                "score": "GOOD",
+                "pct_diff": 14.3,
+                "fan_overlap": "WITHIN_IQR"
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 80.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 68,
+                "score": "FAIR",
+                "pct_diff": 17.6,
+                "fan_overlap": "WITHIN_P10_P90"
+              },
+              "NREL_Cambium": {
+                "value": 76,
+                "score": "GOOD",
+                "pct_diff": 5.3,
+                "fan_overlap": "WITHIN_P10_P90"
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 97.5,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 76,
+                "score": "FAIR",
+                "pct_diff": 28.3,
+                "fan_overlap": "WITHIN_P10_P90"
+              },
+              "NREL_Cambium": {
+                "value": 85,
+                "score": "GOOD",
+                "pct_diff": 14.7,
+                "fan_overlap": "WITHIN_IQR"
+              }
+            }
+          }
+        ],
+        "lmp_trajectory": [
+          {
+            "year": 2030,
+            "our_p50": 41.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 41,
+                "score": "GOOD",
+                "pct_diff": 0.0,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 35,
+                "score": "GOOD",
+                "pct_diff": 17.1,
+                "fan_overlap": "WITHIN_P10_P90",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 41.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 43,
+                "score": "GOOD",
+                "pct_diff": 4.7,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 30,
+                "score": "FAIR",
+                "pct_diff": 36.7,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 41.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 45,
+                "score": "GOOD",
+                "pct_diff": 8.9,
+                "fan_overlap": "WITHIN_P10_P90"
+              },
+              "NREL_Cambium": {
+                "value": 26,
+                "score": "ADJUST",
+                "pct_diff": 57.7,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 41.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 48,
+                "score": "GOOD",
+                "pct_diff": 14.6,
+                "fan_overlap": "ABOVE_P90"
+              },
+              "NREL_Cambium": {
+                "value": 20,
+                "score": "FAIL",
+                "pct_diff": 105.0,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          }
+        ],
+        "emissions": [
+          {
+            "year": 2030,
+            "our_p50": 24.59,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 16,
+                "score": "ADJUST",
+                "pct_diff": 53.7,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 12,
+                "score": "FAIL",
+                "pct_diff": 104.9,
+                "fan_overlap": "WITHIN_P10_P90"
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 12.87,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 12,
+                "score": "GOOD",
+                "pct_diff": 7.2,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 8,
+                "score": "FAIL",
+                "pct_diff": 60.9,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 11.05,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 9,
+                "score": "FAIR",
+                "pct_diff": 22.8,
+                "fan_overlap": "WITHIN_P10_P90"
+              },
+              "NREL_Cambium": {
+                "value": 5,
+                "score": "FAIL",
+                "pct_diff": 121.0,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 1.45,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 5,
+                "score": "FAIL",
+                "pct_diff": 71.0,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 2,
+                "score": "FAIR",
+                "pct_diff": 27.5,
+                "fan_overlap": "WITHIN_IQR"
+              }
+            }
+          }
+        ],
+        "demand": [
+          {
+            "year": 2030,
+            "our_p50": 130.7,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 140,
+                "score": "GOOD",
+                "pct_diff": 6.6
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 142.9,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 150,
+                "score": "GOOD",
+                "pct_diff": 4.7
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 156.2,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 162,
+                "score": "GOOD",
+                "pct_diff": 3.6
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 186.7,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 180,
+                "score": "GOOD",
+                "pct_diff": 3.7
+              }
+            }
+          }
+        ]
+      },
+      "directional_clean_penetration": {
+        "aligned": 2,
+        "total": 3,
+        "pct": 67.0
+      },
+      "directional_emissions": {
+        "aligned": 3,
+        "total": 3,
+        "pct": 100.0
+      },
+      "overall_grade": 62.0
+    },
+    "MISO": {
+      "dimensions": {
+        "clean_penetration": [
+          {
+            "year": 2030,
+            "our_p50": 31.3,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 38,
+                "score": "FAIR",
+                "pct_diff": 17.6,
+                "fan_overlap": "ABOVE_P90"
+              },
+              "NREL_Cambium": {
+                "value": 44,
+                "score": "FAIR",
+                "pct_diff": 28.9,
+                "fan_overlap": "ABOVE_P90"
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 31.3,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 45,
+                "score": "ADJUST",
+                "pct_diff": 30.4,
+                "fan_overlap": "ABOVE_P90"
+              },
+              "NREL_Cambium": {
+                "value": 54,
+                "score": "ADJUST",
+                "pct_diff": 42.0,
+                "fan_overlap": "ABOVE_P90"
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 31.3,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 52,
+                "score": "ADJUST",
+                "pct_diff": 39.8,
+                "fan_overlap": "ABOVE_P90"
+              },
+              "NREL_Cambium": {
+                "value": 62,
+                "score": "FAIL",
+                "pct_diff": 49.5,
+                "fan_overlap": "ABOVE_P90"
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 40.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 60,
+                "score": "ADJUST",
+                "pct_diff": 33.3,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 76,
+                "score": "FAIL",
+                "pct_diff": 47.4,
+                "fan_overlap": "ABOVE_P90"
+              }
+            }
+          }
+        ],
+        "lmp_trajectory": [
+          {
+            "year": 2030,
+            "our_p50": 30.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 33,
+                "score": "GOOD",
+                "pct_diff": 9.1,
+                "fan_overlap": "ABOVE_P90"
+              },
+              "NREL_Cambium": {
+                "value": 27,
+                "score": "GOOD",
+                "pct_diff": 11.1,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 30.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 35,
+                "score": "GOOD",
+                "pct_diff": 14.3,
+                "fan_overlap": "ABOVE_P90"
+              },
+              "NREL_Cambium": {
+                "value": 24,
+                "score": "FAIR",
+                "pct_diff": 25.0,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 30.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 37,
+                "score": "GOOD",
+                "pct_diff": 18.9,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 20,
+                "score": "ADJUST",
+                "pct_diff": 50.0,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 30.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 40,
+                "score": "FAIR",
+                "pct_diff": 25.0,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 15,
+                "score": "FAIL",
+                "pct_diff": 100.0,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          }
+        ],
+        "emissions": [
+          {
+            "year": 2030,
+            "our_p50": 287.9,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 260,
+                "score": "GOOD",
+                "pct_diff": 10.7,
+                "fan_overlap": "BELOW_P10"
+              },
+              "NREL_Cambium": {
+                "value": 215,
+                "score": "FAIR",
+                "pct_diff": 33.9,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 311.72,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 220,
+                "score": "ADJUST",
+                "pct_diff": 41.7,
+                "fan_overlap": "BELOW_P10"
+              },
+              "NREL_Cambium": {
+                "value": 165,
+                "score": "FAIL",
+                "pct_diff": 88.9,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 403.33,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 185,
+                "score": "FAIL",
+                "pct_diff": 118.0,
+                "fan_overlap": "BELOW_P10"
+              },
+              "NREL_Cambium": {
+                "value": 120,
+                "score": "FAIL",
+                "pct_diff": 236.1,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 394.57,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 140,
+                "score": "FAIL",
+                "pct_diff": 181.8,
+                "fan_overlap": "BELOW_P10"
+              },
+              "NREL_Cambium": {
+                "value": 60,
+                "score": "FAIL",
+                "pct_diff": 557.6,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          }
+        ],
+        "demand": [
+          {
+            "year": 2030,
+            "our_p50": 773.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 730,
+                "score": "GOOD",
+                "pct_diff": 5.9
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 861.8,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 780,
+                "score": "FAIR",
+                "pct_diff": 10.5
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 960.9,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 840,
+                "score": "FAIR",
+                "pct_diff": 14.4
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 1194.5,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 950,
+                "score": "ADJUST",
+                "pct_diff": 25.7
+              }
+            }
+          }
+        ]
+      },
+      "directional_clean_penetration": {
+        "aligned": 1,
+        "total": 3,
+        "pct": 33.0
+      },
+      "directional_emissions": {
+        "aligned": 1,
+        "total": 3,
+        "pct": 33.0
+      },
+      "overall_grade": 25.0
+    },
+    "SPP": {
+      "dimensions": {
+        "clean_penetration": [
+          {
+            "year": 2030,
+            "our_p50": 47.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 52,
+                "score": "GOOD",
+                "pct_diff": 9.6,
+                "fan_overlap": "ABOVE_P90"
+              },
+              "NREL_Cambium": {
+                "value": 58,
+                "score": "FAIR",
+                "pct_diff": 19.0,
+                "fan_overlap": "ABOVE_P90"
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 47.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 58,
+                "score": "FAIR",
+                "pct_diff": 19.0,
+                "fan_overlap": "ABOVE_P90"
+              },
+              "NREL_Cambium": {
+                "value": 68,
+                "score": "ADJUST",
+                "pct_diff": 30.9,
+                "fan_overlap": "ABOVE_P90"
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 47.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 64,
+                "score": "FAIR",
+                "pct_diff": 26.6,
+                "fan_overlap": "ABOVE_P90"
+              },
+              "NREL_Cambium": {
+                "value": 75,
+                "score": "ADJUST",
+                "pct_diff": 37.3,
+                "fan_overlap": "ABOVE_P90"
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 47.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 72,
+                "score": "ADJUST",
+                "pct_diff": 34.7,
+                "fan_overlap": "WITHIN_P10_P90"
+              },
+              "NREL_Cambium": {
+                "value": 85,
+                "score": "ADJUST",
+                "pct_diff": 44.7,
+                "fan_overlap": "ABOVE_P90"
+              }
+            }
+          }
+        ],
+        "lmp_trajectory": [
+          {
+            "year": 2030,
+            "our_p50": 25.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 25,
+                "score": "GOOD",
+                "pct_diff": 0.0,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 20,
+                "score": "FAIR",
+                "pct_diff": 25.0,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 25.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 24,
+                "score": "GOOD",
+                "pct_diff": 4.2,
+                "fan_overlap": "BELOW_P10"
+              },
+              "NREL_Cambium": {
+                "value": 16,
+                "score": "ADJUST",
+                "pct_diff": 56.2,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 25.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 24,
+                "score": "GOOD",
+                "pct_diff": 4.2,
+                "fan_overlap": "BELOW_P10"
+              },
+              "NREL_Cambium": {
+                "value": 13,
+                "score": "FAIL",
+                "pct_diff": 92.3,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 25.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 25,
+                "score": "GOOD",
+                "pct_diff": 0.0,
+                "fan_overlap": "WITHIN_IQR"
+              },
+              "NREL_Cambium": {
+                "value": 8,
+                "score": "FAIL",
+                "pct_diff": 212.5,
+                "fan_overlap": "BELOW_P10",
+                "note": "Cambium reports short-run marginal cost, not all-in wholesale. Expect our LMP > Cambium marginal cost."
+              }
+            }
+          }
+        ],
+        "emissions": [
+          {
+            "year": 2030,
+            "our_p50": 97.12,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 65,
+                "score": "ADJUST",
+                "pct_diff": 49.4,
+                "fan_overlap": "BELOW_P10"
+              },
+              "NREL_Cambium": {
+                "value": 52,
+                "score": "FAIL",
+                "pct_diff": 86.8,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 103.71,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 52,
+                "score": "FAIL",
+                "pct_diff": 99.4,
+                "fan_overlap": "BELOW_P10"
+              },
+              "NREL_Cambium": {
+                "value": 35,
+                "score": "FAIL",
+                "pct_diff": 196.3,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 110.92,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 42,
+                "score": "FAIL",
+                "pct_diff": 164.1,
+                "fan_overlap": "BELOW_P10"
+              },
+              "NREL_Cambium": {
+                "value": 24,
+                "score": "FAIL",
+                "pct_diff": 362.2,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 112.93,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 28,
+                "score": "FAIL",
+                "pct_diff": 303.3,
+                "fan_overlap": "BELOW_P10"
+              },
+              "NREL_Cambium": {
+                "value": 10,
+                "score": "FAIL",
+                "pct_diff": 1029.3,
+                "fan_overlap": "BELOW_P10"
+              }
+            }
+          }
+        ],
+        "demand": [
+          {
+            "year": 2030,
+            "our_p50": 339.7,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 305,
+                "score": "FAIR",
+                "pct_diff": 11.4
+              }
+            }
+          },
+          {
+            "year": 2035,
+            "our_p50": 371.4,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 330,
+                "score": "FAIR",
+                "pct_diff": 12.5
+              }
+            }
+          },
+          {
+            "year": 2040,
+            "our_p50": 406.0,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 360,
+                "score": "FAIR",
+                "pct_diff": 12.8
+              }
+            }
+          },
+          {
+            "year": 2050,
+            "our_p50": 485.3,
+            "benchmarks": {
+              "EIA_AEO": {
+                "value": 410,
+                "score": "FAIR",
+                "pct_diff": 18.4
+              }
+            }
+          }
+        ]
+      },
+      "directional_clean_penetration": {
+        "aligned": 1,
+        "total": 3,
+        "pct": 33.0
+      },
+      "directional_emissions": {
+        "aligned": 1,
+        "total": 3,
+        "pct": 33.0
+      },
+      "overall_grade": 31.0
+    }
+  },
+  "by_dimension": {},
+  "deviation_analysis": [
+    {
+      "iso": "CAISO",
+      "dimension": "lmp_trajectory",
+      "year": 2040,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 30.0,
+      "benchmark_value": 18,
+      "pct_diff": 66.7,
+      "score": "ADJUST",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our LMP exceeds Cambium's marginal cost. Note: Cambium reports short-run marginal cost (SRMC), not all-in wholesale price. Our LMP includes capacity market revenues, scarcity pricing, and congestion \u2014 SRMC is a floor, not the full price.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "CAISO",
+      "dimension": "lmp_trajectory",
+      "year": 2050,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 30.0,
+      "benchmark_value": 12,
+      "pct_diff": 150.0,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our LMP exceeds Cambium's marginal cost. Note: Cambium reports short-run marginal cost (SRMC), not all-in wholesale price. Our LMP includes capacity market revenues, scarcity pricing, and congestion \u2014 SRMC is a floor, not the full price.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "CAISO",
+      "dimension": "emissions",
+      "year": 2030,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 34.34,
+      "benchmark_value": 22,
+      "pct_diff": 56.1,
+      "score": "ADJUST",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "CAISO",
+      "dimension": "emissions",
+      "year": 2035,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 22.13,
+      "benchmark_value": 13,
+      "pct_diff": 70.2,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "CAISO",
+      "dimension": "emissions",
+      "year": 2040,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 13.39,
+      "benchmark_value": 8,
+      "pct_diff": 67.4,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "CAISO",
+      "dimension": "emissions",
+      "year": 2050,
+      "benchmark": "EIA_AEO",
+      "our_p50": 25.69,
+      "benchmark_value": 8,
+      "pct_diff": 221.1,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our model shows higher emissions than EIA AEO. Our threshold-based coal retirement may be slower than EIA's plant-by-plant retirement schedule which incorporates announced closures.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "iso": "CAISO",
+      "dimension": "emissions",
+      "year": 2050,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 25.69,
+      "benchmark_value": 3,
+      "pct_diff": 756.3,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "ERCOT",
+      "dimension": "clean_penetration",
+      "year": 2040,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 46.1,
+      "benchmark_value": 70,
+      "pct_diff": 34.1,
+      "score": "ADJUST",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "NREL Cambium projects faster deployment. Cambium uses ReEDS with detailed transmission expansion and state policy modeling. Our model's queue caps or cost assumptions may be more conservative.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "ERCOT",
+      "dimension": "lmp_trajectory",
+      "year": 2035,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 27.0,
+      "benchmark_value": 18,
+      "pct_diff": 50.0,
+      "score": "ADJUST",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our LMP exceeds Cambium's marginal cost. Note: Cambium reports short-run marginal cost (SRMC), not all-in wholesale price. Our LMP includes capacity market revenues, scarcity pricing, and congestion \u2014 SRMC is a floor, not the full price.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "ERCOT",
+      "dimension": "lmp_trajectory",
+      "year": 2040,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 27.0,
+      "benchmark_value": 15,
+      "pct_diff": 80.0,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our LMP exceeds Cambium's marginal cost. Note: Cambium reports short-run marginal cost (SRMC), not all-in wholesale price. Our LMP includes capacity market revenues, scarcity pricing, and congestion \u2014 SRMC is a floor, not the full price.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "ERCOT",
+      "dimension": "lmp_trajectory",
+      "year": 2050,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 27.0,
+      "benchmark_value": 10,
+      "pct_diff": 170.0,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our LMP exceeds Cambium's marginal cost. Note: Cambium reports short-run marginal cost (SRMC), not all-in wholesale price. Our LMP includes capacity market revenues, scarcity pricing, and congestion \u2014 SRMC is a floor, not the full price.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "ERCOT",
+      "dimension": "emissions",
+      "year": 2030,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 176.35,
+      "benchmark_value": 105,
+      "pct_diff": 68.0,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "ERCOT",
+      "dimension": "emissions",
+      "year": 2035,
+      "benchmark": "EIA_AEO",
+      "our_p50": 201.06,
+      "benchmark_value": 110,
+      "pct_diff": 82.8,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our model shows higher emissions than EIA AEO. Our threshold-based coal retirement may be slower than EIA's plant-by-plant retirement schedule which incorporates announced closures.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "iso": "ERCOT",
+      "dimension": "emissions",
+      "year": 2035,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 201.06,
+      "benchmark_value": 78,
+      "pct_diff": 157.8,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "ERCOT",
+      "dimension": "emissions",
+      "year": 2040,
+      "benchmark": "EIA_AEO",
+      "our_p50": 203.34,
+      "benchmark_value": 95,
+      "pct_diff": 114.0,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our model shows higher emissions than EIA AEO. Our threshold-based coal retirement may be slower than EIA's plant-by-plant retirement schedule which incorporates announced closures.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "iso": "ERCOT",
+      "dimension": "emissions",
+      "year": 2040,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 203.34,
+      "benchmark_value": 55,
+      "pct_diff": 269.7,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "ERCOT",
+      "dimension": "emissions",
+      "year": 2050,
+      "benchmark": "EIA_AEO",
+      "our_p50": 247.62,
+      "benchmark_value": 70,
+      "pct_diff": 253.7,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our model shows higher emissions than EIA AEO. Our threshold-based coal retirement may be slower than EIA's plant-by-plant retirement schedule which incorporates announced closures.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "iso": "ERCOT",
+      "dimension": "emissions",
+      "year": 2050,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 247.62,
+      "benchmark_value": 25,
+      "pct_diff": 890.5,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "ERCOT",
+      "dimension": "demand",
+      "year": 2035,
+      "benchmark": "EIA_AEO",
+      "our_p50": 737.4,
+      "benchmark_value": 580,
+      "pct_diff": 27.1,
+      "score": "ADJUST",
+      "attribution": {
+        "category": "unknown",
+        "explanation": "Our model is higher than EIA_AEO by 27.1%. Further investigation needed.",
+        "confidence": "low"
+      }
+    },
+    {
+      "iso": "ERCOT",
+      "dimension": "demand",
+      "year": 2040,
+      "benchmark": "EIA_AEO",
+      "our_p50": 875.8,
+      "benchmark_value": 650,
+      "pct_diff": 34.7,
+      "score": "FAIL",
+      "attribution": {
+        "category": "unknown",
+        "explanation": "Our model is higher than EIA_AEO by 34.7%. Further investigation needed.",
+        "confidence": "low"
+      }
+    },
+    {
+      "iso": "ERCOT",
+      "dimension": "demand",
+      "year": 2050,
+      "benchmark": "EIA_AEO",
+      "our_p50": 1235.5,
+      "benchmark_value": 800,
+      "pct_diff": 54.4,
+      "score": "FAIL",
+      "attribution": {
+        "category": "unknown",
+        "explanation": "Our model is higher than EIA_AEO by 54.4%. Further investigation needed.",
+        "confidence": "low"
+      }
+    },
+    {
+      "iso": "PJM",
+      "dimension": "lmp_trajectory",
+      "year": 2040,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 41.1,
+      "benchmark_value": 25,
+      "pct_diff": 64.4,
+      "score": "ADJUST",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our LMP exceeds Cambium's marginal cost. Note: Cambium reports short-run marginal cost (SRMC), not all-in wholesale price. Our LMP includes capacity market revenues, scarcity pricing, and congestion \u2014 SRMC is a floor, not the full price.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "PJM",
+      "dimension": "lmp_trajectory",
+      "year": 2050,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 55.5,
+      "benchmark_value": 20,
+      "pct_diff": 177.5,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our LMP exceeds Cambium's marginal cost. Note: Cambium reports short-run marginal cost (SRMC), not all-in wholesale price. Our LMP includes capacity market revenues, scarcity pricing, and congestion \u2014 SRMC is a floor, not the full price.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "PJM",
+      "dimension": "emissions",
+      "year": 2030,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 319.91,
+      "benchmark_value": 195,
+      "pct_diff": 64.1,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "PJM",
+      "dimension": "emissions",
+      "year": 2035,
+      "benchmark": "EIA_AEO",
+      "our_p50": 447.67,
+      "benchmark_value": 200,
+      "pct_diff": 123.8,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our model shows higher emissions than EIA AEO. Our threshold-based coal retirement may be slower than EIA's plant-by-plant retirement schedule which incorporates announced closures.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "iso": "PJM",
+      "dimension": "emissions",
+      "year": 2035,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 447.67,
+      "benchmark_value": 155,
+      "pct_diff": 188.8,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "PJM",
+      "dimension": "emissions",
+      "year": 2040,
+      "benchmark": "EIA_AEO",
+      "our_p50": 465.13,
+      "benchmark_value": 175,
+      "pct_diff": 165.8,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our model shows higher emissions than EIA AEO. Our threshold-based coal retirement may be slower than EIA's plant-by-plant retirement schedule which incorporates announced closures.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "iso": "PJM",
+      "dimension": "emissions",
+      "year": 2040,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 465.13,
+      "benchmark_value": 120,
+      "pct_diff": 287.6,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "PJM",
+      "dimension": "emissions",
+      "year": 2050,
+      "benchmark": "EIA_AEO",
+      "our_p50": 322.13,
+      "benchmark_value": 140,
+      "pct_diff": 130.1,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our model shows higher emissions than EIA AEO. Our threshold-based coal retirement may be slower than EIA's plant-by-plant retirement schedule which incorporates announced closures.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "iso": "PJM",
+      "dimension": "emissions",
+      "year": 2050,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 322.13,
+      "benchmark_value": 70,
+      "pct_diff": 360.2,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "PJM",
+      "dimension": "demand",
+      "year": 2040,
+      "benchmark": "EIA_AEO",
+      "our_p50": 1262.1,
+      "benchmark_value": 1020,
+      "pct_diff": 23.7,
+      "score": "ADJUST",
+      "attribution": {
+        "category": "unknown",
+        "explanation": "Our model is higher than EIA_AEO by 23.7%. Further investigation needed.",
+        "confidence": "low"
+      }
+    },
+    {
+      "iso": "PJM",
+      "dimension": "demand",
+      "year": 2050,
+      "benchmark": "EIA_AEO",
+      "our_p50": 1599.9,
+      "benchmark_value": 1140,
+      "pct_diff": 40.3,
+      "score": "FAIL",
+      "attribution": {
+        "category": "unknown",
+        "explanation": "Our model is higher than EIA_AEO by 40.3%. Further investigation needed.",
+        "confidence": "low"
+      }
+    },
+    {
+      "iso": "NYISO",
+      "dimension": "lmp_trajectory",
+      "year": 2050,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 42.0,
+      "benchmark_value": 24,
+      "pct_diff": 75.0,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our LMP exceeds Cambium's marginal cost. Note: Cambium reports short-run marginal cost (SRMC), not all-in wholesale price. Our LMP includes capacity market revenues, scarcity pricing, and congestion \u2014 SRMC is a floor, not the full price.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "NYISO",
+      "dimension": "emissions",
+      "year": 2035,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 21.08,
+      "benchmark_value": 10,
+      "pct_diff": 110.8,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "NYISO",
+      "dimension": "emissions",
+      "year": 2040,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 16.32,
+      "benchmark_value": 7,
+      "pct_diff": 133.1,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "NYISO",
+      "dimension": "emissions",
+      "year": 2050,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 11.14,
+      "benchmark_value": 3,
+      "pct_diff": 271.3,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "NEISO",
+      "dimension": "lmp_trajectory",
+      "year": 2040,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 41.0,
+      "benchmark_value": 26,
+      "pct_diff": 57.7,
+      "score": "ADJUST",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our LMP exceeds Cambium's marginal cost. Note: Cambium reports short-run marginal cost (SRMC), not all-in wholesale price. Our LMP includes capacity market revenues, scarcity pricing, and congestion \u2014 SRMC is a floor, not the full price.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "NEISO",
+      "dimension": "lmp_trajectory",
+      "year": 2050,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 41.0,
+      "benchmark_value": 20,
+      "pct_diff": 105.0,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our LMP exceeds Cambium's marginal cost. Note: Cambium reports short-run marginal cost (SRMC), not all-in wholesale price. Our LMP includes capacity market revenues, scarcity pricing, and congestion \u2014 SRMC is a floor, not the full price.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "NEISO",
+      "dimension": "emissions",
+      "year": 2030,
+      "benchmark": "EIA_AEO",
+      "our_p50": 24.59,
+      "benchmark_value": 16,
+      "pct_diff": 53.7,
+      "score": "ADJUST",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our model shows higher emissions than EIA AEO. Our threshold-based coal retirement may be slower than EIA's plant-by-plant retirement schedule which incorporates announced closures.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "iso": "NEISO",
+      "dimension": "emissions",
+      "year": 2030,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 24.59,
+      "benchmark_value": 12,
+      "pct_diff": 104.9,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "NEISO",
+      "dimension": "emissions",
+      "year": 2035,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 12.87,
+      "benchmark_value": 8,
+      "pct_diff": 60.9,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "NEISO",
+      "dimension": "emissions",
+      "year": 2040,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 11.05,
+      "benchmark_value": 5,
+      "pct_diff": 121.0,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "NEISO",
+      "dimension": "emissions",
+      "year": 2050,
+      "benchmark": "EIA_AEO",
+      "our_p50": 1.45,
+      "benchmark_value": 5,
+      "pct_diff": 71.0,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our model shows lower emissions \u2014 likely because our merit-order retirement displaces coal faster at moderate clean penetration levels. EIA AEO Reference doesn't fully capture IRA-accelerated coal displacement.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "iso": "MISO",
+      "dimension": "clean_penetration",
+      "year": 2035,
+      "benchmark": "EIA_AEO",
+      "our_p50": 31.3,
+      "benchmark_value": 45,
+      "pct_diff": 30.4,
+      "score": "ADJUST",
+      "attribution": {
+        "category": "structural_model",
+        "explanation": "Our model projects slower deployment than EIA \u2014 this may reflect our queue caps binding earlier, higher cost assumptions, or gas friction effects dampening clean investment signals.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "iso": "MISO",
+      "dimension": "clean_penetration",
+      "year": 2035,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 31.3,
+      "benchmark_value": 54,
+      "pct_diff": 42.0,
+      "score": "ADJUST",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "NREL Cambium projects faster deployment. Cambium uses ReEDS with detailed transmission expansion and state policy modeling. Our model's queue caps or cost assumptions may be more conservative.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "MISO",
+      "dimension": "clean_penetration",
+      "year": 2040,
+      "benchmark": "EIA_AEO",
+      "our_p50": 31.3,
+      "benchmark_value": 52,
+      "pct_diff": 39.8,
+      "score": "ADJUST",
+      "attribution": {
+        "category": "structural_model",
+        "explanation": "Our model projects slower deployment than EIA \u2014 this may reflect our queue caps binding earlier, higher cost assumptions, or gas friction effects dampening clean investment signals.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "iso": "MISO",
+      "dimension": "clean_penetration",
+      "year": 2040,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 31.3,
+      "benchmark_value": 62,
+      "pct_diff": 49.5,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "NREL Cambium projects faster deployment. Cambium uses ReEDS with detailed transmission expansion and state policy modeling. Our model's queue caps or cost assumptions may be more conservative.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "MISO",
+      "dimension": "clean_penetration",
+      "year": 2050,
+      "benchmark": "EIA_AEO",
+      "our_p50": 40.0,
+      "benchmark_value": 60,
+      "pct_diff": 33.3,
+      "score": "ADJUST",
+      "attribution": {
+        "category": "structural_model",
+        "explanation": "Our model projects slower deployment than EIA \u2014 this may reflect our queue caps binding earlier, higher cost assumptions, or gas friction effects dampening clean investment signals.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "iso": "MISO",
+      "dimension": "clean_penetration",
+      "year": 2050,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 40.0,
+      "benchmark_value": 76,
+      "pct_diff": 47.4,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "NREL Cambium projects faster deployment. Cambium uses ReEDS with detailed transmission expansion and state policy modeling. Our model's queue caps or cost assumptions may be more conservative.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "MISO",
+      "dimension": "lmp_trajectory",
+      "year": 2040,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 30.0,
+      "benchmark_value": 20,
+      "pct_diff": 50.0,
+      "score": "ADJUST",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our LMP exceeds Cambium's marginal cost. Note: Cambium reports short-run marginal cost (SRMC), not all-in wholesale price. Our LMP includes capacity market revenues, scarcity pricing, and congestion \u2014 SRMC is a floor, not the full price.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "MISO",
+      "dimension": "lmp_trajectory",
+      "year": 2050,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 30.0,
+      "benchmark_value": 15,
+      "pct_diff": 100.0,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our LMP exceeds Cambium's marginal cost. Note: Cambium reports short-run marginal cost (SRMC), not all-in wholesale price. Our LMP includes capacity market revenues, scarcity pricing, and congestion \u2014 SRMC is a floor, not the full price.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "MISO",
+      "dimension": "emissions",
+      "year": 2035,
+      "benchmark": "EIA_AEO",
+      "our_p50": 311.72,
+      "benchmark_value": 220,
+      "pct_diff": 41.7,
+      "score": "ADJUST",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our model shows higher emissions than EIA AEO. Our threshold-based coal retirement may be slower than EIA's plant-by-plant retirement schedule which incorporates announced closures.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "iso": "MISO",
+      "dimension": "emissions",
+      "year": 2035,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 311.72,
+      "benchmark_value": 165,
+      "pct_diff": 88.9,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "MISO",
+      "dimension": "emissions",
+      "year": 2040,
+      "benchmark": "EIA_AEO",
+      "our_p50": 403.33,
+      "benchmark_value": 185,
+      "pct_diff": 118.0,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our model shows higher emissions than EIA AEO. Our threshold-based coal retirement may be slower than EIA's plant-by-plant retirement schedule which incorporates announced closures.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "iso": "MISO",
+      "dimension": "emissions",
+      "year": 2040,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 403.33,
+      "benchmark_value": 120,
+      "pct_diff": 236.1,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "MISO",
+      "dimension": "emissions",
+      "year": 2050,
+      "benchmark": "EIA_AEO",
+      "our_p50": 394.57,
+      "benchmark_value": 140,
+      "pct_diff": 181.8,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our model shows higher emissions than EIA AEO. Our threshold-based coal retirement may be slower than EIA's plant-by-plant retirement schedule which incorporates announced closures.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "iso": "MISO",
+      "dimension": "emissions",
+      "year": 2050,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 394.57,
+      "benchmark_value": 60,
+      "pct_diff": 557.6,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "MISO",
+      "dimension": "demand",
+      "year": 2050,
+      "benchmark": "EIA_AEO",
+      "our_p50": 1194.5,
+      "benchmark_value": 950,
+      "pct_diff": 25.7,
+      "score": "ADJUST",
+      "attribution": {
+        "category": "unknown",
+        "explanation": "Our model is higher than EIA_AEO by 25.7%. Further investigation needed.",
+        "confidence": "low"
+      }
+    },
+    {
+      "iso": "SPP",
+      "dimension": "clean_penetration",
+      "year": 2035,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 47.0,
+      "benchmark_value": 68,
+      "pct_diff": 30.9,
+      "score": "ADJUST",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "NREL Cambium projects faster deployment. Cambium uses ReEDS with detailed transmission expansion and state policy modeling. Our model's queue caps or cost assumptions may be more conservative.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "SPP",
+      "dimension": "clean_penetration",
+      "year": 2040,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 47.0,
+      "benchmark_value": 75,
+      "pct_diff": 37.3,
+      "score": "ADJUST",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "NREL Cambium projects faster deployment. Cambium uses ReEDS with detailed transmission expansion and state policy modeling. Our model's queue caps or cost assumptions may be more conservative.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "SPP",
+      "dimension": "clean_penetration",
+      "year": 2050,
+      "benchmark": "EIA_AEO",
+      "our_p50": 47.0,
+      "benchmark_value": 72,
+      "pct_diff": 34.7,
+      "score": "ADJUST",
+      "attribution": {
+        "category": "structural_model",
+        "explanation": "Our model projects slower deployment than EIA \u2014 this may reflect our queue caps binding earlier, higher cost assumptions, or gas friction effects dampening clean investment signals.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "iso": "SPP",
+      "dimension": "clean_penetration",
+      "year": 2050,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 47.0,
+      "benchmark_value": 85,
+      "pct_diff": 44.7,
+      "score": "ADJUST",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "NREL Cambium projects faster deployment. Cambium uses ReEDS with detailed transmission expansion and state policy modeling. Our model's queue caps or cost assumptions may be more conservative.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "SPP",
+      "dimension": "lmp_trajectory",
+      "year": 2035,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 25.0,
+      "benchmark_value": 16,
+      "pct_diff": 56.2,
+      "score": "ADJUST",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our LMP exceeds Cambium's marginal cost. Note: Cambium reports short-run marginal cost (SRMC), not all-in wholesale price. Our LMP includes capacity market revenues, scarcity pricing, and congestion \u2014 SRMC is a floor, not the full price.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "SPP",
+      "dimension": "lmp_trajectory",
+      "year": 2040,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 25.0,
+      "benchmark_value": 13,
+      "pct_diff": 92.3,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our LMP exceeds Cambium's marginal cost. Note: Cambium reports short-run marginal cost (SRMC), not all-in wholesale price. Our LMP includes capacity market revenues, scarcity pricing, and congestion \u2014 SRMC is a floor, not the full price.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "SPP",
+      "dimension": "lmp_trajectory",
+      "year": 2050,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 25.0,
+      "benchmark_value": 8,
+      "pct_diff": 212.5,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our LMP exceeds Cambium's marginal cost. Note: Cambium reports short-run marginal cost (SRMC), not all-in wholesale price. Our LMP includes capacity market revenues, scarcity pricing, and congestion \u2014 SRMC is a floor, not the full price.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "SPP",
+      "dimension": "emissions",
+      "year": 2030,
+      "benchmark": "EIA_AEO",
+      "our_p50": 97.12,
+      "benchmark_value": 65,
+      "pct_diff": 49.4,
+      "score": "ADJUST",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our model shows higher emissions than EIA AEO. Our threshold-based coal retirement may be slower than EIA's plant-by-plant retirement schedule which incorporates announced closures.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "iso": "SPP",
+      "dimension": "emissions",
+      "year": 2030,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 97.12,
+      "benchmark_value": 52,
+      "pct_diff": 86.8,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "SPP",
+      "dimension": "emissions",
+      "year": 2035,
+      "benchmark": "EIA_AEO",
+      "our_p50": 103.71,
+      "benchmark_value": 52,
+      "pct_diff": 99.4,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our model shows higher emissions than EIA AEO. Our threshold-based coal retirement may be slower than EIA's plant-by-plant retirement schedule which incorporates announced closures.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "iso": "SPP",
+      "dimension": "emissions",
+      "year": 2035,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 103.71,
+      "benchmark_value": 35,
+      "pct_diff": 196.3,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "SPP",
+      "dimension": "emissions",
+      "year": 2040,
+      "benchmark": "EIA_AEO",
+      "our_p50": 110.92,
+      "benchmark_value": 42,
+      "pct_diff": 164.1,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our model shows higher emissions than EIA AEO. Our threshold-based coal retirement may be slower than EIA's plant-by-plant retirement schedule which incorporates announced closures.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "iso": "SPP",
+      "dimension": "emissions",
+      "year": 2040,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 110.92,
+      "benchmark_value": 24,
+      "pct_diff": 362.2,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    },
+    {
+      "iso": "SPP",
+      "dimension": "emissions",
+      "year": 2050,
+      "benchmark": "EIA_AEO",
+      "our_p50": 112.93,
+      "benchmark_value": 28,
+      "pct_diff": 303.3,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Our model shows higher emissions than EIA AEO. Our threshold-based coal retirement may be slower than EIA's plant-by-plant retirement schedule which incorporates announced closures.",
+        "confidence": "medium"
+      }
+    },
+    {
+      "iso": "SPP",
+      "dimension": "emissions",
+      "year": 2050,
+      "benchmark": "NREL_Cambium",
+      "our_p50": 112.93,
+      "benchmark_value": 10,
+      "pct_diff": 1029.3,
+      "score": "FAIL",
+      "attribution": {
+        "category": "input_assumption",
+        "explanation": "Cambium projects deeper emissions cuts. Their model includes state policies (RGGI, CA cap-and-trade) and EPA regulations more granularly. Our model uses a simpler emission-rate approach.",
+        "confidence": "high"
+      }
+    }
+  ],
+  "scorecard": {}
+}
