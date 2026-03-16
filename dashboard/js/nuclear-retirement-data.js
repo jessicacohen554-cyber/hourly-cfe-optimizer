@@ -18,8 +18,8 @@ const NUCLEAR_RETIREMENT_DATA = {
     "agreement_2040": 0.05,
     "viable_band_low": 38.0,
     "viable_band_high": 44.0,
-    "below_viable_rate_2040": 0.525,
-    "avg_energy_price_2040": 42.0
+    "below_viable_rate_2040": 0.407,
+    "avg_energy_price_2040": 46.7
   },
   "plants": [
     {
@@ -701,8 +701,8 @@ const NUCLEAR_RETIREMENT_DATA = {
         "saved_by_cfd": 0.0
       },
       "2045": {
-        "with_cfd": 0.145,
-        "merchant": 0.145,
+        "with_cfd": 0.14,
+        "merchant": 0.14,
         "saved_by_cfd": 0.0
       }
     },
@@ -799,8 +799,8 @@ const NUCLEAR_RETIREMENT_DATA = {
         "saved_by_cfd": 0.0
       },
       "2045": {
-        "with_cfd": 0.145,
-        "merchant": 0.145,
+        "with_cfd": 0.14,
+        "merchant": 0.14,
         "saved_by_cfd": 0.0
       }
     },
@@ -1069,42 +1069,42 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 259.2,
-          "below_viable": 0.917,
+          "avg_profit": 243.2,
+          "below_viable": 0.95,
           "marginal_viable": 0.011,
-          "avg_energy_price": 28.9
+          "avg_energy_price": 28.1
         },
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 276.3,
-          "below_viable": 0.883,
-          "marginal_viable": 0.033,
-          "avg_energy_price": 29.8
+          "avg_profit": 284.1,
+          "below_viable": 0.872,
+          "marginal_viable": 0.028,
+          "avg_energy_price": 30.2
         },
         "2040": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 396.4,
-          "below_viable": 0.678,
-          "marginal_viable": 0.028,
-          "avg_energy_price": 36.2
+          "avg_profit": 402.3,
+          "below_viable": 0.672,
+          "marginal_viable": 0.022,
+          "avg_energy_price": 36.5
         },
         "2045": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 462.3,
-          "below_viable": 0.683,
+          "avg_profit": 464.2,
+          "below_viable": 0.678,
           "marginal_viable": 0.056,
-          "avg_energy_price": 39.7
+          "avg_energy_price": 39.8
         },
         "2050": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 329.7,
-          "below_viable": 0.756,
+          "avg_profit": 332.1,
+          "below_viable": 0.75,
           "marginal_viable": 0.061,
-          "avg_energy_price": 32.6
+          "avg_energy_price": 32.8
         }
       },
       "Perry Nuclear": {
@@ -1119,34 +1119,34 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 353.3,
-          "below_viable": 0.783,
+          "avg_profit": 356.7,
+          "below_viable": 0.739,
           "marginal_viable": 0.006,
-          "avg_energy_price": 38.3
+          "avg_energy_price": 39.0
         },
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 438.8,
-          "below_viable": 0.494,
-          "marginal_viable": 0.011,
-          "avg_energy_price": 47.2
+          "avg_profit": 426.2,
+          "below_viable": 0.461,
+          "marginal_viable": 0.072,
+          "avg_energy_price": 46.2
         },
         "2040": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 448.2,
-          "below_viable": 0.494,
+          "avg_profit": 522.2,
+          "below_viable": 0.306,
           "marginal_viable": 0.044,
-          "avg_energy_price": 48.5
+          "avg_energy_price": 56.1
         },
         "2045": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 434.0,
-          "below_viable": 0.472,
-          "marginal_viable": 0.044,
-          "avg_energy_price": 47.3
+          "avg_profit": 434.2,
+          "below_viable": 0.428,
+          "marginal_viable": 0.089,
+          "avg_energy_price": 47.5
         }
       },
       "Davis-Besse Nuclear": {
@@ -1161,18 +1161,18 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 253.0,
-          "below_viable": 0.783,
+          "avg_profit": 255.4,
+          "below_viable": 0.739,
           "marginal_viable": 0.006,
-          "avg_energy_price": 38.3
+          "avg_energy_price": 39.0
         },
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 314.2,
-          "below_viable": 0.494,
-          "marginal_viable": 0.011,
-          "avg_energy_price": 47.2
+          "avg_profit": 305.2,
+          "below_viable": 0.461,
+          "marginal_viable": 0.072,
+          "avg_energy_price": 46.2
         }
       },
       "Beaver Valley Nuclear": {
@@ -1187,34 +1187,34 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 521.7,
-          "below_viable": 0.783,
+          "avg_profit": 526.6,
+          "below_viable": 0.739,
           "marginal_viable": 0.006,
-          "avg_energy_price": 38.3
+          "avg_energy_price": 39.0
         },
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 647.8,
-          "below_viable": 0.494,
-          "marginal_viable": 0.011,
-          "avg_energy_price": 47.2
+          "avg_profit": 629.2,
+          "below_viable": 0.461,
+          "marginal_viable": 0.072,
+          "avg_energy_price": 46.2
         },
         "2040": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 661.7,
-          "below_viable": 0.494,
+          "avg_profit": 771.0,
+          "below_viable": 0.306,
           "marginal_viable": 0.044,
-          "avg_energy_price": 48.5
+          "avg_energy_price": 56.1
         },
         "2045": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 640.7,
-          "below_viable": 0.472,
-          "marginal_viable": 0.044,
-          "avg_energy_price": 47.3
+          "avg_profit": 641.0,
+          "below_viable": 0.428,
+          "marginal_viable": 0.089,
+          "avg_energy_price": 47.5
         }
       },
       "Limerick Nuclear": {
@@ -1229,26 +1229,26 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 645.7,
-          "below_viable": 0.783,
+          "avg_profit": 651.8,
+          "below_viable": 0.739,
           "marginal_viable": 0.006,
-          "avg_energy_price": 38.3
+          "avg_energy_price": 39.0
         },
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 801.8,
-          "below_viable": 0.494,
-          "marginal_viable": 0.011,
-          "avg_energy_price": 47.2
+          "avg_profit": 778.8,
+          "below_viable": 0.461,
+          "marginal_viable": 0.072,
+          "avg_energy_price": 46.2
         },
         "2040": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 819.0,
-          "below_viable": 0.494,
+          "avg_profit": 954.2,
+          "below_viable": 0.306,
           "marginal_viable": 0.044,
-          "avg_energy_price": 48.5
+          "avg_energy_price": 56.1
         }
       },
       "Peach Bottom Nuclear (CEG 50%)": {
@@ -1263,42 +1263,42 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 386.0,
-          "below_viable": 0.783,
+          "avg_profit": 389.6,
+          "below_viable": 0.739,
           "marginal_viable": 0.006,
-          "avg_energy_price": 38.3
+          "avg_energy_price": 39.0
         },
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 479.3,
-          "below_viable": 0.494,
-          "marginal_viable": 0.011,
-          "avg_energy_price": 47.2
+          "avg_profit": 465.5,
+          "below_viable": 0.461,
+          "marginal_viable": 0.072,
+          "avg_energy_price": 46.2
         },
         "2040": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 489.5,
-          "below_viable": 0.494,
+          "avg_profit": 570.4,
+          "below_viable": 0.306,
           "marginal_viable": 0.044,
-          "avg_energy_price": 48.5
+          "avg_energy_price": 56.1
         },
         "2045": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 474.1,
-          "below_viable": 0.472,
-          "marginal_viable": 0.044,
-          "avg_energy_price": 47.3
+          "avg_profit": 474.3,
+          "below_viable": 0.428,
+          "marginal_viable": 0.089,
+          "avg_energy_price": 47.5
         },
         "2050": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 580.9,
-          "below_viable": 0.322,
+          "avg_profit": 594.1,
+          "below_viable": 0.278,
           "marginal_viable": 0.0,
-          "avg_energy_price": 57.3
+          "avg_energy_price": 58.7
         }
       },
       "Calvert Cliffs Nuclear": {
@@ -1313,42 +1313,42 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 498.8,
-          "below_viable": 0.783,
+          "avg_profit": 503.5,
+          "below_viable": 0.739,
           "marginal_viable": 0.006,
-          "avg_energy_price": 38.3
+          "avg_energy_price": 39.0
         },
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 619.4,
-          "below_viable": 0.494,
-          "marginal_viable": 0.011,
-          "avg_energy_price": 47.2
+          "avg_profit": 601.7,
+          "below_viable": 0.461,
+          "marginal_viable": 0.072,
+          "avg_energy_price": 46.2
         },
         "2040": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 632.7,
-          "below_viable": 0.494,
+          "avg_profit": 737.2,
+          "below_viable": 0.306,
           "marginal_viable": 0.044,
-          "avg_energy_price": 48.5
+          "avg_energy_price": 56.1
         },
         "2045": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 612.7,
-          "below_viable": 0.472,
-          "marginal_viable": 0.044,
-          "avg_energy_price": 47.3
+          "avg_profit": 612.9,
+          "below_viable": 0.428,
+          "marginal_viable": 0.089,
+          "avg_energy_price": 47.5
         },
         "2050": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 750.8,
-          "below_viable": 0.322,
+          "avg_profit": 767.8,
+          "below_viable": 0.278,
           "marginal_viable": 0.0,
-          "avg_energy_price": 57.3
+          "avg_energy_price": 58.7
         }
       },
       "Crane Clean Energy Center": {
@@ -1363,7 +1363,7 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 606.1,
+          "avg_profit": 603.8,
           "below_viable": 0.0,
           "marginal_viable": 0.0,
           "avg_energy_price": 95.0
@@ -1371,7 +1371,7 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 603.4,
+          "avg_profit": 601.8,
           "below_viable": 0.0,
           "marginal_viable": 0.0,
           "avg_energy_price": 95.0
@@ -1379,7 +1379,7 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2040": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 601.2,
+          "avg_profit": 600.2,
           "below_viable": 0.0,
           "marginal_viable": 0.0,
           "avg_energy_price": 95.0
@@ -1387,7 +1387,7 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2045": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 599.7,
+          "avg_profit": 598.6,
           "below_viable": 0.0,
           "marginal_viable": 0.0,
           "avg_energy_price": 95.0
@@ -1395,10 +1395,10 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2050": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 350.2,
-          "below_viable": 0.322,
+          "avg_profit": 358.2,
+          "below_viable": 0.278,
           "marginal_viable": 0.0,
-          "avg_energy_price": 57.3
+          "avg_energy_price": 58.7
         }
       },
       "Salem Nuclear (CEG 43%)": {
@@ -1413,18 +1413,18 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 275.0,
-          "below_viable": 0.783,
+          "avg_profit": 277.7,
+          "below_viable": 0.739,
           "marginal_viable": 0.006,
-          "avg_energy_price": 38.3
+          "avg_energy_price": 39.0
         },
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 341.5,
-          "below_viable": 0.494,
-          "marginal_viable": 0.011,
-          "avg_energy_price": 47.2
+          "avg_profit": 331.8,
+          "below_viable": 0.461,
+          "marginal_viable": 0.072,
+          "avg_energy_price": 46.2
         }
       },
       "Byron Nuclear": {
@@ -1439,26 +1439,26 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 654.0,
-          "below_viable": 0.783,
+          "avg_profit": 660.2,
+          "below_viable": 0.739,
           "marginal_viable": 0.006,
-          "avg_energy_price": 38.3
+          "avg_energy_price": 39.0
         },
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 812.1,
-          "below_viable": 0.494,
-          "marginal_viable": 0.011,
-          "avg_energy_price": 47.2
+          "avg_profit": 788.9,
+          "below_viable": 0.461,
+          "marginal_viable": 0.072,
+          "avg_energy_price": 46.2
         },
         "2040": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 829.6,
-          "below_viable": 0.494,
+          "avg_profit": 966.6,
+          "below_viable": 0.306,
           "marginal_viable": 0.044,
-          "avg_energy_price": 48.5
+          "avg_energy_price": 56.1
         }
       },
       "Braidwood Nuclear": {
@@ -1473,34 +1473,34 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 664.9,
-          "below_viable": 0.783,
+          "avg_profit": 671.2,
+          "below_viable": 0.739,
           "marginal_viable": 0.006,
-          "avg_energy_price": 38.3
+          "avg_energy_price": 39.0
         },
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 825.6,
-          "below_viable": 0.494,
-          "marginal_viable": 0.011,
-          "avg_energy_price": 47.2
+          "avg_profit": 802.0,
+          "below_viable": 0.461,
+          "marginal_viable": 0.072,
+          "avg_energy_price": 46.2
         },
         "2040": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 843.3,
-          "below_viable": 0.494,
+          "avg_profit": 982.6,
+          "below_viable": 0.306,
           "marginal_viable": 0.044,
-          "avg_energy_price": 48.5
+          "avg_energy_price": 56.1
         },
         "2045": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 816.7,
-          "below_viable": 0.472,
-          "marginal_viable": 0.044,
-          "avg_energy_price": 47.3
+          "avg_profit": 817.0,
+          "below_viable": 0.428,
+          "marginal_viable": 0.089,
+          "avg_energy_price": 47.5
         }
       },
       "Quad Cities Nuclear": {
@@ -1515,10 +1515,10 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 506.9,
-          "below_viable": 0.783,
+          "avg_profit": 511.7,
+          "below_viable": 0.739,
           "marginal_viable": 0.006,
-          "avg_energy_price": 38.3
+          "avg_energy_price": 39.0
         }
       },
       "Dresden Nuclear": {
@@ -1533,34 +1533,34 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 514.1,
-          "below_viable": 0.783,
+          "avg_profit": 519.0,
+          "below_viable": 0.739,
           "marginal_viable": 0.006,
-          "avg_energy_price": 38.3
+          "avg_energy_price": 39.0
         },
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 638.4,
-          "below_viable": 0.494,
-          "marginal_viable": 0.011,
-          "avg_energy_price": 47.2
+          "avg_profit": 620.2,
+          "below_viable": 0.461,
+          "marginal_viable": 0.072,
+          "avg_energy_price": 46.2
         },
         "2040": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 652.1,
-          "below_viable": 0.494,
+          "avg_profit": 759.8,
+          "below_viable": 0.306,
           "marginal_viable": 0.044,
-          "avg_energy_price": 48.5
+          "avg_energy_price": 56.1
         },
         "2045": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 631.5,
-          "below_viable": 0.472,
-          "marginal_viable": 0.044,
-          "avg_energy_price": 47.3
+          "avg_profit": 631.8,
+          "below_viable": 0.428,
+          "marginal_viable": 0.089,
+          "avg_energy_price": 47.5
         }
       },
       "LaSalle Nuclear": {
@@ -1575,26 +1575,26 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 646.5,
-          "below_viable": 0.783,
+          "avg_profit": 652.6,
+          "below_viable": 0.739,
           "marginal_viable": 0.006,
-          "avg_energy_price": 38.3
+          "avg_energy_price": 39.0
         },
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 802.8,
-          "below_viable": 0.494,
-          "marginal_viable": 0.011,
-          "avg_energy_price": 47.2
+          "avg_profit": 779.8,
+          "below_viable": 0.461,
+          "marginal_viable": 0.072,
+          "avg_energy_price": 46.2
         },
         "2040": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 820.0,
-          "below_viable": 0.494,
+          "avg_profit": 955.5,
+          "below_viable": 0.306,
           "marginal_viable": 0.044,
-          "avg_energy_price": 48.5
+          "avg_energy_price": 56.1
         }
       },
       "Clinton Nuclear": {
@@ -1609,34 +1609,34 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 296.8,
-          "below_viable": 0.783,
+          "avg_profit": 299.6,
+          "below_viable": 0.739,
           "marginal_viable": 0.006,
-          "avg_energy_price": 38.3
+          "avg_energy_price": 39.0
         },
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 368.5,
-          "below_viable": 0.494,
-          "marginal_viable": 0.011,
-          "avg_energy_price": 47.2
+          "avg_profit": 358.0,
+          "below_viable": 0.461,
+          "marginal_viable": 0.072,
+          "avg_energy_price": 46.2
         },
         "2040": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 376.4,
-          "below_viable": 0.494,
+          "avg_profit": 438.6,
+          "below_viable": 0.306,
           "marginal_viable": 0.044,
-          "avg_energy_price": 48.5
+          "avg_energy_price": 56.1
         },
         "2045": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 364.5,
-          "below_viable": 0.472,
-          "marginal_viable": 0.044,
-          "avg_energy_price": 47.3
+          "avg_profit": 364.7,
+          "below_viable": 0.428,
+          "marginal_viable": 0.089,
+          "avg_energy_price": 47.5
         }
       },
       "Nine Mile Point Nuclear": {
@@ -1651,7 +1651,7 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 436.7,
+          "avg_profit": 437.1,
           "below_viable": 0.433,
           "marginal_viable": 0.422,
           "avg_energy_price": 37.0
@@ -1659,26 +1659,26 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 435.8,
-          "below_viable": 0.489,
-          "marginal_viable": 0.356,
-          "avg_energy_price": 37.3
+          "avg_profit": 439.9,
+          "below_viable": 0.5,
+          "marginal_viable": 0.311,
+          "avg_energy_price": 37.4
         },
         "2040": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 445.7,
-          "below_viable": 0.211,
-          "marginal_viable": 0.789,
-          "avg_energy_price": 38.3
+          "avg_profit": 515.6,
+          "below_viable": 0.233,
+          "marginal_viable": 0.578,
+          "avg_energy_price": 42.7
         },
         "2045": {
-          "merchant": 0.006,
-          "with_cfd": 0.006,
-          "avg_profit": 436.1,
-          "below_viable": 0.178,
-          "marginal_viable": 0.778,
-          "avg_energy_price": 38.1
+          "merchant": 0.0,
+          "with_cfd": 0.0,
+          "avg_profit": 629.7,
+          "below_viable": 0.183,
+          "marginal_viable": 0.611,
+          "avg_energy_price": 50.5
         }
       },
       "FitzPatrick Nuclear": {
@@ -1693,7 +1693,7 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 192.8,
+          "avg_profit": 193.0,
           "below_viable": 0.433,
           "marginal_viable": 0.422,
           "avg_energy_price": 37.0
@@ -1711,7 +1711,7 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 131.9,
+          "avg_profit": 132.0,
           "below_viable": 0.433,
           "marginal_viable": 0.422,
           "avg_energy_price": 37.0
@@ -1719,26 +1719,26 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 131.6,
-          "below_viable": 0.489,
-          "marginal_viable": 0.356,
-          "avg_energy_price": 37.3
+          "avg_profit": 132.9,
+          "below_viable": 0.5,
+          "marginal_viable": 0.311,
+          "avg_energy_price": 37.4
         },
         "2040": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 134.6,
-          "below_viable": 0.211,
-          "marginal_viable": 0.789,
-          "avg_energy_price": 38.3
+          "avg_profit": 155.7,
+          "below_viable": 0.233,
+          "marginal_viable": 0.578,
+          "avg_energy_price": 42.7
         },
         "2045": {
-          "merchant": 0.006,
-          "with_cfd": 0.006,
-          "avg_profit": 131.7,
-          "below_viable": 0.178,
-          "marginal_viable": 0.778,
-          "avg_energy_price": 38.1
+          "merchant": 0.0,
+          "with_cfd": 0.0,
+          "avg_profit": 190.2,
+          "below_viable": 0.183,
+          "marginal_viable": 0.611,
+          "avg_energy_price": 50.5
         }
       },
       "South Texas Project (CEG 44%)": {
@@ -1753,34 +1753,34 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 125.7,
-          "below_viable": 0.917,
+          "avg_profit": 117.9,
+          "below_viable": 0.95,
           "marginal_viable": 0.011,
-          "avg_energy_price": 28.9
+          "avg_energy_price": 28.1
         },
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 134.0,
-          "below_viable": 0.883,
-          "marginal_viable": 0.033,
-          "avg_energy_price": 29.8
+          "avg_profit": 137.8,
+          "below_viable": 0.872,
+          "marginal_viable": 0.028,
+          "avg_energy_price": 30.2
         },
         "2040": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 192.3,
-          "below_viable": 0.678,
-          "marginal_viable": 0.028,
-          "avg_energy_price": 36.2
+          "avg_profit": 195.1,
+          "below_viable": 0.672,
+          "marginal_viable": 0.022,
+          "avg_energy_price": 36.5
         },
         "2045": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 224.2,
-          "below_viable": 0.683,
+          "avg_profit": 225.2,
+          "below_viable": 0.678,
           "marginal_viable": 0.056,
-          "avg_energy_price": 39.7
+          "avg_energy_price": 39.8
         }
       },
       "Susquehanna Nuclear": {
@@ -1795,7 +1795,7 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 1353.8,
+          "avg_profit": 1347.5,
           "below_viable": 0.0,
           "marginal_viable": 0.0,
           "avg_energy_price": 80.0
@@ -1803,7 +1803,7 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 1346.5,
+          "avg_profit": 1342.2,
           "below_viable": 0.0,
           "marginal_viable": 0.0,
           "avg_energy_price": 80.0
@@ -1811,10 +1811,10 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2040": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 787.5,
-          "below_viable": 0.494,
+          "avg_profit": 917.6,
+          "below_viable": 0.306,
           "marginal_viable": 0.044,
-          "avg_energy_price": 48.5
+          "avg_energy_price": 56.1
         }
       },
       "Hope Creek Nuclear": {
@@ -1829,34 +1829,34 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 326.6,
-          "below_viable": 0.783,
+          "avg_profit": 329.7,
+          "below_viable": 0.739,
           "marginal_viable": 0.006,
-          "avg_energy_price": 38.3
+          "avg_energy_price": 39.0
         },
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 405.6,
-          "below_viable": 0.494,
-          "marginal_viable": 0.011,
-          "avg_energy_price": 47.2
+          "avg_profit": 393.9,
+          "below_viable": 0.461,
+          "marginal_viable": 0.072,
+          "avg_energy_price": 46.2
         },
         "2040": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 414.2,
-          "below_viable": 0.494,
+          "avg_profit": 482.7,
+          "below_viable": 0.306,
           "marginal_viable": 0.044,
-          "avg_energy_price": 48.5
+          "avg_energy_price": 56.1
         },
         "2045": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 401.1,
-          "below_viable": 0.472,
-          "marginal_viable": 0.044,
-          "avg_energy_price": 47.3
+          "avg_profit": 401.3,
+          "below_viable": 0.428,
+          "marginal_viable": 0.089,
+          "avg_energy_price": 47.5
         }
       },
       "Salem Nuclear (PSEG 57%)": {
@@ -1871,18 +1871,18 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 364.5,
-          "below_viable": 0.783,
+          "avg_profit": 368.0,
+          "below_viable": 0.739,
           "marginal_viable": 0.006,
-          "avg_energy_price": 38.3
+          "avg_energy_price": 39.0
         },
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 452.6,
-          "below_viable": 0.494,
-          "marginal_viable": 0.011,
-          "avg_energy_price": 47.2
+          "avg_profit": 439.7,
+          "below_viable": 0.461,
+          "marginal_viable": 0.072,
+          "avg_energy_price": 46.2
         }
       },
       "Peach Bottom Nuclear (PSEG 50%)": {
@@ -1897,42 +1897,42 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 355.3,
-          "below_viable": 0.783,
+          "avg_profit": 358.7,
+          "below_viable": 0.739,
           "marginal_viable": 0.006,
-          "avg_energy_price": 38.3
+          "avg_energy_price": 39.0
         },
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 441.2,
-          "below_viable": 0.494,
-          "marginal_viable": 0.011,
-          "avg_energy_price": 47.2
+          "avg_profit": 428.6,
+          "below_viable": 0.461,
+          "marginal_viable": 0.072,
+          "avg_energy_price": 46.2
         },
         "2040": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 450.7,
-          "below_viable": 0.494,
+          "avg_profit": 525.1,
+          "below_viable": 0.306,
           "marginal_viable": 0.044,
-          "avg_energy_price": 48.5
+          "avg_energy_price": 56.1
         },
         "2045": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 436.4,
-          "below_viable": 0.472,
-          "marginal_viable": 0.044,
-          "avg_energy_price": 47.3
+          "avg_profit": 436.6,
+          "below_viable": 0.428,
+          "marginal_viable": 0.089,
+          "avg_energy_price": 47.5
         },
         "2050": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 534.8,
-          "below_viable": 0.322,
+          "avg_profit": 546.9,
+          "below_viable": 0.278,
           "marginal_viable": 0.0,
-          "avg_energy_price": 57.3
+          "avg_energy_price": 58.7
         }
       },
       "Point Beach Nuclear": {
@@ -1955,34 +1955,34 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 193.4,
+          "avg_profit": 192.6,
           "below_viable": 0.911,
           "marginal_viable": 0.0,
-          "avg_energy_price": 32.7
+          "avg_energy_price": 32.6
         },
         "2040": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 249.1,
-          "below_viable": 0.656,
-          "marginal_viable": 0.0,
-          "avg_energy_price": 38.5
+          "avg_profit": 311.6,
+          "below_viable": 0.217,
+          "marginal_viable": 0.133,
+          "avg_energy_price": 45.1
         },
         "2045": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 303.6,
-          "below_viable": 0.428,
-          "marginal_viable": 0.072,
-          "avg_energy_price": 44.3
+          "avg_profit": 320.2,
+          "below_viable": 0.317,
+          "marginal_viable": 0.089,
+          "avg_energy_price": 46.0
         },
         "2050": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 283.0,
-          "below_viable": 0.333,
-          "marginal_viable": 0.089,
-          "avg_energy_price": 42.1
+          "avg_profit": 252.0,
+          "below_viable": 0.528,
+          "marginal_viable": 0.044,
+          "avg_energy_price": 38.8
         }
       },
       "Seabrook Nuclear": {
@@ -2005,7 +2005,7 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2035": {
           "merchant": 0.0,
           "with_cfd": 0.0,
-          "avg_profit": 338.3,
+          "avg_profit": 338.8,
           "below_viable": 0.194,
           "marginal_viable": 0.417,
           "avg_energy_price": 44.8
@@ -2013,26 +2013,26 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2040": {
           "merchant": 0.044,
           "with_cfd": 0.044,
-          "avg_profit": 337.2,
+          "avg_profit": 338.1,
           "below_viable": 0.211,
           "marginal_viable": 0.533,
-          "avg_energy_price": 44.9
+          "avg_energy_price": 45.0
         },
         "2045": {
           "merchant": 0.028,
           "with_cfd": 0.028,
-          "avg_profit": 321.5,
-          "below_viable": 0.256,
-          "marginal_viable": 0.539,
-          "avg_energy_price": 43.5
+          "avg_profit": 326.0,
+          "below_viable": 0.211,
+          "marginal_viable": 0.589,
+          "avg_energy_price": 43.9
         },
         "2050": {
           "merchant": 0.022,
           "with_cfd": 0.022,
-          "avg_profit": 260.4,
-          "below_viable": 0.233,
-          "marginal_viable": 0.733,
-          "avg_energy_price": 37.5
+          "avg_profit": 267.4,
+          "below_viable": 0.35,
+          "marginal_viable": 0.583,
+          "avg_energy_price": 38.1
         }
       }
     },
@@ -4014,56 +4014,56 @@ const NUCLEAR_RETIREMENT_DATA = {
         "n_scenarios": 540,
         "strand_rate": 0.0,
         "merchant_strand_rate": 0.0,
-        "avg_profit_m": 436.6,
+        "avg_profit_m": 438.0,
         "mw_stranded_p50": 0,
-        "below_viable_rate": 0.676,
+        "below_viable_rate": 0.65,
         "marginal_viable_rate": 0.067,
-        "above_viable_rate": 0.257,
-        "avg_energy_price_mwh": 41.4
+        "above_viable_rate": 0.283,
+        "avg_energy_price_mwh": 41.8
       },
       "2035": {
         "n_scenarios": 540,
         "strand_rate": 0.0,
         "merchant_strand_rate": 0.0,
-        "avg_profit_m": 515.2,
+        "avg_profit_m": 505.2,
         "mw_stranded_p50": 0,
-        "below_viable_rate": 0.49,
-        "marginal_viable_rate": 0.059,
-        "above_viable_rate": 0.451,
-        "avg_energy_price_mwh": 47.6
+        "below_viable_rate": 0.468,
+        "marginal_viable_rate": 0.095,
+        "above_viable_rate": 0.437,
+        "avg_energy_price_mwh": 47.0
       },
       "2040": {
         "n_scenarios": 540,
         "strand_rate": 0.002,
         "merchant_strand_rate": 0.002,
-        "avg_profit_m": 529.1,
+        "avg_profit_m": 605.1,
         "mw_stranded_p50": 1244.0,
-        "below_viable_rate": 0.454,
-        "marginal_viable_rate": 0.137,
-        "above_viable_rate": 0.409,
-        "avg_energy_price_mwh": 47.9
+        "below_viable_rate": 0.311,
+        "marginal_viable_rate": 0.122,
+        "above_viable_rate": 0.567,
+        "avg_energy_price_mwh": 53.6
       },
       "2045": {
         "n_scenarios": 540,
         "strand_rate": 0.002,
         "merchant_strand_rate": 0.002,
-        "avg_profit_m": 455.7,
+        "avg_profit_m": 473.0,
         "mw_stranded_p50": 1244.0,
-        "below_viable_rate": 0.416,
-        "marginal_viable_rate": 0.167,
-        "above_viable_rate": 0.417,
-        "avg_energy_price_mwh": 47.8
+        "below_viable_rate": 0.381,
+        "marginal_viable_rate": 0.176,
+        "above_viable_rate": 0.443,
+        "avg_energy_price_mwh": 49.6
       },
       "2050": {
         "n_scenarios": 540,
         "strand_rate": 0.003,
         "merchant_strand_rate": 0.003,
-        "avg_profit_m": 441.4,
+        "avg_profit_m": 445.5,
         "mw_stranded_p50": 1244.0,
-        "below_viable_rate": 0.373,
-        "marginal_viable_rate": 0.126,
-        "above_viable_rate": 0.501,
-        "avg_energy_price_mwh": 48.8
+        "below_viable_rate": 0.391,
+        "marginal_viable_rate": 0.098,
+        "above_viable_rate": 0.51,
+        "avg_energy_price_mwh": 49.2
       }
     },
     "model_b": {
@@ -5140,7 +5140,7 @@ const NUCLEAR_RETIREMENT_DATA = {
         "p90": [
           373.1,
           331.0,
-          724.4,
+          786.2,
           1171.1,
           1769.6,
           580.5
@@ -5194,18 +5194,18 @@ const NUCLEAR_RETIREMENT_DATA = {
         ],
         "p50": [
           8209.3,
-          8370.7,
-          7892.9,
-          6271.2,
-          4012.6,
-          1916.3
+          8317.2,
+          7846.1,
+          8320.1,
+          4039.6,
+          2091.3
         ],
         "p90": [
           8209.3,
-          11035.5,
-          13976.0,
-          12521.3,
-          7445.5,
+          13015.3,
+          13331.8,
+          16903.6,
+          6729.3,
           3493.5
         ]
       }
@@ -5259,10 +5259,10 @@ const NUCLEAR_RETIREMENT_DATA = {
         ],
         "p90": [
           812.5,
-          971.3,
+          972.6,
           832.8,
-          652.6,
-          644.5
+          1056.1,
+          2011.4
         ]
       }
     },
@@ -5324,8 +5324,8 @@ const NUCLEAR_RETIREMENT_DATA = {
           606.6,
           427.1,
           626.1,
-          431.5,
-          295.1
+          432.0,
+          296.6
         ]
       }
     },
@@ -5378,17 +5378,17 @@ const NUCLEAR_RETIREMENT_DATA = {
           139.9,
           168.3,
           168.3,
-          168.3,
-          213.7,
-          267.7
+          316.9,
+          297.9,
+          168.3
         ],
         "p90": [
           139.9,
           168.3,
           168.3,
-          423.8,
+          421.9,
           490.9,
-          378.4
+          369.3
         ]
       }
     }
@@ -5411,7 +5411,7 @@ const NUCLEAR_RETIREMENT_DATA = {
         "fixed_om": 288.0,
         "profit_p50": 222.9,
         "profit_p10": -288.0,
-        "profit_p90": 487.8
+        "profit_p90": 529.4
       },
       "2040": {
         "energy_rev_p50": 510.9,
@@ -5435,144 +5435,144 @@ const NUCLEAR_RETIREMENT_DATA = {
     "Perry Nuclear": {
       "2030": {
         "energy_rev_p50": 339.9,
-        "capacity_rev_p50": 124.0,
+        "capacity_rev_p50": 119.3,
         "cfd_payment_p50": 0.0,
         "fixed_om": 152.2,
-        "profit_p50": 311.7,
+        "profit_p50": 309.4,
         "profit_p10": -2.2,
-        "profit_p90": 441.9
+        "profit_p90": 538.9
       },
       "2035": {
         "energy_rev_p50": 339.9,
-        "capacity_rev_p50": 120.4,
+        "capacity_rev_p50": 117.3,
         "cfd_payment_p50": 0.0,
         "fixed_om": 152.2,
-        "profit_p50": 310.3,
+        "profit_p50": 308.2,
         "profit_p10": -7.6,
-        "profit_p90": 628.9
+        "profit_p90": 595.8
       },
       "2040": {
-        "energy_rev_p50": 339.9,
-        "capacity_rev_p50": 117.6,
+        "energy_rev_p50": 463.9,
+        "capacity_rev_p50": 116.7,
         "cfd_payment_p50": 0.0,
         "fixed_om": 152.2,
-        "profit_p50": 308.8,
+        "profit_p50": 420.8,
         "profit_p10": -7.6,
-        "profit_p90": 649.8
+        "profit_p90": 888.3
       }
     },
     "Davis-Besse Nuclear": {
       "2030": {
         "energy_rev_p50": 243.4,
-        "capacity_rev_p50": 88.8,
+        "capacity_rev_p50": 85.4,
         "cfd_payment_p50": 0.0,
         "fixed_om": 109.0,
-        "profit_p50": 223.2,
+        "profit_p50": 221.6,
         "profit_p10": -1.6,
-        "profit_p90": 316.5
+        "profit_p90": 385.9
       },
       "2035": {
         "energy_rev_p50": 243.4,
-        "capacity_rev_p50": 86.2,
+        "capacity_rev_p50": 84.0,
         "cfd_payment_p50": 0.0,
         "fixed_om": 109.0,
-        "profit_p50": 222.2,
+        "profit_p50": 220.7,
         "profit_p10": -5.4,
-        "profit_p90": 450.3
+        "profit_p90": 426.7
       }
     },
     "Beaver Valley Nuclear": {
       "2030": {
         "energy_rev_p50": 501.8,
-        "capacity_rev_p50": 183.1,
+        "capacity_rev_p50": 176.1,
         "cfd_payment_p50": 0.0,
         "fixed_om": 224.6,
-        "profit_p50": 460.2,
+        "profit_p50": 456.8,
         "profit_p10": -3.3,
-        "profit_p90": 652.5
+        "profit_p90": 795.5
       },
       "2035": {
         "energy_rev_p50": 501.8,
-        "capacity_rev_p50": 177.8,
+        "capacity_rev_p50": 173.2,
         "cfd_payment_p50": 0.0,
         "fixed_om": 224.6,
-        "profit_p50": 458.2,
+        "profit_p50": 454.9,
         "profit_p10": -11.2,
-        "profit_p90": 928.5
+        "profit_p90": 879.7
       },
       "2040": {
-        "energy_rev_p50": 501.8,
-        "capacity_rev_p50": 173.6,
+        "energy_rev_p50": 684.8,
+        "capacity_rev_p50": 172.3,
         "cfd_payment_p50": 0.0,
         "fixed_om": 224.6,
-        "profit_p50": 455.8,
+        "profit_p50": 621.3,
         "profit_p10": -11.2,
-        "profit_p90": 959.3
+        "profit_p90": 1311.4
       }
     },
     "Limerick Nuclear": {
       "2030": {
         "energy_rev_p50": 621.1,
-        "capacity_rev_p50": 226.6,
+        "capacity_rev_p50": 218.0,
         "cfd_payment_p50": 0.0,
         "fixed_om": 278.0,
-        "profit_p50": 569.6,
+        "profit_p50": 565.4,
         "profit_p10": -4.0,
-        "profit_p90": 807.6
+        "profit_p90": 984.6
       },
       "2035": {
         "energy_rev_p50": 621.1,
-        "capacity_rev_p50": 220.0,
+        "capacity_rev_p50": 214.4,
         "cfd_payment_p50": 0.0,
         "fixed_om": 278.0,
-        "profit_p50": 567.1,
+        "profit_p50": 563.1,
         "profit_p10": -13.9,
-        "profit_p90": 1149.2
+        "profit_p90": 1088.8
       },
       "2040": {
-        "energy_rev_p50": 621.1,
-        "capacity_rev_p50": 214.9,
+        "energy_rev_p50": 847.6,
+        "capacity_rev_p50": 213.3,
         "cfd_payment_p50": 0.0,
         "fixed_om": 278.0,
-        "profit_p50": 564.2,
+        "profit_p50": 769.0,
         "profit_p10": -13.9,
-        "profit_p90": 1187.3
+        "profit_p90": 1623.1
       }
     },
     "Peach Bottom Nuclear (CEG 50%)": {
       "2030": {
         "energy_rev_p50": 371.3,
-        "capacity_rev_p50": 135.5,
+        "capacity_rev_p50": 130.3,
         "cfd_payment_p50": 0.0,
         "fixed_om": 166.2,
-        "profit_p50": 340.5,
+        "profit_p50": 338.0,
         "profit_p10": -2.4,
-        "profit_p90": 482.7
+        "profit_p90": 588.6
       },
       "2035": {
         "energy_rev_p50": 371.3,
-        "capacity_rev_p50": 131.5,
+        "capacity_rev_p50": 128.2,
         "cfd_payment_p50": 0.0,
         "fixed_om": 166.2,
-        "profit_p50": 339.0,
+        "profit_p50": 336.6,
         "profit_p10": -8.3,
-        "profit_p90": 686.9
+        "profit_p90": 650.8
       },
       "2040": {
-        "energy_rev_p50": 371.3,
-        "capacity_rev_p50": 128.4,
+        "energy_rev_p50": 506.7,
+        "capacity_rev_p50": 127.5,
         "cfd_payment_p50": 0.0,
         "fixed_om": 166.2,
-        "profit_p50": 337.3,
+        "profit_p50": 459.7,
         "profit_p10": -8.3,
-        "profit_p90": 709.7
+        "profit_p90": 970.2
       },
       "2050": {
-        "energy_rev_p50": 554.7,
-        "capacity_rev_p50": 124.7,
+        "energy_rev_p50": 600.6,
+        "capacity_rev_p50": 122.0,
         "cfd_payment_p50": 0.0,
         "fixed_om": 166.2,
-        "profit_p50": 502.2,
+        "profit_p50": 548.0,
         "profit_p10": -8.3,
         "profit_p90": 915.5
       }
@@ -5580,37 +5580,37 @@ const NUCLEAR_RETIREMENT_DATA = {
     "Calvert Cliffs Nuclear": {
       "2030": {
         "energy_rev_p50": 479.8,
-        "capacity_rev_p50": 175.1,
+        "capacity_rev_p50": 168.4,
         "cfd_payment_p50": 0.0,
         "fixed_om": 214.8,
-        "profit_p50": 440.1,
+        "profit_p50": 436.8,
         "profit_p10": -3.1,
-        "profit_p90": 623.9
+        "profit_p90": 760.7
       },
       "2035": {
         "energy_rev_p50": 479.8,
-        "capacity_rev_p50": 170.0,
+        "capacity_rev_p50": 165.6,
         "cfd_payment_p50": 0.0,
         "fixed_om": 214.8,
-        "profit_p50": 438.1,
+        "profit_p50": 435.0,
         "profit_p10": -10.7,
-        "profit_p90": 887.8
+        "profit_p90": 841.1
       },
       "2040": {
-        "energy_rev_p50": 479.8,
-        "capacity_rev_p50": 166.0,
+        "energy_rev_p50": 654.8,
+        "capacity_rev_p50": 164.8,
         "cfd_payment_p50": 0.0,
         "fixed_om": 214.8,
-        "profit_p50": 435.9,
+        "profit_p50": 594.1,
         "profit_p10": -10.7,
-        "profit_p90": 917.3
+        "profit_p90": 1254.0
       },
       "2050": {
-        "energy_rev_p50": 716.9,
-        "capacity_rev_p50": 161.2,
+        "energy_rev_p50": 776.2,
+        "capacity_rev_p50": 157.6,
         "cfd_payment_p50": 0.0,
         "fixed_om": 214.8,
-        "profit_p50": 649.0,
+        "profit_p50": 708.3,
         "profit_p10": -10.7,
         "profit_p90": 1183.2
       }
@@ -5618,37 +5618,37 @@ const NUCLEAR_RETIREMENT_DATA = {
     "Crane Clean Energy Center": {
       "2030": {
         "energy_rev_p50": 625.4,
-        "capacity_rev_p50": 81.7,
+        "capacity_rev_p50": 78.6,
         "cfd_payment_p50": 0.0,
         "fixed_om": 100.2,
-        "profit_p50": 606.9,
-        "profit_p10": 603.7,
+        "profit_p50": 603.8,
+        "profit_p10": 600.5,
         "profit_p90": 620.4
       },
       "2035": {
         "energy_rev_p50": 625.4,
-        "capacity_rev_p50": 79.3,
+        "capacity_rev_p50": 77.3,
         "cfd_payment_p50": 0.0,
         "fixed_om": 100.2,
-        "profit_p50": 604.5,
-        "profit_p10": 600.4,
+        "profit_p50": 602.5,
+        "profit_p10": 597.2,
         "profit_p90": 620.4
       },
       "2040": {
         "energy_rev_p50": 625.4,
-        "capacity_rev_p50": 77.4,
+        "capacity_rev_p50": 76.9,
         "cfd_payment_p50": 0.0,
         "fixed_om": 100.2,
-        "profit_p50": 602.6,
-        "profit_p10": 597.1,
+        "profit_p50": 602.1,
+        "profit_p10": 595.4,
         "profit_p90": 620.4
       },
       "2050": {
-        "energy_rev_p50": 334.4,
-        "capacity_rev_p50": 75.2,
+        "energy_rev_p50": 362.1,
+        "capacity_rev_p50": 73.5,
         "cfd_payment_p50": 0.0,
         "fixed_om": 100.2,
-        "profit_p50": 302.8,
+        "profit_p50": 330.4,
         "profit_p10": -5.0,
         "profit_p90": 552.0
       }
@@ -5656,177 +5656,177 @@ const NUCLEAR_RETIREMENT_DATA = {
     "Salem Nuclear (CEG 43%)": {
       "2030": {
         "energy_rev_p50": 264.6,
-        "capacity_rev_p50": 96.5,
+        "capacity_rev_p50": 92.9,
         "cfd_payment_p50": 0.0,
         "fixed_om": 118.4,
-        "profit_p50": 242.7,
+        "profit_p50": 240.8,
         "profit_p10": -1.7,
-        "profit_p90": 344.0
+        "profit_p90": 419.4
       },
       "2035": {
         "energy_rev_p50": 264.6,
-        "capacity_rev_p50": 93.7,
+        "capacity_rev_p50": 91.3,
         "cfd_payment_p50": 0.0,
         "fixed_om": 118.4,
-        "profit_p50": 241.6,
+        "profit_p50": 239.9,
         "profit_p10": -5.9,
-        "profit_p90": 489.5
+        "profit_p90": 463.8
       }
     },
     "Byron Nuclear": {
       "2030": {
         "energy_rev_p50": 629.1,
-        "capacity_rev_p50": 229.5,
+        "capacity_rev_p50": 220.8,
         "cfd_payment_p50": 0.0,
         "fixed_om": 281.6,
-        "profit_p50": 577.0,
+        "profit_p50": 572.7,
         "profit_p10": -4.1,
-        "profit_p90": 818.0
+        "profit_p90": 997.4
       },
       "2035": {
         "energy_rev_p50": 629.1,
-        "capacity_rev_p50": 222.9,
+        "capacity_rev_p50": 217.2,
         "cfd_payment_p50": 0.0,
         "fixed_om": 281.6,
-        "profit_p50": 574.4,
+        "profit_p50": 570.4,
         "profit_p10": -14.1,
-        "profit_p90": 1164.0
+        "profit_p90": 1102.9
       },
       "2040": {
-        "energy_rev_p50": 629.1,
-        "capacity_rev_p50": 217.6,
+        "energy_rev_p50": 858.6,
+        "capacity_rev_p50": 216.1,
         "cfd_payment_p50": 0.0,
         "fixed_om": 281.6,
-        "profit_p50": 571.5,
+        "profit_p50": 778.9,
         "profit_p10": -14.1,
-        "profit_p90": 1202.7
+        "profit_p90": 1644.2
       }
     },
     "Braidwood Nuclear": {
       "2030": {
         "energy_rev_p50": 639.6,
-        "capacity_rev_p50": 233.4,
+        "capacity_rev_p50": 224.5,
         "cfd_payment_p50": 0.0,
         "fixed_om": 286.3,
-        "profit_p50": 586.6,
+        "profit_p50": 582.2,
         "profit_p10": -4.2,
-        "profit_p90": 831.6
+        "profit_p90": 1014.0
       },
       "2035": {
         "energy_rev_p50": 639.6,
-        "capacity_rev_p50": 226.6,
+        "capacity_rev_p50": 220.8,
         "cfd_payment_p50": 0.0,
         "fixed_om": 286.3,
-        "profit_p50": 583.9,
+        "profit_p50": 579.9,
         "profit_p10": -14.3,
-        "profit_p90": 1183.4
+        "profit_p90": 1121.2
       },
       "2040": {
-        "energy_rev_p50": 639.6,
-        "capacity_rev_p50": 221.3,
+        "energy_rev_p50": 872.8,
+        "capacity_rev_p50": 219.6,
         "cfd_payment_p50": 0.0,
         "fixed_om": 286.3,
-        "profit_p50": 581.0,
+        "profit_p50": 791.9,
         "profit_p10": -14.3,
-        "profit_p90": 1222.7
+        "profit_p90": 1671.5
       }
     },
     "Quad Cities Nuclear": {
       "2030": {
         "energy_rev_p50": 487.6,
-        "capacity_rev_p50": 177.9,
+        "capacity_rev_p50": 171.1,
         "cfd_payment_p50": 0.0,
         "fixed_om": 218.3,
-        "profit_p50": 447.2,
+        "profit_p50": 443.9,
         "profit_p10": -3.2,
-        "profit_p90": 634.0
+        "profit_p90": 773.0
       }
     },
     "Dresden Nuclear": {
       "2030": {
         "energy_rev_p50": 494.6,
-        "capacity_rev_p50": 180.4,
+        "capacity_rev_p50": 173.6,
         "cfd_payment_p50": 0.0,
         "fixed_om": 221.4,
-        "profit_p50": 453.6,
+        "profit_p50": 450.2,
         "profit_p10": -3.2,
-        "profit_p90": 643.1
+        "profit_p90": 784.1
       },
       "2035": {
         "energy_rev_p50": 494.6,
-        "capacity_rev_p50": 175.2,
+        "capacity_rev_p50": 170.7,
         "cfd_payment_p50": 0.0,
         "fixed_om": 221.4,
-        "profit_p50": 451.5,
+        "profit_p50": 448.4,
         "profit_p10": -11.1,
-        "profit_p90": 915.1
+        "profit_p90": 867.0
       },
       "2040": {
-        "energy_rev_p50": 494.6,
-        "capacity_rev_p50": 171.1,
+        "energy_rev_p50": 674.9,
+        "capacity_rev_p50": 169.8,
         "cfd_payment_p50": 0.0,
         "fixed_om": 221.4,
-        "profit_p50": 449.3,
+        "profit_p50": 612.3,
         "profit_p10": -11.1,
-        "profit_p90": 945.4
+        "profit_p90": 1292.5
       }
     },
     "LaSalle Nuclear": {
       "2030": {
         "energy_rev_p50": 621.9,
-        "capacity_rev_p50": 226.9,
+        "capacity_rev_p50": 218.3,
         "cfd_payment_p50": 0.0,
         "fixed_om": 278.4,
-        "profit_p50": 570.4,
+        "profit_p50": 566.1,
         "profit_p10": -4.0,
-        "profit_p90": 808.6
+        "profit_p90": 985.9
       },
       "2035": {
         "energy_rev_p50": 621.9,
-        "capacity_rev_p50": 220.3,
+        "capacity_rev_p50": 214.7,
         "cfd_payment_p50": 0.0,
         "fixed_om": 278.4,
-        "profit_p50": 567.8,
+        "profit_p50": 563.8,
         "profit_p10": -13.9,
-        "profit_p90": 1150.7
+        "profit_p90": 1090.2
       },
       "2040": {
-        "energy_rev_p50": 621.9,
-        "capacity_rev_p50": 215.1,
+        "energy_rev_p50": 848.7,
+        "capacity_rev_p50": 213.6,
         "cfd_payment_p50": 0.0,
         "fixed_om": 278.4,
-        "profit_p50": 564.9,
+        "profit_p50": 770.0,
         "profit_p10": -13.9,
-        "profit_p90": 1188.8
+        "profit_p90": 1625.2
       }
     },
     "Clinton Nuclear": {
       "2030": {
         "energy_rev_p50": 285.5,
-        "capacity_rev_p50": 104.2,
+        "capacity_rev_p50": 100.2,
         "cfd_payment_p50": 0.0,
         "fixed_om": 127.8,
-        "profit_p50": 261.8,
+        "profit_p50": 259.9,
         "profit_p10": -1.9,
-        "profit_p90": 371.2
+        "profit_p90": 452.6
       },
       "2035": {
         "energy_rev_p50": 285.5,
-        "capacity_rev_p50": 101.1,
+        "capacity_rev_p50": 98.5,
         "cfd_payment_p50": 0.0,
         "fixed_om": 127.8,
-        "profit_p50": 260.6,
+        "profit_p50": 258.8,
         "profit_p10": -6.4,
-        "profit_p90": 528.2
+        "profit_p90": 500.4
       },
       "2040": {
-        "energy_rev_p50": 285.5,
-        "capacity_rev_p50": 98.8,
+        "energy_rev_p50": 389.6,
+        "capacity_rev_p50": 98.0,
         "cfd_payment_p50": 0.0,
         "fixed_om": 127.8,
-        "profit_p50": 259.3,
+        "profit_p50": 353.5,
         "profit_p10": -6.4,
-        "profit_p90": 545.7
+        "profit_p90": 746.1
       }
     },
     "Nine Mile Point Nuclear": {
@@ -5837,11 +5837,11 @@ const NUCLEAR_RETIREMENT_DATA = {
         "fixed_om": 228.8,
         "profit_p50": 436.8,
         "profit_p10": -3.3,
-        "profit_p90": 557.1
+        "profit_p90": 557.8
       },
       "2035": {
         "energy_rev_p50": 548.8,
-        "capacity_rev_p50": 104.7,
+        "capacity_rev_p50": 104.9,
         "cfd_payment_p50": 0.0,
         "fixed_om": 228.8,
         "profit_p50": 424.6,
@@ -5850,12 +5850,12 @@ const NUCLEAR_RETIREMENT_DATA = {
       },
       "2040": {
         "energy_rev_p50": 631.5,
-        "capacity_rev_p50": 98.6,
+        "capacity_rev_p50": 101.6,
         "cfd_payment_p50": 0.0,
         "fixed_om": 228.8,
         "profit_p50": 501.2,
         "profit_p10": -74.8,
-        "profit_p90": 501.2
+        "profit_p90": 811.1
       }
     },
     "FitzPatrick Nuclear": {
@@ -5866,7 +5866,7 @@ const NUCLEAR_RETIREMENT_DATA = {
         "fixed_om": 101.0,
         "profit_p50": 192.9,
         "profit_p10": -1.5,
-        "profit_p90": 246.0
+        "profit_p90": 246.3
       }
     },
     "Ginna Nuclear": {
@@ -5877,11 +5877,11 @@ const NUCLEAR_RETIREMENT_DATA = {
         "fixed_om": 69.1,
         "profit_p50": 131.9,
         "profit_p10": -1.0,
-        "profit_p90": 168.3
+        "profit_p90": 168.5
       },
       "2035": {
         "energy_rev_p50": 165.8,
-        "capacity_rev_p50": 31.6,
+        "capacity_rev_p50": 31.7,
         "cfd_payment_p50": 0.0,
         "fixed_om": 69.1,
         "profit_p50": 128.3,
@@ -5890,12 +5890,12 @@ const NUCLEAR_RETIREMENT_DATA = {
       },
       "2040": {
         "energy_rev_p50": 190.7,
-        "capacity_rev_p50": 29.8,
+        "capacity_rev_p50": 30.7,
         "cfd_payment_p50": 0.0,
         "fixed_om": 69.1,
         "profit_p50": 151.4,
         "profit_p10": -22.6,
-        "profit_p90": 151.4
+        "profit_p90": 245.0
       }
     },
     "South Texas Project (CEG 44%)": {
@@ -5915,7 +5915,7 @@ const NUCLEAR_RETIREMENT_DATA = {
         "fixed_om": 139.7,
         "profit_p50": 108.1,
         "profit_p10": -139.7,
-        "profit_p90": 236.6
+        "profit_p90": 256.8
       },
       "2040": {
         "energy_rev_p50": 247.8,
@@ -5930,115 +5930,115 @@ const NUCLEAR_RETIREMENT_DATA = {
     "Susquehanna Nuclear": {
       "2030": {
         "energy_rev_p50": 1405.2,
-        "capacity_rev_p50": 217.9,
+        "capacity_rev_p50": 209.6,
         "cfd_payment_p50": 0.0,
         "fixed_om": 267.4,
-        "profit_p50": 1355.8,
-        "profit_p10": 1347.4,
+        "profit_p50": 1347.5,
+        "profit_p10": 1338.7,
         "profit_p90": 1391.9
       },
       "2035": {
         "energy_rev_p50": 1405.2,
-        "capacity_rev_p50": 211.6,
+        "capacity_rev_p50": 206.2,
         "cfd_payment_p50": 0.0,
         "fixed_om": 267.4,
-        "profit_p50": 1349.5,
-        "profit_p10": 1338.5,
+        "profit_p50": 1344.0,
+        "profit_p10": 1330.1,
         "profit_p90": 1391.9
       },
       "2040": {
-        "energy_rev_p50": 597.2,
-        "capacity_rev_p50": 206.6,
+        "energy_rev_p50": 815.0,
+        "capacity_rev_p50": 205.1,
         "cfd_payment_p50": 0.0,
         "fixed_om": 267.4,
-        "profit_p50": 542.5,
+        "profit_p50": 739.4,
         "profit_p10": -13.4,
-        "profit_p90": 1141.7
+        "profit_p90": 1560.8
       }
     },
     "Hope Creek Nuclear": {
       "2030": {
         "energy_rev_p50": 314.2,
-        "capacity_rev_p50": 114.6,
+        "capacity_rev_p50": 110.3,
         "cfd_payment_p50": 0.0,
         "fixed_om": 140.6,
-        "profit_p50": 288.1,
+        "profit_p50": 286.0,
         "profit_p10": -2.0,
-        "profit_p90": 408.5
+        "profit_p90": 498.1
       },
       "2035": {
         "energy_rev_p50": 314.2,
-        "capacity_rev_p50": 111.3,
+        "capacity_rev_p50": 108.4,
         "cfd_payment_p50": 0.0,
         "fixed_om": 140.6,
-        "profit_p50": 286.8,
+        "profit_p50": 284.8,
         "profit_p10": -7.0,
-        "profit_p90": 581.3
+        "profit_p90": 550.7
       },
       "2040": {
-        "energy_rev_p50": 314.2,
-        "capacity_rev_p50": 108.7,
+        "energy_rev_p50": 428.7,
+        "capacity_rev_p50": 107.9,
         "cfd_payment_p50": 0.0,
         "fixed_om": 140.6,
-        "profit_p50": 285.4,
+        "profit_p50": 389.0,
         "profit_p10": -7.0,
-        "profit_p90": 600.6
+        "profit_p90": 821.0
       }
     },
     "Salem Nuclear (PSEG 57%)": {
       "2030": {
         "energy_rev_p50": 350.6,
-        "capacity_rev_p50": 127.9,
+        "capacity_rev_p50": 123.1,
         "cfd_payment_p50": 0.0,
         "fixed_om": 157.0,
-        "profit_p50": 321.6,
+        "profit_p50": 319.2,
         "profit_p10": -2.3,
-        "profit_p90": 455.9
+        "profit_p90": 555.9
       },
       "2035": {
         "energy_rev_p50": 350.6,
-        "capacity_rev_p50": 124.2,
+        "capacity_rev_p50": 121.0,
         "cfd_payment_p50": 0.0,
         "fixed_om": 157.0,
-        "profit_p50": 320.1,
+        "profit_p50": 317.9,
         "profit_p10": -7.8,
-        "profit_p90": 648.7
+        "profit_p90": 614.6
       }
     },
     "Peach Bottom Nuclear (PSEG 50%)": {
       "2030": {
         "energy_rev_p50": 341.8,
-        "capacity_rev_p50": 124.7,
+        "capacity_rev_p50": 120.0,
         "cfd_payment_p50": 0.0,
         "fixed_om": 153.0,
-        "profit_p50": 313.5,
+        "profit_p50": 311.1,
         "profit_p10": -2.2,
-        "profit_p90": 444.4
+        "profit_p90": 541.8
       },
       "2035": {
         "energy_rev_p50": 341.8,
-        "capacity_rev_p50": 121.1,
+        "capacity_rev_p50": 118.0,
         "cfd_payment_p50": 0.0,
         "fixed_om": 153.0,
-        "profit_p50": 312.0,
+        "profit_p50": 309.9,
         "profit_p10": -7.7,
-        "profit_p90": 632.4
+        "profit_p90": 599.1
       },
       "2040": {
-        "energy_rev_p50": 341.8,
-        "capacity_rev_p50": 118.2,
+        "energy_rev_p50": 466.4,
+        "capacity_rev_p50": 117.4,
         "cfd_payment_p50": 0.0,
         "fixed_om": 153.0,
-        "profit_p50": 310.5,
+        "profit_p50": 423.2,
         "profit_p10": -7.7,
-        "profit_p90": 653.3
+        "profit_p90": 893.2
       },
       "2050": {
-        "energy_rev_p50": 510.6,
-        "capacity_rev_p50": 114.8,
+        "energy_rev_p50": 552.9,
+        "capacity_rev_p50": 112.3,
         "cfd_payment_p50": 0.0,
         "fixed_om": 153.0,
-        "profit_p50": 462.3,
+        "profit_p50": 504.5,
         "profit_p10": -7.7,
         "profit_p90": 842.8
       }
@@ -6063,22 +6063,22 @@ const NUCLEAR_RETIREMENT_DATA = {
         "profit_p90": 168.3
       },
       "2040": {
+        "energy_rev_p50": 432.4,
+        "capacity_rev_p50": 28.5,
+        "cfd_payment_p50": 0.0,
+        "fixed_om": 144.0,
+        "profit_p50": 316.9,
+        "profit_p10": -115.5,
+        "profit_p90": 421.9
+      },
+      "2050": {
         "energy_rev_p50": 283.8,
         "capacity_rev_p50": 28.5,
         "cfd_payment_p50": 0.0,
         "fixed_om": 144.0,
         "profit_p50": 168.3,
         "profit_p10": -115.5,
-        "profit_p90": 423.8
-      },
-      "2050": {
-        "energy_rev_p50": 383.2,
-        "capacity_rev_p50": 28.5,
-        "cfd_payment_p50": 0.0,
-        "fixed_om": 144.0,
-        "profit_p50": 267.7,
-        "profit_p10": -115.5,
-        "profit_p90": 378.4
+        "profit_p90": 369.3
       }
     },
     "Seabrook Nuclear": {
@@ -6116,7 +6116,7 @@ const NUCLEAR_RETIREMENT_DATA = {
         "fixed_om": 149.3,
         "profit_p50": 295.1,
         "profit_p10": -84.3,
-        "profit_p90": 295.1
+        "profit_p90": 296.6
       }
     }
   },
@@ -6131,27 +6131,27 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 449.9
+          "avg_profit_m": 444.6
         },
         "2035": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 523.1
+          "avg_profit_m": 516.2
         },
         "2040": {
           "strand_rate": 0.004,
           "merchant_strand_rate": 0.004,
-          "avg_profit_m": 576.3
+          "avg_profit_m": 588.3
         },
         "2045": {
-          "strand_rate": 0.005,
-          "merchant_strand_rate": 0.005,
-          "avg_profit_m": 461.2
+          "strand_rate": 0.003,
+          "merchant_strand_rate": 0.003,
+          "avg_profit_m": 449.0
         },
         "2050": {
           "strand_rate": 0.006,
           "merchant_strand_rate": 0.006,
-          "avg_profit_m": 422.1
+          "avg_profit_m": 409.3
         }
       },
       "C": {
@@ -6163,27 +6163,27 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 423.2
+          "avg_profit_m": 431.5
         },
         "2035": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 507.3
+          "avg_profit_m": 494.2
         },
         "2040": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 481.8
+          "avg_profit_m": 621.9
         },
         "2045": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 450.2
+          "avg_profit_m": 497.0
         },
         "2050": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 460.7
+          "avg_profit_m": 481.6
         }
       }
     },
@@ -6197,27 +6197,27 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 435.1
+          "avg_profit_m": 433.5
         },
         "2035": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 458.4
+          "avg_profit_m": 452.8
         },
         "2040": {
           "strand_rate": 0.002,
           "merchant_strand_rate": 0.002,
-          "avg_profit_m": 420.4
+          "avg_profit_m": 453.7
         },
         "2045": {
-          "strand_rate": 0.003,
-          "merchant_strand_rate": 0.003,
-          "avg_profit_m": 393.6
+          "strand_rate": 0.001,
+          "merchant_strand_rate": 0.001,
+          "avg_profit_m": 380.3
         },
         "2050": {
           "strand_rate": 0.002,
           "merchant_strand_rate": 0.002,
-          "avg_profit_m": 410.8
+          "avg_profit_m": 377.7
         }
       },
       "Medium": {
@@ -6229,7 +6229,7 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 435.7
+          "avg_profit_m": 434.7
         },
         "2035": {
           "strand_rate": 0.0,
@@ -6239,17 +6239,17 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2040": {
           "strand_rate": 0.003,
           "merchant_strand_rate": 0.003,
-          "avg_profit_m": 576.6
+          "avg_profit_m": 571.8
         },
         "2045": {
           "strand_rate": 0.004,
           "merchant_strand_rate": 0.004,
-          "avg_profit_m": 561.5
+          "avg_profit_m": 534.8
         },
         "2050": {
           "strand_rate": 0.005,
           "merchant_strand_rate": 0.005,
-          "avg_profit_m": 564.8
+          "avg_profit_m": 571.0
         }
       },
       "High": {
@@ -6261,27 +6261,27 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 438.8
+          "avg_profit_m": 445.9
         },
         "2035": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 605.5
+          "avg_profit_m": 581.2
         },
         "2040": {
           "strand_rate": 0.002,
           "merchant_strand_rate": 0.002,
-          "avg_profit_m": 590.3
+          "avg_profit_m": 789.8
         },
         "2045": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 411.9
+          "avg_profit_m": 503.9
         },
         "2050": {
           "strand_rate": 0.002,
           "merchant_strand_rate": 0.002,
-          "avg_profit_m": 348.7
+          "avg_profit_m": 387.7
         }
       }
     },
@@ -6295,27 +6295,27 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 384.4
+          "avg_profit_m": 381.1
         },
         "2035": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 422.9
+          "avg_profit_m": 427.1
         },
         "2040": {
           "strand_rate": 0.004,
           "merchant_strand_rate": 0.004,
-          "avg_profit_m": 556.2
+          "avg_profit_m": 560.8
         },
         "2045": {
           "strand_rate": 0.002,
           "merchant_strand_rate": 0.002,
-          "avg_profit_m": 453.4
+          "avg_profit_m": 428.4
         },
         "2050": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 426.0
+          "avg_profit_m": 426.5
         }
       },
       "all_med": {
@@ -6327,27 +6327,27 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 415.7
+          "avg_profit_m": 417.9
         },
         "2035": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 496.8
+          "avg_profit_m": 483.8
         },
         "2040": {
           "strand_rate": 0.003,
           "merchant_strand_rate": 0.003,
-          "avg_profit_m": 510.3
+          "avg_profit_m": 627.6
         },
         "2045": {
           "strand_rate": 0.002,
           "merchant_strand_rate": 0.002,
-          "avg_profit_m": 456.8
+          "avg_profit_m": 491.3
         },
         "2050": {
           "strand_rate": 0.004,
           "merchant_strand_rate": 0.004,
-          "avg_profit_m": 455.1
+          "avg_profit_m": 462.5
         }
       },
       "all_high": {
@@ -6359,27 +6359,27 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 550.3
+          "avg_profit_m": 554.2
         },
         "2035": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 662.2
+          "avg_profit_m": 649.0
         },
         "2040": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 559.6
+          "avg_profit_m": 584.4
         },
         "2045": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 485.1
+          "avg_profit_m": 496.9
         },
         "2050": {
           "strand_rate": 0.004,
           "merchant_strand_rate": 0.004,
-          "avg_profit_m": 419.8
+          "avg_profit_m": 423.9
         }
       },
       "high_vre_low_firm": {
@@ -6391,27 +6391,27 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 410.7
+          "avg_profit_m": 413.0
         },
         "2035": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 493.9
+          "avg_profit_m": 478.9
         },
         "2040": {
           "strand_rate": 0.004,
           "merchant_strand_rate": 0.004,
-          "avg_profit_m": 501.3
+          "avg_profit_m": 620.0
         },
         "2045": {
-          "strand_rate": 0.007,
-          "merchant_strand_rate": 0.007,
-          "avg_profit_m": 447.2
+          "strand_rate": 0.003,
+          "merchant_strand_rate": 0.003,
+          "avg_profit_m": 487.1
         },
         "2050": {
           "strand_rate": 0.004,
           "merchant_strand_rate": 0.004,
-          "avg_profit_m": 468.5
+          "avg_profit_m": 471.4
         }
       },
       "high_firm_low_vre": {
@@ -6423,27 +6423,27 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 421.7
+          "avg_profit_m": 424.0
         },
         "2035": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 500.2
+          "avg_profit_m": 487.2
         },
         "2040": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 518.1
+          "avg_profit_m": 632.7
         },
         "2045": {
           "strand_rate": 0.002,
           "merchant_strand_rate": 0.002,
-          "avg_profit_m": 436.0
+          "avg_profit_m": 461.2
         },
         "2050": {
           "strand_rate": 0.004,
           "merchant_strand_rate": 0.004,
-          "avg_profit_m": 437.7
+          "avg_profit_m": 443.0
         }
       }
     },
@@ -6457,27 +6457,27 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 436.6
+          "avg_profit_m": 438.0
         },
         "2035": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 515.2
+          "avg_profit_m": 505.2
         },
         "2040": {
           "strand_rate": 0.002,
           "merchant_strand_rate": 0.002,
-          "avg_profit_m": 529.1
+          "avg_profit_m": 605.1
         },
         "2045": {
           "strand_rate": 0.002,
           "merchant_strand_rate": 0.002,
-          "avg_profit_m": 455.7
+          "avg_profit_m": 473.0
         },
         "2050": {
           "strand_rate": 0.003,
           "merchant_strand_rate": 0.003,
-          "avg_profit_m": 441.4
+          "avg_profit_m": 445.5
         }
       },
       "0.7": {
@@ -6489,27 +6489,27 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 436.6
+          "avg_profit_m": 438.0
         },
         "2035": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 515.2
+          "avg_profit_m": 505.2
         },
         "2040": {
           "strand_rate": 0.002,
           "merchant_strand_rate": 0.002,
-          "avg_profit_m": 529.1
+          "avg_profit_m": 605.1
         },
         "2045": {
           "strand_rate": 0.002,
           "merchant_strand_rate": 0.002,
-          "avg_profit_m": 455.7
+          "avg_profit_m": 473.0
         },
         "2050": {
           "strand_rate": 0.003,
           "merchant_strand_rate": 0.003,
-          "avg_profit_m": 441.4
+          "avg_profit_m": 445.5
         }
       },
       "1.0": {
@@ -6521,27 +6521,27 @@ const NUCLEAR_RETIREMENT_DATA = {
         "2030": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 436.6
+          "avg_profit_m": 438.0
         },
         "2035": {
           "strand_rate": 0.0,
           "merchant_strand_rate": 0.0,
-          "avg_profit_m": 515.2
+          "avg_profit_m": 505.2
         },
         "2040": {
           "strand_rate": 0.002,
           "merchant_strand_rate": 0.002,
-          "avg_profit_m": 529.1
+          "avg_profit_m": 605.1
         },
         "2045": {
           "strand_rate": 0.002,
           "merchant_strand_rate": 0.002,
-          "avg_profit_m": 455.7
+          "avg_profit_m": 473.0
         },
         "2050": {
           "strand_rate": 0.003,
           "merchant_strand_rate": 0.003,
-          "avg_profit_m": 441.4
+          "avg_profit_m": 445.5
         }
       }
     }
