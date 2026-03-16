@@ -11,7 +11,7 @@
     <meta property="og:type" content="article">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles/shared.css">
     <link rel="stylesheet" href="styles/article.css">
     <link rel="stylesheet" href="styles/cinematic.css">
@@ -23,10 +23,10 @@
     <script src="js/scroll-observer.js"></script>
     <script src="js/shared-footer.js"></script>
     <style>
-        /* ===== Page Title — DM Serif Display override ===== */
+        /* ===== Page Title ===== */
         .header h1 {
-            font-family: 'DM Serif Display', serif !important;
-            font-weight: 400 !important;
+            font-family: var(--font-heading) !important;
+            font-weight: 800 !important;
         }
 
         /* ===== Hero Stats Row ===== */
@@ -158,7 +158,7 @@
         }
         .outcome-tag {
             display: inline-block;
-            font-family: 'IBM Plex Mono', var(--font-mono, monospace);
+            font-family: var(--font-mono);
             font-size: 0.72rem;
             font-weight: 700;
             text-transform: uppercase;
@@ -191,7 +191,7 @@
             border-top: 1px solid rgba(0,0,0,0.06);
         }
         .outcome-stat {
-            font-family: 'IBM Plex Mono', var(--font-mono, monospace);
+            font-family: var(--font-mono);
             font-size: 1.8rem;
             font-weight: 700;
             line-height: 1.2;
@@ -331,7 +331,7 @@
         .iso-bar-label {
             width: 64px;
             flex-shrink: 0;
-            font-family: 'IBM Plex Mono', var(--font-mono, monospace);
+            font-family: var(--font-mono);
             font-size: 13px;
             font-weight: 600;
             color: var(--navy, #0B1120);
@@ -358,7 +358,7 @@
         .iso-bar-gap {
             width: 52px;
             flex-shrink: 0;
-            font-family: 'IBM Plex Mono', var(--font-mono, monospace);
+            font-family: var(--font-mono);
             font-size: 13px;
             font-weight: 600;
             color: #EF4444;
@@ -468,7 +468,7 @@
         }
         .coal-wall-side-note.visible { opacity: 1; }
         .coal-wall-counter {
-            font-family: 'IBM Plex Mono', var(--font-mono, monospace);
+            font-family: var(--font-mono);
             font-size: 13px;
             font-weight: 600;
         }
@@ -557,7 +557,7 @@
             box-shadow: 0 0 20px -4px rgba(14,165,233,0.15);
         }
         .ipp-panel-label {
-            font-family: 'IBM Plex Mono', var(--font-mono, monospace);
+            font-family: var(--font-mono);
             font-size: 0.72rem;
             font-weight: 700;
             text-transform: uppercase;
@@ -592,7 +592,7 @@
         .fleet-circle.brightened { box-shadow: 0 0 8px rgba(14,165,233,0.35); transform: scale(1.05); }
         .fleet-circle.shrunk { transform: scale(0.7); opacity: 0.3; }
         .ipp-counter {
-            font-family: 'IBM Plex Mono', var(--font-mono, monospace);
+            font-family: var(--font-mono);
             font-size: clamp(28px, 4vw, 36px);
             font-weight: 700;
             margin-bottom: 4px;
@@ -642,7 +642,7 @@
             box-shadow: 0 0 40px -10px rgba(239,68,68,0.15);
         }
         .ipp-stat-big {
-            font-family: 'IBM Plex Mono', var(--font-mono, monospace);
+            font-family: var(--font-mono);
             font-size: clamp(48px, 6vw, 64px);
             font-weight: 500;
             color: #EF4444;
@@ -745,7 +745,7 @@
         .nuclear-stat-card-rose { border-top: 3px solid #EF4444; }
         .nuclear-stat-card-1b { border-top: 3px solid #6366F1; }
         .nuclear-stat-card .stat-value {
-            font-family: 'IBM Plex Mono', var(--font-mono, monospace);
+            font-family: var(--font-mono);
             font-size: 1.8rem;
             font-weight: 700;
             color: var(--navy, #0B1120);
@@ -785,7 +785,7 @@
             background: #EF4444;
         }
         .rolloff-year {
-            font-family: 'IBM Plex Mono', var(--font-mono, monospace);
+            font-family: var(--font-mono);
             font-size: 0.85rem;
             font-weight: 700;
             color: #EF4444;
@@ -830,9 +830,9 @@
             padding: 0 var(--pad-page);
         }
         .synthesis-heading {
-            font-family: 'DM Serif Display', serif;
+            font-family: var(--font-heading);
             font-size: clamp(32px, 4.5vw, 48px);
-            font-weight: 400;
+            font-weight: 800;
             color: var(--navy, #0B1120);
             margin-bottom: var(--space-xl);
             line-height: 1.2;
@@ -854,7 +854,7 @@
             transform: translateY(0);
         }
         .synthesis-body p {
-            font-family: 'IBM Plex Sans', var(--font-body, sans-serif);
+            font-family: var(--font-body);
             font-size: 18px;
             line-height: 1.78;
             color: var(--text-primary, #1e293b);
@@ -1087,27 +1087,27 @@
                 <!-- ═══ TOP LABEL ═══ -->
                 <g filter="url(#labelShadow)">
                     <rect x="280" y="4" width="240" height="38" rx="19" fill="rgba(255,255,255,0.95)" stroke="rgba(0,0,0,0.10)" stroke-width="1.5"/>
-                    <text x="400" y="29" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="11" font-weight="600" letter-spacing="1.2" fill="rgba(0,0,0,0.55)">CORPORATE PROCUREMENT</text>
+                    <text x="400" y="29" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="11" font-weight="600" letter-spacing="1.2" fill="rgba(0,0,0,0.55)">CORPORATE PROCUREMENT</text>
                 </g>
 
                 <!-- ═══ JUNCTION LABEL ═══ -->
                 <g filter="url(#labelShadow)">
                     <rect x="305" y="175" width="190" height="34" rx="17" fill="rgba(255,255,255,0.95)" stroke="rgba(0,0,0,0.12)" stroke-width="1.5"/>
-                    <text x="400" y="197" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="600" letter-spacing="0.8" fill="rgba(0,0,0,0.50)">ACCOUNTING FRAMEWORK</text>
+                    <text x="400" y="197" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" font-weight="600" letter-spacing="0.8" fill="rgba(0,0,0,0.50)">ACCOUNTING FRAMEWORK</text>
                 </g>
 
                 <!-- ═══ STRATEGY LABELS (positioned on each branch) ═══ -->
                 <!-- 1B label -->
                 <g filter="url(#labelShadow)">
                     <rect x="200" y="330" width="130" height="48" rx="10" fill="rgba(99,102,241,0.06)" stroke="#6366F1" stroke-width="2.5"/>
-                    <text x="265" y="352" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="15" font-weight="700" fill="#6366F1" letter-spacing="0.5">1B</text>
-                    <text x="265" y="368" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="9" font-weight="600" fill="#6366F1" opacity="0.65" letter-spacing="0.8">CONSEQUENTIAL</text>
+                    <text x="265" y="352" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="15" font-weight="700" fill="#6366F1" letter-spacing="0.5">1B</text>
+                    <text x="265" y="368" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="9" font-weight="600" fill="#6366F1" opacity="0.65" letter-spacing="0.8">CONSEQUENTIAL</text>
                 </g>
                 <!-- 2C label -->
                 <g filter="url(#labelShadow)">
                     <rect x="470" y="330" width="130" height="48" rx="10" fill="rgba(14,165,233,0.06)" stroke="#0EA5E9" stroke-width="2.5"/>
-                    <text x="535" y="352" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="15" font-weight="700" fill="#0EA5E9" letter-spacing="0.5">2C</text>
-                    <text x="535" y="368" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="9" font-weight="600" fill="#0EA5E9" opacity="0.65" letter-spacing="0.8">HOURLY MATCHING</text>
+                    <text x="535" y="352" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="15" font-weight="700" fill="#0EA5E9" letter-spacing="0.5">2C</text>
+                    <text x="535" y="368" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="9" font-weight="600" fill="#0EA5E9" opacity="0.65" letter-spacing="0.8">HOURLY MATCHING</text>
                 </g>
             </svg>
         </div>
@@ -1375,15 +1375,15 @@
                 <rect x="80" y="100" width="440" height="200" rx="0" fill="rgba(99,102,241,0.06)" stroke="rgba(99,102,241,0.25)" stroke-width="1.5"/>
 
                 <!-- Labels: left side -->
-                <text x="68" y="385" text-anchor="end" font-family="'IBM Plex Mono', monospace" font-size="11" font-weight="500" fill="rgba(0,0,0,0.40)">COAL</text>
-                <text x="68" y="210" text-anchor="end" font-family="'IBM Plex Mono', monospace" font-size="11" font-weight="500" fill="rgba(99,102,241,0.50)">GAS</text>
+                <text x="68" y="385" text-anchor="end" font-family="'DM Sans', sans-serif" font-size="11" font-weight="500" fill="rgba(0,0,0,0.40)">COAL</text>
+                <text x="68" y="210" text-anchor="end" font-family="'DM Sans', sans-serif" font-size="11" font-weight="500" fill="rgba(99,102,241,0.50)">GAS</text>
                 <!-- Labels: right side -->
-                <text x="532" y="385" text-anchor="start" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="400" fill="rgba(0,0,0,0.30)">~2,200 lb CO&#8322;/MWh</text>
-                <text x="532" y="210" text-anchor="start" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="400" fill="rgba(99,102,241,0.40)">~850 lb CO&#8322;/MWh</text>
+                <text x="532" y="385" text-anchor="start" font-family="'DM Sans', sans-serif" font-size="10" font-weight="400" fill="rgba(0,0,0,0.30)">~2,200 lb CO&#8322;/MWh</text>
+                <text x="532" y="210" text-anchor="start" font-family="'DM Sans', sans-serif" font-size="10" font-weight="400" fill="rgba(99,102,241,0.40)">~850 lb CO&#8322;/MWh</text>
 
                 <!-- Coal wall boundary line -->
                 <line x1="60" y1="300" x2="540" y2="300" stroke="#EF4444" stroke-opacity="0.6" stroke-width="2" stroke-dasharray="6 4"/>
-                <text id="coalWallLabel" x="300" y="290" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="11" font-weight="600" fill="#EF4444" opacity="0.8">THE COAL WALL</text>
+                <text id="coalWallLabel" x="300" y="290" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="11" font-weight="600" fill="#EF4444" opacity="0.8">THE COAL WALL</text>
 
                 <!-- Displaced overlay: layers above sweep line become transparent -->
                 <g clip-path="url(#sweepClip)">
@@ -1404,7 +1404,7 @@
                 </defs>
 
                 <!-- Counter text (animated by JS) -->
-                <text id="sweepCounter" x="300" y="440" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="13" font-weight="600" fill="#0EA5E9" opacity="0">Displacement: ~2,200 lb/MWh</text>
+                <text id="sweepCounter" x="300" y="440" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="13" font-weight="600" fill="#0EA5E9" opacity="0">Displacement: ~2,200 lb/MWh</text>
             </svg>
         </div>
 
@@ -1447,19 +1447,19 @@
                 <line x1="80" y1="300" x2="660" y2="300" stroke="rgba(0,0,0,0.10)" stroke-width="1"/>
 
                 <!-- Y-axis label -->
-                <text x="24" y="170" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" fill="rgba(0,0,0,0.40)" transform="rotate(-90,24,170)">Marginal cost ($/tCO&#8322;)</text>
+                <text x="24" y="170" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.40)" transform="rotate(-90,24,170)">Marginal cost ($/tCO&#8322;)</text>
 
                 <!-- X-axis label -->
-                <text x="370" y="335" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" fill="rgba(0,0,0,0.40)">CFE Target (%)</text>
+                <text x="370" y="335" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.40)">CFE Target (%)</text>
 
                 <!-- X-axis ticks -->
-                <text x="80" y="318" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" fill="rgba(0,0,0,0.35)">80</text>
-                <text x="163" y="318" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" fill="rgba(0,0,0,0.35)">85</text>
-                <text x="245" y="318" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" fill="rgba(0,0,0,0.35)">90</text>
-                <text x="328" y="318" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" fill="rgba(0,0,0,0.35)">95</text>
-                <text x="432" y="318" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" fill="rgba(0,0,0,0.35)">97.5</text>
-                <text x="538" y="318" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" fill="rgba(0,0,0,0.35)">99</text>
-                <text x="640" y="318" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" fill="rgba(0,0,0,0.35)">99.9</text>
+                <text x="80" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)">80</text>
+                <text x="163" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)">85</text>
+                <text x="245" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)">90</text>
+                <text x="328" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)">95</text>
+                <text x="432" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)">97.5</text>
+                <text x="538" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)">99</text>
+                <text x="640" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)">99.9</text>
 
                 <!-- Grid lines (light) -->
                 <line x1="163" y1="300" x2="163" y2="30" stroke="rgba(0,0,0,0.04)" stroke-width="1"/>
@@ -1473,7 +1473,7 @@
 
                 <!-- DAC reference line -->
                 <line id="dacLine" x1="80" y1="140" x2="660" y2="140" stroke="#8B5CF6" stroke-width="1.5" stroke-dasharray="8 4" stroke-dashoffset="800" opacity="0.7"/>
-                <text x="662" y="136" font-family="'IBM Plex Mono', monospace" font-size="9" fill="#8B5CF6" opacity="0.7">DAC reference</text>
+                <text x="662" y="136" font-family="'DM Sans', sans-serif" font-size="9" fill="#8B5CF6" opacity="0.7">DAC reference</text>
 
                 <!-- Grid decarbonization curve (hockey stick) -->
                 <path id="gridCurve" d="M80,270 C120,265 163,258 245,240 C300,228 328,210 370,190 C410,168 432,155 470,140 C510,118 560,80 640,38" fill="none" stroke="url(#gridCurveGrad)" stroke-width="2.5" stroke-linecap="round"/>
@@ -1482,7 +1482,7 @@
                 <g id="crossoverMarker" opacity="0">
                     <line x1="470" y1="140" x2="470" y2="300" stroke="#EF4444" stroke-width="1" stroke-dasharray="4 3" opacity="0.5"/>
                     <circle cx="470" cy="140" r="6" fill="#EF4444" stroke="white" stroke-width="1.5"/>
-                    <text x="470" y="155" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="600" fill="#EF4444" dy="12">~96-98% CFE</text>
+                    <text x="470" y="155" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" font-weight="600" fill="#EF4444" dy="12">~96-98% CFE</text>
                 </g>
             </svg>
         </div>
@@ -1628,13 +1628,13 @@
                 <path id="curve1B" d="M80,60 C180,80 300,120 400,160 C500,200 580,230 640,248"
                       fill="none" stroke="#6366F1" stroke-width="2.5" stroke-linecap="round"
                       stroke-dasharray="800" stroke-dashoffset="800"/>
-                <text x="645" y="258" font-family="'IBM Plex Mono', monospace" font-size="12" font-weight="700" fill="#6366F1" text-anchor="start">1B</text>
+                <text x="645" y="258" font-family="'DM Sans', sans-serif" font-size="12" font-weight="700" fill="#6366F1" text-anchor="start">1B</text>
 
                 <!-- 2C curve — steep, crosses zero -->
                 <path id="curve2C" d="M80,60 C180,75 300,110 400,145 C500,175 560,198 620,210 C640,213 650,212 660,210"
                       fill="none" stroke="#0EA5E9" stroke-width="2.5" stroke-linecap="round"
                       stroke-dasharray="800" stroke-dashoffset="800"/>
-                <text x="645" y="205" font-family="'IBM Plex Mono', monospace" font-size="12" font-weight="700" fill="#0EA5E9" text-anchor="start">2C</text>
+                <text x="645" y="205" font-family="'DM Sans', sans-serif" font-size="12" font-weight="700" fill="#0EA5E9" text-anchor="start">2C</text>
 
                 <!-- Critical mass marker at zero crossing -->
                 <g id="criticalMassGroup" opacity="0">
