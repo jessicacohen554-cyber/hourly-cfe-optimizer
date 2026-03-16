@@ -1,19 +1,19 @@
 # Independent Technical Review: Electricity Market Simulator
 ## Architecture, Assumptions, and Uncertainty Characterization
 
-**Version**: 1.0
-**Date**: March 14, 2026
+**Version**: 1.1
+**Date**: March 16, 2026
 **Classification**: Internal — Peer Review
-**Model Reviewed**: Market Simulator v1.0.0
+**Model Reviewed**: Market Simulation Screening Tool v1.1.0
 **Upstream Pipeline**: Hourly CFE Optimizer Steps 0–7
 
 ---
 
 ## Executive Summary
 
-This document presents an independent technical review of the Electricity Market Simulator, a profit-driven screening tool that models clean energy deployment, fossil retirement, and wholesale price formation across seven U.S. Independent System Operators (ISOs). The tool is designed to narrow the search window for compute-intensive production models (GenX, IPM, ReEDS), not to replace them.
+This document presents an independent technical review of the Market Simulation Screening Tool (formerly Electricity Market Simulator), a profit-driven screening tool that models clean energy deployment, fossil retirement, and wholesale price formation across seven U.S. Independent System Operators (ISOs). The tool is designed to narrow the search window for compute-intensive production models (GenX, IPM, ReEDS), not to replace them.
 
-**Overall Assessment**: The tool is **fit for purpose as a directional screening instrument**. Its core architecture — merit-order LMP formation, profit-driven deployment, and parametric sensitivity coverage — is sound and well-implemented. The 270-scenario sweep mode explores more of the uncertainty space in 30 minutes than GenX/IPM can cover in a week. This throughput advantage is the tool's primary competitive differentiator.
+**Overall Assessment**: The tool is **fit for purpose as a directional screening instrument**. Its core architecture — merit-order LMP formation, profit-driven deployment, and parametric sensitivity coverage — is sound and well-implemented. The 270-scenario sweep mode explores more of the uncertainty space in 30 minutes than GenX/IPM can cover in a week. This throughput advantage is the tool's primary competitive differentiator. Since v1.0, the addition of plant-level dispatch economics using real EIA 860 per-generator heat rates across 16 states strengthens the tool's granularity for individual generator viability assessment.
 
 **Confidence Ratings by Mode**:
 
@@ -66,7 +66,7 @@ The tool serves as a **screening instrument** — its value lies in rapidly expl
 
 This review applies four assessment layers:
 
-1. **Code-level inspection**: Line-by-line review of core algorithms in `market_simulation.py`, `lmp_engine.py`, `dispatch_utils.py`, and `pipeline_config.py`.
+1. **Code-level inspection**: Line-by-line review of core algorithms in `market_simulation.py`, `lmp_engine.py`, `fleet_model.py`, `dispatch_utils.py`, and `pipeline_config.py`.
 2. **Assumption validation**: Cross-reference all input parameters against published sources (NREL ATB 2024, Lazard v17/v18, LBNL Utility-Scale Solar/Wind, PJM SOM 2024, EPA eGRID 2022).
 3. **Structural sensitivity**: Identify model architecture decisions that introduce systematic bias and quantify their magnitude.
 4. **Edge-case analysis**: Test model behavior at parameter extremes and identify failure modes.
@@ -469,7 +469,7 @@ Multi-year averaged (5-year) demand and generation profiles from EIA-930.
 
 2022 vintage. Per-fuel-type CO₂ rates (coal: 0.95 tCO₂/MWh, gas CCGT: 0.37 tCO₂/MWh) are consistent with published eGRID subregion values.
 
-**Assessment (a)**: The `fleet_model.py` validation against EPA CAMPD hourly data is a strong quality control mechanism. Currently available only for Texas (EIA 860/923 data loaded for TX). Extending to additional states would strengthen confidence in fleet characterization.
+**Assessment (a)**: The `fleet_model.py` validation against EPA CAMPD hourly data is a strong quality control mechanism. EIA 860 per-generator data is now loaded for 16 states (AL, AR, AZ, CA, DE, IL, MA, MD, ME, NH, NJ, NY, OR, PA, TX, VA), covering all 7 ISOs. The `load_iso_fleet()` function filters generators by `balancing_authority_code` → ISO mapping, enabling plant-level merit-order dispatch with real per-generator heat rates rather than fleet-average approximations.
 
 ### 6.3 Fossil Capacity Inventory
 
@@ -485,7 +485,7 @@ Multi-year averaged (5-year) demand and generation profiles from EIA-930.
 | MISO | 105,000 | 34% | 38% | 23% | 1% |
 | SPP | 58,000 | 35% | 42% | 27% | 1% |
 
-**Gap (b)**: No systematic accounting of planned retirements beyond PJM (Brandon Shores, Wagner, Indian River adjustments are documented). MISO has significant coal retirement announcements (Ameren Rush Island, Xcel Sherco) not reflected in the static inventory. This may overstate MISO's coal generation by 5–10 TWh.
+**Gap (b) — partially addressed**: MISO coal cap has been adjusted (125.0 → 112.0 TWh, Rec #10) to account for Rush Island, Sherco Unit 2, Campbell 1-3, and Belle River retirements. Plant-level fleet data from EIA 860 (16 states) now provides per-generator capacity and status, enabling more granular retirement tracking. Remaining gap: no systematic tracking of planned retirements beyond PJM and MISO.
 
 ### 6.4 Coal and Oil Capacity Caps
 
@@ -582,11 +582,11 @@ Despite wide individual uncertainty ranges, the tool is highly reliable for dire
 | Assumption | Bias Direction | Magnitude | Impact on Key Outputs |
 |-----------|---------------|-----------|----------------------|
 | Copper-plate transmission | Optimistic | +3–8% clean share | Overstates achievable penetration |
-| No unit commitment | Optimistic | +5–10% fossil availability | Understates retirement pressure |
+| No unit commitment (partially mitigated) | Optimistic | +3–7% fossil availability | Plant-level merit order captures per-generator economics but not min-gen/ramp constraints |
 | Greedy storage dispatch | Conservative | −5–15% storage utilization | Overstates clean firm needs |
 | 90% CCS capture rate | Optimistic | −$4–9/MWh CCS cost | Overstates CCS competitiveness |
 | Sigmoid capacity degradation | Neutral | ±30% capacity revenue | Balanced at mid-range |
-| Static demand | Conservative | −20–40% price variance | Understates scarcity frequency |
+| Static demand (mitigated) | Conservative | −10–20% price variance | Partially addressed by demand elasticity dampening (Rec #8) |
 | Multi-year weather averaging | Mixed | ±3–5% optimal mix | Smooths weather extremes |
 
 **Net direction**: The model is slightly optimistic about clean energy deployment potential (copper-plate and no-UC effects dominate) and slightly conservative about storage economics (greedy dispatch). These partially offset each other.
@@ -600,7 +600,7 @@ Despite wide individual uncertainty ranges, the tool is highly reliable for dire
 | Geographic resolution | ISO-level (7) | Nodal | Nodal | ReEDS zones (~130) |
 | Temporal resolution | 8,760 hourly | Representative periods | Seasonal blocks | 17 time slices |
 | Transmission | Copper-plate | Full network | Full network | Pipeline |
-| Unit commitment | None | Optional | Full | None |
+| Unit commitment | None (plant-level merit order) | Optional | Full | None |
 | Storage optimization | Greedy sequential | Co-optimized LP | Co-optimized LP | Simplified |
 | Scenario coverage | 270 in 30 min | 1 in 2–12 hours | 1 in 4–24 hours | ~10 in days |
 | Runtime (single scenario) | 5–15 seconds | 2–12 hours | 4–24 hours | 1–4 hours |
@@ -640,7 +640,7 @@ Despite wide individual uncertainty ranges, the tool is highly reliable for dire
 | # | Recommendation | Rationale | Status |
 |---|---------------|-----------|--------|
 | 8 | Add demand elasticity for extreme price events (>$200/MWh) | Overstates scarcity pricing by 10–20% | **Fixed** — Post-pricing demand elasticity dampening in `lmp_engine.py`. When LMP exceeds ISO-specific threshold ($200-300/MWh), logarithmic curtailment ramp reduces prices toward threshold. ISO-specific max curtailment: PJM 15% (9.5 GW RPM DR), ERCOT 10% ($300 threshold, 4CP), CAISO 10% (PDR/RDRR), NYISO 12% (SCR/EDRP), NEISO 12% (FCM DR, 0.45 damping for winter gas events), MISO 13% (LMR + industrial), SPP 8% (limited DR). Moderates scarcity tail by 3-7% while preserving price signals above threshold. |
-| 9 | Extend fleet_model.py real generator data beyond Texas | Strengthens heat rate and emission rate validation | Open — blocked on EIA 860/923 multi-state data acquisition |
+| 9 | Extend fleet_model.py real generator data beyond Texas | Strengthens heat rate and emission rate validation | **Fixed** — `load_iso_fleet()` in `fleet_model.py` loads EIA 860 per-generator data from 16 states (AL, AR, AZ, CA, DE, IL, MA, MD, ME, NH, NJ, NY, OR, PA, TX, VA) and filters by `balancing_authority_code` → ISO mapping. Covers all 7 ISOs. `build_plant_level_merit_order()` in `lmp_engine.py` uses real per-generator heat rates for plant-level dispatch economics. `compute_plant_level_economics()` in `market_simulation.py` classifies each generator as stranded/at_risk/operating based on profit margins. Output: `detailed_plant_results.csv` per run. |
 | 10 | Add MISO planned coal retirement adjustments | Current coal cap overstated by 5–10 TWh | **Fixed** — `COAL_CAP_TWH['MISO']` reduced from 125.0 to 112.0 TWh. Accounts for Rush Island (retired 2024), Sherco Unit 2 (retired 2023), Campbell 1-3 (retiring 2025), Belle River (retiring 2028-29). Sourced from EIA-860M Dec 2024. |
 | 11 | Model nuclear offtake contracts (ERCOT) | Prevents false retirement signal for contracted plants | **Fixed** — `NUCLEAR_OFFTAKE_CONTRACTS` added to `pipeline_config.py` with ERCOT Comanche Peak data (2.3 GW, $35/MWh floor, contract through 2045). Nuclear retirement check in `market_simulation.py` skips retirement for contracted plants within contract period. |
 
@@ -651,6 +651,15 @@ Despite wide individual uncertainty ranges, the tool is highly reliable for dire
 | 12 | Add source citations for interconnection queue caps | Currently undocumented in code comments | **Fixed** — Detailed per-ISO citations added to `QUEUE_CAP_GW` in `market_simulation.py`. Sources: LBNL "Queued Up 2024" (Rand et al.), queue sizes and completion rates per ISO, cross-validated against Princeton REPEAT and Rhodium Clean Investment Monitor. |
 | 13 | Publish demand-quantile pricing calibration methodology as technical note | Key innovation deserves standalone documentation | **Fixed** — `docs/Demand_Quantile_Pricing_Methodology.md`: comprehensive technical note covering architecture (4 pricing layers), all parameter definitions with formulas, ISO-specific parameter table (v11.3), calibration process (v11.0→v11.3 iteration), VRE scaling extension, and known limitations. |
 | 14 | Document synthetic LMP validation against actual ISO clearing prices (all 7 ISOs) | Currently available for PJM only | **Fixed** — `docs/LMP_Validation_Results.md`: all 7 ISOs documented with calibration targets, sources, ISO-specific notes, accuracy metrics (avg ±8%, P50 ±8%, P90 ±15%), confidence ratings (High for PJM/ERCOT, Medium-High for CAISO/MISO/SPP, Medium for NYISO/NEISO), and known biases. |
+
+### 10.5 New Capabilities (Implemented Since v1.0)
+
+| # | Feature | Description | Status |
+|---|---------|-------------|--------|
+| 15 | Plant-level dispatch economics | `build_plant_level_merit_order()` in `lmp_engine.py` constructs merit-order stacks from real EIA 860 per-generator heat rates (not aggregated fleet averages). `compute_plant_level_economics()` in `market_simulation.py` computes per-plant revenue, cost, profit, capacity factor, and classifies each generator as `stranded` (profit < -$5/MWh), `at_risk` (profit ≤ $2/MWh or CF < 10%), or `operating`. | **Implemented** |
+| 16 | Multi-state fleet model | `load_iso_fleet()` in `fleet_model.py` loads EIA 860 generator data from 16 states and filters by `balancing_authority_code` → ISO mapping. Correctly handles multi-BA states (e.g., TX has both ERCOT and SPP generators). | **Implemented** |
+| 17 | Detailed plant results output | Each simulation run produces `detailed_plant_results.csv` with per-generator economics, status classification, and dispatch data. Saved to run output directory. | **Implemented** |
+| 18 | Tool renamed to Market Simulation Screening Tool | Clarifies the tool's role as a directional screening instrument, not a production capacity expansion model. Results directories named `run_001_{ISO}` (e.g., `run_001_PJM`, `run_002_CAISO`). | **Implemented** |
 
 ---
 
