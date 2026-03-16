@@ -203,7 +203,9 @@
     //
     // Pages archived: procurement_comparison.html (Legacy — superseded)
     // Pages merged: pipeline_map.html folded into pipeline.html
+    // Pages archived: grid_animation.html (ERCOT Grid Animation — moved to archive/)
     const NAV_ITEMS = [
+        { label: 'Home', href: 'home.html' },
         {
             label: 'About',
             children: [
@@ -237,12 +239,6 @@
                 { label: 'CO\u2082 Abatement', href: 'abatement_dashboard.html' },
                 { label: 'Clean Firm', href: 'clean_firm_case.html' },
                 { label: 'Clean Asset Value', href: 'lmp_trends.html' }
-            ]
-        },
-        {
-            label: 'Grid Visualizations',
-            children: [
-                { label: 'ERCOT Grid Animation', href: 'grid_animation.html' }
             ]
         },
         { label: 'Reference', href: 'reference.html' }
