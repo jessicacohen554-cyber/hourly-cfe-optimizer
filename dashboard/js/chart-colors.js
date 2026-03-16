@@ -107,6 +107,26 @@ var RESOURCE_STACK_ORDER = ['nuclear', 'geothermal', 'ccs', 'hydro', 'offshoreWi
 var CURTAILMENT_STACK_ORDER = ['solar', 'wind', 'offshoreWind', 'hydro', 'ccs', 'geothermal', 'nuclear'];
 
 // ============================================================================
+// CHART.JS DEFAULT FONT SIZES — Desktop readability
+// Applied after DOM loads to ensure Chart.js is available
+// ============================================================================
+function _applyChartDefaults() {
+    if (typeof Chart === 'undefined') return;
+    Chart.defaults.font.size = 14;
+    if (Chart.defaults.plugins.legend && Chart.defaults.plugins.legend.labels) {
+        Chart.defaults.plugins.legend.labels.font = { size: 14 };
+    }
+    if (Chart.defaults.plugins.title) {
+        Chart.defaults.plugins.title.font = { size: 16, weight: '600' };
+    }
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _applyChartDefaults);
+} else {
+    _applyChartDefaults();
+}
+
+// ============================================================================
 // SHARED LEGEND UTILITY — buildLegend()
 // ============================================================================
 // Generates consistent HTML legends with correct swatch types for all pages.

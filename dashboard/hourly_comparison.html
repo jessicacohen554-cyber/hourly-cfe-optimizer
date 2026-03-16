@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hourly Matching Strategy Comparison — 2A vs 2B vs 2C</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/reference.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+<script src="js/shared-footer.js"></script>
+<style>
+body { background: var(--bg-page); }
+
+/* ===== Hero ===== */
+.hero {
+    background: linear-gradient(180deg, #0F1A2E 0%, #1A2744 60%, #1E3A5F 100%);
+    padding: 48px 24px 40px;
+    text-align: center;
+}
+.hero h1 {
+    font-family: var(--font-heading);
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+}
+.hero .subtitle {
+    font-size: 1.05rem;
+    color: rgba(255,255,255,0.88);
+    max-width: 940px;
+    margin: 0 auto 24px;
+    line-height: 1.7;
+}
+.hero .hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+.hero .hero-stat {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 10px;
+    padding: 14px 20px;
+    text-align: center;
+    min-width: 140px;
+}
+.hero .hero-stat .val {
+    font-family: var(--font-data, var(--font-mono));
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #fff;
+}
+.hero .hero-stat .lbl {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: 2px;
+}
+
+/* ===== Content ===== */
+.content { max-width: 1200px; margin: 0 auto; padding: 32px 24px 60px; }
+
+/* ===== Section layout ===== */
+.section-panel {
+    background: #fff;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: 28px 28px 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.section-panel h2 {
+    font-family: var(--font-heading);
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 6px;
+}
+.section-panel h3 {
+    font-family: var(--font-heading);
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #374151;
+    margin: 20px 0 10px;
+}
+.section-panel p, .section-panel li {
+    font-size: 0.95rem;
+    line-height: 1.65;
+    color: #1f2937;
+}
+.section-panel ul { padding-left: 20px; margin-bottom: 12px; }
+.section-panel li { margin-bottom: 6px; }
+.section-desc {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    margin-bottom: 18px;
+    line-height: 1.6;
+}
+
+/* ===== Strategy cards (3-col) ===== */
+.strategy-cards-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin: 20px 0;
+}
+.strat-card {
+    border: 2px solid var(--border-light);
+    border-radius: 12px;
+    padding: 20px;
+    background: #FAFBFD;
+    transition: box-shadow 0.2s, border-color 0.2s;
+    position: relative;
+}
+.strat-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+.strat-card.active { border-color: var(--blue-vivid, #0EA5E9); box-shadow: 0 2px 16px rgba(14,165,233,0.15); }
+.strat-card h4 {
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 4px;
+}
+.strat-card .strat-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+.tag-2a { background: rgba(239,68,68,0.1); color: #B91C1C; border: 1px solid rgba(239,68,68,0.25); } /* contrast-fix: was #DC2626 (4.1:1 on tinted bg), now #B91C1C (5.5:1) */
+.tag-2b { background: rgba(245,158,11,0.1); color: #B45309; /* contrast-fix: was #D97706, now #B45309, ratio 5.02:1 on white */ border: 1px solid rgba(245,158,11,0.25); }
+.tag-2c { background: rgba(34,197,94,0.1); color: #166534; /* contrast-fix: darkened from #15803D for 5.5:1 on tinted bg */ border: 1px solid rgba(34,197,94,0.25); }
+.strat-card p { font-size: 0.82rem; line-height: 1.55; color: #4b5563; }
+.strat-card .cost-big {
+    font-family: var(--font-data, var(--font-mono));
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin: 12px 0 4px;
+}
+.strat-card .cost-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* ===== Controls row ===== */
+.controls-row {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: rgba(0,0,0,0.02);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-light);
+}
+.control-group { display: flex; flex-direction: column; gap: 4px; }
+.control-group label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+}
+.control-group select {
+    padding: 6px 28px 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    background: #fff;
+    cursor: pointer;
+    min-width: 120px;
+}
+
+/* ===== Chart layout ===== */
+.chart-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+.chart-box {
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+}
+.chart-box h3 {
+    font-family: var(--font-heading);
+    font-size: 0.95rem;
+    color: var(--navy);
+    margin-bottom: 4px;
+}
+.chart-box .chart-note { font-size: 0.75rem; color: rgba(0,0,0,0.55); margin-bottom: 12px; }
+.chart-container { position: relative; height: 340px; min-height: auto; }
+.chart-container-wide { position: relative; height: 420px; }
+
+/* ===== Heatmap matrix ===== */
+.matrix-wrapper { overflow-x: auto; margin: 16px 0; }
+.matrix-table {
+    border-collapse: collapse;
+    font-size: 0.78rem;
+    font-family: var(--font-data, var(--font-mono));
+    width: 100%;
+    min-width: 700px;
+}
+.matrix-table th {
+    background: #F3F4F8;
+    color: var(--navy);
+    font-weight: 700;
+    padding: 8px 10px;
+    border-bottom: 2px solid var(--border);
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    text-align: center;
+}
+.matrix-table td {
+    padding: 6px 8px;
+    border: 1px solid rgba(0,0,0,0.06);
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.78rem;
+    transition: background 0.15s;
+}
+.matrix-table td:first-child {
+    text-align: right;
+    font-weight: 700;
+    background: #F9FAFB;
+    color: var(--navy);
+    white-space: nowrap;
+    font-family: var(--font-heading);
+}
+.matrix-table tr:hover td { filter: brightness(0.97); }
+
+/* ===== ISO accordion ===== */
+.iso-accordion-item {
+    margin-bottom: 10px;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+}
+.iso-accordion-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    color: var(--navy);
+    transition: background 0.15s;
+    text-align: left;
+}
+.iso-accordion-header:hover { background: rgba(14,165,233,0.04); }
+.iso-acc-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.iso-acc-name {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1rem;
+    min-width: 60px;
+}
+.iso-acc-summary {
+    flex: 1;
+    font-size: 0.8rem;
+    color: rgba(0,0,0,0.55);
+    font-family: var(--font-data, var(--font-mono));
+}
+.iso-acc-chevron {
+    font-size: 0.7rem;
+    color: rgba(0,0,0,0.3);
+    transition: transform 0.25s;
+}
+.iso-accordion-item.open .iso-acc-chevron { transform: rotate(180deg); }
+.iso-accordion-body {
+    display: none;
+    padding: 0 20px 20px;
+}
+.iso-accordion-item.open .iso-accordion-body { display: block; }
+
+/* ISO body subsections */
+.iso-body-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.iso-mini-chart { height: 260px; position: relative; }
+.iso-insight {
+    background: linear-gradient(135deg, rgba(14,165,233,0.06) 0%, rgba(34,197,94,0.06) 100%);
+    border-left: 4px solid #0EA5E9;
+    padding: 14px 18px;
+    border-radius: 0 8px 8px 0;
+    margin: 12px 0;
+    font-size: 0.85rem;
+    line-height: 1.6;
+}
+.iso-insight strong { color: var(--navy); }
+.iso-insight.warn { border-left-color: #F59E0B; background: linear-gradient(135deg, rgba(245,158,11,0.06) 0%, rgba(239,68,68,0.04) 100%); }
+.iso-insight.danger { border-left-color: #EF4444; background: rgba(239,68,68,0.04); }
+
+/* ===== Rolloff comparison ===== */
+.rolloff-diff { color: #DC2626; font-weight: 700; }
+.rolloff-same { color: #6B7280; }
+
+/* ===== Key finding ===== */
+.key-finding {
+    background: linear-gradient(135deg, rgba(14,165,233,0.06) 0%, rgba(34,197,94,0.06) 100%);
+    border-left: 4px solid #0EA5E9;
+    padding: 14px 18px;
+    border-radius: 0 8px 8px 0;
+    margin: 16px 0;
+    font-size: 0.88rem;
+    line-height: 1.6;
+}
+.key-finding strong { color: var(--navy); }
+
+/* ===== Strategy comparison legend ===== */
+.strat-legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+.strat-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+.strat-legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+    .hero h1 { font-size: 1.6rem; }
+    .hero .hero-stats { gap: 12px; }
+    .hero .hero-stat { min-width: 100px; padding: 10px 14px; }
+    .hero .hero-stat .val { font-size: 1.2rem; }
+    .strategy-cards-3 { grid-template-columns: 1fr; }
+    .chart-pair { grid-template-columns: 1fr; }
+    .iso-body-grid { grid-template-columns: 1fr; }
+    .section-panel { padding: 20px 16px; }
+    .controls-row { padding: 10px 12px; gap: 12px; }
+    .chart-container { height: 280px; }
+    .chart-container-wide { height: 340px; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav id="topNav"></nav>
+
+<!-- HEADER -->
+<div class="header" id="pageHeader">
+    <h1>Hourly Matching Strategy Comparison</h1>
+    <div class="subtitle">How existing clean energy is credited determines what gets built</div>
+    <div class="header-accent"></div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+    <h1>Strategy 2A vs 2B vs 2C</h1>
+    <p class="subtitle">Three approaches to hourly CFE matching &mdash; same physics, different rules for crediting existing clean energy. The choice reshapes costs, resource mixes, and market signals across every ISO.</p>
+    <div class="hero-stats">
+        <div class="hero-stat"><div class="val" id="heroSpread">--</div><div class="lbl">$/MWh spread at 90%</div></div>
+        <div class="hero-stat"><div class="val" id="heroCheapest">--</div><div class="lbl">Cheapest strategy</div></div>
+        <div class="hero-stat"><div class="val" id="heroNewBuild">--</div><div class="lbl">New-build % gap</div></div>
+    </div>
+</div>
+
+<div class="content">
+
+<!-- ============================================================ -->
+<!-- SECTION 1: Strategy Definitions -->
+<!-- ============================================================ -->
+<div class="section-panel" id="stratDefs">
+    <h2>Three Crediting Regimes</h2>
+    <p class="section-desc">All three strategies require same-ISO hourly matching &mdash; every hour of buyer demand must be covered by clean generation within the same grid region. They differ only in how <strong>existing clean energy</strong> is credited against that obligation.</p>
+
+    <div class="strategy-cards-3">
+        <div class="strat-card" id="card2a" onclick="selectStrategy('2A')">
+            <span class="strat-tag tag-2a">Strategy 2A</span>
+            <h4>100% New Build</h4>
+            <p>No credit for existing clean generation. Every MWh of hourly matching must come from <strong>new-build procurement</strong> &mdash; new PPAs for solar, wind, clean firm, or storage.</p>
+            <p>This is the most expensive approach but sends the strongest new-build signal. Treats existing clean as already serving someone else.</p>
+            <div class="cost-big" style="color: #DC2626;" id="cost2a">$--</div>
+            <div class="cost-label">blended $/MWh</div>
+        </div>
+        <div class="strat-card" id="card2b" onclick="selectStrategy('2B')">
+            <span class="strat-tag tag-2b">Strategy 2B</span>
+            <h4>Grid Baseline</h4>
+            <p>Existing clean generation at its actual <strong>8,760-hour shape</strong> is credited for free as a grid baseline. Buyers only procure new-build for the gap above existing clean.</p>
+            <p>Cheapest when existing clean is high, but creates no incremental market signal for what already exists.</p>
+            <div class="cost-big" style="color: #B45309;" id="cost2b">$--</div>
+            <div class="cost-label">blended $/MWh</div>
+        </div>
+        <div class="strat-card active" id="card2c" onclick="selectStrategy('2C')">
+            <span class="strat-tag tag-2c">Strategy 2C</span>
+            <h4>SSS + Premium Tranches</h4>
+            <p><strong>State-supported clean</strong> (SSS) credited at $0 pro-rata. Existing <strong>merchant clean</strong> available at EAC premium. Remaining gap filled by new-build PPAs.</p>
+            <p>Balances incentives: free SSS keeps costs manageable, merchant EAC pricing keeps plants economically viable, new-build signals preserved for the gap.</p>
+            <div class="cost-big" style="color: #15803D;" id="cost2c">$--</div>
+            <div class="cost-label">blended $/MWh</div>
+        </div>
+    </div>
+
+    <div class="key-finding">
+        <strong>The core trade-off:</strong> 2A maximizes new-build investment signal but is prohibitively expensive. 2B minimizes cost but free-rides on existing assets. 2C threads the needle &mdash; SSS at $0 reflects policy intent (ratepayers already funded it), merchant clean at market price keeps plants economically viable, and the remaining gap drives new-build at the margin.
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 2: Interactive Controls + Side-by-Side Comparison -->
+<!-- ============================================================ -->
+<div class="section-panel" id="compSection">
+    <h2>Side-by-Side Comparison</h2>
+    <p class="section-desc">Select an ISO, participation level, and CFE target to compare cost, resource mix, and market outcomes across all three strategies.</p>
+
+    <div class="controls-row">
+        <div class="control-group">
+            <label>ISO Region</label>
+            <select id="isoSelect">
+                <option value="CAISO">CAISO</option>
+                <option value="ERCOT">ERCOT</option>
+                <option value="PJM" selected>PJM</option>
+                <option value="NYISO">NYISO</option>
+                <option value="NEISO">NEISO</option>
+                <option value="MISO">MISO</option>
+                <option value="SPP">SPP</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Participation</label>
+            <select id="partSelect">
+                <option value="10">10%</option>
+                <option value="20">20%</option>
+                <option value="30">30%</option>
+                <option value="40">40%</option>
+                <option value="50" selected>50%</option>
+                <option value="60">60%</option>
+                <option value="70">70%</option>
+                <option value="80">80%</option>
+                <option value="90">90%</option>
+                <option value="100">100%</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>CFE Target</label>
+            <select id="threshSelect">
+                <option value="50">50%</option>
+                <option value="60">60%</option>
+                <option value="70">70%</option>
+                <option value="75">75%</option>
+                <option value="80">80%</option>
+                <option value="85">85%</option>
+                <option value="90" selected>90%</option>
+                <option value="92.5">92.5%</option>
+                <option value="95">95%</option>
+                <option value="97.5">97.5%</option>
+                <option value="99">99%</option>
+                <option value="99.9">99.9%</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Show Rolloff</label>
+            <select id="rolloffSelect">
+                <option value="off">Stable SSS</option>
+                <option value="on">ZEC/CMC Rolloff</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="strat-legend">
+        <div class="strat-legend-item"><div class="strat-legend-dot" style="background:var(--red-dark);"></div> 2A (All New Build)</div>
+        <div class="strat-legend-item"><div class="strat-legend-dot" style="background:var(--geothermal);"></div> 2B (Grid Baseline)</div>
+        <div class="strat-legend-item"><div class="strat-legend-dot" style="background:#16A34A;"></div> 2C (SSS + Tranches)</div>
+        <div class="strat-legend-item" id="rolloffLegend" style="display:none;"><div class="strat-legend-dot" style="background:#16A34A; opacity:0.5; border: 2px dashed #16A34A;"></div> 2C Rolloff</div>
+    </div>
+
+    <div class="chart-pair">
+        <div class="chart-box">
+            <h3>Cost per MWh by CFE Target</h3>
+            <div class="chart-note">Blended procurement cost across all tranches</div>
+            <div class="chart-container"><canvas id="costChart"></canvas></div>
+        </div>
+        <div class="chart-box">
+            <h3>Resource Mix at Selected Target</h3>
+            <div class="chart-note">What gets built under each strategy (TWh)</div>
+            <div class="chart-container"><canvas id="mixChart"></canvas></div>
+        </div>
+    </div>
+
+    <div class="chart-pair">
+        <div class="chart-box">
+            <h3>New-Build Fraction by CFE Target</h3>
+            <div class="chart-note">Share of procurement from new PPAs vs existing clean</div>
+            <div class="chart-container"><canvas id="newbuildChart"></canvas></div>
+        </div>
+        <div class="chart-box">
+            <h3>CO&#8322; Abated by CFE Target</h3>
+            <div class="chart-note">Cumulative emission reductions (MMT)</div>
+            <div class="chart-container"><canvas id="co2Chart"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 3: Participation x Target Matrix -->
+<!-- ============================================================ -->
+<div class="section-panel" id="matrixSection">
+    <h2>Participation &times; Target Matrix</h2>
+    <p class="section-desc">How does cost scale with both the <strong>share of load participating</strong> in hourly matching and the <strong>CFE target</strong>? This matrix reveals the interaction effects &mdash; where the inflection points are and where costs become prohibitive.</p>
+
+    <div class="controls-row">
+        <div class="control-group">
+            <label>ISO Region</label>
+            <select id="matrixIsoSelect">
+                <option value="CAISO">CAISO</option>
+                <option value="ERCOT">ERCOT</option>
+                <option value="PJM" selected>PJM</option>
+                <option value="NYISO">NYISO</option>
+                <option value="NEISO">NEISO</option>
+                <option value="MISO">MISO</option>
+                <option value="SPP">SPP</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Metric</label>
+            <select id="matrixMetricSelect">
+                <option value="cost" selected>Cost ($/MWh)</option>
+                <option value="mac">MAC ($/tCO&#8322;)</option>
+                <option value="newbuild">New-Build %</option>
+                <option value="co2">CO&#8322; Abated (MMT)</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>Strategy</label>
+            <select id="matrixStratSelect">
+                <option value="2C" selected>2C (SSS + Tranches)</option>
+                <option value="2A">2A (All New Build)</option>
+                <option value="2B">2B (Grid Baseline)</option>
+                <option value="diff_ac">2A minus 2C (cost gap)</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="matrix-wrapper">
+        <table class="matrix-table" id="matrixTable">
+            <thead><tr id="matrixHeader"></tr></thead>
+            <tbody id="matrixBody"></tbody>
+        </table>
+    </div>
+
+    <div class="key-finding" id="matrixInsight"></div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 4: Rolloff Analysis -->
+<!-- ============================================================ -->
+<div class="section-panel" id="rolloffSection">
+    <h2>Nuclear Policy Rolloff: What Happens When SSS Expires?</h2>
+    <p class="section-desc">State-level nuclear support programs (ZEC, CMC) have expiration dates. When they expire, the underlying plants don't retire &mdash; they shift from <strong>SSS (free)</strong> to the <strong>merchant clean pool (priced)</strong>. This matters most in PJM, where NJ ZEC (2026) and IL CMC (2028) cover ~65 TWh of nuclear generation.</p>
+
+    <div class="chart-pair">
+        <div class="chart-box">
+            <h3>2C Stable vs 2C Rolloff: Cost Impact</h3>
+            <div class="chart-note">Cost increase when SSS shrinks and nuclear moves to merchant pricing</div>
+            <div class="chart-container"><canvas id="rolloffCostChart"></canvas></div>
+        </div>
+        <div class="chart-box">
+            <h3>SSS Pool vs Merchant Pool Shift</h3>
+            <div class="chart-note">TWh shifting from free SSS to priced merchant pool</div>
+            <div class="chart-container"><canvas id="rolloffPoolChart"></canvas></div>
+        </div>
+    </div>
+
+    <div class="key-finding">
+        <strong>Why rolloff matters for Strategy 2C:</strong> Strategy 2C's cost advantage depends on SSS being free. When ZEC/CMC programs expire, that nuclear generation moves to the merchant pool at EAC market prices ($3&ndash;5/MWh). The cost impact is moderate at low thresholds but compounds at high CFE targets where the SSS share of the total procurement is larger. Strategy 2A is unaffected &mdash; it ignores existing clean entirely.
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 5: ISO Deep Dives (Accordion) -->
+<!-- ============================================================ -->
+<div class="section-panel" id="isoDeepDive">
+    <h2>ISO Deep Dives</h2>
+    <p class="section-desc">Each ISO has unique grid composition, existing clean supply, and policy dynamics that reshape the Strategy 2 comparison. Expand each region for detailed analysis.</p>
+
+    <div id="isoAccordionContainer"></div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 6: Bottom Line -->
+<!-- ============================================================ -->
+<div class="section-panel" id="bottomLine">
+    <h2>The Bottom Line</h2>
+
+    <h3>Which strategy generates optimal clean energy mixes?</h3>
+    <p>Strategy 2C produces the most <strong>efficient and investable</strong> resource mixes because it correctly prices each supply tranche:</p>
+    <ul>
+        <li><strong>SSS at $0</strong> reflects economic reality &mdash; ratepayers already funded these plants through ZEC/CMC/RPS programs. Double-charging via voluntary procurement would be double-counting.</li>
+        <li><strong>Merchant clean at EAC premium</strong> keeps existing unsubsidized plants (and nuclear uprates) economically viable, preventing premature retirement of assets the grid needs.</li>
+        <li><strong>New-build at PPA price</strong> sends an unambiguous build signal for the remaining gap &mdash; exactly the incremental clean generation the grid doesn't have yet.</li>
+    </ul>
+
+    <h3>The participation plateau problem</h3>
+    <p>Across all three strategies, costs accelerate non-linearly once participation exceeds ~60&ndash;70% of C&I load. At high participation &times; high targets, the existing clean supply is exhausted and the marginal MWh must come from increasingly expensive new-build clean firm + storage. This isn't a modeling artifact &mdash; it reflects real physics: there are only so many good wind/solar sites and existing nuclear plants.</p>
+
+    <div class="key-finding">
+        <strong>Market reform is the real solution.</strong> A carbon price that properly values clean firm generation would solve the cost-signal problem organically. But in the absence of US carbon pricing, Strategy 2C is the best available approximation &mdash; it preserves economic signals for existing assets while driving new-build investment at the margin. The participation plateau is a symptom of market failure, not a reason to abandon hourly matching.
+    </div>
+</div>
+
+</div><!-- /.content -->
+
+<!-- FOOTER -->
+<footer id="siteFooter" data-footer-note="The 8,760 Problem &mdash; Hourly CFE Matching Strategy Analysis"></footer>
+
+<!-- DATA -->
+<script src="js/hourly-comparison-data.js"></script>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// CONSTANTS & STATE
+// ═══════════════════════════════════════════════════════════════════════════
+
+const STRAT_COLORS = { '2A': '#DC2626', '2B': '#D97706', '2C': '#16A34A', '2C_rolloff': 'rgba(22,163,106,0.5)' };
+const STRAT_LABELS = { '2A': '2A (All New Build)', '2B': '2B (Grid Baseline)', '2C': '2C (SSS + Tranches)', '2C_rolloff': '2C (Rolloff)' };
+const ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP'];
+const ISO_COLOR_MAP = typeof ISO_COLORS !== 'undefined' ? ISO_COLORS : {
+    CAISO: '#F59E0B', ERCOT: '#22C55E', PJM: '#0EA5E9',
+    NYISO: '#E91E63', NEISO: '#9C27B0', MISO: '#F97316', SPP: '#14B8A6'
+};
+const RESOURCE_LABELS = {
+    solar: 'Solar', wind: 'Wind', clean_firm: 'Clean Firm', nuclear_uprate: 'Nuclear Uprate',
+    battery: 'Battery', ldes: 'LDES', green_h2: 'Green H₂', geothermal: 'Geothermal',
+    existing_merchant: 'Merchant Clean', sss_allocation: 'SSS', grid_mix_allocation: 'Grid Baseline',
+    offshore_wind: 'Offshore Wind'
+};
+const RESOURCE_COLOR_MAP = typeof RESOURCE_COLORS !== 'undefined' ? RESOURCE_COLORS : {};
+const RES_COLORS = {
+    solar: RESOURCE_COLOR_MAP.solar || '#F59E0B',
+    wind: RESOURCE_COLOR_MAP.wind || '#22C55E',
+    clean_firm: RESOURCE_COLOR_MAP.cleanFirm || '#6366F1',
+    nuclear_uprate: RESOURCE_COLOR_MAP.nuclear || '#6366F1',
+    battery: RESOURCE_COLOR_MAP.battery || '#06B6D4',
+    ldes: RESOURCE_COLOR_MAP.ldes || '#E91E63',
+    green_h2: RESOURCE_COLOR_MAP.greenH2 || '#10B981',
+    geothermal: RESOURCE_COLOR_MAP.geothermal || '#D97706',
+    existing_merchant: '#94A3B8',
+    sss_allocation: '#CBD5E1',
+    grid_mix_allocation: '#E2E8F0',
+    offshore_wind: RESOURCE_COLOR_MAP.offshoreWind || '#009688'
+};
+
+const ACTIVE_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99];
+const PARTICIPATION_LEVELS = [5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100];
+
+// Chart instances
+let costChart, mixChart, newbuildChart, co2Chart, rolloffCostChart, rolloffPoolChart;
+const isoCharts = {};
+
+const DATA = typeof HOURLY_COMPARISON_DATA !== 'undefined' ? HOURLY_COMPARISON_DATA : {};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DATA HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function getEntry(strat, iso, part, threshold) {
+    const entries = DATA[strat]?.[iso]?.[String(part)];
+    if (!entries) return null;
+    // Find the entry closest to requested threshold
+    let best = null, bestDiff = Infinity;
+    for (const e of entries) {
+        const diff = Math.abs(e.t - threshold);
+        if (diff < bestDiff) { bestDiff = diff; best = e; }
+    }
+    return bestDiff < 1 ? best : null;
+}
+
+function getEntriesForThresholds(strat, iso, part) {
+    const entries = DATA[strat]?.[iso]?.[String(part)];
+    if (!entries) return [];
+    return entries.filter(e => e.t >= 50);
+}
+
+function fmtDollar(v) {
+    if (v == null || isNaN(v)) return '--';
+    return '$' + v.toFixed(1);
+}
+function fmtPct(v) {
+    if (v == null || isNaN(v)) return '--';
+    return (v * 100).toFixed(0) + '%';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HERO STATS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function updateHeroStats() {
+    const iso = 'PJM', part = 50, thresh = 90;
+    const e2a = getEntry('2A', iso, part, thresh);
+    const e2c = getEntry('2C', iso, part, thresh);
+    if (e2a && e2c) {
+        document.getElementById('heroSpread').textContent = '$' + (e2a.c - e2c.c).toFixed(0);
+        document.getElementById('heroCheapest').textContent = '2C';
+        const nbGap = ((e2a.nbf - e2c.nbf) * 100).toFixed(0);
+        document.getElementById('heroNewBuild').textContent = nbGap + 'pp';
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STRATEGY CARD SELECTION
+// ═══════════════════════════════════════════════════════════════════════════
+
+function selectStrategy(strat) {
+    document.querySelectorAll('.strat-card').forEach(c => c.classList.remove('active'));
+    document.getElementById('card' + strat.toLowerCase()).classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COST CHART (Line — all 3 strategies across thresholds)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function updateCostChart() {
+    const iso = document.getElementById('isoSelect').value;
+    const part = parseInt(document.getElementById('partSelect').value);
+    const showRolloff = document.getElementById('rolloffSelect').value === 'on';
+
+    const strats = ['2A', '2B', '2C'];
+    if (showRolloff) strats.push('2C_rolloff');
+    document.getElementById('rolloffLegend').style.display = showRolloff ? '' : 'none';
+
+    const datasets = strats.map(s => {
+        const entries = getEntriesForThresholds(s, iso, part);
+        return {
+            label: STRAT_LABELS[s],
+            data: entries.map(e => ({ x: e.t, y: e.c })),
+            borderColor: STRAT_COLORS[s],
+            backgroundColor: STRAT_COLORS[s] + '20',
+            borderWidth: s === '2C_rolloff' ? 2 : 2.5,
+            borderDash: s === '2C_rolloff' ? [6, 3] : [],
+            pointRadius: 3,
+            pointHoverRadius: 6,
+            tension: 0.3,
+            fill: false,
+        };
+    });
+
+    if (costChart) costChart.destroy();
+    costChart = new Chart(document.getElementById('costChart'), {
+        type: 'line',
+        data: { datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                x: { type: 'linear', title: { display: true, text: 'CFE Target (%)' }, min: 50, max: 100 },
+                y: { title: { display: true, text: '$/MWh' }, beginAtZero: true }
+            },
+            plugins: {
+                legend: { display: true, position: 'top', labels: { usePointStyle: true, pointStyle: 'line', boxWidth: 30, font: { size: 11 } } },
+                tooltip: {
+                    callbacks: {
+                        title: (items) => 'CFE Target: ' + items[0].parsed.x + '%',
+                        label: (ctx) => ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(1) + '/MWh'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RESOURCE MIX CHART (Stacked bar — 3 strategies at selected threshold)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function updateMixChart() {
+    const iso = document.getElementById('isoSelect').value;
+    const part = parseInt(document.getElementById('partSelect').value);
+    const thresh = parseFloat(document.getElementById('threshSelect').value);
+    const showRolloff = document.getElementById('rolloffSelect').value === 'on';
+
+    const strats = ['2A', '2B', '2C'];
+    if (showRolloff) strats.push('2C_rolloff');
+
+    // Collect all resource keys present
+    const allRes = new Set();
+    const entries = {};
+    for (const s of strats) {
+        entries[s] = getEntry(s, iso, part, thresh);
+        if (entries[s]?.rm) Object.keys(entries[s].rm).forEach(k => allRes.add(k));
+    }
+
+    const resKeys = ['sss_allocation', 'grid_mix_allocation', 'existing_merchant', 'nuclear_uprate',
+                      'solar', 'wind', 'offshore_wind', 'clean_firm', 'geothermal', 'battery', 'ldes', 'green_h2']
+                     .filter(k => allRes.has(k));
+
+    const datasets = resKeys.map(k => ({
+        label: RESOURCE_LABELS[k] || k,
+        data: strats.map(s => entries[s]?.rm?.[k] || 0),
+        backgroundColor: RES_COLORS[k] || '#999',
+        borderWidth: 0,
+    }));
+
+    if (mixChart) mixChart.destroy();
+    mixChart = new Chart(document.getElementById('mixChart'), {
+        type: 'bar',
+        data: { labels: strats.map(s => STRAT_LABELS[s]), datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: {
+                x: { stacked: true },
+                y: { stacked: true, title: { display: true, text: 'TWh' }, beginAtZero: true }
+            },
+            plugins: {
+                legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 10 } } },
+                tooltip: {
+                    callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + ' TWh' }
+                }
+            }
+        }
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// NEW-BUILD FRACTION CHART (Line — all 3 strategies)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function updateNewbuildChart() {
+    const iso = document.getElementById('isoSelect').value;
+    const part = parseInt(document.getElementById('partSelect').value);
+
+    const datasets = ['2A', '2B', '2C'].map(s => {
+        const entries = getEntriesForThresholds(s, iso, part);
+        return {
+            label: STRAT_LABELS[s],
+            data: entries.map(e => ({ x: e.t, y: e.nbf * 100 })),
+            borderColor: STRAT_COLORS[s],
+            borderWidth: 2.5,
+            pointRadius: 3,
+            tension: 0.3,
+            fill: false,
+        };
+    });
+
+    if (newbuildChart) newbuildChart.destroy();
+    newbuildChart = new Chart(document.getElementById('newbuildChart'), {
+        type: 'line',
+        data: { datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                x: { type: 'linear', title: { display: true, text: 'CFE Target (%)' }, min: 50, max: 100 },
+                y: { title: { display: true, text: 'New-Build %' }, min: 0, max: 100 }
+            },
+            plugins: {
+                legend: { display: true, position: 'top', labels: { usePointStyle: true, pointStyle: 'line', boxWidth: 30, font: { size: 11 } } },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + '%'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CO2 ABATED CHART (Line — all 3 strategies)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function updateCO2Chart() {
+    const iso = document.getElementById('isoSelect').value;
+    const part = parseInt(document.getElementById('partSelect').value);
+
+    const datasets = ['2A', '2B', '2C'].map(s => {
+        const entries = getEntriesForThresholds(s, iso, part);
+        return {
+            label: STRAT_LABELS[s],
+            data: entries.map(e => ({ x: e.t, y: e.co2 })),
+            borderColor: STRAT_COLORS[s],
+            borderWidth: 2.5,
+            pointRadius: 3,
+            tension: 0.3,
+            fill: false,
+        };
+    });
+
+    if (co2Chart) co2Chart.destroy();
+    co2Chart = new Chart(document.getElementById('co2Chart'), {
+        type: 'line',
+        data: { datasets },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                x: { type: 'linear', title: { display: true, text: 'CFE Target (%)' }, min: 50, max: 100 },
+                y: { title: { display: true, text: 'CO₂ Abated (MMT)' }, beginAtZero: true }
+            },
+            plugins: {
+                legend: { display: true, position: 'top', labels: { usePointStyle: true, pointStyle: 'line', boxWidth: 30, font: { size: 11 } } },
+                tooltip: {
+                    callbacks: { label: (ctx) => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + ' MMT' }
+                }
+            }
+        }
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STRATEGY CARD COST LABELS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function updateCardCosts() {
+    const iso = document.getElementById('isoSelect').value;
+    const part = parseInt(document.getElementById('partSelect').value);
+    const thresh = parseFloat(document.getElementById('threshSelect').value);
+
+    for (const s of ['2A', '2B', '2C']) {
+        const e = getEntry(s, iso, part, thresh);
+        const el = document.getElementById('cost' + s.toLowerCase());
+        if (el) el.textContent = e ? '$' + e.c.toFixed(1) : '$--';
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MATRIX TABLE
+// ═══════════════════════════════════════════════════════════════════════════
+
+function updateMatrix() {
+    const iso = document.getElementById('matrixIsoSelect').value;
+    const metric = document.getElementById('matrixMetricSelect').value;
+    const strat = document.getElementById('matrixStratSelect').value;
+
+    const thresholds = [50, 60, 70, 75, 80, 85, 90, 95, 97.5, 99, 99.9];
+    const parts = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+
+    // Build header
+    const header = document.getElementById('matrixHeader');
+    header.innerHTML = '<th>Part \\ Target</th>' + thresholds.map(t => '<th>' + t + '%</th>').join('');
+
+    // Build body
+    const tbody = document.getElementById('matrixBody');
+    tbody.innerHTML = '';
+
+    // Find min/max for color scale
+    let allVals = [];
+    for (const p of parts) {
+        for (const t of thresholds) {
+            const val = getMatrixVal(strat, iso, p, t, metric);
+            if (val != null && isFinite(val)) allVals.push(val);
+        }
+    }
+    const vMin = Math.min(...allVals);
+    const vMax = Math.max(...allVals);
+
+    for (const p of parts) {
+        const row = document.createElement('tr');
+        row.innerHTML = '<td>' + p + '%</td>';
+        for (const t of thresholds) {
+            const val = getMatrixVal(strat, iso, p, t, metric);
+            const td = document.createElement('td');
+            if (val != null && isFinite(val)) {
+                td.textContent = formatMetric(val, metric);
+                td.style.background = heatColor(val, vMin, vMax, metric);
+                td.style.color = needsWhiteText(val, vMin, vMax, metric) ? '#fff' : '#1f2937';
+            } else {
+                td.textContent = '--';
+                td.style.color = '#ccc';
+            }
+            row.appendChild(td);
+        }
+        tbody.appendChild(row);
+    }
+
+    // Update insight
+    updateMatrixInsight(iso, strat, metric, allVals);
+}
+
+function getMatrixVal(strat, iso, part, thresh, metric) {
+    if (strat === 'diff_ac') {
+        const eA = getEntry('2A', iso, part, thresh);
+        const eC = getEntry('2C', iso, part, thresh);
+        if (!eA || !eC) return null;
+        return eA.c - eC.c;
+    }
+    const e = getEntry(strat, iso, part, thresh);
+    if (!e) return null;
+    switch (metric) {
+        case 'cost': return e.c;
+        case 'mac': return e.mac;
+        case 'newbuild': return e.nbf * 100;
+        case 'co2': return e.co2;
+        default: return e.c;
+    }
+}
+
+function formatMetric(val, metric) {
+    if (metric === 'cost' || metric === 'diff_ac') return '$' + val.toFixed(0);
+    if (metric === 'mac') return '$' + val.toFixed(0);
+    if (metric === 'newbuild') return val.toFixed(0) + '%';
+    if (metric === 'co2') return val.toFixed(1);
+    return val.toFixed(1);
+}
+
+function heatColor(val, min, max, metric) {
+    if (max === min) return 'rgba(14,165,233,0.1)';
+    const t = (val - min) / (max - min);
+    // For cost/mac: low=green, high=red. For co2: low=red, high=green. For newbuild: neutral
+    if (metric === 'co2') {
+        const r = Math.round(239 - t * 205);
+        const g = Math.round(68 + t * 129);
+        const b = Math.round(68 - t * 34);
+        return `rgba(${r},${g},${b},0.2)`;
+    }
+    if (metric === 'newbuild') {
+        return `rgba(14,165,233,${0.05 + t * 0.25})`;
+    }
+    // cost, mac, diff: green=low, red=high
+    const r = Math.round(34 + t * 205);
+    const g = Math.round(197 - t * 129);
+    const b = Math.round(94 - t * 26);
+    return `rgba(${r},${g},${b},0.2)`;
+}
+
+function needsWhiteText(val, min, max, metric) {
+    if (max === min) return false;
+    const t = (val - min) / (max - min);
+    return t > 0.8;
+}
+
+function updateMatrixInsight(iso, strat, metric, vals) {
+    const el = document.getElementById('matrixInsight');
+    if (!vals.length) { el.innerHTML = ''; return; }
+
+    if (strat === 'diff_ac' && metric === 'cost') {
+        const maxDiff = Math.max(...vals);
+        const minDiff = Math.min(...vals.filter(v => v > 0));
+        el.innerHTML = `<strong>Cost gap insight:</strong> Strategy 2A costs $${minDiff.toFixed(0)}&ndash;$${maxDiff.toFixed(0)}/MWh more than 2C in ${iso}. The gap widens at higher CFE targets because 2A cannot use any existing clean energy — every MWh must be new-build. At low thresholds the gap is modest because both strategies are dominated by cheap VRE procurement.`;
+    } else if (metric === 'cost') {
+        const maxCost = Math.max(...vals);
+        el.innerHTML = `<strong>Cost scaling:</strong> ${STRAT_LABELS[strat] || strat} in ${iso} ranges from $${Math.min(...vals).toFixed(0)} to $${maxCost.toFixed(0)}/MWh across the participation × target space. Costs accelerate fastest in the high-participation × high-target quadrant where existing clean supply is exhausted.`;
+    } else {
+        el.innerHTML = '';
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ROLLOFF CHARTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function updateRolloffCharts() {
+    const iso = 'PJM';
+    const part = 50;
+
+    // Cost comparison: 2C stable vs 2C rolloff
+    const stableEntries = getEntriesForThresholds('2C', iso, part);
+    const rolloffEntries = getEntriesForThresholds('2C_rolloff', iso, part);
+
+    if (rolloffCostChart) rolloffCostChart.destroy();
+    rolloffCostChart = new Chart(document.getElementById('rolloffCostChart'), {
+        type: 'line',
+        data: {
+            datasets: [
+                {
+                    label: '2C Stable SSS',
+                    data: stableEntries.map(e => ({ x: e.t, y: e.c })),
+                    borderColor: '#16A34A',
+                    borderWidth: 2.5,
+                    pointRadius: 3,
+                    tension: 0.3,
+                    fill: false,
+                },
+                {
+                    label: '2C ZEC/CMC Rolloff',
+                    data: rolloffEntries.map(e => ({ x: e.t, y: e.c })),
+                    borderColor: '#DC2626',
+                    borderWidth: 2.5,
+                    borderDash: [6, 3],
+                    pointRadius: 3,
+                    tension: 0.3,
+                    fill: false,
+                }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                x: { type: 'linear', title: { display: true, text: 'CFE Target (%)' }, min: 50, max: 100 },
+                y: { title: { display: true, text: '$/MWh' }, beginAtZero: true }
+            },
+            plugins: {
+                title: { display: true, text: 'PJM — 50% Participation', font: { size: 12, weight: 'normal' }, color: '#6B7280' },
+                legend: { display: true, position: 'top', labels: { usePointStyle: true, pointStyle: 'line', boxWidth: 30, font: { size: 11 } } },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => {
+                            const label = ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(1) + '/MWh';
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Pool shift chart: SSS and merchant TWh comparison
+    if (rolloffPoolChart) rolloffPoolChart.destroy();
+    const stableSSS = stableEntries.map(e => ({ x: e.t, y: e.sss }));
+    const rolloffSSS = rolloffEntries.map(e => ({ x: e.t, y: e.sss }));
+    const stableMerch = stableEntries.map(e => ({ x: e.t, y: e.merch }));
+    const rolloffMerch = rolloffEntries.map(e => ({ x: e.t, y: e.merch }));
+
+    rolloffPoolChart = new Chart(document.getElementById('rolloffPoolChart'), {
+        type: 'line',
+        data: {
+            datasets: [
+                { label: 'SSS (Stable)', data: stableSSS, borderColor: '#16A34A', borderWidth: 2, pointRadius: 2, tension: 0.3, fill: false },
+                { label: 'SSS (Rolloff)', data: rolloffSSS, borderColor: '#DC2626', borderWidth: 2, borderDash: [6,3], pointRadius: 2, tension: 0.3, fill: false },
+                { label: 'Merchant (Stable)', data: stableMerch, borderColor: '#94A3B8', borderWidth: 2, pointRadius: 2, tension: 0.3, fill: false },
+                { label: 'Merchant (Rolloff)', data: rolloffMerch, borderColor: '#F97316', borderWidth: 2, borderDash: [6,3], pointRadius: 2, tension: 0.3, fill: false },
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                x: { type: 'linear', title: { display: true, text: 'CFE Target (%)' }, min: 50, max: 100 },
+                y: { title: { display: true, text: 'TWh' }, beginAtZero: true }
+            },
+            plugins: {
+                title: { display: true, text: 'PJM — Pool Reallocation Under Rolloff', font: { size: 12, weight: 'normal' }, color: '#6B7280' },
+                legend: { display: true, position: 'top', labels: { usePointStyle: true, pointStyle: 'line', boxWidth: 30, font: { size: 10 } } }
+            }
+        }
+    });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ISO ACCORDION DEEP DIVES
+// ═══════════════════════════════════════════════════════════════════════════
+
+const ISO_CONTEXT = {
+    CAISO: {
+        name: 'CAISO (California)',
+        summary: 'Solar-rich, limited existing nuclear (Diablo Canyon extension)',
+        insights: [
+            { type: 'info', text: '<strong>Solar dominance:</strong> CAISO\'s high solar capacity means Strategy 2B (grid baseline) captures significant existing solar generation for free. Strategy 2C also benefits from a large SSS pool (Diablo Canyon under SB 846 + RPS solar/wind). The 2A vs 2C cost gap is largest in hours where existing clean already covers demand.' },
+            { type: 'info', text: '<strong>Geothermal option:</strong> CAISO uniquely has geothermal resources. Under Strategy 2C, the SSS pool includes Salton Sea geothermal, reducing the new-build burden for clean firm generation. No other ISO has this advantage.' },
+            { type: 'info', text: '<strong>Duck curve implications:</strong> High solar pushes midday prices to zero or negative, creating a surplus that hourly matching can use. But evening ramp (4-8 PM) still requires firm+storage regardless of strategy — the physics are identical, only cost allocation differs.' }
+        ]
+    },
+    ERCOT: {
+        name: 'ERCOT (Texas)',
+        summary: 'Wind-rich, no nuclear SSS, merchant-dominated market',
+        insights: [
+            { type: 'info', text: '<strong>No SSS pool:</strong> ERCOT has no state-sponsored nuclear programs (no ZEC/CMC). Strategy 2C\'s SSS allocation is zero — it relies entirely on merchant clean (existing wind PPAs, some solar) and new-build. This narrows the gap between 2B and 2C substantially.' },
+            { type: 'info', text: '<strong>Wind surplus:</strong> ERCOT\'s 37% wind share means Strategy 2B captures enormous free generation. But wind\'s hourly profile doesn\'t match demand — nighttime wind doesn\'t cover daytime peaks, creating the same firm+storage gap as everywhere else at 90%+ targets.' },
+            { type: 'warn', text: '<strong>Merchant risk:</strong> ERCOT\'s energy-only market means existing clean generators have no capacity market revenue floor. Under Strategy 2C, merchant clean pricing at EAC rates ($3-5/MWh) may be insufficient to keep existing assets economically viable without additional bilateral contracts.' }
+        ]
+    },
+    PJM: {
+        name: 'PJM (Mid-Atlantic / Midwest)',
+        summary: 'Largest US ISO — nuclear SSS rolloff is the defining risk',
+        insights: [
+            { type: 'danger', text: '<strong>Nuclear rolloff crisis:</strong> PJM has ~65 TWh of nuclear generation under state subsidy programs. NJ ZEC (Salem + Hope Creek, ~15 TWh) expires 2026. IL CMC (Byron, Braidwood, Quad Cities, ~50 TWh) expires 2028. When these programs expire, that generation shifts from SSS ($0 in Strategy 2C) to the merchant pool (priced at $3-5/MWh EAC). Strategy 2C cost increases by $2-8/MWh at high targets. <a href="ref-nuclear-retirement.html">See nuclear retirement stress test &rarr;</a>' },
+            { type: 'warn', text: '<strong>LMP cannibalization feedback:</strong> As clean energy penetration increases, wholesale LMP drops. Existing nuclear plants face economic pressure from both revenue erosion (lower LMPs) and cost increases (maintenance, fuel). This creates a vicious cycle — the more clean energy you add, the harder it is to keep existing nuclear online. Carbon pricing would break this cycle by providing revenue support independent of energy-only LMP.' },
+            { type: 'info', text: '<strong>Data center load growth:</strong> Virginia data center demand is driving unprecedented load growth in PJM. Higher participation at higher targets compounds the SSS exhaustion problem — at 80%+ participation × 90%+ targets, PJM\'s existing clean supply is completely exhausted regardless of strategy choice.' },
+            { type: 'warn', text: '<strong>Susquehanna lockup:</strong> Amazon\'s ~18.8 TWh Susquehanna PPA removes that nuclear from both SSS and merchant pools. Under Strategy 2C, this corporate lockup reduces available existing clean supply, pushing more procurement to expensive new-build tranches. This is already modeled — contracted clean TWh is excluded from both SSS and merchant allocations.' },
+            { type: 'info', text: '<strong>Nuclear uprate opportunity:</strong> PJM\'s uprate potential is the cheapest new clean firm option (~$30/MWh). All three strategies benefit equally from uprates when available, but Strategy 2C makes better use of the existing fleet to reduce overall cost, freeing capital for uprate investment.' }
+        ]
+    },
+    NYISO: {
+        name: 'NYISO (New York)',
+        summary: 'Stable ZEC Tier 3 — SSS protected, high commercial load',
+        insights: [
+            { type: 'info', text: '<strong>Stable nuclear SSS:</strong> NY is renewing ZEC Tier 3 (Indian Point replacement revenue for upstate plants). Unlike PJM, NYISO has no confirmed rolloff events — SSS is stable for the foreseeable future. Strategy 2C benefits from this stability.' },
+            { type: 'info', text: '<strong>NYC commercial dominance:</strong> NYISO load is ~56% commercial, ~9% industrial. Hourly matching participation is dominated by office/transit/finance — sectors with consistent weekday demand profiles that align well with nuclear+solar generation shapes.' },
+            { type: 'warn', text: '<strong>Offshore wind dependence:</strong> NYISO\'s path to high CFE targets relies heavily on offshore wind (currently under development). Under all three strategies, the new-build mix at 90%+ includes significant offshore wind — the most expensive VRE option. This drives up costs faster than in wind-rich ISOs like ERCOT and SPP.' }
+        ]
+    },
+    NEISO: {
+        name: 'NEISO (New England)',
+        summary: 'Gas-dependent, winter pipeline constraint, Millstone anchor',
+        insights: [
+            { type: 'info', text: '<strong>Millstone under CT CCEF:</strong> Millstone\'s ~17 TWh of nuclear generation is protected under CT\'s Clean Energy Framework (extended). This provides a stable SSS anchor for Strategy 2C. No rolloff exposure.' },
+            { type: 'warn', text: '<strong>Winter gas constraint:</strong> NEISO\'s gas pipeline constraint adds ~$13/MWh to CCS-CCGT costs during winter months. Under all three strategies, this makes clean firm more expensive in NEISO than any other ISO except NYISO. Strategy 2A is hit hardest because it relies entirely on new-build clean firm.' },
+            { type: 'info', text: '<strong>Highest residential share:</strong> NEISO has the highest residential load share (43-48%) among major ISOs, meaning the addressable C&I market for hourly matching is smaller. At 100% C&I participation, NEISO still has ~45% of load unaddressed.' }
+        ]
+    },
+    MISO: {
+        name: 'MISO (Midwest)',
+        summary: 'Vertically integrated, Meta nuclear PPA, coal retirement wave',
+        insights: [
+            { type: 'info', text: '<strong>Meta corporate lockup:</strong> ~18 TWh of MISO nuclear is contracted to Meta (Clinton + Duane Arnold). Like PJM\'s Susquehanna, this capacity is excluded from both SSS and merchant pools. Strategy 2C\'s available existing clean is reduced accordingly.' },
+            { type: 'info', text: '<strong>Coal retirement tailwind:</strong> MISO\'s coal fleet is retiring rapidly. As coal exits, the marginal emission rate drops — meaning each MWh of clean procurement displaces less CO₂ over time. Strategy 2A\'s higher CO₂ abatement advantage erodes as the grid gets cleaner.' },
+            { type: 'warn', text: '<strong>Vertically integrated structure:</strong> Much of MISO operates under vertically integrated utilities with regulated rates. Hourly matching procurement must navigate utility territory boundaries, potentially limiting participation rates below theoretical maximums.' }
+        ]
+    },
+    SPP: {
+        name: 'SPP (Southwest Power Pool)',
+        summary: 'Wind capital of the US — 37% wind share, low cost entry point',
+        insights: [
+            { type: 'info', text: '<strong>Wind surplus:</strong> SPP\'s 37% wind generation share is the highest in the US. Strategy 2B captures enormous free clean energy from the grid baseline. Strategy 2C also benefits through a large merchant wind pool. Under all strategies, SPP is the cheapest ISO for hourly matching up to ~80% targets.' },
+            { type: 'info', text: '<strong>Limited nuclear SSS:</strong> Wolf Creek is SPP\'s only nuclear plant — no state subsidy, market-based revenue. It appears in the merchant pool (Strategy 2C) or grid baseline (Strategy 2B), but the SSS pool is dominated by RPS wind, not nuclear.' },
+            { type: 'info', text: '<strong>Lowest cost inflection:</strong> SPP hits the cost inflection point (where firm+storage start dominating) later than other ISOs — around 85-90% target vs 75-80% elsewhere. This is because wind alone covers more hours in SPP than in any other region.' }
+        ]
+    }
+};
+
+function buildISOAccordions() {
+    const container = document.getElementById('isoAccordionContainer');
+    container.innerHTML = '';
+
+    for (const iso of ISOS) {
+        const ctx = ISO_CONTEXT[iso];
+        const color = ISO_COLOR_MAP[iso] || '#0EA5E9';
+
+        // Get summary stats for the header
+        const e2c90 = getEntry('2C', iso, 50, 90);
+        const e2a90 = getEntry('2A', iso, 50, 90);
+        const costStr = e2c90 ? '$' + e2c90.c.toFixed(0) + '/MWh' : '';
+        const spreadStr = (e2a90 && e2c90) ? '(2A gap: $' + (e2a90.c - e2c90.c).toFixed(0) + ')' : '';
+
+        const item = document.createElement('div');
+        item.className = 'iso-accordion-item';
+        if (iso === 'PJM') item.classList.add('open'); // PJM open by default per user request
+
+        item.innerHTML = `
+            <button class="iso-accordion-header" onclick="this.parentElement.classList.toggle('open')">
+                <span class="iso-acc-dot" style="background:${color};"></span>
+                <span class="iso-acc-name">${iso}</span>
+                <span class="iso-acc-summary">${ctx.summary} &mdash; 2C @ 90%: ${costStr} ${spreadStr}</span>
+                <span class="iso-acc-chevron">&#9660;</span>
+            </button>
+            <div class="iso-accordion-body">
+                <h3 style="font-family:var(--font-heading);font-size:1rem;color:var(--navy);margin:0 0 12px;">${ctx.name}</h3>
+                ${ctx.insights.map(ins => `<div class="iso-insight ${ins.type === 'warn' ? 'warn' : ins.type === 'danger' ? 'danger' : ''}">${ins.text}</div>`).join('')}
+                <div class="iso-body-grid">
+                    <div>
+                        <h4 style="font-family:var(--font-heading);font-size:0.88rem;color:#374151;margin:0 0 8px;">Cost Curves (50% Participation)</h4>
+                        <div class="iso-mini-chart"><canvas id="isoChart_${iso}_cost"></canvas></div>
+                    </div>
+                    <div>
+                        <h4 style="font-family:var(--font-heading);font-size:0.88rem;color:#374151;margin:0 0 8px;">Resource Mix at 90% Target</h4>
+                        <div class="iso-mini-chart"><canvas id="isoChart_${iso}_mix"></canvas></div>
+                    </div>
+                </div>
+            </div>
+        `;
+        container.appendChild(item);
+    }
+
+    // Render charts for PJM immediately (it's open by default)
+    renderISOCharts('PJM');
+
+    // Lazy-render other ISO charts on accordion open
+    container.addEventListener('click', (e) => {
+        const header = e.target.closest('.iso-accordion-header');
+        if (!header) return;
+        const item = header.parentElement;
+        const iso = header.querySelector('.iso-acc-name').textContent;
+        if (item.classList.contains('open') && !isoCharts[iso]) {
+            setTimeout(() => renderISOCharts(iso), 50);
+        }
+    });
+}
+
+function renderISOCharts(iso) {
+    if (isoCharts[iso]) return;
+    isoCharts[iso] = true;
+
+    const part = 50;
+
+    // Cost chart
+    const costCanvas = document.getElementById('isoChart_' + iso + '_cost');
+    if (costCanvas) {
+        new Chart(costCanvas, {
+            type: 'line',
+            data: {
+                datasets: ['2A', '2B', '2C'].map(s => ({
+                    label: s,
+                    data: getEntriesForThresholds(s, iso, part).map(e => ({ x: e.t, y: e.c })),
+                    borderColor: STRAT_COLORS[s],
+                    borderWidth: 2,
+                    pointRadius: 2,
+                    tension: 0.3,
+                    fill: false,
+                }))
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { type: 'linear', min: 50, max: 100, title: { display: true, text: 'CFE %', font: { size: 10 } } },
+                    y: { beginAtZero: true, title: { display: true, text: '$/MWh', font: { size: 10 } } }
+                },
+                plugins: {
+                    legend: { display: true, position: 'top', labels: { boxWidth: 10, font: { size: 9 } } },
+                    tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(1) } }
+                }
+            }
+        });
+    }
+
+    // Mix chart at 90%
+    const mixCanvas = document.getElementById('isoChart_' + iso + '_mix');
+    if (mixCanvas) {
+        const strats = ['2A', '2B', '2C'];
+        const allRes = new Set();
+        const entries = {};
+        for (const s of strats) {
+            entries[s] = getEntry(s, iso, part, 90);
+            if (entries[s]?.rm) Object.keys(entries[s].rm).forEach(k => allRes.add(k));
+        }
+        const resKeys = ['sss_allocation', 'grid_mix_allocation', 'existing_merchant', 'nuclear_uprate',
+                          'solar', 'wind', 'offshore_wind', 'clean_firm', 'geothermal', 'battery', 'ldes', 'green_h2']
+                         .filter(k => allRes.has(k));
+
+        new Chart(mixCanvas, {
+            type: 'bar',
+            data: {
+                labels: strats,
+                datasets: resKeys.map(k => ({
+                    label: RESOURCE_LABELS[k] || k,
+                    data: strats.map(s => entries[s]?.rm?.[k] || 0),
+                    backgroundColor: RES_COLORS[k] || '#999',
+                    borderWidth: 0,
+                }))
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true, beginAtZero: true, title: { display: true, text: 'TWh', font: { size: 10 } } }
+                },
+                plugins: {
+                    legend: { display: true, position: 'top', labels: { boxWidth: 8, font: { size: 8 } } },
+                    tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + ' TWh' } }
+                }
+            }
+        });
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EVENT WIRING
+// ═══════════════════════════════════════════════════════════════════════════
+
+function updateAll() {
+    updateCardCosts();
+    updateCostChart();
+    updateMixChart();
+    updateNewbuildChart();
+    updateCO2Chart();
+}
+
+document.getElementById('isoSelect').addEventListener('change', updateAll);
+document.getElementById('partSelect').addEventListener('change', updateAll);
+document.getElementById('threshSelect').addEventListener('change', updateAll);
+document.getElementById('rolloffSelect').addEventListener('change', updateAll);
+
+document.getElementById('matrixIsoSelect').addEventListener('change', updateMatrix);
+document.getElementById('matrixMetricSelect').addEventListener('change', updateMatrix);
+document.getElementById('matrixStratSelect').addEventListener('change', updateMatrix);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════════
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateHeroStats();
+    updateAll();
+    updateMatrix();
+    updateRolloffCharts();
+    buildISOAccordions();
+});
+</script>
+
+</body>
+</html>
