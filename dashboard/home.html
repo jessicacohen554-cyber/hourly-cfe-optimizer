@@ -423,20 +423,122 @@
             font-weight: 700;
         }
 
-        /* ===== Section 4: The Coal Wall ===== */
-        .coal-wall-container {
-            max-width: 600px;
+        /* ===== Section 4: The Coal Wall — Fuel Gauge ===== */
+        .fuel-gauge-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 16px;
+            max-width: 960px;
             margin: 0 auto;
-            text-align: center;
+            position: relative;
         }
-        .coal-wall-container svg {
+        .fuel-tank {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .tank-label {
+            font-family: var(--font-heading);
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            margin-bottom: 6px;
+        }
+        .tank-body {
             width: 100%;
-            height: auto;
+            max-width: 90px;
+            height: 220px;
+            border-radius: 8px;
+            border: 2px solid rgba(0,0,0,0.08);
+            background: rgba(0,0,0,0.015);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+        .tank-layer {
+            width: 100%;
+            transition: height 2.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 0;
+        }
+        .tank-coal {
+            background: var(--fossil-coal, #374151);
+            border-top: 1px solid rgba(255,255,255,0.15);
+        }
+        .tank-gas {
+            background: var(--fossil-gas, #6B7280);
+            opacity: 0.5;
+        }
+        .tank-layer-text {
+            font-family: var(--font-data, var(--font-body));
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.9);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tank-layer:not(.depleted) .tank-layer-text { opacity: 1; }
+        .tank-coal.depleted { height: 0 !important; border-top: none; }
+        .tank-coal.depleted .tank-layer-text { opacity: 0 !important; }
+        .tank-rate {
+            font-family: var(--font-mono, 'DM Sans', monospace);
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin-top: 8px;
+            min-height: 22px;
+        }
+        .tank-rate-unit {
+            font-size: 0.65rem;
+            font-weight: 400;
+            color: var(--text-muted);
             display: block;
         }
-        @keyframes coalWallPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.08); }
+        .gas-floor-badge {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: var(--font-body);
+            font-size: 0.6rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            background: rgba(255,255,255,0.9);
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+            text-align: center;
+            line-height: 1.3;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 2;
+        }
+        .fuel-gauge-punchline {
+            text-align: center;
+            margin-top: var(--space-xl);
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--red, #EF4444);
+            opacity: 0;
+            transform: translateY(12px);
+            transition: opacity 0.6s ease-out 2.8s, transform 0.6s ease-out 2.8s;
+        }
+        .fuel-gauge-punchline.visible { opacity: 1; transform: translateY(0); }
+        .fuel-gauge-punchline-sub {
+            font-family: var(--font-body);
+            font-size: 0.88rem;
+            font-weight: 400;
+            color: var(--text-secondary);
+            margin-top: var(--space-xs);
+            line-height: 1.6;
         }
         .coal-wall-finding {
             max-width: 720px;
@@ -450,27 +552,6 @@
             font-size: 0.9rem;
             color: var(--text-secondary, #475569);
             line-height: 1.7;
-        }
-        .coal-wall-side-note {
-            max-width: 260px;
-            padding: 14px 18px;
-            background: rgba(255,255,255,0.85);
-            border-left: 3px solid #EF4444;
-            border-radius: 8px;
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            font-size: 0.82rem;
-            color: var(--text-secondary, #475569);
-            line-height: 1.6;
-            opacity: 0;
-            transition: opacity 0.6s ease-out;
-            margin: var(--space-md) auto 0;
-        }
-        .coal-wall-side-note.visible { opacity: 1; }
-        .coal-wall-counter {
-            font-family: var(--font-mono);
-            font-size: 13px;
-            font-weight: 600;
         }
 
         /* ===== Section 5: The Last Mile ===== */
@@ -502,7 +583,8 @@
             .iso-bar-gap { width: 44px; font-size: 11px; }
             .iso-insight-block,
             .iso-annotation { padding: 18px 16px; }
-            .coal-wall-container { max-width: 100%; }
+            .fuel-gauge-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+            .tank-body { height: 160px; }
             .coal-wall-finding { padding: 18px 16px; }
             .crossover-container { max-width: 100%; }
         }
@@ -512,6 +594,11 @@
             .iso-bar-gap { width: 38px; font-size: 10px; }
             .iso-bars-legend { gap: 10px; }
             .iso-bars-legend-item { font-size: 0.7rem; }
+            .fuel-gauge-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
+            .tank-body { height: 140px; max-width: 64px; }
+            .tank-label { font-size: 0.72rem; }
+            .tank-rate { font-size: 0.75rem; }
+            .fuel-gauge-punchline { font-size: 0.95rem; }
         }
 
         /* Reduced motion */
@@ -530,7 +617,8 @@
             .iso-bar-row { opacity: 1; transform: none; transition-delay: 0s !important; }
             .iso-bar-segment { transition: none !important; }
             .iso-annotation { opacity: 1; transform: none; transition-delay: 0s !important; }
-            .coal-wall-side-note { opacity: 1; }
+            .tank-layer { transition: none !important; }
+            .fuel-gauge-punchline { transition: none !important; }
         }
 
         /* ===== Section 6: The IPP Response ===== */
@@ -1355,60 +1443,13 @@
         <p>Consequential&rsquo;s cost advantage has an expiration date: the moment the last coal plant retires from the dispatch stack.</p>
     </div>
     <section class="content-section" id="coal-wall-section">
-        <div class="coal-wall-container" id="coalWallContainer">
-            <svg viewBox="0 0 600 450" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Animated dispatch stack showing coal and gas layers with a rising sweep line">
-                <defs>
-                    <linearGradient id="sweepGrad" x1="0" y1="1" x2="0" y2="0">
-                        <stop offset="0%" stop-color="#0EA5E9"/>
-                        <stop offset="60%" stop-color="#0EA5E9"/>
-                        <stop offset="100%" stop-color="#6366F1"/>
-                    </linearGradient>
-                    <clipPath id="sweepClip">
-                        <rect id="sweepClipRect" x="0" y="450" width="600" height="450"/>
-                    </clipPath>
-                </defs>
-
-                <!-- Coal layer -->
-                <rect x="80" y="300" width="440" height="150" rx="0" fill="rgba(0,0,0,0.06)" stroke="rgba(0,0,0,0.2)" stroke-width="1.5"/>
-                <!-- Gas layer -->
-                <rect x="80" y="100" width="440" height="200" rx="0" fill="rgba(99,102,241,0.06)" stroke="rgba(99,102,241,0.25)" stroke-width="1.5"/>
-
-                <!-- Labels: left side -->
-                <text x="68" y="385" text-anchor="end" font-family="'DM Sans', sans-serif" font-size="11" font-weight="500" fill="rgba(0,0,0,0.40)">COAL</text>
-                <text x="68" y="210" text-anchor="end" font-family="'DM Sans', sans-serif" font-size="11" font-weight="500" fill="rgba(99,102,241,0.50)">GAS</text>
-                <!-- Labels: right side -->
-                <text x="532" y="385" text-anchor="start" font-family="'DM Sans', sans-serif" font-size="10" font-weight="400" fill="rgba(0,0,0,0.30)">~2,200 lb CO&#8322;/MWh</text>
-                <text x="532" y="210" text-anchor="start" font-family="'DM Sans', sans-serif" font-size="10" font-weight="400" fill="rgba(99,102,241,0.40)">~850 lb CO&#8322;/MWh</text>
-
-                <!-- Coal wall boundary line -->
-                <line x1="60" y1="300" x2="540" y2="300" stroke="#EF4444" stroke-opacity="0.6" stroke-width="2" stroke-dasharray="6 4"/>
-                <text id="coalWallLabel" x="300" y="290" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="11" font-weight="600" fill="#EF4444" opacity="0.8">THE COAL WALL</text>
-
-                <!-- Displaced overlay: layers above sweep line become transparent -->
-                <g clip-path="url(#sweepClip)">
-                    <rect x="80" y="300" width="440" height="150" fill="rgba(248,249,252,0.85)"/>
-                    <rect x="80" y="100" width="440" height="200" fill="rgba(248,249,252,0.85)"/>
-                </g>
-
-                <!-- Sweep line -->
-                <line id="sweepLine" x1="60" y1="450" x2="540" y2="450" stroke="#0EA5E9" stroke-width="2.5" filter="url(#sweepGlow)"/>
-                <defs>
-                    <filter id="sweepGlow" x="-20%" y="-200%" width="140%" height="500%">
-                        <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
-                        <feMerge>
-                            <feMergeNode in="blur"/>
-                            <feMergeNode in="SourceGraphic"/>
-                        </feMerge>
-                    </filter>
-                </defs>
-
-                <!-- Counter text (animated by JS) -->
-                <text id="sweepCounter" x="300" y="440" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="13" font-weight="600" fill="#0EA5E9" opacity="0">Displacement: ~2,200 lb/MWh</text>
-            </svg>
+        <div class="fuel-gauge-grid" id="homeCoalWallGauges">
+            <!-- Tanks injected by JS -->
         </div>
 
-        <div class="coal-wall-side-note" id="coalWallAnnotation">
-            All economically displaceable coal is gone. In most ISOs, this happens around ~70% clean. Beyond this point, every clean MWh only displaces gas, cutting the carbon benefit nearly in half.
+        <div class="fuel-gauge-punchline" id="homeCoalWallPunchline">
+            The "discount" was the coal. The coal is finite.
+            <div class="fuel-gauge-punchline-sub">NEISO, NYISO, and CAISO are already at the gas floor today. Once coal runs out in the other four, consequential and hourly matching cost the same $/tCO&#8322;.</div>
         </div>
 
         <div class="coal-wall-finding fade-in">
@@ -2002,112 +2043,108 @@
             observer.observe(container);
         })();
 
-        // ===== MODULE 5: Coal Wall Animation (Section 4) =====
-        (function initCoalWall() {
-            var container = document.getElementById('coalWallContainer');
-            if (!container) return;
+        // ===== MODULE 5: Coal Wall Fuel Gauge Animation (Section 4) =====
+        (function initCoalWallGauges() {
+            var grid = document.getElementById('homeCoalWallGauges');
+            var punchline = document.getElementById('homeCoalWallPunchline');
+            if (!grid) return;
 
-            var sweepLine = document.getElementById('sweepLine');
-            var sweepClipRect = document.getElementById('sweepClipRect');
-            var sweepCounter = document.getElementById('sweepCounter');
-            var coalWallLabel = document.getElementById('coalWallLabel');
-            var annotation = document.getElementById('coalWallAnnotation');
-            if (!sweepLine || !sweepClipRect || !sweepCounter) return;
+            var GAUGES = [
+                { iso: 'PJM',   coal: 139.09, gas: 357.26, blended: 1251, gasRate: 867 },
+                { iso: 'MISO',  coal: 125.0,  gas: 327.92, blended: 1253, gasRate: 860 },
+                { iso: 'ERCOT', coal: 67.58,  gas: 195.46, blended: 1242, gasRate: 867 },
+                { iso: 'SPP',   coal: 42.0,   gas: 114.68, blended: 1237, gasRate: 865 },
+                { iso: 'NEISO', coal: 0.31,   gas: 75.1,   blended: 873,  gasRate: 844 },
+                { iso: 'NYISO', coal: 0,      gas: 92.33,  blended: 915,  gasRate: 915 },
+                { iso: 'CAISO', coal: 0,      gas: 114.78, blended: 867,  gasRate: 862 }
+            ];
+
+            var maxTotal = 0;
+            GAUGES.forEach(function(g) {
+                var t = g.coal + g.gas;
+                if (t > maxTotal) maxTotal = t;
+            });
+
+            GAUGES.forEach(function(g) {
+                var coalPct = maxTotal > 0 ? (g.coal / maxTotal) * 100 : 0;
+                var gasPct = maxTotal > 0 ? (g.gas / maxTotal) * 100 : 0;
+                var isoColor = (typeof ISO_COLORS !== 'undefined' && ISO_COLORS[g.iso]) ? ISO_COLORS[g.iso] : '#6B7280';
+                var isGasOnly = g.coal < 1;
+
+                var tank = document.createElement('div');
+                tank.className = 'fuel-tank';
+
+                var bodyHtml = '<div class="tank-body">';
+                if (isGasOnly) bodyHtml += '<div class="gas-floor-badge">Already at<br>gas floor</div>';
+                bodyHtml += '<div class="tank-layer tank-gas" style="height:' + gasPct + '%"><span class="tank-layer-text">GAS</span></div>';
+                if (!isGasOnly) {
+                    bodyHtml += '<div class="tank-layer tank-coal" data-coal-height="' + coalPct + '" style="height:' + coalPct + '%"><span class="tank-layer-text">' + Math.round(g.coal) + ' TWh</span></div>';
+                }
+                bodyHtml += '</div>';
+
+                tank.innerHTML = '<div class="tank-label" style="color:' + isoColor + '">' + g.iso + '</div>' +
+                    bodyHtml +
+                    '<div class="tank-rate" data-from="' + g.blended + '" data-to="' + g.gasRate + '">' +
+                    g.blended.toLocaleString() + '<span class="tank-rate-unit">lb/MWh</span></div>';
+
+                grid.appendChild(tank);
+            });
 
             var triggered = false;
             var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-            function animateCoalWall() {
+            function animateDepletion() {
                 if (triggered) return;
                 triggered = true;
 
+                var coalLayers = grid.querySelectorAll('.tank-coal');
+                var rateEls = grid.querySelectorAll('.tank-rate');
+
                 if (reducedMotion) {
-                    // Skip animation, show final state
-                    sweepLine.setAttribute('y1', '60');
-                    sweepLine.setAttribute('y2', '60');
-                    sweepClipRect.setAttribute('y', '0');
-                    sweepClipRect.setAttribute('height', '60');
-                    sweepCounter.setAttribute('opacity', '1');
-                    sweepCounter.textContent = 'Displacement: ~850 lb/MWh';
-                    sweepCounter.setAttribute('y', '50');
-                    sweepCounter.setAttribute('fill', '#6366F1');
-                    if (annotation) annotation.classList.add('visible');
+                    coalLayers.forEach(function(el) { el.classList.add('depleted'); });
+                    rateEls.forEach(function(el) {
+                        el.innerHTML = el.getAttribute('data-to') + '<span class="tank-rate-unit">lb/MWh</span>';
+                    });
+                    if (punchline) punchline.classList.add('visible');
                     return;
                 }
 
-                var duration = 4000;
-                var start = null;
-                sweepCounter.setAttribute('opacity', '1');
+                coalLayers.forEach(function(el, i) {
+                    setTimeout(function() { el.classList.add('depleted'); }, i * 150);
+                });
 
-                function step(timestamp) {
-                    if (!start) start = timestamp;
-                    var elapsed = timestamp - start;
-                    var t = Math.min(elapsed / duration, 1);
+                var duration = 2200;
+                var startTime = null;
+                rateEls.forEach(function(el) {
+                    var from = parseInt(el.getAttribute('data-from'));
+                    var to = parseInt(el.getAttribute('data-to'));
+                    if (from === to) return;
 
-                    var y;
-                    if (t < 0.375) {
-                        // Phase 1: rise through coal (0→1.5s, y=450→300)
-                        var p1 = t / 0.375;
-                        var eased = 1 - Math.pow(1 - p1, 2);
-                        y = 450 - eased * 150;
-                        sweepCounter.textContent = 'Displacement: ~2,200 lb/MWh';
-                        sweepCounter.setAttribute('fill', '#0EA5E9');
-                    } else if (t < 0.575) {
-                        // Phase 2: pause at coal wall (1.5→2.3s)
-                        y = 300;
-                        sweepCounter.textContent = 'Displacement: ~2,200 lb/MWh';
-                        sweepCounter.setAttribute('fill', '#0EA5E9');
-
-                        // Pulse the coal wall label
-                        var p2 = (t - 0.375) / 0.2;
-                        if (p2 < 0.5) {
-                            var pScale = 1 + 0.08 * Math.sin(p2 * Math.PI);
-                            coalWallLabel.setAttribute('transform', 'translate(300,290) scale(' + pScale + ') translate(-300,-290)');
-                        } else {
-                            coalWallLabel.removeAttribute('transform');
-                        }
-
-                        // Show annotation
-                        if (annotation && p2 > 0.3) {
-                            annotation.classList.add('visible');
-                        }
-                    } else {
-                        // Phase 3: continue through gas (2.3→4s, y=300→60), ease-in
-                        var p3 = (t - 0.575) / 0.425;
-                        var eased3 = p3 * p3; // ease-in (slow start)
-                        y = 300 - eased3 * 240;
-                        sweepCounter.textContent = 'Displacement: ~850 lb/MWh';
-
-                        // Blend color toward 1B
-                        var blend = Math.min(p3 * 1.5, 1);
-                        var r = Math.round(14 + blend * (99 - 14));
-                        var g = Math.round(165 + blend * (102 - 165));
-                        var b = Math.round(233 + blend * (241 - 233));
-                        sweepCounter.setAttribute('fill', 'rgb(' + r + ',' + g + ',' + b + ')');
+                    function tick(ts) {
+                        if (!startTime) startTime = ts;
+                        var progress = Math.min((ts - startTime) / duration, 1);
+                        var eased = 1 - Math.pow(1 - progress, 3);
+                        var current = Math.round(from + (to - from) * eased);
+                        el.innerHTML = current.toLocaleString() + '<span class="tank-rate-unit">lb/MWh</span>';
+                        if (progress < 1) requestAnimationFrame(tick);
                     }
+                    setTimeout(function() { requestAnimationFrame(tick); }, 300);
+                });
 
-                    sweepLine.setAttribute('y1', y);
-                    sweepLine.setAttribute('y2', y);
-                    sweepClipRect.setAttribute('y', '0');
-                    sweepClipRect.setAttribute('height', y);
-                    sweepCounter.setAttribute('y', y - 10);
-
-                    if (t < 1) {
-                        requestAnimationFrame(step);
-                    }
-                }
-                requestAnimationFrame(step);
+                setTimeout(function() {
+                    if (punchline) punchline.classList.add('visible');
+                }, 2600);
             }
 
             var observer = new IntersectionObserver(function(entries) {
                 entries.forEach(function(entry) {
                     if (entry.isIntersecting) {
-                        animateCoalWall();
+                        animateDepletion();
                         observer.unobserve(entry.target);
                     }
                 });
             }, { threshold: 0.25 });
-            observer.observe(container);
+            observer.observe(grid);
         })();
 
         // ===== MODULE 6: Last Mile Crossover Animation (Section 5) =====
