@@ -224,7 +224,6 @@
             children: [
                 { label: 'Carbon Accounting', href: 'GHG-accounting-overview.html' },
                 { label: 'Strategy Deep Dive', href: 'strategy_deep_dive.html' },
-                { label: 'Procurement Strategy Dashboard', href: 'procurement_deployment.html' },
                 { label: 'Strategy Assessment', href: 'cfe_strategy_assessment.html' }
             ]
         },
@@ -233,8 +232,16 @@
             children: [
                 { label: 'CO\u2082 Abatement', href: 'abatement_dashboard.html' },
                 { label: 'Clean Firm', href: 'clean_firm_case.html' },
-                { label: 'Clean Asset Value', href: 'lmp_trends.html' },
-                { label: 'Nuclear Retirement Risk', href: 'ref-nuclear-retirement.html' }
+                { label: 'Clean Asset Value', href: 'lmp_trends.html' }
+            ]
+        },
+        { label: 'Nuclear Risk', href: 'ref-nuclear-retirement.html' },
+        {
+            label: 'Interactive Tools',
+            children: [
+                { label: 'The Grid (Optimizer)', href: 'dashboard.html' },
+                { label: 'Procurement Deployment Matrix', href: 'procurement_deployment.html' },
+                { label: 'Scenario Comparison', href: 'archive/scenario_comparison.html' }
             ]
         },
         {
@@ -242,8 +249,7 @@
             children: [
                 { label: 'Methodology', href: 'optimizer_methodology.html' },
                 { label: 'Research Overview', href: 'about.html' },
-                { label: 'Literature Review', href: 'lit-review.html' },
-                { label: 'Reference Library', href: 'reference.html' }
+                { label: 'Literature Review', href: 'lit-review.html' }
             ]
         },
     ];
