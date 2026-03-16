@@ -215,8 +215,7 @@
                 { label: 'Policy & Market Outlook', href: 'gen_policy_conditions.html' },
                 { label: 'Target Setting', href: 'gen_target_setting.html' },
                 { label: 'Regional Pathways', href: 'gen_regional_pathways.html' },
-                { label: 'IPP Deep Dives', href: 'ipp_climate_transition.html' },
-                { label: 'Gas Lock-In & Buyer Influence', href: 'gas_lockin_buyer_influence.html' }
+                { label: 'IPP Deep Dives', href: 'ipp_climate_transition.html' }
             ]
         },
         {
@@ -232,10 +231,11 @@
             children: [
                 { label: 'CO\u2082 Abatement', href: 'abatement_dashboard.html' },
                 { label: 'Clean Firm', href: 'clean_firm_case.html' },
-                { label: 'Clean Asset Value', href: 'lmp_trends.html' }
+                { label: 'Clean Asset Value', href: 'lmp_trends.html' },
+                { label: 'Nuclear Retirement Risk', href: 'ref-nuclear-retirement.html' },
+                { label: 'Gas Lock-In & Buyer Influence', href: 'gas_lockin_buyer_influence.html' }
             ]
         },
-        { label: 'Nuclear Risk', href: 'ref-nuclear-retirement.html' },
         {
             label: 'Interactive Tools',
             children: [
