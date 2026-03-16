@@ -799,6 +799,55 @@ section.report-section.panel-navy .report-section-number {
     }
 }
 
+/* ========== SECTION HEADERS — SOLID PANELS ========== */
+/* Section headers sit on transparent bg over the circuit board image.
+   Give them solid white card panels so numbered headings + descriptions
+   are always fully readable. */
+.section-header {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: var(--radius-lg, 12px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    padding: 36px 28px 28px;
+    max-width: 900px;
+    margin: var(--space-xl, 32px) auto 0;
+}
+
+/* ========== CONCEPT-INNER — SOLID PANEL WRAPPER ========== */
+/* concept-section is transparent; concept-inner needs a white panel
+   so narrative text and explore links are readable. */
+.concept-inner {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: var(--radius-lg, 12px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    padding: 32px 28px;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+/* Dark-context concept-inner override */
+.section-dark .concept-inner,
+.panel-navy .concept-inner {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* ========== RELATED-ANALYSES — SOLID BACKGROUND ========== */
+/* Without a bg, the related-analyses title + cards float on the bg image */
+.related-analyses {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: var(--radius-lg, 12px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    max-width: var(--max-w, 1320px);
+    margin: var(--space-xl, 32px) auto;
+}
+.related-analyses-title {
+    color: var(--text-muted, #6B7280);
+}
+
 /* ========== SECTION TEXT ON TRANSPARENT BACKGROUNDS ========== */
 /* Background image is white/light circuit board — text on transparent
    sections must be dark for readability. Cards keep dark-on-white as-is. */
