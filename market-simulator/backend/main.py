@@ -416,6 +416,243 @@ def _extract_nuclear_revenue(nuc_raw: dict) -> NuclearRevenue:
     )
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Chart data computation helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _compute_threshold_sweep(year_results, zone_details, existing_clean, base_lmp):
+    """Build threshold → avg_lmp map from zone details across all years.
+
+    JS expects: {threshold_str: {avg_lmp: float}}
+    """
+    sweep = {}
+    # Start with baseline
+    sweep[str(round(existing_clean, 1))] = {"avg_lmp": round(base_lmp, 1)}
+
+    # Collect zone details from ALL year results (trajectory has multiple years)
+    for yr in year_results:
+        for zd in yr.get("zone_details", []):
+            t = zd.get("threshold", 0)
+            lmp = zd.get("avg_lmp", 0)
+            if t > 0 and lmp > 0:
+                sweep[str(round(t, 1))] = {"avg_lmp": round(lmp, 1)}
+
+    # Also use zone_details from the response-level list
+    for zd in zone_details:
+        t = zd.threshold if hasattr(zd, 'threshold') else zd.get("threshold", 0)
+        lmp = zd.avg_lmp if hasattr(zd, 'avg_lmp') else zd.get("avg_lmp", 0)
+        if t > 0 and lmp > 0:
+            sweep[str(round(t, 1))] = {"avg_lmp": round(lmp, 1)}
+
+    return sweep if len(sweep) > 1 else None
+
+
+def _compute_what_gets_built(final_year):
+    """Extract cumulative GW deployed by resource type.
+
+    JS expects: {resource_name: gw_float}
+    """
+    cum_gw = final_year.get("cumulative_gw", {})
+    if not cum_gw:
+        # Fallback: derive from resource_mix_twh using typical capacity factors
+        rmix = final_year.get("resource_mix_twh", {})
+        cf_map = {
+            'solar': 0.25, 'wind': 0.35, 'offshore_wind': 0.45,
+            'clean_firm': 0.90, 'nuclear': 0.92, 'ccs_ccgt': 0.85,
+            'hydro': 0.40, 'geothermal': 0.90,
+        }
+        cum_gw = {}
+        for res, twh in rmix.items():
+            cf = cf_map.get(res, 0.30)
+            gw = twh / (cf * 8.760) if cf > 0 else 0
+            if gw > 0.01:
+                cum_gw[res] = round(gw, 1)
+
+    # Filter out zero/negative values
+    built = {k: round(v, 1) for k, v in cum_gw.items() if v > 0.01}
+    return built if built else None
+
+
+def _compute_cost_ladder(year_results):
+    """Build cost ladder: cumulative GW vs $/MWh cost and revenue.
+
+    JS expects: [{cumulative_gw, cost_mwh, revenue_mwh}, ...]
+    """
+    # Collect all zone details with cost/revenue data
+    zones = []
+    for yr in year_results:
+        for zd in yr.get("zone_details", []):
+            cost = zd.get("cost", 0)
+            rev = zd.get("revenue", 0)
+            new_gw = zd.get("new_gw", 0)
+            t = zd.get("threshold", 0)
+            if new_gw > 0 and (cost > 0 or rev > 0):
+                zones.append({
+                    "threshold": t,
+                    "cost": cost,
+                    "revenue": rev,
+                    "new_gw": new_gw,
+                })
+
+    if not zones:
+        return None
+
+    # Sort by threshold (ascending clean %) and compute cumulative GW
+    zones.sort(key=lambda z: z["threshold"])
+    ladder = []
+    cum_gw = 0
+    for z in zones:
+        cum_gw += z["new_gw"]
+        ladder.append({
+            "cumulative_gw": round(cum_gw, 1),
+            "cost_mwh": round(z["cost"], 1),
+            "revenue_mwh": round(z["revenue"], 1),
+        })
+
+    return ladder if ladder else None
+
+
+def _compute_gas_fleet_shift(iso, final_year):
+    """Compute gas fleet capacity factors by efficiency tier at different carbon prices.
+
+    JS expects: [{carbon_price, efficient_cf, avg_cf, old_cf}, ...]
+    """
+    # Get baseline generator economics to establish capacity factors
+    gen_econ = final_year.get("generator_economics", {})
+
+    # Efficient = gas_ccgt (HR ~7.0), Average = fleet avg (~8.5), Old = gas_ct (HR ~10.5)
+    efficient_hr = HEAT_RATES.get('gas_ccgt', 7.0)
+    avg_hr = (HEAT_RATES.get('gas_ccgt', 7.0) + HEAT_RATES.get('gas_ct', 10.5)) / 2
+    old_hr = HEAT_RATES.get('gas_ct', 10.5)
+
+    base_gas_price = FUEL_PRICES.get('Medium', {}).get('gas', 3.5)
+    base_lmp = final_year.get("avg_lmp", WHOLESALE_PRICES.get(iso, 30))
+
+    carbon_prices = [0, 10, 25, 50, 75, 100, 150, 200]
+    shift_data = []
+
+    for cp in carbon_prices:
+        # Marginal cost at each efficiency tier
+        mc_efficient = efficient_hr * base_gas_price + VOM.get('gas_ccgt', 3.5) + CO2_RATES.get('gas_ccgt', 0.37) * cp
+        mc_avg = avg_hr * base_gas_price + 4.0 + 0.46 * cp
+        mc_old = old_hr * base_gas_price + VOM.get('gas_ct', 5.0) + CO2_RATES.get('gas_ct', 0.55) * cp
+
+        # LMP increases with carbon price (pass-through from marginal generator)
+        # Marginal generator is typically mid-efficiency gas
+        lmp_at_cp = base_lmp + 0.46 * cp  # ~0.46 tCO2/MWh avg fossil
+
+        # CF approximation: higher profit margin → higher dispatch
+        # CF = clamp(0.05, (lmp - mc) / lmp * base_cf_factor, 0.95)
+        def cf_from_margin(mc, lmp):
+            if lmp <= 0:
+                return 0.05
+            margin_ratio = max(0, (lmp - mc) / lmp)
+            return min(0.90, max(0.02, margin_ratio * 0.85))
+
+        shift_data.append({
+            "carbon_price": cp,
+            "efficient_cf": round(cf_from_margin(mc_efficient, lmp_at_cp), 3),
+            "avg_cf": round(cf_from_margin(mc_avg, lmp_at_cp), 3),
+            "old_cf": round(cf_from_margin(mc_old, lmp_at_cp), 3),
+        })
+
+    return shift_data
+
+
+def _compute_sensitivity_matrix(iso, base_clean_pct, base_lmp):
+    """Compute clean % sensitivity to gas price × carbon price.
+
+    JS expects: {values: number[][], gas_prices: number[], carbon_prices: number[]}
+    """
+    gas_prices = [2.0, 3.0, 3.5, 4.5, 6.0]
+    carbon_prices = [0, 25, 50, 75, 100]
+
+    # Base parameters
+    base_gas = 3.5
+    base_carbon = 0
+
+    # Sensitivity: higher gas → higher LMP → more clean competitive
+    # Higher carbon → higher fossil cost → more clean competitive
+    values = []
+    for cp in carbon_prices:
+        row = []
+        for gp in gas_prices:
+            # Each $1/MMBtu gas increase raises avg fossil MC by ~$7-8/MWh (HR ~7-8)
+            gas_delta = (gp - base_gas) * 7.5  # $/MWh LMP increase
+            # Each $10/ton carbon raises MC by ~$3.7-5.5/MWh (avg ~$4.5/MWh)
+            carbon_delta = (cp - base_carbon) * 0.45  # $/MWh
+
+            # LMP increase makes clean more competitive → more clean deployed
+            # Approximate: each $10/MWh LMP increase → +3-5% clean
+            lmp_increase = gas_delta + carbon_delta
+            pct_increase = lmp_increase * 0.35  # ~3.5% per $10/MWh
+
+            clean_pct = min(99.9, max(10, base_clean_pct + pct_increase))
+            row.append(round(clean_pct, 1))
+        values.append(row)
+
+    return {
+        "values": values,
+        "gas_prices": gas_prices,
+        "carbon_prices": carbon_prices,
+    }
+
+
+def _compute_ccs_analysis(iso):
+    """Compute CCS retrofit vs new gas cost curves at different carbon prices.
+
+    JS expects: {carbon_prices: [], existing_ccgt_cost: [], ccs_retrofit_cost: [], new_gas_cost: []}
+    """
+    carbon_prices = [0, 10, 25, 50, 75, 100, 150, 200]
+
+    gas_price = FUEL_PRICES.get('Medium', {}).get('gas', 3.5)
+
+    # Existing CCGT: HR=7.0, VOM=$3.50, CO2=0.37 t/MWh (no capture)
+    ccgt_hr = HEAT_RATES.get('gas_ccgt', 7.0)
+    ccgt_vom = VOM.get('gas_ccgt', 3.5)
+    ccgt_co2 = CO2_RATES.get('gas_ccgt', 0.37)
+
+    # CCS retrofit: HR=8.4 (20% energy penalty), VOM=$8, CO2=0.037 (90% capture)
+    # Plus ~$30/MWh capex amortization for retrofit
+    ccs_hr = ccgt_hr * 1.20  # 20% efficiency penalty
+    ccs_vom = 8.0
+    ccs_co2 = ccgt_co2 * 0.10  # 90% capture
+    ccs_capex_mwh = 30.0  # Amortized retrofit cost
+    ccs_45q = 27.5  # 45Q credit per ton captured (§45Q at $85/ton × capture rate)
+
+    # New gas CCGT: HR=6.4 (newer fleet), VOM=$3.0, CO2=0.34
+    new_hr = 6.4
+    new_vom = 3.0
+    new_co2 = 0.34
+    new_capex_mwh = 12.0  # Amortized new-build cost
+
+    existing_costs = []
+    ccs_costs = []
+    new_gas_costs = []
+
+    for cp in carbon_prices:
+        # Existing CCGT total cost
+        existing = ccgt_hr * gas_price + ccgt_vom + ccgt_co2 * cp
+        existing_costs.append(round(existing, 1))
+
+        # CCS retrofit total cost (with 45Q credit offset)
+        tons_captured = (ccgt_co2 - ccs_co2)  # tons captured per MWh
+        ccs_credit = min(ccs_45q, tons_captured * 85)  # $85/ton × captured
+        ccs_total = ccs_hr * gas_price + ccs_vom + ccs_co2 * cp + ccs_capex_mwh - ccs_credit
+        ccs_costs.append(round(ccs_total, 1))
+
+        # New gas CCGT
+        new_total = new_hr * gas_price + new_vom + new_co2 * cp + new_capex_mwh
+        new_gas_costs.append(round(new_total, 1))
+
+    return {
+        "carbon_prices": carbon_prices,
+        "existing_ccgt_cost": existing_costs,
+        "ccs_retrofit_cost": ccs_costs,
+        "new_gas_cost": new_gas_costs,
+    }
+
+
 def _build_simulation_response(iso: str, year_results: list) -> SimulationResponse:
     """Build a SimulationResponse from raw simulation year_results for one ISO."""
     if not year_results:
@@ -547,6 +784,32 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
             label="Capacity Revenue by Year",
         )
 
+    # ── Compute additional chart data ──
+
+    # 1. Threshold sweep: LMP at each threshold from zone_details
+    threshold_sweep = _compute_threshold_sweep(
+        year_results, zone_details, existing_clean,
+        final.get("avg_lmp", WHOLESALE_PRICES.get(iso, 30)),
+    )
+
+    # 2. What gets built: cumulative GW by resource
+    what_gets_built = _compute_what_gets_built(final)
+
+    # 3. Cost ladder: cost vs cumulative GW from zone details
+    cost_ladder = _compute_cost_ladder(year_results)
+
+    # 4. Gas fleet shift: CF by efficiency tier at different carbon prices
+    gas_fleet_shift = _compute_gas_fleet_shift(iso, final)
+
+    # 5. Sensitivity matrix: clean % at gas × carbon price grid
+    sensitivity_matrix = _compute_sensitivity_matrix(
+        iso, final.get("clean_pct", existing_clean),
+        final.get("avg_lmp", 30),
+    )
+
+    # 6. CCS analysis: cost curves at different carbon prices
+    ccs_analysis = _compute_ccs_analysis(iso)
+
     return SimulationResponse(
         iso=iso,
         existing_clean_pct=round(existing_clean, 1),
@@ -564,6 +827,12 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
         capacity_rev_time_series=cap_rev_ts,
         supply_stack_summary=supply_stack,
         fuel_bin_table=fuel_bins,
+        threshold_sweep=threshold_sweep,
+        what_gets_built=what_gets_built,
+        cost_ladder=cost_ladder,
+        gas_fleet_shift=gas_fleet_shift,
+        sensitivity_matrix=sensitivity_matrix,
+        ccs_analysis=ccs_analysis,
     )
 
 

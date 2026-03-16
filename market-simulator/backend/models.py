@@ -5,7 +5,7 @@ Pydantic request/response schemas for the Market Simulator API.
 from __future__ import annotations
 
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -307,6 +307,13 @@ class SimulationResponse(BaseModel):
     fuel_bin_table: List[FuelBinRow] = Field(default_factory=list)
     # Plant-level summary
     plant_level_summary: Optional[dict] = None  # {operating: int, at_risk: int, stranded: int, total: int}
+    # Chart data — threshold sweep, deployment, cost ladder, gas shift, sensitivity, CCS
+    threshold_sweep: Optional[Dict[str, Any]] = None
+    what_gets_built: Optional[Dict[str, float]] = None
+    cost_ladder: Optional[List[dict]] = None
+    gas_fleet_shift: Optional[List[dict]] = None
+    sensitivity_matrix: Optional[dict] = None
+    ccs_analysis: Optional[dict] = None
     # Run tracking
     run_id: Optional[str] = None
     narrative: Optional[str] = None
