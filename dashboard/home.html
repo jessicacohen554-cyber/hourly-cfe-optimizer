@@ -19,39 +19,6 @@
     <script src="js/scroll-observer.js"></script>
     <script src="js/shared-footer.js"></script>
     <style>
-        /* ===== DARK THEME OVERRIDE ===== */
-        body {
-            background: #0B1120 !important;
-            color: rgba(255,255,255,0.92);
-        }
-        #bgImage {
-            opacity: 0.08;
-            filter: invert(1) brightness(0.4);
-        }
-        /* Override cinematic.css white panel defaults for dark context */
-        .card,
-        .stat-card,
-        .outcome-panel,
-        .signal-panel {
-            background: rgba(255,255,255,0.05) !important;
-            border: 1px solid rgba(255,255,255,0.08) !important;
-            color: rgba(255,255,255,0.9);
-        }
-        .section-header h2 {
-            color: #fff !important;
-        }
-        .section-header p {
-            color: rgba(255,255,255,0.55) !important;
-        }
-        .section-number {
-            background: rgba(99,102,241,0.15) !important;
-            color: #A5B4FC !important;
-        }
-        /* Header override for dark */
-        .header {
-            background: #0B1120 !important;
-        }
-
         /* ===== Hero Stats Row ===== */
         .hero-stats-row {
             display: grid;
@@ -68,14 +35,14 @@
             font-family: var(--font-heading);
             font-size: 2.8rem;
             font-weight: 800;
-            color: #fff;
+            color: var(--navy);
             line-height: 1.1;
         }
         .hero-stats-row .stat-label {
             font-size: 0.78rem;
             text-transform: uppercase;
             letter-spacing: 0.6px;
-            color: rgba(255,255,255,0.5);
+            color: var(--text-muted);
             margin-top: var(--space-xs);
         }
         /* Stagger fade-in for stat cards */
@@ -83,11 +50,22 @@
         .hero-stats-row .stat-card:nth-child(3) { transition-delay: 0.24s; }
         .hero-stats-row .stat-card:nth-child(4) { transition-delay: 0.36s; }
 
+        /* ===== Dark Glass-Morphism (selective contrast panels) ===== */
+        .dark-glass {
+            background: rgba(11,17,32,0.92) !important;
+            border: 1px solid rgba(255,255,255,0.08) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            color: rgba(255,255,255,0.9);
+            border-radius: var(--radius-lg, 12px);
+        }
+
         /* ===== Fork SVG Diagram ===== */
         .fork-diagram {
             max-width: 900px;
             margin: 0 auto;
             text-align: center;
+            padding: var(--space-xl) var(--space-lg);
         }
         .fork-diagram svg {
             width: 100%;
@@ -113,7 +91,6 @@
         }
         .outcome-panel {
             padding: var(--space-lg) var(--space-md);
-            border-radius: var(--radius-lg, 12px);
         }
         .outcome-panel.strat-1b {
             border-top: 3px solid #6366F1 !important;
@@ -190,9 +167,8 @@
         }
         .signal-panel {
             padding: var(--space-xl) var(--space-lg);
-            border-top: 4px solid transparent !important;
+            border-top: 4px solid transparent;
             text-align: center;
-            border-radius: var(--radius-lg, 12px);
         }
         .signal-panel-1b { border-top-color: #6366F1 !important; }
         .signal-panel-2c { border-top-color: #0EA5E9 !important; }
@@ -206,12 +182,12 @@
             font-family: var(--font-heading);
             font-size: 1.05rem;
             font-weight: 700;
-            color: #fff !important;
+            color: #fff;
             margin-bottom: var(--space-sm);
         }
         .signal-panel p {
             font-size: 0.9rem;
-            color: rgba(255,255,255,0.7);
+            color: rgba(255,255,255,0.75);
             line-height: 1.7;
             text-align: left;
         }
@@ -245,7 +221,7 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            color: #A5B4FC;
+            color: #6366F1;
             font-family: var(--font-heading);
             font-weight: 600;
             font-size: 0.95rem;
@@ -254,7 +230,7 @@
         }
         .explore-link:hover {
             transform: translateX(4px);
-            color: #C4B5FD;
+            color: #4F46E5;
         }
 
         /* ===== Responsive ===== */
@@ -298,7 +274,7 @@
     <!-- Hero Section                                                           -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <section class="content-section" id="hero">
-        <p class="fade-in" style="text-align:center; max-width:720px; margin:0 auto var(--space-xl); font-size:1.08rem; color:rgba(255,255,255,0.75); line-height:1.8">
+        <p class="fade-in" style="text-align:center; max-width:720px; margin:0 auto var(--space-xl); font-size:1.08rem; color:var(--text-secondary); line-height:1.8">
             The GHG Protocol is revising Scope 2 for the first time since 2015. The outcome will redirect hundreds of billions in clean energy capital. One path &mdash; consequential netting &mdash; optimizes for the cheapest ton of CO&#8322; displaced anywhere on the map. The other &mdash; hourly matching &mdash; requires clean energy to meet load every hour in the buyer&rsquo;s grid. Both reduce emissions. They build fundamentally different grids. This analysis, built on an 8,760-hour optimization model across 7 US ISOs, 540+ market scenarios, and 7 IPP fleet assessments, shows why the distinction matters &mdash; and what&rsquo;s at stake if we get it wrong.
         </p>
         <div class="hero-stats-row" id="heroStatsRow">
@@ -331,50 +307,60 @@
     </div>
     <section class="content-section" id="fork-section">
         <!-- SVG Flow Diagram -->
-        <div class="fork-diagram fade-in">
-            <svg viewBox="0 0 800 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fork diagram showing corporate procurement splitting into two strategies">
+        <div class="fork-diagram dark-glass fade-in">
+            <svg viewBox="0 0 800 540" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Fork diagram showing corporate procurement splitting into two strategies">
                 <defs>
                     <!-- Glow filters -->
-                    <filter id="glowWhite" x="-50%" y="-50%" width="200%" height="200%">
-                        <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="rgba(255,255,255,0.15)"/>
+                    <filter id="glowTrunk" x="-50%" y="-50%" width="200%" height="200%">
+                        <feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="rgba(255,255,255,0.1)"/>
                     </filter>
                     <filter id="glow1B" x="-50%" y="-50%" width="200%" height="200%">
-                        <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="rgba(99,102,241,0.35)"/>
+                        <feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="rgba(99,102,241,0.3)"/>
                     </filter>
                     <filter id="glow2C" x="-50%" y="-50%" width="200%" height="200%">
-                        <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="rgba(14,165,233,0.35)"/>
+                        <feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="rgba(14,165,233,0.3)"/>
                     </filter>
                     <!-- Motion paths: trunk + left branch, trunk + right branch -->
-                    <path id="pathLeft" d="M400,70 L400,200 Q400,260 280,340 Q200,390 160,480" fill="none"/>
-                    <path id="pathRight" d="M400,70 L400,200 Q400,260 520,340 Q600,390 640,480" fill="none"/>
+                    <path id="pathLeft" d="M400,90 L400,220 Q400,290 280,360 Q200,405 160,490" fill="none"/>
+                    <path id="pathRight" d="M400,90 L400,220 Q400,290 520,360 Q600,405 640,490" fill="none"/>
                 </defs>
 
-                <!-- Source bar -->
-                <rect x="300" y="20" width="200" height="40" rx="8" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
-                <text x="400" y="45" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="11" font-weight="600" letter-spacing="1.5" fill="rgba(255,255,255,0.45)">CORPORATE PROCUREMENT</text>
+                <!-- ── CORPORATE PROCUREMENT (prominent header) ── -->
+                <rect x="250" y="10" width="300" height="52" rx="10" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+                <text x="400" y="42" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="15" font-weight="700" letter-spacing="2" fill="rgba(255,255,255,0.7)">CORPORATE PROCUREMENT</text>
 
-                <!-- Trunk path -->
-                <line x1="400" y1="60" x2="400" y2="200" stroke="rgba(255,255,255,0.18)" stroke-width="3" filter="url(#glowWhite)"/>
+                <!-- ── Trunk road (thick, transparent fill, white outline) ── -->
+                <line x1="400" y1="62" x2="400" y2="170" stroke="rgba(255,255,255,0.12)" stroke-width="24" stroke-linecap="round"/>
+                <line x1="400" y1="62" x2="400" y2="170" stroke="rgba(255,255,255,0.3)" stroke-width="24" stroke-linecap="round" fill="none" stroke-dasharray="none" opacity="0"/>
+                <line x1="400" y1="62" x2="400" y2="170" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+                <!-- Trunk center line (dashed road marking) -->
+                <line x1="400" y1="68" x2="400" y2="165" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="6,4"/>
+                <!-- Trunk down arrow -->
+                <polygon points="400,174 393,162 407,162" fill="rgba(255,255,255,0.35)"/>
 
-                <!-- Fork node -->
-                <circle cx="400" cy="200" r="6" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
-                <text x="400" y="228" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="10" font-weight="600" letter-spacing="1.2" fill="rgba(255,255,255,0.35)">ACCOUNTING FRAMEWORK</text>
+                <!-- ── ACCOUNTING FRAMEWORK label (above fork) ── -->
+                <text x="400" y="198" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="11" font-weight="600" letter-spacing="1.5" fill="rgba(255,255,255,0.4)">ACCOUNTING FRAMEWORK</text>
 
-                <!-- Left branch (1B) -->
-                <path d="M400,200 Q400,260 280,340 Q200,390 160,480" fill="none" stroke="#6366F1" stroke-width="3" stroke-linecap="round" filter="url(#glow1B)"/>
-                <!-- Left arrow terminal -->
-                <polygon points="160,480 152,470 168,470" fill="#6366F1" opacity="0.8"/>
+                <!-- ── Fork node ── -->
+                <circle cx="400" cy="220" r="7" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+
+                <!-- ── Left branch road (1B — thick with transparent fill, saturated outline) ── -->
+                <path d="M400,220 Q400,290 280,360 Q200,405 160,490" fill="none" stroke="rgba(99,102,241,0.1)" stroke-width="20" stroke-linecap="round"/>
+                <path d="M400,220 Q400,290 280,360 Q200,405 160,490" fill="none" stroke="#6366F1" stroke-width="2" stroke-linecap="round" filter="url(#glow1B)"/>
+                <!-- Left down arrow (centered on road endpoint, pointing down) -->
+                <polygon points="160,495 153,483 167,483" fill="#6366F1" opacity="0.9"/>
                 <!-- Left label -->
-                <text x="160" y="505" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="13" font-weight="700" fill="#A5B4FC">1B &mdash; Consequential</text>
+                <text x="160" y="520" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="14" font-weight="700" fill="#A5B4FC">1B — Consequential</text>
 
-                <!-- Right branch (2C) -->
-                <path d="M400,200 Q400,260 520,340 Q600,390 640,480" fill="none" stroke="#0EA5E9" stroke-width="3" stroke-linecap="round" filter="url(#glow2C)"/>
-                <!-- Right arrow terminal -->
-                <polygon points="640,480 632,470 648,470" fill="#0EA5E9" opacity="0.8"/>
+                <!-- ── Right branch road (2C — thick with transparent fill, saturated outline) ── -->
+                <path d="M400,220 Q400,290 520,360 Q600,405 640,490" fill="none" stroke="rgba(14,165,233,0.1)" stroke-width="20" stroke-linecap="round"/>
+                <path d="M400,220 Q400,290 520,360 Q600,405 640,490" fill="none" stroke="#0EA5E9" stroke-width="2" stroke-linecap="round" filter="url(#glow2C)"/>
+                <!-- Right down arrow (centered on road endpoint, pointing down) -->
+                <polygon points="640,495 633,483 647,483" fill="#0EA5E9" opacity="0.9"/>
                 <!-- Right label -->
-                <text x="640" y="505" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="13" font-weight="700" fill="#7DD3FC">2C &mdash; Hourly Matching</text>
+                <text x="640" y="520" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="14" font-weight="700" fill="#7DD3FC">2C — Hourly Matching</text>
 
-                <!-- Animated flowing dots — LEFT branch (3 dots, staggered) -->
+                <!-- ── Animated flowing dots — LEFT branch (3 dots, staggered) ── -->
                 <circle class="flow-dot" r="5" fill="#6366F1" opacity="0.9">
                     <animateMotion dur="4s" repeatCount="indefinite" begin="0s">
                         <mpath href="#pathLeft"/>
@@ -397,7 +383,7 @@
                     <animate attributeName="opacity" values="0.5;0.9;0.9;0.3" keyTimes="0;0.2;0.8;1" dur="4s" repeatCount="indefinite" begin="2.66s"/>
                 </circle>
 
-                <!-- Animated flowing dots — RIGHT branch (3 dots, staggered) -->
+                <!-- ── Animated flowing dots — RIGHT branch (3 dots, staggered) ── -->
                 <circle class="flow-dot" r="5" fill="#0EA5E9" opacity="0.9">
                     <animateMotion dur="4s" repeatCount="indefinite" begin="0.66s">
                         <mpath href="#pathRight"/>
@@ -425,7 +411,7 @@
         <!-- Outcome Panels (normal flow below SVG) -->
         <div class="outcome-panels">
             <!-- 1B Panel -->
-            <div class="outcome-panel strat-1b fade-in">
+            <div class="outcome-panel strat-1b dark-glass fade-in">
                 <div class="outcome-icons">
                     <!-- Solar icon -->
                     <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#A5B4FC" stroke-width="1.8" stroke-linecap="round">
@@ -458,7 +444,7 @@
                 <div class="outcome-stat outcome-stat-1b">12&ndash;18 GW</div>
             </div>
             <!-- 2C Panel -->
-            <div class="outcome-panel strat-2c fade-in">
+            <div class="outcome-panel strat-2c dark-glass fade-in">
                 <div class="outcome-icons">
                     <!-- Solar -->
                     <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="#7DD3FC" stroke-width="1.8" stroke-linecap="round">
@@ -518,7 +504,7 @@
     <section class="content-section" id="signal-section">
         <div class="signal-grid">
             <!-- Panel 1: What 1B buys -->
-            <div class="signal-panel signal-panel-1b card fade-in">
+            <div class="signal-panel signal-panel-1b dark-glass fade-in">
                 <div class="signal-icon">
                     <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="#A5B4FC" stroke-width="2" stroke-linecap="round">
                         <!-- Solar -->
@@ -538,7 +524,7 @@
                 <p>Strategy 1B directs capital to the cheapest MWh available &mdash; solar and onshore wind deployed anywhere on the map. IPPs respond rationally: they build VRE where it&rsquo;s cheapest and gas where it&rsquo;s needed for reliability. The VRE gets built. The gas gets built too. Both become infrastructure their owners will defend.</p>
             </div>
             <!-- Panel 2: What 2C buys -->
-            <div class="signal-panel signal-panel-2c card fade-in">
+            <div class="signal-panel signal-panel-2c dark-glass fade-in">
                 <div class="signal-icon" id="clockIcon">
                     <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="#7DD3FC" stroke-width="2" stroke-linecap="round">
                         <circle cx="32" cy="32" r="26" stroke-width="2.5"/>
@@ -579,7 +565,7 @@
                 <p>Strategy 2C requires clean generation every hour &mdash; including nights, winter evenings, and multi-day low-wind events. IPPs can&rsquo;t fill these hours with solar and wind alone. The demand signal pulls forward investment in nuclear, CCS, geothermal, and long-duration storage &mdash; technologies the grid needs for deep decarbonization but that wholesale markets alone won&rsquo;t finance.</p>
             </div>
             <!-- Panel 3: Lock-in -->
-            <div class="signal-panel signal-panel-gradient card fade-in">
+            <div class="signal-panel signal-panel-gradient dark-glass fade-in">
                 <div class="signal-icon factory-pulse">
                     <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke-width="2" stroke-linecap="round">
                         <!-- Factory -->
