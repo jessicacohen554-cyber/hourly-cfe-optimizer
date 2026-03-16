@@ -459,7 +459,7 @@
         }
         .tank-layer {
             width: 100%;
-            transition: height 2.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transition: height 3.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             position: relative;
             display: flex;
             align-items: center;
@@ -1933,13 +1933,33 @@
                 grid.appendChild(tank);
             });
 
-            var triggered = false;
             var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            var loopTimer = null;
+            var isVisible = false;
+
+            // Total cycle: 1.5s stagger-in + 3.5s deplete + 3s hold + 1.5s reset + 1.5s hold = ~11s
+            var DEPLETE_DURATION = 3500;
+            var HOLD_DEPLETED = 3000;
+            var HOLD_RESET = 1500;
+
+            function resetCoal() {
+                var coalLayers = grid.querySelectorAll('.tank-coal');
+                var rateEls = grid.querySelectorAll('.tank-rate');
+                // Disable transition for instant reset
+                coalLayers.forEach(function(el) {
+                    el.style.transition = 'none';
+                    el.classList.remove('depleted');
+                    // Force reflow
+                    void el.offsetHeight;
+                    el.style.transition = '';
+                });
+                rateEls.forEach(function(el) {
+                    el.innerHTML = el.getAttribute('data-from') + '<span class="tank-rate-unit">lb/MWh</span>';
+                });
+                if (punchline) punchline.classList.remove('visible');
+            }
 
             function animateDepletion() {
-                if (triggered) return;
-                triggered = true;
-
                 var coalLayers = grid.querySelectorAll('.tank-coal');
                 var rateEls = grid.querySelectorAll('.tank-rate');
 
@@ -1952,11 +1972,12 @@
                     return;
                 }
 
+                // Stagger coal depletion across tanks
                 coalLayers.forEach(function(el, i) {
-                    setTimeout(function() { el.classList.add('depleted'); }, i * 150);
+                    setTimeout(function() { el.classList.add('depleted'); }, i * 200);
                 });
 
-                var duration = 2200;
+                // Animate rate counters
                 var startTime = null;
                 rateEls.forEach(function(el) {
                     var from = parseInt(el.getAttribute('data-from'));
@@ -1965,25 +1986,39 @@
 
                     function tick(ts) {
                         if (!startTime) startTime = ts;
-                        var progress = Math.min((ts - startTime) / duration, 1);
+                        var progress = Math.min((ts - startTime) / DEPLETE_DURATION, 1);
                         var eased = 1 - Math.pow(1 - progress, 3);
                         var current = Math.round(from + (to - from) * eased);
                         el.innerHTML = current.toLocaleString() + '<span class="tank-rate-unit">lb/MWh</span>';
                         if (progress < 1) requestAnimationFrame(tick);
                     }
-                    setTimeout(function() { requestAnimationFrame(tick); }, 300);
+                    setTimeout(function() { requestAnimationFrame(tick); }, 400);
                 });
 
+                // Show punchline after depletion completes
                 setTimeout(function() {
                     if (punchline) punchline.classList.add('visible');
-                }, 2600);
+                }, DEPLETE_DURATION + 200);
+
+                // Schedule reset and next cycle
+                loopTimer = setTimeout(function() {
+                    resetCoal();
+                    if (isVisible) {
+                        loopTimer = setTimeout(animateDepletion, HOLD_RESET);
+                    }
+                }, DEPLETE_DURATION + HOLD_DEPLETED);
             }
 
             var observer = new IntersectionObserver(function(entries) {
                 entries.forEach(function(entry) {
-                    if (entry.isIntersecting) {
+                    if (entry.isIntersecting && !isVisible) {
+                        isVisible = true;
+                        resetCoal();
                         animateDepletion();
-                        observer.unobserve(entry.target);
+                    } else if (!entry.isIntersecting && isVisible) {
+                        isVisible = false;
+                        clearTimeout(loopTimer);
+                        resetCoal();
                     }
                 });
             }, { threshold: 0.25 });
@@ -2104,19 +2139,27 @@
             buildCircles('fleetCircles1B', 'low');
             buildCircles('fleetCircles2C', 'high');
 
-            var triggered = false;
             var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            var fleetLoopTimer = null;
+            var fleetVisible = false;
+
+            var FLEET_ANIMATE_DELAY = 600;
+            var FLEET_HOLD = 4000;
+            var FLEET_RESET_HOLD = 2000;
+
+            function resetFleet() {
+                var circles1B = document.querySelectorAll('#fleetCircles1B .fleet-circle');
+                var circles2C = document.querySelectorAll('#fleetCircles2C .fleet-circle');
+                circles1B.forEach(function(c) { c.classList.remove('gas-pulse'); });
+                circles2C.forEach(function(c) { c.classList.remove('brightened'); });
+            }
 
             function animateFleet() {
-                if (triggered) return;
-                triggered = true;
+                var delay = reducedMotion ? 0 : FLEET_ANIMATE_DELAY;
 
-                var delay = reducedMotion ? 0 : 500;
-
-                // 1B panel: fade some circles to show stagnation
+                // 1B panel: pulse gas-heavy circles to show gas lock-in
                 setTimeout(function() {
                     var circles = document.querySelectorAll('#fleetCircles1B .fleet-circle');
-                    // Pulse a few gas-heavy company circles to show gas lock-in
                     var idx = 0;
                     circles.forEach(function(c) {
                         if (idx > circles.length * 0.7) {
@@ -2126,20 +2169,33 @@
                     });
                 }, delay);
 
-                // 2C panel: shrink most circles (emissions drop), brighten survivors
+                // 2C panel: brighten survivors
                 setTimeout(function() {
                     var circles = document.querySelectorAll('#fleetCircles2C .fleet-circle');
                     circles.forEach(function(c) {
                         c.classList.add('brightened');
                     });
                 }, delay);
+
+                // Schedule reset and next cycle
+                fleetLoopTimer = setTimeout(function() {
+                    resetFleet();
+                    if (fleetVisible) {
+                        fleetLoopTimer = setTimeout(animateFleet, FLEET_RESET_HOLD);
+                    }
+                }, delay + FLEET_HOLD);
             }
 
             var observer = new IntersectionObserver(function(entries) {
                 entries.forEach(function(entry) {
-                    if (entry.isIntersecting) {
+                    if (entry.isIntersecting && !fleetVisible) {
+                        fleetVisible = true;
+                        resetFleet();
                         animateFleet();
-                        observer.unobserve(entry.target);
+                    } else if (!entry.isIntersecting && fleetVisible) {
+                        fleetVisible = false;
+                        clearTimeout(fleetLoopTimer);
+                        resetFleet();
                     }
                 });
             }, { threshold: 0.25 });
