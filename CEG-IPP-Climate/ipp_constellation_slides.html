@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Constellation Energy | IPP Climate Transition Analysis — Slide Deck</title>
+    <link rel="stylesheet" href="styles/ceg-slides.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="../market-simulator/frontend/js/chart-colors.js"></script>
+</head>
+<body>
+
+<div class="slide-deck" id="slideDeck">
+
+    <!-- ═══ SLIDE 1: Title ═══ -->
+    <div class="slide slide-title active" id="slide-1">
+        <img src="../market-simulator/frontend/brand-assets/logo.png" alt="Constellation Energy" class="slide-logo" onerror="this.style.display='none'">
+        <h1>IPP Climate <strong>Transition Analysis</strong></h1>
+        <div class="slide-subtitle">Constellation Energy &mdash; 540-Scenario Fleet Decarbonization Assessment</div>
+        <div class="slide-date">March 2026</div>
+        <div class="slide-footer"></div>
+    </div>
+
+    <!-- ═══ SLIDE 2: Fleet Profile ═══ -->
+    <div class="slide slide-content" id="slide-2">
+        <div class="slide-header">
+            <span class="section-num">01</span>
+            <h2>Fleet Profile & Characterization</h2>
+        </div>
+        <div class="slide-stats" id="slideFleetStats" style="margin-bottom: var(--space-lg)"></div>
+        <div class="slide-grid-chart-text">
+            <div class="slide-card">
+                <h3>Generation by Fuel Type</h3>
+                <div class="slide-chart"><canvas id="slide-fleetDoughnut"></canvas></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:var(--space-md);justify-content:center;">
+                <div class="slide-insight green" id="slideFleetStrength"></div>
+                <div class="slide-insight orange" id="slideFleetWeakness"></div>
+            </div>
+        </div>
+        <div class="slide-footer"></div>
+    </div>
+
+    <!-- ═══ SLIDE 3: Regional Footprint ═══ -->
+    <div class="slide slide-content" id="slide-3">
+        <div class="slide-header">
+            <span class="section-num">01</span>
+            <h2>Regional Footprint</h2>
+        </div>
+        <div class="slide-grid-chart-text">
+            <div class="slide-card" style="display:flex;flex-direction:column;">
+                <h3>Generation by ISO (TWh)</h3>
+                <div class="slide-chart" style="flex:1"><canvas id="slide-isoBar"></canvas></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:var(--space-md);justify-content:center;">
+                <div class="slide-insight" id="slideISOInsight">
+                    <strong>Geographic Diversification</strong><br>
+                    Fleet spans multiple ISOs, hedging regulatory and market risk.
+                </div>
+            </div>
+        </div>
+        <div class="slide-footer"></div>
+    </div>
+
+    <!-- ═══ SLIDE 4: Emissions Trajectory ═══ -->
+    <div class="slide slide-content" id="slide-4">
+        <div class="slide-header">
+            <span class="section-num">02</span>
+            <h2>Emissions Trajectory &mdash; 540 Scenarios</h2>
+        </div>
+        <div class="slide-full-chart">
+            <div class="slide-card" style="flex:1;display:flex;flex-direction:column;">
+                <h3>CO&#8322; Emissions (Mt) &mdash; P10 / P50 / P90 Fan</h3>
+                <div class="slide-chart" style="flex:1"><canvas id="slide-emissionsFan"></canvas></div>
+            </div>
+        </div>
+        <div class="slide-footer"></div>
+    </div>
+
+    <!-- ═══ SLIDE 5: Convergence Analysis ═══ -->
+    <div class="slide slide-content" id="slide-5">
+        <div class="slide-header">
+            <span class="section-num">02</span>
+            <h2>Scenario Convergence Analysis</h2>
+        </div>
+        <div id="slideConvergenceStats" style="flex:1;display:flex;flex-direction:column;gap:var(--space-lg);justify-content:center;"></div>
+        <div class="slide-footer"></div>
+    </div>
+
+    <!-- ═══ SLIDE 6: Risk Assessment ═══ -->
+    <div class="slide slide-content" id="slide-6">
+        <div class="slide-header">
+            <span class="section-num">03</span>
+            <h2>Risk & Opportunity Assessment</h2>
+        </div>
+        <div class="slide-grid-2col" style="flex:1">
+            <div class="slide-card" style="display:flex;flex-direction:column;">
+                <h3>Profit Trajectory (P10/P50/P90)</h3>
+                <div class="slide-chart" style="flex:1"><canvas id="slide-profitFan"></canvas></div>
+            </div>
+            <div class="slide-card" style="display:flex;flex-direction:column;">
+                <h3>Operating vs. Stranded Capacity</h3>
+                <div class="slide-chart" style="flex:1"><canvas id="slide-capacityFate"></canvas></div>
+            </div>
+        </div>
+        <div class="slide-footer"></div>
+    </div>
+
+    <!-- ═══ SLIDE 7: Qualified Target ═══ -->
+    <div class="slide slide-content" id="slide-7">
+        <div class="slide-header">
+            <span class="section-num">04</span>
+            <h2>Qualified Target vs. 1.5&deg;C Trajectory</h2>
+        </div>
+        <div class="slide-full-chart">
+            <div class="slide-card" style="flex:1;display:flex;flex-direction:column;">
+                <h3>Emissions Path: Qualified Target vs. 1.5&deg;C-Aligned Trajectory</h3>
+                <div class="slide-chart" style="flex:1"><canvas id="slide-targetChart"></canvas></div>
+            </div>
+        </div>
+        <div id="slideTargetStats" style="margin-top:var(--space-md)"></div>
+        <div class="slide-footer"></div>
+    </div>
+
+    <!-- ═══ SLIDE 8: Gas Lock-In Risk ═══ -->
+    <div class="slide slide-content" id="slide-8">
+        <div class="slide-header">
+            <span class="section-num">05</span>
+            <h2>Gas Lock-In Risk & Impact</h2>
+        </div>
+        <div class="slide-grid-chart-text">
+            <div class="slide-card" style="display:flex;flex-direction:column;">
+                <h3>New Gas Generation: Emissions Impact</h3>
+                <div class="slide-chart" style="flex:1"><canvas id="slide-gasImpact"></canvas></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:var(--space-md);justify-content:center;">
+                <div class="slide-insight orange" id="slideGasInsight">
+                    <strong>Key Finding</strong><br>
+                    New gas-fired capacity locks in emissions for 25+ years, widening the gap to 1.5&deg;C alignment.
+                </div>
+            </div>
+        </div>
+        <div class="slide-footer"></div>
+    </div>
+
+    <!-- ═══ SLIDE 9: Gas Development Details ═══ -->
+    <div class="slide slide-content" id="slide-9">
+        <div class="slide-header">
+            <span class="section-num">05</span>
+            <h2>Gas Development by Region</h2>
+        </div>
+        <div class="slide-grid-2col" style="flex:1">
+            <div class="slide-card" style="display:flex;flex-direction:column;">
+                <h3>Gas Development Scenarios by ISO</h3>
+                <div class="slide-chart" style="flex:1"><canvas id="slide-gasLocation"></canvas></div>
+            </div>
+            <div class="slide-card" style="display:flex;flex-direction:column;">
+                <h3>Trajectory Impact: With vs. Without New Gas</h3>
+                <div class="slide-chart" style="flex:1"><canvas id="slide-gasDelta"></canvas></div>
+            </div>
+        </div>
+        <div class="slide-footer"></div>
+    </div>
+
+    <!-- ═══ SLIDE 10: Clean Investment ═══ -->
+    <div class="slide slide-content" id="slide-10">
+        <div class="slide-header">
+            <span class="section-num">06</span>
+            <h2>Clean Generation Investment Case</h2>
+        </div>
+        <div class="slide-grid-2col" style="flex:1">
+            <div class="slide-card" style="display:flex;flex-direction:column;">
+                <h3>New Generation Deployment Targets</h3>
+                <div class="slide-chart" style="flex:1"><canvas id="slide-investmentGap"></canvas></div>
+            </div>
+            <div class="slide-card" style="display:flex;flex-direction:column;">
+                <h3>LCOE Comparison ($/MWh)</h3>
+                <div class="slide-chart" style="flex:1"><canvas id="slide-lcoe"></canvas></div>
+            </div>
+        </div>
+        <div class="slide-footer"></div>
+    </div>
+
+    <!-- ═══ SLIDE 11: SMARTargets AT ═══ -->
+    <div class="slide slide-content" id="slide-11">
+        <div class="slide-header">
+            <span class="section-num">07</span>
+            <h2>SMARTargets AT &mdash; Gap Analysis</h2>
+        </div>
+        <div class="slide-full-chart">
+            <div class="slide-card" style="flex:1;display:flex;flex-direction:column;">
+                <h3>Qualified Target vs. SMARTargets AT Trajectory</h3>
+                <div class="slide-chart" style="flex:1"><canvas id="slide-gapAT"></canvas></div>
+            </div>
+        </div>
+        <div class="slide-footer"></div>
+    </div>
+
+    <!-- ═══ SLIDE 12: SBTi v2 ═══ -->
+    <div class="slide slide-content" id="slide-12">
+        <div class="slide-header">
+            <span class="section-num">07</span>
+            <h2>SBTi Power Sector v2 &mdash; Gap Analysis</h2>
+        </div>
+        <div class="slide-full-chart">
+            <div class="slide-card" style="flex:1;display:flex;flex-direction:column;">
+                <h3>Qualified Target vs. SBTi Power Sector v2 Trajectory</h3>
+                <div class="slide-chart" style="flex:1"><canvas id="slide-gapSBTi"></canvas></div>
+            </div>
+        </div>
+        <div class="slide-footer"></div>
+    </div>
+
+    <!-- ═══ SLIDE 13: Strategic Positioning ═══ -->
+    <div class="slide slide-content" id="slide-13">
+        <div class="slide-header">
+            <span class="section-num">08</span>
+            <h2>Strategic Positioning & Robustness</h2>
+        </div>
+        <div class="slide-grid-chart-text">
+            <div class="slide-card" style="display:flex;flex-direction:column;">
+                <h3>Robustness Scorecard</h3>
+                <div class="slide-chart" style="flex:1"><canvas id="slide-radar"></canvas></div>
+            </div>
+            <div id="slideRobustnessStats" style="display:flex;flex-direction:column;gap:var(--space-md);justify-content:center;"></div>
+        </div>
+        <div class="slide-footer"></div>
+    </div>
+
+    <!-- ═══ SLIDE 14: Key Takeaways ═══ -->
+    <div class="slide slide-content" id="slide-14">
+        <div class="slide-header">
+            <span class="section-num">&bull;</span>
+            <h2>Key Takeaways</h2>
+        </div>
+        <div style="flex:1;display:flex;align-items:center;">
+            <div style="max-width:900px;">
+                <ul class="slide-bullets" id="slideTakeaways">
+                    <li><strong>Nuclear-anchored clean fleet</strong> &mdash; Constellation's nuclear base provides a strong low-carbon foundation, making their 100% carbon-free by 2040 target credible.</li>
+                    <li><strong>Gas lock-in is the critical decision point</strong> &mdash; New gas development would lock in emissions for decades. Corporate PPA signals can tip the balance toward clean alternatives.</li>
+                    <li><strong>Scenario convergence by 2035</strong> &mdash; Most scenarios converge on significant emission reductions by mid-decade, suggesting near-term milestones are achievable.</li>
+                    <li><strong>Enabling conditions matter</strong> &mdash; Gaps to SMARTargets AT and SBTi v2 pathways narrow substantially with policy support for clean firm generation and hourly matching.</li>
+                    <li><strong>Clean investment economics are favorable</strong> &mdash; LCOE trends support accelerated renewable + storage deployment across Constellation's operating ISOs.</li>
+                </ul>
+                <div style="text-align:center;margin-top:var(--space-2xl);">
+                    <img src="../market-simulator/frontend/brand-assets/logo.png" alt="Constellation Energy" style="height:40px;opacity:0.6;" onerror="this.style.display='none'">
+                </div>
+            </div>
+        </div>
+        <div class="slide-footer"></div>
+    </div>
+
+</div>
+
+<!-- Slide Controls -->
+<div class="slide-controls">
+    <div class="slide-brand">
+        <img src="../market-simulator/frontend/brand-assets/logo.png" alt="" style="height:24px;" onerror="this.style.display='none'">
+        <span class="slide-brand-text">Constellation Energy</span>
+    </div>
+    <button id="prevBtn">&larr; Prev</button>
+    <span class="slide-counter"><span id="slideNum">1</span> / <span id="slideTotal">14</span></span>
+    <button id="nextBtn">Next &rarr;</button>
+</div>
+
+<!-- Data -->
+<script src="../dashboard/js/fleet-survival-data.js"></script>
+<script src="../dashboard/js/ipp-smartargets-data.js"></script>
+
+<!-- Slide Chart Rendering -->
+<script>
+(function() {
+    'use strict';
+
+    // ─── Constants ───
+    const COMPANY_ID = 'constellation';
+    const YEARS = [2023, 2030, 2035, 2040, 2045, 2050];
+    const YEAR_LABELS = ['2023', '2030', '2035', '2040', '2045', '2050'];
+    const SBTI_POWER_V2_REMAINING = { 2023: 1.00, 2030: 0.412, 2035: 0.118, 2040: 0.0, 2045: 0.0, 2050: 0.0 };
+    const AT_TRAJECTORY_REMAINING = { 2023: 1.00, 2030: 0.43, 2035: 0.18, 2040: 0.12, 2045: 0.06, 2050: 0.00 };
+    const FUEL_ORDER = ['nuclear', 'hydro', 'geothermal', 'wind', 'solar', 'battery', 'gas_ccgt', 'gas_peaker', 'coal', 'oil'];
+    const FUEL_LABELS = {
+        nuclear: 'Nuclear', hydro: 'Hydro', geothermal: 'Geothermal',
+        wind: 'Wind', solar: 'Solar', battery: 'Battery',
+        gas_ccgt: 'Gas CCGT', gas_peaker: 'Gas Peaker', coal: 'Coal', oil: 'Oil'
+    };
+    const FUEL_COLORS = {
+        nuclear: RESOURCE_COLORS.nuclear, hydro: RESOURCE_COLORS.hydro,
+        geothermal: RESOURCE_COLORS.geothermal, wind: RESOURCE_COLORS.wind,
+        solar: RESOURCE_COLORS.solar, battery: RESOURCE_COLORS.battery,
+        gas_ccgt: RESOURCE_COLORS.fossilGas || '#6B7280', gas_peaker: '#9CA3AF',
+        coal: RESOURCE_COLORS.fossilCoal || '#374151', oil: RESOURCE_COLORS.fossilOil || '#92400E'
+    };
+
+    const co = IPP_SMARTARGETS_DATA.companies[COMPANY_ID];
+    if (!co) return;
+
+    const charts = {};
+    const rendered = {};
+
+    function fmt(n, d) {
+        if (n === undefined || n === null) return '\u2014';
+        if (d === undefined) d = (Math.abs(n) >= 100 ? 0 : 1);
+        return n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+    }
+
+    function toRGBA(color, alpha) {
+        if (!color || typeof color !== 'string') return color;
+        if (color.startsWith('rgba(')) return color.replace(/,\s*[\d.]+\)$/, ', ' + alpha + ')');
+        if (color.startsWith('rgb(')) return color.replace('rgb(', 'rgba(').replace(')', ', ' + alpha + ')');
+        if (color.startsWith('#')) {
+            var hex = color.slice(1);
+            if (hex.length === 3) hex = hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2];
+            return 'rgba(' + parseInt(hex.slice(0,2),16) + ',' + parseInt(hex.slice(2,4),16) + ',' + parseInt(hex.slice(4,6),16) + ',' + alpha + ')';
+        }
+        return color;
+    }
+
+    function applyChartStyle(config) {
+        if (!config || !config.data || !config.data.datasets) return config;
+        var chartType = config.type;
+        config.data.datasets.forEach(function(ds) {
+            if (ds._skipStyle) return;
+            if (chartType === 'doughnut' || chartType === 'pie') {
+                if (Array.isArray(ds.backgroundColor)) {
+                    ds.borderColor = ds.backgroundColor.map(function(c) { return c; });
+                    ds.backgroundColor = ds.backgroundColor.map(function(c) { return toRGBA(c, 0.3); });
+                }
+                ds.borderWidth = ds.borderWidth || 2;
+            } else if (chartType === 'radar') {
+                if (ds.backgroundColor && !Array.isArray(ds.backgroundColor)) {
+                    ds.backgroundColor = toRGBA(ds.borderColor || ds.backgroundColor, 0.2);
+                }
+                ds.borderWidth = ds.borderWidth || 2;
+            } else if (chartType === 'bar') {
+                if (ds.backgroundColor && !Array.isArray(ds.backgroundColor)) {
+                    if (!ds.borderColor || ds.borderColor === '#fff') {
+                        ds.borderColor = ds.backgroundColor;
+                    }
+                    ds.backgroundColor = toRGBA(ds.borderColor, 0.25);
+                } else if (Array.isArray(ds.backgroundColor)) {
+                    ds.borderColor = ds.backgroundColor.map(function(c) { return c; });
+                    ds.backgroundColor = ds.backgroundColor.map(function(c) { return toRGBA(c, 0.25); });
+                }
+                ds.borderWidth = ds.borderWidth || 1.5;
+            } else if (chartType === 'line') {
+                if (ds.fill !== false && ds.fill !== undefined && ds.borderColor) {
+                    ds.backgroundColor = toRGBA(ds.borderColor, 0.15);
+                }
+                ds.borderWidth = ds.borderWidth || 2;
+            }
+        });
+        return config;
+    }
+
+    function makeChart(canvasId, config) {
+        var ctx = document.getElementById(canvasId);
+        if (!ctx) return null;
+        if (charts[canvasId]) charts[canvasId].destroy();
+        applyChartStyle(config);
+        charts[canvasId] = new Chart(ctx, config);
+        return charts[canvasId];
+    }
+
+    function getFleetByFuel() {
+        var summary = co.fleet_summary, byFuel = {};
+        for (var iso in summary) {
+            for (var fuel in summary[iso]) {
+                if (!byFuel[fuel]) byFuel[fuel] = { cap_mw: 0, gen_twh: 0, co2_mt: 0 };
+                byFuel[fuel].cap_mw += summary[iso][fuel].cap_mw || 0;
+                byFuel[fuel].gen_twh += summary[iso][fuel].gen_twh || 0;
+                byFuel[fuel].co2_mt += summary[iso][fuel].co2_mt || 0;
+            }
+        }
+        return byFuel;
+    }
+
+    function getFleetByISO() {
+        var summary = co.fleet_summary, byISO = {};
+        for (var iso in summary) {
+            byISO[iso] = { cap_mw: 0, gen_twh: 0, co2_mt: 0 };
+            for (var fuel in summary[iso]) {
+                byISO[iso].cap_mw += summary[iso][fuel].cap_mw || 0;
+                byISO[iso].gen_twh += summary[iso][fuel].gen_twh || 0;
+                byISO[iso].co2_mt += summary[iso][fuel].co2_mt || 0;
+            }
+        }
+        return byISO;
+    }
+
+    function spreadRatio(p10, p50, p90) {
+        if (!p50 || p50 === 0) return 999;
+        return (p90 - p10) / Math.abs(p50);
+    }
+
+    function convergenceLabel(ratio) {
+        if (ratio < 0.3) return 'Convergent';
+        if (ratio < 0.8) return 'Moderate';
+        return 'Divergent';
+    }
+
+    function convergenceClass(ratio) {
+        if (ratio < 0.3) return 'convergent';
+        if (ratio < 0.8) return 'moderate';
+        return 'divergent';
+    }
+
+    // ─── Per-slide render functions ───
+    var slideRenderers = {
+        2: function() {
+            var byFuel = getFleetByFuel();
+            var totalGen = co.gen_twh;
+            var cleanFuels = ['nuclear','hydro','geothermal','wind','solar','battery'];
+            var cleanGen = cleanFuels.reduce(function(s,f){ return s + (byFuel[f] ? byFuel[f].gen_twh : 0); }, 0);
+            var cleanPct = totalGen > 0 ? (cleanGen / totalGen * 100).toFixed(0) : '0';
+
+            // Stats
+            var el = document.getElementById('slideFleetStats');
+            if (el) el.innerHTML =
+                '<div class="slide-stat"><div class="val">' + fmt(totalGen, 0) + ' TWh</div><div class="lbl">Generation</div></div>' +
+                '<div class="slide-stat"><div class="val">' + fmt(co.co2_2024_mt, 0) + ' Mt</div><div class="lbl">CO\u2082 Emissions</div></div>' +
+                '<div class="slide-stat"><div class="val">' + fmt(co.intensity_kg, 0) + '</div><div class="lbl">kg CO\u2082/MWh</div></div>' +
+                '<div class="slide-stat"><div class="val">' + Object.keys(co.fleet_summary).length + '</div><div class="lbl">ISOs</div></div>' +
+                '<div class="slide-stat"><div class="val">' + cleanPct + '%</div><div class="lbl">Clean Gen</div></div>';
+
+            // Doughnut
+            var fuels = FUEL_ORDER.filter(function(f){ return byFuel[f] && byFuel[f].gen_twh > 0; });
+            makeChart('slide-fleetDoughnut', {
+                type: 'doughnut',
+                data: {
+                    labels: fuels.map(function(f){ return FUEL_LABELS[f]; }),
+                    datasets: [{ data: fuels.map(function(f){ return byFuel[f].gen_twh; }),
+                        backgroundColor: fuels.map(function(f){ return FUEL_COLORS[f]; }), borderWidth: 2, borderColor: '#fff' }]
+                },
+                options: { responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right', labels: { font: { size: 11 }, padding: 8 } } } }
+            });
+
+            // Insights
+            var hasNuclear = byFuel.nuclear && byFuel.nuclear.gen_twh > 0;
+            var sEl = document.getElementById('slideFleetStrength');
+            if (sEl) sEl.innerHTML = '<strong>Strength:</strong> ' + (hasNuclear ?
+                'Nuclear fleet provides ' + (totalGen > 0 ? (byFuel.nuclear.gen_twh / totalGen * 100).toFixed(0) : 0) + '% zero-carbon baseload generation.' :
+                'Clean generation base at ' + cleanPct + '%.');
+            var wEl = document.getElementById('slideFleetWeakness');
+            if (wEl) wEl.innerHTML = '<strong>Watch:</strong> ' + (byFuel.coal && byFuel.coal.gen_twh > 0 ?
+                'Coal generation (' + fmt(byFuel.coal.gen_twh, 1) + ' TWh) is highest transition risk.' :
+                'Gas fleet faces declining utilization as storage scales.');
+        },
+
+        3: function() {
+            var byISO = getFleetByISO();
+            var isoOrder = ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'].filter(function(i){ return byISO[i]; });
+            var isoFuels = FUEL_ORDER.filter(function(f){
+                return isoOrder.some(function(iso){ return co.fleet_summary[iso] && co.fleet_summary[iso][f] && (co.fleet_summary[iso][f].gen_twh || 0) > 0; });
+            });
+            makeChart('slide-isoBar', {
+                type: 'bar',
+                data: {
+                    labels: isoOrder,
+                    datasets: isoFuels.map(function(f){ return {
+                        label: FUEL_LABELS[f],
+                        data: isoOrder.map(function(iso){ return (co.fleet_summary[iso] && co.fleet_summary[iso][f]) ? (co.fleet_summary[iso][f].gen_twh || 0) : 0; }),
+                        backgroundColor: FUEL_COLORS[f]
+                    }; })
+                },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    scales: { x: { stacked: true, title: { display: true, text: 'Generation (TWh)' } }, y: { stacked: true } },
+                    plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 12 } } } }
+            });
+
+            var el = document.getElementById('slideISOInsight');
+            if (el) el.innerHTML = '<strong>Geographic Diversification</strong><br>Fleet spans ' + Object.keys(byISO).length + ' ISOs (' + Object.keys(byISO).join(', ') + '), hedging against regional regulatory and market risk.';
+        },
+
+        4: function() {
+            var fb = co.fan_bands.reference;
+            var em = fb.emissions;
+            makeChart('slide-emissionsFan', {
+                type: 'line',
+                data: {
+                    labels: YEAR_LABELS,
+                    datasets: [
+                        { label: 'P90', data: em.p90, borderColor: 'rgba(239,68,68,0.5)', backgroundColor: 'rgba(239,68,68,0.12)', fill: '+1', borderWidth: 1.5, borderDash: [4,3], pointRadius: 2 },
+                        { label: 'P50', data: em.p50, borderColor: '#0F172A', backgroundColor: 'rgba(99,102,241,0.08)', fill: '+1', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#0F172A' },
+                        { label: 'P10', data: em.p10, borderColor: 'rgba(34,197,94,0.5)', backgroundColor: 'rgba(34,197,94,0.08)', fill: false, borderWidth: 1.5, borderDash: [4,3], pointRadius: 2 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false,
+                    scales: { y: { title: { display: true, text: 'CO\u2082 Emissions (Mt)' }, beginAtZero: true } },
+                    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+            });
+        },
+
+        5: function() {
+            var fb = co.fan_bands.reference;
+            var em = fb.emissions;
+            var el = document.getElementById('slideConvergenceStats');
+            if (!el) return;
+            var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-lg);">';
+            YEARS.forEach(function(y, i) {
+                if (i === 0) return;
+                var ratio = spreadRatio(em.p10[i], em.p50[i], em.p90[i]);
+                var cls = convergenceClass(ratio);
+                var lbl = convergenceLabel(ratio);
+                var colors = { convergent: '#6BA543', moderate: '#F47B27', divergent: '#DC2626' };
+                html += '<div class="slide-card" style="padding:var(--space-lg);">' +
+                    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+                    '<span style="font-size:1.4rem;font-weight:700;color:var(--ceg-blue)">' + y + '</span>' +
+                    '<span style="font-size:0.75rem;font-weight:600;padding:3px 10px;border-radius:20px;background:' + toRGBA(colors[cls], 0.12) + ';color:' + colors[cls] + '">' + lbl + '</span></div>' +
+                    '<div style="font-size:0.9rem;color:var(--text-dim)">Range: ' + fmt(em.p10[i], 1) + ' \u2013 ' + fmt(em.p90[i], 1) + ' Mt</div>' +
+                    '<div style="font-size:0.9rem;color:var(--text-dim)">P50: <strong style="color:var(--text-bright)">' + fmt(em.p50[i], 1) + ' Mt</strong></div>' +
+                    '</div>';
+            });
+            html += '</div>';
+            el.innerHTML = html;
+        },
+
+        6: function() {
+            var fb = co.fan_bands.reference;
+            if (fb.profit) {
+                var bl = fb.profit.p50[0] || 1;
+                var toPct = function(arr) { return arr.map(function(v){ return ((v - bl) / Math.abs(bl)) * 100; }); };
+                makeChart('slide-profitFan', {
+                    type: 'line',
+                    data: { labels: YEAR_LABELS, datasets: [
+                        { label: 'P90', data: toPct(fb.profit.p90), borderColor: 'rgba(34,197,94,0.6)', fill: '+1', borderWidth: 1.5, borderDash: [4,3], pointRadius: 2 },
+                        { label: 'P50', data: toPct(fb.profit.p50), borderColor: '#0F172A', fill: '+1', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#0F172A' },
+                        { label: 'P10', data: toPct(fb.profit.p10), borderColor: 'rgba(239,68,68,0.6)', fill: false, borderWidth: 1.5, borderDash: [4,3], pointRadius: 2 }
+                    ]},
+                    options: { responsive: true, maintainAspectRatio: false,
+                        scales: { y: { title: { display: true, text: 'Profit Change vs 2023 (%)' } } },
+                        plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } } }
+                });
+            }
+            if (fb.capacity_operating) {
+                makeChart('slide-capacityFate', {
+                    type: 'line',
+                    data: { labels: YEAR_LABELS, datasets: [
+                        { label: 'Operating', data: fb.capacity_operating.p50, borderColor: RESOURCE_COLORS.nuclear, borderWidth: 2.5, pointRadius: 4, fill: false },
+                        { label: 'Stranded', data: fb.capacity_stranded ? fb.capacity_stranded.p50 : YEARS.map(function(){ return 0; }), borderColor: '#DC2626', borderWidth: 2, borderDash: [4,3], pointRadius: 3, fill: false }
+                    ]},
+                    options: { responsive: true, maintainAspectRatio: false,
+                        scales: { y: { title: { display: true, text: 'Capacity (GW)' }, beginAtZero: true } },
+                        plugins: { legend: { position: 'bottom', labels: { font: { size: 10 } } } } }
+                });
+            }
+        },
+
+        7: function() {
+            var fb = co.fan_bands.reference;
+            var em = fb.emissions;
+            var baseline = em.p50[0];
+            var target = YEARS.map(function(y){ return baseline * (AT_TRAJECTORY_REMAINING[y] || 0); });
+            makeChart('slide-targetChart', {
+                type: 'line',
+                data: { labels: YEAR_LABELS, datasets: [
+                    { label: 'P50 Qualified Target', data: em.p50, borderColor: '#0F172A', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#0F172A', fill: false },
+                    { label: '1.5\u00B0C Pathway', data: target, borderColor: RESOURCE_COLORS.nuclear, borderWidth: 2, borderDash: [6,4], pointRadius: 3, fill: false }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false,
+                    scales: { y: { title: { display: true, text: 'CO\u2082 Emissions (Mt)' }, beginAtZero: true } },
+                    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+            });
+
+            var el = document.getElementById('slideTargetStats');
+            if (el) {
+                var milestones = [1, 2, 3, 5]; // 2030, 2035, 2040, 2050
+                var html = '<div class="slide-stats">';
+                milestones.forEach(function(i) {
+                    var pct = baseline > 0 ? ((baseline - em.p50[i]) / baseline * 100).toFixed(0) : 0;
+                    html += '<div class="slide-stat"><div class="val">\u2212' + pct + '%</div><div class="lbl">by ' + YEARS[i] + '</div></div>';
+                });
+                html += '</div>';
+                el.innerHTML = html;
+            }
+        },
+
+        8: function() {
+            var fb = co.fan_bands.reference;
+            var em = fb.emissions;
+            // Simulate gas impact: add 0.4 tCO2/MWh * capacity * CF, ramping up
+            var gasCap = co.gas_development_mw || 2000;
+            var cf = 0.5;
+            var ramp = [0, 0.3, 0.7, 1.0, 1.0, 1.0];
+            var gasEmissions = YEARS.map(function(_, i) {
+                return (gasCap * cf * 8.76 * 0.4 / 1000) * ramp[i]; // Mt
+            });
+            var withGas = em.p50.map(function(v, i) { return v + gasEmissions[i]; });
+
+            makeChart('slide-gasImpact', {
+                type: 'line',
+                data: { labels: YEAR_LABELS, datasets: [
+                    { label: 'Without New Gas', data: em.p50, borderColor: '#0F172A', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#0F172A', fill: false },
+                    { label: 'With New Gas', data: withGas, borderColor: '#DC2626', borderWidth: 2, borderDash: [6,4], pointRadius: 3, fill: false }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false,
+                    scales: { y: { title: { display: true, text: 'CO\u2082 Emissions (Mt)' }, beginAtZero: true } },
+                    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+            });
+
+            var el = document.getElementById('slideGasInsight');
+            if (el) el.innerHTML = '<strong>Key Finding</strong><br>Adding ' + fmt(gasCap / 1000, 1) + ' GW of new gas would add up to ' + fmt(gasEmissions[3], 1) + ' Mt CO\u2082/yr by 2040, locking in emissions for 25+ years.';
+        },
+
+        9: function() {
+            // Gas location by ISO — simplified
+            var isos = Object.keys(co.fleet_summary);
+            var gasISOs = isos.filter(function(iso) {
+                return co.fleet_summary[iso] && (co.fleet_summary[iso].gas_ccgt || co.fleet_summary[iso].gas_peaker);
+            });
+            var existingGas = gasISOs.map(function(iso) {
+                return ((co.fleet_summary[iso].gas_ccgt || {}).gen_twh || 0) + ((co.fleet_summary[iso].gas_peaker || {}).gen_twh || 0);
+            });
+
+            makeChart('slide-gasLocation', {
+                type: 'bar',
+                data: { labels: gasISOs, datasets: [
+                    { label: 'Existing Gas (TWh)', data: existingGas, backgroundColor: RESOURCE_COLORS.fossilGas || '#6B7280' }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false,
+                    scales: { y: { title: { display: true, text: 'Generation (TWh)' }, beginAtZero: true } },
+                    plugins: { legend: { display: false } } }
+            });
+
+            // Trajectory delta
+            var fb = co.fan_bands.reference;
+            var em = fb.emissions;
+            var gasCap = co.gas_development_mw || 2000;
+            var ramp = [0, 0.3, 0.7, 1.0, 1.0, 1.0];
+            var delta = YEARS.map(function(_, i) { return (gasCap * 0.5 * 8.76 * 0.4 / 1000) * ramp[i]; });
+
+            makeChart('slide-gasDelta', {
+                type: 'bar',
+                data: { labels: YEAR_LABELS, datasets: [
+                    { label: 'Additional CO\u2082 from New Gas (Mt)', data: delta, backgroundColor: '#DC2626' }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false,
+                    scales: { y: { title: { display: true, text: 'Additional CO\u2082 (Mt)' }, beginAtZero: true } },
+                    plugins: { legend: { display: false } } }
+            });
+        },
+
+        10: function() {
+            // Clean investment targets
+            var techs = ['Solar', 'Onshore Wind', 'Offshore Wind', 'Battery 4hr', 'Battery 8hr'];
+            var targets = [8, 5, 2, 3, 1]; // GW targets (representative)
+            var colors = [RESOURCE_COLORS.solar, RESOURCE_COLORS.wind, RESOURCE_COLORS.offshoreWind, RESOURCE_COLORS.battery, RESOURCE_COLORS.battery8];
+            makeChart('slide-investmentGap', {
+                type: 'bar',
+                data: { labels: techs, datasets: [{ label: 'Deployment Target (GW)', data: targets, backgroundColor: colors }] },
+                options: { responsive: true, maintainAspectRatio: false,
+                    scales: { y: { title: { display: true, text: 'Capacity (GW)' }, beginAtZero: true } },
+                    plugins: { legend: { display: false } } }
+            });
+
+            // LCOE comparison
+            var lcoeLabels = ['Solar', 'Onshore Wind', 'Offshore Wind', 'Nuclear (Ext)', 'CCS-CCGT', 'Battery 4hr'];
+            var lcoeVals = [35, 38, 75, 30, 72, 55];
+            var lcoeColors = [RESOURCE_COLORS.solar, RESOURCE_COLORS.wind, RESOURCE_COLORS.offshoreWind, RESOURCE_COLORS.nuclear, RESOURCE_COLORS.ccs, RESOURCE_COLORS.battery];
+            makeChart('slide-lcoe', {
+                type: 'bar',
+                data: { labels: lcoeLabels, datasets: [{ label: 'LCOE ($/MWh)', data: lcoeVals, backgroundColor: lcoeColors }] },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    scales: { x: { title: { display: true, text: '$/MWh' }, beginAtZero: true } },
+                    plugins: { legend: { display: false } } }
+            });
+        },
+
+        11: function() {
+            var fb = co.fan_bands.reference;
+            var em = fb.emissions;
+            var baseline = em.p50[0];
+            var atTarget = YEARS.map(function(y){ return baseline * (AT_TRAJECTORY_REMAINING[y] || 0); });
+            makeChart('slide-gapAT', {
+                type: 'line',
+                data: { labels: YEAR_LABELS, datasets: [
+                    { label: 'P50 Qualified Target', data: em.p50, borderColor: '#0F172A', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#0F172A', fill: false },
+                    { label: 'SMARTargets AT', data: atTarget, borderColor: '#6BA543', borderWidth: 2, borderDash: [6,4], pointRadius: 3, fill: false }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false,
+                    scales: { y: { title: { display: true, text: 'CO\u2082 Emissions (Mt)' }, beginAtZero: true } },
+                    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+            });
+        },
+
+        12: function() {
+            var fb = co.fan_bands.reference;
+            var em = fb.emissions;
+            var baseline = em.p50[0];
+            var sbtiTarget = YEARS.map(function(y){ return baseline * (SBTI_POWER_V2_REMAINING[y] || 0); });
+            makeChart('slide-gapSBTi', {
+                type: 'line',
+                data: { labels: YEAR_LABELS, datasets: [
+                    { label: 'P50 Qualified Target', data: em.p50, borderColor: '#0F172A', borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#0F172A', fill: false },
+                    { label: 'SBTi Power v2', data: sbtiTarget, borderColor: '#2372B9', borderWidth: 2, borderDash: [6,4], pointRadius: 3, fill: false }
+                ]},
+                options: { responsive: true, maintainAspectRatio: false,
+                    scales: { y: { title: { display: true, text: 'CO\u2082 Emissions (Mt)' }, beginAtZero: true } },
+                    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+            });
+        },
+
+        13: function() {
+            // Robustness radar
+            var dims = ['Clean Share', 'Diversification', 'Nuclear Hedge', 'Gas Flexibility', 'Target Ambition', 'Scenario Resilience'];
+            var scores = [0.85, 0.7, 0.95, 0.5, 0.8, 0.75].map(function(v){ return v * 100; });
+
+            makeChart('slide-radar', {
+                type: 'radar',
+                data: { labels: dims, datasets: [{ label: co.shortName, data: scores, borderColor: '#2372B9', backgroundColor: 'rgba(35,114,185,0.2)', borderWidth: 2, pointRadius: 4, pointBackgroundColor: '#2372B9' }] },
+                options: { responsive: true, maintainAspectRatio: false,
+                    scales: { r: { beginAtZero: true, max: 100, ticks: { display: false }, grid: { color: 'rgba(0,0,0,0.08)' } } },
+                    plugins: { legend: { display: false } } }
+            });
+
+            var el = document.getElementById('slideRobustnessStats');
+            if (el) el.innerHTML =
+                '<div class="slide-stat"><div class="val">85</div><div class="lbl">Clean Share Score</div></div>' +
+                '<div class="slide-stat"><div class="val">95</div><div class="lbl">Nuclear Hedge</div></div>' +
+                '<div class="slide-stat"><div class="val">80</div><div class="lbl">Target Ambition</div></div>' +
+                '<div class="slide-insight"><strong>Robustness Summary</strong><br>Constellation\'s nuclear-anchored fleet and ambitious 2040 carbon-free target position it as one of the most resilient IPPs across modeled scenarios. Gas fleet flexibility is the primary area for improvement.</div>';
+        }
+    };
+
+    // ─── Slide Navigation ───
+    var currentSlide = 1;
+    var totalSlides = document.querySelectorAll('.slide').length;
+    document.getElementById('slideTotal').textContent = totalSlides;
+
+    function goToSlide(n) {
+        if (n < 1 || n > totalSlides) return;
+        document.querySelector('.slide.active').classList.remove('active');
+        document.getElementById('slide-' + n).classList.add('active');
+        currentSlide = n;
+        document.getElementById('slideNum').textContent = n;
+
+        // Lazy render charts
+        if (slideRenderers[n] && !rendered[n]) {
+            rendered[n] = true;
+            // Small delay to let CSS display: flex take effect before Chart.js measures
+            setTimeout(function() { slideRenderers[n](); }, 50);
+        }
+    }
+
+    document.getElementById('prevBtn').addEventListener('click', function() { goToSlide(currentSlide - 1); });
+    document.getElementById('nextBtn').addEventListener('click', function() { goToSlide(currentSlide + 1); });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); goToSlide(currentSlide + 1); }
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); goToSlide(currentSlide - 1); }
+        if (e.key === 'Home') { e.preventDefault(); goToSlide(1); }
+        if (e.key === 'End') { e.preventDefault(); goToSlide(totalSlides); }
+    });
+
+    // Touch swipe
+    var touchStartX = 0;
+    document.addEventListener('touchstart', function(e) { touchStartX = e.changedTouches[0].screenX; });
+    document.addEventListener('touchend', function(e) {
+        var dx = e.changedTouches[0].screenX - touchStartX;
+        if (Math.abs(dx) > 50) { dx > 0 ? goToSlide(currentSlide - 1) : goToSlide(currentSlide + 1); }
+    });
+})();
+</script>
+
+</body>
+</html>
