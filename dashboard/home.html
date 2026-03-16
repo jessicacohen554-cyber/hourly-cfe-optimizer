@@ -243,6 +243,214 @@
             .hero-stats-row .stat-value { font-size: 2rem; }
         }
 
+        /* ===== Section 4: Where You Start — ISO Bars ===== */
+        .iso-bars-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .iso-bar-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            opacity: 0;
+            transform: translateY(12px);
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+        }
+        .iso-bar-row.visible { opacity: 1; transform: translateY(0); }
+        .iso-bar-row:nth-child(1) { transition-delay: 0ms; }
+        .iso-bar-row:nth-child(2) { transition-delay: 80ms; }
+        .iso-bar-row:nth-child(3) { transition-delay: 160ms; }
+        .iso-bar-row:nth-child(4) { transition-delay: 240ms; }
+        .iso-bar-row:nth-child(5) { transition-delay: 320ms; }
+        .iso-bar-row:nth-child(6) { transition-delay: 400ms; }
+        .iso-bar-row:nth-child(7) { transition-delay: 480ms; }
+        .iso-bar-label {
+            width: 64px;
+            flex-shrink: 0;
+            font-family: 'IBM Plex Mono', var(--font-mono, monospace);
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--navy, #0B1120);
+            text-align: right;
+        }
+        .iso-bar-track {
+            flex: 1;
+            height: 36px;
+            border-radius: 6px;
+            background: rgba(0,0,0,0.04);
+            display: flex;
+            overflow: hidden;
+        }
+        .iso-bar-segment {
+            height: 100%;
+            width: 0;
+            transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .iso-bar-segment.animate { /* width set via JS */ }
+        .seg-clean { background: rgba(14,165,233,0.50); }
+        .seg-gas { background: rgba(99,102,241,0.45); }
+        .seg-coal { background: rgba(0,0,0,0.15); }
+        .seg-other { background: rgba(139,92,246,0.30); }
+        .iso-bar-gap {
+            width: 52px;
+            flex-shrink: 0;
+            font-family: 'IBM Plex Mono', var(--font-mono, monospace);
+            font-size: 13px;
+            font-weight: 600;
+            color: #EF4444;
+            text-align: left;
+        }
+        .iso-bars-legend {
+            display: flex;
+            gap: 18px;
+            justify-content: center;
+            margin-bottom: var(--space-lg);
+            flex-wrap: wrap;
+        }
+        .iso-bars-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.78rem;
+            color: var(--text-secondary, #475569);
+        }
+        .iso-bars-legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+        .iso-insight-block {
+            max-width: 800px;
+            margin: var(--space-xl) auto 0;
+            padding: 24px 28px;
+            background: rgba(255,255,255,0.85);
+            border-left: 3px solid #0EA5E9;
+            border-radius: 8px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            font-size: 0.9rem;
+            color: var(--text-secondary, #475569);
+            line-height: 1.7;
+        }
+        .iso-annotation {
+            max-width: 800px;
+            margin: 12px auto 0;
+            padding: 18px 24px;
+            background: rgba(255,255,255,0.85);
+            border-radius: 8px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            font-size: 0.88rem;
+            color: var(--text-secondary, #475569);
+            line-height: 1.65;
+            opacity: 0;
+            transform: translateY(16px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+        .iso-annotation.visible { opacity: 1; transform: translateY(0); }
+        .iso-annotation:nth-of-type(1) { transition-delay: 0ms; }
+        .iso-annotation:nth-of-type(2) { transition-delay: 200ms; }
+        .iso-annotation:nth-of-type(3) { transition-delay: 400ms; }
+        .iso-annotation-1b { border-left: 3px solid #6366F1; }
+        .iso-annotation-2c { border-left: 3px solid #0EA5E9; }
+        .iso-annotation-rose { border-left: 3px solid #EF4444; }
+        .iso-annotation strong {
+            color: var(--navy, #0B1120);
+            font-weight: 700;
+        }
+
+        /* ===== Section 5: The Coal Wall ===== */
+        .coal-wall-container {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .coal-wall-container svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        @keyframes coalWallPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+        .coal-wall-finding {
+            max-width: 720px;
+            margin: var(--space-xl) auto 0;
+            padding: 24px 28px;
+            background: rgba(255,255,255,0.85);
+            border-left: 3px solid #0EA5E9;
+            border-radius: 8px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            font-size: 0.9rem;
+            color: var(--text-secondary, #475569);
+            line-height: 1.7;
+        }
+        .coal-wall-side-note {
+            max-width: 260px;
+            padding: 14px 18px;
+            background: rgba(255,255,255,0.85);
+            border-left: 3px solid #EF4444;
+            border-radius: 8px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            font-size: 0.82rem;
+            color: var(--text-secondary, #475569);
+            line-height: 1.6;
+            opacity: 0;
+            transition: opacity 0.6s ease-out;
+            margin: var(--space-md) auto 0;
+        }
+        .coal-wall-side-note.visible { opacity: 1; }
+        .coal-wall-counter {
+            font-family: 'IBM Plex Mono', var(--font-mono, monospace);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        /* ===== Section 6: The Last Mile ===== */
+        .crossover-container {
+            max-width: 700px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        .crossover-container svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .crossover-text {
+            max-width: 720px;
+            margin: var(--space-lg) auto 0;
+            font-size: 0.9rem;
+            color: var(--text-secondary, #475569);
+            line-height: 1.7;
+        }
+        .crossover-text + .crossover-text {
+            margin-top: var(--space-md);
+        }
+
+        /* ===== Responsive for new sections ===== */
+        @media (max-width: 768px) {
+            .iso-bar-label { width: 48px; font-size: 11px; }
+            .iso-bar-track { height: 28px; }
+            .iso-bar-gap { width: 44px; font-size: 11px; }
+            .iso-insight-block,
+            .iso-annotation { padding: 18px 16px; }
+            .coal-wall-container { max-width: 100%; }
+            .coal-wall-finding { padding: 18px 16px; }
+            .crossover-container { max-width: 100%; }
+        }
+        @media (max-width: 480px) {
+            .iso-bar-label { width: 40px; font-size: 10px; }
+            .iso-bar-track { height: 24px; }
+            .iso-bar-gap { width: 38px; font-size: 10px; }
+            .iso-bars-legend { gap: 10px; }
+            .iso-bars-legend-item { font-size: 0.7rem; }
+        }
+
         /* Reduced motion */
         @media (prefers-reduced-motion: reduce) {
             .hero-stats-row .stat-card,
@@ -255,6 +463,10 @@
             }
             .road-median { animation: none !important; }
             .fork-diagram { opacity: 1; transform: scale(1); }
+            .iso-bar-row { opacity: 1; transform: none; transition-delay: 0s !important; }
+            .iso-bar-segment { transition: none !important; }
+            .iso-annotation { opacity: 1; transform: none; transition-delay: 0s !important; }
+            .coal-wall-side-note { opacity: 1; }
         }
     </style>
 </head>
@@ -305,9 +517,9 @@
     <section class="content-section" id="fork-section">
         <!-- Highway Fork SVG — filled road surface with dashed medians -->
         <div class="fork-diagram" id="forkDiagram">
-            <svg viewBox="0 0 800 650" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Highway fork diagram: corporate procurement splitting into two accounting strategies">
+            <svg viewBox="0 0 800 680" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Highway fork diagram: corporate procurement splitting into two accounting strategies">
                 <defs>
-                    <!-- Gradient: trunk neutral → 1B color (left branch) -->
+                    <!-- Road fill gradients -->
                     <linearGradient id="grad1B" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stop-color="#000" stop-opacity="0.06"/>
                         <stop offset="100%" stop-color="#6366F1" stop-opacity="0.10"/>
@@ -316,7 +528,6 @@
                         <stop offset="0%" stop-color="#000" stop-opacity="0.15"/>
                         <stop offset="100%" stop-color="#6366F1" stop-opacity="0.30"/>
                     </linearGradient>
-                    <!-- Gradient: trunk neutral → 2C color (right branch) -->
                     <linearGradient id="grad2C" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stop-color="#000" stop-opacity="0.06"/>
                         <stop offset="100%" stop-color="#0EA5E9" stop-opacity="0.10"/>
@@ -325,73 +536,95 @@
                         <stop offset="0%" stop-color="#000" stop-opacity="0.15"/>
                         <stop offset="100%" stop-color="#0EA5E9" stop-opacity="0.30"/>
                     </linearGradient>
+                    <!-- Label badge shadow -->
+                    <filter id="badgeShadow" x="-10%" y="-20%" width="120%" height="160%">
+                        <feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.08"/>
+                    </filter>
+                    <!-- Arrow markers with orient="auto" -->
+                    <marker id="arrow-1b" viewBox="0 0 14 10" refX="13" refY="5" markerWidth="16" markerHeight="12" orient="auto">
+                        <path d="M 0 0.5 L 12 5 L 0 9.5 L 3 5 Z" fill="#6366F1" opacity="0.85"/>
+                    </marker>
+                    <marker id="arrow-2c" viewBox="0 0 14 10" refX="13" refY="5" markerWidth="16" markerHeight="12" orient="auto">
+                        <path d="M 0 0.5 L 12 5 L 0 9.5 L 3 5 Z" fill="#0EA5E9" opacity="0.85"/>
+                    </marker>
                 </defs>
 
-                <!-- ═══ ROAD SURFACE — filled compound shape ═══ -->
-                <!-- Trunk: straight section from top to fork junction -->
-                <path d="M370,40 L430,40 L430,250 L370,250 Z" fill="rgba(0,0,0,0.06)"/>
-                <!-- Trunk edges -->
-                <line x1="370" y1="40" x2="370" y2="250" stroke="rgba(0,0,0,0.15)" stroke-width="2"/>
-                <line x1="430" y1="40" x2="430" y2="250" stroke="rgba(0,0,0,0.15)" stroke-width="2"/>
+                <!-- ═══════════════════════════════════════════════ -->
+                <!-- LABEL: CORPORATE PROCUREMENT — badge at top    -->
+                <!-- ═══════════════════════════════════════════════ -->
+                <g filter="url(#badgeShadow)">
+                    <rect x="270" y="12" width="260" height="44" rx="22" fill="rgba(255,255,255,0.92)" stroke="rgba(0,0,0,0.12)" stroke-width="1.5"/>
+                    <text x="400" y="40" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="13" font-weight="600" letter-spacing="1.2" fill="rgba(0,0,0,0.70)">CORPORATE PROCUREMENT</text>
+                </g>
 
-                <!-- Left branch road surface (1B) — filled shape following curve -->
-                <path d="M370,250 C370,310 340,340 280,380 C220,420 180,460 140,560
-                         L200,580 C220,480 250,440 310,400 C370,360 400,320 430,260
-                         L430,250 Z" fill="url(#grad1B)"/>
-                <!-- Left branch outer edge -->
-                <path d="M370,250 C370,310 340,340 280,380 C220,420 180,460 140,560" fill="none" stroke="url(#gradEdge1B)" stroke-width="2"/>
-                <!-- Left branch inner edge -->
-                <path d="M430,250 C420,310 400,340 340,380 C280,420 250,460 200,580" fill="none" stroke="url(#gradEdge1B)" stroke-width="2"/>
+                <!-- ═══ ROAD SURFACE ═══ -->
+                <!-- Trunk: 60px wide, from badge bottom to fork junction -->
+                <path d="M370,56 L430,56 L430,270 L370,270 Z" fill="rgba(0,0,0,0.06)"/>
+                <line x1="370" y1="56" x2="370" y2="270" stroke="rgba(0,0,0,0.15)" stroke-width="2"/>
+                <line x1="430" y1="56" x2="430" y2="270" stroke="rgba(0,0,0,0.15)" stroke-width="2"/>
 
-                <!-- Right branch road surface (2C) — filled shape following curve -->
-                <path d="M430,250 C430,310 460,340 520,380 C580,420 620,460 660,560
-                         L600,580 C580,480 550,440 490,400 C430,360 400,320 370,260
-                         L370,250 Z" fill="url(#grad2C)"/>
-                <!-- Right branch outer edge -->
-                <path d="M430,250 C430,310 460,340 520,380 C580,420 620,460 660,560" fill="none" stroke="url(#gradEdge2C)" stroke-width="2"/>
-                <!-- Right branch inner edge -->
-                <path d="M370,250 C380,310 400,340 460,380 C520,420 550,460 600,580" fill="none" stroke="url(#gradEdge2C)" stroke-width="2"/>
+                <!-- Left branch (1B) — single filled shape for consistent 60px width -->
+                <!-- Outer edge: C(370,340 310,380 240,430) C(170,480 150,530 135,590)
+                     Inner edge reverse: C(210,530 230,480 300,430) C(370,380 430,340 430,270) -->
+                <path d="M370,270
+                         C370,340 310,380 240,430
+                         C170,480 150,530 135,590
+                         L195,610
+                         C210,550 230,490 300,440
+                         C370,390 430,330 430,270 Z" fill="url(#grad1B)"/>
+                <path d="M370,270 C370,340 310,380 240,430 C170,480 150,530 135,590" fill="none" stroke="url(#gradEdge1B)" stroke-width="2"/>
+                <path d="M430,270 C430,330 370,390 300,440 C230,490 210,550 195,610" fill="none" stroke="url(#gradEdge1B)" stroke-width="2"/>
 
-                <!-- Gore point / island (negative space triangle at split) -->
-                <path d="M400,260 C395,300 390,320 370,350 L400,270 L430,350 C410,320 405,300 400,260 Z" fill="#F8F9FC"/>
+                <!-- Right branch (2C) — single filled shape for consistent 60px width -->
+                <path d="M430,270
+                         C430,340 490,380 560,430
+                         C630,480 650,530 665,590
+                         L605,610
+                         C590,550 570,490 500,440
+                         C430,390 370,330 370,270 Z" fill="url(#grad2C)"/>
+                <path d="M430,270 C430,340 490,380 560,430 C630,480 650,530 665,590" fill="none" stroke="url(#gradEdge2C)" stroke-width="2"/>
+                <path d="M370,270 C370,330 430,390 500,440 C570,490 590,550 605,610" fill="none" stroke="url(#gradEdge2C)" stroke-width="2"/>
+
+                <!-- Gore point — clean triangular negative space at fork -->
+                <path d="M400,275
+                         C395,310 385,340 350,375
+                         L400,290
+                         L450,375
+                         C415,340 405,310 400,275 Z" fill="#F8F9FC"/>
 
                 <!-- ═══ WHITE DASHED CENTER MEDIANS ═══ -->
-                <!-- Trunk median -->
-                <line x1="400" y1="48" x2="400" y2="245" stroke="white" stroke-width="3" stroke-dasharray="16 10" stroke-linecap="round" class="road-median"/>
+                <line x1="400" y1="64" x2="400" y2="265" stroke="white" stroke-width="3" stroke-dasharray="16 10" stroke-linecap="round" class="road-median"/>
+                <!-- Left branch median — follows center of 60px road -->
+                <path d="M396,280 C392,340 335,385 268,433 C200,480 180,535 165,598" fill="none" stroke="white" stroke-width="3" stroke-dasharray="16 10" stroke-linecap="round" class="road-median" marker-end="url(#arrow-1b)"/>
+                <!-- Right branch median — follows center of 60px road -->
+                <path d="M404,280 C408,340 465,385 532,433 C600,480 620,535 635,598" fill="none" stroke="white" stroke-width="3" stroke-dasharray="16 10" stroke-linecap="round" class="road-median" marker-end="url(#arrow-2c)"/>
 
-                <!-- Left branch median (follows center of left branch curve) -->
-                <path d="M395,260 C390,310 365,345 305,385 C245,425 215,465 170,570" fill="none" stroke="white" stroke-width="3" stroke-dasharray="16 10" stroke-linecap="round" class="road-median"/>
+                <!-- ═══════════════════════════════════════════════ -->
+                <!-- LABEL: ACCOUNTING FRAMEWORK — decision badge   -->
+                <!-- ═══════════════════════════════════════════════ -->
+                <g filter="url(#badgeShadow)">
+                    <rect x="283" y="234" width="234" height="40" rx="20" fill="rgba(255,255,255,0.92)" stroke="rgba(0,0,0,0.18)" stroke-width="1.5"/>
+                    <!-- Small diamond accent on each side -->
+                    <rect x="293" y="249" width="10" height="10" rx="1.5" fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="1" transform="rotate(45,298,254)"/>
+                    <rect x="497" y="249" width="10" height="10" rx="1.5" fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="1" transform="rotate(45,502,254)"/>
+                    <text x="400" y="260" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="12" font-weight="600" letter-spacing="1" fill="rgba(0,0,0,0.65)">ACCOUNTING FRAMEWORK</text>
+                </g>
 
-                <!-- Right branch median (follows center of right branch curve) -->
-                <path d="M405,260 C410,310 435,345 495,385 C555,425 585,465 630,570" fill="none" stroke="white" stroke-width="3" stroke-dasharray="16 10" stroke-linecap="round" class="road-median"/>
+                <!-- ═══ BRANCH LABELS — bold strategy identifiers ═══ -->
+                <!-- 1B label on left branch -->
+                <g transform="translate(270,420) rotate(-28)">
+                    <text x="0" y="0" font-family="'IBM Plex Mono', monospace" font-size="18" font-weight="700" fill="#6366F1" opacity="0.90">1B</text>
+                    <text x="0" y="14" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="500" fill="#6366F1" opacity="0.60">Consequential</text>
+                </g>
+                <!-- 2C label on right branch -->
+                <g transform="translate(500,420) rotate(28)">
+                    <text x="0" y="0" font-family="'IBM Plex Mono', monospace" font-size="18" font-weight="700" fill="#0EA5E9" opacity="0.90">2C</text>
+                    <text x="0" y="14" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="500" fill="#0EA5E9" opacity="0.60">Hourly Matching</text>
+                </g>
 
-                <!-- ═══ DIRECTIONAL FLOW CHEVRONS ═══ -->
-                <!-- Left branch: small chevrons leading to terminal arrow -->
-                <path d="M340,370 L335,378 L330,370" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
-                <path d="M280,420 L273,430 L266,420" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
-                <path d="M230,470 L222,482 L214,470" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
-                <!-- Left terminal arrow -->
-                <polygon points="170,552 155,570 185,570" fill="white" opacity="0.8"/>
-
-                <!-- Right branch: small chevrons leading to terminal arrow -->
-                <path d="M460,370 L465,378 L470,370" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
-                <path d="M520,420 L527,430 L534,420" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
-                <path d="M570,470 L578,482 L586,470" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
-                <!-- Right terminal arrow -->
-                <polygon points="630,552 615,570 645,570" fill="white" opacity="0.8"/>
-
-                <!-- ═══ TEXT LABELS ON ROAD ═══ -->
-                <!-- Trunk label -->
-                <text x="400" y="155" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="11" font-weight="600" letter-spacing="2" fill="rgba(0,0,0,0.35)" transform="rotate(0)">CORPORATE PROCUREMENT</text>
-
-                <!-- Fork point label -->
-                <text x="400" y="238" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="500" letter-spacing="1.5" fill="rgba(0,0,0,0.30)">ACCOUNTING FRAMEWORK</text>
-
-                <!-- Branch labels — 1B -->
-                <text x="140" y="608" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="13" font-weight="700" fill="#6366F1" opacity="0.85">1B</text>
-
-                <!-- Branch labels — 2C -->
-                <text x="660" y="608" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="13" font-weight="700" fill="#0EA5E9" opacity="0.85">2C</text>
+                <!-- Branch endpoint labels (below arrows) -->
+                <text x="165" y="640" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="14" font-weight="700" fill="#6366F1" opacity="0.90">1B</text>
+                <text x="635" y="640" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="14" font-weight="700" fill="#0EA5E9" opacity="0.90">2C</text>
             </svg>
         </div>
 
@@ -563,6 +796,269 @@
         </p>
     </section>
 
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 4: Where You Start                                            -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">4</div>
+        <h2>Where You Start</h2>
+        <p>Each grid begins from a different place. The gap between where market forces stop and where net-zero requires &mdash; that&rsquo;s what procurement strategy must close.</p>
+    </div>
+    <section class="content-section" id="starting-lines-section">
+        <div class="iso-bars-legend">
+            <div class="iso-bars-legend-item"><div class="iso-bars-legend-dot" style="background:rgba(14,165,233,0.50)"></div>Clean</div>
+            <div class="iso-bars-legend-item"><div class="iso-bars-legend-dot" style="background:rgba(99,102,241,0.45)"></div>Gas</div>
+            <div class="iso-bars-legend-item"><div class="iso-bars-legend-dot" style="background:rgba(0,0,0,0.15)"></div>Coal</div>
+            <div class="iso-bars-legend-item"><div class="iso-bars-legend-dot" style="background:rgba(139,92,246,0.30)"></div>Other</div>
+        </div>
+        <div class="iso-bars-container" id="isoBarsContainer">
+            <div class="iso-bar-row" data-clean="55" data-gas="40" data-coal="0" data-other="5" data-gap="45%">
+                <div class="iso-bar-label">CAISO</div>
+                <div class="iso-bar-track">
+                    <div class="iso-bar-segment seg-clean"></div>
+                    <div class="iso-bar-segment seg-gas"></div>
+                    <div class="iso-bar-segment seg-coal"></div>
+                    <div class="iso-bar-segment seg-other"></div>
+                </div>
+                <div class="iso-bar-gap">45%</div>
+            </div>
+            <div class="iso-bar-row" data-clean="40" data-gas="45" data-coal="12" data-other="3" data-gap="60%">
+                <div class="iso-bar-label">ERCOT</div>
+                <div class="iso-bar-track">
+                    <div class="iso-bar-segment seg-clean"></div>
+                    <div class="iso-bar-segment seg-gas"></div>
+                    <div class="iso-bar-segment seg-coal"></div>
+                    <div class="iso-bar-segment seg-other"></div>
+                </div>
+                <div class="iso-bar-gap">60%</div>
+            </div>
+            <div class="iso-bar-row" data-clean="40" data-gas="35" data-coal="20" data-other="5" data-gap="60%">
+                <div class="iso-bar-label">PJM</div>
+                <div class="iso-bar-track">
+                    <div class="iso-bar-segment seg-clean"></div>
+                    <div class="iso-bar-segment seg-gas"></div>
+                    <div class="iso-bar-segment seg-coal"></div>
+                    <div class="iso-bar-segment seg-other"></div>
+                </div>
+                <div class="iso-bar-gap">60%</div>
+            </div>
+            <div class="iso-bar-row" data-clean="35" data-gas="55" data-coal="0" data-other="10" data-gap="65%">
+                <div class="iso-bar-label">NYISO</div>
+                <div class="iso-bar-track">
+                    <div class="iso-bar-segment seg-clean"></div>
+                    <div class="iso-bar-segment seg-gas"></div>
+                    <div class="iso-bar-segment seg-coal"></div>
+                    <div class="iso-bar-segment seg-other"></div>
+                </div>
+                <div class="iso-bar-gap">65%</div>
+            </div>
+            <div class="iso-bar-row" data-clean="30" data-gas="55" data-coal="0" data-other="15" data-gap="70%">
+                <div class="iso-bar-label">NEISO</div>
+                <div class="iso-bar-track">
+                    <div class="iso-bar-segment seg-clean"></div>
+                    <div class="iso-bar-segment seg-gas"></div>
+                    <div class="iso-bar-segment seg-coal"></div>
+                    <div class="iso-bar-segment seg-other"></div>
+                </div>
+                <div class="iso-bar-gap">70%</div>
+            </div>
+            <div class="iso-bar-row" data-clean="25" data-gas="35" data-coal="35" data-other="5" data-gap="75%">
+                <div class="iso-bar-label">MISO</div>
+                <div class="iso-bar-track">
+                    <div class="iso-bar-segment seg-clean"></div>
+                    <div class="iso-bar-segment seg-gas"></div>
+                    <div class="iso-bar-segment seg-coal"></div>
+                    <div class="iso-bar-segment seg-other"></div>
+                </div>
+                <div class="iso-bar-gap">75%</div>
+            </div>
+            <div class="iso-bar-row" data-clean="45" data-gas="25" data-coal="25" data-other="5" data-gap="55%">
+                <div class="iso-bar-label">SPP</div>
+                <div class="iso-bar-track">
+                    <div class="iso-bar-segment seg-clean"></div>
+                    <div class="iso-bar-segment seg-gas"></div>
+                    <div class="iso-bar-segment seg-coal"></div>
+                    <div class="iso-bar-segment seg-other"></div>
+                </div>
+                <div class="iso-bar-gap">55%</div>
+            </div>
+        </div>
+
+        <div class="iso-insight-block fade-in">
+            The market will not deliver net-zero on its own. Across 540 market scenarios per region, clean energy deployment is profitable up to a point &mdash; then it stalls. The gap between where economics alone takes each grid and what net-zero requires is what corporate procurement and policy must close. The question: does your procurement strategy help close <em>your grid&rsquo;s specific gap</em> &mdash; or does it optimize globally while your grid stays stuck?
+        </div>
+
+        <div class="iso-annotation iso-annotation-1b fade-in" id="isoAnnotation1">
+            <strong>ERCOT</strong> &mdash; Already ~40% clean from massive merchant wind and solar. But fully deregulated &mdash; zero policy-supported supply (SSS). Hourly matching draws heavily from existing merchant clean, with new-build needed mainly for night and low-wind gaps. Closing the remaining 60% requires firm clean in a market historically hostile to mandates.
+        </div>
+        <div class="iso-annotation iso-annotation-2c fade-in" id="isoAnnotation2">
+            <strong>PJM</strong> &mdash; Large SSS from Exelon&rsquo;s ZEC-supported nuclear fleet (~95 TWh). But 18.8 TWh is locked to Amazon via the Susquehanna PPA. The Virginia data center corridor is the epicenter of corporate clean energy demand &mdash; and the grid behind it is still heavily gas-dependent.
+        </div>
+        <div class="iso-annotation iso-annotation-rose fade-in" id="isoAnnotation3">
+            <strong>NEISO</strong> &mdash; Supply-constrained, pipeline-constrained, and expensive. Limited natural gas pipeline capacity during winter forces generators to burn oil or LNG at premium prices, adding ~$13/MWh to CCS costs. The hardest grid to decarbonize &mdash; and where strategy choice matters most, because consequential sends capital elsewhere while this grid stays stuck.
+        </div>
+
+        <p class="fade-in" style="text-align:center; margin-top:var(--space-xl)">
+            <a href="gen_regional_pathways.html" class="explore-link">
+                Explore regional pathways <span class="arrow">&rarr;</span>
+            </a>
+        </p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 5: The Coal Wall                                              -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">5</div>
+        <h2>The Coal Wall</h2>
+        <p>Consequential&rsquo;s cost advantage has an expiration date. It&rsquo;s the moment the last coal plant retires from the dispatch stack.</p>
+    </div>
+    <section class="content-section" id="coal-wall-section">
+        <div class="coal-wall-container" id="coalWallContainer">
+            <svg viewBox="0 0 600 450" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Animated dispatch stack showing coal and gas layers with a rising sweep line">
+                <defs>
+                    <linearGradient id="sweepGrad" x1="0" y1="1" x2="0" y2="0">
+                        <stop offset="0%" stop-color="#0EA5E9"/>
+                        <stop offset="60%" stop-color="#0EA5E9"/>
+                        <stop offset="100%" stop-color="#6366F1"/>
+                    </linearGradient>
+                    <clipPath id="sweepClip">
+                        <rect id="sweepClipRect" x="0" y="450" width="600" height="450"/>
+                    </clipPath>
+                </defs>
+
+                <!-- Coal layer -->
+                <rect x="80" y="300" width="440" height="150" rx="0" fill="rgba(0,0,0,0.06)" stroke="rgba(0,0,0,0.2)" stroke-width="1.5"/>
+                <!-- Gas layer -->
+                <rect x="80" y="100" width="440" height="200" rx="0" fill="rgba(99,102,241,0.06)" stroke="rgba(99,102,241,0.25)" stroke-width="1.5"/>
+
+                <!-- Labels: left side -->
+                <text x="68" y="385" text-anchor="end" font-family="'IBM Plex Mono', monospace" font-size="11" font-weight="500" fill="rgba(0,0,0,0.40)">COAL</text>
+                <text x="68" y="210" text-anchor="end" font-family="'IBM Plex Mono', monospace" font-size="11" font-weight="500" fill="rgba(99,102,241,0.50)">GAS</text>
+                <!-- Labels: right side -->
+                <text x="532" y="385" text-anchor="start" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="400" fill="rgba(0,0,0,0.30)">~2,200 lb CO&#8322;/MWh</text>
+                <text x="532" y="210" text-anchor="start" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="400" fill="rgba(99,102,241,0.40)">~850 lb CO&#8322;/MWh</text>
+
+                <!-- Coal wall boundary line -->
+                <line x1="60" y1="300" x2="540" y2="300" stroke="#EF4444" stroke-opacity="0.6" stroke-width="2" stroke-dasharray="6 4"/>
+                <text id="coalWallLabel" x="300" y="290" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="11" font-weight="600" fill="#EF4444" opacity="0.8">THE COAL WALL</text>
+
+                <!-- Displaced overlay: layers above sweep line become transparent -->
+                <g clip-path="url(#sweepClip)">
+                    <rect x="80" y="300" width="440" height="150" fill="rgba(248,249,252,0.85)"/>
+                    <rect x="80" y="100" width="440" height="200" fill="rgba(248,249,252,0.85)"/>
+                </g>
+
+                <!-- Sweep line -->
+                <line id="sweepLine" x1="60" y1="450" x2="540" y2="450" stroke="#0EA5E9" stroke-width="2.5" filter="url(#sweepGlow)"/>
+                <defs>
+                    <filter id="sweepGlow" x="-20%" y="-200%" width="140%" height="500%">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
+                        <feMerge>
+                            <feMergeNode in="blur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+
+                <!-- Counter text (animated by JS) -->
+                <text id="sweepCounter" x="300" y="440" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="13" font-weight="600" fill="#0EA5E9" opacity="0">Displacement: ~2,200 lb/MWh</text>
+            </svg>
+        </div>
+
+        <div class="coal-wall-side-note" id="coalWallAnnotation">
+            All economically displaceable coal is gone. In most ISOs, this happens around ~70% clean. Beyond this point, every clean MWh only displaces gas &mdash; cutting the carbon benefit nearly in half.
+        </div>
+
+        <div class="coal-wall-finding fade-in">
+            Both strategies face escalating costs past the coal wall &mdash; but for different reasons. Consequential (1B) runs out of cheap coal to displace; every additional MWh yields half the carbon benefit against gas. Hourly matching (2C) costs more because firm clean power and storage for the hardest hours is inherently expensive. The critical difference: 2C&rsquo;s cost escalation drives deployment of technologies the grid actually needs &mdash; nuclear, CCS, LDES &mdash; and those costs come down via Wright&rsquo;s Law. 1B&rsquo;s escalation buys diminishing marginal displacement of the same gas fleet.
+        </div>
+
+        <p class="fade-in" style="text-align:center; margin-top:var(--space-xl)">
+            <a href="consequential_accounting.html" class="explore-link">
+                See consequential accounting analysis <span class="arrow">&rarr;</span>
+            </a>
+        </p>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 6: The Last Mile                                              -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">6</div>
+        <h2>The Last Mile</h2>
+        <p>At what point does the last percent of grid decarbonization cost more than just removing carbon directly?</p>
+    </div>
+    <section class="content-section" id="last-mile-section">
+        <div class="crossover-container" id="crossoverContainer">
+            <svg viewBox="0 0 700 350" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Two-curve crossover chart showing grid decarbonization cost versus DAC reference">
+                <defs>
+                    <linearGradient id="gridCurveGrad" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stop-color="#0EA5E9"/>
+                        <stop offset="70%" stop-color="#0EA5E9"/>
+                        <stop offset="100%" stop-color="#EF4444"/>
+                    </linearGradient>
+                </defs>
+
+                <!-- Axis lines -->
+                <line x1="80" y1="30" x2="80" y2="300" stroke="rgba(0,0,0,0.10)" stroke-width="1"/>
+                <line x1="80" y1="300" x2="660" y2="300" stroke="rgba(0,0,0,0.10)" stroke-width="1"/>
+
+                <!-- Y-axis label -->
+                <text x="24" y="170" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" fill="rgba(0,0,0,0.40)" transform="rotate(-90,24,170)">Marginal cost ($/tCO&#8322;)</text>
+
+                <!-- X-axis label -->
+                <text x="370" y="335" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" fill="rgba(0,0,0,0.40)">CFE Target (%)</text>
+
+                <!-- X-axis ticks -->
+                <text x="80" y="318" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" fill="rgba(0,0,0,0.35)">80</text>
+                <text x="163" y="318" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" fill="rgba(0,0,0,0.35)">85</text>
+                <text x="245" y="318" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" fill="rgba(0,0,0,0.35)">90</text>
+                <text x="328" y="318" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" fill="rgba(0,0,0,0.35)">95</text>
+                <text x="432" y="318" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" fill="rgba(0,0,0,0.35)">97.5</text>
+                <text x="538" y="318" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" fill="rgba(0,0,0,0.35)">99</text>
+                <text x="640" y="318" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" fill="rgba(0,0,0,0.35)">99.9</text>
+
+                <!-- Grid lines (light) -->
+                <line x1="163" y1="300" x2="163" y2="30" stroke="rgba(0,0,0,0.04)" stroke-width="1"/>
+                <line x1="245" y1="300" x2="245" y2="30" stroke="rgba(0,0,0,0.04)" stroke-width="1"/>
+                <line x1="328" y1="300" x2="328" y2="30" stroke="rgba(0,0,0,0.04)" stroke-width="1"/>
+                <line x1="432" y1="300" x2="432" y2="30" stroke="rgba(0,0,0,0.04)" stroke-width="1"/>
+                <line x1="538" y1="300" x2="538" y2="30" stroke="rgba(0,0,0,0.04)" stroke-width="1"/>
+
+                <!-- Overshoot zone (post-crossover, below grid curve, above DAC) -->
+                <path id="overshootZone" d="M470,140 C510,105 560,70 640,38 L640,140 Z" fill="rgba(239,68,68,0.06)" opacity="0"/>
+
+                <!-- DAC reference line -->
+                <line id="dacLine" x1="80" y1="140" x2="660" y2="140" stroke="#8B5CF6" stroke-width="1.5" stroke-dasharray="8 4" stroke-dashoffset="800" opacity="0.7"/>
+                <text x="662" y="136" font-family="'IBM Plex Mono', monospace" font-size="9" fill="#8B5CF6" opacity="0.7">DAC reference</text>
+
+                <!-- Grid decarbonization curve (hockey stick) -->
+                <path id="gridCurve" d="M80,270 C120,265 163,258 245,240 C300,228 328,210 370,190 C410,168 432,155 470,140 C510,118 560,80 640,38" fill="none" stroke="url(#gridCurveGrad)" stroke-width="2.5" stroke-linecap="round"/>
+
+                <!-- Crossover marker -->
+                <g id="crossoverMarker" opacity="0">
+                    <line x1="470" y1="140" x2="470" y2="300" stroke="#EF4444" stroke-width="1" stroke-dasharray="4 3" opacity="0.5"/>
+                    <circle cx="470" cy="140" r="6" fill="#EF4444" stroke="white" stroke-width="1.5"/>
+                    <text x="470" y="155" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="600" fill="#EF4444" dy="12">~96-98% CFE</text>
+                </g>
+            </svg>
+        </div>
+
+        <div class="crossover-text fade-in">
+            The optimal CFE target isn&rsquo;t necessarily 100%. It&rsquo;s the point where marginal grid decarbonization exceeds marginal carbon removal. This crossover shifts by region &mdash; earlier in supply-constrained grids (NEISO: ~95%), later in resource-rich ones (ERCOT: ~98%).
+        </div>
+        <div class="crossover-text fade-in">
+            What matters for 1B vs. 2C: the costs 2C incurs <em>below</em> the crossover &mdash; building firm clean and storage in the 85&ndash;97% range &mdash; push the crossover point higher for everyone by driving learning curves down. 1B avoids those costs but contributes nothing to moving the frontier.
+        </div>
+
+        <p class="fade-in" style="text-align:center; margin-top:var(--space-xl)">
+            <a href="gen_regional_pathways.html" class="explore-link">
+                Regional pathways and DAC backstop <span class="arrow">&rarr;</span>
+            </a>
+        </p>
+    </section>
+
     <footer id="siteFooter"></footer>
 
     <script src="js/cinematic-bg.js"></script>
@@ -666,6 +1162,242 @@
                 });
             }, { threshold: 0.5 });
             observer.observe(clockIcon);
+        })();
+
+        // ===== MODULE 4: ISO Bar Animation (Section 4) =====
+        (function initIsoBars() {
+            var container = document.getElementById('isoBarsContainer');
+            if (!container) return;
+
+            var rows = container.querySelectorAll('.iso-bar-row');
+            var triggered = false;
+
+            function animateBars() {
+                if (triggered) return;
+                triggered = true;
+                rows.forEach(function(row, i) {
+                    setTimeout(function() {
+                        row.classList.add('visible');
+                        var segs = row.querySelectorAll('.iso-bar-segment');
+                        var vals = [
+                            parseInt(row.dataset.clean, 10) || 0,
+                            parseInt(row.dataset.gas, 10) || 0,
+                            parseInt(row.dataset.coal, 10) || 0,
+                            parseInt(row.dataset.other, 10) || 0
+                        ];
+                        // Small delay after visible for segment growth
+                        setTimeout(function() {
+                            segs.forEach(function(seg, j) {
+                                seg.style.width = vals[j] + '%';
+                                seg.classList.add('animate');
+                            });
+                        }, 100);
+                    }, i * 80);
+                });
+
+                // Animate annotations with stagger
+                var annotations = document.querySelectorAll('.iso-annotation');
+                annotations.forEach(function(ann, i) {
+                    setTimeout(function() {
+                        ann.classList.add('visible');
+                    }, 800 + i * 200);
+                });
+            }
+
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        animateBars();
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.15 });
+            observer.observe(container);
+        })();
+
+        // ===== MODULE 5: Coal Wall Animation (Section 5) =====
+        (function initCoalWall() {
+            var container = document.getElementById('coalWallContainer');
+            if (!container) return;
+
+            var sweepLine = document.getElementById('sweepLine');
+            var sweepClipRect = document.getElementById('sweepClipRect');
+            var sweepCounter = document.getElementById('sweepCounter');
+            var coalWallLabel = document.getElementById('coalWallLabel');
+            var annotation = document.getElementById('coalWallAnnotation');
+            if (!sweepLine || !sweepClipRect || !sweepCounter) return;
+
+            var triggered = false;
+            var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            function animateCoalWall() {
+                if (triggered) return;
+                triggered = true;
+
+                if (reducedMotion) {
+                    // Skip animation, show final state
+                    sweepLine.setAttribute('y1', '60');
+                    sweepLine.setAttribute('y2', '60');
+                    sweepClipRect.setAttribute('y', '0');
+                    sweepClipRect.setAttribute('height', '60');
+                    sweepCounter.setAttribute('opacity', '1');
+                    sweepCounter.textContent = 'Displacement: ~850 lb/MWh';
+                    sweepCounter.setAttribute('y', '50');
+                    sweepCounter.setAttribute('fill', '#6366F1');
+                    if (annotation) annotation.classList.add('visible');
+                    return;
+                }
+
+                var duration = 4000;
+                var start = null;
+                sweepCounter.setAttribute('opacity', '1');
+
+                function step(timestamp) {
+                    if (!start) start = timestamp;
+                    var elapsed = timestamp - start;
+                    var t = Math.min(elapsed / duration, 1);
+
+                    var y;
+                    if (t < 0.375) {
+                        // Phase 1: rise through coal (0→1.5s, y=450→300)
+                        var p1 = t / 0.375;
+                        var eased = 1 - Math.pow(1 - p1, 2);
+                        y = 450 - eased * 150;
+                        sweepCounter.textContent = 'Displacement: ~2,200 lb/MWh';
+                        sweepCounter.setAttribute('fill', '#0EA5E9');
+                    } else if (t < 0.575) {
+                        // Phase 2: pause at coal wall (1.5→2.3s)
+                        y = 300;
+                        sweepCounter.textContent = 'Displacement: ~2,200 lb/MWh';
+                        sweepCounter.setAttribute('fill', '#0EA5E9');
+
+                        // Pulse the coal wall label
+                        var p2 = (t - 0.375) / 0.2;
+                        if (p2 < 0.5) {
+                            var pScale = 1 + 0.08 * Math.sin(p2 * Math.PI);
+                            coalWallLabel.setAttribute('transform', 'translate(300,290) scale(' + pScale + ') translate(-300,-290)');
+                        } else {
+                            coalWallLabel.removeAttribute('transform');
+                        }
+
+                        // Show annotation
+                        if (annotation && p2 > 0.3) {
+                            annotation.classList.add('visible');
+                        }
+                    } else {
+                        // Phase 3: continue through gas (2.3→4s, y=300→60), ease-in
+                        var p3 = (t - 0.575) / 0.425;
+                        var eased3 = p3 * p3; // ease-in (slow start)
+                        y = 300 - eased3 * 240;
+                        sweepCounter.textContent = 'Displacement: ~850 lb/MWh';
+
+                        // Blend color toward 1B
+                        var blend = Math.min(p3 * 1.5, 1);
+                        var r = Math.round(14 + blend * (99 - 14));
+                        var g = Math.round(165 + blend * (102 - 165));
+                        var b = Math.round(233 + blend * (241 - 233));
+                        sweepCounter.setAttribute('fill', 'rgb(' + r + ',' + g + ',' + b + ')');
+                    }
+
+                    sweepLine.setAttribute('y1', y);
+                    sweepLine.setAttribute('y2', y);
+                    sweepClipRect.setAttribute('y', '0');
+                    sweepClipRect.setAttribute('height', y);
+                    sweepCounter.setAttribute('y', y - 10);
+
+                    if (t < 1) {
+                        requestAnimationFrame(step);
+                    }
+                }
+                requestAnimationFrame(step);
+            }
+
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        animateCoalWall();
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.25 });
+            observer.observe(container);
+        })();
+
+        // ===== MODULE 6: Last Mile Crossover Animation (Section 6) =====
+        (function initCrossover() {
+            var container = document.getElementById('crossoverContainer');
+            if (!container) return;
+
+            var gridCurve = document.getElementById('gridCurve');
+            var dacLine = document.getElementById('dacLine');
+            var crossoverMarker = document.getElementById('crossoverMarker');
+            var overshootZone = document.getElementById('overshootZone');
+            if (!gridCurve || !dacLine) return;
+
+            var triggered = false;
+            var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            // Compute path lengths
+            var gridLen = gridCurve.getTotalLength();
+            var dacLen = 580; // 660 - 80
+
+            // Set initial dash state
+            gridCurve.style.strokeDasharray = gridLen;
+            gridCurve.style.strokeDashoffset = gridLen;
+            dacLine.setAttribute('stroke-dashoffset', dacLen);
+
+            function animateCrossover() {
+                if (triggered) return;
+                triggered = true;
+
+                if (reducedMotion) {
+                    gridCurve.style.strokeDashoffset = '0';
+                    dacLine.setAttribute('stroke-dashoffset', '0');
+                    if (crossoverMarker) crossoverMarker.setAttribute('opacity', '1');
+                    if (overshootZone) overshootZone.setAttribute('opacity', '1');
+                    return;
+                }
+
+                var duration = 2000;
+                var start = null;
+
+                function step(timestamp) {
+                    if (!start) start = timestamp;
+                    var t = Math.min((timestamp - start) / duration, 1);
+                    // ease-out
+                    var eased = 1 - Math.pow(1 - t, 3);
+
+                    gridCurve.style.strokeDashoffset = gridLen * (1 - eased);
+                    dacLine.setAttribute('stroke-dashoffset', dacLen * (1 - eased));
+
+                    if (t < 1) {
+                        requestAnimationFrame(step);
+                    } else {
+                        // Show crossover marker after draw completes
+                        setTimeout(function() {
+                            if (crossoverMarker) {
+                                crossoverMarker.style.transition = 'opacity 0.5s ease-out';
+                                crossoverMarker.setAttribute('opacity', '1');
+                            }
+                            if (overshootZone) {
+                                overshootZone.style.transition = 'opacity 0.5s ease-out';
+                                overshootZone.setAttribute('opacity', '1');
+                            }
+                        }, 300);
+                    }
+                }
+                requestAnimationFrame(step);
+            }
+
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        animateCrossover();
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.25 });
+            observer.observe(container);
         })();
 
     })();
