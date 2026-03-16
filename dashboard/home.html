@@ -517,9 +517,9 @@
     <section class="content-section" id="fork-section">
         <!-- Highway Fork SVG — filled road surface with dashed medians -->
         <div class="fork-diagram" id="forkDiagram">
-            <svg viewBox="0 0 800 650" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Highway fork diagram: corporate procurement splitting into two accounting strategies">
+            <svg viewBox="0 0 800 680" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Highway fork diagram: corporate procurement splitting into two accounting strategies">
                 <defs>
-                    <!-- Gradient: trunk neutral → 1B color (left branch) -->
+                    <!-- Road fill gradients -->
                     <linearGradient id="grad1B" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stop-color="#000" stop-opacity="0.06"/>
                         <stop offset="100%" stop-color="#6366F1" stop-opacity="0.10"/>
@@ -528,7 +528,6 @@
                         <stop offset="0%" stop-color="#000" stop-opacity="0.15"/>
                         <stop offset="100%" stop-color="#6366F1" stop-opacity="0.30"/>
                     </linearGradient>
-                    <!-- Gradient: trunk neutral → 2C color (right branch) -->
                     <linearGradient id="grad2C" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stop-color="#000" stop-opacity="0.06"/>
                         <stop offset="100%" stop-color="#0EA5E9" stop-opacity="0.10"/>
@@ -537,73 +536,95 @@
                         <stop offset="0%" stop-color="#000" stop-opacity="0.15"/>
                         <stop offset="100%" stop-color="#0EA5E9" stop-opacity="0.30"/>
                     </linearGradient>
+                    <!-- Label badge shadow -->
+                    <filter id="badgeShadow" x="-10%" y="-20%" width="120%" height="160%">
+                        <feDropShadow dx="0" dy="2" stdDeviation="4" flood-opacity="0.08"/>
+                    </filter>
+                    <!-- Arrow markers with orient="auto" -->
+                    <marker id="arrow-1b" viewBox="0 0 14 10" refX="13" refY="5" markerWidth="16" markerHeight="12" orient="auto">
+                        <path d="M 0 0.5 L 12 5 L 0 9.5 L 3 5 Z" fill="#6366F1" opacity="0.85"/>
+                    </marker>
+                    <marker id="arrow-2c" viewBox="0 0 14 10" refX="13" refY="5" markerWidth="16" markerHeight="12" orient="auto">
+                        <path d="M 0 0.5 L 12 5 L 0 9.5 L 3 5 Z" fill="#0EA5E9" opacity="0.85"/>
+                    </marker>
                 </defs>
 
-                <!-- ═══ ROAD SURFACE — filled compound shape ═══ -->
-                <!-- Trunk: straight section from top to fork junction -->
-                <path d="M370,40 L430,40 L430,250 L370,250 Z" fill="rgba(0,0,0,0.06)"/>
-                <!-- Trunk edges -->
-                <line x1="370" y1="40" x2="370" y2="250" stroke="rgba(0,0,0,0.15)" stroke-width="2"/>
-                <line x1="430" y1="40" x2="430" y2="250" stroke="rgba(0,0,0,0.15)" stroke-width="2"/>
+                <!-- ═══════════════════════════════════════════════ -->
+                <!-- LABEL: CORPORATE PROCUREMENT — badge at top    -->
+                <!-- ═══════════════════════════════════════════════ -->
+                <g filter="url(#badgeShadow)">
+                    <rect x="270" y="12" width="260" height="44" rx="22" fill="rgba(255,255,255,0.92)" stroke="rgba(0,0,0,0.12)" stroke-width="1.5"/>
+                    <text x="400" y="40" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="13" font-weight="600" letter-spacing="1.2" fill="rgba(0,0,0,0.70)">CORPORATE PROCUREMENT</text>
+                </g>
 
-                <!-- Left branch road surface (1B) — filled shape following curve -->
-                <path d="M370,250 C370,310 340,340 280,380 C220,420 180,460 140,560
-                         L200,580 C220,480 250,440 310,400 C370,360 400,320 430,260
-                         L430,250 Z" fill="url(#grad1B)"/>
-                <!-- Left branch outer edge -->
-                <path d="M370,250 C370,310 340,340 280,380 C220,420 180,460 140,560" fill="none" stroke="url(#gradEdge1B)" stroke-width="2"/>
-                <!-- Left branch inner edge -->
-                <path d="M430,250 C420,310 400,340 340,380 C280,420 250,460 200,580" fill="none" stroke="url(#gradEdge1B)" stroke-width="2"/>
+                <!-- ═══ ROAD SURFACE ═══ -->
+                <!-- Trunk: 60px wide, from badge bottom to fork junction -->
+                <path d="M370,56 L430,56 L430,270 L370,270 Z" fill="rgba(0,0,0,0.06)"/>
+                <line x1="370" y1="56" x2="370" y2="270" stroke="rgba(0,0,0,0.15)" stroke-width="2"/>
+                <line x1="430" y1="56" x2="430" y2="270" stroke="rgba(0,0,0,0.15)" stroke-width="2"/>
 
-                <!-- Right branch road surface (2C) — filled shape following curve -->
-                <path d="M430,250 C430,310 460,340 520,380 C580,420 620,460 660,560
-                         L600,580 C580,480 550,440 490,400 C430,360 400,320 370,260
-                         L370,250 Z" fill="url(#grad2C)"/>
-                <!-- Right branch outer edge -->
-                <path d="M430,250 C430,310 460,340 520,380 C580,420 620,460 660,560" fill="none" stroke="url(#gradEdge2C)" stroke-width="2"/>
-                <!-- Right branch inner edge -->
-                <path d="M370,250 C380,310 400,340 460,380 C520,420 550,460 600,580" fill="none" stroke="url(#gradEdge2C)" stroke-width="2"/>
+                <!-- Left branch (1B) — single filled shape for consistent 60px width -->
+                <!-- Outer edge: C(370,340 310,380 240,430) C(170,480 150,530 135,590)
+                     Inner edge reverse: C(210,530 230,480 300,430) C(370,380 430,340 430,270) -->
+                <path d="M370,270
+                         C370,340 310,380 240,430
+                         C170,480 150,530 135,590
+                         L195,610
+                         C210,550 230,490 300,440
+                         C370,390 430,330 430,270 Z" fill="url(#grad1B)"/>
+                <path d="M370,270 C370,340 310,380 240,430 C170,480 150,530 135,590" fill="none" stroke="url(#gradEdge1B)" stroke-width="2"/>
+                <path d="M430,270 C430,330 370,390 300,440 C230,490 210,550 195,610" fill="none" stroke="url(#gradEdge1B)" stroke-width="2"/>
 
-                <!-- Gore point / island (negative space triangle at split) -->
-                <path d="M400,260 C395,300 390,320 370,350 L400,270 L430,350 C410,320 405,300 400,260 Z" fill="#F8F9FC"/>
+                <!-- Right branch (2C) — single filled shape for consistent 60px width -->
+                <path d="M430,270
+                         C430,340 490,380 560,430
+                         C630,480 650,530 665,590
+                         L605,610
+                         C590,550 570,490 500,440
+                         C430,390 370,330 370,270 Z" fill="url(#grad2C)"/>
+                <path d="M430,270 C430,340 490,380 560,430 C630,480 650,530 665,590" fill="none" stroke="url(#gradEdge2C)" stroke-width="2"/>
+                <path d="M370,270 C370,330 430,390 500,440 C570,490 590,550 605,610" fill="none" stroke="url(#gradEdge2C)" stroke-width="2"/>
+
+                <!-- Gore point — clean triangular negative space at fork -->
+                <path d="M400,275
+                         C395,310 385,340 350,375
+                         L400,290
+                         L450,375
+                         C415,340 405,310 400,275 Z" fill="#F8F9FC"/>
 
                 <!-- ═══ WHITE DASHED CENTER MEDIANS ═══ -->
-                <!-- Trunk median -->
-                <line x1="400" y1="48" x2="400" y2="245" stroke="white" stroke-width="3" stroke-dasharray="16 10" stroke-linecap="round" class="road-median"/>
+                <line x1="400" y1="64" x2="400" y2="265" stroke="white" stroke-width="3" stroke-dasharray="16 10" stroke-linecap="round" class="road-median"/>
+                <!-- Left branch median — follows center of 60px road -->
+                <path d="M396,280 C392,340 335,385 268,433 C200,480 180,535 165,598" fill="none" stroke="white" stroke-width="3" stroke-dasharray="16 10" stroke-linecap="round" class="road-median" marker-end="url(#arrow-1b)"/>
+                <!-- Right branch median — follows center of 60px road -->
+                <path d="M404,280 C408,340 465,385 532,433 C600,480 620,535 635,598" fill="none" stroke="white" stroke-width="3" stroke-dasharray="16 10" stroke-linecap="round" class="road-median" marker-end="url(#arrow-2c)"/>
 
-                <!-- Left branch median (follows center of left branch curve) -->
-                <path d="M395,260 C390,310 365,345 305,385 C245,425 215,465 170,570" fill="none" stroke="white" stroke-width="3" stroke-dasharray="16 10" stroke-linecap="round" class="road-median"/>
+                <!-- ═══════════════════════════════════════════════ -->
+                <!-- LABEL: ACCOUNTING FRAMEWORK — decision badge   -->
+                <!-- ═══════════════════════════════════════════════ -->
+                <g filter="url(#badgeShadow)">
+                    <rect x="283" y="234" width="234" height="40" rx="20" fill="rgba(255,255,255,0.92)" stroke="rgba(0,0,0,0.18)" stroke-width="1.5"/>
+                    <!-- Small diamond accent on each side -->
+                    <rect x="293" y="249" width="10" height="10" rx="1.5" fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="1" transform="rotate(45,298,254)"/>
+                    <rect x="497" y="249" width="10" height="10" rx="1.5" fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="1" transform="rotate(45,502,254)"/>
+                    <text x="400" y="260" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="12" font-weight="600" letter-spacing="1" fill="rgba(0,0,0,0.65)">ACCOUNTING FRAMEWORK</text>
+                </g>
 
-                <!-- Right branch median (follows center of right branch curve) -->
-                <path d="M405,260 C410,310 435,345 495,385 C555,425 585,465 630,570" fill="none" stroke="white" stroke-width="3" stroke-dasharray="16 10" stroke-linecap="round" class="road-median"/>
+                <!-- ═══ BRANCH LABELS — bold strategy identifiers ═══ -->
+                <!-- 1B label on left branch -->
+                <g transform="translate(270,420) rotate(-28)">
+                    <text x="0" y="0" font-family="'IBM Plex Mono', monospace" font-size="18" font-weight="700" fill="#6366F1" opacity="0.90">1B</text>
+                    <text x="0" y="14" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="500" fill="#6366F1" opacity="0.60">Consequential</text>
+                </g>
+                <!-- 2C label on right branch -->
+                <g transform="translate(500,420) rotate(28)">
+                    <text x="0" y="0" font-family="'IBM Plex Mono', monospace" font-size="18" font-weight="700" fill="#0EA5E9" opacity="0.90">2C</text>
+                    <text x="0" y="14" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="500" fill="#0EA5E9" opacity="0.60">Hourly Matching</text>
+                </g>
 
-                <!-- ═══ DIRECTIONAL FLOW CHEVRONS ═══ -->
-                <!-- Left branch: small chevrons leading to terminal arrow -->
-                <path d="M340,370 L335,378 L330,370" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
-                <path d="M280,420 L273,430 L266,420" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
-                <path d="M230,470 L222,482 L214,470" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
-                <!-- Left terminal arrow -->
-                <polygon points="170,552 155,570 185,570" fill="white" opacity="0.8"/>
-
-                <!-- Right branch: small chevrons leading to terminal arrow -->
-                <path d="M460,370 L465,378 L470,370" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
-                <path d="M520,420 L527,430 L534,420" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
-                <path d="M570,470 L578,482 L586,470" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
-                <!-- Right terminal arrow -->
-                <polygon points="630,552 615,570 645,570" fill="white" opacity="0.8"/>
-
-                <!-- ═══ TEXT LABELS ON ROAD ═══ -->
-                <!-- Trunk label -->
-                <text x="400" y="155" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="11" font-weight="600" letter-spacing="2" fill="rgba(0,0,0,0.35)" transform="rotate(0)">CORPORATE PROCUREMENT</text>
-
-                <!-- Fork point label -->
-                <text x="400" y="238" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="10" font-weight="500" letter-spacing="1.5" fill="rgba(0,0,0,0.30)">ACCOUNTING FRAMEWORK</text>
-
-                <!-- Branch labels — 1B -->
-                <text x="140" y="608" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="13" font-weight="700" fill="#6366F1" opacity="0.85">1B</text>
-
-                <!-- Branch labels — 2C -->
-                <text x="660" y="608" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="13" font-weight="700" fill="#0EA5E9" opacity="0.85">2C</text>
+                <!-- Branch endpoint labels (below arrows) -->
+                <text x="165" y="640" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="14" font-weight="700" fill="#6366F1" opacity="0.90">1B</text>
+                <text x="635" y="640" text-anchor="middle" font-family="'IBM Plex Mono', monospace" font-size="14" font-weight="700" fill="#0EA5E9" opacity="0.90">2C</text>
             </svg>
         </div>
 
