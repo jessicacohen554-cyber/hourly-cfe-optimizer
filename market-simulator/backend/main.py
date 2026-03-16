@@ -592,11 +592,36 @@ async def simulate(req: SimulationRequest):
         iso_results = results.get(iso, [])
         response = _build_simulation_response(iso, iso_results)
 
+        # Compute plant-level economics if fleet data available
+        plant_level_data = []
+        plant_summary = None
+        try:
+            from scripts.market_simulation import compute_plant_level_economics
+            from scripts.lmp_engine import build_plant_level_merit_order
+            plant_stack = build_plant_level_merit_order(iso, results.get(iso, []))
+            plant_level_data = compute_plant_level_economics(plant_stack, response.avg_lmp)
+            # Compute summary counts
+            operating = sum(1 for p in plant_level_data if p.get("status") == "operating")
+            at_risk = sum(1 for p in plant_level_data if p.get("status") == "at_risk")
+            stranded = sum(1 for p in plant_level_data if p.get("status") == "stranded")
+            plant_summary = {
+                "operating": operating,
+                "at_risk": at_risk,
+                "stranded": stranded,
+                "total": len(plant_level_data),
+            }
+            response.plant_level_summary = plant_summary
+        except Exception as plant_err:
+            # Plant-level economics is optional — don't fail the simulation
+            print(f"Note: Plant-level economics not available: {plant_err}")
+
         # Save results to indexed run directory
         try:
-            run_id = _next_run_id()
+            run_id = _next_run_id(iso)
             response_data = response.model_dump()
             params_data = req.model_dump()
+            # Attach plant-level data for CSV saving (not included in JSON response)
+            response_data["_plant_level_data"] = plant_level_data
             narrative = _save_run_artifacts(run_id, iso, response_data, params_data)
             response.run_id = run_id
             response.narrative = narrative
@@ -798,18 +823,20 @@ async def run_sensitivity(req: SensitivityRequest):
 # Results directory management
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _next_run_id() -> str:
-    """Determine the next run ID by scanning the results directory."""
+def _next_run_id(iso: str = "") -> str:
+    """Determine the next run ID, including ISO name."""
     existing = [d.name for d in RESULTS_DIR.iterdir() if d.is_dir() and d.name.startswith("run_")]
     if not existing:
-        return "run_001"
-    nums = []
-    for name in existing:
-        match = re.match(r"run_(\d+)", name)
-        if match:
-            nums.append(int(match.group(1)))
-    next_num = max(nums) + 1 if nums else 1
-    return f"run_{next_num:03d}"
+        num = 1
+    else:
+        nums = []
+        for name in existing:
+            match = re.match(r"run_(\d+)", name)
+            if match:
+                nums.append(int(match.group(1)))
+        num = max(nums) + 1 if nums else 1
+    iso_suffix = f"_{iso}" if iso else ""
+    return f"run_{num:03d}{iso_suffix}"
 
 
 def _generate_narrative(iso: str, response_data: dict, params: dict) -> str:
@@ -937,7 +964,35 @@ def _save_run_artifacts(run_id: str, iso: str, response_data: dict, params: dict
                 if src.exists():
                     shutil.copy2(src, run_dir / f"custom_{fname}")
 
+    # 6. Plant-level detailed results CSV
+    plant_data = response_data.get("_plant_level_data", [])
+    if plant_data:
+        _save_plant_level_csv(run_dir / "detailed_plant_results.csv", plant_data)
+
     return narrative
+
+
+def _save_plant_level_csv(filepath: Path, plant_data: list):
+    """Save detailed per-plant economics as CSV."""
+    if not plant_data:
+        return
+
+    columns = [
+        'entity', 'plant_name', 'plant_id', 'generator_id', 'state', 'county',
+        'latitude', 'longitude', 'capacity_mw', 'heat_rate_mmbtu_mwh',
+        'fuel_type', 'prime_mover', 'online_year', 'age_years',
+        'capacity_factor', 'mwh_generated', 'fuel_consumed_mmbtu',
+        'co2_tons', 'nox_lbs', 'sox_lbs',
+        'revenue_per_mwh', 'vom_per_mwh', 'fuel_cost_per_mwh', 'profit_per_mwh',
+        'total_revenue_million', 'total_cost_million', 'total_profit_million',
+        'status'
+    ]
+
+    with open(filepath, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=columns, extrasaction='ignore')
+        w.writeheader()
+        for row in plant_data:
+            w.writerow(row)
 
 
 def _save_results_csv(filepath: Path, response_data: dict):
@@ -1142,6 +1197,24 @@ async def save_chart(run_id: str, request: Request):
         return {"status": "ok", "path": str(filepath)}
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to save chart: {str(e)}")
+
+
+@app.get("/api/runs/{run_id}/plant-csv")
+async def download_plant_csv(run_id: str):
+    """Download the detailed plant-level results CSV for a given run."""
+    run_dir = RESULTS_DIR / run_id
+    if not run_dir.exists():
+        raise HTTPException(status_code=404, detail=f"Run '{run_id}' not found")
+
+    csv_path = run_dir / "detailed_plant_results.csv"
+    if not csv_path.exists():
+        raise HTTPException(status_code=404, detail="Plant-level CSV not available for this run")
+
+    return FileResponse(
+        path=str(csv_path),
+        media_type="text/csv",
+        filename=f"{run_id}_plant_results.csv",
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
