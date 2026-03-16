@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IPP Climate Transition Report — Constellation Energy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+/* ─── Report-specific overrides ─── */
+body {
+  background: var(--bg-page, #F7FAFC);
+  color: var(--text-bright, #1A232F);
+}
+
+.report-hero {
+  background: linear-gradient(135deg, #1B5E9E 0%, #2372B9 40%, #007FA4 100%);
+  color: white;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+.report-hero h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  letter-spacing: -1px;
+}
+.report-hero .subtitle {
+  font-size: 1.2rem;
+  opacity: 0.9;
+  font-weight: 300;
+}
+.report-hero .date {
+  margin-top: 1rem;
+  font-size: 0.95rem;
+  opacity: 0.78; /* contrast-fix: was 0.7, now 0.78, ratio ~8.5:1 on bg dark blue */
+}
+.hero-accent {
+  width: 80px;
+  height: 3px;
+  background: #F47B27;
+  margin: 1rem auto;
+}
+
+.report-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.report-section {
+  margin-bottom: 3rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid #E0E6EF;
+}
+.report-section:last-child { border-bottom: none; }
+
+.section-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #0369A1; /* contrast-fix: was #007FA4, now #0369A1, ratio 5.93:1 on bg white */
+  margin-bottom: 0.5rem;
+}
+.section-header {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #2372B9;
+  margin-bottom: 1rem;
+}
+
+.figure-container {
+  margin: 1.5rem 0;
+  text-align: center;
+}
+.figure-container img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+.figure-caption {
+  font-size: 0.85rem;
+  color: #596066; /* contrast-fix: was #7E8083, now #596066, ratio 6.38:1 on bg white */
+  margin-top: 0.5rem;
+  font-style: italic;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.insight-callout {
+  border-left: 4px solid #2372B9;
+  background: rgba(35,114,185,0.05);
+  padding: 1rem 1.5rem;
+  border-radius: 0 8px 8px 0;
+  margin: 1rem 0;
+  font-size: 0.95rem;
+}
+.insight-callout.green { border-left-color: #6BA543; background: rgba(107,165,67,0.05); }
+.insight-callout.orange { border-left-color: #F47B27; background: rgba(244,123,39,0.05); }
+.insight-callout strong { font-weight: 600; }
+
+.methodology-list {
+  list-style: disc;
+  padding-left: 1.5rem;
+}
+.methodology-list li {
+  margin-bottom: 0.5rem;
+  line-height: 1.6;
+}
+
+.report-footer {
+  background: #1A232F;
+  color: white;
+  text-align: center;
+  padding: 2rem;
+  font-size: 0.85rem;
+}
+.report-footer a {
+  color: #67E8F9; /* contrast-fix: was #007FA4, now #67E8F9, ratio 10.3:1 on bg #1A232F */
+  text-decoration: none;
+}
+.footer-gradient {
+  height: 4px;
+  background: linear-gradient(90deg, #2372B9, #007FA4, #6BA543);
+}
+
+/* ─── KPI & Score Components ─── */
+.kpi-card {
+  background: white;
+  border: 1px solid #E0E6EF;
+  border-radius: 12px;
+  padding: 1.2rem 1rem;
+  text-align: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.kpi-label {
+  font-size: 0.85rem;
+  color: #596066; /* contrast-fix: was #7E8083, now #596066, ratio 6.38:1 on bg white */
+  margin-top: 4px;
+}
+.company-score-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.95rem;
+}
+.company-score-table th {
+  background: #2372B9;
+  color: white;
+  padding: 0.6rem 1rem;
+  text-align: center;
+  font-weight: 600;
+}
+.company-score-table td {
+  padding: 0.5rem 1rem;
+  text-align: center;
+  border-bottom: 1px solid #E0E6EF;
+}
+.company-score-table tr.hero-row {
+  background: rgba(35,114,185,0.06);
+  font-weight: 700;
+}
+.company-score-table tr:hover { background: #F7FAFC; }
+.company-color-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.score-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.score-high { background: rgba(107,165,67,0.15); color: #365D22; }
+.score-mid { background: rgba(251,178,84,0.2); color: #92400E; }
+.score-low { background: rgba(220,38,38,0.12); color: #991B1B; }
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.data-table th {
+  background: #2372B9;
+  color: white;
+  padding: 0.5rem 0.75rem;
+  font-weight: 600;
+}
+.data-table td {
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid #E0E6EF;
+}
+
+@media (max-width: 768px) {
+  .report-hero h1 { font-size: 1.8rem; }
+  .section-header { font-size: 1.3rem; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="report-hero">
+  <h1>IPP Climate Transition<br>Risk Assessment</h1>
+  <div class="hero-accent"></div>
+  <div class="subtitle">Strategic Positioning Analysis of 7 Major US Independent Power Producers</div>
+  <div class="date">March 14, 2026 · Constellation Energy</div>
+</div>
+
+<div class="report-content">
+
+  <!-- Executive Summary -->
+  <div class="report-section">
+    <div class="section-eyebrow">Overview</div>
+    <h2 class="section-header">Executive Summary</h2>
+
+    <div class="kpi-grid">
+      
+      <div class="kpi-card">
+        <div class="kpi-value" style="font-size:2rem;color:#2372B9">7</div>
+        <div class="kpi-label">IPPs Analyzed</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" style="font-size:2rem;color:#0369A1">206 GW</div> <!-- contrast-fix: was #007FA4, now #0369A1, ratio 5.93:1 on bg white -->
+        <div class="kpi-label">Combined Capacity</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" style="font-size:2rem;color:#C2410C">226 Mt</div> <!-- contrast-fix: was #F47B27, now #C2410C, ratio 4.63:1 on bg white -->
+        <div class="kpi-label">Combined CO₂ (2024)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" style="font-size:2rem;color:#15803D">43%</div> <!-- contrast-fix: was #6BA543, now #15803D, ratio 5.02:1 on bg white -->
+        <div class="kpi-label">Constellation Nuclear</div>
+      </div>
+    
+    </div>
+
+    <h3>Key Findings</h3>
+    <ul class="methodology-list">
+            <li>Constellation's emissions intensity (131 kg/MWh) is significantly below the peer average (292 kg/MWh), driven by its dominant nuclear fleet.</li>
+      <li>Nuclear-heavy fleets gain disproportionately under carbon pricing scenarios — the 45U PTC provides an additional $15/MWh revenue floor.</li>
+      <li>Coal-exposed IPPs (Vistra, Talen) face accelerating stranded asset risk under most transition scenarios.</li>
+      <li>Geographic diversification across ISOs provides revenue stability and reduces exposure to single-market regulatory risk.</li>
+    </ul>
+
+    <div class="insight-callout green">
+      <strong>Constellation's Edge:</strong> Largest US zero-carbon generation fleet (nuclear), operating across multiple ISOs, with minimal coal exposure and strong 45U PTC tailwinds.
+    </div>
+  </div>
+
+  <!-- Section 1: IPP Market Landscape -->
+  <div class="report-section">
+    <div class="section-eyebrow">Section 1</div>
+    <h2 class="section-header">IPP Market Landscape</h2>
+
+    <p>The US independent power producer market is dominated by seven major companies, collectively operating over 206 GW of generation capacity across all seven ISO regions. Their fleet compositions vary dramatically — from nuclear-dominant Constellation to coal-heavy Vistra and gas-focused NRG.</p>
+
+    <div class="figure-container">
+      <img src="ipp-figures/06_fleet_composition.png" alt="Fleet Composition">
+      <div class="figure-caption">Figure 1: IPP fleet composition by fuel type (MW nameplate capacity)</div>
+    </div>
+
+    <div class="figure-container">
+      <img src="ipp-figures/09_geographic_heatmap.png" alt="Geographic Distribution">
+      <div class="figure-caption">Figure 2: Geographic capacity distribution across ISO regions</div>
+    </div>
+
+    <div class="figure-container">
+      <img src="ipp-figures/10_emissions_intensity.png" alt="Emissions Intensity">
+      <div class="figure-caption">Figure 3: Fleet emissions intensity comparison (kg CO₂/MWh)</div>
+    </div>
+  </div>
+
+  <!-- Section 2: Strategic Positioning -->
+  <div class="report-section">
+    <div class="section-eyebrow">Section 2</div>
+    <h2 class="section-header">Strategic Positioning Analysis</h2>
+
+    <p>The IPP Strategic Positioning Pentagon evaluates each company across five dimensions critical to energy transition readiness. Higher scores indicate stronger positioning for a decarbonizing grid.</p>
+
+    <div class="figure-container">
+      <img src="ipp-figures/01_spider_comparison.png" alt="Spider Map — All 7 IPPs">
+      <div class="figure-caption">Figure 4: Strategic positioning pentagon — all 7 IPPs compared</div>
+    </div>
+
+    <h3>Scoring Methodology</h3>
+    <ul class="methodology-list">
+      <li><strong>Nuclear Advantage (0–100):</strong> Nuclear capacity share × 200, capped at 100. Companies with ≥50% nuclear capacity score 100.</li>
+      <li><strong>Geographic Diversity (0–100):</strong> Number of ISO regions × 25, capped at 100. Operating in ≥4 ISOs scores 100.</li>
+      <li><strong>Coal Exit Progress (0–100):</strong> 100 minus coal capacity share × 200. Zero coal = 100.</li>
+      <li><strong>Gas Flexibility (0–100):</strong> CCGT share of total gas fleet. Higher CCGT ratio = more efficient, flexible gas assets.</li>
+      <li><strong>Clean Pipeline (0–100):</strong> (Solar + Wind + Battery) share × 300, capped at 100. Measures new clean energy investment.</li>
+    </ul>
+
+    
+    <table class="company-score-table">
+      <thead><tr><th style='text-align:left'>Company</th><th>Nuclear<br>Advantage</th><th>Geographic<br>Diversity</th><th>Coal Exit<br>Progress</th><th>Gas<br>Flexibility</th><th>Clean<br>Pipeline</th><th>Average</th></tr></thead>
+      <tbody><tr class="hero-row"><td style="text-align:left"><span class="company-color-dot" style="background:#2372B9"></span>Constellation</td><td><span class="score-pill score-high">86</span></td><td><span class="score-pill score-high">100</span></td><td><span class="score-pill score-high">100</span></td><td><span class="score-pill score-high">82</span></td><td><span class="score-pill score-low">14</span></td><td><strong>76</strong></td></tr><tr><td style="text-align:left"><span class="company-color-dot" style="background:#F47B27"></span>Vistra</td><td><span class="score-pill score-low">29</span></td><td><span class="score-pill score-high">100</span></td><td><span class="score-pill score-high">73</span></td><td><span class="score-pill score-mid">57</span></td><td><span class="score-pill score-low">4</span></td><td><strong>53</strong></td></tr><tr><td style="text-align:left"><span class="company-color-dot" style="background:#6BA543"></span>NRG</td><td><span class="score-pill score-low">0</span></td><td><span class="score-pill score-high">100</span></td><td><span class="score-pill score-mid">65</span></td><td><span class="score-pill score-mid">67</span></td><td><span class="score-pill score-low">0</span></td><td><strong>47</strong></td></tr><tr><td style="text-align:left"><span class="company-color-dot" style="background:#007FA4"></span>NextEra</td><td><span class="score-pill score-low">15</span></td><td><span class="score-pill score-high">100</span></td><td><span class="score-pill score-high">100</span></td><td><span class="score-pill score-high">100</span></td><td><span class="score-pill score-high">100</span></td><td><strong>83</strong></td></tr><tr><td style="text-align:left"><span class="company-color-dot" style="background:#FBB254"></span>Talen</td><td><span class="score-pill score-mid">42</span></td><td><span class="score-pill score-low">25</span></td><td><span class="score-pill score-low">38</span></td><td><span class="score-pill score-mid">44</span></td><td><span class="score-pill score-low">0</span></td><td><strong>30</strong></td></tr><tr><td style="text-align:left"><span class="company-color-dot" style="background:#9C27B0"></span>PSEG</td><td><span class="score-pill score-high">100</span></td><td><span class="score-pill score-low">25</span></td><td><span class="score-pill score-high">100</span></td><td><span class="score-pill score-high">100</span></td><td><span class="score-pill score-low">0</span></td><td><strong>65</strong></td></tr><tr><td style="text-align:left"><span class="company-color-dot" style="background:#14B8A6"></span>AES</td><td><span class="score-pill score-low">0</span></td><td><span class="score-pill score-mid">50</span></td><td><span class="score-pill score-high">90</span></td><td><span class="score-pill score-mid">58</span></td><td><span class="score-pill score-high">81</span></td><td><strong>56</strong></td></tr></tbody>
+    </table>
+    
+  </div>
+
+  <!-- Section 3: Constellation Deep-Dive -->
+  <div class="report-section">
+    <div class="section-eyebrow">Section 3</div>
+    <h2 class="section-header">Constellation Energy — Deep Dive</h2>
+
+    <div class="figure-container">
+      <img src="ipp-figures/02_spider_constellation.png" alt="Constellation Spider">
+      <div class="figure-caption">Figure 5: Constellation Energy strategic profile</div>
+    </div>
+
+    
+    <p>Constellation Energy operates a fleet of <strong>55 GW</strong>
+    across <strong>5</strong> ISO regions, generating
+    <strong>300 TWh</strong> annually.
+    Its nuclear fleet of <strong>23,585 MW</strong> is the
+    largest in the US and the cornerstone of its transition positioning.</p>
+    
+
+    <div class="insight-callout green">
+      <strong>Top strength: Geographic Diversity</strong> (score: 100/100) —
+      this reflects Constellation's dominant position in zero-carbon baseload generation.
+    </div>
+    
+
+        <div class="insight-callout orange">
+          <strong>Area to watch: Clean Pipeline</strong> (score: 14/100) —
+          indicates room for improvement in this dimension relative to peers.
+        </div>
+        
+
+    <div class="figure-container">
+      <img src="ipp-figures/07_nuclear_advantage.png" alt="Nuclear Advantage">
+      <div class="figure-caption">Figure 6: Nuclear fleet advantage — share of total capacity by company</div>
+    </div>
+
+    <div class="insight-callout green">
+      <strong>45U Production Tax Credit:</strong> The 10-year PTC at $15/MWh provides ~$3B+ in revenue certainty for Constellation's nuclear fleet, creating a structural cost advantage that no competitor can replicate without building new nuclear capacity.
+    </div>
+
+    <div class="figure-container">
+      <img src="ipp-figures/08_coal_exit_timeline.png" alt="Coal Exit Timeline">
+      <div class="figure-caption">Figure 7: Coal fleet retirement timeline by company</div>
+    </div>
+  </div>
+
+  <!-- Section 4: Transition Scenarios -->
+  <div class="report-section">
+    <div class="section-eyebrow">Section 4</div>
+    <h2 class="section-header">Transition Scenario Analysis</h2>
+
+    <p>The IPP sweep model evaluates 270 distinct scenarios spanning demand growth rates, wholesale price trajectories, PPA coverage levels, and gas transition friction parameters. Results are presented as P10/P50/P90 bands reflecting the range of outcomes.</p>
+
+    <div class="figure-container">
+      <img src="ipp-figures/03_emissions_fan.png" alt="Emissions Trajectory">
+      <div class="figure-caption">Figure 8: Fleet emissions trajectory — P50 for all IPPs, P10–P90 band for Constellation</div>
+    </div>
+
+    <div class="figure-container">
+      <img src="ipp-figures/04_revenue_fan.png" alt="Revenue Trajectory">
+      <div class="figure-caption">Figure 9: Fleet revenue trajectory</div>
+    </div>
+
+    <div class="figure-container">
+      <img src="ipp-figures/05_stranded_assets.png" alt="Stranded Assets">
+      <div class="figure-caption">Figure 10: Stranded asset risk — MW unable to recover fixed costs</div>
+    </div>
+
+    <div class="figure-container">
+      <img src="ipp-figures/12_carbon_pricing.png" alt="Carbon Pricing">
+      <div class="figure-caption">Figure 11: Constellation profit under different price scenarios</div>
+    </div>
+
+    <div class="figure-container">
+      <img src="ipp-figures/11_scenario_sensitivity.png" alt="Sensitivity">
+      <div class="figure-caption">Figure 12: Scenario parameter sensitivity — Constellation profit impact</div>
+    </div>
+  </div>
+
+  <!-- Section 5: Recommendations -->
+  <div class="report-section">
+    <div class="section-eyebrow">Section 5</div>
+    <h2 class="section-header">Strategic Recommendations</h2>
+
+    <h3>Leverage Strengths</h3>
+    <ul class="methodology-list">
+      <li><strong>Maximize nuclear uptime and pursue license extensions</strong> — every nuclear MWh generates $15/MWh in 45U PTC value on top of wholesale revenue</li>
+      <li><strong>Pursue premium 24/7 CFE contracts</strong> — Constellation's nuclear baseload + multi-ISO presence uniquely enables hourly carbon-free energy matching for corporate buyers</li>
+      <li><strong>Pair nuclear with solar/storage</strong> — complement baseload nuclear with variable renewables and storage to offer full-spectrum clean energy portfolios</li>
+    </ul>
+
+    <h3>Mitigate Risks</h3>
+    <ul class="methodology-list">
+      <li><strong>Monitor coal-exposed competitors</strong> — Vistra and Talen face $5–10B in stranded asset risk; their strategic pivots will reshape competitive dynamics</li>
+      <li><strong>Hedge gas peaker exposure</strong> — as battery storage costs decline, peaker economics will erode; plan for battery replacement or hybridization</li>
+      <li><strong>Track capacity market reform</strong> — PJM capacity revenues are a significant Constellation revenue stream; regulatory changes could impact valuation</li>
+    </ul>
+
+    <div class="insight-callout">
+      <strong>Bottom line:</strong> Constellation is the best-positioned US IPP for the energy transition. Its nuclear fleet provides a zero-carbon foundation that competitors cannot replicate at scale for at least a decade. The primary risk is not transition exposure — it's failing to fully capitalize on the structural advantages this fleet provides.
+    </div>
+  </div>
+
+  <!-- Appendix -->
+  <div class="report-section">
+    <div class="section-eyebrow">Appendix</div>
+    <h2 class="section-header">Methodology & Data Sources</h2>
+
+    <h3>Data Sources</h3>
+    <ul class="methodology-list">
+      <li><strong>Generation fleet:</strong> EIA-860 (nameplate capacity, fuel type, location), EIA-923 (annual generation)</li>
+      <li><strong>Emissions:</strong> eGRID 2022 (plant-level CO₂ emissions and intensity factors)</li>
+      <li><strong>Scenario modeling:</strong> Hourly CFE Optimizer — SMARTargets IPP sweep module (270 scenarios)</li>
+      <li><strong>Cost assumptions:</strong> NREL Annual Technology Baseline 2024, Lazard LCOE v17</li>
+    </ul>
+
+    <h3>Model Parameters</h3>
+    <ul class="methodology-list">
+      <li>Demand growth: Low / Medium / High annual growth rates</li>
+      <li>Price sensitivity: Multiple wholesale electricity price scenarios</li>
+      <li>PPA coverage: Low / Medium / High contracted clean energy levels</li>
+      <li>Gas transition friction: 0.3 / 0.7 / 1.0 (probability that gas assets face accelerated depreciation)</li>
+      <li>Sweep dimensions: 4 parameters × multiple levels = 270 unique scenario combinations per company</li>
+    </ul>
+
+    <h3>Limitations</h3>
+    <ul class="methodology-list">
+      <li>Fleet data reflects 2023–2024 snapshots; planned additions/retirements may not be fully captured</li>
+      <li>Scenario model assumes rational economic behavior and does not account for political/regulatory disruptions</li>
+      <li>Spider scores are relative positioning metrics, not absolute measures of transition readiness</li>
+    </ul>
+  </div>
+
+</div>
+
+<div class="footer-gradient"></div>
+<div class="report-footer">
+  <p><strong>Constellation Energy</strong> · IPP Climate Transition Risk Assessment</p>
+  <p style="margin-top:0.5rem;color:rgba(255,255,255,0.78)">Confidential — For Internal Use Only · March 14, 2026</p> <!-- contrast-fix: was opacity:0.7, now rgba(255,255,255,0.78), ratio 8.5:1 on bg #1A232F -->
+</div>
+
+</body>
+</html>

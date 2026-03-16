@@ -662,8 +662,41 @@ function auditFile(htmlPath) {
         const bgResult = resolveEffectiveBg($, el, cssRules, cssVars, isDarkContext);
         let bgColor = bgResult.color;
 
-        // Apply opacity
-        const opacity = resolveOpacity($, el, cssRules, cssVars);
+        // Apply opacity — but skip animation-initial states.
+        // Elements starting at opacity:0 with a transition on opacity are
+        // animated to opacity:1 by JavaScript. Audit their visible (final) state.
+        let opacity = resolveOpacity($, el, cssRules, cssVars);
+        if (opacity < 0.1) {
+            // Check if any ancestor has opacity:0 + transition containing 'opacity'
+            // OR has a class indicating animation (fade-in, narrative-card, etc.)
+            let isAnimated = false;
+            let anc = el;
+            while (anc && $(anc).length) {
+                const cls = $(anc).attr('class') || '';
+                // Check class-based animation patterns
+                if (cls.match(/\bfade-in\b|\bstory-fade-in\b|\banimate-in\b|\bslide-in\b|\bnarrative-card\b/)) {
+                    isAnimated = true;
+                    break;
+                }
+                // Check CSS: if element has opacity < 0.1 AND transition includes 'opacity'
+                const opProp = getComputedProperty($, anc, 'opacity', cssRules, cssVars);
+                if (opProp && parseFloat(opProp.value) < 0.1) {
+                    const transProp = getComputedProperty($, anc, 'transition', cssRules, cssVars);
+                    if (transProp && transProp.value && transProp.value.includes('opacity')) {
+                        isAnimated = true;
+                        break;
+                    }
+                    // If an element has explicit opacity:0 in CSS (not inherited default),
+                    // it's almost certainly an animation initial state waiting for JS observer.
+                    // Treat as animated (visible) for contrast auditing.
+                    isAnimated = true;
+                    break;
+                }
+                anc = $(anc).parent()[0];
+                if (!anc || $(anc).is('[cheerio-root]')) break;
+            }
+            if (isAnimated) opacity = 1; // Treat as visible
+        }
         if (opacity < 1) {
             textColor = { ...textColor, a: textColor.a * opacity };
         }
