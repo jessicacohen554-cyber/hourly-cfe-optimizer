@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>About — The 8,760 Problem</title>
+<title>About This Research | The 8,760 Problem</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -54,85 +54,7 @@
 .callout-box h4 { font-size: 1rem; color: var(--navy); text-transform: none; letter-spacing: normal; }
 .callout-box p { font-size: 0.95rem; margin-bottom: 8px; }
 
-/* About-page stat-label override */
-.stat-label { margin-top: 4px; font-weight: 500; }
-
-
-/* ========== THREE THESES SECTION ========== */
-.theses-section {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 48px 24px 16px;
-}
-.thesis-card {
-    position: relative;
-    overflow: hidden;
-    border-radius: 12px;
-    padding: 32px 28px 28px;
-    margin-bottom: 20px;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-.thesis-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06), 0 4px 12px rgba(0, 0, 0, 0.03);
-}
-.thesis-card-green { border-left: 5px solid var(--wind); }
-.thesis-card-red { border-left: 5px solid var(--storage); }
-.thesis-card-blue { border-left: 5px solid var(--hydro); }
-.thesis-num {
-    position: absolute;
-    top: -8px;
-    right: 16px;
-    font-family: var(--font-heading);
-    font-size: 4.5rem;
-    font-weight: 800;
-    opacity: 0.06;
-    line-height: 1;
-    color: var(--navy);
-    pointer-events: none;
-    user-select: none;
-}
-.thesis-text {
-    font-family: var(--font-heading);
-    font-size: 1.2rem;
-    font-weight: 500;
-    color: var(--navy);
-    line-height: 1.65;
-    position: relative;
-    padding-bottom: 6px;
-}
-.thesis-text strong {
-    font-weight: 700;
-    color: var(--navy);
-}
-.thesis-card.visible .thesis-text::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    height: 2px;
-    width: 100%;
-    background: linear-gradient(90deg, var(--hydro), var(--solar));
-    animation: underlineDraw 1.2s ease-out forwards;
-}
-@keyframes underlineDraw {
-    from { width: 0; }
-    to { width: 100%; }
-}
-.thesis-label {
-    font-family: var(--font-data);
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    margin-bottom: 10px;
-    display: block;
-}
-.thesis-card-green .thesis-label { color: #15803D; }
-.thesis-card-red .thesis-label { color: #991B1B; }
-.thesis-card-blue .thesis-label { color: #0369A1; }
-
-/* ========== EXPLORE SECTION REDESIGN ========== */
+/* ========== EXPLORE SECTION ========== */
 .explore-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -201,22 +123,11 @@
 .explore-card-accent-demand { border-top: 3px solid var(--solar); }
 .explore-card-accent-econ { border-top: 3px solid var(--hydro); }
 
-/* ========== REDUCED MOTION ========== */
-@media (prefers-reduced-motion: reduce) {
-    .thesis-card.visible .thesis-text::after { animation: none; width: 100%; }
-    .thesis-card { transition: none; }
-}
-
 @media (max-width: 768px) {
     .explore-grid { grid-template-columns: 1fr; }
-    .thesis-num { font-size: 3.5rem; }
-    .thesis-text { font-size: 1.05rem; }
 }
 @media (max-width: 480px) {
     .story-section { padding: 36px 16px; }
-    .theses-section { padding: 32px 16px 8px; }
-    .thesis-card { padding: 24px 20px 20px; }
-    .thesis-text { font-size: 1rem; }
 }
 </style>
 <script src="js/chart-colors.js"></script>
@@ -234,113 +145,82 @@
 
 <!-- HEADER / BANNER -->
 <header class="header" id="pageHeader">
-    <h1>The 8,760 Problem</h1>
+    <h1>About This Research</h1>
     <div class="subtitle">
-        The transition from passive consumer of electrons to active participant in the grid&rsquo;s metabolic
-        health &mdash; ensuring that every hour of demand is met by a corresponding hour of clean supply.
+        Hourly clean energy optimization across 7 U.S. grid regions, 21 CFE thresholds,
+        and 5,832 cost scenarios per region.
     </div>
     <div class="header-accent"></div>
 </header>
 
 
-<!-- ========== SCROLLYTELL CONTENT ========== -->
+<!-- ========== CONTENT ========== -->
 <div class="content-wrap">
 
-<!-- THREE THESES -->
-<div class="theses-section">
-    <div class="thesis-card thesis-card-green story-section">
-        <span class="thesis-num">I</span>
-        <span class="thesis-label">Thesis One</span>
-        <div class="thesis-text">
-            <strong>Clean firm generation is the linchpin of affordable decarbonization.</strong>
-            Solar and wind get you to 70&ndash;80% clean. The last 20&ndash;30% &mdash; winter evenings,
-            multi-day low-wind periods, peak demand hours &mdash; requires dispatchable clean power:
-            nuclear, CCS, long-duration storage. Without it, the grid falls back to gas.
-        </div>
-    </div>
-    <div class="thesis-card thesis-card-red story-section">
-        <span class="thesis-num">II</span>
-        <span class="thesis-label">Thesis Two</span>
-        <div class="thesis-text">
-            <strong>Procurement strategies not grounded in grid physics yield continued gas reliance.</strong>
-            Annual REC matching hides hundreds of fossil-powered hours behind paper compliance. Hourly
-            matching exposes the gap &mdash; and creates demand for the firm clean resources that actually
-            displace gas. The accounting framework determines the outcome.
-        </div>
-    </div>
-    <div class="thesis-card thesis-card-blue story-section">
-        <span class="thesis-num">III</span>
-        <span class="thesis-label">Thesis Three</span>
-        <div class="thesis-text">
-            <strong>What you need depends on what you have and where you&rsquo;re going.</strong>
-            There is no universal clean energy portfolio. The optimal resource mix varies by region
-            (ERCOT&rsquo;s wind abundance vs. PJM&rsquo;s nuclear fleet), by cost assumptions (technology
-            learning curves shift the frontier), and by ambition level (90% vs. 99.9% hourly matching
-            requires fundamentally different strategies). Cost and resource mix are co-optimized &mdash;
-            that&rsquo;s the core scientific contribution of this project.
-        </div>
-    </div>
-</div>
-
-<hr class="section-divider">
-
-<!-- SECTION 1: THE BIG PICTURE -->
-<section class="story-section" id="sec-bigpicture">
+<!-- SECTION 1: RESEARCH GAPS -->
+<section class="story-section" id="sec-gaps">
     <div class="story-content">
-        <span class="story-badge story-badge-blue">The Big Picture</span>
-        <h2>From Passive Consumer to Active Participant</h2>
-        <p class="lead">
-            Today&rsquo;s grid treats clean energy as an occasional surplus &mdash; something that shows up when the
-            sun shines or the wind blows, then disappears. Annual accounting reinforces this passivity: buy enough
-            certificates to cover total consumption, claim 100% renewable, and ignore the hundreds of hours when gas
-            actually powered the load. The hourly approach inverts this relationship entirely.
-        </p>
+        <span class="story-badge story-badge-amber">Research Gaps</span>
+        <h2>What Existing Research Misses</h2>
         <p>
-            Instead of clean energy as intermittent surplus, the hourly framework makes it the <strong>constant
-            foundation</strong>. Every hour of demand requires a corresponding hour of clean supply &mdash; not on
-            average, not over a year, but in real time. This transforms the buyer from a passive consumer of electrons
-            into an active participant in the grid&rsquo;s metabolic health, ensuring that procurement decisions
-            directly shape what gets built, where, and when it runs.
+            Most clean energy procurement research treats the buyer as a passive accounting entity: offset
+            consumption with certificates, report the result. This project treats procurement as an active
+            systems problem, connecting hourly demand to grid physics, cost uncertainty, and regional
+            generation fleets. Five gaps in existing work motivate the analysis.
         </p>
+
+        <h3>Gap 1: Cost is treated as fixed, not as a variable</h3>
         <p>
-            This project models that transformation &mdash; hour by hour, across 8,760 hours per year, in seven major
-            U.S. grid regions, under thousands of cost scenarios &mdash; to answer the question: <strong>what does it
-            actually take to make clean energy the foundation of every hour, and what does it cost?</strong>
+            Most hourly matching studies assume a single cost for each technology. In practice, solar LCOE
+            ranges from $40 to $120/MWh depending on region and assumptions. This project co-optimizes the
+            resource mix under 5,832 cost scenarios per region, making cost uncertainty a first-class input.
+            Different cost assumptions produce different optimal portfolios. <strong>What you need depends on
+            what things cost.</strong>
         </p>
-        <div class="stat-row">
-            <div class="stat-block">
-                <div class="stat-number" data-target="8760">0</div>
-                <div class="stat-label">Hours modeled per year</div>
-            </div>
-            <div class="stat-block">
-                <div class="stat-number" data-target="7">0</div>
-                <div class="stat-label">Grid regions (ISOs)</div>
-            </div>
-            <div class="stat-block">
-                <div class="stat-number" data-target="5832">0</div>
-                <div class="stat-label">Cost scenarios</div>
-            </div>
-            <div class="stat-block">
-                <div class="stat-number" data-target="16200">0</div>
-                <div class="stat-label">Independent optimizations</div>
-            </div>
-        </div>
+
+        <h3>Gap 2: Regional variation is underappreciated</h3>
+        <p>
+            A 90% hourly target in ERCOT (wind-rich, no RPS competition) requires a different portfolio than
+            in PJM (nuclear fleet under data center pressure) or ISO-NE (transmission-constrained, $37&ndash;40/MWh
+            Tier I RECs). National averages obscure the decisions buyers actually face. This project models
+            seven ISOs independently using real 2025 hourly generation profiles and regional cost tables.
+        </p>
+
+        <h3>Gap 3: The &ldquo;last 5%&rdquo; cost inflection is under-studied</h3>
+        <p>
+            Moving from 75% to 90% hourly matching is relatively affordable. Moving from 95% to 99.9% can
+            cost 5&ndash;10x more per marginal MWh. This inflection zone is where the most consequential
+            procurement decisions occur, and this project covers it at 2.5% threshold granularity.
+        </p>
+
+        <h3>Gap 4: EAC scarcity is emerging but unquantified</h3>
+        <p>
+            PJM Tier I REC prices have hit $37&ndash;40/MWh, historic highs, before hourly matching mandates
+            even take effect. This project quantifies the clean premium by ISO region, modeling how corporate
+            participation rates at 10&ndash;50% penetration drive scarcity.
+        </p>
+
+        <h3>Gap 5: Policies aren&rsquo;t evaluated against physical constraints</h3>
+        <p>
+            The 45Q CCS tax credit incentivizes gas plants to maximize runtime for capture credits, regardless
+            of grid need. Annual REC standards create no demand signal for firm clean resources during the
+            hardest hours. This project evaluates policy mechanisms against actual hourly grid physics, revealing
+            where incentive structures diverge from decarbonization goals.
+        </p>
     </div>
 </section>
 
 <hr class="section-divider">
 
-<!-- SECTION 2: THE LAYERS -->
+<!-- SECTION 2: ANALYTICAL FRAMEWORK -->
 <section class="story-section panel-navy" id="sec-layers">
     <div class="story-content">
-        <span class="story-badge story-badge-green">The Layers</span>
-        <h2>Six Layers Between Intent and Impact</h2>
+        <span class="story-badge story-badge-green">Framework</span>
+        <h2>Analytical Framework</h2>
         <p>
-            Becoming an active participant in the grid&rsquo;s health requires navigating six overlapping layers &mdash;
-            physics, economics, generation fleets, corporate procurement, policy, and accounting rules. Each layer
-            can either accelerate or obstruct the transition from passive consumption to hourly clean foundations.
-            Understanding how they interact is essential for making procurement decisions that drive real progress,
-            not just paper compliance.
+            Hourly clean energy procurement operates across six overlapping layers: grid economics, generation
+            fleets, corporate demand, policy, accounting rules, and climate targets. This project models their
+            interactions to identify where procurement decisions have the greatest impact.
         </p>
         <div class="layer-stack">
             <div class="layer-card">
@@ -348,21 +228,20 @@
                 <span class="layer-num">01</span>
                 <h4>System-Level Grid Economics</h4>
                 <p>
-                    The physical grid operates on marginal cost dispatch: the cheapest available generator runs first.
-                    Adding renewables pushes fossil plants off the margin during sunny/windy hours, but the last 5&ndash;20%
-                    of hours (evenings, winters, low-wind weeks) are the hardest and most expensive to decarbonize. This
-                    creates a steep cost curve &mdash; the &ldquo;last-mile&rdquo; premium that dominates procurement economics.
+                    The grid dispatches generators by marginal cost, cheapest first. Renewables push fossil
+                    plants off the margin during sunny and windy hours, but the last 5&ndash;20% of hours
+                    (evenings, winters, low-wind weeks) are the most expensive to decarbonize, creating a
+                    steep last-mile cost curve.
                 </p>
             </div>
             <div class="layer-card">
                 <div class="layer-accent" style="background:var(--wind);"></div>
                 <span class="layer-num">02</span>
-                <h4>Power Generation &amp; Corporate Decarbonization</h4>
+                <h4>Power Generation &amp; Fleet Decisions</h4>
                 <p>
-                    Utilities and IPPs face their own transition: retiring coal, extending nuclear, building renewables,
-                    and deciding whether to invest in CCS, long-duration storage, or next-gen firm power. Their fleet
-                    decisions shape the supply side of the equation. A region with 30 GW of nuclear (PJM) faces a very
-                    different clean energy future than one dominated by gas (ERCOT) or hydro imports (NYISO).
+                    Utilities and IPPs are deciding whether to retire coal, extend nuclear, or invest in CCS
+                    and long-duration storage. A region with 30 GW of nuclear (PJM) faces a very different
+                    transition than one dominated by gas (ERCOT) or reliant on hydro imports (NYISO).
                 </p>
             </div>
             <div class="layer-card">
@@ -370,11 +249,9 @@
                 <span class="layer-num">03</span>
                 <h4>Voluntary Corporate Buyers</h4>
                 <p>
-                    Tech giants (Google, Microsoft, Amazon), data center operators, and Fortune 500 companies are the
-                    primary demand signal for new clean energy. Their procurement commitments &mdash; virtual PPAs,
-                    24/7 CFE targets, hourly matching goals &mdash; shape which resources get built, where, and at what
-                    price. When corporate demand exceeds available clean supply in specific hours, Energy Attribute
-                    Certificate (EAC) scarcity emerges, driving up premiums.
+                    Tech companies, data center operators, and Fortune 500 firms are the primary demand signal
+                    for new clean energy. Their procurement commitments (virtual PPAs, 24/7 CFE targets, hourly
+                    matching goals) shape which resources get built, where, and at what price.
                 </p>
             </div>
             <div class="layer-card">
@@ -382,11 +259,9 @@
                 <span class="layer-num">04</span>
                 <h4>State &amp; National Policy</h4>
                 <p>
-                    Renewable Portfolio Standards (RPS), clean energy mandates, tax credits (ITC, PTC, 45Q for CCS),
-                    and capacity market designs set the floor for clean energy deployment. But policies designed for
-                    annual compliance create different incentive structures than those designed for hourly matching.
-                    A state that mandates 50% renewables annually may not incentivize the firm clean power needed
-                    to fill the hardest hours.
+                    Tax credits (ITC, PTC, 45Q), clean energy mandates, and capacity market rules set the floor
+                    for deployment. Policies designed for annual compliance create different incentive structures
+                    than those designed for hourly matching.
                 </p>
             </div>
             <div class="layer-card">
@@ -394,12 +269,9 @@
                 <span class="layer-num">05</span>
                 <h4>Accounting &amp; Reporting Frameworks</h4>
                 <p>
-                    The GHG Protocol Scope 2 revision (expected ~2027) will likely require hourly matching and
-                    deliverability for emissions reporting. SBTi&rsquo;s power sector pathways are moving toward
-                    hourly targets by 2030. EPRI&rsquo;s SMARTargets framework offers an alternative approach.
-                    These frameworks <em>define what counts as &ldquo;clean&rdquo;</em> &mdash; and their design
-                    determines whether corporate spending actually drives real-world emissions reductions or just
-                    shuffles paper credits.
+                    The GHG Protocol Scope 2 revision (expected ~2027) and SBTi power sector pathways are
+                    moving toward hourly targets. These frameworks define what counts as "clean" and determine
+                    whether corporate spending drives real emissions reductions or redistributes paper credits.
                 </p>
             </div>
             <div class="layer-card">
@@ -407,10 +279,9 @@
                 <span class="layer-num">06</span>
                 <h4>Global &amp; National Goals</h4>
                 <p>
-                    The Paris Agreement, IEA Net Zero by 2050, US federal clean electricity targets, and EU
-                    climate law set the destination. But goals without mechanisms are aspirational. The gap between
-                    &ldquo;net zero by 2050&rdquo; and &ldquo;here&rsquo;s how to affordably match clean energy in
-                    every hour of 2025&rdquo; is enormous &mdash; and it&rsquo;s where this analysis operates.
+                    Paris Agreement targets, IEA Net Zero by 2050, and national clean electricity goals set
+                    the destination. The gap between those aspirations and the practical question of how to
+                    affordably match clean energy in every hour of 2025 is where this analysis operates.
                 </p>
             </div>
         </div>
@@ -421,211 +292,71 @@
 
 <div class="gradient-transition"></div>
 
-<!-- SECTION 4: CATALYTIC vs PERVERSE -->
-<section class="section-dark">
-<div class="section-dark-inner">
-<div class="story-section" id="sec-incentives">
-    <div class="story-content">
-        <span class="story-badge story-badge-orange">Incentive Design</span>
-        <h2>Catalytic Forces vs. Perverse Incentives</h2>
-        <p>
-            The difference between a passive consumer and an active participant comes down to incentive design.
-            Catalytic frameworks force clean energy to become the foundation &mdash; demanding that every hour of
-            demand is met by a corresponding hour of progress. Perverse frameworks preserve the status quo,
-            letting annual averages mask the hours when the grid still runs on gas.
-        </p>
-
-        <h3>When Frameworks Catalyze Progress</h3>
-        <div class="flow-diagram">
-            <div class="flow-row">
-                <div class="flow-box flow-box-policy">Hourly matching requirement</div>
-                <span class="flow-arrow">&rarr;</span>
-                <div class="flow-box flow-box-action">Demand for firm clean power (nuclear, CCS, LDES)</div>
-                <span class="flow-arrow">&rarr;</span>
-                <div class="flow-box flow-box-good">Investment in resources that fill the hardest hours</div>
-            </div>
-            <div class="flow-row" style="margin-top:16px;">
-                <div class="flow-box flow-box-policy">GHG Protocol Scope 2 revision with deliverability</div>
-                <span class="flow-arrow">&rarr;</span>
-                <div class="flow-box flow-box-action">Regional clean energy investment, not cross-border RECs</div>
-                <span class="flow-arrow">&rarr;</span>
-                <div class="flow-box flow-box-good">Supply built where demand exists</div>
-            </div>
-        </div>
-
-        <h3>When Frameworks Create Perverse Incentives</h3>
-        <div class="flow-diagram">
-            <div class="flow-row">
-                <div class="flow-box flow-box-policy">Annual REC matching</div>
-                <span class="flow-arrow">&rarr;</span>
-                <div class="flow-box flow-box-bad">Cheap solar RECs cover 24/7 consumption</div>
-                <span class="flow-arrow">&rarr;</span>
-                <div class="flow-box flow-box-bad">No demand signal for firm clean power</div>
-            </div>
-            <div class="flow-row" style="margin-top:16px;">
-                <div class="flow-box flow-box-policy">45Q credit for CCS ($85/ton)</div>
-                <span class="flow-arrow">&rarr;</span>
-                <div class="flow-box flow-box-bad">Incentivizes max runtime to capture credits</div>
-                <span class="flow-arrow">&rarr;</span>
-                <div class="flow-box flow-box-bad">Gas plants run even when grid doesn&rsquo;t need them</div>
-            </div>
-            <div class="flow-row" style="margin-top:16px;">
-                <div class="flow-box flow-box-policy">Unbundled RECs across regions</div>
-                <span class="flow-arrow">&rarr;</span>
-                <div class="flow-box flow-box-bad">Cheapest-state RECs bought for any location</div>
-                <span class="flow-arrow">&rarr;</span>
-                <div class="flow-box flow-box-bad">No new capacity built where scarcity exists</div>
-            </div>
-        </div>
-
-        <div class="callout-box callout-warning">
-            <h4>The Scope 2 Revision Is the Inflection Point</h4>
-            <p>
-                The GHG Protocol&rsquo;s Scope 2 guidance revision &mdash; expected around 2027 &mdash; will redefine
-                what &ldquo;counts&rdquo; for corporate emissions reporting. If it mandates hourly temporal matching with
-                deliverability requirements (as drafted), it will create an entirely new demand signal for firm clean
-                resources. Combined with SBTi&rsquo;s 2030 hourly matching trajectory for ~8,000 companies, this will
-                reshape clean energy markets.
-            </p>
-            <p>
-                But if the revision is watered down to preserve annual matching, the current system of paper
-                compliance persists &mdash; and the hardest hours stay dirty.
-            </p>
-        </div>
-    </div>
-</div>
-</div>
-</section>
-
-<section class="story-section panel-navy" id="sec-gaps">
-    <div class="story-content">
-        <span class="story-badge story-badge-amber">Research Gaps</span>
-        <h2>What This Project Addresses</h2>
-        <p>
-            Most research treats clean energy procurement as a passive accounting exercise &mdash; how many certificates
-            offset how much consumption. This project treats it as an active systems problem: how does a buyer&rsquo;s
-            hourly demand interact with grid physics, cost uncertainty, and regional generation fleets to determine
-            what actually gets built? The gaps in existing research all stem from the same root cause &mdash; treating
-            the buyer as a passive consumer rather than an active participant in the grid&rsquo;s transformation.
-        </p>
-
-        <h3>Gap 1: Cost is treated as fixed, not as a variable</h3>
-        <p>
-            Most hourly matching analyses use a single cost assumption for each technology. But technology costs are deeply
-            uncertain &mdash; solar LCOE ranges from $40 to $120/MWh depending on region and assumptions. This project
-            co-optimizes the resource mix with costs: different cost assumptions produce different optimal portfolios.
-            That&rsquo;s not a sensitivity check &mdash; it&rsquo;s the core finding. <strong>What you need depends on
-            what things cost.</strong>
-        </p>
-
-        <h3>Gap 2: Regional variation is underappreciated</h3>
-        <p>
-            A 90% hourly clean energy target costs very different amounts in ERCOT (abundant wind, no state RPS competition)
-            vs. PJM (nuclear-heavy but under data center pressure) vs. ISO-NE (transmission-constrained, high REC prices).
-            National averages obscure the procurement decisions that actually face buyers. This project models
-            five ISOs independently, each with real 2025 hourly generation profiles, regional cost tables, and local
-            grid mix baselines.
-        </p>
-
-        <h3>Gap 3: The &ldquo;last 5%&rdquo; cost inflection is under-studied</h3>
-        <p>
-            Going from 75% to 90% hourly matching is relatively affordable. Going from 95% to 100% is dramatically
-            more expensive &mdash; sometimes 5&ndash;10x the marginal cost. This inflection zone (90&ndash;100%) is where
-            the most consequential procurement decisions happen, and it&rsquo;s where this project concentrates its
-            analytical resolution with 2.5% threshold granularity.
-        </p>
-
-        <h3>Gap 4: EAC scarcity is emerging but unquantified</h3>
-        <p>
-            As corporate demand for hourly-matched clean energy grows, some regions will run out of available clean supply
-            during peak demand hours. PJM Tier I REC prices already hit $37&ndash;40/MWh &mdash; historic highs &mdash;
-            before hourly matching is even mandated. This project quantifies the &ldquo;clean premium&rdquo; by ISO region,
-            modeling how corporate participation rates drive scarcity.
-        </p>
-
-        <h3>Gap 5: Policies and frameworks aren&rsquo;t evaluated against physical constraints</h3>
-        <p>
-            The 45Q CCS tax credit incentivizes gas plants to run at maximum capacity factor &mdash; even when the grid
-            doesn&rsquo;t need the power. Annual REC standards don&rsquo;t create demand for the firm clean resources
-            needed for the hardest hours. This project evaluates policy mechanisms and accounting frameworks against
-            the actual hourly physics of the grid, revealing where incentive structures diverge from decarbonization goals.
-        </p>
-    </div>
-</section>
-
-<hr class="section-divider">
-
-<div class="gradient-transition"></div>
-
-<!-- SECTION 6: NOVEL INSIGHTS -->
+<!-- SECTION 3: KEY FINDINGS -->
 <section class="section-dark">
 <div class="section-dark-inner">
 <div class="story-section" id="sec-insights">
     <div class="story-content">
-        <span class="story-badge story-badge-teal">Novel Insights</span>
-        <h2>What This Analysis Reveals</h2>
+        <span class="story-badge story-badge-teal">Results</span>
+        <h2>Key Findings</h2>
         <p>
-            When you model the buyer as an active participant &mdash; synchronizing procurement to every hour of grid
-            reality rather than averaging over a year &mdash; a fundamentally different picture emerges. Clean energy
-            stops being an occasional surplus that stresses the grid and becomes the constant foundation. These
-            insights only surface when physics, cost, and policy are connected in a single model.
+            Connecting grid physics, cost uncertainty, and regional generation fleets in a single hourly model
+            produces results that do not emerge from simpler approaches. Six findings stand out.
         </p>
 
         <div class="insights-grid">
             <div class="insight-card">
-                <div class="insight-num">INSIGHT 01</div>
+                <div class="insight-num">FINDING 01</div>
                 <h4>Cost Drives the Optimal Resource Mix</h4>
                 <p>
-                    Different cost assumptions don&rsquo;t just change the price &mdash; they change <em>what you should
-                    build</em>. High renewable costs push toward nuclear; high firm costs push toward solar + storage.
-                    16,200 independent co-optimizations reveal that the &ldquo;right&rdquo; portfolio depends on cost
-                    assumptions as much as on the target threshold.
+                    Different cost assumptions produce different optimal portfolios, not just different prices.
+                    High renewable costs shift the mix toward nuclear; high firm costs shift toward solar plus
+                    storage. Across 16,200 independent co-optimizations, the cost scenario is as determinative
+                    as the target threshold.
                 </p>
             </div>
             <div class="insight-card">
-                <div class="insight-num">INSIGHT 02</div>
-                <h4>The Inflection Zone Is Steeper Than Expected</h4>
+                <div class="insight-num">FINDING 02</div>
+                <h4>Last-Mile Costs Escalate Non-Linearly</h4>
                 <p>
-                    Between 90% and 100% hourly matching, marginal costs escalate non-linearly. The resources needed for
-                    the last 5&ndash;10% of hours (winter evenings, multi-day low-wind periods) are the most expensive and
-                    least utilized, creating a cost curve that punishes perfection.
+                    Between 90% and 99.9% hourly matching, marginal costs rise steeply. The resources needed
+                    for the hardest hours (winter evenings, multi-day low-wind periods) are the most expensive
+                    and least utilized.
                 </p>
             </div>
             <div class="insight-card">
-                <div class="insight-num">INSIGHT 03</div>
+                <div class="insight-num">FINDING 03</div>
                 <h4>Region Determines Strategy, Not Just Cost</h4>
                 <p>
-                    ERCOT&rsquo;s optimal portfolio is fundamentally different from PJM&rsquo;s &mdash; not just cheaper.
-                    Wind-rich regions need less storage; nuclear-heavy regions need less new clean firm. The &ldquo;what
-                    you need depends on where you are&rdquo; finding has direct procurement implications.
+                    ERCOT&rsquo;s optimal portfolio differs from PJM&rsquo;s in kind, not just in price.
+                    Wind-rich regions need less storage; nuclear-heavy regions need less new clean firm capacity.
                 </p>
             </div>
             <div class="insight-card">
-                <div class="insight-num">INSIGHT 04</div>
+                <div class="insight-num">FINDING 04</div>
                 <h4>Existing Clean Assets Are Undervalued</h4>
                 <p>
-                    Nuclear uprates, existing hydro, and operating geothermal provide the cheapest clean firm capacity.
-                    But they&rsquo;re being consumed by data center PPAs and state mandates, creating scarcity for
-                    voluntary corporate buyers who need them for hourly matching.
+                    Nuclear uprates, existing hydro, and operating geothermal provide the cheapest clean firm
+                    capacity. Data center PPAs and state mandates are consuming this supply, creating scarcity
+                    for voluntary corporate buyers.
                 </p>
             </div>
             <div class="insight-card">
-                <div class="insight-num">INSIGHT 05</div>
+                <div class="insight-num">FINDING 05</div>
                 <h4>45Q Creates a Gas Plant Persistence Incentive</h4>
                 <p>
-                    The $85/ton 45Q credit for CCS makes gas+CCS plants economically incentivized to run at maximum
-                    capacity factor to maximize capture credits &mdash; regardless of grid need. This is a
-                    policy-designed perverse incentive that this model captures by treating CCS as baseload.
+                    The $85/ton 45Q credit makes CCS-equipped gas plants economically incentivized to maximize
+                    runtime for capture credits, regardless of grid need. This model captures the effect by
+                    treating CCS as baseload.
                 </p>
             </div>
             <div class="insight-card">
-                <div class="insight-num">INSIGHT 06</div>
-                <h4>EAC Scarcity Is Already Emerging in PJM and ISO-NE</h4>
+                <div class="insight-num">FINDING 06</div>
+                <h4>EAC Scarcity Is Already Emerging</h4>
                 <p>
-                    Before hourly matching mandates even take effect, REC prices in PJM and ISO-NE have reached historic
-                    highs. Modeling corporate participation at 10&ndash;50% penetration reveals severe EAC scarcity in
-                    these regions, with clean premiums of $20&ndash;55/MWh &mdash; costs that will be borne by buyers
-                    or passed to ratepayers.
+                    Before hourly matching mandates take effect, REC prices in PJM and ISO-NE have hit historic
+                    highs. Modeling corporate participation at 10&ndash;50% penetration reveals clean premiums
+                    of $20&ndash;55/MWh in these regions.
                 </p>
             </div>
         </div>
@@ -638,17 +369,14 @@
 
 <hr class="section-divider">
 
-<!-- SECTION 7: EXPLORE THE PROJECT -->
+<!-- SECTION 4: EXPLORE THE PROJECT -->
 <section class="story-section" id="sec-explore">
     <div class="story-content">
         <span class="story-badge">Explore</span>
         <h2>Dive Into the Analysis</h2>
         <p>
-            The dashboard maps the full journey from passive consumer to active participant. <strong>Supply Side</strong>
-            reveals the grid&rsquo;s metabolic reality &mdash; what generation exists and what must be built (Thesis I).
-            <strong>Demand Side</strong> shows how procurement frameworks determine whether buyers actively shape the
-            grid or passively consume it (Thesis II). And <strong>Economic Analysis</strong> quantifies the cost of
-            making clean energy the constant foundation, hour by hour (Thesis III).
+            The project includes interactive tools and detailed analysis pages covering three dimensions
+            of hourly clean energy procurement.
         </p>
     </div>
 </section>
@@ -692,7 +420,7 @@
 </div><!-- /content-wrap -->
 
 <!-- FOOTER -->
-<footer id="siteFooter" data-footer-note="The 8,760 Problem &mdash; 2025 Snapshot Model"></footer>
+<footer id="siteFooter" data-footer-note="The 8,760 Problem: 2025 Snapshot Model"></footer>
 
 <!-- ========== JAVASCRIPT ========== -->
 <script>
@@ -708,63 +436,6 @@
     }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
     sections.forEach(function(s) { observer.observe(s); });
 })();
-
-// ---- Animated stat counters ----
-(function() {
-    const counters = document.querySelectorAll('.stat-number[data-target]');
-    let animated = new Set();
-
-    function formatNum(n) {
-        if (n >= 1000) return n.toLocaleString();
-        return n.toString();
-    }
-
-    function animateCounter(el) {
-        const target = parseInt(el.getAttribute('data-target'), 10);
-        const duration = 1800;
-        const start = performance.now();
-        function step(now) {
-            const elapsed = now - start;
-            const progress = Math.min(elapsed / duration, 1);
-            // Ease-out cubic
-            const eased = 1 - Math.pow(1 - progress, 3);
-            const current = Math.round(eased * target);
-            el.textContent = formatNum(current);
-            if (progress < 1) {
-                requestAnimationFrame(step);
-            } else {
-                el.textContent = formatNum(target);
-            }
-        }
-        requestAnimationFrame(step);
-    }
-
-    const counterObserver = new IntersectionObserver(function(entries) {
-        entries.forEach(function(entry) {
-            if (entry.isIntersecting && !animated.has(entry.target)) {
-                animated.add(entry.target);
-                animateCounter(entry.target);
-            }
-        });
-    }, { threshold: 0.5 });
-
-    counters.forEach(function(c) { counterObserver.observe(c); });
-})();
-
-// ---- Thesis card visibility (triggers underline animation) ----
-(function() {
-    const cards = document.querySelectorAll('.thesis-card');
-    const observer = new IntersectionObserver(function(entries) {
-        entries.forEach(function(entry) {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
-            }
-        });
-    }, { threshold: 0.3 });
-    cards.forEach(function(c) { observer.observe(c); });
-})();
-
-// ---- GSAP Cinematic Scroll Background → now in cinematic-bg.js ----
 </script>
 <script src="js/cinematic-bg.js"></script>
 
