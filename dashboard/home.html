@@ -4,10 +4,14 @@
     <meta charset="UTF-8">
     <meta name="robots" content="noindex, nofollow">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>What We Choose to Count — Hourly CFE Optimizer</title>
+    <title>What We Choose to Count — The 8,760 Problem</title>
+    <meta name="description" content="How corporate carbon accounting reshapes the grid. Hourly vs. consequential clean energy procurement across 7 US ISOs, 540+ market scenarios, and 7 IPP fleet assessments.">
+    <meta property="og:title" content="What We Choose to Count — The 8,760 Problem">
+    <meta property="og:description" content="Corporate Scope 2 accounting choices shape IPP investment and determine whether grids lock into gas or transition to firm clean power.">
+    <meta property="og:type" content="article">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles/shared.css">
     <link rel="stylesheet" href="styles/article.css">
     <link rel="stylesheet" href="styles/cinematic.css">
@@ -19,6 +23,12 @@
     <script src="js/scroll-observer.js"></script>
     <script src="js/shared-footer.js"></script>
     <style>
+        /* ===== Page Title — DM Serif Display override ===== */
+        .header h1 {
+            font-family: 'DM Serif Display', serif !important;
+            font-weight: 400 !important;
+        }
+
         /* ===== Hero Stats Row ===== */
         .hero-stats-row {
             display: grid;
@@ -743,6 +753,174 @@
             .new-firm-hex { transition: none !important; }
             .critical-mass-marker { animation: none !important; }
             .fleet-circle.gas-pulse { animation: none !important; }
+        }
+
+        /* ===== Section 10: Synthesis Essay ===== */
+        .synthesis-section {
+            position: relative;
+            padding: var(--space-3xl) 0;
+        }
+        .synthesis-section::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, transparent, rgba(14,165,233,0.03) 30%, rgba(14,165,233,0.03) 70%, transparent);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .synthesis-inner {
+            position: relative;
+            z-index: 1;
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 0 var(--pad-page);
+        }
+        .synthesis-heading {
+            font-family: 'DM Serif Display', serif;
+            font-size: clamp(32px, 4.5vw, 48px);
+            font-weight: 400;
+            color: var(--navy, #0B1120);
+            margin-bottom: var(--space-xl);
+            line-height: 1.2;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+        .synthesis-heading.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .synthesis-body {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s ease-out 0.2s, transform 0.8s ease-out 0.2s;
+        }
+        .synthesis-body.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .synthesis-body p {
+            font-family: 'IBM Plex Sans', var(--font-body, sans-serif);
+            font-size: 18px;
+            line-height: 1.78;
+            color: var(--text-primary, #1e293b);
+            margin-bottom: 24px;
+        }
+        .synthesis-body p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* ===== Section 11: Navigation Grid ===== */
+        .nav-grid-section {
+            padding: var(--space-3xl) var(--pad-page);
+        }
+        .nav-grid-header {
+            text-align: center;
+            margin-bottom: var(--space-xl);
+        }
+        .nav-grid-header h2 {
+            font-family: var(--font-heading);
+            font-size: clamp(24px, 3.5vw, 36px);
+            font-weight: 800;
+            color: var(--navy, #0B1120);
+            margin-bottom: var(--space-xs);
+        }
+        .nav-grid-header p {
+            font-size: 1rem;
+            color: var(--text-secondary, #475569);
+        }
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--space-lg);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .nav-card {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 24px 20px;
+            background: rgba(255,255,255,0.7);
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 12px;
+            text-decoration: none;
+            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+            opacity: 0;
+            transform: translateY(16px);
+        }
+        .nav-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .nav-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px -8px rgba(0,0,0,0.08);
+        }
+        .nav-card:nth-child(1) { transition-delay: 0ms; }
+        .nav-card:nth-child(2) { transition-delay: 100ms; }
+        .nav-card:nth-child(3) { transition-delay: 200ms; }
+        .nav-card:nth-child(4) { transition-delay: 300ms; }
+        .nav-card:nth-child(5) { transition-delay: 400ms; }
+        .nav-card:nth-child(6) { transition-delay: 500ms; }
+        .nav-card:nth-child(7) { transition-delay: 600ms; }
+        .nav-card:nth-child(8) { transition-delay: 700ms; }
+        .nav-card:hover.accent-2c { border-color: #0EA5E9; }
+        .nav-card:hover.accent-violet { border-color: #6366F1; }
+        .nav-card:hover.accent-1b { border-color: #6366F1; }
+        .nav-card:hover.accent-blue { border-color: #3B82F6; }
+        .nav-card:hover.accent-rose { border-color: #EF4444; }
+        .nav-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .nav-dot-2c { background: #0EA5E9; }
+        .nav-dot-violet { background: #6366F1; }
+        .nav-dot-1b { background: #6366F1; }
+        .nav-dot-blue { background: #3B82F6; }
+        .nav-dot-rose { background: #EF4444; }
+        .nav-card-title {
+            font-family: var(--font-heading);
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--navy, #0B1120);
+            line-height: 1.3;
+        }
+        .nav-card-desc {
+            font-size: 13px;
+            color: var(--text-secondary, #475569);
+            line-height: 1.5;
+            flex: 1;
+        }
+        .nav-card-arrow {
+            font-size: 16px;
+            color: #0EA5E9;
+            font-weight: 600;
+            align-self: flex-end;
+            transition: transform 0.2s ease;
+        }
+        .nav-card:hover .nav-card-arrow {
+            transform: translateX(4px);
+        }
+
+        @media (max-width: 1024px) {
+            .nav-grid { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 600px) {
+            .nav-grid { grid-template-columns: 1fr; max-width: 480px; }
+        }
+
+        /* Reduced motion for synthesis + nav grid */
+        @media (prefers-reduced-motion: reduce) {
+            .synthesis-heading,
+            .synthesis-body,
+            .nav-card {
+                opacity: 1 !important;
+                transform: none !important;
+                transition: none !important;
+            }
         }
     </style>
 </head>
@@ -1588,6 +1766,90 @@
         </p>
     </section>
 
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 10: Rowing in the Same Direction — Synthesis                  -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <section class="synthesis-section" id="synthesisSection">
+        <div class="synthesis-inner">
+            <h2 class="synthesis-heading" id="synthesisHeading">Rowing in the Same Direction</h2>
+            <div class="synthesis-body" id="synthesisBody">
+                <p>Single-buyer PPAs for VRE or unbundled RECs were the right tools for the first phase of the energy transition: displacing coal, building the renewable supply chain, proving that clean energy could compete on cost. That phase succeeded. Most of the cheap coal displacement is done or underway.</p>
+
+                <p>The next phase is qualitatively different. Getting grids from 60&ndash;70% clean to net-zero means solving temporal dependencies &mdash; nights, winter evenings, multi-day low-wind events &mdash; and spatial dependencies &mdash; each grid needs its own portfolio of firm clean power and storage tuned to its fossil fleet, weather patterns, and demand profile. These are not problems that cross-regional VRE deployment can solve. They are not problems that annual accounting can even see.</p>
+
+                <p>Consequential accounting is individually rational. Each buyer directing their marginal dollar to the cheapest ton of CO&#8322; displacement is defensible in isolation. But in aggregate, consequential concentrates capital in grids with the cheapest abatement &mdash; coal-heavy MISO and SPP &mdash; while gas-dependent grids like NEISO, NYISO, and CAISO receive less. It creates no structural demand signal for firm clean power. It leaves gas on the grid. And the owners of that gas &mdash; the IPPs who built it because the demand signal said &ldquo;VRE plus backup&rdquo; &mdash; will rationally fight to keep it running.</p>
+
+                <p>Hourly matching is more expensive today. That is a real cost, not a footnote. But it builds coherence by construction. When procurement must match load hour-by-hour within the buyer&rsquo;s grid, investment flows to the resources that specific grid actually needs. It creates demand signals for firm clean power and storage. It pulls forward the learning curves the entire grid needs. It aligns individual procurement with collective grid transformation. And it positions early adopters on the right side of a policy trajectory &mdash; GHG Protocol, SBTi, state mandates, EU rules &mdash; that is converging on hourly matching as the standard.</p>
+
+                <p>The question isn&rsquo;t which strategy is cheaper today. It&rsquo;s which strategy builds the grid we need by 2040.</p>
+
+                <p>Across this analysis &mdash; 8,760 hours at full resolution, 7 ISO/RTOs, 10 procurement strategies, 540+ scenarios per IPP, 7 fleet assessments &mdash; the finding is directionally consistent. Hourly matching drives deeper gas displacement, reaches learning-curve critical mass faster, creates revenue certainty for firm clean investment, and aligns with the regulatory trajectory. Consequential netting is cheaper per MWh but leaves more gas on the grid, concentrates investment geographically, and does not create structural demand signals for the technologies the next phase requires.</p>
+
+                <p>Deep grid decarbonization requires rowing in the same direction &mdash; a shared understanding of where each grid can and should end up, and procurement signals coherent with that destination. The era of each buyer picking off the cheapest ton from anywhere on the map was sufficient when the challenge was displacing coal. It is not sufficient for the era of firm clean power, long-duration storage, and hourly temporal matching. That era is already here. The GHG Protocol revision will determine whether corporate accounting catches up to the physics &mdash; or stays a decade behind it.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 11: Explore the Analysis — Navigation Grid                    -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <section class="nav-grid-section" id="navGridSection">
+        <div class="nav-grid-header fade-in">
+            <h2>Explore the Analysis</h2>
+            <p>Each page explores a different dimension of the question.</p>
+        </div>
+        <div class="nav-grid" id="navGrid">
+            <a href="cfe_strategy_assessment.html" class="nav-card accent-2c">
+                <div class="nav-dot nav-dot-2c"></div>
+                <div class="nav-card-title">The Full Comparison</div>
+                <div class="nav-card-desc">1B vs. 2C across every metric and participation level.</div>
+                <div class="nav-card-arrow">&rarr;</div>
+            </a>
+            <a href="consequential_accounting.html" class="nav-card accent-violet">
+                <div class="nav-dot nav-dot-violet"></div>
+                <div class="nav-card-title">10 Strategies</div>
+                <div class="nav-card-desc">Three accounting families and the tradeoffs.</div>
+                <div class="nav-card-arrow">&rarr;</div>
+            </a>
+            <a href="procurement_deployment.html" class="nav-card accent-1b">
+                <div class="nav-dot nav-dot-1b"></div>
+                <div class="nav-card-title">Where Capital Flows</div>
+                <div class="nav-card-desc">How each strategy reshapes each ISO&rsquo;s mix.</div>
+                <div class="nav-card-arrow">&rarr;</div>
+            </a>
+            <a href="strategy_deep_dive.html" class="nav-card accent-blue">
+                <div class="nav-dot nav-dot-blue"></div>
+                <div class="nav-card-title">Strategy Deep Dive</div>
+                <div class="nav-card-desc">Gas displacement, learning curves, decarb matrices.</div>
+                <div class="nav-card-arrow">&rarr;</div>
+            </a>
+            <a href="gen_regional_pathways.html" class="nav-card accent-2c">
+                <div class="nav-dot nav-dot-2c"></div>
+                <div class="nav-card-title">Regional Pathways</div>
+                <div class="nav-card-desc">Where the market stops and the gap to net-zero.</div>
+                <div class="nav-card-arrow">&rarr;</div>
+            </a>
+            <a href="gen_policy_conditions.html" class="nav-card accent-rose">
+                <div class="nav-dot nav-dot-rose"></div>
+                <div class="nav-card-title">Policy Landscape</div>
+                <div class="nav-card-desc">IRA, state mandates, corporate demand pull.</div>
+                <div class="nav-card-arrow">&rarr;</div>
+            </a>
+            <a href="ipp_climate_transition.html" class="nav-card accent-1b">
+                <div class="nav-dot nav-dot-1b"></div>
+                <div class="nav-card-title">IPP Transition</div>
+                <div class="nav-card-desc">540 scenarios across 7 generators.</div>
+                <div class="nav-card-arrow">&rarr;</div>
+            </a>
+            <a href="optimizer_methodology.html" class="nav-card accent-violet">
+                <div class="nav-dot nav-dot-violet"></div>
+                <div class="nav-card-title">The Model</div>
+                <div class="nav-card-desc">8,760-hour resolution. Full methodology.</div>
+                <div class="nav-card-arrow">&rarr;</div>
+            </a>
+        </div>
+    </section>
+
     <footer id="siteFooter"></footer>
 
     <script src="js/cinematic-bg.js"></script>
@@ -2091,6 +2353,43 @@
                 });
             }, { threshold: 0.25 });
             observer.observe(container);
+        })();
+
+        // ===== MODULE 10: Synthesis Section Fade-In =====
+        (function initSynthesis() {
+            var heading = document.getElementById('synthesisHeading');
+            var body = document.getElementById('synthesisBody');
+            if (!heading || !body) return;
+
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        heading.classList.add('visible');
+                        body.classList.add('visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.2, rootMargin: '0px 0px -60px 0px' });
+            observer.observe(heading);
+        })();
+
+        // ===== MODULE 11: Navigation Grid Stagger =====
+        (function initNavGrid() {
+            var grid = document.getElementById('navGrid');
+            if (!grid) return;
+
+            var cards = grid.querySelectorAll('.nav-card');
+            var observer = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        cards.forEach(function(card) {
+                            card.classList.add('visible');
+                        });
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.2, rootMargin: '0px 0px -60px 0px' });
+            observer.observe(grid);
         })();
 
     })();
