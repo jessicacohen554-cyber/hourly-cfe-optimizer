@@ -990,17 +990,41 @@ def compute_ccs_retrofit_breakeven(iso, fuel_level='Medium', conditions=None):
 def load_step3_data():
     """Load step2.2 cost optimization results for all ISOs.
 
+    Searches for parquet files in priority order:
+      1. step_2_2a_CO_{ISO}.parquet  (current naming convention)
+      2. step3_co_{ISO}.parquet       (legacy naming)
+
+    Searches in directories:
+      1. {MODULE_ROOT}/data/step2.2-cost/     (local market-simulator data)
+      2. {MODULE_ROOT}/../data/step2.2-cost/  (main pipeline data — dev fallback)
+
     Returns {iso: {threshold_float: result_dict}}.
     """
-    step3_dir = os.path.join(MODULE_ROOT, 'data', 'step2.2-cost')
+    search_dirs = [
+        os.path.join(MODULE_ROOT, 'data', 'step2.2-cost'),
+        os.path.join(MODULE_ROOT, '..', 'data', 'step2.2-cost'),
+    ]
 
     all_data = {}
     for iso in ISOS:
-        path = os.path.join(step3_dir, f'step3_co_{iso}.parquet')
-        if not os.path.exists(path):
-            print(f"  WARNING: No step3 parquet for {iso}, skipping")
+        path = None
+        # Search for parquet files in priority order across directories
+        for d in search_dirs:
+            if not os.path.isdir(d):
+                continue
+            for pattern in [f'step_2_2a_CO_{iso}.parquet', f'step3_co_{iso}.parquet']:
+                candidate = os.path.join(d, pattern)
+                if os.path.exists(candidate):
+                    path = candidate
+                    break
+            if path:
+                break
+
+        if path is None:
+            print(f"  WARNING: No cost parquet for {iso}, skipping")
             continue
 
+        print(f"  Loaded {os.path.basename(path)} for {iso}")
         df = pd.read_parquet(path)
         iso_data = {}
         for t_val, grp in df.groupby('threshold'):
