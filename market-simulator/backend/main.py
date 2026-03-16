@@ -131,7 +131,7 @@ if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 # Mount brand assets
-brand_assets_dir = MARKET_SIM_ROOT / "brand-assets"
+brand_assets_dir = MARKET_SIM_ROOT / "frontend" / "brand-assets"
 if brand_assets_dir.exists():
     app.mount("/brand-assets", StaticFiles(directory=str(brand_assets_dir)), name="brand-assets")
 
