@@ -1544,16 +1544,18 @@
             SPP: { likelihood: 'Low', reason: 'Wind-rich region, limited gas fleet presence', newMW: 0 }
         };
 
+        // Compute total new gas MW and annual CO2 (used by chart and narrative)
+        const totalNewGasMW = Object.values(gasISOs).reduce((s, mw) => {
+            const iso = Object.keys(gasISOs).find(k => gasISOs[k] === mw);
+            return s + (isoDrivers[iso]?.newMW || 0);
+        }, 0);
+        // New gas adds ~0.4 tCO2/MWh * CF ~50% * 8760h * newMW
+        const newGasAnnualCO2 = totalNewGasMW * 0.4 * 0.5 * 8.76 / 1000; // Mt
+
         // Gas impact chart: emissions trajectory with and without new gas
         const gasImpactCtx = document.getElementById('gasImpactChart');
         if (gasImpactCtx) {
             const p50Emissions = fb.emissions?.p50 || [co.co2_2024_mt, 30, 25, 20, 15, 10];
-            const totalNewGasMW = Object.values(gasISOs).reduce((s, mw) => {
-                const iso = Object.keys(gasISOs).find(k => gasISOs[k] === mw);
-                return s + (isoDrivers[iso]?.newMW || 0);
-            }, 0);
-            // New gas adds ~0.4 tCO2/MWh * CF ~50% * 8760h * newMW
-            const newGasAnnualCO2 = totalNewGasMW * 0.4 * 0.5 * 8.76 / 1000; // Mt
 
             const withGas = p50Emissions.map((v, i) => {
                 if (i === 0) return v;
