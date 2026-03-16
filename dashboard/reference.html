@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 8,760 Problem — Reference Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/reference.css">
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
+    <script src="js/shared-footer.js"></script>
+<style>
+body { background: var(--bg-page-white); }
+
+.ref-intro {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 56px 24px 32px;
+    text-align: center;
+}
+.ref-intro h2 {
+    font-family: var(--font-heading);
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 16px;
+    letter-spacing: -0.3px;
+}
+.ref-intro p {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    line-height: 1.75;
+    max-width: 620px;
+    margin: 0 auto;
+}
+
+/* ===== Card Grid ===== */
+.ref-grid {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 16px 24px 80px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
+}
+.ref-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 28px;
+    transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    text-decoration: none;
+    display: block;
+    opacity: 0;
+    transform: translateY(24px);
+}
+.ref-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.7s cubic-bezier(0.4,0,0.2,1),
+                transform 0.7s cubic-bezier(0.4,0,0.2,1),
+                border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.ref-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(14,165,233,0.5);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+}
+.ref-card-tag {
+    display: inline-block;
+    background: rgba(14,165,233,0.15);
+    color: var(--hydro);
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-family: var(--font-heading);
+}
+.ref-card h3 {
+    color: var(--navy);
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    line-height: 1.35;
+}
+.ref-card p {
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    line-height: 1.65;
+    margin: 0;
+}
+.ref-card-arrow {
+    color: var(--hydro);
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin-top: 18px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-heading);
+    letter-spacing: 0.03em;
+    transition: gap 0.2s ease;
+}
+.ref-card:hover .ref-card-arrow { gap: 10px; }
+
+/* ===== Empty state ===== */
+.ref-coming-soon {
+    text-align: center;
+    padding: 48px 24px;
+    color: rgba(0,0,0,0.35);
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+/* Footer and bottom-banner use shared.css .page-footer, .footer-links, .bottom-banner */
+
+@media (max-width: 768px) {
+    .ref-intro { padding: 40px 20px 24px; }
+    .ref-intro h2 { font-size: 1.5rem; }
+    .ref-grid { padding: 12px 16px 64px; grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+
+<header class="header">
+    <h1>Reference Library</h1>
+    <p class="subtitle">Concepts, mechanics, and deep dives into electricity market design</p>
+    <div class="header-accent"></div>
+</header>
+
+<section class="ref-intro section-light">
+    <h2>Tools, Deep Dives &amp; Market Mechanics</h2>
+    <p>Interactive tools, technical references, and curated explorations of electricity market design, grid physics, and decarbonization economics.</p>
+</section>
+
+<!-- ===== Core Tools ===== -->
+<section class="ref-grid section-light">
+    <a href="dashboard.html" class="ref-card">
+        <span class="ref-card-tag">Interactive Tool</span>
+        <h3>The Grid (Optimizer)</h3>
+        <p>Interactive cost optimizer with all sensitivity toggles. Explore resource mixes, costs, and tradeoffs across 7 ISOs and 5,832 scenarios per region.</p>
+        <div class="ref-card-arrow">Launch <span>&rarr;</span></div>
+    </a>
+
+    <a href="research_paper.html" class="ref-card">
+        <span class="ref-card-tag">Academic</span>
+        <h3>Literature Review</h3>
+        <p>Academic foundations: hourly accounting, cost benchmarks, firm power, storage economics, curtailment, EAC scarcity, and relationship to capacity expansion models.</p>
+        <div class="ref-card-arrow">Read <span>&rarr;</span></div>
+    </a>
+
+    <a href="policy_context.html" class="ref-card">
+        <span class="ref-card-tag">Policy</span>
+        <h3>Policy Context</h3>
+        <p>How IRA tax credits, RPS mandates, Scope 2 revisions, SBTi pathways, and capacity market designs shape the economics of clean energy procurement.</p>
+        <div class="ref-card-arrow">Read <span>&rarr;</span></div>
+    </a>
+
+</section>
+
+<!-- ===== Novel Analysis ===== -->
+<div class="gradient-transition"></div>
+<section style="max-width:1100px;margin:0 auto;padding:0 24px;">
+    <h2 style="font-family:var(--font-heading);font-size:1.4rem;font-weight:700;color:var(--navy);margin-bottom:8px;">Novel Analysis</h2>
+    <p style="color:var(--text-secondary);font-size:0.92rem;margin-bottom:24px;">Cross-cutting analyses that extract new insights from the optimizer&rsquo;s existing results.</p>
+</section>
+<section class="ref-grid section-light" style="padding-top:0;">
+    <a href="ref-tipping-points.html" class="ref-card">
+        <span class="ref-card-tag">Resource Economics</span>
+        <h3>Technology Tipping Points</h3>
+        <p>At what cost thresholds does the optimal clean energy mix undergo phase transitions? Small changes in technology costs can flip the dominant resource across 5,832 scenarios.</p>
+        <div class="ref-card-arrow">Read <span>&rarr;</span></div>
+    </a>
+
+    <a href="ref-flexibility-value.html" class="ref-card">
+        <span class="ref-card-tag">Storage Economics</span>
+        <h3>The System Value of Energy Storage</h3>
+        <p>How much does each storage technology reduce total system cost? Not LCOE or LCOS &mdash; the portfolio-level value of flexibility, measured as cost savings from optimization.</p>
+        <div class="ref-card-arrow">Read <span>&rarr;</span></div>
+    </a>
+
+    <a href="ref-datacenter-siting.html" class="ref-card">
+        <span class="ref-card-tag">Corporate Strategy</span>
+        <h3>Where Should You Build Your Data Center?</h3>
+        <p>Physics-based comparison of hourly clean energy costs across 7 US ISOs. For hyperscalers pursuing 24/7 CFE, location choice means a 2&ndash;3x cost difference.</p>
+        <div class="ref-card-arrow">Read <span>&rarr;</span></div>
+    </a>
+
+    <a href="ref-carbon-credit-pricing.html" class="ref-card">
+        <span class="ref-card-tag">Carbon Markets</span>
+        <h3>What Should a Carbon Credit Actually Cost?</h3>
+        <p>Physics-grounded marginal abatement costs as fair-value carbon credit prices. Most voluntary credits are 5&ndash;15x below the actual cost of hourly-matched emission displacement.</p>
+        <div class="ref-card-arrow">Read <span>&rarr;</span></div>
+    </a>
+
+    <a href="scenario_comparison.html" class="ref-card">
+        <span class="ref-card-tag">Procurement</span>
+        <h3>Scenario Comparison</h3>
+        <p>Consequential vs. hourly matching strategies compared across all 7 ISOs. The Learning Curve Dividend &mdash; how Wright&rsquo;s Law cost declines reshape the optimal procurement path from FOAK to NOAK.</p>
+        <div class="ref-card-arrow">Explore <span>&rarr;</span></div>
+    </a>
+
+    <a href="hourly_comparison.html" class="ref-card">
+        <span class="ref-card-tag">Procurement</span>
+        <h3>Hourly vs. Annual Matching Comparison</h3>
+        <p>Side-by-side analysis of hourly CFE matching versus annual REC-based approaches. Quantifies the cost premium and environmental integrity gap between strategies.</p>
+        <div class="ref-card-arrow">Read <span>&rarr;</span></div>
+    </a>
+
+    <a href="ref-grid-resilience.html" class="ref-card">
+        <span class="ref-card-tag">Grid Physics</span>
+        <h3>Grid Resilience Stress Testing</h3>
+        <p>How do optimized clean energy portfolios perform under worst-case weather? Synthetic stress tests reveal which regions and thresholds are most vulnerable to heat waves, polar vortices, and wind droughts.</p>
+        <div class="ref-card-arrow">Explore <span>&rarr;</span></div>
+    </a>
+
+    <a href="ref-curtailment-economics.html" class="ref-card">
+        <span class="ref-card-tag">Resource Economics</span>
+        <h3>The Hidden Value of Curtailed Energy</h3>
+        <p>High-renewable grids throw away massive amounts of clean energy. What if that surplus powered green hydrogen, desalination, or industrial heat? Quantifying the billion-dollar curtailment opportunity.</p>
+        <div class="ref-card-arrow">Explore <span>&rarr;</span></div>
+    </a>
+
+    <a href="ref-inter-iso-trading.html" class="ref-card">
+        <span class="ref-card-tag">Market Design</span>
+        <h3>The Case for Cross-Regional Clean Energy Trading</h3>
+        <p>CAISO has midday solar surplus while PJM needs evening power. Cross-regional hourly netting could cut procurement costs 10&ndash;20% &mdash; if transmission economics allow it.</p>
+        <div class="ref-card-arrow">Explore <span>&rarr;</span></div>
+    </a>
+</section>
+
+<!-- ===== Market Mechanics Q&A ===== -->
+<div class="gradient-transition"></div>
+<section style="max-width:1100px;margin:0 auto;padding:0 24px;">
+    <h2 style="font-family:var(--font-heading);font-size:1.4rem;font-weight:700;color:var(--navy);margin-bottom:8px;">Market Mechanics</h2>
+    <p style="color:var(--text-secondary);font-size:0.92rem;margin-bottom:24px;">Curated Q&amp;A entries exploring how electricity markets actually work.</p>
+</section>
+<section class="ref-grid section-light" style="padding-top:0;">
+    <a href="ref-lmp-ccs-nuclear.html" class="ref-card">
+        <span class="ref-card-tag">Market Design</span>
+        <h3>How Would Dispatchable CCS or Nuclear Change Wholesale Prices?</h3>
+        <p>If CCS-equipped gas plants or advanced nuclear could flex their output, how would that reshape the merit order and LMP formation across U.S. wholesale markets?</p>
+        <div class="ref-card-arrow">Read <span>&rarr;</span></div>
+    </a>
+
+    <a href="ref-market-design-low-carbon.html" class="ref-card">
+        <span class="ref-card-tag">Market Design</span>
+        <h3>If Nobody Burns Fuel, How Do You Build a Market?</h3>
+        <p>Current wholesale markets price at marginal fuel cost. When the grid runs on nuclear, wind, and solar with near-zero fuel costs, the entire capital recovery mechanism breaks.</p>
+        <div class="ref-card-arrow">Read <span>&rarr;</span></div>
+    </a>
+
+    <a href="ref-lcoe-vs-capacity-cost.html" class="ref-card">
+        <span class="ref-card-tag">Resource Economics</span>
+        <h3>Energy Economics Metric Dictionary</h3>
+        <p>LCOE, $/kW capacity cost, LCOS, capacity factor, LMP, MAC, and more &mdash; what each metric measures, how they relate, and when to use which one.</p>
+        <div class="ref-card-arrow">Read <span>&rarr;</span></div>
+    </a>
+
+    <a href="ref-ipp-vs-utility.html" class="ref-card">
+        <span class="ref-card-tag">Market Structure</span>
+        <h3>Who Generates America&rsquo;s Electricity? IPP vs. Utility Breakdown by ISO</h3>
+        <p>State-by-state, company-by-company breakdown of independent power producer vs. vertically integrated utility generation across all seven ISOs.</p>
+        <div class="ref-card-arrow">Read <span>&rarr;</span></div>
+    </a>
+
+    <a href="ref-nuclear-retirement.html" class="ref-card">
+        <span class="ref-card-tag">Nuclear Risk</span>
+        <h3>Nuclear Retirement Risk Under the Clean Energy Transition</h3>
+        <p>Three models bracket merchant nuclear risk: a probability fan from current market dynamics, a net-zero emissions ceiling with feedback loops, and forced clean penetration via CapEx optimization. Cross-model agreement reveals which conclusions are robust vs. assumption-dependent.</p>
+        <div class="ref-card-arrow">Read <span>&rarr;</span></div>
+    </a>
+
+    <!-- VRE Investment Thesis removed from nav — standalone HTML/PDF only -->
+</section>
+
+<div class="gradient-transition"></div>
+
+
+<footer id="siteFooter" data-footer-note="The 8,760 Problem &mdash; Reference Library"></footer>
+
+<script>
+// Fade-in cards on scroll
+var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e, i) {
+        if (e.isIntersecting) {
+            setTimeout(function() { e.target.classList.add('visible'); }, i * 100);
+            obs.unobserve(e.target);
+        }
+    });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.ref-card').forEach(function(el) { obs.observe(el); });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPP Climate Transition Analysis</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/scrollytell.css">
+    <link rel="stylesheet" href="styles/ipp-transition.css">
+    <link rel="stylesheet" href="styles/cinematic.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="js/nav.js"></script>
+    <script src="js/chart-colors.js"></script>
+    <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
+    <script src="js/shared-footer.js"></script>
+</head>
+<body>
+    <nav id="topNav"></nav>
+
+    <div class="header" id="pageHeader">
+        <h1>IPP Climate Transition Analysis</h1>
+        <div class="subtitle">Fleet risk, decarbonization pathways, and strategic positioning under uncertainty</div>
+        <div class="header-accent"></div>
+    </div>
+
+    <!-- Hero Section -->
+    <div class="hub-hero">
+        <div class="hub-hero-inner">
+            <h2>7 Independent Power Producers. 540 Scenarios. One Question.</h2>
+            <p>How does each fleet navigate the energy transition — and where should they invest to remain competitive under any climate outcome? Now modeled with announced coal retirements, IRA policy overlay, regulatory feedback, and transmission constraints.</p>
+            <div class="hub-hero-stats">
+                <div class="hub-hero-stat">
+                    <div class="val" id="heroCapacity">—</div>
+                    <div class="lbl">TWh Annual Generation</div>
+                </div>
+                <div class="hub-hero-stat">
+                    <div class="val" id="heroEmissions">—</div>
+                    <div class="lbl">Mt CO₂ Emissions</div>
+                </div>
+                <div class="hub-hero-stat">
+                    <div class="val" id="heroScenarios">—</div>
+                    <div class="lbl">Scenarios Modeled</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Insights -->
+    <div class="content-section scroll-reveal">
+        <h2 class="section-title">Key Findings</h2>
+        <div id="keyInsights"></div>
+    </div>
+
+    <!-- Company Cards -->
+    <div class="content-section">
+        <h2 class="section-title">Company Deep Dives</h2>
+        <p class="section-subtitle">Click any company for a comprehensive climate transition assessment with qualified targets, investment case, and strategic recommendations.</p>
+        <div class="company-cards-grid" id="companyCardsGrid"></div>
+    </div>
+
+    <!-- Decarbonization Cost Comparison -->
+    <div class="content-section">
+        <h2 class="section-title">Fleet Decarbonization Cost Comparison</h2>
+        <p class="section-subtitle">Marginal abatement cost (MAC) to fully decarbonize each fleet, weighted by regional grid costs and fossil fuel mix. Costs reflect the cumulative $/tCO₂ to reach 99.99% clean energy in each ISO where the company operates.</p>
+
+        <div class="card scroll-reveal" style="padding: var(--space-xl); margin-bottom: var(--space-xl)">
+            <h3 style="font-size: 1.1rem; color: var(--navy); margin-bottom: var(--space-md)">Weighted Average MAC by Fleet ($/tCO₂)</h3>
+            <div class="chart-container-lg"><canvas id="macComparisonChart"></canvas></div>
+        </div>
+
+        <div class="grid-2col scroll-reveal" style="margin-bottom: var(--space-xl)">
+            <div class="card" style="padding: var(--space-lg)">
+                <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Total Annual Abatement Cost ($B/yr)</h3>
+                <div class="chart-container-lg"><canvas id="totalAbatementCostChart"></canvas></div>
+            </div>
+            <div class="card" style="padding: var(--space-lg)">
+                <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Cost per MWh of Fossil Generation Replaced</h3>
+                <div class="chart-container-lg"><canvas id="costPerMwhChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="card scroll-reveal" style="padding: var(--space-xl); margin-bottom: var(--space-xl)">
+            <h3 style="font-size: 1.1rem; color: var(--navy); margin-bottom: var(--space-md)">Fleet Decarbonization Summary</h3>
+            <div id="macSummaryTable"></div>
+        </div>
+
+        <div id="macInsightBox"></div>
+    </div>
+
+    <!-- Interactive Tools -->
+    <div class="content-section">
+    </div>
+
+    <!-- Cross-Company Analysis -->
+    <div class="content-section panel-navy">
+        <h2 class="section-title">Cross-Company Comparative Analysis</h2>
+
+        <div class="card scroll-reveal" style="padding: var(--space-xl); margin-bottom: var(--space-xl)">
+            <h3 style="font-size: 1.1rem; color: var(--navy); margin-bottom: var(--space-md)">Emissions Trajectories — All Companies (P50 with P10/P90 Bands)</h3>
+            <div class="chart-container-lg"><canvas id="emissionsComparisonChart"></canvas></div>
+        </div>
+
+        <div class="grid-2col scroll-reveal" style="margin-bottom: var(--space-xl)">
+            <div class="card" style="padding: var(--space-lg)">
+                <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">2050 Fleet Profit Margin Growth vs 2023</h3>
+                <div class="chart-container-lg"><canvas id="profitResilienceChart"></canvas></div>
+            </div>
+            <div class="card" style="padding: var(--space-lg)">
+                <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Fleet Composition Comparison</h3>
+                <div class="chart-container-lg"><canvas id="fleetCompositionChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="card scroll-reveal" style="padding: var(--space-xl); margin-bottom: var(--space-xl)">
+            <h3 style="font-size: 1.1rem; color: var(--navy); margin-bottom: var(--space-sm)">Qualified Target Trajectories — Market-Driven vs. High PPA Depth</h3>
+            <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: var(--space-md)">
+                Solid lines show each IPP's P50 emission reduction trajectory under market-driven conditions. Dashed lines show the accelerated pathway achievable with high PPA market depth. SBTi Power v2 and EPRI AT benchmarks provide 1.5°C context.
+            </p>
+            <div class="chart-container-lg"><canvas id="trajectoryPpaChart"></canvas></div>
+        </div>
+
+        <div class="card scroll-reveal" style="padding: var(--space-xl)">
+            <h3 style="font-size: 1.1rem; color: var(--navy); margin-bottom: var(--space-md)">Qualified Emission Reduction Targets</h3>
+            <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: var(--space-md)">
+                Based on P50 market-driven trajectory. 1.5°C gap shows remaining abatement requiring enabling policy conditions.
+            </p>
+            <div id="targetsSummaryTable"></div>
+        </div>
+    </div>
+
+    <footer id="siteFooter" data-footer-note="&copy; 2026 Hourly CFE Optimizer"></footer>
+
+    <!-- Data -->
+    <script src="js/ipp-smartargets-data.js"></script>
+    <script src="js/ipp-transition-hub.js"></script>
+<script src="js/cinematic-bg.js"></script>
+</body>
+</html>
