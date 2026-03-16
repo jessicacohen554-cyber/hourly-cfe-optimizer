@@ -25,6 +25,8 @@ import numpy as np
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
 
+from pipeline_config import MUST_RUN_PCT
+
 from dispatch_utils import (
     H, ISOS, RESOURCE_TYPES,
     GRID_MIX_SHARES, BASE_DEMAND_TWH,
@@ -441,6 +443,11 @@ class PriceModel:
         self.rt_sensitivity_factor = 1.0  # scale for RT volatility
         self.scarcity_threshold = 0.05    # reserves/demand ratio triggering scarcity
 
+        # Unit commitment: must-run depression strength
+        # When residual demand < total must-run MW, prices are depressed
+        # because must-run units (coal min-gen) bid below cost to avoid cycling
+        self.must_run_depression = 0.30  # default; ISO subclasses override
+
         # Demand-quantile pricing parameters
         # High-demand adder: congestion + gas tightness on highest-demand hours
         self.dq_high_percentile = 80    # demand percentile above which adder applies
@@ -555,6 +562,7 @@ class PJMPriceModel(PriceModel):
         self.surplus_decay = 0.015
         self.scarcity_threshold = 0.03  # PJM has large reserves; scarcity is rare
         self.coal_min_gen_fraction = 0.4
+        self.must_run_depression = 0.35  # PJM: 29% coal + large nuclear → strong must-run effect
 
         # PJM demand elasticity: RPM DR programs (Economic, Emergency, Pre-Emergency)
         # PJM had ~9.5 GW DR resources in 2024 (IMM SOM) — largest pool of any ISO
@@ -600,6 +608,7 @@ class ERCOTPriceModel(PriceModel):
         self.voll = 5000.0
         self.ordc_knee_mw = 3000.0  # reserves below this trigger exponential ORDC
         self.scarcity_threshold = 0.02   # v11: 0.05→0.02, ERCOT 2024 solar+storage reduced scarcity
+        self.must_run_depression = 0.25  # ERCOT: 22% coal, lower must-run impact
 
         # ERCOT demand elasticity: 4CP program + load shed contracts
         # Higher threshold ($300) because ORDC already captures scarcity efficiently
@@ -645,6 +654,7 @@ class CAISOPriceModel(PriceModel):
         self.floor_price = -60.0
         self.surplus_decay = 0.022        # v11: 0.030→0.022, reduce neg hrs 889→~600
         self.scarcity_threshold = 0.03    # v11: 0.05→0.03
+        self.must_run_depression = 0.15  # CAISO: no coal, gas-only; minimal must-run
 
         # CAISO demand elasticity: RDRR + PDR programs, ~2 GW responsive
         # RA market provides baseline, DR adds during evening ramp stress
@@ -677,6 +687,7 @@ class NYISOPriceModel(PriceModel):
         self.floor_price = -20.0
         self.surplus_decay = 0.008         # v11: 0.012→0.008, reduce neg hrs 273→~150
         self.scarcity_threshold = 0.03     # v11: 0.06→0.03
+        self.must_run_depression = 0.15  # NYISO: no coal, gas-only
 
         # NYISO demand elasticity: ICAP SCR/EDRP programs, ~1.3 GW responsive
         # NYC load pocket has limited DR flexibility
@@ -711,6 +722,7 @@ class NEISOPriceModel(PriceModel):
         self.floor_price = -25.0
         self.surplus_decay = 0.008         # v11: 0.012→0.008, reduce neg hrs 314→~180
         self.scarcity_threshold = 0.02     # v11.1: 0.03→0.02, imports + FCM provide reserves
+        self.must_run_depression = 0.15  # NEISO: no coal, gas-only
 
         # NEISO demand elasticity: FCM passive DR + active DR, ~1.5 GW responsive
         # Winter gas constraint limits DR effectiveness (can't substitute fuel)
@@ -765,6 +777,7 @@ class MISOPriceModel(PriceModel):
         self.floor_price = -30.0       # moderate negative pricing
         self.surplus_decay = 0.015     # v11.1: 0.018→0.015, reduce neg hrs 400→~300
         self.scarcity_threshold = 0.02  # v11: 0.05→0.02, PRA provides ample cushion
+        self.must_run_depression = 0.35  # MISO: 35% coal, heavy must-run floor
 
         # MISO demand elasticity: LMR (Load-Modifying Resources), ~8 GW responsive
         # Large industrial load base (aluminum, steel, refining) with interruptible contracts
@@ -805,6 +818,7 @@ class SPPPriceModel(PriceModel):
         self.floor_price = -40.0       # deeper negative prices than MISO (more wind surplus)
         self.surplus_decay = 0.025     # steep negative pricing from wind over-generation
         self.scarcity_threshold = 0.02  # v11: 0.06→0.02
+        self.must_run_depression = 0.30  # SPP: 30% coal, moderate must-run
 
         # SPP demand elasticity: limited formal DR, some interruptible industrial
         # Lowest price market → fewer hours hit threshold, but less DR infrastructure
@@ -1006,6 +1020,28 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
             hourly_lmp[gi] = price_model._price_surplus(
                 float(surplus_mw[gi]), float(demand_mw_profile[gi]))
             hourly_marginal_unit[gi] = -1
+
+    # ══════════════════════════════════════════════════════════════════════
+    # MUST-RUN / MIN-GEN PRICING LAYER
+    # ══════════════════════════════════════════════════════════════════════
+    # Nuclear is fully must-run, coal steam has ~40% min stable generation.
+    # When residual demand drops below the total must-run floor, these units
+    # can't economically cycle off — they bid at or below marginal cost to
+    # stay dispatched, depressing off-peak prices. This physically grounds
+    # off-peak price depression instead of relying solely on statistical
+    # demand-quantile adjustments.
+    must_run_caps = np.zeros(n_units, dtype=np.float64)
+    for i, (unit_type, cap_mw, mc) in enumerate(stack):
+        must_run_caps[i] = cap_mw * MUST_RUN_PCT.get(unit_type, 0.0)
+    total_must_run_mw = must_run_caps.sum()
+
+    if total_must_run_mw > 0:
+        must_run_surplus_mask = pos_mask & (residual_mw < total_must_run_mw)
+        if must_run_surplus_mask.any():
+            surplus_ratio = (total_must_run_mw - residual_mw[must_run_surplus_mask]) / total_must_run_mw
+            surplus_ratio = np.clip(surplus_ratio, 0.0, 1.0)
+            depression = surplus_ratio * price_model.must_run_depression
+            hourly_lmp[must_run_surplus_mask] *= (1.0 - depression)
 
     # ══════════════════════════════════════════════════════════════════════
     # DEMAND-QUANTILE PRICING LAYER
