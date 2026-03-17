@@ -140,8 +140,21 @@ PTC_45U_SUNSET_YEAR = 2032
 # Nuclear retirement threshold — default operating cost
 NUCLEAR_FOM_PER_MWH = 30.0  # $/MWh equivalent at 93% CF
 
-# Simulation years
+# Simulation years — default sparse set (legacy); annual mode uses build_sim_years()
 SIM_YEARS = [2023, 2030, 2035, 2040, 2045, 2050]
+
+
+def build_sim_years(start=2025, end=2060, step=1):
+    """Build simulation year list from user-specified range and step.
+
+    Returns a list like [2025, 2026, ..., 2060] for step=1
+    or [2025, 2030, 2035, ..., 2060] for step=5.
+    Always includes the end year if not already present.
+    """
+    years = list(range(start, end + 1, step))
+    if end not in years:
+        years.append(end)
+    return years
 
 # 2023 eGRID actual clean energy share (%)
 EGRID_2023_CLEAN_PCT = {
@@ -1318,6 +1331,7 @@ def estimate_new_gw_from_delta(delta_resources_twh, iso):
 def run_market_simulation(scenario_id, conditions, isos=None,
                            nuclear_retirement_threshold=None,
                            snapshot_mode=False,
+                           sim_years=None,
                            _preloaded=None, _lmp_cache=None, _quiet=False,
                            weather_year=None):
     """Run purely profit-driven market simulation.
@@ -1332,6 +1346,9 @@ def run_market_simulation(scenario_id, conditions, isos=None,
         nuclear_retirement_threshold: $/MWh — if nuclear total revenue falls
             below this, nuclear retires and model re-dispatches. None = no retirement.
         snapshot_mode: If True, run single-year snapshot (no year progression).
+        sim_years: Optional explicit list of years to simulate. Overrides
+            snapshot_mode and SIM_YEARS when provided. Use build_sim_years()
+            to generate from start/end/step.
         _preloaded: Pre-loaded data dict to avoid re-reading.
         _lmp_cache: Shared LMP cache across scenarios.
         _quiet: Suppress per-zone print output.
@@ -1390,9 +1407,14 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             'cumulative_acp_million': 0,
         }
 
-    sim_years = [2025] if snapshot_mode else SIM_YEARS
+    if sim_years is not None:
+        _sim_years = sim_years
+    elif snapshot_mode:
+        _sim_years = [2025]
+    else:
+        _sim_years = SIM_YEARS
 
-    for year in sim_years:
+    for year in _sim_years:
         _log(f"\n--- Year {year} ---")
 
         # 2023 baseline: inject actual eGRID data

@@ -147,6 +147,10 @@ class SimulationRequest(BaseModel):
     nuclear_retirement_threshold: float = 30.0  # $/MWh
     mode: str = "snapshot"              # snapshot / trajectory
     years: List[int] = Field(default_factory=lambda: [2030, 2035, 2040, 2045, 2050])
+    # Annual granularity controls (trajectory/sweep modes)
+    start_year: int = 2025              # First simulation year
+    end_year: int = 2060                # Last simulation year
+    year_step: int = 1                  # 1 = every year, 5 = every 5 years
     custom_overrides: CustomOverrides = Field(default_factory=CustomOverrides)
 
     # Fossil new-build LCOEs
@@ -161,6 +165,10 @@ class SweepRequest(BaseModel):
     isos: List[str] = Field(default_factory=lambda: ["ERCOT"])
     nuclear_retirement_threshold: Optional[float] = 30.0
     snapshot_mode: bool = False
+    # Annual granularity controls
+    start_year: int = 2025
+    end_year: int = 2060
+    year_step: int = 5                  # Default to 5yr steps for sweeps (performance)
     # Optional overrides for sweep bounds (future use)
     conditions: Optional[List[str]] = None         # e.g. ["Facilitating"]
     demand_levels: Optional[List[str]] = None      # e.g. ["Low", "Medium"]
@@ -298,6 +306,7 @@ class SimulationResponse(BaseModel):
     emissions_mt: float = 0.0
     demand_twh: float = 0.0
     resource_mix_twh: Dict[str, float] = Field(default_factory=dict)
+    sim_years: List[int] = Field(default_factory=list)  # Years actually simulated
     year_results: List[YearResult] = Field(default_factory=list)
     zones_deployed: List[ZoneDetail] = Field(default_factory=list)
     # Market-wide time series for results page
