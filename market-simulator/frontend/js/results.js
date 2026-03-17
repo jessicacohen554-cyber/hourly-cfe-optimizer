@@ -221,6 +221,20 @@ function updateStats(data) {
     } else if (plantStats) {
         plantStats.style.display = 'none';
     }
+
+    // Economic retirement summary
+    const retiredMW = data.total_economic_retirement_mw || 0;
+    const retiredEl = document.getElementById('statEconRetiredMW');
+    if (retiredEl) {
+        setText('statEconRetiredMW', fmtNum(retiredMW / 1000, 1) + ' GW');
+    }
+    const retiredDetail = document.getElementById('econRetirementDetail');
+    if (retiredDetail && data.economic_retirements_mw) {
+        const parts = Object.entries(data.economic_retirements_mw)
+            .filter(([_, mw]) => mw > 0)
+            .map(([type, mw]) => `${type.replace('_', ' ')}: ${fmtNum(mw / 1000, 1)} GW`);
+        retiredDetail.textContent = parts.join(' · ') || 'None';
+    }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
