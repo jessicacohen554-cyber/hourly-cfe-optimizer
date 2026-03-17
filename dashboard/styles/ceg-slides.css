@@ -76,9 +76,11 @@ html, body {
 }
 
 /* ─── SLIDE DECK CONTAINER ───────────────────────────────────────── */
+.ceg-hub-nav-spacer { height: 0; } /* Hub nav overlaps slides — no spacer needed */
 .slide-deck {
   width: 100vw;
   height: calc(100vh - 48px); /* Leave room for controls */
+  padding-top: 64px; /* Clear fixed hub nav */
   position: relative;
   overflow: hidden;
 }
