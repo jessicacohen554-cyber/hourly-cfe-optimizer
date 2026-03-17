@@ -34,6 +34,11 @@ from pipeline_config import (
     ISOS,
     WHOLESALE_PRICES, CAPACITY_MARKET_PRICES,
     EXISTING_GAS_FOM_KW_YR,
+    CCS_CAP_TWH, CCS_RESIDUAL_EMISSION_RATE, CCS_45Q_CREDIT_PER_MWH,
+    CCS_RETROFIT_CAPTURE_COST_KW_YR, CCS_RETROFIT_HR_PENALTY_PCT,
+    CCS_RETROFIT_FOM_ADDER_KW_YR, CCS_RETROFIT_MIN_CAP_MW,
+    CCS_RETROFIT_ELIGIBLE_FUELS, CCS_RETROFIT_CF, CCS_RETROFIT_EARLIEST_YEAR,
+    DAC_COST_PER_TON, get_dac_cost_per_ton,
 )
 
 # ─── PATHS ───────────────────────────────────────────────────────
@@ -209,6 +214,20 @@ def _build_plant_arrays(company):
     cap_price_base = np.array([CAP_PRICES.get(p['iso'], 0) for p in plants], dtype=np.float64)
     cap_degrade = np.array([CAP_DEGRADE_ALPHA.get(p['iso'], 0) for p in plants], dtype=np.float64)
 
+    # CCS retrofit eligibility arrays
+    is_retrofit_eligible = np.array([
+        p['fuel'] in CCS_RETROFIT_ELIGIBLE_FUELS
+        and p['cap_mw'] >= CCS_RETROFIT_MIN_CAP_MW
+        and CCS_CAP_TWH.get(p['iso'], 0) > 0
+        for p in plants
+    ])
+    # ISO index for CCS cap tracking (np.bincount)
+    iso_names_unique = sorted(set(iso_list))
+    iso_to_idx = {iso: idx for idx, iso in enumerate(iso_names_unique)}
+    iso_idx = np.array([iso_to_idx[iso] for iso in iso_list], dtype=np.int64)
+    iso_ccs_cap_twh = np.array([CCS_CAP_TWH.get(iso, 0) for iso in iso_names_unique],
+                                dtype=np.float64)
+
     return {
         'n': n,
         'cap_mw': cap_mw,
@@ -225,6 +244,10 @@ def _build_plant_arrays(company):
         'iso_list': iso_list,
         'cap_price_base': cap_price_base,
         'cap_degrade': cap_degrade,
+        'is_retrofit_eligible': is_retrofit_eligible,
+        'iso_idx': iso_idx,
+        'iso_names_unique': iso_names_unique,
+        'iso_ccs_cap_twh': iso_ccs_cap_twh,
     }
 
 
@@ -312,12 +335,110 @@ def _vectorized_plant_economics(pa, clean_pct_per_plant, avg_lmp_per_plant,
     profit_m = total_rev_m - fixed_om_m
 
     # ── Status ──
-    status = np.full(n, 'operating', dtype='U12')
+    status = np.full(n, 'operating', dtype='U16')
     status[retired_mask | (cf <= 0.01)] = 'retired'
     status[(~retired_mask) & (cf > 0.01) & (profit_m < -5)] = 'stranded'
     status[(~retired_mask) & (cf > 0.01) & (profit_m >= -5) & (profit_m < 0)] = 'marginal'
 
     return cf, gen_twh_out, co2_mt_out, total_rev_m, fixed_om_m, profit_m, status
+
+
+def _vectorized_retrofit_economics(pa, status, profit_m, co2_mt_out,
+                                    avg_lmp_per_plant, year,
+                                    cost_level='Medium', is_45q_on=True):
+    """Evaluate CCS retrofit for stranded/marginal gas CCGT plants.
+
+    Pure economic trigger: retrofit when retrofit profit beats stranding cost
+    AND is cheaper than DAC offsets for the same CO2 reduction.
+
+    Returns:
+        retrofit_mask (N,): boolean, True if plant retrofits
+        retro_profit_m (N,): profit after retrofit ($M/yr)
+        retro_co2_mt (N,): emissions after retrofit (Mt/yr)
+        retro_gen_twh (N,): generation after retrofit (TWh/yr)
+        retro_cost_m (N,): total cost after retrofit ($M/yr)
+        retro_rev_m (N,): total revenue after retrofit ($M/yr)
+        retro_45q_m (N,): 45Q credit revenue ($M/yr)
+        retro_co2_avoided_mt (N,): CO2 avoided vs unabated baseline (Mt/yr)
+    """
+    n = pa['n']
+    cap_mw = pa['cap_mw']
+    eligible = pa['is_retrofit_eligible'].copy()
+
+    # Only stranded/marginal plants can retrofit, and only after earliest year
+    can_retrofit = ((status == 'stranded') | (status == 'marginal')) & (year >= CCS_RETROFIT_EARLIEST_YEAR)
+    eligible = eligible & can_retrofit
+
+    # Retrofit generation: plant runs at CCS_RETROFIT_CF (flat baseload)
+    retro_gen_twh = cap_mw * CCS_RETROFIT_CF * 8.760 / 1000.0
+
+    # Retrofit revenue: energy + 45Q credit
+    retro_energy_rev_m = retro_gen_twh * 1e6 * avg_lmp_per_plant / 1e6
+    retro_45q_m = np.zeros(n, dtype=np.float64)
+    if is_45q_on:
+        retro_45q_m = retro_gen_twh * 1e6 * CCS_45Q_CREDIT_PER_MWH / 1e6
+    retro_rev_m = retro_energy_rev_m + retro_45q_m
+
+    # Retrofit cost: existing FOM + capture FOM adder + capture capex annualized
+    fom_adder = CCS_RETROFIT_FOM_ADDER_KW_YR.get(cost_level, 6.5)
+    capture_cost_arr = np.array([
+        CCS_RETROFIT_CAPTURE_COST_KW_YR.get(cost_level, {}).get(iso, 45)
+        for iso in pa['iso_list']
+    ], dtype=np.float64)
+    retro_cost_m = cap_mw * (pa['fom_kw_yr'] + fom_adder + capture_cost_arr) / 1e3
+
+    # Retrofit profit
+    retro_profit_m = retro_rev_m - retro_cost_m
+
+    # Retrofit CO2: residual emissions at 90% capture
+    retro_co2_mt = retro_gen_twh * 1e6 * CCS_RESIDUAL_EMISSION_RATE / 1e6
+
+    # CO2 avoided vs unabated baseline
+    # Use the plant's original co2_mt (from fleet config) as baseline
+    baseline_co2 = pa['co2_mt']
+    retro_co2_avoided_mt = np.maximum(0, baseline_co2 - retro_co2_mt)
+
+    # DAC alternative cost: what it would cost to offset the baseline CO2 with DAC
+    dac_cost_per_ton = get_dac_cost_per_ton(year, cost_level)
+    dac_alt_cost_m = baseline_co2 * 1e6 * dac_cost_per_ton / 1e6  # $M
+
+    # Decision: retrofit if (a) eligible, (b) retrofit loss is tolerable (<$2M/yr),
+    # and (c) retrofit annual cost is less than DAC offset cost
+    retrofit_mask = eligible & (retro_profit_m > -2.0) & (retro_cost_m < dac_alt_cost_m)
+
+    # CCS cap enforcement: check cumulative retrofit TWh per ISO doesn't exceed cap
+    if retrofit_mask.any():
+        retro_twh_by_iso = np.bincount(
+            pa['iso_idx'][retrofit_mask],
+            weights=retro_gen_twh[retrofit_mask],
+            minlength=len(pa['iso_names_unique'])
+        )
+        # If any ISO exceeds cap, un-retrofit most expensive plants in that ISO
+        for iso_i, iso_name in enumerate(pa['iso_names_unique']):
+            cap_twh = pa['iso_ccs_cap_twh'][iso_i]
+            if retro_twh_by_iso[iso_i] > cap_twh and cap_twh > 0:
+                # Find plants in this ISO that are retrofitting, sorted by cost (desc)
+                iso_retro = np.where(retrofit_mask & (pa['iso_idx'] == iso_i))[0]
+                costs = retro_cost_m[iso_retro]
+                order = np.argsort(-costs)  # Most expensive first
+                cum_twh = 0.0
+                for idx in order:
+                    plant_idx = iso_retro[idx]
+                    cum_twh += retro_gen_twh[plant_idx]
+                    if cum_twh > cap_twh:
+                        retrofit_mask[plant_idx] = False
+
+    # Zero out values for non-retrofitting plants
+    retro_profit_m = np.where(retrofit_mask, retro_profit_m, 0.0)
+    retro_co2_mt = np.where(retrofit_mask, retro_co2_mt, 0.0)
+    retro_gen_twh = np.where(retrofit_mask, retro_gen_twh, 0.0)
+    retro_cost_m = np.where(retrofit_mask, retro_cost_m, 0.0)
+    retro_rev_m = np.where(retrofit_mask, retro_rev_m, 0.0)
+    retro_45q_m = np.where(retrofit_mask, retro_45q_m, 0.0)
+    retro_co2_avoided_mt = np.where(retrofit_mask, retro_co2_avoided_mt, 0.0)
+
+    return (retrofit_mask, retro_profit_m, retro_co2_mt, retro_gen_twh,
+            retro_cost_m, retro_rev_m, retro_45q_m, retro_co2_avoided_mt)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -510,6 +631,11 @@ def simulate_company_all_scenarios(company, sweep_df):
                     'operating_mw': total_cap,
                     'stranded_mw': 0,
                     'retired_mw': 0,
+                    'retrofitted_mw': 0,
+                    'retrofit_co2_avoided_mt': 0.0,
+                    'retrofit_cost_m': 0.0,
+                    'retrofit_revenue_m': 0.0,
+                    'retrofit_45q_revenue_m': 0.0,
                 })
             continue
 
@@ -554,6 +680,28 @@ def simulate_company_all_scenarios(company, sweep_df):
                 _vectorized_plant_economics(pa, clean_pct_arr, avg_lmp_arr,
                                             gas_friction_arr, year)
 
+            # ── CCS Retrofit evaluation ──
+            # Determine cost level from scenario metadata
+            any_row = next(iter(iso_data.values()))
+            cost_level = str(any_row.get('price_sens', 'Medium'))
+            if cost_level not in ('Low', 'Medium', 'High'):
+                cost_level = 'Medium'
+
+            (retrofit_mask, retro_profit, retro_co2, retro_gen,
+             retro_cost, retro_rev, retro_45q, retro_co2_avoided) = \
+                _vectorized_retrofit_economics(
+                    pa, status, profit_m, co2_mt_out,
+                    avg_lmp_arr, year, cost_level=cost_level)
+
+            # Override economics for retrofitted plants
+            if retrofit_mask.any():
+                profit_m = np.where(retrofit_mask, retro_profit, profit_m)
+                co2_mt_out = np.where(retrofit_mask, retro_co2, co2_mt_out)
+                gen_twh_out = np.where(retrofit_mask, retro_gen, gen_twh_out)
+                cost_m = np.where(retrofit_mask, retro_cost, cost_m)
+                rev_m = np.where(retrofit_mask, retro_rev, rev_m)
+                status = np.where(retrofit_mask, 'retrofitted', status)
+
             # Aggregate fleet metrics
             fleet_em = float(co2_mt_out.sum())
             fleet_rev = float(rev_m.sum())
@@ -564,10 +712,9 @@ def simulate_company_all_scenarios(company, sweep_df):
             cap = pa['cap_mw']
             op_mask = (status == 'operating')
             ret_mask = (status == 'retired')
-            strand_mask = ~op_mask & ~ret_mask
+            retro_mask_status = (status == 'retrofitted')
+            strand_mask = ~op_mask & ~ret_mask & ~retro_mask_status
 
-            # Get scenario metadata
-            any_row = next(iter(iso_data.values()))
             all_results.append({
                 'scenario': f'{scn}__{st}',
                 'sweep_type': st,
@@ -584,6 +731,11 @@ def simulate_company_all_scenarios(company, sweep_df):
                 'operating_mw': int(cap[op_mask].sum()),
                 'stranded_mw': int(cap[strand_mask].sum()),
                 'retired_mw': int(cap[ret_mask].sum()),
+                'retrofitted_mw': int(cap[retro_mask_status].sum()),
+                'retrofit_co2_avoided_mt': round(float(retro_co2_avoided.sum()), 3),
+                'retrofit_cost_m': round(float(retro_cost.sum()), 1),
+                'retrofit_revenue_m': round(float(retro_rev.sum()), 1),
+                'retrofit_45q_revenue_m': round(float(retro_45q.sum()), 1),
             })
 
     return pd.DataFrame(all_results)
