@@ -32,7 +32,7 @@ echo Installing dependencies...
 echo [OK] Dependencies installed
 
 REM ── Generate synthetic data if needed ──────────────────────────────────
-if not exist "data\demand_profiles_2025.json" (
+if not exist "data\profiles\eia_demand_profiles.json" (
     echo Generating synthetic data profiles...
     set PYTHONPATH=%~dp0;%~dp0backend;%~dp0scripts
     %PYTHON% scripts\generate_synthetic_profiles.py 2>nul
