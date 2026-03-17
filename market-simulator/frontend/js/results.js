@@ -178,6 +178,12 @@ function renderAll() {
 
     // Level 3: IPP
     renderGeneratorTable(data);
+
+    // Show CCS deep-dive CTA if trajectory mode with year results
+    const ccsCta = document.getElementById('ccsCtaCard');
+    if (ccsCta) {
+        ccsCta.style.display = (data.year_results && data.year_results.length > 1) ? '' : 'none';
+    }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
