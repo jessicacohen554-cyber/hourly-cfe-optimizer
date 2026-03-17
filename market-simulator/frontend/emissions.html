@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CCS Emissions Dashboard — Constellation Energy</title>
+    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/simulator.css">
+    <link rel="stylesheet" href="styles/results.css">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="js/chart-colors.js"></script>
+    <style>
+        .dispatch-status-bar { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md); background: #f8fafc; border-radius: var(--radius-md); border: 1px solid #e0e6ef; margin-bottom: var(--space-lg); }
+        .dispatch-status-bar .status-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dispatch-status-bar .status-dot.ready { background: #22C55E; }
+        .dispatch-status-bar .status-dot.pending { background: #F59E0B; }
+        .dispatch-status-bar .status-dot.error { background: #DC2626; }
+        .dispatch-btn { background: var(--ceg-blue); color: #fff; border: none; padding: 0.6rem 1.5rem; border-radius: var(--radius-sm); cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+        .dispatch-btn:hover { background: var(--navy); }
+        .dispatch-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .plant-selector { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: var(--space-md) 0; }
+        .plant-chip { padding: 0.35rem 0.75rem; border-radius: var(--radius-pill); border: 1px solid #d1d5db; cursor: pointer; font-size: 0.82rem; background: #fff; transition: all 0.15s; }
+        .plant-chip:hover { border-color: var(--ceg-blue); }
+        .plant-chip.selected { background: var(--ceg-blue); color: #fff; border-color: var(--ceg-blue); }
+
+        .ccs-delta-card { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-md); padding: var(--space-md); }
+        .ccs-delta-card.negative { background: #fef2f2; border-color: #fecaca; }
+        .ccs-delta-value { font-size: 1.8rem; font-weight: 700; color: #166534; }
+        .ccs-delta-card.negative .ccs-delta-value { color: #991b1b; }
+        .ccs-delta-label { font-size: 0.85rem; color: #5a6577; }
+
+        .trajectory-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .trajectory-table th, .trajectory-table td { padding: 0.5rem 0.75rem; text-align: right; border-bottom: 1px solid #e0e6ef; }
+        .trajectory-table th { background: var(--navy); color: #fff; font-weight: 600; text-align: left; }
+        .trajectory-table th:first-child { text-align: left; }
+        .trajectory-table td:first-child { text-align: left; font-weight: 500; }
+        .trajectory-table tr:hover { background: rgba(35,114,185,0.04); }
+
+        .fan-legend { display: flex; gap: var(--space-lg); margin-top: var(--space-sm); font-size: 0.82rem; color: #5a6577; }
+        .fan-legend-item { display: flex; align-items: center; gap: 0.35rem; }
+        .fan-legend-swatch { width: 24px; height: 4px; border-radius: 2px; }
+    </style>
+</head>
+<body>
+
+    <div class="progress-bar"><div class="progress-bar-fill"></div></div>
+
+    <!-- Nav -->
+    <nav>
+        <div class="nav-logo">
+            <a href="/" style="display:flex;align-items:center;gap:0.75rem;text-decoration:none;">
+                <img src="/brand-assets/logo.png" alt="Constellation Energy" style="height:36px;" onerror="this.style.display='none'">
+                <div>
+                    <div class="nav-title">Constellation Energy</div>
+                    <div class="nav-subtitle">Market Simulation Screening Tool</div>
+                </div>
+            </a>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/">Guide</a></li>
+            <li><a href="/setup">Setup</a></li>
+            <li><a href="/fleet-config">Fleet Config</a></li>
+            <li><a href="/results">Results</a></li>
+            <li><a href="/emissions" class="active">CCS Emissions</a></li>
+            <li><a href="/ipp-report">IPP Report</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero -->
+    <div class="hero-section">
+        <div class="hero-inner">
+            <div class="hero-eyebrow">CCS Analysis</div>
+            <h1>Emissions <strong>Dashboard</strong></h1>
+            <p class="hero-desc">
+                Per-plant CCS retrofit analysis using market simulation dispatch results.
+                Shows how Constellation CCGT fleet emissions change under modeled market conditions,
+                with CCS capture delta quantified per plant per year.
+            </p>
+        </div>
+    </div>
+
+    <div class="content-section" style="max-width: 1200px;">
+
+        <!-- Dispatch Status -->
+        <div class="dispatch-status-bar" id="dispatchStatus">
+            <div class="status-dot pending" id="statusDot"></div>
+            <div style="flex: 1;">
+                <strong id="statusText">Waiting for simulation results</strong>
+                <div style="font-size: 0.82rem; color: #5a6577;" id="statusDetail">
+                    Run a simulation first, then click "Run CCS Dispatch" to analyze the Constellation fleet.
+                </div>
+            </div>
+            <button class="dispatch-btn" id="btnRunDispatch" disabled>Run CCS Dispatch</button>
+            <button class="btn-export" id="btnDownloadDispatchCSV" style="display:none;">Download CSV</button>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid" id="ccsKpiGrid" style="display:none;">
+            <div class="kpi-card">
+                <div class="kpi-value" id="kpiBaseline">--</div>
+                <div class="kpi-unit">MMt CO2</div>
+                <div class="kpi-label">Fleet Baseline</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value" id="kpiDispatch">--</div>
+                <div class="kpi-unit">MMt CO2</div>
+                <div class="kpi-label">Dispatch Emissions</div>
+            </div>
+            <div class="kpi-card" style="border-left: 4px solid #22C55E;">
+                <div class="kpi-value" id="kpiCCSDelta">--</div>
+                <div class="kpi-unit">MMt CO2</div>
+                <div class="kpi-label">CCS Reduction</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value" id="kpiPlants">--</div>
+                <div class="kpi-label">CCS-Eligible Plants</div>
+            </div>
+        </div>
+
+        <!-- Fleet Emissions Fan Chart -->
+        <div class="chart-card" id="fanChartCard" style="display:none;">
+            <div class="chart-card-header">
+                <h3>Fleet Emissions Trajectory <span class="info-icon" data-tooltip="Total equity-adjusted CO2 emissions from the Constellation CCGT fleet over time. P10/P50/P90 bands show uncertainty range. AT and SBTi reference trajectories shown for comparison.">i</span></h3>
+                <p>Constellation CCGT fleet emissions vs. climate commitment trajectories</p>
+            </div>
+            <div class="chart-container-lg" id="chartFleetFan"></div>
+            <div class="fan-legend">
+                <div class="fan-legend-item"><div class="fan-legend-swatch" style="background: rgba(35,114,185,0.3);"></div> P10-P90 Range</div>
+                <div class="fan-legend-item"><div class="fan-legend-swatch" style="background: #2372B9;"></div> P50 (Median)</div>
+                <div class="fan-legend-item"><div class="fan-legend-swatch" style="background: #DC2626; height: 2px; border-top: 2px dashed #DC2626;"></div> AT Power NZ</div>
+                <div class="fan-legend-item"><div class="fan-legend-swatch" style="background: #F59E0B; height: 2px; border-top: 2px dashed #F59E0B;"></div> SBTi 1.5C</div>
+            </div>
+        </div>
+
+        <!-- CCS Delta Chart -->
+        <div class="chart-card" id="deltaChartCard" style="display:none;">
+            <div class="chart-card-header">
+                <h3>CCS Capture Delta by Plant <span class="info-icon" data-tooltip="Shows how much CO2 each plant avoids by retrofitting with CCS (95% capture rate, 14% heat rate penalty). Larger bars = higher-impact CCS retrofit candidates.">i</span></h3>
+                <p>Annual CO2 reduction potential (MMt) if plant retrofits to CCS</p>
+            </div>
+            <div class="chart-container-lg" id="chartCCSDelta"></div>
+        </div>
+
+        <!-- Plant Selector + Individual Plant Chart -->
+        <div class="chart-card" id="plantDetailCard" style="display:none;">
+            <div class="chart-card-header">
+                <h3>Plant-Level Emissions Detail</h3>
+                <p>Select a plant to see its dispatch emissions trajectory and CCS residual</p>
+            </div>
+            <div class="plant-selector" id="plantSelector"></div>
+            <div class="chart-container-lg" id="chartPlantDetail"></div>
+        </div>
+
+        <!-- Fleet Summary Table -->
+        <div class="chart-card" id="fleetTableCard" style="display:none;">
+            <div class="chart-card-header">
+                <h3>Fleet Dispatch Summary</h3>
+                <p>Per-plant dispatch results across all simulation years</p>
+            </div>
+            <div class="table-responsive">
+                <table class="trajectory-table" id="fleetTable">
+                    <thead>
+                        <tr>
+                            <th>Plant</th>
+                            <th>ISO</th>
+                            <th>Capacity (MW)</th>
+                            <th>Baseline (MMt)</th>
+                            <th>CCS Residual (MMt)</th>
+                            <th>CCS Delta (MMt)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fleetTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-brand"><strong>Constellation Energy</strong> &middot; Market Simulation Screening Tool</div>
+        <div class="footer-note">CCS retrofit analysis powered by merit-order dispatch</div>
+    </footer>
+    <div class="bottom-banner"></div>
+
+    <script src="js/emissions.js"></script>
+</body>
+</html>

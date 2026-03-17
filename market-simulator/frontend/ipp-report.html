@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPP Fleet Report — Constellation Energy</title>
+    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/simulator.css">
+    <link rel="stylesheet" href="styles/results.css">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="js/chart-colors.js"></script>
+    <style>
+        .report-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: var(--space-lg); }
+        .report-card { background: #fff; border-radius: var(--radius-md); padding: var(--space-lg); border: 1px solid #e0e6ef; }
+        .report-card h4 { margin: 0 0 var(--space-sm) 0; color: var(--navy); font-size: 1rem; }
+        .report-card p { margin: 0; font-size: 0.88rem; color: #5a6577; line-height: 1.5; }
+
+        .fleet-stat { display: flex; align-items: baseline; gap: 0.5rem; margin: var(--space-sm) 0; }
+        .fleet-stat-value { font-size: 1.6rem; font-weight: 700; color: var(--navy); }
+        .fleet-stat-unit { font-size: 0.9rem; color: #5a6577; }
+        .fleet-stat-label { font-size: 0.82rem; color: #8b95a5; }
+
+        .iso-breakdown { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-sm); margin-top: var(--space-md); }
+        .iso-pill { padding: 0.5rem 0.75rem; background: #f8fafc; border-radius: var(--radius-sm); border: 1px solid #e0e6ef; text-align: center; }
+        .iso-pill-name { font-weight: 600; font-size: 0.85rem; color: var(--navy); }
+        .iso-pill-val { font-size: 1.1rem; font-weight: 700; margin: 0.15rem 0; }
+        .iso-pill-unit { font-size: 0.75rem; color: #8b95a5; }
+
+        .transition-timeline { position: relative; padding-left: 2rem; }
+        .timeline-item { position: relative; padding-bottom: var(--space-lg); border-left: 2px solid #d1d5db; padding-left: var(--space-md); }
+        .timeline-item:last-child { border-left-color: transparent; }
+        .timeline-item::before { content: ''; position: absolute; left: -7px; top: 4px; width: 12px; height: 12px; border-radius: 50%; background: var(--ceg-blue); border: 2px solid #fff; }
+        .timeline-item.retired::before { background: #DC2626; }
+        .timeline-item.ccs::before { background: #22C55E; }
+        .timeline-year { font-weight: 700; color: var(--navy); font-size: 0.9rem; }
+        .timeline-desc { font-size: 0.85rem; color: #5a6577; margin-top: 0.15rem; }
+    </style>
+</head>
+<body>
+
+    <div class="progress-bar"><div class="progress-bar-fill"></div></div>
+
+    <!-- Nav -->
+    <nav>
+        <div class="nav-logo">
+            <a href="/" style="display:flex;align-items:center;gap:0.75rem;text-decoration:none;">
+                <img src="/brand-assets/logo.png" alt="Constellation Energy" style="height:36px;" onerror="this.style.display='none'">
+                <div>
+                    <div class="nav-title">Constellation Energy</div>
+                    <div class="nav-subtitle">Market Simulation Screening Tool</div>
+                </div>
+            </a>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/">Guide</a></li>
+            <li><a href="/setup">Setup</a></li>
+            <li><a href="/fleet-config">Fleet Config</a></li>
+            <li><a href="/results">Results</a></li>
+            <li><a href="/emissions">CCS Emissions</a></li>
+            <li><a href="/ipp-report" class="active">IPP Report</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero -->
+    <div class="hero-section">
+        <div class="hero-inner">
+            <div class="hero-eyebrow">Fleet Intelligence</div>
+            <h1>IPP Fleet <strong>Report</strong></h1>
+            <p class="hero-desc">
+                Constellation/Calpine fleet performance under modeled market conditions.
+                Aggregated dispatch, revenue, and transition metrics by ISO and fuel type.
+            </p>
+        </div>
+    </div>
+
+    <div class="content-section" style="max-width: 1200px;">
+
+        <!-- Status -->
+        <div class="dispatch-status-bar" id="reportStatus" style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md); background: #f8fafc; border-radius: var(--radius-md); border: 1px solid #e0e6ef; margin-bottom: var(--space-lg);">
+            <div class="status-dot pending" id="reportStatusDot" style="width: 12px; height: 12px; border-radius: 50; background: #F59E0B;"></div>
+            <div style="flex: 1;">
+                <strong id="reportStatusText">Run CCS Dispatch first</strong>
+                <div style="font-size: 0.82rem; color: #5a6577;" id="reportStatusDetail">
+                    Navigate to the CCS Emissions page and run dispatch to generate fleet data for this report.
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 1: Fleet Overview -->
+        <div class="results-section-header" id="sec1Header" style="display:none;">
+            <h2>Fleet Overview</h2>
+            <p>Aggregate Constellation/Calpine fleet metrics</p>
+        </div>
+
+        <div class="kpi-grid" id="fleetKpiGrid" style="display:none;">
+            <div class="kpi-card">
+                <div class="kpi-value" id="rptTotalCap">--</div>
+                <div class="kpi-unit">MW</div>
+                <div class="kpi-label">Total Fleet Capacity</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value" id="rptTotalPlants">--</div>
+                <div class="kpi-label">CCS-Eligible Plants</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-value" id="rptBaselineEmissions">--</div>
+                <div class="kpi-unit">MMt CO2</div>
+                <div class="kpi-label">Baseline Emissions</div>
+            </div>
+            <div class="kpi-card" style="border-left: 4px solid #22C55E;">
+                <div class="kpi-value" id="rptCCSPotential">--</div>
+                <div class="kpi-unit">MMt CO2</div>
+                <div class="kpi-label">Max CCS Reduction</div>
+            </div>
+        </div>
+
+        <!-- Section 2: Capacity by ISO -->
+        <div class="chart-card" id="isoCapCard" style="display:none;">
+            <div class="chart-card-header">
+                <h3>Fleet Capacity by ISO</h3>
+                <p>Distribution of CCS-eligible CCGT capacity across ISOs</p>
+            </div>
+            <div class="chart-container" id="chartISOCap"></div>
+        </div>
+
+        <!-- Section 3: Emissions Trajectory -->
+        <div class="chart-card" id="emissionsCard" style="display:none;">
+            <div class="chart-card-header">
+                <h3>Fleet Emissions Trajectory</h3>
+                <p>Projected equity-adjusted CO2 from dispatch, with and without CCS retrofit</p>
+            </div>
+            <div class="chart-container-lg" id="chartFleetEmissions"></div>
+        </div>
+
+        <!-- Section 4: Transition Timeline -->
+        <div class="chart-card" id="timelineCard" style="display:none;">
+            <div class="chart-card-header">
+                <h3>Fleet Transition Events</h3>
+                <p>Key milestones in the fleet's transition trajectory</p>
+            </div>
+            <div class="transition-timeline" id="transitionTimeline"></div>
+        </div>
+
+        <!-- Section 5: Plant Ranking Table -->
+        <div class="chart-card" id="rankingCard" style="display:none;">
+            <div class="chart-card-header">
+                <h3>Plant CCS Retrofit Ranking</h3>
+                <p>Plants ranked by CCS impact potential (highest delta first)</p>
+            </div>
+            <div class="table-responsive">
+                <table class="trajectory-table" id="rankingTable">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Plant</th>
+                            <th>ISO</th>
+                            <th>Capacity (MW)</th>
+                            <th>Baseline (MMt)</th>
+                            <th>CCS Residual (MMt)</th>
+                            <th>CCS Delta (MMt)</th>
+                            <th>Impact Score</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rankingTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-brand"><strong>Constellation Energy</strong> &middot; Market Simulation Screening Tool</div>
+        <div class="footer-note">IPP fleet intelligence from market-driven dispatch</div>
+    </footer>
+    <div class="bottom-banner"></div>
+
+    <script src="js/ipp-report.js"></script>
+</body>
+</html>
