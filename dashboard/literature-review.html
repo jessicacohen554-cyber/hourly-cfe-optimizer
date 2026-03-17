@@ -7,329 +7,242 @@
     <title>The 8,760 Problem - Literature Review & References</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/article.css">
+    <script src="js/nav.js"></script>
+    <script src="js/chart-colors.js"></script>
+    <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
     <style>
-        /* ── Reset & Base ─────────────────────────────── */
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        /* ── Page-specific overrides for literature-review ── */
+        :root {
+            --bg-primary:    #F8F9FC;
+            --bg-secondary:  #FFFFFF;
+            --bg-card:       rgba(255, 255, 255, 0.9);
+            --bg-card-hover: rgba(255, 255, 255, 1.0);
+            --border-subtle: rgba(0, 0, 0, 0.08);
+            --border-card:   rgba(0, 0, 0, 0.12);
+            --text-primary:  #1A2744;
+            --text-secondary:#475569;
+            --text-muted:    #6B7280;
+            --accent-teal:   #0EA5E9;
+            --accent-amber:  #F59E0B;
+            --accent-violet: #8B5CF6;
+            --accent-blue:   #3B82F6;
+            --accent-rose:   #F43F5E;
+            --max-width:     860px;
+        }
 
-```
-    :root {
-        --bg-primary:    #0B1120;
-        --bg-secondary:  #0F172A;
-        --bg-card:       rgba(15, 23, 42, 0.6);
-        --bg-card-hover: rgba(15, 23, 42, 0.8);
-        --border-subtle: rgba(148, 163, 184, 0.1);
-        --border-card:   rgba(148, 163, 184, 0.15);
-        --text-primary:  #E2E8F0;
-        --text-secondary:#94A3B8;
-        --text-muted:    #64748B;
-        --accent-teal:   #00D4AA;
-        --accent-amber:  #F59E0B;
-        --accent-violet: #8B5CF6;
-        --accent-blue:   #3B82F6;
-        --accent-rose:   #F43F5E;
-        --font-body:     'IBM Plex Sans', -apple-system, sans-serif;
-        --font-mono:     'IBM Plex Mono', 'Menlo', monospace;
-        --font-display:  'DM Serif Display', Georgia, serif;
-        --max-width:     860px;
-        --glow-teal:     0 0 20px rgba(0, 212, 170, 0.15);
-    }
+        html { scroll-behavior: smooth; }
 
-    html { scroll-behavior: smooth; }
+        body {
+            font-family: var(--font-body, 'DM Sans', sans-serif);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.75;
+            font-size: 16px;
+            font-weight: 400;
+            -webkit-font-smoothing: antialiased;
+        }
 
-    body {
-        font-family: var(--font-body);
-        background: var(--bg-primary);
-        color: var(--text-primary);
-        line-height: 1.75;
-        font-size: 16px;
-        font-weight: 400;
-        -webkit-font-smoothing: antialiased;
-    }
+        /* ── Content Container ────────────────────────── */
+        .content-wrap {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 0 24px 80px;
+        }
 
-    /* ── Top Navigation Bar ───────────────────────── */
-    .top-nav {
-        position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-        background: rgba(11, 17, 32, 0.85);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border-bottom: 1px solid var(--border-subtle);
-        padding: 0 24px;
-        height: 56px;
-        display: flex; align-items: center; justify-content: space-between;
-    }
-    .top-nav .nav-brand {
-        font-family: var(--font-mono);
-        font-size: 13px;
-        color: var(--accent-teal);
-        letter-spacing: 0.5px;
-        text-decoration: none;
-    }
-    .top-nav .nav-links {
-        display: flex; gap: 24px; list-style: none;
-    }
-    .top-nav .nav-links a {
-        font-family: var(--font-mono);
-        font-size: 12px;
-        color: var(--text-secondary);
-        text-decoration: none;
-        letter-spacing: 0.3px;
-        transition: color 0.2s;
-    }
-    .top-nav .nav-links a:hover { color: var(--accent-teal); }
+        /* ── Table of Contents Card ───────────────────── */
+        .toc-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-card);
+            border-radius: 12px;
+            padding: 28px 32px;
+            margin-bottom: 56px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+        .toc-card h2 {
+            font-family: var(--font-heading, 'Plus Jakarta Sans', sans-serif);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--accent-teal);
+            margin-bottom: 16px;
+            font-weight: 700;
+        }
+        .toc-card ol {
+            list-style: none;
+            counter-reset: toc;
+            padding: 0;
+        }
+        .toc-card li {
+            counter-increment: toc;
+            margin-bottom: 6px;
+        }
+        .toc-card li a {
+            font-size: 14px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.2s;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+        .toc-card li a::before {
+            content: counter(toc) ".";
+            font-family: var(--font-mono, monospace);
+            font-size: 12px;
+            color: var(--text-muted);
+            min-width: 20px;
+        }
+        .toc-card li a:hover { color: var(--accent-teal); }
 
-    /* ── Page Hero ────────────────────────────────── */
-    .page-hero {
-        padding: 120px 24px 60px;
-        text-align: center;
-        background:
-            radial-gradient(ellipse 60% 40% at 50% 0%, rgba(0, 212, 170, 0.06), transparent 70%),
-            var(--bg-primary);
-    }
-    .page-hero h1 {
-        font-family: var(--font-display);
-        font-size: clamp(2rem, 5vw, 3rem);
-        color: var(--text-primary);
-        margin-bottom: 12px;
-        font-weight: 400;
-    }
-    .page-hero .subtitle {
-        font-family: var(--font-body);
-        font-size: 17px;
-        color: var(--text-secondary);
-        max-width: 640px;
-        margin: 0 auto 24px;
-        line-height: 1.6;
-    }
+        /* ── Section Styling ──────────────────────────── */
+        .lit-section {
+            margin-bottom: 56px;
+            padding-top: 24px;
+        }
+        .lit-section h2 {
+            font-family: var(--font-heading, 'Plus Jakarta Sans', sans-serif);
+            font-size: clamp(1.4rem, 3vw, 1.75rem);
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+        .lit-section h3 {
+            font-family: var(--font-body, 'DM Sans', sans-serif);
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 32px 0 12px;
+        }
+        .lit-section p {
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            font-size: 15px;
+            line-height: 1.8;
+        }
+        .lit-section strong { color: var(--text-primary); font-weight: 600; }
 
-    /* ── Content Container ────────────────────────── */
-    .content-wrap {
-        max-width: var(--max-width);
-        margin: 0 auto;
-        padding: 0 24px 80px;
-    }
+        /* ── Alignment/Extension Callout ──────────────── */
+        .callout {
+            background: rgba(14, 165, 233, 0.05);
+            border-left: 3px solid var(--accent-teal);
+            border-radius: 0 8px 8px 0;
+            padding: 16px 20px;
+            margin: 24px 0;
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--text-secondary);
+        }
+        .callout em { color: var(--accent-teal); font-style: normal; font-weight: 600; }
 
-    /* ── Table of Contents Card ───────────────────── */
-    .toc-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border-card);
-        border-radius: 12px;
-        padding: 28px 32px;
-        margin-bottom: 56px;
-        backdrop-filter: blur(8px);
-    }
-    .toc-card h2 {
-        font-family: var(--font-mono);
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 1.5px;
-        color: var(--accent-teal);
-        margin-bottom: 16px;
-    }
-    .toc-card ol {
-        list-style: none;
-        counter-reset: toc;
-        padding: 0;
-    }
-    .toc-card li {
-        counter-increment: toc;
-        margin-bottom: 6px;
-    }
-    .toc-card li a {
-        font-size: 14px;
-        color: var(--text-secondary);
-        text-decoration: none;
-        transition: color 0.2s;
-        display: flex;
-        align-items: baseline;
-        gap: 8px;
-    }
-    .toc-card li a::before {
-        content: counter(toc) ".";
-        font-family: var(--font-mono);
-        font-size: 12px;
-        color: var(--text-muted);
-        min-width: 20px;
-    }
-    .toc-card li a:hover { color: var(--accent-teal); }
+        /* ── Novel Contributions List ─────────────────── */
+        .novel-list {
+            list-style: none;
+            padding: 0;
+            counter-reset: novel;
+        }
+        .novel-list li {
+            counter-increment: novel;
+            position: relative;
+            padding-left: 48px;
+            margin-bottom: 20px;
+            font-size: 15px;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+        .novel-list li::before {
+            content: counter(novel);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 32px; height: 32px;
+            background: rgba(14, 165, 233, 0.1);
+            border: 1px solid rgba(14, 165, 233, 0.3);
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-family: var(--font-heading, 'Plus Jakarta Sans', sans-serif);
+            font-size: 13px;
+            color: var(--accent-teal);
+            font-weight: 700;
+        }
+        .novel-list li strong { color: var(--text-primary); }
 
-    /* ── Section Styling ──────────────────────────── */
-    .section {
-        margin-bottom: 56px;
-        padding-top: 24px;
-    }
-    .section-number {
-        font-family: var(--font-mono);
-        font-size: 12px;
-        color: var(--accent-teal);
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        margin-bottom: 8px;
-        display: block;
-    }
-    .section h2 {
-        font-family: var(--font-display);
-        font-size: clamp(1.4rem, 3vw, 1.75rem);
-        color: var(--text-primary);
-        margin-bottom: 20px;
-        font-weight: 400;
-        line-height: 1.3;
-    }
-    .section h3 {
-        font-family: var(--font-body);
-        font-size: 18px;
-        font-weight: 600;
-        color: var(--text-primary);
-        margin: 32px 0 12px;
-    }
-    .section p {
-        color: var(--text-secondary);
-        margin-bottom: 16px;
-        font-size: 15px;
-        line-height: 1.8;
-    }
-    .section strong { color: var(--text-primary); font-weight: 600; }
+        /* ── References ───────────────────────────────── */
+        .references-section {
+            margin-top: 64px;
+            padding-top: 32px;
+            border-top: 1px solid var(--border-subtle);
+        }
+        .ref-group-title {
+            font-family: var(--font-heading, 'Plus Jakarta Sans', sans-serif);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--accent-teal);
+            margin: 32px 0 12px;
+            font-weight: 700;
+        }
+        .ref-list {
+            list-style: none;
+            padding: 0;
+        }
+        .ref-list li {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.65;
+            margin-bottom: 10px;
+            padding-left: 36px;
+            position: relative;
+        }
+        .ref-list li .ref-num {
+            position: absolute;
+            left: 0;
+            font-family: var(--font-mono, monospace);
+            font-size: 12px;
+            color: var(--text-muted);
+            min-width: 28px;
+        }
+        .ref-list li a {
+            color: var(--accent-teal);
+            text-decoration: none;
+            word-break: break-all;
+        }
+        .ref-list li a:hover { text-decoration: underline; }
+        .ref-list li em { color: var(--text-secondary); }
 
-    /* ── Alignment/Extension Callout ──────────────── */
-    .callout {
-        background: rgba(0, 212, 170, 0.04);
-        border-left: 3px solid var(--accent-teal);
-        border-radius: 0 8px 8px 0;
-        padding: 16px 20px;
-        margin: 24px 0;
-        font-size: 14px;
-        line-height: 1.7;
-        color: var(--text-secondary);
-    }
-    .callout em { color: var(--accent-teal); font-style: normal; font-weight: 500; }
+        /* ── Divider ──────────────────────────────────── */
+        .section-divider {
+            border: none;
+            border-top: 1px solid var(--border-subtle);
+            margin: 48px 0;
+        }
 
-    /* ── Novel Contributions List ─────────────────── */
-    .novel-list {
-        list-style: none;
-        padding: 0;
-        counter-reset: novel;
-    }
-    .novel-list li {
-        counter-increment: novel;
-        position: relative;
-        padding-left: 48px;
-        margin-bottom: 20px;
-        font-size: 15px;
-        color: var(--text-secondary);
-        line-height: 1.7;
-    }
-    .novel-list li::before {
-        content: counter(novel);
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 32px; height: 32px;
-        background: rgba(0, 212, 170, 0.1);
-        border: 1px solid rgba(0, 212, 170, 0.3);
-        border-radius: 8px;
-        display: flex; align-items: center; justify-content: center;
-        font-family: var(--font-mono);
-        font-size: 13px;
-        color: var(--accent-teal);
-        font-weight: 500;
-    }
-    .novel-list li strong { color: var(--text-primary); }
-
-    /* ── References ───────────────────────────────── */
-    .references-section {
-        margin-top: 64px;
-        padding-top: 32px;
-        border-top: 1px solid var(--border-subtle);
-    }
-    .ref-group-title {
-        font-family: var(--font-mono);
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 1.5px;
-        color: var(--accent-teal);
-        margin: 32px 0 12px;
-    }
-    .ref-list {
-        list-style: none;
-        padding: 0;
-    }
-    .ref-list li {
-        font-size: 13px;
-        color: var(--text-muted);
-        line-height: 1.65;
-        margin-bottom: 10px;
-        padding-left: 36px;
-        position: relative;
-    }
-    .ref-list li .ref-num {
-        position: absolute;
-        left: 0;
-        font-family: var(--font-mono);
-        font-size: 12px;
-        color: var(--text-muted);
-        min-width: 28px;
-    }
-    .ref-list li a {
-        color: var(--accent-teal);
-        text-decoration: none;
-        word-break: break-all;
-    }
-    .ref-list li a:hover { text-decoration: underline; }
-    .ref-list li em { color: var(--text-secondary); }
-
-    /* ── Divider ──────────────────────────────────── */
-    .section-divider {
-        border: none;
-        border-top: 1px solid var(--border-subtle);
-        margin: 48px 0;
-    }
-
-    /* ── Footer ───────────────────────────────────── */
-    .page-footer {
-        text-align: center;
-        padding: 40px 24px;
-        border-top: 1px solid var(--border-subtle);
-        font-family: var(--font-mono);
-        font-size: 12px;
-        color: var(--text-muted);
-    }
-
-    /* ── Responsive ───────────────────────────────── */
-    @media (max-width: 640px) {
-        .top-nav .nav-links { display: none; }
-        .content-wrap { padding: 0 16px 60px; }
-        .toc-card { padding: 20px; }
-        .section h2 { font-size: 1.3rem; }
-    }
-</style>
-```
+        /* ── Responsive ───────────────────────────────── */
+        @media (max-width: 640px) {
+            .content-wrap { padding: 0 16px 60px; }
+            .toc-card { padding: 20px; }
+            .lit-section h2 { font-size: 1.3rem; }
+        }
+    </style>
 
 </head>
 <body>
 
-<!-- ── Navigation ──────────────────────────────────── -->
-
-<nav class="top-nav">
-    <a href="../index.html" class="nav-brand">The 8,760 Problem</a>
-    <ul class="nav-links">
-        <li><a href="../index.html">Home</a></li>
-        <li><a href="optimizer_methodology.html">Methodology</a></li>
-        <li><a href="lit-review.html" style="color:var(--accent-teal)">Literature Review</a></li>
-    </ul>
-</nav>
-
-<!-- ── Hero ────────────────────────────────────────── -->
-
-<header class="page-hero">
+<!-- ── Hero (standard shared header) ──────────────── -->
+<div class="header" id="pageHeader">
     <h1>Literature Review &amp; References</h1>
-    <p class="subtitle">Academic foundations and cited works underpinning the 8,760 Problem analysis - mapping the full intellectual landscape across seven research domains.</p>
-</header>
+    <div class="subtitle">Academic foundations and cited works underpinning the 8,760 Problem analysis — mapping the full intellectual landscape across seven research domains.</div>
+    <div class="header-accent"></div>
+</div>
 
 <!-- ── Content ─────────────────────────────────────── -->
 
 <main class="content-wrap">
 
-```
 <!-- Table of Contents -->
 <div class="toc-card">
     <h2>Contents</h2>
@@ -349,9 +262,11 @@
 </div>
 
 <!-- ── Section 1 ──────────────────────────────── -->
-<div class="section" id="s1">
-    <span class="section-number">Section 1</span>
+<div class="section-header">
+    <div class="section-number">1</div>
     <h2>The Accounting Revolution: From Annual RECs to Hourly Matching</h2>
+</div>
+<div class="lit-section" id="s1">
 
     <p>The intellectual foundation for hourly clean energy matching begins with the <strong>GHG Protocol Scope 2 Guidance</strong> (WRI, 2015) <a href="#ref-1">[1]</a>, which established dual reporting: a location-based method using average grid emission factors and a market-based method using contractual instruments such as Renewable Energy Certificates. This framework enabled the modern voluntary clean energy market but also created a structural loophole.</p>
 
@@ -375,9 +290,11 @@
 <hr class="section-divider">
 
 <!-- ── Section 2 ──────────────────────────────── -->
-<div class="section" id="s2">
-    <span class="section-number">Section 2</span>
+<div class="section-header">
+    <div class="section-number">2</div>
     <h2>Granular Certificates and Institutional Infrastructure</h2>
+</div>
+<div class="lit-section" id="s2">
 
     <p><strong>EnergyTag</strong>, the independent nonprofit, published its Granular Certificate (GC) Scheme Standard V2 in December 2024 and Matching Standard V1 in March 2024. GCs represent energy production during intervals of one hour or less and can be implemented through three configurations: direct issuance by local EAC bodies (Config 1), independent GC issuance alongside existing EAC systems (Config 2), or conversion of monthly EACs using hourly meter data (Config 3, most widely available today). In June 2025, EnergyTag accredited its first two GC schemes - <strong>Energinet</strong> (Denmark's TSO) and a second scheme - marking a milestone for operational granular certification <a href="#ref-12">[12]</a>.</p>
 
@@ -395,9 +312,11 @@
 <hr class="section-divider">
 
 <!-- ── Section 3 ──────────────────────────────── -->
-<div class="section" id="s3">
-    <span class="section-number">Section 3</span>
+<div class="section-header">
+    <div class="section-number">3</div>
     <h2>The Princeton Finding That Annual Matching Fails</h2>
+</div>
+<div class="lit-section" id="s3">
 
     <p>The most consequential finding in the hourly matching literature comes from Princeton's ZERO Lab. Xu, Ricks, Manocha, Patankar, and Jenkins (2024, <em>Joule</em>) enhanced GenX to compare three voluntary procurement strategies - annual matching, temporal (hourly) matching, and emissions matching - across US regions. Their central finding: <strong>annual/volumetric matching produces "zero or near-zero" system-level CO₂ reductions</strong> in the long run, because wind and solar procurement largely displaces other clean energy rather than fossil fuels. Only temporal (hourly) matching consistently lowered system-wide emissions <a href="#ref-17">[17]</a>. In a separate analysis, Xu et al. showed that when both RPS compliance and voluntary C&amp;I demand draw on the same regional supply curve, <strong>costs escalate non-linearly</strong> as combined demand approaches the buildable capacity frontier <a href="#ref-18">[18]</a>.</p>
 
@@ -417,9 +336,11 @@
 <hr class="section-divider">
 
 <!-- ── Section 4 ──────────────────────────────── -->
-<div class="section" id="s4">
-    <span class="section-number">Section 4</span>
+<div class="section-header">
+    <div class="section-number">4</div>
     <h2>Clean Firm Power: The Technologies That Close the Hourly Gap</h2>
+</div>
+<div class="lit-section" id="s4">
 
     <p>The economic case for clean firm power is anchored by Sepulveda, Jenkins, de Sisternes, and Lester (2018, <em>Joule</em>), who evaluated nearly 1,000 cases and found that firm low-carbon technologies <strong>reduce electricity costs by 10–62%</strong> across fully decarbonized scenarios <a href="#ref-27">[27]</a>. Long et al. (2021) - the landmark EDF/CATF California study - found portfolios with clean firm power <strong>32–53% cheaper</strong> than renewables-and-batteries-only pathways <a href="#ref-28">[28]</a>.</p>
 
@@ -453,9 +374,11 @@
 <hr class="section-divider">
 
 <!-- ── Section 5 ──────────────────────────────── -->
-<div class="section" id="s5">
-    <span class="section-number">Section 5</span>
+<div class="section-header">
+    <div class="section-number">5</div>
     <h2>Why LCOE Misleads: System Cost, Cannibalization, and Value Deflation</h2>
+</div>
+<div class="lit-section" id="s5">
 
     <p>Joskow (2011, <em>American Economic Review</em>) established the foundational critique: LCOE is "seriously flawed" because it treats all MWh as homogeneous <a href="#ref-50">[50]</a>. Hirth (2013) quantified the consequence: wind value factors drop to ~0.7 at 30% market share and <strong>solar to ~0.7 at only 10–15% penetration</strong> <a href="#ref-51">[51]</a>. Hirth, Ueckerdt, and Edenhofer (2015) decomposed integration costs into profile costs (~25–35 €/MWh at 30–40% wind), balancing costs (~2–4 €/MWh), and grid costs <a href="#ref-52">[52]</a>. Ueckerdt et al. (2013) formalized <strong>System LCOE = Generation LCOE + Integration Costs</strong> <a href="#ref-53">[53]</a>.</p>
 
@@ -469,9 +392,11 @@
 <hr class="section-divider">
 
 <!-- ── Section 6 ──────────────────────────────── -->
-<div class="section" id="s6">
-    <span class="section-number">Section 6</span>
+<div class="section-header">
+    <div class="section-number">6</div>
     <h2>The Last Mile: Storage Economics, Grid Resilience, and Resource Adequacy</h2>
+</div>
+<div class="lit-section" id="s6">
 
     <p>Battery storage enables temporal shifting of clean energy. NREL ATB 2024 reports 4-hour Li-ion round-trip efficiency of 85% <a href="#ref-41">[41]</a>, with installed costs declining from $380/kWh in 2020 to ~$250/kWh in 2024 <a href="#ref-58">[58]</a>. BloombergNEF reports pack prices at <strong>$108/kWh</strong> in 2025 (down 93% since 2010) <a href="#ref-59">[59]</a>. The EIA reports 16 GW of utility-scale storage installed as of 2024 <a href="#ref-60">[60]</a>.</p>
 
@@ -491,9 +416,11 @@
 <hr class="section-divider">
 
 <!-- ── Section 7 ──────────────────────────────── -->
-<div class="section" id="s7">
-    <span class="section-number">Section 7</span>
+<div class="section-header">
+    <div class="section-number">7</div>
     <h2>The Interconnection Bottleneck and Market Design Challenges</h2>
+</div>
+<div class="lit-section" id="s7">
 
     <p>Berkeley Lab's "Queued Up" (Rand et al., 2025) documents <strong>~2,300 GW</strong> of capacity (10,300 projects) seeking grid connection. Only <strong>13%</strong> from 2000–2019 reached commercial operations; 77% was withdrawn. Median wait times have doubled to over 4 years <a href="#ref-75">[75]</a>.</p>
 
@@ -511,9 +438,11 @@
 <hr class="section-divider">
 
 <!-- ── Section 8 ──────────────────────────────── -->
-<div class="section" id="s8">
-    <span class="section-number">Section 8</span>
+<div class="section-header">
+    <div class="section-number">8</div>
     <h2>Corporate Procurement Enters the Firm Power Era</h2>
+</div>
+<div class="lit-section" id="s8">
 
     <p>BloombergNEF data shows corporations signed ~62 GW of clean power PPAs in 2024 before declining to <strong>55.9 GW in 2025</strong> - the first drop in nearly a decade. Critically, <strong>5.2 GW</strong> of 2025 deals were "baseload-like" products - a structural shift <a href="#ref-83">[83]</a>.</p>
 
@@ -525,9 +454,11 @@
 <hr class="section-divider">
 
 <!-- ── Section 9 ──────────────────────────────── -->
-<div class="section" id="s9">
-    <span class="section-number">Section 9</span>
+<div class="section-header">
+    <div class="section-number">9</div>
     <h2>Relationship to Capacity Expansion Models</h2>
+</div>
+<div class="lit-section" id="s9">
 
     <p>The dominant tools for grid planning - <strong>GenX</strong> <a href="#ref-91">[91]</a>, <strong>ReEDS</strong> <a href="#ref-92">[92]</a>, <strong>SWITCH</strong> <a href="#ref-93">[93]</a>, and <strong>PyPSA</strong> <a href="#ref-94">[94]</a> - are capacity expansion (CE) models. They solve a unified optimization: given cost assumptions, find the least-cost portfolio subject to reliability and policy constraints. They are powerful system-planning instruments. This optimizer is not one of them, and the distinction is deliberate.</p>
 
@@ -555,9 +486,11 @@
 <hr class="section-divider">
 
 <!-- ── Section 10 ─────────────────────────────── -->
-<div class="section" id="s10">
-    <span class="section-number">Section 10</span>
+<div class="section-header">
+    <div class="section-number">10</div>
     <h2>Novel Contributions of The 8,760 Problem</h2>
+</div>
+<div class="lit-section" id="s10">
 
     <p>Across all research domains reviewed, the following nine contributions are not found in any prior published work:</p>
 
@@ -577,9 +510,11 @@
 <hr class="section-divider">
 
 <!-- ── References ─────────────────────────────── -->
-<div class="references-section" id="refs">
-    <span class="section-number">References</span>
+<div class="section-header">
+    <div class="section-number">R</div>
     <h2>References</h2>
+</div>
+<div class="references-section" id="refs">
 
     <!-- CO₂ Accounting & Frameworks -->
     <h3 class="ref-group-title">CO₂ Accounting &amp; Frameworks</h3>
@@ -761,15 +696,14 @@
         <li id="ref-100"><span class="ref-num">100.</span> LDES Council. (2023). "The Journey to Net-Zero: An Update on LDES." <a href="https://www.ldescouncil.com/insights">ldescouncil.com</a></li>
     </ul>
 </div>
-```
 
 </main>
 
 <!-- ── Footer ──────────────────────────────────────── -->
-
 <footer class="page-footer">
-    The 8,760 Problem - Literature Review &amp; References
+    <div class="footer-links">The 8,760 Problem &mdash; Literature Review &amp; References</div>
 </footer>
+<div class="bottom-banner"></div>
 
 </body>
 </html>

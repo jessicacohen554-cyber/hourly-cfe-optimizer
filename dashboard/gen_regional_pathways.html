@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/article.css">
 <link rel="stylesheet" href="styles/scrollytell.css">
 <link rel="stylesheet" href="styles/dashboard-ui.css">
 <link rel="stylesheet" href="styles/cinematic.css">
@@ -173,8 +174,12 @@
 </section>
 
 <!-- TARGET PATHWAY COMPARISON -->
-<section class="story-panel scroll-reveal" id="pathwayComparison">
+<div class="section-header fade-in">
+    <div class="section-number">1</div>
     <h2>Two Pathways to Net-Zero: SMARTargets vs. SBTi</h2>
+    <p>Comparing EPRI SMARTargets aspirational targets with SBTi Power Sector v2 trajectories</p>
+</div>
+<section class="story-panel scroll-reveal" id="pathwayComparison">
     <p class="section-desc">
         The regional analysis below models decarbonization against the <strong>EPRI SMARTargets aspirational targets</strong>
         (net-zero by 2050) as the primary pathway. For comparison, we also show the <strong>SBTi Power Sector v2</strong>
@@ -216,8 +221,12 @@
 <div id="regionalContent">
 
     <!-- §1: The Gap to Net-Zero (with Market Fan) -->
-    <section class="story-panel panel-navy scroll-reveal" id="gapSection">
+    <div class="section-header fade-in">
+        <div class="section-number">2</div>
         <h2>The Gap to Net-Zero: <span id="gapIsoName">California</span></h2>
+        <p>The distance between where the market stops and where the grid needs to be</p>
+    </div>
+    <section class="story-panel scroll-reveal" id="gapSection">
         <p class="section-desc" id="gapDesc">The distance between where the market stops and where the grid needs to be - and what fills the gap.</p>
         <div id="refFanCallout" class="narrative-box warn"></div>
         <div class="gap-cards" id="gapCards"></div>
@@ -236,8 +245,12 @@
     </section>
 
     <!-- §3: Regional Challenges & Opportunities -->
-    <section class="story-panel scroll-reveal" id="challengeSection">
+    <div class="section-header fade-in">
+        <div class="section-number">3</div>
         <h2>Challenges & Opportunities: <span id="challengeIsoName">California</span></h2>
+        <p>Region-specific constraints and advantages shaping the decarbonization pathway</p>
+    </div>
+    <section class="story-panel scroll-reveal" id="challengeSection">
         <div id="challengeNarrative"></div>
     </section>
 
@@ -254,8 +267,12 @@
     </div>
 
     <!-- §4: Grid Buildout - What Gets Built -->
-    <section class="story-panel panel-navy scroll-reveal" id="buildoutSection">
+    <div class="section-header fade-in">
+        <div class="section-number">4</div>
         <h2>What Gets Built: <span id="buildoutPathway">Power Sector NZ</span></h2>
+        <p>The resource portfolio needed to stay on the decarbonization trajectory</p>
+    </div>
+    <section class="story-panel scroll-reveal" id="buildoutSection">
         <p class="section-desc">The resource portfolio needed to stay on the decarbonization trajectory. Saturated bars = existing generation; transparent = new build required. Curtailed energy (hatched) rises with variable renewable penetration.</p>
         <div class="grid-2up" id="mixGridArea">
             <div class="chart-panel" id="mixPanelFac">
@@ -272,8 +289,12 @@
     </section>
 
     <!-- §5: The Cost of Closing the Gap -->
-    <section class="story-panel panel-navy scroll-reveal" id="costSection">
+    <div class="section-header fade-in">
+        <div class="section-number">5</div>
         <h2>The Cost of Closing the Gap</h2>
+        <p>Carbon prices, DAC backstop costs, and policy subsidies required beyond market willingness</p>
+    </div>
+    <section class="story-panel scroll-reveal" id="costSection">
         <p class="section-desc">What it costs in carbon price, DAC backstop, and policy subsidies to force deployment beyond market willingness.</p>
         <div class="grid-2up">
             <div class="chart-panel">
@@ -290,8 +311,12 @@
     </section>
 
     <!-- §6: Facilitating vs. Challenging -->
-    <section class="story-panel scroll-reveal" id="compSection">
+    <div class="section-header fade-in">
+        <div class="section-number">6</div>
         <h2>Facilitating vs. Challenging: Side by Side</h2>
+        <p>Same destination, different costs — how conditions change the difficulty of decarbonization</p>
+    </div>
+    <section class="story-panel scroll-reveal" id="compSection">
         <p class="section-desc">Same destination, different costs. Key 2050 metrics showing how conditions change the difficulty of decarbonization.</p>
         <div class="scenario-pair" id="scenarioComparison"></div>
     </section>

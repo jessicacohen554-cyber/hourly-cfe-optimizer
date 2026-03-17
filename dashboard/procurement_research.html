@@ -10,35 +10,37 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
     <link rel="stylesheet" href="styles/reference.css">
+    <link rel="stylesheet" href="styles/article.css">
 <script src="js/shared-footer.js"></script>
 <style>
 body { background: var(--bg-page); }
 
-/* Hero */
+/* Hero — light theme */
 .hero {
-    background: linear-gradient(180deg, #0F1A2E 0%, #1A2744 60%, #1E3A5F 100%);
+    background: var(--bg-page-white, #fff);
     padding: 48px 24px 40px;
     text-align: center;
+    border-bottom: 1px solid var(--border-light, #E5E7EB);
 }
 .hero h1 {
     font-family: var(--font-heading);
     font-size: 2.2rem;
     font-weight: 800;
-    color: #ffffff;
+    color: var(--navy, #1A2744);
     margin-bottom: 12px;
     letter-spacing: -0.5px;
 }
 .hero .subtitle {
     font-size: 1.05rem;
-    color: rgba(255,255,255,0.88);
+    color: rgba(0,0,0,0.55);
     max-width: 940px;
     margin: 0 auto 8px;
     line-height: 1.7;
 }
 .hero .status-badge {
     display: inline-block;
-    background: rgba(245,158,11,0.15);
-    color: #F59E0B;
+    background: rgba(245,158,11,0.1);
+    color: #B45309;
     border: 1px solid rgba(245,158,11,0.3);
     padding: 4px 14px;
     border-radius: 20px;
@@ -71,8 +73,8 @@ body { background: var(--bg-page); }
     gap: 10px;
 }
 .research-section h2 .section-num {
-    background: var(--navy);
-    color: #fff;
+    background: var(--hydro-bg, rgba(14, 165, 233, 0.08));
+    color: var(--hydro-text, #0369A1);
     width: 28px; height: 28px;
     border-radius: 50%;
     display: inline-flex;
@@ -223,22 +225,6 @@ body { background: var(--bg-page); }
 }
 .site-footer a { color: rgba(255,255,255,0.75); text-decoration: none; }
 .site-footer a:hover { color: #fff; }
-/* contrast-fix: .research-section text colors override shared.css .section-dark colors
-   because page <style> loads after shared.css. Restore light text on dark backgrounds. */
-.section-dark .research-section h2 { color: #ffffff; } /* contrast-fix: was var(--navy) ~#0F172A, now #ffffff on navy bg */
-.section-dark .research-section h3 { color: #ffffff; } /* contrast-fix: was #374151, now #ffffff on navy bg */
-.section-dark .research-section p,
-.section-dark .research-section li { color: rgba(255,255,255,0.88); } /* contrast-fix: was #1f2937, now light on navy bg */
-.section-dark .research-section .section-desc { color: rgba(255,255,255,0.72); } /* contrast-fix: was var(--text-muted) #6B7280, now light on navy bg */
-.section-dark .research-section strong { color: rgba(255,255,255,0.97); } /* contrast-fix: ensure strong text visible on dark bg */
-.section-dark .research-section h2 .section-num { background: rgba(255,255,255,0.2); color: #fff; } /* contrast-fix: was var(--navy) on navy bg */
-.section-dark .strategy-card h4 { color: var(--navy); } /* keep dark text on white card bg */
-.section-dark .strategy-card p { color: #4b5563; } /* keep dark text on white card bg */
-.section-dark .strategy-card p strong { color: #1A2744; } /* keep dark strong text on white card bg */
-.section-dark .strategy-card .tag-consequential { color: #4F46E5; } /* keep on light tag bg */
-.section-dark .strategy-card .tag-hourly { color: #0E7490; } /* keep on light tag bg */
-.section-dark .strategy-card .tag-annual { color: #B45309; } /* keep on light tag bg */
-
 /* Responsive */
 @media (max-width: 768px) {
     .hero h1 { font-size: 1.6rem; }
@@ -659,9 +645,7 @@ body { background: var(--bg-page); }
 <!-- ============================================================ -->
 <!-- SECTION 5: Procurement Strategy Taxonomy -->
 <!-- ============================================================ -->
-<section class="section-dark">
-<div class="section-dark-inner">
-<div class="research-section" id="strategies" style="background:transparent;border:none;box-shadow:none;">
+<div class="research-section" id="strategies">
     <h2><span class="section-num">5</span> Procurement Strategy Taxonomy</h2>
     <p class="section-desc">Three families of strategies, each with sub-variants that define what counts as "clean" and how matching works.</p>
 
@@ -736,8 +720,6 @@ body { background: var(--bg-page); }
     <h3>Cross-Cutting Layer: FOAK-to-NOAK Learning Curves (2ABC-i)</h3>
     <p>An optional layer applicable to any Strategy 2 variant that incorporates first-of-a-kind to Nth-of-a-kind cost learning for clean firm resources. Prioritizes cheapest $/tCO&#8322; queueing while reflecting the deployment-driven cost reductions modeled in the existing Scenario A/B consequential analysis.</p>
 </div>
-</div>
-</section>
 
 <!-- ============================================================ -->
 <!-- SECTION 6: Dashboard Concept -->
@@ -787,9 +769,7 @@ body { background: var(--bg-page); }
 <!-- ============================================================ -->
 <!-- SECTION 8: Open Questions -->
 <!-- ============================================================ -->
-<section class="section-dark">
-<div class="section-dark-inner">
-<div class="research-section" id="open-questions" style="background:transparent;border:none;box-shadow:none;">
+<div class="research-section" id="open-questions">
     <h2><span class="section-num">8</span> Open Design Questions</h2>
     <p class="section-desc">Decisions needed before implementation can proceed.</p>
 
@@ -810,8 +790,6 @@ body { background: var(--bg-page); }
         <li><strong>System-wide panel mechanics:</strong> When backing into required participation, how does the model handle supply constraints (e.g., NEISO can't source enough clean for 100% hourly matching)?</li>
     </ol>
 </div>
-</div>
-</section>
 
 </div><!-- /content -->
 

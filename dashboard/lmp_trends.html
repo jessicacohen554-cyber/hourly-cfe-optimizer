@@ -199,8 +199,6 @@
 @media (max-width: 480px) {
     .ctr-finding-tiles { grid-template-columns: 1fr; }
 }
-/* contrast-fix: chart-legend in panel-navy chart-panels (glass bg on dark bg) */
-.panel-navy .chart-panel .chart-legend-item { color: rgba(255,255,255,0.85) !important; }
 </style>
 </head>
 <body>
@@ -317,6 +315,11 @@
 <!-- ================================================================ -->
 <!-- SECTION 1: Fuel Prices Dominate                                   -->
 <!-- ================================================================ -->
+<div class="section-header fade-in">
+    <div class="section-number">1</div>
+    <h2>Fuel Prices Dominate</h2>
+    <p>Natural gas prices explain nearly all wholesale cost variation — until clean energy reaches critical mass.</p>
+</div>
 <div class="scroll-section section-light">
     <div class="scroll-section-inner">
         <div class="scroll-chart-col">
@@ -355,6 +358,11 @@
 <!-- ================================================================ -->
 <!-- SECTION 2: Market Regime Shift                                    -->
 <!-- ================================================================ -->
+<div class="section-header fade-in">
+    <div class="section-number">2</div>
+    <h2>Market Regime Shift</h2>
+    <p>Zero-price hours explode and scarcity spikes emerge as clean energy displaces fossil generation.</p>
+</div>
 <div class="scroll-section section-light">
     <div class="scroll-section-inner">
         <div class="scroll-chart-col">
@@ -393,6 +401,11 @@
 <!-- ================================================================ -->
 <!-- SECTION 3: Peak vs Off-peak                                       -->
 <!-- ================================================================ -->
+<div class="section-header fade-in">
+    <div class="section-number">3</div>
+    <h2>Peak vs. Off-Peak Spread</h2>
+    <p>The arbitrage signal for storage operators strengthens through most of the transition.</p>
+</div>
 <div class="scroll-section section-light">
     <div class="scroll-section-inner">
         <div class="scroll-chart-col">
@@ -429,7 +442,12 @@
 <!-- ================================================================ -->
 <!-- SECTION 4: Capacity Market Revenue                                -->
 <!-- ================================================================ -->
-<div class="scroll-section section-light panel-navy">
+<div class="section-header fade-in">
+    <div class="section-number">4</div>
+    <h2>Capacity Market Revenue</h2>
+    <p>Capacity payments cushion the wholesale price decline — but only in ISOs with capacity markets.</p>
+</div>
+<div class="scroll-section section-light">
     <div class="scroll-section-inner">
         <div class="chart-panel" id="capRevPanel">
             <div class="chart-header">
@@ -446,7 +464,7 @@
                 <p>In energy-only markets (ERCOT, SPP), generators must survive on energy revenue alone. This amplifies retirement risk as clean energy depresses wholesale prices.</p>
             </div>
             <div class="narrative-card">
-                <span class="section-tag" style="background:rgba(239,68,68,0.2);color:#FCA5A5;">Nuclear Viability</span>
+                <span class="section-tag" style="background:rgba(239,68,68,0.12);color:#DC2626;">Nuclear Viability</span>
                 <h3>Nuclear retirement risk shifts with total market revenue</h3>
                 <p>When capacity payments are included, nuclear viability extends further into the clean energy transition. In PJM, the total market revenue (energy + capacity) crosses below nuclear's all-in cost of <strong>$38–44/MWh</strong> at approximately <strong id="nucViableCapPct">78%</strong> clean - compared to ~68% under energy-only pricing.</p>
                 <p>The 45U PTC ($15/MWh) combined with capacity payments creates a stronger floor, potentially extending nuclear viability to ~85% clean.</p>
@@ -467,6 +485,11 @@
 <!-- ================================================================ -->
 <!-- SECTION 5: Step 5B vs Step 10 Pure Power Market Comparison        -->
 <!-- ================================================================ -->
+<div class="section-header fade-in">
+    <div class="section-number">5</div>
+    <h2>Pure Power Market Comparison</h2>
+    <p>Policy-driven vs. market-driven decarbonization — where the two models converge and diverge.</p>
+</div>
 <div class="scroll-section section-light">
     <div class="scroll-section-inner">
         <div class="chart-panel" id="refCasePanel">
@@ -496,6 +519,11 @@
 <!-- ================================================================ -->
 <!-- SECTION 6: Solar & Wind Cannibalization                           -->
 <!-- ================================================================ -->
+<div class="section-header fade-in">
+    <div class="section-number">6</div>
+    <h2>Solar &amp; Wind Cannibalization</h2>
+    <p>Every megawatt of clean energy pushes wholesale prices lower — undermining its own revenue case.</p>
+</div>
 <div class="scroll-section section-light">
     <div class="scroll-section-inner">
         <div class="scroll-chart-col">
@@ -532,7 +560,12 @@
 <!-- ================================================================ -->
 <!-- SECTION 7: Storage & Arbitrage Signals                            -->
 <!-- ================================================================ -->
-<div class="scroll-section section-light panel-navy">
+<div class="section-header fade-in">
+    <div class="section-number">7</div>
+    <h2>Storage &amp; Arbitrage Signals</h2>
+    <p>Storage deployment grows with CFE targets — and the arbitrage opportunity persists longer than expected.</p>
+</div>
+<div class="scroll-section section-light">
     <div class="scroll-section-inner">
         <div class="scroll-chart-col">
             <div class="chart-panel">
@@ -569,6 +602,11 @@
 <!-- ================================================================ -->
 <!-- SECTION 8: Gas Capacity & Stranding Risk                          -->
 <!-- ================================================================ -->
+<div class="section-header fade-in">
+    <div class="section-number">8</div>
+    <h2>Gas Capacity &amp; Stranding Risk</h2>
+    <p>Gas plants face a utilization cliff — but capacity is still needed for grid reliability.</p>
+</div>
 <div class="scroll-section section-light" id="gas-fleet-risk-section">
     <div class="scroll-section-inner">
         <div class="scroll-chart-col">
@@ -609,6 +647,11 @@
 <!-- ================================================================ -->
 <!-- SECTION 9: Nuclear Revenue Crossover (overview)                   -->
 <!-- ================================================================ -->
+<div class="section-header fade-in">
+    <div class="section-number">9</div>
+    <h2>Nuclear Revenue Crossover</h2>
+    <p>Where total market revenue falls below the threshold needed to sustain existing nuclear plants.</p>
+</div>
 <div class="scroll-section section-light" id="nuclear-crossover">
     <div class="scroll-section-inner">
         <div class="narrative-card">
@@ -658,6 +701,11 @@
 <!-- ================================================================ -->
 <!-- SECTION 10: Revenue Decomposition & Replacement Cost              -->
 <!-- ================================================================ -->
+<div class="section-header fade-in">
+    <div class="section-number">10</div>
+    <h2>Revenue Decomposition &amp; Replacement Cost</h2>
+    <p>Breaking down energy and capacity revenue — and what it costs to replace nuclear when it retires.</p>
+</div>
 <div class="scroll-section section-light">
     <div class="scroll-section-inner">
         <!-- Revenue Decomposition -->
@@ -691,9 +739,13 @@
 <!-- ================================================================ -->
 <!-- SYNTHESIS                                                         -->
 <!-- ================================================================ -->
-<div class="gradient-transition"></div>
-<section class="section-dark">
-<div class="section-dark-inner">
+<div class="section-header fade-in">
+    <div class="section-number">&#10003;</div>
+    <h2>Synthesis</h2>
+    <p>Three eras of the wholesale market — and the uncertainty paradox at the heart of the transition.</p>
+</div>
+<section class="scroll-section section-light">
+<div class="scroll-section-inner">
     <div class="synthesis-grid" id="synthesisGrid">
         <div class="synthesis-card">
             <h3>The uncertainty paradox: widest where it matters most</h3>
@@ -710,6 +762,7 @@
             <a href="home.html#fork-section" class="explore-link" style="font-size:0.82rem; margin-top:var(--space-sm); display:inline-block;">The fork in the road: where the three eras begin <span class="arrow">&rarr;</span></a>
         </div>
     </div>
+</div>
 </section>
 
 <!-- ============ RELATED ANALYSES ============ -->

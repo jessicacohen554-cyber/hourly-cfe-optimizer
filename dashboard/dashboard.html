@@ -9,7 +9,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/article.css">
     <link rel="stylesheet" href="styles/dashboard-ui.css">
+<script src="js/nav.js"></script>
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
     <script src="js/scroll-observer.js"></script>
@@ -163,6 +165,12 @@ body {
     </div>
 
     <!-- CONTROLS -->
+    <div class="section-header fade-in">
+        <div class="section-number">1</div>
+        <h2>Select Your Region &amp; Target</h2>
+        <p>Choose a grid region and set your interim and long-term hourly clean energy matching targets.</p>
+    </div>
+
     <div class="controls-row">
         <div class="control-group">
             <label for="regionSelect">Region / ISO</label>
@@ -204,6 +212,12 @@ body {
     </div>
 
     <!-- SENSITIVITY TOGGLES (5 Paired Groups) -->
+    <div class="section-header fade-in">
+        <div class="section-number">2</div>
+        <h2>Sensitivity Controls</h2>
+        <p>Adjust cost assumptions to see how they reshape the optimal clean energy portfolio and total cost.</p>
+    </div>
+
     <div class="sensitivity-panel" id="sensitivityPanel">
         <h3>Sensitivity Controls</h3>
         <p class="sensitivity-subtitle">Adjust cost assumptions to see how they change the optimal clean energy portfolio and total cost. Each toggle moves related technologies together, reflecting real-world cost correlations.</p>
@@ -402,6 +416,12 @@ body {
     </div>
 
     <!-- WHAT YOU NEED DEPENDS ON WHAT YOU HAVE AND WHERE YOU'RE GOING -->
+    <div class="section-header fade-in">
+        <div class="section-number">3</div>
+        <h2>Pathway Analysis</h2>
+        <p>Compare existing grid resources with optimal portfolios at your interim and long-term targets.</p>
+    </div>
+
     <div class="what-you-need-panel" id="whatYouNeedPanel">
         <h3>What You Need Depends on What You Have &mdash; and Where You're Going</h3>
         <p class="wyn-subtitle">
@@ -471,6 +491,12 @@ body {
     </div>
 
     <!-- METRIC TILES -->
+    <div class="section-header fade-in">
+        <div class="section-number">4</div>
+        <h2>Optimization Results</h2>
+        <p>Key metrics for the selected region, target threshold, and cost scenario.</p>
+    </div>
+
     <div class="metrics-row">
         <div class="metric-tile" id="tileMatch">
             <div class="tile-label">Hourly Match Score</div>
@@ -521,6 +547,12 @@ body {
     </div>
 
     <!-- DONUT (Resource Mix) + COMPRESSED DAY -->
+    <div class="section-header fade-in">
+        <div class="section-number">5</div>
+        <h2>Resource Mix &amp; Dispatch</h2>
+        <p>How your clean energy portfolio is composed and how it meets demand across a typical day.</p>
+    </div>
+
     <div class="charts-row charts-row-duo">
         <div class="chart-panel donut-panel">
             <h3>How Your Clean Energy is Sourced</h3>

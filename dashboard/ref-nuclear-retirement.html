@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/article.css">
 <link rel="stylesheet" href="styles/reference.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="js/shared-footer.js"></script>
@@ -25,28 +26,29 @@ body { background: var(--bg-page-white); }
 
 .article-wrapper { max-width: 1100px; margin: 0 auto; padding: 32px 24px 80px; }
 
-/* ─── Hero Panel ──────────────────────────────────────────────────── */
+/* ─── Hero Panel (light theme) ───────────────────────────────────── */
 .hero-panel {
-    background: linear-gradient(135deg, var(--navy,#1A2744) 0%, var(--navy-mid,#243352) 50%, var(--navy-dark,#0F1A2E) 100%);
+    background: #fff; border: 1px solid #E5E7EB;
     border-radius: 16px; padding: 40px 36px; margin-bottom: 36px;
-    color: #fff; position: relative; overflow: hidden;
+    color: #1A2744; position: relative; overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
 .hero-panel::before {
     content: ''; position: absolute; top: -50%; right: -20%; width: 400px; height: 400px;
-    background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(99,102,241,0.06) 0%, transparent 70%);
     pointer-events: none;
 }
 .hero-panel::after {
     content: ''; position: absolute; bottom: -30%; left: -10%; width: 300px; height: 300px;
-    background: radial-gradient(circle, rgba(239,68,68,0.1) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(239,68,68,0.04) 0%, transparent 70%);
     pointer-events: none;
 }
 .hero-title {
     font-family: var(--font-heading); font-size: 1.8rem; font-weight: 700;
-    margin-bottom: 16px; position: relative; line-height: 1.3;
+    margin-bottom: 16px; position: relative; line-height: 1.3; color: var(--navy, #1A2744);
 }
 .hero-subtitle {
-    font-family: var(--font-body); font-size: 1rem; color: rgba(255,255,255,0.75);
+    font-family: var(--font-body); font-size: 1rem; color: #6B7280;
     margin-bottom: 24px; max-width: 700px; line-height: 1.6; position: relative;
 }
 .hero-stats {
@@ -54,30 +56,30 @@ body { background: var(--bg-page-white); }
     gap: 16px; margin-bottom: 24px; position: relative;
 }
 .hero-stat {
-    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.22);
+    background: #F9FAFB; border: 1px solid #E5E7EB;
     border-radius: 10px; padding: 16px; text-align: center;
 }
 .hero-stat .val {
     font-family: var(--font-data, var(--font-mono)); font-size: 1.6rem;
     font-weight: 700; line-height: 1.2;
 }
-.hero-stat .val.safe { color: #15803D; /* contrast-fix: was #22C55E, now #15803D, ratio 5.02:1 on white */ }
-.hero-stat .val.risk { color: #DC2626; /* contrast-fix: was #EF4444, now #DC2626, ratio 4.83:1 on white */ }
-.hero-stat .val.warn { color: #B45309; /* contrast-fix: was #F59E0B, now #B45309, ratio 5.02:1 on white */ }
-.hero-stat .val.neutral { color: #0369A1; /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on white */ }
+.hero-stat .val.safe { color: #15803D; }
+.hero-stat .val.risk { color: #DC2626; }
+.hero-stat .val.warn { color: #B45309; }
+.hero-stat .val.neutral { color: #0369A1; }
 .hero-stat .lbl {
-    font-family: var(--font-body); font-size: 0.75rem; color: rgba(255,255,255,0.75);
+    font-family: var(--font-body); font-size: 0.75rem; color: #6B7280;
     margin-top: 4px;
 }
 .hero-insight {
-    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.20);
+    background: #F9FAFB; border: 1px solid #E5E7EB;
     border-radius: 10px; padding: 20px; position: relative;
-    font-family: var(--font-body); font-size: 0.9rem; color: rgba(255,255,255,0.85);
+    font-family: var(--font-body); font-size: 0.9rem; color: #374151;
     line-height: 1.65;
 }
-.hero-insight strong { color: #fff; }
+.hero-insight strong { color: #1A2744; }
 .hero-insight .insight-label {
-    display: inline-block; background: rgba(99,102,241,0.3); color: #93C5FD;
+    display: inline-block; background: rgba(99,102,241,0.12); color: #4F46E5;
     font-size: 0.68rem; font-weight: 600; padding: 2px 8px; border-radius: 4px;
     text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;
     font-family: var(--font-heading);
@@ -285,6 +287,7 @@ body { background: var(--bg-page-white); }
 <script src="js/nav.js"></script>
 <script src="js/chart-colors.js"></script>
 <script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
 <script src="js/nuclear-retirement-data.js"></script>
 </head>
 <body>
@@ -317,14 +320,17 @@ body { background: var(--bg-page-white); }
 </div>
 
 <!-- ─── Framing Callout + Why Three Models? ──────────────────────── -->
+<div class="section-header fade-in">
+    <div class="section-number">1</div>
+    <h2>Why Three Models?</h2>
+    <p>Each model isolates a different dimension of stranding risk. When all three agree, the finding is structural.</p>
+</div>
+
 <div class="framing-callout">
     <p style="margin:0 0 8px;font-family:var(--font-body);font-size:0.92rem;color:var(--navy,#1A2744);line-height:1.6;">
         The <a href="lmp_trends.html" style="color:#0369A1;font-weight:600;">Clean Asset Value analysis</a> showed that rising clean penetration suppresses wholesale electricity prices across every ISO. That finding raises an immediate follow-up question: <strong>what happens to the existing nuclear fleet when merchant revenue falls?</strong> This page stress-tests that question from three independent angles.
     </p>
 </div>
-
-<h2 style="font-family:var(--font-heading);font-size:1.3rem;font-weight:700;color:var(--navy,#1A2744);margin-bottom:8px;">Why Three Models?</h2>
-<p style="font-family:var(--font-body);font-size:0.88rem;color:#6B7280;margin-bottom:16px;line-height:1.5;">Each model isolates a different dimension of stranding risk. When all three agree, the finding is structural. When they diverge, the assumptions driving the divergence tell us exactly what matters.</p>
 <div class="model-framing-grid">
     <div class="model-framing-card">
         <div class="model-framing-q">How Likely?</div>
@@ -346,6 +352,12 @@ body { background: var(--bg-page-white); }
 <!-- ═══════════════════════════════════════════════════════════════════
      ACCORDION 0: Cross-Model Overview
      ═══════════════════════════════════════════════════════════════════ -->
+<div class="section-header fade-in">
+    <div class="section-number">2</div>
+    <h2>Cross-Model Comparison</h2>
+    <p>Where do the models agree on plant outcomes, and where do they diverge?</p>
+</div>
+
 <div class="accordion open" id="accOverview">
     <div class="accordion-header" onclick="toggleAccordion('accOverview')">
         <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
@@ -386,6 +398,12 @@ body { background: var(--bg-page-white); }
 <!-- ═══════════════════════════════════════════════════════════════════
      ACCORDION 1: Model A - Parametric Market Sweep
      ═══════════════════════════════════════════════════════════════════ -->
+<div class="section-header fade-in">
+    <div class="section-number">3</div>
+    <h2>Probabilistic Stress Test</h2>
+    <p>Model A: How likely is stranding across 270 parametric market scenarios?</p>
+</div>
+
 <div class="accordion" id="accModelA">
     <div class="accordion-header" onclick="toggleAccordion('accModelA')">
         <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
@@ -430,6 +448,12 @@ body { background: var(--bg-page-white); }
 <!-- ═══════════════════════════════════════════════════════════════════
      ACCORDION 2: Model B - Net-Zero Pathways
      ═══════════════════════════════════════════════════════════════════ -->
+<div class="section-header fade-in">
+    <div class="section-number">4</div>
+    <h2>Net-Zero Pathway Analysis</h2>
+    <p>Model B: Under which specific transition futures does nuclear face the most risk?</p>
+</div>
+
 <div class="accordion" id="accModelB">
     <div class="accordion-header" onclick="toggleAccordion('accModelB')">
         <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
@@ -474,6 +498,12 @@ body { background: var(--bg-page-white); }
 <!-- ═══════════════════════════════════════════════════════════════════
      ACCORDION 3: Model C - Step 3A Baseline + Capacity Adders
      ═══════════════════════════════════════════════════════════════════ -->
+<div class="section-header fade-in">
+    <div class="section-number">5</div>
+    <h2>Price Cannibalization Mechanics</h2>
+    <p>Model C: At what clean energy threshold does wholesale price suppression strand nuclear?</p>
+</div>
+
 <div class="accordion" id="accModelC">
     <div class="accordion-header" onclick="toggleAccordion('accModelC')">
         <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
@@ -516,6 +546,12 @@ body { background: var(--bg-page-white); }
 <!-- ═══════════════════════════════════════════════════════════════════
      ACCORDION 4: Revenue Waterfall & Policy Support
      ═══════════════════════════════════════════════════════════════════ -->
+<div class="section-header fade-in">
+    <div class="section-number">6</div>
+    <h2>Revenue Waterfall & Policy Safety Net</h2>
+    <p>State CfD programs and the federal 45U PTC act as revenue floors — but the policy cliff is steep.</p>
+</div>
+
 <div class="accordion" id="accWaterfall">
     <div class="accordion-header" onclick="toggleAccordion('accWaterfall')">
         <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
@@ -556,6 +592,12 @@ body { background: var(--bg-page-white); }
 <!-- ═══════════════════════════════════════════════════════════════════
      ACCORDION 5: Plant-Level Risk Profiles
      ═══════════════════════════════════════════════════════════════════ -->
+<div class="section-header fade-in">
+    <div class="section-number">7</div>
+    <h2>Plant-Level Risk Profiles</h2>
+    <p>Per-plant stranding probability synthesized across all three models — 25 plants, color-coded by consensus.</p>
+</div>
+
 <div class="accordion" id="accPlants">
     <div class="accordion-header" onclick="toggleAccordion('accPlants')">
         <svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
