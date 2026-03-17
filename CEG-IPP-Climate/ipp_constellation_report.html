@@ -47,6 +47,7 @@
                 <li><a href="#risk">Risk & Opportunity Assessment</a></li>
                 <li><a href="#qualified-target">Qualified Target Proposal</a></li>
                 <li><a href="#gas-development">Gas Lock-In Risk & Corporate Buyer Influence</a></li>
+                <li><a href="#ccs-retrofit">Gas Fleet CCS Retrofit Strategy</a></li>
                 <li><a href="#clean-investment">Clean Generation Investment Case</a></li>
                 <li><a href="#enabling-conditions">Enabling Conditions for 1.5&deg;C</a></li>
                 <li><a href="#strategic">Strategic Positioning</a></li>
@@ -181,10 +182,74 @@
                 <div class="narrative-block" id="gasNarrative"></div>
             </section>
 
-            <!-- Section 6: Clean Investment -->
-            <section class="report-section" id="clean-investment">
+            <!-- Section 6: CCS Retrofit Strategy -->
+            <section class="report-section" id="ccs-retrofit">
                 <div class="report-section-header">
                     <span class="report-section-number">06</span>
+                    <h2>Gas Fleet CCS Retrofit Strategy</h2>
+                </div>
+
+                <p style="font-size: 0.92rem; color: var(--text-secondary); margin-bottom: var(--space-xl); line-height: 1.6">
+                    As grid decarbonization drives Constellation's gas CCGT fleet toward economic stranding, CCS retrofit
+                    offers an alternative to retirement. This analysis evaluates plant-by-plant retrofit economics across
+                    ERCOT, CAISO, PJM, and NEISO &mdash; comparing retrofit costs against DAC offsets and stranding losses.
+                </p>
+
+                <!-- Headline stats -->
+                <div class="grid-stats" id="retrofitStats" style="margin-bottom: var(--space-xl)">
+                    <div class="stat-card"><div class="stat-value" id="statRetrofitEligible">&mdash;</div><div class="stat-label">Retrofit-Eligible MW</div></div>
+                    <div class="stat-card"><div class="stat-value" id="statRetrofitLCOE">&mdash;</div><div class="stat-label">Retrofit LCOE Range</div></div>
+                    <div class="stat-card"><div class="stat-value" id="statRetrofitCO2">&mdash;</div><div class="stat-label">CO&#8322; Captured (Mt/yr)</div></div>
+                    <div class="stat-card"><div class="stat-value" id="stat45QRevenue">&mdash;</div><div class="stat-label">45Q Revenue ($/yr)</div></div>
+                    <div class="stat-card"><div class="stat-value" id="statNEISOIneligible">&mdash;</div><div class="stat-label">NEISO Ineligible MW</div></div>
+                </div>
+
+                <!-- Chart 1: Plant-level retrofit economics -->
+                <div class="card" style="padding: var(--space-lg); margin-bottom: var(--space-xl)">
+                    <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Plant-Level Retrofit Economics by ISO</h3>
+                    <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: var(--space-md)">
+                        Retrofit LCOE vs. wholesale LMP vs. DAC offset cost &mdash; plants above the LMP line are uneconomic without subsidy
+                    </p>
+                    <div class="chart-container-lg"><canvas id="retrofitEconChart"></canvas></div>
+                </div>
+
+                <!-- Chart 2 & 3: Timeline + CO2 -->
+                <div class="grid-2col" style="margin-bottom: var(--space-xl)">
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Retrofit Timeline by ISO</h3>
+                        <div class="chart-container"><canvas id="retrofitTimelineChart"></canvas></div>
+                    </div>
+                    <div class="card" style="padding: var(--space-lg)">
+                        <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">CO&#8322; Reduction: Retrofit vs. DAC Offset</h3>
+                        <div class="chart-container"><canvas id="retrofitCO2Chart"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- Chart 4: Fleet decision map -->
+                <div class="card" style="padding: var(--space-lg); margin-bottom: var(--space-xl)">
+                    <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">2050 Fleet Outcome: Retrofit vs. DAC vs. Stranded</h3>
+                    <div class="chart-container"><canvas id="retrofitDecisionChart"></canvas></div>
+                </div>
+
+                <!-- Narrative -->
+                <div class="narrative-block" id="retrofitNarrative"></div>
+
+                <!-- Insight boxes -->
+                <div class="insight-box" style="border-left-color: #E91E63; margin: var(--space-lg) 0">
+                    <p><strong>NEISO: No geologic storage.</strong> Constellation's ~2 GW NEISO gas fleet (Fore River, Granite Ridge, Westbrook)
+                    cannot retrofit with CCS due to crystalline bedrock geology. These assets face stranding or DAC offset as the only decarbonization paths.</p>
+                </div>
+
+                <div class="insight-box" style="border-left-color: var(--ceg-blue); margin: var(--space-lg) 0">
+                    <p><strong>CAISO CCS cap binding.</strong> California's 25 TWh geologic storage cap limits CCS retrofits to ~3.4 GW at 85% CF.
+                    With 4.6 GW of eligible CAISO gas, ~1.2 GW must find alternatives (retirement or DAC).</p>
+                </div>
+            </section>
+
+            <!-- Section 7: Clean Investment -->
+            <section class="report-section" id="clean-investment">
+                <div class="report-section-header">
+                    <span class="report-section-number">07</span>
                     <h2>Clean Generation Investment Case</h2>
                 </div>
 
@@ -202,10 +267,10 @@
                 <div class="narrative-block" id="investmentNarrative"></div>
             </section>
 
-            <!-- Section 7: Enabling Conditions -->
+            <!-- Section 8: Enabling Conditions -->
             <section class="report-section" id="enabling-conditions">
                 <div class="report-section-header">
-                    <span class="report-section-number">07</span>
+                    <span class="report-section-number">08</span>
                     <h2>Enabling Conditions for 1.5&deg;C Alignment</h2>
                 </div>
 
@@ -235,10 +300,10 @@
                 </div>
             </section>
 
-            <!-- Section 8: Strategic Positioning -->
+            <!-- Section 9: Strategic Positioning -->
             <section class="report-section" id="strategic">
                 <div class="report-section-header">
-                    <span class="report-section-number">08</span>
+                    <span class="report-section-number">09</span>
                     <h2>Strategic Positioning</h2>
                 </div>
 
