@@ -654,13 +654,31 @@
                 <h2 class="section-heading">Trajectory Settings</h2>
                 <div class="grid-2col">
                     <div class="input-group">
-                        <label>Projection Years <span class="info-icon" data-tooltip="Select which future years to simulate. Each year applies learning curves and demand growth from the base year.">i</span></label>
-                        <div class="checkbox-group">
-                            <label><input type="checkbox" value="2030" checked> 2030</label>
-                            <label><input type="checkbox" value="2035" checked> 2035</label>
-                            <label><input type="checkbox" value="2040" checked> 2040</label>
-                            <label><input type="checkbox" value="2045" checked> 2045</label>
-                            <label><input type="checkbox" value="2050" checked> 2050</label>
+                        <label>Year Range <span class="info-icon" data-tooltip="Select the start year, end year, and step size for the simulation trajectory. Annual (every year) gives the most granular results; 5-year steps are faster for sweeps.">i</span></label>
+                        <div style="display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap;">
+                            <select id="startYear" style="padding: 8px 12px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-card); font-family: var(--font-body);">
+                                <option value="2025" selected>2025</option>
+                                <option value="2030">2030</option>
+                                <option value="2035">2035</option>
+                                <option value="2040">2040</option>
+                            </select>
+                            <span style="color: var(--text-muted);">to</span>
+                            <select id="endYear" style="padding: 8px 12px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-card); font-family: var(--font-body);">
+                                <option value="2035">2035</option>
+                                <option value="2040">2040</option>
+                                <option value="2045">2045</option>
+                                <option value="2050">2050</option>
+                                <option value="2055">2055</option>
+                                <option value="2060" selected>2060</option>
+                            </select>
+                        </div>
+                        <div style="margin-top: var(--space-sm);">
+                            <label>Step Size</label>
+                            <div class="toggle-btn-group" id="yearStepToggle">
+                                <button type="button" class="toggle-btn active" data-value="1">Every Year</button>
+                                <button type="button" class="toggle-btn" data-value="5">Every 5 Years</button>
+                            </div>
+                            <div class="input-hint" id="yearCountHint" style="margin-top: 4px; color: var(--text-muted); font-size: 0.85rem;">36 simulation years</div>
                         </div>
                     </div>
                     <div class="input-group">
