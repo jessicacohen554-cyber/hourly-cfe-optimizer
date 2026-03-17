@@ -1,5 +1,5 @@
 // ============================================================================
-// SHARED HEADER — Injects the page banner with SVG waveform/heartbeat overlay
+// SHARED HEADER - Injects the page banner with SVG waveform/heartbeat overlay
 // ============================================================================
 // Usage: Include this script AFTER shared.css and nav.js
 //   <script src="js/shared-header.js"></script>
@@ -164,7 +164,7 @@
         ].join('\n');
     };
 
-    // (Old SVG variants frosted/terrain/hexmosaic removed — replaced by canvas banners in canvas-banners.js)
+    // (Old SVG variants frosted/terrain/hexmosaic removed - replaced by canvas banners in canvas-banners.js)
 
     // ---- Build SVG wrapper ----
     function buildSVG(variant) {
@@ -282,7 +282,7 @@
         boot();
     }
 
-    // Expose variant list (dynamic — includes canvas banners when loaded)
+    // Expose variant list (dynamic - includes canvas banners when loaded)
     window._getHeaderVariants = function() {
         var keys = Object.keys(VARIANTS);
         if (window._canvasBanners) {

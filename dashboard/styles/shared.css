@@ -1,5 +1,5 @@
 /* ============================================================================
-   SHARED STYLES — The 8,760 Problem
+   SHARED STYLES - The 8,760 Problem
    Single source of truth for site-wide reset, variables, navigation, banner,
    typography, layout primitives, panels, charts, buttons, and responsive rules.
 
@@ -9,7 +9,7 @@
 
 /* ========== FONT FACE ========== */
 /* Observatory theme: Plus Jakarta Sans + DM Sans + Plus Jakarta Sans loaded via Google Fonts.
-   No @font-face declarations needed — fonts are loaded via <link> tags. */
+   No @font-face declarations needed - fonts are loaded via <link> tags. */
 
 /* ========== RESET & BASE ========== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -33,7 +33,7 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* ========== CSS VARIABLES — SINGLE SOURCE OF TRUTH ========== */
+/* ========== CSS VARIABLES - SINGLE SOURCE OF TRUTH ========== */
 :root {
     /* ---- Page backgrounds ---- */
     --bg-page: #F8F9FC;
@@ -57,7 +57,7 @@ body {
     --text-light: #78828F;
     --bg-subtle: #F8FAFC;
 
-    /* ---- Resource colors (CANONICAL — use these everywhere) ---- */
+    /* ---- Resource colors (CANONICAL - use these everywhere) ---- */
     --solar: #F59E0B;
     --wind: #22C55E;
     --offshore-wind: #009688;
@@ -107,14 +107,14 @@ body {
     --ldes-bg: rgba(233, 30, 99, 0.08);
     --storage-bg: rgba(239, 68, 68, 0.08);
 
-    /* WCAG AA text-safe variants (4.5:1+ on white) — use for text-color on light backgrounds */
+    /* WCAG AA text-safe variants (4.5:1+ on white) - use for text-color on light backgrounds */
     --hydro-text: #0369A1; /* contrast-fix: #0EA5E9 only 2.77:1, this is 5.93:1 on #FFFFFF */
     --green-text: #15803D; /* contrast-fix: #22C55E only 2.28:1, this is 5.02:1 on #FFFFFF */
     --red-text: #B91C1C; /* contrast-fix: was #DC2626 (4.83:1), now #B91C1C (6.05:1) on #FFFFFF */
     --amber-text: #B45309; /* contrast-fix: #F59E0B only 2.15:1, this is 5.02:1 on #FFFFFF */
     --orange-text: #C2410C; /* contrast-fix: #F97316 only 2.70:1, this is 5.18:1 on #FFFFFF */
 
-    /* ---- ISO colors (CANONICAL — use these everywhere) ---- */
+    /* ---- ISO colors (CANONICAL - use these everywhere) ---- */
     --iso-caiso: #F59E0B;
     --iso-ercot: #22C55E;
     --iso-pjm: #0EA5E9;
@@ -291,7 +291,7 @@ p {
     position: relative;
     overflow: hidden;
 }
-/* SVG waveform overlay — injected by shared-header.js */
+/* SVG waveform overlay - injected by shared-header.js */
 .header-svg-overlay {
     position: absolute;
     inset: 0;
@@ -368,7 +368,7 @@ p {
 /* ========== HEADER VARIANTS ========== */
 /* Set via data-header-variant attribute; class header--{name} auto-added by shared-header.js */
 
-/* --- Canvas overlay — positioned identically to SVG overlay --- */
+/* --- Canvas overlay - positioned identically to SVG overlay --- */
 .header-canvas-overlay {
     position: absolute;
     inset: 0;
@@ -392,7 +392,7 @@ p {
 .header--light h1 { color: #000000; }
 .header--light .subtitle { color: #1a1a1a; }
 
-/* --- Dark banner theme (inherits base .header styles — white text on navy) --- */
+/* --- Dark banner theme (inherits base .header styles - white text on navy) --- */
 .header--dark {}
 
 /* --- Per-variant background overrides --- */
@@ -453,7 +453,7 @@ p {
     padding: var(--pad-card);
     box-shadow: var(--shadow-sm);
 }
-/* Chart panel (solid white — no glass effect for readability) */
+/* Chart panel (solid white - no glass effect for readability) */
 .chart-panel {
     background: #FFFFFF;
     border: 1px solid #E5E7EB;
@@ -552,7 +552,7 @@ p {
     width: 100%;
     min-height: 480px;
 }
-/* Canvas elements inside chart containers — always white for readability */
+/* Canvas elements inside chart containers - always white for readability */
 .chart-container canvas,
 .chart-panel canvas,
 .chart-box canvas {
@@ -1115,7 +1115,7 @@ p {
     font-size: 0.75rem;
 }
 
-/* ========== DARK NAVY PANELS (visual variety — alternate with light sections) ========== */
+/* ========== DARK NAVY PANELS (visual variety - alternate with light sections) ========== */
 /* Usage: <section class="section-dark"><div class="section-dark-inner"> … </div></section>
    Supports: .card, .stat-card, .insight-box, .chart-panel, grids, tables inside.
    Adds depth with subtle radial glow and horizontal rule accents. */
@@ -1145,7 +1145,7 @@ p {
 .section-dark-narrow {
     max-width: var(--max-prose);
 }
-/* Typography overrides for dark background — WCAG AA compliant on navy */
+/* Typography overrides for dark background - WCAG AA compliant on navy */
 .section-dark h2 {
     color: #ffffff;
     font-size: 1.55rem;
@@ -1235,7 +1235,7 @@ p {
 .section-dark .section-subtitle {
     color: rgba(255,255,255,0.82);
 }
-/* Accent divider — thin gradient rule, optional inside dark panels */
+/* Accent divider - thin gradient rule, optional inside dark panels */
 .dark-divider {
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15) 20%, rgba(56,189,248,0.25) 50%, rgba(255,255,255,0.15) 80%, transparent);
@@ -1352,7 +1352,7 @@ p {
 .negative { color: var(--green-pos); }
 .positive { color: var(--red-dark); }
 
-/* ========== MOBILE RESPONSIVE — SHARED ========== */
+/* ========== MOBILE RESPONSIVE - SHARED ========== */
 @media (max-width: 768px) {
     :root {
         --pad-page: 16px;
@@ -1439,7 +1439,7 @@ p {
         grid-template-columns: 1fr;
         gap: var(--space-lg);
     }
-    /* Chart legends — scale down for mobile */
+    /* Chart legends - scale down for mobile */
     .chart-legend { gap: 4px 10px; }
     .chart-legend-item { font-size: 0.62rem; }
     .swatch-line, .swatch-dashed, .swatch-dot-line { width: 14px; }

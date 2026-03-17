@@ -16,7 +16,7 @@ const FUEL_PRICES = {
     High:   { gas: 6.00, coal: 2.80, oil: 13.00 },
 };
 
-// Nuclear operating cost ($/MWh) — fixed costs amortized
+// Nuclear operating cost ($/MWh) - fixed costs amortized
 const NUCLEAR_COST_MWH = 29.0;  // Typical all-in operating cost
 const NUCLEAR_CF = 0.93;
 const NUCLEAR_PTC = 15.0;  // Production tax credit $/MWh (IRA 45U)
@@ -30,10 +30,10 @@ const COAL_RETIREMENT_SCHEDULE = {
     2025: 0.00, 2030: 0.20, 2035: 0.50, 2040: 0.80, 2045: 0.95, 2050: 1.00,
 };
 
-// Gas plant aging — heat rate degradation per decade
+// Gas plant aging - heat rate degradation per decade
 const HR_DEGRADATION_PER_DECADE = 0.15;  // 0.15 MMBtu/MWh per 10 years
 
-// New build costs (LCOE $/MWh) for forward projections — Wright's Law curves
+// New build costs (LCOE $/MWh) for forward projections - Wright's Law curves
 const NEW_BUILD_LCOE = {
     2025: { solar: 32, wind: 28, battery_4hr: 48, nuclear: 88, ccs: 72 },
     2030: { solar: 26, wind: 24, battery_4hr: 38, nuclear: 82, ccs: 65 },
@@ -599,7 +599,7 @@ function runCompanyFullTrajectory(ippId, fuelLevel) {
                 }
             }
 
-            // National portfolio (non-ERCOT) — estimate from curated data
+            // National portfolio (non-ERCOT) - estimate from curated data
             const nat = company.national_portfolio;
             const natNucMW = Math.max(0, nat.nuclear_mw - ercotNucMW);
             const natGasMW = Math.max(0, nat.gas_ccgt_mw + nat.gas_peaker_mw - ercotFossilMW);

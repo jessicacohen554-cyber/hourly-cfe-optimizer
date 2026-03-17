@@ -1,5 +1,5 @@
 // ============================================================
-// LMP Trends — Chart Builders, Content Updater & Region Switching
+// LMP Trends - Chart Builders, Content Updater & Region Switching
 // Depends on: lmp-data.js (LMP_ALL, REGION_META, CAL, ISO_NAMES)
 // ============================================================
 
@@ -211,11 +211,11 @@ function buildCannibalizationChart(D, accent) {
     chartInstances.cannibalization = new Chart(ctx, {
         type: 'line',
         data: { datasets: [
-            // Shaded area: zero/negative price hours (% of year) — right axis
+            // Shaded area: zero/negative price hours (% of year) - right axis
             { label: 'Zero/negative price hours', data: pts(T, R.zeroP50), borderColor: AMBER + '80',
               backgroundColor: AMBER + '25', borderWidth: 1.5, pointRadius: 0, fill: 'origin',
               tension: 0.35, order: 8, yAxisID: 'y1', _unit: 'hrs' },
-            // Main line: wholesale LMP P50 — left axis
+            // Main line: wholesale LMP P50 - left axis
             { label: 'Avg wholesale LMP (P50)', data: pts(T, E.p50), borderColor: c,
               backgroundColor: 'transparent', borderWidth: 2.5, pointRadius: 3,
               pointBackgroundColor: c, fill: false, tension: 0.35, order: 3, yAxisID: 'y' }
@@ -303,11 +303,11 @@ function buildStorageArbitrageChart(D, iso) {
     chartInstances.storageArbitrage = new Chart(ctx, {
         type: 'line',
         data: { datasets: [
-            // Shaded area: peak-offpeak spread — right axis
+            // Shaded area: peak-offpeak spread - right axis
             { label: 'Peak\u2013offpeak spread', data: pts(T, P.spreadP50), borderColor: AMBER + '80',
               backgroundColor: AMBER + '20', borderWidth: 1.5, pointRadius: 0, fill: 'origin',
               tension: 0.35, order: 8, yAxisID: 'y1', _type: 'band' },
-            // Storage dispatch lines — left axis
+            // Storage dispatch lines - left axis
             { label: 'Battery 4hr dispatch %', data: pts(T, bat4), borderColor: CYAN,
               backgroundColor: 'transparent', borderWidth: 2.5, pointRadius: 3,
               pointBackgroundColor: CYAN, fill: false, tension: 0.35, order: 3, yAxisID: 'y' },
@@ -390,7 +390,7 @@ function buildGasStrandingChart(iso) {
     chartInstances.gasStranding = new Chart(ctx, {
         type: 'line',
         data: { datasets: [
-            // Installed gas fleet baseline — horizontal reference
+            // Installed gas fleet baseline - horizontal reference
             { label: '2025 installed gas fleet', data: T.map(function(t) { return { x: t >= 99.99 ? 99.99 : t, y: baselineGas }; }),
               borderColor: GAS_COLOR + '50', backgroundColor: 'transparent',
               borderWidth: 1.5, borderDash: [6, 4], pointRadius: 0, fill: false,
@@ -801,7 +801,7 @@ function buildRefCaseChart(iso, accent) {
     // Update subtitle
     var sub = document.getElementById('refCaseSubtitle');
     if (sub) {
-        sub.textContent = iso + ': Step 5B (policy-driven) vs Step 10 (market-driven) — pure power markets, no REC revenue';
+        sub.textContent = iso + ': Step 5B (policy-driven) vs Step 10 (market-driven) - pure power markets, no REC revenue';
     }
 }
 
@@ -830,7 +830,7 @@ function updateContent(iso) {
     el = document.getElementById('sect2Narrative'); if (el) el.innerHTML = m.sect2HTML;
     el = document.getElementById('sect3Narrative'); if (el) el.innerHTML = m.sect3HTML;
 
-    // Nuclear section elements (on lmp_trends.html — safe to call, elements may not exist)
+    // Nuclear section elements (on lmp_trends.html - safe to call, elements may not exist)
     el = document.getElementById('nuclearCalloutContent');
     if (el) el.innerHTML = '<h4>' + m.nuclearCalloutH4 + '</h4><p>' + m.nuclearCalloutP + '</p>';
     el = document.getElementById('nuclearSectionHeader');

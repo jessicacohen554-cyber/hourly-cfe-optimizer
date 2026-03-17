@@ -1,5 +1,5 @@
 /**
- * IPP Company Report — Shared Template JS
+ * IPP Company Report - Shared Template JS
  * =========================================
  * Renders all 7 report sections for any company.
  * Each company HTML page sets COMPANY_ID before loading this script.
@@ -60,7 +60,7 @@
 
     // ─── Utilities ───────────────────────────────────────────
     function fmt(n, decimals) {
-        if (n === undefined || n === null) return '—';
+        if (n === undefined || n === null) return ' - ';
         if (decimals === undefined) decimals = (Math.abs(n) >= 100 ? 0 : 1);
         return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
     }
@@ -104,7 +104,7 @@
     // Convert a hex or named color to rgba with given alpha
     function toRGBA(color, alpha) {
         if (!color || typeof color !== 'string') return color;
-        // Already rgba — adjust alpha
+        // Already rgba - adjust alpha
         if (color.startsWith('rgba(')) {
             return color.replace(/,\s*[\d.]+\)$/, ', ' + alpha + ')');
         }
@@ -217,7 +217,7 @@
         const byISO = getFleetByISO();
         const isos = Object.keys(byISO);
 
-        // Stats — generation-based (TWh tells the real story, not nameplate MW)
+        // Stats - generation-based (TWh tells the real story, not nameplate MW)
         const totalGen = co.gen_twh;
         const totalCO2 = co.co2_2024_mt;
         const intensity = co.intensity_kg;
@@ -364,7 +364,7 @@
         const fb = co.fan_bands.reference;
         const emissions = fb.emissions;
 
-        // Fan band chart — P10/P50/P90 + min/max
+        // Fan band chart - P10/P50/P90 + min/max
         makeChart('emissionsFanChart', {
             type: 'line',
             data: {
@@ -566,7 +566,7 @@
     function renderRiskOpportunity() {
         const fb = co.fan_bands.reference;
 
-        // Profit fan band — % growth in fleet profit margin vs 2023 baseline
+        // Profit fan band - % growth in fleet profit margin vs 2023 baseline
         if (fb.profit) {
             const profitBaseline = fb.profit.p50[0] || 1; // 2023 baseline
             const toPctGrowth = arr => arr.map(v => ((v - profitBaseline) / Math.abs(profitBaseline)) * 100);
@@ -915,7 +915,7 @@
         const fossilTWh = FUEL_ORDER.filter(f => ['coal', 'gas_ccgt', 'gas_peaker', 'oil'].includes(f))
             .reduce((s, f) => s + (byFuel[f] ? byFuel[f].gen_twh : 0), 0);
 
-        // Investment gap chart — based on total fossil displacement target
+        // Investment gap chart - based on total fossil displacement target
         // Target: displace enough fossil to achieve ~50% emission reduction by 2035
         const coalGen = byFuel.coal ? byFuel.coal.gen_twh : 0;
         const gasGen = (byFuel.gas_ccgt ? byFuel.gas_ccgt.gen_twh : 0) + (byFuel.gas_peaker ? byFuel.gas_peaker.gen_twh : 0);
@@ -1189,15 +1189,15 @@
         const psV2_local = powerSectorV2Trajectory(baseline);
         const at_local = atTrajectory(baseline);
 
-        // 6.1 — SMARTargets AT gap chart
+        // 6.1 - SMARTargets AT gap chart
         buildGapChart('gapChartAT', emissions.p50, at_local,
             'SMARTargets AT (−57/−82/−88/−100%)', '#9C27B0', baseline);
 
-        // 6.2 — SBTi Power Sector v2 gap chart
+        // 6.2 - SBTi Power Sector v2 gap chart
         buildGapChart('gapChartSBTi', emissions.p50, psV2_local,
             'SBTi Power Sector v2 (NZ 2040)', '#E91E63', baseline);
 
-        // Enabling conditions cards — split into AT and SBTi
+        // Enabling conditions cards - split into AT and SBTi
         renderConditionsCards(baseline, psV2_local, at_local, emissions);
 
         // Wire label toggle buttons
@@ -1341,7 +1341,7 @@
         const byISO = getFleetByISO();
         const fb = co.fan_bands.reference;
 
-        // Robustness scores — based on generation share (TWh), not nameplate capacity
+        // Robustness scores - based on generation share (TWh), not nameplate capacity
         const totalGen = co.gen_twh;
         const nuclearGen = byFuel.nuclear ? byFuel.nuclear.gen_twh : 0;
         const nuclearScore = totalGen > 0 ? Math.min(100, (nuclearGen / totalGen) * 200) : 0; // 50% nuclear gen = 100 score
@@ -1938,7 +1938,7 @@
             }
         });
 
-        // ── Chart 3: CO2 reduction — retrofit vs DAC ──
+        // ── Chart 3: CO2 reduction - retrofit vs DAC ──
         const co2ISOs = ['ERCOT', 'CAISO', 'PJM', 'NEISO'];
         const co2Retro = co2ISOs.map(iso => {
             const isoP = eligiblePlants.filter(p => p.iso === iso);

@@ -1,5 +1,5 @@
 /**
- * Gas Lock-In & Buyer Influence — Cross-Company Analysis
+ * Gas Lock-In & Buyer Influence - Cross-Company Analysis
  * =======================================================
  * Aggregates gas development data from all 7 IPPs and renders
  * comparative charts showing gas lock-in risk and the impact

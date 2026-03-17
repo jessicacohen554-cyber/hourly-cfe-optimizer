@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The 8,760 Problem — Nuclear Retirement Risk: Multi-Model Stress Test</title>
+<title>The 8,760 Problem - Nuclear Retirement Risk: Multi-Model Stress Test</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -298,13 +298,13 @@ body { background: var(--bg-page-white); }
 <div class="article-wrapper">
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     HERO PANEL — Key insights across all modeling approaches
+     HERO PANEL - Key insights across all modeling approaches
      ═══════════════════════════════════════════════════════════════════ -->
 <div class="hero-panel" id="heroPanel">
     <div class="hero-title">Merchant Nuclear Stranding Risk in the Clean Energy Transition</div>
     <div class="hero-subtitle" id="heroSubtitle">
-        Three independent modeling approaches — parametric market sweeps, structured net-zero pathways,
-        and cost-optimized baselines — stress-test the IPP nuclear fleet under hundreds of scenarios
+        Three independent modeling approaches - parametric market sweeps, structured net-zero pathways,
+        and cost-optimized baselines - stress-test the IPP nuclear fleet under hundreds of scenarios
         to identify which risks are real, which are model artifacts, and which findings hold universally.
     </div>
 
@@ -384,7 +384,7 @@ body { background: var(--bg-page-white); }
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     ACCORDION 1: Model A — Parametric Market Sweep
+     ACCORDION 1: Model A - Parametric Market Sweep
      ═══════════════════════════════════════════════════════════════════ -->
 <div class="accordion" id="accModelA">
     <div class="accordion-header" onclick="toggleAccordion('accModelA')">
@@ -415,7 +415,7 @@ body { background: var(--bg-page-white); }
                     </div>
                 </div>
                 <div class="chart-panel">
-                    <h3>ISO Nuclear MW at Risk — P10/P50/P90 (2040)</h3>
+                    <h3>ISO Nuclear MW at Risk - P10/P50/P90 (2040)</h3>
                     <div class="chart-container">
                         <canvas id="isoRiskA"></canvas>
                     </div>
@@ -428,7 +428,7 @@ body { background: var(--bg-page-white); }
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     ACCORDION 2: Model B — Net-Zero Pathways
+     ACCORDION 2: Model B - Net-Zero Pathways
      ═══════════════════════════════════════════════════════════════════ -->
 <div class="accordion" id="accModelB">
     <div class="accordion-header" onclick="toggleAccordion('accModelB')">
@@ -472,7 +472,7 @@ body { background: var(--bg-page-white); }
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     ACCORDION 3: Model C — Step 3A Baseline + Capacity Adders
+     ACCORDION 3: Model C - Step 3A Baseline + Capacity Adders
      ═══════════════════════════════════════════════════════════════════ -->
 <div class="accordion" id="accModelC">
     <div class="accordion-header" onclick="toggleAccordion('accModelC')">
@@ -542,7 +542,7 @@ body { background: var(--bg-page-white); }
             <div class="year-selector" id="yearSelector"></div>
 
             <div class="chart-panel" style="margin-bottom: 16px;">
-                <h3 id="waterfallTitle">Revenue Waterfall — 2030</h3>
+                <h3 id="waterfallTitle">Revenue Waterfall - 2030</h3>
                 <div class="chart-container-lg">
                     <canvas id="waterfallChart"></canvas>
                 </div>
@@ -634,7 +634,7 @@ body { background: var(--bg-page-white); }
         hs.appendChild(d);
     });
 
-    // Hero insight text — synthesize key finding
+    // Hero insight text - synthesize key finding
     const heroText = document.getElementById('heroInsightText');
     const modelARate = (MC.model_a?.['2040']?.merchant_strand_rate || 0) * 100;
     const modelBRate = (MC.model_b?.['2040']?.merchant_strand_rate || 0) * 100;
@@ -650,7 +650,7 @@ body { background: var(--bg-page-white); }
     let heroNarrative = '';
     if (modelARate < 5 && modelBRate < 5 && modelCRate > 30) {
         heroNarrative = `<strong>The central finding is a modeling divergence that reveals the true risk vector.</strong>
-        Nuclear plants need $${viableLow}–${viableHigh}/MWh in energy revenue to remain viable — this covers
+        Nuclear plants need $${viableLow}–${viableHigh}/MWh in energy revenue to remain viable - this covers
         not just FO&amp;M but CapEx maintenance, license renewals, and the cost of capital that no owner
         will deploy into a breakeven asset.
         Under current market projections (Model A: avg $${modelAPrice.toFixed(0)}/MWh, ${modelABelow.toFixed(0)}%
@@ -660,7 +660,7 @@ body { background: var(--bg-page-white); }
         The robust conclusion: stranding risk is almost entirely a function of how fast renewable deployment
         suppresses wholesale prices. Plants in capacity-market ISOs (PJM, NYISO) have structural protection;
         ERCOT and MISO plants face energy-only market exposure. The 45U PTC expiry in 2032 removes the last
-        federal safety net — after that, merchant exposure is fully unhedged.`;
+        federal safety net - after that, merchant exposure is fully unhedged.`;
     } else if (modelARate < 5 && modelBRate < 5) {
         heroNarrative = `Plants need $${viableLow}–${viableHigh}/MWh to remain viable (covering FO&amp;M, CapEx
         maintenance, license renewals, and required returns). The fleet clears this under current market
@@ -670,14 +670,14 @@ body { background: var(--bg-page-white); }
     } else {
         heroNarrative = `At the $${viableLow}–${viableHigh}/MWh viability floor (covering all-in operating costs
         and required returns), ${belowViableRate.toFixed(0)}% of scenarios across all models show energy
-        revenue below viable levels by 2040. Model divergence — A: ${modelARate.toFixed(1)}%, B: ${modelBRate.toFixed(1)}%,
-        C: ${modelCRate.toFixed(1)}% stranding — indicates outcome depends heavily on deployment speed and
+        revenue below viable levels by 2040. Model divergence - A: ${modelARate.toFixed(1)}%, B: ${modelBRate.toFixed(1)}%,
+        C: ${modelCRate.toFixed(1)}% stranding - indicates outcome depends heavily on deployment speed and
         wholesale price dynamics.`;
     }
     heroText.innerHTML = heroNarrative;
 
     // ─── ACCORDION 0: Cross-Model Comparison ────────────────────────
-    // Model comparison chart — stranding rate by model × year
+    // Model comparison chart - stranding rate by model × year
     const compCtx = document.getElementById('modelCompChart').getContext('2d');
     const compYears = ['2030', '2035', '2040', '2045', '2050'];
     const compDatasets = ['model_a', 'model_b', 'model_c'].map(m => ({
@@ -745,7 +745,7 @@ body { background: var(--bg-page-white); }
     ['model_a', 'model_b', 'model_c'].forEach(m => {
         const avgPrice = MC[m]?.['2040']?.avg_energy_price_mwh || 0;
         tableHtml += `<tr><td style="font-weight:600;color:${MODEL_COLORS[m]}">${MODEL_LABELS[m]}</td>`;
-        tableHtml += `<td>${MC[m]?.['2040']?.n_scenarios || '—'}</td>`;
+        tableHtml += `<td>${MC[m]?.['2040']?.n_scenarios || ' - '}</td>`;
         tableHtml += `<td style="font-family:var(--font-mono);font-size:0.8rem">$${avgPrice}</td>`;
         compYears.forEach(y => {
             const rate = (MC[m]?.[y]?.below_viable_rate || 0) * 100;
@@ -761,10 +761,10 @@ body { background: var(--bg-page-white); }
     document.getElementById('overviewInsight').innerHTML =
         `<strong>Key divergence on the $${viableLow}–${viableHigh}/MWh viability floor:</strong>
         Nuclear plants need this revenue band to cover FO&amp;M, ongoing CapEx (maintenance, component
-        replacement), license renewals (SLR costs ~$600M per plant), and the cost of capital — no rational
+        replacement), license renewals (SLR costs ~$600M per plant), and the cost of capital - no rational
         owner invests in a breakeven asset. Models A and B show energy prices averaging $${modelAPrice.toFixed(0)}/MWh,
         clearing the floor in most scenarios. Model C reveals that at high clean penetration (90%+),
-        wholesale price cannibalization pushes energy revenue to ~$${modelCPrice.toFixed(0)}/MWh — well below
+        wholesale price cannibalization pushes energy revenue to ~$${modelCPrice.toFixed(0)}/MWh - well below
         viable levels. The truth depends on deployment speed: if clean energy grows fast enough to suppress
         wholesale prices below $${viableLow}/MWh, nuclear becomes economically stranded regardless of
         capacity market support.`;
@@ -861,7 +861,7 @@ body { background: var(--bg-page-white); }
         options: {
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { display: false } },
-            scales: { y: { title: { display: true, text: 'Fleet Strand Rate (%) — 2040' }, beginAtZero: true } }
+            scales: { y: { title: { display: true, text: 'Fleet Strand Rate (%) - 2040' }, beginAtZero: true } }
         }
     });
 
@@ -894,13 +894,13 @@ body { background: var(--bg-page-white); }
 
     document.getElementById('insightA').innerHTML =
         `<strong>Model A result:</strong> Under current market trajectory assumptions, energy prices average
-        $${modelAPrice.toFixed(0)}/MWh — above the $${viableLow}–${viableHigh}/MWh viability floor for most
+        $${modelAPrice.toFixed(0)}/MWh - above the $${viableLow}–${viableHigh}/MWh viability floor for most
         plant-scenarios. However, ${modelABelow.toFixed(0)}% of scenarios still show prices below $${viableLow}/MWh,
         concentrated in low-price/challenging conditions. PJM's capacity market provides supplemental revenue
         but doesn't change the energy price signal that drives investment decisions. The primary risk factor
         in this model is wholesale price level, not clean penetration rate.`;
 
-    // ─── ACCORDION 2: Model B — NZ Pathways ─────────────────────────
+    // ─── ACCORDION 2: Model B - NZ Pathways ─────────────────────────
     const pathCards = document.getElementById('pathwayCards');
     const NZ_TYPE_CLS = { power_sector_nz: 'power', economy_wide_nz: 'economy', reference: 'reference', queue_driven: 'queue' };
     const NZ_TYPE_LBL = { power_sector_nz: 'Power Sector NZ', economy_wide_nz: 'Economy-Wide NZ', reference: 'Reference', queue_driven: 'Queue-Driven' };
@@ -917,14 +917,14 @@ body { background: var(--bg-page-white); }
                 2040: ${yr40.n_operating || 0} operating · ${yr40.n_stranded || 0} stranded · ${yr40.n_marginal || 0} marginal
             </div>
             <div class="pw-stat" style="color:#6B7280;font-size:0.72rem;margin-top:4px;">
-                Avg LMP: $${yr40.avg_lmp || '—'}/MWh · Clean: ${yr40.avg_clean_pct || '—'}%
+                Avg LMP: $${yr40.avg_lmp || ' - '}/MWh · Clean: ${yr40.avg_clean_pct || ' - '}%
             </div>
         </div>`;
     });
     pathHtml += '</div>';
     pathCards.innerHTML = pathHtml;
 
-    // NZ profit chart — per-plant profit under each NZ pathway at 2040
+    // NZ profit chart - per-plant profit under each NZ pathway at 2040
     const nzProfitCtx = document.getElementById('nzProfitChart').getContext('2d');
     const nzTags = Object.keys(NZ).filter(t => NZ[t].years?.['2040']);
     const nzPlantLabels = PLANTS.map(p => p.name.replace(' Nuclear', '').replace(/\s*\([^)]*\)/g, ''));
@@ -1036,7 +1036,7 @@ body { background: var(--bg-page-white); }
         `<strong>NZ pathway insights:</strong> Economy-wide net-zero (AT3/AT4) produces higher LMPs than
         power-sector-only NZ (AT1/AT2) because economy-wide electrification drives demand growth that
         partially offsets renewable price suppression. For nuclear, this means economy-wide NZ is
-        paradoxically <em>better</em> for plant economics — more demand = higher prices. The ERCOT plants
+        paradoxically <em>better</em> for plant economics - more demand = higher prices. The ERCOT plants
         (Comanche Peak, South Texas Project) face the most NZ pathway risk due to ERCOT's energy-only
         market structure.`;
 
@@ -1129,7 +1129,7 @@ body { background: var(--bg-page-white); }
             indexAxis: 'y', responsive: true, maintainAspectRatio: false,
             plugins: { legend: { position: 'top', labels: { font: { size: 11 } } } },
             scales: {
-                x: { title: { display: true, text: `% Below $${viableLow}/MWh — 2040` }, beginAtZero: true, max: 100 },
+                x: { title: { display: true, text: `% Below $${viableLow}/MWh - 2040` }, beginAtZero: true, max: 100 },
                 y: { ticks: { font: { size: 9 } } }
             }
         }
@@ -1137,7 +1137,7 @@ body { background: var(--bg-page-white); }
 
     document.getElementById('insightC').innerHTML =
         `<strong>Model C reveals the price cannibalization risk.</strong> At 90%+ clean penetration,
-        wholesale prices fall to $20–30/MWh across most ISOs — well below the $${viableLow}–${viableHigh}/MWh
+        wholesale prices fall to $20–30/MWh across most ISOs - well below the $${viableLow}–${viableHigh}/MWh
         viability floor that covers FO&amp;M, CapEx maintenance, and license renewals.
         ${modelCBelow.toFixed(0)}% of Model C scenarios show energy revenue below $${viableLow}/MWh by 2040.
         This is most severe in ERCOT (energy-only market) and MISO (low capacity prices), but even PJM
@@ -1204,7 +1204,7 @@ body { background: var(--bg-page-white); }
 
     let wfChart = null;
     function renderWaterfall() {
-        document.getElementById('waterfallTitle').textContent = `Revenue Waterfall — ${selectedYear}`;
+        document.getElementById('waterfallTitle').textContent = `Revenue Waterfall - ${selectedYear}`;
         const filtered = PLANTS.filter(p => wf[p.name] && wf[p.name][String(selectedYear)]);
         const labels = filtered.map(p => p.name.replace(' Nuclear', '').replace(/\s*\([^)]*\)/g, ''));
 
@@ -1234,7 +1234,7 @@ body { background: var(--bg-page-white); }
 
     document.getElementById('insightWF').innerHTML =
         `<strong>The 45U cliff:</strong> The federal 45U PTC ($15/MWh floor) expires in 2032.
-        For most plants, this doesn't currently matter — market revenue already exceeds $15/MWh.
+        For most plants, this doesn't currently matter - market revenue already exceeds $15/MWh.
         But in the low-price scenarios from Model C, the 45U floor would have provided a critical
         safety net that vanishes just as wholesale prices may be falling. State programs expire
         even sooner: IL CEJA (2027), NY ZEC (2029), NJ ZEC (already expired). By 2033, all
@@ -1252,11 +1252,11 @@ body { background: var(--bg-page-white); }
             // Get viability data per model at 2040
             const getBelow = (model) => {
                 const mp = PM[model]?.[p.name]?.['2040'];
-                return mp ? (mp.below_viable * 100).toFixed(0) : '—';
+                return mp ? (mp.below_viable * 100).toFixed(0) : ' - ';
             };
             const getPrice = (model) => {
                 const mp = PM[model]?.[p.name]?.['2040'];
-                return mp ? `$${mp.avg_energy_price}` : '—';
+                return mp ? `$${mp.avg_energy_price}` : ' - ';
             };
             const maxBelow = Math.max(
                 PM.model_a?.[p.name]?.['2040']?.below_viable || 0,
@@ -1285,7 +1285,7 @@ body { background: var(--bg-page-white); }
                 <div class="plant-meta">
                     <span>${p.cap_mw.toLocaleString()} MW</span>
                     <span>${p.owner}</span>
-                    <span>NRC: ${p.nrc_expiry || '—'}</span>
+                    <span>NRC: ${p.nrc_expiry || ' - '}</span>
                 </div>
                 <div style="font-size:0.75rem;color:#374151;margin-top:6px;">
                     2040 below $${viableLow}/MWh:

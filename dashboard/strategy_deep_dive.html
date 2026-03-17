@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Strategy Deep Dive — The 8,760 Problem</title>
+<title>Strategy Deep Dive - The 8,760 Problem</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -403,7 +403,7 @@
 </section>
 
 <!-- FOOTER -->
-<footer id="siteFooter" data-footer-note="Strategy Deep Dive — The 8,760 Problem"></footer>
+<footer id="siteFooter" data-footer-note="Strategy Deep Dive - The 8,760 Problem"></footer>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- DATA SCRIPTS                                                          -->
@@ -603,7 +603,7 @@
         if (crossBelow299.length > 0) {
             const parts = crossBelow299.map(c => `${c.strat} at ${c.part}%`).join('; ');
             document.getElementById('gasInsightText').textContent =
-                `Strategies crossing below existing gas (299 GW): ${parts}. Beyond these thresholds, clean energy doesn't just prevent new gas — it retires existing capacity.`;
+                `Strategies crossing below existing gas (299 GW): ${parts}. Beyond these thresholds, clean energy doesn't just prevent new gas - it retires existing capacity.`;
         } else {
             document.getElementById('gasInsightText').textContent =
                 'At current selections, no strategy crosses below existing gas capacity (299 GW) at the 90% CO₂ target line. Try selecting more aggressive strategies or check higher participation levels.';
@@ -708,13 +708,13 @@
     }
 
     function buildSection2() {
-        // Grid HMS — average across ISOs (weighted by demand would be better, but average is simpler)
+        // Grid HMS - average across ISOs (weighted by demand would be better, but average is simpler)
         chartHmsRibbon = buildGenericRibbon('chartHmsRibbon', chartHmsRibbon,
             (rec) => rec.gridHms || rec.gridCleanPct || 0,
             'Grid Hourly Match Score (%)', v => v.toFixed(0) + '%', '%'
         );
 
-        // Fossil CO2 displaced — baseline minus current
+        // Fossil CO2 displaced - baseline minus current
         chartCo2Ribbon = buildGenericRibbon('chartCo2Ribbon', chartCo2Ribbon,
             (rec) => {
                 const baseline = rec.bl || 0;

@@ -1,8 +1,8 @@
 // ============================================================================
-// CHART COLORS — Canonical color constants for Chart.js
+// CHART COLORS - Canonical color constants for Chart.js
 // ============================================================================
 // Single source of truth for all chart colors. NEVER hardcode hex values
-// in Chart.js dataset configurations — always use these constants.
+// in Chart.js dataset configurations - always use these constants.
 //
 // Usage: <script src="js/chart-colors.js"></script>
 //        Then reference: RESOURCE_COLORS.solar, ISO_COLORS.CAISO, etc.
@@ -17,9 +17,9 @@ var RESOURCE_COLORS = {
     nuclear:      '#6366F1',
     ccs:          '#64748B',
     cleanFirm:    '#6366F1',
-    battery:      '#06B6D4',   // Battery 4hr — cyan
+    battery:      '#06B6D4',   // Battery 4hr - cyan
     battery4:     '#06B6D4',   // Battery 4hr alias
-    battery8:     '#0891B2',   // Battery 8hr — deep cyan
+    battery8:     '#0891B2',   // Battery 8hr - deep cyan
     ldes:         '#E91E63',
     greenH2:      '#10B981',
     geothermal:   '#D97706',
@@ -103,11 +103,11 @@ var SEMANTIC_COLORS = {
 // Resource generation stack order (bottom to top for stacked charts)
 var RESOURCE_STACK_ORDER = ['nuclear', 'geothermal', 'ccs', 'hydro', 'offshoreWind', 'wind', 'solar', 'battery', 'battery8', 'ldes', 'greenH2'];
 
-// Curtailment stack order (bottom to top — reverse of generation: solar curtailed first, nuclear last)
+// Curtailment stack order (bottom to top - reverse of generation: solar curtailed first, nuclear last)
 var CURTAILMENT_STACK_ORDER = ['solar', 'wind', 'offshoreWind', 'hydro', 'ccs', 'geothermal', 'nuclear'];
 
 // ============================================================================
-// CHART.JS DEFAULT FONT SIZES — Desktop readability
+// CHART.JS DEFAULT FONT SIZES - Desktop readability
 // Applied after DOM loads to ensure Chart.js is available
 // ============================================================================
 function _applyChartDefaults() {
@@ -127,7 +127,7 @@ if (document.readyState === 'loading') {
 }
 
 // ============================================================================
-// SHARED LEGEND UTILITY — buildLegend()
+// SHARED LEGEND UTILITY - buildLegend()
 // ============================================================================
 // Generates consistent HTML legends with correct swatch types for all pages.
 // Swatch types: 'line', 'band', 'dashed', 'dot-line', 'hatch'

@@ -522,14 +522,14 @@ body { background: var(--bg-page-white); }
                 const d = getT(s, iso, 90);
                 if (d) { cSum += d.cost; co2Sum += d.co2; n++; }
             });
-            costs[s] = n > 0 ? (cSum / n).toFixed(0) : '—';
-            co2s[s] = n > 0 ? (co2Sum).toFixed(0) : '—';
+            costs[s] = n > 0 ? (cSum / n).toFixed(0) : ' - ';
+            co2s[s] = n > 0 ? (co2Sum).toFixed(0) : ' - ';
         });
 
         // Cost spread
-        const costSpread = costs['2A'] !== '—' && costs['2C'] !== '—'
+        const costSpread = costs['2A'] !== ' - ' && costs['2C'] !== ' - '
             ? ((parseFloat(costs['2A']) - parseFloat(costs['2C'])) / parseFloat(costs['2C']) * 100).toFixed(0)
-            : '—';
+            : ' - ';
 
         el.innerHTML = `
             <div class="hero-stat"><div class="val amber">$${costs['2A']}/MWh</div><div class="lbl">2A Cost (All New) @ 90%</div></div>
@@ -703,10 +703,10 @@ body { background: var(--bg-page-white); }
             d = getT('2C', iso, 95);
             if (d) { vre95_2c += d.vre_twh; total95_2c += d.vre_twh + d.firm_twh + d.storage_twh + d.existing_twh + d.sss_twh; }
         });
-        const vrePct70_2a = total70_2a > 0 ? (vre70_2a / total70_2a * 100).toFixed(0) : '—';
-        const vrePct95_2a = total95_2a > 0 ? (vre95_2a / total95_2a * 100).toFixed(0) : '—';
-        const vrePct70_2c = total70_2c > 0 ? (vre70_2c / total70_2c * 100).toFixed(0) : '—';
-        const vrePct95_2c = total95_2c > 0 ? (vre95_2c / total95_2c * 100).toFixed(0) : '—';
+        const vrePct70_2a = total70_2a > 0 ? (vre70_2a / total70_2a * 100).toFixed(0) : ' - ';
+        const vrePct95_2a = total95_2a > 0 ? (vre95_2a / total95_2a * 100).toFixed(0) : ' - ';
+        const vrePct70_2c = total70_2c > 0 ? (vre70_2c / total70_2c * 100).toFixed(0) : ' - ';
+        const vrePct95_2c = total95_2c > 0 ? (vre95_2c / total95_2c * 100).toFixed(0) : ' - ';
 
         el.innerHTML = `<strong>Key finding:</strong> At 70% threshold, 2A's procurement is <strong>${vrePct70_2a}% VRE</strong> (all new-build solar and wind) vs. 2C's <strong>${vrePct70_2c}% VRE</strong> share (including existing clean). By 95%, 2A drops to <strong>${vrePct95_2a}% VRE</strong> as firm power becomes essential. The lower thresholds are where strategy choice matters most for resource mix composition &mdash; at the last mile, physics dominates and all strategies converge on similar firm + storage requirements.`;
     })();
@@ -826,7 +826,7 @@ body { background: var(--bg-page-white); }
                 n++;
             }
         });
-        const costPremium = n > 0 ? ((cost2a / n - cost2c / n) / (cost2c / n) * 100).toFixed(0) : '—';
+        const costPremium = n > 0 ? ((cost2a / n - cost2c / n) / (cost2c / n) * 100).toFixed(0) : ' - ';
         const co2Gap = (co2_2a - co2_2c).toFixed(0);
         el.innerHTML = `<strong>The paradox:</strong> At 90% threshold, 2A costs <strong>${costPremium}% more</strong> than 2C per MWh &mdash; but abates <strong>${co2Gap} MMT more CO&#8322;</strong> across ISOs. Every 2A dollar funds new-build; 2C redirects ~30-40% of procurement to existing assets that were already generating clean power. The efficiency question is whether that cost premium is worth the marginal CO&#8322; displacement, or whether lower-cost 2C could attract enough additional participants to exceed 2A's total abatement.`;
     })();
@@ -980,7 +980,7 @@ body { background: var(--bg-page-white); }
             const ds = getT('2C', iso, 90), dr = getT('2C_rolloff', iso, 90);
             if (ds && dr) { costStable += ds.cost; costRolloff += dr.cost; n++; }
         });
-        const diff = n > 0 ? ((costRolloff / n - costStable / n)).toFixed(1) : '—';
+        const diff = n > 0 ? ((costRolloff / n - costStable / n)).toFixed(1) : ' - ';
         el.innerHTML = `<strong>Nuclear sensitivity:</strong> When ZEC/CMC programs expire, SSS nuclear shifts from free (Layer 1) to merchant pricing ($4/MWh under 45U PTC). At 90% threshold, this increases 2C's national average cost by <strong>$${diff}/MWh</strong>. The grid doesn't lose nuclear capacity &mdash; plants keep running under federal tax credits &mdash; but buyers lose the "free" allocation and must contract it at merchant rates. Supporting existing nuclear through 2C provides comparable hourly matching benefits at lower cost, but its continuation depends on policy stability.`;
     })();
 
@@ -1156,7 +1156,7 @@ body { background: var(--bg-page-white); }
             const costGap = ((d2a.cost - d2c.cost) / d2c.cost * 100).toFixed(0);
             const co2Gap = (d2a.co2 - d2c.co2).toFixed(1);
             if (sss === 0) {
-                insightEl.innerHTML = `<strong>${iso}:</strong> With zero SSS, all three strategies produce nearly identical outcomes. The additionality distinction is moot in a fully deregulated market with no state clean mandates. Cost gap between 2A and 2C is only <strong>${costGap}%</strong> — driven entirely by merchant existing clean (wind, solar) that 2C can contract cheaply.`;
+                insightEl.innerHTML = `<strong>${iso}:</strong> With zero SSS, all three strategies produce nearly identical outcomes. The additionality distinction is moot in a fully deregulated market with no state clean mandates. Cost gap between 2A and 2C is only <strong>${costGap}%</strong> - driven entirely by merchant existing clean (wind, solar) that 2C can contract cheaply.`;
             } else {
                 insightEl.innerHTML = `<strong>${iso}:</strong> With <strong>${sss} TWh SSS</strong>, 2C saves <strong>${costGap}%</strong> vs 2A at 90% threshold. The SSS layer absorbs ${sss} TWh of buyer demand at zero cost. But 2A deploys <strong>${co2Gap} MMT more CO&#8322; abatement</strong> through pure new-build. The tradeoff: 2C's cost savings could fund ${costGap > 30 ? 'significantly' : 'somewhat'} higher participation rates.`;
             }
@@ -1169,7 +1169,7 @@ body { background: var(--bg-page-white); }
         const scores = [
             { icon: '&#128176;', title: 'Cost Efficiency', text: '<strong>2C wins.</strong> SSS + merchant tranches reduce costs 20-40% vs 2A. Lower barrier to participation.' },
             { icon: '&#127793;', title: 'Additionality', text: '<strong>2A wins.</strong> Every dollar funds new capacity. Maximum market signal for clean energy deployment.' },
-            { icon: '&#9889;', title: 'Grid-Mix Alignment', text: '<strong>Tie at high thresholds.</strong> Physics dominates above 90% — all strategies converge on similar firm + storage needs. 2A may over-procure VRE below 80%.' },
+            { icon: '&#9889;', title: 'Grid-Mix Alignment', text: '<strong>Tie at high thresholds.</strong> Physics dominates above 90% - all strategies converge on similar firm + storage needs. 2A may over-procure VRE below 80%.' },
             { icon: '&#128300;', title: 'Learning Curves', text: '<strong>2A per-buyer, 2C at scale.</strong> 2A drives faster per-buyer learning, but 2C\'s lower cost can attract more buyers, potentially matching aggregate deployment.' },
             { icon: '&#9762;', title: 'Nuclear Support', text: '<strong>2C wins.</strong> Explicit SSS layer supports existing nuclear that provides essential 24/7 firm power. 2A offers no mechanism to prevent uneconomic retirement.' },
             { icon: '&#127919;', title: 'Participation Needed', text: '<strong>2C needs ~1.5-2× less participation</strong> for equivalent grid decarbonization, thanks to lower per-buyer cost. But per-buyer impact is also lower.' },

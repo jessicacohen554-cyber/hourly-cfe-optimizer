@@ -1,5 +1,5 @@
 /* ============================================================================
-   REFERENCE — Shared styles for academic papers, methodology, and long-form
+   REFERENCE - Shared styles for academic papers, methodology, and long-form
    Used by: research_paper, optimizer_methodology, policy_context, reference,
             pipeline, about, ref-* sub-pages
    Dependencies: shared.css (must be loaded first)
@@ -1091,7 +1091,7 @@
     margin-bottom: 12px;
 }
 
-/* ========== RESPONSIVE — REFERENCE PAGES ========== */
+/* ========== RESPONSIVE - REFERENCE PAGES ========== */
 @media (max-width: 768px) {
     .prose-body,
     .article-wrapper { padding: 28px 16px 60px; }
@@ -1162,7 +1162,7 @@
     }
 }
 
-/* ========== REDUCED MOTION — REFERENCE ========== */
+/* ========== REDUCED MOTION - REFERENCE ========== */
 @media (prefers-reduced-motion: reduce) {
     .mm-node, .mindmap-visible .mm-node { animation: none; opacity: 1; }
     .mm-center-node { animation: none; }

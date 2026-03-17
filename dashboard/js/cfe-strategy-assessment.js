@@ -10,9 +10,9 @@ const THRESHOLDS = [90, 92.5, 95, 97.5, 99.5, 99.99];
 const PARTICIPATION_LEVELS = [5, 10, 15, 20, 25, 50, 75];
 
 const STRATEGY_LABELS = {
-    '1B': '1B — Consequential',
-    '2C': '2C — Hourly Matching with SSS',
-    '2C_rolloff': '2C — Nuclear Rolloff'
+    '1B': '1B - Consequential',
+    '2C': '2C - Hourly Matching with SSS',
+    '2C_rolloff': '2C - Nuclear Rolloff'
 };
 const STRATEGY_SHORT = { '1B': '1B', '2C': '2C', '2C_rolloff': '2C-R' };
 
@@ -132,7 +132,7 @@ function baseOpts(titleText) {
     };
 }
 
-function fmt(v, dec) { return v != null && isFinite(v) ? v.toFixed(dec || 1) : '—'; }
+function fmt(v, dec) { return v != null && isFinite(v) ? v.toFixed(dec || 1) : ' - '; }
 
 // ─── Section: Hero Stats ────────────────────────────────────────────────────
 

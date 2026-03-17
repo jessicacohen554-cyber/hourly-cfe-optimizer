@@ -1,14 +1,14 @@
 // ============================================================================
-// CANVAS BANNERS — Light Frequency + Circuit hero banner variants
+// CANVAS BANNERS - Light Frequency + Circuit hero banner variants
 // ============================================================================
 // Loaded on pages that need canvas-based banners (e.g., about.html).
 // Registers variants into window._canvasBanners for shared-header.js to use.
 //
 // Variants (all light freq+circuit, different background tones):
-//   freq-circuit-flat      — flat #FEFEFE (near-white, neutral)
-//   freq-circuit-warm      — flat #FEFDFC (warm off-white)
-//   freq-circuit-cool      — flat #FEFEFD (cool off-white)
-//   freq-circuit-gradient  — gradient blend of all three
+//   freq-circuit-flat      - flat #FEFEFE (near-white, neutral)
+//   freq-circuit-warm      - flat #FEFDFC (warm off-white)
+//   freq-circuit-cool      - flat #FEFEFD (cool off-white)
+//   freq-circuit-gradient  - gradient blend of all three
 //
 // Each banner: init(canvas, header) starts animation, destroy() stops it.
 // Uses requestAnimationFrame exclusively (no setInterval).
@@ -98,7 +98,7 @@
                 };
                 window.addEventListener('resize', this._resizeHandler);
 
-                // IntersectionObserver — pause when offscreen
+                // IntersectionObserver - pause when offscreen
                 if (window.IntersectionObserver) {
                     this._observer = new IntersectionObserver(function(entries) {
                         self._paused = !entries[0].isIntersecting;
@@ -347,7 +347,7 @@
 
 
     // ====================================================================
-    // BANNER REGISTRATIONS — Light Freq + Circuit with background variants
+    // BANNER REGISTRATIONS - Light Freq + Circuit with background variants
     // ====================================================================
 
     // Shared draw function for all 4 variants (same animation, different bg)

@@ -1,5 +1,5 @@
 /* ============================================================================
-   ARTICLE — Shared components for analysis article pages
+   ARTICLE - Shared components for analysis article pages
    Used by: clean_firm_case, cost_to_replace, consequential_accounting,
             fossil_fuel_deepdive, lmp_trends, new_build, wrights_law, storage
    Dependencies: shared.css (must be loaded first)
@@ -260,7 +260,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 .section-dark .stat-badge-purple { background: rgba(139,92,246,0.15); border-color: rgba(139,92,246,0.35); color: #06B6D4; }
 
 /* Synthesis cards in section-dark have glass bg (cinematic override).
-   Do NOT revert stat-badge to light-bg colors — let section-dark overrides (above) win.
+   Do NOT revert stat-badge to light-bg colors - let section-dark overrides (above) win.
    For light-bg synthesis cards, the stat-badge base colors work fine. */
 
 /* ========== SYNTHESIS (dark-bg summary cards) ========== */
@@ -685,7 +685,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     color: rgba(0,0,0,0.6);
     line-height: 1.5;
 }
-/* Dark panel overrides for findings — higher opacity for readability */
+/* Dark panel overrides for findings - higher opacity for readability */
 .section-dark .finding-card { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.18); }
 .section-dark .finding-label { color: rgba(255,255,255,0.92); }
 .section-dark .finding-desc { color: rgba(255,255,255,0.78); }
@@ -839,7 +839,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 
 /* ============================================================================
-   RESPONSIVE — ARTICLE
+   RESPONSIVE - ARTICLE
    ============================================================================ */
 @media (max-width: 900px) {
     .hero-overview { padding: 36px var(--pad-page); }
