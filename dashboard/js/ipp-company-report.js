@@ -1740,6 +1740,322 @@
         }
     }
 
+    // ─── Section 6: CCS Retrofit Strategy ────────────────────
+    function renderCCSRetrofit() {
+        // CCS retrofit cost parameters (matching pipeline_config.py)
+        const CCS_RETROFIT_CAPTURE_COST = {
+            Low:    { CAISO: 35, ERCOT: 30, PJM: 33, NYISO: 40, NEISO: 38, MISO: 31, SPP: 29 },
+            Medium: { CAISO: 48, ERCOT: 40, PJM: 44, NYISO: 54, NEISO: 51, MISO: 42, SPP: 38 },
+            High:   { CAISO: 62, ERCOT: 52, PJM: 57, NYISO: 70, NEISO: 66, MISO: 54, SPP: 50 }
+        };
+        const CCS_FOM_ADDER = { Low: 5, Medium: 6.5, High: 8 };
+        const CCS_HR_PENALTY = { Low: 0.08, Medium: 0.10, High: 0.12 };
+        const CCS_CAP_TWH = { CAISO: 25, ERCOT: 200, PJM: 125, NYISO: 0, NEISO: 0, MISO: 200, SPP: 50 };
+        const CCS_RESIDUAL_RATE = 0.037; // tCO2/MWh after 90% capture
+        const CCS_45Q_PER_MWH = 27.5;
+        const CCS_CF = 0.85;
+        const EXISTING_FOM = { gas_ccgt: 13, gas_peaker: 7 };
+        const DAC_COST = { 2030: 600, 2035: 400, 2040: 300, 2045: 230, 2050: 175 }; // Medium
+        const WHOLESALE_LMP = { CAISO: 45, ERCOT: 32, PJM: 38, NYISO: 42, NEISO: 40, MISO: 30, SPP: 28 };
+
+        // Extract gas CCGT plants from fleet data
+        const plants = (fleetCo && fleetCo.plants) ? fleetCo.plants : (co.plants || []);
+        const gasPlants = plants.filter(p => p.fuel === 'gas_ccgt');
+
+        // Compute per-plant retrofit economics at Medium cost
+        const level = 'Medium';
+        const plantData = gasPlants.map(p => {
+            const iso = p.iso;
+            const capMW = p.cap_mw || 0;
+            const genTWh = p.gen_twh || 0;
+            const co2Mt = p.co2_mt || 0;
+            const hr = p.hr || 7000;
+            const eligible = capMW >= 400 && (CCS_CAP_TWH[iso] || 0) > 0;
+
+            // Retrofit generation (TWh/yr at 85% CF)
+            const retroGenTWh = capMW * CCS_CF * 8.760 / 1000;
+            // Retrofit LCOE ($/MWh)
+            const existFOM = EXISTING_FOM.gas_ccgt || 13;
+            const captureCost = (CCS_RETROFIT_CAPTURE_COST[level] || {})[iso] || 45;
+            const fomAdder = CCS_FOM_ADDER[level] || 6.5;
+            const totalFixedKW = existFOM + fomAdder + captureCost;
+            const fixedPerMWh = (totalFixedKW * capMW) / (retroGenTWh * 1e6) * 1000;
+            // Fuel cost component (approx): gas price ~$3.5/MMBtu * HR
+            const fuelCost = 3.5 * hr / 1000 * (1 + (CCS_HR_PENALTY[level] || 0.10));
+            const retroLCOE = fixedPerMWh + fuelCost;
+            const retroLCOE_45Q = retroLCOE - CCS_45Q_PER_MWH;
+
+            // CO2 after retrofit
+            const retroCO2Mt = retroGenTWh * 1e6 * CCS_RESIDUAL_RATE / 1e6;
+            const co2Avoided = Math.max(0, co2Mt - retroCO2Mt);
+
+            // 45Q revenue
+            const revenue45Q = retroGenTWh * 1e6 * CCS_45Q_PER_MWH / 1e6; // $M
+
+            // DAC cost to offset same emissions
+            const dacCost2040 = co2Mt * 1e6 * (DAC_COST[2040] || 300) / 1e6; // $M
+
+            return {
+                name: p.name, iso, capMW, genTWh, co2Mt, hr, eligible,
+                retroGenTWh, retroLCOE, retroLCOE_45Q, retroCO2Mt, co2Avoided,
+                revenue45Q, dacCost2040, totalFixedKW, fuelCost
+            };
+        });
+
+        // Aggregate stats
+        const eligiblePlants = plantData.filter(p => p.eligible);
+        const ineligibleNEISO = plantData.filter(p => p.iso === 'NEISO' || p.iso === 'NYISO');
+        const totalEligibleMW = eligiblePlants.reduce((s, p) => s + p.capMW, 0);
+        const totalIneligibleMW = ineligibleNEISO.reduce((s, p) => s + p.capMW, 0);
+        const totalCO2Avoided = eligiblePlants.reduce((s, p) => s + p.co2Avoided, 0);
+        const total45QRev = eligiblePlants.reduce((s, p) => s + p.revenue45Q, 0);
+        const lcoeRange = eligiblePlants.length > 0
+            ? [Math.min(...eligiblePlants.map(p => p.retroLCOE_45Q)), Math.max(...eligiblePlants.map(p => p.retroLCOE_45Q))]
+            : [0, 0];
+
+        // Populate stat cards
+        const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+        setEl('statRetrofitEligible', fmt(totalEligibleMW, 0) + ' MW');
+        setEl('statRetrofitLCOE', '$' + fmt(lcoeRange[0], 0) + '–' + fmt(lcoeRange[1], 0) + '/MWh');
+        setEl('statRetrofitCO2', fmt(totalCO2Avoided, 1) + ' Mt');
+        setEl('stat45QRevenue', '$' + fmt(total45QRev, 0) + 'M');
+        setEl('statNEISOIneligible', fmt(totalIneligibleMW, 0) + ' MW');
+
+        // ── Chart 1: Plant-level retrofit economics (horizontal bar) ──
+        // Group by ISO, show retrofit LCOE vs LMP
+        const isoGroups = {};
+        plantData.forEach(p => {
+            if (!isoGroups[p.iso]) isoGroups[p.iso] = [];
+            isoGroups[p.iso].push(p);
+        });
+        const isoOrder = ['ERCOT', 'CAISO', 'PJM', 'NEISO', 'NYISO'];
+        const barLabels = [];
+        const barRetroLCOE = [];
+        const barLMP = [];
+        const barDAC = [];
+        const barColors = [];
+        const ISO_CLR = (typeof ISO_COLORS !== 'undefined') ? ISO_COLORS : {};
+
+        isoOrder.forEach(iso => {
+            const group = isoGroups[iso];
+            if (!group) return;
+            group.sort((a, b) => b.capMW - a.capMW);
+            group.forEach(p => {
+                const label = p.name.replace(/ CCGT.*$/, '').replace(/ \(.*\)/, '');
+                barLabels.push(label + ' (' + iso + ')');
+                barRetroLCOE.push(p.retroLCOE_45Q);
+                barLMP.push(WHOLESALE_LMP[iso] || 35);
+                barDAC.push(p.co2Mt > 0 ? (p.co2Mt * 1e6 * 300) / (p.retroGenTWh * 1e6) : 0); // DAC cost as $/MWh equivalent
+                barColors.push(p.eligible ? (ISO_CLR[iso] || '#6366F1') : '#D1D5DB');
+            });
+        });
+
+        makeChart('retrofitEconChart', {
+            type: 'bar',
+            data: {
+                labels: barLabels,
+                datasets: [
+                    {
+                        label: 'Retrofit LCOE (w/ 45Q)',
+                        data: barRetroLCOE,
+                        backgroundColor: barColors,
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Wholesale LMP',
+                        data: barLMP,
+                        backgroundColor: 'rgba(34, 197, 94, 0.3)',
+                        borderColor: '#22C55E',
+                        borderWidth: 2,
+                        _skipStyle: true
+                    },
+                    {
+                        label: 'DAC Offset ($/MWh equiv)',
+                        data: barDAC,
+                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                        borderColor: '#EF4444',
+                        borderWidth: 2,
+                        borderDash: [4, 4],
+                        _skipStyle: true
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ctx.dataset.label + ': $' + fmt(ctx.parsed.x, 1) + '/MWh'
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: '$/MWh' }, beginAtZero: true }
+                }
+            }
+        });
+
+        // ── Chart 2: Retrofit timeline by ISO (stacked area) ──
+        const timelineYears = [2025, 2030, 2035, 2040, 2045, 2050];
+        const timelineISOs = ['ERCOT', 'CAISO', 'PJM'];
+        const isoMW = {};
+        timelineISOs.forEach(iso => {
+            const isoEligible = eligiblePlants.filter(p => p.iso === iso);
+            const totalMW = isoEligible.reduce((s, p) => s + p.capMW, 0);
+            // CCS cap constraint for CAISO
+            let maxMW = totalMW;
+            if (iso === 'CAISO') {
+                maxMW = Math.min(totalMW, CCS_CAP_TWH.CAISO / (CCS_CF * 8.760 / 1000) * 1000);
+            }
+            // Ramp: 0 before 2030, linear ramp to max by 2040
+            isoMW[iso] = timelineYears.map(y => {
+                if (y < 2030) return 0;
+                if (y >= 2040) return Math.round(maxMW);
+                return Math.round(maxMW * (y - 2030) / 10);
+            });
+        });
+
+        makeChart('retrofitTimelineChart', {
+            type: 'bar',
+            data: {
+                labels: timelineYears.map(String),
+                datasets: timelineISOs.map(iso => ({
+                    label: iso,
+                    data: isoMW[iso] || timelineYears.map(() => 0),
+                    backgroundColor: ISO_CLR[iso] || '#6366F1',
+                }))
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' } },
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true, title: { display: true, text: 'MW Retrofitted' }, beginAtZero: true }
+                }
+            }
+        });
+
+        // ── Chart 3: CO2 reduction — retrofit vs DAC ──
+        const co2ISOs = ['ERCOT', 'CAISO', 'PJM', 'NEISO'];
+        const co2Retro = co2ISOs.map(iso => {
+            const isoP = eligiblePlants.filter(p => p.iso === iso);
+            return isoP.reduce((s, p) => s + p.co2Avoided, 0);
+        });
+        const co2DAC = co2ISOs.map(iso => {
+            const isoP = plantData.filter(p => p.iso === iso);
+            return isoP.reduce((s, p) => s + p.co2Mt, 0);
+        });
+        const dacCostByISO = co2ISOs.map((iso, i) => co2DAC[i] * 300); // $M at $300/ton
+
+        makeChart('retrofitCO2Chart', {
+            type: 'bar',
+            data: {
+                labels: co2ISOs,
+                datasets: [
+                    {
+                        label: 'CO₂ Avoided via Retrofit (Mt/yr)',
+                        data: co2Retro,
+                        backgroundColor: RESOURCE_COLORS.ccs || '#64748B'
+                    },
+                    {
+                        label: 'Baseline Gas Emissions (Mt/yr)',
+                        data: co2DAC,
+                        backgroundColor: RESOURCE_COLORS.fossilGas || '#6B7280'
+                    }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'top' } },
+                scales: {
+                    y: { title: { display: true, text: 'Mt CO₂/yr' }, beginAtZero: true }
+                }
+            }
+        });
+
+        // ── Chart 4: 2050 Fleet Decision Map (doughnut) ──
+        const totalGasMW = plantData.reduce((s, p) => s + p.capMW, 0);
+        const retrofitMW = eligiblePlants.reduce((s, p) => s + p.capMW, 0);
+        // CAISO cap limits
+        const caisoElig = eligiblePlants.filter(p => p.iso === 'CAISO');
+        const caisoTotal = caisoElig.reduce((s, p) => s + p.capMW, 0);
+        const caisoMaxMW = CCS_CAP_TWH.CAISO / (CCS_CF * 8.760 / 1000) * 1000;
+        const caisoCapped = Math.max(0, caisoTotal - caisoMaxMW);
+        const actualRetrofitMW = retrofitMW - caisoCapped;
+        const dacOffsetMW = totalIneligibleMW + caisoCapped;
+        const strandedMW = totalGasMW - actualRetrofitMW - dacOffsetMW;
+
+        makeChart('retrofitDecisionChart', {
+            type: 'doughnut',
+            data: {
+                labels: ['CCS Retrofit', 'DAC Offset / No CCS Storage', 'Stranded / Retired'],
+                datasets: [{
+                    data: [Math.round(actualRetrofitMW), Math.round(dacOffsetMW), Math.max(0, Math.round(strandedMW))],
+                    backgroundColor: [RESOURCE_COLORS.ccs || '#64748B', '#EF4444', '#D1D5DB'],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right' },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => {
+                                const val = ctx.parsed;
+                                const pct = totalGasMW > 0 ? (val / totalGasMW * 100).toFixed(0) : 0;
+                                return ctx.label + ': ' + fmt(val, 0) + ' MW (' + pct + '%)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // ── Narrative ──
+        const narEl = document.getElementById('retrofitNarrative');
+        if (narEl) {
+            const ercotMW = (isoGroups.ERCOT || []).filter(p => p.eligible).reduce((s, p) => s + p.capMW, 0);
+            const caisoMW = caisoTotal;
+            const pjmMW = (isoGroups.PJM || []).filter(p => p.eligible).reduce((s, p) => s + p.capMW, 0);
+            const neisoMW = (isoGroups.NEISO || []).reduce((s, p) => s + p.capMW, 0);
+
+            narEl.innerHTML = `
+                <p><strong>${co.shortName}'s gas CCGT fleet</strong> totals <strong>${fmt(totalGasMW / 1000, 1)} GW</strong>
+                across ${Object.keys(isoGroups).length} ISOs, with <strong>${fmt(totalEligibleMW / 1000, 1)} GW eligible</strong>
+                for CCS retrofit based on capacity (&ge;400 MW) and geologic storage availability.</p>
+
+                <p><strong>ERCOT (${fmt(ercotMW / 1000, 1)} GW)</strong> represents the largest retrofit opportunity, with abundant
+                Gulf Coast saline formation storage (200 TWh cap) and the lowest capture equipment costs ($${CCS_RETROFIT_CAPTURE_COST.Medium.ERCOT}/kW-yr).
+                At Medium costs with 45Q, ERCOT retrofit LCOEs range from
+                $${fmt(Math.min(...eligiblePlants.filter(p => p.iso === 'ERCOT').map(p => p.retroLCOE_45Q)), 0)}–${fmt(Math.max(...eligiblePlants.filter(p => p.iso === 'ERCOT').map(p => p.retroLCOE_45Q)), 0)}/MWh.</p>
+
+                <p><strong>CAISO (${fmt(caisoMW / 1000, 1)} GW)</strong> faces a binding CCS cap of 25 TWh,
+                limiting retrofits to approximately ${fmt(caisoMaxMW / 1000, 1)} GW at 85% capacity factor.
+                The remaining ~${fmt(caisoCapped / 1000, 1)} GW must either retire or procure DAC offsets.</p>
+
+                <p><strong>PJM (${fmt(pjmMW / 1000, 1)} GW)</strong> has adequate Appalachian basin storage (125 TWh cap)
+                and moderate retrofit costs.</p>
+
+                <div class="insight-box insight-danger" style="margin: var(--space-lg) 0">
+                    <strong>NEISO (${fmt(neisoMW / 1000, 1)} GW): Stranded by geology.</strong>
+                    New England's crystalline bedrock offers zero geologic CO&#8322; storage.
+                    Fore River (750 MW), Granite Ridge (745 MW), and Westbrook (552 MW) face certain economic stranding
+                    under high-CFE scenarios, with DAC offsets at ~$300/ton as the only decarbonization path.
+                    At 2040 DAC costs, offsetting NEISO gas emissions would cost approximately
+                    $${fmt(ineligibleNEISO.reduce((s, p) => s + p.co2Mt, 0) * 300, 0)}M/year.
+                </div>
+
+                <p><strong>The 45Q credit is pivotal:</strong> Without 45Q ($27.5/MWh), retrofit LCOEs increase to
+                $${fmt(lcoeRange[0] + 27.5, 0)}–${fmt(lcoeRange[1] + 27.5, 0)}/MWh, making most retrofits
+                uneconomic against both wholesale LMP and DAC alternatives.</p>
+            `;
+        }
+    }
+
     // ─── Initialize ──────────────────────────────────────────
     function init() {
         // Set page title
@@ -1749,12 +2065,13 @@
         const companyTargetEl = document.getElementById('companyTarget');
         if (companyTargetEl) companyTargetEl.textContent = co.target;
 
-        // Render all sections (new order: gas lock-in at position 5)
+        // Render all sections (new order: gas lock-in at 5, CCS retrofit at 6)
         renderFleetProfile();
         renderConvergenceDivergence();
         renderRiskOpportunity();
         renderQualifiedTarget();
         renderGasDevelopment();
+        renderCCSRetrofit();
         renderCleanInvestment();
         renderEnablingConditions();
         renderStrategicPositioning();
