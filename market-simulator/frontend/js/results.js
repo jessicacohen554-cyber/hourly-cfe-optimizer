@@ -161,6 +161,7 @@ function renderAll() {
     // Level 1: Market-wide
     renderLMPTimeSeries(data);
     renderSupplyStack(data);
+    renderEmissionsByYear(data);
     renderFuelBinTable(data);
     renderMeritOrder(data);
 
@@ -379,6 +380,98 @@ function renderSupplyStack(data) {
         }, { responsive: true });
     } else {
         placeholderChart(container);
+    }
+}
+
+// ── Chart 2b: System Emissions by Year ──
+const FUEL_EMISSION_COLORS = {
+    coal_steam: '#374151',
+    gas_ccgt: '#6B7280',
+    gas_ct: '#9CA3AF',
+    oil_ct: '#92400E',
+};
+const FUEL_EMISSION_LABELS = {
+    coal_steam: 'Coal',
+    gas_ccgt: 'Gas CCGT',
+    gas_ct: 'Gas CT',
+    oil_ct: 'Oil',
+};
+
+function renderEmissionsByYear(data) {
+    const card = document.getElementById('emissionsByYearCard');
+    const container = document.getElementById('chartEmissionsByYear');
+    const statsEl = document.getElementById('emissionsHeadlineStats');
+    if (!card || !container) return;
+
+    const eData = data.emissions_by_fuel_by_year;
+    if (!eData || !eData.years || eData.years.length < 2) {
+        card.style.display = 'none';
+        return;
+    }
+
+    card.style.display = '';
+    const years = eData.years;
+    const fuelTypes = Object.keys(eData).filter(k => k !== 'years');
+    const traceMode = years.length > 12 ? 'lines' : 'lines+markers';
+
+    // Stacked area traces
+    const traces = [];
+    for (const fuel of fuelTypes) {
+        traces.push({
+            x: years,
+            y: eData[fuel],
+            name: FUEL_EMISSION_LABELS[fuel] || fuel.replace(/_/g, ' '),
+            type: 'scatter',
+            mode: 'lines',
+            stackgroup: 'emissions',
+            fillcolor: FUEL_EMISSION_COLORS[fuel] || '#9CA3AF',
+            line: { width: 0.5, color: FUEL_EMISSION_COLORS[fuel] || '#9CA3AF' },
+            hovertemplate: '%{fullData.name}: %{y:.1f} Mt<extra></extra>',
+        });
+    }
+
+    // Total emissions line overlay
+    const totals = years.map((_, i) =>
+        fuelTypes.reduce((sum, fuel) => sum + (eData[fuel][i] || 0), 0)
+    );
+    traces.push({
+        x: years,
+        y: totals,
+        name: 'Total',
+        type: 'scatter',
+        mode: traceMode,
+        line: { color: '#EF4444', width: 3 },
+        marker: { size: years.length > 12 ? 4 : 8 },
+        hovertemplate: 'Total: %{y:.1f} Mt<extra></extra>',
+    });
+
+    Plotly.newPlot(container, traces, {
+        ...PLOTLY_LAYOUT_BASE,
+        title: { text: `System CO₂ Emissions by Fuel Type — ${currentISO}`, font: { size: 14 } },
+        xaxis: { title: 'Year', gridcolor: '#f0f0f0' },
+        yaxis: { title: 'CO₂ Emissions (Mt)', gridcolor: '#f0f0f0' },
+        legend: { x: 0, y: 1.15, orientation: 'h' },
+    }, { responsive: true });
+
+    // Headline stats
+    if (statsEl && totals.length >= 2) {
+        const first = totals[0];
+        const last = totals[totals.length - 1];
+        const pctChange = first > 0 ? ((last - first) / first * 100).toFixed(0) : 0;
+        statsEl.innerHTML = `
+            <div style="text-align: center; min-width: 120px;">
+                <div style="font-size: 1.5rem; font-weight: 700; color: var(--navy);">${first.toFixed(1)} Mt</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">${years[0]} Emissions</div>
+            </div>
+            <div style="text-align: center; min-width: 120px;">
+                <div style="font-size: 1.5rem; font-weight: 700; color: ${last < first ? '#22C55E' : '#EF4444'};">${last.toFixed(1)} Mt</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">${years[years.length-1]} Emissions</div>
+            </div>
+            <div style="text-align: center; min-width: 120px;">
+                <div style="font-size: 1.5rem; font-weight: 700; color: ${pctChange < 0 ? '#22C55E' : '#EF4444'};">${pctChange}%</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">Change</div>
+            </div>
+        `;
     }
 }
 
