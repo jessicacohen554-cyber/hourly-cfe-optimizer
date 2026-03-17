@@ -71,27 +71,15 @@ function init() {
     simResult = JSON.parse(raw);
     simParams = rawParams ? JSON.parse(rawParams) : {};
 
-    // Handle multi-ISO results
+    // Determine current ISO
     if (Array.isArray(simResult)) {
         currentISO = simResult[0]?.iso || 'ERCOT';
-        buildISOSelector(simResult.map(r => r.iso));
     } else if (simResult.results && typeof simResult.results === 'object') {
         const isos = Object.keys(simResult.results);
         currentISO = isos[0];
-        buildISOSelector(isos);
     } else {
         currentISO = simResult.iso || 'ERCOT';
-        buildISOSelector([currentISO]);
     }
-
-    // View toggle (hourly / monthly)
-    document.querySelectorAll('#viewToggle .toggle-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('#viewToggle .toggle-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            renderAll();
-        });
-    });
 
     // Render input summary (once, doesn't change per ISO)
     renderInputSummary();
@@ -145,14 +133,41 @@ function renderAll() {
     if (!data) return;
 
     const iso = data.iso || currentISO;
-    const mode = data.mode || simParams?.mode || 'snapshot';
+    const mode = data.mode || simParams?.mode || 'trajectory';
+
+    // ISO header
+    const isoHeaderEl = document.getElementById('isoHeader');
+    if (isoHeaderEl) isoHeaderEl.textContent = `${iso} Results`;
     document.getElementById('resultsSubtitle').textContent =
-        `${iso} — ${mode} simulation`;
+        `${iso} — Market Trajectory Simulation`;
+
+    // Year header above KPI cards
+    const kpiYearHeader = document.getElementById('kpiYearHeader');
+    if (kpiYearHeader && data.year_results && data.year_results.length > 0) {
+        const finalYear = data.year_results[data.year_results.length - 1].year;
+        kpiYearHeader.textContent = `${finalYear} Snapshot Results`;
+    } else if (kpiYearHeader) {
+        kpiYearHeader.textContent = '';
+    }
 
     // Show year drill-down header for trajectory mode
     const yearHeader = document.getElementById('yearDrilldownHeader');
+    const hasMultiYear = data.year_results && data.year_results.length > 1;
     if (yearHeader) {
-        yearHeader.style.display = (data.year_results && data.year_results.length > 1) ? '' : 'none';
+        yearHeader.style.display = hasMultiYear ? '' : 'none';
+    }
+
+    // Populate year dropdown with 5-year intervals
+    const yearSelect = document.getElementById('yearSelect');
+    if (yearSelect && hasMultiYear) {
+        const years = data.year_results.map(yr => yr.year);
+        // Show 5-year intervals if many years, otherwise all
+        const displayYears = years.length > 12
+            ? years.filter(y => y % 5 === 0 || y === years[years.length - 1])
+            : years;
+        yearSelect.innerHTML = displayYears.map(y =>
+            `<option value="${y}" ${y === displayYears[displayYears.length - 1] ? 'selected' : ''}>${y}</option>`
+        ).join('');
     }
 
     updateStats(data);
@@ -165,12 +180,9 @@ function renderAll() {
     renderFuelBinTable(data);
     renderMeritOrder(data);
 
-    // Level 2: Year drill-down
-    renderProfitability(data);
+    // Level 2: Year drill-down (removed: profitability, LMP impact, fossil bins)
     renderWhatBuilt(data);
-    renderLMPImpact(data);
     renderCCSBreakeven(data);
-    renderFossilBins(data);
     renderCostLadder(data);
     renderGasShift(data);
     renderNuclearRevenue(data);
@@ -182,7 +194,7 @@ function renderAll() {
     // Show CCS deep-dive CTA if trajectory mode with year results
     const ccsCta = document.getElementById('ccsCtaCard');
     if (ccsCta) {
-        ccsCta.style.display = (data.year_results && data.year_results.length > 1) ? '' : 'none';
+        ccsCta.style.display = hasMultiYear ? '' : 'none';
     }
 }
 
@@ -314,61 +326,72 @@ function renderLMPTimeSeries(data) {
     }
 }
 
-// ── Chart 2: Supply Stack ──
+// ── Chart 2: Supply Stack (stacked bars at 5-year intervals) ──
 function renderSupplyStack(data) {
     const container = 'chartSupplyStack';
+    const tableContainer = document.getElementById('supplyStackTableContainer');
 
-    // Try supply_stack_summary first, then resource_mix_twh
-    const stackData = data.supply_stack_summary;
+    if (data.year_results && data.year_results.length > 1) {
+        // Trajectory: stacked bars at 5-year intervals
+        const allYears = data.year_results.map(yr => yr.year);
+        // Filter to 5-year intervals
+        const displayYears = allYears.length > 12
+            ? allYears.filter(y => y % 5 === 0 || y === allYears[allYears.length - 1])
+            : allYears;
+        const displayResults = data.year_results.filter(yr => displayYears.includes(yr.year));
 
-    if (stackData && stackData.length > 0) {
-        const resources = stackData.map(s => s.resource);
-        const genTWh = stackData.map(s => s.generation_twh);
-        const colors = resources.map(r => ALL_RESOURCE_COLORS[r] || '#9CA3AF');
-
-        Plotly.newPlot(container, [{
-            x: resources.map(r => r.replace(/_/g, ' ')),
-            y: genTWh,
-            type: 'bar',
-            marker: { color: colors },
-            hovertemplate: '%{x}: %{y:.1f} TWh<extra></extra>',
-        }], {
-            ...PLOTLY_LAYOUT_BASE,
-            title: { text: `Supply Stack — ${currentISO}`, font: { size: 14 } },
-            yaxis: { title: 'Generation (TWh)', gridcolor: '#f0f0f0' },
-            xaxis: { title: '' },
-        }, { responsive: true });
-    } else if (data.year_results && data.year_results.length > 1) {
-        // Trajectory: stacked area by resource over years
-        const years = data.year_results.map(yr => yr.year);
         const allResources = new Set();
-        data.year_results.forEach(yr => {
+        displayResults.forEach(yr => {
             Object.keys(yr.resource_mix_twh || {}).forEach(r => allResources.add(r));
         });
 
         const traces = [];
         for (const res of allResources) {
             traces.push({
-                x: years,
-                y: data.year_results.map(yr => (yr.resource_mix_twh || {})[res] || 0),
+                x: displayYears.map(String),
+                y: displayResults.map(yr => (yr.resource_mix_twh || {})[res] || 0),
                 name: res.replace(/_/g, ' '),
-                type: 'scatter',
-                mode: 'lines',
-                stackgroup: 'one',
-                fillcolor: ALL_RESOURCE_COLORS[res] || '#9CA3AF',
-                line: { width: 0.5, color: ALL_RESOURCE_COLORS[res] || '#9CA3AF' },
+                type: 'bar',
+                marker: { color: ALL_RESOURCE_COLORS[res] || '#9CA3AF' },
+                hovertemplate: `${res.replace(/_/g, ' ')}: %{y:.1f} TWh<extra></extra>`,
             });
         }
 
         Plotly.newPlot(container, traces, {
             ...PLOTLY_LAYOUT_BASE,
-            title: { text: `Supply Stack Trajectory — ${currentISO}`, font: { size: 14 } },
-            xaxis: { title: 'Year', gridcolor: '#f0f0f0' },
+            title: { text: `Supply Stack by Year — ${currentISO}`, font: { size: 14 } },
+            barmode: 'stack',
+            xaxis: { title: 'Year', type: 'category' },
             yaxis: { title: 'Generation (TWh)', gridcolor: '#f0f0f0' },
             legend: { x: 0, y: 1.15, orientation: 'h' },
         }, { responsive: true });
+
+        // Build data table
+        if (tableContainer) {
+            const resList = [...allResources];
+            const thead = document.getElementById('supplyStackTableHead');
+            const tbody = document.getElementById('supplyStackTableBody');
+            thead.innerHTML = `<tr><th>Resource</th>${displayYears.map(y => `<th>${y}</th>`).join('')}</tr>`;
+            tbody.innerHTML = resList.map(res =>
+                `<tr><td style="font-weight:600;">${res.replace(/_/g, ' ')}</td>${displayResults.map(yr =>
+                    `<td>${fmtNum((yr.resource_mix_twh || {})[res] || 0, 1)}</td>`
+                ).join('')}</tr>`
+            ).join('');
+            tableContainer.style.display = '';
+        }
+
+        // Show download button for annual data if many years
+        if (allYears.length > displayYears.length && tableContainer) {
+            const existing = tableContainer.querySelector('.annual-note');
+            if (!existing) {
+                const note = document.createElement('div');
+                note.className = 'annual-note';
+                note.style.cssText = 'margin-top: 0.5rem; font-size: 0.85rem; color: #6B7280;';
+                note.textContent = `Showing ${displayYears.length} of ${allYears.length} years (5-year intervals). Full annual data available in CSV export.`;
+                tableContainer.appendChild(note);
+            }
+        }
     } else if (data.resource_mix_twh && Object.keys(data.resource_mix_twh).length > 0) {
-        // Snapshot: single bar chart of resource mix
         const resources = Object.keys(data.resource_mix_twh);
         const values = resources.map(r => data.resource_mix_twh[r]);
         const colors = resources.map(r => ALL_RESOURCE_COLORS[r] || '#9CA3AF');
@@ -384,8 +407,10 @@ function renderSupplyStack(data) {
             title: { text: `Resource Mix — ${currentISO}`, font: { size: 14 } },
             yaxis: { title: 'Generation (TWh)', gridcolor: '#f0f0f0' },
         }, { responsive: true });
+        if (tableContainer) tableContainer.style.display = 'none';
     } else {
         placeholderChart(container);
+        if (tableContainer) tableContainer.style.display = 'none';
     }
 }
 
@@ -532,57 +557,107 @@ function renderFuelBinTable(data) {
 // EXISTING CHARTS (Level 2 + 3) — retained from previous version
 // ══════════════════════════════════════════════════════════════════════════════
 
-// ── Merit-Order Stack ──
+// ── Merit-Order Stack (time series with heat rate bins) ──
+const HEAT_RATE_BIN_COLORS = {
+    'coal_steam': '#374151',
+    'gas_ccgt < 7.2': '#1B5E9E',
+    'gas_ccgt 7.2-8.0': '#2372B9',
+    'gas_ccgt > 8.0': '#5BA3E0',
+    'gas_ct': '#007FA4',
+    'oil_ct': '#92400E',
+};
+
 function renderMeritOrder(data) {
-    const gens = data.generator_economics || data.merit_order_stack || [];
-    if (!gens.length) { placeholderChart('chartMeritOrder'); return; }
+    const container = 'chartMeritOrder';
+    const tableContainer = document.getElementById('meritOrderTableContainer');
 
-    const sorted = [...gens].sort((a, b) => a.marginal_cost - b.marginal_cost);
-    const traces = [{
-        x: sorted.map(g => g.unit_type.replace('_', ' ')),
-        y: sorted.map(g => g.capacity_mw / 1000),
-        marker: { color: sorted.map(g => UNIT_COLORS[g.unit_type] || '#9CA3AF') },
-        type: 'bar',
-        name: 'Capacity (GW)',
-        hovertemplate: '%{x}<br>%{y:.1f} GW<br>MC: $%{customdata:.1f}/MWh<extra></extra>',
-        customdata: sorted.map(g => g.marginal_cost),
-    }];
+    if (data.year_results && data.year_results.length > 1) {
+        // Trajectory: stacked bars at 5-year intervals showing capacity by fuel/heat rate bin
+        const allYears = data.year_results.map(yr => yr.year);
+        const displayYears = allYears.length > 12
+            ? allYears.filter(y => y % 5 === 0 || y === allYears[allYears.length - 1])
+            : allYears;
+        const displayResults = data.year_results.filter(yr => displayYears.includes(yr.year));
 
-    const avgLMP = data.avg_lmp || 0;
-    Plotly.newPlot('chartMeritOrder', traces, {
-        ...PLOTLY_LAYOUT_BASE,
-        title: { text: `Merit-Order Stack — ${currentISO}`, font: { size: 14 } },
-        yaxis: { title: 'Capacity (GW)', gridcolor: '#f0f0f0' },
-        annotations: [{
-            x: sorted.length - 1,
-            y: Math.max(...sorted.map(g => g.capacity_mw / 1000)) * 0.9,
-            text: `Avg LMP: $${avgLMP.toFixed(1)}`,
-            showarrow: false,
-            font: { color: '#F47B27', size: 12 },
-        }],
-    }, { responsive: true });
-}
+        // Collect all fuel bins across years
+        const allBins = new Set();
+        displayResults.forEach(yr => {
+            const bins = yr.fuel_bin_table || yr.generator_economics || [];
+            bins.forEach(b => {
+                const key = b.heat_rate_bin && b.heat_rate_bin !== '—'
+                    ? `${b.fuel_type || b.unit_type} ${b.heat_rate_bin}`
+                    : (b.fuel_type || b.unit_type);
+                allBins.add(key);
+            });
+        });
 
-// ── Generator Profitability ──
-function renderProfitability(data) {
-    const gens = data.generator_economics || [];
-    if (!gens.length) { placeholderChart('chartProfitability'); return; }
+        const binList = [...allBins];
+        const defaultColors = ['#374151', '#1B5E9E', '#2372B9', '#5BA3E0', '#007FA4', '#92400E', '#6B7280', '#9CA3AF'];
+        const traces = binList.map((bin, idx) => ({
+            x: displayYears.map(String),
+            y: displayResults.map(yr => {
+                const bins = yr.fuel_bin_table || yr.generator_economics || [];
+                return bins.reduce((sum, b) => {
+                    const key = b.heat_rate_bin && b.heat_rate_bin !== '—'
+                        ? `${b.fuel_type || b.unit_type} ${b.heat_rate_bin}`
+                        : (b.fuel_type || b.unit_type);
+                    return key === bin ? sum + (b.capacity_gw || (b.capacity_mw || 0) / 1000) : sum;
+                }, 0);
+            }),
+            name: bin.replace(/_/g, ' '),
+            type: 'bar',
+            marker: { color: HEAT_RATE_BIN_COLORS[bin] || defaultColors[idx % defaultColors.length] },
+        }));
 
-    const names = gens.map(g => g.unit_type.replace(/_/g, ' '));
-    const revenue = gens.map(g => g.avg_revenue_mwh || 0);
-    const cost = gens.map(g => g.marginal_cost || 0);
-    const profit = gens.map(g => g.profit_mwh || 0);
+        Plotly.newPlot(container, traces, {
+            ...PLOTLY_LAYOUT_BASE,
+            title: { text: `Merit-Order by Heat Rate Bin — ${currentISO}`, font: { size: 14 } },
+            barmode: 'stack',
+            xaxis: { title: 'Year', type: 'category' },
+            yaxis: { title: 'Capacity (GW)', gridcolor: '#f0f0f0' },
+            legend: { x: 0, y: 1.15, orientation: 'h' },
+        }, { responsive: true });
 
-    Plotly.newPlot('chartProfitability', [
-        { x: names, y: revenue, name: 'Revenue $/MWh', type: 'bar', marker: { color: '#6BA543' } },
-        { x: names, y: cost, name: 'Cost $/MWh', type: 'bar', marker: { color: '#F47B27' } },
-        { x: names, y: profit, name: 'Profit $/MWh', type: 'bar', marker: { color: profit.map(p => p >= 0 ? '#6BA543' : '#F47B27') } },
-    ], {
-        ...PLOTLY_LAYOUT_BASE,
-        title: { text: `Generator Profitability — ${currentISO}`, font: { size: 14 } },
-        barmode: 'group',
-        yaxis: { title: '$/MWh', gridcolor: '#f0f0f0' },
-    }, { responsive: true });
+        // Build table
+        if (tableContainer) {
+            const thead = document.getElementById('meritOrderTableHead');
+            const tbody = document.getElementById('meritOrderTableBody');
+            thead.innerHTML = `<tr><th>Fuel / Heat Rate Bin</th>${displayYears.map(y => `<th>${y} (GW)</th>`).join('')}</tr>`;
+            tbody.innerHTML = binList.map(bin => {
+                return `<tr><td style="font-weight:600;">${bin.replace(/_/g, ' ')}</td>${displayResults.map(yr => {
+                    const bins = yr.fuel_bin_table || yr.generator_economics || [];
+                    const val = bins.reduce((sum, b) => {
+                        const key = b.heat_rate_bin && b.heat_rate_bin !== '—'
+                            ? `${b.fuel_type || b.unit_type} ${b.heat_rate_bin}`
+                            : (b.fuel_type || b.unit_type);
+                        return key === bin ? sum + (b.capacity_gw || (b.capacity_mw || 0) / 1000) : sum;
+                    }, 0);
+                    return `<td>${fmtNum(val, 1)}</td>`;
+                }).join('')}</tr>`;
+            }).join('');
+            tableContainer.style.display = '';
+        }
+    } else {
+        // Single-year: standard merit order bar
+        const gens = data.generator_economics || data.merit_order_stack || [];
+        if (!gens.length) { placeholderChart(container); if (tableContainer) tableContainer.style.display = 'none'; return; }
+
+        const sorted = [...gens].sort((a, b) => a.marginal_cost - b.marginal_cost);
+        Plotly.newPlot(container, [{
+            x: sorted.map(g => (g.unit_type || '').replace(/_/g, ' ')),
+            y: sorted.map(g => (g.capacity_mw || 0) / 1000),
+            marker: { color: sorted.map(g => UNIT_COLORS[g.unit_type] || '#9CA3AF') },
+            type: 'bar',
+            name: 'Capacity (GW)',
+            hovertemplate: '%{x}<br>%{y:.1f} GW<br>MC: $%{customdata:.1f}/MWh<extra></extra>',
+            customdata: sorted.map(g => g.marginal_cost),
+        }], {
+            ...PLOTLY_LAYOUT_BASE,
+            title: { text: `Merit-Order Stack — ${currentISO}`, font: { size: 14 } },
+            yaxis: { title: 'Capacity (GW)', gridcolor: '#f0f0f0' },
+        }, { responsive: true });
+        if (tableContainer) tableContainer.style.display = 'none';
+    }
 }
 
 // ── Nuclear Revenue ──
@@ -602,27 +677,6 @@ function renderNuclearRevenue(data) {
         ...PLOTLY_LAYOUT_BASE,
         title: { text: `Nuclear Revenue Stack — ${currentISO}`, font: { size: 14 } },
         yaxis: { title: '$/MWh', gridcolor: '#f0f0f0' },
-    }, { responsive: true });
-}
-
-// ── LMP Impact ──
-function renderLMPImpact(data) {
-    const sweep = data.threshold_sweep || data.lmp_by_threshold;
-    if (!sweep) { placeholderChart('chartLMPImpact'); return; }
-
-    const thresholds = Object.keys(sweep).map(Number).sort((a, b) => a - b);
-    const lmps = thresholds.map(t => sweep[t]?.avg_lmp || sweep[t]);
-
-    Plotly.newPlot('chartLMPImpact', [{
-        x: thresholds, y: lmps, type: 'scatter', mode: 'lines+markers',
-        line: { color: '#2372B9', width: 3 },
-        marker: { size: 6 },
-        hovertemplate: '%{x}% clean: $%{y:.1f}/MWh<extra></extra>',
-    }], {
-        ...PLOTLY_LAYOUT_BASE,
-        title: { text: `LMP Impact Curve — ${currentISO}`, font: { size: 14 } },
-        xaxis: { title: 'Clean Energy %', gridcolor: '#f0f0f0' },
-        yaxis: { title: 'Avg LMP ($/MWh)', gridcolor: '#f0f0f0' },
     }, { responsive: true });
 }
 
@@ -648,12 +702,12 @@ function renderCCSBreakeven(data) {
     }, { responsive: true });
 }
 
-// ── What Gets Built ──
+// ── What Gets Built (donut chart) ──
 function renderWhatBuilt(data) {
     const built = data.what_gets_built || data.deployment_stack;
     if (!built) { placeholderChart('chartWhatBuilt'); return; }
 
-    const resources = Object.keys(built);
+    const resources = Object.keys(built).filter(r => built[r] > 0);
     const values = resources.map(r => built[r]);
     const colors = resources.map(r => CLEAN_COLORS[r] || '#9CA3AF');
 
@@ -661,31 +715,13 @@ function renderWhatBuilt(data) {
         labels: resources.map(r => r.replace(/_/g, ' ')),
         values: values,
         type: 'pie',
+        hole: 0.45,
         marker: { colors: colors },
         textinfo: 'label+percent',
         hovertemplate: '%{label}: %{value:.1f} GW (%{percent})<extra></extra>',
     }], {
         ...PLOTLY_LAYOUT_BASE,
         title: { text: `What Gets Built — ${currentISO}`, font: { size: 14 } },
-    }, { responsive: true });
-}
-
-// ── Fossil Bin Economics ──
-function renderFossilBins(data) {
-    const bins = data.fossil_bin_economics || data.generator_economics;
-    if (!bins || !bins.length) { placeholderChart('chartFossilBins'); return; }
-
-    const names = bins.map(b => b.unit_type.replace(/_/g, ' '));
-
-    Plotly.newPlot('chartFossilBins', [
-        { x: names, y: bins.map(b => b.dispatch_hours || 0), name: 'Dispatch Hours', type: 'bar', yaxis: 'y', marker: { color: '#2372B9' } },
-        { x: names, y: bins.map(b => (b.capacity_factor || 0) * 100), name: 'CF %', type: 'scatter', mode: 'lines+markers', yaxis: 'y2', line: { color: '#F47B27', width: 3 }, marker: { size: 8 } },
-    ], {
-        ...PLOTLY_LAYOUT_BASE,
-        title: { text: `Fossil Fleet Economics — ${currentISO}`, font: { size: 14 } },
-        yaxis: { title: 'Dispatch Hours', gridcolor: '#f0f0f0' },
-        yaxis2: { title: 'Capacity Factor %', overlaying: 'y', side: 'right', range: [0, 100] },
-        barmode: 'group',
     }, { responsive: true });
 }
 
@@ -810,7 +846,7 @@ function renderInputSummary() {
     const items = [];
 
     // Mode & ISO
-    items.push({ label: 'Mode', value: simParams.mode || 'snapshot' });
+    items.push({ label: 'Mode', value: simParams.mode || 'trajectory' });
     const isos = simParams.isos || [simParams.iso || 'ERCOT'];
     items.push({ label: 'ISO(s)', value: isos.join(', ') });
 

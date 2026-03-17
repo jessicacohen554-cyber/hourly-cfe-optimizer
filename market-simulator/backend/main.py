@@ -45,12 +45,12 @@ from market_simulation import (
     build_market_scenarios,
     save_results,
     load_common_data,
-    load_step3_data,
     load_egrid_baselines,
     EGRID_2023_CLEAN_PCT,
     EGRID_2023_LMP,
     GAS_FRICTION_LEVELS,
-    CONDITIONS_BUNDLE,
+    QUEUE_CAP_GW,
+    QUEUE_LEARNING_MAP,
     DEMAND_GROWTH_LEVELS,
     PRICE_SENSITIVITIES,
     PPA_LEVELS,
@@ -159,14 +159,12 @@ def _get_preloaded_data() -> Dict:
     global _preloaded_data
     if _preloaded_data is None:
         demand_data, gen_profiles, emission_rates, fossil_mix = load_common_data()
-        step3_data = load_step3_data()
         egrid_baselines = load_egrid_baselines()
         _preloaded_data = {
             "demand_data": demand_data,
             "gen_profiles": gen_profiles,
             "emission_rates": emission_rates,
             "fossil_mix": fossil_mix,
-            "step3_data": step3_data,
             "egrid_baselines": egrid_baselines,
         }
     return _preloaded_data
@@ -331,8 +329,9 @@ def _map_request_to_conditions(req: SimulationRequest) -> dict:
     # Map gas_friction string level to numeric
     gas_friction_val = GAS_FRICTION_LEVELS.get(req.gas_friction, 0.7)
 
-    # Map condition string to learning speed + queue type
-    bundle = CONDITIONS_BUNDLE.get(req.condition, CONDITIONS_BUNDLE["Facilitating"])
+    # Map queue cap level to learning speed
+    queue_cap_level = getattr(req, 'queue_cap_level', None) or 'Medium'
+    learning_speed = QUEUE_LEARNING_MAP.get(queue_cap_level, 'Medium')
 
     # Determine fuel level from fuel_prices (use closest named level)
     # If custom prices provided, find best match; otherwise use "Medium"
@@ -365,12 +364,16 @@ def _map_request_to_conditions(req: SimulationRequest) -> dict:
             'oil': req.fuel_prices.oil,
         }
 
+    # Queue cap override (GW/yr) from user
+    queue_cap_override = getattr(req, 'queue_cap_override_gw', None)
+
     return {
-        "name": f"API: {req.iso} | {req.condition} | {req.demand_growth} demand | carbon=${req.carbon_price}",
+        "name": f"API: {req.iso} | Q={queue_cap_level} | {req.demand_growth} demand | carbon=${req.carbon_price}",
         "demand_growth": req.demand_growth,
         "lcoe_level": lcoe_level,
-        "learning_speed": bundle["learning_speed"],
-        "queue_type": bundle["queue_type"],
+        "learning_speed": learning_speed,
+        "queue_cap_level": queue_cap_level,
+        "queue_cap_override_gw": queue_cap_override,
         "gas_friction": gas_friction_val,
         "carbon_price": req.carbon_price,
         "fuel_level": fuel_level,
@@ -930,7 +933,6 @@ async def simulate(req: SimulationRequest):
 
     try:
         conditions = _map_request_to_conditions(req)
-        snapshot_mode = req.mode == "snapshot"
 
         # Determine nuclear retirement threshold
         nrt = req.nuclear_retirement_threshold if req.nuclear_retirement_threshold > 0 else None
@@ -940,9 +942,7 @@ async def simulate(req: SimulationRequest):
 
         # Build sim_years from request parameters
         from market_simulation import build_sim_years
-        if snapshot_mode:
-            custom_sim_years = None  # snapshot_mode handles [2025]
-        elif req.start_year and req.end_year:
+        if req.start_year and req.end_year:
             custom_sim_years = build_sim_years(
                 start=req.start_year,
                 end=req.end_year,
@@ -956,7 +956,7 @@ async def simulate(req: SimulationRequest):
             conditions=conditions,
             isos=[iso],
             nuclear_retirement_threshold=nrt,
-            snapshot_mode=snapshot_mode,
+            snapshot_mode=False,
             sim_years=custom_sim_years,
             _preloaded=preloaded,
             _lmp_cache=lmp_cache,
@@ -1071,13 +1071,12 @@ def _run_sweep_sync(job_id: str, req: SweepRequest):
         # Build scenario list (optionally filtered)
         all_scenarios = build_market_scenarios()
 
-        # Filter if user specified subsets
-        if req.conditions:
-            cond_set = set(req.conditions)
+        # Filter by queue cap levels if specified
+        if req.queue_cap_levels:
+            q_set = set(req.queue_cap_levels)
             all_scenarios = [
                 (sid, c) for sid, c in all_scenarios
-                if any(k in sid for k in ("_F_" if "Facilitating" in cond_set else "",
-                                           "_C_" if "Challenging" in cond_set else ""))
+                if c.get('queue_cap_level', 'Medium') in q_set
             ]
 
         job.total_scenarios = len(all_scenarios)
@@ -1088,13 +1087,11 @@ def _run_sweep_sync(job_id: str, req: SweepRequest):
 
         # Build sim_years for sweep
         from market_simulation import build_sim_years
-        sweep_sim_years = None
-        if not req.snapshot_mode:
-            sweep_sim_years = build_sim_years(
-                start=req.start_year,
-                end=req.end_year,
-                step=req.year_step or 5,
-            )
+        sweep_sim_years = build_sim_years(
+            start=req.start_year,
+            end=req.end_year,
+            step=req.year_step or 5,
+        )
 
         for i, (scenario_id, conditions) in enumerate(all_scenarios):
             results = run_market_simulation(
@@ -1102,7 +1099,7 @@ def _run_sweep_sync(job_id: str, req: SweepRequest):
                 conditions=conditions,
                 isos=isos,
                 nuclear_retirement_threshold=req.nuclear_retirement_threshold,
-                snapshot_mode=req.snapshot_mode,
+                snapshot_mode=False,
                 sim_years=sweep_sim_years,
                 _preloaded=preloaded,
                 _lmp_cache=lmp_cache,
@@ -1208,7 +1205,6 @@ async def run_sensitivity(req: SensitivityRequest):
             apply_fn(params, val)
 
             conditions = _map_request_to_conditions(params)
-            snapshot_mode = params.mode == "snapshot"
             nrt = params.nuclear_retirement_threshold if params.nuclear_retirement_threshold > 0 else None
 
             sim_results = run_market_simulation(
@@ -1216,7 +1212,7 @@ async def run_sensitivity(req: SensitivityRequest):
                 conditions=conditions,
                 isos=[iso],
                 nuclear_retirement_threshold=nrt,
-                snapshot_mode=snapshot_mode,
+                snapshot_mode=False,
                 _preloaded=preloaded,
                 _lmp_cache=lmp_cache,
                 _quiet=True,
