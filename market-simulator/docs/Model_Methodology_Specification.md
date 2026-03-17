@@ -68,7 +68,7 @@ Three simulation modes are supported:
 - **2025 snapshot model**: Generation profiles and grid mix reflect current conditions. Forward projections (trajectory mode) are modeled explicitly via demand growth rates and learning curves.
 - **ISO-level geographic resolution**: Resources are sourced within each ISO region. No intra-ISO transmission constraints (copper-plate assumption). Transmission costs are flat $/MWh adders by resource type and ISO.
 - **Hydro is existing-only**: No new hydroelectric capacity. Existing hydro is available at wholesale market rates with no incremental transmission cost.
-- **Perfect dispatch**: No unit commitment constraints (minimum up/down times, ramp rates, start-up costs). Storage dispatch follows a priority-ordered greedy algorithm.
+- **Unit commitment constraints**: When plant-level EIA 860 data is available, the model applies vintage-adjusted unit commitment: newer CCGTs (2015+) have 30% minimum generation and lower start costs; older CCGTs (pre-2005) have 50% minimum generation and higher start costs. Without plant data, dispatch uses a simplified merit-order without UC constraints. Storage dispatch follows a priority-ordered greedy algorithm.
 - **Load profile**: Demand uses actual ISO-level 8,760-hour profiles from EIA-930, representing aggregate load.
 
 ### 1.4 Key Differentiator
@@ -244,8 +244,8 @@ The EF outputs feed directly into the Market Simulator's revenue and cost calcul
 
 **Source**: EIA-930 Hourly Electric Grid Monitor (2021–2025)
 
-- **Demand profiles**: 8,760-hour normalized demand for each ISO. Normalized such that `sum(profile) = 8760`.
-- **Generation profiles**: Per-fuel-type hourly shapes (solar, wind, hydro, nuclear, fossil). Normalized to sum to 1.0 (shapes, not magnitudes). Multi-year averaging across 5 years smooths weather anomalies.
+- **Demand profiles**: 8,760-hour normalized demand for each ISO. The `normalized` array sums to 1.0 (hourly fractions of annual demand). The `raw_mw` array contains actual MW values. `total_annual_mwh` provides the conversion factor between the two.
+- **Generation profiles**: Per-fuel-type hourly shapes (solar, wind, hydro, nuclear, fossil). **All profiles are normalized to sum to 1.0** — they represent *when* generation occurs (hourly shape), not *how much*. The dispatch math `contribution = procurement_factor × (pct/100) × profile` requires profiles on the same scale as normalized demand. Multi-year averaging across 5 years smooths weather anomalies.
 - **Fossil mix profiles**: Hourly coal/gas/oil generation shares for merit-order dispatch.
 
 Data transformations:
@@ -283,6 +283,37 @@ The Fleet Model (`fleet_model.py`) provides real unit-level data for plant-level
 - Prime mover `ST` → resolved by fuel type: coal fuels (`BIT`/`SUB`/`LIG`/`ANT`/`RC`) → `coal_steam`, gas fuels (`NG`/`BFG`) → `gas_ccgt`, oil fuels (`DFO`/`RFO`) → `oil_ct`
 
 When real fleet data is available, the simulator uses unit-level merit-order stacks with per-generator heat rates instead of stylized efficiency bins. Otherwise, it falls back to ISO-level aggregate parameters with default heat rates.
+
+#### Two-Tier Dispatch and Emission Model
+
+The simulator uses a two-tier system depending on available data:
+
+**Tier 1 — Fleet-Average (No Plant Data):**
+Without EIA-860/923 or EPA CAMPD data, the model uses aggregate parameters per unit type:
+- Heat rates: coal 10.0, gas CCGT 7.0, gas CT 10.5, oil CT 10.5 MMBtu/MWh
+- Emission rates: fleet-average CO2/NOx/SOx per unit type from eGRID
+- Dispatch: 4-bin merit-order stack (coal, gas CCGT, gas CT, oil CT) sorted by marginal cost
+- Generator economics: aggregate capacity factor and margin per unit type
+
+**Tier 2 — Plant-Level (With EIA/EPA Data):**
+When plant-level data is present in `data/eia-860/`, `data/eia-923/`, and/or `data/epa-campd/`:
+- Per-plant heat rates from EIA 860/923 replace fleet defaults
+- Vintage-adjusted unit commitment: newer CCGTs (2015+) have 30% min gen, older (pre-2005) have 50%
+- Actual emission rates from EPA CAMPD hourly CEMS data replace eGRID averages
+- Plant-level merit-order dispatch with per-generator marginal cost sorting
+- Individual plant economics: CF, revenue, cost, profit, status per generator
+
+The model automatically detects data availability and selects the appropriate tier. Both tiers produce equivalent output formats — Tier 2 adds plant-level granularity within the same data structures.
+
+#### Synthetic Data Fallback
+
+For standalone use without external data, the `generate_synthetic_profiles.py` script produces realistic EIA-style profiles based on published ISO statistics:
+- Demand profiles with seasonal, diurnal, and weekend patterns per ISO
+- VRE generation profiles (solar bell curve, wind beta distribution) calibrated to published capacity factors
+- All profiles are normalized to sum to 1.0 for dispatch compatibility
+- Fossil mix shares derived from installed capacity data
+
+This fallback enables the full simulation pipeline with no external data dependencies. Production runs should use actual EIA 930 data for higher fidelity.
 
 ### 3.6 Natural Gas Price Data
 
@@ -454,6 +485,15 @@ Returns remaining fossil capacity at a given clean energy threshold:
 - Coal retires above ~60% clean share (varies by ISO)
 - Oil retires above ~70%
 - Gas scales down proportionally with remaining demand
+
+**Fossil demand MW conversion**: The residual demand fraction (1 − clean_pct) is converted to MW using `residual × total_annual_mwh` (not `residual × demand_mw_profile`). This matches the LMP engine's conversion and produces realistic MW values for generator dispatch (e.g., ~48,800 MW for ERCOT at 90% residual, not ~5 MW from multiplying two normalized arrays).
+
+**Per-fuel emission rates**: The function uses fuel-specific CO2 rates from the eGRID emission data:
+- `coal_co2_lb_per_mwh` (~2,150–2,300 lbs/MWh depending on ISO)
+- `gas_co2_lb_per_mwh` (~850–950 lbs/MWh)
+- `oil_co2_lb_per_mwh` (~1,550–1,650 lbs/MWh)
+
+These per-fuel rates (sourced from EPA eGRID 2022 fleet-weighted averages) replace the single aggregate `co2_rate` field when computing plant-level emissions. Source: EPA eGRID 2022 — typical fleet-weighted values by fuel type.
 
 ### 4.5 Fleet Model (`fleet_model.py`)
 
