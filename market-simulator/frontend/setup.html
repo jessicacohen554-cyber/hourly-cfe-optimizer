@@ -27,6 +27,7 @@
         <ul class="nav-links">
             <li><a href="/">Guide</a></li>
             <li><a href="/setup" class="active">Setup</a></li>
+            <li><a href="/fleet-config">Fleet Config</a></li>
             <li><a href="/results">Results</a></li>
         </ul>
     </nav>
@@ -706,6 +707,21 @@
                             <button type="button" class="toggle-btn" data-value="Fast">Fast</button>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Fleet Configuration Summary -->
+            <div class="glass-card form-section" id="fleetConfigCard">
+                <div class="section-eyebrow">Fleet</div>
+                <h2 class="section-heading">Fleet Configuration (Constellation/Calpine)</h2>
+                <div id="fleetConfigSummary" style="display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <span id="fleetStatusText" style="color: var(--text-muted);">Using defaults (all plants at baseline status)</span>
+                    </div>
+                    <a href="/fleet-config" class="btn" style="display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: var(--radius-md); border: 1px solid var(--border); text-decoration: none; color: var(--navy); background: var(--bg-card); font-weight: 500; transition: all 0.15s;"
+                       onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='var(--bg-card)'">
+                        Configure Fleet →
+                    </a>
                 </div>
             </div>
 
