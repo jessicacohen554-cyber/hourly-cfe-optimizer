@@ -65,11 +65,14 @@ The Market Simulation Screening Tool models electricity market economics across 
 - CCS breakeven carbon price analysis
 - Plant-level economics for every generator in the EIA 860 fleet
 
-### Three-Page Flow
+### Six-Page Flow
 
-1. **Guide** (`/`) — Instructions and tool overview
+1. **Guide** (`/`) — Instructions, tool overview, and data setup documentation
 2. **Setup** (`/setup`) — Input parameters and run simulation
-3. **Results** (`/results`) — Charts, tables, and analysis
+3. **Fleet Config** (`/fleet-config`) — Constellation/Calpine asset configuration (toggle plants between Operating / Retired / CCS Retrofit)
+4. **Results** (`/results`) — Charts, tables, and analysis
+5. **CCS Emissions** (`/emissions`) — CCS emissions dashboard with plant-level dispatch and capture analysis
+6. **IPP Report** (`/ipp-report`) — Constellation fleet transition report with 9-section executive summary
 
 ### User Interface
 
@@ -298,6 +301,136 @@ Click "Export Charts" on the results page to save PNG images of all charts to th
 ### Downloading Data
 
 Click "Download CSV" to download the full results as a CSV file.
+
+---
+
+## Fleet Configuration Page
+
+The Fleet Config page (`/fleet-config`) lets you modify the status of individual Constellation/Calpine plants before running a simulation.
+
+### Plant Statuses
+
+| Status | Effect on Simulation |
+|--------|---------------------|
+| **Operating** (default) | Plant dispatches normally in merit order |
+| **Retired** | Plant capacity zeroed — removed from dispatch |
+| **CCS Retrofit** | 95% CO2 capture, 14% heat rate penalty, 80% CF floor (available for 39 eligible CCGT plants only) |
+
+### Page Layout
+
+- Plants grouped by ISO → fuel type (expandable sections)
+- Fossil sections (coal, gas CCGT, gas CT, oil) expanded by default
+- Clean sections (nuclear, solar, wind, hydro) collapsed by default
+- Search/filter bar for finding specific plants
+- Bulk controls: "Set All Coal to Retired", "Set All CCGT to CCS Retrofit", "Reset to Defaults"
+
+Fleet selections persist in browser localStorage and are included in the simulation request when you run from the Setup page. The Setup page shows a summary badge: "X plants modified (Y retired, Z CCS retrofit)".
+
+---
+
+## CCS Emissions Dashboard
+
+The Emissions page (`/emissions`) displays CCS analysis results after running a simulation:
+
+- **Plant selector**: Choose individual CCGT plants or view fleet aggregate
+- **Fan bands**: P10/P50/P90 dispatch ranges across sweep scenarios
+- **CCS delta chart**: Emissions reduction from CCS retrofit per plant per year
+- **Stacked emissions**: System-wide CO2 by fuel type over time
+
+This page uses market-sim dispatch results directly (not external parquets).
+
+---
+
+## IPP Report Page
+
+The IPP Report (`/ipp-report`) generates a Constellation fleet transition executive summary with 9 sections covering fleet economics, CCS candidacy, retirement risk, and transition pathways.
+
+---
+
+## Plant-Level Data Setup
+
+The simulator uses a **two-tier dispatch and emission model**:
+
+### Tier 1 — Fleet-Average (Default, No Extra Data Needed)
+Without plant-level data, the model uses aggregate parameters per unit type:
+
+| Unit Type | Default Heat Rate (MMBtu/MWh) | CO2 Rate (tons/MWh) |
+|-----------|-------------------------------|---------------------|
+| Coal Steam | 10.0 | 0.95 |
+| Gas CCGT | 7.0 | 0.37 |
+| Gas CT | 10.5 | 0.55 |
+| Oil CT | 10.5 | 0.65 |
+
+### Tier 2 — Plant-Level (With EIA/EPA Data)
+When plant-level data files are present, the model uses per-generator heat rates, vintage-adjusted unit commitment, and actual emission factors:
+
+- Newer CCGTs (2015+): 30% minimum generation, lower start costs
+- Older CCGTs (pre-2005): 50% minimum generation, higher start costs
+- Per-plant heat rates from EIA 860/923 replace fleet averages
+- Actual emission rates from EPA CAMPD replace eGRID averages
+
+### Directory Setup for Plant-Level Data
+
+To enable Tier 2 plant-level modeling, drop data files into the following directories under `market-simulator/data/`:
+
+#### EIA Form 860 — Plant Characteristics
+```
+data/eia-860/{STATE}/eia860_{STATE}.json
+```
+**Example**: `data/eia-860/TX/eia860_TX.json`
+
+**Required fields per record:**
+- `plant_id` (int) — EIA plant ID (ORISPL code)
+- `plant_name` (string) — Plant name
+- `state` (string) — 2-letter state abbreviation
+- `capacity_mw` (float) — Nameplate capacity in MW
+- `fuel_type` (string) — EIA fuel type code (NG, BIT, SUB, DFO, etc.)
+- `prime_mover` (string) — EIA prime mover code (CA, CT, ST, GT, etc.)
+- `status` (string) — Operating status (OP = operating)
+- `balancing_authority_code` (string) — BA code (ERCO, CISO, PJM, etc.)
+- `heat_rate` (float) — Heat rate in Btu/kWh
+- `online_year` (int) — Year unit came online
+
+#### EIA Form 923 — Monthly Generation
+```
+data/eia-923/{STATE}/eia923_{STATE}_{YYYY-MM}.json
+```
+**Example**: `data/eia-923/TX/eia923_TX_2024-06.json`
+
+**Required fields per record:**
+- `plant_id` (int) — EIA plant ID
+- `plant_name` (string)
+- `fuel_type` (string)
+- `net_generation_mwh` (float)
+- `year` (int), `month` (int)
+
+#### EPA CAMPD — Hourly Emissions
+```
+data/epa-campd/{STATE}/{STATE}_{YYYY-MM}.json
+```
+**Example**: `data/epa-campd/TX/TX_2024-06.json`
+
+**Required fields per record:**
+- `orispl_code` (int) — ORISPL plant code (matches EIA plant_id)
+- `unit_id` (string)
+- `op_date` (string), `op_hour` (int)
+- `co2_mass_tons` (float)
+- `nox_mass_lbs` (float), `so2_mass_lbs` (float)
+- `gross_load_mw` (float)
+
+### Key States per ISO
+
+| ISO | Key States | BA Codes |
+|-----|-----------|----------|
+| ERCOT | TX | ERCO |
+| PJM | PA, NJ, DE, MD, VA, OH, WV, IL, IN | PJM, AEP, COMED, DOM, DUK (partial) |
+| CAISO | CA | CISO |
+| NYISO | NY | NYIS |
+| NEISO | MA, ME, NH, CT, RI, VT | ISNE |
+| MISO | IL, IN, MI, WI, MN, IA, MO, AR, MS, LA | MISO, ALTE, CONS, NSP |
+| SPP | AR, KS, OK, NE, NM (partial) | SWPP, KCPL, OKGE, SPS |
+
+The model automatically maps plants to ISOs via their `balancing_authority_code` field using an internal BA-to-ISO mapping dictionary. You do not need to organize files by ISO — just drop state-level files and the model handles the mapping.
 
 ---
 
