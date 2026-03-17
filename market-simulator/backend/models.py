@@ -27,14 +27,15 @@ class TransmissionLevel(str, Enum):
     high = "High"
 
 
-class ConditionType(str, Enum):
-    facilitating = "Facilitating"
-    challenging = "Challenging"
+class QueueCapLevel(str, Enum):
+    low = "Low"
+    medium = "Medium"
+    high = "High"
 
 
 class SimMode(str, Enum):
-    snapshot = "snapshot"
     trajectory = "trajectory"
+    sweep = "sweep"
 
 
 class SweepStatus(str, Enum):
@@ -143,9 +144,10 @@ class SimulationRequest(BaseModel):
     demand_growth: object = "Medium"    # Low/Medium/High OR float for custom %
     ppa_level: str = "Medium"           # Low/Medium/High
     gas_friction: str = "Medium"        # Low/Medium/High
-    condition: str = "Facilitating"     # Facilitating/Challenging
+    queue_cap_level: str = "Medium"      # Low/Medium/High
+    queue_cap_override_gw: Optional[float] = None  # GW/yr — None = use L/M/H default
     nuclear_retirement_threshold: float = 30.0  # $/MWh
-    mode: str = "snapshot"              # snapshot / trajectory
+    mode: str = "trajectory"            # trajectory / sweep
     years: List[int] = Field(default_factory=lambda: [2030, 2035, 2040, 2045, 2050])
     # Annual granularity controls (trajectory/sweep modes)
     start_year: int = 2025              # First simulation year
@@ -167,13 +169,12 @@ class SweepRequest(BaseModel):
     """Parameters for a full 270-scenario parametric sweep."""
     isos: List[str] = Field(default_factory=lambda: ["ERCOT"])
     nuclear_retirement_threshold: Optional[float] = 30.0
-    snapshot_mode: bool = False
     # Annual granularity controls
     start_year: int = 2025
     end_year: int = 2060
     year_step: int = 5                  # Default to 5yr steps for sweeps (performance)
     # Optional overrides for sweep bounds (future use)
-    conditions: Optional[List[str]] = None         # e.g. ["Facilitating"]
+    queue_cap_levels: Optional[List[str]] = None   # e.g. ["Low", "Medium"]
     demand_levels: Optional[List[str]] = None      # e.g. ["Low", "Medium"]
     price_sens_keys: Optional[List[str]] = None    # e.g. ["all_low", "all_med"]
     ppa_levels: Optional[List[str]] = None

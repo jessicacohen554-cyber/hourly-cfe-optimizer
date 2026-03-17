@@ -25,10 +25,13 @@ const ISO_DATA = {
 };
 
 const MODE_DESCRIPTIONS = {
-    snapshot: "One point-in-time simulation with your exact cost inputs. No learning curves, no year progression. Fast results.",
-    trajectory: "Multi-year forward projection (2025 → 2060). Wright's Law learning curves reduce costs each year. Shows when the market flips for each resource type.",
-    sweep: "Full 270-scenario parametric sweep: 2 conditions × 3 demand × 5 price × 3 PPA × 3 gas friction. Comprehensive but takes longer."
+    trajectory5: "Multi-year market trajectory to 2060 at 5-year intervals. Wright's Law learning curves reduce costs each year. Shows when the market flips for each resource type.",
+    trajectory1: "Multi-year market trajectory to 2060 at annual resolution. Same model as 5-year but with single-year granularity. Detailed results downloadable as CSV.",
+    sweep: "Parametric market reference sweep at 5-year intervals: 3 demand × 5 price × 3 PPA × 3 gas friction × 3 queue speed = 405 scenarios. Upload custom CSV templates to override defaults."
 };
+
+// Mode → year step mapping
+const MODE_STEP = { trajectory5: 5, trajectory1: 1, sweep: 5 };
 
 // ── Mode switching ──
 document.querySelectorAll('.mode-toggle .toggle-btn').forEach(btn => {
@@ -37,9 +40,7 @@ document.querySelectorAll('.mode-toggle .toggle-btn').forEach(btn => {
         btn.classList.add('active');
         const mode = btn.dataset.mode;
         document.getElementById('modeDescription').textContent = MODE_DESCRIPTIONS[mode];
-        // Show trajectory settings for both trajectory and sweep modes
-        document.getElementById('trajectorySettings').style.display =
-            (mode === 'trajectory' || mode === 'sweep') ? '' : 'none';
+        updateYearCountHint();
     });
 });
 
@@ -47,24 +48,18 @@ document.querySelectorAll('.mode-toggle .toggle-btn').forEach(btn => {
 function updateYearCountHint() {
     const start = parseInt(document.getElementById('startYear')?.value || 2025);
     const end = parseInt(document.getElementById('endYear')?.value || 2060);
-    const step = parseInt(document.querySelector('#yearStepToggle .toggle-btn.active')?.dataset.value || 1);
+    const mode = document.querySelector('.mode-toggle .toggle-btn.active')?.dataset.mode || 'trajectory5';
+    const step = MODE_STEP[mode] || 5;
     const count = Math.floor((end - start) / step) + 1;
     const hint = document.getElementById('yearCountHint');
     if (hint) {
-        hint.textContent = `${count} simulation year${count !== 1 ? 's' : ''}`;
+        hint.textContent = `${count} simulation year${count !== 1 ? 's' : ''} (${step === 1 ? 'annual' : '5-yr intervals'})`;
         if (count > 20) hint.textContent += ' (may be slow for sweeps)';
     }
 }
 
 document.getElementById('startYear')?.addEventListener('change', updateYearCountHint);
 document.getElementById('endYear')?.addEventListener('change', updateYearCountHint);
-document.querySelectorAll('#yearStepToggle .toggle-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('#yearStepToggle .toggle-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        updateYearCountHint();
-    });
-});
 
 // ── ISO selection — always single-select (all modes) ──
 document.querySelectorAll('.iso-btn').forEach(btn => {
@@ -178,6 +173,10 @@ document.getElementById('simulationForm').addEventListener('submit', async (e) =
     try {
         const mode = document.querySelector('.mode-toggle .toggle-btn.active').dataset.mode;
         const endpoint = mode === 'sweep' ? '/api/sweep' : '/api/simulate';
+        // Map new mode names to backend mode param
+        if (mode === 'trajectory5') params.mode = 'trajectory';
+        else if (mode === 'trajectory1') params.mode = 'trajectory';
+        else params.mode = mode;
 
         const response = await fetch(endpoint, {
             method: 'POST',
@@ -323,14 +322,17 @@ function collectFormData() {
         }
     } catch (e) { /* ignore parse errors */ }
 
-    // Trajectory-specific params (also used by sweep mode)
-    if (mode === 'trajectory' || mode === 'sweep') {
-        params.condition = document.querySelector('#conditionToggle .toggle-btn.active')?.dataset.value || 'Facilitating';
-        params.start_year = parseInt(document.getElementById('startYear')?.value || 2025);
-        params.end_year = parseInt(document.getElementById('endYear')?.value || 2060);
-        params.year_step = parseInt(document.querySelector('#yearStepToggle .toggle-btn.active')?.dataset.value || 1);
-        params.learning_curves = document.querySelector('#learningToggle .toggle-btn.active')?.dataset.value === 'On';
-        params.learning_speed = document.querySelector('#learningSpeedToggle .toggle-btn.active')?.dataset.value || 'Medium';
+    // Trajectory params (all modes are trajectory-based now)
+    const activeMode = document.querySelector('.mode-toggle .toggle-btn.active')?.dataset.mode || 'trajectory5';
+    params.start_year = parseInt(document.getElementById('startYear')?.value || 2025);
+    params.end_year = parseInt(document.getElementById('endYear')?.value || 2060);
+    params.year_step = MODE_STEP[activeMode] || 5;
+    params.learning_curves = document.querySelector('#learningToggle .toggle-btn.active')?.dataset.value === 'On';
+    params.learning_speed = document.querySelector('#learningSpeedToggle .toggle-btn.active')?.dataset.value || 'Medium';
+    params.queue_cap_level = document.querySelector('#queueCapToggle .toggle-btn.active')?.dataset.value || 'Medium';
+    const queueOverride = document.getElementById('queue_cap_override')?.value;
+    if (queueOverride && queueOverride !== '') {
+        params.queue_cap_override_gw = parseFloat(queueOverride);
     }
 
     return params;

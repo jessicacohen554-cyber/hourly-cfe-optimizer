@@ -33,6 +33,8 @@
             <li><a href="/setup">Setup</a></li>
             <li><a href="/fleet-config">Fleet Config</a></li>
             <li><a href="/results" class="active">Results</a></li>
+            <li><a href="/emissions">CCS Emissions</a></li>
+            <li><a href="/ipp-report">IPP Report</a></li>
         </ul>
     </nav>
 
@@ -45,28 +47,21 @@
         </div>
     </div>
 
-    <!-- ISO Tab Switcher + Controls -->
+    <!-- ISO Header + Controls -->
     <div class="iso-tab-bar" id="controlsBar">
         <div class="content-section" style="padding-top: 0; padding-bottom: 0;">
-            <div class="iso-tabs" id="resultsIsoSelector"></div>
-            <div class="controls-row">
-                <div class="control-group" id="yearControl" style="display:none;">
-                    <label>Year</label>
-                    <select id="yearSelect" class="control-select"></select>
-                </div>
-                <div class="control-group">
-                    <label>View</label>
-                    <div class="toggle-btn-group" id="viewToggle">
-                        <button type="button" class="toggle-btn active" data-view="hourly">Hourly</button>
-                        <button type="button" class="toggle-btn" data-view="monthly">Monthly</button>
-                    </div>
-                </div>
-                <a href="/setup" class="back-link">&larr; Modify Inputs</a>
+            <div style="display: flex; align-items: center; gap: var(--space-lg, 1.5rem); flex-wrap: wrap; padding: 0.75rem 0;">
+                <h2 id="isoHeader" style="margin: 0; color: var(--navy, #1A232F); font-size: 1.4rem; font-weight: 700;"></h2>
+                <a href="/emissions" style="display:inline-block; padding: 0.55rem 1.25rem; background: var(--ceg-blue, #1d4ed8); color: #fff; border-radius: var(--radius-sm, 6px); text-decoration: none; font-weight: 600; font-size: 0.9rem;">Run CCS Dispatch →</a>
+                <a href="/setup" class="back-link" style="margin-left: auto;">&larr; Modify Inputs</a>
             </div>
         </div>
     </div>
 
     <div class="content-section">
+
+        <!-- Year Snapshot Header -->
+        <h2 id="kpiYearHeader" style="margin: 0 0 var(--space-md, 1rem) 0; color: var(--navy, #1A232F); font-size: 1.3rem; font-weight: 700;"></h2>
 
         <!-- KPI Cards -->
         <div class="kpi-grid" id="topStats">
@@ -171,6 +166,12 @@
                 <p>Generation mix by fuel source — how the supply portfolio changes under market conditions</p>
             </div>
             <div class="chart-container-lg" id="chartSupplyStack"></div>
+            <div class="table-responsive" id="supplyStackTableContainer" style="display:none; margin-top: var(--space-md, 1rem);">
+                <table class="data-table" id="supplyStackTable">
+                    <thead id="supplyStackTableHead"></thead>
+                    <tbody id="supplyStackTableBody"></tbody>
+                </table>
+            </div>
         </div>
 
         <!-- Chart 2b: System Emissions by Year (trajectory only) -->
@@ -215,6 +216,12 @@
                 <p>Fossil generators ordered by marginal cost. Generators above the LMP line are uneconomic.</p>
             </div>
             <div class="chart-container-lg" id="chartMeritOrder"></div>
+            <div class="table-responsive" id="meritOrderTableContainer" style="display:none; margin-top: var(--space-md, 1rem);">
+                <table class="data-table" id="meritOrderTable">
+                    <thead id="meritOrderTableHead"></thead>
+                    <tbody id="meritOrderTableBody"></tbody>
+                </table>
+            </div>
         </div>
 
         <!-- ════════════════════════════════════════════════════════════════ -->
@@ -224,53 +231,28 @@
         <div class="results-section-header" id="yearDrilldownHeader" style="display:none;">
             <h2>Year-by-Year Detail</h2>
             <p>Drill into each projection year for deployment, pricing, and fleet economics</p>
-        </div>
-
-        <!-- Charts Row: Profitability + What Gets Built -->
-        <div class="grid-2col">
-            <div class="chart-card">
-                <div class="chart-card-header">
-                    <h3>Generator Profitability</h3>
-                    <p>Revenue vs cost per generator class</p>
-                </div>
-                <div class="chart-container" id="chartProfitability"></div>
-            </div>
-
-            <div class="chart-card">
-                <div class="chart-card-header">
-                    <h3>What Gets Built</h3>
-                    <p>Resource mix from existing baseline through market-cleared level</p>
-                </div>
-                <div class="chart-container" id="chartWhatBuilt"></div>
+            <div style="margin-top: var(--space-sm, 0.5rem);">
+                <label style="font-weight: 600; margin-right: 0.5rem;">Select Year:</label>
+                <select id="yearSelect" class="control-select" style="min-width: 120px;"></select>
             </div>
         </div>
 
-        <!-- LMP Impact + CCS Breakeven -->
-        <div class="grid-2col">
-            <div class="chart-card">
-                <div class="chart-card-header">
-                    <h3>LMP Impact Curve</h3>
-                    <p>How average LMP changes as clean penetration increases</p>
-                </div>
-                <div class="chart-container" id="chartLMPImpact"></div>
-            </div>
-
-            <div class="chart-card">
-                <div class="chart-card-header">
-                    <h3>CCS Retrofit vs New Gas</h3>
-                    <p>Carbon price crossover: when does CCS beat unabated CCGT?</p>
-                </div>
-                <div class="chart-container" id="chartCCSBreakeven"></div>
-            </div>
-        </div>
-
-        <!-- Fossil Bin Economics -->
+        <!-- What Gets Built (donut) -->
         <div class="chart-card">
             <div class="chart-card-header">
-                <h3>Fossil Fleet Economics by Heat Rate Bin</h3>
-                <p>Per-bin dispatch hours, revenue, cost, and margin</p>
+                <h3>What Gets Built</h3>
+                <p>Resource deployment mix from existing baseline through market-cleared level</p>
             </div>
-            <div class="chart-container-lg" id="chartFossilBins"></div>
+            <div class="chart-container" id="chartWhatBuilt"></div>
+        </div>
+
+        <!-- CCS Breakeven -->
+        <div class="chart-card">
+            <div class="chart-card-header">
+                <h3>CCS Retrofit vs New Gas</h3>
+                <p>Carbon price crossover: when does CCS beat unabated CCGT?</p>
+            </div>
+            <div class="chart-container" id="chartCCSBreakeven"></div>
         </div>
 
         <!-- Clean Cost Ladder + Gas Shift -->
