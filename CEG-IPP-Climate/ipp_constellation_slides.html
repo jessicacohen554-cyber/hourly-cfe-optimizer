@@ -162,10 +162,40 @@
         <div class="slide-footer"></div>
     </div>
 
-    <!-- ═══ SLIDE 10: Clean Investment ═══ -->
+    <!-- ═══ SLIDE 10: CCS Retrofit Strategy ═══ -->
     <div class="slide slide-content" id="slide-10">
         <div class="slide-header">
             <span class="section-num">06</span>
+            <h2>Gas Fleet CCS Retrofit Strategy</h2>
+        </div>
+        <div class="slide-stats" id="slideRetrofitStats" style="margin-bottom: var(--space-md)"></div>
+        <div class="slide-grid-2col" style="flex:1">
+            <div class="slide-card" style="display:flex;flex-direction:column;">
+                <h3>2050 Fleet Outcome</h3>
+                <div class="slide-chart" style="flex:1"><canvas id="slide-retrofitDecision"></canvas></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:var(--space-md);justify-content:center;">
+                <div class="slide-insight green">
+                    <strong>ERCOT: Largest Opportunity</strong><br>
+                    ~8.9 GW eligible, Gulf Coast storage (200 TWh cap), lowest capture costs.
+                </div>
+                <div class="slide-insight orange">
+                    <strong>CAISO: Cap-Constrained</strong><br>
+                    25 TWh storage cap limits retrofits to ~3.4 GW of 4.6 GW fleet.
+                </div>
+                <div class="slide-insight" style="border-left-color:#E91E63">
+                    <strong>NEISO: No Geologic Storage</strong><br>
+                    ~2 GW faces stranding; DAC offset only path (~$300/ton).
+                </div>
+            </div>
+        </div>
+        <div class="slide-footer"></div>
+    </div>
+
+    <!-- ═══ SLIDE 11: Clean Investment ═══ -->
+    <div class="slide slide-content" id="slide-11">
+        <div class="slide-header">
+            <span class="section-num">07</span>
             <h2>Clean Generation Investment Case</h2>
         </div>
         <div class="slide-grid-2col" style="flex:1">
@@ -181,10 +211,10 @@
         <div class="slide-footer"></div>
     </div>
 
-    <!-- ═══ SLIDE 11: SMARTargets AT ═══ -->
-    <div class="slide slide-content" id="slide-11">
+    <!-- ═══ SLIDE 12: SMARTargets AT ═══ -->
+    <div class="slide slide-content" id="slide-12">
         <div class="slide-header">
-            <span class="section-num">07</span>
+            <span class="section-num">08</span>
             <h2>SMARTargets AT &mdash; Gap Analysis</h2>
         </div>
         <div class="slide-full-chart">
@@ -196,10 +226,10 @@
         <div class="slide-footer"></div>
     </div>
 
-    <!-- ═══ SLIDE 12: SBTi v2 ═══ -->
-    <div class="slide slide-content" id="slide-12">
+    <!-- ═══ SLIDE 13: SBTi v2 ═══ -->
+    <div class="slide slide-content" id="slide-13">
         <div class="slide-header">
-            <span class="section-num">07</span>
+            <span class="section-num">08</span>
             <h2>SBTi Power Sector v2 &mdash; Gap Analysis</h2>
         </div>
         <div class="slide-full-chart">
@@ -211,10 +241,10 @@
         <div class="slide-footer"></div>
     </div>
 
-    <!-- ═══ SLIDE 13: Strategic Positioning ═══ -->
-    <div class="slide slide-content" id="slide-13">
+    <!-- ═══ SLIDE 14: Strategic Positioning ═══ -->
+    <div class="slide slide-content" id="slide-14">
         <div class="slide-header">
-            <span class="section-num">08</span>
+            <span class="section-num">09</span>
             <h2>Strategic Positioning & Robustness</h2>
         </div>
         <div class="slide-grid-chart-text">
@@ -227,8 +257,8 @@
         <div class="slide-footer"></div>
     </div>
 
-    <!-- ═══ SLIDE 14: Key Takeaways ═══ -->
-    <div class="slide slide-content" id="slide-14">
+    <!-- ═══ SLIDE 15: Key Takeaways ═══ -->
+    <div class="slide slide-content" id="slide-15">
         <div class="slide-header">
             <span class="section-num">&bull;</span>
             <h2>Key Takeaways</h2>
@@ -240,6 +270,7 @@
                     <li><strong>Gas lock-in is the critical decision point</strong> &mdash; New gas development would lock in emissions for decades. Corporate PPA signals can tip the balance toward clean alternatives.</li>
                     <li><strong>Scenario convergence by 2035</strong> &mdash; Most scenarios converge on significant emission reductions by mid-decade, suggesting near-term milestones are achievable.</li>
                     <li><strong>Enabling conditions matter</strong> &mdash; Gaps to SMARTargets AT and SBTi v2 pathways narrow substantially with policy support for clean firm generation and hourly matching.</li>
+                    <li><strong>CCS retrofit viable for ~15 GW</strong> &mdash; ERCOT, CAISO, and PJM gas fleets can retrofit with post-combustion capture. NEISO (~2 GW) has no geologic storage. CAISO 25 TWh cap limits retrofits to ~3.4 GW of 4.6 GW.</li>
                     <li><strong>Clean investment economics are favorable</strong> &mdash; LCOE trends support accelerated renewable + storage deployment across Constellation's operating ISOs.</li>
                 </ul>
                 <div style="text-align:center;margin-top:var(--space-2xl);">
@@ -259,7 +290,7 @@
         <span class="slide-brand-text">Constellation Energy</span>
     </div>
     <button id="prevBtn">&larr; Prev</button>
-    <span class="slide-counter"><span id="slideNum">1</span> / <span id="slideTotal">14</span></span>
+    <span class="slide-counter"><span id="slideNum">1</span> / <span id="slideTotal">15</span></span>
     <button id="nextBtn">Next &rarr;</button>
 </div>
 
@@ -642,6 +673,62 @@
         },
 
         10: function() {
+            // CCS Retrofit Strategy slide
+            var fleetCo = (typeof FLEET_COMPANIES !== 'undefined')
+                ? FLEET_COMPANIES.find(function(c){ return c.shortName === 'Constellation' || c.name === co.name; })
+                : null;
+            var plants = (fleetCo && fleetCo.plants) ? fleetCo.plants : [];
+            var gasPlants = plants.filter(function(p){ return p.fuel === 'gas_ccgt'; });
+            var CCS_CAP = { CAISO: 25, ERCOT: 200, PJM: 125, NYISO: 0, NEISO: 0, MISO: 200, SPP: 50 };
+            var CCS_CF = 0.85;
+
+            var eligible = gasPlants.filter(function(p){ return p.cap_mw >= 400 && (CCS_CAP[p.iso] || 0) > 0; });
+            var ineligible = gasPlants.filter(function(p){ return (CCS_CAP[p.iso] || 0) === 0; });
+            var totalGas = gasPlants.reduce(function(s,p){ return s + p.cap_mw; }, 0);
+            var eligibleMW = eligible.reduce(function(s,p){ return s + p.cap_mw; }, 0);
+            var ineligMW = ineligible.reduce(function(s,p){ return s + p.cap_mw; }, 0);
+
+            // CAISO cap constraint
+            var caisoElig = eligible.filter(function(p){ return p.iso === 'CAISO'; });
+            var caisoMW = caisoElig.reduce(function(s,p){ return s + p.cap_mw; }, 0);
+            var caisoMax = CCS_CAP.CAISO / (CCS_CF * 8.760 / 1000) * 1000;
+            var caisoCapped = Math.max(0, caisoMW - caisoMax);
+
+            var retrofitMW = eligibleMW - caisoCapped;
+            var dacMW = ineligMW + caisoCapped;
+
+            makeChart('slide-retrofitDecision', {
+                type: 'doughnut',
+                data: {
+                    labels: ['CCS Retrofit', 'DAC Offset / No Storage', 'Retired'],
+                    datasets: [{
+                        data: [Math.round(retrofitMW), Math.round(dacMW), Math.max(0, Math.round(totalGas - retrofitMW - dacMW))],
+                        backgroundColor: [RESOURCE_COLORS.ccs || '#64748B', '#EF4444', '#D1D5DB'],
+                        borderWidth: 2
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right', labels: { font: { size: 11 } } },
+                        tooltip: { callbacks: { label: function(ctx) {
+                            var pct = totalGas > 0 ? (ctx.parsed / totalGas * 100).toFixed(0) : 0;
+                            return ctx.label + ': ' + ctx.parsed.toLocaleString() + ' MW (' + pct + '%)';
+                        }}}
+                    }
+                }
+            });
+
+            var statsEl = document.getElementById('slideRetrofitStats');
+            if (statsEl) {
+                statsEl.innerHTML =
+                    '<div class="slide-stat"><div class="val">' + fmt(totalGas / 1000, 1) + ' GW</div><div class="lbl">Total Gas CCGT</div></div>' +
+                    '<div class="slide-stat"><div class="val">' + fmt(eligibleMW / 1000, 1) + ' GW</div><div class="lbl">Retrofit Eligible</div></div>' +
+                    '<div class="slide-stat"><div class="val">' + fmt(ineligMW / 1000, 1) + ' GW</div><div class="lbl">No CCS Storage</div></div>' +
+                    '<div class="slide-stat"><div class="val">90%</div><div class="lbl">Capture Rate</div></div>';
+            }
+        },
+
+        11: function() {
             // Clean investment targets
             var techs = ['Solar', 'Onshore Wind', 'Offshore Wind', 'Battery 4hr', 'Battery 8hr'];
             var targets = [8, 5, 2, 3, 1]; // GW targets (representative)
@@ -667,7 +754,7 @@
             });
         },
 
-        11: function() {
+        12: function() {
             var fb = co.fan_bands.reference;
             var em = fb.emissions;
             var baseline = em.p50[0];
@@ -684,7 +771,7 @@
             });
         },
 
-        12: function() {
+        13: function() {
             var fb = co.fan_bands.reference;
             var em = fb.emissions;
             var baseline = em.p50[0];
@@ -701,7 +788,7 @@
             });
         },
 
-        13: function() {
+        14: function() {
             // Robustness radar
             var dims = ['Clean Share', 'Diversification', 'Nuclear Hedge', 'Gas Flexibility', 'Target Ambition', 'Scenario Resilience'];
             var scores = [0.85, 0.7, 0.95, 0.5, 0.8, 0.75].map(function(v){ return v * 100; });
