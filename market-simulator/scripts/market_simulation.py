@@ -1237,7 +1237,7 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
         base_cap_price = conditions.get('capacity_market_price') or CAPACITY_MARKET_PRICES.get(iso, 0)
         if base_cap_price > 0:
             # Capacity credit varies by resource
-            cap_credit = PEAK_CAPACITY_CREDITS.get(res, {}).get(iso, 0)
+            cap_credit = PEAK_CAPACITY_CREDITS.get(res, 0)
             # Convert $/kW-yr to $/MWh
             capacity_rev = base_cap_price * cap_credit / (cf * 8.760) if cf > 0 else 0
 
