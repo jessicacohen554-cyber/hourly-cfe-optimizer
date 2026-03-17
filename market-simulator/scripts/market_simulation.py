@@ -56,6 +56,7 @@ from dispatch_utils import (
     load_common_data, get_demand_profile, get_supply_profiles,
     reconstruct_hourly_dispatch, compute_fossil_retirement,
     COAL_CAP_TWH, OIL_CAP_TWH,
+    RESOURCE_TYPES,
 )
 from lmp_engine import (
     build_merit_order_stack, compute_hourly_lmp_vectorized, PriceModel,
@@ -381,9 +382,14 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
         custom_vom=custom_vom,
     )
 
+    # resource_pcts already represents actual % of demand each resource serves
+    # (baseline + cumulative deployed), so procurement_pct=100 avoids
+    # double-attenuation. Previously procurement_pct=clean_pct caused
+    # supply = (clean_pct/100) × (resource_pcts/100) which under-counted
+    # clean energy and over-dispatched fossil.
     dispatch = reconstruct_hourly_dispatch(
         demand_norm, supply_profiles, resource_pcts,
-        procurement_pct=clean_pct,
+        procurement_pct=100,
         battery_dispatch_pct=battery_pct,
         battery8_dispatch_pct=battery8_pct,
         ldes_dispatch_pct=ldes_pct,
@@ -1822,6 +1828,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             'acp_bonus_queue_gw': 0,
             'cumulative_acp_million': 0,
             'economic_retirements': {},  # cumulative MW retired by unit type
+            'deployed_twh': {},  # cumulative TWh deployed by resource (for dispatch consistency)
         }
 
     if sim_years is not None:
@@ -1919,11 +1926,19 @@ def run_market_simulation(scenario_id, conditions, isos=None,
 
             # --- LMP + GENERATOR ECONOMICS at current clean% ---
             carbon_price = conditions.get('carbon_price', 0)
-            resource_pcts = {r: 0 for r in DEPLOYABLE_RESOURCES}
-            # Estimate current resource pcts from grid mix shares
+            # Build resource_pcts from baseline + cumulative deployed resources.
+            # resource_pcts must represent the ACTUAL share of total demand each
+            # resource serves, so the dispatch model's residual demand curve
+            # is consistent with the tracked clean_pct.
+            resource_pcts = {r: 0 for r in RESOURCE_TYPES}
+            # Start with baseline grid mix (% of total demand) — includes hydro
             for r, pct in GRID_MIX_SHARES.get(iso, {}).items():
                 if r in resource_pcts:
                     resource_pcts[r] = pct
+            # Add cumulative deployed resources (converted from TWh to % of current demand)
+            for r, twh in state.get('deployed_twh', {}).items():
+                if r in resource_pcts and demand_twh > 0:
+                    resource_pcts[r] += (twh / demand_twh) * 100.0
 
             _lmp_key = (iso, current_pct, conditions['fuel_level'],
                         conditions['demand_growth'], year, carbon_price)
@@ -1964,6 +1979,10 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             current_pct = new_clean_pct
             state['clean_pct'] = current_pct
             state['market_stopped'] = (current_pct <= old_pct + 0.01)
+
+            # Track cumulative deployed TWh for dispatch consistency
+            for res, twh in deployed.items():
+                state['deployed_twh'][res] = state['deployed_twh'].get(res, 0) + twh
 
             # Track RPS-eligible deployment
             for res, twh in deployed.items():
@@ -2089,16 +2108,41 @@ def run_market_simulation(scenario_id, conditions, isos=None,
 
             emissions_mt = fossil_twh * 1e6 * er / 1e6
 
-            # Per-fuel-type emissions breakdown (Mt CO2) from adjusted generator economics
-            # Uses adjusted_gen_econ which excludes economically retired capacity
+            # Per-fuel-type emissions breakdown (Mt CO2) derived from fossil
+            # retirement model — consistent with the emissions_mt total.
+            # Previously used gen_econ capacity factors which ran a separate
+            # dispatch disconnected from clean_pct, producing phantom emissions.
+            regional_er = emission_rates.get(iso, {})
+            coal_co2_rate = regional_er.get('coal_co2_lb_per_mwh', 0.0) / 2204.62
+            gas_co2_rate = regional_er.get('gas_co2_lb_per_mwh', 0.0) / 2204.62
+            oil_co2_rate = regional_er.get('oil_co2_lb_per_mwh', 0.0) / 2204.62
+
+            # Derive per-fuel remaining TWh from retirement model
             emissions_by_fuel = {}
-            for utype, econ in adjusted_gen_econ.items():
-                cap_mw = econ.get('capacity_mw', 0)
-                cf = econ.get('cf', 0)
-                co2_rate = CO2_RATES.get(utype, 0.5)  # tons CO2/MWh
-                gen_mwh = cap_mw * cf * H
-                fuel_co2_mt = gen_mwh * co2_rate / 1e6
-                emissions_by_fuel[utype] = round(fuel_co2_mt, 3)
+            if retirement_info.get('remaining_rate_tco2_mwh', 0) == 0:
+                # 100% clean or zero fossil — no emissions by fuel
+                pass
+            elif retirement_info.get('forced_gas_only'):
+                # Coal/oil fully retired — all remaining fossil is gas
+                emissions_by_fuel['gas_ccgt'] = round(fossil_twh * gas_co2_rate, 3)
+            elif 'coal_remaining_twh' in retirement_info:
+                # Merit-order path — use remaining TWh from retirement model,
+                # scaled by economic retirement surviving fraction
+                econ_scale = 1.0
+                if total_fossil_cap > 0 and econ_retired_mw > 0:
+                    econ_scale = max(0.05, 1.0 - econ_retired_mw / total_fossil_cap)
+                coal_rem = retirement_info['coal_remaining_twh'] * econ_scale
+                oil_rem = retirement_info['oil_remaining_twh'] * econ_scale
+                gas_rem = retirement_info['gas_remaining_twh'] * econ_scale
+                if coal_rem > 0:
+                    emissions_by_fuel['coal'] = round(coal_rem * coal_co2_rate, 3)
+                if oil_rem > 0:
+                    emissions_by_fuel['oil'] = round(oil_rem * oil_co2_rate, 3)
+                if gas_rem > 0:
+                    emissions_by_fuel['gas_ccgt'] = round(gas_rem * gas_co2_rate, 3)
+            else:
+                # Fallback: use total emissions_mt with blended rate
+                emissions_by_fuel['fossil'] = round(emissions_mt, 3)
 
             # Update TWh ratchet floor after all deployment
             current_rps_twh = state['rps_eligible_pct'] / 100.0 * demand_twh
