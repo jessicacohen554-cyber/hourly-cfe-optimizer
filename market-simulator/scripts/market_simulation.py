@@ -74,29 +74,21 @@ OUTPUT_DIR = os.path.join(MODULE_ROOT, 'data', 'results')
 # Sources: LBNL "Queued Up 2024" (Rand et al., 2024) — queue completion rate analysis
 #   https://emp.lbl.gov/queues
 # Methodology: Completion rates by ISO derived from 2014-2023 historical data.
-# Facilitating scenario: 50th-percentile completion speed (assumes transmission
-#   buildout, permitting reform per FERC Order 2023). Approximately 40-50% of
-#   active queue capacity reaches COD within 7 years.
-# Challenging scenario: 20th-percentile completion speed (status quo permitting,
-#   limited transmission expansion). Approximately 15-25% of queue reaches COD.
-# Per-ISO estimates:
-#   CAISO: 143 GW in queue (2024), 4.1% historical completion → 6 GW/yr facilitating
-#   ERCOT: 198 GW in queue, no FERC jurisdiction, single-state ISO with streamlined
-#     permitting. 8-12 GW/yr historical completions (ERCOT CDR 2024) → 12 GW/yr fac.
-#   PJM: 262 GW in queue, recent reform (transition cluster study) → 7 GW/yr
-#   NYISO: 93 GW in queue, constrained by T&D in NYC/LI → 5 GW/yr facilitating
-#   NEISO: 47 GW in queue, ISO-NE Cluster Study process → 5 GW/yr facilitating
-#   MISO: 171 GW in queue, LRTP tranche investments → 7 GW/yr facilitating
-#   SPP: 113 GW in queue, strong wind corridor → 6 GW/yr facilitating
-# Cross-validated against: Princeton REPEAT (2024), Rhodium Clean Investment Monitor
+# High: 50th-percentile completion speed (FERC Order 2023 reforms). ~40-50% of queue COD in 7yr.
+# Low: 20th-percentile (status quo permitting). ~15-25% of queue COD.
+# Medium: Geometric mean of Low/High.
 QUEUE_CAP_GW = {
-    'Facilitating': {
+    'High': {
         'CAISO': 6, 'ERCOT': 12, 'PJM': 7, 'NYISO': 5,
         'NEISO': 5, 'MISO': 7, 'SPP': 6,
     },
-    'Challenging': {
+    'Low': {
         'CAISO': 3, 'ERCOT': 6, 'PJM': 3, 'NYISO': 2,
         'NEISO': 2, 'MISO': 3, 'SPP': 3,
+    },
+    'Medium': {
+        'CAISO': 4.5, 'ERCOT': 9, 'PJM': 5, 'NYISO': 3.5,
+        'NEISO': 3.5, 'MISO': 5, 'SPP': 4.5,
     },
 }
 
@@ -180,10 +172,11 @@ GAS_FRICTION_LEVELS = {'Low': 0.3, 'Medium': 0.7, 'High': 1.0}
 # PPA levels
 PPA_LEVELS = ['Low', 'Medium', 'High']
 
-# Conditions bundle
-CONDITIONS_BUNDLE = {
-    'Facilitating': {'learning_speed': 'Fast', 'queue_type': 'Facilitating'},
-    'Challenging': {'learning_speed': 'Slow', 'queue_type': 'Challenging'},
+# Queue cap level → learning speed mapping (for sweep mode)
+QUEUE_LEARNING_MAP = {
+    'High': 'Fast',
+    'Medium': 'Medium',
+    'Low': 'Slow',
 }
 
 DEMAND_GROWTH_LEVELS = ['Low', 'Medium', 'High']
@@ -1142,6 +1135,235 @@ def compute_ccs_retrofit_breakeven(iso, fuel_level='Medium', conditions=None):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# LCOE MERIT-ORDER DEPLOYMENT MODEL
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Deployable clean resource types and their typical capacity factors by ISO
+DEPLOYABLE_RESOURCES = [
+    'solar', 'wind', 'offshore_wind', 'clean_firm', 'ccs_ccgt', 'geothermal',
+]
+
+# Maximum capacity per resource type (TWh/yr per ISO) — physical/permitting limits
+RESOURCE_CAP_TWH = {
+    'geothermal': {'CAISO': 39.0},  # Only available in CAISO
+    'offshore_wind': {  # Lease area constraints
+        'CAISO': 20.0, 'NYISO': 25.0, 'NEISO': 20.0, 'PJM': 15.0,
+    },
+    'ccs_ccgt': {  # CO2 transport/storage pipeline constraints
+        'CAISO': 30.0, 'ERCOT': 50.0, 'PJM': 40.0, 'NYISO': 15.0,
+        'NEISO': 10.0, 'MISO': 45.0, 'SPP': 35.0,
+    },
+}
+
+
+def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
+                               conditions, cumulative_gw, queue_remaining_gw,
+                               hourly_lmp, avg_lmp, p90_lmp,
+                               supply_profiles_iso, demand_total_mwh,
+                               gen_econ, state):
+    """Pure economics-driven resource deployment via LCOE merit order.
+
+    Ranks all available clean resources by net LCOE (after incentives, learning
+    curves, PPA discounts, transmission). Deploys cheapest first as long as
+    revenue > cost. Stops when no more profitable resources or queue cap hit.
+
+    Clean energy percentage is purely an OUTPUT of this function, not an input.
+
+    Args:
+        iso: ISO region string
+        year: Simulation year
+        demand_twh: Total demand in TWh for this year
+        current_clean_pct: Current clean energy percentage (from prior years)
+        conditions: Dict with lcoe_level, fuel_level, tx_level, etc.
+        cumulative_gw: Dict tracking cumulative GW deployed per tech
+        queue_remaining_gw: Remaining GW that can be interconnected this period
+        hourly_lmp: 8760 array of hourly LMP values
+        avg_lmp: Average LMP ($/MWh)
+        p90_lmp: P90 LMP
+        supply_profiles_iso: Generation profile dict for this ISO
+        demand_total_mwh: Total demand in MWh
+        gen_econ: Generator economics dict from LMP calculation
+        state: Mutable iso_state dict
+
+    Returns:
+        (new_clean_pct, deployed_resources, zone_results, rev_breakdown)
+        where deployed_resources is {resource: twh_deployed}
+    """
+    lcoe_level = conditions.get('lcoe_level', 'Medium')
+    fuel_level = conditions.get('fuel_level', 'Medium')
+    tx_level = conditions.get('tx_level', 'Medium')
+    learning_speed = conditions.get('learning_speed', 'Medium')
+    ppa_level = conditions.get('ppa_level', 'Medium')
+
+    # Estimate revenue available for clean resources
+    # Revenue = energy price (avg LMP serves as proxy) + capacity + REC
+    base_energy_rev = avg_lmp  # $/MWh energy revenue
+
+    # Compute per-resource LCOE and rank by net cost
+    resource_economics = []
+    for res in DEPLOYABLE_RESOURCES:
+        # Skip resources not available in this ISO
+        if res == 'geothermal' and iso != 'CAISO':
+            continue
+        if res == 'offshore_wind' and iso not in ('CAISO', 'NYISO', 'NEISO', 'PJM'):
+            continue
+
+        # Get LCOE after learning curves and incentives
+        lcoe = get_resource_lcoe(res, iso, lcoe_level, cumulative_gw,
+                                  learning_speed, year, conditions=conditions)
+
+        # Add transmission cost
+        if res in ('solar', 'wind', 'clean_firm', 'offshore_wind', 'ccs_ccgt', 'geothermal'):
+            tx = get_tx(res if res != 'clean_firm' else 'clean_firm', tx_level, iso)
+            lcoe += tx
+
+        # Apply PPA discount
+        if ppa_level is not None:
+            discount = _get_ppa_discount(res, ppa_level, iso)
+            lcoe *= (1 - discount)
+
+        # Estimate capacity factor
+        cf = RESOURCE_CAPACITY_FACTORS.get(res, {}).get(iso, 0.25)
+        if res == 'clean_firm':
+            cf = 0.93  # Nuclear CF
+        elif res == 'ccs_ccgt':
+            cf = 0.85  # CCS baseload
+        elif res == 'geothermal':
+            cf = 0.90
+
+        # Resource-specific revenue adjustments
+        capacity_rev = 0
+        rec_rev = 0
+        base_cap_price = conditions.get('capacity_market_price') or CAPACITY_MARKET_PRICES.get(iso, 0)
+        if base_cap_price > 0:
+            # Capacity credit varies by resource
+            cap_credit = PEAK_CAPACITY_CREDITS.get(res, {}).get(iso, 0)
+            # Convert $/kW-yr to $/MWh
+            capacity_rev = base_cap_price * cap_credit / (cf * 8.760) if cf > 0 else 0
+
+        # REC revenue for eligible resources
+        if res in REC_ELIGIBLE:
+            rec_rev = compute_rec_revenue(iso, {res: 100}, current_clean_pct, year,
+                                           rec_price_override=conditions.get('rec_price_override'))
+            rec_rev = rec_rev.get(res, 0)
+
+        total_revenue = base_energy_rev + capacity_rev + rec_rev
+        net_profit = total_revenue - lcoe
+
+        # Max TWh deployable for this resource (physical limits)
+        max_twh = RESOURCE_CAP_TWH.get(res, {}).get(iso, 999)
+        # Already deployed — subtract from cap
+        already_deployed_gw = cumulative_gw.get(RESOURCE_TO_TECH.get(res, res), 0)
+        already_deployed_twh = already_deployed_gw * cf * 8.760 if cf > 0 else 0
+
+        resource_economics.append({
+            'resource': res,
+            'lcoe': round(lcoe, 2),
+            'revenue': round(total_revenue, 2),
+            'profit': round(net_profit, 2),
+            'cf': cf,
+            'max_twh': max_twh - already_deployed_twh,
+            'capacity_rev': round(capacity_rev, 2),
+            'rec_rev': round(rec_rev, 2),
+        })
+
+    # Sort by LCOE ascending (cheapest first) — deploy profitable ones
+    resource_economics.sort(key=lambda x: x['lcoe'])
+
+    deployed = {}
+    total_deployed_twh = 0
+    zone_results = []
+    remaining_gw = queue_remaining_gw
+    clean_pct = current_clean_pct
+
+    for entry in resource_economics:
+        if remaining_gw <= 0:
+            break
+        if entry['profit'] <= 0:
+            continue  # Not profitable
+        if entry['max_twh'] <= 0:
+            continue  # Resource cap reached
+
+        res = entry['resource']
+        cf = entry['cf']
+
+        # How much can we deploy given queue cap?
+        max_deploy_gw = remaining_gw
+        max_deploy_twh = max_deploy_gw * cf * 8.760 if cf > 0 else 0
+
+        # Constrain by resource cap and remaining demand headroom
+        max_clean_headroom_twh = (99.99 - clean_pct) / 100.0 * demand_twh
+        deploy_twh = min(max_deploy_twh, entry['max_twh'], max_clean_headroom_twh)
+
+        if deploy_twh <= 0:
+            continue
+
+        # Convert back to GW
+        deploy_gw = deploy_twh / (cf * 8.760) if cf > 0 else 0
+
+        # Deploy
+        deployed[res] = deploy_twh
+        total_deployed_twh += deploy_twh
+        remaining_gw -= deploy_gw
+
+        # Update cumulative GW
+        tech = RESOURCE_TO_TECH.get(res, res)
+        cumulative_gw[tech] = cumulative_gw.get(tech, 0) + deploy_gw
+
+        # Update clean%
+        clean_increase_pct = deploy_twh / demand_twh * 100
+        clean_pct += clean_increase_pct
+
+        zone_results.append({
+            'resource': res,
+            'twh': round(deploy_twh, 2),
+            'gw': round(deploy_gw, 2),
+            'lcoe': entry['lcoe'],
+            'revenue': entry['revenue'],
+            'profit': entry['profit'],
+        })
+
+    # Build revenue breakdown from deployed mix
+    total_energy = 0
+    total_cap = 0
+    total_rec = 0
+    if total_deployed_twh > 0:
+        for entry in resource_economics:
+            twh = deployed.get(entry['resource'], 0)
+            if twh > 0:
+                weight = twh / total_deployed_twh
+                total_energy += base_energy_rev * weight
+                total_cap += entry['capacity_rev'] * weight
+                total_rec += entry['rec_rev'] * weight
+
+    rev_breakdown = {
+        'energy_rev_mwh': round(total_energy, 2),
+        'capacity_rev_mwh': round(total_cap, 2),
+        'rec_rev_mwh': round(total_rec, 2),
+    }
+
+    blended_cost = 0
+    blended_revenue = 0
+    if total_deployed_twh > 0:
+        for entry in resource_economics:
+            twh = deployed.get(entry['resource'], 0)
+            if twh > 0:
+                weight = twh / total_deployed_twh
+                blended_cost += entry['lcoe'] * weight
+                blended_revenue += entry['revenue'] * weight
+
+    return (
+        round(clean_pct, 2),
+        deployed,
+        zone_results,
+        rev_breakdown,
+        round(blended_cost, 2),
+        round(blended_revenue, 2),
+        remaining_gw,
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # DATA LOADING
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1323,36 +1545,35 @@ def _map_price_sens_to_lcoe_fuel_tx(sens):
 def build_market_scenarios():
     """Generate all parametric sweep scenarios.
 
-    2 conditions × 3 demand × 5 price × 3 PPA × 3 gas friction = 270 scenarios.
-    No emission constraints — purely market-driven.
+    3 demand × 5 price × 3 PPA × 3 gas friction × 3 queue = 405 scenarios.
+    No emission constraints, no NZ targets — purely market-driven reference trajectory.
 
     Returns list of (scenario_id_str, conditions_dict).
     """
     combos = []
-    cond_keys = ['Facilitating', 'Challenging']
     demand_keys = DEMAND_GROWTH_LEVELS
     price_keys = list(PRICE_SENSITIVITIES.keys())
     ppa_keys = PPA_LEVELS
     gas_keys = list(GAS_FRICTION_LEVELS.keys())
+    queue_keys = ['Low', 'Medium', 'High']
 
-    for cond, demand, price_name, ppa, gas_name in cartesian(
-            cond_keys, demand_keys, price_keys, ppa_keys, gas_keys):
+    for demand, price_name, ppa, gas_name, queue in cartesian(
+            demand_keys, price_keys, ppa_keys, gas_keys, queue_keys):
 
-        bundle = CONDITIONS_BUNDLE[cond]
         price_mapping = _map_price_sens_to_lcoe_fuel_tx(PRICE_SENSITIVITIES[price_name])
 
-        cond_code = 'F' if cond == 'Facilitating' else 'C'
         demand_code = demand[0]
         ppa_code = ppa[0]
         gas_code = gas_name[0]
-        scenario_id = f"MKT_{cond_code}_{demand_code}_{price_name}_{ppa_code}_{gas_code}"
+        queue_code = queue[0]
+        scenario_id = f"MKT_{demand_code}_{price_name}_{ppa_code}_{gas_code}_{queue_code}"
 
         conditions = {
-            'name': f"Market: {cond} | {demand} demand | {price_name} | PPA={ppa} | Gas={gas_name}",
+            'name': f"Market: {demand} demand | {price_name} | PPA={ppa} | Gas={gas_name} | Queue={queue}",
             'demand_growth': demand,
             'lcoe_level': price_mapping['lcoe_level'],
-            'learning_speed': bundle['learning_speed'],
-            'queue_type': bundle['queue_type'],
+            'learning_speed': QUEUE_LEARNING_MAP.get(queue, 'Medium'),
+            'queue_cap_level': queue,
             'gas_friction': GAS_FRICTION_LEVELS[gas_name],
             'carbon_price': 0,
             'fuel_level': price_mapping['fuel_level'],
@@ -1376,8 +1597,8 @@ def build_single_scenario(overrides=None):
         'name': 'Custom Market Scenario',
         'demand_growth': 'Medium',
         'lcoe_level': 'Medium',
-        'learning_speed': 'Fast',
-        'queue_type': 'Facilitating',
+        'learning_speed': 'Medium',
+        'queue_cap_level': 'Medium',
         'gas_friction': 0.7,
         'carbon_price': 0,
         'fuel_level': 'Medium',
@@ -1425,10 +1646,11 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                            sim_years=None,
                            _preloaded=None, _lmp_cache=None, _quiet=False,
                            weather_year=None):
-    """Run purely profit-driven market simulation.
+    """Run purely profit-driven market simulation via LCOE merit-order deployment.
 
-    No emission constraints, no mandated deployment, no DAC. Deploy where
-    profitable, stop when not. That's the market outcome.
+    No emission constraints, no mandated deployment, no DAC, no clean% targets.
+    Deploy clean resources where profitable (LCOE < revenue), stop when not.
+    Clean energy level is an OUTPUT that emerges from market economics.
 
     Args:
         scenario_id: Identifier string for this scenario.
@@ -1436,9 +1658,8 @@ def run_market_simulation(scenario_id, conditions, isos=None,
         isos: List of ISOs to simulate (default: all 7).
         nuclear_retirement_threshold: $/MWh — if nuclear total revenue falls
             below this, nuclear retires and model re-dispatches. None = no retirement.
-        snapshot_mode: If True, run single-year snapshot (no year progression).
-        sim_years: Optional explicit list of years to simulate. Overrides
-            snapshot_mode and SIM_YEARS when provided. Use build_sim_years()
+        snapshot_mode: Deprecated, ignored. All modes are trajectory-based.
+        sim_years: Optional explicit list of years to simulate. Use build_sim_years()
             to generate from start/end/step.
         _preloaded: Pre-loaded data dict to avoid re-reading.
         _lmp_cache: Shared LMP cache across scenarios.
@@ -1465,15 +1686,12 @@ def run_market_simulation(scenario_id, conditions, isos=None,
         gen_profiles = _preloaded['gen_profiles']
         emission_rates = _preloaded['emission_rates']
         fossil_mix = _preloaded['fossil_mix']
-        step3_data = _preloaded['step3_data']
         egrid_baselines = _preloaded['egrid_baselines']
     else:
         t0 = time.time()
         _log("Loading common data...")
         demand_data, gen_profiles, emission_rates, fossil_mix = load_common_data()
         _log(f"  Common data loaded in {time.time()-t0:.1f}s")
-        _log("Loading step3 cost optimization parquets...")
-        step3_data = load_step3_data()
         egrid_baselines = load_egrid_baselines()
 
     cumulative_gw = dict(WRIGHT_CUMULATIVE_GW_2025)
@@ -1557,12 +1775,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             continue
 
         for iso in isos:
-            if iso not in step3_data:
-                continue
-
             state = iso_state[iso]
-            if state['market_stopped'] and year > 2023:
-                state['market_stopped'] = False
 
             demand_twh = get_demand_at_year(iso, year, conditions['demand_growth'])
             demand_total_mwh = demand_twh * 1e6
@@ -1573,7 +1786,6 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             growth_factor = demand_twh / REGIONAL_DEMAND_TWH[iso]
             demand_mw_profile = np.array(demand_norm, dtype=np.float64) * total_mwh_base * growth_factor
 
-            iso_data = step3_data[iso]
             current_pct = state['clean_pct']
 
             # Enforce TWh ratchet: installed renewable TWh doesn't shrink with demand growth
@@ -1581,13 +1793,11 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             if state['rps_eligible_pct'] < rps_elig_floor_pct:
                 state['rps_eligible_pct'] = rps_elig_floor_pct
 
-            candidate_thresholds = sorted(t for t in THRESHOLDS if t > current_pct)
-            if not candidate_thresholds:
-                state['market_stopped'] = True
-                continue
-
-            # Annual queue budget
-            queue_budget_gw = QUEUE_CAP_GW[conditions['queue_type']][iso]
+            # Annual queue budget — from queue_cap_level or override
+            queue_cap_level = conditions.get('queue_cap_level', 'Medium')
+            queue_budget_gw = conditions.get('queue_cap_override_gw')
+            if queue_budget_gw is None:
+                queue_budget_gw = QUEUE_CAP_GW.get(queue_cap_level, {}).get(iso, 5)
             years_in_period = 7 if year == 2030 else 5
             queue_remaining_gw = queue_budget_gw * years_in_period
 
@@ -1599,161 +1809,81 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 _log(f"  {iso} ACP recycling: +{acp_bonus:.2f} GW bonus queue")
                 state['acp_bonus_queue_gw'] = 0
 
-            zone_deployed = False
-            zone_results = []
-            avg_lmp = conditions.get('wholesale_price_override') or WHOLESALE_PRICES.get(iso, 30)
-            p90_lmp = avg_lmp * 1.5
-            blended_revenue = 0
-            blended_cost = 0
-            rev_breakdown = {'energy_rev_mwh': 0, 'capacity_rev_mwh': 0, 'rec_rev_mwh': 0}
-            gen_econ = {}
-            nuclear_rev = {}
+            # --- LMP + GENERATOR ECONOMICS at current clean% ---
+            carbon_price = conditions.get('carbon_price', 0)
+            resource_pcts = {r: 0 for r in DEPLOYABLE_RESOURCES}
+            # Estimate current resource pcts from grid mix shares
+            for r, pct in GRID_MIX_SHARES.get(iso, {}).items():
+                if r in resource_pcts:
+                    resource_pcts[r] = pct
 
-            for t_end in candidate_thresholds:
-                if queue_remaining_gw <= 0:
-                    break
-
-                if t_end not in iso_data:
-                    available = sorted(iso_data.keys())
-                    nearest = min(available, key=lambda x: abs(x - t_end))
-                    mix_data = iso_data[nearest]
-                else:
-                    mix_data = iso_data[t_end]
-
-                resource_pcts = mix_data['resource_pcts']
-
-                # Find prior threshold data
-                lower_thresholds = sorted(t for t in iso_data if t <= current_pct)
-                t_start = lower_thresholds[-1] if lower_thresholds else min(iso_data.keys())
-                start_data = iso_data.get(t_start, {})
-                start_pcts = start_data.get('resource_pcts', {r: 0 for r in resource_pcts})
-
-                # Delta resources
-                delta_pcts = {}
-                delta_twh = {}
-                for res in resource_pcts:
-                    dpct = resource_pcts[res] - start_pcts.get(res, 0)
-                    if dpct > 0.1:
-                        delta_pcts[res] = dpct
-                        delta_twh[res] = dpct / 100.0 * demand_twh
-
-                zone_clean_increase = t_end - current_pct
-                if not delta_twh and zone_clean_increase > 0:
-                    dominant = max(resource_pcts, key=resource_pcts.get)
-                    delta_pcts = {dominant: zone_clean_increase}
-                    delta_twh = {dominant: zone_clean_increase / 100.0 * demand_twh}
-
-                if not delta_twh:
-                    continue
-
-                # --- LMP + GENERATOR ECONOMICS ---
-                carbon_price = conditions.get('carbon_price', 0)
-                _lmp_key = (iso, t_end, conditions['fuel_level'],
-                            conditions['demand_growth'], year, carbon_price)
-                if _lmp_cache is not None and _lmp_key in _lmp_cache:
-                    hourly_lmp, avg_lmp, p90_lmp, gen_econ = _lmp_cache[_lmp_key]
-                else:
-                    hourly_lmp, avg_lmp, p90_lmp, gen_econ = compute_lmp_at_threshold(
-                        iso, t_end, conditions['fuel_level'],
-                        demand_norm, demand_mw_profile,
-                        supply_profiles_iso, resource_pcts,
-                        battery_pct=mix_data['battery_pct'],
-                        battery8_pct=mix_data['battery8_pct'],
-                        ldes_pct=mix_data['ldes_pct'],
-                        h2_pct=mix_data['h2_pct'],
-                        carbon_price=carbon_price,
-                        nox_price=conditions.get('nox_price', 0.0),
-                        sox_price=conditions.get('sox_price', 0.0),
-                        nox_limit=conditions.get('nox_limit'),
-                        sox_limit=conditions.get('sox_limit'),
-                        custom_fuel_prices=conditions.get('custom_fuel_prices'),
-                        custom_co2_price=conditions.get('custom_co2_price'),
-                        custom_heat_rates=conditions.get('custom_heat_rates'),
-                        custom_vom=conditions.get('custom_vom'),
-                    )
-                    if _lmp_cache is not None:
-                        _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ)
-
-                # Nuclear revenue at this threshold
-                nuclear_rev = compute_nuclear_revenue(iso, t_end, hourly_lmp, year, conditions=conditions)
-
-                # --- NUCLEAR RETIREMENT CHECK ---
-                # Skip retirement if plant is under long-term offtake contract
-                # (e.g., ERCOT Comanche Peak PPAs). Contracted plants have revenue
-                # floors that prevent market-driven retirement regardless of LMP.
-                offtake = NUCLEAR_OFFTAKE_CONTRACTS.get(iso)
-                contract_protected = (
-                    offtake is not None and
-                    year <= offtake.get('contract_end_year', 0)
+            _lmp_key = (iso, current_pct, conditions['fuel_level'],
+                        conditions['demand_growth'], year, carbon_price)
+            if _lmp_cache is not None and _lmp_key in _lmp_cache:
+                hourly_lmp, avg_lmp, p90_lmp, gen_econ = _lmp_cache[_lmp_key]
+            else:
+                hourly_lmp, avg_lmp, p90_lmp, gen_econ = compute_lmp_at_threshold(
+                    iso, current_pct, conditions['fuel_level'],
+                    demand_norm, demand_mw_profile,
+                    supply_profiles_iso, resource_pcts,
+                    battery_pct=0, battery8_pct=0, ldes_pct=0, h2_pct=0,
+                    carbon_price=carbon_price,
+                    nox_price=conditions.get('nox_price', 0.0),
+                    sox_price=conditions.get('sox_price', 0.0),
+                    nox_limit=conditions.get('nox_limit'),
+                    sox_limit=conditions.get('sox_limit'),
+                    custom_fuel_prices=conditions.get('custom_fuel_prices'),
+                    custom_co2_price=conditions.get('custom_co2_price'),
+                    custom_heat_rates=conditions.get('custom_heat_rates'),
+                    custom_vom=conditions.get('custom_vom'),
                 )
-                if (nuclear_retirement_threshold is not None and
-                        not state['nuclear_retired'] and
-                        not contract_protected and
-                        nuclear_rev['total_mwh'] < nuclear_retirement_threshold):
-                    state['nuclear_retired'] = True
-                    _log(f"  {iso} NUCLEAR RETIRES at {t_end:.0f}% — "
-                         f"revenue ${nuclear_rev['total_mwh']:.1f}/MWh "
-                         f"< threshold ${nuclear_retirement_threshold:.1f}/MWh")
+                if _lmp_cache is not None:
+                    _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ)
 
-                # Revenue for delta resources
-                blended_revenue, per_res_rev, rev_breakdown = compute_zone_revenue(
-                    iso, t_end, delta_pcts, hourly_lmp,
-                    supply_profiles_iso, demand_total_mwh, year,
-                    rec_price_override=conditions.get('rec_price_override'),
-                    conditions=conditions,
-                )
+            # --- LCOE MERIT-ORDER DEPLOYMENT ---
+            # Deploy cheapest profitable clean resources until queue cap or no more profitable
+            (new_clean_pct, deployed, zone_results, rev_breakdown,
+             blended_cost, blended_revenue, remaining_gw) = compute_market_deployment(
+                iso, year, demand_twh, current_pct,
+                conditions, cumulative_gw, queue_remaining_gw,
+                hourly_lmp, avg_lmp, p90_lmp,
+                supply_profiles_iso, demand_total_mwh,
+                gen_econ, state,
+            )
 
-                # Cost
-                blended_cost, per_res_cost = compute_zone_cost(
-                    iso, delta_twh, conditions['lcoe_level'], cumulative_gw,
-                    conditions['learning_speed'], year, conditions['tx_level'],
-                    ppa_level=conditions.get('ppa_level'),
-                    conditions=conditions,
-                )
+            # Update state
+            old_pct = current_pct
+            current_pct = new_clean_pct
+            state['clean_pct'] = current_pct
+            state['market_stopped'] = (current_pct <= old_pct + 0.01)
 
-                # Profit
-                delta_profit = blended_revenue - blended_cost
+            # Track RPS-eligible deployment
+            for res, twh in deployed.items():
+                if res in REC_ELIGIBLE:
+                    rps_delta_pct = twh / demand_twh * 100
+                    state['rps_eligible_pct'] += rps_delta_pct
 
-                # Deploy or stop
-                if delta_profit > 0:
-                    new_gw = estimate_new_gw_from_delta(delta_twh, iso)
-                    total_new_gw = sum(new_gw.values())
+            _log(f"  {iso} → {current_pct:.1f}% clean (was {old_pct:.1f}%): "
+                 f"LMP avg=${avg_lmp:.1f}, deployed {sum(deployed.values()):.1f} TWh "
+                 f"across {len(deployed)} resources")
 
-                    if total_new_gw > queue_remaining_gw:
-                        scale = queue_remaining_gw / total_new_gw
-                        new_gw = {k: v * scale for k, v in new_gw.items()}
-                        total_new_gw = queue_remaining_gw
+            # Nuclear revenue at current threshold
+            nuclear_rev = compute_nuclear_revenue(iso, current_pct, hourly_lmp, year, conditions=conditions)
 
-                    for tech, gw in new_gw.items():
-                        cumulative_gw[tech] = cumulative_gw.get(tech, 0) + gw
-
-                    queue_remaining_gw -= total_new_gw
-                    current_pct = t_end
-                    state['clean_pct'] = current_pct
-                    # Track RPS-eligible deployment (VRE resources count toward RPS)
-                    rps_delta = sum(dp for res, dp in delta_pcts.items() if res in REC_ELIGIBLE)
-                    state['rps_eligible_pct'] += rps_delta
-                    zone_deployed = True
-
-                    zone_results.append({
-                        'threshold': t_end,
-                        'revenue': blended_revenue,
-                        'cost': blended_cost,
-                        'profit': round(delta_profit, 2),
-                        'new_gw': round(total_new_gw, 2),
-                        'avg_lmp': round(avg_lmp, 1),
-                        **rev_breakdown,
-                    })
-
-                    _log(f"  {iso} → {t_end:.0f}%: profit={delta_profit:+.1f} $/MWh "
-                         f"(rev={blended_revenue:.1f}, cost={blended_cost:.1f}) "
-                         f"+{total_new_gw:.1f} GW, LMP avg={avg_lmp:.1f}")
-                else:
-                    state['market_stopped'] = True
-                    _log(f"  {iso} MARKET STOP at {current_pct:.0f}%: "
-                         f"profit={delta_profit:+.1f} $/MWh "
-                         f"(rev={blended_revenue:.1f}, cost={blended_cost:.1f})")
-                    break
+            # --- NUCLEAR RETIREMENT CHECK ---
+            offtake = NUCLEAR_OFFTAKE_CONTRACTS.get(iso)
+            contract_protected = (
+                offtake is not None and
+                year <= offtake.get('contract_end_year', 0)
+            )
+            if (nuclear_retirement_threshold is not None and
+                    not state['nuclear_retired'] and
+                    not contract_protected and
+                    nuclear_rev['total_mwh'] < nuclear_retirement_threshold):
+                state['nuclear_retired'] = True
+                _log(f"  {iso} NUCLEAR RETIRES — "
+                     f"revenue ${nuclear_rev['total_mwh']:.1f}/MWh "
+                     f"< threshold ${nuclear_retirement_threshold:.1f}/MWh")
 
             # --- RPS/CES FLOOR ENFORCEMENT ---
             # After profit-driven deployment, check if state RPS mandates are met.
@@ -1851,14 +1981,12 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             # CCS breakeven at this ISO/fuel level
             ccs_breakeven = compute_ccs_retrofit_breakeven(iso, conditions['fuel_level'])
 
-            # Resource mix in TWh
-            if current_pct in iso_data:
-                final_mix = iso_data[current_pct]['resource_pcts']
-            else:
-                avail = sorted(iso_data.keys())
-                nearest = min(avail, key=lambda x: abs(x - current_pct))
-                final_mix = iso_data[nearest]['resource_pcts']
-            resource_mix_twh = {r: p / 100.0 * demand_twh for r, p in final_mix.items()}
+            # Resource mix in TWh — built from deployed resources + existing mix
+            existing_mix_twh = {r: p / 100.0 * demand_twh
+                                for r, p in GRID_MIX_SHARES.get(iso, {}).items()}
+            resource_mix_twh = dict(existing_mix_twh)
+            for res, twh in deployed.items():
+                resource_mix_twh[res] = resource_mix_twh.get(res, 0) + twh
 
             year_result = {
                 'iso': iso,
@@ -1920,9 +2048,6 @@ def run_full_sweep(isos=None, nuclear_retirement_threshold=None,
     print("Loading common data...")
     demand_data, gen_profiles, emission_rates, fossil_mix = load_common_data()
     print(f"  Common data loaded in {time.time()-t0:.1f}s")
-
-    print("Loading step3 cost optimization parquets...")
-    step3_data = load_step3_data()
     egrid_baselines = load_egrid_baselines()
 
     preloaded = {
@@ -1930,7 +2055,6 @@ def run_full_sweep(isos=None, nuclear_retirement_threshold=None,
         'gen_profiles': gen_profiles,
         'emission_rates': emission_rates,
         'fossil_mix': fossil_mix,
-        'step3_data': step3_data,
         'egrid_baselines': egrid_baselines,
     }
 
