@@ -1743,6 +1743,16 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             fossil_twh = (1 - current_pct / 100.0) * demand_twh
             emissions_mt = fossil_twh * 1e6 * er / 1e6
 
+            # Per-fuel-type emissions breakdown (Mt CO2) from generator economics
+            emissions_by_fuel = {}
+            for utype, econ in gen_econ.items():
+                cap_mw = econ.get('capacity_mw', 0)
+                cf = econ.get('cf', 0)
+                co2_rate = CO2_RATES.get(utype, 0.5)  # tons CO2/MWh
+                gen_mwh = cap_mw * cf * H
+                fuel_co2_mt = gen_mwh * co2_rate / 1e6
+                emissions_by_fuel[utype] = round(fuel_co2_mt, 3)
+
             # Update TWh ratchet floor after all deployment
             current_rps_twh = state['rps_eligible_pct'] / 100.0 * demand_twh
             state['rps_eligible_twh_floor'] = max(state['rps_eligible_twh_floor'], current_rps_twh)
@@ -1782,6 +1792,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 'zones_deployed': [z['threshold'] for z in zone_results],
                 'zone_details': zone_results,
                 'generator_economics': gen_econ,
+                'emissions_by_fuel': emissions_by_fuel,
                 'nuclear_revenue': nuclear_rev,
                 'nuclear_retired': state['nuclear_retired'],
                 'ccs_breakeven': ccs_breakeven,
