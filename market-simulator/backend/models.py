@@ -298,6 +298,9 @@ class YearResult(BaseModel):
     rps_shortfall_pct: float = 0.0
     acp_cost_million: float = 0.0
     cumulative_acp_million: float = 0.0
+    # Economic retirement tracking
+    economic_retirements_mw: Dict[str, float] = Field(default_factory=dict)
+    total_economic_retirement_mw: float = 0.0
     # New: detailed data for results page
     fuel_bin_table: List[FuelBinRow] = Field(default_factory=list)
     supply_stack: List[SupplyStackEntry] = Field(default_factory=list)
@@ -329,6 +332,9 @@ class SimulationResponse(BaseModel):
     emissions_by_fuel_by_year: Optional[Dict[str, Any]] = None  # {years: [...], coal_steam: [...], gas_ccgt: [...], ...}
     # Plant-level summary
     plant_level_summary: Optional[dict] = None  # {operating: int, at_risk: int, stranded: int, total: int}
+    # Economic retirement tracking
+    economic_retirements_mw: Optional[Dict[str, float]] = None  # {unit_type: retired_mw}
+    total_economic_retirement_mw: float = 0.0
     # Chart data — threshold sweep, deployment, cost ladder, gas shift, sensitivity, CCS
     threshold_sweep: Optional[Dict[str, Any]] = None
     what_gets_built: Optional[Dict[str, float]] = None
