@@ -236,6 +236,18 @@ PPA_MARKET_DEPTH = {
     'NEISO': 0.65, 'MISO': 0.60, 'SPP': 0.50,
 }
 
+# Unit commitment parameters per unit type
+# Sources: NREL 2024 ATB, EIA Form 860 operational data, FERC Form 714
+# min_up_hrs / min_down_hrs: thermal cycling constraints
+# start_cost_per_mw: $/MW cold-start cost (hot start ~40% of this)
+# min_gen_pct: minimum stable generation as fraction of nameplate
+UNIT_COMMITMENT = {
+    'coal_steam':  {'min_up_hrs': 24, 'min_down_hrs': 12, 'start_cost_per_mw': 150.0, 'min_gen_pct': 0.40},
+    'gas_ccgt':    {'min_up_hrs': 4,  'min_down_hrs': 2,  'start_cost_per_mw': 35.0,  'min_gen_pct': 0.50},
+    'gas_ct':      {'min_up_hrs': 1,  'min_down_hrs': 1,  'start_cost_per_mw': 15.0,  'min_gen_pct': 0.20},
+    'oil_ct':      {'min_up_hrs': 1,  'min_down_hrs': 1,  'start_cost_per_mw': 20.0,  'min_gen_pct': 0.20},
+}
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # EGRID BASELINES
@@ -345,6 +357,68 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
     return hourly_lmp, avg_lmp, p90_lmp, gen_econ
 
 
+def apply_unit_commitment(dispatched, mw_dispatched, cap_mw, uc_params):
+    """Apply unit commitment constraints to a single unit's dispatch profile.
+
+    Post-processes raw merit-order dispatch with minimum up/down times,
+    minimum stable generation, and start-up cost tracking.
+
+    Args:
+        dispatched: bool array (H,) — hours where merit-order says unit should run
+        mw_dispatched: float array (H,) — raw MW output per hour
+        cap_mw: nameplate capacity MW
+        uc_params: dict with min_up_hrs, min_down_hrs, min_gen_pct, start_cost_per_mw
+
+    Returns:
+        committed: bool array — UC-adjusted commitment schedule
+        mw_output: float array — UC-adjusted MW output
+        n_starts: int — number of start events
+    """
+    H_len = len(dispatched)
+    min_up = uc_params.get('min_up_hrs', 1)
+    min_down = uc_params.get('min_down_hrs', 1)
+    min_gen = uc_params.get('min_gen_pct', 0.0) * cap_mw
+
+    committed = np.zeros(H_len, dtype=bool)
+    n_starts = 0
+    hours_in_state = 0  # hours since last state change
+    is_on = False
+
+    for h in range(H_len):
+        want_on = bool(dispatched[h])
+
+        if is_on:
+            hours_in_state += 1
+            if not want_on and hours_in_state >= min_up:
+                # Can shut down — check min_down feasibility
+                is_on = False
+                hours_in_state = 0
+            # else: stay on (either want_on=True, or min_up not met yet)
+            committed[h] = is_on if not want_on else True
+            if not is_on:
+                committed[h] = False
+            else:
+                committed[h] = True
+        else:
+            hours_in_state += 1
+            if want_on and hours_in_state >= min_down:
+                # Can start up
+                is_on = True
+                hours_in_state = 0
+                n_starts += 1
+                committed[h] = True
+            else:
+                committed[h] = False
+                if want_on and hours_in_state < min_down:
+                    pass  # Can't start yet, min_down not satisfied
+
+    # Apply minimum generation floor and cap
+    mw_output = np.where(committed, np.maximum(mw_dispatched, min_gen), 0.0)
+    mw_output = np.minimum(mw_output, cap_mw)
+
+    return committed, mw_output, n_starts
+
+
 def compute_generator_economics(stack, hourly_lmp, unit_idx, dispatch,
                                  demand_mw_profile, total_fossil_mw,
                                  iso, clean_pct, fuel_level, carbon_price=0):
@@ -376,10 +450,10 @@ def compute_generator_economics(stack, hourly_lmp, unit_idx, dispatch,
     residual = dispatch.get('residual_demand', np.zeros(H))
     if isinstance(residual, (list, tuple)):
         residual = np.array(residual, dtype=np.float64)
-    # residual_demand is normalized [0-1]; scale to MW
-    total_demand_mwh = float(np.sum(demand_mw_profile))
-    demand_scale = float(np.mean(demand_mw_profile)) if total_demand_mwh > 0 else 1.0
-    fossil_demand_mw = residual * demand_scale
+    # residual_demand is normalized [0-1]; scale to MW element-wise
+    # Using per-hour demand preserves the hourly load shape so plants cycle
+    # on/off with demand instead of getting binary 100%/0% capacity factors
+    fossil_demand_mw = residual * demand_mw_profile
 
     # Compute carbon adder per unit
     carbon_adder = {}
@@ -397,6 +471,14 @@ def compute_generator_economics(stack, hourly_lmp, unit_idx, dispatch,
         # MW dispatched per hour (capped at unit capacity)
         mw_dispatched = np.clip(fossil_demand_mw - low, 0, cap_mw) * dispatched
 
+        # Apply unit commitment constraints (min up/down, min gen)
+        uc = UNIT_COMMITMENT.get(utype, {})
+        start_cost_total = 0.0
+        if uc:
+            dispatched, mw_dispatched, n_starts = apply_unit_commitment(
+                dispatched, mw_dispatched, cap_mw, uc)
+            start_cost_total = n_starts * uc.get('start_cost_per_mw', 0) * cap_mw
+
         dispatch_hours = int(np.sum(dispatched))
         total_mwh = float(np.sum(mw_dispatched))
         cf = total_mwh / (cap_mw * H) if cap_mw > 0 else 0
@@ -407,10 +489,11 @@ def compute_generator_economics(stack, hourly_lmp, unit_idx, dispatch,
         else:
             avg_rev = 0.0
 
-        # Variable cost includes carbon
+        # Variable cost includes carbon + amortized start-up costs
         var_cost = mc + carbon_adder.get(utype, 0)
+        start_cost_mwh = start_cost_total / total_mwh if total_mwh > 0 else 0.0
 
-        margin = avg_rev - var_cost
+        margin = avg_rev - var_cost - start_cost_mwh
 
         key = utype
         if key in gen_econ:
@@ -474,17 +557,27 @@ def compute_plant_level_economics(plant_stack, hourly_lmp, dispatch,
     residual = dispatch.get('residual_demand', np.zeros(H_val))
     if isinstance(residual, (list, tuple)):
         residual = np.array(residual, dtype=np.float64)
-    demand_scale = float(np.mean(demand_mw_profile)) if np.sum(demand_mw_profile) > 0 else 1.0
-    fossil_demand_mw = residual * demand_scale
+    # Element-wise scaling: each hour's normalized residual × that hour's MW demand
+    # Preserves hourly load shape so plants cycle on/off realistically
+    fossil_demand_mw = residual * demand_mw_profile
 
     results = []
     for i, plant in enumerate(plant_stack):
         low = cum_cap[i]
         cap_mw = plant['capacity_mw']
 
-        # Hours where this plant dispatches
+        # Hours where this plant dispatches (raw merit-order)
         dispatched = fossil_demand_mw > low
         mw_dispatched = np.clip(fossil_demand_mw - low, 0, cap_mw) * dispatched
+
+        # Apply unit commitment constraints (min up/down times, min gen)
+        uc = UNIT_COMMITMENT.get(plant['unit_type'], {})
+        start_cost_total = 0.0
+        n_starts = 0
+        if uc:
+            dispatched, mw_dispatched, n_starts = apply_unit_commitment(
+                dispatched, mw_dispatched, cap_mw, uc)
+            start_cost_total = n_starts * uc.get('start_cost_per_mw', 0) * cap_mw
 
         dispatch_hours = int(np.sum(dispatched))
         total_mwh = float(np.sum(mw_dispatched))
@@ -503,7 +596,8 @@ def compute_plant_level_economics(plant_stack, hourly_lmp, dispatch,
         vom = VOM.get(plant['unit_type'], 4.0)
         fuel_cost_mwh = hr * fuel_price
         carbon_cost_mwh = plant['co2_rate'] * carbon_price
-        total_cost_mwh = vom + fuel_cost_mwh + carbon_cost_mwh
+        start_cost_mwh = start_cost_total / total_mwh if total_mwh > 0 else 0.0
+        total_cost_mwh = vom + fuel_cost_mwh + carbon_cost_mwh + start_cost_mwh
         profit_mwh = avg_rev - total_cost_mwh
 
         # Emissions
@@ -545,6 +639,8 @@ def compute_plant_level_economics(plant_stack, hourly_lmp, dispatch,
             'vom_per_mwh': round(vom, 2),
             'fuel_cost_per_mwh': round(fuel_cost_mwh, 2),
             'profit_per_mwh': round(profit_mwh, 2),
+            'start_cost_per_mwh': round(start_cost_mwh, 2),
+            'n_starts': n_starts,
             'total_revenue_million': round(avg_rev * total_mwh / 1e6, 2),
             'total_cost_million': round(total_cost_mwh * total_mwh / 1e6, 2),
             'total_profit_million': round(profit_mwh * total_mwh / 1e6, 2),
