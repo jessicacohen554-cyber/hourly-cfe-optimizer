@@ -225,26 +225,28 @@ def run_reference_sweep(plants, sweep_df):
         }
 
     year_emissions = {y: [] for y in SIM_YEARS}
-    # Track per-plant reference scenario results (Medium conditions)
-    ref_plant_yearly = {p['orispl']: {} for p in plants}
+    # Per-plant per-year emissions across ALL scenarios (for percentile computation)
+    # plant_year_emissions[orispl][year_idx] = list of eq_co2_mt across scenarios
+    plant_year_emissions = {
+        p['orispl']: {yi: [] for yi in range(len(SIM_YEARS))}
+        for p in plants
+    }
 
     for si, scenario in enumerate(scenarios):
         if si % 100 == 0:
             print(f'    Scenario {si+1}/{n_scn}...')
 
-        for year in SIM_YEARS:
+        for yi, year in enumerate(SIM_YEARS):
             fleet_co2 = 0.0
 
             for plant in plants:
                 plant_iso = map_plant_iso(plant['iso'])
 
                 if year == 2023:
-                    # Baseline: use actual reported emissions
                     eq_co2 = plant['baselineCO2_mmt']
                 else:
                     scn_data = lookup.get((scenario, plant_iso, year))
                     if scn_data is None:
-                        # Fallback: use baseline emissions scaled by fossil fraction
                         eq_co2 = plant['baselineCO2_mmt'] * 0.8
                     else:
                         r = dispatch_plant(
@@ -255,15 +257,8 @@ def run_reference_sweep(plants, sweep_df):
                         )
                         eq_co2 = r['eq_co2_mt']
 
-                        # Save reference scenario plant data (first scenario only for dashboard)
-                        if si == 0:
-                            ref_plant_yearly[plant['orispl']][year] = {
-                                'eq_co2_mt': round(eq_co2, 4),
-                                'cf': r['cf'],
-                                'status': r['status'],
-                            }
-
                 fleet_co2 += eq_co2
+                plant_year_emissions[plant['orispl']][yi].append(eq_co2)
 
             year_emissions[year].append(fleet_co2)
 
@@ -277,7 +272,19 @@ def run_reference_sweep(plants, sweep_df):
         fan['min'].append(round(float(vals.min()), 2))
         fan['max'].append(round(float(vals.max()), 2))
 
-    return fan, ref_plant_yearly
+    # Per-plant per-year P10/P50/P90 emissions (for CCS delta calculation)
+    plant_fan = {}
+    for p in plants:
+        orispl = p['orispl']
+        pf = {'p10': [], 'p50': [], 'p90': []}
+        for yi in range(len(SIM_YEARS)):
+            vals = np.array(plant_year_emissions[orispl][yi])
+            pf['p10'].append(round(float(np.percentile(vals, 10)), 4))
+            pf['p50'].append(round(float(np.percentile(vals, 50)), 4))
+            pf['p90'].append(round(float(np.percentile(vals, 90)), 4))
+        plant_fan[orispl] = pf
+
+    return fan, plant_fan
 
 
 def main():
@@ -293,7 +300,7 @@ def main():
     sweep_df = load_reference_sweep()
 
     print('\nRunning dispatch...')
-    fan, plant_yearly = run_reference_sweep(plants, sweep_df)
+    fan, plant_fan = run_reference_sweep(plants, sweep_df)
 
     print(f'\nFan bands — REFERENCE SWEEP ONLY (Mt CO2):')
     for i, year in enumerate(SIM_YEARS):
@@ -313,24 +320,43 @@ def main():
         },
     }
 
-    # Build plant list for dashboard
+    # Build plant list with per-year sweep emissions + CCS parameters
+    # CCS delta is computed client-side:
+    #   delta[year] = sweep_emissions[year] - ccs_emissions
+    #   ccs_emissions = cap_mw * 0.80 * 8760 * co2_rate_t_per_mwh * 1.14 * 0.05 * equity / 1e6
     plant_list = []
     for p in plants:
+        orispl = p['orispl']
+        cap = p['ownedCapacity_mw']
+        nameplate = p['namepcap_mw']
+        eq = p['equityShare']
+        baseline_mmt = p['baselineCO2_mmt']
+
+        # Compute CO2 rate (t/MWh) from eGRID baseline for CCS math
+        baseline_gen_est = nameplate * 0.65 * H
+        co2_rate = baseline_mmt * 1e6 / baseline_gen_est if baseline_gen_est > 0 else 0.37
+
+        # CCS emissions at 80% CF, 95% capture, +14% HR penalty (equity-adjusted, MMt)
+        ccs_co2_mmt = cap * 0.80 * H * co2_rate * 1.14 * 0.05 * eq / 1e6
+
         plant_list.append({
-            'orispl': p['orispl'],
+            'orispl': orispl,
             'name': p['name'],
             'iso': p['iso'],
             'state': p['state'],
             'lat': p['lat'],
             'lon': p['lon'],
-            'cap_mw': p['ownedCapacity_mw'],
-            'nameplate_mw': p['namepcap_mw'],
-            'equity_share': p['equityShare'],
-            'baseline_co2_mmt': p['baselineCO2_mmt'],
-            'post_ccs_co2_mmt': p['postCcsCO2_mmt'],
-            'ccs_reduction_mmt': p['reductionCO2_mmt'],
+            'cap_mw': cap,
+            'nameplate_mw': nameplate,
+            'equity_share': eq,
+            'baseline_co2_mmt': baseline_mmt,
+            'co2_rate_t_mwh': round(co2_rate, 5),
+            'ccs_co2_mmt': round(ccs_co2_mmt, 4),
             'viability_score': p['viabilityScore'],
-            'yearly': plant_yearly.get(p['orispl'], {}),
+            # Per-year sweep emissions (P10/P50/P90 across 540 scenarios)
+            'sweep_p10': plant_fan[orispl]['p10'],
+            'sweep_p50': plant_fan[orispl]['p50'],
+            'sweep_p90': plant_fan[orispl]['p90'],
         })
 
     output = {
@@ -339,10 +365,14 @@ def main():
         'plants': plant_list,
         'fan_bands': fan,
         'trajectories': trajectories,
-        'assumptions': meta['assumptions'],
+        'assumptions': {
+            **meta['assumptions'],
+            'ccs_note': 'CCS delta = plant sweep emissions - CCS emissions. '
+                        'CCS: 80% CF, 95% capture, +14% HR penalty on lb CO2/MWh.',
+        },
         'sweep_type': 'reference',
-        'sweep_note': 'Fan bands computed from 540 reference market scenarios only. '
-                      'Does not include power_nz or economy_nz sweeps.',
+        'sweep_note': 'Fan bands from 540 reference market scenarios. '
+                      'Per-plant sweep_p50 = dispatch emissions at each year.',
     }
 
     # Export as JS
