@@ -3,12 +3,11 @@ name: "Step 4: Derived Analytics"
 # Runs derived analytics scripts sequentially:
 #   1. step6a_compute_mac_stats.py  — 6 MAC metrics, ANOVA decomposition, crossover analysis
 #   2. step6b_compute_optimal_targets.py — optimal CFE target per ISO via DAC crossover
-#   3. step6d_extract_building_blocks.py — hourly profiles + resource mix data for building blocks page
-#   4. step6e_extract_resource_density.py — per-scenario resource density strip plots
+#   3. step6e_extract_resource_density.py — per-scenario resource density strip plots
 #
 # Prerequisite: Step 5A (CO2) must have run first — MAC depends on CO2 output.
-# Output: dashboard/js/{mac-stats,optimal-target,building-blocks,resource-density}-data.js
-#         data/step4-analysis/{building-blocks,resource-density}/
+# Output: dashboard/js/{mac-stats,optimal-target,resource-density}-data.js
+#         data/step4-analysis/{resource-density}/
 # Note: Run Step 9 separately afterward to regenerate shared-data.js.
 
 on:
@@ -37,7 +36,6 @@ on:
           - ALL
           - mac-stats
           - optimal-targets
-          - building-blocks
           - resource-density
       branch:
         description: 'Branch to checkout'
@@ -92,7 +90,6 @@ jobs:
       - name: Ensure output directories
         run: |
           mkdir -p data/step4-analysis
-          mkdir -p data/step4-analysis/building-blocks
           mkdir -p data/step4-analysis/resource-density
           mkdir -p dashboard/js
 
@@ -100,26 +97,19 @@ jobs:
       # Sequential: MAC Stats → Optimal Targets → Building Blocks → Resource Density
       # ════════════════════════════════════════════════════════════════════
 
-      - name: "1/4 — Compute MAC Statistics"
+      - name: "1/3 — Compute MAC Statistics"
         if: ${{ inputs.script == 'ALL' || inputs.script == 'mac-stats' }}
         run: |
           echo "=== MAC Statistics (6 metrics, ANOVA, crossover) ==="
           python scripts/step4_1c_compute_mac_stats.py
 
-      - name: "2/4 — Compute Optimal Targets"
+      - name: "2/3 — Compute Optimal Targets"
         if: ${{ inputs.script == 'ALL' || inputs.script == 'optimal-targets' }}
         run: |
           echo "=== Optimal CFE Targets (DAC crossover analysis) ==="
           python scripts/step4_1d_compute_optimal_targets.py
 
-      # LEGACY — building_blocks.html archived. Output not used by any live page.
-      - name: "3/4 — Extract Building Blocks Data (LEGACY)"
-        if: ${{ inputs.script == 'ALL' || inputs.script == 'building-blocks' }}
-        run: |
-          echo "=== Building Blocks (hourly profiles + resource mixes) ==="
-          python scripts/step4_1f_extract_building_blocks.py
-
-      - name: "4/4 — Extract Resource Density Data"
+      - name: "3/3 — Extract Resource Density Data"
         if: ${{ inputs.script == 'ALL' || inputs.script == 'resource-density' }}
         run: |
           echo "=== Resource Density (per-scenario strip plot data) ==="
@@ -193,7 +183,6 @@ jobs:
           # Batch 4: Dashboard JS files
           git add -f dashboard/js/mac-stats-data.js 2>/dev/null || true
           git add -f dashboard/js/optimal-target-data.js 2>/dev/null || true
-          git add -f dashboard/js/building-blocks-data.js 2>/dev/null || true
           git add -f dashboard/js/resource-density-data.js 2>/dev/null || true
           if ! git diff --cached --quiet; then
             echo "--- Staging dashboard JS ---"
