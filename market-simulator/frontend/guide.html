@@ -80,7 +80,7 @@
                 drop real data files into the <code>data/</code> folder before launching.
             </p>
 
-            <h3>Data Setup (3 tiers)</h3>
+            <h3>Data Setup (4 tiers)</h3>
             <table class="file-table">
                 <thead>
                     <tr><th>Tier</th><th>What to Drop In</th><th>Where</th><th>What It Enables</th></tr>
@@ -90,42 +90,93 @@
                         <td><strong>Minimal</strong> (demo)</td>
                         <td>Nothing &mdash; ships ready</td>
                         <td>&mdash;</td>
-                        <td>Full UI with synthetic demand/generation profiles</td>
+                        <td>Full UI with synthetic demand/generation profiles, fleet-average heat rates &amp; emissions</td>
+                    </tr>
+                    <tr>
+                        <td><strong>EIA-930</strong></td>
+                        <td>EIA 930 hourly profiles (parquet or JSON)</td>
+                        <td><code>data/profiles/</code> or <code>data/eia-930/</code></td>
+                        <td>Real hourly demand shapes, solar/wind capacity factors, fossil fuel mix</td>
                     </tr>
                     <tr>
                         <td><strong>Pipeline</strong></td>
                         <td>Step 2.1 + 2.2 parquets</td>
                         <td><code>data/step2.1-ef/</code> &amp; <code>data/step2.2-cost/</code></td>
-                        <td>Real optimizer results, cost scenario analysis</td>
+                        <td>Real optimizer results, cost scenario analysis across 5,832 sensitivity combos</td>
                     </tr>
                     <tr>
                         <td><strong>Full fidelity</strong></td>
-                        <td>EIA-923 + EPA CAMPD JSONs</td>
-                        <td><code>data/eia-923/{STATE}/</code> &amp; <code>data/epa-campd/{STATE}/</code></td>
-                        <td>Real plant-level dispatch, emissions, CCS analysis</td>
+                        <td>EIA-860 + EIA-923 + EPA CAMPD</td>
+                        <td><code>data/eia-860/</code>, <code>data/eia-923/</code>, <code>data/epa-campd/</code></td>
+                        <td>Plant-specific heat rates, actual emissions, per-plant dispatch &amp; CCS analysis</td>
                     </tr>
                 </tbody>
             </table>
 
+            <h3>Emission &amp; Dispatch Data Model</h3>
+            <div class="callout">
+                <p><strong>Without EIA plant data (Minimal/EIA-930 tiers):</strong> The model uses fleet-average heat rates
+                per unit type (coal: 10.0, CCGT: 7.0, CT: 10.5 MMBtu/MWh) and fleet-average CO2 rates from EPA eGRID.
+                All coal plants share one heat rate; all CCGTs share one. Generator economics are reported per unit type
+                (coal_steam, gas_ccgt, gas_ct, oil_ct), not per plant.</p>
+            </div>
+            <div class="callout">
+                <p><strong>With EIA-860/923/CAMPD data (Full fidelity):</strong> Each plant uses its own reported heat rate,
+                CO2 emission rate, and online year. Unit commitment parameters are vintage-adjusted &mdash; newer CCGTs
+                (2015+) turn down to 30% vs 50% for pre-2005 units, with lower start-up costs. Plant-level results include
+                per-plant capacity factor, dispatch hours, revenue, fuel cost, profit, and status (operating/at-risk/stranded).</p>
+            </div>
+
             <h3>Data Directory Format</h3>
             <div class="callout">
-                <p><strong>Parquets:</strong> Copy <code>step_2_1_ef_{ISO}.parquet</code> into <code>data/step2.1-ef/</code>
+                <p><strong>EIA-930 Profiles:</strong> Place hourly profiles (parquet or JSON) in <code>data/profiles/</code>
+                or <code>data/eia-930/</code>. The tool auto-detects both formats. Files:
+                <code>eia_demand_profiles</code>, <code>eia_gen_profiles</code> (or <code>eia_generation_profiles</code>),
+                <code>eia_fossil_mix</code>, <code>egrid_emission_rates</code>. Generation profiles must be normalized
+                shape arrays (sum &asymp; 1.0 per resource), not raw capacity factors.</p>
+            </div>
+            <div class="callout">
+                <p><strong>Pipeline Parquets:</strong> Copy <code>step_2_1_ef_{ISO}.parquet</code> into <code>data/step2.1-ef/</code>
                 and <code>step_2_2a_CO_{ISO}.parquet</code> into <code>data/step2.2-cost/</code>.
-                ISOs: CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP.</p>
+                ISOs: CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP. Without these, the tool generates synthetic resource mix
+                data for screening-level analysis.</p>
             </div>
             <div class="callout">
-                <p><strong>EIA-923:</strong> Create one subfolder per state (e.g., <code>data/eia-923/TX/</code>).
-                Inside, place monthly JSON files named <code>eia923_TX_2024-06.json</code>.
-                Key states: TX (ERCOT), CA (CAISO), PA/NJ/DE/MD/VA (PJM), NY (NYISO), MA/ME/NH (NEISO), IL (MISO).</p>
+                <p><strong>EIA-860 (plant characteristics):</strong> One JSON per state: <code>data/eia-860/TX/eia860_TX.json</code>.
+                Must include fields: <code>plant_id</code>, <code>plant_name</code>, <code>state</code>, <code>capacity_mw</code>,
+                <code>fuel_type</code>, <code>prime_mover</code>, <code>year_built</code>, <code>heat_rate</code>,
+                <code>balancing_authority_code</code>, <code>status</code>. The <code>balancing_authority_code</code> field is
+                critical &mdash; it maps plants to ISOs (e.g., <code>ERCO</code> &rarr; ERCOT, <code>CISO</code> &rarr; CAISO).
+                Plants are classified by prime mover + fuel type (e.g., <code>CA</code>/<code>CT</code>/<code>CC</code> &rarr; gas_ccgt,
+                <code>ST</code> + <code>BIT</code>/<code>SUB</code> &rarr; coal_steam).</p>
             </div>
             <div class="callout">
-                <p><strong>EPA CAMPD:</strong> Same state subfolder structure. Files named <code>TX_2024-06.json</code> (no prefix).
-                Contains hourly emissions records (CO2, NOx, SOx) by plant unit.</p>
+                <p><strong>EIA-923 (monthly generation):</strong> Create one subfolder per state: <code>data/eia-923/TX/</code>.
+                Inside, place monthly JSON files named <code>eia923_TX_2024-06.json</code>. Must include:
+                <code>plant_id</code>, <code>plant_name</code>, <code>fuel_type</code>, <code>net_generation_mwh</code>,
+                <code>year</code>, <code>month</code>. Provides revealed heat rates and capacity factors per plant.</p>
             </div>
             <div class="callout">
-                <p><strong>EIA-860:</strong> One file per state: <code>data/eia-860/TX/eia860_TX.json</code>.
-                Contains plant characteristics (capacity, fuel type, year built, status).</p>
+                <p><strong>EPA CAMPD (hourly emissions):</strong> Same state subfolder structure: <code>data/epa-campd/TX/</code>.
+                Files named <code>TX_2024-06.json</code> (no prefix). Must include:
+                <code>orispl_code</code>, <code>unit_id</code>, <code>op_date</code>, <code>op_hour</code>,
+                <code>co2_mass_tons</code>, <code>nox_mass_lbs</code>, <code>so2_mass_lbs</code>, <code>gross_load_mw</code>.
+                Provides actual stack-level emission rates.</p>
             </div>
+
+            <h3>Key States per ISO</h3>
+            <table class="file-table">
+                <thead><tr><th>ISO</th><th>Key States</th><th>BA Codes (examples)</th></tr></thead>
+                <tbody>
+                    <tr><td>ERCOT</td><td>TX</td><td>ERCO</td></tr>
+                    <tr><td>CAISO</td><td>CA</td><td>CISO</td></tr>
+                    <tr><td>PJM</td><td>PA, NJ, DE, MD, VA, OH, WV</td><td>PJME, PJMW, AEP, COMED, DOM</td></tr>
+                    <tr><td>NYISO</td><td>NY</td><td>NYIS</td></tr>
+                    <tr><td>NEISO</td><td>MA, ME, NH, CT, RI, VT</td><td>ISNE</td></tr>
+                    <tr><td>MISO</td><td>IL, IN, MI, WI, MN, IA</td><td>MISO, ALTE, CONS, NSP</td></tr>
+                    <tr><td>SPP</td><td>OK, KS, AR, NE</td><td>SWPP, KCPL, OKGE</td></tr>
+                </tbody>
+            </table>
             <p style="font-size: 0.88rem; color: #5a6577;">
                 See <code>data/DATA_README.md</code> for the complete directory structure reference with all file naming conventions.
             </p>

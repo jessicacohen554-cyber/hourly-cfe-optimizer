@@ -76,11 +76,11 @@ market-simulator/
 
 | File | Purpose |
 |------|---------|
-| `profiles/eia_demand_profiles.json` | 8760-hour demand curves per ISO (TWh → MW) |
-| `profiles/eia_gen_profiles.json` | Solar/wind/hydro generation profiles per ISO |
-| `profiles/eia_fossil_mix.json` | Coal/gas/oil capacity shares per ISO |
-| `profiles/egrid_emission_rates.json` | CO2 emission rates (tons/MWh) per ISO |
-| `constellation_fleet.json` | 202 Constellation/Calpine plants with capacity, ISO, fuel type, CCS eligibility |
+| `profiles/eia_demand_profiles.json` | 8760-hour demand curves per ISO. `normalized` array sums to 1.0 (hourly fractions); `raw_mw` has actual MW values; `total_annual_mwh` converts between the two. |
+| `profiles/eia_gen_profiles.json` | Solar/wind/hydro generation shape profiles per ISO. **All profiles normalized to sum = 1.0** (hourly shape, not raw capacity factor). Dispatch math requires this normalization. |
+| `profiles/eia_fossil_mix.json` | Coal/gas/oil capacity shares per ISO (hourly arrays) |
+| `profiles/egrid_emission_rates.json` | Per-fuel CO2 emission rates per ISO. Required fields: `co2_rate` (aggregate tons/MWh), `coal_co2_lb_per_mwh` (~2200), `gas_co2_lb_per_mwh` (~900), `oil_co2_lb_per_mwh` (~1600). Source: EPA eGRID 2022. |
+| `constellation_fleet.json` | 204 Constellation/Calpine plants with capacity, ISO, fuel type, CCS eligibility |
 
 ### Optional — Pipeline Outputs (drop in for enhanced results)
 
@@ -106,15 +106,19 @@ market-simulator/
 The tool uses **2-letter US state abbreviations** as subdirectory names. Each
 state maps to one or more ISOs internally. The key states for the 7 ISOs:
 
-| ISO | Key States |
-|-----|-----------|
-| ERCOT | TX |
-| PJM | PA, NJ, DE, MD, VA |
-| CAISO | CA |
-| NYISO | NY |
-| NEISO | MA, ME, NH |
-| MISO | IL, AR, AL |
-| SPP | AR, AZ, OR |
+| ISO | Key States | BA Codes |
+|-----|-----------|----------|
+| ERCOT | TX | ERCO |
+| PJM | PA, NJ, DE, MD, VA, OH, WV, IL, IN | PJM, AEP, COMED, DOM |
+| CAISO | CA | CISO |
+| NYISO | NY | NYIS |
+| NEISO | MA, ME, NH, CT, RI, VT | ISNE |
+| MISO | IL, IN, MI, WI, MN, IA, MO, AR, MS, LA | MISO, ALTE, CONS, NSP |
+| SPP | AR, KS, OK, NE, NM (partial) | SWPP, KCPL, OKGE, SPS |
+
+Plants are assigned to ISOs via their `balancing_authority_code` field in EIA 860 data.
+You do not need to organize files by ISO — just drop state-level files and the model
+handles the BA-to-ISO mapping automatically.
 
 ### EIA-923 Monthly Files
 
@@ -122,8 +126,12 @@ Format: `eia923_{STATE}_{YYYY-MM}.json`
 
 Example: `eia923_TX_2024-06.json`
 
-Should contain monthly generation records with fields like:
-`plant_id`, `plant_name`, `fuel_type`, `net_generation_mwh`, `year`, `month`
+**Required fields** per record:
+- `plant_id` (int) — EIA plant ID (matches EIA 860 plant_id)
+- `plant_name` (string)
+- `fuel_type` (string) — EIA fuel type code
+- `net_generation_mwh` (float) — Net generation in MWh
+- `year` (int), `month` (int) — Reporting period
 
 ### EPA CAMPD Monthly Files
 
@@ -131,8 +139,15 @@ Format: `{STATE}_{YYYY-MM}.json`
 
 Example: `TX_2024-06.json`
 
-Should contain hourly emissions records with fields like:
-`orispl_code`, `unit_id`, `op_date`, `op_hour`, `co2_mass_tons`, `nox_mass_lbs`, `so2_mass_lbs`, `gross_load_mw`
+**Required fields** per record:
+- `orispl_code` (int) — ORISPL plant code (matches EIA plant_id for cross-referencing)
+- `unit_id` (string) — Unit identifier within plant
+- `op_date` (string) — Operating date (YYYY-MM-DD)
+- `op_hour` (int) — Operating hour (0–23)
+- `co2_mass_tons` (float) — CO2 emissions in short tons
+- `nox_mass_lbs` (float) — NOx emissions in pounds
+- `so2_mass_lbs` (float) — SO2 emissions in pounds
+- `gross_load_mw` (float) — Gross load in MW
 
 ### EIA-860 Plant Files
 
@@ -140,8 +155,17 @@ Format: `eia860_{STATE}.json`
 
 Example: `eia860_TX.json`
 
-Should contain plant characteristic records with fields like:
-`plant_id`, `plant_name`, `state`, `capacity_mw`, `fuel_type`, `year_built`, `status`
+**Required fields** per record:
+- `plant_id` (int) — EIA plant ID (ORISPL code)
+- `plant_name` (string) — Plant name
+- `state` (string) — 2-letter state abbreviation
+- `capacity_mw` (float) — Nameplate capacity in MW
+- `fuel_type` (string) — EIA fuel type code: NG, BIT, SUB, LIG, ANT, RC, DFO, RFO
+- `prime_mover` (string) — EIA prime mover code: CA, CS, CT, CC (→ gas_ccgt), GT, IC, OT (→ gas_ct), ST (→ resolved by fuel)
+- `status` (string) — Operating status: OP = operating
+- `balancing_authority_code` (string) — BA code (ERCO, CISO, PJM, NYIS, ISNE, MISO, SWPP, etc.)
+- `heat_rate` (float) — Heat rate in Btu/kWh (falls back to unit-type default if missing)
+- `online_year` (int) — Year unit came online (used for vintage-adjusted unit commitment)
 
 ### Step 2.1/2.2 Parquets
 
@@ -160,3 +184,32 @@ where `{ISO}` is one of: CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP
 | **Minimal** (demo) | Nothing extra — built-in synthetic profiles | Full UI with realistic shapes, synthetic plant data |
 | **Pipeline only** | Drop in step2.1 + step2.2 parquets | Real optimizer results + cost scenarios |
 | **Full fidelity** | All of the above + EIA-923 + EPA CAMPD | Real plant-level dispatch, emissions, CCS analysis |
+
+
+## Two-Tier Dispatch & Emission Model
+
+The simulator automatically selects between two dispatch tiers based on data availability:
+
+### Tier 1 — Fleet-Average (Default)
+No plant data needed. Uses aggregate parameters per unit type:
+- **Heat rates**: coal 10.0, gas CCGT 7.0, gas CT 10.5, oil CT 10.5 MMBtu/MWh
+- **Emission rates**: fleet-average from eGRID per-fuel fields in `egrid_emission_rates.json`
+- **Dispatch**: 4-bin merit-order stack sorted by marginal cost
+
+### Tier 2 — Plant-Level (With EIA/EPA Data)
+When data files are present in `eia-860/`, `eia-923/`, and/or `epa-campd/`:
+- Per-plant heat rates replace fleet averages
+- Vintage-adjusted unit commitment (newer CCGTs have lower min gen)
+- Actual emission rates from EPA CAMPD replace eGRID averages
+- Individual plant economics (CF, revenue, cost, profit, status)
+
+Both tiers produce equivalent output structures — Tier 2 adds per-generator granularity.
+
+
+## Profile Normalization Requirements
+
+**Critical**: All generation profiles in `eia_gen_profiles.json` **must** be normalized to sum = 1.0. These are hourly shape profiles (representing *when* generation occurs), not raw capacity factor values.
+
+The dispatch formula `contribution = procurement_factor × (pct/100) × profile` requires profiles on the same scale as normalized demand (which also sums to 1.0). Raw CF values (summing to ~2000–3000) will produce incorrect dispatch results.
+
+The synthetic profile generator (`scripts/generate_synthetic_profiles.py`) handles this normalization automatically. If providing custom generation profiles, verify `sum(profile) ≈ 1.0` for each resource × ISO combination.
