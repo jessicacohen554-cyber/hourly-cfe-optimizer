@@ -278,6 +278,7 @@ class YearResult(BaseModel):
     zones_deployed: List[float] = Field(default_factory=list)
     zone_details: List[ZoneDetail] = Field(default_factory=list)
     generator_economics: Dict[str, dict] = Field(default_factory=dict)
+    emissions_by_fuel: Dict[str, float] = Field(default_factory=dict)  # Mt CO2 per fuel type
     nuclear_revenue: Dict[str, float] = Field(default_factory=dict)
     nuclear_retired: bool = False
     ccs_breakeven: Dict[str, float] = Field(default_factory=dict)
@@ -314,6 +315,8 @@ class SimulationResponse(BaseModel):
     capacity_rev_time_series: Optional[HourlyProfile] = None
     supply_stack_summary: List[SupplyStackEntry] = Field(default_factory=list)
     fuel_bin_table: List[FuelBinRow] = Field(default_factory=list)
+    # Emissions by fuel type per year (for trajectory emissions chart)
+    emissions_by_fuel_by_year: Optional[Dict[str, Any]] = None  # {years: [...], coal_steam: [...], gas_ccgt: [...], ...}
     # Plant-level summary
     plant_level_summary: Optional[dict] = None  # {operating: int, at_risk: int, stranded: int, total: int}
     # Chart data — threshold sweep, deployment, cost ladder, gas shift, sensitivity, CCS

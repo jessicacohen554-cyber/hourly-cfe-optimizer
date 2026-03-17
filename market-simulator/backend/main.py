@@ -721,10 +721,25 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
                 for zd in yr.get("zone_details", [])
             ],
             generator_economics=yr.get("generator_economics", {}),
+            emissions_by_fuel=yr.get("emissions_by_fuel", {}),
             nuclear_revenue=yr.get("nuclear_revenue", {}),
             nuclear_retired=yr.get("nuclear_retired", False),
             ccs_breakeven=yr.get("ccs_breakeven", {}),
         ))
+
+    # Build emissions_by_fuel_by_year aggregate for trajectory chart
+    emissions_by_fuel_by_year = None
+    if len(year_results) > 1:
+        all_fuel_types = set()
+        for yr in year_results:
+            all_fuel_types.update(yr.get("emissions_by_fuel", {}).keys())
+        emissions_by_fuel_by_year = {
+            "years": [yr.get("year", 0) for yr in year_results],
+        }
+        for fuel in sorted(all_fuel_types):
+            emissions_by_fuel_by_year[fuel] = [
+                yr.get("emissions_by_fuel", {}).get(fuel, 0) for yr in year_results
+            ]
 
     # Build supply stack summary from resource_mix_twh
     supply_stack = []
@@ -831,6 +846,7 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
         capacity_rev_time_series=cap_rev_ts,
         supply_stack_summary=supply_stack,
         fuel_bin_table=fuel_bins,
+        emissions_by_fuel_by_year=emissions_by_fuel_by_year,
         threshold_sweep=threshold_sweep,
         what_gets_built=what_gets_built,
         cost_ladder=cost_ladder,
