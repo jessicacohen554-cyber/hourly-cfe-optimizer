@@ -22,9 +22,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -220,6 +220,24 @@ async def serve_fleet_config_page():
     if not fleet_path.exists():
         raise HTTPException(status_code=404, detail="fleet-config.html not found")
     return FileResponse(str(fleet_path), media_type="text/html")
+
+
+@app.get("/emissions", response_class=HTMLResponse)
+async def serve_emissions_page():
+    """Serve the CCS emissions dashboard page."""
+    emissions_path = FRONTEND_DIR / "emissions.html"
+    if not emissions_path.exists():
+        raise HTTPException(status_code=404, detail="emissions.html not found")
+    return FileResponse(str(emissions_path), media_type="text/html")
+
+
+@app.get("/ipp-report", response_class=HTMLResponse)
+async def serve_ipp_report_page():
+    """Serve the IPP fleet report page."""
+    ipp_path = FRONTEND_DIR / "ipp-report.html"
+    if not ipp_path.exists():
+        raise HTTPException(status_code=404, detail="ipp-report.html not found")
+    return FileResponse(str(ipp_path), media_type="text/html")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1676,8 +1694,6 @@ async def get_run(run_id: str):
     return result
 
 
-from fastapi import Request
-from fastapi.responses import JSONResponse
 import base64
 
 
@@ -1724,6 +1740,56 @@ async def download_plant_csv(run_id: str):
         media_type="text/csv",
         filename=f"{run_id}_plant_results.csv",
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Constellation CCS dispatch endpoint
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.post("/api/constellation-dispatch")
+async def constellation_dispatch(request: Request):
+    """Run Constellation CCGT fleet dispatch using simulation year results.
+
+    Expects JSON body with:
+      - year_results: list of {year, clean_pct, avg_lmp, iso, ...}
+      - fleet_overrides: optional dict {plant_id: status}
+      - run_id: optional run ID for saving CSV output
+    """
+    body = await request.json()
+    year_results = body.get("year_results", [])
+    fleet_overrides = body.get("fleet_overrides", None)
+    run_id = body.get("run_id", None)
+
+    if not year_results:
+        raise HTTPException(status_code=400, detail="No year_results provided")
+
+    try:
+        from constellation_dispatch_integrated import run_dispatch_from_sim_results
+
+        # Convert year_results to plain dicts if they're Pydantic models
+        yr_dicts = []
+        for yr in year_results:
+            if isinstance(yr, dict):
+                yr_dicts.append(yr)
+            else:
+                yr_dicts.append(yr.dict() if hasattr(yr, 'dict') else dict(yr))
+
+        result = run_dispatch_from_sim_results(yr_dicts, fleet_overrides=fleet_overrides)
+
+        # Save CSV if run_id provided
+        if run_id and result.get("csv_rows"):
+            run_dir = RESULTS_DIR / run_id
+            if run_dir.exists():
+                csv_path = run_dir / "constellation_dispatch.csv"
+                _save_constellation_dispatch_csv(csv_path, result["csv_rows"])
+
+        return result
+
+    except ImportError as e:
+        raise HTTPException(status_code=500, detail=f"Constellation dispatch module not available: {e}")
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Dispatch failed: {str(e)}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
