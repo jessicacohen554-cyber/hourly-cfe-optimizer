@@ -1151,13 +1151,10 @@ def load_step3_data():
 
     Searches in directories:
       1. {MODULE_ROOT}/data/step2.2-cost/     (local market-simulator data)
-      2. {MODULE_ROOT}/../data/step2.2-cost/  (main pipeline data — dev fallback)
-
     Returns {iso: {threshold_float: result_dict}}.
     """
     search_dirs = [
         os.path.join(MODULE_ROOT, 'data', 'step2.2-cost'),
-        os.path.join(MODULE_ROOT, '..', 'data', 'step2.2-cost'),
     ]
 
     all_data = {}
