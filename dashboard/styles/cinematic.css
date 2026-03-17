@@ -674,6 +674,18 @@ hr.section-divider,
 .section-header h2 {
     color: #1A2744 !important;
 }
+/* Override for section headers inside dark sections */
+.section-dark .section-header {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+.section-dark .section-header h2 {
+    color: #ffffff !important;
+}
+.section-dark .section-header p {
+    color: rgba(255,255,255,0.7) !important;
+}
 
 /* Concept card text - dark on white bg */
 .concept-card h3 {
