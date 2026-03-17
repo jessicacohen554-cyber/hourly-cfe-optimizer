@@ -1034,7 +1034,10 @@ class FleetModel:
 
 
 def load_iso_fleet(iso, data_root=None):
-    """Load all EIA 860 generators for an ISO by filtering on balancing_authority_code.
+    """Load all EIA 860 generators for an ISO with real heat rates from 923/CAMPD.
+
+    Uses FleetModel.build_fleet() to get the full heat rate cascade:
+    revealed (EIA 923) > measured (EPA CAMPD) > design (EIA 860) > default.
 
     Loads data from ALL available states and filters by BA_TO_ISO mapping.
     This correctly handles multi-BA states (e.g., TX has ERCOT + SPP).
@@ -1059,9 +1062,13 @@ def load_iso_fleet(iso, data_root=None):
             continue
         try:
             fm = FleetModel(state_dir, data_root=data_root)
-            df = fm.load_eia860()
+            # Use build_fleet() to get real heat rates from 923/CAMPD cascade,
+            # not just raw 860 design rates. Previously only called load_eia860()
+            # which gave NaN or unreliable design heat rates for most plants.
+            df = fm.build_fleet()
             if df is not None and len(df) > 0:
-                df['state'] = state_dir
+                if 'state' not in df.columns:
+                    df['state'] = state_dir
                 frames.append(df)
         except Exception:
             continue
@@ -1071,7 +1078,16 @@ def load_iso_fleet(iso, data_root=None):
 
     merged = pd.concat(frames, ignore_index=True)
     # Filter to generators whose BA maps to the requested ISO
-    iso_mask = merged['iso'] == iso
+    # build_fleet() may have already set 'iso' column
+    if 'iso' in merged.columns:
+        iso_mask = merged['iso'] == iso
+    elif 'ba' in merged.columns:
+        merged['iso'] = merged['ba'].map(lambda x: BA_TO_ISO.get(str(x).strip().upper(), None)
+                                          if pd.notna(x) else None)
+        iso_mask = merged['iso'] == iso
+    else:
+        return None
+
     result = merged[iso_mask].copy()
 
     if len(result) == 0:
