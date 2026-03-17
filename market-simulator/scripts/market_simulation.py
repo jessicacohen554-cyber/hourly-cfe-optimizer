@@ -241,12 +241,57 @@ PPA_MARKET_DEPTH = {
 # min_up_hrs / min_down_hrs: thermal cycling constraints
 # start_cost_per_mw: $/MW cold-start cost (hot start ~40% of this)
 # min_gen_pct: minimum stable generation as fraction of nameplate
+#   For gas_ccgt, min_gen varies by vintage — newer single-shaft F/H-class
+#   turbines turn down to ~35%, older 2x1 multi-shaft units need ~50%.
 UNIT_COMMITMENT = {
     'coal_steam':  {'min_up_hrs': 24, 'min_down_hrs': 12, 'start_cost_per_mw': 150.0, 'min_gen_pct': 0.40},
     'gas_ccgt':    {'min_up_hrs': 4,  'min_down_hrs': 2,  'start_cost_per_mw': 35.0,  'min_gen_pct': 0.50},
     'gas_ct':      {'min_up_hrs': 1,  'min_down_hrs': 1,  'start_cost_per_mw': 15.0,  'min_gen_pct': 0.20},
     'oil_ct':      {'min_up_hrs': 1,  'min_down_hrs': 1,  'start_cost_per_mw': 20.0,  'min_gen_pct': 0.20},
 }
+
+
+def get_unit_commitment_params(unit_type, online_year=None):
+    """Get UC parameters adjusted for plant vintage.
+
+    Newer CCGTs (online 2010+) use F/H-class single-shaft turbines with
+    better turndown (~35% min gen). Older 2x1 multi-shaft units need ~50%.
+    Start costs also lower for newer units due to faster ramp rates.
+
+    Args:
+        unit_type: 'coal_steam', 'gas_ccgt', 'gas_ct', 'oil_ct'
+        online_year: year plant came online (from EIA 860). None = use defaults.
+
+    Returns:
+        dict with min_up_hrs, min_down_hrs, start_cost_per_mw, min_gen_pct
+    """
+    base = UNIT_COMMITMENT.get(unit_type, {})
+    if not base:
+        return base
+
+    params = dict(base)  # copy
+
+    if unit_type == 'gas_ccgt' and online_year is not None:
+        try:
+            yr = int(online_year)
+        except (ValueError, TypeError):
+            return params
+
+        if yr >= 2015:
+            # Latest H-class (GE 7HA, Siemens 9000HL): 30-35% min stable
+            params['min_gen_pct'] = 0.30
+            params['start_cost_per_mw'] = 25.0
+            params['min_up_hrs'] = 3
+            params['min_down_hrs'] = 1
+        elif yr >= 2005:
+            # F-class era (GE 7FA, Siemens V94.3A): 35-40% min stable
+            params['min_gen_pct'] = 0.38
+            params['start_cost_per_mw'] = 30.0
+            params['min_up_hrs'] = 4
+            params['min_down_hrs'] = 2
+        # else: pre-2005, keep defaults (50% min gen, older multi-shaft)
+
+    return params
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -571,7 +616,8 @@ def compute_plant_level_economics(plant_stack, hourly_lmp, dispatch,
         mw_dispatched = np.clip(fossil_demand_mw - low, 0, cap_mw) * dispatched
 
         # Apply unit commitment constraints (min up/down times, min gen)
-        uc = UNIT_COMMITMENT.get(plant['unit_type'], {})
+        # Use vintage-aware params for CCGTs (newer units have better turndown)
+        uc = get_unit_commitment_params(plant['unit_type'], plant.get('online_year'))
         start_cost_total = 0.0
         n_starts = 0
         if uc:
