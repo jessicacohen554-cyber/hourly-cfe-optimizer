@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Constellation Energy | CCS Proximity Analysis</title>
+    <link rel="stylesheet" href="styles/ceg-report.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/ccs-proximity-data.js"></script>
+    <script src="js/ceg-nav.js" data-ceg-active="ccs-map"></script>
+    <style>
+        /* ── Page-specific overrides (map + calculator layout) ── */
+        #ccsMap {
+            width: 100%;
+            height: 520px;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--glass-border);
+            z-index: 1;
+        }
+        @media (max-width: 768px) {
+            #ccsMap { height: 360px; }
+        }
+
+        /* Map legend overlay */
+        .map-legend {
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            padding: var(--space-sm) var(--space-md);
+            font-size: 0.78rem;
+            line-height: 1.8;
+            box-shadow: var(--shadow-md);
+        }
+        .map-legend-title {
+            font-weight: 700;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+        }
+        .map-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .map-legend-swatch {
+            width: 16px;
+            height: 4px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+        .map-legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .map-legend-tri {
+            width: 0; height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 10px solid currentColor;
+            flex-shrink: 0;
+        }
+
+        /* Scoring visual */
+        .score-bar {
+            display: flex;
+            height: 28px;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            margin: var(--space-xs) 0;
+        }
+        .score-bar-seg {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: white;
+            min-width: 30px;
+        }
+
+        /* Calculator layout */
+        .calc-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-xl);
+            align-items: start;
+        }
+        @media (max-width: 900px) {
+            .calc-layout { grid-template-columns: 1fr; }
+        }
+
+        /* Plant checklist */
+        .iso-group { margin-bottom: var(--space-lg); }
+        .iso-group-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--space-xs) 0;
+            border-bottom: 2px solid var(--glass-border);
+            margin-bottom: var(--space-sm);
+        }
+        .iso-group-title {
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--ceg-blue);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .iso-group-actions {
+            display: flex;
+            gap: var(--space-sm);
+        }
+        .iso-group-actions button {
+            background: none;
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm);
+            padding: 2px 10px;
+            font-size: 0.72rem;
+            font-family: var(--font);
+            font-weight: 600;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            min-height: 28px;
+        }
+        .iso-group-actions button:hover {
+            background: var(--ceg-blue);
+            color: white;
+            border-color: var(--ceg-blue);
+        }
+
+        .plant-check {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: 6px 0;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background var(--transition-fast);
+            border-radius: var(--radius-sm);
+        }
+        .plant-check:hover { background: var(--bg-mid); }
+        .plant-check input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--ceg-blue);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .plant-check-name { flex: 1; font-weight: 400; }
+        .plant-check-co2 {
+            font-family: var(--font-data);
+            font-weight: 600;
+            color: var(--ceg-blue);
+            font-size: 0.82rem;
+            white-space: nowrap;
+        }
+        .plant-check-score {
+            font-family: var(--font-data);
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            min-width: 32px;
+            text-align: right;
+        }
+
+        /* Reduction dashboard */
+        .reduction-hero {
+            text-align: center;
+            padding: var(--space-xl) var(--space-lg);
+            background: linear-gradient(135deg, rgba(35,114,185,0.06), rgba(0,127,164,0.04));
+            border-radius: var(--radius-lg);
+            border: 1px solid rgba(35,114,185,0.15);
+            margin-bottom: var(--space-xl);
+        }
+        .reduction-hero-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--ceg-orange);
+            margin-bottom: var(--space-sm);
+        }
+        .reduction-hero-value {
+            font-family: var(--font-data);
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 700;
+            color: var(--ceg-blue);
+            line-height: 1.2;
+            transition: all 0.4s ease;
+        }
+        .reduction-hero-value .arrow {
+            color: var(--ceg-green);
+            font-size: 0.7em;
+            margin: 0 0.3em;
+        }
+        .reduction-hero-sub {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            margin-top: var(--space-xs);
+        }
+
+        /* Stacked reduction bar */
+        .reduction-bar-container { margin-bottom: var(--space-lg); }
+        .reduction-bar-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin-bottom: 4px;
+        }
+        .reduction-bar {
+            height: 32px;
+            background: var(--bg-mid);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            display: flex;
+            position: relative;
+        }
+        .reduction-bar-captured {
+            background: var(--ceg-green);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: white;
+        }
+        .reduction-bar-residual {
+            background: var(--ceg-orange);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: white;
+        }
+        .reduction-bar-remaining {
+            background: #E5E7EB;
+            flex: 1;
+        }
+
+        /* Summary stats row */
+        .calc-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-md);
+            margin-bottom: var(--space-xl);
+        }
+        .calc-stat {
+            text-align: center;
+            padding: var(--space-md);
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+        }
+        .calc-stat-value {
+            font-family: var(--font-data);
+            font-size: 1.4rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .calc-stat-label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin-top: 2px;
+        }
+
+        /* Selected plants table */
+        .selected-plants-table {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+        }
+
+        /* Methodology scoring grid */
+        .scoring-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--space-md);
+        }
+        @media (max-width: 768px) {
+            .scoring-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        .scoring-factor {
+            text-align: center;
+            padding: var(--space-lg) var(--space-md);
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+        }
+        .scoring-factor-weight {
+            font-family: var(--font-data);
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--ceg-blue);
+            line-height: 1;
+        }
+        .scoring-factor-name {
+            font-weight: 600;
+            font-size: 0.88rem;
+            margin-top: var(--space-xs);
+            color: var(--text-bright);
+        }
+        .scoring-factor-desc {
+            font-size: 0.78rem;
+            color: var(--text-dim);
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+        .scoring-factor-icon {
+            font-size: 1.6rem;
+            margin-bottom: var(--space-sm);
+        }
+
+        /* Leaflet popup overrides */
+        .leaflet-popup-content-wrapper {
+            border-radius: var(--radius-md) !important;
+            box-shadow: var(--shadow-lg) !important;
+            font-family: var(--font) !important;
+        }
+        .leaflet-popup-content {
+            margin: 12px 16px !important;
+            font-size: 0.85rem !important;
+            line-height: 1.5 !important;
+        }
+        .popup-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--text-bright);
+            margin-bottom: 6px;
+        }
+        .popup-iso {
+            display: inline-block;
+            background: var(--ceg-blue);
+            color: white;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 1px 8px;
+            border-radius: var(--radius-pill);
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        .popup-score {
+            font-family: var(--font-data);
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--ceg-blue);
+        }
+        .popup-score-label {
+            font-size: 0.72rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .popup-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+            font-size: 0.8rem;
+        }
+        .popup-row-label { color: var(--text-dim); }
+        .popup-row-value { font-weight: 600; font-family: var(--font-data); }
+        .popup-divider {
+            border: none;
+            border-top: 1px solid var(--border-light);
+            margin: 8px 0;
+        }
+
+        /* Footer */
+        .page-footer {
+            background: var(--bg-mid);
+            padding: 2rem var(--pad-page);
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-top: var(--space-3xl);
+        }
+        .bottom-banner {
+            height: 3px;
+            background: linear-gradient(90deg, var(--ceg-blue), var(--ceg-teal), var(--ceg-green));
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ═══ HERO ═══ -->
+    <div class="hero-section">
+        <div class="hero-inner">
+            <div class="hero-eyebrow">Carbon Capture &amp; Storage</div>
+            <h1>NGCC Fleet <strong>CCS Retrofit</strong> Viability</h1>
+            <p class="hero-desc">
+                Spatial analysis of 39 natural gas combined cycle plants scored for CCUS retrofit potential
+                based on CO&#8322; emissions, proximity to pipeline infrastructure, Class VI injection wells,
+                and geologic storage formations.
+            </p>
+        </div>
+    </div>
+
+    <!-- ═══ METHODOLOGY ═══ -->
+    <div class="content-section">
+        <h2>How We <strong>Score</strong> CCS Viability</h2>
+        <p style="max-width: 800px; margin-bottom: var(--space-xl)">
+            Each plant receives a composite viability score (0&ndash;100) based on four spatial and emissions
+            factors. Higher scores indicate better candidates for CCUS retrofitting &mdash; plants that emit
+            more CO&#8322;, sit closer to existing transport infrastructure, and overlie proven storage geology.
+        </p>
+
+        <div class="scoring-grid" style="margin-bottom: var(--space-xl)">
+            <div class="scoring-factor">
+                <div class="scoring-factor-icon">&#127981;</div>
+                <div class="scoring-factor-weight">40%</div>
+                <div class="scoring-factor-name">CO&#8322; Emissions</div>
+                <div class="scoring-factor-desc">Annual emissions volume (log-scaled). Larger emitters = higher retrofit impact.</div>
+            </div>
+            <div class="scoring-factor">
+                <div class="scoring-factor-icon">&#128739;</div>
+                <div class="scoring-factor-weight">25%</div>
+                <div class="scoring-factor-name">Pipeline Proximity</div>
+                <div class="scoring-factor-desc">Distance to nearest CO&#8322; pipeline. Capped at 200 km &mdash; closer is better.</div>
+            </div>
+            <div class="scoring-factor">
+                <div class="scoring-factor-icon">&#9881;</div>
+                <div class="scoring-factor-weight">20%</div>
+                <div class="scoring-factor-name">Injection Well Access</div>
+                <div class="scoring-factor-desc">Distance to nearest Class VI well. Capped at 300 km. Proven injection sites.</div>
+            </div>
+            <div class="scoring-factor">
+                <div class="scoring-factor-icon">&#127759;</div>
+                <div class="scoring-factor-weight">15%</div>
+                <div class="scoring-factor-name">Storage Geology</div>
+                <div class="scoring-factor-desc">Binary &mdash; does the plant overlie a saline storage formation?</div>
+            </div>
+        </div>
+
+        <div class="story-callout" style="margin-bottom: var(--space-2xl)">
+            <strong>Key insight:</strong> Pipeline access is the binding constraint. Wells can be drilled in 2&ndash;3 years,
+            but CO&#8322; pipelines take 5&ndash;10 years to permit and build. Plants near existing pipelines in the
+            Gulf Coast corridor score highest because infrastructure is already in place.
+        </div>
+
+        <!-- Headline stats -->
+        <div class="grid-stats" style="margin-bottom: var(--space-2xl)" id="headlineStats">
+            <div class="stat-card">
+                <div class="stat-value" id="statPlants">&mdash;</div>
+                <div class="stat-label">NGCC Plants Analyzed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statBaseline">&mdash;</div>
+                <div class="stat-label">Baseline CO&#8322; (MMT/yr)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statCapacity">&mdash;</div>
+                <div class="stat-label">Total Capacity (GW)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statTopScore">&mdash;</div>
+                <div class="stat-label">Top Viability Score</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statMaxReduction">&mdash;</div>
+                <div class="stat-label">Max Reduction (MMT)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MAP ═══ -->
+    <div class="content-section">
+        <h2>Infrastructure <strong>Map</strong></h2>
+        <p style="margin-bottom: var(--space-lg)">
+            NGCC plants sized by CO&#8322; emissions and colored by viability score. Toggle layers to see
+            CO&#8322; pipelines, Class VI injection wells, and geologic storage formations.
+        </p>
+        <div id="ccsMap"></div>
+    </div>
+
+    <!-- ═══ CCS CALCULATOR ═══ -->
+    <div class="content-section" id="calculatorSection">
+        <h2>CCS Retrofit <strong>Calculator</strong></h2>
+        <p style="margin-bottom: var(--space-xs)">
+            Select plants to model fleet-wide emissions reductions. Assumes <strong>15% heat rate penalty</strong>
+            to power CCS equipment, <strong>95% CO&#8322; capture rate</strong>, and <strong>80% capacity factor</strong>.
+        </p>
+        <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: var(--space-xl)">
+            Baseline emissions are 2023 actuals from EPA eGRID, adjusted for Constellation equity ownership.
+        </p>
+
+        <div class="calc-layout">
+            <!-- Left: plant checklist -->
+            <div class="card" style="padding: var(--space-lg); max-height: 700px; overflow-y: auto;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-md)">
+                    <h3 style="margin: 0; font-size: 1rem;">Select Plants</h3>
+                    <div style="display: flex; gap: var(--space-sm);">
+                        <button class="btn-primary" style="padding: 4px 14px; font-size: 0.72rem;" onclick="selectAllPlants()">Select All</button>
+                        <button class="btn-primary" style="padding: 4px 14px; font-size: 0.72rem; background: var(--ceg-gray);" onclick="clearAllPlants()">Clear All</button>
+                    </div>
+                </div>
+                <div id="plantChecklist"></div>
+            </div>
+
+            <!-- Right: reduction dashboard -->
+            <div>
+                <div class="reduction-hero">
+                    <div class="reduction-hero-label">Fleet Emissions Impact</div>
+                    <div class="reduction-hero-value">
+                        <span id="reductionFrom">50.0</span>
+                        <span class="arrow">&#10230;</span>
+                        <span id="reductionTo">50.0</span>
+                        <span style="font-size: 0.5em; font-weight: 400; color: var(--text-dim)">MMT CO&#8322;/yr</span>
+                    </div>
+                    <div class="reduction-hero-sub" id="reductionSummary">Select plants to model CCS impact</div>
+                </div>
+
+                <div class="reduction-bar-container">
+                    <div class="reduction-bar-labels">
+                        <span>0 MMT</span>
+                        <span id="barMaxLabel">50.0 MMT (fleet baseline)</span>
+                    </div>
+                    <div class="reduction-bar">
+                        <div class="reduction-bar-captured" id="barCaptured" style="width: 0%"></div>
+                        <div class="reduction-bar-residual" id="barResidual" style="width: 0%"></div>
+                        <div class="reduction-bar-remaining"></div>
+                    </div>
+                    <div style="display: flex; gap: var(--space-md); margin-top: var(--space-xs); font-size: 0.72rem; color: var(--text-dim)">
+                        <span><span style="display:inline-block;width:10px;height:10px;background:var(--ceg-green);border-radius:2px;margin-right:4px;"></span>Captured</span>
+                        <span><span style="display:inline-block;width:10px;height:10px;background:var(--ceg-orange);border-radius:2px;margin-right:4px;"></span>Residual</span>
+                        <span><span style="display:inline-block;width:10px;height:10px;background:#E5E7EB;border-radius:2px;margin-right:4px;"></span>Unabated</span>
+                    </div>
+                </div>
+
+                <div class="calc-stats">
+                    <div class="calc-stat">
+                        <div class="calc-stat-value" style="color: var(--ceg-blue)" id="statSelected">0</div>
+                        <div class="calc-stat-label">Plants Selected</div>
+                    </div>
+                    <div class="calc-stat">
+                        <div class="calc-stat-value" style="color: var(--ceg-green)" id="statReduction">0.0</div>
+                        <div class="calc-stat-label">CO&#8322; Captured (MMT)</div>
+                    </div>
+                    <div class="calc-stat">
+                        <div class="calc-stat-value" style="color: var(--ceg-orange)" id="statPctReduction">0%</div>
+                        <div class="calc-stat-label">Fleet Reduction</div>
+                    </div>
+                </div>
+
+                <!-- Selected plants detail table -->
+                <div class="selected-plants-table" id="selectedTableContainer" style="display:none;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Plant</th>
+                                <th>ISO</th>
+                                <th style="text-align:right">Baseline</th>
+                                <th style="text-align:right">Post-CCS</th>
+                                <th style="text-align:right">Reduction</th>
+                            </tr>
+                        </thead>
+                        <tbody id="selectedTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ FOOTER ═══ -->
+    <footer class="page-footer">
+        <p>Data: EPA eGRID 2023 &bull; NETL NATCARB &bull; EPA Class VI Permits &bull; Constellation Fleet Rosetta</p>
+        <p style="margin-top: var(--space-xs)">Analysis by CEG-IPP-Climate Research &bull; 2025</p>
+    </footer>
+    <div class="bottom-banner"></div>
+
+    <!-- ═══ SCRIPT ═══ -->
+    <script>
+    (function() {
+        'use strict';
+
+        const data = CCS_DATA;
+        const meta = data.metadata;
+        const plants = data.plants;
+        const totalBaseline = meta.totalBaselineMmt;
+
+        // ── Populate headline stats ──
+        document.getElementById('statPlants').textContent = meta.plantCount;
+        document.getElementById('statBaseline').textContent = totalBaseline.toFixed(1);
+        document.getElementById('statCapacity').textContent = (meta.totalCapacityMw / 1000).toFixed(1);
+        document.getElementById('statTopScore').textContent = meta.topScore.toFixed(1);
+        document.getElementById('statMaxReduction').textContent = meta.totalReductionMmt.toFixed(1);
+        document.getElementById('reductionFrom').textContent = totalBaseline.toFixed(1);
+        document.getElementById('barMaxLabel').textContent = totalBaseline.toFixed(1) + ' MMT (fleet baseline)';
+
+        // ── Build Map ──
+        const map = L.map('ccsMap', {
+            center: [35.5, -97],
+            zoom: 5,
+            zoomControl: true,
+            scrollWheelZoom: true,
+        });
+
+        // Carto light basemap (no API key)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 19,
+        }).addTo(map);
+
+        // ── Formation polygons ──
+        const formationLayer = L.layerGroup();
+        data.formations.forEach(f => {
+            if (!f.coords || !f.coords.length) return;
+            // GeoJSON polygon coords: [[[lon,lat], ...]]
+            const latlngs = (f.coords[0] || f.coords).map(c => [c[1], c[0]]);
+            L.polygon(latlngs, {
+                color: '#6BA543',
+                weight: 1.5,
+                fillColor: '#6BA543',
+                fillOpacity: 0.12,
+                dashArray: '4 4',
+            }).bindTooltip(
+                '<strong>' + f.name + '</strong><br>' +
+                'Type: ' + f.type + '<br>' +
+                'Storage: ' + f.storageCapacity_gt + ' Gt CO&#8322;',
+                { sticky: true }
+            ).addTo(formationLayer);
+        });
+        formationLayer.addTo(map);
+
+        // ── Pipeline polylines ──
+        const pipelineLayer = L.layerGroup();
+        data.pipelines.forEach(p => {
+            if (!p.coords || !p.coords.length) return;
+            const latlngs = p.coords.map(c => [c[1], c[0]]);
+            const isProposed = (p.name || '').toLowerCase().includes('proposed');
+            L.polyline(latlngs, {
+                color: isProposed ? '#007FA4' : '#64748B',
+                weight: isProposed ? 2.5 : 3,
+                opacity: 0.8,
+                dashArray: isProposed ? '8 6' : null,
+            }).bindTooltip(
+                '<strong>' + p.name + '</strong><br>' +
+                'Operator: ' + p.operator + '<br>' +
+                'Length: ' + p.miles + ' miles',
+                { sticky: true }
+            ).addTo(pipelineLayer);
+        });
+        pipelineLayer.addTo(map);
+
+        // ── Class VI wells ──
+        const wellLayer = L.layerGroup();
+        const wellColors = {
+            'Active': '#6BA543',
+            'Approved': '#2372B9',
+            'Approved (suspended)': '#7E8083',
+            'Completed (pilot)': '#007FA4',
+            'Pending': '#F47B27',
+        };
+        data.wells.forEach(w => {
+            if (!w.lat || !w.lon) return;
+            const color = wellColors[w.status] || '#F47B27';
+            L.circleMarker([w.lat, w.lon], {
+                radius: 7,
+                color: color,
+                fillColor: color,
+                fillOpacity: 0.8,
+                weight: 2,
+            }).bindTooltip(
+                '<strong>' + w.name + '</strong><br>' +
+                'Status: <span style="color:' + color + ';font-weight:700">' + w.status + '</span><br>' +
+                'Operator: ' + w.operator + '<br>' +
+                'Formation: ' + w.formation,
+                { sticky: true }
+            ).addTo(wellLayer);
+        });
+        wellLayer.addTo(map);
+
+        // ── Plant markers ──
+        const plantLayer = L.layerGroup();
+        const plantMarkers = {};
+
+        // Create custom icon using Constellation Gas Primary PNG
+        function makeGasIcon(size) {
+            return L.icon({
+                iconUrl: 'img/Constellation_Gas_Primary.png',
+                iconSize: [size, size],
+                iconAnchor: [size/2, size/2],
+                popupAnchor: [0, -size/2],
+            });
+        }
+
+        // Score to color gradient: low (gray) → mid (blue) → high (green)
+        function scoreColor(score) {
+            if (score >= 80) return '#6BA543';
+            if (score >= 60) return '#2372B9';
+            if (score >= 40) return '#007FA4';
+            return '#7E8083';
+        }
+
+        plants.forEach(p => {
+            // Scale marker size by emissions (14–42px range)
+            const minSize = 18, maxSize = 44;
+            const maxCO2 = Math.max(...plants.map(x => x.baselineCO2_mmt));
+            const ratio = p.baselineCO2_mmt / maxCO2;
+            const size = Math.round(minSize + ratio * (maxSize - minSize));
+
+            const icon = makeGasIcon(size);
+            const marker = L.marker([p.lat, p.lon], { icon: icon, zIndexOffset: Math.round(p.viabilityScore * 10) });
+
+            // Build rich popup
+            const popup = `
+                <div class="popup-title">${p.name}</div>
+                <span class="popup-iso">${p.iso}</span>
+                <span style="font-size:0.72rem;color:var(--text-dim);margin-left:6px;">${p.state}</span>
+                <div style="margin: 8px 0 4px;">
+                    <span class="popup-score">${p.viabilityScore}</span>
+                    <span class="popup-score-label"> / 100 viability score</span>
+                </div>
+                <hr class="popup-divider">
+                <div class="popup-row"><span class="popup-row-label">Emissions (40%)</span><span class="popup-row-value">${p.scoreEmissions}</span></div>
+                <div class="popup-row"><span class="popup-row-label">Pipeline (25%)</span><span class="popup-row-value">${p.scorePipeline}</span></div>
+                <div class="popup-row"><span class="popup-row-label">Injection Well (20%)</span><span class="popup-row-value">${p.scoreWell}</span></div>
+                <div class="popup-row"><span class="popup-row-label">Geology (15%)</span><span class="popup-row-value">${p.scoreFormation}</span></div>
+                <hr class="popup-divider">
+                <div class="popup-row"><span class="popup-row-label">CO&#8322; Baseline</span><span class="popup-row-value">${p.baselineCO2_mmt.toFixed(2)} MMT</span></div>
+                <div class="popup-row"><span class="popup-row-label">Capacity</span><span class="popup-row-value">${p.namepcap_mw.toFixed(0)} MW</span></div>
+                <div class="popup-row"><span class="popup-row-label">Nearest Pipeline</span><span class="popup-row-value">${p.distPipeline_km.toFixed(0)} km</span></div>
+                <div class="popup-row"><span class="popup-row-label">Nearest Well</span><span class="popup-row-value">${p.distWell_km.toFixed(0)} km</span></div>
+                <div class="popup-row"><span class="popup-row-label">On Formation</span><span class="popup-row-value">${p.withinFormation ? 'Yes' : 'No'}</span></div>
+                <div class="popup-row"><span class="popup-row-label">Equity Share</span><span class="popup-row-value">${(p.equityShare * 100).toFixed(0)}%</span></div>
+            `;
+            marker.bindPopup(popup, { maxWidth: 280 });
+
+            // Tooltip for quick hover
+            marker.bindTooltip(
+                `<strong>${p.name}</strong> &mdash; Score: ${p.viabilityScore}`,
+                { direction: 'top', offset: [0, -size/2] }
+            );
+
+            marker.addTo(plantLayer);
+            plantMarkers[p.orispl] = marker;
+        });
+        plantLayer.addTo(map);
+
+        // Layer control
+        L.control.layers(null, {
+            'NGCC Plants': plantLayer,
+            'CO&#8322; Pipelines': pipelineLayer,
+            'Class VI Wells': wellLayer,
+            'Storage Formations': formationLayer,
+        }, { collapsed: false, position: 'topright' }).addTo(map);
+
+        // Custom legend
+        const legend = L.control({ position: 'bottomright' });
+        legend.onAdd = function() {
+            const div = L.DomUtil.create('div', 'map-legend');
+            div.innerHTML = `
+                <div class="map-legend-title">Legend</div>
+                <div class="map-legend-item"><img src="img/Constellation_Gas_Primary.png" style="width:16px;height:16px;"> NGCC Plant (sized by CO&#8322;)</div>
+                <div class="map-legend-item"><div class="map-legend-swatch" style="background:#64748B;"></div> Existing Pipeline</div>
+                <div class="map-legend-item"><div class="map-legend-swatch" style="background:#007FA4;border:1px dashed #007FA4;background:repeating-linear-gradient(90deg,#007FA4 0,#007FA4 6px,transparent 6px,transparent 10px);height:3px;"></div> Proposed Pipeline</div>
+                <div class="map-legend-item"><div class="map-legend-dot" style="background:#6BA543;"></div> Well: Active</div>
+                <div class="map-legend-item"><div class="map-legend-dot" style="background:#2372B9;"></div> Well: Approved</div>
+                <div class="map-legend-item"><div class="map-legend-dot" style="background:#F47B27;"></div> Well: Pending</div>
+                <div class="map-legend-item"><div style="width:16px;height:12px;background:rgba(107,165,67,0.15);border:1px solid #6BA543;border-radius:2px;"></div> Storage Formation</div>
+            `;
+            return div;
+        };
+        legend.addTo(map);
+
+        // ── Build Plant Checklist ──
+        const checklistDiv = document.getElementById('plantChecklist');
+        const isoGroups = {};
+        plants.forEach(p => {
+            if (!isoGroups[p.iso]) isoGroups[p.iso] = [];
+            isoGroups[p.iso].push(p);
+        });
+
+        // Sort ISOs by plant count descending
+        const sortedISOs = Object.keys(isoGroups).sort((a, b) =>
+            isoGroups[b].length - isoGroups[a].length
+        );
+
+        sortedISOs.forEach(iso => {
+            const group = isoGroups[iso];
+            // Sort plants within group by viability score descending
+            group.sort((a, b) => b.viabilityScore - a.viabilityScore);
+
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'iso-group';
+            groupDiv.innerHTML = `
+                <div class="iso-group-header">
+                    <span class="iso-group-title">${iso} (${group.length})</span>
+                    <div class="iso-group-actions">
+                        <button onclick="selectIso('${iso}')">All</button>
+                        <button onclick="clearIso('${iso}')">Clear</button>
+                    </div>
+                </div>
+            `;
+
+            group.forEach(p => {
+                const label = document.createElement('label');
+                label.className = 'plant-check';
+                label.innerHTML = `
+                    <input type="checkbox" data-orispl="${p.orispl}" data-iso="${p.iso}" onchange="updateCalculator()">
+                    <span class="plant-check-name">${p.name}</span>
+                    <span class="plant-check-co2">${p.baselineCO2_mmt.toFixed(2)}</span>
+                    <span class="plant-check-score">${p.viabilityScore}</span>
+                `;
+                groupDiv.appendChild(label);
+            });
+
+            checklistDiv.appendChild(groupDiv);
+        });
+
+        // ── Calculator Logic ──
+        const plantMap = {};
+        plants.forEach(p => plantMap[p.orispl] = p);
+
+        window.updateCalculator = function() {
+            const checkboxes = document.querySelectorAll('#plantChecklist input[type="checkbox"]');
+            const selected = [];
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    const p = plantMap[parseInt(cb.dataset.orispl)];
+                    if (p) selected.push(p);
+                }
+            });
+
+            const selectedBaseline = selected.reduce((s, p) => s + p.baselineCO2_mmt, 0);
+            const selectedPostCcs = selected.reduce((s, p) => s + p.postCcsCO2_mmt, 0);
+            const selectedReduction = selected.reduce((s, p) => s + p.reductionCO2_mmt, 0);
+            const fleetPostCcs = totalBaseline - selectedReduction;
+            const pctReduction = totalBaseline > 0 ? (selectedReduction / totalBaseline * 100) : 0;
+
+            // Update hero
+            document.getElementById('reductionTo').textContent = fleetPostCcs.toFixed(1);
+            document.getElementById('reductionSummary').textContent = selected.length > 0
+                ? `${selected.length} plant${selected.length > 1 ? 's' : ''} selected \u2014 ${selectedReduction.toFixed(1)} MMT captured`
+                : 'Select plants to model CCS impact';
+
+            // Update bar
+            const capturedPct = (selectedReduction / totalBaseline * 100).toFixed(1);
+            const residualPct = (selectedPostCcs / totalBaseline * 100).toFixed(1);
+            document.getElementById('barCaptured').style.width = capturedPct + '%';
+            document.getElementById('barCaptured').textContent = capturedPct > 5 ? capturedPct + '%' : '';
+            document.getElementById('barResidual').style.width = residualPct + '%';
+            document.getElementById('barResidual').textContent = residualPct > 3 ? residualPct + '%' : '';
+
+            // Update stats
+            document.getElementById('statSelected').textContent = selected.length;
+            document.getElementById('statReduction').textContent = selectedReduction.toFixed(1);
+            document.getElementById('statPctReduction').textContent = pctReduction.toFixed(1) + '%';
+
+            // Update table
+            const tbody = document.getElementById('selectedTableBody');
+            const tableContainer = document.getElementById('selectedTableContainer');
+            if (selected.length > 0) {
+                tableContainer.style.display = 'block';
+                tbody.innerHTML = selected
+                    .sort((a, b) => b.reductionCO2_mmt - a.reductionCO2_mmt)
+                    .map(p => `
+                        <tr>
+                            <td>${p.name}</td>
+                            <td>${p.iso}</td>
+                            <td class="num">${p.baselineCO2_mmt.toFixed(2)}</td>
+                            <td class="num">${p.postCcsCO2_mmt.toFixed(2)}</td>
+                            <td class="num" style="color:var(--ceg-green);font-weight:600">-${p.reductionCO2_mmt.toFixed(2)}</td>
+                        </tr>
+                    `).join('');
+            } else {
+                tableContainer.style.display = 'none';
+                tbody.innerHTML = '';
+            }
+
+            // Flash map markers for selected plants
+            Object.keys(plantMarkers).forEach(orispl => {
+                const m = plantMarkers[orispl];
+                const isSelected = selected.some(p => p.orispl === parseInt(orispl));
+                m.setOpacity(isSelected || selected.length === 0 ? 1.0 : 0.4);
+            });
+        };
+
+        window.selectAllPlants = function() {
+            document.querySelectorAll('#plantChecklist input[type="checkbox"]').forEach(cb => cb.checked = true);
+            updateCalculator();
+        };
+
+        window.clearAllPlants = function() {
+            document.querySelectorAll('#plantChecklist input[type="checkbox"]').forEach(cb => cb.checked = false);
+            updateCalculator();
+        };
+
+        window.selectIso = function(iso) {
+            document.querySelectorAll(`#plantChecklist input[data-iso="${iso}"]`).forEach(cb => cb.checked = true);
+            updateCalculator();
+        };
+
+        window.clearIso = function(iso) {
+            document.querySelectorAll(`#plantChecklist input[data-iso="${iso}"]`).forEach(cb => cb.checked = false);
+            updateCalculator();
+        };
+
+    })();
+    </script>
+
+</body>
+</html>
