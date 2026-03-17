@@ -258,24 +258,27 @@ function renderLMPTimeSeries(data) {
         const lmps = data.year_results.map(yr => yr.avg_lmp || 0);
         const capRevs = data.year_results.map(yr => yr.capacity_rev_mwh || 0);
         const energyRevs = data.year_results.map(yr => yr.energy_rev_mwh || 0);
+        // Use lines-only for annual granularity (many years), markers for sparse years
+        const traceMode = years.length > 12 ? 'lines' : 'lines+markers';
+        const mSize = years.length > 12 ? 4 : 8;
 
         traces.push({
             x: years, y: lmps,
             name: 'Avg LMP',
-            type: 'scatter', mode: 'lines+markers',
+            type: 'scatter', mode: traceMode,
             line: { color: '#2372B9', width: 3 },
-            marker: { size: 8 },
+            marker: { size: mSize },
         });
         traces.push({
             x: years, y: energyRevs,
             name: 'Energy Revenue',
-            type: 'scatter', mode: 'lines+markers',
+            type: 'scatter', mode: traceMode,
             line: { color: '#6BA543', width: 2 },
         });
         traces.push({
             x: years, y: capRevs,
             name: 'Capacity Revenue',
-            type: 'scatter', mode: 'lines+markers',
+            type: 'scatter', mode: traceMode,
             line: { color: '#F47B27', width: 2, dash: 'dash' },
         });
 

@@ -810,6 +810,9 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
     # 6. CCS analysis: cost curves at different carbon prices
     ccs_analysis = _compute_ccs_analysis(iso)
 
+    # Extract sim_years from year_results
+    sim_years_list = sorted(set(yr.get("year", 0) for yr in year_results))
+
     return SimulationResponse(
         iso=iso,
         existing_clean_pct=round(existing_clean, 1),
@@ -821,6 +824,7 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
         emissions_mt=final.get("emissions_mt", 0),
         demand_twh=final.get("demand_twh", 0),
         resource_mix_twh=final.get("resource_mix_twh", {}),
+        sim_years=sim_years_list,
         year_results=typed_years,
         zones_deployed=zone_details,
         lmp_time_series=lmp_ts,
@@ -856,12 +860,26 @@ async def simulate(req: SimulationRequest):
         preloaded = _get_preloaded_data()
         lmp_cache: dict = {}
 
+        # Build sim_years from request parameters
+        from market_simulation import build_sim_years
+        if snapshot_mode:
+            custom_sim_years = None  # snapshot_mode handles [2025]
+        elif req.start_year and req.end_year:
+            custom_sim_years = build_sim_years(
+                start=req.start_year,
+                end=req.end_year,
+                step=req.year_step or 1,
+            )
+        else:
+            custom_sim_years = None  # use legacy SIM_YEARS
+
         results = run_market_simulation(
             scenario_id="API_SINGLE",
             conditions=conditions,
             isos=[iso],
             nuclear_retirement_threshold=nrt,
             snapshot_mode=snapshot_mode,
+            sim_years=custom_sim_years,
             _preloaded=preloaded,
             _lmp_cache=lmp_cache,
             _quiet=True,
@@ -990,6 +1008,16 @@ def _run_sweep_sync(job_id: str, req: SweepRequest):
         lmp_cache: dict = {}
         all_results = {}
 
+        # Build sim_years for sweep
+        from market_simulation import build_sim_years
+        sweep_sim_years = None
+        if not req.snapshot_mode:
+            sweep_sim_years = build_sim_years(
+                start=req.start_year,
+                end=req.end_year,
+                step=req.year_step or 5,
+            )
+
         for i, (scenario_id, conditions) in enumerate(all_scenarios):
             results = run_market_simulation(
                 scenario_id=scenario_id,
@@ -997,6 +1025,7 @@ def _run_sweep_sync(job_id: str, req: SweepRequest):
                 isos=isos,
                 nuclear_retirement_threshold=req.nuclear_retirement_threshold,
                 snapshot_mode=req.snapshot_mode,
+                sim_years=sweep_sim_years,
                 _preloaded=preloaded,
                 _lmp_cache=lmp_cache,
                 _quiet=True,
