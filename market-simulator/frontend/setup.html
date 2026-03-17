@@ -29,6 +29,8 @@
             <li><a href="/setup" class="active">Setup</a></li>
             <li><a href="/fleet-config">Fleet Config</a></li>
             <li><a href="/results">Results</a></li>
+            <li><a href="/emissions">CCS Emissions</a></li>
+            <li><a href="/ipp-report">IPP Report</a></li>
         </ul>
     </nav>
 
@@ -48,6 +50,14 @@
         <form id="simulationForm">
 
             <!-- ═══════════════════════════════════════════════════════════
+                 FLEET CONFIG CTA — First thing user sees
+                 ═══════════════════════════════════════════════════════════ -->
+            <a href="/fleet-config" style="display: block; margin-bottom: var(--space-lg); padding: 1rem 1.5rem; background: var(--ceg-blue, #1d4ed8); color: #fff; border-radius: var(--radius-md); text-decoration: none; font-weight: 700; font-size: 1.1rem; text-align: center; transition: opacity 0.15s;"
+               onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                Configure Constellation Fleet →
+            </a>
+
+            <!-- ═══════════════════════════════════════════════════════════
                  ROW 1: Simulation Mode | Region | Nuclear Retirement
                  ═══════════════════════════════════════════════════════════ -->
             <div class="grid-3col">
@@ -56,12 +66,12 @@
                     <div class="section-eyebrow">Simulation Mode</div>
                     <h2 class="section-heading">Choose Your Analysis Type</h2>
                     <div class="mode-toggle">
-                        <button type="button" class="toggle-btn active" data-mode="snapshot">Single Snapshot</button>
-                        <button type="button" class="toggle-btn" data-mode="trajectory">Multi-Year Trajectory</button>
-                        <button type="button" class="toggle-btn" data-mode="sweep">Full 270-Scenario Sweep</button>
+                        <button type="button" class="toggle-btn active" data-mode="trajectory5">Trajectory (5-yr intervals)</button>
+                        <button type="button" class="toggle-btn" data-mode="trajectory1">Trajectory (Annual)</button>
+                        <button type="button" class="toggle-btn" data-mode="sweep">Market Sweep (5-yr intervals)</button>
                     </div>
                     <p class="mode-description" id="modeDescription">
-                        One point-in-time simulation with your exact cost inputs. No learning curves.
+                        Multi-year market trajectory to 2060 at 5-year intervals. Wright's Law learning curves reduce costs each year. Shows when the market flips for each resource type.
                     </p>
                 </div>
 
@@ -171,48 +181,44 @@
                         </div>
                     </div>
 
-                    <!-- NOx / SOx -->
-                    <div class="grid-2col" style="margin-top: var(--space-md);">
-                        <div>
-                            <h4 style="margin: 0 0 var(--space-sm) 0; font-size: 0.9rem; color: var(--navy);">NOx/SOx Allowance Prices ($/ton)</h4>
-                            <div class="grid-2col" style="gap: var(--space-sm);">
-                                <div class="input-group">
-                                    <label>NOx Price <span class="info-icon" data-tooltip="NOx allowance price in $/ton. Adds NOx emission rate × price to fossil marginal cost. Affects coal and oil CTs most.">i</span></label>
-                                    <div class="input-with-presets">
-                                        <input type="number" id="nox_price" value="0" step="any" min="0">
-                                        <div class="preset-btns">
-                                            <button type="button" class="preset-btn active" data-target="nox_price" data-value="0">$0</button>
-                                            <button type="button" class="preset-btn" data-target="nox_price" data-value="2500">$2.5K</button>
-                                            <button type="button" class="preset-btn" data-target="nox_price" data-value="5000">$5K</button>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="input-group">
-                                    <label>SOx Price <span class="info-icon" data-tooltip="SOx allowance price in $/ton. Adds SOx emission rate × price to fossil marginal cost. Coal plants hit hardest (~1.8 lb/MWh).">i</span></label>
-                                    <div class="input-with-presets">
-                                        <input type="number" id="sox_price" value="0" step="any" min="0">
-                                        <div class="preset-btns">
-                                            <button type="button" class="preset-btn active" data-target="sox_price" data-value="0">$0</button>
-                                            <button type="button" class="preset-btn" data-target="sox_price" data-value="100">$100</button>
-                                            <button type="button" class="preset-btn" data-target="sox_price" data-value="500">$500</button>
-                                        </div>
-                                    </div>
+                    <!-- NOx / SOx Allowance Prices -->
+                    <h4 style="margin: var(--space-md) 0 var(--space-sm) 0; font-size: 0.9rem; color: var(--navy);">NOx/SOx Allowance Prices ($/ton)</h4>
+                    <div class="grid-2col" style="gap: var(--space-sm);">
+                        <div class="input-group">
+                            <label>NOx Price <span class="info-icon" data-tooltip="NOx allowance price in $/ton. Adds NOx emission rate × price to fossil marginal cost. Affects coal and oil CTs most.">i</span></label>
+                            <div class="input-with-presets">
+                                <input type="number" id="nox_price" value="0" step="any" min="0">
+                                <div class="preset-btns">
+                                    <button type="button" class="preset-btn active" data-target="nox_price" data-value="0">$0</button>
+                                    <button type="button" class="preset-btn" data-target="nox_price" data-value="2500">$2.5K</button>
+                                    <button type="button" class="preset-btn" data-target="nox_price" data-value="5000">$5K</button>
                                 </div>
                             </div>
                         </div>
-                        <div>
-                            <h4 style="margin: 0 0 var(--space-sm) 0; font-size: 0.9rem; color: var(--navy);">Emission Rate Limits (lb/MWh)</h4>
-                            <p class="section-note" style="margin-top: 0;">Generators exceeding these limits must retrofit or retire.</p>
-                            <div class="grid-2col" style="gap: var(--space-sm);">
-                                <div class="input-group">
-                                    <label>NOx Limit <span class="info-icon" data-tooltip="Maximum NOx emission rate in lb/MWh. Generators above this must retrofit or retire. Leave blank for no limit.">i</span></label>
-                                    <input type="number" id="nox_limit" value="" placeholder="No limit" step="any" min="0">
-                                </div>
-                                <div class="input-group">
-                                    <label>SOx Limit <span class="info-icon" data-tooltip="Maximum SOx emission rate in lb/MWh. Generators above this must retrofit or retire. Leave blank for no limit.">i</span></label>
-                                    <input type="number" id="sox_limit" value="" placeholder="No limit" step="any" min="0">
+                        <div class="input-group">
+                            <label>SOx Price <span class="info-icon" data-tooltip="SOx allowance price in $/ton. Adds SOx emission rate × price to fossil marginal cost. Coal plants hit hardest (~1.8 lb/MWh).">i</span></label>
+                            <div class="input-with-presets">
+                                <input type="number" id="sox_price" value="0" step="any" min="0">
+                                <div class="preset-btns">
+                                    <button type="button" class="preset-btn active" data-target="sox_price" data-value="0">$0</button>
+                                    <button type="button" class="preset-btn" data-target="sox_price" data-value="100">$100</button>
+                                    <button type="button" class="preset-btn" data-target="sox_price" data-value="500">$500</button>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Emission Rate Limits (below allowance prices) -->
+                    <h4 style="margin: var(--space-md) 0 var(--space-sm) 0; font-size: 0.9rem; color: var(--navy);">Emission Rate Limits (lb/MWh)</h4>
+                    <p class="section-note" style="margin-top: 0;">Generators exceeding these limits must retrofit or retire.</p>
+                    <div class="grid-2col" style="gap: var(--space-sm);">
+                        <div class="input-group">
+                            <label>NOx Limit <span class="info-icon" data-tooltip="Maximum NOx emission rate in lb/MWh. Generators above this must retrofit or retire. Leave blank for no limit.">i</span></label>
+                            <input type="number" id="nox_limit" value="" placeholder="No limit" step="any" min="0">
+                        </div>
+                        <div class="input-group">
+                            <label>SOx Limit <span class="info-icon" data-tooltip="Maximum SOx emission rate in lb/MWh. Generators above this must retrofit or retire. Leave blank for no limit.">i</span></label>
+                            <input type="number" id="sox_limit" value="" placeholder="No limit" step="any" min="0">
                         </div>
                     </div>
                 </div>
@@ -649,13 +655,13 @@
                 </div>
             </div>
 
-            <!-- Trajectory Settings (shown only in trajectory mode) -->
-            <div class="glass-card form-section" id="trajectorySettings" style="display:none;">
+            <!-- Trajectory Settings (always shown — mode determines step size) -->
+            <div class="glass-card form-section" id="trajectorySettings">
                 <div class="section-eyebrow">Trajectory</div>
                 <h2 class="section-heading">Trajectory Settings</h2>
                 <div class="grid-2col">
                     <div class="input-group">
-                        <label>Year Range <span class="info-icon" data-tooltip="Select the start year, end year, and step size for the simulation trajectory. Annual (every year) gives the most granular results; 5-year steps are faster for sweeps.">i</span></label>
+                        <label>Year Range <span class="info-icon" data-tooltip="Simulation runs from start year to 2060. Step size is determined by the mode selected above.">i</span></label>
                         <div style="display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap;">
                             <select id="startYear" style="padding: 8px 12px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-card); font-family: var(--font-body);">
                                 <option value="2025" selected>2025</option>
@@ -673,21 +679,18 @@
                                 <option value="2060" selected>2060</option>
                             </select>
                         </div>
-                        <div style="margin-top: var(--space-sm);">
-                            <label>Step Size</label>
-                            <div class="toggle-btn-group" id="yearStepToggle">
-                                <button type="button" class="toggle-btn active" data-value="1">Every Year</button>
-                                <button type="button" class="toggle-btn" data-value="5">Every 5 Years</button>
-                            </div>
-                            <div class="input-hint" id="yearCountHint" style="margin-top: 4px; color: var(--text-muted); font-size: 0.85rem;">36 simulation years</div>
-                        </div>
+                        <div class="input-hint" id="yearCountHint" style="margin-top: 4px; color: var(--text-muted); font-size: 0.85rem;">8 simulation years (5-yr intervals)</div>
                     </div>
                     <div class="input-group">
-                        <label>Conditions <span class="info-icon" data-tooltip="Facilitating = favorable policy/cost trajectory. Challenging = headwinds. Both = run both scenarios for comparison.">i</span></label>
-                        <div class="toggle-btn-group" id="conditionToggle">
-                            <button type="button" class="toggle-btn active" data-value="Facilitating">Facilitating</button>
-                            <button type="button" class="toggle-btn" data-value="Challenging">Challenging</button>
-                            <button type="button" class="toggle-btn" data-value="Both">Both (sweep)</button>
+                        <label>Interconnection Queue Speed <span class="info-icon" data-tooltip="GW/yr of new generation that can interconnect per ISO. Low = 20th-percentile historical completion, Medium = average, High = 50th-percentile with transmission reform (FERC Order 2023). Override individual ISOs below.">i</span></label>
+                        <div class="toggle-btn-group" id="queueCapToggle">
+                            <button type="button" class="toggle-btn" data-value="Low">Low</button>
+                            <button type="button" class="toggle-btn active" data-value="Medium">Med</button>
+                            <button type="button" class="toggle-btn" data-value="High">High</button>
+                        </div>
+                        <div class="input-group" style="margin-top: var(--space-sm);">
+                            <label>Queue Cap Override (GW/yr) <span class="info-icon" data-tooltip="Override the L/M/H queue cap with a custom GW/yr value for the selected ISO. Leave blank to use the L/M/H default.">i</span></label>
+                            <input type="number" id="queue_cap_override" value="" placeholder="Use L/M/H default" step="any" min="0">
                         </div>
                     </div>
                 </div>

@@ -39,6 +39,13 @@ if not exist "data\demand_profiles_2025.json" (
 )
 echo [OK] Data profiles ready
 
+REM ── Generate plant heat rates if needed ─────────────────────────────
+if not exist "data\plant_heat_rates.json" (
+    echo Generating plant-specific heat rates...
+    %PYTHON% scripts\generate_plant_heat_rates.py 2>nul
+)
+echo [OK] Plant heat rates ready
+
 REM ── Open browser after short delay ─────────────────────────────────────
 start "" /b cmd /c "timeout /t 2 /nobreak >nul & start http://127.0.0.1:8000"
 
