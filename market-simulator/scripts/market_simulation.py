@@ -705,6 +705,106 @@ def compute_plant_level_economics(plant_stack, hourly_lmp, dispatch,
     return results
 
 
+def apply_economic_retirement(gen_econ, iso, year, state, _log=print):
+    """Retire fossil capacity that is economically stranded (negative margins).
+
+    Plants with negative operating margins will exit the market — they lose money
+    on every MWh dispatched. This function:
+    1. Identifies unit types with margin < -$5/MWh (matching plant-level stranding threshold)
+    2. Retires a fraction of their capacity (more aggressive for deeper losses)
+    3. Returns adjusted gen_econ with reduced capacity and updated economics
+    4. Tracks cumulative retirements in state for inter-year persistence
+
+    The retirement is partial, not binary: some units within a type are more efficient
+    or have lower fixed costs, so the fleet thins rather than disappears entirely.
+    A reliability floor prevents retiring below RA requirements.
+
+    Returns:
+        adjusted_gen_econ: dict with retired capacity removed
+        retired_capacity: dict of {unit_type: retired_mw}
+        total_retired_mw: float
+    """
+    if not gen_econ:
+        return gen_econ, {}, 0.0
+
+    # Track retirements from prior years
+    prior_retirements = state.get('economic_retirements', {})
+    retired_capacity = {}
+    total_retired_mw = 0.0
+
+    adjusted = {}
+    for utype, econ in gen_econ.items():
+        margin = econ.get('margin_mwh', 0)
+        cap_mw = econ.get('capacity_mw', 0)
+
+        # Already-retired capacity from prior years
+        prior_retired_mw = prior_retirements.get(utype, 0)
+
+        if margin < -5:
+            # Deeper losses → more retirement. Scale: -$5 → 20%, -$15 → 60%, -$30+ → 90%
+            loss_depth = min(abs(margin), 30)
+            retire_frac = 0.20 + 0.70 * ((loss_depth - 5) / 25)
+            retire_frac = min(0.90, retire_frac)
+
+            # Add prior retirements (cumulative across years)
+            cumulative_frac = min(0.95, retire_frac + prior_retired_mw / cap_mw if cap_mw > 0 else 0)
+
+            retire_mw = cap_mw * cumulative_frac
+            remaining_mw = cap_mw - retire_mw
+
+            # Reliability floor: keep at least 5% of original capacity
+            # (RA requirements prevent full retirement)
+            min_mw = cap_mw * 0.05
+            remaining_mw = max(remaining_mw, min_mw)
+            retire_mw = cap_mw - remaining_mw
+
+            retired_capacity[utype] = retire_mw
+            total_retired_mw += retire_mw
+
+            # Adjusted economics: same dispatch characteristics but less capacity
+            adj = dict(econ)
+            if cap_mw > 0:
+                scale = remaining_mw / cap_mw
+                adj['capacity_mw'] = remaining_mw
+                # CF stays the same (remaining units still dispatch in same hours)
+                # but total generation is proportionally reduced
+            adjusted[utype] = adj
+
+            _log(f"    {iso} {utype}: margin ${margin:.1f}/MWh → "
+                 f"retire {retire_mw:.0f} MW ({cumulative_frac*100:.0f}%), "
+                 f"keep {remaining_mw:.0f} MW")
+
+        elif margin < 2:
+            # At-risk: retire a small fraction (plants on the margin exit slowly)
+            at_risk_frac = 0.10
+            prior_frac = prior_retired_mw / cap_mw if cap_mw > 0 else 0
+            cumulative_frac = min(0.50, at_risk_frac + prior_frac)
+            retire_mw = cap_mw * cumulative_frac
+            remaining_mw = max(cap_mw * 0.10, cap_mw - retire_mw)
+            retire_mw = cap_mw - remaining_mw
+
+            retired_capacity[utype] = retire_mw
+            total_retired_mw += retire_mw
+
+            adj = dict(econ)
+            adj['capacity_mw'] = remaining_mw
+            adjusted[utype] = adj
+        else:
+            # Profitable — no retirement
+            adjusted[utype] = dict(econ)
+
+    # Persist cumulative retirements in state for next year
+    updated_retirements = dict(prior_retirements)
+    for utype, mw in retired_capacity.items():
+        updated_retirements[utype] = updated_retirements.get(utype, 0) + mw
+    state['economic_retirements'] = updated_retirements
+
+    if total_retired_mw > 0:
+        _log(f"    {iso} total economic retirement: {total_retired_mw:.0f} MW")
+
+    return adjusted, retired_capacity, total_retired_mw
+
+
 def compute_capacity_degradation(iso, clean_pct):
     """Compute capacity price degradation factor using S-curve (sigmoid) model.
 
@@ -1721,6 +1821,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             'nuclear_retired': False,
             'acp_bonus_queue_gw': 0,
             'cumulative_acp_million': 0,
+            'economic_retirements': {},  # cumulative MW retired by unit type
         }
 
     if sim_years is not None:
@@ -1962,6 +2063,12 @@ def run_market_simulation(scenario_id, conditions, isos=None,
 
                     state['clean_pct'] = current_pct
 
+            # --- ECONOMIC RETIREMENT ---
+            # Retire fossil capacity that is economically stranded (negative margins).
+            # This feeds back into emission accounting: stranded plants don't generate.
+            adjusted_gen_econ, econ_retired, econ_retired_mw = apply_economic_retirement(
+                gen_econ, iso, year, state, _log=_log)
+
             # --- EMISSION ACCOUNTING ---
             gf = demand_twh / REGIONAL_DEMAND_TWH[iso]
             _, retirement_info = compute_fossil_retirement(
@@ -1969,11 +2076,23 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             # Use remaining fleet emission rate (not displaced rate) for actual emissions
             er = retirement_info.get('remaining_rate_tco2_mwh', 0)
             fossil_twh = (1 - current_pct / 100.0) * demand_twh
+
+            # Adjust fossil generation downward for economic retirements.
+            # Economically retired capacity can't generate — reduce fossil TWh
+            # proportionally to retired fraction of total fossil fleet.
+            total_fossil_cap = sum(e.get('capacity_mw', 0) for e in gen_econ.values())
+            if total_fossil_cap > 0 and econ_retired_mw > 0:
+                surviving_frac = max(0.05, 1.0 - econ_retired_mw / total_fossil_cap)
+                fossil_twh *= surviving_frac
+                _log(f"    {iso} fossil TWh adjusted: ×{surviving_frac:.2f} "
+                     f"({econ_retired_mw:.0f} MW retired of {total_fossil_cap:.0f} MW)")
+
             emissions_mt = fossil_twh * 1e6 * er / 1e6
 
-            # Per-fuel-type emissions breakdown (Mt CO2) from generator economics
+            # Per-fuel-type emissions breakdown (Mt CO2) from adjusted generator economics
+            # Uses adjusted_gen_econ which excludes economically retired capacity
             emissions_by_fuel = {}
-            for utype, econ in gen_econ.items():
+            for utype, econ in adjusted_gen_econ.items():
                 cap_mw = econ.get('capacity_mw', 0)
                 cf = econ.get('cf', 0)
                 co2_rate = CO2_RATES.get(utype, 0.5)  # tons CO2/MWh
@@ -2018,6 +2137,9 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 'zones_deployed': [z['resource'] for z in zone_results],
                 'zone_details': zone_results,
                 'generator_economics': gen_econ,
+                'adjusted_generator_economics': adjusted_gen_econ,
+                'economic_retirements_mw': {k: round(v, 0) for k, v in econ_retired.items()},
+                'total_economic_retirement_mw': round(econ_retired_mw, 0),
                 'emissions_by_fuel': emissions_by_fuel,
                 'nuclear_revenue': nuclear_rev,
                 'nuclear_retired': state['nuclear_retired'],
