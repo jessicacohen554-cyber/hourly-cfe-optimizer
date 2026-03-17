@@ -41,8 +41,6 @@
     --bg-card: #FFFFFF;
     --bg-subtle: #F3F4F6;
 
-    /* Gradient */
-    --energy-gradient: linear-gradient(90deg, #F59E0B, #0EA5E9, #7C3AED, #22C55E, #EF4444);
 }
 
 /* ========== MAIN CONTENT CONTAINER ========== */
@@ -57,40 +55,7 @@
     margin-bottom: 64px;
 }
 
-.section-header {
-    margin-bottom: 32px;
-}
-
-.section-header h2 {
-    position: relative;
-    padding-bottom: 12px;
-    font-family: var(--font-heading, 'Plus Jakarta Sans', sans-serif);
-    font-size: 2rem;
-    font-weight: 700;
-    color: var(--navy);
-}
-
-.section-header h2::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 60px;
-    height: 3px;
-    background: var(--sky);
-    border-radius: 2px;
-}
-
-.section-header.center h2::after {
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-.section-header p {
-    font-size: 1.05rem;
-    max-width: 940px;
-    color: var(--text-secondary);
-}
+/* .section-header rules moved to article.css (shared numbered-header template) */
 
 /* ========== STAT TILES ========== */
 .stat-row {
@@ -261,6 +226,46 @@
     align-items: start;
 }
 
+/* ========== MARKET STRUCTURE CARD COLOR VARIANTS ========== */
+.card-market-vi {
+    background: linear-gradient(135deg, rgba(14,165,233,0.07) 0%, #fff 100%);
+    border-left: 4px solid var(--sky);
+    border-top: 2px solid rgba(14,165,233,0.18);
+}
+.card-market-vi h3 {
+    color: #0369A1;
+    font-size: 1.15rem;
+    padding-bottom: 8px;
+    border-bottom: 2px solid rgba(14,165,233,0.18);
+    margin-bottom: 12px;
+}
+
+.card-market-comp {
+    background: linear-gradient(135deg, rgba(245,158,11,0.07) 0%, #fff 100%);
+    border-left: 4px solid var(--amber);
+    border-top: 2px solid rgba(245,158,11,0.18);
+}
+.card-market-comp h3 {
+    color: #B45309;
+    font-size: 1.15rem;
+    padding-bottom: 8px;
+    border-bottom: 2px solid rgba(245,158,11,0.18);
+    margin-bottom: 12px;
+}
+
+.card-market-ipp {
+    background: linear-gradient(135deg, rgba(99,102,241,0.07) 0%, #fff 100%);
+    border-left: 4px solid #6366F1;
+    border-top: 2px solid rgba(99,102,241,0.18);
+}
+.card-market-ipp h3 {
+    color: #6366F1;
+    font-size: 1.15rem;
+    padding-bottom: 8px;
+    border-bottom: 2px solid rgba(99,102,241,0.18);
+    margin-bottom: 12px;
+}
+
 /* ========== CHART CONTAINERS (page-specific) ========== */
 .chart-wrapper {
     position: relative;
@@ -364,14 +369,7 @@ sup.ref {
 .traffic-dot.yellow { background: var(--amber); }
 .traffic-dot.red { background: var(--red-accent); }
 
-/* ========== ENERGY GRADIENT DIVIDER ========== */
-.energy-divider {
-    height: 3px;
-    background: var(--energy-gradient);
-    border-radius: 2px;
-    margin: 32px 0;
-    opacity: 0.6;
-}
+/* .energy-divider moved to shared.css */
 
 /* ========== ANIMATED COUNTERS ========== */
 .counter {
@@ -526,7 +524,6 @@ sup.ref {
 
 @media (max-width: 768px) {
     .main-content { padding: 32px 16px; }
-    .section-header h2 { font-size: 1.5rem; }
     .story-content h2 { font-size: 1.5rem; }
     .card-grid-market { grid-template-columns: 1fr; }
     .card-grid-market > .card-full-row .card-ipp-body { grid-template-columns: 1fr; }
