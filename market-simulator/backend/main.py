@@ -741,17 +741,7 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
     # Zone details
     zone_details = []
     for zd in final.get("zone_details", []):
-        zone_details.append(ZoneDetail(
-            threshold=zd.get("threshold", 0),
-            revenue=round(zd.get("revenue", 0), 2),
-            cost=round(zd.get("cost", 0), 2),
-            profit=round(zd.get("profit", 0), 2),
-            new_gw=round(zd.get("new_gw", 0), 2),
-            avg_lmp=round(zd.get("avg_lmp", 0), 1),
-            energy_rev_mwh=zd.get("energy_rev_mwh", 0),
-            capacity_rev_mwh=zd.get("capacity_rev_mwh", 0),
-            rec_rev_mwh=zd.get("rec_rev_mwh", 0),
-        ))
+        zone_details.append(ZoneDetail(**zd))
 
     # CCS breakeven
     ccs_be = final.get("ccs_breakeven", {})
