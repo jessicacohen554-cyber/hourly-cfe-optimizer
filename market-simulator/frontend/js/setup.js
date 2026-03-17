@@ -315,6 +315,14 @@ function collectFormData() {
         },
     };
 
+    // Fleet overrides from fleet-config page (stored in localStorage)
+    try {
+        const saved = localStorage.getItem('fleet_overrides');
+        if (saved && saved !== '{}') {
+            params.fleet_overrides = JSON.parse(saved);
+        }
+    } catch (e) { /* ignore parse errors */ }
+
     // Trajectory-specific params (also used by sweep mode)
     if (mode === 'trajectory' || mode === 'sweep') {
         params.condition = document.querySelector('#conditionToggle .toggle-btn.active')?.dataset.value || 'Facilitating';
@@ -420,7 +428,40 @@ document.querySelectorAll('#custom_fuel_toggle, #custom_lmp_toggle, #custom_capa
     toggle.addEventListener('change', () => checkCustomInputStatus());
 });
 
+// ── Fleet override status display ──
+function updateFleetStatus() {
+    const saved = localStorage.getItem('fleet_overrides');
+    const statusEl = document.getElementById('fleetStatusText');
+    if (!statusEl) return;
+
+    if (!saved || saved === '{}') {
+        statusEl.textContent = 'Using defaults (all plants at baseline status)';
+        statusEl.style.color = 'var(--text-muted)';
+        return;
+    }
+
+    try {
+        const overrides = JSON.parse(saved);
+        const count = Object.keys(overrides).length;
+        if (count === 0) {
+            statusEl.textContent = 'Using defaults (all plants at baseline status)';
+            statusEl.style.color = 'var(--text-muted)';
+            return;
+        }
+        const retired = Object.values(overrides).filter(v => v === 'Retired').length;
+        const ccs = Object.values(overrides).filter(v => v === 'CCS Retrofit').length;
+        const parts = [];
+        if (retired > 0) parts.push(`${retired} retired`);
+        if (ccs > 0) parts.push(`${ccs} CCS retrofit`);
+        statusEl.innerHTML = `<span style="color: #22C55E; font-weight: 600;">✓</span> ${count} plant${count > 1 ? 's' : ''} modified (${parts.join(', ')})`;
+        statusEl.style.color = 'var(--navy)';
+    } catch (e) {
+        statusEl.textContent = 'Using defaults (all plants at baseline status)';
+    }
+}
+
 // ── Initialize ──
 updateISOSummary();
 updateGeothermalVisibility();
 checkCustomInputStatus();
+updateFleetStatus();

@@ -213,6 +213,30 @@ async def serve_results_page():
     return FileResponse(str(results_path), media_type="text/html")
 
 
+@app.get("/fleet-config", response_class=HTMLResponse)
+async def serve_fleet_config_page():
+    """Serve the fleet configuration page."""
+    fleet_path = FRONTEND_DIR / "fleet-config.html"
+    if not fleet_path.exists():
+        raise HTTPException(status_code=404, detail="fleet-config.html not found")
+    return FileResponse(str(fleet_path), media_type="text/html")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fleet configuration endpoint
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/fleet-config")
+async def get_fleet_config():
+    """Return Constellation/Calpine fleet data for the fleet configuration UI."""
+    fleet_path = MARKET_SIM_ROOT / "data" / "constellation_fleet.json"
+    if not fleet_path.exists():
+        raise HTTPException(status_code=404, detail="constellation_fleet.json not found")
+    import json
+    with open(fleet_path) as f:
+        return json.load(f)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # ISO metadata endpoints
 # ─────────────────────────────────────────────────────────────────────────────
