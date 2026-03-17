@@ -127,6 +127,16 @@ def generate_gen_profile(iso, resource, year='2024'):
     else:
         profile = np.ones(H) * 0.5
 
+    # Normalize to sum ≈ 1.0 — dispatch_utils expects shape profiles (WHEN
+    # generation happens), not raw CF values. The procurement_factor × pct/100
+    # multipliers handle the magnitude; the profile provides the hourly shape.
+    # Baseload profiles (clean_firm, ccs_ccgt) are overridden by
+    # get_supply_profiles() anyway, but normalize everything for consistency.
+    profile = np.asarray(profile, dtype=np.float64)
+    total = np.sum(profile)
+    if total > 0:
+        profile = profile / total
+
     return profile.tolist()
 
 
@@ -156,7 +166,7 @@ def generate_all_profiles(output_dir=None, isos=None):
     if isos is None:
         isos = list(ISOS)
 
-    year = '2024'
+    year = '2025'
 
     # Demand profiles
     demand_data = {}
@@ -170,9 +180,11 @@ def generate_all_profiles(output_dir=None, isos=None):
     gen_data = {}
     resources = ['solar', 'wind', 'offshore_wind', 'clean_firm', 'ccs_ccgt', 'hydro', 'geothermal']
     for iso in isos:
-        gen_data[iso] = {}
+        profiles = {}
         for res in resources:
-            gen_data[iso][res] = {year: generate_gen_profile(iso, res, year)}
+            profiles[res] = generate_gen_profile(iso, res, year)
+        # Store under both '2025' and '2024' so any DATA_YEAR lookup works
+        gen_data[iso] = {year: profiles, '2024': profiles}
     with open(os.path.join(output_dir, 'eia_gen_profiles.json'), 'w') as f:
         json.dump(gen_data, f)
     print(f"  Generation profiles: {len(isos)} ISOs × {len(resources)} resources")
@@ -186,11 +198,18 @@ def generate_all_profiles(output_dir=None, isos=None):
     print(f"  Fossil mix profiles: {len(isos)} ISOs")
 
     # Emission rates (eGRID-derived)
+    # Per-fuel CO2 rates in lbs/MWh (used by compute_fossil_retirement)
+    # Source: EPA eGRID 2022 — typical fleet-weighted values by fuel type
+    # coal_co2: ~2,200 lbs/MWh (bituminous), gas_co2: ~900 lbs/MWh (CCGT fleet avg),
+    # oil_co2: ~1,600 lbs/MWh (distillate/residual blend)
     emission_rates = {
-        'CAISO': {'co2_rate': 0.35}, 'ERCOT': {'co2_rate': 0.42},
-        'PJM': {'co2_rate': 0.55}, 'NYISO': {'co2_rate': 0.28},
-        'NEISO': {'co2_rate': 0.30}, 'MISO': {'co2_rate': 0.62},
-        'SPP': {'co2_rate': 0.48},
+        'CAISO': {'co2_rate': 0.35, 'coal_co2_lb_per_mwh': 2200, 'gas_co2_lb_per_mwh': 880, 'oil_co2_lb_per_mwh': 1600},
+        'ERCOT': {'co2_rate': 0.42, 'coal_co2_lb_per_mwh': 2150, 'gas_co2_lb_per_mwh': 920, 'oil_co2_lb_per_mwh': 1650},
+        'PJM':   {'co2_rate': 0.55, 'coal_co2_lb_per_mwh': 2250, 'gas_co2_lb_per_mwh': 900, 'oil_co2_lb_per_mwh': 1600},
+        'NYISO': {'co2_rate': 0.28, 'coal_co2_lb_per_mwh': 2200, 'gas_co2_lb_per_mwh': 850, 'oil_co2_lb_per_mwh': 1550},
+        'NEISO': {'co2_rate': 0.30, 'coal_co2_lb_per_mwh': 2200, 'gas_co2_lb_per_mwh': 870, 'oil_co2_lb_per_mwh': 1580},
+        'MISO':  {'co2_rate': 0.62, 'coal_co2_lb_per_mwh': 2300, 'gas_co2_lb_per_mwh': 950, 'oil_co2_lb_per_mwh': 1650},
+        'SPP':   {'co2_rate': 0.48, 'coal_co2_lb_per_mwh': 2200, 'gas_co2_lb_per_mwh': 900, 'oil_co2_lb_per_mwh': 1600},
     }
     with open(os.path.join(output_dir, 'egrid_emission_rates.json'), 'w') as f:
         json.dump(emission_rates, f, indent=2)
