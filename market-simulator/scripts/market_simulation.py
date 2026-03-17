@@ -508,10 +508,11 @@ def compute_generator_economics(stack, hourly_lmp, unit_idx, dispatch,
     residual = dispatch.get('residual_demand', np.zeros(H))
     if isinstance(residual, (list, tuple)):
         residual = np.array(residual, dtype=np.float64)
-    # residual_demand is normalized [0-1]; scale to MW element-wise
-    # Using per-hour demand preserves the hourly load shape so plants cycle
-    # on/off with demand instead of getting binary 100%/0% capacity factors
-    fossil_demand_mw = residual * demand_mw_profile
+    # residual_demand is in same normalized units as demand_norm (sum ≈ 1.0).
+    # Convert to MW: residual_mw = residual_norm × total_annual_mwh
+    # (Same conversion used in lmp_engine.compute_hourly_lmp_vectorized)
+    total_annual_mwh = float(np.sum(demand_mw_profile))
+    fossil_demand_mw = residual * total_annual_mwh
 
     # Compute carbon adder per unit
     carbon_adder = {}
@@ -615,9 +616,11 @@ def compute_plant_level_economics(plant_stack, hourly_lmp, dispatch,
     residual = dispatch.get('residual_demand', np.zeros(H_val))
     if isinstance(residual, (list, tuple)):
         residual = np.array(residual, dtype=np.float64)
-    # Element-wise scaling: each hour's normalized residual × that hour's MW demand
-    # Preserves hourly load shape so plants cycle on/off realistically
-    fossil_demand_mw = residual * demand_mw_profile
+    # residual_demand is in same normalized units as demand_norm (sum ≈ 1.0).
+    # Convert to MW: residual_mw = residual_norm × total_annual_mwh
+    # (Same conversion used in lmp_engine.compute_hourly_lmp_vectorized)
+    total_annual_mwh = float(np.sum(demand_mw_profile))
+    fossil_demand_mw = residual * total_annual_mwh
 
     results = []
     for i, plant in enumerate(plant_stack):
@@ -1204,6 +1207,97 @@ def load_step3_data():
                 'gas_backup_mw': float(row.get('gas_gas_backup_needed_mw', 0)),
                 'new_gas_mw': float(row.get('gas_new_gas_build_mw', 0)),
                 'gas_cost_per_mwh': float(row.get('gas_gas_cost_per_mwh', 0)),
+            }
+
+        all_data[iso] = iso_data
+
+    # If no parquet data found, generate synthetic threshold data
+    if not all_data:
+        print("  INFO: No step2.2 parquets found — generating synthetic threshold data")
+        all_data = _generate_synthetic_step3_data()
+
+    return all_data
+
+
+def _generate_synthetic_step3_data():
+    """Generate synthetic resource mix data for each ISO when parquets are absent.
+
+    Produces a reasonable set of threshold → resource_mix mappings based on
+    known grid characteristics. This enables the tool to run standalone for
+    screening-level analysis without requiring the full pipeline.
+    """
+    from pipeline_config import ISOS, GRID_MIX_SHARES
+
+    # Typical resource ramp patterns per ISO
+    iso_profiles = {
+        'CAISO': {'solar_max': 35, 'wind_max': 15, 'firm_max': 12, 'offshore_max': 0, 'hydro': 10, 'ccs_max': 5},
+        'ERCOT': {'solar_max': 25, 'wind_max': 30, 'firm_max': 8, 'offshore_max': 3, 'hydro': 1, 'ccs_max': 5},
+        'PJM':   {'solar_max': 20, 'wind_max': 20, 'firm_max': 15, 'offshore_max': 8, 'hydro': 2, 'ccs_max': 8},
+        'NYISO': {'solar_max': 15, 'wind_max': 15, 'firm_max': 10, 'offshore_max': 10, 'hydro': 15, 'ccs_max': 5},
+        'NEISO': {'solar_max': 12, 'wind_max': 18, 'firm_max': 8, 'offshore_max': 15, 'hydro': 8, 'ccs_max': 5},
+        'MISO':  {'solar_max': 20, 'wind_max': 30, 'firm_max': 10, 'offshore_max': 0, 'hydro': 3, 'ccs_max': 8},
+        'SPP':   {'solar_max': 20, 'wind_max': 35, 'firm_max': 5, 'offshore_max': 0, 'hydro': 3, 'ccs_max': 3},
+    }
+
+    thresholds = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.9]
+    all_data = {}
+
+    for iso in ISOS:
+        profile = iso_profiles.get(iso, iso_profiles['PJM'])
+        existing_clean = sum(GRID_MIX_SHARES.get(iso, {}).values())
+        iso_data = {}
+
+        for t in thresholds:
+            if t <= existing_clean:
+                continue
+
+            # Linear ramp from existing clean to target, allocating resources
+            progress = min(1.0, (t - existing_clean) / (99.9 - existing_clean))
+
+            solar = profile['solar_max'] * progress
+            wind = profile['wind_max'] * progress
+            firm = profile['firm_max'] * progress * min(1.0, progress * 1.5)  # firm ramps faster at high targets
+            offshore = profile['offshore_max'] * progress
+            ccs = profile['ccs_max'] * max(0, progress - 0.3) / 0.7 if progress > 0.3 else 0
+            hydro = profile['hydro']  # hydro is existing, doesn't change
+
+            # Scale to hit target
+            total_new = solar + wind + firm + offshore + ccs
+            remaining = t - existing_clean - hydro
+            if total_new > 0 and remaining > 0:
+                scale = remaining / total_new
+                solar *= scale
+                wind *= scale
+                firm *= scale
+                offshore *= scale
+                ccs *= scale
+
+            resource_pcts = {
+                'clean_firm': round(firm + GRID_MIX_SHARES.get(iso, {}).get('clean_firm', 0), 2),
+                'solar': round(solar + GRID_MIX_SHARES.get(iso, {}).get('solar', 0), 2),
+                'wind': round(wind + GRID_MIX_SHARES.get(iso, {}).get('wind', 0), 2),
+                'offshore_wind': round(offshore, 2),
+                'ccs_ccgt': round(ccs, 2),
+                'hydro': round(hydro, 2),
+            }
+
+            # Storage ramps with clean % (more needed at high targets)
+            bat_pct = min(15, progress * 12)
+            bat8_pct = min(8, max(0, progress - 0.3) * 10)
+            ldes_pct = min(5, max(0, progress - 0.5) * 8)
+            h2_pct = min(3, max(0, progress - 0.8) * 10) if t >= 95 else 0
+
+            iso_data[t] = {
+                'resource_pcts': resource_pcts,
+                'total_cost': 0,  # no cost data without parquets
+                'hourly_match_score': t / 100.0,
+                'battery_pct': round(bat_pct, 1),
+                'battery8_pct': round(bat8_pct, 1),
+                'ldes_pct': round(ldes_pct, 1),
+                'h2_pct': round(h2_pct, 1),
+                'gas_backup_mw': 0,
+                'new_gas_mw': 0,
+                'gas_cost_per_mwh': 0,
             }
 
         all_data[iso] = iso_data

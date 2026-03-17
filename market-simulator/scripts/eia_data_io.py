@@ -65,12 +65,14 @@ def load_generation_profiles():
         return result
 
     jp = _try_json('eia_generation_profiles')
+    if jp is None:
+        jp = _try_json('eia_gen_profiles')  # synthetic profile short name
     if jp:
         with open(jp) as f:
             return json.load(f)
 
     raise FileNotFoundError(
-        f"No generation profiles found. Checked:\n  {EIA_DIR}/eia_generation_profiles.parquet\n  {EIA_DIR}/eia_generation_profiles.json")
+        f"No generation profiles found. Checked:\n  {EIA_DIR}/eia_generation_profiles.parquet\n  {EIA_DIR}/eia_generation_profiles.json\n  {EIA_DIR}/eia_gen_profiles.json")
 
 
 def load_demand_profiles():
