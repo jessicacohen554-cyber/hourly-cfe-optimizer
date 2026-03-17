@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """
-CCS Proximity Analysis: Spatial viability scoring for CCUS retrofitting of US fossil plants.
+CCS Proximity Analysis: Spatial viability scoring for CCUS retrofitting of NGCC plants.
+
+Filters to natural gas combined cycle (CCGT) plants only, identified via the
+fleet-rosetta cross-reference (CEG-IPP-Climate/fleet-rosetta.csv) matched against
+EPA eGRID 2023 for coordinates and 2023 CO2 emissions.
 
 Automatically downloads and cross-references:
-  1. EPA eGRID 2023 — fossil power plant locations + CO2 emissions
+  1. Fleet-rosetta → eGRID 2023 — NGCC plant locations + CO2 emissions
   2. NETL NATCARB — CO2 pipeline routes (ArcGIS REST API)
   3. NETL NATCARB — geologic saline storage polygons (ArcGIS REST API)
   4. EPA/CATF — Class VI injection well permits (curated reference + EPA FRS)
 
-Produces a ranked viability table scoring each plant on:
+Produces a ranked viability table scoring each NGCC plant on:
   - Annual CO2 emissions volume (40%)
   - Distance to nearest CO2 pipeline (25%)
   - Distance to nearest Class VI well (20%)
@@ -25,6 +29,7 @@ Output:
     output/ccus_viability_map.png (if matplotlib available)
 
 Data sources:
+    - Fleet-rosetta: CEG-IPP-Climate/fleet-rosetta.csv
     - EPA eGRID 2023: https://www.epa.gov/egrid
     - NETL NATCARB: https://netl.doe.gov/carbon-management/carbon-storage/atlas-data
     - CATF Class VI Wells: https://www.catf.us/classviwellsmap/
@@ -50,10 +55,14 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 # Paths
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_DIR = os.path.dirname(SCRIPT_DIR)
 DATA_DIR = os.path.join(SCRIPT_DIR, "data")
 OUTPUT_DIR = os.path.join(SCRIPT_DIR, "output")
 os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# Fleet-rosetta (identifies CCGT plants by CAMPD Facility ID → eGRID ORISPL)
+FLEET_ROSETTA = os.path.join(REPO_DIR, "CEG-IPP-Climate", "fleet-rosetta.csv")
 
 # Target CRS — NAD83 / Conus Albers Equal Area (meters, optimized for CONUS)
 TARGET_CRS = "EPSG:5070"
@@ -75,8 +84,8 @@ NETL_SALINE_URL = (
     "service_e5c790678b2f40288e0ef98f4ea63675/FeatureServer"
 )
 
-# Fossil fuel categories in eGRID PLFUELCT column
-FOSSIL_FUELS = {"COAL", "GAS", "OIL", "OFSL", "OTHF"}
+# Fleet-rosetta plant type filter — only natural gas combined cycles
+CCGT_PLANT_TYPE = "Combined Cycle"
 
 # BA code → ISO mapping (from pipeline_config)
 BA_TO_ISO = {
@@ -121,52 +130,69 @@ def _download_file(url, dest, label="file"):
     return False
 
 
-def fetch_egrid_plants():
+def fetch_ccgt_plants():
     """
-    Download EPA eGRID 2023 and extract fossil power plant locations + emissions.
-    Returns GeoDataFrame with columns: ORISPL, PNAME, PSTATABB, LAT, LON,
-    NAMEPCAP, PLCO2AN, PLNGENAN, PLFUELCT, BACODE, ISO, geometry.
-    """
-    print("\n[1/4] Fetching EPA eGRID 2023 plant data...")
+    Identify NGCC/CCGT plants from fleet-rosetta, then pull coordinates and
+    2023 CO2 emissions from EPA eGRID 2023.
 
-    # Download
+    Returns GeoDataFrame with columns: ORISPL, PNAME, PSTATABB, LAT, LON,
+    NAMEPCAP, PLCO2AN, PLNGENAN, PLFUELCT, BACODE, ISO, FLEET_NAME,
+    OWNED_CAPACITY_MW, geometry.
+    """
+    print("\n[1/4] Identifying NGCC plants from fleet-rosetta + eGRID 2023...")
+
+    # --- Load fleet-rosetta and filter to Combined Cycle ---
+    if not os.path.exists(FLEET_ROSETTA):
+        print(f"ERROR: Fleet-rosetta not found: {FLEET_ROSETTA}")
+        sys.exit(1)
+
+    fleet = pd.read_csv(FLEET_ROSETTA)
+    cc = fleet[fleet["Plant Type"] == CCGT_PLANT_TYPE].copy()
+    print(f"  Fleet-rosetta Combined Cycle entries: {len(cc)}")
+
+    # Extract CAMPD Facility IDs (= eGRID ORISPL)
+    cc["CAMPD Facility ID"] = pd.to_numeric(cc["CAMPD Facility ID"], errors="coerce")
+    cc_with_id = cc.dropna(subset=["CAMPD Facility ID"])
+    campd_ids = cc_with_id["CAMPD Facility ID"].astype(int).unique()
+    print(f"  Unique CAMPD/ORISPL IDs: {len(campd_ids)}")
+    if cc["CAMPD Facility ID"].isna().sum() > 0:
+        print(f"  ({cc['CAMPD Facility ID'].isna().sum()} entries without CAMPD ID — skipped)")
+
+    # --- Download eGRID ---
     downloaded = False
     for url in EGRID_URLS:
         if _download_file(url, EGRID_FILE, "eGRID 2023"):
             downloaded = True
             break
     if not downloaded:
-        print("ERROR: Could not download eGRID. Please manually download from:")
-        print("  https://www.epa.gov/egrid/detailed-data")
-        print(f"  Save to: {EGRID_FILE}")
-        sys.exit(1)
+        # Try the repo copy
+        repo_egrid = os.path.join(REPO_DIR, "data", "egrid2023_data_rev2 2.xlsx")
+        if os.path.exists(repo_egrid):
+            EGRID_FILE_USE = repo_egrid
+            print(f"  Using repo copy: {repo_egrid}")
+        else:
+            print("ERROR: Could not download eGRID. Please manually download from:")
+            print("  https://www.epa.gov/egrid/detailed-data")
+            sys.exit(1)
+    else:
+        EGRID_FILE_USE = EGRID_FILE
 
-    # Read the plant-level sheet
+    # --- Read eGRID plant sheet ---
     try:
         import openpyxl  # noqa: F401
     except ImportError:
         os.system(f"{sys.executable} -m pip install openpyxl -q")
 
-    xls = pd.ExcelFile(EGRID_FILE, engine="openpyxl")
-    plant_sheet = None
-    for name in xls.sheet_names:
-        if "PLNT" in name.upper():
-            plant_sheet = name
-            break
+    xls = pd.ExcelFile(EGRID_FILE_USE, engine="openpyxl")
+    plant_sheet = next((n for n in xls.sheet_names if "PLNT" in n.upper()), None)
     if plant_sheet is None:
         print(f"ERROR: No plant sheet found. Sheets: {xls.sheet_names}")
         sys.exit(1)
 
-    # eGRID has a description row (row 0) then header row (row 1)
     df = pd.read_excel(xls, sheet_name=plant_sheet, header=1)
-    print(f"  Raw plant records: {len(df):,}")
-
-    # Standardize column names to uppercase
     df.columns = [str(c).strip().upper() for c in df.columns]
 
-    # Required columns
-    needed = ["LAT", "LON", "PLCO2AN", "PLFUELCT"]
-    # eGRID sometimes uses PLNTLAT/PLNTLON or LAT/LON
+    # Normalize lat/lon column names
     lat_col = next((c for c in df.columns if c in ("LAT", "PLNTLAT", "LATITUD")), None)
     lon_col = next((c for c in df.columns if c in ("LON", "PLNTLON", "LONGITUD")), None)
     if lat_col and lat_col != "LAT":
@@ -174,46 +200,68 @@ def fetch_egrid_plants():
     if lon_col and lon_col != "LON":
         df.rename(columns={lon_col: "LON"}, inplace=True)
 
-    for col in needed:
-        if col not in df.columns:
-            print(f"  WARNING: Column '{col}' not found. Available: {list(df.columns)[:20]}")
+    # --- Filter to fleet-rosetta CCGT ORISPL IDs ---
+    matched = df[df["ORISPL"].isin(campd_ids)].copy()
+    print(f"  eGRID matches: {len(matched)} plants")
 
-    # Filter to fossil plants with valid coordinates
-    df = df.dropna(subset=["LAT", "LON"])
-    df["LAT"] = pd.to_numeric(df["LAT"], errors="coerce")
-    df["LON"] = pd.to_numeric(df["LON"], errors="coerce")
-    df = df.dropna(subset=["LAT", "LON"])
+    # Validate coordinates
+    matched["LAT"] = pd.to_numeric(matched["LAT"], errors="coerce")
+    matched["LON"] = pd.to_numeric(matched["LON"], errors="coerce")
+    matched = matched.dropna(subset=["LAT", "LON"])
 
-    # Filter CONUS only (exclude AK, HI, territories)
-    df = df[(df["LAT"] > 24) & (df["LAT"] < 50) &
-            (df["LON"] > -125) & (df["LON"] < -66)]
-
-    # Filter fossil fuels
-    if "PLFUELCT" in df.columns:
-        df["PLFUELCT"] = df["PLFUELCT"].astype(str).str.strip().str.upper()
-        df = df[df["PLFUELCT"].isin(FOSSIL_FUELS)]
+    # CONUS bounds check
+    matched = matched[(matched["LAT"] > 24) & (matched["LAT"] < 50) &
+                      (matched["LON"] > -125) & (matched["LON"] < -66)]
 
     # Clean numeric columns
     for col in ["PLCO2AN", "PLNGENAN", "NAMEPCAP"]:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+        if col in matched.columns:
+            matched[col] = pd.to_numeric(matched[col], errors="coerce").fillna(0)
 
     # Map BA to ISO
-    if "BACODE" in df.columns:
-        df["ISO"] = df["BACODE"].map(BA_TO_ISO).fillna("Other")
+    if "BACODE" in matched.columns:
+        matched["ISO"] = matched["BACODE"].map(BA_TO_ISO).fillna("Other")
     else:
-        df["ISO"] = "Unknown"
+        matched["ISO"] = "Unknown"
+
+    # Merge fleet-rosetta metadata (plant name from 10-K, owned capacity, equity share)
+    fleet_meta = cc_with_id[["CAMPD Facility ID", "10-K Org Name", "Owned Capacity",
+                              "Equity Share %", "ISO"]].copy()
+    fleet_meta = fleet_meta.rename(columns={
+        "CAMPD Facility ID": "ORISPL",
+        "10-K Org Name": "FLEET_NAME",
+        "Owned Capacity": "OWNED_CAPACITY_MW",
+        "Equity Share %": "EQUITY_SHARE",
+        "ISO": "FLEET_ISO",
+    })
+    fleet_meta["ORISPL"] = fleet_meta["ORISPL"].astype(int)
+    # Parse equity share: "100%" → 1.0, "51%" → 0.51
+    fleet_meta["EQUITY_SHARE"] = (
+        fleet_meta["EQUITY_SHARE"].astype(str)
+        .str.replace("%", "", regex=False)
+        .pipe(pd.to_numeric, errors="coerce") / 100.0
+    ).fillna(1.0)
+    # Deduplicate (some plants have multiple rows for different units)
+    fleet_meta = fleet_meta.groupby("ORISPL").first().reset_index()
+    matched = matched.merge(fleet_meta, on="ORISPL", how="left")
+
+    # Compute equity-adjusted CO2 emissions
+    matched["EQUITY_SHARE"] = matched["EQUITY_SHARE"].fillna(1.0)
+    matched["PLCO2AN_EQUITY"] = matched["PLCO2AN"] * matched["EQUITY_SHARE"]
 
     # Build GeoDataFrame
-    geometry = [Point(lon, lat) for lon, lat in zip(df["LON"], df["LAT"])]
-    keep_cols = [c for c in ["ORISPL", "PNAME", "PSTATABB", "LAT", "LON",
-                              "NAMEPCAP", "PLCO2AN", "PLNGENAN", "PLFUELCT",
-                              "BACODE", "ISO"] if c in df.columns]
-    gdf = gpd.GeoDataFrame(df[keep_cols].reset_index(drop=True),
+    geometry = [Point(lon, lat) for lon, lat in zip(matched["LON"], matched["LAT"])]
+    keep_cols = [c for c in ["ORISPL", "PNAME", "FLEET_NAME", "PSTATABB", "LAT", "LON",
+                              "NAMEPCAP", "OWNED_CAPACITY_MW", "PLCO2AN", "PLCO2AN_EQUITY",
+                              "EQUITY_SHARE", "PLNGENAN", "PLFUELCT", "BACODE", "ISO"]
+                 if c in matched.columns]
+    gdf = gpd.GeoDataFrame(matched[keep_cols].reset_index(drop=True),
                            geometry=geometry, crs="EPSG:4326")
 
-    print(f"  Fossil plants with coordinates: {len(gdf):,}")
-    print(f"  Total CO2: {gdf['PLCO2AN'].sum()/1e6:.1f} million short tons")
+    print(f"  NGCC plants with coordinates: {len(gdf):,}")
+    print(f"  Total 2023 CO2 (plant-level): {gdf['PLCO2AN'].sum()/1e6:.1f} million short tons")
+    print(f"  Total 2023 CO2 (equity-adjusted): {gdf['PLCO2AN_EQUITY'].sum()/1e6:.1f} million short tons")
+    print(f"  Total nameplate capacity: {gdf['NAMEPCAP'].sum():,.0f} MW")
     return gdf
 
 
@@ -781,8 +829,9 @@ def compute_viability_scores(df):
     print("\nComputing viability scores...")
 
     # --- CO2 emissions score (0-1) ---
-    # Use log scale because emissions span several orders of magnitude
-    co2 = df["PLCO2AN"].clip(lower=1)  # avoid log(0)
+    # Use equity-adjusted emissions; log scale because they span orders of magnitude
+    co2_col = "PLCO2AN_EQUITY" if "PLCO2AN_EQUITY" in df.columns else "PLCO2AN"
+    co2 = df[co2_col].clip(lower=1)  # avoid log(0)
     log_co2 = np.log10(co2)
     score_co2 = (log_co2 - log_co2.min()) / (log_co2.max() - log_co2.min())
 
@@ -832,26 +881,29 @@ def generate_outputs(df, pipelines_gdf, wells_gdf, formations_gdf):
     df["rank"] = range(1, len(df) + 1)
 
     # --- Top 25 plants ---
+    co2_label = "CO2 Eq kT" if "PLCO2AN_EQUITY" in df.columns else "CO2 (kT)"
     print(f"\n{'Rank':>5} {'Plant Name':<40} {'State':>5} {'ISO':>7} "
-          f"{'CO2 (kT)':>10} {'Pipe km':>9} {'Well km':>9} "
+          f"{'Eq%':>5} {co2_label:>10} {'Pipe km':>9} {'Well km':>9} "
           f"{'Geology':>8} {'Score':>7}")
-    print("-" * 110)
+    print("-" * 120)
     for _, row in df.head(25).iterrows():
-        co2_kt = row.get("PLCO2AN", 0) / 1000
+        co2_kt = row.get("PLCO2AN_EQUITY", row.get("PLCO2AN", 0)) / 1000
         pipe_km = row.get("dist_pipeline_m", 0) / 1000
         well_km = row.get("dist_well_m", 0) / 1000
         geol = "YES" if row.get("within_formation", False) else "no"
         name = str(row.get("PNAME", "Unknown"))[:38]
+        eq_pct = row.get("EQUITY_SHARE", 1.0) * 100
         print(f"{row['rank']:>5} {name:<40} {row.get('PSTATABB','??'):>5} "
-              f"{row.get('ISO',''):>7} {co2_kt:>10,.0f} {pipe_km:>9,.0f} "
+              f"{row.get('ISO',''):>7} {eq_pct:>4.0f}% {co2_kt:>10,.0f} {pipe_km:>9,.0f} "
               f"{well_km:>9,.0f} {geol:>8} {row['viability_score']:>7.1f}")
 
     # --- Summary by state ---
+    co2_agg_col = "PLCO2AN_EQUITY" if "PLCO2AN_EQUITY" in df.columns else "PLCO2AN"
     state_summary = df.groupby("PSTATABB").agg(
         plant_count=("viability_score", "size"),
         avg_score=("viability_score", "mean"),
         top_score=("viability_score", "max"),
-        total_co2_mt=("PLCO2AN", lambda x: x.sum() / 1e6),
+        total_co2_mt=(co2_agg_col, lambda x: x.sum() / 1e6),
     ).sort_values("avg_score", ascending=False).round(1)
 
     print(f"\n\nSUMMARY BY STATE (top 15):")
@@ -867,7 +919,7 @@ def generate_outputs(df, pipelines_gdf, wells_gdf, formations_gdf):
         plant_count=("viability_score", "size"),
         avg_score=("viability_score", "mean"),
         top_score=("viability_score", "max"),
-        total_co2_mt=("PLCO2AN", lambda x: x.sum() / 1e6),
+        total_co2_mt=(co2_agg_col, lambda x: x.sum() / 1e6),
     ).sort_values("avg_score", ascending=False).round(1)
 
     print(f"\n\nSUMMARY BY ISO:")
@@ -970,11 +1022,11 @@ def plot_viability_map(plants_df, pipelines_gdf, wells_gdf, formations_gdf):
 def main():
     print("=" * 80)
     print("CCS PROXIMITY ANALYSIS")
-    print("Spatial viability scoring for CCUS retrofitting of US fossil power plants")
+    print("Spatial viability scoring for CCUS retrofitting of NGCC power plants")
     print("=" * 80)
 
     # ── Step 1: Ingest all datasets ──
-    plants_gdf = fetch_egrid_plants()
+    plants_gdf = fetch_ccgt_plants()
     pipelines_gdf = fetch_co2_pipelines()
     formations_gdf = fetch_saline_formations()
     wells_gdf = fetch_class_vi_wells()
