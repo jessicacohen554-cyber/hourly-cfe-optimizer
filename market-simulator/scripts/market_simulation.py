@@ -1316,11 +1316,18 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
 
         zone_results.append({
             'resource': res,
+            'threshold': round(clean_pct, 1),
             'twh': round(deploy_twh, 2),
             'gw': round(deploy_gw, 2),
+            'new_gw': round(deploy_gw, 2),
             'lcoe': entry['lcoe'],
+            'cost': entry['lcoe'],
             'revenue': entry['revenue'],
             'profit': entry['profit'],
+            'avg_lmp': round(avg_lmp, 1),
+            'energy_rev_mwh': round(base_energy_rev, 2),
+            'capacity_rev_mwh': round(entry['capacity_rev'], 2),
+            'rec_rev_mwh': round(entry['rec_rev'], 2),
         })
 
     # Build revenue breakdown from deployed mix
@@ -2008,7 +2015,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 'market_stop': state['market_stopped'],
                 'resource_mix_twh': {k: round(v, 2) for k, v in resource_mix_twh.items()},
                 'cumulative_gw': {k: round(v, 2) for k, v in cumulative_gw.items()},
-                'zones_deployed': [z['threshold'] for z in zone_results],
+                'zones_deployed': [z['resource'] for z in zone_results],
                 'zone_details': zone_results,
                 'generator_economics': gen_econ,
                 'emissions_by_fuel': emissions_by_fuel,
