@@ -1,17 +1,17 @@
 // ============================================================================
-// SHARED SCROLL OBSERVER — Centralized IntersectionObserver for fade-in
+// SHARED SCROLL OBSERVER - Centralized IntersectionObserver for fade-in
 // ============================================================================
 // Usage: Include this script AFTER shared.css (which defines the animation
 // classes). Elements with these classes will automatically animate on scroll:
 //
-//   .scroll-reveal       — Fade in + slide up (0.7s, spring ease)
-//   .scroll-reveal-slow  — Fade in + slide up (0.8s, ease-out-quart)
-//   .story-fade-in       — Same as scroll-reveal (legacy class)
-//   .story-section       — Same as scroll-reveal (legacy class)
-//   .fade-in             — Fade in + slide up (0.7s, ease-out)
-//   .reveal              — Fade in + slide up (0.7s, ease-out) (reference pages)
-//   .narrative-card      — Fade in + slide up (0.8s, card style)
-//   .synthesis-card      — Fade in + slide up (0.8s, card style)
+//   .scroll-reveal       - Fade in + slide up (0.7s, spring ease)
+//   .scroll-reveal-slow  - Fade in + slide up (0.8s, ease-out-quart)
+//   .story-fade-in       - Same as scroll-reveal (legacy class)
+//   .story-section       - Same as scroll-reveal (legacy class)
+//   .fade-in             - Fade in + slide up (0.7s, ease-out)
+//   .reveal              - Fade in + slide up (0.7s, ease-out) (reference pages)
+//   .narrative-card      - Fade in + slide up (0.8s, card style)
+//   .synthesis-card      - Fade in + slide up (0.8s, card style)
 //
 // All elements get the .visible class added when they enter the viewport.
 // The observer uses a 15% threshold for triggering.
