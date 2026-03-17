@@ -83,6 +83,22 @@
         <div class="header-accent"></div>
     </div>
 
+    <!-- Synthesis Hero Callout -->
+    <section class="content-section fade-in" id="synthesis-hero" style="padding-top: var(--space-lg)">
+        <div class="card fade-in" style="padding: var(--space-2xl); border-left: 5px solid #22C55E; background: linear-gradient(135deg, rgba(34,197,94,0.04), rgba(14,165,233,0.04));">
+            <h2 style="font-family: var(--font-heading); font-size: 1.4rem; color: var(--navy); margin: 0 0 var(--space-md)">Building the Grid We Need by 2040</h2>
+            <p style="font-size: 1.05rem; color: var(--text-secondary); line-height: 1.75; margin: 0 0 var(--space-md)">
+                Deep grid decarbonization requires corporate procurement signals that are coherent with grid-level planning &mdash; not a collection of individual optimizations that might conflict. The old approach of picking off the cheapest abatement opportunities anywhere on the map was rational in the era of coal displacement. But the remaining challenges are temporal (nights, winter, multi-day weather events) and spatial (each grid needs its own portfolio of firm clean + storage).
+            </p>
+            <p style="font-size: 1.05rem; color: var(--text-secondary); line-height: 1.75; margin: 0 0 var(--space-md)">
+                Strategy 2C's hourly matching framework creates this coherence by construction: procurement must match load hour-by-hour within the buyer's grid, so investment flows to the resources <em>that specific grid needs</em>. Strategy 1B is individually rational but collectively insufficient &mdash; it optimizes each buyer's $/tCO&#8322; without contextualizing the spatial and temporal dependencies of the grid.
+            </p>
+            <div class="insight-box insight-success" style="margin: 0; border-left-width: 3px;">
+                <strong>The question isn't which strategy is cheaper today &mdash; it's which strategy builds the grid we need by 2040.</strong> Hourly matching isn't a premium &mdash; it's the framework that aligns individual procurement with collective grid transformation.
+            </div>
+        </div>
+    </section>
+
     <!-- Hero Stats -->
     <section class="content-section fade-in" id="hero-stats">
         <p style="text-align:center; max-width:940px; margin:0 auto var(--space-xl); font-size:1.05rem; color:var(--text-secondary); line-height:1.75">
@@ -274,9 +290,26 @@
             <p>Loading cost crossover analysis...</p>
         </div>
 
-        <!-- Gas Lock-in by ISO -->
+        <!-- Gas Lock-in by ISO (Interactive) -->
         <div class="card fade-in" style="padding: var(--space-lg); margin-bottom: var(--space-xl)">
-            <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">Gas Lock-in by ISO (95% / 50% Participation)</h3>
+            <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">Gas Lock-in by ISO</h3>
+            <div style="display: flex; gap: var(--space-lg); flex-wrap: wrap; margin-bottom: var(--space-md); align-items: center;">
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">
+                        Participation: <span id="gasLockinPartLabel" style="color: var(--navy)">50%</span>
+                    </label>
+                    <input type="range" id="gasLockinPartSlider" min="5" max="75" value="50" step="5"
+                        style="width: 100%; accent-color: var(--navy);">
+                </div>
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">
+                        CFE Target: <span id="gasLockinTargetLabel" style="color: var(--navy)">95%</span>
+                    </label>
+                    <input type="range" id="gasLockinTargetSlider" min="0" max="5" value="2" step="1"
+                        style="width: 100%; accent-color: var(--navy);">
+                </div>
+            </div>
+            <div id="gasLockinTotal" style="text-align: center; font-size: 0.85rem; font-weight: 700; color: var(--navy); margin-bottom: var(--space-sm);"></div>
             <div class="chart-container"><canvas id="gasLockinChart"></canvas></div>
         </div>
 
@@ -373,79 +406,82 @@
             </div>
         </div>
 
-        <div class="card fade-in" style="padding: var(--space-lg); margin: var(--space-xl) 0">
-            <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">Nuclear Stranding Exposure</h3>
-            <div class="chart-container-sm"><canvas id="nuclearStrandChart"></canvas></div>
-        </div>
-
-        <div class="insight-box insight-warn fade-in" id="nuclearInsight">
-            <p>Loading nuclear analysis...</p>
-        </div>
-
-        <!-- Constellation Case Study Cross-Link -->
-        <div class="insight-box fade-in" style="margin-top: var(--space-lg)">
-            <h4 style="font-family:var(--font-heading); color:var(--navy); margin:0 0 var(--space-xs)">The Constellation Test Case</h4>
-            <p style="margin:0">Constellation Energy operates the largest US nuclear fleet (~90% clean generation). Our 540-scenario analysis shows that fleet trajectory diverges dramatically based on PPA market depth. High PPA commitment (corporate buyers paying premium for hourly matching) enables nuclear fleet maintenance, restarts (Crane/TMI), and hourly matching platforms. Low PPA scenarios lead to premature retirements and higher system emissions. The nuclear question isn't abstract &mdash; it's a live test of whether procurement frameworks can sustain the existing clean generation that grids already depend on.</p>
-        </div>
-
-        <div class="related-analyses fade-in" style="margin-top: var(--space-lg)">
-            <div class="related-analyses-title">Supporting Analysis</div>
-            <div class="related-analyses-grid">
-                <a href="ipp_constellation.html" class="related-card">
-                    <div class="related-card-tag">Case Study</div>
-                    <div class="related-card-title">Constellation Energy</div>
-                    <div class="related-card-desc">Nuclear fleet survival analysis: 540 scenarios, PPA market depth, and the revenue adequacy question</div>
-                    <div class="related-card-arrow">Explore &rarr;</div>
-                </a>
+        <!-- Chart left + narrative right on desktop -->
+        <div class="grid-2col fade-in" style="margin: var(--space-xl) 0; align-items: start;">
+            <div class="card" style="padding: var(--space-lg);">
+                <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">Nuclear Stranding Exposure</h3>
+                <div style="display: flex; gap: var(--space-lg); flex-wrap: wrap; margin-bottom: var(--space-md); align-items: center;">
+                    <div style="flex: 1; min-width: 160px;">
+                        <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">
+                            Participation: <span id="nucPartLabel" style="color: var(--navy)">15%</span>
+                        </label>
+                        <input type="range" id="nucPartSlider" min="5" max="75" value="15" step="5"
+                            style="width: 100%; accent-color: var(--navy);">
+                    </div>
+                    <div style="flex: 1; min-width: 160px;">
+                        <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">
+                            CFE Target: <span id="nucTargetLabel" style="color: var(--navy)">95%</span>
+                        </label>
+                        <input type="range" id="nucTargetSlider" min="0" max="5" value="2" step="1"
+                            style="width: 100%; accent-color: var(--navy);">
+                    </div>
+                </div>
+                <div class="chart-container"><canvas id="nuclearStrandChart"></canvas></div>
+                <p style="font-size: 0.78rem; color: var(--text-muted); margin-top: var(--space-sm); line-height: 1.5;">
+                    <strong>How stranding risk is calculated:</strong> The index combines three factors: (1) <em>Revenue exposure</em> &mdash; nuclear plants under 1B face merchant price erosion from VRE oversupply without offsetting EAC revenue; (2) <em>Replacement cost gap</em> &mdash; the $/MWh cost increase if nuclear retires, measured by comparing 2C base vs. 2C-nuclear-rolloff scenarios; (3) <em>Gas dependency amplification</em> &mdash; 1B's higher gas retention means nuclear retirement forces even more gas buildout. A higher index means the strategy leaves nuclear more financially vulnerable to premature closure.
+                </p>
+            </div>
+            <div>
+                <div class="insight-box insight-warn" id="nuclearInsight">
+                    <p>Loading nuclear analysis...</p>
+                </div>
+                <div class="insight-box" style="margin-top: var(--space-md);">
+                    <h4 style="font-family:var(--font-heading); color:var(--navy); margin:0 0 var(--space-xs)">Why This Matters</h4>
+                    <p style="margin:0">The US nuclear fleet generates ~20% of all electricity and ~50% of all clean electricity. Strategy 2C actively supports nuclear economics by creating EAC revenue (~$20&ndash;40/MWh) that helps prevent premature retirement. Under 1B, nuclear plants face merchant revenue erosion from VRE oversupply with no offsetting demand signal. If nuclear retires, both strategies get worse &mdash; but 1B gets worse faster because it has no mechanism to prevent the loss.</p>
+                </div>
             </div>
         </div>
     </section>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- Section 7: Rowing in the Same Direction (NEW - Synthesis)              -->
+    <!-- Section 7: Curtailment Risk                                            -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <div class="section-header fade-in">
         <div class="section-number">7</div>
-        <h2>Rowing in the Same Direction</h2>
-        <p>Coherent demand signals for grid-level deep decarbonization</p>
+        <h2>Curtailment Risk</h2>
+        <p>Surplus clean energy that the grid can't absorb creates hidden systemic costs</p>
     </div>
-    <section class="content-section fade-in" id="synthesis">
-        <p style="font-size:1.05rem; color:var(--text-secondary); line-height:1.75; max-width:940px; margin-bottom:var(--space-lg)">
-            Deep grid decarbonization requires a common understanding of where each grid can and should end up. The old approach &mdash; individual buyers picking off the cheapest abatement opportunities anywhere on the map &mdash; was rational in the era of coal displacement. But we've entered a new era where the remaining challenges are temporal (nights, winter, multi-day weather events) and spatial (each grid needs its own portfolio of firm clean + storage). Solving these challenges requires corporate procurement signals that are coherent with grid-level planning &mdash; not a collection of individual optimizations that might conflict.
-        </p>
-        <p style="font-size:1.05rem; color:var(--text-secondary); line-height:1.75; max-width:940px; margin-bottom:var(--space-lg)">
-            Strategy 2C's hourly matching framework, aligned with the proposed GHG Protocol Scope 2 revision, creates this coherence by construction: procurement must match load hour-by-hour within the buyer's grid, so investment flows to the resources <em>that specific grid needs</em>. Strategy 1B is individually rational but collectively insufficient &mdash; it optimizes each buyer's $/tCO&#8322; without contextualizing the spatial and temporal dependencies of the grid.
-        </p>
-        <p style="font-size:1.05rem; color:var(--text-secondary); line-height:1.75; max-width:940px; margin-bottom:var(--space-xl)">
-            The evidence across this analysis supports this: 2C drives deeper gas displacement, reaches learning curve critical mass faster, creates the revenue certainty IPPs need for capital-intensive firm clean investment, and aligns with the policy trajectory. 1B is cheaper per-MWh but leaves more gas on the grid, concentrates investment geographically, and doesn't create demand signals for the technologies the next phase of decarbonization requires.
-        </p>
-
-        <div class="insight-box insight-success fade-in">
-            <h4 style="font-family:var(--font-heading); color:var(--navy); margin:0 0 var(--space-xs)">The question isn't which strategy is cheaper today &mdash; it's which strategy builds the grid we need by 2040.</h4>
-            <p style="margin:0">Single-buyer PPAs for VRE or unbundled RECs were the right tools for the first phase: displacing coal and building the VRE supply chain. But getting grids from 60&ndash;70% clean to net-zero requires solving temporal and spatial dependencies that annual or cross-regional accounting ignores. Hourly matching isn't a premium &mdash; it's the framework that aligns individual procurement with collective grid transformation.</p>
-        </div>
-
-        <div class="related-analyses fade-in" style="margin-top: var(--space-lg)">
-            <div class="related-analyses-title">Explore the Full Analytical Ecosystem</div>
-            <div class="related-analyses-grid">
-                <a href="gen_regional_pathways.html" class="related-card">
-                    <div class="related-card-tag">Regional</div>
-                    <div class="related-card-title">Regional Pathways</div>
-                    <div class="related-card-desc">Where each grid starts, where it's headed, and the gap corporate procurement must close</div>
-                    <div class="related-card-arrow">Explore &rarr;</div>
-                </a>
-                <a href="GHG-accounting-overview.html" class="related-card">
-                    <div class="related-card-tag">Accounting</div>
-                    <div class="related-card-title">Carbon Accounting Frameworks</div>
-                    <div class="related-card-desc">All 10 procurement strategies compared: consequential, hourly, and annual matching</div>
-                    <div class="related-card-arrow">Explore &rarr;</div>
-                </a>
-                <a href="ipp_climate_transition.html" class="related-card">
-                    <div class="related-card-tag">Supply Side</div>
-                    <div class="related-card-title">IPP Climate Transition</div>
-                    <div class="related-card-desc">How demand signals shape IPP investment across 540 scenarios and 7 major generators</div>
-                    <div class="related-card-arrow">Explore &rarr;</div>
-                </a>
+    <section class="content-section fade-in" id="risks">
+        <!-- Chart left + text right on desktop -->
+        <div class="grid-2col fade-in" style="align-items: start;">
+            <div class="card" style="padding: var(--space-lg);">
+                <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">VRE Curtailment by Strategy</h3>
+                <div style="display: flex; gap: var(--space-lg); flex-wrap: wrap; margin-bottom: var(--space-md); align-items: center;">
+                    <div style="flex: 1; min-width: 160px;">
+                        <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">
+                            Participation: <span id="curtPartLabel" style="color: var(--navy)">50%</span>
+                        </label>
+                        <input type="range" id="curtPartSlider" min="5" max="75" value="50" step="5"
+                            style="width: 100%; accent-color: var(--navy);">
+                    </div>
+                    <div style="flex: 1; min-width: 160px;">
+                        <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">
+                            CFE Target: <span id="curtTargetLabel" style="color: var(--navy)">95%</span>
+                        </label>
+                        <input type="range" id="curtTargetSlider" min="0" max="5" value="2" step="1"
+                            style="width: 100%; accent-color: var(--navy);">
+                    </div>
+                </div>
+                <div class="chart-container"><canvas id="curtailmentChart"></canvas></div>
+            </div>
+            <div>
+                <div class="insight-box insight-warn" id="riskInsight">
+                    <p>Loading risk analysis...</p>
+                </div>
+                <div class="insight-box" style="margin-top: var(--space-md);">
+                    <h4 style="font-family:var(--font-heading); color:var(--navy); margin:0 0 var(--space-xs)">Why Curtailment Matters</h4>
+                    <p style="margin:0">Curtailed clean energy represents wasted investment &mdash; capital deployed for generation capacity that the grid can't absorb. VRE-heavy strategies (1B) produce more curtailment because cross-regional solar and wind deployment concentrates generation in hours that already have surplus. Hourly matching (2C) inherently reduces curtailment by forcing procurement of resources that match load patterns, including firm clean and storage that absorb surplus.</p>
+                </div>
             </div>
         </div>
     </section>
@@ -461,24 +497,6 @@
     <section class="content-section fade-in" id="dissenting">
         <div id="dissentingContent">
             <p style="color: var(--text-muted)">Loading dissenting analysis...</p>
-        </div>
-    </section>
-
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- Section 9: Critical Risks                                              -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <div class="section-header fade-in">
-        <div class="section-number">9</div>
-        <h2>Curtailment Risk</h2>
-        <p>Surplus clean energy that the grid can't absorb creates hidden systemic costs</p>
-    </div>
-    <section class="content-section fade-in" id="risks">
-        <div class="card fade-in" style="padding: var(--space-lg); margin-bottom: var(--space-xl)">
-            <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">VRE Curtailment by Strategy (95% / 50% Participation)</h3>
-            <div class="chart-container"><canvas id="curtailmentChart"></canvas></div>
-        </div>
-        <div class="insight-box insight-warn fade-in" id="riskInsight">
-            <p>Loading risk analysis...</p>
         </div>
     </section>
 
