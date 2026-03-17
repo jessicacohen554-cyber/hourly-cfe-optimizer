@@ -1073,6 +1073,51 @@ CCS_LCOE_45Q_OFF = {
 # See SPEC.md §5.4.3 for sources and rationale.
 # NOTE: Already defined above as CCS_CAP_TWH, re-exported here for discoverability.
 
+# ============================================================================
+# CCS RETROFIT PARAMETERS — for existing gas CCGT → CCS conversion analysis
+# ============================================================================
+# NETL 2023 retrofit study: 55-70% of greenfield capex for post-combustion
+# capture on existing CCGT (reuses turbine, interconnection, cooling, land).
+# IEAGHG 2023: 7-12% heat rate penalty for CCGT post-combustion capture.
+
+CCS_RETROFIT_HR_PENALTY_PCT = {'Low': 0.08, 'Medium': 0.10, 'High': 0.12}
+CCS_RETROFIT_FOM_ADDER_KW_YR = {'Low': 5.0, 'Medium': 6.5, 'High': 8.0}
+CCS_RETROFIT_MIN_CAP_MW = 400          # Capture economics don't scale below this
+CCS_RETROFIT_ELIGIBLE_FUELS = {'gas_ccgt'}
+CCS_RETROFIT_CF = 0.85                 # Same as new-build CCS (flat baseload post-retrofit)
+CCS_RETROFIT_EARLIEST_YEAR = 2030      # 3-year construction from ~2027 decision
+
+# Incremental annualized capture equipment cost ($/kW-yr) — NOT full plant cost.
+# Derived from greenfield CCS capex × retrofit multiplier (0.55-0.70x).
+CCS_RETROFIT_CAPTURE_COST_KW_YR = {
+    'Low':    {'CAISO': 35, 'ERCOT': 30, 'PJM': 33, 'NYISO': 40, 'NEISO': 38, 'MISO': 31, 'SPP': 29},
+    'Medium': {'CAISO': 48, 'ERCOT': 40, 'PJM': 44, 'NYISO': 54, 'NEISO': 51, 'MISO': 42, 'SPP': 38},
+    'High':   {'CAISO': 62, 'ERCOT': 52, 'PJM': 57, 'NYISO': 70, 'NEISO': 66, 'MISO': 54, 'SPP': 50},
+}
+
+# DAC cost trajectories ($/ton CO2) — shared by step6_1 and step6_2a.
+# Facilitating (Low): aggressive learning (Climeworks Gen3, Heirloom, etc.)
+# Floor $150/ton per Rubin et al. (2015), Fuss et al. (2018) published lower bounds.
+DAC_COST_PER_TON = {
+    'Low':    {2030: 400, 2035: 275, 2040: 220, 2045: 180, 2050: 150},
+    'Medium': {2030: 600, 2035: 400, 2040: 300, 2045: 230, 2050: 175},
+    'High':   {2030: 800, 2035: 600, 2040: 450, 2045: 350, 2050: 275},
+}
+
+def get_dac_cost_per_ton(year, dac_level='Medium'):
+    """Interpolate DAC cost for a given year and cost level."""
+    trajectory = DAC_COST_PER_TON[dac_level]
+    years_sorted = sorted(trajectory.keys())
+    if year <= years_sorted[0]:
+        return trajectory[years_sorted[0]]
+    if year >= years_sorted[-1]:
+        return trajectory[years_sorted[-1]]
+    for i in range(len(years_sorted) - 1):
+        if years_sorted[i] <= year <= years_sorted[i + 1]:
+            frac = (year - years_sorted[i]) / (years_sorted[i + 1] - years_sorted[i])
+            return trajectory[years_sorted[i]] * (1 - frac) + trajectory[years_sorted[i + 1]] * frac
+    return trajectory[years_sorted[-1]]
+
 # Lazard v16.0 CCGT annualized capacity cost ($/kW-yr)
 NEW_CCGT_COST_KW_YR = {
     'CAISO': 112, 'ERCOT': 89, 'PJM': 99, 'NYISO': 114, 'NEISO': 105,
