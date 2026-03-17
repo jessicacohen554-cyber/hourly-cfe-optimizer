@@ -159,6 +159,9 @@ class SimulationRequest(BaseModel):
     # Per-resource transmission overrides
     tx_overrides: Optional[dict] = None  # {solar: float, wind: float, ...} — blank = use master L/M/H
 
+    # Fleet overrides from fleet-config page
+    fleet_overrides: Optional[Dict[str, str]] = None  # {plant_id: "Operating"|"Retired"|"CCS Retrofit"}
+
 
 class SweepRequest(BaseModel):
     """Parameters for a full 270-scenario parametric sweep."""
