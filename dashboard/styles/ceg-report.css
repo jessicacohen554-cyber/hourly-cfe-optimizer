@@ -338,12 +338,14 @@ nav:not(.ceg-hub-nav) {
     top: 64px;
     left: 0;
     right: 0;
+    z-index: 1200;
     background: linear-gradient(180deg, #1B5E9E 0%, var(--ceg-blue) 100%);
     flex-direction: column;
     padding: 1rem 1.5rem 1.5rem;
     gap: 0.25rem;
     transform: translateY(-120%);
     opacity: 0;
+    pointer-events: none;
     transition: all 0.35s ease;
     box-shadow: 0 8px 24px rgba(0,0,0,0.2);
     border-bottom: 2px solid rgba(255,255,255,0.1);
@@ -352,6 +354,7 @@ nav:not(.ceg-hub-nav) {
   .ceg-hub-links.open {
     transform: translateY(0);
     opacity: 1;
+    pointer-events: auto;
   }
 
   .ceg-hub-links li a {
