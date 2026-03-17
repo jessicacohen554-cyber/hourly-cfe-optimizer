@@ -103,9 +103,18 @@ jobs:
           echo "=== Remote branches ==="
           OTHER_BRANCHES=$(git for-each-ref --format='%(refname:short)' refs/remotes/origin/ \
             | grep -v HEAD | grep -v 'origin/master' | grep -v 'origin/main' | sed 's|origin/||' || true)
-          BRANCH_COUNT=$(echo "$OTHER_BRANCHES" | grep -c . 2>/dev/null || echo 0)
-          echo "Non-master branches: $BRANCH_COUNT"
+
+          # Count branches safely — grep -c outputs a count to stdout even on
+          # failure (exit 1 = no matches), so "|| echo 0" would produce TWO
+          # lines ("0\n0"). Use wc -l instead, which always succeeds.
           if [ -n "$OTHER_BRANCHES" ]; then
+            BRANCH_COUNT=$(echo "$OTHER_BRANCHES" | wc -l | tr -d ' ')
+          else
+            BRANCH_COUNT=0
+          fi
+
+          echo "Non-master branches: $BRANCH_COUNT"
+          if [ -n "$OTHER_BRANCHES" ] && [ "$BRANCH_COUNT" -gt 0 ]; then
             echo "$OTHER_BRANCHES" | head -20
             [ "$BRANCH_COUNT" -gt 20 ] && echo "  ... and $((BRANCH_COUNT - 20)) more"
           fi
@@ -140,6 +149,12 @@ jobs:
 
       - name: Create orphan branch with HEAD tree
         if: ${{ inputs.dry_run == false }}
+        env:
+          COMMIT_MSG: ${{ inputs.commit_message }}
+          COMMIT_COUNT: ${{ steps.record.outputs.commit_count }}
+          HEAD_SHA: ${{ steps.record.outputs.head_sha }}
+          HEAD_TREE: ${{ steps.record.outputs.head_tree }}
+          FILE_COUNT: ${{ steps.record.outputs.file_count }}
         run: |
           echo "=== Creating orphan branch with current HEAD content ==="
 
@@ -153,14 +168,16 @@ jobs:
           # Stage all files (they're already in the working tree from the checkout)
           git add -A
 
-          # Create the single root commit
-          COMMIT_MSG="${{ inputs.commit_message }}"
-          git commit -m "$COMMIT_MSG
+          # Create the single root commit (use env vars to avoid shell injection)
+          git commit -m "$(cat <<EOF
+          ${COMMIT_MSG}
 
-          Squashed ${{ steps.record.outputs.commit_count }} commits into 1.
-          Original HEAD was ${{ steps.record.outputs.head_sha }}.
-          Tree hash preserved: ${{ steps.record.outputs.head_tree }}.
-          Files: ${{ steps.record.outputs.file_count }}."
+          Squashed ${COMMIT_COUNT} commits into 1.
+          Original HEAD was ${HEAD_SHA}.
+          Tree hash preserved: ${HEAD_TREE}.
+          Files: ${FILE_COUNT}.
+          EOF
+          )"
 
           echo "New root commit: $(git rev-parse HEAD)"
           echo "New tree hash:   $(git rev-parse HEAD^{tree})"
