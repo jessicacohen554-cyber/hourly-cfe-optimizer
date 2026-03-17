@@ -590,19 +590,67 @@ function buildRiskCharts() {
     populateRiskInsight();
 }
 
-function buildGasLockinChart() {
-    destroyChart('gasLockinChart');
-    const participation = 50, threshold = 95;
+// ─── Slider Helpers ──────────────────────────────────────────────────────────
 
-    const datasets = ISOS.map(iso => ({
-        label: iso,
-        data: CORE_STRATEGIES.map(s => {
+const SLIDER_THRESHOLDS = [90, 92.5, 95, 97.5, 99.5, 99.99];
+
+function sliderToThreshold(val) {
+    return SLIDER_THRESHOLDS[Math.min(Math.max(0, val), SLIDER_THRESHOLDS.length - 1)];
+}
+
+function snapParticipation(val) {
+    // Snap to nearest available participation level
+    const avail = PARTICIPATION_LEVELS;
+    let best = avail[0];
+    for (const p of avail) { if (Math.abs(p - val) < Math.abs(best - val)) best = p; }
+    return best;
+}
+
+function hexToRGBA(hex, alpha) {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// ─── Section 4: Gas Lock-in by ISO (Interactive) ────────────────────────────
+
+function buildGasLockinChart(participation, threshold) {
+    destroyChart('gasLockinChart');
+    participation = participation || 50;
+    threshold = threshold || 95;
+
+    // Compute totals for the total label
+    const totals = {};
+    for (const s of CORE_STRATEGIES) {
+        totals[s] = 0;
+        for (const iso of ISOS) {
             const d = getRecord(s, iso, participation, threshold);
-            return d ? d.gasGw : 0;
-        }),
-        backgroundColor: typeof ISO_COLORS !== 'undefined' ? ISO_COLORS[iso] : '#999',
-        borderRadius: 2
-    }));
+            totals[s] += d ? d.gasGw : 0;
+        }
+    }
+
+    const totalEl = document.getElementById('gasLockinTotal');
+    if (totalEl) {
+        totalEl.innerHTML = CORE_STRATEGIES.map(s =>
+            `<span style="color:${STRATEGY_COLORS[s]}; margin: 0 var(--space-md);">${STRATEGY_SHORT[s]}: ${fmt(totals[s], 0)} GW total</span>`
+        ).join(' vs ');
+    }
+
+    const datasets = ISOS.map(iso => {
+        const isoColor = typeof ISO_COLORS !== 'undefined' ? ISO_COLORS[iso] : '#999';
+        return {
+            label: iso,
+            data: CORE_STRATEGIES.map(s => {
+                const d = getRecord(s, iso, participation, threshold);
+                return d ? d.gasGw : 0;
+            }),
+            backgroundColor: hexToRGBA(isoColor, 0.25),
+            borderColor: isoColor,
+            borderWidth: 2,
+            borderRadius: 8
+        };
+    });
 
     const ctx = document.getElementById('gasLockinChart');
     if (!ctx) return;
@@ -620,55 +668,11 @@ function buildGasLockinChart() {
     });
 }
 
-function buildCurtailmentChart() {
-    destroyChart('curtailmentChart');
-    const participation = 50, threshold = 95;
-    const values = CORE_STRATEGIES.map(s => cachedAggregate(s, participation, threshold).totalCurtTwh);
+// ─── Section 6: Nuclear Stranding (Interactive) ─────────────────────────────
 
-    const ctx = document.getElementById('curtailmentChart');
-    if (!ctx) return;
-
-    charts.curtailmentChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: CORE_STRATEGIES.map(s => STRATEGY_SHORT[s]),
-            datasets: [{
-                label: 'Curtailment (TWh)',
-                data: values,
-                backgroundColor: CORE_STRATEGIES.map(s => STRATEGY_COLORS[s]),
-                borderRadius: 4
-            }]
-        },
-        options: {
-            ...baseOpts(),
-            plugins: { ...baseOpts().plugins, legend: { display: false } },
-            scales: {
-                x: { ...baseOpts().scales.x },
-                y: { ...baseOpts().scales.y, title: { display: true, text: 'TWh Curtailed', font: { family: 'DM Sans', size: 11 } } }
-            }
-        }
-    });
-}
-
-function populateRiskInsight() {
-    const curt95 = CORE_STRATEGIES.map(s => ({ s, curt: cachedAggregate(s, 50, 95).totalCurtTwh }));
-    curt95.sort((a, b) => b.curt - a.curt);
-
-    const el = document.getElementById('riskInsight');
-    if (el) {
-        el.innerHTML = `<p><strong>Curtailment Risk (95% / 50% participation):</strong>
-            ${fmt(curt95[curt95.length - 1].curt)} TWh (${STRATEGY_SHORT[curt95[curt95.length - 1].s]}) to
-            ${fmt(curt95[0].curt)} TWh (${STRATEGY_SHORT[curt95[0].s]}).
-            VRE-heavy strategies (1B) generate more surplus clean energy that can\u2019t be absorbed by the grid,
-            while hourly matching (2C) produces less curtailment by design \u2014 its firm clean + storage portfolio
-            better matches generation to load patterns.</p>`;
-    }
-}
-
-// ─── Section 8: Nuclear Narrative ───────────────────────────────────────────
-
-function populateNuclearNarrative() {
-    const part = 15, thresh = 95;
+function populateNuclearNarrative(part, thresh) {
+    part = part || 15;
+    thresh = thresh || 95;
     const base = cachedAggregate('2C', part, thresh);
     const rolloff = cachedAggregate('2C_rolloff', part, thresh);
 
@@ -685,34 +689,44 @@ function populateNuclearNarrative() {
     const gasEl = document.getElementById('nucGasDelta');
     if (gasEl) gasEl.textContent = '+' + fmt(Math.abs(gasDelta), 0) + ' GW';
 
-    buildNuclearStrandChart();
+    buildNuclearStrandChart(part, thresh);
 
     const insight = document.getElementById('nuclearInsight');
     if (insight) {
         insight.innerHTML = `<p><strong>What happens if nuclear retires?</strong>
-            At 95% CFE / ${part}% participation, losing the existing nuclear fleet would increase clean procurement costs by
+            At ${thresh}% CFE / ${part}% participation, losing the existing nuclear fleet would increase clean procurement costs by
             <strong>$${fmt(Math.abs(costDelta))}/MWh</strong>, reduce CO\u2082 displacement by <strong>${fmt(Math.abs(co2Delta))} Mt</strong>,
             and add <strong>${fmt(Math.abs(gasDelta), 0)} GW</strong> of gas to the grid.</p>
-            <p><strong>Strategy 2C actively supports nuclear economics</strong> by creating EAC revenue (~$20\u201340/MWh) that helps prevent premature retirement.
-            Under 1B, nuclear plants face merchant revenue erosion from VRE oversupply with no offsetting demand signal.
-            The US nuclear fleet generates ~20% of all electricity and ~50% of all clean electricity.</p>`;
+            <p>Strategy 2C creates EAC revenue (~$20\u201340/MWh) that helps prevent premature retirement.
+            Under 1B, nuclear plants face merchant revenue erosion from VRE oversupply with no offsetting demand signal.</p>`;
     }
 }
 
-function buildNuclearStrandChart() {
+function buildNuclearStrandChart(participation, threshold) {
     destroyChart('nuclearStrandChart');
-    const participation = 15, threshold = 95;
+    participation = participation || 15;
+    threshold = threshold || 95;
 
     const base2c = cachedAggregate('2C', participation, threshold);
     const roll2c = cachedAggregate('2C_rolloff', participation, threshold);
+
+    // Revenue exposure: cost increase % when nuclear retires
     const dep2c = base2c.avgCost > 0 ? Math.abs(roll2c.avgCost - base2c.avgCost) / base2c.avgCost * 100 : 0;
 
+    // Gas dependency amplification: more gas means nuclear loss is more damaging
+    const gas1b = cachedAggregate('1B', participation, threshold).totalGasGw;
+    const gas2c = base2c.totalGasGw;
+    const gasAmp1b = gas1b > 0 ? (gas1b / 100) * 5 : 0;
+    const gasAmp2c = gas2c > 0 ? (gas2c / 100) * 5 : 0;
+
     const exposures = CORE_STRATEGIES.map(s => {
-        const strandingScore = {
-            '1B': 20 + dep2c * 0.5,
-            '2C': Math.max(0, dep2c - 5)
-        };
-        return strandingScore[s] || 10;
+        if (s === '1B') {
+            // 1B: high base exposure (no EAC revenue) + gas amplification + replacement cost
+            return 20 + dep2c * 0.5 + gasAmp1b;
+        } else {
+            // 2C: lower base (EAC revenue protects) but still exposed to replacement cost
+            return Math.max(0, dep2c - 5) + gasAmp2c;
+        }
     });
 
     const ctx = document.getElementById('nuclearStrandChart');
@@ -725,8 +739,10 @@ function buildNuclearStrandChart() {
             datasets: [{
                 label: 'Nuclear Stranding Risk',
                 data: exposures,
-                backgroundColor: CORE_STRATEGIES.map(s => STRATEGY_COLORS[s]),
-                borderRadius: 4
+                backgroundColor: CORE_STRATEGIES.map(s => hexToRGBA(STRATEGY_COLORS[s], 0.3)),
+                borderColor: CORE_STRATEGIES.map(s => STRATEGY_COLORS[s]),
+                borderWidth: 2,
+                borderRadius: 8
             }]
         },
         options: {
@@ -741,7 +757,74 @@ function buildNuclearStrandChart() {
     });
 }
 
-// ─── Section 9: Dissenting ─────────────────────────────────────────────────
+// ─── Section 7: Curtailment (Interactive, Horizontal Bars) ──────────────────
+
+function buildRiskCharts(participation, threshold) {
+    buildCurtailmentChart(participation, threshold);
+    populateRiskInsight(participation, threshold);
+}
+
+function buildCurtailmentChart(participation, threshold) {
+    destroyChart('curtailmentChart');
+    participation = participation || 50;
+    threshold = threshold || 95;
+
+    const isoData = {};
+    for (const s of CORE_STRATEGIES) {
+        isoData[s] = ISOS.map(iso => {
+            const d = getRecord(s, iso, participation, threshold);
+            return d ? d.curtTwh : 0;
+        });
+    }
+
+    const datasets = CORE_STRATEGIES.map(s => ({
+        label: STRATEGY_SHORT[s],
+        data: isoData[s],
+        backgroundColor: hexToRGBA(STRATEGY_COLORS[s], 0.3),
+        borderColor: STRATEGY_COLORS[s],
+        borderWidth: 2,
+        borderRadius: 8
+    }));
+
+    const ctx = document.getElementById('curtailmentChart');
+    if (!ctx) return;
+
+    charts.curtailmentChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ISOS,
+            datasets
+        },
+        options: {
+            ...baseOpts(),
+            indexAxis: 'y',
+            plugins: { ...baseOpts().plugins, legend: { labels: { font: { family: 'DM Sans', size: 11 }, usePointStyle: true, padding: 12 } } },
+            scales: {
+                x: { ...baseOpts().scales.x, title: { display: true, text: 'TWh Curtailed', font: { family: 'DM Sans', size: 11 } } },
+                y: { ...baseOpts().scales.y }
+            }
+        }
+    });
+}
+
+function populateRiskInsight(participation, threshold) {
+    participation = participation || 50;
+    threshold = threshold || 95;
+    const curt = CORE_STRATEGIES.map(s => ({ s, curt: cachedAggregate(s, participation, threshold).totalCurtTwh }));
+    curt.sort((a, b) => b.curt - a.curt);
+
+    const el = document.getElementById('riskInsight');
+    if (el) {
+        el.innerHTML = `<p><strong>Curtailment Risk (${threshold}% / ${participation}% participation):</strong>
+            ${fmt(curt[curt.length - 1].curt)} TWh (${STRATEGY_SHORT[curt[curt.length - 1].s]}) to
+            ${fmt(curt[0].curt)} TWh (${STRATEGY_SHORT[curt[0].s]}).
+            VRE-heavy strategies (1B) generate more surplus clean energy that can\u2019t be absorbed by the grid,
+            while hourly matching (2C) produces less curtailment by design \u2014 its firm clean + storage portfolio
+            better matches generation to load patterns.</p>`;
+    }
+}
+
+// ─── Section 8: Dissenting ─────────────────────────────────────────────────
 
 function populateDissenting() {
     const el = document.getElementById('dissentingContent');
@@ -790,7 +873,7 @@ function populateDissenting() {
     `;
 }
 
-// ─── Toggle Wiring ──────────────────────────────────────────────────────────
+// ─── Toggle & Slider Wiring ─────────────────────────────────────────────────
 
 function wireToggles() {
     function wireToggleGroup(container, callback) {
@@ -809,6 +892,53 @@ function wireToggles() {
         buildCrossoverCharts(parseInt(p));
     });
 
+    // Gas Lock-in sliders
+    function updateGasLockin() {
+        const partSlider = document.getElementById('gasLockinPartSlider');
+        const targetSlider = document.getElementById('gasLockinTargetSlider');
+        if (!partSlider || !targetSlider) return;
+        const p = snapParticipation(parseInt(partSlider.value));
+        const t = sliderToThreshold(parseInt(targetSlider.value));
+        document.getElementById('gasLockinPartLabel').textContent = p + '%';
+        document.getElementById('gasLockinTargetLabel').textContent = t + '%';
+        buildGasLockinChart(p, t);
+    }
+    const gasPartSlider = document.getElementById('gasLockinPartSlider');
+    const gasTargetSlider = document.getElementById('gasLockinTargetSlider');
+    if (gasPartSlider) gasPartSlider.addEventListener('input', updateGasLockin);
+    if (gasTargetSlider) gasTargetSlider.addEventListener('input', updateGasLockin);
+
+    // Nuclear sliders
+    function updateNuclear() {
+        const partSlider = document.getElementById('nucPartSlider');
+        const targetSlider = document.getElementById('nucTargetSlider');
+        if (!partSlider || !targetSlider) return;
+        const p = snapParticipation(parseInt(partSlider.value));
+        const t = sliderToThreshold(parseInt(targetSlider.value));
+        document.getElementById('nucPartLabel').textContent = p + '%';
+        document.getElementById('nucTargetLabel').textContent = t + '%';
+        populateNuclearNarrative(p, t);
+    }
+    const nucPartSlider = document.getElementById('nucPartSlider');
+    const nucTargetSlider = document.getElementById('nucTargetSlider');
+    if (nucPartSlider) nucPartSlider.addEventListener('input', updateNuclear);
+    if (nucTargetSlider) nucTargetSlider.addEventListener('input', updateNuclear);
+
+    // Curtailment sliders
+    function updateCurtailment() {
+        const partSlider = document.getElementById('curtPartSlider');
+        const targetSlider = document.getElementById('curtTargetSlider');
+        if (!partSlider || !targetSlider) return;
+        const p = snapParticipation(parseInt(partSlider.value));
+        const t = sliderToThreshold(parseInt(targetSlider.value));
+        document.getElementById('curtPartLabel').textContent = p + '%';
+        document.getElementById('curtTargetLabel').textContent = t + '%';
+        buildRiskCharts(p, t);
+    }
+    const curtPartSlider = document.getElementById('curtPartSlider');
+    const curtTargetSlider = document.getElementById('curtTargetSlider');
+    if (curtPartSlider) curtPartSlider.addEventListener('input', updateCurtailment);
+    if (curtTargetSlider) curtTargetSlider.addEventListener('input', updateCurtailment);
 }
 
 // ─── Fade-in Observer ───────────────────────────────────────────────────────
@@ -836,11 +966,11 @@ function init() {
     buildSystemCostCrossover();    // Section 4: Demand signal (system cost)
     buildCostBreakdown();          // Section 4: Demand signal (cost breakdown)
     populateCrossoverInsight();    // Section 4: Demand signal (insight)
-    buildGasLockinChart();         // Section 4: Demand signal (gas lock-in)
+    buildGasLockinChart(50, 95);   // Section 4: Gas lock-in (interactive)
     buildWrightsLawChart();        // Section 5: Learning curves
-    populateNuclearNarrative();    // Section 6: Nuclear
+    populateNuclearNarrative(15, 95); // Section 6: Nuclear (interactive)
+    buildRiskCharts(50, 95);       // Section 7: Curtailment (interactive)
     populateDissenting();          // Section 8: Dissenting
-    buildRiskCharts();             // Section 9: Critical risks (curtailment)
     wireToggles();
     initFadeObserver();
 }
