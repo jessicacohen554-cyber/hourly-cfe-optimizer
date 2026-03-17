@@ -79,15 +79,24 @@ jobs:
           echo "=== Repo size BEFORE ==="
           git count-objects -vH
 
-      - name: Build protected blob set and record HEAD tree hash
+      - name: Build protected blob set and record HEAD file manifest
         id: protect
         run: |
           echo "=== Building protected blob set (all blobs live in ANY branch HEAD) ==="
 
-          # Record HEAD tree hash for post-cleanup integrity verification
-          HEAD_TREE=$(git rev-parse HEAD^{tree})
-          echo "HEAD tree hash: $HEAD_TREE"
-          echo "head_tree=$HEAD_TREE" >> "$GITHUB_OUTPUT"
+          # Record HEAD file manifest for post-cleanup integrity verification.
+          # We compare file listings (mode+sha+path) rather than tree hashes because
+          # git-filter-repo rewrites commit/tree objects, which can change tree hashes
+          # even when file content is fully preserved.
+          HEAD_MANIFEST=$(mktemp)
+          git ls-tree -r HEAD | sort > "$HEAD_MANIFEST"
+          HEAD_FILE_COUNT=$(wc -l < "$HEAD_MANIFEST")
+          HEAD_MANIFEST_HASH=$(sha256sum "$HEAD_MANIFEST" | awk '{print $1}')
+          echo "HEAD file count: $HEAD_FILE_COUNT"
+          echo "HEAD manifest hash: $HEAD_MANIFEST_HASH"
+          echo "head_manifest=$HEAD_MANIFEST" >> "$GITHUB_OUTPUT"
+          echo "head_manifest_hash=$HEAD_MANIFEST_HASH" >> "$GITHUB_OUTPUT"
+          echo "head_file_count=$HEAD_FILE_COUNT" >> "$GITHUB_OUTPUT"
 
           # Protect blobs from ALL branch tips — not just master.
           # This is critical because --force --all pushes every branch,
@@ -131,9 +140,11 @@ jobs:
           echo ""
 
           echo "--- Protected data/ files by directory (master HEAD) ---"
-          for dir in data/eia-930 data/step1-pfs data/step1-pfs \
+          for dir in data/eia-930 data/step1-pfs \
                      data/step2.1-ef data/step2.2-cost \
-                     data/step4-analysis; do
+                     data/step3-dispatch data/step4-analysis \
+                     data/step5-scenarios data/step5-wrights \
+                     data/step6-smartargets; do
             count=$(grep -c "^.* ${dir}/" "$PROTECTED_DATA" 2>/dev/null || echo 0)
             [ "$count" -gt 0 ] && echo "  ${dir}/  →  ${count} live files"
           done
@@ -232,10 +243,12 @@ jobs:
             done
             echo ""
             echo "--- Protected by directory ---"
-            for dir in data/eia-930 data/step1-pfs data/step1-pfs \
+            for dir in data/eia-930 data/step1-pfs \
                        data/step2.1-ef data/step2.2-cost \
-                       data/step4-analysis \
+                       data/step3-dispatch data/step4-analysis \
                        data/step4-analysis/lmp data/step4-analysis/co2_results \
+                       data/step5-scenarios data/step5-wrights \
+                       data/step6-smartargets \
                        dashboard dashboard/js; do
               matched=$(grep " ${dir}/" "$KEPT" || true)
               count=$(echo "$matched" | grep -c "." 2>/dev/null || echo 0)
@@ -269,10 +282,12 @@ jobs:
             done
             echo ""
             echo "--- Removable by directory ---"
-            for dir in data/eia-930 data/step1-pfs data/step1-pfs \
+            for dir in data/eia-930 data/step1-pfs \
                        data/step2.1-ef data/step2.2-cost \
-                       data/step4-analysis \
+                       data/step3-dispatch data/step4-analysis \
                        data/step4-analysis/lmp data/step4-analysis/co2_results \
+                       data/step5-scenarios data/step5-wrights \
+                       data/step6-smartargets \
                        data/checkpoints data/checkpoints_v4 \
                        dashboard dashboard/js; do
               matched=$(grep " ${dir}/" "$REMOVABLE" || true)
@@ -321,21 +336,31 @@ jobs:
       - name: Verify HEAD integrity after cleanup
         if: ${{ inputs.dry_run == false && steps.blobmap.outputs.skip != 'true' }}
         run: |
-          EXPECTED_TREE="${{ steps.protect.outputs.head_tree }}"
-          ACTUAL_TREE=$(git rev-parse HEAD^{tree})
+          EXPECTED_HASH="${{ steps.protect.outputs.head_manifest_hash }}"
+          EXPECTED_COUNT="${{ steps.protect.outputs.head_file_count }}"
+          ORIGINAL_MANIFEST="${{ steps.protect.outputs.head_manifest }}"
 
-          echo "=== HEAD Tree Integrity Check ==="
-          echo "Expected tree hash (before): $EXPECTED_TREE"
-          echo "Actual tree hash (after):    $ACTUAL_TREE"
+          # Build post-cleanup manifest and compare
+          POST_MANIFEST=$(mktemp)
+          git ls-tree -r HEAD | sort > "$POST_MANIFEST"
+          ACTUAL_HASH=$(sha256sum "$POST_MANIFEST" | awk '{print $1}')
+          ACTUAL_COUNT=$(wc -l < "$POST_MANIFEST")
 
-          if [ "$EXPECTED_TREE" = "$ACTUAL_TREE" ]; then
-            echo "PASSED — HEAD tree is identical. All live files are intact."
+          echo "=== HEAD File Integrity Check ==="
+          echo "  Files expected: $EXPECTED_COUNT"
+          echo "  Files actual:   $ACTUAL_COUNT"
+          echo "  Manifest hash expected: $EXPECTED_HASH"
+          echo "  Manifest hash actual:   $ACTUAL_HASH"
+
+          if [ "$EXPECTED_HASH" = "$ACTUAL_HASH" ]; then
+            echo "PASSED — all $ACTUAL_COUNT files are identical (same modes, SHAs, paths)."
           else
-            echo "::error::FAILED — HEAD tree hash changed! Live files may have been modified."
-            echo "Expected: $EXPECTED_TREE"
-            echo "Got:      $ACTUAL_TREE"
+            echo "::error::FAILED — HEAD file manifest changed after cleanup!"
             echo ""
-            echo "Aborting push. Investigate before force-pushing."
+            echo "Files removed or modified:"
+            diff "$ORIGINAL_MANIFEST" "$POST_MANIFEST" || true
+            echo ""
+            echo "Aborting push. The protected blob set may be incomplete."
             exit 1
           fi
 
