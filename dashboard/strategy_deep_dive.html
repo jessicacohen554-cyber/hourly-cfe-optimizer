@@ -315,23 +315,30 @@
 
     <div class="chart-grid-2">
         <div class="card">
-            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Resource Mix vs. Threshold</h4>
-            <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm) /* contrast-fix: was #94A3B8, now #64748B, ratio 4.76:1 on white */">How the resource mix evolves as CO&#8322; ambition increases. Select a strategy to view.</p>
-            <div class="slider-control">
-                <label>Strategy:</label>
-                <select id="trajectoryStratSelect" style="font-family:var(--font-data);font-size:12px;padding:4px 8px;border-radius:var(--radius-sm);border:1px solid #CBD5E1;">
-                </select>
-            </div>
-            <div class="deep-chart-wrap">
-                <canvas id="chartResourceTrajectory"></canvas>
-            </div>
-        </div>
-        <div class="card">
             <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Curtailment vs. Threshold</h4>
-            <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm) /* contrast-fix: was #94A3B8, now #64748B, ratio 4.76:1 on white */">Strategies that overbuild renewables early show rising curtailment at higher targets.</p>
+            <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm)">Strategies that overbuild renewables early show rising curtailment at higher targets.</p>
             <div class="deep-chart-wrap">
                 <canvas id="chartCurtTrajectory"></canvas>
             </div>
+        </div>
+        <div class="card">
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">New Gas Buildout vs. Threshold</h4>
+            <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm)">Total gas capacity required at each CO&#8322; target. Lower = less fossil backup needed.</p>
+            <div class="deep-chart-wrap">
+                <canvas id="chartGasBuildout"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="card" style="margin-top:var(--space-md)">
+        <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Resource Mix vs. Threshold</h4>
+        <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm)">How the resource mix evolves as CO&#8322; ambition increases. Select a strategy to view.</p>
+        <div class="slider-control">
+            <label>Strategy:</label>
+            <select id="trajectoryStratSelect" style="font-family:var(--font-data);font-size:12px;padding:4px 8px;border-radius:var(--radius-sm);border:1px solid #CBD5E1;">
+            </select>
+        </div>
+        <div class="deep-chart-wrap" style="min-height:350px">
+            <canvas id="chartResourceTrajectory"></canvas>
         </div>
     </div>
 </section>
@@ -603,6 +610,7 @@
     let chartCurtRibbon = null;
     let chartResourceTrajectory = null;
     let chartCurtTrajectory = null;
+    let chartGasBuildout = null;
     let chartWrightsTrajectory = null;
     let chartCriticalMass = null;
 
@@ -938,42 +946,73 @@
         }
     }
 
+    // Extract resource TWh from a deployment record
+    function extractResources(rec) {
+        const res = {};
+        // New-build resources (n field)
+        if (rec.n) {
+            for (const [k, v] of Object.entries(rec.n)) {
+                if (k === 'nuclear_uprate') { res.clean_firm = (res.clean_firm || 0) + v; }
+                else if (k === 'new_vre') { res.wind = (res.wind || 0) + v; } // new_vre lumped into wind
+                else { res[k] = (res[k] || 0) + v; }
+            }
+        }
+        // Cross-regional resources (x field — keyed by source ISO)
+        if (rec.x) {
+            for (const isoData of Object.values(rec.x)) {
+                if (typeof isoData !== 'object') continue;
+                for (const [k, v] of Object.entries(isoData)) {
+                    if (k === 'existing_merchant') continue; // skip existing credits
+                    res[k] = (res[k] || 0) + v;
+                }
+            }
+        }
+        // Existing resources (e field)
+        if (rec.e) {
+            res.existing = (res.existing || 0) + (rec.e.existing_merchant || 0) + (rec.e.sss_allocation || 0);
+        }
+        return res;
+    }
+
     function buildResourceTrajectory() {
         if (chartResourceTrajectory) chartResourceTrajectory.destroy();
         const strat = document.getElementById('trajectoryStratSelect').value;
         const part = getTrajectoryParticipation();
 
-        // Get data from STRATEGY_CMP
-        if (typeof STRATEGY_CMP === 'undefined') return;
-        const stratData = STRATEGY_CMP.strategies?.[strat];
-        if (!stratData) return;
-
-        const resources = ['solar', 'wind', 'ccs', 'battery', 'ldes'];
+        const resources = ['solar', 'wind', 'clean_firm', 'ccs', 'battery', 'ldes', 'existing'];
+        const resLabels = { solar: 'Solar', wind: 'Wind', clean_firm: 'Clean Firm', ccs: 'CCS', battery: 'Battery', ldes: 'LDES', existing: 'Existing Clean' };
         const resColors = {
             solar: RESOURCE_COLORS ? RESOURCE_COLORS.solar : '#F59E0B',
             wind: RESOURCE_COLORS ? RESOURCE_COLORS.wind : '#22C55E',
+            clean_firm: RESOURCE_COLORS ? RESOURCE_COLORS.cleanFirm : '#6366F1',
             ccs: RESOURCE_COLORS ? RESOURCE_COLORS.ccs : '#64748B',
             battery: RESOURCE_COLORS ? RESOURCE_COLORS.battery : '#06B6D4',
             ldes: RESOURCE_COLORS ? RESOURCE_COLORS.ldes : '#E91E63',
+            existing: '#94A3B8',
         };
 
-        const availableThrs = Object.keys(stratData.CAISO?.by_threshold || {}).map(Number).sort((a,b) => a - b);
-
+        // Build data from DEPLOYMENT_DATA across all ISOs
         const resData = {};
         for (const r of resources) resData[r] = [];
 
+        const availableThrs = THRESHOLDS;
+
         for (const thr of availableThrs) {
-            for (const r of resources) {
-                let total = 0;
-                for (const iso of ISOS) {
-                    const entry = stratData[iso]?.by_threshold?.[String(thr)];
-                    if (entry?.resources?.[r]) total += entry.resources[r].twh || 0;
+            const totals = {};
+            for (const iso of ISOS) {
+                const rec = getRecord(strat, iso, part, thr);
+                if (!rec) continue;
+                const extracted = extractResources(rec);
+                for (const [k, v] of Object.entries(extracted)) {
+                    totals[k] = (totals[k] || 0) + v;
                 }
-                resData[r].push(total);
+            }
+            for (const r of resources) {
+                resData[r].push(totals[r] || 0);
             }
         }
 
-        // Also add gas backup from deployment data
+        // Gas backup from deployment data
         const gasData = availableThrs.map(thr => {
             let total = 0;
             for (const iso of ISOS) {
@@ -983,9 +1022,12 @@
             return total;
         });
 
+        // Filter out resources with all zeros
+        const activeResources = resources.filter(r => resData[r].some(v => v > 0));
+
         const datasets = [
-            ...resources.map(r => ({
-                label: r.charAt(0).toUpperCase() + r.slice(1),
+            ...activeResources.map(r => ({
+                label: resLabels[r] || r,
                 data: resData[r],
                 backgroundColor: resColors[r] + 'AA',
                 borderColor: resColors[r],
@@ -1059,6 +1101,64 @@
                     ...baseOpts.scales,
                     x: { ...baseOpts.scales.x, title: { display: true, text: 'CO₂ Reduction Target', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
                     y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: v => v.toFixed(0) + ' TWh' }, title: { display: true, text: 'Curtailment (TWh)', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                },
+            },
+        });
+    }
+
+    function buildGasBuildout() {
+        if (chartGasBuildout) chartGasBuildout.destroy();
+        const active = getActiveStrategies();
+        const part = getTrajectoryParticipation();
+        const datasets = [];
+
+        for (const strat of active) {
+            const color = STRAT_COLORS[strat] || '#6366F1';
+            const data = THRESHOLDS.map(thr => {
+                let total = 0;
+                for (const iso of ISOS) {
+                    const rec = getRecord(strat, iso, part, thr);
+                    if (rec) total += (rec.gasGw || 0);
+                }
+                return total;
+            });
+
+            datasets.push({
+                label: STRAT_LABELS[strat] || strat,
+                data,
+                borderColor: color,
+                backgroundColor: color + '20',
+                borderWidth: 2,
+                pointRadius: 2,
+                tension: 0.3,
+                fill: false,
+            });
+        }
+
+        const gbLabels = THRESHOLDS.map(t => t >= 99.99 ? '≥99.99%' : t + '%');
+        chartGasBuildout = new Chart(document.getElementById('chartGasBuildout').getContext('2d'), {
+            type: 'line',
+            data: { labels: gbLabels, datasets },
+            options: {
+                ...baseOpts,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    ...baseOpts.plugins,
+                    annotation: {
+                        annotations: {
+                            ...thresholdAnnotations(gbLabels),
+                            existing: {
+                                type: 'line', yMin: 299, yMax: 299,
+                                borderColor: '#F59E0B', borderWidth: 1.5, borderDash: [8, 4],
+                                label: { display: true, content: 'Existing gas (299 GW)', position: 'end', backgroundColor: 'rgba(245,158,11,0.85)', color: '#fff', font: { size: 9, family: "'DM Sans'" }, padding: { top: 2, bottom: 2, left: 4, right: 4 } },
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    ...baseOpts.scales,
+                    x: { ...baseOpts.scales.x, title: { display: true, text: 'CO₂ Reduction Target', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                    y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: v => Math.round(v) + ' GW' }, title: { display: true, text: 'Gas Capacity (GW)', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
                 },
             },
         });
@@ -1248,6 +1348,7 @@
         buildHeatmaps();
         buildResourceTrajectory();
         buildCurtTrajectory();
+        buildGasBuildout();
         buildWrightsCharts();
         computeSynthesisStats();
     }
@@ -1267,6 +1368,7 @@
         document.getElementById('trajectoryValue').textContent = part + '%';
         buildResourceTrajectory();
         buildCurtTrajectory();
+        buildGasBuildout();
     });
 
     document.getElementById('trajectoryStratSelect').addEventListener('change', buildResourceTrajectory);
