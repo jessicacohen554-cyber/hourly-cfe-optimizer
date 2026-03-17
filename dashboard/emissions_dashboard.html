@@ -322,6 +322,10 @@
                     <div class="toggle-label">Reference Trajectories</div>
                     <div style="display:flex;flex-direction:column;gap:6px;">
                         <label class="plant-check">
+                            <input type="checkbox" id="togMarket" checked onchange="updateChart()">
+                            <span class="plant-check-name">Market Trajectory (original)</span>
+                        </label>
+                        <label class="plant-check">
                             <input type="checkbox" id="togAT" checked onchange="updateChart()">
                             <span class="plant-check-name">AT Power NZ</span>
                         </label>
@@ -412,6 +416,11 @@
         document.getElementById('statGapToTarget').textContent =
             (gap2050 > 0 ? '+' : '') + gap2050.toFixed(1) + ' Mt';
 
+        // ── Compute max CCS delta for each plant (baseline sweep - CCS emissions) ──
+        plants.forEach(p => {
+            p.max_ccs_delta = Math.max(0, p.baseline_co2_mmt - p.ccs_co2_mmt);
+        });
+
         // ── Build plant checklist grouped by ISO ──
         const byISO = {};
         plants.forEach(p => {
@@ -427,7 +436,7 @@
         });
 
         isoOrder.forEach(iso => {
-            const group = byISO[iso].sort((a, b) => b.ccs_reduction_mmt - a.ccs_reduction_mmt);
+            const group = byISO[iso].sort((a, b) => b.max_ccs_delta - a.max_ccs_delta);
             const groupDiv = document.createElement('div');
             groupDiv.className = 'iso-group';
             groupDiv.innerHTML = `
@@ -445,7 +454,7 @@
                 label.innerHTML = `
                     <input type="checkbox" data-orispl="${p.orispl}" data-iso="${p.iso}" onchange="updateChart()">
                     <span class="plant-check-name">${p.name}</span>
-                    <span class="plant-check-co2">${p.ccs_reduction_mmt.toFixed(2)} Mt</span>
+                    <span class="plant-check-co2">${p.max_ccs_delta.toFixed(2)} Mt</span>
                 `;
                 groupDiv.appendChild(label);
             });
@@ -483,31 +492,50 @@
             updateChart();
         };
 
-        // ── Compute CCS-adjusted fan bands ──
+        // ── Compute CCS-adjusted fan bands using per-plant per-year sweep deltas ──
+        // CCS delta = (plant's sweep dispatch emissions) - (CCS emissions at 80% CF / 95% capture / +14% HR)
+        // CCS construction ramp: 2023=0%, 2030=30%, 2035=70%, 2040+=100%
+        const CCS_RAMP = [0, 0.3, 0.7, 1.0, 1.0, 1.0]; // indexed by year position
+
         function computeAdjustedFan() {
             const checkboxes = document.querySelectorAll('#plantChecklist input[type="checkbox"]');
-            let totalReduction = 0;
+            const selectedPlants = [];
             checkboxes.forEach(cb => {
                 if (cb.checked) {
                     const p = plantMap[parseInt(cb.dataset.orispl)];
-                    if (p) totalReduction += p.ccs_reduction_mmt;
+                    if (p) selectedPlants.push(p);
                 }
             });
 
-            // CCS reduces emissions proportionally across all scenarios
-            // Reduction applies from 2030 onward (CCS takes time to build)
-            const ccsRamp = {0: 0, 1: 0.3, 2: 0.7, 3: 1.0, 4: 1.0, 5: 1.0};
+            // For each year, compute total delta for P10/P50/P90 independently
+            // Delta = plant's sweep emissions at that percentile - plant's CCS emissions (fixed)
             const adjusted = {p10: [], p50: [], p90: []};
+            let totalReduction2050 = 0; // for summary stats (at full ramp)
 
             for (let i = 0; i < years.length; i++) {
-                const ramp = ccsRamp[i] || 0;
-                const reduction = totalReduction * ramp;
-                adjusted.p10.push(Math.max(0, fan.p10[i] - reduction));
-                adjusted.p50.push(Math.max(0, fan.p50[i] - reduction));
-                adjusted.p90.push(Math.max(0, fan.p90[i] - reduction));
+                let deltaP10 = 0, deltaP50 = 0, deltaP90 = 0;
+                const ramp = CCS_RAMP[i];
+
+                selectedPlants.forEach(p => {
+                    // Per-plant delta: what they emit in sweep minus what they'd emit with CCS
+                    // ccs_co2_mmt is already the annual CCS residual (80% CF × 95% capture × +14% HR)
+                    const d10 = Math.max(0, p.sweep_p10[i] - p.ccs_co2_mmt) * ramp;
+                    const d50 = Math.max(0, p.sweep_p50[i] - p.ccs_co2_mmt) * ramp;
+                    const d90 = Math.max(0, p.sweep_p90[i] - p.ccs_co2_mmt) * ramp;
+                    deltaP10 += d10;
+                    deltaP50 += d50;
+                    deltaP90 += d90;
+                });
+
+                adjusted.p10.push(Math.max(0, fan.p10[i] - deltaP10));
+                adjusted.p50.push(Math.max(0, fan.p50[i] - deltaP50));
+                adjusted.p90.push(Math.max(0, fan.p90[i] - deltaP90));
+
+                // Track 2050 reduction for summary
+                if (i === years.length - 1) totalReduction2050 = deltaP50;
             }
 
-            return {adjusted, totalReduction};
+            return {adjusted, totalReduction: totalReduction2050};
         }
 
         // ── Gas emissions overlay ──
@@ -523,8 +551,10 @@
         window.updateChart = function() {
             const {adjusted, totalReduction} = computeAdjustedFan();
             const gas = gasEmissions();
+            const showMarket = document.getElementById('togMarket').checked;
             const showAT = document.getElementById('togAT').checked;
             const showSBTi = document.getElementById('togSBTi').checked;
+            const hasCCS = document.querySelectorAll('#plantChecklist input:checked').length > 0;
 
             // Update summary stats
             const nSelected = document.querySelectorAll('#plantChecklist input:checked').length;
@@ -532,7 +562,6 @@
             document.getElementById('sumReduction').textContent = totalReduction.toFixed(1);
 
             const p50_2050 = adjusted.p50[adjusted.p50.length - 1];
-            const withGas = gasMode !== 'without' ? p50_2050 + gas[gas.length - 1] : p50_2050;
             document.getElementById('sumResidual').textContent = p50_2050.toFixed(1);
             document.getElementById('sumPctCut').textContent =
                 baseline > 0 ? ((1 - p50_2050 / baseline) * 100).toFixed(0) + '%' : '0%';
@@ -547,9 +576,47 @@
             // ── Fan chart datasets ──
             const datasets = [];
 
-            // P90 → P50 fill
+            // Original market trajectory (unadjusted fan) as reference when CCS active
+            if (showMarket && hasCCS) {
+                datasets.push({
+                    label: 'Market P90 (ref)',
+                    data: [...fan.p90],
+                    borderColor: 'rgba(239,68,68,0.20)',
+                    backgroundColor: 'transparent',
+                    fill: false,
+                    borderWidth: 1,
+                    borderDash: [2, 4],
+                    pointRadius: 0,
+                    order: 5,
+                });
+                datasets.push({
+                    label: 'Market P50 (ref)',
+                    data: [...fan.p50],
+                    borderColor: 'rgba(100,116,139,0.35)',
+                    backgroundColor: 'rgba(100,116,139,0.04)',
+                    fill: '+1',
+                    borderWidth: 1.5,
+                    borderDash: [3, 4],
+                    pointRadius: 2,
+                    pointBackgroundColor: 'rgba(100,116,139,0.4)',
+                    order: 4,
+                });
+                datasets.push({
+                    label: 'Market P10 (ref)',
+                    data: [...fan.p10],
+                    borderColor: 'rgba(34,197,94,0.20)',
+                    backgroundColor: 'transparent',
+                    fill: false,
+                    borderWidth: 1,
+                    borderDash: [2, 4],
+                    pointRadius: 0,
+                    order: 5,
+                });
+            }
+
+            // CCS-adjusted (or original if no CCS) P90 → P50 fill
             datasets.push({
-                label: 'P90',
+                label: hasCCS ? 'P90 (CCS)' : 'P90',
                 data: adjusted.p90,
                 borderColor: 'rgba(239,68,68,0.5)',
                 backgroundColor: 'rgba(239,68,68,0.10)',
@@ -561,19 +628,19 @@
             });
             // P50
             datasets.push({
-                label: 'P50',
+                label: hasCCS ? 'P50 (CCS)' : 'P50',
                 data: adjusted.p50,
-                borderColor: '#0F172A',
+                borderColor: hasCCS ? '#059669' : '#0F172A',
                 backgroundColor: 'rgba(99,102,241,0.06)',
                 fill: '+1',
                 borderWidth: 2.5,
                 pointRadius: 4,
-                pointBackgroundColor: '#0F172A',
+                pointBackgroundColor: hasCCS ? '#059669' : '#0F172A',
                 order: 2,
             });
             // P10
             datasets.push({
-                label: 'P10',
+                label: hasCCS ? 'P10 (CCS)' : 'P10',
                 data: adjusted.p10,
                 borderColor: 'rgba(34,197,94,0.5)',
                 backgroundColor: 'transparent',
@@ -592,7 +659,7 @@
                     data: withGasData,
                     borderColor: 'rgba(249,115,22,0.8)',
                     backgroundColor: 'rgba(249,115,22,0.08)',
-                    fill: gasMode === 'both' ? false : false,
+                    fill: false,
                     borderWidth: 2,
                     borderDash: [6, 4],
                     pointRadius: 3,
