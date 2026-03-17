@@ -7,7 +7,7 @@
  * Usage:
  *   <script src="js/ceg-nav.js" data-ceg-active="ccs-map"></script>
  *
- * Active keys: "report", "slides", "ccs-map"
+ * Active keys: "report", "slides", "ccs-map", "emissions"
  */
 (function () {
     'use strict';
@@ -17,9 +17,10 @@
     const activePage = scriptTag ? scriptTag.getAttribute('data-ceg-active') || '' : '';
 
     const pages = [
-        { key: 'report',  label: 'Fleet Report',     href: 'ceg_constellation_report.html', icon: '&#128200;' },
-        { key: 'slides',  label: 'Slide Deck',        href: 'ceg_constellation_slides.html', icon: '&#128202;' },
-        { key: 'ccs-map', label: 'CCS Map',            href: 'ccs_proximity_map.html',        icon: '&#127758;' },
+        { key: 'report',    label: 'Fleet Report',     href: 'ceg_constellation_report.html', icon: '&#128200;' },
+        { key: 'slides',    label: 'Slide Deck',        href: 'ceg_constellation_slides.html', icon: '&#128202;' },
+        { key: 'ccs-map',   label: 'CCS Map',            href: 'ccs_proximity_map.html',        icon: '&#127758;' },
+        { key: 'emissions', label: 'Emissions',          href: 'emissions_dashboard.html',      icon: '&#127793;' },
     ];
 
     // Build nav HTML
