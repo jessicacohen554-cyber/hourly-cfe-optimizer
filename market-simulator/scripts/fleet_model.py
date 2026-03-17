@@ -23,6 +23,7 @@ Usage:
     python fleet_model.py --state CA
 """
 
+import logging
 import os
 import sys
 import glob
@@ -31,6 +32,8 @@ from typing import Dict, List, Optional, Tuple, Any
 
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Path setup — allow imports from sibling scripts
@@ -628,6 +631,8 @@ class FleetModel:
             self.load_eia860()
         if self.eia923 is None:
             self.load_eia923()
+        if self.campd is None:
+            self.load_campd()
 
         # If no real data, fall back to stylized defaults
         if self.eia860 is None or len(self.eia860) == 0:
@@ -667,6 +672,9 @@ class FleetModel:
             if 'plant_id' in eia923.columns:
                 eia923['plant_id'] = eia923['plant_id'].astype(str).str.strip()
 
+            logger.info(f"[{self.state}] EIA 860 generators: {len(df)}, "
+                        f"EIA 923 records: {len(eia923)}")
+
             # Check if 923 has gen_id — EIA API JSON typically doesn't
             has_gen_id = ('gen_id' in eia923.columns and
                           eia923['gen_id'].notna().any() and
@@ -679,6 +687,8 @@ class FleetModel:
                     'net_gen_mwh': 'sum',
                     'fuel_mmbtu': 'sum',
                 })
+                logger.info(f"[{self.state}] 923 merge: gen-level, "
+                            f"{len(agg_923)} agg records")
                 df = df.merge(agg_923, on=['plant_id', 'gen_id'], how='left',
                               suffixes=('', '_923'))
             else:
@@ -687,6 +697,8 @@ class FleetModel:
                     'net_gen_mwh': 'sum',
                     'fuel_mmbtu': 'sum',
                 })
+                logger.info(f"[{self.state}] 923 merge: plant-level (no gen_id), "
+                            f"{len(agg_923)} unique plants")
                 df = df.merge(agg_923, on='plant_id', how='left',
                               suffixes=('', '_923'))
 
@@ -699,6 +711,11 @@ class FleetModel:
 
             if 'fuel_mmbtu' not in df.columns:
                 df['fuel_mmbtu'] = np.nan
+
+            # Log 923 merge success rate
+            matched_923 = int(df['net_gen_mwh'].notna().sum())
+            logger.info(f"[{self.state}] 923 merge result: {matched_923}/{len(df)} "
+                        f"generators matched ({100*matched_923/max(len(df),1):.0f}%)")
 
             # Compute revealed heat rate: fuel consumed / net generation
             # Vectorized — avoid per-row loops
@@ -719,17 +736,67 @@ class FleetModel:
             if 'fuel_mmbtu' not in df.columns:
                 df['fuel_mmbtu'] = np.nan
 
-        # Best heat rate: prefer revealed, fall back to design, then unit-type default
+        # Merge CAMPD measured heat rates as additional fallback source
+        df['heat_rate_campd'] = np.nan
+        if self.campd is not None and len(self.campd) > 0:
+            campd = self.campd.copy()
+            if 'facility_id' in campd.columns:
+                campd['facility_id'] = campd['facility_id'].astype(str).str.strip()
+                # CAMPD facility_id = EIA plant_id (ORISPL code)
+                campd_agg = campd.groupby('facility_id', as_index=False).agg({
+                    'heat_input': 'sum',
+                    'gross_load': 'sum',
+                })
+                load_arr = campd_agg['gross_load'].values.astype(float)
+                heat_arr = campd_agg['heat_input'].values.astype(float)
+                valid_campd = (load_arr > 0) & np.isfinite(load_arr) & np.isfinite(heat_arr)
+                campd_agg['measured_heat_rate'] = np.where(
+                    valid_campd, heat_arr / load_arr, np.nan)
+                campd_hr = campd_agg[['facility_id', 'measured_heat_rate']].rename(
+                    columns={'facility_id': 'plant_id', 'measured_heat_rate': 'heat_rate_campd'})
+                campd_hr['plant_id'] = campd_hr['plant_id'].astype(str).str.strip()
+                df = df.merge(campd_hr, on='plant_id', how='left', suffixes=('', '_campd_merge'))
+                if 'heat_rate_campd_campd_merge' in df.columns:
+                    df['heat_rate_campd'] = df['heat_rate_campd_campd_merge'].fillna(df['heat_rate_campd'])
+                    df.drop(columns=['heat_rate_campd_campd_merge'], inplace=True, errors='ignore')
+                matched_campd = int(df['heat_rate_campd'].notna().sum())
+                logger.info(f"[{self.state}] CAMPD heat rates: {matched_campd}/{len(df)} "
+                            f"generators matched")
+
+        # Best heat rate: revealed (923) > CAMPD measured > design (860) > default
         hr_design = df['heat_rate_design'].values.astype(float)
         hr_revealed = df['heat_rate_revealed'].values.astype(float)
+        hr_campd = df['heat_rate_campd'].values.astype(float)
         hr_default = df['unit_type'].map(DEFAULT_HEAT_RATES).values.astype(float)
 
-        best_hr = np.where(np.isfinite(hr_revealed) & (hr_revealed > 3.0) & (hr_revealed < 30.0),
-                           hr_revealed,
-                           np.where(np.isfinite(hr_design) & (hr_design > 3.0) & (hr_design < 30.0),
-                                    hr_design,
-                                    hr_default))
+        valid_range = lambda hr: np.isfinite(hr) & (hr > 3.0) & (hr < 30.0)
+
+        best_hr = np.where(valid_range(hr_revealed), hr_revealed,
+                  np.where(valid_range(hr_campd), hr_campd,
+                  np.where(valid_range(hr_design), hr_design,
+                           hr_default)))
         df['heat_rate'] = best_hr
+
+        # Track which source was used for each generator
+        hr_source = np.where(valid_range(hr_revealed), 'revealed_923',
+                   np.where(valid_range(hr_campd), 'campd',
+                   np.where(valid_range(hr_design), 'design_860',
+                            'default')))
+        df['heat_rate_source'] = hr_source
+
+        # Diagnostic logging
+        n_revealed = int((hr_source == 'revealed_923').sum())
+        n_campd = int((hr_source == 'campd').sum())
+        n_design = int((hr_source == 'design_860').sum())
+        n_default = int((hr_source == 'default').sum())
+        logger.info(f"[{self.state}] Heat rate sources: "
+                    f"{n_revealed} revealed (923), {n_campd} CAMPD, "
+                    f"{n_design} design (860), {n_default} default")
+        logger.info(f"[{self.state}] Heat rate stats: "
+                    f"min={df['heat_rate'].min():.2f}, "
+                    f"median={df['heat_rate'].median():.2f}, "
+                    f"max={df['heat_rate'].max():.2f}, "
+                    f"std={df['heat_rate'].std():.2f}")
 
         # Filter out unreasonable entries
         df = df[df['capacity_mw'] > 0].copy()
