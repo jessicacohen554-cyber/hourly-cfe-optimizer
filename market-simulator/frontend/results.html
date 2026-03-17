@@ -31,6 +31,7 @@
         <ul class="nav-links">
             <li><a href="/">Guide</a></li>
             <li><a href="/setup">Setup</a></li>
+            <li><a href="/fleet-config">Fleet Config</a></li>
             <li><a href="/results" class="active">Results</a></li>
         </ul>
     </nav>
@@ -170,6 +171,16 @@
                 <p>Generation mix by fuel source — how the supply portfolio changes under market conditions</p>
             </div>
             <div class="chart-container-lg" id="chartSupplyStack"></div>
+        </div>
+
+        <!-- Chart 2b: System Emissions by Year (trajectory only) -->
+        <div class="chart-card" id="emissionsByYearCard" style="display:none;">
+            <div class="chart-card-header">
+                <h3>System Emissions by Year <span class="info-icon" data-tooltip="Total CO₂ emissions from fossil generators, broken down by fuel type (coal, gas CCGT, gas CT, oil). Shows how emissions decline as clean energy displaces fossil generation.">i</span></h3>
+                <p>CO₂ emissions trajectory by fuel type — which fossil generators are emitting and when they phase out</p>
+            </div>
+            <div class="chart-container-lg" id="chartEmissionsByYear"></div>
+            <div class="emissions-headline-stats" id="emissionsHeadlineStats" style="display: flex; gap: var(--space-lg); margin-top: var(--space-md); flex-wrap: wrap;"></div>
         </div>
 
         <!-- Table 3: Fuel Source / Heat Rate Bin Breakdown -->
@@ -330,6 +341,23 @@
                 </thead>
                 <tbody id="generatorTableBody"></tbody>
             </table>
+        </div>
+
+        <!-- CCS Deep Dive CTA -->
+        <div class="chart-card" id="ccsCtaCard" style="display:none; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid #bae6fd;">
+            <div style="display: flex; align-items: center; gap: var(--space-lg); flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 240px;">
+                    <h3 style="margin: 0 0 0.35rem 0; color: var(--navy);">Constellation CCS Analysis</h3>
+                    <p style="margin: 0; font-size: 0.9rem; color: #5a6577;">
+                        Run per-plant dispatch on the Constellation CCGT fleet using these simulation results.
+                        See CCS retrofit impact, plant-level emissions trajectories, and fleet transition metrics.
+                    </p>
+                </div>
+                <div style="display: flex; gap: var(--space-sm);">
+                    <a href="/emissions" style="display:inline-block; padding: 0.6rem 1.25rem; background: var(--ceg-blue); color: #fff; border-radius: var(--radius-sm); text-decoration: none; font-weight: 600; font-size: 0.9rem;">CCS Emissions Dashboard</a>
+                    <a href="/ipp-report" style="display:inline-block; padding: 0.6rem 1.25rem; background: var(--navy); color: #fff; border-radius: var(--radius-sm); text-decoration: none; font-weight: 600; font-size: 0.9rem;">IPP Fleet Report</a>
+                </div>
+            </div>
         </div>
 
     </div>

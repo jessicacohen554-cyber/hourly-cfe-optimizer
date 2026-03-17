@@ -147,6 +147,10 @@ class SimulationRequest(BaseModel):
     nuclear_retirement_threshold: float = 30.0  # $/MWh
     mode: str = "snapshot"              # snapshot / trajectory
     years: List[int] = Field(default_factory=lambda: [2030, 2035, 2040, 2045, 2050])
+    # Annual granularity controls (trajectory/sweep modes)
+    start_year: int = 2025              # First simulation year
+    end_year: int = 2060                # Last simulation year
+    year_step: int = 1                  # 1 = every year, 5 = every 5 years
     custom_overrides: CustomOverrides = Field(default_factory=CustomOverrides)
 
     # Fossil new-build LCOEs
@@ -155,12 +159,19 @@ class SimulationRequest(BaseModel):
     # Per-resource transmission overrides
     tx_overrides: Optional[dict] = None  # {solar: float, wind: float, ...} — blank = use master L/M/H
 
+    # Fleet overrides from fleet-config page
+    fleet_overrides: Optional[Dict[str, str]] = None  # {plant_id: "Operating"|"Retired"|"CCS Retrofit"}
+
 
 class SweepRequest(BaseModel):
     """Parameters for a full 270-scenario parametric sweep."""
     isos: List[str] = Field(default_factory=lambda: ["ERCOT"])
     nuclear_retirement_threshold: Optional[float] = 30.0
     snapshot_mode: bool = False
+    # Annual granularity controls
+    start_year: int = 2025
+    end_year: int = 2060
+    year_step: int = 5                  # Default to 5yr steps for sweeps (performance)
     # Optional overrides for sweep bounds (future use)
     conditions: Optional[List[str]] = None         # e.g. ["Facilitating"]
     demand_levels: Optional[List[str]] = None      # e.g. ["Low", "Medium"]
@@ -270,6 +281,7 @@ class YearResult(BaseModel):
     zones_deployed: List[float] = Field(default_factory=list)
     zone_details: List[ZoneDetail] = Field(default_factory=list)
     generator_economics: Dict[str, dict] = Field(default_factory=dict)
+    emissions_by_fuel: Dict[str, float] = Field(default_factory=dict)  # Mt CO2 per fuel type
     nuclear_revenue: Dict[str, float] = Field(default_factory=dict)
     nuclear_retired: bool = False
     ccs_breakeven: Dict[str, float] = Field(default_factory=dict)
@@ -298,6 +310,7 @@ class SimulationResponse(BaseModel):
     emissions_mt: float = 0.0
     demand_twh: float = 0.0
     resource_mix_twh: Dict[str, float] = Field(default_factory=dict)
+    sim_years: List[int] = Field(default_factory=list)  # Years actually simulated
     year_results: List[YearResult] = Field(default_factory=list)
     zones_deployed: List[ZoneDetail] = Field(default_factory=list)
     # Market-wide time series for results page
@@ -305,6 +318,8 @@ class SimulationResponse(BaseModel):
     capacity_rev_time_series: Optional[HourlyProfile] = None
     supply_stack_summary: List[SupplyStackEntry] = Field(default_factory=list)
     fuel_bin_table: List[FuelBinRow] = Field(default_factory=list)
+    # Emissions by fuel type per year (for trajectory emissions chart)
+    emissions_by_fuel_by_year: Optional[Dict[str, Any]] = None  # {years: [...], coal_steam: [...], gas_ccgt: [...], ...}
     # Plant-level summary
     plant_level_summary: Optional[dict] = None  # {operating: int, at_risk: int, stranded: int, total: int}
     # Chart data — threshold sweep, deployment, cost ladder, gas shift, sensitivity, CCS

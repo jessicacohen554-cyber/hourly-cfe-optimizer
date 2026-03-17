@@ -26,7 +26,7 @@ const ISO_DATA = {
 
 const MODE_DESCRIPTIONS = {
     snapshot: "One point-in-time simulation with your exact cost inputs. No learning curves, no year progression. Fast results.",
-    trajectory: "Multi-year forward projection (2023 → 2050). Wright's Law learning curves reduce costs each period. Shows when the market flips for each resource type.",
+    trajectory: "Multi-year forward projection (2025 → 2060). Wright's Law learning curves reduce costs each year. Shows when the market flips for each resource type.",
     sweep: "Full 270-scenario parametric sweep: 2 conditions × 3 demand × 5 price × 3 PPA × 3 gas friction. Comprehensive but takes longer."
 };
 
@@ -37,7 +37,32 @@ document.querySelectorAll('.mode-toggle .toggle-btn').forEach(btn => {
         btn.classList.add('active');
         const mode = btn.dataset.mode;
         document.getElementById('modeDescription').textContent = MODE_DESCRIPTIONS[mode];
-        document.getElementById('trajectorySettings').style.display = mode === 'trajectory' ? '' : 'none';
+        // Show trajectory settings for both trajectory and sweep modes
+        document.getElementById('trajectorySettings').style.display =
+            (mode === 'trajectory' || mode === 'sweep') ? '' : 'none';
+    });
+});
+
+// ── Year range controls ──
+function updateYearCountHint() {
+    const start = parseInt(document.getElementById('startYear')?.value || 2025);
+    const end = parseInt(document.getElementById('endYear')?.value || 2060);
+    const step = parseInt(document.querySelector('#yearStepToggle .toggle-btn.active')?.dataset.value || 1);
+    const count = Math.floor((end - start) / step) + 1;
+    const hint = document.getElementById('yearCountHint');
+    if (hint) {
+        hint.textContent = `${count} simulation year${count !== 1 ? 's' : ''}`;
+        if (count > 20) hint.textContent += ' (may be slow for sweeps)';
+    }
+}
+
+document.getElementById('startYear')?.addEventListener('change', updateYearCountHint);
+document.getElementById('endYear')?.addEventListener('change', updateYearCountHint);
+document.querySelectorAll('#yearStepToggle .toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('#yearStepToggle .toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        updateYearCountHint();
     });
 });
 
@@ -290,11 +315,20 @@ function collectFormData() {
         },
     };
 
-    // Trajectory-specific params
-    if (mode === 'trajectory') {
+    // Fleet overrides from fleet-config page (stored in localStorage)
+    try {
+        const saved = localStorage.getItem('fleet_overrides');
+        if (saved && saved !== '{}') {
+            params.fleet_overrides = JSON.parse(saved);
+        }
+    } catch (e) { /* ignore parse errors */ }
+
+    // Trajectory-specific params (also used by sweep mode)
+    if (mode === 'trajectory' || mode === 'sweep') {
         params.condition = document.querySelector('#conditionToggle .toggle-btn.active')?.dataset.value || 'Facilitating';
-        params.years = Array.from(document.querySelectorAll('#trajectorySettings input[type="checkbox"]:checked'))
-            .map(cb => parseInt(cb.value));
+        params.start_year = parseInt(document.getElementById('startYear')?.value || 2025);
+        params.end_year = parseInt(document.getElementById('endYear')?.value || 2060);
+        params.year_step = parseInt(document.querySelector('#yearStepToggle .toggle-btn.active')?.dataset.value || 1);
         params.learning_curves = document.querySelector('#learningToggle .toggle-btn.active')?.dataset.value === 'On';
         params.learning_speed = document.querySelector('#learningSpeedToggle .toggle-btn.active')?.dataset.value || 'Medium';
     }
@@ -394,7 +428,40 @@ document.querySelectorAll('#custom_fuel_toggle, #custom_lmp_toggle, #custom_capa
     toggle.addEventListener('change', () => checkCustomInputStatus());
 });
 
+// ── Fleet override status display ──
+function updateFleetStatus() {
+    const saved = localStorage.getItem('fleet_overrides');
+    const statusEl = document.getElementById('fleetStatusText');
+    if (!statusEl) return;
+
+    if (!saved || saved === '{}') {
+        statusEl.textContent = 'Using defaults (all plants at baseline status)';
+        statusEl.style.color = 'var(--text-muted)';
+        return;
+    }
+
+    try {
+        const overrides = JSON.parse(saved);
+        const count = Object.keys(overrides).length;
+        if (count === 0) {
+            statusEl.textContent = 'Using defaults (all plants at baseline status)';
+            statusEl.style.color = 'var(--text-muted)';
+            return;
+        }
+        const retired = Object.values(overrides).filter(v => v === 'Retired').length;
+        const ccs = Object.values(overrides).filter(v => v === 'CCS Retrofit').length;
+        const parts = [];
+        if (retired > 0) parts.push(`${retired} retired`);
+        if (ccs > 0) parts.push(`${ccs} CCS retrofit`);
+        statusEl.innerHTML = `<span style="color: #22C55E; font-weight: 600;">✓</span> ${count} plant${count > 1 ? 's' : ''} modified (${parts.join(', ')})`;
+        statusEl.style.color = 'var(--navy)';
+    } catch (e) {
+        statusEl.textContent = 'Using defaults (all plants at baseline status)';
+    }
+}
+
 // ── Initialize ──
 updateISOSummary();
 updateGeothermalVisibility();
 checkCustomInputStatus();
+updateFleetStatus();

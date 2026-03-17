@@ -22,9 +22,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -211,6 +211,68 @@ async def serve_results_page():
     if not results_path.exists():
         raise HTTPException(status_code=404, detail="results.html not found")
     return FileResponse(str(results_path), media_type="text/html")
+
+
+@app.get("/fleet-config", response_class=HTMLResponse)
+async def serve_fleet_config_page():
+    """Serve the fleet configuration page."""
+    fleet_path = FRONTEND_DIR / "fleet-config.html"
+    if not fleet_path.exists():
+        raise HTTPException(status_code=404, detail="fleet-config.html not found")
+    return FileResponse(str(fleet_path), media_type="text/html")
+
+
+@app.get("/emissions", response_class=HTMLResponse)
+async def serve_emissions_page():
+    """Serve the CCS emissions dashboard page."""
+    emissions_path = FRONTEND_DIR / "emissions.html"
+    if not emissions_path.exists():
+        raise HTTPException(status_code=404, detail="emissions.html not found")
+    return FileResponse(str(emissions_path), media_type="text/html")
+
+
+@app.get("/ipp-report", response_class=HTMLResponse)
+async def serve_ipp_report_page():
+    """Serve the IPP fleet report page."""
+    ipp_path = FRONTEND_DIR / "ipp-report.html"
+    if not ipp_path.exists():
+        raise HTTPException(status_code=404, detail="ipp-report.html not found")
+    return FileResponse(str(ipp_path), media_type="text/html")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Fleet configuration endpoint
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/fleet-config")
+async def get_fleet_config():
+    """Return Constellation/Calpine fleet data for the fleet configuration UI."""
+    fleet_path = MARKET_SIM_ROOT / "data" / "constellation_fleet.json"
+    if not fleet_path.exists():
+        raise HTTPException(status_code=404, detail="constellation_fleet.json not found")
+    import json
+    with open(fleet_path) as f:
+        return json.load(f)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# File download endpoint
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/download/{run_id}/{filename}")
+async def download_result_file(run_id: str, filename: str):
+    """Download a result file from a specific run directory."""
+    # Sanitize filename to prevent directory traversal
+    import re
+    if not re.match(r'^[\w\-\.]+$', filename):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    if not re.match(r'^[\w\-]+$', run_id):
+        raise HTTPException(status_code=400, detail="Invalid run_id")
+
+    file_path = RESULTS_DIR / run_id / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"File not found: {filename}")
+    return FileResponse(str(file_path), filename=filename)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -721,10 +783,25 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
                 for zd in yr.get("zone_details", [])
             ],
             generator_economics=yr.get("generator_economics", {}),
+            emissions_by_fuel=yr.get("emissions_by_fuel", {}),
             nuclear_revenue=yr.get("nuclear_revenue", {}),
             nuclear_retired=yr.get("nuclear_retired", False),
             ccs_breakeven=yr.get("ccs_breakeven", {}),
         ))
+
+    # Build emissions_by_fuel_by_year aggregate for trajectory chart
+    emissions_by_fuel_by_year = None
+    if len(year_results) > 1:
+        all_fuel_types = set()
+        for yr in year_results:
+            all_fuel_types.update(yr.get("emissions_by_fuel", {}).keys())
+        emissions_by_fuel_by_year = {
+            "years": [yr.get("year", 0) for yr in year_results],
+        }
+        for fuel in sorted(all_fuel_types):
+            emissions_by_fuel_by_year[fuel] = [
+                yr.get("emissions_by_fuel", {}).get(fuel, 0) for yr in year_results
+            ]
 
     # Build supply stack summary from resource_mix_twh
     supply_stack = []
@@ -810,6 +887,9 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
     # 6. CCS analysis: cost curves at different carbon prices
     ccs_analysis = _compute_ccs_analysis(iso)
 
+    # Extract sim_years from year_results
+    sim_years_list = sorted(set(yr.get("year", 0) for yr in year_results))
+
     return SimulationResponse(
         iso=iso,
         existing_clean_pct=round(existing_clean, 1),
@@ -821,12 +901,14 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
         emissions_mt=final.get("emissions_mt", 0),
         demand_twh=final.get("demand_twh", 0),
         resource_mix_twh=final.get("resource_mix_twh", {}),
+        sim_years=sim_years_list,
         year_results=typed_years,
         zones_deployed=zone_details,
         lmp_time_series=lmp_ts,
         capacity_rev_time_series=cap_rev_ts,
         supply_stack_summary=supply_stack,
         fuel_bin_table=fuel_bins,
+        emissions_by_fuel_by_year=emissions_by_fuel_by_year,
         threshold_sweep=threshold_sweep,
         what_gets_built=what_gets_built,
         cost_ladder=cost_ladder,
@@ -856,12 +938,26 @@ async def simulate(req: SimulationRequest):
         preloaded = _get_preloaded_data()
         lmp_cache: dict = {}
 
+        # Build sim_years from request parameters
+        from market_simulation import build_sim_years
+        if snapshot_mode:
+            custom_sim_years = None  # snapshot_mode handles [2025]
+        elif req.start_year and req.end_year:
+            custom_sim_years = build_sim_years(
+                start=req.start_year,
+                end=req.end_year,
+                step=req.year_step or 1,
+            )
+        else:
+            custom_sim_years = None  # use legacy SIM_YEARS
+
         results = run_market_simulation(
             scenario_id="API_SINGLE",
             conditions=conditions,
             isos=[iso],
             nuclear_retirement_threshold=nrt,
             snapshot_mode=snapshot_mode,
+            sim_years=custom_sim_years,
             _preloaded=preloaded,
             _lmp_cache=lmp_cache,
             _quiet=True,
@@ -990,6 +1086,16 @@ def _run_sweep_sync(job_id: str, req: SweepRequest):
         lmp_cache: dict = {}
         all_results = {}
 
+        # Build sim_years for sweep
+        from market_simulation import build_sim_years
+        sweep_sim_years = None
+        if not req.snapshot_mode:
+            sweep_sim_years = build_sim_years(
+                start=req.start_year,
+                end=req.end_year,
+                step=req.year_step or 5,
+            )
+
         for i, (scenario_id, conditions) in enumerate(all_scenarios):
             results = run_market_simulation(
                 scenario_id=scenario_id,
@@ -997,6 +1103,7 @@ def _run_sweep_sync(job_id: str, req: SweepRequest):
                 isos=isos,
                 nuclear_retirement_threshold=req.nuclear_retirement_threshold,
                 snapshot_mode=req.snapshot_mode,
+                sim_years=sweep_sim_years,
                 _preloaded=preloaded,
                 _lmp_cache=lmp_cache,
                 _quiet=True,
@@ -1315,6 +1422,28 @@ def _save_plant_level_csv(filepath: Path, plant_data: list):
             w.writerow(row)
 
 
+def _save_constellation_dispatch_csv(filepath: Path, dispatch_results: list):
+    """Save constellation dispatch results as CSV for external analysis.
+
+    Each row is one plant × one year with dispatch economics.
+    """
+    if not dispatch_results:
+        return
+
+    columns = [
+        'year', 'orispl', 'plant_name', 'iso', 'capacity_mw', 'equity_pct',
+        'capacity_factor', 'generation_mwh', 'co2_tons', 'co2_mmt',
+        'ccs_residual_mmt', 'ccs_delta_mmt', 'revenue_mwh', 'fuel_cost_mwh',
+        'profit_mwh', 'status',
+    ]
+
+    with open(filepath, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=columns, extrasaction='ignore')
+        w.writeheader()
+        for row in dispatch_results:
+            w.writerow(row)
+
+
 def _save_results_csv(filepath: Path, response_data: dict):
     """Save comprehensive result data as CSV with multiple sections."""
     with open(filepath, "w", newline="") as f:
@@ -1565,8 +1694,6 @@ async def get_run(run_id: str):
     return result
 
 
-from fastapi import Request
-from fastapi.responses import JSONResponse
 import base64
 
 
@@ -1613,6 +1740,56 @@ async def download_plant_csv(run_id: str):
         media_type="text/csv",
         filename=f"{run_id}_plant_results.csv",
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Constellation CCS dispatch endpoint
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.post("/api/constellation-dispatch")
+async def constellation_dispatch(request: Request):
+    """Run Constellation CCGT fleet dispatch using simulation year results.
+
+    Expects JSON body with:
+      - year_results: list of {year, clean_pct, avg_lmp, iso, ...}
+      - fleet_overrides: optional dict {plant_id: status}
+      - run_id: optional run ID for saving CSV output
+    """
+    body = await request.json()
+    year_results = body.get("year_results", [])
+    fleet_overrides = body.get("fleet_overrides", None)
+    run_id = body.get("run_id", None)
+
+    if not year_results:
+        raise HTTPException(status_code=400, detail="No year_results provided")
+
+    try:
+        from constellation_dispatch_integrated import run_dispatch_from_sim_results
+
+        # Convert year_results to plain dicts if they're Pydantic models
+        yr_dicts = []
+        for yr in year_results:
+            if isinstance(yr, dict):
+                yr_dicts.append(yr)
+            else:
+                yr_dicts.append(yr.dict() if hasattr(yr, 'dict') else dict(yr))
+
+        result = run_dispatch_from_sim_results(yr_dicts, fleet_overrides=fleet_overrides)
+
+        # Save CSV if run_id provided
+        if run_id and result.get("csv_rows"):
+            run_dir = RESULTS_DIR / run_id
+            if run_dir.exists():
+                csv_path = run_dir / "constellation_dispatch.csv"
+                _save_constellation_dispatch_csv(csv_path, result["csv_rows"])
+
+        return result
+
+    except ImportError as e:
+        raise HTTPException(status_code=500, detail=f"Constellation dispatch module not available: {e}")
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Dispatch failed: {str(e)}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
