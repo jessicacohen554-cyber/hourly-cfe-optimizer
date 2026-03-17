@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="js/ccs-proximity-data.js"></script>
+    <script src="js/ceg-nav.js" data-ceg-active="ccs-map"></script>
     <style>
         /* ── Page-specific overrides (map + calculator layout) ── */
         #ccsMap {
@@ -389,24 +390,6 @@
     </style>
 </head>
 <body>
-
-    <!-- ═══ NAV ═══ -->
-    <nav>
-        <div class="nav-logo">
-            <a href="#" style="display:flex;align-items:center;gap:0.75rem;text-decoration:none;">
-                <img src="img/ceg_logo.png" alt="Constellation Energy" style="height:36px;" onerror="this.style.display='none'">
-                <div>
-                    <div class="nav-title">Constellation Energy</div>
-                    <div class="nav-subtitle">CCS Proximity Analysis</div>
-                </div>
-            </a>
-        </div>
-        <ul class="nav-links">
-            <li><a href="ceg_constellation_report.html">Full Report</a></li>
-            <li><a href="ceg_constellation_slides.html">Slide Deck</a></li>
-            <li><a href="ccs_proximity_map.html" class="active">CCS Map</a></li>
-        </ul>
-    </nav>
 
     <!-- ═══ HERO ═══ -->
     <div class="hero-section">
