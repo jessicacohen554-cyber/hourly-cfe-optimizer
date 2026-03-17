@@ -7,7 +7,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -220,13 +220,19 @@ class CCSBreakeven(BaseModel):
 
 
 class ZoneDetail(BaseModel):
-    """Economics for a single deployment zone (threshold band)."""
-    threshold: float
-    revenue: float
-    cost: float
-    profit: float
-    new_gw: float
-    avg_lmp: float
+    """Economics for a single deployment zone."""
+    model_config = ConfigDict(extra='ignore')
+
+    resource: str = ""
+    threshold: float = 0.0
+    twh: float = 0.0
+    gw: float = 0.0
+    new_gw: float = 0.0
+    lcoe: float = 0.0
+    revenue: float = 0.0
+    cost: float = 0.0
+    profit: float = 0.0
+    avg_lmp: float = 0.0
     energy_rev_mwh: float = 0.0
     capacity_rev_mwh: float = 0.0
     rec_rev_mwh: float = 0.0
@@ -279,7 +285,7 @@ class YearResult(BaseModel):
     market_stop: bool = False
     resource_mix_twh: Dict[str, float] = Field(default_factory=dict)
     cumulative_gw: Dict[str, float] = Field(default_factory=dict)
-    zones_deployed: List[float] = Field(default_factory=list)
+    zones_deployed: List[str] = Field(default_factory=list)
     zone_details: List[ZoneDetail] = Field(default_factory=list)
     generator_economics: Dict[str, dict] = Field(default_factory=dict)
     emissions_by_fuel: Dict[str, float] = Field(default_factory=dict)  # Mt CO2 per fuel type
