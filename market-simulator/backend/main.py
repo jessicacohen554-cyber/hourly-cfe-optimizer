@@ -238,6 +238,26 @@ async def get_fleet_config():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# File download endpoint
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/download/{run_id}/{filename}")
+async def download_result_file(run_id: str, filename: str):
+    """Download a result file from a specific run directory."""
+    # Sanitize filename to prevent directory traversal
+    import re
+    if not re.match(r'^[\w\-\.]+$', filename):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    if not re.match(r'^[\w\-]+$', run_id):
+        raise HTTPException(status_code=400, detail="Invalid run_id")
+
+    file_path = RESULTS_DIR / run_id / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"File not found: {filename}")
+    return FileResponse(str(file_path), filename=filename)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # ISO metadata endpoints
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -1381,6 +1401,28 @@ def _save_plant_level_csv(filepath: Path, plant_data: list):
         w = csv.DictWriter(f, fieldnames=columns, extrasaction='ignore')
         w.writeheader()
         for row in plant_data:
+            w.writerow(row)
+
+
+def _save_constellation_dispatch_csv(filepath: Path, dispatch_results: list):
+    """Save constellation dispatch results as CSV for external analysis.
+
+    Each row is one plant × one year with dispatch economics.
+    """
+    if not dispatch_results:
+        return
+
+    columns = [
+        'year', 'orispl', 'plant_name', 'iso', 'capacity_mw', 'equity_pct',
+        'capacity_factor', 'generation_mwh', 'co2_tons', 'co2_mmt',
+        'ccs_residual_mmt', 'ccs_delta_mmt', 'revenue_mwh', 'fuel_cost_mwh',
+        'profit_mwh', 'status',
+    ]
+
+    with open(filepath, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=columns, extrasaction='ignore')
+        w.writeheader()
+        for row in dispatch_results:
             w.writerow(row)
 
 
