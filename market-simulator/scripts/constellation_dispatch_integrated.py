@@ -64,32 +64,7 @@ def load_ccs_plants_from_file(fleet_json_path=None):
             })
         return plants
 
-    # Fallback: try ccs-proximity-data.js
-    root_dir = os.path.dirname(os.path.dirname(SCRIPT_DIR))
-    ccs_path = os.path.join(root_dir, 'dashboard', 'js', 'ccs-proximity-data.js')
-    if os.path.exists(ccs_path):
-        with open(ccs_path) as f:
-            content = f.read()
-        m = re.search(r'=\s*(\{.*\})\s*;', content, re.DOTALL)
-        data = json.loads(m.group(1))
-        plants = []
-        for p in data['plants']:
-            cap = p.get('ownedCapacity_mw', p.get('namepcap_mw', 0))
-            baseline = p.get('baselineCO2_mmt', 0)
-            gen_est = cap * 0.65 * H
-            co2_rate = baseline * 1e6 / gen_est if baseline > 0 and gen_est > 0 else 0.37
-            plants.append({
-                'orispl': p.get('orispl', 0),
-                'name': p.get('name', ''),
-                'iso': p.get('iso', 'ERCOT'),
-                'capacity_mw': cap,
-                'equity_pct': p.get('equityShare', 1.0),
-                'co2_rate_t_mwh': co2_rate,
-                'baseline_co2_mmt': baseline,
-                'ccs_eligible': True,
-            })
-        return plants
-
+    # No fleet data found — return empty
     return []
 
 
