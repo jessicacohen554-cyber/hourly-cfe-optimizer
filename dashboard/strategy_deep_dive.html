@@ -238,7 +238,7 @@
 
     <div class="card">
         <h3 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Total Gas Capacity vs. Corporate Participation</h3>
-        <p style="font-family:var(--font-body);font-size:13px;color:#64748B;margin-bottom:var(--space-md)">Ribbon bands show the range across all CO&#8322; targets (50&ndash;99.99%). Solid line = 90% target. When lines cross below 299 GW, strategies begin displacing existing gas.</p>
+        <p style="font-family:var(--font-body);font-size:13px;color:#64748B;margin-bottom:var(--space-md)">Ribbon bands show the range across all CO&#8322; targets (50&ndash;99.99%). Solid line = 95% target; dotted lines = 90% and 99%. When lines cross below 299 GW, strategies begin displacing existing gas.</p>
         <div class="deep-chart-wrap">
             <canvas id="chartGasRibbon"></canvas>
         </div>
@@ -254,7 +254,7 @@
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <section class="content-section story-section scroll-reveal">
     <h2 class="section-title">2. Participation-Level Deep Dive</h2>
-    <p class="section-subtitle">How do strategies compare across the full range of CO&#8322; ambition? Ribbon bands show the threshold range; solid lines mark the 90% target.</p>
+    <p class="section-subtitle">How do strategies compare across the full range of CO&#8322; ambition? Ribbon bands show the threshold range; solid lines mark the 95% target; dotted lines show 90% and 99%.</p>
 
     <div class="chart-grid-2">
         <div class="card">
@@ -315,23 +315,30 @@
 
     <div class="chart-grid-2">
         <div class="card">
-            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Resource Mix vs. Threshold</h4>
-            <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm) /* contrast-fix: was #94A3B8, now #64748B, ratio 4.76:1 on white */">How the resource mix evolves as CO&#8322; ambition increases. Select a strategy to view.</p>
-            <div class="slider-control">
-                <label>Strategy:</label>
-                <select id="trajectoryStratSelect" style="font-family:var(--font-data);font-size:12px;padding:4px 8px;border-radius:var(--radius-sm);border:1px solid #CBD5E1;">
-                </select>
-            </div>
-            <div class="deep-chart-wrap">
-                <canvas id="chartResourceTrajectory"></canvas>
-            </div>
-        </div>
-        <div class="card">
             <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Curtailment vs. Threshold</h4>
-            <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm) /* contrast-fix: was #94A3B8, now #64748B, ratio 4.76:1 on white */">Strategies that overbuild renewables early show rising curtailment at higher targets.</p>
+            <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm)">Strategies that overbuild renewables early show rising curtailment at higher targets.</p>
             <div class="deep-chart-wrap">
                 <canvas id="chartCurtTrajectory"></canvas>
             </div>
+        </div>
+        <div class="card">
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">New Gas Buildout vs. Threshold</h4>
+            <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm)">Total gas capacity required at each CO&#8322; target. Lower = less fossil backup needed.</p>
+            <div class="deep-chart-wrap">
+                <canvas id="chartGasBuildout"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="card" style="margin-top:var(--space-md)">
+        <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Resource Mix vs. Threshold</h4>
+        <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm)">How the resource mix evolves as CO&#8322; ambition increases. Select a strategy to view.</p>
+        <div class="slider-control">
+            <label>Strategy:</label>
+            <select id="trajectoryStratSelect" style="font-family:var(--font-data);font-size:12px;padding:4px 8px;border-radius:var(--radius-sm);border:1px solid #CBD5E1;">
+            </select>
+        </div>
+        <div class="deep-chart-wrap" style="min-height:350px">
+            <canvas id="chartResourceTrajectory"></canvas>
         </div>
     </div>
 </section>
@@ -345,7 +352,7 @@
 
     <div class="chart-grid-2">
         <div class="card">
-            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Cost Trajectories by Strategy (at 90% target)</h4>
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Cost Trajectories by Strategy (at 95% target)</h4>
             <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm) /* contrast-fix: was #94A3B8, now #64748B, ratio 4.76:1 on white */">Blended $/MWh as participation scales. Lower = faster learning curve realization.</p>
             <div class="deep-chart-wrap">
                 <canvas id="chartWrightsTrajectory"></canvas>
@@ -379,7 +386,7 @@
         </div>
         <div class="synth-card scroll-reveal">
             <div class="synth-val" id="synthGridClean">--</div>
-            <div class="synth-lbl">Peak grid clean % achievable at 90% target</div>
+            <div class="synth-lbl">Peak grid clean % achievable at 95% target</div>
         </div>
         <div class="synth-card scroll-reveal">
             <div class="synth-val" id="synthCritMass">--</div>
@@ -387,7 +394,7 @@
         </div>
         <div class="synth-card scroll-reveal">
             <div class="synth-val" id="synthCO2">--</div>
-            <div class="synth-lbl">Mt CO&#8322; displaced at 30% participation, 90% target (best strategy)</div>
+            <div class="synth-lbl">Mt CO&#8322; displaced at 30% participation, 95% target (best strategy)</div>
         </div>
     </div>
 
@@ -500,6 +507,7 @@
     function buildRibbonData(strat, metricFn) {
         return PARTICIPATION_LEVELS.map(part => {
             const vals = [];
+            let t90 = null, t95 = null, t99 = null;
             for (const thr of THRESHOLDS) {
                 let total = 0;
                 let valid = false;
@@ -507,16 +515,24 @@
                     const rec = getRecord(strat, iso, part, thr);
                     if (rec) { total += metricFn(rec, iso); valid = true; }
                 }
-                if (valid) vals.push(total);
+                if (valid) {
+                    vals.push(total);
+                    if (thr === 90) t90 = total;
+                    if (thr === 95) t95 = total;
+                    if (thr === 99) t99 = total;
+                }
             }
-            if (vals.length === 0) return { min: 0, max: 0, p90: 0 };
+            if (vals.length === 0) return { min: 0, max: 0, t90: 0, t95: 0, t99: 0 };
             vals.sort((a, b) => a - b);
-            const p90Idx = Math.min(Math.floor(vals.length * 0.75), vals.length - 1); // ~90th percentile threshold
-            return { min: vals[0], max: vals[vals.length - 1], p90: vals[p90Idx] };
+            // Fallback to percentile if specific threshold not found
+            if (t90 === null) t90 = vals[Math.min(Math.floor(vals.length * 0.5), vals.length - 1)];
+            if (t95 === null) t95 = vals[Math.min(Math.floor(vals.length * 0.75), vals.length - 1)];
+            if (t99 === null) t99 = vals[Math.min(Math.floor(vals.length * 0.9), vals.length - 1)];
+            return { min: vals[0], max: vals[vals.length - 1], t90, t95, t99 };
         });
     }
 
-    // Build ribbon datasets for Chart.js (fill band + solid line)
+    // Build ribbon datasets for Chart.js (fill band + solid 95% line + dotted 90%/99% lines)
     function ribbonDatasets(strat, ribbonData) {
         const color = STRAT_COLORS[strat] || '#6366F1';
         const label = STRAT_LABELS[strat] || strat;
@@ -543,7 +559,7 @@
             },
             {
                 label: label,
-                data: ribbonData.map(d => d.p90),
+                data: ribbonData.map(d => d.t95),
                 borderColor: color,
                 backgroundColor: color + '20',
                 borderWidth: 2.5,
@@ -555,6 +571,30 @@
                 tension: 0.3,
                 fill: false,
                 order: 1,
+            },
+            {
+                label: label + ' (90%)',
+                data: ribbonData.map(d => d.t90),
+                borderColor: color,
+                backgroundColor: 'transparent',
+                borderWidth: 1.5,
+                borderDash: [6, 4],
+                pointRadius: 0,
+                tension: 0.3,
+                fill: false,
+                order: 5,
+            },
+            {
+                label: label + ' (99%)',
+                data: ribbonData.map(d => d.t99),
+                borderColor: color,
+                backgroundColor: 'transparent',
+                borderWidth: 1.5,
+                borderDash: [6, 4],
+                pointRadius: 0,
+                tension: 0.3,
+                fill: false,
+                order: 5,
             },
         ];
     }
@@ -570,6 +610,7 @@
     let chartCurtRibbon = null;
     let chartResourceTrajectory = null;
     let chartCurtTrajectory = null;
+    let chartGasBuildout = null;
     let chartWrightsTrajectory = null;
     let chartCriticalMass = null;
 
@@ -590,9 +631,9 @@
             const data = buildRibbonData(strat, (rec) => rec.gasGw || 0);
             datasets.push(...ribbonDatasets(strat, data));
 
-            // Find first participation where p90 line crosses below 299
+            // Find first participation where 95% target line crosses below 299
             for (let i = 0; i < data.length; i++) {
-                if (data[i].p90 < EXISTING_GAS_TOTAL) {
+                if (data[i].t95 < EXISTING_GAS_TOTAL) {
                     crossBelow299.push({ strat: STRAT_LABELS[strat] || strat, part: PARTICIPATION_LEVELS[i] });
                     break;
                 }
@@ -606,7 +647,7 @@
                 `Strategies crossing below existing gas (299 GW): ${parts}. Beyond these thresholds, clean energy doesn't just prevent new gas - it retires existing capacity.`;
         } else {
             document.getElementById('gasInsightText').textContent =
-                'At current selections, no strategy crosses below existing gas capacity (299 GW) at the 90% CO₂ target line. Try selecting more aggressive strategies or check higher participation levels.';
+                'At current selections, no strategy crosses below existing gas capacity (299 GW) at the 95% CO₂ target line. Try selecting more aggressive strategies or check higher participation levels.';
         }
 
         chartGasRibbon = new Chart(document.getElementById('chartGasRibbon').getContext('2d'), {
@@ -621,7 +662,7 @@
                         ...baseOpts.plugins.legend,
                         labels: {
                             ...baseOpts.plugins.legend.labels,
-                            filter: (item) => !item.text.includes('(max)') && !item.text.includes('(min)'),
+                            filter: (item) => !item.text.includes('(max)') && !item.text.includes('(min)') && !item.text.includes('(90%)') && !item.text.includes('(99%)'),
                         },
                     },
                     annotation: {
@@ -684,7 +725,7 @@
                         ...baseOpts.plugins.legend,
                         labels: {
                             ...baseOpts.plugins.legend.labels,
-                            filter: (item) => !item.text.includes('(max)') && !item.text.includes('(min)'),
+                            filter: (item) => !item.text.includes('(max)') && !item.text.includes('(min)') && !item.text.includes('(90%)') && !item.text.includes('(99%)'),
                         },
                     },
                     tooltip: {
@@ -905,42 +946,73 @@
         }
     }
 
+    // Extract resource TWh from a deployment record
+    function extractResources(rec) {
+        const res = {};
+        // New-build resources (n field)
+        if (rec.n) {
+            for (const [k, v] of Object.entries(rec.n)) {
+                if (k === 'nuclear_uprate') { res.clean_firm = (res.clean_firm || 0) + v; }
+                else if (k === 'new_vre') { res.wind = (res.wind || 0) + v; } // new_vre lumped into wind
+                else { res[k] = (res[k] || 0) + v; }
+            }
+        }
+        // Cross-regional resources (x field — keyed by source ISO)
+        if (rec.x) {
+            for (const isoData of Object.values(rec.x)) {
+                if (typeof isoData !== 'object') continue;
+                for (const [k, v] of Object.entries(isoData)) {
+                    if (k === 'existing_merchant') continue; // skip existing credits
+                    res[k] = (res[k] || 0) + v;
+                }
+            }
+        }
+        // Existing resources (e field)
+        if (rec.e) {
+            res.existing = (res.existing || 0) + (rec.e.existing_merchant || 0) + (rec.e.sss_allocation || 0);
+        }
+        return res;
+    }
+
     function buildResourceTrajectory() {
         if (chartResourceTrajectory) chartResourceTrajectory.destroy();
         const strat = document.getElementById('trajectoryStratSelect').value;
         const part = getTrajectoryParticipation();
 
-        // Get data from STRATEGY_CMP
-        if (typeof STRATEGY_CMP === 'undefined') return;
-        const stratData = STRATEGY_CMP.strategies?.[strat];
-        if (!stratData) return;
-
-        const resources = ['solar', 'wind', 'ccs', 'battery', 'ldes'];
+        const resources = ['solar', 'wind', 'clean_firm', 'ccs', 'battery', 'ldes', 'existing'];
+        const resLabels = { solar: 'Solar', wind: 'Wind', clean_firm: 'Clean Firm', ccs: 'CCS', battery: 'Battery', ldes: 'LDES', existing: 'Existing Clean' };
         const resColors = {
             solar: RESOURCE_COLORS ? RESOURCE_COLORS.solar : '#F59E0B',
             wind: RESOURCE_COLORS ? RESOURCE_COLORS.wind : '#22C55E',
+            clean_firm: RESOURCE_COLORS ? RESOURCE_COLORS.cleanFirm : '#6366F1',
             ccs: RESOURCE_COLORS ? RESOURCE_COLORS.ccs : '#64748B',
             battery: RESOURCE_COLORS ? RESOURCE_COLORS.battery : '#06B6D4',
             ldes: RESOURCE_COLORS ? RESOURCE_COLORS.ldes : '#E91E63',
+            existing: '#94A3B8',
         };
 
-        const availableThrs = Object.keys(stratData.CAISO?.by_threshold || {}).map(Number).sort((a,b) => a - b);
-
+        // Build data from DEPLOYMENT_DATA across all ISOs
         const resData = {};
         for (const r of resources) resData[r] = [];
 
+        const availableThrs = THRESHOLDS;
+
         for (const thr of availableThrs) {
-            for (const r of resources) {
-                let total = 0;
-                for (const iso of ISOS) {
-                    const entry = stratData[iso]?.by_threshold?.[String(thr)];
-                    if (entry?.resources?.[r]) total += entry.resources[r].twh || 0;
+            const totals = {};
+            for (const iso of ISOS) {
+                const rec = getRecord(strat, iso, part, thr);
+                if (!rec) continue;
+                const extracted = extractResources(rec);
+                for (const [k, v] of Object.entries(extracted)) {
+                    totals[k] = (totals[k] || 0) + v;
                 }
-                resData[r].push(total);
+            }
+            for (const r of resources) {
+                resData[r].push(totals[r] || 0);
             }
         }
 
-        // Also add gas backup from deployment data
+        // Gas backup from deployment data
         const gasData = availableThrs.map(thr => {
             let total = 0;
             for (const iso of ISOS) {
@@ -950,9 +1022,12 @@
             return total;
         });
 
+        // Filter out resources with all zeros
+        const activeResources = resources.filter(r => resData[r].some(v => v > 0));
+
         const datasets = [
-            ...resources.map(r => ({
-                label: r.charAt(0).toUpperCase() + r.slice(1),
+            ...activeResources.map(r => ({
+                label: resLabels[r] || r,
                 data: resData[r],
                 backgroundColor: resColors[r] + 'AA',
                 borderColor: resColors[r],
@@ -1031,6 +1106,64 @@
         });
     }
 
+    function buildGasBuildout() {
+        if (chartGasBuildout) chartGasBuildout.destroy();
+        const active = getActiveStrategies();
+        const part = getTrajectoryParticipation();
+        const datasets = [];
+
+        for (const strat of active) {
+            const color = STRAT_COLORS[strat] || '#6366F1';
+            const data = THRESHOLDS.map(thr => {
+                let total = 0;
+                for (const iso of ISOS) {
+                    const rec = getRecord(strat, iso, part, thr);
+                    if (rec) total += (rec.gasGw || 0);
+                }
+                return total;
+            });
+
+            datasets.push({
+                label: STRAT_LABELS[strat] || strat,
+                data,
+                borderColor: color,
+                backgroundColor: color + '20',
+                borderWidth: 2,
+                pointRadius: 2,
+                tension: 0.3,
+                fill: false,
+            });
+        }
+
+        const gbLabels = THRESHOLDS.map(t => t >= 99.99 ? '≥99.99%' : t + '%');
+        chartGasBuildout = new Chart(document.getElementById('chartGasBuildout').getContext('2d'), {
+            type: 'line',
+            data: { labels: gbLabels, datasets },
+            options: {
+                ...baseOpts,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    ...baseOpts.plugins,
+                    annotation: {
+                        annotations: {
+                            ...thresholdAnnotations(gbLabels),
+                            existing: {
+                                type: 'line', yMin: 299, yMax: 299,
+                                borderColor: '#F59E0B', borderWidth: 1.5, borderDash: [8, 4],
+                                label: { display: true, content: 'Existing gas (299 GW)', position: 'end', backgroundColor: 'rgba(245,158,11,0.85)', color: '#fff', font: { size: 9, family: "'DM Sans'" }, padding: { top: 2, bottom: 2, left: 4, right: 4 } },
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    ...baseOpts.scales,
+                    x: { ...baseOpts.scales.x, title: { display: true, text: 'CO₂ Reduction Target', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                    y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: v => Math.round(v) + ' GW' }, title: { display: true, text: 'Gas Capacity (GW)', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                },
+            },
+        });
+    }
+
     // ═════════════════════════════════════════════════════════════════════
     // SECTION 5: WRIGHT'S LAW
     // ═════════════════════════════════════════════════════════════════════
@@ -1049,26 +1182,26 @@
     function buildWrightsCharts() {
         if (!wrightsData) return;
 
-        // Chart 6A: Cost trajectories by strategy at 90% target
+        // Chart 6A: Cost trajectories by strategy at 95% target
         if (chartWrightsTrajectory) chartWrightsTrajectory.destroy();
 
-        const fig8 = wrightsData.figure8 || wrightsData.strategy_comparison_90;
+        const fig8 = wrightsData.figure8 || wrightsData.strategy_comparison_95 || wrightsData.strategy_comparison_90;
         if (!fig8) return;
 
         const partPcts = fig8.participation_pcts || wrightsData.metadata?.participation_pcts || [];
         const partLabelsW = partPcts.map(p => Math.round(p * 100) + '%');
 
         const stratKeys = [
-            { key: 'strat_1a_at_90', label: '1A Conseq', color: STRAT_COLORS['1A'] },
-            { key: 'strat_2a_at_90', label: '2A Hourly (New)', color: STRAT_COLORS['2A'] },
-            { key: 'strat_2b_at_90', label: '2B Hourly (Grid)', color: STRAT_COLORS['2B'] },
+            { key: 'strat_1a_at_95', fallback: 'strat_1a_at_90', label: '1A Conseq', color: STRAT_COLORS['1A'] },
+            { key: 'strat_2a_at_95', fallback: 'strat_2a_at_90', label: '2A Hourly (New)', color: STRAT_COLORS['2A'] },
+            { key: 'strat_2b_at_95', fallback: 'strat_2b_at_90', label: '2B Hourly (Grid)', color: STRAT_COLORS['2B'] },
             { key: 'strat_2c_gated', label: '2C Hourly (SSS)', color: STRAT_COLORS['2C'] },
-            { key: 'strat_3a_at_90', label: '3A Annual', color: STRAT_COLORS['3A'] },
+            { key: 'strat_3a_at_95', fallback: 'strat_3a_at_90', label: '3A Annual', color: STRAT_COLORS['3A'] },
         ];
 
         const datasets = [];
         for (const sk of stratKeys) {
-            const data = fig8[sk.key];
+            const data = fig8[sk.key] || (sk.fallback ? fig8[sk.fallback] : null);
             if (!data) continue;
             datasets.push({
                 label: sk.label,
@@ -1163,7 +1296,7 @@
         for (const strat of active) {
             let totalGas = 0;
             for (const iso of ISOS) {
-                const rec = getRecord(strat, iso, 50, 90);
+                const rec = getRecord(strat, iso, 50, 95);
                 if (rec) totalGas += (rec.gasGw || 0);
             }
             const reduction = EXISTING_GAS_TOTAL + 195 - totalGas; // vs theoretical 494
@@ -1171,12 +1304,12 @@
         }
         document.getElementById('synthGasReduction').textContent = Math.round(maxGasReduction) + ' GW';
 
-        // Peak grid clean at 90% target
+        // Peak grid clean at 95% target
         let maxClean = 0;
         for (const strat of active) {
             let totalClean = 0, count = 0;
             for (const iso of ISOS) {
-                const rec = getRecord(strat, iso, 100, 90);
+                const rec = getRecord(strat, iso, 100, 95);
                 if (rec) { totalClean += (rec.gridHms || rec.gridCleanPct || 0); count++; }
             }
             const avg = count > 0 ? totalClean / count : 0;
@@ -1186,18 +1319,18 @@
 
         // Critical mass from Wright's data
         if (wrightsData?.critical_mass) {
-            const cm90 = wrightsData.critical_mass['90.0'] || wrightsData.critical_mass['90'];
-            if (cm90) {
-                document.getElementById('synthCritMass').textContent = Math.round(cm90 * 100) + '%';
+            const cm95 = wrightsData.critical_mass['95.0'] || wrightsData.critical_mass['95'] || wrightsData.critical_mass['90.0'] || wrightsData.critical_mass['90'];
+            if (cm95) {
+                document.getElementById('synthCritMass').textContent = Math.round(cm95 * 100) + '%';
             }
         }
 
-        // CO2 displaced at 30% participation, 90% target
+        // CO2 displaced at 30% participation, 95% target
         let maxCO2 = 0;
         for (const strat of active) {
             let totalDisp = 0;
             for (const iso of ISOS) {
-                const rec = getRecord(strat, iso, 30, 90);
+                const rec = getRecord(strat, iso, 30, 95);
                 if (rec) totalDisp += Math.max(0, (rec.bl || 0) - (rec.co2 || 0));
             }
             if (totalDisp > maxCO2) maxCO2 = totalDisp;
@@ -1215,6 +1348,7 @@
         buildHeatmaps();
         buildResourceTrajectory();
         buildCurtTrajectory();
+        buildGasBuildout();
         buildWrightsCharts();
         computeSynthesisStats();
     }
@@ -1234,6 +1368,7 @@
         document.getElementById('trajectoryValue').textContent = part + '%';
         buildResourceTrajectory();
         buildCurtTrajectory();
+        buildGasBuildout();
     });
 
     document.getElementById('trajectoryStratSelect').addEventListener('change', buildResourceTrajectory);
