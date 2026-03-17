@@ -1,5 +1,5 @@
 // ============================================================================
-// SHARED NAVIGATION MODULE — Single source of truth for site navigation
+// SHARED NAVIGATION MODULE - Single source of truth for site navigation
 // ============================================================================
 // Include via: <script src="js/nav.js"></script>
 // Place a <nav id="topNav"></nav> element in HTML, or this script will
@@ -201,9 +201,9 @@
     //
     // "Research" is a standard dropdown.
     //
-    // Pages archived: procurement_comparison.html (Legacy — superseded)
+    // Pages archived: procurement_comparison.html (Legacy - superseded)
     // Pages merged: pipeline_map.html folded into pipeline.html
-    // Pages archived: grid_animation.html (ERCOT Grid Animation — moved to archive/)
+    // Pages archived: grid_animation.html (ERCOT Grid Animation - moved to archive/)
     // Pages archived: building_blocks.html, ipp_smartargets.html, market_convergence.html, troubleshooting_step3_vs_5d.html
     // Pages removed from nav: optimizer_methodology.html, consequential_vacuum.html (tiles removed, pages kept)
     const NAV_ITEMS = [
@@ -394,12 +394,12 @@
         navLinks.querySelectorAll('.nav-dropdown-toggle').forEach(function(btn) {
             btn.addEventListener('click', function(e) {
                 e.preventDefault();
-                // Desktop: let CSS :hover handle dropdowns — don't set inline styles
+                // Desktop: let CSS :hover handle dropdowns - don't set inline styles
                 if (window.innerWidth > 768) {
                     return;
                 }
                 var dropdown = this.parentElement;
-                // Find the menu — either .nav-dropdown-menu or .nav-mega-menu
+                // Find the menu - either .nav-dropdown-menu or .nav-mega-menu
                 var menu = dropdown.querySelector('.nav-dropdown-menu') || dropdown.querySelector('.nav-mega-menu');
                 var isExpanded = this.getAttribute('aria-expanded') === 'true';
 

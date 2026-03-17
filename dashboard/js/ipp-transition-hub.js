@@ -1,5 +1,5 @@
 /**
- * IPP Climate Transition Hub — Cross-Company Overview
+ * IPP Climate Transition Hub - Cross-Company Overview
  * =====================================================
  * Renders hero stats, company cards, and comparative analysis charts.
  * Reads from: IPP_SMARTARGETS_DATA (ipp-smartargets-data.js)
@@ -110,7 +110,7 @@
 
     const FUEL_ORDER = ['nuclear', 'hydro', 'geothermal', 'wind', 'solar', 'battery', 'gas_ccgt', 'gas_peaker', 'coal', 'oil'];
 
-    // Cumulative MAC ($/tCO₂) at 99.99% CFE threshold per ISO — from step5d MAC queue
+    // Cumulative MAC ($/tCO₂) at 99.99% CFE threshold per ISO - from step5d MAC queue
     const ISO_MAC_FULL = {
         ERCOT: 356, PJM: 254, CAISO: 482, NEISO: 468, NYISO: 492, MISO: 357, SPP: 253
     };
@@ -118,7 +118,7 @@
     const FOSSIL_FUELS = ['coal', 'gas_ccgt', 'gas_peaker', 'oil'];
 
     function fmt(n, d) {
-        if (n === undefined || n === null) return '—';
+        if (n === undefined || n === null) return ' - ';
         if (d === undefined) d = Math.abs(n) >= 100 ? 0 : 1;
         return n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
     }
@@ -198,7 +198,7 @@
 
             // P50 emission reduction by 2050
             const fb = co.fan_bands.all.emissions;
-            const reduction = fb.p50[0] > 0 ? ((fb.p50[0] - fb.p50[5]) / fb.p50[0] * 100).toFixed(0) : '—';
+            const reduction = fb.p50[0] > 0 ? ((fb.p50[0] - fb.p50[5]) / fb.p50[0] * 100).toFixed(0) : ' - ';
             const companyColor = COMPANY_COLORS[idx % COMPANY_COLORS.length];
 
             return `
@@ -274,7 +274,7 @@
         let consistent = [];
         let divergent = [];
 
-        // Check coal retirement — all companies with coal show declining coal dispatch
+        // Check coal retirement - all companies with coal show declining coal dispatch
         const coalCompanies = companies.filter(c => {
             const summary = c.fleet_summary;
             return Object.keys(summary).some(iso => summary[iso].coal && summary[iso].coal.gen_twh > 0);
@@ -519,7 +519,7 @@
             const psV2_2040 = baseline * (SBTI_POWER_V2_REMAINING[2040] || 0);
             const at_2050 = baseline * (AT_TRAJECTORY_REMAINING[2050] || 0);
 
-            const pcts = fb.p50.map(v => baseline > 0 ? ((baseline - v) / baseline * 100).toFixed(0) + '%' : '—');
+            const pcts = fb.p50.map(v => baseline > 0 ? ((baseline - v) / baseline * 100).toFixed(0) + '%' : ' - ');
             const gapPS = fb.p50[3] - psV2_2040;
             const gapAT = fb.p50[5] - at_2050;
 
@@ -874,7 +874,7 @@
             sorted.forEach(r => {
                 const delta = r.avgMAC - cheapest.avgMAC;
                 const deltaPct = cheapest.avgMAC > 0 ? (delta / cheapest.avgMAC * 100) : 0;
-                const deltaStr = delta < 1 ? '—' : `+$${fmt(delta, 0)} (+${fmt(deltaPct, 0)}%)`;
+                const deltaStr = delta < 1 ? ' - ' : `+$${fmt(delta, 0)} (+${fmt(deltaPct, 0)}%)`;
                 const deltaColor = delta < 1 ? 'var(--text-secondary)' : delta > 50 ? '#dc2626' : '#b45309';
 
                 html += `<tr>
@@ -909,10 +909,10 @@
 
             let insights = [];
             insights.push(`<strong>${cheapestMAC.name}</strong> has the lowest per-ton cost at <strong>$${fmt(cheapestMAC.avgMAC, 0)}/tCO₂</strong>, driven by concentration in low-MAC ISOs (ERCOT $356/t, PJM $254/t).`);
-            insights.push(`<strong>${mostExpMAC.name}</strong> faces the highest at <strong>$${fmt(mostExpMAC.avgMAC, 0)}/tCO₂</strong> — a <strong>$${fmt(macSpread, 0)}/tCO₂</strong> premium over ${cheapestMAC.name}.`);
+            insights.push(`<strong>${mostExpMAC.name}</strong> faces the highest at <strong>$${fmt(mostExpMAC.avgMAC, 0)}/tCO₂</strong> - a <strong>$${fmt(macSpread, 0)}/tCO₂</strong> premium over ${cheapestMAC.name}.`);
 
             if (coalHeavy.length > 0) {
-                insights.push(`<strong>Coal exposure matters for total cost, not per-ton cost:</strong> ${coalHeavy.map(r => r.name).join(', ')} carry ${fmt(coalHeavy.reduce((s, r) => s + r.coalCO2, 0), 0)} Mt of coal CO₂ — high-emitting per MWh but cheaper to displace per ton because coal plants emit ~0.95 tCO₂/MWh vs ~0.4 for gas.`);
+                insights.push(`<strong>Coal exposure matters for total cost, not per-ton cost:</strong> ${coalHeavy.map(r => r.name).join(', ')} carry ${fmt(coalHeavy.reduce((s, r) => s + r.coalCO2, 0), 0)} Mt of coal CO₂ - high-emitting per MWh but cheaper to displace per ton because coal plants emit ~0.95 tCO₂/MWh vs ~0.4 for gas.`);
             }
 
             if (pureGas.length > 0) {

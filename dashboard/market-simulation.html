@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
 <meta name="googlebot" content="noindex, nofollow">
-<title>ERCOT Fleet Economics — Constellation Energy</title>
+<title>ERCOT Fleet Economics - Constellation Energy</title>
 <link rel="stylesheet" href="styles/ceg-market.css">
 <link rel="stylesheet" href="styles/ceg-results.css">
 <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
@@ -13,7 +13,7 @@
 <style>
 /* contrast-fix: override --text-dim page-wide from #7E8083 (4.03:1) to #585B5F (5.6:1 on white) */
 :root { --text-dim: #585B5F; }
-/* contrast-fix: hero-eyebrow uses --ceg-orange #F47B27 as text on white — override to #B45A1A (4.6:1) */
+/* contrast-fix: hero-eyebrow uses --ceg-orange #F47B27 as text on white - override to #B45A1A (4.6:1) */
 .hero-eyebrow { color: #B45A1A; }
 
 /* ── Demo controls bar ── */
@@ -25,7 +25,7 @@
 .carbon-pills { display: flex; gap: 4px; }
 .carbon-pill { padding: 8px 14px; border: 1.5px solid var(--glass-border); border-radius: var(--radius-pill); background: white; cursor: pointer; font-family: var(--font); font-weight: 600; font-size: 0.85rem; color: #585B5F; /* contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white */ transition: all 0.15s; min-height: 44px; display: flex; align-items: center; }
 .carbon-pill:hover { border-color: var(--ceg-blue); color: #1A5F9E; /* contrast-fix: was var(--ceg-blue) #2372B9, now #1A5F9E, ratio 5.8:1 on white */ }
-.carbon-pill.active { background: var(--ceg-blue); border-color: var(--ceg-blue); color: #F8F9FA; /* contrast-fix: was white #FFFFFF, now #F8F9FA, ratio 4.7:1 on #2372B9 — avoids pure white text */ }
+.carbon-pill.active { background: var(--ceg-blue); border-color: var(--ceg-blue); color: #F8F9FA; /* contrast-fix: was white #FFFFFF, now #F8F9FA, ratio 4.7:1 on #2372B9 - avoids pure white text */ }
 .year-pills { display: flex; gap: 4px; }
 .year-pill { padding: 6px 12px; border: 1.5px solid var(--glass-border); border-radius: var(--radius-pill); background: white; cursor: pointer; font-family: var(--font); font-weight: 600; font-size: 0.82rem; color: #585B5F; /* contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white */ transition: all 0.15s; min-height: 40px; display: flex; align-items: center; }
 .year-pill:hover { border-color: var(--ceg-teal); color: #006680; /* contrast-fix: was var(--ceg-teal) #007FA4, now #006680, ratio 5.9:1 on white */ }
@@ -182,7 +182,7 @@
     <!-- Section 3: Owner Portfolio -->
     <hr class="section-divider">
     <div class="section-eyebrow">IPP Portfolio Analysis</div>
-    <div class="section-heading" id="portfolioHeading">Company Portfolios — All Owners</div>
+    <div class="section-heading" id="portfolioHeading">Company Portfolios - All Owners</div>
 
     <div class="portfolio-grid" id="portfolioCards"></div>
 
@@ -208,7 +208,7 @@
     <div class="section-heading">IPP Competitor Comparison</div>
 
     <div class="chart-card">
-        <div class="chart-card-header"><h3>ERCOT Portfolio Mix</h3><p>Capacity breakdown by fuel type for top IPPs — fossil vs clean positioning</p></div>
+        <div class="chart-card-header"><h3>ERCOT Portfolio Mix</h3><p>Capacity breakdown by fuel type for top IPPs - fossil vs clean positioning</p></div>
         <div class="chart-container-lg" id="chartCompetitorMix"></div>
     </div>
 
@@ -539,7 +539,7 @@ function renderOwnerPortfolio(sim) {
     let owners = sim.owners;
     if (currentOwner) {
         owners = owners.filter(o => o.name === currentOwner);
-        heading.textContent = `Company Portfolio — ${currentOwner}`;
+        heading.textContent = `Company Portfolio - ${currentOwner}`;
     } else {
         owners = owners.slice(0, 5);
         heading.textContent = 'Top 5 IPP Portfolios';
@@ -806,11 +806,11 @@ function renderTable(sim) {
             <td style="font-size:0.75rem;color:#585B5F;">${g.owner.length > 25 ? g.owner.substring(0,25)+'…' : g.owner}</td><!-- contrast-fix: was var(--text-dim) #7E8083, now #585B5F, ratio 5.6:1 on white -->
             <td>${g.type.replace(/_/g,' ')}</td>
             <td>${g.mw.toLocaleString()}</td>
-            <td>${g.hr ? g.hr.toFixed(1) : '—'}</td>
+            <td>${g.hr ? g.hr.toFixed(1) : ' - '}</td>
             <td>$${(g.mc||0).toFixed(1)}</td>
             <td>${((g.cf_sim||0)*100).toFixed(1)}%</td>
             <td>${(g.dispatch_hrs||0).toLocaleString()}</td>
-            <td><span style="background:${statusBg};color:${statusColor};padding:2px 8px;border-radius:20px;font-size:0.75rem;font-weight:700;text-transform:uppercase;">${g.status||'—'}</span></td>
+            <td><span style="background:${statusBg};color:${statusColor};padding:2px 8px;border-radius:20px;font-size:0.75rem;font-weight:700;text-transform:uppercase;">${g.status||' - '}</span></td>
         </tr>`;
     }).join('');
 }
@@ -933,7 +933,7 @@ function renderFullTrajectory() {
         xaxis: { title: 'Year', dtick: 5 },
         yaxis: { title: 'Annual Revenue/Profit ($M)', gridcolor: '#f0f0f0' },
         legend: { x: 0.02, y: 0.98 },
-        title: { text: `${traj.company} — Full Portfolio (${currentPriceLevel} fuel, $${cp}/ton CO₂)`, font: { size: 14 } },
+        title: { text: `${traj.company} - Full Portfolio (${currentPriceLevel} fuel, $${cp}/ton CO₂)`, font: { size: 14 } },
     }, { responsive: true });
 }
 

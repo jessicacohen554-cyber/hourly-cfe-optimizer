@@ -58,7 +58,7 @@
 .iso-gap-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
 .iso-gap-market { background: var(--card-accent); opacity: 0.7; position: absolute; top: 0; left: 0; height: 100%; }
 
-/* ─── Sticky Controls — MOBILE FIX ─── */
+/* ─── Sticky Controls - MOBILE FIX ─── */
 .global-controls {
     background: rgba(255,255,255,0.97); border-bottom: 1px solid rgba(0,0,0,0.08);
     padding: 12px var(--pad-page); position: sticky; top: 0; z-index: 50;
@@ -128,7 +128,7 @@
 /* ─── Mobile: collapse sticky bar ─── */
 @media (max-width: 768px) {
     .global-controls {
-        position: relative; /* NOT sticky on mobile — let it scroll away */
+        position: relative; /* NOT sticky on mobile - let it scroll away */
         top: auto;
         max-height: none;
     }
@@ -178,7 +178,7 @@
     <p class="section-desc">
         The regional analysis below models decarbonization against the <strong>EPRI SMARTargets aspirational targets</strong>
         (net-zero by 2050) as the primary pathway. For comparison, we also show the <strong>SBTi Power Sector v2</strong>
-        trajectory, which requires net-zero by 2040 — a full decade earlier. The gap between these two pathways
+        trajectory, which requires net-zero by 2040 - a full decade earlier. The gap between these two pathways
         represents the additional policy ambition and technology acceleration required by the more stringent SBTi framework.
     </p>
 
@@ -218,7 +218,7 @@
     <!-- §1: The Gap to Net-Zero (with Market Fan) -->
     <section class="story-panel panel-navy scroll-reveal" id="gapSection">
         <h2>The Gap to Net-Zero: <span id="gapIsoName">California</span></h2>
-        <p class="section-desc" id="gapDesc">The distance between where the market stops and where the grid needs to be — and what fills the gap.</p>
+        <p class="section-desc" id="gapDesc">The distance between where the market stops and where the grid needs to be - and what fills the gap.</p>
         <div id="refFanCallout" class="narrative-box warn"></div>
         <div class="gap-cards" id="gapCards"></div>
         <div class="grid-2up">
@@ -253,7 +253,7 @@
         </div>
     </div>
 
-    <!-- §4: Grid Buildout — What Gets Built -->
+    <!-- §4: Grid Buildout - What Gets Built -->
     <section class="story-panel panel-navy scroll-reveal" id="buildoutSection">
         <h2>What Gets Built: <span id="buildoutPathway">Power Sector NZ</span></h2>
         <p class="section-desc">The resource portfolio needed to stay on the decarbonization trajectory. Saturated bars = existing generation; transparent = new build required. Curtailed energy (hatched) rises with variable renewable penetration.</p>
@@ -434,10 +434,10 @@ const GROUPS = {
 };
 const SCENARIO_META = {
     'Reference': { name: 'Reference (Market Only)' },
-    'AT1': { name: 'Power NZ — Facilitating' },
-    'AT2': { name: 'Power NZ — Challenging' },
-    'AT3': { name: 'Economy-Wide NZ — Facilitating' },
-    'AT4': { name: 'Economy-Wide NZ — Challenging' },
+    'AT1': { name: 'Power NZ - Facilitating' },
+    'AT2': { name: 'Power NZ - Challenging' },
+    'AT3': { name: 'Economy-Wide NZ - Facilitating' },
+    'AT4': { name: 'Economy-Wide NZ - Challenging' },
 };
 const MIX_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar', 'battery', 'ldes'];
 const MIX_LABELS = {
@@ -653,10 +653,10 @@ function buildGapSection() {
         const medianClean = r1Clean ? r1Clean[r1Clean.length - 1] : null;
         const reductionPct = ((fanBaseline - p50_2050) / fanBaseline * 100).toFixed(0);
 
-        callout.innerHTML = `<strong>${ISO_FULL[iso]}:</strong> Under market forces alone, the median outcome is a ${reductionPct}% emission reduction by 2050 — ` +
+        callout.innerHTML = `<strong>${ISO_FULL[iso]}:</strong> Under market forces alone, the median outcome is a ${reductionPct}% emission reduction by 2050 - ` +
             `from ${fmt(fanBaseline, 0)} Mt to ${fmt(p50_2050, 0)} Mt. The grid reaches roughly ${medianClean ? fmtPct(medianClean) : '?'} clean. ` +
             `<strong>The uncertainty is huge:</strong> best-case (P10) reaches ${fmt(p10_2050, 0)} Mt; worst-case (P90) stalls at ${fmt(p90_2050, 0)} Mt. ` +
-            `None of these outcomes reach net-zero — that requires policy.`;
+            `None of these outcomes reach net-zero - that requires policy.`;
         callout.style.display = '';
     } else {
         callout.style.display = 'none';
@@ -939,7 +939,7 @@ function buildChallenges() {
 
     let html = '';
 
-    // Regional character — use fan data if available, or fac mix for resource dominance
+    // Regional character - use fan data if available, or fac mix for resource dominance
     const mixSrc = fac || r1;
     const mixObj = mixSrc.mix || {};
     const mixR1 = {};
@@ -953,7 +953,7 @@ function buildChallenges() {
         Under market forces, the grid reaches ${fmtPct(marketClean)} clean by 2050${totalR1 > 0 ? ', dominated by ' + topRes : ''}.
     </div>`;
 
-    // Challenges — use fan spread for uncertainty
+    // Challenges - use fan spread for uncertainty
     const challenges = [];
     const refFan = r1.fan;
     if (refFan) {
@@ -961,7 +961,7 @@ function buildChallenges() {
         const p10Final = refFan.p10[lastIdx];
         const spread = p90Final - p10Final;
         if (spread > baseline * 0.3) {
-            challenges.push(`<strong>High uncertainty:</strong> The market outcome range spans ${fmt(spread, 0)} Mt (P10–P90) — conditions matter enormously here.`);
+            challenges.push(`<strong>High uncertainty:</strong> The market outcome range spans ${fmt(spread, 0)} Mt (P10–P90) - conditions matter enormously here.`);
         }
     }
     const chalGas = chal?.total_gas_gw?.[lastIdx] || 0;
@@ -970,10 +970,10 @@ function buildChallenges() {
     }
     const chalShadow = chal?.carbon_shadow_price?.[lastIdx] || 0;
     if (chalShadow > 100) {
-        challenges.push(`<strong>Extreme policy cost:</strong> Reaching net-zero under challenging conditions requires an implied carbon price of ${fmtDollar(chalShadow)}/ton — far above current carbon markets.`);
+        challenges.push(`<strong>Extreme policy cost:</strong> Reaching net-zero under challenging conditions requires an implied carbon price of ${fmtDollar(chalShadow)}/ton - far above current carbon markets.`);
     }
     if (marketClean < 80) {
-        challenges.push(`<strong>Low market ceiling:</strong> Even under optimistic conditions, market forces only reach ${fmtPct(marketClean)} clean — most of the decarbonization must come from policy.`);
+        challenges.push(`<strong>Low market ceiling:</strong> Even under optimistic conditions, market forces only reach ${fmtPct(marketClean)} clean - most of the decarbonization must come from policy.`);
     }
 
     if (challenges.length > 0) {
@@ -983,21 +983,21 @@ function buildChallenges() {
     // Opportunities
     const opps = [];
     if (marketClean >= 85) {
-        opps.push(`<strong>High market ceiling:</strong> Market forces deliver ${fmtPct(marketClean)} clean — the remaining gap to net-zero is relatively small.`);
+        opps.push(`<strong>High market ceiling:</strong> Market forces deliver ${fmtPct(marketClean)} clean - the remaining gap to net-zero is relatively small.`);
     }
     const facDac = fac?.dac_offset_mt?.[lastIdx] || 0;
     const facDacCost = fac?.dac_cost_per_ton?.[lastIdx] || 0;
     if (facDac > 0 && facDacCost < 150) {
-        opps.push(`<strong>DAC backstop viable:</strong> Under facilitating conditions, DAC can offset the remaining ${fmt(facDac, 0)} Mt at ${fmtDollar(facDacCost)}/ton — cheaper than forced grid overbuild.`);
+        opps.push(`<strong>DAC backstop viable:</strong> Under facilitating conditions, DAC can offset the remaining ${fmt(facDac, 0)} Mt at ${fmtDollar(facDacCost)}/ton - cheaper than forced grid overbuild.`);
     }
     if (mixR1.wind > totalR1 * 0.25) {
-        opps.push(`<strong>Strong wind resource:</strong> Wind contributes ${(mixR1.wind/totalR1*100).toFixed(0)}% of market-driven supply — a natural foundation for deeper decarbonization.`);
+        opps.push(`<strong>Strong wind resource:</strong> Wind contributes ${(mixR1.wind/totalR1*100).toFixed(0)}% of market-driven supply - a natural foundation for deeper decarbonization.`);
     }
     if (mixR1.solar > totalR1 * 0.25) {
-        opps.push(`<strong>Strong solar resource:</strong> Solar contributes ${(mixR1.solar/totalR1*100).toFixed(0)}% of market-driven supply — abundant cheap generation.`);
+        opps.push(`<strong>Strong solar resource:</strong> Solar contributes ${(mixR1.solar/totalR1*100).toFixed(0)}% of market-driven supply - abundant cheap generation.`);
     }
     if (mixR1.hydro > totalR1 * 0.1) {
-        opps.push(`<strong>Existing hydro base:</strong> Hydro provides ${(mixR1.hydro/totalR1*100).toFixed(0)}% of supply at zero marginal cost — firm, dispatchable, and already paid for.`);
+        opps.push(`<strong>Existing hydro base:</strong> Hydro provides ${(mixR1.hydro/totalR1*100).toFixed(0)}% of supply at zero marginal cost - firm, dispatchable, and already paid for.`);
     }
 
     if (opps.length > 0) {

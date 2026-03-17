@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Procurement Deployment Matrix — Where Capital Flows Under Each Strategy</title>
+<title>Procurement Deployment Matrix - Where Capital Flows Under Each Strategy</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -299,7 +299,7 @@
         0 0 0 1px rgba(99, 102, 241, 0.15);
 }
 
-/* HMS gradient fill — rises from bottom */
+/* HMS gradient fill - rises from bottom */
 .jar-dom::before {
     content: '';
     position: absolute;
@@ -351,14 +351,14 @@
     transition: opacity 0.4s ease, transform 0.3s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-/* Tier: baseline — solid fill (grid baseline clean) */
+/* Tier: baseline - solid fill (grid baseline clean) */
 .ball--baseline {
     background: var(--ball-color);
     opacity: 1;
     box-shadow: 0 1px 3px rgba(0,0,0,0.12);
 }
 
-/* Tier: claimed — transparent + saturated ring (existing claimed) */
+/* Tier: claimed - transparent + saturated ring (existing claimed) */
 .ball--claimed {
     background: color-mix(in srgb, var(--ball-color) 25%, transparent);
     border: 2px solid var(--ball-color);
@@ -366,7 +366,7 @@
     opacity: 0.85;
 }
 
-/* Tier: new — lighter translucent (new build) with border ring */
+/* Tier: new - lighter translucent (new build) with border ring */
 .ball--new {
     background: color-mix(in srgb, var(--ball-color) 40%, transparent);
     border: 2px solid var(--ball-color);
@@ -384,7 +384,7 @@
     }
 }
 
-/* Tier: curtailed — striped + dashed (above rim overflow) */
+/* Tier: curtailed - striped + dashed (above rim overflow) */
 .ball--curtailed {
     background: repeating-linear-gradient(
         -45deg,
@@ -450,7 +450,7 @@
     .ball, .ball--glow { animation: none !important; }
 }
 
-/* Mini tooltip (desktop hover — 1-line summary) */
+/* Mini tooltip (desktop hover - 1-line summary) */
 .deployment-tooltip {
     position: fixed;
     display: none;
@@ -659,7 +659,7 @@
     .ball { animation-duration: 4s; }
     .jar-hms-label { font-size: 0.52rem; bottom: -13px; }
     .info-icon:hover::after { white-space: normal; max-width: 200px; left: auto; right: 0; transform: none; }
-    .deployment-tooltip { display: none !important; } /* No hover tooltip on mobile — use detail panel */
+    .deployment-tooltip { display: none !important; } /* No hover tooltip on mobile - use detail panel */
 }
 @media (max-width: 480px) {
     .controls-bar { padding: 10px 10px; }
@@ -687,7 +687,7 @@
     <div class="insight-box">
         <strong>How to read this page</strong>
         <p style="margin:8px 0 6px;">This is a <strong>cost optimization model for corporate voluntary procurement</strong>, not a market simulation. It shows what happens in a vacuum when different procurement strategies are applied at varying participation levels, based purely on LCOE and capital costs.</p>
-        <p style="margin:6px 0;">In reality, market dynamics drive a broader mix of new generation — we explore those trajectories in the supply-side regional climate transition analysis. Here, the goal is to isolate the demand-pull signal: which resources do these strategies incentivize, where, and at what cost?</p>
+        <p style="margin:6px 0;">In reality, market dynamics drive a broader mix of new generation - we explore those trajectories in the supply-side regional climate transition analysis. Here, the goal is to isolate the demand-pull signal: which resources do these strategies incentivize, where, and at what cost?</p>
         <p style="margin:6px 0 0;"><strong>Demand grows with ambition.</strong> Each CFE target maps to an SBTi-aligned deployment year (50%&nbsp;→&nbsp;2030, 90%&nbsp;→&nbsp;2040, ≥99.99%&nbsp;→&nbsp;2050). Demand scales at ISO-specific growth rates from a 2025 baseline. Higher targets = later years = more demand to serve.</p>
     </div>
 </div>
@@ -712,8 +712,8 @@
         <div class="control-group">
             <label>Nuclear Policy</label>
             <div class="toggle-btn-group">
-                <button class="toggle-btn active" data-nuclear="stable" title="ZEC/CMC programs remain stable — SSS fixed fleet constant">Stable</button>
-                <button class="toggle-btn" data-nuclear="rolloff" title="NJ ZEC expires 2026, IL CMC expires 2028 — SSS shrinks, plants move to merchant pool">Roll-Off</button>
+                <button class="toggle-btn active" data-nuclear="stable" title="ZEC/CMC programs remain stable - SSS fixed fleet constant">Stable</button>
+                <button class="toggle-btn" data-nuclear="rolloff" title="NJ ZEC expires 2026, IL CMC expires 2028 - SSS shrinks, plants move to merchant pool">Roll-Off</button>
             </div>
         </div>
         <div class="control-group" style="margin-left:auto">
@@ -788,17 +788,17 @@
         <label class="strategy-check">
             <input type="checkbox" value="2A">
             <span class="strategy-id">2A</span>
-            <span class="info-icon" data-tooltip="Hourly matching — new-build only, same ISO">&#9432;</span>
+            <span class="info-icon" data-tooltip="Hourly matching - new-build only, same ISO">&#9432;</span>
         </label>
         <label class="strategy-check">
             <input type="checkbox" value="2B">
             <span class="strategy-id">2B</span>
-            <span class="info-icon" data-tooltip="Hourly matching — new-build + existing merchant clean">&#9432;</span>
+            <span class="info-icon" data-tooltip="Hourly matching - new-build + existing merchant clean">&#9432;</span>
         </label>
         <label class="strategy-check">
             <input type="checkbox" value="2C" checked>
             <span class="strategy-id">2C</span>
-            <span class="info-icon" data-tooltip="Hourly matching — new-build + existing merchant + SSS allocation">&#9432;</span>
+            <span class="info-icon" data-tooltip="Hourly matching - new-build + existing merchant + SSS allocation">&#9432;</span>
         </label>
     </div>
     <div class="strategy-category">
@@ -806,22 +806,22 @@
         <label class="strategy-check">
             <input type="checkbox" value="3A">
             <span class="strategy-id">3A</span>
-            <span class="info-icon" data-tooltip="Annual matching — new-build only, same ISO">&#9432;</span>
+            <span class="info-icon" data-tooltip="Annual matching - new-build only, same ISO">&#9432;</span>
         </label>
         <label class="strategy-check">
             <input type="checkbox" value="3B">
             <span class="strategy-id">3B</span>
-            <span class="info-icon" data-tooltip="Annual matching — new-build, cross-regional">&#9432;</span>
+            <span class="info-icon" data-tooltip="Annual matching - new-build, cross-regional">&#9432;</span>
         </label>
         <label class="strategy-check">
             <input type="checkbox" value="3C">
             <span class="strategy-id">3C</span>
-            <span class="info-icon" data-tooltip="Annual matching — new-build + existing credits, same ISO">&#9432;</span>
+            <span class="info-icon" data-tooltip="Annual matching - new-build + existing credits, same ISO">&#9432;</span>
         </label>
         <label class="strategy-check">
             <input type="checkbox" value="3D" checked>
             <span class="strategy-id">3D</span>
-            <span class="info-icon" data-tooltip="Annual matching — cross-regional + existing credits">&#9432;</span>
+            <span class="info-icon" data-tooltip="Annual matching - cross-regional + existing credits">&#9432;</span>
         </label>
     </div>
 </div>
@@ -879,7 +879,7 @@
     </div>
 </div>
 
-<!-- Gas Capacity Needed vs Participation (line chart — replaces ribbon) -->
+<!-- Gas Capacity Needed vs Participation (line chart - replaces ribbon) -->
 <div class="agg-charts">
     <div class="agg-chart-card">
         <h3>Gas Capacity Needed vs. Participation Level</h3>
@@ -900,7 +900,7 @@
         <h3>Grid Hourly Match Score by Participation Level (Crossover Analysis)</h3>
         <p style="font-family:var(--font-body);font-size:0.8rem;color:var(--text-muted);margin:-4px 0 8px;">
             How each strategy physically cleans the grid as more C&I load participates, measured by dispatch-based hourly match score (HMS).
-            HMS captures hour-by-hour clean energy matching — harder to achieve than annual %.
+            HMS captures hour-by-hour clean energy matching - harder to achieve than annual %.
             Dashed lines show 90%, 95%, and 99% HMS reference thresholds.
         </p>
         <div class="grid-2col">
@@ -920,7 +920,7 @@
                 <h4 style="font-family:var(--font-heading);font-size:0.95rem;color:var(--text-primary);margin:0 0 8px;">Participation Required for Grid-Clean Targets</h4>
                 <p style="font-family:var(--font-body);font-size:0.78rem;color:var(--text-muted);margin:0 0 8px;">
                     Minimum C&I participation (%) to reach grid HMS milestones at selected CO₂ target.
-                    "—" = unreachable even at 100% participation.
+                    " - " = unreachable even at 100% participation.
                 </p>
                 <div style="overflow-x:auto;">
                     <table class="data-table" id="participationTable">
@@ -935,7 +935,7 @@
     </div>
 </div>
 
-<!-- Chart 2: CO₂ Efficiency — Dispatch CO₂ displaced per TWh procured -->
+<!-- Chart 2: CO₂ Efficiency - Dispatch CO₂ displaced per TWh procured -->
 <div class="agg-charts">
     <div class="grid-2col">
         <div class="agg-chart-card">
@@ -961,10 +961,10 @@
 <div class="content-section" style="padding-bottom:0;">
     <div class="insight-box" style="font-size:0.82rem;line-height:1.6;">
         <strong>Data Sources & Methodology</strong>
-        <p style="margin:8px 0 6px;"><strong>Demand</strong> — 2025 baseline demand (TWh) per ISO, grown at region-specific annual rates indexed to SBTi target years. Medium growth rates: CAISO 1.9%, ERCOT 3.5%, PJM 2.4%, NYISO 2.0%, NEISO 1.8%, MISO 2.2%, SPP 1.8%.</p>
-        <p style="margin:6px 0;"><strong>Hourly profiles</strong> — Generation and demand shapes from 2021–2025 weather-year average (EIA Form 930). Profile shapes held constant across target years; total TWh scales with demand growth.</p>
-        <p style="margin:6px 0;"><strong>Offshore wind</strong> — NREL National Offshore Wind dataset (NOW-23), 2&nbsp;km resolution, 2000–2020 historical record. Applied to CAISO, PJM, NYISO, and NEISO. Not modeled for ERCOT, MISO, or SPP.</p>
-        <p style="margin:6px 0 0;"><strong>Other sources</strong> — Solar: NREL TMY3. Onshore wind: EIA/NREL. Hydro: historical inflow-weighted. Emission factors: EPA eGRID. Cost assumptions: NREL ATB 2024, Lazard LCOE+ v17.</p>
+        <p style="margin:8px 0 6px;"><strong>Demand</strong> - 2025 baseline demand (TWh) per ISO, grown at region-specific annual rates indexed to SBTi target years. Medium growth rates: CAISO 1.9%, ERCOT 3.5%, PJM 2.4%, NYISO 2.0%, NEISO 1.8%, MISO 2.2%, SPP 1.8%.</p>
+        <p style="margin:6px 0;"><strong>Hourly profiles</strong> - Generation and demand shapes from 2021–2025 weather-year average (EIA Form 930). Profile shapes held constant across target years; total TWh scales with demand growth.</p>
+        <p style="margin:6px 0;"><strong>Offshore wind</strong> - NREL National Offshore Wind dataset (NOW-23), 2&nbsp;km resolution, 2000–2020 historical record. Applied to CAISO, PJM, NYISO, and NEISO. Not modeled for ERCOT, MISO, or SPP.</p>
+        <p style="margin:6px 0 0;"><strong>Other sources</strong> - Solar: NREL TMY3. Onshore wind: EIA/NREL. Hydro: historical inflow-weighted. Emission factors: EPA eGRID. Cost assumptions: NREL ATB 2024, Lazard LCOE+ v17.</p>
     </div>
 </div>
 
@@ -1038,7 +1038,7 @@
     const grid = new JarGrid('jarCanvas', 'jarTooltip');
 
     grid.onStatsUpdate = function(stats) {
-        // Stats callback (chips removed — metrics not meaningful for cross-strategy comparison)
+        // Stats callback (chips removed - metrics not meaningful for cross-strategy comparison)
     };
 
     if (typeof DEPLOYMENT_DATA !== 'undefined') {
@@ -1350,7 +1350,7 @@
 
         for (const strat of active) {
             const color = STRAT_COLORS[strat] || '#6366F1';
-            const label = (STRAT_LABELS[strat] || strat).replace('\n', ' — ');
+            const label = (STRAT_LABELS[strat] || strat).replace('\n', ' - ');
             const data = computeTotalGasAtThreshold(strat, threshold);
             datasets.push({
                 label: label, data: data,
@@ -1550,7 +1550,7 @@
                         bodyFont: { family: "'DM Sans'", size: 11 },
                         padding: 10, cornerRadius: 8,
                         callbacks: {
-                            title: (items) => `${crossoverIso} — ${items[0].label} participation`,
+                            title: (items) => `${crossoverIso} - ${items[0].label} participation`,
                             label: (ctx) => `${ctx.dataset.label}: ${ctx.raw !== null ? ctx.raw.toFixed(1) + '% HMS' : 'N/A'}`,
                         },
                     },
@@ -1616,7 +1616,7 @@
                     td.style.color = p <= 30 ? '#22C55E' : p <= 60 ? '#F59E0B' : p <= 90 ? '#EF4444' : '#7C3AED';
                     td.style.fontWeight = '600';
                 } else {
-                    td.textContent = '—';
+                    td.textContent = ' - ';
                     td.style.color = '#94A3B8';
                 }
                 tr.appendChild(td);
@@ -1732,7 +1732,7 @@
 
     // Cap participation when the WORST-performing active strategy (slowest to
     // reach 100% clean) has all ISOs at ≥99.99% grid clean. Above this point,
-    // every strategy has fully decarbonized every grid — further participation
+    // every strategy has fully decarbonized every grid - further participation
     // just adds curtailment with no analytical value.
     function computeParticipationCap() {
         const active = getActiveStrategies();
@@ -1781,7 +1781,7 @@
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    // MASTER UPDATE — wire threshold slider to also update new charts
+    // MASTER UPDATE - wire threshold slider to also update new charts
     // ═════════════════════════════════════════════════════════════════════════
 
     thrSlider.addEventListener('input', () => {

@@ -1,5 +1,5 @@
 /**
- * Jar Animation Engine v4 — DOM-based glassmorphism jars with CSS animations
+ * Jar Animation Engine v4 - DOM-based glassmorphism jars with CSS animations
  *
  * Each jar shows what happens to an ISO's GRID under a procurement strategy.
  * At 0% participation: baseline grid mix (solid balls).
@@ -99,7 +99,7 @@ function getIsoColor(iso) {
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// JAR CLASS — DOM-based glassmorphism jar with flexbox ball stacking
+// JAR CLASS - DOM-based glassmorphism jar with flexbox ball stacking
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class Jar {
@@ -130,7 +130,7 @@ class Jar {
 
         const items = [];
 
-        // 1. Grid baseline balls — each ball = 1% of grid demand (saturated/solid)
+        // 1. Grid baseline balls - each ball = 1% of grid demand (saturated/solid)
         for (const [res, pct] of Object.entries(bl)) {
             if (res === 'totalPct' || res === 'baselineHms' || res === 'baselineCo2Mt' || pct <= 0) continue;
             items.push({
@@ -142,9 +142,9 @@ class Jar {
         }
 
         // Existing claims (gridRecord.e) are already represented in the grid
-        // baseline — no additional balls needed. Data kept for metrics only.
+        // baseline - no additional balls needed. Data kept for metrics only.
 
-        // 2. New-build procurement balls — transparent/outline
+        // 2. New-build procurement balls - transparent/outline
         //    gridRecord.n has {resource: twh} aggregated from all buyers targeting this grid
         if (gridRecord && gridRecord.n) {
             // Build per-resource ball counts, tracking buyer glow per ball
@@ -187,7 +187,7 @@ class Jar {
             }
         }
 
-        // 3. Curtailment balls — above the rim (1 ball per % of demand)
+        // 3. Curtailment balls - above the rim (1 ball per % of demand)
         const curtItems = [];
         const effectiveCurt = curtTwh || (gridRecord && gridRecord.curtTwh) || 0;
         if (effectiveCurt > 0) {
@@ -242,7 +242,7 @@ class Jar {
             this.el.dataset.iso = this.iso;
         }
 
-        // Set HMS gradient height — use gridCleanPct (grid-centric) or fallback
+        // Set HMS gradient height - use gridCleanPct (grid-centric) or fallback
         const hms = this.data && this.data.hms;
         const gridCleanPct = this.data && this.data.gridCleanPct;
         const blPctFallback = this.gridBaseline ? (this.gridBaseline.totalPct || 0) : 0;
@@ -281,7 +281,7 @@ class Jar {
             html += '</div>';
         }
 
-        // HMS label — always show baseline HMS when no procurement, with +delta when procured
+        // HMS label - always show baseline HMS when no procurement, with +delta when procured
         const baselineHms = this.gridBaseline ? (this.gridBaseline.baselineHms || null) : null;
         const displayPct = hms != null ? hms : (gridCleanPct != null ? gridCleanPct : null);
         if (displayPct != null && displayPct >= 0.5) {
@@ -293,7 +293,7 @@ class Jar {
             }
             html += `<div class="jar-hms-label">${label}</div>`;
         } else if (baselineHms != null) {
-            // No procurement yet — show baseline HMS
+            // No procurement yet - show baseline HMS
             html += `<div class="jar-hms-label" style="opacity:0.55">${Math.round(baselineHms)}% HMS</div>`;
         } else if (this.gridBaseline) {
             const blPct = this.gridBaseline.totalPct || 0;
@@ -325,7 +325,7 @@ class Jar {
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// JAR GRID — Canvas grid + DOM jar overlay controller
+// JAR GRID - Canvas grid + DOM jar overlay controller
 // ═══════════════════════════════════════════════════════════════════════════════
 
 class JarGrid {
@@ -541,7 +541,7 @@ class JarGrid {
                     }
                 }
 
-                // Existing claims (e) — already in grid baseline, no new balls needed.
+                // Existing claims (e) - already in grid baseline, no new balls needed.
                 // But store for detail panel / metrics
                 if (record.e) {
                     if (!view[buyerIso].e) view[buyerIso].e = {};
@@ -768,7 +768,7 @@ class JarGrid {
 
         ctx.clearRect(0, 0, w, h);
 
-        // Column headers (strategies — multi-line labels)
+        // Column headers (strategies - multi-line labels)
         ctx.save();
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -799,13 +799,13 @@ class JarGrid {
             const strat = this.activeStrategies[col];
             const x = this.rowHeaderWidth + col * this.jarWidth + this.jarWidth / 2;
 
-            // Line 1: New gas GW — red if >0, gray if 0
+            // Line 1: New gas GW - red if >0, gray if 0
             const newGasGw = this.strategyNewGasGw?.[strat] ?? 0;
             ctx.font = `700 ${metricFS}px 'DM Sans', sans-serif`;
             ctx.fillStyle = newGasGw > 0 ? '#EF4444' : '#9CA3AF';
             ctx.fillText(newGasGw > 0 ? `+${Math.round(newGasGw)} GW gas` : '0 GW gas', x, metricBaseY);
 
-            // Line 2: Curtailed TWh — amber
+            // Line 2: Curtailed TWh - amber
             const curtTwh = this.strategyCurtTwh?.[strat] ?? 0;
             ctx.font = `600 ${metricFS}px 'DM Sans', sans-serif`;
             ctx.fillStyle = curtTwh > 1 ? '#F59E0B' : '#9CA3AF';
@@ -813,7 +813,7 @@ class JarGrid {
                               curtTwh >= 1 ? `${Math.round(curtTwh)} TWh curtailed` : '0 TWh curtailed';
             ctx.fillText(curtLabel, x, metricBaseY + metricLineH);
 
-            // Line 3: Total system cost (clean + gas) — navy
+            // Line 3: Total system cost (clean + gas) - navy
             const costM = this.strategyCostM?.[strat] ?? 0;
             ctx.font = `600 ${metricFS}px 'DM Sans', sans-serif`;
             ctx.fillStyle = '#334155';
@@ -859,7 +859,7 @@ class JarGrid {
         const stratLabel = (STRATEGY_LABELS[jar.strategy] || jar.strategy).replace('\n', ' ');
         const hms = jar.data && jar.data.hms != null ? jar.data.hms : (jar.data && jar.data.gridCleanPct != null ? jar.data.gridCleanPct : null);
         const hmsText = hms != null ? ` · ${Math.round(hms)}% Grid HMS` : '';
-        this.tooltipEl.innerHTML = `<span style="color:${getIsoColor(jar.iso)};font-weight:700">${jar.iso}</span> — ${stratLabel}${hmsText} <span style="color:var(--text-muted);font-size:0.7rem">(click for details)</span>`;
+        this.tooltipEl.innerHTML = `<span style="color:${getIsoColor(jar.iso)};font-weight:700">${jar.iso}</span> - ${stratLabel}${hmsText} <span style="color:var(--text-muted);font-size:0.7rem">(click for details)</span>`;
         this.tooltipEl.style.display = 'block';
 
         const ttRect = this.tooltipEl.getBoundingClientRect();
@@ -877,7 +877,7 @@ class JarGrid {
 
         let html = `<div class="close-btn" id="detailPanelClose">&times;</div>`;
         html += `<div class="detail-panel-header">
-            <strong>${(STRATEGY_LABELS[jar.strategy] || jar.strategy).replace('\n', ' ')}</strong> —
+            <strong>${(STRATEGY_LABELS[jar.strategy] || jar.strategy).replace('\n', ' ')}</strong>  - 
             <span style="color:${getIsoColor(jar.iso)};font-weight:700">${jar.iso}</span>
         </div>`;
 

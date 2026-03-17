@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hourly Matching Strategy Comparison — 2A vs 2B vs 2C</title>
+<title>Hourly Matching Strategy Comparison - 2A vs 2B vs 2C</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -743,7 +743,7 @@ function selectStrategy(strat) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// COST CHART (Line — all 3 strategies across thresholds)
+// COST CHART (Line - all 3 strategies across thresholds)
 // ═══════════════════════════════════════════════════════════════════════════
 
 function updateCostChart() {
@@ -796,7 +796,7 @@ function updateCostChart() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// RESOURCE MIX CHART (Stacked bar — 3 strategies at selected threshold)
+// RESOURCE MIX CHART (Stacked bar - 3 strategies at selected threshold)
 // ═══════════════════════════════════════════════════════════════════════════
 
 function updateMixChart() {
@@ -848,7 +848,7 @@ function updateMixChart() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// NEW-BUILD FRACTION CHART (Line — all 3 strategies)
+// NEW-BUILD FRACTION CHART (Line - all 3 strategies)
 // ═══════════════════════════════════════════════════════════════════════════
 
 function updateNewbuildChart() {
@@ -892,7 +892,7 @@ function updateNewbuildChart() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// CO2 ABATED CHART (Line — all 3 strategies)
+// CO2 ABATED CHART (Line - all 3 strategies)
 // ═══════════════════════════════════════════════════════════════════════════
 
 function updateCO2Chart() {
@@ -1062,7 +1062,7 @@ function updateMatrixInsight(iso, strat, metric, vals) {
     if (strat === 'diff_ac' && metric === 'cost') {
         const maxDiff = Math.max(...vals);
         const minDiff = Math.min(...vals.filter(v => v > 0));
-        el.innerHTML = `<strong>Cost gap insight:</strong> Strategy 2A costs $${minDiff.toFixed(0)}&ndash;$${maxDiff.toFixed(0)}/MWh more than 2C in ${iso}. The gap widens at higher CFE targets because 2A cannot use any existing clean energy — every MWh must be new-build. At low thresholds the gap is modest because both strategies are dominated by cheap VRE procurement.`;
+        el.innerHTML = `<strong>Cost gap insight:</strong> Strategy 2A costs $${minDiff.toFixed(0)}&ndash;$${maxDiff.toFixed(0)}/MWh more than 2C in ${iso}. The gap widens at higher CFE targets because 2A cannot use any existing clean energy - every MWh must be new-build. At low thresholds the gap is modest because both strategies are dominated by cheap VRE procurement.`;
     } else if (metric === 'cost') {
         const maxCost = Math.max(...vals);
         el.innerHTML = `<strong>Cost scaling:</strong> ${STRAT_LABELS[strat] || strat} in ${iso} ranges from $${Math.min(...vals).toFixed(0)} to $${maxCost.toFixed(0)}/MWh across the participation × target space. Costs accelerate fastest in the high-participation × high-target quadrant where existing clean supply is exhausted.`;
@@ -1117,7 +1117,7 @@ function updateRolloffCharts() {
                 y: { title: { display: true, text: '$/MWh' }, beginAtZero: true }
             },
             plugins: {
-                title: { display: true, text: 'PJM — 50% Participation', font: { size: 12, weight: 'normal' }, color: '#6B7280' },
+                title: { display: true, text: 'PJM - 50% Participation', font: { size: 12, weight: 'normal' }, color: '#6B7280' },
                 legend: { display: true, position: 'top', labels: { usePointStyle: true, pointStyle: 'line', boxWidth: 30, font: { size: 11 } } },
                 tooltip: {
                     callbacks: {
@@ -1156,7 +1156,7 @@ function updateRolloffCharts() {
                 y: { title: { display: true, text: 'TWh' }, beginAtZero: true }
             },
             plugins: {
-                title: { display: true, text: 'PJM — Pool Reallocation Under Rolloff', font: { size: 12, weight: 'normal' }, color: '#6B7280' },
+                title: { display: true, text: 'PJM - Pool Reallocation Under Rolloff', font: { size: 12, weight: 'normal' }, color: '#6B7280' },
                 legend: { display: true, position: 'top', labels: { usePointStyle: true, pointStyle: 'line', boxWidth: 30, font: { size: 10 } } }
             }
         }
@@ -1174,36 +1174,36 @@ const ISO_CONTEXT = {
         insights: [
             { type: 'info', text: '<strong>Solar dominance:</strong> CAISO\'s high solar capacity means Strategy 2B (grid baseline) captures significant existing solar generation for free. Strategy 2C also benefits from a large SSS pool (Diablo Canyon under SB 846 + RPS solar/wind). The 2A vs 2C cost gap is largest in hours where existing clean already covers demand.' },
             { type: 'info', text: '<strong>Geothermal option:</strong> CAISO uniquely has geothermal resources. Under Strategy 2C, the SSS pool includes Salton Sea geothermal, reducing the new-build burden for clean firm generation. No other ISO has this advantage.' },
-            { type: 'info', text: '<strong>Duck curve implications:</strong> High solar pushes midday prices to zero or negative, creating a surplus that hourly matching can use. But evening ramp (4-8 PM) still requires firm+storage regardless of strategy — the physics are identical, only cost allocation differs.' }
+            { type: 'info', text: '<strong>Duck curve implications:</strong> High solar pushes midday prices to zero or negative, creating a surplus that hourly matching can use. But evening ramp (4-8 PM) still requires firm+storage regardless of strategy - the physics are identical, only cost allocation differs.' }
         ]
     },
     ERCOT: {
         name: 'ERCOT (Texas)',
         summary: 'Wind-rich, no nuclear SSS, merchant-dominated market',
         insights: [
-            { type: 'info', text: '<strong>No SSS pool:</strong> ERCOT has no state-sponsored nuclear programs (no ZEC/CMC). Strategy 2C\'s SSS allocation is zero — it relies entirely on merchant clean (existing wind PPAs, some solar) and new-build. This narrows the gap between 2B and 2C substantially.' },
-            { type: 'info', text: '<strong>Wind surplus:</strong> ERCOT\'s 37% wind share means Strategy 2B captures enormous free generation. But wind\'s hourly profile doesn\'t match demand — nighttime wind doesn\'t cover daytime peaks, creating the same firm+storage gap as everywhere else at 90%+ targets.' },
+            { type: 'info', text: '<strong>No SSS pool:</strong> ERCOT has no state-sponsored nuclear programs (no ZEC/CMC). Strategy 2C\'s SSS allocation is zero - it relies entirely on merchant clean (existing wind PPAs, some solar) and new-build. This narrows the gap between 2B and 2C substantially.' },
+            { type: 'info', text: '<strong>Wind surplus:</strong> ERCOT\'s 37% wind share means Strategy 2B captures enormous free generation. But wind\'s hourly profile doesn\'t match demand - nighttime wind doesn\'t cover daytime peaks, creating the same firm+storage gap as everywhere else at 90%+ targets.' },
             { type: 'warn', text: '<strong>Merchant risk:</strong> ERCOT\'s energy-only market means existing clean generators have no capacity market revenue floor. Under Strategy 2C, merchant clean pricing at EAC rates ($3-5/MWh) may be insufficient to keep existing assets economically viable without additional bilateral contracts.' }
         ]
     },
     PJM: {
         name: 'PJM (Mid-Atlantic / Midwest)',
-        summary: 'Largest US ISO — nuclear SSS rolloff is the defining risk',
+        summary: 'Largest US ISO - nuclear SSS rolloff is the defining risk',
         insights: [
             { type: 'danger', text: '<strong>Nuclear rolloff crisis:</strong> PJM has ~65 TWh of nuclear generation under state subsidy programs. NJ ZEC (Salem + Hope Creek, ~15 TWh) expires 2026. IL CMC (Byron, Braidwood, Quad Cities, ~50 TWh) expires 2028. When these programs expire, that generation shifts from SSS ($0 in Strategy 2C) to the merchant pool (priced at $3-5/MWh EAC). Strategy 2C cost increases by $2-8/MWh at high targets. <a href="ref-nuclear-retirement.html">See nuclear retirement stress test &rarr;</a>' },
-            { type: 'warn', text: '<strong>LMP cannibalization feedback:</strong> As clean energy penetration increases, wholesale LMP drops. Existing nuclear plants face economic pressure from both revenue erosion (lower LMPs) and cost increases (maintenance, fuel). This creates a vicious cycle — the more clean energy you add, the harder it is to keep existing nuclear online. Carbon pricing would break this cycle by providing revenue support independent of energy-only LMP.' },
-            { type: 'info', text: '<strong>Data center load growth:</strong> Virginia data center demand is driving unprecedented load growth in PJM. Higher participation at higher targets compounds the SSS exhaustion problem — at 80%+ participation × 90%+ targets, PJM\'s existing clean supply is completely exhausted regardless of strategy choice.' },
-            { type: 'warn', text: '<strong>Susquehanna lockup:</strong> Amazon\'s ~18.8 TWh Susquehanna PPA removes that nuclear from both SSS and merchant pools. Under Strategy 2C, this corporate lockup reduces available existing clean supply, pushing more procurement to expensive new-build tranches. This is already modeled — contracted clean TWh is excluded from both SSS and merchant allocations.' },
+            { type: 'warn', text: '<strong>LMP cannibalization feedback:</strong> As clean energy penetration increases, wholesale LMP drops. Existing nuclear plants face economic pressure from both revenue erosion (lower LMPs) and cost increases (maintenance, fuel). This creates a vicious cycle - the more clean energy you add, the harder it is to keep existing nuclear online. Carbon pricing would break this cycle by providing revenue support independent of energy-only LMP.' },
+            { type: 'info', text: '<strong>Data center load growth:</strong> Virginia data center demand is driving unprecedented load growth in PJM. Higher participation at higher targets compounds the SSS exhaustion problem - at 80%+ participation × 90%+ targets, PJM\'s existing clean supply is completely exhausted regardless of strategy choice.' },
+            { type: 'warn', text: '<strong>Susquehanna lockup:</strong> Amazon\'s ~18.8 TWh Susquehanna PPA removes that nuclear from both SSS and merchant pools. Under Strategy 2C, this corporate lockup reduces available existing clean supply, pushing more procurement to expensive new-build tranches. This is already modeled - contracted clean TWh is excluded from both SSS and merchant allocations.' },
             { type: 'info', text: '<strong>Nuclear uprate opportunity:</strong> PJM\'s uprate potential is the cheapest new clean firm option (~$30/MWh). All three strategies benefit equally from uprates when available, but Strategy 2C makes better use of the existing fleet to reduce overall cost, freeing capital for uprate investment.' }
         ]
     },
     NYISO: {
         name: 'NYISO (New York)',
-        summary: 'Stable ZEC Tier 3 — SSS protected, high commercial load',
+        summary: 'Stable ZEC Tier 3 - SSS protected, high commercial load',
         insights: [
-            { type: 'info', text: '<strong>Stable nuclear SSS:</strong> NY is renewing ZEC Tier 3 (Indian Point replacement revenue for upstate plants). Unlike PJM, NYISO has no confirmed rolloff events — SSS is stable for the foreseeable future. Strategy 2C benefits from this stability.' },
-            { type: 'info', text: '<strong>NYC commercial dominance:</strong> NYISO load is ~56% commercial, ~9% industrial. Hourly matching participation is dominated by office/transit/finance — sectors with consistent weekday demand profiles that align well with nuclear+solar generation shapes.' },
-            { type: 'warn', text: '<strong>Offshore wind dependence:</strong> NYISO\'s path to high CFE targets relies heavily on offshore wind (currently under development). Under all three strategies, the new-build mix at 90%+ includes significant offshore wind — the most expensive VRE option. This drives up costs faster than in wind-rich ISOs like ERCOT and SPP.' }
+            { type: 'info', text: '<strong>Stable nuclear SSS:</strong> NY is renewing ZEC Tier 3 (Indian Point replacement revenue for upstate plants). Unlike PJM, NYISO has no confirmed rolloff events - SSS is stable for the foreseeable future. Strategy 2C benefits from this stability.' },
+            { type: 'info', text: '<strong>NYC commercial dominance:</strong> NYISO load is ~56% commercial, ~9% industrial. Hourly matching participation is dominated by office/transit/finance - sectors with consistent weekday demand profiles that align well with nuclear+solar generation shapes.' },
+            { type: 'warn', text: '<strong>Offshore wind dependence:</strong> NYISO\'s path to high CFE targets relies heavily on offshore wind (currently under development). Under all three strategies, the new-build mix at 90%+ includes significant offshore wind - the most expensive VRE option. This drives up costs faster than in wind-rich ISOs like ERCOT and SPP.' }
         ]
     },
     NEISO: {
@@ -1220,17 +1220,17 @@ const ISO_CONTEXT = {
         summary: 'Vertically integrated, Meta nuclear PPA, coal retirement wave',
         insights: [
             { type: 'info', text: '<strong>Meta corporate lockup:</strong> ~18 TWh of MISO nuclear is contracted to Meta (Clinton + Duane Arnold). Like PJM\'s Susquehanna, this capacity is excluded from both SSS and merchant pools. Strategy 2C\'s available existing clean is reduced accordingly.' },
-            { type: 'info', text: '<strong>Coal retirement tailwind:</strong> MISO\'s coal fleet is retiring rapidly. As coal exits, the marginal emission rate drops — meaning each MWh of clean procurement displaces less CO₂ over time. Strategy 2A\'s higher CO₂ abatement advantage erodes as the grid gets cleaner.' },
+            { type: 'info', text: '<strong>Coal retirement tailwind:</strong> MISO\'s coal fleet is retiring rapidly. As coal exits, the marginal emission rate drops - meaning each MWh of clean procurement displaces less CO₂ over time. Strategy 2A\'s higher CO₂ abatement advantage erodes as the grid gets cleaner.' },
             { type: 'warn', text: '<strong>Vertically integrated structure:</strong> Much of MISO operates under vertically integrated utilities with regulated rates. Hourly matching procurement must navigate utility territory boundaries, potentially limiting participation rates below theoretical maximums.' }
         ]
     },
     SPP: {
         name: 'SPP (Southwest Power Pool)',
-        summary: 'Wind capital of the US — 37% wind share, low cost entry point',
+        summary: 'Wind capital of the US - 37% wind share, low cost entry point',
         insights: [
             { type: 'info', text: '<strong>Wind surplus:</strong> SPP\'s 37% wind generation share is the highest in the US. Strategy 2B captures enormous free clean energy from the grid baseline. Strategy 2C also benefits through a large merchant wind pool. Under all strategies, SPP is the cheapest ISO for hourly matching up to ~80% targets.' },
-            { type: 'info', text: '<strong>Limited nuclear SSS:</strong> Wolf Creek is SPP\'s only nuclear plant — no state subsidy, market-based revenue. It appears in the merchant pool (Strategy 2C) or grid baseline (Strategy 2B), but the SSS pool is dominated by RPS wind, not nuclear.' },
-            { type: 'info', text: '<strong>Lowest cost inflection:</strong> SPP hits the cost inflection point (where firm+storage start dominating) later than other ISOs — around 85-90% target vs 75-80% elsewhere. This is because wind alone covers more hours in SPP than in any other region.' }
+            { type: 'info', text: '<strong>Limited nuclear SSS:</strong> Wolf Creek is SPP\'s only nuclear plant - no state subsidy, market-based revenue. It appears in the merchant pool (Strategy 2C) or grid baseline (Strategy 2B), but the SSS pool is dominated by RPS wind, not nuclear.' },
+            { type: 'info', text: '<strong>Lowest cost inflection:</strong> SPP hits the cost inflection point (where firm+storage start dominating) later than other ISOs - around 85-90% target vs 75-80% elsewhere. This is because wind alone covers more hours in SPP than in any other region.' }
         ]
     }
 };

@@ -1,5 +1,5 @@
 /**
- * Cinematic Scroll Background — Shared Module
+ * Cinematic Scroll Background - Shared Module
  * Injects a fixed background image and creates a GSAP ScrollTrigger
  * animation that pans/zooms the image as the user scrolls.
  *
@@ -61,7 +61,7 @@
         return (seed & 0x7fffffff) / 2147483647;
     }
 
-    // Base keyframes — wide sweeping motions
+    // Base keyframes - wide sweeping motions
     var baseKeyframes = [
         { x: -24, y: -8,  s: 1.08, d: 1.0 },
         { x: -5,  y: -22, s: 1.14, d: 1.0 },

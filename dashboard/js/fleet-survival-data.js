@@ -1,5 +1,5 @@
 /**
- * Fleet Survival Dashboard — Data Module
+ * Fleet Survival Dashboard - Data Module
  * ============================================================================
  * Contains: company fleet data by ISO/fuel, fossil dispatch decline curves
  * from the Track 1 baseline pipeline, SBTi timeline mapping, and 2024
@@ -45,35 +45,35 @@ const FLEET_COMPANIES = [
         total_capacity_gw: 44,
         target: "Net-zero by 2050",
         plants: [
-            // ERCOT — Coal (Martin Lake + Coleto Creek; retiring by 2027)
+            // ERCOT - Coal (Martin Lake + Coleto Creek; retiring by 2027)
             { name: "Martin Lake Coal (TX)", iso: "ERCOT", fuel: "coal", capacity_mw: 2250, generation_twh: 11.0, co2_mt: 11.6, heat_rate_btu: 10200 },
             { name: "Coleto Creek Coal (TX)", iso: "ERCOT", fuel: "coal", capacity_mw: 630, generation_twh: 3.1, co2_mt: 3.3, heat_rate_btu: 10400 },
-            // ERCOT — Gas CCGT
+            // ERCOT - Gas CCGT
             { name: "Odessa-Ector CCGT", iso: "ERCOT", fuel: "gas_ccgt", capacity_mw: 1054, generation_twh: 5.5, co2_mt: 2.2 },
             { name: "Midlothian CCGT", iso: "ERCOT", fuel: "gas_ccgt", capacity_mw: 1600, generation_twh: 8.4, co2_mt: 3.3 },
             { name: "Forney CCGT", iso: "ERCOT", fuel: "gas_ccgt", capacity_mw: 1800, generation_twh: 9.4, co2_mt: 3.8 },
-            // ERCOT — Gas Peaker (Hays, Stryker Creek, Graham, Morgan Creek, Permian, Trinidad, etc.)
+            // ERCOT - Gas Peaker (Hays, Stryker Creek, Graham, Morgan Creek, Permian, Trinidad, etc.)
             { name: "ERCOT CT/Peaker Fleet (8 plants)", iso: "ERCOT", fuel: "gas_peaker", capacity_mw: 4600, generation_twh: 4.0, co2_mt: 2.6 },
-            // ERCOT — Nuclear
+            // ERCOT - Nuclear
             { name: "Comanche Peak Nuclear", iso: "ERCOT", fuel: "nuclear", capacity_mw: 2400, generation_twh: 20.5, co2_mt: 0 },
-            // ERCOT — Solar + Battery
+            // ERCOT - Solar + Battery
             { name: "ERCOT Solar Portfolio", iso: "ERCOT", fuel: "solar", capacity_mw: 358, generation_twh: 0.8, co2_mt: 0 },
             { name: "DeCordova BESS", iso: "ERCOT", fuel: "battery", capacity_mw: 260, generation_twh: 0, co2_mt: 0 },
-            // PJM — Nuclear (Perry, Davis-Besse, Beaver Valley)
+            // PJM - Nuclear (Perry, Davis-Besse, Beaver Valley)
             { name: "Perry Nuclear (OH)", iso: "PJM", fuel: "nuclear", capacity_mw: 1268, generation_twh: 10.7, co2_mt: 0 },
             { name: "Davis-Besse Nuclear (OH)", iso: "PJM", fuel: "nuclear", capacity_mw: 908, generation_twh: 7.6, co2_mt: 0 },
             { name: "Beaver Valley Nuclear (PA)", iso: "PJM", fuel: "nuclear", capacity_mw: 1872, generation_twh: 15.8, co2_mt: 0 },
-            // PJM/MISO — Coal (Kincaid, Baldwin, Newton; all retiring 2027)
+            // PJM/MISO - Coal (Kincaid, Baldwin, Newton; all retiring 2027)
             { name: "Kincaid Coal (IL)", iso: "PJM", fuel: "coal", capacity_mw: 1319, generation_twh: 4.0, co2_mt: 4.0, heat_rate_btu: 10800 },
             { name: "Baldwin Coal (IL)", iso: "PJM", fuel: "coal", capacity_mw: 1185, generation_twh: 3.6, co2_mt: 3.6, heat_rate_btu: 10600 },
             { name: "Newton Coal (IL)", iso: "PJM", fuel: "coal", capacity_mw: 615, generation_twh: 1.9, co2_mt: 1.9, heat_rate_btu: 10700 },
-            // PJM — Gas CCGT (ex-Dynegy fleet)
+            // PJM - Gas CCGT (ex-Dynegy fleet)
             { name: "PJM Gas CCGT Fleet (ex-Dynegy)", iso: "PJM", fuel: "gas_ccgt", capacity_mw: 5200, generation_twh: 27.3, co2_mt: 10.9 },
-            // PJM — Gas Peaker
+            // PJM - Gas Peaker
             { name: "PJM CT/Peaker Fleet", iso: "PJM", fuel: "gas_peaker", capacity_mw: 5000, generation_twh: 4.4, co2_mt: 2.8 },
-            // CAISO — Gas + Battery (Moss Landing)
+            // CAISO - Gas + Battery (Moss Landing)
             { name: "Moss Landing CCGT (CA)", iso: "CAISO", fuel: "gas_ccgt", capacity_mw: 1200, generation_twh: 6.3, co2_mt: 2.5 },
-            // NEISO — Gas CCGT (Cogentrix pending: Newington, Bridgeport, Tiverton, Rumford)
+            // NEISO - Gas CCGT (Cogentrix pending: Newington, Bridgeport, Tiverton, Rumford)
             { name: "Newington CCGT (NH)", iso: "NEISO", fuel: "gas_ccgt", capacity_mw: 624, generation_twh: 3.3, co2_mt: 1.3 },
             { name: "Bridgeport CCGT (CT)", iso: "NEISO", fuel: "gas_ccgt", capacity_mw: 558, generation_twh: 2.9, co2_mt: 1.2 },
             { name: "Tiverton/Rumford CCGT", iso: "NEISO", fuel: "gas_ccgt", capacity_mw: 568, generation_twh: 3.0, co2_mt: 1.2 },
@@ -89,47 +89,47 @@ const FLEET_COMPANIES = [
         total_capacity_gw: 55,
         target: "100% carbon-free by 2040",
         plants: [
-            // PJM — Nuclear (Limerick, Peach Bottom 50%, Calvert Cliffs, Crane/TMI restart, Salem 43%)
+            // PJM - Nuclear (Limerick, Peach Bottom 50%, Calvert Cliffs, Crane/TMI restart, Salem 43%)
             { name: "Limerick Nuclear (PA)", iso: "PJM", fuel: "nuclear", capacity_mw: 2317, generation_twh: 19.5, co2_mt: 0 },
             { name: "Peach Bottom Nuclear (PA, 50%)", iso: "PJM", fuel: "nuclear", capacity_mw: 1385, generation_twh: 11.7, co2_mt: 0 },
             { name: "Calvert Cliffs Nuclear (MD)", iso: "PJM", fuel: "nuclear", capacity_mw: 1790, generation_twh: 15.1, co2_mt: 0 },
             { name: "Crane Clean Energy Center (PA)", iso: "PJM", fuel: "nuclear", capacity_mw: 835, generation_twh: 7.0, co2_mt: 0 },
             { name: "Salem Nuclear (NJ, 43%)", iso: "PJM", fuel: "nuclear", capacity_mw: 987, generation_twh: 8.3, co2_mt: 0 },
-            // PJM — Gas (Calpine: Zion CT, Cumberland CT, Sherman Ave CT; ~3.5 GW being divested)
+            // PJM - Gas (Calpine: Zion CT, Cumberland CT, Sherman Ave CT; ~3.5 GW being divested)
             { name: "PJM Gas Peaker Fleet", iso: "PJM", fuel: "gas_peaker", capacity_mw: 786, generation_twh: 0.7, co2_mt: 0.4 },
-            // PJM — Hydro
+            // PJM - Hydro
             { name: "Conowingo Hydro (MD)", iso: "PJM", fuel: "hydro", capacity_mw: 572, generation_twh: 1.9, co2_mt: 0 },
-            // NYISO — Nuclear (Nine Mile Point, FitzPatrick, Ginna)
+            // NYISO - Nuclear (Nine Mile Point, FitzPatrick, Ginna)
             { name: "Nine Mile Point Nuclear (NY)", iso: "NYISO", fuel: "nuclear", capacity_mw: 1907, generation_twh: 16.1, co2_mt: 0 },
             { name: "FitzPatrick Nuclear (NY)", iso: "NYISO", fuel: "nuclear", capacity_mw: 842, generation_twh: 7.1, co2_mt: 0 },
             { name: "Ginna Nuclear (NY)", iso: "NYISO", fuel: "nuclear", capacity_mw: 576, generation_twh: 4.9, co2_mt: 0 },
-            // NYISO — Gas (Calpine: Bethpage CT, Kennedy cogen)
+            // NYISO - Gas (Calpine: Bethpage CT, Kennedy cogen)
             { name: "NYISO Calpine Gas Fleet", iso: "NYISO", fuel: "gas_peaker", capacity_mw: 225, generation_twh: 0.5, co2_mt: 0.2 },
-            // NEISO — Gas CCGT (Calpine: Fore River, Granite Ridge, Westbrook)
+            // NEISO - Gas CCGT (Calpine: Fore River, Granite Ridge, Westbrook)
             { name: "Fore River CCGT (MA)", iso: "NEISO", fuel: "gas_ccgt", capacity_mw: 750, generation_twh: 3.9, co2_mt: 1.5 },
             { name: "Granite Ridge CCGT (NH)", iso: "NEISO", fuel: "gas_ccgt", capacity_mw: 745, generation_twh: 3.9, co2_mt: 1.5 },
             { name: "Westbrook CCGT (ME)", iso: "NEISO", fuel: "gas_ccgt", capacity_mw: 552, generation_twh: 2.9, co2_mt: 1.1 },
-            // ERCOT — Nuclear (South Texas Project 44%)
+            // ERCOT - Nuclear (South Texas Project 44%)
             { name: "South Texas Project (44%)", iso: "ERCOT", fuel: "nuclear", capacity_mw: 1164, generation_twh: 9.8, co2_mt: 0 },
-            // ERCOT — Gas CCGT (Calpine: Deer Park, Guadalupe, Baytown, Channel, Freestone, Bosque, etc.)
+            // ERCOT - Gas CCGT (Calpine: Deer Park, Guadalupe, Baytown, Channel, Freestone, Bosque, etc.)
             { name: "Deer Park Energy Center", iso: "ERCOT", fuel: "gas_ccgt", capacity_mw: 1204, generation_twh: 6.3, co2_mt: 2.5 },
             { name: "Guadalupe Energy Center", iso: "ERCOT", fuel: "gas_ccgt", capacity_mw: 1009, generation_twh: 5.3, co2_mt: 2.1 },
             { name: "Baytown/Channel/Freestone CCGT", iso: "ERCOT", fuel: "gas_ccgt", capacity_mw: 2483, generation_twh: 13.0, co2_mt: 5.2 },
             { name: "Bosque/Magic Valley/Pasadena CCGT", iso: "ERCOT", fuel: "gas_ccgt", capacity_mw: 2083, generation_twh: 10.9, co2_mt: 4.4 },
             { name: "Quail Run/Corpus/Lost Pines CCGT", iso: "ERCOT", fuel: "gas_ccgt", capacity_mw: 1570, generation_twh: 8.2, co2_mt: 3.3 },
-            // ERCOT — Gas Peaker (Hidalgo + others)
+            // ERCOT - Gas Peaker (Hidalgo + others)
             { name: "ERCOT Calpine Peaker Fleet", iso: "ERCOT", fuel: "gas_peaker", capacity_mw: 1500, generation_twh: 1.3, co2_mt: 0.8 },
-            // ERCOT — Constellation legacy gas
+            // ERCOT - Constellation legacy gas
             { name: "Colorado Bend CCGT (TX)", iso: "ERCOT", fuel: "gas_ccgt", capacity_mw: 550, generation_twh: 2.9, co2_mt: 1.2 },
-            // CAISO — Gas CCGT (Calpine: Delta, Marsh Landing, Los Medanos, Russell City, Metcalf, Gateway, Pastoria, Sutter)
+            // CAISO - Gas CCGT (Calpine: Delta, Marsh Landing, Los Medanos, Russell City, Metcalf, Gateway, Pastoria, Sutter)
             { name: "Delta/Los Medanos CCGT", iso: "CAISO", fuel: "gas_ccgt", capacity_mw: 1643, generation_twh: 8.6, co2_mt: 3.4 },
             { name: "Russell City/Gateway CCGT", iso: "CAISO", fuel: "gas_ccgt", capacity_mw: 1239, generation_twh: 6.5, co2_mt: 2.6 },
             { name: "Pastoria/Metcalf/Sutter CCGT", iso: "CAISO", fuel: "gas_ccgt", capacity_mw: 1754, generation_twh: 9.2, co2_mt: 3.7 },
-            // CAISO — Gas Peaker (Marsh Landing, Los Esteros, Gilroy)
+            // CAISO - Gas Peaker (Marsh Landing, Los Esteros, Gilroy)
             { name: "CAISO Calpine Peaker Fleet", iso: "CAISO", fuel: "gas_peaker", capacity_mw: 1318, generation_twh: 1.2, co2_mt: 0.7 },
-            // CAISO — Geothermal (The Geysers, 13 plants)
+            // CAISO - Geothermal (The Geysers, 13 plants)
             { name: "The Geysers Geothermal (CA)", iso: "CAISO", fuel: "geothermal", capacity_mw: 725, generation_twh: 5.3, co2_mt: 0.3 },
-            // CAISO — Battery (Nova BESS)
+            // CAISO - Battery (Nova BESS)
             { name: "Nova BESS Portfolio (CA)", iso: "CAISO", fuel: "battery", capacity_mw: 798, generation_twh: 0, co2_mt: 0 },
             // Wind/Solar across ISOs
             { name: "Wind Portfolio (10 states)", iso: "PJM", fuel: "wind", capacity_mw: 1400, generation_twh: 4.6, co2_mt: 0 },
@@ -146,26 +146,26 @@ const FLEET_COMPANIES = [
         total_capacity_gw: 25,
         target: "50% CO2 reduction by 2025 (vs 2014); net-zero by 2050",
         plants: [
-            // ERCOT — Coal
+            // ERCOT - Coal
             { name: "W.A. Parish Coal (TX)", iso: "ERCOT", fuel: "coal", capacity_mw: 2697, generation_twh: 13.0, co2_mt: 13.7, heat_rate_btu: 10500 },
             { name: "Limestone Coal (TX)", iso: "ERCOT", fuel: "coal", capacity_mw: 1629, generation_twh: 7.8, co2_mt: 8.2, heat_rate_btu: 10400 },
-            // ERCOT — Gas CCGT (Parish gas units, Cedar Bayou, LS Power TX plants)
+            // ERCOT - Gas CCGT (Parish gas units, Cedar Bayou, LS Power TX plants)
             { name: "W.A. Parish Gas CCGT", iso: "ERCOT", fuel: "gas_ccgt", capacity_mw: 1086, generation_twh: 5.7, co2_mt: 2.2 },
             { name: "Cedar Bayou CCGT (TX)", iso: "ERCOT", fuel: "gas_ccgt", capacity_mw: 1492, generation_twh: 7.8, co2_mt: 3.1 },
             { name: "LS Power TX Gas Plants (3)", iso: "ERCOT", fuel: "gas_ccgt", capacity_mw: 2060, generation_twh: 10.8, co2_mt: 4.3 },
-            // ERCOT — Gas Peaker (T.H. Wharton, Bertron, Greens Bayou, San Jacinto, Rockland)
+            // ERCOT - Gas Peaker (T.H. Wharton, Bertron, Greens Bayou, San Jacinto, Rockland)
             { name: "ERCOT CT/Peaker Fleet (6 plants)", iso: "ERCOT", fuel: "gas_peaker", capacity_mw: 3489, generation_twh: 3.1, co2_mt: 2.0 },
-            // PJM — Gas CCGT (LS Power: Doswell, Hunterstown, Ironwood, Springdale + others)
+            // PJM - Gas CCGT (LS Power: Doswell, Hunterstown, Ironwood, Springdale + others)
             { name: "Doswell Energy Center (VA)", iso: "PJM", fuel: "gas_ccgt", capacity_mw: 1313, generation_twh: 6.9, co2_mt: 2.8 },
             { name: "Hunterstown CCGT (PA)", iso: "PJM", fuel: "gas_ccgt", capacity_mw: 810, generation_twh: 4.2, co2_mt: 1.7 },
             { name: "Ironwood CCGT (PA)", iso: "PJM", fuel: "gas_ccgt", capacity_mw: 778, generation_twh: 4.1, co2_mt: 1.6 },
             { name: "Springdale/Other PJM CCGT", iso: "PJM", fuel: "gas_ccgt", capacity_mw: 2623, generation_twh: 13.8, co2_mt: 5.5 },
-            // PJM — Gas Peaker
+            // PJM - Gas Peaker
             { name: "PJM CT/Peaker Fleet", iso: "PJM", fuel: "gas_peaker", capacity_mw: 2000, generation_twh: 1.8, co2_mt: 1.1 },
-            // NYISO — Gas (Ravenswood, Arthur Kill)
+            // NYISO - Gas (Ravenswood, Arthur Kill)
             { name: "Ravenswood Gas/Oil (NY)", iso: "NYISO", fuel: "gas_ccgt", capacity_mw: 1947, generation_twh: 8.5, co2_mt: 3.5 },
             { name: "Arthur Kill Gas (NY)", iso: "NYISO", fuel: "gas_peaker", capacity_mw: 866, generation_twh: 0.8, co2_mt: 0.5 },
-            // NEISO — Gas (LS Power NE plants)
+            // NEISO - Gas (LS Power NE plants)
             { name: "NE Gas Plants (2)", iso: "NEISO", fuel: "gas_ccgt", capacity_mw: 940, generation_twh: 4.9, co2_mt: 1.9 },
         ]
     },
@@ -179,20 +179,20 @@ const FLEET_COMPANIES = [
         total_capacity_gw: 10.7,
         target: "No formal net-zero target; exploring nuclear expansion (Cumulus data center)",
         plants: [
-            // PJM — Nuclear (Susquehanna, 90% owned = 2,228 MW)
+            // PJM - Nuclear (Susquehanna, 90% owned = 2,228 MW)
             { name: "Susquehanna Nuclear (PA, 90%)", iso: "PJM", fuel: "nuclear", capacity_mw: 2228, generation_twh: 18.8, co2_mt: 0 },
-            // PJM — Gas CCGT (Lower Mt. Bethel)
+            // PJM - Gas CCGT (Lower Mt. Bethel)
             { name: "Lower Mt. Bethel CCGT (PA)", iso: "PJM", fuel: "gas_ccgt", capacity_mw: 610, generation_twh: 3.2, co2_mt: 1.3 },
-            // PJM — Gas Peaker (Martins Creek CT, Camden)
+            // PJM - Gas Peaker (Martins Creek CT, Camden)
             { name: "Martins Creek CT (PA)", iso: "PJM", fuel: "gas_peaker", capacity_mw: 1710, generation_twh: 1.5, co2_mt: 1.0 },
             { name: "Camden CT (NJ)", iso: "PJM", fuel: "gas_peaker", capacity_mw: 145, generation_twh: 0.1, co2_mt: 0.1 },
-            // PJM — Coal (Brandon Shores RMR through 2029; Conemaugh 22%, Keystone 12%)
+            // PJM - Coal (Brandon Shores RMR through 2029; Conemaugh 22%, Keystone 12%)
             { name: "Brandon Shores Coal (MD, RMR)", iso: "PJM", fuel: "coal", capacity_mw: 1295, generation_twh: 3.9, co2_mt: 3.9, heat_rate_btu: 10600 },
             { name: "Brunner Island (PA, coal ceasing 2028)", iso: "PJM", fuel: "coal", capacity_mw: 1419, generation_twh: 4.3, co2_mt: 4.3, heat_rate_btu: 10500 },
             { name: "Montour (PA, coal ceased 2025/gas)", iso: "PJM", fuel: "gas_ccgt", capacity_mw: 1508, generation_twh: 7.9, co2_mt: 3.2 },
             { name: "Conemaugh (PA, 22%)", iso: "PJM", fuel: "coal", capacity_mw: 392, generation_twh: 1.2, co2_mt: 1.2, heat_rate_btu: 10700 },
             { name: "Keystone (PA, 12%)", iso: "PJM", fuel: "coal", capacity_mw: 214, generation_twh: 0.6, co2_mt: 0.6, heat_rate_btu: 10800 },
-            // PJM — Oil/Gas (H.A. Wagner, RMR through 2029)
+            // PJM - Oil/Gas (H.A. Wagner, RMR through 2029)
             { name: "H.A. Wagner (MD, oil/gas)", iso: "PJM", fuel: "gas_peaker", capacity_mw: 838, generation_twh: 1.0, co2_mt: 0.7 },
         ]
     },
@@ -206,7 +206,7 @@ const FLEET_COMPANIES = [
         total_capacity_gw: 3.8,
         target: "Net-zero operations by 2045",
         plants: [
-            // PJM — Nuclear (Hope Creek 100%, Salem 57%, Peach Bottom 50%)
+            // PJM - Nuclear (Hope Creek 100%, Salem 57%, Peach Bottom 50%)
             { name: "Hope Creek Nuclear (NJ)", iso: "PJM", fuel: "nuclear", capacity_mw: 1172, generation_twh: 9.9, co2_mt: 0 },
             { name: "Salem Nuclear (NJ, 57%)", iso: "PJM", fuel: "nuclear", capacity_mw: 1308, generation_twh: 11.0, co2_mt: 0 },
             { name: "Peach Bottom Nuclear (PA, 50%)", iso: "PJM", fuel: "nuclear", capacity_mw: 1275, generation_twh: 10.7, co2_mt: 0 },
@@ -222,23 +222,23 @@ const FLEET_COMPANIES = [
         total_capacity_gw: 33,
         target: "Real Zero emissions by 2045",
         plants: [
-            // PJM — Nuclear
+            // PJM - Nuclear
             { name: "Point Beach Nuclear (WI)", iso: "PJM", fuel: "nuclear", capacity_mw: 1200, generation_twh: 10.1, co2_mt: 0 },
-            // ERCOT — Wind + Solar
+            // ERCOT - Wind + Solar
             { name: "ERCOT Wind Portfolio", iso: "ERCOT", fuel: "wind", capacity_mw: 8000, generation_twh: 25.0, co2_mt: 0 },
             { name: "ERCOT Solar Portfolio", iso: "ERCOT", fuel: "solar", capacity_mw: 3500, generation_twh: 7.7, co2_mt: 0 },
             { name: "ERCOT Battery Storage", iso: "ERCOT", fuel: "battery", capacity_mw: 2000, generation_twh: 0, co2_mt: 0 },
-            // ERCOT — Gas
+            // ERCOT - Gas
             { name: "ERCOT Gas CCGT Fleet", iso: "ERCOT", fuel: "gas_ccgt", capacity_mw: 3200, generation_twh: 16.8, co2_mt: 6.7 },
-            // PJM — Wind/Solar
+            // PJM - Wind/Solar
             { name: "PJM Wind Portfolio", iso: "PJM", fuel: "wind", capacity_mw: 2000, generation_twh: 6.3, co2_mt: 0 },
             { name: "PJM Solar Portfolio", iso: "PJM", fuel: "solar", capacity_mw: 1500, generation_twh: 3.3, co2_mt: 0 },
-            // CAISO — Solar + Battery
+            // CAISO - Solar + Battery
             { name: "CAISO Solar Portfolio", iso: "CAISO", fuel: "solar", capacity_mw: 2500, generation_twh: 5.5, co2_mt: 0 },
             { name: "CAISO Battery Storage", iso: "CAISO", fuel: "battery", capacity_mw: 1500, generation_twh: 0, co2_mt: 0 },
-            // CAISO — Gas
+            // CAISO - Gas
             { name: "CAISO Gas CCGT Fleet", iso: "CAISO", fuel: "gas_ccgt", capacity_mw: 1200, generation_twh: 6.3, co2_mt: 2.5 },
-            // NEISO — Wind
+            // NEISO - Wind
             { name: "NEISO Wind Portfolio", iso: "NEISO", fuel: "wind", capacity_mw: 800, generation_twh: 2.5, co2_mt: 0 },
         ]
     },
@@ -252,15 +252,15 @@ const FLEET_COMPANIES = [
         total_capacity_gw: 35,
         target: "Carbon-neutral Scope 1&2 by 2040; SBTi validated 1.5°C",
         plants: [
-            // PJM — Coal
+            // PJM - Coal
             { name: "Petersburg Coal (IN)", iso: "PJM", fuel: "coal", capacity_mw: 1700, generation_twh: 5.3, co2_mt: 5.3, heat_rate_btu: 10700 },
-            // PJM — Gas
+            // PJM - Gas
             { name: "PJM Gas CCGT Fleet", iso: "PJM", fuel: "gas_ccgt", capacity_mw: 1800, generation_twh: 9.4, co2_mt: 3.8 },
             { name: "PJM Gas Peaker Fleet", iso: "PJM", fuel: "gas_peaker", capacity_mw: 1200, generation_twh: 1.1, co2_mt: 0.7 },
-            // CAISO — Solar + Battery
+            // CAISO - Solar + Battery
             { name: "CAISO Solar Portfolio", iso: "CAISO", fuel: "solar", capacity_mw: 3000, generation_twh: 6.6, co2_mt: 0 },
             { name: "CAISO Battery Storage", iso: "CAISO", fuel: "battery", capacity_mw: 2000, generation_twh: 0, co2_mt: 0 },
-            // CAISO — Gas
+            // CAISO - Gas
             { name: "AES Alamitos CCGT (CA)", iso: "CAISO", fuel: "gas_ccgt", capacity_mw: 1960, generation_twh: 10.3, co2_mt: 4.1 },
             { name: "AES Redondo/Huntington (CA)", iso: "CAISO", fuel: "gas_peaker", capacity_mw: 1500, generation_twh: 1.3, co2_mt: 0.8 },
             // Wind
@@ -272,15 +272,15 @@ const FLEET_COMPANIES = [
 ];
 
 // ============================================================================
-// FOSSIL DISPATCH DECLINE CURVES — Track 1 Baseline
+// FOSSIL DISPATCH DECLINE CURVES - Track 1 Baseline
 // ============================================================================
 // Computed from the pipeline's merit-order retirement model (dispatch_utils.py):
 //   Coal → Oil → Gas displacement as clean energy increases
 //   At 70% threshold, all coal and oil fully retired; only gas remains
 //
-// P10 = low demand growth (0.5%/yr) — more optimistic for decarbonization
+// P10 = low demand growth (0.5%/yr) - more optimistic for decarbonization
 // P50 = medium demand growth (1.0%/yr)
-// P90 = high demand growth (2.0%/yr) — more fossil remains
+// P90 = high demand growth (2.0%/yr) - more fossil remains
 
 const FOSSIL_DISPATCH_DECLINE = {
     CAISO: {
@@ -449,7 +449,7 @@ const EMISSION_RATES_TCO2_MWH = {
 // ============================================================================
 /**
  * For a given company and set of fuel filters, compute the "survival rate"
- * at each threshold — the percentage of their fossil capacity that still
+ * at each threshold - the percentage of their fossil capacity that still
  * has dispatch room in the grid.
  *
  * Logic:
@@ -500,7 +500,7 @@ function computeFleetSurvival(company, fuelFilter) {
     });
 
     if (baseline_fossil_capacity === 0 && fuelFilter !== 'all') {
-        // No fossil plants matching filter — survival is N/A
+        // No fossil plants matching filter - survival is N/A
         FLEET_THRESHOLDS.forEach(t => {
             thresholds.push(t);
             years.push(FLEET_THRESHOLD_YEARS[t]);
@@ -532,7 +532,7 @@ function computeFleetSurvival(company, fuelFilter) {
                 const iso = plant.iso;
                 const decline = FOSSIL_DISPATCH_DECLINE[iso];
                 if (!decline) {
-                    // ISO not in our model — assume survival
+                    // ISO not in our model - assume survival
                     surviving_capacity += plant.capacity_mw;
                     surviving_co2 += plant.co2_mt;
                     return;
@@ -583,7 +583,7 @@ function computeFleetSurvival(company, fuelFilter) {
                         Math.min(1, gas_remaining_twh / total_regional_gas) : 0;
 
                     if (plant.fuel === 'gas_ccgt') {
-                        // CCGTs survive longer — they're dispatched first
+                        // CCGTs survive longer - they're dispatched first
                         // If gas fraction > (peaker share of gas), CCGTs fully survive
                         const peaker_share = iso_total_gas_gen > 0 ? iso_peaker_gen / iso_total_gas_gen : 0;
                         const ccgt_survival = peaker_share < 1 ?
@@ -773,7 +773,7 @@ function computeFleetMixOverTime(company) {
  *   oil_exit_year: year when company oil dispatch → 0 (or null),
  *   peaker_squeeze_year: year when peaker dispatch drops below 50% of baseline,
  *   ccgt_erosion_year: year when CCGT dispatch drops below 90% of baseline
- *                       (the start of real CCGT pain — lower CFs, not retirements),
+ *                       (the start of real CCGT pain - lower CFs, not retirements),
  * }
  */
 function computeFleetMilestones(company) {
@@ -865,7 +865,7 @@ function getFleetBreakdown(company) {
 }
 
 // ============================================================================
-// REGIONAL FOSSIL FLEET — Nameplate Capacity & Dispatch Model
+// REGIONAL FOSSIL FLEET - Nameplate Capacity & Dispatch Model
 // ============================================================================
 // Sources:
 //   - Installed capacity: EIA Form 860 (2024), PP6 LMP module estimates
@@ -1040,7 +1040,7 @@ function computeAggregateFossilMetrics() {
  * Compute company-specific nameplate capacity, dispatch, and capacity factor
  * at each SBTi threshold. Unlike computeFleetMixOverTime (which scales capacity
  * by dispatch fraction), this separates physical nameplate from economic dispatch:
- *   - Coal/oil nameplate: binary — full capacity until regional dispatch → 0, then retired
+ *   - Coal/oil nameplate: binary - full capacity until regional dispatch → 0, then retired
  *   - Gas nameplate: ALWAYS full (plants stay on grid as capacity resources)
  *   - Clean nameplate: ALWAYS full (unaffected by fossil dispatch decline)
  *   - Dispatch: merit-order model (same as computeFleetMixOverTime)
@@ -1129,7 +1129,7 @@ function computeCompanyCapacityDispatch(company) {
             if (plant.fuel === 'coal') {
                 const coalFrac = decline.coal_cap_twh > 0 ?
                     Math.min(1, remaining.coal / decline.coal_cap_twh) : 0;
-                // Nameplate: binary — running or retired
+                // Nameplate: binary - running or retired
                 const np = remaining.coal > 0.01 ? plant.capacity_mw : 0;
                 const disp = plant.generation_twh * coalFrac;
                 fuelNpAcc[plant.fuel] += np;

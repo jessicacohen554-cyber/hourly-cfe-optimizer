@@ -1,5 +1,5 @@
 // ============================================================================
-// SHARED BACK BUTTON MODULE — Consistent back navigation bar
+// SHARED BACK BUTTON MODULE - Consistent back navigation bar
 // ============================================================================
 // Include via: <script src="js/shared-back-button.js"></script>
 //
@@ -7,8 +7,8 @@
 //   <div id="backBar" data-back-href="about.html" data-back-label="Back to Home"></div>
 //
 // Attributes:
-//   data-back-href  — Link target (default: "about.html")
-//   data-back-label — Link text (default: "Back to Home")
+//   data-back-href  - Link target (default: "about.html")
+//   data-back-label - Link text (default: "Back to Home")
 //
 // This script injects the styled back bar with chevron SVG.
 // ============================================================================

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Design Preview — The 8,760 Problem</title>
+<title>Design Preview - The 8,760 Problem</title>
 
 <!-- All Google Fonts for 4 variants -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,7 +16,7 @@
 
 <style>
 /* ================================================================
-   DESIGN PREVIEW — THEME SYSTEM
+   DESIGN PREVIEW - THEME SYSTEM
    All 4 variants use the SAME HTML. Only CSS custom properties change.
    ================================================================ */
 
@@ -108,7 +108,7 @@ body.theme-editorial {
 }
 
 /* ================================================================
-   VARIANT B: THE OBSERVATORY — with light/dark rhythm
+   VARIANT B: THE OBSERVATORY - with light/dark rhythm
    ================================================================ */
 body.theme-observatory {
     --font-heading: 'Plus Jakarta Sans', sans-serif;
@@ -296,7 +296,7 @@ body.theme-observatory .section-light .narrative-block strong {
 /* ================================================================
    VARIANT C: THE CURRENT (Enhanced)
    ================================================================ */
-/* (defaults in :root — no overrides needed) */
+/* (defaults in :root - no overrides needed) */
 
 /* ================================================================
    VARIANT D: THE SIGNAL
@@ -999,7 +999,7 @@ body.theme-editorial .pull-quote {
 }
 
 /* ================================================================
-   TRANSITION DIVIDERS (Observatory-only — hidden on other themes)
+   TRANSITION DIVIDERS (Observatory-only - hidden on other themes)
    ================================================================ */
 .section-transition-light-to-dark,
 .section-transition-dark-to-light,
@@ -1190,7 +1190,7 @@ body.theme-observatory .section-light .stat-card:hover {
 <div class="accent-line" aria-hidden="true"></div>
 
 <!-- ================================================================ -->
-<!-- REGIONAL DEEP DIVE SECTION (LIGHT — analytical, data-forward)     -->
+<!-- REGIONAL DEEP DIVE SECTION (LIGHT - analytical, data-forward)     -->
 <!-- ================================================================ -->
 <section class="content-section section-light">
     <h2 class="section-title">Regional Deep Dive</h2>
@@ -1272,7 +1272,7 @@ body.theme-observatory .section-light .stat-card:hover {
 <div class="section-transition-light-to-dark" aria-hidden="true"></div>
 
 <!-- ================================================================ -->
-<!-- KEY METRICS BAND (DARK — glowing stats, emphasis)                  -->
+<!-- KEY METRICS BAND (DARK - glowing stats, emphasis)                  -->
 <!-- ================================================================ -->
 <section class="dark-metrics-band section-dark">
     <div class="metrics-inner">
@@ -1303,7 +1303,7 @@ body.theme-observatory .section-light .stat-card:hover {
 <div class="accent-line" aria-hidden="true"></div>
 
 <!-- ================================================================ -->
-<!-- METHODOLOGY PEEK (LIGHT — brief, analytical)                      -->
+<!-- METHODOLOGY PEEK (LIGHT - brief, analytical)                      -->
 <!-- ================================================================ -->
 <section class="content-section section-light" style="padding-top: 48px; padding-bottom: 48px;">
     <div class="insight-box" style="max-width: 940px; margin: 0 auto;">
@@ -1320,7 +1320,7 @@ body.theme-observatory .section-light .stat-card:hover {
 <div class="section-transition-light-to-dark" aria-hidden="true"></div>
 
 <!-- ================================================================ -->
-<!-- DARK NARRATIVE SECTION (DARK — emphasis, storytelling)             -->
+<!-- DARK NARRATIVE SECTION (DARK - emphasis, storytelling)             -->
 <!-- ================================================================ -->
 <section class="dark-section section-dark">
     <div class="dark-inner">
@@ -1343,7 +1343,7 @@ body.theme-observatory .section-light .stat-card:hover {
 <div class="accent-line" aria-hidden="true"></div>
 
 <!-- ================================================================ -->
-<!-- RELATED ANALYSES (LIGHT — clean card grid)                        -->
+<!-- RELATED ANALYSES (LIGHT - clean card grid)                        -->
 <!-- ================================================================ -->
 <section class="content-section section-light">
     <h2 class="section-title">Continue Exploring</h2>
@@ -1428,16 +1428,16 @@ function getCurrentSVG() {
 }
 
 function getEditorialSVG() {
-    // Elegant thin-stroke energy curves — static illustration, not animated
+    // Elegant thin-stroke energy curves - static illustration, not animated
     return '<div class="header-svg-overlay"><svg viewBox="0 0 1440 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">' +
     // Thin elegant energy curves
     '<path d="M0,220 C240,200 480,180 720,190 C960,200 1200,210 1440,195" fill="none" stroke="rgba(14,165,233,0.25)" stroke-width="1"/>' +
     '<path d="M0,200 C180,190 360,170 540,160 C720,150 900,165 1080,175 C1260,185 1380,195 1440,200" fill="none" stroke="rgba(245,158,11,0.20)" stroke-width="0.8"/>' +
     '<path d="M0,240 C360,235 720,225 1080,230 C1260,232 1380,238 1440,240" fill="none" stroke="rgba(34,197,94,0.15)" stroke-width="0.8"/>' +
-    // Single heartbeat — refined, thin
+    // Single heartbeat - refined, thin
     '<path d="M0,140 L500,140 L518,138 L525,120 L532,160 L540,100 L548,165 L555,118 L562,142 L570,140 L900,140 L918,138 L925,122 L932,158 L940,102 L948,163 L955,120 L962,142 L970,140 L1440,140" fill="none" stroke="rgba(239,68,68,0.18)" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">' +
     '<animate attributeName="stroke-opacity" dur="4s" repeatCount="indefinite" values="0.18;0.30;0.18"/></path>' +
-    // Subtle dots — like data points
+    // Subtle dots - like data points
     '<circle cx="540" cy="100" r="2" fill="rgba(239,68,68,0.2)"/>' +
     '<circle cx="940" cy="102" r="2" fill="rgba(239,68,68,0.2)"/>' +
     // Fine grid lines
@@ -1446,7 +1446,7 @@ function getEditorialSVG() {
 }
 
 function getObservatorySVG() {
-    // Glowing neon oscilloscope style — animated, with dot grid
+    // Glowing neon oscilloscope style - animated, with dot grid
     return '<div class="header-svg-overlay"><svg viewBox="0 0 1440 280" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">' +
     '<defs>' +
     '<filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>' +
@@ -1459,7 +1459,7 @@ function getObservatorySVG() {
     // Glowing energy curves
     '<path d="M0,200 C120,180 240,160 360,170 C480,180 600,200 720,190 C840,180 960,160 1080,170 C1200,180 1320,200 1440,190" fill="none" stroke="rgba(6,182,212,0.5)" stroke-width="2" filter="url(#glow)"><animate attributeName="d" dur="10s" repeatCount="indefinite" values="M0,200 C120,180 240,160 360,170 C480,180 600,200 720,190 C840,180 960,160 1080,170 C1200,180 1320,200 1440,190;M0,195 C120,175 240,165 360,175 C480,185 600,195 720,185 C840,175 960,165 1080,175 C1200,185 1320,195 1440,185;M0,200 C120,180 240,160 360,170 C480,180 600,200 720,190 C840,180 960,160 1080,170 C1200,180 1320,200 1440,190"/></path>' +
     '<path d="M0,230 C180,220 300,180 450,150 C600,120 720,110 900,140 C1050,160 1200,200 1440,220" fill="none" stroke="rgba(245,158,11,0.35)" stroke-width="1.5" filter="url(#glow)"><animate attributeName="d" dur="14s" repeatCount="indefinite" values="M0,230 C180,220 300,180 450,150 C600,120 720,110 900,140 C1050,160 1200,200 1440,220;M0,225 C180,215 300,175 450,155 C600,125 720,115 900,135 C1050,155 1200,195 1440,215;M0,230 C180,220 300,180 450,150 C600,120 720,110 900,140 C1050,160 1200,200 1440,220"/></path>' +
-    // Heartbeat — neon red glow
+    // Heartbeat - neon red glow
     '<path d="M0,140 L300,140 L318,138 L325,118 L332,162 L340,88 L348,170 L355,112 L362,145 L370,140 L700,140 L718,138 L725,120 L732,160 L740,90 L748,168 L755,114 L762,144 L770,140 L1100,140 L1118,138 L1125,122 L1132,158 L1140,94 L1148,166 L1155,116 L1162,143 L1170,140 L1440,140" fill="none" stroke="rgba(239,68,68,0.45)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"><animate attributeName="stroke-opacity" dur="2.5s" repeatCount="indefinite" values="0.35;0.6;0.35"/></path>' +
     // Scan line effect
     '<line x1="0" y1="0" x2="0" y2="280" stroke="rgba(6,182,212,0.08)" stroke-width="2"><animate attributeName="x1" dur="6s" repeatCount="indefinite" values="0;1440"/><animate attributeName="x2" dur="6s" repeatCount="indefinite" values="0;1440"/></line>' +
@@ -1492,7 +1492,7 @@ function getSignalSVG() {
     '<path d="M198,130 C300,165 400,170 500,160 C600,155 650,135 678,110" fill="none" stroke="rgba(14,165,233,0.20)" stroke-width="1.2"/>' +
     '<path d="M680,105 C800,135 900,140 1000,135 C1100,130 1130,115 1158,115" fill="none" stroke="rgba(245,158,11,0.25)" stroke-width="1.5"><animate attributeName="stroke-opacity" dur="3s" repeatCount="indefinite" values="0.25;0.40;0.25"/></path>' +
     '<path d="M680,110 C800,145 900,150 1000,140 C1100,135 1130,120 1158,120" fill="none" stroke="rgba(14,165,233,0.20)" stroke-width="1.2"/>' +
-    // Bold heartbeat signal — thick, confident
+    // Bold heartbeat signal - thick, confident
     '<path d="M0,140 L250,140 L268,137 L275,110 L282,170 L290,75 L298,180 L305,105 L312,148 L320,140 L680,140 L698,137 L705,112 L712,168 L720,78 L728,178 L735,108 L742,146 L750,140 L1100,140 L1118,137 L1125,115 L1132,165 L1140,80 L1148,175 L1155,110 L1162,145 L1170,140 L1440,140" fill="none" stroke="rgba(239,68,68,0.40)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><animate attributeName="stroke-opacity" dur="2s" repeatCount="indefinite" values="0.35;0.55;0.35"/></path>' +
     // Horizontal grid
     '<line x1="0" y1="70" x2="1440" y2="70" stroke="rgba(255,255,255,0.04)" stroke-width="0.5"/>' +

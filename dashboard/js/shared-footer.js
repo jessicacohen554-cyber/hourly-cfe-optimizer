@@ -1,5 +1,5 @@
 // ============================================================================
-// SHARED FOOTER MODULE — Single source of truth for site footer
+// SHARED FOOTER MODULE - Single source of truth for site footer
 // ============================================================================
 // Include via: <script src="js/shared-footer.js"></script>
 //
@@ -13,7 +13,7 @@
 (function() {
     'use strict';
 
-    // Canonical footer link set — single source of truth
+    // Canonical footer link set - single source of truth
     var FOOTER_LINKS = [
         { href: 'about.html',                label: 'About' },
         { href: 'dashboard.html',             label: 'Cost Optimizer' },

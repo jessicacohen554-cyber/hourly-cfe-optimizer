@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="robots" content="noindex, nofollow">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The 8,760 Problem — About This Model</title>
+    <title>The 8,760 Problem - About This Model</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -14,7 +14,7 @@
     <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
     <style>
-        /* ========== ABOUT THIS MODEL — Page-specific styles only ========== */
+        /* ========== ABOUT THIS MODEL - Page-specific styles only ========== */
         html { font-size: 16px; }
         body {
             background: var(--bg-page);
@@ -230,7 +230,7 @@
             h2 { page-break-before: auto; }
         }
 
-        /* ========== Forecast Validation section — scoped styles ========== */
+        /* ========== Forecast Validation section - scoped styles ========== */
         .fv-wrapper {
             background: var(--bg-page-white);
             padding: 40px 0;
@@ -890,7 +890,7 @@
     <h2 id="outputs">7. Analytical Outputs</h2>
 
     <p>
-        The model produces a comprehensive set of results that together answer the key questions
+        The model produces a full set of results that together answer the key questions
         facing clean energy procurement decision-makers.
     </p>
 
@@ -1229,7 +1229,7 @@
 
     <h2 style="font-size:1.6rem;color:var(--navy);margin-top:0;margin-bottom:18px;padding-bottom:10px;border-bottom:2px solid var(--border);letter-spacing:0.02em;text-transform:capitalize;">11. Forecast Validation</h2>
 
-    <p>We validated our SMARTargets market simulation against five published benchmark forecasts — EIA's Annual Energy Outlook, NREL's Cambium model, Princeton's REPEAT project, LBNL's interconnection queue data, and EPA's Integrated Planning Model — across all seven U.S. ISOs.</p>
+    <p>We validated our SMARTargets market simulation against five published benchmark forecasts - EIA's Annual Energy Outlook, NREL's Cambium model, Princeton's REPEAT project, LBNL's interconnection queue data, and EPA's Integrated Planning Model - across all seven U.S. ISOs.</p>
 
     <div class="fv-stat-row">
         <div class="fv-stat-counter">
@@ -1247,24 +1247,24 @@
     </div>
 
     <div class="insight-box">
-        <strong>Bottom line:</strong> Our model's clean energy penetration trajectories are directionally aligned with consensus forecasts in 60% of year-over-year comparisons. Near-term (2030) projections are close to EIA for most ISOs, but our market-only reference sweep consistently projects slower decarbonization than policy-inclusive benchmarks. The divergences at 2040+ are <em>structural and explainable</em> — they trace to our omission of policy mandates (IRA, state RPS, RGGI), not model errors.
+        <strong>Bottom line:</strong> Our model's clean energy penetration trajectories are directionally aligned with consensus forecasts in 60% of year-over-year comparisons. Near-term (2030) projections are close to EIA for most ISOs, but our market-only reference sweep consistently projects slower decarbonization than policy-inclusive benchmarks. The divergences at 2040+ are <em>structural and explainable</em> - they trace to our omission of policy mandates (IRA, state RPS, RGGI), not model errors.
     </div>
 
     <p>The three most important findings from this validation:</p>
     <ol>
-        <li><strong>Our model captures scarcity pricing that capacity-expansion models miss.</strong> At high clean penetration (>70%), our hourly dispatch resolution shows wholesale prices rising — not falling — as fossil generation becomes scarce and expensive to maintain. EIA and NREL models, which optimize capacity over annual blocks, project steadily declining prices from VRE surplus. The truth likely falls between these views.</li>
-        <li><strong>Our reference sweep is a market-only scenario</strong> — no emission caps, no RPS mandates, no carbon price escalation. This is intentional: it shows what the market alone would deliver. Benchmarks that include IRA incentives, state policies, and EPA regulations naturally project faster decarbonization. The gap between our reference case and these policy-inclusive benchmarks is itself informative — it quantifies the policy premium.</li>
+        <li><strong>Our model captures scarcity pricing that capacity-expansion models miss.</strong> At high clean penetration (>70%), our hourly dispatch resolution shows wholesale prices rising - not falling - as fossil generation becomes scarce and expensive to maintain. EIA and NREL models, which optimize capacity over annual blocks, project steadily declining prices from VRE surplus. The truth likely falls between these views.</li>
+        <li><strong>Our reference sweep is a market-only scenario</strong> - no emission caps, no RPS mandates, no carbon price escalation. This is intentional: it shows what the market alone would deliver. Benchmarks that include IRA incentives, state policies, and EPA regulations naturally project faster decarbonization. The gap between our reference case and these policy-inclusive benchmarks is itself informative - it quantifies the policy premium.</li>
         <li><strong>Cross-border clean imports matter for NYISO.</strong> Our model treats ISOs as independent grids, ignoring ~25 TWh/yr of Hydro-Québec clean energy imports into NYISO. This partly explains the NYISO clean penetration lag (our ~40% vs. benchmarks' 58–62% at 2030). We've implemented a correction for this in the model code (see Model Improvements below).</li>
     </ol>
 
     <!-- 11.1: Where We Agree -->
     <h3 style="margin-top:36px;">Where We Agree</h3>
-    <p style="color:var(--text-muted);font-size:0.88rem;margin-bottom:16px;">Clean energy deployment pace — strong near-term consensus</p>
+    <p style="color:var(--text-muted);font-size:0.88rem;margin-bottom:16px;">Clean energy deployment pace - strong near-term consensus</p>
 
-    <p>Through 2035, our model and EIA AEO agree on the direction of clean energy deployment for most ISOs: clean penetration is rising, and the near-term cost economics are clear. Both models use similar near-term cost assumptions (NREL ATB-derived LCOEs), similar existing fleet data (EIA 860), and similar demand baselines — though our ISO-specific demand growth rates (ERCOT 3.5%/yr, PJM 2.4%/yr, CAISO 1.9%/yr, etc.) diverge from EIA's national average.</p>
+    <p>Through 2035, our model and EIA AEO agree on the direction of clean energy deployment for most ISOs: clean penetration is rising, and the near-term cost economics are clear. Both models use similar near-term cost assumptions (NREL ATB-derived LCOEs), similar existing fleet data (EIA 860), and similar demand baselines - though our ISO-specific demand growth rates (ERCOT 3.5%/yr, PJM 2.4%/yr, CAISO 1.9%/yr, etc.) diverge from EIA's national average.</p>
 
     <div class="insight-box insight-success">
-        <strong>Strongest alignment:</strong> PJM and ERCOT clean penetration directionally tracks EIA AEO through 2040 — both show steady upward trajectories. NEISO deployment direction matches NREL Cambium closely. The magnitude gaps widen after 2035, but both models agree on the direction of the transition.
+        <strong>Strongest alignment:</strong> PJM and ERCOT clean penetration directionally tracks EIA AEO through 2040 - both show steady upward trajectories. NEISO deployment direction matches NREL Cambium closely. The magnitude gaps widen after 2035, but both models agree on the direction of the transition.
     </div>
 
     <p>Select an ISO to see how our model's P10–P90 fan band compares with benchmark projections for clean energy penetration:</p>
@@ -1287,18 +1287,18 @@
         Shaded area = our model's P10–P90 range across 540 scenarios (including IRA policy toggle). Lines = published benchmark projections.
     </p>
 
-    <p>The key takeaway: despite very different modeling approaches (our hourly dispatch model vs. EIA's National Energy Modeling System vs. NREL's ReEDS capacity expansion), the near-term deployment trajectory converges. The economics of solar and wind are clear enough that model choice doesn't matter much through 2035 — the differences emerge in the long-term structural assumptions.</p>
+    <p>The key takeaway: despite very different modeling approaches (our hourly dispatch model vs. EIA's National Energy Modeling System vs. NREL's ReEDS capacity expansion), the near-term deployment trajectory converges. The economics of solar and wind are clear enough that model choice doesn't matter much through 2035 - the differences emerge in the long-term structural assumptions.</p>
 
     <!-- 11.2: Where We Diverge -->
-    <h3 style="margin-top:36px;">Where We Diverge — And Why</h3>
+    <h3 style="margin-top:36px;">Where We Diverge - And Why</h3>
     <p style="color:var(--text-muted);font-size:0.88rem;margin-bottom:16px;">Three structural differences explain 90% of the deviation</p>
 
     <h4 style="font-family:var(--font-heading);font-size:0.95rem;margin-top:24px;">1. The LMP Divergence at High Clean Penetration</h4>
 
-    <p>This is the most striking finding. By 2040–2050, our model projects wholesale prices <em>rising</em> in most ISOs, while EIA and NREL project them falling or staying flat. In ERCOT, our unconstrained reference case projects P50 LMP reaching $172/MWh by 2050, versus EIA's $35 and Cambium's $10. However, our updated model now includes a <strong>regulatory feedback mechanism</strong> that caps effective average LMP at ~1.75&times; the 2023 baseline when rolling 3-year averages exceed 2&times; — modeling the capacity mechanism reforms that real ISOs implement under sustained price stress (e.g., ERCOT's ORDC reforms post-2021 freeze).</p>
+    <p>This is the most striking finding. By 2040–2050, our model projects wholesale prices <em>rising</em> in most ISOs, while EIA and NREL project them falling or staying flat. In ERCOT, our unconstrained reference case projects P50 LMP reaching $172/MWh by 2050, versus EIA's $35 and Cambium's $10. However, our updated model now includes a <strong>regulatory feedback mechanism</strong> that caps effective average LMP at ~1.75&times; the 2023 baseline when rolling 3-year averages exceed 2&times; - modeling the capacity mechanism reforms that real ISOs implement under sustained price stress (e.g., ERCOT's ORDC reforms post-2021 freeze).</p>
 
     <div class="insight-box insight-warn">
-        <strong>Why this happens:</strong> Our model includes hourly scarcity pricing. When clean penetration exceeds ~70%, the remaining fossil fleet operates fewer hours but at higher marginal cost (peakers, not baseload). Our ERCOT model uses ORDC-based pricing with a $5,000/MWh VOLL cap. A small number of scarcity hours can pull the annual average up dramatically. Capacity expansion models like ReEDS optimize away this scarcity by building "just enough" firm capacity — they assume perfect foresight and optimal buildout, which real markets don't achieve. The regulatory feedback mechanism now dampens the most extreme projections, but a gap remains between our hourly dispatch view and annual optimization models.
+        <strong>Why this happens:</strong> Our model includes hourly scarcity pricing. When clean penetration exceeds ~70%, the remaining fossil fleet operates fewer hours but at higher marginal cost (peakers, not baseload). Our ERCOT model uses ORDC-based pricing with a $5,000/MWh VOLL cap. A small number of scarcity hours can pull the annual average up dramatically. Capacity expansion models like ReEDS optimize away this scarcity by building "just enough" firm capacity - they assume perfect foresight and optimal buildout, which real markets don't achieve. The regulatory feedback mechanism now dampens the most extreme projections, but a gap remains between our hourly dispatch view and annual optimization models.
     </div>
 
     <p>The truth falls between these views. Real markets will experience some scarcity pricing (our model captures this), and policy interventions will dampen sustained extremes (our regulatory feedback models this). The remaining gap with EIA/NREL quantifies the <strong>value of market design</strong> and the difference between hourly dispatch realism and annual capacity optimization.</p>
@@ -1307,7 +1307,7 @@
 
     <p>Our reference sweep emissions consistently exceed both EIA and NREL projections. In PJM, we project ~380 Mt CO&#8322; at 2050 versus EIA's 140 Mt and Cambium's 70 Mt. This is by design: our reference scenario answers "what would the market deliver without policy intervention?"</p>
 
-    <p>The benchmarks include IRA tax credits (driving economics), state RPS mandates (driving deployment minimums), RGGI/cap-and-trade (driving coal retirement), and EPA regulations (setting emission limits). Our reference sweep includes none of these policy drivers — it's pure market economics.</p>
+    <p>The benchmarks include IRA tax credits (driving economics), state RPS mandates (driving deployment minimums), RGGI/cap-and-trade (driving coal retirement), and EPA regulations (setting emission limits). Our reference sweep includes none of these policy drivers - it's pure market economics.</p>
 
     <div class="insight-box">
         <strong>The policy premium:</strong> The gap between our market-only trajectory and policy-inclusive benchmarks quantifies the emissions reduction attributable to policy. For PJM, ~240 Mt CO&#8322; of the 2050 difference is policy-driven, not market-driven. This is a feature of our model design, not a flaw.
@@ -1318,8 +1318,8 @@
     <p>Our model projects NYISO at ~40% clean by 2030 (P50), while both EIA (58%) and NREL (62%) project much higher levels. This is the widest near-term gap and has two root causes:</p>
 
     <ol>
-        <li><strong>Missing Hydro-Québec imports:</strong> NYISO imports ~25 TWh/yr of clean hydropower from Québec via HVDC ties — roughly a 15 percentage-point boost to clean penetration. Our model treated ISOs as independent grids and missed this entirely. We've now added an <code>EXTERNAL_CLEAN_IMPORTS_TWH</code> correction to the model (see Model Improvements below), which will close about half of the gap in the next sweep run.</li>
-        <li><strong>Missing state mandates:</strong> The benchmarks include NY CLCPA mandates (70% clean by 2030 state law), which drive rapid offshore wind and solar deployment. Our reference sweep, being market-only, doesn't enforce these mandates — and in pure market terms, NYISO's tight geography and high interconnection costs slow voluntary deployment.</li>
+        <li><strong>Missing Hydro-Québec imports:</strong> NYISO imports ~25 TWh/yr of clean hydropower from Québec via HVDC ties - roughly a 15 percentage-point boost to clean penetration. Our model treated ISOs as independent grids and missed this entirely. We've now added an <code>EXTERNAL_CLEAN_IMPORTS_TWH</code> correction to the model (see Model Improvements below), which will close about half of the gap in the next sweep run.</li>
+        <li><strong>Missing state mandates:</strong> The benchmarks include NY CLCPA mandates (70% clean by 2030 state law), which drive rapid offshore wind and solar deployment. Our reference sweep, being market-only, doesn't enforce these mandates - and in pure market terms, NYISO's tight geography and high interconnection costs slow voluntary deployment.</li>
     </ol>
 
     <p>The remaining deviation after the HQ import correction reflects the difference between a legal mandate (CLCPA) and market incentive alone. Our policy scenarios (IRA overlay with RPS floors) will close most of the residual gap.</p>
@@ -1353,16 +1353,16 @@
     <h3 style="margin-top:36px;">Our Model's Edge</h3>
     <p style="color:var(--text-muted);font-size:0.88rem;margin-bottom:16px;">What hourly dispatch resolution reveals that annual models miss</p>
 
-    <p>Most published forecasts use capacity expansion models — they find the cost-optimal portfolio of generators to build, assuming perfect foresight and annual energy balance. Our model operates at 8,760-hour resolution, dispatching resources hour by hour against 5-year averaged demand and generation profiles (2021–2025 element-wise averages). This captures three dynamics that capacity expansion models smooth over:</p>
+    <p>Most published forecasts use capacity expansion models - they find the cost-optimal portfolio of generators to build, assuming perfect foresight and annual energy balance. Our model operates at 8,760-hour resolution, dispatching resources hour by hour against 5-year averaged demand and generation profiles (2021–2025 element-wise averages). This captures three dynamics that capacity expansion models smooth over:</p>
 
     <div class="capability-grid">
         <div class="capability-card">
             <h4>VRE Price Suppression</h4>
-            <p>When solar floods the grid midday, our model drives prices to zero or negative — matching observed CAISO duck curve dynamics. Annual models only capture the average effect, missing the volatility that makes storage valuable and shapes investment signals.</p>
+            <p>When solar floods the grid midday, our model drives prices to zero or negative - matching observed CAISO duck curve dynamics. Annual models only capture the average effect, missing the volatility that makes storage valuable and shapes investment signals.</p>
         </div>
         <div class="capability-card">
             <h4>Scarcity Pricing</h4>
-            <p>When wind dies down for days in ERCOT, our model dispatches expensive peakers and triggers ORDC scarcity pricing. This is how real markets work — and it reveals the <em>true cost</em> of the last 5% of decarbonization that capacity models understate.</p>
+            <p>When wind dies down for days in ERCOT, our model dispatches expensive peakers and triggers ORDC scarcity pricing. This is how real markets work - and it reveals the <em>true cost</em> of the last 5% of decarbonization that capacity models understate.</p>
         </div>
         <div class="capability-card">
             <h4>Storage Dispatch Realism</h4>
@@ -1370,18 +1370,18 @@
         </div>
         <div class="capability-card">
             <h4>ISO-Specific Market Design</h4>
-            <p>ERCOT's energy-only ORDC produces fundamentally different price signals than PJM's RPM capacity market. Our model captures this — ERCOT shows extreme price spikes that PJM's capacity market prevents. Most national models use a single pricing framework.</p>
+            <p>ERCOT's energy-only ORDC produces fundamentally different price signals than PJM's RPM capacity market. Our model captures this - ERCOT shows extreme price spikes that PJM's capacity market prevents. Most national models use a single pricing framework.</p>
         </div>
     </div>
 
     <h4 style="font-family:var(--font-heading);font-size:0.95rem;margin-top:28px;">LMP Trajectories: Small Multiples</h4>
-    <p>Average wholesale price trajectory across all 7 ISOs — our P10–P90 fan vs. EIA AEO and NREL Cambium projections.</p>
+    <p>Average wholesale price trajectory across all 7 ISOs - our P10–P90 fan vs. EIA AEO and NREL Cambium projections.</p>
 
     <div class="fv-small-multiples" id="fvLmpSmallMultiples">
         <!-- Populated by JS -->
     </div>
 
-    <p>The divergence pattern is consistent: near-term convergence, long-term divergence. Our model's rising prices at high clean penetration reflect the cost of maintaining reliability with a shrinking fossil fleet — a dynamic that capacity expansion models assume away by building optimal firm capacity.</p>
+    <p>The divergence pattern is consistent: near-term convergence, long-term divergence. Our model's rising prices at high clean penetration reflect the cost of maintaining reliability with a shrinking fossil fleet - a dynamic that capacity expansion models assume away by building optimal firm capacity.</p>
 
     <!-- 11.5: Known Limitations -->
     <h3 style="margin-top:36px;">Known Validation Limitations</h3>
@@ -1437,7 +1437,7 @@
     </table>
 
     <div class="insight-box">
-        <strong>Overall assessment:</strong> Our model's limitations are well-understood and bounded. The hourly dispatch resolution provides insights that capacity expansion models cannot — particularly around price formation, storage value, and the last-mile cost of decarbonization. The key is using each model type for what it does best: ours for operational dynamics and cost granularity, theirs for long-term capacity planning and policy impact assessment.
+        <strong>Overall assessment:</strong> Our model's limitations are well-understood and bounded. The hourly dispatch resolution provides insights that capacity expansion models cannot - particularly around price formation, storage value, and the last-mile cost of decarbonization. The key is using each model type for what it does best: ours for operational dynamics and cost granularity, theirs for long-term capacity planning and policy impact assessment.
     </div>
 
     <!-- 11.6: Model Improvements -->
@@ -1501,7 +1501,7 @@
             <tr>
                 <td><strong>LMP Decomposition</strong></td>
                 <td>Component tracking in LMP engine: merit_base + scarcity + dq_adder. Enables apples-to-apples comparison of our merit_base_avg against Cambium's SRMC.</td>
-                <td>Resolves apparent LMP over-prediction — much of the gap is scarcity/congestion pricing that Cambium's SRMC excludes by design.</td>
+                <td>Resolves apparent LMP over-prediction - much of the gap is scarcity/congestion pricing that Cambium's SRMC excludes by design.</td>
                 <td style="color: #166534; font-weight: 600;">Implemented</td>
             </tr>
         </tbody>
@@ -1518,12 +1518,12 @@
 
     <ol>
         <li><strong>Near-term reliability:</strong> Through 2035, our clean energy deployment projections align with consensus. Corporate procurement decisions based on our model are well-grounded.</li>
-        <li><strong>Long-term insight, not prediction:</strong> Our 2040-2050 projections shouldn't be read as "prices will reach $172/MWh in ERCOT." They should be read as "without policy intervention and capacity market reform, scarcity pricing dynamics could become severe." The benchmarks' lower prices assume policy and market design evolve to prevent this — our model shows what happens if they don't.</li>
+        <li><strong>Long-term insight, not prediction:</strong> Our 2040-2050 projections shouldn't be read as "prices will reach $172/MWh in ERCOT." They should be read as "without policy intervention and capacity market reform, scarcity pricing dynamics could become severe." The benchmarks' lower prices assume policy and market design evolve to prevent this - our model shows what happens if they don't.</li>
         <li><strong>The policy gap is quantifiable:</strong> The difference between our market-only reference and policy-inclusive benchmarks measures the emissions reduction attributable to policy. This is independently useful for policy analysis and corporate strategy.</li>
     </ol>
 
     <div class="insight-box insight-success">
-        <strong>Confidence level:</strong> High for near-term (2030-2035) resource deployment and cost analysis. Moderate for mid-term (2035-2040) market dynamics. Our 2040-2050 projections are scenario-dependent and should be interpreted as conditional forecasts, not predictions — which is exactly what they're designed to be.
+        <strong>Confidence level:</strong> High for near-term (2030-2035) resource deployment and cost analysis. Moderate for mid-term (2035-2040) market dynamics. Our 2040-2050 projections are scenario-dependent and should be interpreted as conditional forecasts, not predictions - which is exactly what they're designed to be.
     </div>
 
 </div>
@@ -1786,7 +1786,7 @@
             <h4>Multi-Sector Energy Integration</h4>
             <p>
                 Extend the model to capture electricity&ndash;transport&ndash;buildings&ndash;industry
-                interactions, enabling holistic decarbonization pathway analysis where
+                interactions, enabling cross-sector decarbonization pathway analysis where
                 electrification decisions in one sector affect resource requirements and prices
                 in others. Informed by REGEN's full energy-economy integration architecture.
             </p>
@@ -1871,7 +1871,7 @@
     </p>
 
     <style>
-        /* ========== Data Flow Map — page-specific layout styles ========== */
+        /* ========== Data Flow Map - page-specific layout styles ========== */
         .dfm-wrap {
             position: relative;
             overflow-x: auto;
@@ -2330,7 +2330,7 @@
             rect.setAttribute('stroke', 'rgba(255,255,255,0.3)');
             g.appendChild(rect);
 
-            // Label — split into two lines if long
+            // Label - split into two lines if long
             const parts = n.label.split(': ');
             if (parts.length === 2) {
                 const t1 = document.createElementNS(ns, 'text');
@@ -2459,7 +2459,7 @@ document.addEventListener('DOMContentLoaded', function() {
     'use strict';
 
     if (typeof VALIDATION_DATA === 'undefined' || typeof Chart === 'undefined') {
-        console.warn('Validation data or Chart.js not loaded — skipping forecast validation charts');
+        console.warn('Validation data or Chart.js not loaded - skipping forecast validation charts');
         return;
     }
 

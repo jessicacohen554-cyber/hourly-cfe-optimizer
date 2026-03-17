@@ -1,5 +1,5 @@
 
-// --- Resource Mix (% of demand) — MMM_M_M scenario ---
+// --- Resource Mix (% of demand) - MMM_M_M scenario ---
 // Source: co2_results batch JSONs (Step 5)
 // Indices match THRESHOLDS array: ['50', '55', '60', '65', '70', '75', '80', '85', '87.5', '90', '92.5', '95', '97.5', '99', '99.99']
 // battery/ldes = dispatch % of demand; procurement = over-procurement %
@@ -61,7 +61,7 @@ const RESOURCE_MIX_DATA = {
     }
 };
 
-// --- Compressed Day Hourly Profiles (24h normalized) — MMM_M_M scenario ---
+// --- Compressed Day Hourly Profiles (24h normalized) - MMM_M_M scenario ---
 // Source: co2_results batch JSONs compressed_day field
 // Each sub-array is [24 hourly values], one per threshold (matching THRESHOLDS)
 const COMPRESSED_DAY_DATA = {
@@ -1107,7 +1107,7 @@ const COMPRESSED_DAY_DATA = {
     }
 };
 
-// --- CF Tranche Split (uprate vs new-build) — MMM_M_M scenario ---
+// --- CF Tranche Split (uprate vs new-build) - MMM_M_M scenario ---
 // Source: co2_results batch JSONs tranche_costs field
 const CF_TRANCHE_DATA = {
     CAISO: {

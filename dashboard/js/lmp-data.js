@@ -1,5 +1,5 @@
 // ============================================================
-// LMP Trends — Multi-ISO Data Generation & Region Metadata
+// LMP Trends - Multi-ISO Data Generation & Region Metadata
 // ============================================================
 // Calibration baselines from *_calibration.json (at 50% clean threshold)
 var CAL = {
@@ -162,7 +162,7 @@ function nc(tag, tagBg, tagColor, title, body, badgeCls, badge) {
     return h + '</div>';
 }
 
-// ===== REGION META — per-ISO narrative content =====
+// ===== REGION META - per-ISO narrative content =====
 function buildMeta(iso) {
     var name = ISO_NAMES[iso], D = LMP_ALL[iso], c = CAL[iso];
     var decline = Math.round((1 - D.envelope.p50[10] / D.envelope.p50[0]) * 100);

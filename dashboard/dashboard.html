@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The 8,760 Problem — Cost Optimizer Dashboard</title>
+<title>The 8,760 Problem - Cost Optimizer Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -19,7 +19,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
-/* ===== PAGE-SPECIFIC STYLES — dashboard.html ===== */
+/* ===== PAGE-SPECIFIC STYLES - dashboard.html ===== */
 /* Everything else lives in dashboard-ui.css */
 
 /* Page background override */
@@ -180,12 +180,12 @@ body {
         </div>
         <div class="control-group">
             <label>Interim Year <span class="info-icon-wrapper" tabindex="0"><span class="info-icon" aria-label="Info">i</span><span class="info-tooltip">Auto-derived from the SBTi milestone timeline based on your interim target threshold.</span></span></label>
-            <span id="interimYearDisplay" class="year-display">—</span>
+            <span id="interimYearDisplay" class="year-display"> - </span>
             <input type="hidden" id="interimYear" value="2036">
         </div>
         <div class="control-group">
             <label>Long-term Year <span class="info-icon-wrapper" tabindex="0"><span class="info-icon" aria-label="Info">i</span><span class="info-tooltip">Auto-derived from the SBTi milestone timeline based on your long-term target threshold.</span></span></label>
-            <span id="longtermYearDisplay" class="year-display">—</span>
+            <span id="longtermYearDisplay" class="year-display"> - </span>
             <input type="hidden" id="longtermYear" value="2050">
         </div>
         <!-- Legacy cfCostSelect hidden for backward compat -->
@@ -350,7 +350,7 @@ body {
                         45Q Tax Credit
                         <span class="info-icon-wrapper" tabindex="0">
                             <span class="info-icon" aria-label="Info">i</span>
-                            <span class="info-tooltip">The 45Q tax credit provides $85/ton CO₂ for carbon capture and storage, reducing CCS-CCGT costs by ~$29/MWh. <strong>With 45Q</strong> reflects current policy (default). <strong>Without 45Q</strong> shows what happens if the credit expires or is repealed — CCS becomes significantly more expensive.</span>
+                            <span class="info-tooltip">The 45Q tax credit provides $85/ton CO₂ for carbon capture and storage, reducing CCS-CCGT costs by ~$29/MWh. <strong>With 45Q</strong> reflects current policy (default). <strong>Without 45Q</strong> shows what happens if the credit expires or is repealed - CCS becomes significantly more expensive.</span>
                         </span>
                     </div>
                     <div class="toggle-label-sub">CCS-CCGT cost offset ($85/ton CO₂)</div>
@@ -406,7 +406,7 @@ body {
         <h3>What You Need Depends on What You Have &mdash; and Where You're Going</h3>
         <p class="wyn-subtitle">
             The chart compares the <strong>existing clean resources</strong> on the grid today with the
-            <strong>optimal portfolios</strong> at your interim and long-term targets — in TWh, scaled by
+            <strong>optimal portfolios</strong> at your interim and long-term targets - in TWh, scaled by
             demand growth. When the long-term optimal mix differs from the interim, some of today's
             investment becomes <strong>stranded</strong>. Building strategically toward the end state
             from the start can save significant capital.
@@ -545,7 +545,7 @@ body {
         </div>
     </div>
 
-    <!-- Cost table and peak capacity panels removed — data shown in metric tiles -->
+    <!-- Cost table and peak capacity panels removed - data shown in metric tiles -->
 </div>
 
 <!-- FOOTER -->
@@ -643,7 +643,7 @@ function syncSbtiYears() {
         document.getElementById('longtermYearDisplay').textContent =
             `${ltYear}  (${longtermThresh}% CFE)`;
     } else {
-        // "Same as Interim" — use interim year
+        // "Same as Interim" - use interim year
         document.getElementById('longtermYear').value = interimYear;
         document.getElementById('longtermYearDisplay').textContent =
             `${interimYear}  (same as interim)`;
@@ -655,7 +655,7 @@ function syncSbtiYears() {
 
 // Split a clean_firm value into nuclear + geothermal portions.
 // Uses CF_TRANCHE_DATA (threshold-aware) when available; falls back to static ratios.
-// thresholdIdx: index into THRESHOLDS array (optional — uses current selection if omitted)
+// thresholdIdx: index into THRESHOLDS array (optional - uses current selection if omitted)
 function splitCleanFirm(iso, value, thresholdIdx) {
     if (!value || value <= 0) return { nuclear: 0, geothermal: 0, ccs: 0 };
     // Resolve threshold index from current selection if not passed
@@ -790,7 +790,7 @@ function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
     const rate = growthRate || 0;
     const growthFactor = years > 0 ? Math.pow(1 + rate, years) : 1;
     const demandTwh = baseDemandTwh * growthFactor;
-    // Existing shares are % of 2025 demand — scale down to % of grown demand
+    // Existing shares are % of 2025 demand - scale down to % of grown demand
     const existingScaleFactor = 1 / growthFactor;
 
     const rm = { clean_firm: mixArr[0], solar: mixArr[1], wind: mixArr[2], offshore_wind: mixArr[3], ccs_ccgt: mixArr[4], hydro: mixArr[5] };
@@ -904,7 +904,7 @@ function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
         totalCost += costPerDemand;
     }
 
-    // Storage costs — battery, battery8, and LDES use independent cost toggles
+    // Storage costs - battery, battery8, and LDES use independent cost toggles
     const battCostName = { L: 'Low', M: 'Medium', H: 'High' }[battLevel] || 'Medium';
     const batLcoe = ((LCOE_TABLES.battery || {})[battCostName] || {})[iso] || 102;
     const batTx = ((TX_TABLES.battery || {})[tx] || {})[iso] || 0;
@@ -912,7 +912,7 @@ function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
     resourceCosts.battery = { capacity_pct: batPct, dispatch_pct: batPct, cost_per_demand_mwh: batCost };
     totalCost += batCost;
 
-    // Battery 8hr — uses same storage toggle level as 4hr battery
+    // Battery 8hr - uses same storage toggle level as 4hr battery
     const bat8Lcoe = ((LCOE_TABLES.battery8 || {})[battCostName] || {})[iso] || 130;
     const bat8Tx = ((TX_TABLES.battery8 || {})[tx] || {})[iso] || 0;
     const bat8Cost = (bat8Pct / 100.0) * (bat8Lcoe + bat8Tx);
@@ -1277,7 +1277,7 @@ function buildDashboardData() {
         const thresholds = {};
         for (let ti = 0; ti < THRESHOLDS.length; ti++) {
             const tk = String(THRESHOLDS[ti]);
-            // Stub thresholds — resolveEntry() uses client-side repricing via FEASIBLE_MIXES
+            // Stub thresholds - resolveEntry() uses client-side repricing via FEASIBLE_MIXES
             thresholds[tk] = {};
         }
         const demandTWh = (typeof REGIONAL_DEMAND_TWH !== 'undefined' ? REGIONAL_DEMAND_TWH[iso] : 200) || 200;
@@ -1443,7 +1443,7 @@ function initDashboard() {
         regionSel.appendChild(opt);
     });
 
-    // Populate threshold dropdown — modeled thresholds (50-≥99.99%)
+    // Populate threshold dropdown - modeled thresholds (50-≥99.99%)
     const threshSel = document.getElementById('thresholdSelect');
     const FULL_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99];
     FULL_THRESHOLDS.forEach(t => {
@@ -1851,7 +1851,7 @@ function updateCompressedDay(entry, region, iso) {
 
     // NOTE: The compressed day profile was simulated at base-year (2025) demand.
     // All arrays (demand, matched, surplus, gap) are in the same normalized space.
-    // Do NOT apply demand growth factor here — it would break the relationship:
+    // Do NOT apply demand growth factor here - it would break the relationship:
     //   demand = matchedTotal + gap (must hold at every hour)
     // Growth factor already affects which MIX is selected via findOptimalMix,
     // but the dispatch visualization shows that mix at the demand level it was simulated against.
@@ -1861,7 +1861,7 @@ function updateCompressedDay(entry, region, iso) {
     const rRaw = (arr) => rotateToLocal(arr).map(v => toMWh(v));
     const z24 = new Array(24).fill(0);
 
-    // Calculate stacked matched values (in MWh, local time) — all 7 resource types
+    // Calculate stacked matched values (in MWh, local time) - all 7 resource types
     // Split clean_firm into nuclear + geothermal using threshold-aware tranche data
     const matchedCleanFirmRaw = r(cd.matched.clean_firm || z24);
     // Compute geo fraction from tranche data for this threshold
@@ -1897,13 +1897,13 @@ function updateCompressedDay(entry, region, iso) {
     const matchedLDES = r(cd.matched.ldes || z24);
     const matchedH2 = r(cd.matched.h2 || z24);
 
-    // Separate charging for battery, battery8, LDES, and H₂ (negative, below x-axis) — in MWh, local time
+    // Separate charging for battery, battery8, LDES, and H₂ (negative, below x-axis) - in MWh, local time
     const batteryCharge = rRaw(cd.battery_charge || z24);
     const battery8Charge = rRaw(cd.battery8_charge || z24);
     const ldesCharge = rRaw(cd.ldes_charge || z24);
     const h2Charge = rRaw(cd.h2_charge || z24);
 
-    // Per-resource surplus (curtailed) — in MWh, local time
+    // Per-resource surplus (curtailed) - in MWh, local time
     const surplusSolarRaw = rRaw(cd.surplus?.solar || z24);
     const surplusWindRaw = rRaw(cd.surplus?.wind || z24);
     const surplusOffshoreWindRaw = rRaw(cd.surplus?.offshore_wind || z24);
@@ -1937,7 +1937,7 @@ function updateCompressedDay(entry, region, iso) {
     const surplusGeothermal = surplusGeothermalRaw.map((v, i) => v * netCurtailFactor[i]);
     const surplusCCS = surplusCCSRaw.map((v, i) => v * netCurtailFactor[i]);
 
-    // Gap (unmatched) — in MWh, local time
+    // Gap (unmatched) - in MWh, local time
     const gap = rRaw(cd.gap);
 
     // Build stacked bottom-up: clean_firm, ccs_ccgt, hydro, wind, solar, battery, ldes
@@ -2054,10 +2054,10 @@ function updateCompressedDay(entry, region, iso) {
         });
     }
 
-    // Demand line — actual electricity demand (navy dashed)
+    // Demand line - actual electricity demand (navy dashed)
     const demandLocal = rotateToLocal(cd.demand).map(v => toMWh(v));
 
-    // Fossil fuel overlay removed — chart shows clean resources vs demand only
+    // Fossil fuel overlay removed - chart shows clean resources vs demand only
 
     const demandDsIdx = datasets.length;
     datasets.push({
@@ -2269,7 +2269,7 @@ function updateCompressedDay(entry, region, iso) {
                                     if (contrib < 1) return null;
                                     return ` ${ds.label}: ${fmtMWh(contrib)}`;
                                 }
-                                // Storage charge (negative) — show specific label
+                                // Storage charge (negative) - show specific label
                                 if (ds._isCharge) {
                                     const idx = context.dataIndex;
                                     const dsIdx = context.datasetIndex;
@@ -2611,7 +2611,7 @@ function refreshNarrativeStats() {
 
 // ---- Narrative Mix / Incremental charts removed (content deleted from page) ----
 
-// (Narrative mix + incremental chart code removed — HTML sections deleted)
+// (Narrative mix + incremental chart code removed - HTML sections deleted)
 // ---- Narrative Cost Chart stubs (implementation below) ----
 let narrativeCostChart = null;
 function initNarrativeCostChart() {}
@@ -2673,7 +2673,7 @@ function highlightCostStep(stepName) {
     const annotations = {};
 
     if (stepName === 'cost-intro') {
-        // Highlight all — full curve glow
+        // Highlight all - full curve glow
         for (let i = 0; i < n; i++) {
             colors[i] = '#1A2744';
             radii[i] = 6;
@@ -2749,7 +2749,7 @@ function highlightCostStep(stepName) {
             };
         }
     } else if (stepName === 'cost-99') {
-        // Highlight 99-≥99.99% zone — the steep climb
+        // Highlight 99-≥99.99% zone - the steep climb
         const idx99 = findIdx(99);
         const idx100 = findIdx(99.99);
         const topIdx = idx100 >= 0 ? idx100 : idx99;
@@ -2795,7 +2795,7 @@ function highlightCostStep(stepName) {
                 xAdjust: -90,
                 yAdjust: 8,
             };
-            // Danger zone shading — 99 to 100 is proportionally narrow
+            // Danger zone shading - 99 to 100 is proportionally narrow
             annotations['dangerZone'] = {
                 type: 'box',
                 xMin: 98.5,
@@ -2830,7 +2830,7 @@ function initScrollAnimations() {
         fadeObserver.observe(el);
     });
 
-    // 2. Scrollytelling step observer — highlight cost chart based on active step
+    // 2. Scrollytelling step observer - highlight cost chart based on active step
     const steps = document.querySelectorAll('.scrolly-step');
     if (steps.length === 0) return;
 
@@ -2865,7 +2865,7 @@ function initScrollAnimations() {
 
     steps.forEach(step => stepObserver.observe(step));
 
-    // (Narrative mix + incremental chart observers removed — content deleted from page)
+    // (Narrative mix + incremental chart observers removed - content deleted from page)
 }
 
 // ---- Target Mode Toggle (Interim / Long-term) ----
@@ -2890,7 +2890,7 @@ function updateTargetModeInfo() {
     if (currentTargetMode === 'longterm' && longtermVal) {
         infoEl.innerHTML = `Showing <strong>long-term ${longtermVal}%</strong> target results. All charts below reflect the long-term matching goal.`;
     } else if (currentTargetMode === 'longterm' && !longtermVal) {
-        infoEl.innerHTML = `Long-term target not set — showing <strong>interim ${interimThresh}%</strong> results. Select a long-term target above.`;
+        infoEl.innerHTML = `Long-term target not set - showing <strong>interim ${interimThresh}%</strong> results. Select a long-term target above.`;
     } else {
         infoEl.innerHTML = `Showing <strong>interim ${interimThresh}%</strong> target results. All charts below reflect the interim matching goal.`;
     }
@@ -2970,7 +2970,7 @@ function updateHeatmapTiles(region, entry, iso) {
     // CO2 abated: higher = green
     applyHeatmap('tileCO2', getCO2Abated(entry, iso), minCO2, maxCO2, false);
 
-    // Abatement cost tile — MAC = total incremental cost / CO2 abated
+    // Abatement cost tile - MAC = total incremental cost / CO2 abated
     const co2Tons = getCO2Abated(entry, iso);
     const abateCostEl = document.getElementById('metricAbateCost');
     const abateCostSub = document.getElementById('metricAbateCostSub');
@@ -3036,13 +3036,13 @@ function updateHeatmapTiles(region, entry, iso) {
         }
     }
 
-    // Resolve current gas values — repriced entry takes priority
+    // Resolve current gas values - repriced entry takes priority
     const demandTWh = (typeof REGIONAL_DEMAND_TWH !== 'undefined') ? (REGIONAL_DEMAND_TWH[iso] || 0) : 0;
     let curTotalCostPerMwh = null, curGasCostPerMwh = null;
     let curGasMw = null, curNewGasMw = null, curCoverage = null, curNewGasCost = null;
 
     if (entryGb) {
-        // From client-side repricing — total_cost already includes gas
+        // From client-side repricing - total_cost already includes gas
         const cleanCost = (entry.costs_detail?.total_cost_per_demand_mwh || entry.costs?.total_cost_per_demand_mwh || 0);
         curTotalCostPerMwh = cleanCost;  // gas already baked into total_cost from priceMix
         curGasCostPerMwh = entryGb.gas_cost_per_mwh || 0;
@@ -3061,7 +3061,7 @@ function updateHeatmapTiles(region, entry, iso) {
         curNewGasCost = gbPrecomp.new_gas_cost[gbIdx];
     }
 
-    // Full System Cost tile — absolute $ (annual, billions)
+    // Full System Cost tile - absolute $ (annual, billions)
     const totalCostEl = document.getElementById('metricTotalCost');
     const totalCostSub = document.getElementById('metricTotalCostSub');
     if (totalCostEl && curTotalCostPerMwh != null && demandTWh > 0) {
@@ -3190,7 +3190,7 @@ function getUnifiedCosts(entry) {
 // Fallback CCGT emission rate (used only when dispatch CO2 data unavailable)
 const CCGT_CO2_RATE = 0.350; // metric tons CO2 per MWh
 
-// Get CO2 abated in metric tons — uses dispatch model data when available
+// Get CO2 abated in metric tons - uses dispatch model data when available
 function getCO2Abated(entry, iso) {
     if (!entry || !iso) return 0;
     // Try CO2_DISPATCH_DATA first (from step5a_compute_co2.py dispatch-stack model)
@@ -3208,7 +3208,7 @@ function getCO2Abated(entry, iso) {
     return (matchScore / 100) * annualDemand * CCGT_CO2_RATE;
 }
 
-// Get CO2 emission rate (tCO2/MWh) for current threshold — dispatch model or fallback
+// Get CO2 emission rate (tCO2/MWh) for current threshold - dispatch model or fallback
 function getCO2Rate(iso) {
     if (typeof CO2_DISPATCH_DATA !== 'undefined' && CO2_DISPATCH_DATA[iso]) {
         const threshVal = parseFloat(findClosestThreshold(
@@ -3231,7 +3231,7 @@ function initSensitivityToggles() {
     document.querySelectorAll('.toggle-btn-group').forEach(group => {
         const toggleKey = group.getAttribute('data-toggle');
         if (!toggleKey) return;
-        // Skip demand_growth — handled by initPathwayAnalysis with extra updateDemandGrowthLabel()
+        // Skip demand_growth - handled by initPathwayAnalysis with extra updateDemandGrowthLabel()
         if (toggleKey === 'demand_growth') return;
         group.querySelectorAll('button').forEach(btn => {
             btn.addEventListener('click', function() {
@@ -3255,7 +3255,7 @@ function initSensitivityToggles() {
         });
     });
 
-    // 45Q toggle — separate from paired sensitivity toggles
+    // 45Q toggle - separate from paired sensitivity toggles
     const toggle45Q = document.getElementById('toggle45Q');
     if (toggle45Q) {
         toggle45Q.querySelectorAll('button').forEach(btn => {
@@ -3353,7 +3353,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     }
     injectStorageDispatch(interimRC, interimThreshold);
 
-    // Long-term target — resolve with longtermYear's demand
+    // Long-term target - resolve with longtermYear's demand
     const longtermVal = document.getElementById('longtermTarget').value;
     const longtermThreshold = longtermVal ? findClosestThreshold(regionData, longtermVal) : null;
     let longtermRC = null;
@@ -3470,7 +3470,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     // Long-term target (new build scaled to longterm demand)
     const longtermData = longtermRC ? getResourceTWh(longtermRC, longtermTWh) : null;
 
-    // Build chart labels — simple: Existing / Interim / Long-term
+    // Build chart labels - simple: Existing / Interim / Long-term
     const hasLongterm = longtermData !== null;
     const labels = hasLongterm
         ? ['Existing', 'Interim', 'Long-term']
@@ -3660,7 +3660,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     const maxTWh = Math.max(...barTotals, ...demandAtStage);
     const yMax = Math.ceil(maxTWh / 10) * 10 + 10; // extra room for labels
 
-    // Demand annotations — each line restricted to its own column only
+    // Demand annotations - each line restricted to its own column only
     const demandAnnotations = {};
     const stageLabels = ['2025 Demand', 'Interim Demand', 'Long-term Demand'];
     demandAtStage.forEach((d, i) => {
@@ -3827,7 +3827,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         metricsEl.style.display = '';
 
         // Compare interim NEW BUILD vs long-term NEW BUILD per resource.
-        // Only new build can be stranded — existing capacity is already built.
+        // Only new build can be stranded - existing capacity is already built.
         // Each stage's resource_costs has growth-adjusted existing_pct/new_pct
         // (% of that year's demand), so multiply by that year's demand for absolute TWh.
         let totalInterimNewTWh = 0;
@@ -3840,7 +3840,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
 
         allResources.forEach(r => {
             if (r === 'storage') return; // skip combined storage; use battery + ldes separately
-            if (r === 'hydro') return; // hydro is static existing — never stranded, never new build
+            if (r === 'hydro') return; // hydro is static existing - never stranded, never new build
             const intRes = interimRC[r] || {};
             const ltRes = longtermRC[r] || {};
 
@@ -4032,7 +4032,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                 const color = colorByKey[r] || '#888';
                 const rLabel = RESOURCE_LABELS[r] || r;
                 const stVal = strandedByRes[r];
-                const stNote = stVal > 0.05 ? ` — <span class="sl-val">${stVal.toFixed(1)} TWh stranded</span>` : '';
+                const stNote = stVal > 0.05 ? ` - <span class="sl-val">${stVal.toFixed(1)} TWh stranded</span>` : '';
                 return `<div class="stranded-legend-item">
                     <div class="stranded-legend-dot" style="background:${color}"></div>
                     <span>${rLabel}${stNote}</span>
@@ -4073,9 +4073,9 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                 const pct = (v) => (v / maxGasMW * 100).toFixed(1);
 
                 // Bar 1: Existing Gas Capacity (full fleet)
-                // Bar 2: Interim — existing used + new build
-                // Bar 3: Long-term — existing used + new build
-                // Bar 4: Stranded — delta between interim and long-term new build
+                // Bar 2: Interim - existing used + new build
+                // Bar 3: Long-term - existing used + new build
+                // Bar 4: Stranded - delta between interim and long-term new build
 
                 let gasHtml = '';
 
@@ -4138,7 +4138,7 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         }
 
     } else {
-        // No long-term target selected — show simpler insight, hide metrics
+        // No long-term target selected - show simpler insight, hide metrics
         if (metricsEl) metricsEl.style.display = 'none';
         const breakdownElHide = document.getElementById('strandedBreakdown');
         if (breakdownElHide) breakdownElHide.style.display = 'none';
@@ -4194,7 +4194,7 @@ function initPathwayAnalysis() {
         }
     }
 
-    // Re-render when pathway controls change — demand growth now affects pricing
+    // Re-render when pathway controls change - demand growth now affects pricing
     function triggerRerender() {
         updateDemandGrowthLabel();
         // Full updateAll because demand growth affects priceMix() via resolveEntry()
@@ -4251,10 +4251,10 @@ function updateDemandGrowthLabel() {
     if (!rates) { display.textContent = ''; return; }
     const level = getDemandGrowthLevel();
     const rate = rates[level] || rates.Medium;
-    display.innerHTML = `<strong>${(rate * 100).toFixed(1)}%/yr</strong> — ${rates.label}`;
+    display.innerHTML = `<strong>${(rate * 100).toFixed(1)}%/yr</strong> - ${rates.label}`;
 }
 
-// updatePathwayAnalysis is now a no-op — all logic merged into updateWhatYouNeedPanel
+// updatePathwayAnalysis is now a no-op - all logic merged into updateWhatYouNeedPanel
 function updatePathwayAnalysis() {
     updateDemandGrowthLabel();
 }

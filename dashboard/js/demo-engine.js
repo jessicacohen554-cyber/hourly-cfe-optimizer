@@ -1,7 +1,7 @@
 /**
- * Demo Engine — Client-side synthetic market simulation
+ * Demo Engine - Client-side synthetic market simulation
  * Generates plausible results from L/M/H price level + carbon price + ISO.
- * NOT a real model — directionally correct for prototype feedback.
+ * NOT a real model - directionally correct for prototype feedback.
  */
 
 const ISO_PROFILES = {

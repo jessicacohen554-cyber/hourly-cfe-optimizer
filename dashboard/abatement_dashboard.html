@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The 8,760 Problem — CO₂ Abatement Analysis</title>
+<title>The 8,760 Problem - CO₂ Abatement Analysis</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -28,7 +28,7 @@ html, body {
 }
 
 /* ========== contrast-fix: panel-navy overrides for deepdive section ========== */
-/* The deepdive section sits on #0F172A navy bg — child text must be light */
+/* The deepdive section sits on #0F172A navy bg - child text must be light */
 
 /* contrast-fix: was #1E293B (dark text from scrollytell.css), now #E2E8F0, ratio 12.3:1 on bg #0F172A */
 .panel-navy .deepdive-header h2 { color: #E2E8F0 !important; }
@@ -53,11 +53,11 @@ html, body {
 .panel-navy .step-stat-green { background: rgba(34,197,94,0.15); color: #86EFAC !important; border-color: rgba(34,197,94,0.3); } /* contrast-fix: was #15803D, now #86EFAC, ratio 8.25:1 on bg #0F172A */
 .panel-navy .step-stat-amber { background: rgba(245,158,11,0.15); color: #FCD34D !important; border-color: rgba(245,158,11,0.3); } /* contrast-fix: was #92400E, now #FCD34D, ratio 10.8:1 on bg #0F172A */
 
-/* contrast-fix: iso-tab in navy context — inactive tabs need light text */
+/* contrast-fix: iso-tab in navy context - inactive tabs need light text */
 .panel-navy .iso-tab { color: #94A3B8; background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); } /* contrast-fix: was var(--text-dim), now #94A3B8, ratio 6.59:1 on bg #0F172A */
 .panel-navy .iso-tab:hover { color: #CBD5E1; background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.2); } /* contrast-fix: ratio 10.2:1 on bg #0F172A */
 
-/* contrast-fix: chart panel inside navy — force white bg for readability */
+/* contrast-fix: chart panel inside navy - force white bg for readability */
 .panel-navy .chart-panel { background: #FFFFFF !important; border: 1px solid rgba(255,255,255,0.15) !important; }
 .panel-navy .hero-chart-title { color: #1E293B; } /* contrast-fix: on white chart-panel bg */
 
@@ -145,13 +145,13 @@ html, body {
     <div class="hero-overview-inner">
         <div class="hero-text-block" style="grid-column: 1 / -1; text-align: center; max-width: 860px; margin: 0 auto;">
             <h2>Every region has an optimal clean energy target</h2>
-            <p>Grid decarbonization is cheaper than Direct Air Capture — up to a point. That point varies by region and depends on technology costs. The crossover range below shows where each region's marginal abatement cost exceeds projected DAC costs across 5,832 cost scenarios. Within that range, certain resource investments pay off under <em>any</em> plausible cost future.</p>
+            <p>Grid decarbonization is cheaper than Direct Air Capture - up to a point. That point varies by region and depends on technology costs. The crossover range below shows where each region's marginal abatement cost exceeds projected DAC costs across 5,832 cost scenarios. Within that range, certain resource investments pay off under <em>any</em> plausible cost future.</p>
         </div>
     </div>
 
     <!-- 7 ISO Tiles -->
     <div class="iso-tiles-grid" id="isoTilesGrid">
-        <!-- Tiles populated by JS — one per ISO showing crossover range + key finding -->
+        <!-- Tiles populated by JS - one per ISO showing crossover range + key finding -->
     </div>
 
     <!-- Narrative findings + All-regions MAC chart -->
@@ -165,7 +165,7 @@ html, body {
         </div>
         <div class="hero-chart-block">
             <div class="chart-panel chart-panel-overview">
-                <div class="hero-chart-title" id="heroChartTitle">Marginal Abatement Cost vs. Projected DAC — All Regions</div>
+                <div class="hero-chart-title" id="heroChartTitle">Marginal Abatement Cost vs. Projected DAC - All Regions</div>
                 <div class="chart-container">
                     <canvas id="heroScrollyChart"></canvas>
                 </div>
@@ -245,7 +245,7 @@ html, body {
         <!-- 2. Cost curve chart -->
         <div class="deepdive-chart-col">
             <div class="chart-panel">
-                <div class="hero-chart-title" id="deepdiveChartTitle">ERCOT — Marginal Abatement Cost vs. DAC</div>
+                <div class="hero-chart-title" id="deepdiveChartTitle">ERCOT - Marginal Abatement Cost vs. DAC</div>
                 <div class="chart-container">
                     <canvas id="deepdiveChart"></canvas>
                 </div>
@@ -284,7 +284,7 @@ html, body {
 </section>
 
 <!-- ================================================================== -->
-<!-- RESOURCE INVESTMENT DEEP DIVE — Density Strip Plots                  -->
+<!-- RESOURCE INVESTMENT DEEP DIVE - Density Strip Plots                  -->
 <!-- ================================================================== -->
 <section class="content-section density-deep-dive-section panel-navy" id="densityDeepDive">
     <div class="density-header">
@@ -426,11 +426,11 @@ const TEXT_SAFE_RESOURCE = {
     '#22C55E': '#15803D',
     /* contrast-fix: was #009688, now #00695C, ratio 5.73:1 on bg #FFFFFF */
     '#009688': '#00695C',
-    /* contrast-fix: was #1E3A5F — already high contrast, keep as-is */
+    /* contrast-fix: was #1E3A5F - already high contrast, keep as-is */
     '#1E3A5F': '#1E3A5F',
     /* contrast-fix: was #D97706, now #92400E, ratio 7.34:1 on bg #FFFFFF */
     '#D97706': '#92400E',
-    /* contrast-fix: was #64748B — already 4.66:1, keep as-is */
+    /* contrast-fix: was #64748B - already 4.66:1, keep as-is */
     '#64748B': '#64748B',
     /* contrast-fix: was #0EA5E9, now #0369A1, ratio 5.93:1 on bg #FFFFFF */
     '#0EA5E9': '#0369A1',
@@ -503,7 +503,7 @@ function splitCleanFirmAnalysis(iso, cfAnalysis) {
     };
 }
 
-// Resolve analysis for split resources — maps clean_firm → nuclear + geothermal
+// Resolve analysis for split resources - maps clean_firm → nuclear + geothermal
 function resolveAnalysis(iso, analysisObj) {
     if (!analysisObj) return analysisObj;
     var resolved = {};
@@ -520,7 +520,7 @@ function resolveAnalysis(iso, analysisObj) {
 /// New-build only: exclude hydro (always existing, never new-build)
 const NR_RESOURCE_DISPLAY = RESOURCE_DISPLAY.filter(function(r) { return r.key !== 'hydro'; });
 
-// Existing clean resources as % of demand (2025 baseline) — subtracted for new-build chart
+// Existing clean resources as % of demand (2025 baseline) - subtracted for new-build chart
 // nuclear = existing clean_firm (all existing firm is nuclear), geothermal = 0 (no existing geothermal fleet)
 const EXISTING_CLEAN_PCT = {
     CAISO:  { nuclear: 7.9, geothermal: 0, solar: 22.3, wind: 8.8, offshore_wind: 0, ccs_ccgt: 0, hydro: 9.5, battery: 0, battery8: 0, ldes: 0 },
@@ -694,7 +694,7 @@ function computeCrossover(iso) {
 
 // ============================================================================
 // NO-REGRETS DATA
-// Priority: 1) NO_REGRETS_DATA (Step 3 DG parquets, richest — 5,832+ scenarios)
+// Priority: 1) NO_REGRETS_DATA (Step 3 DG parquets, richest - 5,832+ scenarios)
 //           2) OPTIMAL_TARGETS (step6, medium-cost RESOURCE_MIX_DATA based)
 //           3) Client-side analysis of RESOURCE_MIX_DATA (fallback)
 // ============================================================================
@@ -1305,7 +1305,7 @@ function renderNoRegrets(iso) {
             '</div>';
     }
 
-    // Column headers removed — per-resource breakdown is what matters
+    // Column headers removed - per-resource breakdown is what matters
     if (colHeaders) colHeaders.innerHTML = '';
 
     // Render resource bars
