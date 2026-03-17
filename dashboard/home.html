@@ -92,17 +92,7 @@
             animation: flowDash 1.6s linear infinite;
         }
 
-        /* Glow pulse on arrowheads */
-        @keyframes arrowPulse1b {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 1; }
-        }
-        @keyframes arrowPulse2c {
-            0%, 100% { opacity: 0.6; }
-            50% { opacity: 1; }
-        }
-        .arrow-tip-1b { animation: arrowPulse1b 2.5s ease-in-out infinite; }
-        .arrow-tip-2c { animation: arrowPulse2c 2.5s ease-in-out infinite; }
+        /* Arrow pulse (arrows removed, keeping for reduced-motion compat) */
 
         /* ===== Outcome Panels (below fork) ===== */
         .outcome-panels {
@@ -332,9 +322,9 @@
             width: 64px;
             flex-shrink: 0;
             font-family: var(--font-mono);
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--navy, #0B1120);
+            font-size: 15px;
+            font-weight: 700;
+            color: #0B1120;
             text-align: right;
         }
         .iso-bar-track {
@@ -359,8 +349,8 @@
             width: 52px;
             flex-shrink: 0;
             font-family: var(--font-mono);
-            font-size: 13px;
-            font-weight: 600;
+            font-size: 15px;
+            font-weight: 700;
             color: #EF4444;
             text-align: left;
         }
@@ -439,7 +429,7 @@
         }
         .tank-label {
             font-family: var(--font-heading);
-            font-size: 0.82rem;
+            font-size: 0.95rem;
             font-weight: 700;
             letter-spacing: 0.04em;
             margin-bottom: 6px;
@@ -449,8 +439,8 @@
             max-width: 90px;
             height: 220px;
             border-radius: 8px;
-            border: 2px solid rgba(0,0,0,0.08);
-            background: rgba(0,0,0,0.015);
+            border: 2px solid rgba(0,0,0,0.12);
+            background: rgba(0,0,0,0.02);
             position: relative;
             overflow: hidden;
             display: flex;
@@ -459,7 +449,7 @@
         }
         .tank-layer {
             width: 100%;
-            transition: height 3.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transition: height 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             position: relative;
             display: flex;
             align-items: center;
@@ -467,18 +457,18 @@
             min-height: 0;
         }
         .tank-coal {
-            background: var(--fossil-coal, #374151);
+            background: #374151;
             border-top: 1px solid rgba(255,255,255,0.15);
         }
         .tank-gas {
-            background: var(--fossil-gas, #6B7280);
+            background: #6B7280;
             opacity: 0.5;
         }
         .tank-layer-text {
             font-family: var(--font-data, var(--font-body));
-            font-size: 0.65rem;
-            font-weight: 600;
-            color: rgba(255,255,255,0.9);
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: rgba(255,255,255,0.95);
             text-transform: uppercase;
             letter-spacing: 0.06em;
             white-space: nowrap;
@@ -488,17 +478,25 @@
         .tank-layer:not(.depleted) .tank-layer-text { opacity: 1; }
         .tank-coal.depleted { height: 0 !important; border-top: none; }
         .tank-coal.depleted .tank-layer-text { opacity: 0 !important; }
+        /* Flash red border when depletion starts */
+        .tank-body.depleting {
+            border-color: #EF4444;
+            box-shadow: 0 0 12px -2px rgba(239,68,68,0.3);
+            transition: border-color 0.5s, box-shadow 0.5s;
+        }
         .tank-rate {
             font-family: var(--font-mono, 'DM Sans', monospace);
-            font-size: 0.85rem;
+            font-size: 1rem;
             font-weight: 700;
-            color: var(--navy);
+            color: #0B1120;
             margin-top: 8px;
             min-height: 22px;
+            transition: color 0.5s;
         }
+        .tank-rate.rate-changed { color: #EF4444; }
         .tank-rate-unit {
-            font-size: 0.65rem;
-            font-weight: 400;
+            font-size: 0.7rem;
+            font-weight: 500;
             color: var(--text-muted);
             display: block;
         }
@@ -508,33 +506,49 @@
             left: 50%;
             transform: translate(-50%, -50%);
             font-family: var(--font-body);
-            font-size: 0.6rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            background: rgba(255,255,255,0.9);
-            padding: 4px 8px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #EF4444;
+            background: rgba(255,255,255,0.95);
+            padding: 5px 10px;
             border-radius: var(--radius-sm);
+            border: 1px solid rgba(239,68,68,0.2);
             text-align: center;
             line-height: 1.3;
             white-space: nowrap;
             pointer-events: none;
             z-index: 2;
         }
+        .coal-wall-phase-label {
+            text-align: center;
+            font-family: var(--font-heading);
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #0B1120;
+            margin-bottom: var(--space-md);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            opacity: 0;
+            transition: opacity 0.6s;
+        }
+        .coal-wall-phase-label.visible { opacity: 1; }
+        .coal-wall-phase-label .phase-before { color: #374151; }
+        .coal-wall-phase-label .phase-after { color: #EF4444; }
         .fuel-gauge-punchline {
             text-align: center;
             margin-top: var(--space-xl);
             font-family: var(--font-heading);
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             font-weight: 700;
-            color: var(--red, #EF4444);
+            color: #EF4444;
             opacity: 0;
             transform: translateY(12px);
-            transition: opacity 0.6s ease-out 2.8s, transform 0.6s ease-out 2.8s;
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
         }
         .fuel-gauge-punchline.visible { opacity: 1; transform: translateY(0); }
         .fuel-gauge-punchline-sub {
             font-family: var(--font-body);
-            font-size: 0.88rem;
+            font-size: 0.92rem;
             font-weight: 400;
             color: var(--text-secondary);
             margin-top: var(--space-xs);
@@ -552,6 +566,19 @@
             font-size: 0.95rem;
             color: var(--text-secondary, #475569);
             line-height: 1.7;
+        }
+
+        /* ===== Glassmorphism Chart Panel ===== */
+        .glass-chart-panel {
+            max-width: 960px;
+            margin: var(--space-lg) auto;
+            padding: 24px;
+            background: rgba(255,255,255,0.75);
+            border: 1px solid rgba(255,255,255,0.6);
+            border-radius: 20px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 8px 32px -8px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
         }
 
         /* ===== Section 5: The Last Mile ===== */
@@ -617,13 +644,14 @@
                 animation: none !important;
             }
             .road-median { animation: none !important; }
-            .arrow-tip-1b, .arrow-tip-2c { animation: none !important; opacity: 1 !important; }
+            /* Arrow tips removed */
             .fork-diagram { opacity: 1; transform: none; }
             .iso-bar-row { opacity: 1; transform: none; transition-delay: 0s !important; }
             .iso-bar-segment { transition: none !important; }
             .iso-annotation { opacity: 1; transform: none; transition-delay: 0s !important; }
             .tank-layer { transition: none !important; }
-            .fuel-gauge-punchline { transition: none !important; }
+            .fuel-gauge-punchline { transition: none !important; opacity: 1 !important; transform: none !important; }
+            .coal-wall-phase-label { opacity: 1 !important; }
         }
 
         /* ===== Section 6: The IPP Response ===== */
@@ -921,11 +949,15 @@
             border: 1px solid rgba(0,0,0,0.08);
             border-radius: 12px;
             text-decoration: none;
-            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+            transition: transform 0.6s ease, border-color 0.3s ease, box-shadow 0.3s ease, opacity 0.6s ease;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .nav-card.animate-in {
             opacity: 0;
             transform: translateY(16px);
         }
-        .nav-card.visible {
+        .nav-card.animate-in.visible {
             opacity: 1;
             transform: translateY(0);
         }
@@ -1107,8 +1139,7 @@
                 <!-- Center dashed line -->
                 <path d="M387,200 Q324,314 178,458"
                       fill="none" stroke="#6366F1" stroke-width="2.5" stroke-dasharray="12 10" stroke-linecap="round" class="road-median"/>
-                <!-- Arrow tip -->
-                <polygon points="145,470 175,455 155,445" fill="#6366F1" class="arrow-tip-1b"/>
+                <!-- Arrow tip (removed for cleaner visual) -->
 
                 <!-- ═══ RIGHT BRANCH (2C: Hourly Matching) ═══ -->
                 <!--
@@ -1128,8 +1159,7 @@
                 <!-- Center dashed line -->
                 <path d="M413,200 Q476,314 622,458"
                       fill="none" stroke="#0EA5E9" stroke-width="2.5" stroke-dasharray="12 10" stroke-linecap="round" class="road-median"/>
-                <!-- Arrow tip -->
-                <polygon points="655,470 625,455 645,445" fill="#0EA5E9" class="arrow-tip-2c"/>
+                <!-- Arrow tip (removed for cleaner visual) -->
 
                 <!-- ═══ TOP LABEL ═══ -->
                 <g filter="url(#labelShadow)">
@@ -1291,6 +1321,7 @@
         <p>Each grid begins from a different place. The gap between where market forces stop and where net-zero requires is what procurement strategy must close.</p>
     </div>
     <section class="content-section" id="starting-lines-section">
+        <div class="glass-chart-panel">
         <div class="iso-bars-legend">
             <div class="iso-bars-legend-item"><div class="iso-bars-legend-dot" style="background:rgba(14,165,233,0.50)"></div>Clean</div>
             <div class="iso-bars-legend-item"><div class="iso-bars-legend-dot" style="background:rgba(99,102,241,0.45)"></div>Gas</div>
@@ -1369,6 +1400,7 @@
                 <div class="iso-bar-gap">55%</div>
             </div>
         </div>
+        </div>
 
         <div class="iso-insight-block fade-in">
             The market will not deliver net-zero on its own. Across 540 market scenarios per region, clean energy deployment is profitable up to a point, then it stalls. The gap between where economics alone takes each grid and what net-zero requires is what corporate procurement and policy must close. The question is whether your procurement strategy helps close <em>your grid&rsquo;s specific gap</em> or optimizes globally while your grid stays stuck.
@@ -1400,6 +1432,10 @@
         <p>Consequential&rsquo;s cost advantage has an expiration date: the moment the last coal plant retires from the dispatch stack.</p>
     </div>
     <section class="content-section" id="coal-wall-section">
+        <div class="glass-chart-panel">
+        <div class="coal-wall-phase-label" id="coalWallPhaseLabel">
+            <span class="phase-before">Blended fossil dispatch</span> &rarr; <span class="phase-after">After coal retires</span>
+        </div>
         <div class="fuel-gauge-grid" id="homeCoalWallGauges">
             <!-- Tanks injected by JS -->
         </div>
@@ -1407,6 +1443,7 @@
         <div class="fuel-gauge-punchline" id="homeCoalWallPunchline">
             The "discount" was the coal. The coal is finite.
             <div class="fuel-gauge-punchline-sub">NEISO, NYISO, and CAISO are already at the gas floor today. Once coal runs out in the other four, consequential and hourly matching cost the same $/tCO&#8322;.</div>
+        </div>
         </div>
 
         <div class="coal-wall-finding fade-in">
@@ -1429,6 +1466,7 @@
         <p>At what point does the last percent of grid decarbonization cost more than just removing carbon directly?</p>
     </div>
     <section class="content-section" id="last-mile-section">
+        <div class="glass-chart-panel">
         <div class="crossover-container" id="crossoverContainer">
             <svg viewBox="0 0 700 350" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Two-curve crossover chart showing grid decarbonization cost versus DAC reference">
                 <defs>
@@ -1439,24 +1477,27 @@
                     </linearGradient>
                 </defs>
 
+                <!-- Chart title -->
+                <text x="370" y="22" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="15" font-weight="700" fill="#0B1120">Marginal Abatement Cost vs. DAC Reference</text>
+
                 <!-- Axis lines -->
-                <line x1="80" y1="30" x2="80" y2="300" stroke="rgba(0,0,0,0.10)" stroke-width="1"/>
-                <line x1="80" y1="300" x2="660" y2="300" stroke="rgba(0,0,0,0.10)" stroke-width="1"/>
+                <line x1="80" y1="30" x2="80" y2="300" stroke="#0B1120" stroke-width="1.5"/>
+                <line x1="80" y1="300" x2="660" y2="300" stroke="#0B1120" stroke-width="1.5"/>
 
                 <!-- Y-axis label -->
-                <text x="24" y="170" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.40)" transform="rotate(-90,24,170)">Marginal cost ($/tCO&#8322;)</text>
+                <text x="24" y="170" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="13" font-weight="600" fill="#0B1120" transform="rotate(-90,24,170)">Marginal cost ($/tCO&#8322;)</text>
 
                 <!-- X-axis label -->
-                <text x="370" y="335" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.40)">CFE Target (%)</text>
+                <text x="370" y="340" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="13" font-weight="600" fill="#0B1120">CFE Target (%)</text>
 
                 <!-- X-axis ticks -->
-                <text x="80" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)">80</text>
-                <text x="163" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)">85</text>
-                <text x="245" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)">90</text>
-                <text x="328" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)">95</text>
-                <text x="432" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)">97.5</text>
-                <text x="538" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)">99</text>
-                <text x="640" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)">99.9</text>
+                <text x="80" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="12" fill="#0B1120">80</text>
+                <text x="163" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="12" fill="#0B1120">85</text>
+                <text x="245" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="12" fill="#0B1120">90</text>
+                <text x="328" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="12" fill="#0B1120">95</text>
+                <text x="432" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="12" fill="#0B1120">97.5</text>
+                <text x="538" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="12" fill="#0B1120">99</text>
+                <text x="640" y="318" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="12" fill="#0B1120">99.9</text>
 
                 <!-- Grid lines (light) -->
                 <line x1="163" y1="300" x2="163" y2="30" stroke="rgba(0,0,0,0.04)" stroke-width="1"/>
@@ -1470,18 +1511,19 @@
 
                 <!-- DAC reference line -->
                 <line id="dacLine" x1="80" y1="140" x2="660" y2="140" stroke="#8B5CF6" stroke-width="1.5" stroke-dasharray="8 4" stroke-dashoffset="800" opacity="0.7"/>
-                <text x="662" y="136" font-family="'DM Sans', sans-serif" font-size="9" fill="#8B5CF6" opacity="0.7">DAC reference</text>
+                <text x="662" y="136" font-family="'DM Sans', sans-serif" font-size="11" fill="#8B5CF6" font-weight="600">DAC reference</text>
 
                 <!-- Grid decarbonization curve (hockey stick) -->
-                <path id="gridCurve" d="M80,270 C120,265 163,258 245,240 C300,228 328,210 370,190 C410,168 432,155 470,140 C510,118 560,80 640,38" fill="none" stroke="url(#gridCurveGrad)" stroke-width="2.5" stroke-linecap="round"/>
+                <path id="gridCurve" d="M80,270 C120,265 163,258 245,240 C300,228 328,210 370,190 C410,168 432,155 470,140 C510,118 560,80 640,38" fill="none" stroke="url(#gridCurveGrad)" stroke-width="3" stroke-linecap="round"/>
 
                 <!-- Crossover marker -->
                 <g id="crossoverMarker" opacity="0">
                     <line x1="470" y1="140" x2="470" y2="300" stroke="#EF4444" stroke-width="1" stroke-dasharray="4 3" opacity="0.5"/>
-                    <circle cx="470" cy="140" r="6" fill="#EF4444" stroke="white" stroke-width="1.5"/>
-                    <text x="470" y="155" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" font-weight="600" fill="#EF4444" dy="12">~96-98% CFE</text>
+                    <circle cx="470" cy="140" r="7" fill="#EF4444" stroke="white" stroke-width="2"/>
+                    <text x="470" y="155" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="12" font-weight="700" fill="#EF4444" dy="12">~96-98% CFE</text>
                 </g>
             </svg>
+        </div>
         </div>
 
         <div class="crossover-text fade-in">
@@ -1576,45 +1618,88 @@
             Wright&rsquo;s Law: costs decline predictably with cumulative deployment. Solar and wind are far down their curves, already mature and cheap. Nuclear, CCS, and long-duration storage are still in the steep part where each doubling drives 15&ndash;25% cost reduction. The strategy that reaches critical mass first pulls costs down for the entire grid.
         </p>
 
-        <!-- Diverging Curves SVG -->
+        <!-- Learning Curve: Before/After Cost Waterfall -->
+        <div class="glass-chart-panel">
         <div class="learning-svg-container fade-in" id="learningCurvesContainer">
-            <svg viewBox="0 0 700 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Two diverging learning curves comparing Strategy 1B and 2C cost trajectories">
-                <!-- Axes -->
-                <line x1="60" y1="20" x2="60" y2="270" stroke="rgba(0,0,0,0.08)" stroke-width="1"/>
-                <line x1="60" y1="270" x2="660" y2="270" stroke="rgba(0,0,0,0.08)" stroke-width="1"/>
-                <text x="30" y="150" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="11" fill="rgba(0,0,0,0.4)" transform="rotate(-90,30,150)">Cost premium ($/MWh)</text>
-                <text x="360" y="305" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="11" fill="rgba(0,0,0,0.4)">Cumulative deployment (GW)</text>
+            <svg viewBox="0 0 740 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Learning curve dividend: how 2C deployment drives down clean firm costs for everyone">
+                <!-- Title -->
+                <text x="370" y="28" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="16" font-weight="700" fill="#0B1120">Clean Firm Cost Today vs. After Learning Curves</text>
+                <text x="370" y="48" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="12" fill="#64748B">Wright&rsquo;s Law: each doubling of cumulative deployment cuts costs 15&ndash;25%</text>
 
-                <!-- Zero line -->
-                <line x1="60" y1="210" x2="660" y2="210" stroke="rgba(0,0,0,0.08)" stroke-width="1"/>
-                <text x="665" y="213" font-family="'DM Sans', sans-serif" font-size="10" fill="rgba(0,0,0,0.35)" text-anchor="start">Cost parity with fossil</text>
+                <!-- Y-axis -->
+                <line x1="80" y1="70" x2="80" y2="320" stroke="#0B1120" stroke-width="1.5"/>
+                <text x="30" y="195" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="13" font-weight="600" fill="#0B1120" transform="rotate(-90,30,195)">LCOE ($/MWh)</text>
+                <!-- Y-axis ticks -->
+                <line x1="75" y1="100" x2="80" y2="100" stroke="#0B1120" stroke-width="1.5"/>
+                <text x="70" y="104" text-anchor="end" font-family="'DM Sans', sans-serif" font-size="11" fill="#0B1120">$150</text>
+                <line x1="75" y1="160" x2="80" y2="160" stroke="#0B1120" stroke-width="1.5"/>
+                <text x="70" y="164" text-anchor="end" font-family="'DM Sans', sans-serif" font-size="11" fill="#0B1120">$100</text>
+                <line x1="75" y1="220" x2="80" y2="220" stroke="#0B1120" stroke-width="1.5"/>
+                <text x="70" y="224" text-anchor="end" font-family="'DM Sans', sans-serif" font-size="11" fill="#0B1120">$50</text>
+                <line x1="75" y1="280" x2="80" y2="280" stroke="#0B1120" stroke-width="1.5"/>
+                <text x="70" y="284" text-anchor="end" font-family="'DM Sans', sans-serif" font-size="11" fill="#0B1120">$0</text>
+                <!-- X-axis -->
+                <line x1="80" y1="320" x2="700" y2="320" stroke="#0B1120" stroke-width="1.5"/>
 
-                <!-- Gap shading between curves -->
-                <path d="M80,60 C180,80 300,110 400,145 C500,175 580,195 640,205
-                         L640,220 C580,225 500,240 400,248 C300,255 180,260 80,262 Z"
-                      fill="rgba(14,165,233,0.05)" id="learningGap"/>
-                <text x="300" y="195" font-family="'DM Sans', sans-serif" font-size="13" fill="#0EA5E9" font-style="italic" opacity="0.7">Learning curve dividend</text>
+                <!-- Grid lines -->
+                <line x1="80" y1="100" x2="700" y2="100" stroke="rgba(0,0,0,0.05)" stroke-width="1"/>
+                <line x1="80" y1="160" x2="700" y2="160" stroke="rgba(0,0,0,0.05)" stroke-width="1"/>
+                <line x1="80" y1="220" x2="700" y2="220" stroke="rgba(0,0,0,0.05)" stroke-width="1"/>
+                <line x1="80" y1="280" x2="700" y2="280" stroke="rgba(0,0,0,0.05)" stroke-width="1"/>
 
-                <!-- 1B curve - shallow -->
-                <path id="curve1B" d="M80,60 C180,80 300,120 400,160 C500,200 580,230 640,248"
-                      fill="none" stroke="#6366F1" stroke-width="2.5" stroke-linecap="round"
-                      stroke-dasharray="800" stroke-dashoffset="800"/>
-                <text x="645" y="258" font-family="'DM Sans', sans-serif" font-size="12" font-weight="700" fill="#6366F1" text-anchor="start">1B</text>
+                <!-- Gas LCOE reference line -->
+                <line x1="80" y1="232" x2="700" y2="232" stroke="#EF4444" stroke-width="1.5" stroke-dasharray="8 6" opacity="0.6"/>
+                <text x="705" y="236" font-family="'DM Sans', sans-serif" font-size="10" fill="#EF4444" font-weight="600" text-anchor="start">Gas CCGT</text>
 
-                <!-- 2C curve - steep, crosses zero -->
-                <path id="curve2C" d="M80,60 C180,75 300,110 400,145 C500,175 560,198 620,210 C640,213 650,212 660,210"
-                      fill="none" stroke="#0EA5E9" stroke-width="2.5" stroke-linecap="round"
-                      stroke-dasharray="800" stroke-dashoffset="800"/>
-                <text x="645" y="205" font-family="'DM Sans', sans-serif" font-size="12" font-weight="700" fill="#0EA5E9" text-anchor="start">2C</text>
+                <!-- ══ TODAY bars (left group) ══ -->
+                <text x="245" y="340" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="13" font-weight="700" fill="#0B1120">TODAY (FOAK)</text>
 
-                <!-- Critical mass marker at zero crossing -->
-                <g id="criticalMassGroup" opacity="0">
-                    <circle cx="620" cy="210" r="6" fill="#0EA5E9" class="critical-mass-marker" opacity="0.6"/>
-                    <circle cx="620" cy="210" r="3" fill="#0EA5E9"/>
-                    <text x="600" y="290" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="#0EA5E9" font-weight="600">Critical mass: learning</text>
-                    <text x="600" y="302" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="#0EA5E9" font-weight="600">curves outpace premiums</text>
+                <!-- Nuclear today -->
+                <rect id="barNucToday" x="110" y="320" width="48" height="0" fill="#6366F1" rx="3" opacity="0.85"/>
+                <text x="134" y="350" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="#0B1120" font-weight="600">Nuclear</text>
+                <!-- CCS today -->
+                <rect id="barCcsToday" x="178" y="320" width="48" height="0" fill="#64748B" rx="3" opacity="0.85"/>
+                <text x="202" y="350" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="#0B1120" font-weight="600">CCS</text>
+                <!-- LDES today -->
+                <rect id="barLdesToday" x="246" y="320" width="48" height="0" fill="#E91E63" rx="3" opacity="0.85"/>
+                <text x="270" y="350" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="#0B1120" font-weight="600">LDES</text>
+                <!-- H2 today -->
+                <rect id="barH2Today" x="314" y="320" width="48" height="0" fill="#10B981" rx="3" opacity="0.85"/>
+                <text x="338" y="350" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="#0B1120" font-weight="600">Green H&#8322;</text>
+
+                <!-- Separator -->
+                <line x1="390" y1="75" x2="390" y2="315" stroke="rgba(0,0,0,0.08)" stroke-width="1" stroke-dasharray="4 4"/>
+
+                <!-- ══ AFTER 2C bars (right group) ══ -->
+                <text x="545" y="340" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="13" font-weight="700" fill="#0EA5E9">AFTER 2C DEPLOYMENT (NOAK)</text>
+
+                <!-- Nuclear after -->
+                <rect id="barNucAfter" x="420" y="320" width="48" height="0" fill="#6366F1" rx="3" opacity="0.85"/>
+                <text x="444" y="350" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="#0B1120" font-weight="600">Nuclear</text>
+                <!-- CCS after -->
+                <rect id="barCcsAfter" x="488" y="320" width="48" height="0" fill="#64748B" rx="3" opacity="0.85"/>
+                <text x="512" y="350" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="#0B1120" font-weight="600">CCS</text>
+                <!-- LDES after -->
+                <rect id="barLdesAfter" x="556" y="320" width="48" height="0" fill="#E91E63" rx="3" opacity="0.85"/>
+                <text x="580" y="350" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="#0B1120" font-weight="600">LDES</text>
+                <!-- H2 after -->
+                <rect id="barH2After" x="624" y="320" width="48" height="0" fill="#10B981" rx="3" opacity="0.85"/>
+                <text x="648" y="350" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="#0B1120" font-weight="600">Green H&#8322;</text>
+
+                <!-- Cost reduction arrows (drawn by JS after bars animate) -->
+                <g id="costReductionAnnotations" opacity="0">
+                    <!-- Arrow from Nuclear today to Nuclear after -->
+                    <text x="289" y="93" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="11" fill="#0EA5E9" font-weight="700">&minus;20&ndash;35%</text>
+                    <path d="M250,98 C300,108 350,108 400,98" fill="none" stroke="#0EA5E9" stroke-width="1.5" marker-end="url(#arrowDown)"/>
+                    <text x="289" y="372" text-anchor="middle" font-family="'DM Sans', sans-serif" font-size="10" fill="#64748B" font-style="italic">per Wright&rsquo;s Law doubling</text>
                 </g>
+                <defs>
+                    <marker id="arrowDown" viewBox="0 0 10 10" refX="5" refY="10" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M0,0 L5,10 L10,0" fill="none" stroke="#0EA5E9" stroke-width="1.5"/>
+                    </marker>
+                </defs>
             </svg>
+        </div>
         </div>
 
         <!-- Three cards -->
@@ -1890,6 +1975,7 @@
         (function initCoalWallGauges() {
             var grid = document.getElementById('homeCoalWallGauges');
             var punchline = document.getElementById('homeCoalWallPunchline');
+            var phaseLabel = document.getElementById('coalWallPhaseLabel');
             if (!grid) return;
 
             var GAUGES = [
@@ -1928,7 +2014,7 @@
                 tank.innerHTML = '<div class="tank-label" style="color:' + isoColor + '">' + g.iso + '</div>' +
                     bodyHtml +
                     '<div class="tank-rate" data-from="' + g.blended + '" data-to="' + g.gasRate + '">' +
-                    g.blended.toLocaleString() + '<span class="tank-rate-unit">lb/MWh</span></div>';
+                    g.blended.toLocaleString() + '<span class="tank-rate-unit">lb/MWh blended</span></div>';
 
                 grid.appendChild(tank);
             });
@@ -1937,68 +2023,85 @@
             var loopTimer = null;
             var isVisible = false;
 
-            // Total cycle: 1.5s stagger-in + 3.5s deplete + 3s hold + 1.5s reset + 1.5s hold = ~11s
-            var DEPLETE_DURATION = 3500;
-            var HOLD_DEPLETED = 3000;
-            var HOLD_RESET = 1500;
+            var DEPLETE_DURATION = 2500;
+            var HOLD_DEPLETED = 4000;
+            var HOLD_RESET = 2000;
 
             function resetCoal() {
                 var coalLayers = grid.querySelectorAll('.tank-coal');
                 var rateEls = grid.querySelectorAll('.tank-rate');
-                // Disable transition for instant reset
+                var tankBodies = grid.querySelectorAll('.tank-body');
                 coalLayers.forEach(function(el) {
                     el.style.transition = 'none';
                     el.classList.remove('depleted');
-                    // Force reflow
                     void el.offsetHeight;
                     el.style.transition = '';
                 });
                 rateEls.forEach(function(el) {
-                    el.innerHTML = el.getAttribute('data-from') + '<span class="tank-rate-unit">lb/MWh</span>';
+                    el.classList.remove('rate-changed');
+                    el.innerHTML = el.getAttribute('data-from') + '<span class="tank-rate-unit">lb/MWh blended</span>';
                 });
+                tankBodies.forEach(function(el) { el.classList.remove('depleting'); });
                 if (punchline) punchline.classList.remove('visible');
+                if (phaseLabel) phaseLabel.classList.remove('visible');
             }
 
             function animateDepletion() {
                 var coalLayers = grid.querySelectorAll('.tank-coal');
                 var rateEls = grid.querySelectorAll('.tank-rate');
+                var tankBodies = grid.querySelectorAll('.tank-body');
+
+                // Show phase label
+                if (phaseLabel) phaseLabel.classList.add('visible');
 
                 if (reducedMotion) {
                     coalLayers.forEach(function(el) { el.classList.add('depleted'); });
+                    tankBodies.forEach(function(el) { el.classList.add('depleting'); });
                     rateEls.forEach(function(el) {
-                        el.innerHTML = el.getAttribute('data-to') + '<span class="tank-rate-unit">lb/MWh</span>';
+                        el.classList.add('rate-changed');
+                        el.innerHTML = el.getAttribute('data-to') + '<span class="tank-rate-unit">lb/MWh gas-only</span>';
                     });
                     if (punchline) punchline.classList.add('visible');
                     return;
                 }
 
-                // Stagger coal depletion across tanks
-                coalLayers.forEach(function(el, i) {
-                    setTimeout(function() { el.classList.add('depleted'); }, i * 200);
-                });
-
-                // Animate rate counters
-                var startTime = null;
-                rateEls.forEach(function(el) {
-                    var from = parseInt(el.getAttribute('data-from'));
-                    var to = parseInt(el.getAttribute('data-to'));
-                    if (from === to) return;
-
-                    function tick(ts) {
-                        if (!startTime) startTime = ts;
-                        var progress = Math.min((ts - startTime) / DEPLETE_DURATION, 1);
-                        var eased = 1 - Math.pow(1 - progress, 3);
-                        var current = Math.round(from + (to - from) * eased);
-                        el.innerHTML = current.toLocaleString() + '<span class="tank-rate-unit">lb/MWh</span>';
-                        if (progress < 1) requestAnimationFrame(tick);
-                    }
-                    setTimeout(function() { requestAnimationFrame(tick); }, 400);
-                });
-
-                // Show punchline after depletion completes
+                // Brief pause, then start depletion with red border flash
                 setTimeout(function() {
-                    if (punchline) punchline.classList.add('visible');
-                }, DEPLETE_DURATION + 200);
+                    tankBodies.forEach(function(el) { el.classList.add('depleting'); });
+
+                    // Stagger coal depletion across tanks
+                    coalLayers.forEach(function(el, i) {
+                        setTimeout(function() { el.classList.add('depleted'); }, i * 300);
+                    });
+
+                    // Animate rate counters
+                    rateEls.forEach(function(el) {
+                        var from = parseInt(el.getAttribute('data-from'));
+                        var to = parseInt(el.getAttribute('data-to'));
+                        if (from === to) {
+                            el.classList.add('rate-changed');
+                            return;
+                        }
+
+                        var startTime = null;
+                        function tick(ts) {
+                            if (!startTime) startTime = ts;
+                            var progress = Math.min((ts - startTime) / DEPLETE_DURATION, 1);
+                            var eased = 1 - Math.pow(1 - progress, 3);
+                            var current = Math.round(from + (to - from) * eased);
+                            el.innerHTML = current.toLocaleString() + '<span class="tank-rate-unit">lb/MWh ' + (progress < 1 ? 'blended' : 'gas-only') + '</span>';
+                            if (progress >= 0.5) el.classList.add('rate-changed');
+                            if (progress < 1) requestAnimationFrame(tick);
+                        }
+                        setTimeout(function() { requestAnimationFrame(tick); }, 300);
+                    });
+
+                    // Show punchline after depletion completes
+                    setTimeout(function() {
+                        if (punchline) punchline.classList.add('visible');
+                    }, DEPLETE_DURATION + 400);
+
+                }, 800);
 
                 // Schedule reset and next cycle
                 loopTimer = setTimeout(function() {
@@ -2006,7 +2109,7 @@
                     if (isVisible) {
                         loopTimer = setTimeout(animateDepletion, HOLD_RESET);
                     }
-                }, DEPLETE_DURATION + HOLD_DEPLETED);
+                }, 800 + DEPLETE_DURATION + HOLD_DEPLETED);
             }
 
             var observer = new IntersectionObserver(function(entries) {
@@ -2021,7 +2124,7 @@
                         resetCoal();
                     }
                 });
-            }, { threshold: 0.25 });
+            }, { threshold: 0.2 });
             observer.observe(grid);
         })();
 
@@ -2202,39 +2305,41 @@
             observer.observe(grid);
         })();
 
-        // ===== MODULE 8: Learning Curve Draw Animation (Section 7) =====
+        // ===== MODULE 8: Learning Curve Bar Animation (Section 7) =====
         (function initLearningCurves() {
             var container = document.getElementById('learningCurvesContainer');
             if (!container) return;
 
-            var curve1B = document.getElementById('curve1B');
-            var curve2C = document.getElementById('curve2C');
-            var critGroup = document.getElementById('criticalMassGroup');
-            if (!curve1B || !curve2C) return;
+            // Bar heights: LCOE values mapped to pixel heights (320 baseline, each $1 = ~1.6px)
+            // Today (FOAK): Nuclear $120, CCS $95, LDES $140, H2 $160
+            // After (NOAK): Nuclear $80, CCS $60, LDES $85, H2 $95
+            var bars = [
+                { today: 'barNucToday', after: 'barNucAfter', hToday: 192, hAfter: 128 },
+                { today: 'barCcsToday', after: 'barCcsAfter', hToday: 152, hAfter: 96 },
+                { today: 'barLdesToday', after: 'barLdesAfter', hToday: 224, hAfter: 136 },
+                { today: 'barH2Today', after: 'barH2After', hToday: 250, hAfter: 152 }
+            ];
 
+            var annotations = document.getElementById('costReductionAnnotations');
             var triggered = false;
             var reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-            // Compute actual path lengths
-            var len1B = curve1B.getTotalLength();
-            var len2C = curve2C.getTotalLength();
-            curve1B.style.strokeDasharray = len1B;
-            curve1B.style.strokeDashoffset = len1B;
-            curve2C.style.strokeDasharray = len2C;
-            curve2C.style.strokeDashoffset = len2C;
-
-            function animateCurves() {
+            function animateBars() {
                 if (triggered) return;
                 triggered = true;
 
                 if (reducedMotion) {
-                    curve1B.style.strokeDashoffset = '0';
-                    curve2C.style.strokeDashoffset = '0';
-                    if (critGroup) critGroup.setAttribute('opacity', '1');
+                    bars.forEach(function(b) {
+                        var todayEl = document.getElementById(b.today);
+                        var afterEl = document.getElementById(b.after);
+                        if (todayEl) { todayEl.setAttribute('height', b.hToday); todayEl.setAttribute('y', 320 - b.hToday); }
+                        if (afterEl) { afterEl.setAttribute('height', b.hAfter); afterEl.setAttribute('y', 320 - b.hAfter); }
+                    });
+                    if (annotations) annotations.setAttribute('opacity', '1');
                     return;
                 }
 
-                var duration = 2500;
+                var duration = 1500;
                 var start = null;
 
                 function step(timestamp) {
@@ -2242,19 +2347,24 @@
                     var t = Math.min((timestamp - start) / duration, 1);
                     var eased = 1 - Math.pow(1 - t, 3);
 
-                    curve1B.style.strokeDashoffset = len1B * (1 - eased);
-                    curve2C.style.strokeDashoffset = len2C * (1 - eased);
+                    bars.forEach(function(b) {
+                        var todayEl = document.getElementById(b.today);
+                        var afterEl = document.getElementById(b.after);
+                        var ht = b.hToday * eased;
+                        var ha = b.hAfter * eased;
+                        if (todayEl) { todayEl.setAttribute('height', ht); todayEl.setAttribute('y', 320 - ht); }
+                        if (afterEl) { afterEl.setAttribute('height', ha); afterEl.setAttribute('y', 320 - ha); }
+                    });
 
                     if (t < 1) {
                         requestAnimationFrame(step);
                     } else {
-                        // Show critical mass marker after draw completes
                         setTimeout(function() {
-                            if (critGroup) {
-                                critGroup.style.transition = 'opacity 0.5s ease-out';
-                                critGroup.setAttribute('opacity', '1');
+                            if (annotations) {
+                                annotations.style.transition = 'opacity 0.6s ease-out';
+                                annotations.setAttribute('opacity', '1');
                             }
-                        }, 500);
+                        }, 400);
                     }
                 }
                 requestAnimationFrame(step);
@@ -2263,7 +2373,7 @@
             var observer = new IntersectionObserver(function(entries) {
                 entries.forEach(function(entry) {
                     if (entry.isIntersecting) {
-                        animateCurves();
+                        animateBars();
                         observer.unobserve(entry.target);
                     }
                 });
@@ -2295,6 +2405,9 @@
             if (!grid) return;
 
             var cards = grid.querySelectorAll('.nav-card');
+            // Add animate-in class for scroll-triggered reveal
+            cards.forEach(function(card) { card.classList.add('animate-in'); });
+
             var observer = new IntersectionObserver(function(entries) {
                 entries.forEach(function(entry) {
                     if (entry.isIntersecting) {
@@ -2304,8 +2417,13 @@
                         observer.unobserve(entry.target);
                     }
                 });
-            }, { threshold: 0.2, rootMargin: '0px 0px -60px 0px' });
+            }, { threshold: 0.1, rootMargin: '0px 0px 0px 0px' });
             observer.observe(grid);
+
+            // Fallback: make visible after 2s regardless
+            setTimeout(function() {
+                cards.forEach(function(card) { card.classList.add('visible'); });
+            }, 2000);
         })();
 
     })();
