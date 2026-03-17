@@ -59,6 +59,7 @@ from pipeline_config import (
     IRA_PTC_SOLAR, IRA_PTC_WIND, IRA_ITC_BATTERY_PCT, IRA_PTC_45U_NUCLEAR,
     RGGI_ISOS, RGGI_PRICE_PER_TON,
     STATE_RPS_FLOORS, get_rps_floor,
+    DAC_COST_PER_TON, get_dac_cost_per_ton,
 )
 from dispatch_utils import (
     load_common_data, get_demand_profile, get_supply_profiles,
@@ -241,18 +242,7 @@ REC_ELIGIBLE = {'solar', 'wind', 'offshore_wind', 'hydro', 'geothermal'}
 CES_ELIGIBLE = REC_ELIGIBLE | {'clean_firm', 'ccs_ccgt'}
 CES_DISCOUNT_FACTOR = 0.60  # ZEC/Tier 3 = ~60% of Tier 1 REC price
 
-# DAC (Direct Air Capture) backstop cost — used when physical deployment can't
-# meet emission cap. Learning-curve decline from FOAK to NOAK over time.
-# Sources: IEA 2024 DAC report, Rhodium Group, Climeworks/Orca published costs.
-DAC_COST_PER_TON = {
-    # Facilitating: aggressive learning (Climeworks Gen3, Heirloom, etc.)
-    # Floor $150/ton per Rubin et al. (2015), Fuss et al. (2018) published lower bounds
-    'Low': {2030: 400, 2035: 275, 2040: 220, 2045: 180, 2050: 150},
-    # Medium: moderate learning
-    'Medium': {2030: 600, 2035: 400, 2040: 300, 2045: 230, 2050: 175},
-    # Challenging: slow learning, limited deployment
-    'High': {2030: 800, 2035: 600, 2040: 450, 2045: 350, 2050: 275},
-}
+# DAC_COST_PER_TON and get_dac_cost_per_ton() imported from pipeline_config
 
 # Queue overshoot premium — mandated build beyond queue cap costs extra ($/MWh adder)
 # Reflects expedited permitting, emergency grid upgrades, etc.
@@ -522,27 +512,7 @@ def get_emission_cap_mt(iso, year, constraint_type, baselines, reduction_target=
     return baseline_mt * fraction_remaining
 
 
-def get_dac_cost_per_ton(year, lcoe_level):
-    """Get DAC cost per metric ton CO₂ at a given year and cost scenario.
-
-    Maps LCOE level to DAC cost trajectory:
-    - Low LCOE → Low DAC cost (facilitating: fast learning)
-    - High LCOE → High DAC cost (challenging: slow learning)
-    - Medium LCOE → Medium DAC cost
-    """
-    dac_level = lcoe_level  # Same mapping: Low/Medium/High
-    trajectory = DAC_COST_PER_TON[dac_level]
-    years = sorted(trajectory.keys())
-    if year <= years[0]:
-        return trajectory[years[0]]
-    if year >= years[-1]:
-        return trajectory[years[-1]]
-    # Linear interpolation between known years
-    for i in range(len(years) - 1):
-        if years[i] <= year <= years[i + 1]:
-            frac = (year - years[i]) / (years[i + 1] - years[i])
-            return trajectory[years[i]] * (1 - frac) + trajectory[years[i + 1]] * frac
-    return trajectory[years[-1]]
+# get_dac_cost_per_ton() is now imported from pipeline_config
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
