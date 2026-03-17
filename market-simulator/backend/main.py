@@ -780,6 +780,8 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
             nuclear_revenue=yr.get("nuclear_revenue", {}),
             nuclear_retired=yr.get("nuclear_retired", False),
             ccs_breakeven=yr.get("ccs_breakeven", {}),
+            economic_retirements_mw=yr.get("economic_retirements_mw", {}),
+            total_economic_retirement_mw=yr.get("total_economic_retirement_mw", 0),
         ))
 
     # Build emissions_by_fuel_by_year aggregate for trajectory chart
@@ -808,8 +810,9 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
             ))
 
     # Build fuel bin table from generator_economics
+    # Use adjusted economics (with economic retirements applied) when available
     fuel_bins = []
-    gen_raw = final.get("generator_economics", {})
+    gen_raw = final.get("adjusted_generator_economics", final.get("generator_economics", {}))
     if isinstance(gen_raw, dict):
         for unit_type, data in gen_raw.items():
             if not isinstance(data, dict):
@@ -902,6 +905,8 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
         supply_stack_summary=supply_stack,
         fuel_bin_table=fuel_bins,
         emissions_by_fuel_by_year=emissions_by_fuel_by_year,
+        economic_retirements_mw=final.get("economic_retirements_mw"),
+        total_economic_retirement_mw=final.get("total_economic_retirement_mw", 0),
         threshold_sweep=threshold_sweep,
         what_gets_built=what_gets_built,
         cost_ladder=cost_ladder,
