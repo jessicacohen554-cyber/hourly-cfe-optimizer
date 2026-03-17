@@ -9,33 +9,37 @@
     <script src="js/emissions-dashboard-data.js"></script>
     <script src="js/ceg-nav.js" data-ceg-active="emissions"></script>
     <style>
-        /* ── Page-specific layout ── */
-        .dash-layout {
-            display: grid;
-            grid-template-columns: 340px 1fr;
-            gap: var(--space-xl);
-            align-items: start;
+        /* ── Page-specific layout — single column ── */
+        .controls-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-lg);
+            align-items: flex-start;
+            margin-bottom: var(--space-xl);
         }
-        @media (max-width: 1000px) {
-            .dash-layout { grid-template-columns: 1fr; }
-            .controls-panel {
-                position: static;
-                max-height: none;
-                overflow-y: visible;
-            }
+        .controls-bar > .toggle-group { margin-bottom: 0; }
+        .controls-bar > .summary-stats {
+            margin-bottom: 0;
         }
 
-        /* Controls panel */
-        .controls-panel {
-            background: var(--bg-card);
-            border: 1px solid var(--glass-border);
-            border-radius: var(--radius-lg);
-            padding: var(--space-lg);
-            position: sticky;
-            top: 80px;
-            max-height: calc(100vh - 100px);
+        /* Plant selector — horizontal scrollable strip */
+        .plant-selector {
+            margin-bottom: var(--space-xl);
+        }
+        .plant-list-scroll {
+            max-height: 280px;
             overflow-y: auto;
-            z-index: 10;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 0 var(--space-xl);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm);
+            padding: var(--space-sm);
+        }
+        @media (max-width: 600px) {
+            .plant-list-scroll {
+                grid-template-columns: 1fr;
+            }
         }
         .controls-title {
             font-weight: 700;
@@ -226,14 +230,7 @@
             background: var(--ceg-green); color: white; border-color: var(--ceg-green);
         }
 
-        /* Plant checklist scroll */
-        .plant-list-scroll {
-            max-height: 360px;
-            overflow-y: auto;
-            border: 1px solid var(--glass-border);
-            border-radius: var(--radius-sm);
-            padding: var(--space-sm);
-        }
+        /* Plant checklist scroll — overridden by .plant-selector rules above */
 
         .page-footer {
             background: var(--bg-mid);
@@ -288,98 +285,90 @@
 
     <!-- ═══ MAIN DASHBOARD ═══ -->
     <div class="content-section">
-        <div class="dash-layout">
 
-            <!-- ── LEFT: Controls ── -->
-            <div class="controls-panel">
-
-                <!-- Summary -->
-                <div class="summary-stats">
-                    <div class="summary-stat">
-                        <div class="summary-stat-val" id="sumPlants">0</div>
-                        <div class="summary-stat-lbl">CCS Plants</div>
-                    </div>
-                    <div class="summary-stat">
-                        <div class="summary-stat-val" id="sumReduction">0.0</div>
-                        <div class="summary-stat-lbl">Mt Captured</div>
-                    </div>
-                    <div class="summary-stat">
-                        <div class="summary-stat-val" id="sumResidual">—</div>
-                        <div class="summary-stat-lbl">Post-CCS P50</div>
-                    </div>
-                    <div class="summary-stat">
-                        <div class="summary-stat-val" id="sumPctCut">0%</div>
-                        <div class="summary-stat-lbl">Reduction</div>
-                    </div>
+        <!-- ── Controls bar: summary + toggles ── -->
+        <div class="controls-bar">
+            <div class="summary-stats">
+                <div class="summary-stat">
+                    <div class="summary-stat-val" id="sumPlants">0</div>
+                    <div class="summary-stat-lbl">CCS Plants</div>
                 </div>
-
-                <!-- Gas Toggle -->
-                <div class="toggle-group">
-                    <div class="toggle-label">New Gas Development</div>
-                    <div class="toggle-row">
-                        <button class="toggle-btn active" data-gas="without" onclick="setGas('without')">Without</button>
-                        <button class="toggle-btn" data-gas="with" onclick="setGas('with')">With Gas</button>
-                        <button class="toggle-btn" data-gas="both" onclick="setGas('both')">Both</button>
-                    </div>
+                <div class="summary-stat">
+                    <div class="summary-stat-val" id="sumReduction">0.0</div>
+                    <div class="summary-stat-lbl">Mt Captured</div>
                 </div>
-
-                <!-- Trajectory toggles -->
-                <div class="toggle-group">
-                    <div class="toggle-label">Reference Trajectories</div>
-                    <div style="display:flex;flex-direction:column;gap:6px;">
-                        <label class="plant-check">
-                            <input type="checkbox" id="togMarket" checked onchange="updateChart()">
-                            <span class="plant-check-name">Market Trajectory (original)</span>
-                        </label>
-                        <label class="plant-check">
-                            <input type="checkbox" id="togAT" checked onchange="updateChart()">
-                            <span class="plant-check-name">AT Power NZ</span>
-                        </label>
-                        <label class="plant-check">
-                            <input type="checkbox" id="togSBTi" onchange="updateChart()">
-                            <span class="plant-check-name">SBTi 1.5&deg;C</span>
-                        </label>
-                    </div>
+                <div class="summary-stat">
+                    <div class="summary-stat-val" id="sumResidual">—</div>
+                    <div class="summary-stat-lbl">Post-CCS P50</div>
                 </div>
-
-                <!-- CCS Plant Selection -->
-                <div class="controls-title">CCS Retrofit Selection</div>
-                <div class="ccs-actions">
-                    <button onclick="selectAllCCS()">Select All</button>
-                    <button onclick="clearAllCCS()">Clear All</button>
-                </div>
-                <div class="plant-list-scroll" id="plantChecklist">
-                    <!-- populated by JS -->
+                <div class="summary-stat">
+                    <div class="summary-stat-val" id="sumPctCut">0%</div>
+                    <div class="summary-stat-lbl">Reduction</div>
                 </div>
             </div>
 
-            <!-- ── RIGHT: Charts ── -->
-            <div>
-                <!-- Fan Chart -->
-                <div class="chart-area">
-                    <div class="chart-title">Fleet Emissions Trajectory — P10/P50/P90</div>
-                    <div class="chart-subtitle">
-                        Reference market sweep (540 scenarios) with merit-order dispatch + unit commitment.
-                        Select plants at left for CCS retrofit impact.
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="fanChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Delta Chart -->
-                <div class="chart-area delta-section">
-                    <div class="chart-title">Gap to Target — P50 vs Trajectory</div>
-                    <div class="chart-subtitle">
-                        Positive = above target (more work needed). Negative = exceeding target.
-                    </div>
-                    <div class="delta-container">
-                        <canvas id="deltaChart"></canvas>
-                    </div>
+            <div class="toggle-group">
+                <div class="toggle-label">New Gas Development</div>
+                <div class="toggle-row">
+                    <button class="toggle-btn active" data-gas="without" onclick="setGas('without')">Without</button>
+                    <button class="toggle-btn" data-gas="with" onclick="setGas('with')">With Gas</button>
+                    <button class="toggle-btn" data-gas="both" onclick="setGas('both')">Both</button>
                 </div>
             </div>
 
+            <div class="toggle-group">
+                <div class="toggle-label">Reference Trajectories</div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <label class="plant-check">
+                        <input type="checkbox" id="togMarket" checked onchange="updateChart()">
+                        <span class="plant-check-name">Market Trajectory (original)</span>
+                    </label>
+                    <label class="plant-check">
+                        <input type="checkbox" id="togAT" checked onchange="updateChart()">
+                        <span class="plant-check-name">AT Power NZ</span>
+                    </label>
+                    <label class="plant-check">
+                        <input type="checkbox" id="togSBTi" onchange="updateChart()">
+                        <span class="plant-check-name">SBTi 1.5&deg;C</span>
+                    </label>
+                </div>
+            </div>
         </div>
+
+        <!-- ── Plant selector (full width, multi-column grid) ── -->
+        <div class="plant-selector">
+            <div class="controls-title">CCS Retrofit Selection</div>
+            <div class="ccs-actions">
+                <button onclick="selectAllCCS()">Select All</button>
+                <button onclick="clearAllCCS()">Clear All</button>
+            </div>
+            <div class="plant-list-scroll" id="plantChecklist">
+                <!-- populated by JS -->
+            </div>
+        </div>
+
+        <!-- ── Charts ── -->
+        <div class="chart-area">
+            <div class="chart-title">Fleet Emissions Trajectory — P10/P50/P90</div>
+            <div class="chart-subtitle">
+                Reference market sweep (540 scenarios) with merit-order dispatch + unit commitment.
+                Select plants above for CCS retrofit impact.
+            </div>
+            <div class="chart-container">
+                <canvas id="fanChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-area delta-section">
+            <div class="chart-title">Gap to Target — P50 vs Trajectory</div>
+            <div class="chart-subtitle">
+                Positive = above target (more work needed). Negative = exceeding target.
+            </div>
+            <div class="delta-container">
+                <canvas id="deltaChart"></canvas>
+            </div>
+        </div>
+
     </div>
 
     <!-- ═══ FOOTER ═══ -->
