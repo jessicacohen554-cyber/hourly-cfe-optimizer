@@ -196,6 +196,35 @@
                 <strong>It answers:</strong> Under these cost assumptions, what happens to the fossil fleet? Which generators retire?
                 What clean resources can be profitably deployed? At what carbon price does CCS break even?
             </p>
+
+            <h3>Advanced Modeling Features</h3>
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <h4>Zonal LMP Decomposition</h4>
+                    <p>Pipe-and-bubble zonal model with 2&ndash;5 zones per ISO and inter-zonal transfer limits. Captures 60&ndash;80% of real congestion effects vs. single-bus copper-plate. Automatically enabled when fleet data is available.</p>
+                </div>
+                <div class="metric-card">
+                    <h4>LP Storage Co-Dispatch</h4>
+                    <p>All storage types (battery 4hr/8hr, LDES 100hr, green H₂ 1000hr) co-optimized simultaneously via linear programming. Rolling windows match storage duration: daily for batteries, weekly for LDES, monthly for H₂.</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Inter-Regional Flows</h4>
+                    <p>Hourly net import/export profiles from EIA-930 data reduce each ISO's self-sufficiency requirement. NEISO counts HQ hydro imports, CAISO imports from PNW. Toggle on/off on the Setup page.</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Demand Response</h4>
+                    <p>Price-elastic load curtailment activates when LMP exceeds ISO-specific trigger prices. PJM has 10 GW registered DR at $100+/MWh, ERCOT 5 GW at $200+. Set Off/Low/Med/High on Setup page.</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Confidence Visualization</h4>
+                    <p>Trajectory results show confidence zones: <span style="color:#22C55E">Calibrated</span> (2025&ndash;2030), <span style="color:#F59E0B">Moderate Extrapolation</span> (2030&ndash;2040), <span style="color:#EF4444">High Uncertainty</span> (2040&ndash;2060). Background bands and KPI badges communicate model reliability.</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Trajectory Backtesting</h4>
+                    <p>Backward-looking validation framework runs the model from 2020 conditions with actual historical fuel prices and compares predicted vs observed outcomes (clean %, LMP, emissions) across all 7 ISOs.</p>
+                </div>
+            </div>
+
             <div class="callout">
                 <p><strong>Note:</strong> This is a screening tool producing directionally correct results, not a production capacity expansion model.
                 Use it to narrow the parameter space before running full IPM or GenX analyses.</p>
@@ -223,6 +252,12 @@
                     Each input has an <span style="color:var(--ceg-blue);font-weight:600;">&#9432;</span> info icon &mdash;
                     hover over it to see what the parameter controls and typical ranges.
                     Use L/M/H preset buttons for quick selection, or enter any custom value.
+                </li>
+                <li>
+                    <strong>Configure advanced options</strong>
+                    Set <strong>Inter-Regional Imports</strong> (On/Off) to include or exclude cross-border power flows.
+                    Set <strong>Demand Response</strong> (Off/Low/Med/High) to model price-elastic load curtailment.
+                    These appear at the bottom of the Setup page.
                 </li>
                 <li>
                     <strong>Click "Run Market Simulation"</strong>
@@ -291,6 +326,18 @@
                 <div class="chart-desc-card">
                     <h4>CCS Retrofit vs. New Gas</h4>
                     <p>Carbon price crossover analysis. Shows the carbon price at which CCS-CCGT becomes cheaper than unabated gas.</p>
+                </div>
+                <div class="chart-desc-card">
+                    <h4>Zonal LMP Spread</h4>
+                    <p>When zonal decomposition is active (requires fleet data), shows per-zone average LMP and price spread vs system average. Identifies congestion-constrained pockets with elevated prices.</p>
+                </div>
+                <div class="chart-desc-card">
+                    <h4>Demand Response Metrics</h4>
+                    <p>When DR is enabled (Low/Med/High), shows total curtailed GWh, peak activation GW, hours of DR activation, and average price during DR events. Appears as KPI cards below the main results.</p>
+                </div>
+                <div class="chart-desc-card">
+                    <h4>Confidence Zones</h4>
+                    <p>Trajectory charts show colored background bands: green (2025&ndash;2030, calibrated), yellow (2030&ndash;2040, moderate extrapolation), red (2040&ndash;2060, high uncertainty). KPI cards show a confidence badge for the selected year.</p>
                 </div>
             </div>
         </div>
