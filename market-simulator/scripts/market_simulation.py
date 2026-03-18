@@ -31,6 +31,20 @@ import pandas as pd
 from pathlib import Path
 from itertools import product as cartesian
 
+# Numba JIT — speedup on unit commitment state machine loop
+try:
+    from numba import njit
+    HAS_NUMBA = True
+except ImportError:
+    HAS_NUMBA = False
+    def njit(*args, **kwargs):
+        """Fallback no-op decorator when Numba is not installed."""
+        def decorator(f):
+            return f
+        if len(args) == 1 and callable(args[0]):
+            return args[0]
+        return decorator
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 MODULE_ROOT = os.path.dirname(SCRIPT_DIR)
 # Add scripts dir to path for shared utilities
@@ -516,6 +530,49 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
     return hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics
 
 
+@njit(cache=True)
+def _uc_loop(dispatched_i8, min_up, min_down):
+    """Numba-accelerated unit commitment state machine.
+
+    Args:
+        dispatched_i8: int8 array (H,) — 1 where merit-order says unit should run
+        min_up: minimum hours a unit must stay on after starting
+        min_down: minimum hours a unit must stay off after shutting down
+
+    Returns:
+        committed: int8 array (H,) — UC-adjusted commitment (1=on, 0=off)
+        n_starts: number of start events
+    """
+    H_len = dispatched_i8.shape[0]
+    committed = np.zeros(H_len, dtype=np.int8)
+    n_starts = 0
+    hours_in_state = 0
+    is_on = 0  # 0=off, 1=on
+
+    for h in range(H_len):
+        want_on = dispatched_i8[h]
+
+        if is_on == 1:
+            hours_in_state += 1
+            if want_on == 0 and hours_in_state >= min_up:
+                is_on = 0
+                hours_in_state = 0
+                committed[h] = 0
+            else:
+                committed[h] = 1
+        else:
+            hours_in_state += 1
+            if want_on == 1 and hours_in_state >= min_down:
+                is_on = 1
+                hours_in_state = 0
+                n_starts += 1
+                committed[h] = 1
+            else:
+                committed[h] = 0
+
+    return committed, n_starts
+
+
 def apply_unit_commitment(dispatched, mw_dispatched, cap_mw, uc_params):
     """Apply unit commitment constraints to a single unit's dispatch profile.
 
@@ -533,45 +590,16 @@ def apply_unit_commitment(dispatched, mw_dispatched, cap_mw, uc_params):
         mw_output: float array — UC-adjusted MW output
         n_starts: int — number of start events
     """
-    H_len = len(dispatched)
     min_up = uc_params.get('min_up_hrs', 1)
     min_down = uc_params.get('min_down_hrs', 1)
     min_gen = uc_params.get('min_gen_pct', 0.0) * cap_mw
 
-    committed = np.zeros(H_len, dtype=bool)
-    n_starts = 0
-    hours_in_state = 0  # hours since last state change
-    is_on = False
+    # Run state machine via Numba kernel (20-50x faster than Python loop)
+    dispatched_i8 = np.asarray(dispatched, dtype=np.int8)
+    committed_i8, n_starts = _uc_loop(dispatched_i8, min_up, min_down)
+    committed = committed_i8.astype(bool)
 
-    for h in range(H_len):
-        want_on = bool(dispatched[h])
-
-        if is_on:
-            hours_in_state += 1
-            if not want_on and hours_in_state >= min_up:
-                # Can shut down — check min_down feasibility
-                is_on = False
-                hours_in_state = 0
-            # else: stay on (either want_on=True, or min_up not met yet)
-            committed[h] = is_on if not want_on else True
-            if not is_on:
-                committed[h] = False
-            else:
-                committed[h] = True
-        else:
-            hours_in_state += 1
-            if want_on and hours_in_state >= min_down:
-                # Can start up
-                is_on = True
-                hours_in_state = 0
-                n_starts += 1
-                committed[h] = True
-            else:
-                committed[h] = False
-                if want_on and hours_in_state < min_down:
-                    pass  # Can't start yet, min_down not satisfied
-
-    # Apply minimum generation floor and cap
+    # Apply minimum generation floor and cap (already vectorized)
     mw_output = np.where(committed, np.maximum(mw_dispatched, min_gen), 0.0)
     mw_output = np.minimum(mw_output, cap_mw)
 
