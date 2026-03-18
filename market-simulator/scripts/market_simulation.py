@@ -595,11 +595,16 @@ def compute_generator_economics(stack, hourly_lmp, unit_idx, dispatch,
 
 def compute_plant_level_economics(plant_stack, hourly_lmp, dispatch,
                                    demand_mw_profile, fuel_prices, carbon_price,
-                                   year=2025):
+                                   year=2025, zonal_lmp=None, plant_zones=None,
+                                   zone_names=None):
     """Compute per-plant dispatch economics using plant-level merit order.
 
     Each plant's position in the merit-order stack determines when it dispatches.
     Returns list of dicts with full per-plant economics.
+
+    If zonal_lmp is provided (n_zones × H matrix), each plant uses its
+    zone-specific LMP for revenue instead of system-average hourly_lmp.
+    plant_zones is a list of zone name strings parallel to plant_stack.
     """
     if not plant_stack:
         return []
@@ -644,9 +649,15 @@ def compute_plant_level_economics(plant_stack, hourly_lmp, dispatch,
         total_mwh = float(np.sum(mw_dispatched))
         cf = total_mwh / (cap_mw * H_val) if cap_mw > 0 else 0
 
-        # Revenue
+        # Revenue — use zonal LMP if available for this plant
+        plant_lmp = hourly_lmp  # default: system-average
+        if zonal_lmp is not None and plant_zones is not None and zone_names is not None:
+            pzone = plant_zones[i] if i < len(plant_zones) else None
+            if pzone and pzone in zone_names:
+                z_idx = zone_names.index(pzone)
+                plant_lmp = zonal_lmp[z_idx]
         if total_mwh > 0:
-            avg_rev = float(np.sum(hourly_lmp * mw_dispatched)) / total_mwh
+            avg_rev = float(np.sum(plant_lmp * mw_dispatched)) / total_mwh
         else:
             avg_rev = 0.0
 
@@ -707,6 +718,7 @@ def compute_plant_level_economics(plant_stack, hourly_lmp, dispatch,
             'total_cost_million': round(total_cost_mwh * total_mwh / 1e6, 2),
             'total_profit_million': round(profit_mwh * total_mwh / 1e6, 2),
             'status': status,
+            'zone': plant_zones[i] if plant_zones and i < len(plant_zones) else None,
         })
 
     return results
