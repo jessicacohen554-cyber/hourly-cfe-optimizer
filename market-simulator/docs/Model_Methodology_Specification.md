@@ -71,9 +71,9 @@ Three simulation modes are supported:
 ### 1.3 Key Assumptions
 
 - **2025 snapshot model**: Generation profiles and grid mix reflect current conditions. Forward projections (trajectory mode) are modeled explicitly via demand growth rates and learning curves.
-- **ISO-level geographic resolution**: Resources are sourced within each ISO region. No intra-ISO transmission constraints (copper-plate assumption). Transmission costs are flat $/MWh adders by resource type and ISO.
+- **ISO-level geographic resolution**: Resources are sourced within each ISO region. Default is copper-plate (single-bus), but optional zonal LMP decomposition models 2–5 zones per ISO using a pipe-and-bubble LP approach (requires EIA-860 fleet data; falls back to copper-plate without it). Transmission costs are flat $/MWh adders by resource type and ISO.
 - **Hydro is existing-only**: No new hydroelectric capacity. Existing hydro is available at wholesale market rates with no incremental transmission cost.
-- **Unit commitment constraints**: When plant-level EIA 860 data is available, the model applies vintage-adjusted unit commitment: newer CCGTs (2015+) have 30% minimum generation and lower start costs; older CCGTs (pre-2005) have 50% minimum generation and higher start costs. Without plant data, dispatch uses a simplified merit-order without UC constraints. Storage dispatch follows a priority-ordered greedy algorithm.
+- **Unit commitment constraints**: When plant-level EIA 860 data is available, the model applies vintage-adjusted unit commitment: newer CCGTs (2015+) have 30% minimum generation and lower start costs; older CCGTs (pre-2005) have 50% minimum generation and higher start costs. Without plant data, dispatch uses a simplified merit-order without UC constraints. Storage dispatch uses LP co-optimization (simultaneous battery/LDES/H₂ dispatch via scipy linprog with rolling windows), with greedy sequential fallback.
 - **Load profile**: Demand uses actual ISO-level 8,760-hour profiles from EIA-930, representing aggregate load.
 
 ### 1.4 Key Differentiator
