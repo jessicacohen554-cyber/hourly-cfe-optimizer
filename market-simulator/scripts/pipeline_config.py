@@ -501,13 +501,13 @@ STORAGE_DISPATCH_MODE = 'greedy'
 #                 (historical avg from ISO event performance data)
 
 DEMAND_RESPONSE = {
-    'CAISO':  {'max_dr_gw': 4.0,  'trigger_price': 150, 'participation': 0.70},
-    'ERCOT':  {'max_dr_gw': 5.0,  'trigger_price': 200, 'participation': 0.60},
-    'PJM':    {'max_dr_gw': 10.0, 'trigger_price': 100, 'participation': 0.75},
-    'NYISO':  {'max_dr_gw': 1.5,  'trigger_price': 150, 'participation': 0.70},
-    'NEISO':  {'max_dr_gw': 1.0,  'trigger_price': 150, 'participation': 0.65},
-    'MISO':   {'max_dr_gw': 8.0,  'trigger_price': 120, 'participation': 0.65},
-    'SPP':    {'max_dr_gw': 2.0,  'trigger_price': 150, 'participation': 0.60},
+    'CAISO':  {'max_dr_gw': 4.0,  'trigger_price': 150, 'participation': 0.70, 'dr_ordc_link': True},
+    'ERCOT':  {'max_dr_gw': 5.0,  'trigger_price': 200, 'participation': 0.60, 'dr_ordc_link': True},
+    'PJM':    {'max_dr_gw': 10.0, 'trigger_price': 100, 'participation': 0.75, 'dr_ordc_link': True},
+    'NYISO':  {'max_dr_gw': 1.5,  'trigger_price': 150, 'participation': 0.70, 'dr_ordc_link': True},
+    'NEISO':  {'max_dr_gw': 1.0,  'trigger_price': 150, 'participation': 0.65, 'dr_ordc_link': True},
+    'MISO':   {'max_dr_gw': 8.0,  'trigger_price': 120, 'participation': 0.65, 'dr_ordc_link': True},
+    'SPP':    {'max_dr_gw': 2.0,  'trigger_price': 150, 'participation': 0.60, 'dr_ordc_link': True},
 }
 
 # DR sensitivity levels: Off/Low/Medium/High
