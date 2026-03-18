@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/article.css">
     <link rel="stylesheet" href="styles/scrollytell.css">
     <link rel="stylesheet" href="styles/ipp-transition.css">
     <link rel="stylesheet" href="styles/cinematic.css">
@@ -51,24 +52,36 @@
         </div>
     </div>
 
-    <!-- Key Insights -->
+    <!-- Section 1: Key Findings -->
+    <div class="section-header fade-in">
+        <div class="section-number">1</div>
+        <h2>Key Findings</h2>
+        <p>Critical insights from modeling 540 scenarios across 7 independent power producers</p>
+    </div>
+
     <div class="content-section scroll-reveal">
-        <h2 class="section-title">Key Findings</h2>
         <div id="keyInsights"></div>
     </div>
 
-    <!-- Company Cards -->
+    <!-- Section 2: Company Deep Dives -->
+    <div class="section-header fade-in">
+        <div class="section-number">2</div>
+        <h2>Company Deep Dives</h2>
+        <p>Click any company for a detailed climate transition assessment with qualified targets, investment case, and strategic recommendations.</p>
+    </div>
+
     <div class="content-section">
-        <h2 class="section-title">Company Deep Dives</h2>
-        <p class="section-subtitle">Click any company for a detailed climate transition assessment with qualified targets, investment case, and strategic recommendations.</p>
         <div class="company-cards-grid" id="companyCardsGrid"></div>
     </div>
 
-    <!-- Decarbonization Cost Comparison -->
-    <div class="content-section">
-        <h2 class="section-title">Fleet Decarbonization Cost Comparison</h2>
-        <p class="section-subtitle">Marginal abatement cost (MAC) to fully decarbonize each fleet, weighted by regional grid costs and fossil fuel mix. Costs reflect the cumulative $/tCO₂ to reach 99.99% clean energy in each ISO where the company operates.</p>
+    <!-- Section 3: Decarbonization Cost Comparison -->
+    <div class="section-header fade-in">
+        <div class="section-number">3</div>
+        <h2>Fleet Decarbonization Cost Comparison</h2>
+        <p>Marginal abatement cost (MAC) to fully decarbonize each fleet, weighted by regional grid costs and fossil fuel mix. Costs reflect the cumulative $/tCO₂ to reach 99.99% clean energy in each ISO where the company operates.</p>
+    </div>
 
+    <div class="content-section">
         <div class="card scroll-reveal" style="padding: var(--space-xl); margin-bottom: var(--space-xl)">
             <h3 style="font-size: 1.1rem; color: var(--navy); margin-bottom: var(--space-md)">Weighted Average MAC by Fleet ($/tCO₂)</h3>
             <div class="chart-container-lg"><canvas id="macComparisonChart"></canvas></div>
@@ -97,10 +110,14 @@
     <div class="content-section">
     </div>
 
-    <!-- Cross-Company Analysis -->
-    <div class="content-section panel-navy">
-        <h2 class="section-title">Cross-Company Comparative Analysis</h2>
+    <!-- Section 4: Cross-Company Analysis -->
+    <div class="section-header fade-in">
+        <div class="section-number">4</div>
+        <h2>Cross-Company Comparative Analysis</h2>
+        <p>Emissions trajectories, profit resilience, and qualified targets across all modeled fleets</p>
+    </div>
 
+    <div class="content-section">
         <div class="card scroll-reveal" style="padding: var(--space-xl); margin-bottom: var(--space-xl)">
             <h3 style="font-size: 1.1rem; color: var(--navy); margin-bottom: var(--space-md)">Emissions Trajectories - All Companies (P50 with P10/P90 Bands)</h3>
             <div class="chart-container-lg"><canvas id="emissionsComparisonChart"></canvas></div>

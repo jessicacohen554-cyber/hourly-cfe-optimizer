@@ -91,11 +91,7 @@
 .stat-green { background: var(--wind-bg); border: 1px solid rgba(34,197,94,0.2); color: #166534; }
 .stat-blue { background: var(--hydro-bg); border: 1px solid rgba(14,165,233,0.2); color: #0369A1; } /* contrast-fix: was #0284c7, now #0369A1, ratio 5.93:1 on bg #fff */
 .stat-amber { background: var(--solar-bg); border: 1px solid rgba(245,158,11,0.2); color: #B45309; } /* contrast-fix: was var(--amber-warn)/#D97706, now #B45309, ratio 5.02:1 on bg #fff */
-/* Dark section overrides for stat-callout */
-.section-dark .stat-red { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.35); color: #FCA5A5; }
-.section-dark .stat-green { background: rgba(34,197,94,0.15); border-color: rgba(34,197,94,0.35); color: #6EE7B7; }
-.section-dark .stat-blue { background: rgba(14,165,233,0.15); border-color: rgba(14,165,233,0.35); color: #7DD3FC; }
-.section-dark .stat-amber { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.35); color: #FCD34D; }
+/* (section-dark stat overrides removed — light theme only) */
 
 /* Synthesis overrides (light bg, border) */
 .synthesis-section {
@@ -194,12 +190,7 @@
 }
 .foak-sources .src-list li { margin-bottom: 2px; }
 
-/* contrast-fix: dark bg overrides for panel-navy / section-dark contexts */
-.panel-navy .narrative-card h3 { color: #fff; } /* contrast-fix: was var(--navy), now #fff, ratio 15.4:1 on bg #0F172A */
-.panel-navy .narrative-card p { color: rgba(255,255,255,0.92); } /* contrast-fix: was rgba(0,0,0,0.7), now white, ratio 13.6:1 on bg #0F172A */
-.panel-navy .counter-lbl { color: rgba(255,255,255,0.8); } /* contrast-fix: was rgba(0,0,0,0.5), now white 0.8, ratio 10.5:1 on bg #0F172A */
-.panel-navy .chart-title { color: rgba(255,255,255,0.95); } /* contrast-fix: ensure chart titles readable on dark bg */
-.section-dark .synthesis-card h3 { color: #fff; } /* contrast-fix: ensure headings visible on dark bg */
+/* (panel-navy / section-dark overrides removed — light theme only) */
 
 /* Responsive */
 @media (max-width: 900px) {
@@ -399,6 +390,11 @@
 </header>
 
 <!-- ==================== FOAK → NOAK: THE INVESTMENT CASE (HERO) ==================== -->
+<div class="section-header fade-in">
+    <div class="section-number">1</div>
+    <h2>The Investment Case</h2>
+    <p>Clean firm power is expensive today because it's first-of-a-kind. But learning curves are real, and gas gets more expensive every year.</p>
+</div>
 <section class="foak-hero section-light">
     <div class="foak-inner">
         <div class="foak-text">
@@ -473,11 +469,16 @@
 </section>
 
 <!-- ==================== STRANDED ASSETS OVERVIEW ==================== -->
-<section class="hero-overview section-light panel-navy">
+<div class="section-header fade-in">
+    <div class="section-number">2</div>
+    <h2>The Stranding Problem</h2>
+    <p>At 90% clean energy, 145 GW of gas backup becomes a permanent liability across all 7 ISOs.</p>
+</div>
+<section class="hero-overview section-light">
     <div class="hero-inner">
         <div class="hero-text">
             <h2>You're building gas plants today that become stranded assets tomorrow.</h2>
-            <p>At 90% clean energy, America's 7 ISOs still depend on <strong style="color:#FCA5A5;">145 GW of gas backup capacity</strong><!-- contrast-fix: was #f87171, now #FCA5A5, ratio 8.2:1 on bg #0F172A (panel-navy) --> to maintain reliability. That's billions in incumbent capital that earns diminishing returns as decarbonization continues. Clean firm power &mdash; nuclear, enhanced geothermal, CCS &mdash; prevents this trap. The investment case holds across all 5,832 cost scenarios we tested.</p>
+            <p>At 90% clean energy, America's 7 ISOs still depend on <strong style="color:#DC2626;">145 GW of gas backup capacity</strong> to maintain reliability. That's billions in incumbent capital that earns diminishing returns as decarbonization continues. Clean firm power &mdash; nuclear, enhanced geothermal, CCS &mdash; prevents this trap. The investment case holds across all 5,832 cost scenarios we tested.</p>
             <div class="counter-row">
                 <div class="counter-card">
                     <div class="counter-val" id="ctrNewGas">145</div>
@@ -516,9 +517,9 @@
     </p>
 </div>
 
-<!-- ==================== SECTION 1: THE GAS TRAP ==================== -->
-<div class="section-header">
-    <div class="section-number">1</div>
+<!-- ==================== SECTION 3: THE GAS TRAP ==================== -->
+<div class="section-header fade-in">
+    <div class="section-number">3</div>
     <h2>The Gas Trap: You're Paying to Build Stranded Assets</h2>
     <p>Every ISO needs new gas capacity to guarantee reliability &mdash; but that capital becomes stranded as clean energy scales. Click each ISO to see the scale of the problem.
         <a href="lmp_trends.html#gas-fleet-risk" class="explore-link" style="font-size:0.82rem; margin-left:6px;">Gas stranding dynamics <span class="arrow">&rarr;</span></a>
@@ -554,9 +555,9 @@
     <p>If existing nuclear retires due to revenue erosion, gas fills the reliability gap - accelerating the lock-in dynamic. <a href="ref-nuclear-retirement.html">See plant-level retirement risk &rarr;</a></p>
 </div>
 
-<!-- ==================== SECTION 2: CLEAN FIRM DISPLACES GAS ==================== -->
-<div class="section-header">
-    <div class="section-number">2</div>
+<!-- ==================== SECTION 4: CLEAN FIRM DISPLACES GAS ==================== -->
+<div class="section-header fade-in">
+    <div class="section-number">4</div>
     <h2>Clean Firm Displaces Gas - Dollar for Dollar</h2>
     <p>As dispatchable clean generation enters, gas backup drops and clean coverage rises. The displacement is consistent across every cost scenario.</p>
 </div>
@@ -585,13 +586,13 @@
     </div>
 </section>
 
-<!-- ==================== SECTION 3: THE INVESTMENT CASE ==================== -->
-<div class="section-header">
-    <div class="section-number">3</div>
+<!-- ==================== SECTION 5: THE INVESTMENT CASE ==================== -->
+<div class="section-header fade-in">
+    <div class="section-number">5</div>
     <h2>The Investment Math: Gas Costs Are Permanent, FOAK Costs Decline</h2>
     <p>Gas backup cost recurs annually and compounds with demand growth. Clean firm FOAK costs are one-time premiums that shrink with every deployment.</p>
 </div>
-<section class="concept-section section-light panel-navy">
+<section class="concept-section section-light">
     <div class="concept-inner">
         <div class="concept-chart-col">
             <div class="chart-panel" style="width:100%;">
@@ -608,9 +609,12 @@
 </section>
 
 <!-- ==================== SYNTHESIS ==================== -->
-<div class="gradient-transition"></div>
-<section class="section-dark">
-<div class="section-dark-inner">
+<div class="section-header fade-in">
+    <div class="section-number">6</div>
+    <h2>Synthesis</h2>
+    <p>The economic case for clean firm power in two frames.</p>
+</div>
+<section class="synthesis-section section-light">
     <div class="synthesis-inner">
         <div class="synthesis-card">
             <h3>The stranding risk is already here</h3>
@@ -623,9 +627,7 @@
             <span class="stat-callout stat-green">~40% cost decline FOAK&rarr;NOAK &middot; Fervo: 35% learning rate</span>
         </div>
     </div>
-</div>
 </section>
-<div class="gradient-transition"></div>
 
 <!-- SOURCES -->
 <div style="max-width:1320px;margin:0 auto;padding:24px;">
@@ -653,6 +655,11 @@
 </div>
 
 <!-- ========== WRIGHT'S LAW LEARNING CURVES (merged from wrights_law.html) ========== -->
+<div class="section-header fade-in">
+    <div class="section-number">7</div>
+    <h2>Wright's Law: Learning Curves & Critical Mass</h2>
+    <p>Every energy technology follows Wright's Law. The question is when enough buyers commit to trigger the first doubling.</p>
+</div>
 <div class="wrights-law-wrap">
 
 <!-- Wright's Law Intro -->

@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/article.css">
 <link rel="stylesheet" href="styles/dashboard-ui.css">
 <link rel="stylesheet" href="styles/cinematic.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
@@ -682,14 +683,26 @@
     <div class="header-accent"></div>
 </div>
 
-<!-- Interpretation Panel -->
-<div class="content-section" style="padding-top:var(--space-lg);padding-bottom:0;">
+<!-- Section 1: How to Read This Page -->
+<div class="section-header fade-in">
+    <div class="section-number">1</div>
+    <h2>How to Read This Page</h2>
+    <p>A cost optimization model for corporate voluntary procurement — isolating the demand-pull signal across strategies and participation levels.</p>
+</div>
+<div class="content-section" style="padding-top:var(--space-md);padding-bottom:0;">
     <div class="insight-box">
         <strong>How to read this page</strong>
         <p style="margin:8px 0 6px;">This is a <strong>cost optimization model for corporate voluntary procurement</strong>, not a market simulation. It shows what happens in a vacuum when different procurement strategies are applied at varying participation levels, based purely on LCOE and capital costs.</p>
         <p style="margin:6px 0;">In reality, market dynamics drive a broader mix of new generation - we explore those trajectories in the supply-side regional climate transition analysis. Here, the goal is to isolate the demand-pull signal: which resources do these strategies incentivize, where, and at what cost?</p>
         <p style="margin:6px 0 0;"><strong>Demand grows with ambition.</strong> Each CFE target maps to an SBTi-aligned deployment year (50%&nbsp;→&nbsp;2030, 90%&nbsp;→&nbsp;2040, ≥99.99%&nbsp;→&nbsp;2050). Demand scales at ISO-specific growth rates from a 2025 baseline. Higher targets = later years = more demand to serve.</p>
     </div>
+</div>
+
+<!-- Section 2: Deployment Matrix -->
+<div class="section-header fade-in">
+    <div class="section-number">2</div>
+    <h2>Deployment Matrix</h2>
+    <p>Each jar represents an ISO grid. Balls show resource deployment — their type, tier, and quantity shift with strategy selection and participation level.</p>
 </div>
 
 <!-- Controls Bar -->
@@ -842,6 +855,13 @@
 <!-- Detail panel (click/tap to expand) -->
 <div class="jar-detail-panel" id="jarDetailPanel"></div>
 
+<!-- Section 3: Aggregate Impact -->
+<div class="section-header fade-in">
+    <div class="section-number">3</div>
+    <h2>Aggregate Impact</h2>
+    <p>Total procurement volume, CO&#8322; displacement, and gas capacity changes at the selected participation level and target.</p>
+</div>
+
 <!-- Aggregate Charts -->
 <div class="agg-charts">
     <div class="grid-2col">
@@ -867,16 +887,11 @@
     </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- PARTICIPATION-LEVEL ANALYSIS SECTION                                -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-
-<div class="agg-charts">
-    <div class="content-section" style="padding:24px 0 0;">
-        <h2 class="section-title" id="participationSectionHeader" style="font-size:1.3rem;margin-bottom:4px;">
-            At 85% CO₂ reduction target: Implications of each strategy at varying participation levels
-        </h2>
-    </div>
+<!-- Section 4: Participation-Level Analysis -->
+<div class="section-header fade-in">
+    <div class="section-number">4</div>
+    <h2 id="participationSectionHeader">Participation-Level Analysis</h2>
+    <p>At the selected CO&#8322; reduction target: how each strategy performs as more C&amp;I load participates.</p>
 </div>
 
 <!-- Gas Capacity Needed vs Participation (line chart - replaces ribbon) -->
@@ -890,9 +905,12 @@
     </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- CROSSOVER & PARTICIPATION ANALYSIS CHARTS                          -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- Section 5: Crossover & Efficiency Analysis -->
+<div class="section-header fade-in">
+    <div class="section-number">5</div>
+    <h2>Crossover &amp; Efficiency Analysis</h2>
+    <p>Grid hourly match scores, participation thresholds for clean targets, and CO&#8322; efficiency per unit of procurement.</p>
+</div>
 
 <!-- Chart 1: Grid Clean % by Participation (crossover lines) -->
 <div class="agg-charts">

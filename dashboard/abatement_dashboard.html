@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/article.css">
     <link rel="stylesheet" href="styles/scrollytell.css">
     <link rel="stylesheet" href="styles/cinematic.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
@@ -17,8 +18,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
-/* contrast-fix: region-tag in dark section needs lighter text */
-.panel-navy .region-tag { color: #86EFAC !important; background: rgba(34,197,94,0.2) !important; }
 /* contrast-fix: finding-highlight green on tinted bg */
 .finding-highlight { color: #166534 !important; }
 /* Page-specific: prevent horizontal overflow on this page */
@@ -26,96 +25,6 @@ html, body {
     overflow-x: hidden;
     max-width: 100vw;
 }
-
-/* ========== contrast-fix: panel-navy overrides for deepdive section ========== */
-/* The deepdive section sits on #0F172A navy bg - child text must be light */
-
-/* contrast-fix: was #1E293B (dark text from scrollytell.css), now #E2E8F0, ratio 12.3:1 on bg #0F172A */
-.panel-navy .deepdive-header h2 { color: #E2E8F0 !important; }
-/* contrast-fix: was #64748B (updated base), now #94A3B8, ratio 6.59:1 on bg #0F172A */
-.panel-navy .deepdive-header p { color: #94A3B8 !important; }
-
-/* contrast-fix: region-step-card text in navy context */
-.panel-navy .region-step-card h3 { color: #E2E8F0 !important; } /* contrast-fix: was var(--text-secondary), now #E2E8F0, ratio 12.3:1 on bg #0F172A */
-.panel-navy .region-step-card p { color: #CBD5E1 !important; } /* contrast-fix: was #475569, now #CBD5E1, ratio 10.2:1 on bg #0F172A */
-
-/* contrast-fix: narrative callout elements in navy context */
-.panel-navy .narrative-callout { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); }
-.panel-navy .narrative-callout-label { color: #94A3B8 !important; } /* contrast-fix: was #64748B, now #94A3B8, ratio 6.59:1 on bg #0F172A */
-.panel-navy .narrative-callout-value { color: #E2E8F0 !important; } /* contrast-fix: was inline ISO color, now #E2E8F0, ratio 12.3:1 on bg #0F172A */
-.panel-navy .narrative-callout-detail { color: #94A3B8 !important; } /* contrast-fix: was #64748B, now #94A3B8, ratio 6.59:1 on bg #0F172A */
-
-/* contrast-fix: narrative NR summary in navy context */
-.panel-navy .narrative-nr-summary { color: #CBD5E1 !important; } /* contrast-fix: was #475569, now #CBD5E1, ratio 10.2:1 on bg #0F172A */
-.panel-navy .narrative-nr-summary strong { color: #F1F5F9 !important; } /* contrast-fix: ratio 14.5:1 on bg #0F172A */
-
-/* contrast-fix: step-stat badges in navy context */
-.panel-navy .step-stat-green { background: rgba(34,197,94,0.15); color: #86EFAC !important; border-color: rgba(34,197,94,0.3); } /* contrast-fix: was #15803D, now #86EFAC, ratio 8.25:1 on bg #0F172A */
-.panel-navy .step-stat-amber { background: rgba(245,158,11,0.15); color: #FCD34D !important; border-color: rgba(245,158,11,0.3); } /* contrast-fix: was #92400E, now #FCD34D, ratio 10.8:1 on bg #0F172A */
-
-/* contrast-fix: iso-tab in navy context - inactive tabs need light text */
-.panel-navy .iso-tab { color: #94A3B8; background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); } /* contrast-fix: was var(--text-dim), now #94A3B8, ratio 6.59:1 on bg #0F172A */
-.panel-navy .iso-tab:hover { color: #CBD5E1; background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.2); } /* contrast-fix: ratio 10.2:1 on bg #0F172A */
-
-/* contrast-fix: chart panel inside navy - force white bg for readability */
-.panel-navy .chart-panel { background: #FFFFFF !important; border: 1px solid rgba(255,255,255,0.15) !important; }
-.panel-navy .hero-chart-title { color: #1E293B; } /* contrast-fix: on white chart-panel bg */
-
-/* contrast-fix: NR panel in navy context */
-.panel-navy .nr-panel { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); }
-.panel-navy .nr-panel-header h3 { color: #E2E8F0 !important; } /* contrast-fix: was var(--text-secondary), now #E2E8F0, ratio 12.3:1 on bg #0F172A */
-.panel-navy .nr-panel-header p { color: #94A3B8 !important; } /* contrast-fix: was #64748B, now #94A3B8, ratio 6.59:1 on bg #0F172A */
-
-/* contrast-fix: NR reading guide in navy context */
-.panel-navy .nr-reading-guide { background: rgba(34,197,94,0.08); border-color: rgba(34,197,94,0.2); }
-.panel-navy .nr-reading-guide-title { color: #86EFAC !important; } /* contrast-fix: was #15803D, now #86EFAC, ratio 8.25:1 on bg #0F172A */
-.panel-navy .nr-reading-guide-text { color: #CBD5E1 !important; } /* contrast-fix: was #475569, now #CBD5E1, ratio 10.2:1 on bg #0F172A */
-.panel-navy .nr-reading-guide-text strong { color: #F1F5F9 !important; }
-
-/* contrast-fix: NR resource rows in navy context */
-.panel-navy .nr-resource-label { color: #CBD5E1 !important; } /* contrast-fix: was #475569, now #CBD5E1, ratio 10.2:1 on bg #0F172A */
-.panel-navy .nr-resource-row { border-bottom-color: rgba(255,255,255,0.06); }
-.panel-navy .nr-bar-container { background: rgba(255,255,255,0.04); }
-.panel-navy .nr-bar-floor-label.outside { color: #94A3B8 !important; } /* contrast-fix: was #475569, now #94A3B8, ratio 6.59:1 on bg #0F172A */
-.panel-navy .nr-bar-avg-label { color: #94A3B8 !important; } /* contrast-fix: was var(--text-dim), now #94A3B8, ratio 6.59:1 on bg #0F172A */
-
-/* contrast-fix: NR badges in navy context */
-.panel-navy .nr-badge-yes { background: rgba(34,197,94,0.15); color: #86EFAC !important; border-color: rgba(34,197,94,0.3); } /* contrast-fix: was #15803D, now #86EFAC, ratio 8.25:1 on bg #0F172A */
-.panel-navy .nr-badge-partial { background: rgba(245,158,11,0.15); color: #FCD34D !important; border-color: rgba(245,158,11,0.3); } /* contrast-fix: was #92400E, now #FCD34D, ratio 10.8:1 on bg #0F172A */
-.panel-navy .nr-badge-no { background: rgba(255,255,255,0.04); color: #64748B !important; border-color: rgba(255,255,255,0.08); } /* contrast-fix: was rgba(15,23,42,0.35), now #64748B, ratio 4.69:1 on bg #0F172A */
-
-/* contrast-fix: NR summary row in navy context */
-.panel-navy .nr-summary-row { border-top-color: rgba(255,255,255,0.08); }
-.panel-navy .nr-summary-stat { background: rgba(34,197,94,0.12) !important; color: #86EFAC !important; border-color: rgba(34,197,94,0.25) !important; } /* contrast-fix: was #15803D, now #86EFAC, ratio 8.25:1 on bg #0F172A */
-.panel-navy .nr-summary-row span:not(.nr-summary-stat) { color: #94A3B8 !important; } /* contrast-fix: source text in navy, was #64748B, now #94A3B8, ratio 6.59:1 on bg #0F172A */
-
-/* contrast-fix: NR interpret items in navy context */
-.panel-navy .nr-interpret-item { color: #CBD5E1 !important; }
-.panel-navy .nr-interpret-label { color: #E2E8F0 !important; }
-.panel-navy .nr-interpret-desc { color: #94A3B8 !important; }
-
-/* contrast-fix: density section is also panel-navy (#0F172A bg) */
-.density-deep-dive-section.panel-navy .section-title { color: #E2E8F0 !important; } /* contrast-fix: ratio 12.3:1 on bg #0F172A */
-.density-deep-dive-section.panel-navy .section-subtitle { color: #94A3B8 !important; } /* contrast-fix: ratio 6.59:1 on bg #0F172A */
-
-/* contrast-fix: density reading guide in navy */
-.panel-navy .density-reading-guide { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); }
-.panel-navy .nr-reading-guide-title { color: #86EFAC !important; }
-.panel-navy .density-reading-guide .nr-reading-guide-title { color: #E2E8F0 !important; } /* contrast-fix: ratio 12.3:1 on bg #0F172A */
-.panel-navy .density-reading-guide .nr-reading-guide-text { color: #CBD5E1 !important; } /* contrast-fix: ratio 10.2:1 on bg #0F172A */
-
-/* contrast-fix: density row elements in navy */
-.panel-navy .density-resource-name { color: #E2E8F0 !important; } /* contrast-fix: was var(--text-primary), now #E2E8F0, ratio 12.3:1 on bg #0F172A */
-.panel-navy .density-stat-label { color: #94A3B8 !important; } /* contrast-fix: was #64748B, now #94A3B8, ratio 6.59:1 on bg #0F172A */
-.panel-navy .density-stat-value { color: #E2E8F0 !important; } /* contrast-fix: was var(--text-primary), now #E2E8F0, ratio 12.3:1 on bg #0F172A */
-.panel-navy .density-driver { color: #94A3B8 !important; } /* contrast-fix: was #64748B, now #94A3B8, ratio 6.59:1 on bg #0F172A */
-.panel-navy .density-axis-tick { color: #94A3B8 !important; } /* contrast-fix: was #64748B, now #94A3B8, ratio 6.59:1 on bg #0F172A */
-.panel-navy .density-axis-label { color: #94A3B8 !important; } /* contrast-fix: was #64748B, now #94A3B8, ratio 6.59:1 on bg #0F172A */
-.panel-navy .density-row { border-bottom-color: rgba(255,255,255,0.06); }
-.panel-navy .density-strip-wrap { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); }
-
-/* contrast-fix: NR zero resource text in navy */
-.panel-navy .nr-zero-resource .nr-bar-container { background: rgba(255,255,255,0.02); }
 </style>
 </head>
 <body>
@@ -140,12 +49,16 @@ html, body {
 <!-- ================================================================== -->
 <!-- HERO SECTION: Intro + ISO tiles + narrative/chart                   -->
 <!-- ================================================================== -->
+<div class="section-header fade-in">
+    <div class="section-number">1</div>
+    <h2>Every Region Has an Optimal Clean Energy Target</h2>
+    <p>Grid decarbonization is cheaper than DAC &mdash; up to a point. That point varies by region and cost assumptions.</p>
+</div>
 <section class="hero-overview">
     <!-- Title + brief intro -->
     <div class="hero-overview-inner">
         <div class="hero-text-block" style="grid-column: 1 / -1; text-align: center; max-width: 860px; margin: 0 auto;">
-            <h2>Every region has an optimal clean energy target</h2>
-            <p>Grid decarbonization is cheaper than Direct Air Capture - up to a point. That point varies by region and depends on technology costs. The crossover range below shows where each region's marginal abatement cost exceeds projected DAC costs across 5,832 cost scenarios. Within that range, certain resource investments pay off under <em>any</em> plausible cost future.</p>
+            <p>The crossover range below shows where each region's marginal abatement cost exceeds projected DAC costs across 5,832 cost scenarios. Within that range, certain resource investments pay off under <em>any</em> plausible cost future.</p>
         </div>
     </div>
 
@@ -193,13 +106,12 @@ html, body {
 <!-- ================================================================== -->
 <!-- ISO DEEP-DIVE: Selector + regional chart + no-regrets panel        -->
 <!-- ================================================================== -->
-<div class="gradient-transition"></div>
-<section class="deepdive-section section-light panel-navy">
-    <div class="deepdive-header">
-        <h2>Regional Deep Dive</h2>
-        <p>Select a region to explore its MAC crossover analysis and the clean energy investments that pay off under every cost scenario.</p>
-    </div>
-
+<div class="section-header fade-in">
+    <div class="section-number">2</div>
+    <h2>Regional Deep Dive</h2>
+    <p>Select a region to explore its MAC crossover analysis and no-regrets investments.</p>
+</div>
+<section class="deepdive-section section-light">
     <!-- ISO Selector Tabs -->
     <div class="iso-selector" id="isoSelector">
         <button class="iso-tab active" data-iso="ERCOT" onclick="switchISO('ERCOT')">
@@ -286,10 +198,14 @@ html, body {
 <!-- ================================================================== -->
 <!-- RESOURCE INVESTMENT DEEP DIVE - Density Strip Plots                  -->
 <!-- ================================================================== -->
-<section class="content-section density-deep-dive-section panel-navy" id="densityDeepDive">
+<div class="section-header fade-in">
+    <div class="section-number">3</div>
+    <h2>Resource Investment Deep Dive</h2>
+    <p>Distribution of new-build capacity across cost scenarios in the optimal target range.</p>
+</div>
+<section class="content-section density-deep-dive-section" id="densityDeepDive">
     <div class="density-header">
-        <h2 class="section-title">Resource Investment Deep Dive</h2>
-        <p class="section-subtitle" id="densitySubtitle">Distribution of new-build capacity across cost scenarios in the optimal target range</p>
+        <p class="section-subtitle" id="densitySubtitle"></p>
     </div>
     <div class="density-reading-guide">
         <div class="nr-reading-guide-title">How to Read This Chart</div>
@@ -306,10 +222,13 @@ html, body {
 <!-- ================================================================== -->
 <!-- METHODOLOGY & SOURCES                                               -->
 <!-- ================================================================== -->
-<div class="gradient-transition"></div>
-<section class="methodology-section section-dark">
-    <div class="methodology-inner section-dark-inner">
-        <h2>Methodology</h2>
+<div class="section-header fade-in">
+    <div class="section-number">4</div>
+    <h2>Methodology</h2>
+    <p>How we compute marginal abatement costs, sensitivity bands, and no-regrets investments.</p>
+</div>
+<section class="methodology-section content-section">
+    <div class="methodology-inner">
 
         <h3>Marginal Abatement Cost (MAC) Calculation</h3>
         <p>The MAC curve answers: <em>how much does each additional ton of CO&#8322; abatement cost via clean energy procurement?</em> We compute it from the cumulative cost and CO&#8322; abatement data produced by the hourly matching optimizer across 21 decarbonization thresholds (10% to &ge;99.99%).</p>
@@ -363,9 +282,9 @@ html, body {
         <h3>Data Sources</h3>
         <p>MAC curves derived from the 8,760 Problem hourly matching optimizer using EIA hourly generation profiles, eGRID emission rates, and NREL ATB 2024 cost projections. DAC cost trajectories from DOE Liftoff (2023), Sievert et al. (Joule 2024), and IEA (2022/2024). Demand growth rates from ISO-specific forecasts (EIA AEO 2025, FERC data).</p>
 
-        <details style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.15);border-radius:10px;padding:16px 20px;margin-top:24px;">
-            <summary style="font-family:var(--font-heading);font-size:0.9rem;font-weight:600;color:#E2E8F0;cursor:pointer;min-height:44px;display:flex;align-items:center;">Full Sources &amp; References</summary><!-- contrast-fix: was rgba(255,255,255,0.9), now #E2E8F0, ratio 12.3:1 on bg #0F172A -->
-            <ol style="font-size:0.8rem;color:#CBD5E1;line-height:1.8;padding-left:20px;margin-top:12px;"><!-- contrast-fix: was rgba(255,255,255,0.88), now #CBD5E1, ratio 10.2:1 on bg #0F172A -->
+        <details style="background:var(--bg-page);border:1px solid var(--border-light);border-radius:10px;padding:16px 20px;margin-top:24px;">
+            <summary style="font-family:var(--font-heading);font-size:0.9rem;font-weight:600;color:var(--text-primary, #1E293B);cursor:pointer;min-height:44px;display:flex;align-items:center;">Full Sources &amp; References</summary>
+            <ol style="font-size:0.8rem;color:var(--text-secondary, #475569);line-height:1.8;padding-left:20px;margin-top:12px;">
                 <li>EPA eGRID 2022 &mdash; regional emission rates and CO&#8322; intensity by balancing authority.</li>
                 <li>EPA Social Cost of Carbon &mdash; Technical Support Document (2024), central estimate $190/metric ton (3% discount rate).</li>
                 <li>Rennert, K. et al. (2022). &ldquo;Comprehensive evidence implies a higher social cost of CO&#8322;.&rdquo; <em>Nature</em>, 610, 687&ndash;692. $185/metric ton.</li>

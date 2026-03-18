@@ -34,7 +34,7 @@ body { background: var(--bg-page-white); }
 
 /* Page-specific: highlight utility */
 .highlight { background: rgba(245,158,11,0.2); padding: 2px 6px; border-radius: 4px; font-weight: 600; color: #92400E; } /* contrast-fix: was var(--solar)/#F59E0B (1.84:1 on amber bg), now #92400E (6.5:1) */
-.section-dark .highlight { background: rgba(245,158,11,0.25); color: #FCD34D; } /* contrast-fix: light amber text on dark amber bg for dark sections */
+/* .section-dark .highlight removed — no dark panels on this page */
 
 /* Page-specific: comparison table */
 .comparison-table-wrap { overflow-x: auto; margin: 24px 0; -webkit-overflow-scrolling: touch; }
@@ -46,12 +46,7 @@ body { background: var(--bg-page-white); }
 /* Page-specific: blockquote */
 .content-section blockquote { border-left: 3px solid rgba(239,68,68,0.5); margin: 24px 0; padding: 16px 20px; background: rgba(239,68,68,0.05); border-radius: 0 8px 8px 0; font-size: 0.9rem; color: var(--text-secondary); line-height: 1.7; }
 
-/* Dark panel overrides */
-.section-dark .mechanism-card { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.22); }
-.section-dark .mechanism-card h4 { color: #FCA5A5; }
-.section-dark .mechanism-card p { color: rgba(255,255,255,0.88); }
-.section-dark .mechanism-card .evidence { color: rgba(14,165,233,0.9); border-top-color: rgba(255,255,255,0.15); }
-.section-dark blockquote { color: rgba(255,255,255,0.88); border-left-color: rgba(56,189,248,0.5); background: rgba(255,255,255,0.10); }
+/* Dark panel overrides removed — all sections use light backgrounds */
 
 @media (max-width: 768px) {
     .mechanism-card { padding: 18px; }
@@ -425,7 +420,7 @@ body { background: var(--bg-page-white); }
     <p>Every grid has a finite stock of "cheap abatement" - the coal and inefficient gas units that offer high displacement per dollar. Consequential accounting concentrates capital on this stock until it's exhausted, then the economics collapse.</p>
 </div>
 
-<section class="chart-section section-light fade-in panel-navy">
+<section class="chart-section section-light fade-in">
     <div class="chart-panel">
         <div class="chart-title">Marginal Displacement Rate vs. Cumulative Clean Energy Penetration by ISO</div>
         <div class="iso-selector" id="saturationIsoSelector">
@@ -456,7 +451,7 @@ body { background: var(--bg-page-white); }
     <p>The most insidious failure mode: by directing all marginal clean energy capital to coal displacement, consequential accounting extends the economic life of natural gas infrastructure in gas-dependent grids by decades.</p>
 </div>
 
-<section class="content-section section-light fade-in panel-navy">
+<section class="content-section section-light fade-in">
     <p><strong>The mechanism is straightforward.</strong> Gas-dependent grids (NEISO, NYISO, CAISO) need firm clean power - nuclear, geothermal, CCS-CCGT, or long-duration storage - to displace their fossil fleet. These technologies require large, long-term demand signals (PPAs, capacity contracts) to get financed and built. Under consequential accounting, corporate buyers in these grids direct their clean energy capital elsewhere because coal displacement in SPP/MISO offers better $/tCO₂.</p>
 
     <p><strong>The result: gas plants in NEISO, NYISO, and CAISO face no competitive pressure from firm clean alternatives.</strong> Without demand signals for nuclear/CCS/LDES in these grids, no developer builds them. Without new firm clean capacity, the gas fleet runs indefinitely - not because gas is cheap, but because nothing is being built to replace it.</p>
@@ -613,9 +608,7 @@ body { background: var(--bg-page-white); }
     <p>Each failure mode reinforces the others. Marginal signal degradation makes displacement claims less credible. Saturation exhausts cheap abatement. Lock-in preserves fossil infrastructure. Geographic clustering starves the grids that need investment most. Together, they produce a collectively catastrophic outcome from individually rational decisions.</p>
 </div>
 
-<div class="gradient-transition"></div>
-<section class="section-dark fade-in">
-<div class="section-dark-inner">
+<section class="content-section fade-in">
     <p><strong>The game-theoretic structure is a textbook tragedy of the commons.</strong> Each buyer optimizing for their own cheapest $/tCO₂ is locally rational. But the shared resource - each grid's need for investment in firm clean power and long-duration storage - is neglected because every actor is incentivized to free-ride on cheaper abatement elsewhere.</p>
 
     <p><strong>Hourly attribution avoids this trap</strong> by construction. When procurement must match load hour-by-hour within a deliverability region, there is no mechanism for free-riding. A NEISO buyer must solve NEISO's winter gas problem. A CAISO buyer must cover the evening ramp. The constraint forces investment in the technologies each grid actually needs - not the cheapest global displacement.</p>
@@ -626,7 +619,7 @@ body { background: var(--bg-page-white); }
         <strong>Individual optimization vs. system outcome:</strong> Consequential accounting minimizes $/tCO₂ for each buyer. Hourly matching minimizes total emissions across the grid system. The GHG Protocol's choice between these frameworks isn't just accounting methodology - it's a choice between individual rationality and collective decarbonization.
     </blockquote>
 
-    <hr class="dark-divider">
+    <hr style="border:none;border-top:1px solid var(--border-light);margin:24px 0;">
 
     <div class="mechanism-grid">
         <div class="mechanism-card">
@@ -641,17 +634,15 @@ body { background: var(--bg-page-white); }
         </div>
     </div>
 
-    <hr class="dark-divider">
+    <hr style="border:none;border-top:1px solid var(--border-light);margin:24px 0;">
 
-    <div class="page-insight-box" style="background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.18);">
+    <div class="page-insight-box">
         <h3>The Bottom Line</h3>
         <p>Consequential accounting works as a niche analytical tool - measuring displacement impact alongside an hourly matching procurement strategy. It fails catastrophically as a <span class="highlight">primary procurement framework at scale</span>. The five failure modes documented here aren't edge cases; they're the predictable, mathematically inevitable consequences of optimizing for cheapest $/tCO₂ across unconstrained geographies.</p>
         <p><strong>The coal/oil transition tells the timeline story.</strong> Our model shows all coal-bearing ISOs hit the coal wall at approximately 70% clean energy penetration. SPP must exhaust 42 TWh of coal, MISO 125 TWh, PJM 139 TWh, and ERCOT 68 TWh. After those thresholds, every grid converges to the same efficient-gas baseline at ~860 lb/MWh - and the consequential "discount" vanishes entirely. NEISO, NYISO, and CAISO are already there today. <span class="highlight">Once coal is exhausted, consequential buyers face the same $/tCO&#8322; as hourly matching</span> - but having starved gas-dependent grids of firm clean investment during the critical window when those technologies needed demand signals to scale.</p>
         <p>The GHG Protocol's Scope 2 revision should recognize hourly attribution as the robust default - the framework that works at 1% participation and at 100%.</p>
     </div>
-</div>
 </section>
-<div class="gradient-transition"></div>
 
 <!-- ============ SOURCES ============ -->
 <section class="sources-section fade-in">
