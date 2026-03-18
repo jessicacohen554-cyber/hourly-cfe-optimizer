@@ -94,7 +94,7 @@ jobs:
           mkdir -p dashboard/js
 
       # ════════════════════════════════════════════════════════════════════
-      # Sequential: MAC Stats → Optimal Targets → Building Blocks → Resource Density
+      # Sequential: MAC Stats → Optimal Targets → Resource Density
       # ════════════════════════════════════════════════════════════════════
 
       - name: "1/3 — Compute MAC Statistics"
@@ -176,7 +176,7 @@ jobs:
           git add -f data/step4-analysis/ 2>/dev/null || true
           if ! git diff --cached --quiet; then
             echo "--- Staging step6 derived analytics data ---"
-            git commit -m "Step 6 derived analytics: building-blocks + resource-density — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "Step 6 derived analytics: resource-density — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             if push_with_retry "step6-data"; then PUSHED=true; else git reset HEAD~1; fi
           fi
 
