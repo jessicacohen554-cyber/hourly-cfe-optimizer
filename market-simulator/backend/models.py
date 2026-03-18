@@ -300,6 +300,9 @@ class YearResult(BaseModel):
     gas_built_gw: float = 0.0
     total_gas_gw: float = 0.0
     market_stop: bool = False
+    # Confidence zone for trajectory projection reliability
+    confidence: str = 'high'            # 'high', 'moderate', 'low'
+    confidence_label: str = 'Calibrated'
     resource_mix_twh: Dict[str, float] = Field(default_factory=dict)
     cumulative_gw: Dict[str, float] = Field(default_factory=dict)
     zones_deployed: List[str] = Field(default_factory=list)
@@ -369,6 +372,8 @@ class SimulationResponse(BaseModel):
     # Run tracking
     run_id: Optional[str] = None
     narrative: Optional[str] = None
+    # Confidence zone metadata for trajectory visualization
+    confidence_zones: Optional[List[dict]] = None
 
 
 class SweepJob(BaseModel):
