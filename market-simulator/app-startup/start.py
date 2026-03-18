@@ -35,16 +35,38 @@ def install_deps():
 
 
 def ensure_data():
-    data_file = ROOT / "data" / "demand_profiles_2025.json"
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.pathsep.join([str(ROOT), str(ROOT / "backend"), str(ROOT / "scripts")])
+
+    # Demand + generation profiles (also generates interchange profiles)
+    data_file = ROOT / "data" / "profiles" / "eia_demand_profiles.json"
     if not data_file.exists():
         print("Generating synthetic data profiles...")
-        env = os.environ.copy()
-        env["PYTHONPATH"] = os.pathsep.join([str(ROOT), str(ROOT / "backend"), str(ROOT / "scripts")])
         subprocess.run(
             [sys.executable, str(ROOT / "scripts" / "generate_synthetic_profiles.py")],
             env=env, capture_output=True,
         )
     print("✓ Data profiles ready")
+
+    # Plant heat rates (optional — enhances fleet-level dispatch)
+    heat_file = ROOT / "data" / "plant_heat_rates.json"
+    if not heat_file.exists():
+        print("Generating plant heat rates...")
+        subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "generate_plant_heat_rates.py")],
+            env=env, capture_output=True,
+        )
+    print("✓ Plant heat rates ready")
+
+    # Interchange profiles (inter-regional import/export flows)
+    interchange_file = ROOT / "data" / "profiles" / "eia_interchange_profiles.json"
+    if not interchange_file.exists():
+        print("Generating interchange profiles...")
+        subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "generate_synthetic_profiles.py")],
+            env=env, capture_output=True,
+        )
+    print("✓ Interchange profiles ready")
 
 
 def open_browser():
