@@ -91,6 +91,7 @@ from .models import (
     NuclearRevenue,
     ZoneDetail,
     YearResult,
+    IPMTrigger,
     FuelBinRow,
     HourlyProfile,
     SupplyStackEntry,
@@ -822,6 +823,10 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
             ccs_breakeven=yr.get("ccs_breakeven", {}),
             economic_retirements_mw=yr.get("economic_retirements_mw", {}),
             total_economic_retirement_mw=yr.get("total_economic_retirement_mw", 0),
+            ipm_triggers=[
+                IPMTrigger(**t) if isinstance(t, dict) else t
+                for t in yr.get("ipm_triggers", [])
+            ],
         ))
 
     # Build emissions_by_fuel_by_year aggregate for trajectory chart
