@@ -40,7 +40,12 @@ from market_simulation import (
     EGRID_2023_CLEAN_PCT,
     EGRID_2023_LMP,
 )
-from pipeline_config import ISOS, REGIONAL_DEMAND_TWH
+from pipeline_config import (
+    ISOS, REGIONAL_DEMAND_TWH,
+    BACKTEST_SCARCITY_BY_YEAR, BACKTEST_ERCOT_ALWAYS_ORDC,
+    BACKTEST_TOLERANCES, SCARCITY_MODE,
+)
+import pipeline_config
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # HISTORICAL DATA
@@ -137,16 +142,38 @@ def run_backtest(isos=None, with_ira=False, verbose=True):
         'interchange_data': interchange_data,
     }
 
+    # Track which model features are active per year for report
+    features_by_year = {}
+
     # Run year-by-year with actual fuel prices
     all_predicted = {iso: {} for iso in isos}
     all_actual = {iso: {} for iso in isos}
+
+    # Save original scarcity mode to restore after backtest
+    original_scarcity_mode = pipeline_config.SCARCITY_MODE
 
     for year in years:
         fuel_level = _fuel_level_for_year(year)
         fuel_prices = HISTORICAL_FUEL_PRICES[year]
 
+        # Determine scarcity mode for this year
+        year_scarcity_mode = BACKTEST_SCARCITY_BY_YEAR.get(year, 'demand_quantile')
+
+        # Set the global scarcity mode for this year's simulation
+        # (consumed by compute_lmp_at_threshold → compute_hourly_lmp_vectorized)
+        pipeline_config.SCARCITY_MODE = year_scarcity_mode
+
         if verbose:
-            print(f"\n--- Year {year} (gas=${fuel_prices['gas']:.2f}/MMBtu → {fuel_level}) ---")
+            print(f"\n--- Year {year} (gas=${fuel_prices['gas']:.2f}/MMBtu → {fuel_level}, "
+                  f"scarcity={year_scarcity_mode}) ---")
+
+        # Track active features for this year
+        features_by_year[year] = {
+            'scarcity_mode': year_scarcity_mode,
+            'tech_differentiated_queue': True,
+            'cannibalization_enabled': True,
+            'fuel_level': fuel_level,
+        }
 
         # Build conditions using actual historical fuel prices
         conditions = {
@@ -163,20 +190,49 @@ def run_backtest(isos=None, with_ira=False, verbose=True):
             'dr_level': 'Off',  # DR not widely deployed pre-2024
             'custom_fuel_prices': fuel_prices,
             'interchange_enabled': True,
+            # Explicitly enable current model features
+            'tech_differentiated_queue': True,
         }
 
         # Run single-year simulation for each ISO
         sim_years = [year]
 
+        # ERCOT special case: always use ORDC (energy-only market with active ORDC since 2014)
+        # If base mode is demand_quantile and ERCOT is in the ISO list, run ERCOT separately
+        ercot_separate = (BACKTEST_ERCOT_ALWAYS_ORDC
+                          and year_scarcity_mode != 'ordc'
+                          and 'ERCOT' in isos)
+        non_ercot_isos = [i for i in isos if i != 'ERCOT'] if ercot_separate else isos
+
         results = run_market_simulation(
             scenario_id=f"BACKTEST_{year}",
             conditions=conditions,
-            isos=isos,
+            isos=non_ercot_isos,
             nuclear_retirement_threshold=30.0,
             sim_years=sim_years,
             _preloaded=preloaded,
             _quiet=True,
         )
+
+        if ercot_separate:
+            # Run ERCOT with ORDC
+            pipeline_config.SCARCITY_MODE = 'ordc'
+            ercot_results = run_market_simulation(
+                scenario_id=f"BACKTEST_{year}_ERCOT_ORDC",
+                conditions=conditions,
+                isos=['ERCOT'],
+                nuclear_retirement_threshold=30.0,
+                sim_years=sim_years,
+                _preloaded=preloaded,
+                _quiet=True,
+            )
+            results.update(ercot_results)
+            # Restore year's base scarcity mode
+            pipeline_config.SCARCITY_MODE = year_scarcity_mode
+            # Track ERCOT's actual scarcity mode
+            features_by_year[year]['ercot_scarcity_override'] = 'ordc'
+            if verbose:
+                print(f"  ERCOT: ran with ORDC override (energy-only market)")
 
         # Collect predictions
         for iso in isos:
@@ -206,6 +262,9 @@ def run_backtest(isos=None, with_ira=False, verbose=True):
                 print(f"  {iso}: clean% pred={pred['clean_pct']:.1f} act={act['clean_pct']:.1f} | "
                       f"LMP pred=${pred['avg_lmp']:.1f} act=${act['avg_lmp']:.1f}")
 
+    # Restore original scarcity mode after all years complete
+    pipeline_config.SCARCITY_MODE = original_scarcity_mode
+
     elapsed = time.time() - t0
     if verbose:
         print(f"\nBacktest completed in {elapsed:.1f}s")
@@ -217,6 +276,7 @@ def run_backtest(isos=None, with_ira=False, verbose=True):
         'isos': isos,
         'with_ira': with_ira,
         'elapsed_seconds': elapsed,
+        'features_by_year': features_by_year,
     }
 
 
@@ -228,15 +288,19 @@ def compute_validation_metrics(backtest_results):
     """Compute comprehensive validation metrics from backtest results.
 
     Returns dict with per-ISO and aggregate validation metrics.
+    Tolerance bands are scarcity-mode-aware: tighter for ORDC years (2023-2024)
+    where the physics model is structurally matched to actual pricing.
     """
     predicted = backtest_results['predicted']
     actual = backtest_results['actual']
     years = backtest_results['years']
     isos = backtest_results['isos']
+    features_by_year = backtest_results.get('features_by_year', {})
 
     metrics = {
         'per_iso': {},
         'aggregate': {},
+        'features_by_year': {str(y): f for y, f in features_by_year.items()},
     }
 
     all_direction_correct = []
@@ -277,6 +341,7 @@ def compute_validation_metrics(backtest_results):
             # Magnitude accuracy: % error and absolute error per year
             pct_errors = []
             abs_errors = []
+            tolerance_results = []
             for year in years:
                 pred_val = predicted[iso].get(year, {}).get(metric, 0)
                 act_val = actual[iso].get(year, {}).get(metric, 0)
@@ -288,10 +353,26 @@ def compute_validation_metrics(backtest_results):
                 abs_errors.append(abs_err)
                 all_abs_errors[metric].append(abs(abs_err))
 
+                # Check against year-specific tolerance bands
+                yr_features = features_by_year.get(year, {})
+                yr_scarcity = yr_features.get('scarcity_mode', 'demand_quantile')
+                tol = BACKTEST_TOLERANCES.get(yr_scarcity, BACKTEST_TOLERANCES['demand_quantile'])
+                if metric == 'avg_lmp':
+                    within_tol = abs(abs_err) <= tol['lmp_abs_error']
+                elif metric == 'clean_pct':
+                    within_tol = abs(abs_err) <= tol['clean_pct_error']
+                else:
+                    within_tol = True  # No specific tolerance for emissions
+                tolerance_results.append({
+                    'year': year, 'within_tolerance': within_tol,
+                    'scarcity_mode': yr_scarcity,
+                })
+
             iso_metrics['magnitude_accuracy'][metric] = {
                 'mean_pct_error': round(np.mean(pct_errors), 1) if pct_errors else 0,
                 'mean_abs_error': round(np.mean(np.abs(abs_errors)), 2),
                 'max_abs_error': round(max(np.abs(abs_errors)), 2) if abs_errors else 0,
+                'tolerance_checks': tolerance_results,
             }
 
             # Trend accuracy: 2020→2024 slope comparison
@@ -379,6 +460,24 @@ def generate_report(backtest_results, metrics):
     lines.append(f"**IRA effects**: {'Included' if backtest_results.get('with_ira') else 'Not included'}")
     lines.append("")
 
+    # Active model features
+    features_by_year = backtest_results.get('features_by_year', {})
+    if features_by_year:
+        lines.append("## Active Model Features\n")
+        lines.append("| Year | Scarcity Mode | Tech Queue | VRE Cannibalization | Fuel Level |")
+        lines.append("|------|--------------|------------|---------------------|------------|")
+        for yr in sorted(features_by_year.keys()):
+            feat = features_by_year[yr]
+            lines.append(f"| {yr} | {feat.get('scarcity_mode', 'N/A')} | "
+                        f"{'Yes' if feat.get('tech_differentiated_queue') else 'No'} | "
+                        f"{'Yes' if feat.get('cannibalization_enabled') else 'No'} | "
+                        f"{feat.get('fuel_level', 'N/A')} |")
+        lines.append("")
+        lines.append("**Scarcity mode rationale**: demand_quantile for 2020-2022 (pre-ORDC era in most markets), "
+                     "ORDC for 2023-2024 (ERCOT active ORDC, other ISOs have capacity-scarcity mechanisms). "
+                     "Tech-differentiated queue caps and VRE cannibalization active for all years.")
+        lines.append("")
+
     # Executive summary
     lines.append("## Executive Summary\n")
     lines.append(f"- **Overall direction accuracy**: {agg['overall_direction_accuracy']:.0f}% of year-over-year changes predicted correctly")
@@ -460,11 +559,20 @@ def generate_report(backtest_results, metrics):
     lines.append("1. Initialize model at 2020 grid conditions (EIA-860/eGRID actual clean %, demand TWh)")
     lines.append("2. Run trajectory mode year-by-year (2020, 2021, 2022, 2023, 2024) with actual historical fuel prices")
     lines.append("3. Map each year's Henry Hub gas price to the closest model fuel level (Low/Medium/High)")
-    lines.append("4. Compare predicted vs observed outcomes across 7 ISOs")
+    lines.append("4. Year-dependent scarcity pricing: demand-quantile for 2020-2022, ORDC for 2023-2024")
+    lines.append("5. Tech-differentiated queue caps and VRE cannibalization active for all years")
+    lines.append("6. Compare predicted vs observed outcomes across 7 ISOs")
+    lines.append("")
+    lines.append("### Model Features Active")
+    lines.append("- **Scarcity pricing**: ORDC (Operating Reserve Demand Curve) for 2023-2024; demand-quantile for 2020-2022")
+    lines.append("- **Tech-differentiated queue caps**: Per-technology deployment limits (solar, wind, nuclear, etc.) vs uniform cap")
+    lines.append("- **VRE cannibalization**: Per-resource temporal energy revenue accounting for price depression at high VRE penetration")
+    lines.append("- **Tolerance bands**: ±$5/MWh LMP and ±3pp clean% for ORDC years; ±$8/MWh and ±4pp for demand-quantile years")
     lines.append("")
     lines.append("### Validation Metrics")
     lines.append("- **Direction accuracy**: % of year-over-year changes where model predicts correct sign (increasing/decreasing)")
     lines.append("- **Magnitude accuracy**: Mean absolute % error and absolute error per metric per year")
+    lines.append("- **Tolerance checks**: Year-specific pass/fail against scarcity-mode-aware tolerance bands")
     lines.append("- **Rank ordering**: Kendall-tau-style concordant pairs for ISO ranking by clean energy %")
     lines.append("- **Trend accuracy**: 2020→2024 annualized slope within ±25% of actual")
     lines.append("")
@@ -474,6 +582,7 @@ def generate_report(backtest_results, metrics):
     lines.append("- Winter Storm Uri (Feb 2021) extreme pricing not captured by merit-order dispatch")
     lines.append("- IRA passage (Aug 2022) mid-year policy shift — effects lag into 2023-2024")
     lines.append("- Fuel prices mapped to L/M/H levels; actual regional basis differentials not captured")
+    lines.append("- ORDC applied uniformly to all ISOs in 2023-2024; in reality, only ERCOT has formal ORDC. Other ISOs approximate via capacity market scarcity signals.")
     lines.append("")
 
     # Data sources
@@ -515,6 +624,9 @@ def save_backtest_results(backtest_results, metrics):
             'isos': backtest_results['isos'],
             'with_ira': backtest_results.get('with_ira', False),
             'elapsed_seconds': backtest_results['elapsed_seconds'],
+            'features_by_year': {
+                str(y): f for y, f in backtest_results.get('features_by_year', {}).items()
+            },
         },
         'metrics': metrics,
     }
