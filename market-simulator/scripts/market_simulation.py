@@ -1184,10 +1184,16 @@ def get_resource_lcoe(res, iso, lcoe_level, cumulative_gw, learning_speed, year,
             if key in custom_lcoes and custom_lcoes[key] is not None:
                 return custom_lcoes[key]
 
+    # Learning curves toggle — when Off, use base LCOE at selected level (no Wright's Law)
+    learning_enabled = conditions.get('learning_curves_enabled', True) if conditions else True
+
     tech = RESOURCE_TO_TECH.get(res, res)
 
     if res == 'clean_firm':
         base_lcoe = NUCLEAR_NEWBUILD_LCOE.get(lcoe_level, {}).get(iso, 100)
+        ptc_new_nuc = conditions.get('ptc_nuclear_new', PTC_45Y_NEW_NUCLEAR) if conditions else PTC_45Y_NEW_NUCLEAR
+        if not learning_enabled:
+            return max(0, base_lcoe - ptc_new_nuc)
         foak = FOAK_NUCLEAR_NEWBUILD.get(iso, 175)
         noak = NUCLEAR_NEWBUILD_LCOE.get('Low', {}).get(iso, 68)
         lr = WRIGHT_LEARNING_RATE.get('nuclear', {}).get(learning_speed, 0.12)
@@ -1196,7 +1202,6 @@ def get_resource_lcoe(res, iso, lcoe_level, cumulative_gw, learning_speed, year,
                                               learning_speed, year)
         cost = wright_cost(foak, noak, eff_gw, ref_gw, lr)
         # Phase 2A: Parameterized 45Y PTC for new nuclear
-        ptc_new_nuc = conditions.get('ptc_nuclear_new', PTC_45Y_NEW_NUCLEAR) if conditions else PTC_45Y_NEW_NUCLEAR
         cost = max(noak, cost - ptc_new_nuc)
         return cost
 
@@ -1221,6 +1226,8 @@ def get_resource_lcoe(res, iso, lcoe_level, cumulative_gw, learning_speed, year,
             base_lcoe = ccs_table.get(lcoe_level, {}).get(iso, 120)
             noak = ccs_table.get('Low', {}).get(iso, 80)
 
+        if not learning_enabled:
+            return base_lcoe
         lr = WRIGHT_LEARNING_RATE.get('ccs', {}).get(learning_speed, 0.10)
         ref_gw = WRIGHT_CUMULATIVE_GW_2025.get('ccs', 0.3)
         eff_gw = get_effective_cumulative_gw('ccs', cumulative_gw.get('ccs', 0),
@@ -1229,6 +1236,8 @@ def get_resource_lcoe(res, iso, lcoe_level, cumulative_gw, learning_speed, year,
 
     elif res == 'geothermal':
         base_lcoe = GEOTHERMAL_LCOE.get(lcoe_level, 88)
+        if not learning_enabled:
+            return base_lcoe
         foak = FOAK_GEOTHERMAL if isinstance(FOAK_GEOTHERMAL, (int, float)) else 150
         noak = GEOTHERMAL_LCOE.get('Low', 63)
         lr = WRIGHT_LEARNING_RATE.get('geothermal', {}).get(learning_speed, 0.15)
@@ -1297,6 +1306,8 @@ def compute_zone_cost(iso, delta_resources, lcoe_level, cumulative_gw,
     total_twh = 0
     weighted_cost = 0
 
+    tx_overrides = (conditions or {}).get('tx_overrides') or {}
+
     for res, delta_twh in delta_resources.items():
         if delta_twh <= 0:
             continue
@@ -1304,7 +1315,9 @@ def compute_zone_cost(iso, delta_resources, lcoe_level, cumulative_gw,
                                   learning_speed, year, conditions=conditions)
 
         if res in ('solar', 'wind', 'clean_firm', 'offshore_wind'):
-            tx = get_tx(res if res != 'clean_firm' else 'clean_firm', tx_level, iso)
+            res_key = res if res != 'clean_firm' else 'nuclear'
+            tx_override = tx_overrides.get(res_key)
+            tx = tx_override if tx_override is not None else get_tx(res if res != 'clean_firm' else 'clean_firm', tx_level, iso)
             lcoe += tx
 
         if ppa_level is not None:
@@ -1358,8 +1371,8 @@ def compute_ccs_retrofit_breakeven(iso, fuel_level='Medium', conditions=None):
     else:
         breakeven_ccs = float('inf')
 
-    # New efficient gas (HR 6.2) vs old gas (HR 8.0+)
-    new_hr = 6.2
+    # New efficient gas vs old gas (HR 8.0+)
+    new_hr = conditions.get('custom_heat_rates', {}).get('new_gas_ccgt', 6.2) if conditions else 6.2
     old_hr = 8.5
     new_cost = new_hr * fuel_price + 3.0  # Lower VOM for new
     old_cost = old_hr * fuel_price + 5.0  # Higher VOM for old
@@ -1443,6 +1456,7 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
     tx_level = conditions.get('tx_level', 'Medium')
     learning_speed = conditions.get('learning_speed', 'Medium')
     ppa_level = conditions.get('ppa_level', 'Medium')
+    tx_overrides = conditions.get('tx_overrides') or {}
 
     # Estimate revenue available for clean resources
     # Revenue = energy price (avg LMP serves as proxy) + capacity + REC
@@ -1461,9 +1475,14 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
         lcoe = get_resource_lcoe(res, iso, lcoe_level, cumulative_gw,
                                   learning_speed, year, conditions=conditions)
 
-        # Add transmission cost
+        # Add transmission cost (per-resource override takes priority over master L/M/H)
         if res in ('solar', 'wind', 'clean_firm', 'offshore_wind', 'ccs_ccgt', 'geothermal'):
-            tx = get_tx(res if res != 'clean_firm' else 'clean_firm', tx_level, iso)
+            res_key = res if res != 'clean_firm' else 'nuclear'
+            tx_override = tx_overrides.get(res_key)
+            if tx_override is not None:
+                tx = tx_override
+            else:
+                tx = get_tx(res if res != 'clean_firm' else 'clean_firm', tx_level, iso)
             lcoe += tx
 
         # Apply PPA discount
