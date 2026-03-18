@@ -529,13 +529,27 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
     # --- DEMAND RESPONSE POST-PROCESSING ---
     # Applied after LMP is computed (whether zonal or copper-plate) so DR
     # responds to the fully-formed price signal regardless of LMP method.
-    from pipeline_config import DEMAND_RESPONSE, DR_LEVELS
+    from pipeline_config import DEMAND_RESPONSE, DR_LEVELS, SCARCITY_MODE, ORDC_PARAMS
     dr_curtailed_mw = np.zeros(H, dtype=np.float64)
+    dr_activation_mode = 'off'
     if dr_level != 'Off' and iso in DEMAND_RESPONSE:
         dr_params = DEMAND_RESPONSE[iso]
         dr_lvl = DR_LEVELS.get(dr_level, DR_LEVELS['Off'])
         effective_participation = dr_params['participation'] * dr_lvl['participation_mult']
-        effective_trigger = dr_params['trigger_price'] * dr_lvl['trigger_mult']
+        fixed_trigger = dr_params['trigger_price'] * dr_lvl['trigger_mult']
+
+        # Dynamic DR-ORDC trigger: when ORDC active and dr_ordc_link enabled,
+        # trigger = max(fixed_trigger, VOLL * 0.05) — DR activates when ORDC
+        # adder exceeds 5% of VOLL (genuine reserve stress).
+        use_ordc_link = dr_params.get('dr_ordc_link', True) and SCARCITY_MODE == 'ordc'
+        if use_ordc_link and iso in ORDC_PARAMS:
+            ordc_dynamic_trigger = ORDC_PARAMS[iso]['voll'] * 0.05
+            effective_trigger = max(fixed_trigger, ordc_dynamic_trigger)
+            dr_activation_mode = 'ordc_dynamic'
+        else:
+            effective_trigger = fixed_trigger
+            dr_activation_mode = 'fixed'
+
         max_dr_mw = dr_params['max_dr_gw'] * 1000 * effective_participation
 
         if max_dr_mw > 0:
@@ -549,17 +563,15 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
                 dr_curtailed_mw[dr_mask] = dr_potential * price_ratio
 
                 # Dampen LMP for DR-active hours: reduced demand shifts marginal unit
-                # Use price-reduction proportional to demand curtailed
-                for h_idx in np.where(dr_mask)[0]:
-                    if demand_mw_profile[h_idx] > 0 and dr_curtailed_mw[h_idx] > 0:
-                        # Approximate LMP reduction: proportional to demand reduction
-                        # weighted by supply elasticity (~2-4× leverage)
-                        demand_reduction_pct = dr_curtailed_mw[h_idx] / demand_mw_profile[h_idx]
-                        # Supply elasticity: 5% demand reduction → ~15% price reduction
-                        price_reduction = min(demand_reduction_pct * 3.0, 0.5)
-                        hourly_lmp[h_idx] *= (1.0 - price_reduction)
-                        # Floor at trigger price
-                        hourly_lmp[h_idx] = max(hourly_lmp[h_idx], effective_trigger * 0.95)
+                # Vectorized: supply elasticity (~3× leverage), capped at 50% reduction
+                dr_active_mask = dr_mask & (demand_mw_profile > 0) & (dr_curtailed_mw > 0)
+                if dr_active_mask.any():
+                    demand_reduction_pct = dr_curtailed_mw[dr_active_mask] / demand_mw_profile[dr_active_mask]
+                    price_reduction = np.minimum(demand_reduction_pct * 3.0, 0.5)
+                    hourly_lmp[dr_active_mask] *= (1.0 - price_reduction)
+                    # Floor at 95% of trigger price
+                    hourly_lmp[dr_active_mask] = np.maximum(
+                        hourly_lmp[dr_active_mask], effective_trigger * 0.95)
 
     avg_lmp = float(np.mean(hourly_lmp))
     p90_lmp = float(np.percentile(hourly_lmp, 90))
@@ -579,6 +591,8 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
             'dr_peak_gw': round(float(dr_curtailed_mw.max()) / 1e3, 2),
             'dr_hours': int(dr_active.sum()),
             'dr_avg_price': round(float(hourly_lmp[dr_active].mean()), 1) if dr_active.any() else 0,
+            'dr_activation_mode': dr_activation_mode,
+            'dr_effective_trigger': round(float(effective_trigger), 1),
         }
 
     # --- ORDC SCARCITY HOURS FRACTION ---
