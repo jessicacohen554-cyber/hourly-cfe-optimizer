@@ -531,6 +531,107 @@ p {
     background: var(--wind-bg);
 }
 
+/* Glass chart panel (frosted glass container for data viz — matches home.html) */
+.glass-chart-panel {
+    max-width: 960px;
+    margin: var(--space-lg) auto;
+    padding: 24px;
+    background: rgba(255,255,255,0.75);
+    border: 1px solid rgba(255,255,255,0.6);
+    border-radius: 20px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 8px 32px -8px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
+}
+.glass-chart-panel canvas {
+    background: transparent;
+}
+
+/* Accent-bordered card variants (semi-transparent fill + saturated outline) */
+.card-accent {
+    border-radius: var(--radius-xl);
+    padding: var(--pad-card);
+    border-width: 3px;
+    border-style: solid;
+    border-color: var(--border-light);
+    background: rgba(255,255,255,0.85);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.card-accent:hover {
+    transform: translateY(-2px);
+}
+.card-accent-indigo {
+    border-color: #6366F1;
+    background: rgba(99,102,241,0.04);
+    box-shadow: 0 4px 32px -8px rgba(99,102,241,0.12);
+}
+.card-accent-cyan {
+    border-color: #0EA5E9;
+    background: rgba(14,165,233,0.04);
+    box-shadow: 0 4px 32px -8px rgba(14,165,233,0.12);
+}
+.card-accent-green {
+    border-color: #22C55E;
+    background: rgba(34,197,94,0.04);
+    box-shadow: 0 4px 32px -8px rgba(34,197,94,0.12);
+}
+.card-accent-red {
+    border-color: #EF4444;
+    background: rgba(239,68,68,0.04);
+    box-shadow: 0 4px 32px -8px rgba(239,68,68,0.12);
+}
+
+/* Glass-backed insight block (matches home.html insight/annotation pattern) */
+.insight-glass {
+    max-width: 940px;
+    margin: var(--space-xl) auto 0;
+    padding: 24px 28px;
+    background: rgba(255,255,255,0.85);
+    border-left: 3px solid var(--hydro);
+    border-radius: 8px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    line-height: 1.7;
+}
+.insight-glass strong {
+    color: var(--navy);
+    font-weight: 700;
+}
+.insight-glass-indigo { border-left-color: #6366F1; }
+.insight-glass-cyan   { border-left-color: #0EA5E9; }
+.insight-glass-red    { border-left-color: #EF4444; }
+.insight-glass-green  { border-left-color: #22C55E; }
+
+/* Dark emphasis callout (use sparingly — 1-2 per page max, like home.html "3.4x" panel) */
+.emphasis-callout {
+    background: rgba(11,17,32,0.92);
+    border-radius: 16px;
+    max-width: 560px;
+    text-align: center;
+    padding: 44px;
+    margin: var(--space-xl) auto 0;
+    box-shadow: 0 0 40px -10px rgba(239,68,68,0.15);
+}
+.emphasis-callout .emphasis-big {
+    font-family: var(--font-data);
+    font-size: clamp(48px, 6vw, 64px);
+    font-weight: 500;
+    color: #EF4444;
+    line-height: 1.1;
+    margin-bottom: 8px;
+}
+.emphasis-callout .emphasis-desc {
+    font-size: 18px;
+    color: #fff;
+    margin-bottom: 4px;
+}
+.emphasis-callout .emphasis-sub {
+    font-size: 15px;
+    color: rgba(255,255,255,0.7);
+}
+
 /* ========== CHART CONTAINERS ========== */
 .chart-container {
     position: relative;
@@ -1458,6 +1559,26 @@ p {
     /* Chart panels */
     .chart-panel {
         padding: 18px 14px;
+    }
+    .glass-chart-panel {
+        padding: 16px;
+        border-radius: 14px;
+        margin-left: var(--pad-page);
+        margin-right: var(--pad-page);
+    }
+    .card-accent {
+        border-width: 2px;
+        padding: 18px 14px;
+    }
+    .insight-glass {
+        padding: 18px 16px;
+        margin-left: var(--pad-page);
+        margin-right: var(--pad-page);
+    }
+    .emphasis-callout {
+        padding: 28px 20px;
+        margin-left: var(--pad-page);
+        margin-right: var(--pad-page);
     }
     .chart-container {
         min-height: 280px;

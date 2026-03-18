@@ -40,27 +40,19 @@
             gap: var(--space-lg);
             margin: var(--space-xl) 0;
         }
-        .strategy-pair .card {
-            border-top: 3px solid var(--navy);
-        }
-        .strategy-pair .card.strat-1b {
-            border-top-color: #6366F1;
-        }
-        .strategy-pair .card.strat-2c {
-            border-top-color: #0EA5E9;
-        }
         .strat-tag {
             display: inline-block;
             font-size: 0.72rem;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.8px;
-            padding: 4px 12px;
+            padding: 6px 14px;
             border-radius: var(--radius-pill);
             margin-bottom: var(--space-sm);
+            border: 1.5px solid transparent;
         }
-        .strat-tag-purple { background: rgba(99,102,241,0.12); color: #4F46E5; } /* contrast-fix: was #6366F1 (3.84:1), now 5.68:1 */
-        .strat-tag-blue { background: rgba(14,165,233,0.12); color: #0369A1; } /* contrast-fix: was #0EA5E9 (2.46:1), now 5.12:1 */
+        .strat-tag-purple { background: rgba(99,102,241,0.12); color: #4F46E5; border-color: rgba(99,102,241,0.25); }
+        .strat-tag-blue { background: rgba(14,165,233,0.12); color: #0369A1; border-color: rgba(14,165,233,0.25); }
         .crossover-section-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -85,7 +77,7 @@
 
     <!-- Synthesis Hero Callout -->
     <section class="content-section fade-in" id="synthesis-hero" style="padding-top: var(--space-lg)">
-        <div class="card fade-in" style="padding: var(--space-2xl); border-left: 5px solid #22C55E; background: linear-gradient(135deg, rgba(34,197,94,0.04), rgba(14,165,233,0.04));">
+        <div class="card-accent card-accent-green fade-in" style="padding: var(--space-2xl)">
             <h2 style="font-family: var(--font-heading); font-size: 1.4rem; color: var(--navy); margin: 0 0 var(--space-md)">Building the Grid We Need by 2040</h2>
             <p style="font-size: 1.05rem; color: var(--text-secondary); line-height: 1.75; margin: 0 0 var(--space-md)">
                 Deep grid decarbonization requires corporate procurement signals that are coherent with grid-level planning &mdash; not a collection of individual optimizations that might conflict. The old approach of picking off the cheapest abatement opportunities anywhere on the map was rational in the era of coal displacement. But the remaining challenges are temporal (nights, winter, multi-day weather events) and spatial (each grid needs its own portfolio of firm clean + storage).
@@ -136,12 +128,12 @@
     </div>
     <section class="content-section fade-in" id="strategies-intro">
         <div class="strategy-pair">
-            <div class="card strat-1b fade-in" style="padding: var(--space-xl)">
+            <div class="card-accent card-accent-indigo fade-in" style="padding: var(--space-xl)">
                 <span class="strat-tag strat-tag-purple">Strategy 1B</span>
                 <h3 style="font-family: var(--font-heading); font-size: 1.15rem; color: #4F46E5; margin: 0 0 var(--space-sm)">1B &mdash; Consequential</h3>
                 <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.7; margin: 0">Cross-regional new-build deployment via queue-ordered procurement using a fossil-average emission baseline. Deploys mostly mature VRE (solar, onshore wind) across any ISO. Cheapest per-MWh, but annual accounting misses hourly mismatches between clean generation and actual load. Minimal firm clean or storage deployment &mdash; relying instead on existing grid infrastructure for reliability.</p>
             </div>
-            <div class="card strat-2c fade-in" style="padding: var(--space-xl)">
+            <div class="card-accent card-accent-cyan fade-in" style="padding: var(--space-xl)">
                 <span class="strat-tag strat-tag-blue">Strategy 2C</span>
                 <h3 style="font-family: var(--font-heading); font-size: 1.15rem; color: #0369A1; margin: 0 0 var(--space-sm)">2C &mdash; Hourly Matching with SSS</h3>
                 <p style="font-size: 0.92rem; color: var(--text-secondary); line-height: 1.7; margin: 0">Same-ISO hourly matching blending existing clean resources (Surplus Supply Stack, merchant EAC, nuclear uprate) with new-build. Clean generation must match load every hour in the buyer's grid &mdash; forcing deployment of firm clean and storage. Proposed framework for the GHG Protocol Scope 2 revision.</p>
@@ -209,7 +201,7 @@
         <p>As the CFE target rises, the two strategies diverge dramatically</p>
     </div>
     <section class="content-section fade-in" id="crossover">
-        <div class="card fade-in" style="padding: var(--space-xl)">
+        <div class="glass-chart-panel fade-in" style="max-width: var(--max-content)">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-md); flex-wrap: wrap; gap: var(--space-sm)">
                 <h3 style="font-family: var(--font-heading); font-size: 0.95rem; color: var(--navy); margin: 0">Strategy Crossover</h3>
                 <div class="toggle-btn-group" id="crossoverParticipationToggle" style="font-size: 0.75rem">
@@ -274,7 +266,7 @@
         </p>
 
         <!-- Gas Ribbon Chart -->
-        <div class="card fade-in" style="padding: var(--space-xl); margin-bottom: var(--space-xl)">
+        <div class="glass-chart-panel fade-in" style="max-width: var(--max-content); margin-bottom: var(--space-xl)">
             <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">Gas Capacity on Grid by Strategy</h3>
             <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom: var(--space-md)">Ribbon shows range across ambition levels (90%&ndash;99.99% CFE). Solid line = median (95%).</p>
             <div class="ribbon-chart-wrap"><canvas id="gasRibbonChart"></canvas></div>
@@ -285,11 +277,11 @@
 
         <!-- Cost Crossover Charts -->
         <div class="crossover-section-grid">
-            <div class="card fade-in" style="padding: var(--space-xl)">
+            <div class="glass-chart-panel fade-in" style="margin: 0">
                 <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">System Cost vs. Participation (95% CFE)</h3>
                 <div class="chart-container-lg"><canvas id="systemCostCrossoverChart"></canvas></div>
             </div>
-            <div class="card fade-in" style="padding: var(--space-xl)">
+            <div class="glass-chart-panel fade-in" style="margin: 0">
                 <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">Cost Breakdown: Clean + Gas (95% CFE)</h3>
                 <div class="chart-container-lg"><canvas id="costBreakdownChart"></canvas></div>
             </div>
@@ -299,7 +291,7 @@
         </div>
 
         <!-- Gas Lock-in by ISO (Interactive) -->
-        <div class="card fade-in" style="padding: var(--space-lg); margin-bottom: var(--space-xl)">
+        <div class="glass-chart-panel fade-in" style="max-width: var(--max-content); margin-bottom: var(--space-xl)">
             <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">Gas Lock-in by ISO</h3>
             <div style="display: flex; gap: var(--space-lg); flex-wrap: wrap; margin-bottom: var(--space-md); align-items: center;">
                 <div style="flex: 1; min-width: 200px;">
@@ -365,7 +357,7 @@
     <section class="content-section fade-in" id="learning-curves">
         <p style="font-size:1.05rem; color:var(--text-secondary); line-height:1.75; max-width:940px; margin-bottom:var(--space-xl)">Strategy 2C forces deployment of firm clean and storage &mdash; technologies still on steep learning curves. 1B deploys mostly mature VRE, contributing minimally to cost breakthroughs the entire grid needs. The cost premium for hourly matching is real but temporary &mdash; and shrinking.</p>
 
-        <div class="card fade-in" style="padding: var(--space-xl)">
+        <div class="glass-chart-panel fade-in" style="max-width: var(--max-content)">
             <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">Cost Premium vs. Participation (95% CFE Target)</h3>
             <div class="chart-container-lg"><canvas id="wrightsLawChart"></canvas></div>
         </div>
@@ -420,7 +412,7 @@
 
         <!-- Chart left + narrative right on desktop -->
         <div class="grid-2col fade-in" style="margin: var(--space-xl) 0; align-items: start;">
-            <div class="card" style="padding: var(--space-lg);">
+            <div class="glass-chart-panel" style="margin: 0">
                 <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">Nuclear Stranding Exposure</h3>
                 <div style="display: flex; gap: var(--space-lg); flex-wrap: wrap; margin-bottom: var(--space-md); align-items: center;">
                     <div style="flex: 1; min-width: 160px;">
@@ -468,7 +460,7 @@
     <section class="content-section fade-in" id="risks">
         <!-- Chart left + text right on desktop -->
         <div class="grid-2col fade-in" style="align-items: start;">
-            <div class="card" style="padding: var(--space-lg);">
+            <div class="glass-chart-panel" style="margin: 0">
                 <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm); font-family: var(--font-heading)">VRE Curtailment by Strategy</h3>
                 <div style="display: flex; gap: var(--space-lg); flex-wrap: wrap; margin-bottom: var(--space-md); align-items: center;">
                     <div style="flex: 1; min-width: 160px;">

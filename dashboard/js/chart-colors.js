@@ -100,6 +100,19 @@ var SEMANTIC_COLORS = {
     muted:    '#6B7280'
 };
 
+// ============================================================================
+// withAlpha() - Create semi-transparent fill from any hex color
+// ============================================================================
+// Usage: withAlpha(RESOURCE_COLORS.solar, 0.15) → 'rgba(245,158,11,0.15)'
+// Pattern: borderColor: RESOURCE_COLORS.solar, backgroundColor: withAlpha(RESOURCE_COLORS.solar, 0.15)
+function withAlpha(hex, alpha) {
+    if (!hex || hex.charAt(0) !== '#') return hex;
+    var r = parseInt(hex.slice(1, 3), 16);
+    var g = parseInt(hex.slice(3, 5), 16);
+    var b = parseInt(hex.slice(5, 7), 16);
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+
 // Resource generation stack order (bottom to top for stacked charts)
 var RESOURCE_STACK_ORDER = ['nuclear', 'geothermal', 'ccs', 'hydro', 'offshoreWind', 'wind', 'solar', 'battery', 'battery8', 'ldes', 'greenH2'];
 
