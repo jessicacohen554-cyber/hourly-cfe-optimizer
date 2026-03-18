@@ -42,9 +42,18 @@ echo [OK] Data profiles ready
 REM ── Generate plant heat rates if needed ─────────────────────────────
 if not exist "data\plant_heat_rates.json" (
     echo Generating plant-specific heat rates...
+    set PYTHONPATH=%~dp0;%~dp0backend;%~dp0scripts
     %PYTHON% scripts\generate_plant_heat_rates.py 2>nul
 )
 echo [OK] Plant heat rates ready
+
+REM ── Generate interchange profiles if needed ────────────────────────
+if not exist "data\profiles\eia_interchange_profiles.json" (
+    echo Generating inter-regional interchange profiles...
+    set PYTHONPATH=%~dp0;%~dp0backend;%~dp0scripts
+    %PYTHON% scripts\generate_synthetic_profiles.py 2>nul
+)
+echo [OK] Interchange profiles ready
 
 REM ── Open browser after short delay ─────────────────────────────────────
 start "" /b cmd /c "timeout /t 2 /nobreak >nul & start http://127.0.0.1:8000"
