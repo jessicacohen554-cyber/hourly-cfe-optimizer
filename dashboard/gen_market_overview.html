@@ -226,6 +226,7 @@
                 <tbody></tbody>
             </table>
         </div>
+        <div class="legend" id="fuelMixLegend" style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 12px 20px;"></div>
         <p class="citation" style="margin-top: 12px;">Notes: Generation and emissions estimates based on eGRID 2023 plant-level data aggregated by parent company, supplemented by 2024 company reports. Constellation Energy data reflects current fleet composition.<sup class="ref">1,2,4</sup></p>
     </section>
 
@@ -481,9 +482,10 @@ const companies = [
 ];
 
 const fuelColors = {
-    Nuclear: '#7C3AED', Gas: '#EF4444', Coal: '#374151', Wind: '#0EA5E9',
-    Solar: '#F59E0B', Hydro: '#06B6D4', Geothermal: '#10B981', Battery: '#0891B2',
-    Oil: '#9CA3AF', Biomass: '#84CC16', Other: '#D1D5DB'
+    Nuclear: RESOURCE_COLORS.nuclear, Gas: RESOURCE_COLORS.fossilGas, Coal: RESOURCE_COLORS.fossilCoal,
+    Wind: RESOURCE_COLORS.wind, Solar: RESOURCE_COLORS.solar, Hydro: RESOURCE_COLORS.hydro,
+    Geothermal: RESOURCE_COLORS.geothermal, Battery: RESOURCE_COLORS.battery,
+    Oil: RESOURCE_COLORS.fossilOil, Biomass: '#84CC16', Other: RESOURCE_COLORS.gap
 };
 
 // ISO data for stacked bar
@@ -532,6 +534,13 @@ document.querySelectorAll('.fade-in, .slide-left, .slide-right').forEach(el => o
 // ============================================================
 // ISO STACKED BAR CHART
 // ============================================================
+// Per-ISO color arrays for stacked bar
+var isoBarColors = isoData.map(function(d) { return ISO_COLORS[d.iso]; });
+var isoBarFillsIPP = isoBarColors.map(function(c) { return withAlpha(c, 0.2); });
+var isoBarFillsReg = isoBarColors.map(function(c) { return withAlpha(c, 0.45); });
+var isoBarHoverIPP = isoBarColors.map(function(c) { return withAlpha(c, 0.35); });
+var isoBarHoverReg = isoBarColors.map(function(c) { return withAlpha(c, 0.6); });
+
 new Chart(document.getElementById('isoStackedChart').getContext('2d'), {
     type: 'bar',
     data: {
@@ -540,16 +549,20 @@ new Chart(document.getElementById('isoStackedChart').getContext('2d'), {
             {
                 label: 'IPP / Competitive Generation (TWh)',
                 data: isoData.map(d => Math.round(d.total * d.ipp / 100)),
-                backgroundColor: withAlpha('#7C3AED', 0.85),
-                borderColor: '#7C3AED',
+                backgroundColor: isoBarFillsIPP,
+                hoverBackgroundColor: isoBarHoverIPP,
+                borderColor: isoBarColors,
+                hoverBorderColor: isoBarColors,
                 borderWidth: 2,
                 borderRadius: 3
             },
             {
                 label: 'Regulated Utility Generation (TWh)',
                 data: isoData.map(d => Math.round(d.total * d.reg / 100)),
-                backgroundColor: withAlpha('#0EA5E9', 0.85),
-                borderColor: '#0EA5E9',
+                backgroundColor: isoBarFillsReg,
+                hoverBackgroundColor: isoBarHoverReg,
+                borderColor: isoBarColors,
+                hoverBorderColor: isoBarColors,
                 borderWidth: 2,
                 borderRadius: 3
             }
@@ -560,12 +573,43 @@ new Chart(document.getElementById('isoStackedChart').getContext('2d'), {
         maintainAspectRatio: false,
         indexAxis: 'y',
         plugins: {
-            legend: { position: 'bottom', labels: { usePointStyle: true, padding: 16, font: { size: 12 } } },
+            legend: {
+                position: 'bottom',
+                labels: {
+                    usePointStyle: true, padding: 16, font: { size: 12 },
+                    generateLabels: function(chart) {
+                        return [
+                            { text: 'IPP / Competitive (lighter fill)', fillStyle: withAlpha('#6366F1', 0.2), strokeStyle: '#6366F1', lineWidth: 2, pointStyle: 'rectRounded' },
+                            { text: 'Regulated Utility (darker fill)', fillStyle: withAlpha('#6366F1', 0.45), strokeStyle: '#6366F1', lineWidth: 2, pointStyle: 'rectRounded' }
+                        ];
+                    }
+                }
+            },
             tooltip: {
+                backgroundColor: 'rgba(255,255,255,0.96)',
+                titleColor: '#1A2744',
+                bodyColor: '#374151',
+                borderColor: '#E5E7EB',
+                borderWidth: 1,
+                titleFont: { size: 12, weight: 600 },
+                bodyFont: { size: 11 },
+                cornerRadius: 8,
+                padding: 10,
                 callbacks: {
+                    title: function(items) {
+                        return items[0].label;
+                    },
+                    label: function(item) {
+                        var idx = item.dataIndex;
+                        var d = isoData[idx];
+                        var twh = item.raw;
+                        var pct = item.datasetIndex === 0 ? d.ipp : d.reg;
+                        return item.dataset.label.split('(')[0].trim() + ': ' + twh + ' TWh (' + pct + '%)';
+                    },
                     afterBody: function(items) {
-                        const idx = items[0].dataIndex;
-                        return ['Avg Intensity: ~' + isoData[idx].intensity + ' kg CO\u2082/MWh'];
+                        var idx = items[0].dataIndex;
+                        var d = isoData[idx];
+                        return ['Total: ' + d.total + ' TWh', 'Avg Intensity: ~' + d.intensity + ' kg CO\u2082/MWh'];
                     }
                 }
             },
@@ -601,8 +645,8 @@ function buildTable() {
         let mixBar = '';
         const fuels = Object.entries(c.mix).sort((a, b) => b[1] - a[1]);
         fuels.forEach(([fuel, pct]) => {
-            const color = fuelColors[fuel] || '#D1D5DB';
-            mixBar += '<div class="fuel-mix-segment" style="width:' + pct + '%;background:' + color + '" title="' + fuel + ': ' + pct + '%"></div>';
+            const color = fuelColors[fuel] || RESOURCE_COLORS.gap;
+            mixBar += '<div class="fuel-mix-segment" style="width:' + pct + '%;background:' + withAlpha(color, 0.3) + ';border-left:1.5px solid ' + color + '" data-fuel="' + fuel + '" data-pct="' + pct + '"></div>';
         });
 
         tbody.innerHTML += '<tr>' +
@@ -617,6 +661,46 @@ function buildTable() {
     });
 }
 buildTable();
+
+// Build fuel mix legend from all fuels present in data
+(function() {
+    var allFuels = {};
+    companies.forEach(function(c) {
+        Object.keys(c.mix).forEach(function(f) { allFuels[f] = true; });
+    });
+    var legendEl = document.getElementById('fuelMixLegend');
+    var fuelOrder = ['Nuclear', 'Gas', 'Coal', 'Wind', 'Solar', 'Hydro', 'Geothermal', 'Battery', 'Oil', 'Biomass', 'Other'];
+    fuelOrder.forEach(function(f) {
+        if (!allFuels[f]) return;
+        var color = fuelColors[f] || RESOURCE_COLORS.gap;
+        legendEl.innerHTML += '<span class="legend-item" style="display:inline-flex;align-items:center;gap:5px;font-size:0.78rem;color:var(--text-secondary);">' +
+            '<span class="legend-dot" style="width:10px;height:10px;border-radius:50%;background:' + withAlpha(color, 0.35) + ';border:1.5px solid ' + color + ';flex-shrink:0;"></span>' + f + '</span>';
+    });
+})();
+
+// Custom tooltip for fuel mix segments
+(function() {
+    var tip = document.createElement('div');
+    tip.id = 'fuelMixTooltip';
+    tip.style.cssText = 'position:fixed;pointer-events:none;z-index:9999;background:rgba(255,255,255,0.96);border:1px solid #E5E7EB;border-radius:8px;padding:6px 12px;font-size:0.82rem;color:#374151;font-weight:500;box-shadow:0 4px 12px rgba(0,0,0,0.1);opacity:0;transition:opacity 0.15s;font-family:var(--font-body);';
+    document.body.appendChild(tip);
+    document.addEventListener('mouseover', function(e) {
+        var seg = e.target.closest('.fuel-mix-segment');
+        if (!seg) { tip.style.opacity = '0'; return; }
+        var fuel = seg.dataset.fuel;
+        var pct = seg.dataset.pct;
+        var color = fuelColors[fuel] || RESOURCE_COLORS.gap;
+        tip.innerHTML = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + color + ';margin-right:6px;"></span>' + fuel + ': <strong>' + pct + '%</strong>';
+        tip.style.opacity = '1';
+    });
+    document.addEventListener('mousemove', function(e) {
+        tip.style.left = (e.clientX + 12) + 'px';
+        tip.style.top = (e.clientY - 28) + 'px';
+    });
+    document.addEventListener('mouseout', function(e) {
+        if (e.target.closest('.fuel-mix-segment')) tip.style.opacity = '0';
+    });
+})();
 
 // ============================================================
 // BUBBLE CHART - Intensity vs Generation
