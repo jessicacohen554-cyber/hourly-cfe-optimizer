@@ -1004,10 +1004,76 @@ async def simulate(req: SimulationRequest):
             else:
                 fuel_prices_dict = FUEL_PRICES.get(fuel_level, FUEL_PRICES.get("Medium", {}))
 
+            # Compute zonal LMP if zone data available
+            zonal_lmp_result = None
+            plant_zone_list = None
+            zone_name_list = None
+            zonal_stats = None
+            try:
+                from pipeline_config import ZONE_CONFIG
+                if iso in ZONE_CONFIG:
+                    from lmp_engine import compute_hourly_lmp_zonal, get_price_model
+                    from fleet_model import FleetModel
+
+                    zone_config = ZONE_CONFIG[iso]
+                    zone_name_list = zone_config['zones']
+                    price_model = get_price_model(iso, fuel_level)
+
+                    # Build zonal stacks from fleet model
+                    fm = FleetModel(iso=iso)
+                    if fm.fleet is not None and not fm.fleet.empty:
+                        fm.assign_zones()
+                        zone_stacks = fm.build_zonal_merit_order_stacks(
+                            fuel_level=fuel_level, co2_price=carbon_price_val)
+
+                        # Compute zonal LMP
+                        zonal_lmp_matrix, system_lmp_arr, _, zonal_stats = \
+                            compute_hourly_lmp_zonal(
+                                dispatch, demand_mw_profile, zone_stacks,
+                                zone_config, price_model, iso=iso,
+                                vre_penetration=clean_pct,
+                            )
+                        zonal_lmp_result = zonal_lmp_matrix
+
+                        # Use system-average zonal LMP instead of flat approximation
+                        hourly_lmp = system_lmp_arr
+
+                        # Build plant-to-zone mapping
+                        plant_zone_list = []
+                        from pipeline_config import get_zone_for_plant
+                        for p in plant_stack:
+                            pzone = get_zone_for_plant(
+                                iso,
+                                ba_code=p.get('ba'),
+                                lat=p.get('latitude'),
+                                lon=p.get('longitude'),
+                            )
+                            plant_zone_list.append(pzone)
+            except Exception as zonal_err:
+                print(f"Note: Zonal LMP not available: {zonal_err}")
+
             plant_level_data = compute_plant_level_economics(
                 plant_stack, hourly_lmp, dispatch,
                 demand_mw_profile, fuel_prices_dict, carbon_price_val,
+                zonal_lmp=zonal_lmp_result,
+                plant_zones=plant_zone_list,
+                zone_names=zone_name_list,
             )
+
+            # Attach zonal LMP stats to response if available
+            if zonal_stats:
+                response.zonal_lmp_stats = [
+                    {
+                        'zone_name': s['zone_name'],
+                        'avg_lmp': round(s['avg_lmp'], 2),
+                        'peak_lmp': round(s['peak_lmp'], 2),
+                        'offpeak_lmp': round(s['offpeak_lmp'], 2),
+                        'p10_lmp': round(s['p10_lmp'], 2),
+                        'p90_lmp': round(s['p90_lmp'], 2),
+                        'price_spread_vs_system': round(s['price_spread_vs_system'], 2),
+                    }
+                    for s in zonal_stats.values()
+                ]
 
             # Compute summary counts
             operating = sum(1 for p in plant_level_data if p.get("status") == "operating")

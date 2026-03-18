@@ -50,6 +50,199 @@ ISO_DIMENSIONS = {
     'NYISO': 5, 'NEISO': 5, 'MISO': 4, 'SPP': 4,
 }
 
+# ============================================================================
+# ZONAL TRANSMISSION CONFIGURATION
+# ============================================================================
+# Simplified pipe-and-bubble zonal decomposition per ISO.
+# Each ISO has 2-5 zones with inter-zonal transfer limits (MW) and demand shares.
+# Sources: PJM RTEP, MISO MTEP, ERCOT CDR, NYISO Gold Book, ISO-NE RSP.
+# Transfer limits are bidirectional thermal ratings on major interfaces.
+# Demand shares from EIA-930 subregional data and ISO load zone publications.
+
+ZONE_CONFIG = {
+    'PJM': {
+        'zones': ['Western', 'AEP_East', 'MAAC', 'EMAAC', 'SWMAAC'],
+        'demand_share': {
+            'Western': 0.18, 'AEP_East': 0.15, 'MAAC': 0.25,
+            'EMAAC': 0.27, 'SWMAAC': 0.15,
+        },
+        'transfer_limits_mw': {
+            ('Western', 'AEP_East'): 5000,   # AEP-East interface
+            ('AEP_East', 'MAAC'): 7500,      # ATSI/APS to Mid-Atlantic
+            ('MAAC', 'EMAAC'): 6000,         # Mid-Atlantic to Eastern
+            ('MAAC', 'SWMAAC'): 5000,        # Mid-Atlantic to Baltimore/DC
+        },
+    },
+    'MISO': {
+        'zones': ['North', 'Central', 'South'],
+        'demand_share': {'North': 0.35, 'Central': 0.40, 'South': 0.25},
+        'transfer_limits_mw': {
+            ('North', 'Central'): 4000,       # MN/WI/IA to IL/IN/MI
+            ('Central', 'South'): 3000,       # IL/IN to LA/MS/AR — major bottleneck
+        },
+    },
+    'ERCOT': {
+        'zones': ['West', 'North', 'South', 'Houston'],
+        'demand_share': {
+            'West': 0.10, 'North': 0.35, 'South': 0.25, 'Houston': 0.30,
+        },
+        'transfer_limits_mw': {
+            ('West', 'North'): 3500,          # Wind corridor to Dallas
+            ('North', 'South'): 5000,         # Dallas to San Antonio/Austin
+            ('North', 'Houston'): 6000,       # Dallas to Houston
+            ('South', 'Houston'): 4500,       # SA to Houston
+        },
+    },
+    'NYISO': {
+        'zones': ['Upstate', 'NYC', 'LongIsland'],
+        'demand_share': {'Upstate': 0.45, 'NYC': 0.40, 'LongIsland': 0.15},
+        'transfer_limits_mw': {
+            ('Upstate', 'NYC'): 5150,         # Central East + UPNY-ConEd interfaces
+            ('NYC', 'LongIsland'): 500,       # Zone J to Zone K — very constrained
+        },
+    },
+    'NEISO': {
+        'zones': ['Northern', 'Southern'],
+        'demand_share': {'Northern': 0.30, 'Southern': 0.70},
+        'transfer_limits_mw': {
+            ('Northern', 'Southern'): 2500,   # ME/NH/VT to MA/CT/RI
+        },
+    },
+    'CAISO': {
+        'zones': ['NP15', 'SP15'],
+        'demand_share': {'NP15': 0.55, 'SP15': 0.45},
+        'transfer_limits_mw': {
+            ('NP15', 'SP15'): 4000,           # Path 15 + Path 26 combined
+        },
+    },
+    'SPP': {
+        'zones': ['North', 'South'],
+        'demand_share': {'North': 0.45, 'South': 0.55},
+        'transfer_limits_mw': {
+            ('North', 'South'): 3500,         # KS/NE to OK/TX panhandle
+        },
+    },
+}
+
+# Balancing Authority → (ISO, Zone) mapping for plant assignment.
+# Priority: BA_TO_ZONE > lat/lon fallback > largest-demand zone.
+BA_TO_ZONE = {
+    # PJM zones
+    'AEP': ('PJM', 'Western'), 'AP': ('PJM', 'Western'),
+    'ATSI': ('PJM', 'AEP_East'), 'DAY': ('PJM', 'AEP_East'),
+    'DEOK': ('PJM', 'AEP_East'),
+    'COMED': ('PJM', 'MAAC'), 'DOM': ('PJM', 'MAAC'),
+    'PJMW': ('PJM', 'Western'), 'PJMC': ('PJM', 'MAAC'),
+    'DPL': ('PJM', 'EMAAC'), 'JC': ('PJM', 'EMAAC'),
+    'PS': ('PJM', 'EMAAC'), 'RECO': ('PJM', 'EMAAC'),
+    'PJME': ('PJM', 'EMAAC'),
+    'PEP': ('PJM', 'SWMAAC'), 'PE': ('PJM', 'SWMAAC'),
+    'PJMD': ('PJM', 'SWMAAC'),
+    'DUQ': ('PJM', 'Western'), 'EKPC': ('PJM', 'Western'),
+    'ME': ('PJM', 'EMAAC'), 'PL': ('PJM', 'EMAAC'),
+    'PN': ('PJM', 'EMAAC'),
+    # MISO zones
+    'NSP': ('MISO', 'North'), 'GRE': ('MISO', 'North'),
+    'OTP': ('MISO', 'North'), 'MDU': ('MISO', 'North'),
+    'MEC': ('MISO', 'North'), 'MPW': ('MISO', 'North'),
+    'MPS': ('MISO', 'North'), 'UPPC': ('MISO', 'North'),
+    'MGE': ('MISO', 'North'), 'WEC': ('MISO', 'North'),
+    'WPS': ('MISO', 'North'),
+    'ALTE': ('MISO', 'Central'), 'ALTW': ('MISO', 'Central'),
+    'CONS': ('MISO', 'Central'), 'CWEP': ('MISO', 'Central'),
+    'CWLP': ('MISO', 'Central'), 'NIPS': ('MISO', 'Central'),
+    'HE': ('MISO', 'Central'), 'SIPC': ('MISO', 'Central'),
+    'SMP': ('MISO', 'Central'),
+    'EES': ('MISO', 'South'), 'EAI': ('MISO', 'South'),
+    'LAFA': ('MISO', 'South'), 'LEPA': ('MISO', 'South'),
+    'CLEC': ('MISO', 'South'), 'AMMO': ('MISO', 'South'),
+    'DECI': ('MISO', 'South'), 'EDE': ('MISO', 'South'),
+    'EMBA': ('MISO', 'South'),
+    # ERCOT zones (single BA — use lat/lon for sub-zone assignment)
+    'ERCO': ('ERCOT', None),  # Resolved by lat/lon
+    'ERCOT': ('ERCOT', None),
+    # NYISO zones (single BA — use lat/lon for sub-zone assignment)
+    'NYIS': ('NYISO', None),
+    'NYISO': ('NYISO', None),
+    # NEISO zones
+    'ISNE': ('NEISO', None),
+    'NEISO': ('NEISO', None),
+    'ISONE': ('NEISO', None),
+    # CAISO zones (single BA)
+    'CISO': ('CAISO', None),
+    'CAISO': ('CAISO', None),
+    # SPP zones
+    'SWPP': ('SPP', None), 'SPP': ('SPP', None),
+    'KCPL': ('SPP', 'North'), 'LES': ('SPP', 'North'),
+    'NPPD': ('SPP', 'North'), 'OPPD': ('SPP', 'North'),
+    'MIDW': ('SPP', 'North'), 'WAUE': ('SPP', 'North'),
+    'OKGE': ('SPP', 'South'), 'SPS': ('SPP', 'South'),
+    'WFEC': ('SPP', 'South'), 'CSWS': ('SPP', 'South'),
+    'GRDA': ('SPP', 'South'), 'INDN': ('SPP', 'South'),
+    'KACY': ('SPP', 'South'), 'SPA': ('SPP', 'South'),
+    'SECI': ('SPP', 'South'), 'SPRM': ('SPP', 'South'),
+    'WR': ('SPP', 'South'), 'AECI': ('SPP', 'South'),
+}
+
+# Lat/lon bounding boxes for zone assignment when BA mapping returns None.
+# Format: (iso, zone) → {lat: (min, max), lon: (min, max)}
+ZONE_BOUNDS = {
+    # ERCOT sub-zones
+    ('ERCOT', 'West'):    {'lat': (29.5, 34.0), 'lon': (-106.0, -100.5)},
+    ('ERCOT', 'North'):   {'lat': (32.0, 34.0), 'lon': (-100.5, -96.0)},
+    ('ERCOT', 'South'):   {'lat': (27.5, 32.0), 'lon': (-100.5, -96.5)},
+    ('ERCOT', 'Houston'): {'lat': (28.5, 31.0), 'lon': (-96.5, -93.5)},
+    # NYISO sub-zones
+    ('NYISO', 'Upstate'):    {'lat': (41.5, 45.0), 'lon': (-80.0, -73.5)},
+    ('NYISO', 'NYC'):        {'lat': (40.4, 41.5), 'lon': (-74.5, -73.5)},
+    ('NYISO', 'LongIsland'): {'lat': (40.5, 41.2), 'lon': (-73.5, -71.8)},
+    # NEISO sub-zones
+    ('NEISO', 'Northern'): {'lat': (43.0, 47.5), 'lon': (-73.5, -66.9)},
+    ('NEISO', 'Southern'): {'lat': (41.0, 43.0), 'lon': (-73.7, -69.9)},
+    # CAISO sub-zones
+    ('CAISO', 'NP15'): {'lat': (36.8, 42.0), 'lon': (-124.5, -119.0)},
+    ('CAISO', 'SP15'): {'lat': (32.5, 36.8), 'lon': (-121.5, -114.5)},
+    # SPP sub-zones (fallback for unmapped BAs)
+    ('SPP', 'North'): {'lat': (38.0, 43.0), 'lon': (-104.0, -94.5)},
+    ('SPP', 'South'): {'lat': (33.0, 38.0), 'lon': (-103.0, -94.0)},
+}
+
+
+def get_zone_for_plant(iso, ba_code=None, lat=None, lon=None):
+    """Assign a plant to a transmission zone within its ISO.
+
+    Priority: BA_TO_ZONE mapping > lat/lon bounding box > largest-demand zone.
+
+    Returns:
+        zone_name (str) or None if ISO has no zone config.
+    """
+    if iso not in ZONE_CONFIG:
+        return None
+
+    config = ZONE_CONFIG[iso]
+    zones = config['zones']
+
+    # Try BA mapping first
+    if ba_code:
+        ba_upper = str(ba_code).strip().upper()
+        if ba_upper in BA_TO_ZONE:
+            _, zone = BA_TO_ZONE[ba_upper]
+            if zone is not None and zone in zones:
+                return zone
+
+    # Try lat/lon bounding box
+    if lat is not None and lon is not None:
+        for zone in zones:
+            key = (iso, zone)
+            if key in ZONE_BOUNDS:
+                bounds = ZONE_BOUNDS[key]
+                if (bounds['lat'][0] <= lat <= bounds['lat'][1] and
+                        bounds['lon'][0] <= lon <= bounds['lon'][1]):
+                    return zone
+
+    # Fallback: zone with largest demand share
+    return max(config['demand_share'], key=config['demand_share'].get)
+
 RESOURCE_COLS_BASE = ['clean_firm', 'solar', 'wind', 'hydro']
 RESOURCE_COLS_OFFSHORE = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind']
 RESOURCE_COLS_CAISO = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind', 'geothermal']
