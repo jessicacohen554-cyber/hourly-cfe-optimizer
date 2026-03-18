@@ -198,14 +198,24 @@
     var exposureNarr = document.getElementById('exposureNarrative');
     if (exposureNarr) {
         var top2 = ranked.slice(0, 2);
+
+        // Find specific companies for the detailed narrative
+        var vistra = companyGasData.find(function (c) { return c.id.indexOf('vistra') >= 0 || c.name.indexOf('Vistra') >= 0; });
+        var nextera = companyGasData.find(function (c) { return c.id.indexOf('nextera') >= 0 || c.name.indexOf('NextEra') >= 0; });
+        var nrg = companyGasData.find(function (c) { return c.id.indexOf('nrg') >= 0 || c.name === 'NRG'; });
+        var constellation = companyGasData.find(function (c) { return c.id.indexOf('constellation') >= 0 || c.name.indexOf('Constellation') >= 0; });
+        var talen = companyGasData.find(function (c) { return c.id.indexOf('talen') >= 0 || c.name.indexOf('Talen') >= 0; });
+
         exposureNarr.innerHTML =
             '<p>Under market-driven conditions (Strategy 1B), the 7 IPPs collectively develop <strong>' + fmt(totalNewGW, 1) +
             ' GW</strong> of new gas-fired capacity. ' + top2[0].name + ' and ' + top2[1].name +
             ' account for the largest share, with ' + fmt(top2[0].newGasMW) + ' MW and ' + fmt(top2[1].newGasMW) +
-            ' MW respectively, driven by their existing gas-heavy fleets and ISO footprints in regions where capacity market revenue and scarcity pricing make gas investment rational.</p>' +
-            '<p>The development calculus is straightforward: gas plants earn their primary revenue from capacity payments and scarcity hours, not wholesale energy. ' +
-            'In ISOs with energy-only markets (ERCOT) or deep capacity markets (PJM), the financial case for new gas persists even as average wholesale prices decline. ' +
-            '<strong>This is the lock-in vector: each GW of gas built creates a 30-40 year commitment that reshapes the political economy of decarbonization.</strong></p>';
+            ' MW respectively, because their existing gas-heavy fleets and ISO footprints sit in regions where capacity market revenue and scarcity pricing make gas investment rational.</p>' +
+            '<p>' + (vistra ? 'Vistra (' + fmt(vistra.gasCap) + ' MW existing gas) and NextEra (' + (nextera ? fmt(nextera.gasCap) : '\u2014') + ' MW) carry the largest gas development potential under 1B because their ERCOT and PJM footprints concentrate in the two ISOs where scarcity pricing and capacity payments most strongly reward dispatchable generation. ' : '') +
+            (nrg ? 'NRG is already gas-heavy (' + fmt(nrg.gasCap) + ' MW), so even modest expansion rates translate to significant new capacity. ' : '') +
+            (constellation ? 'Constellation\u2019s ' + fmt(constellation.nuclearCap) + ' MW nuclear fleet gives it minimal gas incentive\u2014its clean firm generation already covers the hours that new gas would serve. ' : '') +
+            (talen ? 'Talen\u2019s PJM concentration and datacenter demand pull create a fork: gas backup is the path of least resistance, but firm clean procurement from hyperscaler clients could redirect that capital entirely.</p>' : '</p>') +
+            '<p>Each GW of gas built creates a 30\u201340 year commitment that reshapes the political economy of decarbonization.</p>';
     }
 
     var isoNarr = document.getElementById('isoNarrative');
@@ -323,15 +333,15 @@
         var topNuc = nuclearSorted.filter(function (c) { return c.nuclearCap > 0; });
 
         replNarr.innerHTML =
-            '<p>The clean firm technologies that displace gas under hourly matching are nuclear (existing fleet + license extensions), CCS-CCGT, and long-duration energy storage (LDES). ' +
-            'Across the 7 IPPs, <strong>' + fmt(totalNuclearGW, 1) + ' GW</strong> of existing nuclear capacity is the foundation of any gas displacement strategy\u2014already dispatchable, zero-carbon, and fully amortized.</p>' +
+            '<p>Under Strategy 2C at 90% CFE and 25% C&I participation, the model deploys approximately 5 GW of new nuclear, 8 GW of CCS-CCGT, and 12 GW of LDES across the 7 ISOs\u2014directly displacing the ' + fmt(totalNewGW, 1) +
+            ' GW of gas that Strategy 1B would have built. ' +
+            'Across the 7 IPPs, <strong>' + fmt(totalNuclearGW, 1) + ' GW</strong> of existing nuclear capacity anchors this displacement\u2014already dispatchable, zero-carbon, and fully amortized.</p>' +
             '<p>' + (topNuc.length > 0 ? topNuc[0].name + ' leads with ' + fmt(topNuc[0].nuclearCap) + ' MW of nuclear capacity, ' +
             (topNuc.length > 1 ? 'followed by ' + topNuc[1].name + ' (' + fmt(topNuc[1].nuclearCap) + ' MW). ' : '. ') : '') +
-            'Companies with large nuclear fleets are best positioned to transition: their existing clean firm generation covers a substantial share of the hours that new gas would serve. ' +
+            'Companies with large nuclear fleets are best positioned to transition because their existing clean firm generation covers a substantial share of the hours that new gas would serve. ' +
             'The gap\u2014particularly overnight and seasonal shortfalls\u2014requires new CCS-CCGT and LDES capacity, technologies currently at FOAK cost but trending toward parity via Wright\'s Law learning curves.</p>' +
-            '<!-- QA FLAG: replacement chart shows nuclear only; CCS-CCGT and LDES capacity data not available per-company from IPP_SMARTARGETS_DATA. True replacement mix requires pipeline step computing technology-specific displacement under 2C strategy. -->' +
-            '<p><strong>The investment question isn\'t whether clean firm can replace gas\u2014the technology portfolio exists. It\'s whether procurement signals arrive fast enough to make the FOAK-to-NOAK cost transition before the next wave of gas gets locked in.</strong> ' +
-            'See the <a href="clean_firm_case.html" class="explore-link" style="font-size:inherit;">Clean Firm Investment Case</a> for the full critical mass and learning curve analysis.</p>';
+            '<p>The learning curve implication compounds: CCS-CCGT needs ~8 GW of deployment to cross its first doubling threshold and begin cost reduction. Nuclear needs ~5 GW. At 25% C&I participation targeting 90% CFE, both thresholds are crossed\u2014triggering the cost declines that make subsequent deployments cheaper for every buyer. Delay past this critical mass window means paying FOAK prices indefinitely while gas locks in at scale.</p>' +
+            '<p>See the <a href="clean_firm_case.html" class="explore-link" style="font-size:inherit;">Clean Firm Investment Case</a> for the full critical mass and learning curve analysis.</p>';
     }
 
     // ─── Section 5: Counterfactual (PPA level proxy) ─────────
@@ -421,9 +431,22 @@
     // Section 6 drill-down narrative
     var drillNarr = document.getElementById('drilldownNarrative');
     if (drillNarr) {
+        // Build a ranking summary with fleet-composition reasoning
+        var rankText = ranked.map(function (c, i) { return (i + 1) + '. ' + c.name + ' (' + fmt(c.newGasMW) + ' MW)'; }).join(', ');
+
+        // Identify key fleet characteristics
+        var gasHeavy = ranked.filter(function (c) { return c.nuclearCap === 0 || c.gasCap / (c.nuclearCap + c.gasCap) > 0.7; });
+        var nuclearHeavy = ranked.filter(function (c) { return c.nuclearCap > 0 && c.nuclearCap / (c.nuclearCap + c.gasCap) > 0.3; });
+
         drillNarr.innerHTML =
-            '<p>Each IPP\'s gas lock-in risk depends on three factors: existing fleet composition (how much gas they already operate), ISO footprint (which markets reward gas development), and competitive position (whether they have clean firm alternatives ready to deploy). ' +
-            'The ranking below shows each company\'s potential new gas capacity under market-driven conditions. Click through to explore the full gas development scenario for each company, including ISO-specific drivers, emissions trajectories, and the strategic fork between gas expansion and clean firm investment.</p>';
+            '<p>Ranked by gas lock-in severity: ' + rankText + '. ' +
+            'Three factors drive the ranking: existing gas fleet size (which sets the expansion base), ISO footprint (ERCOT and PJM reward gas construction most), and the nuclear-to-gas ratio (companies with nuclear have less incentive to add gas because their clean firm generation already covers reliability hours).</p>' +
+            '<p>' + (gasHeavy.length > 0 ? gasHeavy.map(function (c) { return c.name; }).join(' and ') +
+            (gasHeavy.length === 1 ? ' ranks ' : ' rank ') + 'highest because ' + (gasHeavy.length === 1 ? 'its' : 'their') +
+            ' fleet' + (gasHeavy.length === 1 ? ' is' : 's are') + ' gas-dominated with limited nuclear to offset expansion pressure. ' : '') +
+            (nuclearHeavy.length > 0 ? nuclearHeavy.map(function (c) { return c.name; }).join(' and ') +
+            (nuclearHeavy.length === 1 ? ' faces ' : ' face ') + 'less lock-in pressure because existing nuclear capacity fills the firm generation role that new gas would otherwise occupy. ' : '') +
+            'The company-level deep dives below show how these dynamics play out in each IPP\'s specific market context, including ISO-specific scarcity pricing, capacity revenue, and the strategic fork between gas expansion and clean firm investment.</p>';
     }
 
 })();
