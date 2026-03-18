@@ -1,0 +1,51 @@
+=== Summary Metrics ===
+metric,value,unit
+iso,ERCOT,
+existing_clean_pct,46.1,%
+market_outcome_clean_pct,67.4,%
+avg_lmp,124.5,$/MWh
+emissions_mt,84.39,MT CO2
+demand_twh,620.9,TWh
+nuclear_revenue_mwh,0,$/MWh
+ccs_breakeven_carbon_price,0.0,$/ton
+
+=== Resource Mix (TWh) ===
+resource,generation_twh,pct_of_total
+solar,218.1,52.1
+wind,146.5,35.0
+clean_firm,53.4,12.8
+hydro,0.6,0.1
+offshore_wind,0.0,0.0
+ccs_ccgt,0.0,0.0
+
+=== Generator Economics ===
+unit_type,capacity_mw,marginal_cost_mwh,dispatch_hours,capacity_factor,avg_revenue_mwh,vom_mwh,fuel_cost_mwh,profit_mwh,status
+gas_ccgt,40000.0,0.0,8759,0.0,0.0,,,0.0,marginal
+coal_steam,17600.0,0.0,5989,0.0,0.0,,,0.0,marginal
+gas_ct,22400.000000000004,0.0,1472,0.0,0.0,,,0.0,marginal
+
+=== Supply Stack ===
+resource,generation_twh
+solar,218.1
+wind,146.5
+clean_firm,53.4
+hydro,0.6
+
+=== Year-by-Year Trajectory ===
+year,clean_pct,demand_twh,emissions_mt,emission_rate_tco2_mwh,avg_lmp,lmp_p90,cost_per_mwh,revenue_per_mwh,energy_rev_mwh,capacity_rev_mwh,rec_rev_mwh,gas_built_gw,market_stop,zones_deployed,nuclear_retired,rps_mandated_pct,rps_eligible_pct,rps_shortfall_pct,acp_cost_million
+2025,46.1,522.8,147.52,0.5511,48.0,59.7,0.0,0.0,0.0,0.0,0.0,0.0,True,,False,0.0,0.0,0.0,0.0
+2030,67.4,620.9,84.39,0.4173,124.5,475.7,59.84,124.97,124.47,0.0,0.5,0.0,False,solar,False,0.0,0.0,0.0,0.0
+
+=== Nuclear Revenue Breakdown ===
+component,value_mwh
+energy_rev_mwh,124.47
+capacity_rev_mwh,0.0
+ptc_mwh,0.0
+total_mwh,124.47
+
+=== Plant-Level Summary ===
+status,count
+operating,1401
+at_risk,3
+stranded,45
+total,1449
