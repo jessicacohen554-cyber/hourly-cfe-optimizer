@@ -387,23 +387,14 @@ body { background: var(--bg-page-white); }
 
     <p><strong>At 5–15% C&I participation, the signal begins to degrade.</strong> Each new PPA doesn't displace the same marginal unit. The first PPA displaces coal at 2,200 lb/MWh. The second displaces the next coal unit at 2,100 lb/MWh. By the tenth, you're displacing efficient CCGT at 850 lb/MWh. The marginal emissions rate that justified the first buyer's investment has halved by the time the tenth buyer arrives - but every buyer is still reporting the <em>original</em> marginal rate if they use static annual estimates.</p>
 
-    <p><strong>This isn't theoretical.</strong> It's a direct consequence of merit-order economics: each unit of renewable generation displaces the next most expensive (and typically next most carbon-intensive) fossil generator. As more renewables enter a region, the marginal fossil unit shifts from coal → inefficient gas → efficient CCGT → the last peaker. The displacement curve is concave - steep at first, then rapidly flattening.</p>
-
     <div class="mechanism-grid">
         <div class="mechanism-card">
-            <h4>Double-Counting at the Margin</h4>
-            <p>If 50 buyers each claim they displaced coal at 2,200 lb/MWh, but the grid only had enough coal to be displaced by the first 10, the other 40 are claiming reductions that don't physically occur. No registry prevents this because consequential accounting doesn't use certificate-based tracking - it uses models.</p>
-            <div class="evidence">Related: Bjørn et al. (2024) show that buyer-level consequential claims can sum to 2–3× actual grid emissions reductions when aggregated across all participants.</div>
-        </div>
-        <div class="mechanism-card">
-            <h4>Temporal Instability</h4>
-            <p>Marginal rates vary hour-to-hour, season-to-season, and year-to-year. A buyer who contracts based on 2024 marginal rates may find their 2026 displacement rate is 40% lower because grid mix shifted, new gas plants came online, or coal retirements already happened. The "impact" they purchased doesn't exist three years later.</p>
-            <div class="evidence">WattTime's own marginal rate data shows intra-year variation of 30–60% for the same hour across years in PJM and MISO.</div>
+            <h4>Double-Counting and Temporal Drift</h4>
+            <p>If 50 buyers each claim coal displacement at 2,200 lb/MWh, but only the first 10 actually displace coal, the other 40 are claiming reductions that don't physically occur. Bjørn et al. (2024) show that buyer-level consequential claims can sum to 2–3× actual grid emissions reductions when aggregated. The problem compounds over time: a buyer contracting on 2024 marginal rates may find their displacement rate 40% lower by 2026 as coal retires and grid mix shifts.</p>
         </div>
         <div class="mechanism-card">
             <h4>Model Dependence</h4>
-            <p>There is no single "correct" marginal emissions rate. Different dispatch models (statistical regression vs. structural economic dispatch vs. machine learning) produce rates that differ by 30–200% for the same grid-hour. A buyer choosing one model over another isn't measuring impact - they're selecting a narrative.</p>
-            <div class="evidence">Comparison of WattTime, REsurety, and Singularity Energy marginal rates for PJM shows regular 2× divergence on the same hours.</div>
+            <p>There is no single "correct" marginal emissions rate. WattTime, REsurety, and Singularity Energy produce rates that diverge by 2× for the same PJM grid-hours. A buyer choosing one model over another isn't measuring impact — they're selecting a narrative.</p>
         </div>
     </div>
 </section>
@@ -443,8 +434,7 @@ body { background: var(--bg-page-white); }
     <div class="chart-narrative-below">
         <p><strong>The displacement curve is concave for every grid - steep at first, then flattening.</strong> The shaded band between the coal/oil reference line and the efficient gas baseline shows the "cheap abatement premium" - the extra displacement available from retiring dirty units. In coal-heavy SPP and MISO, the first 10% of renewable penetration displaces coal at 1,800–2,200 lb CO₂/MWh. Once the band collapses to zero, you're displacing only efficient CCGT at ~850 lb/MWh.</p>
         <p><strong>The transition thresholds are stark:</strong> Our model shows all ISOs hit the coal wall at roughly the 70% clean energy threshold - the point where all economically displaceable coal is retired from the dispatch stack. SPP has 42 TWh of coal to exhaust, MISO 125 TWh, PJM 139 TWh, and ERCOT 68 TWh. But NEISO, NYISO, and CAISO - with negligible coal - start at the gas baseline from day one. There is no cheap abatement available in these grids. The consequential "bargain" only exists in coal-heavy regions, and it depletes.</p>
-        <p><strong>The saturation problem is worse than the curve suggests</strong> because consequential capital from <em>all seven ISOs</em> competes for the same "attractive" coal displacement in SPP and MISO. A NEISO buyer and a CAISO buyer are both chasing the same MISO coal retirement. The available stock of cheap displacement doesn't scale with demand - it depletes.</p>
-        <p><strong>After saturation:</strong> consequential accounting produces the same $/tCO₂ as hourly matching - because the marginal unit everywhere is now efficient gas. But the framework has already directed a decade of capital away from gas-dependent grids, starving them of the firm clean power investment they needed. The window for those grids' decarbonization has narrowed.</p>
+        <p><strong>The saturation problem is worse than the curve suggests</strong> because consequential capital from <em>all seven ISOs</em> competes for the same coal displacement in SPP and MISO. A NEISO buyer and a CAISO buyer are both chasing the same MISO coal retirement. The available stock doesn't scale with demand — it depletes. After saturation, consequential accounting produces the same $/tCO₂ as hourly matching, but having starved gas-dependent grids of firm clean investment during the critical window.</p>
     </div>
 </section>
 
@@ -454,7 +444,7 @@ body { background: var(--bg-page-white); }
 <div class="section-header fade-in">
     <div class="section-number">3</div>
     <h2>Fossil Lock-In: How Cheap Abatement Preserves Gas Infrastructure</h2>
-    <p>The most insidious failure mode: by directing all marginal clean energy capital to coal displacement, consequential accounting extends the economic life of natural gas infrastructure in gas-dependent grids by decades.</p>
+    <p>By directing clean energy capital toward coal displacement in other grids, consequential accounting extends the economic life of gas infrastructure in NEISO, NYISO, and CAISO by 10–20 years.</p>
 </div>
 
 <section class="content-section section-light fade-in">
@@ -590,8 +580,7 @@ body { background: var(--bg-page-white); }
         </div>
     </div>
     <div class="chart-narrative-below">
-        <p><strong>The chart makes the capital concentration visible.</strong> The stacked bars show each ISO's fossil fuel mix (coal vs. gas), while the green line shows "consequential attractiveness" - how much capital flows to that grid under $/tCO₂ optimization. Coal-heavy grids (<span class="text-spp">SPP</span>, <span class="text-miso">MISO</span>) pull capital from across the interconnection. Gas-only grids (<span class="text-neiso">NEISO</span>, <span class="text-nyiso">NYISO</span>, <span class="text-caiso">CAISO</span>) become net capital exporters.</p>
-        <p><strong>The asymmetry is structural.</strong> SPP + MISO have 574 TWh of C&amp;I load (~35% of total) but attract disproportionate consequential clean energy capital at scale because coal displacement offers better $/tCO&#8322;. NEISO + NYISO + CAISO have 294 TWh (~18%) but see their own corporate buyers funding abatement in other grids, because gas-only displacement yields half the carbon benefit per dollar.</p>
+        <p><strong>The asymmetry is structural.</strong> Coal-heavy grids (<span class="text-spp">SPP</span>, <span class="text-miso">MISO</span>) pull capital from across the interconnection. Gas-only grids (<span class="text-neiso">NEISO</span>, <span class="text-nyiso">NYISO</span>, <span class="text-caiso">CAISO</span>) become net capital exporters — their own corporate buyers funding abatement elsewhere because gas-only displacement yields half the carbon benefit per dollar.</p>
     </div>
 </section>
 
@@ -619,21 +608,21 @@ body { background: var(--bg-page-white); }
 </div>
 
 <section class="content-section fade-in">
+    <blockquote>
+        <strong>Individual optimization vs. system outcome:</strong> Consequential accounting minimizes $/tCO₂ for each buyer. Hourly matching minimizes total emissions across the grid system. The GHG Protocol's choice between these frameworks isn't just accounting methodology — it's a choice between individual rationality and collective decarbonization.
+    </blockquote>
+
     <p><strong>The game-theoretic structure is a textbook tragedy of the commons.</strong> Each buyer optimizing for their own cheapest $/tCO₂ is locally rational. But the shared resource - each grid's need for investment in firm clean power and long-duration storage - is neglected because every actor is incentivized to free-ride on cheaper abatement elsewhere.</p>
 
     <p><strong>Hourly attribution avoids this trap</strong> by construction. When procurement must match load hour-by-hour within a deliverability region, there is no mechanism for free-riding. A <span class="text-neiso">NEISO</span> buyer must solve NEISO's winter gas problem. A <span class="text-caiso">CAISO</span> buyer must cover the evening ramp. The constraint forces investment in the technologies each grid actually needs - not the cheapest global displacement.</p>
 
-    <p><strong>The irony:</strong> hourly matching produces <em>higher $/tCO₂</em> in the short run for any individual buyer - because it forces investment in firm clean power instead of cheap wind. But it produces <em>lower total system emissions</em> at scale - because it actually decarbonizes every grid rather than over-investing in coal displacement while leaving gas grids untouched.</p>
-
-    <blockquote>
-        <strong>Individual optimization vs. system outcome:</strong> Consequential accounting minimizes $/tCO₂ for each buyer. Hourly matching minimizes total emissions across the grid system. The GHG Protocol's choice between these frameworks isn't just accounting methodology - it's a choice between individual rationality and collective decarbonization.
-    </blockquote>
+    <p>Hourly matching produces <em>higher $/tCO₂</em> in the short run for any individual buyer — it forces investment in firm clean power instead of cheap wind. But it produces <em>lower total system emissions</em> at scale, because it actually decarbonizes every grid rather than over-investing in coal displacement while leaving gas grids untouched.</p>
 
     <hr style="border:none;border-top:1px solid var(--border-light);margin:24px 0;">
 
     <div class="mechanism-grid">
         <div class="mechanism-card">
-            <h4>Why This Isn't Just Theory</h4>
+            <h4>The Pattern Is Already Visible</h4>
             <p>We're already seeing early signs: 70%+ of voluntary corporate renewable PPAs in 2023–2024 were for wind and solar in <span class="text-ercot">ERCOT</span>, <span class="text-spp">SPP</span>, and <span class="text-miso">MISO</span> - the grids with the best $/MWh and $/tCO₂. <span class="text-neiso">NEISO</span> and <span class="text-nyiso">NYISO</span> corporate PPA activity was minimal despite those grids having the highest marginal gas dependence. The capital flow pattern matches exactly what consequential optimization predicts - and it's happening under today's annual REC regime, which already has weak locational constraints.</p>
             <div class="evidence">Sources: BNEF Corporate PPA Tracker 2024; American Clean Power Association Market Report Q4 2024.</div>
         </div>
@@ -648,7 +637,7 @@ body { background: var(--bg-page-white); }
 
     <div class="page-insight-box">
         <h3>The Bottom Line</h3>
-        <p>Consequential accounting works as a niche analytical tool - measuring displacement impact alongside an hourly matching procurement strategy. It fails catastrophically as a <span class="highlight">primary procurement framework at scale</span>. The five failure modes documented here aren't edge cases; they're the predictable, mathematically inevitable consequences of optimizing for cheapest $/tCO₂ across unconstrained geographies.</p>
+        <p>Consequential accounting works as a niche analytical tool - measuring displacement impact alongside an hourly matching procurement strategy. As a <span class="highlight">primary procurement framework at scale</span>, it produces the opposite of its intended outcome. The five failure modes documented here aren't edge cases; they're the predictable, mathematically inevitable consequences of optimizing for cheapest $/tCO₂ across unconstrained geographies.</p>
         <p><strong>The coal/oil transition tells the timeline story.</strong> Our model shows all coal-bearing ISOs hit the coal wall at approximately 70% clean energy penetration. <span class="text-spp">SPP</span> must exhaust 42 TWh of coal, <span class="text-miso">MISO</span> 125 TWh, <span class="text-pjm">PJM</span> 139 TWh, and <span class="text-ercot">ERCOT</span> 68 TWh. After those thresholds, every grid converges to the same efficient-gas baseline at ~860 lb/MWh - and the consequential "discount" vanishes entirely. <span class="text-neiso">NEISO</span>, <span class="text-nyiso">NYISO</span>, and <span class="text-caiso">CAISO</span> are already there today. <span class="highlight">Once coal is exhausted, consequential buyers face the same $/tCO&#8322; as hourly matching</span> - but having starved gas-dependent grids of firm clean investment during the critical window when those technologies needed demand signals to scale.</p>
         <p>The GHG Protocol's Scope 2 revision should recognize hourly attribution as the robust default - the framework that works at 1% participation and at 100%.</p>
     </div>
