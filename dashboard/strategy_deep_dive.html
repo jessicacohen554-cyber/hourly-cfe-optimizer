@@ -241,7 +241,7 @@
 
 <section class="content-section scroll-reveal">
 
-    <div class="card">
+    <div class="glass-chart-panel">
         <h3 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Total Gas Capacity vs. Corporate Participation</h3>
         <p style="font-family:var(--font-body);font-size:13px;color:#64748B;margin-bottom:var(--space-md)">Ribbon bands show the range across all CO&#8322; targets (50&ndash;99.99%). Solid line = 95% target; dotted lines = 90% and 99%. When lines cross below 299 GW, strategies begin displacing existing gas.</p>
         <div class="deep-chart-wrap">
@@ -257,6 +257,7 @@
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- SECTION 2: PARTICIPATION-LEVEL DEEP DIVE                             -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="energy-divider"></div>
 <div class="section-header fade-in">
     <div class="section-number">2</div>
     <h2>Participation-Level Deep Dive</h2>
@@ -266,25 +267,25 @@
 <section class="content-section scroll-reveal">
 
     <div class="chart-grid-2">
-        <div class="card">
+        <div class="glass-chart-panel" style="margin:0">
             <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Grid Hourly Match Score (%)</h4>
             <div class="deep-chart-wrap">
                 <canvas id="chartHmsRibbon"></canvas>
             </div>
         </div>
-        <div class="card">
+        <div class="glass-chart-panel" style="margin:0">
             <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Fossil CO&#8322; Displaced (Mt)</h4>
             <div class="deep-chart-wrap">
                 <canvas id="chartCo2Ribbon"></canvas>
             </div>
         </div>
-        <div class="card">
+        <div class="glass-chart-panel" style="margin:0">
             <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">CO&#8322; Efficiency (Mt displaced per $B)</h4>
             <div class="deep-chart-wrap">
                 <canvas id="chartEffRibbon"></canvas>
             </div>
         </div>
-        <div class="card">
+        <div class="glass-chart-panel" style="margin:0">
             <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Curtailment (TWh)</h4>
             <div class="deep-chart-wrap">
                 <canvas id="chartCurtRibbon"></canvas>
@@ -296,6 +297,7 @@
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- SECTION 3: FULL DECARBONIZATION MATRIX                                -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="energy-divider"></div>
 <div class="section-header fade-in">
     <div class="section-number">3</div>
     <h2>Full Decarbonization Matrix</h2>
@@ -316,6 +318,7 @@
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- SECTION 4: RESOURCE BUILDOUT TRAJECTORIES                             -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="energy-divider"></div>
 <div class="section-header fade-in">
     <div class="section-number">4</div>
     <h2>Resource Buildout Trajectories &amp; Stranded Assets</h2>
@@ -331,14 +334,14 @@
     </div>
 
     <div class="chart-grid-2">
-        <div class="card">
+        <div class="glass-chart-panel" style="margin:0">
             <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Curtailment vs. Threshold</h4>
             <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm)">Strategies that overbuild renewables early show rising curtailment at higher targets.</p>
             <div class="deep-chart-wrap">
                 <canvas id="chartCurtTrajectory"></canvas>
             </div>
         </div>
-        <div class="card">
+        <div class="glass-chart-panel" style="margin:0">
             <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">New Gas Buildout vs. Threshold</h4>
             <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm)">Total gas capacity required at each CO&#8322; target. Lower = less fossil backup needed.</p>
             <div class="deep-chart-wrap">
@@ -346,7 +349,7 @@
             </div>
         </div>
     </div>
-    <div class="card" style="margin-top:var(--space-md)">
+    <div class="glass-chart-panel" style="margin-top:var(--space-md)">
         <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Resource Mix vs. Threshold</h4>
         <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm)">How the resource mix evolves as CO&#8322; ambition increases. Select a strategy to view.</p>
         <div class="slider-control">
@@ -363,6 +366,7 @@
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- SECTION 5: WRIGHT'S LAW CRITICAL MASS                                 -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="energy-divider"></div>
 <div class="section-header fade-in">
     <div class="section-number">5</div>
     <h2>Wright&rsquo;s Law Critical Mass</h2>
@@ -372,14 +376,14 @@
 <section class="content-section scroll-reveal">
 
     <div class="chart-grid-2">
-        <div class="card">
+        <div class="glass-chart-panel" style="margin:0">
             <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Cost Trajectories by Strategy (at 95% target)</h4>
             <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm) /* contrast-fix: was #94A3B8, now #64748B, ratio 4.76:1 on white */">Blended $/MWh as participation scales. Lower = faster learning curve realization.</p>
             <div class="deep-chart-wrap">
                 <canvas id="chartWrightsTrajectory"></canvas>
             </div>
         </div>
-        <div class="card">
+        <div class="glass-chart-panel" style="margin:0">
             <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Critical Mass Threshold</h4>
             <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm) /* contrast-fix: was #94A3B8, now #64748B, ratio 4.76:1 on white */">Participation level where blended costs reach net-negative (learning curves outpace premiums).</p>
             <div class="deep-chart-wrap">
@@ -396,6 +400,7 @@
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
 <!-- SECTION 6: SYNTHESIS                                                  -->
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="energy-divider"></div>
 <div class="section-header fade-in">
     <div class="section-number">6</div>
     <h2>Synthesis</h2>

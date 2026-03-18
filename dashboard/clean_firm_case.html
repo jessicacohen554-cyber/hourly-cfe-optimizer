@@ -31,7 +31,7 @@
 }
 
 /* Chart panel min-height override */
-.chart-panel .chart-container { min-height: 340px; }
+.chart-panel .chart-container, .glass-chart-panel .chart-container { min-height: 340px; }
 
 /* Concept layout (full-width card bg, 2-col inner) */
 .concept-section {
@@ -198,7 +198,7 @@
     .concept-inner { grid-template-columns: 1fr; }
     .concept-chart-col { padding: 24px 16px 16px; }
     .concept-narrative-col { padding: 16px 16px 32px; }
-    .chart-panel .chart-container { min-height: 300px; }
+    .chart-panel .chart-container, .glass-chart-panel .chart-container { min-height: 300px; }
     .synthesis-inner { grid-template-columns: 1fr; gap: 16px; }
     .synthesis-section { padding: 36px var(--pad-page); }
     .section-header { padding: 32px 16px 0; }
@@ -208,8 +208,8 @@
     .foak-text p { font-size: 0.85rem; }
 }
 @media (max-width: 600px) {
-    .chart-panel { padding: 12px 10px; }
-    .chart-panel .chart-container { min-height: 260px; }
+    .chart-panel, .glass-chart-panel { padding: 12px 10px; }
+    .chart-panel .chart-container, .glass-chart-panel .chart-container { min-height: 260px; }
     .concept-chart-col { padding: 16px 10px 10px; }
     .concept-narrative-col { padding: 10px 12px 24px; }
     .synthesis-card { padding: 18px 14px; }
@@ -219,7 +219,7 @@
     .foak-text p { font-size: 0.8rem; line-height: 1.6; }
 }
 @media (max-width: 480px) {
-    .chart-panel .chart-container { min-height: 240px; }
+    .chart-panel .chart-container, .glass-chart-panel .chart-container { min-height: 240px; }
     .iso-btn { padding: 4px 9px; font-size: 0.68rem; min-height: 30px; }
     .stat-callout { font-size: 0.75rem; padding: 6px 10px; }
     .foak-hero { padding: 20px 8px; }
@@ -452,7 +452,7 @@
             </details>
         </div>
         <div class="foak-chart">
-            <div class="chart-panel">
+            <div class="glass-chart-panel chart-panel" style="margin:0">
                 <div class="chart-title">FOAK &rarr; NOAK: Clean Firm Costs Fall as Gas Costs Rise</div>
                 <div class="chart-container" style="min-height:380px;position:relative;">
                     <canvas id="foakNOAKChart"></canvas>
@@ -469,6 +469,7 @@
 </section>
 
 <!-- ==================== STRANDED ASSETS OVERVIEW ==================== -->
+<div class="energy-divider"></div>
 <div class="section-header fade-in">
     <div class="section-number">2</div>
     <h2>The Stranding Problem</h2>
@@ -499,7 +500,7 @@
             </div>
         </div>
         <div class="hero-chart-block">
-            <div class="chart-panel">
+            <div class="glass-chart-panel" style="margin:0">
                 <div class="chart-title">Gas Backup Capacity at 90% Clean (GW)</div>
                 <div class="chart-container">
                     <canvas id="heroChart"></canvas>
@@ -518,6 +519,7 @@
 </div>
 
 <!-- ==================== SECTION 3: THE GAS TRAP ==================== -->
+<div class="energy-divider"></div>
 <div class="section-header fade-in">
     <div class="section-number">3</div>
     <h2>The Gas Trap: You're Paying to Build Stranded Assets</h2>
@@ -529,7 +531,7 @@
 <section class="concept-section section-light">
     <div class="concept-inner">
         <div class="concept-chart-col">
-            <div class="chart-panel" style="width:100%;">
+            <div class="glass-chart-panel" style="margin:0; width:100%;">
                 <div class="iso-selector" id="gasTrapISO">
                     <button class="iso-btn active" data-iso="PJM">PJM</button>
                     <button class="iso-btn" data-iso="ERCOT">ERCOT</button>
@@ -556,6 +558,7 @@
 </div>
 
 <!-- ==================== SECTION 4: CLEAN FIRM DISPLACES GAS ==================== -->
+<div class="energy-divider"></div>
 <div class="section-header fade-in">
     <div class="section-number">4</div>
     <h2>Clean Firm Displaces Gas - Dollar for Dollar</h2>
@@ -564,7 +567,7 @@
 <section class="concept-section section-light">
     <div class="concept-inner">
         <div class="concept-chart-col">
-            <div class="chart-panel" style="width:100%;">
+            <div class="glass-chart-panel" style="margin:0; width:100%;">
                 <div class="iso-selector" id="displacementISO">
                     <button class="iso-btn active" data-iso="PJM">PJM</button>
                     <button class="iso-btn" data-iso="ERCOT">ERCOT</button>
@@ -587,6 +590,7 @@
 </section>
 
 <!-- ==================== SECTION 5: THE INVESTMENT CASE ==================== -->
+<div class="energy-divider"></div>
 <div class="section-header fade-in">
     <div class="section-number">5</div>
     <h2>The Investment Math: Gas Costs Are Permanent, FOAK Costs Decline</h2>
@@ -595,7 +599,7 @@
 <section class="concept-section section-light">
     <div class="concept-inner">
         <div class="concept-chart-col">
-            <div class="chart-panel" style="width:100%;">
+            <div class="glass-chart-panel" style="margin:0; width:100%;">
                 <div class="chart-title">Gas Backup Cost vs Nuclear LCOE at 90% Clean - All ISOs</div>
                 <div class="chart-container">
                     <canvas id="investmentChart"></canvas>
@@ -609,6 +613,7 @@
 </section>
 
 <!-- ==================== SYNTHESIS ==================== -->
+<div class="energy-divider"></div>
 <div class="section-header fade-in">
     <div class="section-number">6</div>
     <h2>Synthesis</h2>
@@ -655,6 +660,7 @@
 </div>
 
 <!-- ========== WRIGHT'S LAW LEARNING CURVES (merged from wrights_law.html) ========== -->
+<div class="energy-divider"></div>
 <div class="section-header fade-in">
     <div class="section-number">7</div>
     <h2>Wright's Law: Learning Curves & Critical Mass</h2>

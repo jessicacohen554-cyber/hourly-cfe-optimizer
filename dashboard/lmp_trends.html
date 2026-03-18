@@ -25,12 +25,7 @@
 
 /* LMP synthesis uses light bg instead of dark glass */
 .synthesis-section { border-top: 1px solid rgba(0,0,0,0.025); }
-.synthesis-card {
-    background: rgba(255,255,255,0.95);
-    border-color: rgba(74,144,217,0.10);
-}
-.synthesis-card h3 { color: var(--text-secondary); }
-.synthesis-card p { color: rgba(15,23,42,0.78); }
+/* synthesis-card styles removed — uses glass-chart-panel instead */
 
 /* Hero section padding override */
 .hero-section { padding: 56px var(--pad-page) 48px; }
@@ -257,6 +252,8 @@
     </p>
 </div>
 
+<div class="energy-divider"></div>
+
 <!-- REGION SELECTOR PILLS -->
 <div class="region-pills-bar">
     <div class="region-pills-inner">
@@ -296,7 +293,7 @@
             </div>
         </div>
         <div class="hero-chart-block">
-            <div class="chart-panel">
+            <div class="glass-chart-panel">
                 <div class="chart-title">Average Wholesale Price by Clean Energy Threshold - All Scenarios</div>
                 <div class="chart-container">
                     <canvas id="heroEnvelopeChart"></canvas>
@@ -312,6 +309,8 @@
     </div>
 </section>
 
+<div class="energy-divider"></div>
+
 <!-- ================================================================ -->
 <!-- SECTION 1: Fuel Prices Dominate                                   -->
 <!-- ================================================================ -->
@@ -323,7 +322,7 @@
 <div class="scroll-section section-light">
     <div class="scroll-section-inner">
         <div class="scroll-chart-col">
-            <div class="chart-panel">
+            <div class="glass-chart-panel">
                 <div class="chart-title">Wholesale Price by Fuel Assumption - Low / Medium / High</div>
                 <div class="chart-container">
                     <canvas id="fuelEnvelopeChart"></canvas>
@@ -355,6 +354,8 @@
     </div>
 </div>
 
+<div class="energy-divider"></div>
+
 <!-- ================================================================ -->
 <!-- SECTION 2: Market Regime Shift                                    -->
 <!-- ================================================================ -->
@@ -366,7 +367,7 @@
 <div class="scroll-section section-light">
     <div class="scroll-section-inner">
         <div class="scroll-chart-col">
-            <div class="chart-panel">
+            <div class="glass-chart-panel">
                 <div class="chart-title">Market Regime Shift - Zero-Price &amp; Scarcity Hours</div>
                 <div class="chart-container">
                     <canvas id="regimeChart"></canvas>
@@ -398,6 +399,8 @@
     </div>
 </div>
 
+<div class="energy-divider"></div>
+
 <!-- ================================================================ -->
 <!-- SECTION 3: Peak vs Off-peak                                       -->
 <!-- ================================================================ -->
@@ -409,7 +412,7 @@
 <div class="scroll-section section-light">
     <div class="scroll-section-inner">
         <div class="scroll-chart-col">
-            <div class="chart-panel">
+            <div class="glass-chart-panel">
                 <div class="chart-title">Peak vs. Off-Peak Wholesale Price &mdash; Structural Arbitrage</div>
                 <div class="chart-container">
                     <canvas id="peakSpreadChart"></canvas>
@@ -439,6 +442,8 @@
     </div>
 </div>
 
+<div class="energy-divider"></div>
+
 <!-- ================================================================ -->
 <!-- SECTION 4: Capacity Market Revenue                                -->
 <!-- ================================================================ -->
@@ -449,7 +454,7 @@
 </div>
 <div class="scroll-section section-light">
     <div class="scroll-section-inner">
-        <div class="chart-panel" id="capRevPanel">
+        <div class="glass-chart-panel" id="capRevPanel" style="margin:0">
             <div class="chart-header">
                 <h3 class="chart-title" id="capRevTitle">Total Wholesale Market Revenue: Energy + Capacity</h3>
                 <p class="chart-subtitle" id="capRevSubtitle">Capacity markets add $5–12/MWh in PJM, NYISO, CAISO - $0 in energy-only markets (ERCOT, SPP)</p>
@@ -472,7 +477,7 @@
         </div>
 
         <!-- Nuclear by resource category -->
-        <div class="chart-panel" style="margin-top:var(--space-lg);">
+        <div class="glass-chart-panel" style="margin-top:var(--space-lg);">
             <div class="chart-header">
                 <h3 class="chart-title" id="nucRevTitle">Nuclear Total Market Revenue by Fuel Price Scenario</h3>
                 <p class="chart-subtitle" id="nucRevSubtitle">Energy LMP + capacity payments vs. nuclear cost thresholds (operating, all-in, viability)</p>
@@ -481,6 +486,8 @@
         </div>
     </div>
 </div>
+
+<div class="energy-divider"></div>
 
 <!-- ================================================================ -->
 <!-- SECTION 5: Step 5B vs Step 10 Pure Power Market Comparison        -->
@@ -492,7 +499,7 @@
 </div>
 <div class="scroll-section section-light">
     <div class="scroll-section-inner">
-        <div class="chart-panel" id="refCasePanel">
+        <div class="glass-chart-panel" id="refCasePanel">
             <div class="chart-header">
                 <h3 class="chart-title" id="refCaseTitle">Pure Power Markets: Policy-Driven (5B) vs Market-Driven (Step 10)</h3>
                 <p class="chart-subtitle" id="refCaseSubtitle">Energy + capacity revenue only - no REC revenue included</p>
@@ -516,6 +523,8 @@
     </div>
 </div>
 
+<div class="energy-divider"></div>
+
 <!-- ================================================================ -->
 <!-- SECTION 6: Solar & Wind Cannibalization                           -->
 <!-- ================================================================ -->
@@ -527,7 +536,7 @@
 <div class="scroll-section section-light">
     <div class="scroll-section-inner">
         <div class="scroll-chart-col">
-            <div class="chart-panel">
+            <div class="glass-chart-panel">
                 <div class="chart-title">Price Cannibalization: How Clean Energy Erodes Its Own Revenue</div>
                 <div class="chart-container">
                     <canvas id="cannibalizationChart"></canvas>
@@ -557,6 +566,8 @@
     </div>
 </div>
 
+<div class="energy-divider"></div>
+
 <!-- ================================================================ -->
 <!-- SECTION 7: Storage & Arbitrage Signals                            -->
 <!-- ================================================================ -->
@@ -568,7 +579,7 @@
 <div class="scroll-section section-light">
     <div class="scroll-section-inner">
         <div class="scroll-chart-col">
-            <div class="chart-panel">
+            <div class="glass-chart-panel">
                 <div class="chart-title">Storage Deployment &amp; Arbitrage Opportunity by Clean Energy Threshold</div>
                 <div class="chart-container">
                     <canvas id="storageArbitrageChart"></canvas>
@@ -599,6 +610,8 @@
     </div>
 </div>
 
+<div class="energy-divider"></div>
+
 <!-- ================================================================ -->
 <!-- SECTION 8: Gas Capacity & Stranding Risk                          -->
 <!-- ================================================================ -->
@@ -610,7 +623,7 @@
 <div class="scroll-section section-light" id="gas-fleet-risk-section">
     <div class="scroll-section-inner">
         <div class="scroll-chart-col">
-            <div class="chart-panel">
+            <div class="glass-chart-panel">
                 <div class="chart-title">Gas Backup Capacity Required vs. 2025 Installed Fleet</div>
                 <div class="chart-container">
                     <canvas id="gasStrandingChart"></canvas>
@@ -644,6 +657,8 @@
     </div>
 </div>
 
+<div class="energy-divider"></div>
+
 <!-- ================================================================ -->
 <!-- SECTION 9: Nuclear Revenue Crossover (overview)                   -->
 <!-- ================================================================ -->
@@ -665,7 +680,7 @@
         </div>
 
         <!-- Crossover bar chart -->
-        <div class="chart-panel" style="margin-top:var(--space-lg);">
+        <div class="glass-chart-panel" style="margin-top:var(--space-lg);">
             <div class="chart-header">
                 <h3 class="chart-title">Revenue Crossover Threshold by ISO</h3>
                 <p class="chart-subtitle">Clean energy % where nuclear revenue drops below $41/MWh</p>
@@ -698,6 +713,8 @@
     </div>
 </div>
 
+<div class="energy-divider"></div>
+
 <!-- ================================================================ -->
 <!-- SECTION 10: Revenue Decomposition & Replacement Cost              -->
 <!-- ================================================================ -->
@@ -713,7 +730,7 @@
             <h2 class="section-title" id="ctrRevenueTitle">PJM &mdash; Revenue Decomposition</h2>
             <p class="section-subtitle">Energy (LMP) and capacity market revenue at each clean energy threshold, with the $38&ndash;44/MWh nuclear viability band.</p>
         </div>
-        <div class="chart-panel" style="margin-top:var(--space-lg);">
+        <div class="glass-chart-panel" style="margin-top:var(--space-lg);">
             <div class="chart-container-lg"><canvas id="ctrRevenueDecompChart"></canvas></div>
             <div class="chart-legend" id="ctrRevenueDecompLegend"></div>
         </div>
@@ -726,7 +743,7 @@
             <h3 class="section-title" id="ctrCompTitle" style="font-size:1.15rem;">PJM &mdash; Cost to Replace Nuclear</h3>
             <p class="section-subtitle">Track 1 (baseline with nuclear), Track 2 (all new-build), and Track 3 (replace nuclear) &mdash; plus total market revenue for comparison.</p>
         </div>
-        <div class="chart-panel" style="margin-top:var(--space-lg);">
+        <div class="glass-chart-panel" style="margin-top:var(--space-lg);">
             <div class="chart-container-lg"><canvas id="ctrComparisonChart"></canvas></div>
             <div class="chart-legend" id="ctrCompLegend"></div>
         </div>
@@ -735,6 +752,8 @@
         </div>
     </div>
 </div>
+
+<div class="energy-divider"></div>
 
 <!-- ================================================================ -->
 <!-- SYNTHESIS                                                         -->
@@ -747,13 +766,13 @@
 <section class="scroll-section section-light">
 <div class="scroll-section-inner">
     <div class="synthesis-grid" id="synthesisGrid">
-        <div class="synthesis-card">
+        <div class="glass-chart-panel" style="margin:0">
             <h3>The uncertainty paradox: widest where it matters most</h3>
             <p>The P10&ndash;P90 spread in wholesale prices peaks at 75&ndash;80% clean energy - exactly the threshold range where most corporate buyers and utilities are currently planning. At 80%, the gap between the best- and worst-case outcome is <strong>$31/MWh</strong>. That's the difference between wholesale power cheaper than natural gas alone and wholesale power more expensive than today's average.</p>
             <p>The implication: forecasting wholesale prices at 75&ndash;85% clean requires getting fuel cost assumptions right. Every other input is noise until you approach &ge;99.99%.</p>
             <span class="stat-badge stat-badge-amber">$31/MWh spread at 80% &middot; $0.4/MWh spread at &ge;99.99%</span>
         </div>
-        <div class="synthesis-card">
+        <div class="glass-chart-panel" style="margin:0">
             <h3>Three eras of the wholesale market</h3>
             <p><strong>Era 1: 50&ndash;75% (2030&ndash;~2034)</strong> &mdash; Fossil sets the price. Fuel costs dominate. Wholesale markets function as they do today, just at modestly lower levels. Zero-price hours are a nuisance, not a structural feature.</p>
             <p><strong>Era 2: 75&ndash;95% (~2034&ndash;2045)</strong> &mdash; The transition zone. Price uncertainty is at its peak. Zero-price hours become a defining feature (half the year by 95%). Storage and flexibility gain premium value.</p>
@@ -764,6 +783,8 @@
     </div>
 </div>
 </section>
+
+<div class="energy-divider"></div>
 
 <!-- ============ RELATED ANALYSES ============ -->
 <div class="related-analyses">
