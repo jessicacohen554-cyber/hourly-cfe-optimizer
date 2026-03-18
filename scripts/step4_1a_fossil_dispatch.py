@@ -54,7 +54,7 @@ from dispatch_utils import (
     load_common_data, get_supply_profiles, get_demand_profile,
     build_supply_matrix,
     _archetype_key, load_dispatch_cache, DISPATCH_CACHE_DIR,
-    compute_fossil_retirement,
+    compute_fossil_retirement, compute_co2_from_dispatch,
 )
 
 from parquet_io import (
