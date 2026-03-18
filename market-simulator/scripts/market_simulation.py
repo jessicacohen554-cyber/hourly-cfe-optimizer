@@ -67,6 +67,8 @@ from pipeline_config import (
     get_rps_floor,
     FIRM_IMPORT_MW,
     CANNIBALIZATION_ENABLED,
+    SCARCITY_MODE,
+    VRE_PRIMARY_ZONE,
 )
 from dispatch_utils import (
     load_common_data, get_demand_profile, get_supply_profiles,
@@ -579,7 +581,21 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
             'dr_avg_price': round(float(hourly_lmp[dr_active].mean()), 1) if dr_active.any() else 0,
         }
 
-    return hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_stats
+    # --- ORDC SCARCITY HOURS FRACTION ---
+    # Fraction of hours where ORDC adder > $50/MWh — used to floor
+    # VRE cannibalization depression (scarcity hours keep prices high
+    # even at high VRE penetration).
+    scarcity_hours_fraction = 0.0
+    if SCARCITY_MODE == 'ordc':
+        # Reconstruct residual MW from dispatch to compute reserves
+        total_annual_mwh = demand_mw_profile.sum()
+        residual_norm = dispatch['residual_demand']
+        _residual_mw = residual_norm * total_annual_mwh
+        _reserves_mw = np.maximum(total_fossil_mw - _residual_mw, 0.0)
+        _ordc_adder = price_model.compute_ordc_adder(_reserves_mw)
+        scarcity_hours_fraction = float(np.sum(_ordc_adder > 50.0)) / H
+
+    return hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_stats, scarcity_hours_fraction
 
 
 @njit(cache=True)
@@ -1729,12 +1745,66 @@ def compute_ipm_triggers(iso, year, year_result, gen_econ, state, conditions,
     return triggers
 
 
+def _compute_zone_capture_adjustments(iso, system_vre_penetration, zonal_stats):
+    """Compute zone-aware capture rate adjustments for VRE resources.
+
+    When zonal LMP data is available, solar/wind in high-curtailment zones
+    face worse capture rates than the system average, while resources in
+    load-center zones may fare better.
+
+    Args:
+        iso: ISO region string
+        system_vre_penetration: System-wide VRE penetration fraction
+        zonal_stats: Dict from _compute_zonal_stats() — keys are zone names
+            with sub-dict containing 'avg_lmp', plus '_congestion' key.
+
+    Returns dict {resource: adjustment_factor} where factor > 1.0 means
+    the zone-level capture is better than system average, < 1.0 means worse.
+    Factor of 1.0 = no adjustment (fallback).
+    """
+    if not zonal_stats:
+        return {}
+
+    # Extract zone-level avg LMPs from zonal_stats structure
+    # zonal_stats has zone names as keys (e.g., 'SP15', 'NP15') with
+    # sub-dicts containing 'avg_lmp'. Skip special keys like '_congestion'.
+    zone_avg_lmps = {}
+    for key, val in zonal_stats.items():
+        if isinstance(val, dict) and 'avg_lmp' in val:
+            zone_avg_lmps[key] = val['avg_lmp']
+
+    if not zone_avg_lmps:
+        return {}
+
+    # Compute system average from zone LMPs
+    system_avg_lmp = sum(zone_avg_lmps.values()) / len(zone_avg_lmps)
+    if system_avg_lmp <= 0:
+        return {}
+
+    vre_zones = VRE_PRIMARY_ZONE.get(iso, {})
+    adjustments = {}
+
+    for vre_res, canonical in [('solar', 'solar'), ('wind', 'wind'),
+                                ('offshore_wind', 'wind')]:
+        zone_name = vre_zones.get(canonical)
+        if zone_name and zone_name in zone_avg_lmps:
+            zone_lmp = zone_avg_lmps[zone_name]
+            # Ratio of zone LMP to system LMP — zones with lower average
+            # LMP (due to VRE surplus) get a capture penalty
+            adjustments[vre_res] = zone_lmp / system_avg_lmp
+        # else: no adjustment (factor defaults to 1.0 in caller)
+
+    return adjustments
+
+
 def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
                                conditions, cumulative_gw, queue_remaining_gw,
                                hourly_lmp, avg_lmp, p90_lmp,
                                supply_profiles_iso, demand_total_mwh,
                                gen_econ, state, tech_queue_budget=None,
-                               per_resource_energy_rev=None):
+                               per_resource_energy_rev=None,
+                               scarcity_hours_fraction=0.0,
+                               zonal_stats=None):
     """Pure economics-driven resource deployment via LCOE merit order.
 
     Ranks all available clean resources by net LCOE (after incentives, learning
@@ -1956,7 +2026,9 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
         })
 
         # Intra-deployment cannibalization: depress VRE energy revenue for
-        # subsequent tranches as solar/wind penetration increases
+        # subsequent tranches as solar/wind penetration increases.
+        # ORDC-aware: scarcity hours create a floor on revenue depression.
+        # Zone-aware: use zone-level VRE penetration when zonal data available.
         if per_resource_energy_rev is not None and res in ('solar', 'wind', 'offshore_wind'):
             cumulative_vre_twh = sum(
                 deployed.get(r, 0) for r in ('solar', 'wind', 'offshore_wind')
@@ -1964,9 +2036,22 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
             vre_penetration = cumulative_vre_twh / demand_twh if demand_twh > 0 else 0
             # Sigmoid depression matching procurement_utils.py pattern
             depression = 0.55 * (1.0 / (1.0 + np.exp(-8.0 * (vre_penetration - 0.6))))
+
+            # ORDC floor: scarcity hours keep prices high even at high VRE.
+            # If 10% of hours have ORDC > $50, max depression capped at 97%.
+            if scarcity_hours_fraction > 0 and SCARCITY_MODE == 'ordc':
+                scarcity_floor = scarcity_hours_fraction * 0.3
+                depression = min(depression, 1.0 - scarcity_floor)
+
+            # Zone-aware: adjust per-resource depression by zone-level penetration
+            # when zonal LMP data is available
+            _zone_capture = _compute_zone_capture_adjustments(
+                iso, vre_penetration, zonal_stats) if zonal_stats else {}
+
             for vre_res in ('solar', 'wind', 'offshore_wind'):
                 base_rev = per_resource_energy_rev.get(vre_res, avg_lmp)
-                per_res_rev[vre_res] = base_rev * (1.0 - depression)
+                zone_adj = _zone_capture.get(vre_res, 1.0)
+                per_res_rev[vre_res] = base_rev * (1.0 - depression) * zone_adj
 
     # Build revenue breakdown from deployed mix
     total_energy = 0
@@ -2559,10 +2644,11 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                         conditions['demand_growth'], year, carbon_price,
                         interchange_enabled, dr_level)
             zonal_congestion_data = None
+            scarcity_hours_frac = 0.0
             if _lmp_cache is not None and _lmp_key in _lmp_cache:
-                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data = _lmp_cache[_lmp_key]
+                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac = _lmp_cache[_lmp_key]
             else:
-                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data = compute_lmp_at_threshold(
+                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac = compute_lmp_at_threshold(
                     iso, current_pct, conditions['fuel_level'],
                     demand_norm, demand_mw_profile,
                     supply_profiles_iso, resource_pcts,
@@ -2581,7 +2667,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                     dr_level=dr_level,
                 )
                 if _lmp_cache is not None:
-                    _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data)
+                    _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac)
 
             # --- LCOE MERIT-ORDER DEPLOYMENT ---
             # Compute per-resource temporal energy revenue for deployment economics
@@ -2602,6 +2688,8 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 gen_econ, state,
                 tech_queue_budget=tech_queue_budget,
                 per_resource_energy_rev=_per_res_rev,
+                scarcity_hours_fraction=scarcity_hours_frac,
+                zonal_stats=zonal_congestion_data,
             )
 
             # Sync queue budget after deployment
@@ -2835,6 +2923,9 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 'dr_hours': dr_metrics.get('dr_hours', 0),
                 'dr_avg_price': dr_metrics.get('dr_avg_price', 0),
                 'data_source': _data_sources.get(iso, 'synthetic'),
+                # ORDC scarcity metrics
+                'ordc_scarcity_hours': round(scarcity_hours_frac * H),
+                'ordc_scarcity_hours_fraction': round(scarcity_hours_frac, 4),
             }
 
             # ── Zonal congestion data (from zonal LP solver) ────────────
