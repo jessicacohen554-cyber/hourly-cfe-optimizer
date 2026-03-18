@@ -168,6 +168,31 @@
             <div class="chart-container-lg" id="chartLMPTimeSeries"></div>
         </div>
 
+        <!-- Chart 1b: Zonal LMP Price Spreads (shown when zonal data available) -->
+        <div class="chart-card" id="zonalLMPCard" style="display:none;">
+            <div class="chart-card-header">
+                <h3>Zonal Price Spreads <span class="info-icon" data-tooltip="Transmission congestion creates different prices across zones within an ISO. Plants in high-price zones earn more revenue; plants in low-price zones may be stranded despite system-average profitability. Based on simplified pipe-and-bubble zonal decomposition with inter-zonal transfer limits.">i</span></h3>
+                <p>Average LMP by transmission zone — congestion creates winners and losers within the ISO</p>
+            </div>
+            <div class="chart-container" id="chartZonalLMP"></div>
+            <div class="table-responsive" style="margin-top: var(--space-md, 1rem);">
+                <table class="data-table" id="zonalLMPTable">
+                    <thead>
+                        <tr>
+                            <th>Zone</th>
+                            <th>Avg LMP ($/MWh)</th>
+                            <th>Peak ($/MWh)</th>
+                            <th>Off-Peak ($/MWh)</th>
+                            <th>P10</th>
+                            <th>P90</th>
+                            <th>Spread vs System</th>
+                        </tr>
+                    </thead>
+                    <tbody id="zonalLMPTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- Chart 2: Supply Stack Time Series -->
         <div class="chart-card">
             <div class="chart-card-header">
