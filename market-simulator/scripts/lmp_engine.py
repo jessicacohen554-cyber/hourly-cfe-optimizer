@@ -1335,7 +1335,10 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
                     hourly_lmp[winter_slice])
             h += mh
 
-    return hourly_lmp, hourly_marginal_unit
+    # DR is applied as post-processing in market_simulation.py so it works
+    # with both zonal and copper-plate LMP paths.
+    dr_curtailed_mw = np.zeros(H, dtype=np.float64)
+    return hourly_lmp, hourly_marginal_unit, dr_curtailed_mw
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1617,7 +1620,7 @@ def run_lmp_for_iso(iso, scenarios, demand_data, gen_profiles,
             h2_pct=h2)
 
         # Compute hourly LMP
-        hourly_lmp, hourly_mu = compute_hourly_lmp_vectorized(
+        hourly_lmp, hourly_mu, _dr = compute_hourly_lmp_vectorized(
             dispatch, demand_mw_profile, stack, price_model, iso)
 
         # Compute stats
@@ -1749,7 +1752,7 @@ def run_test_cases(iso='PJM'):
         price_model = get_price_model(iso, fuel_level)
 
         # LMP computation
-        hourly_lmp, hourly_mu = compute_hourly_lmp_vectorized(
+        hourly_lmp, hourly_mu, _dr = compute_hourly_lmp_vectorized(
             dispatch, demand_mw_profile, stack, price_model, iso)
 
         # Stats

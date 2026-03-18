@@ -155,6 +155,7 @@ class SimulationRequest(BaseModel):
     year_step: int = 1                  # 1 = every year, 5 = every 5 years
     custom_overrides: CustomOverrides = Field(default_factory=CustomOverrides)
 
+    dr_level: str = "Off"  # Off/Low/Medium/High — demand response participation level
     # Fossil new-build LCOEs
     fossil_lcoes: Optional[dict] = None  # {gas_ccgt: float, gas_ct: float, coal: float}
 
@@ -360,6 +361,11 @@ class SimulationResponse(BaseModel):
     gas_fleet_shift: Optional[List[dict]] = None
     sensitivity_matrix: Optional[dict] = None
     ccs_analysis: Optional[dict] = None
+    # Demand response metrics (from latest year)
+    dr_curtailed_gwh: float = 0.0
+    dr_peak_gw: float = 0.0
+    dr_hours: int = 0
+    dr_avg_price: float = 0.0
     # Run tracking
     run_id: Optional[str] = None
     narrative: Optional[str] = None
