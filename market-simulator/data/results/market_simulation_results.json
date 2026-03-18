@@ -1,32 +1,25 @@
 {
   "MKT_CUSTOM": {
-    "ERCOT": [
+    "PJM": [
       {
-        "iso": "ERCOT",
+        "iso": "PJM",
         "scenario": "MKT_CUSTOM",
-        "year": 2025,
-        "clean_pct": 46.1,
-        "demand_twh": 522.8,
-        "emissions_mt": 0.0,
-        "emission_rate_tco2_mwh": 0.0,
-        "cost_per_mwh": 75.5,
-        "revenue_per_mwh": 44.48,
-        "energy_rev_mwh": 44.48,
-        "capacity_rev_mwh": 0.0,
-        "rec_rev_mwh": 0.0,
-        "avg_lmp": 44.5,
-        "lmp_p90": 53.6,
+        "year": 2023,
+        "clean_pct": 36.8,
+        "demand_twh": 843.3,
+        "emissions_mt": 267.32,
+        "emission_rate_tco2_mwh": 0.5015,
+        "cost_per_mwh": 0,
+        "revenue_per_mwh": 0,
+        "energy_rev_mwh": 0,
+        "capacity_rev_mwh": 0,
+        "rec_rev_mwh": 0,
+        "avg_lmp": 33.0,
+        "lmp_p90": 49.5,
         "gas_built_gw": 0,
         "total_gas_gw": 0,
-        "market_stop": true,
-        "resource_mix_twh": {
-          "clean_firm": 47.05,
-          "solar": 73.19,
-          "wind": 162.06,
-          "offshore_wind": 0.0,
-          "ccs_ccgt": 240.48,
-          "hydro": 0.0
-        },
+        "market_stop": false,
+        "resource_mix_twh": {},
         "cumulative_gw": {
           "nuclear": 2.0,
           "ccs": 0.3,
@@ -40,38 +33,156 @@
           "offshore_wind": 5.0
         },
         "zones_deployed": [],
-        "zone_details": [],
+        "generator_economics": {},
+        "nuclear_revenue": {},
+        "nuclear_retired": false,
+        "ccs_breakeven": {},
+        "rps_mandated_pct": 0,
+        "rps_eligible_pct": 8.5,
+        "rps_shortfall_pct": 0,
+        "acp_cost_million": 0,
+        "cumulative_acp_million": 0
+      },
+      {
+        "iso": "PJM",
+        "scenario": "MKT_CUSTOM",
+        "year": 2030,
+        "clean_pct": 53.1,
+        "demand_twh": 995.6,
+        "emissions_mt": 199.56,
+        "emission_rate_tco2_mwh": 0.439,
+        "cost_per_mwh": 62.86,
+        "revenue_per_mwh": 161.43,
+        "energy_rev_mwh": 135.25,
+        "capacity_rev_mwh": 24.17,
+        "rec_rev_mwh": 2.0,
+        "avg_lmp": 135.3,
+        "lmp_p90": 453.7,
+        "gas_built_gw": 0,
+        "total_gas_gw": 0,
+        "market_stop": false,
+        "resource_mix_twh": {
+          "clean_firm": 319.6,
+          "solar": 81.0,
+          "wind": 37.83,
+          "offshore_wind": 0.0,
+          "ccs_ccgt": 0.0,
+          "hydro": 17.92
+        },
+        "cumulative_gw": {
+          "nuclear": 2.0,
+          "ccs": 0.3,
+          "ldes": 0.01,
+          "h2": 0.1,
+          "geothermal": 0.05,
+          "battery": 50.0,
+          "battery8": 50.0,
+          "solar": 185.0,
+          "wind": 150.0,
+          "offshore_wind": 5.0
+        },
+        "zones_deployed": [
+          "solar"
+        ],
+        "zone_details": [
+          {
+            "resource": "solar",
+            "threshold": 45.8,
+            "twh": 52.12,
+            "gw": 35.0,
+            "new_gw": 35.0,
+            "lcoe": 62.86,
+            "cost": 62.86,
+            "revenue": 161.43,
+            "profit": 98.57,
+            "avg_lmp": 135.3,
+            "energy_rev_mwh": 135.25,
+            "capacity_rev_mwh": 24.17,
+            "rec_rev_mwh": 2.0
+          }
+        ],
         "generator_economics": {
           "gas_ccgt": {
-            "dispatch_hours": 8760,
-            "cf": 0.0,
-            "avg_rev_mwh": 53.98,
+            "dispatch_hours": 8759,
+            "cf": 1.0,
+            "avg_rev_mwh": 135.36,
             "var_cost_mwh": 33.04,
-            "margin_mwh": 20.94,
-            "capacity_mw": 38549.30942949881
+            "margin_mwh": 102.32,
+            "capacity_mw": 47286.0
           },
           "coal_steam": {
-            "dispatch_hours": 0,
-            "cf": 0.0,
-            "avg_rev_mwh": 0.0,
+            "dispatch_hours": 8365,
+            "cf": 0.69,
+            "avg_rev_mwh": 173.44,
             "var_cost_mwh": 36.55,
-            "margin_mwh": -36.55,
-            "capacity_mw": 16961.696148979478
+            "margin_mwh": 136.07,
+            "capacity_mw": 37062.0
           },
           "gas_ct": {
+            "dispatch_hours": 1960,
+            "cf": 0.05,
+            "avg_rev_mwh": 343.13,
+            "var_cost_mwh": 49.25,
+            "margin_mwh": 273.35,
+            "capacity_mw": 39618.0
+          },
+          "oil_ct": {
             "dispatch_hours": 0,
             "cf": 0.0,
             "avg_rev_mwh": 0.0,
-            "var_cost_mwh": 49.25,
-            "margin_mwh": -49.25,
-            "capacity_mw": 21587.613280519337
+            "var_cost_mwh": 131.81,
+            "margin_mwh": -131.81,
+            "capacity_mw": 3834.0
           }
         },
+        "adjusted_generator_economics": {
+          "gas_ccgt": {
+            "dispatch_hours": 8759,
+            "cf": 1.0,
+            "avg_rev_mwh": 135.36,
+            "var_cost_mwh": 33.04,
+            "margin_mwh": 102.32,
+            "capacity_mw": 47286.0
+          },
+          "coal_steam": {
+            "dispatch_hours": 8365,
+            "cf": 0.69,
+            "avg_rev_mwh": 173.44,
+            "var_cost_mwh": 36.55,
+            "margin_mwh": 136.07,
+            "capacity_mw": 37062.0
+          },
+          "gas_ct": {
+            "dispatch_hours": 1960,
+            "cf": 0.05,
+            "avg_rev_mwh": 343.13,
+            "var_cost_mwh": 49.25,
+            "margin_mwh": 273.35,
+            "capacity_mw": 39618.0
+          },
+          "oil_ct": {
+            "dispatch_hours": 0,
+            "cf": 0.0,
+            "avg_rev_mwh": 0.0,
+            "var_cost_mwh": 131.81,
+            "margin_mwh": -131.81,
+            "capacity_mw": 383.40000000000055
+          }
+        },
+        "economic_retirements_mw": {
+          "oil_ct": 3451.0
+        },
+        "total_economic_retirement_mw": 3451.0,
+        "emissions_by_fuel": {
+          "coal": 14.766,
+          "oil": 3.241,
+          "gas_ccgt": 128.498
+        },
         "nuclear_revenue": {
-          "energy_rev_mwh": 44.48,
-          "capacity_rev_mwh": 0.0,
-          "ptc_mwh": 15.0,
-          "total_mwh": 59.48
+          "energy_rev_mwh": 135.25,
+          "capacity_rev_mwh": 9.81,
+          "ptc_mwh": 0.0,
+          "total_mwh": 145.06
         },
         "nuclear_retired": false,
         "ccs_breakeven": {
@@ -79,7 +190,650 @@
           "new_gas_vs_old_carbon_price": 0,
           "existing_ccgt_var_cost": 28.0,
           "ccs_lcoe": 100
-        }
+        },
+        "rps_mandated_pct": 7.2,
+        "rps_eligible_pct": 21.0,
+        "rps_shortfall_pct": 9.0,
+        "acp_cost_million": 4.0,
+        "cumulative_acp_million": 4.0,
+        "dr_curtailed_gwh": 9666.3,
+        "dr_peak_gw": 5.25,
+        "dr_hours": 2332,
+        "dr_avg_price": 382.2
+      },
+      {
+        "iso": "PJM",
+        "scenario": "MKT_CUSTOM",
+        "year": 2035,
+        "clean_pct": 61.0,
+        "demand_twh": 1121.0,
+        "emissions_mt": 173.41,
+        "emission_rate_tco2_mwh": 0.4082,
+        "cost_per_mwh": 62.86,
+        "revenue_per_mwh": 287.2,
+        "energy_rev_mwh": 261.03,
+        "capacity_rev_mwh": 24.17,
+        "rec_rev_mwh": 2.0,
+        "avg_lmp": 261.0,
+        "lmp_p90": 460.5,
+        "gas_built_gw": 0,
+        "total_gas_gw": 0,
+        "market_stop": false,
+        "resource_mix_twh": {
+          "clean_firm": 359.83,
+          "solar": 69.74,
+          "wind": 42.6,
+          "offshore_wind": 0.0,
+          "ccs_ccgt": 0.0,
+          "hydro": 20.18
+        },
+        "cumulative_gw": {
+          "nuclear": 2.0,
+          "ccs": 0.3,
+          "ldes": 0.01,
+          "h2": 0.1,
+          "geothermal": 0.05,
+          "battery": 50.0,
+          "battery8": 50.0,
+          "solar": 210.0,
+          "wind": 150.0,
+          "offshore_wind": 5.0
+        },
+        "zones_deployed": [
+          "solar",
+          "wind"
+        ],
+        "zone_details": [
+          {
+            "resource": "solar",
+            "threshold": 56.4,
+            "twh": 37.23,
+            "gw": 25.0,
+            "new_gw": 25.0,
+            "lcoe": 62.86,
+            "cost": 62.86,
+            "revenue": 287.2,
+            "profit": 224.34,
+            "avg_lmp": 261.0,
+            "energy_rev_mwh": 261.03,
+            "capacity_rev_mwh": 24.17,
+            "rec_rev_mwh": 2.0
+          },
+          {
+            "resource": "wind",
+            "threshold": 56.4,
+            "twh": 0.0,
+            "gw": 0.0,
+            "new_gw": 0.0,
+            "lcoe": 64.66,
+            "cost": 64.66,
+            "revenue": 267.6,
+            "profit": 202.94,
+            "avg_lmp": 261.0,
+            "energy_rev_mwh": 261.03,
+            "capacity_rev_mwh": 4.57,
+            "rec_rev_mwh": 2.0
+          }
+        ],
+        "generator_economics": {
+          "gas_ccgt": {
+            "dispatch_hours": 8759,
+            "cf": 1.0,
+            "avg_rev_mwh": 261.08,
+            "var_cost_mwh": 33.04,
+            "margin_mwh": 228.04,
+            "capacity_mw": 47286.0
+          },
+          "coal_steam": {
+            "dispatch_hours": 8593,
+            "cf": 0.74,
+            "avg_rev_mwh": 298.68,
+            "var_cost_mwh": 36.55,
+            "margin_mwh": 261.81,
+            "capacity_mw": 37062.0
+          },
+          "gas_ct": {
+            "dispatch_hours": 3067,
+            "cf": 0.11,
+            "avg_rev_mwh": 427.7,
+            "var_cost_mwh": 49.25,
+            "margin_mwh": 370.81,
+            "capacity_mw": 39618.0
+          },
+          "oil_ct": {
+            "dispatch_hours": 0,
+            "cf": 0.0,
+            "avg_rev_mwh": 0.0,
+            "var_cost_mwh": 131.81,
+            "margin_mwh": -131.81,
+            "capacity_mw": 3834.0
+          }
+        },
+        "adjusted_generator_economics": {
+          "gas_ccgt": {
+            "dispatch_hours": 8759,
+            "cf": 1.0,
+            "avg_rev_mwh": 261.08,
+            "var_cost_mwh": 33.04,
+            "margin_mwh": 228.04,
+            "capacity_mw": 47286.0
+          },
+          "coal_steam": {
+            "dispatch_hours": 8593,
+            "cf": 0.74,
+            "avg_rev_mwh": 298.68,
+            "var_cost_mwh": 36.55,
+            "margin_mwh": 261.81,
+            "capacity_mw": 37062.0
+          },
+          "gas_ct": {
+            "dispatch_hours": 3067,
+            "cf": 0.11,
+            "avg_rev_mwh": 427.7,
+            "var_cost_mwh": 49.25,
+            "margin_mwh": 370.81,
+            "capacity_mw": 39618.0
+          },
+          "oil_ct": {
+            "dispatch_hours": 0,
+            "cf": 0.0,
+            "avg_rev_mwh": 0.0,
+            "var_cost_mwh": 131.81,
+            "margin_mwh": -131.81,
+            "capacity_mw": 191.70000000000027
+          }
+        },
+        "economic_retirements_mw": {
+          "oil_ct": 3642.0
+        },
+        "total_economic_retirement_mw": 3642.0,
+        "emissions_by_fuel": {
+          "gas_ccgt": 82.766
+        },
+        "nuclear_revenue": {
+          "energy_rev_mwh": 261.03,
+          "capacity_rev_mwh": 7.36,
+          "ptc_mwh": 0.0,
+          "total_mwh": 268.39
+        },
+        "nuclear_retired": false,
+        "ccs_breakeven": {
+          "ccs_vs_existing_carbon_price": 216.2,
+          "new_gas_vs_old_carbon_price": 0,
+          "existing_ccgt_var_cost": 28.0,
+          "ccs_lcoe": 100
+        },
+        "rps_mandated_pct": 4.6,
+        "rps_eligible_pct": 28.9,
+        "rps_shortfall_pct": 11.1,
+        "acp_cost_million": 5.6,
+        "cumulative_acp_million": 9.7,
+        "dr_curtailed_gwh": 24229.6,
+        "dr_peak_gw": 5.25,
+        "dr_hours": 5055,
+        "dr_avg_price": 421.4
+      },
+      {
+        "iso": "PJM",
+        "scenario": "MKT_CUSTOM",
+        "year": 2040,
+        "clean_pct": 68.0,
+        "demand_twh": 1262.1,
+        "emissions_mt": 164.77,
+        "emission_rate_tco2_mwh": 0.4082,
+        "cost_per_mwh": 62.86,
+        "revenue_per_mwh": 400.03,
+        "energy_rev_mwh": 373.8,
+        "capacity_rev_mwh": 24.17,
+        "rec_rev_mwh": 2.06,
+        "avg_lmp": 373.8,
+        "lmp_p90": 466.6,
+        "gas_built_gw": 0,
+        "total_gas_gw": 0,
+        "market_stop": false,
+        "resource_mix_twh": {
+          "clean_firm": 405.14,
+          "solar": 73.84,
+          "wind": 47.96,
+          "offshore_wind": 0.0,
+          "ccs_ccgt": 0.0,
+          "hydro": 22.72
+        },
+        "cumulative_gw": {
+          "nuclear": 2.0,
+          "ccs": 0.3,
+          "ldes": 0.01,
+          "h2": 0.1,
+          "geothermal": 0.05,
+          "battery": 50.0,
+          "battery8": 50.0,
+          "solar": 235.01,
+          "wind": 150.0,
+          "offshore_wind": 5.0
+        },
+        "zones_deployed": [
+          "solar",
+          "wind"
+        ],
+        "zone_details": [
+          {
+            "resource": "solar",
+            "threshold": 63.9,
+            "twh": 37.23,
+            "gw": 25.0,
+            "new_gw": 25.0,
+            "lcoe": 62.86,
+            "cost": 62.86,
+            "revenue": 400.03,
+            "profit": 337.17,
+            "avg_lmp": 373.8,
+            "energy_rev_mwh": 373.8,
+            "capacity_rev_mwh": 24.17,
+            "rec_rev_mwh": 2.06
+          },
+          {
+            "resource": "wind",
+            "threshold": 63.9,
+            "twh": 0.0,
+            "gw": 0.0,
+            "new_gw": 0.0,
+            "lcoe": 64.66,
+            "cost": 64.66,
+            "revenue": 380.43,
+            "profit": 315.77,
+            "avg_lmp": 373.8,
+            "energy_rev_mwh": 373.8,
+            "capacity_rev_mwh": 4.57,
+            "rec_rev_mwh": 2.06
+          }
+        ],
+        "generator_economics": {
+          "gas_ccgt": {
+            "dispatch_hours": 8759,
+            "cf": 1.0,
+            "avg_rev_mwh": 373.85,
+            "var_cost_mwh": 33.04,
+            "margin_mwh": 340.81,
+            "capacity_mw": 47286.0
+          },
+          "coal_steam": {
+            "dispatch_hours": 8665,
+            "cf": 0.8,
+            "avg_rev_mwh": 390.81,
+            "var_cost_mwh": 36.55,
+            "margin_mwh": 354.09,
+            "capacity_mw": 37062.0
+          },
+          "gas_ct": {
+            "dispatch_hours": 4239,
+            "cf": 0.23,
+            "avg_rev_mwh": 452.1,
+            "var_cost_mwh": 49.25,
+            "margin_mwh": 398.75,
+            "capacity_mw": 39618.0
+          },
+          "oil_ct": {
+            "dispatch_hours": 80,
+            "cf": 0.01,
+            "avg_rev_mwh": 535.12,
+            "var_cost_mwh": 131.81,
+            "margin_mwh": 374.97,
+            "capacity_mw": 3834.0
+          }
+        },
+        "adjusted_generator_economics": {
+          "gas_ccgt": {
+            "dispatch_hours": 8759,
+            "cf": 1.0,
+            "avg_rev_mwh": 373.85,
+            "var_cost_mwh": 33.04,
+            "margin_mwh": 340.81,
+            "capacity_mw": 47286.0
+          },
+          "coal_steam": {
+            "dispatch_hours": 8665,
+            "cf": 0.8,
+            "avg_rev_mwh": 390.81,
+            "var_cost_mwh": 36.55,
+            "margin_mwh": 354.09,
+            "capacity_mw": 37062.0
+          },
+          "gas_ct": {
+            "dispatch_hours": 4239,
+            "cf": 0.23,
+            "avg_rev_mwh": 452.1,
+            "var_cost_mwh": 49.25,
+            "margin_mwh": 398.75,
+            "capacity_mw": 39618.0
+          },
+          "oil_ct": {
+            "dispatch_hours": 80,
+            "cf": 0.01,
+            "avg_rev_mwh": 535.12,
+            "var_cost_mwh": 131.81,
+            "margin_mwh": 374.97,
+            "capacity_mw": 3834.0
+          }
+        },
+        "economic_retirements_mw": {},
+        "total_economic_retirement_mw": 0.0,
+        "emissions_by_fuel": {
+          "gas_ccgt": 23.514
+        },
+        "nuclear_revenue": {
+          "energy_rev_mwh": 373.8,
+          "capacity_rev_mwh": 5.86,
+          "ptc_mwh": 0.0,
+          "total_mwh": 379.65
+        },
+        "nuclear_retired": false,
+        "ccs_breakeven": {
+          "ccs_vs_existing_carbon_price": 216.2,
+          "new_gas_vs_old_carbon_price": 0,
+          "existing_ccgt_var_cost": 28.0,
+          "ccs_lcoe": 100
+        },
+        "rps_mandated_pct": 4.1,
+        "rps_eligible_pct": 35.9,
+        "rps_shortfall_pct": 14.1,
+        "acp_cost_million": 8.0,
+        "cumulative_acp_million": 17.7,
+        "dr_curtailed_gwh": 37001.9,
+        "dr_peak_gw": 5.25,
+        "dr_hours": 7436,
+        "dr_avg_price": 435.1
+      },
+      {
+        "iso": "PJM",
+        "scenario": "MKT_CUSTOM",
+        "year": 2045,
+        "clean_pct": 74.3,
+        "demand_twh": 1421.0,
+        "emissions_mt": 149.29,
+        "emission_rate_tco2_mwh": 0.4082,
+        "cost_per_mwh": 62.86,
+        "revenue_per_mwh": 474.86,
+        "energy_rev_mwh": 448.02,
+        "capacity_rev_mwh": 24.17,
+        "rec_rev_mwh": 2.66,
+        "avg_lmp": 448.0,
+        "lmp_p90": 472.0,
+        "gas_built_gw": 0,
+        "total_gas_gw": 0,
+        "market_stop": false,
+        "resource_mix_twh": {
+          "clean_firm": 456.14,
+          "solar": 78.45,
+          "wind": 54.0,
+          "offshore_wind": 0.0,
+          "ccs_ccgt": 0.0,
+          "hydro": 25.58
+        },
+        "cumulative_gw": {
+          "nuclear": 2.0,
+          "ccs": 0.3,
+          "ldes": 0.01,
+          "h2": 0.1,
+          "geothermal": 0.05,
+          "battery": 50.0,
+          "battery8": 50.0,
+          "solar": 260.01,
+          "wind": 150.0,
+          "offshore_wind": 5.0
+        },
+        "zones_deployed": [
+          "solar"
+        ],
+        "zone_details": [
+          {
+            "resource": "solar",
+            "threshold": 70.6,
+            "twh": 37.24,
+            "gw": 25.0,
+            "new_gw": 25.0,
+            "lcoe": 62.86,
+            "cost": 62.86,
+            "revenue": 474.86,
+            "profit": 412.0,
+            "avg_lmp": 448.0,
+            "energy_rev_mwh": 448.02,
+            "capacity_rev_mwh": 24.17,
+            "rec_rev_mwh": 2.66
+          }
+        ],
+        "generator_economics": {
+          "gas_ccgt": {
+            "dispatch_hours": 8759,
+            "cf": 1.0,
+            "avg_rev_mwh": 448.03,
+            "var_cost_mwh": 33.04,
+            "margin_mwh": 414.98,
+            "capacity_mw": 47286.0
+          },
+          "coal_steam": {
+            "dispatch_hours": 8629,
+            "cf": 0.84,
+            "avg_rev_mwh": 449.62,
+            "var_cost_mwh": 36.55,
+            "margin_mwh": 412.85,
+            "capacity_mw": 37062.0
+          },
+          "gas_ct": {
+            "dispatch_hours": 5268,
+            "cf": 0.37,
+            "avg_rev_mwh": 457.07,
+            "var_cost_mwh": 49.25,
+            "margin_mwh": 405.09,
+            "capacity_mw": 39618.0
+          },
+          "oil_ct": {
+            "dispatch_hours": 1084,
+            "cf": 0.1,
+            "avg_rev_mwh": 468.37,
+            "var_cost_mwh": 131.81,
+            "margin_mwh": 327.27,
+            "capacity_mw": 3834.0
+          }
+        },
+        "adjusted_generator_economics": {
+          "gas_ccgt": {
+            "dispatch_hours": 8759,
+            "cf": 1.0,
+            "avg_rev_mwh": 448.03,
+            "var_cost_mwh": 33.04,
+            "margin_mwh": 414.98,
+            "capacity_mw": 47286.0
+          },
+          "coal_steam": {
+            "dispatch_hours": 8629,
+            "cf": 0.84,
+            "avg_rev_mwh": 449.62,
+            "var_cost_mwh": 36.55,
+            "margin_mwh": 412.85,
+            "capacity_mw": 37062.0
+          },
+          "gas_ct": {
+            "dispatch_hours": 5268,
+            "cf": 0.37,
+            "avg_rev_mwh": 457.07,
+            "var_cost_mwh": 49.25,
+            "margin_mwh": 405.09,
+            "capacity_mw": 39618.0
+          },
+          "oil_ct": {
+            "dispatch_hours": 1084,
+            "cf": 0.1,
+            "avg_rev_mwh": 468.37,
+            "var_cost_mwh": 131.81,
+            "margin_mwh": 327.27,
+            "capacity_mw": 3834.0
+          }
+        },
+        "economic_retirements_mw": {},
+        "total_economic_retirement_mw": 0.0,
+        "emissions_by_fuel": {
+          "gas_ccgt": 149.305
+        },
+        "nuclear_revenue": {
+          "energy_rev_mwh": 448.02,
+          "capacity_rev_mwh": 4.84,
+          "ptc_mwh": 0.0,
+          "total_mwh": 452.86
+        },
+        "nuclear_retired": false,
+        "ccs_breakeven": {
+          "ccs_vs_existing_carbon_price": 216.2,
+          "new_gas_vs_old_carbon_price": 0,
+          "existing_ccgt_var_cost": 28.0,
+          "ccs_lcoe": 100
+        },
+        "rps_mandated_pct": 3.6,
+        "rps_eligible_pct": 42.2,
+        "rps_shortfall_pct": 17.8,
+        "acp_cost_million": 11.4,
+        "cumulative_acp_million": 29.1,
+        "dr_curtailed_gwh": 44562.0,
+        "dr_peak_gw": 5.25,
+        "dr_hours": 8490,
+        "dr_avg_price": 460.3
+      },
+      {
+        "iso": "PJM",
+        "scenario": "MKT_CUSTOM",
+        "year": 2050,
+        "clean_pct": 79.8,
+        "demand_twh": 1599.9,
+        "emissions_mt": 131.87,
+        "emission_rate_tco2_mwh": 0.4082,
+        "cost_per_mwh": 62.86,
+        "revenue_per_mwh": 493.58,
+        "energy_rev_mwh": 464.14,
+        "capacity_rev_mwh": 24.17,
+        "rec_rev_mwh": 5.27,
+        "avg_lmp": 464.1,
+        "lmp_p90": 476.8,
+        "gas_built_gw": 0,
+        "total_gas_gw": 0,
+        "market_stop": false,
+        "resource_mix_twh": {
+          "clean_firm": 513.57,
+          "solar": 83.64,
+          "wind": 60.8,
+          "offshore_wind": 0.0,
+          "ccs_ccgt": 0.0,
+          "hydro": 28.8
+        },
+        "cumulative_gw": {
+          "nuclear": 2.0,
+          "ccs": 0.3,
+          "ldes": 0.01,
+          "h2": 0.1,
+          "geothermal": 0.05,
+          "battery": 50.0,
+          "battery8": 50.0,
+          "solar": 285.02,
+          "wind": 150.0,
+          "offshore_wind": 5.0
+        },
+        "zones_deployed": [
+          "solar",
+          "wind"
+        ],
+        "zone_details": [
+          {
+            "resource": "solar",
+            "threshold": 76.6,
+            "twh": 37.24,
+            "gw": 25.01,
+            "new_gw": 25.01,
+            "lcoe": 62.86,
+            "cost": 62.86,
+            "revenue": 493.58,
+            "profit": 430.72,
+            "avg_lmp": 464.1,
+            "energy_rev_mwh": 464.14,
+            "capacity_rev_mwh": 24.17,
+            "rec_rev_mwh": 5.27
+          },
+          {
+            "resource": "wind",
+            "threshold": 76.6,
+            "twh": 0.0,
+            "gw": 0.0,
+            "new_gw": 0.0,
+            "lcoe": 64.66,
+            "cost": 64.66,
+            "revenue": 473.97,
+            "profit": 409.31,
+            "avg_lmp": 464.1,
+            "energy_rev_mwh": 464.14,
+            "capacity_rev_mwh": 4.57,
+            "rec_rev_mwh": 5.27
+          }
+        ],
+        "generator_economics": {
+          "gas_ccgt": {
+            "dispatch_hours": 8759,
+            "cf": 0.98,
+            "avg_rev_mwh": 463.54,
+            "var_cost_mwh": 33.04,
+            "margin_mwh": 430.5,
+            "capacity_mw": 69538.23529411765
+          },
+          "gas_ct": {
+            "dispatch_hours": 7465,
+            "cf": 0.56,
+            "avg_rev_mwh": 459.74,
+            "var_cost_mwh": 49.25,
+            "margin_mwh": 409.16,
+            "capacity_mw": 58261.76470588236
+          }
+        },
+        "adjusted_generator_economics": {
+          "gas_ccgt": {
+            "dispatch_hours": 8759,
+            "cf": 0.98,
+            "avg_rev_mwh": 463.54,
+            "var_cost_mwh": 33.04,
+            "margin_mwh": 430.5,
+            "capacity_mw": 69538.23529411765
+          },
+          "gas_ct": {
+            "dispatch_hours": 7465,
+            "cf": 0.56,
+            "avg_rev_mwh": 459.74,
+            "var_cost_mwh": 49.25,
+            "margin_mwh": 409.16,
+            "capacity_mw": 58261.76470588236
+          }
+        },
+        "economic_retirements_mw": {},
+        "total_economic_retirement_mw": 0.0,
+        "emissions_by_fuel": {
+          "gas_ccgt": 131.885
+        },
+        "nuclear_revenue": {
+          "energy_rev_mwh": 464.14,
+          "capacity_rev_mwh": 4.2,
+          "ptc_mwh": 0.0,
+          "total_mwh": 468.34
+        },
+        "nuclear_retired": false,
+        "ccs_breakeven": {
+          "ccs_vs_existing_carbon_price": 216.2,
+          "new_gas_vs_old_carbon_price": 0,
+          "existing_ccgt_var_cost": 28.0,
+          "ccs_lcoe": 100
+        },
+        "rps_mandated_pct": 3.2,
+        "rps_eligible_pct": 47.7,
+        "rps_shortfall_pct": 12.3,
+        "acp_cost_million": 8.9,
+        "cumulative_acp_million": 37.9,
+        "dr_curtailed_gwh": 45979.5,
+        "dr_peak_gw": 5.25,
+        "dr_hours": 8758,
+        "dr_avg_price": 464.2
       }
     ]
   }
