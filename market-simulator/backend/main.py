@@ -73,6 +73,8 @@ from pipeline_config import (
     GRID_MIX_SHARES,
     CAPACITY_MARKET_PRICES,
     WHOLESALE_PRICES,
+    CONFIDENCE_ZONES,
+    get_confidence_zone,
 )
 
 from .models import (
@@ -779,6 +781,8 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
             gas_built_gw=yr.get("gas_built_gw", 0),
             total_gas_gw=yr.get("total_gas_gw", 0),
             market_stop=yr.get("market_stop", False),
+            confidence=get_confidence_zone(yr.get("year", 0)),
+            confidence_label=CONFIDENCE_ZONES[get_confidence_zone(yr.get("year", 0))]['label'],
             resource_mix_twh=yr.get("resource_mix_twh", {}),
             cumulative_gw=yr.get("cumulative_gw", {}),
             zones_deployed=yr.get("zones_deployed", []),
@@ -929,6 +933,10 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
         dr_peak_gw=final.get("dr_peak_gw", 0),
         dr_hours=final.get("dr_hours", 0),
         dr_avg_price=final.get("dr_avg_price", 0),
+        # Confidence zone metadata for trajectory visualization
+        confidence_zones=[
+            {'zone': k, **v} for k, v in CONFIDENCE_ZONES.items()
+        ],
     )
 
 
