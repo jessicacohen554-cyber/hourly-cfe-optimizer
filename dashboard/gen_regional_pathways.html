@@ -1016,13 +1016,13 @@ function buildChallenges() {
         opps.push(`<strong>DAC backstop viable:</strong> Under facilitating conditions, DAC can offset the remaining ${fmt(facDac, 0)} Mt at ${fmtDollar(facDacCost)}/ton - cheaper than forced grid overbuild.`);
     }
     if (mixR1.wind > totalR1 * 0.25) {
-        opps.push(`<strong>Strong wind resource:</strong> Wind contributes ${(mixR1.wind/totalR1*100).toFixed(0)}% of market-driven supply - a natural foundation for deeper decarbonization.`);
+        opps.push(`<strong>Strong <span class="em-wind">wind</span> resource:</strong> Wind contributes <span class="text-wind">${(mixR1.wind/totalR1*100).toFixed(0)}%</span> of market-driven supply - a natural foundation for deeper decarbonization.`);
     }
     if (mixR1.solar > totalR1 * 0.25) {
-        opps.push(`<strong>Strong solar resource:</strong> Solar contributes ${(mixR1.solar/totalR1*100).toFixed(0)}% of market-driven supply - abundant cheap generation.`);
+        opps.push(`<strong>Strong <span class="em-solar">solar</span> resource:</strong> Solar contributes <span class="text-solar">${(mixR1.solar/totalR1*100).toFixed(0)}%</span> of market-driven supply - abundant cheap generation.`);
     }
     if (mixR1.hydro > totalR1 * 0.1) {
-        opps.push(`<strong>Existing hydro base:</strong> Hydro provides ${(mixR1.hydro/totalR1*100).toFixed(0)}% of supply at zero marginal cost - firm, dispatchable, and already paid for.`);
+        opps.push(`<strong>Existing <span class="em-hydro">hydro</span> base:</strong> Hydro provides <span class="text-hydro">${(mixR1.hydro/totalR1*100).toFixed(0)}%</span> of supply at zero marginal cost - firm, dispatchable, and already paid for.`);
     }
 
     if (opps.length > 0) {
