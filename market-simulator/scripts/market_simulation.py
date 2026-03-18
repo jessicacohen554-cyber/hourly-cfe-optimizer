@@ -108,6 +108,54 @@ QUEUE_CAP_GW = {
     },
 }
 
+# Per-technology queue caps (GW/yr per ISO per tech)
+# Sources: LBNL "Queued Up 2024" (Rand et al., 2024) — queue completion rate by technology
+# Solar completes at ~8 GW/yr nationally, wind ~5 GW/yr, nuclear/CCS <0.5 GW/yr.
+# Per-tech caps sum to approximately the uniform QUEUE_CAP_GW for backward compatibility.
+TECH_QUEUE_CAP_GW = {
+    'Medium': {
+        'CAISO':  {'solar': 2.5, 'wind': 0.8, 'offshore_wind': 0.3, 'clean_firm': 0.2, 'ccs_ccgt': 0.4, 'geothermal': 0.3},
+        'ERCOT':  {'solar': 4.0, 'wind': 2.5, 'offshore_wind': 0.2, 'clean_firm': 0.2, 'ccs_ccgt': 0.5, 'geothermal': 0.0},
+        'PJM':    {'solar': 2.5, 'wind': 1.2, 'offshore_wind': 0.5, 'clean_firm': 0.3, 'ccs_ccgt': 0.5, 'geothermal': 0.0},
+        'NYISO':  {'solar': 1.0, 'wind': 0.6, 'offshore_wind': 0.5, 'clean_firm': 0.2, 'ccs_ccgt': 0.2, 'geothermal': 0.0},
+        'NEISO':  {'solar': 0.8, 'wind': 0.8, 'offshore_wind': 0.7, 'clean_firm': 0.2, 'ccs_ccgt': 0.3, 'geothermal': 0.0},
+        'MISO':   {'solar': 2.0, 'wind': 1.5, 'offshore_wind': 0.0, 'clean_firm': 0.2, 'ccs_ccgt': 0.5, 'geothermal': 0.0},
+        'SPP':    {'solar': 1.8, 'wind': 1.5, 'offshore_wind': 0.0, 'clean_firm': 0.1, 'ccs_ccgt': 0.3, 'geothermal': 0.0},
+    },
+    'Low': {  # ~50% of Medium (status quo permitting)
+        'CAISO':  {'solar': 1.3, 'wind': 0.4, 'offshore_wind': 0.15, 'clean_firm': 0.1, 'ccs_ccgt': 0.2, 'geothermal': 0.15},
+        'ERCOT':  {'solar': 2.0, 'wind': 1.3, 'offshore_wind': 0.1, 'clean_firm': 0.1, 'ccs_ccgt': 0.25, 'geothermal': 0.0},
+        'PJM':    {'solar': 1.3, 'wind': 0.6, 'offshore_wind': 0.25, 'clean_firm': 0.15, 'ccs_ccgt': 0.25, 'geothermal': 0.0},
+        'NYISO':  {'solar': 0.5, 'wind': 0.3, 'offshore_wind': 0.25, 'clean_firm': 0.1, 'ccs_ccgt': 0.1, 'geothermal': 0.0},
+        'NEISO':  {'solar': 0.4, 'wind': 0.4, 'offshore_wind': 0.35, 'clean_firm': 0.1, 'ccs_ccgt': 0.15, 'geothermal': 0.0},
+        'MISO':   {'solar': 1.0, 'wind': 0.8, 'offshore_wind': 0.0, 'clean_firm': 0.1, 'ccs_ccgt': 0.25, 'geothermal': 0.0},
+        'SPP':    {'solar': 0.9, 'wind': 0.8, 'offshore_wind': 0.0, 'clean_firm': 0.05, 'ccs_ccgt': 0.15, 'geothermal': 0.0},
+    },
+    'High': {  # ~133% of Medium (FERC Order 2023 reforms)
+        'CAISO':  {'solar': 3.3, 'wind': 1.1, 'offshore_wind': 0.4, 'clean_firm': 0.3, 'ccs_ccgt': 0.5, 'geothermal': 0.4},
+        'ERCOT':  {'solar': 5.3, 'wind': 3.3, 'offshore_wind': 0.3, 'clean_firm': 0.3, 'ccs_ccgt': 0.7, 'geothermal': 0.0},
+        'PJM':    {'solar': 3.3, 'wind': 1.6, 'offshore_wind': 0.7, 'clean_firm': 0.4, 'ccs_ccgt': 0.7, 'geothermal': 0.0},
+        'NYISO':  {'solar': 1.3, 'wind': 0.8, 'offshore_wind': 0.7, 'clean_firm': 0.3, 'ccs_ccgt': 0.3, 'geothermal': 0.0},
+        'NEISO':  {'solar': 1.1, 'wind': 1.1, 'offshore_wind': 0.9, 'clean_firm': 0.3, 'ccs_ccgt': 0.4, 'geothermal': 0.0},
+        'MISO':   {'solar': 2.7, 'wind': 2.0, 'offshore_wind': 0.0, 'clean_firm': 0.3, 'ccs_ccgt': 0.7, 'geothermal': 0.0},
+        'SPP':    {'solar': 2.4, 'wind': 2.0, 'offshore_wind': 0.0, 'clean_firm': 0.15, 'ccs_ccgt': 0.4, 'geothermal': 0.0},
+    },
+}
+TECH_DIFFERENTIATED_QUEUE = True   # Set False to use legacy uniform QUEUE_CAP_GW
+QUEUE_FLEX_FRACTION = 0.20         # 20% of total cap available as flex pool across techs
+
+# Validate per-tech caps sum to within 50% of the uniform cap (catch config errors).
+# Tech caps are intentionally lower than uniform — LBNL completion rates reflect real
+# bottlenecks. The flex pool (QUEUE_FLEX_FRACTION) compensates for the difference.
+for _level in TECH_QUEUE_CAP_GW:
+    for _iso in TECH_QUEUE_CAP_GW[_level]:
+        _tech_sum = sum(TECH_QUEUE_CAP_GW[_level][_iso].values())
+        _uniform = QUEUE_CAP_GW.get(_level, {}).get(_iso, 0)
+        if _uniform > 0 and abs(_tech_sum - _uniform) / _uniform > 0.50:
+            import warnings as _w
+            _w.warn(f"TECH_QUEUE_CAP_GW[{_level}][{_iso}] sums to {_tech_sum:.1f} GW "
+                    f"but uniform QUEUE_CAP_GW is {_uniform:.1f} GW (>50% difference)")
+
 # Wright's Law — deployment-based learning
 WRIGHT_CUMULATIVE_GW_2025 = {
     'nuclear': 2.0, 'ccs': 0.3, 'ldes': 0.01, 'h2': 0.1,
@@ -1422,7 +1470,7 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
                                conditions, cumulative_gw, queue_remaining_gw,
                                hourly_lmp, avg_lmp, p90_lmp,
                                supply_profiles_iso, demand_total_mwh,
-                               gen_econ, state):
+                               gen_econ, state, tech_queue_budget=None):
     """Pure economics-driven resource deployment via LCOE merit order.
 
     Ranks all available clean resources by net LCOE (after incentives, learning
@@ -1439,6 +1487,7 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
         conditions: Dict with lcoe_level, fuel_level, tx_level, etc.
         cumulative_gw: Dict tracking cumulative GW deployed per tech
         queue_remaining_gw: Remaining GW that can be interconnected this period
+            (used as total cap when tech_queue_budget is None)
         hourly_lmp: 8760 array of hourly LMP values
         avg_lmp: Average LMP ($/MWh)
         p90_lmp: P90 LMP
@@ -1446,9 +1495,13 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
         demand_total_mwh: Total demand in MWh
         gen_econ: Generator economics dict from LMP calculation
         state: Mutable iso_state dict
+        tech_queue_budget: Optional dict {resource: remaining_gw} for per-tech
+            queue caps. When provided, each resource is constrained by its own
+            tech-specific budget plus a shared flex pool.
 
     Returns:
-        (new_clean_pct, deployed_resources, zone_results, rev_breakdown)
+        (new_clean_pct, deployed_resources, zone_results, rev_breakdown,
+         blended_cost, blended_revenue, remaining_gw)
         where deployed_resources is {resource: twh_deployed}
     """
     lcoe_level = conditions.get('lcoe_level', 'Medium')
@@ -1544,9 +1597,27 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
     remaining_gw = queue_remaining_gw
     clean_pct = current_clean_pct
 
+    # Tech-differentiated queue: compute flex pool from total budget
+    use_tech_queue = tech_queue_budget is not None
+    flex_pool_gw = 0.0
+    if use_tech_queue:
+        total_tech_budget = sum(tech_queue_budget.values())
+        flex_pool_gw = total_tech_budget * QUEUE_FLEX_FRACTION
+        # Reduce each tech's dedicated budget proportionally to fund the flex pool
+        tech_budget = {res: cap * (1.0 - QUEUE_FLEX_FRACTION)
+                       for res, cap in tech_queue_budget.items()}
+    else:
+        tech_budget = None
+
     for entry in resource_economics:
-        if remaining_gw <= 0:
-            break
+        if use_tech_queue:
+            # Check if any budget remains (dedicated + flex)
+            res_budget = tech_budget.get(entry['resource'], 0)
+            if res_budget <= 0 and flex_pool_gw <= 0:
+                continue
+        else:
+            if remaining_gw <= 0:
+                break
         if entry['profit'] <= 0:
             continue  # Not profitable
         if entry['max_twh'] <= 0:
@@ -1556,7 +1627,12 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
         cf = entry['cf']
 
         # How much can we deploy given queue cap?
-        max_deploy_gw = remaining_gw
+        if use_tech_queue:
+            # Dedicated budget for this tech + flex pool overflow
+            res_dedicated = max(0, tech_budget.get(res, 0))
+            max_deploy_gw = res_dedicated + flex_pool_gw
+        else:
+            max_deploy_gw = remaining_gw
         max_deploy_twh = max_deploy_gw * cf * 8.760 if cf > 0 else 0
 
         # Constrain by resource cap and remaining demand headroom
@@ -1572,7 +1648,21 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
         # Deploy
         deployed[res] = deploy_twh
         total_deployed_twh += deploy_twh
-        remaining_gw -= deploy_gw
+
+        if use_tech_queue:
+            # Deduct from dedicated budget first, overflow to flex pool
+            res_dedicated = max(0, tech_budget.get(res, 0))
+            if deploy_gw <= res_dedicated:
+                tech_budget[res] = res_dedicated - deploy_gw
+            else:
+                # Exhaust dedicated, draw remainder from flex pool
+                flex_draw = deploy_gw - res_dedicated
+                tech_budget[res] = 0
+                flex_pool_gw = max(0, flex_pool_gw - flex_draw)
+            # Also decrement the total remaining_gw for backward-compat return
+            remaining_gw -= deploy_gw
+        else:
+            remaining_gw -= deploy_gw
 
         # Update cumulative GW
         tech = RESOURCE_TO_TECH.get(res, res)
@@ -2089,11 +2179,26 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             years_in_period = 7 if year == 2030 else 5
             queue_remaining_gw = queue_budget_gw * years_in_period
 
+            # Build per-tech queue budget if tech-differentiated mode is active
+            use_tech_queue = conditions.get('tech_differentiated_queue', TECH_DIFFERENTIATED_QUEUE)
+            tech_queue_budget = None
+            if use_tech_queue and queue_budget_gw == QUEUE_CAP_GW.get(queue_cap_level, {}).get(iso, 5):
+                # Use per-tech caps (only when no manual override)
+                iso_tech_caps = TECH_QUEUE_CAP_GW.get(queue_cap_level, {}).get(iso, {})
+                tech_queue_budget = {res: cap * years_in_period
+                                     for res, cap in iso_tech_caps.items()}
+
             # ACP recycling: prior-period ACP payments boost queue (capped at 20% of base)
             acp_bonus = min(state.get('acp_bonus_queue_gw', 0),
                            queue_budget_gw * years_in_period * 0.20)
             if acp_bonus > 0:
                 queue_remaining_gw += acp_bonus
+                # When tech-differentiated, distribute ACP bonus proportionally
+                if tech_queue_budget is not None:
+                    total_tech = sum(tech_queue_budget.values())
+                    if total_tech > 0:
+                        for res in tech_queue_budget:
+                            tech_queue_budget[res] += acp_bonus * (tech_queue_budget[res] / total_tech)
                 _log(f"  {iso} ACP recycling: +{acp_bonus:.2f} GW bonus queue")
                 state['acp_bonus_queue_gw'] = 0
 
@@ -2168,7 +2273,11 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 hourly_lmp, avg_lmp, p90_lmp,
                 supply_profiles_iso, demand_total_mwh,
                 gen_econ, state,
+                tech_queue_budget=tech_queue_budget,
             )
+
+            # Sync queue budget after deployment
+            queue_remaining_gw = remaining_gw
 
             # Update state
             old_pct = current_pct
