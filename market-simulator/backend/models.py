@@ -323,6 +323,7 @@ class YearResult(BaseModel):
     # Confidence zone for trajectory projection reliability
     confidence: str = 'high'            # 'high', 'moderate', 'low'
     confidence_label: str = 'Calibrated'
+    confidence_adjusted: bool = False    # True if downgraded due to IPM triggers
     resource_mix_twh: Dict[str, float] = Field(default_factory=dict)
     cumulative_gw: Dict[str, float] = Field(default_factory=dict)
     zones_deployed: List[str] = Field(default_factory=list)
