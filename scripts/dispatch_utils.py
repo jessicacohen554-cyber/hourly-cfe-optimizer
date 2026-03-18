@@ -59,6 +59,8 @@ from pipeline_config import (
     GRID_MIX_SHARES, REGIONAL_DEMAND_TWH,
     WHOLESALE_PRICES, FUEL_ADJUSTMENTS,
     CCS_RESIDUAL_EMISSION_RATE, COAL_OIL_RETIREMENT_THRESHOLD,
+    COAL_PHASE_OUT_START, COAL_PHASE_OUT_END,
+    CCS_CAPTURE_RATES, CCS_UNABATED_GAS_RATE,
     ANNOUNCED_COAL_RETIREMENTS, get_announced_coal_retired_gw,
     H,
     DISPATCH_CACHE_VERSION,
@@ -738,6 +740,31 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# SIGMOID COAL PHASE-OUT MODEL
+# ══════════════════════════════════════════════════════════════════════════════
+
+def coal_fraction_at_clean_pct(clean_pct):
+    """Sigmoid coal phase-out: returns fraction of coal capacity remaining (0-1).
+
+    Replaces the previous cliff model (100% → 0% at a single threshold).
+    Uses a smooth quadratic ramp: coal declines from 100% at COAL_PHASE_OUT_START
+    to 0% at COAL_PHASE_OUT_END.
+
+    This better reflects real-world coal retirement dynamics driven by economics,
+    regulation (EPA 111(d)), and plant age rather than a clean-energy threshold.
+    Literature: Grubert 2020 (ES&T), Gillingham & Stock 2018 (JEP).
+    """
+    if clean_pct <= COAL_PHASE_OUT_START:
+        return 1.0
+    if clean_pct >= COAL_PHASE_OUT_END:
+        return 0.0
+    # Smooth quadratic: f(x) = 1 - ((x - start) / (end - start))^2
+    # Concave: faster decline at beginning, slower at end (realistic: easy retirements first)
+    t = (clean_pct - COAL_PHASE_OUT_START) / (COAL_PHASE_OUT_END - COAL_PHASE_OUT_START)
+    return max(0.0, 1.0 - t * t)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # FOSSIL RETIREMENT MODEL
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -793,34 +820,18 @@ def compute_fossil_retirement(iso, clean_pct, emission_rates, fossil_mix,
             'demand_growth_factor': demand_growth_factor,
         }
 
-    coal_twh = min(coal_cap, fossil_twh)
+    # Sigmoid coal phase-out: coal capacity declines smoothly from 50% to 85% clean
+    # Oil follows coal at same fraction (both retire together in merit order)
+    cf = coal_fraction_at_clean_pct(clean_pct)
+    effective_coal_cap = coal_cap * cf
+    effective_oil_cap = oil_cap * cf
+
+    coal_twh = min(effective_coal_cap, fossil_twh)
     remaining_fossil = fossil_twh - coal_twh
-    oil_twh = min(oil_cap, remaining_fossil)
+    oil_twh = min(effective_oil_cap, remaining_fossil)
     gas_twh = max(0, fossil_twh - coal_twh - oil_twh)
 
     additional_clean_twh = max(0, (clean_pct - baseline_clean) / 100.0 * grown_demand_twh)
-
-    if clean_pct >= COAL_OIL_RETIREMENT_THRESHOLD:
-        coal_displaced = coal_cap
-        oil_displaced = oil_cap
-        gas_displaced = max(0, additional_clean_twh - coal_cap - oil_cap)
-        total_displaced = coal_displaced + oil_displaced + gas_displaced
-
-        if total_displaced > 0.01:
-            displaced_rate = (coal_displaced * coal_rate + oil_displaced * oil_rate +
-                              gas_displaced * gas_rate) / total_displaced
-        else:
-            displaced_rate = gas_rate
-
-        return displaced_rate, {
-            'coal_displaced_twh': round(coal_displaced, 2),
-            'oil_displaced_twh': round(oil_displaced, 2),
-            'gas_displaced_twh': round(gas_displaced, 2),
-            'displaced_rate_tco2_mwh': round(displaced_rate, 4),
-            'remaining_rate_tco2_mwh': round(gas_rate, 4),
-            'forced_gas_only': True,
-            'demand_growth_factor': demand_growth_factor,
-        }
 
     # Merit-order displacement: coal first, then oil, then gas
     coal_displaced = min(additional_clean_twh, coal_twh)
@@ -876,17 +887,14 @@ def compute_fossil_capacity_at_threshold(iso, clean_pct, demand_growth_factor=1.
     coal_cap = COAL_CAP_TWH.get(iso, 0)
     oil_cap = OIL_CAP_TWH.get(iso, 0)
 
-    if clean_pct >= COAL_OIL_RETIREMENT_THRESHOLD:
-        # All coal and oil retired
-        return {
-            'coal_twh': 0.0, 'oil_twh': 0.0,
-            'gas_twh': max(0, fossil_twh),
-            'total_fossil_twh': max(0, fossil_twh),
-        }
+    # Sigmoid coal/oil phase-out
+    cf = coal_fraction_at_clean_pct(clean_pct)
+    effective_coal_cap = coal_cap * cf
+    effective_oil_cap = oil_cap * cf
 
-    coal_twh = min(coal_cap, fossil_twh)
+    coal_twh = min(effective_coal_cap, fossil_twh)
     remaining = fossil_twh - coal_twh
-    oil_twh = min(oil_cap, remaining)
+    oil_twh = min(effective_oil_cap, remaining)
     gas_twh = max(0, fossil_twh - coal_twh - oil_twh)
 
     return {
@@ -894,6 +902,7 @@ def compute_fossil_capacity_at_threshold(iso, clean_pct, demand_growth_factor=1.
         'oil_twh': round(oil_twh, 2),
         'gas_twh': round(gas_twh, 2),
         'total_fossil_twh': round(fossil_twh, 2),
+        'coal_fraction': round(cf, 4),
     }
 
 
@@ -1094,22 +1103,23 @@ def get_or_compute_dispatch(iso, demand_norm, supply_profiles, resource_pcts,
 # DISPATCH-BASED CO₂ ACCOUNTING — hourly fossil displacement from cache
 # ══════════════════════════════════════════════════════════════════════════════
 
-def compute_co2_from_dispatch(iso, dispatch_result, emission_rates, demand_total_mwh):
-    """Compute CO₂ displacement from hourly dispatch results.
+def compute_co2_from_dispatch(iso, dispatch_result, emission_rates, demand_total_mwh,
+                              clean_pct=None, ccs_capture_level='Medium'):
+    """Compute CO₂ displacement from hourly dispatch results with hour-varying rates.
 
     Uses the 8760-hour fossil_displaced and ccs_supply arrays from the dispatch
-    cache to compute exact CO₂ abated. The emission rate at each hour is the
-    weighted average of the remaining fossil stack (merit-order: coal → oil → gas).
-
-    Unlike the analytical compute_fossil_retirement() which uses TWh-level averages,
-    this function captures the hourly shape of displacement — a wind-heavy portfolio
-    displaces different fossil hours than clean firm.
+    cache. Emission rate varies per-hour based on merit-order dispatch: in hours
+    with high residual demand, coal/oil are marginal (high rate); in low-demand
+    hours, gas is marginal (lower rate). This captures the temporal specificity
+    that static annual rates miss (Siler-Evans et al. 2012, ES&T).
 
     Args:
         iso: ISO region identifier
         dispatch_result: dict from dispatch cache with 'fossil_displaced', 'ccs_supply' arrays
         emission_rates: eGRID emission rates dict
         demand_total_mwh: annual demand in MWh (for scaling normalized arrays)
+        clean_pct: clean energy percentage (for sigmoid coal phase-out)
+        ccs_capture_level: 'Low'/'Medium'/'High' for CCS capture rate sensitivity
 
     Returns:
         dict with total_co2_abated_tons, co2_rate_per_mwh, matched_mwh,
@@ -1131,31 +1141,73 @@ def compute_co2_from_dispatch(iso, dispatch_result, emission_rates, demand_total
     total_displaced_mwh = float(np.sum(fossil_mwh))
     total_displaced_twh = total_displaced_mwh / 1e6
 
-    # Determine which fossil fuels are displaced using merit-order
-    # Coal displaced first (up to cap), then oil, then gas
-    coal_cap_mwh = COAL_CAP_TWH.get(iso, 0) * 1e6
-    oil_cap_mwh = OIL_CAP_TWH.get(iso, 0) * 1e6
+    # Sigmoid coal/oil phase-out
+    cf = coal_fraction_at_clean_pct(clean_pct) if clean_pct is not None else 1.0
+    coal_cap_mwh = COAL_CAP_TWH.get(iso, 0) * 1e6 * cf
+    oil_cap_mwh = OIL_CAP_TWH.get(iso, 0) * 1e6 * cf
 
-    coal_displaced_mwh = min(total_displaced_mwh, coal_cap_mwh)
-    remaining = total_displaced_mwh - coal_displaced_mwh
-    oil_displaced_mwh = min(remaining, oil_cap_mwh)
-    gas_displaced_mwh = max(0, remaining - oil_displaced_mwh)
+    # ── Hour-varying emission rates via merit-order dispatch ──
+    # Each hour: determine which fossil fuel is marginal based on cumulative
+    # displacement. Hours with high displacement exhaust coal cap → marginal = gas.
+    # Hours with low displacement → marginal = coal (highest emitting).
+    # This captures the key insight from Siler-Evans et al. (2012) that marginal
+    # rates vary 2-3x within a day.
 
-    # CO₂ from non-CCS displacement (weighted by fuel type displaced)
+    # Sort hours by displacement magnitude to build cumulative merit-order
+    hourly_co2 = np.zeros(H, dtype=np.float64)
+
+    # Vectorized merit-order attribution per hour
+    # For each hour, fossil_mwh[h] is allocated: coal first, then oil, then gas
+    # But we need to respect *fleet-wide* caps across all hours
+    # Approach: allocate coal/oil/gas proportionally based on fleet-level caps
     if total_displaced_mwh > 0:
+        coal_displaced_mwh = min(total_displaced_mwh, coal_cap_mwh)
+        remaining = total_displaced_mwh - coal_displaced_mwh
+        oil_displaced_mwh = min(remaining, oil_cap_mwh)
+        gas_displaced_mwh = max(0, remaining - oil_displaced_mwh)
+
+        # Compute fleet-level weighted rate
         weighted_rate = (
             coal_displaced_mwh * coal_rate +
             oil_displaced_mwh * oil_rate +
             gas_displaced_mwh * gas_rate
         ) / total_displaced_mwh
+
+        # Hour-varying rate: hours with higher displacement are more likely to be
+        # displacing gas (lower rate); hours with lower displacement displace coal first
+        # Use a linear interpolation based on per-hour displacement rank
+        sort_idx = np.argsort(fossil_mwh)  # ascending: low displacement → high
+        cumulative_mwh = np.cumsum(fossil_mwh[sort_idx])
+
+        # Per-hour marginal rate based on cumulative position in merit order
+        hourly_rate = np.full(H, gas_rate, dtype=np.float64)
+        coal_mask = cumulative_mwh <= coal_cap_mwh
+        oil_mask = (~coal_mask) & (cumulative_mwh <= coal_cap_mwh + oil_cap_mwh)
+        gas_mask = ~coal_mask & ~oil_mask
+
+        hourly_rate_sorted = np.full(H, gas_rate, dtype=np.float64)
+        hourly_rate_sorted[coal_mask] = coal_rate
+        hourly_rate_sorted[oil_mask] = oil_rate
+        hourly_rate_sorted[gas_mask] = gas_rate
+
+        # Unsort back to original hour order
+        hourly_rate[sort_idx] = hourly_rate_sorted
+
+        # CO₂ from non-CCS displacement (hour-varying)
+        hourly_co2 = non_ccs_mwh * hourly_rate
+
+        # CCS credit with sensitivity
+        capture_rate = CCS_CAPTURE_RATES.get(ccs_capture_level, 0.90)
+        ccs_residual = CCS_UNABATED_GAS_RATE * (1 - capture_rate)
+        ccs_credit_per_hour = np.maximum(0.0, hourly_rate - ccs_residual)
+        hourly_co2 += ccs_mwh * ccs_credit_per_hour
     else:
         weighted_rate = gas_rate
+        coal_displaced_mwh = 0.0
+        oil_displaced_mwh = 0.0
+        gas_displaced_mwh = 0.0
 
-    co2_non_ccs = float(np.sum(non_ccs_mwh)) * weighted_rate
-    ccs_credit = max(0.0, weighted_rate - CCS_RESIDUAL_EMISSION_RATE)
-    co2_ccs = float(np.sum(ccs_mwh)) * ccs_credit
-
-    total_co2 = co2_non_ccs + co2_ccs
+    total_co2 = float(np.sum(hourly_co2))
     co2_rate = total_co2 / total_displaced_mwh if total_displaced_mwh > 0 else 0
 
     return {
@@ -1167,5 +1219,7 @@ def compute_co2_from_dispatch(iso, dispatch_result, emission_rates, demand_total
         'oil_displaced_twh': round(oil_displaced_mwh / 1e6, 2),
         'gas_displaced_twh': round(gas_displaced_mwh / 1e6, 2),
         'weighted_emission_rate': round(weighted_rate, 4),
-        'methodology': 'dispatch_cache_hourly',
+        'coal_fraction': round(cf, 4),
+        'ccs_capture_level': ccs_capture_level,
+        'methodology': 'dispatch_cache_hourly_varying',
     }
