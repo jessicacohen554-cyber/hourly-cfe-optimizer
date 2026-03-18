@@ -955,7 +955,8 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
                                  procurement_pct=100, battery_dispatch_pct=0,
                                  battery8_dispatch_pct=0, ldes_dispatch_pct=0,
                                  supply_matrix=None, detailed=False,
-                                 h2_dispatch_pct=0, dispatch_mode=None):
+                                 h2_dispatch_pct=0, dispatch_mode=None,
+                                 interchange_norm=None):
     """Reconstruct full 8760 hourly dispatch for a resource mix.
 
     Args:
@@ -1073,6 +1074,17 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
     fossil_displaced = np.minimum(demand_arr, total_clean)
     residual_demand = np.maximum(0.0, demand_arr - total_clean)
     curtailed = np.maximum(0.0, total_clean - demand_arr)
+
+    # Apply inter-regional interchange: net imports reduce residual demand,
+    # net exports increase it. Applied AFTER storage dispatch to avoid
+    # interfering with clean supply/storage optimization.
+    if interchange_norm is not None:
+        interchange_arr = np.asarray(interchange_norm[:H], dtype=np.float64)
+        # Positive interchange = net imports → reduces fossil need
+        # Negative interchange = net exports → increases fossil need
+        residual_demand = np.maximum(0.0, residual_demand - interchange_arr)
+        # Imports that arrive during surplus hours reduce curtailment
+        curtailed = np.maximum(0.0, curtailed - np.maximum(0.0, interchange_arr))
 
     result = {
         'supply_total': supply_total,

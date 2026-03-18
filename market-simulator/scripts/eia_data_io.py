@@ -142,3 +142,46 @@ def load_fossil_mix():
 
     raise FileNotFoundError(
         f"No fossil mix found. Checked:\n  {EIA_DIR}/eia_fossil_mix.parquet\n  {EIA_DIR}/eia_fossil_mix.json")
+
+
+def load_interchange_profiles():
+    """Load interchange profiles → {iso: {year_str: {net_import_mw: [...], net_import_norm: [...]}}}.
+
+    Returns empty dict (not an error) if no data found — backward compatible
+    with copper-plate (no interchange) behavior.
+    """
+    pq = _try_parquet('eia_interchange_profiles')
+    if pq:
+        import pandas as pd
+        df = pd.read_parquet(pq)
+        result = {}
+        for iso in df['iso'].unique():
+            result[iso] = {}
+            iso_df = df[df['iso'] == iso]
+            for year in iso_df['year'].unique():
+                year_df = iso_df[iso_df['year'] == year].sort_values('hour')
+                result[iso][str(year)] = {
+                    'net_import_mw': year_df['net_import_mw'].tolist(),
+                    'net_import_norm': year_df['net_import_norm'].tolist(),
+                }
+        return result
+
+    jp = _try_json('eia_interchange_profiles')
+    if jp:
+        with open(jp) as f:
+            return json.load(f)
+
+    # No pre-built file → generate on first load
+    try:
+        from step0_fetch_interchange import main as generate_interchange
+        generate_interchange()
+        # Retry after generation
+        jp = _try_json('eia_interchange_profiles')
+        if jp:
+            with open(jp) as f:
+                return json.load(f)
+    except Exception:
+        pass
+
+    # No interchange data → return empty dict (copper-plate fallback)
+    return {}
