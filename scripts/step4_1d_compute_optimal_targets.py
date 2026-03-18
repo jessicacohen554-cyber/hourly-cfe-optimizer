@@ -91,6 +91,7 @@ except ImportError:
 try:
     from dispatch_utils import (
         compute_fossil_retirement,
+        coal_fraction_at_clean_pct,
         BASE_DEMAND_TWH as DU_DEMAND_TWH,
         GRID_MIX_SHARES as DU_GRID_MIX_SHARES,
         COAL_CAP_TWH as DU_COAL_CAP,
@@ -639,7 +640,7 @@ def compute_total_fossil_emissions_mt(iso, clean_pct, demand_twh=None):
     """Compute total fossil CO₂ emissions (Mt) at a given clean energy level.
 
     Uses merit-order dispatch: coal remains first, then oil, then gas.
-    As clean_pct increases, fossil shrinks. Coal/oil fully retire at 70%.
+    Sigmoid coal/oil phase-out from 50% to 85% clean (replaces 70% cliff).
 
     Returns emissions in Mt (= TWh × tCO₂/MWh, since 1 TWh = 1e6 MWh).
     """
@@ -655,15 +656,17 @@ def compute_total_fossil_emissions_mt(iso, clean_pct, demand_twh=None):
     oil_cap = OIL_CAP_TWH.get(iso, 0)
     rates = _FUEL_RATES.get(iso, EMISSION_RATES_FALLBACK.get(iso, {'coal': 0, 'oil': 0, 'gas': 0}))
 
-    if clean_pct >= COAL_OIL_RETIREMENT_THRESHOLD:
-        return fossil_twh * rates['gas']
-    else:
-        coal_twh = min(coal_cap, fossil_twh)
-        remaining = fossil_twh - coal_twh
-        oil_twh = min(oil_cap, remaining)
-        gas_twh = max(0, remaining - oil_twh)
-        return (coal_twh * rates['coal'] + oil_twh * rates['oil']
-                + gas_twh * rates['gas'])
+    # Sigmoid coal/oil phase-out
+    cf = coal_fraction_at_clean_pct(clean_pct)
+    effective_coal_cap = coal_cap * cf
+    effective_oil_cap = oil_cap * cf
+
+    coal_twh = min(effective_coal_cap, fossil_twh)
+    remaining = fossil_twh - coal_twh
+    oil_twh = min(effective_oil_cap, remaining)
+    gas_twh = max(0, remaining - oil_twh)
+    return (coal_twh * rates['coal'] + oil_twh * rates['oil']
+            + gas_twh * rates['gas'])
 
 
 def compute_co2_reduced_by_new(iso, threshold_pct, growth_tier='medium'):
@@ -690,12 +693,16 @@ def compute_co2_reduced_by_new(iso, threshold_pct, growth_tier='medium'):
 
     co2_reduced = max(0, baseline_emissions - scenario_emissions)
 
-    # Marginal rate: gas rate (dominant at high thresholds above 70%)
+    # Marginal rate: depends on sigmoid coal fraction
     rates = _FUEL_RATES.get(iso, EMISSION_RATES_FALLBACK.get(iso, {}))
-    if threshold_pct >= COAL_OIL_RETIREMENT_THRESHOLD:
+    cf = coal_fraction_at_clean_pct(threshold_pct)
+    if cf < 0.01:
         marginal_rate = rates.get('gas', 0.39)
+    elif cf > 0.5:
+        marginal_rate = rates.get('coal', 1.0)
     else:
-        marginal_rate = rates.get('coal', 1.0) if threshold_pct < 50 else rates.get('gas', 0.39)
+        # Blend: weighted average of coal and gas marginal rates by coal fraction
+        marginal_rate = cf * rates.get('coal', 1.0) + (1 - cf) * rates.get('gas', 0.39)
 
     return {
         'total_co2_mt': co2_reduced,
