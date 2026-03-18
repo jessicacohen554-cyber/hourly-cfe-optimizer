@@ -172,27 +172,61 @@ function renderAll() {
     document.getElementById('resultsSubtitle').textContent =
         `${iso} — Market Trajectory Simulation`;
 
-    // ── Synthetic data warning banner ──
+    // ── Multi-tier data warnings ──
     const warningBanner = document.getElementById('syntheticWarningBanner');
     if (warningBanner) {
         const dataSource = data.data_source || 'unknown';
+        const tiers = data.data_tiers || {};
+        const warnings = [];
+
+        // Red: synthetic resource mix (critical)
         if (dataSource === 'synthetic') {
-            warningBanner.innerHTML = `
-                <div class="story-callout orange" style="margin-bottom: var(--space-lg, 1.5rem);">
-                    <strong>⚠ ILLUSTRATIVE ONLY</strong> — Running with synthetic resource mix profiles
-                    (calibrated physics data not available). Results show directional patterns only.
-                    For production-quality results, run the full optimization pipeline (Steps 1–2).
-                </div>`;
-        } else {
-            warningBanner.innerHTML = '';
+            warnings.push(`<div class="story-callout orange" style="margin-bottom:0.5rem;">
+                <strong>\u26a0 ILLUSTRATIVE ONLY</strong> — Running with synthetic resource mix profiles
+                (calibrated physics data not available). Results show directional patterns only.
+                For production-quality results, run the full optimization pipeline (Steps 1\u20132).
+            </div>`);
         }
+
+        // Amber: missing interchange data or approximate zone definitions
+        if (tiers.interchange === 'none') {
+            warnings.push(`<div class="story-callout" style="margin-bottom:0.5rem;border-left-color:#F59E0B;background:rgba(245,158,11,0.06);">
+                <strong>\u26a0 No interchange data loaded</strong> — Inter-regional power flow effects
+                are not modeled. Run <code>step0_fetch_interchange.py</code> for EIA-930 profiles.
+            </div>`);
+        }
+        if (tiers.zonal_config === 'hardcoded') {
+            warnings.push(`<div class="story-callout" style="margin-bottom:0.5rem;border-left-color:#F59E0B;background:rgba(245,158,11,0.06);">
+                <strong>\u26a0 Approximate zone definitions</strong> — Zonal prices use hardcoded
+                zone boundaries from pipeline_config rather than validated external data.
+            </div>`);
+        }
+
+        // Blue: informational (fleet data, DR params)
+        if (tiers.fleet_data === 'aggregated') {
+            warnings.push(`<div class="story-callout" style="margin-bottom:0.5rem;border-left-color:#0EA5E9;background:rgba(14,165,233,0.06);">
+                <strong>\u2139 Aggregated fleet data</strong> — Plant-level data (EIA-860) unavailable;
+                using aggregated fleet characteristics.
+            </div>`);
+        }
+
+        warningBanner.innerHTML = warnings.length
+            ? `<div style="margin-bottom:var(--space-lg,1.5rem);">${warnings.join('')}</div>`
+            : '';
     }
 
     // ── Data source badge next to ISO header ──
     const dataSourceBadge = document.getElementById('dataSourceBadge');
     if (dataSourceBadge) {
         const dataSource = data.data_source || 'unknown';
-        if (dataSource === 'parquet') {
+        const tiers = data.data_tiers || {};
+        const allTiersPresent = dataSource === 'parquet'
+            && tiers.interchange !== 'none'
+            && tiers.fleet_data !== 'aggregated';
+
+        if (allTiersPresent) {
+            dataSourceBadge.innerHTML = '<span class="badge badge-green" style="font-size:0.75rem;">Full Data</span>';
+        } else if (dataSource === 'parquet') {
             dataSourceBadge.innerHTML = '<span class="badge badge-green" style="font-size:0.75rem;">Physics Data</span>';
         } else if (dataSource === 'synthetic') {
             dataSourceBadge.innerHTML = '<span class="badge badge-orange" style="font-size:0.75rem;">Synthetic: Illustrative Only</span>';
