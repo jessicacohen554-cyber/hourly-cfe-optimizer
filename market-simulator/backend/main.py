@@ -160,12 +160,19 @@ def _get_preloaded_data() -> Dict:
     if _preloaded_data is None:
         demand_data, gen_profiles, emission_rates, fossil_mix = load_common_data()
         egrid_baselines = load_egrid_baselines()
+        # Load interchange profiles (empty dict if unavailable → copper-plate fallback)
+        try:
+            from eia_data_io import load_interchange_profiles
+            interchange_data = load_interchange_profiles()
+        except Exception:
+            interchange_data = {}
         _preloaded_data = {
             "demand_data": demand_data,
             "gen_profiles": gen_profiles,
             "emission_rates": emission_rates,
             "fossil_mix": fossil_mix,
             "egrid_baselines": egrid_baselines,
+            "interchange_data": interchange_data,
         }
     return _preloaded_data
 
@@ -432,6 +439,8 @@ def _map_request_to_conditions(req: SimulationRequest) -> dict:
             'ccs_ccgt': req.clean_lcoes.ccs_ccgt,
             'geothermal': req.clean_lcoes.geothermal if req.clean_lcoes else None,
         } if req.clean_lcoes else None,
+        # Inter-regional interchange toggle
+        "interchange_enabled": req.interchange_enabled,
     }
 
 
