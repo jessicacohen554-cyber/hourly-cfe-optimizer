@@ -206,6 +206,7 @@
     // Pages archived: grid_animation.html (ERCOT Grid Animation - moved to archive/)
     // Pages archived: building_blocks.html, ipp_smartargets.html, market_convergence.html, troubleshooting_step3_vs_5d.html
     // Pages removed from nav: optimizer_methodology.html, consequential_vacuum.html (tiles removed, pages kept)
+    // Pages archived from Interactive Tools: scenario_comparison.html, dashboard.html (The Grid/Optimizer)
     const NAV_ITEMS = [
         { label: 'Home', href: 'home.html' },
         {
@@ -223,7 +224,8 @@
             children: [
                 { label: 'Carbon Accounting', href: 'GHG-accounting-overview.html' },
                 { label: 'Strategy Deep Dive', href: 'strategy_deep_dive.html' },
-                { label: 'Strategy Assessment', href: 'cfe_strategy_assessment.html' }
+                { label: 'Strategy Assessment', href: 'cfe_strategy_assessment.html' },
+                { label: 'Procurement Deployment Matrix', href: 'procurement_deployment.html' }
             ]
         },
         {
@@ -234,14 +236,6 @@
                 { label: 'Clean Asset Value', href: 'lmp_trends.html' },
                 { label: 'Nuclear Retirement Risk', href: 'ref-nuclear-retirement.html' },
                 { label: 'Gas Lock-In & Buyer Influence', href: 'gas_lockin_buyer_influence.html' }
-            ]
-        },
-        {
-            label: 'Interactive Tools',
-            children: [
-                { label: 'The Grid (Optimizer)', href: 'dashboard.html' },
-                { label: 'Procurement Deployment Matrix', href: 'procurement_deployment.html' },
-                { label: 'Scenario Comparison', href: 'archive/scenario_comparison.html' }
             ]
         },
         {
