@@ -3,25 +3,30 @@
 **Source**: Code audit of Integration gaps between Prompts 1-6 (foundational features) and Prompts 7-11 (audit-driven fixes)
 **Purpose**: Copy-paste ready prompts for Claude Code sessions. Each prompt is self-contained with full context, specific file/line references, and validation criteria.
 
-**Background**: Prompts 1-6 were implemented first. Prompts 7-11 were then designed with a recommended execution order that placed some 7-11 prompts before some 1-6 prompts. Prompts 7-11 were implemented in the recommended order, but 1-6 were not re-run. This created 7 synchronization conflicts ranging from critical to low severity.
+**Background**: Prompts 1-6 were implemented first. Prompts 7-11 were then designed with a recommended execution order that placed some 7-11 prompts before some 1-6 prompts. Prompts 7-11 were implemented in the recommended order, but 1-6 were not re-run. Deep code audit identified 10 synchronization conflicts ranging from critical (ORDC missing in zonal path) to low (flows computed but discarded).
 
 ---
 
 ## Execution Order
 
 ```
-V2-1 (ORDC+Zonal) ──┐
-V2-2 (IPM+Zonal)  ──┤── Group A: Can run in parallel (independent zonal integrations)
-V2-4 (Flows+DR)   ──┘
-         │
-V2-3 (Cannibalization sync) ── Group B: After V2-1 (needs ORDC-in-zonal)
-         │
-V2-5 (Backtesting alignment) ── Group B: After V2-1, V2-3 (needs updated models)
-         │
-V2-6 (QA/QC Testing) ── Group C: After all sync prompts
-V2-7 (UI/CSV QA) ── Group C: Parallel with V2-6
-         │
-V2-8 (Documentation) ── Group D: Last (reflects all changes)
+Phase 1 — Sync Core (sequential):
+  V2-1 (ORDC+Zonal) → V2-4 (DR vectorize + ORDC triggers) → V2-3 (Cannibalization zone+ORDC aware)
+
+Phase 2 — Sync Extended (parallel, after Phase 1):
+  V2-2 (IPM+Zonal+TechQueue) ──┐
+  V2-5A (Backtest interchange)  ├── All independent, all depend on Phase 1
+  V2-5B (Flows+DR persistence)  │
+  V2-6 (Confidence+IPM coord)  │
+  V2-7 (Multi-tier data warns) ─┘
+
+Phase 3 — QA/QC (parallel, after Phase 2):
+  V2-8 (E2E app testing) ──────┐
+  V2-9 (Parameter sensitivity)  ├── All independent
+  V2-10 (UI/CSV + Results QA) ──┘
+
+Phase 4 — Documentation (after Phase 3):
+  V2-11 (Full documentation audit)
 ```
 
 ---
@@ -129,41 +134,81 @@ V2-8 (Documentation) ── Group D: Last (reflects all changes)
 
 ---
 
-### Prompt V2-4: Persist Zonal Flows for Export + Align DR Triggers with ORDC
+### Prompt V2-4: Vectorize DR Loop + Align DR Triggers with ORDC Pricing
 
-> **Severity**: Low-Medium
-> **Problem**: Two lower-severity desynchronizations: (1) Inter-regional flows (Prompt 3) are computed by the zonal LP solver but immediately discarded — they're never exported for validation, visualization, or downstream analysis. (2) Demand response trigger prices (Prompt 4) are hardcoded per ISO (e.g., PJM $100/MWh, ERCOT $200/MWh) and were calibrated before ORDC scarcity pricing (Prompt 8) was added. The triggers are independent of actual scarcity pricing behavior.
+> **Severity**: Medium
+> **Problem**: Two issues with the demand response implementation after ORDC was added:
+> (1) `market_simulation.py:548` has a Python `for h_idx in np.where(dr_mask)[0]` loop that applies DR price reduction per hour. This violates the codebase vectorization mandate — it will be slow on 8760-hour arrays.
+> (2) DR trigger prices in `pipeline_config.py:DEMAND_RESPONSE` (ERCOT $200, PJM $100, etc.) were calibrated for demand-quantile pricing. ORDC can produce spikes of $500-5000/MWh, meaning DR may activate too frequently or the `price_ratio` ramp (0% at trigger, 100% at 2× trigger) may be miscalibrated.
 >
 > **Evidence**:
-> - `market_simulation.py:507`: `zonal_stats` returned from `compute_zonal_lmp_hourly()` but assigned to local variable only — never stored.
-> - `pipeline_config.py:490-497`: `DEMAND_RESPONSE` dict has fixed `trigger_price` values per ISO, calibrated to pre-ORDC price levels.
-> - `market_simulation.py:533`: DR activation uses `effective_trigger = dr_params['trigger_price'] * dr_lvl['trigger_mult']` — no reference to ORDC state or current reserve margin.
+> - `market_simulation.py:548`: `for h_idx in np.where(dr_mask)[0]:` — sequential loop over active DR hours
+> - `pipeline_config.py:490-497`: Fixed `trigger_price` values per ISO, calibrated to pre-ORDC price levels
+> - `market_simulation.py:533`: `effective_trigger = dr_params['trigger_price'] * dr_lvl['trigger_mult']` — no ORDC awareness
+> - `market_simulation.py:542`: `price_ratio` ramp scales linearly from trigger to 2× trigger
 >
 > **What to fix**:
-> 1. **Persist zonal flows**:
->    - At `market_simulation.py:507`, store `zonal_stats` into a variable that gets added to `year_result`.
->    - Add to `year_result` dict (around line 2701-2745): `'zonal_stats': zonal_stats` (or a summary subset to keep JSON size reasonable — e.g., per-zone avg LMP, max LMP, flow utilization percentages).
->    - In `backend/models.py`, add `zonal_stats: Optional[dict] = None` to the response model.
->    - In `frontend/js/results.js`, optionally display a zonal flow summary table if data is present.
-> 2. **DR-ORDC consistency**:
->    - In `pipeline_config.py`, add a `dr_ordc_link` flag (default `True`) to `DEMAND_RESPONSE` config.
->    - When `dr_ordc_link` is True and `SCARCITY_MODE == 'ordc'`: Set DR trigger dynamically as `max(fixed_trigger, VOLL * 0.05)` — DR activates when ORDC adder exceeds 5% of VOLL (i.e., when LOLP indicates real stress, not just high demand).
->    - This ensures DR responds to actual reserve stress rather than arbitrary price thresholds.
+> 1. **Vectorize the DR loop** (line 548):
+>    ```python
+>    # Replace for-loop with vectorized numpy operations
+>    demand_reduction_pct = dr_curtailed_mw[dr_mask] / demand_mw_profile[dr_mask]
+>    price_reduction = np.minimum(demand_reduction_pct * 3.0, 0.5)
+>    hourly_lmp[dr_mask] *= (1.0 - price_reduction)
+>    hourly_lmp[dr_mask] = np.maximum(hourly_lmp[dr_mask], effective_trigger * 0.95)
+>    ```
+> 2. **DR-ORDC trigger calibration**:
+>    - Add a `dr_ordc_link` flag (default `True`) to `DEMAND_RESPONSE` config in `pipeline_config.py`.
+>    - When `dr_ordc_link` is True and `SCARCITY_MODE == 'ordc'`: Set DR trigger dynamically as `max(fixed_trigger, VOLL * 0.05)` — DR activates when ORDC adder exceeds 5% of VOLL (actual reserve stress, not arbitrary price threshold).
 >    - When `SCARCITY_MODE == 'demand_quantile'` or `dr_ordc_link` is False: Use existing fixed trigger prices.
 > 3. Add a `dr_activation_mode` field to results output showing which trigger method was used.
 >
 > **Validation**:
-> - Run PJM with zonal mode: `year_result` should contain zonal flow data viewable in results JSON.
-> - Run ERCOT with ORDC + DR: ERCOT VOLL=$5000, so dynamic trigger = $250 (vs fixed $200). DR should activate slightly less often but at genuinely stressed moments.
-> - Run with `SCARCITY_MODE = 'demand_quantile'`: DR trigger should use fixed prices (no ORDC link).
+> - **Performance**: Time the DR section before and after vectorization. Should be <1ms after (vs potentially seconds before).
+> - **ERCOT ORDC+DR**: ERCOT VOLL=$5000, so dynamic trigger = $250 (vs fixed $200). DR should activate slightly less often but at genuinely stressed moments.
+> - **DR hours check**: Run ERCOT trajectory 2025-2050. DR should not activate >20% of hours (would indicate triggers too low for ORDC prices).
+> - **Regression**: `SCARCITY_MODE = 'demand_quantile'` should produce identical DR behavior to pre-change.
 >
-> **Files to modify**: `scripts/market_simulation.py` (persist zonal_stats, update DR trigger), `scripts/pipeline_config.py` (DR config), `backend/models.py` (response schema)
-> **Files to read first**: `scripts/market_simulation.py` (lines 498-560, 2700-2750), `scripts/pipeline_config.py` (lines 486-500), `scripts/zonal_lmp.py` (lines 273-290)
-> **Dependencies**: None (can run in parallel with V2-1 and V2-2)
+> **Files to modify**: `scripts/market_simulation.py` (lines 524-577, DR block), `scripts/pipeline_config.py` (DEMAND_RESPONSE dict, DR_LEVELS)
+> **Files to read first**: `scripts/market_simulation.py` (lines 524-577), `scripts/pipeline_config.py` (lines 486-500), `scripts/lmp_engine.py` (lines 595-615)
+> **Dependencies**: V2-1 (ORDC in zonal path) should be done first so DR calibration accounts for zonal ORDC behavior
 
 ---
 
-### Prompt V2-5: Align Backtesting with ORDC, Cannibalization, and Tech Queue Caps
+### Prompt V2-5A: Fix Backtest Interchange Data Loading
+
+> **Severity**: Medium
+> **Problem**: `backtest_trajectory.py:126-132` builds a `preloaded` dict with demand_data, gen_profiles, emission_rates, fossil_mix, and egrid_baselines — but does NOT include `interchange_data`. The main simulation loop at `market_simulation.py:2277` does `_preloaded.get('interchange_data', {})` which returns empty. So despite `interchange_enabled=True` in the backtest conditions (line 159), all backtests run without interchange — NEISO shows ~16 GW fossil requirement instead of the ~12 GW it should with 3.5 GW firm Quebec imports.
+>
+> **Evidence**:
+> - `backtest_trajectory.py:126-132`: `preloaded` dict has 5 entries; `interchange_data` is missing
+> - `backtest_trajectory.py:159`: `conditions['interchange_enabled'] = True` — set but ineffective without data
+> - `market_simulation.py:2277`: Falls back to empty dict when interchange_data not in preloaded
+>
+> **What to fix** (4-line fix):
+> 1. Read `scripts/backtest_trajectory.py` lines 96-214.
+> 2. After the existing data loading block (around line 125), add:
+>    ```python
+>    try:
+>        from eia_data_io import load_interchange_profiles
+>        interchange_data = load_interchange_profiles()
+>    except Exception:
+>        interchange_data = {}
+>    ```
+> 3. Add `'interchange_data': interchange_data` to the `preloaded` dict (around line 126).
+> 4. No other changes needed — downstream code in `run_market_simulation` already handles preloaded interchange_data correctly.
+>
+> **Validation**:
+> - Run backtest for NEISO: Without fix, ~16 GW fossil requirement. With fix, ~12-13 GW (3.5 GW firm imports).
+> - Average LMP for NEISO, NYISO, CAISO should decrease by $1-4/MWh with interchange loaded.
+> - Run backtest for ERCOT (minimal imports): Results should barely change (1.2 GW firm imports).
+>
+> **Files to modify**: `scripts/backtest_trajectory.py` (4-line addition)
+> **Files to read first**: `scripts/backtest_trajectory.py` (lines 96-214), `scripts/market_simulation.py` (lines 2270-2290)
+> **Dependencies**: None (can run in parallel with other Phase 2 prompts)
+
+---
+
+### Prompt V2-5B: Align Backtesting Model Features with Current Implementation
 
 > **Severity**: Medium
 > **Problem**: The backtest trajectory module (Prompt 5) validates the model against 2020-2024 observed outcomes. But it was implemented before ORDC scarcity pricing (Prompt 8), VRE cannibalization (Prompt 7), and tech-differentiated queue caps (Prompt 11). The backtest may be using stale pricing/deployment models, producing validation metrics that don't reflect the current model's behavior. Passing validation on the old model doesn't validate the new model.
@@ -196,9 +241,79 @@ V2-8 (Documentation) ── Group D: Last (reflects all changes)
 
 ---
 
+### Prompt V2-6: Coordinate Confidence Bands with IPM Trigger Severity
+
+> **Severity**: Medium
+> **Problem**: `YearResult.confidence` is derived solely from the year (via `get_confidence_zone(year)` in `backend/main.py:821`). A 2030 result gets "high confidence" regardless of whether it has 3 "high severity" IPM triggers indicating the model is operating outside its valid regime. Users see contradictory signals: "High Confidence" badge alongside "High Severity: Model approximation breaks down" trigger cards on the same results page.
+>
+> **Evidence**:
+> - `backend/main.py:821`: Confidence assigned purely by year — `get_confidence_zone(year)` returns 'high' for 2025-2030, 'moderate' for 2030-2040, 'low' for 2040+
+> - `market_simulation.py:2748-2751`: IPM triggers computed per year but not fed back into confidence assignment
+> - `frontend/js/results.js:220+`: Confidence badge rendered independently of IPM trigger cards at line 438+
+>
+> **What to fix**:
+> 1. Read `backend/main.py` lines 818-840 (YearResult building) and `frontend/js/results.js` lines 220-240 (confidence rendering) and 438-470 (IPM trigger rendering).
+> 2. Add a post-processing step after IPM trigger computation: if any trigger has `severity: 'high'`, cap confidence at `'moderate'` regardless of year. If 2+ triggers have `severity: 'medium'`, also cap at `'moderate'`.
+> 3. In `results.js`, when confidence was downgraded due to triggers, append "(adjusted)" to the badge label and add a tooltip: "Confidence reduced because model limitations are binding — see IPM triggers below."
+> 4. Optionally add a composite "model validity" indicator that combines year-based confidence + trigger severity into a single signal.
+>
+> **Validation**:
+> - Run CAISO trajectory to 60%+ VRE by 2030. Confidence should show "Moderate (adjusted)", not "High", due to VRE_CANNIBALIZATION trigger.
+> - Run a 2050 projection with no triggers. Should still show "Low" (year-based floor applies).
+> - Run a 2028 projection with no triggers. Should show "High" (no downgrade needed).
+>
+> **Files to modify**: `backend/main.py` (confidence assignment), `frontend/js/results.js` (badge rendering)
+> **Files to read first**: `backend/main.py` (lines 75-85, 818-840), `frontend/js/results.js` (lines 220-240, 438-470), `scripts/market_simulation.py` (lines 2745-2755)
+> **Dependencies**: V2-2 (IPM trigger improvements) should be done first
+
+---
+
+### Prompt V2-7: Extend Synthetic Data Warnings to Multi-Tier Data Sources
+
+> **Severity**: Low-Medium
+> **Problem**: `check_data_sources()` (market_simulation.py:2008) only checks whether Step 2.2 parquets exist, returning `'parquet'|'synthetic'` per ISO. But Prompts 1-6 introduced additional data dependencies: zonal configurations (hardcoded in pipeline_config), interchange profiles (from EIA-930), fleet-level plant data (EIA-860), DR parameters (calibrated constants). A simulation could have real parquets but synthetic zone definitions, no interchange data, and aggregated fleet data. The `/api/data-status` endpoint doesn't communicate these nuances.
+>
+> **Evidence**:
+> - `market_simulation.py:2008-2026`: `check_data_sources()` only checks for parquet files in `data/step2.2-cost/`
+> - `backend/main.py:1993-1996`: `/api/data-status` returns single-tier status per ISO
+> - Zone definitions in `pipeline_config.py` are hardcoded (not loaded from validated external data)
+> - Interchange data may or may not be present depending on whether `step0_fetch_interchange.py` has been run
+>
+> **What to fix**:
+> 1. Expand `check_data_sources()` to return a multi-tier status per ISO:
+>    ```python
+>    {
+>        'ERCOT': {
+>            'resource_mix': 'parquet',        # step2.2 data present
+>            'zonal_config': 'hardcoded',      # ZONE_CONFIG in pipeline_config
+>            'interchange': 'eia_930',         # from load_interchange_profiles
+>            'fleet_data': 'aggregated',       # vs 'plant_level' when EIA-860 loaded
+>            'dr_params': 'calibrated',        # from pipeline_config
+>        }
+>    }
+>    ```
+> 2. Update `/api/data-status` endpoint to return this richer structure.
+> 3. In `frontend/js/results.js`, show tiered warnings:
+>    - **Red** (critical): "Results use synthetic resource mix data" (no parquets)
+>    - **Amber** (moderate): "Zonal prices use approximate zone definitions" or "No interchange data loaded"
+>    - **Blue** (informational): "Plant-level data unavailable; using aggregated fleet"
+> 4. On `setup.html`, show data tier indicators before the user runs a simulation so they know what data quality to expect.
+>
+> **Validation**:
+> - Call `/api/data-status` and verify all tiers are populated per ISO.
+> - When parquets are absent, UI shows prominent red warning.
+> - When parquets exist but interchange is missing, show amber notice.
+> - When all data tiers are present, show green "Full data" indicator.
+>
+> **Files to modify**: `scripts/market_simulation.py` (check_data_sources), `backend/main.py` (/api/data-status), `frontend/js/results.js` (warning rendering), `frontend/js/setup.js` (pre-run data indicator)
+> **Files to read first**: `scripts/market_simulation.py` (lines 2008-2026), `backend/main.py` (lines 1993-1996), `frontend/js/results.js` (search "synthetic" or "warning")
+> **Dependencies**: None (can run in parallel with other Phase 2 prompts)
+
+---
+
 ## Category 2: Comprehensive QA/QC Testing
 
-### Prompt V2-6: End-to-End Application Testing Regime
+### Prompt V2-8: End-to-End Application Testing Regime
 
 > **Task**: Conduct a comprehensive QA/QC audit of the market simulator's standalone application (run.bat / run.sh), testing all simulation modes, all ISOs, edge cases, user variable sensitivity, CSV overrides, and error handling.
 >
@@ -274,9 +389,48 @@ V2-8 (Documentation) ── Group D: Last (reflects all changes)
 
 ---
 
+### Prompt V2-9: Parameter Sensitivity & Cross-Feature Interaction Testing
+
+> **Task**: Verify that (a) changing each parameter produces directionally correct results, and (b) features from Prompts 1-11 interact correctly when multiple features are active simultaneously.
+>
+> **Context**: After synchronization fixes, each parameter should produce a meaningful, directionally correct response, and combined features should work without conflicts. This tests both individual parameter sensitivity and cross-feature interaction.
+>
+> **Part A — Parameter Sensitivity Matrix** (run each pair on ERCOT trajectory mode):
+>
+> | Parameter | Low Value | High Value | Expected Direction |
+> |-----------|-----------|------------|-------------------|
+> | Gas price | $2.00/MMBtu | $5.00/MMBtu | Higher gas → higher LMP, more clean deployment |
+> | Coal price | $1.50/MMBtu | $3.50/MMBtu | Higher coal → coal retires faster |
+> | Carbon price | $0/ton | $100/ton | Higher carbon → lower emissions, more clean |
+> | Solar LCOE | $45/MWh | $85/MWh | Higher solar cost → less solar deployed |
+> | Demand growth | Low | High | Higher demand → higher LMP, tighter reserves |
+> | Queue cap | Low | High | Higher cap → faster clean deployment |
+> | DR level | Off | High | DR → lower peak LMP, fewer scarcity hours |
+> | Interchange | Off | On | Interchange → lower LMP in import-heavy ISOs |
+> | Tech queue | Off | On | Tech queue → different resource mix composition |
+> | 45Q | Off | On | 45Q → lower CCS LCOE, more CCS deployment |
+>
+> For each row: run two simulations with only that parameter changed. Compare year-2035 results. If expected direction doesn't hold, investigate the code path.
+>
+> **Part B — Cross-Feature Interaction Tests**:
+>
+> 1. **Zonal + ORDC + DR**: Run ERCOT with zonal LMP, ORDC pricing, DR=Medium. Verify: zonal LMP has per-zone variation, ORDC adders in scarcity hours, DR activates and reduces peak zonal LMPs.
+> 2. **Zonal + VRE Cannibalization**: Run CAISO with zonal + cannibalization. Verify: solar capture_rate < 1.0 at high penetration; if zone-aware (V2-3), SP15 solar capture rate differs from system average.
+> 3. **Tech Queue + Deployment + IPM**: Run PJM with tech queue + high demand growth. Verify: per-tech deployment respects caps, IPM triggers fire appropriately.
+> 4. **Interchange + Backtest**: Run backtest for NEISO after V2-5A. Verify interchange loads and NEISO LMP reflects imports.
+> 5. **Confidence + IPM**: Run trajectory reaching 60% VRE by 2030. Verify confidence capped at "moderate" due to triggers (V2-6).
+> 6. **Full stack**: Run ERCOT with ALL features enabled vs ALL disabled. Both should be physically plausible; results should differ meaningfully.
+>
+> **Success criteria**: All 10 parameters produce directionally correct responses. All 6 interaction tests pass without crashes or contradictory signals. Magnitude of parameter effects is plausible (e.g., doubling gas price changes LMP by >$1/MWh).
+>
+> **Files to read first**: `scripts/pipeline_config.py` (parameter tables), `backend/models.py` (SimulationRequest fields), `scripts/market_simulation.py` (parameter threading)
+> **Dependencies**: All synchronization prompts (V2-1 through V2-7) should be completed first.
+
+---
+
 ## Category 3: UI & CSV Template QA/QC
 
-### Prompt V2-7: Setup Page Validation + Custom CSV Compatibility Audit
+### Prompt V2-10: Setup Page Validation + Custom CSV Compatibility Audit
 
 > **Task**: Audit and fix the setup.html parameter input system, CSV template format compliance, custom input file loading pipeline, and responsive design across viewports.
 >
@@ -354,7 +508,7 @@ V2-8 (Documentation) ── Group D: Last (reflects all changes)
 
 ## Category 4: Documentation Audit
 
-### Prompt V2-8: Comprehensive Documentation Update — Manual, Guide, Methodology, Specification
+### Prompt V2-11: Comprehensive Documentation Update — Manual, Guide, Methodology, Specification
 
 > **Task**: Audit and update all user-facing and developer-facing documentation to reflect the complete state of the market simulator after all 11 implementation prompts and v2 synchronization fixes.
 >
@@ -452,19 +606,23 @@ V2-8 (Documentation) ── Group D: Last (reflects all changes)
 
 | Prompt | Category | Severity | Effort | What It Fixes |
 |--------|----------|----------|--------|---------------|
-| V2-1 | Sync | Critical | 1 day | ORDC missing from zonal LMP path |
-| V2-2 | Sync | Critical | 1 day | IPM triggers blind to zonal congestion |
-| V2-3 | Sync | High | Half day | Cannibalization ignores ORDC floor + zonal |
-| V2-4 | Sync | Low-Med | Half day | Flows discarded + DR triggers stale |
-| V2-5 | Sync | Medium | Half day | Backtest using pre-7-11 model behavior |
-| V2-6 | QA/QC | — | 1-2 days | Full app end-to-end testing |
-| V2-7 | UI/CSV | — | 1 day | Setup page + CSV template audit |
-| V2-8 | Docs | — | 1-2 days | All documentation current and complete |
+| **V2-1** | Sync | Critical | 1 day | ORDC missing from zonal LMP path |
+| **V2-2** | Sync | Critical | 1 day | IPM triggers blind to zonal congestion + tech queue |
+| **V2-3** | Sync | High | Half day | Cannibalization ignores ORDC floor + zonal |
+| **V2-4** | Sync | Low-Med | Half day | DR vectorization + ORDC-calibrated triggers |
+| **V2-5A** | Sync | Medium | 1 hour | Backtest missing interchange data (4-line fix) |
+| **V2-5B** | Sync | Medium | Half day | Backtest not using ORDC/cannibalization/tech queue |
+| **V2-6** | Sync | Medium | Half day | Confidence bands contradict IPM triggers |
+| **V2-7** | Sync | Low-Med | Half day | Synthetic warnings only check parquets, not all data tiers |
+| **V2-8** | QA/QC | — | 1-2 days | Full app end-to-end testing |
+| **V2-9** | QA/QC | — | 1 day | Parameter sensitivity + cross-feature interaction |
+| **V2-10** | UI/CSV | — | 1 day | Setup page + CSV template audit |
+| **V2-11** | Docs | — | 1-2 days | All documentation current and complete |
 
-**Total estimated effort**: 5-7 sessions
+**Total estimated effort**: 7-9 sessions
 
-**Parallel execution groups**:
-- **Group A** (parallel): V2-1, V2-2, V2-4
-- **Group B** (sequential after A): V2-3, V2-5
-- **Group C** (parallel after B): V2-6, V2-7
-- **Group D** (after C): V2-8
+**Execution phases**:
+- **Phase 1** (sequential): V2-1 → V2-4 → V2-3 (price formation chain)
+- **Phase 2** (parallel after Phase 1): V2-2, V2-5A, V2-5B, V2-6, V2-7
+- **Phase 3** (parallel after Phase 2): V2-8, V2-9, V2-10
+- **Phase 4** (after Phase 3): V2-11
