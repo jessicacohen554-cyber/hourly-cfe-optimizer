@@ -136,17 +136,17 @@
                 datasets: [{
                     label: 'Existing Gas (MW)',
                     data: ranked.map(function (c) { return c.gasCap; }),
-                    backgroundColor: ranked.map(function (c) { return toRGBA(c.color, 0.15); }),
+                    backgroundColor: ranked.map(function (c) { return withAlpha(c.color, 0.15); }),
                     borderColor: ranked.map(function (c) { return c.color; }),
-                    borderWidth: 1.5,
-                    borderRadius: 4
+                    borderWidth: 2,
+                    borderRadius: 3
                 }, {
                     label: 'Potential New Gas (MW)',
                     data: ranked.map(function (c) { return c.newGasMW; }),
-                    backgroundColor: toRGBA('#EF4444', 0.25),
+                    backgroundColor: withAlpha('#EF4444', 0.15),
                     borderColor: '#EF4444',
-                    borderWidth: 1.5,
-                    borderRadius: 4
+                    borderWidth: 2,
+                    borderRadius: 3
                 }]
             },
             options: {
@@ -176,10 +176,10 @@
                 datasets: [{
                     label: 'Total New Gas (MW)',
                     data: isoData,
-                    backgroundColor: allISOs.map(function (iso) { return toRGBA(ISO_COLORS[iso] || '#6B7280', 0.25); }),
+                    backgroundColor: allISOs.map(function (iso) { return withAlpha(ISO_COLORS[iso] || '#6B7280', 0.15); }),
                     borderColor: allISOs.map(function (iso) { return ISO_COLORS[iso] || '#6B7280'; }),
-                    borderWidth: 1.5,
-                    borderRadius: 4
+                    borderWidth: 2,
+                    borderRadius: 3
                 }]
             },
             options: {
@@ -239,10 +239,10 @@
                 datasets: [{
                     label: 'Cumulative Locked-In CO\u2082 (Mt)',
                     data: ranked.map(function (c) { return +c.cumulativeCO2.toFixed(1); }),
-                    backgroundColor: toRGBA('#EF4444', 0.25),
+                    backgroundColor: withAlpha('#EF4444', 0.15),
                     borderColor: '#EF4444',
-                    borderWidth: 1.5,
-                    borderRadius: 4
+                    borderWidth: 2,
+                    borderRadius: 3
                 }]
             },
             options: {
@@ -288,17 +288,17 @@
                 datasets: [{
                     label: 'Existing Nuclear (MW)',
                     data: replSorted.map(function (c) { return c.nuclearCap; }),
-                    backgroundColor: toRGBA(RESOURCE_COLORS.nuclear || '#6366F1', 0.25),
+                    backgroundColor: withAlpha(RESOURCE_COLORS.nuclear || '#6366F1', 0.85),
                     borderColor: RESOURCE_COLORS.nuclear || '#6366F1',
-                    borderWidth: 1.5,
-                    borderRadius: 4
+                    borderWidth: 2,
+                    borderRadius: 3
                 }, {
                     label: 'New Gas at Risk (MW)',
                     data: replSorted.map(function (c) { return c.newGasMW; }),
-                    backgroundColor: toRGBA('#EF4444', 0.25),
+                    backgroundColor: withAlpha('#EF4444', 0.15),
                     borderColor: '#EF4444',
-                    borderWidth: 1.5,
-                    borderRadius: 4
+                    borderWidth: 2,
+                    borderRadius: 3
                 }]
             },
             options: {
@@ -346,17 +346,17 @@
                 datasets: [{
                     label: 'Low PPA Depth (2040 Mt)',
                     data: sorted.map(function (c) { return c.lowPPA_2040 !== null ? +c.lowPPA_2040.toFixed(2) : 0; }),
-                    backgroundColor: toRGBA('#EF4444', 0.25),
+                    backgroundColor: withAlpha('#EF4444', 0.15),
                     borderColor: '#EF4444',
-                    borderWidth: 1.5,
-                    borderRadius: 4
+                    borderWidth: 2,
+                    borderRadius: 3
                 }, {
                     label: 'High PPA Depth (2040 Mt)',
                     data: sorted.map(function (c) { return c.highPPA_2040 !== null ? +c.highPPA_2040.toFixed(2) : 0; }),
-                    backgroundColor: toRGBA('#22C55E', 0.25),
+                    backgroundColor: withAlpha('#22C55E', 0.15),
                     borderColor: '#22C55E',
-                    borderWidth: 1.5,
-                    borderRadius: 4
+                    borderWidth: 2,
+                    borderRadius: 3
                 }]
             },
             options: {
@@ -399,10 +399,10 @@
                 datasets: [{
                     label: 'Potential New Gas (MW)',
                     data: ranked.map(function (c) { return c.newGasMW; }),
-                    backgroundColor: ranked.map(function (c) { return toRGBA(c.color, 0.25); }),
+                    backgroundColor: ranked.map(function (c) { return withAlpha(c.color, 0.15); }),
                     borderColor: ranked.map(function (c) { return c.color; }),
                     borderWidth: 2,
-                    borderRadius: 4
+                    borderRadius: 3
                 }]
             },
             options: {

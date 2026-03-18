@@ -104,15 +104,15 @@
 
             <div class="stat-row" style="margin-top: 20px;">
                 <div class="stat-tile">
-                    <div class="stat-value" style="font-size: 1.6rem;">30 + DC</div>
+                    <div class="stat-value text-green" style="font-size: 1.6rem;">30 + DC</div>
                     <div class="stat-label">States with RPS/CES</div>
                 </div>
                 <div class="stat-tile">
-                    <div class="stat-value" style="font-size: 1.6rem;">63%</div>
+                    <div class="stat-value text-hydro" style="font-size: 1.6rem;">63%</div>
                     <div class="stat-label">US Retail Sales Under RPS</div>
                 </div>
                 <div class="stat-tile">
-                    <div class="stat-value" style="font-size: 1.6rem;">14</div>
+                    <div class="stat-value text-nuclear" style="font-size: 1.6rem;">14</div>
                     <div class="stat-label">States with 100% Clean Laws</div>
                 </div>
             </div>
@@ -179,19 +179,19 @@
 
             <div class="card-grid" style="margin-top: 24px;">
                 <div class="stat-card">
-                    <div class="stat-value" style="color: #15803D;">$25&ndash;35</div>
+                    <div class="stat-value text-green">$25&ndash;35</div>
                     <div class="stat-label">Coal retirement economic everywhere</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value" style="color: #B45309;">$44&ndash;66</div>
+                    <div class="stat-value text-amber">$44&ndash;66</div>
                     <div class="stat-label">All coal-to-renewable substitution</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value" style="color: var(--ccs);">$80&ndash;110</div>
+                    <div class="stat-value text-ccs">$80&ndash;110</div>
                     <div class="stat-label">CCS on gas becomes competitive</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value" style="color: var(--nuclear);">$150+</div>
+                    <div class="stat-value text-nuclear">$150+</div>
                     <div class="stat-label">New nuclear competitive with gas</div>
                 </div>
             </div>
@@ -560,16 +560,22 @@ new Chart(document.getElementById('iraLcoeChart').getContext('2d'), {
             {
                 label: 'Pre-IRA LCOE',
                 data: [36, 35, 86, 140, 180, 130],
-                backgroundColor: '#E5E7EB',
-                borderRadius: 4
+                backgroundColor: withAlpha('#9CA3AF', 0.15),
+                borderColor: '#9CA3AF',
+                borderWidth: 2,
+                borderRadius: 3
             },
             {
                 label: 'Post-IRA LCOE',
                 data: [24, 24, 62, 108, 140, 88],
                 backgroundColor: typeof RESOURCE_COLORS !== 'undefined'
+                    ? [withAlpha(RESOURCE_COLORS.solar, 0.15), withAlpha(RESOURCE_COLORS.wind, 0.15), withAlpha(RESOURCE_COLORS.offshoreWind, 0.15), withAlpha(RESOURCE_COLORS.battery, 0.15), withAlpha(RESOURCE_COLORS.nuclear, 0.15), withAlpha(RESOURCE_COLORS.ccs, 0.15)]
+                    : [withAlpha('#F59E0B', 0.15), withAlpha('#22C55E', 0.15), withAlpha('#009688', 0.15), withAlpha('#06B6D4', 0.15), withAlpha('#6366F1', 0.15), withAlpha('#64748B', 0.15)],
+                borderColor: typeof RESOURCE_COLORS !== 'undefined'
                     ? [RESOURCE_COLORS.solar, RESOURCE_COLORS.wind, RESOURCE_COLORS.offshoreWind, RESOURCE_COLORS.battery, RESOURCE_COLORS.nuclear, RESOURCE_COLORS.ccs]
                     : ['#F59E0B', '#22C55E', '#009688', '#06B6D4', '#6366F1', '#64748B'],
-                borderRadius: 4
+                borderWidth: 2,
+                borderRadius: 3
             }
         ]
     },
@@ -617,8 +623,10 @@ new Chart(document.getElementById('carbonPriceChart').getContext('2d'), {
         datasets: [{
             label: '$/tonne CO₂',
             data: [15, 190, 90, 185],
-            backgroundColor: ['#9CA3AF', '#F59E0B', '#0EA5E9', '#DC2626'],
-            borderRadius: 6
+            backgroundColor: [withAlpha('#9CA3AF', 0.15), withAlpha('#F59E0B', 0.15), withAlpha('#0EA5E9', 0.15), withAlpha('#DC2626', 0.15)],
+            borderColor: ['#9CA3AF', '#F59E0B', '#0EA5E9', '#DC2626'],
+            borderWidth: 2,
+            borderRadius: 3
         }]
     },
     options: {
@@ -662,14 +670,18 @@ new Chart(document.getElementById('carbonThresholdChart').getContext('2d'), {
             {
                 label: 'Low end',
                 data: [25, 44, 80, 150],
-                backgroundColor: 'rgba(34, 197, 94, 0.7)',
-                borderRadius: 4
+                backgroundColor: withAlpha('#22C55E', 0.15),
+                borderColor: '#22C55E',
+                borderWidth: 2,
+                borderRadius: 3
             },
             {
                 label: 'High end (incremental)',
                 data: [10, 22, 30, 50],
-                backgroundColor: 'rgba(34, 197, 94, 0.3)',
-                borderRadius: 4
+                backgroundColor: withAlpha('#22C55E', 0.08),
+                borderColor: withAlpha('#22C55E', 0.5),
+                borderWidth: 2,
+                borderRadius: 3
             }
         ]
     },

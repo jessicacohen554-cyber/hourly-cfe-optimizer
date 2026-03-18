@@ -403,14 +403,18 @@ function buildCostBreakdown() {
                 {
                     label: 'Clean Procurement',
                     data: cleanData,
-                    backgroundColor: barColors,
-                    borderRadius: 2
+                    backgroundColor: barColors.map(function(c) { return withAlpha(c, 0.15); }),
+                    borderColor: barColors,
+                    borderWidth: 2,
+                    borderRadius: 3
                 },
                 {
                     label: 'Gas Backup Cost',
                     data: gasData,
-                    backgroundColor: gasColors,
-                    borderRadius: 2
+                    backgroundColor: barColors.map(function(c) { return withAlpha(c, 0.08); }),
+                    borderColor: barColors.map(function(c) { return withAlpha(c, 0.5); }),
+                    borderWidth: 2,
+                    borderRadius: 3
                 }
             ]
         },
@@ -645,10 +649,10 @@ function buildGasLockinChart(participation, threshold) {
                 const d = getRecord(s, iso, participation, threshold);
                 return d ? d.gasGw : 0;
             }),
-            backgroundColor: hexToRGBA(isoColor, 0.25),
+            backgroundColor: withAlpha(isoColor, 0.15),
             borderColor: isoColor,
             borderWidth: 2,
-            borderRadius: 8
+            borderRadius: 3
         };
     });
 
@@ -739,10 +743,10 @@ function buildNuclearStrandChart(participation, threshold) {
             datasets: [{
                 label: 'Nuclear Stranding Risk',
                 data: exposures,
-                backgroundColor: CORE_STRATEGIES.map(s => hexToRGBA(STRATEGY_COLORS[s], 0.3)),
+                backgroundColor: CORE_STRATEGIES.map(s => withAlpha(STRATEGY_COLORS[s], 0.15)),
                 borderColor: CORE_STRATEGIES.map(s => STRATEGY_COLORS[s]),
                 borderWidth: 2,
-                borderRadius: 8
+                borderRadius: 3
             }]
         },
         options: {
@@ -780,10 +784,10 @@ function buildCurtailmentChart(participation, threshold) {
     const datasets = CORE_STRATEGIES.map(s => ({
         label: STRATEGY_SHORT[s],
         data: isoData[s],
-        backgroundColor: hexToRGBA(STRATEGY_COLORS[s], 0.3),
+        backgroundColor: withAlpha(STRATEGY_COLORS[s], 0.15),
         borderColor: STRATEGY_COLORS[s],
         borderWidth: 2,
-        borderRadius: 8
+        borderRadius: 3
     }));
 
     const ctx = document.getElementById('curtailmentChart');

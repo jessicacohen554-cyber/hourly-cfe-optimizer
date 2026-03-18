@@ -246,7 +246,7 @@
                 <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Evergy, AEP, BH Energy, Vistra, PPL</strong></p>
                 <p style="font-size: 0.88rem;">Coal &ge;25% of generation. Highest current emissions intensity (454&ndash;572 kg/MWh). But coal retirement is the cheapest form of abatement: new renewables now undercut coal operating costs in most markets.<sup class="ref">5</sup></p>
                 <div class="stat-tile" style="margin-top: 12px; background: rgba(55,65,81,0.05);">
-                    <div class="stat-value" style="font-size: 1.4rem; color: #374151;">$15&ndash;35</div>
+                    <div class="stat-value text-fossil" style="font-size: 1.4rem;">$15&ndash;35</div>
                     <div class="stat-label">$/tonne CO&#8322; abatement (coal &rarr; renewables)</div>
                 </div>
             </div>
@@ -255,7 +255,7 @@
                 <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Entergy, Dominion</strong></p>
                 <p style="font-size: 0.88rem;">Gas &ge;45% with nuclear. Moderate intensity (333&ndash;349 kg/MWh). Already past the easy wins of coal retirement. Reducing gas emissions requires CCS, clean firm, or massive renewable overbuild&mdash;all more expensive per tonne.<sup class="ref">6</sup></p>
                 <div class="stat-tile" style="margin-top: 12px; background: rgba(239,68,68,0.05);">
-                    <div class="stat-value" style="font-size: 1.4rem; color: #DC2626;">$80&ndash;150</div>
+                    <div class="stat-value text-red" style="font-size: 1.4rem;">$80&ndash;150</div>
                     <div class="stat-label">$/tonne CO&#8322; abatement (gas &rarr; clean)</div>
                 </div>
             </div>
@@ -264,7 +264,7 @@
                 <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Duke, Southern, Xcel, DTE, WEC, AES</strong></p>
                 <p style="font-size: 0.88rem;">Mix of gas, coal, nuclear, and growing renewables. These generators have the most flexible pathway options: retire remaining coal first (cheap), then build renewables, then address gas (harder).</p>
                 <div class="stat-tile" style="margin-top: 12px; background: rgba(14,165,233,0.05);">
-                    <div class="stat-value" style="font-size: 1.4rem; color: #0369A1;">$25&ndash;80</div>
+                    <div class="stat-value text-hydro" style="font-size: 1.4rem;">$25&ndash;80</div>
                     <div class="stat-label">$/tonne CO&#8322; abatement (blended pathway)</div>
                 </div>
             </div>
@@ -273,7 +273,7 @@
                 <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Constellation, NextEra</strong></p>
                 <p style="font-size: 0.88rem;">Already below US average intensity. Nuclear or renewable backbone. Challenge is not reducing&mdash;it's maintaining low-carbon status while growing to meet surging demand (data centers, electrification).</p>
                 <div class="stat-tile" style="margin-top: 12px; background: rgba(124,58,237,0.05);">
-                    <div class="stat-value" style="font-size: 1.4rem; color: #7C3AED;">$120+</div>
+                    <div class="stat-value text-neiso" style="font-size: 1.4rem;">$120+</div>
                     <div class="stat-label">$/tonne CO&#8322; for marginal reductions</div>
                 </div>
             </div>
@@ -540,18 +540,18 @@ new Chart(document.getElementById('isoStackedChart').getContext('2d'), {
             {
                 label: 'IPP / Competitive Generation (TWh)',
                 data: isoData.map(d => Math.round(d.total * d.ipp / 100)),
-                backgroundColor: 'rgba(124, 58, 237, 0.7)',
+                backgroundColor: withAlpha('#7C3AED', 0.85),
                 borderColor: '#7C3AED',
-                borderWidth: 1,
-                borderRadius: 4
+                borderWidth: 2,
+                borderRadius: 3
             },
             {
                 label: 'Regulated Utility Generation (TWh)',
                 data: isoData.map(d => Math.round(d.total * d.reg / 100)),
-                backgroundColor: 'rgba(14, 165, 233, 0.5)',
+                backgroundColor: withAlpha('#0EA5E9', 0.85),
                 borderColor: '#0EA5E9',
-                borderWidth: 1,
-                borderRadius: 4
+                borderWidth: 2,
+                borderRadius: 3
             }
         ]
     },

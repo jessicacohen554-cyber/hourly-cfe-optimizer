@@ -142,11 +142,11 @@ body { background: var(--bg-page-white); }
     </div>
 
     <div class="grid-stats" style="margin-bottom: var(--space-lg);">
-        <div class="stat-card"><div class="stat-value" style="color: #0369A1;">7</div><div class="stat-label">ISOs Modeled</div></div><!-- contrast-fix: was var(--hydro)/#0EA5E9, now #0369A1, ratio 5.93:1 on white -->
-        <div class="stat-card"><div class="stat-value" style="color: #15803D;">21</div><div class="stat-label">Thresholds</div></div><!-- contrast-fix: was var(--wind)/#22C55E, now #15803D, ratio 5.02:1 on white -->
-        <div class="stat-card"><div class="stat-value" style="color: #B45309;">5,832</div><div class="stat-label">Cost Scenarios</div></div><!-- contrast-fix: was var(--solar)/#F59E0B, now #B45309, ratio 5.02:1 on white -->
-        <div class="stat-card"><div class="stat-value" style="color: #0E7490;">8,760</div><div class="stat-label">Hours/Year</div></div><!-- contrast-fix: was var(--battery)/#06B6D4, now #0E7490, ratio 5.14:1 on white -->
-        <div class="stat-card"><div class="stat-value" style="color: #4F46E5;">190</div><div class="stat-label">Tests Passing</div></div><!-- contrast-fix: was var(--nuclear)/#6366F1, now #4F46E5, ratio 5.56:1 on white -->
+        <div class="stat-card"><div class="stat-value text-hydro">7</div><div class="stat-label">ISOs Modeled</div></div>
+        <div class="stat-card"><div class="stat-value text-wind">21</div><div class="stat-label">Thresholds</div></div>
+        <div class="stat-card"><div class="stat-value text-solar">5,832</div><div class="stat-label">Cost Scenarios</div></div>
+        <div class="stat-card"><div class="stat-value text-battery">8,760</div><div class="stat-label">Hours/Year</div></div>
+        <div class="stat-card"><div class="stat-value text-nuclear">190</div><div class="stat-label">Tests Passing</div></div>
     </div>
 
     <!-- Validation status table -->
@@ -581,13 +581,13 @@ body { background: var(--bg-page-white); }
         <table class="data-table" style="margin-bottom: 16px;">
             <thead><tr><th>ISO</th><th>PFS Rows</th><th>Cost-Opt Rows</th><th>Scenarios</th><th>Dispatch</th><th>CO₂</th><th>Tests</th><th>Result</th></tr></thead>
             <tbody>
-                <tr><td>CAISO</td><td>45,892</td><td>367,416</td><td>17,496</td><td>1 archetype</td><td>367,416</td><td>10/10</td><td style="color: #15803D; /* contrast-fix: was #16a34a (3.30:1), now #15803D, ratio 5.02:1 on bg #FFFFFF */ font-weight: 600;">✓ PASS</td></tr>
-                <tr><td>ERCOT</td><td>26,059</td><td>122,472</td><td>5,832</td><td>1 archetype</td><td>122,472</td><td>10/10</td><td style="color: #15803D; /* contrast-fix: was #16a34a (3.30:1), now #15803D, ratio 5.02:1 on bg #FFFFFF */ font-weight: 600;">✓ PASS</td></tr>
-                <tr><td>PJM</td><td>6,538</td><td>122,472</td><td>5,832</td><td>1 archetype</td><td>122,472</td><td>9/9</td><td style="color: #15803D; /* contrast-fix: was #16a34a (3.30:1), now #15803D, ratio 5.02:1 on bg #FFFFFF */ font-weight: 600;">✓ PASS</td></tr>
-                <tr><td>NYISO</td><td>21,338</td><td>122,472</td><td>5,832</td><td>1 archetype</td><td>122,472</td><td>9/9</td><td style="color: #15803D; /* contrast-fix: was #16a34a (3.30:1), now #15803D, ratio 5.02:1 on bg #FFFFFF */ font-weight: 600;">✓ PASS</td></tr>
-                <tr><td>NEISO</td><td>10,644</td><td>122,472</td><td>5,832</td><td>1 archetype</td><td>122,472</td><td>11/11</td><td style="color: #15803D; /* contrast-fix: was #16a34a (3.30:1), now #15803D, ratio 5.02:1 on bg #FFFFFF */ font-weight: 600;">✓ PASS</td></tr>
-                <tr><td>MISO</td><td>20,327</td><td>122,472</td><td>5,832</td><td>1 archetype</td><td>122,472</td><td>9/9</td><td style="color: #15803D; /* contrast-fix: was #16a34a (3.30:1), now #15803D, ratio 5.02:1 on bg #FFFFFF */ font-weight: 600;">✓ PASS</td></tr>
-                <tr><td>SPP</td><td>30,857</td><td>122,472</td><td>5,832</td><td>1 archetype</td><td>122,472</td><td>9/9</td><td style="color: #15803D; /* contrast-fix: was #16a34a (3.30:1), now #15803D, ratio 5.02:1 on bg #FFFFFF */ font-weight: 600;">✓ PASS</td></tr>
+                <tr><td>CAISO</td><td>45,892</td><td>367,416</td><td>17,496</td><td>1 archetype</td><td>367,416</td><td>10/10</td><td class="text-green" style="font-weight: 600;">✓ PASS</td></tr>
+                <tr><td>ERCOT</td><td>26,059</td><td>122,472</td><td>5,832</td><td>1 archetype</td><td>122,472</td><td>10/10</td><td class="text-green" style="font-weight: 600;">✓ PASS</td></tr>
+                <tr><td>PJM</td><td>6,538</td><td>122,472</td><td>5,832</td><td>1 archetype</td><td>122,472</td><td>9/9</td><td class="text-green" style="font-weight: 600;">✓ PASS</td></tr>
+                <tr><td>NYISO</td><td>21,338</td><td>122,472</td><td>5,832</td><td>1 archetype</td><td>122,472</td><td>9/9</td><td class="text-green" style="font-weight: 600;">✓ PASS</td></tr>
+                <tr><td>NEISO</td><td>10,644</td><td>122,472</td><td>5,832</td><td>1 archetype</td><td>122,472</td><td>11/11</td><td class="text-green" style="font-weight: 600;">✓ PASS</td></tr>
+                <tr><td>MISO</td><td>20,327</td><td>122,472</td><td>5,832</td><td>1 archetype</td><td>122,472</td><td>9/9</td><td class="text-green" style="font-weight: 600;">✓ PASS</td></tr>
+                <tr><td>SPP</td><td>30,857</td><td>122,472</td><td>5,832</td><td>1 archetype</td><td>122,472</td><td>9/9</td><td class="text-green" style="font-weight: 600;">✓ PASS</td></tr>
             </tbody>
         </table>
 
@@ -612,18 +612,18 @@ body { background: var(--bg-page-white); }
         <table class="data-table">
             <thead><tr><th>ISO</th><th>Target ($/MWh)</th><th>Model ($/MWh)</th><th>Δ</th><th>P50</th><th>Neg. Hours</th><th>Scarcity Hours</th><th>Source</th></tr></thead>
             <tbody>
-                <tr><td>CAISO</td><td>$38.00</td><td>$34.40</td><td style="color: #15803D; /* contrast-fix: was #16a34a (3.30:1), now #15803D, ratio 5.02:1 on bg #FFFFFF */">−9.5%</td><td>$30.68</td><td>624</td><td>43</td><td>CAISO DMM 2024 Q4 + Annual</td></tr>
-                <tr><td>ERCOT</td><td>$26.00</td><td>$28.40</td><td style="color: #15803D; /* contrast-fix: was #16a34a (3.30:1), now #15803D, ratio 5.02:1 on bg #FFFFFF */">+9.2%</td><td>$27.95</td><td>470</td><td>50</td><td>Modo Energy / ERCOT Commercial Markets</td></tr>
-                <tr><td>PJM</td><td>$34.70</td><td>$36.00</td><td style="color: #15803D; /* contrast-fix: was #16a34a (3.30:1), now #15803D, ratio 5.02:1 on bg #FFFFFF */">+3.7%</td><td>$31.41</td><td>196</td><td>71</td><td>Monitoring Analytics 2024 SOM</td></tr>
-                <tr><td>NYISO</td><td>$42.00</td><td>$38.20</td><td style="color: #15803D; /* contrast-fix: was #16a34a (3.30:1), now #15803D, ratio 5.02:1 on bg #FFFFFF */">−9.0%</td><td>$32.17</td><td>157</td><td>49</td><td>Potomac Economics 2024 SOM</td></tr>
-                <tr><td>NEISO</td><td>$39.50</td><td>$42.50</td><td style="color: #92400E;">+7.6%</td><td>$40.93</td><td>210</td><td>62</td><td>ISO-NE 2024 EMM Report</td></tr>
-                <tr><td>MISO</td><td>$31.00</td><td>$32.20</td><td style="color: #15803D; /* contrast-fix: was #16a34a (3.30:1), now #15803D, ratio 5.02:1 on bg #FFFFFF */">+3.9%</td><td>$29.11</td><td>346</td><td>41</td><td>Potomac Economics 2024 SOM</td></tr>
-                <tr><td>SPP</td><td>$26.00</td><td>$28.20</td><td style="color: #15803D; /* contrast-fix: was #16a34a (3.30:1), now #15803D, ratio 5.02:1 on bg #FFFFFF */">+8.5%</td><td>$26.92</td><td>564</td><td>13</td><td>SPP MMU 2024 Annual SOM</td></tr>
+                <tr><td>CAISO</td><td>$38.00</td><td>$34.40</td><td class="text-green">−9.5%</td><td>$30.68</td><td>624</td><td>43</td><td>CAISO DMM 2024 Q4 + Annual</td></tr>
+                <tr><td>ERCOT</td><td>$26.00</td><td>$28.40</td><td class="text-green">+9.2%</td><td>$27.95</td><td>470</td><td>50</td><td>Modo Energy / ERCOT Commercial Markets</td></tr>
+                <tr><td>PJM</td><td>$34.70</td><td>$36.00</td><td class="text-green">+3.7%</td><td>$31.41</td><td>196</td><td>71</td><td>Monitoring Analytics 2024 SOM</td></tr>
+                <tr><td>NYISO</td><td>$42.00</td><td>$38.20</td><td class="text-green">−9.0%</td><td>$32.17</td><td>157</td><td>49</td><td>Potomac Economics 2024 SOM</td></tr>
+                <tr><td>NEISO</td><td>$39.50</td><td>$42.50</td><td class="text-amber">+7.6%</td><td>$40.93</td><td>210</td><td>62</td><td>ISO-NE 2024 EMM Report</td></tr>
+                <tr><td>MISO</td><td>$31.00</td><td>$32.20</td><td class="text-green">+3.9%</td><td>$29.11</td><td>346</td><td>41</td><td>Potomac Economics 2024 SOM</td></tr>
+                <tr><td>SPP</td><td>$26.00</td><td>$28.20</td><td class="text-green">+8.5%</td><td>$26.92</td><td>564</td><td>13</td><td>SPP MMU 2024 Annual SOM</td></tr>
             </tbody>
         </table>
 
         <p style="font-size: 0.88rem; color: #64748b; margin-top: 8px;">
-            All 7 ISOs calibrate within 10% of target average LMP. Calibration tolerance: &lt;10% = <span style="color: #15803D; /* contrast-fix: was #16a34a (3.30:1), now #15803D, ratio 5.02:1 on bg #FFFFFF */ font-weight:600;">GOOD</span>, &lt;25% = FAIR, &lt;50% = ADJUST. Negative pricing hours reflect renewable surplus (CAISO duck curve, SPP wind corridor). Scarcity hours reflect peak demand events (PJM summer, NEISO winter gas constraints).
+            All 7 ISOs calibrate within 10% of target average LMP. Calibration tolerance: &lt;10% = <span class="text-green" style="font-weight:600;">GOOD</span>, &lt;25% = FAIR, &lt;50% = ADJUST. Negative pricing hours reflect renewable surplus (CAISO duck curve, SPP wind corridor). Scarcity hours reflect peak demand events (PJM summer, NEISO winter gas constraints).
         </p>
     </div>
 
@@ -757,7 +757,7 @@ body { background: var(--bg-page-white); }
     <div class="card">
         <h3>Running the Test Suite</h3>
         <div class="formula-box" style="border-left-color: #22c55e;">
-            <div class="formula-label" style="color: #15803D;">Quick Start</div>
+            <div class="formula-label text-green">Quick Start</div>
             <pre style="font-family: var(--font-mono); font-size: 0.88rem; margin: 8px 0 0; white-space: pre-wrap;">
 pip install numpy numba pytest
 cd hourly-cfe-optimizer

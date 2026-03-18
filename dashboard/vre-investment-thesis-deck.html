@@ -1914,6 +1914,7 @@ body {
      CHART.JS SCRIPTS
      ═══════════════════════════════════════════════════════════════════ -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+<script src="js/chart-colors.js"></script>
 <script>
 // ─── Slide 2: Demand Forecast Bar Chart ───
 const demandCtx = document.getElementById('demandChart');
@@ -1926,24 +1927,28 @@ if (demandCtx) {
         {
           label: 'BNEF Forecast',
           data: [38, 45, 54, 62, 72, 84, 96, null, 106],
-          backgroundColor: '#2372B9',
-          borderRadius: 4,
+          backgroundColor: withAlpha('#2372B9', 0.15),
+          borderColor: '#2372B9',
+          borderWidth: 2,
+          borderRadius: 3,
           barPercentage: 0.7,
         },
         {
           label: 'Goldman Sachs',
           data: [38, 47, 58, 70, 82, 92, 100, null, null],
-          backgroundColor: '#B45309',
-          borderRadius: 4,
+          backgroundColor: withAlpha('#B45309', 0.15),
+          borderColor: '#B45309',
+          borderWidth: 2,
+          borderRadius: 3,
           barPercentage: 0.7,
         },
         {
           label: 'Wood Mackenzie (Pipeline)',
           data: [null, null, null, null, null, null, null, null, 245],
-          backgroundColor: 'rgba(107,165,67,0.4)',
+          backgroundColor: withAlpha('#4D7C2E', 0.15),
           borderColor: '#4D7C2E',
           borderWidth: 2,
-          borderRadius: 4,
+          borderRadius: 3,
           barPercentage: 0.7,
         }
       ]
@@ -2076,12 +2081,20 @@ if (premiumCtx) {
           data: [2, 4, 7, 10, 16, 25, 38, 58, 82, 120],
           backgroundColor: function(ctx) {
             const val = ctx.raw;
+            if (val <= 10) return withAlpha('#4D7C2E', 0.15);
+            if (val <= 25) return withAlpha('#2372B9', 0.15);
+            if (val <= 58) return withAlpha('#B45309', 0.15);
+            return withAlpha('#DC2626', 0.15);
+          },
+          borderColor: function(ctx) {
+            const val = ctx.raw;
             if (val <= 10) return '#4D7C2E';
             if (val <= 25) return '#2372B9';
             if (val <= 58) return '#B45309';
             return '#DC2626';
           },
-          borderRadius: 4,
+          borderWidth: 2,
+          borderRadius: 3,
           barPercentage: 0.85,
         }
       ]

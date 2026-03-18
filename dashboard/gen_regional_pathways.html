@@ -1123,7 +1123,7 @@ function buildMixChart(canvasId, scenarioName) {
         if (!hex || !existD[r].some(v => v > 0)) continue;
         datasets.push({
             label: MIX_LABELS[r] + ' (existing)', data: existD[r],
-            backgroundColor: hexToRgba(hex, 0.75), borderColor: hex, borderWidth: 1.5, borderRadius: 4,
+            backgroundColor: hexToRgba(hex, 0.85), borderColor: hex, borderWidth: 2, borderRadius: 3,
             stack: 'mix', _resourceKey: r,
         });
     }
@@ -1133,7 +1133,7 @@ function buildMixChart(canvasId, scenarioName) {
         if (!hex || !newD[r].some(v => v > 0)) continue;
         datasets.push({
             label: MIX_LABELS[r] + ' (new)', data: newD[r],
-            backgroundColor: hexToRgba(hex, 0.40), borderColor: hex, borderWidth: 1, borderRadius: 4,
+            backgroundColor: hexToRgba(hex, 0.15), borderColor: hex, borderWidth: 2, borderRadius: 3,
             stack: 'mix', _resourceKey: r,
         });
     }
@@ -1145,7 +1145,7 @@ function buildMixChart(canvasId, scenarioName) {
         if (!hex || !curtD[r].some(v => v > 0)) continue;
         datasets.push({
             label: MIX_LABELS[r] + ' (curtailed)', data: curtD[r],
-            backgroundColor: createDiagonalPattern(hex, 0.55), borderColor: hex, borderWidth: 1, borderRadius: 2,
+            backgroundColor: createDiagonalPattern(hex, 0.55), borderColor: hex, borderWidth: 2, borderRadius: 3,
             stack: 'mix', _resourceKey: r, _isCurtailed: true,
         });
     }

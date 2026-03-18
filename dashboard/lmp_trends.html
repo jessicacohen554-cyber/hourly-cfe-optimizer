@@ -215,19 +215,19 @@
     <p class="section-subtitle">Our synthetic LMP model simulates 150,000+ scenarios per ISO to project how wholesale electricity prices evolve as clean energy penetration increases from 50% to &ge;99.99%. The results are structurally consistent across all 7 ISOs.</p>
     <div class="key-findings-grid">
         <div class="key-finding-tile">
-            <div class="kf-value" style="color:#15803D;">&minus;44% to &minus;56%</div>
+            <div class="kf-value text-green">&minus;44% to &minus;56%</div>
             <div class="kf-label">Median wholesale price decline from 50% to 95% clean &mdash; consistent across all 7 ISOs</div>
         </div>
         <div class="key-finding-tile">
-            <div class="kf-value" style="color:#B45309;">4&ndash;8&times;</div>
+            <div class="kf-value text-amber">4&ndash;8&times;</div>
             <div class="kf-label">Increase in zero/negative price hours as clean energy grows &mdash; up to 91% of all hours at &ge;99.99%</div>
         </div>
         <div class="key-finding-tile">
-            <div class="kf-value" style="color:#0369A1;">$25&ndash;35/MWh</div>
+            <div class="kf-value text-hydro">$25&ndash;35/MWh</div>
             <div class="kf-label">Peak uncertainty band (P10&ndash;P90) at 75&ndash;80% clean &mdash; exactly where most buyers are planning</div>
         </div>
         <div class="key-finding-tile">
-            <div class="kf-value" style="color:#dc2626;">~65&ndash;75%</div>
+            <div class="kf-value text-red">~65&ndash;75%</div>
             <div class="kf-label">Clean energy threshold where wholesale falls below nuclear viability ($38&ndash;44/MWh) in every ISO</div>
         </div>
     </div>
@@ -238,7 +238,7 @@
     <div class="insight-box insight-warn">
         <div>
             <h4>The Replacement Cost Paradox</h4>
-            <p>Wholesale price degradation threatens existing nuclear viability across all 7 ISOs &mdash; but replacing retired nuclear with new-build clean firm costs 3&ndash;5&times; the wholesale price that caused the retirement ($105&ndash;163/MWh new nuclear vs. $20&ndash;34/MWh wholesale at 90% clean). Nuclear doesn't just need enough revenue to survive &mdash; it needs profit to reinvest in uprates, relicensing, and capacity expansion at already-permitted sites.</p>
+            <p>Wholesale price degradation threatens existing <span class="em-nuclear">nuclear</span> viability across all 7 ISOs &mdash; but replacing retired nuclear with new-build clean firm costs 3&ndash;5&times; the wholesale price that caused the retirement ($105&ndash;163/MWh new nuclear vs. $20&ndash;34/MWh wholesale at 90% clean). Nuclear doesn't just need enough revenue to survive &mdash; it needs profit to reinvest in uprates, relicensing, and capacity expansion at already-permitted sites.</p>
             <p><a href="#nuclear-crossover">See the full nuclear economics analysis below &rarr;</a></p>
         </div>
     </div>
@@ -465,13 +465,13 @@
             <div class="narrative-card">
                 <span class="section-tag" style="background:rgba(99,102,241,0.2);color:#A5B4FC;">Revenue Streams</span>
                 <h3>Capacity payments cushion the price decline - but only where markets exist</h3>
-                <p>ISOs with capacity markets (PJM, NYISO, CAISO, NEISO, MISO) provide generators with additional revenue beyond the energy spot market. For nuclear plants, capacity revenue adds <strong id="nucCapRevPJM">$12/MWh</strong> in PJM at 50% clean - enough to delay the retirement threshold by ~10 percentage points.</p>
+                <p>ISOs with capacity markets (<span class="text-pjm">PJM</span>, <span class="text-nyiso">NYISO</span>, <span class="text-caiso">CAISO</span>, <span class="text-neiso">NEISO</span>, <span class="text-miso">MISO</span>) provide generators with additional revenue beyond the energy spot market. For <span class="em-nuclear">nuclear</span> plants, capacity revenue adds <strong id="nucCapRevPJM">$12/MWh</strong> in PJM at 50% clean - enough to delay the retirement threshold by ~10 percentage points.</p>
                 <p>In energy-only markets (ERCOT, SPP), generators must survive on energy revenue alone. This amplifies retirement risk as clean energy depresses wholesale prices.</p>
             </div>
             <div class="narrative-card">
                 <span class="section-tag" style="background:rgba(239,68,68,0.12);color:#DC2626;">Nuclear Viability</span>
                 <h3>Nuclear retirement risk shifts with total market revenue</h3>
-                <p>When capacity payments are included, nuclear viability extends further into the clean energy transition. In PJM, the total market revenue (energy + capacity) crosses below nuclear's all-in cost of <strong>$38–44/MWh</strong> at approximately <strong id="nucViableCapPct">78%</strong> clean - compared to ~68% under energy-only pricing.</p>
+                <p>When capacity payments are included, <span class="em-nuclear">nuclear</span> viability extends further into the clean energy transition. In <span class="text-pjm">PJM</span>, the total market revenue (energy + capacity) crosses below nuclear's all-in cost of <strong class="text-nuclear">$38&ndash;44/MWh</strong> at approximately <strong id="nucViableCapPct">78%</strong> clean - compared to ~68% under energy-only pricing.</p>
                 <p>The 45U PTC ($15/MWh) combined with capacity payments creates a stronger floor, potentially extending nuclear viability to ~85% clean.</p>
             </div>
         </div>
@@ -553,7 +553,7 @@
                 <span class="section-tag" style="background:rgba(245,158,11,0.08);color:#B45309;">Cannibalization</span>
                 <h3>Every megawatt of solar and wind pushes wholesale prices lower &mdash; undermining its own revenue case</h3>
                 <p>As clean energy grows from 50% to 95%, average wholesale LMPs decline 44&ndash;56% across all 7 ISOs. Zero-price hours explode from ~200&ndash;600 at 50% clean to 4,000&ndash;6,000 at 95%. At &ge;99.99%, over 8,000 hours per year produce free or negative-priced electricity &mdash; 91% of the year.</p>
-                <p>This is the cannibalization paradox: renewables are victims of their own success. Each additional MW of solar or wind depresses the price during the hours when it generates, reducing the revenue available to finance the next project.</p>
+                <p>This is the cannibalization paradox: renewables are victims of their own success. Each additional MW of <span class="em-solar">solar</span> or <span class="em-wind">wind</span> depresses the price during the hours when it generates, reducing the revenue available to finance the next project.</p>
                 <span class="stat-badge stat-badge-amber">200 &rarr; 8,000+ zero-price hours as clean energy scales</span>
             </div>
             <div class="narrative-card">
@@ -597,13 +597,13 @@
             <div class="narrative-card">
                 <span class="section-tag" style="background:rgba(139,92,246,0.2);color:#C4B5FD;">Storage Economics</span>
                 <h3>Storage deployment grows with CFE targets &mdash; and the arbitrage signal persists</h3>
-                <p>Battery dispatch grows from near-zero at 50% clean to 7&ndash;10% of annual demand at &ge;99.99%. Long-duration storage (LDES) only appears at 95%+ thresholds, where multi-day supply gaps become the binding constraint. Green H&#8322; enters at &ge;95% for seasonal balancing.</p>
+                <p><span class="em-battery">Battery</span> dispatch grows from near-zero at 50% clean to 7&ndash;10% of annual demand at &ge;99.99%. <span class="em-ldes">Long-duration storage</span> (LDES) only appears at 95%+ thresholds, where multi-day supply gaps become the binding constraint. Green H&#8322; enters at &ge;95% for seasonal balancing.</p>
                 <p>The peak-to-offpeak spread &mdash; the arbitrage signal for storage operators &mdash; actually <em>widens</em> through most of the transition before collapsing only at extreme penetrations. The economic case for time-shifting energy strengthens through 97.5% clean.</p>
                 <span class="stat-badge stat-badge-blue">Peak&ndash;offpeak spread: widens from 80% to 97.5% clean</span>
             </div>
             <div class="narrative-card">
                 <h3>LDES becomes economic when daily cycling can't bridge the gap</h3>
-                <p>At 95%+ clean, the remaining unmatched hours cluster into multi-day events &mdash; winter wind droughts, consecutive cloudy days, extreme cold snaps. 4-hour batteries can't bridge a 72-hour gap. That's where 100-hour iron-air (LDES) and eventually 1,000-hour green hydrogen fill the role, despite their lower round-trip efficiencies (50% and 35%, respectively).</p>
+                <p>At 95%+ clean, the remaining unmatched hours cluster into multi-day events &mdash; winter wind droughts, consecutive cloudy days, extreme cold snaps. 4-hour <span class="em-battery">batteries</span> can't bridge a 72-hour gap. That's where 100-hour iron-air (<span class="em-ldes">LDES</span>) and eventually 1,000-hour green hydrogen fill the role, despite their lower round-trip efficiencies (50% and 35%, respectively).</p>
                 <span class="stat-badge stat-badge-green">LDES: 100hr iron-air, 50% RTE &middot; H&#8322;: 1000hr, 35% RTE</span>
             </div>
         </div>
@@ -641,7 +641,7 @@
                 <span class="section-tag" style="background:rgba(107,114,128,0.08);color:#4B5563;">Gas Fleet Risk</span>
                 <h3>Gas plants face a utilization cliff &mdash; but capacity is still needed for reliability</h3>
                 <p>As clean energy scales, gas capacity utilization plummets &mdash; but the fleet can't simply retire. Resource adequacy requirements (15% reserve margin) mean gas backup remains necessary even at 95%+ clean, but it runs fewer and fewer hours per year. The result: gas plants that cost billions to maintain but generate almost no revenue.</p>
-                <p>CAISO and ERCOT face the earliest stranding signals, where abundant wind and solar displace gas capacity most rapidly. PJM's large nuclear fleet delays the transition. NEISO faces a unique constraint: winter gas pipeline bottlenecks add a $13.13/MWh CCS premium.</p>
+                <p><span class="text-caiso">CAISO</span> and <span class="text-ercot">ERCOT</span> face the earliest stranding signals, where abundant <span class="em-wind">wind</span> and <span class="em-solar">solar</span> displace gas capacity most rapidly. <span class="text-pjm">PJM</span>'s large <span class="em-nuclear">nuclear</span> fleet delays the transition. <span class="text-neiso">NEISO</span> faces a unique constraint: winter gas pipeline bottlenecks add a $13.13/MWh <span class="em-ccs">CCS</span> premium.</p>
                 <span class="stat-badge stat-badge-red">Gas utilization: &lt;5% of hours at 95%+ clean, but capacity still required</span>
             </div>
             <div class="narrative-card">
@@ -672,7 +672,7 @@
         <div class="narrative-card">
             <span class="section-tag" style="background:rgba(239,68,68,0.08);color:#B91C1C;">Revenue Crossover</span>
             <h2 class="section-title">The Nuclear Revenue Crossover</h2>
-            <p class="section-subtitle">As clean energy targets rise, wholesale energy prices and capacity market revenue shift. This analysis identifies where total market revenue falls below the $38&ndash;44/MWh threshold needed to sustain existing nuclear &mdash; and what replacement costs when it does.</p>
+            <p class="section-subtitle">As clean energy targets rise, wholesale energy prices and capacity market revenue shift. This analysis identifies where total market revenue falls below the <strong class="text-nuclear">$38&ndash;44/MWh</strong> threshold needed to sustain existing <span class="em-nuclear">nuclear</span> &mdash; and what replacement costs when it does.</p>
             <div style="display:flex; flex-wrap:wrap; gap:var(--space-sm) var(--space-lg); margin-top:var(--space-sm);">
                 <a href="ipp_constellation.html" class="explore-link" style="font-size:0.82rem;">Constellation: largest nuclear fleet <span class="arrow">&rarr;</span></a>
                 <a href="ipp_vistra.html" class="explore-link" style="font-size:0.82rem;">Vistra: nuclear + gas split <span class="arrow">&rarr;</span></a>
@@ -690,10 +690,10 @@
 
         <!-- Finding tiles (light theme) -->
         <div class="ctr-finding-tiles" id="ctrFindingTiles">
-            <div class="ctr-finding-tile"><div class="val" id="ctrTileCrossover">--</div><div class="lbl">Median crossover threshold across ISOs</div></div>
-            <div class="ctr-finding-tile"><div class="val" id="ctrTileReplaceCost">--</div><div class="lbl">Average replacement cost at 90% clean (CTR track)</div></div>
-            <div class="ctr-finding-tile"><div class="val" id="ctrTileNewbuild">--</div><div class="lbl">Average new-build cost at 90% clean</div></div>
-            <div class="ctr-finding-tile"><div class="val" id="ctrTilePremium">--</div><div class="lbl">Average replacement premium over nuclear sustaining cost</div></div>
+            <div class="ctr-finding-tile"><div class="val text-nuclear" id="ctrTileCrossover">--</div><div class="lbl">Median crossover threshold across ISOs</div></div>
+            <div class="ctr-finding-tile"><div class="val text-red" id="ctrTileReplaceCost">--</div><div class="lbl">Average replacement cost at 90% clean (CTR track)</div></div>
+            <div class="ctr-finding-tile"><div class="val text-hydro" id="ctrTileNewbuild">--</div><div class="lbl">Average new-build cost at 90% clean</div></div>
+            <div class="ctr-finding-tile"><div class="val text-amber" id="ctrTilePremium">--</div><div class="lbl">Average replacement premium over nuclear sustaining cost</div></div>
         </div>
 
         <!-- Viability heatmap -->
@@ -704,7 +704,7 @@
             </div>
             <div class="ctr-heatmap-wrap" id="ctrHeatmapContainer"></div>
             <div class="insight-box" style="margin-top:var(--space-md);">
-                <p><strong>Reading the heatmap:</strong> Green = total revenue exceeds $44/MWh (nuclear viable). Amber = revenue between $38&ndash;44/MWh (marginal). Red = revenue below $38/MWh (nuclear unviable without support).</p>
+                <p><strong>Reading the heatmap:</strong> <strong class="text-green">Green</strong> = total revenue exceeds $44/MWh (nuclear viable). <strong class="text-amber">Amber</strong> = revenue between $38&ndash;44/MWh (marginal). <strong class="text-red">Red</strong> = revenue below $38/MWh (nuclear unviable without support).</p>
             </div>
             <div class="insight-box" style="margin-top:var(--space-md);border-left-color:var(--nuclear);">
                 <p><strong>Which plants are actually at risk?</strong> A multi-model stress test across 25 merchant nuclear plants, three independent modeling approaches, and 370 scenarios. <a href="ref-nuclear-retirement.html">Nuclear Retirement Risk Analysis &rarr;</a></p>
@@ -914,10 +914,10 @@
                 labels: labels,
                 datasets: [{
                     data: values,
-                    backgroundColor: colors.map(function(c) { return c + 'CC'; }),
+                    backgroundColor: colors.map(function(c) { return withAlpha(c, 0.15); }),
                     borderColor: colors,
-                    borderWidth: 1.5,
-                    borderRadius: 6,
+                    borderWidth: 2,
+                    borderRadius: 3,
                     barPercentage: 0.65
                 }]
             },

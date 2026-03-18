@@ -823,8 +823,10 @@ function updateMixChart() {
     const datasets = resKeys.map(k => ({
         label: RESOURCE_LABELS[k] || k,
         data: strats.map(s => entries[s]?.rm?.[k] || 0),
-        backgroundColor: RES_COLORS[k] || '#999',
-        borderWidth: 0,
+        backgroundColor: withAlpha(RES_COLORS[k] || '#999', 0.15),
+        borderColor: RES_COLORS[k] || '#999',
+        borderWidth: 2,
+        borderRadius: 3,
     }));
 
     if (mixChart) mixChart.destroy();
@@ -1350,8 +1352,10 @@ function renderISOCharts(iso) {
                 datasets: resKeys.map(k => ({
                     label: RESOURCE_LABELS[k] || k,
                     data: strats.map(s => entries[s]?.rm?.[k] || 0),
-                    backgroundColor: RES_COLORS[k] || '#999',
-                    borderWidth: 0,
+                    backgroundColor: withAlpha(RES_COLORS[k] || '#999', 0.15),
+                    borderColor: RES_COLORS[k] || '#999',
+                    borderWidth: 2,
+                    borderRadius: 3,
                 }))
             },
             options: {

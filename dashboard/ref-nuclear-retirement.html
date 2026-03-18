@@ -759,9 +759,9 @@ body { background: var(--bg-page-white); }
             labels: ['Robustly Safe', 'Robustly At Risk', 'Model-Dependent'],
             datasets: [{
                 data: [nSafe, nRisk, nDep],
-                backgroundColor: [GREEN + '90', RED + '90', AMBER + '90'],
+                backgroundColor: [withAlpha(GREEN, 0.15), withAlpha(RED, 0.15), withAlpha(AMBER, 0.15)],
                 borderColor: [GREEN, RED, AMBER],
-                borderWidth: 1.5,
+                borderWidth: 2,
             }]
         },
         options: {
@@ -829,11 +829,11 @@ body { background: var(--bg-page-white); }
                 return mp ? (mp.below_viable * 100).toFixed(1) : 0;
             }),
             backgroundColor: [
-                BLUE + '35', NUCLEAR + '35',
-                AMBER + '35', RED + '30', RED + '50'
+                withAlpha(BLUE, 0.15), withAlpha(NUCLEAR, 0.15),
+                withAlpha(AMBER, 0.15), withAlpha(RED, 0.15), withAlpha(RED, 0.15)
             ][yi],
             borderColor: heatmapBorders[yi],
-            borderWidth: 1.5,
+            borderWidth: 2,
             borderRadius: 3,
         }));
 
@@ -899,7 +899,7 @@ body { background: var(--bg-page-white); }
 
     new Chart(dimCtx, {
         type: 'bar',
-        data: { labels: dimLabels, datasets: [{ data: dimValues, backgroundColor: dimColors.map(c => c + '35'), borderColor: dimColors, borderWidth: 1.5, borderRadius: 4 }] },
+        data: { labels: dimLabels, datasets: [{ data: dimValues, backgroundColor: dimColors.map(c => withAlpha(c, 0.15)), borderColor: dimColors, borderWidth: 2, borderRadius: 3 }] },
         options: {
             responsive: true, maintainAspectRatio: false,
             plugins: { legend: { display: false } },
@@ -922,9 +922,9 @@ body { background: var(--bg-page-white); }
         data: {
             labels: isoLabels,
             datasets: [
-                { label: 'P10', data: isoRiskData.map(d => d.p10), backgroundColor: NUCLEAR + '30', borderColor: NUCLEAR, borderWidth: 1.5, borderRadius: 3 },
-                { label: 'P50', data: isoRiskData.map(d => d.p50), backgroundColor: NUCLEAR + '60', borderColor: NUCLEAR, borderWidth: 1.5, borderRadius: 3 },
-                { label: 'P90', data: isoRiskData.map(d => d.p90), backgroundColor: NUCLEAR + '90', borderColor: NUCLEAR, borderWidth: 1.5, borderRadius: 3 },
+                { label: 'P10', data: isoRiskData.map(d => d.p10), backgroundColor: withAlpha(NUCLEAR, 0.85), borderColor: NUCLEAR, borderWidth: 2, borderRadius: 3 },
+                { label: 'P50', data: isoRiskData.map(d => d.p50), backgroundColor: withAlpha(NUCLEAR, 0.85), borderColor: NUCLEAR, borderWidth: 2, borderRadius: 3 },
+                { label: 'P90', data: isoRiskData.map(d => d.p90), backgroundColor: withAlpha(NUCLEAR, 0.85), borderColor: NUCLEAR, borderWidth: 2, borderRadius: 3 },
             ]
         },
         options: {
@@ -978,9 +978,9 @@ body { background: var(--bg-page-white); }
             const mp = PM.model_b?.[p.name]?.['2040'];
             return mp ? mp.avg_profit : 0;
         }),
-        backgroundColor: [NUCLEAR + '35', NUCLEAR + '30', RED + '30', RED + '25'][ti],
+        backgroundColor: [withAlpha(NUCLEAR, 0.15), withAlpha(NUCLEAR, 0.15), withAlpha(RED, 0.15), withAlpha(RED, 0.15)][ti],
         borderColor: [NUCLEAR, NUCLEAR, RED, RED][ti],
-        borderWidth: 1.5,
+        borderWidth: 2,
         borderRadius: 3,
     }));
 
@@ -997,14 +997,14 @@ body { background: var(--bg-page-white); }
                 backgroundColor: PLANTS.map(p => {
                     const mp = PM.model_b?.[p.name]?.['2040'];
                     const rate = mp ? mp.below_viable : 0;
-                    return (rate > 0.5 ? RED : rate > 0.2 ? AMBER : GREEN) + '35';
+                    return withAlpha(rate > 0.5 ? RED : rate > 0.2 ? AMBER : GREEN, 0.15);
                 }),
                 borderColor: PLANTS.map(p => {
                     const mp = PM.model_b?.[p.name]?.['2040'];
                     const rate = mp ? mp.below_viable : 0;
                     return rate > 0.5 ? RED : rate > 0.2 ? AMBER : GREEN;
                 }),
-                borderWidth: 1.5,
+                borderWidth: 2,
                 borderRadius: 3,
             }]
         },
@@ -1062,9 +1062,9 @@ body { background: var(--bg-page-white); }
         data: {
             labels: statusTags,
             datasets: [
-                { label: 'Operating', data: statusTags.map(t => NZ[t].years['2040']?.n_operating || 0), backgroundColor: GREEN + '35', borderColor: GREEN, borderWidth: 1.5, borderRadius: 3 },
-                { label: 'Marginal', data: statusTags.map(t => NZ[t].years['2040']?.n_marginal || 0), backgroundColor: AMBER + '35', borderColor: AMBER, borderWidth: 1.5, borderRadius: 3 },
-                { label: 'Stranded', data: statusTags.map(t => NZ[t].years['2040']?.n_stranded || 0), backgroundColor: RED + '35', borderColor: RED, borderWidth: 1.5, borderRadius: 3 },
+                { label: 'Operating', data: statusTags.map(t => NZ[t].years['2040']?.n_operating || 0), backgroundColor: withAlpha(GREEN, 0.15), borderColor: GREEN, borderWidth: 2, borderRadius: 3 },
+                { label: 'Marginal', data: statusTags.map(t => NZ[t].years['2040']?.n_marginal || 0), backgroundColor: withAlpha(AMBER, 0.15), borderColor: AMBER, borderWidth: 2, borderRadius: 3 },
+                { label: 'Stranded', data: statusTags.map(t => NZ[t].years['2040']?.n_stranded || 0), backgroundColor: withAlpha(RED, 0.15), borderColor: RED, borderWidth: 2, borderRadius: 3 },
             ]
         },
         options: {
@@ -1096,14 +1096,14 @@ body { background: var(--bg-page-white); }
                 data: thresholds.map(t => ((yr2040.by_threshold[t]?.below_viable_rate || 0) * 100).toFixed(1)),
                 backgroundColor: thresholds.map(t => {
                     const r = yr2040.by_threshold[t]?.below_viable_rate || 0;
-                    return (r > 0.5 ? RED : r > 0.2 ? AMBER : GREEN) + '35';
+                    return withAlpha(r > 0.5 ? RED : r > 0.2 ? AMBER : GREEN, 0.15);
                 }),
                 borderColor: thresholds.map(t => {
                     const r = yr2040.by_threshold[t]?.below_viable_rate || 0;
                     return r > 0.5 ? RED : r > 0.2 ? AMBER : GREEN;
                 }),
-                borderWidth: 1.5,
-                borderRadius: 4,
+                borderWidth: 2,
+                borderRadius: 3,
             }]
         },
         options: {
@@ -1125,10 +1125,10 @@ body { background: var(--bg-page-white); }
             labels: ['Low (P10)', 'Mid (P50)', 'High (P90)'],
             datasets: [{
                 data: ['low', 'mid', 'high'].map(c => ((priceCases[c]?.strand_rate || 0) * 100).toFixed(1)),
-                backgroundColor: [RED + '35', AMBER + '35', GREEN + '35'],
+                backgroundColor: [withAlpha(RED, 0.15), withAlpha(AMBER, 0.15), withAlpha(GREEN, 0.15)],
                 borderColor: [RED, AMBER, GREEN],
-                borderWidth: 1.5,
-                borderRadius: 4,
+                borderWidth: 2,
+                borderRadius: 3,
             }]
         },
         options: {
@@ -1155,7 +1155,7 @@ body { background: var(--bg-page-white); }
                         const mp = PM.model_a?.[p.name]?.['2040'];
                         return mp ? (mp.below_viable * 100).toFixed(1) : 0;
                     }),
-                    backgroundColor: BLUE + '35', borderColor: BLUE, borderWidth: 1.5, borderRadius: 3,
+                    backgroundColor: withAlpha(BLUE, 0.15), borderColor: BLUE, borderWidth: 2, borderRadius: 3,
                 },
                 {
                     label: 'Model C (Cost Baseline)',
@@ -1163,7 +1163,7 @@ body { background: var(--bg-page-white); }
                         const mp = PM.model_c?.[p.name]?.['2040'];
                         return mp ? (mp.below_viable * 100).toFixed(1) : 0;
                     }),
-                    backgroundColor: AMBER + '35', borderColor: AMBER, borderWidth: 1.5, borderRadius: 3,
+                    backgroundColor: withAlpha(AMBER, 0.15), borderColor: AMBER, borderWidth: 2, borderRadius: 3,
                 },
             ]
         },
@@ -1256,10 +1256,10 @@ body { background: var(--bg-page-white); }
             data: {
                 labels,
                 datasets: [
-                    { label: 'Energy Revenue', data: filtered.map(p => getWfVal(p.name, selectedYear, 'energy_rev_p50')), backgroundColor: BLUE + '35', borderColor: BLUE, borderWidth: 1.5 },
-                    { label: 'Capacity Revenue', data: filtered.map(p => getWfVal(p.name, selectedYear, 'capacity_rev_p50')), backgroundColor: GREEN + '35', borderColor: GREEN, borderWidth: 1.5 },
-                    { label: 'CfD Payment', data: filtered.map(p => getWfVal(p.name, selectedYear, 'cfd_payment_p50')), backgroundColor: NUCLEAR + '35', borderColor: NUCLEAR, borderWidth: 1.5 },
-                    { label: 'Fixed O&M', data: filtered.map(p => -getWfVal(p.name, selectedYear, 'fixed_om')), backgroundColor: RED + '30', borderColor: RED, borderWidth: 1.5 },
+                    { label: 'Energy Revenue', data: filtered.map(p => getWfVal(p.name, selectedYear, 'energy_rev_p50')), backgroundColor: withAlpha(BLUE, 0.15), borderColor: BLUE, borderWidth: 2, borderRadius: 3 },
+                    { label: 'Capacity Revenue', data: filtered.map(p => getWfVal(p.name, selectedYear, 'capacity_rev_p50')), backgroundColor: withAlpha(GREEN, 0.15), borderColor: GREEN, borderWidth: 2, borderRadius: 3 },
+                    { label: 'CfD Payment', data: filtered.map(p => getWfVal(p.name, selectedYear, 'cfd_payment_p50')), backgroundColor: withAlpha(NUCLEAR, 0.15), borderColor: NUCLEAR, borderWidth: 2, borderRadius: 3 },
+                    { label: 'Fixed O&M', data: filtered.map(p => -getWfVal(p.name, selectedYear, 'fixed_om')), backgroundColor: withAlpha(RED, 0.15), borderColor: RED, borderWidth: 2, borderRadius: 3 },
                 ]
             },
             options: {
