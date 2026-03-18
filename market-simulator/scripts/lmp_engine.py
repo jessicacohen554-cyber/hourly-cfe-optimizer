@@ -1401,19 +1401,11 @@ def compute_lmp_stats(hourly_lmp, hourly_marginal_unit, demand_mw_profile,
 
     Returns dict matching the output schema in SPEC.md.
     """
-    # Peak/off-peak classification (7am-11pm weekdays)
-    peak_mask = np.zeros(H, dtype=bool)
-    month_hours = [744, 672, 744, 720, 744, 720, 744, 744, 720, 744, 720, 744]
-    h = 0
-    for day in range(365):
-        dow = day % 7  # 0=Mon (Jan 1 2025 is Wednesday → adjust)
-        # 2025: Jan 1 = Wednesday (dow=2)
-        actual_dow = (day + 2) % 7  # 0=Mon, ..., 6=Sun
-        is_weekday = actual_dow < 5
-        for hour_of_day in range(24):
-            if h < H and is_weekday and 7 <= hour_of_day <= 22:
-                peak_mask[h] = True
-            h += 1
+    # Peak/off-peak classification (7am-11pm weekdays) — vectorized
+    hours = np.arange(H)
+    day_of_week = (hours // 24 + 2) % 7  # 2025: Jan 1 = Wednesday (offset 2), 0=Mon
+    hour_of_day = hours % 24
+    peak_mask = (day_of_week < 5) & (hour_of_day >= 7) & (hour_of_day <= 22)
 
     offpeak_mask = ~peak_mask
 
@@ -1514,19 +1506,14 @@ def load_scenarios(iso=None, threshold=None):
     if threshold is not None:
         table = table.filter(pc.equal(table.column('threshold'), float(threshold)))
 
-    rows = []
-    for i in range(table.num_rows):
-        row = {col: table.column(col)[i].as_py() for col in table.column_names}
-        # Reconstruct resource_mix dict
-        row['resource_mix'] = {
-            'clean_firm': row.get('mix_clean_firm', 0),
-            'solar': row.get('mix_solar', 0),
-            'wind': row.get('mix_wind', 0),
-            'offshore_wind': row.get('mix_offshore_wind', 0),
-            'ccs_ccgt': row.get('mix_ccs_ccgt', 0),
-            'hydro': row.get('mix_hydro', 0),
-        }
-        rows.append(row)
+    # Batch convert Arrow table → list of dicts (avoids per-cell .as_py() overhead)
+    rows = table.to_pandas().to_dict('records')
+    mix_cols = ('mix_clean_firm', 'mix_solar', 'mix_wind',
+                'mix_offshore_wind', 'mix_ccs_ccgt', 'mix_hydro')
+    mix_keys = ('clean_firm', 'solar', 'wind',
+                'offshore_wind', 'ccs_ccgt', 'hydro')
+    for row in rows:
+        row['resource_mix'] = {k: row.get(mc, 0) for k, mc in zip(mix_keys, mix_cols)}
 
     return rows
 
