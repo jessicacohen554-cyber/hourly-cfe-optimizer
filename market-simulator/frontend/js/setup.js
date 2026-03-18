@@ -250,6 +250,9 @@ function collectFormData() {
             gas_ccgt: parseFloat(document.getElementById('hr_gas_ccgt').value),
             gas_ct: parseFloat(document.getElementById('hr_gas_ct').value),
             oil_ct: parseFloat(document.getElementById('hr_oil_ct').value),
+            new_gas_ccgt: parseFloat(document.getElementById('hr_new_gas_ccgt').value),
+            new_gas_ct: parseFloat(document.getElementById('hr_new_gas_ct').value),
+            new_coal: parseFloat(document.getElementById('hr_new_coal').value),
         },
         vom: {
             coal_steam: parseFloat(document.getElementById('vom_coal_steam').value),
@@ -463,6 +466,177 @@ function updateFleetStatus() {
         statusEl.textContent = 'Using defaults (all plants at baseline status)';
     }
 }
+
+// ── CSV Upload/Download ──
+
+// Toggle button mapping: CSV parameter → {selector, attribute, matchKey}
+const TOGGLE_MAP = {
+    iso:                  { selector: '.iso-btn', attr: 'data-iso' },
+    mode:                 { selector: '.mode-toggle .toggle-btn', attr: 'data-mode' },
+    transmission_level:   { selector: '#txToggle .toggle-btn', attr: 'data-value' },
+    q45:                  { selector: '#q45Toggle .toggle-btn', attr: 'data-value', map: { 'On': '1', 'Off': '0' } },
+    ppa_level:            { selector: '#ppaToggle .toggle-btn', attr: 'data-value' },
+    demand_growth:        { selector: '#demandToggle .toggle-btn', attr: 'data-value' },
+    gas_friction:         { selector: '#gasFrictionToggle .toggle-btn', attr: 'data-value' },
+    interchange_enabled:  { selector: '#interchangeToggle .toggle-btn', attr: 'data-value' },
+    dr_level:             { selector: '#drToggle .toggle-btn', attr: 'data-value' },
+    learning_curves:      { selector: '#learningToggle .toggle-btn', attr: 'data-value' },
+    learning_speed:       { selector: '#learningSpeedToggle .toggle-btn', attr: 'data-value' },
+    queue_cap_level:      { selector: '#queueCapToggle .toggle-btn', attr: 'data-value' },
+};
+
+// Simple number input mapping: CSV parameter → DOM element ID
+const INPUT_MAP = {
+    fuel_gas: 'fuel_gas', fuel_coal: 'fuel_coal', fuel_oil: 'fuel_oil',
+    carbon_price: 'carbon_price', nox_price: 'nox_price', sox_price: 'sox_price',
+    nox_limit: 'nox_limit', sox_limit: 'sox_limit',
+    hr_coal_steam: 'hr_coal_steam', hr_gas_ccgt: 'hr_gas_ccgt',
+    hr_gas_ct: 'hr_gas_ct', hr_oil_ct: 'hr_oil_ct',
+    hr_new_gas_ccgt: 'hr_new_gas_ccgt', hr_new_gas_ct: 'hr_new_gas_ct', hr_new_coal: 'hr_new_coal',
+    vom_coal_steam: 'vom_coal_steam', vom_gas_ccgt: 'vom_gas_ccgt',
+    vom_gas_ct: 'vom_gas_ct', vom_oil_ct: 'vom_oil_ct',
+    lcoe_solar: 'lcoe_solar', lcoe_wind: 'lcoe_wind', lcoe_offshore: 'lcoe_offshore',
+    lcoe_nuclear: 'lcoe_nuclear', lcoe_ccs: 'lcoe_ccs', lcoe_geo: 'lcoe_geo',
+    new_gas_ccgt_lcoe: 'new_gas_ccgt_lcoe', new_gas_ct_lcoe: 'new_gas_ct_lcoe',
+    new_coal_lcoe: 'new_coal_lcoe',
+    cost_battery: 'cost_battery', cost_battery8: 'cost_battery8', cost_ldes: 'cost_ldes',
+    tx_override_solar: 'tx_override_solar', tx_override_wind: 'tx_override_wind',
+    tx_override_offshore_wind: 'tx_override_offshore_wind', tx_override_nuclear: 'tx_override_nuclear',
+    tx_override_ccs_ccgt: 'tx_override_ccs_ccgt', tx_override_geothermal: 'tx_override_geothermal',
+    ptc_wind: 'ptc_wind', ptc_solar: 'ptc_solar', ptc_nuclear_new: 'ptc_nuclear_new',
+    ptc_45u_max: 'ptc_45u_max', ptc_45u_floor: 'ptc_45u_floor',
+    ptc_45u_floor_escalation: 'ptc_45u_floor_escalation', ptc_45u_sunset_year: 'ptc_45u_sunset_year',
+    itc_pct: 'itc_pct', rec_price: 'rec_price',
+    ccs_credit_override: 'ccs_credit_override',
+    capacity_market: 'capacity_market', wholesale_override: 'wholesale_override',
+    custom_demand_pct: 'custom_demand_pct',
+    nuclear_retirement: 'nuclear_retirement',
+    queue_cap_override: 'queue_cap_override',
+};
+
+// Select (dropdown) mapping
+const SELECT_MAP = {
+    start_year: 'startYear',
+    end_year: 'endYear',
+};
+
+function parseCSV(text) {
+    const lines = text.split(/\r?\n/).filter(l => l.trim());
+    if (lines.length < 2) return {};
+    // Find column indices from header
+    const header = lines[0].split(',').map(h => h.trim().toLowerCase());
+    const paramIdx = header.indexOf('parameter');
+    const valueIdx = header.indexOf('value');
+    if (paramIdx < 0 || valueIdx < 0) return {};
+
+    const result = {};
+    for (let i = 1; i < lines.length; i++) {
+        // Simple CSV parse (handles quoted fields with commas)
+        const cols = [];
+        let current = '';
+        let inQuotes = false;
+        for (const ch of lines[i]) {
+            if (ch === '"') { inQuotes = !inQuotes; continue; }
+            if (ch === ',' && !inQuotes) { cols.push(current.trim()); current = ''; continue; }
+            current += ch;
+        }
+        cols.push(current.trim());
+        const param = cols[paramIdx];
+        const value = cols[valueIdx];
+        if (param) result[param] = value;
+    }
+    return result;
+}
+
+function applyCSVConfig(config) {
+    let applied = 0;
+    let skipped = 0;
+
+    for (const [param, value] of Object.entries(config)) {
+        // Toggle buttons
+        if (TOGGLE_MAP[param]) {
+            const { selector, attr, map } = TOGGLE_MAP[param];
+            const matchValue = map ? (map[value] || value) : value;
+            const buttons = document.querySelectorAll(selector);
+            let found = false;
+            buttons.forEach(btn => {
+                if (btn.getAttribute(attr) === matchValue) {
+                    // Deactivate siblings
+                    buttons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    btn.click(); // Trigger any event listeners
+                    found = true;
+                }
+            });
+            if (found) applied++;
+            else skipped++;
+            continue;
+        }
+
+        // Number/text inputs
+        if (INPUT_MAP[param]) {
+            const el = document.getElementById(INPUT_MAP[param]);
+            if (el) {
+                el.value = value; // Empty string for blank values is correct
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                applied++;
+            } else {
+                skipped++;
+            }
+            continue;
+        }
+
+        // Select dropdowns
+        if (SELECT_MAP[param]) {
+            const el = document.getElementById(SELECT_MAP[param]);
+            if (el) {
+                el.value = value;
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+                applied++;
+            } else {
+                skipped++;
+            }
+            continue;
+        }
+    }
+
+    // Update computed fields
+    ['battery', 'battery8', 'ldes'].forEach(t => updateStorageLCOE(t));
+    updateISOSummary();
+    updateGeothermalVisibility();
+    updateYearCountHint();
+
+    return { applied, skipped };
+}
+
+// File upload handler
+document.getElementById('csvUploadInput')?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    const status = document.getElementById('csvUploadStatus');
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        try {
+            const config = parseCSV(ev.target.result);
+            const count = Object.keys(config).length;
+            if (count === 0) {
+                status.textContent = '✗ No valid parameters found in CSV';
+                status.style.color = '#DC2626';
+                return;
+            }
+            const { applied, skipped } = applyCSVConfig(config);
+            status.textContent = `✓ ${applied} fields populated` + (skipped > 0 ? ` (${skipped} skipped)` : '');
+            status.style.color = '#22C55E';
+        } catch (err) {
+            status.textContent = `✗ Parse error: ${err.message}`;
+            status.style.color = '#DC2626';
+        }
+    };
+    reader.readAsText(file);
+    // Reset so same file can be re-uploaded
+    e.target.value = '';
+});
 
 // ── Initialize ──
 updateISOSummary();
