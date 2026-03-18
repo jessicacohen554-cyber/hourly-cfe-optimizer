@@ -6,8 +6,13 @@ Downloads or reads the eGRID 2023 Excel workbook, sums PLCO2AN (annual CO2
 emissions in short tons) by balancing authority, converts to metric tons,
 and outputs per-ISO baseline emissions for the SMARTargets AT trajectory.
 
+Also extracts per-fuel emission rates to update egrid_emission_rates.json
+with precise plant-level aggregations (replacing rounded estimates for
+MISO/SPP identified in the CO2 methodology audit).
+
 Usage:
     python scripts/step0_extract_egrid_baselines.py
+    python scripts/step0_extract_egrid_baselines.py --update-rates
 
 Prerequisites:
     pip install openpyxl
