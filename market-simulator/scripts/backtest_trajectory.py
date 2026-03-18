@@ -122,6 +122,11 @@ def run_backtest(isos=None, with_ira=False, verbose=True):
         print("Loading common data...")
     demand_data, gen_profiles, emission_rates, fossil_mix = load_common_data()
     egrid_baselines = load_egrid_baselines()
+    try:
+        from eia_data_io import load_interchange_profiles
+        interchange_data = load_interchange_profiles()
+    except Exception:
+        interchange_data = {}
 
     preloaded = {
         'demand_data': demand_data,
@@ -129,6 +134,7 @@ def run_backtest(isos=None, with_ira=False, verbose=True):
         'emission_rates': emission_rates,
         'fossil_mix': fossil_mix,
         'egrid_baselines': egrid_baselines,
+        'interchange_data': interchange_data,
     }
 
     # Run year-by-year with actual fuel prices
