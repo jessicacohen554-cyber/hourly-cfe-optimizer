@@ -411,9 +411,12 @@ def compute_zonal_lmp_hourly(iso, zone_config, zone_stacks, demand_mw_profile,
     system_lmp = np.sum(zonal_lmp_matrix * zone_demand_shares[:, np.newaxis],
                         axis=0)
 
-    # Compute per-zone statistics
+    # Compute per-zone statistics (including inter-zonal congestion metrics)
     zonal_stats = _compute_zonal_stats(zonal_lmp_matrix, system_lmp,
-                                        zone_names, demand_mw_profile)
+                                        zone_names, demand_mw_profile,
+                                        flows_matrix=flows_matrix,
+                                        interfaces=interfaces,
+                                        transfer_limits=transfer_limits)
 
     return zonal_lmp_matrix, system_lmp, flows_matrix, zonal_stats
 
@@ -492,8 +495,9 @@ def _apply_pricing_layers(zonal_lmp_matrix, demand_mw_profile,
 
 
 def _compute_zonal_stats(zonal_lmp_matrix, system_lmp, zone_names,
-                          demand_mw_profile):
-    """Compute per-zone LMP summary statistics."""
+                          demand_mw_profile, flows_matrix=None,
+                          interfaces=None, transfer_limits=None):
+    """Compute per-zone LMP summary statistics and inter-zonal congestion."""
     n_zones = zonal_lmp_matrix.shape[0]
     H = len(demand_mw_profile)
 
@@ -518,5 +522,65 @@ def _compute_zonal_stats(zonal_lmp_matrix, system_lmp, zone_names,
             'p90_lmp': float(np.percentile(zlmp, 90)),
             'price_spread_vs_system': float(np.mean(zlmp) - system_avg),
         }
+
+    # ── Inter-zonal congestion metrics ──────────────────────────────────
+    # Compute pairwise LMP spreads and flow utilization for each interface
+    zone_name_to_idx = {z: i for i, z in enumerate(zone_names)}
+    interface_stats = []
+    max_spread_p50 = 0.0
+    max_spread_pair = None
+    total_congested_hours = 0
+
+    if interfaces and len(interfaces) > 0:
+        for iface_idx, (zone_a, zone_b) in enumerate(interfaces):
+            za_idx = zone_name_to_idx.get(zone_a)
+            zb_idx = zone_name_to_idx.get(zone_b)
+            if za_idx is None or zb_idx is None:
+                continue
+
+            # Hourly LMP spread between zone pair (absolute)
+            hourly_spread = np.abs(
+                zonal_lmp_matrix[za_idx] - zonal_lmp_matrix[zb_idx])
+            spread_p50 = float(np.median(hourly_spread))
+            spread_avg = float(np.mean(hourly_spread))
+            spread_p90 = float(np.percentile(hourly_spread, 90))
+
+            # Flow utilization (fraction of transfer limit used)
+            iface_stat = {
+                'zone_a': zone_a,
+                'zone_b': zone_b,
+                'spread_avg': round(spread_avg, 2),
+                'spread_p50': round(spread_p50, 2),
+                'spread_p90': round(spread_p90, 2),
+            }
+
+            if (flows_matrix is not None and transfer_limits
+                    and iface_idx < flows_matrix.shape[0]):
+                limit_mw = transfer_limits.get((zone_a, zone_b), 1.0)
+                if limit_mw > 0:
+                    abs_flows = np.abs(flows_matrix[iface_idx])
+                    utilization = abs_flows / limit_mw
+                    iface_stat['avg_utilization_pct'] = round(
+                        float(np.mean(utilization)) * 100, 1)
+                    iface_stat['hours_above_70pct'] = int(
+                        np.sum(utilization > 0.70))
+                    iface_stat['hours_above_95pct'] = int(
+                        np.sum(utilization > 0.95))
+                    total_congested_hours = max(
+                        total_congested_hours,
+                        iface_stat['hours_above_70pct'])
+
+            interface_stats.append(iface_stat)
+
+            if spread_p50 > max_spread_p50:
+                max_spread_p50 = spread_p50
+                max_spread_pair = f"{zone_a}-{zone_b}"
+
+    stats['_congestion'] = {
+        'interfaces': interface_stats,
+        'max_spread_p50': round(max_spread_p50, 2),
+        'max_spread_pair': max_spread_pair,
+        'max_congested_hours': total_congested_hours,
+    }
 
     return stats

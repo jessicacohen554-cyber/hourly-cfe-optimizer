@@ -433,6 +433,23 @@ function aggregateTriggers(yearResults) {
 }
 
 /**
+ * Extract zonal congestion data from the most recent year result.
+ * Returns the zonal_congestion object or null if unavailable.
+ */
+function _extractZonalCongestion(data) {
+    // Trajectory mode: use last year with zonal data
+    if (data.year_results && data.year_results.length > 0) {
+        for (let i = data.year_results.length - 1; i >= 0; i--) {
+            if (data.year_results[i].zonal_congestion) {
+                return data.year_results[i].zonal_congestion;
+            }
+        }
+    }
+    // Single-year / snapshot mode
+    return data.zonal_congestion || null;
+}
+
+/**
  * Render IPM trigger indicator cards into #ipmTriggerContainer.
  */
 function renderIPMTriggers(data) {
@@ -462,12 +479,44 @@ function renderIPMTriggers(data) {
         <h3>${hasHigh ? '\u26A0\uFE0F Production Modeling Recommended' : '\u26A0 Model Limitations Flagged'}</h3>
     </div>`;
 
+    // Extract zonal congestion data from most recent year result for display
+    const zonalCongestion = _extractZonalCongestion(data);
+
     for (const t of triggers) {
         const name = TRIGGER_NAMES[t.trigger_id] || t.trigger_id;
         const sevClass = t.severity === 'high' ? 'trigger-card-high' : 'trigger-card-medium';
         const sevBadge = t.severity === 'high' ? 'trigger-severity-high' : 'trigger-severity-medium';
         const icon = t.severity === 'high' ? '\u26A0\uFE0F' : '\u26A0';
         const yearStr = t.year_range ? `<div class="trigger-years">${t.year_range}</div>` : '';
+
+        // Build zonal spread detail row for HIGH_CONGESTION triggers
+        let zonalDetail = '';
+        if (t.trigger_id === 'HIGH_CONGESTION' && zonalCongestion) {
+            const ifaces = zonalCongestion.interfaces || [];
+            if (ifaces.length > 0) {
+                const rows = ifaces.map(iface => {
+                    const pairLabel = `${iface.zone_a}\u2192${iface.zone_b}`;
+                    const spread = fmtNum(iface.spread_p50, 1);
+                    const util = iface.avg_utilization_pct != null
+                        ? fmtNum(iface.avg_utilization_pct, 0) + '%' : '\u2014';
+                    const h95 = iface.hours_above_95pct != null
+                        ? iface.hours_above_95pct + 'h' : '\u2014';
+                    return `<tr><td>${pairLabel}</td><td>$${spread}</td><td>${util}</td><td>${h95}</td></tr>`;
+                }).join('');
+                zonalDetail = `
+                    <div class="trigger-zonal-detail" style="margin-top:6px;">
+                        <table class="trigger-zonal-table" style="font-size:0.82em;border-collapse:collapse;width:100%;">
+                            <thead><tr style="border-bottom:1px solid rgba(0,0,0,0.15);text-align:left;">
+                                <th style="padding:2px 6px;">Interface</th>
+                                <th style="padding:2px 6px;">Spread (P50)</th>
+                                <th style="padding:2px 6px;">Avg Util</th>
+                                <th style="padding:2px 6px;">Hrs @95%+</th>
+                            </tr></thead>
+                            <tbody>${rows}</tbody>
+                        </table>
+                    </div>`;
+            }
+        }
 
         html += `<div class="trigger-card ${sevClass}" data-trigger-id="${t.trigger_id}">
             <div class="trigger-icon">${icon}</div>
@@ -480,6 +529,7 @@ function renderIPMTriggers(data) {
                     Current: <strong>${fmtNum(t.metric_value, 1)}</strong> | Threshold: ${fmtNum(t.threshold, 1)}
                     ${t.recommended_model ? ` | Rec: ${t.recommended_model}` : ''}
                 </div>
+                ${zonalDetail}
                 ${yearStr}
             </div>
             <button class="trigger-dismiss" onclick="dismissTrigger('${t.trigger_id}')" title="Dismiss">&times;</button>
