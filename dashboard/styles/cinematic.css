@@ -297,6 +297,48 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
     background: #FFFFFF !important;
 }
 
+/* ========== GLASS/ACCENT COMPONENT EXCLUSIONS ========== */
+/* These new components from shared.css have intentional non-white backgrounds.
+   Override the catch-all white !important block above so they retain their styling. */
+.glass-chart-panel {
+    background: rgba(255,255,255,0.75) !important;
+    border: 1px solid rgba(255,255,255,0.6) !important;
+    border-radius: 20px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 8px 32px -8px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
+}
+.card-accent-indigo {
+    border: 3px solid #6366F1 !important;
+    background: rgba(99,102,241,0.04) !important;
+}
+.card-accent-cyan {
+    border: 3px solid #0EA5E9 !important;
+    background: rgba(14,165,233,0.04) !important;
+}
+.card-accent-green {
+    border: 3px solid #22C55E !important;
+    background: rgba(34,197,94,0.04) !important;
+}
+.card-accent-red {
+    border: 3px solid #EF4444 !important;
+    background: rgba(239,68,68,0.04) !important;
+}
+.insight-glass {
+    background: rgba(255,255,255,0.85) !important;
+    border-left: 3px solid var(--hydro) !important;
+    border-right: none !important;
+    border-top: none !important;
+    border-bottom: none !important;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+.emphasis-callout {
+    background: rgba(11,17,32,0.92) !important;
+    border: none !important;
+    color: #fff;
+}
+
 /* ========== DARK CONTEXT OVERRIDES ========== */
 /* Undo the white !important catch-all for elements inside dark sections.
    These elements need transparent/glass backgrounds to be readable on dark navy. */
@@ -344,6 +386,17 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
     background: rgba(255, 255, 255, 0.12) !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
     color: rgba(255, 255, 255, 0.9);
+}
+/* Glass/accent components inside dark sections retain glass treatment */
+.section-dark .glass-chart-panel,
+.panel-navy .glass-chart-panel {
+    background: rgba(255,255,255,0.12) !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+}
+.section-dark .insight-glass,
+.panel-navy .insight-glass {
+    background: rgba(255,255,255,0.12) !important;
+    border-left-color: rgba(255,255,255,0.4) !important;
 }
 /* Text inside dark-context cards */
 .section-dark .finding-label,
