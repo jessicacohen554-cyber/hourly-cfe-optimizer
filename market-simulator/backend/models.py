@@ -320,6 +320,9 @@ class YearResult(BaseModel):
     nuclear_revenue: Dict[str, float] = Field(default_factory=dict)
     nuclear_retired: bool = False
     ccs_breakeven: Dict[str, float] = Field(default_factory=dict)
+    # Per-resource energy revenue and capture rates (VRE cannibalization)
+    energy_rev_by_resource: Dict[str, float] = Field(default_factory=dict)
+    capture_rates: Dict[str, float] = Field(default_factory=dict)
     # RPS compliance tracking
     rps_mandated_pct: float = 0.0
     rps_eligible_pct: float = 0.0

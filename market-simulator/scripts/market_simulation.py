@@ -66,6 +66,7 @@ from pipeline_config import (
     H, NUCLEAR_OFFTAKE_CONTRACTS,
     get_rps_floor,
     FIRM_IMPORT_MW,
+    CANNIBALIZATION_ENABLED,
 )
 from dispatch_utils import (
     load_common_data, get_demand_profile, get_supply_profiles,
@@ -1470,7 +1471,8 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
                                conditions, cumulative_gw, queue_remaining_gw,
                                hourly_lmp, avg_lmp, p90_lmp,
                                supply_profiles_iso, demand_total_mwh,
-                               gen_econ, state, tech_queue_budget=None):
+                               gen_econ, state, tech_queue_budget=None,
+                               per_resource_energy_rev=None):
     """Pure economics-driven resource deployment via LCOE merit order.
 
     Ranks all available clean resources by net LCOE (after incentives, learning
@@ -1511,9 +1513,8 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
     ppa_level = conditions.get('ppa_level', 'Medium')
     tx_overrides = conditions.get('tx_overrides') or {}
 
-    # Estimate revenue available for clean resources
-    # Revenue = energy price (avg LMP serves as proxy) + capacity + REC
-    base_energy_rev = avg_lmp  # $/MWh energy revenue
+    # Per-resource energy revenue (temporal value) or fallback to flat avg_lmp
+    per_res_rev = dict(per_resource_energy_rev) if per_resource_energy_rev else {}
 
     # Compute per-resource LCOE and rank by net cost
     resource_economics = []
@@ -1568,7 +1569,9 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
                                            rec_price_override=conditions.get('rec_price_override'))
             rec_rev = rec_rev.get(res, 0)
 
-        total_revenue = base_energy_rev + capacity_rev + rec_rev
+        # Use temporal revenue for this resource; fallback to avg_lmp
+        res_energy_rev = per_res_rev.get(res, avg_lmp)
+        total_revenue = res_energy_rev + capacity_rev + rec_rev
         net_profit = total_revenue - lcoe
 
         # Max TWh deployable for this resource (physical limits)
@@ -1580,6 +1583,7 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
         resource_economics.append({
             'resource': res,
             'lcoe': round(lcoe, 2),
+            'energy_rev': round(res_energy_rev, 2),
             'revenue': round(total_revenue, 2),
             'profit': round(net_profit, 2),
             'cf': cf,
@@ -1683,10 +1687,24 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
             'revenue': entry['revenue'],
             'profit': entry['profit'],
             'avg_lmp': round(avg_lmp, 1),
-            'energy_rev_mwh': round(base_energy_rev, 2),
+            'energy_rev_mwh': round(entry['energy_rev'], 2),
+            'capture_rate': round(entry['energy_rev'] / avg_lmp, 3) if avg_lmp > 0 else 1.0,
             'capacity_rev_mwh': round(entry['capacity_rev'], 2),
             'rec_rev_mwh': round(entry['rec_rev'], 2),
         })
+
+        # Intra-deployment cannibalization: depress VRE energy revenue for
+        # subsequent tranches as solar/wind penetration increases
+        if per_resource_energy_rev is not None and res in ('solar', 'wind', 'offshore_wind'):
+            cumulative_vre_twh = sum(
+                deployed.get(r, 0) for r in ('solar', 'wind', 'offshore_wind')
+            )
+            vre_penetration = cumulative_vre_twh / demand_twh if demand_twh > 0 else 0
+            # Sigmoid depression matching procurement_utils.py pattern
+            depression = 0.55 * (1.0 / (1.0 + np.exp(-8.0 * (vre_penetration - 0.6))))
+            for vre_res in ('solar', 'wind', 'offshore_wind'):
+                base_rev = per_resource_energy_rev.get(vre_res, avg_lmp)
+                per_res_rev[vre_res] = base_rev * (1.0 - depression)
 
     # Build revenue breakdown from deployed mix
     total_energy = 0
@@ -1697,7 +1715,7 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
             twh = deployed.get(entry['resource'], 0)
             if twh > 0:
                 weight = twh / total_deployed_twh
-                total_energy += base_energy_rev * weight
+                total_energy += entry.get('energy_rev', avg_lmp) * weight
                 total_cap += entry['capacity_rev'] * weight
                 total_rec += entry['rec_rev'] * weight
 
@@ -1717,6 +1735,14 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
                 blended_cost += entry['lcoe'] * weight
                 blended_revenue += entry['revenue'] * weight
 
+    # Compute capture rates for deployed resources
+    capture_rates = {}
+    energy_rev_by_res = {}
+    for res in deployed:
+        rev = per_res_rev.get(res, avg_lmp)
+        energy_rev_by_res[res] = round(rev, 2)
+        capture_rates[res] = round(rev / avg_lmp, 3) if avg_lmp > 0 else 1.0
+
     return (
         round(clean_pct, 2),
         deployed,
@@ -1725,6 +1751,8 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
         round(blended_cost, 2),
         round(blended_revenue, 2),
         remaining_gw,
+        energy_rev_by_res,
+        capture_rates,
     )
 
 
@@ -2265,15 +2293,24 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                     _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics)
 
             # --- LCOE MERIT-ORDER DEPLOYMENT ---
+            # Compute per-resource temporal energy revenue for deployment economics
+            if CANNIBALIZATION_ENABLED:
+                _per_res_rev = compute_energy_revenue_by_resource(
+                    hourly_lmp, supply_profiles_iso, resource_pcts, demand_total_mwh)
+            else:
+                _per_res_rev = None
+
             # Deploy cheapest profitable clean resources until queue cap or no more profitable
             (new_clean_pct, deployed, zone_results, rev_breakdown,
-             blended_cost, blended_revenue, remaining_gw) = compute_market_deployment(
+             blended_cost, blended_revenue, remaining_gw,
+             energy_rev_by_resource, capture_rates) = compute_market_deployment(
                 iso, year, demand_twh, current_pct,
                 conditions, cumulative_gw, queue_remaining_gw,
                 hourly_lmp, avg_lmp, p90_lmp,
                 supply_profiles_iso, demand_total_mwh,
                 gen_econ, state,
                 tech_queue_budget=tech_queue_budget,
+                per_resource_energy_rev=_per_res_rev,
             )
 
             # Sync queue budget after deployment
@@ -2485,6 +2522,8 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 'cumulative_gw': {k: round(v, 2) for k, v in cumulative_gw.items()},
                 'zones_deployed': [z['resource'] for z in zone_results],
                 'zone_details': zone_results,
+                'energy_rev_by_resource': energy_rev_by_resource,
+                'capture_rates': capture_rates,
                 'generator_economics': gen_econ,
                 'adjusted_generator_economics': adjusted_gen_econ,
                 'economic_retirements_mw': {k: round(v, 0) for k, v in econ_retired.items()},

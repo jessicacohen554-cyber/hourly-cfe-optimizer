@@ -29,6 +29,9 @@ PIPELINE_VERSION = "1.0.0"
 BASE_YEAR = 2025
 MODEL_TYPE = "snapshot"  # 2025 snapshot model (no forward projections in Track 1)
 
+# Feature flags
+CANNIBALIZATION_ENABLED = True  # Per-resource temporal energy revenue in deployment
+
 # ============================================================================
 # REGIONS
 # ============================================================================

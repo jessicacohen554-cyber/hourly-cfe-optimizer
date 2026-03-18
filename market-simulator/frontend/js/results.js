@@ -247,6 +247,7 @@ function renderAll() {
 
     // Level 2: Year drill-down (removed: profitability, LMP impact, fossil bins)
     renderWhatBuilt(data);
+    renderCaptureRates(data);
     renderCCSBreakeven(data);
     renderCostLadder(data);
     renderGasShift(data);
@@ -929,6 +930,85 @@ function renderWhatBuilt(data) {
         ...PLOTLY_LAYOUT_BASE,
         title: { text: `What Gets Built — ${currentISO}`, font: { size: 14 } },
     }, { responsive: true });
+}
+
+// ── Capture Rates Table ──
+function renderCaptureRates(data) {
+    const el = document.getElementById('captureRateTable');
+    if (!el) return;
+
+    const captureRates = data.capture_rates;
+    const energyRev = data.energy_rev_by_resource;
+    const avgLmp = data.avg_lmp || 0;
+    const zoneDetails = data.zone_details || [];
+
+    if ((!captureRates || Object.keys(captureRates).length === 0) && zoneDetails.length === 0) {
+        el.innerHTML = '<p style="color:#6B7280;font-style:italic;">No deployment data available</p>';
+        return;
+    }
+
+    // Build rows from zone_details (has per-tranche data) or capture_rates dict
+    const rows = [];
+    if (zoneDetails.length > 0) {
+        for (const z of zoneDetails) {
+            const cr = z.capture_rate || (captureRates && captureRates[z.resource]) || 1.0;
+            rows.push({
+                resource: z.resource,
+                lcoe: z.lcoe || z.cost || 0,
+                energyRev: z.energy_rev_mwh || (energyRev && energyRev[z.resource]) || avgLmp,
+                captureRate: cr,
+                profit: z.profit || 0,
+                twh: z.twh || 0,
+            });
+        }
+    } else if (captureRates) {
+        for (const [res, cr] of Object.entries(captureRates)) {
+            rows.push({
+                resource: res,
+                lcoe: 0,
+                energyRev: (energyRev && energyRev[res]) || avgLmp,
+                captureRate: cr,
+                profit: 0,
+                twh: 0,
+            });
+        }
+    }
+
+    function crColor(cr) {
+        if (cr >= 1.0) return '#16A34A';  // green
+        if (cr >= 0.8) return '#CA8A04';  // yellow
+        return '#DC2626';                  // red
+    }
+
+    function formatRes(r) {
+        return r.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    let html = '<table style="width:100%;border-collapse:collapse;font-size:0.9rem;">';
+    html += '<thead><tr style="border-bottom:2px solid #E5E7EB;text-align:left;">';
+    html += '<th style="padding:0.5rem;">Resource</th>';
+    html += '<th style="padding:0.5rem;">LCOE</th>';
+    html += '<th style="padding:0.5rem;">Energy Rev</th>';
+    html += '<th style="padding:0.5rem;">Capture Rate</th>';
+    html += '<th style="padding:0.5rem;">Profit</th>';
+    html += '</tr></thead><tbody>';
+
+    for (const r of rows) {
+        const crPct = (r.captureRate * 100).toFixed(1);
+        html += `<tr style="border-bottom:1px solid #F3F4F6;">`;
+        html += `<td style="padding:0.5rem;font-weight:600;">${formatRes(r.resource)}</td>`;
+        html += `<td style="padding:0.5rem;">$${r.lcoe.toFixed(1)}</td>`;
+        html += `<td style="padding:0.5rem;">$${r.energyRev.toFixed(1)}</td>`;
+        html += `<td style="padding:0.5rem;font-weight:700;color:${crColor(r.captureRate)};">${crPct}%</td>`;
+        html += `<td style="padding:0.5rem;color:${r.profit >= 0 ? '#16A34A' : '#DC2626'};">$${r.profit.toFixed(1)}</td>`;
+        html += `</tr>`;
+    }
+
+    html += '</tbody></table>';
+    if (avgLmp > 0) {
+        html += `<p style="font-size:0.8rem;color:#6B7280;margin-top:0.5rem;">Avg LMP: $${avgLmp.toFixed(1)}/MWh. Capture rate = resource energy revenue / avg LMP.</p>`;
+    }
+    el.innerHTML = html;
 }
 
 // ── Cost Ladder ──
