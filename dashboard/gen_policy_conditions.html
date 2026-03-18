@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Policy Conditions &amp; Market Outlook | The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/article.css">
+<link rel="stylesheet" href="styles/scrollytell.css">
+<link rel="stylesheet" href="styles/pg-generator.css">
+<link rel="stylesheet" href="styles/cinematic.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="js/shared-footer.js"></script>
+</head>
+<body>
+
+<!-- TOP NAV (injected by nav.js) -->
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+
+<!-- HEADER BANNER -->
+<header class="header" id="pageHeader">
+    <h1>Policy Conditions &amp; Market Outlook</h1>
+    <p class="subtitle">The policy landscape, market dynamics, and enabling conditions shaping IPP decarbonization economics across U.S. power markets.</p>
+    <div class="header-accent"></div>
+</header>
+
+<div class="main-content">
+
+    <!-- ===== KEY INSIGHTS BAR ===== -->
+    <div class="key-insights">
+        <div class="key-insight-item">
+            <div><strong>IRA Credits Cut LCOE 30&ndash;40%</strong><br>Tax credits make clean energy cheaper than new fossil in most markets</div>
+        </div>
+        <div class="key-insight-item">
+            <div><strong>$44&ndash;66/t Makes Coal Uneconomic</strong><br>Carbon price at this level drives coal retirement everywhere</div>
+        </div>
+        <div class="key-insight-item">
+            <div><strong>2,300 GW in Queue</strong><br>Only 322 miles of HV transmission built in 2024 vs. 5,000 mi/yr needed</div>
+        </div>
+        <div class="key-insight-item">
+            <div><strong>Corporate Demand Pull</strong><br>Hyperscale data centers driving clean energy PPA market at unprecedented scale</div>
+        </div>
+    </div>
+
+    <!-- ===== OPENING FRAME ===== -->
+    <section class="story-section fade-in">
+        <div class="story-content">
+            <p>Every cost comparison between consequential and hourly matching depends on assumptions about what else is happening in the market. IRA credits compress the cost gap between VRE-only and diversified portfolios. State mandates create guaranteed demand floors. Corporate PPAs provide revenue certainty for capital-intensive projects. Each of these forces tilts the economics toward hourly matching &mdash; and they're all strengthening simultaneously.</p>
+        </div>
+    </section>
+
+    <!-- ===== SECTION 1: FEDERAL POLICY - IRA TAX CREDITS ===== -->
+    <div class="section-header fade-in">
+        <div class="section-number">1</div>
+        <h2>IRA Credits Cut Clean Energy Costs 30&ndash;40%</h2>
+        <p>Federal Policy</p>
+    </div>
+    <section class="story-section fade-in">
+        <div class="story-content">
+            <p>The Inflation Reduction Act (2022) provides an estimated <strong>$369 billion</strong> in clean energy tax incentives over 10 years. For independent power producers, three credits reshape project economics:</p>
+
+            <div class="card-grid" style="margin-top: 20px;">
+                <div class="card" style="border-left: 4px solid var(--solar);">
+                    <h4>Section 45Y &mdash; Clean Electricity PTC</h4>
+                    <p style="font-size: 0.9rem; color: var(--text-secondary);">~<strong class="text-green">$28/MWh</strong> for qualifying clean generation (<span class="em-wind">wind</span>, <span class="em-solar">solar</span>, <span class="em-nuclear">nuclear</span>, geothermal). Reduces LCOE by 30&ndash;40% for new-build projects. The PTC is inflation-adjusted and available for 10 years from placed-in-service date.</p>
+                </div>
+                <div class="card" style="border-left: 4px solid var(--wind);">
+                    <h4>Section 48E &mdash; Clean Electricity ITC</h4>
+                    <p style="font-size: 0.9rem; color: var(--text-secondary);"><strong>30%</strong> base investment tax credit + <strong>10%</strong> domestic content bonus + <strong>10%</strong> energy communities bonus. Combined ITC can reach 50% for qualifying projects in energy communities using domestic materials.</p>
+                </div>
+                <div class="card" style="border-left: 4px solid var(--ccs);">
+                    <h4>Section 45Q &mdash; CCS Credit</h4>
+                    <p style="font-size: 0.9rem; color: var(--text-secondary);"><strong class="text-green">$85/tonne CO&#8322;</strong> for geologic storage. Makes <span class="em-ccs">CCS</span> economically viable on large CCGTs at ~50&ndash;60% capture rate. Creates a pathway for existing <span class="text-fossil">gas fleet</span> decarbonization without stranding assets.</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 28px;">Impact of IRA Credits on LCOE by Resource</h3>
+            <p>The chart below shows how IRA tax credits shift the levelized cost of energy for each major clean resource type. The reduction ranges from 22% (new nuclear) to 33% (utility solar).</p>
+            <div class="chart-container" style="margin-top: 16px;">
+                <canvas id="iraLcoeChart"></canvas>
+            </div>
+
+            <div class="callout warning" style="margin-top: 20px;">
+                <p><strong>Political risk:</strong> IRA credits face repeal pressure, but over 75% of IRA-funded clean energy investment has flowed to Republican-held districts, creating bipartisan constituency support. Full repeal is unlikely; partial rollback (phase-downs, eligibility restrictions) remains the realistic risk vector.</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ===== SECTION 2: STATE POLICY LANDSCAPE ===== -->
+    <div class="section-header fade-in">
+        <div class="section-number">2</div>
+        <h2>State Clean Energy Mandates: The Regulatory Floor</h2>
+        <p>State Policies</p>
+    </div>
+    <section class="story-section fade-in">
+        <div class="story-content">
+            <p>Thirty states plus the District of Columbia have binding Renewable Portfolio Standards (RPS) or Clean Energy Standards (CES). These mandates create the regulatory floor for clean energy deployment and drive competitive markets for Energy Attribute Certificates (EACs).</p>
+
+            <div class="stat-row" style="margin-top: 20px;">
+                <div class="stat-tile">
+                    <div class="stat-value text-green" style="font-size: 1.6rem;">30 + DC</div>
+                    <div class="stat-label">States with RPS/CES</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-value text-hydro" style="font-size: 1.6rem;">63%</div>
+                    <div class="stat-label">US Retail Sales Under RPS</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-value text-nuclear" style="font-size: 1.6rem;">14</div>
+                    <div class="stat-label">States with 100% Clean Laws</div>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 28px;">Top State Clean Energy Mandates</h3>
+            <p>The most aggressive state mandates directly shape IPP investment decisions and EAC market dynamics. Key distinction: <strong>RPS</strong> mandates count only renewables (wind, solar, hydro), while <strong>CES</strong> mandates also include nuclear and other zero-emission sources.</p>
+
+            <div style="overflow-x: auto; margin-top: 16px;">
+                <table class="data-table" style="max-width: 820px; margin: 0 auto;">
+                    <thead>
+                        <tr>
+                            <th>State</th>
+                            <th>Law</th>
+                            <th>Target</th>
+                            <th>Deadline</th>
+                            <th>Type</th>
+                            <th>ISO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>California</td><td>SB 100</td><td>100% clean electricity</td><td>2045</td><td>CES</td><td>CAISO</td></tr>
+                        <tr><td>New York</td><td>CLCPA</td><td>70% renewable / 100% zero-emission</td><td>2030 / 2040</td><td>CES</td><td>NYISO</td></tr>
+                        <tr><td>Virginia</td><td>VCEA</td><td>100% carbon-free</td><td>2050</td><td>CES</td><td>PJM</td></tr>
+                        <tr><td>Illinois</td><td>CEJA</td><td>100% clean</td><td>2045</td><td>CES</td><td>PJM/MISO</td></tr>
+                        <tr><td>New Jersey</td><td>EMP</td><td>100% clean</td><td>2050</td><td>CES</td><td>PJM</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <details style="margin-top: 16px;">
+                <summary style="cursor: pointer; font-weight: 600; color: var(--navy); font-size: 0.92rem;">Full State Mandate List</summary>
+                <div style="overflow-x: auto; margin-top: 12px;">
+                    <table class="data-table" style="max-width: 820px; margin: 0 auto;">
+                        <thead>
+                            <tr>
+                                <th>State</th>
+                                <th>Law</th>
+                                <th>Target</th>
+                                <th>Deadline</th>
+                                <th>Type</th>
+                                <th>ISO</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Colorado</td><td>SB 19-236</td><td>100% clean (Xcel territory)</td><td>2040</td><td>CES</td><td>SPP</td></tr>
+                            <tr><td>Minnesota</td><td>100% CFS</td><td>100% carbon-free</td><td>2040</td><td>CES</td><td>MISO</td></tr>
+                            <tr><td>Rhode Island</td><td>Act on Climate</td><td>100% renewable</td><td>2033</td><td>RPS</td><td>NEISO</td></tr>
+                            <tr><td>Massachusetts</td><td>Clean Energy Act</td><td>100% clean</td><td>2050</td><td>CES</td><td>NEISO</td></tr>
+                            <tr><td>Connecticut</td><td>PA 22-5</td><td>Zero-carbon electric</td><td>2040</td><td>CES</td><td>NEISO</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </details>
+
+            <p style="margin-top: 20px;">The distinction between RPS and CES mandates has direct financial consequences for nuclear fleet owners. Under RPS-only states, nuclear plants earn no compliance credits and must survive on energy-only revenue; under CES mandates, the same plants gain an additional revenue stream that can justify continued operation or even life extensions. States transitioning from RPS to CES &mdash; like Illinois under CEJA &mdash; are effectively creating new value for existing zero-emission baseload.</p>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ===== SECTION 3: CARBON PRICING LANDSCAPE ===== -->
+    <div class="section-header fade-in">
+        <div class="section-number">3</div>
+        <h2>Carbon Pricing: The Missing Accelerant</h2>
+        <p>Carbon Pricing</p>
+    </div>
+    <section class="story-section fade-in">
+        <div class="story-content">
+            <p>No national carbon price exists in the United States. Regional carbon markets (RGGI in the Northeast, WCI in the West) cover only a fraction of generators. A federal carbon price would accelerate decarbonization economics, but the key question is at what level different technology transitions unlock.</p>
+
+            <h3 style="margin-top: 24px;">Technology Transition Thresholds</h3>
+            <p>Different carbon price levels unlock different technology substitutions. The chart below shows the carbon price at which each major transition becomes economic:</p>
+
+            <div class="chart-container-lg" style="margin-top: 16px;">
+                <canvas id="carbonThresholdChart"></canvas>
+            </div>
+
+            <div class="card-grid" style="margin-top: 24px;">
+                <div class="stat-card">
+                    <div class="stat-value text-green">$25&ndash;35</div>
+                    <div class="stat-label">Coal retirement economic everywhere</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value text-amber">$44&ndash;66</div>
+                    <div class="stat-label">All coal-to-renewable substitution</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value text-ccs">$80&ndash;110</div>
+                    <div class="stat-label">CCS on gas becomes competitive</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value text-nuclear">$150+</div>
+                    <div class="stat-label">New nuclear competitive with gas</div>
+                </div>
+            </div>
+
+            <p class="citation" style="margin-top: 12px;"><small>Reference: EPA SCC $190/t (2024$); Rennert et al. $185/t; EU ETS &euro;70&ndash;100/t; RGGI ~$15/t.</small></p>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ===== SECTION 4: TRANSMISSION & INTERCONNECTION ===== -->
+    <div class="section-header fade-in">
+        <div class="section-number">4</div>
+        <h2>Transmission &amp; Interconnection</h2>
+        <p>The Bottleneck</p>
+    </div>
+    <section class="story-section fade-in">
+        <div class="story-content">
+            <p>The LBNL "Queued Up" 2025 edition paints a stark picture: the interconnection queue contains more capacity than the entire installed U.S. generation fleet, yet only a fraction will ever reach operation.</p>
+
+            <div class="stat-row" style="margin-top: 20px;">
+                <div class="stat-tile">
+                    <div class="stat-value text-red" style="font-size: 1.5rem;">2,300 GW</div>
+                    <div class="stat-label">In Interconnection Queue</div>
+                    <div class="stat-sublabel">10,300 projects waiting (end 2024)</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-value text-red" style="font-size: 1.5rem;">77%</div>
+                    <div class="stat-label">Withdrawal Rate</div>
+                    <div class="stat-sublabel">Projects submitted 2000&ndash;2019</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-value text-red" style="font-size: 1.5rem;">322 mi</div>
+                    <div class="stat-label">HV Lines Built (2024)</div>
+                    <div class="stat-sublabel">vs. ~5,000 mi/yr needed</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-value text-amber" style="font-size: 1.5rem;">$240/kW</div>
+                    <div class="stat-label">Avg. Interconnection Cost</div>
+                    <div class="stat-sublabel">PJM completed projects</div>
+                </div>
+            </div>
+
+            <p style="margin-top: 20px;">Median time from request to operation has <strong>doubled from &lt;2 years to &gt;4 years</strong> over the past decade. Only 13% of projects submitted 2000&ndash;2019 reached commercial operation. Gas capacity in queues is up 72% year-over-year while solar, storage, and wind applications are declining.</p>
+
+            <div class="callout warning" style="margin-top: 16px;">
+                <p><strong>FERC Order 1920</strong> (2024) requires proactive long-range transmission planning, and several ISOs are transitioning to "first-ready, first-served" cluster study models. But implementation will take years. In the interim, the queue bottleneck remains the binding constraint on power sector decarbonization.</p>
+            </div>
+
+            <div class="callout" style="margin-top: 12px;">
+                <p><strong>NEISO winter constraint:</strong> New England faces a unique seasonal bottleneck. Limited natural gas pipeline capacity during winter months forces generators to burn oil or LNG at premium prices. This adds an estimated <strong class="text-red">$13.13/MWh adder</strong> to <span class="em-ccs">CCS-CCGT</span> costs in the region &mdash; a structural cost penalty that makes CCS less competitive in NEISO relative to other ISOs.</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ===== SECTION 5: CORPORATE CLEAN ENERGY DEMAND ===== -->
+    <div class="section-header fade-in">
+        <div class="section-number">5</div>
+        <h2>Corporate Clean Energy Demand: The New Market Maker</h2>
+        <p>Demand Pull</p>
+    </div>
+    <section class="story-section fade-in">
+        <div class="story-content">
+            <p>Unprecedented electricity demand growth from AI training and hyperscale data centers is creating a new market dynamic: corporate buyers who need <strong>24/7 carbon-free energy</strong>, not just annual RECs. This demand-side pull is reshaping IPP investment economics independent of wholesale market prices.</p>
+
+            <h3 style="margin-top: 24px;">Hyperscale Data Center Load Growth</h3>
+            <p>U.S. data center electricity consumption is projected to grow from ~200 TWh in 2024 to 400&ndash;600 TWh by 2030, driven primarily by AI model training and inference workloads. This represents <strong>5&ndash;12% of total U.S. electricity demand</strong> &mdash; equivalent to adding the entire load of a mid-sized ISO.</p>
+
+            <div class="card-grid" style="margin-top: 20px;">
+                <div class="card" style="border-left: 4px solid var(--nuclear);">
+                    <h4>Microsoft</h4>
+                    <p style="font-size: 0.88rem;">100% CFE by 2030; signed 20-year PPA for Crane <span class="em-nuclear">nuclear</span> restart (1.8 GW) and contracting for <span class="em-ccs">CCS</span> and advanced geothermal.</p>
+                </div>
+                <div class="card" style="border-left: 4px solid var(--solar);">
+                    <h4>Google</h4>
+                    <p style="font-size: 0.88rem;">24/7 CFE by 2030; pioneered hourly matching methodology; contracting for advanced <span class="em-geo">geothermal</span> (Fervo), next-gen <span class="em-nuclear">nuclear</span> (Kairos), and <span class="em-wind">wind</span>+<span class="em-storage">storage</span>.</p>
+                </div>
+                <div class="card" style="border-left: 4px solid var(--wind);">
+                    <h4>Amazon</h4>
+                    <p style="font-size: 0.88rem;">Net-zero by 2040; world's largest corporate clean energy buyer with 500+ projects and multi-GW PPAs across <span class="text-ercot">ERCOT</span>, <span class="text-pjm">PJM</span>, and <span class="text-miso">MISO</span>.</p>
+                </div>
+            </div>
+
+            <h3 style="margin-top: 28px;">How This Creates a Revenue Pathway for IPPs</h3>
+            <p>Corporate PPAs create a revenue pathway for clean energy investment that is <strong>structurally different from wholesale market dependence</strong>:</p>
+            <ul style="margin-left: 20px; color: var(--text-secondary);">
+                <li><strong>Long-term price certainty</strong> &mdash; 10&ndash;20 year fixed-price contracts de-risk new-build investment</li>
+                <li><strong>Premium for hourly matching</strong> &mdash; dispatchable clean generation (<span class="em-nuclear">nuclear</span>, <span class="em-ccs">CCS</span>, <span class="em-geo">geothermal</span>) commands $10&ndash;40/MWh premiums over variable renewables for evening/night hours</li>
+                <li><strong>Creditworthy offtakers</strong> &mdash; tech company balance sheets reduce project finance risk and lower cost of capital by 100&ndash;200 bps</li>
+                <li><strong>Demand concentration</strong> &mdash; <span class="text-pjm">PJM</span> (Virginia data center corridor), <span class="text-ercot">ERCOT</span> (Texas), and <span class="text-caiso">CAISO</span> see the heaviest corporate procurement pressure</li>
+            </ul>
+
+            <div class="callout success" style="margin-top: 20px;">
+                <p><strong>Landmark example &mdash; Constellation Crane restart:</strong> Microsoft's 20-year PPA enabled the restart of the 1.8 GW Crane nuclear plant, demonstrating that corporate demand alone can underwrite capital-intensive clean energy projects. This single transaction provides ~14 TWh/year of 24/7 carbon-free generation &mdash; more than the entire annual renewable output of most U.S. states.</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ===== SECTION 6: POLICY CONVERGENCE ===== -->
+    <div class="section-header fade-in">
+        <div class="section-number">6</div>
+        <h2>Policy Convergence: When All Signals Align</h2>
+        <p>Convergence</p>
+    </div>
+    <section class="story-section fade-in">
+        <div class="story-content">
+            <p>These forces are not independent &mdash; they form a causal chain. IRA credits push new-build solar and wind below the marginal cost of existing coal in most markets, making the cost crossover a present-tense fact rather than a forecast. State RPS and CES mandates layer guaranteed demand on top of that cost advantage, reducing volume risk for developers. Corporate hourly matching requirements then create premium revenue for exactly the dispatchable clean resources &mdash; nuclear, CCS, geothermal, LDES &mdash; that are hardest to finance on wholesale market revenue alone. Meanwhile, the regulatory floor keeps rising: EU CBAM (2026), GHG Protocol Scope 2 revision (expected 2027), and SBTi hourly matching requirements (2030) create parallel demand channels that reinforce the economics. Every year of delay increases stranded asset exposure, as coal plants accumulate losses past their economic retirement date and unabated gas faces growing carbon liability. The timing and sequencing of IPP decarbonization now matters more than the directional decision &mdash; early movers capture IRA credits at maximum value and lock in corporate PPA premiums before the market saturates. The remaining barriers are transmission, permitting, and interconnection: execution challenges, not economic ones.</p>
+
+            <p style="margin-top: 16px;">The next section examines how these conditions translate into specific procurement strategies &mdash; and what the optimizer results reveal about optimal resource portfolios under each policy scenario.</p>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ===== SECTION 7: FRAMEWORK COMPARISON ===== -->
+    <div class="section-header fade-in">
+        <div class="section-number">7</div>
+        <h2>Clean Energy Framework Comparison</h2>
+        <p>Reference</p>
+    </div>
+    <section id="framework-comparison" class="story-section fade-in">
+        <div class="story-content">
+            <p>The global landscape of clean energy procurement frameworks is fragmenting along a key axis: <strong>temporal granularity</strong>. Some frameworks require annual matching, others demand hourly. The table below compares the major frameworks shaping corporate procurement obligations.</p>
+
+            <div style="overflow-x: auto; margin-top: 16px;">
+                <table class="data-table" style="min-width: 820px; margin: 0 auto;">
+                    <thead>
+                        <tr>
+                            <th>Framework</th>
+                            <th>Temporal Granularity</th>
+                            <th>Deliverability</th>
+                            <th>Additionality</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>GHG Protocol Scope 2</strong></td>
+                            <td>Hourly (proposed)</td>
+                            <td>Grid-connected / BA</td>
+                            <td>Under discussion</td>
+                            <td>Draft &mdash; final 2027</td>
+                        </tr>
+                        <tr>
+                            <td><strong>SBTi Net-Zero V2.0</strong></td>
+                            <td>50% hourly by 2030 &rarr; 90% by 2040</td>
+                            <td>Regional</td>
+                            <td>10yr &rarr; 5yr by 2035</td>
+                            <td>Consultation &mdash; Spring 2026</td>
+                        </tr>
+                        <tr>
+                            <td><strong>RE100</strong></td>
+                            <td>Annual</td>
+                            <td>Same market</td>
+                            <td>Encouraged, not required</td>
+                            <td>Active &mdash; 430+ members</td>
+                        </tr>
+                        <tr>
+                            <td><strong>UN 24/7 CFE Compact</strong></td>
+                            <td>Hourly</td>
+                            <td>Same grid</td>
+                            <td>New-build preference</td>
+                            <td>Active &mdash; 170+ signatories</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Climate Group 24/7 Coalition</strong></td>
+                            <td>Hourly</td>
+                            <td>Same grid</td>
+                            <td>Required</td>
+                            <td>Active</td>
+                        </tr>
+                        <tr>
+                            <td><strong>EU CBAM</strong></td>
+                            <td>Hourly</td>
+                            <td>Direct line / PPA</td>
+                            <td>Implicit (new capacity)</td>
+                            <td>Binding Jan 2026</td>
+                        </tr>
+                        <tr>
+                            <td><strong>EnergyTag</strong></td>
+                            <td>Hourly</td>
+                            <td>Issuer-verified</td>
+                            <td>Tracked via vintage</td>
+                            <td>6 markets accredited</td>
+                        </tr>
+                        <tr>
+                            <td><strong>CDP Climate</strong></td>
+                            <td>Annual</td>
+                            <td>Market-based</td>
+                            <td>Scored, not mandated</td>
+                            <td>Active &mdash; 23,000+ disclosers</td>
+                        </tr>
+                        <tr>
+                            <td><strong>US State RPS/CES</strong></td>
+                            <td>Annual</td>
+                            <td>State-defined</td>
+                            <td>Varies by state</td>
+                            <td>29 states + DC</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="callout" style="margin-top: 20px;">
+                <p><strong>SBTi V2.0</strong> phases in hourly matching: 50% by 2030 for large consumers (&ge;10 GWh/region), 90% by 2040, with 100% low-carbon electricity. Additionality tightens from 10-year to 5-year facility age by 2035. See <a href="clean_firm_case.html#critical-mass">clean firm investment case</a> for cost implications.</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ===== SECTION 8: GHG PROTOCOL SCOPE 2 REVISION ===== -->
+    <div class="section-header fade-in">
+        <div class="section-number">8</div>
+        <h2>GHG Protocol Scope 2 Revision</h2>
+        <p>Standards</p>
+    </div>
+    <section id="ghg-protocol" class="story-section fade-in">
+        <div class="story-content">
+            <p>The GHG Protocol Scope 2 standard &mdash; the global basis for corporate electricity emissions accounting &mdash; is undergoing its first revision since 2015. If adopted as proposed, it will redefine every corporate renewable energy claim worldwide.</p>
+
+            <h3 style="margin-top: 24px;">Timeline</h3>
+            <div style="overflow-x: auto; margin-top: 12px;">
+                <table class="data-table" style="max-width: 600px; margin: 0 auto;">
+                    <tbody>
+                        <tr><td><strong>2015</strong></td><td>Current Scope 2 Guidance published</td></tr>
+                        <tr><td><strong>2023</strong></td><td>GHG Protocol announces Scope 2 revision</td></tr>
+                        <tr><td><strong>2024</strong></td><td>Survey + stakeholder workshops; draft proposals circulated</td></tr>
+                        <tr><td><strong>2025&ndash;2026</strong></td><td>Public consultation on proposed changes</td></tr>
+                        <tr><td><strong>2027</strong></td><td>Final revised standard expected</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 style="margin-top: 24px;">Proposed Changes</h3>
+            <ul style="margin-left: 20px; color: var(--text-secondary); font-size: 0.92rem; line-height: 1.7;">
+                <li><strong>Hourly temporal matching</strong> &mdash; energy attribute certificates must correspond to the hour of consumption</li>
+                <li><strong>Deliverability requirements</strong> &mdash; certificates must come from resources on the same grid or balancing authority</li>
+                <li><strong>Possible exemptions</strong> &mdash; small consumers, regions without hourly tracking infrastructure, and transition periods under discussion</li>
+                <li><strong>Market-based vs. location-based</strong> &mdash; both methods retained, but market-based method tightened significantly</li>
+            </ul>
+
+            <h3 style="margin-top: 24px;">The Competing Camps</h3>
+            <div class="card-grid" style="margin-top: 12px;">
+                <div class="card" style="border-left: 4px solid var(--solar);">
+                    <h4>Hourly Matching</h4>
+                    <p style="font-size: 0.88rem;">Google, Microsoft, EnergyTag &mdash; tie procurement to the hour of consumption. Maximizes grid-cleaning incentive. Higher cost, higher impact.</p>
+                </div>
+                <div class="card" style="border-left: 4px solid var(--wind);">
+                    <h4>Emissions-First</h4>
+                    <p style="font-size: 0.88rem;">Amazon, Meta, Emissions First Partnership &mdash; prioritize maximum tonnes CO&#8322; avoided per dollar. Argues hourly matching over-constrains procurement.</p>
+                </div>
+                <div class="card" style="border-left: 4px solid var(--ccs);">
+                    <h4>Annual Matching</h4>
+                    <p style="font-size: 0.88rem;">CRS, legacy utility programs &mdash; maintain annual certificate retirement. Simple and cheap, but increasingly disconnected from physical grid reality.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ===== SECTION 9: EAC SCARCITY ===== -->
+    <div class="section-header fade-in">
+        <div class="section-number">9</div>
+        <h2>EAC Scarcity: The Binding Constraint</h2>
+        <p>Constraint</p>
+    </div>
+    <section id="eac-scarcity" class="story-section fade-in">
+        <div class="story-content">
+            <p>Analysis of 32,760 scenarios across 7 ISOs reveals that Energy Attribute Certificate (EAC) scarcity is the binding constraint on hourly matching feasibility &mdash; not technology cost.</p>
+
+            <div style="overflow-x: auto; margin-top: 16px;">
+                <table class="data-table" style="max-width: 700px; margin: 0 auto; text-align: center;">
+                    <thead>
+                        <tr>
+                            <th style="text-align: left;">ISO</th>
+                            <th>Pipeline After RPS</th>
+                            <th>Scarcity Level</th>
+                            <th>Marginal EAC at 100%</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td style="text-align: left;"><strong class="text-pjm">PJM</strong></td><td>6.2 TWh</td><td class="text-red">Critical</td><td>$720/MWh</td></tr>
+                        <tr><td style="text-align: left;"><strong class="text-nyiso">NYISO</strong></td><td>~0 TWh by 2030</td><td class="text-red">Critical</td><td>N/A (fully consumed)</td></tr>
+                        <tr><td style="text-align: left;"><strong class="text-neiso">NEISO</strong></td><td>Limited</td><td class="text-amber">Constrained</td><td>High</td></tr>
+                        <tr><td style="text-align: left;"><strong class="text-caiso">CAISO</strong></td><td>Moderate</td><td class="text-amber">Moderate</td><td>Moderate</td></tr>
+                        <tr><td style="text-align: left;"><strong class="text-miso">MISO</strong></td><td>Adequate</td><td class="text-green">Open</td><td>Low</td></tr>
+                        <tr><td style="text-align: left;"><strong class="text-spp">SPP</strong></td><td>Adequate</td><td class="text-green">Open</td><td>Low</td></tr>
+                        <tr><td style="text-align: left;"><strong class="text-ercot">ERCOT</strong></td><td>136 TWh</td><td class="text-green">Abundant</td><td>$3.6/MWh</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="callout warning" style="margin-top: 20px;">
+                <p><strong>Impact on voluntary procurement:</strong> In constrained ISOs (PJM, NYISO, NEISO), state mandates consume 80&ndash;100% of the buildable clean energy pipeline, leaving minimal capacity for corporate buyers pursuing hourly matching. See the <a href="clean_firm_case.html#eac-scarcity">full EAC scarcity analysis</a> for ISO-level supply constraints.</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ===== SECTION 10: KEY CITATIONS ===== -->
+    <div class="section-header fade-in">
+        <div class="section-number">10</div>
+        <h2>Key Citations &amp; Sources</h2>
+        <p>Sources</p>
+    </div>
+    <section id="citations" class="story-section fade-in">
+        <div class="story-content">
+            <ul style="list-style: none; padding: 0; margin: 0;">
+                <li style="padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; line-height: 1.5;"><strong>Xu et al. (2024)</strong> &mdash; "System-level impacts of 24/7 carbon-free electricity procurement." <em>Joule</em>, 8(6).</li>
+                <li style="padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; line-height: 1.5;"><strong>Riepin, Vibhuti &amp; Brown (2024)</strong> &mdash; "Means vs. Ends: 24/7 CFE in the European electricity system." TU Berlin.</li>
+                <li style="padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; line-height: 1.5;"><strong>Miller, Fell &amp; Hittinger (2024)</strong> &mdash; "Hourly accounting for carbon-free energy procurement." <em>Environmental Research Letters</em>.</li>
+                <li style="padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; line-height: 1.5;"><strong>Google &amp; EnergyTag (2023)</strong> &mdash; "24/7 Carbon-Free Energy: Methodology and Results."</li>
+                <li style="padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; line-height: 1.5;"><strong>Emissions First Partnership (2024)</strong> &mdash; "Emissions-First Framework: Maximizing Climate Impact."</li>
+                <li style="padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; line-height: 1.5;"><strong>NREL (2024)</strong> &mdash; "Annual Technology Baseline." National Renewable Energy Laboratory.</li>
+                <li style="padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; line-height: 1.5;"><strong>Lazard (2024)</strong> &mdash; "Levelized Cost of Energy Analysis &mdash; Version 17.0."</li>
+                <li style="padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; line-height: 1.5;"><strong>EIA (2024)</strong> &mdash; "Hourly Electric Grid Monitor." US Energy Information Administration.</li>
+                <li style="padding: 8px 0; font-size: 0.9rem; line-height: 1.5;"><strong>EPA eGRID (2024)</strong> &mdash; "Emissions &amp; Generation Resource Integrated Database."</li>
+            </ul>
+        </div>
+    </section>
+
+</div>
+
+<!-- ===== CHARTS & INTERACTIVITY ===== -->
+<script>
+// Scroll fade-in observer
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// ---- CHART 1: IRA LCOE Impact ----
+new Chart(document.getElementById('iraLcoeChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: ['Utility Solar', 'Onshore Wind', 'Offshore Wind', 'Battery 4hr', 'Nuclear (new)', 'CCS-CCGT'],
+        datasets: [
+            {
+                label: 'Pre-IRA LCOE',
+                data: [36, 35, 86, 140, 180, 130],
+                backgroundColor: withAlpha('#9CA3AF', 0.15),
+                borderColor: '#9CA3AF',
+                borderWidth: 2,
+                borderRadius: 3
+            },
+            {
+                label: 'Post-IRA LCOE',
+                data: [24, 24, 62, 108, 140, 88],
+                backgroundColor: typeof RESOURCE_COLORS !== 'undefined'
+                    ? [withAlpha(RESOURCE_COLORS.solar, 0.15), withAlpha(RESOURCE_COLORS.wind, 0.15), withAlpha(RESOURCE_COLORS.offshoreWind, 0.15), withAlpha(RESOURCE_COLORS.battery, 0.15), withAlpha(RESOURCE_COLORS.nuclear, 0.15), withAlpha(RESOURCE_COLORS.ccs, 0.15)]
+                    : [withAlpha('#F59E0B', 0.15), withAlpha('#22C55E', 0.15), withAlpha('#009688', 0.15), withAlpha('#06B6D4', 0.15), withAlpha('#6366F1', 0.15), withAlpha('#64748B', 0.15)],
+                borderColor: typeof RESOURCE_COLORS !== 'undefined'
+                    ? [RESOURCE_COLORS.solar, RESOURCE_COLORS.wind, RESOURCE_COLORS.offshoreWind, RESOURCE_COLORS.battery, RESOURCE_COLORS.nuclear, RESOURCE_COLORS.ccs]
+                    : ['#F59E0B', '#22C55E', '#009688', '#06B6D4', '#6366F1', '#64748B'],
+                borderWidth: 2,
+                borderRadius: 3
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: { font: { size: 11 }, usePointStyle: true, padding: 12 }
+            },
+            tooltip: {
+                callbacks: {
+                    afterBody: function(context) {
+                        const idx = context[0].dataIndex;
+                        const pre = [36, 35, 86, 140, 180, 130];
+                        const post = [24, 24, 62, 108, 140, 88];
+                        const pct = Math.round((1 - post[idx] / pre[idx]) * 100);
+                        return `Reduction: -${pct}%`;
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                title: { display: true, text: '$/MWh (LCOE)', font: { size: 11 } },
+                grid: { color: 'rgba(0,0,0,0.05)' },
+                border: { display: true },
+                beginAtZero: true
+            },
+            x: {
+                grid: { display: false },
+                border: { display: true },
+                ticks: { font: { size: 10 }, maxRotation: 45 }
+            }
+        }
+    }
+});
+
+// ---- CHART 2: Carbon Price Technology Thresholds ----
+new Chart(document.getElementById('carbonThresholdChart').getContext('2d'), {
+    type: 'bar',
+    data: {
+        labels: [
+            'Coal retirement\n(all regions)',
+            'Coal-to-renewable\nsubstitution',
+            'CCS on gas\ncompetitive',
+            'New nuclear vs.\ngas competitive'
+        ],
+        datasets: [
+            {
+                label: 'Low end',
+                data: [25, 44, 80, 150],
+                backgroundColor: withAlpha('#22C55E', 0.15),
+                borderColor: '#22C55E',
+                borderWidth: 2,
+                borderRadius: 3
+            },
+            {
+                label: 'High end (incremental)',
+                data: [10, 22, 30, 50],
+                backgroundColor: withAlpha('#22C55E', 0.08),
+                borderColor: withAlpha('#22C55E', 0.5),
+                borderWidth: 2,
+                borderRadius: 3
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: function(ctx) {
+                        const ranges = ['$25–35', '$44–66', '$80–110', '$150+'];
+                        return `Carbon price: ${ranges[ctx.dataIndex]}/tonne CO₂`;
+                    }
+                }
+            },
+            annotation: {
+                annotations: {
+                    epaLine: {
+                        type: 'line',
+                        xMin: 190, xMax: 190,
+                        borderColor: '#F59E0B',
+                        borderWidth: 2,
+                        borderDash: [6, 4],
+                        label: {
+                            display: true,
+                            content: 'EPA SCC $190',
+                            position: 'start',
+                            font: { size: 10 },
+                            backgroundColor: 'rgba(245, 158, 11, 0.8)'
+                        }
+                    },
+                    rennertLine: {
+                        type: 'line',
+                        xMin: 185, xMax: 185,
+                        borderColor: '#DC2626',
+                        borderWidth: 2,
+                        borderDash: [6, 4],
+                        label: {
+                            display: true,
+                            content: 'Rennert $185',
+                            position: 'start',
+                            font: { size: 10 },
+                            backgroundColor: 'rgba(220, 38, 38, 0.8)'
+                        }
+                    }
+                }
+            }
+        },
+        scales: {
+            x: {
+                stacked: true,
+                title: { display: true, text: '$/tonne CO₂', font: { size: 11 } },
+                grid: { color: 'rgba(0,0,0,0.05)' },
+                border: { display: true },
+                ticks: { callback: v => `$${v}` },
+                max: 220,
+                beginAtZero: true
+            },
+            y: {
+                stacked: true,
+                grid: { display: false },
+                border: { display: true },
+                ticks: { font: { size: 10 } }
+            }
+        }
+    }
+});
+</script>
+
+<footer id="siteFooter" data-footer-note="Analysis based on EPA eGRID 2023, EIA data, MJ Bradley/ERM, company filings, IRA legislation, and hourly CFE optimizer modeling. &copy; 2026"></footer>
+
+<script src="js/cinematic-bg.js"></script>
+</body>
+</html>
