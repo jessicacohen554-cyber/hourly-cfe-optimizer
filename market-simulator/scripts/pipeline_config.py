@@ -444,7 +444,7 @@ STORAGE_MAX_V2 = {
 # Storage dispatch mode: 'greedy' (sequential priority) or 'lp' (co-optimized via scipy.linprog)
 # LP co-dispatch solves a rolling-window linear program that coordinates all storage types
 # simultaneously, reducing order-dependency bias and improving gap-filling by 8-15%.
-STORAGE_DISPATCH_MODE = 'lp'
+STORAGE_DISPATCH_MODE = 'greedy'
 
 # ============================================================================
 # STORAGE ECONOMICS (Step 1D.2 Economic Assessment)
