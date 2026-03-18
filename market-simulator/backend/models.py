@@ -60,6 +60,10 @@ class HeatRates(BaseModel):
     gas_ccgt: float = 7.0
     gas_ct: float = 10.5
     oil_ct: float = 10.5
+    # New-build heat rates (used in CCS breakeven & new-build economics)
+    new_gas_ccgt: float = 6.2   # H-class CCGT
+    new_gas_ct: float = 9.5     # Modern aeroderivative CT
+    new_coal: float = 8.8       # Supercritical coal
 
 
 class VOM(BaseModel):
@@ -164,6 +168,9 @@ class SimulationRequest(BaseModel):
 
     # Inter-regional interchange: On = historical import/export profiles, Off = copper-plate isolation
     interchange_enabled: bool = True
+
+    # Learning curves toggle (separate from learning speed)
+    learning_curves: bool = True  # On/Off — when Off, skip Wright's Law cost decline
 
     # Fleet overrides from fleet-config page
     fleet_overrides: Optional[Dict[str, str]] = None  # {plant_id: "Operating"|"Retired"|"CCS Retrofit"}
