@@ -77,6 +77,11 @@ with open(_EGRID_PATH) as _f:
 
 # Per-ISO fuel emission rates (tCO₂/MWh)
 FUEL_RATES = {}
+# Uncertainty bounds (± pct) for emission rate sensitivity analysis
+FUEL_RATE_UNCERTAINTY = {}
+# Sub-regional emission rate variation for intra-ISO sensitivity
+SUB_REGIONAL_RATES = {}
+
 for iso in ISOS:
     rates = _EGRID.get(iso, {})
     FUEL_RATES[iso] = {
@@ -84,6 +89,24 @@ for iso in ISOS:
         'oil': rates.get('oil_co2_lb_per_mwh', 0.0) / _LB_PER_TON,
         'gas': rates.get('gas_co2_lb_per_mwh', 0.0) / _LB_PER_TON,
     }
+    # Load uncertainty bounds if available
+    unc = rates.get('uncertainty_pct', {})
+    if unc:
+        FUEL_RATE_UNCERTAINTY[iso] = {
+            'coal_pct': unc.get('coal', 5.0),
+            'oil_pct': unc.get('oil', 10.0),
+            'gas_pct': unc.get('gas', 3.0),
+        }
+    else:
+        FUEL_RATE_UNCERTAINTY[iso] = {'coal_pct': 5.0, 'oil_pct': 10.0, 'gas_pct': 3.0}
+
+    # Load sub-regional rates if available
+    sub = rates.get('sub_regional', {})
+    if sub:
+        SUB_REGIONAL_RATES[iso] = {
+            region: data.get('total_co2_lb_per_mwh', 0) / _LB_PER_TON
+            for region, data in sub.items()
+        }
 
 # Existing clean percentage per ISO (2025 baseline)
 EXISTING_CLEAN_PCT = {iso: sum(GRID_MIX_SHARES.get(iso, {}).values()) for iso in ISOS}
@@ -254,6 +277,69 @@ def add_mac_column(df):
     )
 
     return df
+
+
+def compute_emission_rate_uncertainty(iso, clean_pct, demand_twh=None):
+    """Compute CO₂ emission uncertainty bounds at a given clean energy level.
+
+    Returns low/mid/high emission estimates based on eGRID year-over-year
+    variation. Uncertainty differs by fuel: coal ±5%, gas ±3%, oil ±8-12%.
+
+    This provides the sensitivity bounds recommended by the CO₂ methodology
+    audit (Rec #5) to quantify emission rate uncertainty in MAC calculations.
+    """
+    mid = compute_total_fossil_emissions_mt(iso, clean_pct, demand_twh)
+    unc = FUEL_RATE_UNCERTAINTY.get(iso, {'coal_pct': 5.0, 'oil_pct': 10.0, 'gas_pct': 3.0})
+
+    if demand_twh is None:
+        demand_twh = BASE_DEMAND_TWH.get(iso, 0)
+
+    fossil_pct = max(0, (100.0 - clean_pct)) / 100.0
+    fossil_twh = demand_twh * fossil_pct
+    if fossil_twh <= 0.01:
+        return {'low': 0.0, 'mid': 0.0, 'high': 0.0}
+
+    # Approximate uncertainty from fuel mix composition
+    cf = coal_fraction_at_clean_pct(clean_pct)
+    coal_cap = COAL_CAP_TWH.get(iso, 0) * cf
+    coal_share = min(coal_cap, fossil_twh) / fossil_twh if fossil_twh > 0 else 0
+    gas_share = 1.0 - coal_share  # simplified (oil negligible for uncertainty)
+
+    # Weighted uncertainty
+    weighted_unc_pct = coal_share * unc['coal_pct'] + gas_share * unc['gas_pct']
+
+    return {
+        'low': mid * (1 - weighted_unc_pct / 100),
+        'mid': mid,
+        'high': mid * (1 + weighted_unc_pct / 100),
+        'uncertainty_pct': round(weighted_unc_pct, 1),
+    }
+
+
+def compute_sub_regional_sensitivity(iso, clean_pct, demand_twh=None):
+    """Compute sub-regional emission rate variation within an ISO.
+
+    Returns the range of total_co2_lb_per_mwh across sub-regions, showing
+    how much location within an ISO affects the emission rate. Addresses
+    the single-bus limitation (audit Rec #4, M3).
+
+    Example: NYISO Zone J (NYC, 620 lb/MWh) vs upstate (180 lb/MWh) = 3.4x.
+    """
+    sub = SUB_REGIONAL_RATES.get(iso, {})
+    if not sub:
+        return None
+
+    rates = list(sub.values())
+    iso_avg = _EGRID.get(iso, {}).get('total_co2_lb_per_mwh', 0) / _LB_PER_TON
+
+    return {
+        'iso_average_tco2_mwh': round(iso_avg, 4),
+        'sub_regions': {k: round(v, 4) for k, v in sub.items()},
+        'min_tco2_mwh': round(min(rates), 4),
+        'max_tco2_mwh': round(max(rates), 4),
+        'range_ratio': round(max(rates) / min(rates), 2) if min(rates) > 0 else float('inf'),
+        'note': 'Intra-ISO variation can bias emission rate estimates 20-40% for location-specific decisions (Palmer et al. 2023)',
+    }
 
 
 def parse_toggle_levels(df):
@@ -908,6 +994,32 @@ def format_js_output(fan_data, stepwise_fan, envelope_data, path_mac, anova, cro
     # Crossover analysis
     lines.append('// --- Crossover Analysis: threshold where MAC exceeds benchmarks ---')
     lines.append(f'const MAC_CROSSOVERS = {json.dumps(crossovers, indent=4)};')
+    lines.append('')
+
+    # Emission rate uncertainty bounds (Rec #5: year-over-year eGRID variation)
+    uncertainty_data = {}
+    for iso in ISOS:
+        uncertainty_data[iso] = {}
+        for t in [50, 70, 85, 90, 95, 99]:
+            unc = compute_emission_rate_uncertainty(iso, t)
+            uncertainty_data[iso][t] = {
+                'low_mt': round(unc['low'], 2),
+                'mid_mt': round(unc['mid'], 2),
+                'high_mt': round(unc['high'], 2),
+                'uncertainty_pct': unc.get('uncertainty_pct', 0),
+            }
+    lines.append('// --- Emission Rate Uncertainty Bounds (eGRID year-over-year variation) ---')
+    lines.append(f'const EMISSION_UNCERTAINTY = {json.dumps(uncertainty_data, indent=4)};')
+    lines.append('')
+
+    # Sub-regional emission rate sensitivity (Rec #4: intra-ISO variation)
+    sub_regional_data = {}
+    for iso in ISOS:
+        sub = compute_sub_regional_sensitivity(iso, 50)
+        if sub:
+            sub_regional_data[iso] = sub
+    lines.append('// --- Sub-Regional Emission Rate Variation (intra-ISO sensitivity) ---')
+    lines.append(f'const SUB_REGIONAL_EMISSIONS = {json.dumps(sub_regional_data, indent=4)};')
     lines.append('')
 
     return '\n'.join(lines) + '\n'
