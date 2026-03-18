@@ -147,47 +147,46 @@ def compute_capacity_market_revenue(iso, threshold, resource_mix):
 
 def compute_hourly_co2(dispatch_result, iso, threshold, emission_rates, fossil_mix,
                         total_mwh):
-    """Compute CO₂ abated from hourly dispatch profiles.
+    """Compute CO₂ abated from hourly dispatch profiles with hour-varying rates.
 
-    Uses dispatch-stack emission rate (varies by threshold via merit-order
-    retirement). CCS gets special treatment: its dispatch displaces fossil
-    but has residual emissions.
+    Uses hour-varying emission rates from merit-order dispatch (coal → oil → gas).
+    The marginal fossil unit varies by hour — high-displacement hours exhaust coal
+    cap and displace gas (lower rate); low-displacement hours displace coal first
+    (higher rate). This captures the 2-3x intra-day variation documented in
+    Siler-Evans et al. (2012, ES&T).
+
+    Also uses sigmoid coal phase-out (50-85% clean) instead of the previous
+    70% cliff model, per Grubert 2020 and EIA Form 860 retirement data.
+
+    CCS gets special treatment: its dispatch displaces fossil but has residual
+    emissions based on configurable capture rate (85%/90%/95%).
 
     Args:
         dispatch_result: dict with 'fossil_displaced', 'ccs_supply', etc.
         iso: ISO region
-        threshold: clean energy threshold (determines emission rate)
+        threshold: clean energy threshold (determines coal phase-out level)
         emission_rates: regional emission rates
         fossil_mix: regional fossil fuel mix
         total_mwh: total annual demand in MWh
 
     Returns:
-        dict with CO₂ abatement metrics
+        dict with CO₂ abatement metrics including hour-varying methodology
     """
+    # Get retirement info for metadata (uses sigmoid internally now)
     rate, info = compute_fossil_retirement(iso, threshold, emission_rates, fossil_mix)
 
-    fossil_displaced = dispatch_result['fossil_displaced']
-    ccs_supply = dispatch_result.get('ccs_supply', np.zeros(H))
-
-    # Split fossil displacement into CCS and non-CCS components
-    non_ccs_displaced = np.maximum(0.0, fossil_displaced - np.minimum(fossil_displaced, ccs_supply))
-    ccs_displaced = np.minimum(fossil_displaced, ccs_supply)
-
-    # CO₂ calculation
-    co2_clean = float(np.sum(non_ccs_displaced)) * rate * total_mwh
-    ccs_credit = max(0.0, rate - CCS_RESIDUAL_EMISSION_RATE)
-    co2_ccs = float(np.sum(ccs_displaced)) * ccs_credit * total_mwh
-
-    total_abated = co2_clean + co2_ccs
-    matched_mwh = float(np.sum(fossil_displaced)) * total_mwh
-    co2_rate = total_abated / matched_mwh if matched_mwh > 0 else 0
+    # Delegate to hour-varying dispatch-based CO₂ calculation
+    co2_result = compute_co2_from_dispatch(
+        iso, dispatch_result, emission_rates, total_mwh,
+        clean_pct=threshold)
 
     return {
-        'total_co2_abated_tons': round(total_abated, 0),
-        'co2_rate_per_mwh': round(co2_rate, 4),
-        'matched_mwh': round(matched_mwh, 0),
-        'emission_rate_tco2_mwh': round(rate, 4),
-        'methodology': 'hourly_fossil_dispatch',
+        'total_co2_abated_tons': co2_result['total_co2_abated_tons'],
+        'co2_rate_per_mwh': co2_result['co2_rate_per_mwh'],
+        'matched_mwh': co2_result['matched_mwh'],
+        'emission_rate_tco2_mwh': co2_result['weighted_emission_rate'],
+        'coal_fraction': co2_result.get('coal_fraction', 1.0),
+        'methodology': 'hourly_varying_fossil_dispatch',
         'retirement_info': info,
     }
 
