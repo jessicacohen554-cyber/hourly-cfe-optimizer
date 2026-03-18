@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Methodology — Market Simulation Screening Tool</title>
+    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/simulator.css">
+    <style>
+        .meth-section { margin-bottom: var(--space-2xl); }
+        .meth-section h2 { color: var(--navy); margin-bottom: var(--space-md); font-size: 1.5rem; border-bottom: 2px solid var(--ceg-blue); padding-bottom: var(--space-xs); }
+        .meth-section h3 { color: var(--ceg-blue); margin: var(--space-lg) 0 var(--space-sm) 0; font-size: 1.15rem; }
+        .comparison-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: var(--space-md) 0; }
+        .comparison-table th, .comparison-table td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #e0e6ef; }
+        .comparison-table th { background: var(--navy); color: #fff; font-weight: 600; font-size: 0.8rem; }
+        .comparison-table tr:hover { background: rgba(35,114,185,0.04); }
+        .comparison-table .yes { color: #16a34a; font-weight: 600; }
+        .comparison-table .no { color: #dc2626; font-weight: 600; }
+        .comparison-table .partial { color: #d97706; font-weight: 600; }
+        .use-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg); margin: var(--space-md) 0; }
+        @media (max-width: 768px) { .use-grid { grid-template-columns: 1fr; } }
+        .use-card { background: #fff; border-radius: var(--radius-md); padding: var(--space-md); border: 1px solid #e0e6ef; }
+        .use-card h4 { margin: 0 0 var(--space-sm) 0; font-size: 1rem; }
+        .use-card.do h4 { color: #16a34a; }
+        .use-card.dont h4 { color: #dc2626; }
+        .use-card ul { margin: 0; padding-left: 1.25rem; font-size: 0.9rem; color: #5a6577; line-height: 1.6; }
+        .limitation-list { list-style: none; padding: 0; counter-reset: lim; }
+        .limitation-list li { counter-increment: lim; padding: var(--space-sm) var(--space-md); margin-bottom: var(--space-xs); background: rgba(255,255,255,0.8); border-radius: var(--radius-sm); border-left: 3px solid var(--ceg-blue); font-size: 0.9rem; line-height: 1.5; color: #374151; }
+        .limitation-list li strong { color: var(--navy); }
+        .limitation-list li.critical { border-left-color: #dc2626; }
+        .limitation-list li.moderate { border-left-color: #d97706; }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+        .data-table th, .data-table td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #e0e6ef; }
+        .data-table th { background: var(--navy); color: #fff; font-weight: 600; }
+        .data-table tr:hover { background: rgba(35,114,185,0.04); }
+        .callout { background: #eef4fc; border-left: 4px solid var(--ceg-blue); padding: var(--space-md); border-radius: var(--radius-sm); margin: var(--space-md) 0; }
+        .callout-warn { background: #fef3cd; border-left-color: #f0ad4e; }
+        .callout p { margin: 0; font-size: 0.9rem; line-height: 1.5; }
+    </style>
+</head>
+<body>
+
+    <div class="progress-bar"><div class="progress-bar-fill"></div></div>
+
+    <!-- Nav -->
+    <nav>
+        <div class="nav-logo">
+            <a href="/" style="display:flex;align-items:center;gap:0.75rem;text-decoration:none;">
+                <img src="/brand-assets/logo.png" alt="Constellation Energy" style="height:36px;" onerror="this.style.display='none'">
+                <div>
+                    <div class="nav-title">Constellation Energy</div>
+                    <div class="nav-subtitle">Market Simulation Screening Tool</div>
+                </div>
+            </a>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/">Guide</a></li>
+            <li><a href="/setup">Setup</a></li>
+            <li><a href="/fleet-config">Fleet Config</a></li>
+            <li><a href="/results">Results</a></li>
+            <li><a href="/emissions">CCS Emissions</a></li>
+            <li><a href="/ipp-report">IPP Report</a></li>
+            <li><a href="/methodology" class="active">Methodology</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero -->
+    <div class="hero-section">
+        <div class="hero-inner">
+            <div class="hero-eyebrow">Methodology Disclosure</div>
+            <h1>Model <strong>Methodology</strong></h1>
+            <p class="hero-desc">
+                An honest assessment of what this tool does, what it doesn't do,
+                and when you should (and shouldn't) use it.
+            </p>
+        </div>
+    </div>
+
+    <div class="content-section" style="max-width: 960px;">
+
+        <!-- Section 1: What This Tool Does -->
+        <div class="meth-section">
+            <h2>1. What This Tool Does</h2>
+            <p>
+                This is a <strong>reduced-form market screening model</strong> that evaluates generator profitability,
+                clean energy deployment economics, and retirement pressure across 7 US ISOs under parametric
+                sensitivity scenarios.
+            </p>
+            <h3>Core Capabilities</h3>
+            <ul>
+                <li><strong>Merit-order dispatch</strong> — Stacks fossil generators by marginal cost, dispatches in order until demand is met. Clean resources dispatch at zero marginal cost.</li>
+                <li><strong>Multi-stream revenue decomposition</strong> — Energy revenue (LMP &times; capacity factor) + capacity market payments + REC/PTC/ITC incentives, per resource type.</li>
+                <li><strong>Profit-driven deployment</strong> — Deploys clean resources where expected revenue exceeds LCOE. Clean energy level is an <em>output</em> of market economics, not a mandated target.</li>
+                <li><strong>Wright's Law learning curves</strong> — Technology-specific cost reduction per doubling of cumulative deployment, with FOAK/NOAK bounds calibrated to published literature.</li>
+                <li><strong>Nuclear retirement risk</strong> — Revenue floor model evaluating energy + capacity + &sect;45U PTC against operating cost thresholds.</li>
+                <li><strong>CCS retrofit breakeven</strong> — Carbon price breakeven analysis for CCGT retrofits under 45Q credit scenarios.</li>
+                <li><strong>Economic retirement modeling</strong> — Margin-threshold heuristic for coal, oil, and gas fleet retirement under changing market conditions.</li>
+                <li><strong>Interactive web interface</strong> — Real-time parametric sensitivity with immediate visual feedback, designed for stakeholder accessibility.</li>
+            </ul>
+        </div>
+
+        <!-- Section 2: What This Tool Does NOT Do -->
+        <div class="meth-section">
+            <h2>2. What This Tool Does NOT Do</h2>
+            <div class="callout callout-warn">
+                <p>
+                    This tool is <strong>not</strong> a production capacity expansion model. It complements — rather than
+                    replaces — tools like GenX, ReEDS, PLEXOS, IPM, and Aurora for detailed planning analysis.
+                </p>
+            </div>
+            <ul>
+                <li><strong>No co-optimized generation + storage + transmission</strong> — Storage parameters are exogenous, not endogenously optimized with generation mix.</li>
+                <li><strong>No unit commitment with physical constraints</strong> — UC constraints (min up/down times, ramp rates, start-up costs) are applied post-hoc, not co-optimized with dispatch.</li>
+                <li><strong>No nodal/zonal transmission modeling</strong> — Merit-order dispatch without transmission limits. Optional zonal decomposition uses proportional stack-splitting, not physics-based power flow.</li>
+                <li><strong>No VRE curtailment feedback</strong> — Energy revenue uses average LMP, not time-matched LMP. Does not capture solar/wind value deflation at high penetration.</li>
+                <li><strong>No probabilistic reliability</strong> — No LOLE/EUE calculations. Resource adequacy enforced as a 15% reserve margin floor.</li>
+                <li><strong>No cross-sector coupling</strong> — Electricity only; does not model transport, heat, or industrial electrification interactions.</li>
+            </ul>
+        </div>
+
+        <!-- Section 3: When to Use -->
+        <div class="meth-section">
+            <h2>3. When to Use This Tool</h2>
+            <div class="use-grid">
+                <div class="use-card do">
+                    <h4>&#10003; Recommended Uses</h4>
+                    <ul>
+                        <li><strong>Directional sensitivity analysis</strong> — "Does higher gas price accelerate clean deployment?" The model gets direction right even if magnitude is approximate.</li>
+                        <li><strong>Nuclear retirement risk screening</strong> — "At what gas + capacity market + PTC combination does nuclear become uneconomic?" Revenue stacking works well here.</li>
+                        <li><strong>CCS retrofit breakeven</strong> — Carbon price analysis for CCGT retrofits; doesn't depend on dispatch model accuracy.</li>
+                        <li><strong>Stakeholder education</strong> — Interactive UI helps non-technical audiences understand which variables drive electricity markets.</li>
+                        <li><strong>Scenario ranking (relative, not absolute)</strong> — "Scenario A produces 15% more clean energy than B" is more reliable than the absolute percentage in either.</li>
+                        <li><strong>Identifying ISOs/scenarios for detailed modeling</strong> — Triage which combinations warrant a full IPM/PLEXOS run.</li>
+                    </ul>
+                </div>
+                <div class="use-card dont">
+                    <h4>&#10007; Not Recommended</h4>
+                    <ul>
+                        <li><strong>Absolute LMP forecasting</strong> — Values lack transmission constraints, proper unit commitment, and scarcity pricing.</li>
+                        <li><strong>Optimal resource portfolio design</strong> — Cannot determine optimal mixes (no curtailment feedback, no storage co-optimization).</li>
+                        <li><strong>Policy impact quantification</strong> — "A $50/ton carbon price reduces emissions by X MT" — direction right, magnitude unreliable.</li>
+                        <li><strong>Plant-specific retirement timing</strong> — Heuristic retirement model cannot predict when individual plants close.</li>
+                        <li><strong>Investment decisions or regulatory filings</strong> — Results are screening-quality, not investment-grade.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 4: Comparison to Production Models -->
+        <div class="meth-section">
+            <h2>4. Comparison to Production Models</h2>
+            <p>Where this tool sits relative to industry-standard capacity expansion and dispatch models:</p>
+            <div style="overflow-x: auto;">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Capability</th>
+                            <th>GenX</th>
+                            <th>ReEDS</th>
+                            <th>PLEXOS</th>
+                            <th>IPM</th>
+                            <th>Aurora</th>
+                            <th>This Tool</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Co-optimized capacity expansion + dispatch</td>
+                            <td class="yes">Yes</td>
+                            <td class="yes">Yes</td>
+                            <td class="yes">Yes</td>
+                            <td class="yes">Yes</td>
+                            <td class="yes">Yes</td>
+                            <td class="no">No</td>
+                        </tr>
+                        <tr>
+                            <td>Nodal/zonal transmission with power flow</td>
+                            <td class="yes">Yes</td>
+                            <td class="partial">Zonal</td>
+                            <td class="yes">Yes</td>
+                            <td class="yes">Yes</td>
+                            <td class="yes">Yes</td>
+                            <td class="partial">Heuristic</td>
+                        </tr>
+                        <tr>
+                            <td>Unit commitment constraints</td>
+                            <td class="yes">Yes</td>
+                            <td class="partial">Reduced</td>
+                            <td class="yes">Yes</td>
+                            <td class="yes">Yes</td>
+                            <td class="yes">Yes</td>
+                            <td class="partial">Post-hoc</td>
+                        </tr>
+                        <tr>
+                            <td>Storage co-optimization</td>
+                            <td class="yes">Yes</td>
+                            <td class="yes">Yes</td>
+                            <td class="yes">Yes</td>
+                            <td class="yes">Yes</td>
+                            <td class="yes">Yes</td>
+                            <td class="no">Exogenous</td>
+                        </tr>
+                        <tr>
+                            <td>VRE curtailment feedback</td>
+                            <td class="yes">Yes</td>
+                            <td class="yes">Yes</td>
+                            <td class="yes">Yes</td>
+                            <td class="yes">Yes</td>
+                            <td class="yes">Yes</td>
+                            <td class="no">No</td>
+                        </tr>
+                        <tr>
+                            <td>Probabilistic reliability (LOLE/EUE)</td>
+                            <td class="partial">Optional</td>
+                            <td class="partial">REPRA</td>
+                            <td class="yes">Yes</td>
+                            <td class="yes">Yes</td>
+                            <td class="yes">Yes</td>
+                            <td class="no">No</td>
+                        </tr>
+                        <tr>
+                            <td>Multi-year path dependence</td>
+                            <td class="yes">Yes</td>
+                            <td class="yes">Yes</td>
+                            <td class="partial">Partial</td>
+                            <td class="yes">Yes</td>
+                            <td class="yes">Yes</td>
+                            <td class="partial">Partial</td>
+                        </tr>
+                        <tr>
+                            <td>Interactive web UI</td>
+                            <td class="no">No</td>
+                            <td class="no">No</td>
+                            <td class="no">No</td>
+                            <td class="no">No</td>
+                            <td class="no">No</td>
+                            <td class="yes">Yes</td>
+                        </tr>
+                        <tr>
+                            <td>Stakeholder accessibility</td>
+                            <td class="no">Low</td>
+                            <td class="no">Low</td>
+                            <td class="no">Low</td>
+                            <td class="no">Low</td>
+                            <td class="no">Low</td>
+                            <td class="yes">High</td>
+                        </tr>
+                        <tr>
+                            <td>Run time (single scenario)</td>
+                            <td>Minutes–Hours</td>
+                            <td>Hours</td>
+                            <td>Hours–Days</td>
+                            <td>Hours–Days</td>
+                            <td>Minutes–Hours</td>
+                            <td class="yes">5–120 sec</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="callout">
+                <p>
+                    <strong>Positioning:</strong> This tool occupies a distinct niche — rapid interactive screening with
+                    stakeholder-friendly visualization. It is closest in spirit to Bloomberg NEF market outlook models
+                    or internal utility "what-if" analysis tools, but with transparent, configurable assumptions.
+                </p>
+            </div>
+        </div>
+
+        <!-- Section 5: Data Sources -->
+        <div class="meth-section">
+            <h2>5. Data Sources</h2>
+            <div style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Source</th>
+                            <th>Usage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Demand profiles</td>
+                            <td>EIA-930 (2024 hourly)</td>
+                            <td>8,760-hour load shape by ISO</td>
+                        </tr>
+                        <tr>
+                            <td>Generation profiles</td>
+                            <td>EIA-930 (2024 hourly by fuel)</td>
+                            <td>Solar, wind, hydro generation shapes</td>
+                        </tr>
+                        <tr>
+                            <td>Emission rates</td>
+                            <td>EPA eGRID 2022, EPA CAMPD 2023</td>
+                            <td>CO&#8322;/NOx/SOx rates by fuel type and plant</td>
+                        </tr>
+                        <tr>
+                            <td>Fossil heat rates</td>
+                            <td>PJM SOM 2024, EIA-923 (2023–2025)</td>
+                            <td>Unit-level or fleet-average thermal efficiency</td>
+                        </tr>
+                        <tr>
+                            <td>LCOE tables</td>
+                            <td>NREL ATB 2024 (primary), Lazard v17–18 (cross-check)</td>
+                            <td>Solar, wind, nuclear, storage, offshore wind cost benchmarks</td>
+                        </tr>
+                        <tr>
+                            <td>Fuel prices</td>
+                            <td>EIA weekly data, 2024 annualized</td>
+                            <td>Natural gas, coal, oil baseline prices</td>
+                        </tr>
+                        <tr>
+                            <td>Capacity market prices</td>
+                            <td>RPM/ICAP/FCM/PRA 2024–2025 auction results</td>
+                            <td>Per-ISO capacity clearing prices</td>
+                        </tr>
+                        <tr>
+                            <td>Plant data (optional)</td>
+                            <td>EIA-860 (capacity, fuel, heat rate, online year)</td>
+                            <td>Plant-level merit-order dispatch and economics</td>
+                        </tr>
+                        <tr>
+                            <td>Plant generation (optional)</td>
+                            <td>EIA-923 monthly (2023–2025)</td>
+                            <td>Revealed heat rates and capacity factors</td>
+                        </tr>
+                        <tr>
+                            <td>Plant emissions (optional)</td>
+                            <td>EPA CAMPD hourly (2023–2025)</td>
+                            <td>Actual emission rates vs. defaults</td>
+                        </tr>
+                        <tr>
+                            <td>Learning curves</td>
+                            <td>DOE Liftoff 2023, BloombergNEF 2024</td>
+                            <td>Cost reduction per doubling of cumulative capacity</td>
+                        </tr>
+                        <tr>
+                            <td>Queue capacity limits</td>
+                            <td>LBNL "Queued Up" 2025, ERCOT CDR 2024</td>
+                            <td>Annual GW/yr interconnection completion rate per ISO</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Section 6: Known Limitations -->
+        <div class="meth-section">
+            <h2>6. Known Limitations</h2>
+            <p>Ranked by impact on results. Critical limitations affect results materially; moderate limitations affect interpretation.</p>
+
+            <h3>Critical Limitations</h3>
+            <ol class="limitation-list">
+                <li class="critical">
+                    <strong>No VRE cannibalization feedback</strong> — Energy revenue for solar/wind uses average LMP, not time-matched LMP.
+                    Solar revenue collapses with penetration (duck curve effect) but the model doesn't capture this.
+                    Systematically <em>overestimates</em> clean deployment at &gt;40% VRE penetration.
+                </li>
+                <li class="critical">
+                    <strong>No network constraints in dispatch</strong> — Merit-order without transmission limits.
+                    Zonal decomposition is proportional stack-splitting (not physics-based), producing congestion approximations rather than real transmission constraints.
+                </li>
+                <li class="critical">
+                    <strong>Post-hoc unit commitment</strong> — UC constraints applied after dispatch, not co-optimized.
+                    Misses minimum up/down times, ramp rates, and start-up costs, leading to incorrect LMP during shoulder hours.
+                </li>
+                <li class="critical">
+                    <strong>No storage co-optimization</strong> — Storage parameters read from pre-computed profiles or hardcoded;
+                    not endogenously co-optimized with generation mix (unlike GenX/ReEDS).
+                </li>
+                <li class="critical">
+                    <strong>Synthetic data fallback</strong> — When Step 2.2 parquets are absent, the model uses hardcoded
+                    linear ramp patterns per ISO that are not calibrated to physics. Results from this fallback are
+                    illustrative only. A warning banner appears on the results page when this fallback is active.
+                </li>
+            </ol>
+
+            <h3>Moderate Limitations</h3>
+            <ol class="limitation-list">
+                <li class="moderate">
+                    <strong>Static supply model</strong> — Doesn't account for price-induced supply responses
+                    (e.g., high EAC prices stimulating additional investment).
+                </li>
+                <li class="moderate">
+                    <strong>Reduced-form demand response</strong> — Price-elastic curtailment function, not full DR resource dispatch.
+                    Captures first-order elasticity but not participation caps or notification delays.
+                </li>
+                <li class="moderate">
+                    <strong>Simplified inter-regional trade</strong> — Import/export from EIA-930 historical data; not price-responsive.
+                </li>
+                <li class="moderate">
+                    <strong>Policy snapshot (early 2025)</strong> — RPS, IRA credits, and GHG Protocol evolve;
+                    model frozen at 2025 assumptions.
+                </li>
+                <li class="moderate">
+                    <strong>Retirement heuristic</strong> — Fractional retirements based on margin thresholds;
+                    real closure decisions are binary and depend on factors the model ignores (decommissioning costs, state intervention).
+                </li>
+                <li class="moderate">
+                    <strong>Trajectory confidence degrades</strong> — Beyond 2030: moderate extrapolation.
+                    Beyond 2040: high uncertainty. Assumptions about cost curves, demand growth, and policy become speculative.
+                </li>
+            </ol>
+        </div>
+
+        <!-- Section 7: Simulation Modes -->
+        <div class="meth-section">
+            <h2>7. Simulation Modes &amp; Confidence</h2>
+            <div style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Mode</th>
+                            <th>Use Case</th>
+                            <th>Horizon</th>
+                            <th>Runtime</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Snapshot</strong></td>
+                            <td>Single-condition analysis, quick screening</td>
+                            <td>2025 only</td>
+                            <td>5–15 sec</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Trajectory</strong></td>
+                            <td>Multi-year planning, nuclear risk, learning effects</td>
+                            <td>2023–2050</td>
+                            <td>30–120 sec</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Sweep</strong></td>
+                            <td>Full sensitivity analysis, parametric surface</td>
+                            <td>2025 baseline</td>
+                            <td>5–30 min</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Trajectory Confidence Zones</h3>
+            <ul>
+                <li><strong>Calibrated (&le;2030)</strong> — Grounded in observed 2020–2024 data, validated against historical actuals.</li>
+                <li><strong>Moderate Extrapolation (2030–2040)</strong> — Technology costs and demand growth projected; policy assumptions held constant.</li>
+                <li><strong>High Uncertainty (2040+)</strong> — Speculative; assumes Wright's Law continues, no major policy breaks, stable demand growth.</li>
+            </ul>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-brand"><strong>Constellation Energy</strong> &middot; Market Simulation Screening Tool</div>
+        <div class="footer-note">Directionally correct economics for targeted IPM/GenX analysis</div>
+    </footer>
+    <div class="bottom-banner"></div>
+
+</body>
+</html>
