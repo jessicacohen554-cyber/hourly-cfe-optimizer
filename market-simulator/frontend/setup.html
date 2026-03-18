@@ -647,6 +647,15 @@
                             <button type="button" class="toggle-btn" data-value="Off">Off</button>
                         </div>
                     </div>
+                    <div class="input-group">
+                        <label>Demand Response <span class="info-icon" data-tooltip="Price-elastic load shedding. When LMP exceeds ISO-specific trigger prices, registered DR capacity curtails demand. PJM: 10 GW at $100+/MWh, ERCOT: 5 GW at $200+/MWh, MISO: 8 GW at $120+/MWh. Higher levels = more participation, lower trigger prices.">i</span></label>
+                        <div class="toggle-btn-group" id="drToggle">
+                            <button type="button" class="toggle-btn active" data-value="Off">Off</button>
+                            <button type="button" class="toggle-btn" data-value="Low">Low</button>
+                            <button type="button" class="toggle-btn" data-value="Medium">Med</button>
+                            <button type="button" class="toggle-btn" data-value="High">High</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="custom-file-section" style="margin-top: var(--space-md);">
                     <label class="custom-file-toggle">

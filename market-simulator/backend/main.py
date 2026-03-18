@@ -441,6 +441,8 @@ def _map_request_to_conditions(req: SimulationRequest) -> dict:
         } if req.clean_lcoes else None,
         # Inter-regional interchange toggle
         "interchange_enabled": req.interchange_enabled,
+        # Demand response level
+        "dr_level": req.dr_level,
     }
 
 
@@ -922,6 +924,11 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
         gas_fleet_shift=gas_fleet_shift,
         sensitivity_matrix=sensitivity_matrix,
         ccs_analysis=ccs_analysis,
+        # Demand response metrics from final year
+        dr_curtailed_gwh=final.get("dr_curtailed_gwh", 0),
+        dr_peak_gw=final.get("dr_peak_gw", 0),
+        dr_hours=final.get("dr_hours", 0),
+        dr_avg_price=final.get("dr_avg_price", 0),
     )
 
 
