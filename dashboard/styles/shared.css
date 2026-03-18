@@ -491,6 +491,9 @@ p {
     padding: var(--pad-card);
     box-shadow: var(--shadow-sm);
 }
+/* Spacious card variant — extra internal padding */
+.card.card-spacious { padding: var(--space-xl); }
+
 /* Chart panel (solid white - no glass effect for readability) */
 .chart-panel {
     background: #FFFFFF;
@@ -584,6 +587,8 @@ p {
 .glass-chart-panel canvas {
     background: transparent;
 }
+/* Flush variant — use inside grids where grid gap handles spacing */
+.glass-chart-panel.flush { margin: 0; max-width: none; }
 
 /* Accent-bordered card variants (semi-transparent fill + saturated outline) */
 .card-accent {

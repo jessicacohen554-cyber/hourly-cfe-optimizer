@@ -213,6 +213,9 @@
     .chart-grid-2 { grid-template-columns: 1fr; }
     .heatmap-grid { grid-template-columns: 1fr; }
 }
+@media (max-width: 480px) {
+    .deep-chart-wrap { min-height: 200px; }
+}
 </style>
 </head>
 <body>
@@ -299,25 +302,25 @@
 <section class="content-section scroll-reveal">
 
     <div class="chart-grid-2">
-        <div class="glass-chart-panel" style="margin:0">
+        <div class="glass-chart-panel flush">
             <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Grid Hourly Match Score (%)</h4>
             <div class="deep-chart-wrap">
                 <canvas id="chartHmsRibbon"></canvas>
             </div>
         </div>
-        <div class="glass-chart-panel" style="margin:0">
+        <div class="glass-chart-panel flush">
             <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Fossil CO&#8322; Displaced (Mt)</h4>
             <div class="deep-chart-wrap">
                 <canvas id="chartCo2Ribbon"></canvas>
             </div>
         </div>
-        <div class="glass-chart-panel" style="margin:0">
+        <div class="glass-chart-panel flush">
             <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">CO&#8322; Efficiency (Mt displaced per $B)</h4>
             <div class="deep-chart-wrap">
                 <canvas id="chartEffRibbon"></canvas>
             </div>
         </div>
-        <div class="glass-chart-panel" style="margin:0">
+        <div class="glass-chart-panel flush">
             <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Curtailment (TWh)</h4>
             <div class="deep-chart-wrap">
                 <canvas id="chartCurtRibbon"></canvas>
@@ -380,14 +383,14 @@
     </div>
 
     <div class="chart-grid-2">
-        <div class="glass-chart-panel" style="margin:0">
+        <div class="glass-chart-panel flush">
             <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Curtailment vs. Threshold</h4>
             <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm)">Strategies that overbuild renewables early show rising curtailment at higher targets.</p>
             <div class="deep-chart-wrap">
                 <canvas id="chartCurtTrajectory"></canvas>
             </div>
         </div>
-        <div class="glass-chart-panel" style="margin:0">
+        <div class="glass-chart-panel flush">
             <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">New Gas Buildout vs. Threshold</h4>
             <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm)">Total gas capacity required at each CO&#8322; target. Lower = less fossil backup needed.</p>
             <div class="deep-chart-wrap">
@@ -403,7 +406,7 @@
             <select id="trajectoryStratSelect" style="font-family:var(--font-data);font-size:12px;padding:4px 8px;border-radius:var(--radius-sm);border:1px solid #CBD5E1;">
             </select>
         </div>
-        <div class="deep-chart-wrap" style="min-height:350px">
+        <div class="deep-chart-wrap">
             <canvas id="chartResourceTrajectory"></canvas>
         </div>
     </div>
@@ -431,14 +434,14 @@
 <section class="content-section scroll-reveal">
 
     <div class="chart-grid-2">
-        <div class="glass-chart-panel" style="margin:0">
+        <div class="glass-chart-panel flush">
             <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Cost Trajectories by Strategy (at 95% target)</h4>
             <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm)">Blended $/MWh as participation scales. Lower = faster learning curve realization.</p>
             <div class="deep-chart-wrap">
                 <canvas id="chartWrightsTrajectory"></canvas>
             </div>
         </div>
-        <div class="glass-chart-panel" style="margin:0">
+        <div class="glass-chart-panel flush">
             <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Critical Mass Threshold</h4>
             <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm)">Participation level where blended costs reach net-negative (learning curves outpace premiums).</p>
             <div class="deep-chart-wrap">
