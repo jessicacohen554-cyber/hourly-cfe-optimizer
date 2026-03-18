@@ -961,7 +961,10 @@ async def simulate(req: SimulationRequest):
 
         # Build sim_years from request parameters
         from market_simulation import build_sim_years
-        if req.start_year and req.end_year:
+        if req.mode == "snapshot":
+            # Snapshot: single year only (fast, 5-20s)
+            custom_sim_years = [req.start_year or 2025]
+        elif req.start_year and req.end_year:
             custom_sim_years = build_sim_years(
                 start=req.start_year,
                 end=req.end_year,
@@ -1045,6 +1048,7 @@ async def simulate(req: SimulationRequest):
 
                     # Build zonal stacks from fleet model
                     fm = FleetModel(iso=iso)
+                    fm.build_fleet()
                     if fm.fleet is not None and not fm.fleet.empty:
                         fm.assign_zones()
                         zone_stacks = fm.build_zonal_merit_order_stacks(
@@ -1086,16 +1090,17 @@ async def simulate(req: SimulationRequest):
 
             # Attach zonal LMP stats to response if available
             if zonal_stats:
+                from models import ZonalLMPStats
                 response.zonal_lmp_stats = [
-                    {
-                        'zone_name': s['zone_name'],
-                        'avg_lmp': round(s['avg_lmp'], 2),
-                        'peak_lmp': round(s['peak_lmp'], 2),
-                        'offpeak_lmp': round(s['offpeak_lmp'], 2),
-                        'p10_lmp': round(s['p10_lmp'], 2),
-                        'p90_lmp': round(s['p90_lmp'], 2),
-                        'price_spread_vs_system': round(s['price_spread_vs_system'], 2),
-                    }
+                    ZonalLMPStats(
+                        zone_name=s['zone_name'],
+                        avg_lmp=round(s['avg_lmp'], 2),
+                        peak_lmp=round(s['peak_lmp'], 2),
+                        offpeak_lmp=round(s['offpeak_lmp'], 2),
+                        p10_lmp=round(s['p10_lmp'], 2),
+                        p90_lmp=round(s['p90_lmp'], 2),
+                        price_spread_vs_system=round(s['price_spread_vs_system'], 2),
+                    )
                     for s in zonal_stats.values()
                 ]
 

@@ -45,6 +45,24 @@ else
     echo "[OK] Data profiles found"
 fi
 
+# ── Generate plant heat rates if needed ──────────────────────────────────────
+if [ ! -f "data/plant_heat_rates.json" ]; then
+    echo "Generating plant-specific heat rates..."
+    PYTHONPATH="$SCRIPT_DIR:$SCRIPT_DIR/backend:$SCRIPT_DIR/scripts" $PYTHON scripts/generate_plant_heat_rates.py 2>/dev/null || true
+    echo "[OK] Plant heat rates ready"
+else
+    echo "[OK] Plant heat rates found"
+fi
+
+# ── Generate interchange profiles if needed ──────────────────────────────────
+if [ ! -f "data/profiles/eia_interchange_profiles.json" ]; then
+    echo "Generating inter-regional interchange profiles..."
+    PYTHONPATH="$SCRIPT_DIR:$SCRIPT_DIR/backend:$SCRIPT_DIR/scripts" $PYTHON scripts/generate_synthetic_profiles.py 2>/dev/null || true
+    echo "[OK] Interchange profiles ready"
+else
+    echo "[OK] Interchange profiles found"
+fi
+
 # ── Open browser (after short delay for server startup) ──────────────────────
 (sleep 2 && {
     URL="http://127.0.0.1:$PORT"

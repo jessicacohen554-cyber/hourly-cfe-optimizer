@@ -1,0 +1,90 @@
+SIMULATION INPUT PARAMETERS — run_005_ERCOT
+Generated: 2026-03-18 14:39:07
+============================================================
+
+{
+  "iso": "ERCOT",
+  "fuel_prices": {
+    "coal": 2.25,
+    "gas": 3.5,
+    "oil": 10.5
+  },
+  "carbon_price": 0.0,
+  "emission_prices": {
+    "nox": 0.0,
+    "sox": 0.0
+  },
+  "emission_limits": {
+    "nox_limit": null,
+    "sox_limit": null
+  },
+  "heat_rates": {
+    "coal_steam": 10.0,
+    "gas_ccgt": 7.0,
+    "gas_ct": 10.5,
+    "oil_ct": 10.5
+  },
+  "vom": {
+    "coal_steam": 5.5,
+    "gas_ccgt": 3.5,
+    "gas_ct": 5.0,
+    "oil_ct": 6.0
+  },
+  "clean_lcoes": {
+    "solar": 65.0,
+    "wind": 62.0,
+    "offshore_wind": 85.0,
+    "nuclear": 90.0,
+    "ccs_ccgt": 120.0,
+    "geothermal": null
+  },
+  "incentives": {
+    "ptc_wind": 26.0,
+    "ptc_solar": 26.0,
+    "ptc_nuclear_new": 26.0,
+    "ptc_45u_max": 15.0,
+    "ptc_45u_floor": 40.0,
+    "ptc_45u_floor_escalation": 0.0,
+    "ptc_45u_sunset_year": 2032,
+    "itc_pct": 30.0,
+    "rec_price": null
+  },
+  "storage_costs": {
+    "battery": 295.0,
+    "battery8": 456.0,
+    "ldes": 220.0
+  },
+  "capacity_market_price": null,
+  "wholesale_price_override": null,
+  "q45": true,
+  "ccs_credit_override": null,
+  "transmission_level": "Medium",
+  "demand_growth": "Medium",
+  "ppa_level": "Medium",
+  "gas_friction": "Medium",
+  "queue_cap_level": "Medium",
+  "queue_cap_override_gw": null,
+  "nuclear_retirement_threshold": 30.0,
+  "mode": "snapshot",
+  "years": [
+    2030,
+    2035,
+    2040,
+    2045,
+    2050
+  ],
+  "start_year": 2025,
+  "end_year": 2060,
+  "year_step": 1,
+  "custom_overrides": {
+    "fuel": false,
+    "lmp": false,
+    "capacity": false,
+    "rec": false
+  },
+  "dr_level": "Medium",
+  "fossil_lcoes": null,
+  "tx_overrides": null,
+  "interchange_enabled": true,
+  "fleet_overrides": null
+}
