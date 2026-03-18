@@ -240,7 +240,131 @@
         <p><em>Alignment with The 8,760 Problem:</em> The site&rsquo;s synthetic LMP model (150,000+ scenarios per ISO) directly addresses the cannibalization challenge, and the curtailment cost quantification across matching targets and regions extends existing analysis. <em>Extension:</em> The stranded investment analysis &mdash; comparing interim vs. long-term target procurement decisions &mdash; is not found in the academic capacity expansion literature, which typically optimizes for a single future year.</p>
     </div>
 
-    <!-- SECTIONS 6-11 + REFERENCES TO BE ADDED -->
+    <hr>
+
+    <!-- ===== SECTION 6 ===== -->
+    <h2 id="lastmile">6. The Last Mile: Storage Economics, Grid Resilience, and Resource Adequacy</h2>
+
+    <p>Battery storage enables temporal shifting of clean energy from surplus to deficit hours. The NREL ATB 2024 reports 4-hour lithium-ion round-trip efficiency of 85% <sup><a href="#ref-41">41</a></sup>, with installed costs declining from $380/kWh in 2020 to approximately $250/kWh in 2024 <sup><a href="#ref-58">58</a></sup>. BloombergNEF reports global average lithium-ion pack prices at $108/kWh in 2025 (down 93% since 2010), with stationary storage packs at $70/kWh <sup><a href="#ref-59">59</a></sup>. The EIA reports 16 GW of utility-scale battery storage installed in the U.S. as of 2024, with the majority in California (CAISO) and Texas (ERCOT) <sup><a href="#ref-60">60</a></sup>.</p>
+
+    <p>However, 4-hour storage has limited ability to address multi-day deficits or seasonal mismatches. Dowling et al. (2020) show that storage alone cannot cost-effectively replace firm generation at high decarbonization levels, as the required storage duration scales nonlinearly with the matching target <sup><a href="#ref-61">61</a></sup>. Cole et al. (2021, <em>Joule</em>, NREL) demonstrated that costs increase nonlinearly for the last few percent toward 100% renewable electricity <sup><a href="#ref-62">62</a></sup>. Mai et al. (2022, <em>Joule</em>, NREL) evaluated six strategies for the last 10%, concluding that no single strategy is sufficient <sup><a href="#ref-63">63</a></sup>.</p>
+
+    <h3>Long-Duration Energy Storage</h3>
+
+    <p>Form Energy&rsquo;s iron-air battery targets &lt;$20/kWh for 100+ hours of continuous discharge, though current costs exceed $150/kWh <sup><a href="#ref-64">64</a></sup>. The DOE Long Duration Storage Shot (July 2021) targets 90% cost reduction for 10+ hour storage <sup><a href="#ref-65">65</a></sup>. The DOE Pathways to Commercial Liftoff for LDES (2023) estimates net-zero pathways deploying LDES yield $10&ndash;20 billion/year in savings and reduce the need for 200+ GW of new gas capacity <sup><a href="#ref-66">66</a></sup>. The LDES Council/McKinsey analysis (2021) concluded LDES is most competitive beyond 6&ndash;8 hours <sup><a href="#ref-67">67</a></sup>.</p>
+
+    <h3>Resource Adequacy and Dunkelflaute</h3>
+
+    <p>PJM adopted marginal ELCC methodology (FERC-approved January 2024). Solar incremental capacity credit in CAISO is expected to drop to 6% by 2026 <sup><a href="#ref-68">68</a></sup>. Kittel et al. (2024, arXiv) quantified 2&ndash;10 Dunkelflaute events per year in northern Europe, mostly October&ndash;February. Germany experienced a major event in November 2024 with renewable contribution dropping to 30% and prices surging above &euro;145/MWh <sup><a href="#ref-69">69</a></sup>.</p>
+
+    <h3>Critical Mineral Supply Chains</h3>
+
+    <p>The supply chain for clean energy technologies faces material constraints. The IEA Critical Minerals Market Review 2024 documents concentration risk in key mineral supply chains <sup><a href="#ref-70">70</a></sup>. The USGS Mineral Commodity Summaries 2024 and DOE Critical Materials Assessment (2023) further detail bottlenecks in lithium, cobalt, nickel, and rare earths <sup><a href="#ref-71">71</a></sup> <sup><a href="#ref-72">72</a></sup>. S&amp;P Global&rsquo;s copper analysis (2022) warns that demand from the energy transition may outstrip supply growth <sup><a href="#ref-73">73</a></sup>. Uranium supply remains adequate for current fleet operations, with the World Nuclear Association documenting stable mining production <sup><a href="#ref-74">74</a></sup>.</p>
+
+    <div class="alignment-box">
+        <p><em>Alignment with The 8,760 Problem:</em> The site&rsquo;s treatment of the 90&ndash;100% zone with 2.5% granularity directly addresses the &ldquo;last mile&rdquo; problem. Its inclusion of diverse storage durations and firm power options mirrors the literature&rsquo;s finding that no single technology solves the last 10%. <em>Extension:</em> The MAC vs. DAC crossover analysis with &ldquo;no-regrets&rdquo; resource identification represents a novel decision framework not found in the storage literature.</p>
+    </div>
+
+    <hr>
+
+    <!-- ===== SECTION 7 ===== -->
+    <h2 id="interconnection">7. The Interconnection Bottleneck and Market Design Challenges</h2>
+
+    <p>Berkeley Lab&rsquo;s &ldquo;Queued Up&rdquo; series (Rand et al., 2025) documents ~2,300 GW of capacity (10,300 projects) actively seeking grid connection. Only 13% of capacity from 2000&ndash;2019 reached commercial operations; 77% was withdrawn. Median wait times have doubled to over 4 years <sup><a href="#ref-75">75</a></sup>.</p>
+
+    <p>FERC Order No. 2023 (July 2023, with Order 2023-A in March 2024) represents the most significant interconnection reform in two decades, replacing first-come-first-served with cluster-based studies, increasing financial readiness requirements, and mandating interconnection heatmaps <sup><a href="#ref-76">76</a></sup>.</p>
+
+    <p>Wholesale market design faces fundamental challenges. Lo Prete, Palmer, and Robertson (RFF Report 24-09, June 2025) reviewed 11 proposed market designs against 10 criteria and concluded that existing designs are poorly suited for the evolving resource mix. Reliability challenges increasingly arise not from lack of capacity but from lack of available energy at times of need &mdash; a shift from capacity adequacy to energy adequacy <sup><a href="#ref-77">77</a></sup>.</p>
+
+    <p>PJM&rsquo;s July 2024 capacity auction cleared at $269.92/MW-day, a nearly 10-fold increase from the prior year&rsquo;s $28.92, driven by retirements, demand growth, and the new marginal ELCC methodology. ERCOT&rsquo;s energy-only market faces separate challenges with loss-of-load expectation at 1.25 days/year &mdash; far above the 0.1 standard <sup><a href="#ref-78">78</a></sup>.</p>
+
+    <p>The &ldquo;missing money&rdquo; problem &mdash; where near-zero marginal cost renewables depress wholesale prices and erode revenue for resources needed for reliability &mdash; is worsening. Ela et al. (NREL, 2016) found net revenues insufficient to justify new thermal/nuclear investment in all base cases <sup><a href="#ref-79">79</a></sup>. Hogan (2017, <em>The Electricity Journal</em>) argued that out-of-market capacity mechanisms create &ldquo;misallocated money&rdquo; that undermines innovation <sup><a href="#ref-80">80</a></sup>.</p>
+
+    <p>The DOE National Transmission Needs Study (October 2023) concluded that interregional capacity must grow more than fivefold to realize IRA benefits <sup><a href="#ref-81">81</a></sup>. Simeone and Rose (NREL, June 2024) documented that at the ISO-NE/NYISO interface, power flowed in the economic direction for only 57% of hours in 2022 <sup><a href="#ref-82">82</a></sup>.</p>
+
+    <div class="alignment-box">
+        <p><em>Alignment with The 8,760 Problem:</em> The site covers all 7 US ISOs, inherently modeling differences between capacity markets (PJM, NYISO, ISO-NE), hybrid designs (MISO, SPP), and energy-only markets (ERCOT). <em>Extension:</em> No prior study systematically compares procurement optimization outcomes across all 7 ISOs simultaneously.</p>
+    </div>
+
+    <hr>
+
+    <!-- ===== SECTION 8 ===== -->
+    <h2 id="procurement">8. Corporate Procurement Enters the Firm Power Era</h2>
+
+    <p>BloombergNEF data shows corporations signed ~62 GW of clean power PPAs in 2024 before declining to 55.9 GW in 2025 &mdash; the first drop in nearly a decade. Meta, Amazon, Google, and Microsoft accounted for 49% of all global activity. Critically, 5.2 GW of 2025 deals were &ldquo;baseload-like&rdquo; products &mdash; a structural shift from the prior decade&rsquo;s near-exclusive focus on wind and solar PPAs <sup><a href="#ref-83">83</a></sup>.</p>
+
+    <p>The nuclear deals are unprecedented: Microsoft signed a $1.6 billion PPA with Constellation for TMI Unit 1 restart (835 MW, September 2024). Google signed the first corporate SMR fleet deal with Kairos Power (up to 500 MW, October 2024) and committed capital to Elementl Power for 1.8 GW. Amazon is pursuing nearly 2 GW from Talen Energy&rsquo;s Susquehanna plant. Meta signed 1.1 GW with Constellation&rsquo;s Clinton Clean Energy Center (June 2025). Combined, Big Tech contracted for 10+ GW of possible new nuclear capacity in 2024&ndash;2025 <sup><a href="#ref-84">84</a></sup> <sup><a href="#ref-85">85</a></sup> <sup><a href="#ref-86">86</a></sup> <sup><a href="#ref-87">87</a></sup>.</p>
+
+    <p>IRA Section 45V (final regulations January 2025) established hourly matching required starting January 1, 2030 for hydrogen production tax credits &mdash; the first federal hourly matching mandate in US law <sup><a href="#ref-88">88</a></sup>. The IEA World Energy Outlook 2024 provides the broader policy context <sup><a href="#ref-89">89</a></sup>, while Carbon Tracker&rsquo;s stranded assets analysis demonstrates the financial risk of continued fossil fuel investment <sup><a href="#ref-90">90</a></sup>.</p>
+
+    <div class="alignment-box">
+        <p><em>Alignment with The 8,760 Problem:</em> The site contextualizes these corporate procurement decisions within its optimization framework, showing how different procurement strategies (annual vs. hourly, VRE-only vs. diversified) produce different system-level outcomes. <em>Extension:</em> The stranded investment analysis and Wright&rsquo;s Law critical mass framework provide procurement strategists with quantitative tools for evaluating the system-level consequences of their individual decisions.</p>
+    </div>
+
+    <hr>
+
+    <!-- ===== SECTION 9 ===== -->
+    <h2 id="cemodels">9. Relationship to Capacity Expansion Models</h2>
+
+    <p>The dominant tools for grid planning &mdash; GenX <sup><a href="#ref-91">91</a></sup>, ReEDS <sup><a href="#ref-92">92</a></sup>, SWITCH <sup><a href="#ref-93">93</a></sup>, and PyPSA <sup><a href="#ref-94">94</a></sup> &mdash; are capacity expansion (CE) models. They solve a unified optimization: given cost assumptions, find the least-cost portfolio of generation, storage, and transmission that meets demand subject to reliability and policy constraints. They are powerful system-planning instruments. This optimizer is not one of them, and the distinction is deliberate.</p>
+
+    <p><strong>CE models answer a system planner&rsquo;s question: &ldquo;What should the grid build?&rdquo;</strong> They co-optimize capacity investment and operational dispatch within a single linear or mixed-integer program, typically over a 20&ndash;30 year horizon. To keep the problem computationally tractable, most CE models compress 8,760 hours into representative periods &mdash; often 50&ndash;200 time slices selected to preserve statistical properties of load and renewable output <sup><a href="#ref-95">95</a></sup>. This approximation is acceptable for system-level planning, where the goal is directionally correct capacity buildout under policy scenarios.</p>
+
+    <p><strong>This optimizer answers a procurement strategist&rsquo;s question: &ldquo;What does it cost to match my load cleanly at every hour, and what drives that cost?&rdquo;</strong> The unit of analysis is not the grid &mdash; it is a load-following clean energy portfolio evaluated against actual hourly demand and generation profiles. This reframing enables (and requires) a different methodological architecture.</p>
+
+    <h3>Full Temporal Resolution Without Representative-Period Compression</h3>
+
+    <p>Hourly CFE matching is inherently a tail-risk problem. The hours that matter most &mdash; winter evening peaks, multi-day wind droughts, low-solar shoulder seasons &mdash; are precisely the hours that representative-period selection algorithms tend to underweight. A portfolio that scores 95% CFE on representative days may score 88% on the actual 8,760-hour profile because the hardest hours were averaged away. This optimizer simulates every hour of the year, which is essential for accurately sizing storage, quantifying curtailment losses, and identifying the resource mix transitions that occur at high matching thresholds.</p>
+
+    <h3>Physics-First Feasibility, Then Economic Evaluation</h3>
+
+    <p>CE models couple physics and economics into a single objective: minimize cost subject to constraints. This produces one optimal point per scenario. If cost assumptions change, the entire optimization must re-run. This optimizer inverts the sequence. Step 1 exhaustively enumerates the <em>Physics Feasible Space</em> (PFS) &mdash; all resource mixes capable of achieving each hourly matching target from 50% to 100% &mdash; without reference to cost. Step 3 then evaluates the economic performance of every feasible mix under thousands of cost scenarios. Because physics and economics are decoupled, changing cost assumptions requires only a re-evaluation of the cached feasible space (minutes), not a re-solve of the physical dispatch (hours).</p>
+
+    <p>This architecture exposes structure that single-objective optimization conceals. The full PFS reveals that multiple qualitatively different portfolios can achieve the same matching target: a wind-heavy/low-storage mix and a solar-heavy/high-storage mix may both reach 90% CFE, but their cost sensitivity profiles diverge sharply under different technology cost futures. A CE model would return whichever is cheaper under its assumed inputs; this optimizer returns both and maps their relative economics across the entire sensitivity space. For a procurement strategist evaluating a 15&ndash;20 year PPA commitment under cost uncertainty, this visibility into portfolio robustness across scenarios is directly actionable.</p>
+
+    <h3>Parametric Sensitivity at Marginal Cost</h3>
+
+    <p>The cached PFS of ~21.4 million physics-validated mixes enables what would be computationally prohibitive in a CE framework: exhaustive parametric sensitivity analysis across 5,832 cost scenarios per region and threshold (17,496 for CAISO). Each scenario varies renewable generation costs, firm generation costs, storage costs, fossil fuel prices, transmission costs, CCS technology costs, and 45Q policy assumptions simultaneously. In a CE model, each combination would require a full re-solve; here, it requires a vectorized cost evaluation on the pre-computed feasible set. This enables the ANOVA-style sensitivity decomposition &mdash; identifying which cost toggles dominate total cost variance at each matching threshold and in each region &mdash; which would be impractical to derive from a model requiring hours per solve.</p>
+
+    <h3>What This Approach Does Not Do</h3>
+
+    <p>The tradeoffs are real. This optimizer does not model unit commitment, spinning reserves, or ramp-rate constraints &mdash; operational details that matter for grid reliability but are secondary for portfolio-level procurement analysis. It treats each ISO as a single node, omitting intra-regional transmission congestion. Storage dispatch follows a deterministic priority rule (short-duration batteries first, then long-duration) rather than being co-optimized with generation dispatch per cost scenario. And it is a snapshot model using 5-year averaged hourly profiles (2021&ndash;2025 element-wise averages for shapes, 2025 actuals for quantities), not a multi-decade capacity expansion pathway.</p>
+
+    <p>CO&#8322; emission rates are static annual averages per ISO and fuel type (sourced from EPA eGRID), applied uniformly across all 8,760 hours. The model does not capture hourly marginal emission rate variation &mdash; real grids exhibit significant diurnal and seasonal shifts in marginal fuel mix. Fuel-switching elasticity is also absent: the fossil fuel price toggle affects LMP-based cost calculations but does not alter emission factors. The deployment queue is an economic ordering (cheapest marginal abatement cost first, with within-ISO sequential buildout constraints), not a representation of physical FERC interconnection queue position, permitting timelines, or supply chain bottlenecks.</p>
+
+    <p>These are appropriate simplifications for the question being asked. A corporate buyer evaluating hourly CFE procurement does not need to solve the system planner&rsquo;s problem. They need to understand how their portfolio&rsquo;s cost and physical performance interact across plausible futures &mdash; and that requires full temporal resolution, exhaustive feasibility mapping, and rapid parametric evaluation, none of which are strengths of the CE paradigm.</p>
+
+    <p>The two approaches are complementary. CE models like GenX and ReEDS generate the technology cost projections and system-level deployment trajectories that inform this optimizer&rsquo;s input assumptions (LCOE ranges, transmission costs, capacity factors). This optimizer then applies those assumptions to the specific problem of hourly load matching &mdash; a procurement-scale question that system models are not designed to answer at the temporal granularity required.</p>
+
+    <hr>
+
+    <!-- ===== SECTION 10 ===== -->
+    <h2 id="contributions">10. Novel Contributions of The 8,760 Problem</h2>
+
+    <p>Across all research domains reviewed, the following nine contributions are not found in any prior published work:</p>
+
+    <ol style="padding-left: 1.5em; margin-bottom: 24px;">
+        <li style="margin-bottom: 12px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.75;"><strong>Co-optimization of cost and resource mix across 5,832 sensitivity scenarios per ISO</strong> (vs. single-point estimates in existing models). The parametric breadth enables ANOVA-style sensitivity decomposition identifying which cost toggles dominate variance at each threshold and region.</li>
+        <li style="margin-bottom: 12px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.75;"><strong>The four-pool supply model</strong> (Standard Supply Service / Corporate-Contracted / Merchant / New-Build). This operationalizes the distinction between existing and new clean resources in a way that reflects actual procurement market structure.</li>
+        <li style="margin-bottom: 12px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.75;"><strong>The 10-strategy procurement comparison framework</strong> (3 consequential, 3 hourly, 4 annual). The most comprehensive side-by-side evaluation of procurement strategies documented to date &mdash; existing studies compare at most 2&ndash;3 strategies.</li>
+        <li style="margin-bottom: 12px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.75;"><strong>The critical mass analysis for Wright&rsquo;s Law learning curve activation.</strong> No published study quantifies how many corporate procurement decisions are needed to trigger specific learning rate milestones for advanced nuclear or enhanced geothermal at the ISO level.</li>
+        <li style="margin-bottom: 12px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.75;"><strong>The ~33,000 physics-feasible resource mixes per ISO</strong> (21.4 million total). The exhaustive enumeration of the Physics Feasible Space exposes structure that single-objective optimization conceals.</li>
+        <li style="margin-bottom: 12px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.75;"><strong>The stranded investment analysis</strong> (interim vs. long-term target comparison). Not found in the academic capacity expansion literature, which typically optimizes for a single future year.</li>
+        <li style="margin-bottom: 12px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.75;"><strong>The synthetic LMP model</strong> (150,000+ scenarios per ISO). Extends beyond existing temporal mismatch analysis to generate comprehensive price distributions.</li>
+        <li style="margin-bottom: 12px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.75;"><strong>MAC vs. DAC crossover analysis.</strong> Identifies where hourly matching becomes more expensive than direct air capture, with &ldquo;no-regrets&rdquo; resource identification below the threshold.</li>
+        <li style="margin-bottom: 12px; font-size: 0.95rem; color: var(--text-secondary); line-height: 1.75;"><strong>2.5% threshold granularity in the 90&ndash;100% inflection zone.</strong> Finer than any published study, providing practitioners the precision needed for target-setting in the most cost-sensitive zone.</li>
+    </ol>
+
+    <hr>
+
+    <!-- ===== SECTION 11 ===== -->
+    <h2 id="conclusion">11. Conclusion</h2>
+
+    <p>Across all seven domains, the research literature converges: annual REC matching has negligible system-level emissions impact; hourly matching with diverse clean resources is essential but costly above ~90%; firm clean power reduces system costs by tens of percent; LCOE misleads about dispatchable resource value; interconnection queues create binding constraints; and corporate procurement is shifting toward firm, hourly-matched products.</p>
+
+    <p>What the literature lacks &mdash; and what The 8,760 Problem provides &mdash; is a unified analytical framework connecting these findings across all seven domains simultaneously, at the geographic specificity of individual ISOs, with the scenario breadth needed to support actual procurement decisions under deep uncertainty. By bridging academic models and practitioner needs with unprecedented scenario scale, the site occupies a genuinely novel position &mdash; one that the imminent GHG Protocol Scope 2 revision, SBTi V2 requirements, and the growth of corporate firm-power procurement will make increasingly relevant through 2027 and beyond.</p>
+
+    <!-- REFERENCES TO BE ADDED -->
 
 </div>
 
