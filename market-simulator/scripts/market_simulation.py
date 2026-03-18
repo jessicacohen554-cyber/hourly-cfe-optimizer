@@ -51,6 +51,7 @@ from pipeline_config import (
     OFFSHORE_ISOS, CCS_CAP_TWH, GEOTHERMAL_CAP_TWH,
     H, NUCLEAR_OFFTAKE_CONTRACTS,
     get_rps_floor,
+    FIRM_IMPORT_MW,
 )
 from dispatch_utils import (
     load_common_data, get_demand_profile, get_supply_profiles,
@@ -390,7 +391,8 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
                               carbon_price=0, nox_price=0.0, sox_price=0.0,
                               nox_limit=None, sox_limit=None,
                               custom_fuel_prices=None, custom_co2_price=None,
-                              custom_heat_rates=None, custom_vom=None):
+                              custom_heat_rates=None, custom_vom=None,
+                              interchange_norm=None, firm_import_mw=0):
     """Compute 8760-hour LMP at a given clean percentage.
 
     Returns (hourly_lmp_array, avg_lmp, lmp_p90, generator_economics).
@@ -407,6 +409,7 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
         custom_co2_price=custom_co2_price,
         custom_heat_rates=custom_heat_rates,
         custom_vom=custom_vom,
+        firm_import_mw=firm_import_mw,
     )
 
     # resource_pcts already represents actual % of demand each resource serves
@@ -421,6 +424,7 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
         battery8_dispatch_pct=battery8_pct,
         ldes_dispatch_pct=ldes_pct,
         h2_dispatch_pct=h2_pct,
+        interchange_norm=interchange_norm,
     )
 
     price_model = PriceModel(iso, fuel_level)
@@ -1864,12 +1868,22 @@ def run_market_simulation(scenario_id, conditions, isos=None,
         emission_rates = _preloaded['emission_rates']
         fossil_mix = _preloaded['fossil_mix']
         egrid_baselines = _preloaded['egrid_baselines']
+        interchange_data = _preloaded.get('interchange_data', {})
     else:
         t0 = time.time()
         _log("Loading common data...")
         demand_data, gen_profiles, emission_rates, fossil_mix = load_common_data()
         _log(f"  Common data loaded in {time.time()-t0:.1f}s")
         egrid_baselines = load_egrid_baselines()
+        # Load interchange profiles (empty dict if unavailable → copper-plate fallback)
+        try:
+            from eia_data_io import load_interchange_profiles
+            interchange_data = load_interchange_profiles()
+        except Exception:
+            interchange_data = {}
+
+    # Interchange enabled flag from conditions (default: True)
+    interchange_enabled = conditions.get('interchange_enabled', True)
 
     cumulative_gw = dict(WRIGHT_CUMULATIVE_GW_2025)
     results = {iso: [] for iso in isos}
@@ -2004,8 +2018,27 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 if r in resource_pcts and demand_twh > 0:
                     resource_pcts[r] += (twh / demand_twh) * 100.0
 
+            # --- Inter-regional interchange ---
+            # Retrieve hourly net import profile for this ISO (normalized units).
+            # In trajectory mode, scale by demand growth but cap at firm import MW.
+            iso_ic_data = interchange_data.get(iso, {}).get('2024', {})
+            if interchange_enabled and iso_ic_data.get('net_import_norm'):
+                ic_norm_base = np.array(iso_ic_data['net_import_norm'][:H], dtype=np.float64)
+                # Scale imports by demand growth (more demand → more imports needed)
+                ic_norm = ic_norm_base * growth_factor
+                # Cap at FIRM_IMPORT_MW in normalized units
+                firm_cap = FIRM_IMPORT_MW.get(iso, 0)
+                if firm_cap > 0 and demand_total_mwh > 0:
+                    cap_norm = firm_cap / demand_total_mwh
+                    ic_norm = np.clip(ic_norm, -cap_norm, cap_norm)
+                ic_firm_mw = FIRM_IMPORT_MW.get(iso, 0)
+            else:
+                ic_norm = None
+                ic_firm_mw = 0
+
             _lmp_key = (iso, current_pct, conditions['fuel_level'],
-                        conditions['demand_growth'], year, carbon_price)
+                        conditions['demand_growth'], year, carbon_price,
+                        interchange_enabled)
             if _lmp_cache is not None and _lmp_key in _lmp_cache:
                 hourly_lmp, avg_lmp, p90_lmp, gen_econ = _lmp_cache[_lmp_key]
             else:
@@ -2023,6 +2056,8 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                     custom_co2_price=conditions.get('custom_co2_price'),
                     custom_heat_rates=conditions.get('custom_heat_rates'),
                     custom_vom=conditions.get('custom_vom'),
+                    interchange_norm=ic_norm,
+                    firm_import_mw=ic_firm_mw,
                 )
                 if _lmp_cache is not None:
                     _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ)
