@@ -1859,3 +1859,34 @@ def get_confidence_zone(year: int) -> str:
     elif year <= 2040:
         return 'moderate'
     return 'low'
+
+
+def adjust_confidence_for_triggers(year_zone: str, ipm_triggers: list) -> tuple:
+    """Downgrade confidence zone based on IPM trigger severity.
+
+    Rules:
+    - Any trigger with severity='high' → cap at 'moderate'
+    - 2+ triggers with severity='medium' → cap at 'moderate'
+    - 'low' confidence is never upgraded (year-based floor applies)
+
+    Returns:
+        (adjusted_zone, was_adjusted) tuple
+    """
+    if not ipm_triggers:
+        return year_zone, False
+
+    # 'low' is already the floor — triggers can't make it worse
+    if year_zone == 'low':
+        return year_zone, False
+
+    high_count = sum(1 for t in ipm_triggers
+                     if (t.get('severity') if isinstance(t, dict) else getattr(t, 'severity', '')) == 'high')
+    medium_count = sum(1 for t in ipm_triggers
+                       if (t.get('severity') if isinstance(t, dict) else getattr(t, 'severity', '')) == 'medium')
+
+    should_cap = high_count >= 1 or medium_count >= 2
+
+    if should_cap and year_zone == 'high':
+        return 'moderate', True
+
+    return year_zone, False
