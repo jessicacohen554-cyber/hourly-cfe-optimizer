@@ -357,25 +357,27 @@
             if (chartType === 'doughnut' || chartType === 'pie') {
                 if (Array.isArray(ds.backgroundColor)) {
                     ds.borderColor = ds.backgroundColor.map(function(c) { return c; });
-                    ds.backgroundColor = ds.backgroundColor.map(function(c) { return toRGBA(c, 0.3); });
+                    ds.backgroundColor = ds.backgroundColor.map(function(c) { return toRGBA(c, ds._existing ? 0.85 : 0.15); });
                 }
-                ds.borderWidth = ds.borderWidth || 2;
+                ds.borderWidth = 2;
             } else if (chartType === 'radar') {
                 if (ds.backgroundColor && !Array.isArray(ds.backgroundColor)) {
                     ds.backgroundColor = toRGBA(ds.borderColor || ds.backgroundColor, 0.2);
                 }
                 ds.borderWidth = ds.borderWidth || 2;
             } else if (chartType === 'bar') {
+                var alpha = ds._existing ? 0.85 : 0.15;
                 if (ds.backgroundColor && !Array.isArray(ds.backgroundColor)) {
                     if (!ds.borderColor || ds.borderColor === '#fff') {
                         ds.borderColor = ds.backgroundColor;
                     }
-                    ds.backgroundColor = toRGBA(ds.borderColor, 0.25);
+                    ds.backgroundColor = toRGBA(ds.borderColor, alpha);
                 } else if (Array.isArray(ds.backgroundColor)) {
                     ds.borderColor = ds.backgroundColor.map(function(c) { return c; });
-                    ds.backgroundColor = ds.backgroundColor.map(function(c) { return toRGBA(c, 0.25); });
+                    ds.backgroundColor = ds.backgroundColor.map(function(c) { return toRGBA(c, alpha); });
                 }
-                ds.borderWidth = ds.borderWidth || 1.5;
+                ds.borderWidth = 2;
+                ds.borderRadius = ds.borderRadius || 3;
             } else if (chartType === 'line') {
                 if (ds.fill !== false && ds.fill !== undefined && ds.borderColor) {
                     ds.backgroundColor = toRGBA(ds.borderColor, 0.15);
@@ -463,7 +465,7 @@
                 data: {
                     labels: fuels.map(function(f){ return FUEL_LABELS[f]; }),
                     datasets: [{ data: fuels.map(function(f){ return byFuel[f].gen_twh; }),
-                        backgroundColor: fuels.map(function(f){ return FUEL_COLORS[f]; }), borderWidth: 2, borderColor: '#fff' }]
+                        backgroundColor: fuels.map(function(f){ return FUEL_COLORS[f]; }), _existing: true }]
                 },
                 options: { responsive: true, maintainAspectRatio: false,
                     plugins: { legend: { position: 'right', labels: { font: { size: 11 }, padding: 8 } } } }
@@ -494,7 +496,8 @@
                     datasets: isoFuels.map(function(f){ return {
                         label: FUEL_LABELS[f],
                         data: isoOrder.map(function(iso){ return (co.fleet_summary[iso] && co.fleet_summary[iso][f]) ? (co.fleet_summary[iso][f].gen_twh || 0) : 0; }),
-                        backgroundColor: FUEL_COLORS[f]
+                        backgroundColor: FUEL_COLORS[f],
+                        _existing: true
                     }; })
                 },
                 options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false,
@@ -649,7 +652,7 @@
             makeChart('slide-gasLocation', {
                 type: 'bar',
                 data: { labels: gasISOs, datasets: [
-                    { label: 'Existing Gas (TWh)', data: existingGas, backgroundColor: RESOURCE_COLORS.fossilGas || '#6B7280' }
+                    { label: 'Existing Gas (TWh)', data: existingGas, backgroundColor: RESOURCE_COLORS.fossilGas || '#6B7280', _existing: true }
                 ]},
                 options: { responsive: true, maintainAspectRatio: false,
                     scales: { y: { title: { display: true, text: 'Generation (TWh)' }, beginAtZero: true } },
@@ -705,8 +708,7 @@
                     labels: ['CCS Retrofit', 'DAC Offset / No Storage', 'Retired'],
                     datasets: [{
                         data: [Math.round(retrofitMW), Math.round(dacMW), Math.max(0, Math.round(totalGas - retrofitMW - dacMW))],
-                        backgroundColor: [RESOURCE_COLORS.ccs || '#64748B', '#EF4444', '#D1D5DB'],
-                        borderWidth: 2
+                        backgroundColor: [RESOURCE_COLORS.ccs || '#64748B', '#EF4444', '#D1D5DB']
                     }]
                 },
                 options: { responsive: true, maintainAspectRatio: false,

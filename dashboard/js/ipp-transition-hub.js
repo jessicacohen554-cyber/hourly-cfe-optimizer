@@ -417,17 +417,29 @@
                     {
                         label: 'P10 (worst)',
                         data: sorted.map(c => toPctGrowth(c, 'p10')),
-                        backgroundColor: 'rgba(239,68,68,0.6)'
+                        backgroundColor: withAlpha('#EF4444', 0.15),
+                        borderColor: '#EF4444',
+                        borderWidth: 2,
+                        borderRadius: 3,
+                        _skipStyle: true
                     },
                     {
                         label: 'P50 (median)',
                         data: sorted.map(c => toPctGrowth(c, 'p50')),
-                        backgroundColor: 'rgba(99,102,241,0.7)'
+                        backgroundColor: withAlpha('#6366F1', 0.15),
+                        borderColor: '#6366F1',
+                        borderWidth: 2,
+                        borderRadius: 3,
+                        _skipStyle: true
                     },
                     {
                         label: 'P90 (best)',
                         data: sorted.map(c => toPctGrowth(c, 'p90')),
-                        backgroundColor: 'rgba(34,197,94,0.6)'
+                        backgroundColor: withAlpha('#22C55E', 0.15),
+                        borderColor: '#22C55E',
+                        borderWidth: 2,
+                        borderRadius: 3,
+                        _skipStyle: true
                     }
                 ]
             },
@@ -467,6 +479,7 @@
             });
             if (!hasData) return null;
 
+            const isExisting = ['nuclear', 'hydro', 'geothermal', 'coal', 'gas_ccgt', 'gas_peaker', 'oil'].includes(fuel);
             return {
                 label: FUEL_LABELS[fuel],
                 data: sorted.map(co => {
@@ -477,7 +490,11 @@
                     }
                     return total;
                 }),
-                backgroundColor: FUEL_COLORS[fuel]
+                backgroundColor: withAlpha(FUEL_COLORS[fuel], isExisting ? 0.85 : 0.15),
+                borderColor: FUEL_COLORS[fuel],
+                borderWidth: 2,
+                borderRadius: 3,
+                _skipStyle: true
             };
         }).filter(Boolean);
 
@@ -735,14 +752,20 @@
                         {
                             label: 'Coal abatement',
                             data: sortedByMAC.map(r => r.coalCO2 > 0 ? r.avgMAC * (r.coalCO2 / r.fossilCO2) : 0),
-                            backgroundColor: FUEL_COLORS.coal,
-                            borderRadius: 2
+                            backgroundColor: withAlpha(FUEL_COLORS.coal, 0.85),
+                            borderColor: FUEL_COLORS.coal,
+                            borderWidth: 2,
+                            borderRadius: 3,
+                            _skipStyle: true
                         },
                         {
                             label: 'Gas abatement',
                             data: sortedByMAC.map(r => r.gasCO2 > 0 ? r.avgMAC * (r.gasCO2 / r.fossilCO2) : r.avgMAC),
-                            backgroundColor: FUEL_COLORS.gas_ccgt,
-                            borderRadius: 2
+                            backgroundColor: withAlpha(FUEL_COLORS.gas_ccgt, 0.85),
+                            borderColor: FUEL_COLORS.gas_ccgt,
+                            borderWidth: 2,
+                            borderRadius: 3,
+                            _skipStyle: true
                         }
                     ]
                 },
@@ -793,9 +816,16 @@
                         data: sorted.map(r => r.totalCostB),
                         backgroundColor: sorted.map(r => {
                             const ratio = r.totalCostB / maxCost;
+                            const color = ratio > 0.8 ? '#dc2626' : ratio > 0.5 ? '#f59e0b' : '#22c55e';
+                            return withAlpha(color, 0.15);
+                        }),
+                        borderColor: sorted.map(r => {
+                            const ratio = r.totalCostB / maxCost;
                             return ratio > 0.8 ? '#dc2626' : ratio > 0.5 ? '#f59e0b' : '#22c55e';
                         }),
-                        borderRadius: 4
+                        borderWidth: 2,
+                        borderRadius: 3,
+                        _skipStyle: true
                     }]
                 },
                 options: {
@@ -831,8 +861,11 @@
                     datasets: [{
                         label: '$/MWh',
                         data: sorted.map(r => r.costPerMWh),
-                        backgroundColor: sorted.map((_, i) => COMPANY_COLORS[companies.findIndex(c => c.shortName === sorted[i].name) % COMPANY_COLORS.length]),
-                        borderRadius: 4
+                        backgroundColor: sorted.map((_, i) => withAlpha(COMPANY_COLORS[companies.findIndex(c => c.shortName === sorted[i].name) % COMPANY_COLORS.length], 0.15)),
+                        borderColor: sorted.map((_, i) => COMPANY_COLORS[companies.findIndex(c => c.shortName === sorted[i].name) % COMPANY_COLORS.length]),
+                        borderWidth: 2,
+                        borderRadius: 3,
+                        _skipStyle: true
                     }]
                 },
                 options: {

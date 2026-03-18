@@ -113,6 +113,12 @@ body {
     --red-text: #B91C1C; /* contrast-fix: was #DC2626 (4.83:1), now #B91C1C (6.05:1) on #FFFFFF */
     --amber-text: #B45309; /* contrast-fix: #F59E0B only 2.15:1, this is 5.02:1 on #FFFFFF */
     --orange-text: #C2410C; /* contrast-fix: #F97316 only 2.70:1, this is 5.18:1 on #FFFFFF */
+    --nuclear-text: #4F46E5; /* indigo - 5.67:1 on #FFFFFF */
+    --ccs-text: #475569; /* slate - 5.44:1 on #FFFFFF */
+    --battery-text: #0E7490; /* deep cyan - 5.01:1 on #FFFFFF */
+    --ldes-text: #BE185D; /* deep pink - 5.02:1 on #FFFFFF */
+    --neiso-text: #7C3AED; /* purple - 4.63:1 on #FFFFFF */
+    --spp-text: #0D9488; /* teal - 4.54:1 on #FFFFFF */
 
     /* ---- ISO colors (CANONICAL - use these everywhere) ---- */
     --iso-caiso: #F59E0B;
@@ -217,6 +223,38 @@ p {
 .text-amber { color: var(--amber-warn); }
 .text-blue { color: #0284C7; }
 .text-mono { font-family: var(--font-data); }
+
+/* Resource text colors (WCAG AA safe on white backgrounds) */
+.text-solar      { color: var(--amber-text); }
+.text-wind       { color: var(--green-text); }
+.text-hydro      { color: var(--hydro-text); }
+.text-nuclear    { color: var(--nuclear-text); }
+.text-ccs        { color: var(--ccs-text); }
+.text-battery    { color: var(--battery-text); }
+.text-ldes       { color: var(--ldes-text); }
+.text-storage    { color: var(--red-text); }
+.text-geothermal { color: var(--orange-text); }
+.text-fossil     { color: #374151; }
+
+/* ISO text colors (WCAG AA safe) */
+.text-caiso  { color: var(--amber-text); }
+.text-ercot  { color: var(--green-text); }
+.text-pjm    { color: var(--hydro-text); }
+.text-nyiso  { color: var(--ldes-text); }
+.text-neiso  { color: var(--neiso-text); }
+.text-miso   { color: var(--orange-text); }
+.text-spp    { color: var(--spp-text); }
+
+/* Emphasis: bold + resource-colored (for inline narrative highlights) */
+.em-solar    { color: var(--amber-text);   font-weight: 600; }
+.em-wind     { color: var(--green-text);   font-weight: 600; }
+.em-hydro    { color: var(--hydro-text);   font-weight: 600; }
+.em-nuclear  { color: var(--nuclear-text); font-weight: 600; }
+.em-ccs      { color: var(--ccs-text);     font-weight: 600; }
+.em-battery  { color: var(--battery-text); font-weight: 600; }
+.em-ldes     { color: var(--ldes-text);    font-weight: 600; }
+.em-storage  { color: var(--red-text);     font-weight: 600; }
+.em-geo      { color: var(--orange-text);  font-weight: 600; }
 
 /* ========== TOP NAVIGATION BAR ========== */
 .top-nav {

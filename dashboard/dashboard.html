@@ -600,22 +600,25 @@ if (typeof ChartDataLabels !== 'undefined') {
 }
 
 // Resource color map
+// Existing clean energy (saturated fill) vs new-build (outline style)
+// Existing: nuclear, hydro → alpha 0.85 (solid fill)
+// New-build: everything else → alpha 0.15 (outline style)
 const COLORS = {
-    clean_firm: { base: '#1E3A5F', alpha: 'rgba(30,58,95,0.55)' },
-    nuclear:    { base: '#1E3A5F', alpha: 'rgba(30,58,95,0.55)' },
-    geothermal: { base: '#D97706', alpha: 'rgba(217,119,6,0.55)' },
-    ccs_ccgt:   { base: '#64748B', alpha: 'rgba(100,116,139,0.55)' },
-    solar:      { base: '#F59E0B', alpha: 'rgba(245,158,11,0.55)' },
-    wind:       { base: '#22C55E', alpha: 'rgba(34,197,94,0.55)' },
-    offshore_wind: { base: '#009688', alpha: 'rgba(0,150,136,0.55)' },
-    hydro:      { base: '#0EA5E9', alpha: 'rgba(14,165,233,0.55)' },
-    battery:    { base: '#06B6D4', alpha: 'rgba(196,181,253,0.55)' },
-    battery8:   { base: '#0891B2', alpha: 'rgba(139,92,246,0.55)' },
-    ldes:       { base: '#EC4899', alpha: 'rgba(236,72,153,0.55)' },
-    storage:    { base: '#EF4444', alpha: 'rgba(239,68,68,0.55)' },
-    h2:         { base: '#00BCD4', alpha: 'rgba(0,188,212,0.55)' },
-    green_h2:   { base: '#00BCD4', alpha: 'rgba(0,188,212,0.55)' },
-    gap:        { base: '#D1D5DB', alpha: 'rgba(209,213,219,0.55)' }
+    clean_firm:    { base: RESOURCE_COLORS.cleanFirm,    alpha: withAlpha(RESOURCE_COLORS.cleanFirm, 0.15) },
+    nuclear:       { base: RESOURCE_COLORS.nuclear,      alpha: withAlpha(RESOURCE_COLORS.nuclear, 0.85) },
+    geothermal:    { base: RESOURCE_COLORS.geothermal,   alpha: withAlpha(RESOURCE_COLORS.geothermal, 0.15) },
+    ccs_ccgt:      { base: RESOURCE_COLORS.ccs,          alpha: withAlpha(RESOURCE_COLORS.ccs, 0.15) },
+    solar:         { base: RESOURCE_COLORS.solar,         alpha: withAlpha(RESOURCE_COLORS.solar, 0.15) },
+    wind:          { base: RESOURCE_COLORS.wind,          alpha: withAlpha(RESOURCE_COLORS.wind, 0.15) },
+    offshore_wind: { base: RESOURCE_COLORS.offshoreWind,  alpha: withAlpha(RESOURCE_COLORS.offshoreWind, 0.15) },
+    hydro:         { base: RESOURCE_COLORS.hydro,         alpha: withAlpha(RESOURCE_COLORS.hydro, 0.85) },
+    battery:       { base: RESOURCE_COLORS.battery,       alpha: withAlpha(RESOURCE_COLORS.battery, 0.15) },
+    battery8:      { base: RESOURCE_COLORS.battery8,      alpha: withAlpha(RESOURCE_COLORS.battery8, 0.15) },
+    ldes:          { base: RESOURCE_COLORS.ldes,          alpha: withAlpha(RESOURCE_COLORS.ldes, 0.15) },
+    storage:       { base: RESOURCE_COLORS.storage,       alpha: withAlpha(RESOURCE_COLORS.storage, 0.15) },
+    h2:            { base: RESOURCE_COLORS.greenH2,       alpha: withAlpha(RESOURCE_COLORS.greenH2, 0.15) },
+    green_h2:      { base: RESOURCE_COLORS.greenH2,       alpha: withAlpha(RESOURCE_COLORS.greenH2, 0.15) },
+    gap:           { base: RESOURCE_COLORS.gap,           alpha: withAlpha(RESOURCE_COLORS.gap, 0.15) }
 };
 
 const RESOURCE_LABELS = {
@@ -1716,19 +1719,19 @@ function updateDonut(entry) {
                     labels.push(RESOURCE_LABELS.nuclear);
                     values.push(Math.round(nuclear * 10) / 10);
                     bgColors.push(COLORS.nuclear.alpha);
-                    borderColors.push(OUTLINE_COLOR);
+                    borderColors.push(COLORS.nuclear.base);
                 }
                 if (geothermal > 0.3) {
                     labels.push(RESOURCE_LABELS.geothermal);
                     values.push(Math.round(geothermal * 10) / 10);
                     bgColors.push(COLORS.geothermal.alpha);
-                    borderColors.push(OUTLINE_COLOR);
+                    borderColors.push(COLORS.geothermal.base);
                 }
             } else {
                 labels.push(RESOURCE_LABELS[r]);
                 values.push(Math.round(scaledVal * 10) / 10);
                 bgColors.push(COLORS[r].alpha);
-                borderColors.push(OUTLINE_COLOR);
+                borderColors.push(COLORS[r].base);
             }
         }
     });
@@ -1738,25 +1741,25 @@ function updateDonut(entry) {
         labels.push(RESOURCE_LABELS.battery);
         values.push(Math.round(battPct * 10) / 10);
         bgColors.push(COLORS.battery.alpha);
-        borderColors.push(OUTLINE_COLOR);
+        borderColors.push(COLORS.battery.base);
     }
     if (batt8Pct > 0.3) {
         labels.push(RESOURCE_LABELS.battery8);
         values.push(Math.round(batt8Pct * 10) / 10);
         bgColors.push(COLORS.battery8.alpha);
-        borderColors.push(OUTLINE_COLOR);
+        borderColors.push(COLORS.battery8.base);
     }
     if (ldesPct > 0.3) {
         labels.push(RESOURCE_LABELS.ldes);
         values.push(Math.round(ldesPct * 10) / 10);
         bgColors.push(COLORS.ldes.alpha);
-        borderColors.push(OUTLINE_COLOR);
+        borderColors.push(COLORS.ldes.base);
     }
     if (h2Pct > 0.3) {
         labels.push(RESOURCE_LABELS.h2);
         values.push(Math.round(h2Pct * 10) / 10);
         bgColors.push(COLORS.h2.alpha);
-        borderColors.push(OUTLINE_COLOR);
+        borderColors.push(COLORS.h2.base);
     }
 
     // Gap slice
@@ -1765,7 +1768,7 @@ function updateDonut(entry) {
         labels.push('Unmatched');
         values.push(Math.round(gapPct * 10) / 10);
         bgColors.push(COLORS.gap.alpha);
-        borderColors.push(OUTLINE_COLOR);
+        borderColors.push(COLORS.gap.base);
     }
 
     // Center label
@@ -3517,13 +3520,11 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     const NEW_ORDER = wynHasGeo
         ? ['nuclear', 'geothermal', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar', 'battery', 'battery8', 'ldes', 'h2']
         : ['nuclear', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar', 'battery', 'battery8', 'ldes', 'h2'];
-    const existingAlpha = 0.75;
-    const newAlpha = 0.40;
     const datasets = [];
 
-    // Existing portion datasets (full saturation)
+    // Existing portion datasets (saturated fill for existing clean energy)
     for (const r of EXISTING_ORDER) {
-        const c = MIX_COLORS[r];
+        const c = COLORS[r];
         if (!c) continue;
         const data = hasLongterm
             ? [todayData.existing[r] || 0, interimData.existing[r] || 0, longtermData.existing[r] || 0]
@@ -3531,18 +3532,18 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         datasets.push({
             label: MIX_LABELS_MAP[r] + ' (existing)',
             data,
-            backgroundColor: c.fill.replace(/[\d.]+\)$/, existingAlpha + ')'),
-            borderColor: c.border,
-            borderWidth: 1.5,
-            borderRadius: 6,
+            backgroundColor: withAlpha(c.base, 0.85),
+            borderColor: c.base,
+            borderWidth: 2,
+            borderRadius: 3,
             stack: 'compare',
             _resourceKey: r,
             _isExisting: true,
         });
     }
-    // New build portion datasets
+    // New build portion datasets (outline style — semi-transparent fill with saturated border)
     for (const r of NEW_ORDER) {
-        const c = MIX_COLORS[r];
+        const c = COLORS[r];
         if (!c) continue;
         const data = hasLongterm
             ? [0, interimData.newBuild[r] || 0, longtermData.newBuild[r] || 0]
@@ -3550,10 +3551,10 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         datasets.push({
             label: MIX_LABELS_MAP[r] + ' (new build)',
             data,
-            backgroundColor: c.fill.replace(/[\d.]+\)$/, newAlpha + ')'),
-            borderColor: c.border,
-            borderWidth: 1,
-            borderRadius: 6,
+            backgroundColor: withAlpha(c.base, 0.15),
+            borderColor: c.base,
+            borderWidth: 2,
+            borderRadius: 3,
             borderSkipped: 'start',
             stack: 'compare',
             _resourceKey: r,
@@ -3761,22 +3762,22 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                                 : ['nuclear', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar', 'battery', 'battery8', 'ldes', 'h2'];
                             const items = legendResources.map(r => ({
                                 text: MIX_LABELS_MAP[r] || RESOURCE_LABELS[r] || r,
-                                fillStyle: (MIX_COLORS[r] || {}).fill || COLORS[r]?.alpha || '#888',
-                                strokeStyle: (MIX_COLORS[r] || {}).border || COLORS[r]?.base || '#888',
+                                fillStyle: COLORS[r] ? withAlpha(COLORS[r].base, 0.15) : '#888',
+                                strokeStyle: COLORS[r]?.base || '#888',
                                 lineWidth: 2,
                                 pointStyle: 'rectRounded',
                             }));
                             items.push({
-                                text: 'Saturated = Existing',
-                                fillStyle: 'rgba(100,100,100,0.75)',
-                                strokeStyle: '#666',
+                                text: 'Solid = Existing',
+                                fillStyle: withAlpha('#6B7280', 0.85),
+                                strokeStyle: '#6B7280',
                                 lineWidth: 2,
                                 pointStyle: 'rectRounded',
                             });
                             items.push({
-                                text: 'Faded = New Build',
-                                fillStyle: 'rgba(100,100,100,0.35)',
-                                strokeStyle: '#999',
+                                text: 'Outline = New Build',
+                                fillStyle: withAlpha('#6B7280', 0.15),
+                                strokeStyle: '#6B7280',
                                 lineWidth: 2,
                                 pointStyle: 'rectRounded',
                             });
@@ -3807,8 +3808,8 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
                         return context.dataset.data[context.dataIndex] >= (maxTWh * 0.03);
                     },
                     color: function(context) {
-                        const rk = context.dataset._resourceKey;
-                        if (rk === 'clean_firm' || rk === 'nuclear') return '#FFFFFF';
+                        // White text on saturated existing fills, dark text on outline new-build fills
+                        if (context.dataset._isExisting) return '#FFFFFF';
                         return '#1A1A1A';
                     },
                     font: { family: "'Barlow Semi Condensed','Arial Narrow',sans-serif", size: 10, weight: 700 },

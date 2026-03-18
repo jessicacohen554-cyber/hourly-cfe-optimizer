@@ -572,33 +572,39 @@ body { background: var(--bg-page-white); }
             datasets.push({
                 label: s + ' VRE (Solar+Wind)',
                 data: vreData[s],
-                backgroundColor: alpha(baseColor, 0.9),
+                backgroundColor: withAlpha(baseColor, 0.15),
+                borderColor: baseColor,
+                borderWidth: 2,
+                borderRadius: 3,
                 stack: 'stack' + si,
-                borderWidth: 0,
             });
             datasets.push({
                 label: s + ' Firm (Clean Firm+CCS)',
                 data: firmData[s],
-                backgroundColor: alpha(baseColor, 0.6),
+                backgroundColor: withAlpha(baseColor, 0.15),
+                borderColor: baseColor,
+                borderWidth: 2,
+                borderRadius: 3,
                 stack: 'stack' + si,
-                borderWidth: 0,
             });
             datasets.push({
                 label: s + ' Storage',
                 data: storageData[s],
-                backgroundColor: alpha(baseColor, 0.35),
+                backgroundColor: withAlpha(baseColor, 0.15),
+                borderColor: baseColor,
+                borderWidth: 2,
+                borderRadius: 3,
                 stack: 'stack' + si,
-                borderWidth: 0,
             });
             if (s !== '2A') {
                 datasets.push({
                     label: s + ' Existing/SSS',
                     data: existData[s],
-                    backgroundColor: alpha(baseColor, 0.15),
-                    stack: 'stack' + si,
-                    borderWidth: 0,
+                    backgroundColor: withAlpha(baseColor, 0.85),
                     borderColor: baseColor,
-                    borderDash: [3, 3],
+                    borderWidth: 2,
+                    borderRadius: 3,
+                    stack: 'stack' + si,
                 });
             }
         });
@@ -794,7 +800,10 @@ body { background: var(--bg-page-white); }
                 });
                 return Math.round(val);
             }),
-            backgroundColor: catColors[ci],
+            backgroundColor: ci >= 3 ? withAlpha(catColors[ci], 0.85) : withAlpha(catColors[ci], 0.15),
+            borderColor: catColors[ci],
+            borderWidth: 2,
+            borderRadius: 3,
         }));
 
         new Chart(ctx, {
@@ -941,9 +950,10 @@ body { background: var(--bg-page-white); }
                     ISOS.forEach(iso => { const d = getT('2C', iso, t); if (d) sum += d.existing_twh + d.sss_twh; });
                     return sum;
                 }),
-                backgroundColor: STRAT_COLORS['2C'] + '60',
+                backgroundColor: withAlpha(STRAT_COLORS['2C'], 0.85),
                 borderColor: STRAT_COLORS['2C'],
                 borderWidth: 2,
+                borderRadius: 3,
             },
             {
                 label: '2C Rolloff: Existing+SSS TWh',
@@ -952,9 +962,10 @@ body { background: var(--bg-page-white); }
                     ISOS.forEach(iso => { const d = getT('2C_rolloff', iso, t); if (d) sum += d.existing_twh + d.sss_twh; });
                     return sum;
                 }),
-                backgroundColor: STRAT_COLORS['2C_rolloff'] + '40',
+                backgroundColor: withAlpha(STRAT_COLORS['2C_rolloff'], 0.85),
                 borderColor: STRAT_COLORS['2C_rolloff'],
                 borderWidth: 2, borderDash: [6, 3],
+                borderRadius: 3,
             },
         ];
 
@@ -1103,11 +1114,11 @@ body { background: var(--bg-page-white); }
                 existD.push(d ? d.existing_twh + d.sss_twh : 0);
             });
             const c = STRAT_COLORS[s];
-            mixDatasets.push({ label: s + ' VRE', data: vreD, backgroundColor: c + 'E6', stack: 'st' + si, borderWidth: 0 });
-            mixDatasets.push({ label: s + ' Firm', data: firmD, backgroundColor: c + '99', stack: 'st' + si, borderWidth: 0 });
-            mixDatasets.push({ label: s + ' Storage', data: storD, backgroundColor: c + '59', stack: 'st' + si, borderWidth: 0 });
+            mixDatasets.push({ label: s + ' VRE', data: vreD, backgroundColor: withAlpha(c, 0.15), borderColor: c, borderWidth: 2, borderRadius: 3, stack: 'st' + si });
+            mixDatasets.push({ label: s + ' Firm', data: firmD, backgroundColor: withAlpha(c, 0.15), borderColor: c, borderWidth: 2, borderRadius: 3, stack: 'st' + si });
+            mixDatasets.push({ label: s + ' Storage', data: storD, backgroundColor: withAlpha(c, 0.15), borderColor: c, borderWidth: 2, borderRadius: 3, stack: 'st' + si });
             if (s !== '2A') {
-                mixDatasets.push({ label: s + ' Existing', data: existD, backgroundColor: c + '26', stack: 'st' + si, borderWidth: 0 });
+                mixDatasets.push({ label: s + ' Existing', data: existD, backgroundColor: withAlpha(c, 0.85), borderColor: c, borderWidth: 2, borderRadius: 3, stack: 'st' + si });
             }
         });
 

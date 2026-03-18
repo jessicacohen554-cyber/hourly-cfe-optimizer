@@ -210,6 +210,10 @@
         }
         .headline-val.green { color: var(--ceg-green); }
         .headline-val.orange { color: var(--ceg-orange); }
+        .headline-val.red { color: #DC2626; }
+        .summary-stat-val.green { color: var(--ceg-green); }
+        .summary-stat-val.red { color: #DC2626; }
+        .summary-stat-val.blue { color: var(--ceg-blue); }
 
         /* CCS select all bar */
         .ccs-actions {
@@ -290,11 +294,11 @@
         <div class="controls-bar">
             <div class="summary-stats">
                 <div class="summary-stat">
-                    <div class="summary-stat-val" id="sumPlants">0</div>
+                    <div class="summary-stat-val blue" id="sumPlants">0</div>
                     <div class="summary-stat-lbl">CCS Plants</div>
                 </div>
                 <div class="summary-stat">
-                    <div class="summary-stat-val" id="sumReduction">0.0</div>
+                    <div class="summary-stat-val green" id="sumReduction">0.0</div>
                     <div class="summary-stat-lbl">Mt Captured</div>
                 </div>
                 <div class="summary-stat">
@@ -302,7 +306,7 @@
                     <div class="summary-stat-lbl">Post-CCS P50</div>
                 </div>
                 <div class="summary-stat">
-                    <div class="summary-stat-val" id="sumPctCut">0%</div>
+                    <div class="summary-stat-val green" id="sumPctCut">0%</div>
                     <div class="summary-stat-lbl">Reduction</div>
                 </div>
             </div>
@@ -742,8 +746,11 @@
                     label: 'Gap to AT Power NZ',
                     data: adjusted.p50.map((v, i) => +(v - atVals[i]).toFixed(1)),
                     backgroundColor: adjusted.p50.map((v, i) =>
-                        v - atVals[i] > 0 ? 'rgba(35,114,185,0.7)' : 'rgba(107,165,67,0.7)'),
-                    borderRadius: 4,
+                        v - atVals[i] > 0 ? withAlpha('#2372B9', 0.15) : withAlpha('#6BA543', 0.15)),
+                    borderColor: adjusted.p50.map((v, i) =>
+                        v - atVals[i] > 0 ? '#2372B9' : '#6BA543'),
+                    borderWidth: 2,
+                    borderRadius: 3,
                 });
             }
             if (showSBTi) {
@@ -751,8 +758,11 @@
                     label: 'Gap to SBTi 1.5°C',
                     data: adjusted.p50.map((v, i) => +(v - sbtiVals[i]).toFixed(1)),
                     backgroundColor: adjusted.p50.map((v, i) =>
-                        v - sbtiVals[i] > 0 ? 'rgba(107,165,67,0.5)' : 'rgba(107,165,67,0.8)'),
-                    borderRadius: 4,
+                        v - sbtiVals[i] > 0 ? withAlpha('#6BA543', 0.15) : withAlpha('#6BA543', 0.15)),
+                    borderColor: adjusted.p50.map((v, i) =>
+                        v - sbtiVals[i] > 0 ? '#6BA543' : '#6BA543'),
+                    borderWidth: 2,
+                    borderRadius: 3,
                 });
             }
 

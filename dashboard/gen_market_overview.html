@@ -43,7 +43,7 @@
          ================================================================ -->
     <div class="stat-row fade-in">
         <div class="stat-tile">
-            <div class="stat-value counter" data-target="15">0</div>
+            <div class="stat-value text-blue counter" data-target="15">0</div>
             <div class="stat-label">Companies Analyzed</div>
             <div class="stat-sublabel">Top generators by TWh</div>
         </div>
@@ -53,12 +53,12 @@
             <div class="stat-sublabel">~40% of US total</div>
         </div>
         <div class="stat-tile">
-            <div class="stat-value danger counter" data-target="537">0</div>
+            <div class="stat-value text-red counter" data-target="537">0</div>
             <div class="stat-label">Million Tonnes CO&#8322;</div>
             <div class="stat-sublabel">Annual Scope 1 emissions</div>
         </div>
         <div class="stat-tile">
-            <div class="stat-value counter" data-target="352">0</div>
+            <div class="stat-value text-amber counter" data-target="352">0</div>
             <div class="stat-label">Avg. kg CO&#8322;/MWh</div>
             <div class="stat-sublabel">Weighted fleet intensity</div>
         </div>
@@ -83,8 +83,8 @@
                 <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Southern, Duke, Dominion, Entergy, BH Energy, Xcel, DTE, WEC, Evergy, PPL</strong></p>
                 <p style="font-size: 0.88rem;">Own generation, transmission, and distribution. Regulated by state public utility commissions (PUCs) with a guaranteed rate of return. Decarbonization is planned through Integrated Resource Plans (IRPs), with costs passed to ratepayers.</p>
                 <div style="margin-top: 12px; font-size: 0.85rem;">
-                    <p style="margin-bottom: 6px;"><strong style="color: #15803D;">Advantages:</strong> Can plan across the full value chain. Long-term investment horizons with guaranteed cost recovery. Can make system-wide optimization decisions.</p>
-                    <p style="margin-bottom: 0;"><strong style="color: var(--red-accent);">Challenges:</strong> Political pressure from ratepayers on cost increases. State regulatory environments vary wildly&mdash;from aggressive clean energy mandates to hostile opposition. No market price signal for clean energy. Slow decision cycles driven by IRP cadence (2&ndash;3 year cycles).</p>
+                    <p style="margin-bottom: 6px;"><strong class="text-green">Advantages:</strong> Can plan across the full value chain. Long-term investment horizons with guaranteed cost recovery. Can make system-wide optimization decisions.</p>
+                    <p style="margin-bottom: 0;"><strong class="text-red">Challenges:</strong> Political pressure from ratepayers on cost increases. State regulatory environments vary wildly&mdash;from aggressive clean energy mandates to hostile opposition. No market price signal for clean energy. Slow decision cycles driven by IRP cadence (2&ndash;3 year cycles).</p>
                 </div>
             </div>
             <div class="card card-market-comp">
@@ -92,8 +92,8 @@
                 <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Constellation, Vistra, NRG, Talen, AES, PSEG, NextEra (competitive gen)</strong></p>
                 <p style="font-size: 0.88rem;">Generators sell into wholesale markets operated by ISOs (CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP). Revenue depends on market clearing prices. No guaranteed cost recovery for capital investments.</p>
                 <div style="margin-top: 12px; font-size: 0.85rem;">
-                    <p style="margin-bottom: 6px;"><strong style="color: #15803D;">Advantages:</strong> Market signals drive operational efficiency. Can respond quickly to economic opportunities. Innovation rewarded by margin capture.</p>
-                    <p style="margin-bottom: 0;"><strong style="color: var(--red-accent);">Challenges:</strong> No centralized generation planning. Investment decisions driven by market economics, not emissions targets. Stranded asset risk from regulatory or market shifts. Wholesale price volatility creates investment uncertainty.</p>
+                    <p style="margin-bottom: 6px;"><strong class="text-green">Advantages:</strong> Market signals drive operational efficiency. Can respond quickly to economic opportunities. Innovation rewarded by margin capture.</p>
+                    <p style="margin-bottom: 0;"><strong class="text-red">Challenges:</strong> No centralized generation planning. Investment decisions driven by market economics, not emissions targets. Stranded asset risk from regulatory or market shifts. Wholesale price volatility creates investment uncertainty.</p>
                 </div>
             </div>
             <div class="card-full-row">
@@ -130,12 +130,12 @@
         <p>Fleet composition determines decarbonization pathway. There is no one-size-fits-all strategy.</p>
     </div>
     <section class="content-section fade-in">
-        <p style="font-size: 1.05rem; color: var(--text-secondary); line-height: 1.75; max-width: 940px; margin: 0 auto var(--space-md);">Just 15 companies generate roughly <strong>1,683 TWh</strong> of electricity annually&mdash;about 40% of total U.S. generation. But their fleets couldn't be more different. Some are nuclear-dominated with already-low carbon intensity. Others burn coal at rates that would have been unremarkable a decade ago but are now increasingly untenable under every major climate framework.<sup class="ref" title="eGRID 2023, EPA">1</sup></p>
+        <p style="font-size: 1.05rem; color: var(--text-secondary); line-height: 1.75; max-width: 940px; margin: 0 auto var(--space-md);">Just 15 companies generate roughly <strong>1,683 TWh</strong> of electricity annually&mdash;about 40% of total U.S. generation. But their fleets couldn't be more different. Some are <span class="em-nuclear">nuclear</span>-dominated with already-low carbon intensity. Others burn coal at rates that would have been unremarkable a decade ago but are now increasingly untenable under every major climate framework.<sup class="ref" title="eGRID 2023, EPA">1</sup></p>
 
         <p style="font-size: 1.05rem; color: var(--text-secondary); line-height: 1.75; max-width: 940px; margin: 0 auto var(--space-md);">This diversity matters because a coal-heavy utility in the Midwest faces fundamentally different economics, politics, and physical constraints than a nuclear merchant generator in PJM or a diversified utility with growing renewables in the Southeast.</p>
 
         <div class="callout" style="margin-top: 20px; max-width: 940px; margin-left: auto; margin-right: auto;">
-            <p><strong>Sector context (MJ Bradley/ERM 2025):</strong> The 100 largest U.S. power producers emitted <strong>1.15 billion tonnes CO&#8322;</strong> in 2024&mdash;down ~40% from the 2007 peak, but essentially flat since 2020. In a milestone year, <strong>2024 was the first year solar + wind generated more electricity than coal</strong>. Zero-carbon sources now supply ~40% of U.S. electricity. Yet power sector CO&#8322; rose 3.8% in 2025 as higher gas prices drove a coal-generation rebound.<sup class="ref" title="MJ Bradley/ERM Benchmarking 2025, Rhodium Group 2025">4,20</sup></p>
+            <p><strong>Sector context (MJ Bradley/ERM 2025):</strong> The 100 largest U.S. power producers emitted <strong>1.15 billion tonnes CO&#8322;</strong> in 2024&mdash;down ~40% from the 2007 peak, but essentially flat since 2020. In a milestone year, <strong>2024 was the first year <span class="em-solar">solar</span> + <span class="em-wind">wind</span> generated more electricity than coal</strong>. Zero-carbon sources now supply ~40% of U.S. electricity. Yet power sector CO&#8322; rose 3.8% in 2025 as higher gas prices drove a coal-generation rebound.<sup class="ref" title="MJ Bradley/ERM Benchmarking 2025, Rhodium Group 2025">4,20</sup></p>
         </div>
 
         <div class="chart-container chart-panel" style="margin-top: 32px;">
@@ -246,34 +246,34 @@
                 <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Evergy, AEP, BH Energy, Vistra, PPL</strong></p>
                 <p style="font-size: 0.88rem;">Coal &ge;25% of generation. Highest current emissions intensity (454&ndash;572 kg/MWh). But coal retirement is the cheapest form of abatement: new renewables now undercut coal operating costs in most markets.<sup class="ref">5</sup></p>
                 <div class="stat-tile" style="margin-top: 12px; background: rgba(55,65,81,0.05);">
-                    <div class="stat-value" style="font-size: 1.4rem; color: #374151;">$15&ndash;35</div>
+                    <div class="stat-value text-fossil" style="font-size: 1.4rem;">$15&ndash;35</div>
                     <div class="stat-label">$/tonne CO&#8322; abatement (coal &rarr; renewables)</div>
                 </div>
             </div>
             <div class="card" style="border-left: 4px solid #EF4444;">
                 <h3 style="color: #DC2626;">Gas-Dominant</h3>
                 <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Entergy, Dominion</strong></p>
-                <p style="font-size: 0.88rem;">Gas &ge;45% with nuclear. Moderate intensity (333&ndash;349 kg/MWh). Already past the easy wins of coal retirement. Reducing gas emissions requires CCS, clean firm, or massive renewable overbuild&mdash;all more expensive per tonne.<sup class="ref">6</sup></p>
+                <p style="font-size: 0.88rem;">Gas &ge;45% with nuclear. Moderate intensity (333&ndash;349 kg/MWh). Already past the easy wins of coal retirement. Reducing gas emissions requires <span class="em-ccs">CCS</span>, clean firm, or massive renewable overbuild&mdash;all more expensive per tonne.<sup class="ref">6</sup></p>
                 <div class="stat-tile" style="margin-top: 12px; background: rgba(239,68,68,0.05);">
-                    <div class="stat-value" style="font-size: 1.4rem; color: #DC2626;">$80&ndash;150</div>
+                    <div class="stat-value text-red" style="font-size: 1.4rem;">$80&ndash;150</div>
                     <div class="stat-label">$/tonne CO&#8322; abatement (gas &rarr; clean)</div>
                 </div>
             </div>
             <div class="card" style="border-left: 4px solid #0EA5E9;">
                 <h3 style="color: #0369A1;">Diversified / Transitioning</h3>
                 <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Duke, Southern, Xcel, DTE, WEC, AES</strong></p>
-                <p style="font-size: 0.88rem;">Mix of gas, coal, nuclear, and growing renewables. These generators have the most flexible pathway options: retire remaining coal first (cheap), then build renewables, then address gas (harder).</p>
+                <p style="font-size: 0.88rem;">Mix of gas, coal, <span class="em-nuclear">nuclear</span>, and growing renewables. These generators have the most flexible pathway options: retire remaining coal first (cheap), then build renewables, then address gas (harder).</p>
                 <div class="stat-tile" style="margin-top: 12px; background: rgba(14,165,233,0.05);">
-                    <div class="stat-value" style="font-size: 1.4rem; color: #0369A1;">$25&ndash;80</div>
+                    <div class="stat-value text-hydro" style="font-size: 1.4rem;">$25&ndash;80</div>
                     <div class="stat-label">$/tonne CO&#8322; abatement (blended pathway)</div>
                 </div>
             </div>
             <div class="card" style="border-left: 4px solid #7C3AED;">
                 <h3 style="color: #7C3AED;">Nuclear-Led / Renewable-Led</h3>
                 <p style="font-size: 0.88rem; margin-bottom: 8px;"><strong>Constellation, NextEra</strong></p>
-                <p style="font-size: 0.88rem;">Already below US average intensity. Nuclear or renewable backbone. Challenge is not reducing&mdash;it's maintaining low-carbon status while growing to meet surging demand (data centers, electrification).</p>
+                <p style="font-size: 0.88rem;">Already below US average intensity. <span class="em-nuclear">Nuclear</span> or renewable backbone. Challenge is not reducing&mdash;it's maintaining low-carbon status while growing to meet surging demand (data centers, electrification).</p>
                 <div class="stat-tile" style="margin-top: 12px; background: rgba(124,58,237,0.05);">
-                    <div class="stat-value" style="font-size: 1.4rem; color: #7C3AED;">$120+</div>
+                    <div class="stat-value text-nuclear" style="font-size: 1.4rem;">$120+</div>
                     <div class="stat-label">$/tonne CO&#8322; for marginal reductions</div>
                 </div>
             </div>
@@ -302,9 +302,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr><td><strong>Coal</strong></td><td>37%</td><td>~15%</td><td style="color:#15803D;">&darr; 22 pp</td></tr><!-- contrast-fix: was #22C55E, now #15803D, ratio 5.02:1 on bg white -->
-                    <tr><td><strong>Natural Gas</strong></td><td>30%</td><td>~43%</td><td style="color:#B45309;">&uarr; 13 pp</td></tr><!-- contrast-fix: was #F59E0B, now #B45309, ratio 5.02:1 on bg white -->
-                    <tr><td><strong>Wind + Solar</strong></td><td>&lt;4%</td><td>~16%</td><td style="color:#15803D;">&uarr; 12+ pp</td></tr><!-- contrast-fix: was #22C55E, now #15803D, ratio 5.02:1 on bg white -->
+                    <tr><td><strong>Coal</strong></td><td>37%</td><td>~15%</td><td class="text-green">&darr; 22 pp</td></tr>
+                    <tr><td><strong>Natural Gas</strong></td><td>30%</td><td>~43%</td><td class="text-amber">&uarr; 13 pp</td></tr>
+                    <tr><td><strong>Wind + Solar</strong></td><td>&lt;4%</td><td>~16%</td><td class="text-green">&uarr; 12+ pp</td></tr>
                     <tr><td><strong>Nuclear</strong></td><td>~19%</td><td>~18%</td><td style="color:var(--text-muted);">&asymp; stable</td></tr>
                 </tbody>
             </table>
@@ -354,20 +354,20 @@
         <div style="max-width: 940px; margin: 0 auto var(--space-lg);">
             <p style="font-size: 1.05rem; line-height: 1.75; margin-bottom: var(--space-md);">Here is the counterintuitive insight at the heart of this analysis: <strong>the dirtiest generators may face the most straightforward decarbonization economics.</strong></p>
 
-            <p style="font-size: 1.05rem; line-height: 1.75; margin-bottom: var(--space-md);">Coal-to-renewable substitution is now the cheapest form of new generation in most US markets. The levelized cost of new solar ($24&ndash;$96/MWh) and wind ($24&ndash;$75/MWh) undercuts existing coal operating costs in many regions.<sup class="ref" title="Lazard LCOE 2024">5</sup> For a coal-heavy utility, retiring coal and building renewables + storage represents genuine, large-scale CO&#8322; reduction at costs that may actually <em>lower</em> system costs.</p>
+            <p style="font-size: 1.05rem; line-height: 1.75; margin-bottom: var(--space-md);">Coal-to-renewable substitution is now the cheapest form of new generation in most US markets. The levelized cost of new <span class="em-solar">solar</span> ($24&ndash;$96/MWh) and <span class="em-wind">wind</span> ($24&ndash;$75/MWh) undercuts existing coal operating costs in many regions.<sup class="ref" title="Lazard LCOE 2024">5</sup> For a coal-heavy utility, retiring coal and building renewables + storage represents genuine, large-scale CO&#8322; reduction at costs that may actually <em>lower</em> system costs.</p>
 
             <div class="callout">
                 <p><strong>The counterintuitive math:</strong> A coal-heavy generator at ~500 kg CO&#8322;/MWh could cut its intensity by 50% simply by replacing coal with wind in resource-rich regions. That's massive abatement at low cost. Meanwhile, a nuclear-led generator at ~180 kg/MWh would need to eliminate virtually all remaining gas generation&mdash;requiring expensive clean firm power, storage, or CCS&mdash;to achieve a comparable <em>percentage</em> reduction. The marginal cost per tonne rises sharply as fleet intensity falls.</p>
             </div>
 
-            <p style="font-size: 1.05rem; line-height: 1.75; margin-top: var(--space-md);">But efficient CCGT + nuclear fleets face diminishing returns. Natural gas combined-cycle plants emit ~363&ndash;408 kg CO&#8322;/MWh&mdash;already 60% less than coal. Going from gas to zero-carbon requires either CCS ($90&ndash;130/MWh with capture)<sup class="ref" title="NREL ATB 2024">6</sup>, new nuclear ($120&ndash;180/MWh)<sup class="ref" title="Lazard LCOE 2024">5</sup>, or massive overbuild of renewables + long-duration storage to cover all hours.</p>
+            <p style="font-size: 1.05rem; line-height: 1.75; margin-top: var(--space-md);">But efficient CCGT + nuclear fleets face diminishing returns. Natural gas combined-cycle plants emit ~363&ndash;408 kg CO&#8322;/MWh&mdash;already 60% less than coal. Going from gas to zero-carbon requires either <span class="em-ccs">CCS</span> ($90&ndash;130/MWh with capture)<sup class="ref" title="NREL ATB 2024">6</sup>, new nuclear ($120&ndash;180/MWh)<sup class="ref" title="Lazard LCOE 2024">5</sup>, or massive overbuild of renewables + <span class="em-ldes">long-duration storage</span> to cover all hours.</p>
         </div>
 
         <div class="story-two-col" style="margin-top: 24px;">
             <div class="card" style="border: 2px solid #374151;">
                 <h4>Coal-Heavy Archetype: 519 &rarr; 260 kg/MWh</h4>
                 <ul style="font-size: 0.9rem; margin-left: 16px; color: var(--text-secondary);">
-                    <li><strong>Strategy:</strong> Replace coal fleet with Kansas wind + battery storage</li>
+                    <li><strong>Strategy:</strong> Replace coal fleet with Kansas <span class="em-wind">wind</span> + <span class="em-battery">battery storage</span></li>
                     <li><strong>Cost:</strong> New wind at $25&ndash;35/MWh undercuts coal operating costs ($35&ndash;50/MWh)</li>
                     <li><strong>Abatement:</strong> ~$15&ndash;25/tonne CO&#8322;</li>
                     <li><strong>Barrier:</strong> Coal community transition, stranded assets</li>
@@ -540,18 +540,18 @@ new Chart(document.getElementById('isoStackedChart').getContext('2d'), {
             {
                 label: 'IPP / Competitive Generation (TWh)',
                 data: isoData.map(d => Math.round(d.total * d.ipp / 100)),
-                backgroundColor: 'rgba(124, 58, 237, 0.7)',
+                backgroundColor: withAlpha('#7C3AED', 0.85),
                 borderColor: '#7C3AED',
-                borderWidth: 1,
-                borderRadius: 4
+                borderWidth: 2,
+                borderRadius: 3
             },
             {
                 label: 'Regulated Utility Generation (TWh)',
                 data: isoData.map(d => Math.round(d.total * d.reg / 100)),
-                backgroundColor: 'rgba(14, 165, 233, 0.5)',
+                backgroundColor: withAlpha('#0EA5E9', 0.85),
                 borderColor: '#0EA5E9',
-                borderWidth: 1,
-                borderRadius: 4
+                borderWidth: 2,
+                borderRadius: 3
             }
         ]
     },

@@ -350,15 +350,15 @@ body { background: var(--bg-page-white); }
 
     <div class="fuel-gauge-stats">
         <div class="fg-stat">
-            <div class="fg-stat-val red">~70%</div>
+            <div class="fg-stat-val text-red">~70%</div>
             <div class="fg-stat-lbl">Coal Wall Threshold</div>
         </div>
         <div class="fg-stat">
-            <div class="fg-stat-val amber">860</div>
+            <div class="fg-stat-val text-fossil">860</div>
             <div class="fg-stat-lbl">lb/MWh Gas Floor</div>
         </div>
         <div class="fg-stat">
-            <div class="fg-stat-val blue">4 of 7</div>
+            <div class="fg-stat-val text-blue">4 of 7</div>
             <div class="fg-stat-lbl">ISOs with coal to burn</div>
         </div>
     </div>
@@ -383,7 +383,7 @@ body { background: var(--bg-page-white); }
 </div>
 
 <section class="content-section section-light fade-in">
-    <p><strong>At low volumes, marginal rates are meaningful.</strong> A single 100 MW wind PPA in MISO displaces the marginal gas or coal unit on each hour's merit order. The marginal emissions rate captures this displacement accurately - it's just reading the dispatch stack.</p>
+    <p><strong>At low volumes, marginal rates are meaningful.</strong> A single 100 MW <span class="em-wind">wind</span> PPA in <span class="text-miso">MISO</span> displaces the marginal gas or coal unit on each hour's merit order. The marginal emissions rate captures this displacement accurately - it's just reading the dispatch stack.</p>
 
     <p><strong>At 5–15% C&I participation, the signal begins to degrade.</strong> Each new PPA doesn't displace the same marginal unit. The first PPA displaces coal at 2,200 lb/MWh. The second displaces the next coal unit at 2,100 lb/MWh. By the tenth, you're displacing efficient CCGT at 850 lb/MWh. The marginal emissions rate that justified the first buyer's investment has halved by the time the tenth buyer arrives - but every buyer is still reporting the <em>original</em> marginal rate if they use static annual estimates.</p>
 
@@ -458,24 +458,24 @@ body { background: var(--bg-page-white); }
 </div>
 
 <section class="content-section section-light fade-in">
-    <p><strong>The mechanism is straightforward.</strong> Gas-dependent grids (NEISO, NYISO, CAISO) need firm clean power - nuclear, geothermal, CCS-CCGT, or long-duration storage - to displace their fossil fleet. These technologies require large, long-term demand signals (PPAs, capacity contracts) to get financed and built. Under consequential accounting, corporate buyers in these grids direct their clean energy capital elsewhere because coal displacement in SPP/MISO offers better $/tCO₂.</p>
+    <p><strong>The mechanism is straightforward.</strong> Gas-dependent grids (<span class="text-neiso">NEISO</span>, <span class="text-nyiso">NYISO</span>, <span class="text-caiso">CAISO</span>) need firm clean power - <span class="em-nuclear">nuclear</span>, <span class="em-geo">geothermal</span>, <span class="em-ccs">CCS-CCGT</span>, or <span class="em-ldes">long-duration storage</span> - to displace their fossil fleet. These technologies require large, long-term demand signals (PPAs, capacity contracts) to get financed and built. Under consequential accounting, corporate buyers in these grids direct their clean energy capital elsewhere because coal displacement in SPP/MISO offers better $/tCO₂.</p>
 
-    <p><strong>The result: gas plants in NEISO, NYISO, and CAISO face no competitive pressure from firm clean alternatives.</strong> Without demand signals for nuclear/CCS/LDES in these grids, no developer builds them. Without new firm clean capacity, the gas fleet runs indefinitely - not because gas is cheap, but because nothing is being built to replace it.</p>
+    <p><strong>The result: gas plants in NEISO, NYISO, and CAISO face no competitive pressure from firm clean alternatives.</strong> Without demand signals for nuclear/CCS/LDES in these grids, no developer builds them. Without new firm clean capacity, the <span class="text-fossil">gas fleet</span> runs indefinitely - not because gas is cheap, but because nothing is being built to replace it.</p>
 
     <div class="mechanism-grid">
         <div class="mechanism-card">
             <h4>NEISO: The Pipeline Trap</h4>
-            <p>New England's fossil fleet is 98% gas (75 TWh), constrained by pipeline capacity from Appalachian shale fields. Winter gas prices spike as heating and power generation compete for the same pipeline capacity. Under consequential accounting, NEISO corporate buyers fund MISO or SPP wind instead - because displacing coal at 2,280 lb/MWh offers far better $/tCO&#8322; than displacing NEISO gas at 844 lb/MWh. The winter gas constraint stays permanently unfunded.</p>
+            <p>New England's <span class="text-fossil">fossil fleet</span> is 98% gas (75 TWh), constrained by pipeline capacity from Appalachian shale fields. Winter gas prices spike as heating and power generation compete for the same pipeline capacity. Under consequential accounting, <span class="text-neiso">NEISO</span> corporate buyers fund <span class="text-miso">MISO</span> or <span class="text-spp">SPP</span> <span class="em-wind">wind</span> instead - because displacing coal at 2,280 lb/MWh offers far better $/tCO&#8322; than displacing NEISO gas at 844 lb/MWh. The winter gas constraint stays permanently unfunded.</p>
             <div class="evidence">Model: NEISO fossil emission rate 873 lb/MWh (blended) vs. MISO 1,253 lb/MWh - consequential optimization directs capital away from NEISO by default.</div>
         </div>
         <div class="mechanism-card">
             <h4>CAISO: The Duck Curve Deepens</h4>
-            <p>California's fossil fleet is 99.5% gas (115 TWh), with a blended fossil emission rate of just 867 lb/MWh. What CAISO needs is dispatchable clean power for the evening ramp and multi-day low-solar events. Under consequential accounting, CAISO buyers purchase MISO coal displacement instead of contracting for CAISO geothermal, battery storage, or CCS - because MISO's 1,253 lb/MWh fossil rate offers 44% more displacement per dollar. The duck curve deepens, gas peakers remain essential.</p>
+            <p>California's <span class="text-fossil">fossil fleet</span> is 99.5% gas (115 TWh), with a blended fossil emission rate of just 867 lb/MWh. What <span class="text-caiso">CAISO</span> needs is dispatchable clean power for the evening ramp and multi-day low-solar events. Under consequential accounting, <span class="text-caiso">CAISO</span> buyers purchase <span class="text-miso">MISO</span> coal displacement instead of contracting for CAISO <span class="em-geo">geothermal</span>, <span class="em-battery">battery storage</span>, or <span class="em-ccs">CCS</span> - because MISO's 1,253 lb/MWh fossil rate offers 44% more displacement per dollar. The duck curve deepens, gas peakers remain essential.</p>
             <div class="evidence">Model: CAISO demand 224 TWh, fossil generation 115 TWh - all gas. Consequential optimization finds zero coal to displace within CAISO.</div>
         </div>
         <div class="mechanism-card">
             <h4>NYISO: Peaker Retirement Stalls</h4>
-            <p>New York's fossil fleet is 99.8% gas (92 TWh), with a blended fossil rate of 915 lb/MWh. Retiring gas peakers requires firm clean alternatives: offshore wind, battery storage, and demand response at scale. Consequential accounting diverts that capital because displacing Midwest coal at 2,280 lb/MWh offers 2.5× the carbon benefit per dollar compared to displacing NYISO gas.</p>
+            <p>New York's <span class="text-fossil">fossil fleet</span> is 99.8% gas (92 TWh), with a blended fossil rate of 915 lb/MWh. Retiring gas peakers requires firm clean alternatives: <span class="em-wind">offshore wind</span>, <span class="em-battery">battery storage</span>, and demand response at scale. Consequential accounting diverts that capital because displacing Midwest coal at 2,280 lb/MWh offers 2.5× the carbon benefit per dollar compared to displacing NYISO gas.</p>
             <div class="evidence">Model: NYISO demand 152 TWh, fossil emission rate 915 lb/MWh vs. MISO 1,253 lb/MWh - consequential optimization systematically deprioritizes NYISO investment.</div>
         </div>
     </div>
@@ -484,7 +484,7 @@ body { background: var(--bg-page-white); }
 <div class="insight-callout fade-in">
     <div class="page-insight-box">
         <h3>The Lifespan Extension</h3>
-        <p>Under hourly matching, a NEISO corporate buyer must contract firm clean power to cover winter peak hours - creating demand signals for offshore wind, nuclear, or CCS. Under consequential accounting, that same buyer funds MISO wind instead. <span class="highlight">Every year of delayed firm clean investment in gas-dependent grids is another year those gas plants run</span>. The three gas-dominant grids (NEISO, NYISO, CAISO) represent 491 TWh of demand served by fossil fleets averaging 860–915 lb CO&#8322;/MWh - and consequential accounting systematically deprioritizes investment in all three.</p>
+        <p>Under hourly matching, a NEISO corporate buyer must contract firm clean power to cover winter peak hours - creating demand signals for offshore wind, nuclear, or CCS. Under consequential accounting, that same buyer funds MISO wind instead. <span class="highlight">Every year of delayed firm clean investment in gas-dependent grids is another year those gas plants run</span>. The three gas-dominant grids (<span class="text-neiso">NEISO</span>, <span class="text-nyiso">NYISO</span>, <span class="text-caiso">CAISO</span>) represent 491 TWh of demand served by fossil fleets averaging 860–915 lb CO&#8322;/MWh - and consequential accounting systematically deprioritizes investment in all three.</p>
     </div>
 </div>
 
@@ -517,25 +517,25 @@ body { background: var(--bg-page-white); }
         <td><strong>SPP</strong></td>
         <td>296</td>
         <td>178 TWh</td>
-        <td style="color:#DC2626;">27%</td>
+        <td class="text-red">27%</td>
         <td>73%</td>
         <td>1,237</td>
-        <td style="color:#15803D;"><strong>Highest - cheap wind displaces coal</strong></td>
+        <td class="text-green"><strong>Highest - cheap wind displaces coal</strong></td>
     </tr>
     <tr>
         <td><strong>MISO</strong></td>
         <td>660</td>
         <td>396 TWh</td>
-        <td style="color:#DC2626;">28%</td>
+        <td class="text-red">28%</td>
         <td>72%</td>
         <td>1,253</td>
-        <td style="color:#15803D;"><strong>Very High - large grid, coal-heavy</strong></td>
+        <td class="text-green"><strong>Very High - large grid, coal-heavy</strong></td>
     </tr>
     <tr>
         <td><strong>PJM</strong></td>
         <td>843</td>
         <td>506 TWh</td>
-        <td style="color:#B45309;">28%</td>
+        <td class="text-amber">28%</td>
         <td>71%</td>
         <td>1,251</td>
         <td>Moderate - largest US grid</td>
@@ -544,7 +544,7 @@ body { background: var(--bg-page-white); }
         <td><strong>ERCOT</strong></td>
         <td>488</td>
         <td>293 TWh</td>
-        <td style="color:#B45309;">26%</td>
+        <td class="text-amber">26%</td>
         <td>74%</td>
         <td>1,242</td>
         <td>Moderate - strong wind already</td>
@@ -554,27 +554,27 @@ body { background: var(--bg-page-white); }
         <td>115</td>
         <td>69 TWh</td>
         <td>&lt;1%</td>
-        <td style="color:#0369A1;">98%</td>
+        <td class="text-blue">98%</td>
         <td>873</td>
-        <td style="color:#DC2626;"><strong>Lowest - expensive, gas-only</strong></td>
+        <td class="text-red"><strong>Lowest - expensive, gas-only</strong></td>
     </tr>
     <tr>
         <td><strong>NYISO</strong></td>
         <td>152</td>
         <td>91 TWh</td>
         <td>0%</td>
-        <td style="color:#0369A1;">99.8%</td>
+        <td class="text-blue">99.8%</td>
         <td>915</td>
-        <td style="color:#DC2626;"><strong>Very Low - no coal to displace</strong></td>
+        <td class="text-red"><strong>Very Low - no coal to displace</strong></td>
     </tr>
     <tr>
         <td><strong>CAISO</strong></td>
         <td>224</td>
         <td>134 TWh</td>
         <td>0%</td>
-        <td style="color:#0369A1;">99.5%</td>
+        <td class="text-blue">99.5%</td>
         <td>867</td>
-        <td style="color:#DC2626;"><strong>Low - gas-only, high solar</strong></td>
+        <td class="text-red"><strong>Low - gas-only, high solar</strong></td>
     </tr>
     </tbody>
     </table>
@@ -590,7 +590,7 @@ body { background: var(--bg-page-white); }
         </div>
     </div>
     <div class="chart-narrative-below">
-        <p><strong>The chart makes the capital concentration visible.</strong> The stacked bars show each ISO's fossil fuel mix (coal vs. gas), while the green line shows "consequential attractiveness" - how much capital flows to that grid under $/tCO₂ optimization. Coal-heavy grids (SPP, MISO) pull capital from across the interconnection. Gas-only grids (NEISO, NYISO, CAISO) become net capital exporters.</p>
+        <p><strong>The chart makes the capital concentration visible.</strong> The stacked bars show each ISO's fossil fuel mix (coal vs. gas), while the green line shows "consequential attractiveness" - how much capital flows to that grid under $/tCO₂ optimization. Coal-heavy grids (<span class="text-spp">SPP</span>, <span class="text-miso">MISO</span>) pull capital from across the interconnection. Gas-only grids (<span class="text-neiso">NEISO</span>, <span class="text-nyiso">NYISO</span>, <span class="text-caiso">CAISO</span>) become net capital exporters.</p>
         <p><strong>The asymmetry is structural.</strong> SPP + MISO have 574 TWh of C&amp;I load (~35% of total) but attract disproportionate consequential clean energy capital at scale because coal displacement offers better $/tCO&#8322;. NEISO + NYISO + CAISO have 294 TWh (~18%) but see their own corporate buyers funding abatement in other grids, because gas-only displacement yields half the carbon benefit per dollar.</p>
     </div>
 </section>
@@ -605,7 +605,7 @@ body { background: var(--bg-page-white); }
     <div class="chart-narrative-below">
         <p><strong>The 20–30% C&I participation band is the tipping point.</strong> Below 20%, capital allocation roughly matches each grid's share of C&I load - buyers invest where they operate. Above 30%, coal-heavy grids receive 40–55% of all clean energy investment while gas-only grids drop below their "fair share."</p>
         <p><strong>At 50%+ participation</strong> (~800+ TWh of consequential procurement), SPP's interconnection queue is saturated. MISO absorbs capital from PJM, NYISO, and NEISO buyers. Gas-dependent grids - which need the most innovative solutions - receive the least investment precisely because they're expensive to decarbonize.</p>
-        <p><strong>The 60% threshold is existential:</strong> if more than ~60% of corporate load uses consequential accounting, the remaining hourly-matching buyers become too small a constituency to drive firm clean power investment in gas-dependent grids. Technology learning curves for nuclear, LDES, and CCS stall because the demand signal disappears.</p>
+        <p><strong>The 60% threshold is existential:</strong> if more than ~60% of corporate load uses consequential accounting, the remaining hourly-matching buyers become too small a constituency to drive firm clean power investment in gas-dependent grids. Technology learning curves for <span class="em-nuclear">nuclear</span>, <span class="em-ldes">LDES</span>, and <span class="em-ccs">CCS</span> stall because the demand signal disappears.</p>
     </div>
 </section>
 
@@ -621,7 +621,7 @@ body { background: var(--bg-page-white); }
 <section class="content-section fade-in">
     <p><strong>The game-theoretic structure is a textbook tragedy of the commons.</strong> Each buyer optimizing for their own cheapest $/tCO₂ is locally rational. But the shared resource - each grid's need for investment in firm clean power and long-duration storage - is neglected because every actor is incentivized to free-ride on cheaper abatement elsewhere.</p>
 
-    <p><strong>Hourly attribution avoids this trap</strong> by construction. When procurement must match load hour-by-hour within a deliverability region, there is no mechanism for free-riding. A NEISO buyer must solve NEISO's winter gas problem. A CAISO buyer must cover the evening ramp. The constraint forces investment in the technologies each grid actually needs - not the cheapest global displacement.</p>
+    <p><strong>Hourly attribution avoids this trap</strong> by construction. When procurement must match load hour-by-hour within a deliverability region, there is no mechanism for free-riding. A <span class="text-neiso">NEISO</span> buyer must solve NEISO's winter gas problem. A <span class="text-caiso">CAISO</span> buyer must cover the evening ramp. The constraint forces investment in the technologies each grid actually needs - not the cheapest global displacement.</p>
 
     <p><strong>The irony:</strong> hourly matching produces <em>higher $/tCO₂</em> in the short run for any individual buyer - because it forces investment in firm clean power instead of cheap wind. But it produces <em>lower total system emissions</em> at scale - because it actually decarbonizes every grid rather than over-investing in coal displacement while leaving gas grids untouched.</p>
 
@@ -634,12 +634,12 @@ body { background: var(--bg-page-white); }
     <div class="mechanism-grid">
         <div class="mechanism-card">
             <h4>Why This Isn't Just Theory</h4>
-            <p>We're already seeing early signs: 70%+ of voluntary corporate renewable PPAs in 2023–2024 were for wind and solar in ERCOT, SPP, and MISO - the grids with the best $/MWh and $/tCO₂. NEISO and NYISO corporate PPA activity was minimal despite those grids having the highest marginal gas dependence. The capital flow pattern matches exactly what consequential optimization predicts - and it's happening under today's annual REC regime, which already has weak locational constraints.</p>
+            <p>We're already seeing early signs: 70%+ of voluntary corporate renewable PPAs in 2023–2024 were for wind and solar in <span class="text-ercot">ERCOT</span>, <span class="text-spp">SPP</span>, and <span class="text-miso">MISO</span> - the grids with the best $/MWh and $/tCO₂. <span class="text-neiso">NEISO</span> and <span class="text-nyiso">NYISO</span> corporate PPA activity was minimal despite those grids having the highest marginal gas dependence. The capital flow pattern matches exactly what consequential optimization predicts - and it's happening under today's annual REC regime, which already has weak locational constraints.</p>
             <div class="evidence">Sources: BNEF Corporate PPA Tracker 2024; American Clean Power Association Market Report Q4 2024.</div>
         </div>
         <div class="mechanism-card">
             <h4>What Hourly Matching Solves</h4>
-            <p>By requiring temporal and spatial matching, hourly attribution creates guaranteed demand signals for firm clean power in every grid. A NEISO buyer under hourly matching must contract dispatchable clean capacity to cover winter peaks. Under consequential accounting, that same buyer could meet its full "impact" target with a MISO wind PPA - and NEISO's winter problem persists.</p>
+            <p>By requiring temporal and spatial matching, hourly attribution creates guaranteed demand signals for firm clean power in every grid. A <span class="text-neiso">NEISO</span> buyer under hourly matching must contract dispatchable clean capacity to cover winter peaks. Under consequential accounting, that same buyer could meet its full "impact" target with a <span class="text-miso">MISO</span> <span class="em-wind">wind</span> PPA - and <span class="text-neiso">NEISO</span>'s winter problem persists.</p>
             <div class="evidence">Model: Hourly matching at 90% CFE in CAISO costs $75.94/MWh but deploys 238 TWh of firm generation - vs. consequential at $68.12/MWh deploying only 25 TWh. The cost gap narrows while the firm clean deployment gap is 10×.</div>
         </div>
     </div>
@@ -649,7 +649,7 @@ body { background: var(--bg-page-white); }
     <div class="page-insight-box">
         <h3>The Bottom Line</h3>
         <p>Consequential accounting works as a niche analytical tool - measuring displacement impact alongside an hourly matching procurement strategy. It fails catastrophically as a <span class="highlight">primary procurement framework at scale</span>. The five failure modes documented here aren't edge cases; they're the predictable, mathematically inevitable consequences of optimizing for cheapest $/tCO₂ across unconstrained geographies.</p>
-        <p><strong>The coal/oil transition tells the timeline story.</strong> Our model shows all coal-bearing ISOs hit the coal wall at approximately 70% clean energy penetration. SPP must exhaust 42 TWh of coal, MISO 125 TWh, PJM 139 TWh, and ERCOT 68 TWh. After those thresholds, every grid converges to the same efficient-gas baseline at ~860 lb/MWh - and the consequential "discount" vanishes entirely. NEISO, NYISO, and CAISO are already there today. <span class="highlight">Once coal is exhausted, consequential buyers face the same $/tCO&#8322; as hourly matching</span> - but having starved gas-dependent grids of firm clean investment during the critical window when those technologies needed demand signals to scale.</p>
+        <p><strong>The coal/oil transition tells the timeline story.</strong> Our model shows all coal-bearing ISOs hit the coal wall at approximately 70% clean energy penetration. <span class="text-spp">SPP</span> must exhaust 42 TWh of coal, <span class="text-miso">MISO</span> 125 TWh, <span class="text-pjm">PJM</span> 139 TWh, and <span class="text-ercot">ERCOT</span> 68 TWh. After those thresholds, every grid converges to the same efficient-gas baseline at ~860 lb/MWh - and the consequential "discount" vanishes entirely. <span class="text-neiso">NEISO</span>, <span class="text-nyiso">NYISO</span>, and <span class="text-caiso">CAISO</span> are already there today. <span class="highlight">Once coal is exhausted, consequential buyers face the same $/tCO&#8322; as hourly matching</span> - but having starved gas-dependent grids of firm clean investment during the critical window when those technologies needed demand signals to scale.</p>
         <p>The GHG Protocol's Scope 2 revision should recognize hourly attribution as the robust default - the framework that works at 1% participation and at 100%.</p>
     </div>
 </section>
@@ -1028,18 +1028,20 @@ if (capitalFlowCtx) {
                 {
                     label: 'Coal (% of fossil)',
                     data: coalPct,
-                    backgroundColor: 'rgba(239,68,68,0.7)',
-                    borderColor: 'rgba(239,68,68,1)',
-                    borderWidth: 1,
+                    backgroundColor: withAlpha(RESOURCE_COLORS.fossilCoal, 0.85),
+                    borderColor: RESOURCE_COLORS.fossilCoal,
+                    borderWidth: 2,
+                    borderRadius: 3,
                     stack: 'fossil',
                     yAxisID: 'y'
                 },
                 {
                     label: 'Gas (% of fossil)',
                     data: gasPct,
-                    backgroundColor: 'rgba(14,165,233,0.5)',
-                    borderColor: 'rgba(14,165,233,0.8)',
-                    borderWidth: 1,
+                    backgroundColor: withAlpha(RESOURCE_COLORS.fossilGas, 0.85),
+                    borderColor: RESOURCE_COLORS.fossilGas,
+                    borderWidth: 2,
+                    borderRadius: 3,
                     stack: 'fossil',
                     yAxisID: 'y'
                 },

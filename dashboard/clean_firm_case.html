@@ -403,13 +403,13 @@
                 High matching targets need clean firm power in most regions. Without it, the gap between demand and variable renewable supply must be filled by gas backup &mdash; and every new gas plant built today becomes a stranded asset tomorrow.
             </p>
             <p>
-                Clean firm is expensive today because it's <strong style="color:#B45309;">first-of-a-kind</strong><!-- contrast-fix: was #F59E0B, now #B45309, ratio 5.02:1 on bg #fff -->. Vogtle Units 3&amp;4 came in at ~$15,000/kW; NuScale's SMR reached ~$20,000/kW before cancellation. Lazard (2025) puts unsubsidized new nuclear at $141&ndash;220/MWh. But every energy technology follows Wright's Law: costs decline with deployment. Solar achieved a 24% learning rate per doubling. Wind: 15%. NREL ATB 2024 models nuclear learning at 8&ndash;9.5% per doubling; the DOE's Liftoff report projects ~40% total reduction after 5&ndash;10 reactors per design, reaching $3,600/kW and ~$66/MWh. MIT's 2024 analysis puts AP1000 NOAK at $4,625/kW ($66/MWh unsubsidized).
+                Clean firm is expensive today because it's <strong class="text-amber">first-of-a-kind</strong>. Vogtle Units 3&amp;4 came in at ~$15,000/kW; NuScale's SMR reached ~$20,000/kW before cancellation. Lazard (2025) puts unsubsidized new <span class="em-nuclear">nuclear</span> at <strong class="text-nuclear">$141&ndash;220/MWh</strong>. But every energy technology follows Wright's Law: costs decline with deployment. <span class="em-solar">Solar</span> achieved a 24% learning rate per doubling. <span class="em-wind">Wind</span>: 15%. NREL ATB 2024 models nuclear learning at 8&ndash;9.5% per doubling; the DOE's Liftoff report projects ~40% total reduction after 5&ndash;10 reactors per design, reaching $3,600/kW and ~$66/MWh. MIT's 2024 analysis puts AP1000 NOAK at $4,625/kW ($66/MWh unsubsidized).
             </p>
             <p>
-                Meanwhile, gas gets <em>more</em> expensive. Fuel prices rise (EIA AEO2025: $3.50&rarr;$4.95/MMBtu by 2050). Capital costs have <strong style="color:#DC2626;">tripled</strong><!-- contrast-fix: was #EF4444, now #DC2626, ratio 4.83:1 on bg #fff --> &mdash; market quotes are $2,400/kW vs. EIA's $1,200/kW estimate (GridLab 2025). As clean energy scales, gas plants run fewer hours, spreading fixed costs over declining output. Add carbon pricing &mdash; EU ETS already at &euro;77/ton, heading to &euro;126+ by 2030 &mdash; and the true cost of gas rises relentlessly. Carbon Tracker estimates $3.5 trillion in stranded fossil assets globally under IEA net-zero scenarios.
+                Meanwhile, gas gets <em>more</em> expensive. Fuel prices rise (EIA AEO2025: $3.50&rarr;$4.95/MMBtu by 2050). Capital costs have <strong class="text-red">tripled</strong> &mdash; market quotes are $2,400/kW vs. EIA's $1,200/kW estimate (GridLab 2025). As clean energy scales, gas plants run fewer hours, spreading fixed costs over declining output. Add carbon pricing &mdash; EU ETS already at &euro;77/ton, heading to &euro;126+ by 2030 &mdash; and the true cost of gas rises relentlessly. Carbon Tracker estimates $3.5 trillion in stranded fossil assets globally under IEA net-zero scenarios.
             </p>
             <p>
-                CCS follows a parallel trajectory. DOE OCED projects ~25% CAPEX reduction from FOAK to NOAK, with learning rates of 3&ndash;5% per doubling (NETL). The 45Q tax credit ($85/ton for saline storage) reduces CCS-CCGT LCOE by over 25%, bringing near-term costs to ~$92/MWh (Frontiers 2022). As both nuclear and CCS descend their learning curves, the clean firm portfolio converges on $68&ndash;75/MWh by the late 2030s.
+                <span class="em-ccs">CCS</span> follows a parallel trajectory. DOE OCED projects ~25% CAPEX reduction from FOAK to NOAK, with learning rates of 3&ndash;5% per doubling (NETL). The 45Q tax credit ($85/ton for saline storage) reduces CCS-CCGT LCOE by over 25%, bringing near-term costs to ~$92/MWh (Frontiers 2022). As both <span class="em-nuclear">nuclear</span> and <span class="em-ccs">CCS</span> descend their learning curves, the clean firm portfolio converges on <strong class="text-green">$68&ndash;75/MWh</strong> by the late 2030s.
             </p>
             <p style="color:rgba(0,0,0,0.75);font-size:0.85rem;line-height:1.6;">
                 <strong>An important caveat:</strong> these projections assume positive learning
@@ -479,22 +479,22 @@
     <div class="hero-inner">
         <div class="hero-text">
             <h2>You're building gas plants today that become stranded assets tomorrow.</h2>
-            <p>At 90% clean energy, America's 7 ISOs still depend on <strong style="color:#DC2626;">145 GW of gas backup capacity</strong> to maintain reliability. That's billions in incumbent capital that earns diminishing returns as decarbonization continues. Clean firm power &mdash; nuclear, enhanced geothermal, CCS &mdash; prevents this trap. The investment case holds across all 5,832 cost scenarios we tested.</p>
+            <p>At 90% clean energy, America's 7 ISOs still depend on <strong class="text-red">145 GW of gas backup capacity</strong> to maintain reliability. That's billions in incumbent capital that earns diminishing returns as decarbonization continues. Clean firm power &mdash; <span class="em-nuclear">nuclear</span>, enhanced geothermal, <span class="em-ccs">CCS</span> &mdash; prevents this trap. The investment case holds across all 5,832 cost scenarios we tested.</p>
             <div class="counter-row">
                 <div class="counter-card">
-                    <div class="counter-val" id="ctrNewGas">145</div>
+                        <div class="counter-val text-fossil" id="ctrNewGas">145</div>
                     <div class="counter-lbl">GW Gas Backup at 90%</div>
                 </div>
                 <div class="counter-card">
-                    <div class="counter-val" id="ctrAnnualCost">$2B</div>
+                    <div class="counter-val text-red" id="ctrAnnualCost">$2B</div>
                     <div class="counter-lbl">Annual Gas Backup Cost</div>
                 </div>
                 <div class="counter-card">
-                    <div class="counter-val blue" id="ctrISOs">7</div>
+                    <div class="counter-val text-blue" id="ctrISOs">7</div>
                     <div class="counter-lbl">ISOs Analyzed</div>
                 </div>
                 <div class="counter-card">
-                    <div class="counter-val green" id="ctrScenarios">5832</div>
+                    <div class="counter-val text-green" id="ctrScenarios">5832</div>
                     <div class="counter-lbl">Cost Scenarios</div>
                 </div>
             </div>
@@ -623,12 +623,12 @@
     <div class="synthesis-inner">
         <div class="synthesis-card">
             <h3>The stranding risk is already here</h3>
-            <p>145 GW of gas backup capacity across 7 ISOs at 90% clean energy. This incumbent fleet earns diminishing returns as clean targets rise. Without clean firm power, this gas dependency is unavoidable &mdash; a permanent annual cost on every region's ratepayers.</p>
+            <p>145 GW of gas backup capacity across 7 ISOs at 90% clean energy. This incumbent fleet earns diminishing returns as clean targets rise. Without clean firm power, this <strong class="text-fossil">gas</strong> dependency is unavoidable &mdash; a permanent annual cost on every region's ratepayers.</p>
             <span class="stat-callout stat-red">145 GW gas backup &middot; Diminishing utilization &middot; Permanent cost</span>
         </div>
         <div class="synthesis-card">
             <h3>The FOAK premium is an investment, not a cost</h3>
-            <p>Lazard (2025) puts unsubsidized new nuclear at $141&ndash;220/MWh &mdash; consistent with Vogtle ($15,000/kW) and NuScale ($20,000/kW) experience. But DOE&rsquo;s Liftoff report targets $3,600/kW after 5&ndash;10 deployments per design; MIT (2024) models AP1000 NOAK at $66/MWh unsubsidized. NREL ATB 2024 applies 8&ndash;9.5% learning rates per doubling. Geothermal is moving even faster &mdash; Fervo cut drilling costs 50% in 3 years. CCS follows suit: NETL documents 3&ndash;5% learning per doubling, with DOE OCED projecting 25% CAPEX reduction to NOAK. The gas cost it displaces never declines.</p>
+            <p>Lazard (2025) puts unsubsidized new <span class="em-nuclear">nuclear</span> at <strong class="text-nuclear">$141&ndash;220/MWh</strong> &mdash; consistent with Vogtle ($15,000/kW) and NuScale ($20,000/kW) experience. But DOE&rsquo;s Liftoff report targets $3,600/kW after 5&ndash;10 deployments per design; MIT (2024) models AP1000 NOAK at <strong class="text-nuclear">$66/MWh</strong> unsubsidized. NREL ATB 2024 applies 8&ndash;9.5% learning rates per doubling. <span class="em-geo">Geothermal</span> is moving even faster &mdash; Fervo cut drilling costs 50% in 3 years. <span class="em-ccs">CCS</span> follows suit: NETL documents 3&ndash;5% learning per doubling, with DOE OCED projecting 25% CAPEX reduction to NOAK. The gas cost it displaces never declines.</p>
             <span class="stat-callout stat-green">~40% cost decline FOAK&rarr;NOAK &middot; Fervo: 35% learning rate</span>
         </div>
     </div>
@@ -671,8 +671,8 @@
 <!-- Wright's Law Intro -->
 <div class="wl-analysis-section section-light">
     <h3>The Critical Mass Question</h3>
-    <p class="section-desc">Wright's Law predicts that technology costs decline by a fixed percentage each time cumulative production doubles. Solar panels followed this pattern &mdash; falling 99% since 1976. But clean firm generation (advanced nuclear, CCS-CCGT) hasn't hit the first doubling yet. The question isn't <em>whether</em> costs will fall, but <em>when enough buyers commit</em> to trigger the learning curve.</p>
-    <p class="section-desc">This analysis models what happens when C&amp;I electricity buyers collectively adopt hourly CFE matching (Strategy 2C) at different participation levels. Below a critical mass threshold, new-build clean firm stays at FOAK pricing. Above it, Wright's Law activates and costs plummet toward NOAK levels &mdash; benefiting every participant.</p>
+    <p class="section-desc">Wright's Law predicts that technology costs decline by a fixed percentage each time cumulative production doubles. <span class="em-solar">Solar</span> panels followed this pattern &mdash; falling 99% since 1976. But clean firm generation (advanced <span class="em-nuclear">nuclear</span>, <span class="em-ccs">CCS-CCGT</span>) hasn't hit the first doubling yet. The question isn't <em>whether</em> costs will fall, but <em>when enough buyers commit</em> to trigger the learning curve.</p>
+    <p class="section-desc">This analysis models what happens when C&amp;I electricity buyers collectively adopt hourly CFE matching (Strategy 2C) at different participation levels. Below a critical mass threshold, new-build clean firm stays at <strong class="text-red">FOAK pricing</strong>. Above it, Wright's Law activates and costs plummet toward <strong class="text-green">NOAK levels</strong> &mdash; benefiting every participant.</p>
 
     <div class="key-findings" id="keyFindings">
         <div class="key-finding">
@@ -701,30 +701,30 @@
 
     <div class="key-findings">
         <div class="key-finding">
-            <div class="lbl">PJM</div>
-            <div class="val" style="color: var(--danger)">95% consumed</div>
+            <div class="lbl"><span class="text-pjm">PJM</span></div>
+            <div class="val text-red">95% consumed</div>
             <div class="lbl">Only 6.2 TWh remaining after RPS</div>
         </div>
         <div class="key-finding">
-            <div class="lbl">ERCOT</div>
-            <div class="val" style="color: var(--success)">136 TWh open</div>
+            <div class="lbl"><span class="text-ercot">ERCOT</span></div>
+            <div class="val text-green">136 TWh open</div>
             <div class="lbl">Most abundant voluntary pipeline</div>
         </div>
         <div class="key-finding">
-            <div class="lbl">NYISO</div>
-            <div class="val" style="color: var(--danger)">Zero headroom</div>
+            <div class="lbl"><span class="text-nyiso">NYISO</span></div>
+            <div class="val text-red">Zero headroom</div>
             <div class="lbl">Projected fully consumed by 2030</div>
         </div>
         <div class="key-finding">
             <div class="lbl">Premium Escalation</div>
-            <div class="val">$3.6 → $720</div>
+            <div class="val text-amber">$3.6 → $720</div>
             <div class="lbl">PJM marginal EAC cost at 100% matching ($/MWh)</div>
         </div>
     </div>
     <!-- QA FLAG: verify EAC scarcity numbers - PJM 6.2 TWh, ERCOT 136 TWh, NYISO zero headroom, PJM $3.6→$720 -->
 
     <div class="note-box" style="margin-top: var(--space-lg)">
-        <strong>The supply-demand paradox:</strong> The ISOs where hourly matching creates the strongest grid-cleaning signal (PJM, NYISO) are exactly where the clean energy pipeline is most constrained. Reaching Wright's Law critical mass in these regions requires <em>new-build beyond the current pipeline</em> - which is precisely the FOAK→NOAK investment thesis modeled above. In unconstrained markets (ERCOT), critical mass is achievable with existing pipeline alone.
+        <strong>The supply-demand paradox:</strong> The ISOs where hourly matching creates the strongest grid-cleaning signal (<span class="text-pjm">PJM</span>, <span class="text-nyiso">NYISO</span>) are exactly where the clean energy pipeline is most constrained. Reaching Wright's Law critical mass in these regions requires <em>new-build beyond the current pipeline</em> - which is precisely the FOAK→NOAK investment thesis modeled above. In unconstrained markets (ERCOT), critical mass is achievable with existing pipeline alone.
         <span style="display:block; margin-top:8px; font-size:0.85rem">
             <a href="gen_policy_conditions.html#eac-scarcity" style="color:#0369A1; text-decoration:none; border-bottom:1px solid rgba(14,165,233,0.3)">See complete EAC scarcity data and policy context &rarr;</a>
         </span>
@@ -738,30 +738,30 @@
 
     <div class="key-findings">
         <div class="key-finding">
-            <div class="lbl">PJM</div>
-            <div class="val" style="color: var(--danger)">95% consumed</div>
+            <div class="lbl"><span class="text-pjm">PJM</span></div>
+            <div class="val text-red">95% consumed</div>
             <div class="lbl">Only 6.2 TWh remaining after RPS</div>
         </div>
         <div class="key-finding">
-            <div class="lbl">ERCOT</div>
-            <div class="val" style="color: var(--success)">136 TWh open</div>
+            <div class="lbl"><span class="text-ercot">ERCOT</span></div>
+            <div class="val text-green">136 TWh open</div>
             <div class="lbl">Most abundant voluntary pipeline</div>
         </div>
         <div class="key-finding">
-            <div class="lbl">NYISO</div>
-            <div class="val" style="color: var(--danger)">Zero headroom</div>
+            <div class="lbl"><span class="text-nyiso">NYISO</span></div>
+            <div class="val text-red">Zero headroom</div>
             <div class="lbl">Projected fully consumed by 2030</div>
         </div>
         <div class="key-finding">
             <div class="lbl">Premium Escalation</div>
-            <div class="val">$3.6 → $720</div>
+            <div class="val text-amber">$3.6 → $720</div>
             <div class="lbl">PJM marginal EAC cost at 100% matching ($/MWh)</div>
         </div>
     </div>
     <!-- QA FLAG: verify EAC scarcity numbers - PJM 6.2 TWh, ERCOT 136 TWh, NYISO zero headroom, PJM $3.6→$720 -->
 
     <div class="note-box" style="margin-top: var(--space-lg)">
-        <strong>The supply-demand paradox:</strong> The ISOs where hourly matching creates the strongest grid-cleaning signal (PJM, NYISO) are exactly where the clean energy pipeline is most constrained. Reaching Wright's Law critical mass in these regions requires <em>new-build beyond the current pipeline</em> - which is precisely the FOAK→NOAK investment thesis modeled above. In unconstrained markets (ERCOT), critical mass is achievable with existing pipeline alone.
+        <strong>The supply-demand paradox:</strong> The ISOs where hourly matching creates the strongest grid-cleaning signal (<span class="text-pjm">PJM</span>, <span class="text-nyiso">NYISO</span>) are exactly where the clean energy pipeline is most constrained. Reaching Wright's Law critical mass in these regions requires <em>new-build beyond the current pipeline</em> - which is precisely the FOAK→NOAK investment thesis modeled above. In unconstrained markets (ERCOT), critical mass is achievable with existing pipeline alone.
         <span style="display:block; margin-top:8px; font-size:0.85rem">
             <a href="gen_policy_conditions.html#eac-scarcity" style="color:#0369A1; text-decoration:none; border-bottom:1px solid rgba(14,165,233,0.3)">See complete EAC scarcity data and policy context &rarr;</a>
         </span>
@@ -785,7 +785,7 @@
 <!-- Wright's Law Section 2: Technology LCOE Trajectories -->
 <div class="wl-analysis-section section-light">
     <h3>Technology Learning Curves: FOAK to NOAK</h3>
-    <p class="section-desc">Wright's Law cost trajectories for CCS-CCGT and advanced nuclear, gated by critical mass. Below the first-doubling threshold (8 GW CCS, 5 GW nuclear), costs stay at FOAK levels. After critical mass, they follow the standard learning curve toward NOAK pricing.</p>
+    <p class="section-desc">Wright's Law cost trajectories for <span class="em-ccs">CCS-CCGT</span> and advanced <span class="em-nuclear">nuclear</span>, gated by critical mass. Below the first-doubling threshold (8 GW CCS, 5 GW nuclear), costs stay at FOAK levels. After critical mass, they follow the standard learning curve toward NOAK pricing.</p>
     <div class="wl-chart-box"><canvas id="chartLcoeTraj"></canvas></div>
     <div class="wl-insight">
         <strong>The doubling threshold matters.</strong> CCS-CCGT needs ~8 GW of global deployment to trigger its learning curve (down from $<span id="ccsFoak">--</span>/MWh to $<span id="ccsNoak">--</span>/MWh). Nuclear needs ~5 GW (down from $<span id="nucFoak">--</span>/MWh to $<span id="nucNoak">--</span>/MWh). At 25% C&amp;I participation targeting 90% CFE, both thresholds are crossed.
@@ -1035,16 +1035,18 @@ function buildHeroChart() {
                 {
                     label: 'Existing Gas (GW)',
                     data: existData,
-                    backgroundColor: 'rgba(156,163,175,0.5)',
-                    borderColor: 'rgba(156,163,175,0.8)',
-                    borderWidth: 1
+                    backgroundColor: withAlpha(RESOURCE_COLORS.fossilGas, 0.85),
+                    borderColor: RESOURCE_COLORS.fossilGas,
+                    borderWidth: 2,
+                    borderRadius: 3
                 },
                 {
                     label: 'New Gas Build (GW)',
                     data: newData,
-                    backgroundColor: 'rgba(239,68,68,0.65)',
+                    backgroundColor: withAlpha('#EF4444', 0.15),
                     borderColor: '#EF4444',
-                    borderWidth: 1
+                    borderWidth: 2,
+                    borderRadius: 3
                 }
             ]
         },
@@ -1114,18 +1116,20 @@ function buildGasTrapChart() {
                 {
                     label: 'Existing Gas (GW)',
                     data: DISPLAY_IDXS.map(function(i) { return (d.gas_backup_mw[i] - d.new_gas_build_mw[i]) / 1000; }),
-                    backgroundColor: 'rgba(156,163,175,0.45)',
-                    borderColor: 'rgba(156,163,175,0.7)',
-                    borderWidth: 1,
+                    backgroundColor: withAlpha(RESOURCE_COLORS.fossilGas, 0.85),
+                    borderColor: RESOURCE_COLORS.fossilGas,
+                    borderWidth: 2,
+                    borderRadius: 3,
                     stack: 'gas',
                     order: 2
                 },
                 {
                     label: 'New Gas Build (GW)',
                     data: DISPLAY_IDXS.map(function(i) { return d.new_gas_build_mw[i] / 1000; }),
-                    backgroundColor: 'rgba(239,68,68,0.6)',
+                    backgroundColor: withAlpha('#EF4444', 0.15),
                     borderColor: '#EF4444',
-                    borderWidth: 1,
+                    borderWidth: 2,
+                    borderRadius: 3,
                     stack: 'gas',
                     order: 2
                 },
@@ -1177,9 +1181,10 @@ function buildDisplacementChart() {
                 {
                     label: 'Gas Backup (GW)',
                     data: DISPLAY_IDXS.map(function(i) { return d.gas_backup_mw[i] / 1000; }),
-                    backgroundColor: 'rgba(239,68,68,0.35)',
-                    borderColor: 'rgba(239,68,68,0.6)',
-                    borderWidth: 1,
+                    backgroundColor: withAlpha('#EF4444', 0.15),
+                    borderColor: '#EF4444',
+                    borderWidth: 2,
+                    borderRadius: 3,
                     order: 2
                 },
                 {
@@ -1237,18 +1242,20 @@ function buildInvestmentChart() {
                 {
                     label: 'Total Gas Backup Cost',
                     data: gasTotal,
-                    backgroundColor: 'rgba(239,68,68,0.55)',
+                    backgroundColor: withAlpha('#EF4444', 0.15),
                     borderColor: '#EF4444',
-                    borderWidth: 1,
+                    borderWidth: 2,
+                    borderRadius: 3,
                     barPercentage: 0.5,
                     order: 3
                 },
                 {
                     label: 'New Gas Cost Only',
                     data: newGasCost,
-                    backgroundColor: 'rgba(239,68,68,0.25)',
-                    borderColor: 'rgba(239,68,68,0.5)',
-                    borderWidth: 1,
+                    backgroundColor: withAlpha('#EF4444', 0.10),
+                    borderColor: withAlpha('#EF4444', 0.5),
+                    borderWidth: 2,
+                    borderRadius: 3,
                     borderDash: [4, 2],
                     barPercentage: 0.5,
                     order: 3
@@ -2124,10 +2131,10 @@ function wlRenderCriticalMass() {
                 label: 'C&I Participation Required',
                 data: values,
                 backgroundColor: entries.map(e =>
-                    e.pct <= 10 ? 'rgba(34, 197, 94, 0.7)' :
-                    e.pct <= 25 ? 'rgba(14, 165, 233, 0.7)' :
-                    e.pct <= 50 ? 'rgba(245, 158, 11, 0.7)' :
-                    'rgba(239, 68, 68, 0.7)'
+                    e.pct <= 10 ? withAlpha(RESOURCE_COLORS.wind, 0.15) :
+                    e.pct <= 25 ? withAlpha(RESOURCE_COLORS.hydro, 0.15) :
+                    e.pct <= 50 ? withAlpha(RESOURCE_COLORS.solar, 0.15) :
+                    withAlpha('#EF4444', 0.15)
                 ),
                 borderColor: entries.map(e =>
                     e.pct <= 10 ? RESOURCE_COLORS.wind :
@@ -2136,7 +2143,7 @@ function wlRenderCriticalMass() {
                     '#EF4444'
                 ),
                 borderWidth: 2,
-                borderRadius: 6,
+                borderRadius: 3,
                 barPercentage: 0.7
             }]
         },
@@ -2220,8 +2227,8 @@ function wlRenderIsoSpend(partIdx) {
                 datasets: [{
                     data: [existSpend, nbSpend],
                     backgroundColor: [
-                        'rgba(14, 165, 233, 0.65)',
-                        'rgba(124, 58, 237, 0.65)'
+                        withAlpha(RESOURCE_COLORS.hydro, 0.85),
+                        withAlpha(RESOURCE_COLORS.nuclear, 0.15)
                     ],
                     borderColor: [RESOURCE_COLORS.hydro, RESOURCE_COLORS.nuclear],
                     borderWidth: 2

@@ -196,16 +196,16 @@
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px;">
         <div class="narrative-box" style="border-left-color: var(--nuclear);">
             <strong>SMARTargets Aspirational Targets</strong><br>
-            2030: −56% from baseline<br>
-            2035: −82% from baseline<br>
-            2050: Net-zero<br>
+            2030: <span class="text-green">−56%</span> from baseline<br>
+            2035: <span class="text-green">−82%</span> from baseline<br>
+            2050: <span class="text-green">Net-zero</span><br>
             <em style="font-size: 0.8rem; color: var(--text-dim);">Company-specific qualified targets may differ based on fleet composition and market constraints.</em>
         </div>
         <div class="narrative-box" style="border-left-color: var(--ldes);">
             <strong>SBTi Power Sector v2</strong><br>
-            2030: ~118 kg CO₂/MWh<br>
-            2035: ~57 kg CO₂/MWh<br>
-            2040: Net-zero<br>
+            2030: <span class="text-amber">~118 kg CO₂/MWh</span><br>
+            2035: <span class="text-green">~57 kg CO₂/MWh</span><br>
+            2040: <span class="text-green">Net-zero</span><br>
             <em style="font-size: 0.8rem; color: var(--text-dim);">Uniform sector pathway based on 1.5°C carbon budget. No company-specific adjustment.</em>
         </div>
     </div>
@@ -1016,13 +1016,13 @@ function buildChallenges() {
         opps.push(`<strong>DAC backstop viable:</strong> Under facilitating conditions, DAC can offset the remaining ${fmt(facDac, 0)} Mt at ${fmtDollar(facDacCost)}/ton - cheaper than forced grid overbuild.`);
     }
     if (mixR1.wind > totalR1 * 0.25) {
-        opps.push(`<strong>Strong wind resource:</strong> Wind contributes ${(mixR1.wind/totalR1*100).toFixed(0)}% of market-driven supply - a natural foundation for deeper decarbonization.`);
+        opps.push(`<strong>Strong <span class="em-wind">wind</span> resource:</strong> Wind contributes <span class="text-wind">${(mixR1.wind/totalR1*100).toFixed(0)}%</span> of market-driven supply - a natural foundation for deeper decarbonization.`);
     }
     if (mixR1.solar > totalR1 * 0.25) {
-        opps.push(`<strong>Strong solar resource:</strong> Solar contributes ${(mixR1.solar/totalR1*100).toFixed(0)}% of market-driven supply - abundant cheap generation.`);
+        opps.push(`<strong>Strong <span class="em-solar">solar</span> resource:</strong> Solar contributes <span class="text-solar">${(mixR1.solar/totalR1*100).toFixed(0)}%</span> of market-driven supply - abundant cheap generation.`);
     }
     if (mixR1.hydro > totalR1 * 0.1) {
-        opps.push(`<strong>Existing hydro base:</strong> Hydro provides ${(mixR1.hydro/totalR1*100).toFixed(0)}% of supply at zero marginal cost - firm, dispatchable, and already paid for.`);
+        opps.push(`<strong>Existing <span class="em-hydro">hydro</span> base:</strong> Hydro provides <span class="text-hydro">${(mixR1.hydro/totalR1*100).toFixed(0)}%</span> of supply at zero marginal cost - firm, dispatchable, and already paid for.`);
     }
 
     if (opps.length > 0) {
@@ -1123,7 +1123,7 @@ function buildMixChart(canvasId, scenarioName) {
         if (!hex || !existD[r].some(v => v > 0)) continue;
         datasets.push({
             label: MIX_LABELS[r] + ' (existing)', data: existD[r],
-            backgroundColor: hexToRgba(hex, 0.75), borderColor: hex, borderWidth: 1.5, borderRadius: 4,
+            backgroundColor: hexToRgba(hex, 0.85), borderColor: hex, borderWidth: 2, borderRadius: 3,
             stack: 'mix', _resourceKey: r,
         });
     }
@@ -1133,7 +1133,7 @@ function buildMixChart(canvasId, scenarioName) {
         if (!hex || !newD[r].some(v => v > 0)) continue;
         datasets.push({
             label: MIX_LABELS[r] + ' (new)', data: newD[r],
-            backgroundColor: hexToRgba(hex, 0.40), borderColor: hex, borderWidth: 1, borderRadius: 4,
+            backgroundColor: hexToRgba(hex, 0.15), borderColor: hex, borderWidth: 2, borderRadius: 3,
             stack: 'mix', _resourceKey: r,
         });
     }
@@ -1145,7 +1145,7 @@ function buildMixChart(canvasId, scenarioName) {
         if (!hex || !curtD[r].some(v => v > 0)) continue;
         datasets.push({
             label: MIX_LABELS[r] + ' (curtailed)', data: curtD[r],
-            backgroundColor: createDiagonalPattern(hex, 0.55), borderColor: hex, borderWidth: 1, borderRadius: 2,
+            backgroundColor: createDiagonalPattern(hex, 0.55), borderColor: hex, borderWidth: 2, borderRadius: 3,
             stack: 'mix', _resourceKey: r, _isCurtailed: true,
         });
     }

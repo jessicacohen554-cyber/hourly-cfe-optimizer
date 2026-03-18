@@ -693,7 +693,7 @@
     <div class="insight-box">
         <strong>How to read this page</strong>
         <p style="margin:8px 0 6px;">This is a <strong>cost optimization model for corporate voluntary procurement</strong>, not a market simulation. It shows what happens in a vacuum when different procurement strategies are applied at varying participation levels, based purely on LCOE and capital costs.</p>
-        <p style="margin:6px 0;">In reality, market dynamics drive a broader mix of new generation - we explore those trajectories in the supply-side regional climate transition analysis. Here, the goal is to isolate the demand-pull signal: which resources do these strategies incentivize, where, and at what cost?</p>
+        <p style="margin:6px 0;">In reality, market dynamics drive a broader mix of new generation - we explore those trajectories in the supply-side regional climate transition analysis. Here, the goal is to isolate the demand-pull signal: which resources do these strategies incentivize - <span class="em-solar">solar</span>, <span class="em-wind">wind</span>, <span class="em-nuclear">nuclear</span>, <span class="em-ccs">CCS</span>, <span class="em-battery">battery</span> - where, and at what cost?</p>
         <p style="margin:6px 0 0;"><strong>Demand grows with ambition.</strong> Each CFE target maps to an SBTi-aligned deployment year (50%&nbsp;→&nbsp;2030, 90%&nbsp;→&nbsp;2040, ≥99.99%&nbsp;→&nbsp;2050). Demand scales at ISO-specific growth rates from a 2025 baseline. Higher targets = later years = more demand to serve.</p>
     </div>
 </div>
@@ -979,7 +979,7 @@
 <div class="content-section" style="padding-bottom:0;">
     <div class="insight-box" style="font-size:0.82rem;line-height:1.6;">
         <strong>Data Sources & Methodology</strong>
-        <p style="margin:8px 0 6px;"><strong>Demand</strong> - 2025 baseline demand (TWh) per ISO, grown at region-specific annual rates indexed to SBTi target years. Medium growth rates: CAISO 1.9%, ERCOT 3.5%, PJM 2.4%, NYISO 2.0%, NEISO 1.8%, MISO 2.2%, SPP 1.8%.</p>
+        <p style="margin:8px 0 6px;"><strong>Demand</strong> - 2025 baseline demand (TWh) per ISO, grown at region-specific annual rates indexed to SBTi target years. Medium growth rates: <span class="text-caiso">CAISO</span> 1.9%, <span class="text-ercot">ERCOT</span> 3.5%, <span class="text-pjm">PJM</span> 2.4%, <span class="text-nyiso">NYISO</span> 2.0%, <span class="text-neiso">NEISO</span> 1.8%, <span class="text-miso">MISO</span> 2.2%, <span class="text-spp">SPP</span> 1.8%.</p>
         <p style="margin:6px 0;"><strong>Hourly profiles</strong> - Generation and demand shapes from 2021–2025 weather-year average (EIA Form 930). Profile shapes held constant across target years; total TWh scales with demand growth.</p>
         <p style="margin:6px 0;"><strong>Offshore wind</strong> - NREL National Offshore Wind dataset (NOW-23), 2&nbsp;km resolution, 2000–2020 historical record. Applied to CAISO, PJM, NYISO, and NEISO. Not modeled for ERCOT, MISO, or SPP.</p>
         <p style="margin:6px 0 0;"><strong>Other sources</strong> - Solar: NREL TMY3. Onshore wind: EIA/NREL. Hydro: historical inflow-weighted. Emission factors: EPA eGRID. Cost assumptions: NREL ATB 2024, Lazard LCOE+ v17.</p>
@@ -1160,9 +1160,9 @@
             data: {
                 labels: active.map(s => STRAT_LABELS[s]),
                 datasets: [
-                    { label: 'Existing', data: active.map(() => 0), backgroundColor: '#6366F1CC', borderColor: '#6366F1', borderWidth: 1, borderRadius: 2 },
-                    { label: 'New Build', data: active.map(() => 0), backgroundColor: '#6366F140', borderColor: '#6366F1', borderWidth: 1, borderRadius: 2 },
-                    { label: 'Cross-ISO', data: active.map(() => 0), backgroundColor: '#F59E0B80', borderColor: '#F59E0B', borderWidth: 1, borderRadius: 2 },
+                    { label: 'Existing', data: active.map(() => 0), backgroundColor: withAlpha('#6366F1', 0.85), borderColor: '#6366F1', borderWidth: 2, borderRadius: 3 },
+                    { label: 'New Build', data: active.map(() => 0), backgroundColor: withAlpha('#6366F1', 0.15), borderColor: '#6366F1', borderWidth: 2, borderRadius: 3 },
+                    { label: 'Cross-ISO', data: active.map(() => 0), backgroundColor: withAlpha('#F59E0B', 0.15), borderColor: '#F59E0B', borderWidth: 2, borderRadius: 3 },
                 ]
             },
             options: {
@@ -1180,9 +1180,9 @@
                 datasets: [{
                     label: 'Fossil Displaced',
                     data: active.map(() => 0),
-                    backgroundColor: active.map(s => STRAT_COLORS[s] + 'CC'),
+                    backgroundColor: active.map(s => withAlpha(STRAT_COLORS[s], 0.15)),
                     borderColor: active.map(s => STRAT_COLORS[s]),
-                    borderWidth: 1, borderRadius: 4,
+                    borderWidth: 2, borderRadius: 3,
                 }]
             },
             options: {
@@ -1289,9 +1289,9 @@
                 datasets: [{
                     label: 'New Gas Capacity (GW)',
                     data: data,
-                    backgroundColor: colors.map(c => c + 'CC'),
+                    backgroundColor: colors.map(c => withAlpha(c, 0.15)),
                     borderColor: colors,
-                    borderWidth: 1, borderRadius: 4,
+                    borderWidth: 2, borderRadius: 3,
                 }]
             },
             options: {

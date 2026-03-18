@@ -225,25 +225,37 @@
             .reduce((s, f) => s + (byFuel[f] ? byFuel[f].gen_twh : 0), 0);
         const cleanPct = totalGen > 0 ? ((cleanGen / totalGen) * 100).toFixed(0) : '0';
 
-        // Inject stats
+        // Inject stats with resource-appropriate colors
         document.getElementById('statCapacity').textContent = fmt(totalGen, 0) + ' TWh';
+        document.getElementById('statCapacity').style.color = '#0369A1';
         document.getElementById('statGeneration').textContent = fmt(totalGen, 0) + ' TWh';
+        document.getElementById('statGeneration').style.color = '#0369A1';
         document.getElementById('statEmissions').textContent = fmt(totalCO2, 0) + ' Mt';
+        document.getElementById('statEmissions').style.color = '#B91C1C';
         document.getElementById('statIntensity').textContent = fmt(intensity, 0) + ' kg/MWh';
+        document.getElementById('statIntensity').style.color = '#374151';
         document.getElementById('statISOs').textContent = isos.length;
+        document.getElementById('statISOs').style.color = '#4F46E5';
         document.getElementById('statCleanPct').textContent = cleanPct + '%';
+        document.getElementById('statCleanPct').style.color = '#15803D';
 
         // Doughnut: generation by fuel (TWh)
         const doughnutFuels = FUEL_ORDER.filter(f => byFuel[f] && byFuel[f].gen_twh > 0);
+        // Existing fleet = solid fill (0.85); all fuel types here are existing energy
+        const EXISTING_FUELS = ['nuclear', 'hydro', 'geothermal'];
         makeChart('fleetDoughnutChart', {
             type: 'doughnut',
             data: {
                 labels: doughnutFuels.map(f => FUEL_LABELS[f]),
                 datasets: [{
                     data: doughnutFuels.map(f => byFuel[f].gen_twh),
-                    backgroundColor: doughnutFuels.map(f => FUEL_COLORS[f]),
+                    backgroundColor: doughnutFuels.map(f => {
+                        const c = FUEL_COLORS[f];
+                        return EXISTING_FUELS.includes(f) ? withAlpha(c, 0.85) : withAlpha(c, 0.15);
+                    }),
+                    borderColor: doughnutFuels.map(f => FUEL_COLORS[f]),
                     borderWidth: 2,
-                    borderColor: '#fff'
+                    _skipStyle: true
                 }]
             },
             options: {
@@ -273,7 +285,11 @@
                 datasets: isoFuels.map(f => ({
                     label: FUEL_LABELS[f],
                     data: isoOrder.map(iso => (co.fleet_summary[iso] && co.fleet_summary[iso][f]) ? (co.fleet_summary[iso][f].gen_twh || 0) : 0),
-                    backgroundColor: FUEL_COLORS[f]
+                    backgroundColor: EXISTING_FUELS.includes(f) ? withAlpha(FUEL_COLORS[f], 0.85) : withAlpha(FUEL_COLORS[f], 0.15),
+                    borderColor: FUEL_COLORS[f],
+                    borderWidth: 2,
+                    borderRadius: 3,
+                    _skipStyle: true
                 }))
             },
             options: {
@@ -642,14 +658,22 @@
                         {
                             label: 'Operating (P50)',
                             data: fb.operating_mw.p50,
-                            backgroundColor: 'rgba(34,197,94,0.7)',
-                            stack: 'stack0'
+                            backgroundColor: withAlpha('#22C55E', 0.15),
+                            borderColor: '#22C55E',
+                            borderWidth: 2,
+                            borderRadius: 3,
+                            stack: 'stack0',
+                            _skipStyle: true
                         },
                         {
                             label: 'Stranded (P50)',
                             data: fb.stranded_mw.p50,
-                            backgroundColor: 'rgba(239,68,68,0.7)',
-                            stack: 'stack0'
+                            backgroundColor: withAlpha('#EF4444', 0.15),
+                            borderColor: '#EF4444',
+                            borderWidth: 2,
+                            borderRadius: 3,
+                            stack: 'stack0',
+                            _skipStyle: true
                         }
                     ]
                 },
@@ -933,10 +957,18 @@
                     label: 'Generation (TWh)',
                     data: [cleanTWh, -fossilTWh, solarNeeded, windNeeded, batteryNeeded, firmCleanNeeded],
                     backgroundColor: [
-                        'rgba(34,197,94,0.7)', 'rgba(107,114,128,0.7)',
+                        withAlpha('#22C55E', 0.85), withAlpha('#6B7280', 0.85),
+                        withAlpha(RESOURCE_COLORS.solar, 0.15), withAlpha(RESOURCE_COLORS.wind, 0.15),
+                        withAlpha(RESOURCE_COLORS.battery, 0.15), withAlpha(RESOURCE_COLORS.nuclear, 0.15)
+                    ],
+                    borderColor: [
+                        '#22C55E', '#6B7280',
                         RESOURCE_COLORS.solar, RESOURCE_COLORS.wind,
                         RESOURCE_COLORS.battery, RESOURCE_COLORS.nuclear
-                    ]
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 3,
+                    _skipStyle: true
                 }]
             },
             options: {
@@ -961,6 +993,8 @@
             { label: 'New CCS-CCGT', cost: 58, color: '#64748B' }
         ];
 
+        // Existing resources = solid, new-build = outline
+        const EXISTING_LCOE_LABELS = ['Existing Coal', 'Existing Gas CCGT'];
         makeChart('lcoeChart', {
             type: 'bar',
             data: {
@@ -968,7 +1002,11 @@
                 datasets: [{
                     label: 'LCOE ($/MWh)',
                     data: lcoeData.map(d => d.cost),
-                    backgroundColor: lcoeData.map(d => d.color)
+                    backgroundColor: lcoeData.map(d => EXISTING_LCOE_LABELS.includes(d.label) ? withAlpha(d.color, 0.85) : withAlpha(d.color, 0.15)),
+                    borderColor: lcoeData.map(d => d.color),
+                    borderWidth: 2,
+                    borderRadius: 3,
+                    _skipStyle: true
                 }]
             },
             options: {
@@ -1625,14 +1663,20 @@
                         {
                             label: 'Existing Gas (MW)',
                             data: relevantISOs.map(iso => gasISOs[iso] || 0),
-                            backgroundColor: 'rgba(107,114,128,0.6)',
-                            borderRadius: 4
+                            backgroundColor: withAlpha(RESOURCE_COLORS.fossilGas, 0.85),
+                            borderColor: RESOURCE_COLORS.fossilGas,
+                            borderWidth: 2,
+                            borderRadius: 3,
+                            _skipStyle: true
                         },
                         {
                             label: 'Potential New Gas (MW)',
                             data: relevantISOs.map(iso => isoDrivers[iso]?.newMW || 0),
-                            backgroundColor: 'rgba(239,68,68,0.6)',
-                            borderRadius: 4
+                            backgroundColor: withAlpha('#EF4444', 0.15),
+                            borderColor: '#EF4444',
+                            borderWidth: 2,
+                            borderRadius: 3,
+                            _skipStyle: true
                         }
                     ]
                 },
@@ -1665,10 +1709,11 @@
                             const ramp = i <= 1 ? 1.0 : i <= 2 ? 0.9 : i <= 3 ? 0.7 : i <= 4 ? 0.5 : 0.3;
                             return +(annualCO2 * ramp).toFixed(1);
                         }),
-                        backgroundColor: 'rgba(239,68,68,0.5)',
+                        backgroundColor: withAlpha('#EF4444', 0.15),
                         borderColor: '#EF4444',
-                        borderWidth: 1,
-                        borderRadius: 4
+                        borderWidth: 2,
+                        borderRadius: 3,
+                        _skipStyle: true
                     }]
                 },
                 options: {
@@ -1858,23 +1903,28 @@
                     {
                         label: 'Retrofit LCOE (w/ 45Q)',
                         data: barRetroLCOE,
-                        backgroundColor: barColors,
-                        borderWidth: 1
+                        backgroundColor: barColors.map(function(c) { return withAlpha(c, 0.15); }),
+                        borderColor: barColors,
+                        borderWidth: 2,
+                        borderRadius: 3,
+                        _skipStyle: true
                     },
                     {
                         label: 'Wholesale LMP',
                         data: barLMP,
-                        backgroundColor: 'rgba(34, 197, 94, 0.3)',
+                        backgroundColor: withAlpha('#22C55E', 0.15),
                         borderColor: '#22C55E',
                         borderWidth: 2,
+                        borderRadius: 3,
                         _skipStyle: true
                     },
                     {
                         label: 'DAC Offset ($/MWh equiv)',
                         data: barDAC,
-                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                        backgroundColor: withAlpha('#EF4444', 0.15),
                         borderColor: '#EF4444',
                         borderWidth: 2,
+                        borderRadius: 3,
                         borderDash: [4, 4],
                         _skipStyle: true
                     }
@@ -1925,7 +1975,11 @@
                 datasets: timelineISOs.map(iso => ({
                     label: iso,
                     data: isoMW[iso] || timelineYears.map(() => 0),
-                    backgroundColor: ISO_CLR[iso] || '#6366F1',
+                    backgroundColor: withAlpha(ISO_CLR[iso] || '#6366F1', 0.15),
+                    borderColor: ISO_CLR[iso] || '#6366F1',
+                    borderWidth: 2,
+                    borderRadius: 3,
+                    _skipStyle: true
                 }))
             },
             options: {
@@ -1958,12 +2012,20 @@
                     {
                         label: 'CO₂ Avoided via Retrofit (Mt/yr)',
                         data: co2Retro,
-                        backgroundColor: RESOURCE_COLORS.ccs || '#64748B'
+                        backgroundColor: withAlpha(RESOURCE_COLORS.ccs || '#64748B', 0.15),
+                        borderColor: RESOURCE_COLORS.ccs || '#64748B',
+                        borderWidth: 2,
+                        borderRadius: 3,
+                        _skipStyle: true
                     },
                     {
                         label: 'Baseline Gas Emissions (Mt/yr)',
                         data: co2DAC,
-                        backgroundColor: RESOURCE_COLORS.fossilGas || '#6B7280'
+                        backgroundColor: withAlpha(RESOURCE_COLORS.fossilGas || '#6B7280', 0.85),
+                        borderColor: RESOURCE_COLORS.fossilGas || '#6B7280',
+                        borderWidth: 2,
+                        borderRadius: 3,
+                        _skipStyle: true
                     }
                 ]
             },
@@ -1994,8 +2056,10 @@
                 labels: ['CCS Retrofit', 'DAC Offset / No CCS Storage', 'Stranded / Retired'],
                 datasets: [{
                     data: [Math.round(actualRetrofitMW), Math.round(dacOffsetMW), Math.max(0, Math.round(strandedMW))],
-                    backgroundColor: [RESOURCE_COLORS.ccs || '#64748B', '#EF4444', '#D1D5DB'],
-                    borderWidth: 2
+                    backgroundColor: [withAlpha(RESOURCE_COLORS.ccs || '#64748B', 0.15), withAlpha('#EF4444', 0.15), withAlpha('#D1D5DB', 0.15)],
+                    borderColor: [RESOURCE_COLORS.ccs || '#64748B', '#EF4444', '#D1D5DB'],
+                    borderWidth: 2,
+                    _skipStyle: true
                 }]
             },
             options: {

@@ -113,6 +113,54 @@ function withAlpha(hex, alpha) {
     return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
 }
 
+// ============================================================================
+// OUTLINE / SOLID DATASET FACTORIES
+// ============================================================================
+// outlineDataset: semi-transparent fill + saturated border (default for new-build)
+// solidDataset:   saturated fill + matching border (for existing clean energy)
+//
+// Usage:
+//   datasets: [
+//     outlineDataset(RESOURCE_COLORS.solar, 'New Solar', [10, 20, 30]),
+//     solidDataset(RESOURCE_COLORS.nuclear, 'Existing Nuclear', [50, 50, 50])
+//   ]
+// ============================================================================
+
+function outlineDataset(color, label, data, opts) {
+    opts = opts || {};
+    var result = {
+        label: label,
+        data: data,
+        backgroundColor: withAlpha(color, opts.fillAlpha || 0.15),
+        borderColor: color,
+        borderWidth: opts.borderWidth || 2,
+        borderRadius: opts.borderRadius || 3,
+        hoverBackgroundColor: withAlpha(color, 0.35),
+        hoverBorderColor: color,
+        hoverBorderWidth: (opts.borderWidth || 2) + 0.5
+    };
+    if (opts.extra) {
+        for (var k in opts.extra) { result[k] = opts.extra[k]; }
+    }
+    return result;
+}
+
+function solidDataset(color, label, data, opts) {
+    opts = opts || {};
+    var result = {
+        label: label,
+        data: data,
+        backgroundColor: withAlpha(color, opts.fillAlpha || 0.85),
+        borderColor: color,
+        borderWidth: opts.borderWidth || 2,
+        borderRadius: opts.borderRadius || 3
+    };
+    if (opts.extra) {
+        for (var k in opts.extra) { result[k] = opts.extra[k]; }
+    }
+    return result;
+}
+
 // Resource generation stack order (bottom to top for stacked charts)
 var RESOURCE_STACK_ORDER = ['nuclear', 'geothermal', 'ccs', 'hydro', 'offshoreWind', 'wind', 'solar', 'battery', 'battery8', 'ldes', 'greenH2'];
 
