@@ -64,6 +64,12 @@ The Market Simulation Screening Tool models electricity market economics across 
 - Nuclear retirement risk under different revenue assumptions
 - CCS breakeven carbon price analysis
 - Plant-level economics for every generator in the EIA 860 fleet
+- **Zonal LMP decomposition** — pipe-and-bubble zonal model (2–5 zones/ISO) captures intra-ISO transmission congestion
+- **LP storage co-dispatch** — simultaneous optimization of battery 4hr/8hr, LDES 100hr, and green H₂ via linear programming
+- **Inter-regional flows** — hourly import/export profiles reduce self-sufficiency requirements (NEISO HQ hydro, CAISO PNW imports)
+- **Demand response** — price-elastic load curtailment when LMP exceeds ISO-specific trigger prices
+- **Confidence visualization** — trajectory results show calibrated/extrapolated/uncertain zones with widening uncertainty bands
+- **Trajectory backtesting** — backward-looking validation against 2020–2024 observed outcomes
 
 ### Six-Page Flow
 
@@ -138,6 +144,13 @@ Levelized costs for new-build resources, including storage, fossil new-build, an
 |-----------|---------|-------------|
 | Demand Growth | Low (0.5%) / Med (1.5%) / High (2.5%) / Custom | Annual load growth rate |
 | Gas Friction | Low / Med / High | ESG/permitting headwinds for new gas |
+
+### Row 6: Advanced Options
+
+| Parameter | Options | Description |
+|-----------|---------|-------------|
+| Inter-Regional Imports | On / Off | Include historical cross-border power flows from EIA-930 data. On = imports reduce residual demand and fossil fleet sizing. Off = copper-plate isolation (each ISO self-sufficient). |
+| Demand Response | Off / Low / Med / High | Price-elastic load curtailment. Off = inelastic demand. Low = 50% registered DR participation with higher trigger prices. Medium = 70% participation (default DR values). High = 90% participation with lower trigger prices. |
 
 ---
 
@@ -217,13 +230,37 @@ Override model defaults with your own price data:
 
 | Chart | What It Shows |
 |-------|---------------|
-| LMP & Capacity Revenue | Price profile (hourly or yearly trajectory) |
-| Supply Stack | Generation mix by fuel (TWh) |
+| LMP & Capacity Revenue | Price profile (hourly or yearly trajectory). Confidence zone background bands in trajectory mode. |
+| Supply Stack | Generation mix by fuel (TWh). Confidence zone annotations label calibrated vs. extrapolated ranges. |
 | Merit-Order Stack | Fossil generators sorted by cost, with LMP cutoff |
 | Generator Economics | Per-unit dispatch, revenue, and profitability |
 | Profitability | Revenue vs. cost per resource (trajectory mode) |
 | CCS Breakeven | Carbon price at which CCS beats unabated gas |
 | Nuclear Revenue Stack | Energy + capacity + PTC breakdown |
+| Zonal LMP Spread | Per-zone average LMP and price spread vs system average (when fleet data available) |
+
+### Demand Response Metrics
+
+When DR is enabled (Low/Med/High), four KPI cards appear below the main results:
+
+| Metric | Description |
+|--------|-------------|
+| DR Curtailed (GWh/yr) | Total demand response energy curtailed annually |
+| DR Peak (GW) | Maximum simultaneous demand response activation |
+| DR Hours/yr | Number of hours demand response was triggered |
+| DR Avg Price ($/MWh) | Average LMP during demand response events |
+
+### Confidence Indicators (Trajectory Mode)
+
+Trajectory results include visual confidence indicators:
+
+| Zone | Years | Color | Meaning |
+|------|-------|-------|---------|
+| Calibrated | 2025–2030 | Green | Based on calibrated 2024 market data and near-term policy |
+| Moderate Extrapolation | 2030–2040 | Yellow | Technology costs and market structure may diverge from calibration |
+| High Uncertainty | 2040–2060 | Red | Multiple compounding uncertainties — scenario exploration, not forecast |
+
+These appear as colored background bands on trajectory charts and as a badge on year-level KPI cards.
 
 ### Status Indicators
 
@@ -460,7 +497,13 @@ Check that your CSV has exactly the right number of rows and all 7 ISO columns. 
 
 - **Backend**: FastAPI (Python) serving REST API + static HTML
 - **Frontend**: Vanilla HTML/CSS/JS with Plotly.js for charts; Constellation Energy branding
-- **Model**: Merit-order dispatch with hourly LMP computation
-- **Data**: EIA 860 plant fleet, EIA demand profiles, eGRID emission rates, fossil fleet data
+- **Model**: Merit-order dispatch with hourly LMP computation, zonal decomposition (scipy LP), LP storage co-dispatch
+- **Storage dispatch**: Rolling-window LP co-optimization (scipy.optimize.linprog with HiGHS solver) for battery 4hr/8hr, LDES 100hr, green H₂ 1000hr. Sparse matrix construction for efficient constraint building. Falls back to greedy sequential dispatch if LP infeasible.
+- **Zonal LMP**: Pipe-and-bubble model with 2–5 zones per ISO. Inter-zonal transfer limits from ISO planning reports. LP solver per hour with dual prices as zonal marginal prices. Requires EIA-860 plant data for zone assignment.
+- **Inter-regional flows**: Hourly net import profiles from EIA-930 data, scaled by demand growth but capped at firm import limits (CAISO 8 GW, PJM 5 GW, NEISO 3.5 GW, etc.)
+- **Demand response**: Price-elastic curtailment with ISO-specific trigger prices and DR capacity from FERC Form 714 / ISO registrations. Linear ramp from trigger to 2× trigger price.
+- **Confidence zones**: Year-based confidence classification (Calibrated 2025–2030, Moderate 2030–2040, High Uncertainty 2040+) with synthetic uncertainty bands on trajectory outputs.
+- **Backtesting**: Backward-looking validation from 2020 conditions with actual historical fuel prices (EIA Henry Hub). Computes direction accuracy, magnitude error, rank ordering, and trend slope metrics.
+- **Data**: EIA 860 plant fleet, EIA demand profiles, eGRID emission rates, fossil fleet data, EIA-930 interchange profiles
 - The tool runs entirely locally — no data is sent to external servers
 - All input fields include info-hover tooltips with parameter explanations
