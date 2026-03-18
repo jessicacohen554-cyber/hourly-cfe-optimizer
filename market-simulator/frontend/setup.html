@@ -694,6 +694,15 @@
                         </div>
                     </div>
                 </div>
+                <div class="grid-2col" style="margin-top: var(--space-md);">
+                    <div class="input-group">
+                        <label>Scarcity Pricing <span class="info-icon" data-tooltip="ORDC (Operating Reserve Demand Curve): scarcity prices rise based on actual operating reserve margins — structurally responsive to generation mix changes (e.g., adding solar reduces midday scarcity). Used by ERCOT in practice. Statistical: legacy demand-percentile-based scarcity overlays calibrated to historical ISO price distributions.">i</span></label>
+                        <div class="toggle-btn-group" id="scarcityModeToggle">
+                            <button type="button" class="toggle-btn active" data-value="ordc">ORDC</button>
+                            <button type="button" class="toggle-btn" data-value="demand_quantile">Statistical</button>
+                        </div>
+                    </div>
+                </div>
                 <div class="custom-file-section" style="margin-top: var(--space-md);">
                     <label class="custom-file-toggle">
                         <input type="checkbox" id="custom_lmp_toggle"> Use custom LMP curve from custom-user-inputs/lmp_hourly.csv
