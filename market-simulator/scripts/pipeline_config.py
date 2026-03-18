@@ -58,6 +58,40 @@ ORDC_PARAMS = {
 }
 
 # ============================================================================
+# BACKTEST CONFIGURATION
+# ============================================================================
+# Year-range → scarcity pricing mode mapping for trajectory backtesting.
+# ERCOT had active ORDC pricing from 2014+; other ISOs adopted reserve-margin-
+# responsive pricing mechanisms later. For historical fidelity:
+#   2020-2022: demand_quantile (most markets calibrated to demand-percentile pricing)
+#   2023-2024: ordc (ERCOT ORDC active, other ISOs have capacity-scarcity mechanisms)
+# ERCOT always uses ORDC since it's structurally appropriate for its energy-only market.
+BACKTEST_SCARCITY_BY_YEAR = {
+    2020: 'demand_quantile',
+    2021: 'demand_quantile',
+    2022: 'demand_quantile',
+    2023: 'ordc',
+    2024: 'ordc',
+}
+
+# ERCOT override: always ORDC (energy-only market with active ORDC since 2014)
+BACKTEST_ERCOT_ALWAYS_ORDC = True
+
+# Validation tolerance bands — tighter for ORDC years where physics is better matched
+BACKTEST_TOLERANCES = {
+    'ordc': {
+        'lmp_abs_error': 5.0,       # ±$5/MWh for ORDC years (2023-2024)
+        'clean_pct_error': 3.0,     # ±3pp clean energy share
+        'deployment_rate_error': 2.0,  # ±2 GW/yr deployment rate
+    },
+    'demand_quantile': {
+        'lmp_abs_error': 8.0,       # ±$8/MWh for pre-ORDC years (wider tolerance)
+        'clean_pct_error': 4.0,     # ±4pp clean energy share
+        'deployment_rate_error': 3.0,  # ±3 GW/yr deployment rate
+    },
+}
+
+# ============================================================================
 # REGIONS
 # ============================================================================
 
