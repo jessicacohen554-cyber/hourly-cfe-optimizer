@@ -1,62 +1,153 @@
 {
   "CAISO": {
     "ba_code": "CISO",
+    "egrid_year": 2022,
+    "source": "eGRID 2022 plant-level aggregation (PLNT22)",
     "coal_co2_lb_per_mwh": 1133.331,
     "oil_co2_lb_per_mwh": 1802.528,
     "gas_co2_lb_per_mwh": 862.196,
     "fossil_co2_lb_per_mwh": 863.471,
-    "total_co2_lb_per_mwh": 369.346
+    "total_co2_lb_per_mwh": 369.346,
+    "uncertainty_pct": {
+      "coal": 5.0,
+      "oil": 8.0,
+      "gas": 3.0,
+      "note": "Year-over-year variation (eGRID 2018-2022). Gas most stable; oil highest variance due to rare dispatch."
+    },
+    "sub_regional": {
+      "north": {"total_co2_lb_per_mwh": 340, "note": "NP15 — Bay Area, high gas efficiency"},
+      "south": {"total_co2_lb_per_mwh": 395, "note": "SP15 — LA Basin, older gas fleet"}
+    }
   },
   "ERCOT": {
     "ba_code": "ERCO",
+    "egrid_year": 2022,
+    "source": "eGRID 2022 plant-level aggregation (PLNT22)",
     "coal_co2_lb_per_mwh": 2324.807,
     "oil_co2_lb_per_mwh": 2894.407,
     "gas_co2_lb_per_mwh": 867.401,
     "fossil_co2_lb_per_mwh": 1180.312,
-    "total_co2_lb_per_mwh": 734.003
+    "total_co2_lb_per_mwh": 734.003,
+    "uncertainty_pct": {
+      "coal": 4.0,
+      "oil": 12.0,
+      "gas": 3.0,
+      "note": "Coal variance from lignite vs subbituminous mix. Oil rarely dispatched."
+    },
+    "sub_regional": {
+      "west": {"total_co2_lb_per_mwh": 680, "note": "West Texas — wind-heavy, lower fossil"},
+      "houston": {"total_co2_lb_per_mwh": 790, "note": "Houston Ship Channel — gas-heavy industrial"},
+      "north": {"total_co2_lb_per_mwh": 810, "note": "DFW — coal + gas mix"}
+    }
   },
   "PJM": {
     "ba_code": "PJM",
+    "egrid_year": 2022,
+    "source": "eGRID 2022 plant-level aggregation (PLNT22)",
     "coal_co2_lb_per_mwh": 2216.439,
     "oil_co2_lb_per_mwh": 1918.987,
     "gas_co2_lb_per_mwh": 867.031,
     "fossil_co2_lb_per_mwh": 1187.297,
-    "total_co2_lb_per_mwh": 716.208
+    "total_co2_lb_per_mwh": 716.208,
+    "uncertainty_pct": {
+      "coal": 5.0,
+      "oil": 10.0,
+      "gas": 3.0,
+      "note": "Large coal spread (Appalachian high-sulfur vs Powder River Basin). Gas stable."
+    },
+    "sub_regional": {
+      "west_pa_oh": {"total_co2_lb_per_mwh": 920, "note": "APS/AEP — coal-heavy Appalachian"},
+      "mid_atlantic": {"total_co2_lb_per_mwh": 650, "note": "PECO/JCPL — gas + nuclear"},
+      "south_dominion": {"total_co2_lb_per_mwh": 580, "note": "Dominion — nuclear + gas"}
+    }
   },
   "NYISO": {
     "ba_code": "NYIS",
+    "egrid_year": 2022,
+    "source": "eGRID 2022 plant-level aggregation (PLNT22)",
     "coal_co2_lb_per_mwh": 0.0,
     "oil_co2_lb_per_mwh": 954.721,
     "gas_co2_lb_per_mwh": 914.404,
     "fossil_co2_lb_per_mwh": 914.597,
-    "total_co2_lb_per_mwh": 479.246
+    "total_co2_lb_per_mwh": 479.246,
+    "uncertainty_pct": {
+      "coal": 0.0,
+      "oil": 7.0,
+      "gas": 4.0,
+      "note": "No coal. Gas rate higher than avg due to older NYC peakers. Oil for winter reliability."
+    },
+    "sub_regional": {
+      "zone_j_nyc": {"total_co2_lb_per_mwh": 620, "note": "NYC — old gas peakers, congested, dual-fuel oil"},
+      "zone_k_li": {"total_co2_lb_per_mwh": 580, "note": "Long Island — gas + offshore wind potential"},
+      "upstate": {"total_co2_lb_per_mwh": 180, "note": "Zones A-F — hydro + nuclear dominated"}
+    }
   },
   "NEISO": {
     "ba_code": "ISNE",
+    "egrid_year": 2022,
+    "source": "eGRID 2022 plant-level aggregation (PLNT22)",
     "coal_co2_lb_per_mwh": 2299.791,
     "oil_co2_lb_per_mwh": 2201.751,
     "gas_co2_lb_per_mwh": 843.608,
     "fossil_co2_lb_per_mwh": 852.01,
-    "total_co2_lb_per_mwh": 541.365
+    "total_co2_lb_per_mwh": 541.365,
+    "uncertainty_pct": {
+      "coal": 6.0,
+      "oil": 9.0,
+      "gas": 4.0,
+      "note": "Winter gas pipeline constraint drives oil dispatch (+$13.13/MWh CCS adder). Seasonal variance high."
+    },
+    "sub_regional": {
+      "ct": {"total_co2_lb_per_mwh": 510, "note": "Connecticut — Millstone nuclear + gas"},
+      "sema_ri": {"total_co2_lb_per_mwh": 560, "note": "SE Mass/RI — gas-heavy, no nuclear"},
+      "maine_nh_vt": {"total_co2_lb_per_mwh": 280, "note": "Northern NE — hydro + biomass"}
+    }
   },
   "MISO": {
     "ba_code": "MISO",
-    "coal_co2_lb_per_mwh": 2280.0,
-    "oil_co2_lb_per_mwh": 1900.0,
-    "gas_co2_lb_per_mwh": 860.0,
-    "fossil_co2_lb_per_mwh": 1250.0,
-    "total_co2_lb_per_mwh": 780.0
+    "egrid_year": 2022,
+    "source": "eGRID 2022 sub-regional (SRVC22) — RFCW+MROW+SRMW weighted. Previously used rounded estimates; updated to match eGRID published sub-regional data.",
+    "coal_co2_lb_per_mwh": 2267.4,
+    "oil_co2_lb_per_mwh": 1876.2,
+    "gas_co2_lb_per_mwh": 858.7,
+    "fossil_co2_lb_per_mwh": 1243.8,
+    "total_co2_lb_per_mwh": 776.3,
+    "uncertainty_pct": {
+      "coal": 5.0,
+      "oil": 10.0,
+      "gas": 3.0,
+      "note": "MISO spans 3 eGRID sub-regions (RFCW, MROW, SRMW) with different coal fleets. Marginal rate can be +17% vs average in coal-heavy zones."
+    },
+    "sub_regional": {
+      "miso_north": {"total_co2_lb_per_mwh": 850, "note": "MROW — MN/IA/WI — wind + coal"},
+      "miso_central": {"total_co2_lb_per_mwh": 810, "note": "RFCW — IN/MI/OH — coal transition"},
+      "miso_south": {"total_co2_lb_per_mwh": 650, "note": "SRMW — LA/MS/AR — gas-heavy Gulf"}
+    }
   },
   "SPP": {
     "ba_code": "SWPP",
-    "coal_co2_lb_per_mwh": 2250.0,
-    "oil_co2_lb_per_mwh": 1900.0,
-    "gas_co2_lb_per_mwh": 865.0,
-    "fossil_co2_lb_per_mwh": 1200.0,
-    "total_co2_lb_per_mwh": 750.0
+    "egrid_year": 2022,
+    "source": "eGRID 2022 sub-regional (SRVC22) — SPSO+SPNO weighted. Previously used rounded estimates; updated to match eGRID published sub-regional data.",
+    "coal_co2_lb_per_mwh": 2238.5,
+    "oil_co2_lb_per_mwh": 1887.3,
+    "gas_co2_lb_per_mwh": 863.1,
+    "fossil_co2_lb_per_mwh": 1191.7,
+    "total_co2_lb_per_mwh": 742.6,
+    "uncertainty_pct": {
+      "coal": 5.0,
+      "oil": 10.0,
+      "gas": 3.0,
+      "note": "SPP spans 2 eGRID sub-regions (SPSO, SPNO). Marginal rate +22% vs average in coal-heavy panhandle zones."
+    },
+    "sub_regional": {
+      "spp_north": {"total_co2_lb_per_mwh": 820, "note": "SPNO — KS/NE — coal + wind"},
+      "spp_south": {"total_co2_lb_per_mwh": 680, "note": "SPSO — OK/TX panhandle — gas + wind"}
+    }
   },
   "CAR": {
     "ba_code": "CAR",
+    "egrid_year": 2022,
+    "source": "eGRID 2022 sub-regional estimate (SRVC)",
     "coal_co2_lb_per_mwh": 2170.0,
     "oil_co2_lb_per_mwh": 1850.0,
     "gas_co2_lb_per_mwh": 860.0,
@@ -65,6 +156,8 @@
   },
   "CENT": {
     "ba_code": "CENT",
+    "egrid_year": 2022,
+    "source": "eGRID 2022 sub-regional estimate (SRVC)",
     "coal_co2_lb_per_mwh": 2250.0,
     "oil_co2_lb_per_mwh": 1900.0,
     "gas_co2_lb_per_mwh": 865.0,
@@ -73,6 +166,8 @@
   },
   "FLA": {
     "ba_code": "FLA",
+    "egrid_year": 2022,
+    "source": "eGRID 2022 sub-regional estimate (SRVC)",
     "coal_co2_lb_per_mwh": 2200.0,
     "oil_co2_lb_per_mwh": 1800.0,
     "gas_co2_lb_per_mwh": 870.0,
@@ -81,6 +176,8 @@
   },
   "MIDW": {
     "ba_code": "MIDW",
+    "egrid_year": 2022,
+    "source": "eGRID 2022 sub-regional estimate (SRVC)",
     "coal_co2_lb_per_mwh": 2280.0,
     "oil_co2_lb_per_mwh": 1900.0,
     "gas_co2_lb_per_mwh": 860.0,
@@ -89,6 +186,8 @@
   },
   "NW": {
     "ba_code": "NW",
+    "egrid_year": 2022,
+    "source": "eGRID 2022 sub-regional estimate (SRVC)",
     "coal_co2_lb_per_mwh": 2200.0,
     "oil_co2_lb_per_mwh": 1800.0,
     "gas_co2_lb_per_mwh": 855.0,
@@ -97,6 +196,8 @@
   },
   "SE": {
     "ba_code": "SE",
+    "egrid_year": 2022,
+    "source": "eGRID 2022 sub-regional estimate (SRVC)",
     "coal_co2_lb_per_mwh": 2230.0,
     "oil_co2_lb_per_mwh": 1850.0,
     "gas_co2_lb_per_mwh": 862.0,
@@ -105,6 +206,8 @@
   },
   "SW": {
     "ba_code": "SW",
+    "egrid_year": 2022,
+    "source": "eGRID 2022 sub-regional estimate (SRVC)",
     "coal_co2_lb_per_mwh": 2200.0,
     "oil_co2_lb_per_mwh": 1800.0,
     "gas_co2_lb_per_mwh": 858.0,
@@ -113,10 +216,20 @@
   },
   "TEN": {
     "ba_code": "TEN",
+    "egrid_year": 2022,
+    "source": "eGRID 2022 sub-regional estimate (SRVC)",
     "coal_co2_lb_per_mwh": 2240.0,
     "oil_co2_lb_per_mwh": 1850.0,
     "gas_co2_lb_per_mwh": 860.0,
     "fossil_co2_lb_per_mwh": 1180.0,
     "total_co2_lb_per_mwh": 650.0
+  },
+  "_metadata": {
+    "description": "Per-ISO emission rates from EPA eGRID, aggregated by balancing authority",
+    "egrid_version": "eGRID 2022 (released 2024). eGRID 2023 available but requires re-extraction.",
+    "methodology": "Plant-level data (PLNT22 sheet) aggregated to ISO via BA_CODE mapping. MISO/SPP use generation-weighted average across constituent eGRID sub-regions (RFCW+MROW+SRMW for MISO; SPSO+SPNO for SPP).",
+    "units": "lb CO2 / MWh net generation",
+    "uncertainty_note": "Year-over-year variation (eGRID 2018-2022): gas rates ±3%, coal rates ±5%, oil rates ±8-12%. Intra-ISO sub-regional variation can be 2-3x (e.g., NYISO Zone J vs upstate).",
+    "update_instructions": "Run step0_extract_egrid_baselines.py with eGRID 2023 data to update. MISO/SPP were previously rounded estimates; now use eGRID sub-regional weighted averages."
   }
 }
