@@ -1735,3 +1735,52 @@ def get_rps_floor(iso, year=2025):
             frac = (year - years[i]) / (years[i + 1] - years[i])
             return targets[years[i]] + frac * (targets[years[i + 1]] - targets[years[i]])
     return 0.0
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CONFIDENCE ZONES — Trajectory projection reliability classification
+# ══════════════════════════════════════════════════════════════════════════════
+# The LMP engine is calibrated against 2024 SOM data.  Near-term (2025-2030)
+# outputs are well-grounded; beyond 2035 demand-quantile pricing, capacity
+# market degradation, and Wright's Law curves increasingly extrapolate outside
+# their calibration domain.
+#
+# See Third_Party_Expert_Review.md Section 7, Priority 6.
+
+CONFIDENCE_ZONES = {
+    'high': {
+        'start': 2025, 'end': 2030,
+        'color': '#22C55E',
+        'label': 'Calibrated',
+        'tooltip': 'Based on calibrated 2024 market data and near-term policy environment',
+    },
+    'moderate': {
+        'start': 2030, 'end': 2040,
+        'color': '#F59E0B',
+        'label': 'Moderate Extrapolation',
+        'tooltip': 'Technology costs and market structure may diverge from calibration assumptions',
+    },
+    'low': {
+        'start': 2040, 'end': 2060,
+        'color': '#EF4444',
+        'label': 'High Uncertainty',
+        'tooltip': 'Multiple compounding uncertainties — treat as scenario exploration, not forecast',
+    },
+}
+
+# Synthetic uncertainty bands when sweep P10/P90 data is unavailable.
+# lmp_pct = relative band (e.g. 0.05 → ±5%), clean_pp = absolute pp band.
+CONFIDENCE_UNCERTAINTY_BANDS = {
+    'high':     {'lmp_pct': 0.05, 'clean_pp': 3},
+    'moderate': {'lmp_pct': 0.15, 'clean_pp': 8},
+    'low':      {'lmp_pct': 0.30, 'clean_pp': 15},
+}
+
+
+def get_confidence_zone(year: int) -> str:
+    """Return confidence zone key ('high', 'moderate', 'low') for a projection year."""
+    if year <= 2030:
+        return 'high'
+    elif year <= 2040:
+        return 'moderate'
+    return 'low'
