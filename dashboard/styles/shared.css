@@ -576,7 +576,7 @@ p {
     padding: 24px;
     background: rgba(255,255,255,0.75);
     border: 1px solid rgba(255,255,255,0.6);
-    border-radius: 20px;
+    border-radius: var(--radius-xl);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     box-shadow: 0 8px 32px -8px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
@@ -1600,7 +1600,7 @@ p {
     }
     .glass-chart-panel {
         padding: 16px;
-        border-radius: 14px;
+        border-radius: var(--radius-lg);
         margin-left: var(--pad-page);
         margin-right: var(--pad-page);
     }

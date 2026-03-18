@@ -332,6 +332,9 @@ hr.section-divider, .global-controls, .hero-section, .hero-overview,
     border-bottom: none !important;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
 }
 .emphasis-callout {
     background: rgba(11,17,32,0.92) !important;
@@ -1392,6 +1395,20 @@ section.report-section.panel-navy .report-section-number {
     padding: 32px 28px;
     max-width: 1100px;
     margin: 0 auto;
+}
+
+/* Glass-chart-panel inside concept-inner: neutralize the inner panel's
+   visual styling so it doesn't create a ghost "panel within panel" effect.
+   concept-inner already provides the white card container. */
+.concept-inner .glass-chart-panel {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0;
+    margin: 0;
+    border-radius: 0;
 }
 
 /* Dark-context concept-inner override */
