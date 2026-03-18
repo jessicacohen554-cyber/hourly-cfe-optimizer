@@ -313,11 +313,376 @@
 
 ---
 
+## Prompt 7: VRE Cannibalization Feedback in Deployment
+
+> **Task**: Wire time-matched energy revenue into the deployment model so solar and wind receive their actual profile-weighted LMP revenue instead of the system average.
+>
+> **Context**: This is the **#1 audit criticism** (AUDIT.md §2.1). The deployment model in `compute_market_deployment()` (line 1421 of `market_simulation.py`) uses `base_energy_rev = avg_lmp` (line 1463) for ALL resources — solar, wind, nuclear, CCS all get the same $/MWh energy revenue. In reality, solar revenue collapses with penetration (midday price depression) and wind gets different temporal value than baseload. The infrastructure to fix this **already exists**: `compute_energy_revenue_by_resource()` at line 1032 computes time-matched `LMP[h] × generation_profile[h]` weighted revenue per resource. It's just never called in the deployment path. There's also a sigmoid cannibalization function in `procurement_utils.py` (line 1166) used for procurement analysis but not deployment.
+>
+> **What to build**: Per-resource energy revenue in the deployment merit-order, with intra-deployment feedback that re-estimates revenue as each resource tranche is deployed.
+>
+> **Implementation approach**:
+> 1. **Wire existing function into deployment path.** In `run_market_simulation()` (line ~2141), after computing `hourly_lmp` via `compute_lmp_at_threshold()`, call `compute_energy_revenue_by_resource(hourly_lmp, supply_profiles_iso, resource_pcts, demand_total_mwh)`. Pass the resulting `{resource: $/MWh}` dict into `compute_market_deployment()` as a new parameter `per_resource_energy_rev`.
+> 2. **Replace static avg_lmp in deployment.** In `compute_market_deployment()`, replace line 1463 (`base_energy_rev = avg_lmp`) with a per-resource lookup inside the resource loop (line 1467+):
+>    ```python
+>    base_energy_rev = per_resource_energy_rev.get(res, avg_lmp)
+>    ```
+>    Firm resources (nuclear, CCS, geothermal) have flat profiles and will naturally get ~avg_lmp. Solar and wind will get their profile-weighted revenue, which is lower when VRE penetration is high.
+> 3. **Add intra-deployment cannibalization feedback.** After deploying each resource tranche in the `for entry in sorted_economics` loop (line ~1547), apply a lightweight price depression estimate:
+>    - Compute the incremental clean supply profile: `delta_supply[h] = deployed_twh * profile[h] / sum(profile)`
+>    - For hours where the resource generates, estimate LMP depression from the merit-order stack slope: `lmp_delta[h] = -delta_supply_mw[h] * dLMP_dSupply` where `dLMP_dSupply` is the $/MWh-per-MW slope at each hour's operating point (derivable from the merit-order stack already computed)
+>    - **Simpler alternative for v1**: Use the existing sigmoid from `procurement_utils.py:1166` applied per-resource based on that resource's penetration fraction: `depression = 0.55 * (1 / (1 + exp(-8 * (res_penetration - 0.6))))`. Solar at 30% penetration gets heavier cannibalization than wind at 15%.
+>    - Update `per_resource_energy_rev` after each tranche so the next resource in the merit-order sees the updated prices
+> 4. **Config flag**: Add `CANNIBALIZATION_ENABLED = True` to `pipeline_config.py` to allow toggling.
+> 5. **Output enrichment**: Add `energy_rev_by_resource: Dict[str, float]` to the year result dict (and `backend/models.py` `YearResult` at line 291) so the frontend can display per-resource energy revenue vs avg_lmp.
+> 6. **Frontend display**: On the results page, show a "Capture Rate" column in the resource deployment table: `capture_rate = resource_energy_rev / avg_lmp`. Solar at 0.78 means it earns 78% of the average price — immediately communicates cannibalization to the user.
+>
+> **Key files to modify**:
+> - `scripts/market_simulation.py` — `compute_market_deployment()` (line 1421, specifically 1463 and 1518), `run_market_simulation()` (line ~2162), `compute_energy_revenue_by_resource()` (line 1032, no changes needed — already works)
+> - `scripts/pipeline_config.py` — add `CANNIBALIZATION_ENABLED` flag
+> - `backend/models.py` — add `energy_rev_by_resource` and `capture_rates` to `YearResult` (line 291)
+> - `frontend/js/results.js` — display capture rates in deployment table
+>
+> **Performance constraint**: `compute_energy_revenue_by_resource()` is O(R × H) where R = number of resources (~7) and H = 8760. With numpy vectorization this is <1ms. The intra-deployment feedback adds one call per deployed tranche (typically 3–5 tranches per year). Total overhead: <10ms per year-ISO. Negligible.
+>
+> **Validation**:
+> - **CAISO at Medium costs**: Solar energy revenue should be 15–25% below avg_lmp (capture rate 0.75–0.85) due to midday price depression from the duck curve. Wind should be 5–10% above avg_lmp (capture rate 1.05–1.10) due to evening generation when prices are highest.
+> - **ERCOT**: Wind energy revenue should be 10–20% below avg_lmp (overnight generation in low-price hours). Solar closer to avg_lmp.
+> - **Total deployment impact**: At >50% clean penetration, total deployment should decrease 5–15% vs current model because marginal solar tranches are no longer profitable once cannibalization is applied. This is the correct direction — the current model systematically overestimates clean deployment at high penetrations.
+> - **Cross-check**: Compare capture rates against published CAISO DMM data (2024) and ERCOT IMM data. CAISO solar capture rate was ~0.70 in 2024; wind was ~1.05.
+>
+> **Read these files first**: `scripts/market_simulation.py` (lines 1032–1048 for existing revenue function, lines 1421–1600 for deployment model), `scripts/procurement_utils.py` (line 1166 for sigmoid cannibalization), `AUDIT.md` (Section 2.1).
+
+---
+
+## Prompt 8: ORDC Scarcity Pricing
+
+> **Task**: Replace the demand-quantile statistical LMP overlays with an Operating Reserve Demand Curve (ORDC) pricing mechanism that structurally responds to generation mix changes.
+>
+> **Context**: The current LMP engine uses demand-quantile statistical overlays (lines 1167–1278 of `lmp_engine.py`) — curve-fit percentile-based adjustments calibrated against historical PJM price distributions. These overlays reproduce historical LMP *shapes* well, but they **cannot predict LMP response to structural generation mix changes**, which is the tool's entire purpose. Adding 10 GW of solar to ERCOT should reduce midday scarcity events (more operating reserves) but have no effect on evening scarcity — the current demand-quantile approach can't produce this structural response because scarcity pricing is tied to demand percentile, not operating reserve margin.
+>
+> ORDC is what ERCOT actually uses for real-time pricing. The concept: price = marginal cost + VOLL × LOLP(reserves), where LOLP increases as reserves fall below target. This makes price formation physically responsive to the generation mix rather than statistically anchored to a historical distribution shape.
+>
+> **What to build**: An ORDC pricing layer that replaces the scarcity tail and high-demand congestion adder while keeping the low-demand/VRE surplus effects (which model real phenomena ORDC doesn't address).
+>
+> **Implementation approach**:
+> 1. **Add ORDC parameters** to `pipeline_config.py`:
+>    ```python
+>    ORDC_PARAMS = {
+>        'ERCOT': {'voll': 5000, 'reserve_target_mw': 3000, 'lolp_k': 0.003},
+>        'PJM':   {'voll': 3700, 'reserve_target_mw': 5500, 'lolp_k': 0.002},
+>        'CAISO': {'voll': 2000, 'reserve_target_mw': 3000, 'lolp_k': 0.003},
+>        'NYISO': {'voll': 2500, 'reserve_target_mw': 2000, 'lolp_k': 0.003},
+>        'NEISO': {'voll': 2000, 'reserve_target_mw': 1500, 'lolp_k': 0.003},
+>        'MISO':  {'voll': 3500, 'reserve_target_mw': 4000, 'lolp_k': 0.002},
+>        'SPP':   {'voll': 2000, 'reserve_target_mw': 2500, 'lolp_k': 0.003},
+>    }
+>    # voll: Value of Lost Load ($/MWh) — ERCOT $5,000 (PUCT), PJM $3,700 (1/3 × penalty factor)
+>    # reserve_target_mw: Target operating reserve level from NERC/ISO standards
+>    # lolp_k: Steepness of LOLP sigmoid — controls how sharply price rises as reserves fall
+>    SCARCITY_MODE = 'ordc'  # 'ordc' or 'demand_quantile'
+>    ```
+>    Sources: ERCOT PUCT ORDC parameters (Docket 52373), PJM RPM penalty factor, CAISO/NYISO/NEISO from FERC filings and reliability standards.
+>
+> 2. **Add ORDC computation to `PriceModel`** (line 541 of `lmp_engine.py`):
+>    - Add method `compute_ordc_adder(self, reserves_mw)`:
+>      ```python
+>      def compute_ordc_adder(self, reserves_mw):
+>          """ORDC price adder: VOLL × LOLP(reserves)."""
+>          lolp = 1.0 / (1.0 + np.exp(self.lolp_k * (reserves_mw - self.reserve_target_mw)))
+>          return self.voll * lolp
+>      ```
+>    - Add ORDC parameters to `PriceModel.__init__()` loaded from `ORDC_PARAMS`
+>    - ISO-specific subclasses (e.g., `ERCOTPriceModel` at line ~670) inherit or override
+>
+> 3. **Compute hourly reserves** in `compute_hourly_lmp_vectorized()` (line 1014):
+>    - After the merit-order dispatch loop, reserves are derivable from existing data:
+>      ```python
+>      total_available_mw = sum(unit['capacity_mw'] for unit in stack)
+>      reserves_mw = total_available_mw - residual_mw  # per hour, already vectorized
+>      ```
+>    - Add clean resource ELCC contribution: `total_reserves = fossil_reserves + clean_elcc_mw` where `clean_elcc_mw` accounts for firm clean capacity (nuclear, hydro) that contributes to reserves
+>
+> 4. **Replace scarcity pricing blocks** in the demand-quantile layer:
+>    - **Remove or gate** the high-demand congestion adder (lines 1181–1191) and scarcity tail (lines 1193–1204) when `SCARCITY_MODE == 'ordc'`
+>    - **Replace with**: `hourly_lmp += price_model.compute_ordc_adder(reserves_mw)` applied to all hours (ORDC adder is ~$0 when reserves are ample, rises steeply only when reserves are tight)
+>    - **Keep**: Low-demand negative pricing (lines 1224–1240), mid-low compression (lines 1242–1256), VRE surplus merit-order effect (lines 1258–1278) — these model real phenomena (must-run pricing, negative prices) that ORDC doesn't address
+>
+> 5. **Vectorize** the ORDC computation — the sigmoid is a numpy ufunc, so `lolp = 1 / (1 + np.exp(k * (reserves_arr - target)))` operates on the full 8760-hour array in one call. No loop needed.
+>
+> 6. **Config toggle**: `SCARCITY_MODE = 'ordc' | 'demand_quantile'` in `pipeline_config.py`. Default: `'ordc'`. The demand-quantile mode is preserved as fallback and for comparison.
+>
+> 7. **Setup page**: Add "Scarcity Pricing" toggle — "ORDC" (default) / "Statistical" (legacy). Brief tooltip explaining the difference.
+>
+> **Key files to modify**:
+> - `scripts/lmp_engine.py` — `PriceModel` class (line 541), `compute_hourly_lmp_vectorized()` (line 1014, specifically lines 1181–1204 for replacement), ISO-specific subclasses
+> - `scripts/pipeline_config.py` — `ORDC_PARAMS`, `SCARCITY_MODE`
+> - `frontend/setup.html` / `frontend/js/setup.js` — scarcity mode toggle
+>
+> **Performance constraint**: The ORDC sigmoid is a single numpy vectorized operation on an 8760-element array — <0.1ms. Strictly faster than the current demand-quantile overlays (which involve multiple masked operations). No runtime impact.
+>
+> **Validation**:
+> - **ERCOT behavioral test**: Run two scenarios — (A) current ERCOT mix, (B) add 10 GW solar. With ORDC: midday scarcity events should decrease (more reserves from solar), evening scarcity events should be unchanged. With demand-quantile: both periods change proportionally (wrong).
+> - **ERCOT calibration**: ERCOT had ~100 hours with ORDC adder > $100/MWh in 2024. The model should produce a similar count at current fuel prices and generation mix.
+> - **PJM calibration**: P99 LMP should be $800–1,500/MWh (consistent with PJM penalty factor events). P50 LMP should be largely unchanged (ORDC adder is ~$0 for most hours).
+> - **Cross-ISO**: ISOs with tight reserve margins (ERCOT, PJM) should show higher ORDC impact than ISOs with excess capacity (SPP, MISO). This matches reality.
+>
+> **Read these files first**: `scripts/lmp_engine.py` (lines 541–600 for PriceModel, lines 1167–1278 for demand-quantile layer), `scripts/pipeline_config.py`, `AUDIT.md` (Section 2.3), `docs/Demand_Quantile_Pricing_Methodology.md`.
+
+---
+
+## Prompt 9: Synthetic Data Warning + Methodology Disclosure
+
+> **Task**: Add prominent UI warnings when the tool runs on synthetic (fabricated) data, and create a methodology disclosure page that honestly positions the tool as a screening complement to production models.
+>
+> **Context**: When Step 2.2 parquets are absent, `_generate_synthetic_step3_data()` (line 1719 of `market_simulation.py`) fabricates resource mixes using hardcoded linear ramps (lines 1729–1737). These are illustrative at best and have no calibration to physics. The UI gives **zero warning** — users see the same results presentation whether data comes from a 21M-mix physics optimization or from hardcoded guesses. The audit (§2.6) flags this as a credibility risk.
+>
+> **What to build**: (A) Data source tracking through the full pipeline with frontend warning banners, (B) A methodology disclosure page that explains what the model does and doesn't do.
+>
+> **Implementation approach**:
+>
+> **Part A — Synthetic Data Warning:**
+> 1. **Track data source in `load_step3_data()`** (line 1645 of `market_simulation.py`):
+>    - Currently returns `all_data` dict. Change return to include source: `return all_data, 'parquet'` when loading from parquets, `return all_data, 'synthetic'` when falling back to `_generate_synthetic_step3_data()` (around line 1714 where the fallback triggers)
+>    - Thread `data_source` through `run_market_simulation()` and into the year result dicts
+> 2. **Add to API response** in `backend/models.py`:
+>    - Add `data_source: str = 'parquet'` field to `SimulationResponse` (line 338) and optionally to `YearResult` (line 291)
+>    - In `backend/main.py`, populate from simulation results
+> 3. **Frontend warning banner** in `frontend/js/results.js`:
+>    - At the top of results rendering, check `response.data_source`
+>    - If `'synthetic'`: inject a persistent, non-dismissible warning banner using the existing `.insight-box.insight-warn` CSS pattern (from the shared design system):
+>      ```html
+>      <div class="insight-box insight-warn">
+>        <strong>⚠ ILLUSTRATIVE ONLY</strong> — Running with synthetic resource mix profiles
+>        (calibrated physics data not available). Results show directional patterns only.
+>        For production-quality results, run the full optimization pipeline (Steps 1-2).
+>      </div>
+>      ```
+>    - Banner should appear at the top of EVERY results tab/view, not just the first
+> 4. **New `/api/data-status` endpoint** in `backend/main.py`:
+>    - `GET /api/data-status` → returns `{iso: 'parquet' | 'synthetic'}` per ISO
+>    - Useful for the setup page to show data availability before running a simulation
+> 5. **Data tier badges**: Below each ISO heading on results, show a small badge: "Physics Data" (green) or "Synthetic: Illustrative Only" (orange/red). Use existing `.story-badge` / `.story-badge-red` CSS.
+>
+> **Part B — Methodology Disclosure Page:**
+> 6. **Create `frontend/methodology.html`** following the existing `guide.html` template:
+>    - **Section 1 — What This Tool Does**: Reduced-form market screening model. Evaluates generator profitability, clean energy deployment economics, and retirement pressure across 7 US ISOs under parametric sensitivity scenarios. Uses merit-order dispatch, multi-stream revenue decomposition, Wright's Law learning curves.
+>    - **Section 2 — What This Tool Does NOT Do**: Not a production capacity expansion model. Does not co-optimize generation + storage + transmission. Does not perform unit commitment with physical constraints. Does not model nodal/zonal transmission (unless Prompt 1 is implemented). Not suitable for: investment decisions, regulatory filings, fleet retirement timing predictions.
+>    - **Section 3 — When to Use This Tool**: Directional screening ("Does higher gas prices accelerate clean deployment?"). Identifying which ISOs/scenarios warrant detailed IPM/PLEXOS modeling. CCS retrofit breakeven analysis. Nuclear retirement risk screening. Stakeholder education. Relative scenario comparison.
+>    - **Section 4 — When NOT to Use**: Absolute LMP forecasting. Optimal resource portfolio design. Policy impact quantification with specific emission reduction targets. Retirement timing for specific plants.
+>    - **Section 5 — Comparison to Production Models**: Table comparing this tool vs GenX, ReEDS, PLEXOS, IPM, Aurora across dimensions (dispatch fidelity, network model, storage co-opt, VRE curtailment, reliability). Adapted from AUDIT.md §4.1.
+>    - **Section 6 — Data Sources**: EIA-860/923, eGRID, EPA CAMPD, PJM/ERCOT/CAISO SOM reports. With citations.
+>    - **Section 7 — Known Limitations**: Honest list from AUDIT.md §2 (VRE cannibalization approximation, statistical LMP overlays, heuristic retirement, no inter-regional flows).
+>    - Use the standard page template: `.header` with shared-header.js, `.content-section`, nav bar via nav.js.
+> 7. **Add to navigation**: Add "Methodology" link to the nav bar in `frontend/js/nav.js`, positioned between "Guide" and "IPP Report".
+>
+> **Key files to modify**:
+> - `scripts/market_simulation.py` — `load_step3_data()` (line 1645), `_generate_synthetic_step3_data()` (line 1719), `run_market_simulation()` (line 1919)
+> - `backend/models.py` — `SimulationResponse` (line 338), `YearResult` (line 291)
+> - `backend/main.py` — `simulate()` endpoint, new `/api/data-status` endpoint
+> - `frontend/js/results.js` — warning banner injection, data tier badges
+> - `frontend/js/nav.js` — add methodology link
+> - **New file**: `frontend/methodology.html`
+>
+> **Validation**: Start the backend without parquets in `data/step2.2-cost/`. Run a simulation. The warning banner must appear on every results view. Restart with parquets present — banner must not appear. The methodology page must render correctly and be accessible from the nav bar on all pages.
+>
+> **Read these files first**: `scripts/market_simulation.py` (lines 1645–1750 for data loading and synthetic fallback), `frontend/js/results.js`, `frontend/guide.html` (template for methodology page), `AUDIT.md` (Section 2.6 and 6.3).
+
+---
+
+## Prompt 10: IPM Trigger Indicators
+
+> **Task**: Add automated indicators that flag when simulation results cross thresholds where the screening model's approximations break down, recommending production-model validation (IPM, PLEXOS, GenX).
+>
+> **Context**: The market simulator is positioned as a **pre-screening tool** — more sophisticated than spreadsheets but less rigorous than production models. Its highest-value function is telling users **where it's worth investing in a full IPM/PLEXOS run**. Currently it gives no signal about when its own results become unreliable. This prompt adds that signal, making the tool genuinely useful as a "triage" step in the modeling workflow.
+>
+> **What to build**: A set of trigger conditions computed per ISO per year that flag when specific modeling limitations become binding. Each trigger includes a severity level, a plain-English explanation, and a recommendation for which type of production analysis would address the limitation.
+>
+> **Trigger definitions**:
+>
+> | Trigger ID | Condition | Severity | Explanation |
+> |-----------|-----------|----------|-------------|
+> | `VRE_CANNIBALIZATION` | VRE (solar+wind) penetration > 40% of generation | Medium at 40–60%, High at >60% | "VRE penetration above 40% causes significant price cannibalization effects. A production dispatch model with hourly granularity and curtailment modeling would better quantify revenue erosion and optimal storage sizing." |
+> | `TIGHT_RA_MARGIN` | Operating reserve margin < 10% (vs 15% target) | Medium at <10%, High at <5% | "Reserve margins are tight enough that unit commitment constraints (ramp rates, minimum generation, start-up costs) materially affect price formation and reliability. A UC-constrained dispatch model is recommended." |
+> | `HIGH_CONGESTION` | Zonal LMP spread > $15/MWh (if zonal mode active) OR VRE deployment exceeds 2× historical queue completion in high-transmission ISOs | Medium at $15–25/MWh, High at >$25/MWh | "Transmission congestion is material. Zonal or nodal dispatch modeling would better capture locational price signals and their impact on resource siting decisions." |
+> | `STORAGE_DOMINANCE` | Storage (battery + LDES + H₂) provides > 15% of total energy served | Medium at 15–25%, High at >25% | "Storage is a major contributor to supply. Co-optimized storage dispatch (jointly with generation and unit commitment) would materially change utilization patterns and economics." |
+> | `RETIREMENT_CASCADE` | Economic retirement removes > 20% of fossil fleet capacity in a single period | Medium at 20–35%, High at >35% | "Large-scale fossil retirement is occurring. Binary plant-level retirement decisions, reliability-must-run contracts, and regulatory backstop interventions would significantly alter this trajectory. Plant-level modeling (EIA 860 fleet) is recommended." |
+> | `NUCLEAR_AT_RISK` | Nuclear all-in revenue falls within $5/MWh of the retirement threshold ($30/MWh) | High (always — this is a cliff) | "Nuclear plant revenue is near the retirement cliff. Small changes in LMP assumptions could flip the retirement decision. Detailed plant-level economics with contract-specific data is recommended before acting on this result." |
+>
+> **Implementation approach**:
+> 1. **Create `compute_ipm_triggers()` function** in `market_simulation.py`:
+>    ```python
+>    def compute_ipm_triggers(iso, year, year_result, gen_econ, state):
+>        """Evaluate IPM trigger conditions for this year's results."""
+>        triggers = []
+>        clean_pct = year_result['clean_pct']
+>        # ... check each condition, append IPMTrigger dicts
+>        return triggers
+>    ```
+>    - Takes the year result dict, generator economics, and simulation state
+>    - Returns list of `{'trigger_id': str, 'severity': str, 'explanation': str, 'metric_value': float, 'threshold': float, 'recommended_model': str}`
+>
+> 2. **Call from the year loop** in `run_market_simulation()` after line 2295 (after emission accounting, where all metrics are available):
+>    ```python
+>    ipm_triggers = compute_ipm_triggers(iso, year, year_result, gen_econ, state)
+>    year_result['ipm_triggers'] = ipm_triggers
+>    ```
+>
+> 3. **Add to API model** in `backend/models.py`:
+>    - New `IPMTrigger` Pydantic model: `trigger_id: str`, `severity: str`, `explanation: str`, `metric_value: float`, `threshold: float`, `recommended_model: str`
+>    - Add `ipm_triggers: List[IPMTrigger] = []` to `YearResult` (line 291)
+>
+> 4. **Frontend — trigger cards** in `frontend/js/results.js`:
+>    - Below each year's KPI panel, render triggered indicators as colored cards
+>    - **High severity**: Red card with exclamation icon and "Production Modeling Recommended" header
+>    - **Medium severity**: Amber card with warning icon
+>    - Card format: `[Trigger Name] — [Explanation]. Current: [metric_value] | Threshold: [threshold]`
+>    - **Aggregate across years**: If the same trigger fires in consecutive years, consolidate into one card with the year range (e.g., "2035–2050")
+>
+> 5. **Summary badge** on ISO comparison view:
+>    - Add a row to the ISO comparison table: "IPM Recommended: Yes/No"
+>    - "Yes" (red) if any High-severity trigger fires in any year for that ISO
+>    - "Maybe" (amber) if only Medium triggers
+>    - "No" (green) if no triggers
+>    - Tooltip lists which triggers fired and when
+>
+> 6. **Trigger suppression**: If the user has already acknowledged triggers (e.g., via a "Dismiss" button), don't re-show on re-render. Store dismissed state in sessionStorage.
+>
+> **Key files to modify**:
+> - `scripts/market_simulation.py` — new `compute_ipm_triggers()` function, add to year loop (after line 2295)
+> - `backend/models.py` — new `IPMTrigger` model, add `ipm_triggers` field to `YearResult` (line 291)
+> - `backend/main.py` — ensure triggers flow through `_build_simulation_response()`
+> - `frontend/js/results.js` — trigger card rendering, aggregate view badges
+> - `frontend/styles/results.css` — trigger card styling (use existing `.insight-box` variants from `shared.css`)
+>
+> **Performance constraint**: Trigger computation is pure threshold checks — 6 comparisons per ISO per year. Negligible overhead (<0.01ms).
+>
+> **Validation**:
+> - **CAISO with High demand growth to 2050**: Should trigger `VRE_CANNIBALIZATION` (solar penetration >40% by ~2035) and likely `STORAGE_DOMINANCE` (storage >15% at high clean%).
+> - **PJM with High fuel prices**: Should trigger `RETIREMENT_CASCADE` if coal retires aggressively, and possibly `TIGHT_RA_MARGIN`.
+> - **All ISOs at Medium defaults, 2025–2030**: Should produce few or no triggers (near-term results within model's calibration domain).
+> - **All ISOs at Medium defaults, 2040–2050**: Should produce multiple triggers as extrapolation compounds.
+> - **NEISO/NYISO at high clean%**: `NUCLEAR_AT_RISK` should fire when nuclear revenue approaches the retirement threshold — verify by checking that nuclear revenue is within $5/MWh of $30.
+>
+> **Read these files first**: `scripts/market_simulation.py` (lines 2280–2370 for the year loop where triggers would be computed), `backend/models.py` (line 291 for `YearResult`), `frontend/js/results.js` (results rendering), `AUDIT.md` (Sections 2.1–2.7 for which limitations to trigger on).
+
+---
+
+## Prompt 11: Tech-Differentiated Queue Caps
+
+> **Task**: Replace the uniform GW/year interconnection queue cap with per-technology caps based on LBNL historical completion rate data.
+>
+> **Context**: The current `QUEUE_CAP_GW` (line 96 of `market_simulation.py`) applies a single GW/year cap uniformly across all clean energy technologies for each ISO. In reality, technologies have vastly different queue completion rates — solar projects complete at ~8 GW/yr nationally (shorter interconnection studies, smaller average project size), wind at ~5 GW/yr, while nuclear and CCS have <10% queue completion rates (~0.5 GW/yr). The undifferentiated cap creates a bias: when solar (fast) and nuclear (slow) compete for the same queue budget, solar deployment is artificially constrained while nuclear gets queue capacity it can't realistically use. Source: LBNL "Queued Up 2024" (Rand et al., 2024), https://emp.lbl.gov/queues.
+>
+> **What to build**: Per-technology queue caps by ISO, with the total approximately summing to the current uniform cap for backward compatibility.
+>
+> **Implementation approach**:
+> 1. **Add `TECH_QUEUE_CAP_GW` dict** to `market_simulation.py` (near line 96, alongside existing `QUEUE_CAP_GW`):
+>    ```python
+>    TECH_QUEUE_CAP_GW = {
+>        'Medium': {
+>            'CAISO':  {'solar': 2.5, 'wind': 0.8, 'offshore_wind': 0.3, 'clean_firm': 0.2, 'ccs_ccgt': 0.4, 'geothermal': 0.3},
+>            'ERCOT':  {'solar': 4.0, 'wind': 2.5, 'offshore_wind': 0.2, 'clean_firm': 0.2, 'ccs_ccgt': 0.5, 'geothermal': 0.0},
+>            'PJM':    {'solar': 2.5, 'wind': 1.2, 'offshore_wind': 0.5, 'clean_firm': 0.3, 'ccs_ccgt': 0.5, 'geothermal': 0.0},
+>            'NYISO':  {'solar': 1.0, 'wind': 0.6, 'offshore_wind': 0.5, 'clean_firm': 0.2, 'ccs_ccgt': 0.2, 'geothermal': 0.0},
+>            'NEISO':  {'solar': 0.8, 'wind': 0.8, 'offshore_wind': 0.7, 'clean_firm': 0.2, 'ccs_ccgt': 0.3, 'geothermal': 0.0},
+>            'MISO':   {'solar': 2.0, 'wind': 1.5, 'offshore_wind': 0.0, 'clean_firm': 0.2, 'ccs_ccgt': 0.5, 'geothermal': 0.0},
+>            'SPP':    {'solar': 1.8, 'wind': 1.5, 'offshore_wind': 0.0, 'clean_firm': 0.1, 'ccs_ccgt': 0.3, 'geothermal': 0.0},
+>        },
+>        'Low': {  # ~50% of Medium (status quo permitting)
+>            'CAISO':  {'solar': 1.3, 'wind': 0.4, 'offshore_wind': 0.15, 'clean_firm': 0.1, 'ccs_ccgt': 0.2, 'geothermal': 0.15},
+>            'ERCOT':  {'solar': 2.0, 'wind': 1.3, 'offshore_wind': 0.1, 'clean_firm': 0.1, 'ccs_ccgt': 0.25, 'geothermal': 0.0},
+>            'PJM':    {'solar': 1.3, 'wind': 0.6, 'offshore_wind': 0.25, 'clean_firm': 0.15, 'ccs_ccgt': 0.25, 'geothermal': 0.0},
+>            'NYISO':  {'solar': 0.5, 'wind': 0.3, 'offshore_wind': 0.25, 'clean_firm': 0.1, 'ccs_ccgt': 0.1, 'geothermal': 0.0},
+>            'NEISO':  {'solar': 0.4, 'wind': 0.4, 'offshore_wind': 0.35, 'clean_firm': 0.1, 'ccs_ccgt': 0.15, 'geothermal': 0.0},
+>            'MISO':   {'solar': 1.0, 'wind': 0.8, 'offshore_wind': 0.0, 'clean_firm': 0.1, 'ccs_ccgt': 0.25, 'geothermal': 0.0},
+>            'SPP':    {'solar': 0.9, 'wind': 0.8, 'offshore_wind': 0.0, 'clean_firm': 0.05, 'ccs_ccgt': 0.15, 'geothermal': 0.0},
+>        },
+>        'High': {  # ~133% of Medium (FERC Order 2023 reforms)
+>            'CAISO':  {'solar': 3.3, 'wind': 1.1, 'offshore_wind': 0.4, 'clean_firm': 0.3, 'ccs_ccgt': 0.5, 'geothermal': 0.4},
+>            'ERCOT':  {'solar': 5.3, 'wind': 3.3, 'offshore_wind': 0.3, 'clean_firm': 0.3, 'ccs_ccgt': 0.7, 'geothermal': 0.0},
+>            'PJM':    {'solar': 3.3, 'wind': 1.6, 'offshore_wind': 0.7, 'clean_firm': 0.4, 'ccs_ccgt': 0.7, 'geothermal': 0.0},
+>            'NYISO':  {'solar': 1.3, 'wind': 0.8, 'offshore_wind': 0.7, 'clean_firm': 0.3, 'ccs_ccgt': 0.3, 'geothermal': 0.0},
+>            'NEISO':  {'solar': 1.1, 'wind': 1.1, 'offshore_wind': 0.9, 'clean_firm': 0.3, 'ccs_ccgt': 0.4, 'geothermal': 0.0},
+>            'MISO':   {'solar': 2.7, 'wind': 2.0, 'offshore_wind': 0.0, 'clean_firm': 0.3, 'ccs_ccgt': 0.7, 'geothermal': 0.0},
+>            'SPP':    {'solar': 2.4, 'wind': 2.0, 'offshore_wind': 0.0, 'clean_firm': 0.15, 'ccs_ccgt': 0.4, 'geothermal': 0.0},
+>        },
+>    }
+>    TECH_DIFFERENTIATED_QUEUE = True  # Set False to use legacy uniform QUEUE_CAP_GW
+>    ```
+>    Per-tech caps approximately sum to the existing uniform `QUEUE_CAP_GW` per ISO (e.g., CAISO Medium: 2.5+0.8+0.3+0.2+0.4+0.3 = 4.5 GW vs current 4.5 GW).
+>
+> 2. **Modify `compute_market_deployment()`** (line 1421):
+>    - Replace the single `queue_remaining_gw` parameter with a `tech_queue_budget` dict: `{resource: remaining_gw}`
+>    - In the deployment loop (starting at line ~1547), constrain each resource by its own tech-specific budget:
+>      ```python
+>      tech_cap = tech_queue_budget.get(res, 0)
+>      max_deploy_twh = min(max_twh, tech_cap * cf * 8.760)
+>      ```
+>    - After deploying, decrement only that resource's budget: `tech_queue_budget[res] -= deployed_gw`
+>
+> 3. **Modify `run_market_simulation()`** (lines 2084–2098):
+>    - Replace the single `queue_budget_gw` accumulator with per-tech budgets:
+>      ```python
+>      if TECH_DIFFERENTIATED_QUEUE:
+>          tech_budget = {res: cap * years_per_step
+>                        for res, cap in TECH_QUEUE_CAP_GW[queue_level][iso].items()}
+>      else:
+>          # Legacy: distribute uniform cap equally (current behavior)
+>          tech_budget = {res: queue_remaining_gw / len(DEPLOYABLE_RESOURCES)
+>                        for res in DEPLOYABLE_RESOURCES}
+>      ```
+>    - Pass `tech_budget` to `compute_market_deployment()` instead of `queue_remaining_gw`
+>
+> 4. **Optional: Flex pool.** Some ISOs allow queue slots to be fungible across technologies. Add:
+>    ```python
+>    QUEUE_FLEX_FRACTION = 0.20  # 20% of total cap available as flex pool
+>    ```
+>    After a resource exhausts its dedicated budget, it can draw from the flex pool (shared across all techs). This prevents hard cutoffs when one tech is slightly over-subscribed.
+>
+> 5. **Backward compatibility**: When `TECH_DIFFERENTIATED_QUEUE = False`, fall back to existing `QUEUE_CAP_GW` behavior. Add a validation check that per-tech caps sum to approximately the uniform cap (within ±10%) to catch configuration errors.
+>
+> 6. **Setup page**: Add "Queue Model" toggle — "Uniform" / "Tech-Differentiated" (default). Brief tooltip: "Tech-differentiated caps reflect LBNL data showing solar and wind complete interconnection faster than nuclear or CCS."
+>
+> **Key files to modify**:
+> - `scripts/market_simulation.py` — `TECH_QUEUE_CAP_GW` constants (near line 96), `compute_market_deployment()` (line 1421), `run_market_simulation()` (lines 2084–2098)
+> - `scripts/pipeline_config.py` — `TECH_DIFFERENTIATED_QUEUE` flag, `QUEUE_FLEX_FRACTION`
+> - `backend/models.py` — optionally add `queue_by_tech: Dict[str, float]` to `YearResult` for transparency
+> - `frontend/setup.html` / `frontend/js/setup.js` — queue model toggle
+>
+> **Performance constraint**: Only changes how the queue budget is sliced — same number of iterations, same deployment loop structure. Zero runtime impact.
+>
+> **Validation**:
+> - **Compare trajectories**: Uniform vs tech-differentiated at Medium costs, ERCOT, 2025–2050. With tech caps: solar deployment should increase 20–40% (larger dedicated budget) and nuclear/CCS deployment should decrease (smaller dedicated budget but reflecting actual completion rates).
+> - **Sum check**: Per-tech caps for each ISO should sum to within ±10% of the uniform `QUEUE_CAP_GW` for that ISO.
+> - **National totals**: Sum across all ISOs: solar should be ~8 GW/yr, wind ~5 GW/yr at Medium — matching LBNL 2024 national completion rates.
+> - **Total clean% at 2050**: Should be slightly higher with tech-differentiated caps because fast-deploying technologies (solar, wind) are no longer constrained by slow technologies (nuclear, CCS) consuming shared queue budget.
+>
+> **Read these files first**: `scripts/market_simulation.py` (lines 90–109 for existing `QUEUE_CAP_GW`, lines 1421–1600 for deployment model, lines 2084–2098 for queue budget management), `AUDIT.md` (Section 2.3 on queue cap bias).
+
+---
+
 ## Usage Notes
 
 - Each prompt is designed to be self-contained — paste into a new Claude Code session with access to the `market-simulator/` directory
-- Prompts are ordered by priority (matching the review's recommendations)
-- Prompts 2, 3, and 4 are relatively independent and could be worked in parallel sessions
-- Prompt 1 (zonal) is the most complex and has the highest impact — consider tackling it after 2/3/4 are done
-- Prompt 5 (backtesting) can be done at any time but is most valuable after the other improvements are in place
-- Prompt 6 (confidence viz) is lowest effort and can be done independently at any time
+- **Prompt 2 (LP Storage Co-Dispatch) has been implemented** but produced limited differentiation vs greedy dispatch — extra compute with minimal value. This validates VRE cannibalization (Prompt 7) as the higher-impact fix.
+
+### Recommended execution order:
+
+| Order | Prompt | Effort | Impact | Dependencies |
+|-------|--------|--------|--------|-------------|
+| 1 | **Prompt 9** (Synthetic Warning) | ~2–3 hours | Quick credibility win | None |
+| 2 | **Prompt 7** (VRE Cannibalization) | ~1 day | **Highest** — fixes #1 audit criticism | None |
+| 3 | **Prompt 11** (Tech Queue Caps) | ~half day | Medium — removes deployment bias | None |
+| 4 | **Prompt 8** (ORDC Scarcity) | ~1–2 days | High — makes LMP structurally responsive | None |
+| 5 | **Prompt 10** (IPM Triggers) | ~1 day | High for positioning | Partial dep on 7 (VRE metric) |
+| 6 | **Prompt 6** (Confidence Viz) | ~half day | Medium — UX transparency | None |
+| 7 | **Prompt 3** (Inter-Regional Flows) | ~1 day | Medium — corrects RA in import-heavy ISOs | None |
+| 8 | **Prompt 4** (Demand Response) | ~1 day | Medium — fixes scarcity overshoot | None |
+| 9 | **Prompt 5** (Backtesting) | ~2 days | High for credibility — best after 7/8 | After 7, 8 |
+| 10 | **Prompt 1** (Zonal Decomposition) | ~2–3 days | Highest structural — most complex | After 3, 4 |
+
+### Groupings for parallel sessions:
+- **Group A** (independent): Prompts 7, 9, 11 — can all be worked in parallel
+- **Group B** (independent): Prompts 3, 4, 8 — can all be worked in parallel after Group A
+- **Group C** (sequential): Prompt 10 after 7; Prompt 5 after 7+8; Prompt 1 after 3+4
