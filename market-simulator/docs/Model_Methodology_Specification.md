@@ -33,6 +33,7 @@
    - 5.11 Cost-Based Offer Adders
    - 5.12 Demand Growth Rates
 6. [Output Specification](#6-output-specification)
+   - 6.8 IPM Trigger Indicators (automated production-model recommendations)
 7. [Validation & Benchmarking](#7-validation--benchmarking)
 8. [Usage & Limitations](#8-usage--limitations)
 9. [Directions for Use](#9-directions-for-use)
@@ -1026,6 +1027,44 @@ Per ISO × year:
 
 Results are saved to `data/results/run_NNN/` (auto-incrementing run ID).
 
+### 6.8 IPM Trigger Indicators
+
+The model includes automated indicators that flag when simulation results cross thresholds where the screening model's approximations become unreliable, recommending validation with production-grade models (IPM, PLEXOS, GenX).
+
+Triggers are computed per ISO per year as pure threshold checks (negligible overhead). Each trigger produces:
+- `trigger_id`: Machine-readable identifier
+- `severity`: `medium` or `high`
+- `explanation`: Plain-English description of the limitation
+- `metric_value`: The actual value that triggered the indicator
+- `threshold`: The threshold crossed
+- `recommended_model`: Which type of production model would address the limitation
+
+**Trigger definitions:**
+
+| Trigger ID | Condition | Medium | High | Recommended Model |
+|---|---|---|---|---|
+| `VRE_CANNIBALIZATION` | VRE (solar+wind) share of generation | >40% | >60% | Production dispatch with curtailment modeling (PLEXOS, GenX) |
+| `TIGHT_RA_MARGIN` | Operating reserve margin vs. 15% target | <10% | <5% | UC-constrained dispatch (IPM, PLEXOS) |
+| `HIGH_CONGESTION` | VRE deployment vs. historical queue completion rate | >2x | >3x | Zonal/nodal dispatch model |
+| `STORAGE_DOMINANCE` | Storage (battery+LDES+H₂) share of energy served | >15% | >25% | Co-optimized storage dispatch (GenX, PLEXOS) |
+| `RETIREMENT_CASCADE` | Fossil fleet capacity retired in a single period | >20% | >35% | Plant-level retirement model (EIA 860, IPM) |
+| `NUCLEAR_AT_RISK` | Nuclear revenue within $5/MWh of retirement cliff ($30/MWh) | — | Always high | Plant-level nuclear economics (contract-specific) |
+
+**Implementation details:**
+- **VRE penetration** is computed from `resource_mix_twh` (solar + wind + offshore_wind) / demand_twh.
+- **Reserve margin** uses fossil `capacity_mw` from generator economics + clean cumulative GW, vs. peak demand estimated at 1.5× average demand.
+- **Congestion** compares cumulative VRE GW deployed against `QUEUE_CAP_GW['Medium']` × years elapsed since 2025.
+- **Storage share** sums battery_4hr, battery_8hr, LDES, and green_h2 TWh from the resource mix.
+- **Retirement cascade** uses `total_economic_retirement_mw` / total fossil capacity from generator economics.
+- **Nuclear at risk** checks whether `nuclear_revenue.total_mwh` is within $5 of the retirement threshold and the plant has not already retired.
+
+**Frontend rendering:**
+- Trigger cards appear below KPI stats on the results page.
+- High severity: red-bordered card with "Production Modeling Recommended" header.
+- Medium severity: amber-bordered card.
+- In trajectory mode, triggers are aggregated across years — consecutive years with the same trigger are consolidated into a year range (e.g., "2035–2050").
+- Users can dismiss individual triggers via a close button; dismissed state is stored in `sessionStorage`.
+
 ---
 
 ## 7. Validation & Benchmarking
@@ -1092,6 +1131,8 @@ Historical actuals are sourced from EIA-860M, ISO State of Market reports (PJM M
 8. **Policy snapshot**: Reflects current policy as of early 2025. RPS, IRA credits, and GHG Protocol evolve.
 9. **Interconnection queue constraints**: New capacity assumed buildable as needed (except in trajectory mode which models queue caps).
 10. **Trajectory confidence degrades with horizon**: Projections beyond 2030 rely on extrapolated technology cost curves, demand growth, and policy assumptions. The model displays confidence zones to communicate this (Calibrated ≤2030, Moderate 2030–2040, High Uncertainty 2040+).
+
+**Automated limitation detection:** The model includes IPM trigger indicators (Section 6.8) that automatically flag when results cross thresholds where these limitations become binding — e.g., VRE penetration above 40% triggers a cannibalization warning, tight reserve margins flag the need for unit-commitment modeling. These triggers serve as a triage mechanism, identifying where investment in a production-grade model run (IPM, PLEXOS, GenX) would materially change the results.
 
 ### 8.3 When to Use Each Mode
 
