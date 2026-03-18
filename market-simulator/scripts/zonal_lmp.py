@@ -23,6 +23,8 @@ import numpy as np
 from scipy.optimize import linprog
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
+from pipeline_config import SCARCITY_MODE
+
 
 def _build_lp_structure(zone_stacks, zone_names, interfaces, transfer_limits):
     """Pre-build LP constraint matrices that are constant across hours.
@@ -212,6 +214,7 @@ def _solve_hour_batch(lp_c, lp_A_eq, lp_bounds, lp_units_arr, n_zones,
     """
     n_batch = len(hour_indices)
     lmp_batch = np.zeros((n_zones, n_batch))
+    gen_batch = np.zeros((n_zones, n_batch))
     flows_batch = np.zeros((n_interfaces, n_batch))
     infeasible = 0
 
@@ -229,6 +232,12 @@ def _solve_hour_batch(lp_c, lp_A_eq, lp_bounds, lp_units_arr, n_zones,
             continue
 
         x = result.x
+
+        # Extract per-zone generation
+        for z_idx in range(n_zones):
+            z_start, z_end = int(lp_units_arr[z_idx, 0]), int(lp_units_arr[z_idx, 1])
+            if z_start < z_end:
+                gen_batch[z_idx, local_h] = np.sum(x[z_start:z_end])
 
         # Extract net flows
         for iface_idx in range(n_interfaces):
@@ -251,7 +260,7 @@ def _solve_hour_batch(lp_c, lp_A_eq, lp_bounds, lp_units_arr, n_zones,
                 if np.any(mask):
                     lmp_batch[z_idx, local_h] = np.max(zone_mc[mask])
 
-    return lmp_batch, flows_batch, infeasible
+    return lmp_batch, gen_batch, flows_batch, infeasible
 
 
 def compute_zonal_lmp_hourly(iso, zone_config, zone_stacks, demand_mw_profile,
@@ -302,8 +311,15 @@ def compute_zonal_lmp_hourly(iso, zone_config, zone_stacks, demand_mw_profile,
                 # Floor at zero — excess clean supply = curtailment
                 zone_demand_all[z_idx] = np.maximum(zone_demand_all[z_idx], 0.0)
 
+    # Compute per-zone total fossil capacity (for ORDC reserve calculation)
+    zone_capacity = np.zeros(n_zones)
+    for z_idx, zname in enumerate(zone_names):
+        for unit_type, cap_mw, mc in zone_stacks.get(zname, []):
+            zone_capacity[z_idx] += cap_mw
+
     # Solve LP for each hour — parallel batches when beneficial
     zonal_lmp_matrix = np.zeros((n_zones, H))
+    zonal_gen_matrix = np.zeros((n_zones, H))
     flows_matrix = np.zeros((n_interfaces, H))
     infeasible_hours = 0
 
@@ -362,8 +378,9 @@ def compute_zonal_lmp_hourly(iso, zone_config, zone_stacks, demand_mw_profile,
 
             for fut in as_completed(futures):
                 chunk_hrs = futures[fut]
-                lmp_batch, flows_batch, infeas = fut.result()
+                lmp_batch, gen_batch, flows_batch, infeas = fut.result()
                 zonal_lmp_matrix[:, chunk_hrs] = lmp_batch
+                zonal_gen_matrix[:, chunk_hrs] = gen_batch
                 flows_matrix[:, chunk_hrs] = flows_batch
                 infeasible_hours += infeas
     else:
@@ -376,6 +393,7 @@ def compute_zonal_lmp_hourly(iso, zone_config, zone_stacks, demand_mw_profile,
 
             if success:
                 zonal_lmp_matrix[:, h] = zonal_lmp
+                zonal_gen_matrix[:, h] = zonal_gen
                 flows_matrix[:, h] = flows
             else:
                 infeasible_hours += 1
@@ -385,7 +403,9 @@ def compute_zonal_lmp_hourly(iso, zone_config, zone_stacks, demand_mw_profile,
     if price_model is not None:
         zonal_lmp_matrix = _apply_pricing_layers(
             zonal_lmp_matrix, demand_mw_profile, zone_demand_shares,
-            price_model, vre_penetration)
+            price_model, vre_penetration,
+            zone_capacity=zone_capacity,
+            zonal_gen_matrix=zonal_gen_matrix)
 
     # Compute demand-weighted system average LMP
     system_lmp = np.sum(zonal_lmp_matrix * zone_demand_shares[:, np.newaxis],
@@ -399,13 +419,23 @@ def compute_zonal_lmp_hourly(iso, zone_config, zone_stacks, demand_mw_profile,
 
 
 def _apply_pricing_layers(zonal_lmp_matrix, demand_mw_profile,
-                           zone_demand_shares, price_model, vre_penetration):
-    """Apply demand-quantile pricing adjustments per zone.
+                           zone_demand_shares, price_model, vre_penetration,
+                           zone_capacity=None, zonal_gen_matrix=None):
+    """Apply pricing adjustments per zone.
 
-    Preserves the calibrated pricing layers from the copper-plate model
-    but applies them zone-by-zone using zone-specific demand quantiles.
+    Supports two scarcity pricing modes (controlled by pipeline_config.SCARCITY_MODE):
+      - 'ordc': ORDC reserve-margin-responsive scarcity pricing per zone.
+                Computes reserves = zone_capacity - zone_dispatched, then applies
+                VOLL × LOLP(reserves) adder. Skips demand-quantile scarcity overlay.
+      - 'demand_quantile': Legacy demand-percentile scarcity overlay (backward compatible).
+
+    In both modes, the high-demand congestion adder and low-demand surplus depression
+    are always applied — these represent congestion and surplus, not scarcity.
     """
     n_zones, H = zonal_lmp_matrix.shape
+    use_ordc = (SCARCITY_MODE == 'ordc'
+                and zone_capacity is not None
+                and zonal_gen_matrix is not None)
 
     for z_idx in range(n_zones):
         zone_demand = demand_mw_profile * zone_demand_shares[z_idx]
@@ -415,7 +445,7 @@ def _apply_pricing_layers(zonal_lmp_matrix, demand_mw_profile,
         sorted_demand = np.sort(zone_demand)
         percentile_rank = np.searchsorted(sorted_demand, zone_demand) / H
 
-        # High-demand congestion adder
+        # --- HIGH-DEMAND CONGESTION ADDER (both modes) ---
         high_mask = percentile_rank > price_model.dq_high_percentile / 100.0
         if np.any(high_mask):
             frac = ((percentile_rank[high_mask] -
@@ -424,15 +454,26 @@ def _apply_pricing_layers(zonal_lmp_matrix, demand_mw_profile,
             adder = price_model.dq_high_max_adder * frac ** 2
             zone_lmp[high_mask] += adder
 
-        # Scarcity tail
-        scarcity_mask = percentile_rank > price_model.dq_scarcity_percentile / 100.0
-        if np.any(scarcity_mask):
-            frac = ((percentile_rank[scarcity_mask] -
-                     price_model.dq_scarcity_percentile / 100.0) /
-                    (1.0 - price_model.dq_scarcity_percentile / 100.0))
-            zone_lmp[scarcity_mask] += price_model.dq_scarcity_max * frac
+        # --- SCARCITY PRICING: ORDC or DEMAND-QUANTILE ---
+        if use_ordc:
+            # Per-zone reserves: total zone capacity minus dispatched generation
+            zone_reserves = np.maximum(
+                zone_capacity[z_idx] - zonal_gen_matrix[z_idx], 0.0)
+            # ORDC adder: VOLL × LOLP(reserves) — vectorized sigmoid
+            ordc_adder = price_model.compute_ordc_adder(zone_reserves)
+            # Only apply where generation is positive (fossil dispatching)
+            pos_gen_mask = zonal_gen_matrix[z_idx] > 0.1
+            zone_lmp[pos_gen_mask] += ordc_adder[pos_gen_mask]
+        else:
+            # Legacy demand-quantile scarcity tail
+            scarcity_mask = percentile_rank > price_model.dq_scarcity_percentile / 100.0
+            if np.any(scarcity_mask):
+                frac = ((percentile_rank[scarcity_mask] -
+                         price_model.dq_scarcity_percentile / 100.0) /
+                        (1.0 - price_model.dq_scarcity_percentile / 100.0))
+                zone_lmp[scarcity_mask] += price_model.dq_scarcity_max * frac
 
-        # Low-demand depression
+        # --- LOW-DEMAND SURPLUS DEPRESSION (both modes) ---
         low_mask = percentile_rank < price_model.dq_low_percentile / 100.0
         if np.any(low_mask):
             frac = ((price_model.dq_low_percentile / 100.0 -
