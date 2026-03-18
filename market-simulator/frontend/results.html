@@ -92,6 +92,30 @@
             </div>
         </div>
 
+        <!-- Demand Response KPI Cards (shown when DR active) -->
+        <div class="kpi-grid" id="drStats" style="display:none;">
+            <div class="kpi-card" style="border-left: 4px solid #8B5CF6;">
+                <div class="kpi-value" id="statDrCurtailed">--</div>
+                <div class="kpi-unit">GWh/yr</div>
+                <div class="kpi-label">DR Curtailed</div>
+            </div>
+            <div class="kpi-card" style="border-left: 4px solid #8B5CF6;">
+                <div class="kpi-value" id="statDrPeak">--</div>
+                <div class="kpi-unit">GW</div>
+                <div class="kpi-label">Peak DR</div>
+            </div>
+            <div class="kpi-card" style="border-left: 4px solid #8B5CF6;">
+                <div class="kpi-value" id="statDrHours">--</div>
+                <div class="kpi-unit">hrs/yr</div>
+                <div class="kpi-label">DR Hours</div>
+            </div>
+            <div class="kpi-card" style="border-left: 4px solid #8B5CF6;">
+                <div class="kpi-value" id="statDrPrice">--</div>
+                <div class="kpi-unit">$/MWh</div>
+                <div class="kpi-label">Avg DR Price</div>
+            </div>
+        </div>
+
         <!-- Plant-Level Summary KPI Cards -->
         <div class="kpi-grid" id="plantStats" style="display:none;">
             <div class="kpi-card" style="border-left: 4px solid #4A7C2E;">
