@@ -175,6 +175,7 @@ function renderAll() {
 
     // Level 1: Market-wide
     renderLMPTimeSeries(data);
+    renderZonalLMP(data);
     renderSupplyStack(data);
     renderEmissionsByYear(data);
     renderFuelBinTable(data);
@@ -337,6 +338,85 @@ function renderLMPTimeSeries(data) {
             title: { text: `Average LMP — ${currentISO}`, font: { size: 14 } },
             yaxis: { title: '$/MWh', gridcolor: '#f0f0f0' },
         }, { responsive: true });
+    }
+}
+
+// ── Chart 1b: Zonal LMP Price Spreads ──
+function renderZonalLMP(data) {
+    const card = document.getElementById('zonalLMPCard');
+    const container = 'chartZonalLMP';
+    const tbody = document.getElementById('zonalLMPTableBody');
+
+    const zonalStats = data.zonal_lmp_stats;
+    if (!zonalStats || zonalStats.length === 0) {
+        if (card) card.style.display = 'none';
+        return;
+    }
+
+    if (card) card.style.display = '';
+
+    // Sort zones by avg LMP descending
+    const sorted = [...zonalStats].sort((a, b) => b.avg_lmp - a.avg_lmp);
+    const systemAvg = data.avg_lmp || 0;
+
+    // Plotly horizontal bar chart
+    const zoneNames = sorted.map(z => z.zone_name);
+    const avgLmps = sorted.map(z => z.avg_lmp);
+    const spreads = sorted.map(z => z.price_spread_vs_system);
+    const barColors = spreads.map(s =>
+        s > 0 ? 'rgba(220, 38, 38, 0.7)' : 'rgba(74, 124, 46, 0.7)');
+
+    const traces = [{
+        type: 'bar',
+        y: zoneNames,
+        x: avgLmps,
+        orientation: 'h',
+        marker: { color: barColors },
+        text: avgLmps.map(v => '$' + v.toFixed(1)),
+        textposition: 'outside',
+        hovertemplate: '%{y}: $%{x:.1f}/MWh<extra></extra>',
+    }];
+
+    // System average reference line
+    const shapes = [{
+        type: 'line',
+        x0: systemAvg, x1: systemAvg,
+        y0: -0.5, y1: zoneNames.length - 0.5,
+        line: { color: '#1A232F', width: 2, dash: 'dash' },
+    }];
+
+    const annotations = [{
+        x: systemAvg, y: zoneNames.length - 0.3,
+        text: `System Avg $${systemAvg.toFixed(1)}`,
+        showarrow: false, font: { size: 11, color: '#1A232F' },
+        xanchor: 'left', xshift: 5,
+    }];
+
+    Plotly.newPlot(container, traces, {
+        ...PLOTLY_LAYOUT_BASE,
+        title: { text: 'Average LMP by Transmission Zone', font: { size: 14 } },
+        xaxis: { title: '$/MWh', zeroline: true },
+        yaxis: { automargin: true },
+        shapes, annotations,
+        margin: { l: 120, r: 60, t: 40, b: 40 },
+        height: Math.max(200, zoneNames.length * 50 + 80),
+    }, { responsive: true });
+
+    // Populate table
+    if (tbody) {
+        tbody.innerHTML = sorted.map(z => {
+            const spreadClass = z.price_spread_vs_system > 0 ? 'color:#DC2626' : 'color:#4A7C2E';
+            const spreadSign = z.price_spread_vs_system > 0 ? '+' : '';
+            return `<tr>
+                <td><strong>${z.zone_name}</strong></td>
+                <td>$${z.avg_lmp.toFixed(1)}</td>
+                <td>$${z.peak_lmp.toFixed(1)}</td>
+                <td>$${z.offpeak_lmp.toFixed(1)}</td>
+                <td>$${z.p10_lmp.toFixed(1)}</td>
+                <td>$${z.p90_lmp.toFixed(1)}</td>
+                <td style="${spreadClass}; font-weight:600;">${spreadSign}$${z.price_spread_vs_system.toFixed(1)}</td>
+            </tr>`;
+        }).join('');
     }
 }
 
