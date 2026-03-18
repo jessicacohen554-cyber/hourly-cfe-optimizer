@@ -1,0 +1,93 @@
+{
+    "_metadata": {
+        "description": "Historical observed outcomes (2020-2024) for backtesting the trajectory mode",
+        "sources": {
+            "clean_pct": "EIA-860M monthly generation reports, EIA Electric Power Monthly Table 1.1",
+            "avg_lmp": "ISO State of the Market reports (PJM MMU, Potomac Economics, CAISO DMM)",
+            "emissions_mt": "EPA CAMPD + EIA-923, cross-referenced with eGRID",
+            "coal_gw": "EIA-860 generator inventory, retirement notices",
+            "gas_price_mmbtu": "EIA Henry Hub natural gas spot prices (annual average)",
+            "demand_twh": "EIA-930 Hourly Grid Monitor, EIA Electric Power Monthly"
+        },
+        "notes": [
+            "2020: COVID demand collapse (-3-5% in most ISOs)",
+            "2021: Winter Storm Uri (ERCOT, SPP), post-COVID demand recovery",
+            "2022: Natural gas price spike ($6.45/MMBtu avg Henry Hub), high LMPs",
+            "2023: Gas price correction ($2.57/MMBtu), LMP decline, continued clean growth",
+            "2024: Normal conditions, continued renewables deployment, IRA incentives flowing"
+        ]
+    },
+
+    "fuel_prices": {
+        "2020": {"gas": 2.03, "coal": 1.92, "oil": 6.50},
+        "2021": {"gas": 3.89, "coal": 2.10, "oil": 9.50},
+        "2022": {"gas": 6.45, "coal": 2.45, "oil": 13.10},
+        "2023": {"gas": 2.57, "coal": 2.25, "oil": 10.50},
+        "2024": {"gas": 2.19, "coal": 2.20, "oil": 10.80}
+    },
+
+    "carbon_prices": {
+        "_notes": "RGGI + CA cap-and-trade weighted average where applicable, 0 for non-covered ISOs",
+        "2020": {"CAISO": 17.5, "ERCOT": 0, "PJM": 7.5, "NYISO": 7.5, "NEISO": 7.5, "MISO": 0, "SPP": 0},
+        "2021": {"CAISO": 22.0, "ERCOT": 0, "PJM": 10.0, "NYISO": 10.0, "NEISO": 10.0, "MISO": 0, "SPP": 0},
+        "2022": {"CAISO": 28.0, "ERCOT": 0, "PJM": 13.5, "NYISO": 13.5, "NEISO": 13.5, "MISO": 0, "SPP": 0},
+        "2023": {"CAISO": 32.0, "ERCOT": 0, "PJM": 13.0, "NYISO": 13.0, "NEISO": 13.0, "MISO": 0, "SPP": 0},
+        "2024": {"CAISO": 35.0, "ERCOT": 0, "PJM": 14.0, "NYISO": 14.0, "NEISO": 14.0, "MISO": 0, "SPP": 0}
+    },
+
+    "CAISO": {
+        "2020": {"clean_pct": 42.5, "avg_lmp": 37.5, "emissions_mt": 40.2, "coal_gw": 0.0, "demand_twh": 218.0},
+        "2021": {"clean_pct": 44.0, "avg_lmp": 55.0, "emissions_mt": 39.5, "coal_gw": 0.0, "demand_twh": 225.0},
+        "2022": {"clean_pct": 46.0, "avg_lmp": 72.0, "emissions_mt": 37.8, "coal_gw": 0.0, "demand_twh": 228.0},
+        "2023": {"clean_pct": 48.5, "avg_lmp": 36.0, "emissions_mt": 35.0, "coal_gw": 0.0, "demand_twh": 232.0},
+        "2024": {"clean_pct": 51.0, "avg_lmp": 38.0, "emissions_mt": 33.5, "coal_gw": 0.0, "demand_twh": 237.0}
+    },
+
+    "ERCOT": {
+        "2020": {"clean_pct": 30.0, "avg_lmp": 22.0, "emissions_mt": 155.0, "coal_gw": 15.0, "demand_twh": 382.0},
+        "2021": {"clean_pct": 33.5, "avg_lmp": 48.0, "emissions_mt": 152.0, "coal_gw": 14.2, "demand_twh": 395.0},
+        "2022": {"clean_pct": 36.0, "avg_lmp": 65.0, "emissions_mt": 148.0, "coal_gw": 13.5, "demand_twh": 400.0},
+        "2023": {"clean_pct": 40.2, "avg_lmp": 28.5, "emissions_mt": 140.0, "coal_gw": 12.8, "demand_twh": 410.0},
+        "2024": {"clean_pct": 44.0, "avg_lmp": 30.0, "emissions_mt": 132.0, "coal_gw": 12.0, "demand_twh": 420.0}
+    },
+
+    "PJM": {
+        "2020": {"clean_pct": 32.0, "avg_lmp": 23.0, "emissions_mt": 215.0, "coal_gw": 42.0, "demand_twh": 755.0},
+        "2021": {"clean_pct": 33.5, "avg_lmp": 40.0, "emissions_mt": 210.0, "coal_gw": 39.0, "demand_twh": 770.0},
+        "2022": {"clean_pct": 34.5, "avg_lmp": 62.0, "emissions_mt": 205.0, "coal_gw": 37.0, "demand_twh": 780.0},
+        "2023": {"clean_pct": 36.8, "avg_lmp": 33.0, "emissions_mt": 195.0, "coal_gw": 35.0, "demand_twh": 790.0},
+        "2024": {"clean_pct": 38.5, "avg_lmp": 35.0, "emissions_mt": 188.0, "coal_gw": 33.0, "demand_twh": 800.0}
+    },
+
+    "NYISO": {
+        "2020": {"clean_pct": 30.0, "avg_lmp": 25.0, "emissions_mt": 28.0, "coal_gw": 0.0, "demand_twh": 148.0},
+        "2021": {"clean_pct": 31.0, "avg_lmp": 42.0, "emissions_mt": 27.5, "coal_gw": 0.0, "demand_twh": 152.0},
+        "2022": {"clean_pct": 31.5, "avg_lmp": 65.0, "emissions_mt": 27.0, "coal_gw": 0.0, "demand_twh": 154.0},
+        "2023": {"clean_pct": 33.0, "avg_lmp": 38.0, "emissions_mt": 25.5, "coal_gw": 0.0, "demand_twh": 156.0},
+        "2024": {"clean_pct": 34.5, "avg_lmp": 40.0, "emissions_mt": 24.5, "coal_gw": 0.0, "demand_twh": 158.0}
+    },
+
+    "NEISO": {
+        "2020": {"clean_pct": 24.0, "avg_lmp": 26.0, "emissions_mt": 28.5, "coal_gw": 0.5, "demand_twh": 118.0},
+        "2021": {"clean_pct": 25.5, "avg_lmp": 52.0, "emissions_mt": 28.0, "coal_gw": 0.3, "demand_twh": 120.0},
+        "2022": {"clean_pct": 27.0, "avg_lmp": 78.0, "emissions_mt": 27.0, "coal_gw": 0.2, "demand_twh": 122.0},
+        "2023": {"clean_pct": 29.5, "avg_lmp": 42.0, "emissions_mt": 25.5, "coal_gw": 0.1, "demand_twh": 123.0},
+        "2024": {"clean_pct": 32.0, "avg_lmp": 45.0, "emissions_mt": 24.0, "coal_gw": 0.0, "demand_twh": 125.0}
+    },
+
+    "MISO": {
+        "2020": {"clean_pct": 20.0, "avg_lmp": 22.0, "emissions_mt": 340.0, "coal_gw": 48.0, "demand_twh": 620.0},
+        "2021": {"clean_pct": 22.0, "avg_lmp": 38.0, "emissions_mt": 330.0, "coal_gw": 46.0, "demand_twh": 635.0},
+        "2022": {"clean_pct": 23.5, "avg_lmp": 55.0, "emissions_mt": 320.0, "coal_gw": 44.0, "demand_twh": 645.0},
+        "2023": {"clean_pct": 25.8, "avg_lmp": 27.0, "emissions_mt": 305.0, "coal_gw": 42.0, "demand_twh": 650.0},
+        "2024": {"clean_pct": 28.0, "avg_lmp": 29.0, "emissions_mt": 290.0, "coal_gw": 40.0, "demand_twh": 660.0}
+    },
+
+    "SPP": {
+        "2020": {"clean_pct": 36.0, "avg_lmp": 18.0, "emissions_mt": 82.0, "coal_gw": 15.0, "demand_twh": 250.0},
+        "2021": {"clean_pct": 38.0, "avg_lmp": 35.0, "emissions_mt": 80.0, "coal_gw": 14.5, "demand_twh": 255.0},
+        "2022": {"clean_pct": 40.0, "avg_lmp": 48.0, "emissions_mt": 76.0, "coal_gw": 14.0, "demand_twh": 260.0},
+        "2023": {"clean_pct": 42.0, "avg_lmp": 24.0, "emissions_mt": 72.0, "coal_gw": 13.5, "demand_twh": 262.0},
+        "2024": {"clean_pct": 45.0, "avg_lmp": 26.0, "emissions_mt": 68.0, "coal_gw": 13.0, "demand_twh": 265.0}
+    }
+}
