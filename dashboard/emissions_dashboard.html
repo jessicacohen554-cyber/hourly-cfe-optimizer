@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Constellation Energy | Emissions Trajectory Explorer</title>
+    <link rel="stylesheet" href="styles/ceg-report.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="js/emissions-dashboard-data.js"></script>
+    <script src="js/ceg-nav.js" data-ceg-active="emissions"></script>
+    <style>
+        /* ── Page-specific layout — single column ── */
+        .controls-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-lg);
+            align-items: flex-start;
+            margin-bottom: var(--space-xl);
+        }
+        .controls-bar > .toggle-group { margin-bottom: 0; }
+        .controls-bar > .summary-stats {
+            margin-bottom: 0;
+        }
+
+        /* Plant selector — horizontal scrollable strip */
+        .plant-selector {
+            margin-bottom: var(--space-xl);
+        }
+        .plant-list-scroll {
+            max-height: 280px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 0 var(--space-xl);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm);
+            padding: var(--space-sm);
+        }
+        @media (max-width: 600px) {
+            .plant-list-scroll {
+                grid-template-columns: 1fr;
+            }
+        }
+        .controls-title {
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--ceg-blue);
+            margin-bottom: var(--space-md);
+            padding-bottom: var(--space-xs);
+            border-bottom: 2px solid var(--ceg-blue);
+        }
+
+        /* Toggle group */
+        .toggle-group {
+            margin-bottom: var(--space-lg);
+        }
+        .toggle-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: var(--space-xs);
+        }
+        .toggle-row {
+            display: flex;
+            gap: var(--space-xs);
+        }
+        .toggle-btn {
+            flex: 1;
+            padding: 8px 4px;
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm);
+            background: var(--bg-card);
+            font-family: var(--font);
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: center;
+            min-height: 36px;
+        }
+        .toggle-btn:hover { border-color: var(--ceg-blue); color: var(--ceg-blue); }
+        .toggle-btn.active {
+            background: var(--ceg-blue);
+            color: white;
+            border-color: var(--ceg-blue);
+        }
+
+        /* Plant checklist */
+        .iso-group { margin-bottom: var(--space-md); }
+        .iso-group-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: var(--space-xs) 0;
+            border-bottom: 1px solid var(--glass-border);
+            margin-bottom: 4px;
+        }
+        .iso-group-title {
+            font-weight: 700; font-size: 0.78rem;
+            color: var(--ceg-blue); text-transform: uppercase; letter-spacing: 1px;
+        }
+        .iso-group-actions { display: flex; gap: 4px; }
+        .iso-group-actions button {
+            background: none; border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm); padding: 2px 8px;
+            font-size: 0.68rem; font-family: var(--font); font-weight: 600;
+            color: var(--text-dim); cursor: pointer; min-height: 24px;
+        }
+        .iso-group-actions button:hover {
+            background: var(--ceg-blue); color: white; border-color: var(--ceg-blue);
+        }
+        .plant-check {
+            display: flex; align-items: center; gap: 6px;
+            padding: 4px 0; font-size: 0.8rem; cursor: pointer;
+            border-radius: var(--radius-sm);
+        }
+        .plant-check:hover { background: var(--bg-mid); }
+        .plant-check input[type="checkbox"] {
+            width: 16px; height: 16px; accent-color: var(--ceg-green);
+            cursor: pointer; flex-shrink: 0;
+        }
+        .plant-check-name { flex: 1; font-weight: 400; font-size: 0.78rem; }
+        .plant-check-co2 {
+            font-family: var(--font-data); font-weight: 600;
+            color: var(--text-dim); font-size: 0.75rem; white-space: nowrap;
+        }
+
+        /* Summary stats */
+        .summary-stats {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: var(--space-sm); margin-bottom: var(--space-lg);
+        }
+        .summary-stat {
+            background: var(--bg-mid);
+            border-radius: var(--radius-sm);
+            padding: var(--space-sm);
+            text-align: center;
+        }
+        .summary-stat-val {
+            font-family: var(--font-data); font-size: 1.3rem;
+            font-weight: 700; color: var(--text-bright);
+        }
+        .summary-stat-lbl {
+            font-size: 0.68rem; color: var(--text-dim);
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+
+        /* Chart area */
+        .chart-area {
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-xl);
+        }
+        .chart-title {
+            font-size: 1.1rem; font-weight: 700;
+            color: var(--text-bright); margin-bottom: var(--space-xs);
+        }
+        .chart-subtitle {
+            font-size: 0.82rem; color: var(--text-dim);
+            margin-bottom: var(--space-lg);
+        }
+        .chart-container {
+            position: relative;
+            height: 420px;
+        }
+        @media (max-width: 768px) {
+            .chart-container { height: 300px; }
+        }
+
+        /* Delta bars */
+        .delta-section {
+            margin-top: var(--space-xl);
+        }
+        .delta-container {
+            position: relative;
+            height: 260px;
+        }
+        @media (max-width: 768px) {
+            .delta-container { height: 200px; }
+        }
+
+        /* Headline cards */
+        .headline-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: var(--space-md);
+            margin-bottom: var(--space-xl);
+        }
+        .headline-card {
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            text-align: center;
+        }
+        .headline-val {
+            font-family: var(--font-data);
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--ceg-blue);
+        }
+        .headline-lbl {
+            font-size: 0.78rem;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+        .headline-val.green { color: var(--ceg-green); }
+        .headline-val.orange { color: var(--ceg-orange); }
+        .headline-val.red { color: #DC2626; }
+        .summary-stat-val.green { color: var(--ceg-green); }
+        .summary-stat-val.red { color: #DC2626; }
+        .summary-stat-val.blue { color: var(--ceg-blue); }
+
+        /* CCS select all bar */
+        .ccs-actions {
+            display: flex; gap: var(--space-sm);
+            margin-bottom: var(--space-md);
+        }
+        .ccs-actions button {
+            flex: 1; padding: 8px; border-radius: var(--radius-sm);
+            font-family: var(--font); font-size: 0.78rem; font-weight: 600;
+            cursor: pointer; border: 1px solid var(--glass-border);
+            background: var(--bg-card); color: var(--text-dim);
+            min-height: 36px; transition: all 0.15s;
+        }
+        .ccs-actions button:hover {
+            background: var(--ceg-green); color: white; border-color: var(--ceg-green);
+        }
+        .ccs-actions button.active-all {
+            background: var(--ceg-green); color: white; border-color: var(--ceg-green);
+        }
+
+        /* Plant checklist scroll — overridden by .plant-selector rules above */
+
+        .page-footer {
+            background: var(--bg-mid);
+            padding: 2rem var(--pad-page);
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-top: var(--space-3xl);
+        }
+        .bottom-banner {
+            height: 3px;
+            background: linear-gradient(90deg, var(--ceg-blue), var(--ceg-teal), var(--ceg-green));
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ═══ HERO ═══ -->
+    <div class="hero-section">
+        <div class="hero-inner">
+            <div class="hero-eyebrow">Emissions Trajectory Explorer</div>
+            <h1>NGCC Fleet <strong>Decarbonization</strong> Pathways</h1>
+            <p class="hero-desc">
+                Interactive exploration of Constellation's 39 CCGT fleet emissions trajectory
+                under 540 reference market scenarios. Select plants for CCS retrofit to see
+                how the trajectory shifts against AT Power NZ and SBTi 1.5&deg;C targets.
+            </p>
+        </div>
+    </div>
+
+    <!-- ═══ HEADLINE STATS ═══ -->
+    <div class="content-section">
+        <div class="headline-row">
+            <div class="headline-card">
+                <div class="headline-val" id="statBaseline">—</div>
+                <div class="headline-lbl">Baseline (MMt CO&#8322;)</div>
+            </div>
+            <div class="headline-card">
+                <div class="headline-val" id="statP50_2050">—</div>
+                <div class="headline-lbl">P50 at 2050 (MMt)</div>
+            </div>
+            <div class="headline-card">
+                <div class="headline-val green" id="statCcsReduction">0.0</div>
+                <div class="headline-lbl">CCS Reduction (MMt)</div>
+            </div>
+            <div class="headline-card">
+                <div class="headline-val orange" id="statGapToTarget">—</div>
+                <div class="headline-lbl">Gap to AT Target 2050</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MAIN DASHBOARD ═══ -->
+    <div class="content-section">
+
+        <!-- ── Controls bar: summary + toggles ── -->
+        <div class="controls-bar">
+            <div class="summary-stats">
+                <div class="summary-stat">
+                    <div class="summary-stat-val blue" id="sumPlants">0</div>
+                    <div class="summary-stat-lbl">CCS Plants</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-stat-val green" id="sumReduction">0.0</div>
+                    <div class="summary-stat-lbl">Mt Captured</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-stat-val" id="sumResidual">—</div>
+                    <div class="summary-stat-lbl">Post-CCS P50</div>
+                </div>
+                <div class="summary-stat">
+                    <div class="summary-stat-val green" id="sumPctCut">0%</div>
+                    <div class="summary-stat-lbl">Reduction</div>
+                </div>
+            </div>
+
+            <div class="toggle-group">
+                <div class="toggle-label">New Gas Development</div>
+                <div class="toggle-row">
+                    <button class="toggle-btn active" data-gas="without" onclick="setGas('without')">Without</button>
+                    <button class="toggle-btn" data-gas="with" onclick="setGas('with')">With Gas</button>
+                    <button class="toggle-btn" data-gas="both" onclick="setGas('both')">Both</button>
+                </div>
+            </div>
+
+            <div class="toggle-group">
+                <div class="toggle-label">Reference Trajectories</div>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                    <label class="plant-check">
+                        <input type="checkbox" id="togMarket" checked onchange="updateChart()">
+                        <span class="plant-check-name">Market Trajectory (original)</span>
+                    </label>
+                    <label class="plant-check">
+                        <input type="checkbox" id="togAT" checked onchange="updateChart()">
+                        <span class="plant-check-name">AT Power NZ</span>
+                    </label>
+                    <label class="plant-check">
+                        <input type="checkbox" id="togSBTi" onchange="updateChart()">
+                        <span class="plant-check-name">SBTi 1.5&deg;C</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Plant selector (full width, multi-column grid) ── -->
+        <div class="plant-selector">
+            <div class="controls-title">CCS Retrofit Selection</div>
+            <div class="ccs-actions">
+                <button onclick="selectAllCCS()">Select All</button>
+                <button onclick="clearAllCCS()">Clear All</button>
+            </div>
+            <div class="plant-list-scroll" id="plantChecklist">
+                <!-- populated by JS -->
+            </div>
+        </div>
+
+        <!-- ── Charts ── -->
+        <div class="chart-area">
+            <div class="chart-title">Fleet Emissions Trajectory — P10/P50/P90</div>
+            <div class="chart-subtitle">
+                Reference market sweep (540 scenarios) with merit-order dispatch + unit commitment.
+                Select plants above for CCS retrofit impact.
+            </div>
+            <div class="chart-container">
+                <canvas id="fanChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-area delta-section">
+            <div class="chart-title">Gap to Target — P50 vs Trajectory</div>
+            <div class="chart-subtitle">
+                Positive = above target (more work needed). Negative = exceeding target.
+            </div>
+            <div class="delta-container">
+                <canvas id="deltaChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ═══ FOOTER ═══ -->
+    <footer class="page-footer">
+        <p>Data: EPA eGRID 2023 &bull; SMARTargets Reference Sweep (540 scenarios) &bull; Market-Simulator Merit-Order Dispatch</p>
+        <p style="margin-top: var(--space-xs)">Analysis by CEG-IPP-Climate Research &bull; 2025</p>
+    </footer>
+    <div class="bottom-banner"></div>
+
+    <!-- ═══ SCRIPT ═══ -->
+    <script>
+    (function() {
+        'use strict';
+
+        const D = EMISSIONS_DASH;
+        const baseline = D.baseline_mmt;
+        const years = D.year_labels;
+        const fan = D.fan_bands;
+        const plants = D.plants;
+        const traj = D.trajectories;
+
+        // ── State ──
+        let gasMode = 'without';
+        let ccsSelected = new Set();
+        let fanChart = null;
+        let deltaChart = null;
+
+        // ── New gas emissions estimate (from ipp-company-report.js pattern) ──
+        // Ramp factor: new gas starts 2028, ramps to full by 2032
+        const GAS_RAMP = {2023: 0, 2030: 0.4, 2035: 1.0, 2040: 1.0, 2045: 1.0, 2050: 1.0};
+        const NEW_GAS_ANNUAL_MMT = 3.5; // ~3.5 MMt/yr from planned CCGT additions
+
+        // ── Initialize headline stats ──
+        document.getElementById('statBaseline').textContent = baseline.toFixed(1);
+        document.getElementById('statP50_2050').textContent = fan.p50[fan.p50.length - 1].toFixed(1);
+
+        // AT target at 2050
+        const atTarget2050 = traj.at_power_nz.values[traj.at_power_nz.values.length - 1];
+        const gap2050 = fan.p50[fan.p50.length - 1] - atTarget2050;
+        document.getElementById('statGapToTarget').textContent =
+            (gap2050 > 0 ? '+' : '') + gap2050.toFixed(1) + ' Mt';
+
+        // ── Compute max CCS delta for each plant (baseline sweep - CCS emissions) ──
+        plants.forEach(p => {
+            p.max_ccs_delta = Math.max(0, p.baseline_co2_mmt - p.ccs_co2_mmt);
+        });
+
+        // ── Build plant checklist grouped by ISO ──
+        const byISO = {};
+        plants.forEach(p => {
+            if (!byISO[p.iso]) byISO[p.iso] = [];
+            byISO[p.iso].push(p);
+        });
+
+        const checklistDiv = document.getElementById('plantChecklist');
+        const isoOrder = Object.keys(byISO).sort((a, b) => {
+            const aSum = byISO[a].reduce((s, p) => s + p.baseline_co2_mmt, 0);
+            const bSum = byISO[b].reduce((s, p) => s + p.baseline_co2_mmt, 0);
+            return bSum - aSum;
+        });
+
+        isoOrder.forEach(iso => {
+            const group = byISO[iso].sort((a, b) => b.max_ccs_delta - a.max_ccs_delta);
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'iso-group';
+            groupDiv.innerHTML = `
+                <div class="iso-group-header">
+                    <span class="iso-group-title">${iso} (${group.length})</span>
+                    <div class="iso-group-actions">
+                        <button onclick="selectIso('${iso}')">All</button>
+                        <button onclick="clearIso('${iso}')">Clear</button>
+                    </div>
+                </div>
+            `;
+            group.forEach(p => {
+                const label = document.createElement('label');
+                label.className = 'plant-check';
+                label.innerHTML = `
+                    <input type="checkbox" data-orispl="${p.orispl}" data-iso="${p.iso}" onchange="updateChart()">
+                    <span class="plant-check-name">${p.name}</span>
+                    <span class="plant-check-co2">${p.max_ccs_delta.toFixed(2)} Mt</span>
+                `;
+                groupDiv.appendChild(label);
+            });
+            checklistDiv.appendChild(groupDiv);
+        });
+
+        // ── Plant lookup ──
+        const plantMap = {};
+        plants.forEach(p => plantMap[p.orispl] = p);
+
+        // ── CCS selection handlers ──
+        window.selectAllCCS = function() {
+            document.querySelectorAll('#plantChecklist input[type="checkbox"]').forEach(cb => cb.checked = true);
+            updateChart();
+        };
+        window.clearAllCCS = function() {
+            document.querySelectorAll('#plantChecklist input[type="checkbox"]').forEach(cb => cb.checked = false);
+            updateChart();
+        };
+        window.selectIso = function(iso) {
+            document.querySelectorAll(`#plantChecklist input[data-iso="${iso}"]`).forEach(cb => cb.checked = true);
+            updateChart();
+        };
+        window.clearIso = function(iso) {
+            document.querySelectorAll(`#plantChecklist input[data-iso="${iso}"]`).forEach(cb => cb.checked = false);
+            updateChart();
+        };
+
+        // ── Gas toggle ──
+        window.setGas = function(mode) {
+            gasMode = mode;
+            document.querySelectorAll('[data-gas]').forEach(b => {
+                b.classList.toggle('active', b.dataset.gas === mode);
+            });
+            updateChart();
+        };
+
+        // ── Compute CCS-adjusted fan bands using per-plant per-year sweep deltas ──
+        // CCS delta = (plant's sweep dispatch emissions) - (CCS emissions at 80% CF / 95% capture / +14% HR)
+        // CCS construction ramp: 2023=0%, 2030=30%, 2035=70%, 2040+=100%
+        const CCS_RAMP = [0, 0.3, 0.7, 1.0, 1.0, 1.0]; // indexed by year position
+
+        function computeAdjustedFan() {
+            const checkboxes = document.querySelectorAll('#plantChecklist input[type="checkbox"]');
+            const selectedPlants = [];
+            checkboxes.forEach(cb => {
+                if (cb.checked) {
+                    const p = plantMap[parseInt(cb.dataset.orispl)];
+                    if (p) selectedPlants.push(p);
+                }
+            });
+
+            // For each year, compute total delta for P10/P50/P90 independently
+            // Delta = plant's sweep emissions at that percentile - plant's CCS emissions (fixed)
+            const adjusted = {p10: [], p50: [], p90: []};
+            let totalReduction2050 = 0; // for summary stats (at full ramp)
+
+            for (let i = 0; i < years.length; i++) {
+                let deltaP10 = 0, deltaP50 = 0, deltaP90 = 0;
+                const ramp = CCS_RAMP[i];
+
+                selectedPlants.forEach(p => {
+                    // Per-plant delta: what they emit in sweep minus what they'd emit with CCS
+                    // ccs_co2_mmt is already the annual CCS residual (80% CF × 95% capture × +14% HR)
+                    const d10 = Math.max(0, p.sweep_p10[i] - p.ccs_co2_mmt) * ramp;
+                    const d50 = Math.max(0, p.sweep_p50[i] - p.ccs_co2_mmt) * ramp;
+                    const d90 = Math.max(0, p.sweep_p90[i] - p.ccs_co2_mmt) * ramp;
+                    deltaP10 += d10;
+                    deltaP50 += d50;
+                    deltaP90 += d90;
+                });
+
+                adjusted.p10.push(Math.max(0, fan.p10[i] - deltaP10));
+                adjusted.p50.push(Math.max(0, fan.p50[i] - deltaP50));
+                adjusted.p90.push(Math.max(0, fan.p90[i] - deltaP90));
+
+                // Track 2050 reduction for summary
+                if (i === years.length - 1) totalReduction2050 = deltaP50;
+            }
+
+            return {adjusted, totalReduction: totalReduction2050};
+        }
+
+        // ── Gas emissions overlay ──
+        function gasEmissions() {
+            return years.map((y, i) => {
+                const yr = parseInt(y);
+                const ramp = GAS_RAMP[yr] || 0;
+                return NEW_GAS_ANNUAL_MMT * ramp;
+            });
+        }
+
+        // ── Update charts ──
+        window.updateChart = function() {
+            const {adjusted, totalReduction} = computeAdjustedFan();
+            const gas = gasEmissions();
+            const showMarket = document.getElementById('togMarket').checked;
+            const showAT = document.getElementById('togAT').checked;
+            const showSBTi = document.getElementById('togSBTi').checked;
+            const hasCCS = document.querySelectorAll('#plantChecklist input:checked').length > 0;
+
+            // Update summary stats
+            const nSelected = document.querySelectorAll('#plantChecklist input:checked').length;
+            document.getElementById('sumPlants').textContent = nSelected;
+            document.getElementById('sumReduction').textContent = totalReduction.toFixed(1);
+
+            const p50_2050 = adjusted.p50[adjusted.p50.length - 1];
+            document.getElementById('sumResidual').textContent = p50_2050.toFixed(1);
+            document.getElementById('sumPctCut').textContent =
+                baseline > 0 ? ((1 - p50_2050 / baseline) * 100).toFixed(0) + '%' : '0%';
+
+            // Update headline cards
+            document.getElementById('statCcsReduction').textContent = totalReduction.toFixed(1);
+            document.getElementById('statP50_2050').textContent = p50_2050.toFixed(1);
+            const gapVal = p50_2050 - atTarget2050;
+            document.getElementById('statGapToTarget').textContent =
+                (gapVal > 0 ? '+' : '') + gapVal.toFixed(1) + ' Mt';
+
+            // ── Fan chart datasets ──
+            const datasets = [];
+
+            // Original market trajectory (unadjusted fan) as reference when CCS active
+            if (showMarket && hasCCS) {
+                datasets.push({
+                    label: 'Market P90 (ref)',
+                    data: [...fan.p90],
+                    borderColor: 'rgba(239,68,68,0.20)',
+                    backgroundColor: 'transparent',
+                    fill: false,
+                    borderWidth: 1,
+                    borderDash: [2, 4],
+                    pointRadius: 0,
+                    order: 5,
+                });
+                datasets.push({
+                    label: 'Market P50 (ref)',
+                    data: [...fan.p50],
+                    borderColor: 'rgba(100,116,139,0.35)',
+                    backgroundColor: 'rgba(100,116,139,0.04)',
+                    fill: '+1',
+                    borderWidth: 1.5,
+                    borderDash: [3, 4],
+                    pointRadius: 2,
+                    pointBackgroundColor: 'rgba(100,116,139,0.4)',
+                    order: 4,
+                });
+                datasets.push({
+                    label: 'Market P10 (ref)',
+                    data: [...fan.p10],
+                    borderColor: 'rgba(34,197,94,0.20)',
+                    backgroundColor: 'transparent',
+                    fill: false,
+                    borderWidth: 1,
+                    borderDash: [2, 4],
+                    pointRadius: 0,
+                    order: 5,
+                });
+            }
+
+            // CCS-adjusted (or original if no CCS) P90 → P50 fill
+            datasets.push({
+                label: hasCCS ? 'P90 (CCS)' : 'P90',
+                data: adjusted.p90,
+                borderColor: 'rgba(239,68,68,0.5)',
+                backgroundColor: 'rgba(239,68,68,0.10)',
+                fill: '+1',
+                borderWidth: 1.5,
+                borderDash: [4, 3],
+                pointRadius: 2,
+                order: 3,
+            });
+            // P50
+            datasets.push({
+                label: hasCCS ? 'P50 (CCS)' : 'P50',
+                data: adjusted.p50,
+                borderColor: hasCCS ? '#059669' : '#0F172A',
+                backgroundColor: 'rgba(99,102,241,0.06)',
+                fill: '+1',
+                borderWidth: 2.5,
+                pointRadius: 4,
+                pointBackgroundColor: hasCCS ? '#059669' : '#0F172A',
+                order: 2,
+            });
+            // P10
+            datasets.push({
+                label: hasCCS ? 'P10 (CCS)' : 'P10',
+                data: adjusted.p10,
+                borderColor: 'rgba(34,197,94,0.5)',
+                backgroundColor: 'transparent',
+                fill: false,
+                borderWidth: 1.5,
+                borderDash: [4, 3],
+                pointRadius: 2,
+                order: 3,
+            });
+
+            // Gas overlay
+            if (gasMode === 'with' || gasMode === 'both') {
+                const withGasData = adjusted.p50.map((v, i) => v + gas[i]);
+                datasets.push({
+                    label: 'P50 + New Gas',
+                    data: withGasData,
+                    borderColor: 'rgba(249,115,22,0.8)',
+                    backgroundColor: 'rgba(249,115,22,0.08)',
+                    fill: false,
+                    borderWidth: 2,
+                    borderDash: [6, 4],
+                    pointRadius: 3,
+                    pointBackgroundColor: '#F97316',
+                    order: 1,
+                });
+            }
+
+            // AT Power NZ trajectory
+            if (showAT) {
+                datasets.push({
+                    label: 'AT Power NZ',
+                    data: traj.at_power_nz.values,
+                    borderColor: 'rgba(35,114,185,0.7)',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [8, 4],
+                    pointRadius: 3,
+                    pointStyle: 'triangle',
+                    pointBackgroundColor: '#2372B9',
+                    fill: false,
+                    order: 0,
+                });
+            }
+
+            // SBTi 1.5°C trajectory
+            if (showSBTi) {
+                datasets.push({
+                    label: 'SBTi 1.5°C',
+                    data: traj.sbti_15c.values,
+                    borderColor: 'rgba(107,165,67,0.7)',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2,
+                    borderDash: [8, 4],
+                    pointRadius: 3,
+                    pointStyle: 'rectRot',
+                    pointBackgroundColor: '#6BA543',
+                    fill: false,
+                    order: 0,
+                });
+            }
+
+            // ── Render fan chart ──
+            if (fanChart) fanChart.destroy();
+            fanChart = new Chart(document.getElementById('fanChart'), {
+                type: 'line',
+                data: { labels: years, datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'CO₂ Emissions (Mt)', font: { size: 12 } },
+                            max: Math.ceil(baseline * 1.1),
+                        },
+                        x: {
+                            title: { display: true, text: 'Year', font: { size: 12 } },
+                        },
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { font: { size: 11 }, boxWidth: 14, padding: 16 },
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + ' Mt';
+                                }
+                            }
+                        },
+                    },
+                },
+            });
+
+            // ── Delta chart ──
+            const atVals = traj.at_power_nz.values;
+            const sbtiVals = traj.sbti_15c.values;
+            const deltaDatasets = [];
+
+            if (showAT) {
+                deltaDatasets.push({
+                    label: 'Gap to AT Power NZ',
+                    data: adjusted.p50.map((v, i) => +(v - atVals[i]).toFixed(1)),
+                    backgroundColor: adjusted.p50.map((v, i) =>
+                        v - atVals[i] > 0 ? withAlpha('#2372B9', 0.15) : withAlpha('#6BA543', 0.15)),
+                    borderColor: adjusted.p50.map((v, i) =>
+                        v - atVals[i] > 0 ? '#2372B9' : '#6BA543'),
+                    borderWidth: 2,
+                    borderRadius: 3,
+                });
+            }
+            if (showSBTi) {
+                deltaDatasets.push({
+                    label: 'Gap to SBTi 1.5°C',
+                    data: adjusted.p50.map((v, i) => +(v - sbtiVals[i]).toFixed(1)),
+                    backgroundColor: adjusted.p50.map((v, i) =>
+                        v - sbtiVals[i] > 0 ? withAlpha('#6BA543', 0.15) : withAlpha('#6BA543', 0.15)),
+                    borderColor: adjusted.p50.map((v, i) =>
+                        v - sbtiVals[i] > 0 ? '#6BA543' : '#6BA543'),
+                    borderWidth: 2,
+                    borderRadius: 3,
+                });
+            }
+
+            if (deltaChart) deltaChart.destroy();
+            deltaChart = new Chart(document.getElementById('deltaChart'), {
+                type: 'bar',
+                data: { labels: years, datasets: deltaDatasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            title: { display: true, text: 'Gap (Mt CO₂)', font: { size: 12 } },
+                        },
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { font: { size: 11 }, boxWidth: 14 },
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    const v = ctx.parsed.y;
+                                    return ctx.dataset.label + ': ' +
+                                        (v > 0 ? '+' : '') + v.toFixed(1) + ' Mt ' +
+                                        (v > 0 ? '(above target)' : '(below target)');
+                                }
+                            }
+                        },
+                    },
+                },
+            });
+        };
+
+        // Initial render
+        updateChart();
+
+    })();
+    </script>
+</body>
+</html>
