@@ -468,6 +468,8 @@ def _map_request_to_conditions(req: SimulationRequest) -> dict:
         } if req.fossil_lcoes else None,
         # Learning curves toggle — False = skip Wright's Law cost decline
         "learning_curves_enabled": getattr(req, 'learning_curves', True),
+        # Tech-differentiated queue caps (per-technology interconnection limits)
+        "tech_differentiated_queue": getattr(req, 'tech_differentiated_queue', True),
     }
 
 

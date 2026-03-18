@@ -150,6 +150,7 @@ class SimulationRequest(BaseModel):
     gas_friction: str = "Medium"        # Low/Medium/High
     queue_cap_level: str = "Medium"      # Low/Medium/High
     queue_cap_override_gw: Optional[float] = None  # GW/yr — None = use L/M/H default
+    tech_differentiated_queue: bool = True  # Per-technology queue caps (LBNL data)
     nuclear_retirement_threshold: float = 30.0  # $/MWh
     mode: str = "trajectory"            # trajectory / sweep
     years: List[int] = Field(default_factory=lambda: [2030, 2035, 2040, 2045, 2050])
