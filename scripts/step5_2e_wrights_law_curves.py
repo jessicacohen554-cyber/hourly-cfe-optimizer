@@ -249,6 +249,81 @@ def _extract_cf_tranche_from_parquets():
     }
 
 
+def _tranche_data_is_valid(data):
+    """Check if cf_tranche_data has any non-zero values."""
+    ct = data.get('cf_tranche_data', {})
+    for iso_data in ct.values():
+        for key in ['new_cf_twh', 'nuclear_newbuild_twh', 'ccs_tranche_twh']:
+            vals = iso_data.get(key, [])
+            if any(v != 0 for v in vals):
+                return True
+    return False
+
+
+def _extract_cf_tranche_from_step2_parquets():
+    """Extract cf_tranche_data directly from step2.2 cost parquets.
+
+    Reads tranche columns from the medium-cost scenario for each ISO/threshold.
+    """
+    import pandas as pd
+    step2_dir = os.path.join(DATA_DIR, 'step2.2-cost')
+    if not os.path.isdir(step2_dir):
+        return None
+
+    cf_tranche_data = {}
+    for iso in ISOS:
+        pq_file = os.path.join(step2_dir, f'step_2_2a_CO_{iso}.parquet')
+        if not os.path.exists(pq_file):
+            continue
+        df = pd.read_parquet(pq_file)
+        # Filter to medium scenario
+        med_key = _medium_key(iso)
+        if 'scenario' in df.columns:
+            med_df = df[df['scenario'] == med_key]
+            if med_df.empty:
+                # Try broader match
+                med_df = df[df['scenario'].str.startswith('MMMM_M_M')]
+                if med_df.empty:
+                    med_df = df
+        else:
+            med_df = df
+
+        iso_tr = {k: [] for k in ['new_cf_twh', 'cf_existing_twh', 'uprate_twh',
+                                    'geo_twh', 'nuclear_newbuild_twh', 'ccs_tranche_twh',
+                                    'uprate_price', 'newbuild_price', 'effective_cf_lcoe']}
+
+        col_map = {
+            'new_cf_twh': 'tranche_new_cf_twh',
+            'cf_existing_twh': 'tranche_cf_existing_twh',
+            'uprate_twh': 'tranche_uprate_twh',
+            'geo_twh': 'tranche_geo_twh',
+            'nuclear_newbuild_twh': 'tranche_nuclear_newbuild_twh',
+            'ccs_tranche_twh': 'tranche_ccs_tranche_twh',
+            'uprate_price': 'tranche_uprate_price',
+            'newbuild_price': 'tranche_newbuild_price',
+            'effective_cf_lcoe': 'tranche_effective_new_cf_lcoe',
+        }
+
+        for t in OUTPUT_THRESHOLDS:
+            t_df = med_df[med_df['threshold'] == t] if 'threshold' in med_df.columns else pd.DataFrame()
+            for key, col in col_map.items():
+                if col in t_df.columns and not t_df.empty:
+                    # Take the mean across scenarios at this threshold
+                    iso_tr[key].append(round(float(t_df[col].mean()), 3))
+                else:
+                    iso_tr[key].append(0)
+
+        cf_tranche_data[iso] = iso_tr
+
+    if not cf_tranche_data:
+        return None
+
+    return {
+        'thresholds': OUTPUT_THRESHOLDS,
+        'cf_tranche_data': cf_tranche_data,
+    }
+
+
 def load_shared_data():
     """Load cf_tranche_data, preferring shared_data.json, falling back to parquets.
 
@@ -259,17 +334,28 @@ def load_shared_data():
     if os.path.exists(path):
         print(f"  Loading from {path}")
         with open(path) as f:
-            return json.load(f)
+            data = json.load(f)
+        # Validate tranche data is populated
+        if _tranche_data_is_valid(data):
+            return data
+        print("  WARNING: shared_data.json has all-zero tranche data, falling back to parquets...")
 
-    # Fallback: extract directly from parquets
-    print("  shared_data.json not found — extracting cf_tranche_data from parquets...")
+    # Fallback: extract directly from step2.2 cost parquets
+    print("  Extracting cf_tranche_data from step2.2 cost parquets...")
+    result = _extract_cf_tranche_from_step2_parquets()
+    if result is not None and _tranche_data_is_valid(result):
+        print(f"  Successfully loaded tranche data from step2.2 parquets")
+        return result
+
+    # Legacy fallback: try original parquet extraction
+    print("  Trying legacy parquet extraction...")
     result = _extract_cf_tranche_from_parquets()
     if result is None:
         raise FileNotFoundError(
             f"Cannot load tranche data. Need either:\n"
             f"  {path}\n"
-            f"  data/step4-analysis/co2_results/ (parquets)\n"
-            f"  data/step2.2-cost/ (parquets)")
+            f"  data/step2.2-cost/ (parquets)\n"
+            f"  data/step4-analysis/co2_results/ (parquets)")
     return result
 
 
