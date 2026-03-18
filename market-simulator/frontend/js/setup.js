@@ -310,6 +310,7 @@ function collectFormData() {
         gas_friction: document.querySelector('#gasFrictionToggle .toggle-btn.active')?.dataset.value || 'Medium',
         interchange_enabled: document.querySelector('#interchangeToggle .toggle-btn.active')?.dataset.value === 'On',
         dr_level: document.querySelector('#drToggle .toggle-btn.active')?.dataset.value || 'Off',
+        scarcity_mode: document.querySelector('#scarcityModeToggle .toggle-btn.active')?.dataset.value || 'ordc',
         nuclear_retirement_threshold: parseFloat(document.getElementById('nuclear_retirement').value),
         custom_overrides: {
             fuel: document.getElementById('custom_fuel_toggle')?.checked || false,
@@ -481,6 +482,7 @@ const TOGGLE_MAP = {
     gas_friction:         { selector: '#gasFrictionToggle .toggle-btn', attr: 'data-value' },
     interchange_enabled:  { selector: '#interchangeToggle .toggle-btn', attr: 'data-value' },
     dr_level:             { selector: '#drToggle .toggle-btn', attr: 'data-value' },
+    scarcity_mode:        { selector: '#scarcityModeToggle .toggle-btn', attr: 'data-value' },
     learning_curves:      { selector: '#learningToggle .toggle-btn', attr: 'data-value' },
     learning_speed:       { selector: '#learningSpeedToggle .toggle-btn', attr: 'data-value' },
     queue_cap_level:      { selector: '#queueCapToggle .toggle-btn', attr: 'data-value' },
