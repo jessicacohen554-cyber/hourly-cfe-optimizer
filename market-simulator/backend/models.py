@@ -404,6 +404,8 @@ class SimulationResponse(BaseModel):
     confidence_zones: Optional[List[dict]] = None
     # Data source tracking (parquet = physics data, synthetic = illustrative only)
     data_source: str = 'unknown'
+    # Multi-tier data quality: {resource_mix, zonal_config, interchange, fleet_data, dr_params}
+    data_tiers: Optional[dict] = None
 
 
 class SweepJob(BaseModel):
