@@ -16,7 +16,6 @@
     // Canonical footer link set - single source of truth
     var FOOTER_LINKS = [
         { href: 'about.html',                label: 'About' },
-        { href: 'dashboard.html',             label: 'Cost Optimizer' },
         { href: 'abatement_dashboard.html',   label: 'CO\u2082 Abatement' },
         { href: 'gen_market_overview.html',    label: 'Market Overview' },
         { href: 'GHG-accounting-overview.html', label: 'Carbon Accounting' },
