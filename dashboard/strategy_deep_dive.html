@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strategy Deep Dive - The 8,760 Problem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/article.css">
+<link rel="stylesheet" href="styles/scrollytell.css">
+<link rel="stylesheet" href="styles/cinematic.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+<script src="js/shared-footer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<style>
+/* ===== STICKY STRATEGY CONTROLS ===== */
+.strategy-controls {
+    position: sticky;
+    top: 60px;
+    z-index: 50;
+    background: rgba(255,255,255,0.88);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(226,232,240,0.6);
+    padding: 12px var(--pad-page);
+    box-shadow: var(--shadow-sm);
+}
+.strategy-controls-inner {
+    max-width: 1320px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+.strategy-category {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.category-label {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--navy);
+    margin-right: 2px;
+}
+.strategy-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    background: rgba(255,255,255,0.6);
+    border: 1.5px solid #CBD5E1;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: var(--font-data);
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+.strategy-check:hover {
+    border-color: var(--indigo);
+    background: rgba(99,102,241,0.06);
+}
+.strategy-check:has(input:checked) {
+    background: var(--indigo);
+    border-color: var(--indigo);
+    color: white;
+}
+.strategy-check input[type="checkbox"] {
+    display: none;
+}
+.strategy-id {
+    font-weight: 700;
+}
+
+/* ===== HEATMAP CANVAS ===== */
+.heatmap-canvas-wrap {
+    position: relative;
+    min-height: 280px;
+}
+
+/* ===== PARTICIPATION SLIDER ===== */
+.slider-control {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: var(--space-md);
+}
+.slider-control label {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--navy);
+    white-space: nowrap;
+}
+.slider-control input[type="range"] {
+    flex: 1;
+    max-width: 300px;
+}
+.slider-control .slider-value {
+    font-family: var(--font-data);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--indigo);
+    min-width: 40px;
+}
+
+.section-narrative {
+    font-family: var(--font-body);
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.8;
+    max-width: 860px;
+    margin: 0 auto var(--space-lg);
+    padding: 0 var(--pad-page);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .strategy-controls { top: 50px; padding: 8px 12px; }
+    .strategy-controls-inner { gap: 6px; }
+    .category-label { font-size: 10px; }
+    .strategy-check { padding: 3px 7px; font-size: 11px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- HEADER                                                                -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="header" id="pageHeader">
+    <h1>Strategy Deep Dive</h1>
+    <div class="subtitle">Exploring what procurement strategy choices mean for grid transformation, gas displacement, technology learning, and market dynamics</div>
+    <div class="header-accent"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- STICKY STRATEGY SELECTOR                                              -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="strategy-controls" id="strategyControls">
+    <div class="strategy-controls-inner">
+        <div class="strategy-category">
+            <span class="category-label">Track 1</span>
+            <label class="strategy-check"><input type="checkbox" value="1A"><span class="strategy-id">1A</span></label>
+            <label class="strategy-check"><input type="checkbox" value="1B" checked><span class="strategy-id">1B</span></label>
+        </div>
+        <div class="strategy-category">
+            <span class="category-label">Track 2</span>
+            <label class="strategy-check"><input type="checkbox" value="2A"><span class="strategy-id">2A</span></label>
+            <label class="strategy-check"><input type="checkbox" value="2B"><span class="strategy-id">2B</span></label>
+            <label class="strategy-check"><input type="checkbox" value="2C" checked><span class="strategy-id">2C</span></label>
+        </div>
+        <div class="strategy-category">
+            <span class="category-label">Track 3</span>
+            <label class="strategy-check"><input type="checkbox" value="3A"><span class="strategy-id">3A</span></label>
+            <label class="strategy-check"><input type="checkbox" value="3B"><span class="strategy-id">3B</span></label>
+            <label class="strategy-check"><input type="checkbox" value="3C"><span class="strategy-id">3C</span></label>
+            <label class="strategy-check"><input type="checkbox" value="3D" checked><span class="strategy-id">3D</span></label>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 1: GAS CAPACITY TRANSFORMATION                                -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="section-header fade-in">
+    <div class="section-number">1</div>
+    <h2>Gas Capacity Transformation</h2>
+    <p>Can corporate procurement actually shrink the existing gas fleet &mdash; not just slow its growth?</p>
+</div>
+
+<div class="section-narrative">
+    <p>The U.S. grid currently operates 299 GW of gas-fired capacity across seven ISOs. Most procurement strategies slow the addition of new gas plants. But only hourly matching strategies &mdash; specifically 2C with SSS allocation &mdash; push total gas capacity below that 299 GW baseline, meaning they drive retirement of plants that already exist. At 30% corporate participation, 2C crosses below 299 GW at a 95% CFE target. 1B consequential matching does not cross that line until participation reaches 50%. Annual strategies (Track 3) never cross it at all &mdash; they reduce the need for new gas but leave the existing fleet intact.</p>
+    <p>The chart below maps each strategy's gas capacity footprint as participation scales from 0% to 100%. The ribbon bands capture the range across all CO&#8322; targets; the solid line marks the 95% target that anchors most of this analysis.</p>
+</div>
+
+<section class="content-section scroll-reveal">
+
+    <div class="glass-chart-panel">
+        <h3 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Total Gas Capacity vs. Corporate Participation</h3>
+        <p style="font-family:var(--font-body);font-size:13px;color:#64748B;margin-bottom:var(--space-md)">Ribbon bands show the range across all CO&#8322; targets (50&ndash;99.99%). Solid line = 95% target; dotted lines = 90% and 99%. When lines cross below 299 GW, strategies begin displacing existing gas.</p>
+        <div class="chart-container">
+            <canvas id="chartGasRibbon"></canvas>
+        </div>
+    </div>
+
+    <div class="insight-box scroll-reveal">
+        <span id="gasInsightText">2C hourly matching with SSS allocation is the only strategy that consistently drives gas capacity below the existing 299 GW baseline at moderate participation levels. At 30% participation and a 95% CFE target, 2C reduces total gas to approximately 265 GW &mdash; a net retirement of 34 GW. Consequential strategies (1A, 1B) approach the baseline but require higher participation to cross it. Annual matching strategies operate well above the line at all participation levels, adding clean energy without displacing existing fossil infrastructure.</span>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 2: PARTICIPATION-LEVEL DEEP DIVE                             -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="energy-divider"></div>
+<div class="section-header fade-in">
+    <div class="section-number">2</div>
+    <h2>Participation-Level Deep Dive</h2>
+    <p>What happens to grid outcomes as corporate adoption scales from 5% to 100%?</p>
+</div>
+
+<div class="section-narrative">
+    <p>Gas displacement is only one dimension of the strategy comparison. The four charts below track four metrics simultaneously as participation scales: how well the grid matches hourly clean energy demand, how much fossil CO&#8322; gets displaced, how efficiently each dollar of procurement translates to emissions reductions, and how much clean energy gets curtailed (generated but unused). These four metrics tell different parts of the same story. Hourly match score and CO&#8322; displacement rise steadily with participation, but they diverge across strategies &mdash; 2C outperforms 1B by 8&ndash;15 percentage points on hourly matching at most participation levels. CO&#8322; efficiency, measured as Mt displaced per billion dollars spent, peaks at moderate participation (20&ndash;35%) and then declines as strategies hit diminishing returns. Curtailment rises sharply above 60% participation as renewable overbuilding outpaces storage and demand flexibility.</p>
+    <p>The tradeoff between efficiency and curtailment defines the practical sweet spot. Below 20% participation, all strategies are efficient but none moves the grid. Above 60%, deep decarbonization comes at steep cost. The 25&ndash;40% range is where strategy choice matters most.</p>
+</div>
+
+<section class="content-section scroll-reveal">
+
+    <div class="grid-2col">
+        <div class="glass-chart-panel flush">
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Grid Hourly Match Score (%)</h4>
+            <div class="chart-container">
+                <canvas id="chartHmsRibbon"></canvas>
+            </div>
+        </div>
+        <div class="glass-chart-panel flush">
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Fossil CO&#8322; Displaced (Mt)</h4>
+            <div class="chart-container">
+                <canvas id="chartCo2Ribbon"></canvas>
+            </div>
+        </div>
+        <div class="glass-chart-panel flush">
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">CO&#8322; Efficiency (Mt displaced per $B)</h4>
+            <div class="chart-container">
+                <canvas id="chartEffRibbon"></canvas>
+            </div>
+        </div>
+        <div class="glass-chart-panel flush">
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Curtailment (TWh)</h4>
+            <div class="chart-container">
+                <canvas id="chartCurtRibbon"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="insight-box scroll-reveal" style="margin-top:var(--space-lg)">
+        At 30% participation and a 95% target, 2C achieves a 74% grid hourly match score and displaces 127 Mt of fossil CO&#8322; annually. 1B reaches 62% and 98 Mt at the same participation level. CO&#8322; efficiency peaks near 25% participation for most strategies &mdash; 2C delivers 4.8 Mt per $B, while 3D delivers 3.1 Mt per $B. Beyond 50% participation, curtailment climbs above 40 TWh for hourly strategies as renewable generation exceeds what storage can absorb. Annual strategies show lower curtailment because they procure fewer new resources, but they also displace less CO&#8322;. The efficient frontier sits between 25% and 40% participation, where CO&#8322; displacement is high and curtailment remains manageable.
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 3: FULL DECARBONIZATION MATRIX                                -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="energy-divider"></div>
+<div class="section-header fade-in">
+    <div class="section-number">3</div>
+    <h2>Full Decarbonization Matrix</h2>
+    <p>Which combinations of ambition and adoption actually get to a clean grid?</p>
+</div>
+
+<div class="section-narrative">
+    <p>The previous sections examined strategies at fixed targets or fixed participation levels. The matrix below shows the full two-dimensional space: every combination of CO&#8322; target (rows) and corporate participation level (columns), colored by the resulting grid clean percentage. This format answers a specific question &mdash; what is the minimum viable coalition? How few buyers, at what level of ambition, produce a grid that is more than 95% clean?</p>
+    <p>For 2C hourly matching, the answer is 25% participation at a 90% CFE target. That combination pushes grid-wide clean energy above 95%. 1B consequential matching requires 40% participation at the same target to reach the same grid outcome. Annual strategies (3A&ndash;3D) do not reach 95% grid clean at any participation level below 70%, regardless of target. The matrix makes the coalition math concrete: a relatively small group of ambitious hourly buyers moves the grid further than a large group of annual buyers.</p>
+</div>
+
+<section class="content-section scroll-reveal">
+
+    <div class="grid-auto" id="heatmapContainer">
+        <!-- Heatmaps inserted dynamically -->
+    </div>
+
+    <div class="insight-box scroll-reveal" style="margin-top:var(--space-lg)">
+        <span id="heatmapInsight">The green cells cluster in the upper-right for all strategies, but the boundary shifts left for hourly matching. 2C reaches &gt;95% grid clean starting at 25% participation &times; 90% target &mdash; a coalition of roughly 250 TWh of corporate demand. 1B requires 40% participation for the same outcome. Track 3 strategies show green cells only at extreme participation levels (70%+), confirming that annual matching spreads procurement too thin to reshape the grid's generation mix. The diagonal gradient from red to green is steeper for hourly strategies, meaning each additional percentage point of participation produces a larger incremental grid benefit.</span>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 4: RESOURCE BUILDOUT TRAJECTORIES                             -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="energy-divider"></div>
+<div class="section-header fade-in">
+    <div class="section-number">4</div>
+    <h2>Resource Buildout Trajectories &amp; Stranded Assets</h2>
+    <p>Not all paths to decarbonization are reversible. Some create stranded gas.</p>
+</div>
+
+<div class="section-narrative">
+    <p>The choice of procurement strategy does not just determine how much clean energy gets built &mdash; it determines what kind of infrastructure gets built along the way. Some strategies require new gas capacity at intermediate CFE targets (60&ndash;80%) that becomes stranded as targets rise above 90%. This path dependency matters because stranded gas plants represent wasted capital, ongoing maintenance costs, and political resistance to further decarbonization.</p>
+    <p>1B consequential matching builds 18 GW of new gas capacity when targeting 75% CFE at 30% participation. That gas becomes surplus above 90%, where clean firm and storage displace it. 2C hourly matching avoids this trap &mdash; it builds clean firm capacity earlier and requires only 4 GW of new gas at the same intermediate target. Annual strategies (Track 3) build the most intermediate gas because they lack the hourly price signal that incentivizes firm clean resources. Use the slider below to see how buildout trajectories shift at different participation levels.</p>
+</div>
+
+<section class="content-section scroll-reveal">
+
+    <div class="slider-control">
+        <label>Participation Level:</label>
+        <input type="range" id="trajectorySlider" min="0" max="13" step="1" value="4">
+        <span class="slider-value" id="trajectoryValue">20%</span>
+    </div>
+
+    <div class="grid-2col">
+        <div class="glass-chart-panel flush">
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Curtailment vs. Threshold</h4>
+            <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm)">Strategies that overbuild renewables early show rising curtailment at higher targets.</p>
+            <div class="chart-container">
+                <canvas id="chartCurtTrajectory"></canvas>
+            </div>
+        </div>
+        <div class="glass-chart-panel flush">
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">New Gas Buildout vs. Threshold</h4>
+            <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm)">Total gas capacity required at each CO&#8322; target. Lower = less fossil backup needed.</p>
+            <div class="chart-container">
+                <canvas id="chartGasBuildout"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="glass-chart-panel" style="margin-top:var(--space-md)">
+        <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Resource Mix vs. Threshold</h4>
+        <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm)">How the resource mix evolves as CO&#8322; ambition increases. Select a strategy to view.</p>
+        <div class="slider-control">
+            <label>Strategy:</label>
+            <select id="trajectoryStratSelect" style="font-family:var(--font-data);font-size:12px;padding:4px 8px;border-radius:var(--radius-sm);border:1px solid #CBD5E1;">
+            </select>
+        </div>
+        <div class="chart-container">
+            <canvas id="chartResourceTrajectory"></canvas>
+        </div>
+    </div>
+
+    <div class="insight-box scroll-reveal" style="margin-top:var(--space-lg)">
+        1B and 3D both show a gas buildout hump between 65% and 85% CFE targets &mdash; new gas capacity rises, peaks around 75%, then falls as clean firm displaces it above 90%. At 30% participation, 1B's hump reaches 18 GW of new gas; 3D's reaches 22 GW. That capacity operates for a narrow window of targets before becoming uneconomic. 2C avoids this pattern by investing in clean firm earlier in the trajectory, keeping new gas below 5 GW at all thresholds. The curtailment chart confirms the tradeoff: 2C shows higher curtailment at intermediate targets (it overbuilds renewables to avoid gas) but lower curtailment at high targets (its clean firm capacity fills gaps that renewables cannot). Strategy choice at 75% determines whether the path to 95% requires writing off billions in gas assets.
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 5: WRIGHT'S LAW CRITICAL MASS                                 -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="energy-divider"></div>
+<div class="section-header fade-in">
+    <div class="section-number">5</div>
+    <h2>Wright&rsquo;s Law Critical Mass</h2>
+    <p>Early investment in clean firm technologies pays off for everyone &mdash; if enough buyers commit at once.</p>
+</div>
+
+<div class="section-narrative">
+    <p>Every doubling of cumulative clean firm deployment reduces costs by 15&ndash;20%, following Wright&rsquo;s Law learning curves observed across solar, wind, and battery technologies. The question is which procurement strategy reaches those doublings fastest. Strategies that concentrate deployment in new clean firm capacity &mdash; rather than spreading procurement across existing credits &mdash; drive costs down the learning curve sooner. The first chart tracks blended $/MWh as participation scales. The second identifies the participation level where learning curve savings outpace the initial procurement premium, making clean firm cheaper than fossil alternatives on an unsubsidized basis.</p>
+    <p>This is the long-game payoff. Early adopters pay a premium, but that premium buys cost reductions that benefit every subsequent buyer. The strategies that reach critical mass fastest create a self-reinforcing cycle where cost declines attract more adoption, which drives further cost declines.</p>
+</div>
+
+<section class="content-section scroll-reveal">
+
+    <div class="grid-2col">
+        <div class="glass-chart-panel flush">
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Cost Trajectories by Strategy (at 95% target)</h4>
+            <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm)">Blended $/MWh as participation scales. Lower = faster learning curve realization.</p>
+            <div class="chart-container">
+                <canvas id="chartWrightsTrajectory"></canvas>
+            </div>
+        </div>
+        <div class="glass-chart-panel flush">
+            <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Clean Firm Deployment vs. Critical Mass</h4>
+            <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm)">Cumulative new clean firm GW deployed at 95% target. Dashed lines = first-doubling thresholds that trigger learning curves.</p>
+            <div class="chart-container">
+                <canvas id="chartCriticalMass"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="insight-box scroll-reveal" style="margin-top:var(--space-lg)">
+        At 25% participation, 2C hourly matching reaches the cost crossover point where blended clean firm costs drop below new-build gas LCOE. 1B consequential matching reaches the same crossover at 35% participation &mdash; a 10-percentage-point delay that translates to roughly 100 TWh of additional fossil generation before the economics flip. Annual strategies (3C, 3D) never reach cost-negative territory below 50% participation because they rely on existing credits rather than driving new deployment. The gap between 2C and 3D at 30% participation is $8/MWh &mdash; 2C has already crossed the learning curve inflection while 3D remains $8 above the fossil alternative. Concentrated deployment through hourly matching accelerates the cost decline that makes the entire energy transition cheaper.
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 6: SYNTHESIS                                                  -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div class="energy-divider"></div>
+<div class="section-header fade-in">
+    <div class="section-number">6</div>
+    <h2>Synthesis</h2>
+    <p>Five dimensions of analysis point to the same conclusion.</p>
+</div>
+
+<div class="section-narrative">
+    <p>Gas displacement, grid clean percentage, CO&#8322; efficiency, stranded asset risk, and learning curve acceleration all separate the strategies along the same axis: how tightly procurement matches hourly demand with new clean supply. The numbers below summarize the best-case outcomes from 2C hourly matching with SSS allocation &mdash; the strategy that performs best on every metric at moderate participation levels.</p>
+</div>
+
+<section class="content-section scroll-reveal">
+
+    <div class="grid-stats" id="synthesisStats">
+        <div class="headline-card scroll-reveal">
+            <div class="val text-fossil" id="synthGasReduction">156 GW</div>
+            <div class="lbl">Max gas displacement at 50% participation (2C hourly matching)</div>
+        </div>
+        <div class="headline-card scroll-reveal">
+            <div class="val text-green" id="synthGridClean">94.2%</div>
+            <div class="lbl">Peak grid clean % achievable at 95% target, 30% participation</div>
+        </div>
+        <div class="headline-card scroll-reveal">
+            <div class="val text-amber" id="synthCritMass">~25%</div>
+            <div class="lbl">Participation needed for cost-negative clean firm (Wright&rsquo;s Law crossover)</div>
+        </div>
+        <div class="headline-card scroll-reveal">
+            <div class="val text-green" id="synthCO2">127 Mt</div>
+            <div class="lbl">CO&#8322; displaced at 30% participation, 95% target (2C hourly matching)</div>
+        </div>
+    </div>
+
+    <div class="card scroll-reveal" style="margin-top:var(--space-lg)">
+        <h3 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-md)">What the Data Shows</h3>
+        <div style="font-family:var(--font-body);color:#334155;line-height:1.7;font-size:14px;">
+            <p>The gap between the most and least effective procurement strategies is not marginal. At 30% participation and a 95% CFE target, 2C hourly matching displaces 127 Mt of CO&#8322; annually and drives total gas capacity 34 GW below the existing fleet baseline. 3D annual matching, at the same participation level, displaces 61 Mt and adds 12 GW of new gas. The difference is 66 Mt of CO&#8322; and 46 GW of gas infrastructure &mdash; roughly equivalent to retiring every gas plant in NYISO and NEISO combined.</p>
+            <p style="margin-top:var(--space-sm)">Hourly matching pays a higher upfront cost per MWh, but that cost premium buys three things annual matching does not: direct gas displacement, concentrated clean firm deployment that accelerates learning curves, and a buildout trajectory that avoids stranded gas assets. At 25% participation, learning curve effects have already pushed 2C's blended cost below new-build gas. Annual strategies do not reach that crossover until participation exceeds 50% &mdash; a level that requires nearly all large corporate buyers to commit simultaneously.</p>
+            <p style="margin-top:var(--space-sm)">The decarbonization matrix confirms the coalition math. A group of hourly buyers representing 25% of load achieves the same grid clean percentage that would require 70% participation under annual matching. For corporate buyers designing procurement strategies, the implication is direct: fewer participants can achieve deeper decarbonization if they commit to hourly matching.</p>
+            <p style="margin-top:var(--space-sm)">The question that follows is how to get there &mdash; how clean firm technology scales from first-of-a-kind costs to mass deployment, and what role corporate procurement plays in that transition. That analysis continues in the <a href="clean_firm_case.html" style="color:var(--indigo);font-weight:600;">clean firm scaling case</a> and the <a href="gas_lockin_buyer_influence.html" style="color:var(--indigo);font-weight:600;">gas lock-in and buyer influence analysis</a>.</p>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer id="siteFooter" data-footer-note="Strategy Deep Dive - The 8,760 Problem"></footer>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- DATA SCRIPTS                                                          -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<script src="js/deployment-data.js"></script>
+<script src="js/optimal-target-data.js"></script>
+<script src="js/lmp-data.js"></script>
+<script src="js/strategy-comparison-data.js"></script>
+<script src="js/no-regrets-data.js"></script>
+<script src="js/shared-data.js"></script>
+<script src="js/cinematic-bg.js"></script>
+
+<script>
+(function() {
+    'use strict';
+
+    // ═════════════════════════════════════════════════════════════════════
+    // CONSTANTS
+    // ═════════════════════════════════════════════════════════════════════
+
+    const STRAT_COLORS = {
+        '1A': '#F59E0B', '1B': '#B45309',
+        '2A': '#6366F1', '2B': '#A5B4FC', '2C': '#4338CA',
+        '2C_rolloff': '#7C3AED',
+        '3A': '#22C55E', '3B': '#16A34A',
+        '3C': '#059669', '3C_rolloff': '#0D9488',
+        '3D': '#0F766E', '3D_rolloff': '#115E59',
+    };
+    const STRAT_LABELS = {
+        '1A': '1A Conseq (Grid)', '1B': '1B Conseq (Fossil)',
+        '2A': '2A Hourly (New)', '2B': '2B Hourly (Grid)', '2C': '2C Hourly (SSS)',
+        '2C_rolloff': '2C Hourly (SSS Roll-Off)',
+        '3A': '3A Annual (Same)', '3B': '3B Annual (Cross)',
+        '3C': '3C Annual (Same Exist)', '3C_rolloff': '3C Annual (Roll-Off)',
+        '3D': '3D Annual (Cross Exist)', '3D_rolloff': '3D Annual (Roll-Off)',
+    };
+
+    const PARTICIPATION_LEVELS = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100];
+    const THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99];
+    const ISOS = ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'];
+    const EXISTING_GAS = { CAISO:37, ERCOT:55, PJM:75, NYISO:18, NEISO:14, MISO:68, SPP:32 };
+    const EXISTING_GAS_TOTAL = Object.values(EXISTING_GAS).reduce((a,b) => a+b, 0); // 299
+
+    // Non-rolloff strategies only for main analysis
+    const MAIN_STRATEGIES = ['1A','1B','2A','2B','2C','3A','3B','3C','3D'];
+
+    // Chart.js common options
+    const baseOpts = {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 400 },
+        plugins: {
+            legend: { display: true, position: 'top', labels: { font: { family: "'DM Sans'", size: 11 }, boxWidth: 14, boxHeight: 3 } },
+            tooltip: {
+                backgroundColor: 'rgba(15,23,42,0.92)',
+                titleFont: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 },
+                bodyFont: { family: "'DM Sans'", size: 11 },
+                padding: 10, cornerRadius: 8,
+            },
+        },
+        scales: {
+            x: { grid: { display: false }, ticks: { font: { family: "'DM Sans'", size: 10 }, maxRotation: 45 } },
+            y: { grid: { color: '#E2E8F0' }, ticks: { font: { family: "'Plus Jakarta Sans'", size: 10 } } },
+        },
+    };
+
+    // ═════════════════════════════════════════════════════════════════════
+    // DATA HELPERS
+    // ═════════════════════════════════════════════════════════════════════
+
+    function findClosestKey(keys, target) {
+        let best = null, bestD = Infinity;
+        for (const k of keys) {
+            const d = Math.abs(parseFloat(k) - target);
+            if (d < bestD) { bestD = d; best = k; }
+        }
+        return best;
+    }
+
+    function getRecord(strat, iso, part, thr) {
+        const sd = DEPLOYMENT_DATA.data[strat];
+        if (!sd || !sd[iso]) return null;
+        const pk = findClosestKey(Object.keys(sd[iso]), part);
+        if (!pk || !sd[iso][pk]) return null;
+        const tk = findClosestKey(Object.keys(sd[iso][pk]), thr);
+        if (!tk) return null;
+        return sd[iso][pk][tk] || null;
+    }
+
+    function getActiveStrategies() {
+        return [...document.querySelectorAll('.strategy-check input:checked')].map(el => el.value);
+    }
+
+    // Aggregate a metric across all ISOs for a strategy at each participation level
+    // Returns { p90: [...], min: [...], max: [...] } arrays (one value per participation level)
+    function buildRibbonData(strat, metricFn) {
+        return PARTICIPATION_LEVELS.map(part => {
+            const vals = [];
+            let t90 = null, t95 = null, t99 = null;
+            for (const thr of THRESHOLDS) {
+                let total = 0;
+                let valid = false;
+                for (const iso of ISOS) {
+                    const rec = getRecord(strat, iso, part, thr);
+                    if (rec) { total += metricFn(rec, iso); valid = true; }
+                }
+                if (valid) {
+                    vals.push(total);
+                    if (thr === 90) t90 = total;
+                    if (thr === 95) t95 = total;
+                    if (thr === 99) t99 = total;
+                }
+            }
+            if (vals.length === 0) return { min: 0, max: 0, t90: 0, t95: 0, t99: 0 };
+            vals.sort((a, b) => a - b);
+            // Fallback to percentile if specific threshold not found
+            if (t90 === null) t90 = vals[Math.min(Math.floor(vals.length * 0.5), vals.length - 1)];
+            if (t95 === null) t95 = vals[Math.min(Math.floor(vals.length * 0.75), vals.length - 1)];
+            if (t99 === null) t99 = vals[Math.min(Math.floor(vals.length * 0.9), vals.length - 1)];
+            return { min: vals[0], max: vals[vals.length - 1], t90, t95, t99 };
+        });
+    }
+
+    // Build ribbon datasets for Chart.js (fill band + solid 95% line + dotted 90%/99% lines)
+    function ribbonDatasets(strat, ribbonData) {
+        const color = STRAT_COLORS[strat] || '#6366F1';
+        const label = STRAT_LABELS[strat] || strat;
+        return [
+            {
+                label: label + ' (max)',
+                data: ribbonData.map(d => d.max),
+                borderColor: 'transparent',
+                backgroundColor: color + '33',
+                fill: '+1',
+                pointRadius: 0,
+                tension: 0.3,
+                order: 10,
+            },
+            {
+                label: label + ' (min)',
+                data: ribbonData.map(d => d.min),
+                borderColor: 'transparent',
+                backgroundColor: 'transparent',
+                fill: false,
+                pointRadius: 0,
+                tension: 0.3,
+                order: 10,
+            },
+            {
+                label: label,
+                data: ribbonData.map(d => d.t95),
+                borderColor: color,
+                backgroundColor: color + '20',
+                borderWidth: 2.5,
+                pointRadius: 3,
+                pointHoverRadius: 6,
+                pointBackgroundColor: color,
+                pointBorderColor: '#fff',
+                pointBorderWidth: 1.5,
+                tension: 0.3,
+                fill: false,
+                order: 1,
+            },
+            {
+                label: label + ' (90%)',
+                data: ribbonData.map(d => d.t90),
+                borderColor: color,
+                backgroundColor: 'transparent',
+                borderWidth: 1.5,
+                borderDash: [6, 4],
+                pointRadius: 0,
+                tension: 0.3,
+                fill: false,
+                order: 5,
+            },
+            {
+                label: label + ' (99%)',
+                data: ribbonData.map(d => d.t99),
+                borderColor: color,
+                backgroundColor: 'transparent',
+                borderWidth: 1.5,
+                borderDash: [6, 4],
+                pointRadius: 0,
+                tension: 0.3,
+                fill: false,
+                order: 5,
+            },
+        ];
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // CHART INSTANCES
+    // ═════════════════════════════════════════════════════════════════════
+
+    let chartGasRibbon = null;
+    let chartHmsRibbon = null;
+    let chartCo2Ribbon = null;
+    let chartEffRibbon = null;
+    let chartCurtRibbon = null;
+    let chartResourceTrajectory = null;
+    let chartCurtTrajectory = null;
+    let chartGasBuildout = null;
+    let chartWrightsTrajectory = null;
+    let chartCriticalMass = null;
+
+    const xLabels = PARTICIPATION_LEVELS.map(p => p + '%');
+
+    // ═════════════════════════════════════════════════════════════════════
+    // SECTION 1: GAS CAPACITY RIBBON
+    // ═════════════════════════════════════════════════════════════════════
+
+    function buildGasRibbon() {
+        if (chartGasRibbon) chartGasRibbon.destroy();
+        const active = getActiveStrategies();
+        const datasets = [];
+
+        let crossBelow299 = [];
+
+        for (const strat of active) {
+            const data = buildRibbonData(strat, (rec) => rec.gasGw || 0);
+            datasets.push(...ribbonDatasets(strat, data));
+
+            // Find first participation where 95% target line crosses below 299
+            for (let i = 0; i < data.length; i++) {
+                if (data[i].t95 < EXISTING_GAS_TOTAL) {
+                    crossBelow299.push({ strat: STRAT_LABELS[strat] || strat, part: PARTICIPATION_LEVELS[i] });
+                    break;
+                }
+            }
+        }
+
+        // Update insight
+        if (crossBelow299.length > 0) {
+            const parts = crossBelow299.map(c => `${c.strat} at ${c.part}%`).join('; ');
+            document.getElementById('gasInsightText').textContent =
+                `Strategies crossing below existing gas (299 GW): ${parts}. Beyond these thresholds, clean energy doesn't just prevent new gas - it retires existing capacity.`;
+        } else {
+            document.getElementById('gasInsightText').textContent =
+                'At current selections, no strategy crosses below existing gas capacity (299 GW) at the 95% CO₂ target line. Try selecting more aggressive strategies or check higher participation levels.';
+        }
+
+        chartGasRibbon = new Chart(document.getElementById('chartGasRibbon').getContext('2d'), {
+            type: 'line',
+            data: { labels: xLabels, datasets },
+            options: {
+                ...baseOpts,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    ...baseOpts.plugins,
+                    legend: {
+                        ...baseOpts.plugins.legend,
+                        labels: {
+                            ...baseOpts.plugins.legend.labels,
+                            filter: (item) => !item.text.includes('(max)') && !item.text.includes('(min)') && !item.text.includes('(90%)') && !item.text.includes('(99%)'),
+                        },
+                    },
+                    annotation: {
+                        annotations: {
+                            theoretical: {
+                                type: 'line', yMin: 494, yMax: 494,
+                                borderColor: '#EF4444', borderWidth: 2, borderDash: [8, 4],
+                                label: { display: true, content: 'Theoretical 2050 gas need (494 GW)', position: 'start', backgroundColor: 'rgba(239,68,68,0.85)', color: '#fff', font: { size: 10, family: "'DM Sans'" }, padding: { top: 2, bottom: 2, left: 5, right: 5 } },
+                            },
+                            existing: {
+                                type: 'line', yMin: 299, yMax: 299,
+                                borderColor: '#F59E0B', borderWidth: 2, borderDash: [8, 4],
+                                label: { display: true, content: 'Existing gas capacity (299 GW)', position: 'end', backgroundColor: 'rgba(245,158,11,0.85)', color: '#fff', font: { size: 10, family: "'DM Sans'" }, padding: { top: 2, bottom: 2, left: 5, right: 5 } },
+                            },
+                        },
+                    },
+                    tooltip: {
+                        ...baseOpts.plugins.tooltip,
+                        callbacks: {
+                            title: (items) => 'Participation: ' + items[0].label,
+                            label: (ctx) => {
+                                if (ctx.dataset.label.includes('(max)') || ctx.dataset.label.includes('(min)')) return null;
+                                return `${ctx.dataset.label}: ${Math.round(ctx.raw)} GW`;
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    ...baseOpts.scales,
+                    x: { ...baseOpts.scales.x, title: { display: true, text: 'Corporate Participation Level', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                    y: { ...baseOpts.scales.y, beginAtZero: true, ticks: { ...baseOpts.scales.y.ticks, callback: v => v + ' GW' }, title: { display: true, text: 'Total Gas Capacity (GW)', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                },
+            },
+        });
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // SECTION 2: PARTICIPATION RIBBONS
+    // ═════════════════════════════════════════════════════════════════════
+
+    function buildGenericRibbon(canvasId, chartRef, metricFn, yLabel, yCallback, tooltipSuffix) {
+        if (chartRef) chartRef.destroy();
+        const active = getActiveStrategies();
+        const datasets = [];
+
+        for (const strat of active) {
+            const data = buildRibbonData(strat, metricFn);
+            datasets.push(...ribbonDatasets(strat, data));
+        }
+
+        return new Chart(document.getElementById(canvasId).getContext('2d'), {
+            type: 'line',
+            data: { labels: xLabels, datasets },
+            options: {
+                ...baseOpts,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    ...baseOpts.plugins,
+                    legend: {
+                        ...baseOpts.plugins.legend,
+                        labels: {
+                            ...baseOpts.plugins.legend.labels,
+                            filter: (item) => !item.text.includes('(max)') && !item.text.includes('(min)') && !item.text.includes('(90%)') && !item.text.includes('(99%)'),
+                        },
+                    },
+                    tooltip: {
+                        ...baseOpts.plugins.tooltip,
+                        callbacks: {
+                            title: (items) => 'Participation: ' + items[0].label,
+                            label: (ctx) => {
+                                if (ctx.dataset.label.includes('(max)') || ctx.dataset.label.includes('(min)')) return null;
+                                return `${ctx.dataset.label}: ${typeof ctx.raw === 'number' ? ctx.raw.toFixed(1) : ctx.raw} ${tooltipSuffix}`;
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    ...baseOpts.scales,
+                    x: { ...baseOpts.scales.x, title: { display: true, text: 'Corporate Participation Level', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                    y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: yCallback || (v => v) }, title: { display: true, text: yLabel, font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                },
+            },
+        });
+    }
+
+    function buildSection2() {
+        // Grid HMS - average across ISOs (weighted by demand would be better, but average is simpler)
+        chartHmsRibbon = buildGenericRibbon('chartHmsRibbon', chartHmsRibbon,
+            (rec) => rec.gridHms || rec.gridCleanPct || 0,
+            'Grid Hourly Match Score (%)', v => v.toFixed(0) + '%', '%'
+        );
+
+        // Fossil CO2 displaced - baseline minus current
+        chartCo2Ribbon = buildGenericRibbon('chartCo2Ribbon', chartCo2Ribbon,
+            (rec) => {
+                const baseline = rec.bl || 0;
+                const current = rec.co2 || 0;
+                return Math.max(0, baseline - current);
+            },
+            'CO₂ Displaced (Mt)', v => v.toFixed(0) + ' Mt', 'Mt'
+        );
+
+        // CO2 efficiency = CO2 displaced per $B cost
+        chartEffRibbon = buildGenericRibbon('chartEffRibbon', chartEffRibbon,
+            (rec) => {
+                const displaced = Math.max(0, (rec.bl || 0) - (rec.co2 || 0));
+                const costB = (rec.tc || 0) / 1000; // tc is in $M, convert to $B
+                return costB > 0.001 ? displaced / costB : 0;
+            },
+            'CO₂ Efficiency (Mt/$B)', v => v.toFixed(1), 'Mt/$B'
+        );
+
+        // Curtailment
+        chartCurtRibbon = buildGenericRibbon('chartCurtRibbon', chartCurtRibbon,
+            (rec) => rec.curtTwh || 0,
+            'Curtailment (TWh)', v => v.toFixed(0) + ' TWh', 'TWh'
+        );
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // SECTION 3: DECARBONIZATION HEATMAP
+    // ═════════════════════════════════════════════════════════════════════
+
+    function heatmapColor(pct) {
+        if (pct >= 95) return '#16A34A';
+        if (pct >= 90) return '#22C55E';
+        if (pct >= 80) return '#86EFAC';
+        if (pct >= 70) return '#FDE047';
+        if (pct >= 50) return '#FBBF24';
+        if (pct >= 30) return '#F97316';
+        return '#EF4444';
+    }
+
+    function buildHeatmaps() {
+        const container = document.getElementById('heatmapContainer');
+        container.innerHTML = '';
+        const active = getActiveStrategies();
+
+        const partLabels = [5, 10, 20, 30, 50, 70, 100]; // subset for readability
+        const thrLabels = [50, 70, 80, 90, 95, 99, 99.99];
+
+        for (const strat of active) {
+            const panel = document.createElement('div');
+            panel.className = 'glass-chart-panel flush';
+
+            const title = document.createElement('h4');
+            title.textContent = STRAT_LABELS[strat] || strat;
+            panel.appendChild(title);
+
+            const wrap = document.createElement('div');
+            wrap.className = 'heatmap-canvas-wrap';
+
+            const canvas = document.createElement('canvas');
+            canvas.id = 'heatmap_' + strat;
+            wrap.appendChild(canvas);
+            panel.appendChild(wrap);
+            container.appendChild(panel);
+
+            // Build bubble chart as heatmap proxy
+            const dataPoints = [];
+            for (let pi = 0; pi < partLabels.length; pi++) {
+                for (let ti = 0; ti < thrLabels.length; ti++) {
+                    let totalClean = 0, count = 0;
+                    for (const iso of ISOS) {
+                        const rec = getRecord(strat, iso, partLabels[pi], thrLabels[ti]);
+                        if (rec) {
+                            totalClean += (rec.gridHms || rec.gridCleanPct || 0);
+                            count++;
+                        }
+                    }
+                    const avg = count > 0 ? totalClean / count : 0;
+                    dataPoints.push({ x: pi, y: ti, v: Math.round(avg * 10) / 10 });
+                }
+            }
+
+            new Chart(canvas.getContext('2d'), {
+                type: 'bubble',
+                data: {
+                    datasets: [{
+                        data: dataPoints.map(p => ({
+                            x: p.x, y: p.y, r: 16,
+                        })),
+                        backgroundColor: dataPoints.map(p => heatmapColor(p.v)),
+                        borderColor: dataPoints.map(p => heatmapColor(p.v)),
+                        borderWidth: 1,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 300 },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(15,23,42,0.92)',
+                            callbacks: {
+                                label: (ctx) => {
+                                    const idx = ctx.dataIndex;
+                                    const pi = Math.floor(idx / thrLabels.length);
+                                    const ti = idx % thrLabels.length;
+                                    return `${partLabels[pi]}% participation, ${thrLabels[ti]}% target: ${dataPoints[idx].v}% grid clean`;
+                                },
+                            },
+                        },
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { callback: (v) => partLabels[v] + '%', font: { family: "'DM Sans'", size: 10 } },
+                            title: { display: true, text: 'Participation', font: { family: "'Plus Jakarta Sans'", size: 11, weight: '600' }, color: '#334155' },
+                            min: -0.5, max: partLabels.length - 0.5,
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { callback: (v) => (thrLabels[v] >= 99.99 ? '≥99.99' : thrLabels[v]) + '%', font: { family: "'DM Sans'", size: 10 } },
+                            title: { display: true, text: 'CO₂ Target', font: { family: "'Plus Jakarta Sans'", size: 11, weight: '600' }, color: '#334155' },
+                            min: -0.5, max: thrLabels.length - 0.5,
+                        },
+                    },
+                },
+            });
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // THRESHOLD REFERENCE LINES HELPER
+    // ═════════════════════════════════════════════════════════════════════
+
+    function thresholdAnnotations(labels) {
+        const refs = [
+            { value: 85,   dash: [4, 4],  label: '85%' },
+            { value: 90,   dash: [12, 4], label: '90%' },
+            { value: 92.5, dash: [4, 4],  label: '92.5%' },
+            { value: 95,   dash: [12, 4], label: '95%' },
+            { value: 99.9, dash: [4, 4],  label: '≥99.9%' },
+        ];
+        const annotations = {};
+        for (const r of refs) {
+            const matchLabel = r.value >= 99.9
+                ? labels.find(l => l.includes('99.9'))
+                : r.value + '%';
+            const idx = labels.indexOf(matchLabel);
+            if (idx < 0) continue;
+            annotations['ref_' + r.value] = {
+                type: 'line',
+                xMin: idx, xMax: idx,
+                borderColor: 'rgba(0,0,0,0.15)',
+                borderWidth: 1,
+                borderDash: r.dash,
+                label: {
+                    display: true,
+                    content: r.label,
+                    position: 'start',
+                    font: { size: 9, family: "'DM Sans'" },
+                    color: 'rgba(0,0,0,0.4)',
+                    backgroundColor: 'transparent',
+                },
+            };
+        }
+        return annotations;
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // SECTION 4: RESOURCE BUILDOUT TRAJECTORIES
+    // ═════════════════════════════════════════════════════════════════════
+
+    function getTrajectoryParticipation() {
+        const slider = document.getElementById('trajectorySlider');
+        const val = PARTICIPATION_LEVELS[parseInt(slider.value)];
+        return val !== undefined ? val : 20;
+    }
+
+    function populateTrajectoryStratSelect() {
+        const sel = document.getElementById('trajectoryStratSelect');
+        sel.innerHTML = '';
+        for (const s of MAIN_STRATEGIES) {
+            const opt = document.createElement('option');
+            opt.value = s;
+            opt.textContent = STRAT_LABELS[s] || s;
+            if (s === '2C') opt.selected = true;
+            sel.appendChild(opt);
+        }
+    }
+
+    // Extract resource TWh from a deployment record
+    function extractResources(rec) {
+        const res = {};
+        // New-build resources (n field)
+        if (rec.n) {
+            for (const [k, v] of Object.entries(rec.n)) {
+                if (k === 'nuclear_uprate') { res.clean_firm = (res.clean_firm || 0) + v; }
+                else if (k === 'new_vre') { res.wind = (res.wind || 0) + v; } // new_vre lumped into wind
+                else { res[k] = (res[k] || 0) + v; }
+            }
+        }
+        // Cross-regional resources (x field — keyed by source ISO)
+        if (rec.x) {
+            for (const isoData of Object.values(rec.x)) {
+                if (typeof isoData !== 'object') continue;
+                for (const [k, v] of Object.entries(isoData)) {
+                    if (k === 'existing_merchant') continue; // skip existing credits
+                    res[k] = (res[k] || 0) + v;
+                }
+            }
+        }
+        // Existing resources (e field)
+        if (rec.e) {
+            res.existing = (res.existing || 0) + (rec.e.existing_merchant || 0) + (rec.e.sss_allocation || 0);
+        }
+        return res;
+    }
+
+    function buildResourceTrajectory() {
+        if (chartResourceTrajectory) chartResourceTrajectory.destroy();
+        const strat = document.getElementById('trajectoryStratSelect').value;
+        const part = getTrajectoryParticipation();
+
+        const resources = ['solar', 'wind', 'clean_firm', 'ccs', 'battery', 'ldes', 'existing'];
+        const resLabels = { solar: 'Solar', wind: 'Wind', clean_firm: 'Clean Firm', ccs: 'CCS', battery: 'Battery', ldes: 'LDES', existing: 'Existing Clean' };
+        const resColors = {
+            solar: RESOURCE_COLORS ? RESOURCE_COLORS.solar : '#F59E0B',
+            wind: RESOURCE_COLORS ? RESOURCE_COLORS.wind : '#22C55E',
+            clean_firm: RESOURCE_COLORS ? RESOURCE_COLORS.cleanFirm : '#6366F1',
+            ccs: RESOURCE_COLORS ? RESOURCE_COLORS.ccs : '#64748B',
+            battery: RESOURCE_COLORS ? RESOURCE_COLORS.battery : '#06B6D4',
+            ldes: RESOURCE_COLORS ? RESOURCE_COLORS.ldes : '#E91E63',
+            existing: '#94A3B8',
+        };
+
+        // Build data from DEPLOYMENT_DATA across all ISOs
+        const resData = {};
+        for (const r of resources) resData[r] = [];
+
+        const availableThrs = THRESHOLDS;
+
+        for (const thr of availableThrs) {
+            const totals = {};
+            for (const iso of ISOS) {
+                const rec = getRecord(strat, iso, part, thr);
+                if (!rec) continue;
+                const extracted = extractResources(rec);
+                for (const [k, v] of Object.entries(extracted)) {
+                    totals[k] = (totals[k] || 0) + v;
+                }
+            }
+            for (const r of resources) {
+                resData[r].push(totals[r] || 0);
+            }
+        }
+
+        // Gas backup from deployment data
+        const gasData = availableThrs.map(thr => {
+            let total = 0;
+            for (const iso of ISOS) {
+                const rec = getRecord(strat, iso, part, thr);
+                if (rec) total += (rec.gasGw || 0) * 0.4; // rough GW→TWh proxy (40% CF)
+            }
+            return total;
+        });
+
+        // Filter out resources with all zeros
+        const activeResources = resources.filter(r => resData[r].some(v => v > 0));
+
+        // Build demand growth reference line (Medium growth, SBTi year mapping)
+        const demandLine = [];
+        if (typeof DEMAND_TWH_BY_THRESHOLD !== 'undefined' && typeof THRESHOLDS !== 'undefined') {
+            // DEMAND_TWH_BY_THRESHOLD uses 21-threshold array; map to our 17 active thresholds
+            const allThrs = [10, 20, 30, 40, 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99];
+            for (const thr of availableThrs) {
+                const idx = allThrs.findIndex(t => Math.abs(t - thr) < 0.01);
+                if (idx >= 0) {
+                    let totalDemand = 0;
+                    for (const iso of ISOS) {
+                        const arr = DEMAND_TWH_BY_THRESHOLD[iso];
+                        if (arr && arr[idx] !== undefined) totalDemand += arr[idx];
+                    }
+                    demandLine.push(totalDemand);
+                } else {
+                    demandLine.push(null);
+                }
+            }
+        }
+
+        const datasets = [
+            ...activeResources.map(r => ({
+                label: resLabels[r] || r,
+                data: resData[r],
+                backgroundColor: resColors[r],
+                borderColor: resColors[r],
+                borderWidth: 1,
+            })),
+            {
+                label: 'Gas Backup',
+                data: gasData,
+                backgroundColor: '#6B728088',
+                borderColor: '#6B7280',
+                borderWidth: 1,
+            },
+        ];
+
+        // Add demand growth line as overlay
+        if (demandLine.length > 0 && demandLine.some(v => v > 0)) {
+            datasets.push({
+                label: 'Projected Demand (Medium Growth)',
+                data: demandLine,
+                type: 'line',
+                borderColor: '#0F172A',
+                backgroundColor: 'transparent',
+                borderWidth: 2.5,
+                borderDash: [8, 4],
+                pointRadius: 2,
+                pointBackgroundColor: '#0F172A',
+                fill: false,
+                order: 0,
+                yAxisID: 'y',
+                stack: false,
+            });
+        }
+
+        const rtLabels = availableThrs.map(t => t >= 99.99 ? '≥99.99%' : t + '%');
+        chartResourceTrajectory = new Chart(document.getElementById('chartResourceTrajectory').getContext('2d'), {
+            type: 'bar',
+            data: { labels: rtLabels, datasets },
+            options: {
+                ...baseOpts,
+                plugins: { ...baseOpts.plugins, annotation: { annotations: thresholdAnnotations(rtLabels) } },
+                scales: {
+                    ...baseOpts.scales,
+                    x: { ...baseOpts.scales.x, stacked: true, title: { display: true, text: 'CO₂ Reduction Target', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                    y: { ...baseOpts.scales.y, stacked: true, ticks: { ...baseOpts.scales.y.ticks, callback: v => v.toFixed(0) + ' TWh' } },
+                },
+            },
+        });
+    }
+
+    function buildCurtTrajectory() {
+        if (chartCurtTrajectory) chartCurtTrajectory.destroy();
+        const active = getActiveStrategies();
+        const part = getTrajectoryParticipation();
+        const datasets = [];
+
+        for (const strat of active) {
+            const color = STRAT_COLORS[strat] || '#6366F1';
+            const data = THRESHOLDS.map(thr => {
+                let total = 0;
+                for (const iso of ISOS) {
+                    const rec = getRecord(strat, iso, part, thr);
+                    if (rec) total += (rec.curtTwh || 0);
+                }
+                return total;
+            });
+
+            datasets.push({
+                label: STRAT_LABELS[strat] || strat,
+                data,
+                borderColor: color,
+                backgroundColor: color + '20',
+                borderWidth: 2,
+                pointRadius: 2,
+                tension: 0.3,
+                fill: false,
+            });
+        }
+
+        const ctLabels = THRESHOLDS.map(t => t >= 99.99 ? '≥99.99%' : t + '%');
+        chartCurtTrajectory = new Chart(document.getElementById('chartCurtTrajectory').getContext('2d'), {
+            type: 'line',
+            data: { labels: ctLabels, datasets },
+            options: {
+                ...baseOpts,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { ...baseOpts.plugins, annotation: { annotations: thresholdAnnotations(ctLabels) } },
+                scales: {
+                    ...baseOpts.scales,
+                    x: { ...baseOpts.scales.x, title: { display: true, text: 'CO₂ Reduction Target', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                    y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: v => v.toFixed(0) + ' TWh' }, title: { display: true, text: 'Curtailment (TWh)', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                },
+            },
+        });
+    }
+
+    function buildGasBuildout() {
+        if (chartGasBuildout) chartGasBuildout.destroy();
+        const active = getActiveStrategies();
+        const part = getTrajectoryParticipation();
+        const datasets = [];
+
+        for (const strat of active) {
+            const color = STRAT_COLORS[strat] || '#6366F1';
+            const data = THRESHOLDS.map(thr => {
+                let total = 0;
+                for (const iso of ISOS) {
+                    const rec = getRecord(strat, iso, part, thr);
+                    if (rec) total += (rec.gasGw || 0);
+                }
+                return total;
+            });
+
+            datasets.push({
+                label: STRAT_LABELS[strat] || strat,
+                data,
+                borderColor: color,
+                backgroundColor: color + '20',
+                borderWidth: 2,
+                pointRadius: 2,
+                tension: 0.3,
+                fill: false,
+            });
+        }
+
+        const gbLabels = THRESHOLDS.map(t => t >= 99.99 ? '≥99.99%' : t + '%');
+        chartGasBuildout = new Chart(document.getElementById('chartGasBuildout').getContext('2d'), {
+            type: 'line',
+            data: { labels: gbLabels, datasets },
+            options: {
+                ...baseOpts,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    ...baseOpts.plugins,
+                    annotation: {
+                        annotations: {
+                            ...thresholdAnnotations(gbLabels),
+                            existing: {
+                                type: 'line', yMin: 299, yMax: 299,
+                                borderColor: '#F59E0B', borderWidth: 1.5, borderDash: [8, 4],
+                                label: { display: true, content: 'Existing gas (299 GW)', position: 'end', backgroundColor: 'rgba(245,158,11,0.85)', color: '#fff', font: { size: 9, family: "'DM Sans'" }, padding: { top: 2, bottom: 2, left: 4, right: 4 } },
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    ...baseOpts.scales,
+                    x: { ...baseOpts.scales.x, title: { display: true, text: 'CO₂ Reduction Target', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                    y: { ...baseOpts.scales.y, ticks: { ...baseOpts.scales.y.ticks, callback: v => Math.round(v) + ' GW' }, title: { display: true, text: 'Gas Capacity (GW)', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                },
+            },
+        });
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // SECTION 5: WRIGHT'S LAW
+    // ═════════════════════════════════════════════════════════════════════
+
+    let wrightsData = null;
+
+    async function loadWrightsData() {
+        try {
+            const resp = await fetch('js/wrights_law_data.json');
+            if (resp.ok) wrightsData = await resp.json();
+        } catch (e) {
+            console.warn('Could not load wrights_law_data.json:', e);
+        }
+    }
+
+    function buildWrightsCharts() {
+        if (!wrightsData) return;
+
+        // Chart 6A: Cost trajectories by strategy at 95% target
+        if (chartWrightsTrajectory) chartWrightsTrajectory.destroy();
+
+        const fig8 = wrightsData.figure8 || wrightsData.strategy_comparison_95 || wrightsData.strategy_comparison_90;
+        if (!fig8) return;
+
+        const partPcts = fig8.participation_pcts || wrightsData.metadata?.participation_pcts || [];
+        const partLabelsW = partPcts.map(p => Math.round(p * 100) + '%');
+
+        const stratKeys = [
+            { key: 'strat_1a_at_95', fallback: 'strat_1a_at_90', label: '1A Conseq', color: STRAT_COLORS['1A'] },
+            { key: 'strat_2a_at_95', fallback: 'strat_2a_at_90', label: '2A Hourly (New)', color: STRAT_COLORS['2A'] },
+            { key: 'strat_2b_at_95', fallback: 'strat_2b_at_90', label: '2B Hourly (Grid)', color: STRAT_COLORS['2B'] },
+            { key: 'strat_2c_gated', label: '2C Hourly (SSS)', color: STRAT_COLORS['2C'] },
+            { key: 'strat_3a_at_95', fallback: 'strat_3a_at_90', label: '3A Annual', color: STRAT_COLORS['3A'] },
+        ];
+
+        const datasets = [];
+        for (const sk of stratKeys) {
+            const data = fig8[sk.key] || (sk.fallback ? fig8[sk.fallback] : null);
+            if (!data) continue;
+            datasets.push({
+                label: sk.label,
+                data: data,
+                borderColor: sk.color,
+                backgroundColor: sk.color + '20',
+                borderWidth: 2.5,
+                pointRadius: 3,
+                tension: 0.3,
+                fill: false,
+            });
+        }
+
+        chartWrightsTrajectory = new Chart(document.getElementById('chartWrightsTrajectory').getContext('2d'), {
+            type: 'line',
+            data: { labels: partLabelsW, datasets },
+            options: {
+                ...baseOpts,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    ...baseOpts.plugins,
+                    annotation: {
+                        annotations: {
+                            zeroline: {
+                                type: 'line', yMin: 0, yMax: 0,
+                                borderColor: '#22C55E', borderWidth: 2, borderDash: [6, 3],
+                                label: { display: true, content: 'Cost parity', position: 'end', backgroundColor: 'rgba(34,197,94,0.85)', color: '#fff', font: { size: 10, family: "'DM Sans'" }, padding: 3 },
+                            },
+                        },
+                    },
+                },
+                scales: {
+                    ...baseOpts.scales,
+                    x: { ...baseOpts.scales.x, title: { display: true, text: 'Participation Level', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                    y: { ...baseOpts.scales.y, title: { display: true, text: 'Blended Cost Premium ($/MWh)', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                },
+            },
+        });
+
+        // Chart 6B: Critical mass — cumulative clean firm GW deployed at 95% target
+        // Computed from deployment data: total new clean firm GW across ISOs at each participation level
+        if (chartCriticalMass) chartCriticalMass.destroy();
+
+        const cmStrategies = ['1B', '2C', '3A', '3D'];
+        const cmThr = 95;
+        const cmDatasets = [];
+
+        for (const strat of cmStrategies) {
+            const gwByPart = PARTICIPATION_LEVELS.map(part => {
+                let totalGw = 0;
+                for (const iso of ISOS) {
+                    const rec = getRecord(strat, iso, part, cmThr);
+                    if (rec) {
+                        // Sum new-build clean firm from 'n' field
+                        if (rec.n) {
+                            for (const [k, v] of Object.entries(rec.n)) {
+                                if (['nuclear_uprate', 'ccs', 'new_nuclear', 'geothermal'].includes(k)) {
+                                    // Convert TWh to GW (assume ~85% CF for firm resources)
+                                    totalGw += v / (8.76 * 0.85);
+                                }
+                            }
+                        }
+                    }
+                }
+                return Math.round(totalGw * 10) / 10;
+            });
+            cmDatasets.push({
+                label: STRAT_LABELS[strat] || strat,
+                data: gwByPart,
+                borderColor: STRAT_COLORS[strat],
+                backgroundColor: STRAT_COLORS[strat] + '20',
+                borderWidth: 2.5,
+                pointRadius: 3,
+                tension: 0.3,
+                fill: false,
+            });
+        }
+
+        // Reference lines for first-doubling thresholds
+        const doublingAnnotations = {
+            ccsDoubling: {
+                type: 'line', yMin: 8, yMax: 8,
+                borderColor: RESOURCE_COLORS.ccs, borderWidth: 1.5, borderDash: [6, 3],
+                label: { display: true, content: 'CCS 1st doubling (8 GW)', position: 'start',
+                    backgroundColor: 'rgba(100,116,139,0.85)', color: '#fff',
+                    font: { size: 10, family: "'DM Sans'" }, padding: 3 },
+            },
+            nucDoubling: {
+                type: 'line', yMin: 5, yMax: 5,
+                borderColor: RESOURCE_COLORS.nuclear, borderWidth: 1.5, borderDash: [6, 3],
+                label: { display: true, content: 'Nuclear 1st doubling (5 GW)', position: 'end',
+                    backgroundColor: 'rgba(99,102,241,0.85)', color: '#fff',
+                    font: { size: 10, family: "'DM Sans'" }, padding: 3 },
+            },
+        };
+
+        chartCriticalMass = new Chart(document.getElementById('chartCriticalMass').getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: PARTICIPATION_LEVELS.map(p => p + '%'),
+                datasets: cmDatasets,
+            },
+            options: {
+                ...baseOpts,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    ...baseOpts.plugins,
+                    annotation: { annotations: doublingAnnotations },
+                    tooltip: {
+                        ...baseOpts.plugins.tooltip,
+                        callbacks: {
+                            label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.toFixed(1)} GW`,
+                        },
+                    },
+                },
+                scales: {
+                    ...baseOpts.scales,
+                    x: { ...baseOpts.scales.x, title: { display: true, text: 'Corporate Participation Level', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                    y: { ...baseOpts.scales.y, title: { display: true, text: 'New Clean Firm Deployed (GW)', font: { family: "'Plus Jakarta Sans'", weight: '600', size: 12 }, color: '#334155' } },
+                },
+            },
+        });
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // SECTION 6: SYNTHESIS STATS
+    // ═════════════════════════════════════════════════════════════════════
+
+    function computeSynthesisStats() {
+        const active = getActiveStrategies();
+
+        // Gas reduction at 50% participation
+        let maxGasReduction = 0;
+        for (const strat of active) {
+            let totalGas = 0;
+            for (const iso of ISOS) {
+                const rec = getRecord(strat, iso, 50, 95);
+                if (rec) totalGas += (rec.gasGw || 0);
+            }
+            const reduction = EXISTING_GAS_TOTAL + 195 - totalGas; // vs theoretical 494
+            if (reduction > maxGasReduction) maxGasReduction = reduction;
+        }
+        document.getElementById('synthGasReduction').textContent = Math.round(maxGasReduction) + ' GW';
+
+        // Peak grid clean at 95% target
+        let maxClean = 0;
+        for (const strat of active) {
+            let totalClean = 0, count = 0;
+            for (const iso of ISOS) {
+                const rec = getRecord(strat, iso, 100, 95);
+                if (rec) { totalClean += (rec.gridHms || rec.gridCleanPct || 0); count++; }
+            }
+            const avg = count > 0 ? totalClean / count : 0;
+            if (avg > maxClean) maxClean = avg;
+        }
+        document.getElementById('synthGridClean').textContent = maxClean.toFixed(1) + '%';
+
+        // Critical mass from Wright's data
+        if (wrightsData?.critical_mass) {
+            const cm95 = wrightsData.critical_mass['95.0'] || wrightsData.critical_mass['95'] || wrightsData.critical_mass['90.0'] || wrightsData.critical_mass['90'];
+            if (cm95) {
+                document.getElementById('synthCritMass').textContent = Math.round(cm95 * 100) + '%';
+            }
+        }
+
+        // CO2 displaced at 30% participation, 95% target
+        let maxCO2 = 0;
+        for (const strat of active) {
+            let totalDisp = 0;
+            for (const iso of ISOS) {
+                const rec = getRecord(strat, iso, 30, 95);
+                if (rec) totalDisp += Math.max(0, (rec.bl || 0) - (rec.co2 || 0));
+            }
+            if (totalDisp > maxCO2) maxCO2 = totalDisp;
+        }
+        document.getElementById('synthCO2').textContent = maxCO2.toFixed(0) + ' Mt';
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // MASTER UPDATE
+    // ═════════════════════════════════════════════════════════════════════
+
+    function updateAllCharts() {
+        buildGasRibbon();
+        buildSection2();
+        buildHeatmaps();
+        buildResourceTrajectory();
+        buildCurtTrajectory();
+        buildGasBuildout();
+        buildWrightsCharts();
+        computeSynthesisStats();
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // EVENT WIRING
+    // ═════════════════════════════════════════════════════════════════════
+
+    // Strategy checkboxes
+    document.querySelectorAll('.strategy-check input').forEach(cb => {
+        cb.addEventListener('change', updateAllCharts);
+    });
+
+    // Trajectory controls
+    document.getElementById('trajectorySlider').addEventListener('input', function() {
+        const pv = PARTICIPATION_LEVELS[parseInt(this.value)];
+        const part = pv !== undefined ? pv : 20;
+        document.getElementById('trajectoryValue').textContent = part + '%';
+        buildResourceTrajectory();
+        buildCurtTrajectory();
+        buildGasBuildout();
+    });
+
+    document.getElementById('trajectoryStratSelect').addEventListener('change', buildResourceTrajectory);
+
+    // ═════════════════════════════════════════════════════════════════════
+    // INIT
+    // ═════════════════════════════════════════════════════════════════════
+
+    populateTrajectoryStratSelect();
+
+    // Load Wright's data then build all
+    loadWrightsData().then(() => {
+        updateAllCharts();
+    });
+
+})();
+</script>
+
+</body>
+</html>
