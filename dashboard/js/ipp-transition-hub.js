@@ -3,9 +3,10 @@
  * =====================================================
  * Renders hero stats, company cards, and comparative analysis charts.
  * Reads from: IPP_SMARTARGETS_DATA (ipp-smartargets-data.js)
+ *             FLEET_COMPANIES (fleet-survival-data.js) for pipeline_twh
  */
 
-/* global IPP_SMARTARGETS_DATA, Chart, RESOURCE_COLORS, ISO_COLORS */
+/* global IPP_SMARTARGETS_DATA, FLEET_COMPANIES, Chart, RESOURCE_COLORS, ISO_COLORS */
 
 (function () {
     'use strict';
@@ -144,8 +145,20 @@
         const peakerGen = byFuel.gas_peaker ? byFuel.gas_peaker.gen_twh : 0;
         const ccgtGen = byFuel.gas_ccgt ? byFuel.gas_ccgt.gen_twh : 0;
         const gasFlexScore = ccgtGen > 0 ? Math.min(100, (ccgtGen / (ccgtGen + peakerGen)) * 100) : 50;
-        const cleanNewGen = ['solar', 'wind', 'battery'].reduce((s, f) => s + (byFuel[f] ? byFuel[f].gen_twh : 0), 0);
-        const cleanPipelineScore = Math.min(100, (cleanNewGen / totalGen) * 300);
+        // Clean Pipeline: use pipeline_twh from fleet config if available
+        const fleetMatch = (typeof FLEET_COMPANIES !== 'undefined')
+            ? FLEET_COMPANIES.find(fc => fc.shortName.toLowerCase() === (co.shortName || '').toLowerCase())
+            : null;
+        const pipelineTwh = (fleetMatch && fleetMatch.pipeline_twh) || (co.pipeline_twh) || 0;
+        let cleanPipelineScore;
+        if (pipelineTwh > 0 && totalGen > 0) {
+            const absScore = Math.min(100, (pipelineTwh / 25) * 100);
+            const relScore = Math.min(100, (pipelineTwh / totalGen / 0.15) * 100);
+            cleanPipelineScore = (absScore + relScore) / 2;
+        } else {
+            const cleanNewGen = ['solar', 'wind', 'battery'].reduce((s, f) => s + (byFuel[f] ? byFuel[f].gen_twh : 0), 0);
+            cleanPipelineScore = Math.min(100, (cleanNewGen / totalGen) * 300);
+        }
         return [nuclearScore, diversityScore, coalExitScore, gasFlexScore, cleanPipelineScore];
     }
 

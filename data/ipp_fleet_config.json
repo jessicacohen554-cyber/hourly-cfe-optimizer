@@ -32,6 +32,15 @@
       "gen_twh": 154,
       "cap_gw": 44,
       "target": "Net-zero by 2050",
+      "clean_pipeline": {
+        "pipeline_twh": 4.5,
+        "breakdown": [
+          {"tech": "solar", "cap_mw": 1200, "twh": 2.6, "stage": "under_construction"},
+          {"tech": "battery", "cap_mw": 1500, "twh": 0, "stage": "under_construction"},
+          {"tech": "nuclear_uprate", "cap_mw": 230, "twh": 1.9, "stage": "approved"}
+        ],
+        "_note": "Comanche Peak uprate (NRC approved), ERCOT solar+battery portfolio. Modest clean pipeline relative to fleet size."
+      },
       "plants": [
         {
           "name": "Martin Lake Coal (TX)",
@@ -234,6 +243,17 @@
       "cap_gw": 55,
       "target": "100% carbon-free by 2040",
       "_note": "Post-Calpine merger (Jan 2026). ~200 TWh clean (180 nuclear, 9 geo, 5 renewable), ~100 TWh gas CCGT/peaker.",
+      "clean_pipeline": {
+        "pipeline_twh": 15.3,
+        "breakdown": [
+          {"tech": "nuclear_uprate", "cap_mw": 1000, "twh": 8.0, "stage": "approved", "_note": "NRC-approved uprates across fleet (Braidwood, Byron, LaSalle, Limerick, Peach Bottom)"},
+          {"tech": "nuclear_restart", "cap_mw": 835, "twh": 6.5, "stage": "permitted", "_note": "Crane Clean Energy Center (Three Mile Island Unit 1) restart, Microsoft PPA, target 2028"},
+          {"tech": "solar", "cap_mw": 300, "twh": 0.6, "stage": "announced"},
+          {"tech": "battery", "cap_mw": 200, "twh": 0, "stage": "announced"},
+          {"tech": "geothermal", "cap_mw": 100, "twh": 0.2, "stage": "announced", "_note": "Via Calpine geothermal expansion (The Geysers)"}
+        ],
+        "_note": "Constellation's clean pipeline is uniquely nuclear-heavy: ~8 TWh from NRC-approved uprates at existing plants, ~6.5 TWh from Crane restart. This is the largest single clean firm pipeline of any US IPP."
+      },
       "plants": [
         {
           "name": "Limerick Nuclear (PA)",
@@ -560,6 +580,15 @@
       "gen_twh": 80,
       "cap_gw": 25,
       "target": "Net-zero by 2050",
+      "clean_pipeline": {
+        "pipeline_twh": 1.5,
+        "breakdown": [
+          {"tech": "solar", "cap_mw": 400, "twh": 0.9, "stage": "announced"},
+          {"tech": "battery", "cap_mw": 500, "twh": 0, "stage": "announced"},
+          {"tech": "wind", "cap_mw": 200, "twh": 0.6, "stage": "announced"}
+        ],
+        "_note": "Minimal clean pipeline. NRG is primarily focused on retail electricity and thermal generation. Vivint Solar acquisition focused on rooftop, not utility-scale."
+      },
       "plants": [
         {
           "name": "W.A. Parish Coal (TX)",
@@ -699,6 +728,13 @@
       "gen_twh": 42,
       "cap_gw": 10.7,
       "target": "No formal net-zero target",
+      "clean_pipeline": {
+        "pipeline_twh": 1.0,
+        "breakdown": [
+          {"tech": "nuclear_uprate", "cap_mw": 120, "twh": 1.0, "stage": "approved", "_note": "Susquehanna uprate potential"}
+        ],
+        "_note": "Minimal clean pipeline. Talen's strategy is data center colocation at Susquehanna (Amazon deal), not new clean development. Post-restructuring focus on existing assets."
+      },
       "plants": [
         {
           "name": "Susquehanna Nuclear (PA, 90%)",
@@ -804,6 +840,16 @@
       "gen_twh": 34.6,
       "cap_gw": 3.8,
       "target": "Net-zero operations by 2045",
+      "clean_pipeline": {
+        "pipeline_twh": 4.8,
+        "breakdown": [
+          {"tech": "nuclear_uprate", "cap_mw": 200, "twh": 1.6, "stage": "approved", "_note": "Hope Creek & Salem uprate potential"},
+          {"tech": "offshore_wind", "cap_mw": 1100, "twh": 2.2, "stage": "permitted", "_note": "Ocean Wind equity stake / NJ offshore commitments"},
+          {"tech": "solar", "cap_mw": 400, "twh": 0.9, "stage": "announced"},
+          {"tech": "battery", "cap_mw": 100, "twh": 0, "stage": "announced"}
+        ],
+        "_note": "PSEG pipeline is a mix of nuclear uprates, offshore wind equity stakes, and utility-scale solar. Relatively small fleet makes this a meaningful share."
+      },
       "plants": [
         {
           "name": "Hope Creek Nuclear (NJ)",
@@ -850,6 +896,18 @@
       "gen_twh": 100,
       "cap_gw": 33,
       "target": "Real Zero emissions by 2045",
+      "clean_pipeline": {
+        "pipeline_twh": 50.0,
+        "breakdown": [
+          {"tech": "solar", "cap_mw": 10000, "twh": 22.0, "stage": "under_construction", "_note": "Largest US solar pipeline, ~10 GW in active development"},
+          {"tech": "wind", "cap_mw": 5000, "twh": 16.0, "stage": "under_construction", "_note": "Onshore wind backlog across ERCOT, SPP, MISO"},
+          {"tech": "battery", "cap_mw": 5000, "twh": 0, "stage": "under_construction", "_note": "Co-located with solar portfolio"},
+          {"tech": "wind_offshore", "cap_mw": 1000, "twh": 4.0, "stage": "permitted"},
+          {"tech": "solar_distributed", "cap_mw": 3000, "twh": 5.0, "stage": "announced"},
+          {"tech": "nuclear_smr", "cap_mw": 400, "twh": 3.0, "stage": "announced", "_note": "Exploring SMR at Duane Arnold site"}
+        ],
+        "_note": "Largest clean energy pipeline of any US IPP by a wide margin. NextEra adds ~8-10 GW/year of renewables+storage. Backlog is 25+ GW with strong execution track record."
+      },
       "plants": [
         {
           "name": "Point Beach Nuclear (WI)",
@@ -961,6 +1019,17 @@
       "gen_twh": 75,
       "cap_gw": 35,
       "target": "Carbon-neutral Scope 1&2 by 2040; SBTi validated 1.5C",
+      "clean_pipeline": {
+        "pipeline_twh": 25.0,
+        "breakdown": [
+          {"tech": "solar", "cap_mw": 6000, "twh": 13.2, "stage": "under_construction", "_note": "US solar portfolio in PJM, ERCOT, CAISO"},
+          {"tech": "battery", "cap_mw": 4000, "twh": 0, "stage": "under_construction", "_note": "Largest US battery developer, Fluence partnership"},
+          {"tech": "wind", "cap_mw": 2000, "twh": 6.4, "stage": "permitted"},
+          {"tech": "wind_offshore", "cap_mw": 800, "twh": 3.2, "stage": "announced"},
+          {"tech": "green_hydrogen", "cap_mw": 500, "twh": 2.2, "stage": "announced", "_note": "Green hydrogen pilot projects"}
+        ],
+        "_note": "AES has aggressive clean pipeline driven by SBTi commitment. Second-largest US battery developer (via Fluence). Strong execution in solar+storage co-location."
+      },
       "plants": [
         {
           "name": "Petersburg Coal (IN)",
