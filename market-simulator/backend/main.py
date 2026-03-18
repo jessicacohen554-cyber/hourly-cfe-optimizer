@@ -1011,108 +1011,107 @@ async def simulate(req: SimulationRequest):
         iso_results = results.get(iso, [])
         response = _build_simulation_response(iso, iso_results)
 
-        # Compute plant-level economics if fleet data available
-        plant_level_data = []
+        # Compute plant-level economics for ALL simulation years
+        plant_level_data = []  # List of dicts, each tagged with 'year'
         plant_summary = None
         try:
             import numpy as np
             from market_simulation import compute_plant_level_economics
             from lmp_engine import build_plant_level_merit_order
 
-            # Extract clean_pct from the response
-            clean_pct = (response.market_outcome_clean_pct or 50.0) / 100.0
-
-            # Get fuel/carbon parameters from the conditions
             fuel_level = conditions.get("fuel_level", "Medium")
             carbon_price_val = conditions.get("carbon_price", 0)
 
-            plant_stack, total_cap = build_plant_level_merit_order(
-                iso, clean_pct,
-                fuel_level=fuel_level,
-                carbon_price=carbon_price_val,
-            )
-
-            # Build synthetic hourly data from the simulation summary.
-            # The simulation doesn't return 8760 arrays, so we approximate:
-            avg_lmp = response.avg_lmp or WHOLESALE_PRICES.get(iso, 30.0)
-            hourly_lmp = np.full(8760, avg_lmp)
-
-            # Demand MW profile — flat approximation from regional demand
-            demand_twh = response.demand_twh or REGIONAL_DEMAND_TWH.get(iso, 300)
-            avg_demand_mw = demand_twh * 1e6 / 8760
-            demand_mw_profile = np.full(8760, avg_demand_mw)
-
-            # Residual (fossil) demand: fraction of demand not served by clean
-            fossil_frac = max(0, 1.0 - clean_pct)
-            residual_demand = np.full(8760, fossil_frac)
-            dispatch = {'residual_demand': residual_demand}
-
-            # Fuel prices
+            # Fuel prices (shared across years)
             fuel_prices_dict = {}
             if conditions.get("custom_fuel_prices"):
                 fuel_prices_dict = conditions["custom_fuel_prices"]
             else:
                 fuel_prices_dict = FUEL_PRICES.get(fuel_level, FUEL_PRICES.get("Medium", {}))
 
-            # Compute zonal LMP if zone data available
-            zonal_lmp_result = None
-            plant_zone_list = None
-            zone_name_list = None
-            zonal_stats = None
-            try:
-                from pipeline_config import ZONE_CONFIG
-                if iso in ZONE_CONFIG:
-                    from lmp_engine import compute_hourly_lmp_zonal, get_price_model
-                    from fleet_model import FleetModel
+            # Iterate over each year result from the simulation
+            years_to_process = iso_results if iso_results else []
+            last_zonal_stats = None
+            for yr_data in years_to_process:
+                yr_year = yr_data.get("year", 0)
+                yr_clean_pct = yr_data.get("clean_pct", 50.0) / 100.0
+                yr_demand_twh = yr_data.get("demand_twh", REGIONAL_DEMAND_TWH.get(iso, 300))
+                yr_avg_lmp = yr_data.get("avg_lmp", WHOLESALE_PRICES.get(iso, 30.0))
 
-                    zone_config = ZONE_CONFIG[iso]
-                    zone_name_list = zone_config['zones']
-                    price_model = get_price_model(iso, fuel_level)
+                try:
+                    plant_stack, total_cap = build_plant_level_merit_order(
+                        iso, yr_clean_pct,
+                        fuel_level=fuel_level,
+                        carbon_price=carbon_price_val,
+                    )
 
-                    # Build zonal stacks from fleet model
-                    fm = FleetModel(iso=iso)
-                    fm.build_fleet()
-                    if fm.fleet is not None and not fm.fleet.empty:
-                        fm.assign_zones()
-                        zone_stacks = fm.build_zonal_merit_order_stacks(
-                            fuel_level=fuel_level, co2_price=carbon_price_val)
+                    hourly_lmp = np.full(8760, yr_avg_lmp)
+                    avg_demand_mw = yr_demand_twh * 1e6 / 8760
+                    demand_mw_profile = np.full(8760, avg_demand_mw)
+                    fossil_frac = max(0, 1.0 - yr_clean_pct)
+                    residual_demand = np.full(8760, fossil_frac)
+                    dispatch = {'residual_demand': residual_demand}
 
-                        # Compute zonal LMP
-                        zonal_lmp_matrix, system_lmp_arr, _, zonal_stats = \
-                            compute_hourly_lmp_zonal(
-                                dispatch, demand_mw_profile, zone_stacks,
-                                zone_config, price_model, iso=iso,
-                                vre_penetration=clean_pct,
-                            )
-                        zonal_lmp_result = zonal_lmp_matrix
+                    # Zonal LMP (optional — don't fail year if unavailable)
+                    zonal_lmp_result = None
+                    plant_zone_list = None
+                    zone_name_list = None
+                    try:
+                        from pipeline_config import ZONE_CONFIG
+                        if iso in ZONE_CONFIG:
+                            from lmp_engine import compute_hourly_lmp_zonal, get_price_model
+                            from fleet_model import FleetModel
 
-                        # Use system-average zonal LMP instead of flat approximation
-                        hourly_lmp = system_lmp_arr
+                            zone_config = ZONE_CONFIG[iso]
+                            zone_name_list = zone_config['zones']
+                            price_model = get_price_model(iso, fuel_level)
 
-                        # Build plant-to-zone mapping
-                        plant_zone_list = []
-                        from pipeline_config import get_zone_for_plant
-                        for p in plant_stack:
-                            pzone = get_zone_for_plant(
-                                iso,
-                                ba_code=p.get('ba'),
-                                lat=p.get('latitude'),
-                                lon=p.get('longitude'),
-                            )
-                            plant_zone_list.append(pzone)
-            except Exception as zonal_err:
-                print(f"Note: Zonal LMP not available: {zonal_err}")
+                            fm = FleetModel(iso=iso)
+                            fm.build_fleet()
+                            if fm.fleet is not None and not fm.fleet.empty:
+                                fm.assign_zones()
+                                zone_stacks = fm.build_zonal_merit_order_stacks(
+                                    fuel_level=fuel_level, co2_price=carbon_price_val)
+                                zonal_lmp_matrix, system_lmp_arr, _, yr_zonal_stats = \
+                                    compute_hourly_lmp_zonal(
+                                        dispatch, demand_mw_profile, zone_stacks,
+                                        zone_config, price_model, iso=iso,
+                                        vre_penetration=yr_clean_pct,
+                                    )
+                                zonal_lmp_result = zonal_lmp_matrix
+                                hourly_lmp = system_lmp_arr
+                                last_zonal_stats = yr_zonal_stats
 
-            plant_level_data = compute_plant_level_economics(
-                plant_stack, hourly_lmp, dispatch,
-                demand_mw_profile, fuel_prices_dict, carbon_price_val,
-                zonal_lmp=zonal_lmp_result,
-                plant_zones=plant_zone_list,
-                zone_names=zone_name_list,
-            )
+                                plant_zone_list = []
+                                from pipeline_config import get_zone_for_plant
+                                for p in plant_stack:
+                                    pzone = get_zone_for_plant(
+                                        iso,
+                                        ba_code=p.get('ba'),
+                                        lat=p.get('latitude'),
+                                        lon=p.get('longitude'),
+                                    )
+                                    plant_zone_list.append(pzone)
+                    except Exception:
+                        pass  # Zonal LMP optional per-year
 
-            # Attach zonal LMP stats to response if available
-            if zonal_stats:
+                    yr_plants = compute_plant_level_economics(
+                        plant_stack, hourly_lmp, dispatch,
+                        demand_mw_profile, fuel_prices_dict, carbon_price_val,
+                        zonal_lmp=zonal_lmp_result,
+                        plant_zones=plant_zone_list,
+                        zone_names=zone_name_list,
+                    )
+                    # Tag each plant row with the simulation year
+                    for p in yr_plants:
+                        p['year'] = yr_year
+                    plant_level_data.extend(yr_plants)
+                except Exception as yr_err:
+                    print(f"Note: Plant-level economics for year {yr_year} failed: {yr_err}")
+                    continue
+
+            # Attach zonal LMP stats from the last year to response
+            if last_zonal_stats:
                 from models import ZonalLMPStats
                 response.zonal_lmp_stats = [
                     ZonalLMPStats(
@@ -1124,18 +1123,20 @@ async def simulate(req: SimulationRequest):
                         p90_lmp=round(s['p90_lmp'], 2),
                         price_spread_vs_system=round(s['price_spread_vs_system'], 2),
                     )
-                    for s in zonal_stats.values()
+                    for s in last_zonal_stats.values()
                 ]
 
-            # Compute summary counts
-            operating = sum(1 for p in plant_level_data if p.get("status") == "operating")
-            at_risk = sum(1 for p in plant_level_data if p.get("status") == "at_risk")
-            stranded = sum(1 for p in plant_level_data if p.get("status") == "stranded")
+            # Compute summary from the final year's plant data
+            final_year = years_to_process[-1].get("year", 0) if years_to_process else 0
+            final_plants = [p for p in plant_level_data if p.get("year") == final_year]
+            operating = sum(1 for p in final_plants if p.get("status") == "operating")
+            at_risk = sum(1 for p in final_plants if p.get("status") == "at_risk")
+            stranded = sum(1 for p in final_plants if p.get("status") == "stranded")
             plant_summary = {
                 "operating": operating,
                 "at_risk": at_risk,
                 "stranded": stranded,
-                "total": len(plant_level_data),
+                "total": len(final_plants),
             }
             response.plant_level_summary = plant_summary
         except Exception as plant_err:
@@ -1509,11 +1510,16 @@ def _save_run_artifacts(run_id: str, iso: str, response_data: dict, params: dict
 
 
 def _save_plant_level_csv(filepath: Path, plant_data: list):
-    """Save detailed per-plant economics as CSV."""
+    """Save detailed per-plant economics as CSV.
+
+    Each row is tagged with a 'year' column so trajectory simulations
+    output all years (not just the final year).
+    """
     if not plant_data:
         return
 
     columns = [
+        'year',
         'entity', 'plant_name', 'plant_id', 'generator_id', 'state', 'county',
         'latitude', 'longitude', 'capacity_mw', 'heat_rate_mmbtu_mwh',
         'fuel_type', 'prime_mover', 'online_year', 'age_years',
@@ -1640,6 +1646,62 @@ def _save_results_csv(filepath: Path, response_data: dict):
                         yr.get("rps_mandated_pct"), yr.get("rps_eligible_pct"),
                         yr.get("rps_shortfall_pct"), yr.get("acp_cost_million"),
                     ])
+            w.writerow([])
+
+        # ── Section 5b: Year-by-Year Resource Mix ──
+        if years:
+            # Collect all resource types across all years
+            all_resources = set()
+            for yr in years:
+                if isinstance(yr, dict):
+                    all_resources.update(yr.get("resource_mix_twh", {}).keys())
+            all_resources = sorted(all_resources)
+            if all_resources:
+                w.writerow(["=== Year-by-Year Resource Mix (TWh) ==="])
+                w.writerow(["year"] + all_resources)
+                for yr in years:
+                    if isinstance(yr, dict):
+                        rmix = yr.get("resource_mix_twh", {})
+                        w.writerow([yr.get("year")] + [round(rmix.get(r, 0), 2) for r in all_resources])
+                w.writerow([])
+
+        # ── Section 5c: Year-by-Year Generator Economics ──
+        if years:
+            w.writerow(["=== Year-by-Year Generator Economics ==="])
+            w.writerow(["year", "unit_type", "capacity_mw", "marginal_cost_mwh",
+                         "dispatch_hours", "capacity_factor",
+                         "avg_revenue_mwh", "vom_mwh", "fuel_cost_mwh",
+                         "profit_mwh", "status"])
+            for yr in years:
+                if not isinstance(yr, dict):
+                    continue
+                yr_year = yr.get("year", "")
+                # Use adjusted economics when available
+                gen_raw = yr.get("adjusted_generator_economics", yr.get("generator_economics", {}))
+                if isinstance(gen_raw, dict):
+                    for unit_type, data in gen_raw.items():
+                        if not isinstance(data, dict):
+                            continue
+                        w.writerow([
+                            yr_year, unit_type,
+                            data.get("capacity_mw"), data.get("marginal_cost"),
+                            data.get("dispatch_hours"), data.get("capacity_factor"),
+                            data.get("avg_revenue_mwh"), data.get("vom_mwh", ""),
+                            data.get("fuel_cost_mwh", ""), data.get("profit_mwh"),
+                            data.get("status"),
+                        ])
+                elif isinstance(gen_raw, list):
+                    for g in gen_raw:
+                        if not isinstance(g, dict):
+                            continue
+                        w.writerow([
+                            yr_year, g.get("unit_type"),
+                            g.get("capacity_mw"), g.get("marginal_cost"),
+                            g.get("dispatch_hours"), g.get("capacity_factor"),
+                            g.get("avg_revenue_mwh"), g.get("vom_mwh", ""),
+                            g.get("fuel_cost_mwh", ""), g.get("profit_mwh"),
+                            g.get("status"),
+                        ])
             w.writerow([])
 
         # ── Section 6: Zone Economics Detail ──

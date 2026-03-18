@@ -2345,7 +2345,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             state['rps_eligible_twh_floor'] = max(state['rps_eligible_twh_floor'], current_rps_twh)
 
             # CCS breakeven at this ISO/fuel level
-            ccs_breakeven = compute_ccs_retrofit_breakeven(iso, conditions['fuel_level'])
+            ccs_breakeven = compute_ccs_retrofit_breakeven(iso, conditions['fuel_level'], conditions=conditions)
 
             # Resource mix in TWh — built from deployed resources + existing mix
             existing_mix_twh = {r: p / 100.0 * demand_twh
