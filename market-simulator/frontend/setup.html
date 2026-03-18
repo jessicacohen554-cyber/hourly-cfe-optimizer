@@ -639,6 +639,15 @@
                         </div>
                     </div>
                 </div>
+                <div class="grid-2col" style="margin-top: var(--space-md);">
+                    <div class="input-group">
+                        <label>Inter-Regional Imports <span class="info-icon" data-tooltip="When On, historical inter-regional power flows reduce each ISO's self-sufficiency requirement. NEISO gets ~3.5 GW from Quebec hydro, CAISO imports ~5.5 GW from Pacific NW, etc. Off = each ISO modeled in complete isolation (copper-plate).">i</span></label>
+                        <div class="toggle-btn-group" id="interchangeToggle">
+                            <button type="button" class="toggle-btn active" data-value="On">On</button>
+                            <button type="button" class="toggle-btn" data-value="Off">Off</button>
+                        </div>
+                    </div>
+                </div>
                 <div class="custom-file-section" style="margin-top: var(--space-md);">
                     <label class="custom-file-toggle">
                         <input type="checkbox" id="custom_lmp_toggle"> Use custom LMP curve from custom-user-inputs/lmp_hourly.csv

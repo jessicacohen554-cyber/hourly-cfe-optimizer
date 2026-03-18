@@ -656,6 +656,18 @@ GAS_AVAILABILITY_FACTOR = {
     'NYISO': 0.82, 'NEISO': 0.85, 'MISO': 0.84, 'SPP': 0.84,
 }
 
+# Firm import capacity (MW) — maximum dependable inter-regional transfer capability
+# Source: NERC Interregional Transfer Capability assessments, EIA-930 peak observed flows (2024)
+FIRM_IMPORT_MW = {
+    'CAISO': 8000,   # Path 66 + PDCI from Pacific NW
+    'ERCOT': 1200,   # DC ties to SPP/Mexico (limited by design)
+    'PJM': 5000,     # MISO/NYISO interchange
+    'NYISO': 4000,   # PJM/NEISO/HQ imports
+    'NEISO': 3500,   # HQ Phase I/II + NB Power + NYISO
+    'MISO': 4000,    # PJM/SPP interchange
+    'SPP': 3000,     # MISO/ERCOT interchange
+}
+
 PEAK_CAPACITY_CREDITS = {
     'clean_firm': 1.0, 'solar': 0.30, 'wind': 0.10,
     'ccs_ccgt': 0.90, 'hydro': 0.50, 'battery': 0.95,
