@@ -216,12 +216,16 @@ function renderAll() {
                 kpiYearHeader.firstChild
             );
         }
-        // Confidence badge
+        // Confidence badge (may be adjusted downward by IPM trigger severity)
         if (confBadge && finalYr.confidence) {
             const zoneInfo = (data.confidence_zones || []).find(z => z.zone === finalYr.confidence);
             confBadge.className = `confidence-badge confidence-${finalYr.confidence}`;
             confBadge.textContent = finalYr.confidence_label || finalYr.confidence;
-            confBadge.title = zoneInfo ? zoneInfo.tooltip : '';
+            if (finalYr.confidence_adjusted) {
+                confBadge.title = 'Confidence reduced because model limitations are binding \u2014 see IPM triggers below.';
+            } else {
+                confBadge.title = zoneInfo ? zoneInfo.tooltip : '';
+            }
             confBadge.style.display = '';
         }
     } else if (kpiYearHeader) {
