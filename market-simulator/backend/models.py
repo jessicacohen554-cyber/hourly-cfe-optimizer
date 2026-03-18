@@ -264,6 +264,19 @@ class SupplyStackEntry(BaseModel):
     generation_twh: float
 
 
+class ZonalLMPStats(BaseModel):
+    """Per-zone LMP statistics from zonal decomposition."""
+    model_config = ConfigDict(extra='ignore')
+
+    zone_name: str = ""
+    avg_lmp: float = 0.0
+    peak_lmp: float = 0.0
+    offpeak_lmp: float = 0.0
+    p10_lmp: float = 0.0
+    p90_lmp: float = 0.0
+    price_spread_vs_system: float = 0.0  # zone avg - system avg
+
+
 class YearResult(BaseModel):
     """Results for a single ISO × year."""
     iso: str
@@ -332,6 +345,8 @@ class SimulationResponse(BaseModel):
     emissions_by_fuel_by_year: Optional[Dict[str, Any]] = None  # {years: [...], coal_steam: [...], gas_ccgt: [...], ...}
     # Plant-level summary
     plant_level_summary: Optional[dict] = None  # {operating: int, at_risk: int, stranded: int, total: int}
+    # Zonal LMP statistics (from zonal decomposition)
+    zonal_lmp_stats: List[ZonalLMPStats] = Field(default_factory=list)
     # Economic retirement tracking
     economic_retirements_mw: Optional[Dict[str, float]] = None  # {unit_type: retired_mw}
     total_economic_retirement_mw: float = 0.0
