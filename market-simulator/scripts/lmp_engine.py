@@ -26,7 +26,7 @@ import pandas as pd
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
 
-from pipeline_config import MUST_RUN_PCT
+from pipeline_config import MUST_RUN_PCT, ORDC_PARAMS, SCARCITY_MODE
 
 from dispatch_utils import (
     H, ISOS, RESOURCE_TYPES,
@@ -591,6 +591,28 @@ class PriceModel:
         self.demand_elasticity_threshold = 200.0  # $/MWh — onset of curtailment
         self.demand_elasticity_max_curtailment = 0.12  # 12% max demand reduction
         self.demand_elasticity_damping = 0.5  # price damping factor per unit curtailment
+
+        # ORDC parameters — loaded from pipeline_config.ORDC_PARAMS
+        ordc = ORDC_PARAMS.get(iso, {'voll': 2000, 'reserve_target_mw': 2500, 'lolp_k': 0.003})
+        self.ordc_voll = ordc['voll']
+        self.ordc_reserve_target_mw = ordc['reserve_target_mw']
+        self.ordc_lolp_k = ordc['lolp_k']
+
+    def compute_ordc_adder(self, reserves_mw):
+        """ORDC price adder: VOLL × LOLP(reserves). Fully vectorized.
+
+        LOLP modeled as logistic sigmoid: LOLP = 1 / (1 + exp(k * (R - R_target))).
+        When reserves >> target: LOLP ≈ 0, adder ≈ $0.
+        When reserves << target: LOLP ≈ 1, adder ≈ VOLL.
+        Sigmoid transitions smoothly around the reserve target.
+
+        Args:
+            reserves_mw: numpy array (8760,) of hourly operating reserves in MW
+        Returns:
+            numpy array (8760,) of ORDC adders in $/MWh
+        """
+        lolp = 1.0 / (1.0 + np.exp(self.ordc_lolp_k * (reserves_mw - self.ordc_reserve_target_mw)))
+        return self.ordc_voll * lolp
 
     def price_hour(self, residual_demand_mw, demand_mw, stack, surplus_mw=0.0):
         """Compute LMP for a single hour given residual demand and merit-order stack.
@@ -1178,30 +1200,48 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
     demand_sorted = np.sort(demand_mw_profile)
     demand_rank = np.searchsorted(demand_sorted, demand_mw_profile, side='right') / H
 
-    # --- HIGH-DEMAND CONGESTION/TIGHTNESS ADDER ---
-    # Hours above dq_high_percentile get increasing adder
-    high_threshold = price_model.dq_high_percentile / 100.0
-    high_mask = demand_rank > high_threshold
-    if high_mask.any():
-        # Normalized position: 0 at threshold, 1 at rank=1.0
-        high_position = (demand_rank[high_mask] - high_threshold) / (1.0 - high_threshold)
-        high_position = np.clip(high_position, 0.0, 1.0)
-        # Exponential ramp: most adder concentrated on hottest hours
-        high_adder = price_model.dq_high_max_adder * (high_position ** price_model.dq_high_exponent)
-        hourly_lmp[high_mask] += high_adder
+    # --- SCARCITY PRICING: ORDC or DEMAND-QUANTILE ---
+    # Controlled by pipeline_config.SCARCITY_MODE:
+    #   'ordc' — Operating Reserve Demand Curve: price adder = VOLL × LOLP(reserves)
+    #            Physically responsive to generation mix (more solar → more midday
+    #            reserves → lower midday scarcity, but evening scarcity unchanged).
+    #   'demand_quantile' — Legacy: demand-percentile congestion/scarcity overlays.
+    #            Reproduces historical LMP shapes but cannot predict structural response.
+    if SCARCITY_MODE == 'ordc':
+        # Compute hourly operating reserves (MW) from fossil stack headroom
+        # reserves = total fossil capacity available - fossil demand dispatched
+        reserves_mw = np.maximum(total_fossil_cap - residual_mw, 0.0)
+        # ORDC adder: sigmoid LOLP × VOLL — near $0 when reserves ample,
+        # rises steeply as reserves fall below ISO-specific target.
+        # Single numpy vectorized sigmoid on 8760-element array (<0.1ms).
+        ordc_adder = price_model.compute_ordc_adder(reserves_mw)
+        # Only apply to hours with positive residual demand (fossil dispatching)
+        hourly_lmp[pos_mask] += ordc_adder[pos_mask]
+    else:
+        # --- HIGH-DEMAND CONGESTION/TIGHTNESS ADDER (demand-quantile mode) ---
+        # Hours above dq_high_percentile get increasing adder
+        high_threshold = price_model.dq_high_percentile / 100.0
+        high_mask = demand_rank > high_threshold
+        if high_mask.any():
+            # Normalized position: 0 at threshold, 1 at rank=1.0
+            high_position = (demand_rank[high_mask] - high_threshold) / (1.0 - high_threshold)
+            high_position = np.clip(high_position, 0.0, 1.0)
+            # Exponential ramp: most adder concentrated on hottest hours
+            high_adder = price_model.dq_high_max_adder * (high_position ** price_model.dq_high_exponent)
+            hourly_lmp[high_mask] += high_adder
 
-    # --- SCARCITY TAIL ---
-    # Extreme high-demand hours get additional scarcity-like pricing
-    # (represents penalty factor / emergency pricing / ORDC tail)
-    scarcity_threshold = price_model.dq_scarcity_percentile / 100.0
-    scarcity_mask = demand_rank > scarcity_threshold
-    if scarcity_mask.any():
-        scar_position = (demand_rank[scarcity_mask] - scarcity_threshold) / (1.0 - scarcity_threshold)
-        scar_position = np.clip(scar_position, 0.0, 1.0)
-        # Linear scarcity ramp — distributes adder evenly across tail hours
-        # This avoids extreme concentration that causes excess volatility
-        scarcity_adder = price_model.dq_scarcity_max * scar_position
-        hourly_lmp[scarcity_mask] += scarcity_adder
+        # --- SCARCITY TAIL (demand-quantile mode) ---
+        # Extreme high-demand hours get additional scarcity-like pricing
+        # (represents penalty factor / emergency pricing / ORDC tail)
+        scarcity_threshold = price_model.dq_scarcity_percentile / 100.0
+        scarcity_mask = demand_rank > scarcity_threshold
+        if scarcity_mask.any():
+            scar_position = (demand_rank[scarcity_mask] - scarcity_threshold) / (1.0 - scarcity_threshold)
+            scar_position = np.clip(scar_position, 0.0, 1.0)
+            # Linear scarcity ramp — distributes adder evenly across tail hours
+            # This avoids extreme concentration that causes excess volatility
+            scarcity_adder = price_model.dq_scarcity_max * scar_position
+            hourly_lmp[scarcity_mask] += scarcity_adder
 
     # --- VRE-SCALED NEGATIVE PRICING PARAMETERS ---
     # At higher VRE penetration, negative pricing becomes more frequent and deeper.
