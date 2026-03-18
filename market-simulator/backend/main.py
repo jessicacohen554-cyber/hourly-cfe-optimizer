@@ -46,6 +46,7 @@ from market_simulation import (
     save_results,
     load_common_data,
     load_egrid_baselines,
+    check_data_sources,
     EGRID_2023_CLEAN_PCT,
     EGRID_2023_LMP,
     GAS_FRICTION_LEVELS,
@@ -176,6 +177,7 @@ def _get_preloaded_data() -> Dict:
             "fossil_mix": fossil_mix,
             "egrid_baselines": egrid_baselines,
             "interchange_data": interchange_data,
+            "data_sources": check_data_sources(),
         }
     return _preloaded_data
 
@@ -256,6 +258,15 @@ async def serve_ipp_report_page():
     if not ipp_path.exists():
         raise HTTPException(status_code=404, detail="ipp-report.html not found")
     return FileResponse(str(ipp_path), media_type="text/html")
+
+
+@app.get("/methodology", response_class=HTMLResponse)
+async def serve_methodology_page():
+    """Serve the methodology disclosure page."""
+    meth_path = FRONTEND_DIR / "methodology.html"
+    if not meth_path.exists():
+        raise HTTPException(status_code=404, detail="methodology.html not found")
+    return FileResponse(str(meth_path), media_type="text/html")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -827,6 +838,7 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
                 IPMTrigger(**t) if isinstance(t, dict) else t
                 for t in yr.get("ipm_triggers", [])
             ],
+            data_source=yr.get("data_source", "unknown"),
         ))
 
     # Build emissions_by_fuel_by_year aggregate for trajectory chart
@@ -967,6 +979,7 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
         confidence_zones=[
             {'zone': k, **v} for k, v in CONFIDENCE_ZONES.items()
         ],
+        data_source=final.get('data_source', 'unknown'),
     )
 
 
@@ -1013,6 +1026,7 @@ async def simulate(req: SimulationRequest):
             _preloaded=preloaded,
             _lmp_cache=lmp_cache,
             _quiet=True,
+            _data_sources=preloaded.get('data_sources'),
         )
 
         iso_results = results.get(iso, [])
@@ -1225,6 +1239,7 @@ def _run_sweep_sync(job_id: str, req: SweepRequest):
                 _preloaded=preloaded,
                 _lmp_cache=lmp_cache,
                 _quiet=True,
+                _data_sources=preloaded.get('data_sources'),
             )
             all_results[scenario_id] = results
             job.completed_scenarios = i + 1
@@ -1337,6 +1352,7 @@ async def run_sensitivity(req: SensitivityRequest):
                 _preloaded=preloaded,
                 _lmp_cache=lmp_cache,
                 _quiet=True,
+                _data_sources=preloaded.get('data_sources'),
             )
 
             iso_results = sim_results.get(iso, [])
@@ -1973,6 +1989,12 @@ async def constellation_dispatch(request: Request):
 # ─────────────────────────────────────────────────────────────────────────────
 # Health check
 # ─────────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/data-status")
+async def data_status():
+    """Return data availability per ISO (parquet vs synthetic)."""
+    return check_data_sources()
+
 
 @app.get("/api/health")
 async def health_check():

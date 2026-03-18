@@ -28,6 +28,7 @@ from dispatch_utils import (
     GRID_MIX_SHARES, BASE_DEMAND_TWH,
     WHOLESALE_PRICES, FUEL_ADJUSTMENTS,
     COAL_OIL_RETIREMENT_THRESHOLD, COAL_CAP_TWH, OIL_CAP_TWH,
+    coal_fraction_at_clean_pct,
     load_common_data, get_demand_profile, get_supply_profiles,
     reconstruct_hourly_dispatch, compute_fossil_retirement,
     compute_fossil_capacity_at_threshold,
@@ -69,6 +70,32 @@ CO2_RATES = {
     'gas_ccgt': 0.37,     # ~820 lb/MWh ≈ 0.37 t/MWh
     'gas_ct': 0.55,       # ~1,210 lb/MWh ≈ 0.55 t/MWh (lower efficiency)
     'oil_ct': 0.65,       # ~1,430 lb/MWh ≈ 0.65 t/MWh
+}
+
+# ── Efficiency Bins (Rec #6: intra-fuel-class heterogeneity) ──
+# 3 efficiency bins per fuel class based on EIA-923 heat rate distributions.
+# Captures ~30% spread in coal (8.5-12.0 MMBtu/MWh) and ~25% in gas (6.2-8.5).
+# Within each class, least efficient units retire first as clean penetration rises.
+# Bins: (heat_rate, co2_rate, capacity_fraction)
+EFFICIENCY_BINS = {
+    'coal_steam': [
+        {'label': 'efficient',    'heat_rate': 8.5,  'co2_rate': 0.80, 'fraction': 0.30},
+        {'label': 'mid',          'heat_rate': 10.0, 'co2_rate': 0.95, 'fraction': 0.45},
+        {'label': 'inefficient',  'heat_rate': 12.0, 'co2_rate': 1.10, 'fraction': 0.25},
+    ],
+    'gas_ccgt': [
+        {'label': 'H-class',     'heat_rate': 6.3,  'co2_rate': 0.33, 'fraction': 0.25},
+        {'label': 'F-class',     'heat_rate': 7.0,  'co2_rate': 0.37, 'fraction': 0.50},
+        {'label': 'older',       'heat_rate': 8.0,  'co2_rate': 0.42, 'fraction': 0.25},
+    ],
+    'gas_ct': [
+        {'label': 'aero-deriv',  'heat_rate': 9.5,  'co2_rate': 0.50, 'fraction': 0.30},
+        {'label': 'frame',       'heat_rate': 10.5, 'co2_rate': 0.55, 'fraction': 0.50},
+        {'label': 'older',       'heat_rate': 12.0, 'co2_rate': 0.63, 'fraction': 0.20},
+    ],
+    'oil_ct': [
+        {'label': 'standard',    'heat_rate': 10.5, 'co2_rate': 0.65, 'fraction': 1.0},
+    ],
 }
 
 # CO2 allowance prices ($/ton) — RGGI, state programs
@@ -308,19 +335,20 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
         if share_total > 0:
             shares = {k: v / share_total for k, v in shares.items()}
 
-    # Apply retirement model (threshold-based, on top of announced retirements)
-    if clean_pct >= COAL_OIL_RETIREMENT_THRESHOLD:
-        # All remaining coal and oil retired
-        active_shares = {
-            'gas_ccgt': shares.get('gas_ccgt', 0.5),
-            'gas_ct': shares.get('gas_ct', 0.5),
-        }
-        # Renormalize
+    # Sigmoid coal/oil phase-out (replaces cliff model at 70%)
+    cf = coal_fraction_at_clean_pct(clean_pct)
+    active_shares = dict(shares)
+    if cf < 1.0:
+        # Reduce coal and oil shares by sigmoid fraction
+        for fuel_type in ['coal_steam', 'oil_ct']:
+            if fuel_type in active_shares:
+                active_shares[fuel_type] = active_shares[fuel_type] * cf
+        # Renormalize so shares sum to 1.0
         total = sum(active_shares.values())
         if total > 0:
             active_shares = {k: v / total for k, v in active_shares.items()}
-    else:
-        active_shares = dict(shares)
+        # Remove zero-share entries
+        active_shares = {k: v for k, v in active_shares.items() if v > 1e-6}
 
     # Build stack: list of (type, capacity_mw, mc)
     stack = []
