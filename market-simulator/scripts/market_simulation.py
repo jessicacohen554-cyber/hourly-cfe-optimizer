@@ -357,6 +357,33 @@ def get_effective_cumulative_gw(tech, model_deployed_gw, learning_speed, year):
 # REVENUE MODEL
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
+def _split_stack_by_zone(stack, zone_config):
+    """Split a system-level merit-order stack into per-zone stacks.
+
+    When real plant-to-zone mapping isn't available (e.g., synthetic stack
+    in sweep mode), splits each unit's capacity proportionally by zone
+    demand share. This is an approximation — real zonal stacks from
+    FleetModel.build_zonal_merit_order_stacks() are more accurate.
+
+    Args:
+        stack: list of (unit_type, cap_mw, mc) tuples
+        zone_config: dict with 'zones' and 'demand_share'
+
+    Returns:
+        dict {zone_name: [(unit_type, cap_mw, mc), ...]}
+    """
+    zone_stacks = {}
+    for zname in zone_config['zones']:
+        share = zone_config['demand_share'][zname]
+        zone_stacks[zname] = [
+            (utype, cap * share, mc)
+            for utype, cap, mc in stack
+            if cap * share > 0.1  # Skip negligible slices
+        ]
+    return zone_stacks
+
+
 def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
                               demand_mw_profile, supply_profiles, resource_pcts,
                               battery_pct=0, battery8_pct=0, ldes_pct=0, h2_pct=0,
@@ -397,10 +424,34 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
     )
 
     price_model = PriceModel(iso, fuel_level)
-    hourly_lmp, unit_idx = compute_hourly_lmp_vectorized(
-        dispatch, demand_mw_profile, stack, price_model, iso=iso,
-        vre_penetration=clean_pct / 100.0 if clean_pct is not None else None,
-    )
+    vre_pen = clean_pct / 100.0 if clean_pct is not None else None
+
+    # Try zonal LMP if zone config available
+    zonal_lmp_matrix = None
+    zonal_stats = None
+    try:
+        from pipeline_config import ZONE_CONFIG
+        if iso in ZONE_CONFIG:
+            from zonal_lmp import compute_zonal_lmp_hourly
+            zone_config = ZONE_CONFIG[iso]
+            # Split synthetic stack by zone demand share (proportional approximation)
+            zone_stacks = _split_stack_by_zone(stack, zone_config)
+            zonal_lmp_matrix, system_lmp, _, zonal_stats = compute_zonal_lmp_hourly(
+                iso=iso, zone_config=zone_config, zone_stacks=zone_stacks,
+                demand_mw_profile=demand_mw_profile,
+                price_model=price_model, vre_penetration=vre_pen,
+            )
+            hourly_lmp = system_lmp
+            unit_idx = np.full(len(hourly_lmp), -1, dtype=np.int8)
+    except Exception:
+        # Fall back to copper-plate
+        pass
+
+    if zonal_lmp_matrix is None:
+        hourly_lmp, unit_idx = compute_hourly_lmp_vectorized(
+            dispatch, demand_mw_profile, stack, price_model, iso=iso,
+            vre_penetration=vre_pen,
+        )
 
     avg_lmp = float(np.mean(hourly_lmp))
     p90_lmp = float(np.percentile(hourly_lmp, 90))
@@ -595,11 +646,16 @@ def compute_generator_economics(stack, hourly_lmp, unit_idx, dispatch,
 
 def compute_plant_level_economics(plant_stack, hourly_lmp, dispatch,
                                    demand_mw_profile, fuel_prices, carbon_price,
-                                   year=2025):
+                                   year=2025, zonal_lmp=None, plant_zones=None,
+                                   zone_names=None):
     """Compute per-plant dispatch economics using plant-level merit order.
 
     Each plant's position in the merit-order stack determines when it dispatches.
     Returns list of dicts with full per-plant economics.
+
+    If zonal_lmp is provided (n_zones × H matrix), each plant uses its
+    zone-specific LMP for revenue instead of system-average hourly_lmp.
+    plant_zones is a list of zone name strings parallel to plant_stack.
     """
     if not plant_stack:
         return []
@@ -644,9 +700,15 @@ def compute_plant_level_economics(plant_stack, hourly_lmp, dispatch,
         total_mwh = float(np.sum(mw_dispatched))
         cf = total_mwh / (cap_mw * H_val) if cap_mw > 0 else 0
 
-        # Revenue
+        # Revenue — use zonal LMP if available for this plant
+        plant_lmp = hourly_lmp  # default: system-average
+        if zonal_lmp is not None and plant_zones is not None and zone_names is not None:
+            pzone = plant_zones[i] if i < len(plant_zones) else None
+            if pzone and pzone in zone_names:
+                z_idx = zone_names.index(pzone)
+                plant_lmp = zonal_lmp[z_idx]
         if total_mwh > 0:
-            avg_rev = float(np.sum(hourly_lmp * mw_dispatched)) / total_mwh
+            avg_rev = float(np.sum(plant_lmp * mw_dispatched)) / total_mwh
         else:
             avg_rev = 0.0
 
@@ -707,6 +769,7 @@ def compute_plant_level_economics(plant_stack, hourly_lmp, dispatch,
             'total_cost_million': round(total_cost_mwh * total_mwh / 1e6, 2),
             'total_profit_million': round(profit_mwh * total_mwh / 1e6, 2),
             'status': status,
+            'zone': plant_zones[i] if plant_zones and i < len(plant_zones) else None,
         })
 
     return results
