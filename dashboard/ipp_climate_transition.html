@@ -26,29 +26,45 @@
 
     <div class="header" id="pageHeader">
         <h1>IPP Climate Transition Analysis</h1>
-        <div class="subtitle">Fleet risk, decarbonization pathways, and strategic positioning under uncertainty</div>
+        <div class="subtitle">Which generators decarbonize, which get stranded, and what corporate buyers can do about it.</div>
         <div class="header-accent"></div>
     </div>
 
     <!-- Hero Section -->
     <div class="hub-hero">
         <div class="hub-hero-inner">
-            <h2>7 Independent Power Producers. 540 Scenarios. One Question.</h2>
-            <p>How does each fleet navigate the energy transition, and where should they invest to remain competitive under any climate outcome? Now modeled with announced coal retirements, IRA policy overlay, regulatory feedback, and transmission constraints.</p>
+            <h2>7 Independent Power Producers. 540 Scenarios. The demand signal determines the outcome.</h2>
+            <p>At high PPA market depth, aggregate IPP emissions fall to 23.8 Mt CO₂ by 2040&mdash;a 3.4x reduction from the 80.6 Mt baseline under low demand. The gap between these outcomes is not technology or regulation. It is corporate procurement volume.</p>
             <div class="hub-hero-stats">
                 <div class="hub-hero-stat">
-                    <div class="val" id="heroCapacity"> - </div>
+                    <div class="val" id="heroCapacity">~786</div>
                     <div class="lbl">TWh Annual Generation</div>
                 </div>
                 <div class="hub-hero-stat">
-                    <div class="val" id="heroEmissions"> - </div>
+                    <div class="val" id="heroEmissions">~226</div>
                     <div class="lbl">Mt CO₂ Emissions</div>
                 </div>
                 <div class="hub-hero-stat">
-                    <div class="val" id="heroScenarios"> - </div>
+                    <div class="val" id="heroScenarios">540</div>
                     <div class="lbl">Scenarios Modeled</div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Executive Summary -->
+    <div class="content-section">
+        <div class="insight-box">
+            <h4 style="margin-bottom: var(--space-sm); font-family: var(--font-heading); color: var(--navy)">Executive Summary</h4>
+            <p style="margin-bottom: var(--space-md)">These seven companies&mdash;Vistra, Constellation, NRG, NextEra, Talen, PSEG, and AES&mdash;generate 786 TWh annually and emit 226 Mt CO&#8322;, roughly 12% of total US power sector emissions. Across 540 scenarios varying grid cost assumptions, policy conditions, and PPA market depth, the single largest determinant of fleet-level decarbonization is corporate procurement volume.</p>
+
+            <p style="margin-bottom: var(--space-md)">At the P50 estimate under low PPA depth, aggregate 2040 emissions reach 80.6 Mt CO&#8322;. Under high PPA depth, the same fleets reach 23.8 Mt&mdash;a 3.4x differential driven entirely by demand-side signals. High PPA depth sustains nuclear economics (preserving Constellation&rsquo;s 35 GW fleet and Talen&rsquo;s Susquehanna units), accelerates firm clean buildout in gas-heavy regions, and pulls forward renewable deployment by 5&ndash;8 years.</p>
+
+            <p style="margin-bottom: var(--space-md)">Fleet composition dictates decarbonization cost. Constellation&rsquo;s nuclear-dominated portfolio (300 TWh, 83% clean) faces the lowest marginal abatement cost&mdash;its fleet is already largely decarbonized. Vistra (154 TWh, 68 Mt) and NRG (80 TWh, 42 Mt) carry coal and gas exposure across ERCOT, PJM, and MISO, placing them at the high end of abatement cost curves. NextEra&rsquo;s renewable-heavy fleet (100 TWh, 18 Mt) sits between these extremes, with residual gas in MISO and SPP.</p>
+
+            <p style="margin-bottom: var(--space-md)">ISO geography compounds the cost differences. Companies operating in coal-heavy ISOs (MISO, SPP) face lower marginal abatement costs because coal-to-clean switching is cheaper per ton than gas-to-clean. PSEG, concentrated in PJM and NEISO where gas dominates, faces higher per-ton costs despite its smaller absolute emissions (1 Mt).</p>
+
+            <p>The fleet-level view shows where gas development concentrates&mdash;and which procurement strategies prevent it. The mechanism connecting procurement depth to fleet outcomes is explored in detail on the <a href="gas_lockin_buyer_influence.html" style="color: var(--link)">gas lock-in and buyer influence page</a>. Corporate PPAs provide revenue certainty that underwrites new clean capacity, which displaces fossil generation on the margin. Without that demand signal, gas assets run longer, nuclear units face retirement risk, and the transition stalls at 50&ndash;60% clean.</p>
         </div>
     </div>
 
@@ -82,6 +98,10 @@
     </div>
 
     <div class="content-section">
+        <p style="font-size: 0.95rem; color: var(--text-secondary); margin-bottom: var(--space-lg); line-height: 1.7">
+            Fleet-weighted MAC varies by more than 2x across these companies, driven primarily by ISO footprint and fuel mix. Coal-heavy fleets operating in MISO and SPP face lower per-ton abatement costs: replacing coal with renewables abates more CO&#8322; per MWh switched than replacing gas. PSEG&rsquo;s concentration in NEISO&mdash;where winter gas pipeline constraints add $13/MWh to CCS costs&mdash;pushes its per-ton MAC higher despite having the smallest absolute emissions of any company modeled. Vistra and NRG carry the highest total abatement costs because they combine large fossil portfolios with exposure to multiple high-cost ISOs.
+        </p>
+
         <div class="card scroll-reveal" style="padding: var(--space-xl); margin-bottom: var(--space-xl)">
             <h3 style="font-size: 1.1rem; color: var(--navy); margin-bottom: var(--space-md)">Weighted Average MAC by Fleet ($/tCO₂)</h3>
             <div class="chart-container-lg"><canvas id="macComparisonChart"></canvas></div>
@@ -119,17 +139,26 @@
 
     <div class="content-section">
         <div class="card scroll-reveal" style="padding: var(--space-xl); margin-bottom: var(--space-xl)">
-            <h3 style="font-size: 1.1rem; color: var(--navy); margin-bottom: var(--space-md)">Emissions Trajectories - All Companies (P50 with P10/P90 Bands)</h3>
+            <h3 style="font-size: 1.1rem; color: var(--navy); margin-bottom: var(--space-sm)">Emissions Trajectories - All Companies (P50 with P10/P90 Bands)</h3>
+            <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: var(--space-md)">
+                Constellation and NextEra converge toward near-zero emissions by 2040 under most scenarios&mdash;their clean-heavy fleets require minimal incremental abatement. Vistra and NRG show the widest P10/P90 bands, reflecting scenario sensitivity in coal-retirement timing and gas displacement rates across ERCOT and PJM. Under high PPA depth, all seven companies converge below 10 Mt by 2045.
+            </p>
             <div class="chart-container-lg"><canvas id="emissionsComparisonChart"></canvas></div>
         </div>
 
         <div class="grid-2col scroll-reveal" style="margin-bottom: var(--space-xl)">
             <div class="card" style="padding: var(--space-lg)">
-                <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">2050 Fleet Profit Margin Growth vs 2023</h3>
+                <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-xs)">2050 Fleet Profit Margin Growth vs 2023</h3>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: var(--space-sm)">
+                    Companies with existing clean capacity&mdash;Constellation (nuclear), NextEra (wind/solar)&mdash;gain the most from transition scenarios where carbon costs rise and clean generation earns premium pricing. Gas-heavy fleets face margin compression as carbon exposure increases operating costs faster than revenue grows.
+                </p>
                 <div class="chart-container-lg"><canvas id="profitResilienceChart"></canvas></div>
             </div>
             <div class="card" style="padding: var(--space-lg)">
-                <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-sm)">Fleet Composition Comparison</h3>
+                <h3 style="font-size: 0.95rem; color: var(--navy); margin-bottom: var(--space-xs)">Fleet Composition Comparison</h3>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: var(--space-sm)">
+                    Current fleet mix determines starting position. Constellation&rsquo;s 83% nuclear share provides a structural advantage that no amount of capital deployment can replicate on a 10-year horizon. Vistra and AES carry the most diverse fossil exposure&mdash;coal, gas, and oil&mdash;creating multiple simultaneous retirement pathways and the highest capital requirements for full decarbonization.
+                </p>
                 <div class="chart-container-lg"><canvas id="fleetCompositionChart"></canvas></div>
             </div>
         </div>
@@ -145,7 +174,7 @@
         <div class="card scroll-reveal" style="padding: var(--space-xl)">
             <h3 style="font-size: 1.1rem; color: var(--navy); margin-bottom: var(--space-md)">Qualified Emission Reduction Targets</h3>
             <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: var(--space-md)">
-                Based on P50 market-driven trajectory. 1.5°C gap shows remaining abatement requiring enabling policy conditions.
+                P50 values represent the median outcome across 540 scenarios&mdash;the emission reduction each company achieves under current market conditions and announced policies, without assuming additional regulatory intervention. The 1.5&deg;C gap shows the remaining abatement that would require enabling conditions&mdash;carbon pricing, accelerated coal retirement mandates, or expanded clean energy standards&mdash;to close. Companies with larger gaps are more dependent on policy action to align with Paris Agreement commitments; companies with smaller gaps can reach their targets through market forces alone.
             </p>
             <div id="targetsSummaryTable"></div>
         </div>

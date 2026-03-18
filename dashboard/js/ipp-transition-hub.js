@@ -157,7 +157,7 @@
 
         document.getElementById('heroCapacity').textContent = fmt(totalGen, 0);
         document.getElementById('heroEmissions').textContent = fmt(totalCO2, 0);
-        document.getElementById('heroScenarios').textContent = '270';
+        document.getElementById('heroScenarios').textContent = '540';
     }
 
     // ─── Company Cards ───────────────────────────────────────
