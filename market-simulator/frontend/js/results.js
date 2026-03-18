@@ -172,6 +172,35 @@ function renderAll() {
     document.getElementById('resultsSubtitle').textContent =
         `${iso} — Market Trajectory Simulation`;
 
+    // ── Synthetic data warning banner ──
+    const warningBanner = document.getElementById('syntheticWarningBanner');
+    if (warningBanner) {
+        const dataSource = data.data_source || 'unknown';
+        if (dataSource === 'synthetic') {
+            warningBanner.innerHTML = `
+                <div class="story-callout orange" style="margin-bottom: var(--space-lg, 1.5rem);">
+                    <strong>⚠ ILLUSTRATIVE ONLY</strong> — Running with synthetic resource mix profiles
+                    (calibrated physics data not available). Results show directional patterns only.
+                    For production-quality results, run the full optimization pipeline (Steps 1–2).
+                </div>`;
+        } else {
+            warningBanner.innerHTML = '';
+        }
+    }
+
+    // ── Data source badge next to ISO header ──
+    const dataSourceBadge = document.getElementById('dataSourceBadge');
+    if (dataSourceBadge) {
+        const dataSource = data.data_source || 'unknown';
+        if (dataSource === 'parquet') {
+            dataSourceBadge.innerHTML = '<span class="badge badge-green" style="font-size:0.75rem;">Physics Data</span>';
+        } else if (dataSource === 'synthetic') {
+            dataSourceBadge.innerHTML = '<span class="badge badge-orange" style="font-size:0.75rem;">Synthetic: Illustrative Only</span>';
+        } else {
+            dataSourceBadge.innerHTML = '';
+        }
+    }
+
     // Year header above KPI cards
     const kpiYearHeader = document.getElementById('kpiYearHeader');
     const confBadge = document.getElementById('kpiConfidenceBadge');
