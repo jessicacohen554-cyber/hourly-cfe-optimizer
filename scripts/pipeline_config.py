@@ -588,11 +588,18 @@ RESOURCE_CAPACITY_FACTORS = {
 # EMISSION RATES & CO2 MODEL
 # ============================================================================
 
-# CCS residual emission rate (tCO2/MWh) — 90% capture rate
-CCS_RESIDUAL_EMISSION_RATE = 0.037
+# CCS capture rate sensitivity (fraction of CO2 captured)
+# Default 90%; sensitivity analysis uses 85%/90%/95%
+CCS_CAPTURE_RATES = {'Low': 0.85, 'Medium': 0.90, 'High': 0.95}
+CCS_UNABATED_GAS_RATE = 0.37  # tCO2/MWh for unabated CCGT (eGRID fleet avg)
+CCS_RESIDUAL_EMISSION_RATE = CCS_UNABATED_GAS_RATE * (1 - CCS_CAPTURE_RATES['Medium'])  # 0.037
 
-# Coal/oil retirement threshold (% clean energy)
-# Above this threshold, coal and oil are fully retired from the fossil fleet
+# Coal/oil retirement model parameters
+# Sigmoid phase-out: coal fraction ramps from 100% at COAL_PHASE_OUT_START to 0% at COAL_PHASE_OUT_END
+# Replaces the previous cliff model (instant retirement at a single threshold)
+COAL_PHASE_OUT_START = 50.0   # % clean: coal begins declining
+COAL_PHASE_OUT_END = 85.0     # % clean: coal fully retired
+# Legacy threshold kept for backward compatibility (midpoint of sigmoid)
 COAL_OIL_RETIREMENT_THRESHOLD = 70.0
 
 # Announced coal retirement schedule (cumulative GW retired by year)
