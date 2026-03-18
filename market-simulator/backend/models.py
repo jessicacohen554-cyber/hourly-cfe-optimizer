@@ -346,6 +346,8 @@ class YearResult(BaseModel):
     total_economic_retirement_mw: float = 0.0
     # IPM trigger indicators
     ipm_triggers: List[IPMTrigger] = Field(default_factory=list)
+    # Data source tracking (parquet = physics data, synthetic = illustrative only)
+    data_source: str = 'unknown'
     # New: detailed data for results page
     fuel_bin_table: List[FuelBinRow] = Field(default_factory=list)
     supply_stack: List[SupplyStackEntry] = Field(default_factory=list)
@@ -399,6 +401,8 @@ class SimulationResponse(BaseModel):
     narrative: Optional[str] = None
     # Confidence zone metadata for trajectory visualization
     confidence_zones: Optional[List[dict]] = None
+    # Data source tracking (parquet = physics data, synthetic = illustrative only)
+    data_source: str = 'unknown'
 
 
 class SweepJob(BaseModel):
