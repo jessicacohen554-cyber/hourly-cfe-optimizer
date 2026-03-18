@@ -56,8 +56,9 @@ MEDIUM_KEYS_SET = frozenset({
     'MMM_M_M_M1_M', 'MMM_M_M_M1_X', 'MMM_M_M',
 })
 
-# (Wholesale prices removed — no longer used in MAC calculation.
-#  MAC uses pure LCOE of new-build resources / CO₂ displaced.)
+# Wholesale prices for net MAC calculation (gross MAC retained as primary metric;
+# net MAC = (LCOE - wholesale revenue) / CO₂ displaced, per Gillingham & Stock 2018)
+from pipeline_config import WHOLESALE_PRICES
 
 # ── Dispatch-model-based CO₂ baseline ──
 # Import canonical grid mix shares and fossil caps from dispatch_utils (required).
@@ -65,6 +66,7 @@ MEDIUM_KEYS_SET = frozenset({
 from dispatch_utils import (
     GRID_MIX_SHARES, BASE_DEMAND_TWH, COAL_CAP_TWH, OIL_CAP_TWH,
     COAL_OIL_RETIREMENT_THRESHOLD,
+    coal_fraction_at_clean_pct,
 )
 
 # Load emission rates for CO₂ computation
@@ -91,7 +93,7 @@ def compute_total_fossil_emissions_mt(iso, clean_pct, demand_twh=None):
     """Compute total fossil CO₂ emissions (Mt) at a given clean energy level.
 
     Uses merit-order dispatch: coal remains first, then oil, then gas.
-    As clean_pct increases, fossil shrinks and coal/oil retire at 70% threshold.
+    Sigmoid coal/oil phase-out from 50% to 85% clean (replaces 70% cliff).
 
     Returns emissions in Mt (= TWh × tCO₂/MWh, since 1 TWh = 1e6 MWh).
     """
@@ -107,17 +109,17 @@ def compute_total_fossil_emissions_mt(iso, clean_pct, demand_twh=None):
     oil_cap = OIL_CAP_TWH.get(iso, 0)
     rates = FUEL_RATES.get(iso, {'coal': 0, 'oil': 0, 'gas': 0})
 
-    if clean_pct >= COAL_OIL_RETIREMENT_THRESHOLD:
-        # All coal and oil retired — only gas remains
-        return fossil_twh * rates['gas']
-    else:
-        # Fossil fleet: coal fills first, then oil, then gas
-        coal_twh = min(coal_cap, fossil_twh)
-        remaining = fossil_twh - coal_twh
-        oil_twh = min(oil_cap, remaining)
-        gas_twh = max(0, remaining - oil_twh)
-        return (coal_twh * rates['coal'] + oil_twh * rates['oil']
-                + gas_twh * rates['gas'])
+    # Sigmoid coal/oil phase-out
+    cf = coal_fraction_at_clean_pct(clean_pct)
+    effective_coal_cap = coal_cap * cf
+    effective_oil_cap = oil_cap * cf
+
+    coal_twh = min(effective_coal_cap, fossil_twh)
+    remaining = fossil_twh - coal_twh
+    oil_twh = min(effective_oil_cap, remaining)
+    gas_twh = max(0, remaining - oil_twh)
+    return (coal_twh * rates['coal'] + oil_twh * rates['oil']
+            + gas_twh * rates['gas'])
 
 
 # Precompute baseline emissions (existing clean only at 2025 demand) per ISO
@@ -225,13 +227,32 @@ def add_mac_column(df):
     co2_reduced_mt = (baseline_mt - scenario_mt).clip(lower=0)
     co2_reduced_tons = co2_reduced_mt * 1e6  # Mt → tons
 
-    # ── 4. MAC = new_resource_cost × demand_mwh / co2_reduced_tons ──
+    # ── 4. Gross MAC = new_resource_cost × demand_mwh / co2_reduced_tons ──
     valid = (co2_reduced_tons > 0) & new_cost.notna() & (new_cost > 0)
     df['mac'] = np.where(
         valid,
         (new_cost * df['annual_demand_mwh']) / co2_reduced_tons,
         np.nan,
     )
+
+    # ── 5. Net MAC = (LCOE - wholesale revenue) × demand / CO₂ (Gillingham & Stock 2018) ──
+    # Net MAC is the economically relevant metric: subtracts private benefit (electricity
+    # value) to isolate the externality correction cost. At PJM wholesale $34/MWh and
+    # solar LCOE $35/MWh, gross MAC ~ $95/tCO₂ but net MAC ~ $3/tCO₂.
+    wholesale = df['iso'].map(WHOLESALE_PRICES).fillna(0)
+    net_cost = (new_cost - wholesale).clip(lower=0)
+    df['mac_net'] = np.where(
+        valid,
+        (net_cost * df['annual_demand_mwh']) / co2_reduced_tons,
+        np.nan,
+    )
+    # Also store the wholesale offset for transparency
+    df['mac_wholesale_offset'] = np.where(
+        valid,
+        (wholesale * df['annual_demand_mwh']) / co2_reduced_tons,
+        np.nan,
+    )
+
     return df
 
 
