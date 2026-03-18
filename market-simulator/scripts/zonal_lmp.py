@@ -18,8 +18,10 @@ Dual prices on balance constraints = zonal LMPs.
 Uses scipy.optimize.linprog with HiGHS solver (~0.5ms per 5-zone problem).
 """
 
+import os
 import numpy as np
 from scipy.optimize import linprog
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 
 def _build_lp_structure(zone_stacks, zone_names, interfaces, transfer_limits):
@@ -173,21 +175,83 @@ def _approximate_zonal_lmp(lp_struct, x, zone_demand_mw):
     """Approximate zonal LMP when dual prices unavailable.
 
     Uses the marginal cost of the most expensive dispatched unit in each zone.
+    Vectorized per-zone: boolean mask + np.max instead of inner Python loop.
     """
     n_zones = lp_struct['n_zones']
     zonal_lmp = np.zeros(n_zones)
     units = lp_struct['units']
+    # Pre-extract marginal costs as array for vectorized masking
+    mc_arr = np.array([u[3] for u in units])
 
     for z_idx in range(n_zones):
         start, end = lp_struct['zone_unit_ranges'].get(z_idx, (0, 0))
-        max_mc = 0.0
-        for i in range(start, end):
-            if x[i] > 0.1:  # Unit is dispatched (>0.1 MW threshold)
-                _, _, _, mc = units[i]
-                max_mc = max(max_mc, mc)
-        zonal_lmp[z_idx] = max_mc
+        if start >= end:
+            continue
+        zone_x = x[start:end]
+        zone_mc = mc_arr[start:end]
+        dispatched_mask = zone_x > 0.1
+        if np.any(dispatched_mask):
+            zonal_lmp[z_idx] = np.max(zone_mc[dispatched_mask])
 
     return zonal_lmp
+
+
+def _solve_hour_batch(lp_c, lp_A_eq, lp_bounds, lp_units_arr, n_zones,
+                      n_units, n_interfaces, zone_demand_batch, hour_indices):
+    """Solve zonal LP for a batch of hours. Top-level function for ProcessPoolExecutor.
+
+    Args:
+        lp_c, lp_A_eq, lp_bounds: LP structure components (pickle-friendly)
+        lp_units_arr: numpy array of (zone_idx, mc) per unit for gen extraction
+        n_zones, n_units, n_interfaces: LP dimensions
+        zone_demand_batch: np.array (n_zones, n_hours_batch) demand per zone
+        hour_indices: np.array of hour indices in the batch
+
+    Returns:
+        (lmp_batch, flows_batch, infeasible_count) — arrays for this batch
+    """
+    n_batch = len(hour_indices)
+    lmp_batch = np.zeros((n_zones, n_batch))
+    flows_batch = np.zeros((n_interfaces, n_batch))
+    infeasible = 0
+
+    for local_h in range(n_batch):
+        b_eq = zone_demand_batch[:, local_h].copy()
+
+        result = linprog(
+            c=lp_c, A_eq=lp_A_eq, b_eq=b_eq, bounds=lp_bounds,
+            method='highs', options={'presolve': True, 'time_limit': 0.1},
+        )
+
+        if not result.success:
+            infeasible += 1
+            lmp_batch[:, local_h] = 500.0  # Scarcity cap
+            continue
+
+        x = result.x
+
+        # Extract net flows
+        for iface_idx in range(n_interfaces):
+            fpos = x[n_units + 2 * iface_idx]
+            fneg = x[n_units + 2 * iface_idx + 1]
+            flows_batch[iface_idx, local_h] = fpos - fneg
+
+        # Zonal LMPs from dual prices
+        if hasattr(result, 'eqlin') and result.eqlin is not None:
+            lmp_batch[:, local_h] = result.eqlin.marginals
+        else:
+            # Fallback: marginal cost of most expensive dispatched unit per zone
+            for z_idx in range(n_zones):
+                z_start, z_end = int(lp_units_arr[z_idx, 0]), int(lp_units_arr[z_idx, 1])
+                if z_start >= z_end:
+                    continue
+                zone_x = x[z_start:z_end]
+                zone_mc = lp_units_arr[z_idx, 2:2 + (z_end - z_start)]
+                mask = zone_x > 0.1
+                if np.any(mask):
+                    lmp_batch[z_idx, local_h] = np.max(zone_mc[mask])
+
+    return lmp_batch, flows_batch, infeasible
 
 
 def compute_zonal_lmp_hourly(iso, zone_config, zone_stacks, demand_mw_profile,
@@ -238,30 +302,84 @@ def compute_zonal_lmp_hourly(iso, zone_config, zone_stacks, demand_mw_profile,
                 # Floor at zero — excess clean supply = curtailment
                 zone_demand_all[z_idx] = np.maximum(zone_demand_all[z_idx], 0.0)
 
-    # Solve LP for each hour
+    # Solve LP for each hour — parallel batches when beneficial
     zonal_lmp_matrix = np.zeros((n_zones, H))
     flows_matrix = np.zeros((n_interfaces, H))
     infeasible_hours = 0
 
-    for h in range(H):
-        zone_demand_h = zone_demand_all[:, h]
+    # Pre-filter: identify hours that actually need LP solving
+    demand_sums = zone_demand_all.sum(axis=0)
+    active_hours = np.where(demand_sums >= 1.0)[0]
+    # Hours with ~zero demand get LMP=0 (already initialized to zero)
 
-        # Skip LP if total demand is ~zero (all clean)
-        if zone_demand_h.sum() < 1.0:
-            # All clean — LMP near zero/negative
-            zonal_lmp_matrix[:, h] = 0.0
-            continue
+    use_parallel = (
+        len(active_hours) >= 1000
+        and os.environ.get('DISABLE_PARALLEL_LP', '0') != '1'
+    )
 
-        zonal_lmp, zonal_gen, flows, success = solve_zonal_dispatch_hour(
-            lp_struct, zone_demand_h)
+    if use_parallel:
+        # Parallel batch LP solving via ProcessPoolExecutor
+        # Prepare pickle-friendly LP data (no dicts-of-tuples)
+        lp_c = lp_struct['c']
+        lp_A_eq = lp_struct['A_eq']
+        lp_bounds = lp_struct['bounds']
 
-        if success:
-            zonal_lmp_matrix[:, h] = zonal_lmp
-            flows_matrix[:, h] = flows
-        else:
-            infeasible_hours += 1
-            # Infeasible: set scarcity price
-            zonal_lmp_matrix[:, h] = 500.0  # Scarcity cap
+        # Build zone_unit_ranges as a simple array for the batch solver
+        # We pass the approximate_zonal_lmp data inline since it's a rare fallback
+        max_units_per_zone = max(
+            (end - start) for start, end in lp_struct['zone_unit_ranges'].values()
+        ) if lp_struct['zone_unit_ranges'] else 0
+        # Pack zone ranges + marginal costs into a 2D array
+        units_info = np.zeros((n_zones, 2 + max_units_per_zone))
+        mc_arr = np.array([u[3] for u in lp_struct['units']])
+        for z_idx in range(n_zones):
+            start, end = lp_struct['zone_unit_ranges'].get(z_idx, (0, 0))
+            units_info[z_idx, 0] = start
+            units_info[z_idx, 1] = end
+            if end > start:
+                units_info[z_idx, 2:2 + (end - start)] = mc_arr[start:end]
+
+        n_units_lp = lp_struct['n_units']
+        chunk_size = 500
+        n_active = len(active_hours)
+        chunks = [
+            active_hours[i:i + chunk_size]
+            for i in range(0, n_active, chunk_size)
+        ]
+
+        max_workers = min(os.cpu_count() or 4, 8, len(chunks))
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+            futures = {}
+            for chunk_hrs in chunks:
+                demand_batch = np.ascontiguousarray(zone_demand_all[:, chunk_hrs])
+                fut = executor.submit(
+                    _solve_hour_batch,
+                    lp_c, lp_A_eq, lp_bounds, units_info,
+                    n_zones, n_units_lp, n_interfaces,
+                    demand_batch, chunk_hrs,
+                )
+                futures[fut] = chunk_hrs
+
+            for fut in as_completed(futures):
+                chunk_hrs = futures[fut]
+                lmp_batch, flows_batch, infeas = fut.result()
+                zonal_lmp_matrix[:, chunk_hrs] = lmp_batch
+                flows_matrix[:, chunk_hrs] = flows_batch
+                infeasible_hours += infeas
+    else:
+        # Sequential fallback (small problem or parallel disabled)
+        for h in active_hours:
+            zone_demand_h = zone_demand_all[:, h]
+
+            zonal_lmp, zonal_gen, flows, success = solve_zonal_dispatch_hour(
+                lp_struct, zone_demand_h)
+
+            if success:
+                zonal_lmp_matrix[:, h] = zonal_lmp
+                flows_matrix[:, h] = flows
+            else:
+                infeasible_hours += 1
+                zonal_lmp_matrix[:, h] = 500.0  # Scarcity cap
 
     # Apply post-LP pricing adjustments if price_model provided
     if price_model is not None:
