@@ -235,9 +235,12 @@ def compute_marginal_costs(fuel_level='Medium', co2_level='Medium',
     adder_rate = COST_BASED_ADDERS.get(iso, TEN_PERCENT_ADDER) if iso else TEN_PERCENT_ADDER
     adder = 1.0 + adder_rate
 
+    FUEL_KEY_MAP = {'coal_steam': 'coal', 'gas_ccgt': 'gas', 'gas_ct': 'gas', 'oil_ct': 'oil'}
     costs = {}
     for unit_type in hr:
-        fuel_key = {'coal_steam': 'coal', 'gas_ccgt': 'gas', 'gas_ct': 'gas', 'oil_ct': 'oil'}[unit_type]
+        if unit_type not in FUEL_KEY_MAP:
+            continue  # Skip non-fleet keys (e.g. new_gas_ccgt, new_gas_ct, new_coal)
+        fuel_key = FUEL_KEY_MAP[unit_type]
         # Base: fuel + VOM + CO2
         base_cost = (hr[unit_type] * fp[fuel_key] + vm[unit_type]
                      + CO2_RATES[unit_type] * co2_price)
