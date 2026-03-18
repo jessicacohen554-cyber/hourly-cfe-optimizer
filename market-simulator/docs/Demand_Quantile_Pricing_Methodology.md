@@ -250,11 +250,15 @@ pct_scale = 1.0 + 1.0 × vre_excess       # Widens negative-price band
 
 2. **No cross-hour coupling**: Each hour priced independently. Real markets have start-up costs, minimum run times, and ramp constraints that create temporal price linkages.
 
-3. **No locational variation**: Single-bus model produces system-average LMP. Real ISOs have substantial zonal/nodal variation (PJM: $10-20/MWh spread, NYISO: $30+ between upstate and NYC).
+3. **Simplified locational variation** (**Addressed v12.0**): A pipe-and-bubble zonal decomposition (2–5 zones per ISO) has been added to capture intra-ISO congestion. When EIA-860 fleet data is available, plants are assigned to zones via BA-to-zone mapping or lat/lon bounding boxes. An LP solver (scipy linprog) clears a zonal market each hour with inter-zonal transfer limits, producing zonal LMPs from dual prices. This captures 60–80% of congestion effects but remains simpler than full nodal pricing. Without fleet data, falls back to single-bus (copper-plate) as before.
 
 4. **Static calibration baseline**: Parameters calibrated to 2024 market structure. Structural changes (coal retirements, gas plant additions, storage deployment) may shift price formation beyond what VRE scaling captures.
 
-5. **Simplified demand elasticity** (**Addressed v11.3**): Post-pricing dampening applied when LMP exceeds ISO-specific threshold ($200-300/MWh). Logarithmic curtailment ramp (5-15% max, ISO-specific) moderates extreme prices. This is a reduced-form approximation — real demand response involves complex contract structures, notification delays, and minimum curtailment durations not captured here.
+5. **Simplified demand elasticity** (**Addressed v11.3 + v12.0**): Two complementary mechanisms:
+   - **Post-pricing dampening (v11.3)**: Logarithmic curtailment when LMP > $200–300/MWh threshold. 5–15% max curtailment, ISO-specific.
+   - **Explicit demand response (v12.0)**: Price-elastic load curtailment with ISO-specific trigger prices and registered DR capacity from FERC Form 714 / ISO registrations. PJM: 10 GW @ $100/MWh, ERCOT: 5 GW @ $200/MWh, MISO: 8 GW @ $120/MWh. Linear ramp from 0% at trigger to 100% at 2× trigger, capped at 15% of hourly demand. Off/Low/Medium/High toggle on Setup page. This is still a reduced-form approximation — real DR involves contract structures, notification delays, and minimum curtailment durations not captured here.
+
+6. **No inter-regional price coupling**: Each ISO's demand-quantile pricing is calibrated independently. In reality, cross-border flows create price convergence between adjacent ISOs (MISO-PJM interface, CAISO-EIM, etc.). The model now includes exogenous import/export profiles from EIA-930 (toggled On/Off), which adjust residual demand before pricing, but these flows are not price-responsive — they follow historical patterns rather than arbitraging price differences.
 
 ---
 
