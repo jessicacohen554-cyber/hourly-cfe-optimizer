@@ -33,6 +33,31 @@ MODEL_TYPE = "snapshot"  # 2025 snapshot model (no forward projections in Track 
 CANNIBALIZATION_ENABLED = True  # Per-resource temporal energy revenue in deployment
 
 # ============================================================================
+# SCARCITY PRICING MODE
+# ============================================================================
+# 'ordc' — Operating Reserve Demand Curve: price = marginal_cost + VOLL × LOLP(reserves)
+#   Physically responsive to generation mix changes (adding solar reduces midday scarcity).
+# 'demand_quantile' — Legacy: demand-percentile-based congestion/scarcity overlays
+#   calibrated against historical ISO price distributions. Cannot respond to mix changes.
+SCARCITY_MODE = 'ordc'
+
+# ORDC parameters per ISO
+# voll: Value of Lost Load ($/MWh) — from ISO tariffs / FERC filings
+# reserve_target_mw: Target operating reserve level (MW) from NERC/ISO standards
+# lolp_k: Steepness of LOLP sigmoid — controls how sharply price rises as reserves fall
+# Sources: ERCOT PUCT Docket 52373, PJM RPM penalty factor (1/3 × $11,100),
+#          CAISO/NYISO/NEISO from FERC filings and regional reliability standards.
+ORDC_PARAMS = {
+    'ERCOT': {'voll': 5000, 'reserve_target_mw': 3000, 'lolp_k': 0.003},
+    'PJM':   {'voll': 3700, 'reserve_target_mw': 5500, 'lolp_k': 0.002},
+    'CAISO': {'voll': 2000, 'reserve_target_mw': 3000, 'lolp_k': 0.003},
+    'NYISO': {'voll': 2500, 'reserve_target_mw': 2000, 'lolp_k': 0.003},
+    'NEISO': {'voll': 2000, 'reserve_target_mw': 1500, 'lolp_k': 0.003},
+    'MISO':  {'voll': 3500, 'reserve_target_mw': 4000, 'lolp_k': 0.002},
+    'SPP':   {'voll': 2000, 'reserve_target_mw': 2500, 'lolp_k': 0.003},
+}
+
+# ============================================================================
 # REGIONS
 # ============================================================================
 
