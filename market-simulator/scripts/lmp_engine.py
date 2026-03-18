@@ -285,7 +285,8 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
                              nox_price=0.0, sox_price=0.0,
                              nox_limit=None, sox_limit=None,
                              custom_fuel_prices=None, custom_co2_price=None,
-                             custom_heat_rates=None, custom_vom=None):
+                             custom_heat_rates=None, custom_vom=None,
+                             firm_import_mw=0):
     """Build merit-order stack: list of (unit_type, capacity_mw, marginal_cost).
 
     Ordered by marginal cost (cheapest first). Stack composition reflects
@@ -352,7 +353,8 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
                 clean_peak_mw = (clean_pct / 100.0) * avg_demand_mw * blended_credit
 
             # Residual peak demand that fossil must serve
-            residual_peak_mw = max(0, ra_peak_mw - clean_peak_mw)
+            # Firm imports reduce the peak that local fossil must cover
+            residual_peak_mw = max(0, ra_peak_mw - clean_peak_mw - firm_import_mw)
 
             # GAF deration: not all gas is available at peak (forced outages,
             # weather correlation). Need more nameplate MW to deliver firm capacity.
