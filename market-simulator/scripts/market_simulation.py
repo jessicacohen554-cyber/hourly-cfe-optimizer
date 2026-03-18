@@ -1467,6 +1467,176 @@ RESOURCE_CAP_TWH = {
 }
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# IPM TRIGGER INDICATORS
+# ═══════════════════════════════════════════════════════════════════════════════
+# Flags when simulation results cross thresholds where the screening model's
+# approximations break down, recommending production-model validation.
+
+# Nuclear retirement threshold used by trigger check ($/MWh).
+_NUCLEAR_RETIREMENT_THRESHOLD_DEFAULT = 30.0
+
+# VRE resources to sum for penetration check
+_VRE_RESOURCES = {'solar', 'wind', 'offshore_wind'}
+
+# Storage resources to sum for dominance check
+_STORAGE_RESOURCES = {'battery_4hr', 'battery_8hr', 'ldes', 'green_h2'}
+
+# Peak-to-average demand ratio (proxy for reserve-margin calc)
+_PEAK_TO_AVG_RATIO = 1.5
+
+
+def compute_ipm_triggers(iso, year, year_result, gen_econ, state, conditions,
+                         nuclear_retirement_threshold=None):
+    """Evaluate IPM trigger conditions for this year's results.
+
+    Pure threshold checks — negligible overhead (<0.01ms per ISO-year).
+
+    Returns:
+        list[dict]: Each dict matches IPMTrigger schema:
+            trigger_id, severity, explanation, metric_value, threshold,
+            recommended_model.
+    """
+    triggers = []
+    demand_twh = year_result.get('demand_twh', 0)
+    resource_mix = year_result.get('resource_mix_twh', {})
+    if demand_twh <= 0:
+        return triggers
+
+    # ── VRE_CANNIBALIZATION ──────────────────────────────────────────────
+    vre_twh = sum(resource_mix.get(r, 0) for r in _VRE_RESOURCES)
+    vre_pct = vre_twh / demand_twh * 100
+    if vre_pct > 40:
+        severity = 'high' if vre_pct > 60 else 'medium'
+        triggers.append({
+            'trigger_id': 'VRE_CANNIBALIZATION',
+            'severity': severity,
+            'explanation': (
+                "VRE penetration above 40% causes significant price cannibalization "
+                "effects. A production dispatch model with hourly granularity and "
+                "curtailment modeling would better quantify revenue erosion and "
+                "optimal storage sizing."
+            ),
+            'metric_value': round(vre_pct, 1),
+            'threshold': 60.0 if severity == 'high' else 40.0,
+            'recommended_model': 'Production dispatch model (PLEXOS, GenX)',
+        })
+
+    # ── TIGHT_RA_MARGIN ─────────────────────────────────────────────────
+    # Reserve margin = (total capacity - peak demand) / peak demand
+    total_cap_mw = sum(e.get('capacity_mw', 0) for e in gen_econ.values())
+    # Add deployed clean capacity (cumulative_gw from state)
+    cumulative_gw = year_result.get('cumulative_gw', {})
+    clean_cap_mw = sum(v * 1000 for v in cumulative_gw.values())
+    total_supply_mw = total_cap_mw + clean_cap_mw
+    avg_demand_mw = demand_twh * 1e6 / 8760
+    peak_demand_mw = avg_demand_mw * _PEAK_TO_AVG_RATIO
+    if peak_demand_mw > 0:
+        reserve_margin_pct = (total_supply_mw - peak_demand_mw) / peak_demand_mw * 100
+        if reserve_margin_pct < 10:
+            severity = 'high' if reserve_margin_pct < 5 else 'medium'
+            triggers.append({
+                'trigger_id': 'TIGHT_RA_MARGIN',
+                'severity': severity,
+                'explanation': (
+                    "Reserve margins are tight enough that unit commitment constraints "
+                    "(ramp rates, minimum generation, start-up costs) materially affect "
+                    "price formation and reliability. A UC-constrained dispatch model "
+                    "is recommended."
+                ),
+                'metric_value': round(reserve_margin_pct, 1),
+                'threshold': 5.0 if severity == 'high' else 10.0,
+                'recommended_model': 'UC-constrained dispatch model (IPM, PLEXOS)',
+            })
+
+    # ── HIGH_CONGESTION ──────────────────────────────────────────────────
+    # VRE deployment exceeds 2× historical queue completion rate
+    vre_gw = sum(cumulative_gw.get(r, 0) for r in _VRE_RESOURCES)
+    years_elapsed = max(1, year - 2025)
+    queue_cap = QUEUE_CAP_GW.get('Medium', {}).get(iso, 5)
+    expected_gw = queue_cap * years_elapsed
+    if expected_gw > 0:
+        deploy_ratio = vre_gw / expected_gw
+        if deploy_ratio > 2.0:
+            severity = 'high' if deploy_ratio > 3.0 else 'medium'
+            triggers.append({
+                'trigger_id': 'HIGH_CONGESTION',
+                'severity': severity,
+                'explanation': (
+                    "Transmission congestion is material. VRE deployment significantly "
+                    "exceeds historical interconnection queue completion rates. Zonal or "
+                    "nodal dispatch modeling would better capture locational price signals "
+                    "and their impact on resource siting decisions."
+                ),
+                'metric_value': round(deploy_ratio, 2),
+                'threshold': 3.0 if severity == 'high' else 2.0,
+                'recommended_model': 'Zonal/nodal dispatch model (PLEXOS, nodal IPM)',
+            })
+
+    # ── STORAGE_DOMINANCE ────────────────────────────────────────────────
+    storage_twh = sum(resource_mix.get(r, 0) for r in _STORAGE_RESOURCES)
+    storage_pct = storage_twh / demand_twh * 100
+    if storage_pct > 15:
+        severity = 'high' if storage_pct > 25 else 'medium'
+        triggers.append({
+            'trigger_id': 'STORAGE_DOMINANCE',
+            'severity': severity,
+            'explanation': (
+                "Storage is a major contributor to supply. Co-optimized storage "
+                "dispatch (jointly with generation and unit commitment) would "
+                "materially change utilization patterns and economics."
+            ),
+            'metric_value': round(storage_pct, 1),
+            'threshold': 25.0 if severity == 'high' else 15.0,
+            'recommended_model': 'Co-optimized storage dispatch (GenX, PLEXOS)',
+        })
+
+    # ── RETIREMENT_CASCADE ───────────────────────────────────────────────
+    econ_retired_mw = year_result.get('total_economic_retirement_mw', 0)
+    total_fossil_cap = sum(e.get('capacity_mw', 0) for e in gen_econ.values())
+    if total_fossil_cap > 0:
+        retired_pct = econ_retired_mw / total_fossil_cap * 100
+        if retired_pct > 20:
+            severity = 'high' if retired_pct > 35 else 'medium'
+            triggers.append({
+                'trigger_id': 'RETIREMENT_CASCADE',
+                'severity': severity,
+                'explanation': (
+                    "Large-scale fossil retirement is occurring. Binary plant-level "
+                    "retirement decisions, reliability-must-run contracts, and "
+                    "regulatory backstop interventions would significantly alter "
+                    "this trajectory. Plant-level modeling (EIA 860 fleet) is "
+                    "recommended."
+                ),
+                'metric_value': round(retired_pct, 1),
+                'threshold': 35.0 if severity == 'high' else 20.0,
+                'recommended_model': 'Plant-level retirement model (EIA 860, IPM)',
+            })
+
+    # ── NUCLEAR_AT_RISK ──────────────────────────────────────────────────
+    nuc_rev = year_result.get('nuclear_revenue', {})
+    nuc_rev_mwh = nuc_rev.get('total_mwh', 0) if isinstance(nuc_rev, dict) else 0
+    nuc_threshold = nuclear_retirement_threshold or _NUCLEAR_RETIREMENT_THRESHOLD_DEFAULT
+    if (not state.get('nuclear_retired', False) and
+            nuc_rev_mwh > 0 and
+            abs(nuc_rev_mwh - nuc_threshold) <= 5.0):
+        triggers.append({
+            'trigger_id': 'NUCLEAR_AT_RISK',
+            'severity': 'high',
+            'explanation': (
+                "Nuclear plant revenue is near the retirement cliff. Small changes "
+                "in LMP assumptions could flip the retirement decision. Detailed "
+                "plant-level economics with contract-specific data is recommended "
+                "before acting on this result."
+            ),
+            'metric_value': round(nuc_rev_mwh, 2),
+            'threshold': nuc_threshold,
+            'recommended_model': 'Plant-level nuclear economics (contract-specific)',
+        })
+
+    return triggers
+
+
 def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
                                conditions, cumulative_gw, queue_remaining_gw,
                                hourly_lmp, avg_lmp, p90_lmp,
@@ -2573,6 +2743,13 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 'dr_avg_price': dr_metrics.get('dr_avg_price', 0),
                 'data_source': _data_sources.get(iso, 'synthetic'),
             }
+
+            # IPM trigger evaluation — flag when screening-model limits are binding
+            ipm_triggers = compute_ipm_triggers(
+                iso, year, year_result, gen_econ, state, conditions,
+                nuclear_retirement_threshold=nuclear_retirement_threshold)
+            year_result['ipm_triggers'] = ipm_triggers
+
             results[iso].append(year_result)
 
     return results
