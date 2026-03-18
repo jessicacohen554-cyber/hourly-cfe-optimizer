@@ -211,6 +211,16 @@ async def serve_setup_page():
     return FileResponse(str(setup_path), media_type="text/html")
 
 
+@app.get("/setup-template.csv")
+async def serve_setup_template():
+    """Serve the CSV configuration template for bulk setup."""
+    csv_path = FRONTEND_DIR / "setup-template.csv"
+    if not csv_path.exists():
+        raise HTTPException(status_code=404, detail="setup-template.csv not found")
+    return FileResponse(str(csv_path), media_type="text/csv",
+                        filename="setup-template.csv")
+
+
 @app.get("/results", response_class=HTMLResponse)
 async def serve_results_page():
     """Serve the results page."""
@@ -402,6 +412,9 @@ def _map_request_to_conditions(req: SimulationRequest) -> dict:
             'gas_ccgt': req.heat_rates.gas_ccgt,
             'gas_ct': req.heat_rates.gas_ct,
             'oil_ct': req.heat_rates.oil_ct,
+            'new_gas_ccgt': req.heat_rates.new_gas_ccgt,
+            'new_gas_ct': req.heat_rates.new_gas_ct,
+            'new_coal': req.heat_rates.new_coal,
         } if req.heat_rates else None,
         "custom_vom": {
             'coal_steam': req.vom.coal_steam,
@@ -445,6 +458,16 @@ def _map_request_to_conditions(req: SimulationRequest) -> dict:
         "interchange_enabled": req.interchange_enabled,
         # Demand response level
         "dr_level": req.dr_level,
+        # Per-resource transmission overrides ($/MWh) — None = use master L/M/H
+        "tx_overrides": req.tx_overrides,
+        # Fossil new-build LCOEs ($/MWh) — None = use defaults
+        "custom_fossil_lcoes": {
+            'gas_ccgt': req.fossil_lcoes.get('gas_ccgt'),
+            'gas_ct': req.fossil_lcoes.get('gas_ct'),
+            'coal': req.fossil_lcoes.get('coal'),
+        } if req.fossil_lcoes else None,
+        # Learning curves toggle — False = skip Wright's Law cost decline
+        "learning_curves_enabled": getattr(req, 'learning_curves', True),
     }
 
 
