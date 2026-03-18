@@ -1390,8 +1390,20 @@
         const peakerGen = byFuel.gas_peaker ? byFuel.gas_peaker.gen_twh : 0;
         const ccgtGen = byFuel.gas_ccgt ? byFuel.gas_ccgt.gen_twh : 0;
         const gasFlexScore = ccgtGen > 0 ? Math.min(100, (ccgtGen / (ccgtGen + peakerGen)) * 100) : 50;
-        const cleanNewGen = ['solar', 'wind', 'battery'].reduce((s, f) => s + (byFuel[f] ? byFuel[f].gen_twh : 0), 0);
-        const cleanPipelineScore = totalGen > 0 ? Math.min(100, (cleanNewGen / totalGen) * 300) : 0;
+        // Clean Pipeline score: pipeline_twh from fleet config (announced/approved/under-construction projects)
+        // Blended 50/50: absolute scale (25 TWh = 100) + relative to fleet (15% of gen = 100)
+        // This credits both large absolute pipelines (NextEra, AES) and transformative ones (PSEG, Constellation)
+        const pipelineTwh = (fleetCo && fleetCo.pipeline_twh) || (co.pipeline_twh) || 0;
+        let cleanPipelineScore;
+        if (pipelineTwh > 0 && totalGen > 0) {
+            const absScore = Math.min(100, (pipelineTwh / 25) * 100);
+            const relScore = Math.min(100, (pipelineTwh / totalGen / 0.15) * 100);
+            cleanPipelineScore = (absScore + relScore) / 2;
+        } else {
+            // Fallback: existing VRE share
+            const cleanNewGen = ['solar', 'wind', 'battery'].reduce((s, f) => s + (byFuel[f] ? byFuel[f].gen_twh : 0), 0);
+            cleanPipelineScore = totalGen > 0 ? Math.min(100, (cleanNewGen / totalGen) * 300) : 0;
+        }
 
         // Radar chart
         makeChart('radarChart', {
@@ -1475,7 +1487,7 @@
             diversity: 'geographic diversification across multiple ISOs hedges against regional disruption',
             coalExit: 'advanced coal exit progress removes the largest transition risk',
             gasFlex: 'efficient gas fleet provides reliable dispatchable capacity during transition',
-            cleanPipeline: 'existing clean energy portfolio positions for accelerated deployment'
+            cleanPipeline: 'clean development pipeline (announced, approved, and under-construction projects) positions for accelerated deployment'
         };
 
         const weaknessLabels = {
@@ -1483,7 +1495,7 @@
             diversity: 'geographic concentration in fewer ISOs creates regulatory and market risk',
             coalExit: 'remaining coal exposure represents the largest near-term transition risk',
             gasFlex: 'gas fleet composition (high peaker ratio) faces declining utilization',
-            cleanPipeline: 'limited clean energy portfolio requires significant greenfield investment'
+            cleanPipeline: 'limited clean development pipeline requires significant greenfield investment to reach decarbonization targets'
         };
 
         let recs = [];

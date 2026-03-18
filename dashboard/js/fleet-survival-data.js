@@ -44,6 +44,7 @@ const FLEET_COMPANIES = [
         total_generation_twh: 154,
         total_capacity_gw: 44,
         target: "Net-zero by 2050",
+        pipeline_twh: 4.5, // Solar/battery in ERCOT + Comanche Peak nuclear uprate
         plants: [
             // ERCOT - Coal (Martin Lake + Coleto Creek; retiring by 2027)
             { name: "Martin Lake Coal (TX)", iso: "ERCOT", fuel: "coal", capacity_mw: 2250, generation_twh: 11.0, co2_mt: 11.6, heat_rate_btu: 10200 },
@@ -88,6 +89,7 @@ const FLEET_COMPANIES = [
         total_generation_twh: 310,
         total_capacity_gw: 55,
         target: "100% carbon-free by 2040",
+        pipeline_twh: 15.3, // ~8 TWh nuclear uprates (NRC-approved) + ~6.5 TWh Crane restart + renewables/geo
         plants: [
             // PJM - Nuclear (Limerick, Peach Bottom 50%, Calvert Cliffs, Crane/TMI restart, Salem 43%)
             { name: "Limerick Nuclear (PA)", iso: "PJM", fuel: "nuclear", capacity_mw: 2317, generation_twh: 19.5, co2_mt: 0 },
@@ -145,6 +147,7 @@ const FLEET_COMPANIES = [
         total_generation_twh: 80,
         total_capacity_gw: 25,
         target: "50% CO2 reduction by 2025 (vs 2014); net-zero by 2050",
+        pipeline_twh: 1.5, // Minimal clean pipeline, primarily thermal/retail focus
         plants: [
             // ERCOT - Coal
             { name: "W.A. Parish Coal (TX)", iso: "ERCOT", fuel: "coal", capacity_mw: 2697, generation_twh: 13.0, co2_mt: 13.7, heat_rate_btu: 10500 },
@@ -178,6 +181,7 @@ const FLEET_COMPANIES = [
         total_generation_twh: 42,
         total_capacity_gw: 10.7,
         target: "No formal net-zero target; exploring nuclear expansion (Cumulus data center)",
+        pipeline_twh: 1.0, // Susquehanna nuclear uprate potential only; data center colocation focus
         plants: [
             // PJM - Nuclear (Susquehanna, 90% owned = 2,228 MW)
             { name: "Susquehanna Nuclear (PA, 90%)", iso: "PJM", fuel: "nuclear", capacity_mw: 2228, generation_twh: 18.8, co2_mt: 0 },
@@ -205,6 +209,7 @@ const FLEET_COMPANIES = [
         total_generation_twh: 40,
         total_capacity_gw: 3.8,
         target: "Net-zero operations by 2045",
+        pipeline_twh: 4.8, // Nuclear uprates (Hope Creek/Salem) + offshore wind + solar
         plants: [
             // PJM - Nuclear (Hope Creek 100%, Salem 57%, Peach Bottom 50%)
             { name: "Hope Creek Nuclear (NJ)", iso: "PJM", fuel: "nuclear", capacity_mw: 1172, generation_twh: 9.9, co2_mt: 0 },
@@ -221,6 +226,7 @@ const FLEET_COMPANIES = [
         total_generation_twh: 100,
         total_capacity_gw: 33,
         target: "Real Zero emissions by 2045",
+        pipeline_twh: 50.0, // Largest US clean pipeline: ~25 GW backlog (solar/wind/battery/offshore/SMR)
         plants: [
             // PJM - Nuclear
             { name: "Point Beach Nuclear (WI)", iso: "PJM", fuel: "nuclear", capacity_mw: 1200, generation_twh: 10.1, co2_mt: 0 },
@@ -251,6 +257,7 @@ const FLEET_COMPANIES = [
         total_generation_twh: 75,
         total_capacity_gw: 35,
         target: "Carbon-neutral Scope 1&2 by 2040; SBTi validated 1.5°C",
+        pipeline_twh: 25.0, // Large solar+battery pipeline (Fluence partnership) + wind + offshore
         plants: [
             // PJM - Coal
             { name: "Petersburg Coal (IN)", iso: "PJM", fuel: "coal", capacity_mw: 1700, generation_twh: 5.3, co2_mt: 5.3, heat_rate_btu: 10700 },
