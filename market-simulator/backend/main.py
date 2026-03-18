@@ -76,6 +76,7 @@ from pipeline_config import (
     WHOLESALE_PRICES,
     CONFIDENCE_ZONES,
     get_confidence_zone,
+    adjust_confidence_for_triggers,
 )
 
 from .models import (
@@ -800,6 +801,16 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
     # Typed year results
     typed_years = []
     for yr in year_results:
+        # Compute confidence: year-based zone, then adjust for IPM trigger severity
+        year_zone = get_confidence_zone(yr.get("year", 0))
+        adj_zone, was_adjusted = adjust_confidence_for_triggers(
+            year_zone, yr.get("ipm_triggers", [])
+        )
+        conf_zone = adj_zone
+        conf_label = CONFIDENCE_ZONES[conf_zone]['label']
+        if was_adjusted:
+            conf_label += ' (adjusted)'
+
         typed_years.append(YearResult(
             iso=yr.get("iso", iso),
             scenario=yr.get("scenario", ""),
@@ -818,8 +829,9 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
             gas_built_gw=yr.get("gas_built_gw", 0),
             total_gas_gw=yr.get("total_gas_gw", 0),
             market_stop=yr.get("market_stop", False),
-            confidence=get_confidence_zone(yr.get("year", 0)),
-            confidence_label=CONFIDENCE_ZONES[get_confidence_zone(yr.get("year", 0))]['label'],
+            confidence=conf_zone,
+            confidence_label=conf_label,
+            confidence_adjusted=was_adjusted,
             resource_mix_twh=yr.get("resource_mix_twh", {}),
             cumulative_gw=yr.get("cumulative_gw", {}),
             zones_deployed=yr.get("zones_deployed", []),
