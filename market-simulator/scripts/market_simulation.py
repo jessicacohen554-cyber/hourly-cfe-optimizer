@@ -2004,6 +2004,28 @@ def load_step3_data():
     return all_data
 
 
+def check_data_sources():
+    """Check which ISOs have real parquet data vs. requiring synthetic fallback.
+
+    Returns dict: {iso: 'parquet' | 'synthetic'} for all ISOs.
+    """
+    search_dirs = [os.path.join(MODULE_ROOT, 'data', 'step2.2-cost')]
+    sources = {}
+    for iso in ISOS:
+        found = False
+        for d in search_dirs:
+            if not os.path.isdir(d):
+                continue
+            for pattern in [f'step_2_2a_CO_{iso}.parquet', f'step3_co_{iso}.parquet']:
+                if os.path.exists(os.path.join(d, pattern)):
+                    found = True
+                    break
+            if found:
+                break
+        sources[iso] = 'parquet' if found else 'synthetic'
+    return sources
+
+
 def _generate_synthetic_step3_data():
     """Generate synthetic resource mix data for each ISO when parquets are absent.
 
@@ -2209,7 +2231,8 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                            snapshot_mode=False,
                            sim_years=None,
                            _preloaded=None, _lmp_cache=None, _quiet=False,
-                           weather_year=None):
+                           weather_year=None,
+                           _data_sources=None):
     """Run purely profit-driven market simulation via LCOE merit-order deployment.
 
     No emission constraints, no mandated deployment, no DAC, no clean% targets.
@@ -2267,6 +2290,10 @@ def run_market_simulation(scenario_id, conditions, isos=None,
 
     # Interchange enabled flag from conditions (default: True)
     interchange_enabled = conditions.get('interchange_enabled', True)
+
+    # Determine data source per ISO (parquet vs synthetic)
+    if _data_sources is None:
+        _data_sources = check_data_sources()
 
     cumulative_gw = dict(WRIGHT_CUMULATIVE_GW_2025)
     results = {iso: [] for iso in isos}
@@ -2344,6 +2371,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                     'rps_shortfall_pct': 0,
                     'acp_cost_million': 0,
                     'cumulative_acp_million': 0,
+                    'data_source': _data_sources.get(iso, 'synthetic'),
                 }
                 results[iso].append(year_result)
                 _log(f"  {iso}: 2023 baseline — {baseline_co2_mt:.1f} Mt, "
@@ -2713,6 +2741,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 'dr_peak_gw': dr_metrics.get('dr_peak_gw', 0),
                 'dr_hours': dr_metrics.get('dr_hours', 0),
                 'dr_avg_price': dr_metrics.get('dr_avg_price', 0),
+                'data_source': _data_sources.get(iso, 'synthetic'),
             }
 
             # IPM trigger evaluation — flag when screening-model limits are binding
