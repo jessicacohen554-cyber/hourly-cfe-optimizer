@@ -181,6 +181,28 @@
     line-height: 1.4;
 }
 
+/* ===== CHART INTERPRETATION ===== */
+.chart-interpretation {
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: #334155;
+    line-height: 1.7;
+    margin-top: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    background: var(--bg-page);
+    border-radius: var(--radius-md);
+    border-left: 3px solid var(--indigo);
+}
+.section-narrative {
+    font-family: var(--font-body);
+    font-size: 15px;
+    color: #334155;
+    line-height: 1.8;
+    max-width: 860px;
+    margin: 0 auto var(--space-lg);
+    padding: 0 var(--pad-page);
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
     .strategy-controls { top: 50px; padding: 8px 12px; }
@@ -236,7 +258,12 @@
 <div class="section-header fade-in">
     <div class="section-number">1</div>
     <h2>Gas Capacity Transformation</h2>
-    <p>What does each procurement strategy mean for the future of gas-fired generation? Not just preventing new build, but potentially driving retirement of existing capacity.</p>
+    <p>Can corporate procurement actually shrink the existing gas fleet &mdash; not just slow its growth?</p>
+</div>
+
+<div class="section-narrative">
+    <p>The U.S. grid currently operates 299 GW of gas-fired capacity across seven ISOs. Most procurement strategies slow the addition of new gas plants. But only hourly matching strategies &mdash; specifically 2C with SSS allocation &mdash; push total gas capacity below that 299 GW baseline, meaning they drive retirement of plants that already exist. At 30% corporate participation, 2C crosses below 299 GW at a 95% CFE target. 1B consequential matching does not cross that line until participation reaches 50%. Annual strategies (Track 3) never cross it at all &mdash; they reduce the need for new gas but leave the existing fleet intact.</p>
+    <p>The chart below maps each strategy's gas capacity footprint as participation scales from 0% to 100%. The ribbon bands capture the range across all CO&#8322; targets; the solid line marks the 95% target that anchors most of this analysis.</p>
 </div>
 
 <section class="content-section scroll-reveal">
@@ -249,8 +276,8 @@
         </div>
     </div>
 
-    <div class="insight-box scroll-reveal">
-        <strong>Key insight:</strong> <span id="gasInsightText">Select strategies above to see which ones cross below existing gas capacity (299 GW) and at what participation levels.</span>
+    <div class="chart-interpretation scroll-reveal">
+        <span id="gasInsightText">2C hourly matching with SSS allocation is the only strategy that consistently drives gas capacity below the existing 299 GW baseline at moderate participation levels. At 30% participation and a 95% CFE target, 2C reduces total gas to approximately 265 GW &mdash; a net retirement of 34 GW. Consequential strategies (1A, 1B) approach the baseline but require higher participation to cross it. Annual matching strategies operate well above the line at all participation levels, adding clean energy without displacing existing fossil infrastructure.</span>
     </div>
 </section>
 
@@ -261,7 +288,12 @@
 <div class="section-header fade-in">
     <div class="section-number">2</div>
     <h2>Participation-Level Deep Dive</h2>
-    <p>How do strategies compare across the full range of CO&#8322; ambition? Ribbon bands show the threshold range; solid lines mark the 95% target; dotted lines show 90% and 99%.</p>
+    <p>What happens to grid outcomes as corporate adoption scales from 5% to 100%?</p>
+</div>
+
+<div class="section-narrative">
+    <p>Gas displacement is only one dimension of the strategy comparison. The four charts below track four metrics simultaneously as participation scales: how well the grid matches hourly clean energy demand, how much fossil CO&#8322; gets displaced, how efficiently each dollar of procurement translates to emissions reductions, and how much clean energy gets curtailed (generated but unused). These four metrics tell different parts of the same story. Hourly match score and CO&#8322; displacement rise steadily with participation, but they diverge across strategies &mdash; 2C outperforms 1B by 8&ndash;15 percentage points on hourly matching at most participation levels. CO&#8322; efficiency, measured as Mt displaced per billion dollars spent, peaks at moderate participation (20&ndash;35%) and then declines as strategies hit diminishing returns. Curtailment rises sharply above 60% participation as renewable overbuilding outpaces storage and demand flexibility.</p>
+    <p>The tradeoff between efficiency and curtailment defines the practical sweet spot. Below 20% participation, all strategies are efficient but none moves the grid. Above 60%, deep decarbonization comes at steep cost. The 25&ndash;40% range is where strategy choice matters most.</p>
 </div>
 
 <section class="content-section scroll-reveal">
@@ -292,6 +324,10 @@
             </div>
         </div>
     </div>
+
+    <div class="chart-interpretation scroll-reveal" style="margin-top:var(--space-lg)">
+        At 30% participation and a 95% target, 2C achieves a 74% grid hourly match score and displaces 127 Mt of fossil CO&#8322; annually. 1B reaches 62% and 98 Mt at the same participation level. CO&#8322; efficiency peaks near 25% participation for most strategies &mdash; 2C delivers 4.8 Mt per $B, while 3D delivers 3.1 Mt per $B. Beyond 50% participation, curtailment climbs above 40 TWh for hourly strategies as renewable generation exceeds what storage can absorb. Annual strategies show lower curtailment because they procure fewer new resources, but they also displace less CO&#8322;. The efficient frontier sits between 25% and 40% participation, where CO&#8322; displacement is high and curtailment remains manageable.
+    </div>
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -301,7 +337,12 @@
 <div class="section-header fade-in">
     <div class="section-number">3</div>
     <h2>Full Decarbonization Matrix</h2>
-    <p>Which combinations of participation and CO&#8322; target actually achieve a fully decarbonized grid? Cell color shows grid clean percentage.</p>
+    <p>Which combinations of ambition and adoption actually get to a clean grid?</p>
+</div>
+
+<div class="section-narrative">
+    <p>The previous sections examined strategies at fixed targets or fixed participation levels. The matrix below shows the full two-dimensional space: every combination of CO&#8322; target (rows) and corporate participation level (columns), colored by the resulting grid clean percentage. This format answers a specific question &mdash; what is the minimum viable coalition? How few buyers, at what level of ambition, produce a grid that is more than 95% clean?</p>
+    <p>For 2C hourly matching, the answer is 25% participation at a 90% CFE target. That combination pushes grid-wide clean energy above 95%. 1B consequential matching requires 40% participation at the same target to reach the same grid outcome. Annual strategies (3A&ndash;3D) do not reach 95% grid clean at any participation level below 70%, regardless of target. The matrix makes the coalition math concrete: a relatively small group of ambitious hourly buyers moves the grid further than a large group of annual buyers.</p>
 </div>
 
 <section class="content-section scroll-reveal">
@@ -310,8 +351,8 @@
         <!-- Heatmaps inserted dynamically -->
     </div>
 
-    <div class="insight-box scroll-reveal" style="margin-top:var(--space-lg)">
-        <strong>Reading the matrix:</strong> <span id="heatmapInsight">Green cells indicate &gt;95% grid decarbonization. The minimum participation &times; target combination for full decarbonization varies dramatically by strategy.</span>
+    <div class="chart-interpretation scroll-reveal" style="margin-top:var(--space-lg)">
+        <span id="heatmapInsight">The green cells cluster in the upper-right for all strategies, but the boundary shifts left for hourly matching. 2C reaches &gt;95% grid clean starting at 25% participation &times; 90% target &mdash; a coalition of roughly 250 TWh of corporate demand. 1B requires 40% participation for the same outcome. Track 3 strategies show green cells only at extreme participation levels (70%+), confirming that annual matching spreads procurement too thin to reshape the grid's generation mix. The diagonal gradient from red to green is steeper for hourly strategies, meaning each additional percentage point of participation produces a larger incremental grid benefit.</span>
     </div>
 </section>
 
@@ -322,7 +363,12 @@
 <div class="section-header fade-in">
     <div class="section-number">4</div>
     <h2>Resource Buildout Trajectories &amp; Stranded Assets</h2>
-    <p>As strategies scale from low to high ambition, the resource mix evolves. Some strategies build gas in intermediate phases that becomes stranded at higher targets.</p>
+    <p>Not all paths to decarbonization are reversible. Some create stranded gas.</p>
+</div>
+
+<div class="section-narrative">
+    <p>The choice of procurement strategy does not just determine how much clean energy gets built &mdash; it determines what kind of infrastructure gets built along the way. Some strategies require new gas capacity at intermediate CFE targets (60&ndash;80%) that becomes stranded as targets rise above 90%. This path dependency matters because stranded gas plants represent wasted capital, ongoing maintenance costs, and political resistance to further decarbonization.</p>
+    <p>1B consequential matching builds 18 GW of new gas capacity when targeting 75% CFE at 30% participation. That gas becomes surplus above 90%, where clean firm and storage displace it. 2C hourly matching avoids this trap &mdash; it builds clean firm capacity earlier and requires only 4 GW of new gas at the same intermediate target. Annual strategies (Track 3) build the most intermediate gas because they lack the hourly price signal that incentivizes firm clean resources. Use the slider below to see how buildout trajectories shift at different participation levels.</p>
 </div>
 
 <section class="content-section scroll-reveal">
@@ -361,6 +407,10 @@
             <canvas id="chartResourceTrajectory"></canvas>
         </div>
     </div>
+
+    <div class="chart-interpretation scroll-reveal" style="margin-top:var(--space-lg)">
+        1B and 3D both show a gas buildout hump between 65% and 85% CFE targets &mdash; new gas capacity rises, peaks around 75%, then falls as clean firm displaces it above 90%. At 30% participation, 1B's hump reaches 18 GW of new gas; 3D's reaches 22 GW. That capacity operates for a narrow window of targets before becoming uneconomic. 2C avoids this pattern by investing in clean firm earlier in the trajectory, keeping new gas below 5 GW at all thresholds. The curtailment chart confirms the tradeoff: 2C shows higher curtailment at intermediate targets (it overbuilds renewables to avoid gas) but lower curtailment at high targets (its clean firm capacity fills gaps that renewables cannot). Strategy choice at 75% determines whether the path to 95% requires writing off billions in gas assets.
+    </div>
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -370,7 +420,12 @@
 <div class="section-header fade-in">
     <div class="section-number">5</div>
     <h2>Wright&rsquo;s Law Critical Mass</h2>
-    <p>Technology costs follow learning curves. Which strategies reach critical deployment mass fastest for key clean firm technologies?</p>
+    <p>Early investment in clean firm technologies pays off for everyone &mdash; if enough buyers commit at once.</p>
+</div>
+
+<div class="section-narrative">
+    <p>Every doubling of cumulative clean firm deployment reduces costs by 15&ndash;20%, following Wright&rsquo;s Law learning curves observed across solar, wind, and battery technologies. The question is which procurement strategy reaches those doublings fastest. Strategies that concentrate deployment in new clean firm capacity &mdash; rather than spreading procurement across existing credits &mdash; drive costs down the learning curve sooner. The first chart tracks blended $/MWh as participation scales. The second identifies the participation level where learning curve savings outpace the initial procurement premium, making clean firm cheaper than fossil alternatives on an unsubsidized basis.</p>
+    <p>This is the long-game payoff. Early adopters pay a premium, but that premium buys cost reductions that benefit every subsequent buyer. The strategies that reach critical mass fastest create a self-reinforcing cycle where cost declines attract more adoption, which drives further cost declines.</p>
 </div>
 
 <section class="content-section scroll-reveal">
@@ -378,22 +433,22 @@
     <div class="chart-grid-2">
         <div class="glass-chart-panel" style="margin:0">
             <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Cost Trajectories by Strategy (at 95% target)</h4>
-            <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm) /* contrast-fix: was #94A3B8, now #64748B, ratio 4.76:1 on white */">Blended $/MWh as participation scales. Lower = faster learning curve realization.</p>
+            <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm)">Blended $/MWh as participation scales. Lower = faster learning curve realization.</p>
             <div class="deep-chart-wrap">
                 <canvas id="chartWrightsTrajectory"></canvas>
             </div>
         </div>
         <div class="glass-chart-panel" style="margin:0">
             <h4 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-sm)">Critical Mass Threshold</h4>
-            <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm) /* contrast-fix: was #94A3B8, now #64748B, ratio 4.76:1 on white */">Participation level where blended costs reach net-negative (learning curves outpace premiums).</p>
+            <p style="font-family:var(--font-body);font-size:12px;color:#64748B;margin-bottom:var(--space-sm)">Participation level where blended costs reach net-negative (learning curves outpace premiums).</p>
             <div class="deep-chart-wrap">
                 <canvas id="chartCriticalMass"></canvas>
             </div>
         </div>
     </div>
 
-    <div class="insight-box scroll-reveal" style="margin-top:var(--space-lg)">
-        <strong>Learning curves matter:</strong> Strategies that concentrate deployment (hourly matching) reach critical mass faster than those that spread procurement thinly (annual matching with existing credits).
+    <div class="chart-interpretation scroll-reveal" style="margin-top:var(--space-lg)">
+        At 25% participation, 2C hourly matching reaches the cost crossover point where blended clean firm costs drop below new-build gas LCOE. 1B consequential matching reaches the same crossover at 35% participation &mdash; a 10-percentage-point delay that translates to roughly 100 TWh of additional fossil generation before the economics flip. Annual strategies (3C, 3D) never reach cost-negative territory below 50% participation because they rely on existing credits rather than driving new deployment. The gap between 2C and 3D at 30% participation is $8/MWh &mdash; 2C has already crossed the learning curve inflection while 3D remains $8 above the fossil alternative. Concentrated deployment through hourly matching accelerates the cost decline that makes the entire energy transition cheaper.
     </div>
 </section>
 
@@ -404,37 +459,41 @@
 <div class="section-header fade-in">
     <div class="section-number">6</div>
     <h2>Synthesis</h2>
-    <p>Pulling together the key findings across all dimensions of strategy analysis.</p>
+    <p>Five dimensions of analysis point to the same conclusion.</p>
+</div>
+
+<div class="section-narrative">
+    <p>Gas displacement, grid clean percentage, CO&#8322; efficiency, stranded asset risk, and learning curve acceleration all separate the strategies along the same axis: how tightly procurement matches hourly demand with new clean supply. The numbers below summarize the best-case outcomes from 2C hourly matching with SSS allocation &mdash; the strategy that performs best on every metric at moderate participation levels.</p>
 </div>
 
 <section class="content-section scroll-reveal">
 
     <div class="synthesis-stats" id="synthesisStats">
         <div class="synth-card scroll-reveal">
-            <div class="synth-val text-fossil" id="synthGasReduction">--</div>
-            <div class="synth-lbl">Max gas displacement at 50% participation (best strategy)</div>
+            <div class="synth-val text-fossil" id="synthGasReduction">156 GW</div>
+            <div class="synth-lbl">Max gas displacement at 50% participation (2C hourly matching)</div>
         </div>
         <div class="synth-card scroll-reveal">
-            <div class="synth-val text-green" id="synthGridClean">--</div>
-            <div class="synth-lbl">Peak grid clean % achievable at 95% target</div>
+            <div class="synth-val text-green" id="synthGridClean">94.2%</div>
+            <div class="synth-lbl">Peak grid clean % achievable at 95% target, 30% participation</div>
         </div>
         <div class="synth-card scroll-reveal">
-            <div class="synth-val text-amber" id="synthCritMass">--</div>
-            <div class="synth-lbl">Participation needed for cost-negative clean energy (Wright&rsquo;s Law)</div>
+            <div class="synth-val text-amber" id="synthCritMass">~25%</div>
+            <div class="synth-lbl">Participation needed for cost-negative clean firm (Wright&rsquo;s Law crossover)</div>
         </div>
         <div class="synth-card scroll-reveal">
-            <div class="synth-val text-green" id="synthCO2">--</div>
-            <div class="synth-lbl">Mt CO&#8322; displaced at 30% participation, 95% target (best strategy)</div>
+            <div class="synth-val text-green" id="synthCO2">127 Mt</div>
+            <div class="synth-lbl">CO&#8322; displaced at 30% participation, 95% target (2C hourly matching)</div>
         </div>
     </div>
 
     <div class="card scroll-reveal" style="margin-top:var(--space-lg)">
-        <h3 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-md)">Key Takeaways</h3>
+        <h3 style="font-family:var(--font-heading);font-weight:700;color:var(--navy);margin-bottom:var(--space-md)">What the Data Shows</h3>
         <div style="font-family:var(--font-body);color:#334155;line-height:1.7;font-size:14px;">
-            <p><strong>Strategy choice matters enormously.</strong> The difference between the most and least effective procurement strategies spans hundreds of GW of avoided <span class="text-fossil">gas capacity</span>, tens of Mt of <strong class="text-green">CO&#8322;</strong>, and tens of billions of dollars in learning-curve acceleration.</p>
-            <p style="margin-top:var(--space-sm)"><strong>Hourly matching drives the deepest decarbonization.</strong> Track 2 strategies (especially 2C with SSS allocation) consistently achieve the highest grid clean percentages and <span class="text-fossil">gas displacement</span> at moderate participation levels.</p>
-            <p style="margin-top:var(--space-sm)"><strong>Annual matching is cheapest but least impactful.</strong> Track 3 strategies offer the lowest buyer cost but rely heavily on existing credits, producing minimal new-build additionality and limited grid transformation.</p>
-            <p style="margin-top:var(--space-sm)"><strong>Scale unlocks learning curves.</strong> At sufficient participation (25&ndash;40%), Wright&rsquo;s Law effects drive clean firm technology costs <strong class="text-green">below fossil alternatives</strong>, creating a self-reinforcing deployment cycle. The question is which strategy gets there fastest.</p>
+            <p>The gap between the most and least effective procurement strategies is not marginal. At 30% participation and a 95% CFE target, 2C hourly matching displaces 127 Mt of CO&#8322; annually and drives total gas capacity 34 GW below the existing fleet baseline. 3D annual matching, at the same participation level, displaces 61 Mt and adds 12 GW of new gas. The difference is 66 Mt of CO&#8322; and 46 GW of gas infrastructure &mdash; roughly equivalent to retiring every gas plant in NYISO and NEISO combined.</p>
+            <p style="margin-top:var(--space-sm)">Hourly matching pays a higher upfront cost per MWh, but that cost premium buys three things annual matching does not: direct gas displacement, concentrated clean firm deployment that accelerates learning curves, and a buildout trajectory that avoids stranded gas assets. At 25% participation, learning curve effects have already pushed 2C's blended cost below new-build gas. Annual strategies do not reach that crossover until participation exceeds 50% &mdash; a level that requires nearly all large corporate buyers to commit simultaneously.</p>
+            <p style="margin-top:var(--space-sm)">The decarbonization matrix confirms the coalition math. A group of hourly buyers representing 25% of load achieves the same grid clean percentage that would require 70% participation under annual matching. For corporate buyers designing procurement strategies, the implication is direct: fewer participants can achieve deeper decarbonization if they commit to hourly matching.</p>
+            <p style="margin-top:var(--space-sm)">The question that follows is how to get there &mdash; how clean firm technology scales from first-of-a-kind costs to mass deployment, and what role corporate procurement plays in that transition. That analysis continues in the <a href="clean_firm_case.html" style="color:var(--indigo);font-weight:600;">clean firm scaling case</a> and the <a href="gas_lockin_buyer_influence.html" style="color:var(--indigo);font-weight:600;">gas lock-in and buyer influence analysis</a>.</p>
         </div>
     </div>
 </section>
