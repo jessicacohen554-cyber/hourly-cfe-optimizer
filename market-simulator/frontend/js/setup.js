@@ -306,6 +306,7 @@ function collectFormData() {
         ppa_level: document.querySelector('#ppaToggle .toggle-btn.active')?.dataset.value || 'Medium',
         gas_friction: document.querySelector('#gasFrictionToggle .toggle-btn.active')?.dataset.value || 'Medium',
         interchange_enabled: document.querySelector('#interchangeToggle .toggle-btn.active')?.dataset.value === 'On',
+        dr_level: document.querySelector('#drToggle .toggle-btn.active')?.dataset.value || 'Off',
         nuclear_retirement_threshold: parseFloat(document.getElementById('nuclear_retirement').value),
         custom_overrides: {
             fuel: document.getElementById('custom_fuel_toggle')?.checked || false,
