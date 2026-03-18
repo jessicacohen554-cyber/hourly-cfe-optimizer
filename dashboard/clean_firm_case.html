@@ -389,42 +389,168 @@
     <p class="subtitle">The economic and physical case for always-on clean power - and how learning curves transform its cost trajectory</p>
 </header>
 
-<!-- ==================== FOAK → NOAK: THE INVESTMENT CASE (HERO) ==================== -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- ACT 1: THE GAS TRAP                                               -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+
+<!-- ==================== STRANDED ASSETS OVERVIEW ==================== -->
+<div class="energy-divider"></div>
 <div class="section-header fade-in">
     <div class="section-number">1</div>
-    <h2>The Investment Case</h2>
-    <p>Clean firm power is expensive today because it's first-of-a-kind. But learning curves are real, and gas gets more expensive every year.</p>
+    <h2>The Gas Trap</h2>
+    <p>At 90% clean energy, 145 GW of gas backup becomes a permanent liability across all 7 ISOs.</p>
+</div>
+<section class="hero-overview section-light">
+    <div class="hero-inner">
+        <div class="hero-text">
+            <h2>145 GW of Gas Backup &mdash; and Growing</h2>
+            <p>At 90% clean energy, America's 7 ISOs still depend on <strong class="text-red">145 GW of gas backup capacity</strong> to maintain reliability. That's billions in incumbent capital that earns diminishing returns as decarbonization continues. Clean firm power &mdash; <span class="em-nuclear">nuclear</span>, enhanced geothermal, <span class="em-ccs">CCS</span> &mdash; prevents this trap. The investment case holds across all 5,832 cost scenarios we tested.</p>
+            <div class="counter-row">
+                <div class="counter-card">
+                        <div class="counter-val text-fossil" id="ctrNewGas">145</div>
+                    <div class="counter-lbl">GW Gas Backup at 90%</div>
+                </div>
+                <div class="counter-card">
+                    <div class="counter-val text-red" id="ctrAnnualCost">$2B</div>
+                    <div class="counter-lbl">Annual Gas Backup Cost</div>
+                </div>
+                <div class="counter-card">
+                    <div class="counter-val text-blue" id="ctrISOs">7</div>
+                    <div class="counter-lbl">ISOs Analyzed</div>
+                </div>
+                <div class="counter-card">
+                    <div class="counter-val text-green" id="ctrScenarios">5832</div>
+                    <div class="counter-lbl">Cost Scenarios</div>
+                </div>
+            </div>
+        </div>
+        <div class="hero-chart-block">
+            <div class="glass-chart-panel" style="margin:0">
+                <div class="chart-title">Gas Backup Capacity at 90% Clean (GW)</div>
+                <div class="chart-container">
+                    <canvas id="heroChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Narrative framing -->
+<div class="insight-box" style="max-width:var(--max-content); margin:var(--space-lg) auto var(--space-xl); padding:var(--space-lg);">
+    <p style="margin:0; font-size:0.95rem; line-height:1.7; color:var(--text-secondary);">
+        <a href="home.html" class="explore-link" style="font-size:0.82rem; margin-bottom:8px; display:inline-block;">&larr; Back to the central argument</a><br>
+        This gas fleet runs less than 5% of hours at high clean-energy thresholds &mdash; but the capacity must stay online to guarantee reliability. The annual cost to maintain it runs into the billions, and it grows with every year of delay. This is the cost of <em>not</em> building clean firm power.
+    </p>
+</div>
+
+<!-- ==================== SECTION 3: THE GAS TRAP ==================== -->
+<div class="energy-divider"></div>
+<div class="section-header fade-in">
+    <div class="section-number">2</div>
+    <h2>The Gas Trap by Region</h2>
+    <p>Every ISO needs new gas capacity to guarantee reliability &mdash; but that capital becomes stranded as clean energy scales. Click each ISO to see the scale of the problem.
+        <a href="lmp_trends.html#gas-fleet-risk" class="explore-link" style="font-size:0.82rem; margin-left:6px;">Gas stranding dynamics <span class="arrow">&rarr;</span></a>
+        <a href="gas_lockin_buyer_influence.html" class="explore-link" style="font-size:0.82rem; margin-left:6px;">Cross-company view <span class="arrow">&rarr;</span></a>
+    </p>
+</div>
+<section class="concept-section section-light">
+    <div class="concept-inner">
+        <div class="concept-chart-col">
+            <div class="glass-chart-panel" style="margin:0; width:100%;">
+                <div class="iso-selector" id="gasTrapISO">
+                    <button class="iso-btn active" data-iso="PJM">PJM</button>
+                    <button class="iso-btn" data-iso="ERCOT">ERCOT</button>
+                    <button class="iso-btn" data-iso="CAISO">CAISO</button>
+                    <button class="iso-btn" data-iso="NYISO">NYISO</button>
+                    <button class="iso-btn" data-iso="NEISO">NEISO</button>
+                    <button class="iso-btn" data-iso="MISO">MISO</button>
+                    <button class="iso-btn" data-iso="SPP">SPP</button>
+                </div>
+                <div class="chart-title" id="gasTrapTitle">PJM: Gas Backup Capacity by Threshold</div>
+                <div class="chart-container">
+                    <canvas id="gasTrapChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="concept-narrative-col">
+            <div class="narrative-card" id="gasTrapCard"></div>
+        </div>
+    </div>
+</section>
+
+<div class="insight-box" style="margin:var(--space-lg) auto;max-width:1200px;border-left-color:var(--nuclear);">
+    <p>If existing nuclear retires due to revenue erosion, gas fills the reliability gap - accelerating the lock-in dynamic. <a href="ref-nuclear-retirement.html">See plant-level retirement risk &rarr;</a></p>
+</div>
+
+<!-- ==================== SECTION 4: CLEAN FIRM DISPLACES GAS ==================== -->
+<div class="energy-divider"></div>
+<div class="section-header fade-in">
+    <div class="section-number">3</div>
+    <h2>Clean Firm Displaces Gas - Dollar for Dollar</h2>
+    <p>As dispatchable clean generation enters, gas backup drops and clean coverage rises. The displacement is consistent across every cost scenario.</p>
+</div>
+<section class="concept-section section-light">
+    <div class="concept-inner">
+        <div class="concept-chart-col">
+            <div class="glass-chart-panel" style="margin:0; width:100%;">
+                <div class="iso-selector" id="displacementISO">
+                    <button class="iso-btn active" data-iso="PJM">PJM</button>
+                    <button class="iso-btn" data-iso="ERCOT">ERCOT</button>
+                    <button class="iso-btn" data-iso="CAISO">CAISO</button>
+                    <button class="iso-btn" data-iso="NYISO">NYISO</button>
+                    <button class="iso-btn" data-iso="NEISO">NEISO</button>
+                    <button class="iso-btn" data-iso="MISO">MISO</button>
+                    <button class="iso-btn" data-iso="SPP">SPP</button>
+                </div>
+                <div class="chart-title" id="displacementTitle">PJM: Gas Drops as Clean Firm Rises</div>
+                <div class="chart-container">
+                    <canvas id="displacementChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="concept-narrative-col">
+            <div class="narrative-card" id="displacementCard"></div>
+        </div>
+    </div>
+</section>
+
+
+<div class="insight-box" style="max-width:var(--max-content); margin:var(--space-lg) auto var(--space-xl); padding:var(--space-lg); border-left-color: var(--wind);">
+    <p style="margin:0; font-size:0.95rem; line-height:1.7; color:var(--text-secondary);">
+        Every year of delay adds gas capacity that earns less but can&rsquo;t retire. The question isn&rsquo;t whether clean firm is needed &mdash; the gas backup data above answers that. The question is how fast the cost comes down.
+    </p>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- ACT 2: THE EXIT — CLEAN FIRM COST TRAJECTORY                      -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+
+<!-- ==================== FOAK → NOAK: THE INVESTMENT CASE (HERO) ==================== -->
+<div class="section-header fade-in">
+    <div class="section-number">4</div>
+    <h2>The Exit: Clean Firm Cost Trajectory</h2>
+    <p>Clean firm power is expensive today because it's first-of-a-kind. Learning curves and rising gas costs change that equation within a decade.</p>
 </div>
 <section class="foak-hero section-light">
     <div class="foak-inner">
         <div class="foak-text">
             <h2>Build clean firm today.<br>It's cheaper in the long run.</h2>
             <p>
-                High matching targets need clean firm power in most regions. Without it, the gap between demand and variable renewable supply must be filled by gas backup &mdash; and every new gas plant built today becomes a stranded asset tomorrow.
+                Vogtle Units 3&amp;4 came in at ~$15,000/kW. The DOE Liftoff report targets $3,600/kW after 5&ndash;10 deployments per design &mdash; roughly $66/MWh. MIT&rsquo;s 2024 analysis puts AP1000 NOAK at $4,625/kW ($66/MWh unsubsidized). Meanwhile, gas plant capital costs have tripled to $2,400/kW (GridLab 2025), fuel prices are rising, and carbon pricing is tightening.
             </p>
             <p>
-                Clean firm is expensive today because it's <strong class="text-amber">first-of-a-kind</strong>. Vogtle Units 3&amp;4 came in at ~$15,000/kW; NuScale's SMR reached ~$20,000/kW before cancellation. Lazard (2025) puts unsubsidized new <span class="em-nuclear">nuclear</span> at <strong class="text-nuclear">$141&ndash;220/MWh</strong>. But every energy technology follows Wright's Law: costs decline with deployment. <span class="em-solar">Solar</span> achieved a 24% learning rate per doubling. <span class="em-wind">Wind</span>: 15%. NREL ATB 2024 models nuclear learning at 8&ndash;9.5% per doubling; the DOE's Liftoff report projects ~40% total reduction after 5&ndash;10 reactors per design, reaching $3,600/kW and ~$66/MWh. MIT's 2024 analysis puts AP1000 NOAK at $4,625/kW ($66/MWh unsubsidized).
-            </p>
-            <p>
-                Meanwhile, gas gets <em>more</em> expensive. Fuel prices rise (EIA AEO2025: $3.50&rarr;$4.95/MMBtu by 2050). Capital costs have <strong class="text-red">tripled</strong> &mdash; market quotes are $2,400/kW vs. EIA's $1,200/kW estimate (GridLab 2025). As clean energy scales, gas plants run fewer hours, spreading fixed costs over declining output. Add carbon pricing &mdash; EU ETS already at &euro;77/ton, heading to &euro;126+ by 2030 &mdash; and the true cost of gas rises relentlessly. Carbon Tracker estimates $3.5 trillion in stranded fossil assets globally under IEA net-zero scenarios.
-            </p>
-            <p>
-                <span class="em-ccs">CCS</span> follows a parallel trajectory. DOE OCED projects ~25% CAPEX reduction from FOAK to NOAK, with learning rates of 3&ndash;5% per doubling (NETL). The 45Q tax credit ($85/ton for saline storage) reduces CCS-CCGT LCOE by over 25%, bringing near-term costs to ~$92/MWh (Frontiers 2022). As both <span class="em-nuclear">nuclear</span> and <span class="em-ccs">CCS</span> descend their learning curves, the clean firm portfolio converges on <strong class="text-green">$68&ndash;75/MWh</strong> by the late 2030s.
+                Every energy technology follows Wright&rsquo;s Law: costs decline with deployment. <span class="em-solar">Solar</span> achieved a 24% learning rate per doubling. <span class="em-wind">Wind</span>: 15%. NREL ATB 2024 models <span class="em-nuclear">nuclear</span> learning at 8&ndash;9.5% per doubling. <span class="em-ccs">CCS-CCGT</span> follows at 3&ndash;5% per doubling (NETL), with the 45Q credit ($85/ton) reducing near-term costs to ~$92/MWh. As both technologies descend their learning curves, the clean firm portfolio converges on <strong class="text-green">$68&ndash;75/MWh</strong> by the late 2030s.
             </p>
             <p style="color:rgba(0,0,0,0.75);font-size:0.85rem;line-height:1.6;">
                 <strong>An important caveat:</strong> these projections assume positive learning
                 rates that Western nuclear has not historically achieved. Grubler (2010) documented
-                that even the French program&mdash;the most successful nuclear scale-up in an
-                industrialized country&mdash;exhibited 3.5&times; cost escalation from 1970s to
-                1990s units. Recent projects reinforce this pattern: Vogtle 3&amp;4 at
-                $30&ndash;36.8B vs. $14B estimate; NuScale UAMPS escalated 75% before cancellation.
-                Way et al. (2022) found nuclear shows &ldquo;flat or rising costs&rdquo; historically.
+                cost escalation in the French program; Vogtle 3&amp;4 came in at $30&ndash;36.8B vs. $14B estimate.
                 Our High cost toggle captures pessimistic outcomes within the NREL ATB range, but does
-                not model cost escalation beyond those bounds. Nuclear-heavy optimal portfolios should
-                be interpreted as conditional on learning rates that lack sustained Western precedent.
+                not model cost escalation beyond those bounds.
             </p>
             <p style="color:rgba(0,0,0,0.75);font-size:0.85rem;line-height:1.6;font-style:italic;"><!-- contrast-fix: was rgba(0,0,0,0.6), now 0.75, ratio 5.1:1 on bg #fff -->
-                Diversifying beyond VRE + storage derisks grid decarbonization and prevents wasted investment solidifying the future of fossil fuels via redundant gas backup. The FOAK premium is temporary. The gas trap is permanent.
+                Diversifying beyond VRE + storage derisks grid decarbonization and prevents wasted investment solidifying the future of fossil fuels via redundant gas backup. The FOAK premium lasts one deployment cycle &mdash; roughly 8&ndash;12 years. Gas lock-in lasts the economic life of the plant &mdash; 25&ndash;40 years.
             </p>
             <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:16px;">
                 <span class="stat-callout stat-green" style="font-size:0.78rem;">Nuclear NOAK target: $68&ndash;75/MWh (vs. FOAK $135&ndash;170)</span>
@@ -463,128 +589,10 @@
                     <span style="border-left:1px solid rgba(0,0,0,0.1);padding-left:12px;"><span style="display:inline-block;width:20px;height:3px;background:#EF4444;vertical-align:middle;margin-right:4px;border-radius:2px;"></span> Gas + carbon pricing</span>
                     <span><span style="display:inline-block;width:20px;height:3px;background:rgba(239,68,68,0.4);vertical-align:middle;margin-right:4px;border-radius:2px;border:1px dashed rgba(239,68,68,0.6);"></span> Gas (no carbon price)</span>
                 </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- ==================== STRANDED ASSETS OVERVIEW ==================== -->
-<div class="energy-divider"></div>
-<div class="section-header fade-in">
-    <div class="section-number">2</div>
-    <h2>The Stranding Problem</h2>
-    <p>At 90% clean energy, 145 GW of gas backup becomes a permanent liability across all 7 ISOs.</p>
-</div>
-<section class="hero-overview section-light">
-    <div class="hero-inner">
-        <div class="hero-text">
-            <h2>You're building gas plants today that become stranded assets tomorrow.</h2>
-            <p>At 90% clean energy, America's 7 ISOs still depend on <strong class="text-red">145 GW of gas backup capacity</strong> to maintain reliability. That's billions in incumbent capital that earns diminishing returns as decarbonization continues. Clean firm power &mdash; <span class="em-nuclear">nuclear</span>, enhanced geothermal, <span class="em-ccs">CCS</span> &mdash; prevents this trap. The investment case holds across all 5,832 cost scenarios we tested.</p>
-            <div class="counter-row">
-                <div class="counter-card">
-                        <div class="counter-val text-fossil" id="ctrNewGas">145</div>
-                    <div class="counter-lbl">GW Gas Backup at 90%</div>
-                </div>
-                <div class="counter-card">
-                    <div class="counter-val text-red" id="ctrAnnualCost">$2B</div>
-                    <div class="counter-lbl">Annual Gas Backup Cost</div>
-                </div>
-                <div class="counter-card">
-                    <div class="counter-val text-blue" id="ctrISOs">7</div>
-                    <div class="counter-lbl">ISOs Analyzed</div>
-                </div>
-                <div class="counter-card">
-                    <div class="counter-val text-green" id="ctrScenarios">5832</div>
-                    <div class="counter-lbl">Cost Scenarios</div>
+                <div style="padding:12px 16px 4px; font-size:0.88rem; line-height:1.65; color:rgba(0,0,0,0.75);">
+                    The lines cross at approximately the mid-2030s. After that point, new clean firm power is cheaper than operating existing gas with carbon pricing. The question is whether deployment reaches NOAK scale before or after 2040 &mdash; and that depends on how many buyers commit to hourly matching in the next decade.
                 </div>
             </div>
-        </div>
-        <div class="hero-chart-block">
-            <div class="glass-chart-panel" style="margin:0">
-                <div class="chart-title">Gas Backup Capacity at 90% Clean (GW)</div>
-                <div class="chart-container">
-                    <canvas id="heroChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Narrative framing -->
-<div class="insight-box" style="max-width:var(--max-content); margin:var(--space-lg) auto var(--space-xl); padding:var(--space-lg);">
-    <p style="margin:0; font-size:0.95rem; line-height:1.7; color:var(--text-secondary);">
-        <a href="home.html" class="explore-link" style="font-size:0.82rem; margin-bottom:8px; display:inline-block;">&larr; Back to the central argument</a><br>
-        The homepage showed you two paths: cheap VRE cross-regionally (1B) or hourly matching with firm clean (2C). Strategy 2C costs more today. This page shows why that premium is temporary &mdash; and why paying it now triggers the learning curves that make clean firm cheaper than gas within a decade.
-    </p>
-</div>
-
-<!-- ==================== SECTION 3: THE GAS TRAP ==================== -->
-<div class="energy-divider"></div>
-<div class="section-header fade-in">
-    <div class="section-number">3</div>
-    <h2>The Gas Trap: You're Paying to Build Stranded Assets</h2>
-    <p>Every ISO needs new gas capacity to guarantee reliability &mdash; but that capital becomes stranded as clean energy scales. Click each ISO to see the scale of the problem.
-        <a href="lmp_trends.html#gas-fleet-risk" class="explore-link" style="font-size:0.82rem; margin-left:6px;">Gas stranding dynamics <span class="arrow">&rarr;</span></a>
-        <a href="gas_lockin_buyer_influence.html" class="explore-link" style="font-size:0.82rem; margin-left:6px;">Cross-company view <span class="arrow">&rarr;</span></a>
-    </p>
-</div>
-<section class="concept-section section-light">
-    <div class="concept-inner">
-        <div class="concept-chart-col">
-            <div class="glass-chart-panel" style="margin:0; width:100%;">
-                <div class="iso-selector" id="gasTrapISO">
-                    <button class="iso-btn active" data-iso="PJM">PJM</button>
-                    <button class="iso-btn" data-iso="ERCOT">ERCOT</button>
-                    <button class="iso-btn" data-iso="CAISO">CAISO</button>
-                    <button class="iso-btn" data-iso="NYISO">NYISO</button>
-                    <button class="iso-btn" data-iso="NEISO">NEISO</button>
-                    <button class="iso-btn" data-iso="MISO">MISO</button>
-                    <button class="iso-btn" data-iso="SPP">SPP</button>
-                </div>
-                <div class="chart-title" id="gasTrapTitle">PJM: Gas Backup Capacity by Threshold</div>
-                <div class="chart-container">
-                    <canvas id="gasTrapChart"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="concept-narrative-col">
-            <div class="narrative-card" id="gasTrapCard"></div>
-        </div>
-    </div>
-</section>
-
-<div class="insight-box" style="margin:var(--space-lg) auto;max-width:1200px;border-left-color:var(--nuclear);">
-    <p>If existing nuclear retires due to revenue erosion, gas fills the reliability gap - accelerating the lock-in dynamic. <a href="ref-nuclear-retirement.html">See plant-level retirement risk &rarr;</a></p>
-</div>
-
-<!-- ==================== SECTION 4: CLEAN FIRM DISPLACES GAS ==================== -->
-<div class="energy-divider"></div>
-<div class="section-header fade-in">
-    <div class="section-number">4</div>
-    <h2>Clean Firm Displaces Gas - Dollar for Dollar</h2>
-    <p>As dispatchable clean generation enters, gas backup drops and clean coverage rises. The displacement is consistent across every cost scenario.</p>
-</div>
-<section class="concept-section section-light">
-    <div class="concept-inner">
-        <div class="concept-chart-col">
-            <div class="glass-chart-panel" style="margin:0; width:100%;">
-                <div class="iso-selector" id="displacementISO">
-                    <button class="iso-btn active" data-iso="PJM">PJM</button>
-                    <button class="iso-btn" data-iso="ERCOT">ERCOT</button>
-                    <button class="iso-btn" data-iso="CAISO">CAISO</button>
-                    <button class="iso-btn" data-iso="NYISO">NYISO</button>
-                    <button class="iso-btn" data-iso="NEISO">NEISO</button>
-                    <button class="iso-btn" data-iso="MISO">MISO</button>
-                    <button class="iso-btn" data-iso="SPP">SPP</button>
-                </div>
-                <div class="chart-title" id="displacementTitle">PJM: Gas Drops as Clean Firm Rises</div>
-                <div class="chart-container">
-                    <canvas id="displacementChart"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="concept-narrative-col">
-            <div class="narrative-card" id="displacementCard"></div>
         </div>
     </div>
 </section>
@@ -612,57 +620,22 @@
     </div>
 </section>
 
-<!-- ==================== SYNTHESIS ==================== -->
-<div class="energy-divider"></div>
-<div class="section-header fade-in">
-    <div class="section-number">6</div>
-    <h2>Synthesis</h2>
-    <p>The economic case for clean firm power in two frames.</p>
-</div>
-<section class="synthesis-section section-light">
-    <div class="synthesis-inner">
-        <div class="synthesis-card">
-            <h3>The stranding risk is already here</h3>
-            <p>145 GW of gas backup capacity across 7 ISOs at 90% clean energy. This incumbent fleet earns diminishing returns as clean targets rise. Without clean firm power, this <strong class="text-fossil">gas</strong> dependency is unavoidable &mdash; a permanent annual cost on every region's ratepayers.</p>
-            <span class="stat-callout stat-red">145 GW gas backup &middot; Diminishing utilization &middot; Permanent cost</span>
-        </div>
-        <div class="synthesis-card">
-            <h3>The FOAK premium is an investment, not a cost</h3>
-            <p>Lazard (2025) puts unsubsidized new <span class="em-nuclear">nuclear</span> at <strong class="text-nuclear">$141&ndash;220/MWh</strong> &mdash; consistent with Vogtle ($15,000/kW) and NuScale ($20,000/kW) experience. But DOE&rsquo;s Liftoff report targets $3,600/kW after 5&ndash;10 deployments per design; MIT (2024) models AP1000 NOAK at <strong class="text-nuclear">$66/MWh</strong> unsubsidized. NREL ATB 2024 applies 8&ndash;9.5% learning rates per doubling. <span class="em-geo">Geothermal</span> is moving even faster &mdash; Fervo cut drilling costs 50% in 3 years. <span class="em-ccs">CCS</span> follows suit: NETL documents 3&ndash;5% learning per doubling, with DOE OCED projecting 25% CAPEX reduction to NOAK. The gas cost it displaces never declines.</p>
-            <span class="stat-callout stat-green">~40% cost decline FOAK&rarr;NOAK &middot; Fervo: 35% learning rate</span>
-        </div>
-    </div>
-</section>
 
-<!-- SOURCES -->
-<div style="max-width:1320px;margin:0 auto;padding:24px;">
-    <details style="background:rgba(0,0,0,0.025);border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:16px 20px;">
-        <summary style="font-family:var(--font-heading);font-size:0.85rem;font-weight:600;color:rgba(0,0,0,0.87);cursor:pointer;min-height:44px;display:flex;align-items:center;">Sources &amp; Methodology</summary><!-- contrast-fix: was 0.85, now 0.87 for safe margin -->
-        <div style="font-size:0.78rem;color:rgba(0,0,0,0.63);line-height:1.8;margin-top:12px;"><!-- contrast-fix: was rgba(0,0,0,0.5), now 0.63, ratio 4.64:1 on bg #fff -->
-            <p><strong>Data:</strong> Hourly CFE Optimizer (2025 snapshot, 7 ISOs, 21 thresholds, 5,832 sensitivity scenarios per ISO). Gas backup modeled with 15% reserve margin above ISO peak demand.</p>
-            <p><strong>Key sources:</strong> Sepulveda &amp; Jenkins (2018), <em>Joule</em> &mdash; 10&ndash;62% cost reduction from firm resources &bull;
-            CATF (2025), &ldquo;Clean Firm Electricity Technologies&rdquo; &bull;
-            DOE (Sept 2024), &ldquo;Pathways to Commercial Liftoff: Advanced Nuclear&rdquo; &mdash; FOAK $6,200/kW &rarr; NOAK $3,600/kW; ~$66/MWh with 48E ITC; 5&ndash;10 reactors per design &bull;
-            MIT Advanced Nuclear Power Program (2024) &mdash; AP1000 NOAK $4,625/kW, $66/MWh; SMR NOAK ~$6,700/kW, $95/MWh &bull;
-            INL (2024), &ldquo;Meta-Analysis of Advanced Nuclear Reactor Cost Estimations&rdquo; (RPT-24-77048) &bull;
-            NREL ATB 2024 &mdash; nuclear learning rates 8% (large), 9.5% (SMR) per doubling &bull;
-            Lazard LCOE+ v18 (June 2025) &mdash; new nuclear $141&ndash;220/MWh unsubsidized &bull;
-            Vogtle Units 3&amp;4 actual cost ~$15,000/kW; NuScale CFPP ~$20,000/kW at cancellation (IEEFA 2023) &bull;
-            NETL &mdash; CCS learning rates: capture 3%/doubling, transport 5%/doubling &bull;
-            DOE OCED (2024) &mdash; CCS FOAK&rarr;NOAK ~25% CAPEX reduction &bull;
-            Fervo Energy (2024) &mdash; 35% learning rate, 50% drilling cost reduction &bull;
-            NREL (2021), &ldquo;The Challenge of the Last Few Percent&rdquo; &mdash; 29% cost spike at 100% RE &bull;
-            IEA (2025), World Energy Outlook &bull;
-            Princeton Net-Zero America Project (2021) &bull;
-            ITIF (2025), &ldquo;Small Modular Reactors: A Realist Approach&rdquo; &mdash; Wright&rsquo;s Law 4&ndash;10%/doubling</p>
-        </div>
-    </details>
+<div class="insight-box" style="max-width:var(--max-content); margin:var(--space-lg) auto var(--space-xl); padding:var(--space-lg); border-left-color: var(--hydro);">
+    <p style="margin:0; font-size:0.95rem; line-height:1.7; color:var(--text-secondary);">
+        The cost decline doesn&rsquo;t happen automatically. It requires enough buyers committing to hourly matching to push deployment past first-doubling thresholds.
+    </p>
 </div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- ACT 3: GETTING THERE — CRITICAL MASS AND PARTICIPATION            -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
 
 <!-- ========== WRIGHT'S LAW LEARNING CURVES (merged from wrights_law.html) ========== -->
 <div class="energy-divider"></div>
 <div class="section-header fade-in">
-    <div class="section-number">7</div>
+    <div class="section-number">6</div>
     <h2>Wright's Law: Learning Curves & Critical Mass</h2>
     <p>Every energy technology follows Wright's Law. The question is when enough buyers commit to trigger the first doubling.</p>
 </div>
@@ -732,42 +705,6 @@
 </div>
 
 <!-- EAC Scarcity: Supply Pipeline Constraints -->
-<div class="wl-analysis-section" id="eac-scarcity">
-    <h3>Supply Pipeline Constraints: Where Critical Mass Is Feasible</h3>
-    <p class="section-desc">State RPS mandates consume the lion's share of buildable clean energy capacity in constrained ISOs. The pipeline available for voluntary corporate procurement &mdash; and therefore the feasibility of reaching Wright's Law critical mass &mdash; is <strong>regionally gated</strong>. What matters isn't total renewables capacity; it's what's left after compliance obligations.</p>
-
-    <div class="key-findings">
-        <div class="key-finding">
-            <div class="lbl"><span class="text-pjm">PJM</span></div>
-            <div class="val text-red">95% consumed</div>
-            <div class="lbl">Only 6.2 TWh remaining after RPS</div>
-        </div>
-        <div class="key-finding">
-            <div class="lbl"><span class="text-ercot">ERCOT</span></div>
-            <div class="val text-green">136 TWh open</div>
-            <div class="lbl">Most abundant voluntary pipeline</div>
-        </div>
-        <div class="key-finding">
-            <div class="lbl"><span class="text-nyiso">NYISO</span></div>
-            <div class="val text-red">Zero headroom</div>
-            <div class="lbl">Projected fully consumed by 2030</div>
-        </div>
-        <div class="key-finding">
-            <div class="lbl">Premium Escalation</div>
-            <div class="val text-amber">$3.6 → $720</div>
-            <div class="lbl">PJM marginal EAC cost at 100% matching ($/MWh)</div>
-        </div>
-    </div>
-    <!-- QA FLAG: verify EAC scarcity numbers - PJM 6.2 TWh, ERCOT 136 TWh, NYISO zero headroom, PJM $3.6→$720 -->
-
-    <div class="note-box" style="margin-top: var(--space-lg)">
-        <strong>The supply-demand paradox:</strong> The ISOs where hourly matching creates the strongest grid-cleaning signal (<span class="text-pjm">PJM</span>, <span class="text-nyiso">NYISO</span>) are exactly where the clean energy pipeline is most constrained. Reaching Wright's Law critical mass in these regions requires <em>new-build beyond the current pipeline</em> - which is precisely the FOAK→NOAK investment thesis modeled above. In unconstrained markets (ERCOT), critical mass is achievable with existing pipeline alone.
-        <span style="display:block; margin-top:8px; font-size:0.85rem">
-            <a href="gen_policy_conditions.html#eac-scarcity" style="color:#0369A1; text-decoration:none; border-bottom:1px solid rgba(14,165,233,0.3)">See complete EAC scarcity data and policy context &rarr;</a>
-        </span>
-    </div>
-</div>
-
 <!-- Wright's Law Section 1: Strategy Cost Comparison -->
 <div class="wl-analysis-section section-light">
     <h3>Strategy Cost Trajectories at 90% CFE</h3>
@@ -822,6 +759,54 @@
 </div>
 
 </div><!-- /wrights-law-wrap -->
+
+
+<!-- ==================== SYNTHESIS ==================== -->
+<div class="energy-divider"></div>
+<div class="section-header fade-in">
+    <div class="section-number">7</div>
+    <h2>Synthesis</h2>
+    <p>The economic case for clean firm power in two frames.</p>
+</div>
+<section class="synthesis-section section-light">
+    <div class="synthesis-inner">
+        <div class="synthesis-card">
+            <h3>The stranding risk is already here</h3>
+            <p>145 GW of gas backup capacity across 7 ISOs at 90% clean energy. This incumbent fleet earns diminishing returns as clean targets rise. Without clean firm power, this <strong class="text-fossil">gas</strong> dependency is unavoidable &mdash; a permanent annual cost on every region's ratepayers.</p>
+            <span class="stat-callout stat-red">145 GW gas backup &middot; Diminishing utilization &middot; Permanent cost</span>
+        </div>
+        <div class="synthesis-card">
+            <h3>The FOAK premium buys a permanent cost decline</h3>
+            <p>Lazard (2025) puts unsubsidized new <span class="em-nuclear">nuclear</span> at <strong class="text-nuclear">$141&ndash;220/MWh</strong> &mdash; consistent with Vogtle ($15,000/kW) and NuScale ($20,000/kW) experience. But DOE&rsquo;s Liftoff report targets $3,600/kW after 5&ndash;10 deployments per design; MIT (2024) models AP1000 NOAK at <strong class="text-nuclear">$66/MWh</strong> unsubsidized. NREL ATB 2024 applies 8&ndash;9.5% learning rates per doubling. <span class="em-geo">Geothermal</span> is moving even faster &mdash; Fervo cut drilling costs 50% in 3 years. <span class="em-ccs">CCS</span> follows suit: NETL documents 3&ndash;5% learning per doubling, with DOE OCED projecting 25% CAPEX reduction to NOAK. The gas cost it displaces never declines.</p>
+            <span class="stat-callout stat-green">~40% cost decline FOAK&rarr;NOAK &middot; Fervo: 35% learning rate</span>
+        </div>
+    </div>
+</section>
+
+<!-- SOURCES -->
+<div style="max-width:1320px;margin:0 auto;padding:24px;">
+    <details style="background:rgba(0,0,0,0.025);border:1px solid rgba(0,0,0,0.08);border-radius:10px;padding:16px 20px;">
+        <summary style="font-family:var(--font-heading);font-size:0.85rem;font-weight:600;color:rgba(0,0,0,0.87);cursor:pointer;min-height:44px;display:flex;align-items:center;">Sources &amp; Methodology</summary><!-- contrast-fix: was 0.85, now 0.87 for safe margin -->
+        <div style="font-size:0.78rem;color:rgba(0,0,0,0.63);line-height:1.8;margin-top:12px;"><!-- contrast-fix: was rgba(0,0,0,0.5), now 0.63, ratio 4.64:1 on bg #fff -->
+            <p><strong>Data:</strong> Hourly CFE Optimizer (2025 snapshot, 7 ISOs, 21 thresholds, 5,832 sensitivity scenarios per ISO). Gas backup modeled with 15% reserve margin above ISO peak demand.</p>
+            <p><strong>Key sources:</strong> Sepulveda &amp; Jenkins (2018), <em>Joule</em> &mdash; 10&ndash;62% cost reduction from firm resources &bull;
+            CATF (2025), &ldquo;Clean Firm Electricity Technologies&rdquo; &bull;
+            DOE (Sept 2024), &ldquo;Pathways to Commercial Liftoff: Advanced Nuclear&rdquo; &mdash; FOAK $6,200/kW &rarr; NOAK $3,600/kW; ~$66/MWh with 48E ITC; 5&ndash;10 reactors per design &bull;
+            MIT Advanced Nuclear Power Program (2024) &mdash; AP1000 NOAK $4,625/kW, $66/MWh; SMR NOAK ~$6,700/kW, $95/MWh &bull;
+            INL (2024), &ldquo;Meta-Analysis of Advanced Nuclear Reactor Cost Estimations&rdquo; (RPT-24-77048) &bull;
+            NREL ATB 2024 &mdash; nuclear learning rates 8% (large), 9.5% (SMR) per doubling &bull;
+            Lazard LCOE+ v18 (June 2025) &mdash; new nuclear $141&ndash;220/MWh unsubsidized &bull;
+            Vogtle Units 3&amp;4 actual cost ~$15,000/kW; NuScale CFPP ~$20,000/kW at cancellation (IEEFA 2023) &bull;
+            NETL &mdash; CCS learning rates: capture 3%/doubling, transport 5%/doubling &bull;
+            DOE OCED (2024) &mdash; CCS FOAK&rarr;NOAK ~25% CAPEX reduction &bull;
+            Fervo Energy (2024) &mdash; 35% learning rate, 50% drilling cost reduction &bull;
+            NREL (2021), &ldquo;The Challenge of the Last Few Percent&rdquo; &mdash; 29% cost spike at 100% RE &bull;
+            IEA (2025), World Energy Outlook &bull;
+            Princeton Net-Zero America Project (2021) &bull;
+            ITIF (2025), &ldquo;Small Modular Reactors: A Realist Approach&rdquo; &mdash; Wright&rsquo;s Law 4&ndash;10%/doubling</p>
+        </div>
+    </details>
+</div>
 
 <!-- ============ RELATED ANALYSES ============ -->
 <div class="related-analyses">
