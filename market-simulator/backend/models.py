@@ -289,6 +289,18 @@ class ZonalLMPStats(BaseModel):
     price_spread_vs_system: float = 0.0  # zone avg - system avg
 
 
+class IPMTrigger(BaseModel):
+    """Indicator that a production model (IPM/PLEXOS/GenX) should validate this result."""
+    model_config = ConfigDict(extra='ignore')
+
+    trigger_id: str          # e.g. 'VRE_CANNIBALIZATION'
+    severity: str            # 'medium' or 'high'
+    explanation: str         # Plain-English description
+    metric_value: float      # Actual value that triggered
+    threshold: float         # Threshold crossed
+    recommended_model: str   # e.g. 'Hourly dispatch with curtailment modeling'
+
+
 class YearResult(BaseModel):
     """Results for a single ISO × year."""
     iso: str
@@ -332,6 +344,8 @@ class YearResult(BaseModel):
     # Economic retirement tracking
     economic_retirements_mw: Dict[str, float] = Field(default_factory=dict)
     total_economic_retirement_mw: float = 0.0
+    # IPM trigger indicators
+    ipm_triggers: List[IPMTrigger] = Field(default_factory=list)
     # New: detailed data for results page
     fuel_bin_table: List[FuelBinRow] = Field(default_factory=list)
     supply_stack: List[SupplyStackEntry] = Field(default_factory=list)
