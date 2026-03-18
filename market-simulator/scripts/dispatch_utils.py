@@ -20,7 +20,10 @@ don't recompute dispatch for mixes already evaluated.
 import json
 import os
 import hashlib
+import warnings
 import numpy as np
+from scipy.optimize import linprog
+from scipy.sparse import csc_matrix, lil_matrix
 
 # Numba JIT — 10-50x speedup on battery/LDES dispatch loops
 try:
@@ -57,6 +60,7 @@ from pipeline_config import (
     # Dispatch-specific constants (migrated to pipeline_config)
     HYDRO_CAPS, COAL_CAP_TWH, OIL_CAP_TWH,
     NUCLEAR_SHARE_OF_CLEAN_FIRM, NUCLEAR_MONTHLY_CF,
+    STORAGE_DISPATCH_MODE,
 )
 
 DATA_YEAR = '2025'
@@ -517,6 +521,318 @@ def _dispatch_h2_detailed(residual_surplus, residual_gap, dispatch_pct, demand_a
                                 H2_EFFICIENCY, window_hours, H)
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# LP CO-OPTIMIZED STORAGE DISPATCH
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Storage type definitions for LP dispatch
+_STORAGE_TYPES = [
+    {
+        'name': 'battery4',
+        'duration': BATTERY_DURATION_HOURS,
+        'efficiency': BATTERY_EFFICIENCY,
+        'window_hours': 24,
+        'soc_carryover': False,
+    },
+    {
+        'name': 'battery8',
+        'duration': BATTERY8_DURATION_HOURS,
+        'efficiency': BATTERY8_EFFICIENCY,
+        'window_hours': 48,
+        'soc_carryover': False,
+    },
+    {
+        'name': 'ldes',
+        'duration': LDES_DURATION_HOURS,
+        'efficiency': LDES_EFFICIENCY,
+        'window_hours': LDES_WINDOW_DAYS * 24,
+        'soc_carryover': True,
+    },
+    {
+        'name': 'h2',
+        'duration': H2_DURATION_HOURS,
+        'efficiency': H2_EFFICIENCY,
+        'window_hours': H2_WINDOW_DAYS * 24,
+        'soc_carryover': True,
+    },
+]
+
+
+def _count_active_storage(b4_pct, b8_pct, ldes_pct, h2_pct):
+    """Count how many storage types have non-zero capacity."""
+    return (b4_pct > 0) + (b8_pct > 0) + (ldes_pct > 0) + (h2_pct > 0)
+
+
+def _build_active_storage_params(b4_pct, b8_pct, ldes_pct, h2_pct):
+    """Build list of active storage params from dispatch percentages.
+
+    Returns list of dicts with keys: name, capacity, power_rating, efficiency,
+    window_hours, soc_carryover, and the original index into _STORAGE_TYPES.
+    """
+    pcts = [b4_pct, b8_pct, ldes_pct, h2_pct]
+    active = []
+    for i, (pct, stype) in enumerate(zip(pcts, _STORAGE_TYPES)):
+        if pct > 0:
+            cap = pct / 100.0
+            active.append({
+                'name': stype['name'],
+                'capacity': cap,
+                'power_rating': cap / stype['duration'],
+                'efficiency': stype['efficiency'],
+                'window_hours': stype['window_hours'],
+                'soc_carryover': stype['soc_carryover'],
+                'idx': i,
+            })
+    return active
+
+
+def _solve_storage_window_lp(surplus_w, gap_w, capacities, power_ratings, rtes, soc_init):
+    """Solve LP for one rolling window of co-optimized storage dispatch.
+
+    Variables: [charge(K*W), discharge(K*W), unmet(W)]
+    Objective: minimize sum(unmet)
+
+    Constraints:
+      - SOC upper: cumsum(charge) - cumsum(discharge/rte) <= cap - soc_init  (K*W)
+      - SOC lower: -(cumsum(charge) - cumsum(discharge/rte)) <= soc_init     (K*W)
+      - Surplus:   sum_k(charge[k,h]) <= surplus[h]                          (W)
+      - Gap eq:    sum_k(discharge[k,h]) + unmet[h] = gap[h]                 (W)
+
+    Returns (charge, discharge, soc_final) or None on failure.
+    """
+    from scipy.sparse import coo_matrix
+
+    K = len(capacities)
+    W = len(surplus_w)
+    n_vars = 2 * K * W + W  # charge + discharge + unmet
+
+    # --- Objective: minimize sum(unmet) ---
+    c = np.zeros(n_vars)
+    c[2 * K * W:] = 1.0
+
+    # --- Variable bounds (as array for speed) ---
+    lb = np.zeros(n_vars)
+    ub = np.empty(n_vars)
+    for k in range(K):
+        ub[k * W:(k + 1) * W] = power_ratings[k]          # charge bounds
+        ub[K * W + k * W:K * W + (k + 1) * W] = power_ratings[k]  # discharge bounds
+    ub[2 * K * W:] = gap_w  # unmet bounds
+
+    # --- Build SOC constraint matrices using vectorized COO construction ---
+    # For each type k and hour h, the cumulative-sum constraint involves
+    # a lower-triangular pattern. We build this as COO triplets.
+
+    # Pre-compute the number of non-zeros for SOC constraints:
+    # Each type contributes W*(W+1)/2 entries for charge + same for discharge = W*(W+1) per type
+    # Total SOC nnz = K * W * (W + 1) (for upper), same for lower
+    tri_nnz = W * (W + 1) // 2  # lower-triangular entries per type per variable
+
+    # Build row/col/data arrays for SOC upper constraints (K*W rows)
+    # Row h of type k = k*W + h, cols = k*W+0..k*W+h (charge), K*W+k*W+0..K*W+k*W+h (discharge)
+    soc_rows_list = []
+    soc_cols_list = []
+    soc_data_list = []
+
+    # Precompute lower-triangular indices (row_offset, col_offset within W block)
+    row_idx = np.repeat(np.arange(W), np.arange(1, W + 1))  # [0, 1,1, 2,2,2, ...]
+    col_idx = np.concatenate([np.arange(h + 1) for h in range(W)])  # [0, 0,1, 0,1,2, ...]
+
+    for k in range(K):
+        inv_rte = 1.0 / rtes[k]
+        base_row = k * W
+
+        # Charge columns (positive for upper, negative for lower)
+        soc_rows_list.append(base_row + row_idx)
+        soc_cols_list.append(k * W + col_idx)
+        soc_data_list.append(np.ones(tri_nnz))
+
+        # Discharge columns (negative/rte for upper)
+        soc_rows_list.append(base_row + row_idx)
+        soc_cols_list.append(K * W + k * W + col_idx)
+        soc_data_list.append(np.full(tri_nnz, -inv_rte))
+
+    soc_upper_rows = np.concatenate(soc_rows_list)
+    soc_upper_cols = np.concatenate(soc_cols_list)
+    soc_upper_data = np.concatenate(soc_data_list)
+
+    # SOC upper bound RHS: cap[k] - soc_init[k]
+    b_soc_upper = np.empty(K * W)
+    for k in range(K):
+        b_soc_upper[k * W:(k + 1) * W] = capacities[k] - soc_init[k]
+
+    # SOC lower: negate the upper matrix, RHS = soc_init[k]
+    soc_lower_data = -soc_upper_data
+    b_soc_lower = np.empty(K * W)
+    for k in range(K):
+        b_soc_lower[k * W:(k + 1) * W] = soc_init[k]
+
+    # Surplus constraint: sum_k charge[k,h] <= surplus[h]  (W rows)
+    surplus_rows = np.repeat(np.arange(W), K)
+    surplus_cols = np.concatenate([k * W + np.arange(W) for k in range(K)]).reshape(K, W).T.ravel()
+    surplus_data = np.ones(K * W)
+
+    # Combine all inequality constraints
+    n_ub = 2 * K * W + W
+    all_ub_rows = np.concatenate([
+        soc_upper_rows,
+        K * W + soc_upper_rows,  # SOC lower rows offset by K*W
+        2 * K * W + surplus_rows,
+    ])
+    all_ub_cols = np.concatenate([soc_upper_cols, soc_upper_cols, surplus_cols])
+    all_ub_data = np.concatenate([soc_upper_data, soc_lower_data, surplus_data])
+    b_ub = np.concatenate([b_soc_upper, b_soc_lower, surplus_w])
+
+    A_ub_csc = csc_matrix((all_ub_data, (all_ub_rows, all_ub_cols)), shape=(n_ub, n_vars))
+
+    # --- Equality: sum_k discharge[k,h] + unmet[h] = gap[h] ---
+    eq_rows = np.concatenate([np.arange(W) for _ in range(K)] + [np.arange(W)])
+    eq_cols = np.concatenate(
+        [K * W + k * W + np.arange(W) for k in range(K)] + [2 * K * W + np.arange(W)]
+    )
+    eq_data = np.ones(K * W + W)
+    A_eq_csc = csc_matrix((eq_data, (eq_rows, eq_cols)), shape=(W, n_vars))
+    b_eq = gap_w.copy()
+
+    # Build bounds as (n_vars, 2) array for linprog compatibility
+    bounds = np.column_stack([lb, ub])
+
+    result = linprog(c, A_ub=A_ub_csc, b_ub=b_ub, A_eq=A_eq_csc, b_eq=b_eq,
+                     bounds=bounds, method='highs',
+                     options={'presolve': True, 'time_limit': 10.0})
+
+    if not result.success:
+        return None
+
+    x = np.clip(result.x, 0.0, None)
+
+    charge = np.zeros((K, W))
+    discharge = np.zeros((K, W))
+    for k in range(K):
+        charge[k] = x[k * W:(k + 1) * W]
+        discharge[k] = x[K * W + k * W:K * W + (k + 1) * W]
+        np.clip(charge[k], 0, power_ratings[k], out=charge[k])
+        np.clip(discharge[k], 0, power_ratings[k], out=discharge[k])
+
+    soc_final = np.zeros(K)
+    for k in range(K):
+        soc_final[k] = soc_init[k] + np.sum(charge[k]) - np.sum(discharge[k]) / rtes[k]
+        soc_final[k] = np.clip(soc_final[k], 0.0, capacities[k])
+
+    return charge, discharge, soc_final
+
+
+def co_dispatch_storage_lp(residual_surplus, residual_gap, active_params, detailed=False):
+    """LP co-optimized storage dispatch across all active storage types.
+
+    Solves a rolling-window LP that coordinates charge/discharge across all storage
+    types simultaneously, minimizing unmet demand (residual gap).
+
+    Args:
+        residual_surplus: (H,) surplus array, modified in-place
+        residual_gap: (H,) gap array, modified in-place
+        active_params: list of dicts from _build_active_storage_params()
+        detailed: if True, also return charge profiles
+
+    Returns:
+        dict with keys like 'battery4', 'battery8', 'ldes', 'h2' -> (H,) dispatch profiles,
+        and optionally 'battery4_charge', etc. -> (H,) charge profiles.
+    """
+    K = len(active_params)
+    total_hours = len(residual_surplus)
+
+    # Initialize output profiles (all 4 types, even inactive ones get zeros)
+    all_names = ['battery4', 'battery8', 'ldes', 'h2']
+    dispatch_profiles = {n: np.zeros(total_hours, dtype=np.float64) for n in all_names}
+    charge_profiles = {n: np.zeros(total_hours, dtype=np.float64) for n in all_names}
+
+    if K == 0:
+        result = dict(dispatch_profiles)
+        if detailed:
+            result.update({f'{n}_charge': v for n, v in charge_profiles.items()})
+        return result
+
+    # Unified window = largest active type's window
+    window_hours = max(p['window_hours'] for p in active_params)
+
+    capacities = np.array([p['capacity'] for p in active_params])
+    power_ratings = np.array([p['power_rating'] for p in active_params])
+    rtes = np.array([p['efficiency'] for p in active_params])
+    names = [p['name'] for p in active_params]
+    carryover = [p['soc_carryover'] for p in active_params]
+
+    soc_state = np.zeros(K)  # Current SOC for types with carryover
+
+    num_windows = (total_hours + window_hours - 1) // window_hours
+    greedy_fallback_used = False
+
+    for w in range(num_windows):
+        ws = w * window_hours
+        we = min(ws + window_hours, total_hours)
+        wlen = we - ws
+
+        surplus_w = residual_surplus[ws:we].copy()
+        gap_w = residual_gap[ws:we].copy()
+
+        # Set initial SOC: 0 for batteries (no carryover), carried for LDES/H2
+        soc_init = np.zeros(K)
+        for k in range(K):
+            if carryover[k]:
+                soc_init[k] = soc_state[k]
+
+        # Skip LP if no surplus and no gap in this window
+        if np.sum(surplus_w) < 1e-12 and np.sum(gap_w) < 1e-12:
+            # Reset battery SOCs (no carryover)
+            for k in range(K):
+                if not carryover[k]:
+                    soc_state[k] = 0.0
+            continue
+
+        lp_result = _solve_storage_window_lp(surplus_w, gap_w, capacities,
+                                              power_ratings, rtes, soc_init)
+
+        if lp_result is None:
+            # LP failed — fall back to greedy for this window
+            if not greedy_fallback_used:
+                warnings.warn(f"LP co-dispatch infeasible/failed at window {w}, "
+                              f"falling back to greedy for this window.")
+                greedy_fallback_used = True
+            # Reset SOC for non-carryover types
+            for k in range(K):
+                if not carryover[k]:
+                    soc_state[k] = 0.0
+            continue
+
+        charge_w, discharge_w, soc_final = lp_result
+
+        # Write results into output arrays and update residuals
+        for k in range(K):
+            name = names[k]
+            dispatch_profiles[name][ws:we] += discharge_w[k, :wlen]
+            charge_profiles[name][ws:we] += charge_w[k, :wlen]
+
+        # Update residual arrays in-place (consumed surplus, filled gap)
+        total_charge_h = np.sum(charge_w[:, :wlen], axis=0)
+        total_discharge_h = np.sum(discharge_w[:, :wlen], axis=0)
+        residual_surplus[ws:we] -= total_charge_h
+        residual_gap[ws:we] -= total_discharge_h
+
+        # Clip to avoid numerical negatives
+        np.clip(residual_surplus[ws:we], 0.0, None, out=residual_surplus[ws:we])
+        np.clip(residual_gap[ws:we], 0.0, None, out=residual_gap[ws:we])
+
+        # Update SOC state
+        for k in range(K):
+            if carryover[k]:
+                soc_state[k] = soc_final[k]
+            else:
+                soc_state[k] = 0.0
+
+    result = dict(dispatch_profiles)
+    if detailed:
+        result.update({f'{n}_charge': v for n, v in charge_profiles.items()})
+    return result
+
+
 @njit(cache=True)
 def _per_resource_dispatch_njit(demand_arr, supply_matrix, resource_pcts_arr,
                                  procurement_factor, dispatch_order_indices):
@@ -639,7 +955,7 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
                                  procurement_pct=100, battery_dispatch_pct=0,
                                  battery8_dispatch_pct=0, ldes_dispatch_pct=0,
                                  supply_matrix=None, detailed=False,
-                                 h2_dispatch_pct=0):
+                                 h2_dispatch_pct=0, dispatch_mode=None):
     """Reconstruct full 8760 hourly dispatch for a resource mix.
 
     Args:
@@ -696,11 +1012,34 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
             if rtype == 'ccs_ccgt':
                 ccs_supply = contribution.copy()
 
-    # Storage dispatch: battery4 → battery8 → LDES (sequential, each reduces residuals)
+    # Storage dispatch
     residual_surplus = np.maximum(0.0, supply_total - demand_arr)
     residual_gap = np.maximum(0.0, demand_arr - supply_total)
 
-    if detailed:
+    if dispatch_mode is None:
+        dispatch_mode = STORAGE_DISPATCH_MODE
+
+    active_count = _count_active_storage(battery_dispatch_pct, battery8_dispatch_pct,
+                                          ldes_dispatch_pct, h2_dispatch_pct)
+
+    # LP co-dispatch when enabled and >=2 storage types active (otherwise greedy is equivalent)
+    if dispatch_mode == 'lp' and active_count >= 2:
+        active_params = _build_active_storage_params(
+            battery_dispatch_pct, battery8_dispatch_pct,
+            ldes_dispatch_pct, h2_dispatch_pct)
+        lp_result = co_dispatch_storage_lp(residual_surplus, residual_gap,
+                                            active_params, detailed=detailed)
+        battery4_profile = lp_result['battery4']
+        battery8_profile = lp_result['battery8']
+        ldes_profile = lp_result['ldes']
+        h2_profile = lp_result['h2']
+        if detailed:
+            battery4_charge = lp_result['battery4_charge']
+            battery8_charge = lp_result['battery8_charge']
+            ldes_charge = lp_result['ldes_charge']
+            h2_charge = lp_result['h2_charge']
+    elif detailed:
+        # Greedy sequential dispatch with charge tracking
         battery4_profile, battery4_charge = _dispatch_battery_detailed(
             residual_surplus, residual_gap,
             battery_dispatch_pct, BATTERY_DURATION_HOURS, BATTERY_EFFICIENCY)
@@ -715,6 +1054,7 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
             residual_surplus, residual_gap,
             h2_dispatch_pct, demand_arr)
     else:
+        # Greedy sequential dispatch (no charge tracking)
         battery4_profile = _dispatch_battery(
             residual_surplus, residual_gap,
             battery_dispatch_pct, BATTERY_DURATION_HOURS, BATTERY_EFFICIENCY)
