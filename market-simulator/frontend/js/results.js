@@ -54,6 +54,37 @@ const PLOTLY_LAYOUT_BASE = {
     autosize: true,
 };
 
+// ── Confidence zones for trajectory reliability visualization ──
+const CONFIDENCE_ZONES = {
+    high:     { start: 2025, end: 2030, color: 'rgba(34,197,94,0.08)',  border: '#22C55E', label: 'Calibrated' },
+    moderate: { start: 2030, end: 2040, color: 'rgba(245,158,11,0.08)', border: '#F59E0B', label: 'Moderate Extrapolation' },
+    low:      { start: 2040, end: 2060, color: 'rgba(239,68,68,0.08)',  border: '#EF4444', label: 'High Uncertainty' },
+};
+
+const CONFIDENCE_UNCERTAINTY = { high: 0.05, moderate: 0.15, low: 0.30 };
+
+function getConfidenceShapes(years) {
+    if (!years || years.length < 2) return [];
+    const minY = Math.min(...years), maxY = Math.max(...years);
+    return Object.values(CONFIDENCE_ZONES)
+        .filter(z => z.start < maxY && z.end > minY)
+        .map(z => ({
+            type: 'rect', xref: 'x', yref: 'paper',
+            x0: Math.max(z.start, minY - 0.5),
+            x1: Math.min(z.end, maxY + 0.5),
+            y0: 0, y1: 1,
+            fillcolor: z.color,
+            line: { width: 1, color: z.border, dash: 'dot' },
+            layer: 'below',
+        }));
+}
+
+function getConfidenceZoneKey(year) {
+    if (year <= 2030) return 'high';
+    if (year <= 2040) return 'moderate';
+    return 'low';
+}
+
 // ── Load data ──
 let simResult = null;
 let simParams = null;
@@ -143,16 +174,49 @@ function renderAll() {
 
     // Year header above KPI cards
     const kpiYearHeader = document.getElementById('kpiYearHeader');
+    const confBadge = document.getElementById('kpiConfidenceBadge');
     if (kpiYearHeader && data.year_results && data.year_results.length > 0) {
-        const finalYear = data.year_results[data.year_results.length - 1].year;
-        kpiYearHeader.textContent = `${finalYear} Snapshot Results`;
+        const finalYr = data.year_results[data.year_results.length - 1];
+        // Set text without overwriting the badge span
+        const textNode = kpiYearHeader.firstChild;
+        if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+            textNode.textContent = `${finalYr.year} Snapshot Results `;
+        } else {
+            kpiYearHeader.insertBefore(
+                document.createTextNode(`${finalYr.year} Snapshot Results `),
+                kpiYearHeader.firstChild
+            );
+        }
+        // Confidence badge
+        if (confBadge && finalYr.confidence) {
+            const zoneInfo = (data.confidence_zones || []).find(z => z.zone === finalYr.confidence);
+            confBadge.className = `confidence-badge confidence-${finalYr.confidence}`;
+            confBadge.textContent = finalYr.confidence_label || finalYr.confidence;
+            confBadge.title = zoneInfo ? zoneInfo.tooltip : '';
+            confBadge.style.display = '';
+        }
     } else if (kpiYearHeader) {
         kpiYearHeader.textContent = '';
+        if (confBadge) confBadge.style.display = 'none';
+    }
+
+    // Confidence zone legend (trajectory mode only)
+    const confLegend = document.getElementById('confidenceLegend');
+    const hasMultiYear = data.year_results && data.year_results.length > 1;
+    if (confLegend && hasMultiYear && data.confidence_zones) {
+        confLegend.innerHTML = data.confidence_zones.map(z =>
+            `<div class="confidence-legend-item">
+                <span class="confidence-legend-dot" style="background:${z.color}"></span>
+                ${z.label} (${z.start}\u2013${z.end})
+            </div>`
+        ).join('');
+        confLegend.style.display = '';
+    } else if (confLegend) {
+        confLegend.style.display = 'none';
     }
 
     // Show year drill-down header for trajectory mode
     const yearHeader = document.getElementById('yearDrilldownHeader');
-    const hasMultiYear = data.year_results && data.year_results.length > 1;
     if (yearHeader) {
         yearHeader.style.display = hasMultiYear ? '' : 'none';
     }
@@ -331,12 +395,27 @@ function renderLMPTimeSeries(data) {
             line: { color: '#F47B27', width: 2, dash: 'dash' },
         });
 
+        // Synthetic uncertainty envelope (widens with projection distance)
+        const lmpUpper = years.map((y, i) => lmps[i] * (1 + CONFIDENCE_UNCERTAINTY[getConfidenceZoneKey(y)]));
+        const lmpLower = years.map((y, i) => lmps[i] * (1 - CONFIDENCE_UNCERTAINTY[getConfidenceZoneKey(y)]));
+        traces.unshift({
+            x: [...years, ...[...years].reverse()],
+            y: [...lmpUpper, ...[...lmpLower].reverse()],
+            fill: 'toself',
+            fillcolor: 'rgba(35, 114, 185, 0.08)',
+            line: { color: 'transparent' },
+            showlegend: true,
+            name: 'Uncertainty Range',
+            hoverinfo: 'skip',
+        });
+
         Plotly.newPlot(container, traces, {
             ...PLOTLY_LAYOUT_BASE,
             title: { text: `LMP & Revenue Trajectory — ${currentISO}`, font: { size: 14 } },
             xaxis: { title: 'Year', gridcolor: '#f0f0f0' },
             yaxis: { title: '$/MWh', gridcolor: '#f0f0f0' },
             legend: { x: 0, y: 1.12, orientation: 'h' },
+            shapes: getConfidenceShapes(years),
         }, { responsive: true });
     } else {
         // Fallback: single LMP value
@@ -466,13 +545,30 @@ function renderSupplyStack(data) {
             });
         }
 
+        // Confidence zone annotations for categorical x-axis
+        const supplyAnnotations = [];
+        for (const [key, zone] of Object.entries(CONFIDENCE_ZONES)) {
+            const zoneYears = displayYears.filter(y => y >= zone.start && y < zone.end);
+            if (zoneYears.length > 0) {
+                const midIdx = Math.floor((displayYears.indexOf(zoneYears[0]) + displayYears.indexOf(zoneYears[zoneYears.length - 1])) / 2);
+                supplyAnnotations.push({
+                    x: String(displayYears[midIdx]),
+                    y: 1.02, yref: 'paper', yanchor: 'bottom',
+                    text: zone.label,
+                    showarrow: false,
+                    font: { size: 9, color: zone.border },
+                });
+            }
+        }
+
         Plotly.newPlot(container, traces, {
             ...PLOTLY_LAYOUT_BASE,
             title: { text: `Supply Stack by Year — ${currentISO}`, font: { size: 14 } },
             barmode: 'stack',
             xaxis: { title: 'Year', type: 'category' },
             yaxis: { title: 'Generation (TWh)', gridcolor: '#f0f0f0' },
-            legend: { x: 0, y: 1.15, orientation: 'h' },
+            legend: { x: 0, y: 1.22, orientation: 'h' },
+            annotations: supplyAnnotations,
         }, { responsive: true });
 
         // Build data table
@@ -591,6 +687,7 @@ function renderEmissionsByYear(data) {
         xaxis: { title: 'Year', gridcolor: '#f0f0f0' },
         yaxis: { title: 'CO₂ Emissions (Mt)', gridcolor: '#f0f0f0' },
         legend: { x: 0, y: 1.15, orientation: 'h' },
+        shapes: getConfidenceShapes(years),
     }, { responsive: true });
 
     // Headline stats
