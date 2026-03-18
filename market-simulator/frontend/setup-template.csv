@@ -1,0 +1,67 @@
+parameter,value,description,unit,default,valid_range
+iso,ERCOT,ISO region to simulate,,ERCOT,CAISO|ERCOT|PJM|NYISO|NEISO|MISO|SPP
+mode,trajectory5,Simulation mode,,trajectory5,trajectory5|trajectory1|sweep
+fuel_gas,3.50,Natural gas price,$/MMBtu,3.50,1.0-15.0
+fuel_coal,2.25,Coal price,$/MMBtu,2.25,1.0-5.0
+fuel_oil,10.50,Oil price,$/MMBtu,10.50,5.0-25.0
+carbon_price,5.50,CO2 emission price,$/ton,5.50,0-200
+nox_price,0,NOx allowance price,$/ton,0,0-10000
+sox_price,0,SOx allowance price,$/ton,0,0-1000
+nox_limit,,NOx emission rate limit — blank means no limit,lb/MWh,,0.01-5.0
+sox_limit,,SOx emission rate limit — blank means no limit,lb/MWh,,0.01-5.0
+hr_coal_steam,10.0,Existing coal steam heat rate,MMBtu/MWh,10.0,8.0-14.0
+hr_gas_ccgt,7.0,Existing gas CCGT heat rate,MMBtu/MWh,7.0,6.0-9.0
+hr_gas_ct,10.5,Existing gas combustion turbine heat rate,MMBtu/MWh,10.5,8.0-14.0
+hr_oil_ct,10.5,Existing oil combustion turbine heat rate,MMBtu/MWh,10.5,8.0-14.0
+hr_new_gas_ccgt,6.2,New-build CCGT heat rate (H-class),MMBtu/MWh,6.2,5.0-9.0
+hr_new_gas_ct,9.5,New-build gas CT heat rate (aeroderivative),MMBtu/MWh,9.5,7.0-14.0
+hr_new_coal,8.8,New-build supercritical coal heat rate,MMBtu/MWh,8.8,7.0-12.0
+vom_coal_steam,5.50,Existing coal steam variable O&M,$/MWh,5.50,2.0-10.0
+vom_gas_ccgt,3.50,Existing gas CCGT variable O&M,$/MWh,3.50,1.0-8.0
+vom_gas_ct,5.00,Existing gas CT variable O&M,$/MWh,5.00,2.0-10.0
+vom_oil_ct,6.00,Existing oil CT variable O&M,$/MWh,6.00,3.0-12.0
+lcoe_solar,31.8,Solar PV levelized cost,$/MWh,31.8,15.0-80.0
+lcoe_wind,34.5,Onshore wind levelized cost,$/MWh,34.5,20.0-80.0
+lcoe_offshore,82.0,Offshore wind levelized cost,$/MWh,82.0,50.0-200.0
+lcoe_nuclear,89.0,Nuclear (clean firm) levelized cost,$/MWh,89.0,50.0-200.0
+lcoe_ccs,86.0,CCS-CCGT levelized cost,$/MWh,86.0,50.0-200.0
+lcoe_geo,55.0,Geothermal levelized cost (CAISO only),$/MWh,55.0,30.0-150.0
+new_gas_ccgt_lcoe,55,New-build gas CCGT LCOE,$/MWh,55,30-120
+new_gas_ct_lcoe,85,New-build gas CT (peaker) LCOE,$/MWh,85,50-150
+new_coal_lcoe,80,New-build coal LCOE,$/MWh,80,50-150
+cost_battery,295,Battery 4hr Li-ion installed cost,$/kW-yr,295,150-500
+cost_battery8,456,Battery 8hr Li-ion installed cost,$/kW-yr,456,250-750
+cost_ldes,220,LDES 100hr iron-air installed cost,$/kW-yr,220,100-400
+transmission_level,Medium,Master transmission cost level,,Medium,None|Low|Medium|High
+tx_override_solar,,Per-resource TX override for solar — blank uses master level,$/MWh,,0-50
+tx_override_wind,,Per-resource TX override for wind — blank uses master level,$/MWh,,0-50
+tx_override_offshore_wind,,Per-resource TX override for offshore wind — blank uses master level,$/MWh,,0-50
+tx_override_nuclear,,Per-resource TX override for nuclear — blank uses master level,$/MWh,,0-50
+tx_override_ccs_ccgt,,Per-resource TX override for CCS-CCGT — blank uses master level,$/MWh,,0-50
+tx_override_geothermal,,Per-resource TX override for geothermal — blank uses master level (CAISO only),$/MWh,,0-50
+ptc_wind,26.0,Production Tax Credit for wind,$/MWh,26.0,0-50
+ptc_solar,26.0,Production Tax Credit for solar,$/MWh,26.0,0-50
+ptc_nuclear_new,26.0,45Y PTC for new nuclear,$/MWh,26.0,0-50
+ptc_45u_max,15.0,45U existing nuclear max credit,$/MWh,15.0,0-30
+ptc_45u_floor,40.0,45U revenue floor price,$/MWh,40.0,20-80
+ptc_45u_floor_escalation,0,45U floor annual escalation,%/yr,0,0-5
+ptc_45u_sunset_year,2032,45U sunset year,year,2032,2025-2060
+itc_pct,30,Investment Tax Credit for storage/offshore,%,30,0-50
+rec_price,,REC price override — blank uses ISO-specific model default,$/MWh,,0-100
+q45,On,45Q carbon capture tax credit,,On,On|Off
+ccs_credit_override,,CCS credit override — replaces 45Q tables when set,$/MWh,,0-100
+ppa_level,Medium,PPA availability/discount level,,Medium,Low|Medium|High
+capacity_market,,Capacity market price override — blank uses ISO default,$/kW-yr,,0-300
+wholesale_override,,Wholesale energy price override — blank uses model-derived,$/MWh,,10-100
+demand_growth,Medium,Demand growth rate,,Medium,Low|Medium|High|Custom
+custom_demand_pct,1.5,Custom demand growth rate (only used when demand_growth=Custom),%/yr,1.5,0-5.0
+gas_friction,Medium,Gas new-build friction (ESG/permitting barriers),,Medium,Low|Medium|High
+interchange_enabled,On,Inter-regional power imports,,On,On|Off
+dr_level,Off,Demand response participation level,,Off,Off|Low|Medium|High
+nuclear_retirement,30,Nuclear economic retirement threshold,$/MWh,30,10-60
+start_year,2025,Simulation start year,year,2025,2025|2030|2035|2040
+end_year,2060,Simulation end year,year,2060,2035|2040|2045|2050|2055|2060
+learning_curves,On,Wright's Law learning curves — cost decline over time,,On,On|Off
+learning_speed,Medium,Learning curve speed (when learning curves enabled),,Medium,Slow|Medium|Fast
+queue_cap_level,Medium,Interconnection queue speed,,Medium,Low|Medium|High
+queue_cap_override,,Queue cap override — blank uses L/M/H default,GW/yr,,0.5-20.0
