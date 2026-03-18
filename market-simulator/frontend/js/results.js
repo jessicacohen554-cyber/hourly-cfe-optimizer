@@ -264,6 +264,7 @@ function renderAll() {
     }
 
     updateStats(data);
+    renderIPMTriggers(data);
     renderNarrative(data);
 
     // Level 1: Market-wide
@@ -345,6 +346,148 @@ function updateStats(data) {
             .map(([type, mw]) => `${type.replace('_', ' ')}: ${fmtNum(mw / 1000, 1)} GW`);
         retiredDetail.textContent = parts.join(' · ') || 'None';
     }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// IPM TRIGGER INDICATORS
+// ══════════════════════════════════════════════════════════════════════════════
+
+const TRIGGER_NAMES = {
+    'VRE_CANNIBALIZATION': 'VRE Price Cannibalization',
+    'TIGHT_RA_MARGIN': 'Tight Reserve Margin',
+    'HIGH_CONGESTION': 'Transmission Congestion Risk',
+    'STORAGE_DOMINANCE': 'Storage Dominance',
+    'RETIREMENT_CASCADE': 'Fossil Retirement Cascade',
+    'NUCLEAR_AT_RISK': 'Nuclear Retirement Risk',
+};
+
+const TRIGGER_ICONS = {
+    'high': '\u26A0\uFE0F',   // ⚠️
+    'medium': '\u26A0',        // ⚠
+};
+
+/**
+ * Get dismissed triggers from sessionStorage.
+ */
+function getDismissedTriggers() {
+    try {
+        return JSON.parse(sessionStorage.getItem('dismissedIPMTriggers') || '[]');
+    } catch { return []; }
+}
+
+/**
+ * Dismiss a trigger — add to sessionStorage and remove its card.
+ */
+function dismissTrigger(triggerId) {
+    const dismissed = getDismissedTriggers();
+    if (!dismissed.includes(triggerId)) {
+        dismissed.push(triggerId);
+        sessionStorage.setItem('dismissedIPMTriggers', JSON.stringify(dismissed));
+    }
+    const card = document.querySelector(`.trigger-card[data-trigger-id="${triggerId}"]`);
+    if (card) card.remove();
+    // Hide container if no cards remain
+    const container = document.getElementById('ipmTriggerContainer');
+    if (container && container.querySelectorAll('.trigger-card').length === 0) {
+        container.style.display = 'none';
+    }
+}
+
+/**
+ * Aggregate triggers across years: group by trigger_id, consolidate year ranges.
+ * Returns array of {trigger_id, severity, explanation, metric_value, threshold,
+ *   recommended_model, years: [int], year_range: str}
+ */
+function aggregateTriggers(yearResults) {
+    const byId = {};
+    for (const yr of (yearResults || [])) {
+        for (const t of (yr.ipm_triggers || [])) {
+            const key = t.trigger_id;
+            if (!byId[key]) {
+                byId[key] = { ...t, years: [] };
+            }
+            byId[key].years.push(yr.year);
+            // Keep highest severity and worst metric
+            if (t.severity === 'high') byId[key].severity = 'high';
+            if (Math.abs(t.metric_value) > Math.abs(byId[key].metric_value)) {
+                byId[key].metric_value = t.metric_value;
+            }
+        }
+    }
+
+    // Build year ranges and sort: high first, then medium
+    const result = Object.values(byId).map(t => {
+        const yrs = [...new Set(t.years)].sort((a, b) => a - b);
+        let yearRange;
+        if (yrs.length === 0) yearRange = '';
+        else if (yrs.length === 1) yearRange = String(yrs[0]);
+        else yearRange = `${yrs[0]}\u2013${yrs[yrs.length - 1]}`;
+        return { ...t, years: yrs, year_range: yearRange };
+    });
+    result.sort((a, b) => {
+        if (a.severity === 'high' && b.severity !== 'high') return -1;
+        if (a.severity !== 'high' && b.severity === 'high') return 1;
+        return 0;
+    });
+    return result;
+}
+
+/**
+ * Render IPM trigger indicator cards into #ipmTriggerContainer.
+ */
+function renderIPMTriggers(data) {
+    const container = document.getElementById('ipmTriggerContainer');
+    if (!container) return;
+
+    // Collect triggers — from year_results (trajectory) or single result
+    let triggers;
+    if (data.year_results && data.year_results.length > 0) {
+        triggers = aggregateTriggers(data.year_results);
+    } else {
+        // Single-year: wrap in array
+        const singleTriggers = data.ipm_triggers || [];
+        if (singleTriggers.length === 0) { container.style.display = 'none'; return; }
+        triggers = singleTriggers.map(t => ({ ...t, years: [data.year || 0], year_range: '' }));
+    }
+
+    // Filter out dismissed
+    const dismissed = getDismissedTriggers();
+    triggers = triggers.filter(t => !dismissed.includes(t.trigger_id));
+
+    if (triggers.length === 0) { container.style.display = 'none'; return; }
+
+    const hasHigh = triggers.some(t => t.severity === 'high');
+
+    let html = `<div class="trigger-header-bar">
+        <h3>${hasHigh ? '\u26A0\uFE0F Production Modeling Recommended' : '\u26A0 Model Limitations Flagged'}</h3>
+    </div>`;
+
+    for (const t of triggers) {
+        const name = TRIGGER_NAMES[t.trigger_id] || t.trigger_id;
+        const sevClass = t.severity === 'high' ? 'trigger-card-high' : 'trigger-card-medium';
+        const sevBadge = t.severity === 'high' ? 'trigger-severity-high' : 'trigger-severity-medium';
+        const icon = t.severity === 'high' ? '\u26A0\uFE0F' : '\u26A0';
+        const yearStr = t.year_range ? `<div class="trigger-years">${t.year_range}</div>` : '';
+
+        html += `<div class="trigger-card ${sevClass}" data-trigger-id="${t.trigger_id}">
+            <div class="trigger-icon">${icon}</div>
+            <div class="trigger-body">
+                <div class="trigger-title">${name}
+                    <span class="trigger-severity-badge ${sevBadge}">${t.severity}</span>
+                </div>
+                <div class="trigger-explanation">${t.explanation}</div>
+                <div class="trigger-metric">
+                    Current: <strong>${fmtNum(t.metric_value, 1)}</strong> | Threshold: ${fmtNum(t.threshold, 1)}
+                    ${t.recommended_model ? ` | Rec: ${t.recommended_model}` : ''}
+                </div>
+                ${yearStr}
+            </div>
+            <button class="trigger-dismiss" onclick="dismissTrigger('${t.trigger_id}')" title="Dismiss">&times;</button>
+        </div>`;
+    }
+
+    container.innerHTML = html;
+    container.style.display = '';
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
