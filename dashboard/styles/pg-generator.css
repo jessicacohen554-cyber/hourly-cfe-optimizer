@@ -269,7 +269,7 @@
 /* ========== CHART CONTAINERS (page-specific) ========== */
 .chart-wrapper {
     position: relative;
-    height: 350px;
+    min-height: 350px;
 }
 
 /* ========== SCROLLYTELLING ========== */
@@ -538,7 +538,7 @@ sup.ref {
 @media (max-width: 480px) {
     .stat-row { grid-template-columns: 1fr 1fr; }
     .stat-value { font-size: 1.8rem; }
-    .chart-wrapper { height: 340px !important; }
+    .chart-wrapper { min-height: 340px !important; }
     .card-grid { grid-template-columns: 1fr; }
     .key-insights { margin: 0 8px 20px; padding: 16px 16px; }
 }
