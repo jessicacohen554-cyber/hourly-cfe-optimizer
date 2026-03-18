@@ -58,6 +58,24 @@
             </a>
 
             <!-- ═══════════════════════════════════════════════════════════
+                 CSV Configuration Import/Export
+                 ═══════════════════════════════════════════════════════════ -->
+            <div class="glass-card form-section" style="padding: var(--space-md) var(--space-lg); display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 200px;">
+                    <h3 style="margin: 0 0 4px; font-size: 1rem; color: var(--navy);">Bulk Configuration</h3>
+                    <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">Download the CSV template, fill in your values, and upload to populate all fields at once.</p>
+                </div>
+                <a href="/setup-template.csv" download="setup-template.csv" class="btn-secondary" style="white-space: nowrap; padding: 0.5rem 1rem; font-size: 0.9rem; text-decoration: none; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-card); cursor: pointer;">
+                    ↓ Download Template
+                </a>
+                <label class="btn-secondary" style="white-space: nowrap; padding: 0.5rem 1rem; font-size: 0.9rem; border-radius: var(--radius-sm); border: 1px solid var(--ceg-blue, #1d4ed8); background: var(--ceg-blue, #1d4ed8); color: #fff; cursor: pointer;">
+                    ↑ Upload CSV
+                    <input type="file" id="csvUploadInput" accept=".csv" style="display: none;">
+                </label>
+                <span id="csvUploadStatus" style="font-size: 0.85rem; color: var(--text-muted);"></span>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════════════
                  ROW 1: Simulation Mode | Region | Nuclear Retirement
                  ═══════════════════════════════════════════════════════════ -->
             <div class="grid-3col">
@@ -278,6 +296,25 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- New-Build Heat Rates -->
+                <h4 style="margin: var(--space-md) 0 var(--space-sm); font-size: 0.9rem; color: var(--navy);">New-Build Heat Rates
+                    <span class="info-icon" data-tooltip="Heat rates for new-build fossil generators. Used in CCS breakeven analysis and new-build vs. existing fleet economics. Lower heat rate = more efficient.">i</span>
+                </h4>
+                <div class="grid-3col">
+                    <div class="input-group">
+                        <label>New CCGT (MMBtu/MWh) <span class="info-icon" data-tooltip="H-class combined cycle heat rate. Default 6.2 reflects best-in-class efficiency. F-class would be ~7.0.">i</span></label>
+                        <input type="number" id="hr_new_gas_ccgt" value="6.2" step="0.1" min="5.0" max="9.0">
+                    </div>
+                    <div class="input-group">
+                        <label>New Gas CT (MMBtu/MWh) <span class="info-icon" data-tooltip="Modern aeroderivative combustion turbine heat rate. Default 9.5 reflects LM6000/LMS100 class.">i</span></label>
+                        <input type="number" id="hr_new_gas_ct" value="9.5" step="0.1" min="7.0" max="14.0">
+                    </div>
+                    <div class="input-group">
+                        <label>New Coal (MMBtu/MWh) <span class="info-icon" data-tooltip="Supercritical coal plant heat rate. Default 8.8. Ultra-supercritical would be ~8.0.">i</span></label>
+                        <input type="number" id="hr_new_coal" value="8.8" step="0.1" min="7.0" max="12.0">
+                    </div>
                 </div>
             </div>
 
