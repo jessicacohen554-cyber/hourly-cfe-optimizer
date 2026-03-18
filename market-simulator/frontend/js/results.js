@@ -223,6 +223,21 @@ function updateStats(data) {
         plantStats.style.display = 'none';
     }
 
+    // Demand response KPI cards
+    const drStats = document.getElementById('drStats');
+    if (drStats) {
+        const drGwh = data.dr_curtailed_gwh || 0;
+        if (drGwh > 0) {
+            setText('statDrCurtailed', fmtNum(drGwh, 1));
+            setText('statDrPeak', fmtNum(data.dr_peak_gw || 0, 2));
+            setText('statDrHours', fmtNum(data.dr_hours || 0, 0));
+            setText('statDrPrice', '$' + fmtNum(data.dr_avg_price || 0, 0));
+            drStats.style.display = '';
+        } else {
+            drStats.style.display = 'none';
+        }
+    }
+
     // Economic retirement summary
     const retiredMW = data.total_economic_retirement_mw || 0;
     const retiredEl = document.getElementById('statEconRetiredMW');

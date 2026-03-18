@@ -447,6 +447,39 @@ STORAGE_MAX_V2 = {
 STORAGE_DISPATCH_MODE = 'greedy'
 
 # ============================================================================
+# DEMAND RESPONSE PARAMETERS
+# ============================================================================
+# Price-elastic demand curtailment model. When LMP exceeds an ISO-specific
+# trigger price, registered DR capacity sheds load proportionally until price
+# equilibrates. Sources: FERC Form 714, ISO DR registration reports, PJM
+# Demand Response Operations Markets Activity Reports (2020-2024).
+#
+# max_dr_gw:      Maximum registered DR capacity (GW) from ISO filings
+# trigger_price:  LMP threshold ($/MWh) above which DR activates
+# participation:  Base fraction of registered DR that actually responds
+#                 (historical avg from ISO event performance data)
+
+DEMAND_RESPONSE = {
+    'CAISO':  {'max_dr_gw': 4.0,  'trigger_price': 150, 'participation': 0.70},
+    'ERCOT':  {'max_dr_gw': 5.0,  'trigger_price': 200, 'participation': 0.60},
+    'PJM':    {'max_dr_gw': 10.0, 'trigger_price': 100, 'participation': 0.75},
+    'NYISO':  {'max_dr_gw': 1.5,  'trigger_price': 150, 'participation': 0.70},
+    'NEISO':  {'max_dr_gw': 1.0,  'trigger_price': 150, 'participation': 0.65},
+    'MISO':   {'max_dr_gw': 8.0,  'trigger_price': 120, 'participation': 0.65},
+    'SPP':    {'max_dr_gw': 2.0,  'trigger_price': 150, 'participation': 0.60},
+}
+
+# DR sensitivity levels: Off/Low/Medium/High
+# participation_mult: multiplier on base participation rate
+# trigger_mult: multiplier on trigger price (>1 = higher threshold = less activation)
+DR_LEVELS = {
+    'Off':    {'participation_mult': 0.0,  'trigger_mult': 1.0},
+    'Low':    {'participation_mult': 0.50, 'trigger_mult': 1.3},
+    'Medium': {'participation_mult': 0.70, 'trigger_mult': 1.0},
+    'High':   {'participation_mult': 0.90, 'trigger_mult': 0.8},
+}
+
+# ============================================================================
 # STORAGE ECONOMICS (Step 1D.2 Economic Assessment)
 # ============================================================================
 

@@ -57,7 +57,7 @@ from dispatch_utils import (
     load_common_data, get_demand_profile, get_supply_profiles,
     reconstruct_hourly_dispatch, compute_fossil_retirement,
     COAL_CAP_TWH, OIL_CAP_TWH,
-    RESOURCE_TYPES,
+    RESOURCE_TYPES, H,
 )
 from lmp_engine import (
     build_merit_order_stack, compute_hourly_lmp_vectorized, PriceModel,
@@ -392,7 +392,8 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
                               nox_limit=None, sox_limit=None,
                               custom_fuel_prices=None, custom_co2_price=None,
                               custom_heat_rates=None, custom_vom=None,
-                              interchange_norm=None, firm_import_mw=0):
+                              interchange_norm=None, firm_import_mw=0,
+                              dr_level='Off'):
     """Compute 8760-hour LMP at a given clean percentage.
 
     Returns (hourly_lmp_array, avg_lmp, lmp_p90, generator_economics).
@@ -452,10 +453,45 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
         pass
 
     if zonal_lmp_matrix is None:
-        hourly_lmp, unit_idx = compute_hourly_lmp_vectorized(
+        hourly_lmp, unit_idx, _dr_unused = compute_hourly_lmp_vectorized(
             dispatch, demand_mw_profile, stack, price_model, iso=iso,
             vre_penetration=vre_pen,
         )
+
+    # --- DEMAND RESPONSE POST-PROCESSING ---
+    # Applied after LMP is computed (whether zonal or copper-plate) so DR
+    # responds to the fully-formed price signal regardless of LMP method.
+    from pipeline_config import DEMAND_RESPONSE, DR_LEVELS
+    dr_curtailed_mw = np.zeros(H, dtype=np.float64)
+    if dr_level != 'Off' and iso in DEMAND_RESPONSE:
+        dr_params = DEMAND_RESPONSE[iso]
+        dr_lvl = DR_LEVELS.get(dr_level, DR_LEVELS['Off'])
+        effective_participation = dr_params['participation'] * dr_lvl['participation_mult']
+        effective_trigger = dr_params['trigger_price'] * dr_lvl['trigger_mult']
+        max_dr_mw = dr_params['max_dr_gw'] * 1000 * effective_participation
+
+        if max_dr_mw > 0:
+            dr_mask = hourly_lmp > effective_trigger
+            if dr_mask.any():
+                # Cap at 15% of hourly demand
+                dr_potential = np.minimum(max_dr_mw, demand_mw_profile[dr_mask] * 0.15)
+                # Linear ramp: 0% at trigger, 100% at 2× trigger
+                price_ratio = np.clip(
+                    (hourly_lmp[dr_mask] - effective_trigger) / effective_trigger, 0, 1)
+                dr_curtailed_mw[dr_mask] = dr_potential * price_ratio
+
+                # Dampen LMP for DR-active hours: reduced demand shifts marginal unit
+                # Use price-reduction proportional to demand curtailed
+                for h_idx in np.where(dr_mask)[0]:
+                    if demand_mw_profile[h_idx] > 0 and dr_curtailed_mw[h_idx] > 0:
+                        # Approximate LMP reduction: proportional to demand reduction
+                        # weighted by supply elasticity (~2-4× leverage)
+                        demand_reduction_pct = dr_curtailed_mw[h_idx] / demand_mw_profile[h_idx]
+                        # Supply elasticity: 5% demand reduction → ~15% price reduction
+                        price_reduction = min(demand_reduction_pct * 3.0, 0.5)
+                        hourly_lmp[h_idx] *= (1.0 - price_reduction)
+                        # Floor at trigger price
+                        hourly_lmp[h_idx] = max(hourly_lmp[h_idx], effective_trigger * 0.95)
 
     avg_lmp = float(np.mean(hourly_lmp))
     p90_lmp = float(np.percentile(hourly_lmp, 90))
@@ -466,7 +502,18 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
         total_fossil_mw, iso, clean_pct, fuel_level, carbon_price,
     )
 
-    return hourly_lmp, avg_lmp, p90_lmp, gen_econ
+    # --- DR METRICS ---
+    dr_metrics = {}
+    if dr_level != 'Off':
+        dr_active = dr_curtailed_mw > 0
+        dr_metrics = {
+            'dr_curtailed_gwh': round(float(dr_curtailed_mw.sum()) / 1e3, 1),
+            'dr_peak_gw': round(float(dr_curtailed_mw.max()) / 1e3, 2),
+            'dr_hours': int(dr_active.sum()),
+            'dr_avg_price': round(float(hourly_lmp[dr_active].mean()), 1) if dr_active.any() else 0,
+        }
+
+    return hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics
 
 
 def apply_unit_commitment(dispatched, mw_dispatched, cap_mw, uc_params):
@@ -1785,6 +1832,7 @@ def build_single_scenario(overrides=None):
         'fuel_level': 'Medium',
         'tx_level': 'Medium',
         'ppa_level': 'Medium',
+        'dr_level': 'Off',
     }
     if overrides:
         defaults.update(overrides)
@@ -2036,13 +2084,14 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 ic_norm = None
                 ic_firm_mw = 0
 
+            dr_level = conditions.get('dr_level', 'Off')
             _lmp_key = (iso, current_pct, conditions['fuel_level'],
                         conditions['demand_growth'], year, carbon_price,
-                        interchange_enabled)
+                        interchange_enabled, dr_level)
             if _lmp_cache is not None and _lmp_key in _lmp_cache:
-                hourly_lmp, avg_lmp, p90_lmp, gen_econ = _lmp_cache[_lmp_key]
+                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics = _lmp_cache[_lmp_key]
             else:
-                hourly_lmp, avg_lmp, p90_lmp, gen_econ = compute_lmp_at_threshold(
+                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics = compute_lmp_at_threshold(
                     iso, current_pct, conditions['fuel_level'],
                     demand_norm, demand_mw_profile,
                     supply_profiles_iso, resource_pcts,
@@ -2058,9 +2107,10 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                     custom_vom=conditions.get('custom_vom'),
                     interchange_norm=ic_norm,
                     firm_import_mw=ic_firm_mw,
+                    dr_level=dr_level,
                 )
                 if _lmp_cache is not None:
-                    _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ)
+                    _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics)
 
             # --- LCOE MERIT-ORDER DEPLOYMENT ---
             # Deploy cheapest profitable clean resources until queue cap or no more profitable
@@ -2293,6 +2343,11 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 'rps_shortfall_pct': round(rps_shortfall_pct, 1),
                 'acp_cost_million': round(acp_cost_million, 1),
                 'cumulative_acp_million': round(state['cumulative_acp_million'], 1),
+                # Demand response metrics
+                'dr_curtailed_gwh': dr_metrics.get('dr_curtailed_gwh', 0),
+                'dr_peak_gw': dr_metrics.get('dr_peak_gw', 0),
+                'dr_hours': dr_metrics.get('dr_hours', 0),
+                'dr_avg_price': dr_metrics.get('dr_avg_price', 0),
             }
             results[iso].append(year_result)
 
@@ -2545,6 +2600,9 @@ def main():
                         help='Clean resource LCOE level')
     parser.add_argument('--nuclear-retirement', type=float, default=None,
                         help='Nuclear retirement threshold $/MWh (default: None = no retirement)')
+    parser.add_argument('--dr-level', default='Off',
+                        choices=['Off', 'Low', 'Medium', 'High'],
+                        help='Demand response level (default: Off)')
     parser.add_argument('--weather-year', default=None,
                         help='Weather year for demand/gen profiles (2021-2025). '
                              'For sweep: comma-separated (e.g., "2021,2023,2025") '
@@ -2568,6 +2626,7 @@ def main():
             'carbon_price': args.carbon_price,
             'fuel_level': args.fuel_level,
             'lcoe_level': args.lcoe_level,
+            'dr_level': args.dr_level,
         }
         scenario_id, conditions = build_single_scenario(overrides)
         wy = weather_years[0] if weather_years else None
