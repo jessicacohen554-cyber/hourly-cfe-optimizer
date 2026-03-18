@@ -769,6 +769,12 @@ def _compute_ccs_analysis(iso):
     }
 
 
+def _get_data_tiers(iso: str) -> dict:
+    """Get multi-tier data quality info for a single ISO."""
+    ds = check_data_sources()
+    return ds.get('tiers', {}).get(iso, {})
+
+
 def _build_simulation_response(iso: str, year_results: list) -> SimulationResponse:
     """Build a SimulationResponse from raw simulation year_results for one ISO."""
     if not year_results:
@@ -992,6 +998,7 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
             {'zone': k, **v} for k, v in CONFIDENCE_ZONES.items()
         ],
         data_source=final.get('data_source', 'unknown'),
+        data_tiers=_get_data_tiers(iso),
     )
 
 
@@ -2004,7 +2011,12 @@ async def constellation_dispatch(request: Request):
 
 @app.get("/api/data-status")
 async def data_status():
-    """Return data availability per ISO (parquet vs synthetic)."""
+    """Return multi-tier data availability per ISO.
+
+    Response shape:
+      { simple: {ISO: 'parquet'|'synthetic'},
+        tiers:  {ISO: {resource_mix, zonal_config, interchange, fleet_data, dr_params}} }
+    """
     return check_data_sources()
 
 

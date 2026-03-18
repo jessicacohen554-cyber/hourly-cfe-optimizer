@@ -61,6 +61,79 @@ function updateYearCountHint() {
 document.getElementById('startYear')?.addEventListener('change', updateYearCountHint);
 document.getElementById('endYear')?.addEventListener('change', updateYearCountHint);
 
+// ── Data tier status (fetched once) ──
+let _dataTierCache = null;
+
+async function fetchDataTiers() {
+    if (_dataTierCache) return _dataTierCache;
+    try {
+        const resp = await fetch('/api/data-status');
+        if (resp.ok) {
+            _dataTierCache = await resp.json();
+            return _dataTierCache;
+        }
+    } catch (e) { /* ignore — indicator will stay empty */ }
+    return null;
+}
+
+function renderDataTierIndicator(iso) {
+    const el = document.getElementById('dataTierIndicator');
+    if (!el || !_dataTierCache) { if (el) el.innerHTML = ''; return; }
+
+    const tiers = (_dataTierCache.tiers || {})[iso];
+    if (!tiers) { el.innerHTML = ''; return; }
+
+    const items = [];
+    const dot = (color) => `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-right:4px;"></span>`;
+
+    // Resource mix
+    if (tiers.resource_mix === 'parquet') {
+        items.push(`${dot('#22C55E')}Resource mix: Physics data`);
+    } else {
+        items.push(`${dot('#EF4444')}Resource mix: Synthetic`);
+    }
+
+    // Interchange
+    if (tiers.interchange === 'eia_930') {
+        items.push(`${dot('#22C55E')}Interchange: EIA-930`);
+    } else {
+        items.push(`${dot('#F59E0B')}Interchange: Not loaded`);
+    }
+
+    // Zonal config
+    if (tiers.zonal_config === 'validated') {
+        items.push(`${dot('#22C55E')}Zonal config: Validated`);
+    } else {
+        items.push(`${dot('#F59E0B')}Zonal config: Hardcoded`);
+    }
+
+    // Fleet data
+    if (tiers.fleet_data === 'plant_level') {
+        items.push(`${dot('#22C55E')}Fleet data: Plant-level`);
+    } else {
+        items.push(`${dot('#0EA5E9')}Fleet data: Aggregated`);
+    }
+
+    // DR params
+    if (tiers.dr_params === 'calibrated') {
+        items.push(`${dot('#22C55E')}DR params: Calibrated`);
+    } else {
+        items.push(`${dot('#0EA5E9')}DR params: Default`);
+    }
+
+    const allGreen = tiers.resource_mix === 'parquet' && tiers.interchange === 'eia_930'
+        && tiers.fleet_data === 'plant_level';
+    const headerColor = tiers.resource_mix === 'synthetic' ? '#EF4444' : (allGreen ? '#22C55E' : '#F59E0B');
+    const headerLabel = tiers.resource_mix === 'synthetic' ? 'Synthetic Data' : (allGreen ? 'Full Data' : 'Partial Data');
+
+    el.innerHTML = `<div style="padding:0.75rem 1rem;border-radius:8px;border:1px solid ${headerColor}33;background:${headerColor}08;font-size:0.8rem;">
+        <div style="font-weight:600;margin-bottom:0.5rem;color:${headerColor};">${headerLabel}</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.25rem 1rem;color:#4B5563;">
+            ${items.map(i => `<span>${i}</span>`).join('')}
+        </div>
+    </div>`;
+}
+
 // ── ISO selection — always single-select (all modes) ──
 document.querySelectorAll('.iso-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -69,6 +142,7 @@ document.querySelectorAll('.iso-btn').forEach(btn => {
         btn.classList.add('active');
         updateISOSummary();
         updateGeothermalVisibility();
+        renderDataTierIndicator(btn.dataset.iso);
     });
 });
 
@@ -647,3 +721,7 @@ updateISOSummary();
 updateGeothermalVisibility();
 checkCustomInputStatus();
 updateFleetStatus();
+fetchDataTiers().then(() => {
+    const activeISO = document.querySelector('.iso-btn.active')?.dataset.iso || 'CAISO';
+    renderDataTierIndicator(activeISO);
+});
