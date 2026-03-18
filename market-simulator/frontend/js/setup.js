@@ -335,6 +335,7 @@ function collectFormData() {
     params.learning_curves = document.querySelector('#learningToggle .toggle-btn.active')?.dataset.value === 'On';
     params.learning_speed = document.querySelector('#learningSpeedToggle .toggle-btn.active')?.dataset.value || 'Medium';
     params.queue_cap_level = document.querySelector('#queueCapToggle .toggle-btn.active')?.dataset.value || 'Medium';
+    params.tech_differentiated_queue = (document.querySelector('#queueModelToggle .toggle-btn.active')?.dataset.value || 'tech') === 'tech';
     const queueOverride = document.getElementById('queue_cap_override')?.value;
     if (queueOverride && queueOverride !== '') {
         params.queue_cap_override_gw = parseFloat(queueOverride);
@@ -483,6 +484,7 @@ const TOGGLE_MAP = {
     learning_curves:      { selector: '#learningToggle .toggle-btn', attr: 'data-value' },
     learning_speed:       { selector: '#learningSpeedToggle .toggle-btn', attr: 'data-value' },
     queue_cap_level:      { selector: '#queueCapToggle .toggle-btn', attr: 'data-value' },
+    tech_differentiated_queue: { selector: '#queueModelToggle .toggle-btn', attr: 'data-value', map: { 'tech': '1', 'uniform': '0' } },
 };
 
 // Simple number input mapping: CSV parameter → DOM element ID
