@@ -2198,23 +2198,62 @@ def load_step3_data():
 def check_data_sources():
     """Check which ISOs have real parquet data vs. requiring synthetic fallback.
 
-    Returns dict: {iso: 'parquet' | 'synthetic'} for all ISOs.
+    Returns dict with two keys:
+      - 'simple': {iso: 'parquet' | 'synthetic'} — backward-compatible single-tier
+      - 'tiers':  {iso: {resource_mix, zonal_config, interchange, fleet_data, dr_params}}
     """
+    from pipeline_config import ZONE_CONFIG, DEMAND_RESPONSE
+
     search_dirs = [os.path.join(MODULE_ROOT, 'data', 'step2.2-cost')]
-    sources = {}
+    simple = {}
+    tiers = {}
+
+    # Check interchange data availability (shared across ISOs)
+    interchange_file = os.path.join(MODULE_ROOT, 'data', 'profiles',
+                                    'eia_interchange_profiles.json')
+    has_interchange = os.path.isfile(interchange_file)
+
+    # Check EIA-860 plant-level data
+    eia860_dir = os.path.join(MODULE_ROOT, 'data', 'eia-860')
+    has_eia860 = os.path.isdir(eia860_dir) and bool(os.listdir(eia860_dir))
+
     for iso in ISOS:
-        found = False
+        # Tier 1: resource mix (parquet vs synthetic)
+        found_parquet = False
         for d in search_dirs:
             if not os.path.isdir(d):
                 continue
-            for pattern in [f'step_2_2a_CO_{iso}.parquet', f'step3_co_{iso}.parquet']:
+            for pattern in [f'step_2_2a_CO_{iso}.parquet',
+                            f'step3_co_{iso}.parquet']:
                 if os.path.exists(os.path.join(d, pattern)):
-                    found = True
+                    found_parquet = True
                     break
-            if found:
+            if found_parquet:
                 break
-        sources[iso] = 'parquet' if found else 'synthetic'
-    return sources
+        resource_mix = 'parquet' if found_parquet else 'synthetic'
+        simple[iso] = resource_mix
+
+        # Tier 2: zonal configuration
+        zonal_config = 'validated' if iso in ZONE_CONFIG else 'hardcoded'
+
+        # Tier 3: interchange
+        interchange = 'eia_930' if has_interchange else 'none'
+
+        # Tier 4: fleet data
+        fleet_data = 'plant_level' if has_eia860 else 'aggregated'
+
+        # Tier 5: demand response parameters
+        dr_params = 'calibrated' if iso in DEMAND_RESPONSE else 'default'
+
+        tiers[iso] = {
+            'resource_mix': resource_mix,
+            'zonal_config': zonal_config,
+            'interchange': interchange,
+            'fleet_data': fleet_data,
+            'dr_params': dr_params,
+        }
+
+    return {'simple': simple, 'tiers': tiers}
 
 
 def _generate_synthetic_step3_data():
@@ -2484,7 +2523,8 @@ def run_market_simulation(scenario_id, conditions, isos=None,
 
     # Determine data source per ISO (parquet vs synthetic)
     if _data_sources is None:
-        _data_sources = check_data_sources()
+        _ds = check_data_sources()
+        _data_sources = _ds.get('simple', _ds) if isinstance(_ds, dict) and 'simple' in _ds else _ds
 
     cumulative_gw = dict(WRIGHT_CUMULATIVE_GW_2025)
     results = {iso: [] for iso in isos}
