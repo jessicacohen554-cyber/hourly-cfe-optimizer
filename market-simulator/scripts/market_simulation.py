@@ -459,8 +459,11 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
                               dr_level='Off'):
     """Compute 8760-hour LMP at a given clean percentage.
 
-    Returns (hourly_lmp_array, avg_lmp, lmp_p90, generator_economics).
+    Returns (hourly_lmp_array, avg_lmp, lmp_p90, generator_economics,
+             dr_metrics, zonal_stats_or_None).
     generator_economics is a dict of per-unit-type dispatch metrics.
+    zonal_stats is a dict with per-zone LMP stats and congestion data
+    (None if copper-plate mode was used).
     """
     stack, total_fossil_mw = build_merit_order_stack(
         iso, clean_pct, fuel_level=fuel_level,
@@ -576,7 +579,7 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
             'dr_avg_price': round(float(hourly_lmp[dr_active].mean()), 1) if dr_active.any() else 0,
         }
 
-    return hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics
+    return hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_stats
 
 
 @njit(cache=True)
@@ -1487,10 +1490,16 @@ _PEAK_TO_AVG_RATIO = 1.5
 
 
 def compute_ipm_triggers(iso, year, year_result, gen_econ, state, conditions,
-                         nuclear_retirement_threshold=None):
+                         nuclear_retirement_threshold=None,
+                         zonal_congestion_data=None):
     """Evaluate IPM trigger conditions for this year's results.
 
     Pure threshold checks — negligible overhead (<0.01ms per ISO-year).
+
+    Args:
+        zonal_congestion_data: Optional dict from zonal LP solver containing
+            '_congestion' key with inter-zonal LMP spreads and flow utilization.
+            If None, falls back to VRE-ratio proxy for HIGH_CONGESTION trigger.
 
     Returns:
         list[dict]: Each dict matches IPMTrigger schema:
@@ -1550,28 +1559,111 @@ def compute_ipm_triggers(iso, year, year_result, gen_econ, state, conditions,
             })
 
     # ── HIGH_CONGESTION ──────────────────────────────────────────────────
-    # VRE deployment exceeds 2× historical queue completion rate
-    vre_gw = sum(cumulative_gw.get(r, 0) for r in _VRE_RESOURCES)
-    years_elapsed = max(1, year - 2025)
-    queue_cap = QUEUE_CAP_GW.get('Medium', {}).get(iso, 5)
-    expected_gw = queue_cap * years_elapsed
-    if expected_gw > 0:
-        deploy_ratio = vre_gw / expected_gw
-        if deploy_ratio > 2.0:
-            severity = 'high' if deploy_ratio > 3.0 else 'medium'
+    # Use actual zonal congestion data when available; fall back to VRE-ratio proxy
+    _congestion_triggered = False
+    cong = None
+    if zonal_congestion_data and '_congestion' in zonal_congestion_data:
+        cong = zonal_congestion_data['_congestion']
+    elif year_result.get('zonal_congestion'):
+        cong = year_result['zonal_congestion']
+
+    if cong is not None:
+        max_spread = cong.get('max_spread_p50', 0)
+        spread_pair = cong.get('max_spread_pair', 'unknown')
+        # Check flow utilization across all interfaces
+        max_hours_70 = 0
+        max_hours_95 = 0
+        worst_iface_70 = ''
+        worst_iface_95 = ''
+        for iface in cong.get('interfaces', []):
+            h70 = iface.get('hours_above_70pct', 0)
+            h95 = iface.get('hours_above_95pct', 0)
+            iface_label = f"{iface.get('zone_a', '?')}-{iface.get('zone_b', '?')}"
+            if h70 > max_hours_70:
+                max_hours_70 = h70
+                worst_iface_70 = iface_label
+            if h95 > max_hours_95:
+                max_hours_95 = h95
+                worst_iface_95 = iface_label
+
+        # High: spread P50 > $25/MWh OR any interface at 95%+ for > 500 hours
+        # Medium: spread P50 > $15/MWh OR any interface at 70%+ for > 1000 hours
+        high_spread = max_spread > 25
+        high_flow = max_hours_95 > 500
+        med_spread = max_spread > 15
+        med_flow = max_hours_70 > 1000
+
+        if high_spread or high_flow:
+            _congestion_triggered = True
+            detail_parts = []
+            if high_spread:
+                detail_parts.append(
+                    f"Max zonal LMP spread (P50) ${max_spread:.1f}/MWh "
+                    f"on {spread_pair} interface")
+            if high_flow:
+                detail_parts.append(
+                    f"{worst_iface_95} interface at 95%+ utilization "
+                    f"for {max_hours_95} hours/year")
             triggers.append({
                 'trigger_id': 'HIGH_CONGESTION',
-                'severity': severity,
+                'severity': 'high',
                 'explanation': (
-                    "Transmission congestion is material. VRE deployment significantly "
-                    "exceeds historical interconnection queue completion rates. Zonal or "
-                    "nodal dispatch modeling would better capture locational price signals "
-                    "and their impact on resource siting decisions."
+                    f"Transmission congestion is binding. {'; '.join(detail_parts)}. "
+                    "A nodal or detailed zonal dispatch model would better capture "
+                    "locational price signals and congestion rent allocation."
                 ),
-                'metric_value': round(deploy_ratio, 2),
-                'threshold': 3.0 if severity == 'high' else 2.0,
+                'metric_value': round(max_spread, 1),
+                'threshold': 25.0,
                 'recommended_model': 'Zonal/nodal dispatch model (PLEXOS, nodal IPM)',
             })
+        elif med_spread or med_flow:
+            _congestion_triggered = True
+            detail_parts = []
+            if med_spread:
+                detail_parts.append(
+                    f"Max zonal LMP spread (P50) ${max_spread:.1f}/MWh "
+                    f"on {spread_pair} interface")
+            if med_flow:
+                detail_parts.append(
+                    f"{worst_iface_70} interface at 70%+ utilization "
+                    f"for {max_hours_70} hours/year")
+            triggers.append({
+                'trigger_id': 'HIGH_CONGESTION',
+                'severity': 'medium',
+                'explanation': (
+                    f"Moderate transmission congestion detected. {'; '.join(detail_parts)}. "
+                    "Zonal dispatch modeling would improve locational price accuracy "
+                    "and resource siting decisions."
+                ),
+                'metric_value': round(max_spread, 1),
+                'threshold': 15.0,
+                'recommended_model': 'Zonal/nodal dispatch model (PLEXOS, nodal IPM)',
+            })
+
+    # Fallback: VRE-ratio proxy when zonal data unavailable (copper-plate mode)
+    if not _congestion_triggered and cong is None:
+        vre_gw = sum(cumulative_gw.get(r, 0) for r in _VRE_RESOURCES)
+        years_elapsed = max(1, year - 2025)
+        queue_cap = QUEUE_CAP_GW.get('Medium', {}).get(iso, 5)
+        expected_gw = queue_cap * years_elapsed
+        if expected_gw > 0:
+            deploy_ratio = vre_gw / expected_gw
+            if deploy_ratio > 2.0:
+                severity = 'high' if deploy_ratio > 3.0 else 'medium'
+                triggers.append({
+                    'trigger_id': 'HIGH_CONGESTION',
+                    'severity': severity,
+                    'explanation': (
+                        "Transmission congestion is material (proxy: VRE deployment "
+                        "significantly exceeds historical interconnection queue "
+                        "completion rates). Zonal or nodal dispatch modeling would "
+                        "better capture locational price signals and their impact "
+                        "on resource siting decisions."
+                    ),
+                    'metric_value': round(deploy_ratio, 2),
+                    'threshold': 3.0 if severity == 'high' else 2.0,
+                    'recommended_model': 'Zonal/nodal dispatch model (PLEXOS, nodal IPM)',
+                })
 
     # ── STORAGE_DOMINANCE ────────────────────────────────────────────────
     storage_twh = sum(resource_mix.get(r, 0) for r in _STORAGE_RESOURCES)
@@ -2466,10 +2558,11 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             _lmp_key = (iso, current_pct, conditions['fuel_level'],
                         conditions['demand_growth'], year, carbon_price,
                         interchange_enabled, dr_level)
+            zonal_congestion_data = None
             if _lmp_cache is not None and _lmp_key in _lmp_cache:
-                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics = _lmp_cache[_lmp_key]
+                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data = _lmp_cache[_lmp_key]
             else:
-                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics = compute_lmp_at_threshold(
+                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data = compute_lmp_at_threshold(
                     iso, current_pct, conditions['fuel_level'],
                     demand_norm, demand_mw_profile,
                     supply_profiles_iso, resource_pcts,
@@ -2488,7 +2581,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                     dr_level=dr_level,
                 )
                 if _lmp_cache is not None:
-                    _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics)
+                    _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data)
 
             # --- LCOE MERIT-ORDER DEPLOYMENT ---
             # Compute per-resource temporal energy revenue for deployment economics
@@ -2744,10 +2837,19 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 'data_source': _data_sources.get(iso, 'synthetic'),
             }
 
+            # ── Zonal congestion data (from zonal LP solver) ────────────
+            if zonal_congestion_data and '_congestion' in zonal_congestion_data:
+                cong = zonal_congestion_data['_congestion']
+                year_result['zonal_lmp_spread'] = cong.get('max_spread_p50', 0)
+                year_result['zonal_spread_pair'] = cong.get('max_spread_pair')
+                year_result['congested_hours'] = cong.get('max_congested_hours', 0)
+                year_result['zonal_congestion'] = cong
+
             # IPM trigger evaluation — flag when screening-model limits are binding
             ipm_triggers = compute_ipm_triggers(
                 iso, year, year_result, gen_econ, state, conditions,
-                nuclear_retirement_threshold=nuclear_retirement_threshold)
+                nuclear_retirement_threshold=nuclear_retirement_threshold,
+                zonal_congestion_data=zonal_congestion_data)
             year_result['ipm_triggers'] = ipm_triggers
 
             results[iso].append(year_result)
