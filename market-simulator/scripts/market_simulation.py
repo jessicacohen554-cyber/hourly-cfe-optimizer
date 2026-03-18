@@ -357,6 +357,33 @@ def get_effective_cumulative_gw(tech, model_deployed_gw, learning_speed, year):
 # REVENUE MODEL
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
+def _split_stack_by_zone(stack, zone_config):
+    """Split a system-level merit-order stack into per-zone stacks.
+
+    When real plant-to-zone mapping isn't available (e.g., synthetic stack
+    in sweep mode), splits each unit's capacity proportionally by zone
+    demand share. This is an approximation — real zonal stacks from
+    FleetModel.build_zonal_merit_order_stacks() are more accurate.
+
+    Args:
+        stack: list of (unit_type, cap_mw, mc) tuples
+        zone_config: dict with 'zones' and 'demand_share'
+
+    Returns:
+        dict {zone_name: [(unit_type, cap_mw, mc), ...]}
+    """
+    zone_stacks = {}
+    for zname in zone_config['zones']:
+        share = zone_config['demand_share'][zname]
+        zone_stacks[zname] = [
+            (utype, cap * share, mc)
+            for utype, cap, mc in stack
+            if cap * share > 0.1  # Skip negligible slices
+        ]
+    return zone_stacks
+
+
 def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
                               demand_mw_profile, supply_profiles, resource_pcts,
                               battery_pct=0, battery8_pct=0, ldes_pct=0, h2_pct=0,
@@ -397,10 +424,34 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
     )
 
     price_model = PriceModel(iso, fuel_level)
-    hourly_lmp, unit_idx = compute_hourly_lmp_vectorized(
-        dispatch, demand_mw_profile, stack, price_model, iso=iso,
-        vre_penetration=clean_pct / 100.0 if clean_pct is not None else None,
-    )
+    vre_pen = clean_pct / 100.0 if clean_pct is not None else None
+
+    # Try zonal LMP if zone config available
+    zonal_lmp_matrix = None
+    zonal_stats = None
+    try:
+        from pipeline_config import ZONE_CONFIG
+        if iso in ZONE_CONFIG:
+            from zonal_lmp import compute_zonal_lmp_hourly
+            zone_config = ZONE_CONFIG[iso]
+            # Split synthetic stack by zone demand share (proportional approximation)
+            zone_stacks = _split_stack_by_zone(stack, zone_config)
+            zonal_lmp_matrix, system_lmp, _, zonal_stats = compute_zonal_lmp_hourly(
+                iso=iso, zone_config=zone_config, zone_stacks=zone_stacks,
+                demand_mw_profile=demand_mw_profile,
+                price_model=price_model, vre_penetration=vre_pen,
+            )
+            hourly_lmp = system_lmp
+            unit_idx = np.full(len(hourly_lmp), -1, dtype=np.int8)
+    except Exception:
+        # Fall back to copper-plate
+        pass
+
+    if zonal_lmp_matrix is None:
+        hourly_lmp, unit_idx = compute_hourly_lmp_vectorized(
+            dispatch, demand_mw_profile, stack, price_model, iso=iso,
+            vre_penetration=vre_pen,
+        )
 
     avg_lmp = float(np.mean(hourly_lmp))
     p90_lmp = float(np.percentile(hourly_lmp, 90))
