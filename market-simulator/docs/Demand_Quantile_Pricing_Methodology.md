@@ -50,8 +50,9 @@ Layer 5: Demand Elasticity Dampening (v11.3)
 
 ### Implementation Location
 
-- **File**: `lmp_engine.py`, lines 947-1050
+- **File**: `lmp_engine.py`, line 1011+
 - **Entry point**: `compute_hourly_lmp_vectorized()`, applied after merit-order dispatch
+- **Demand elasticity dampening**: Per-ISO trigger prices and max curtailment parameters at lines 940–950
 
 ---
 
