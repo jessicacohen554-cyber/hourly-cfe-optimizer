@@ -60,8 +60,13 @@
 
     <div class="content-section">
 
-        <!-- Year Snapshot Header -->
-        <h2 id="kpiYearHeader" style="margin: 0 0 var(--space-md, 1rem) 0; color: var(--navy, #1A232F); font-size: 1.3rem; font-weight: 700;"></h2>
+        <!-- Year Snapshot Header + Confidence Badge -->
+        <h2 id="kpiYearHeader" style="margin: 0 0 var(--space-md, 1rem) 0; color: var(--navy, #1A232F); font-size: 1.3rem; font-weight: 700;">
+            <span id="kpiConfidenceBadge" class="confidence-badge" style="display:none;"></span>
+        </h2>
+
+        <!-- Confidence Zone Legend (trajectory mode only) -->
+        <div id="confidenceLegend" class="confidence-legend" style="display:none;"></div>
 
         <!-- KPI Cards -->
         <div class="kpi-grid" id="topStats">
