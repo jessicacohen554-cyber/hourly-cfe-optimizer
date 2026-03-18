@@ -203,7 +203,7 @@
       <div class="step-box">
         <div class="step-id">EIA / eGRID</div>
         <div class="step-name">Profiles &amp; Emissions</div>
-        <div class="step-desc">8,760-hour demand &amp; generation (EIA-930, 5-yr avg). eGRID emission rates. Fossil fleet mix.</div>
+        <div class="step-desc">8,760-hour demand &amp; generation (EIA-930). eGRID emission rates. Fossil fleet mix. Inter-regional interchange profiles.</div>
         <div class="step-script">eia_data_io.py, pipeline_config.py</div>
       </div>
       <div class="step-box">
@@ -223,26 +223,26 @@
     <div class="phase-content">
       <div class="step-box highlight">
         <div class="step-id">Core</div>
-        <div class="step-name">LMP Engine</div>
-        <div class="step-desc">Merit-order fossil stack: HR &times; fuel + VOM + CO&sub2; &times; carbon. 8,760-hour vectorized clearing. ISO-specific price models.</div>
-        <div class="step-script">lmp_engine.py</div>
+        <div class="step-name">LMP Engine + Zonal</div>
+        <div class="step-desc">Merit-order stack + pipe-and-bubble zonal LP (2&ndash;5 zones/ISO). Demand response dampening. Inter-regional import/export profiles.</div>
+        <div class="step-script">lmp_engine.py, zonal_lmp.py</div>
       </div>
       <div class="step-box">
         <div class="step-id">Core</div>
-        <div class="step-name">Hourly Dispatch</div>
-        <div class="step-desc">4-phase storage: bat4 &rarr; bat8 &rarr; LDES &rarr; H&sub2;. Clean supply vs demand matching. Per-resource breakdowns.</div>
+        <div class="step-name">LP Storage Co-Dispatch</div>
+        <div class="step-desc">Rolling-window LP co-optimization of bat4/bat8/LDES/H&sub2;. Sparse matrix constraints with SOC carryover. Greedy fallback.</div>
         <div class="step-script">dispatch_utils.py</div>
       </div>
       <div class="step-box">
         <div class="step-id">Core</div>
         <div class="step-name">Profitability Analysis</div>
-        <div class="step-desc">Revenue (LMP &times; CF + capacity + PTC) vs Cost (fuel + VOM + CO&sub2;). Deploy where profit &gt; 0; stop at first loss.</div>
+        <div class="step-desc">Revenue (LMP &times; CF + capacity + PTC) vs Cost (fuel + VOM + CO&sub2;). Deploy where profit &gt; 0; stop at first loss. DR metrics.</div>
         <div class="step-script">market_simulation.py</div>
       </div>
       <div class="step-box">
         <div class="step-id">Core</div>
         <div class="step-name">Fossil Retirement</div>
-        <div class="step-desc">Merit-order cascade: coal &rarr; oil &rarr; gas CT &rarr; gas CCGT. Nuclear floor mechanism with &sect;45U PTC.</div>
+        <div class="step-desc">Merit-order cascade: coal &rarr; oil &rarr; gas CT &rarr; gas CCGT. Nuclear floor &sect;45U PTC. Economic stranding analysis.</div>
         <div class="step-script">dispatch_utils.py</div>
       </div>
     </div>
@@ -280,13 +280,13 @@
     <div class="phase-content">
       <div class="step-box">
         <div class="step-id">Charts</div>
-        <div class="step-name">10 Interactive Charts</div>
-        <div class="step-desc">Merit-order stack, generator profitability, nuclear revenue, LMP curve, CCS breakeven, supply mix, sensitivity heatmap.</div>
+        <div class="step-name">12 Interactive Charts</div>
+        <div class="step-desc">Merit-order, profitability, LMP, CCS, supply mix, zonal LMP spreads. Confidence zone bands on trajectory charts.</div>
       </div>
       <div class="step-box">
         <div class="step-id">KPIs</div>
         <div class="step-name">Dashboard Cards</div>
-        <div class="step-desc">Market clean %, avg LMP, new clean GW, nuclear revenue, CCS breakeven price, annual CO&sub2;.</div>
+        <div class="step-desc">Clean %, LMP, emissions, nuclear rev, DR metrics (curtailed GWh, peak GW, hours). Confidence badges.</div>
       </div>
       <div class="step-box">
         <div class="step-id">Export</div>

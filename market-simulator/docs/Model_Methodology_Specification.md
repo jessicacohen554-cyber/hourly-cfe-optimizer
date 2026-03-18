@@ -17,7 +17,12 @@
 3. [Data Foundation](#3-data-foundation)
 4. [Model Architecture](#4-model-architecture)
    - 4.1–4.3 Core Engine, Dispatch, LMP (aggregate + plant-level stacks)
-   - 4.4 Hourly Dispatch Reconstruction
+   - 4.4 Hourly Dispatch Reconstruction (LP storage co-dispatch)
+   - 4.4.1 Zonal LMP Decomposition (pipe-and-bubble, 2–5 zones/ISO)
+   - 4.4.2 Inter-Regional Exchange (EIA-930 import/export profiles)
+   - 4.4.3 Demand Response (price-elastic curtailment)
+   - 4.4.4 Confidence Zones (trajectory reliability visualization)
+   - 4.4.5 Trajectory Backtesting (2020–2024 validation)
    - 4.5 Fleet Model (BA → ISO mapping, EIA 860)
    - 4.6 Plant-Level Dispatch Economics (status classification)
    - 4.7–4.8 Scenario Construction, Configuration
@@ -470,14 +475,101 @@ Each ISO has a `PriceModel` subclass with three pricing layers:
 
 `reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts, ...)`:
 
-Reconstructs 8,760-hour dispatch with 4-phase storage:
+Reconstructs 8,760-hour dispatch with LP-optimized storage co-dispatch:
 
 1. Compute total clean supply per hour by weighting each resource's normalized generation shape by its allocation percentage
-2. Apply battery 4-hour dispatch (daily charge/discharge cycle, 85% RTE)
-3. Apply battery 8-hour dispatch (daily cycle, 85% RTE)
-4. Apply LDES 100-hour dispatch (7-day rolling window, 50% RTE)
-5. Apply H₂ 1000-hour dispatch (30-day rolling window, 35% RTE, ≥95% only)
-6. Compute matched, surplus, and gap profiles
+2. **LP Storage Co-Dispatch** (when ≥2 storage types active): Simultaneously optimizes all storage types via `co_dispatch_storage_lp()` using scipy.optimize.linprog with HiGHS solver
+   - **Decision variables**: charge[type, hour] and discharge[type, hour] for each storage type
+   - **Objective**: Minimize total unmet demand (residual gap) across all hours in the dispatch window
+   - **Constraints**: Power rating limits, SOC bounds, round-trip efficiency losses, surplus availability, gap balance
+   - **Rolling windows**: 24hr (battery 4hr), 48hr (battery 8hr), 168hr/7-day (LDES), 720hr/30-day (H₂)
+   - **SOC carryover**: Batteries reset daily; LDES and H₂ carry state of charge across window boundaries
+   - **Sparse matrix construction**: COO format → CSC for efficient LP constraint building
+   - **Fallback**: Reverts to greedy sequential dispatch if LP is infeasible or solver times out
+3. **Greedy fallback** (single storage type or LP failure): Sequential dispatch in priority order — Battery 4hr → Battery 8hr → LDES 100hr → Green H₂ 1000hr
+4. Compute matched, surplus, and gap profiles
+
+### 4.4.1 Zonal LMP Decomposition (`zonal_lmp.py`)
+
+When EIA-860 fleet data is available, the model decomposes each ISO into 2–5 zones with inter-zonal transfer limits (pipe-and-bubble model):
+
+**Zone definitions** (`ZONE_CONFIG` in `pipeline_config.py`):
+- **PJM** (5 zones): Western (AEP/APS), AEP-East, MAAC (Mid-Atlantic), EMAAC (Eastern Mid-Atlantic), SWMAAC (Baltimore/DC)
+- **MISO** (3 zones): North (MN/WI/IA/ND/SD), Central (IL/IN/MI), South (LA/MS/AR/TX)
+- **ERCOT** (4 zones): West (wind corridor), North (Dallas), South (San Antonio/Austin), Houston/Coast
+- **NYISO** (3 zones): Upstate (Zones A–F), NYC (Zone J), Long Island (Zone K)
+- **NEISO** (2 zones): Northern (ME/NH/VT), Southern (MA/CT/RI)
+- **CAISO** (2 zones): NP15 (Northern), SP15 (Southern)
+- **SPP** (2 zones): North (KS/NE), South (OK/TX panhandle)
+
+**LP formulation** (per hour):
+- Minimize total generation cost subject to zonal demand balance and inter-zonal transfer limits
+- Solver: scipy.optimize.linprog with HiGHS backend
+- Zonal LMPs: extracted from dual prices on balance constraints (shadow prices of zonal demand equality)
+- `_approximate_zonal_lmp()`: fast fallback from marginal unit costs per zone when LP fails
+
+**Plant-to-zone assignment**: Plants assigned via `BA_TO_ZONE` mapping (balancing authority → zone) or `ZONE_BOUNDS` lat/lon bounding boxes as fallback. The `FleetModel.assign_zones()` method and `get_zone_for_plant()` utility handle this.
+
+**Integration**: `compute_hourly_lmp_zonal()` returns an (H × Z) matrix of zonal LMPs, a system-average LMP array, and per-zone statistics (avg, peak, off-peak, P10/P90, price spread vs system). Falls back to copper-plate LMP if zonal data unavailable.
+
+### 4.4.2 Inter-Regional Exchange
+
+Hourly net import/export profiles per ISO reduce each region's self-sufficiency requirement:
+
+- **Data source**: EIA-930 hourly interchange data aggregated to ISO level using BA-to-ISO mapping
+- **Profiles**: `data/profiles/eia_interchange_profiles.json` with normalized hourly net import values
+- **Application**: `effective_demand[h] = demand[h] - net_imports[h]` applied before fossil dispatch
+- **Transfer limits** (`FIRM_IMPORT_MW`): CAISO 8,000 MW (Path 66 + PDCI), ERCOT 1,200 MW (DC ties), PJM 5,000 MW, NYISO 4,000 MW, NEISO 3,500 MW (HQ Phase I/II + NB Power), MISO 4,000 MW, SPP 3,000 MW
+- **Trajectory scaling**: Imports scale with demand growth but are capped at firm import MW limits
+- **Toggle**: On/Off on Setup page. Off = copper-plate isolation (current behavior)
+
+### 4.4.3 Demand Response
+
+Price-elastic load curtailment that activates when LMP exceeds ISO-specific trigger prices:
+
+- **Parameters** (`DEMAND_RESPONSE` in `pipeline_config.py`):
+  - Per-ISO: max_dr_gw, trigger_price ($/MWh), participation fraction
+  - PJM: 10 GW @ $100/MWh, 75% participation (largest registered DR pool)
+  - ERCOT: 5 GW @ $200/MWh, 60% participation
+  - MISO: 8 GW @ $120/MWh, 65% participation
+  - Sources: FERC Form 714, ISO DR registrations
+
+- **DR levels** (`DR_LEVELS`): Off / Low / Medium / High
+  - Low: 50% participation multiplier, 1.5× trigger price
+  - Medium: 70% participation, 1.0× trigger (default registered values)
+  - High: 90% participation, 0.8× trigger price
+
+- **Mechanism**: For each hour where LMP > trigger:
+  1. DR activation: linear ramp from 0% at trigger to 100% at 2× trigger
+  2. Capped at 15% of hourly demand (physical limit)
+  3. LMP dampened by supply elasticity factor (3×)
+  4. DR metrics tracked: curtailed GWh, peak GW, active hours, average price
+
+### 4.4.4 Confidence Zones (Trajectory Mode)
+
+Trajectory projections include confidence classification based on calibration horizon:
+
+- **Calibrated** (2025–2030): Based on calibrated 2024 market data and near-term policy environment. ±5% LMP uncertainty, ±3pp clean% uncertainty.
+- **Moderate Extrapolation** (2030–2040): Technology costs and market structure may diverge from calibration assumptions. ±15% LMP, ±8pp clean%.
+- **High Uncertainty** (2040–2060): Multiple compounding uncertainties — treat as scenario exploration, not forecast. ±30% LMP, ±15pp clean%.
+
+Confidence zones appear as:
+- Background bands on trajectory charts (LMP, emissions, supply stack)
+- Colored badges on year-level KPI cards
+- Widening P10/P90 fan bands when sweep results are available
+
+### 4.4.5 Trajectory Backtesting (`backtest_trajectory.py`)
+
+Backward-looking validation framework that runs the model from 2020 starting conditions:
+
+- **Approach**: Initialize at 2020 grid state (EIA-860/eGRID actual clean%, demand), run year-by-year with actual historical fuel prices (EIA Henry Hub), compare predicted vs observed 2020–2024 outcomes
+- **Historical fuel prices mapped to model levels**: Gas $2.03 (Low), $3.89 (Medium), $6.45 (High), etc.
+- **Validation metrics**:
+  - Direction accuracy: % of year-over-year changes with correct sign
+  - Magnitude accuracy: mean absolute % error per metric per year
+  - Rank ordering: Kendall-tau concordant pairs for ISO ranking by clean%
+  - Trend accuracy: 2020→2024 annualized slope within ±25%
+- **Known limitations**: COVID demand collapse (2020–2021) not modeled, Winter Storm Uri (2021 ERCOT) not captured, IRA passage (Aug 2022) mid-trajectory policy shift
 
 `compute_fossil_retirement(iso, clean_pct, emission_rates, fossil_mix, demand_growth_factor)`:
 
@@ -965,6 +1057,17 @@ EPA eGRID emission factors cross-checked against:
 
 The 270-scenario sweep systematically varies all major input dimensions. P10/P50/P90 ranges capture structural uncertainty in fuel prices, technology costs, demand growth, and market design.
 
+### 7.5 Trajectory Backtesting
+
+The model includes a backward-looking validation framework (`scripts/backtest_trajectory.py`) that runs the simulator from 2020 grid conditions with actual historical fuel prices and compares predicted 2020–2024 outcomes against observed data across 7 ISOs. Validation metrics include:
+
+- **Direction accuracy**: Percentage of year-over-year changes where the model predicts the correct sign (increasing vs. decreasing)
+- **Magnitude accuracy**: Mean absolute percentage error for clean energy %, LMP, and emissions per ISO per year
+- **Rank ordering**: Kendall-tau concordant pair analysis for ISO ranking by clean energy penetration
+- **Trend accuracy**: Whether the 2020→2024 annualized slope is within ±25% of actual
+
+Historical actuals are sourced from EIA-860M, ISO State of Market reports (PJM MMU, Potomac Economics, CAISO DMM), EPA CAMPD, and EIA-930. Stored in `data/backtest/historical_actuals.json`. Known challenges include COVID demand collapse (2020–2021), Winter Storm Uri (2021 ERCOT), and the 2022 gas price spike ($6.45/MMBtu Henry Hub average).
+
 ---
 
 ## 8. Usage & Limitations
@@ -980,14 +1083,15 @@ The 270-scenario sweep systematically varies all major input dimensions. P10/P50
 ### 8.2 Known Limitations
 
 1. **Static supply model**: Does not account for price-induced supply responses. High EAC prices would stimulate new investment in reality.
-2. **No cross-ISO interactions**: Each ISO modeled independently. No inter-regional trade or load migration.
-3. **No intra-ISO transmission constraints**: Copper-plate assumption within each ISO.
+2. **Simplified inter-regional trade**: Inter-regional flows use exogenous hourly profiles from EIA-930 historical data — not a full trade optimization model. Flows are demand-adjusted, not price-responsive. Toggle On/Off on Setup page.
+3. **Simplified zonal model**: Intra-ISO transmission uses a pipe-and-bubble approximation (2–5 zones per ISO) with aggregate transfer limits. This captures 60–80% of congestion effects but misses nodal-level price separation. Zonal decomposition requires EIA-860 plant data for zone assignment; falls back to copper-plate without it.
 4. **No unit commitment**: Perfect dispatch assumed. No minimum up/down times, ramp rates, or start-up costs.
-5. **No demand-side flexibility**: Load is perfectly inelastic. No demand response or load shifting.
+5. **Reduced-form demand response**: Demand response is modeled as a price-elastic curtailment function, not a full DR resource dispatch model. Activation uses a linear ramp between trigger and 2× trigger price. Captures first-order demand elasticity effects but not DR-as-a-resource economics.
 6. **Single-sector scope**: Electricity only. No cross-sector coupling (transport, heat, industry).
 7. **Reserve margin without hourly reserves**: Resource adequacy enforced, but spinning/non-spinning reserves not modeled.
 8. **Policy snapshot**: Reflects current policy as of early 2025. RPS, IRA credits, and GHG Protocol evolve.
 9. **Interconnection queue constraints**: New capacity assumed buildable as needed (except in trajectory mode which models queue caps).
+10. **Trajectory confidence degrades with horizon**: Projections beyond 2030 rely on extrapolated technology cost curves, demand growth, and policy assumptions. The model displays confidence zones to communicate this (Calibrated ≤2030, Moderate 2030–2040, High Uncertainty 2040+).
 
 ### 8.3 When to Use Each Mode
 
