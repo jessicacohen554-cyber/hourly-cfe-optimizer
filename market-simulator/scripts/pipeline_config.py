@@ -152,6 +152,19 @@ ZONE_CONFIG = {
     },
 }
 
+# VRE primary zone mapping: which zone has the most solar/wind resource.
+# Used for zone-aware cannibalization — solar capture rate should reflect
+# the zone where solar is predominantly located, etc.
+VRE_PRIMARY_ZONE = {
+    'CAISO': {'solar': 'SP15', 'wind': 'NP15'},
+    'ERCOT': {'solar': 'West', 'wind': 'West'},
+    'PJM':   {'solar': 'MAAC', 'wind': 'Western'},
+    'NYISO': {'solar': 'Upstate', 'wind': 'Upstate'},
+    'NEISO': {'solar': 'Southern', 'wind': 'Northern'},
+    'MISO':  {'solar': 'Central', 'wind': 'North'},
+    'SPP':   {'solar': 'South', 'wind': 'North'},
+}
+
 # Balancing Authority → (ISO, Zone) mapping for plant assignment.
 # Priority: BA_TO_ZONE > lat/lon fallback > largest-demand zone.
 BA_TO_ZONE = {
