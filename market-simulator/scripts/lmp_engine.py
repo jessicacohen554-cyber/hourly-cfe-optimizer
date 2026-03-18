@@ -1337,6 +1337,56 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# ZONAL LMP COMPUTATION
+# ══════════════════════════════════════════════════════════════════════════════
+
+def compute_hourly_lmp_zonal(dispatch_result, demand_mw_profile, zone_stacks,
+                              zone_config, price_model, iso=None,
+                              vre_penetration=None):
+    """Zonal LMP computation — replaces copper-plate when zone data available.
+
+    Solves a per-hour LP across 2-5 zones with inter-zonal transfer limits,
+    then applies the same demand-quantile pricing layers used by the
+    copper-plate model.
+
+    Args:
+        dispatch_result: dict with 'residual_demand' and 'curtailed' arrays
+        demand_mw_profile: np.array (8760,) hourly demand in MW
+        zone_stacks: dict {zone_name: [(unit_type, cap_mw, mc), ...]}
+        zone_config: dict from ZONE_CONFIG[iso] with zones, demand_share,
+            transfer_limits_mw
+        price_model: PriceModel instance
+        iso: ISO name (for special rules)
+        vre_penetration: VRE share as fraction (0-1)
+
+    Returns:
+        zonal_lmp_matrix: np.array (n_zones, H) — $/MWh per zone per hour
+        system_lmp: np.array (H,) — demand-weighted system average (backward compat)
+        hourly_marginal_unit: np.array (H,) — set to -1 (not applicable for zonal)
+        zonal_stats: dict with per-zone summary statistics
+    """
+    from zonal_lmp import compute_zonal_lmp_hourly
+
+    H = len(demand_mw_profile)
+
+    zonal_lmp_matrix, system_lmp, flows_matrix, zonal_stats = \
+        compute_zonal_lmp_hourly(
+            iso=iso,
+            zone_config=zone_config,
+            zone_stacks=zone_stacks,
+            demand_mw_profile=demand_mw_profile,
+            clean_supply_by_zone=None,  # TODO: split clean supply by zone
+            price_model=price_model,
+            vre_penetration=vre_penetration,
+        )
+
+    # Backward-compatible marginal unit array (not meaningful for zonal)
+    hourly_marginal_unit = np.full(H, -1, dtype=np.int8)
+
+    return zonal_lmp_matrix, system_lmp, hourly_marginal_unit, zonal_stats
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # LMP STATISTICS
 # ══════════════════════════════════════════════════════════════════════════════
 

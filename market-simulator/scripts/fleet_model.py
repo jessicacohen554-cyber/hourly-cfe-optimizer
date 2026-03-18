@@ -967,6 +967,102 @@ class FleetModel:
         return stack, total_mw
 
     # ------------------------------------------------------------------
+    # Zonal merit-order stacks
+    # ------------------------------------------------------------------
+
+    def assign_zones(self):
+        """Assign each plant in self.fleet to a transmission zone.
+
+        Uses pipeline_config.get_zone_for_plant() with BA → zone mapping,
+        lat/lon bounding box fallback, and largest-demand-zone default.
+        Adds a 'zone' column to self.fleet.
+        """
+        from pipeline_config import get_zone_for_plant, ZONE_CONFIG
+
+        iso = self.iso
+        if iso not in ZONE_CONFIG or self.fleet is None or self.fleet.empty:
+            return
+
+        def _get_zone(row):
+            ba = row.get('ba', None)
+            lat = row.get('latitude', None)
+            lon = row.get('longitude', None)
+            if pd.notna(ba):
+                ba = str(ba).strip().upper()
+            else:
+                ba = None
+            lat = float(lat) if pd.notna(lat) else None
+            lon = float(lon) if pd.notna(lon) else None
+            return get_zone_for_plant(iso, ba_code=ba, lat=lat, lon=lon)
+
+        self.fleet['zone'] = self.fleet.apply(_get_zone, axis=1)
+
+    def build_zonal_merit_order_stacks(self, fuel_level: str = 'Medium',
+                                        co2_price: float = 0.0
+                                        ) -> Dict[str, List[Tuple[str, float, float]]]:
+        """Build per-zone merit-order stacks.
+
+        Splits the fleet by zone, bins by heat rate within each zone,
+        and returns a dict {zone_name: [(bin_name, capacity_mw, mc), ...]}.
+
+        Args:
+            fuel_level: 'Low', 'Medium', or 'High' fuel price scenario.
+            co2_price: Carbon price in $/ton CO2.
+
+        Returns:
+            Dict mapping zone name to sorted merit-order stack.
+        """
+        from pipeline_config import ZONE_CONFIG
+
+        if self.fleet is None or self.fleet.empty:
+            return {}
+
+        if 'zone' not in self.fleet.columns:
+            self.assign_zones()
+
+        iso = self.iso
+        if iso not in ZONE_CONFIG:
+            return {}
+
+        fp = DEFAULT_FUEL_PRICES.get(fuel_level, DEFAULT_FUEL_PRICES['Medium'])
+        zone_stacks = {}
+
+        for zone_name in ZONE_CONFIG[iso]['zones']:
+            zone_fleet = self.fleet[self.fleet['zone'] == zone_name]
+            if zone_fleet.empty:
+                zone_stacks[zone_name] = []
+                continue
+
+            stack = []
+            # Group by unit_type within this zone
+            for unit_type, group in zone_fleet.groupby('unit_type'):
+                total_mw = group['capacity_mw'].sum()
+                avg_hr = group['heat_rate'].mean()
+
+                if 'coal' in str(unit_type):
+                    fuel_price = fp['coal']
+                    base_type = 'coal_steam'
+                elif 'oil' in str(unit_type):
+                    fuel_price = fp['oil']
+                    base_type = 'oil_ct'
+                elif 'ccgt' in str(unit_type):
+                    fuel_price = fp['gas']
+                    base_type = 'gas_ccgt'
+                else:
+                    fuel_price = fp['gas']
+                    base_type = 'gas_ct'
+
+                vom = DEFAULT_VOM.get(base_type, 4.0)
+                co2_rate = DEFAULT_CO2_RATES.get(base_type, 0.5)
+                marginal_cost = avg_hr * fuel_price + vom + co2_rate * co2_price
+                stack.append((str(unit_type), float(total_mw), float(marginal_cost)))
+
+            stack.sort(key=lambda x: x[2])
+            zone_stacks[zone_name] = stack
+
+        return zone_stacks
+
+    # ------------------------------------------------------------------
     # Summary
     # ------------------------------------------------------------------
 
