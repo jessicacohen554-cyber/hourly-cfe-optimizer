@@ -462,7 +462,7 @@ The computation is fully vectorized using NumPy — no Python loops over hours.
 
 Each ISO has a `PriceModel` subclass with three pricing layers:
 1. **Merit-order dispatch** — marginal cost from heat rate × fuel + VOM
-2. **ORDC scarcity pricing** (default) — structural reserve-based pricing via `compute_ordc_adder()`: `adder = VOLL × LOLP(reserves)` where `LOLP = 1/(1 + exp(k × (reserves - target)))`. Replaces statistical demand-quantile overlays. See §4.4.6 for full specification.
+2. **ORDC scarcity pricing** (default) — structural reserve-based pricing via `compute_ordc_adder()`: exponential knee model where adder = $0 above knee, `min(cap, VOLL × exp(-λ × reserves))` below knee. Replaces statistical demand-quantile overlays. See §4.4.6 for full specification.
 3. **Demand-quantile pricing** (legacy fallback) — congestion/tightness adder on high-demand hours, negative pricing on low-demand hours with must-run surplus
 
 | ISO | Model | Key Feature |
@@ -495,7 +495,7 @@ Reconstructs 8,760-hour dispatch with LP-optimized storage co-dispatch:
 
 ### 4.4.1 Zonal LMP Decomposition (`zonal_lmp.py`) — ORDC-Integrated
 
-When EIA-860 fleet data is available, the model decomposes each ISO into 2–5 zones with inter-zonal transfer limits (pipe-and-bubble model). ORDC scarcity pricing is integrated into the zonal path — per-zone reserve margins feed into LOLP calculations, producing zone-specific scarcity adders that reflect local supply tightness.
+When EIA-860 fleet data is available, the model decomposes each ISO into 2–5 zones with inter-zonal transfer limits (pipe-and-bubble model). ORDC scarcity pricing is integrated into the zonal path — per-zone reserve margins feed into the exponential knee LOLP calculation, producing zone-specific scarcity adders that reflect local supply tightness.
 
 **Zone definitions** (`ZONE_CONFIG` in `pipeline_config.py`):
 - **PJM** (5 zones): Western (AEP/APS), AEP-East, MAAC (Mid-Atlantic), EMAAC (Eastern Mid-Atlantic), SWMAAC (Baltimore/DC)
@@ -605,33 +605,39 @@ These per-fuel rates (sourced from EPA eGRID 2022 fleet-weighted averages) repla
 
 The Operating Reserve Demand Curve (ORDC) models scarcity pricing structurally rather than statistically. It replaces the legacy demand-quantile overlay approach.
 
-**Formula:**
+**Formula — Exponential Knee with Cap:**
 
-$$\text{price}(h) = \text{MC}_{\text{marginal}}(h) + \text{VOLL} \times \text{LOLP}(\text{reserves}(h))$$
+$$\text{price}(h) = \text{MC}_{\text{marginal}}(h) + \text{ORDC\_adder}(\text{reserves}(h))$$
 
-$$\text{LOLP}(\text{reserves}) = \frac{1}{1 + \exp(k \times (\text{reserves} - \text{target}))}$$
+$$\text{ORDC\_adder}(R) = \begin{cases} 0 & \text{if } R \geq \text{knee} \\ \min(\text{cap},\ \text{VOLL} \times e^{-\lambda R}) & \text{if } R < \text{knee} \end{cases}$$
 
 where:
 - **VOLL** (Value of Lost Load, $/MWh): ISO-calibrated from regulatory proceedings
-- **LOLP**: Loss of Load Probability, modeled as a logistic sigmoid of operating reserves vs. target
-- **k**: Sigmoid steepness parameter (controls how sharply scarcity prices respond to reserve depletion)
-- **target**: Reserve target in MW (calibrated to ISO planning standards)
+- **knee** (MW): Reserve threshold above which the ORDC adder is exactly $0. Set at ~1.5–2× the ISO's minimum operating reserve requirement per NERC/ISO standards.
+- **λ** (1/MW): Exponential decay rate controlling how steeply LOLP rises as reserves deplete below the knee. λ=0.002 → adder reaches ~$92/MWh at 1,000 MW below knee (for VOLL=$5,000). λ=0.0015 → slower decay for larger systems (PJM, MISO).
+- **cap** ($/MWh): Maximum ORDC adder per hour, preventing single-hour spikes from polluting average LMP. Capacity-market ISOs capped at $200–300; energy-only ERCOT at $500.
+
+This exponential knee model matches real-world ORDC behavior (e.g., ERCOT PUCT Docket 52373): the adder is near-zero at comfortable reserve levels, ramps exponentially as reserves deplete, and is capped to bound tail risk. The hard knee at the reserve threshold ensures that normal operating hours contribute $0 in scarcity pricing — only hours with genuinely tight reserves see a price signal.
+
+**Calibration target**: Annual average ORDC contribution of $2–8/MWh, with 30–100 scarcity hours (adder > $0) per ISO. This aligns with observed real-market scarcity frequency and magnitude.
 
 **Per-ISO Parameters** (`ORDC_PARAMS` in `pipeline_config.py`):
 
-| ISO | VOLL ($/MWh) | Reserve Target (MW) | k |
-|---|---|---|---|
-| ERCOT | 5,000 | 3,000 | 0.003 |
-| PJM | 3,700 | 5,500 | 0.002 |
-| MISO | 3,500 | 4,000 | 0.002 |
-| NYISO | 2,500 | 2,000 | 0.003 |
-| CAISO | 2,000 | 3,000 | 0.003 |
-| NEISO | 2,000 | 1,500 | 0.003 |
-| SPP | 2,000 | 2,500 | 0.003 |
+| ISO | VOLL ($/MWh) | Knee (MW) | λ (1/MW) | Cap ($/MWh) |
+|---|---|---|---|---|
+| ERCOT | 5,000 | 3,000 | 0.002 | 500 |
+| PJM | 3,700 | 6,000 | 0.0015 | 300 |
+| MISO | 3,500 | 5,000 | 0.0015 | 300 |
+| NYISO | 2,500 | 3,000 | 0.002 | 300 |
+| CAISO | 2,000 | 4,000 | 0.002 | 300 |
+| NEISO | 2,000 | 2,500 | 0.002 | 250 |
+| SPP | 2,000 | 3,500 | 0.002 | 200 |
 
-Sources: ERCOT ORDC regulatory proceedings, PJM RPM capacity demand curve, MISO PRA, NYISO ICAP demand curves. ERCOT has the highest VOLL ($5,000) reflecting its energy-only market design (no capacity payments, scarcity pricing is the sole investment signal).
+Sources: ERCOT ORDC regulatory proceedings, PJM RPM capacity demand curve, MISO PRA, NYISO ICAP demand curves. ERCOT has the highest VOLL ($5,000) and cap ($500) reflecting its energy-only market design (no capacity payments, scarcity pricing is the sole investment signal).
 
-**Implementation**: `PriceModel.compute_ordc_adder()` (lmp_engine.py lines 541–616). Fully vectorized over 8,760 hours. Reserves computed as `total_capacity - demand - committed_generation`.
+**Double-counting guard**: When `SCARCITY_MODE='ordc'`, the per-hour `_scarcity_adder()` path (used by demand-quantile mode) is bypassed. Only `compute_ordc_adder()` applies scarcity pricing, preventing two scarcity mechanisms from firing on the same hours.
+
+**Implementation**: `PriceModel.compute_ordc_adder()` in `lmp_engine.py`. Fully vectorized over 8,760 hours using numpy boolean masking (below-knee filter) and `np.exp` / `np.minimum`. Reserves computed as `total_fossil_capacity - residual_demand`.
 
 ### 4.4.7 VRE Cannibalization Feedback (`market_simulation.py`)
 
@@ -1446,5 +1452,6 @@ def wright_adjusted_cost(foak_cost, cumulative_gw, baseline_gw, learning_rate):
 | 1.0 | Feb 2026 | Initial specification: merit-order dispatch, plant-level economics, LP storage, zonal LMP, DR, confidence zones, backtesting |
 | 1.1 | Mar 2026 | Added IPM trigger indicators (§6.8), fleet model documentation, cost table updates |
 | 2.0 | Mar 2026 | v2 synchronization: ORDC scarcity pricing (§4.4.6), VRE cannibalization feedback (§4.4.7), ORDC-in-zonal integration, DR vectorization + ORDC-link, tech-differentiated queue caps (§4.7), data tier warnings, feature interaction matrix (§6.9), comprehensive limitation updates (§8.2) |
+| 2.1 | Mar 2026 | ORDC fix: replaced logistic sigmoid with exponential knee + cap model. New params: {voll, knee_mw, lam, cap}. Double-counting guard on _scarcity_adder. Calibrated $2–8/MWh avg contribution. |
 
 *Constellation Energy — Market Simulator v2.0 — Internal & Confidential*
