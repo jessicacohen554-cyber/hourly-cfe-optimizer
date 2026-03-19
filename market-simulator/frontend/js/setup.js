@@ -27,7 +27,7 @@ const ISO_DATA = {
 const MODE_DESCRIPTIONS = {
     trajectory5: "Multi-year market trajectory to 2060 at 5-year intervals. Wright's Law learning curves reduce costs each year. Shows when the market flips for each resource type.",
     trajectory1: "Multi-year market trajectory to 2060 at annual resolution. Same model as 5-year but with single-year granularity. Detailed results downloadable as CSV.",
-    sweep: "Parametric market reference sweep at 5-year intervals: 3 demand × 5 price × 3 PPA × 3 gas friction × 3 queue speed = 405 scenarios. Upload custom CSV templates to override defaults."
+    sweep: "Parametric market reference sweep at 5-year intervals: 3 demand × 5 price × 3 PPA × 3 gas friction × 3 queue speed × 3 new-build fossil cost = 1,215 scenarios. Upload custom CSV templates to override defaults."
 };
 
 // Mode → year step mapping
@@ -552,6 +552,13 @@ function collectFormData() {
         })(),
         ppa_level: document.querySelector('#ppaToggle .toggle-btn.active')?.dataset.value || 'Medium',
         gas_friction: document.querySelector('#gasFrictionToggle .toggle-btn.active')?.dataset.value || 'Medium',
+        new_fossil_cost_level: document.querySelector('#newFossilCostToggle .toggle-btn.active')?.dataset.value || 'Medium',
+        new_fossil_enabled: document.querySelector('#newFossilEnabledToggle .toggle-btn.active')?.dataset.value === 'On',
+        new_fossil_min_cf_override: {
+            gas_ccgt: (parseFloat(document.getElementById('min_cf_ccgt')?.value) || 30) / 100.0,
+            gas_ct: (parseFloat(document.getElementById('min_cf_ct')?.value) || 5) / 100.0,
+            coal: (parseFloat(document.getElementById('min_cf_coal')?.value) || 60) / 100.0,
+        },
         interchange_enabled: document.querySelector('#interchangeToggle .toggle-btn.active')?.dataset.value === 'On',
         dr_level: document.querySelector('#drToggle .toggle-btn.active')?.dataset.value || 'Off',
         scarcity_mode: document.querySelector('#scarcityModeToggle .toggle-btn.active')?.dataset.value || 'ordc',
@@ -724,6 +731,8 @@ const TOGGLE_MAP = {
     ppa_level:            { selector: '#ppaToggle .toggle-btn', attr: 'data-value' },
     demand_growth:        { selector: '#demandToggle .toggle-btn', attr: 'data-value' },
     gas_friction:         { selector: '#gasFrictionToggle .toggle-btn', attr: 'data-value' },
+    new_fossil_cost_level: { selector: '#newFossilCostToggle .toggle-btn', attr: 'data-value' },
+    new_fossil_enabled:   { selector: '#newFossilEnabledToggle .toggle-btn', attr: 'data-value' },
     interchange_enabled:  { selector: '#interchangeToggle .toggle-btn', attr: 'data-value' },
     dr_level:             { selector: '#drToggle .toggle-btn', attr: 'data-value' },
     scarcity_mode:        { selector: '#scarcityModeToggle .toggle-btn', attr: 'data-value' },
@@ -760,6 +769,7 @@ const INPUT_MAP = {
     custom_demand_pct: 'custom_demand_pct',
     nuclear_retirement: 'nuclear_retirement',
     queue_cap_override: 'queue_cap_override',
+    min_cf_ccgt: 'min_cf_ccgt', min_cf_ct: 'min_cf_ct', min_cf_coal: 'min_cf_coal',
 };
 
 // Select (dropdown) mapping

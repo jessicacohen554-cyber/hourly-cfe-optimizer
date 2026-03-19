@@ -168,7 +168,7 @@ Levelized costs for new-build resources, including storage, fossil new-build, an
 |------|-------------|-------|
 | **Snapshot** | Single point-in-time simulation | 5–15 seconds |
 | **Trajectory** | Multi-year projection with learning curves (2030–2050) | 30–120 seconds |
-| **Sweep** | 270-scenario parametric sweep | 5–30 minutes |
+| **Sweep** | 1,215-scenario parametric sweep | 15–90 minutes |
 
 ### Fuel Prices ($/MMBtu)
 
@@ -188,6 +188,18 @@ Levelized costs for new-build resources, including storage, fossil new-build, an
 | EPA SCC | $51.00 | EPA Social Cost of Carbon |
 | EU ETS | $100.00 | EU Emissions Trading System range |
 | Rennert | $185.00 | Academic estimate (Rennert et al.) |
+
+### New-Build Fossil Parameters
+
+| Parameter | Default | Valid Range | Description |
+|-----------|---------|-------------|-------------|
+| **New Fossil Cost Level** | Medium | Low / Medium / High | CAPEX tier for new-build fossil (swept in parametric mode) |
+| **New Fossil Builds** | On | On / Off | Enable/disable new fossil construction |
+| **Min CF — CCGT** | 30% | 5–90% | Minimum capacity factor for new CCGT investment |
+| **Min CF — CT** | 5% | 1–50% | Minimum capacity factor for new peaker CT investment |
+| **Min CF — Coal** | 60% | 20–90% | Minimum capacity factor for new coal investment |
+
+In single trajectory mode, users can also override per-type CAPEX ($/kW-yr) via the API `new_fossil_capex_override` field. Coal new-build is blocked in CAISO, NYISO, and NEISO.
 
 ---
 
