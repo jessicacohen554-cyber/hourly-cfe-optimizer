@@ -166,6 +166,12 @@ class SimulationRequest(BaseModel):
     # Fossil new-build LCOEs
     fossil_lcoes: Optional[dict] = None  # {gas_ccgt: float, gas_ct: float, coal: float}
 
+    # New-build fossil parameters
+    new_fossil_cost_level: str = "Medium"  # Low/Medium/High — CAPEX table for new fossil builds
+    new_fossil_enabled: bool = True  # On/Off — allow new fossil capacity in dispatch
+    new_fossil_capex_override: Optional[Dict[str, float]] = None  # {gas_ccgt: $/kW-yr, gas_ct: ..., coal: ...}
+    new_fossil_min_cf_override: Optional[Dict[str, float]] = None  # {gas_ccgt: 0.30, gas_ct: 0.05, coal: 0.60}
+
     # Per-resource transmission overrides
     tx_overrides: Optional[dict] = None  # {solar: float, wind: float, ...} — blank = use master L/M/H
 
@@ -320,7 +326,10 @@ class YearResult(BaseModel):
     avg_lmp: float
     lmp_p90: float = 0.0
     gas_built_gw: float = 0.0
+    fossil_built_gw: float = 0.0
     total_gas_gw: float = 0.0
+    total_new_fossil_mw: float = 0.0
+    new_fossil_builds_mw: Dict[str, float] = Field(default_factory=dict)
     market_stop: bool = False
     # Confidence zone for trajectory projection reliability
     confidence: str = 'high'            # 'high', 'moderate', 'low'

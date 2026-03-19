@@ -1294,6 +1294,85 @@ EXISTING_GAS_FOM_KW_YR = {
 NEW_GAS_CCGT_LCOE = {'Low': 45, 'Medium': 55, 'High': 65}
 NEW_GAS_CT_LCOE = {'Low': 65, 'Medium': 80, 'High': 100}
 
+# New-build coal LCOE ($/MWh, annualized all-in including capital recovery)
+# Sources: Lazard v18, EIA AEO 2024, IEA WEO 2024.
+# Ultra-supercritical coal, 75% CF assumption.
+# Low reflects regions with cheap coal + existing rail (MISO/SPP).
+# High reflects coastal ISOs with carbon risk premium.
+NEW_COAL_LCOE = {'Low': 75, 'Medium': 95, 'High': 120}
+
+# ── New-build fossil annualized CAPEX ($/kW-yr) by sensitivity level ──
+# These are the capital recovery + fixed O&M costs for new-build decisions
+# in the market simulator dispatch loop. L/M/H represent construction cost
+# uncertainty (permitting, labor, supply chain).
+# Sources: Lazard v17-18, NREL ATB 2024, EIA AEO 2024.
+#
+# CCGT: H/J-class combined cycle, 2-3 year build, ~$900-1400/kW overnight.
+# CT: Frame/aero peaker, 1-2 year build, ~$400-700/kW overnight.
+# Coal: Ultra-supercritical, 4-6 year build, ~$3000-5000/kW overnight.
+NEW_BUILD_CAPEX_KW_YR = {
+    'Low': {
+        'gas_ccgt': {'CAISO': 95, 'ERCOT': 75, 'PJM': 84, 'NYISO': 97, 'NEISO': 89, 'MISO': 80, 'SPP': 74},
+        'gas_ct':   {'CAISO': 55, 'ERCOT': 42, 'PJM': 48, 'NYISO': 57, 'NEISO': 52, 'MISO': 45, 'SPP': 41},
+        'coal':     {'CAISO': 999, 'ERCOT': 180, 'PJM': 195, 'NYISO': 999, 'NEISO': 999, 'MISO': 170, 'SPP': 165},
+    },
+    'Medium': {
+        'gas_ccgt': {'CAISO': 112, 'ERCOT': 89, 'PJM': 99, 'NYISO': 114, 'NEISO': 105, 'MISO': 95, 'SPP': 88},
+        'gas_ct':   {'CAISO': 65, 'ERCOT': 50, 'PJM': 57, 'NYISO': 67, 'NEISO': 62, 'MISO': 54, 'SPP': 49},
+        'coal':     {'CAISO': 999, 'ERCOT': 220, 'PJM': 240, 'NYISO': 999, 'NEISO': 999, 'MISO': 210, 'SPP': 200},
+    },
+    'High': {
+        'gas_ccgt': {'CAISO': 132, 'ERCOT': 105, 'PJM': 117, 'NYISO': 135, 'NEISO': 124, 'MISO': 112, 'SPP': 104},
+        'gas_ct':   {'CAISO': 78, 'ERCOT': 60, 'PJM': 68, 'NYISO': 80, 'NEISO': 73, 'MISO': 64, 'SPP': 59},
+        'coal':     {'CAISO': 999, 'ERCOT': 270, 'PJM': 295, 'NYISO': 999, 'NEISO': 999, 'MISO': 258, 'SPP': 245},
+    },
+}
+
+# New-build fossil heat rates (MMBtu/MWh) — better than fleet average
+# New CCGT: H/J-class turbines achieve 6.2-6.4 MMBtu/MWh
+# New CT: Modern aero-derivative 9.5-10.0, frame 10.0-10.5
+# New coal: Ultra-supercritical 8.8-9.2
+NEW_BUILD_HEAT_RATES = {
+    'gas_ccgt': 6.3,
+    'gas_ct': 9.8,
+    'coal': 9.5,
+}
+
+# New-build fossil VOM ($/MWh) — lower than aging fleet
+NEW_BUILD_VOM = {
+    'gas_ccgt': 2.50,
+    'gas_ct': 4.00,
+    'coal': 4.50,
+}
+
+# New-build fossil CO2 rates (tCO2/MWh) — derived from heat rates
+NEW_BUILD_CO2_RATES = {
+    'gas_ccgt': 0.053 * 6.3,   # ~0.334 tCO2/MWh
+    'gas_ct': 0.053 * 9.8,     # ~0.519 tCO2/MWh
+    'coal': 0.095 * 9.5,       # ~0.903 tCO2/MWh
+}
+
+# Minimum CF thresholds for investment decision — below this CF the unit
+# doesn't generate enough revenue to justify the capital outlay.
+# CCGT: 30% — modern H/J-class have fast ramp (10 MW/min) and low min gen,
+#   so they are viable at lower CFs than older fleet-average units.
+# CT: 5% — peakers only need to cover scarcity hours.
+# Coal: 60% — high fixed costs and slow cycling require baseload dispatch.
+# In single-trajectory runs, these are user-overridable via conditions dict.
+NEW_BUILD_MIN_CF = {
+    'gas_ccgt': 0.30,
+    'gas_ct': 0.05,
+    'coal': 0.60,
+}
+
+# Maximum annual new-build rate per ISO (GW/yr) — reflects permitting,
+# construction labor, and interconnection queue throughput constraints.
+# ISOs with larger grids and more active development pipelines get higher caps.
+NEW_BUILD_MAX_GW_YR = {
+    'CAISO': 3.0, 'ERCOT': 4.0, 'PJM': 5.0, 'NYISO': 2.0,
+    'NEISO': 2.0, 'MISO': 4.0, 'SPP': 3.0,
+}
+
 # ============================================================================
 # FOAK COST TABLES — First-of-a-kind costs before any learning curve
 # ============================================================================
