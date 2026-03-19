@@ -1,0 +1,401 @@
+{
+  "fleet_summary": {
+    "total_plants": 5,
+    "total_capacity_mw": 2730.0,
+    "isos": [
+      "ERCOT",
+      "PJM"
+    ],
+    "n_scenarios": 405,
+    "years": [
+      2023,
+      2030,
+      2035,
+      2040,
+      2045,
+      2050
+    ]
+  },
+  "envelope": {
+    "2023": {
+      "p10": 0.0,
+      "p50": 0.0,
+      "p90": 0.0,
+      "mean": 0.0
+    },
+    "2030": {
+      "p10": 4.269,
+      "p50": 5.6485,
+      "p90": 6.3735,
+      "mean": 5.5615
+    },
+    "2035": {
+      "p10": 3.9892,
+      "p50": 5.7105,
+      "p90": 6.8916,
+      "mean": 5.6027
+    },
+    "2040": {
+      "p10": 4.0829,
+      "p50": 5.9241,
+      "p90": 7.6523,
+      "mean": 5.824
+    },
+    "2045": {
+      "p10": 3.5564,
+      "p50": 6.0266,
+      "p90": 8.0257,
+      "mean": 5.878
+    },
+    "2050": {
+      "p10": 3.1715,
+      "p50": 5.9906,
+      "p90": 8.2255,
+      "mean": 5.9887
+    }
+  },
+  "plant_detail": {
+    "2023": [
+      {
+        "orispl": 55001,
+        "name": "Riverside CCGT",
+        "iso": "PJM",
+        "fuel_type": "gas_ccgt",
+        "capacity_mw": 1100.0,
+        "status": "operating",
+        "capacity_factor": 0.0,
+        "generation_gwh": 0.0,
+        "emissions_kt": 0.0
+      },
+      {
+        "orispl": 55003,
+        "name": "Keystone Coal Station",
+        "iso": "PJM",
+        "fuel_type": "coal_steam",
+        "capacity_mw": 425.0,
+        "status": "operating",
+        "capacity_factor": 0.0,
+        "generation_gwh": 0.0,
+        "emissions_kt": 0.0
+      },
+      {
+        "orispl": 55005,
+        "name": "Allegheny CCGT (CCS Retrofit)",
+        "iso": "PJM",
+        "fuel_type": "gas_ccgt",
+        "capacity_mw": 750.0,
+        "status": "ccs_retrofit",
+        "capacity_factor": 0.0,
+        "generation_gwh": 0.0,
+        "emissions_kt": 0.0
+      },
+      {
+        "orispl": 55002,
+        "name": "Eagle Ford CT",
+        "iso": "ERCOT",
+        "fuel_type": "gas_ct",
+        "capacity_mw": 320.0,
+        "status": "operating",
+        "capacity_factor": 0.0,
+        "generation_gwh": 0.0,
+        "emissions_kt": 0.0
+      },
+      {
+        "orispl": 55004,
+        "name": "Brazos Wind-Backup CT",
+        "iso": "ERCOT",
+        "fuel_type": "gas_ct",
+        "capacity_mw": 135.0,
+        "status": "operating",
+        "capacity_factor": 0.0,
+        "generation_gwh": 0.0,
+        "emissions_kt": 0.0
+      }
+    ],
+    "2030": [
+      {
+        "orispl": 55001,
+        "name": "Riverside CCGT",
+        "iso": "PJM",
+        "fuel_type": "gas_ccgt",
+        "capacity_mw": 1100.0,
+        "status": "operating",
+        "capacity_factor": 0.95,
+        "generation_gwh": 9154.2,
+        "emissions_kt": 3112.43
+      },
+      {
+        "orispl": 55003,
+        "name": "Keystone Coal Station",
+        "iso": "PJM",
+        "fuel_type": "coal_steam",
+        "capacity_mw": 425.0,
+        "status": "operating",
+        "capacity_factor": 0.6019,
+        "generation_gwh": 2240.69,
+        "emissions_kt": 2312.4
+      },
+      {
+        "orispl": 55005,
+        "name": "Allegheny CCGT (CCS Retrofit)",
+        "iso": "PJM",
+        "fuel_type": "gas_ccgt",
+        "capacity_mw": 750.0,
+        "status": "ccs_retrofit",
+        "capacity_factor": 0.95,
+        "generation_gwh": 5475.0,
+        "emissions_kt": 112.66
+      },
+      {
+        "orispl": 55002,
+        "name": "Eagle Ford CT",
+        "iso": "ERCOT",
+        "fuel_type": "gas_ct",
+        "capacity_mw": 320.0,
+        "status": "operating",
+        "capacity_factor": 0.0515,
+        "generation_gwh": 144.28,
+        "emissions_kt": 78.06
+      },
+      {
+        "orispl": 55004,
+        "name": "Brazos Wind-Backup CT",
+        "iso": "ERCOT",
+        "fuel_type": "gas_ct",
+        "capacity_mw": 135.0,
+        "status": "operating",
+        "capacity_factor": 0.0457,
+        "generation_gwh": 53.99,
+        "emissions_kt": 32.93
+      }
+    ],
+    "2035": [
+      {
+        "orispl": 55001,
+        "name": "Riverside CCGT",
+        "iso": "PJM",
+        "fuel_type": "gas_ccgt",
+        "capacity_mw": 1100.0,
+        "status": "operating",
+        "capacity_factor": 0.95,
+        "generation_gwh": 9154.2,
+        "emissions_kt": 3112.43
+      },
+      {
+        "orispl": 55003,
+        "name": "Keystone Coal Station",
+        "iso": "PJM",
+        "fuel_type": "coal_steam",
+        "capacity_mw": 425.0,
+        "status": "operating",
+        "capacity_factor": 0.5833,
+        "generation_gwh": 2171.75,
+        "emissions_kt": 2241.25
+      },
+      {
+        "orispl": 55005,
+        "name": "Allegheny CCGT (CCS Retrofit)",
+        "iso": "PJM",
+        "fuel_type": "gas_ccgt",
+        "capacity_mw": 750.0,
+        "status": "ccs_retrofit",
+        "capacity_factor": 0.95,
+        "generation_gwh": 5475.0,
+        "emissions_kt": 112.66
+      },
+      {
+        "orispl": 55002,
+        "name": "Eagle Ford CT",
+        "iso": "ERCOT",
+        "fuel_type": "gas_ct",
+        "capacity_mw": 320.0,
+        "status": "operating",
+        "capacity_factor": 0.1132,
+        "generation_gwh": 317.42,
+        "emissions_kt": 171.72
+      },
+      {
+        "orispl": 55004,
+        "name": "Brazos Wind-Backup CT",
+        "iso": "ERCOT",
+        "fuel_type": "gas_ct",
+        "capacity_mw": 135.0,
+        "status": "operating",
+        "capacity_factor": 0.1004,
+        "generation_gwh": 118.77,
+        "emissions_kt": 72.45
+      }
+    ],
+    "2040": [
+      {
+        "orispl": 55001,
+        "name": "Riverside CCGT",
+        "iso": "PJM",
+        "fuel_type": "gas_ccgt",
+        "capacity_mw": 1100.0,
+        "status": "operating",
+        "capacity_factor": 0.6344,
+        "generation_gwh": 6112.84,
+        "emissions_kt": 2078.36
+      },
+      {
+        "orispl": 55003,
+        "name": "Keystone Coal Station",
+        "iso": "PJM",
+        "fuel_type": "coal_steam",
+        "capacity_mw": 425.0,
+        "status": "operating",
+        "capacity_factor": 0.9074,
+        "generation_gwh": 3378.28,
+        "emissions_kt": 3486.38
+      },
+      {
+        "orispl": 55005,
+        "name": "Allegheny CCGT (CCS Retrofit)",
+        "iso": "PJM",
+        "fuel_type": "gas_ccgt",
+        "capacity_mw": 750.0,
+        "status": "ccs_retrofit",
+        "capacity_factor": 0.5971,
+        "generation_gwh": 3440.94,
+        "emissions_kt": 70.8
+      },
+      {
+        "orispl": 55002,
+        "name": "Eagle Ford CT",
+        "iso": "ERCOT",
+        "fuel_type": "gas_ct",
+        "capacity_mw": 320.0,
+        "status": "operating",
+        "capacity_factor": 0.1338,
+        "generation_gwh": 375.13,
+        "emissions_kt": 202.95
+      },
+      {
+        "orispl": 55004,
+        "name": "Brazos Wind-Backup CT",
+        "iso": "ERCOT",
+        "fuel_type": "gas_ct",
+        "capacity_mw": 135.0,
+        "status": "operating",
+        "capacity_factor": 0.1187,
+        "generation_gwh": 140.37,
+        "emissions_kt": 85.63
+      }
+    ],
+    "2045": [
+      {
+        "orispl": 55001,
+        "name": "Riverside CCGT",
+        "iso": "PJM",
+        "fuel_type": "gas_ccgt",
+        "capacity_mw": 1100.0,
+        "status": "operating",
+        "capacity_factor": 0.7,
+        "generation_gwh": 6745.2,
+        "emissions_kt": 2293.37
+      },
+      {
+        "orispl": 55003,
+        "name": "Keystone Coal Station",
+        "iso": "PJM",
+        "fuel_type": "coal_steam",
+        "capacity_mw": 425.0,
+        "status": "operating",
+        "capacity_factor": 0.9167,
+        "generation_gwh": 3412.75,
+        "emissions_kt": 3521.96
+      },
+      {
+        "orispl": 55005,
+        "name": "Allegheny CCGT (CCS Retrofit)",
+        "iso": "PJM",
+        "fuel_type": "gas_ccgt",
+        "capacity_mw": 750.0,
+        "status": "ccs_retrofit",
+        "capacity_factor": 0.6588,
+        "generation_gwh": 3796.9,
+        "emissions_kt": 78.13
+      },
+      {
+        "orispl": 55002,
+        "name": "Eagle Ford CT",
+        "iso": "ERCOT",
+        "fuel_type": "gas_ct",
+        "capacity_mw": 320.0,
+        "status": "operating",
+        "capacity_factor": 0.0618,
+        "generation_gwh": 173.14,
+        "emissions_kt": 93.67
+      },
+      {
+        "orispl": 55004,
+        "name": "Brazos Wind-Backup CT",
+        "iso": "ERCOT",
+        "fuel_type": "gas_ct",
+        "capacity_mw": 135.0,
+        "status": "operating",
+        "capacity_factor": 0.0548,
+        "generation_gwh": 64.79,
+        "emissions_kt": 39.52
+      }
+    ],
+    "2050": [
+      {
+        "orispl": 55001,
+        "name": "Riverside CCGT",
+        "iso": "PJM",
+        "fuel_type": "gas_ccgt",
+        "capacity_mw": 1100.0,
+        "status": "operating",
+        "capacity_factor": 0.95,
+        "generation_gwh": 9154.2,
+        "emissions_kt": 3112.43
+      },
+      {
+        "orispl": 55003,
+        "name": "Keystone Coal Station",
+        "iso": "PJM",
+        "fuel_type": "coal_steam",
+        "capacity_mw": 425.0,
+        "status": "operating",
+        "capacity_factor": 0.6389,
+        "generation_gwh": 2378.58,
+        "emissions_kt": 2454.7
+      },
+      {
+        "orispl": 55005,
+        "name": "Allegheny CCGT (CCS Retrofit)",
+        "iso": "PJM",
+        "fuel_type": "gas_ccgt",
+        "capacity_mw": 750.0,
+        "status": "ccs_retrofit",
+        "capacity_factor": 0.95,
+        "generation_gwh": 5475.0,
+        "emissions_kt": 112.66
+      },
+      {
+        "orispl": 55002,
+        "name": "Eagle Ford CT",
+        "iso": "ERCOT",
+        "fuel_type": "gas_ct",
+        "capacity_mw": 320.0,
+        "status": "operating",
+        "capacity_factor": 0.1441,
+        "generation_gwh": 403.99,
+        "emissions_kt": 218.56
+      },
+      {
+        "orispl": 55004,
+        "name": "Brazos Wind-Backup CT",
+        "iso": "ERCOT",
+        "fuel_type": "gas_ct",
+        "capacity_mw": 135.0,
+        "status": "operating",
+        "capacity_factor": 0.1278,
+        "generation_gwh": 151.17,
+        "emissions_kt": 92.21
+      }
+    ]
+  }
+}

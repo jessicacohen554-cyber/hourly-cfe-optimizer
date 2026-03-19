@@ -1,0 +1,85 @@
+{
+  "$schema_version": "1.0",
+  "$schema_description": "Fleet input schema for company-level fossil plant inventory. Used by fleet_dispatch.py to map grid-level market outcomes to company-specific emissions trajectories.",
+
+  "metadata": {
+    "company": "Sample Energy Corp",
+    "as_of_date": "2025-01-01",
+    "notes": "Illustrative 5-plant fleet across PJM and ERCOT. All values fictional.",
+    "emission_factors_source": "EPA eGRID 2022 — fuel-specific CO2 factors (kg CO2/MMBtu): gas=53.06, coal=95.52, oil=73.96"
+  },
+
+  "schema": {
+    "orispl":                  {"type": "integer",  "required": true,  "description": "EIA plant ID (ORIS code). Use 0 for hypothetical/new plants."},
+    "name":                    {"type": "string",   "required": true,  "description": "Human-readable plant name."},
+    "iso":                     {"type": "string",   "required": true,  "description": "Operating ISO.", "enum": ["CAISO", "ERCOT", "PJM", "NYISO", "NEISO", "MISO", "SPP"]},
+    "capacity_mw":             {"type": "number",   "required": true,  "description": "Owned/equity-adjusted nameplate capacity (MW)."},
+    "fuel_type":               {"type": "string",   "required": true,  "description": "Fuel and technology class.", "enum": ["gas_ccgt", "gas_ct", "coal_steam", "oil_ct"]},
+    "heat_rate_mmbtu_mwh":     {"type": "number",   "required": true,  "description": "Plant-specific net heat rate (MMBtu/MWh). Lower = more efficient."},
+    "co2_rate_t_mwh":          {"type": "number",   "required": true,  "description": "CO2 intensity (metric tonnes CO2 per MWh). Derived: heat_rate × emission_factor / 1000. Gas≈0.37-0.55, Coal≈0.90-1.10, Oil≈0.65-0.85."},
+    "equity_share":            {"type": "number",   "required": true,  "description": "Ownership fraction (0-1). 1.0 = wholly owned. Applied to capacity, generation, and emissions.", "minimum": 0, "maximum": 1},
+    "status":                  {"type": "string",   "required": true,  "description": "Current plant status.", "enum": ["operating", "retired", "ccs_retrofit"]},
+    "ccs_capture_rate":        {"type": "number",   "required": false, "description": "CO2 capture rate when status=ccs_retrofit. Default 0.95 (95%).", "default": 0.95, "minimum": 0, "maximum": 1},
+    "ccs_heat_rate_penalty":   {"type": "number",   "required": false, "description": "Heat rate multiplier for CCS parasitic load. Default 1.14 (14% penalty).", "default": 1.14, "minimum": 1.0}
+  },
+
+  "plants": [
+    {
+      "orispl": 55001,
+      "name": "Riverside CCGT",
+      "iso": "PJM",
+      "capacity_mw": 1100,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 6.4,
+      "co2_rate_t_mwh": 0.340,
+      "equity_share": 1.0,
+      "status": "operating"
+    },
+    {
+      "orispl": 55002,
+      "name": "Eagle Ford CT",
+      "iso": "ERCOT",
+      "capacity_mw": 320,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 10.2,
+      "co2_rate_t_mwh": 0.541,
+      "equity_share": 1.0,
+      "status": "operating"
+    },
+    {
+      "orispl": 55003,
+      "name": "Keystone Coal Station",
+      "iso": "PJM",
+      "capacity_mw": 850,
+      "fuel_type": "coal_steam",
+      "heat_rate_mmbtu_mwh": 10.8,
+      "co2_rate_t_mwh": 1.032,
+      "equity_share": 0.5,
+      "status": "operating"
+    },
+    {
+      "orispl": 55004,
+      "name": "Brazos Wind-Backup CT",
+      "iso": "ERCOT",
+      "capacity_mw": 180,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 11.5,
+      "co2_rate_t_mwh": 0.610,
+      "equity_share": 0.75,
+      "status": "operating"
+    },
+    {
+      "orispl": 55005,
+      "name": "Allegheny CCGT (CCS Retrofit)",
+      "iso": "PJM",
+      "capacity_mw": 750,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 6.8,
+      "co2_rate_t_mwh": 0.361,
+      "equity_share": 1.0,
+      "status": "ccs_retrofit",
+      "ccs_capture_rate": 0.95,
+      "ccs_heat_rate_penalty": 1.14
+    }
+  ]
+}
