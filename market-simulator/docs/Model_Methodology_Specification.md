@@ -745,8 +745,8 @@ The fleet dispatch model (originally `scripts/fleet_dispatch.py`) has been porte
 - **Year-aware masks**: Retired plants zeroed from year_online onward; new plants zeroed before year_online
 
 **Data Pipeline**:
-- Sweep dispatch data (per-ISO, per-year, per-scenario fuel CF and margin) is extracted from `sweep_405_flat.parquet` into a compact JSON (~0.7 MB) served to the browser
-- P10/P50/P90 envelopes computed via sort-based percentile on 405 scenarios per year
+- Sweep dispatch data (per-ISO, per-year, per-scenario fuel CF and margin) is extracted from `sweep_1215_flat.parquet` into a compact JSON (~0.7 MB) served to the browser
+- P10/P50/P90 envelopes computed via sort-based percentile on 1,215 scenarios per year
 
 **Emission Factors (t CO₂ / MMBtu)**:
 - gas_ccgt: 0.05306, gas_ct: 0.05306, coal_steam: 0.09552, oil_ct: 0.07396
