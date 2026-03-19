@@ -733,6 +733,26 @@ Computes per-plant dispatch hours, capacity factor, revenue, cost, emissions, an
 
 **Output fields per plant**: entity, plant name, plant ID, generator ID, state, county, lat/lon, capacity MW, heat rate, fuel type, prime mover, online year, age, capacity factor, MWh generated, fuel consumed, CO₂/NOx/SOx emissions, revenue/VOM/fuel cost/profit per MWh, total revenue/cost/profit ($M), status.
 
+### 4.6.1 Client-Side Fleet Dispatch Engine
+
+The fleet dispatch model (originally `scripts/fleet_dispatch.py`) has been ported to JavaScript (`frontend/js/fleet-dispatch-engine.js`) for real-time browser-based recalculation. The JS port maintains identical logic:
+
+**Dispatch Logic**:
+- **Efficiency ratio**: `min(ref_hr / plant_hr, 1.5)` where reference heat rates are gas_ccgt=7.0, gas_ct=10.5, coal_steam=10.0, oil_ct=10.5 MMBtu/MWh
+- **Economic retirement**: Zero CF when margin < 0
+- **CCS ramp schedule**: 0% at year_online, 30% at +2yr, 70% at +5yr, 100% at +8yr (linear interpolation)
+- **CCS heat rate penalty**: 1.14×, effective CO₂ = base_co2 × hr_penalty × (1 − capture_rate)
+- **Year-aware masks**: Retired plants zeroed from year_online onward; new plants zeroed before year_online
+
+**Data Pipeline**:
+- Sweep dispatch data (per-ISO, per-year, per-scenario fuel CF and margin) is extracted from `sweep_405_flat.parquet` into a compact JSON (~0.7 MB) served to the browser
+- P10/P50/P90 envelopes computed via sort-based percentile on 405 scenarios per year
+
+**Emission Factors (t CO₂ / MMBtu)**:
+- gas_ccgt: 0.05306, gas_ct: 0.05306, coal_steam: 0.09552, oil_ct: 0.07396
+
+**Performance**: 200 plants × 405 scenarios × 6 years computed in <50ms in modern browsers.
+
 ### 4.7 Scenario Construction
 
 #### Snapshot Mode

@@ -103,6 +103,7 @@
                 <li><strong>Economic new-build fossil</strong> — Endogenous construction of new gas CCGT, gas CT, and coal capacity when market economics support it. Triggered by resource adequacy gaps (reserve margin &lt; 15%) or positive net margins above minimum capacity factor thresholds. Per-ISO CAPEX tables with L/M/H cost levels; coal blocked in CAISO/NYISO/NEISO. User-configurable min CF, CAPEX overrides, and on/off toggle.</li>
                 <li><strong>Tech-differentiated queue caps</strong> — Per-technology interconnection limits from LBNL &ldquo;Queued Up 2024&rdquo; completion rates. 20% flex pool across technologies.</li>
                 <li><strong>Data tier warnings</strong> — Color-coded indicators distinguish synthetic vs. EIA-930 vs. pipeline vs. full-fidelity data quality.</li>
+                <li><strong>Client-side fleet dispatch</strong> — The fleet_dispatch.py logic (efficiency ratios, CCS ramp schedules, economic retirement, year-aware retirement/addition masks) has been ported to JavaScript for real-time browser-based recalculation. Users can modify fleet configurations and see updated P10/P50/P90 emissions envelopes across all 405 scenarios without a backend round-trip.</li>
                 <li><strong>Interactive web interface</strong> — Real-time parametric sensitivity with immediate visual feedback, designed for stakeholder accessibility.</li>
             </ul>
         </div>
