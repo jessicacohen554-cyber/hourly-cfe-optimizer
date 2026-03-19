@@ -64,10 +64,15 @@ The Market Simulation Screening Tool models electricity market economics across 
 - Nuclear retirement risk under different revenue assumptions
 - CCS breakeven carbon price analysis
 - Plant-level economics for every generator in the EIA 860 fleet
-- **Zonal LMP decomposition** — pipe-and-bubble zonal model (2–5 zones/ISO) captures intra-ISO transmission congestion
+- **ORDC scarcity pricing** — Operating Reserve Demand Curve pricing replaces statistical demand-quantile overlays with structural reserve-based pricing: `price = marginal_cost + VOLL × LOLP(reserves)`. ISO-calibrated VOLL ($2,000–$5,000/MWh) and reserve targets.
+- **VRE cannibalization feedback** — Solar and wind energy revenue uses time-matched LMP (capture rates), not average LMP. Capture rates decline as VRE penetration increases (duck curve effect). ORDC scarcity hours create a revenue floor preventing total collapse.
+- **Zonal LMP decomposition** — pipe-and-bubble zonal model (2–5 zones/ISO) with ORDC-integrated scarcity pricing per zone. Captures intra-ISO transmission congestion.
 - **LP storage co-dispatch** — simultaneous optimization of battery 4hr/8hr, LDES 100hr, and green H₂ via linear programming
 - **Inter-regional flows** — hourly import/export profiles reduce self-sufficiency requirements (NEISO HQ hydro, CAISO PNW imports)
-- **Demand response** — price-elastic load curtailment when LMP exceeds ISO-specific trigger prices
+- **Demand response** — price-elastic load curtailment when LMP exceeds ISO-specific trigger prices. ORDC-linked dynamic triggers available.
+- **IPM trigger indicators** — automated flags when results cross thresholds where screening approximations become unreliable. 6 trigger types with Medium/High severity recommend production-model validation.
+- **Tech-differentiated queue caps** — per-technology interconnection limits (solar, wind, offshore, nuclear, CCS) based on LBNL "Queued Up 2024" completion rates
+- **Data tier warnings** — color-coded indicators show data quality (synthetic vs. EIA-930 vs. pipeline parquets vs. full plant-level) so users understand result reliability
 - **Confidence visualization** — trajectory results show calibrated/extrapolated/uncertain zones with widening uncertainty bands
 - **Trajectory backtesting** — backward-looking validation against 2020–2024 observed outcomes
 
@@ -150,7 +155,8 @@ Levelized costs for new-build resources, including storage, fossil new-build, an
 | Parameter | Options | Description |
 |-----------|---------|-------------|
 | Inter-Regional Imports | On / Off | Include historical cross-border power flows from EIA-930 data. On = imports reduce residual demand and fossil fleet sizing. Off = copper-plate isolation (each ISO self-sufficient). |
-| Demand Response | Off / Low / Med / High | Price-elastic load curtailment. Off = inelastic demand. Low = 50% registered DR participation with higher trigger prices. Medium = 70% participation (default DR values). High = 90% participation with lower trigger prices. |
+| Demand Response | Off / Low / Med / High | Price-elastic load curtailment. Off = inelastic demand. Low = 50% registered DR participation with higher trigger prices. Medium = 70% participation (default DR values). High = 90% participation with lower trigger prices. ORDC-linked mode uses dynamic triggers based on reserve scarcity. |
+| Scarcity Pricing Mode | ORDC / Demand-Quantile | **ORDC** (default): Structural reserve-based pricing using LOLP sigmoid and ISO-calibrated VOLL. Produces realistic scarcity spikes tied to reserve margins. **Demand-Quantile**: Statistical overlay based on demand percentile — simpler but less physically grounded. |
 
 ---
 
@@ -261,6 +267,48 @@ Trajectory results include visual confidence indicators:
 | High Uncertainty | 2040–2060 | Red | Multiple compounding uncertainties — scenario exploration, not forecast |
 
 These appear as colored background bands on trajectory charts and as a badge on year-level KPI cards.
+
+### VRE Capture Rates
+
+When VRE cannibalization feedback is active, results include per-resource capture rates:
+
+| Metric | Description |
+|--------|-------------|
+| Solar Capture Rate | Ratio of solar generation-weighted LMP to time-average LMP. Falls below 1.0 as solar penetration increases (duck curve). Typical range: 0.6–1.0. |
+| Wind Capture Rate | Ratio of wind generation-weighted LMP to time-average LMP. Generally closer to 1.0 than solar due to more even diurnal profile. |
+
+Capture rates below 0.7 indicate severe revenue depression — the model automatically dampens further VRE deployment when this occurs.
+
+### IPM Trigger Indicators
+
+When simulation results cross thresholds where the screening model's approximations become unreliable, trigger cards appear on the results page:
+
+| Trigger | Medium Threshold | High Threshold | What to Do |
+|---------|-----------------|----------------|------------|
+| VRE Cannibalization | >40% VRE share | >60% VRE share | Run production dispatch with curtailment (PLEXOS, GenX) |
+| Tight RA Margin | <10% reserve margin | <5% reserve margin | Run UC-constrained dispatch (IPM, PLEXOS) |
+| High Congestion | >2× queue completion | >3× queue completion | Run zonal/nodal dispatch model |
+| Storage Dominance | >15% of energy served | >25% of energy served | Run co-optimized storage dispatch (GenX) |
+| Retirement Cascade | >20% fleet retired/period | >35% fleet retired/period | Run plant-level retirement model (IPM) |
+| Nuclear at Risk | Revenue within $5/MWh of retirement cliff | Always high | Run plant-level nuclear economics |
+
+- **High severity** triggers appear as red-bordered cards with "Production Modeling Recommended" header.
+- **Medium severity** triggers appear as amber-bordered cards.
+- Triggers can be dismissed via the close button (stored in session).
+
+### Data Tier Indicators
+
+The Setup page shows color-coded data quality indicators:
+
+| Indicator | Green | Amber | Red |
+|-----------|-------|-------|-----|
+| Resource Mix | Pipeline parquets loaded | — | Synthetic data (illustrative only) |
+| Interchange | EIA-930 profiles loaded | — | Not loaded |
+| Zonal Config | Validated zone assignments | Hardcoded defaults | — |
+| Fleet Data | Plant-level EIA 860 | Aggregated fleet-average | — |
+| DR Params | Calibrated ISO-specific | Default values | — |
+
+When running on synthetic data (Minimal tier), results are illustrative only — suitable for UI exploration but not for screening decisions. The results page shows a warning banner.
 
 ### Status Indicators
 
@@ -497,13 +545,17 @@ Check that your CSV has exactly the right number of rows and all 7 ISO columns. 
 
 - **Backend**: FastAPI (Python) serving REST API + static HTML
 - **Frontend**: Vanilla HTML/CSS/JS with Plotly.js for charts; Constellation Energy branding
-- **Model**: Merit-order dispatch with hourly LMP computation, zonal decomposition (scipy LP), LP storage co-dispatch
+- **Model**: Merit-order dispatch with hourly LMP computation, ORDC scarcity pricing, VRE cannibalization feedback, zonal decomposition (scipy LP), LP storage co-dispatch
+- **ORDC pricing**: `LOLP = 1/(1+exp(k×(reserves−target)))`, adder = VOLL × LOLP. Per-ISO parameters: ERCOT VOLL=$5,000, PJM=$3,700, MISO=$3,500, NYISO=$2,500, others=$2,000.
+- **VRE cannibalization**: Per-resource capture rates computed from generation-weighted LMP. Sigmoid depression with ORDC floor on scarcity hours (>$50/MWh adder).
 - **Storage dispatch**: Rolling-window LP co-optimization (scipy.optimize.linprog with HiGHS solver) for battery 4hr/8hr, LDES 100hr, green H₂ 1000hr. Sparse matrix construction for efficient constraint building. Falls back to greedy sequential dispatch if LP infeasible.
-- **Zonal LMP**: Pipe-and-bubble model with 2–5 zones per ISO. Inter-zonal transfer limits from ISO planning reports. LP solver per hour with dual prices as zonal marginal prices. Requires EIA-860 plant data for zone assignment.
+- **Zonal LMP**: Pipe-and-bubble model with 2–5 zones per ISO. ORDC integrated into zonal path. Inter-zonal transfer limits from ISO planning reports. LP solver per hour with dual prices as zonal marginal prices. Requires EIA-860 plant data for zone assignment.
 - **Inter-regional flows**: Hourly net import profiles from EIA-930 data, scaled by demand growth but capped at firm import limits (CAISO 8 GW, PJM 5 GW, NEISO 3.5 GW, etc.)
-- **Demand response**: Price-elastic curtailment with ISO-specific trigger prices and DR capacity from FERC Form 714 / ISO registrations. Linear ramp from trigger to 2× trigger price.
+- **Demand response**: Price-elastic curtailment with ISO-specific trigger prices and DR capacity from FERC Form 714 / ISO registrations. ORDC-linked dynamic trigger mode. Fully vectorized (numpy boolean masks).
+- **IPM triggers**: 6 automated threshold checks flag when screening approximations are unreliable. Negligible compute overhead.
+- **Tech queue caps**: Per-technology GW/yr caps (solar, wind, offshore, nuclear, CCS, geothermal) from LBNL "Queued Up 2024". 20% flex pool across technologies.
 - **Confidence zones**: Year-based confidence classification (Calibrated 2025–2030, Moderate 2030–2040, High Uncertainty 2040+) with synthetic uncertainty bands on trajectory outputs.
-- **Backtesting**: Backward-looking validation from 2020 conditions with actual historical fuel prices (EIA Henry Hub). Computes direction accuracy, magnitude error, rank ordering, and trend slope metrics.
+- **Backtesting**: Backward-looking validation from 2020 conditions with actual historical fuel prices (EIA Henry Hub). Computes direction accuracy, magnitude error, rank ordering, and trend slope metrics. ORDC for 2023+ years, demand-quantile for 2020–2022.
 - **Data**: EIA 860 plant fleet, EIA demand profiles, eGRID emission rates, fossil fleet data, EIA-930 interchange profiles
 - The tool runs entirely locally — no data is sent to external servers
 - All input fields include info-hover tooltips with parameter explanations
