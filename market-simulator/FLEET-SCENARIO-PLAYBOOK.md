@@ -14,7 +14,7 @@ The market-simulator already has two relevant systems:
 
 | Capability | Already Built? | Where |
 |------------|---------------|-------|
-| 405-scenario parametric sweep | Yes | `market_simulation.py:build_market_scenarios()` |
+| 1,215-scenario parametric sweep | Yes | `market_simulation.py:build_market_scenarios()` |
 | Per-ISO annual dispatch + emissions | Yes | `market_simulation.py:run_market_simulation()` |
 | Plant-level fleet config (toggle on/off) | Yes (frontend) | `frontend/fleet-config.html` + `backend/main.py` |
 | Generator-level economics (margin, CF, retirement) | Yes | Output `generator_economics` dict per year |
@@ -24,13 +24,13 @@ The market-simulator already has two relevant systems:
 | **"With new gas" fleet variant** | **Partial** | Emissions dashboard has static overlay — not integrated into dispatch |
 | **P10/P50/P90 envelope from sweep** | **Yes** | `constellation_dispatch.py:265-285` |
 
-**What's missing**: A module that takes the 405 sweep results, lets you define fleet scenarios (CCS on plant X, retire plant Y, add 600 MW new gas in PJM), recomputes emissions through the dispatch model, and produces probability envelopes for each fleet scenario side by side.
+**What's missing**: A module that takes the 1,215 sweep results, lets you define fleet scenarios (CCS on plant X, retire plant Y, add 600 MW new gas in PJM), recomputes emissions through the dispatch model, and produces probability envelopes for each fleet scenario side by side.
 
 The market-simulator's dispatch engine already handles CCS deployment at the grid level. What you want is *company-fleet-level* CCS/retirement/new-gas toggling applied *on top of* grid-level market trajectories. That's an overlay module, not a rewrite.
 
 ---
 
-## Phase 1: Run the 405-Scenario Parametric Sweep
+## Phase 1: Run the 1,215-Scenario Parametric Sweep
 
 **Goal**: Generate the base market trajectories across all 7 ISOs.
 
@@ -38,7 +38,7 @@ The market-simulator's dispatch engine already handles CCS deployment at the gri
 
 ```
 Review market_simulation.py:build_market_scenarios() and confirm:
-1. How many scenarios does it produce? (Expected: 405 = 3×5×3×3×3)
+1. How many scenarios does it produce? (Expected: 1,215 = 3×5×3×3×3×3)
 2. What are the swept dimensions and their levels?
 3. What years are simulated? (Expected: 2023, 2030, 2035, 2040, 2045, 2050)
 4. What's the output schema per scenario/ISO/year?
@@ -50,11 +50,11 @@ and flag any gaps.
 ### Prompt 1.2 — Run the sweep (all ISOs)
 
 ```
-Run the full 405-scenario parametric sweep across all 7 ISOs
+Run the full 1,215-scenario parametric sweep across all 7 ISOs
 (CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP).
 
 Use market_simulation.py's batch mode. Save results to
-market-simulator/results/sweep_405/.
+market-simulator/results/sweep_1215/.
 
 For each ISO × scenario × year, I need:
 - clean_pct, demand_twh, emissions_mt, emission_rate_tco2_mwh
@@ -72,10 +72,10 @@ Save as both JSON and parquet for downstream consumption.
 ### Prompt 1.3 — Validate sweep results
 
 ```
-Load the sweep results from market-simulator/results/sweep_405/ and run
+Load the sweep results from market-simulator/results/sweep_1215/ and run
 validation checks:
 
-1. All 405 scenarios × 7 ISOs × 6 years = 17,010 year-results present?
+1. All 1,215 scenarios × 7 ISOs × 6 years = 51,030 year-results present?
 2. Emissions monotonically decrease within each scenario as clean_pct rises?
 3. No negative emissions_mt or clean_pct > 100%?
 4. Generator economics: coal CF declining over time in most scenarios?
@@ -120,7 +120,7 @@ Don't build the processing logic yet — just the schema.
 Build a module market-simulator/scripts/fleet_dispatch.py that:
 
 1. Loads a fleet JSON file (from Phase 2.1 schema)
-2. Loads the 405-sweep results (from Phase 1)
+2. Loads the 1,215-sweep results (from Phase 1)
 3. For each scenario × year:
    a. Look up the ISO-level generator_economics for each plant's fuel_type
    b. Apply plant-specific heat rate to get plant-level:
@@ -130,14 +130,14 @@ Build a module market-simulator/scripts/fleet_dispatch.py that:
    c. Apply economic retirement logic: if the plant's fuel type has negative
       margins in that scenario/year, retire it (zero gen, zero emissions)
    d. Sum across all plants → fleet_emissions_mt per scenario per year
-4. Compute P10/P50/P90 across the 405 scenarios for each year
+4. Compute P10/P50/P90 across the 1,215 scenarios for each year
 5. Output: fleet_results.json with per-year P10/P50/P90 emissions envelopes
 
 Key design choice: Use the market-level generator_economics as the dispatch
 signal, but apply plant-specific heat rates to differentiate efficient vs.
 inefficient units within the same fuel type.
 
-Vectorize all loops — no Python for-loops over the 405 scenarios.
+Vectorize all loops — no Python for-loops over the 1,215 scenarios.
 ```
 
 ### Prompt 2.3 — Validate fleet dispatch against emissions dashboard
@@ -230,7 +230,7 @@ Extend fleet_dispatch.py to process multiple fleet scenarios:
      }
    }
 
-Vectorize: process all 405 scenarios in numpy, not Python loops.
+Vectorize: process all 1,215 scenarios in numpy, not Python loops.
 ```
 
 ### Prompt 3.3 — Target overlay (SBTi / AT Power NZ)
@@ -246,7 +246,7 @@ Add target trajectory overlays to fleet_scenario_results.json:
 For each scenario, compute:
 - gap_to_target_mt per year (positive = above target, negative = below)
 - year_of_target_achievement (first year P50 crosses below target, if ever)
-- probability_of_meeting_target per year (% of 405 scenarios below target)
+- probability_of_meeting_target per year (% of 1,215 scenarios below target)
 
 Add these to the output JSON.
 ```
@@ -318,14 +318,14 @@ Add a sidebar or modal to fleet-scenarios.html that lets me:
 3. Set year_online for retirements and CCS retrofits
 4. Add a new plant (name, ISO, capacity, heat rate, fuel type, year online)
 5. Name and save the current configuration as a new scenario
-6. Click "Recalculate" to rerun fleet_dispatch against the 405 sweep results
+6. Click "Recalculate" to rerun fleet_dispatch against the 1,215 sweep results
    and update all charts in real-time
 
-The recalculation should happen client-side in JavaScript (the 405 sweep
+The recalculation should happen client-side in JavaScript (the 1,215 sweep
 results are pre-loaded — the per-plant math is simple enough for the browser).
 
 No backend round-trip needed for the fleet overlay math. The heavy compute
-(405 market scenarios) is already done.
+(1,215 market scenarios) is already done.
 ```
 
 ---
@@ -374,7 +374,7 @@ are on track and which aren't?"
 
 | Phase | What You Get | Depends On |
 |-------|-------------|------------|
-| **1** | 405-scenario sweep results (grid-level market trajectories) | Market-simulator QA complete |
+| **1** | 1,215-scenario sweep results (grid-level market trajectories) | Market-simulator QA complete |
 | **2** | Fleet-level dispatch mapper → company emissions by year | Phase 1 results |
 | **3** | Multi-scenario fleet configs (CCS/retire/new gas) with envelopes | Phase 2 module |
 | **4** | Interactive visualization dashboard | Phase 3 results |
@@ -392,6 +392,6 @@ Each phase produces a usable artifact. You can stop after any phase and have som
 
 3. **New gas dispatch assumption**: New CCGTs dispatch at fleet-average CF for gas_ccgt in that market scenario, or at a fixed high CF (e.g., 70%) since they'd be the most efficient units?
 
-4. **Client-side vs. server-side recalc**: Phase 4.3 proposes client-side recalculation. With 405 scenarios × 6 years × 40 plants, that's ~97K simple multiplications — fast in JS. But if you want more sophisticated dispatch (e.g., plant-specific retirement thresholds), it needs server-side. Which approach?
+4. **Client-side vs. server-side recalc**: Phase 4.3 proposes client-side recalculation. With 1,215 scenarios × 6 years × 40 plants, that's ~292K simple multiplications — fast in JS. But if you want more sophisticated dispatch (e.g., plant-specific retirement thresholds), it needs server-side. Which approach?
 
 5. **Scope**: Is this Constellation-specific or truly generic (any company, any fleet)? The existing emissions dashboard is Constellation-specific. A generic tool needs the fleet JSON input; a Constellation-specific tool can hardcode the 39-plant fleet.
