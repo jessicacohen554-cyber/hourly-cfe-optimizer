@@ -453,3 +453,313 @@ Ordered, self-contained prompts for integrating new-build fossil across the code
 - `market_simulation_results.json` — full nested JSON
 - `sweep_1215_flat.parquet` — flat table for analysis
 - `sweep_1215_aggregates.json` — P10/P50/P90 percentile bands
+
+---
+
+### Prompt 6: Re-run Fleet Dispatch Against Fresh Sweep
+
+**Goal**: Regenerate fleet results using the updated `fleet_dispatch.py` (from Prompt 2) against the fresh 1,215-scenario sweep (from Prompt 5).
+
+**Prerequisites**: Prompts 2 and 5 must be complete.
+
+**Steps**:
+
+1. **Single-fleet mode** (Phase 2.1):
+   ```bash
+   cd market-simulator/scripts
+   python fleet_dispatch.py \
+       --fleet ../fleet_scenarios/sample_fleet.json \
+       --sweep ../results/sweep_1215/sweep_1215_flat.parquet \
+       --output ../results/fleet_results.json
+   ```
+
+2. **Multi-scenario mode** (Phase 3.1):
+   ```bash
+   python fleet_dispatch.py \
+       --scenarios ../fleet_scenarios/constellation_scenarios.json \
+       --sweep ../results/sweep_1215/sweep_1215_flat.parquet \
+       --output ../results/fleet_scenario_results.json
+   ```
+
+3. **Validate output**:
+   - `fleet_results.json`: Contains emissions for all 1,215 × 7 × 6 combinations
+   - `fleet_scenario_results.json`: Contains emissions per named scenario × grid scenario × ISO × year
+   - New fossil fields present: `grid_new_fossil_mw`, `nb_gas_ccgt_mw`, etc.
+   - Emissions values are physically reasonable (positive, non-zero for fossil plants, zero for retired plants)
+
+4. **Commit**:
+   ```bash
+   git add results/fleet_results.json results/fleet_scenario_results.json
+   git commit -m "Regenerate fleet results against 1,215-scenario sweep with new fossil data"
+   git push
+   ```
+
+---
+
+### Prompt 7: Fleet Scenarios Viz Design Update
+
+**Goal**: Update `Fleet_Scenarios_Viz_Design.md` to reflect the 1,215-scenario sweep and new fossil dimension.
+
+**File to modify**: `docs/Fleet_Scenarios_Viz_Design.md`
+
+**Changes**:
+
+1. **Controls strip** — add new fossil cost toggle:
+   ```
+   ┌─ Controls Strip (.glass-card) ───────────────────────┐
+   │ Scenario Checkboxes │ Target │ Year │ New Fossil Cost │
+   │                     │ Selector│Slider│   (L / M / H)  │
+   └──────────────────────────────────────────────────────┘
+   ```
+   - Toggle label: "New Fossil Cost Assumption"
+   - Options: Low / Medium / High
+   - Default: Medium
+   - Tooltip: "Controls the assumed CAPEX for new-build gas and coal plants. Low = aggressive cost learning, High = conservative/regulatory friction."
+
+2. **Scenario count references** — update from 405 to 1,215 throughout:
+   - Data source description
+   - Any references to sweep_405 paths
+   - Scenario count in chart descriptions
+
+3. **Secondary charts** — add new fossil build waterfall:
+   ```
+   ┌─ Secondary Charts (2-col → 3-chart grid) ─────────────┐
+   │ ┌────────────────┐ ┌──────────────────┐                │
+   │ │ Plant Waterfall │ │ Generation Mix   │                │
+   │ └────────────────┘ └──────────────────┘                │
+   │ ┌──────────────────────────────────────┐                │
+   │ │ Emissions by Fuel (stacked area)     │                │
+   │ └──────────────────────────────────────┘                │
+   │ ┌──────────────────────────────────────┐                │
+   │ │ NEW: New Fossil Builds (grouped bar) │                │
+   │ │ X: Year  Y: MW built                 │                │
+   │ │ Groups: CCGT / CT / Coal             │                │
+   │ │ Shows grid + fleet new builds        │                │
+   │ └──────────────────────────────────────┘                │
+   └────────────────────────────────────────────────────────┘
+   ```
+
+4. **Emission accounting** — update to include new-build fossil generation:
+   - Emissions by fuel chart should include a "New-Build Gas" category separate from existing fleet gas
+   - Generation mix should show new-build fossil as a distinct stack segment
+   - Tooltip should clarify: "Grid-level new fossil (market-driven) + Fleet-level new fossil (company-specific)"
+
+5. **Legend updates**:
+   - Add color entries for new-build CCGT, CT, coal (use lighter shades of existing fossil colors)
+   - Add interaction rule note: "New fossil builds shown are additive: grid-level (market-driven) + fleet-level (company-specific)"
+
+---
+
+### Prompt 8: Constellation Scenarios Update
+
+**Goal**: Update `constellation_scenarios.json` to account for the new fossil dimension and document the interaction rule.
+
+**File to modify**: `fleet_scenarios/constellation_scenarios.json`
+
+**Changes**:
+
+1. **Add `new_build_interaction` field** (top-level, after `metadata`):
+   ```json
+   "new_build_interaction": {
+     "rule": "additive",
+     "description": "Fleet-level add_plant actions are additive to grid-level new fossil builds from apply_economic_new_build(). Fleet additions represent company-specific decisions; grid builds represent market-driven capacity.",
+     "reporting": "Both sources reported separately in output: grid_new_fossil_mw (market) + fleet_new_fossil_mw (company) = total_new_fossil_mw"
+   }
+   ```
+
+2. **Update "CCS + New Gas" scenario description** to clarify interaction:
+   - Current: Scenario has static `add_plant` gas entries
+   - Updated: Add a `notes` field explaining that these fleet-level additions are **on top of** any grid-level new fossil builds in the sweep
+   - Example:
+     ```json
+     {
+       "description": "CCS retrofits on existing coal + new gas CCGT additions. Fleet-level gas additions are additive to grid-level new fossil builds (see new_build_interaction rule).",
+       "modifications": [...]
+     }
+     ```
+
+3. **Update `$schema_version`** to `"2.1"` to reflect the schema extension.
+
+4. **Update `$schema_description`** to mention new-build interaction rules.
+
+**Verification**:
+- JSON validates (no syntax errors)
+- `new_build_interaction` field is parseable by `fleet_dispatch.py`
+- "CCS + New Gas" scenario description is clear about additive behavior
+
+---
+
+### Prompt 9: Backend API Alignment
+
+**Goal**: Ensure backend API endpoints serve data from the correct `results/sweep_1215/` directory and expose new fossil columns.
+
+**File to verify**: `backend/main.py`
+
+**Checks**:
+
+1. **`SWEEP_CACHE_DIR`** (line 1348): Already points to `results/sweep_1215/` — **no change needed**.
+
+2. **`sweep_dimensions` metadata** (around line 1366): Verify it includes `new_fossil_cost_level`:
+   ```python
+   "sweep_dimensions": {
+       "demand_growth": list(DEMAND_GROWTH_LEVELS),
+       "price_sensitivity": list(PRICE_SENSITIVITIES.keys()),
+       "ppa_level": list(PPA_LEVELS),
+       "gas_friction": list(GAS_FRICTION_LEVELS.keys()),
+       "queue_pace": list(QUEUE_PACE_LEVELS.keys()),
+       "new_fossil_cost": ["Low", "Medium", "High"],  # <-- verify this exists
+   }
+   ```
+   If missing, add it.
+
+3. **Parquet schema validation** — when serving `/api/sweep-results`, verify the response includes new fossil columns:
+   - `total_new_fossil_mw`
+   - `gas_built_gw`
+   - `fossil_built_gw`
+   - `nb_{fuel}_mw` columns
+
+4. **Aggregation endpoints** — `/api/sweep-aggregates` should compute P10/P50/P90 for new fossil columns too. Verify the aggregation logic doesn't hardcode column lists that exclude new fossil fields.
+
+5. **Fleet results endpoint** — if `/api/fleet-results` exists, verify it reads from the updated `fleet_results.json` / `fleet_scenario_results.json` that include new fossil data.
+
+**Verification**:
+- Start backend: `cd market-simulator/backend && python main.py`
+- `curl localhost:8000/api/sweep-cached/status` → should show `available: true` after sweep runs
+- `curl localhost:8000/api/sweep-results?iso=PJM&year=2030` → response should include `total_new_fossil_mw`
+
+---
+
+### Prompt 10: End-to-End Integration Test
+
+**Goal**: Full pipeline validation from sweep through to dashboard API.
+
+**Test matrix**:
+
+| Check | Expected | Pass criteria |
+|-------|----------|---------------|
+| Parquet row count | 51,030 | `len(df) == 1215 * 7 * 6` |
+| New fossil columns exist | All present | `{'nb_gas_ccgt_mw', 'nb_gas_ct_mw', 'total_new_fossil_mw', 'gas_built_gw', 'fossil_built_gw'} ⊆ df.columns` |
+| New fossil builds non-zero | At least some scenarios build fossil | `(df['total_new_fossil_mw'] > 0).any()` |
+| LMP range | $5–$300/MWh | `5 ≤ df['avg_lmp'].min()` and `df['avg_lmp'].max() ≤ 300` |
+| No $0 LMP | No zero LMPs | `(df['avg_lmp'] == 0).sum() == 0` |
+| No $9999 LMP | No absurd outliers | `df['avg_lmp'].max() < 1000` |
+| Scarcity hours reasonable | 0–2000 per scenario | `df['ordc_scarcity_hours'].max() < 2000` |
+| Fleet emissions populated | All scenarios have fleet data | `len(fleet_results) == expected` |
+| Fleet new fossil fields | Present in output | `'grid_new_fossil_mw' in fleet_results[0]` |
+| API responds | 200 OK | All endpoints return valid JSON |
+| Aggregates generated | P10/P50/P90 bands | Aggregates JSON has expected structure |
+
+**Execution**:
+
+```python
+import pandas as pd
+import json
+
+# 1. Parquet validation
+df = pd.read_parquet("results/sweep_1215/sweep_1215_flat.parquet")
+assert len(df) == 51030, f"Expected 51,030 rows, got {len(df)}"
+
+new_fossil_cols = {"nb_gas_ccgt_mw", "nb_gas_ct_mw", "total_new_fossil_mw",
+                   "gas_built_gw", "fossil_built_gw"}
+assert new_fossil_cols.issubset(df.columns), f"Missing: {new_fossil_cols - set(df.columns)}"
+
+assert (df["total_new_fossil_mw"] > 0).any(), "No new fossil builds in any scenario"
+assert df["avg_lmp"].between(1, 500).all(), f"LMP outliers: min={df['avg_lmp'].min()}, max={df['avg_lmp'].max()}"
+assert df["ordc_scarcity_hours"].max() < 2000, f"Extreme scarcity: {df['ordc_scarcity_hours'].max()}"
+
+# 2. Fleet results validation
+with open("results/fleet_scenario_results.json") as f:
+    fleet = json.load(f)
+# Check structure and new fossil fields present
+
+# 3. Aggregates validation
+with open("results/sweep_1215/sweep_1215_aggregates.json") as f:
+    agg = json.load(f)
+# Check P10/P50/P90 bands exist for all ISOs
+
+print("All integration tests passed.")
+```
+
+**If any test fails**: Stop, diagnose root cause, fix, and re-run from the appropriate prompt. Do not proceed to dashboard work with invalid data.
+
+---
+
+## 5. Testing Schema
+
+### Pre-Sweep Validation (Before Prompt 5)
+
+| Test | Command | Pass criteria |
+|------|---------|---------------|
+| Syntax check | `python -c "import py_compile; py_compile.compile('scripts/run_sweep_405.py')"` | No errors |
+| Import check | `python -c "from market_simulation import apply_economic_new_build"` | Imports successfully |
+| Fleet dispatch syntax | `python -c "import py_compile; py_compile.compile('scripts/fleet_dispatch.py')"` | No errors |
+| Stale refs eliminated | `grep -rn '"405-scenario"' scripts/` | No matches (filename refs OK) |
+
+### Post-Sweep Validation (After Prompt 5)
+
+| Test | Command | Pass criteria |
+|------|---------|---------------|
+| Row count | `python -c "import pandas as pd; df=pd.read_parquet('results/sweep_1215/sweep_1215_flat.parquet'); print(len(df))"` | 51,030 |
+| Schema check | See Prompt 10 assertions | All pass |
+| LMP sanity | `df['avg_lmp'].describe()` | Mean $25–50, max < $500 |
+| Scarcity check | `df['ordc_scarcity_hours'].describe()` | Median > 0, max < 2000 |
+| New fossil active | `(df['total_new_fossil_mw'] > 0).mean()` | > 5% of scenarios |
+
+### Post-Fleet Validation (After Prompt 6)
+
+| Test | Command | Pass criteria |
+|------|---------|---------------|
+| Fleet results exist | `ls results/fleet_results.json results/fleet_scenario_results.json` | Both exist |
+| JSON valid | `python -c "import json; json.load(open('results/fleet_results.json'))"` | No errors |
+| New fossil fields | Check for `grid_new_fossil_mw` in output | Present |
+| Emissions non-negative | All emissions values ≥ 0 | No negatives |
+
+### API Validation (After Prompt 9)
+
+| Test | Command | Pass criteria |
+|------|---------|---------------|
+| Status endpoint | `curl -s localhost:8000/api/sweep-cached/status \| jq .available` | `true` |
+| Sweep results | `curl -s localhost:8000/api/sweep-results?iso=PJM&year=2030` | 200 OK, JSON valid |
+| New fossil in API | Check response includes `total_new_fossil_mw` | Present |
+
+---
+
+## 6. Risk Register
+
+| # | Risk | Likelihood | Impact | Mitigation |
+|---|------|-----------|--------|------------|
+| R1 | Sweep runtime exceeds expectations | Medium | High (blocks all downstream) | Monitor progress, use `--isos` flag to test single ISO first before full sweep |
+| R2 | New fossil builds in every scenario (over-triggering) | Low | Medium | Check `(df['total_new_fossil_mw'] > 0).mean()` — if > 80%, new fossil thresholds may be too permissive |
+| R3 | New fossil builds in no scenario (under-triggering) | Low | Medium | Check `(df['total_new_fossil_mw'] > 0).any()` — if False, cost assumptions may be too restrictive or ORDC doesn't create enough scarcity |
+| R4 | Fleet dispatch CF adjustment causes negative margins | Medium | Low | Start conservative (flag only, no adjustment) per Prompt 2 recommendation |
+| R5 | Constellation scenarios JSON schema break | Low | Medium | Validate JSON after edits, run fleet dispatch with `--dry-run` if available |
+| R6 | ORDC recalibration needed post-new-fossil | Medium | High (re-run sweep) | Run Prompt 4 analysis first, make targeted ORDC_PARAMS adjustments if needed, then re-sweep only if changes are material |
+| R7 | Stale sweep_405/ results accidentally consumed | Medium | High (invalid analysis) | Archive immediately (Prompt 5 step 1), grep codebase for `sweep_405` path references |
+| R8 | Dashboard JS hardcodes 405 scenario count | Low | Low | Search frontend/ for "405" string literals after sweep completes |
+| R9 | Git merge conflicts on fleet_dispatch.py | Low | Low | Work on feature branch, resolve conflicts before merging to main |
+| R10 | Additive interaction rule produces unrealistic combined capacity | Medium | Medium | Monitor `total_new_fossil_mw` (grid + fleet) — if combined exceeds 50% of existing capacity in any ISO, flag for review |
+
+### Dependency Chain
+
+```
+Prompt 1 (Cleanup) ─────────────────────────────────────┐
+Prompt 2 (Fleet Dispatch) ──────────────────────────────┤
+Prompt 3 (Reconciliation) ─────────────────────────────┤
+                                                        ▼
+                                              Prompt 5 (Run Sweep)
+                                                        │
+                                           ┌────────────┼────────────┐
+                                           ▼            ▼            ▼
+                                    Prompt 4      Prompt 6      Prompt 9
+                                   (ORDC Cal)   (Fleet Re-run)  (API Align)
+                                                        │
+                                                        ▼
+                                                  Prompt 7 + 8
+                                              (Viz + Scenarios)
+                                                        │
+                                                        ▼
+                                                  Prompt 10
+                                                (E2E Integration)
+```
+
+Prompts 1–3 can run in parallel. Prompt 5 depends on 1–2. Prompts 4, 6, 9 depend on 5 (can run in parallel). Prompts 7–8 can run anytime. Prompt 10 is the final gate.
