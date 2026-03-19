@@ -397,6 +397,57 @@ def fig_gap_analysis_waterfall():
 # FIGURE 6: Cost Projections
 # ══════════════════════════════════════════════════════════════════════
 
+def fig_gap_analysis_waterfall_extended(year):
+    """Waterfall chart: Big 4 hyperscaler clean energy gap for extended years (2035/2040/2050)."""
+    df = load_csv("us_hyperscaler_gap_analysis_extended.csv")
+    row = df[df["year"] == year]
+    if row.empty:
+        return None
+
+    r = row.iloc[0]
+    total_need = float(r["energy_need_twh"])
+    proc_low = float(r["procured_twh_low"])
+    proc_med = float(r["procured_twh_med"])
+    proc_high = float(r["procured_twh_high"])
+    gap_low = float(r["gap_twh_low"])
+    gap_med = float(r["gap_twh_med"])
+    gap_high = float(r["gap_twh_high"])
+
+    categories = [f"{year}\nDemand", "High\nScenario", "Medium\nScenario", "Low\nScenario"]
+    bar_vals = [total_need, proc_high, proc_med, proc_low]
+    bar_colors = [CEG_BLUE, CEG_GREEN, CEG_TEAL, CEG_YELLOW]
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    # Group 1: Demand bar
+    ax.bar(0, total_need, width=0.5, color=CEG_BLUE, zorder=3, edgecolor="white", linewidth=0.5)
+    ax.text(0, total_need + 15, f"{int(total_need)} TWh", ha="center", va="bottom",
+            fontsize=11, fontweight="700", color=CEG_BLUE)
+
+    # Group 2-4: Procurement bars (from bottom) with gap stacked on top
+    for i, (proc, gap, color, gap_color) in enumerate([
+        (proc_high, gap_high, CEG_GREEN, CEG_YELLOW),
+        (proc_med, gap_med, CEG_TEAL, CEG_ORANGE),
+        (proc_low, gap_low, CEG_YELLOW, CEG_RED),
+    ], start=1):
+        ax.bar(i, proc, width=0.5, color=color, zorder=3, edgecolor="white", linewidth=0.5, label=f"Procured ({categories[i].split(chr(10))[0]})")
+        ax.bar(i, gap, width=0.5, bottom=proc, color=gap_color, alpha=0.6, zorder=3, edgecolor="white", linewidth=0.5, hatch="//")
+        ax.text(i, proc + gap + 15, f"Gap: {int(gap)}", ha="center", va="bottom",
+                fontsize=9, fontweight="600", color=gap_color)
+        ax.text(i, proc / 2, f"{int(proc)}", ha="center", va="center",
+                fontsize=10, fontweight="600", color="white")
+
+    ax.set_xticks(range(4))
+    ax.set_xticklabels([c.replace("\n", " ") for c in categories])
+    ax.set_ylabel("TWh", fontweight="600")
+    ax.set_title(f"Big 4 Hyperscaler Clean Energy Gap ({year}) — L/M/H Scenarios", pad=12)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.set_ylim(0, total_need * 1.2)
+
+    return fig
+
+
 def fig_cost_projections():
     """LCOE trajectory ranges by technology."""
     df = load_csv("cost_projections.csv")
@@ -479,6 +530,9 @@ def main():
         ("cfe_premium.png", fig_cfe_premium, "24/7 CFE Cost Premium"),
         ("investment_matrix.png", fig_investment_matrix, "Investment Rating Matrix"),
         ("gap_analysis_waterfall.png", fig_gap_analysis_waterfall, "Clean Energy Gap Waterfall"),
+        ("gap_analysis_waterfall_2035.png", lambda: fig_gap_analysis_waterfall_extended(2035), "Clean Energy Gap 2035"),
+        ("gap_analysis_waterfall_2040.png", lambda: fig_gap_analysis_waterfall_extended(2040), "Clean Energy Gap 2040"),
+        ("gap_analysis_waterfall_2050.png", lambda: fig_gap_analysis_waterfall_extended(2050), "Clean Energy Gap 2050"),
         ("cost_projections.png", fig_cost_projections, "LCOE Cost Projections"),
     ]
 
