@@ -56,6 +56,11 @@ wholesale_override,,Wholesale energy price override — blank uses model-derived
 demand_growth,Medium,Demand growth rate,,Medium,Low|Medium|High|Custom
 custom_demand_pct,1.5,Custom demand growth rate (only used when demand_growth=Custom),%/yr,1.5,0-5.0
 gas_friction,Medium,Gas new-build friction (ESG/permitting barriers),,Medium,Low|Medium|High
+new_fossil_cost_level,Medium,New-build fossil CAPEX cost level (CCGT/CT/coal),,Medium,Low|Medium|High
+new_fossil_enabled,On,Allow new fossil plant construction in dispatch,,On,On|Off
+min_cf_ccgt,30,Minimum capacity factor for new CCGT investment decision,%,30,5-90
+min_cf_ct,5,Minimum capacity factor for new peaker CT investment decision,%,5,1-50
+min_cf_coal,60,Minimum capacity factor for new coal investment decision,%,60,20-90
 interchange_enabled,On,Inter-regional power imports,,On,On|Off
 dr_level,Off,Demand response participation level,,Off,Off|Low|Medium|High
 nuclear_retirement,30,Nuclear economic retirement threshold,$/MWh,30,10-60
