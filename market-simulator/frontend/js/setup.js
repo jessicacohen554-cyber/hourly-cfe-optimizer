@@ -225,6 +225,64 @@ document.querySelectorAll('#learningToggle .toggle-btn').forEach(btn => {
     });
 });
 
+// ── Form validation ──
+function validateForm() {
+    const errors = [];
+    const warnings = [];
+
+    // Required numeric fields — reject non-numeric or empty
+    const requiredNumeric = [
+        { id: 'fuel_gas', label: 'Natural Gas price', min: 0 },
+        { id: 'fuel_coal', label: 'Coal price', min: 0 },
+        { id: 'fuel_oil', label: 'Oil price', min: 0 },
+        { id: 'carbon_price', label: 'Carbon price', min: 0 },
+        { id: 'nuclear_retirement', label: 'Nuclear retirement threshold', min: 0 },
+        { id: 'lcoe_solar', label: 'Solar LCOE', min: 0 },
+        { id: 'lcoe_wind', label: 'Wind LCOE', min: 0 },
+        { id: 'lcoe_offshore', label: 'Offshore Wind LCOE', min: 0 },
+        { id: 'lcoe_nuclear', label: 'Nuclear LCOE', min: 0 },
+        { id: 'lcoe_ccs', label: 'CCS-CCGT LCOE', min: 0 },
+        { id: 'cost_battery', label: 'Battery 4hr cost', min: 0 },
+        { id: 'cost_battery8', label: 'Battery 8hr cost', min: 0 },
+        { id: 'cost_ldes', label: 'LDES cost', min: 0 },
+    ];
+
+    for (const field of requiredNumeric) {
+        const el = document.getElementById(field.id);
+        if (!el) continue;
+        const val = el.value.trim();
+        if (val === '') {
+            errors.push(`${field.label} is required`);
+            el.style.borderColor = 'var(--danger, #dc3545)';
+        } else if (isNaN(parseFloat(val))) {
+            errors.push(`${field.label} must be a number`);
+            el.style.borderColor = 'var(--danger, #dc3545)';
+        } else if (field.min !== undefined && parseFloat(val) < field.min) {
+            errors.push(`${field.label} cannot be negative`);
+            el.style.borderColor = 'var(--danger, #dc3545)';
+        } else {
+            el.style.borderColor = '';
+        }
+    }
+
+    // Warn on extreme values (allow but flag)
+    const demandToggle = document.querySelector('#demandToggle .toggle-btn.active');
+    if (demandToggle && demandToggle.dataset.value === 'Custom') {
+        const customVal = parseFloat(document.getElementById('custom_demand_pct')?.value);
+        if (customVal > 7.5) {
+            warnings.push(`Demand growth ${customVal}% exceeds 7.5% — backend will cap at 7.5%`);
+        }
+    }
+
+    const gasPrice = parseFloat(document.getElementById('fuel_gas')?.value);
+    if (gasPrice > 15) warnings.push(`Gas price $${gasPrice}/MMBtu is unusually high`);
+
+    const carbonPrice = parseFloat(document.getElementById('carbon_price')?.value);
+    if (carbonPrice > 300) warnings.push(`Carbon price $${carbonPrice}/ton is unusually high`);
+
+    return { errors, warnings };
+}
+
 // ── Form submission ──
 document.getElementById('simulationForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -233,6 +291,19 @@ document.getElementById('simulationForm').addEventListener('submit', async (e) =
     const submitText = submitBtn.querySelector('.submit-text');
     const submitSpinner = submitBtn.querySelector('.submit-spinner');
     const status = document.getElementById('submitStatus');
+
+    // Validate before submitting
+    const { errors, warnings } = validateForm();
+    if (errors.length > 0) {
+        status.className = 'submit-status error';
+        status.textContent = `Validation errors: ${errors.join('; ')}`;
+        return;
+    }
+    if (warnings.length > 0) {
+        status.className = 'submit-status';
+        status.style.color = '#D97706';
+        status.textContent = `Warning: ${warnings.join('; ')} — submitting anyway`;
+    }
 
     // Collect form data
     const params = collectFormData();
