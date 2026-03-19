@@ -53,7 +53,7 @@
             <!-- ═══════════════════════════════════════════════════════════
                  FLEET CONFIG CTA — First thing user sees
                  ═══════════════════════════════════════════════════════════ -->
-            <a href="/fleet-config" style="display: block; margin-bottom: var(--space-lg); padding: 1rem 1.5rem; background: var(--ceg-blue, #1d4ed8); color: #fff; border-radius: var(--radius-md); text-decoration: none; font-weight: 700; font-size: 1.1rem; text-align: center; transition: opacity 0.15s;"
+            <a href="/fleet-config" id="fleetCTA" style="display: block; margin-bottom: var(--space-lg); padding: 1rem 1.5rem; background: var(--ceg-blue, #1d4ed8); color: #fff; border-radius: var(--radius-md); text-decoration: none; font-weight: 700; font-size: 1.1rem; text-align: center; transition: opacity 0.15s;"
                onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
                 Configure Constellation Fleet →
             </a>
@@ -61,7 +61,7 @@
             <!-- ═══════════════════════════════════════════════════════════
                  CSV Configuration Import/Export
                  ═══════════════════════════════════════════════════════════ -->
-            <div class="glass-card form-section" style="padding: var(--space-md) var(--space-lg); display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap;">
+            <div class="glass-card form-section" id="csvConfigSection" style="padding: var(--space-md) var(--space-lg); display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap;">
                 <div style="flex: 1; min-width: 200px;">
                     <h3 style="margin: 0 0 4px; font-size: 1rem; color: var(--navy);">Bulk Configuration</h3>
                     <p style="margin: 0; font-size: 0.85rem; color: var(--text-muted);">Download the CSV template, fill in your values, and upload to populate all fields at once.</p>
@@ -92,6 +92,13 @@
                     <p class="mode-description" id="modeDescription">
                         Multi-year market trajectory to 2060 at 5-year intervals. Wright's Law learning curves reduce costs each year. Shows when the market flips for each resource type.
                     </p>
+
+                    <!-- Sweep cache info panel — shown only in sweep mode -->
+                    <div id="sweepCacheInfo" style="display:none; margin-top: var(--space-md);">
+                        <div id="sweepCacheStatus" style="padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.85rem; border: 1px solid #22C55E33; background: #22C55E08;">
+                            Checking for cached results...
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Region Selection -->
@@ -112,7 +119,7 @@
                 </div>
 
                 <!-- Nuclear Retirement Threshold -->
-                <div class="glass-card form-section">
+                <div class="glass-card form-section" id="nuclearRetirementCard">
                     <div class="section-eyebrow">Nuclear</div>
                     <h2 class="section-heading">Nuclear Retirement Threshold
                         <span class="info-icon" data-tooltip="If total nuclear revenue (energy + capacity + PTC) falls below this $/MWh threshold, the plant retires. Cascading effects are modeled — retired capacity raises LMP, which can save remaining plants.">i</span>
@@ -126,9 +133,75 @@
             </div>
 
             <!-- ═══════════════════════════════════════════════════════════
+                 SWEEP MODE INFO PANEL — shown when sweep mode is active
+                 ═══════════════════════════════════════════════════════════ -->
+            <div class="glass-card form-section" id="sweepInfoPanel" style="display:none;">
+                <div class="section-eyebrow" style="color: #6366F1;">Pre-Computed Parametric Sweep</div>
+                <h2 class="section-heading">405 Market Scenarios × 7 ISOs × 6 Years</h2>
+                <p style="color: var(--text-muted); margin-bottom: var(--space-md); line-height: 1.6;">
+                    Results are loaded from a pre-computed cache — no simulation needed. The sweep covers all
+                    combinations of the 5 dimensions below, producing P10/P50/P90 uncertainty bands for every metric.
+                </p>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-md); margin-bottom: var(--space-lg);">
+                    <div style="padding: 1rem; border-radius: var(--radius-md); background: #F8FAFC; border: 1px solid var(--border);">
+                        <div style="font-weight: 700; color: var(--navy); font-size: 0.9rem; margin-bottom: 0.25rem;">Demand Growth</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">Low · Medium · High</div>
+                        <div style="font-size: 0.75rem; color: #9CA3AF; margin-top: 0.25rem;">3 levels</div>
+                    </div>
+                    <div style="padding: 1rem; border-radius: var(--radius-md); background: #F8FAFC; border: 1px solid var(--border);">
+                        <div style="font-weight: 700; color: var(--navy); font-size: 0.9rem; margin-bottom: 0.25rem;">Price Sensitivity</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">All-Low · All-Med · All-High · High VRE/Low Firm · High Firm/Low VRE</div>
+                        <div style="font-size: 0.75rem; color: #9CA3AF; margin-top: 0.25rem;">5 bundles (LCOE + fuel + TX)</div>
+                    </div>
+                    <div style="padding: 1rem; border-radius: var(--radius-md); background: #F8FAFC; border: 1px solid var(--border);">
+                        <div style="font-weight: 700; color: var(--navy); font-size: 0.9rem; margin-bottom: 0.25rem;">PPA Availability</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">Low · Medium · High</div>
+                        <div style="font-size: 0.75rem; color: #9CA3AF; margin-top: 0.25rem;">3 levels</div>
+                    </div>
+                    <div style="padding: 1rem; border-radius: var(--radius-md); background: #F8FAFC; border: 1px solid var(--border);">
+                        <div style="font-weight: 700; color: var(--navy); font-size: 0.9rem; margin-bottom: 0.25rem;">Gas Friction (ESG/Permitting)</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">Low (0.3) · Medium (0.7) · High (1.0)</div>
+                        <div style="font-size: 0.75rem; color: #9CA3AF; margin-top: 0.25rem;">3 levels</div>
+                    </div>
+                    <div style="padding: 1rem; border-radius: var(--radius-md); background: #F8FAFC; border: 1px solid var(--border);">
+                        <div style="font-weight: 700; color: var(--navy); font-size: 0.9rem; margin-bottom: 0.25rem;">Queue Cap Speed</div>
+                        <div style="font-size: 0.85rem; color: var(--text-muted);">Low · Medium · High</div>
+                        <div style="font-size: 0.75rem; color: #9CA3AF; margin-top: 0.25rem;">3 levels</div>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-sm); padding: 1rem; border-radius: var(--radius-md); background: linear-gradient(135deg, #EEF2FF, #F0F9FF); border: 1px solid #C7D2FE;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 800; color: #4F46E5;">405</div>
+                        <div style="font-size: 0.75rem; color: #6B7280;">scenarios</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 800; color: #4F46E5;">7</div>
+                        <div style="font-size: 0.75rem; color: #6B7280;">ISOs</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 800; color: #4F46E5;">6</div>
+                        <div style="font-size: 0.75rem; color: #6B7280;">years</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 1.5rem; font-weight: 800; color: #4F46E5;">17,010</div>
+                        <div style="font-size: 0.75rem; color: #6B7280;">year-results</div>
+                    </div>
+                </div>
+
+                <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: var(--space-md); line-height: 1.5;">
+                    <strong>Years simulated:</strong> 2023 (baseline), 2030, 2035, 2040, 2045, 2050<br>
+                    <strong>Output per scenario/ISO/year:</strong> clean_pct, demand_twh, emissions_mt, avg_lmp, lmp_p90,
+                    resource_mix_twh, generator_economics, economic_retirements_mw, emissions_by_fuel, nuclear_revenue, ccs_breakeven<br>
+                    <strong>Select an ISO above</strong> to filter results, or view all ISOs at once.
+                </p>
+            </div>
+
+            <!-- ═══════════════════════════════════════════════════════════
                  ROW 2: Fuel Prices | Emissions (merged Carbon + NOx/SOx)
                  ═══════════════════════════════════════════════════════════ -->
-            <div class="grid-2col">
+            <div class="grid-2col" data-sweep-hide>
                 <!-- Fuel Prices -->
                 <div class="glass-card form-section">
                     <div class="section-eyebrow">Fuel Prices</div>
@@ -245,7 +318,7 @@
             </div>
 
             <!-- Generator Heat Rates (collapsible, unchanged position) -->
-            <div class="glass-card form-section collapsible">
+            <div class="glass-card form-section collapsible" data-sweep-hide>
                 <h2 class="section-heading collapsible-header" data-target="heatRateSection">
                     Generator Heat Rates, VOM &amp; Emission Rates
                     <span class="collapse-icon">&#9660;</span>
@@ -323,7 +396,7 @@
             <!-- ═══════════════════════════════════════════════════════════
                  ROW 3: Resource LCOEs (full width — clean + fossil + storage + TX)
                  ═══════════════════════════════════════════════════════════ -->
-            <div class="glass-card form-section">
+            <div class="glass-card form-section" data-sweep-hide>
                 <div class="section-eyebrow">Resources</div>
                 <h2 class="section-heading">Resource LCOEs
                     <span class="info-icon" data-tooltip="Levelized Cost of Energy for new-build resources. Determines which resources can be profitably deployed. Lower LCOE = cheaper to build = more deployment at a given market price.">i</span>
@@ -523,7 +596,7 @@
             <!-- ═══════════════════════════════════════════════════════════
                  ROW 4: Incentives (full width — merged in 45Q, PPA)
                  ═══════════════════════════════════════════════════════════ -->
-            <div class="glass-card form-section">
+            <div class="glass-card form-section" data-sweep-hide>
                 <div class="section-eyebrow">Incentives</div>
                 <h2 class="section-heading">Federal Tax Credits, RECs &amp; PPA
                     <span class="info-icon" data-tooltip="PTC reduces effective LCOE for wind/solar/nuclear. ITC offsets storage/offshore capex. 45U provides a revenue floor for existing nuclear. 45Q offsets CCS costs. RECs add revenue from renewable portfolio standards. PPA availability affects clean energy offtake economics.">i</span>
@@ -640,7 +713,7 @@
             <!-- ═══════════════════════════════════════════════════════════
                  ROW 5: Market Parameters (slimmed — no 45Q, no TX, + demand/gas friction)
                  ═══════════════════════════════════════════════════════════ -->
-            <div class="glass-card form-section">
+            <div class="glass-card form-section" data-sweep-hide>
                 <div class="section-eyebrow">Market</div>
                 <h2 class="section-heading">Market Parameters
                     <span class="info-icon" data-tooltip="Capacity market prices, wholesale price override, demand growth, and gas friction settings. These affect generator revenue stacks and market dynamics.">i</span>
@@ -722,7 +795,7 @@
             </div>
 
             <!-- Trajectory Settings (always shown — mode determines step size) -->
-            <div class="glass-card form-section" id="trajectorySettings">
+            <div class="glass-card form-section" id="trajectorySettings" data-sweep-hide>
                 <div class="section-eyebrow">Trajectory</div>
                 <h2 class="section-heading">Trajectory Settings</h2>
                 <div class="grid-2col">
