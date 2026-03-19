@@ -34,6 +34,65 @@ const MODE_DESCRIPTIONS = {
 const MODE_STEP = { trajectory5: 5, trajectory1: 1, sweep: 5 };
 
 // ── Mode switching ──
+function updateSweepModeUI(mode) {
+    const isSweep = (mode === 'sweep');
+    // Show/hide all parameter sections
+    document.querySelectorAll('[data-sweep-hide]').forEach(el => {
+        el.style.display = isSweep ? 'none' : '';
+    });
+    // Show/hide sweep info panel
+    const sweepPanel = document.getElementById('sweepInfoPanel');
+    if (sweepPanel) sweepPanel.style.display = isSweep ? '' : 'none';
+    // Show/hide sweep cache info
+    const sweepCacheInfo = document.getElementById('sweepCacheInfo');
+    if (sweepCacheInfo) sweepCacheInfo.style.display = isSweep ? '' : 'none';
+    // Hide fleet CTA + CSV section + nuclear retirement in sweep mode
+    const fleetCTA = document.getElementById('fleetCTA');
+    if (fleetCTA) fleetCTA.style.display = isSweep ? 'none' : '';
+    const csvSection = document.getElementById('csvConfigSection');
+    if (csvSection) csvSection.style.display = isSweep ? 'none' : '';
+    const nucCard = document.getElementById('nuclearRetirementCard');
+    if (nucCard) nucCard.style.display = isSweep ? 'none' : '';
+    const fleetCard = document.getElementById('fleetConfigCard');
+    if (fleetCard) fleetCard.style.display = isSweep ? 'none' : '';
+    // Update submit button text
+    const submitText = document.querySelector('.submit-text');
+    if (submitText) {
+        submitText.textContent = isSweep
+            ? 'Load Cached Sweep Results'
+            : 'Run Market Simulation Screening';
+    }
+    // Check cache availability when switching to sweep
+    if (isSweep) checkSweepCacheStatus();
+}
+
+async function checkSweepCacheStatus() {
+    const statusEl = document.getElementById('sweepCacheStatus');
+    if (!statusEl) return;
+    try {
+        const resp = await fetch('/api/sweep-cached/status');
+        const data = await resp.json();
+        if (data.available) {
+            const sizeMB = data.json_size_mb || '?';
+            statusEl.innerHTML = `<span style="color:#22C55E;font-weight:600;">✓ Cached results available</span>` +
+                ` (${data.total_scenarios} scenarios × ${data.isos.length} ISOs × ${data.years.length} years` +
+                ` = ${data.total_scenarios * data.isos.length * data.years.length} results, ${sizeMB} MB)`;
+            statusEl.style.borderColor = '#22C55E33';
+            statusEl.style.background = '#22C55E08';
+        } else {
+            statusEl.innerHTML = `<span style="color:#EF4444;font-weight:600;">✗ No cached results</span>` +
+                ` — Run the GitHub Actions workflow <em>"Market Simulator: 405-Scenario Sweep"</em> first, ` +
+                `or use Trajectory mode to run a single custom scenario.`;
+            statusEl.style.borderColor = '#EF444433';
+            statusEl.style.background = '#EF444408';
+        }
+    } catch (e) {
+        statusEl.innerHTML = `<span style="color:#F59E0B;">⚠ Could not check cache status</span> (${e.message})`;
+        statusEl.style.borderColor = '#F59E0B33';
+        statusEl.style.background = '#F59E0B08';
+    }
+}
+
 document.querySelectorAll('.mode-toggle .toggle-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.mode-toggle .toggle-btn').forEach(b => b.classList.remove('active'));
@@ -41,6 +100,7 @@ document.querySelectorAll('.mode-toggle .toggle-btn').forEach(btn => {
         const mode = btn.dataset.mode;
         document.getElementById('modeDescription').textContent = MODE_DESCRIPTIONS[mode];
         updateYearCountHint();
+        updateSweepModeUI(mode);
     });
 });
 
@@ -292,21 +352,24 @@ document.getElementById('simulationForm').addEventListener('submit', async (e) =
     const submitSpinner = submitBtn.querySelector('.submit-spinner');
     const status = document.getElementById('submitStatus');
 
-    // Validate before submitting
-    const { errors, warnings } = validateForm();
-    if (errors.length > 0) {
-        status.className = 'submit-status error';
-        status.textContent = `Validation errors: ${errors.join('; ')}`;
-        return;
-    }
-    if (warnings.length > 0) {
-        status.className = 'submit-status';
-        status.style.color = '#D97706';
-        status.textContent = `Warning: ${warnings.join('; ')} — submitting anyway`;
-    }
+    const activeMode = document.querySelector('.mode-toggle .toggle-btn.active')?.dataset.mode || 'trajectory5';
 
-    // Collect form data
-    const params = collectFormData();
+    // Skip validation and form collection for cached sweep mode
+    let params = {};
+    if (activeMode !== 'sweep') {
+        const { errors, warnings } = validateForm();
+        if (errors.length > 0) {
+            status.className = 'submit-status error';
+            status.textContent = `Validation errors: ${errors.join('; ')}`;
+            return;
+        }
+        if (warnings.length > 0) {
+            status.className = 'submit-status';
+            status.style.color = '#D97706';
+            status.textContent = `Warning: ${warnings.join('; ')} — submitting anyway`;
+        }
+        params = collectFormData();
+    }
 
     // UI feedback
     submitBtn.disabled = true;
@@ -317,31 +380,67 @@ document.getElementById('simulationForm').addEventListener('submit', async (e) =
 
     try {
         const mode = document.querySelector('.mode-toggle .toggle-btn.active').dataset.mode;
-        const endpoint = mode === 'sweep' ? '/api/sweep' : '/api/simulate';
-        // Map new mode names to backend mode param
-        if (mode === 'trajectory5') params.mode = 'trajectory';
-        else if (mode === 'trajectory1') params.mode = 'trajectory';
-        else params.mode = mode;
-
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(params),
-        });
-
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.detail || `HTTP ${response.status}`);
-        }
-
-        const result = await response.json();
 
         if (mode === 'sweep') {
-            // Poll for sweep completion
-            status.textContent = `Sweep started — job ${result.job_id}. Polling for results...`;
-            pollSweepStatus(result.job_id);
+            // ── Cached sweep mode — load from pre-computed results ──
+            const selectedISO = document.querySelector('.iso-btn.active')?.dataset.iso || '';
+            const isoParam = selectedISO ? `?iso=${selectedISO}` : '';
+
+            status.textContent = 'Loading cached sweep results...';
+
+            // Load aggregates
+            const aggResp = await fetch(`/api/sweep-cached/aggregates${isoParam}`);
+            if (!aggResp.ok) {
+                const err = await aggResp.json();
+                throw new Error(err.detail || `HTTP ${aggResp.status}`);
+            }
+            const aggregates = await aggResp.json();
+
+            // Load full results (filtered by ISO for reasonable size)
+            const resResp = await fetch(`/api/sweep-cached/results${isoParam}`);
+            if (!resResp.ok) {
+                const err = await resResp.json();
+                throw new Error(err.detail || `HTTP ${resResp.status}`);
+            }
+            const fullResults = await resResp.json();
+
+            // Store in sessionStorage for results page
+            sessionStorage.setItem('sweepResult', JSON.stringify({
+                scenario_count: fullResults.scenario_count,
+                aggregates: aggregates,
+                results: fullResults.results,
+                iso: selectedISO || 'ALL',
+                cached: true,
+            }));
+            sessionStorage.setItem('simulationParams', JSON.stringify({
+                mode: 'sweep',
+                iso: selectedISO || 'ALL',
+                cached: true,
+            }));
+
+            status.className = 'submit-status success';
+            status.textContent = `Loaded ${fullResults.scenario_count} cached scenarios. Redirecting...`;
+            setTimeout(() => { window.location.href = '/results'; }, 500);
+
         } else {
-            // Store results and redirect
+            // ── Single scenario mode — run live ──
+            const endpoint = '/api/simulate';
+            if (mode === 'trajectory5') params.mode = 'trajectory';
+            else if (mode === 'trajectory1') params.mode = 'trajectory';
+            else params.mode = mode;
+
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(params),
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.detail || `HTTP ${response.status}`);
+            }
+
+            const result = await response.json();
             sessionStorage.setItem('simulationResult', JSON.stringify(result));
             sessionStorage.setItem('simulationParams', JSON.stringify(params));
             status.className = 'submit-status success';
