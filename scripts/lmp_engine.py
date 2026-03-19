@@ -108,9 +108,59 @@ CO2_PRICES = {
     'High': 14.00,    # $/ton — full RGGI clearing price
 }
 
+# NOx emission rates (lb/MWh) — EPA CAMPD 2023, Cross-State Air Pollution Rule
+# Coal: 1.5-3.0 lb/MWh uncontrolled, 0.5-1.0 with SCR; using fleet avg w/ SCR
+# Gas CCGT: 0.06-0.15 lb/MWh (low-NOx DLN burners); Gas CT: 0.15-0.4 lb/MWh
+# Oil: 0.8-2.0 lb/MWh; using fleet avg with typical controls
+NOX_RATES = {
+    'coal_steam': 0.80,   # lb/MWh — fleet avg with SCR/SNCR (EPA CAMPD 2023)
+    'gas_ccgt':   0.10,   # lb/MWh — DLN burners (EPA CAMPD 2023)
+    'gas_ct':     0.25,   # lb/MWh — simple cycle, higher per-MWh (EPA CAMPD 2023)
+    'oil_ct':     1.20,   # lb/MWh — distillate oil CT (EPA CAMPD 2023)
+}
+
+# SOx emission rates (lb/MWh) — EPA CAMPD 2023, Acid Rain Program
+# Coal: highly variable, 2-12 lb/MWh uncontrolled; 0.5-3.0 with FGD
+# Gas: essentially zero (no sulfur in pipeline gas)
+# Oil: 0.5-2.0 lb/MWh depending on sulfur content
+SOX_RATES = {
+    'coal_steam': 1.80,   # lb/MWh — fleet avg with FGD scrubbers (EPA CAMPD 2023)
+    'gas_ccgt':   0.01,   # lb/MWh — trace (mercaptan odorant)
+    'gas_ct':     0.01,   # lb/MWh — trace
+    'oil_ct':     0.80,   # lb/MWh — low-sulfur distillate oil (EPA CAMPD 2023)
+}
+
+# NOx allowance prices ($/ton) — CSAPR Group 3 trading
+NOX_PRICES = {
+    'Low': 500.0,        # $/ton — surplus allowances
+    'Medium': 2500.0,    # $/ton — 2024 CSAPR Group 3 avg
+    'High': 5000.0,      # $/ton — scarcity pricing / tighter caps
+}
+
+# SOx allowance prices ($/ton) — Acid Rain Program
+SOX_PRICES = {
+    'Low': 25.0,         # $/ton — 2024 ARP surplus era
+    'Medium': 100.0,     # $/ton — moderate enforcement
+    'High': 500.0,       # $/ton — tight cap scenario
+}
+
 # 10% Adder — PJM market rules allow generators 10% markup above cost-based offers
 # PJM SOM 2024: 10% adder contributed $2.00/MWh (5.9% of RT LMP)
 TEN_PERCENT_ADDER = 0.10
+
+# ISO-specific cost-based offer adders — market structure determines allowed markup
+# PJM/NYISO/NEISO/CAISO: capacity markets → cost-based offer rules with 10% markup
+# MISO: Module C energy offer rules → 7% effective markup
+# ERCOT/SPP: energy-only competitive offers → no regulatory markup
+COST_BASED_ADDERS = {
+    'CAISO': 0.10,   # RA market — cost-based offer rules similar to PJM
+    'ERCOT': 0.00,   # Energy-only — competitive offers, no regulatory markup
+    'PJM':   0.10,   # RPM capacity market — PJM Manual 15 cost-based offer rule
+    'NYISO': 0.10,   # ICAP capacity market — similar to PJM structure
+    'NEISO': 0.10,   # FCM capacity market — similar to PJM structure
+    'MISO':  0.07,   # PRA market — Module C energy offer rules, lower effective markup
+    'SPP':   0.00,   # Energy-like market — competitive offers
+}
 
 # Fuel prices ($/MMBtu) by sensitivity level
 FUEL_PRICES = {
@@ -184,37 +234,68 @@ GAS_AVAILABILITY_FACTOR = {
 }
 
 
-def compute_marginal_costs(fuel_level='Medium', co2_level='Medium', carbon_price_override=None):
+def compute_marginal_costs(fuel_level='Medium', co2_level='Medium',
+                           carbon_price_override=None, iso=None, use_bins=False):
     """Compute marginal cost ($/MWh) for each fossil unit type.
 
-    PJM Manual 15 cost-based offer formula:
-      MC = (Incremental Heat Rate × Fuel Price + VOM + CO2 Rate × CO2 Price) × (1 + 10% Adder)
+    Cost-based offer formula:
+      MC = (Heat Rate × Fuel Price + VOM + CO2 Rate × CO2 Price
+            + NOx Rate × NOx Price + SOx Rate × SOx Price) × (1 + Adder)
 
-    The 10% adder is PJM's allowed markup above cost-based offers (SOM 2024: $2.00/MWh).
-    CO2 costs reflect RGGI and state compliance programs (SOM 2024: $1.94/MWh).
+    The adder is ISO-specific (COST_BASED_ADDERS): 10% for PJM/NYISO/NEISO/CAISO,
+    7% for MISO, 0% for ERCOT/SPP. NOx/SOx costs are tied to fossil fuel sensitivity.
 
     Parameters
     ----------
     carbon_price_override : float or None
         When provided, overrides the co2_level lookup with this $/ton value.
-        Used for ISO-specific carbon pricing (e.g., RGGI for NE ISOs, 0 for
-        non-RGGI ISOs). When None, uses CO2_PRICES[co2_level] as before.
+    iso : str or None
+        ISO region — determines cost-based adder. None defaults to 10%.
+    use_bins : bool
+        If True, returns costs keyed by (unit_type, bin_label) using per-bin
+        heat rates from EFFICIENCY_BINS. If False, uses fleet-average HEAT_RATES.
     """
     fp = FUEL_PRICES[fuel_level]
     if carbon_price_override is not None:
         co2_price = carbon_price_override
     else:
         co2_price = CO2_PRICES.get(co2_level, CO2_PRICES['Medium'])
-    adder = 1.0 + TEN_PERCENT_ADDER
 
-    costs = {}
-    for unit_type in HEAT_RATES:
-        fuel_key = {'coal_steam': 'coal', 'gas_ccgt': 'gas', 'gas_ct': 'gas', 'oil_ct': 'oil'}[unit_type]
-        base_cost = (HEAT_RATES[unit_type] * fp[fuel_key] + VOM[unit_type]
-                     + CO2_RATES[unit_type] * co2_price)
-        costs[unit_type] = base_cost * adder
+    # ISO-specific cost-based offer adder
+    adder_rate = COST_BASED_ADDERS.get(iso, TEN_PERCENT_ADDER) if iso else TEN_PERCENT_ADDER
+    adder = 1.0 + adder_rate
 
-    return costs
+    # NOx/SOx allowance prices tied to fossil fuel sensitivity level
+    nox_price = NOX_PRICES.get(fuel_level, NOX_PRICES['Medium'])
+    sox_price = SOX_PRICES.get(fuel_level, SOX_PRICES['Medium'])
+
+    FUEL_KEY_MAP = {'coal_steam': 'coal', 'gas_ccgt': 'gas', 'gas_ct': 'gas', 'oil_ct': 'oil'}
+
+    if use_bins:
+        # Return per-bin costs: key = (unit_type, bin_label)
+        costs = {}
+        for unit_type, bins in EFFICIENCY_BINS.items():
+            fuel_key = FUEL_KEY_MAP[unit_type]
+            for b in bins:
+                base_cost = (b['heat_rate'] * fp[fuel_key] + VOM[unit_type]
+                             + b['co2_rate'] * co2_price)
+                # NOx/SOx: rate (lb/MWh) × price ($/ton) / 2000 (lb/ton)
+                base_cost += NOX_RATES.get(unit_type, 0) * nox_price / 2000.0
+                base_cost += SOX_RATES.get(unit_type, 0) * sox_price / 2000.0
+                costs[(unit_type, b['label'])] = base_cost * adder
+        return costs
+    else:
+        # Legacy: fleet-average costs keyed by unit_type
+        costs = {}
+        for unit_type in HEAT_RATES:
+            fuel_key = FUEL_KEY_MAP[unit_type]
+            base_cost = (HEAT_RATES[unit_type] * fp[fuel_key] + VOM[unit_type]
+                         + CO2_RATES[unit_type] * co2_price)
+            base_cost += NOX_RATES.get(unit_type, 0) * nox_price / 2000.0
+            base_cost += SOX_RATES.get(unit_type, 0) * sox_price / 2000.0
+            costs[unit_type] = base_cost * adder
+
+        return costs
 
 
 def _compute_clean_peak_mw(iso, resource_mix, battery_pct=0,
@@ -276,7 +357,10 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
         stack: list of (unit_type, capacity_mw, marginal_cost_per_mwh)
         total_capacity_mw: total fossil MW
     """
-    mc = compute_marginal_costs(fuel_level, co2_level, carbon_price_override=carbon_price_override)
+    # Compute per-bin marginal costs for finer merit-order resolution
+    mc_bins = compute_marginal_costs(fuel_level, co2_level,
+                                     carbon_price_override=carbon_price_override,
+                                     iso=iso, use_bins=True)
 
     if total_fossil_mw is None:
         installed = INSTALLED_FOSSIL_MW.get(iso, 80_000)
@@ -350,13 +434,23 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
         # Remove zero-share entries
         active_shares = {k: v for k, v in active_shares.items() if v > 1e-6}
 
-    # Build stack: list of (type, capacity_mw, mc)
+    # Build stack with efficiency bins: each fuel type splits into 2-3 sub-units
+    # with different heat rates and marginal costs. Inefficient bins retire first
+    # as clean penetration rises (captured by smaller capacity at high clean_pct).
     stack = []
     for unit_type, share in active_shares.items():
         if share <= 0:
             continue
-        cap_mw = total_fossil_mw * share
-        stack.append((unit_type, cap_mw, mc[unit_type]))
+        fuel_cap_mw = total_fossil_mw * share
+        bins = EFFICIENCY_BINS.get(unit_type, [{'label': 'standard', 'fraction': 1.0}])
+        for b in bins:
+            bin_key = (unit_type, b['label'])
+            bin_mc = mc_bins.get(bin_key)
+            if bin_mc is None:
+                continue
+            bin_cap = fuel_cap_mw * b['fraction']
+            if bin_cap > 0:
+                stack.append((unit_type, bin_cap, bin_mc))
 
     # Sort by marginal cost (cheapest first)
     stack.sort(key=lambda x: x[2])
