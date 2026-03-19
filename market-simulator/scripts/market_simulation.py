@@ -499,6 +499,18 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
     price_model = PriceModel(iso, fuel_level)
     vre_pen = clean_pct / 100.0 if clean_pct is not None else None
 
+    # Adjust demand profile for interchange (net imports reduce effective demand)
+    # Applied before LMP computation so both zonal and copper-plate paths see
+    # the interchange-adjusted demand signal.
+    effective_demand_mw = demand_mw_profile.copy()
+    if interchange_norm is not None:
+        total_annual_mwh = demand_mw_profile.sum()
+        interchange_mw = np.asarray(interchange_norm[:H], dtype=np.float64) * total_annual_mwh
+        # Cap at firm import MW
+        if firm_import_mw > 0:
+            interchange_mw = np.clip(interchange_mw, -firm_import_mw, firm_import_mw)
+        effective_demand_mw = np.maximum(0.0, demand_mw_profile - interchange_mw)
+
     # Try zonal LMP if zone config available
     zonal_lmp_matrix = None
     zonal_stats = None
@@ -511,7 +523,7 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
             zone_stacks = _split_stack_by_zone(stack, zone_config)
             zonal_lmp_matrix, system_lmp, _, zonal_stats = compute_zonal_lmp_hourly(
                 iso=iso, zone_config=zone_config, zone_stacks=zone_stacks,
-                demand_mw_profile=demand_mw_profile,
+                demand_mw_profile=effective_demand_mw,
                 price_model=price_model, vre_penetration=vre_pen,
             )
             hourly_lmp = system_lmp
@@ -522,7 +534,7 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
 
     if zonal_lmp_matrix is None:
         hourly_lmp, unit_idx, _dr_unused = compute_hourly_lmp_vectorized(
-            dispatch, demand_mw_profile, stack, price_model, iso=iso,
+            dispatch, effective_demand_mw, stack, price_model, iso=iso,
             vre_penetration=vre_pen,
         )
 
@@ -1438,11 +1450,11 @@ def compute_ccs_retrofit_breakeven(iso, fuel_level='Medium', conditions=None):
     # Select CCS LCOE based on 45Q toggle / credit override
     ccs_credit_override = conditions.get('ccs_credit_override') if conditions else None
     if ccs_credit_override is not None:
-        ccs_lcoe = CCS_LCOE_45Q_OFF.get('Medium', {}).get(iso, 100) - ccs_credit_override
+        ccs_lcoe = CCS_LCOE_45Q_OFF.get('M', {}).get(iso, 100) - ccs_credit_override
     else:
         q45_on = conditions.get('q45', True) if conditions else True
         ccs_table = CCS_LCOE_45Q_ON if q45_on else CCS_LCOE_45Q_OFF
-        ccs_lcoe = ccs_table.get('Medium', {}).get(iso, 100)
+        ccs_lcoe = ccs_table.get('M', {}).get(iso, 100)
     ccs_co2_rate = gas_co2 * 0.10  # 90% capture → 10% residual
 
     # Breakeven: existing_cost + gas_co2 × Cp = ccs_lcoe + ccs_co2 × Cp
