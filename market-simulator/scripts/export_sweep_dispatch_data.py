@@ -2,7 +2,7 @@
 """
 Export sweep dispatch data for client-side fleet recalculation.
 
-Reads sweep_405_flat.parquet and extracts per-ISO, per-fuel CF and margin arrays
+Reads sweep_1215_flat.parquet and extracts per-ISO, per-fuel CF and margin arrays
 into a compact JSON that the browser can use for real-time fleet dispatch.
 
 Usage:
@@ -18,7 +18,7 @@ import pandas as pd
 
 SCRIPT_DIR = Path(__file__).parent
 ROOT = SCRIPT_DIR.parent
-SWEEP_PATH = ROOT / "results" / "sweep_405" / "sweep_405_flat.parquet"
+SWEEP_PATH = ROOT / "results" / "sweep_1215" / "sweep_1215_flat.parquet"
 OUTPUT_PATH = ROOT / "frontend" / "data" / "sweep_dispatch_data.json"
 
 FUEL_TYPES = ["gas_ccgt", "gas_ct", "coal_steam", "oil_ct"]
