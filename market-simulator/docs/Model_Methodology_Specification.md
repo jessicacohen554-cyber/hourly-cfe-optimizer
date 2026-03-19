@@ -144,6 +144,27 @@ Fossil generators retire in merit order based on profitability:
 
 The retirement cascade is threshold-driven: as clean energy share increases, progressively more efficient fossil units become unprofitable.
 
+### 2.3.1 Economic New-Build Fossil Logic
+
+After economic retirement, the dispatch loop evaluates whether new fossil capacity should be built. Two triggers exist:
+
+1. **Resource adequacy (RA) trigger**: If the post-retirement reserve margin falls below the 15% target, new dispatchable capacity is added to close the gap. The cheapest viable type is built first.
+2. **Economic trigger**: If a fossil type's expected capacity factor (from LMP-based dispatch analysis) exceeds its minimum CF threshold AND net margin (energy revenue + capacity revenue − variable cost − annualized CAPEX) is positive, it is built.
+
+**New-build parameters by type:**
+
+| Type | Heat Rate (MMBtu/MWh) | VOM ($/MWh) | CO₂ Rate (t/MWh) | Default Min CF |
+|------|----------------------|-------------|-------------------|---------------|
+| Gas CCGT | 6.3 | $2.50 | 0.334 | 30% |
+| Gas CT | 9.8 | $4.00 | 0.519 | 5% |
+| Coal | 9.5 | $4.50 | 0.903 | 60% |
+
+**CAPEX ($/kW-yr) varies by ISO and cost level (Low/Medium/High).** Coal is blocked (CAPEX = $999) in CAISO, NYISO, and NEISO where no coal fleet exists. Per-ISO maximum build rates (GW/yr) constrain annual additions.
+
+New-build capacity persists across simulation years. Generation and emissions from new builds are added to the dispatch stack and included in total emission accounting. Wright's Law learning curves are NOT applied to fossil new-build costs (only clean resources).
+
+In sweep mode, new-build fossil cost level (Low/Medium/High) is a swept axis, expanding the parametric space from 405 to 1,215 scenarios. In single trajectory mode, users can override CAPEX per type and minimum CF thresholds.
+
 **Nuclear retirement** uses a revenue floor mechanism: existing nuclear retires if total revenue (energy + capacity + §45U PTC) falls below the user-specified threshold (default: $30/MWh). The §45U production tax credit provides a contract-for-difference floor of $40/MWh (max credit $15/MWh) through its sunset year (default: 2032).
 
 ### 2.4 Wright's Law Learning Curves (Trajectory Mode)
