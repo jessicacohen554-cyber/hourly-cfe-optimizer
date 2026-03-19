@@ -2,22 +2,22 @@
 """
 Fleet Dispatch Mapper — Phases 2.2 + 3.2 of the Fleet Scenario Playbook.
 
-Maps grid-level 405-scenario sweep results to company-specific fleet emissions
+Maps grid-level 1,215-scenario sweep results to company-specific fleet emissions
 using plant-level heat rates and equity shares. Supports multi-scenario fleet
 configurations with year-sensitive CCS ramp, retirements, and new plant additions.
 
-Fully vectorized — no Python for-loops over the 405 scenarios.
+Fully vectorized — no Python for-loops over the 1,215 scenarios.
 
 Usage (single fleet, Phase 2.1 schema):
     python fleet_dispatch.py \
         --fleet fleet_scenarios/sample_fleet.json \
-        --sweep results/sweep_405/sweep_405_flat.parquet \
+        --sweep results/sweep_1215/sweep_1215_flat.parquet \
         --output results/fleet_results.json
 
 Usage (multi-scenario, Phase 3.1 schema):
     python fleet_dispatch.py \
         --scenarios fleet_scenarios/constellation_scenarios.json \
-        --sweep results/sweep_405/sweep_405_flat.parquet \
+        --sweep results/sweep_1215/sweep_1215_flat.parquet \
         --output results/fleet_scenario_results.json
 """
 
@@ -133,7 +133,7 @@ def _apply_plant_defaults(plants: list[dict]):
 
 
 def load_sweep(sweep_path: str) -> pd.DataFrame:
-    """Load the 405-sweep flat parquet."""
+    """Load the 1,215-sweep flat parquet."""
     df = pd.read_parquet(sweep_path)
     required = {"iso", "year", "scenario"}
     missing = required - set(df.columns)
@@ -658,7 +658,7 @@ def main():
     )
     parser.add_argument(
         "--sweep", required=True,
-        help="Path to sweep_405_flat.parquet."
+        help="Path to sweep_1215_flat.parquet."
     )
     parser.add_argument(
         "--output", default=None,

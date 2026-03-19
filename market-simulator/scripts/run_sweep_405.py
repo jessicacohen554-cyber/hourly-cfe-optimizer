@@ -7,12 +7,12 @@ across all ISOs and years.
 
 Usage:
     cd market-simulator/scripts
-    python run_sweep_405.py [--isos CAISO PJM] [--output-dir ../results/sweep_405]
+    python run_sweep_405.py [--isos CAISO PJM] [--output-dir ../results/sweep_1215]
 
 Produces:
-    sweep_405/market_simulation_results.json   — full nested JSON (all fields)
-    sweep_405/sweep_405_flat.parquet           — flat table for analysis
-    sweep_405/sweep_405_aggregates.json        — P10/P50/P90 percentile bands
+    sweep_1215/market_simulation_results.json   — full nested JSON (all fields)
+    sweep_1215/sweep_1215_flat.parquet           — flat table for analysis
+    sweep_1215/sweep_1215_aggregates.json        — P10/P50/P90 percentile bands
 """
 
 import argparse
@@ -116,17 +116,17 @@ def results_to_dataframe(all_results):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Run 405-scenario sweep → JSON + parquet')
+    parser = argparse.ArgumentParser(description='Run 1,215-scenario sweep → JSON + parquet')
     parser.add_argument('--isos', nargs='+', default=None,
                         help='ISOs to simulate (default: all 7)')
     parser.add_argument('--output-dir', default=None,
-                        help='Output directory (default: ../results/sweep_405)')
+                        help='Output directory (default: ../results/sweep_1215)')
     parser.add_argument('--nuclear-retirement', type=float, default=None,
                         help='Nuclear retirement threshold $/MWh')
     args = parser.parse_args()
 
     output_dir = args.output_dir or os.path.join(
-        os.path.dirname(__file__), '..', 'results', 'sweep_405')
+        os.path.dirname(__file__), '..', 'results', 'sweep_1215')
     os.makedirs(output_dir, exist_ok=True)
 
     # Verify scenario count
@@ -153,12 +153,12 @@ def main():
     # ── Save flat parquet ──
     print("Converting to flat parquet...")
     df = results_to_dataframe(all_results)
-    parquet_path = os.path.join(output_dir, 'sweep_405_flat.parquet')
+    parquet_path = os.path.join(output_dir, 'sweep_1215_flat.parquet')
     df.to_parquet(parquet_path, index=False, engine='pyarrow')
     print(f"Parquet saved: {parquet_path}")
     print(f"  Shape: {df.shape[0]} rows × {df.shape[1]} columns")
 
-    # Expected: 405 scenarios × 7 ISOs × 6 years = 17,010
+    # Expected: 1,215 scenarios × 7 ISOs × 6 years = 51,030
     n_scenarios = len([k for k in all_results if not k.startswith('_')])
     n_isos = len(set(df['iso'].dropna()))
     n_years = len(set(df['year'].dropna()))
@@ -173,7 +173,7 @@ def main():
     # ── Save aggregates separately ──
     print("Computing aggregates...")
     aggregates = aggregate_sweep_percentiles(all_results)
-    agg_path = os.path.join(output_dir, 'sweep_405_aggregates.json')
+    agg_path = os.path.join(output_dir, 'sweep_1215_aggregates.json')
     with open(agg_path, 'w') as f:
         json.dump(aggregates, f, indent=2, default=str)
     print(f"Aggregates saved: {agg_path}")
