@@ -2431,9 +2431,17 @@ def build_single_scenario(overrides=None):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def get_demand_at_year(iso, year, growth_level):
-    """Project demand TWh at a future year from 2023 baseline."""
+    """Project demand TWh at a future year from 2023 baseline.
+
+    growth_level can be 'Low'/'Medium'/'High' (looks up DEMAND_GROWTH_RATES)
+    or a numeric value (interpreted as annual % growth rate, capped at 7.5%).
+    """
     base = REGIONAL_DEMAND_TWH[iso]
-    rate = DEMAND_GROWTH_RATES[iso][growth_level]
+    if isinstance(growth_level, (int, float)):
+        # Numeric growth rate — interpret as percentage, cap at 7.5%
+        rate = min(float(growth_level) / 100.0, 0.075)
+    else:
+        rate = DEMAND_GROWTH_RATES[iso][growth_level]
     return base * (1 + rate) ** (year - 2023)
 
 
