@@ -486,6 +486,11 @@ def _map_request_to_conditions(req: SimulationRequest) -> dict:
             'gas_ct': req.fossil_lcoes.get('gas_ct'),
             'coal': req.fossil_lcoes.get('coal'),
         } if req.fossil_lcoes else None,
+        # New-build fossil parameters
+        "new_fossil_cost_level": getattr(req, 'new_fossil_cost_level', 'Medium'),
+        "new_fossil_enabled": getattr(req, 'new_fossil_enabled', True),
+        "new_fossil_capex_override": getattr(req, 'new_fossil_capex_override', None) or {},
+        "new_fossil_min_cf_override": getattr(req, 'new_fossil_min_cf_override', None) or {},
         # Learning curves toggle — False = skip Wright's Law cost decline
         "learning_curves_enabled": getattr(req, 'learning_curves', True),
         # Tech-differentiated queue caps (per-technology interconnection limits)
@@ -842,7 +847,10 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
             avg_lmp=yr.get("avg_lmp", 0),
             lmp_p90=yr.get("lmp_p90", 0),
             gas_built_gw=yr.get("gas_built_gw", 0),
+            fossil_built_gw=yr.get("fossil_built_gw", 0),
             total_gas_gw=yr.get("total_gas_gw", 0),
+            total_new_fossil_mw=yr.get("total_new_fossil_mw", 0),
+            new_fossil_builds_mw=yr.get("new_fossil_builds_mw", {}),
             market_stop=yr.get("market_stop", False),
             confidence=conf_zone,
             confidence_label=conf_label,
@@ -1316,7 +1324,7 @@ async def start_sweep(req: SweepRequest, background_tasks: BackgroundTasks):
     job = SweepJob(
         job_id=job_id,
         status=SweepStatus.pending,
-        total_scenarios=270,  # Updated when actual count is known
+        total_scenarios=1215,  # Updated when actual count is known
     )
     _sweep_jobs[job_id] = job
 
@@ -1334,18 +1342,18 @@ async def get_sweep_status(job_id: str):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Cached sweep endpoints — read pre-computed 405-scenario results
+# Cached sweep endpoints — read pre-computed 1215-scenario results
 # ─────────────────────────────────────────────────────────────────────────────
 
-SWEEP_CACHE_DIR = MARKET_SIM_ROOT / "results" / "sweep_405"
+SWEEP_CACHE_DIR = MARKET_SIM_ROOT / "results" / "sweep_1215"
 
 
 @app.get("/api/sweep-cached/status")
 async def sweep_cached_status():
     """Check whether pre-computed sweep results exist and return metadata."""
     json_path = SWEEP_CACHE_DIR / "market_simulation_results.json"
-    agg_path = SWEEP_CACHE_DIR / "sweep_405_aggregates.json"
-    parquet_path = SWEEP_CACHE_DIR / "sweep_405_flat.parquet"
+    agg_path = SWEEP_CACHE_DIR / "sweep_1215_aggregates.json"
+    parquet_path = SWEEP_CACHE_DIR / "sweep_1215_flat.parquet"
 
     available = json_path.exists() or agg_path.exists()
 
@@ -1360,8 +1368,9 @@ async def sweep_cached_status():
             "ppa_level": list(PPA_LEVELS),
             "gas_friction": list(GAS_FRICTION_LEVELS.keys()),
             "queue_cap": ["Low", "Medium", "High"],
+            "new_fossil_cost_level": ["Low", "Medium", "High"],
         },
-        "total_scenarios": 405,
+        "total_scenarios": 1215,
         "years": [2023, 2030, 2035, 2040, 2045, 2050],
         "isos": list(ISOS),
     }
@@ -1377,12 +1386,12 @@ async def sweep_cached_status():
 @app.get("/api/sweep-cached/aggregates")
 async def sweep_cached_aggregates(iso: str = None):
     """Return P10/P50/P90 aggregates from cached sweep. Optionally filter by ISO."""
-    agg_path = SWEEP_CACHE_DIR / "sweep_405_aggregates.json"
+    agg_path = SWEEP_CACHE_DIR / "sweep_1215_aggregates.json"
     if not agg_path.exists():
         raise HTTPException(
             status_code=404,
-            detail="Cached sweep aggregates not found. Run the 405-scenario sweep first "
-                   "(GitHub Actions workflow 'Market Simulator: 405-Scenario Sweep').",
+            detail="Cached sweep aggregates not found. Run the 1,215-scenario sweep first "
+                   "(GitHub Actions workflow 'Market Simulator: 1215-Scenario Sweep').",
         )
 
     with open(agg_path) as f:
@@ -1408,7 +1417,7 @@ async def sweep_cached_results(iso: str = None, scenario: str = None):
     if not json_path.exists():
         raise HTTPException(
             status_code=404,
-            detail="Cached sweep results not found. Run the 405-scenario sweep first.",
+            detail="Cached sweep results not found. Run the 1,215-scenario sweep first.",
         )
 
     with open(json_path) as f:
