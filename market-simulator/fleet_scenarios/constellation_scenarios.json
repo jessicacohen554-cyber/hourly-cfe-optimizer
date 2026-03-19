@@ -1,11 +1,17 @@
 {
-  "$schema_version": "2.0",
-  "$schema_description": "Fleet scenario schema — extends Phase 2.1 with named scenario variants. Each scenario applies modifications to the base_fleet: CCS retrofits, retirements, or new plant additions. Processing logic applies modifications year-sensitive (respecting year_online).",
+  "$schema_version": "2.1",
+  "$schema_description": "Fleet scenario schema — extends Phase 2.1 with named scenario variants and new-build interaction rules. Each scenario applies modifications to the base_fleet: CCS retrofits, retirements, or new plant additions. Fleet-level add_plant actions interact with grid-level new fossil builds per the new_build_interaction rule.",
 
   "metadata": {
     "company": "Constellation Energy",
     "as_of_date": "2025-01-01",
     "notes": "Fossil fleet across 6 ISOs with 4 scenario variants for fleet-level emissions modeling."
+  },
+
+  "new_build_interaction": {
+    "rule": "additive",
+    "description": "Fleet-level add_plant actions are additive to grid-level new fossil builds from apply_economic_new_build(). Fleet additions represent company-specific decisions; grid builds represent market-driven capacity. Both can coexist.",
+    "reporting": "Both sources reported separately in output: grid_new_fossil_mw (market) + fleet_new_fossil_mw (company) = total_new_fossil_mw"
   },
 
   "schema": {
@@ -294,7 +300,7 @@
     },
 
     "ccs_plus_new_gas": {
-      "description": "CCS on top ERCOT emitters + 1,200 MW new efficient CCGT in PJM to replace aging peakers. New plant online 2028 with best-in-class heat rate (6.3 MMBtu/MWh).",
+      "description": "CCS on top ERCOT emitters + 1,200 MW new efficient CCGT in PJM to replace aging peakers. New plant online 2028 with best-in-class heat rate (6.3 MMBtu/MWh). Fleet-level gas additions are additive to grid-level new fossil builds (see new_build_interaction rule).",
       "modifications": [
         {"orispl": 55464, "action": "ccs_retrofit", "year_online": 2030},
         {"orispl": 60122, "action": "ccs_retrofit", "year_online": 2030},
