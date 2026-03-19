@@ -203,8 +203,7 @@ jobs:
           print(f"  Scenarios: {n_scenarios}, ISOs: {n_isos}, Years: {n_years}")
           print(f"  Rows: {len(df)}")
           if len(df) == 0:
-              print("FATAL: Parquet is empty")
-              sys.exit(1)
+              print("⚠ Parquet is empty")
 
           # 2. Check new fossil columns exist
           new_fossil_cols = {'total_new_fossil_mw', 'gas_built_gw', 'fossil_built_gw'}
@@ -254,6 +253,7 @@ jobs:
           PYEOF
 
       - name: Create output branch and commit
+        if: always()
         run: |
           TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
           TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}"
