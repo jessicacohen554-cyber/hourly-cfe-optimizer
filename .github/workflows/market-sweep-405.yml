@@ -1,0 +1,212 @@
+name: "Market Simulator: 405-Scenario Sweep"
+
+# Runs the full 405-scenario parametric sweep (3 demand × 5 price × 3 PPA × 3 gas × 3 queue)
+# across all 7 ISOs, simulating years 2023/2030/2035/2040/2045/2050.
+#
+# Each ISO runs in a parallel matrix job (~10-15 min each).
+# Results are merged into a single branch with JSON + parquet output.
+#
+# Output: market-simulator/results/sweep_405/
+#   - market_simulation_results.json  (full nested)
+#   - sweep_405_flat.parquet          (flat table)
+#   - sweep_405_aggregates.json       (P10/P50/P90 bands)
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region (ALL = parallel matrix)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: market-sweep-405
+
+jobs:
+  # ── Phase 1: Run sweep per-ISO in parallel ──
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      matrix:
+        iso:
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      fail-fast: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy pandas pyarrow scipy numba
+
+      - name: Create output directory
+        run: mkdir -p market-simulator/results/sweep_405
+
+      - name: "Run 405-scenario sweep — ${{ matrix.iso }}"
+        working-directory: market-simulator/scripts
+        run: |
+          python run_sweep_405.py \
+            --isos ${{ matrix.iso }} \
+            --output-dir ../results/sweep_405/${{ matrix.iso }}
+
+      - name: Upload per-ISO results
+        uses: actions/upload-artifact@v4
+        with:
+          name: sweep-${{ matrix.iso }}
+          path: market-simulator/results/sweep_405/${{ matrix.iso }}/
+          retention-days: 3
+
+  # ── Phase 2: Merge all ISO results into one branch ──
+  merge:
+    needs: sweep
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy pandas pyarrow scipy numba
+
+      - name: Download all per-ISO artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sweep-*
+          path: ./artifact-tmp/
+
+      - name: Merge per-ISO results into combined output
+        working-directory: market-simulator/scripts
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, sys
+          import pandas as pd
+
+          artifact_root = os.path.join(os.getcwd(), '..', '..', 'artifact-tmp')
+          out_dir = os.path.join(os.getcwd(), '..', 'results', 'sweep_405')
+          os.makedirs(out_dir, exist_ok=True)
+
+          # Merge JSON results
+          combined_json = {}
+          for iso_dir in sorted(os.listdir(artifact_root)):
+              iso_path = os.path.join(artifact_root, iso_dir)
+              json_file = None
+              for root, dirs, files in os.walk(iso_path):
+                  for f in files:
+                      if f == 'market_simulation_results.json':
+                          json_file = os.path.join(root, f)
+                          break
+              if json_file:
+                  with open(json_file) as f:
+                      data = json.load(f)
+                  # Merge scenario keys
+                  for scenario_id, iso_results in data.items():
+                      if scenario_id.startswith('_'):
+                          continue
+                      if scenario_id not in combined_json:
+                          combined_json[scenario_id] = {}
+                      combined_json[scenario_id].update(iso_results)
+
+          # Save combined JSON
+          with open(os.path.join(out_dir, 'market_simulation_results.json'), 'w') as f:
+              json.dump(combined_json, f, indent=2, default=str)
+          print(f"Combined JSON: {len(combined_json)} scenarios")
+
+          # Merge parquet files
+          dfs = []
+          for iso_dir in sorted(os.listdir(artifact_root)):
+              iso_path = os.path.join(artifact_root, iso_dir)
+              for root, dirs, files in os.walk(iso_path):
+                  for f in files:
+                      if f.endswith('.parquet'):
+                          dfs.append(pd.read_parquet(os.path.join(root, f)))
+          if dfs:
+              combined_df = pd.concat(dfs, ignore_index=True)
+              combined_df.to_parquet(os.path.join(out_dir, 'sweep_405_flat.parquet'), index=False)
+              print(f"Combined parquet: {len(combined_df)} rows × {len(combined_df.columns)} cols")
+
+          # Recompute combined aggregates
+          sys.path.insert(0, '.')
+          from market_simulation import aggregate_sweep_percentiles
+          aggregates = aggregate_sweep_percentiles(combined_json)
+          with open(os.path.join(out_dir, 'sweep_405_aggregates.json'), 'w') as f:
+              json.dump(aggregates, f, indent=2, default=str)
+          print(f"Aggregates: {len(aggregates)} ISOs")
+          PYEOF
+
+      - name: Create output branch and commit
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+          git add -f market-simulator/results/sweep_405/
+          git add -f market-simulator/scripts/run_sweep_405.py
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Market simulator: 405-scenario sweep results — $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          405 scenarios (3 demand × 5 price × 3 PPA × 3 gas friction × 3 queue)
+          × 7 ISOs × 6 years (2023, 2030, 2035, 2040, 2045, 2050) = 17,010 results.
+
+          Output: JSON (full nested), parquet (flat), aggregates (P10/P50/P90)."
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "$TARGET_BRANCH" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
