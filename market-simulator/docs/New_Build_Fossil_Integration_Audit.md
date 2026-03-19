@@ -221,3 +221,235 @@ These mechanisms are unaware of each other. In a scenario where both trigger, th
 - API endpoints (`/api/sweep-results`, `/api/sweep-aggregates`) — will 404 until sweep_1215/ exists
 
 **Fix**: Run fresh 1,215 sweep (Prompt 5), archive `sweep_405/` for reference, regenerate all downstream artifacts.
+
+---
+
+## 4. Implementation Prompts
+
+Ordered, self-contained prompts for integrating new-build fossil across the codebase. Execute in sequence — each prompt builds on the prior one.
+
+### Prompt 1: Code Cleanup — Update "405" References to "1,215"
+
+**Goal**: Eliminate misleading "405" references in docstrings and comments across the codebase.
+
+**Files to modify**:
+- `scripts/run_sweep_405.py`
+- `scripts/fleet_dispatch.py`
+
+**Changes for `run_sweep_405.py`**:
+1. Line 2-16 (module docstring): Update scenario count description. The docstring already correctly states the 6 dimensions at line 4-5, but the usage examples and output paths reference `sweep_405`:
+   - Line 10: `python run_sweep_405.py [--isos CAISO PJM] [--output-dir ../results/sweep_405]` → update output dir to `../results/sweep_1215`
+   - Lines 13-15: Output file names `sweep_405/*` → `sweep_1215/*`
+2. Search for any other "405" string literals in the file (variable names, path defaults, comments)
+3. Do NOT rename the file itself (that's a separate decision with import/CI implications)
+
+**Changes for `fleet_dispatch.py`**:
+1. Line 5: "Maps grid-level **405-scenario** sweep results" → "Maps grid-level **1,215-scenario** sweep results"
+2. Line 9: "no Python for-loops over the **405** scenarios" → "no Python for-loops over the **1,215** scenarios"
+3. Lines 14, 20: CLI usage examples — update `sweep_405` paths to `sweep_1215`
+4. Line 136: `load_sweep()` docstring — "Load the **405-sweep** flat parquet" → "Load the **1,215-sweep** flat parquet"
+
+**Verification**: `grep -rn "405" scripts/run_sweep_405.py scripts/fleet_dispatch.py` should return only the filename itself (unavoidable) and no stale scenario-count references.
+
+---
+
+### Prompt 2: Fleet Dispatch — Ingest New Fossil Build Data
+
+**Goal**: Update `fleet_dispatch.py` to read and use new-build fossil columns from the sweep parquet, so fleet emissions correctly account for grid-level new fossil builds.
+
+**Background**: When `apply_economic_new_build()` adds new gas capacity to the grid, it increases total supply and depresses LMPs and incumbent margins. Currently, `fleet_dispatch.py` only reads `ge_{fuel}_cf` and `ge_{fuel}_margin_mwh` — these already reflect the post-new-build equilibrium. However, the fleet module doesn't know **why** margins changed or **how much** new fossil exists, which limits its ability to:
+- Report new-build fossil generation alongside fleet generation
+- Adjust plant-level dispatch for competitive pressure from new entrants
+- Provide new-fossil context in fleet scenario output
+
+**Files to modify**: `scripts/fleet_dispatch.py`
+
+**Implementation**:
+
+1. **Expand `load_sweep()` to validate new fossil columns exist** (lines 135-142):
+   ```python
+   def load_sweep(sweep_path: str) -> pd.DataFrame:
+       """Load the 1,215-sweep flat parquet."""
+       df = pd.read_parquet(sweep_path)
+       required = {"iso", "year", "scenario"}
+       missing = required - set(df.columns)
+       if missing:
+           raise ValueError(f"Sweep parquet missing columns: {missing}")
+       # Warn if new fossil columns are absent (pre-expansion parquet)
+       new_fossil_cols = {"total_new_fossil_mw", "gas_built_gw", "fossil_built_gw"}
+       if not new_fossil_cols.issubset(df.columns):
+           import warnings
+           warnings.warn(
+               f"Sweep parquet missing new-fossil columns: {new_fossil_cols - set(df.columns)}. "
+               "Fleet dispatch will not account for grid-level new fossil builds."
+           )
+       return df
+   ```
+
+2. **Add new fossil data to fleet dispatch output** — in the per-scenario results dict, include:
+   - `grid_new_fossil_mw`: Total new fossil MW built on the grid (from `total_new_fossil_mw`)
+   - `grid_gas_built_gw`: Cumulative gas builds (from `gas_built_gw`)
+   - `grid_fossil_built_gw`: Cumulative all-fossil builds (from `fossil_built_gw`)
+   - Per-fuel new builds: `nb_{fuel}_mw` columns
+
+3. **Adjust incumbent fleet plant CF for competitive pressure** (optional, defensible either way):
+   - When `total_new_fossil_mw > 0`, apply a capacity-weighted CF depression to incumbent gas plants
+   - Rationale: New gas competes for the same dispatch hours, pushing existing plants down the merit order
+   - Conservative approach: Flag the data in output, let downstream analysis apply the adjustment
+   - Aggressive approach: Reduce incumbent gas CF by `new_gas_mw / (existing_gas_mw + new_gas_mw)` fraction
+   - **Recommendation**: Start conservative (flag only), add adjustment as a follow-up if analysis shows material impact
+
+4. **Update output schema** — add new fossil fields to `fleet_results.json` and `fleet_scenario_results.json`:
+   ```json
+   {
+     "scenario": "baseline",
+     "year": 2030,
+     "iso": "PJM",
+     "fleet_emissions_mt": 12.5,
+     "grid_new_fossil_mw": 2400,
+     "grid_gas_built_gw": 2.1,
+     "grid_fossil_built_gw": 2.4,
+     "nb_gas_ccgt_mw": 1800,
+     "nb_gas_ct_mw": 600,
+     "nb_coal_mw": 0
+   }
+   ```
+
+**Verification**:
+- Load a sweep parquet with new fossil columns → confirm no warnings
+- Load a pre-expansion parquet (sweep_405) → confirm warning emitted, no crash
+- Check output JSON includes `grid_new_fossil_mw` and `nb_*` fields
+
+---
+
+### Prompt 3: Fleet Scenario Reconciliation — Define Interaction Rules
+
+**Goal**: Reconcile the two independent "new fossil" mechanisms so they don't double-count or conflict.
+
+**The two mechanisms**:
+1. **Grid-level** (`apply_economic_new_build()` in `market_simulation.py`): Market-driven. Triggered by reserve/economic conditions. Varies by scenario. Produces `nb_{fuel}_mw` in sweep parquet.
+2. **Fleet-level** (`add_plant` in `constellation_scenarios.json`): User-defined. Static. Applied regardless of market conditions. Currently used in "CCS + New Gas" scenario.
+
+**Recommended interaction rule**: **Fleet `add_plant` is additive to grid new-build** (Option A from the original plan).
+
+**Rationale**:
+- Grid-level new-build represents **market-driven** capacity that any developer might build (generic)
+- Fleet-level `add_plant` represents **company-specific** capacity decisions (e.g., Constellation decides to build a specific plant at a specific site)
+- These are conceptually distinct — a company's decision to build doesn't prevent the market from also building
+- The alternative (fleet replaces grid) would mean company decisions negate market forces — less realistic
+- If combined capacity seems unrealistically high, that's a signal the scenario assumptions need tuning, not that the interaction model is wrong
+
+**Implementation**:
+
+1. **Document the interaction rule** in `constellation_scenarios.json`:
+   Add a top-level field:
+   ```json
+   "new_build_interaction": {
+     "rule": "additive",
+     "description": "Fleet-level add_plant actions are additive to grid-level new fossil builds from apply_economic_new_build(). Fleet additions represent company-specific decisions; grid builds represent market-driven capacity. Both can coexist."
+   }
+   ```
+
+2. **Update `fleet_dispatch.py`** to report both sources separately:
+   - `grid_new_fossil_mw` — from sweep parquet (market-driven)
+   - `fleet_new_fossil_mw` — from `add_plant` actions (company-specific)
+   - `total_new_fossil_mw` — sum of both (for total impact analysis)
+
+3. **Add a note in the fleet dispatch output** when both mechanisms produce new gas in the same ISO/year:
+   ```json
+   "new_fossil_overlap_note": "Both grid-level (2,400 MW) and fleet-level (800 MW) new gas in PJM 2035. Combined 3,200 MW is additive per interaction rule."
+   ```
+
+**Verification**:
+- Run fleet dispatch on a scenario with both grid and fleet new gas → confirm both appear in output
+- Confirm `total_new_fossil_mw = grid_new_fossil_mw + fleet_new_fossil_mw`
+
+---
+
+### Prompt 4: ORDC Calibration Check
+
+**Goal**: After running the 1,215 sweep, validate that ORDC scarcity pricing remains calibrated with new fossil builds active.
+
+**Prerequisites**: Prompt 5 (fresh sweep) must complete first. This prompt is ordered before Prompt 5 for logical grouping but executes after.
+
+**Analysis steps**:
+
+1. **Extract scarcity hour distribution**:
+   ```python
+   import pandas as pd
+   df = pd.read_parquet("results/sweep_1215/sweep_1215_flat.parquet")
+
+   # Scarcity hours by ISO and year
+   scarcity = df.groupby(["iso", "year"])["ordc_scarcity_hours"].describe()
+
+   # Scarcity hours by new fossil build level
+   # (new_fossil_cost_level is embedded in scenario string — parse it)
+   df["has_new_fossil"] = df["total_new_fossil_mw"] > 0
+   compare = df.groupby(["iso", "has_new_fossil"])["ordc_scarcity_hours"].describe()
+   ```
+
+2. **Expected behavior**:
+   - Scenarios with new fossil builds should have **fewer** scarcity hours (new supply relieves reserves)
+   - The reduction should be **moderate, not total** — some scarcity should remain even with new builds
+   - ERCOT should show the largest ORDC impact (energy-only market, no capacity market to cushion)
+
+3. **Red flags to watch for**:
+   - **Zero scarcity hours in >50% of scenarios** → ORDC caps may be too low or knee_mw too aggressive
+   - **No difference with/without new fossil** → new builds may not be large enough to matter, or ORDC parameters are too loose
+   - **Scarcity hours >2,000 in any scenario** → something is broken (8,760 hours/year, >23% scarcity is extreme)
+
+4. **Calibration targets** (approximate, based on real-world data):
+   | ISO | Expected avg scarcity hours | Acceptable range |
+   |-----|---------------------------|-----------------|
+   | ERCOT | 100–400 | 50–800 |
+   | CAISO | 50–200 | 20–500 |
+   | PJM | 30–150 | 10–400 |
+   | NYISO | 40–200 | 15–500 |
+   | NEISO | 30–150 | 10–400 |
+   | MISO | 50–250 | 20–600 |
+   | SPP | 40–200 | 15–500 |
+
+5. **If recalibration needed**: Adjust `ORDC_PARAMS` in `market_simulation.py` — specifically `knee_mw` (reserve level where scarcity pricing kicks in) and `cap` (maximum scarcity adder in $/MWh). Document changes and rationale.
+
+**Output**: Summary table of scarcity hour statistics by ISO × new-fossil-present. Recommendation on whether ORDC parameters need adjustment.
+
+---
+
+### Prompt 5: Run Fresh 1,215-Scenario Sweep
+
+**Goal**: Generate fresh sweep results with both the ORDC fix AND new-build fossil active.
+
+**Prerequisites**: Prompts 1-2 should be complete (code cleanup + fleet dispatch updates). Prompt 3 (reconciliation rules) should be decided but doesn't block the sweep itself.
+
+**Steps**:
+
+1. **Archive stale results**:
+   ```bash
+   mv results/sweep_405/ results/sweep_405_archived_$(date +%Y%m%d)/
+   ```
+
+2. **Run the sweep**:
+   ```bash
+   cd market-simulator/scripts
+   python run_sweep_405.py --output-dir ../results/sweep_1215
+   ```
+   Expected runtime: depends on hardware. ~51,030 simulations.
+
+3. **Validate output**:
+   - Check row count: `1,215 × 7 × 6 = 51,030` rows in parquet
+   - Check new fossil columns exist: `nb_gas_ccgt_mw`, `nb_gas_ct_mw`, `total_new_fossil_mw`, `gas_built_gw`, `fossil_built_gw`
+   - Check LMP sanity: avg LMP should be $25–50/MWh, no $0 or $9999 outliers
+   - Check new fossil builds: `total_new_fossil_mw > 0` in at least some scenarios (confirms the feature is active)
+   - Check aggregates JSON generated
+
+4. **Commit results immediately**:
+   ```bash
+   git add results/sweep_1215/
+   git commit -m "Bank 1,215-scenario sweep results (ORDC fix + new-build fossil)"
+   git push
+   ```
+
+**Output**: `results/sweep_1215/` containing:
+- `market_simulation_results.json` — full nested JSON
+- `sweep_1215_flat.parquet` — flat table for analysis
+- `sweep_1215_aggregates.json` — P10/P50/P90 percentile bands
