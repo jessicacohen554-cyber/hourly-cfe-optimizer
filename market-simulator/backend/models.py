@@ -186,7 +186,7 @@ class SimulationRequest(BaseModel):
 
 
 class SweepRequest(BaseModel):
-    """Parameters for a full 270-scenario parametric sweep."""
+    """Parameters for a full 1,215-scenario parametric sweep."""
     isos: List[str] = Field(default_factory=lambda: ["ERCOT"])
     nuclear_retirement_threshold: Optional[float] = 30.0
     # Annual granularity controls
