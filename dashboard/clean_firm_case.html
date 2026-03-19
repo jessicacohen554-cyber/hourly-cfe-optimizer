@@ -268,6 +268,8 @@
     padding: 32px;
     margin-bottom: 24px;
     box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    box-sizing: border-box;
 }
 .wl-analysis-section h3 {
     font-family: var(--font-heading);
@@ -291,7 +293,15 @@
 @media (max-width: 768px) {
     .wl-chart-box { min-height: 300px; }
     .wl-analysis-section { padding: 24px 16px; }
-    .key-findings { grid-template-columns: 1fr 1fr; }
+    .key-findings { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .key-finding { padding: 14px 10px; }
+    .key-finding .val { font-size: 1.5rem; }
+    .key-finding .lbl { font-size: 0.72rem; }
+}
+@media (max-width: 480px) {
+    .key-findings { grid-template-columns: 1fr; gap: 8px; }
+    .key-finding { padding: 12px 10px; }
+    .key-finding .val { font-size: 1.35rem; }
 }
 
 /* Zone annotation legend */
@@ -1460,6 +1470,26 @@ function animateCounter(el, target, prefix, suffix) {
 // ============================================================================
 // FOAK → NOAK CHART: Clean Firm Learning Curve vs. Rising Gas Cost
 // ============================================================================
+// Inline data: blended clean firm LCOE (nuclear + CCS weighted) learning trajectory
+// and gas true cost (fuel + O&M + carbon pricing) over 2025–2050.
+// Nuclear FOAK ~$148/MWh → NOAK ~$71/MWh; CCS FOAK ~$99/MWh → NOAK ~$78/MWh.
+// Blended clean firm = 60% nuclear + 40% CCS (capacity-weighted).
+var FOAK_NOAK_YEARS = [2025, 2027, 2030, 2033, 2035, 2037, 2040, 2043, 2045, 2048, 2050];
+var CLEAN_FIRM_LEARNING = {
+    // Conservative: slower learning (5-8%/doubling), regulatory delays
+    conservative: [128, 124, 118, 112, 106, 100, 94, 89, 85, 81, 78],
+    // Central: 10-12%/doubling, DOE Liftoff trajectory
+    central:      [128, 121, 110, 100, 92, 86, 80, 76, 73, 71, 69],
+    // Optimistic: 15-20%/doubling, R&D breakthroughs, Fervo-style 35% rates
+    optimistic:   [128, 116, 98, 85, 76, 70, 64, 60, 57, 55, 53]
+};
+var GAS_TRUE_COST = {
+    // Base: fuel + O&M only (no carbon price), modest fuel inflation
+    base:        [52, 54, 57, 60, 62, 64, 67, 70, 72, 75, 78],
+    // With carbon pricing: +$25/ton in 2025 → +$85/ton by 2050 (EPA SCC trajectory)
+    with_carbon: [58, 63, 72, 82, 90, 97, 106, 115, 122, 132, 140]
+};
+
 let foakChart = null;
 
 function buildFoakNOAKChart() {
@@ -1751,14 +1781,15 @@ async function loadWrightsLawData() {
 function wlPopulateKeyFindings() {
     const fig8 = WL_DATA.figure8;
     const cm = fig8.critical_mass_pct_at_90;
-    const foakCost = fig8.blended_2c_at_90[0];
-    const noakCost = fig8.blended_2c_noak_at_90[fig8.blended_2c_noak_at_90.length - 1];
-    const savings = ((foakCost - noakCost) / foakCost * 100);
+    // Skip index 0 (zero participation = zero cost), use first non-zero entry
+    const foakCost = fig8.blended_2c_at_90.find(function(v) { return v > 0; }) || 0;
+    const noakCost = fig8.blended_2c_noak_at_90.slice().reverse().find(function(v) { return v > 0; }) || 0;
+    const savings = foakCost > 0 ? ((foakCost - noakCost) / foakCost * 100) : 0;
 
     document.getElementById('kfCriticalMass').textContent = cm ? (cm * 100).toFixed(0) + '%' : 'N/A';
-    document.getElementById('kfFoakCost').textContent = '$' + foakCost.toFixed(0);
-    document.getElementById('kfNoakCost').textContent = '$' + noakCost.toFixed(0);
-    document.getElementById('kfSavings').textContent = savings.toFixed(0) + '%';
+    document.getElementById('kfFoakCost').textContent = foakCost > 0 ? '$' + foakCost.toFixed(0) : 'N/A';
+    document.getElementById('kfNoakCost').textContent = noakCost > 0 ? '$' + noakCost.toFixed(0) : 'N/A';
+    document.getElementById('kfSavings').textContent = savings > 0 ? savings.toFixed(0) + '%' : 'N/A';
 }
 
 function wlRenderStrategyComparison() {
