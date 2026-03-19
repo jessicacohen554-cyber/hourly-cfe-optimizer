@@ -1,0 +1,276 @@
+name: "Market Simulator: 1,215-Scenario Sweep"
+
+# Runs the full 1,215-scenario parametric sweep
+# (3 demand × 5 price × 3 PPA × 3 gas friction × 3 queue × 3 new-build fossil cost)
+# across all 7 ISOs, simulating years 2023/2030/2035/2040/2045/2050.
+#
+# Each ISO runs in a parallel matrix job.
+# Results are merged into a single branch with JSON + parquet output.
+#
+# Output: market-simulator/results/sweep_1215/
+#   - market_simulation_results.json  (full nested)
+#   - sweep_1215_flat.parquet         (flat table)
+#   - sweep_1215_aggregates.json      (P10/P50/P90 bands)
+#
+# Total simulations: 1,215 scenarios × 7 ISOs × 6 years = 51,030 ISO-year runs
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region (ALL = parallel matrix)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  BRANCH_PREFIX: market-sweep-1215
+
+jobs:
+  # ── Phase 1: Run sweep per-ISO in parallel ──
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      matrix:
+        iso:
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      fail-fast: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy pandas pyarrow scipy numba
+
+      - name: Create output directory
+        run: mkdir -p market-simulator/results/sweep_1215
+
+      - name: "Run 1,215-scenario sweep — ${{ matrix.iso }}"
+        working-directory: market-simulator/scripts
+        run: |
+          python run_sweep_405.py \
+            --isos ${{ matrix.iso }} \
+            --output-dir ../results/sweep_1215/${{ matrix.iso }}
+
+      - name: Upload per-ISO results
+        uses: actions/upload-artifact@v4
+        with:
+          name: sweep-1215-${{ matrix.iso }}
+          path: market-simulator/results/sweep_1215/${{ matrix.iso }}/
+          retention-days: 3
+
+  # ── Phase 2: Merge all ISO results into one branch ──
+  merge:
+    needs: sweep
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy pandas pyarrow scipy numba
+
+      - name: Download all per-ISO artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sweep-1215-*
+          path: ./artifact-tmp/
+
+      - name: Merge per-ISO results into combined output
+        working-directory: market-simulator/scripts
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, sys
+          import pandas as pd
+
+          artifact_root = os.path.join(os.getcwd(), '..', '..', 'artifact-tmp')
+          out_dir = os.path.join(os.getcwd(), '..', 'results', 'sweep_1215')
+          os.makedirs(out_dir, exist_ok=True)
+
+          # Merge JSON results
+          combined_json = {}
+          for iso_dir in sorted(os.listdir(artifact_root)):
+              iso_path = os.path.join(artifact_root, iso_dir)
+              json_file = None
+              for root, dirs, files in os.walk(iso_path):
+                  for f in files:
+                      if f == 'market_simulation_results.json':
+                          json_file = os.path.join(root, f)
+                          break
+              if json_file:
+                  with open(json_file) as f:
+                      data = json.load(f)
+                  # Merge scenario keys
+                  for scenario_id, iso_results in data.items():
+                      if scenario_id.startswith('_'):
+                          continue
+                      if scenario_id not in combined_json:
+                          combined_json[scenario_id] = {}
+                      combined_json[scenario_id].update(iso_results)
+
+          # Save combined JSON
+          with open(os.path.join(out_dir, 'market_simulation_results.json'), 'w') as f:
+              json.dump(combined_json, f, indent=2, default=str)
+          print(f"Combined JSON: {len(combined_json)} scenarios")
+
+          # Merge parquet files
+          dfs = []
+          for iso_dir in sorted(os.listdir(artifact_root)):
+              iso_path = os.path.join(artifact_root, iso_dir)
+              for root, dirs, files in os.walk(iso_path):
+                  for f in files:
+                      if f.endswith('.parquet'):
+                          dfs.append(pd.read_parquet(os.path.join(root, f)))
+          if dfs:
+              combined_df = pd.concat(dfs, ignore_index=True)
+              combined_df.to_parquet(os.path.join(out_dir, 'sweep_1215_flat.parquet'), index=False)
+              print(f"Combined parquet: {len(combined_df)} rows × {len(combined_df.columns)} cols")
+
+          # Recompute combined aggregates
+          sys.path.insert(0, '.')
+          from market_simulation import aggregate_sweep_percentiles
+          aggregates = aggregate_sweep_percentiles(combined_json)
+          with open(os.path.join(out_dir, 'sweep_1215_aggregates.json'), 'w') as f:
+              json.dump(aggregates, f, indent=2, default=str)
+          print(f"Aggregates: {len(aggregates)} ISOs")
+          PYEOF
+
+      - name: Validate sweep output
+        working-directory: market-simulator
+        run: |
+          python3 - <<'PYEOF'
+          import pandas as pd
+          import json, os
+
+          out_dir = 'results/sweep_1215'
+
+          # 1. Check parquet exists and has expected shape
+          pq = os.path.join(out_dir, 'sweep_1215_flat.parquet')
+          assert os.path.exists(pq), f"Parquet not found: {pq}"
+          df = pd.read_parquet(pq)
+          print(f"Parquet: {len(df)} rows × {len(df.columns)} cols")
+
+          # Expected: 1,215 × 7 ISOs × 6 years = 51,030
+          n_scenarios = df['scenario'].nunique() if 'scenario' in df.columns else df['scenario_id'].nunique()
+          n_isos = df['iso'].nunique()
+          n_years = df['year'].nunique()
+          expected = n_scenarios * n_isos * n_years
+          print(f"  Scenarios: {n_scenarios}, ISOs: {n_isos}, Years: {n_years}")
+          print(f"  Expected rows: {expected}, Actual: {len(df)}")
+
+          # 2. Check new fossil columns exist
+          new_fossil_cols = {'total_new_fossil_mw', 'gas_built_gw', 'fossil_built_gw'}
+          present = new_fossil_cols & set(df.columns)
+          missing = new_fossil_cols - set(df.columns)
+          print(f"  New fossil cols present: {present}")
+          if missing:
+              print(f"  ⚠ Missing new fossil cols: {missing}")
+
+          # 3. LMP sanity
+          if 'avg_lmp' in df.columns:
+              lmp_min = df['avg_lmp'].min()
+              lmp_max = df['avg_lmp'].max()
+              lmp_mean = df['avg_lmp'].mean()
+              print(f"  LMP: min=${lmp_min:.1f}, mean=${lmp_mean:.1f}, max=${lmp_max:.1f}")
+              assert lmp_max < 1000, f"LMP outlier: max=${lmp_max}"
+
+          # 4. New fossil builds active in at least some scenarios
+          if 'total_new_fossil_mw' in df.columns:
+              pct_with_fossil = (df['total_new_fossil_mw'] > 0).mean() * 100
+              print(f"  Scenarios with new fossil builds: {pct_with_fossil:.1f}%")
+
+          # 5. Scarcity hours
+          if 'ordc_scarcity_hours' in df.columns:
+              scarcity_max = df['ordc_scarcity_hours'].max()
+              print(f"  Max scarcity hours: {scarcity_max}")
+              assert scarcity_max < 2000, f"Extreme scarcity: {scarcity_max}"
+
+          # 6. Check aggregates exist
+          agg_path = os.path.join(out_dir, 'sweep_1215_aggregates.json')
+          assert os.path.exists(agg_path), f"Aggregates not found: {agg_path}"
+          with open(agg_path) as f:
+              agg = json.load(f)
+          print(f"  Aggregates: {len(agg)} entries")
+
+          print("\n✓ All validation checks passed")
+          PYEOF
+
+      - name: Create output branch and commit
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="auto/${TIMESTAMP}-${BRANCH_PREFIX}"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$TARGET_BRANCH"
+
+          git add -f market-simulator/results/sweep_1215/
+          git add -f market-simulator/scripts/run_sweep_405.py
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Market simulator: 1,215-scenario sweep results — $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          1,215 scenarios (3 demand × 5 price × 3 PPA × 3 gas friction × 3 queue × 3 new fossil cost)
+          × 7 ISOs × 6 years (2023, 2030, 2035, 2040, 2045, 2050) = 51,030 results.
+
+          Includes ORDC exponential-knee fix + new-build fossil (apply_economic_new_build).
+          Output: JSON (full nested), parquet (flat), aggregates (P10/P50/P90)."
+
+          MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "Push attempt $i/$MAX_RETRIES..."
+            git push -u origin "$TARGET_BRANCH" 2>&1 && break
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              exit 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
