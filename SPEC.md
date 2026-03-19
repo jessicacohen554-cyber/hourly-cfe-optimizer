@@ -1181,7 +1181,7 @@ Full 8760-hour LMP model for **all 7 ISOs**. All 7 ISOs now have calibrated pric
 
 **Implementation status (Feb 28):**
 1. PJM — fully calibrated (v10, PJMPriceModel), target $34.7/MWh ✓
-2. ERCOT — ERCOTPriceModel, ORDC VOLL×LOLP $5K cap, target $26/MWh ✓
+2. ERCOT — ERCOTPriceModel, ORDC exponential knee (VOLL=$5K, knee=3GW, cap=$500), target $26/MWh ✓
 3. CAISO — CAISOPriceModel, RA + duck curve -$60 floor, target $38/MWh ✓
 4. NYISO — NYISOPriceModel, ICAP + tight geography, target $42/MWh ✓
 5. NEISO — NEISOPriceModel, FCM + winter gas $13.13/MWh, target $39.5/MWh ✓
@@ -1947,7 +1947,7 @@ Step 4 → dispatch cache → CO2/MAC/LMP/compressed day (read from cache, run i
 - **10% adder**: PJM market rules allow 10% markup above cost-based offers. SOM 2024: $2.00/MWh contribution.
 - **Stack walk**: `np.searchsorted` step function with load-dependent heat rate ramp (15% quadratic)
 - **Demand-quantile pricing**: High-demand congestion adder (P75+), scarcity tail (P95.5+), mid-low compression (P10-P70), negative pricing (P0-P10)
-- **ISO price formation**: PJM RPM ($2K cap), ERCOT ORDC (VOLL×LOLP, $5K cap), CAISO RA (-$60 floor), NYISO ICAP, NEISO FCM (+$13.13 winter gas)
+- **ISO price formation**: PJM RPM ($2K cap), ERCOT ORDC (exponential knee, $500 cap), CAISO RA (-$60 floor), NYISO ICAP, NEISO FCM (+$13.13 winter gas). All ISOs use ORDC exponential knee model with per-ISO VOLL/knee/λ/cap parameters.
 - **Installed capacity**: EIA 860 actuals (PJM 127.8 GW, ERCOT 80 GW, CAISO 47 GW, NYISO 28 GW, NEISO 16 GW)
 - **Fuel prices**: Low/Medium/High sensitivity (coal $2.00-2.50, gas $2.00-6.00, oil $8.00-13.00 $/MMBtu)
 - **Dispatch cache**: Shared with recompute_co2.py via dispatch_utils.py, append-mode NPZ per ISO
@@ -2888,12 +2888,12 @@ Each ISO gets its own `PriceModel` class with calibratable parameters:
 | ISO | Capacity Mechanism | Scarcity Model | Surplus Model | Key Parameters |
 |---|---|---|---|---|
 | **PJM** | RPM capacity market | Penalty factor → $2,000 cap | Moderate negative prices (coal/nuclear must-run) | `scarcity_cap=2000`, `floor=-30`, coal baseload min-gen |
-| **ERCOT** | Energy-only | **ORDC** — smooth exponential adder (VOLL × LOLP curve) | Aggressive negative prices (no must-run obligation) | `ordc_cap=5000`, `ordc_shape`, `floor=-50` |
+| **ERCOT** | Energy-only | **ORDC** — exponential knee: $0 above 3 GW reserves, exp decay below, $500 cap | Aggressive negative prices (no must-run obligation) | `voll=5000`, `knee_mw=3000`, `lam=0.002`, `cap=500`, `floor=-50` |
 | **CAISO** | Resource Adequacy | Soft cap + RDRR mechanism | Most negative prices (solar duck curve) | `scarcity_cap=2000`, `floor=-60`, solar curtailment premium |
 | **NYISO** | ICAP | Penalty factor → $2,000 cap | Similar to PJM but tighter geography | `scarcity_cap=2000`, `floor=-20` |
 | **NEISO** | FCM | Penalty factor → $2,000 cap | Winter gas constraint creates seasonal scarcity | `scarcity_cap=2000`, `winter_gas_adder`, pipeline constraint |
 
-**ERCOT ORDC** (unique — not a simple price cap): `adder = VOLL × LOLP(reserves)`, LOLP increases exponentially as reserves drop below ~3,000 MW. VOLL = $5,000/MWh (post-2023 reform).
+**ORDC scarcity pricing** (all ISOs, `SCARCITY_MODE='ordc'`): Exponential knee model — adder is exactly $0 when reserves ≥ knee threshold, rises as `min(cap, VOLL × exp(-λ × reserves))` below knee. Per-ISO parameters: ERCOT (VOLL=$5K, knee=3GW, λ=0.002, cap=$500), PJM (VOLL=$3.7K, knee=6GW, λ=0.0015, cap=$300), CAISO (VOLL=$2K, knee=4GW, λ=0.002, cap=$300), MISO (VOLL=$3.5K, knee=5GW, λ=0.0015, cap=$300). Calibrated for $2–8/MWh annual avg ORDC contribution, 30–100 scarcity hours.
 
 **NEISO winter gas** (unique — already modeled in Step 4): Winter hours (Dec-Feb) get gas price spike due to pipeline constraints. Parameterized via existing `NEISO_CCS_GAS_ADDER = $13.13/MWh`.
 
