@@ -116,6 +116,14 @@
                 </tbody>
             </table>
 
+            <div class="callout callout-warn">
+                <p><strong>Data quality matters:</strong> On the <strong>Minimal</strong> (demo) tier, the model uses
+                synthetic profiles &mdash; results are <em>illustrative only</em>, suitable for exploring the UI but
+                not for screening decisions. The Setup page shows color-coded data tier indicators (green/amber/red)
+                so you can see exactly which data sources are active. The Results page shows a warning banner when
+                running on synthetic data.</p>
+            </div>
+
             <h3>Emission &amp; Dispatch Data Model</h3>
             <div class="callout">
                 <p><strong>Without EIA plant data (Minimal/EIA-930 tiers):</strong> The model uses fleet-average heat rates
@@ -201,8 +209,16 @@
             <h3>Advanced Modeling Features</h3>
             <div class="metric-grid">
                 <div class="metric-card">
+                    <h4>ORDC Scarcity Pricing</h4>
+                    <p>Operating Reserve Demand Curve replaces statistical price overlays with structural reserve-based pricing. LOLP sigmoid models probability of lost load as reserves tighten. ISO-calibrated VOLL ($2K&ndash;$5K/MWh) produces realistic scarcity spikes.</p>
+                </div>
+                <div class="metric-card">
+                    <h4>VRE Cannibalization</h4>
+                    <p>Solar/wind energy revenue uses time-matched LMP (capture rates), not average LMP. Solar capture rates fall below 1.0 as penetration increases &mdash; the duck curve effect. ORDC scarcity hours create a revenue floor. This prevents the model from overestimating VRE deployment at high penetration.</p>
+                </div>
+                <div class="metric-card">
                     <h4>Zonal LMP Decomposition</h4>
-                    <p>Pipe-and-bubble zonal model with 2&ndash;5 zones per ISO and inter-zonal transfer limits. Captures 60&ndash;80% of real congestion effects vs. single-bus copper-plate. Automatically enabled when fleet data is available.</p>
+                    <p>Pipe-and-bubble zonal model with 2&ndash;5 zones per ISO, inter-zonal transfer limits, and ORDC-integrated scarcity pricing. Captures 60&ndash;80% of real congestion effects. Automatically enabled when fleet data is available.</p>
                 </div>
                 <div class="metric-card">
                     <h4>LP Storage Co-Dispatch</h4>
@@ -214,7 +230,19 @@
                 </div>
                 <div class="metric-card">
                     <h4>Demand Response</h4>
-                    <p>Price-elastic load curtailment activates when LMP exceeds ISO-specific trigger prices. PJM has 10 GW registered DR at $100+/MWh, ERCOT 5 GW at $200+. Set Off/Low/Med/High on Setup page.</p>
+                    <p>Price-elastic load curtailment with ORDC-linked dynamic triggers. PJM has 10 GW registered DR at $100+/MWh, ERCOT 5 GW at $200+. Fully vectorized activation. Set Off/Low/Med/High on Setup page.</p>
+                </div>
+                <div class="metric-card">
+                    <h4>IPM Trigger Indicators</h4>
+                    <p>6 automated flags detect when screening approximations are unreliable: VRE cannibalization, tight RA margin, high congestion, storage dominance, retirement cascade, nuclear at risk. Medium/High severity with recommended production model.</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Tech-Differentiated Queue Caps</h4>
+                    <p>Per-technology interconnection limits (solar, wind, offshore, nuclear, CCS) based on LBNL &ldquo;Queued Up 2024&rdquo; completion rates. Solar deploys faster than nuclear. 20% flex pool across technologies.</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Data Tier Warnings</h4>
+                    <p>Color-coded indicators on the Setup page show data quality per ISO: green (physics data), amber (defaults), red (synthetic). Results page shows a warning banner when running on synthetic data.</p>
                 </div>
                 <div class="metric-card">
                     <h4>Confidence Visualization</h4>
@@ -337,8 +365,20 @@
                     <p>When DR is enabled (Low/Med/High), shows total curtailed GWh, peak activation GW, hours of DR activation, and average price during DR events. Appears as KPI cards below the main results.</p>
                 </div>
                 <div class="chart-desc-card">
+                    <h4>VRE Capture Rates</h4>
+                    <p>Solar and wind capture rates show the ratio of generation-weighted LMP to average LMP. A capture rate below 1.0 means the resource earns less per MWh than the market average &mdash; this is the cannibalization effect. Solar capture rates typically fall to 0.6&ndash;0.8 at high penetration due to the duck curve.</p>
+                </div>
+                <div class="chart-desc-card">
+                    <h4>IPM Trigger Cards</h4>
+                    <p>Colored alert cards appear when results cross reliability thresholds. Red = High severity (production modeling recommended). Amber = Medium severity (results approximate). Each card names the specific limitation and recommends a production model (IPM, PLEXOS, or GenX) to validate the finding.</p>
+                </div>
+                <div class="chart-desc-card">
                     <h4>Confidence Zones</h4>
                     <p>Trajectory charts show colored background bands: green (2025&ndash;2030, calibrated), yellow (2030&ndash;2040, moderate extrapolation), red (2040&ndash;2060, high uncertainty). KPI cards show a confidence badge for the selected year.</p>
+                </div>
+                <div class="chart-desc-card">
+                    <h4>Data Tier Warning Banner</h4>
+                    <p>When running on synthetic data (Minimal tier), a prominent banner warns that results are illustrative only. Green header = full pipeline data. Amber = partial. Red = synthetic. Check the Setup page data tier indicators for details.</p>
                 </div>
             </div>
         </div>
@@ -477,6 +517,10 @@
                     <a href="/results">Results</a> &rarr;
                     <a href="/emissions">CCS Emissions</a> &rarr;
                     <a href="/ipp-report">IPP Report</a>
+                </p>
+                <p style="margin-top: 0.5rem; font-size: 0.88rem; color: #5a6577;">
+                    For detailed model methodology, assumptions, and limitations, see the
+                    <a href="/methodology">Methodology</a> page.
                 </p>
             </div>
         </div>

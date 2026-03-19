@@ -89,12 +89,20 @@
             <h3>Core Capabilities</h3>
             <ul>
                 <li><strong>Merit-order dispatch</strong> — Stacks fossil generators by marginal cost, dispatches in order until demand is met. Clean resources dispatch at zero marginal cost.</li>
+                <li><strong>ORDC scarcity pricing</strong> — Operating Reserve Demand Curve models scarcity structurally: <code>price = MC + VOLL &times; LOLP(reserves)</code> where LOLP is a logistic sigmoid of operating reserves vs. target. ISO-calibrated VOLL ($2K&ndash;$5K/MWh) and reserve targets.</li>
+                <li><strong>VRE cannibalization feedback</strong> — Solar and wind revenue uses time-matched LMP (capture rates), not average LMP. Capture rates decline with VRE penetration (duck curve effect). ORDC scarcity hours create a revenue floor preventing total collapse.</li>
+                <li><strong>Zonal LMP decomposition</strong> — 2&ndash;5 zone pipe-and-bubble model per ISO with ORDC integration. LP solver with dual prices as zonal marginals.</li>
+                <li><strong>LP storage co-dispatch</strong> — Simultaneous optimization of battery 4hr/8hr, LDES 100hr, and green H&#8322; via scipy linprog. Rolling windows match storage duration.</li>
                 <li><strong>Multi-stream revenue decomposition</strong> — Energy revenue (LMP &times; capacity factor) + capacity market payments + REC/PTC/ITC incentives, per resource type.</li>
                 <li><strong>Profit-driven deployment</strong> — Deploys clean resources where expected revenue exceeds LCOE. Clean energy level is an <em>output</em> of market economics, not a mandated target.</li>
                 <li><strong>Wright's Law learning curves</strong> — Technology-specific cost reduction per doubling of cumulative deployment, with FOAK/NOAK bounds calibrated to published literature.</li>
+                <li><strong>Demand response</strong> — Price-elastic curtailment with ORDC-linked dynamic triggers. Fully vectorized (numpy boolean masks). Off/Low/Medium/High levels.</li>
+                <li><strong>IPM trigger framework</strong> — 6 automated indicators flag when screening approximations are unreliable, recommending production-model validation.</li>
                 <li><strong>Nuclear retirement risk</strong> — Revenue floor model evaluating energy + capacity + &sect;45U PTC against operating cost thresholds.</li>
                 <li><strong>CCS retrofit breakeven</strong> — Carbon price breakeven analysis for CCGT retrofits under 45Q credit scenarios.</li>
                 <li><strong>Economic retirement modeling</strong> — Margin-threshold heuristic for coal, oil, and gas fleet retirement under changing market conditions.</li>
+                <li><strong>Tech-differentiated queue caps</strong> — Per-technology interconnection limits from LBNL &ldquo;Queued Up 2024&rdquo; completion rates. 20% flex pool across technologies.</li>
+                <li><strong>Data tier warnings</strong> — Color-coded indicators distinguish synthetic vs. EIA-930 vs. pipeline vs. full-fidelity data quality.</li>
                 <li><strong>Interactive web interface</strong> — Real-time parametric sensitivity with immediate visual feedback, designed for stakeholder accessibility.</li>
             </ul>
         </div>
@@ -109,11 +117,11 @@
                 </p>
             </div>
             <ul>
-                <li><strong>No co-optimized generation + storage + transmission</strong> — Storage parameters are exogenous, not endogenously optimized with generation mix.</li>
+                <li><strong>No co-optimized generation + storage + transmission</strong> — Storage is co-dispatched via LP within a given resource mix, but the resource mix itself is not endogenously co-optimized with storage (unlike GenX/ReEDS).</li>
                 <li><strong>No unit commitment with physical constraints</strong> — UC constraints (min up/down times, ramp rates, start-up costs) are applied post-hoc, not co-optimized with dispatch.</li>
-                <li><strong>No nodal/zonal transmission modeling</strong> — Merit-order dispatch without transmission limits. Optional zonal decomposition uses proportional stack-splitting, not physics-based power flow.</li>
-                <li><strong>No VRE curtailment feedback</strong> — Energy revenue uses average LMP, not time-matched LMP. Does not capture solar/wind value deflation at high penetration.</li>
-                <li><strong>No probabilistic reliability</strong> — No LOLE/EUE calculations. Resource adequacy enforced as a 15% reserve margin floor.</li>
+                <li><strong>Simplified zonal transmission</strong> — Pipe-and-bubble zonal model (2&ndash;5 zones/ISO) with aggregate transfer limits captures 60&ndash;80% of congestion effects, but is not physics-based power flow.</li>
+                <li><strong>Reduced-form VRE cannibalization</strong> — Capture-rate feedback is included (solar/wind revenue uses time-matched LMP), but curtailment is not explicitly modeled &mdash; the sigmoid depression is an approximation, not a physics-based curtailment dispatch.</li>
+                <li><strong>No probabilistic reliability</strong> — No LOLE/EUE calculations. Resource adequacy enforced as a 15% reserve margin floor. ORDC scarcity pricing provides a structural price signal but not a reliability metric.</li>
                 <li><strong>No cross-sector coupling</strong> — Electricity only; does not model transport, heat, or industrial electrification interactions.</li>
             </ul>
         </div>
@@ -136,8 +144,8 @@
                 <div class="use-card dont">
                     <h4>&#10007; Not Recommended</h4>
                     <ul>
-                        <li><strong>Absolute LMP forecasting</strong> — Values lack transmission constraints, proper unit commitment, and scarcity pricing.</li>
-                        <li><strong>Optimal resource portfolio design</strong> — Cannot determine optimal mixes (no curtailment feedback, no storage co-optimization).</li>
+                        <li><strong>Absolute LMP forecasting</strong> — Values include ORDC scarcity pricing and zonal decomposition, but lack nodal transmission and proper unit commitment.</li>
+                        <li><strong>Optimal resource portfolio design</strong> — Capture-rate feedback and LP storage are included, but the tool does not co-optimize generation mix + storage + transmission endogenously.</li>
                         <li><strong>Policy impact quantification</strong> — "A $50/ton carbon price reduces emissions by X MT" — direction right, magnitude unreliable.</li>
                         <li><strong>Plant-specific retirement timing</strong> — Heuristic retirement model cannot predict when individual plants close.</li>
                         <li><strong>Investment decisions or regulatory filings</strong> — Results are screening-quality, not investment-grade.</li>
@@ -198,7 +206,7 @@
                             <td class="yes">Yes</td>
                             <td class="yes">Yes</td>
                             <td class="yes">Yes</td>
-                            <td class="no">Exogenous</td>
+                            <td class="partial">LP dispatch</td>
                         </tr>
                         <tr>
                             <td>VRE curtailment feedback</td>
@@ -207,7 +215,7 @@
                             <td class="yes">Yes</td>
                             <td class="yes">Yes</td>
                             <td class="yes">Yes</td>
-                            <td class="no">No</td>
+                            <td class="partial">Capture rates</td>
                         </tr>
                         <tr>
                             <td>Probabilistic reliability (LOLE/EUE)</td>
@@ -352,26 +360,29 @@
             <h3>Critical Limitations</h3>
             <ol class="limitation-list">
                 <li class="critical">
-                    <strong>No VRE cannibalization feedback</strong> — Energy revenue for solar/wind uses average LMP, not time-matched LMP.
-                    Solar revenue collapses with penetration (duck curve effect) but the model doesn't capture this.
-                    Systematically <em>overestimates</em> clean deployment at &gt;40% VRE penetration.
+                    <strong>Reduced-form VRE cannibalization</strong> — Capture-rate feedback is included (solar/wind revenue uses
+                    time-matched LMP), but curtailment is modeled via a sigmoid depression approximation, not explicit hourly
+                    curtailment dispatch. ORDC scarcity hours create a revenue floor. Results are reasonable to ~60% VRE penetration;
+                    above that, IPM trigger cards recommend production dispatch validation.
                 </li>
                 <li class="critical">
-                    <strong>No network constraints in dispatch</strong> — Merit-order without transmission limits.
-                    Zonal decomposition is proportional stack-splitting (not physics-based), producing congestion approximations rather than real transmission constraints.
+                    <strong>Simplified zonal transmission</strong> — Pipe-and-bubble zonal model (2&ndash;5 zones/ISO) with ORDC-integrated
+                    scarcity pricing captures 60&ndash;80% of congestion effects. Not physics-based power flow &mdash; misses nodal-level
+                    price separation, loop flows, and contingency constraints.
                 </li>
                 <li class="critical">
                     <strong>Post-hoc unit commitment</strong> — UC constraints applied after dispatch, not co-optimized.
                     Misses minimum up/down times, ramp rates, and start-up costs, leading to incorrect LMP during shoulder hours.
                 </li>
                 <li class="critical">
-                    <strong>No storage co-optimization</strong> — Storage parameters read from pre-computed profiles or hardcoded;
-                    not endogenously co-optimized with generation mix (unlike GenX/ReEDS).
+                    <strong>No endogenous capacity expansion</strong> — Storage is LP-co-dispatched within a given mix, but the
+                    generation + storage + transmission mix is not jointly optimized (unlike GenX/ReEDS). Resource deployment
+                    is profit-driven sequential, not globally optimal.
                 </li>
                 <li class="critical">
-                    <strong>Synthetic data fallback</strong> — When Step 2.2 parquets are absent, the model uses hardcoded
-                    linear ramp patterns per ISO that are not calibrated to physics. Results from this fallback are
-                    illustrative only. A warning banner appears on the results page when this fallback is active.
+                    <strong>Synthetic data fallback</strong> — When pipeline parquets are absent, the model uses synthetic
+                    profiles that are not calibrated to physics. Results are illustrative only. The Setup page shows
+                    color-coded data tier indicators, and the Results page shows a warning banner when synthetic data is active.
                 </li>
             </ol>
 
@@ -382,8 +393,9 @@
                     (e.g., high EAC prices stimulating additional investment).
                 </li>
                 <li class="moderate">
-                    <strong>Reduced-form demand response</strong> — Price-elastic curtailment function, not full DR resource dispatch.
-                    Captures first-order elasticity but not participation caps or notification delays.
+                    <strong>Reduced-form demand response</strong> — Price-elastic curtailment with ORDC-linked dynamic triggers,
+                    not full DR resource dispatch. Fully vectorized but uses a linear ramp activation model.
+                    Captures first-order demand elasticity and scarcity interaction but not DR-as-a-resource economics.
                 </li>
                 <li class="moderate">
                     <strong>Simplified inter-regional trade</strong> — Import/export from EIA-930 historical data; not price-responsive.
@@ -399,13 +411,65 @@
                 <li class="moderate">
                     <strong>Trajectory confidence degrades</strong> — Beyond 2030: moderate extrapolation.
                     Beyond 2040: high uncertainty. Assumptions about cost curves, demand growth, and policy become speculative.
+                    Confidence zones and backtesting validation communicate this (see Section 7).
                 </li>
             </ol>
+
+            <h3>Automated Limitation Detection</h3>
+            <p>
+                The model includes 6 IPM trigger indicators that automatically flag when results cross thresholds where
+                these limitations become binding &mdash; e.g., VRE penetration above 40% triggers a cannibalization warning,
+                tight reserve margins flag the need for UC-constrained modeling. These serve as a triage mechanism,
+                identifying where investment in a production-grade model run (IPM, PLEXOS, GenX) would materially change results.
+            </p>
+            <p>
+                The tool is positioned as a <strong>complement to production models</strong>, not a replacement. Use it to
+                narrow the parameter space and identify which scenarios warrant full IPM/GenX analysis.
+            </p>
         </div>
 
-        <!-- Section 7: Simulation Modes -->
+        <!-- Section 7: Data Tiers -->
         <div class="meth-section">
-            <h2>7. Simulation Modes &amp; Confidence</h2>
+            <h2>7. Data Tiers &amp; Result Reliability</h2>
+            <p>Result quality depends directly on the data tier in use. The Setup page shows color-coded indicators per ISO.</p>
+            <div style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Tier</th><th>Data Source</th><th>Result Quality</th><th>Indicator</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Minimal</strong></td>
+                            <td>Synthetic profiles (ships ready)</td>
+                            <td>Illustrative only &mdash; suitable for UI exploration, not screening decisions</td>
+                            <td style="color:#dc2626;font-weight:600;">&#9679; Red</td>
+                        </tr>
+                        <tr>
+                            <td><strong>EIA-930</strong></td>
+                            <td>Real hourly demand/generation shapes</td>
+                            <td>Directionally correct dispatch and LMP patterns</td>
+                            <td style="color:#d97706;font-weight:600;">&#9679; Amber</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Pipeline</strong></td>
+                            <td>Step 2.1/2.2 parquets (optimizer results)</td>
+                            <td>Screening-quality results across 5,832 cost scenarios</td>
+                            <td style="color:#16a34a;font-weight:600;">&#9679; Green</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Full Fidelity</strong></td>
+                            <td>EIA-860 + EIA-923 + EPA CAMPD</td>
+                            <td>Plant-level dispatch, per-generator economics, zonal LMP</td>
+                            <td style="color:#16a34a;font-weight:600;">&#9679; Green</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Section 8: Simulation Modes -->
+        <div class="meth-section">
+            <h2>8. Simulation Modes &amp; Confidence</h2>
             <div style="overflow-x: auto;">
                 <table class="data-table">
                     <thead>
