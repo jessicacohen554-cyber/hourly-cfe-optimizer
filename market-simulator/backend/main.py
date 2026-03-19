@@ -361,9 +361,11 @@ def _map_request_to_conditions(req: SimulationRequest) -> dict:
     # Map gas_friction string level to numeric
     gas_friction_val = GAS_FRICTION_LEVELS.get(req.gas_friction, 0.7)
 
-    # Map queue cap level to learning speed
+    # Learning speed: use explicit user setting if provided, else derive from queue cap
     queue_cap_level = getattr(req, 'queue_cap_level', None) or 'Medium'
-    learning_speed = QUEUE_LEARNING_MAP.get(queue_cap_level, 'Medium')
+    learning_speed = getattr(req, 'learning_speed', None)
+    if not learning_speed or learning_speed not in ('Slow', 'Medium', 'Fast'):
+        learning_speed = QUEUE_LEARNING_MAP.get(queue_cap_level, 'Medium')
 
     # Determine fuel level from fuel_prices (use closest named level)
     # If custom prices provided, find best match; otherwise use "Medium"
@@ -488,6 +490,8 @@ def _map_request_to_conditions(req: SimulationRequest) -> dict:
         "learning_curves_enabled": getattr(req, 'learning_curves', True),
         # Tech-differentiated queue caps (per-technology interconnection limits)
         "tech_differentiated_queue": getattr(req, 'tech_differentiated_queue', True),
+        # Scarcity pricing mode: 'ordc' or 'demand_quantile'
+        "scarcity_mode": getattr(req, 'scarcity_mode', 'ordc'),
     }
 
 
@@ -1020,6 +1024,13 @@ async def simulate(req: SimulationRequest):
     try:
         conditions = _map_request_to_conditions(req)
 
+        # Apply scarcity mode from user request to global config
+        import pipeline_config
+        scarcity_mode = conditions.get('scarcity_mode', 'ordc')
+        original_scarcity_mode = pipeline_config.SCARCITY_MODE
+        if scarcity_mode in ('ordc', 'demand_quantile'):
+            pipeline_config.SCARCITY_MODE = scarcity_mode
+
         # Determine nuclear retirement threshold
         nrt = req.nuclear_retirement_threshold if req.nuclear_retirement_threshold > 0 else None
 
@@ -1209,6 +1220,12 @@ async def simulate(req: SimulationRequest):
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Simulation failed: {str(e)}")
+    finally:
+        # Restore global scarcity mode
+        try:
+            pipeline_config.SCARCITY_MODE = original_scarcity_mode
+        except Exception:
+            pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1839,26 +1856,38 @@ def _validate_custom_file(filepath: Path, expected_rows: int) -> dict:
         return {"found": False, "valid": False, "error": "File not found"}
 
     try:
-        with open(filepath) as f:
-            reader = csv.reader(f)
-            header = next(reader)
+        import pandas as pd
+
+        # Try comma first, then tab delimiter
+        try:
+            df = pd.read_csv(filepath, sep=',')
+            if len(df.columns) <= 2:
+                df = pd.read_csv(filepath, sep='\t')
+        except Exception:
+            df = pd.read_csv(filepath, sep='\t')
 
         # Check ISO columns
-        header_set = set(header)
+        header_set = set(df.columns)
         missing_isos = EXPECTED_ISO_COLS - header_set
         if missing_isos:
             return {"found": True, "valid": False,
                     "error": f"Missing columns: {', '.join(sorted(missing_isos))}"}
 
-        # Count data rows and check for NaN
-        import pandas as pd
-        df = pd.read_csv(filepath)
+        # Check row count
         if len(df) != expected_rows:
             return {"found": True, "valid": False,
                     "error": f"Expected {expected_rows} rows, found {len(df)}"}
 
-        if df.isnull().any().any():
+        # Check for NaN/blank values in ISO columns
+        iso_cols = [c for c in df.columns if c in EXPECTED_ISO_COLS]
+        if df[iso_cols].isnull().any().any():
             return {"found": True, "valid": False, "error": "Contains NaN/blank values"}
+
+        # Check all ISO columns are numeric
+        for col in iso_cols:
+            if not pd.to_numeric(df[col], errors='coerce').notna().all():
+                return {"found": True, "valid": False,
+                        "error": f"Column '{col}' contains non-numeric values"}
 
         return {"found": True, "valid": True, "rows": len(df)}
 
@@ -1871,10 +1900,41 @@ async def custom_input_status():
     """Check status of custom input files in the custom-user-inputs folder."""
     result = {}
     for category, config in CUSTOM_FILE_MAP.items():
-        # Check the first (primary) file for each category
-        primary_file = config["files"][0]
-        filepath = CUSTOM_INPUTS_DIR / primary_file
-        result[category] = _validate_custom_file(filepath, config["expected_rows"])
+        # Validate ALL files in the category (fuel has 3 files)
+        files = config["files"]
+        all_valid = True
+        any_found = False
+        file_results = []
+        for fname in files:
+            filepath = CUSTOM_INPUTS_DIR / fname
+            file_result = _validate_custom_file(filepath, config["expected_rows"])
+            file_results.append((fname, file_result))
+            if file_result.get("found"):
+                any_found = True
+            if not file_result.get("valid"):
+                all_valid = False
+
+        if len(files) == 1:
+            result[category] = file_results[0][1]
+        else:
+            # Multi-file category (fuel): aggregate results
+            if not any_found:
+                result[category] = {"found": False, "valid": False, "error": "No files found"}
+            elif all_valid:
+                result[category] = {"found": True, "valid": True, "rows": config["expected_rows"],
+                                    "files_checked": len(files)}
+            else:
+                # Report first invalid file
+                for fname, fr in file_results:
+                    if fr.get("found") and not fr.get("valid"):
+                        result[category] = {"found": True, "valid": False,
+                                            "error": f"{fname}: {fr['error']}"}
+                        break
+                else:
+                    # Some files missing
+                    missing = [fn for fn, fr in file_results if not fr.get("found")]
+                    result[category] = {"found": True, "valid": False,
+                                        "error": f"Missing files: {', '.join(missing)}"}
     return result
 
 

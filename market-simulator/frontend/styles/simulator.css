@@ -438,3 +438,75 @@
   .mode-toggle { flex-direction: column; }
   .mode-toggle .toggle-btn { text-align: center; }
 }
+
+@media (max-width: 480px) {
+  .form-section { padding: var(--space-md); }
+  .section-heading { font-size: 1.1rem; }
+
+  /* Ensure touch targets ≥ 44px */
+  .toggle-btn, .iso-btn, .preset-btn, .preset-btn-wide {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+  }
+
+  .input-group input[type="number"] {
+    min-height: 44px;
+    font-size: 1rem; /* prevent iOS zoom on focus */
+  }
+
+  .iso-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .iso-btn {
+    flex: 1 1 calc(33% - 4px);
+    text-align: center;
+  }
+
+  /* Prevent horizontal overflow */
+  .input-with-presets {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .preset-btns {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 375px) {
+  .form-section { padding: var(--space-sm) var(--space-md); }
+
+  .iso-btn {
+    flex: 1 1 calc(50% - 4px);
+    font-size: 0.8rem;
+  }
+
+  .mode-toggle .toggle-btn {
+    font-size: 0.82rem;
+    padding: 10px 12px;
+  }
+
+  .info-icon::after {
+    max-width: 220px;
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+}
+
+@media (max-width: 320px) {
+  .form-section { padding: var(--space-sm); }
+  .section-heading { font-size: 1rem; }
+
+  .submit-btn {
+    padding: 14px 24px;
+    font-size: 0.95rem;
+    width: 100%;
+  }
+}

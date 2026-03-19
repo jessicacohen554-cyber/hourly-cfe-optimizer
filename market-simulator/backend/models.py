@@ -161,6 +161,8 @@ class SimulationRequest(BaseModel):
     custom_overrides: CustomOverrides = Field(default_factory=CustomOverrides)
 
     dr_level: str = "Off"  # Off/Low/Medium/High — demand response participation level
+    scarcity_mode: str = "ordc"  # ordc / demand_quantile — scarcity pricing model
+    learning_speed: str = "Medium"  # Slow/Medium/Fast — Wright's Law learning rate
     # Fossil new-build LCOEs
     fossil_lcoes: Optional[dict] = None  # {gas_ccgt: float, gas_ct: float, coal: float}
 
