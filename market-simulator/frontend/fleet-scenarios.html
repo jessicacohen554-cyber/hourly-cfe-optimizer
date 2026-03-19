@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fleet Scenario Comparison — Constellation Energy</title>
+    <link rel="stylesheet" href="styles/CEG-style.css">
+    <link rel="stylesheet" href="styles/simulator.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <script src="js/chart-colors.js"></script>
+    <style>
+        /* ── Page-specific styles only (everything else from CEG-style.css) ── */
+
+        /* Controls strip */
+        .controls-strip {
+            display: flex; align-items: center; gap: var(--space-xl);
+            flex-wrap: wrap; padding: var(--space-lg);
+        }
+        .controls-group { display: flex; flex-direction: column; gap: var(--space-sm); }
+        .controls-group-label {
+            font-size: 0.72rem; font-weight: 700; letter-spacing: 2px;
+            text-transform: uppercase; color: var(--ceg-blue);
+        }
+
+        /* Scenario checkboxes */
+        .scenario-checks { display: flex; gap: var(--space-lg); flex-wrap: wrap; }
+        .scenario-check {
+            display: flex; align-items: center; gap: var(--space-sm);
+            cursor: pointer; font-size: 0.95rem; font-weight: 400;
+            min-height: 44px; user-select: none;
+        }
+        .scenario-check input[type="checkbox"] {
+            width: 20px; height: 20px; accent-color: var(--ceg-blue);
+            cursor: pointer; flex-shrink: 0;
+        }
+        .scenario-swatch {
+            width: 24px; height: 10px; border-radius: 3px; flex-shrink: 0;
+        }
+
+        /* Target radios */
+        .target-radios { display: flex; gap: var(--space-lg); flex-wrap: wrap; }
+        .target-radio {
+            display: flex; align-items: center; gap: var(--space-sm);
+            cursor: pointer; font-size: 0.95rem; min-height: 44px; user-select: none;
+        }
+        .target-radio input[type="radio"] {
+            width: 20px; height: 20px; accent-color: var(--ceg-blue);
+            cursor: pointer; flex-shrink: 0;
+        }
+
+        /* Year slider */
+        .year-slider-wrap {
+            display: flex; align-items: center; gap: var(--space-md); min-width: 200px;
+        }
+        .year-slider-wrap input[type="range"] {
+            flex: 1; height: 6px; cursor: pointer; min-height: 44px;
+        }
+        .year-slider-value {
+            font-size: 1.3rem; font-weight: 700; color: var(--ceg-blue);
+            min-width: 3.5rem; text-align: center;
+        }
+
+        /* Chart cards */
+        .chart-card {
+            background: var(--bg-card); border: 1px solid var(--glass-border);
+            border-radius: var(--radius-lg); padding: var(--space-xl);
+            box-shadow: var(--shadow-sm); margin-bottom: var(--space-xl);
+        }
+        .chart-card-header { margin-bottom: var(--space-lg); }
+        .chart-card-header h3 {
+            font-size: 1.25rem; font-weight: 600; color: var(--text-bright); margin-bottom: var(--space-xs);
+        }
+        .chart-card-header p {
+            font-size: 0.9rem; color: var(--text-dim); line-height: 1.5;
+        }
+        .chart-card-header .section-eyebrow { margin-bottom: var(--space-sm); }
+
+        /* Chart containers */
+        .fan-chart-container { position: relative; min-height: 480px; }
+        .secondary-chart-container { position: relative; min-height: 360px; }
+        .waterfall-chart-container { position: relative; min-height: 400px; }
+
+        /* 2-col grid for secondary charts */
+        .charts-grid-2 {
+            display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xl);
+        }
+
+        /* Custom tooltip */
+        .fan-tooltip {
+            position: absolute; pointer-events: none; z-index: 100;
+            background: #fff; border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md); padding: var(--space-md);
+            box-shadow: var(--shadow-md); font-size: 0.85rem;
+            max-width: 420px; opacity: 0; transition: opacity 0.15s ease;
+        }
+        .fan-tooltip.visible { opacity: 1; }
+        .fan-tooltip-title {
+            font-weight: 700; font-size: 0.9rem; color: var(--text-bright);
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: var(--space-xs); margin-bottom: var(--space-sm);
+        }
+        .fan-tooltip-row {
+            display: flex; align-items: center; gap: var(--space-sm);
+            padding: 2px 0; font-family: var(--font-data);
+        }
+        .fan-tooltip-swatch {
+            width: 12px; height: 8px; border-radius: 2px; flex-shrink: 0;
+        }
+        .fan-tooltip-label { font-weight: 600; min-width: 100px; }
+        .fan-tooltip-vals { color: var(--text-dim); }
+        .fan-tooltip-gap { margin-top: var(--space-sm); padding-top: var(--space-xs); border-top: 1px solid var(--glass-border); }
+        .gap-positive { color: #DC2626; font-weight: 600; }
+        .gap-negative { color: var(--ceg-green); font-weight: 600; }
+
+        /* Waterfall scenario selector */
+        .waterfall-scenario-select {
+            padding: 0.45rem 0.85rem; border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm); font-size: 0.9rem;
+            background: #fff; color: var(--text-bright); cursor: pointer;
+            min-height: 44px;
+        }
+
+        /* Emissions-by-fuel scenario selector */
+        .fuel-scenario-select {
+            padding: 0.45rem 0.85rem; border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm); font-size: 0.9rem;
+            background: #fff; color: var(--text-bright); cursor: pointer;
+            min-height: 44px;
+        }
+
+        /* Legend bar */
+        .chart-legend-bar {
+            display: flex; flex-wrap: wrap; gap: var(--space-md) var(--space-lg);
+            margin-top: var(--space-md); font-size: 0.82rem; color: var(--text-dim);
+        }
+
+        /* Loading state */
+        .loading-overlay {
+            display: flex; align-items: center; justify-content: center;
+            min-height: 300px; color: var(--text-dim); font-size: 1.1rem;
+        }
+        .error-banner {
+            background: #fef2f2; border: 1px solid #fecaca;
+            border-radius: var(--radius-md); padding: var(--space-lg);
+            color: #991b1b; text-align: center;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .controls-strip { flex-direction: column; align-items: stretch; }
+            .charts-grid-2 { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .fan-chart-container { min-height: 360px; }
+            .secondary-chart-container { min-height: 300px; }
+            .waterfall-chart-container { min-height: 300px; }
+            .chart-card { padding: var(--space-lg); }
+        }
+        @media (max-width: 480px) {
+            .scenario-checks { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+            .target-radios { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="progress-bar"><div class="progress-bar-fill"></div></div>
+
+    <!-- Nav -->
+    <nav>
+        <div class="nav-logo">
+            <a href="/" style="display:flex;align-items:center;gap:0.75rem;text-decoration:none;">
+                <img src="/brand-assets/logo.png" alt="Constellation Energy" style="height:36px;" onerror="this.style.display='none'">
+                <div>
+                    <div class="nav-title">Constellation Energy</div>
+                    <div class="nav-subtitle">Market Simulation Screening Tool</div>
+                </div>
+            </a>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/">Guide</a></li>
+            <li><a href="/setup">Setup</a></li>
+            <li><a href="/fleet-config">Fleet Config</a></li>
+            <li><a href="/results">Results</a></li>
+            <li><a href="/emissions">CCS Emissions</a></li>
+            <li><a href="/fleet-scenarios" class="active">Fleet Scenarios</a></li>
+            <li><a href="/ipp-report">IPP Report</a></li>
+            <li><a href="/methodology">Methodology</a></li>
+        </ul>
+    </nav>
+
+    <!-- Hero -->
+    <div class="hero-section">
+        <div class="hero-inner">
+            <div class="hero-eyebrow">Fleet Analysis</div>
+            <h1>Fleet Scenario <strong>Comparison</strong></h1>
+            <p class="hero-desc">
+                P10/P50/P90 emissions envelopes across fleet decarbonization scenarios.
+                Compare baseline, CCS retrofit, new gas, and retirement pathways against climate targets.
+            </p>
+        </div>
+    </div>
+
+    <div class="content-section" style="max-width: 1400px;">
+
+        <!-- Controls Strip -->
+        <div class="glass-card controls-strip" id="controlsStrip">
+            <div class="controls-group">
+                <div class="controls-group-label">Scenarios</div>
+                <div class="scenario-checks" id="scenarioChecks">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+            <div class="controls-group">
+                <div class="controls-group-label">Target Overlay</div>
+                <div class="target-radios" id="targetRadios">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+            <div class="controls-group" style="flex:1; min-width: 180px;">
+                <div class="controls-group-label">Year (Waterfall)</div>
+                <div class="year-slider-wrap">
+                    <input type="range" id="yearSlider" min="2023" max="2050" value="2030" step="1">
+                    <div class="year-slider-value" id="yearSliderValue">2030</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Fan Chart -->
+        <div class="chart-card" id="fanChartCard">
+            <div class="chart-card-header">
+                <div class="section-eyebrow">Emissions Trajectory</div>
+                <h3>Fleet Emissions Fan Chart</h3>
+                <p>P10/P50/P90 probability envelopes for each fleet scenario vs. climate targets</p>
+            </div>
+            <div class="fan-chart-container">
+                <canvas id="fanChart"></canvas>
+                <div class="fan-tooltip" id="fanTooltip"></div>
+            </div>
+            <div class="chart-legend-bar" id="fanLegend"></div>
+        </div>
+
+        <!-- Secondary Charts: 2-col grid -->
+        <div class="charts-grid-2">
+            <!-- Waterfall -->
+            <div class="chart-card" id="waterfallCard">
+                <div class="chart-card-header">
+                    <div class="section-eyebrow">Plant Impact</div>
+                    <h3 id="waterfallTitle">Emissions Delta vs. Baseline — 2030</h3>
+                    <p>
+                        Which plants drive the biggest emissions changes?
+                        <select class="waterfall-scenario-select" id="waterfallScenarioSelect"></select>
+                    </p>
+                </div>
+                <div class="waterfall-chart-container">
+                    <canvas id="waterfallChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Generation Mix -->
+            <div class="chart-card" id="genMixCard">
+                <div class="chart-card-header">
+                    <div class="section-eyebrow">Generation Mix</div>
+                    <h3 id="genMixTitle">Fleet Generation by Fuel — 2030</h3>
+                    <p>TWh by fuel type for each visible scenario</p>
+                </div>
+                <div class="secondary-chart-container">
+                    <canvas id="genMixChart"></canvas>
+                </div>
+                <div class="chart-legend-bar" id="genMixLegend"></div>
+            </div>
+        </div>
+
+        <!-- Emissions by Fuel (full width) -->
+        <div class="chart-card" id="fuelEmissionsCard">
+            <div class="chart-card-header">
+                <div class="section-eyebrow">Emissions Breakdown</div>
+                <h3 id="fuelEmissionsTitle">Emissions by Fuel Type — Baseline</h3>
+                <p>
+                    Stacked area showing coal/gas/oil emissions over time.
+                    <select class="fuel-scenario-select" id="fuelScenarioSelect"></select>
+                </p>
+            </div>
+            <div class="secondary-chart-container">
+                <canvas id="fuelEmissionsChart"></canvas>
+            </div>
+            <div class="chart-legend-bar" id="fuelEmissionsLegend"></div>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-brand"><strong>Constellation Energy</strong> &middot; Market Simulation Screening Tool</div>
+        <div class="footer-note">Fleet scenario analysis powered by 405-scenario parametric sweep</div>
+    </footer>
+    <div class="bottom-banner"></div>
+
+    <script src="js/fleet-scenarios.js"></script>
+</body>
+</html>
