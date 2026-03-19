@@ -243,22 +243,13 @@ async def serve_fleet_config_page():
     return FileResponse(str(fleet_path), media_type="text/html")
 
 
-@app.get("/emissions", response_class=HTMLResponse)
-async def serve_emissions_page():
-    """Serve the CCS emissions dashboard page."""
-    emissions_path = FRONTEND_DIR / "emissions.html"
-    if not emissions_path.exists():
-        raise HTTPException(status_code=404, detail="emissions.html not found")
-    return FileResponse(str(emissions_path), media_type="text/html")
-
-
-@app.get("/ipp-report", response_class=HTMLResponse)
-async def serve_ipp_report_page():
-    """Serve the IPP fleet report page."""
-    ipp_path = FRONTEND_DIR / "ipp-report.html"
-    if not ipp_path.exists():
-        raise HTTPException(status_code=404, detail="ipp-report.html not found")
-    return FileResponse(str(ipp_path), media_type="text/html")
+@app.get("/fleet-scenarios", response_class=HTMLResponse)
+async def serve_fleet_scenarios_page():
+    """Serve the Fleet Climate Scenarios page."""
+    page_path = FRONTEND_DIR / "fleet-scenarios.html"
+    if not page_path.exists():
+        raise HTTPException(status_code=404, detail="fleet-scenarios.html not found")
+    return FileResponse(str(page_path), media_type="text/html")
 
 
 @app.get("/methodology", response_class=HTMLResponse)
@@ -283,6 +274,37 @@ async def get_fleet_config():
     import json
     with open(fleet_path) as f:
         return json.load(f)
+
+
+@app.get("/api/sweep-dispatch-data")
+async def get_sweep_dispatch_data():
+    """Return pre-exported sweep dispatch data for client-side fleet recalculation."""
+    path = FRONTEND_DIR / "data" / "sweep_dispatch_data.json"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="sweep_dispatch_data.json not found. Run scripts/export_sweep_dispatch_data.py first.")
+    return FileResponse(str(path), media_type="application/json")
+
+
+@app.get("/api/fleet-scenarios-config")
+async def get_fleet_scenarios_config():
+    """Return fleet scenario configuration (base fleet + scenarios + targets)."""
+    path = MARKET_SIM_ROOT / "fleet_scenarios" / "constellation_scenarios.json"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="constellation_scenarios.json not found")
+    return FileResponse(str(path), media_type="application/json")
+
+
+@app.get("/api/fleet-scenario-results")
+async def get_fleet_scenario_results():
+    """Return pre-computed fleet scenario results."""
+    path = MARKET_SIM_ROOT / "results" / "fleet_scenario_results.json"
+    if not path.exists():
+        # Fall back to sample data
+        sample_path = FRONTEND_DIR / "data" / "fleet_scenario_results_sample.json"
+        if not sample_path.exists():
+            raise HTTPException(status_code=404, detail="No fleet scenario results found")
+        return FileResponse(str(sample_path), media_type="application/json")
+    return FileResponse(str(path), media_type="application/json")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
