@@ -439,21 +439,29 @@ def compute_fleet_emissions_fast(plants: list[dict], sweep_df: pd.DataFrame) -> 
     # -----------------------------------------------------------------------
     # Envelopes
     # -----------------------------------------------------------------------
-    envelope = {}
+    def _compute_envelope(emissions_subset, year_indices=None):
+        """Compute P10/P50/P90/mean envelope for a (n, n_years) emissions array."""
+        env = {}
+        for yi, y in enumerate(years):
+            col = emissions_subset[:, yi]
+            valid = col[~np.isnan(col)]
+            if len(valid) == 0:
+                env[int(y)] = {"p10": 0.0, "p50": 0.0, "p90": 0.0, "mean": 0.0}
+            else:
+                env[int(y)] = {
+                    "p10": round(float(np.percentile(valid, 10)), 4),
+                    "p50": round(float(np.percentile(valid, 50)), 4),
+                    "p90": round(float(np.percentile(valid, 90)), 4),
+                    "mean": round(float(np.mean(valid)), 4),
+                }
+        return env
+
+    envelope = _compute_envelope(fleet_emissions)
+
+    # Attach grid-level new fossil build context to main envelope
     for yi, y in enumerate(years):
         col = fleet_emissions[:, yi]
         valid = col[~np.isnan(col)]
-        if len(valid) == 0:
-            year_env = {"p10": 0.0, "p50": 0.0, "p90": 0.0, "mean": 0.0}
-        else:
-            year_env = {
-                "p10": round(float(np.percentile(valid, 10)), 4),
-                "p50": round(float(np.percentile(valid, 50)), 4),
-                "p90": round(float(np.percentile(valid, 90)), 4),
-                "mean": round(float(np.mean(valid)), 4),
-            }
-
-        # Attach grid-level new fossil build context (P50 scenario values)
         if has_new_fossil and len(valid) > 0:
             median_val = np.median(valid)
             diffs_env = np.abs(col - median_val)
@@ -462,9 +470,37 @@ def compute_fleet_emissions_fast(plants: list[dict], sweep_df: pd.DataFrame) -> 
             nf_context = {}
             for col_name, arr in grid_new_fossil.items():
                 nf_context[col_name] = round(float(arr[p50_si_env, yi]), 2)
-            year_env["grid_new_fossil"] = nf_context
+            envelope[int(y)]["grid_new_fossil"] = nf_context
 
-        envelope[int(y)] = year_env
+    # -----------------------------------------------------------------------
+    # Per-fossil-cost-level envelopes (filter by new_fossil_cost_level)
+    # -----------------------------------------------------------------------
+    # Scenario IDs: MKT_{demand}_{price}_{ppa}_{gas}_{queue}_{nfc}
+    # Last underscore-separated token is the new fossil cost code: L/M/H
+    NFC_CODE_MAP = {"L": "Low", "M": "Medium", "H": "High"}
+    envelope_by_fossil_cost = {}
+
+    # Build scenario-to-fossil-cost-level mapping
+    scenario_nfc = {}
+    for s in scenarios:
+        parts = s.split("_")
+        nfc_code = parts[-1] if parts else ""
+        if nfc_code in NFC_CODE_MAP:
+            scenario_nfc[s] = NFC_CODE_MAP[nfc_code]
+
+    if scenario_nfc:
+        # Group scenario indices by fossil cost level
+        nfc_groups = {}
+        for s, level in scenario_nfc.items():
+            idx = scenario_idx.get(s)
+            if idx is not None:
+                nfc_groups.setdefault(level, []).append(idx)
+
+        for level in ["Low", "Medium", "High"]:
+            indices = nfc_groups.get(level, [])
+            if indices:
+                subset = fleet_emissions[indices, :]
+                envelope_by_fossil_cost[level] = _compute_envelope(subset)
 
     # -----------------------------------------------------------------------
     # Plant detail at P50 scenario
@@ -589,6 +625,7 @@ def compute_fleet_emissions_fast(plants: list[dict], sweep_df: pd.DataFrame) -> 
             "years": [int(y) for y in years],
         },
         "envelope": envelope,
+        "envelope_by_fossil_cost": envelope_by_fossil_cost if envelope_by_fossil_cost else None,
         "plant_detail": plant_detail,
         "grid_new_fossil": grid_new_fossil_detail,
         "new_fossil_summary": new_fossil_summary,
