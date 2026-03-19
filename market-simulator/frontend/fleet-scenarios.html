@@ -502,6 +502,14 @@
     <div class="bottom-banner"></div>
 
     <script src="js/fleet-dispatch-engine.js"></script>
+    <script src="js/fleet-sidebar.js"></script>
     <script src="js/fleet-scenarios.js"></script>
+    <script>
+        // Initialize sidebar after fleet-scenarios.js boots
+        document.addEventListener('DOMContentLoaded', function () {
+            // Small delay to ensure fleet-scenarios.js has initialized
+            setTimeout(function () { FleetSidebar.init(); }, 100);
+        });
+    </script>
 </body>
 </html>
