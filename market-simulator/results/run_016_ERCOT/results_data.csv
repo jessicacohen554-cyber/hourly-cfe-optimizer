@@ -1,0 +1,74 @@
+=== Summary Metrics ===
+metric,value,unit
+iso,ERCOT,
+existing_clean_pct,46.1,%
+market_outcome_clean_pct,100.0,%
+avg_lmp,956.7,$/MWh
+emissions_mt,0.03,MT CO2
+demand_twh,833.0,TWh
+nuclear_revenue_mwh,0,$/MWh
+ccs_breakeven_carbon_price,0.0,$/ton
+
+=== Resource Mix (TWh) ===
+resource,generation_twh,pct_of_total
+wind,196.6,51.2
+solar,115.0,29.9
+clean_firm,71.6,18.7
+hydro,0.8,0.2
+offshore_wind,0.0,0.0
+ccs_ccgt,0.0,0.0
+
+=== Generator Economics ===
+unit_type,capacity_mw,marginal_cost_mwh,dispatch_hours,capacity_factor,avg_revenue_mwh,vom_mwh,fuel_cost_mwh,profit_mwh,status
+gas_ccgt,51282.051282051274,0.0,8759,0.0,0.0,,,0.0,marginal
+gas_ct,28717.94871794872,0.0,3033,0.0,0.0,,,0.0,marginal
+
+=== Supply Stack ===
+resource,generation_twh
+wind,196.6
+solar,115.0
+clean_firm,71.6
+hydro,0.8
+
+=== Year-by-Year Trajectory ===
+year,clean_pct,demand_twh,emissions_mt,emission_rate_tco2_mwh,avg_lmp,lmp_p90,cost_per_mwh,revenue_per_mwh,energy_rev_mwh,capacity_rev_mwh,rec_rev_mwh,gas_built_gw,market_stop,zones_deployed,nuclear_retired,rps_mandated_pct,rps_eligible_pct,rps_shortfall_pct,acp_cost_million
+2025,66.6,507.7,70.85,0.4173,856.0,2060.1,65.65,1192.28,1191.88,0.0,0.4,0.0,False,solar|wind|clean_firm|ccs_ccgt,False,0.0,0.0,0.0,0.0
+2030,92.5,560.6,17.52,0.4173,1678.3,3807.5,65.65,2166.9,2166.5,0.0,0.4,0.0,False,solar|wind|clean_firm|ccs_ccgt,False,0.0,0.0,0.0,0.0
+2035,100.0,618.9,0.03,0.4173,2629.3,4870.7,59.84,2167.52,2167.02,0.0,0.5,0.0,False,solar,False,0.0,0.0,0.0,0.0
+2040,100.0,683.3,0.03,0.4173,2183.9,4841.5,0.0,0.0,0.0,0.0,0.0,0.0,True,,False,0.0,0.0,0.0,0.0
+2045,100.0,754.5,0.03,0.4173,1617.8,4840.8,0.0,0.0,0.0,0.0,0.0,0.0,True,,False,0.0,0.0,0.0,0.0
+2050,100.0,833.0,0.03,0.4173,956.7,3067.0,0.0,0.0,0.0,0.0,0.0,0.0,True,,False,0.0,0.0,0.0,0.0
+
+=== Year-by-Year Resource Mix (TWh) ===
+year,ccs_ccgt,clean_firm,hydro,offshore_wind,solar,wind
+2025,14.89,50.18,0.51,0.0,119.26,153.11
+2030,20.85,57.33,0.56,0.0,146.23,178.9
+2035,0.0,53.23,0.62,0.0,131.71,146.07
+2040,0.0,58.77,0.68,0.0,94.3,161.27
+2045,0.0,64.88,0.75,0.0,104.12,178.05
+2050,0.0,71.64,0.83,0.0,114.95,196.59
+
+=== Year-by-Year Generator Economics ===
+year,unit_type,capacity_mw,marginal_cost_mwh,dispatch_hours,capacity_factor,avg_revenue_mwh,vom_mwh,fuel_cost_mwh,profit_mwh,status
+2025,gas_ccgt,40000.0,,8759,,,,,,
+2025,coal_steam,17600.0,,5247,,,,,,
+2025,gas_ct,22400.000000000004,,140,,,,,,
+2030,gas_ccgt,40000.0,,8759,,,,,,
+2030,coal_steam,17600.0,,5148,,,,,,
+2030,gas_ct,22400.000000000004,,257,,,,,,
+2035,gas_ccgt,51282.051282051274,,8759,,,,,,
+2035,gas_ct,28717.94871794872,,794,,,,,,
+2040,gas_ccgt,51282.051282051274,,8759,,,,,,
+2040,gas_ct,28717.94871794872,,1496,,,,,,
+2045,gas_ccgt,51282.051282051274,,8759,,,,,,
+2045,gas_ct,28717.94871794872,,2274,,,,,,
+2050,gas_ccgt,51282.051282051274,,8759,,,,,,
+2050,gas_ct,28717.94871794872,,3033,,,,,,
+
+=== Nuclear Revenue Breakdown ===
+component,value_mwh
+energy_rev_mwh,956.73
+capacity_rev_mwh,0.0
+ptc_mwh,0.0
+total_mwh,956.73
+
