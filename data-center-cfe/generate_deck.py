@@ -310,6 +310,160 @@ def build_waterfall_svg():
     return "\n".join(bars)
 
 
+def build_extended_waterfall_svg(year):
+    """
+    Build SVG bars for extended gap analysis waterfall (2035/2040/2050).
+    Uses Medium procurement scenario from extended CSV.
+    Source: us_hyperscaler_gap_analysis_extended.csv
+    """
+    df = load_csv("us_hyperscaler_gap_analysis_extended.csv")
+    row = df[df["year"] == year]
+    if row.empty:
+        return "<!-- No extended gap data -->"
+
+    r = row.iloc[0]
+    total_need = float(r["energy_need_twh"])
+    procured_low = float(r["procured_twh_low"])
+    procured_med = float(r["procured_twh_med"])
+    procured_high = float(r["procured_twh_high"])
+    gap_med = float(r["gap_twh_med"])
+
+    # For waterfall: show demand, then L/M/H procurement bars, then medium gap
+    max_val = total_need * 1.08
+    y_bottom = 240
+    y_top = 40
+    y_range = y_bottom - y_top
+
+    def val_to_height(v):
+        return max(4, v / max_val * y_range)
+
+    bars = []
+
+    # Bar 1: Total Demand
+    h1 = val_to_height(total_need)
+    y1 = y_bottom - h1
+    bars.append(f'          <!-- Bar 1: Total Demand ({int(total_need)} TWh) -->')
+    bars.append(f'          <rect x="60" y="{y1:.0f}" width="55" height="{h1:.0f}" rx="3" fill="#2372B9"/>')
+    bars.append(f'          <text x="87" y="{y1 - 7:.0f}" text-anchor="middle" font-size="11" font-weight="700" fill="#2372B9">{int(total_need)}</text>')
+    bars.append(f'          <text x="87" y="258" text-anchor="middle" font-size="8" fill="#1A232F">{year} Need</text>')
+
+    # Bar 2: High procurement (best case, tallest green bar)
+    h_high = val_to_height(procured_high)
+    y_high = y1
+    bars.append(f'')
+    bars.append(f'          <!-- High procurement ({int(procured_high)} TWh) -->')
+    bars.append(f'          <rect x="135" y="{y_high:.0f}" width="55" height="{h_high:.0f}" rx="3" fill="rgba(107,165,67,0.3)" stroke="#6BA543" stroke-width="1.5"/>')
+    bars.append(f'          <text x="162" y="{y_high - 7:.0f}" text-anchor="middle" font-size="9" font-weight="600" fill="#6BA543">-{int(procured_high)}</text>')
+    bars.append(f'          <text x="162" y="258" text-anchor="middle" font-size="7.5" fill="#1A232F">High</text>')
+    bars.append(f'          <text x="162" y="268" text-anchor="middle" font-size="7" fill="#7E8083">Scenario</text>')
+    bars.append(f'          <line x1="115" y1="{y_high:.0f}" x2="135" y2="{y_high:.0f}" stroke="#E0E6EF" stroke-width="1" stroke-dasharray="3,2"/>')
+
+    # Bar 3: Medium procurement (solid green)
+    h_med = val_to_height(procured_med)
+    y_med = y1
+    bars.append(f'')
+    bars.append(f'          <!-- Med procurement ({int(procured_med)} TWh) -->')
+    bars.append(f'          <rect x="210" y="{y_med:.0f}" width="55" height="{h_med:.0f}" rx="3" fill="#6BA543"/>')
+    bars.append(f'          <text x="237" y="{y_med - 7:.0f}" text-anchor="middle" font-size="10" font-weight="600" fill="#6BA543">-{int(procured_med)}</text>')
+    bars.append(f'          <text x="237" y="258" text-anchor="middle" font-size="7.5" fill="#1A232F">Medium</text>')
+    bars.append(f'          <text x="237" y="268" text-anchor="middle" font-size="7" fill="#7E8083">Scenario</text>')
+
+    # Bar 4: Low procurement (lighter)
+    h_low = val_to_height(procured_low)
+    y_low = y1
+    bars.append(f'')
+    bars.append(f'          <!-- Low procurement ({int(procured_low)} TWh) -->')
+    bars.append(f'          <rect x="285" y="{y_low:.0f}" width="55" height="{h_low:.0f}" rx="3" fill="#007FA4"/>')
+    bars.append(f'          <text x="312" y="{y_low - 7:.0f}" text-anchor="middle" font-size="9" font-weight="600" fill="#007FA4">-{int(procured_low)}</text>')
+    bars.append(f'          <text x="312" y="258" text-anchor="middle" font-size="7.5" fill="#1A232F">Low</text>')
+    bars.append(f'          <text x="312" y="268" text-anchor="middle" font-size="7" fill="#7E8083">Scenario</text>')
+
+    # Bar 5: Medium Gap
+    gap_y_top = y_med + h_med
+    h_gap = val_to_height(gap_med)
+    bars.append(f'')
+    bars.append(f'          <!-- Gap (Medium): {int(gap_med)} TWh -->')
+    bars.append(f'          <rect x="370" y="{gap_y_top:.0f}" width="55" height="{h_gap:.0f}" rx="3" fill="#F47B27"/>')
+    bars.append(f'          <text x="397" y="{gap_y_top - 7:.0f}" text-anchor="middle" font-size="12" font-weight="700" fill="#F47B27">{int(gap_med)}</text>')
+    bars.append(f'          <text x="397" y="258" text-anchor="middle" font-size="8" font-weight="700" fill="#F47B27">UNMET</text>')
+    bars.append(f'          <text x="397" y="268" text-anchor="middle" font-size="8" font-weight="700" fill="#F47B27">GAP (Med)</text>')
+    bars.append(f'          <line x1="265" y1="{y_med + h_med:.0f}" x2="370" y2="{gap_y_top:.0f}" stroke="#E0E6EF" stroke-width="1" stroke-dasharray="3,2"/>')
+
+    return "\n".join(bars)
+
+
+def build_extended_gap_table(year):
+    """
+    Build HTML table for extended gap analysis (Big 4 aggregate, L/M/H scenarios).
+    Source: us_hyperscaler_gap_analysis_extended.csv
+    """
+    df = load_csv("us_hyperscaler_gap_analysis_extended.csv")
+    row = df[df["year"] == year]
+    if row.empty:
+        return "<!-- No data -->"
+
+    r = row.iloc[0]
+    need = int(r["energy_need_twh"])
+    gw = int(r["energy_need_gw"])
+
+    scenarios = [
+        ("High", int(r["procured_twh_high"]), int(r["gap_twh_high"]),
+         int(r["gap_gw_vre_35cf_high"]), int(r["gap_gw_nuclear_90cf_high"]),
+         round(r["procured_twh_high"] / r["energy_need_twh"] * 100)),
+        ("Medium", int(r["procured_twh_med"]), int(r["gap_twh_med"]),
+         int(r["gap_gw_vre_35cf_med"]), int(r["gap_gw_nuclear_90cf_med"]),
+         round(r["procured_twh_med"] / r["energy_need_twh"] * 100)),
+        ("Low", int(r["procured_twh_low"]), int(r["gap_twh_low"]),
+         int(r["gap_gw_vre_35cf_low"]), int(r["gap_gw_nuclear_90cf_low"]),
+         round(r["procured_twh_low"] / r["energy_need_twh"] * 100)),
+    ]
+
+    rows = []
+    rows.append(f'          <tr style="background:var(--ceg-blue-light,#EBF3FA);font-weight:700;">'
+                f'<td colspan="2">Big 4 {year} Demand</td>'
+                f'<td colspan="2"><strong>{need} TWh</strong> ({gw} GW)</td>'
+                f'<td></td></tr>')
+
+    for label, procured, gap, gw_vre, gw_nuc, pct in scenarios:
+        style = 'font-weight:700;' if label == "Medium" else ''
+        gap_color = '#F47B27' if gap > 500 else '#B45309' if gap > 200 else '#6BA543'
+        rows.append(
+            f'          <tr style="{style}">'
+            f'<td>{label}</td>'
+            f'<td>{procured} TWh</td>'
+            f'<td style="color:{gap_color};font-weight:700;">{gap} TWh</td>'
+            f'<td>{gw_vre} GW VRE / {gw_nuc} GW Nuc</td>'
+            f'<td>{pct}%</td></tr>'
+        )
+
+    return "\n".join(rows)
+
+
+EXTENDED_SLIDE_NARRATIVES = {
+    2035: {
+        "title": "The Clean Energy Gap: 2035 Outlook",
+        "intro": "By 2035, Big 4 demand reaches 789 TWh as AI workloads compound. Even in the high procurement scenario, a significant gap persists. SMR deployment timelines are the swing factor.",
+        "callout_main": "In the medium scenario, the gap grows to <strong>409 TWh</strong> — requiring 133 GW of additional VRE or 52 GW of nuclear. First-generation SMRs must be online and scaling by 2033 to bend the curve.",
+        "callout_secondary": "The low scenario assumes current procurement pace and SMR delays — producing a <strong>509 TWh gap</strong> (64% unmet). The high scenario requires unprecedented 50 GW/yr additions with SMR FOAK deployed.",
+        "sources": "Demand: BNEF 1H 2026 (106 GW US total by 2035). IEA Energy & AI Base Case (1,200 TWh global). Procurement scenarios: Constellation analysis of BNEF PPA pipeline, SMR deployment timelines (NuScale/X-energy/Kairos), and IRA policy trajectory.",
+    },
+    2040: {
+        "title": "The Clean Energy Gap: 2040 Outlook",
+        "intro": "By 2040, Big 4 demand reaches 1,042 TWh — nearly 2× the 2030 level. The procurement challenge shifts from deal volume to supply chain and grid interconnection constraints.",
+        "callout_main": "Medium scenario gap: <strong>482 TWh</strong> (157 GW VRE equivalent). This assumes SMR NOAK costs achieved, storage costs collapse 60%, and ~40 GW/yr sustained procurement. Even so, nearly half of demand remains unmet.",
+        "callout_secondary": "The high scenario narrows the gap to <strong>262 TWh</strong> — but requires a nuclear renaissance (60 GW/yr additions), enhanced geothermal at scale, and uninterrupted IRA-level policy support for 15+ years.",
+        "sources": "Demand: McKinsey Global Energy Perspective 2025 extrapolation; CAGR deceleration model. Supply: NREL ATB 2024 cost curves; DOE Liftoff reports (nuclear, geothermal, LDES). Grid: FERC interconnection queue data (2025).",
+    },
+    2050: {
+        "title": "The Clean Energy Gap: 2050 Outlook",
+        "intro": "By 2050, Big 4 demand reaches 1,638 TWh. The Big 4 share of total DC market declines to ~45% as second-wave buyers scale, but absolute demand nearly triples from 2030.",
+        "callout_main": "Medium scenario gap: <strong>738 TWh</strong> (241 GW VRE). The 2050 gap is larger than the <em>entire</em> 2030 demand. Closing it requires technologies not yet commercially deployed: fusion, advanced geothermal, or AI-driven efficiency breakthroughs.",
+        "callout_secondary": "Even the high scenario leaves a <strong>288 TWh gap</strong> — roughly equal to France's annual electricity consumption. The total clean energy buildout needed across all scenarios dwarfs any historical precedent.",
+        "sources": "Demand: EIA AEO 2025 (computing → 20% of commercial electricity by 2050); BNEF New Energy Outlook (3,700 TWh global DC demand). Supply: DOE Pathways to Commercial Liftoff; IPCC AR6 technology deployment curves.",
+    },
+}
+
+
 def build_regional_matrix_rows():
     """
     Build HTML table rows for Slide 9: Regional Opportunity Matrix.
@@ -423,6 +577,11 @@ def main():
     waterfall = build_waterfall_svg()
     matrix_rows = build_regional_matrix_rows()
 
+    # Extended gap analysis slides (2035, 2040, 2050)
+    extended_years = [2035, 2040, 2050]
+    extended_waterfalls = {yr: build_extended_waterfall_svg(yr) for yr in extended_years}
+    extended_tables = {yr: build_extended_gap_table(yr) for yr in extended_years}
+
     print("Rendering template...")
     html = template.render(
         # Chart data
@@ -436,6 +595,16 @@ def main():
         gap_table_rows=gap_rows,
         waterfall_svg_bars=waterfall,
         regional_matrix_rows=matrix_rows,
+        # Extended gap slides
+        waterfall_2035=extended_waterfalls[2035],
+        waterfall_2040=extended_waterfalls[2040],
+        waterfall_2050=extended_waterfalls[2050],
+        gap_table_2035=extended_tables[2035],
+        gap_table_2040=extended_tables[2040],
+        gap_table_2050=extended_tables[2050],
+        slide_2035=EXTENDED_SLIDE_NARRATIVES[2035],
+        slide_2040=EXTENDED_SLIDE_NARRATIVES[2040],
+        slide_2050=EXTENDED_SLIDE_NARRATIVES[2050],
     )
 
     out_path = OUTPUT_DIR / "vre-investment-thesis-deck.html"
