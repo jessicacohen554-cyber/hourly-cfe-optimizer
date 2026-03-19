@@ -789,6 +789,31 @@
         }
     }
 
+    // ── Public API for sidebar integration ──
+    window.FLEET_SCENARIOS_API = {
+        addScenario: function (key, label, data) {
+            if (!DATA) return;
+            DATA.scenarios[key] = data;
+            SCENARIO_LABELS[key] = label;
+            SCENARIO_COLORS[key] = data.color || '#8B5CF6';
+            scenarioVisibility[key] = true;
+            buildControls();
+            updateAllCharts();
+        },
+        removeScenario: function (key) {
+            if (!DATA) return;
+            delete DATA.scenarios[key];
+            delete SCENARIO_LABELS[key];
+            delete SCENARIO_COLORS[key];
+            delete scenarioVisibility[key];
+            buildControls();
+            updateAllCharts();
+        },
+        updateAllCharts: updateAllCharts,
+        getData: function () { return DATA; },
+        getYears: getYears
+    };
+
     // ── Boot ──
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
