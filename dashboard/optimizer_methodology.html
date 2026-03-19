@@ -943,7 +943,7 @@
     <ul style="font-size:0.92rem;color:var(--text-secondary);line-height:1.8;">
         <li><strong>Merit-order base</strong> &mdash; marginal cost from dispatch stack, reflecting fuel costs, heat rates, and variable O&amp;M for each unit in the regional fossil fleet.</li>
         <li><strong>Unit commitment / must-run floor</strong> &mdash; nuclear operates at 100% must-run; coal steam generators have a 40% minimum stable generation constraint. When residual demand falls below the total must-run floor, prices are depressed by surplus generation&mdash;capturing the off-peak price dynamics observed in real markets (e.g., PJM off-peak ~$28/MWh).</li>
-        <li><strong>Scarcity pricing</strong> &mdash; ORDC-based pricing with ISO-specific value-of-lost-load caps ($5,000/MWh ERCOT ORDC, $2,000/MWh capacity market ISOs). Triggers when reserve margins fall below reliability thresholds.</li>
+        <li><strong>Scarcity pricing</strong> &mdash; ORDC exponential knee model: adder is exactly $0 when operating reserves exceed the ISO-specific knee threshold, then rises exponentially as reserves deplete below it (LOLP = e<sup>&minus;&lambda;R</sup>), capped per ISO ($500/MWh ERCOT energy-only, $200&ndash;300/MWh capacity-market ISOs). Calibrated for $2&ndash;8/MWh annual average ORDC contribution and 30&ndash;100 scarcity hours per year.</li>
     </ul>
     <p>
         A <strong>regulatory feedback mechanism</strong> dampens sustained high LMP at high clean penetration.
