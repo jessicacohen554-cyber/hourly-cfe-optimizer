@@ -62,6 +62,42 @@
     }
   },
 
+  "baseline_mt": 49.96,
+
+  "targets": {
+    "sbti_15c": {
+      "type": "sbti_15c",
+      "description": "SBTi 1.5°C pathway: -4.2% annual linear reduction from 2023 baseline.",
+      "annual_reduction_pct": 4.2,
+      "base_year": 2023,
+      "baseline_mt": 49.96
+    },
+    "at_power_nz": {
+      "type": "at_power_nz",
+      "description": "Constellation committed target: 95% reduction by 2040, net-zero by 2045.",
+      "milestones": {
+        "2023": 49.96,
+        "2030": 35.0,
+        "2035": 20.0,
+        "2040": 2.5,
+        "2045": 0.0,
+        "2050": 0.0
+      }
+    },
+    "custom_moderate": {
+      "type": "custom",
+      "description": "Moderate decarbonization: 50% reduction by 2035, 80% by 2045.",
+      "milestones": {
+        "2023": 49.96,
+        "2030": 37.0,
+        "2035": 25.0,
+        "2040": 15.0,
+        "2045": 10.0,
+        "2050": 5.0
+      }
+    }
+  },
+
   "base_fleet": [
     {
       "orispl": 55524,
