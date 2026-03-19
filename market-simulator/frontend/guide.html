@@ -478,48 +478,50 @@
             </table>
         </div>
 
-        <!-- Section: Fleet Config & CCS -->
+        <!-- Section: Fleet Config & Climate Scenarios -->
         <div class="guide-section">
-            <h2>Fleet Configuration &amp; CCS Analysis</h2>
+            <h2>Fleet Configuration &amp; Climate Scenario Analysis</h2>
             <p>
-                The tool includes a full Constellation/Calpine plant roster (202 plants). You can configure
-                each plant's status before running a simulation, then use the CCS Emissions Dashboard for
-                per-plant dispatch analysis.
+                The tool includes a full Constellation/Calpine plant roster (202 plants). Configure fleet
+                decarbonization scenarios directly from the Fleet Climate Scenarios page using the built-in
+                sidebar, or pre-configure plants on the Fleet Config page.
             </p>
             <ol class="guide-steps">
                 <li>
-                    <strong>Configure fleet status</strong>
-                    Go to <a href="/fleet-config">Fleet Config</a> and set each plant to Operating, Retired, or CCS Retrofit.
-                    Use bulk actions to retire all coal plants, retrofit eligible CCGTs, etc.
-                    Selections are saved automatically.
+                    <strong>Open Fleet Climate Scenarios</strong>
+                    Go to <a href="/fleet-scenarios">Fleet Climate Scenarios</a> to see P10/P50/P90 emissions
+                    envelopes for pre-built scenarios (Baseline, CCS-Only, CCS + New Gas, Retire + CCS).
                 </li>
                 <li>
-                    <strong>Run a trajectory simulation</strong>
-                    From <a href="/setup">Setup</a>, run in Trajectory mode (not Snapshot) with your desired year range.
-                    Fleet configuration overrides will be applied to the dispatch model.
+                    <strong>Open the Fleet Config Sidebar</strong>
+                    Click "Edit Fleet" to open the sidebar. View all plants grouped by ISO. Toggle each
+                    plant between Operating, Retired, or CCS Retrofit. Set the year for retirements
+                    and CCS installations.
                 </li>
                 <li>
-                    <strong>Open CCS Emissions Dashboard</strong>
-                    After results load, click "CCS Emissions Dashboard" at the bottom of the results page.
-                    Click "Run CCS Dispatch" to analyze the Constellation CCGT fleet under the simulation conditions.
+                    <strong>Add new plants</strong>
+                    Use the "Add Plant" form at the bottom of the sidebar to model new gas or other generation
+                    additions, specifying capacity, heat rate, fuel type, and commissioning year.
                 </li>
                 <li>
-                    <strong>Review fleet intelligence</strong>
-                    The <a href="/ipp-report">IPP Fleet Report</a> shows aggregate fleet metrics, ISO capacity breakdown,
-                    emissions trajectories, transition milestones, and a plant CCS retrofit ranking by impact score.
+                    <strong>Recalculate in real-time</strong>
+                    Click "Recalculate" to run fleet dispatch against the 405-scenario sweep results entirely
+                    in your browser. All four charts (fan chart, waterfall, generation mix, emissions by fuel)
+                    update instantly with your custom configuration.
+                </li>
+                <li>
+                    <strong>Save and compare</strong>
+                    Name your configuration and click "Save Scenario" to add it as a new scenario in the
+                    comparison view. Toggle it on/off alongside the pre-built scenarios.
                 </li>
             </ol>
             <div class="callout">
                 <p><strong>Pages:</strong>
-                    <a href="/fleet-config">Fleet Config</a> &rarr;
-                    <a href="/setup">Setup &amp; Run</a> &rarr;
-                    <a href="/results">Results</a> &rarr;
-                    <a href="/emissions">CCS Emissions</a> &rarr;
-                    <a href="/ipp-report">IPP Report</a>
+                    <a href="/fleet-config">Fleet Config</a> (bulk plant management) &rarr;
+                    <a href="/fleet-scenarios">Fleet Climate Scenarios</a> (sidebar config + real-time dispatch)
                 </p>
                 <p style="margin-top: 0.5rem; font-size: 0.88rem; color: #5a6577;">
-                    For detailed model methodology, assumptions, and limitations, see the
-                    <a href="/methodology">Methodology</a> page.
+                    For detailed model methodology, see the <a href="/methodology">Methodology</a> page.
                 </p>
             </div>
         </div>
