@@ -55,6 +55,27 @@ if not exist "data\profiles\eia_interchange_profiles.json" (
 )
 echo [OK] Interchange profiles ready
 
+REM ── Run 1,215-scenario parametric sweep if cached results missing ─────
+if not exist "results\sweep_1215\sweep_1215_flat.parquet" (
+    echo.
+    echo ================================================================
+    echo   Sweep cache not found. Running 1,215-scenario parametric sweep.
+    echo   This is a one-time operation and may take a while...
+    echo   ^(3 demand x 5 price x 3 PPA x 3 gas x 3 queue x 3 fossil cost^)
+    echo   x 7 ISOs x 6 years = 51,030 simulations
+    echo ================================================================
+    echo.
+    set PYTHONPATH=%~dp0;%~dp0backend;%~dp0scripts
+    %PYTHON% scripts\run_sweep_405.py --output-dir results\sweep_1215
+    if errorlevel 1 (
+        echo WARNING: Sweep generation failed. The UI will still load but
+        echo sweep-dependent features will be unavailable.
+    ) else (
+        echo [OK] Sweep results generated
+    )
+)
+echo [OK] Sweep cache ready
+
 REM ── Open browser after short delay ─────────────────────────────────────
 start "" /b cmd /c "timeout /t 2 /nobreak >nul & start http://127.0.0.1:8000"
 
