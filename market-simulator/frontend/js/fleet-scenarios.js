@@ -49,6 +49,7 @@
     var scenarioVisibility = {};
     var selectedTarget = 'sbti_15';
     var selectedYear = 2030;
+    var selectedFossilCost = 'All';
     var fanChart = null;
     var waterfallChart = null;
     var genMixChart = null;
@@ -90,6 +91,15 @@
             if (vis[i] !== 'baseline') return vis[i];
         }
         return vis[0] || 'ccs_only';
+    }
+
+    function getEnvelope(sc) {
+        // Return the appropriate envelope based on selectedFossilCost
+        if (selectedFossilCost !== 'All' && sc.envelope_by_fossil_cost &&
+            sc.envelope_by_fossil_cost[selectedFossilCost]) {
+            return sc.envelope_by_fossil_cost[selectedFossilCost];
+        }
+        return sc.envelope;
     }
 
     // ── Init ──
@@ -189,6 +199,22 @@
             updateFanChart();
             updateFanLegend();
         });
+
+        // Fossil cost toggle
+        var fossilToggle = document.getElementById('fossilCostToggle');
+        if (fossilToggle) {
+            fossilToggle.addEventListener('click', function (e) {
+                var btn = e.target.closest('.toggle-btn');
+                if (!btn) return;
+                fossilToggle.querySelectorAll('.toggle-btn').forEach(function (b) {
+                    b.classList.remove('active');
+                });
+                btn.classList.add('active');
+                selectedFossilCost = btn.dataset.value;
+                updateFanChart();
+                updateFanLegend();
+            });
+        }
 
         // Year slider
         var slider = document.getElementById('yearSlider');
@@ -306,10 +332,11 @@
         for (var key in DATA.scenarios) {
             if (!scenarioVisibility[key]) continue;
             var sc = DATA.scenarios[key];
+            var env = getEnvelope(sc);
             var color = sc.color || SCENARIO_COLORS[key] || '#888';
             var p10 = [], p50 = [], p90 = [];
             years.forEach(function (y) {
-                var e = sc.envelope[String(y)];
+                var e = env[String(y)];
                 p10.push(e ? e.p10 : null);
                 p50.push(e ? e.p50 : null);
                 p90.push(e ? e.p90 : null);
@@ -435,15 +462,16 @@
             var visible = getVisibleScenarios();
             visible.forEach(function (sKey) {
                 var sc = DATA.scenarios[sKey];
-                var env = sc.envelope[year];
-                if (!env) return;
+                var envData = getEnvelope(sc);
+                var envYear = envData[year];
+                if (!envYear) return;
                 var color = sc.color || SCENARIO_COLORS[sKey] || '#888';
                 html += '<div class="fan-tooltip-row">' +
                     '<span class="fan-tooltip-swatch" style="background:' + color + '"></span>' +
                     '<span class="fan-tooltip-label">' + (SCENARIO_LABELS[sKey] || sKey) + '</span>' +
-                    '<span class="fan-tooltip-vals">P10: ' + env.p10.toFixed(1) +
-                    '  P50: ' + env.p50.toFixed(1) +
-                    '  P90: ' + env.p90.toFixed(1) + '</span></div>';
+                    '<span class="fan-tooltip-vals">P10: ' + envYear.p10.toFixed(1) +
+                    '  P50: ' + envYear.p50.toFixed(1) +
+                    '  P90: ' + envYear.p90.toFixed(1) + '</span></div>';
             });
 
             // Gap to target
