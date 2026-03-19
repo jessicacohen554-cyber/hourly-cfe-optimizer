@@ -43,18 +43,24 @@ SCARCITY_MODE = 'ordc'
 
 # ORDC parameters per ISO
 # voll: Value of Lost Load ($/MWh) — from ISO tariffs / FERC filings
-# reserve_target_mw: Target operating reserve level (MW) from NERC/ISO standards
-# lolp_k: Steepness of LOLP sigmoid — controls how sharply price rises as reserves fall
+# knee_mw: Reserve threshold (MW) above which ORDC adder is exactly $0.
+#          Set at ~1.5-2x minimum operating reserve requirement per NERC/ISO standards.
+# lam: Exponential decay rate — controls how steeply LOLP rises below the knee.
+#      lambda=0.002 → adder ~$92/MWh at 1000 MW below knee (VOLL=5000).
+#      lambda=0.0015 → slower decay for larger systems (PJM, MISO).
+# cap: Maximum ORDC adder ($/MWh) — prevents single-hour spikes from polluting averages.
+#      Capacity-market ISOs capped lower ($200-300); energy-only ERCOT at $500.
 # Sources: ERCOT PUCT Docket 52373, PJM RPM penalty factor (1/3 × $11,100),
 #          CAISO/NYISO/NEISO from FERC filings and regional reliability standards.
+# Calibration target: annual avg ORDC contribution $2-8/MWh, 30-100 scarcity hours.
 ORDC_PARAMS = {
-    'ERCOT': {'voll': 5000, 'reserve_target_mw': 3000, 'lolp_k': 0.003},
-    'PJM':   {'voll': 3700, 'reserve_target_mw': 5500, 'lolp_k': 0.002},
-    'CAISO': {'voll': 2000, 'reserve_target_mw': 3000, 'lolp_k': 0.003},
-    'NYISO': {'voll': 2500, 'reserve_target_mw': 2000, 'lolp_k': 0.003},
-    'NEISO': {'voll': 2000, 'reserve_target_mw': 1500, 'lolp_k': 0.003},
-    'MISO':  {'voll': 3500, 'reserve_target_mw': 4000, 'lolp_k': 0.002},
-    'SPP':   {'voll': 2000, 'reserve_target_mw': 2500, 'lolp_k': 0.003},
+    'ERCOT': {'voll': 5000, 'knee_mw': 3000, 'lam': 0.002, 'cap': 500},
+    'PJM':   {'voll': 3700, 'knee_mw': 6000, 'lam': 0.0015, 'cap': 300},
+    'CAISO': {'voll': 2000, 'knee_mw': 4000, 'lam': 0.002, 'cap': 300},
+    'NYISO': {'voll': 2500, 'knee_mw': 3000, 'lam': 0.002, 'cap': 300},
+    'NEISO': {'voll': 2000, 'knee_mw': 2500, 'lam': 0.002, 'cap': 250},
+    'MISO':  {'voll': 3500, 'knee_mw': 5000, 'lam': 0.0015, 'cap': 300},
+    'SPP':   {'voll': 2000, 'knee_mw': 3500, 'lam': 0.002, 'cap': 200},
 }
 
 # ============================================================================
