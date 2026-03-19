@@ -6,7 +6,7 @@ Phase 2.3: Validate fleet_dispatch.py against emissions-dashboard-data.js.
    - Aggregates multi-unit plants (same campd_id) into single entries
    - Classifies Gas plants as gas_ccgt (>200 MW, post-1995) vs gas_ct (peakers)
    - Uses dashboard plant-specific CO2 rates where available
-2. Runs fleet dispatch against 405-sweep
+2. Runs fleet dispatch against 1,215-sweep
 3. Compares P10/P50/P90 envelopes against emissions-dashboard-data.js fan_bands
 4. Compares per-plant emissions at P50 for the top emitters
 5. Flags divergences > 20% and explains root causes
@@ -305,7 +305,7 @@ def explain_divergences(envelope_div, plant_div, fleet_results, dashboard):
   CAUSE 3: SCENARIO AXIS MISMATCH
   ────────────────────────────────
   Dashboard: 540 reference scenarios (different sweep dimensions)
-  Fleet dispatch: 405 scenarios (3×5×3×3×3 = different grid)
+  Fleet dispatch: 1,215 scenarios (3×5×3×3×3×3 = different grid)
   Impact: P10/P90 bands differ in width. P50 less affected.
 
   CAUSE 4: 2023 BASELINE = 0 IN FLEET DISPATCH
@@ -318,7 +318,7 @@ def explain_divergences(envelope_div, plant_div, fleet_results, dashboard):
   ───────────────────────────────────
   Dashboard shows CAISO/NEISO gas going to 0 by 2035-2040 (clean transition).
   Fleet dispatch only retires plants when margin < 0, which may happen on
-  a different timeline under the 405-sweep's clean energy trajectories.
+  a different timeline under the 1,215-sweep's clean energy trajectories.
 """)
 
 
@@ -339,7 +339,7 @@ def main():
     print(f"  Total equity-adjusted fossil capacity: {total_mw:,.0f} MW")
 
     # Load sweep + run
-    sweep_df = load_sweep("market-simulator/results/sweep_405/sweep_405_flat.parquet")
+    sweep_df = load_sweep("market-simulator/results/sweep_1215/sweep_1215_flat.parquet")
     print(f"\n  Sweep: {len(sweep_df)} rows, running fleet dispatch...")
     results = compute_fleet_emissions_fast(plants, sweep_df)
 
