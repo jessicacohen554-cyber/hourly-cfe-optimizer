@@ -526,9 +526,9 @@ Ordered, self-contained prompts for integrating new-build fossil across the code
 
 ### Prompt 7: Fleet Scenarios Viz Design Update
 
-> **Status (2026-03-19): Completed / superseded.** `Fleet_Scenarios_Viz_Design.md` was fully implemented as the live `fleet-scenarios.html` page with fleet config sidebar (commit `66d5ca7`) and then deleted (commit `eff7c4c`). The sidebar provides fleet-level plant configuration (Operating/Retired/CCS Retrofit + Add Plant) with instant browser-side recalculation across all 4 charts.
+> **Status (2026-03-19): Complete.** `Fleet_Scenarios_Viz_Design.md` was fully implemented as the live `fleet-scenarios.html` page with fleet config sidebar (commit `66d5ca7`) and then deleted (commit `eff7c4c`). The grid-level `new_fossil_cost_level` L/M/H toggle has been added to the controls strip, filtering the fan chart envelope data by sweep dimension. Backend (`fleet_dispatch.py`) computes per-level envelopes from scenario IDs.
 >
-> **Remaining gap**: The grid-level `new_fossil_cost_level` L/M/H toggle is not yet in the fleet scenarios controls strip. This should be added as a filter on the sweep's 6th dimension — separate from the fleet-level sidebar plant additions.
+> **Implementation**: Toggle added to controls strip (All/Low/Med/High). Selecting a level filters the P10/P50/P90 fan chart bands to show only scenarios at that fossil cost level. `fleet_dispatch.py` parses `new_fossil_cost_level` from scenario IDs (last token: L/M/H) and groups envelope computation by level. Sample JSON updated with per-level envelope data.
 
 **Original goal** *(superseded)*: Update `Fleet_Scenarios_Viz_Design.md` to reflect the 1,215-scenario sweep and new fossil dimension.
 
