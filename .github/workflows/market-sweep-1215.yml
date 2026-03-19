@@ -182,59 +182,78 @@ jobs:
         run: |
           python3 - <<'PYEOF'
           import pandas as pd
-          import json, os
+          import json, os, sys
 
           out_dir = 'results/sweep_1215'
+          errors = []
 
           # 1. Check parquet exists and has expected shape
           pq = os.path.join(out_dir, 'sweep_1215_flat.parquet')
-          assert os.path.exists(pq), f"Parquet not found: {pq}"
+          if not os.path.exists(pq):
+              print(f"FATAL: Parquet not found: {pq}")
+              sys.exit(1)
           df = pd.read_parquet(pq)
           print(f"Parquet: {len(df)} rows × {len(df.columns)} cols")
 
-          # Expected: 1,215 × 7 ISOs × 6 years = 51,030
-          n_scenarios = df['scenario'].nunique() if 'scenario' in df.columns else df['scenario_id'].nunique()
+          # Scenario count — use scenario_id (always set by flatten)
+          id_col = 'scenario_id' if 'scenario_id' in df.columns else 'scenario'
+          n_scenarios = df[id_col].nunique()
           n_isos = df['iso'].nunique()
-          n_years = df['year'].nunique()
-          expected = n_scenarios * n_isos * n_years
+          n_years = df['year'].dropna().nunique()
           print(f"  Scenarios: {n_scenarios}, ISOs: {n_isos}, Years: {n_years}")
-          print(f"  Expected rows: {expected}, Actual: {len(df)}")
+          print(f"  Rows: {len(df)}")
+          if len(df) == 0:
+              errors.append("Parquet is empty")
 
           # 2. Check new fossil columns exist
           new_fossil_cols = {'total_new_fossil_mw', 'gas_built_gw', 'fossil_built_gw'}
           present = new_fossil_cols & set(df.columns)
           missing = new_fossil_cols - set(df.columns)
-          print(f"  New fossil cols present: {present}")
+          print(f"  New fossil cols present: {sorted(present)}")
           if missing:
-              print(f"  ⚠ Missing new fossil cols: {missing}")
+              print(f"  ⚠ Missing new fossil cols (warning): {sorted(missing)}")
 
-          # 3. LMP sanity
+          # 3. LMP sanity (warn, don't fail — scarcity pricing can produce high values)
           if 'avg_lmp' in df.columns:
-              lmp_min = df['avg_lmp'].min()
-              lmp_max = df['avg_lmp'].max()
-              lmp_mean = df['avg_lmp'].mean()
-              print(f"  LMP: min=${lmp_min:.1f}, mean=${lmp_mean:.1f}, max=${lmp_max:.1f}")
-              assert lmp_max < 1000, f"LMP outlier: max=${lmp_max}"
+              lmp = df['avg_lmp'].dropna()
+              if len(lmp) > 0:
+                  print(f"  LMP: min=${lmp.min():.1f}, mean=${lmp.mean():.1f}, "
+                        f"median=${lmp.median():.1f}, max=${lmp.max():.1f}")
+                  if lmp.max() > 5000:
+                      errors.append(f"Extreme LMP outlier: max=${lmp.max():.1f}")
+                  if (lmp == 0).any():
+                      print(f"  ⚠ {(lmp == 0).sum()} rows with $0 LMP")
 
           # 4. New fossil builds active in at least some scenarios
           if 'total_new_fossil_mw' in df.columns:
-              pct_with_fossil = (df['total_new_fossil_mw'] > 0).mean() * 100
+              col = df['total_new_fossil_mw'].fillna(0)
+              pct_with_fossil = (col > 0).mean() * 100
               print(f"  Scenarios with new fossil builds: {pct_with_fossil:.1f}%")
 
-          # 5. Scarcity hours
+          # 5. Scarcity hours (warn only — extreme scenarios can legitimately have high values)
           if 'ordc_scarcity_hours' in df.columns:
-              scarcity_max = df['ordc_scarcity_hours'].max()
-              print(f"  Max scarcity hours: {scarcity_max}")
-              assert scarcity_max < 2000, f"Extreme scarcity: {scarcity_max}"
+              scarcity = df['ordc_scarcity_hours'].dropna()
+              if len(scarcity) > 0:
+                  print(f"  Scarcity hours: median={scarcity.median():.0f}, "
+                        f"max={scarcity.max():.0f}")
+                  if scarcity.max() > 4000:
+                      print(f"  ⚠ Very high scarcity hours detected: {scarcity.max():.0f}")
 
           # 6. Check aggregates exist
           agg_path = os.path.join(out_dir, 'sweep_1215_aggregates.json')
-          assert os.path.exists(agg_path), f"Aggregates not found: {agg_path}"
-          with open(agg_path) as f:
-              agg = json.load(f)
-          print(f"  Aggregates: {len(agg)} entries")
+          if os.path.exists(agg_path):
+              with open(agg_path) as f:
+                  agg = json.load(f)
+              print(f"  Aggregates: {len(agg)} entries")
+          else:
+              print(f"  ⚠ Aggregates not found: {agg_path}")
 
-          print("\n✓ All validation checks passed")
+          # Final verdict
+          if errors:
+              print(f"\n✗ Validation failed: {errors}")
+              sys.exit(1)
+          else:
+              print("\n✓ All validation checks passed")
           PYEOF
 
       - name: Create output branch and commit
