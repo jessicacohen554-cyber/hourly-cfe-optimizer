@@ -1,0 +1,287 @@
+{
+  "scenarios": {
+    "baseline": {
+      "description": "Status quo — no CCS, no early retirements, no new gas",
+      "color": "#7E8083",
+      "envelope": {
+        "2023": {"p10": 52.1, "p50": 55.3, "p90": 58.7},
+        "2025": {"p10": 50.8, "p50": 54.0, "p90": 57.4},
+        "2030": {"p10": 45.2, "p50": 48.3, "p90": 52.1},
+        "2035": {"p10": 42.1, "p50": 46.0, "p90": 50.5},
+        "2040": {"p10": 38.5, "p50": 43.2, "p90": 48.8},
+        "2045": {"p10": 35.0, "p50": 40.8, "p90": 47.1},
+        "2050": {"p10": 31.2, "p50": 38.0, "p90": 45.5}
+      },
+      "plant_detail": {
+        "2023": [
+          {"name": "Brandon Shores", "orispl": 1553, "fuel_type": "gas_ccgt", "gen_twh": 4.2, "emissions_mt": 1.82, "status": "operating"},
+          {"name": "Calvert Cliffs", "orispl": 1554, "fuel_type": "nuclear", "gen_twh": 14.8, "emissions_mt": 0.0, "status": "operating"},
+          {"name": "Crane", "orispl": 1555, "fuel_type": "gas_ccgt", "gen_twh": 3.8, "emissions_mt": 1.65, "status": "operating"},
+          {"name": "Wagner", "orispl": 1556, "fuel_type": "gas_ccgt", "gen_twh": 2.9, "emissions_mt": 1.26, "status": "operating"},
+          {"name": "Perryman", "orispl": 1557, "fuel_type": "gas_ct", "gen_twh": 0.8, "emissions_mt": 0.52, "status": "operating"},
+          {"name": "Riverside", "orispl": 1558, "fuel_type": "gas_ccgt", "gen_twh": 3.1, "emissions_mt": 1.35, "status": "operating"},
+          {"name": "Gould Street", "orispl": 1559, "fuel_type": "gas_ct", "gen_twh": 0.4, "emissions_mt": 0.26, "status": "operating"},
+          {"name": "Handsome Lake", "orispl": 1560, "fuel_type": "gas_ccgt", "gen_twh": 5.2, "emissions_mt": 2.26, "status": "operating"},
+          {"name": "Keystone", "orispl": 1561, "fuel_type": "coal_steam", "gen_twh": 6.1, "emissions_mt": 6.10, "status": "operating"},
+          {"name": "Conemaugh", "orispl": 1562, "fuel_type": "coal_steam", "gen_twh": 5.8, "emissions_mt": 5.80, "status": "operating"},
+          {"name": "Homer City", "orispl": 1563, "fuel_type": "coal_steam", "gen_twh": 4.5, "emissions_mt": 4.50, "status": "operating"},
+          {"name": "Eddystone", "orispl": 1564, "fuel_type": "gas_ccgt", "gen_twh": 3.5, "emissions_mt": 1.52, "status": "operating"},
+          {"name": "Cromby", "orispl": 1565, "fuel_type": "gas_ccgt", "gen_twh": 2.1, "emissions_mt": 0.91, "status": "operating"},
+          {"name": "New Plant A", "orispl": 99901, "fuel_type": "gas_ccgt", "gen_twh": 0, "emissions_mt": 0, "status": "not_built"},
+          {"name": "Other Fleet", "orispl": 99999, "fuel_type": "gas_ccgt", "gen_twh": 18.5, "emissions_mt": 8.05, "status": "operating"}
+        ],
+        "2030": [
+          {"name": "Brandon Shores", "orispl": 1553, "fuel_type": "gas_ccgt", "gen_twh": 3.8, "emissions_mt": 1.65, "status": "operating"},
+          {"name": "Calvert Cliffs", "orispl": 1554, "fuel_type": "nuclear", "gen_twh": 14.8, "emissions_mt": 0.0, "status": "operating"},
+          {"name": "Crane", "orispl": 1555, "fuel_type": "gas_ccgt", "gen_twh": 3.4, "emissions_mt": 1.48, "status": "operating"},
+          {"name": "Wagner", "orispl": 1556, "fuel_type": "gas_ccgt", "gen_twh": 2.6, "emissions_mt": 1.13, "status": "operating"},
+          {"name": "Perryman", "orispl": 1557, "fuel_type": "gas_ct", "gen_twh": 0.7, "emissions_mt": 0.46, "status": "operating"},
+          {"name": "Riverside", "orispl": 1558, "fuel_type": "gas_ccgt", "gen_twh": 2.8, "emissions_mt": 1.22, "status": "operating"},
+          {"name": "Gould Street", "orispl": 1559, "fuel_type": "gas_ct", "gen_twh": 0.3, "emissions_mt": 0.20, "status": "operating"},
+          {"name": "Handsome Lake", "orispl": 1560, "fuel_type": "gas_ccgt", "gen_twh": 4.7, "emissions_mt": 2.04, "status": "operating"},
+          {"name": "Keystone", "orispl": 1561, "fuel_type": "coal_steam", "gen_twh": 4.8, "emissions_mt": 4.80, "status": "operating"},
+          {"name": "Conemaugh", "orispl": 1562, "fuel_type": "coal_steam", "gen_twh": 4.5, "emissions_mt": 4.50, "status": "operating"},
+          {"name": "Homer City", "orispl": 1563, "fuel_type": "coal_steam", "gen_twh": 3.5, "emissions_mt": 3.50, "status": "operating"},
+          {"name": "Eddystone", "orispl": 1564, "fuel_type": "gas_ccgt", "gen_twh": 3.2, "emissions_mt": 1.39, "status": "operating"},
+          {"name": "Cromby", "orispl": 1565, "fuel_type": "gas_ccgt", "gen_twh": 1.9, "emissions_mt": 0.83, "status": "operating"},
+          {"name": "New Plant A", "orispl": 99901, "fuel_type": "gas_ccgt", "gen_twh": 0, "emissions_mt": 0, "status": "not_built"},
+          {"name": "Other Fleet", "orispl": 99999, "fuel_type": "gas_ccgt", "gen_twh": 16.8, "emissions_mt": 7.30, "status": "operating"}
+        ],
+        "2035": [
+          {"name": "Brandon Shores", "orispl": 1553, "fuel_type": "gas_ccgt", "gen_twh": 3.5, "emissions_mt": 1.52, "status": "operating"},
+          {"name": "Crane", "orispl": 1555, "fuel_type": "gas_ccgt", "gen_twh": 3.1, "emissions_mt": 1.35, "status": "operating"},
+          {"name": "Keystone", "orispl": 1561, "fuel_type": "coal_steam", "gen_twh": 3.8, "emissions_mt": 3.80, "status": "operating"},
+          {"name": "Conemaugh", "orispl": 1562, "fuel_type": "coal_steam", "gen_twh": 3.5, "emissions_mt": 3.50, "status": "operating"},
+          {"name": "Handsome Lake", "orispl": 1560, "fuel_type": "gas_ccgt", "gen_twh": 4.3, "emissions_mt": 1.87, "status": "operating"},
+          {"name": "Other Fleet", "orispl": 99999, "fuel_type": "gas_ccgt", "gen_twh": 15.0, "emissions_mt": 6.52, "status": "operating"}
+        ],
+        "2040": [
+          {"name": "Brandon Shores", "orispl": 1553, "fuel_type": "gas_ccgt", "gen_twh": 3.2, "emissions_mt": 1.39, "status": "operating"},
+          {"name": "Crane", "orispl": 1555, "fuel_type": "gas_ccgt", "gen_twh": 2.8, "emissions_mt": 1.22, "status": "operating"},
+          {"name": "Keystone", "orispl": 1561, "fuel_type": "coal_steam", "gen_twh": 2.5, "emissions_mt": 2.50, "status": "operating"},
+          {"name": "Handsome Lake", "orispl": 1560, "fuel_type": "gas_ccgt", "gen_twh": 3.9, "emissions_mt": 1.70, "status": "operating"},
+          {"name": "Other Fleet", "orispl": 99999, "fuel_type": "gas_ccgt", "gen_twh": 13.5, "emissions_mt": 5.87, "status": "operating"}
+        ],
+        "2045": [
+          {"name": "Brandon Shores", "orispl": 1553, "fuel_type": "gas_ccgt", "gen_twh": 2.9, "emissions_mt": 1.26, "status": "operating"},
+          {"name": "Crane", "orispl": 1555, "fuel_type": "gas_ccgt", "gen_twh": 2.5, "emissions_mt": 1.09, "status": "operating"},
+          {"name": "Handsome Lake", "orispl": 1560, "fuel_type": "gas_ccgt", "gen_twh": 3.5, "emissions_mt": 1.52, "status": "operating"},
+          {"name": "Other Fleet", "orispl": 99999, "fuel_type": "gas_ccgt", "gen_twh": 12.0, "emissions_mt": 5.22, "status": "operating"}
+        ],
+        "2050": [
+          {"name": "Brandon Shores", "orispl": 1553, "fuel_type": "gas_ccgt", "gen_twh": 2.5, "emissions_mt": 1.09, "status": "operating"},
+          {"name": "Crane", "orispl": 1555, "fuel_type": "gas_ccgt", "gen_twh": 2.2, "emissions_mt": 0.96, "status": "operating"},
+          {"name": "Handsome Lake", "orispl": 1560, "fuel_type": "gas_ccgt", "gen_twh": 3.1, "emissions_mt": 1.35, "status": "operating"},
+          {"name": "Other Fleet", "orispl": 99999, "fuel_type": "gas_ccgt", "gen_twh": 10.5, "emissions_mt": 4.57, "status": "operating"}
+        ]
+      },
+      "generation_by_fuel": {
+        "2023": {"coal_steam": 16.4, "gas_ccgt": 40.3, "gas_ct": 1.2, "oil_ct": 0.1, "nuclear": 14.8, "ccs_ccgt": 0.0},
+        "2025": {"coal_steam": 14.8, "gas_ccgt": 39.5, "gas_ct": 1.1, "oil_ct": 0.1, "nuclear": 14.8, "ccs_ccgt": 0.0},
+        "2030": {"coal_steam": 12.8, "gas_ccgt": 37.2, "gas_ct": 1.0, "oil_ct": 0.05, "nuclear": 14.8, "ccs_ccgt": 0.0},
+        "2035": {"coal_steam": 10.5, "gas_ccgt": 34.8, "gas_ct": 0.8, "oil_ct": 0.0, "nuclear": 14.8, "ccs_ccgt": 0.0},
+        "2040": {"coal_steam": 7.5, "gas_ccgt": 32.0, "gas_ct": 0.6, "oil_ct": 0.0, "nuclear": 14.8, "ccs_ccgt": 0.0},
+        "2045": {"coal_steam": 4.5, "gas_ccgt": 29.5, "gas_ct": 0.4, "oil_ct": 0.0, "nuclear": 14.8, "ccs_ccgt": 0.0},
+        "2050": {"coal_steam": 2.0, "gas_ccgt": 26.8, "gas_ct": 0.2, "oil_ct": 0.0, "nuclear": 14.8, "ccs_ccgt": 0.0}
+      },
+      "emissions_by_fuel": {
+        "2023": {"coal_steam": 16.4, "gas_ccgt": 17.52, "gas_ct": 0.78, "oil_ct": 0.08},
+        "2025": {"coal_steam": 14.8, "gas_ccgt": 17.17, "gas_ct": 0.72, "oil_ct": 0.08},
+        "2030": {"coal_steam": 12.8, "gas_ccgt": 16.17, "gas_ct": 0.65, "oil_ct": 0.04},
+        "2035": {"coal_steam": 10.5, "gas_ccgt": 15.13, "gas_ct": 0.52, "oil_ct": 0.0},
+        "2040": {"coal_steam": 7.5, "gas_ccgt": 13.91, "gas_ct": 0.39, "oil_ct": 0.0},
+        "2045": {"coal_steam": 4.5, "gas_ccgt": 12.83, "gas_ct": 0.26, "oil_ct": 0.0},
+        "2050": {"coal_steam": 2.0, "gas_ccgt": 11.65, "gas_ct": 0.13, "oil_ct": 0.0}
+      }
+    },
+    "ccs_only": {
+      "description": "CCS retrofit on top 5 CCGT plants (95% capture)",
+      "color": "#2372B9",
+      "envelope": {
+        "2023": {"p10": 52.1, "p50": 55.3, "p90": 58.7},
+        "2025": {"p10": 50.0, "p50": 53.2, "p90": 56.5},
+        "2030": {"p10": 35.5, "p50": 38.8, "p90": 42.5},
+        "2035": {"p10": 28.4, "p50": 33.1, "p90": 39.2},
+        "2040": {"p10": 24.0, "p50": 29.5, "p90": 35.8},
+        "2045": {"p10": 20.5, "p50": 26.2, "p90": 32.5},
+        "2050": {"p10": 17.0, "p50": 23.0, "p90": 29.5}
+      },
+      "plant_detail": {
+        "2030": [
+          {"name": "Brandon Shores", "orispl": 1553, "fuel_type": "gas_ccgt", "gen_twh": 3.8, "emissions_mt": 0.25, "status": "ccs_retrofit"},
+          {"name": "Crane", "orispl": 1555, "fuel_type": "gas_ccgt", "gen_twh": 3.4, "emissions_mt": 0.22, "status": "ccs_retrofit"},
+          {"name": "Handsome Lake", "orispl": 1560, "fuel_type": "gas_ccgt", "gen_twh": 4.7, "emissions_mt": 0.31, "status": "ccs_retrofit"},
+          {"name": "Eddystone", "orispl": 1564, "fuel_type": "gas_ccgt", "gen_twh": 3.2, "emissions_mt": 0.21, "status": "ccs_retrofit"},
+          {"name": "Riverside", "orispl": 1558, "fuel_type": "gas_ccgt", "gen_twh": 2.8, "emissions_mt": 0.18, "status": "ccs_retrofit"},
+          {"name": "Keystone", "orispl": 1561, "fuel_type": "coal_steam", "gen_twh": 4.8, "emissions_mt": 4.80, "status": "operating"},
+          {"name": "Conemaugh", "orispl": 1562, "fuel_type": "coal_steam", "gen_twh": 4.5, "emissions_mt": 4.50, "status": "operating"},
+          {"name": "Homer City", "orispl": 1563, "fuel_type": "coal_steam", "gen_twh": 3.5, "emissions_mt": 3.50, "status": "operating"},
+          {"name": "Other Fleet", "orispl": 99999, "fuel_type": "gas_ccgt", "gen_twh": 16.8, "emissions_mt": 7.30, "status": "operating"}
+        ],
+        "2035": [
+          {"name": "Brandon Shores", "orispl": 1553, "fuel_type": "gas_ccgt", "gen_twh": 3.5, "emissions_mt": 0.11, "status": "ccs_retrofit"},
+          {"name": "Crane", "orispl": 1555, "fuel_type": "gas_ccgt", "gen_twh": 3.1, "emissions_mt": 0.10, "status": "ccs_retrofit"},
+          {"name": "Handsome Lake", "orispl": 1560, "fuel_type": "gas_ccgt", "gen_twh": 4.3, "emissions_mt": 0.14, "status": "ccs_retrofit"},
+          {"name": "Keystone", "orispl": 1561, "fuel_type": "coal_steam", "gen_twh": 3.8, "emissions_mt": 3.80, "status": "operating"},
+          {"name": "Conemaugh", "orispl": 1562, "fuel_type": "coal_steam", "gen_twh": 3.5, "emissions_mt": 3.50, "status": "operating"},
+          {"name": "Other Fleet", "orispl": 99999, "fuel_type": "gas_ccgt", "gen_twh": 15.0, "emissions_mt": 6.52, "status": "operating"}
+        ]
+      },
+      "generation_by_fuel": {
+        "2023": {"coal_steam": 16.4, "gas_ccgt": 40.3, "gas_ct": 1.2, "oil_ct": 0.1, "nuclear": 14.8, "ccs_ccgt": 0.0},
+        "2025": {"coal_steam": 14.8, "gas_ccgt": 30.5, "gas_ct": 1.1, "oil_ct": 0.1, "nuclear": 14.8, "ccs_ccgt": 9.0},
+        "2030": {"coal_steam": 12.8, "gas_ccgt": 19.4, "gas_ct": 1.0, "oil_ct": 0.05, "nuclear": 14.8, "ccs_ccgt": 18.5},
+        "2035": {"coal_steam": 10.5, "gas_ccgt": 17.0, "gas_ct": 0.8, "oil_ct": 0.0, "nuclear": 14.8, "ccs_ccgt": 18.5},
+        "2040": {"coal_steam": 7.5, "gas_ccgt": 14.5, "gas_ct": 0.6, "oil_ct": 0.0, "nuclear": 14.8, "ccs_ccgt": 18.5},
+        "2045": {"coal_steam": 4.5, "gas_ccgt": 12.0, "gas_ct": 0.4, "oil_ct": 0.0, "nuclear": 14.8, "ccs_ccgt": 18.5},
+        "2050": {"coal_steam": 2.0, "gas_ccgt": 9.5, "gas_ct": 0.2, "oil_ct": 0.0, "nuclear": 14.8, "ccs_ccgt": 18.0}
+      },
+      "emissions_by_fuel": {
+        "2023": {"coal_steam": 16.4, "gas_ccgt": 17.52, "gas_ct": 0.78, "oil_ct": 0.08},
+        "2025": {"coal_steam": 14.8, "gas_ccgt": 13.27, "gas_ct": 0.72, "oil_ct": 0.08},
+        "2030": {"coal_steam": 12.8, "gas_ccgt": 8.43, "gas_ct": 0.65, "oil_ct": 0.04},
+        "2035": {"coal_steam": 10.5, "gas_ccgt": 7.39, "gas_ct": 0.52, "oil_ct": 0.0},
+        "2040": {"coal_steam": 7.5, "gas_ccgt": 6.30, "gas_ct": 0.39, "oil_ct": 0.0},
+        "2045": {"coal_steam": 4.5, "gas_ccgt": 5.22, "gas_ct": 0.26, "oil_ct": 0.0},
+        "2050": {"coal_steam": 2.0, "gas_ccgt": 4.13, "gas_ct": 0.13, "oil_ct": 0.0}
+      }
+    },
+    "ccs_plus_new_gas": {
+      "description": "CCS on existing CCGT fleet + 1,200 MW new CCGT in PJM",
+      "color": "#F47B27",
+      "envelope": {
+        "2023": {"p10": 52.1, "p50": 55.3, "p90": 58.7},
+        "2025": {"p10": 51.5, "p50": 54.8, "p90": 58.2},
+        "2030": {"p10": 38.2, "p50": 41.5, "p90": 45.3},
+        "2035": {"p10": 30.1, "p50": 35.8, "p90": 42.0},
+        "2040": {"p10": 26.5, "p50": 32.2, "p90": 38.5},
+        "2045": {"p10": 23.0, "p50": 29.0, "p90": 35.5},
+        "2050": {"p10": 20.0, "p50": 26.0, "p90": 32.5}
+      },
+      "plant_detail": {
+        "2030": [
+          {"name": "Brandon Shores", "orispl": 1553, "fuel_type": "gas_ccgt", "gen_twh": 3.8, "emissions_mt": 0.25, "status": "ccs_retrofit"},
+          {"name": "Crane", "orispl": 1555, "fuel_type": "gas_ccgt", "gen_twh": 3.4, "emissions_mt": 0.22, "status": "ccs_retrofit"},
+          {"name": "Handsome Lake", "orispl": 1560, "fuel_type": "gas_ccgt", "gen_twh": 4.7, "emissions_mt": 0.31, "status": "ccs_retrofit"},
+          {"name": "Keystone", "orispl": 1561, "fuel_type": "coal_steam", "gen_twh": 4.8, "emissions_mt": 4.80, "status": "operating"},
+          {"name": "Conemaugh", "orispl": 1562, "fuel_type": "coal_steam", "gen_twh": 4.5, "emissions_mt": 4.50, "status": "operating"},
+          {"name": "Homer City", "orispl": 1563, "fuel_type": "coal_steam", "gen_twh": 3.5, "emissions_mt": 3.50, "status": "operating"},
+          {"name": "New PJM CCGT 1", "orispl": 99901, "fuel_type": "gas_ccgt", "gen_twh": 4.2, "emissions_mt": 1.72, "status": "operating"},
+          {"name": "New PJM CCGT 2", "orispl": 99902, "fuel_type": "gas_ccgt", "gen_twh": 4.2, "emissions_mt": 1.72, "status": "operating"},
+          {"name": "Other Fleet", "orispl": 99999, "fuel_type": "gas_ccgt", "gen_twh": 16.8, "emissions_mt": 7.30, "status": "operating"}
+        ]
+      },
+      "generation_by_fuel": {
+        "2023": {"coal_steam": 16.4, "gas_ccgt": 40.3, "gas_ct": 1.2, "oil_ct": 0.1, "nuclear": 14.8, "ccs_ccgt": 0.0},
+        "2025": {"coal_steam": 14.8, "gas_ccgt": 38.5, "gas_ct": 1.1, "oil_ct": 0.1, "nuclear": 14.8, "ccs_ccgt": 2.0},
+        "2030": {"coal_steam": 12.8, "gas_ccgt": 27.8, "gas_ct": 1.0, "oil_ct": 0.05, "nuclear": 14.8, "ccs_ccgt": 12.5},
+        "2035": {"coal_steam": 10.5, "gas_ccgt": 25.0, "gas_ct": 0.8, "oil_ct": 0.0, "nuclear": 14.8, "ccs_ccgt": 14.5},
+        "2040": {"coal_steam": 7.5, "gas_ccgt": 22.5, "gas_ct": 0.6, "oil_ct": 0.0, "nuclear": 14.8, "ccs_ccgt": 14.5},
+        "2045": {"coal_steam": 4.5, "gas_ccgt": 20.0, "gas_ct": 0.4, "oil_ct": 0.0, "nuclear": 14.8, "ccs_ccgt": 14.5},
+        "2050": {"coal_steam": 2.0, "gas_ccgt": 17.5, "gas_ct": 0.2, "oil_ct": 0.0, "nuclear": 14.8, "ccs_ccgt": 14.0}
+      },
+      "emissions_by_fuel": {
+        "2023": {"coal_steam": 16.4, "gas_ccgt": 17.52, "gas_ct": 0.78, "oil_ct": 0.08},
+        "2025": {"coal_steam": 14.8, "gas_ccgt": 16.74, "gas_ct": 0.72, "oil_ct": 0.08},
+        "2030": {"coal_steam": 12.8, "gas_ccgt": 12.09, "gas_ct": 0.65, "oil_ct": 0.04},
+        "2035": {"coal_steam": 10.5, "gas_ccgt": 10.87, "gas_ct": 0.52, "oil_ct": 0.0},
+        "2040": {"coal_steam": 7.5, "gas_ccgt": 9.78, "gas_ct": 0.39, "oil_ct": 0.0},
+        "2045": {"coal_steam": 4.5, "gas_ccgt": 8.70, "gas_ct": 0.26, "oil_ct": 0.0},
+        "2050": {"coal_steam": 2.0, "gas_ccgt": 7.61, "gas_ct": 0.13, "oil_ct": 0.0}
+      }
+    },
+    "retire_coal_ccs_gas": {
+      "description": "Retire all coal by 2030, CCS retrofit on gas fleet by 2035",
+      "color": "#6BA543",
+      "envelope": {
+        "2023": {"p10": 52.1, "p50": 55.3, "p90": 58.7},
+        "2025": {"p10": 46.0, "p50": 49.2, "p90": 52.5},
+        "2030": {"p10": 22.5, "p50": 26.8, "p90": 31.5},
+        "2035": {"p10": 10.2, "p50": 14.5, "p90": 19.8},
+        "2040": {"p10": 6.5, "p50": 10.2, "p90": 15.0},
+        "2045": {"p10": 4.0, "p50": 7.5, "p90": 12.0},
+        "2050": {"p10": 2.5, "p50": 5.2, "p90": 9.0}
+      },
+      "plant_detail": {
+        "2030": [
+          {"name": "Brandon Shores", "orispl": 1553, "fuel_type": "gas_ccgt", "gen_twh": 3.8, "emissions_mt": 0.25, "status": "ccs_retrofit"},
+          {"name": "Crane", "orispl": 1555, "fuel_type": "gas_ccgt", "gen_twh": 3.4, "emissions_mt": 0.22, "status": "ccs_retrofit"},
+          {"name": "Handsome Lake", "orispl": 1560, "fuel_type": "gas_ccgt", "gen_twh": 4.7, "emissions_mt": 0.31, "status": "ccs_retrofit"},
+          {"name": "Eddystone", "orispl": 1564, "fuel_type": "gas_ccgt", "gen_twh": 3.2, "emissions_mt": 0.21, "status": "ccs_retrofit"},
+          {"name": "Riverside", "orispl": 1558, "fuel_type": "gas_ccgt", "gen_twh": 2.8, "emissions_mt": 0.18, "status": "ccs_retrofit"},
+          {"name": "Keystone", "orispl": 1561, "fuel_type": "coal_steam", "gen_twh": 0.0, "emissions_mt": 0.0, "status": "retired"},
+          {"name": "Conemaugh", "orispl": 1562, "fuel_type": "coal_steam", "gen_twh": 0.0, "emissions_mt": 0.0, "status": "retired"},
+          {"name": "Homer City", "orispl": 1563, "fuel_type": "coal_steam", "gen_twh": 0.0, "emissions_mt": 0.0, "status": "retired"},
+          {"name": "Other Fleet", "orispl": 99999, "fuel_type": "gas_ccgt", "gen_twh": 16.8, "emissions_mt": 7.30, "status": "operating"}
+        ]
+      },
+      "generation_by_fuel": {
+        "2023": {"coal_steam": 16.4, "gas_ccgt": 40.3, "gas_ct": 1.2, "oil_ct": 0.1, "nuclear": 14.8, "ccs_ccgt": 0.0},
+        "2025": {"coal_steam": 8.0, "gas_ccgt": 35.5, "gas_ct": 1.1, "oil_ct": 0.1, "nuclear": 14.8, "ccs_ccgt": 5.0},
+        "2030": {"coal_steam": 0.0, "gas_ccgt": 19.6, "gas_ct": 1.0, "oil_ct": 0.0, "nuclear": 14.8, "ccs_ccgt": 18.5},
+        "2035": {"coal_steam": 0.0, "gas_ccgt": 5.0, "gas_ct": 0.5, "oil_ct": 0.0, "nuclear": 14.8, "ccs_ccgt": 30.5},
+        "2040": {"coal_steam": 0.0, "gas_ccgt": 3.0, "gas_ct": 0.3, "oil_ct": 0.0, "nuclear": 14.8, "ccs_ccgt": 30.5},
+        "2045": {"coal_steam": 0.0, "gas_ccgt": 2.0, "gas_ct": 0.2, "oil_ct": 0.0, "nuclear": 14.8, "ccs_ccgt": 30.0},
+        "2050": {"coal_steam": 0.0, "gas_ccgt": 1.0, "gas_ct": 0.1, "oil_ct": 0.0, "nuclear": 14.8, "ccs_ccgt": 29.5}
+      },
+      "emissions_by_fuel": {
+        "2023": {"coal_steam": 16.4, "gas_ccgt": 17.52, "gas_ct": 0.78, "oil_ct": 0.08},
+        "2025": {"coal_steam": 8.0, "gas_ccgt": 15.44, "gas_ct": 0.72, "oil_ct": 0.08},
+        "2030": {"coal_steam": 0.0, "gas_ccgt": 8.52, "gas_ct": 0.65, "oil_ct": 0.0},
+        "2035": {"coal_steam": 0.0, "gas_ccgt": 2.17, "gas_ct": 0.33, "oil_ct": 0.0},
+        "2040": {"coal_steam": 0.0, "gas_ccgt": 1.30, "gas_ct": 0.20, "oil_ct": 0.0},
+        "2045": {"coal_steam": 0.0, "gas_ccgt": 0.87, "gas_ct": 0.13, "oil_ct": 0.0},
+        "2050": {"coal_steam": 0.0, "gas_ccgt": 0.43, "gas_ct": 0.07, "oil_ct": 0.0}
+      }
+    }
+  },
+  "targets": {
+    "sbti_15": {
+      "label": "SBTi 1.5\u00b0C",
+      "trajectory": {
+        "2023": 55.3, "2025": 50.6, "2030": 40.5, "2035": 32.4, "2040": 25.9, "2045": 20.7, "2050": 16.6
+      }
+    },
+    "at_power_nz": {
+      "label": "AT Power NZ",
+      "trajectory": {
+        "2023": 55.3, "2025": 49.8, "2030": 38.0, "2035": 27.0, "2040": 16.0, "2045": 8.0, "2050": 0.0
+      }
+    }
+  },
+  "gap_analysis": {
+    "baseline": {
+      "sbti_15": {
+        "gap_mt": {"2023": 0.0, "2025": 3.4, "2030": 7.8, "2035": 13.6, "2040": 17.3, "2045": 20.1, "2050": 21.4},
+        "year_achieved": null,
+        "prob_meeting": {"2030": 0.08, "2040": 0.02, "2050": 0.01}
+      }
+    },
+    "ccs_only": {
+      "sbti_15": {
+        "gap_mt": {"2023": 0.0, "2025": 2.6, "2030": -1.7, "2035": 0.7, "2040": 3.6, "2045": 5.5, "2050": 6.4},
+        "year_achieved": null,
+        "prob_meeting": {"2030": 0.55, "2040": 0.32, "2050": 0.18}
+      }
+    },
+    "ccs_plus_new_gas": {
+      "sbti_15": {
+        "gap_mt": {"2023": 0.0, "2025": 4.2, "2030": 1.0, "2035": 3.4, "2040": 6.3, "2045": 8.3, "2050": 9.4},
+        "year_achieved": null,
+        "prob_meeting": {"2030": 0.42, "2040": 0.18, "2050": 0.08}
+      }
+    },
+    "retire_coal_ccs_gas": {
+      "sbti_15": {
+        "gap_mt": {"2023": 0.0, "2025": -1.4, "2030": -13.7, "2035": -17.9, "2040": -15.7, "2045": -13.2, "2050": -11.4},
+        "year_achieved": 2025,
+        "prob_meeting": {"2030": 0.92, "2040": 0.88, "2050": 0.82}
+      }
+    }
+  },
+  "metadata": {
+    "fleet_name": "Constellation Energy",
+    "sweep_count": 405,
+    "generated_at": "2026-03-19T12:00:00Z"
+  }
+}
