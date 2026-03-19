@@ -139,6 +139,14 @@ def load_sweep(sweep_path: str) -> pd.DataFrame:
     missing = required - set(df.columns)
     if missing:
         raise ValueError(f"Sweep parquet missing columns: {missing}")
+    # Warn if new fossil columns are absent (pre-expansion parquet)
+    new_fossil_cols = {"total_new_fossil_mw", "gas_built_gw", "fossil_built_gw"}
+    if not new_fossil_cols.issubset(df.columns):
+        import warnings
+        warnings.warn(
+            f"Sweep parquet missing new-fossil columns: {new_fossil_cols - set(df.columns)}. "
+            "Fleet dispatch will not account for grid-level new fossil builds."
+        )
     return df
 
 
@@ -301,6 +309,36 @@ def compute_fleet_emissions_fast(plants: list[dict], sweep_df: pd.DataFrame) -> 
     fleet_emissions = np.zeros((n_scenarios, n_years), dtype=np.float64)
     plant_arrays = []  # (plant_dict, gen_mwh, emis_mt, cf, status_per_year)
 
+    # -----------------------------------------------------------------------
+    # Extract grid-level new fossil build data (conservative: report only)
+    # -----------------------------------------------------------------------
+    NEW_FOSSIL_COLS = ["total_new_fossil_mw", "gas_built_gw", "fossil_built_gw"]
+    NB_FUEL_PREFIXES = [c for c in sweep_df.columns if c.startswith("nb_") and c.endswith("_mw")]
+    has_new_fossil = set(NEW_FOSSIL_COLS).issubset(sweep_df.columns)
+
+    # Build (n_scenarios, n_years) arrays for new fossil columns, aggregated across ISOs
+    grid_new_fossil: dict[str, np.ndarray] = {}
+    if has_new_fossil:
+        # We need per-ISO per-scenario per-year values; sum across fleet ISOs
+        fleet_isos = set(p["iso"] for p in active_plants)
+        for col_name in NEW_FOSSIL_COLS + NB_FUEL_PREFIXES:
+            if col_name not in sweep_df.columns:
+                continue
+            arr = np.zeros((n_scenarios, n_years), dtype=np.float64)
+            for iso in fleet_isos:
+                iso_df_nf = sweep_df[sweep_df["iso"] == iso]
+                if iso_df_nf.empty:
+                    continue
+                si_arr = iso_df_nf["scenario"].map(scenario_idx).values
+                yi_arr = iso_df_nf["year"].map(year_idx).values
+                valid_nf = ~(np.isnan(si_arr) | np.isnan(yi_arr))
+                si_nf = si_arr[valid_nf].astype(np.intp)
+                yi_nf = yi_arr[valid_nf].astype(np.intp)
+                vals = iso_df_nf[col_name].values[valid_nf]
+                vals = np.where(np.isnan(vals), 0.0, vals)
+                np.add.at(arr, (si_nf, yi_nf), vals)
+            grid_new_fossil[col_name] = arr
+
     for iso, iso_plant_list in iso_plants.items():
         iso_df = sweep_df[sweep_df["iso"] == iso]
         if iso_df.empty:
@@ -406,14 +444,27 @@ def compute_fleet_emissions_fast(plants: list[dict], sweep_df: pd.DataFrame) -> 
         col = fleet_emissions[:, yi]
         valid = col[~np.isnan(col)]
         if len(valid) == 0:
-            envelope[int(y)] = {"p10": 0.0, "p50": 0.0, "p90": 0.0, "mean": 0.0}
+            year_env = {"p10": 0.0, "p50": 0.0, "p90": 0.0, "mean": 0.0}
         else:
-            envelope[int(y)] = {
+            year_env = {
                 "p10": round(float(np.percentile(valid, 10)), 4),
                 "p50": round(float(np.percentile(valid, 50)), 4),
                 "p90": round(float(np.percentile(valid, 90)), 4),
                 "mean": round(float(np.mean(valid)), 4),
             }
+
+        # Attach grid-level new fossil build context (P50 scenario values)
+        if has_new_fossil and len(valid) > 0:
+            median_val = np.median(valid)
+            diffs_env = np.abs(col - median_val)
+            diffs_env[np.isnan(col)] = np.inf
+            p50_si_env = int(np.argmin(diffs_env))
+            nf_context = {}
+            for col_name, arr in grid_new_fossil.items():
+                nf_context[col_name] = round(float(arr[p50_si_env, yi]), 2)
+            year_env["grid_new_fossil"] = nf_context
+
+        envelope[int(y)] = year_env
 
     # -----------------------------------------------------------------------
     # Plant detail at P50 scenario
@@ -452,6 +503,26 @@ def compute_fleet_emissions_fast(plants: list[dict], sweep_df: pd.DataFrame) -> 
         for p in active_plants
     )
 
+    # -----------------------------------------------------------------------
+    # Grid-level new fossil build context (P50 scenario per year)
+    # -----------------------------------------------------------------------
+    grid_new_fossil_detail = {}
+    if has_new_fossil:
+        for yi, y in enumerate(years):
+            col = fleet_emissions[:, yi]
+            valid_mask = ~np.isnan(col)
+            if not valid_mask.any():
+                continue
+            median_val = np.median(col[valid_mask])
+            diffs_nf = np.abs(col - median_val)
+            diffs_nf[~valid_mask] = np.inf
+            p50_si_nf = int(np.argmin(diffs_nf))
+
+            nf_year = {}
+            for col_name, arr in grid_new_fossil.items():
+                nf_year[col_name] = round(float(arr[p50_si_nf, yi]), 2)
+            grid_new_fossil_detail[int(y)] = nf_year
+
     return {
         "fleet_summary": {
             "total_plants": len(active_plants),
@@ -462,6 +533,7 @@ def compute_fleet_emissions_fast(plants: list[dict], sweep_df: pd.DataFrame) -> 
         },
         "envelope": envelope,
         "plant_detail": plant_detail,
+        "grid_new_fossil": grid_new_fossil_detail,
         "_fleet_emissions": fleet_emissions,  # (n_scenarios, n_years) — stripped before JSON output
     }
 
