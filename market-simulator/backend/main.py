@@ -399,9 +399,14 @@ def _map_request_to_conditions(req: SimulationRequest) -> dict:
     # Queue cap override (GW/yr) from user
     queue_cap_override = getattr(req, 'queue_cap_override_gw', None)
 
+    # Validate and cap demand_growth: if numeric, cap at 7.5%
+    demand_growth = req.demand_growth
+    if isinstance(demand_growth, (int, float)):
+        demand_growth = min(float(demand_growth), 7.5)
+
     return {
-        "name": f"API: {req.iso} | Q={queue_cap_level} | {req.demand_growth} demand | carbon=${req.carbon_price}",
-        "demand_growth": req.demand_growth,
+        "name": f"API: {req.iso} | Q={queue_cap_level} | {demand_growth} demand | carbon=${req.carbon_price}",
+        "demand_growth": demand_growth,
         "lcoe_level": lcoe_level,
         "learning_speed": learning_speed,
         "queue_cap_level": queue_cap_level,
