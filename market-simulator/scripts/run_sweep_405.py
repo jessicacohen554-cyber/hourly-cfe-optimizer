@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Run the full 405-scenario parametric sweep and save as JSON + parquet.
+"""Run the full parametric sweep and save as JSON + parquet.
+
+The sweep covers 3 demand × 5 price × 3 PPA × 3 gas friction × 3 queue
+× 3 new-build fossil cost = 1,215 scenarios. Each scenario is simulated
+across all ISOs and years.
 
 Usage:
     cd market-simulator/scripts
@@ -38,7 +42,8 @@ SCALAR_FIELDS = [
     'cost_per_mwh', 'revenue_per_mwh',
     'energy_rev_mwh', 'capacity_rev_mwh', 'rec_rev_mwh',
     'avg_lmp', 'lmp_p90',
-    'gas_built_gw', 'total_gas_gw',
+    'gas_built_gw', 'fossil_built_gw', 'total_gas_gw',
+    'total_new_fossil_mw',
     'market_stop', 'nuclear_retired',
     'total_economic_retirement_mw',
     'rps_mandated_pct', 'rps_eligible_pct', 'rps_shortfall_pct',
@@ -72,6 +77,11 @@ def flatten_year_result(scenario_id, yr):
     econ_ret = yr.get('economic_retirements_mw', {}) or {}
     for fuel, mw in econ_ret.items():
         row[f'ret_{fuel}_mw'] = mw
+
+    # new_fossil_builds_mw → prefixed columns
+    nfb = yr.get('new_fossil_builds_mw', {}) or {}
+    for fuel, mw in nfb.items():
+        row[f'nb_{fuel}_mw'] = mw
 
     # emissions_by_fuel → prefixed columns
     ebf = yr.get('emissions_by_fuel', {}) or {}
