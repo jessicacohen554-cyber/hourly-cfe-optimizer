@@ -3,6 +3,7 @@
 > **Created**: 2026-03-19
 > **Scope**: Audit of downstream impacts after `apply_economic_new_build()` was added to the market-simulator dispatch engine
 > **Status**: Audit complete — implementation prompts ready for execution
+> **Last Updated**: 2026-03-19 — Updated to reflect fleet config sidebar + client-side dispatch engine (commit `66d5ca7`)
 
 ---
 
@@ -58,10 +59,12 @@ The new-build fossil capability touches dispatch ordering, LMP formation, and sc
 
 - **`fleet_dispatch.py`** — Does not ingest new fossil columns; fleet emissions ignore grid-level new fossil builds
 - **`run_sweep_405.py`** — Filename and docstrings say "405" but script runs 1,215 scenarios
-- **`constellation_scenarios.json`** — Fleet-level `add_plant` actions don't interact with grid-level `apply_economic_new_build()`
-- **`Fleet_Scenarios_Viz_Design.md`** — Assumes 405 scenarios; no new fossil dimension in controls
+- **`constellation_scenarios.json`** — Fleet-level `add_plant` actions don't interact with grid-level `apply_economic_new_build()`. Now more urgent: the fleet config sidebar enables interactive plant additions, compounding the double-counting risk.
 - **`results/sweep_405/`** — Results are pre-ORDC fix AND pre-new-fossil (doubly stale)
 - **`backend/main.py`** — Already correctly points to `results/sweep_1215/` (no change needed)
+- **`frontend/js/fleet-dispatch-engine.js`** *(NEW)* — Client-side JS port of `fleet_dispatch.py`. Matches Python constants exactly (heat rates, emission factors, CCS ramp). Validated: baseline 2030 P50 = 32.81 Mt vs server 32.8062 Mt. However, does **not** ingest `nb_*` or `total_new_fossil_mw` columns — same gap as Python version.
+- **`frontend/js/fleet-sidebar.js`** *(NEW)* — Fleet config sidebar for interactive plant modifications (Operating/Retired/CCS Retrofit), capacity editing, new plant addition, and instant browser-side dispatch recalculation via `FleetDispatchEngine`. localStorage persistence for custom scenarios.
+- **`frontend/js/fleet-scenarios.js`** *(MODIFIED)* — Exposed `FLEET_SCENARIOS_API.addScenario()` for sidebar integration; all 4 charts (fan, waterfall, gen mix, fuel emissions) update instantly with custom fleet configurations.
 
 ---
 
@@ -174,22 +177,43 @@ File-by-file assessment of new-build fossil integration status across the codeba
 
 These mechanisms are unaware of each other. In a scenario where both trigger, the combined new gas capacity could be unrealistically high (double-counting). Conversely, fleet-level additions that overlap with grid-level builds don't net out.
 
+> **Update (2026-03-19):** The fleet config sidebar (`fleet-sidebar.js`) now enables **interactive** plant additions, making this double-counting risk more visible and immediate. Users can add gas plants via the sidebar while the sweep already includes grid-level new builds from `apply_economic_new_build()`. Reconciliation (Prompt 3) is now more urgent.
+
 **Fix needed**: Define interaction rules — see Prompt 3.
 
 ---
 
-#### `docs/Fleet_Scenarios_Viz_Design.md` — :warning: Design Updates Needed
+#### ~~`docs/Fleet_Scenarios_Viz_Design.md`~~ — Deleted (Implemented)
+
+> **Status update (2026-03-19):** This design doc was fully implemented as the live `fleet-scenarios.html` page with sidebar and then deleted (commit `eff7c4c`). No longer a downstream artifact. The remaining gap — grid-level `new_fossil_cost_level` L/M/H toggle in the controls strip — is tracked below in Prompt 7's status note.
+
+---
+
+#### `frontend/js/fleet-dispatch-engine.js` — :warning: Partially Compatible (NEW)
 
 | Aspect | Status | Detail |
 |--------|--------|--------|
-| Page layout | :white_check_mark: | Unaffected |
-| Chart types | :white_check_mark: | Emissions fan, waterfall, generation mix — still valid |
-| **Controls strip** | :warning: | No `new_fossil_cost_level` toggle — missing the 6th dimension |
-| **Scenario count** | :warning: | Implicitly assumes 405 scenarios (references `fleet_scenario_results.json` from pre-expansion) |
-| **Secondary charts** | :warning: | No new-fossil build waterfall or new-fossil generation in mix charts |
-| **Emission accounting** | :warning: | Doesn't account for new-build fossil generation in emissions by fuel chart |
+| Dispatch logic | :white_check_mark: | Correct JS port of `fleet_dispatch.py` — efficiency ratios, CCS ramp schedule (0/2/5/8yr), economic retirement, year-aware masks all match Python |
+| Constants | :white_check_mark: | Heat rates (CCGT 7.0, CT 10.5, Coal 10.0, Oil 10.5), emission factors, CO₂ rates match Python exactly |
+| Economic retirement | :white_check_mark: | `margin < 0 → CF = 0` prevents negative-margin dispatch (mitigates Risk R4 client-side) |
+| Validation | :white_check_mark: | Baseline 2030 P50 = 32.81 Mt matches server-computed 32.8062 Mt |
+| **New fossil columns** | :x: | Does not read `nb_*`, `total_new_fossil_mw`, `gas_built_gw`, `fossil_built_gw` from sweep dispatch data |
 
-**Fix needed**: Update design doc to include new fossil dimension in controls, charts, and emission accounting.
+**Impact**: Same gap as Python `fleet_dispatch.py` — grid-level new fossil builds are invisible to the client-side engine. When Prompt 2 is implemented for Python, the sweep dispatch data JSON extraction must also be updated to include new fossil columns so the JS engine can consume them.
+
+---
+
+#### `frontend/js/fleet-sidebar.js` — :warning: Partially Compatible (NEW)
+
+| Aspect | Status | Detail |
+|--------|--------|--------|
+| Plant modifications | :white_check_mark: | Operating → Retired → CCS Retrofit status changes, capacity editing, year_online inputs |
+| Add plant | :white_check_mark: | New gas/coal plants with fuel type, capacity, heat rate, year online |
+| Client-side dispatch | :white_check_mark: | Calls `FleetDispatchEngine.computeFleetDispatch()` and injects results via `FLEET_SCENARIOS_API.addScenario()` — all 4 charts update instantly |
+| localStorage | :white_check_mark: | Save/load/delete custom fleet scenarios |
+| **Grid-level new fossil awareness** | :x: | User-added plants via sidebar are independent of grid-level `apply_economic_new_build()` results — same double-counting risk as `constellation_scenarios.json` (see Prompt 3) |
+
+**Impact**: The sidebar enables interactive fleet-level plant additions while the sweep already includes grid-level new fossil builds. This makes the reconciliation rule (Prompt 3) more urgent — users can now trigger the overlap interactively without any warning.
 
 ---
 
@@ -254,6 +278,8 @@ Ordered, self-contained prompts for integrating new-build fossil across the code
 ---
 
 ### Prompt 2: Fleet Dispatch — Ingest New Fossil Build Data
+
+> **Status (2026-03-19): Not addressed.** Python `fleet_dispatch.py` was not modified. The JS port (`fleet-dispatch-engine.js`) also does not ingest new fossil columns — it reads `{fuel}_cf` and `{fuel}_margin` from pre-extracted sweep dispatch JSON, not raw parquet. This prompt now applies to **both** the Python script AND the JSON extraction pipeline (`export_sweep_dispatch_data.py` / `/api/sweep-dispatch-data`) that feeds the JS engine.
 
 **Goal**: Update `fleet_dispatch.py` to read and use new-build fossil columns from the sweep parquet, so fleet emissions correctly account for grid-level new fossil builds.
 
@@ -458,6 +484,8 @@ Ordered, self-contained prompts for integrating new-build fossil across the code
 
 ### Prompt 6: Re-run Fleet Dispatch Against Fresh Sweep
 
+> **Status (2026-03-19): Not addressed** (blocked on Prompts 2 + 5). After this re-run completes, the sweep dispatch data JSON (`sweep_dispatch_data.json`) served to the browser must also be regenerated via `export_sweep_dispatch_data.py` to include new fossil columns, so the client-side fleet sidebar benefits from the updated data.
+
 **Goal**: Regenerate fleet results using the updated `fleet_dispatch.py` (from Prompt 2) against the fresh 1,215-scenario sweep (from Prompt 5).
 
 **Prerequisites**: Prompts 2 and 5 must be complete.
@@ -498,59 +526,19 @@ Ordered, self-contained prompts for integrating new-build fossil across the code
 
 ### Prompt 7: Fleet Scenarios Viz Design Update
 
-**Goal**: Update `Fleet_Scenarios_Viz_Design.md` to reflect the 1,215-scenario sweep and new fossil dimension.
+> **Status (2026-03-19): Completed / superseded.** `Fleet_Scenarios_Viz_Design.md` was fully implemented as the live `fleet-scenarios.html` page with fleet config sidebar (commit `66d5ca7`) and then deleted (commit `eff7c4c`). The sidebar provides fleet-level plant configuration (Operating/Retired/CCS Retrofit + Add Plant) with instant browser-side recalculation across all 4 charts.
+>
+> **Remaining gap**: The grid-level `new_fossil_cost_level` L/M/H toggle is not yet in the fleet scenarios controls strip. This should be added as a filter on the sweep's 6th dimension — separate from the fleet-level sidebar plant additions.
 
-**File to modify**: `docs/Fleet_Scenarios_Viz_Design.md`
+**Original goal** *(superseded)*: Update `Fleet_Scenarios_Viz_Design.md` to reflect the 1,215-scenario sweep and new fossil dimension.
 
-**Changes**:
-
-1. **Controls strip** — add new fossil cost toggle:
-   ```
-   ┌─ Controls Strip (.glass-card) ───────────────────────┐
-   │ Scenario Checkboxes │ Target │ Year │ New Fossil Cost │
-   │                     │ Selector│Slider│   (L / M / H)  │
-   └──────────────────────────────────────────────────────┘
-   ```
-   - Toggle label: "New Fossil Cost Assumption"
-   - Options: Low / Medium / High
-   - Default: Medium
-   - Tooltip: "Controls the assumed CAPEX for new-build gas and coal plants. Low = aggressive cost learning, High = conservative/regulatory friction."
-
-2. **Scenario count references** — update from 405 to 1,215 throughout:
-   - Data source description
-   - Any references to sweep_405 paths
-   - Scenario count in chart descriptions
-
-3. **Secondary charts** — add new fossil build waterfall:
-   ```
-   ┌─ Secondary Charts (2-col → 3-chart grid) ─────────────┐
-   │ ┌────────────────┐ ┌──────────────────┐                │
-   │ │ Plant Waterfall │ │ Generation Mix   │                │
-   │ └────────────────┘ └──────────────────┘                │
-   │ ┌──────────────────────────────────────┐                │
-   │ │ Emissions by Fuel (stacked area)     │                │
-   │ └──────────────────────────────────────┘                │
-   │ ┌──────────────────────────────────────┐                │
-   │ │ NEW: New Fossil Builds (grouped bar) │                │
-   │ │ X: Year  Y: MW built                 │                │
-   │ │ Groups: CCGT / CT / Coal             │                │
-   │ │ Shows grid + fleet new builds        │                │
-   │ └──────────────────────────────────────┘                │
-   └────────────────────────────────────────────────────────┘
-   ```
-
-4. **Emission accounting** — update to include new-build fossil generation:
-   - Emissions by fuel chart should include a "New-Build Gas" category separate from existing fleet gas
-   - Generation mix should show new-build fossil as a distinct stack segment
-   - Tooltip should clarify: "Grid-level new fossil (market-driven) + Fleet-level new fossil (company-specific)"
-
-5. **Legend updates**:
-   - Add color entries for new-build CCGT, CT, coal (use lighter shades of existing fossil colors)
-   - Add interaction rule note: "New fossil builds shown are additive: grid-level (market-driven) + fleet-level (company-specific)"
+**Revised goal**: Add `new_fossil_cost_level` L/M/H toggle to the fleet-scenarios page controls strip, filtering the sweep data served to charts. The sidebar and all 4 charts are already implemented.
 
 ---
 
 ### Prompt 8: Constellation Scenarios Update
+
+> **Status (2026-03-19): Not addressed.** JSON not modified. Now more urgent — the fleet config sidebar enables interactive plant additions that compound the double-counting risk without any reconciliation rule or user warning.
 
 **Goal**: Update `constellation_scenarios.json` to account for the new fossil dimension and document the interaction rule.
 
@@ -590,6 +578,8 @@ Ordered, self-contained prompts for integrating new-build fossil across the code
 ---
 
 ### Prompt 9: Backend API Alignment
+
+> **Status (2026-03-19): Partially addressed.** The `/api/fleet-scenarios-config` and `/api/sweep-dispatch-data` endpoints were created to serve the fleet sidebar. The sweep dispatch data JSON (`sweep_dispatch_data.json`) is generated by `export_sweep_dispatch_data.py`. However, new fossil columns (`nb_*`, `total_new_fossil_mw`) are not included in the dispatch data JSON — the JS engine cannot see grid-level new fossil builds.
 
 **Goal**: Ensure backend API endpoints serve data from the correct `results/sweep_1215/` directory and expose new fossil columns.
 
@@ -731,13 +721,14 @@ print("All integration tests passed.")
 | R1 | Sweep runtime exceeds expectations | Medium | High (blocks all downstream) | Monitor progress, use `--isos` flag to test single ISO first before full sweep |
 | R2 | New fossil builds in every scenario (over-triggering) | Low | Medium | Check `(df['total_new_fossil_mw'] > 0).mean()` — if > 80%, new fossil thresholds may be too permissive |
 | R3 | New fossil builds in no scenario (under-triggering) | Low | Medium | Check `(df['total_new_fossil_mw'] > 0).any()` — if False, cost assumptions may be too restrictive or ORDC doesn't create enough scarcity |
-| R4 | Fleet dispatch CF adjustment causes negative margins | Medium | Low | Start conservative (flag only, no adjustment) per Prompt 2 recommendation |
+| R4 | Fleet dispatch CF adjustment causes negative margins | Medium | Low | Start conservative (flag only, no adjustment) per Prompt 2 recommendation. **Update:** Client-side economic retirement (`margin < 0 → CF = 0`) in `fleet-dispatch-engine.js` mitigates this for browser-side dispatch. Python-side risk unchanged. |
 | R5 | Constellation scenarios JSON schema break | Low | Medium | Validate JSON after edits, run fleet dispatch with `--dry-run` if available |
 | R6 | ORDC recalibration needed post-new-fossil | Medium | High (re-run sweep) | Run Prompt 4 analysis first, make targeted ORDC_PARAMS adjustments if needed, then re-sweep only if changes are material |
 | R7 | Stale sweep_405/ results accidentally consumed | Medium | High (invalid analysis) | Archive immediately (Prompt 5 step 1), grep codebase for `sweep_405` path references |
-| R8 | Dashboard JS hardcodes 405 scenario count | Low | Low | Search frontend/ for "405" string literals after sweep completes |
+| R8 | Dashboard JS hardcodes 405 scenario count | Low | Low | Search frontend/ for "405" string literals after sweep completes. **Update:** `fleet-dispatch-engine.js` is scenario-count agnostic — reads whatever arrays exist in sweep dispatch data. No "405" references found in JS engine. |
 | R9 | Git merge conflicts on fleet_dispatch.py | Low | Low | Work on feature branch, resolve conflicts before merging to main |
 | R10 | Additive interaction rule produces unrealistic combined capacity | Medium | Medium | Monitor `total_new_fossil_mw` (grid + fleet) — if combined exceeds 50% of existing capacity in any ISO, flag for review |
+| R11 | Client-side / server-side dispatch divergence | Medium | Medium | JS engine (`fleet-dispatch-engine.js`) and Python `fleet_dispatch.py` could drift apart as one is updated without the other. Keep `§4.6.1` of Model Methodology Spec as canonical reference; update both engines in lockstep. |
 
 ### Dependency Chain
 
@@ -762,4 +753,6 @@ Prompt 3 (Reconciliation) ──────────────────
                                                 (E2E Integration)
 ```
 
-Prompts 1–3 can run in parallel. Prompt 5 depends on 1–2. Prompts 4, 6, 9 depend on 5 (can run in parallel). Prompts 7–8 can run anytime. Prompt 10 is the final gate.
+Prompts 1–3 can run in parallel. Prompt 5 depends on 1–2. Prompts 4, 6, 9 depend on 5 (can run in parallel). Prompt 7 is largely complete (sidebar implemented); remaining grid-level toggle can run anytime. Prompt 8 can run anytime. Prompt 10 is the final gate.
+
+> **Note (2026-03-19):** Prompts 2 and 9 now have a JS-side component: when implementing new fossil column ingestion (Prompt 2), also update `export_sweep_dispatch_data.py` to include those columns in the browser-served JSON. When verifying API alignment (Prompt 9), also verify the `/api/sweep-dispatch-data` endpoint includes new fossil data.
