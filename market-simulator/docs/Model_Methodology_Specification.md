@@ -2,8 +2,8 @@
 
 **Constellation Energy — Commercial Strategy & Analytics**
 
-**Document Version:** 1.1
-**Model Version:** Market Simulator v1.0.0
+**Document Version:** 2.0
+**Model Version:** Market Simulator v2.0.0
 **Base Year:** 2025 (snapshot model)
 **Date:** March 2026
 **Classification:** Internal — Confidential
@@ -18,14 +18,17 @@
 4. [Model Architecture](#4-model-architecture)
    - 4.1–4.3 Core Engine, Dispatch, LMP (aggregate + plant-level stacks)
    - 4.4 Hourly Dispatch Reconstruction (LP storage co-dispatch)
-   - 4.4.1 Zonal LMP Decomposition (pipe-and-bubble, 2–5 zones/ISO)
+   - 4.4.1 Zonal LMP Decomposition (pipe-and-bubble, 2–5 zones/ISO, ORDC-integrated)
    - 4.4.2 Inter-Regional Exchange (EIA-930 import/export profiles)
-   - 4.4.3 Demand Response (price-elastic curtailment)
+   - 4.4.3 Demand Response (vectorized, ORDC-linked)
    - 4.4.4 Confidence Zones (trajectory reliability visualization)
    - 4.4.5 Trajectory Backtesting (2020–2024 validation)
+   - 4.4.6 ORDC Scarcity Pricing (reserve-based pricing model)
+   - 4.4.7 VRE Cannibalization Feedback (capture-rate model)
    - 4.5 Fleet Model (BA → ISO mapping, EIA 860)
    - 4.6 Plant-Level Dispatch Economics (status classification)
-   - 4.7–4.8 Scenario Construction, Configuration
+   - 4.7 Scenario Construction (tech-differentiated queue caps)
+   - 4.8 Configuration
 5. [Cost & Input Tables](#5-cost--input-tables)
    - 5.1–5.8 Renewable/Firm LCOE, Storage, Transmission, Fuel, Capacity, Incentives, FOAK
    - 5.9 Fossil New-Build LCOE (Gas CCGT, Gas CT, Coal)
@@ -459,8 +462,8 @@ The computation is fully vectorized using NumPy — no Python loops over hours.
 
 Each ISO has a `PriceModel` subclass with three pricing layers:
 1. **Merit-order dispatch** — marginal cost from heat rate × fuel + VOM
-2. **Demand-quantile pricing** — congestion/tightness adder on high-demand hours, negative pricing on low-demand hours with must-run surplus
-3. **Scarcity pricing** — exponential adder when reserves drop below threshold
+2. **ORDC scarcity pricing** (default) — structural reserve-based pricing via `compute_ordc_adder()`: `adder = VOLL × LOLP(reserves)` where `LOLP = 1/(1 + exp(k × (reserves - target)))`. Replaces statistical demand-quantile overlays. See §4.4.6 for full specification.
+3. **Demand-quantile pricing** (legacy fallback) — congestion/tightness adder on high-demand hours, negative pricing on low-demand hours with must-run surplus
 
 | ISO | Model | Key Feature |
 |---|---|---|
@@ -490,9 +493,9 @@ Reconstructs 8,760-hour dispatch with LP-optimized storage co-dispatch:
 3. **Greedy fallback** (single storage type or LP failure): Sequential dispatch in priority order — Battery 4hr → Battery 8hr → LDES 100hr → Green H₂ 1000hr
 4. Compute matched, surplus, and gap profiles
 
-### 4.4.1 Zonal LMP Decomposition (`zonal_lmp.py`)
+### 4.4.1 Zonal LMP Decomposition (`zonal_lmp.py`) — ORDC-Integrated
 
-When EIA-860 fleet data is available, the model decomposes each ISO into 2–5 zones with inter-zonal transfer limits (pipe-and-bubble model):
+When EIA-860 fleet data is available, the model decomposes each ISO into 2–5 zones with inter-zonal transfer limits (pipe-and-bubble model). ORDC scarcity pricing is integrated into the zonal path — per-zone reserve margins feed into LOLP calculations, producing zone-specific scarcity adders that reflect local supply tightness.
 
 **Zone definitions** (`ZONE_CONFIG` in `pipeline_config.py`):
 - **PJM** (5 zones): Western (AEP/APS), AEP-East, MAAC (Mid-Atlantic), EMAAC (Eastern Mid-Atlantic), SWMAAC (Baltimore/DC)
@@ -524,27 +527,37 @@ Hourly net import/export profiles per ISO reduce each region's self-sufficiency 
 - **Trajectory scaling**: Imports scale with demand growth but are capped at firm import MW limits
 - **Toggle**: On/Off on Setup page. Off = copper-plate isolation (current behavior)
 
-### 4.4.3 Demand Response
+### 4.4.3 Demand Response — Vectorized, ORDC-Linked
 
-Price-elastic load curtailment that activates when LMP exceeds ISO-specific trigger prices:
+Fully vectorized price-elastic load curtailment (numpy boolean masks, no Python loops) that activates when LMP exceeds ISO-specific trigger prices. ORDC-linked dynamic trigger mode available.
 
 - **Parameters** (`DEMAND_RESPONSE` in `pipeline_config.py`):
-  - Per-ISO: max_dr_gw, trigger_price ($/MWh), participation fraction
+  - Per-ISO: max_dr_gw, trigger_price ($/MWh), participation fraction, dr_ordc_link (bool)
   - PJM: 10 GW @ $100/MWh, 75% participation (largest registered DR pool)
   - ERCOT: 5 GW @ $200/MWh, 60% participation
+  - CAISO: 4 GW @ $150/MWh, 70% participation
   - MISO: 8 GW @ $120/MWh, 65% participation
+  - NYISO: 3 GW @ $150/MWh, 70% participation
+  - NEISO: 2.5 GW @ $120/MWh, 65% participation
+  - SPP: 2 GW @ $100/MWh, 55% participation
   - Sources: FERC Form 714, ISO DR registrations
 
 - **DR levels** (`DR_LEVELS`): Off / Low / Medium / High
-  - Low: 50% participation multiplier, 1.5× trigger price
+  - Off: 0% participation (inelastic demand)
+  - Low: 50% participation multiplier, 1.3× trigger price
   - Medium: 70% participation, 1.0× trigger (default registered values)
   - High: 90% participation, 0.8× trigger price
 
-- **Mechanism**: For each hour where LMP > trigger:
-  1. DR activation: linear ramp from 0% at trigger to 100% at 2× trigger
-  2. Capped at 15% of hourly demand (physical limit)
-  3. LMP dampened by supply elasticity factor (3×)
-  4. DR metrics tracked: curtailed GWh, peak GW, active hours, average price
+- **Activation modes**:
+  - **Fixed trigger**: LMP > trigger_price
+  - **ORDC dynamic** (when `dr_ordc_link=True`): LMP > max(trigger_price, VOLL × 0.05). Links DR activation to reserve scarcity rather than a static price threshold.
+
+- **Mechanism** (vectorized):
+  1. `dr_active = hourly_lmp > trigger` (boolean mask over 8,760 hours)
+  2. DR activation: linear ramp from 0% at trigger to 100% at 2× trigger
+  3. Capped at 12% of hourly demand (physical limit)
+  4. LMP dampened by supply elasticity factor
+  5. DR metrics tracked: curtailed GWh, peak GW, active hours, average price
 
 ### 4.4.4 Confidence Zones (Trajectory Mode)
 
@@ -587,6 +600,60 @@ Returns remaining fossil capacity at a given clean energy threshold:
 - `oil_co2_lb_per_mwh` (~1,550–1,650 lbs/MWh)
 
 These per-fuel rates (sourced from EPA eGRID 2022 fleet-weighted averages) replace the single aggregate `co2_rate` field when computing plant-level emissions. Source: EPA eGRID 2022 — typical fleet-weighted values by fuel type.
+
+### 4.4.6 ORDC Scarcity Pricing (`lmp_engine.py`)
+
+The Operating Reserve Demand Curve (ORDC) models scarcity pricing structurally rather than statistically. It replaces the legacy demand-quantile overlay approach.
+
+**Formula:**
+
+$$\text{price}(h) = \text{MC}_{\text{marginal}}(h) + \text{VOLL} \times \text{LOLP}(\text{reserves}(h))$$
+
+$$\text{LOLP}(\text{reserves}) = \frac{1}{1 + \exp(k \times (\text{reserves} - \text{target}))}$$
+
+where:
+- **VOLL** (Value of Lost Load, $/MWh): ISO-calibrated from regulatory proceedings
+- **LOLP**: Loss of Load Probability, modeled as a logistic sigmoid of operating reserves vs. target
+- **k**: Sigmoid steepness parameter (controls how sharply scarcity prices respond to reserve depletion)
+- **target**: Reserve target in MW (calibrated to ISO planning standards)
+
+**Per-ISO Parameters** (`ORDC_PARAMS` in `pipeline_config.py`):
+
+| ISO | VOLL ($/MWh) | Reserve Target (MW) | k |
+|---|---|---|---|
+| ERCOT | 5,000 | 3,000 | 0.003 |
+| PJM | 3,700 | 5,500 | 0.002 |
+| MISO | 3,500 | 4,000 | 0.002 |
+| NYISO | 2,500 | 2,000 | 0.003 |
+| CAISO | 2,000 | 3,000 | 0.003 |
+| NEISO | 2,000 | 1,500 | 0.003 |
+| SPP | 2,000 | 2,500 | 0.003 |
+
+Sources: ERCOT ORDC regulatory proceedings, PJM RPM capacity demand curve, MISO PRA, NYISO ICAP demand curves. ERCOT has the highest VOLL ($5,000) reflecting its energy-only market design (no capacity payments, scarcity pricing is the sole investment signal).
+
+**Implementation**: `PriceModel.compute_ordc_adder()` (lmp_engine.py lines 541–616). Fully vectorized over 8,760 hours. Reserves computed as `total_capacity - demand - committed_generation`.
+
+### 4.4.7 VRE Cannibalization Feedback (`market_simulation.py`)
+
+VRE cannibalization captures the revenue depression that solar and wind experience as their penetration increases. At high VRE shares, these resources generate most of their output during the same hours, depressing the LMP they earn.
+
+**Capture Rate**: The ratio of a resource's generation-weighted LMP to the time-average LMP:
+
+$$\text{capture\_rate}_r = \frac{\sum_h \text{gen}_r(h) \times \text{LMP}(h)}{\sum_h \text{gen}_r(h)} \div \text{avg\_LMP}$$
+
+A capture rate < 1.0 means the resource earns less per MWh than the market average. Solar capture rates typically fall to 0.6–0.8 at high penetration due to the duck curve.
+
+**Cannibalization-ORDC Interaction**: During ORDC scarcity hours (adder > $50/MWh), a revenue floor prevents capture rates from collapsing completely. This reflects reality: during tight reserve conditions, all generation earns elevated prices regardless of technology.
+
+**Deployment Dampening**: The deployment loop applies a sigmoid damping function as VRE penetration increases. Subsequent tranches of VRE experience progressively lower capture rates:
+
+$$\text{depression} = 0.55 \times \sigma(\text{vre\_penetration} - 0.6)$$
+
+where $\sigma$ is the logistic sigmoid. This smoothly reduces VRE revenue as penetration rises, preventing the model from overestimating VRE deployment.
+
+**Zone-Aware Capture**: Each VRE resource is assigned a primary zone via `VRE_PRIMARY_ZONE` mapping (pipeline_config.py). Capture rates are computed against zonal LMP when zonal data is available, not just system-average LMP.
+
+**Implementation**: `compute_energy_revenue_by_resource()` (market_simulation.py line 1126), deployment loop with cannibalization damping (lines 2054–2109).
 
 ### 4.5 Fleet Model (`fleet_model.py`)
 
@@ -653,21 +720,29 @@ At each step:
 - Deploy clean resources zone-by-zone where profitable
 - Track cumulative GW, resource mix, retirement status
 
-Interconnection queue caps limit annual new-build:
+#### Tech-Differentiated Queue Caps
 
-| ISO | Facilitating (GW/yr) | Challenging (GW/yr) |
-|---|---|---|
-| CAISO | 6 | 3 |
-| ERCOT | 12 | 6 |
-| PJM | 7 | 3 |
-| NYISO | 5 | 2 |
-| NEISO | 5 | 2 |
-| MISO | 7 | 3 |
-| SPP | 6 | 3 |
+Interconnection queue caps are differentiated by technology, reflecting LBNL "Queued Up 2024" (Rand et al., 2024) completion rates. Solar projects complete faster than nuclear; offshore wind has unique permitting timelines.
 
-*ERCOT caps reflect faster permitting (no FERC jurisdiction, single-state ISO) and 8-12 GW/yr historical completion rate (ERCOT CDR 2024).*
+**Per-Technology Caps (Medium scenario, GW/yr)** (`TECH_QUEUE_CAP_GW` in `pipeline_config.py`):
 
-**RPS/CES floor enforcement** is queue-constrained: mandated clean deployment cannot exceed the interconnection queue's physical throughput. If the queue can't deliver enough GW in one period to meet the RPS floor, deployment is capped at available queue capacity and the shortfall carries forward.
+| ISO | Solar | Wind | Offshore Wind | Clean Firm | CCS-CCGT | Geothermal |
+|---|---|---|---|---|---|---|
+| CAISO | 2.5 | 0.8 | 0.3 | 0.2 | 0.4 | 0.3 |
+| ERCOT | 4.0 | 2.5 | 0.2 | 0.2 | 0.5 | 0.0 |
+| PJM | 2.5 | 1.2 | 0.5 | 0.3 | 0.5 | 0.0 |
+| NYISO | 1.0 | 0.6 | 0.5 | 0.2 | 0.2 | 0.0 |
+| NEISO | 0.8 | 0.5 | 0.4 | 0.2 | 0.2 | 0.0 |
+| MISO | 2.0 | 1.5 | 0.0 | 0.2 | 0.4 | 0.0 |
+| SPP | 1.5 | 2.0 | 0.0 | 0.1 | 0.3 | 0.0 |
+
+Low and High variants scale these by approximately 0.6× and 1.5× respectively.
+
+**Control Flags**:
+- `TECH_DIFFERENTIATED_QUEUE = True` (pipeline_config.py line 147): Enable/disable per-tech caps. When disabled, falls back to aggregate ISO-level caps.
+- `QUEUE_FLEX_FRACTION = 0.20` (line 148): 20% of total queue capacity is a flex pool that any technology can draw from. This prevents a single technology's cap from being the binding constraint when another technology has unused queue headroom.
+
+**RPS/CES floor enforcement** is queue-constrained: mandated clean deployment cannot exceed the interconnection queue's physical throughput per technology. If the queue can't deliver enough GW in one period to meet the RPS floor, deployment is capped at available queue capacity and the shortfall carries forward.
 
 #### Sweep Mode
 270-scenario parametric sweep:
@@ -1065,6 +1140,26 @@ Triggers are computed per ISO per year as pure threshold checks (negligible over
 - In trajectory mode, triggers are aggregated across years — consecutive years with the same trigger are consolidated into a year range (e.g., "2035–2050").
 - Users can dismiss individual triggers via a close button; dismissed state is stored in `sessionStorage`.
 
+### 6.9 Feature Interaction Matrix
+
+The following matrix documents how features from Prompts 1–11 interact with each other and which have been synchronized in v2:
+
+| Feature | Feeds Into | Depends On | Synchronized (v2) |
+|---|---|---|---|
+| ORDC Scarcity Pricing (P8) | Zonal LMP, DR activation, VRE capture floor | Reserve margins from dispatch | Yes — ORDC integrated into zonal path |
+| VRE Cannibalization (P7) | Deployment economics, capture rates | Hourly LMP (from ORDC), zonal LMP | Yes — ORDC floor on scarcity hours |
+| Zonal LMP (P1) | IPM triggers (congestion), capture rates | Fleet data, transfer limits, ORDC | Yes — ORDC-in-zonal, flow persistence |
+| LP Storage (P2) | Dispatch profiles, gap reduction | Surplus/deficit from clean dispatch | Independent (pre-dispatch) |
+| Demand Response (P4) | LMP dampening, peak shaving | LMP (ORDC-aware trigger) | Yes — vectorized, ORDC-linked |
+| Backtesting (P5) | Confidence calibration | Historical actuals, ORDC/demand-quantile toggle | Yes — interchange data, model features |
+| Confidence Zones (P6) | UI display, KPI badges | Year classification | Yes — IPM triggers integrated |
+| Inter-Regional Flows (P3) | Effective demand reduction | EIA-930 data | Independent |
+| IPM Triggers (P10) | User recommendations | VRE share, reserves, congestion (zonal), retirements | Yes — zonal congestion data feeds triggers |
+| Tech Queue Caps (P11) | Deployment rate limits | LBNL completion rates | Independent per technology |
+| Data Tier Warnings (P9) | UI indicators, result disclaimers | Data availability detection | Independent |
+
+**Key interaction chain**: Zonal dispatch → ORDC reserve calculation → scarcity pricing → DR activation (ORDC-linked) → cannibalization capture rates (ORDC floor) → deployment economics → IPM trigger evaluation.
+
 ---
 
 ## 7. Validation & Benchmarking
@@ -1121,16 +1216,18 @@ Historical actuals are sourced from EIA-860M, ISO State of Market reports (PJM M
 
 ### 8.2 Known Limitations
 
-1. **Static supply model**: Does not account for price-induced supply responses. High EAC prices would stimulate new investment in reality.
-2. **Simplified inter-regional trade**: Inter-regional flows use exogenous hourly profiles from EIA-930 historical data — not a full trade optimization model. Flows are demand-adjusted, not price-responsive. Toggle On/Off on Setup page.
-3. **Simplified zonal model**: Intra-ISO transmission uses a pipe-and-bubble approximation (2–5 zones per ISO) with aggregate transfer limits. This captures 60–80% of congestion effects but misses nodal-level price separation. Zonal decomposition requires EIA-860 plant data for zone assignment; falls back to copper-plate without it.
-4. **No unit commitment**: Perfect dispatch assumed. No minimum up/down times, ramp rates, or start-up costs.
-5. **Reduced-form demand response**: Demand response is modeled as a price-elastic curtailment function, not a full DR resource dispatch model. Activation uses a linear ramp between trigger and 2× trigger price. Captures first-order demand elasticity effects but not DR-as-a-resource economics.
-6. **Single-sector scope**: Electricity only. No cross-sector coupling (transport, heat, industry).
-7. **Reserve margin without hourly reserves**: Resource adequacy enforced, but spinning/non-spinning reserves not modeled.
-8. **Policy snapshot**: Reflects current policy as of early 2025. RPS, IRA credits, and GHG Protocol evolve.
-9. **Interconnection queue constraints**: New capacity assumed buildable as needed (except in trajectory mode which models queue caps).
-10. **Trajectory confidence degrades with horizon**: Projections beyond 2030 rely on extrapolated technology cost curves, demand growth, and policy assumptions. The model displays confidence zones to communicate this (Calibrated ≤2030, Moderate 2030–2040, High Uncertainty 2040+).
+1. **Reduced-form VRE cannibalization**: Capture-rate feedback is included (solar/wind revenue uses time-matched LMP with sigmoid depression), but curtailment is not explicitly modeled as hourly dispatch. Results are reasonable to ~60% VRE penetration; above that, IPM triggers recommend production dispatch validation (PLEXOS, GenX).
+2. **Simplified zonal model**: Intra-ISO transmission uses a pipe-and-bubble approximation (2–5 zones per ISO) with ORDC-integrated scarcity pricing. Captures 60–80% of congestion effects but misses nodal-level price separation and loop flows. Requires EIA-860 plant data for zone assignment; falls back to copper-plate without it.
+3. **No unit commitment**: UC constraints applied post-hoc, not co-optimized with dispatch. Misses minimum up/down times, ramp rates, and start-up costs.
+4. **No endogenous capacity expansion**: Storage is LP-co-dispatched within a given mix, but the generation + storage + transmission mix is not jointly optimized (unlike GenX/ReEDS). Resource deployment is profit-driven sequential, not globally optimal.
+5. **Reduced-form demand response**: Vectorized price-elastic curtailment with ORDC-linked dynamic triggers, but not full DR resource dispatch. Captures first-order demand elasticity and scarcity interaction but not DR-as-a-resource economics.
+6. **Simplified inter-regional trade**: Inter-regional flows use exogenous hourly profiles from EIA-930 historical data — not a full trade optimization model. Flows are demand-adjusted, not price-responsive.
+7. **Static supply model**: Does not account for price-induced supply responses. High EAC prices would stimulate new investment in reality.
+8. **Single-sector scope**: Electricity only. No cross-sector coupling (transport, heat, industry).
+9. **Reserve margin without hourly reserves**: ORDC scarcity pricing provides a structural price signal, but spinning/non-spinning reserve categories are not individually modeled.
+10. **Policy snapshot**: Reflects current policy as of early 2025. RPS, IRA credits, and GHG Protocol evolve.
+11. **Synthetic data fallback**: When pipeline parquets are absent, the model uses synthetic profiles that are not calibrated to physics. Results are illustrative only. Color-coded data tier indicators on the Setup page communicate this. IPM trigger flags help users identify when screening-quality results need production-model validation.
+12. **Trajectory confidence degrades with horizon**: Projections beyond 2030 rely on extrapolated technology cost curves, demand growth, and policy assumptions. Confidence zones and backtesting validation communicate this.
 
 **Automated limitation detection:** The model includes IPM trigger indicators (Section 6.8) that automatically flag when results cross thresholds where these limitations become binding — e.g., VRE penetration above 40% triggers a cannibalization warning, tight reserve margins flag the need for unit-commitment modeling. These triggers serve as a triage mechanism, identifying where investment in a production-grade model run (IPM, PLEXOS, GenX) would materially change the results.
 
@@ -1340,4 +1437,14 @@ def wright_adjusted_cost(foak_cost, cumulative_gw, baseline_gw, learning_rate):
 
 ---
 
-*Constellation Energy — Market Simulator v1.0 — Internal & Confidential*
+---
+
+## Revision History
+
+| Version | Date | Changes |
+|---|---|---|
+| 1.0 | Feb 2026 | Initial specification: merit-order dispatch, plant-level economics, LP storage, zonal LMP, DR, confidence zones, backtesting |
+| 1.1 | Mar 2026 | Added IPM trigger indicators (§6.8), fleet model documentation, cost table updates |
+| 2.0 | Mar 2026 | v2 synchronization: ORDC scarcity pricing (§4.4.6), VRE cannibalization feedback (§4.4.7), ORDC-in-zonal integration, DR vectorization + ORDC-link, tech-differentiated queue caps (§4.7), data tier warnings, feature interaction matrix (§6.9), comprehensive limitation updates (§8.2) |
+
+*Constellation Energy — Market Simulator v2.0 — Internal & Confidential*
