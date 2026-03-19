@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fleet Scenario Comparison — Constellation Energy</title>
+    <title>Fleet Climate Scenarios — Constellation Energy</title>
     <link rel="stylesheet" href="styles/CEG-style.css">
     <link rel="stylesheet" href="styles/simulator.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -146,10 +146,150 @@
             color: #991b1b; text-align: center;
         }
 
+        /* ── Sidebar toggle button ── */
+        .sidebar-toggle-btn {
+            padding: 10px 20px; border-radius: var(--radius-md);
+            border: 2px solid var(--ceg-blue); background: white;
+            color: var(--ceg-blue); font-weight: 700; font-size: 0.9rem;
+            cursor: pointer; min-height: 44px; white-space: nowrap;
+            transition: all 0.15s;
+        }
+        .sidebar-toggle-btn:hover { background: var(--ceg-blue); color: white; }
+
+        /* ── Fleet Sidebar ── */
+        .fleet-sidebar-backdrop {
+            display: none; position: fixed; inset: 0; z-index: 899;
+            background: rgba(0,0,0,0.3); backdrop-filter: blur(2px);
+        }
+        .fleet-sidebar-backdrop.open { display: block; }
+        .fleet-sidebar {
+            position: fixed; top: 60px; right: 0; width: 440px;
+            height: calc(100vh - 60px); z-index: 900;
+            background: white; border-left: 1px solid var(--glass-border);
+            box-shadow: var(--shadow-lg); overflow-y: auto;
+            transform: translateX(100%); transition: transform 0.3s ease;
+        }
+        .fleet-sidebar.open { transform: translateX(0); }
+        .sidebar-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 20px; border-bottom: 1px solid var(--glass-border);
+            position: sticky; top: 0; background: white; z-index: 1;
+        }
+        .sidebar-header h3 { margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--navy); }
+        .sidebar-close {
+            width: 36px; height: 36px; border: none; background: none;
+            font-size: 1.5rem; cursor: pointer; color: var(--text-dim);
+            border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center;
+        }
+        .sidebar-close:hover { background: #f3f4f6; color: var(--text-bright); }
+        .sidebar-body { padding: 16px 20px; }
+
+        /* Sidebar ISO group */
+        .sb-iso-group { margin-bottom: 12px; }
+        .sb-iso-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 12px; background: #f8fafc; border: 1px solid #e2e8f0;
+            border-radius: var(--radius-sm); cursor: pointer; user-select: none;
+            font-weight: 600; font-size: 0.9rem; color: var(--navy);
+        }
+        .sb-iso-header:hover { background: #f1f5f9; }
+        .sb-iso-header .sb-chevron { transition: transform 0.2s; font-size: 0.7rem; }
+        .sb-iso-header.collapsed .sb-chevron { transform: rotate(-90deg); }
+        .sb-iso-body { padding: 4px 0; }
+        .sb-iso-body.collapsed { display: none; }
+
+        /* Sidebar plant row */
+        .sb-plant-row {
+            display: grid; grid-template-columns: 1fr 65px 110px 70px;
+            gap: 6px; align-items: center; padding: 6px 12px;
+            border-bottom: 1px solid #f1f5f9; font-size: 0.82rem;
+        }
+        .sb-plant-row:hover { background: #f9fafb; }
+        .sb-plant-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sb-plant-cap { color: var(--text-dim, #6b7280); font-size: 0.78rem; }
+        .sb-plant-row select {
+            padding: 3px 4px; border-radius: var(--radius-sm);
+            border: 1px solid #e2e8f0; font-size: 0.78rem; background: white;
+            min-height: 32px;
+        }
+        .sb-plant-row select.modified { border-color: var(--ceg-blue); background: #eff6ff; }
+        .sb-plant-row input[type="number"] {
+            width: 60px; padding: 3px 4px; border-radius: var(--radius-sm);
+            border: 1px solid #e2e8f0; font-size: 0.78rem; min-height: 32px;
+        }
+
+        /* Sidebar add plant form */
+        .sb-section-title {
+            font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1.5px; color: var(--ceg-blue); margin: 20px 0 10px;
+            padding-top: 12px; border-top: 2px solid #e2e8f0;
+        }
+        .sb-form-row {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 8px; margin-bottom: 8px;
+        }
+        .sb-form-row.full { grid-template-columns: 1fr; }
+        .sb-form-row label {
+            font-size: 0.78rem; color: var(--text-dim, #6b7280); margin-bottom: 2px; display: block;
+        }
+        .sb-form-row input, .sb-form-row select {
+            width: 100%; padding: 6px 8px; border-radius: var(--radius-sm);
+            border: 1px solid #e2e8f0; font-size: 0.85rem; min-height: 36px;
+            font-family: var(--font-body);
+        }
+
+        /* Sidebar action buttons */
+        .sb-actions {
+            margin-top: 20px; padding-top: 16px; border-top: 2px solid #e2e8f0;
+            display: flex; flex-direction: column; gap: 8px;
+        }
+        .sb-actions input[type="text"] {
+            width: 100%; padding: 8px 12px; border-radius: var(--radius-sm);
+            border: 1px solid #e2e8f0; font-size: 0.9rem; min-height: 40px;
+            font-family: var(--font-body);
+        }
+        .sb-btn-row { display: flex; gap: 8px; }
+        .sb-btn {
+            flex: 1; padding: 10px 16px; border-radius: var(--radius-md);
+            font-size: 0.85rem; font-weight: 600; cursor: pointer;
+            min-height: 44px; border: 1px solid #e2e8f0; background: white;
+            color: var(--text-bright); transition: all 0.15s;
+        }
+        .sb-btn:hover { background: #f8fafc; border-color: var(--ceg-blue); }
+        .sb-btn-primary {
+            flex: 1; padding: 10px 16px; border-radius: var(--radius-md);
+            font-size: 0.85rem; font-weight: 700; cursor: pointer;
+            min-height: 44px; border: none; background: var(--ceg-blue);
+            color: white; transition: all 0.15s;
+        }
+        .sb-btn-primary:hover { background: #1a5a9e; }
+        .sb-btn-danger {
+            padding: 4px 8px; border-radius: var(--radius-sm);
+            border: 1px solid #fca5a5; background: #fef2f2; color: #991b1b;
+            font-size: 0.75rem; cursor: pointer;
+        }
+
+        /* Saved scenarios list */
+        .sb-saved-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 12px; border: 1px solid #e2e8f0;
+            border-radius: var(--radius-sm); margin-bottom: 6px;
+            font-size: 0.85rem; background: #f8fafc;
+        }
+        .sb-saved-item button { min-height: 32px; }
+        .sb-saved-actions { display: flex; gap: 4px; }
+
+        /* Recalc status */
+        .sb-status {
+            text-align: center; padding: 8px; font-size: 0.82rem;
+            color: var(--ceg-green); font-weight: 600; margin-top: 8px;
+        }
+
         /* Responsive */
         @media (max-width: 900px) {
             .controls-strip { flex-direction: column; align-items: stretch; }
             .charts-grid-2 { grid-template-columns: 1fr; }
+            .fleet-sidebar { width: 100%; }
         }
         @media (max-width: 768px) {
             .fan-chart-container { min-height: 360px; }
@@ -183,9 +323,7 @@
             <li><a href="/setup">Setup</a></li>
             <li><a href="/fleet-config">Fleet Config</a></li>
             <li><a href="/results">Results</a></li>
-            <li><a href="/emissions">CCS Emissions</a></li>
-            <li><a href="/fleet-scenarios" class="active">Fleet Scenarios</a></li>
-            <li><a href="/ipp-report">IPP Report</a></li>
+            <li><a href="/fleet-scenarios" class="active">Fleet Climate Scenarios</a></li>
             <li><a href="/methodology">Methodology</a></li>
         </ul>
     </nav>
@@ -194,10 +332,11 @@
     <div class="hero-section">
         <div class="hero-inner">
             <div class="hero-eyebrow">Fleet Analysis</div>
-            <h1>Fleet Scenario <strong>Comparison</strong></h1>
+            <h1>Fleet Climate <strong>Scenarios</strong></h1>
             <p class="hero-desc">
                 P10/P50/P90 emissions envelopes across fleet decarbonization scenarios.
                 Compare baseline, CCS retrofit, new gas, and retirement pathways against climate targets.
+                Edit fleet configuration and recalculate in real-time.
             </p>
         </div>
     </div>
@@ -224,6 +363,9 @@
                     <input type="range" id="yearSlider" min="2023" max="2050" value="2030" step="1">
                     <div class="year-slider-value" id="yearSliderValue">2030</div>
                 </div>
+            </div>
+            <div class="controls-group" style="align-self: flex-end;">
+                <button class="sidebar-toggle-btn" id="sidebarToggle">Edit Fleet</button>
             </div>
         </div>
 
@@ -290,6 +432,68 @@
 
     </div>
 
+    <!-- Fleet Config Sidebar -->
+    <div class="fleet-sidebar-backdrop" id="sidebarBackdrop"></div>
+    <div class="fleet-sidebar" id="fleetSidebar">
+        <div class="sidebar-header">
+            <h3>Fleet Configuration</h3>
+            <button class="sidebar-close" id="sidebarClose">&times;</button>
+        </div>
+        <div class="sidebar-body">
+            <div id="sidebarFleetList">
+                <div style="text-align:center; color:var(--text-dim); padding:24px;">Loading fleet data...</div>
+            </div>
+
+            <div class="sb-section-title">Add New Plant</div>
+            <div id="addPlantSection">
+                <div class="sb-form-row">
+                    <div><label>Plant Name</label><input type="text" id="apName" placeholder="New CCGT"></div>
+                    <div><label>ISO</label>
+                        <select id="apISO">
+                            <option value="PJM">PJM</option>
+                            <option value="ERCOT">ERCOT</option>
+                            <option value="CAISO">CAISO</option>
+                            <option value="NYISO">NYISO</option>
+                            <option value="NEISO">NEISO</option>
+                            <option value="MISO">MISO</option>
+                            <option value="SPP">SPP</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="sb-form-row">
+                    <div><label>Capacity (MW)</label><input type="number" id="apCapacity" value="1200" min="1"></div>
+                    <div><label>Heat Rate (MMBtu/MWh)</label><input type="number" id="apHeatRate" value="6.5" step="0.1" min="1"></div>
+                </div>
+                <div class="sb-form-row">
+                    <div><label>Fuel Type</label>
+                        <select id="apFuelType">
+                            <option value="gas_ccgt">Gas CCGT</option>
+                            <option value="gas_ct">Gas CT</option>
+                            <option value="coal_steam">Coal</option>
+                            <option value="oil_ct">Oil CT</option>
+                        </select>
+                    </div>
+                    <div><label>Year Online</label><input type="number" id="apYearOnline" value="2028" min="2023" max="2050"></div>
+                </div>
+                <div class="sb-form-row full">
+                    <button class="sb-btn" id="addPlantBtn" style="margin-top:4px;">+ Add Plant</button>
+                </div>
+            </div>
+
+            <div class="sb-actions">
+                <input type="text" id="scenarioNameInput" placeholder="Custom scenario name...">
+                <div class="sb-btn-row">
+                    <button class="sb-btn" id="saveScenarioBtn">Save Scenario</button>
+                    <button class="sb-btn-primary" id="recalcBtn">Recalculate</button>
+                </div>
+                <div class="sb-status" id="recalcStatus"></div>
+            </div>
+
+            <div class="sb-section-title">Saved Scenarios</div>
+            <div id="savedScenariosList"></div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer>
         <div class="footer-brand"><strong>Constellation Energy</strong> &middot; Market Simulation Screening Tool</div>
@@ -297,6 +501,7 @@
     </footer>
     <div class="bottom-banner"></div>
 
+    <script src="js/fleet-dispatch-engine.js"></script>
     <script src="js/fleet-scenarios.js"></script>
 </body>
 </html>
