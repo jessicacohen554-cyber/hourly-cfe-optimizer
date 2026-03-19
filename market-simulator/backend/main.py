@@ -1334,6 +1334,113 @@ async def get_sweep_status(job_id: str):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Cached sweep endpoints — read pre-computed 405-scenario results
+# ─────────────────────────────────────────────────────────────────────────────
+
+SWEEP_CACHE_DIR = MARKET_SIM_ROOT / "results" / "sweep_405"
+
+
+@app.get("/api/sweep-cached/status")
+async def sweep_cached_status():
+    """Check whether pre-computed sweep results exist and return metadata."""
+    json_path = SWEEP_CACHE_DIR / "market_simulation_results.json"
+    agg_path = SWEEP_CACHE_DIR / "sweep_405_aggregates.json"
+    parquet_path = SWEEP_CACHE_DIR / "sweep_405_flat.parquet"
+
+    available = json_path.exists() or agg_path.exists()
+
+    meta = {
+        "available": available,
+        "json_exists": json_path.exists(),
+        "aggregates_exists": agg_path.exists(),
+        "parquet_exists": parquet_path.exists(),
+        "sweep_dimensions": {
+            "demand_growth": list(DEMAND_GROWTH_LEVELS),
+            "price_sensitivity": list(PRICE_SENSITIVITIES.keys()),
+            "ppa_level": list(PPA_LEVELS),
+            "gas_friction": list(GAS_FRICTION_LEVELS.keys()),
+            "queue_cap": ["Low", "Medium", "High"],
+        },
+        "total_scenarios": 405,
+        "years": [2023, 2030, 2035, 2040, 2045, 2050],
+        "isos": list(ISOS),
+    }
+
+    if json_path.exists():
+        meta["json_size_mb"] = round(json_path.stat().st_size / 1e6, 1)
+    if agg_path.exists():
+        meta["aggregates_size_mb"] = round(agg_path.stat().st_size / 1e6, 1)
+
+    return meta
+
+
+@app.get("/api/sweep-cached/aggregates")
+async def sweep_cached_aggregates(iso: str = None):
+    """Return P10/P50/P90 aggregates from cached sweep. Optionally filter by ISO."""
+    agg_path = SWEEP_CACHE_DIR / "sweep_405_aggregates.json"
+    if not agg_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Cached sweep aggregates not found. Run the 405-scenario sweep first "
+                   "(GitHub Actions workflow 'Market Simulator: 405-Scenario Sweep').",
+        )
+
+    with open(agg_path) as f:
+        aggregates = json.load(f)
+
+    if iso:
+        iso = iso.upper()
+        if iso not in aggregates:
+            raise HTTPException(status_code=404, detail=f"ISO '{iso}' not found in cached results.")
+        return {iso: aggregates[iso]}
+
+    return aggregates
+
+
+@app.get("/api/sweep-cached/results")
+async def sweep_cached_results(iso: str = None, scenario: str = None):
+    """Return full cached sweep results. Filter by ISO and/or scenario ID.
+
+    Warning: unfiltered response can be very large (100+ MB). Always filter
+    by at least ISO for reasonable response sizes.
+    """
+    json_path = SWEEP_CACHE_DIR / "market_simulation_results.json"
+    if not json_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Cached sweep results not found. Run the 405-scenario sweep first.",
+        )
+
+    with open(json_path) as f:
+        all_results = json.load(f)
+
+    # Remove aggregates key if present
+    all_results.pop("_aggregates", None)
+
+    # Filter by scenario
+    if scenario:
+        if scenario not in all_results:
+            raise HTTPException(status_code=404, detail=f"Scenario '{scenario}' not found.")
+        all_results = {scenario: all_results[scenario]}
+
+    # Filter by ISO within each scenario
+    if iso:
+        iso = iso.upper()
+        filtered = {}
+        for sid, iso_results in all_results.items():
+            if iso in iso_results:
+                filtered[sid] = {iso: iso_results[iso]}
+        if not filtered:
+            raise HTTPException(status_code=404, detail=f"No results for ISO '{iso}'.")
+        all_results = filtered
+
+    return {
+        "scenario_count": len(all_results),
+        "results": all_results,
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Sensitivity endpoint
 # ─────────────────────────────────────────────────────────────────────────────
 
