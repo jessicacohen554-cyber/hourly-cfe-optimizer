@@ -462,39 +462,181 @@ def compute_fleet_emissions_fast(plants: list[dict], sweep_df: pd.DataFrame) -> 
         },
         "envelope": envelope,
         "plant_detail": plant_detail,
+        "_fleet_emissions": fleet_emissions,  # (n_scenarios, n_years) — stripped before JSON output
     }
 
 
 # ---------------------------------------------------------------------------
-# Multi-scenario runner (Phase 3.2)
+# Target trajectories (Phase 3.3)
+# ---------------------------------------------------------------------------
+
+def build_target_trajectories(targets_config: dict, years: list[int],
+                              baseline_mt: float) -> dict[str, np.ndarray]:
+    """
+    Build target emissions trajectories from the scenario file's 'targets' block.
+
+    Supported target types:
+      - sbti_15c: -4.2% annual linear reduction from baseline_mt starting 2023
+      - at_power_nz: company-specific {year: emissions_mt} milestones, linearly
+        interpolated between points
+      - custom_*: arbitrary {year: emissions_mt} pairs, same interpolation
+
+    Returns {target_name: np.array of emissions_mt for each year in years}.
+    """
+    trajectories = {}
+
+    for name, spec in targets_config.items():
+        ttype = spec.get("type", "custom")
+
+        if ttype == "sbti_15c":
+            # -4.2% per year linear reduction from baseline
+            rate = spec.get("annual_reduction_pct", 4.2) / 100.0
+            base_year = spec.get("base_year", 2023)
+            base_val = spec.get("baseline_mt", baseline_mt)
+            traj = np.array([
+                max(0.0, base_val * (1.0 - rate * (y - base_year)))
+                for y in years
+            ])
+            trajectories[name] = traj
+
+        elif ttype in ("at_power_nz", "custom"):
+            # Interpolate from milestone points {year: emissions_mt}
+            milestones = spec.get("milestones", {})
+            if not milestones:
+                continue
+            # Sort milestone years
+            ms_years = sorted(int(k) for k in milestones.keys())
+            ms_vals = [float(milestones[str(y)]) for y in ms_years]
+
+            traj = np.interp(
+                years,
+                ms_years,
+                ms_vals,
+                left=ms_vals[0],     # extrapolate flat before first milestone
+                right=ms_vals[-1],   # extrapolate flat after last milestone
+            )
+            trajectories[name] = traj
+
+    return trajectories
+
+
+def compute_target_analysis(fleet_emissions: np.ndarray, years: list[int],
+                            target_traj: np.ndarray) -> dict:
+    """
+    Compute target gap, achievement year, and probability of meeting target.
+
+    Args:
+        fleet_emissions: (n_scenarios, n_years) array of fleet emissions in Mt CO2
+        years: list of years matching the column axis
+        target_traj: (n_years,) array of target emissions in Mt CO2
+
+    Returns dict with:
+        gap_to_target_mt: {year: P50 emissions - target} (positive = above target)
+        year_of_target_achievement: first year P50 <= target (null if never)
+        probability_of_meeting_target: {year: % of scenarios below target}
+    """
+    n_scenarios, n_years = fleet_emissions.shape
+
+    # P50 per year
+    p50_arr = np.nanmedian(fleet_emissions, axis=0)  # (n_years,)
+
+    # Gap: P50 - target (positive = above, negative = below)
+    gap = p50_arr - target_traj  # (n_years,)
+
+    gap_dict = {}
+    for yi, y in enumerate(years):
+        gap_dict[y] = round(float(gap[yi]), 4)
+
+    # Year of target achievement: first year where P50 <= target
+    achievement_year = None
+    for yi, y in enumerate(years):
+        if p50_arr[yi] <= target_traj[yi] and p50_arr[yi] > 0:
+            # Only count if there's actual emissions data (skip 2023 = 0 problem)
+            achievement_year = y
+            break
+
+    # Probability of meeting target: % of scenarios with emissions <= target
+    prob_dict = {}
+    for yi, y in enumerate(years):
+        col = fleet_emissions[:, yi]
+        valid = col[~np.isnan(col)]
+        if len(valid) == 0:
+            prob_dict[y] = 0.0
+        else:
+            pct = float(np.sum(valid <= target_traj[yi]) / len(valid) * 100)
+            prob_dict[y] = round(pct, 1)
+
+    return {
+        "gap_to_target_mt": gap_dict,
+        "year_of_target_achievement": achievement_year,
+        "probability_of_meeting_target": prob_dict,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Multi-scenario runner (Phase 3.2 + 3.3)
 # ---------------------------------------------------------------------------
 
 def run_scenarios(scenario_file: str, sweep_df: pd.DataFrame) -> dict:
     """
     Process all named scenarios from a Phase 3.1 scenario file.
+    If 'targets' block is present, computes target analysis per scenario.
 
-    Returns {scenario_name: {description, envelope, plant_detail, fleet_summary}}.
+    Returns {
+      "scenarios": {name: {description, envelope, plant_detail, fleet_summary, targets}},
+      "target_trajectories": {name: {year: emissions_mt}},
+      "baseline_mt": float
+    }
     """
     data = load_scenario_file(scenario_file)
     base_fleet = data["base_fleet"]
     scenarios = data["scenarios"]
-    years = sorted(sweep_df["year"].unique())
+    targets_config = data.get("targets", {})
+    years = sorted(int(y) for y in sweep_df["year"].unique())
 
-    results = {}
+    # Compute baseline_mt: sum of base fleet emissions at a reference year
+    # Use the scenario file's configured value, or estimate from fleet
+    baseline_mt = data.get("baseline_mt", 0.0)
+
+    # Build target trajectories
+    target_trajs = build_target_trajectories(targets_config, years, baseline_mt)
+
+    # Serialize target trajectories for output (numpy → dict)
+    target_traj_output = {}
+    for tname, traj in target_trajs.items():
+        target_traj_output[tname] = {
+            "description": targets_config[tname].get("description", ""),
+            "values": {y: round(float(traj[yi]), 4) for yi, y in enumerate(years)},
+        }
+
+    scenario_results = {}
     for name, spec in scenarios.items():
         description = spec.get("description", "")
         modifications = spec.get("modifications", [])
 
-        # Apply modifications to a copy of the base fleet
-        fleet = apply_scenario(base_fleet, modifications, [int(y) for y in years])
+        fleet = apply_scenario(base_fleet, modifications, years)
+        dispatch = compute_fleet_emissions_fast(fleet, sweep_df)
+        dispatch["description"] = description
 
-        # Run dispatch
-        scenario_results = compute_fleet_emissions_fast(fleet, sweep_df)
-        scenario_results["description"] = description
+        # Extract raw emissions array for target analysis, then remove from output
+        fleet_emissions = dispatch.pop("_fleet_emissions")
 
-        results[name] = scenario_results
+        # Compute target analysis for each target trajectory
+        if target_trajs:
+            targets_analysis = {}
+            for tname, traj in target_trajs.items():
+                targets_analysis[tname] = compute_target_analysis(
+                    fleet_emissions, years, traj
+                )
+            dispatch["targets"] = targets_analysis
 
-    return results
+        scenario_results[name] = dispatch
+
+    return {
+        "scenarios": scenario_results,
+        "target_trajectories": target_traj_output,
+        "baseline_mt": baseline_mt,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -539,6 +681,9 @@ def main():
         print("Computing fleet dispatch...")
         results = compute_fleet_emissions_fast(plants, sweep_df)
 
+        # Strip internal numpy array before JSON serialization
+        results.pop("_fleet_emissions", None)
+
         Path(out_path).parent.mkdir(parents=True, exist_ok=True)
         with open(out_path, "w") as f:
             json.dump(results, f, indent=2)
@@ -547,7 +692,7 @@ def main():
         print(f"\nResults → {out_path}")
 
     else:
-        # Multi-scenario mode (Phase 3.2)
+        # Multi-scenario mode (Phase 3.2 + 3.3)
         out_path = args.output or "market-simulator/results/fleet_scenario_results.json"
         print(f"\nLoading scenarios: {args.scenarios}")
         data = load_scenario_file(args.scenarios)
@@ -555,25 +700,56 @@ def main():
               f"{len(data['scenarios'])} scenarios")
 
         results = run_scenarios(args.scenarios, sweep_df)
+        scenario_results = results["scenarios"]
 
         Path(out_path).parent.mkdir(parents=True, exist_ok=True)
         with open(out_path, "w") as f:
             json.dump(results, f, indent=2)
 
         # Print comparison table
+        first_scenario = scenario_results[next(iter(scenario_results))]
+        years = first_scenario["fleet_summary"]["years"]
         print(f"\n{'Scenario':<30}  ", end="")
-        years = results[next(iter(results))]["fleet_summary"]["years"]
         for y in years:
             print(f"  {y}", end="")
         print("  (P50 Mt CO2)")
         print("-" * (32 + 8 * len(years)))
 
-        for name, res in results.items():
+        for name, res in scenario_results.items():
             print(f"{name:<30}  ", end="")
             for y in years:
-                val = res["envelope"].get(y, {}).get("p50", 0)
+                val = res["envelope"].get(y, res["envelope"].get(str(y), {})).get("p50", 0)
                 print(f"  {val:>5.1f}", end="")
             print()
+
+        # Print target analysis if present
+        if results.get("target_trajectories"):
+            print(f"\n--- Target Trajectories ---")
+            print(f"Baseline: {results['baseline_mt']:.2f} Mt CO2")
+            for tname, tdata in results["target_trajectories"].items():
+                print(f"\n  {tname}: {tdata.get('description', '')}")
+                print(f"    Values: ", end="")
+                for y, v in tdata["values"].items():
+                    print(f"  {y}: {v:.2f}", end="")
+                print()
+
+            print(f"\n--- Target Achievement (P50 gap in Mt CO2) ---")
+            print(f"{'Scenario':<30}  {'Target':<20}  {'Achievement':>12}  ", end="")
+            for y in years:
+                print(f"  {y:>6}", end="")
+            print()
+
+            for sname, sres in scenario_results.items():
+                for tname in results["target_trajectories"]:
+                    tanalysis = sres.get("targets", {}).get(tname, {})
+                    gap = tanalysis.get("gap_to_target_mt", {})
+                    ach = tanalysis.get("year_of_target_achievement")
+                    ach_str = str(ach) if ach else "never"
+                    print(f"{sname:<30}  {tname:<20}  {ach_str:>12}  ", end="")
+                    for y in years:
+                        g = gap.get(y, gap.get(str(y), 0))
+                        print(f"  {g:>6.2f}", end="")
+                    print()
 
         print(f"\nResults → {out_path}")
 
