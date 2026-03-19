@@ -14,7 +14,7 @@ Adapted from step6_1_smartargets.py R1/R2 reference sweep, with all emission-
 constraint / mandated-deployment / DAC logic removed.
 
 Usage:
-  python market_simulation.py                           # Full 270-scenario sweep
+  python market_simulation.py                           # Full 1,215-scenario sweep
   python market_simulation.py --isos CAISO ERCOT        # Subset ISOs
   python market_simulation.py --single                  # Single scenario (Medium defaults)
   python market_simulation.py --snapshot                # Single-year snapshot mode
@@ -1065,7 +1065,7 @@ def apply_economic_new_build(gen_econ, iso, year, state, conditions,
     per-ISO annual build rate × years_in_period.
 
     New-build fossil cost level is a sweep parameter ('Low'/'Medium'/'High')
-    in the 405 parametric sweep, and a free-form input in single trajectory
+    in the 1,215 parametric sweep, and a free-form input in single trajectory
     runs (via conditions['new_fossil_cost_level'] or per-type overrides).
 
     Args:
@@ -3319,7 +3319,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
 
 def run_full_sweep(isos=None, nuclear_retirement_threshold=None,
                     snapshot_mode=False, weather_years=None):
-    """Run full 270-scenario market sweep.
+    """Run full 1,215-scenario market sweep.
 
     Pre-loads data once, shares LMP cache across scenarios.
 
@@ -3327,8 +3327,8 @@ def run_full_sweep(isos=None, nuclear_retirement_threshold=None,
         weather_years: Optional list of year strings (e.g., ['2021', '2023', '2025'])
             to run weather-year sensitivity. Each year runs the full sweep
             independently, then results are combined. If None, uses default
-            year only (1× sweep = 270 scenarios). With 5 years, runs 5× sweep
-            = 1,350 scenarios total.
+            year only (1× sweep = 1,215 scenarios). With 5 years, runs 5× sweep
+            = 6,075 scenarios total.
     """
     t0 = time.time()
     print("Loading common data...")
@@ -3387,7 +3387,7 @@ def run_full_sweep(isos=None, nuclear_retirement_threshold=None,
 def aggregate_sweep_percentiles(all_results):
     """Compute P10/P50/P90 uncertainty bands across all sweep scenarios.
 
-    Groups year_results by (iso, year), computes percentiles across 270 scenarios
+    Groups year_results by (iso, year), computes percentiles across 1,215 scenarios
     for all scalar metrics and per-resource breakdowns. This is the primary
     uncertainty quantification output — it shows how sensitive each outcome is
     to parametric uncertainty (fuel prices, demand growth, grid conditions, etc.).
@@ -3547,7 +3547,7 @@ def main():
     parser.add_argument('--isos', nargs='+', default=None,
                         help='ISOs to simulate (default: all 7)')
     parser.add_argument('--single', action='store_true',
-                        help='Run single scenario instead of full 270 sweep')
+                        help='Run single scenario instead of full 1,215 sweep')
     parser.add_argument('--snapshot', action='store_true',
                         help='Single-year snapshot mode (no year progression)')
     parser.add_argument('--carbon-price', type=float, default=0,
