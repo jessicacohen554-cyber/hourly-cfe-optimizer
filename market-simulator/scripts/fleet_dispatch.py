@@ -504,6 +504,29 @@ def compute_fleet_emissions_fast(plants: list[dict], sweep_df: pd.DataFrame) -> 
     )
 
     # -----------------------------------------------------------------------
+    # Fleet-level new fossil capacity (from add_plant actions)
+    # -----------------------------------------------------------------------
+    fleet_new_fossil_by_iso_year: dict[str, dict[int, float]] = {}
+    for p in active_plants:
+        if p.get("_action") == "add_plant" and p["fuel_type"] in ("gas_ccgt", "gas_ct", "coal_steam"):
+            iso = p["iso"]
+            year_online = p.get("_year_online")
+            cap = p["capacity_mw"] * p.get("equity_share", 1.0)
+            if year_online is not None:
+                for y in years:
+                    if int(y) >= year_online:
+                        fleet_new_fossil_by_iso_year.setdefault(iso, {})
+                        fleet_new_fossil_by_iso_year[iso][int(y)] = (
+                            fleet_new_fossil_by_iso_year.get(iso, {}).get(int(y), 0.0) + cap
+                        )
+
+    # Aggregate fleet new fossil across all ISOs per year
+    fleet_new_fossil_total: dict[int, float] = {}
+    for iso_data in fleet_new_fossil_by_iso_year.values():
+        for y_int, cap_val in iso_data.items():
+            fleet_new_fossil_total[y_int] = fleet_new_fossil_total.get(y_int, 0.0) + cap_val
+
+    # -----------------------------------------------------------------------
     # Grid-level new fossil build context (P50 scenario per year)
     # -----------------------------------------------------------------------
     grid_new_fossil_detail = {}
@@ -523,6 +546,40 @@ def compute_fleet_emissions_fast(plants: list[dict], sweep_df: pd.DataFrame) -> 
                 nf_year[col_name] = round(float(arr[p50_si_nf, yi]), 2)
             grid_new_fossil_detail[int(y)] = nf_year
 
+    # -----------------------------------------------------------------------
+    # Combined new fossil reporting (grid + fleet, additive rule)
+    # -----------------------------------------------------------------------
+    new_fossil_summary: dict[int, dict] = {}
+    overlap_notes: list[str] = []
+
+    for yi, y in enumerate(years):
+        y_int = int(y)
+        grid_mw = 0.0
+        if has_new_fossil and y_int in grid_new_fossil_detail:
+            grid_mw = grid_new_fossil_detail[y_int].get("total_new_fossil_mw", 0.0)
+        fleet_mw = fleet_new_fossil_total.get(y_int, 0.0)
+        combined_mw = grid_mw + fleet_mw
+
+        new_fossil_summary[y_int] = {
+            "grid_new_fossil_mw": round(grid_mw, 1),
+            "fleet_new_fossil_mw": round(fleet_mw, 1),
+            "total_new_fossil_mw": round(combined_mw, 1),
+        }
+
+        # Generate overlap note when both mechanisms produce new fossil in same year
+        if grid_mw > 0 and fleet_mw > 0:
+            # Identify which ISOs have fleet additions this year
+            overlap_isos = [
+                iso for iso, iso_data in fleet_new_fossil_by_iso_year.items()
+                if iso_data.get(y_int, 0) > 0
+            ]
+            iso_str = ", ".join(sorted(overlap_isos)) if overlap_isos else "multiple ISOs"
+            overlap_notes.append(
+                f"Both grid-level ({grid_mw:,.0f} MW) and fleet-level ({fleet_mw:,.0f} MW) "
+                f"new fossil in {iso_str} {y_int}. Combined {combined_mw:,.0f} MW is additive "
+                f"per interaction rule."
+            )
+
     return {
         "fleet_summary": {
             "total_plants": len(active_plants),
@@ -534,6 +591,8 @@ def compute_fleet_emissions_fast(plants: list[dict], sweep_df: pd.DataFrame) -> 
         "envelope": envelope,
         "plant_detail": plant_detail,
         "grid_new_fossil": grid_new_fossil_detail,
+        "new_fossil_summary": new_fossil_summary,
+        "new_fossil_overlap_notes": overlap_notes if overlap_notes else None,
         "_fleet_emissions": fleet_emissions,  # (n_scenarios, n_years) — stripped before JSON output
     }
 
