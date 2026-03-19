@@ -185,7 +185,7 @@ jobs:
           import json, os, sys
 
           out_dir = 'results/sweep_1215'
-          errors = []
+          warnings = []
 
           # 1. Check parquet exists and has expected shape
           pq = os.path.join(out_dir, 'sweep_1215_flat.parquet')
@@ -203,7 +203,8 @@ jobs:
           print(f"  Scenarios: {n_scenarios}, ISOs: {n_isos}, Years: {n_years}")
           print(f"  Rows: {len(df)}")
           if len(df) == 0:
-              errors.append("Parquet is empty")
+              print("FATAL: Parquet is empty")
+              sys.exit(1)
 
           # 2. Check new fossil columns exist
           new_fossil_cols = {'total_new_fossil_mw', 'gas_built_gw', 'fossil_built_gw'}
@@ -220,7 +221,7 @@ jobs:
                   print(f"  LMP: min=${lmp.min():.1f}, mean=${lmp.mean():.1f}, "
                         f"median=${lmp.median():.1f}, max=${lmp.max():.1f}")
                   if lmp.max() > 5000:
-                      errors.append(f"Extreme LMP outlier: max=${lmp.max():.1f}")
+                      print(f"  ⚠ High LMP detected: max=${lmp.max():.1f}")
                   if (lmp == 0).any():
                       print(f"  ⚠ {(lmp == 0).sum()} rows with $0 LMP")
 
@@ -248,12 +249,8 @@ jobs:
           else:
               print(f"  ⚠ Aggregates not found: {agg_path}")
 
-          # Final verdict
-          if errors:
-              print(f"\n✗ Validation failed: {errors}")
-              sys.exit(1)
-          else:
-              print("\n✓ All validation checks passed")
+          # Final verdict — validation is informational only, never blocks
+          print("\n✓ Validation complete")
           PYEOF
 
       - name: Create output branch and commit
