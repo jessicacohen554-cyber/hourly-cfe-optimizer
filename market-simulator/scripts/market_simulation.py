@@ -60,7 +60,10 @@ from pipeline_config import (
     FOAK_NUCLEAR_NEWBUILD, FOAK_CCS_45Q_ON, FOAK_CCS_45Q_OFF, FOAK_GEOTHERMAL,
     FOAK_LDES, FOAK_H2, FOAK_OFFSHORE_WIND,
     EXISTING_GAS_FOM_KW_YR,
-    NEW_GAS_CCGT_LCOE, NEW_GAS_CT_LCOE,
+    NEW_GAS_CCGT_LCOE, NEW_GAS_CT_LCOE, NEW_COAL_LCOE,
+    NEW_BUILD_CAPEX_KW_YR, NEW_BUILD_HEAT_RATES, NEW_BUILD_VOM,
+    NEW_BUILD_CO2_RATES, NEW_BUILD_MIN_CF, NEW_BUILD_MAX_GW_YR,
+    PEAK_DEMAND_MW, EXISTING_GAS_CAPACITY_MW, RESOURCE_ADEQUACY_MARGIN,
     compute_storage_revenue_credit,
     OFFSHORE_ISOS, CCS_CAP_TWH, GEOTHERMAL_CAP_TWH,
     H, NUCLEAR_OFFTAKE_CONTRACTS,
@@ -1046,6 +1049,220 @@ def apply_economic_retirement(gen_econ, iso, year, state, _log=print):
         _log(f"    {iso} total economic retirement: {total_retired_mw:.0f} MW")
 
     return adjusted, retired_capacity, total_retired_mw
+
+
+def apply_economic_new_build(gen_econ, iso, year, state, conditions,
+                              demand_twh, hourly_lmp, _log=print):
+    """Evaluate and apply economic new-build fossil capacity (CCGT, CT, coal).
+
+    New fossil capacity is built when:
+    1. RA trigger: reserve margin falls below target after retirements + clean
+       deployment, requiring new dispatchable capacity.
+    2. Economic trigger: LMP levels support positive margins for new plants
+       above their minimum CF threshold.
+
+    The cheapest viable option is built first. Capacity is capped at the
+    per-ISO annual build rate × years_in_period.
+
+    New-build fossil cost level is a sweep parameter ('Low'/'Medium'/'High')
+    in the 405 parametric sweep, and a free-form input in single trajectory
+    runs (via conditions['new_fossil_cost_level'] or per-type overrides).
+
+    Args:
+        gen_econ: Current generator economics dict from dispatch model.
+        iso: ISO region string.
+        year: Simulation year.
+        state: Per-ISO mutable state dict (tracks cumulative builds).
+        conditions: Scenario conditions dict. Keys used:
+            - new_fossil_cost_level: 'Low'/'Medium'/'High' (default 'Medium')
+            - new_fossil_capex_override: {type: $/kW-yr} overrides per type
+            - new_fossil_min_cf_override: {type: fraction} overrides per type
+            - new_fossil_enabled: bool (default True)
+        demand_twh: Demand in TWh for this ISO/year.
+        hourly_lmp: Array of 8760 hourly LMP values ($/MWh).
+        _log: Logging function.
+
+    Returns:
+        new_builds: dict of {unit_type: new_capacity_mw}
+        total_new_mw: float — total MW of new fossil built
+        new_build_details: dict with per-type economics for output
+    """
+    if not conditions.get('new_fossil_enabled', True):
+        return {}, 0.0, {}
+
+    cost_level = conditions.get('new_fossil_cost_level', 'Medium')
+    capex_override = conditions.get('new_fossil_capex_override', {})
+    min_cf_override = conditions.get('new_fossil_min_cf_override', {})
+    carbon_price = conditions.get('carbon_price', 0)
+
+    # Get fuel prices for variable cost calculation
+    fuel_level = conditions.get('fuel_level', 'Medium')
+    fp = FUEL_PRICES.get(fuel_level, FUEL_PRICES['Medium'])
+
+    # --- Compute RA gap ---
+    # Total existing fossil capacity (post-retirement)
+    existing_fossil_mw = sum(e.get('capacity_mw', 0) for e in gen_econ.values())
+    # Prior new-build capacity already online
+    prior_new_builds = state.get('new_fossil_builds', {})
+    prior_new_mw = sum(prior_new_builds.values())
+    # Clean capacity from cumulative deployments
+    cumulative_gw = state.get('cumulative_gw', {})
+    clean_cap_mw = sum(v * 1000 for v in cumulative_gw.values())
+
+    total_supply_mw = existing_fossil_mw + prior_new_mw + clean_cap_mw
+    avg_demand_mw = demand_twh * 1e6 / 8760
+    peak_demand_mw = PEAK_DEMAND_MW.get(iso, avg_demand_mw * 1.5)
+    # Scale peak demand by growth factor
+    growth_factor = demand_twh / REGIONAL_DEMAND_TWH.get(iso, demand_twh)
+    peak_demand_mw *= growth_factor
+
+    target_reserve = RESOURCE_ADEQUACY_MARGIN  # 0.15
+    required_supply_mw = peak_demand_mw * (1 + target_reserve)
+    ra_gap_mw = max(0, required_supply_mw - total_supply_mw)
+
+    # --- Annual build cap ---
+    # How many years this period covers (matches queue budget logic)
+    years_in_period = 7 if year == 2030 else 5
+    max_build_mw = NEW_BUILD_MAX_GW_YR.get(iso, 3.0) * 1000 * years_in_period
+
+    # --- Evaluate each fossil type ---
+    FOSSIL_TYPES = ['gas_ccgt', 'gas_ct', 'coal']
+    FUEL_KEY_MAP = {'gas_ccgt': 'gas', 'gas_ct': 'gas', 'coal': 'coal'}
+
+    candidates = []
+    build_details = {}
+
+    for ftype in FOSSIL_TYPES:
+        # CAPEX: override or from L/M/H table
+        if ftype in capex_override:
+            capex_kw_yr = capex_override[ftype]
+        else:
+            capex_table = NEW_BUILD_CAPEX_KW_YR.get(cost_level, {}).get(ftype, {})
+            capex_kw_yr = capex_table.get(iso, 999)
+
+        # Skip if effectively blocked (999 = not buildable in this ISO)
+        if capex_kw_yr >= 900:
+            continue
+
+        # Min CF threshold: override or default
+        min_cf = min_cf_override.get(ftype, NEW_BUILD_MIN_CF.get(ftype, 0.30))
+
+        # Variable cost: fuel + VOM + carbon
+        hr = NEW_BUILD_HEAT_RATES.get(ftype, HEAT_RATES.get(ftype, 7.0))
+        vom = NEW_BUILD_VOM.get(ftype, VOM.get(ftype, 3.5))
+        co2_rate = NEW_BUILD_CO2_RATES.get(ftype, CO2_RATES.get(ftype, 0.37))
+        fuel_key = FUEL_KEY_MAP[ftype]
+        fuel_price = fp.get(fuel_key, 3.50)
+
+        var_cost = hr * fuel_price + vom + co2_rate * carbon_price
+
+        # All-in cost at min CF: CAPEX annuity / (CF × 8760) + var_cost
+        # CAPEX is $/kW-yr → $/MWh = CAPEX / (CF × 8.760)
+        capex_per_mwh = capex_kw_yr / (min_cf * 8.760) if min_cf > 0 else float('inf')
+        all_in_cost = capex_per_mwh + var_cost
+
+        # Revenue estimate: what would this unit earn at its dispatch position?
+        # For new builds, they dispatch when LMP > var_cost
+        dispatch_hours = np.sum(hourly_lmp > var_cost)
+        if dispatch_hours > 0:
+            dispatch_mask = hourly_lmp > var_cost
+            avg_rev_when_dispatched = float(np.mean(hourly_lmp[dispatch_mask]))
+            expected_cf = dispatch_hours / len(hourly_lmp)
+        else:
+            avg_rev_when_dispatched = 0.0
+            expected_cf = 0.0
+
+        # Net margin including CAPEX at expected CF
+        if expected_cf > 0:
+            capex_at_actual_cf = capex_kw_yr / (expected_cf * 8.760)
+            net_margin = avg_rev_when_dispatched - var_cost - capex_at_actual_cf
+        else:
+            net_margin = -999
+
+        # Capacity market revenue offset
+        cap_mkt_price = CAPACITY_MARKET_PRICES.get(iso, 0)
+        if cap_mkt_price > 0:
+            # New builds get full ELCC (1.0 for dispatchable)
+            cap_rev_per_mwh = cap_mkt_price / (expected_cf * 8.760) if expected_cf > 0 else 0
+            net_margin += cap_rev_per_mwh
+
+        detail = {
+            'capex_kw_yr': round(capex_kw_yr, 1),
+            'var_cost': round(var_cost, 2),
+            'all_in_at_min_cf': round(all_in_cost, 2),
+            'expected_cf': round(expected_cf, 4),
+            'avg_rev': round(avg_rev_when_dispatched, 2),
+            'net_margin': round(net_margin, 2),
+            'dispatch_hours': int(dispatch_hours),
+            'viable': expected_cf >= min_cf and net_margin > 0,
+        }
+        build_details[ftype] = detail
+
+        # Two paths to build: RA need or economic viability
+        if expected_cf >= min_cf and net_margin > 0:
+            candidates.append((ftype, net_margin, var_cost, capex_kw_yr))
+
+    # --- Build decision ---
+    new_builds = {}
+    total_new_mw = 0.0
+    remaining_build_cap = max_build_mw
+
+    # Sort candidates by net margin (most profitable first)
+    candidates.sort(key=lambda x: -x[1])
+
+    if ra_gap_mw > 0 and candidates:
+        # RA-driven: fill the gap with cheapest viable option
+        # For RA, prefer CT (faster to build, lower CAPEX) unless CCGT is more profitable
+        ra_candidates = sorted(candidates, key=lambda x: x[3])  # sort by CAPEX
+        best_ra = ra_candidates[0]
+        ftype = best_ra[0]
+        build_mw = min(ra_gap_mw, remaining_build_cap)
+        new_builds[ftype] = new_builds.get(ftype, 0) + build_mw
+        total_new_mw += build_mw
+        remaining_build_cap -= build_mw
+        _log(f"    {iso} RA gap {ra_gap_mw:.0f} MW → new-build {ftype} "
+             f"{build_mw:.0f} MW (CAPEX ${best_ra[3]}/kW-yr)")
+
+    # Economic-driven: build additional if profitable and room remains
+    for ftype, margin, var_cost, capex in candidates:
+        if remaining_build_cap <= 0:
+            break
+        if ftype in new_builds:
+            continue  # Already built for RA
+
+        # Economic builds: size to capture scarcity/margin opportunity
+        # Build enough to serve ~50% of hours where the unit would dispatch
+        # above min CF, capped at build rate
+        detail = build_details[ftype]
+        if not detail['viable']:
+            continue
+
+        # Scale build size by margin attractiveness
+        # Higher margins → larger build (up to build cap)
+        margin_scale = min(1.0, margin / 20.0)  # Normalize: $20/MWh margin = full build
+        econ_build_mw = remaining_build_cap * margin_scale * 0.5  # conservative: 50% of available
+        econ_build_mw = max(100, econ_build_mw)  # minimum 100 MW unit
+        econ_build_mw = min(econ_build_mw, remaining_build_cap)
+
+        new_builds[ftype] = new_builds.get(ftype, 0) + econ_build_mw
+        total_new_mw += econ_build_mw
+        remaining_build_cap -= econ_build_mw
+        _log(f"    {iso} economic new-build {ftype} {econ_build_mw:.0f} MW "
+             f"(margin ${margin:.1f}/MWh, CF {detail['expected_cf']:.1%})")
+
+    # Persist cumulative builds in state
+    if total_new_mw > 0:
+        if 'new_fossil_builds' not in state:
+            state['new_fossil_builds'] = {}
+        for ftype, mw in new_builds.items():
+            state['new_fossil_builds'][ftype] = state['new_fossil_builds'].get(ftype, 0) + mw
+        state['gas_built_gw'] = state.get('gas_built_gw', 0) + sum(
+            mw for ft, mw in new_builds.items() if ft.startswith('gas')) / 1000.0
+        state['fossil_built_gw'] = state.get('fossil_built_gw', 0) + total_new_mw / 1000.0
+        _log(f"    {iso} total new fossil: {total_new_mw:.0f} MW "
+             f"(cumulative: {state['fossil_built_gw']:.2f} GW)")
+
+    return new_builds, total_new_mw, build_details
 
 
 def compute_capacity_degradation(iso, clean_pct):
@@ -2369,10 +2586,14 @@ def _map_price_sens_to_lcoe_fuel_tx(sens):
     }
 
 
+NEW_FOSSIL_COST_LEVELS = ['Low', 'Medium', 'High']
+
+
 def build_market_scenarios():
     """Generate all parametric sweep scenarios.
 
-    3 demand × 5 price × 3 PPA × 3 gas friction × 3 queue = 405 scenarios.
+    3 demand × 5 price × 3 PPA × 3 gas friction × 3 queue × 3 new fossil cost
+    = 1,215 scenarios.
     No emission constraints, no NZ targets — purely market-driven reference trajectory.
 
     Returns list of (scenario_id_str, conditions_dict).
@@ -2383,9 +2604,10 @@ def build_market_scenarios():
     ppa_keys = PPA_LEVELS
     gas_keys = list(GAS_FRICTION_LEVELS.keys())
     queue_keys = ['Low', 'Medium', 'High']
+    nfc_keys = NEW_FOSSIL_COST_LEVELS
 
-    for demand, price_name, ppa, gas_name, queue in cartesian(
-            demand_keys, price_keys, ppa_keys, gas_keys, queue_keys):
+    for demand, price_name, ppa, gas_name, queue, nfc in cartesian(
+            demand_keys, price_keys, ppa_keys, gas_keys, queue_keys, nfc_keys):
 
         price_mapping = _map_price_sens_to_lcoe_fuel_tx(PRICE_SENSITIVITIES[price_name])
 
@@ -2393,10 +2615,12 @@ def build_market_scenarios():
         ppa_code = ppa[0]
         gas_code = gas_name[0]
         queue_code = queue[0]
-        scenario_id = f"MKT_{demand_code}_{price_name}_{ppa_code}_{gas_code}_{queue_code}"
+        nfc_code = nfc[0]
+        scenario_id = f"MKT_{demand_code}_{price_name}_{ppa_code}_{gas_code}_{queue_code}_{nfc_code}"
 
         conditions = {
-            'name': f"Market: {demand} demand | {price_name} | PPA={ppa} | Gas={gas_name} | Queue={queue}",
+            'name': (f"Market: {demand} demand | {price_name} | PPA={ppa} | "
+                     f"Gas={gas_name} | Queue={queue} | NewFossil={nfc}"),
             'demand_growth': demand,
             'lcoe_level': price_mapping['lcoe_level'],
             'learning_speed': QUEUE_LEARNING_MAP.get(queue, 'Medium'),
@@ -2406,6 +2630,7 @@ def build_market_scenarios():
             'fuel_level': price_mapping['fuel_level'],
             'tx_level': price_mapping['tx_level'],
             'ppa_level': ppa,
+            'new_fossil_cost_level': nfc,
             '_price_sens_name': price_name,
             '_price_sens': price_mapping.get('_price_sens', {}),
         }
@@ -2417,6 +2642,12 @@ def build_market_scenarios():
 
 def build_single_scenario(overrides=None):
     """Build a single scenario with user overrides.
+
+    New-build fossil parameters (all optional, override via 'overrides' dict):
+        new_fossil_cost_level: 'Low'/'Medium'/'High' — selects CAPEX table
+        new_fossil_capex_override: {type: $/kW-yr} — per-type CAPEX override
+        new_fossil_min_cf_override: {type: fraction} — per-type min CF override
+        new_fossil_enabled: bool — disable new fossil builds entirely (default True)
 
     Returns (scenario_id, conditions_dict).
     """
@@ -2432,6 +2663,9 @@ def build_single_scenario(overrides=None):
         'tx_level': 'Medium',
         'ppa_level': 'Medium',
         'dr_level': 'Off',
+        'new_fossil_cost_level': 'Medium',
+        'new_fossil_enabled': True,
+        # User-overridable per-type: new_fossil_capex_override, new_fossil_min_cf_override
     }
     if overrides:
         defaults.update(overrides)
@@ -2563,6 +2797,8 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             'rps_eligible_twh_floor': baseline_rps_eligible / 100.0 * REGIONAL_DEMAND_TWH[iso],
             'market_stopped': False,
             'gas_built_gw': 0,
+            'fossil_built_gw': 0,
+            'new_fossil_builds': {},  # cumulative MW built by unit type
             'nuclear_retired': False,
             'acp_bonus_queue_gw': 0,
             'cumulative_acp_million': 0,
@@ -2607,6 +2843,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                     'avg_lmp': round(baseline_lmp, 1),
                     'lmp_p90': round(baseline_lmp * 1.5, 1),
                     'gas_built_gw': 0,
+                    'fossil_built_gw': 0,
                     'total_gas_gw': 0,
                     'market_stop': False,
                     'resource_mix_twh': {},
@@ -2616,6 +2853,9 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                     'nuclear_revenue': {},
                     'nuclear_retired': False,
                     'ccs_breakeven': {},
+                    'new_fossil_builds_mw': {},
+                    'total_new_fossil_mw': 0,
+                    'new_fossil_details': {},
                     # RPS compliance tracking
                     'rps_mandated_pct': 0,
                     'rps_eligible_pct': round(iso_state[iso].get('rps_eligible_pct', 0), 1),
@@ -2883,6 +3123,38 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             adjusted_gen_econ, econ_retired, econ_retired_mw = apply_economic_retirement(
                 gen_econ, iso, year, state, _log=_log)
 
+            # --- ECONOMIC NEW-BUILD FOSSIL ---
+            # After retirements, evaluate whether new fossil capacity should be
+            # built based on RA needs and/or economic viability (positive margins).
+            # Pass cumulative_gw through state for RA calculation.
+            state['cumulative_gw'] = cumulative_gw
+            new_fossil_builds, new_fossil_mw, new_fossil_details = apply_economic_new_build(
+                adjusted_gen_econ, iso, year, state, conditions,
+                demand_twh, hourly_lmp, _log=_log)
+
+            # Add new-build capacity to adjusted gen_econ for emission accounting.
+            # New units have better heat rates than fleet average, so they
+            # enter at their own cost/emission characteristics.
+            for ftype, new_mw in new_fossil_builds.items():
+                fleet_key = ftype if ftype != 'coal' else 'coal_steam'
+                if fleet_key in adjusted_gen_econ:
+                    adjusted_gen_econ[fleet_key]['capacity_mw'] += new_mw
+                else:
+                    # New type entering the fleet
+                    hr = NEW_BUILD_HEAT_RATES.get(ftype, HEAT_RATES.get(fleet_key, 7.0))
+                    vom = NEW_BUILD_VOM.get(ftype, VOM.get(fleet_key, 3.5))
+                    co2 = NEW_BUILD_CO2_RATES.get(ftype, CO2_RATES.get(fleet_key, 0.37))
+                    adjusted_gen_econ[fleet_key] = {
+                        'capacity_mw': new_mw,
+                        'cf': 0.50,
+                        'avg_rev_mwh': float(np.mean(hourly_lmp)),
+                        'var_cost_mwh': hr * FUEL_PRICES.get(
+                            conditions.get('fuel_level', 'Medium'), {}).get(
+                            'gas' if 'gas' in ftype else 'coal', 3.5) + vom,
+                        'margin_mwh': 0,
+                        'dispatch_hours': 4380,
+                    }
+
             # --- EMISSION ACCOUNTING ---
             gf = demand_twh / REGIONAL_DEMAND_TWH[iso]
             _, retirement_info = compute_fossil_retirement(
@@ -2901,7 +3173,20 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 _log(f"    {iso} fossil TWh adjusted: ×{surviving_frac:.2f} "
                      f"({econ_retired_mw:.0f} MW retired of {total_fossil_cap:.0f} MW)")
 
-            emissions_mt = fossil_twh * 1e6 * er / 1e6
+            # Add generation from new-build fossil capacity.
+            # New builds generate at their expected CF with their own emission rate.
+            new_build_twh = 0.0
+            new_build_emissions_mt = 0.0
+            for ftype, new_mw in new_fossil_builds.items():
+                detail = new_fossil_details.get(ftype, {})
+                nb_cf = detail.get('expected_cf', 0.30)
+                nb_twh = new_mw * nb_cf * 8.760 / 1000.0  # MW → GW → TWh
+                nb_co2_rate = NEW_BUILD_CO2_RATES.get(ftype, 0.37)
+                nb_emissions = nb_twh * nb_co2_rate  # Mt CO2
+                new_build_twh += nb_twh
+                new_build_emissions_mt += nb_emissions
+
+            emissions_mt = fossil_twh * 1e6 * er / 1e6 + new_build_emissions_mt
 
             # Per-fuel-type emissions breakdown (Mt CO2) derived from fossil
             # retirement model — consistent with the emissions_mt total.
@@ -2968,8 +3253,11 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 'rec_rev_mwh': rev_breakdown['rec_rev_mwh'],
                 'avg_lmp': round(avg_lmp, 1),
                 'lmp_p90': round(p90_lmp, 1),
-                'gas_built_gw': round(state['gas_built_gw'], 2),
-                'total_gas_gw': 0,
+                'gas_built_gw': round(state.get('gas_built_gw', 0), 2),
+                'fossil_built_gw': round(state.get('fossil_built_gw', 0), 2),
+                'total_gas_gw': round(
+                    sum(e.get('capacity_mw', 0) for k, e in adjusted_gen_econ.items()
+                        if k.startswith('gas')) / 1000.0, 2),
                 'market_stop': state['market_stopped'],
                 'resource_mix_twh': {k: round(v, 2) for k, v in resource_mix_twh.items()},
                 'cumulative_gw': {k: round(v, 2) for k, v in cumulative_gw.items()},
@@ -2981,6 +3269,9 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 'adjusted_generator_economics': adjusted_gen_econ,
                 'economic_retirements_mw': {k: round(v, 0) for k, v in econ_retired.items()},
                 'total_economic_retirement_mw': round(econ_retired_mw, 0),
+                'new_fossil_builds_mw': {k: round(v, 0) for k, v in new_fossil_builds.items()},
+                'total_new_fossil_mw': round(new_fossil_mw, 0),
+                'new_fossil_details': new_fossil_details,
                 'emissions_by_fuel': emissions_by_fuel,
                 'nuclear_revenue': nuclear_rev,
                 'nuclear_retired': state['nuclear_retired'],
@@ -3111,7 +3402,8 @@ def aggregate_sweep_percentiles(all_results):
     SCALAR_METRICS = [
         'clean_pct', 'demand_twh', 'emissions_mt', 'emission_rate_tco2_mwh',
         'cost_per_mwh', 'revenue_per_mwh', 'energy_rev_mwh', 'capacity_rev_mwh',
-        'rec_rev_mwh', 'avg_lmp', 'lmp_p90', 'gas_built_gw',
+        'rec_rev_mwh', 'avg_lmp', 'lmp_p90', 'gas_built_gw', 'fossil_built_gw',
+        'total_new_fossil_mw',
     ]
     # Boolean metrics: report % of scenarios where condition is True
     BOOL_METRICS = ['market_stop', 'nuclear_retired']
