@@ -1,0 +1,298 @@
+{
+  "$schema_version": "2.0",
+  "$schema_description": "Fleet scenario schema — extends Phase 2.1 with named scenario variants. Each scenario applies modifications to the base_fleet: CCS retrofits, retirements, or new plant additions. Processing logic applies modifications year-sensitive (respecting year_online).",
+
+  "metadata": {
+    "company": "Constellation Energy",
+    "as_of_date": "2025-01-01",
+    "notes": "Fossil fleet across 6 ISOs with 4 scenario variants for fleet-level emissions modeling."
+  },
+
+  "schema": {
+    "base_fleet": {
+      "description": "Array of Phase 2.1 plant objects. All plants start in 'operating' status. This is the default fleet state before any scenario modifications.",
+      "items": "See Phase 2.1 schema (sample_fleet.json) for per-plant fields."
+    },
+    "scenarios": {
+      "description": "Named scenario variants. Each scenario applies an ordered list of modifications to a copy of the base_fleet.",
+      "value_schema": {
+        "description": {"type": "string", "required": true, "description": "Human-readable scenario description."},
+        "modifications": {
+          "type": "array",
+          "required": true,
+          "description": "Ordered list of fleet modifications. Applied sequentially to a copy of base_fleet.",
+          "item_types": {
+            "ccs_retrofit": {
+              "description": "Retrofit an existing plant with CCS. Targeted by orispl (single plant) or fuel_type (all plants of that type).",
+              "fields": {
+                "action": "ccs_retrofit",
+                "orispl": {"type": "integer", "required": false, "description": "Target a specific plant by ORIS ID."},
+                "fuel_type": {"type": "string", "required": false, "description": "Target all plants of this fuel type. Mutually exclusive with orispl."},
+                "year_online": {"type": "integer", "required": true, "description": "Year CCS becomes operational."},
+                "ccs_capture_rate": {"type": "number", "default": 0.95, "description": "CO2 capture rate (0-1)."},
+                "ccs_heat_rate_penalty": {"type": "number", "default": 1.14, "description": "Heat rate multiplier for CCS parasitic load."}
+              }
+            },
+            "retire": {
+              "description": "Retire a plant or all plants of a fuel type. Zero generation and emissions from year_online onward.",
+              "fields": {
+                "action": "retire",
+                "orispl": {"type": "integer", "required": false, "description": "Target a specific plant."},
+                "fuel_type": {"type": "string", "required": false, "description": "Target all plants of this fuel type."},
+                "year_online": {"type": "integer", "required": true, "description": "Year retirement takes effect."}
+              }
+            },
+            "add_plant": {
+              "description": "Add a new plant to the fleet (e.g., new-build CCGT).",
+              "fields": {
+                "action": "add_plant",
+                "name": {"type": "string", "required": true},
+                "iso": {"type": "string", "required": true},
+                "capacity_mw": {"type": "number", "required": true},
+                "fuel_type": {"type": "string", "required": true},
+                "heat_rate_mmbtu_mwh": {"type": "number", "required": true},
+                "co2_rate_t_mwh": {"type": "number", "required": false, "description": "Derived from heat_rate x emission_factor if omitted."},
+                "equity_share": {"type": "number", "default": 1.0},
+                "year_online": {"type": "integer", "required": true, "description": "Year the plant enters service."}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "base_fleet": [
+    {
+      "orispl": 55524,
+      "name": "York",
+      "iso": "PJM",
+      "capacity_mw": 1433.0,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 8.07,
+      "co2_rate_t_mwh": 0.42844,
+      "equity_share": 1.0,
+      "status": "operating"
+    },
+    {
+      "orispl": 55464,
+      "name": "Deer Park",
+      "iso": "ERCOT",
+      "capacity_mw": 1237.0,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 6.2,
+      "co2_rate_t_mwh": 0.32873,
+      "equity_share": 1.0,
+      "status": "operating"
+    },
+    {
+      "orispl": 60122,
+      "name": "Colorado Bend II",
+      "iso": "ERCOT",
+      "capacity_mw": 1210.3,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.61,
+      "co2_rate_t_mwh": 0.40379,
+      "equity_share": 1.0,
+      "status": "operating"
+    },
+    {
+      "orispl": 59812,
+      "name": "Wolf Hollow II",
+      "iso": "ERCOT",
+      "capacity_mw": 1181.0,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 6.94,
+      "co2_rate_t_mwh": 0.36844,
+      "equity_share": 1.0,
+      "status": "operating"
+    },
+    {
+      "orispl": 55690,
+      "name": "Bethlehem",
+      "iso": "PJM",
+      "capacity_mw": 1136.0,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.57,
+      "co2_rate_t_mwh": 0.40141,
+      "equity_share": 1.0,
+      "status": "operating"
+    },
+    {
+      "orispl": 7153,
+      "name": "Hay Road",
+      "iso": "PJM",
+      "capacity_mw": 1128.0,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 2.75,
+      "co2_rate_t_mwh": 0.14601,
+      "equity_share": 1.0,
+      "status": "operating"
+    },
+    {
+      "orispl": 55327,
+      "name": "Baytown",
+      "iso": "ERCOT",
+      "capacity_mw": 1122.0,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 5.93,
+      "co2_rate_t_mwh": 0.31478,
+      "equity_share": 1.0,
+      "status": "operating"
+    },
+    {
+      "orispl": 55153,
+      "name": "Guadalupe",
+      "iso": "ERCOT",
+      "capacity_mw": 1042.0,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 8.69,
+      "co2_rate_t_mwh": 0.46128,
+      "equity_share": 1.0,
+      "status": "operating"
+    },
+    {
+      "orispl": 3491,
+      "name": "Handley 3",
+      "iso": "ERCOT",
+      "capacity_mw": 1245.0,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "equity_share": 1.0,
+      "status": "operating"
+    },
+    {
+      "orispl": 3161,
+      "name": "Eddystone",
+      "iso": "PJM",
+      "capacity_mw": 838.2,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "equity_share": 1.0,
+      "status": "operating"
+    },
+    {
+      "orispl": 593,
+      "name": "Edge Moor",
+      "iso": "PJM",
+      "capacity_mw": 711.0,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "status": "operating"
+    },
+    {
+      "orispl": 1556,
+      "name": "Perryman",
+      "iso": "PJM",
+      "capacity_mw": 494.8,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "equity_share": 1.0,
+      "status": "operating"
+    },
+    {
+      "orispl": 8012,
+      "name": "Croydon",
+      "iso": "PJM",
+      "capacity_mw": 523.5,
+      "fuel_type": "oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "equity_share": 1.0,
+      "status": "operating"
+    },
+    {
+      "orispl": 55317,
+      "name": "Fore River",
+      "iso": "NEISO",
+      "capacity_mw": 790.0,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 3.36,
+      "co2_rate_t_mwh": 0.178,
+      "equity_share": 1.0,
+      "status": "operating"
+    },
+    {
+      "orispl": 55170,
+      "name": "Granite Ridge",
+      "iso": "NEISO",
+      "capacity_mw": 729.0,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 5.44,
+      "co2_rate_t_mwh": 0.28862,
+      "equity_share": 1.0,
+      "status": "operating"
+    },
+    {
+      "orispl": 55294,
+      "name": "Westbrook",
+      "iso": "NEISO",
+      "capacity_mw": 585.4,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 5.1,
+      "co2_rate_t_mwh": 0.27033,
+      "equity_share": 1.0,
+      "status": "operating"
+    }
+  ],
+
+  "scenarios": {
+    "baseline": {
+      "description": "Status quo — no CCS, no new gas, no early retirements. Economic retirements only (driven by market conditions in each sweep scenario).",
+      "modifications": []
+    },
+
+    "ccs_top_emitters": {
+      "description": "CCS retrofit on the 4 largest ERCOT CCGTs (Deer Park, Colorado Bend II, Wolf Hollow II, Guadalupe) by 2030-2032. These 4 plants represent ~4.7 GW and ~10 Mt/yr baseline emissions.",
+      "modifications": [
+        {"orispl": 55464, "action": "ccs_retrofit", "year_online": 2030},
+        {"orispl": 60122, "action": "ccs_retrofit", "year_online": 2030},
+        {"orispl": 59812, "action": "ccs_retrofit", "year_online": 2031},
+        {"orispl": 55153, "action": "ccs_retrofit", "year_online": 2032}
+      ]
+    },
+
+    "ccs_plus_new_gas": {
+      "description": "CCS on top ERCOT emitters + 1,200 MW new efficient CCGT in PJM to replace aging peakers. New plant online 2028 with best-in-class heat rate (6.3 MMBtu/MWh).",
+      "modifications": [
+        {"orispl": 55464, "action": "ccs_retrofit", "year_online": 2030},
+        {"orispl": 60122, "action": "ccs_retrofit", "year_online": 2030},
+        {"orispl": 59812, "action": "ccs_retrofit", "year_online": 2031},
+        {
+          "action": "add_plant",
+          "name": "New PJM CCGT East",
+          "iso": "PJM",
+          "capacity_mw": 600,
+          "fuel_type": "gas_ccgt",
+          "heat_rate_mmbtu_mwh": 6.3,
+          "equity_share": 1.0,
+          "year_online": 2028
+        },
+        {
+          "action": "add_plant",
+          "name": "New PJM CCGT West",
+          "iso": "PJM",
+          "capacity_mw": 600,
+          "fuel_type": "gas_ccgt",
+          "heat_rate_mmbtu_mwh": 6.3,
+          "equity_share": 1.0,
+          "year_online": 2029
+        }
+      ]
+    },
+
+    "retire_peakers_ccs_baseload": {
+      "description": "Retire all oil CTs and gas CTs by 2030, CCS retrofit on all remaining gas CCGTs by 2035. Aggressive decarbonization pathway — eliminates peaker fleet entirely and captures residual CCGT emissions.",
+      "modifications": [
+        {"fuel_type": "oil_ct", "action": "retire", "year_online": 2030},
+        {"fuel_type": "gas_ct", "action": "retire", "year_online": 2030},
+        {"fuel_type": "gas_ccgt", "action": "ccs_retrofit", "year_online": 2035}
+      ]
+    }
+  }
+}
