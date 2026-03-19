@@ -593,26 +593,35 @@ class PriceModel:
         self.demand_elasticity_damping = 0.5  # price damping factor per unit curtailment
 
         # ORDC parameters — loaded from pipeline_config.ORDC_PARAMS
-        ordc = ORDC_PARAMS.get(iso, {'voll': 2000, 'reserve_target_mw': 2500, 'lolp_k': 0.003})
+        # Exponential knee model: $0 above knee, exp decay below, capped.
+        ordc = ORDC_PARAMS.get(iso, {'voll': 2000, 'knee_mw': 3000, 'lam': 0.002, 'cap': 250})
         self.ordc_voll = ordc['voll']
-        self.ordc_reserve_target_mw = ordc['reserve_target_mw']
-        self.ordc_lolp_k = ordc['lolp_k']
+        self.ordc_knee_mw = ordc['knee_mw']
+        self.ordc_lam = ordc['lam']
+        self.ordc_cap = ordc['cap']
 
     def compute_ordc_adder(self, reserves_mw):
-        """ORDC price adder: VOLL × LOLP(reserves). Fully vectorized.
+        """ORDC price adder: exponential knee with cap. Fully vectorized.
 
-        LOLP modeled as logistic sigmoid: LOLP = 1 / (1 + exp(k * (R - R_target))).
-        When reserves >> target: LOLP ≈ 0, adder ≈ $0.
-        When reserves << target: LOLP ≈ 1, adder ≈ VOLL.
-        Sigmoid transitions smoothly around the reserve target.
+        Hard knee: adder is exactly $0 when reserves >= knee_mw.
+        Below knee: LOLP = exp(-lambda * reserves), adder = min(cap, VOLL * LOLP).
+        This matches real-world ORDC behavior (e.g., ERCOT PUCT Docket 52373):
+        - Near-zero adder at comfortable reserve levels
+        - Smooth exponential ramp as reserves deplete
+        - Capped to prevent average-polluting spikes
 
         Args:
             reserves_mw: numpy array (8760,) of hourly operating reserves in MW
         Returns:
             numpy array (8760,) of ORDC adders in $/MWh
         """
-        lolp = 1.0 / (1.0 + np.exp(self.ordc_lolp_k * (reserves_mw - self.ordc_reserve_target_mw)))
-        return self.ordc_voll * lolp
+        adder = np.zeros_like(reserves_mw)
+        below_knee = reserves_mw < self.ordc_knee_mw
+        if not below_knee.any():
+            return adder
+        lolp = np.exp(-self.ordc_lam * np.maximum(reserves_mw[below_knee], 0.0))
+        adder[below_knee] = np.minimum(self.ordc_cap, self.ordc_voll * lolp)
+        return adder
 
     def price_hour(self, residual_demand_mw, demand_mw, stack, surplus_mw=0.0):
         """Compute LMP for a single hour given residual demand and merit-order stack.
@@ -1132,11 +1141,15 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
             remaining_cap = total_fossil_cap - normal_residual
             reserve_ratio = np.where(pos_demand > 0, remaining_cap / pos_demand, 1.0)
 
-            low_reserve = reserve_ratio < price_model.scarcity_threshold
-            if low_reserve.any():
-                for j in np.where(low_reserve)[0]:
-                    normal_prices[j] += price_model._scarcity_adder(
-                        float(reserve_ratio[j]), float(pos_demand[j]))
+            # Per-hour scarcity adder: only in demand_quantile mode.
+            # When ORDC is active, scarcity pricing comes from compute_ordc_adder()
+            # applied later — applying both would double-count scarcity.
+            if SCARCITY_MODE != 'ordc':
+                low_reserve = reserve_ratio < price_model.scarcity_threshold
+                if low_reserve.any():
+                    for j in np.where(low_reserve)[0]:
+                        normal_prices[j] += price_model._scarcity_adder(
+                            float(reserve_ratio[j]), float(pos_demand[j]))
 
             pos_indices = np.where(pos_mask)[0]
             normal_global = pos_indices[normal_mask]
