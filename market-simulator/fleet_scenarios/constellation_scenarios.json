@@ -1,0 +1,1239 @@
+{
+  "$schema_version": "2.1",
+  "$schema_description": "Fleet scenario schema \u2014 extends Phase 2.1 with named scenario variants and new-build interaction rules. Each scenario applies modifications to the base_fleet: CCS retrofits, retirements, or new plant additions. Fleet-level add_plant actions interact with grid-level new fossil builds per the new_build_interaction rule.",
+  "metadata": {
+    "company": "Constellation Energy",
+    "as_of_date": "2025-01-01",
+    "source": "CEG_fleet_rosetta.csv",
+    "notes": "Fossil fleet of 81 plants across multiple ISOs with 4 scenario variants for fleet-level emissions modeling. Plants include CEG legacy fleet and CPN (Calpine) acquisition."
+  },
+  "new_build_interaction": {
+    "rule": "additive",
+    "description": "Fleet-level add_plant actions are additive to grid-level new fossil builds from apply_economic_new_build(). Fleet additions represent company-specific decisions; grid builds represent market-driven capacity. Both can coexist.",
+    "reporting": "Both sources reported separately in output: grid_new_fossil_mw (market) + fleet_new_fossil_mw (company) = total_new_fossil_mw"
+  },
+  "schema": {
+    "base_fleet": {
+      "description": "Array of Phase 2.1 plant objects. All plants start in 'operating' status. This is the default fleet state before any scenario modifications.",
+      "items": "See Phase 2.1 schema (sample_fleet.json) for per-plant fields."
+    },
+    "scenarios": {
+      "description": "Named scenario variants. Each scenario applies an ordered list of modifications to a copy of the base_fleet.",
+      "value_schema": {
+        "description": {
+          "type": "string",
+          "required": true,
+          "description": "Human-readable scenario description."
+        },
+        "modifications": {
+          "type": "array",
+          "required": true,
+          "description": "Ordered list of fleet modifications. Applied sequentially to a copy of base_fleet.",
+          "item_types": {
+            "ccs_retrofit": {
+              "description": "Retrofit an existing plant with CCS. Targeted by orispl (single plant) or fuel_type (all plants of that type).",
+              "fields": {
+                "action": "ccs_retrofit",
+                "orispl": {
+                  "type": "integer",
+                  "required": false,
+                  "description": "Target a specific plant by ORIS ID."
+                },
+                "fuel_type": {
+                  "type": "string",
+                  "required": false,
+                  "description": "Target all plants of this fuel type. Mutually exclusive with orispl."
+                },
+                "year_online": {
+                  "type": "integer",
+                  "required": true,
+                  "description": "Year CCS becomes operational."
+                },
+                "ccs_capture_rate": {
+                  "type": "number",
+                  "default": 0.95,
+                  "description": "CO2 capture rate (0-1)."
+                },
+                "ccs_heat_rate_penalty": {
+                  "type": "number",
+                  "default": 1.14,
+                  "description": "Heat rate multiplier for CCS parasitic load."
+                }
+              }
+            },
+            "retire": {
+              "description": "Retire a plant or all plants of a fuel type. Zero generation and emissions from year_online onward.",
+              "fields": {
+                "action": "retire",
+                "orispl": {
+                  "type": "integer",
+                  "required": false,
+                  "description": "Target a specific plant."
+                },
+                "fuel_type": {
+                  "type": "string",
+                  "required": false,
+                  "description": "Target all plants of this fuel type."
+                },
+                "year_online": {
+                  "type": "integer",
+                  "required": true,
+                  "description": "Year retirement takes effect."
+                }
+              }
+            },
+            "add_plant": {
+              "description": "Add a new plant to the fleet (e.g., new-build CCGT).",
+              "fields": {
+                "action": "add_plant",
+                "name": {
+                  "type": "string",
+                  "required": true
+                },
+                "iso": {
+                  "type": "string",
+                  "required": true
+                },
+                "capacity_mw": {
+                  "type": "number",
+                  "required": true
+                },
+                "fuel_type": {
+                  "type": "string",
+                  "required": true
+                },
+                "heat_rate_mmbtu_mwh": {
+                  "type": "number",
+                  "required": true
+                },
+                "co2_rate_t_mwh": {
+                  "type": "number",
+                  "required": false,
+                  "description": "Derived from heat_rate x emission_factor if omitted."
+                },
+                "equity_share": {
+                  "type": "number",
+                  "default": 1.0
+                },
+                "year_online": {
+                  "type": "integer",
+                  "required": true,
+                  "description": "Year the plant enters service."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "baseline_mt": 23.16,
+  "targets": {
+    "sbti_15c": {
+      "type": "sbti_15c",
+      "description": "SBTi 1.5\u00b0C pathway: net zero by 2040.",
+      "base_year": 2023,
+      "baseline_mt": 23.16,
+      "milestones": {
+        "2023": 23.16,
+        "2030": 11.6,
+        "2035": 5.8,
+        "2040": 0.0,
+        "2045": 0.0,
+        "2050": 0.0
+      }
+    },
+    "at_power_nz": {
+      "type": "at_power_nz",
+      "description": "Constellation committed target: AT Power net-zero pathway.",
+      "milestones": {
+        "2023": 23.16,
+        "2030": 15.1,
+        "2035": 8.1,
+        "2040": 1.2,
+        "2045": 0.0,
+        "2050": 0.0
+      }
+    }
+  },
+  "base_fleet": [
+    {
+      "orispl": 997153,
+      "name": "Agnews Cogeneration",
+      "iso": "CAISO",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55327,
+      "name": "BTE Baytown Chiller Gas Plant",
+      "iso": "ERCOT",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55327,
+      "name": "Baytown Power Plant",
+      "iso": "ERCOT",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 50292,
+      "name": "Bethpage",
+      "iso": "NYISO",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55172,
+      "name": "Calpine Bosque Energy Center(Thad Hill)",
+      "iso": "ERCOT",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55299,
+      "name": "Channel Energy Center",
+      "iso": "ERCOT",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 60122,
+      "name": "Colorado Bend Energy Center II",
+      "iso": "ERCOT",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55206,
+      "name": "Corpus Christi Energy Center",
+      "iso": "ERCOT",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55464,
+      "name": "Deer Park Energy Center",
+      "iso": "ERCOT",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55333,
+      "name": "Delta Energy Center",
+      "iso": "CAISO",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55317,
+      "name": "Fore River",
+      "iso": "NEISO",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55226,
+      "name": "Freestone Energy Center",
+      "iso": "ERCOT",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 0.75,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 10034,
+      "name": "Gilroy",
+      "iso": "CAISO",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55170,
+      "name": "Granite Ridge",
+      "iso": "NEISO",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 977331,
+      "name": "Greenfield Energy Centre",
+      "iso": "NA",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55086,
+      "name": "Gregory",
+      "iso": "ERCOT",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 0.34,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55153,
+      "name": "Guadalupe Energy Center",
+      "iso": "ERCOT",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 54761,
+      "name": "Hermiston Power Project",
+      "iso": "NA",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 7762,
+      "name": "Hidalgo Energy Center",
+      "iso": "ERCOT",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 0.79,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55411,
+      "name": "Hillabee Energy Center",
+      "iso": "NA",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55357,
+      "name": "Jack A. Fusco Energy Center (Brazos Valley)",
+      "iso": "ERCOT",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 990002,
+      "name": "Kennedy International Airport Cogen",
+      "iso": "NYISO",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 10294,
+      "name": "King City",
+      "iso": "CAISO",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55748,
+      "name": "Los Esteros Critical CC Plant",
+      "iso": "CAISO",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55217,
+      "name": "Los Medanos Energy Center",
+      "iso": "CAISO",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55123,
+      "name": "Magic Valley Generating Station",
+      "iso": "ERCOT",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55393,
+      "name": "Metcalf Energy Center",
+      "iso": "CAISO",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55293,
+      "name": "Morgan Energy Center",
+      "iso": "NA",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55345,
+      "name": "Otay Mesa Generating Project",
+      "iso": "CAISO",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55047,
+      "name": "Pasadena Cogeneration Power Plant",
+      "iso": "ERCOT",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55656,
+      "name": "Pastoria Energy Center",
+      "iso": "CAISO",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55075,
+      "name": "Pine Bluff Energy Center",
+      "iso": "MISO",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 56349,
+      "name": "Quail Run",
+      "iso": "ERCOT",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 56467,
+      "name": "Russell City Energy Center",
+      "iso": "CAISO",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55177,
+      "name": "South Point Energy Center",
+      "iso": "NA",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55112,
+      "name": "Sutter Energy Center",
+      "iso": "CAISO",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 52088,
+      "name": "Texas City",
+      "iso": "ERCOT",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 912546,
+      "name": "Valladolid III",
+      "iso": "NA",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 0.29,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 55294,
+      "name": "Westbrook Energy Center",
+      "iso": "NEISO",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 59812,
+      "name": "Wolf Hollow II",
+      "iso": "ERCOT",
+      "capacity_mw": 800,
+      "fuel_type": "gas_ccgt",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 50292,
+      "name": "Bethpage CT",
+      "iso": "NYISO",
+      "capacity_mw": 200,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 55625,
+      "name": "Creed Energy Center",
+      "iso": "CAISO",
+      "capacity_mw": 200,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 5083,
+      "name": "Cumberland CT",
+      "iso": "PJM",
+      "capacity_mw": 200,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 55847,
+      "name": "Feather River Energy Center",
+      "iso": "CAISO",
+      "capacity_mw": 200,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 55810,
+      "name": "Gilroy Peaking Energy Center",
+      "iso": "CAISO",
+      "capacity_mw": 200,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 55627,
+      "name": "Goose Haven Energy Center",
+      "iso": "CAISO",
+      "capacity_mw": 200,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 3491,
+      "name": "Handley",
+      "iso": "ERCOT",
+      "capacity_mw": 200,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 55233,
+      "name": "Handsome Lake Energy",
+      "iso": "PJM",
+      "capacity_mw": 200,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 10294,
+      "name": "King City Peaking Energy Center",
+      "iso": "CAISO",
+      "capacity_mw": 200,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 55626,
+      "name": "Lambie Energy Center",
+      "iso": "CAISO",
+      "capacity_mw": 200,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 907221,
+      "name": "Northern Prairie Power Project (Grande Prairie)",
+      "iso": "NA",
+      "capacity_mw": 200,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 55963,
+      "name": "Riverview Energy Center",
+      "iso": "CAISO",
+      "capacity_mw": 200,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 2410,
+      "name": "Salem CT",
+      "iso": "PJM",
+      "capacity_mw": 200,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 7288,
+      "name": "Sherman Avenue",
+      "iso": "PJM",
+      "capacity_mw": 200,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 6081,
+      "name": "Stony Brook Cogeneration",
+      "iso": "NYISO",
+      "capacity_mw": 200,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 55855,
+      "name": "Wolfskill Energy",
+      "iso": "CAISO",
+      "capacity_mw": 200,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 10349,
+      "name": "Yuba City Energy Center",
+      "iso": "CAISO",
+      "capacity_mw": 200,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 55392,
+      "name": "Zion Energy Center",
+      "iso": "PJM",
+      "capacity_mw": 200,
+      "fuel_type": "gas_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "equity_share": 1.0,
+      "ccs_eligible": true,
+      "status": "operating"
+    },
+    {
+      "orispl": 591,
+      "name": "Christiana",
+      "iso": "PJM",
+      "capacity_mw": 200,
+      "fuel_type": "gas_oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.58,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 592,
+      "name": "Delaware City 10",
+      "iso": "PJM",
+      "capacity_mw": 200,
+      "fuel_type": "gas_oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.58,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 3161,
+      "name": "Eddystone 3-4",
+      "iso": "PJM",
+      "capacity_mw": 200,
+      "fuel_type": "gas_oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.58,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 3161,
+      "name": "Eddystone CT",
+      "iso": "PJM",
+      "capacity_mw": 200,
+      "fuel_type": "gas_oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.58,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 1556,
+      "name": "Perryman",
+      "iso": "PJM",
+      "capacity_mw": 200,
+      "fuel_type": "gas_oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.58,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 3785,
+      "name": "Tasley",
+      "iso": "PJM",
+      "capacity_mw": 200,
+      "fuel_type": "gas_oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.58,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 597,
+      "name": "West Energy Center",
+      "iso": "PJM",
+      "capacity_mw": 200,
+      "fuel_type": "gas_oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.58,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 59882,
+      "name": "West Medway II",
+      "iso": "NEISO",
+      "capacity_mw": 200,
+      "fuel_type": "gas_oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.58,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 59882,
+      "name": "West Medway II",
+      "iso": "NEISO",
+      "capacity_mw": 200,
+      "fuel_type": "gas_oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.58,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 935814,
+      "name": "Bayview",
+      "iso": "PJM",
+      "capacity_mw": 150,
+      "fuel_type": "oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 999402,
+      "name": "Chester",
+      "iso": "PJM",
+      "capacity_mw": 150,
+      "fuel_type": "oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 929188,
+      "name": "Crisfield",
+      "iso": "PJM",
+      "capacity_mw": 150,
+      "fuel_type": "oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 8012,
+      "name": "Croydon",
+      "iso": "PJM",
+      "capacity_mw": 150,
+      "fuel_type": "oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 941205,
+      "name": "Falls",
+      "iso": "PJM",
+      "capacity_mw": 150,
+      "fuel_type": "oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 1586,
+      "name": "Framingham",
+      "iso": "NEISO",
+      "capacity_mw": 150,
+      "fuel_type": "oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 1592,
+      "name": "Medway CT",
+      "iso": "NEISO",
+      "capacity_mw": 150,
+      "fuel_type": "oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 1592,
+      "name": "Medway CT",
+      "iso": "NEISO",
+      "capacity_mw": 150,
+      "fuel_type": "oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 1592,
+      "name": "Medway CT",
+      "iso": "NEISO",
+      "capacity_mw": 150,
+      "fuel_type": "oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 972330,
+      "name": "Moser",
+      "iso": "PJM",
+      "capacity_mw": 150,
+      "fuel_type": "oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 905097,
+      "name": "Philadelphia Road",
+      "iso": "PJM",
+      "capacity_mw": 150,
+      "fuel_type": "oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 3168,
+      "name": "Richmond CT",
+      "iso": "PJM",
+      "capacity_mw": 150,
+      "fuel_type": "oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 939713,
+      "name": "Southwark",
+      "iso": "PJM",
+      "capacity_mw": 150,
+      "fuel_type": "oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
+      "orispl": 1507,
+      "name": "William F. Wyman",
+      "iso": "NEISO",
+      "capacity_mw": 150,
+      "fuel_type": "oil_ct",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "equity_share": 0.06,
+      "ccs_eligible": false,
+      "status": "operating"
+    }
+  ],
+  "scenarios": {
+    "baseline": {
+      "description": "Status quo \u2014 no CCS, no new gas, no early retirements. Economic retirements only (driven by market conditions in each sweep scenario).",
+      "modifications": []
+    },
+    "ccs_top_emitters": {
+      "description": "CCS retrofit on the top 6 largest CCS-eligible CCGTs by 2030-2032.",
+      "modifications": [
+        {
+          "orispl": 997153,
+          "action": "ccs_retrofit",
+          "year_online": 2030
+        },
+        {
+          "orispl": 55327,
+          "action": "ccs_retrofit",
+          "year_online": 2030
+        },
+        {
+          "orispl": 55327,
+          "action": "ccs_retrofit",
+          "year_online": 2031
+        },
+        {
+          "orispl": 50292,
+          "action": "ccs_retrofit",
+          "year_online": 2031
+        },
+        {
+          "orispl": 55172,
+          "action": "ccs_retrofit",
+          "year_online": 2032
+        },
+        {
+          "orispl": 55299,
+          "action": "ccs_retrofit",
+          "year_online": 2032
+        }
+      ]
+    },
+    "ccs_plus_new_gas": {
+      "description": "CCS on top emitters + 1,200 MW new efficient CCGT in PJM to replace aging peakers. Fleet-level gas additions are additive to grid-level new fossil builds.",
+      "modifications": [
+        {
+          "orispl": 997153,
+          "action": "ccs_retrofit",
+          "year_online": 2030
+        },
+        {
+          "orispl": 55327,
+          "action": "ccs_retrofit",
+          "year_online": 2030
+        },
+        {
+          "orispl": 55327,
+          "action": "ccs_retrofit",
+          "year_online": 2031
+        },
+        {
+          "action": "add_plant",
+          "name": "New PJM CCGT East",
+          "iso": "PJM",
+          "capacity_mw": 600,
+          "fuel_type": "gas_ccgt",
+          "heat_rate_mmbtu_mwh": 6.3,
+          "equity_share": 1.0,
+          "year_online": 2028
+        },
+        {
+          "action": "add_plant",
+          "name": "New PJM CCGT West",
+          "iso": "PJM",
+          "capacity_mw": 600,
+          "fuel_type": "gas_ccgt",
+          "heat_rate_mmbtu_mwh": 6.3,
+          "equity_share": 1.0,
+          "year_online": 2029
+        }
+      ]
+    },
+    "retire_peakers_ccs_baseload": {
+      "description": "Retire all oil CTs, gas/oil CTs, and gas CTs by 2030, CCS retrofit on all remaining gas CCGTs by 2035. Aggressive decarbonization \u2014 eliminates peaker fleet entirely and captures residual CCGT emissions.",
+      "modifications": [
+        {
+          "fuel_type": "oil_ct",
+          "action": "retire",
+          "year_online": 2030
+        },
+        {
+          "fuel_type": "gas_oil_ct",
+          "action": "retire",
+          "year_online": 2030
+        },
+        {
+          "fuel_type": "gas_ct",
+          "action": "retire",
+          "year_online": 2030
+        },
+        {
+          "fuel_type": "gas_ccgt",
+          "action": "ccs_retrofit",
+          "year_online": 2035
+        }
+      ]
+    }
+  }
+}
