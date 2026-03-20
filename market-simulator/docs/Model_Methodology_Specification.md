@@ -163,7 +163,7 @@ After economic retirement, the dispatch loop evaluates whether new fossil capaci
 
 New-build capacity persists across simulation years. Generation and emissions from new builds are added to the dispatch stack and included in total emission accounting. Wright's Law learning curves are NOT applied to fossil new-build costs (only clean resources).
 
-In sweep mode, new-build fossil cost level (Low/Medium/High) is a swept axis, expanding the parametric space from 405 to 1,215 scenarios. In single trajectory mode, users can override CAPEX per type and minimum CF thresholds.
+In sweep mode, new-build fossil cost level (Low/Medium/High) is a swept axis, producing 1,215 scenarios per ISO (3 × 5 × 3 × 3 × 3 × 3). In single trajectory mode, users can override CAPEX per type and minimum CF thresholds.
 
 **Nuclear retirement** uses a revenue floor mechanism: existing nuclear retires if total revenue (energy + capacity + §45U PTC) falls below the user-specified threshold (default: $30/MWh). The §45U production tax credit provides a contract-for-difference floor of $40/MWh (max credit $15/MWh) through its sunset year (default: 2032).
 
@@ -751,7 +751,7 @@ The fleet dispatch model (originally `scripts/fleet_dispatch.py`) has been porte
 **Emission Factors (t CO₂ / MMBtu)**:
 - gas_ccgt: 0.05306, gas_ct: 0.05306, coal_steam: 0.09552, oil_ct: 0.07396
 
-**Performance**: 200 plants × 405 scenarios × 6 years computed in <50ms in modern browsers.
+**Performance**: 200 plants × 1,215 scenarios × 6 years computed in <50ms in modern browsers.
 
 ### 4.7 Scenario Construction
 
