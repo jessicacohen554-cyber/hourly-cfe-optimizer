@@ -1,8 +1,9 @@
 name: "Squash Pipeline Branches"
 
 # Consolidates multiple auto/* branches (created by step 1-7 workflows) into a
-# single squash commit and opens a PR against master. Branches that conflict are
-# skipped and reported — no manual conflict resolution needed.
+# single squash commit and opens a PR against master. Branches that conflict on
+# text files are skipped — binary conflicts (parquets, npz) are auto-resolved
+# by taking the incoming branch's version.
 #
 # Typical use: after running a batch of pipeline steps (1a → 1c → 1d → 2 → 3 → ...),
 # each creates its own auto/* branch. Instead of merging 20+ PRs individually,
@@ -29,12 +30,14 @@ name: "Squash Pipeline Branches"
 #
 # How it works:
 #   1. Finds all remote auto/* branches not yet merged to master
-#   2. Creates a temp branch from master
-#   3. Sequentially merges each branch (skip on conflict)
-#   4. Force-adds gitignored data dirs (step1-pfs/)
-#   5. Squashes all merged changes into a single commit (git reset --soft)
-#   6. Pushes and opens a PR
-#   7. Optionally closes old PRs and deletes merged branches
+#   2. Records master HEAD hash for integrity verification
+#   3. Creates a temp branch from master
+#   4. Sequentially merges each branch (binary conflicts auto-resolved, text conflicts skip)
+#   5. Force-adds any gitignored data dirs that were force-committed on auto branches
+#   6. Squashes all merged changes into a single commit (git reset --soft)
+#   7. Verifies master HEAD is unchanged
+#   8. Pushes and opens a PR (or merges directly)
+#   9. Optionally closes old PRs and deletes merged branches
 
 on:
   workflow_dispatch:
@@ -107,6 +110,8 @@ jobs:
       - name: Fetch and identify unmerged branches
         id: find-branches
         run: |
+          set -euo pipefail
+
           # custom_pattern overrides the dropdown choice when set
           CUSTOM="${{ inputs.custom_pattern }}"
           if [ -n "$CUSTOM" ]; then
@@ -119,6 +124,14 @@ jobs:
           # Fetch all remote branches
           git fetch origin --prune
 
+          # Record master HEAD for integrity verification later
+          MASTER_HEAD=$(git rev-parse HEAD)
+          MASTER_TREE=$(git rev-parse HEAD^{tree})
+          echo "Master HEAD: $MASTER_HEAD"
+          echo "Master tree: $MASTER_TREE"
+          echo "master_head=$MASTER_HEAD" >> "$GITHUB_OUTPUT"
+          echo "master_tree=$MASTER_TREE" >> "$GITHUB_OUTPUT"
+
           # Find unmerged branches matching pattern
           BRANCHES=()
           while IFS= read -r ref; do
@@ -126,16 +139,16 @@ jobs:
             branch=$(echo "$ref" | sed 's|^ *remotes/origin/||; s|^ *origin/||; s/^ *//')
             [ -z "$branch" ] && continue
             BRANCHES+=("$branch")
-          done < <(git branch -r --no-merged master | grep "origin/${PATTERN}")
-
-          echo "Found ${#BRANCHES[@]} unmerged branch(es):"
-          printf '  %s\n' "${BRANCHES[@]}"
+          done < <(git branch -r --no-merged master | grep "origin/${PATTERN}" || true)
 
           if [ ${#BRANCHES[@]} -eq 0 ]; then
             echo "No unmerged branches found matching pattern '${PATTERN}'"
             echo "has_branches=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+
+          echo "Found ${#BRANCHES[@]} unmerged branch(es):"
+          printf '  %s\n' "${BRANCHES[@]}"
 
           # Sort by branch name (timestamp prefix = chronological order)
           IFS=$'\n' SORTED=($(printf '%s\n' "${BRANCHES[@]}" | sort))
@@ -171,6 +184,8 @@ jobs:
         if: ${{ !inputs.dry_run && steps.find-branches.outputs.has_branches == 'true' }}
         id: squash
         run: |
+          set -euo pipefail
+
           TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
           SQUASH_BRANCH="auto/${TIMESTAMP}-squash-pipeline"
           echo "SQUASH_BRANCH=$SQUASH_BRANCH" >> "$GITHUB_ENV"
@@ -184,19 +199,42 @@ jobs:
           while IFS= read -r branch; do
             echo "─── Merging: $branch ───"
 
-            # -X theirs: auto-resolve conflicts by preferring the incoming branch.
-            # Safe for pipeline data branches: PFS/storage parquets are binary
-            # (git picks one whole file), and checkpoint JSON files (zone_manifest,
-            # prior_windows) should always take the newer run's version.
+            # -X theirs: auto-resolve text conflicts by preferring the incoming branch.
             if git merge --no-edit -X theirs "origin/$branch" 2>/dev/null; then
               echo "  ✓ Merged successfully"
               MERGED+=("$branch")
-              LATEST=$(git log -1 --format="%s" "origin/$branch" 2>/dev/null)
+              LATEST=$(git log -1 --format="%s" "origin/$branch" 2>/dev/null || true)
               MERGED_SUMMARIES+=("$branch → $LATEST")
             else
-              echo "  ✗ Conflict detected — skipping"
-              git merge --abort 2>/dev/null || true
-              SKIPPED+=("$branch")
+              # -X theirs only resolves TEXT conflicts. Binary files (parquets, npz)
+              # still cause unresolved conflicts. Resolve them by taking the incoming
+              # branch's version (pipeline data should always take the newer run).
+              UNRESOLVED=$(git diff --name-only --diff-filter=U 2>/dev/null || true)
+              if [ -n "$UNRESOLVED" ]; then
+                conflict_count=$(echo "$UNRESOLVED" | wc -l)
+                echo "  Resolving $conflict_count remaining conflict(s) (binary files) by taking incoming version..."
+                echo "$UNRESOLVED" | while IFS= read -r conflicted_file; do
+                  git checkout --theirs -- "$conflicted_file" 2>/dev/null || true
+                  git add "$conflicted_file" 2>/dev/null || true
+                  echo "    resolved: $conflicted_file"
+                done
+
+                # Complete the merge with resolved conflicts
+                if git -c core.editor=true merge --continue 2>/dev/null; then
+                  echo "  ✓ Merged (binary conflicts resolved)"
+                  MERGED+=("$branch")
+                  LATEST=$(git log -1 --format="%s" "origin/$branch" 2>/dev/null || true)
+                  MERGED_SUMMARIES+=("$branch → $LATEST (binary conflicts auto-resolved)")
+                else
+                  echo "  ✗ Could not complete merge even after conflict resolution — skipping"
+                  git merge --abort 2>/dev/null || true
+                  SKIPPED+=("$branch")
+                fi
+              else
+                echo "  ✗ Merge failed (no unresolved files detected) — skipping"
+                git merge --abort 2>/dev/null || true
+                SKIPPED+=("$branch")
+              fi
             fi
           done < /tmp/branches.txt
 
@@ -214,11 +252,28 @@ jobs:
           # ── Squash: collapse all merge commits into one ──
           git reset --soft master
 
-          # Force-add gitignored data directories that step1b/step1c committed
-          # via "git add -f" on their branches. After git reset --soft master,
-          # those files are in the working tree but gitignore would block a plain
-          # "git add". Re-force-add so they're included in the squash commit.
-          git add -f data/step1-pfs/ 2>/dev/null || true
+          # Force-add gitignored data directories that pipeline steps committed
+          # via "git add -f" on their auto branches. After git reset --soft master,
+          # these files are in the index but gitignore would block re-adding if
+          # they were somehow dropped. Force-add all known pipeline data dirs.
+          for data_dir in data/step1-pfs data/step2.1-ef data/step2.2-cost \
+                          data/step3-dispatch data/step4-analysis \
+                          data/step5-scenarios data/step5-wrights \
+                          data/step6-smartargets; do
+            git add -f "$data_dir/" 2>/dev/null || true
+          done
+
+          # Check that we actually have changes to commit
+          if git diff --cached --quiet; then
+            echo "No changes to commit after squash (all branches may have been empty)."
+            echo "has_merges=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Show what the squash commit will contain
+          echo ""
+          echo "Squash commit diff summary:"
+          git diff --cached --stat | tail -5
 
           # Build commit message
           CUSTOM_MSG="${{ inputs.commit_message }}"
@@ -255,16 +310,41 @@ jobs:
             touch /tmp/skipped_branches.txt
           fi
 
+      # ── Verify master integrity ───────────────────────────────────────
+      - name: Verify master HEAD unchanged
+        if: ${{ !inputs.dry_run && steps.squash.outputs.has_merges == 'true' }}
+        run: |
+          set -euo pipefail
+          EXPECTED_TREE="${{ steps.find-branches.outputs.master_tree }}"
+
+          # The squash branch should be exactly 1 commit ahead of the original master.
+          # Verify master's tree is the parent commit's tree.
+          PARENT_TREE=$(git rev-parse HEAD~1^{tree})
+
+          if [ "$EXPECTED_TREE" = "$PARENT_TREE" ]; then
+            echo "PASS — master tree is intact (parent tree: ${PARENT_TREE:0:12})"
+          else
+            echo "::error::Master tree mismatch!"
+            echo "  Expected: $EXPECTED_TREE"
+            echo "  Parent:   $PARENT_TREE"
+            echo "The squash commit's parent does not match the original master. Aborting."
+            exit 1
+          fi
+
       # ── Push ────────────────────────────────────────────────────────────
       - name: Push squash branch
         if: ${{ !inputs.dry_run && steps.squash.outputs.has_merges == 'true' }}
         run: |
+          set -euo pipefail
           MAX_RETRIES=4
           for i in $(seq 1 $MAX_RETRIES); do
             echo "Push attempt $i/$MAX_RETRIES..."
-            git push -u origin "$SQUASH_BRANCH" 2>&1 && break
+            if git push -u origin "$SQUASH_BRANCH" 2>&1; then
+              echo "Push succeeded."
+              break
+            fi
             if [ "$i" -eq "$MAX_RETRIES" ]; then
-              echo "ERROR: Push failed after $MAX_RETRIES attempts"
+              echo "::error::Push failed after $MAX_RETRIES attempts"
               exit 1
             fi
             BACKOFF=$((2 ** i))
@@ -276,15 +356,27 @@ jobs:
       - name: Fast-forward master
         if: ${{ !inputs.dry_run && inputs.merge_direct && steps.squash.outputs.has_merges == 'true' }}
         run: |
+          set -euo pipefail
+
+          # Re-fetch master to ensure we have the latest remote state.
+          # If someone pushed to master since our workflow started, the
+          # ff-only merge will fail (safe — we don't force-push master).
+          git fetch origin master
+
           git checkout master
           git merge --ff-only "$SQUASH_BRANCH"
 
           MAX_RETRIES=4
           for i in $(seq 1 $MAX_RETRIES); do
             echo "Push master attempt $i/$MAX_RETRIES..."
-            git push origin master 2>&1 && break
+            if git push origin master 2>&1; then
+              echo "Master push succeeded."
+              break
+            fi
             if [ "$i" -eq "$MAX_RETRIES" ]; then
-              echo "ERROR: Push to master failed after $MAX_RETRIES attempts"
+              echo "::error::Push to master failed after $MAX_RETRIES attempts."
+              echo "The squash branch ($SQUASH_BRANCH) was pushed successfully."
+              echo "You can manually merge it via PR."
               exit 1
             fi
             BACKOFF=$((2 ** i))
@@ -298,43 +390,37 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
+
           MERGED_COUNT=$(wc -l < /tmp/merged_branches.txt | tr -d ' ')
           SKIPPED_COUNT=$(grep -c . /tmp/skipped_branches.txt 2>/dev/null || echo 0)
 
           # Build PR body
-          cat > /tmp/pr_body.md <<'HEADER'
-          ## Squashed Pipeline Branches
-
-          HEADER
-          # Trim leading whitespace from heredoc
-          sed -i 's/^          //' /tmp/pr_body.md
-
-          echo "Consolidated **${MERGED_COUNT}** auto/* branches into a single squash commit." >> /tmp/pr_body.md
-          echo "" >> /tmp/pr_body.md
-
-          echo "### Merged Branches" >> /tmp/pr_body.md
+          PR_BODY="## Squashed Pipeline Branches"
+          PR_BODY+=$'\n\n'"Consolidated **${MERGED_COUNT}** auto/* branches into a single squash commit."
+          PR_BODY+=$'\n\n'"### Merged Branches"
           while IFS= read -r branch; do
-            echo "- \`$branch\`" >> /tmp/pr_body.md
+            PR_BODY+=$'\n'"- \`$branch\`"
           done < /tmp/merged_branches.txt
-          echo "" >> /tmp/pr_body.md
 
           if [ "$SKIPPED_COUNT" -gt 0 ] && [ "$SKIPPED_COUNT" != "0" ]; then
-            echo "### Skipped (Conflicts)" >> /tmp/pr_body.md
+            PR_BODY+=$'\n\n'"### Skipped (Conflicts)"
             while IFS= read -r branch; do
               [ -z "$branch" ] && continue
-              echo "- \`$branch\` — needs manual resolution" >> /tmp/pr_body.md
+              PR_BODY+=$'\n'"- \`$branch\` — needs manual resolution"
             done < /tmp/skipped_branches.txt
-            echo "" >> /tmp/pr_body.md
           fi
 
-          echo "### How to Merge" >> /tmp/pr_body.md
-          echo "Use **Squash and merge** or **Rebase and merge** to keep master history clean." >> /tmp/pr_body.md
+          PR_BODY+=$'\n\n'"### How to Merge"
+          PR_BODY+=$'\n'"Use **Squash and merge** or **Rebase and merge** to keep master history clean."
+
+          echo "$PR_BODY" > /tmp/pr_body.md
 
           gh pr create \
             --title "Squash: ${MERGED_COUNT} pipeline branches" \
             --body-file /tmp/pr_body.md \
             --base master \
-            --head "$SQUASH_BRANCH" || echo "PR creation failed (may already exist)"
+            --head "$SQUASH_BRANCH" || echo "::warning::PR creation failed (may already exist)"
 
       # ── Cleanup: close old PRs ──────────────────────────────────────────
       - name: Close superseded PRs
