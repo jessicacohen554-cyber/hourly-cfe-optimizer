@@ -1,0 +1,206 @@
+{
+  "synthetic": {
+    "low_lmp": {
+      "scenario": "Low LMP ($25 avg)",
+      "plant_level": [
+        {
+          "year": 2025,
+          "retired_mw": 9300.0,
+          "n_plants": 9,
+          "by_type": {
+            "coal_steam": 6100,
+            "gas_ct": 700,
+            "gas_ccgt": 2500
+          },
+          "plant_ids": [
+            "COAL_1",
+            "COAL_2",
+            "COAL_3",
+            "CT_3",
+            "GAS_5",
+            "COAL_4",
+            "COAL_5",
+            "GAS_4",
+            "CT_2"
+          ],
+          "reserve_margin": 46.0
+        },
+        {
+          "year": 2030,
+          "retired_mw": 0.0,
+          "n_plants": 0,
+          "by_type": {},
+          "plant_ids": [],
+          "reserve_margin": 64.1
+        },
+        {
+          "year": 2035,
+          "retired_mw": 0.0,
+          "n_plants": 0,
+          "by_type": {},
+          "plant_ids": [],
+          "reserve_margin": 64.1
+        }
+      ],
+      "fleet_fraction": [
+        {
+          "year": 2025,
+          "retired_mw": 4048.0,
+          "by_type": {
+            "coal_steam": 2928.0,
+            "gas_ccgt": 1000.0,
+            "gas_ct": 120.0
+          },
+          "reserve_margin": 56.2
+        },
+        {
+          "year": 2030,
+          "retired_mw": 8035.0,
+          "by_type": {
+            "coal_steam": 5795.0,
+            "gas_ccgt": 2000.0,
+            "gas_ct": 240.0
+          },
+          "reserve_margin": 48.5
+        },
+        {
+          "year": 2035,
+          "retired_mw": 10275.0,
+          "by_type": {
+            "coal_steam": 5795.0,
+            "gas_ccgt": 4000.0,
+            "gas_ct": 480.0
+          },
+          "reserve_margin": 44.1
+        }
+      ]
+    },
+    "mid_lmp": {
+      "scenario": "Medium LMP ($38 avg)",
+      "plant_level": [
+        {
+          "year": 2025,
+          "retired_mw": 6800.0,
+          "n_plants": 6,
+          "by_type": {
+            "coal_steam": 5500,
+            "gas_ct": 300,
+            "gas_ccgt": 1000
+          },
+          "plant_ids": [
+            "COAL_1",
+            "COAL_2",
+            "COAL_3",
+            "CT_3",
+            "GAS_5",
+            "COAL_4"
+          ],
+          "reserve_margin": 50.9
+        },
+        {
+          "year": 2030,
+          "retired_mw": 0.0,
+          "n_plants": 0,
+          "by_type": {},
+          "plant_ids": [],
+          "reserve_margin": 64.1
+        },
+        {
+          "year": 2035,
+          "retired_mw": 0.0,
+          "n_plants": 0,
+          "by_type": {},
+          "plant_ids": [],
+          "reserve_margin": 64.1
+        }
+      ],
+      "fleet_fraction": [
+        {
+          "year": 2025,
+          "retired_mw": 1732.3999999999996,
+          "by_type": {
+            "coal_steam": 1732.3999999999996
+          },
+          "reserve_margin": 60.7
+        },
+        {
+          "year": 2030,
+          "retired_mw": 3464.7999999999997,
+          "by_type": {
+            "coal_steam": 3464.7999999999997
+          },
+          "reserve_margin": 57.4
+        },
+        {
+          "year": 2035,
+          "retired_mw": 5795.0,
+          "by_type": {
+            "coal_steam": 5795.0
+          },
+          "reserve_margin": 52.8
+        }
+      ]
+    },
+    "high_lmp": {
+      "scenario": "High LMP ($54 avg)",
+      "plant_level": [
+        {
+          "year": 2025,
+          "retired_mw": 3500.0,
+          "n_plants": 2,
+          "by_type": {
+            "coal_steam": 3500
+          },
+          "plant_ids": [
+            "COAL_1",
+            "COAL_2"
+          ],
+          "reserve_margin": 57.3
+        },
+        {
+          "year": 2030,
+          "retired_mw": 0.0,
+          "n_plants": 0,
+          "by_type": {},
+          "plant_ids": [],
+          "reserve_margin": 64.1
+        },
+        {
+          "year": 2035,
+          "retired_mw": 0.0,
+          "n_plants": 0,
+          "by_type": {},
+          "plant_ids": [],
+          "reserve_margin": 64.1
+        }
+      ],
+      "fleet_fraction": [
+        {
+          "year": 2025,
+          "retired_mw": 610.0,
+          "by_type": {
+            "coal_steam": 610.0
+          },
+          "reserve_margin": 62.9
+        },
+        {
+          "year": 2030,
+          "retired_mw": 1220.0,
+          "by_type": {
+            "coal_steam": 1220.0
+          },
+          "reserve_margin": 61.7
+        },
+        {
+          "year": 2035,
+          "retired_mw": 2440.0,
+          "by_type": {
+            "coal_steam": 2440.0
+          },
+          "reserve_margin": 59.4
+        }
+      ]
+    }
+  },
+  "live": {}
+}
