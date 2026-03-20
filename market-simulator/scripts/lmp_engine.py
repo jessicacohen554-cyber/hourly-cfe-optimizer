@@ -289,7 +289,9 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
                              nox_limit=None, sox_limit=None,
                              custom_fuel_prices=None, custom_co2_price=None,
                              custom_heat_rates=None, custom_vom=None,
-                             firm_import_mw=0):
+                             firm_import_mw=0,
+                             demand_growth_factor=1.0,
+                             new_fossil_builds=None):
     """Build merit-order stack: list of (unit_type, capacity_mw, marginal_cost).
 
     Ordered by marginal cost (cheapest first). Stack composition reflects
@@ -316,6 +318,10 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
         sox_limit: lb/MWh SOx emission cap — generators above this are retired
         custom_fuel_prices: dict with 'coal', 'gas', 'oil' prices (overrides fuel_level)
         custom_co2_price: float CO2 price (overrides co2_level)
+        demand_growth_factor: ratio of current demand to baseline demand (>1 for growth).
+            Scales PEAK_DEMAND_MW for RA sizing so the fossil fleet grows with demand.
+        new_fossil_builds: dict {unit_type: mw} of cumulative new-build fossil capacity
+            from prior simulation years. Added on top of the base fleet.
 
     Returns:
         stack: list of (unit_type, capacity_mw, marginal_cost_per_mwh)
@@ -329,6 +335,10 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
                                 custom_vom=custom_vom,
                                 iso=iso)
 
+    # Cumulative new-build fossil from prior simulation years
+    _new_fossil_builds = new_fossil_builds or {}
+    new_build_total_mw = sum(_new_fossil_builds.values())
+
     if total_fossil_mw is None:
         installed = INSTALLED_FOSSIL_MW.get(iso, 80_000)
         baseline_clean = sum(GRID_MIX_SHARES.get(iso, {}).values())
@@ -337,7 +347,8 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
             total_fossil_mw = installed
         else:
             # RA-aware fleet sizing with GAF deration (matches step3 formula)
-            peak_mw = PEAK_DEMAND_MW.get(iso, 80_000)
+            # Scale peak demand by demand growth factor so RA tracks demand growth
+            peak_mw = PEAK_DEMAND_MW.get(iso, 80_000) * demand_growth_factor
             ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
 
             # Compute clean peak MW using actual resource mix when available
@@ -413,6 +424,14 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
             continue
         cap_mw = total_fossil_mw * share
         stack.append((unit_type, cap_mw, mc[unit_type]))
+
+    # Add new-build fossil from prior simulation years as separate stack entries.
+    # New builds are on top of the base fleet (not subject to retirement logic).
+    if new_build_total_mw > 0:
+        for nb_type, nb_mw in _new_fossil_builds.items():
+            if nb_mw > 0 and nb_type in mc:
+                stack.append((nb_type, nb_mw, mc[nb_type]))
+        total_fossil_mw += new_build_total_mw
 
     # Sort by marginal cost (cheapest first)
     stack.sort(key=lambda x: x[2])
