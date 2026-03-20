@@ -165,6 +165,22 @@ New-build capacity persists across simulation years. Generation and emissions fr
 
 In sweep mode, new-build fossil cost level (Low/Medium/High) is a swept axis, producing 1,215 scenarios per ISO (3 × 5 × 3 × 3 × 3 × 3). In single trajectory mode, users can override CAPEX per type and minimum CF thresholds.
 
+**ORDC–New Fossil Stabilizing Feedback Loop**: New-build fossil creates a self-correcting equilibrium that depends on correct ORDC behavior:
+
+```
+Low reserves → ORDC scarcity spikes → New fossil becomes economically viable
+    → New fossil builds → Reserves restored → ORDC calms down
+```
+
+This negative feedback loop prevents both runaway fossil builds (ORDC too hot) and permanent scarcity (ORDC too cold). Different `new_fossil_cost_level` settings (L/M/H) shift the viability threshold, producing realistic variation in new-build outcomes across scenarios.
+
+**Fleet vs Grid Fossil Reconciliation**: Two independent new-fossil mechanisms exist:
+
+1. **Grid-level** (`apply_economic_new_build()`): Market-driven, triggered by reserve/economic conditions, varies by scenario. Produces `nb_{fuel}_mw` columns in sweep output.
+2. **Fleet-level** (`add_plant` in scenario configurations): User-defined, static, applied regardless of market conditions. Represents company-specific investment decisions.
+
+These mechanisms follow an **additive interaction rule**: fleet-level additions represent company-specific decisions; grid-level builds represent market-driven capacity. Both coexist. The fleet dispatch engine reports both sources separately (`grid_new_fossil_mw`, `fleet_new_fossil_mw`, `total_new_fossil_mw`) and generates overlap notes when both trigger in the same ISO/year.
+
 **Nuclear retirement** uses a revenue floor mechanism: existing nuclear retires if total revenue (energy + capacity + §45U PTC) falls below the user-specified threshold (default: $30/MWh). The §45U production tax credit provides a contract-for-difference floor of $40/MWh (max credit $15/MWh) through its sunset year (default: 2032).
 
 ### 2.4 Wright's Law Learning Curves (Trajectory Mode)
@@ -659,6 +675,8 @@ Sources: ERCOT ORDC regulatory proceedings, PJM RPM capacity demand curve, MISO 
 **Double-counting guard**: When `SCARCITY_MODE='ordc'`, the per-hour `_scarcity_adder()` path (used by demand-quantile mode) is bypassed. Only `compute_ordc_adder()` applies scarcity pricing, preventing two scarcity mechanisms from firing on the same hours.
 
 **Implementation**: `PriceModel.compute_ordc_adder()` in `lmp_engine.py`. Fully vectorized over 8,760 hours using numpy boolean masking (below-knee filter) and `np.exp` / `np.minimum`. Reserves computed as `total_fossil_capacity - residual_demand`.
+
+**Post-Sweep Calibration Status** (from `validate_ordc_calibration.py`, results in `ordc_calibration_report.json`): ERCOT (avg 294 scarcity hours) and MISO (avg 116 hours) pass calibration targets. CAISO, NYISO, PJM, NEISO, and SPP show excessive zero-scarcity dominance, indicating `knee_mw` thresholds may need loosening for capacity-market ISOs. The new-fossil feedback loop is directionally correct: higher fossil cost levels produce more scarcity hours (ERCOT +5.7%, MISO +35.0%).
 
 ### 4.4.7 VRE Cannibalization Feedback (`market_simulation.py`)
 
