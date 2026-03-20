@@ -22,6 +22,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
+import pandas as pd
+
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
@@ -1373,15 +1375,13 @@ SWEEP_CACHE_DIR = MARKET_SIM_ROOT / "results" / "sweep_1215"
 @app.get("/api/sweep-cached/status")
 async def sweep_cached_status():
     """Check whether pre-computed sweep results exist and return metadata."""
-    json_path = SWEEP_CACHE_DIR / "market_simulation_results.json"
     agg_path = SWEEP_CACHE_DIR / "sweep_1215_aggregates.json"
     parquet_path = SWEEP_CACHE_DIR / "sweep_1215_flat.parquet"
 
-    available = json_path.exists() or agg_path.exists()
+    available = parquet_path.exists() or agg_path.exists()
 
     meta = {
         "available": available,
-        "json_exists": json_path.exists(),
         "aggregates_exists": agg_path.exists(),
         "parquet_exists": parquet_path.exists(),
         "sweep_dimensions": {
@@ -1397,8 +1397,8 @@ async def sweep_cached_status():
         "isos": list(ISOS),
     }
 
-    if json_path.exists():
-        meta["json_size_mb"] = round(json_path.stat().st_size / 1e6, 1)
+    if parquet_path.exists():
+        meta["parquet_size_mb"] = round(parquet_path.stat().st_size / 1e6, 1)
     if agg_path.exists():
         meta["aggregates_size_mb"] = round(agg_path.stat().st_size / 1e6, 1)
 
@@ -1430,44 +1430,38 @@ async def sweep_cached_aggregates(iso: str = None):
 
 @app.get("/api/sweep-cached/results")
 async def sweep_cached_results(iso: str = None, scenario: str = None):
-    """Return full cached sweep results. Filter by ISO and/or scenario ID.
+    """Return cached sweep results from parquet. Filter by ISO and/or scenario ID.
 
-    Warning: unfiltered response can be very large (100+ MB). Always filter
-    by at least ISO for reasonable response sizes.
+    Results are served from the flat parquet file (~10 MB) instead of JSON (~300 MB).
     """
-    json_path = SWEEP_CACHE_DIR / "market_simulation_results.json"
-    if not json_path.exists():
+    parquet_path = SWEEP_CACHE_DIR / "sweep_1215_flat.parquet"
+    if not parquet_path.exists():
         raise HTTPException(
             status_code=404,
             detail="Cached sweep results not found. Run the 1,215-scenario sweep first.",
         )
 
-    with open(json_path) as f:
-        all_results = json.load(f)
-
-    # Remove aggregates key if present
-    all_results.pop("_aggregates", None)
+    df = pd.read_parquet(parquet_path)
 
     # Filter by scenario
     if scenario:
-        if scenario not in all_results:
+        df = df[df['scenario_id'] == scenario]
+        if df.empty:
             raise HTTPException(status_code=404, detail=f"Scenario '{scenario}' not found.")
-        all_results = {scenario: all_results[scenario]}
 
-    # Filter by ISO within each scenario
+    # Filter by ISO
     if iso:
         iso = iso.upper()
-        filtered = {}
-        for sid, iso_results in all_results.items():
-            if iso in iso_results:
-                filtered[sid] = {iso: iso_results[iso]}
-        if not filtered:
+        df = df[df['iso'] == iso]
+        if df.empty:
             raise HTTPException(status_code=404, detail=f"No results for ISO '{iso}'.")
-        all_results = filtered
+
+    # Convert to records for JSON response
+    records = df.to_dict(orient='records')
 
     return {
-        "scenario_count": len(all_results),
-        "results": all_results,
+        "row_count": len(records),
+        "results": records,
     }
 
 
