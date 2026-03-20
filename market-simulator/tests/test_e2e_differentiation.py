@@ -7,7 +7,7 @@ import os
 
 # Add scripts/ to path for simulation engine
 test_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(test_dir, 'scripts'))
+sys.path.insert(0, os.path.join(test_dir, '..', 'scripts'))
 
 from market_simulation import run_market_simulation
 

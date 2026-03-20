@@ -18,7 +18,7 @@ import json
 import numpy as np
 import pandas as pd
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 sys.path.insert(0, SCRIPT_DIR)
 
 from dispatch_utils import (
