@@ -40,60 +40,79 @@ ISO × Reference Model × Milestone Year → Divergence (percentage points)
 These divergences are consistent with the structural differences between
 our profit-driven market simulator and the reference models.
 
-- **CAISO 2030** (CV_Reference_Zero_Carbon_vs_AEO_Reference): +13.0 pp — Model higher than AEO by 13.0 pp — expected offset from comparing ISO-level against national average
-- **CAISO 2035** (CV_Reference_Zero_Carbon_vs_AEO_Reference): +27.6 pp — Model higher than AEO by 27.6 pp — expected offset from comparing ISO-level against national average
+- **CAISO 2030** (CV_Reference_Zero_Carbon_vs_AEO_Reference): +13.0 pp — Model higher than AEO by 13.0 pp — CAISO RPS/CES mandates push clean share above the current-policy national average
+- **CAISO 2035** (CV_Reference_Zero_Carbon_vs_AEO_Reference): +27.6 pp — Model higher than AEO by 27.6 pp — CAISO RPS/CES mandates push clean share above the current-policy national average
 - **ERCOT 2030** (CV_Reference_Zero_Carbon_vs_AEO_Reference): +12.2 pp — Model higher than AEO by 12.2 pp — expected offset from comparing ISO-level against national average
 - **ERCOT 2035** (CV_Reference_Zero_Carbon_vs_AEO_Reference): +8.2 pp — Within 10 pp of AEO Reference (current policy)
 - **ERCOT 2040** (CV_Reference_Zero_Carbon_vs_AEO_Reference): +11.7 pp — Model higher than AEO by 11.7 pp — expected offset from comparing ISO-level against national average
 - **PJM 2030** (CV_Reference_Zero_Carbon_vs_AEO_Reference): -0.4 pp — Within 10 pp of AEO Reference (current policy)
 - **PJM 2035** (CV_Reference_Zero_Carbon_vs_AEO_Reference): -0.5 pp — Within 10 pp of AEO Reference (current policy)
 - **PJM 2040** (CV_Reference_Zero_Carbon_vs_AEO_Reference): -0.1 pp — Within 10 pp of AEO Reference (current policy)
-- **CAISO 2030** (CV_Reference_Zero_Carbon_vs_REEDS_Mid): +8.0 pp — Model clean share exceeds ReEDS national average — plausible where regional economics strongly favor renewables (comparing CAISO against national reference introduces structural offset)
-- **CAISO 2035** (CV_Reference_Zero_Carbon_vs_REEDS_Mid): +18.6 pp — Model clean share exceeds ReEDS national average — plausible where regional economics strongly favor renewables (comparing CAISO against national reference introduces structural offset)
-- **CAISO 2040** (CV_Reference_Zero_Carbon_vs_REEDS_Mid): +23.0 pp — Model clean share exceeds ReEDS national average — plausible where regional economics strongly favor renewables (comparing CAISO against national reference introduces structural offset)
-- **ERCOT 2030** (CV_Reference_Zero_Carbon_vs_REEDS_Mid): +7.2 pp — Model clean share exceeds ReEDS national average — plausible where regional economics strongly favor renewables (comparing ERCOT against national reference introduces structural offset)
-- **ERCOT 2035** (CV_Reference_Zero_Carbon_vs_REEDS_Mid): -0.8 pp — Model clean share below ReEDS — consistent with profit-driven deployment without policy mandates, or region with less favorable renewable economics
-- **ERCOT 2040** (CV_Reference_Zero_Carbon_vs_REEDS_Mid): -1.3 pp — Model clean share below ReEDS — consistent with profit-driven deployment without policy mandates, or region with less favorable renewable economics
-- **PJM 2030** (CV_Reference_Zero_Carbon_vs_REEDS_Mid): -5.4 pp — Model clean share below ReEDS — consistent with profit-driven deployment without policy mandates, or region with less favorable renewable economics
-- **PJM 2035** (CV_Reference_Zero_Carbon_vs_REEDS_Mid): -9.5 pp — Model clean share below ReEDS — consistent with profit-driven deployment without policy mandates, or region with less favorable renewable economics
-- **PJM 2040** (CV_Reference_Zero_Carbon_vs_REEDS_Mid): -13.1 pp — Model clean share below ReEDS — consistent with profit-driven deployment without policy mandates, or region with less favorable renewable economics
+- **CAISO 2030** (CV_Reference_Zero_Carbon_vs_REEDS_Mid): +8.0 pp — Model clean share exceeds ReEDS national average — CAISO has binding RPS/CES mandates that force deployment beyond pure market economics
+- **CAISO 2035** (CV_Reference_Zero_Carbon_vs_REEDS_Mid): +18.6 pp — Model clean share exceeds ReEDS national average — CAISO has binding RPS/CES mandates that force deployment beyond pure market economics
+- **CAISO 2040** (CV_Reference_Zero_Carbon_vs_REEDS_Mid): +23.0 pp — Model clean share exceeds ReEDS national average — CAISO has binding RPS/CES mandates that force deployment beyond pure market economics
+- **ERCOT 2030** (CV_Reference_Zero_Carbon_vs_REEDS_Mid): +7.2 pp — Model clean share exceeds ReEDS national average — comparing ERCOT against national reference introduces structural offset
+- **ERCOT 2035** (CV_Reference_Zero_Carbon_vs_REEDS_Mid): -0.8 pp — Model clean share below ReEDS — consistent with region having less favorable economics or weaker mandates than the national cost-optimal path
+- **ERCOT 2040** (CV_Reference_Zero_Carbon_vs_REEDS_Mid): -1.3 pp — Model clean share below ReEDS — consistent with region having less favorable economics or weaker mandates than the national cost-optimal path
+- **PJM 2030** (CV_Reference_Zero_Carbon_vs_REEDS_Mid): -5.4 pp — Model clean share below ReEDS — consistent with region having less favorable economics or weaker mandates than the national cost-optimal path
+- **PJM 2035** (CV_Reference_Zero_Carbon_vs_REEDS_Mid): -9.5 pp — Model clean share below ReEDS — consistent with region having less favorable economics or weaker mandates than the national cost-optimal path
+- **PJM 2040** (CV_Reference_Zero_Carbon_vs_REEDS_Mid): -13.1 pp — Model clean share below ReEDS — consistent with region having less favorable economics or weaker mandates than the national cost-optimal path
 
-### Why Profit-Driven ≠ Cost-Minimizing
+### Our Model: Profit-Driven WITH Policy Mandates
 
 Our model simulates **profit-maximizing generator behavior** in competitive
-wholesale markets. Generators build or retire based on projected revenue vs.
-cost, without a central planner enforcing least-cost outcomes. Divergence
-from reference models can go in either direction depending on regional
-economics:
+wholesale markets, **subject to binding RPS/CES mandate floors**. Generators
+build or retire based on projected revenue vs. cost, but state-level clean
+energy mandates (SB100, CLCPA, etc.) enforce minimum clean share thresholds
+at each milestone year. If profit-driven deployment falls short of the
+mandate, the model forces additional procurement up to interconnection queue
+capacity, with alternative compliance payments (ACP) for any remaining shortfall.
+
+This means our model is neither purely market-driven nor purely policy-driven —
+it's a hybrid. The mandate floor acts as a ratchet: in ISOs with aggressive
+mandates (CAISO: 100% by 2045, NYISO: 100% by 2040), the floor dominates the
+trajectory at higher targets. In ISOs with weak or no mandates (ERCOT: 0%),
+deployment is purely profit-driven.
+
+### Key mandate floors enforced in the model
+
+| ISO | 2030 | 2035 | 2040 | 2045 | Basis |
+|-----|------|------|------|------|-------|
+| CAISO | 60% | 80% | 90% | 100% | SB100 |
+| NYISO | 70% | 80% | 90% | 100% | CLCPA |
+| NEISO | 50% | 60% | 75% | 90% | State CES composite |
+| PJM | 30% | 40% | 50% | 60% | State RPS composite |
+| MISO | 20% | 30% | 40% | 50% | State RPS composite |
+| SPP | 15% | 20% | 30% | 40% | State RPS composite |
+| ERCOT | 0% | 0% | 0% | 0% | No state RPS |
+
+### Comparison with reference models
 
 - **vs. ReEDS (NREL)**: ReEDS minimizes system-wide cost subject to policy
-  constraints (RPS mandates, clean energy standards) with perfect foresight.
-  Our model can land above or below ReEDS depending on the region. Where
-  renewable economics are strong (CAISO solar, ERCOT wind), profit-driven
-  deployment can match or exceed ReEDS even without mandates. Where economics
-  are weaker or existing fossil fleets are younger (PJM), our model will
-  typically show lower clean share.
+  constraints with perfect foresight. Our model can land above or below
+  ReEDS depending on the region. In mandate-heavy ISOs (CAISO, NYISO),
+  our RPS floors can push clean share above the ReEDS national average.
+  In weaker-mandate ISOs (PJM), our model may show lower clean share.
 
-- **vs. AEO (EIA)**: AEO Reference assumes current policy only, making it
-  the closest analog to our zero-carbon-price scenario. Differences stem
-  from our use of ISO-specific rather than national fuel mixes and our
-  bottom-up generator dispatch.
+- **vs. AEO (EIA)**: AEO Reference assumes current policy only at the
+  national level. Our model enforces ISO-specific mandates, so ISOs with
+  aggressive mandates (CAISO, NYISO) will exceed the AEO trajectory, while
+  ISOs with weak mandates will track closer.
 
 - **vs. EPA IPM**: IPM models coal retirement under existing environmental
-  regulations. Without explicit policy enforcement, our model may retire
-  coal at a different pace depending on regional fuel economics and carbon
-  pricing assumptions.
+  regulations. Coal retirement pace in our model depends on regional fuel
+  economics, carbon pricing assumptions, and RPS mandate pressure.
 
 ### ISO vs. National Reference Comparisons
 
 All three reference models publish **national** trajectories. Our model
 produces **ISO-level** results. This creates an inherent structural offset —
 individual ISOs can diverge significantly from the national average due to
-regional resource quality, existing fleet composition, and state policy
-environments. CAISO (California) will naturally show higher clean share than
-the national average; PJM (coal-heavy Mid-Atlantic) will show lower. A 30 pp
-threshold is used for ISO-vs-national comparisons (vs. 20 pp for national-level)
-to account for this structural offset.
+regional resource quality, existing fleet composition, and state mandate
+stringency. CAISO (California, SB100 100% by 2045) will naturally show much
+higher clean share than the national average; ERCOT (no mandate) will track
+closer to or below it. A 30 pp threshold is used for ISO-vs-national comparisons
+(vs. 20 pp for national-level) to account for this structural offset.
 
 ---
 
@@ -102,7 +121,7 @@ to account for this structural offset.
 The following divergences warrant investigation — they suggest the model
 may be producing results inconsistent with its structural assumptions.
 
-- **CAISO 2040** (CV_Reference_Zero_Carbon_vs_AEO_Reference): +36.0 pp — Divergence of +36.0 pp exceeds 30 pp threshold (ISO vs national reference — higher threshold applied); Model higher than AEO by 36.0 pp — expected offset from comparing ISO-level against national average
+- **CAISO 2040** (CV_Reference_Zero_Carbon_vs_AEO_Reference): +36.0 pp — Divergence of +36.0 pp exceeds 30 pp threshold (ISO vs national reference — higher threshold applied); Model higher than AEO by 36.0 pp — CAISO RPS/CES mandates push clean share above the current-policy national average
 
 ### Investigation Notes
 

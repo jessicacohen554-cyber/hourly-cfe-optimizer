@@ -241,14 +241,16 @@ def classify_divergence(model_val, ref_val, abs_div, reference_data, metric,
                         iso=None):
     """Classify a divergence as 'expected' or 'investigate' with explanation.
 
-    The only hard flag is the 20 pp threshold. Direction of divergence
-    (above or below a reference) is descriptive context, not a pass/fail
-    signal — a profit-driven model can plausibly land on either side of a
-    cost-minimizing reference depending on regional economics.
+    Our model is profit-driven WITH RPS/CES mandate enforcement — it's not a
+    pure free-market model. In mandate-heavy ISOs (CAISO, NYISO, NEISO), the
+    RPS floor forces deployment beyond what pure economics would deliver,
+    which can push clean share above national-average references like ReEDS.
+
+    The only hard flag is the absolute pp threshold. Direction of divergence
+    is descriptive context, not a pass/fail signal.
 
     When comparing ISO-level results against national references, an
-    additional structural offset is expected (e.g., CAISO's solar economics
-    push clean share well above the national average).
+    additional structural offset is expected.
 
     Parameters
     ----------
@@ -259,6 +261,10 @@ def classify_divergence(model_val, ref_val, abs_div, reference_data, metric,
     is_reeds = 'ReEDS' in source or 'REEDS' in source or 'NREL' in source
     is_epa = 'EPA' in source or 'IPM' in source
     is_aeo = 'AEO' in source or 'EIA' in source
+
+    # ISOs with binding RPS/CES mandates in our model
+    mandate_isos = {'CAISO', 'NYISO', 'NEISO', 'PJM', 'MISO', 'SPP'}
+    has_mandate = iso in mandate_isos if iso else False
 
     # ISO-vs-national comparisons have inherent structural offset
     is_iso_vs_national = iso is not None
@@ -280,19 +286,23 @@ def classify_divergence(model_val, ref_val, abs_div, reference_data, metric,
     if metric in ('clean_share_pct', 'clean_pct'):
         if is_reeds:
             if model_val > ref_val:
-                reason = ('Model clean share exceeds ReEDS national average — '
-                          'plausible where regional economics strongly favor '
-                          'renewables')
-                if is_iso_vs_national:
-                    reason += (f' (comparing {iso} against national reference '
-                               'introduces structural offset)')
+                reason = ('Model clean share exceeds ReEDS national average')
+                if has_mandate:
+                    reason += (f' — {iso} has binding RPS/CES mandates that '
+                               'force deployment beyond pure market economics')
+                elif is_iso_vs_national:
+                    reason += (f' — comparing {iso} against national reference '
+                               'introduces structural offset')
+                else:
+                    reason += (' — plausible where regional economics or '
+                               'mandates favor renewables')
                 flags.append({'status': 'expected', 'reason': reason})
             else:
                 flags.append({
                     'status': 'expected',
                     'reason': ('Model clean share below ReEDS — consistent with '
-                               'profit-driven deployment without policy mandates, '
-                               'or region with less favorable renewable economics'),
+                               'region having less favorable economics or weaker '
+                               'mandates than the national cost-optimal path'),
                 })
         elif is_aeo:
             if abs(abs_div) <= 10:
@@ -303,13 +313,15 @@ def classify_divergence(model_val, ref_val, abs_div, reference_data, metric,
             else:
                 direction = 'higher' if model_val > ref_val else 'lower'
                 reason = (f'Model {direction} than AEO by {abs(abs_div):.1f} pp')
-                if is_iso_vs_national:
+                if has_mandate and model_val > ref_val:
+                    reason += (f' — {iso} RPS/CES mandates push clean share '
+                               'above the current-policy national average')
+                elif is_iso_vs_national:
                     reason += (' — expected offset from comparing ISO-level '
                                'against national average')
-                    flags.append({'status': 'expected', 'reason': reason})
                 else:
                     reason += ' — review regional assumptions if unexpected'
-                    flags.append({'status': 'expected', 'reason': reason})
+                flags.append({'status': 'expected', 'reason': reason})
 
     elif metric == 'coal_share_pct':
         if is_epa:
@@ -317,7 +329,7 @@ def classify_divergence(model_val, ref_val, abs_div, reference_data, metric,
                 flags.append({
                     'status': 'expected',
                     'reason': ('Model retires coal slower than EPA IPM — '
-                               'plausible without regulatory enforcement'),
+                               'plausible without full regulatory enforcement'),
                 })
             else:
                 flags.append({
@@ -855,42 +867,61 @@ def generate_markdown_report(cv_results, table_rows):
 
     lines.extend([
         "",
-        "### Why Profit-Driven ≠ Cost-Minimizing",
+        "### Our Model: Profit-Driven WITH Policy Mandates",
         "",
         "Our model simulates **profit-maximizing generator behavior** in competitive",
-        "wholesale markets. Generators build or retire based on projected revenue vs.",
-        "cost, without a central planner enforcing least-cost outcomes. Divergence",
-        "from reference models can go in either direction depending on regional",
-        "economics:",
+        "wholesale markets, **subject to binding RPS/CES mandate floors**. Generators",
+        "build or retire based on projected revenue vs. cost, but state-level clean",
+        "energy mandates (SB100, CLCPA, etc.) enforce minimum clean share thresholds",
+        "at each milestone year. If profit-driven deployment falls short of the",
+        "mandate, the model forces additional procurement up to interconnection queue",
+        "capacity, with alternative compliance payments (ACP) for any remaining shortfall.",
+        "",
+        "This means our model is neither purely market-driven nor purely policy-driven —",
+        "it's a hybrid. The mandate floor acts as a ratchet: in ISOs with aggressive",
+        "mandates (CAISO: 100% by 2045, NYISO: 100% by 2040), the floor dominates the",
+        "trajectory at higher targets. In ISOs with weak or no mandates (ERCOT: 0%),",
+        "deployment is purely profit-driven.",
+        "",
+        "### Key mandate floors enforced in the model",
+        "",
+        "| ISO | 2030 | 2035 | 2040 | 2045 | Basis |",
+        "|-----|------|------|------|------|-------|",
+        "| CAISO | 60% | 80% | 90% | 100% | SB100 |",
+        "| NYISO | 70% | 80% | 90% | 100% | CLCPA |",
+        "| NEISO | 50% | 60% | 75% | 90% | State CES composite |",
+        "| PJM | 30% | 40% | 50% | 60% | State RPS composite |",
+        "| MISO | 20% | 30% | 40% | 50% | State RPS composite |",
+        "| SPP | 15% | 20% | 30% | 40% | State RPS composite |",
+        "| ERCOT | 0% | 0% | 0% | 0% | No state RPS |",
+        "",
+        "### Comparison with reference models",
         "",
         "- **vs. ReEDS (NREL)**: ReEDS minimizes system-wide cost subject to policy",
-        "  constraints (RPS mandates, clean energy standards) with perfect foresight.",
-        "  Our model can land above or below ReEDS depending on the region. Where",
-        "  renewable economics are strong (CAISO solar, ERCOT wind), profit-driven",
-        "  deployment can match or exceed ReEDS even without mandates. Where economics",
-        "  are weaker or existing fossil fleets are younger (PJM), our model will",
-        "  typically show lower clean share.",
+        "  constraints with perfect foresight. Our model can land above or below",
+        "  ReEDS depending on the region. In mandate-heavy ISOs (CAISO, NYISO),",
+        "  our RPS floors can push clean share above the ReEDS national average.",
+        "  In weaker-mandate ISOs (PJM), our model may show lower clean share.",
         "",
-        "- **vs. AEO (EIA)**: AEO Reference assumes current policy only, making it",
-        "  the closest analog to our zero-carbon-price scenario. Differences stem",
-        "  from our use of ISO-specific rather than national fuel mixes and our",
-        "  bottom-up generator dispatch.",
+        "- **vs. AEO (EIA)**: AEO Reference assumes current policy only at the",
+        "  national level. Our model enforces ISO-specific mandates, so ISOs with",
+        "  aggressive mandates (CAISO, NYISO) will exceed the AEO trajectory, while",
+        "  ISOs with weak mandates will track closer.",
         "",
         "- **vs. EPA IPM**: IPM models coal retirement under existing environmental",
-        "  regulations. Without explicit policy enforcement, our model may retire",
-        "  coal at a different pace depending on regional fuel economics and carbon",
-        "  pricing assumptions.",
+        "  regulations. Coal retirement pace in our model depends on regional fuel",
+        "  economics, carbon pricing assumptions, and RPS mandate pressure.",
         "",
         "### ISO vs. National Reference Comparisons",
         "",
         "All three reference models publish **national** trajectories. Our model",
         "produces **ISO-level** results. This creates an inherent structural offset —",
         "individual ISOs can diverge significantly from the national average due to",
-        "regional resource quality, existing fleet composition, and state policy",
-        "environments. CAISO (California) will naturally show higher clean share than",
-        "the national average; PJM (coal-heavy Mid-Atlantic) will show lower. A 30 pp",
-        "threshold is used for ISO-vs-national comparisons (vs. 20 pp for national-level)",
-        "to account for this structural offset.",
+        "regional resource quality, existing fleet composition, and state mandate",
+        "stringency. CAISO (California, SB100 100% by 2045) will naturally show much",
+        "higher clean share than the national average; ERCOT (no mandate) will track",
+        "closer to or below it. A 30 pp threshold is used for ISO-vs-national comparisons",
+        "(vs. 20 pp for national-level) to account for this structural offset.",
         "",
     ])
 
