@@ -156,3 +156,73 @@ Checklist:
 - [x] R10 block at lines 2515–2528: effective_cf = cf × (1 - curtailment_rate), effective_lcoe = lcoe / (1 - curtailment_rate), inf guard
 - [x] `effective_lcoe` (not raw lcoe) used in profit calculation downstream (line 2554)
 - [x] `curtailment_rate` field on YearResult (models.py:486), populated at market_simulation.py:3859
+
+---
+
+## Section 3: Unit Test Results
+
+**Test file**: `scripts/tests/test_r9_qa_qc.py`
+**Run command**: `python3 -m pytest scripts/tests/test_r9_qa_qc.py -v --tb=long`
+**Date**: 2026-03-20
+**Result**: **29/29 passed in 3.32s**
+
+### Per-Class Results
+
+| Test Class | Recommendation | Tests | Result |
+|---|---|---|---|
+| `TestR2WrightsLaw` | R2 — Endogenous Wright's Law | 5 | **5/5 PASS** |
+| `TestR3SyntheticFallback` | R3 — Synthetic Fallback Warning | 2 | **2/2 PASS** |
+| `TestR4VREBasis` | R4 — VRE Basis Differential | 3 | **3/3 PASS** |
+| `TestR5ConfidenceIntervals` | R5 — Confidence Intervals | 4 | **4/4 PASS** |
+| `TestR7CapacityMarket` | R7 — Capacity Market Prices | 5 | **5/5 PASS** |
+| `TestR8InputValidation` | R8 — Input Validation | 6 | **6/6 PASS** |
+| `TestR10CurtailmentFeedback` | R10 — Curtailment Feedback | 4 | **4/4 PASS** |
+| **TOTAL** | | **29** | **29/29 PASS** |
+
+### Individual Test Results
+
+```
+TestR2WrightsLaw::test_wright_cost_decreases_with_cumulative_gw        PASSED
+TestR2WrightsLaw::test_wright_cost_static_below_reference              PASSED
+TestR2WrightsLaw::test_wright_cost_zero_learning_rate                  PASSED
+TestR2WrightsLaw::test_lcoe_trajectory_25_years                        PASSED
+TestR2WrightsLaw::test_compute_lcoe_snapshot_returns_all_techs         PASSED
+TestR3SyntheticFallback::test_synthetic_data_emits_warning             PASSED
+TestR3SyntheticFallback::test_synthetic_data_returns_valid_structure    PASSED
+TestR4VREBasis::test_vre_primary_zone_coverage                         PASSED
+TestR4VREBasis::test_basis_differential_with_zonal_lmp                 PASSED
+TestR4VREBasis::test_copper_plate_zero_basis                           PASSED
+TestR5ConfidenceIntervals::test_percentile_dict_matches_numpy          PASSED
+TestR5ConfidenceIntervals::test_weighted_percentiles_shift_toward_high_weight  PASSED
+TestR5ConfidenceIntervals::test_uncertainty_bands_model_fields         PASSED
+TestR5ConfidenceIntervals::test_scenario_weights_sum_to_one            PASSED
+TestR7CapacityMarket::test_ercot_always_zero                           PASSED
+TestR7CapacityMarket::test_spp_always_zero                             PASSED
+TestR7CapacityMarket::test_scarcity_increases_price                    PASSED
+TestR7CapacityMarket::test_clean_penetration_degrades_price            PASSED
+TestR7CapacityMarket::test_max_scarcity_multiplier_bounded             PASSED
+TestR8InputValidation::test_invalid_iso_rejected                       PASSED
+TestR8InputValidation::test_non_monotonic_years_rejected               PASSED
+TestR8InputValidation::test_out_of_range_years_rejected                PASSED
+TestR8InputValidation::test_valid_request_accepted                     PASSED
+TestR8InputValidation::test_iso_case_insensitive                       PASSED
+TestR8InputValidation::test_negative_carbon_price_rejected             PASSED
+TestR10CurtailmentFeedback::test_zero_curtailment_no_change            PASSED
+TestR10CurtailmentFeedback::test_curtailment_increases_effective_lcoe  PASSED
+TestR10CurtailmentFeedback::test_50pct_curtailment_doubles_lcoe        PASSED
+TestR10CurtailmentFeedback::test_extreme_curtailment_blocks_deployment PASSED
+```
+
+### Fixes Required
+
+None. All 29 tests passed on the first run with no implementation fixes needed.
+
+### Key Validations Confirmed
+
+- **R2**: Wright's Law cost curve is monotonically decreasing with cumulative GW, floors at NOAK, returns FOAK when below reference GW, and LCOE trajectory decreases over 25 years of simulated deployment
+- **R3**: `_generate_synthetic_step3_data()` emits a `UserWarning` mentioning synthetic data and returns a valid dict structure
+- **R4**: All 7 ISOs have VRE primary zone mappings for solar and wind; zonal LMP produces non-trivial basis differentials; copper-plate mode (no zonal data) returns zero basis differentials
+- **R5**: `_percentile_dict` matches `np.percentile` within 0.01 tolerance; weighted percentiles shift toward high-weight values; `UncertaintyBands` model accepts all required fields; all `SCENARIO_WEIGHTS` dimensions sum to 1.0
+- **R7**: ERCOT and SPP always return $0 capacity price (energy-only markets); lower reserve margin increases price (scarcity effect); higher clean penetration degrades price (sigmoid); max scarcity multiplier is bounded
+- **R8**: Invalid ISO, non-monotonic years, out-of-range years, and negative carbon price all rejected by Pydantic validators; valid requests accepted; ISO auto-uppercased
+- **R10**: Curtailment formula `lcoe / (1 - curtailment_rate)` correctly produces no change at 0%, monotonic increase, 2× at 50%, and >1000× at 99%
