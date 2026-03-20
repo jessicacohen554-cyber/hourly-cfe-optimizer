@@ -74,6 +74,38 @@
 
     <div class="content-section" style="max-width: 960px;">
 
+        <!-- What's New — Recent Enhancements -->
+        <div class="guide-section">
+            <h2>What's New &mdash; Recent Enhancements</h2>
+            <p>The simulator has been significantly upgraded with six new capabilities that improve realism, transparency, and analytical depth:</p>
+            <div class="metric-grid">
+                <div class="metric-card" style="border-left-color: #22C55E;">
+                    <h4>Plant-Level Retirement</h4>
+                    <p>Individual generators now retire based on their own heat rate, revenue, and margin &mdash; not fleet-average economics. A 15% per-zone reserve margin floor prevents cascading over-retirement. Results include per-plant status (operating / at-risk / stranded).</p>
+                </div>
+                <div class="metric-card" style="border-left-color: #6366F1;">
+                    <h4>Correlated Scenario Bundles</h4>
+                    <p>Five IEA-aligned bundles (STEPS, APS, NZE, High Friction, Rapid Transition) pair inputs that co-move in reality &mdash; e.g., high gas prices with high carbon prices. Use these alongside the independent 1,215-scenario sweep for internally consistent narratives.</p>
+                </div>
+                <div class="metric-card" style="border-left-color: #F59E0B;">
+                    <h4>Sensitivity Analysis</h4>
+                    <p>Morris method screening identifies which input parameters drive the most output variance. Tornado diagrams and variance decomposition help you prioritize which assumptions to refine before commissioning a full production model run.</p>
+                </div>
+                <div class="metric-card" style="border-left-color: #0EA5E9;">
+                    <h4>Result Provenance</h4>
+                    <p>Every simulation now embeds full audit metadata: git commit SHA, config hash, timestamp, Python version, and a complete input snapshot. Enables exact reproducibility and result traceability for governance reviews.</p>
+                </div>
+                <div class="metric-card" style="border-left-color: #EF4444;">
+                    <h4>LMP Confidence Indicators</h4>
+                    <p>A confidence factor (0&ndash;1) degrades as VRE penetration exceeds the model&rsquo;s calibration range (&gt;60%). Results at high VRE now carry explicit uncertainty flags so you know when to validate with a production dispatch model.</p>
+                </div>
+                <div class="metric-card" style="border-left-color: #9C27B0;">
+                    <h4>Cross-Validation Framework</h4>
+                    <p>Structured comparison against EIA AEO, NREL ReEDS, and EPA IPM reference trajectories. Divergences are classified as &ldquo;expected&rdquo; (mechanism difference) or &ldquo;unexplained&rdquo; (potential calibration issue).</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Section 0: Getting Started / Data Setup -->
         <div class="guide-section">
             <h2>Getting Started</h2>
@@ -312,6 +344,14 @@
                     These appear at the bottom of the Setup page.
                 </li>
                 <li>
+                    <strong>Choose scenario mode</strong>
+                    Select <strong>Independent Sweep</strong> for a full 1,215-scenario parameter sweep,
+                    or <strong>Correlated Bundles</strong> to run IEA-aligned scenario packages (STEPS, APS, NZE,
+                    High Friction, Rapid Transition) where input dimensions co-move realistically.
+                    Correlated bundles are ideal for narrative-driven analysis; independent sweeps are better
+                    for mapping the full sensitivity space.
+                </li>
+                <li>
                     <strong>Click "Run Market Simulation"</strong>
                     The model will compute results (typically 5-30 seconds for Snapshot/Trajectory).
                     You'll be redirected to the results page automatically.
@@ -320,6 +360,15 @@
                     <strong>Review results</strong>
                     The results page shows KPI summary cards, LMP profiles, supply stack, merit-order dispatch,
                     generator economics, and deployment profitability. Each chart has an info hover explaining what it shows.
+                    Check the <strong>lmp_confidence_factor</strong> badge on LMP charts &mdash; values below 1.0
+                    indicate the model is extrapolating beyond its calibrated VRE range and results should be
+                    validated with a production dispatch model.
+                </li>
+                <li>
+                    <strong>Check provenance metadata</strong>
+                    Every result JSON includes a <code>provenance</code> block with the git commit SHA,
+                    config hash, timestamp, and full input snapshot. Use this for audit trails and to
+                    reproduce any past simulation exactly.
                 </li>
                 <li>
                     <strong>Export &amp; compare</strong>
@@ -350,6 +399,44 @@
                 <div class="metric-card">
                     <h4>Nuclear Revenue ($/MWh)</h4>
                     <p>Total revenue stack for existing nuclear: energy + capacity + 45U PTC. If this falls below the retirement threshold, nuclear plants shut down.</p>
+                </div>
+            </div>
+
+            <h3>New Result Fields</h3>
+            <p>Recent enhancements add several new fields to the results JSON. Here's how to interpret them:</p>
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <h4><code>plant_retirements</code></h4>
+                    <p>Array of individual plant retirement decisions per simulation year. Each entry includes
+                    <code>plant_id</code>, <code>plant_name</code>, <code>capacity_mw</code>, <code>fuel_type</code>,
+                    <code>heat_rate</code>, <code>annual_profit</code>, and <code>retirement_reason</code>
+                    (e.g., "negative_margin", "reserve_margin_floor"). Plants with positive margins stay online;
+                    unprofitable plants retire unless doing so would breach the 15% zonal reserve margin floor.</p>
+                </div>
+                <div class="metric-card">
+                    <h4><code>lmp_confidence_factor</code></h4>
+                    <p>A value between 0.0 and 1.0 indicating how far the simulation's VRE penetration is from the model's
+                    calibration range. <strong>1.0</strong> = fully within calibrated range (&le;60% VRE).
+                    <strong>0.5&ndash;0.9</strong> = moderate extrapolation (60&ndash;80% VRE) &mdash; directionally useful
+                    but validate key findings. <strong>&lt;0.5</strong> = high extrapolation (&gt;80% VRE) &mdash;
+                    LMP results should be cross-checked with a production dispatch model (IPM, PLEXOS).</p>
+                </div>
+                <div class="metric-card">
+                    <h4><code>tornado_data</code></h4>
+                    <p>Morris method sensitivity output. Contains <code>parameter</code> (input name),
+                    <code>mu_star</code> (mean absolute elementary effect &mdash; overall influence),
+                    <code>sigma</code> (standard deviation &mdash; interaction/nonlinearity), and
+                    <code>output_metric</code> (which KPI is affected). Parameters with high <code>mu_star</code>
+                    are the ones worth refining first. High <code>sigma</code> relative to <code>mu_star</code>
+                    indicates the parameter interacts strongly with other inputs.</p>
+                </div>
+                <div class="metric-card">
+                    <h4><code>provenance</code></h4>
+                    <p>Audit metadata block embedded in every result. Fields: <code>git_sha</code> (exact code version),
+                    <code>config_hash</code> (SHA-256 of all input parameters), <code>timestamp</code> (ISO 8601),
+                    <code>python_version</code>, and <code>input_snapshot</code> (complete copy of all inputs).
+                    To reproduce a result, check out the <code>git_sha</code> and run with the <code>input_snapshot</code>.
+                    The <code>config_hash</code> lets you quickly verify if two runs used identical inputs.</p>
                 </div>
             </div>
 
@@ -403,6 +490,13 @@
                     <h4>Data Tier Warning Banner</h4>
                     <p>When running on synthetic data (Minimal tier), a prominent banner warns that results are illustrative only. Green header = full pipeline data. Amber = partial. Red = synthetic. Check the Setup page data tier indicators for details.</p>
                 </div>
+            </div>
+
+            <div class="callout">
+                <p><strong>Data &amp; Methodology:</strong> For complete documentation of the dispatch model, LMP formation,
+                retirement logic, learning curves, and all equations, see the
+                <a href="/methodology"><strong>Methodology</strong></a> page. It covers plant-level retirement mechanics,
+                LMP confidence factor derivation, sensitivity analysis methods, and provenance metadata schema.</p>
             </div>
         </div>
 
