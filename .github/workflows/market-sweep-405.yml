@@ -4,12 +4,11 @@ name: "Market Simulator: 405-Scenario Sweep"
 # across all 7 ISOs, simulating years 2023/2030/2035/2040/2045/2050.
 #
 # Each ISO runs in a parallel matrix job (~10-15 min each).
-# Results are merged into a single branch with JSON + parquet output.
+# Results are merged into a single branch with parquet output only (no large JSON).
 #
 # Output: market-simulator/results/sweep_405/
-#   - market_simulation_results.json  (full nested)
-#   - sweep_405_flat.parquet          (flat table)
-#   - sweep_405_aggregates.json       (P10/P50/P90 bands)
+#   - sweep_405_flat.parquet          (flat table, ~5 MB)
+#   - sweep_405_aggregates.json       (P10/P50/P90 bands, ~1 MB)
 
 on:
   workflow_dispatch:
@@ -85,7 +84,7 @@ jobs:
           path: market-simulator/results/sweep_405/${{ matrix.iso }}/
           retention-days: 3
 
-  # ── Phase 2: Merge all ISO results into one branch ──
+  # ── Phase 2: Merge per-ISO parquets into combined output ──
   merge:
     needs: sweep
     runs-on: ubuntu-latest
@@ -115,7 +114,7 @@ jobs:
           pattern: sweep-*
           path: ./artifact-tmp/
 
-      - name: Merge per-ISO results into combined output
+      - name: Merge per-ISO parquets into combined output
         working-directory: market-simulator/scripts
         run: |
           python3 - <<'PYEOF'
@@ -126,52 +125,59 @@ jobs:
           out_dir = os.path.join(os.getcwd(), '..', 'results', 'sweep_405')
           os.makedirs(out_dir, exist_ok=True)
 
-          # Merge JSON results
-          combined_json = {}
-          for iso_dir in sorted(os.listdir(artifact_root)):
-              iso_path = os.path.join(artifact_root, iso_dir)
-              json_file = None
-              for root, dirs, files in os.walk(iso_path):
-                  for f in files:
-                      if f == 'market_simulation_results.json':
-                          json_file = os.path.join(root, f)
-                          break
-              if json_file:
-                  with open(json_file) as f:
-                      data = json.load(f)
-                  # Merge scenario keys
-                  for scenario_id, iso_results in data.items():
-                      if scenario_id.startswith('_'):
-                          continue
-                      if scenario_id not in combined_json:
-                          combined_json[scenario_id] = {}
-                      combined_json[scenario_id].update(iso_results)
-
-          # Save combined JSON
-          with open(os.path.join(out_dir, 'market_simulation_results.json'), 'w') as f:
-              json.dump(combined_json, f, indent=2, default=str)
-          print(f"Combined JSON: {len(combined_json)} scenarios")
-
-          # Merge parquet files
+          # Merge parquet files from all ISOs
           dfs = []
           for iso_dir in sorted(os.listdir(artifact_root)):
               iso_path = os.path.join(artifact_root, iso_dir)
               for root, dirs, files in os.walk(iso_path):
                   for f in files:
                       if f.endswith('.parquet'):
-                          dfs.append(pd.read_parquet(os.path.join(root, f)))
+                          df = pd.read_parquet(os.path.join(root, f))
+                          dfs.append(df)
+                          print(f"  Loaded {iso_dir}: {len(df)} rows")
           if dfs:
               combined_df = pd.concat(dfs, ignore_index=True)
-              combined_df.to_parquet(os.path.join(out_dir, 'sweep_405_flat.parquet'), index=False)
+              parquet_path = os.path.join(out_dir, 'sweep_405_flat.parquet')
+              combined_df.to_parquet(parquet_path, index=False)
               print(f"Combined parquet: {len(combined_df)} rows × {len(combined_df.columns)} cols")
+              size_mb = os.path.getsize(parquet_path) / 1e6
+              print(f"  Size: {size_mb:.1f} MB")
+          else:
+              print("ERROR: No parquet files found in artifacts")
+              sys.exit(1)
 
-          # Recompute combined aggregates
-          sys.path.insert(0, '.')
-          from market_simulation import aggregate_sweep_percentiles
-          aggregates = aggregate_sweep_percentiles(combined_json)
-          with open(os.path.join(out_dir, 'sweep_405_aggregates.json'), 'w') as f:
-              json.dump(aggregates, f, indent=2, default=str)
-          print(f"Aggregates: {len(aggregates)} ISOs")
+          # Compute aggregates from parquet
+          print("Computing P10/P50/P90 aggregates from parquet...")
+          agg_cols = [
+              'avg_lmp', 'lmp_p90', 'emissions_mt', 'emission_rate_tco2_mwh',
+              'cost_per_mwh', 'revenue_per_mwh', 'clean_pct', 'demand_twh',
+              'total_new_fossil_mw', 'total_economic_retirement_mw',
+              'ordc_scarcity_hours',
+          ]
+          existing_cols = [c for c in agg_cols if c in combined_df.columns]
+
+          aggregates = {}
+          for iso in sorted(combined_df['iso'].dropna().unique()):
+              iso_df = combined_df[combined_df['iso'] == iso]
+              aggregates[iso] = {}
+              for year in sorted(iso_df['year'].dropna().unique()):
+                  yr_df = iso_df[iso_df['year'] == year]
+                  yr_agg = {}
+                  for col in existing_cols:
+                      vals = yr_df[col].dropna()
+                      if len(vals) > 0:
+                          yr_agg[col] = {
+                              'p10': round(float(vals.quantile(0.1)), 4),
+                              'p50': round(float(vals.quantile(0.5)), 4),
+                              'p90': round(float(vals.quantile(0.9)), 4),
+                              'mean': round(float(vals.mean()), 4),
+                          }
+                  aggregates[iso][str(int(year))] = yr_agg
+
+          agg_path = os.path.join(out_dir, 'sweep_405_aggregates.json')
+          with open(agg_path, 'w') as f:
+              json.dump(aggregates, f, indent=2)
+          print(f"Aggregates saved: {agg_path} ({len(aggregates)} ISOs)")
           PYEOF
 
       - name: Create output branch and commit
@@ -191,12 +197,13 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Market simulator: 405-scenario sweep results — $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          git commit -m "Market simulator: 405-scenario sweep results (parquet-only) — $(date -u +%Y-%m-%dT%H:%M:%SZ)
 
           405 scenarios (3 demand × 5 price × 3 PPA × 3 gas friction × 3 queue)
           × 7 ISOs × 6 years (2023, 2030, 2035, 2040, 2045, 2050) = 17,010 results.
 
-          Output: JSON (full nested), parquet (flat), aggregates (P10/P50/P90)."
+          Output: parquet (flat table) + aggregates JSON (P10/P50/P90).
+          Combined JSON removed to reduce repo size."
 
           MAX_RETRIES=4
           for i in $(seq 1 $MAX_RETRIES); do
