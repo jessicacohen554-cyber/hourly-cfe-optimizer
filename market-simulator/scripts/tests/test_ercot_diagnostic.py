@@ -5,7 +5,7 @@ Traces the hourly LMP distribution for ERCOT 2030 (worst case: no prior new buil
 to identify how many hours hit capacity shortage vs ORDC vs normal pricing.
 """
 import sys, os
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import numpy as np
 from market_simulation import (

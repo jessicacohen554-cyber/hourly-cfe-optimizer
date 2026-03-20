@@ -7,7 +7,7 @@ After the fix: avg_lmp $25-80, scarcity_hours < 1000 in all years.
 """
 import sys
 import os
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import numpy as np
 from market_simulation import (
