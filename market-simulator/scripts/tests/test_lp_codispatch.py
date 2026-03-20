@@ -15,7 +15,7 @@ import numpy as np
 
 # Ensure scripts dir is on path
 import os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 from dispatch_utils import (
     reconstruct_hourly_dispatch,

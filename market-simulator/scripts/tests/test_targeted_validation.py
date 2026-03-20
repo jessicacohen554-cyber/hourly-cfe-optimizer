@@ -7,7 +7,7 @@ Picks worst-case combos (ERCOT High demand, NEISO High demand) to verify:
 3. New-build fossil feedback visible (fleet grows year-over-year)
 """
 import sys, os
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import time
 import numpy as np
