@@ -179,7 +179,7 @@
 
 <div class="title-bar">
   <h1>Market Simulator &mdash; High-Level Architecture</h1>
-  <span class="subtitle">Profit-Driven Electricity Market Model &bull; 7 ISOs &bull; 3 Simulation Modes</span>
+  <span class="subtitle">Profit-Driven Electricity Market Model &bull; 7 ISOs &bull; 3 Simulation Modes &bull; 1,215-Scenario Sweep</span>
 </div>
 
 <div class="pipeline">
@@ -209,7 +209,7 @@
       <div class="step-box">
         <div class="step-id">EIA 860/923</div>
         <div class="step-name">Fleet Inventory</div>
-        <div class="step-desc">Real generator-level data: capacity, heat rates, emissions. EIA + EPA CAMPD cross-reference.</div>
+        <div class="step-desc">Real generator-level data: capacity, heat rates, emissions. EIA + EPA CAMPD cross-reference. BA&rarr;ISO mapping.</div>
         <div class="step-script">fleet_model.py</div>
       </div>
     </div>
@@ -223,8 +223,8 @@
     <div class="phase-content">
       <div class="step-box highlight">
         <div class="step-id">Core</div>
-        <div class="step-name">LMP Engine + Zonal</div>
-        <div class="step-desc">Merit-order stack + pipe-and-bubble zonal LP (2&ndash;5 zones/ISO). Demand response dampening. Inter-regional import/export profiles.</div>
+        <div class="step-name">LMP + ORDC + Zonal</div>
+        <div class="step-desc">Merit-order stack + ORDC scarcity pricing (exponential knee) + pipe-and-bubble zonal LP. Demand response dampening. VRE cannibalization feedback.</div>
         <div class="step-script">lmp_engine.py, zonal_lmp.py</div>
       </div>
       <div class="step-box">
@@ -235,15 +235,15 @@
       </div>
       <div class="step-box">
         <div class="step-id">Core</div>
-        <div class="step-name">Profitability Analysis</div>
-        <div class="step-desc">Revenue (LMP &times; CF + capacity + PTC) vs Cost (fuel + VOM + CO&sub2;). Deploy where profit &gt; 0; stop at first loss. DR metrics.</div>
+        <div class="step-name">Profitability + New Build</div>
+        <div class="step-desc">Revenue vs Cost dispatch. Clean deploys where profit &gt; 0. Economic retirement cascade. New-build fossil (CCGT/CT/coal) via RA &amp; economic triggers. ORDC feedback loop.</div>
         <div class="step-script">market_simulation.py</div>
       </div>
       <div class="step-box">
         <div class="step-id">Core</div>
-        <div class="step-name">Fossil Retirement</div>
-        <div class="step-desc">Merit-order cascade: coal &rarr; oil &rarr; gas CT &rarr; gas CCGT. Nuclear floor &sect;45U PTC. Economic stranding analysis.</div>
-        <div class="step-script">dispatch_utils.py</div>
+        <div class="step-name">Fleet Dispatch</div>
+        <div class="step-desc">Plant-level economics across sweep. Grid+fleet fossil reconciliation (additive rule). P10/P50/P90 envelopes. JS port for browser-side recalc.</div>
+        <div class="step-script">fleet_dispatch.py, fleet-dispatch-engine.js</div>
       </div>
     </div>
   </div>
@@ -262,12 +262,12 @@
       <div class="step-box">
         <div class="step-id">Mode 2</div>
         <div class="step-name">Trajectory</div>
-        <div class="step-desc">2023 &rarr; 2050 (6 timesteps). Wright&rsquo;s Law learning curves, demand growth (L/M/H), queue caps. 30&ndash;120 sec.</div>
+        <div class="step-desc">2023 &rarr; 2050 (6 timesteps). Wright&rsquo;s Law learning curves, demand growth (L/M/H), tech-differentiated queue caps. 30&ndash;120 sec.</div>
       </div>
       <div class="step-box">
         <div class="step-id">Mode 3</div>
         <div class="step-name">Parametric Sweep</div>
-        <div class="step-desc">270 scenarios = 2 conditions &times; 3 demand &times; 5 price &times; 3 PPA &times; 3 gas friction. Full sensitivity surface. 5&ndash;30 min.</div>
+        <div class="step-desc">1,215 scenarios = 3 demand &times; 5 price &times; 3 PPA &times; 3 gas friction &times; 3 queue &times; 3 NB fossil cost. &times; 7 ISOs &times; 6 years = 51,030 runs.</div>
       </div>
     </div>
   </div>
@@ -280,23 +280,23 @@
     <div class="phase-content">
       <div class="step-box">
         <div class="step-id">Charts</div>
-        <div class="step-name">12 Interactive Charts</div>
-        <div class="step-desc">Merit-order, profitability, LMP, CCS, supply mix, zonal LMP spreads. Confidence zone bands on trajectory charts.</div>
+        <div class="step-name">Interactive Charts</div>
+        <div class="step-desc">Merit-order, profitability, LMP, CCS, supply mix, zonal spreads. Confidence zones. Fleet fan charts (P10/P50/P90). IPM trigger indicators.</div>
       </div>
       <div class="step-box">
-        <div class="step-id">KPIs</div>
-        <div class="step-name">Dashboard Cards</div>
-        <div class="step-desc">Clean %, LMP, emissions, nuclear rev, DR metrics (curtailed GWh, peak GW, hours). Confidence badges.</div>
+        <div class="step-id">Pages</div>
+        <div class="step-name">6-Page Application</div>
+        <div class="step-desc">Guide &rarr; Setup &rarr; Results &rarr; Fleet Config &rarr; Fleet Scenarios (sidebar + 4 charts) &rarr; Methodology. CCS dashboard. IPP report.</div>
       </div>
       <div class="step-box">
         <div class="step-id">Export</div>
-        <div class="step-name">CSV / JSON / PNG</div>
-        <div class="step-desc">Full results table, input parameters, narrative interpretation, chart image exports.</div>
+        <div class="step-name">CSV / JSON / Parquet</div>
+        <div class="step-desc">Full results table, sweep parquet (51K rows), aggregates JSON (P10/P50/P90), fleet results, chart PNG exports.</div>
       </div>
       <div class="step-box">
         <div class="step-id">API</div>
         <div class="step-name">REST Endpoints</div>
-        <div class="step-desc">FastAPI: /api/simulate, /api/sweep, /api/sensitivity, /api/iso-defaults. JSON request/response.</div>
+        <div class="step-desc">FastAPI: /api/simulate, /api/sweep, /api/sweep-cached/status, /api/fleet-scenarios-config, /api/sweep-dispatch-data.</div>
         <div class="step-script">backend/main.py, models.py</div>
       </div>
     </div>
@@ -311,7 +311,7 @@
     <div class="legend-item"><div class="legend-swatch" style="background:#F47B27"></div>Scenario Analysis</div>
     <div class="legend-item"><div class="legend-swatch" style="background:#6BA543"></div>Visualization &amp; Export</div>
   </div>
-  <div class="footer">Constellation Energy &mdash; Market Simulator v1.0</div>
+  <div class="footer">Constellation Energy &mdash; Market Simulator</div>
 </div>
 
 </body>
