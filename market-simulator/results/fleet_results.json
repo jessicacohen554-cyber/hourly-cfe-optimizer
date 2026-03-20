@@ -6,7 +6,7 @@
       "ERCOT",
       "PJM"
     ],
-    "n_scenarios": 405,
+    "n_scenarios": 1215,
     "years": [
       2023,
       2030,
@@ -21,37 +21,201 @@
       "p10": 0.0,
       "p50": 0.0,
       "p90": 0.0,
-      "mean": 0.0
+      "mean": 0.0,
+      "grid_new_fossil": {
+        "total_new_fossil_mw": 0.0,
+        "gas_built_gw": 0.0,
+        "fossil_built_gw": 0.0,
+        "nb_gas_ct_mw": 0.0,
+        "nb_gas_ccgt_mw": 0.0,
+        "nb_coal_mw": 0.0
+      }
     },
     "2030": {
-      "p10": 4.269,
+      "p10": 3.9132,
       "p50": 5.6485,
       "p90": 6.3735,
-      "mean": 5.5615
+      "mean": 5.4785,
+      "grid_new_fossil": {
+        "total_new_fossil_mw": 37490.0,
+        "gas_built_gw": 37.49,
+        "fossil_built_gw": 37.49,
+        "nb_gas_ct_mw": 25698.0,
+        "nb_gas_ccgt_mw": 11792.0,
+        "nb_coal_mw": 0.0
+      }
     },
     "2035": {
-      "p10": 3.9892,
-      "p50": 5.7105,
-      "p90": 6.8916,
-      "mean": 5.6027
+      "p10": 3.6912,
+      "p50": 5.5016,
+      "p90": 6.3816,
+      "mean": 5.2838,
+      "grid_new_fossil": {
+        "total_new_fossil_mw": 25522.0,
+        "gas_built_gw": 68.24,
+        "fossil_built_gw": 71.05,
+        "nb_gas_ct_mw": 14506.0,
+        "nb_gas_ccgt_mw": 9864.0,
+        "nb_coal_mw": 1152.0
+      }
     },
     "2040": {
-      "p10": 4.0829,
-      "p50": 5.9241,
-      "p90": 7.6523,
-      "mean": 5.824
+      "p10": 3.4027,
+      "p50": 5.6926,
+      "p90": 6.9283,
+      "mean": 5.4005,
+      "grid_new_fossil": {
+        "total_new_fossil_mw": 33667.0,
+        "gas_built_gw": 100.31,
+        "fossil_built_gw": 100.31,
+        "nb_gas_ct_mw": 22500.0,
+        "nb_gas_ccgt_mw": 11167.0,
+        "nb_coal_mw": 0.0
+      }
     },
     "2045": {
-      "p10": 3.5564,
-      "p50": 6.0266,
-      "p90": 8.0257,
-      "mean": 5.878
+      "p10": 3.4027,
+      "p50": 5.7415,
+      "p90": 7.417,
+      "mean": 5.5073,
+      "grid_new_fossil": {
+        "total_new_fossil_mw": 36104.0,
+        "gas_built_gw": 132.39,
+        "fossil_built_gw": 139.28,
+        "nb_gas_ct_mw": 22500.0,
+        "nb_gas_ccgt_mw": 11250.0,
+        "nb_coal_mw": 2354.0
+      }
     },
     "2050": {
-      "p10": 3.1715,
-      "p50": 5.9906,
-      "p90": 8.2255,
-      "mean": 5.9887
+      "p10": 3.4233,
+      "p50": 5.408,
+      "p90": 7.7767,
+      "mean": 5.4122,
+      "grid_new_fossil": {
+        "total_new_fossil_mw": 37003.0,
+        "gas_built_gw": 165.74,
+        "fossil_built_gw": 176.26,
+        "nb_gas_ct_mw": 22500.0,
+        "nb_gas_ccgt_mw": 11250.0,
+        "nb_coal_mw": 3253.0
+      }
+    }
+  },
+  "envelope_by_fossil_cost": {
+    "Low": {
+      "2023": {
+        "p10": 0.0,
+        "p50": 0.0,
+        "p90": 0.0,
+        "mean": 0.0
+      },
+      "2030": {
+        "p10": 3.9132,
+        "p50": 5.6485,
+        "p90": 6.3735,
+        "mean": 5.4785
+      },
+      "2035": {
+        "p10": 3.669,
+        "p50": 5.5016,
+        "p90": 6.3438,
+        "mean": 5.2715
+      },
+      "2040": {
+        "p10": 3.3583,
+        "p50": 5.6926,
+        "p90": 6.9283,
+        "mean": 5.3849
+      },
+      "2045": {
+        "p10": 3.3583,
+        "p50": 5.7415,
+        "p90": 7.417,
+        "mean": 5.4909
+      },
+      "2050": {
+        "p10": 3.4221,
+        "p50": 5.408,
+        "p90": 7.7767,
+        "mean": 5.4023
+      }
+    },
+    "Medium": {
+      "2023": {
+        "p10": 0.0,
+        "p50": 0.0,
+        "p90": 0.0,
+        "mean": 0.0
+      },
+      "2030": {
+        "p10": 3.9132,
+        "p50": 5.6485,
+        "p90": 6.3735,
+        "mean": 5.4785
+      },
+      "2035": {
+        "p10": 3.669,
+        "p50": 5.5016,
+        "p90": 6.3438,
+        "mean": 5.2782
+      },
+      "2040": {
+        "p10": 3.3805,
+        "p50": 5.6926,
+        "p90": 6.9283,
+        "mean": 5.3958
+      },
+      "2045": {
+        "p10": 3.4027,
+        "p50": 5.7415,
+        "p90": 7.417,
+        "mean": 5.5052
+      },
+      "2050": {
+        "p10": 3.4233,
+        "p50": 5.3971,
+        "p90": 7.7767,
+        "mean": 5.4063
+      }
+    },
+    "High": {
+      "2023": {
+        "p10": 0.0,
+        "p50": 0.0,
+        "p90": 0.0,
+        "mean": 0.0
+      },
+      "2030": {
+        "p10": 3.9132,
+        "p50": 5.6485,
+        "p90": 6.3735,
+        "mean": 5.4785
+      },
+      "2035": {
+        "p10": 3.8244,
+        "p50": 5.5238,
+        "p90": 6.3882,
+        "mean": 5.3016
+      },
+      "2040": {
+        "p10": 3.4249,
+        "p50": 5.6926,
+        "p90": 6.9283,
+        "mean": 5.4208
+      },
+      "2045": {
+        "p10": 3.4027,
+        "p50": 5.7637,
+        "p90": 7.417,
+        "mean": 5.5258
+      },
+      "2050": {
+        "p10": 3.4455,
+        "p50": 5.4435,
+        "p90": 7.7767,
+        "mean": 5.4282
+      }
     }
   },
   "plant_detail": {
@@ -188,9 +352,9 @@
         "fuel_type": "coal_steam",
         "capacity_mw": 425.0,
         "status": "operating",
-        "capacity_factor": 0.5833,
-        "generation_gwh": 2171.75,
-        "emissions_kt": 2241.25
+        "capacity_factor": 0.5463,
+        "generation_gwh": 2033.86,
+        "emissions_kt": 2098.94
       },
       {
         "orispl": 55005,
@@ -210,9 +374,9 @@
         "fuel_type": "gas_ct",
         "capacity_mw": 320.0,
         "status": "operating",
-        "capacity_factor": 0.1132,
-        "generation_gwh": 317.42,
-        "emissions_kt": 171.72
+        "capacity_factor": 0.0824,
+        "generation_gwh": 230.85,
+        "emissions_kt": 124.89
       },
       {
         "orispl": 55004,
@@ -221,126 +385,12 @@
         "fuel_type": "gas_ct",
         "capacity_mw": 135.0,
         "status": "operating",
-        "capacity_factor": 0.1004,
-        "generation_gwh": 118.77,
-        "emissions_kt": 72.45
+        "capacity_factor": 0.073,
+        "generation_gwh": 86.38,
+        "emissions_kt": 52.69
       }
     ],
     "2040": [
-      {
-        "orispl": 55001,
-        "name": "Riverside CCGT",
-        "iso": "PJM",
-        "fuel_type": "gas_ccgt",
-        "capacity_mw": 1100.0,
-        "status": "operating",
-        "capacity_factor": 0.6344,
-        "generation_gwh": 6112.84,
-        "emissions_kt": 2078.36
-      },
-      {
-        "orispl": 55003,
-        "name": "Keystone Coal Station",
-        "iso": "PJM",
-        "fuel_type": "coal_steam",
-        "capacity_mw": 425.0,
-        "status": "operating",
-        "capacity_factor": 0.9074,
-        "generation_gwh": 3378.28,
-        "emissions_kt": 3486.38
-      },
-      {
-        "orispl": 55005,
-        "name": "Allegheny CCGT (CCS Retrofit)",
-        "iso": "PJM",
-        "fuel_type": "gas_ccgt",
-        "capacity_mw": 750.0,
-        "status": "ccs_retrofit",
-        "capacity_factor": 0.5971,
-        "generation_gwh": 3440.94,
-        "emissions_kt": 70.8
-      },
-      {
-        "orispl": 55002,
-        "name": "Eagle Ford CT",
-        "iso": "ERCOT",
-        "fuel_type": "gas_ct",
-        "capacity_mw": 320.0,
-        "status": "operating",
-        "capacity_factor": 0.1338,
-        "generation_gwh": 375.13,
-        "emissions_kt": 202.95
-      },
-      {
-        "orispl": 55004,
-        "name": "Brazos Wind-Backup CT",
-        "iso": "ERCOT",
-        "fuel_type": "gas_ct",
-        "capacity_mw": 135.0,
-        "status": "operating",
-        "capacity_factor": 0.1187,
-        "generation_gwh": 140.37,
-        "emissions_kt": 85.63
-      }
-    ],
-    "2045": [
-      {
-        "orispl": 55001,
-        "name": "Riverside CCGT",
-        "iso": "PJM",
-        "fuel_type": "gas_ccgt",
-        "capacity_mw": 1100.0,
-        "status": "operating",
-        "capacity_factor": 0.7,
-        "generation_gwh": 6745.2,
-        "emissions_kt": 2293.37
-      },
-      {
-        "orispl": 55003,
-        "name": "Keystone Coal Station",
-        "iso": "PJM",
-        "fuel_type": "coal_steam",
-        "capacity_mw": 425.0,
-        "status": "operating",
-        "capacity_factor": 0.9167,
-        "generation_gwh": 3412.75,
-        "emissions_kt": 3521.96
-      },
-      {
-        "orispl": 55005,
-        "name": "Allegheny CCGT (CCS Retrofit)",
-        "iso": "PJM",
-        "fuel_type": "gas_ccgt",
-        "capacity_mw": 750.0,
-        "status": "ccs_retrofit",
-        "capacity_factor": 0.6588,
-        "generation_gwh": 3796.9,
-        "emissions_kt": 78.13
-      },
-      {
-        "orispl": 55002,
-        "name": "Eagle Ford CT",
-        "iso": "ERCOT",
-        "fuel_type": "gas_ct",
-        "capacity_mw": 320.0,
-        "status": "operating",
-        "capacity_factor": 0.0618,
-        "generation_gwh": 173.14,
-        "emissions_kt": 93.67
-      },
-      {
-        "orispl": 55004,
-        "name": "Brazos Wind-Backup CT",
-        "iso": "ERCOT",
-        "fuel_type": "gas_ct",
-        "capacity_mw": 135.0,
-        "status": "operating",
-        "capacity_factor": 0.0548,
-        "generation_gwh": 64.79,
-        "emissions_kt": 39.52
-      }
-    ],
-    "2050": [
       {
         "orispl": 55001,
         "name": "Riverside CCGT",
@@ -359,9 +409,66 @@
         "fuel_type": "coal_steam",
         "capacity_mw": 425.0,
         "status": "operating",
-        "capacity_factor": 0.6389,
-        "generation_gwh": 2378.58,
-        "emissions_kt": 2454.7
+        "capacity_factor": 0.5556,
+        "generation_gwh": 2068.33,
+        "emissions_kt": 2134.52
+      },
+      {
+        "orispl": 55005,
+        "name": "Allegheny CCGT (CCS Retrofit)",
+        "iso": "PJM",
+        "fuel_type": "gas_ccgt",
+        "capacity_mw": 750.0,
+        "status": "ccs_retrofit",
+        "capacity_factor": 0.95,
+        "generation_gwh": 5475.0,
+        "emissions_kt": 112.66
+      },
+      {
+        "orispl": 55002,
+        "name": "Eagle Ford CT",
+        "iso": "ERCOT",
+        "fuel_type": "gas_ct",
+        "capacity_mw": 320.0,
+        "status": "operating",
+        "capacity_factor": 0.1544,
+        "generation_gwh": 432.85,
+        "emissions_kt": 234.17
+      },
+      {
+        "orispl": 55004,
+        "name": "Brazos Wind-Backup CT",
+        "iso": "ERCOT",
+        "fuel_type": "gas_ct",
+        "capacity_mw": 135.0,
+        "status": "operating",
+        "capacity_factor": 0.137,
+        "generation_gwh": 161.96,
+        "emissions_kt": 98.8
+      }
+    ],
+    "2045": [
+      {
+        "orispl": 55001,
+        "name": "Riverside CCGT",
+        "iso": "PJM",
+        "fuel_type": "gas_ccgt",
+        "capacity_mw": 1100.0,
+        "status": "operating",
+        "capacity_factor": 0.95,
+        "generation_gwh": 9154.2,
+        "emissions_kt": 3112.43
+      },
+      {
+        "orispl": 55003,
+        "name": "Keystone Coal Station",
+        "iso": "PJM",
+        "fuel_type": "coal_steam",
+        "capacity_mw": 425.0,
+        "status": "operating",
+        "capacity_factor": 0.5741,
+        "generation_gwh": 2137.28,
+        "emissions_kt": 2205.67
       },
       {
         "orispl": 55005,
@@ -396,6 +503,146 @@
         "generation_gwh": 151.17,
         "emissions_kt": 92.21
       }
+    ],
+    "2050": [
+      {
+        "orispl": 55001,
+        "name": "Riverside CCGT",
+        "iso": "PJM",
+        "fuel_type": "gas_ccgt",
+        "capacity_mw": 1100.0,
+        "status": "operating",
+        "capacity_factor": 0.95,
+        "generation_gwh": 9154.2,
+        "emissions_kt": 3112.43
+      },
+      {
+        "orispl": 55003,
+        "name": "Keystone Coal Station",
+        "iso": "PJM",
+        "fuel_type": "coal_steam",
+        "capacity_mw": 425.0,
+        "status": "operating",
+        "capacity_factor": 0.4815,
+        "generation_gwh": 1792.56,
+        "emissions_kt": 1849.92
+      },
+      {
+        "orispl": 55005,
+        "name": "Allegheny CCGT (CCS Retrofit)",
+        "iso": "PJM",
+        "fuel_type": "gas_ccgt",
+        "capacity_mw": 750.0,
+        "status": "ccs_retrofit",
+        "capacity_factor": 0.95,
+        "generation_gwh": 5475.0,
+        "emissions_kt": 112.66
+      },
+      {
+        "orispl": 55002,
+        "name": "Eagle Ford CT",
+        "iso": "ERCOT",
+        "fuel_type": "gas_ct",
+        "capacity_mw": 320.0,
+        "status": "operating",
+        "capacity_factor": 0.1544,
+        "generation_gwh": 432.85,
+        "emissions_kt": 234.17
+      },
+      {
+        "orispl": 55004,
+        "name": "Brazos Wind-Backup CT",
+        "iso": "ERCOT",
+        "fuel_type": "gas_ct",
+        "capacity_mw": 135.0,
+        "status": "operating",
+        "capacity_factor": 0.137,
+        "generation_gwh": 161.96,
+        "emissions_kt": 98.8
+      }
     ]
-  }
+  },
+  "grid_new_fossil": {
+    "2023": {
+      "total_new_fossil_mw": 0.0,
+      "gas_built_gw": 0.0,
+      "fossil_built_gw": 0.0,
+      "nb_gas_ct_mw": 0.0,
+      "nb_gas_ccgt_mw": 0.0,
+      "nb_coal_mw": 0.0
+    },
+    "2030": {
+      "total_new_fossil_mw": 37490.0,
+      "gas_built_gw": 37.49,
+      "fossil_built_gw": 37.49,
+      "nb_gas_ct_mw": 25698.0,
+      "nb_gas_ccgt_mw": 11792.0,
+      "nb_coal_mw": 0.0
+    },
+    "2035": {
+      "total_new_fossil_mw": 25522.0,
+      "gas_built_gw": 68.24,
+      "fossil_built_gw": 71.05,
+      "nb_gas_ct_mw": 14506.0,
+      "nb_gas_ccgt_mw": 9864.0,
+      "nb_coal_mw": 1152.0
+    },
+    "2040": {
+      "total_new_fossil_mw": 33667.0,
+      "gas_built_gw": 100.31,
+      "fossil_built_gw": 100.31,
+      "nb_gas_ct_mw": 22500.0,
+      "nb_gas_ccgt_mw": 11167.0,
+      "nb_coal_mw": 0.0
+    },
+    "2045": {
+      "total_new_fossil_mw": 36104.0,
+      "gas_built_gw": 132.39,
+      "fossil_built_gw": 139.28,
+      "nb_gas_ct_mw": 22500.0,
+      "nb_gas_ccgt_mw": 11250.0,
+      "nb_coal_mw": 2354.0
+    },
+    "2050": {
+      "total_new_fossil_mw": 37003.0,
+      "gas_built_gw": 165.74,
+      "fossil_built_gw": 176.26,
+      "nb_gas_ct_mw": 22500.0,
+      "nb_gas_ccgt_mw": 11250.0,
+      "nb_coal_mw": 3253.0
+    }
+  },
+  "new_fossil_summary": {
+    "2023": {
+      "grid_new_fossil_mw": 0.0,
+      "fleet_new_fossil_mw": 0.0,
+      "total_new_fossil_mw": 0.0
+    },
+    "2030": {
+      "grid_new_fossil_mw": 37490.0,
+      "fleet_new_fossil_mw": 0.0,
+      "total_new_fossil_mw": 37490.0
+    },
+    "2035": {
+      "grid_new_fossil_mw": 25522.0,
+      "fleet_new_fossil_mw": 0.0,
+      "total_new_fossil_mw": 25522.0
+    },
+    "2040": {
+      "grid_new_fossil_mw": 33667.0,
+      "fleet_new_fossil_mw": 0.0,
+      "total_new_fossil_mw": 33667.0
+    },
+    "2045": {
+      "grid_new_fossil_mw": 36104.0,
+      "fleet_new_fossil_mw": 0.0,
+      "total_new_fossil_mw": 36104.0
+    },
+    "2050": {
+      "grid_new_fossil_mw": 37003.0,
+      "fleet_new_fossil_mw": 0.0,
+      "total_new_fossil_mw": 37003.0
+    }
+  },
+  "new_fossil_overlap_notes": null
 }
