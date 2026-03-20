@@ -141,3 +141,166 @@ VRE integration captures the most important economic mechanism (temporal canniba
 - **Single weather year as default.** VRE generation profiles come from a single year (2025 default) with optional 2021–2025 sensitivity. No ensemble or synthetic weather year generation, which means tail-risk VRE underperformance isn't captured.
 
 ---
+
+### 2.4 Storage Dispatch
+
+**Rating: Weak**
+
+Storage is the most significant modeling gap. The dispatch is either a greedy heuristic or an opt-in LP, and the market simulation engine largely treats storage as a static deployment ramp rather than an economically co-optimized asset.
+
+**Strengths:**
+
+- **Dispatch utilities include both greedy and LP co-optimization paths** (`dispatch_utils.py`):
+  - Greedy sequential: Numba `@njit` battery loop (lines 268–311) and LDES loop (lines 315–365) with rolling-window charge/discharge
+  - LP co-optimization: `_solve_storage_window_lp()` (lines 589–721) via scipy.linprog with SOC constraints and multi-storage coordination
+  - March 2026 bug fix corrected double-counting where LDES and battery consumed the same surplus MWh
+
+- **Technology differentiation is correct**: Battery 4hr (85% RTE, daily cycle), Battery 8hr (85% RTE), LDES 100hr iron-air (50% RTE, 7-day window), Green H₂ 1000hr (35% RTE, 30-day window, ≥95% only). Parameters match industry consensus (NREL ATB 2024, LDES Council).
+
+- **LP co-dispatch** (`co_dispatch_storage_lp`, lines 724–833) handles multi-storage coordination with graceful fallback to greedy on infeasibility.
+
+**Critical Weaknesses:**
+
+- **Market simulation engine bypasses co-optimization entirely.** In `market_simulation.py` (lines 2565–2578), storage deployment is a **static ramp function** of clean percentage:
+  ```
+  Battery 4hr: min(15%, progress × 12%)
+  Battery 8hr: min(8%, max(0, progress − 0.3) × 10%)
+  LDES: min(5%, max(0, progress − 0.5) × 8%)
+  ```
+  These are placeholders, not economics-driven deployment. Storage capacity is not optimized against arbitrage revenue, capacity market revenue, or ancillary services — it's simply ramped as a function of trajectory progress.
+
+- **No hourly charge/discharge optimization in the market engine.** Storage is treated as a demand-side reduction (same as VRE) rather than a time-shifting asset. There's no price-taking storage dispatch model that would charge during low-LMP hours and discharge during high-LMP hours. This means storage revenue is not endogenous to the simulation.
+
+- **Revenue assumption is static** (line 2154): `capacity_credit × capacity_price / (CF × 8.760)` converted to $/MWh. This ignores arbitrage revenue, which is the primary value stream for merchant storage. For a 4hr battery in ERCOT (2024), arbitrage revenue was ~$80–120/kW-yr — comparable to or exceeding capacity revenue.
+
+- **No round-trip efficiency impact on LMP.** Storage charging adds load; storage discharging reduces residual demand. Neither effect is reflected in the LMP calculation, which sees only the net clean percentage. At high storage penetration (>10 GW in ERCOT), charge-induced demand could meaningfully shift overnight LMPs.
+
+---
+
+### 2.5 Retirement & Deployment Logic
+
+**Rating: Adequate**
+
+The retirement cascade and deployment merit order are economically grounded but make simplifying assumptions that users should understand.
+
+**Strengths:**
+
+- **Retirement is margin-driven with graduated response** (`market_simulation.py` lines 969–1067):
+  - Stranded (margin < −$5/MWh): 20–90% retirement (scaled by loss depth)
+  - At-risk (margin < +$2/MWh): ~10% per year
+  - Profitable (margin ≥ +$2/MWh): retained
+  - Reliability floor: never retire below 5% of original capacity per unit type
+
+- **Resource adequacy backstop for new fossil** (`apply_economic_new_build`, lines 1069–1280): If reserve margin falls below 15% target after retirements + clean deployment, the model builds cheapest dispatchable capacity (CCGT or CT). This prevents the model from producing physically infeasible grids with insufficient firm capacity.
+
+- **Technology-differentiated interconnection queues** (lines 2194–2256): Per-technology budgets with a 20% flexible pool that can overflow between technologies. Calibrated to LBNL interconnection queue data. This is a meaningful constraint that many models omit.
+
+- **RPS compliance via ACP pricing** (lines 1405–1427): Scarcity-driven exponential REC pricing based on gap to RPS target. Creates a price signal for compliance-driven deployment beyond pure market economics.
+
+**Limitations:**
+
+- **Retirement thresholds are deterministic.** Real-world retirement decisions involve regulatory proceedings (state utility commissions), labor agreements, environmental remediation costs, and political factors. The margin-based model captures the economic signal but not the institutional friction that keeps uneconomic plants running for years.
+
+- **No plant-level heterogeneity in retirement.** The model retires a *fraction* of capacity by unit type, not individual plants. A fleet with one highly profitable CCGT and one deeply uneconomic one retires a fraction of both rather than closing only the unprofitable unit.
+
+- **New fossil CAPEX is static** — no technology learning for CCGT/CT. Gas prices float via fuel sensitivity, but construction costs don't change. For 25-year trajectories, this may underestimate future gas plant costs (labor, permitting, carbon risk premium).
+
+- **Nuclear retirement is binary.** After a trigger year, nuclear either stays fully online or exits entirely (line 3068). No partial fleet retirement or plant-by-plant assessment. Given Constellation, Vistra, and NextEra's plant economics vary substantially, this is a significant simplification.
+
+---
+
+### 2.6 Data Foundation & Calibration
+
+**Rating: Strong**
+
+The data foundation is comprehensive and well-sourced, with appropriate regional specificity.
+
+**Strengths:**
+
+- **EIA data backbone**: Demand profiles from EIA-930, generation from EIA-923, fleet inventory from EIA-860. These are the standard authoritative sources for US electricity data.
+
+- **eGRID emission factors**: CO₂/NOx/SOx rates from EPA eGRID 2022 + CAMPD 2023. Unit-type variability in emission rates (not just fleet averages) is correctly modeled.
+
+- **ISO-specific calibration targets** from 2024 State of the Market reports:
+  - PJM: avg $34.70/MWh, P90 $55, 200 negative hours (SOM 2024)
+  - ERCOT: avg $26/MWh (Modo Energy 2024)
+  - CAISO: avg $38/MWh, extreme duck curve (DMM 2024)
+  - NYISO: avg $42/MWh (Potomac Economics 2024)
+  - NEISO: avg $39.50/MWh + winter gas adder (EMM 2024)
+  - MISO: avg $31/MWh, 35% coal (Potomac 2024)
+  - SPP: avg $26.18/MWh, 37% wind (MMU 2024)
+
+- **Pipeline configuration as single source of truth** (`pipeline_config.py`): All constants imported from one module, preventing parameter drift between scripts. This is good engineering practice.
+
+- **Plant-level merit order option** (`lmp_engine.py` lines 442–553): Can load actual EIA 860 generator data with per-unit heat rates, avoiding aggregation error from fleet-average assumptions.
+
+**Limitations:**
+
+- **Capacity market prices are annual snapshots** (`pipeline_config.py` lines 569–576): $/kW-yr values calibrated to recent auctions but don't evolve with the simulation. In a 25-year trajectory, capacity prices should respond to changing reserve margins.
+
+- **Demand response parameters are 2023–2024 vintage** (lines 543–550): DR trigger prices, participation rates, and max GW are static. DR programs are expanding rapidly — FERC Order 2222 alone could double distributed DR participation by 2030.
+
+- **No EIA data freshness tracking.** The model uses whatever data is in `data/`, but there's no automated validation that profiles match the simulation year or flag when data is stale.
+
+---
+
+### 2.7 Scenario Construction
+
+**Rating: Strong**
+
+The 1,215-scenario sweep is well-designed for screening, with meaningful dimensionality and interpretable parameter combinations.
+
+**Strengths:**
+
+- **Nine sweep dimensions** capture the most policy-relevant uncertainties:
+  1. Demand growth (3 levels)
+  2. Price sensitivity (5 named combos mapping to LCOE/fuel/transmission)
+  3. PPA discount level (3)
+  4. Gas friction (3: 0.3/0.7/1.0)
+  5. Queue cap (3)
+  6. New fossil cost (3)
+  - Total: 3 × 5 × 3 × 3 × 3 × 3 = **1,215 scenarios** per ISO
+
+- **Named price combos** (all_low, all_med, all_high, high_vre_low_firm, high_firm_low_vre) are more interpretable than exhaustive L/M/H grids across individual parameters. They capture correlated cost movements (e.g., if renewables are cheap, storage likely is too).
+
+- **Gas friction parameter** is a thoughtful addition — it modulates gas scarcity pricing intensity, capturing uncertainty about pipeline constraints, LNG competition, and methane regulation.
+
+- **Single-scenario override** (`build_single_scenario`, lines 2658–2687) allows custom exploration without running the full sweep. Supports custom LCOEs, PTC extensions, CCS credit overrides, etc.
+
+**Limitations:**
+
+- **No correlated scenario construction.** Demand growth, fuel prices, and renewable costs are swept independently, but in reality they're correlated. High demand growth → higher gas prices → faster renewable deployment → lower renewable costs via learning. An internally consistent scenario framework (e.g., IEA WEO scenarios) would improve realism.
+
+- **No tail-risk scenarios.** The sweep covers L/M/H bands but not extreme outcomes: prolonged gas shortage, major nuclear accident affecting fleet policy, breakthrough in fusion or advanced geothermal, or federal carbon tax. These would test model robustness at the boundaries.
+
+- **Binary 45Q toggle** (On/Off) doesn't capture policy uncertainty about credit value, qualification criteria, or phase-out schedules. A graduated 45Q sensitivity (50%/70%/100% realization probability) would be more informative.
+
+---
+
+### 2.8 Uncertainty Communication
+
+**Rating: Weak**
+
+The model generates 1,215 scenarios but provides limited tools for communicating parametric uncertainty to users.
+
+**Strengths:**
+
+- **Scenario sweep enables distributional analysis.** With 1,215 outcomes per ISO, users can construct percentile bands (P10/P50/P90) for any metric. The infrastructure for uncertainty quantification exists.
+
+- **Data tier tracking** (`models.py` SimulationResponse): Multi-tier quality labels signal which results use calibrated data vs. synthetic fallback.
+
+- **IPM trigger indicators** (models.py lines 300–309): Flag when simulation results hit boundaries where a production-grade model would give different answers. This is an honest and valuable meta-uncertainty signal.
+
+**Critical Weaknesses:**
+
+- **No confidence intervals on outputs.** Individual scenario results are point estimates. The model doesn't report P10/P50/P90 bands for clean deployment, cost, or emissions at each year — the user must compute these from raw sweep results.
+
+- **No Monte Carlo or bootstrap.** Each scenario runs once deterministically. No stochastic weather years, no random draws from cost distributions, no parametric uncertainty propagation. The 1,215 scenarios are a structured grid, not a probability-weighted sample.
+
+- **No scenario probability weights.** All 1,215 scenarios are implicitly equiprobable. In reality, "all_med" is more likely than "all_low" or "all_high." Without weights, summary statistics over the sweep are biased toward extreme scenarios that dominate the tails.
+
+- **Synthetic data fallback is silent** (`market_simulation.py` line 2503+): When parquet data is absent, the model silently generates illustrative ramp patterns for storage. Production code should error or at minimum flag results as synthetic-backed. Users could unknowingly make decisions based on placeholder data.
+
+- **No documentation of model limitations in API responses.** The methodology doc covers limitations, but the API response doesn't include a `caveats` or `limitations` field that would travel with the results.
+
+---
