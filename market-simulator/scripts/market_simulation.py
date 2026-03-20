@@ -461,7 +461,9 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
                               custom_fuel_prices=None, custom_co2_price=None,
                               custom_heat_rates=None, custom_vom=None,
                               interchange_norm=None, firm_import_mw=0,
-                              dr_level='Off'):
+                              dr_level='Off',
+                              demand_growth_factor=1.0,
+                              new_fossil_builds=None):
     """Compute 8760-hour LMP at a given clean percentage.
 
     Returns (hourly_lmp_array, avg_lmp, lmp_p90, generator_economics,
@@ -482,6 +484,8 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
         custom_heat_rates=custom_heat_rates,
         custom_vom=custom_vom,
         firm_import_mw=firm_import_mw,
+        demand_growth_factor=demand_growth_factor,
+        new_fossil_builds=new_fossil_builds,
     )
 
     # resource_pcts already represents actual % of demand each resource serves
@@ -2954,9 +2958,11 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 ic_firm_mw = 0
 
             dr_level = conditions.get('dr_level', 'Off')
+            # Include new-build fossil total in cache key — fleet state affects LMP
+            _nb_total = sum(state.get('new_fossil_builds', {}).values())
             _lmp_key = (iso, current_pct, conditions['fuel_level'],
                         conditions['demand_growth'], year, carbon_price,
-                        interchange_enabled, dr_level)
+                        interchange_enabled, dr_level, _nb_total)
             zonal_congestion_data = None
             scarcity_hours_frac = 0.0
             if _lmp_cache is not None and _lmp_key in _lmp_cache:
@@ -2979,6 +2985,8 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                     interchange_norm=ic_norm,
                     firm_import_mw=ic_firm_mw,
                     dr_level=dr_level,
+                    demand_growth_factor=growth_factor,
+                    new_fossil_builds=state.get('new_fossil_builds'),
                 )
                 if _lmp_cache is not None:
                     _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac)
