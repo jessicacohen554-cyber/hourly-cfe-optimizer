@@ -528,9 +528,19 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
             zone_config = ZONE_CONFIG[iso]
             # Split synthetic stack by zone demand share (proportional approximation)
             zone_stacks = _split_stack_by_zone(stack, zone_config)
+            # BUG FIX: Pass residual demand (after clean dispatch) to zonal LP,
+            # not full demand. The zone stacks contain only fossil units, so the
+            # LP demand signal must be the fossil residual — otherwise hours where
+            # total demand > fossil capacity are infeasible ($500 scarcity cap)
+            # even though clean energy covers 40-75% of load.
+            total_annual_mwh = effective_demand_mw.sum()
+            residual_demand_mw = np.asarray(
+                dispatch['residual_demand'], dtype=np.float64) * total_annual_mwh
+            # Floor at zero — negative residual = clean surplus (no fossil needed)
+            residual_demand_mw = np.maximum(residual_demand_mw, 0.0)
             zonal_lmp_matrix, system_lmp, _, zonal_stats = compute_zonal_lmp_hourly(
                 iso=iso, zone_config=zone_config, zone_stacks=zone_stacks,
-                demand_mw_profile=effective_demand_mw,
+                demand_mw_profile=residual_demand_mw,
                 price_model=price_model, vre_penetration=vre_pen,
             )
             hourly_lmp = system_lmp
