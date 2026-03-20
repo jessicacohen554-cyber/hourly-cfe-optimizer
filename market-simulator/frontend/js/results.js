@@ -177,10 +177,19 @@ function renderAll() {
     if (warningBanner) {
         const dataSource = data.data_source || 'unknown';
         const tiers = data.data_tiers || {};
+        const dataQuality = data.data_quality || {};
         const warnings = [];
 
-        // Red: synthetic resource mix (critical)
-        if (dataSource === 'synthetic') {
+        // Red: synthetic resource mix (critical) — prefer data_quality when available
+        if (dataQuality.synthetic_backed) {
+            const missingSrc = (dataQuality.missing_sources || []).join(', ');
+            warnings.push(`<div class="story-callout orange" style="margin-bottom:0.5rem;">
+                <strong>\u26a0 ILLUSTRATIVE ONLY</strong> — Results use synthetic placeholder data
+                (missing: ${missingSrc || 'step2.2 parquets'}). Run the full pipeline
+                (Steps 1\u20132) for calibrated results.
+            </div>`);
+        } else if (dataSource === 'synthetic') {
+            // Legacy fallback for responses without data_quality
             warnings.push(`<div class="story-callout orange" style="margin-bottom:0.5rem;">
                 <strong>\u26a0 ILLUSTRATIVE ONLY</strong> — Running with synthetic resource mix profiles
                 (calibrated physics data not available). Results show directional patterns only.
