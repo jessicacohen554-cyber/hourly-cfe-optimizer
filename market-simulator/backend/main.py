@@ -20,7 +20,7 @@ import traceback
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
@@ -813,6 +813,22 @@ def _get_data_tiers(iso: str) -> dict:
     return ds.get('tiers', {}).get(iso, {})
 
 
+def _aggregate_data_quality(year_results: list) -> Optional[dict]:
+    """Aggregate data_quality across all typed YearResult objects."""
+    any_synthetic = any(
+        (getattr(yr, 'data_quality', None) or {}).get('synthetic_backed', False)
+        for yr in year_results
+    )
+    all_missing = set()
+    for yr in year_results:
+        all_missing.update(
+            (getattr(yr, 'data_quality', None) or {}).get('missing_sources', [])
+        )
+    if not any_synthetic and not all_missing:
+        return None
+    return {'synthetic_backed': any_synthetic, 'missing_sources': sorted(all_missing)}
+
+
 def _build_simulation_response(iso: str, year_results: list) -> SimulationResponse:
     """Build a SimulationResponse from raw simulation year_results for one ISO."""
     if not year_results:
@@ -898,6 +914,7 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
                 for t in yr.get("ipm_triggers", [])
             ],
             data_source=yr.get("data_source", "unknown"),
+            data_quality=yr.get("data_quality"),
         ))
 
     # Build emissions_by_fuel_by_year aggregate for trajectory chart
@@ -1040,6 +1057,7 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
         ],
         data_source=final.get('data_source', 'unknown'),
         data_tiers=_get_data_tiers(iso),
+        data_quality=_aggregate_data_quality(typed_years),
     )
 
 

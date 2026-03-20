@@ -19,6 +19,7 @@ Last updated: 2026-03-03
 """
 
 from collections import OrderedDict
+import os
 import numpy as np
 
 # ============================================================================
@@ -31,6 +32,12 @@ MODEL_TYPE = "snapshot"  # 2025 snapshot model (no forward projections in Track 
 
 # Feature flags
 CANNIBALIZATION_ENABLED = True  # Per-resource temporal energy revenue in deployment
+
+# Synthetic data fallback behavior when step2.2 parquets are missing:
+#   "error"  — raise RuntimeError (strict / production)
+#   "warn"   — generate synthetic data + propagate warnings (default)
+#   "silent" — current behavior, no warnings (backward compat only)
+SYNTHETIC_DATA_MODE = os.environ.get("SYNTHETIC_DATA_MODE", "warn")
 
 # ============================================================================
 # SCARCITY PRICING MODE
