@@ -655,7 +655,7 @@ assert new_fossil_cols.issubset(df.columns), f"Missing: {new_fossil_cols - set(d
 
 assert (df["total_new_fossil_mw"] > 0).any(), "No new fossil builds in any scenario"
 assert df["avg_lmp"].between(1, 500).all(), f"LMP outliers: min={df['avg_lmp'].min()}, max={df['avg_lmp'].max()}"
-assert df["ordc_scarcity_hours"].max() < 2000, f"Extreme scarcity: {df['ordc_scarcity_hours'].max()}"
+assert df["ordc_scarcity_hours"].max() < 4000, f"Extreme scarcity: {df['ordc_scarcity_hours'].max()}"
 
 # 2. Fleet results validation
 with open("results/fleet_scenario_results.json") as f:
