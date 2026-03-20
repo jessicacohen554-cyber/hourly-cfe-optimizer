@@ -92,7 +92,7 @@ from dispatch_utils import (
 )
 from lmp_engine import (
     build_merit_order_stack, build_plant_level_merit_order,
-    compute_hourly_lmp_vectorized, PriceModel,
+    compute_hourly_lmp_vectorized, compute_lmp_confidence_factor, PriceModel,
     HEAT_RATES, VOM, CO2_RATES, FUEL_PRICES,
     INSTALLED_FOSSIL_MW, FOSSIL_CAPACITY_SHARES,
 )
@@ -540,6 +540,7 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
     zonal_lmp_matrix = None
     zonal_zone_names = None
     zonal_stats = None
+    lmp_confidence = compute_lmp_confidence_factor(vre_pen)
     try:
         from pipeline_config import ZONE_CONFIG
         if iso in ZONE_CONFIG:
@@ -571,7 +572,7 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
         pass
 
     if zonal_lmp_matrix is None:
-        hourly_lmp, unit_idx, _dr_unused = compute_hourly_lmp_vectorized(
+        hourly_lmp, unit_idx, _dr_unused, lmp_confidence = compute_hourly_lmp_vectorized(
             dispatch, effective_demand_mw, stack, price_model, iso=iso,
             vre_penetration=vre_pen,
         )
@@ -678,7 +679,7 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
         _ordc_adder = price_model.compute_ordc_adder(_reserves_mw)
         scarcity_hours_fraction = float(np.sum(_ordc_adder > 50.0)) / H
 
-    return hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_stats, scarcity_hours_fraction, zonal_lmp_matrix, zonal_zone_names, curtailment_rate
+    return hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_stats, scarcity_hours_fraction, zonal_lmp_matrix, zonal_zone_names, curtailment_rate, lmp_confidence
 
 
 @njit(cache=True)
@@ -2289,6 +2290,28 @@ def compute_ipm_triggers(iso, year, year_result, gen_econ, state, conditions,
             'recommended_model': 'Production dispatch model (PLEXOS, GenX)',
         })
 
+    # ── LMP_EXTRAPOLATION ──────────────────────────────────────────────
+    # Flag when VRE penetration exceeds the calibration range of the
+    # merit-order LMP model (calibrated to 2019-2024 ISO data, ≤50% VRE).
+    vre_frac = vre_pct / 100.0
+    if vre_frac > 0.60:
+        lmp_severity = 'high' if vre_frac > 0.75 else 'medium'
+        conf = compute_lmp_confidence_factor(vre_frac)
+        triggers.append({
+            'trigger_id': 'LMP_EXTRAPOLATION',
+            'severity': lmp_severity,
+            'explanation': (
+                f"VRE penetration {vre_pct:.0f}% exceeds the 60% calibration "
+                f"range of the merit-order LMP model. LMP confidence factor "
+                f"degraded to {conf:.1f}. Negative pricing depth, curtailment "
+                f"interactions, and storage arbitrage dynamics are beyond the "
+                f"empirical calibration envelope."
+            ),
+            'metric_value': round(vre_pct, 1),
+            'threshold': 75.0 if lmp_severity == 'high' else 60.0,
+            'recommended_model': 'Production cost model (PLEXOS, GenX, AURORA)',
+        })
+
     # ── TIGHT_RA_MARGIN ─────────────────────────────────────────────────
     # Reserve margin = (total capacity - peak demand) / peak demand
     total_cap_mw = sum(e.get('capacity_mw', 0) for e in gen_econ.values())
@@ -3759,10 +3782,10 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             scarcity_hours_frac = 0.0
             curtailment_rate = 0.0
             if _lmp_cache is not None and _lmp_key in _lmp_cache:
-                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate = _lmp_cache[_lmp_key]
+                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate, lmp_confidence = _lmp_cache[_lmp_key]
             else:
                 # R1: Use previously deployed storage in LMP calculation (Pass 1)
-                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate = compute_lmp_at_threshold(
+                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate, lmp_confidence = compute_lmp_at_threshold(
                     iso, current_pct, conditions['fuel_level'],
                     demand_norm, demand_mw_profile,
                     supply_profiles_iso, resource_pcts,
@@ -3786,7 +3809,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                     new_fossil_builds=state.get('new_fossil_builds'),
                 )
                 if _lmp_cache is not None:
-                    _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate)
+                    _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate, lmp_confidence)
 
             # --- RESERVE MARGIN (for endogenous capacity pricing) ---
             reserve_margin_pct = compute_reserve_margin(
@@ -3811,9 +3834,9 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                              conditions['demand_growth'], year, carbon_price,
                              interchange_enabled, dr_level, _nb_bucket, _stor_key2)
                 if _lmp_cache is not None and _lmp_key2 in _lmp_cache:
-                    hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate = _lmp_cache[_lmp_key2]
+                    hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate, lmp_confidence = _lmp_cache[_lmp_key2]
                 else:
-                    hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate = compute_lmp_at_threshold(
+                    hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate, lmp_confidence = compute_lmp_at_threshold(
                         iso, current_pct, conditions['fuel_level'],
                         demand_norm, demand_mw_profile,
                         supply_profiles_iso, resource_pcts,
@@ -3837,7 +3860,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                         new_fossil_builds=state.get('new_fossil_builds'),
                     )
                     if _lmp_cache is not None:
-                        _lmp_cache[_lmp_key2] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate)
+                        _lmp_cache[_lmp_key2] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate, lmp_confidence)
 
                 _log(f"  {iso} R1 storage: "
                      + ", ".join(f"{t}={_new_stor.get(t, 0):.4f}%"
@@ -4212,6 +4235,8 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                     compute_capacity_price(iso, reserve_margin_pct, current_pct), 2),
                 # VRE curtailment feedback (R10)
                 'curtailment_rate': round(curtailment_rate, 4),
+                # G5: LMP confidence degradation above 60% VRE
+                'lmp_confidence_factor': round(lmp_confidence, 2),
                 # R1: Economics-driven storage deployment
                 'battery_pct': round(state.get('storage_deployed', {}).get('battery', 0), 4),
                 'battery8_pct': round(state.get('storage_deployed', {}).get('battery8', 0), 4),
