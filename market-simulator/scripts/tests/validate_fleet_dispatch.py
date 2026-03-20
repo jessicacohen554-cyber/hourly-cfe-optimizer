@@ -18,7 +18,7 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from fleet_dispatch import load_sweep, compute_fleet_emissions_fast
 
 # Reference heat rates and CO2 rates from lmp_engine.py
