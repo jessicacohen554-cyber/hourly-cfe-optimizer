@@ -477,6 +477,36 @@ class ISODefaults(BaseModel):
     sox_rates: Dict[str, float] = Field(default_factory=dict)
 
 
+class UncertaintyBands(BaseModel):
+    """Percentile bands for a single metric across the scenario sweep.
+
+    Includes both unweighted (equiprobable) and optionally weighted
+    (prior-belief) percentiles.
+    """
+    metric: str
+    p10: float
+    p25: float
+    p50: float
+    p75: float
+    p90: float
+    mean: float = 0.0
+    std: float = 0.0
+    n: int = 0
+    # Weighted percentiles (using SCENARIO_WEIGHTS priors)
+    wp10: Optional[float] = None
+    wp25: Optional[float] = None
+    wp50: Optional[float] = None
+    wp75: Optional[float] = None
+    wp90: Optional[float] = None
+
+
+class SweepUncertainty(BaseModel):
+    """Uncertainty bands for one ISO × year across the scenario sweep."""
+    iso: str
+    year: int
+    bands: List[UncertaintyBands] = Field(default_factory=list)
+
+
 class ErrorResponse(BaseModel):
     """Standard error response."""
     detail: str
