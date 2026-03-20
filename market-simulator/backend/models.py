@@ -360,6 +360,8 @@ class YearResult(BaseModel):
     ipm_triggers: List[IPMTrigger] = Field(default_factory=list)
     # Data source tracking (parquet = physics data, synthetic = illustrative only)
     data_source: str = 'unknown'
+    # Structured data quality metadata: {"synthetic_backed": bool, "missing_sources": [...]}
+    data_quality: Optional[dict] = None
     # New: detailed data for results page
     fuel_bin_table: List[FuelBinRow] = Field(default_factory=list)
     supply_stack: List[SupplyStackEntry] = Field(default_factory=list)
@@ -419,6 +421,8 @@ class SimulationResponse(BaseModel):
     data_source: str = 'unknown'
     # Multi-tier data quality: {resource_mix, zonal_config, interchange, fleet_data, dr_params}
     data_tiers: Optional[dict] = None
+    # Aggregated data quality across all year results
+    data_quality: Optional[dict] = None
 
 
 class SweepJob(BaseModel):
