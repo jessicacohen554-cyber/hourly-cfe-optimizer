@@ -256,6 +256,7 @@ class ZoneDetail(BaseModel):
     energy_rev_mwh: float = 0.0
     capacity_rev_mwh: float = 0.0
     rec_rev_mwh: float = 0.0
+    basis_differential: float = 0.0  # $/MWh difference: resource zone LMP − system LMP
 
 
 class FuelBinRow(BaseModel):
