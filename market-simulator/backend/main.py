@@ -106,6 +106,8 @@ from .models import (
     CorrelatedScenarioRequest,
     CorrelatedScenarioResult,
     CorrelatedScenarioResponse,
+    TornadoBar,
+    TornadoMetric,
 )
 
 
@@ -1624,6 +1626,72 @@ async def sweep_cached_results(iso: str = None, scenario: str = None):
         "row_count": len(records),
         "results": records,
     }
+
+
+@app.get("/api/sweep-cached/sensitivity")
+async def sweep_cached_sensitivity(iso: str = None, year: int = 2050):
+    """Return G7 sensitivity analysis (tornado data + Morris method) from cached sweep.
+
+    Computes variance decomposition and Morris elementary effects on-the-fly from
+    the cached parquet. Results include tornado_data suitable for embedding in
+    SweepUncertainty responses.
+    """
+    parquet_path = SWEEP_CACHE_DIR / "sweep_1215_flat.parquet"
+    if not parquet_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Cached sweep results not found. Run the 1,215-scenario sweep first.",
+        )
+
+    # Import sensitivity analysis module
+    try:
+        from sensitivity_analysis import (
+            run_sensitivity_analysis,
+            METRIC_LABELS,
+        )
+    except ImportError:
+        raise HTTPException(
+            status_code=500,
+            detail="sensitivity_analysis module not found in scripts/.",
+        )
+
+    target_isos = [iso.upper()] if iso else None
+    results = run_sensitivity_analysis(
+        parquet_path=str(parquet_path),
+        year=year,
+        isos=target_isos,
+    )
+
+    if not results:
+        raise HTTPException(status_code=404, detail="No sensitivity results for the given parameters.")
+
+    # Build structured tornado_data per ISO
+    response = {}
+    for iso_key, iso_data in results.items():
+        tornado_metrics = []
+        var_decomp = iso_data.get('variance_decomposition', {})
+        tornado_raw = iso_data.get('tornado', {})
+
+        for metric, bars in tornado_raw.items():
+            total_var = var_decomp.get(metric, {}).get('_total_variance', 0.0)
+            tornado_metrics.append(
+                TornadoMetric(
+                    metric=metric,
+                    metric_label=METRIC_LABELS.get(metric, metric),
+                    bars=[TornadoBar(**b) for b in bars],
+                    total_variance=total_var,
+                ).model_dump()
+            )
+
+        response[iso_key] = {
+            'tornado_data': tornado_metrics,
+            'morris': iso_data.get('morris', {}),
+            'morris_plot': iso_data.get('morris_plot', {}),
+            'range_impact': iso_data.get('range_impact', {}),
+            'metadata': iso_data.get('metadata', {}),
+        }
+
+    return response
 
 
 # ─────────────────────────────────────────────────────────────────────────────
