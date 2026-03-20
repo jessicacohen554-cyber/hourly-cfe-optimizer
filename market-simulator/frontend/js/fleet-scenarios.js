@@ -13,18 +13,21 @@
 
     // ── Scenario color map (from design spec, uses CEG brand palette) ──
     var SCENARIO_COLORS = {
-        baseline:           '#7E8083',
-        ccs_only:           '#2372B9',
-        ccs_plus_new_gas:   '#F47B27',
-        retire_coal_ccs_gas:'#6BA543'
+        baseline:                   '#7E8083',
+        ccs_only:                   '#2372B9',
+        ccs_top_emitters:           '#2372B9',
+        ccs_plus_new_gas:           '#F47B27',
+        retire_peakers_ccs_baseload:'#6BA543',
+        retire_peakers_ccs_gas:     '#6BA543'
     };
 
     var SCENARIO_LABELS = {
-        baseline:           'Baseline',
-        ccs_only:           'CCS-Only',
-        ccs_plus_new_gas:   'CCS + New Gas',
-        retire_coal_ccs_gas:'Retire + CCS',
-        retire_peakers_ccs_gas:'Retire Peakers + CCS'
+        baseline:                   'Baseline',
+        ccs_only:                   'CCS-Only',
+        ccs_top_emitters:           'CCS Top Emitters',
+        ccs_plus_new_gas:           'CCS + New Gas',
+        retire_peakers_ccs_baseload:'Retire Peakers + CCS',
+        retire_peakers_ccs_gas:     'Retire Peakers + CCS'
     };
 
     var TARGET_STYLES = {
@@ -33,8 +36,8 @@
         custom:      { color: '#6B7280', dash: [4, 4], label: 'Custom' }
     };
 
-    var FUEL_KEYS   = ['nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'gas_ccgt', 'gas_ct', 'oil_ct', 'ccs_ccgt'];
-    var FUEL_LABELS = { nuclear: 'Nuclear', geothermal: 'Geothermal', wind: 'Wind', solar: 'Solar', hydro: 'Hydro', gas_ccgt: 'Gas CCGT', gas_ct: 'Gas CT', oil_ct: 'Oil', ccs_ccgt: 'CCS-CCGT' };
+    var FUEL_KEYS   = ['nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'gas_ccgt', 'gas_ct', 'gas_oil_ct', 'oil_ct', 'ccs_ccgt'];
+    var FUEL_LABELS = { nuclear: 'Nuclear', geothermal: 'Geothermal', wind: 'Wind', solar: 'Solar', hydro: 'Hydro', gas_ccgt: 'Gas CCGT', gas_ct: 'Gas CT', gas_oil_ct: 'Gas/Oil', oil_ct: 'Oil', ccs_ccgt: 'CCS-CCGT' };
     var FUEL_COLORS = {
         nuclear:    RESOURCE_COLORS.nuclear,
         geothermal: RESOURCE_COLORS.geothermal || '#D97706',
@@ -43,10 +46,11 @@
         hydro:      RESOURCE_COLORS.hydro || '#0EA5E9',
         gas_ccgt:   RESOURCE_COLORS.fossilGas,
         gas_ct:     RESOURCE_COLORS.fossilGasCT || '#007FA4',
+        gas_oil_ct: '#8B7355',
         oil_ct:     RESOURCE_COLORS.fossilOil,
         ccs_ccgt:   RESOURCE_COLORS.ccs
     };
-    var EMISSION_FUEL_KEYS = ['gas_ccgt', 'gas_ct', 'oil_ct', 'ccs_ccgt'];
+    var EMISSION_FUEL_KEYS = ['gas_ccgt', 'gas_ct', 'gas_oil_ct', 'oil_ct', 'ccs_ccgt'];
 
     // ── State ──
     var DATA = null;
