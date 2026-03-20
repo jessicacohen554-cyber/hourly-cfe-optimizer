@@ -197,10 +197,10 @@ ZONE_CONFIG = {
 # the zone where solar is predominantly located, etc.
 VRE_PRIMARY_ZONE = {
     'CAISO': {'solar': 'SP15', 'wind': 'NP15'},
-    'ERCOT': {'solar': 'West', 'wind': 'West'},
-    'PJM':   {'solar': 'MAAC', 'wind': 'Western'},
-    'NYISO': {'solar': 'Upstate', 'wind': 'Upstate'},
-    'NEISO': {'solar': 'Southern', 'wind': 'Northern'},
+    'ERCOT': {'solar': 'West', 'wind': 'West', 'offshore_wind': 'Houston'},
+    'PJM':   {'solar': 'MAAC', 'wind': 'Western', 'offshore_wind': 'EMAAC'},
+    'NYISO': {'solar': 'Upstate', 'wind': 'Upstate', 'offshore_wind': 'LongIsland'},
+    'NEISO': {'solar': 'Southern', 'wind': 'Northern', 'offshore_wind': 'Southern'},
     'MISO':  {'solar': 'Central', 'wind': 'North'},
     'SPP':   {'solar': 'South', 'wind': 'North'},
 }
