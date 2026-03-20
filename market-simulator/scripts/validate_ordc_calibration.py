@@ -54,7 +54,15 @@ def load_sweep(parquet_path):
         print(f"ERROR: Missing columns in parquet: {missing}")
         sys.exit(1)
 
-    print(f"Loaded {len(df):,} rows from {parquet_path}")
+    total_rows = len(df)
+    # Drop 2023 rows — historical year, ordc_scarcity_hours is null
+    n_2023 = (df['year'] == 2023).sum()
+    df = df[df['year'] != 2023].copy()
+
+    print(f"Loaded {total_rows:,} rows from {parquet_path}")
+    if n_2023 > 0:
+        print(f"  Excluded {n_2023:,} year-2023 rows (ORDC not applied to historical year)")
+    print(f"  Analyzing {len(df):,} rows")
     print(f"  ISOs: {sorted(df['iso'].dropna().unique())}")
     print(f"  Years: {sorted(df['year'].dropna().unique())}")
     return df
@@ -106,25 +114,34 @@ def check_new_fossil_impact(df):
     ).round(1)
     print(compare.to_string())
 
-    # Compute reduction percentages
-    print("\n  Scarcity hour reduction from new fossil builds:")
+    # Compute reduction percentages using NF cost level (more meaningful than has/hasn't)
+    print("\n  Scarcity hour impact of new fossil cost level (L=cheap/easy → H=expensive):")
     reductions = {}
-    for iso in sorted(df['iso'].dropna().unique()):
-        iso_df = df[df['iso'] == iso]
-        no_fossil = iso_df[~iso_df['has_new_fossil']]['ordc_scarcity_hours'].mean()
-        with_fossil = iso_df[iso_df['has_new_fossil']]['ordc_scarcity_hours'].mean()
-        if no_fossil > 0:
-            pct = (no_fossil - with_fossil) / no_fossil * 100
-            reductions[iso] = {
-                'no_fossil_avg': round(no_fossil, 1),
-                'with_fossil_avg': round(with_fossil, 1),
-                'reduction_pct': round(pct, 1),
-            }
-            print(f"    {iso}: {no_fossil:.0f} → {with_fossil:.0f} hrs "
-                  f"({pct:+.1f}% {'✓' if 5 < pct < 60 else '⚠'})")
-        else:
-            reductions[iso] = {'no_fossil_avg': 0, 'with_fossil_avg': 0, 'reduction_pct': 0}
-            print(f"    {iso}: 0 → 0 hrs (no scarcity in either case ⚠)")
+    if 'new_fossil_cost_level' in df.columns:
+        for iso in sorted(df['iso'].dropna().unique()):
+            iso_df = df[df['iso'] == iso]
+            low_nf = iso_df[iso_df['new_fossil_cost_level'] == 'L']['ordc_scarcity_hours'].mean()
+            high_nf = iso_df[iso_df['new_fossil_cost_level'] == 'H']['ordc_scarcity_hours'].mean()
+            avg_all = iso_df['ordc_scarcity_hours'].mean()
+            if avg_all > 0 and low_nf > 0:
+                pct = (high_nf - low_nf) / low_nf * 100
+                reductions[iso] = {
+                    'low_nf_cost_avg': round(low_nf, 1),
+                    'high_nf_cost_avg': round(high_nf, 1),
+                    'increase_pct': round(pct, 1),
+                }
+                direction = "✓" if pct > 0 else "⚠ UNEXPECTED"
+                print(f"    {iso}: NF_L={low_nf:.0f} → NF_H={high_nf:.0f} hrs "
+                      f"({pct:+.1f}% {direction})")
+            else:
+                reductions[iso] = {
+                    'low_nf_cost_avg': round(low_nf, 1),
+                    'high_nf_cost_avg': round(high_nf, 1),
+                    'increase_pct': 0,
+                }
+                print(f"    {iso}: avg={avg_all:.0f} hrs (near-zero scarcity)")
+    else:
+        print("    Cannot parse NF cost level from scenario IDs")
 
     return compare, reductions
 
@@ -239,6 +256,56 @@ def check_ordc_params_vs_results(df):
               f"{p['cap']:5.0f}  {avg:8.1f}  {med:8.1f}  {p90:8.1f}")
 
 
+def check_nf_cost_level_impact(df):
+    """Check 6: Scarcity hours broken down by NF cost level (L/M/H)."""
+    if 'new_fossil_cost_level' not in df.columns:
+        return
+
+    print("\n" + "=" * 80)
+    print("CHECK 6: Scarcity by New Fossil Cost Level (L=cheap → H=expensive)")
+    print("=" * 80)
+    print("Expected: H (expensive fossil) → less fossil built → MORE scarcity hours")
+
+    # Only show ISOs with non-zero scarcity
+    active_isos = []
+    for iso in sorted(df['iso'].unique()):
+        if df[df['iso'] == iso]['ordc_scarcity_hours'].max() > 0:
+            active_isos.append(iso)
+
+    if not active_isos:
+        print("  No ISOs with non-zero scarcity hours — cannot assess NF cost impact.")
+        return
+
+    for iso in active_isos:
+        iso_df = df[df['iso'] == iso]
+        pivot = iso_df.pivot_table(
+            values=['ordc_scarcity_hours', 'total_new_fossil_mw', 'avg_lmp'],
+            index='new_fossil_cost_level',
+            aggfunc='mean',
+        ).round(1)
+        if len(pivot) > 0:
+            print(f"\n  {iso}:")
+            for level in ['L', 'M', 'H']:
+                if level in pivot.index:
+                    row = pivot.loc[level]
+                    print(f"    NF={level}: scarcity={row.get('ordc_scarcity_hours', 0):6.1f} hrs, "
+                          f"new_fossil={row.get('total_new_fossil_mw', 0):7.0f} MW, "
+                          f"LMP=${row.get('avg_lmp', 0):.1f}")
+
+            # Check directionality: H should have more scarcity than L
+            if 'L' in pivot.index and 'H' in pivot.index:
+                l_scarcity = pivot.loc['L', 'ordc_scarcity_hours']
+                h_scarcity = pivot.loc['H', 'ordc_scarcity_hours']
+                if h_scarcity > l_scarcity:
+                    print(f"    → Feedback loop CORRECT: H cost → +{h_scarcity - l_scarcity:.0f} "
+                          f"more scarcity hrs than L")
+                elif h_scarcity == l_scarcity:
+                    print(f"    → No difference between L and H — feedback loop NOT visible")
+                else:
+                    print(f"    → UNEXPECTED: L cost has MORE scarcity than H "
+                          f"({l_scarcity:.0f} vs {h_scarcity:.0f})")
+
+
 def generate_recommendations(calibration_results, flags, reductions):
     """Generate actionable recommendations."""
     print("\n" + "=" * 80)
@@ -265,15 +332,16 @@ def generate_recommendations(calibration_results, flags, reductions):
                     f"or INCREASING cap (currently ${ORDC_PARAMS[iso]['cap']}/MWh)."
                 )
 
-    # Check ERCOT specifically (should show largest ORDC impact)
+    # Check ERCOT specifically (should show largest ORDC sensitivity to NF builds)
     if 'ERCOT' in reductions:
-        ercot_red = reductions['ERCOT'].get('reduction_pct', 0)
-        other_reds = [v['reduction_pct'] for k, v in reductions.items() if k != 'ERCOT']
-        if other_reds and ercot_red <= np.mean(other_reds):
+        ercot_pct = reductions['ERCOT'].get('increase_pct', 0)
+        other_pcts = [v['increase_pct'] for k, v in reductions.items()
+                      if k != 'ERCOT' and v.get('increase_pct', 0) > 0]
+        if other_pcts and ercot_pct < np.mean(other_pcts):
             recs.append(
-                f"  ERCOT: Expected LARGEST scarcity reduction from new fossil "
-                f"(energy-only market) but reduction ({ercot_red:.0f}%) is ≤ average "
-                f"of other ISOs ({np.mean(other_reds):.0f}%). May need ERCOT-specific tuning."
+                f"  ERCOT: Expected LARGEST scarcity sensitivity to NF cost "
+                f"(energy-only market) but increase ({ercot_pct:.0f}%) is below average "
+                f"of other ISOs ({np.mean(other_pcts):.0f}%). May need ERCOT-specific tuning."
             )
 
     if not recs:
@@ -306,6 +374,7 @@ def main():
     calibration_results, all_pass = check_calibration_targets(df)
     flags = check_red_flags(df)
     check_ordc_params_vs_results(df)
+    check_nf_cost_level_impact(df)
     recs = generate_recommendations(calibration_results, flags, reductions)
 
     # Build report
