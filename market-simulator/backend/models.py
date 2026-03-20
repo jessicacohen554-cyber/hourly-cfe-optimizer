@@ -645,6 +645,44 @@ class SweepUncertainty(BaseModel):
     bands: List[UncertaintyBands] = Field(default_factory=list)
 
 
+class CorrelatedScenarioRequest(BaseModel):
+    """Request for IEA-aligned correlated scenario analysis."""
+    iso: str
+    scenarios: Optional[List[str]] = Field(
+        default=None,
+        description="Scenario names to run (e.g. ['IEA_STEPS', 'IEA_NZE']). "
+                    "If null/omitted, runs all 5 scenarios.",
+    )
+
+    @field_validator('iso')
+    @classmethod
+    def validate_iso(cls, v):
+        if v not in VALID_ISOS:
+            raise ValueError(f"Invalid ISO '{v}'. Must be one of {VALID_ISOS}")
+        return v
+
+
+class CorrelatedScenarioResult(BaseModel):
+    """Result for a single correlated scenario."""
+    scenario_name: str
+    scenario_id: str
+    description: str
+    parameters: Dict[str, Any] = Field(
+        description="The correlated parameter bundle (demand_growth, gas_price, etc.)"
+    )
+    year_results: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Simulation results keyed by ISO",
+    )
+
+
+class CorrelatedScenarioResponse(BaseModel):
+    """Response containing results for all requested correlated scenarios."""
+    iso: str
+    scenarios: List[CorrelatedScenarioResult]
+    provenance: Optional[Dict[str, Any]] = None
+
+
 class ErrorResponse(BaseModel):
     """Standard error response."""
     detail: str
