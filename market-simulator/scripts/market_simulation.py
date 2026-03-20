@@ -4713,20 +4713,24 @@ def aggregate_sweep_percentiles(all_results):
     return aggregates
 
 
-def compute_sweep_uncertainty(all_results):
+def compute_sweep_uncertainty(all_results, sweep_df=None):
     """High-level uncertainty quantification entry point.
 
     Wraps ``aggregate_sweep_percentiles`` and returns both the raw aggregates
     dict and a structured list of ``UncertaintyBands`` dicts suitable for the
-    API response.
+    API response.  When *sweep_df* (a flat DataFrame of sweep results) is
+    provided, the G7 variance decomposition tornado data is computed and
+    attached to each ISO×year entry as ``tornado_data``.
 
     Args:
         all_results: dict[scenario_id, dict[iso, list[year_result]]]
+        sweep_df: Optional DataFrame with scenario_id/iso/year columns and
+                  output metrics for G7 sensitivity analysis.
 
     Returns:
         (aggregates_dict, uncertainty_list) where *uncertainty_list* is a list
-        of ``{iso, year, bands: [{metric, p10, p25, p50, p75, p90, ...}]}``
-        dicts matching the ``SweepUncertainty`` schema.
+        of ``{iso, year, bands, tornado_data}`` dicts matching the
+        ``SweepUncertainty`` schema.
     """
     aggregates = aggregate_sweep_percentiles(all_results)
 
@@ -4736,6 +4740,34 @@ def compute_sweep_uncertainty(all_results):
         'emissions_mt', 'avg_lmp', 'demand_twh',
         'gas_built_gw', 'fossil_built_gw',
     ]
+
+    # Pre-compute G7 sensitivity analysis if sweep DataFrame is available
+    sensitivity_cache = {}  # (iso, year) → tornado_data list
+    if sweep_df is not None:
+        try:
+            from sensitivity_analysis import (
+                add_dimension_columns,
+                compute_variance_decomposition,
+                format_tornado_data,
+                METRIC_LABELS,
+            )
+            enriched_df = add_dimension_columns(sweep_df.copy())
+            for iso in enriched_df['iso'].unique():
+                for year in enriched_df[enriched_df['iso'] == iso]['year'].unique():
+                    var_decomp = compute_variance_decomposition(enriched_df, iso, int(year))
+                    tornado = format_tornado_data(var_decomp)
+                    tornado_metrics = []
+                    for metric, bars in tornado.items():
+                        total_var = var_decomp.get(metric, {}).get('_total_variance', 0.0)
+                        tornado_metrics.append({
+                            'metric': metric,
+                            'metric_label': METRIC_LABELS.get(metric, metric),
+                            'bars': bars,
+                            'total_variance': total_var,
+                        })
+                    sensitivity_cache[(iso, int(year))] = tornado_metrics
+        except Exception:
+            pass  # Sensitivity analysis is optional enrichment
 
     uncertainty_list = []
     for iso, years in aggregates.items():
@@ -4761,11 +4793,16 @@ def compute_sweep_uncertainty(all_results):
                         'wp90': m.get('wp90'),
                     })
             if bands:
-                uncertainty_list.append({
+                entry = {
                     'iso': iso,
                     'year': int(year_str),
                     'bands': bands,
-                })
+                }
+                # Attach G7 tornado data if available
+                tornado = sensitivity_cache.get((iso, int(year_str)))
+                if tornado:
+                    entry['tornado_data'] = tornado
+                uncertainty_list.append(entry)
 
     return aggregates, uncertainty_list
 
