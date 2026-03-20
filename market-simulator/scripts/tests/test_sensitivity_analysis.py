@@ -394,5 +394,215 @@ class TestMorrisCorrectness:
             )
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Tests — Variance Fraction Sum Constraint (Explicit)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestVarianceFractionSum:
+    """Dedicated tests ensuring variance fractions sum to ≤ 1.0 across all metrics.
+
+    This is a mathematical invariant of first-order Sobol indices: the sum of
+    individual variance fractions can never exceed 1.0 because the remainder
+    represents interaction effects. Violations indicate a bug in the
+    decomposition logic.
+    """
+
+    def test_sum_leq_1_all_metrics(self, synthetic_df_with_dims):
+        """Variance fractions must sum to ≤ 1.0 for every metric."""
+        var_results = compute_variance_decomposition(
+            synthetic_df_with_dims, 'TEST_ISO', 2050)
+
+        for metric, fractions in var_results.items():
+            dim_fracs = {k: v for k, v in fractions.items() if not k.startswith('_')}
+            total = sum(dim_fracs.values())
+            assert total <= 1.0 + 1e-6, (
+                f"Variance fractions sum to {total:.6f} > 1.0 for {metric}. "
+                f"Breakdown: {dim_fracs}"
+            )
+
+    def test_interaction_residual_positive(self, synthetic_df_with_dims):
+        """The interaction residual (1 - sum of first-order fractions) must be ≥ 0."""
+        var_results = compute_variance_decomposition(
+            synthetic_df_with_dims, 'TEST_ISO', 2050)
+
+        for metric, fractions in var_results.items():
+            dim_fracs = {k: v for k, v in fractions.items() if not k.startswith('_')}
+            residual = 1.0 - sum(dim_fracs.values())
+            assert residual >= -1e-6, (
+                f"Negative interaction residual {residual:.6f} for {metric}"
+            )
+
+    def test_sum_leq_1_with_pure_additive_model(self):
+        """When output = sum of independent effects, fractions should sum to ~1.0."""
+        rows = []
+        code = {'Low': 'L', 'Medium': 'M', 'High': 'H'}
+        demand_vals = {'Low': 10, 'Medium': 20, 'High': 30}
+        price_vals = {'all_low': 5, 'all_med': 10, 'all_high': 15,
+                      'high_vre_low_firm': 12, 'high_firm_low_vre': 8}
+
+        for d in ['Low', 'Medium', 'High']:
+            for p in ['all_low', 'all_med', 'all_high', 'high_vre_low_firm', 'high_firm_low_vre']:
+                for ppa in ['Low', 'Medium', 'High']:
+                    for g in ['Low', 'Medium', 'High']:
+                        for q in ['Low', 'Medium', 'High']:
+                            for nfc in ['Low', 'Medium', 'High']:
+                                sid = f"MKT_{code[d]}_{p}_{code[ppa]}_{code[g]}_{code[q]}_{code[nfc]}"
+                                # Purely additive: no interaction terms
+                                clean = demand_vals[d] + price_vals[p]
+                                rows.append({
+                                    'scenario_id': sid, 'iso': 'A', 'year': 2050,
+                                    'clean_pct': clean,
+                                    'cost_per_mwh': 0, 'emissions_mt': 0, 'avg_lmp': 0,
+                                })
+
+        df = add_dimension_columns(pd.DataFrame(rows))
+        var_results = compute_variance_decomposition(df, 'A', 2050)
+
+        # For a purely additive model, first-order fractions should sum to ~1.0
+        fracs = {k: v for k, v in var_results['clean_pct'].items() if not k.startswith('_')}
+        total = sum(fracs.values())
+        assert abs(total - 1.0) < 0.01, (
+            f"Pure additive model should have fractions summing to ~1.0, got {total:.4f}"
+        )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Tests — Morris Correctness on Known Test Cases
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestMorrisKnownCases:
+    """Verify Morris elementary effects against analytically known functions."""
+
+    def test_two_dimension_additive(self):
+        """y = 10*demand + 5*queue → demand μ*=10, queue μ*=5, others μ*≈0."""
+        rows = []
+        code = {'Low': 'L', 'Medium': 'M', 'High': 'H'}
+        d_num = {'Low': 0, 'Medium': 1, 'High': 2}
+        q_num = {'Low': 0, 'Medium': 1, 'High': 2}
+
+        for d in ['Low', 'Medium', 'High']:
+            for p in ['all_low', 'all_med', 'all_high', 'high_vre_low_firm', 'high_firm_low_vre']:
+                for ppa in ['Low', 'Medium', 'High']:
+                    for g in ['Low', 'Medium', 'High']:
+                        for q in ['Low', 'Medium', 'High']:
+                            for nfc in ['Low', 'Medium', 'High']:
+                                sid = f"MKT_{code[d]}_{p}_{code[ppa]}_{code[g]}_{code[q]}_{code[nfc]}"
+                                rows.append({
+                                    'scenario_id': sid, 'iso': 'Z', 'year': 2050,
+                                    'clean_pct': 10.0 * d_num[d] + 5.0 * q_num[q],
+                                    'cost_per_mwh': 0, 'emissions_mt': 0, 'avg_lmp': 0,
+                                })
+
+        df = add_dimension_columns(pd.DataFrame(rows))
+        effects = compute_elementary_effects(df, 'Z', 2050, 'clean_pct')
+
+        # demand_growth: each step = +10
+        assert abs(effects['demand_growth']['mu_star'] - 10.0) < 0.01
+        assert effects['demand_growth']['sigma'] < 0.01
+
+        # queue_capacity: each step = +5
+        assert abs(effects['queue_capacity']['mu_star'] - 5.0) < 0.01
+        assert effects['queue_capacity']['sigma'] < 0.01
+
+        # Others should be ~0
+        for dim in ['price_sensitivity', 'ppa_level', 'gas_friction', 'new_fossil_cost']:
+            assert effects[dim]['mu_star'] < 0.01, (
+                f"{dim} should have zero effect, got {effects[dim]['mu_star']}"
+            )
+
+    def test_quadratic_shows_nonlinearity(self):
+        """y = demand² → μ* > 0, σ > 0 (non-zero sigma indicates non-linearity)."""
+        rows = []
+        code = {'Low': 'L', 'Medium': 'M', 'High': 'H'}
+        d_num = {'Low': 0, 'Medium': 1, 'High': 2}
+
+        for d in ['Low', 'Medium', 'High']:
+            for p in ['all_low', 'all_med', 'all_high', 'high_vre_low_firm', 'high_firm_low_vre']:
+                for ppa in ['Low', 'Medium', 'High']:
+                    for g in ['Low', 'Medium', 'High']:
+                        for q in ['Low', 'Medium', 'High']:
+                            for nfc in ['Low', 'Medium', 'High']:
+                                sid = f"MKT_{code[d]}_{p}_{code[ppa]}_{code[g]}_{code[q]}_{code[nfc]}"
+                                rows.append({
+                                    'scenario_id': sid, 'iso': 'Q', 'year': 2050,
+                                    'clean_pct': float(d_num[d] ** 2),
+                                    'cost_per_mwh': 0, 'emissions_mt': 0, 'avg_lmp': 0,
+                                })
+
+        df = add_dimension_columns(pd.DataFrame(rows))
+        effects = compute_elementary_effects(df, 'Q', 2050, 'clean_pct')
+
+        # For y = x², the elementary effects are:
+        #   0→1: 1²-0²=1, 1→2: 2²-1²=3 → μ*=2, σ=√2≈1.414
+        assert effects['demand_growth']['mu_star'] > 0
+        assert effects['demand_growth']['sigma'] > 0, (
+            "Quadratic function should produce non-zero σ (non-linearity indicator)"
+        )
+
+        # Signed mean should be positive (monotonically increasing)
+        assert effects['demand_growth']['mu'] > 0
+
+    def test_signed_mean_direction(self):
+        """y = -10*demand → μ should be negative (decreasing), μ* positive."""
+        rows = []
+        code = {'Low': 'L', 'Medium': 'M', 'High': 'H'}
+        d_num = {'Low': 0, 'Medium': 1, 'High': 2}
+
+        for d in ['Low', 'Medium', 'High']:
+            for p in ['all_low', 'all_med', 'all_high', 'high_vre_low_firm', 'high_firm_low_vre']:
+                for ppa in ['Low', 'Medium', 'High']:
+                    for g in ['Low', 'Medium', 'High']:
+                        for q in ['Low', 'Medium', 'High']:
+                            for nfc in ['Low', 'Medium', 'High']:
+                                sid = f"MKT_{code[d]}_{p}_{code[ppa]}_{code[g]}_{code[q]}_{code[nfc]}"
+                                rows.append({
+                                    'scenario_id': sid, 'iso': 'N', 'year': 2050,
+                                    'clean_pct': -10.0 * d_num[d],
+                                    'cost_per_mwh': 0, 'emissions_mt': 0, 'avg_lmp': 0,
+                                })
+
+        df = add_dimension_columns(pd.DataFrame(rows))
+        effects = compute_elementary_effects(df, 'N', 2050, 'clean_pct')
+
+        assert abs(effects['demand_growth']['mu_star'] - 10.0) < 0.01
+        assert effects['demand_growth']['mu'] < 0, "Signed mean should be negative"
+        assert abs(effects['demand_growth']['mu'] + 10.0) < 0.01
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Tests — TornadoMetric / TornadoBar Model Integration
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestTornadoModel:
+    """Verify the Pydantic model for tornado_data integrates with analysis output."""
+
+    def test_tornado_model_from_analysis(self, synthetic_df_with_dims):
+        """TornadoMetric model should accept format_tornado_data output."""
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'backend'))
+        try:
+            from models import TornadoBar, TornadoMetric
+        except ImportError:
+            pytest.skip("backend models not importable")
+
+        var_results = compute_variance_decomposition(
+            synthetic_df_with_dims, 'TEST_ISO', 2050)
+        tornado = format_tornado_data(var_results)
+
+        for metric, bars in tornado.items():
+            total_var = var_results.get(metric, {}).get('_total_variance', 0.0)
+            tm = TornadoMetric(
+                metric=metric,
+                metric_label=f"Label for {metric}",
+                bars=[TornadoBar(**b) for b in bars],
+                total_variance=total_var,
+            )
+            assert len(tm.bars) == len(SWEEP_DIMENSIONS)
+            assert tm.total_variance >= 0
+            # Verify serialization round-trip
+            d = tm.model_dump()
+            assert d['metric'] == metric
+            assert len(d['bars']) == len(SWEEP_DIMENSIONS)
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
