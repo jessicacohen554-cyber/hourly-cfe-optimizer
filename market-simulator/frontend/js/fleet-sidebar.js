@@ -115,7 +115,7 @@ var FleetSidebar = (function () {
             .then(function (r) { if (r.ok) return r.json(); throw new Error('No fleet'); })
             .then(function (plants) {
                 // Convert from fleet-config format to dispatch format
-                var fossilFuels = { 'Gas': 'gas_ccgt', 'Coal': 'coal_steam', 'Oil': 'oil_ct', 'Gas/Oil': 'gas_ct', 'Oil/Coal': 'oil_ct' };
+                var fossilFuels = { 'Gas': 'gas_ccgt', 'Oil': 'oil_ct', 'Gas/Oil': 'gas_oil_ct' };
                 baseFleet = plants
                     .filter(function (p) { return fossilFuels[p.fuel_type]; })
                     .map(function (p, i) {
@@ -217,7 +217,7 @@ var FleetSidebar = (function () {
             plants.forEach(function (p) {
                 var isAdded = p._isAdded;
                 var idx = isAdded ? 'add_' + p._addId : p._idx;
-                var fuelLabel = { gas_ccgt: 'CCGT', gas_ct: 'CT', coal_steam: 'Coal', oil_ct: 'Oil' };
+                var fuelLabel = { gas_ccgt: 'CCGT', gas_ct: 'CT', oil_ct: 'Oil', gas_oil_ct: 'Gas/Oil' };
                 var capStr = Math.round(p.capacity_mw || 0) + ' MW';
                 var currentAction = p._action || 'operating';
 
@@ -230,12 +230,15 @@ var FleetSidebar = (function () {
                 // Capacity input (for editing)
                 html += '<div><input type="number" class="sb-cap-input" data-idx="' + idx + '" value="' + Math.round(p.capacity_mw || 0) + '" min="0" step="10" title="Capacity (MW)"></div>';
 
-                // Status dropdown
+                // Status dropdown — CCS Retrofit only for CCS-eligible plants
+                var isCcsEligible = p.ccs_eligible || p.ccs_eligible === true;
                 var modClass = (currentAction && currentAction !== 'operating' && currentAction !== p.status) ? ' modified' : '';
                 html += '<div><select class="sb-status-select' + modClass + '" data-idx="' + idx + '">';
                 html += '<option value="operating"' + (currentAction === 'operating' || !currentAction ? ' selected' : '') + '>Operating</option>';
                 html += '<option value="retire"' + (currentAction === 'retire' ? ' selected' : '') + '>Retired</option>';
-                html += '<option value="ccs_retrofit"' + (currentAction === 'ccs_retrofit' ? ' selected' : '') + '>CCS Retrofit</option>';
+                if (isCcsEligible) {
+                    html += '<option value="ccs_retrofit"' + (currentAction === 'ccs_retrofit' ? ' selected' : '') + '>CCS Retrofit</option>';
+                }
                 html += '</select></div>';
 
                 // Year input (for retire/CCS)
