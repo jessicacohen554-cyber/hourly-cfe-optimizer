@@ -1603,6 +1603,10 @@ async def sweep_cached_results(iso: str = None, scenario: str = None):
         if df.empty:
             raise HTTPException(status_code=404, detail=f"No results for ISO '{iso}'.")
 
+    # Replace inf/nan with None so JSON serialization succeeds
+    df = df.replace([float('inf'), float('-inf')], None)
+    df = df.where(df.notna(), None)
+
     # Convert to records for JSON response
     records = df.to_dict(orient='records')
 
