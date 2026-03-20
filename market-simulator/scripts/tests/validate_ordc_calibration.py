@@ -24,7 +24,7 @@ import sys
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 from pipeline_config import ORDC_PARAMS
 
 # ── Calibration targets (approximate, based on real-world data) ──────────
