@@ -826,13 +826,207 @@ Update both architecture HTML documents to reflect structural changes:
      - plant_retirements returned in YearResult
      - tornado_data returned in sweep response
 
+Note: Verification and validation of all Prompt 8 documentation updates is handled
+in Prompt 9 below (combined with fleet scenario documentation updates).
+
+Key files:
+  USER_MANUAL.md
+  docs/Model_Methodology_Specification.md
+  frontend/guide.html
+  frontend/methodology.html
+  docs/architecture-high-level.html
+  docs/architecture-detailed.html
+```
+
+---
+
+### Prompt 9: Fleet Scenario Documentation Updates & Full Verification (1 session, run AFTER Prompt 8)
+
+This prompt addresses documentation changes required by the Constellation fleet Rosetta updates (commits `50b0a95` and `5d5e7cf`) — which rebuilt the fleet scenario feature with accurate plant-level data from `CEG_fleet_rosetta.csv` — and performs the combined verification checklist for both Prompt 8 and Prompt 9 changes.
+
+```
+After implementing Prompt 8 (documentation updates for G1–G7), update ALL documentation
+artifacts to reflect the Constellation fleet Rosetta updates that occurred in parallel.
+The fleet scenario feature was substantially rebuilt:
+
+- Fleet expanded from ~16 fossil-only plants to 146 plants across all fuel types
+  (15 nuclear, 43 renewable, 81 fossil, 7 storage) sourced from CEG_fleet_rosetta.csv
+- Nuclear generation: ~190 TWh equity-weighted
+- Geothermal: ~9 TWh (Geysers complex)
+- Wind/Solar/Hydro: ~4.8 TWh combined
+- Coal removed entirely (Constellation has no coal assets)
+- Scenario keys realigned: ccs_top_emitters, retire_peakers_ccs_baseload
+  (replacing old ccs_only, retire_peakers_ccs_gas, retire_coal_ccs_gas)
+- Target selection changed from single-select radio to multi-select checkboxes
+  (users can overlay both SBTi and Absolute Target simultaneously)
+- CCS Retrofit option restricted to CCS-eligible plants only in sidebar
+- Non-fossil plants (nuclear, renewables, storage) now render in sidebar grouped
+  by category with Operating/Retired toggle (no CCS option)
+- Dispatch engine updated: non-fossil plants use static capacity factors
+  (nuclear 92%, geothermal 85%, wind 30%, solar 22%, hydro 40%)
+- Backend serves Rosetta-derived sample data as primary source, sweep-based
+  results as fallback
+- New build scripts: build_fleet_scenario_data.py, generate_constellation_scenarios.py
+
+This is a documentation-only prompt — no model code changes.
+
 ─────────────────────────────────────────────────
-VERIFICATION CHECKLIST
+PART A — USER_MANUAL.md
 ─────────────────────────────────────────────────
 
-After all updates, verify:
+1. **Fleet Config section** (currently line ~83): Update description from
+   "Constellation/Calpine asset configuration (toggle plants between Operating /
+   Retired / CCS Retrofit)" to reflect the full 146-plant fleet with category
+   groupings (Nuclear, Renewables, Fossil, Storage). Mention that CCS Retrofit
+   is only available for CCS-eligible fossil plants.
+
+2. **Add Fleet Scenarios page** to the Six-Page Flow if not already listed:
+   - `/fleet-scenarios` — P10/P50/P90 emissions envelopes across 4 fleet
+     decarbonization scenarios (baseline, CCS top emitters, retire peakers +
+     CCS baseload, full transition). Fan chart with climate target overlays
+     (SBTi 1.5C, Absolute Target). Waterfall charts for plant-level impacts.
+
+3. **Fleet Data section**: Update or add documentation for:
+   - `data/CEG_fleet_rosetta.csv` — Canonical Constellation Energy asset roster
+     (single source of truth for fleet composition)
+   - `data/constellation_fleet.json` — 146-plant JSON derived from Rosetta CSV
+     (was 202/204 plants in old docs — verify current count)
+   - `frontend/data/fleet_scenario_results_sample.json` — Pre-computed scenario
+     results from Rosetta-derived data
+   - `frontend/data/fleet_scenarios/constellation_scenarios.json` — Plant-level
+     configuration with CCS eligibility, heat rates, CO2 rates, capacity factors
+
+4. **Directory Structure**: Update the directory tree to include:
+   - scripts/build_fleet_scenario_data.py
+   - scripts/generate_constellation_scenarios.py
+   - data/CEG_fleet_rosetta.csv
+   - frontend/data/fleet_scenarios/constellation_scenarios.json
+
+5. **Fleet Dispatch section**: Document the non-fossil plant dispatch model:
+   - Nuclear: 92% capacity factor, flat year-round
+   - Geothermal: 85% capacity factor, flat year-round
+   - Wind: 30% capacity factor (no hourly profile, static average)
+   - Solar: 22% capacity factor (no hourly profile, static average)
+   - Hydro: 40% capacity factor
+   - Storage: pass-through (capacity tracked, generation excluded from
+     emissions accounting)
+
+─────────────────────────────────────────────────
+PART B — DATA_README.md
+─────────────────────────────────────────────────
+
+1. **Update constellation_fleet.json description** (currently line ~29–30):
+   - Old: "202 Constellation/Calpine plants"
+   - New: "146 Constellation Energy plants (15 nuclear, 43 renewable, 81 fossil,
+     7 storage) derived from CEG_fleet_rosetta.csv"
+
+2. **Add CEG_fleet_rosetta.csv entry**: Document the Rosetta CSV as the canonical
+   source file for fleet composition. Include column descriptions if known.
+
+3. **Add fleet_scenarios/ directory entry**: Document
+   constellation_scenarios.json and fleet_scenario_results_sample.json with
+   their purpose and generation provenance.
+
+4. **Remove stale coal references**: If any data documentation mentions coal
+   plants in the Constellation fleet, remove them (Constellation has no coal
+   assets post-Rosetta update).
+
+─────────────────────────────────────────────────
+PART C — guide.html (Frontend Guide Page)
+─────────────────────────────────────────────────
+
+1. **Fleet Scenarios navigation**: Verify `/fleet-scenarios` is listed in the
+   guide's navigation/workflow. If present, update the description to reflect
+   the full fleet (not just fossil plants).
+
+2. **Fleet Config workflow**: Update any step-by-step instructions to reflect:
+   - Plants are now grouped by category (Nuclear, Renewables, Fossil, Storage)
+   - CCS Retrofit option only appears for CCS-eligible fossil plants
+   - Non-fossil plants show Operating/Retired toggle only
+   - Target selection uses checkboxes (not radio buttons) — users can overlay
+     multiple targets simultaneously
+
+3. **Fleet Scenarios workflow**: Add or update guidance on:
+   - Available scenarios: baseline, CCS top emitters, retire peakers + CCS
+     baseload, full transition
+   - Climate target overlays: SBTi 1.5C Power Sector v2 (net zero by 2040),
+     Absolute Target
+   - Fan chart shows P10/P50/P90 emissions envelopes
+   - Waterfall charts show plant-level emissions impacts per scenario
+
+─────────────────────────────────────────────────
+PART D — methodology.html (Frontend Methodology Page)
+─────────────────────────────────────────────────
+
+1. **Fleet Dispatch Methodology section**: Add or update to document:
+   - Rosetta CSV as canonical data source for plant characteristics
+   - Non-fossil dispatch model (static capacity factors by fuel type)
+   - Fossil dispatch: existing merit-order model applies to 81 fossil plants
+   - CCS eligibility criteria and retrofit modeling
+   - Scenario construction methodology (how each of the 4 scenarios modifies
+     the fleet: which plants retire, which get CCS, which are added)
+
+2. **Fleet Data Provenance**: Document the data pipeline:
+   - CEG_fleet_rosetta.csv → generate_constellation_scenarios.py →
+     constellation_scenarios.json
+   - CEG_fleet_rosetta.csv → build_fleet_scenario_data.py →
+     fleet_scenario_results_sample.json
+   - Note: nuclear generation uses equity-weighted capacity (~190 TWh total)
+
+3. **Remove stale references**: Update any references to coal plants, old
+   scenario names (ccs_only, retire_peakers_ccs_gas, retire_coal_ccs_gas),
+   or old fleet composition numbers (202/204 plants).
+
+─────────────────────────────────────────────────
+PART E — Architecture Diagrams
+─────────────────────────────────────────────────
+
+1. **architecture-high-level.html**: If fleet scenarios appear in the high-level
+   diagram, update:
+   - Data source label: "CEG Rosetta CSV" as fleet data input
+   - Fleet composition: "146 plants (nuclear, renewable, fossil, storage)"
+   - Remove any coal references
+
+2. **architecture-detailed.html**: Update if fleet scenarios are shown:
+   - Add build_fleet_scenario_data.py and generate_constellation_scenarios.py
+     to the scripts inventory
+   - Add /api/fleet-scenario-results to API endpoint listing if not present
+   - Update data flow to show Rosetta CSV → build scripts → JSON outputs →
+     frontend
+   - Document the data loading priority: Rosetta-derived sample data first,
+     sweep-based results as fallback
+
+─────────────────────────────────────────────────
+PART F — Model_Methodology_Specification.md
+─────────────────────────────────────────────────
+
+If the methodology specification covers fleet scenarios or retirement modeling
+at the fleet level, update:
+
+1. **Fleet composition**: 146 plants from CEG_fleet_rosetta.csv (15 nuclear,
+   43 renewable, 81 fossil, 7 storage). No coal assets.
+
+2. **Scenario definitions**: Document the 4 fleet scenarios with their
+   specific plant-level actions (which plants are retired, CCS retrofitted,
+   or added in each scenario).
+
+3. **Non-fossil dispatch model**: Static capacity factors used for nuclear,
+   geothermal, wind, solar, hydro in fleet scenario analysis.
+
+If the methodology spec does NOT currently cover fleet scenarios, add a new
+section (e.g., §X "Fleet Scenario Analysis") documenting the above.
+
+─────────────────────────────────────────────────
+COMBINED VERIFICATION CHECKLIST (Prompt 8 + Prompt 9)
+─────────────────────────────────────────────────
+
+After all Prompt 8 AND Prompt 9 updates, verify:
+
+Prompt 8 items:
 □ USER_MANUAL.md documents all 7 new features (G1–G7)
-□ USER_MANUAL.md directory tree includes new files
+□ USER_MANUAL.md directory tree includes new files (sensitivity_analysis.py,
+  validate_cross_model.py, Cross_Validation_Results.md,
+  Sensitivity_Analysis_Results.md)
 □ Model_Methodology_Specification.md has methodology sections for all 7 features
 □ Model_Methodology_Specification.md version history updated
 □ guide.html mentions all new capabilities
@@ -846,11 +1040,32 @@ After all updates, verify:
   script inventory, and data flow
 □ All internal cross-references between documents are consistent
 □ No stale references to "fleet-fraction retirement" remain in any document
-□ No stale references to missing features (sensitivity, correlated scenarios) as
-  "not yet implemented"
+□ No stale references to missing features (sensitivity, correlated scenarios)
+  as "not yet implemented"
+
+Prompt 9 items:
+□ USER_MANUAL.md Fleet Config description reflects 146-plant full fleet
+□ USER_MANUAL.md includes Fleet Scenarios page in Six-Page Flow
+□ USER_MANUAL.md directory tree includes build_fleet_scenario_data.py,
+  generate_constellation_scenarios.py, CEG_fleet_rosetta.csv
+□ USER_MANUAL.md documents non-fossil dispatch model (static capacity factors)
+□ DATA_README.md constellation_fleet.json count updated (146 plants, not 202/204)
+□ DATA_README.md includes CEG_fleet_rosetta.csv entry
+□ DATA_README.md includes fleet_scenarios/ directory entry
+□ DATA_README.md has no stale coal references for Constellation fleet
+□ guide.html fleet workflow reflects category groupings and checkbox targets
+□ methodology.html documents Rosetta-based fleet dispatch methodology
+□ methodology.html documents 4 fleet scenarios with plant-level actions
+□ methodology.html has no stale scenario names (ccs_only, retire_coal_ccs_gas)
+□ Architecture diagrams reflect Rosetta data pipeline if fleet scenarios shown
+□ No stale references to 202/204 plant count — all updated to 146
+□ No stale references to coal in Constellation fleet context
+□ No stale scenario key names (ccs_only, retire_peakers_ccs_gas,
+  retire_coal_ccs_gas) remain in any documentation
 
 Key files:
   USER_MANUAL.md
+  data/DATA_README.md
   docs/Model_Methodology_Specification.md
   frontend/guide.html
   frontend/methodology.html
@@ -892,8 +1107,9 @@ For teams with limited capacity, the highest-impact improvements in order:
 6. **G4 (Correlated Scenarios)** — 1 session, better distributional analysis
 7. **G7 (Sensitivity Analysis)** — 1–2 sessions, decision-support enhancement
 8. **Documentation & Architecture Updates** — 1–2 sessions, run AFTER all code changes. Updates USER_MANUAL.md, Model_Methodology_Specification.md, guide.html, methodology.html, and both architecture diagrams to reflect everything implemented in Prompts 1–7.
+9. **Fleet Scenario Documentation & Full Verification** — 1 session, run AFTER Prompt 8. Updates all documentation to reflect the Constellation fleet Rosetta rebuild (146-plant full fleet, no coal, updated scenario keys, non-fossil dispatch model). Includes the combined verification checklist for Prompts 8 and 9.
 
-**Total estimated effort**: 8.5–10 sessions for all high and medium priority items plus documentation. The 4 low-priority items (G8–G11) add 2.5–3.5 sessions but are optional for the model's stated screening purpose.
+**Total estimated effort**: 9.5–11 sessions for all high and medium priority items plus documentation. The 4 low-priority items (G8–G11) add 2.5–3.5 sessions but are optional for the model's stated screening purpose.
 
 ### 7.4 Final Assessment
 
