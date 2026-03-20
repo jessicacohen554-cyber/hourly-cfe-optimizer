@@ -75,7 +75,7 @@ from pipeline_config import (
     STORAGE_ANCILLARY_PRODUCT, ANCILLARY_SERVICE_RATES, ANCILLARY_HOURS,
     REVENUE_STACKING_FACTOR, STORAGE_MAX, H2_MIN_THRESHOLD,
     OFFSHORE_ISOS, CCS_CAP_TWH, GEOTHERMAL_CAP_TWH,
-    H, NUCLEAR_OFFTAKE_CONTRACTS,
+    H, NUCLEAR_OFFTAKE_CONTRACTS, EXISTING_NUCLEAR_GW,
     get_rps_floor,
     FIRM_IMPORT_MW,
     CANNIBALIZATION_ENABLED,
@@ -91,7 +91,8 @@ from dispatch_utils import (
     RESOURCE_TYPES, H,
 )
 from lmp_engine import (
-    build_merit_order_stack, compute_hourly_lmp_vectorized, PriceModel,
+    build_merit_order_stack, build_plant_level_merit_order,
+    compute_hourly_lmp_vectorized, PriceModel,
     HEAT_RATES, VOM, CO2_RATES, FUEL_PRICES,
     INSTALLED_FOSSIL_MW, FOSSIL_CAPACITY_SHARES,
 )
@@ -1004,29 +1005,290 @@ def compute_plant_level_economics(plant_stack, hourly_lmp, dispatch,
     return results
 
 
-def apply_economic_retirement(gen_econ, iso, year, state, _log=print):
-    """Retire fossil capacity that is economically stranded (negative margins).
+def apply_economic_retirement(gen_econ, iso, year, state, _log=print,
+                              plant_economics=None, demand_twh=None):
+    """Retire fossil capacity using plant-level economics (G1).
 
-    Plants with negative operating margins will exit the market — they lose money
-    on every MWh dispatched. This function:
-    1. Identifies unit types with margin < -$5/MWh (matching plant-level stranding threshold)
-    2. Retires a fraction of their capacity (more aggressive for deeper losses)
-    3. Returns adjusted gen_econ with reduced capacity and updated economics
-    4. Tracks cumulative retirements in state for inter-year persistence
+    When plant_economics is provided (from compute_plant_level_economics()),
+    retires individual plants sorted by margin (worst-first). Each plant with
+    margin < -$5/MWh is retired individually, tracked by plant ID for inter-year
+    persistence. A zonal reliability floor (15% reserve margin on peak demand)
+    prevents over-retirement.
 
-    The retirement is partial, not binary: some units within a type are more efficient
-    or have lower fixed costs, so the fleet thins rather than disappears entirely.
-    A reliability floor prevents retiring below RA requirements.
+    Nuclear plants are evaluated individually using NUCLEAR_OFFTAKE_CONTRACTS:
+    plants with below-market contracts face higher stranding risk than those
+    with market-rate or regulated-rate revenue.
+
+    Falls back to legacy fleet-fraction retirement if plant_economics is None.
 
     Returns:
         adjusted_gen_econ: dict with retired capacity removed
         retired_capacity: dict of {unit_type: retired_mw}
         total_retired_mw: float
+        plant_retirement_list: list of retired plant dicts
     """
     if not gen_econ:
-        return gen_econ, {}, 0.0
+        return gen_econ, {}, 0.0, []
 
-    # Track retirements from prior years
+    # --- PLANT-LEVEL PATH (G1) ---
+    if plant_economics is not None:
+        return _apply_plant_level_retirement(
+            gen_econ, iso, year, state, plant_economics, demand_twh, _log)
+
+    # --- LEGACY FLEET-FRACTION PATH (fallback) ---
+    adjusted, retired_capacity, total_retired_mw = _apply_fleet_fraction_retirement(
+        gen_econ, iso, year, state, _log)
+    return adjusted, retired_capacity, total_retired_mw, []
+
+
+def _apply_plant_level_retirement(gen_econ, iso, year, state, plant_economics,
+                                  demand_twh, _log=print):
+    """Plant-level retirement engine: retire individual plants by margin.
+
+    1. Sorts all plants by margin (worst first)
+    2. Retires plants with margin < -$5/MWh
+    3. Tracks retired plant IDs in state['retired_plants'] for persistence
+    4. Enforces 15% zonal reserve margin floor on peak demand
+    5. Evaluates nuclear plants individually using contract economics
+
+    Returns: (adjusted_gen_econ, retired_by_type, total_retired_mw, plant_retirement_list)
+    """
+    RETIREMENT_THRESHOLD = -5.0  # $/MWh — matches existing stranded classification
+    RESERVE_MARGIN_FLOOR = 0.15  # 15% minimum reserve margin per zone
+
+    # Already-retired plant IDs from prior years
+    prior_retired = set(state.get('retired_plants', []))
+
+    # Filter out already-retired plants from economics
+    active_plants = [p for p in plant_economics
+                     if p.get('plant_id') not in prior_retired
+                     and p.get('generator_id') not in prior_retired]
+
+    # Sort by margin — worst (most negative) first
+    active_plants.sort(key=lambda p: p.get('profit_per_mwh', 0))
+
+    # Compute zonal peak demand for reliability floor
+    # Use demand_twh to derive peak; _PEAK_TO_AVG_RATIO = 1.5
+    peak_to_avg = _PEAK_TO_AVG_RATIO
+    if demand_twh and demand_twh > 0:
+        avg_demand_mw = demand_twh * 1e6 / 8760
+        peak_demand_mw = avg_demand_mw * peak_to_avg
+    else:
+        # Fallback: use pipeline_config PEAK_DEMAND_MW if available
+        peak_demand_mw = PEAK_DEMAND_MW.get(iso, 50000)
+
+    # Total available capacity (all active plants + clean capacity)
+    total_fossil_mw = sum(p.get('capacity_mw', 0) for p in active_plants)
+    clean_gw = sum(state.get('cumulative_gw', {}).values()) if 'cumulative_gw' in state else 0
+    clean_mw = clean_gw * 1000
+    total_supply_mw = total_fossil_mw + clean_mw
+
+    # Minimum fossil capacity to maintain reserve margin
+    min_total_supply = peak_demand_mw * (1 + RESERVE_MARGIN_FLOOR)
+    max_retirable_mw = max(0, total_supply_mw - min_total_supply)
+
+    # --- Nuclear plant-level evaluation ---
+    # Build set of nuclear plant IDs with their contract status
+    nuclear_contract = _evaluate_nuclear_contracts(iso, year, active_plants)
+
+    retired_plants = []
+    retired_by_type = {}
+    total_retired_mw = 0.0
+    cumulative_retired_this_year = 0.0
+
+    for plant in active_plants:
+        plant_id = plant.get('plant_id', plant.get('generator_id', ''))
+        margin = plant.get('profit_per_mwh', 0)
+        cap_mw = plant.get('capacity_mw', 0)
+        utype = plant.get('fuel_type', '') or plant.get('prime_mover', '')
+        zone = plant.get('zone')
+
+        # Skip nuclear plants — handled separately below
+        if _is_nuclear_plant(plant):
+            continue
+
+        # Retirement decision based on individual margin
+        if margin >= RETIREMENT_THRESHOLD:
+            # Profitable or marginally economic — no retirement
+            continue
+
+        # Check reliability floor: can we retire this plant?
+        if cumulative_retired_this_year + cap_mw > max_retirable_mw:
+            _log(f"    {iso} reliability floor: cannot retire {plant.get('plant_name', plant_id)} "
+                 f"({cap_mw:.0f} MW) — would breach 15% reserve margin")
+            continue
+
+        # Retire this plant
+        cumulative_retired_this_year += cap_mw
+        total_retired_mw += cap_mw
+        unit_type_key = plant.get('unit_type', utype) or 'unknown'
+        retired_by_type[unit_type_key] = retired_by_type.get(unit_type_key, 0) + cap_mw
+
+        retired_plants.append({
+            'plant_id': plant_id,
+            'generator_id': plant.get('generator_id', ''),
+            'plant_name': plant.get('plant_name', ''),
+            'capacity_mw': round(cap_mw, 1),
+            'unit_type': unit_type_key,
+            'margin': round(margin, 2),
+            'iso': iso,
+            'zone': zone,
+            'year_retired': year,
+        })
+
+        _log(f"    {iso} retire {plant.get('plant_name', plant_id)} "
+             f"({unit_type_key}, {cap_mw:.0f} MW, margin ${margin:.1f}/MWh)")
+
+    # --- Nuclear plant-level retirement ---
+    nuclear_retired_plants = _retire_nuclear_plants(
+        iso, year, state, active_plants, nuclear_contract,
+        cumulative_retired_this_year, max_retirable_mw, _log)
+    for nplant in nuclear_retired_plants:
+        total_retired_mw += nplant['capacity_mw']
+        retired_by_type['nuclear'] = retired_by_type.get('nuclear', 0) + nplant['capacity_mw']
+        retired_plants.append(nplant)
+
+    # Persist retired plant IDs in state
+    new_retired_ids = prior_retired | {p['plant_id'] for p in retired_plants}
+    state['retired_plants'] = list(new_retired_ids)
+
+    # Also maintain legacy economic_retirements dict for backward compatibility
+    prior_econ_retirements = state.get('economic_retirements', {})
+    for utype, mw in retired_by_type.items():
+        prior_econ_retirements[utype] = prior_econ_retirements.get(utype, 0) + mw
+    state['economic_retirements'] = prior_econ_retirements
+
+    # Build adjusted gen_econ: reduce capacity per unit type by retired amount
+    adjusted = {}
+    for utype, econ in gen_econ.items():
+        adj = dict(econ)
+        retired_mw = retired_by_type.get(utype, 0)
+        if retired_mw > 0 and adj.get('capacity_mw', 0) > 0:
+            adj['capacity_mw'] = max(0, adj['capacity_mw'] - retired_mw)
+        adjusted[utype] = adj
+
+    if total_retired_mw > 0:
+        _log(f"    {iso} total plant-level retirement: {total_retired_mw:.0f} MW "
+             f"({len(retired_plants)} plants)")
+
+    return adjusted, retired_by_type, total_retired_mw, retired_plants
+
+
+def _is_nuclear_plant(plant):
+    """Check if a plant dict represents a nuclear unit."""
+    fuel = str(plant.get('fuel_type', '')).upper()
+    mover = str(plant.get('prime_mover', '')).upper()
+    utype = str(plant.get('unit_type', '')).lower()
+    return ('NUC' in fuel or 'UR' in fuel or  # NUC, NUCLEAR, URANIUM
+            'ST' == mover and 'NUC' in fuel or
+            utype == 'nuclear')
+
+
+def _evaluate_nuclear_contracts(iso, year, active_plants):
+    """Evaluate per-plant nuclear contract economics.
+
+    Returns dict of {plant_id: {contract_protected: bool, contract_revenue_mwh: float}}
+    """
+    offtake = NUCLEAR_OFFTAKE_CONTRACTS.get(iso)
+    result = {}
+
+    nuclear_plants = [p for p in active_plants if _is_nuclear_plant(p)]
+    for plant in nuclear_plants:
+        pid = plant.get('plant_id', plant.get('generator_id', ''))
+        if offtake and year <= offtake.get('contract_end_year', 0):
+            # Plant has explicit contract protection
+            result[pid] = {
+                'contract_protected': True,
+                'contract_revenue_mwh': offtake['contract_floor_mwh'],
+                'contract_name': offtake.get('name', ''),
+            }
+        else:
+            # No explicit contract — relies on capacity market or merchant revenue
+            # ISOs with capacity markets (PJM, NYISO, NEISO, MISO) provide
+            # going-forward cost recovery separate from energy revenue
+            has_capacity_market = iso in ('PJM', 'NYISO', 'NEISO', 'MISO')
+            cap_price = CAPACITY_MARKET_PRICES.get(iso, 0) if has_capacity_market else 0
+            result[pid] = {
+                'contract_protected': False,
+                'capacity_market_revenue_kw_yr': cap_price,
+                'has_capacity_market': has_capacity_market,
+            }
+    return result
+
+
+def _retire_nuclear_plants(iso, year, state, active_plants, nuclear_contract,
+                           cumulative_retired_mw, max_retirable_mw, _log=print):
+    """Evaluate and retire individual nuclear plants based on contract economics.
+
+    Plants with below-market offtake contracts are at higher stranding risk.
+    Plants protected by PPA floors or capacity market revenue are more resilient.
+    Nuclear retirement is individual, not fleet-wide.
+
+    Returns list of retired nuclear plant dicts.
+    """
+    NUCLEAR_OPERATING_COST_MWH = 30.0  # $/MWh typical nuclear OPEX (fuel + O&M)
+
+    nuclear_plants = [p for p in active_plants if _is_nuclear_plant(p)]
+    if not nuclear_plants:
+        return []
+
+    retired = []
+    for plant in nuclear_plants:
+        pid = plant.get('plant_id', plant.get('generator_id', ''))
+        cap_mw = plant.get('capacity_mw', 0)
+        energy_rev = plant.get('revenue_per_mwh', 0) or plant.get('profit_per_mwh', 0) + NUCLEAR_OPERATING_COST_MWH
+
+        contract_info = nuclear_contract.get(pid, {})
+
+        # Compute effective revenue including contract/capacity market support
+        if contract_info.get('contract_protected'):
+            # PPA floor guarantees minimum revenue
+            effective_rev = max(energy_rev, contract_info['contract_revenue_mwh'])
+        elif contract_info.get('has_capacity_market'):
+            # Capacity market revenue supplements energy revenue
+            cap_rev_mwh = contract_info.get('capacity_market_revenue_kw_yr', 0) * 1000 / 8760
+            effective_rev = energy_rev + cap_rev_mwh
+        else:
+            effective_rev = energy_rev
+
+        # Retirement decision: does effective revenue cover operating costs?
+        margin = effective_rev - NUCLEAR_OPERATING_COST_MWH
+
+        if margin >= -5:
+            continue  # Plant is economic — survives
+
+        # Check reliability floor
+        if cumulative_retired_mw + cap_mw > max_retirable_mw:
+            _log(f"    {iso} reliability floor: cannot retire nuclear plant {pid} "
+                 f"({cap_mw:.0f} MW)")
+            continue
+
+        cumulative_retired_mw += cap_mw
+        retired.append({
+            'plant_id': pid,
+            'generator_id': plant.get('generator_id', ''),
+            'plant_name': plant.get('plant_name', ''),
+            'capacity_mw': round(cap_mw, 1),
+            'unit_type': 'nuclear',
+            'margin': round(margin, 2),
+            'iso': iso,
+            'zone': plant.get('zone'),
+            'year_retired': year,
+            'contract_protected': contract_info.get('contract_protected', False),
+        })
+
+        _log(f"    {iso} retire nuclear {plant.get('plant_name', pid)} "
+             f"({cap_mw:.0f} MW, margin ${margin:.1f}/MWh"
+             f"{', contract-protected' if contract_info.get('contract_protected') else ''})")
+
+    return retired
+
+
+def _apply_fleet_fraction_retirement(gen_econ, iso, year, state, _log=print):
+    """Legacy fleet-fraction retirement (fallback when plant data unavailable).
+
+    Preserved for backward compatibility when plant_economics is not provided.
+    """
     prior_retirements = state.get('economic_retirements', {})
     retired_capacity = {}
     total_retired_mw = 0.0
@@ -1035,38 +1297,24 @@ def apply_economic_retirement(gen_econ, iso, year, state, _log=print):
     for utype, econ in gen_econ.items():
         margin = econ.get('margin_mwh', 0)
         cap_mw = econ.get('capacity_mw', 0)
-
-        # Already-retired capacity from prior years
         prior_retired_mw = prior_retirements.get(utype, 0)
 
         if margin < -5:
-            # Deeper losses → more retirement. Scale: -$5 → 20%, -$15 → 60%, -$30+ → 90%
             loss_depth = min(abs(margin), 30)
             retire_frac = 0.20 + 0.70 * ((loss_depth - 5) / 25)
             retire_frac = min(0.90, retire_frac)
-
-            # Add prior retirements (cumulative across years)
             cumulative_frac = min(0.95, retire_frac + prior_retired_mw / cap_mw if cap_mw > 0 else 0)
-
             retire_mw = cap_mw * cumulative_frac
             remaining_mw = cap_mw - retire_mw
-
-            # Reliability floor: keep at least 5% of original capacity
-            # (RA requirements prevent full retirement)
             min_mw = cap_mw * 0.05
             remaining_mw = max(remaining_mw, min_mw)
             retire_mw = cap_mw - remaining_mw
 
             retired_capacity[utype] = retire_mw
             total_retired_mw += retire_mw
-
-            # Adjusted economics: same dispatch characteristics but less capacity
             adj = dict(econ)
             if cap_mw > 0:
-                scale = remaining_mw / cap_mw
                 adj['capacity_mw'] = remaining_mw
-                # CF stays the same (remaining units still dispatch in same hours)
-                # but total generation is proportionally reduced
             adjusted[utype] = adj
 
             _log(f"    {iso} {utype}: margin ${margin:.1f}/MWh → "
@@ -1074,7 +1322,6 @@ def apply_economic_retirement(gen_econ, iso, year, state, _log=print):
                  f"keep {remaining_mw:.0f} MW")
 
         elif margin < 2:
-            # At-risk: retire a small fraction (plants on the margin exit slowly)
             at_risk_frac = 0.10
             prior_frac = prior_retired_mw / cap_mw if cap_mw > 0 else 0
             cumulative_frac = min(0.50, at_risk_frac + prior_frac)
@@ -1084,15 +1331,12 @@ def apply_economic_retirement(gen_econ, iso, year, state, _log=print):
 
             retired_capacity[utype] = retire_mw
             total_retired_mw += retire_mw
-
             adj = dict(econ)
             adj['capacity_mw'] = remaining_mw
             adjusted[utype] = adj
         else:
-            # Profitable — no retirement
             adjusted[utype] = dict(econ)
 
-    # Persist cumulative retirements in state for next year
     updated_retirements = dict(prior_retirements)
     for utype, mw in retired_capacity.items():
         updated_retirements[utype] = updated_retirements.get(utype, 0) + mw
@@ -3337,6 +3581,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             'acp_bonus_queue_gw': 0,
             'cumulative_acp_million': 0,
             'economic_retirements': {},  # cumulative MW retired by unit type
+            'retired_plants': [],  # G1: plant IDs retired across years (inter-year persistence)
             'deployed_twh': {},  # cumulative TWh deployed by resource (for dispatch consistency)
             'storage_deployed': {},  # R1: {tech: pct_of_demand} from economics-driven deployment
             'storage_details': {},   # R1: per-tech revenue/cost breakdown
@@ -3742,17 +3987,55 @@ def run_market_simulation(scenario_id, conditions, isos=None,
 
                     state['clean_pct'] = current_pct
 
-            # --- ECONOMIC RETIREMENT ---
-            # Retire fossil capacity that is economically stranded (negative margins).
-            # This feeds back into emission accounting: stranded plants don't generate.
-            adjusted_gen_econ, econ_retired, econ_retired_mw = apply_economic_retirement(
-                gen_econ, iso, year, state, _log=_log)
+            # --- ECONOMIC RETIREMENT (G1: Plant-Level) ---
+            # Build plant-level merit order and compute per-plant economics.
+            # Retire individual plants by margin (worst-first) with zonal reliability floor.
+            plant_economics = None
+            plant_retirement_list = []
+            try:
+                fuel_level = conditions.get('fuel_level', 'Medium')
+                _fuel_prices = conditions.get('custom_fuel_prices') or FUEL_PRICES.get(fuel_level, FUEL_PRICES['Medium'])
+                plant_stack, _plant_total_mw = build_plant_level_merit_order(
+                    iso, current_pct, fuel_level=fuel_level,
+                    carbon_price=carbon_price,
+                    custom_fuel_prices=_fuel_prices,
+                    custom_vom=conditions.get('custom_vom'),
+                )
+                if plant_stack:
+                    # Filter out previously retired plants
+                    prior_retired_ids = set(state.get('retired_plants', []))
+                    plant_stack = [p for p in plant_stack
+                                   if p.get('plant_id') not in prior_retired_ids]
+                    # Reconstruct dispatch for plant-level economics
+                    _stor = state.get('storage_deployed', {})
+                    _dispatch = reconstruct_hourly_dispatch(
+                        demand_norm, supply_profiles_iso, resource_pcts,
+                        procurement_pct=100,
+                        battery_dispatch_pct=_stor.get('battery', 0),
+                        battery8_dispatch_pct=_stor.get('battery8', 0),
+                        ldes_dispatch_pct=_stor.get('ldes', 0),
+                        h2_dispatch_pct=_stor.get('h2', 0),
+                    )
+                    plant_economics = compute_plant_level_economics(
+                        plant_stack, hourly_lmp, _dispatch,
+                        demand_mw_profile, _fuel_prices, carbon_price,
+                        year=year,
+                    )
+            except Exception as _pe:
+                _log(f"    {iso} plant-level economics unavailable ({_pe}), "
+                     f"falling back to fleet-fraction retirement")
+                plant_economics = None
+
+            # Pass cumulative_gw to state so reliability floor can account for clean capacity
+            state['cumulative_gw'] = cumulative_gw
+
+            adjusted_gen_econ, econ_retired, econ_retired_mw, plant_retirement_list = apply_economic_retirement(
+                gen_econ, iso, year, state, _log=_log,
+                plant_economics=plant_economics, demand_twh=demand_twh)
 
             # --- ECONOMIC NEW-BUILD FOSSIL ---
             # After retirements, evaluate whether new fossil capacity should be
             # built based on RA needs and/or economic viability (positive margins).
-            # Pass cumulative_gw through state for RA calculation.
-            state['cumulative_gw'] = cumulative_gw
             # Recompute reserve margin after retirements (before new-build decision)
             reserve_margin_pct_post_retire = compute_reserve_margin(
                 adjusted_gen_econ, cumulative_gw, demand_twh)
@@ -3899,6 +4182,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 'adjusted_generator_economics': adjusted_gen_econ,
                 'economic_retirements_mw': {k: round(v, 0) for k, v in econ_retired.items()},
                 'total_economic_retirement_mw': round(econ_retired_mw, 0),
+                'plant_retirements': plant_retirement_list,
                 'new_fossil_builds_mw': {k: round(v, 0) for k, v in new_fossil_builds.items()},
                 'total_new_fossil_mw': round(new_fossil_mw, 0),
                 'new_fossil_details': new_fossil_details,
