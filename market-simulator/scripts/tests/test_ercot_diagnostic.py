@@ -74,7 +74,7 @@ ordc_hours = int(np.sum(reserves < knee))
 print(f"ORDC active (reserves < {knee} MW): {ordc_hours} hours ({ordc_hours/H*100:.1f}%)")
 
 # Compute actual LMP
-hourly_lmp, avg_lmp, p90_lmp, _, _, _, scarcity_frac = compute_lmp_at_threshold(
+hourly_lmp, avg_lmp, p90_lmp, _, _, _, scarcity_frac, _, _ = compute_lmp_at_threshold(
     iso, baseline_clean, 'Medium', demand_norm, demand_mw_profile,
     supply_profiles, resource_pcts, demand_growth_factor=growth_factor)
 
