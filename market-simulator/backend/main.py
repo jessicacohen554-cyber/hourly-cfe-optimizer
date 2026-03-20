@@ -43,6 +43,7 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 from market_simulation import (
     run_market_simulation,
     run_full_sweep,
+    run_correlated_scenarios,
     build_single_scenario,
     build_market_scenarios,
     save_results,
@@ -77,6 +78,7 @@ from pipeline_config import (
     CAPACITY_MARKET_PRICES,
     WHOLESALE_PRICES,
     CONFIDENCE_ZONES,
+    CORRELATED_SCENARIOS,
     get_confidence_zone,
     adjust_confidence_for_triggers,
 )
@@ -101,6 +103,9 @@ from .models import (
     SupplyStackEntry,
     ISOSummary,
     ISODefaults,
+    CorrelatedScenarioRequest,
+    CorrelatedScenarioResult,
+    CorrelatedScenarioResponse,
 )
 
 
@@ -1700,6 +1705,68 @@ async def run_sensitivity(req: SensitivityRequest):
         vary_param=req.vary_param,
         base_iso=iso,
         results=results,
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Correlated scenario analysis (IEA-aligned bundles)
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.post("/api/correlated-scenarios", response_model=CorrelatedScenarioResponse)
+async def run_correlated(req: CorrelatedScenarioRequest):
+    """Run IEA-aligned correlated scenario bundles for a single ISO.
+
+    Unlike the independent Cartesian sweep, these scenarios represent
+    internally-consistent macro futures where parameters move together
+    as they would in reality (e.g., high gas prices + fast renewable
+    cost decline in NZE pathway).
+    """
+    iso = req.iso.upper()
+    if iso not in ISOS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid ISO '{iso}'. Available: {', '.join(ISOS)}",
+        )
+
+    scenario_names = req.scenarios
+    if scenario_names:
+        invalid = [s for s in scenario_names if s not in CORRELATED_SCENARIOS]
+        if invalid:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown scenario(s): {invalid}. "
+                       f"Valid: {list(CORRELATED_SCENARIOS.keys())}",
+            )
+
+    try:
+        raw = run_correlated_scenarios(
+            iso=iso,
+            scenario_names=scenario_names,
+        )
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Correlated scenario analysis failed: {str(e)}",
+        )
+
+    provenance = raw.pop('_provenance', None)
+
+    scenario_results = []
+    for name, data in raw.items():
+        iso_results = data.get('results', {}).get(iso, [])
+        scenario_results.append(CorrelatedScenarioResult(
+            scenario_name=name,
+            scenario_id=data['scenario_id'],
+            description=data['description'],
+            parameters=data['parameters'],
+            year_results={iso: iso_results},
+        ))
+
+    return CorrelatedScenarioResponse(
+        iso=iso,
+        scenarios=scenario_results,
+        provenance=provenance,
     )
 
 
