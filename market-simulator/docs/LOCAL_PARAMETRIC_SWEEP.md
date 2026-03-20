@@ -193,9 +193,9 @@ cd market-simulator
 export PYTHONPATH="$(pwd):$(pwd)/backend:$(pwd)/scripts"
 ```
 
-### Option A: Full 405-Scenario Sweep (all ISOs)
+### Option A: Full 1,215-Scenario Sweep (all ISOs)
 
-This is what the GitHub Action does. Runs 3 demand × 5 price × 3 PPA × 3 gas friction × 3 queue = 405 scenarios × 7 ISOs.
+This is what the GitHub Action does. Runs 3 demand × 5 price × 3 PPA × 3 gas friction × 3 queue × 3 new-build fossil cost = 1,215 scenarios × 7 ISOs.
 
 ```bash
 python3 scripts/market_simulation.py
@@ -260,6 +260,29 @@ python3 scripts/market_simulation.py --snapshot
 
 ---
 
+## Step 4b: Validate Sweep Results (Integration Test)
+
+After the sweep completes, run the end-to-end integration test to validate all outputs:
+
+```bash
+cd market-simulator
+python -m pytest tests/test_e2e_integration.py -v --tb=short
+```
+
+This validates:
+- **Parquet schema**: 51,030 rows (1,215 × 7 ISOs × 6 years), all required columns present
+- **New fossil builds**: `nb_gas_ccgt_mw`, `nb_gas_ct_mw`, `total_new_fossil_mw` populated and non-negative
+- **LMP sanity**: No $0 LMPs, no outliers > $500, mean in $20–$80 range
+- **ORDC scarcity hours**: Non-negative, max < 4,000, at least some non-zero
+- **Fleet results**: Envelope P10/P50/P90, `grid_new_fossil` and `new_fossil_summary` fields present
+- **Aggregates JSON**: All 7 ISOs × 6 years, P10/P50/P90 bands for key metrics
+- **Cross-validation**: Aggregate P50 matches parquet median within tolerance
+- **API endpoints** (if backend running): Sweep status, aggregates, results, fleet scenarios
+
+All 36 offline tests must pass before proceeding to fleet dispatch or dashboard work.
+
+---
+
 ## Step 5: Run the Backtest (Optional)
 
 After the sweep, validate against historical data:
@@ -292,8 +315,9 @@ The full sweep explores:
 | PPA premium | 3 | Low / Medium / High |
 | Gas friction | 3 | Low (0.3) / Medium (0.7) / High (1.0) |
 | Queue cap | 3 | Low / Medium / High |
+| New-build fossil cost | 3 | Low / Medium / High |
 
-**Total**: 3 × 5 × 3 × 3 × 3 = **405 scenarios per ISO**
+**Total**: 3 × 5 × 3 × 3 × 3 × 3 = **1,215 scenarios per ISO**
 
 Each scenario simulates a 25-year trajectory (2025→2050) with annual year steps by default. Simulation includes:
 - Wright's Law learning curves (FOAK→NOAK)
@@ -338,4 +362,4 @@ Each scenario simulates a 25-year trajectory (2025→2050) with annual year step
 
 **"No parquet files found"**: The simulator falls back to synthetic data automatically. Results are still valid for screening but won't reflect real optimizer physics.
 
-**Memory issues**: The full sweep holds all 405 scenario results in memory. For constrained systems, run one ISO at a time with `--isos`.
+**Memory issues**: The full sweep holds all 1,215 scenario results in memory. For constrained systems, run one ISO at a time with `--isos`.
