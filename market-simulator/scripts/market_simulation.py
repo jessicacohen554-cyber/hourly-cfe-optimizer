@@ -2969,11 +2969,15 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 ic_firm_mw = 0
 
             dr_level = conditions.get('dr_level', 'Off')
-            # Include new-build fossil total in cache key — fleet state affects LMP
+            # Include new-build fossil total in cache key — fleet state affects LMP.
+            # Round to nearest 5 GW to improve cache hit rate: scenarios with
+            # similar fossil fleets (e.g., 42 GW vs 43 GW) produce nearly
+            # identical LMPs, so bucketing avoids redundant dispatch solves.
             _nb_total = sum(state.get('new_fossil_builds', {}).values())
+            _nb_bucket = round(_nb_total / 5000) * 5000  # 5 GW buckets
             _lmp_key = (iso, current_pct, conditions['fuel_level'],
                         conditions['demand_growth'], year, carbon_price,
-                        interchange_enabled, dr_level, _nb_total)
+                        interchange_enabled, dr_level, _nb_bucket)
             zonal_congestion_data = None
             scarcity_hours_frac = 0.0
             if _lmp_cache is not None and _lmp_key in _lmp_cache:
