@@ -19,6 +19,16 @@ var FleetSidebar = (function () {
     var isOpen = false;
     var nextAddId = 90000;     // ID counter for added plants
 
+    // ── Fuel labels ──
+    var FUEL_LABELS = {
+        gas_ccgt: 'CCGT', gas_ct: 'CT', oil_ct: 'Oil', gas_oil_ct: 'Gas/Oil',
+        nuclear: 'Nuclear', geothermal: 'Geothermal', wind: 'Wind',
+        solar: 'Solar', hydro: 'Hydro', battery: 'Battery',
+        pumped_storage: 'Pumped Storage'
+    };
+
+    var FOSSIL_FUELS = new Set(['gas_ccgt', 'gas_ct', 'oil_ct', 'gas_oil_ct']);
+
     // ── DOM refs ──
     var els = {};
 
@@ -59,7 +69,6 @@ var FleetSidebar = (function () {
 
     // ── Data Loading ──
     function loadData() {
-        // Load both in parallel
         var fleetLoaded = false, sweepLoaded = false;
 
         // 1. Fleet scenarios config (base fleet + scenario definitions)
@@ -82,7 +91,6 @@ var FleetSidebar = (function () {
             })
             .catch(function (err) {
                 console.warn('Fleet config not available:', err);
-                // Try loading from constellation_fleet.json as fallback
                 loadFleetFallback(function () {
                     fleetLoaded = true;
                     if (sweepLoaded) onAllLoaded();
@@ -114,7 +122,6 @@ var FleetSidebar = (function () {
         fetch('/api/fleet-config')
             .then(function (r) { if (r.ok) return r.json(); throw new Error('No fleet'); })
             .then(function (plants) {
-                // Convert from fleet-config format to dispatch format
                 var fossilFuels = { 'Gas': 'gas_ccgt', 'Oil': 'oil_ct', 'Gas/Oil': 'gas_oil_ct' };
                 baseFleet = plants
                     .filter(function (p) { return fossilFuels[p.fuel_type]; })
@@ -152,12 +159,24 @@ var FleetSidebar = (function () {
 
     function onAllLoaded() {
         renderSavedScenarios();
+
+        // Count by category
+        var nuclearCount = 0, renewableCount = 0, fossilCount = 0, storageCount = 0;
+        baseFleet.forEach(function (p) {
+            var cat = p.plant_category || (FOSSIL_FUELS.has(p.fuel_type) ? 'fossil' : 'other');
+            if (cat === 'nuclear') nuclearCount++;
+            else if (cat === 'renewable') renewableCount++;
+            else if (cat === 'fossil') fossilCount++;
+            else if (cat === 'storage') storageCount++;
+        });
+
+        var statusMsg = 'Ready — ' + baseFleet.length + ' plants (' +
+            nuclearCount + ' nuclear, ' + renewableCount + ' renewable, ' +
+            fossilCount + ' fossil, ' + storageCount + ' storage)';
         if (sweepData) {
-            setStatus('Ready — ' + baseFleet.length + ' plants, ' +
-                (sweepData.n_scenarios || 0) + ' scenarios');
-        } else {
-            setStatus('Sweep data unavailable — recalculation disabled');
+            statusMsg += ', ' + (sweepData.n_scenarios || 0) + ' sweep scenarios';
         }
+        setStatus(statusMsg);
     }
 
     // ── Sidebar Open/Close ──
@@ -185,73 +204,126 @@ var FleetSidebar = (function () {
 
         var allPlants = fleetPlants.concat(addedPlants);
 
-        // Group by ISO
-        var byISO = {};
+        // Group by category first, then by ISO within each category
+        var byCategoryISO = {};
+        var categoryOrder = ['nuclear', 'renewable', 'fossil', 'storage', 'other'];
         allPlants.forEach(function (p) {
+            var cat = p.plant_category || (FOSSIL_FUELS.has(p.fuel_type) ? 'fossil' : 'other');
             var iso = p.iso || 'Other';
-            if (!byISO[iso]) byISO[iso] = [];
-            byISO[iso].push(p);
+            var key = cat + '|' + iso;
+            if (!byCategoryISO[key]) byCategoryISO[key] = { category: cat, iso: iso, plants: [] };
+            byCategoryISO[key].plants.push(p);
         });
 
+        // Sort groups by category order, then ISO order
         var isoOrder = ['PJM', 'ERCOT', 'CAISO', 'NYISO', 'NEISO', 'MISO', 'SPP'];
-        var sortedISOs = Object.keys(byISO).sort(function (a, b) {
-            var ai = isoOrder.indexOf(a), bi = isoOrder.indexOf(b);
-            if (ai >= 0 && bi >= 0) return ai - bi;
-            if (ai >= 0) return -1;
-            if (bi >= 0) return 1;
-            return a.localeCompare(b);
+        var sortedKeys = Object.keys(byCategoryISO).sort(function (a, b) {
+            var ga = byCategoryISO[a], gb = byCategoryISO[b];
+            var catA = categoryOrder.indexOf(ga.category), catB = categoryOrder.indexOf(gb.category);
+            if (catA < 0) catA = 99;
+            if (catB < 0) catB = 99;
+            if (catA !== catB) return catA - catB;
+            var isoA = isoOrder.indexOf(ga.iso), isoB = isoOrder.indexOf(gb.iso);
+            if (isoA < 0) isoA = 99;
+            if (isoB < 0) isoB = 99;
+            return isoA - isoB;
         });
 
         var html = '';
-        sortedISOs.forEach(function (iso) {
-            var plants = byISO[iso];
+        var lastCategory = null;
+
+        sortedKeys.forEach(function (key) {
+            var group = byCategoryISO[key];
+            var plants = group.plants;
             var totalMW = plants.reduce(function (s, p) { return s + (p.capacity_mw || 0); }, 0);
 
+            // Category header
+            if (group.category !== lastCategory) {
+                lastCategory = group.category;
+                var catLabels = {
+                    nuclear: 'Nuclear Fleet',
+                    renewable: 'Renewables & Geothermal',
+                    fossil: 'Fossil Fleet',
+                    storage: 'Energy Storage'
+                };
+                var catColors = {
+                    nuclear: '#6366F1',
+                    renewable: '#22C55E',
+                    fossil: '#6B7280',
+                    storage: '#06B6D4'
+                };
+                html += '<div class="sb-category-header" style="background:' + (catColors[group.category] || '#888') + ';color:#fff;padding:8px 12px;font-weight:700;font-size:0.85rem;margin-top:8px;border-radius:6px 6px 0 0;">';
+                html += (catLabels[group.category] || group.category);
+                html += '</div>';
+            }
+
             html += '<div class="sb-iso-group">';
-            html += '<div class="sb-iso-header" data-iso="' + iso + '">';
-            html += '<span>' + iso + ' (' + plants.length + ' plants, ' + Math.round(totalMW).toLocaleString() + ' MW)</span>';
+            html += '<div class="sb-iso-header" data-iso="' + key + '">';
+            html += '<span>' + group.iso + ' (' + plants.length + ' plants, ' + Math.round(totalMW).toLocaleString() + ' MW)</span>';
             html += '<span class="sb-chevron">▼</span>';
             html += '</div>';
-            html += '<div class="sb-iso-body" data-iso-body="' + iso + '">';
+            html += '<div class="sb-iso-body" data-iso-body="' + key + '">';
 
             plants.forEach(function (p) {
                 var isAdded = p._isAdded;
                 var idx = isAdded ? 'add_' + p._addId : p._idx;
-                var fuelLabel = { gas_ccgt: 'CCGT', gas_ct: 'CT', oil_ct: 'Oil', gas_oil_ct: 'Gas/Oil' };
+                var fuelLabel = FUEL_LABELS[p.fuel_type] || p.fuel_type;
                 var capStr = Math.round(p.capacity_mw || 0) + ' MW';
+                var equityStr = p.equity_share < 1 ? ' (' + Math.round(p.equity_share * 100) + '% equity)' : '';
                 var currentAction = p._action || 'operating';
+                var isFossil = FOSSIL_FUELS.has(p.fuel_type);
+                var isCcsEligible = p.ccs_eligible === true;
 
                 html += '<div class="sb-plant-row" data-plant-idx="' + idx + '">';
-                html += '<div class="sb-plant-name" title="' + (p.name || '') + ' (' + (fuelLabel[p.fuel_type] || p.fuel_type) + ')">';
+                html += '<div class="sb-plant-name" title="' + (p.full_name || p.name || '') + ' (' + fuelLabel + ')">';
                 html += (p.name || 'Plant ' + idx);
-                html += '<br><span class="sb-plant-cap">' + capStr + ' · ' + (fuelLabel[p.fuel_type] || p.fuel_type) + '</span>';
+                html += '<br><span class="sb-plant-cap">' + capStr + ' · ' + fuelLabel + equityStr + '</span>';
                 html += '</div>';
 
-                // Capacity input (for editing)
-                html += '<div><input type="number" class="sb-cap-input" data-idx="' + idx + '" value="' + Math.round(p.capacity_mw || 0) + '" min="0" step="10" title="Capacity (MW)"></div>';
+                if (isFossil) {
+                    // Fossil: editable capacity
+                    html += '<div><input type="number" class="sb-cap-input" data-idx="' + idx + '" value="' + Math.round(p.capacity_mw || 0) + '" min="0" step="10" title="Capacity (MW)"></div>';
 
-                // Status dropdown — CCS Retrofit only for CCS-eligible plants
-                var isCcsEligible = p.ccs_eligible || p.ccs_eligible === true;
-                var modClass = (currentAction && currentAction !== 'operating' && currentAction !== p.status) ? ' modified' : '';
-                html += '<div><select class="sb-status-select' + modClass + '" data-idx="' + idx + '">';
-                html += '<option value="operating"' + (currentAction === 'operating' || !currentAction ? ' selected' : '') + '>Operating</option>';
-                html += '<option value="retire"' + (currentAction === 'retire' ? ' selected' : '') + '>Retired</option>';
-                if (isCcsEligible) {
-                    html += '<option value="ccs_retrofit"' + (currentAction === 'ccs_retrofit' ? ' selected' : '') + '>CCS Retrofit</option>';
-                }
-                html += '</select></div>';
+                    // Status dropdown
+                    var modClass = (currentAction && currentAction !== 'operating' && currentAction !== p.status) ? ' modified' : '';
+                    html += '<div><select class="sb-status-select' + modClass + '" data-idx="' + idx + '">';
+                    html += '<option value="operating"' + (currentAction === 'operating' || !currentAction ? ' selected' : '') + '>Operating</option>';
+                    html += '<option value="retire"' + (currentAction === 'retire' ? ' selected' : '') + '>Retired</option>';
+                    if (isCcsEligible) {
+                        html += '<option value="ccs_retrofit"' + (currentAction === 'ccs_retrofit' ? ' selected' : '') + '>CCS Retrofit</option>';
+                    }
+                    html += '</select></div>';
 
-                // Year input (for retire/CCS)
-                var showYear = (currentAction === 'retire' || currentAction === 'ccs_retrofit' || currentAction === 'add_plant');
-                var yearVal = p._year_online || 2030;
-                html += '<div>';
-                if (showYear) {
-                    html += '<input type="number" class="sb-year-input" data-idx="' + idx + '" value="' + yearVal + '" min="2023" max="2050" title="Year">';
+                    // Year input (for retire/CCS)
+                    var showYear = (currentAction === 'retire' || currentAction === 'ccs_retrofit' || currentAction === 'add_plant');
+                    var yearVal = p._year_online || 2030;
+                    html += '<div>';
+                    if (showYear) {
+                        html += '<input type="number" class="sb-year-input" data-idx="' + idx + '" value="' + yearVal + '" min="2023" max="2050" title="Year">';
+                    }
+                    if (isAdded) {
+                        html += '<button class="sb-btn-danger sb-remove-added" data-add-id="' + p._addId + '" title="Remove">✕</button>';
+                    }
+                    html += '</div>';
+                } else {
+                    // Non-fossil: Operating/Retired toggle only, read-only capacity
+                    html += '<div><span class="sb-cap-readonly" style="font-size:0.78rem;color:#6b7280;">' + capStr + '</span></div>';
+
+                    // Status: Operating / Retired (no CCS option)
+                    html += '<div><select class="sb-status-select" data-idx="' + idx + '">';
+                    html += '<option value="operating"' + (currentAction === 'operating' || !currentAction ? ' selected' : '') + '>Operating</option>';
+                    html += '<option value="retire"' + (currentAction === 'retire' ? ' selected' : '') + '>Retired</option>';
+                    html += '</select></div>';
+
+                    // Year input for retirement
+                    var showYearNF = (currentAction === 'retire');
+                    var yearValNF = p._year_online || 2030;
+                    html += '<div>';
+                    if (showYearNF) {
+                        html += '<input type="number" class="sb-year-input" data-idx="' + idx + '" value="' + yearValNF + '" min="2023" max="2050" title="Year">';
+                    }
+                    html += '</div>';
                 }
-                if (isAdded) {
-                    html += '<button class="sb-btn-danger sb-remove-added" data-add-id="' + p._addId + '" title="Remove">✕</button>';
-                }
-                html += '</div>';
 
                 html += '</div>';
             });
@@ -264,8 +336,8 @@ var FleetSidebar = (function () {
         // Bind ISO group collapse
         els.fleetList.querySelectorAll('.sb-iso-header').forEach(function (header) {
             header.addEventListener('click', function () {
-                var iso = this.dataset.iso;
-                var body = els.fleetList.querySelector('[data-iso-body="' + iso + '"]');
+                var key = this.dataset.iso;
+                var body = els.fleetList.querySelector('[data-iso-body="' + key + '"]');
                 if (body) {
                     var collapsed = body.classList.toggle('collapsed');
                     this.classList.toggle('collapsed', collapsed);
@@ -357,6 +429,7 @@ var FleetSidebar = (function () {
             iso: iso,
             capacity_mw: capacity,
             fuel_type: fuelType,
+            plant_category: 'fossil',
             heat_rate_mmbtu_mwh: heatRate,
             co2_rate_t_mwh: co2Rate,
             equity_share: 1.0,
@@ -401,7 +474,6 @@ var FleetSidebar = (function () {
             els.recalcBtn.textContent = 'Calculating...';
         }
 
-        // Use requestAnimationFrame to let UI update before heavy compute
         requestAnimationFrame(function () {
             setTimeout(function () {
                 try {
@@ -409,11 +481,9 @@ var FleetSidebar = (function () {
                     var result = FleetDispatchEngine.computeFleetDispatch(allPlants, sweepData);
                     var elapsed = Math.round(performance.now() - t0);
 
-                    // Build scenario name
                     var scenarioName = (els.nameInput && els.nameInput.value.trim()) || 'Custom';
                     var scenarioKey = 'custom_' + Date.now();
 
-                    // Package result for fleet-scenarios.js
                     var scenarioData = {
                         description: scenarioName,
                         color: '#8B5CF6',
@@ -424,7 +494,6 @@ var FleetSidebar = (function () {
                         fleet_summary: result.fleet_summary
                     };
 
-                    // Inject via API
                     if (window.FLEET_SCENARIOS_API) {
                         window.FLEET_SCENARIOS_API.addScenario(scenarioKey, scenarioName, scenarioData);
                         setStatus('Done in ' + elapsed + 'ms — "' + scenarioName + '" added to charts');
@@ -470,10 +539,8 @@ var FleetSidebar = (function () {
         var saved = savedScenarios[name];
         if (!saved) return;
 
-        // Reset fleet to base
         fleetPlants = JSON.parse(JSON.stringify(baseFleet));
 
-        // Apply saved modifications
         (saved.fleetMods || []).forEach(function (mod) {
             var p = fleetPlants[mod._idx];
             if (p && p.orispl === mod.orispl) {
@@ -484,10 +551,8 @@ var FleetSidebar = (function () {
             }
         });
 
-        // Restore added plants
         addedPlants = JSON.parse(JSON.stringify(saved.addedPlants || []));
 
-        // Update name input
         if (els.nameInput) els.nameInput.value = name;
 
         renderFleetList();
@@ -521,7 +586,6 @@ var FleetSidebar = (function () {
         });
         els.savedList.innerHTML = html;
 
-        // Bind load/delete
         els.savedList.querySelectorAll('[data-load]').forEach(function (btn) {
             btn.addEventListener('click', function () { loadScenario(this.dataset.load); });
         });
