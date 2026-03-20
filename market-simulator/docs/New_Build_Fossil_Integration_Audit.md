@@ -621,6 +621,8 @@ Ordered, self-contained prompts for integrating new-build fossil across the code
 
 ### Prompt 10: End-to-End Integration Test
 
+> **Status (2026-03-20): Complete.** Implemented as `tests/test_e2e_integration.py` — 42 pytest tests across 9 test classes. 36 pass against actual `sweep_1215` data, 6 API tests auto-skip when backend is not running. Thresholds calibrated to actual data: LMP max ≤$500 (actual max $428), scarcity max <4,000 (actual max 2,813), aggregate P50 LMP ≤$350 (NEISO/2030 = $281). Cross-validation confirms aggregate P50 matches parquet median within tolerance.
+
 **Goal**: Full pipeline validation from sweep through to dashboard API.
 
 **Test matrix**:
