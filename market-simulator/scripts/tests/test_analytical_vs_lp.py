@@ -6,7 +6,7 @@ import sys
 import time
 import numpy as np
 
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from pipeline_config import ZONE_CONFIG
 from lmp_engine import build_merit_order_stack
