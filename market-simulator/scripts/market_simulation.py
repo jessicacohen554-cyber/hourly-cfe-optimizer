@@ -542,6 +542,7 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
                 iso=iso, zone_config=zone_config, zone_stacks=zone_stacks,
                 demand_mw_profile=residual_demand_mw,
                 price_model=price_model, vre_penetration=vre_pen,
+                full_demand_mw_profile=effective_demand_mw,
             )
             hourly_lmp = system_lmp
             unit_idx = np.full(len(hourly_lmp), -1, dtype=np.int8)
