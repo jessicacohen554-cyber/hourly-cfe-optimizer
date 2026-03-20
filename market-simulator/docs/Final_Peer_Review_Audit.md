@@ -273,3 +273,391 @@ These are quality-of-life improvements that enhance the model but aren't require
 
 **Effort**: 0.5 session.
 
+---
+
+## 6. Claude Code Implementation Prompts
+
+The following prompts are designed to be executed sequentially, each completable in a single Claude Code session. Dependencies are noted — prompts without dependencies can be reordered freely.
+
+### Prompt 1: G3 — Result Provenance (0.5 session, no dependencies)
+
+```
+In market-simulator/backend/models.py and market-simulator/scripts/market_simulation.py,
+add result provenance metadata to all simulation outputs:
+
+1. In models.py, add a ProvenanceMetadata model:
+   class ProvenanceMetadata(BaseModel):
+       model_version: str          # e.g., "2.1.0"
+       git_sha: str                # short SHA of current commit
+       git_branch: str             # current branch name
+       config_hash: str            # SHA-256 of pipeline_config.py contents
+       run_timestamp: str          # ISO 8601 UTC timestamp
+       python_version: str         # sys.version
+       input_snapshot: dict        # full request parameters as submitted
+
+2. Add a provenance field to SimulationResponse:
+   provenance: Optional[ProvenanceMetadata] = None
+
+3. In market_simulation.py, add a helper function build_provenance_metadata()
+   that:
+   - Reads git SHA via subprocess: git rev-parse --short HEAD
+   - Reads git branch via: git rev-parse --abbrev-ref HEAD
+   - Computes SHA-256 hash of pipeline_config.py file contents
+   - Captures current timestamp and Python version
+   - Accepts the input request dict as a parameter
+   - Returns a ProvenanceMetadata instance
+
+4. Call build_provenance_metadata() at the start of run_single_simulation()
+   and run_full_sweep(), attaching it to the response.
+
+5. Add a test in scripts/tests/test_r9_qa_qc.py:
+   - TestProvenance class with tests verifying:
+     - git_sha is non-empty string
+     - config_hash is 64-char hex string
+     - run_timestamp is valid ISO 8601
+     - input_snapshot round-trips correctly
+
+Key files: backend/models.py, scripts/market_simulation.py, scripts/pipeline_config.py
+```
+
+---
+
+### Prompt 2: G2 — Methodology Equation Documentation (1 session, no dependencies)
+
+```
+In market-simulator/docs/Model_Methodology_Specification.md, add mathematical
+formulations for two subsystems that currently lack equations:
+
+1. **Pipe-and-Bubble LP Formulation** (add to §4.4.1 Zonal LMP Decomposition):
+
+   Reference implementation: zonal_lmp.py lines 549–633
+
+   Document the following:
+   - Decision variables: g[z][u] (generation per zone per unit), f_pos[i]/f_neg[i]
+     (positive/negative flow on each interface)
+   - Objective: minimize Σ(mc[u] × g[z][u]) over all zones z and units u
+   - Constraints:
+     a. Zonal power balance: Σ g[z][u] + Σ f_in[z] - Σ f_out[z] = demand[z]
+     b. Generation bounds: 0 ≤ g[z][u] ≤ capacity[z][u]
+     c. Transfer limits: -limit[i] ≤ f[i] ≤ limit[i]
+   - Dual extraction: zonal LMP[z] = shadow price (dual variable) on balance
+     constraint for zone z
+   - Note the analytical solver path (closed-form for 2-zone cases) vs. scipy
+     linprog for >2 zones
+
+2. **VRE Cannibalization / Capture Rate Model** (add to §4.4.7):
+
+   Reference implementation: lmp_engine.py lines 1284–1294,
+   market_simulation.py lines 1358–1374
+
+   Document:
+   - Energy revenue: Revenue(r) = mean(profile(r,h) × LMP(h)) for h ∈ {1..8760}
+   - Capture rate: CR(r) = Revenue(r) / mean(LMP)
+   - VRE penetration floor scaling: floor_mult = 1.0 + 1.5 × max(0, vre_pct − 0.25),
+     capped at 2.0
+   - Interaction with basis differential (R4): zone-specific LMP replaces system
+     LMP when zonal data available
+   - Interaction with curtailment feedback (R10): effective_lcoe = lcoe / (1 − curtailment_rate)
+
+3. Add a cross-reference table at the end of each equation section mapping
+   equation variables to code variables and line numbers.
+
+Key files: docs/Model_Methodology_Specification.md, scripts/zonal_lmp.py,
+scripts/lmp_engine.py, scripts/market_simulation.py
+```
+
+---
+
+### Prompt 3: G1 — Plant-Level Retirement (2 sessions, no dependencies)
+
+```
+In market-simulator/scripts/market_simulation.py, replace fleet-fraction
+retirement with plant-level economics. This is a 2-session task.
+
+SESSION 1 — Plant-Level Retirement Engine:
+
+1. The plant-level merit order already exists: build_plant_level_merit_order()
+   in lmp_engine.py (lines 442–553) loads EIA 860 plant data with capacity,
+   heat rates, VOM, fuel type, and location. compute_plant_level_economics()
+   in market_simulation.py (lines 868–997) already computes per-plant margins
+   and classifies plants as stranded/at_risk/operating.
+
+2. Refactor apply_economic_retirement() (lines 999–1067) to:
+   a. Accept plant_economics (output of compute_plant_level_economics) instead
+      of fleet-level gen_econ
+   b. Sort plants by margin (worst first)
+   c. Retire individual plants with margin < -$5/MWh (current threshold)
+   d. Track retired plant IDs in state['retired_plants'] for inter-year persistence
+   e. Enforce reliability floor per zone, not per unit type: maintain minimum
+      reserve margin of 15% based on zonal peak demand
+   f. Return list of retired plant dicts (ID, capacity, type, margin, zone)
+
+3. For nuclear: use NUCLEAR_OFFTAKE_CONTRACTS dict from pipeline_config.py
+   to evaluate each plant's contract revenue vs. operating cost individually.
+   Plants with below-market offtake contracts are at higher stranding risk than
+   those with market-rate or regulated-rate contracts. Do NOT retire the entire
+   nuclear fleet at a single trigger year.
+
+4. Add plant_retirements field to YearResult in models.py:
+   plant_retirements: List[dict] = []  # [{plant_id, capacity_mw, unit_type, margin, iso, zone}]
+
+5. Add unit tests:
+   - Test that high-margin plants survive while low-margin plants retire
+   - Test reliability floor prevents over-retirement
+   - Test nuclear plants retire individually based on contract economics
+   - Test retired plant IDs persist across simulation years
+
+SESSION 2 — Integration and Validation:
+
+6. Wire plant-level retirement into the main simulation loop
+   (run_single_simulation), replacing the fleet-fraction call.
+
+7. Run a single-ISO (PJM) validation comparing fleet-fraction vs. plant-level
+   retirement trajectories across 3 scenarios. Document the difference in
+   retirement timing, reserve margins, and capacity price trajectories.
+
+8. Update the existing regression tests to work with the new retirement
+   interface.
+
+Key files: market_simulation.py (lines 868–1067, 2190–2260),
+lmp_engine.py (lines 442–553), pipeline_config.py (NUCLEAR_OFFTAKE_CONTRACTS),
+backend/models.py (YearResult)
+```
+
+---
+
+### Prompt 4: G5 — Demand-Quantile Extrapolation Guard (0.5 session, no dependencies)
+
+```
+In market-simulator/scripts/lmp_engine.py and market_simulation.py, add explicit
+confidence degradation for LMP results above 60% VRE penetration:
+
+1. In lmp_engine.py, after compute_hourly_lmp_vectorized() returns LMP array,
+   add a confidence_factor field to the result:
+   - If vre_penetration <= 0.50: confidence = 1.0 (fully calibrated)
+   - If 0.50 < vre_penetration <= 0.60: confidence = 1.0 (within calibration)
+   - If 0.60 < vre_penetration <= 0.75: confidence = 0.8 (moderate extrapolation)
+   - If 0.75 < vre_penetration <= 0.90: confidence = 0.6 (significant extrapolation)
+   - If vre_penetration > 0.90: confidence = 0.4 (beyond model validity)
+
+2. In market_simulation.py, when VRE > 60%, add to the existing IPM trigger
+   system:
+   - ipm_triggers.append({
+       "type": "lmp_extrapolation",
+       "severity": "warning" if vre < 0.75 else "critical",
+       "message": f"VRE penetration {vre*100:.0f}% exceeds calibration range...",
+       "recommendation": "Validate LMP results with production cost model"
+     })
+
+3. Add lmp_confidence_factor to YearResult in models.py.
+
+4. Add a test verifying confidence degrades correctly at each VRE bracket.
+
+Key files: lmp_engine.py, market_simulation.py, backend/models.py
+```
+
+---
+
+### Prompt 5: G6 — Cross-Validation Benchmarks (1 session, run after G1 if plant retirement implemented)
+
+```
+Create market-simulator/scripts/tests/validate_cross_model.py — a validation
+script that compares model outputs against published reference-case trajectories:
+
+1. Define reference data from publicly available sources:
+   a. EIA AEO 2025 Reference Case — renewable share trajectory 2025–2050
+      (Table 8 "Electricity Generation by Fuel")
+   b. NREL ReEDS Standard Scenarios 2024 — Mid-case clean share + capacity additions
+   c. EPA IPM v6 Reference Case — coal retirement schedule + gas build trajectory
+
+   Hard-code these as dicts in the script (small data, publicly available,
+   won't change). Include source citations.
+
+2. Run the market simulator for a "reference-equivalent" scenario:
+   - Medium demand, Medium LCOE, Medium gas price, Medium carbon ($0/ton for
+     AEO comparison, $51/ton for EPA comparison)
+   - ERCOT + PJM + CAISO (3 largest ISOs)
+   - 2025–2050 trajectory
+
+3. For each ISO × reference model pair, compute:
+   - Clean share divergence at 2030, 2035, 2040
+   - Capacity addition rate divergence (GW/year)
+   - Coal retirement timing divergence (year of <5% coal share)
+
+4. Generate a structured comparison table and narrative:
+   - Expected divergences (this model is profit-driven, others are cost-minimizing)
+   - Unexplained divergences (potential calibration issues)
+   - Document the comparison as market-simulator/docs/Cross_Validation_Results.md
+
+5. Add to the test suite as a non-blocking validation (warnings, not failures)
+   since divergence from optimization models is expected and intentional.
+
+Key files: New script + new doc. References: market_simulation.py (run_single_simulation),
+pipeline_config.py (scenario parameters)
+```
+
+---
+
+### Prompt 6: G4 — Correlated Scenario Construction (1 session, no dependencies)
+
+```
+In market-simulator/scripts/pipeline_config.py and market_simulation.py, add
+IEA-aligned correlated scenario bundles alongside the existing independent sweep:
+
+1. In pipeline_config.py, add CORRELATED_SCENARIOS dict:
+   CORRELATED_SCENARIOS = {
+       "IEA_STEPS": {  # Stated Policies
+           "description": "Current policies continue, moderate ambition",
+           "demand_growth": "Medium",
+           "gas_price": "Medium",
+           "renewable_lcoe": "Medium",
+           "carbon_price": 0,
+           "learning_rate": "Medium",
+           "45q": True,
+       },
+       "IEA_APS": {  # Announced Pledges
+           "description": "All announced national commitments implemented",
+           "demand_growth": "Medium",
+           "gas_price": "Medium",
+           "renewable_lcoe": "Low",  # faster cost decline
+           "carbon_price": 51,       # EPA SCC
+           "learning_rate": "Fast",
+           "45q": True,
+       },
+       "IEA_NZE": {  # Net Zero by 2050
+           "description": "1.5C-aligned pathway",
+           "demand_growth": "High",  # electrification drives demand
+           "gas_price": "High",      # carbon costs embedded
+           "renewable_lcoe": "Low",
+           "carbon_price": 185,      # Rennert et al.
+           "learning_rate": "Fast",
+           "45q": True,
+       },
+       "HIGH_FRICTION": {  # Stress test
+           "description": "Regulatory/permitting delays + high costs",
+           "demand_growth": "High",
+           "gas_price": "Low",       # cheap gas delays transition
+           "renewable_lcoe": "High",
+           "carbon_price": 0,
+           "learning_rate": "Slow",
+           "45q": False,
+       },
+       "RAPID_TRANSITION": {  # Bull case for clean energy
+           "description": "Technology breakthroughs + strong policy",
+           "demand_growth": "High",
+           "gas_price": "High",
+           "renewable_lcoe": "Low",
+           "carbon_price": 100,
+           "learning_rate": "Fast",
+           "45q": True,
+       },
+   }
+
+2. In market_simulation.py, add run_correlated_scenarios() function that:
+   - Accepts an ISO and list of scenario names (default: all 5)
+   - Maps each scenario to the appropriate parameter combination
+   - Runs simulations and returns results keyed by scenario name
+   - These are NOT added to the independent sweep — they run separately
+
+3. In backend/main.py, add an endpoint:
+   @app.post("/api/correlated-scenarios")
+   async def run_correlated(iso: str, scenarios: List[str] = None):
+       ...
+
+4. In backend/models.py, add CorrelatedScenarioResponse with scenario metadata.
+
+5. Add tests verifying each scenario maps to valid parameter combinations and
+   produces distinct trajectories.
+
+Key files: pipeline_config.py, market_simulation.py, backend/main.py, backend/models.py
+```
+
+---
+
+### Prompt 7: G7 — Sensitivity Analysis Framework (1–2 sessions, run after G4)
+
+```
+Create market-simulator/scripts/sensitivity_analysis.py — a post-processing
+module that decomposes output variance across the 1,215-scenario sweep:
+
+SESSION 1 — Morris Method Screening:
+
+1. Implement Morris method (elementary effects) screening:
+   - For each input dimension (demand, gas_price, renewable_lcoe, carbon_price,
+     learning_rate, 45q), compute the mean and standard deviation of elementary
+     effects on key outputs (clean_pct, total_cost_per_mwh, emissions_mt)
+   - This uses existing sweep results — no new simulations needed
+   - Read sweep results from the API or from cached JSON
+
+2. Generate a Morris plot (mean vs. std of elementary effects) per ISO:
+   - High mean + high std = non-linear, important
+   - High mean + low std = linear, important
+   - Low mean + low std = unimportant
+   - Output as JSON data suitable for Chart.js visualization
+
+3. Implement first-order variance decomposition (one-at-a-time):
+   - For each dimension, compute fraction of total output variance explained
+   - Output as tornado diagram data (sorted bar chart of variance fractions)
+
+SESSION 2 — Integration:
+
+4. Add a tornado_data field to the sweep uncertainty response (from R5)
+   containing the variance decomposition results.
+
+5. Create market-simulator/docs/Sensitivity_Analysis_Results.md documenting:
+   - Which inputs matter most per ISO
+   - Non-linear interactions identified
+   - Recommendations for where to invest in better input data
+
+6. Add tests verifying variance fractions sum to <= 1.0 and Morris elementary
+   effects are computed correctly on a known test case.
+
+Key files: New script. References: market_simulation.py (sweep results),
+pipeline_config.py (scenario dimensions), backend/models.py (response models)
+```
+
+---
+
+## 7. Conclusion
+
+### 7.1 Current Fitness Assessment
+
+The market simulator has materially improved since the original peer review. The implementation of 8 of 10 recommendations — verified by 304 independent checks — addressed the two most critical weaknesses:
+
+1. **Storage dispatch** moved from static ramps to economics-driven deployment with arbitrage revenue, capacity market credits, and technology-differentiated dispatch. This directly addresses the gap that was identified as the model's weakest link.
+
+2. **Uncertainty communication** moved from point estimates to P10/P50/P90 bands with scenario probability weights, synthetic data warnings, and input validation. Users now receive structured uncertainty information rather than single-scenario results.
+
+### 7.2 Readiness Assessment
+
+| Use Context | Ready? | Prerequisites |
+|---|---|---|
+| Internal strategic screening | **Yes** | Use P10/P50/P90 ranges, note IPM triggers |
+| Client presentations | **Yes, with caveats** | Include Section 4.5 interpretation guidance |
+| Peer review / publication | **Not yet** | Complete G1 (plant-level retirement), G2 (methodology equations), G6 (cross-validation) |
+| Regulatory filing support | **Not yet** | Complete G1, G3 (provenance), G5 (extrapolation guards), G6, G7 (sensitivity) |
+| Investment-grade decisions | **Never standalone** | Always validate screening results with production cost models (PLEXOS, IPM) |
+
+### 7.3 Recommended Implementation Sequence
+
+For teams with limited capacity, the highest-impact improvements in order:
+
+1. **G3 (Result Provenance)** — 0.5 session, immediate governance benefit
+2. **G2 (Methodology Equations)** — 1 session, documentation-only, enables peer review
+3. **G1 (Plant-Level Retirement)** — 2 sessions, largest model improvement remaining
+4. **G5 (Extrapolation Guard)** — 0.5 session, protective guardrail
+5. **G6 (Cross-Validation)** — 1 session, credibility for external audiences
+6. **G4 (Correlated Scenarios)** — 1 session, better distributional analysis
+7. **G7 (Sensitivity Analysis)** — 1–2 sessions, decision-support enhancement
+
+**Total estimated effort**: 7–8 sessions for all high and medium priority items. The 4 low-priority items (G8–G11) add 2.5–3.5 sessions but are optional for the model's stated screening purpose.
+
+### 7.4 Final Assessment
+
+The market simulator is a well-engineered screening tool that has demonstrably improved through systematic peer review and implementation. Its profit-driven, agent-based approach fills a genuine gap in the modeling landscape — most available tools are cost-minimizing capacity expansion models that treat clean energy targets as constraints rather than emergent outcomes.
+
+The remaining gaps are proportional: plant-level retirement (G1) would bring the model from adequate to strong in its weakest remaining dimension, while provenance (G3) and cross-validation (G6) are standard practices for any model used in decision-making contexts. None of the remaining gaps undermine the model's core screening utility when used within its stated boundary conditions.
+
+---
+
+*End of Final Peer Review Audit*
