@@ -265,19 +265,26 @@ def _solve_hour_batch(lp_c, lp_A_eq, lp_bounds, lp_units_arr, n_zones,
 
 def compute_zonal_lmp_hourly(iso, zone_config, zone_stacks, demand_mw_profile,
                               clean_supply_by_zone=None, price_model=None,
-                              vre_penetration=None):
+                              vre_penetration=None,
+                              full_demand_mw_profile=None):
     """Compute zonal LMPs for all 8760 hours.
 
     Args:
         iso: ISO name
         zone_config: Dict from ZONE_CONFIG[iso]
         zone_stacks: Dict {zone_name: [(unit_type, cap_mw, mc), ...]}
-        demand_mw_profile: np.array (8760,) total ISO demand in MW
+        demand_mw_profile: np.array (8760,) — demand for the LP solver (MW).
+            When zone stacks are fossil-only, this should be residual demand
+            after clean dispatch. The LP matches this demand with fossil gen.
         clean_supply_by_zone: Optional dict {zone_name: np.array (8760,)} of
             clean generation in MW per zone. If None, clean supply is split
             proportionally to demand shares.
         price_model: PriceModel instance for post-LP pricing adjustments
         vre_penetration: VRE share for pricing layer adjustments
+        full_demand_mw_profile: np.array (8760,) — total system demand (MW)
+            used for demand-percentile pricing layers (congestion adders,
+            low-demand depression). If None, defaults to demand_mw_profile.
+            Must be full demand (not residual) for correct calibration.
 
     Returns:
         zonal_lmp_matrix: np.array (n_zones, H) — $/MWh per zone per hour
@@ -285,6 +292,10 @@ def compute_zonal_lmp_hourly(iso, zone_config, zone_stacks, demand_mw_profile,
         flows_matrix: np.array (n_interfaces, H) — net flows per interface
         zonal_stats: dict with per-zone summary statistics
     """
+    # Pricing layers need full demand for percentile ranking;
+    # LP needs residual demand for dispatch. Separate the two signals.
+    if full_demand_mw_profile is None:
+        full_demand_mw_profile = demand_mw_profile
     zone_names = zone_config['zones']
     demand_shares = zone_config['demand_share']
     transfer_limits = zone_config['transfer_limits_mw']
@@ -400,9 +411,12 @@ def compute_zonal_lmp_hourly(iso, zone_config, zone_stacks, demand_mw_profile,
                 zonal_lmp_matrix[:, h] = 500.0  # Scarcity cap
 
     # Apply post-LP pricing adjustments if price_model provided
+    # Use full_demand_mw_profile (not residual) for demand-percentile
+    # calibration — congestion adders and low-demand depression are
+    # calibrated against total system load, not fossil residual.
     if price_model is not None:
         zonal_lmp_matrix = _apply_pricing_layers(
-            zonal_lmp_matrix, demand_mw_profile, zone_demand_shares,
+            zonal_lmp_matrix, full_demand_mw_profile, zone_demand_shares,
             price_model, vre_penetration,
             zone_capacity=zone_capacity,
             zonal_gen_matrix=zonal_gen_matrix)
