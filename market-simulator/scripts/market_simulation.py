@@ -61,6 +61,7 @@ from pipeline_config import (
     NUCLEAR_NEWBUILD_LCOE, CCS_LCOE_45Q_ON, CCS_LCOE_45Q_OFF, GEOTHERMAL_LCOE,
     FOAK_NUCLEAR_NEWBUILD, FOAK_CCS_45Q_ON, FOAK_CCS_45Q_OFF, FOAK_GEOTHERMAL,
     FOAK_LDES, FOAK_H2, FOAK_OFFSHORE_WIND,
+    NOAK_BATTERY, NOAK_BATTERY8,
     EXISTING_GAS_FOM_KW_YR,
     NEW_GAS_CCGT_LCOE, NEW_GAS_CT_LCOE, NEW_COAL_LCOE,
     NEW_BUILD_CAPEX_KW_YR, NEW_BUILD_HEAT_RATES, NEW_BUILD_VOM,
@@ -1800,6 +1801,25 @@ def get_resource_lcoe(res, iso, lcoe_level, cumulative_gw, learning_speed, year,
                 capital_fraction = 0.85  # ~85% of storage LCOE is capital
                 itc_delta = (user_itc - BASELINE_ITC_PCT) / 100.0
                 base *= (1 - capital_fraction * itc_delta / (1 - BASELINE_ITC_PCT / 100))
+
+        # R2: Apply Wright's Law learning for storage techs with nonzero learning rates
+        if learning_enabled and res in ('battery', 'battery8', 'ldes', 'h2'):
+            tech = RESOURCE_TO_TECH.get(res, res)
+            lr = WRIGHT_LEARNING_RATE.get(tech, {}).get(learning_speed, 0.0)
+            if lr > 0:
+                noak_tables = {
+                    'battery': NOAK_BATTERY, 'battery8': NOAK_BATTERY8,
+                }.get(tech)
+                if noak_tables:
+                    noak = noak_tables.get(lcoe_level, {}).get(iso, base * 0.5)
+                else:
+                    noak = base * 0.5  # fallback for ldes/h2
+                foak = base  # Current LCOE_TABLES value is the starting (FOAK) cost
+                ref_gw = WRIGHT_CUMULATIVE_GW_2025.get(tech, 1.0)
+                eff_gw = get_effective_cumulative_gw(tech, cumulative_gw.get(tech, 0),
+                                                      learning_speed, year)
+                base = wright_cost(foak, noak, eff_gw, ref_gw, lr)
+
         return max(0, base)
 
 
@@ -2515,7 +2535,7 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
         if conditions.get('capacity_market_price') is not None:
             base_cap_price = conditions['capacity_market_price']
         else:
-            base_cap_price = compute_capacity_price(iso, _rm, clean_pct)
+            base_cap_price = compute_capacity_price(iso, _rm, current_clean_pct)
         if base_cap_price > 0:
             # Capacity credit varies by resource
             cap_credit = PEAK_CAPACITY_CREDITS.get(res, 0)
