@@ -39,8 +39,16 @@ market-simulator/
 │   └── CONSTELLATION_STYLE_GUIDE.md  # UI style reference
 ├── custom-user-inputs/         # User-provided override CSVs
 ├── data/                       # Model input data (EIA, eGRID, etc.)
+├── docs/                       # Documentation & architecture
+│   ├── Cross_Validation_Results.md   # G6: Cross-model validation report
+│   ├── Sensitivity_Analysis_Results.md # G7: Morris method sensitivity results
+│   ├── architecture-high-level.html  # High-level architecture diagram
+│   └── architecture-detailed.html    # Detailed system architecture
 ├── results/                    # Simulation output directories
 └── scripts/                    # Utility scripts
+    ├── sensitivity_analysis.py       # G7: Morris method sensitivity analysis
+    └── tests/
+        └── validate_cross_model.py   # G6: Cross-validation against AEO/ReEDS/IPM
 ```
 
 ---
@@ -528,6 +536,263 @@ data/epa-campd/{STATE}/{STATE}_{YYYY-MM}.json
 | SPP | AR, KS, OK, NE, NM (partial) | SWPP, KCPL, OKGE, SPS |
 
 The model automatically maps plants to ISOs via their `balancing_authority_code` field using an internal BA-to-ISO mapping dictionary. You do not need to organize files by ISO — just drop state-level files and the model handles the mapping.
+
+---
+
+## New API Endpoints
+
+### POST /api/correlated-scenarios (G4)
+
+Runs simulation using IEA-aligned correlated scenario bundles instead of the independent 1,215-scenario sweep. Correlated scenarios pair input dimensions that co-move in reality (e.g., high demand + high gas prices + fast renewable cost decline).
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| iso | string | Yes | ISO region (CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP) |
+| scenarios | list[string] | No | Scenario names to run. Default: all 5 |
+| years | list[int] | No | Trajectory years. Default: [2025, 2030, 2035, 2040, 2045, 2050] |
+
+**Available scenario bundles:**
+
+| Scenario | Description | Key Assumptions |
+|----------|-------------|-----------------|
+| `IEA_STEPS` | Stated Policies — current policies continue | Medium demand, Medium gas, Medium LCOE, $0 carbon |
+| `IEA_APS` | Announced Pledges — all national commitments implemented | Medium demand, Medium gas, Low LCOE, $51 carbon (EPA SCC) |
+| `IEA_NZE` | Net Zero by 2050 — 1.5°C-aligned pathway | High demand (electrification), High gas, Low LCOE, $185 carbon |
+| `HIGH_FRICTION` | Stress test — regulatory/permitting delays | High demand, Low gas, High LCOE, $0 carbon, no 45Q |
+| `RAPID_TRANSITION` | Bull case — technology breakthroughs + strong policy | High demand, High gas, Low LCOE, $185 carbon |
+
+**Example request:**
+```json
+{
+  "iso": "PJM",
+  "scenarios": ["IEA_STEPS", "IEA_NZE"],
+  "years": [2025, 2030, 2040]
+}
+```
+
+**Example response (abbreviated):**
+```json
+{
+  "scenario_results": {
+    "IEA_STEPS": { "years": { "2030": { "clean_pct": 42.1, "avg_lmp": 38.5, ... } } },
+    "IEA_NZE": { "years": { "2030": { "clean_pct": 61.3, "avg_lmp": 52.7, ... } } }
+  },
+  "provenance": { "model_version": "2.1.0", "git_sha": "a3f7c2d", ... }
+}
+```
+
+**When to use correlated scenarios vs. independent sweep:**
+- Use **correlated scenarios** when presenting results to stakeholders who need internally consistent "what if" narratives (e.g., "What happens under Net Zero policies?")
+- Use the **independent 1,215-scenario sweep** for comprehensive sensitivity analysis where you need to isolate the effect of individual parameters
+
+### POST /api/validate-request
+
+Validates simulation parameters without running the simulation. Returns validation errors for invalid ISOs, out-of-range prices, or incompatible parameter combinations. Useful for pre-flight checks before long sweep runs.
+
+---
+
+## Result Provenance (G3)
+
+Every simulation response now includes a `provenance` metadata block that enables full audit trails and result reproducibility.
+
+**Provenance fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `model_version` | string | Semantic version (e.g., "2.1.0") |
+| `git_sha` | string | Short SHA of the code commit that produced the results |
+| `git_branch` | string | Git branch name at time of execution |
+| `config_hash` | string | SHA-256 hash of `pipeline_config.py` contents — detects config drift |
+| `run_timestamp` | string | ISO 8601 UTC timestamp of the simulation run |
+| `python_version` | string | Python interpreter version |
+| `input_snapshot` | dict | Complete copy of the request parameters as submitted |
+
+**Example:**
+```json
+{
+  "provenance": {
+    "model_version": "2.1.0",
+    "git_sha": "a3f7c2d",
+    "git_branch": "main",
+    "config_hash": "e4b2a1c9f8d7...64 hex chars",
+    "run_timestamp": "2026-03-20T14:32:01Z",
+    "python_version": "3.11.8",
+    "input_snapshot": { "iso": "PJM", "gas_price": 3.5, ... }
+  }
+}
+```
+
+**Usage for audit trails:** If a decision was made based on model outputs from a specific date, the `git_sha` and `config_hash` allow you to reconstruct the exact code and configuration that produced those results. The `input_snapshot` ensures you know the exact parameters used.
+
+---
+
+## Plant-Level Retirement (G1)
+
+The model now uses **plant-level economics** to drive retirement decisions, replacing the previous fleet-fraction approach. Each generator in the EIA 860 fleet is evaluated individually.
+
+### How It Works
+
+1. **Individual plant economics**: Each plant's margin is computed from its specific heat rate, fuel cost, capacity factor, and revenue (energy + capacity + incentives). Plants with margin < -$5/MWh are retirement candidates.
+
+2. **Merit-order retirement**: Plants are sorted by margin (worst first). The least profitable plants retire first, preserving more efficient units even when the overall fleet economics are stressed.
+
+3. **Reliability floor**: A 15% reserve margin is maintained per zone. Even if a plant is uneconomic, it will not retire if doing so would breach the reserve margin requirement.
+
+4. **Nuclear per-plant retirement**: Nuclear plants are evaluated individually based on their contract economics (offtake contract revenue vs. operating cost), not retired as a fleet at a single trigger year. Plants with below-market offtake contracts face higher stranding risk.
+
+5. **Inter-year persistence**: Retired plant IDs are tracked in `state['retired_plants']` and persist across simulation years. Once retired, a plant does not return.
+
+### Plant Retirements in Results
+
+Year-level results include a `plant_retirements` field:
+
+```json
+{
+  "plant_retirements": [
+    {
+      "plant_id": 3456,
+      "capacity_mw": 450,
+      "unit_type": "coal_steam",
+      "margin": -12.3,
+      "iso": "PJM",
+      "zone": "WEST"
+    }
+  ]
+}
+```
+
+---
+
+## LMP Confidence & Extrapolation Warnings (G5)
+
+Simulation results now include an **LMP confidence factor** that degrades as VRE penetration increases beyond the model's calibration range.
+
+### Confidence Brackets
+
+| VRE Penetration | Confidence Factor | Interpretation |
+|-----------------|-------------------|----------------|
+| ≤ 50% | 1.0 | Fully calibrated — LMP pricing grounded in observed 2019–2024 data |
+| 50–60% | 1.0 | Within calibration range |
+| 60–75% | 0.8 | Moderate extrapolation — pricing relationships may deviate from calibration |
+| 75–90% | 0.6 | Significant extrapolation — treat LMP levels as directional, not precise |
+| > 90% | 0.4 | Beyond model validity — LMP structure may not reflect actual market dynamics |
+
+### IPM Trigger: LMP Extrapolation
+
+When VRE penetration exceeds 60%, an IPM trigger of type `lmp_extrapolation` is added to results:
+
+- **Warning severity** (60–75% VRE): "Validate LMP results with production cost model"
+- **Critical severity** (>75% VRE): "LMP pricing is beyond calibration range — production modeling strongly recommended"
+
+### Interpreting Results at High VRE
+
+At high VRE penetration, the demand-quantile pricing layer extrapolates beyond observed US ISO data. Key effects that may not be fully captured:
+- Negative pricing frequency and depth
+- Duck curve minimum generation constraints
+- Curtailment-driven price depression
+- Storage saturation effects on price spreads
+
+Use the `lmp_confidence_factor` field to weight results appropriately. When confidence is below 0.8, validate key findings with a production dispatch model (PLEXOS, GenX, or IPM).
+
+---
+
+## Correlated Scenarios (G4)
+
+The model supports two complementary scenario approaches:
+
+### Independent Sweep (1,215 Scenarios)
+
+The default parametric sweep varies 6 dimensions independently across their full ranges. This produces comprehensive sensitivity coverage but includes implausible combinations (e.g., high demand + low gas prices + slow renewable cost decline).
+
+### IEA-Aligned Correlated Bundles (5 Scenarios)
+
+Five curated scenario bundles pair input dimensions that co-move in reality, aligned to IEA World Energy Outlook scenarios:
+
+| Bundle | Narrative | Gas | Renewables | Carbon | Demand |
+|--------|-----------|-----|------------|--------|--------|
+| **IEA STEPS** | Business as usual | Medium | Medium | None | Medium |
+| **IEA APS** | Policy commitments met | Medium | Accelerated | $51/ton | Medium |
+| **IEA NZE** | Net Zero 2050 | High | Accelerated | $185/ton | High |
+| **HIGH_FRICTION** | Transition stalls | Low | Slow | None | High |
+| **RAPID_TRANSITION** | Technology + policy | High | Accelerated | $185/ton | High |
+
+### When to Use Each
+
+- **Independent sweep**: Sensitivity analysis, tornado diagrams, identifying which parameters matter most
+- **Correlated bundles**: Stakeholder presentations, strategy planning, "what if" narratives with internally consistent assumptions
+- **Both together**: Cross-check that correlated bundle results fall within the P10–P90 range of the independent sweep
+
+---
+
+## Sensitivity Analysis (G7)
+
+The model includes a **Morris method** sensitivity screening framework that identifies which input parameters drive the most output variance.
+
+### What Morris Method Tells You
+
+Morris method is a one-at-a-time (OAT) screening technique that efficiently identifies:
+- **Which inputs matter most** for a given output (clean %, LMP, emissions, etc.)
+- **Which inputs have negligible effect** — safe to fix at default values
+- **Which inputs have non-linear or interaction effects** — require deeper analysis
+
+### Interpreting Results
+
+**Tornado diagrams** show the absolute range of output variation when each input is varied from its low to high value while other inputs are held at their median. Longer bars = more influential parameters.
+
+**Variance decomposition** partitions total output variance into contributions from each input parameter. A parameter contributing 40% of LMP variance is 4× more influential than one contributing 10%.
+
+The `tornado_data` field in sweep uncertainty results provides:
+```json
+{
+  "tornado_data": {
+    "clean_pct": {
+      "gas_price": {"low": 35.2, "high": 58.1, "range": 22.9},
+      "carbon_price": {"low": 28.4, "high": 67.3, "range": 38.9},
+      ...
+    }
+  }
+}
+```
+
+### Running Sensitivity Analysis
+
+```bash
+python scripts/sensitivity_analysis.py --iso PJM --output results/sensitivity/
+```
+
+Results are saved to `docs/Sensitivity_Analysis_Results.md` with tornado plots and variance decomposition tables.
+
+---
+
+## Cross-Validation (G6)
+
+The model includes a cross-validation framework that compares simulation trajectories against three established reference models.
+
+### Reference Models
+
+| Model | Source | What It Provides |
+|-------|--------|-----------------|
+| **EIA AEO 2025** | Annual Energy Outlook Reference Case | Renewable share trajectory 2025–2050 |
+| **NREL ReEDS** | Standard Scenarios 2024 Mid-case | Clean share + capacity additions |
+| **EPA IPM v6** | Reference Case | Coal retirement schedule + gas build trajectory |
+
+### Expected Divergences
+
+This model is **profit-driven** (agent-based), while AEO/ReEDS/IPM are **cost-minimizing** (optimization). Expected differences:
+
+- **Higher fossil persistence**: Profit-driven models keep efficient gas plants running longer than cost-minimizing models that enforce clean targets
+- **Different retirement sequencing**: This model retires by plant economics; optimization models retire by system cost minimization
+- **Lower clean share at moderate carbon prices**: Without a binding clean energy target, market economics alone produce less clean energy than policy-mandated optimization
+
+### Running Cross-Validation
+
+```bash
+python scripts/tests/validate_cross_model.py --isos PJM ERCOT CAISO
+```
+
+Results are saved to `docs/Cross_Validation_Results.md` with structured comparison tables. Divergences are classified as "expected" (mechanism difference) or "unexplained" (potential calibration issue).
 
 ---
 
