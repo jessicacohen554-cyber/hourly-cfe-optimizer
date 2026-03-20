@@ -16,7 +16,7 @@
 2. [Theoretical Framework](#2-theoretical-framework)
 3. [Data Foundation](#3-data-foundation)
 4. [Model Architecture](#4-model-architecture)
-   - 4.1–4.3 Core Engine, Dispatch, LMP (aggregate + plant-level stacks)
+   - 4.1–4.3 Core Engine, Dispatch, LMP (aggregate + plant-level stacks, extrapolation guard)
    - 4.4 Hourly Dispatch Reconstruction (LP storage co-dispatch)
    - 4.4.1 Zonal LMP Decomposition (pipe-and-bubble, 2–5 zones/ISO, ORDC-integrated)
    - 4.4.2 Inter-Regional Exchange (EIA-930 import/export profiles)
@@ -137,18 +137,39 @@ Each generator type's profitability is evaluated as a revenue-cost spread:
 
 #### 2.3.0 Plant-Level Retirement (G1)
 
-When plant-level data is available (EIA 860), retirement operates on **individual plant economics** rather than fleet fractions. Each generator is evaluated independently:
+When plant-level data is available (EIA 860), retirement operates on **individual plant economics** rather than fleet fractions. Each generator is evaluated independently via `_apply_plant_level_retirement()` in `market_simulation.py`.
 
-1. **Per-plant margin**: $\text{margin}_p = \text{revenue}_p - \text{cost}_p$ computed from plant-specific heat rate, fuel cost, capacity factor, and multi-stream revenue (energy + capacity + incentives).
+**Per-plant margin calculation:**
 
-2. **Merit-order retirement**: Plants sorted by margin (worst first). Plants with $\text{margin}_p < -\$5/\text{MWh}$ are retirement candidates.
+$$\text{margin}_p = \text{energy\_revenue}_p + \text{capacity\_revenue}_p + \text{ancillary\_revenue}_p - \text{variable\_cost}_p - \text{fixed\_cost}_p$$
 
-3. **Reliability floor**: Per-zone reserve margin of 15% is enforced. A plant will not retire if:
-$$\text{reserve\_margin}_z = \frac{\text{capacity}_z - \text{peak\_demand}_z}{\text{peak\_demand}_z} < 0.15$$
+Where variable cost per MWh is:
 
-4. **Nuclear per-plant evaluation**: Each nuclear plant is assessed individually using `NUCLEAR_OFFTAKE_CONTRACTS` from `pipeline_config.py`. Plants with below-market offtake contracts face higher stranding risk. Nuclear is NOT retired as a fleet at a single trigger year.
+$$\text{variable\_cost}_p = \text{VOM}_p + (\text{heat\_rate}_p \times \text{fuel\_price}) + (\text{CO}_2\text{\_rate}_p \times \text{carbon\_price}) + \frac{\text{annual\_start\_costs}_p}{\text{annual\_MWh}_p}$$
 
-5. **Inter-year persistence**: $\text{retired\_plants}(t) = \text{retired\_plants}(t-1) \cup \text{new\_retirements}(t)$. Once retired, a plant does not return.
+Variable O&M by unit type: coal $5.50/MWh, gas CCGT $3.50/MWh, gas CT $5.00/MWh, oil CT $6.00/MWh.
+
+**Retirement threshold:** Plants with $\text{margin}_p < -\$5/\text{MWh}$ (configurable) are retirement candidates. This threshold represents economically stranded capacity where revenue cannot cover operating costs.
+
+**Retirement ordering:** Plants are sorted by margin (worst-first). The algorithm iterates from most-negative margin upward, retiring each candidate unless constrained by the reliability floor.
+
+**Reliability floor constraint:** A minimum 15% reserve margin per zone based on zonal peak demand prevents over-retirement:
+
+$$\text{peak\_demand\_MW} = \frac{\text{demand\_TWh} \times 10^6}{8760} \times 1.5$$
+
+$$\text{min\_total\_supply} = \text{peak\_demand\_MW} \times (1 + 0.15)$$
+
+$$\text{max\_retirable\_MW} = \text{total\_supply\_MW} - \text{min\_total\_supply}$$
+
+A plant is skipped if retiring it would push cumulative retirements beyond `max_retirable_MW`. Clean capacity (cumulative deployed GW × 1000) is included in total supply for this check.
+
+**Nuclear per-plant evaluation:** Each nuclear plant is assessed individually via `_retire_nuclear_plants()` using `NUCLEAR_OFFTAKE_CONTRACTS` from `pipeline_config.py`. Plants with below-market offtake contracts (PPA floor pricing) face higher stranding risk. Nuclear plants in capacity market ISOs (PJM, NYISO, NEISO, MISO) receive capacity revenue credit. Operating cost baseline: $30.00/MWh (`NUCLEAR_OPERATING_COST_MWH`). Nuclear is NOT retired as a fleet at a single trigger year — each unit faces its own margin evaluation.
+
+**State persistence:** Retired plant IDs are tracked across simulation years:
+
+$$\text{retired\_plants}(t) = \text{retired\_plants}(t-1) \cup \text{new\_retirements}(t)$$
+
+Once retired, a plant does not return. The set is stored in `state['retired_plants']` and persists across the full trajectory.
 
 The `plant_retirements` field in year results contains: `[{plant_id, capacity_mw, unit_type, margin, iso, zone}]`.
 
@@ -513,6 +534,24 @@ For each of 8,760 hours:
 4. If clean supply exceeds demand, LMP = 0 (or minimum bid)
 
 The computation is fully vectorized using NumPy — no Python loops over hours.
+
+#### LMP Extrapolation Guard (G5)
+
+The merit-order LMP model is calibrated against 2019–2024 ISO State of Market reports (PJM MMU, Potomac Economics, CAISO DMM), where VRE penetration rarely exceeds 50%. At higher VRE shares, price formation dynamics — negative pricing depth, curtailment interactions, storage arbitrage patterns — move beyond the calibration envelope. A confidence degradation function (`compute_lmp_confidence_factor()` in `lmp_engine.py`) quantifies this:
+
+| VRE Penetration | Confidence Factor | Interpretation |
+|---|---|---|
+| ≤ 60% | 1.0 | Fully within calibration range |
+| 60–75% | 0.8 | Moderate extrapolation — price levels reliable, volatility patterns less certain |
+| 75–90% | 0.6 | Significant extrapolation — directional trends reliable, magnitudes uncertain |
+| > 90% | 0.4 | Beyond model validity — results are indicative only |
+
+The confidence factor is computed alongside hourly LMP prices in `compute_hourly_lmp_vectorized()` and is propagated to the output metadata. When VRE penetration exceeds 60%, the `LMP_EXTRAPOLATION` IPM trigger fires (see §6.8), recommending validation with production cost models (IPM, PLEXOS) that have explicit curtailment and unit commitment modeling. At >75% VRE, the trigger escalates to `high` severity.
+
+**Calibration range boundaries:**
+- **Lower bound**: 2019 data (pre-pandemic demand patterns, moderate gas prices ~$2.50/MMBtu)
+- **Upper bound**: 2024 data (post-IRA clean deployment ramp, gas prices normalized ~$2.20/MMBtu)
+- **VRE share range in calibration data**: 5% (NEISO) to 42% (SPP/ERCOT)
 
 #### ISO-Specific Price Models
 
@@ -1024,7 +1063,15 @@ In addition to the independent sweep, 5 IEA-aligned correlated scenario bundles 
 | **HIGH_FRICTION** | Transition stalls | Low | High | $0 | High | Slow |
 | **RAPID_TRANSITION** | Technology + policy breakthroughs | High | Low | $185 | High | Fast |
 
-Correlated bundles address the limitation of independent sweeps where implausible combinations (e.g., high demand + low gas + slow learning) receive equal weight, diluting the probability mass in P10/P50/P90 summaries. Bundles are accessed via `POST /api/correlated-scenarios`.
+**Rationale — why correlated scenarios complement independent sweep:**
+
+The 270-scenario independent sweep (§4.7 Sweep Mode) varies each input dimension independently, producing a full factorial grid. This is thorough but treats all combinations as equally plausible — including physically unlikely pairings (e.g., high demand growth + low gas prices + slow learning, which implies rapid electrification without the economic drivers that cause it). These implausible corners dilute the probability mass in P10/P50/P90 summaries, widening confidence bands beyond what decision-makers find actionable.
+
+Correlated bundles restore internal consistency by mapping each bundle to a coherent economic narrative. They represent the subset of the sweep space where input dimensions co-move as they do in real energy transitions: high carbon prices co-occur with aggressive learning rates (policy drives investment), while low carbon prices co-occur with slow technology improvement (market status quo).
+
+**Relationship to R5 confidence intervals:**
+
+The R5 weighted percentile framework (§6.6) computes P10/P25/P50/P75/P90 across all sweep scenarios. Correlated bundles provide named anchors within this distribution — e.g., IEA_NZE typically maps near P90 for clean share, while HIGH_FRICTION maps near P10. This allows users to interpret confidence intervals through the lens of specific narratives rather than abstract percentiles. Bundles are accessed via `POST /api/correlated-scenarios`.
 
 ### 4.8 Configuration & Constants (`pipeline_config.py`)
 
@@ -1374,19 +1421,28 @@ Results are saved to `data/results/run_NNN/` (auto-incrementing run ID).
 
 ### 6.7.1 Result Provenance Metadata (G3)
 
-Every simulation response includes a `provenance` block for audit trails and reproducibility:
+Every simulation response includes a `provenance` block for audit trails and reproducibility. The schema is defined as a Pydantic model (`ProvenanceMetadata` in `backend/models.py`) embedded as an optional field in `SimulationResult`.
 
-| Field | Type | Description |
-|---|---|---|
-| `model_version` | string | Semantic version (e.g., "2.1.0") |
-| `git_sha` | string | Short SHA of the code commit |
-| `git_branch` | string | Git branch name |
-| `config_hash` | string | SHA-256 hash of `pipeline_config.py` |
-| `run_timestamp` | string | ISO 8601 UTC timestamp |
-| `python_version` | string | Python interpreter version |
-| `input_snapshot` | dict | Complete request parameters |
+**ProvenanceMetadata schema:**
 
-The `config_hash` field detects configuration drift — if `pipeline_config.py` is modified between runs, the hash changes, flagging that results may not be directly comparable.
+| Field | Type | Description | Example |
+|---|---|---|---|
+| `model_version` | string | Semantic version tag | `"3.0.0"` |
+| `git_sha` | string | Short SHA of the code commit | `"a1b2c3d"` |
+| `git_branch` | string | Git branch name | `"main"` |
+| `config_hash` | string | SHA-256 hash of `pipeline_config.py` | `"e3b0c44..."` |
+| `run_timestamp` | string | ISO 8601 UTC timestamp | `"2026-03-20T14:30:00Z"` |
+| `python_version` | string | Python interpreter version (`sys.version`) | `"3.11.5"` |
+| `input_snapshot` | dict | Complete request parameters as submitted | `{iso: "PJM", year: 2030, ...}` |
+
+**Audit trail capabilities:**
+
+- **Configuration drift detection**: The `config_hash` field is a SHA-256 hash of the full `pipeline_config.py` contents. If cost tables, thresholds, or any constants are modified between runs, the hash changes, flagging that results may not be directly comparable. This enables automated regression detection in CI/CD.
+- **Code reproducibility**: The combination of `git_sha` + `git_branch` + `config_hash` uniquely identifies the exact codebase state that produced a result. Any result can be reproduced by checking out the commit and verifying the config hash matches.
+- **Input completeness**: `input_snapshot` captures the full request parameters (including defaults), so reviewers can determine exactly what scenario was run without needing to inspect server logs.
+- **Environment tracking**: `python_version` ensures numerical reproducibility concerns (e.g., floating-point behavior differences across Python versions) can be investigated.
+
+Provenance metadata is automatically populated by the API layer on every simulation response — no user action required. It is included in all export formats (JSON, CSV headers, Parquet metadata).
 
 ### 6.8 IPM Trigger Indicators
 
@@ -1480,30 +1536,96 @@ The 270-scenario sweep systematically varies all major input dimensions. P10/P50
 
 #### 7.4.1 Morris Method Sensitivity Screening (G7)
 
-A formal sensitivity decomposition framework (`scripts/sensitivity_analysis.py`) identifies which input parameters drive the most output variance using Morris method one-at-a-time (OAT) screening:
+A formal sensitivity decomposition framework (`scripts/sensitivity_analysis.py`) identifies which input parameters drive the most output variance across 6 independent input dimensions and 4 output metrics.
 
+**Input dimensions (6):**
+1. `demand_growth` — Low / Medium / High
+2. `price_sensitivity` — all_low / all_med / all_high / high_vre_low_firm / high_firm_low_vre
+3. `ppa_level` — L / M / H
+4. `gas_friction` — L / M / H
+5. `queue_capacity` — L / M / H
+6. `new_fossil_cost` — L / M / H
+
+**Output metrics (4):** clean energy percentage, system cost ($/MWh), CO₂ emissions (Mt), average LMP ($/MWh).
+
+**Morris elementary effects computation** (`compute_elementary_effects()`):
+
+For each input dimension $d$:
+1. Identify pairs of scenarios that differ ONLY in dimension $d$ (all other dimensions held constant)
+2. Compute the elementary effect: $EE_d^{(i)} = \frac{Y(X^{(i)} + \Delta_d) - Y(X^{(i)})}{\Delta_d}$
+3. Aggregate across all valid pairs to compute Morris statistics:
+   - $\mu^* = \text{mean}(|EE_d|)$ — absolute mean effect (importance measure)
+   - $\sigma = \text{std}(EE_d)$ — standard deviation (non-linearity/interaction indicator)
+   - $\mu = \text{mean}(EE_d)$ — net directional effect
+
+Parameters with high $\sigma^*$ relative to $\mu^*$ indicate non-linear response or interaction effects requiring deeper investigation (e.g., Sobol analysis).
+
+**First-order variance decomposition** (`compute_variance_decomposition()`):
+
+An ANOVA-style decomposition partitions total output variance into per-parameter contributions (first-order Sobol index approximation):
+
+$$V_d = \frac{\text{Var}(\mathbb{E}[Y | X_d])}{\text{Var}(Y)}$$
+
+Steps: (1) Compute conditional mean $\mathbb{E}[Y | X_d = x]$ for each level of dimension $d$; (2) Compute variance of these conditional means across levels; (3) Normalize by total output variance. The resulting $V_d$ represents the fraction of total output variance attributable to dimension $d$ alone.
+
+**Per-ISO aggregation** (`run_sensitivity_analysis()`):
+
+Analysis is run independently for each ISO to capture regional differences in sensitivity structure:
+1. Filter sweep results to the target ISO and year (default: 2050)
+2. Compute Morris elementary effects for all 4 output metrics
+3. Compute variance decomposition for all metrics
+4. Generate tornado diagram data (range impact per dimension)
+5. Package results with metadata (scenario count, dimension labels)
+
+Output format per ISO: `{morris, morris_plot, variance_decomposition, tornado, range_impact, metadata}`. Results are stored in `results/sensitivity/` as JSON per ISO.
+
+**Visualization outputs:**
 - **Tornado diagrams**: Show the absolute output range when each input varies from low to high while others are held at median. Longer bars = more influential parameters.
-- **Variance decomposition**: Partitions total output variance into per-parameter contributions using the elementary effects from the Morris trajectories.
-- **Non-linearity detection**: Parameters with high $\sigma^*$ relative to $\mu^*$ (Morris statistics) indicate non-linear or interaction effects requiring deeper analysis.
+- **Morris scatter plots**: $\mu^*$ vs. $\sigma$ for each dimension, identifying which parameters have linear effects (high $\mu^*$, low $\sigma$) vs. interaction-dominated effects (high $\sigma$).
 
 Results are documented in `docs/Sensitivity_Analysis_Results.md`.
 
 ### 7.5 Cross-Validation Against Established Models (G6)
 
-A structured cross-validation framework (`scripts/tests/validate_cross_model.py`) compares model trajectories against three established reference models:
+A structured cross-validation framework (`scripts/tests/validate_cross_model.py`) compares model trajectories against three established reference models to identify calibration issues vs. expected mechanism-driven divergences.
 
-| Reference Model | Source | Comparison Metrics |
-|---|---|---|
-| EIA AEO 2025 | Annual Energy Outlook Reference Case | Renewable share trajectory 2025–2050 |
-| NREL ReEDS 2024 | Standard Scenarios Mid-case | Clean share + capacity additions (GW/yr) |
-| EPA IPM v6 | Reference Case | Coal retirement schedule + gas build trajectory |
+**Reference models and data sources:**
 
-**Expected divergences** (mechanism-driven, not bugs):
-- This model is profit-driven (agent-based); reference models are cost-minimizing (optimization). Higher fossil persistence at moderate carbon prices is expected.
-- Different retirement sequencing: this model retires by individual plant economics; optimization models retire by system cost minimization.
-- Lower clean share at moderate carbon prices: without binding clean energy targets, market economics produce less clean energy than policy-mandated optimization.
+| Reference Model | Source | Comparison Metric | National Trajectory (2025→2050) |
+|---|---|---|---|
+| EIA AEO 2025 | Annual Energy Outlook Reference Case, Table 8 | Clean energy share (%) | 42% → 58% |
+| NREL ReEDS 2024 | Standard Scenarios Mid-case | Clean energy share (%) + capacity additions (GW/yr) | 43% → 78% |
+| EPA IPM v6 | Reference Case | Coal share (%) retirement schedule | 16% → 2% |
 
-**Unexplained divergences** are flagged for investigation as potential calibration issues.
+**Scenario-to-reference pairings:**
+
+The framework maps specific simulation scenarios to reference model assumptions:
+- `CV_Reference_Zero_Carbon` ↔ AEO Reference (no carbon price, current policies)
+- `CV_Reference_Zero_Carbon` ↔ ReEDS Mid (technology cost trajectory comparison)
+- `CV_Reference_EPA_Carbon` ↔ EPA IPM Reference (carbon price included)
+- `CV_Reference_High_Clean` ↔ ReEDS Mid (aggressive clean deployment comparison)
+
+**Comparison metrics:**
+
+For each scenario-reference pair, the framework computes at milestone years (2030, 2035, 2040):
+- **Absolute divergence**: model value − reference value (percentage points)
+- **Relative divergence**: |absolute divergence| / reference value × 100%
+- **Mean absolute divergence**: average |divergence| across milestone years
+- **Maximum absolute divergence**: worst-case single-year divergence
+
+**Divergence classification:**
+- **National threshold**: |absolute divergence| > 20 pp → flagged for investigation
+- **ISO-vs-national threshold**: |absolute divergence| > 30 pp (structural offset expected between ISO-level and national averages)
+- **Status flags**: `expected` (mechanism-driven divergence with documented explanation) or `investigate` (unexplained, potential calibration issue)
+
+**Expected divergences due to mechanism difference (profit-driven vs. cost-minimizing):**
+
+1. **Higher fossil persistence at moderate carbon prices**: Without binding clean energy targets, the profit-driven model retains fossil capacity that remains marginally profitable — cost-minimizing models would retire it if system cost is lower with replacement clean resources.
+2. **Different retirement sequencing**: This model retires by individual plant economics (worst-margin-first); optimization models retire by system cost minimization (may retain expensive plants for reliability while retiring cheaper ones).
+3. **Lower clean share at moderate carbon prices**: Market economics alone produce less clean energy than policy-mandated optimization targets. The gap narrows at high carbon prices where economics and policy converge.
+4. **Mandate-bound ISO offset**: ISOs with state-level clean energy mandates (CAISO, NYISO, NEISO) may exceed the model's market-only projections — these mandates are not modeled as constraints.
+
+**Unexplained divergences** — those exceeding thresholds without a documented mechanism explanation — are flagged for investigation as potential calibration issues.
 
 Results are documented in `docs/Cross_Validation_Results.md`.
 
@@ -1764,5 +1886,6 @@ def wright_adjusted_cost(foak_cost, cumulative_gw, baseline_gw, learning_rate):
 | 2.0 | Mar 2026 | v2 synchronization: ORDC scarcity pricing (§4.4.6), VRE cannibalization feedback (§4.4.7), ORDC-in-zonal integration, DR vectorization + ORDC-link, tech-differentiated queue caps (§4.7), data tier warnings, feature interaction matrix (§6.9), comprehensive limitation updates (§8.2) |
 | 2.1 | Mar 2026 | ORDC fix: replaced logistic sigmoid with exponential knee + cap model. New params: {voll, knee_mw, lam, cap}. Double-counting guard on _scarcity_adder. Calibrated $2–8/MWh avg contribution. |
 | 3.0 | Mar 2026 | Peer review implementation: G1 plant-level retirement (§2.3.0), G3 result provenance (§6.7.1), G4 correlated scenarios (§4.7), G5 LMP extrapolation guard (§6.8 `LMP_EXTRAPOLATION` trigger), G6 cross-validation framework (§7.5), G7 Morris sensitivity analysis (§7.4.1). Updated ToC, output spec, validation sections. |
+| 3.1 | Mar 2026 | Comprehensive methodology documentation update for G1–G7 implementations: **G1** — expanded plant-level retirement with full margin formula (energy + capacity + ancillary revenue − variable − fixed cost), VOM rates by unit type, reliability floor math, nuclear per-plant evaluation details. **G3** — expanded ProvenanceMetadata schema documentation with audit trail capabilities (config drift detection, code reproducibility, input completeness). **G4** — added rationale for correlated scenarios complementing independent sweep (implausible corner dilution), relationship to R5 weighted percentile confidence intervals. **G5** — added LMP extrapolation guard section to §4.3 with confidence degradation table (1.0/0.8/0.6/0.4 by VRE tier), calibration range boundaries (2019–2024 ISO data, 5–42% VRE), IPM trigger integration. **G6** — expanded cross-validation with scenario-reference pairings, divergence classification thresholds (20 pp national, 30 pp ISO), 4 documented mechanism-driven divergences. **G7** — expanded Morris method with elementary effects formula, first-order variance decomposition (ANOVA/Sobol), 6 input dimensions, 4 output metrics, per-ISO aggregation methodology. |
 
-*Constellation Energy — Market Simulator v3.0 — Internal & Confidential*
+*Constellation Energy — Market Simulator v3.1 — Internal & Confidential*
