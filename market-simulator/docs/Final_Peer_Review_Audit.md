@@ -618,6 +618,248 @@ pipeline_config.py (scenario dimensions), backend/models.py (response models)
 
 ---
 
+### Prompt 8: Documentation & Architecture Updates (1–2 sessions, run AFTER Prompts 1–7)
+
+This prompt ensures all user-facing documentation, methodology specifications, frontend pages, and architecture diagrams reflect every change implemented in Prompts 1–7. Run this last — it captures the final state.
+
+```
+After implementing Prompts 1–7 (G3 provenance, G2 methodology equations, G1 plant-level
+retirement, G5 extrapolation guard, G6 cross-validation, G4 correlated scenarios,
+G7 sensitivity analysis), update ALL documentation artifacts to reflect the new
+capabilities. This is a documentation-only prompt — no model code changes.
+
+TARGET FILES (6 documents):
+  1. market-simulator/USER_MANUAL.md (573 lines)
+  2. market-simulator/docs/Model_Methodology_Specification.md (1,592 lines)
+  3. market-simulator/frontend/guide.html (544 lines)
+  4. market-simulator/frontend/methodology.html (526 lines)
+  5. market-simulator/docs/architecture-high-level.html (318 lines)
+  6. market-simulator/docs/architecture-detailed.html (584 lines)
+
+─────────────────────────────────────────────────
+PART A — USER_MANUAL.md
+─────────────────────────────────────────────────
+
+Update the user manual to document all new features and API endpoints:
+
+1. **New API Endpoints section** — Add documentation for:
+   - POST /api/correlated-scenarios (from G4): parameters, example request/response,
+     available scenario names (IEA_STEPS, IEA_APS, IEA_NZE, HIGH_FRICTION, RAPID_TRANSITION)
+   - POST /api/validate-request: already exists but verify it's documented
+
+2. **Result Provenance section** (from G3): Explain the new provenance metadata
+   fields in simulation responses (model_version, git_sha, config_hash,
+   run_timestamp, input_snapshot). Explain how users can use this for audit trails
+   and result reproducibility.
+
+3. **Plant-Level Retirement section** (from G1): Document the new plant_retirements
+   field in year results. Explain:
+   - How individual plant economics drive retirement (vs. old fleet-fraction approach)
+   - The reliability floor (15% reserve margin per zone)
+   - Nuclear retirement is now per-plant based on contract economics
+   - How retired_plants persist across simulation years
+
+4. **LMP Confidence & Extrapolation Warnings section** (from G5): Document:
+   - The lmp_confidence_factor field in year results
+   - Confidence degradation brackets (≤50%=1.0, 50-60%=1.0, 60-75%=0.8,
+     75-90%=0.6, >90%=0.4)
+   - IPM trigger: "lmp_extrapolation" type with severity levels
+   - How users should interpret results at high VRE penetration
+
+5. **Correlated Scenarios section** (from G4): Document:
+   - The 5 IEA-aligned scenario bundles and what each represents
+   - How correlated scenarios differ from the independent 1,215 sweep
+   - When to use correlated scenarios vs. independent sweep
+
+6. **Sensitivity Analysis section** (from G7): Document:
+   - What Morris method screening tells users (which inputs matter most)
+   - How to interpret tornado diagrams and variance decomposition
+   - The tornado_data field in sweep uncertainty results
+
+7. **Cross-Validation section** (from G6): Document:
+   - What the cross-validation script compares against (AEO, ReEDS, EPA IPM)
+   - How to run validate_cross_model.py
+   - How to interpret divergences (expected vs. unexplained)
+
+8. **Directory Structure**: Update the directory tree to include:
+   - scripts/sensitivity_analysis.py
+   - scripts/tests/validate_cross_model.py
+   - docs/Cross_Validation_Results.md
+   - docs/Sensitivity_Analysis_Results.md
+
+─────────────────────────────────────────────────
+PART B — Model_Methodology_Specification.md
+─────────────────────────────────────────────────
+
+Note: Prompt 2 (G2) already adds LP formulation and VRE cannibalization equations.
+This prompt adds the broader methodology updates needed from the other prompts.
+
+1. **Plant-Level Retirement** (from G1): Add or update the retirement methodology
+   section to document:
+   - Per-plant margin calculation: margin = energy_revenue + capacity_revenue
+     + ancillary_revenue - variable_cost - fixed_cost
+   - Retirement threshold: margin < -$5/MWh (configurable)
+   - Retirement ordering: plants sorted by margin, worst-first
+   - Reliability floor constraint: minimum 15% reserve margin per zone based
+     on zonal peak demand
+   - Nuclear: per-plant evaluation using NUCLEAR_OFFTAKE_CONTRACTS, not
+     fleet-wide binary trigger
+   - State persistence: retired plant IDs tracked across simulation years in
+     state['retired_plants']
+
+2. **Result Provenance** (from G3): Add a section on output metadata and
+   reproducibility. Document the ProvenanceMetadata schema and how it enables
+   audit trails.
+
+3. **Extrapolation Guard** (from G5): Add to the LMP formation section:
+   - Confidence degradation formula at VRE > 60%
+   - IPM trigger integration for lmp_extrapolation warnings
+   - Calibration range boundaries (2019–2024 ISO State of Market data)
+
+4. **Correlated Scenarios** (from G4): Add a section describing:
+   - The 5 IEA-aligned scenario bundles with parameter mappings
+   - Rationale: why correlated scenarios complement independent sweep
+   - Relationship to R5 confidence intervals (weighted percentiles)
+
+5. **Sensitivity Decomposition** (from G7): Add a section describing:
+   - Morris method elementary effects computation
+   - First-order variance decomposition methodology
+   - How sensitivity results are aggregated per ISO
+
+6. **Cross-Validation Framework** (from G6): Add a section describing:
+   - Reference models and data sources (AEO 2025, ReEDS 2024, EPA IPM v6)
+   - Comparison metrics (clean share, capacity additions, coal retirement timing)
+   - Expected divergences due to mechanism difference (profit-driven vs.
+     cost-minimizing)
+
+7. **Version History**: Add entries for all G1–G7 implementations with dates.
+
+─────────────────────────────────────────────────
+PART C — guide.html (Frontend Guide Page)
+─────────────────────────────────────────────────
+
+Update the user-facing guide page to reflect new capabilities:
+
+1. **New Features callout**: Add a "What's New" or "Recent Enhancements" section
+   near the top highlighting:
+   - Plant-level retirement (more realistic fleet economics)
+   - Correlated scenario bundles (IEA-aligned analysis)
+   - Sensitivity analysis (identify which assumptions matter most)
+   - Result provenance (audit trail for every simulation)
+   - LMP confidence indicators (transparency at high VRE)
+
+2. **Updated workflow steps**: If the guide has a step-by-step workflow, add:
+   - Step for selecting correlated scenarios vs. independent sweep
+   - Note about checking lmp_confidence_factor in high-VRE results
+   - Note about provenance metadata in results JSON
+
+3. **Interpreting Results section**: Add guidance on:
+   - plant_retirements field in year results
+   - lmp_confidence_factor interpretation
+   - tornado_data for sensitivity analysis
+   - How to use provenance metadata for result traceability
+
+4. **Data & Methodology link**: Ensure the guide links to the updated
+   methodology.html page.
+
+─────────────────────────────────────────────────
+PART D — methodology.html (Frontend Methodology Page)
+─────────────────────────────────────────────────
+
+Update the technical methodology page to reflect all model changes:
+
+1. **Retirement Mechanism section**: Update from fleet-fraction description to
+   plant-level retirement. Include:
+   - Brief description of per-plant margin calculation
+   - Reliability floor constraint
+   - Nuclear per-plant evaluation
+   - Link to full equations in Model_Methodology_Specification.md
+
+2. **LMP Formation section**: Add:
+   - Confidence degradation at high VRE penetration
+   - Calibration range disclosure (2019–2024)
+   - IPM trigger integration
+
+3. **Scenario Construction section**: Add:
+   - Correlated scenario bundles table (5 scenarios with parameter mappings)
+   - How correlated scenarios complement the independent sweep
+   - Sensitivity analysis methodology (Morris method, variance decomposition)
+
+4. **Model Comparison table**: Update the comparison table (if present) to
+   reflect new capabilities:
+   - Plant-level retirement: ✓ (was ✗)
+   - Sensitivity decomposition: ✓ (was ✗)
+   - Correlated scenarios: ✓ (was ✗)
+   - Result provenance: ✓ (was ✗)
+
+5. **Known Limitations section**: Update to reflect which limitations have been
+   addressed (G1–G7) and which remain (G8–G11).
+
+6. **Cross-Validation section**: Add summary of cross-validation results from
+   docs/Cross_Validation_Results.md with link to full document.
+
+─────────────────────────────────────────────────
+PART E — Architecture Diagrams
+─────────────────────────────────────────────────
+
+Update both architecture HTML documents to reflect structural changes:
+
+1. **architecture-high-level.html** (318 lines):
+   - Add "Provenance Layer" box showing metadata injection into responses
+   - Update "Retirement Module" label from "Fleet-Fraction" to "Plant-Level"
+   - Add "Sensitivity Analysis" post-processing module in the pipeline flow
+   - Add "Correlated Scenarios" as an input path alongside "Parametric Sweep"
+   - Add "Cross-Validation" as an output/validation step
+   - Add "Confidence Guard" annotation on the LMP engine box
+
+2. **architecture-detailed.html** (584 lines):
+   - Update the Retirement section with plant-level flow:
+     compute_plant_level_economics() → sort by margin → retire worst-first
+     → check reliability floor → persist retired_plants
+   - Add ProvenanceMetadata to the data model section
+   - Add sensitivity_analysis.py to the scripts section
+   - Add validate_cross_model.py to the validation section
+   - Add /api/correlated-scenarios to the API endpoint listing
+   - Update data flow arrows to show:
+     - ProvenanceMetadata attached at simulation start
+     - lmp_confidence_factor computed in LMP engine
+     - plant_retirements returned in YearResult
+     - tornado_data returned in sweep response
+
+─────────────────────────────────────────────────
+VERIFICATION CHECKLIST
+─────────────────────────────────────────────────
+
+After all updates, verify:
+□ USER_MANUAL.md documents all 7 new features (G1–G7)
+□ USER_MANUAL.md directory tree includes new files
+□ Model_Methodology_Specification.md has methodology sections for all 7 features
+□ Model_Methodology_Specification.md version history updated
+□ guide.html mentions all new capabilities
+□ guide.html workflow steps reflect new options
+□ methodology.html retirement section updated to plant-level
+□ methodology.html scenario section includes correlated bundles
+□ methodology.html limitations section reflects current gap status
+□ architecture-high-level.html shows provenance, plant-level retirement,
+  sensitivity analysis, correlated scenarios, confidence guard
+□ architecture-detailed.html shows updated data models, API endpoints,
+  script inventory, and data flow
+□ All internal cross-references between documents are consistent
+□ No stale references to "fleet-fraction retirement" remain in any document
+□ No stale references to missing features (sensitivity, correlated scenarios) as
+  "not yet implemented"
+
+Key files:
+  USER_MANUAL.md
+  docs/Model_Methodology_Specification.md
+  frontend/guide.html
+  frontend/methodology.html
+  docs/architecture-high-level.html
+  docs/architecture-detailed.html
+```
+
+---
+
 ## 7. Conclusion
 
 ### 7.1 Current Fitness Assessment
@@ -649,8 +891,9 @@ For teams with limited capacity, the highest-impact improvements in order:
 5. **G6 (Cross-Validation)** — 1 session, credibility for external audiences
 6. **G4 (Correlated Scenarios)** — 1 session, better distributional analysis
 7. **G7 (Sensitivity Analysis)** — 1–2 sessions, decision-support enhancement
+8. **Documentation & Architecture Updates** — 1–2 sessions, run AFTER all code changes. Updates USER_MANUAL.md, Model_Methodology_Specification.md, guide.html, methodology.html, and both architecture diagrams to reflect everything implemented in Prompts 1–7.
 
-**Total estimated effort**: 7–8 sessions for all high and medium priority items. The 4 low-priority items (G8–G11) add 2.5–3.5 sessions but are optional for the model's stated screening purpose.
+**Total estimated effort**: 8.5–10 sessions for all high and medium priority items plus documentation. The 4 low-priority items (G8–G11) add 2.5–3.5 sessions but are optional for the model's stated screening purpose.
 
 ### 7.4 Final Assessment
 
