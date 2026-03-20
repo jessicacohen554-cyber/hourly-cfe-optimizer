@@ -251,6 +251,30 @@
                     <h4>Trajectory Backtesting</h4>
                     <p>Backward-looking validation framework runs the model from 2020 conditions with actual historical fuel prices and compares predicted vs observed outcomes (clean %, LMP, emissions) across all 7 ISOs.</p>
                 </div>
+                <div class="metric-card">
+                    <h4>Plant-Level Retirement</h4>
+                    <p>Individual plant economics drive retirement decisions. Each generator is evaluated by its specific heat rate, revenue, and margin. A 15% per-zone reserve margin reliability floor prevents over-retirement. Nuclear plants assessed individually by contract economics.</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Result Provenance</h4>
+                    <p>Every simulation result includes audit metadata: git commit SHA, config hash, timestamp, Python version, and a full input snapshot. Enables exact reproducibility and traceability for governance and compliance.</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Correlated Scenarios</h4>
+                    <p>5 IEA-aligned scenario bundles (STEPS, APS, NZE, High Friction, Rapid Transition) pair input dimensions that co-move in reality. Complements the independent 1,215-scenario sweep with internally consistent narratives.</p>
+                </div>
+                <div class="metric-card">
+                    <h4>LMP Extrapolation Guard</h4>
+                    <p>Confidence factor degrades as VRE penetration exceeds the model&rsquo;s calibration range (&gt;60%). IPM trigger warns when LMP pricing is beyond observed data, recommending production-model validation.</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Sensitivity Analysis</h4>
+                    <p>Morris method screening identifies which input parameters drive the most output variance. Tornado diagrams and variance decomposition help prioritize which assumptions to refine.</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Cross-Validation</h4>
+                    <p>Structured comparison against EIA AEO, NREL ReEDS, and EPA IPM reference trajectories. Divergences classified as &ldquo;expected&rdquo; (mechanism difference) or &ldquo;unexplained&rdquo; (potential calibration issue).</p>
+                </div>
             </div>
 
             <div class="callout">
