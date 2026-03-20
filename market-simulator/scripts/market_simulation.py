@@ -72,6 +72,7 @@ from pipeline_config import (
     CANNIBALIZATION_ENABLED,
     SCARCITY_MODE,
     VRE_PRIMARY_ZONE,
+    ENDOGENOUS_LEARNING,
 )
 from dispatch_utils import (
     load_common_data, get_demand_profile, get_supply_profiles,
@@ -1616,6 +1617,31 @@ def get_resource_lcoe(res, iso, lcoe_level, cumulative_gw, learning_speed, year,
         return max(0, base)
 
 
+def compute_lcoe_snapshot(iso, cumulative_gw, lcoe_level, learning_speed, year,
+                          conditions=None):
+    """Compute current LCOE for all deployable techs at given cumulative GW.
+
+    Returns a dict {tech: lcoe_$/MWh} reflecting the Wright's Law cost
+    reduction achieved so far.  Used to populate lcoe_trajectory in YearResult.
+    """
+    snapshot = {}
+    for res in DEPLOYABLE_RESOURCES:
+        if res == 'geothermal' and iso != 'CAISO':
+            continue
+        if res == 'offshore_wind' and iso not in ('CAISO', 'NYISO', 'NEISO', 'PJM'):
+            continue
+        lcoe = get_resource_lcoe(res, iso, lcoe_level, cumulative_gw,
+                                  learning_speed, year, conditions=conditions)
+        tech = RESOURCE_TO_TECH.get(res, res)
+        snapshot[tech] = round(lcoe, 2)
+    # Also include storage techs that have learning curves
+    for storage_res in ('battery', 'battery8', 'ldes'):
+        lcoe = get_resource_lcoe(storage_res, iso, lcoe_level, cumulative_gw,
+                                  learning_speed, year, conditions=conditions)
+        snapshot[storage_res] = round(lcoe, 2)
+    return snapshot
+
+
 def _get_ppa_discount(res, ppa_level, iso=None):
     """PPA risk premium discount, scaled by regional market depth."""
     category = 'VRE' if res in ('solar', 'wind', 'offshore_wind') else 'Firm'
@@ -2796,6 +2822,8 @@ def run_market_simulation(scenario_id, conditions, isos=None,
         _data_sources = _ds.get('simple', _ds) if isinstance(_ds, dict) and 'simple' in _ds else _ds
 
     cumulative_gw = dict(WRIGHT_CUMULATIVE_GW_2025)
+    # Endogenous learning: allow conditions to override the global toggle
+    _endogenous = conditions.get('endogenous_learning', ENDOGENOUS_LEARNING)
     results = {iso: [] for iso in isos}
 
     # Per-ISO state
@@ -2883,6 +2911,10 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 _log(f"  {iso}: 2023 baseline — {baseline_co2_mt:.1f} Mt, "
                      f"{baseline_clean:.1f}% clean, LMP=${baseline_lmp:.0f}")
             continue
+
+        # Static learning mode: freeze cumulative GW at 2025 baseline each year
+        if not _endogenous:
+            cumulative_gw = dict(WRIGHT_CUMULATIVE_GW_2025)
 
         for iso in isos:
             state = iso_state[iso]
@@ -3315,6 +3347,13 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 'ordc_scarcity_hours': round(scarcity_hours_frac * H),
                 'ordc_scarcity_hours_fraction': round(scarcity_hours_frac, 4),
             }
+
+            # ── LCOE trajectory (endogenous Wright's Law) ────────────
+            lcoe_level = conditions.get('lcoe_level', 'Medium')
+            learning_speed = conditions.get('learning_speed', 'Medium')
+            year_result['lcoe_trajectory'] = compute_lcoe_snapshot(
+                iso, cumulative_gw, lcoe_level, learning_speed, year,
+                conditions=conditions)
 
             # ── Zonal congestion data (from zonal LP solver) ────────────
             if zonal_congestion_data and '_congestion' in zonal_congestion_data:
