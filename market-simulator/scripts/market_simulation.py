@@ -83,6 +83,7 @@ from pipeline_config import (
     SCARCITY_MODE,
     VRE_PRIMARY_ZONE,
     ENDOGENOUS_LEARNING,
+    CORRELATED_SCENARIOS,
 )
 from dispatch_utils import (
     load_common_data, get_demand_profile, get_supply_profiles,
@@ -4354,6 +4355,123 @@ def run_full_sweep(isos=None, nuclear_retirement_threshold=None,
     all_results['_provenance'] = sweep_provenance.model_dump()
 
     return all_results
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CORRELATED SCENARIO RUNNER
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _correlated_scenario_to_conditions(name, spec):
+    """Map a CORRELATED_SCENARIOS entry to the conditions dict used by run_market_simulation.
+
+    The correlated scenario spec uses high-level parameter names (gas_price,
+    renewable_lcoe, learning_rate, 45q).  This function translates them into
+    the internal conditions keys (fuel_level, lcoe_level, learning_speed, etc.).
+    """
+    # Map gas_price L/M/H → fuel_level and gas_friction
+    gas_map = {'Low': ('Low', 0.3), 'Medium': ('Medium', 0.7), 'High': ('High', 1.0)}
+    fuel_level, gas_friction = gas_map[spec['gas_price']]
+
+    # Map learning_rate Slow/Medium/Fast → learning_speed
+    learning_map = {'Slow': 'Slow', 'Medium': 'Medium', 'Fast': 'Fast'}
+    learning_speed = learning_map[spec['learning_rate']]
+
+    return {
+        'name': f"Correlated: {name} — {spec['description']}",
+        'demand_growth': spec['demand_growth'],
+        'lcoe_level': spec['renewable_lcoe'],
+        'learning_speed': learning_speed,
+        'queue_cap_level': 'Medium',
+        'gas_friction': gas_friction,
+        'carbon_price': spec['carbon_price'],
+        'fuel_level': fuel_level,
+        'tx_level': 'Medium',
+        'ppa_level': 'Medium',
+        'new_fossil_cost_level': 'Medium',
+        '_correlated_scenario': name,
+    }
+
+
+def run_correlated_scenarios(iso, scenario_names=None,
+                              nuclear_retirement_threshold=None,
+                              snapshot_mode=False):
+    """Run IEA-aligned correlated scenario bundles for a single ISO.
+
+    Unlike the independent Cartesian sweep, these scenarios represent
+    internally-consistent macro futures where parameters are correlated
+    as they would be in reality.
+
+    Args:
+        iso: ISO region to simulate (e.g. 'PJM').
+        scenario_names: List of scenario keys from CORRELATED_SCENARIOS.
+            If None, runs all 5 scenarios.
+        nuclear_retirement_threshold: Optional nuclear retirement override.
+        snapshot_mode: If True, run snapshot (single-year) mode.
+
+    Returns:
+        dict keyed by scenario name → simulation results dict.
+    """
+    if scenario_names is None:
+        scenario_names = list(CORRELATED_SCENARIOS.keys())
+
+    # Validate requested scenario names
+    invalid = [s for s in scenario_names if s not in CORRELATED_SCENARIOS]
+    if invalid:
+        raise ValueError(
+            f"Unknown correlated scenario(s): {invalid}. "
+            f"Valid: {list(CORRELATED_SCENARIOS.keys())}"
+        )
+
+    t0 = time.time()
+    print(f"Loading common data for correlated scenarios ({iso})...")
+    demand_data, gen_profiles, emission_rates, fossil_mix = load_common_data()
+    egrid_baselines = load_egrid_baselines()
+
+    preloaded = {
+        'demand_data': demand_data,
+        'gen_profiles': gen_profiles,
+        'emission_rates': emission_rates,
+        'fossil_mix': fossil_mix,
+        'egrid_baselines': egrid_baselines,
+    }
+
+    lmp_cache = {}
+    results = {}
+
+    for i, name in enumerate(scenario_names):
+        spec = CORRELATED_SCENARIOS[name]
+        conditions = _correlated_scenario_to_conditions(name, spec)
+        scenario_id = f"CORR_{name}"
+
+        print(f"\n[{i+1}/{len(scenario_names)}] {scenario_id}: {spec['description']}")
+        sim_result = run_market_simulation(
+            scenario_id, conditions, isos=[iso],
+            nuclear_retirement_threshold=nuclear_retirement_threshold,
+            snapshot_mode=snapshot_mode,
+            _preloaded=preloaded,
+            _lmp_cache=lmp_cache,
+            _quiet=True,
+        )
+        results[name] = {
+            'scenario_id': scenario_id,
+            'description': spec['description'],
+            'parameters': dict(spec),
+            'results': sim_result,
+        }
+
+    elapsed = time.time() - t0
+    print(f"\nCorrelated scenarios complete: {len(scenario_names)} scenarios in {elapsed:.1f}s")
+
+    # Attach provenance
+    provenance = build_provenance_metadata({
+        'mode': 'correlated_scenarios',
+        'iso': iso,
+        'scenarios': scenario_names,
+        'snapshot_mode': snapshot_mode,
+    })
+    results['_provenance'] = provenance.model_dump()
+
+    return results
 
 
 def _compute_weighted_percentiles(values, weights, percentiles):

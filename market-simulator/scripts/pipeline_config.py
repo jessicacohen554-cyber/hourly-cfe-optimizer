@@ -1015,6 +1015,70 @@ def n_scenarios(iso):
     """Return number of cost scenarios for an ISO."""
     return N_SCENARIOS_CAISO if iso == 'CAISO' else N_SCENARIOS_BASE
 
+
+# ============================================================================
+# CORRELATED SCENARIO BUNDLES (IEA-aligned)
+# ============================================================================
+# These represent internally-consistent macro scenarios where parameters are
+# correlated as they would be in reality.  They run SEPARATELY from the
+# independent Cartesian sweep and are useful for narrative-driven analysis
+# (e.g., "what does the NZE pathway look like?").
+#
+# Sources:
+#   IEA World Energy Outlook 2024 — STEPS / APS / NZE pathway definitions
+#   EPA Social Cost of Carbon ($51/tCO2) — 2020 IWG central estimate
+#   Rennert et al. 2022 ($185/tCO2) — updated damage-function SCC
+#   EU ETS 2024 range ($60-100/tCO2)
+
+CORRELATED_SCENARIOS = {
+    "IEA_STEPS": {
+        "description": "Current policies continue, moderate ambition",
+        "demand_growth": "Medium",
+        "gas_price": "Medium",
+        "renewable_lcoe": "Medium",
+        "carbon_price": 0,
+        "learning_rate": "Medium",
+        "45q": True,
+    },
+    "IEA_APS": {
+        "description": "All announced national commitments implemented",
+        "demand_growth": "Medium",
+        "gas_price": "Medium",
+        "renewable_lcoe": "Low",
+        "carbon_price": 51,
+        "learning_rate": "Fast",
+        "45q": True,
+    },
+    "IEA_NZE": {
+        "description": "1.5C-aligned pathway",
+        "demand_growth": "High",
+        "gas_price": "High",
+        "renewable_lcoe": "Low",
+        "carbon_price": 185,
+        "learning_rate": "Fast",
+        "45q": True,
+    },
+    "HIGH_FRICTION": {
+        "description": "Regulatory/permitting delays + high costs",
+        "demand_growth": "High",
+        "gas_price": "Low",
+        "renewable_lcoe": "High",
+        "carbon_price": 0,
+        "learning_rate": "Slow",
+        "45q": False,
+    },
+    "RAPID_TRANSITION": {
+        "description": "Technology breakthroughs + strong policy",
+        "demand_growth": "High",
+        "gas_price": "High",
+        "renewable_lcoe": "Low",
+        "carbon_price": 100,
+        "learning_rate": "Fast",
+        "45q": True,
+    },
+}
+
+
 # ============================================================================
 # DATA PATHS
 # ============================================================================
