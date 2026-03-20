@@ -581,6 +581,51 @@ where $\mu_z$ is the shadow price (dual variable) on the zonal balance equality 
 
 - `_approximate_zonal_lmp()`: fast fallback from marginal unit costs per zone when LP fails or returns infeasible
 
+*Analytical solver path (2-zone systems):*
+
+For ISOs with exactly 2 zones (NEISO, CAISO, SPP), the model uses a closed-form vectorized solver (`_solve_2zone_vectorized()`, lines 92–229) that dispatches all 8,760 hours simultaneously without invoking the LP:
+
+1. **Copper-plate dispatch**: Merge both zone stacks into a single sorted merit order. Dispatch against total demand $D_{\text{tot}}(h) = D_A(h) + D_B(h)$ to obtain unconstrained system LMP $\lambda_{\text{sys}}(h)$ via `_vectorized_merit_dispatch_1zone()`.
+
+2. **Implied flow**: Compute the unconstrained flow as excess generation in zone A:
+
+$$F_{\text{impl}}(h) = G_A^{\text{cp}}(h) - D_A(h)$$
+
+   where $G_A^{\text{cp}}$ is zone A's copper-plate generation.
+
+3. **Regime classification** (three cases per hour):
+
+$$\text{Regime}(h) = \begin{cases} \text{Unconstrained} & \text{if } |F_{\text{impl}}(h)| \leq T \\ A \to B \text{ at limit} & \text{if } F_{\text{impl}}(h) > T \\ B \to A \text{ at limit} & \text{if } F_{\text{impl}}(h) < -T \end{cases}$$
+
+   where $T$ is the interface transfer limit.
+
+4. **LMP assignment**:
+   - *Unconstrained*: $\lambda_A(h) = \lambda_B(h) = \lambda_{\text{sys}}(h)$ — both zones see system price.
+   - *Constrained ($A \to B$ at limit)*: Redispatch each zone independently with effective demands $D_A^{\text{eff}} = D_A + T$, $D_B^{\text{eff}} = \max(D_B - T, 0)$. The importing zone's LMP is floored at the exporting zone's LMP: $\lambda_B \geq \lambda_A$ (congestion rent).
+   - *Constrained ($B \to A$ at limit)*: Symmetric case with $\lambda_A \geq \lambda_B$.
+   - *Infeasible* ($D_{\text{tot}} > \text{total capacity}$): Both zones set to scarcity cap $\lambda_z = \$500/\text{MWh}$.
+
+This analytical path avoids 8,760 individual LP solves and runs ~100× faster than the scipy path while producing identical results. The scipy LP path is used for ISOs with >2 zones (PJM 5-zone, ERCOT 4-zone, MISO/NYISO 3-zone) where closed-form solutions are not tractable.
+
+**Cross-Reference Table — LP Formulation (§4.4.1)**
+
+| Equation Variable | Code Variable | File | Lines | Description |
+|---|---|---|---|---|
+| $g_u$ | `x[0:n_units]` | `zonal_lmp.py` | 549–567 | Generation MW per unit |
+| $f^+_i$ | `x[n_units + 2*i]` | `zonal_lmp.py` | 555–559 | Positive directional flow |
+| $f^-_i$ | `x[n_units + 2*i + 1]` | `zonal_lmp.py` | 555–559 | Negative directional flow |
+| $\text{mc}_u$ | `c[i]` (objective vector) | `zonal_lmp.py` | 574–577 | Unit marginal cost $/MWh |
+| $D_z(h)$ | `zone_demand_mw` / `b_eq` | `zonal_lmp.py` | 649 | Hourly zonal demand MW |
+| $\overline{G}_u$ | `cap_mw` in `bounds` | `zonal_lmp.py` | 579–582 | Unit capacity MW |
+| $T_i$ | `transfer_limits[iface_key]` | `zonal_lmp.py` | 584–587 | Interface transfer limit MW |
+| $A_{\text{eq}}$ | `A_eq` | `zonal_lmp.py` | 598–619 | Equality constraint matrix |
+| $\mu_z$ (LMP) | `result.eqlin.marginals` | `zonal_lmp.py` | 683–691 | Shadow price on balance constraint |
+| $\lambda_{\text{sys}}$ | `sys_lmp` | `zonal_lmp.py` | 120–134 | Copper-plate system LMP (2-zone) |
+| $F_{\text{impl}}$ | `implied_flow` | `zonal_lmp.py` | 136–157 | Unconstrained net flow A→B |
+| Zone config | `ZONE_CONFIG` | `pipeline_config.py` | — | Zone definitions per ISO |
+| Transfer limits | `TRANSFER_LIMITS` | `pipeline_config.py` | — | MW limits per interface |
+| BA→Zone map | `BA_TO_ZONE` | `pipeline_config.py` | — | Plant assignment mapping |
+
 **Plant-to-zone assignment**: Plants assigned via `BA_TO_ZONE` mapping (balancing authority → zone) or `ZONE_BOUNDS` lat/lon bounding boxes as fallback. The `FleetModel.assign_zones()` method and `get_zone_for_plant()` utility handle this.
 
 **Integration**: `compute_hourly_lmp_zonal()` returns an (H × Z) matrix of zonal LMPs, a system-average LMP array, and per-zone statistics (avg, peak, off-peak, P10/P90, price spread vs system). Falls back to copper-plate LMP if zonal data unavailable.
@@ -774,7 +819,55 @@ $$\text{depression} = 0.55 \times \sigma(\text{vre\_penetration} - 0.6)$$
 
 where $\sigma$ is the logistic sigmoid. This smoothly reduces VRE revenue as penetration rises, preventing the model from overestimating VRE deployment.
 
-**Implementation**: `compute_energy_revenue_by_resource()` (market_simulation.py lines 1493–1534), VRE floor scaling (lmp_engine.py lines 1284–1294), deployment loop with cannibalization damping (lines 2054–2109).
+**Interaction with Basis Differential (R4)**: When zonal LMP data is available, the basis differential quantifies the locational value gap:
+
+$$\text{basis\_diff}_r = \overline{\text{LMP}}_{z(r)} - \overline{\text{LMP}}_{\text{sys}} \quad [\$/\text{MWh}]$$
+
+The zone capture adjustment modifies energy revenue multiplicatively:
+
+$$\text{zone\_adj}_r = \frac{\overline{\text{LMP}}_{z(r)}}{\overline{\text{LMP}}_{\text{sys}}}$$
+
+$$\text{Revenue}_r^{\text{final}} = \text{Revenue}_r^{\text{base}} \times (1 - \text{depression}) \times \text{zone\_adj}_r$$
+
+where $\text{Revenue}_r^{\text{base}}$ is the profile-weighted energy revenue from Step 1. Zones with surplus VRE (e.g., ERCOT West wind corridor) produce $\text{zone\_adj} < 1.0$; load centers produce $\text{zone\_adj} > 1.0$.
+
+**Interaction with Curtailment Feedback (R10)**: When VRE curtailment occurs (surplus generation exceeds demand + storage + exports), the effective LCOE rises because fixed capital costs are spread over fewer delivered MWh:
+
+$$\text{effective\_LCOE}_r = \frac{\text{LCOE}_r}{1 - c_r}$$
+
+where $c_r$ is the curtailment rate for resource $r$ (fraction of potential generation curtailed, $0 \leq c_r < 1$). The effective capacity factor also adjusts: $\text{CF}_r^{\text{eff}} = \text{CF}_r \times (1 - c_r)$. At $c_r \geq 1.0$ (full curtailment), effective LCOE is set to $\infty$, making the resource uneconomic. This feedback is implemented in `_evaluate_resource_economics()` (`market_simulation.py` lines 2527–2535) and propagates through the deployment decision: resources with high curtailment rates face both lower capture-rate revenue *and* higher effective costs, creating a natural saturation signal.
+
+**ORDC Scarcity Floor on Depression**: During hours with ORDC scarcity adder > $50/MWh, the cannibalization depression is capped to preserve the scarcity pricing signal:
+
+$$\text{scarcity\_floor} = f_{\text{scarcity}} \times 0.3$$
+$$\text{depression} = \min\bigl(\text{depression},\; 1.0 - \text{scarcity\_floor}\bigr)$$
+
+where $f_{\text{scarcity}}$ is the fraction of hours with active ORDC scarcity pricing. This prevents VRE revenue from collapsing below the scarcity-hour floor even at high penetration.
+
+**Implementation**: `compute_energy_revenue_by_resource()` (market_simulation.py lines 1493–1534), VRE floor scaling (lmp_engine.py lines 1284–1294), deployment loop with cannibalization damping (lines 2054–2109), curtailment feedback (lines 2527–2535), zone capture adjustments (lines 2247–2298), basis differentials (lines 2474–2484).
+
+**Cross-Reference Table — VRE Cannibalization (§4.4.7)**
+
+| Equation Variable | Code Variable | File | Lines | Description |
+|---|---|---|---|---|
+| $\text{gen}_r(h)$ | `gen_profile` | `market_simulation.py` | 1532–1539 | Hourly generation MW per resource |
+| $\text{LMP}_r(h)$ | `effective_lmp` / `zonal_lmp_matrix[z_idx]` | `market_simulation.py` | 1532–1538 | Zone-aware hourly LMP |
+| $\text{Revenue}_r$ | `revenue_weighted / gen_total` | `market_simulation.py` | 1539–1541 | Generation-weighted avg revenue |
+| $\overline{\text{LMP}}$ | `avg_lmp` / `np.mean(hourly_lmp)` | `market_simulation.py` | 2749 | Time-average system LMP |
+| $\text{capture\_rate}_r$ | `capture_rates[res]` | `market_simulation.py` | 2749 | Revenue / avg LMP ratio |
+| $\text{vre\_pct}$ | `vre_penetration` | `lmp_engine.py` | 1286 | System VRE fraction |
+| $\text{vre\_excess}$ | `vre_excess` | `lmp_engine.py` | 1289 | Penetration above 25% baseline |
+| $\text{floor\_scale}$ | `vre_floor_scale` | `lmp_engine.py` | 1290, 1292 | Negative price floor multiplier |
+| $\text{pct\_scale}$ | `vre_pct_scale` | `lmp_engine.py` | 1291, 1293 | Negative-price band multiplier |
+| $\text{depression}$ | `depression` | `market_simulation.py` | 2695 | Sigmoid cannibalization factor [0, 0.55] |
+| $f_{\text{scarcity}}$ | `scarcity_hours_fraction` | `market_simulation.py` | 2697 | ORDC scarcity hour fraction |
+| $\text{zone\_adj}_r$ | `zone_capture_adjustment` | `market_simulation.py` | 2295, 2710–2711 | Zone LMP / system LMP ratio |
+| $\text{basis\_diff}_r$ | `_basis_diffs[res_key]` | `market_simulation.py` | 2483–2484 | Zone avg − system avg LMP |
+| $c_r$ (curtailment rate) | `curtailment_rate` | `market_simulation.py` | 629–642, 2528 | Fraction of VRE generation curtailed |
+| $\text{effective\_LCOE}_r$ | `effective_lcoe` | `market_simulation.py` | 2527–2535 | LCOE adjusted for curtailment |
+| $\text{CF}_r^{\text{eff}}$ | `effective_cf` | `market_simulation.py` | 2529 | Capacity factor × (1 − curtailment) |
+| VRE zone mapping | `VRE_PRIMARY_ZONE` | `pipeline_config.py` | — | Resource → primary zone assignment |
+| Price model params | `dq_low_floor`, `dq_low_percentile` | `lmp_engine.py` | 1299–1300 | Baseline floor/percentile values |
 
 ### 4.5 Fleet Model (`fleet_model.py`)
 
