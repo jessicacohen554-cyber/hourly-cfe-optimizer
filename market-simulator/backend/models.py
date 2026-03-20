@@ -482,6 +482,8 @@ class YearResult(BaseModel):
     supply_stack: List[SupplyStackEntry] = Field(default_factory=list)
     lmp_hourly_profile: Optional[HourlyProfile] = None
     capacity_revenue_profile: Optional[HourlyProfile] = None
+    # VRE curtailment rate (R10: fraction of VRE generation curtailed)
+    curtailment_rate: float = 0.0
     # Year-over-year LCOE trajectory by technology (endogenous Wright's Law)
     lcoe_trajectory: Dict[str, float] = Field(default_factory=dict)
 
