@@ -304,3 +304,51 @@ The model generates 1,215 scenarios but provides limited tools for communicating
 - **No documentation of model limitations in API responses.** The methodology doc covers limitations, but the API response doesn't include a `caveats` or `limitations` field that would travel with the results.
 
 ---
+
+## 3. Identified Gaps
+
+### 3.1 Critical Gaps
+
+These gaps could produce materially misleading results if not addressed.
+
+| # | Gap | Location | Impact |
+|---|-----|----------|--------|
+| C1 | **Storage dispatch is a static ramp stub in the market engine** | `market_simulation.py` lines 2565–2578 | Storage deployment is not economics-driven. Capacity is assigned as a fixed function of clean%, ignoring arbitrage revenue, capacity value, and ancillary services. Results at >60% clean are unreliable because storage economics dominate the marginal deployment decision. |
+| C2 | **No hourly storage charge/discharge in market LMP** | `market_simulation.py` — absent | Storage charging adds load (raises off-peak LMP) and discharging reduces peak residual demand (lowers peak LMP). Neither effect is modeled. At >10 GW storage penetration, this could shift LMPs by $5–15/MWh in peak/off-peak spread. |
+| C3 | **Synthetic data fallback is silent** | `market_simulation.py` line 2503+ | When PFS parquets are missing, the model generates illustrative data without warning. Users could make investment decisions based on placeholder ramp patterns. Should either error or prominently flag results as "synthetic-backed." |
+| C4 | **No VRE spatial basis differential** | `market_simulation.py` lines 1358–1374 | All VRE within an ISO receives system-average LMP. In congested ISOs (ERCOT West→Houston, CAISO SP15→NP15), actual basis differentials are −$5 to −$20/MWh. Overestimates VRE revenue and thus deployment pace. |
+| C5 | **Wright's Law learning curves are static within a run** | `market_simulation.py` — deployment loop | Cumulative GW is set at simulation start and not updated as the model deploys new capacity. In a 25-year trajectory deploying 200+ GW of solar, this could overestimate costs by 15–30% in later years. |
+
+### 3.2 Moderate Gaps
+
+These gaps introduce systematic bias but may be acceptable for screening purposes if documented.
+
+| # | Gap | Location | Impact |
+|---|-----|----------|--------|
+| M1 | **Retirement is fleet-fraction, not plant-level** | `market_simulation.py` lines 969–1067 | Retires a percentage of capacity by unit type rather than individual plants. Over-retires profitable units and under-retires uneconomic ones. |
+| M2 | **Nuclear retirement is binary** | `market_simulation.py` line 3068 | Entire nuclear fleet either stays or exits at trigger year. No plant-by-plant assessment. Given 30+ GW US nuclear fleet with highly variable economics, this is a significant simplification. |
+| M3 | **Capacity market prices are static** | `pipeline_config.py` lines 569–576 | $/kW-yr values don't respond to changing reserve margins or clean penetration. In a trajectory where 50 GW of coal retires, capacity prices should spike. |
+| M4 | **Demand response parameters frozen at 2023–2024** | `pipeline_config.py` lines 543–550 | DR trigger prices, participation rates, and max GW don't evolve. FERC Order 2222 and state programs are expanding DR significantly. |
+| M5 | **No correlated scenario construction** | `market_simulation.py` lines 2607–2655 | Demand, fuel, and technology costs are swept independently. In reality, high demand growth correlates with higher gas prices and faster renewable cost decline. |
+| M6 | **Demand-quantile pricing layer is empirical, not physical** | `lmp_engine.py` lines 1221–1350 | Calibrated to historical data. May not extrapolate reliably to unprecedented VRE penetration (>60%) where price formation fundamentally changes. |
+| M7 | **No curtailment feedback on VRE deployment economics** | `market_simulation.py` — deployment loop | Curtailment is tracked but doesn't reduce effective capacity factor or increase effective LCOE for marginal VRE projects. |
+| M8 | **Zonal LMP clean supply not zone-allocated** | `zonal_lmp.py` line 1458 (TODO) | Clean supply is split proportionally rather than by actual zonal location. Overstates clean supply in fossil-heavy zones and understates it in VRE-rich zones. |
+| M9 | **No financing cost sensitivity** | `market_simulation.py` — deployment loop | LCOE implicitly includes WACC but there's no toggle for interest rate environments. A 200bp rate increase can shift solar LCOE by $5–8/MWh. |
+| M10 | **REC price model not validated** | `market_simulation.py` lines 1405–1427 | Scarcity-driven exponential with per-ISO k_scarcity. High sensitivity to RPS target assumptions. Not benchmarked against actual REC market prices. |
+
+### 3.3 Minor Gaps
+
+These are quality-of-life improvements that would strengthen the model but don't affect core results.
+
+| # | Gap | Location | Impact |
+|---|-----|----------|--------|
+| m1 | **No input validation for years list monotonicity** | `backend/main.py` | Non-monotonic years (e.g., [2025, 2020, 2030]) will fail silently downstream rather than returning a clear error. |
+| m2 | **No bounds check on custom cost overrides** | `backend/main.py` lines 381–524 | Negative LCOE or extreme values accepted without warning. |
+| m3 | **Methodology doc missing algorithmic detail** | `docs/Model_Methodology_Specification.md` | ORDC equation, pipe-and-bubble LP formulation, and VRE cannibalization algorithm are described conceptually but not with equations. |
+| m4 | **Demand elasticity hardcoded at 3× leverage** | `market_simulation.py` line 600 | No sensitivity to actual demand elasticity. DR response is identical across ISOs despite different program structures. |
+| m5 | **LMP caching granularity at 5 GW** | `market_simulation.py` lines 2973–2980 | Buckets fossil capacity to 5 GW increments for LMP reuse. In ISOs with <20 GW fossil (NEISO, SPP), this is >25% granularity — potentially significant. |
+| m6 | **Capacity degradation sigmoid parameters are point estimates** | `market_simulation.py` lines 1296–1308 | Midpoint, k, and floor of the capacity price degradation S-curve are fixed per ISO. No sensitivity to auction design changes. |
+| m7 | **No API-level result caveats** | `backend/models.py` | SimulationResponse lacks a `limitations` or `data_quality` field that would travel with results to the frontend. |
+| m8 | **CORS allows all origins** | `backend/main.py` line 111–123 | `allow_origins=["*"]` with credentials — acceptable for development but should be restricted in production. |
+
+---
