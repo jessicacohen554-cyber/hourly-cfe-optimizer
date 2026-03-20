@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the full parametric sweep and save as JSON + parquet.
+"""Run the full parametric sweep and save as parquet only (no large JSON).
 
 The sweep covers 3 demand × 5 price × 3 PPA × 3 gas friction × 3 queue
 × 3 new-build fossil cost = 1,215 scenarios. Each scenario is simulated
@@ -10,9 +10,11 @@ Usage:
     python run_sweep_405.py [--isos CAISO PJM] [--output-dir ../results/sweep_1215]
 
 Produces:
-    sweep_1215/market_simulation_results.json   — full nested JSON (all fields)
-    sweep_1215/sweep_1215_flat.parquet           — flat table for analysis
-    sweep_1215/sweep_1215_aggregates.json        — P10/P50/P90 percentile bands
+    sweep_1215/sweep_1215_flat.parquet           — flat table for analysis (~10 MB)
+    sweep_1215/sweep_1215_aggregates.json        — P10/P50/P90 percentile bands (~1 MB)
+
+The combined JSON (~300 MB) is NO LONGER produced. All downstream consumers
+(backend API, validation scripts, dashboard) read from parquet instead.
 """
 
 import argparse
@@ -30,7 +32,6 @@ sys.path.insert(0, os.path.dirname(__file__))
 from market_simulation import (
     build_market_scenarios,
     run_full_sweep,
-    save_results,
     aggregate_sweep_percentiles,
     SIM_YEARS,
 )
@@ -116,7 +117,7 @@ def results_to_dataframe(all_results):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Run 1,215-scenario sweep → JSON + parquet')
+    parser = argparse.ArgumentParser(description='Run 1,215-scenario sweep → parquet')
     parser.add_argument('--isos', nargs='+', default=None,
                         help='ISOs to simulate (default: all 7)')
     parser.add_argument('--output-dir', default=None,
@@ -145,12 +146,7 @@ def main():
     elapsed = time.time() - t0
     print(f"\nSweep completed in {elapsed:.1f}s")
 
-    # ── Save JSON (full nested structure) ──
-    json_path = os.path.join(output_dir, 'market_simulation_results.json')
-    save_results(all_results, output_dir)
-    print(f"JSON saved: {json_path}")
-
-    # ── Save flat parquet ──
+    # ── Save flat parquet (primary output) ──
     print("Converting to flat parquet...")
     df = results_to_dataframe(all_results)
     parquet_path = os.path.join(output_dir, 'sweep_1215_flat.parquet')
@@ -170,7 +166,7 @@ def main():
     else:
         print(f"  ⚠ Row count {actual} ≠ expected {expected}")
 
-    # ── Save aggregates separately ──
+    # ── Save aggregates (small JSON, ~1 MB) ──
     print("Computing aggregates...")
     aggregates = aggregate_sweep_percentiles(all_results)
     agg_path = os.path.join(output_dir, 'sweep_1215_aggregates.json')
