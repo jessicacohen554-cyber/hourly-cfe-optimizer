@@ -22,9 +22,12 @@ Usage:
 """
 
 import argparse
+import datetime
+import hashlib
 import json
 import logging
 import os
+import subprocess
 import sys
 import time
 import numpy as np
@@ -52,6 +55,7 @@ MODULE_ROOT = os.path.dirname(SCRIPT_DIR)
 sys.path.insert(0, SCRIPT_DIR)
 
 from pipeline_config import (
+    PIPELINE_VERSION,
     ISOS, REGIONAL_DEMAND_TWH, DEMAND_GROWTH_RATES,
     GRID_MIX_SHARES, WHOLESALE_PRICES, THRESHOLDS,
     CAPACITY_MARKET_PRICES, CAPACITY_DEGRADATION_ALPHA, CAPACITY_DEGRADATION_PARAMS,
@@ -92,6 +96,10 @@ from lmp_engine import (
     INSTALLED_FOSSIL_MW, FOSSIL_CAPACITY_SHARES,
 )
 from procurement_utils import get_rps_target_at_year, PPA_PREMIUMS
+
+# Add backend dir to path for model imports
+sys.path.insert(0, os.path.join(MODULE_ROOT, 'backend'))
+from models import ProvenanceMetadata
 
 OUTPUT_DIR = os.path.join(MODULE_ROOT, 'data', 'results')
 
@@ -3166,6 +3174,58 @@ def estimate_new_gw_from_delta(delta_resources_twh, iso):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# PROVENANCE METADATA
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_PIPELINE_CONFIG_PATH = os.path.join(SCRIPT_DIR, 'pipeline_config.py')
+
+
+def build_provenance_metadata(input_params: dict) -> ProvenanceMetadata:
+    """Build provenance metadata capturing code version, config, and inputs.
+
+    Args:
+        input_params: The input request parameters (scenario conditions, ISOs, etc.)
+
+    Returns:
+        ProvenanceMetadata instance with git SHA, branch, config hash, etc.
+    """
+    # Git SHA (short)
+    try:
+        git_sha = subprocess.check_output(
+            ['git', 'rev-parse', '--short', 'HEAD'],
+            cwd=SCRIPT_DIR, stderr=subprocess.DEVNULL, text=True
+        ).strip()
+    except Exception:
+        git_sha = 'unknown'
+
+    # Git branch
+    try:
+        git_branch = subprocess.check_output(
+            ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+            cwd=SCRIPT_DIR, stderr=subprocess.DEVNULL, text=True
+        ).strip()
+    except Exception:
+        git_branch = 'unknown'
+
+    # SHA-256 of pipeline_config.py
+    try:
+        with open(_PIPELINE_CONFIG_PATH, 'rb') as f:
+            config_hash = hashlib.sha256(f.read()).hexdigest()
+    except Exception:
+        config_hash = 'unknown'
+
+    return ProvenanceMetadata(
+        model_version=PIPELINE_VERSION,
+        git_sha=git_sha,
+        git_branch=git_branch,
+        config_hash=config_hash,
+        run_timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        python_version=sys.version,
+        input_snapshot=input_params,
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # CORE MARKET SIMULATION
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -3209,6 +3269,17 @@ def run_market_simulation(scenario_id, conditions, isos=None,
     _log(f"\n{'='*70}")
     _log(f"Market Simulation — Scenario {scenario_id}: {conditions['name']}")
     _log(f"{'='*70}")
+
+    # Build provenance metadata
+    provenance = build_provenance_metadata({
+        'scenario_id': scenario_id,
+        'conditions': conditions,
+        'isos': isos,
+        'nuclear_retirement_threshold': nuclear_retirement_threshold,
+        'snapshot_mode': snapshot_mode,
+        'sim_years': sim_years,
+        'weather_year': weather_year,
+    })
 
     # Load data
     if _preloaded is not None:
@@ -3890,6 +3961,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
 
             results[iso].append(year_result)
 
+    results['_provenance'] = provenance.model_dump()
     return results
 
 
@@ -3960,6 +4032,17 @@ def run_full_sweep(isos=None, nuclear_retirement_threshold=None,
     print(f"\n{'='*70}")
     print(f"Sweep complete: {total_runs} scenarios in {elapsed:.1f}s")
     print(f"LMP cache entries: {len(lmp_cache)} unique threshold/fuel/demand combos")
+
+    # Attach sweep-level provenance
+    sweep_provenance = build_provenance_metadata({
+        'mode': 'full_sweep',
+        'isos': isos,
+        'nuclear_retirement_threshold': nuclear_retirement_threshold,
+        'snapshot_mode': snapshot_mode,
+        'weather_years': weather_years,
+        'total_scenarios': total_runs,
+    })
+    all_results['_provenance'] = sweep_provenance.model_dump()
 
     return all_results
 
