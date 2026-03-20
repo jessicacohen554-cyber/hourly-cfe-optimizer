@@ -252,7 +252,7 @@ def build_generation_by_fuel(year, scenario='baseline', ccs_plants=None, retired
         # CCS plants represent roughly 60% of CCGT generation (the biggest plants)
         ccs_fraction_of_ccgt = 0.6
         ccs_ramp = min(1.0, max(0.0, (year - 2028) / 5.0))  # Ramp 2028-2033
-        if scenario in ('ccs_only', 'ccs_plus_new_gas', 'retire_peakers_ccs_gas'):
+        if scenario in ('ccs_top_emitters', 'ccs_plus_new_gas', 'retire_peakers_ccs_baseload'):
             ccs_ccgt_twh = gas_ccgt_twh * ccs_fraction_of_ccgt * ccs_ramp
             gas_ccgt_twh -= ccs_ccgt_twh
 
@@ -348,7 +348,7 @@ def build_plant_detail(fossil_plants, year, scenario='baseline',
         # CCS status
         status = 'operating'
         emission_rate = EMISSION_RATE.get(fuel, 0.434)
-        if scenario in ('ccs_only', 'ccs_plus_new_gas', 'retire_peakers_ccs_gas'):
+        if scenario in ('ccs_top_emitters', 'ccs_plus_new_gas', 'retire_peakers_ccs_baseload'):
             if p['ccs_eligible'] and year >= 2030:
                 status = 'ccs_retrofit'
                 ccs_ramp = min(1.0, (year - 2028) / 5.0)
@@ -370,20 +370,20 @@ def build_scenario(fossil_plants, scenario_key):
     """Build a complete scenario data structure."""
     descriptions = {
         'baseline': 'Status quo — no CCS, no early retirements. Natural market-driven decline only.',
-        'ccs_only': 'CCS retrofit on all eligible CCGT plants (95% capture). No retirements, no new builds.',
-        'ccs_plus_new_gas': 'CCS on eligible CCGTs + 1,200 MW new efficient CCGT in PJM (2028-2029).',
-        'retire_peakers_ccs_gas': 'Retire all oil CTs and gas CTs by 2030, CCS retrofit on all CCGTs by 2035.'
+        'ccs_top_emitters': 'CCS retrofit on top 6 CCS-eligible CCGT plants (95% capture). No retirements, no new builds.',
+        'ccs_plus_new_gas': 'CCS on top emitters + 1,200 MW new efficient CCGT in PJM (2028-2029).',
+        'retire_peakers_ccs_baseload': 'Retire all oil CTs and gas CTs by 2030, CCS retrofit on all CCGTs by 2035.'
     }
     colors = {
         'baseline': '#7E8083',
-        'ccs_only': '#2372B9',
+        'ccs_top_emitters': '#2372B9',
         'ccs_plus_new_gas': '#F47B27',
-        'retire_peakers_ccs_gas': '#6BA543'
+        'retire_peakers_ccs_baseload': '#6BA543'
     }
 
-    ccs_eligible = scenario_key in ('ccs_only', 'ccs_plus_new_gas', 'retire_peakers_ccs_gas')
+    ccs_eligible = scenario_key in ('ccs_top_emitters', 'ccs_plus_new_gas', 'retire_peakers_ccs_baseload')
     retired_fuels = {}
-    if scenario_key == 'retire_peakers_ccs_gas':
+    if scenario_key == 'retire_peakers_ccs_baseload':
         retired_fuels = {'oil_ct': 2030, 'gas_ct': 2030, 'gas_oil_ct': 2030}
 
     generation_by_fuel = {}
@@ -525,7 +525,7 @@ def main():
     # Build all scenarios
     print("\nBuilding scenarios...")
     scenarios = {}
-    for skey in ['baseline', 'ccs_only', 'ccs_plus_new_gas', 'retire_peakers_ccs_gas']:
+    for skey in ['baseline', 'ccs_top_emitters', 'ccs_plus_new_gas', 'retire_peakers_ccs_baseload']:
         print(f"  Building {skey}...")
         scenarios[skey] = build_scenario(fossil_plants, skey)
 

@@ -303,15 +303,20 @@ async def get_fleet_scenarios_config():
 
 @app.get("/api/fleet-scenario-results")
 async def get_fleet_scenario_results():
-    """Return pre-computed fleet scenario results."""
-    path = MARKET_SIM_ROOT / "results" / "fleet_scenario_results.json"
-    if not path.exists():
-        # Fall back to sample data
-        sample_path = FRONTEND_DIR / "data" / "fleet_scenario_results_sample.json"
-        if not sample_path.exists():
-            raise HTTPException(status_code=404, detail="No fleet scenario results found")
+    """Return pre-computed fleet scenario results.
+
+    Prefers the Rosetta-derived sample data (full fleet with nuclear/renewables)
+    over sweep-based results which only cover fossil dispatch.
+    """
+    # Primary: Rosetta-derived full fleet results (build_fleet_scenario_data.py output)
+    sample_path = FRONTEND_DIR / "data" / "fleet_scenario_results_sample.json"
+    if sample_path.exists():
         return FileResponse(str(sample_path), media_type="application/json")
-    return FileResponse(str(path), media_type="application/json")
+    # Fallback: sweep-based results (fossil only)
+    path = MARKET_SIM_ROOT / "results" / "fleet_scenario_results.json"
+    if path.exists():
+        return FileResponse(str(path), media_type="application/json")
+    raise HTTPException(status_code=404, detail="No fleet scenario results found")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
