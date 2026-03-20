@@ -281,8 +281,10 @@
               <strong>Flow:</strong> load_common_data() &rarr; build_market_scenarios() &rarr; build_single_scenario() &times; N &rarr; save_results().
               Profit-driven: clean resources deploy where revenue &gt; cost. Deployment stops at first unprofitable zone.
               Clean energy level is an OUTPUT, not a target constraint.
-              <strong>New-build fossil:</strong> <span class="module-ref">apply_economic_new_build()</span> &mdash; RA trigger (reserve margin &lt; 15%) + economic trigger.
-              ORDC feedback loop: low reserves &rarr; scarcity spikes &rarr; new fossil viable &rarr; reserves restored.
+              <strong>Plant-level retirement (G1):</strong> Per-plant margin &rarr; merit-order retirement &rarr; 15% zonal reserve floor. Nuclear per-contract.
+              <strong>LMP confidence (G5):</strong> Confidence factor degrades at &gt;60% VRE. IPM trigger on extrapolation.
+              <strong>Provenance (G3):</strong> git_sha + config_hash + input_snapshot attached to every response.
+              <strong>New-build fossil:</strong> <span class="module-ref">apply_economic_new_build()</span> &mdash; RA trigger + economic trigger. ORDC feedback loop.
             </div>
             <div class="sc-io">
               <span>In:</span> EF parquets, EIA profiles, user params &nbsp;
@@ -309,8 +311,8 @@
               <strong>co_dispatch_storage_lp():</strong> Rolling-window LP co-optimization of all storage types.
               scipy linprog (HiGHS) with sparse matrix constraints. Objective: minimize unmet demand.<br>
               Windows: 24hr (bat4), 48hr (bat8), 168hr (LDES), 720hr (H&sub2;). SOC carryover for multi-day.<br>
-              <strong>Fossil retirement cascade:</strong> Coal &rarr; oil &rarr; gas CT &rarr; gas CCGT. Margin-threshold heuristic.<br>
-              <strong>Nuclear retirement:</strong> Revenue floor (&sect;45U PTC). Retires if energy + capacity + PTC &lt; threshold.
+              <strong>Plant-level retirement (G1):</strong> Per-plant margin evaluation. Merit-order retirement (worst-margin first). 15% per-zone reserve floor. Nuclear per-contract economics.<br>
+              <strong>Fallback:</strong> Fleet-fraction cascade (coal &rarr; oil &rarr; gas CT &rarr; gas CCGT) when plant data unavailable.
             </div>
           </div>
         </div>
@@ -400,10 +402,11 @@
         <div class="step-row">
           <div class="step-card">
             <div class="sc-id">Simulation</div>
-            <div class="sc-script">POST /api/simulate &bull; POST /api/sweep &bull; POST /api/sensitivity</div>
+            <div class="sc-script">POST /api/simulate &bull; POST /api/sweep &bull; POST /api/sensitivity &bull; POST /api/correlated-scenarios</div>
             <div class="sc-detail">
-              <strong>simulate:</strong> Single snapshot or trajectory. Full parameter set &rarr; generator economics, LMP, supply mix, KPIs, zone details.<br>
-              <strong>sweep:</strong> Async 1,215-scenario sweep. Returns job_id; client polls GET /api/sweep/{job_id} for progress.<br>
+              <strong>simulate:</strong> Single snapshot or trajectory. Full parameter set &rarr; generator economics, LMP, supply mix, KPIs, zone details. Result provenance (G3) on all responses.<br>
+              <strong>sweep:</strong> Async 1,215-scenario sweep. Returns job_id; client polls GET /api/sweep/{job_id} for progress. Includes tornado_data (G7).<br>
+              <strong>correlated-scenarios (G4):</strong> 5 IEA-aligned bundles (STEPS, APS, NZE, HIGH_FRICTION, RAPID_TRANSITION).<br>
               <strong>sensitivity:</strong> Single-parameter variation (base_params + vary_param + values[]).
             </div>
           </div>
@@ -433,6 +436,7 @@
               <strong>isos:</strong> ISO summaries (demand, clean%, fossil MW, cap mkt).<br>
               <strong>defaults:</strong> Per-ISO form defaults (fuel prices, heat rates, VOM, emissions).<br>
               <strong>data-status:</strong> Pipeline data availability check.<br>
+              <strong>validate-request:</strong> Pre-flight parameter validation (G3). Returns errors before simulation runs.<br>
               <strong>health:</strong> Uptime/readiness probe.<br>
               Also: /api/sweep-dispatch-data, /api/constellation-dispatch, /api/runs, /api/download.
             </div>
@@ -569,7 +573,9 @@
               data/profiles/ &mdash; EIA demand, gen, fossil, emission, interchange profiles<br>
               data/eia-860/, eia-923/, epa-campd/ &mdash; fleet model by state<br>
               data/sweep_results/ &mdash; pre-computed 1,215-scenario sweep parquets<br>
-              data/fleet/ &mdash; fleet dispatch results, plant-level economics
+              data/fleet/ &mdash; fleet dispatch results, plant-level economics<br>
+              scripts/sensitivity_analysis.py &mdash; G7: Morris method screening<br>
+              scripts/tests/validate_cross_model.py &mdash; G6: cross-validation vs AEO/ReEDS/IPM
             </div>
           </div>
         </div>

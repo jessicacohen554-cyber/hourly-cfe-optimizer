@@ -179,7 +179,7 @@
 
 <div class="title-bar">
   <h1>Market Simulator &mdash; High-Level Architecture</h1>
-  <span class="subtitle">Profit-Driven Electricity Market Model &bull; 7 ISOs &bull; 3 Simulation Modes &bull; 1,215-Scenario Sweep</span>
+  <span class="subtitle">Profit-Driven Electricity Market Model &bull; 7 ISOs &bull; 3 Simulation Modes &bull; 1,215-Scenario Sweep + 5 IEA-Aligned Bundles</span>
 </div>
 
 <div class="pipeline">
@@ -235,8 +235,8 @@
       </div>
       <div class="step-box">
         <div class="step-id">Core</div>
-        <div class="step-name">Profitability + New Build</div>
-        <div class="step-desc">Revenue vs Cost dispatch. Clean deploys where profit &gt; 0. Economic retirement cascade. New-build fossil (CCGT/CT/coal) via RA &amp; economic triggers. ORDC feedback loop.</div>
+        <div class="step-name">Profitability + Retirement</div>
+        <div class="step-desc">Revenue vs Cost dispatch. Clean deploys where profit &gt; 0. Plant-level retirement (G1): per-plant margin, reliability floor, nuclear per-contract. New-build fossil via RA &amp; economic triggers. LMP confidence guard (G5).</div>
         <div class="step-script">market_simulation.py</div>
       </div>
       <div class="step-box">
@@ -296,7 +296,7 @@
       <div class="step-box">
         <div class="step-id">API</div>
         <div class="step-name">REST Endpoints</div>
-        <div class="step-desc">FastAPI: /api/simulate, /api/sweep, /api/sweep-cached/status, /api/fleet-scenarios-config, /api/sweep-dispatch-data.</div>
+        <div class="step-desc">FastAPI: /api/simulate, /api/sweep, /api/correlated-scenarios, /api/validate-request, /api/sweep-cached/status, /api/fleet-scenarios-config. Result provenance (G3) on all responses.</div>
         <div class="step-script">backend/main.py, models.py</div>
       </div>
     </div>

@@ -2,8 +2,8 @@
 
 **Constellation Energy — Commercial Strategy & Analytics**
 
-**Document Version:** 2.0
-**Model Version:** Market Simulator v2.0.0
+**Document Version:** 3.0
+**Model Version:** Market Simulator v3.0.0
 **Base Year:** 2025 (snapshot model)
 **Date:** March 2026
 **Classification:** Internal — Confidential
@@ -135,7 +135,26 @@ Each generator type's profitability is evaluated as a revenue-cost spread:
 
 ### 2.3 Fossil Retirement Logic
 
-Fossil generators retire in merit order based on profitability:
+#### 2.3.0 Plant-Level Retirement (G1)
+
+When plant-level data is available (EIA 860), retirement operates on **individual plant economics** rather than fleet fractions. Each generator is evaluated independently:
+
+1. **Per-plant margin**: $\text{margin}_p = \text{revenue}_p - \text{cost}_p$ computed from plant-specific heat rate, fuel cost, capacity factor, and multi-stream revenue (energy + capacity + incentives).
+
+2. **Merit-order retirement**: Plants sorted by margin (worst first). Plants with $\text{margin}_p < -\$5/\text{MWh}$ are retirement candidates.
+
+3. **Reliability floor**: Per-zone reserve margin of 15% is enforced. A plant will not retire if:
+$$\text{reserve\_margin}_z = \frac{\text{capacity}_z - \text{peak\_demand}_z}{\text{peak\_demand}_z} < 0.15$$
+
+4. **Nuclear per-plant evaluation**: Each nuclear plant is assessed individually using `NUCLEAR_OFFTAKE_CONTRACTS` from `pipeline_config.py`. Plants with below-market offtake contracts face higher stranding risk. Nuclear is NOT retired as a fleet at a single trigger year.
+
+5. **Inter-year persistence**: $\text{retired\_plants}(t) = \text{retired\_plants}(t-1) \cup \text{new\_retirements}(t)$. Once retired, a plant does not return.
+
+The `plant_retirements` field in year results contains: `[{plant_id, capacity_mw, unit_type, margin, iso, zone}]`.
+
+#### 2.3.1 Fleet-Fraction Fallback
+
+When plant-level data is unavailable, retirement falls back to fleet-fraction logic. Fossil generators retire by type in merit order:
 
 1. **Coal steam** retires first — highest emission rates (0.95 tCO₂/MWh), lowest efficiency, highest marginal cost under any carbon price
 2. **Oil combustion turbines** retire next — high heat rates (10.5 MMBtu/MWh), limited dispatch hours
@@ -993,6 +1012,20 @@ Total: 2 × 3 × 5 × 3 × ~3 = 270 base scenarios (with gas friction sub-levels
 
 A shared LMP cache across scenarios avoids redundant 8,760-hour computation.
 
+#### Correlated Scenario Bundles (G4)
+
+In addition to the independent sweep, 5 IEA-aligned correlated scenario bundles provide internally consistent "what if" narratives where input dimensions co-move as they do in reality:
+
+| Bundle | Narrative | Gas | LCOE | Carbon | Demand | Learning |
+|---|---|---|---|---|---|---|
+| **IEA_STEPS** | Current policies continue | Medium | Medium | $0 | Medium | Medium |
+| **IEA_APS** | Announced pledges implemented | Medium | Low | $51 (EPA SCC) | Medium | Fast |
+| **IEA_NZE** | Net Zero by 2050 (1.5°C) | High | Low | $185 (Rennert) | High | Fast |
+| **HIGH_FRICTION** | Transition stalls | Low | High | $0 | High | Slow |
+| **RAPID_TRANSITION** | Technology + policy breakthroughs | High | Low | $185 | High | Fast |
+
+Correlated bundles address the limitation of independent sweeps where implausible combinations (e.g., high demand + low gas + slow learning) receive equal weight, diluting the probability mass in P10/P50/P90 summaries. Bundles are accessed via `POST /api/correlated-scenarios`.
+
 ### 4.8 Configuration & Constants (`pipeline_config.py`)
 
 Single source of truth for all shared constants. All scripts import from here — no local constant definitions.
@@ -1315,6 +1348,8 @@ Per ISO × year:
 - Generator economics by type
 - Nuclear retirement status
 - CCS breakeven at each year
+- `plant_retirements` — list of individual plant retirement events (G1): `[{plant_id, capacity_mw, unit_type, margin, iso, zone}]`
+- `lmp_confidence_factor` — confidence degradation factor based on VRE penetration (G5): 1.0 (≤60% VRE), 0.8 (60–75%), 0.6 (75–90%), 0.4 (>90%)
 
 ### 6.6 Sweep Results
 
@@ -1322,6 +1357,7 @@ Per ISO × year:
 - Clean % achieved under each (condition, demand, price, PPA, gas friction) combination
 - Avg LMP, emissions, cost/revenue per scenario
 - Identifies robust outcomes (consistent across scenarios) vs. sensitive outcomes
+- `tornado_data` — Morris method sensitivity decomposition (G7): per-output ranges and variance contributions for each swept input parameter
 
 ### 6.7 Export Formats
 
@@ -1335,6 +1371,22 @@ Per ISO × year:
 | JSON | `market_simulation_results.json` | Machine-readable full results |
 
 Results are saved to `data/results/run_NNN/` (auto-incrementing run ID).
+
+### 6.7.1 Result Provenance Metadata (G3)
+
+Every simulation response includes a `provenance` block for audit trails and reproducibility:
+
+| Field | Type | Description |
+|---|---|---|
+| `model_version` | string | Semantic version (e.g., "2.1.0") |
+| `git_sha` | string | Short SHA of the code commit |
+| `git_branch` | string | Git branch name |
+| `config_hash` | string | SHA-256 hash of `pipeline_config.py` |
+| `run_timestamp` | string | ISO 8601 UTC timestamp |
+| `python_version` | string | Python interpreter version |
+| `input_snapshot` | dict | Complete request parameters |
+
+The `config_hash` field detects configuration drift — if `pipeline_config.py` is modified between runs, the hash changes, flagging that results may not be directly comparable.
 
 ### 6.8 IPM Trigger Indicators
 
@@ -1358,6 +1410,7 @@ Triggers are computed per ISO per year as pure threshold checks (negligible over
 | `STORAGE_DOMINANCE` | Storage (battery+LDES+H₂) share of energy served | >15% | >25% | Co-optimized storage dispatch (GenX, PLEXOS) |
 | `RETIREMENT_CASCADE` | Fossil fleet capacity retired in a single period | >20% | >35% | Plant-level retirement model (EIA 860, IPM) |
 | `NUCLEAR_AT_RISK` | Nuclear revenue within $5/MWh of retirement cliff ($30/MWh) | — | Always high | Plant-level nuclear economics (contract-specific) |
+| `LMP_EXTRAPOLATION` | VRE penetration exceeds demand-quantile calibration range (G5) | >60% VRE | >75% VRE | Production cost model with detailed unit commitment |
 
 **Implementation details:**
 - **VRE penetration** is computed from `resource_mix_twh` (solar + wind + offshore_wind) / demand_twh.
@@ -1425,7 +1478,36 @@ EPA eGRID emission factors cross-checked against:
 
 The 270-scenario sweep systematically varies all major input dimensions. P10/P50/P90 ranges capture structural uncertainty in fuel prices, technology costs, demand growth, and market design.
 
-### 7.5 Trajectory Backtesting
+#### 7.4.1 Morris Method Sensitivity Screening (G7)
+
+A formal sensitivity decomposition framework (`scripts/sensitivity_analysis.py`) identifies which input parameters drive the most output variance using Morris method one-at-a-time (OAT) screening:
+
+- **Tornado diagrams**: Show the absolute output range when each input varies from low to high while others are held at median. Longer bars = more influential parameters.
+- **Variance decomposition**: Partitions total output variance into per-parameter contributions using the elementary effects from the Morris trajectories.
+- **Non-linearity detection**: Parameters with high $\sigma^*$ relative to $\mu^*$ (Morris statistics) indicate non-linear or interaction effects requiring deeper analysis.
+
+Results are documented in `docs/Sensitivity_Analysis_Results.md`.
+
+### 7.5 Cross-Validation Against Established Models (G6)
+
+A structured cross-validation framework (`scripts/tests/validate_cross_model.py`) compares model trajectories against three established reference models:
+
+| Reference Model | Source | Comparison Metrics |
+|---|---|---|
+| EIA AEO 2025 | Annual Energy Outlook Reference Case | Renewable share trajectory 2025–2050 |
+| NREL ReEDS 2024 | Standard Scenarios Mid-case | Clean share + capacity additions (GW/yr) |
+| EPA IPM v6 | Reference Case | Coal retirement schedule + gas build trajectory |
+
+**Expected divergences** (mechanism-driven, not bugs):
+- This model is profit-driven (agent-based); reference models are cost-minimizing (optimization). Higher fossil persistence at moderate carbon prices is expected.
+- Different retirement sequencing: this model retires by individual plant economics; optimization models retire by system cost minimization.
+- Lower clean share at moderate carbon prices: without binding clean energy targets, market economics produce less clean energy than policy-mandated optimization.
+
+**Unexplained divergences** are flagged for investigation as potential calibration issues.
+
+Results are documented in `docs/Cross_Validation_Results.md`.
+
+### 7.6 Trajectory Backtesting
 
 The model includes a backward-looking validation framework (`scripts/backtest_trajectory.py`) that runs the simulator from 2020 grid conditions with actual historical fuel prices and compares predicted 2020–2024 outcomes against observed data across 7 ISOs. Validation metrics include:
 
@@ -1681,5 +1763,6 @@ def wright_adjusted_cost(foak_cost, cumulative_gw, baseline_gw, learning_rate):
 | 1.1 | Mar 2026 | Added IPM trigger indicators (§6.8), fleet model documentation, cost table updates |
 | 2.0 | Mar 2026 | v2 synchronization: ORDC scarcity pricing (§4.4.6), VRE cannibalization feedback (§4.4.7), ORDC-in-zonal integration, DR vectorization + ORDC-link, tech-differentiated queue caps (§4.7), data tier warnings, feature interaction matrix (§6.9), comprehensive limitation updates (§8.2) |
 | 2.1 | Mar 2026 | ORDC fix: replaced logistic sigmoid with exponential knee + cap model. New params: {voll, knee_mw, lam, cap}. Double-counting guard on _scarcity_adder. Calibrated $2–8/MWh avg contribution. |
+| 3.0 | Mar 2026 | Peer review implementation: G1 plant-level retirement (§2.3.0), G3 result provenance (§6.7.1), G4 correlated scenarios (§4.7), G5 LMP extrapolation guard (§6.8 `LMP_EXTRAPOLATION` trigger), G6 cross-validation framework (§7.5), G7 Morris sensitivity analysis (§7.4.1). Updated ToC, output spec, validation sections. |
 
-*Constellation Energy — Market Simulator v2.0 — Internal & Confidential*
+*Constellation Energy — Market Simulator v3.0 — Internal & Confidential*
