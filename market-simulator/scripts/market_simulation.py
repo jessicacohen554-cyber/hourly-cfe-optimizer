@@ -611,6 +611,25 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
                     hourly_lmp[dr_active_mask] = np.maximum(
                         hourly_lmp[dr_active_mask], effective_trigger * 0.95)
 
+    # --- CURTAILMENT RATE (R10: VRE economics feedback) ---
+    # Compute system-level curtailment rate = curtailed_mwh / total_vre_mwh.
+    # Used downstream to penalize marginal VRE LCOE as curtailment rises,
+    # creating a natural saturation point that prevents unrealistic overdeployment.
+    curtailment_rate = 0.0
+    curtailed_arr = dispatch.get('curtailed')
+    if curtailed_arr is not None:
+        curtailed_total = float(np.sum(curtailed_arr))
+        # VRE = solar + wind + offshore_wind portion of supply_total
+        vre_resources = ('solar', 'wind', 'offshore_wind')
+        total_vre = 0.0
+        for vr in vre_resources:
+            pct = resource_pcts.get(vr, 0)
+            if pct > 0 and vr in supply_profiles:
+                profile = np.array(supply_profiles[vr][:H], dtype=np.float64)
+                total_vre += float(np.sum(profile * (pct / 100.0)))
+        if total_vre > 0:
+            curtailment_rate = min(curtailed_total / total_vre, 1.0)
+
     avg_lmp = float(np.mean(hourly_lmp))
     p90_lmp = float(np.percentile(hourly_lmp, 90))
 
@@ -647,7 +666,7 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
         _ordc_adder = price_model.compute_ordc_adder(_reserves_mw)
         scarcity_hours_fraction = float(np.sum(_ordc_adder > 50.0)) / H
 
-    return hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_stats, scarcity_hours_fraction, zonal_lmp_matrix, zonal_zone_names
+    return hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_stats, scarcity_hours_fraction, zonal_lmp_matrix, zonal_zone_names, curtailment_rate
 
 
 @njit(cache=True)
@@ -2180,7 +2199,8 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
                                zonal_stats=None,
                                zonal_lmp_matrix=None,
                                zonal_zone_names=None,
-                               reserve_margin_pct=None):
+                               reserve_margin_pct=None,
+                               curtailment_rate=0.0):
     """Pure economics-driven resource deployment via LCOE merit order.
 
     Ranks all available clean resources by net LCOE (after incentives, learning
@@ -2273,6 +2293,21 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
         elif res == 'geothermal':
             cf = 0.90
 
+        # R10: Curtailment feedback — reduce effective CF for VRE resources
+        # based on system curtailment rate.  As curtailment rises, marginal
+        # VRE produces less usable energy → effective LCOE increases →
+        # deployment naturally saturates.
+        effective_lcoe = lcoe
+        if res in ('solar', 'wind', 'offshore_wind') and curtailment_rate > 0:
+            effective_cf = cf * (1.0 - curtailment_rate)
+            if effective_cf > 0:
+                # Scale LCOE inversely with usable fraction: same capex
+                # spread over fewer productive MWh.
+                effective_lcoe = lcoe / (1.0 - curtailment_rate)
+            else:
+                effective_lcoe = float('inf')
+            cf = effective_cf  # Use derated CF for capacity calcs too
+
         # Resource-specific revenue adjustments
         capacity_rev = 0
         rec_rev = 0
@@ -2297,7 +2332,7 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
         # Use temporal revenue for this resource; fallback to avg_lmp
         res_energy_rev = per_res_rev.get(res, avg_lmp)
         total_revenue = res_energy_rev + capacity_rev + rec_rev
-        net_profit = total_revenue - lcoe
+        net_profit = total_revenue - effective_lcoe
 
         # Max TWh deployable for this resource (physical limits)
         max_twh = RESOURCE_CAP_TWH.get(res, {}).get(iso, 999)
@@ -2307,7 +2342,8 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
 
         resource_economics.append({
             'resource': res,
-            'lcoe': round(lcoe, 2),
+            'lcoe': round(effective_lcoe, 2),
+            'lcoe_base': round(lcoe, 2),
             'energy_rev': round(res_energy_rev, 2),
             'revenue': round(total_revenue, 2),
             'profit': round(net_profit, 2),
@@ -3172,10 +3208,11 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                         interchange_enabled, dr_level, _nb_bucket)
             zonal_congestion_data = None
             scarcity_hours_frac = 0.0
+            curtailment_rate = 0.0
             if _lmp_cache is not None and _lmp_key in _lmp_cache:
-                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names = _lmp_cache[_lmp_key]
+                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate = _lmp_cache[_lmp_key]
             else:
-                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names = compute_lmp_at_threshold(
+                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate = compute_lmp_at_threshold(
                     iso, current_pct, conditions['fuel_level'],
                     demand_norm, demand_mw_profile,
                     supply_profiles_iso, resource_pcts,
@@ -3196,7 +3233,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                     new_fossil_builds=state.get('new_fossil_builds'),
                 )
                 if _lmp_cache is not None:
-                    _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names)
+                    _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate)
 
             # --- RESERVE MARGIN (for endogenous capacity pricing) ---
             reserve_margin_pct = compute_reserve_margin(
@@ -3228,6 +3265,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 zonal_lmp_matrix=_zonal_lmp_matrix,
                 zonal_zone_names=_zonal_zone_names,
                 reserve_margin_pct=reserve_margin_pct,
+                curtailment_rate=curtailment_rate,
             )
 
             # Sync queue budget after deployment
@@ -3527,6 +3565,8 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 'reserve_margin_pct': round(reserve_margin_pct, 1),
                 'capacity_price_kw_yr': round(
                     compute_capacity_price(iso, reserve_margin_pct, current_pct), 2),
+                # VRE curtailment feedback (R10)
+                'curtailment_rate': round(curtailment_rate, 4),
             }
 
             # ── LCOE trajectory (endogenous Wright's Law) ────────────
