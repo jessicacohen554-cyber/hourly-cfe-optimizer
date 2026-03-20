@@ -829,6 +829,71 @@ def _aggregate_data_quality(year_results: list) -> Optional[dict]:
     return {'synthetic_backed': any_synthetic, 'missing_sources': sorted(all_missing)}
 
 
+def _compute_result_caveats(iso: str, final_year: dict) -> List[str]:
+    """Build a list of caveats relevant to this specific simulation run."""
+    from pipeline_config import ZONE_CONFIG, OFFSHORE_ISOS, GEOTHERMAL_ISOS
+
+    caveats: List[str] = []
+
+    # Data source caveat
+    data_source = final_year.get('data_source', 'unknown')
+    if data_source == 'synthetic':
+        caveats.append(
+            f"Results for {iso} use synthetic generation profiles — "
+            "treat as illustrative, not calibrated."
+        )
+
+    # Zonal LMP availability
+    if iso not in ZONE_CONFIG:
+        caveats.append(
+            f"Zonal LMP decomposition not available for {iso} — "
+            "only system-level LMP reported."
+        )
+
+    # Storage dispatch model limitation
+    caveats.append(
+        "Storage deployment uses greedy daily-cycle dispatch — "
+        "see peer review C1 for LP co-optimization caveat."
+    )
+
+    # Offshore wind applicability
+    if iso not in OFFSHORE_ISOS:
+        resource_mix = final_year.get('resource_mix_twh', {})
+        if resource_mix.get('offshore_wind', 0) > 0:
+            caveats.append(
+                f"Offshore wind is not a validated resource for {iso}."
+            )
+
+    # Geothermal applicability
+    if iso not in GEOTHERMAL_ISOS:
+        resource_mix = final_year.get('resource_mix_twh', {})
+        if resource_mix.get('geothermal', 0) > 0:
+            caveats.append(
+                f"Geothermal is only modeled for CAISO — "
+                f"results for {iso} exclude geothermal potential."
+            )
+
+    # Interchange caveat
+    tiers = _get_data_tiers(iso)
+    if tiers.get('interchange') == 'none':
+        caveats.append(
+            f"Inter-regional interchange data not available for {iso} — "
+            "using copper-plate isolation assumption."
+        )
+
+    # Confidence zone warnings from IPM triggers
+    ipm_triggers = final_year.get('ipm_triggers', [])
+    high_triggers = [t for t in ipm_triggers
+                     if isinstance(t, dict) and t.get('severity') == 'high']
+    if high_triggers:
+        caveats.append(
+            f"{len(high_triggers)} high-severity IPM trigger(s) detected — "
+            "consider validating with a production dispatch model."
+        )
+
+    return caveats
+
+
 def _build_simulation_response(iso: str, year_results: list) -> SimulationResponse:
     """Build a SimulationResponse from raw simulation year_results for one ISO."""
     if not year_results:
@@ -1019,6 +1084,9 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
     # Extract sim_years from year_results
     sim_years_list = sorted(set(yr.get("year", 0) for yr in year_results))
 
+    # Build result caveats based on data availability and model limitations
+    caveats = _compute_result_caveats(iso, final)
+
     return SimulationResponse(
         iso=iso,
         existing_clean_pct=round(existing_clean, 1),
@@ -1058,7 +1126,68 @@ def _build_simulation_response(iso: str, year_results: list) -> SimulationRespon
         data_source=final.get('data_source', 'unknown'),
         data_tiers=_get_data_tiers(iso),
         data_quality=_aggregate_data_quality(typed_years),
+        result_caveats=caveats,
     )
+
+
+@app.post("/api/validate-request")
+async def validate_request(req: SimulationRequest):
+    """Dry-run validation: check request validity and data availability
+    without running a simulation.
+
+    Returns:
+        valid: bool — whether all required data is present
+        missing_data: list — parquet/profile files not found for this ISO
+        scenario_count: int — number of simulation years that would be computed
+        caveats: list — known limitations for this ISO/configuration
+    """
+    iso = req.iso.upper()
+
+    # Map request to conditions (validates parameter mapping)
+    conditions = _map_request_to_conditions(req)
+
+    # Check data availability
+    ds = check_data_sources()
+    simple = ds.get('simple', {})
+    tiers = ds.get('tiers', {}).get(iso, {})
+
+    missing: List[str] = []
+    if simple.get(iso) == 'synthetic':
+        missing.append(f"step2.2-cost parquet for {iso} (using synthetic fallback)")
+    if tiers.get('interchange') == 'none':
+        missing.append(f"EIA interchange profiles for {iso}")
+    if tiers.get('fleet_data') in ('none', 'synthetic'):
+        missing.append(f"EIA-860 plant-level fleet data for {iso}")
+
+    # Compute scenario count (number of year-steps)
+    from market_simulation import build_sim_years
+    if req.start_year and req.end_year:
+        sim_years = build_sim_years(
+            start=req.start_year, end=req.end_year, step=req.year_step or 1,
+        )
+    else:
+        sim_years = req.years
+    scenario_count = len(sim_years)
+
+    # Pre-compute caveats
+    from pipeline_config import ZONE_CONFIG, OFFSHORE_ISOS
+    caveats: List[str] = []
+    if simple.get(iso) == 'synthetic':
+        caveats.append(f"Results for {iso} will use synthetic profiles (illustrative only).")
+    if iso not in ZONE_CONFIG:
+        caveats.append(f"Zonal LMP not available for {iso}.")
+    caveats.append(
+        "Storage deployment uses greedy daily-cycle dispatch — see peer review C1."
+    )
+
+    return {
+        "valid": len(missing) == 0,
+        "missing_data": missing,
+        "scenario_count": scenario_count,
+        "sim_years": sim_years,
+        "caveats": caveats,
+        "data_tiers": tiers,
+    }
 
 
 @app.post("/api/simulate", response_model=SimulationResponse)
