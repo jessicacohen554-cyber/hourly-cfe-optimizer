@@ -23,7 +23,8 @@
         baseline:           'Baseline',
         ccs_only:           'CCS-Only',
         ccs_plus_new_gas:   'CCS + New Gas',
-        retire_coal_ccs_gas:'Retire + CCS'
+        retire_coal_ccs_gas:'Retire + CCS',
+        retire_peakers_ccs_gas:'Retire Peakers + CCS'
     };
 
     var TARGET_STYLES = {
@@ -32,22 +33,25 @@
         custom:      { color: '#6B7280', dash: [4, 4], label: 'Custom' }
     };
 
-    var FUEL_KEYS   = ['coal_steam', 'gas_ccgt', 'gas_ct', 'oil_ct', 'nuclear', 'ccs_ccgt'];
-    var FUEL_LABELS = { coal_steam: 'Coal', gas_ccgt: 'Gas CCGT', gas_ct: 'Gas CT', oil_ct: 'Oil', nuclear: 'Nuclear', ccs_ccgt: 'CCS-CCGT' };
+    var FUEL_KEYS   = ['nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'gas_ccgt', 'gas_ct', 'oil_ct', 'ccs_ccgt'];
+    var FUEL_LABELS = { nuclear: 'Nuclear', geothermal: 'Geothermal', wind: 'Wind', solar: 'Solar', hydro: 'Hydro', gas_ccgt: 'Gas CCGT', gas_ct: 'Gas CT', oil_ct: 'Oil', ccs_ccgt: 'CCS-CCGT' };
     var FUEL_COLORS = {
-        coal_steam: RESOURCE_COLORS.fossilCoal,
+        nuclear:    RESOURCE_COLORS.nuclear,
+        geothermal: RESOURCE_COLORS.geothermal || '#D97706',
+        wind:       RESOURCE_COLORS.wind || '#22C55E',
+        solar:      RESOURCE_COLORS.solar || '#F59E0B',
+        hydro:      RESOURCE_COLORS.hydro || '#0EA5E9',
         gas_ccgt:   RESOURCE_COLORS.fossilGas,
         gas_ct:     RESOURCE_COLORS.fossilGasCT || '#007FA4',
         oil_ct:     RESOURCE_COLORS.fossilOil,
-        nuclear:    RESOURCE_COLORS.nuclear,
         ccs_ccgt:   RESOURCE_COLORS.ccs
     };
-    var EMISSION_FUEL_KEYS = ['coal_steam', 'gas_ccgt', 'gas_ct', 'oil_ct'];
+    var EMISSION_FUEL_KEYS = ['gas_ccgt', 'gas_ct', 'oil_ct', 'ccs_ccgt'];
 
     // ── State ──
     var DATA = null;
     var scenarioVisibility = {};
-    var selectedTarget = 'sbti_15';
+    var selectedTargets = ['sbti_15'];
     var selectedYear = 2030;
     var selectedFossilCost = 'All';
     var fanChart = null;
@@ -174,28 +178,47 @@
             }
         });
 
-        // Target radios
+        // Target checkboxes (allow multiple simultaneous targets)
         var radiosEl = document.getElementById('targetRadios');
         radiosEl.innerHTML = '';
         var targetKeys = DATA.targets ? Object.keys(DATA.targets) : [];
         targetKeys.forEach(function (tKey, i) {
             var t = DATA.targets[tKey];
-            var style = TARGET_STYLES[tKey] || TARGET_STYLES.custom;
             var lbl = document.createElement('label');
             lbl.className = 'target-radio';
             lbl.innerHTML =
-                '<input type="radio" name="targetOverlay" value="' + tKey + '"' + (i === 0 ? ' checked' : '') + '>' +
+                '<input type="checkbox" data-target="' + tKey + '"' + (i === 0 ? ' checked' : '') + '> ' +
                 t.label;
             radiosEl.appendChild(lbl);
         });
-        // "None" option
+        // "None" option — unchecks all others
         var noneLbl = document.createElement('label');
         noneLbl.className = 'target-radio';
-        noneLbl.innerHTML = '<input type="radio" name="targetOverlay" value="none"> None';
+        noneLbl.innerHTML = '<input type="checkbox" data-target="none"> None';
         radiosEl.appendChild(noneLbl);
 
         radiosEl.addEventListener('change', function (e) {
-            selectedTarget = e.target.value;
+            var cb = e.target;
+            if (!cb.dataset || !cb.dataset.target) return;
+            var tKey = cb.dataset.target;
+            if (tKey === 'none') {
+                // "None" unchecks all others
+                if (cb.checked) {
+                    selectedTargets = [];
+                    radiosEl.querySelectorAll('input[type="checkbox"]').forEach(function (box) {
+                        if (box.dataset.target !== 'none') box.checked = false;
+                    });
+                }
+            } else {
+                // Uncheck "None" when selecting a target
+                var noneBox = radiosEl.querySelector('input[data-target="none"]');
+                if (noneBox) noneBox.checked = false;
+                if (cb.checked) {
+                    if (selectedTargets.indexOf(tKey) === -1) selectedTargets.push(tKey);
+                } else {
+                    selectedTargets = selectedTargets.filter(function (t) { return t !== tKey; });
+                }
+            }
             updateFanChart();
             updateFanLegend();
         });
@@ -387,10 +410,11 @@
             });
         }
 
-        // Target overlay
-        if (selectedTarget && selectedTarget !== 'none' && DATA.targets && DATA.targets[selectedTarget]) {
-            var tgt = DATA.targets[selectedTarget];
-            var style = TARGET_STYLES[selectedTarget] || TARGET_STYLES.custom;
+        // Target overlays (one dataset per selected target)
+        selectedTargets.forEach(function (selTgt) {
+            if (!selTgt || selTgt === 'none' || !DATA.targets || !DATA.targets[selTgt]) return;
+            var tgt = DATA.targets[selTgt];
+            var style = TARGET_STYLES[selTgt] || TARGET_STYLES.custom;
             var tgtData = years.map(function (y) {
                 return tgt.trajectory[String(y)] != null ? tgt.trajectory[String(y)] : null;
             });
@@ -406,7 +430,7 @@
                 tension: 0.3,
                 _target: true
             });
-        }
+        });
 
         fanChart.data.labels = labels;
         fanChart.data.datasets = datasets;
@@ -460,29 +484,40 @@
             var html = '<div class="fan-tooltip-title">' + year + '</div>';
 
             var visible = getVisibleScenarios();
+            var baseline2023 = DATA.scenarios.baseline ? (function () {
+                var bEnv = getEnvelope(DATA.scenarios.baseline);
+                return bEnv && bEnv['2023'] ? bEnv['2023'].p50 : null;
+            })() : null;
+
             visible.forEach(function (sKey) {
                 var sc = DATA.scenarios[sKey];
                 var envData = getEnvelope(sc);
                 var envYear = envData[year];
                 if (!envYear) return;
                 var color = sc.color || SCENARIO_COLORS[sKey] || '#888';
+                var pctStr = '';
+                if (baseline2023 && baseline2023 > 0) {
+                    var pctReduction = ((baseline2023 - envYear.p50) / baseline2023 * 100).toFixed(1);
+                    pctStr = ' (' + (pctReduction >= 0 ? '-' : '+') + Math.abs(pctReduction) + '% vs 2023)';
+                }
                 html += '<div class="fan-tooltip-row">' +
                     '<span class="fan-tooltip-swatch" style="background:' + color + '"></span>' +
                     '<span class="fan-tooltip-label">' + (SCENARIO_LABELS[sKey] || sKey) + '</span>' +
                     '<span class="fan-tooltip-vals">P10: ' + envYear.p10.toFixed(1) +
                     '  P50: ' + envYear.p50.toFixed(1) +
-                    '  P90: ' + envYear.p90.toFixed(1) + '</span></div>';
+                    '  P90: ' + envYear.p90.toFixed(1) + pctStr + '</span></div>';
             });
 
-            // Gap to target
-            if (selectedTarget && selectedTarget !== 'none' && DATA.gap_analysis) {
+            // Gap to targets (all selected)
+            selectedTargets.forEach(function (selTgt) {
+                if (!selTgt || selTgt === 'none' || !DATA.gap_analysis) return;
                 html += '<div class="fan-tooltip-gap">';
-                var tgtLabel = DATA.targets[selectedTarget] ? DATA.targets[selectedTarget].label : selectedTarget;
+                var tgtLabel = DATA.targets[selTgt] ? DATA.targets[selTgt].label : selTgt;
                 html += '<strong>Gap to ' + tgtLabel + ':</strong><br>';
                 visible.forEach(function (sKey) {
                     var ga = DATA.gap_analysis[sKey];
-                    if (!ga || !ga[selectedTarget]) return;
-                    var gap = ga[selectedTarget].gap_mt[year];
+                    if (!ga || !ga[selTgt]) return;
+                    var gap = ga[selTgt].gap_mt[year];
                     if (gap == null) return;
                     var cls = gap > 0 ? 'gap-positive' : 'gap-negative';
                     var sign = gap > 0 ? '+' : '';
@@ -490,7 +525,7 @@
                     html += '<span class="' + cls + '">' + (SCENARIO_LABELS[sKey] || sKey) + ' ' + sign + gap.toFixed(1) + ' Mt' + check + '</span>  ';
                 });
                 html += '</div>';
-            }
+            });
 
             tooltipEl.innerHTML = html;
         }
@@ -523,16 +558,25 @@
             var color = DATA.scenarios[key].color || SCENARIO_COLORS[key];
             items.push({ label: SCENARIO_LABELS[key] || key, color: color, type: 'band' });
         }
-        if (selectedTarget && selectedTarget !== 'none' && DATA.targets && DATA.targets[selectedTarget]) {
-            var style = TARGET_STYLES[selectedTarget] || TARGET_STYLES.custom;
-            items.push({
-                label: DATA.targets[selectedTarget].label,
-                color: style.color,
-                type: style.dash.length ? 'dashed' : 'line'
-            });
-        }
+        selectedTargets.forEach(function (selTgt) {
+            if (selTgt && selTgt !== 'none' && DATA.targets && DATA.targets[selTgt]) {
+                var style = TARGET_STYLES[selTgt] || TARGET_STYLES.custom;
+                items.push({
+                    label: DATA.targets[selTgt].label,
+                    color: style.color,
+                    type: style.dash.length ? 'dashed' : 'line'
+                });
+            }
+        });
         if (typeof buildLegend === 'function') {
             buildLegend(el, items);
+        } else {
+            // Fallback: render simple HTML legend
+            el.innerHTML = items.map(function(item) {
+                return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:16px;">' +
+                    '<span style="width:24px;height:10px;border-radius:3px;background:' + item.color + ';display:inline-block;"></span>' +
+                    item.label + '</span>';
+            }).join('');
         }
     }
 
@@ -720,10 +764,17 @@
 
         // Legend
         var legendEl = document.getElementById('genMixLegend');
+        var genLegendItems = FUEL_KEYS.map(function (f) {
+            return { label: FUEL_LABELS[f], color: FUEL_COLORS[f], type: 'band' };
+        });
         if (typeof buildLegend === 'function') {
-            buildLegend(legendEl, FUEL_KEYS.map(function (f) {
-                return { label: FUEL_LABELS[f], color: FUEL_COLORS[f], type: 'band' };
-            }));
+            buildLegend(legendEl, genLegendItems);
+        } else {
+            legendEl.innerHTML = genLegendItems.map(function(item) {
+                return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:16px;">' +
+                    '<span style="width:24px;height:10px;border-radius:3px;background:' + item.color + ';display:inline-block;"></span>' +
+                    item.label + '</span>';
+            }).join('');
         }
     }
 
@@ -810,10 +861,17 @@
 
         // Legend
         var legendEl = document.getElementById('fuelEmissionsLegend');
+        var emLegendItems = EMISSION_FUEL_KEYS.map(function (f) {
+            return { label: FUEL_LABELS[f], color: FUEL_COLORS[f], type: 'band' };
+        });
         if (typeof buildLegend === 'function') {
-            buildLegend(legendEl, EMISSION_FUEL_KEYS.map(function (f) {
-                return { label: FUEL_LABELS[f], color: FUEL_COLORS[f], type: 'band' };
-            }));
+            buildLegend(legendEl, emLegendItems);
+        } else {
+            legendEl.innerHTML = emLegendItems.map(function(item) {
+                return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:16px;">' +
+                    '<span style="width:24px;height:10px;border-radius:3px;background:' + item.color + ';display:inline-block;"></span>' +
+                    item.label + '</span>';
+            }).join('');
         }
     }
 
