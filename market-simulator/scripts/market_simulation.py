@@ -67,6 +67,8 @@ from pipeline_config import (
     NEW_BUILD_CO2_RATES, NEW_BUILD_MIN_CF, NEW_BUILD_MAX_GW_YR,
     PEAK_DEMAND_MW, EXISTING_GAS_CAPACITY_MW, RESOURCE_ADEQUACY_MARGIN,
     compute_storage_revenue_credit,
+    STORAGE_ANCILLARY_PRODUCT, ANCILLARY_SERVICE_RATES, ANCILLARY_HOURS,
+    REVENUE_STACKING_FACTOR, STORAGE_MAX, H2_MIN_THRESHOLD,
     OFFSHORE_ISOS, CCS_CAP_TWH, GEOTHERMAL_CAP_TWH,
     H, NUCLEAR_OFFTAKE_CONTRACTS,
     get_rps_floor,
@@ -1359,6 +1361,85 @@ def compute_capacity_degradation(iso, clean_pct):
     return max(floor, factor)
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# ECONOMICS-DRIVEN STORAGE DEPLOYMENT (R1)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Storage technology parameters for arbitrage calculation
+_STORAGE_TECH_PARAMS = {
+    'battery':  {'duration': 4,    'efficiency': 0.85, 'cycles_per_year': 365, 'window_days': 1},
+    'battery8': {'duration': 8,    'efficiency': 0.85, 'cycles_per_year': 365, 'window_days': 2},
+    'ldes':     {'duration': 100,  'efficiency': 0.50, 'cycles_per_year': 52,  'window_days': 7},
+    'h2':       {'duration': 1000, 'efficiency': 0.35, 'cycles_per_year': 12,  'window_days': 30},
+}
+
+
+def compute_storage_arbitrage_from_lmp(hourly_lmp, iso=None):
+    """Compute realized arbitrage revenue ($/kW-yr) for each storage tech.
+
+    Uses price-taking dispatch: charge during lowest-LMP hours, discharge
+    during highest-LMP hours per cycle window. Vectorized numpy — no Numba
+    needed for 8760 elements.
+
+    Args:
+        hourly_lmp: 8760 array of hourly LMP ($/MWh)
+        iso: ISO string (unused currently, reserved for future regional adjustments)
+
+    Returns:
+        dict mapping tech name to realized arbitrage revenue in $/kW-yr
+    """
+    lmp = np.asarray(hourly_lmp, dtype=np.float64)
+    results = {}
+
+    for tech, params in _STORAGE_TECH_PARAMS.items():
+        duration = params['duration']
+        rte = params['efficiency']
+        cycles = params['cycles_per_year']
+        window_hours = params['window_days'] * 24
+
+        # Number of windows in the year
+        n_windows = min(cycles, H // window_hours) if window_hours > 0 else 0
+        if n_windows <= 0 or duration <= 0:
+            results[tech] = 0.0
+            continue
+
+        # Per-window arbitrage: sort LMP within each window, charge at bottom,
+        # discharge at top. This captures realistic temporal constraints
+        # (can't charge in January and discharge in June for a 4hr battery).
+        #
+        # For a 1 kW power-rated system with `duration` hours of storage:
+        #   - Charges at 1 kW for `duration` hours → stores `duration` kWh
+        #   - Discharges at 1 kW for `duration` hours → delivers `duration * RTE` kWh
+        #   - Per-cycle revenue = avg(discharge_lmp) * duration * RTE - avg(charge_lmp) * duration
+        #   - Units: $/MWh × hours = $/MW per cycle → ÷ 1000 for $/kW per cycle
+        total_revenue_dollar_per_mw = 0.0
+        charge_hours_per_window = min(duration, window_hours // 2)
+        discharge_hours_per_window = charge_hours_per_window  # symmetric
+
+        for w in range(n_windows):
+            w_start = w * window_hours
+            w_end = min(w_start + window_hours, H)
+            if w_end - w_start < 2 * charge_hours_per_window:
+                continue  # window too short
+
+            window_lmp = lmp[w_start:w_end]
+            sorted_idx = np.argsort(window_lmp)
+
+            # Charge at cheapest hours, discharge at most expensive
+            # Each hour: 1 MW power → 1 MWh energy, cost/revenue = LMP × 1 MWh
+            charge_cost = np.sum(window_lmp[sorted_idx[:charge_hours_per_window]])
+            discharge_rev = np.sum(window_lmp[sorted_idx[-discharge_hours_per_window:]])
+
+            # Net revenue per cycle in $/MW (1 MW power capacity assumed)
+            cycle_revenue = discharge_rev * rte - charge_cost
+            total_revenue_dollar_per_mw += cycle_revenue
+
+        # Convert $/MW-yr → $/kW-yr (÷ 1000)
+        results[tech] = max(0.0, total_revenue_dollar_per_mw / 1000.0)
+
+    return results
+
+
 def compute_nuclear_revenue(iso, clean_pct, hourly_lmp, year, conditions=None,
                              reserve_margin_pct=None):
     """Compute nuclear plant revenue stack by ISO.
@@ -2189,6 +2270,124 @@ def _compute_zone_capture_adjustments(iso, system_vre_penetration, zonal_stats):
     return adjustments
 
 
+def compute_storage_deployment(iso, year, hourly_lmp, demand_twh,
+                                demand_total_mwh, current_clean_pct,
+                                conditions, cumulative_gw, state):
+    """Economics-driven storage deployment via revenue vs. cost comparison.
+
+    For each storage technology, computes total revenue (arbitrage + capacity +
+    ancillary) and compares against annualized LCOE. Deploys capacity where
+    revenue exceeds cost, subject to STORAGE_MAX caps.
+
+    Args:
+        iso: ISO region string
+        year: Simulation year
+        hourly_lmp: 8760 array of hourly LMP ($/MWh)
+        demand_twh: Total demand in TWh
+        demand_total_mwh: Total demand in MWh
+        current_clean_pct: Current clean energy percentage
+        conditions: Dict with lcoe_level, fuel_level, etc.
+        cumulative_gw: Dict tracking cumulative GW deployed per tech
+        state: Mutable iso_state dict
+
+    Returns:
+        dict with:
+            deployed_pcts: {tech: pct_of_demand} for battery, battery8, ldes, h2
+            storage_details: {tech: {revenue, cost, margin, deployed}} per tech
+            total_storage_cost_mwh: Blended storage cost in $/MWh of total demand
+    """
+    lcoe_level = conditions.get('lcoe_level', 'Medium')
+    learning_speed = conditions.get('learning_speed', 'Medium')
+
+    # Compute LMP-based arbitrage revenue for each tech
+    arb_revenue = compute_storage_arbitrage_from_lmp(hourly_lmp, iso)
+
+    # Capacity market revenue with degradation at high clean shares
+    base_cap_price = CAPACITY_MARKET_PRICES.get(iso, 0)
+    cap_degrade = compute_capacity_degradation(iso, current_clean_pct)
+    degraded_cap_price = base_cap_price * cap_degrade
+
+    deployed_pcts = {}
+    storage_details = {}
+    total_storage_cost = 0.0
+
+    for tech in ['battery', 'battery8', 'ldes', 'h2']:
+        # H2 only at ≥95% thresholds
+        if tech == 'h2' and current_clean_pct < H2_MIN_THRESHOLD:
+            deployed_pcts[tech] = 0.0
+            storage_details[tech] = {
+                'revenue_kw_yr': 0, 'arb_kw_yr': 0, 'cap_kw_yr': 0,
+                'anc_kw_yr': 0, 'revenue_lcoe': 0, 'cost_lcoe': 0,
+                'margin': 0, 'deployed_pct': 0, 'reason': 'below_threshold',
+            }
+            continue
+
+        params = _STORAGE_TECH_PARAMS[tech]
+        duration = params['duration']
+
+        # --- Revenue stack ($/kW-yr) ---
+        # 1. Arbitrage revenue from LMP dispatch
+        arb_kw_yr = arb_revenue.get(tech, 0)
+
+        # 2. Capacity revenue (availability-based, always earned)
+        # Storage gets full capacity credit (dispatchable resource)
+        cap_kw_yr = degraded_cap_price
+
+        # 3. Ancillary services revenue
+        product = STORAGE_ANCILLARY_PRODUCT[tech]
+        anc_rate = ANCILLARY_SERVICE_RATES[product].get(iso, 0)
+        anc_hours = ANCILLARY_HOURS[product]
+        anc_kw_yr = anc_rate * anc_hours / 1000.0  # $/MW-hr × hr/yr → $/kW-yr
+
+        # Capacity is always earned; arbitrage + ancillary compete for same hours
+        total_rev_kw_yr = cap_kw_yr + (arb_kw_yr + anc_kw_yr) * REVENUE_STACKING_FACTOR
+
+        # Convert to LCOE-comparable units (same as LCOE_TABLES storage entries)
+        # LCOE_TABLES storage: annualized cost per % of annual demand
+        # Revenue credit: 1000 × $/kW-yr ÷ duration_hours
+        revenue_lcoe = 1000.0 * total_rev_kw_yr / duration if duration > 0 else 0
+
+        # --- Cost (annualized LCOE from LCOE_TABLES) ---
+        cost_lcoe = get_resource_lcoe(tech, iso, lcoe_level, cumulative_gw,
+                                       learning_speed, year, conditions=conditions)
+
+        # --- Deploy decision ---
+        margin = revenue_lcoe - cost_lcoe
+        max_pct = STORAGE_MAX.get(tech, 0)
+
+        if margin > 0:
+            # Profitable — deploy to max cap
+            deploy_pct = max_pct
+        else:
+            deploy_pct = 0.0
+
+        deployed_pcts[tech] = round(deploy_pct, 4)
+        storage_details[tech] = {
+            'revenue_kw_yr': round(total_rev_kw_yr, 1),
+            'arb_kw_yr': round(arb_kw_yr, 1),
+            'cap_kw_yr': round(cap_kw_yr, 1),
+            'anc_kw_yr': round(anc_kw_yr, 1),
+            'revenue_lcoe': round(revenue_lcoe, 1),
+            'cost_lcoe': round(cost_lcoe, 1),
+            'margin': round(margin, 1),
+            'deployed_pct': round(deploy_pct, 4),
+        }
+
+        # Storage cost contribution to total demand
+        if deploy_pct > 0:
+            # Cost in $/MWh of demand: cost_lcoe × deploy_pct / 100
+            total_storage_cost += cost_lcoe * deploy_pct / 100.0
+
+    state['storage_deployed'] = deployed_pcts
+    state['storage_details'] = storage_details
+
+    return {
+        'deployed_pcts': deployed_pcts,
+        'storage_details': storage_details,
+        'total_storage_cost_mwh': round(total_storage_cost, 2),
+    }
+
+
 def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
                                conditions, cumulative_gw, queue_remaining_gw,
                                hourly_lmp, avg_lmp, p90_lmp,
@@ -2722,7 +2921,16 @@ def _generate_synthetic_step3_data():
     Produces a reasonable set of threshold → resource_mix mappings based on
     known grid characteristics. This enables the tool to run standalone for
     screening-level analysis without requiring the full pipeline.
+
+    R1: Now emits an explicit warning instead of silently generating ramp data.
     """
+    import warnings
+    warnings.warn(
+        "Parquet data not found — using synthetic storage ramps. "
+        "Results are approximate. Run the full pipeline (Steps 1-2) "
+        "for production-quality results.",
+        UserWarning, stacklevel=2,
+    )
     from pipeline_config import ISOS, GRID_MIX_SHARES
 
     # Typical resource ramp patterns per ISO
@@ -3039,6 +3247,8 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             'cumulative_acp_million': 0,
             'economic_retirements': {},  # cumulative MW retired by unit type
             'deployed_twh': {},  # cumulative TWh deployed by resource (for dispatch consistency)
+            'storage_deployed': {},  # R1: {tech: pct_of_demand} from economics-driven deployment
+            'storage_details': {},   # R1: per-tech revenue/cost breakdown
         }
 
     if sim_years is not None:
@@ -3203,20 +3413,27 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             # identical LMPs, so bucketing avoids redundant dispatch solves.
             _nb_total = sum(state.get('new_fossil_builds', {}).values())
             _nb_bucket = round(_nb_total / 5000) * 5000  # 5 GW buckets
+            # R1: Include storage state in LMP cache key
+            _prev_stor = state.get('storage_deployed', {})
+            _stor_key = tuple(sorted(_prev_stor.items())) if _prev_stor else ()
             _lmp_key = (iso, current_pct, conditions['fuel_level'],
                         conditions['demand_growth'], year, carbon_price,
-                        interchange_enabled, dr_level, _nb_bucket)
+                        interchange_enabled, dr_level, _nb_bucket, _stor_key)
             zonal_congestion_data = None
             scarcity_hours_frac = 0.0
             curtailment_rate = 0.0
             if _lmp_cache is not None and _lmp_key in _lmp_cache:
                 hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate = _lmp_cache[_lmp_key]
             else:
+                # R1: Use previously deployed storage in LMP calculation (Pass 1)
                 hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate = compute_lmp_at_threshold(
                     iso, current_pct, conditions['fuel_level'],
                     demand_norm, demand_mw_profile,
                     supply_profiles_iso, resource_pcts,
-                    battery_pct=0, battery8_pct=0, ldes_pct=0, h2_pct=0,
+                    battery_pct=_prev_stor.get('battery', 0),
+                    battery8_pct=_prev_stor.get('battery8', 0),
+                    ldes_pct=_prev_stor.get('ldes', 0),
+                    h2_pct=_prev_stor.get('h2', 0),
                     carbon_price=carbon_price,
                     nox_price=conditions.get('nox_price', 0.0),
                     sox_price=conditions.get('sox_price', 0.0),
@@ -3238,6 +3455,59 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             # --- RESERVE MARGIN (for endogenous capacity pricing) ---
             reserve_margin_pct = compute_reserve_margin(
                 gen_econ, cumulative_gw, demand_twh)
+
+            # --- R1: ECONOMICS-DRIVEN STORAGE DEPLOYMENT ---
+            storage_result = compute_storage_deployment(
+                iso, year, hourly_lmp, demand_twh, demand_total_mwh,
+                current_pct, conditions, cumulative_gw, state)
+            _new_stor = storage_result['deployed_pcts']
+
+            # Check if storage allocation changed materially (>0.1pp on any tech)
+            _storage_changed = any(
+                abs(_new_stor.get(t, 0) - _prev_stor.get(t, 0)) > 0.001
+                for t in ['battery', 'battery8', 'ldes', 'h2']
+            )
+
+            if _storage_changed:
+                # LMP Pass 2: recompute with new storage deployment
+                _stor_key2 = tuple(sorted(_new_stor.items()))
+                _lmp_key2 = (iso, current_pct, conditions['fuel_level'],
+                             conditions['demand_growth'], year, carbon_price,
+                             interchange_enabled, dr_level, _nb_bucket, _stor_key2)
+                if _lmp_cache is not None and _lmp_key2 in _lmp_cache:
+                    hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate = _lmp_cache[_lmp_key2]
+                else:
+                    hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate = compute_lmp_at_threshold(
+                        iso, current_pct, conditions['fuel_level'],
+                        demand_norm, demand_mw_profile,
+                        supply_profiles_iso, resource_pcts,
+                        battery_pct=_new_stor.get('battery', 0),
+                        battery8_pct=_new_stor.get('battery8', 0),
+                        ldes_pct=_new_stor.get('ldes', 0),
+                        h2_pct=_new_stor.get('h2', 0),
+                        carbon_price=carbon_price,
+                        nox_price=conditions.get('nox_price', 0.0),
+                        sox_price=conditions.get('sox_price', 0.0),
+                        nox_limit=conditions.get('nox_limit'),
+                        sox_limit=conditions.get('sox_limit'),
+                        custom_fuel_prices=conditions.get('custom_fuel_prices'),
+                        custom_co2_price=conditions.get('custom_co2_price'),
+                        custom_heat_rates=conditions.get('custom_heat_rates'),
+                        custom_vom=conditions.get('custom_vom'),
+                        interchange_norm=ic_norm,
+                        firm_import_mw=ic_firm_mw,
+                        dr_level=dr_level,
+                        demand_growth_factor=growth_factor,
+                        new_fossil_builds=state.get('new_fossil_builds'),
+                    )
+                    if _lmp_cache is not None:
+                        _lmp_cache[_lmp_key2] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate)
+
+                _log(f"  {iso} R1 storage: "
+                     + ", ".join(f"{t}={_new_stor.get(t, 0):.4f}%"
+                                for t in ['battery', 'battery8', 'ldes', 'h2']
+                                if _new_stor.get(t, 0) > 0)
+                     + f" (LMP pass 2: avg=${avg_lmp:.1f})")
 
             # --- LCOE MERIT-ORDER DEPLOYMENT ---
             # Compute per-resource temporal energy revenue for deployment economics
@@ -3567,6 +3837,13 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                     compute_capacity_price(iso, reserve_margin_pct, current_pct), 2),
                 # VRE curtailment feedback (R10)
                 'curtailment_rate': round(curtailment_rate, 4),
+                # R1: Economics-driven storage deployment
+                'battery_pct': round(state.get('storage_deployed', {}).get('battery', 0), 4),
+                'battery8_pct': round(state.get('storage_deployed', {}).get('battery8', 0), 4),
+                'ldes_pct': round(state.get('storage_deployed', {}).get('ldes', 0), 4),
+                'h2_pct': round(state.get('storage_deployed', {}).get('h2', 0), 4),
+                'storage_revenue_details': state.get('storage_details', {}),
+                'storage_cost_per_mwh': round(storage_result.get('total_storage_cost_mwh', 0), 2),
             }
 
             # ── LCOE trajectory (endogenous Wright's Law) ────────────
