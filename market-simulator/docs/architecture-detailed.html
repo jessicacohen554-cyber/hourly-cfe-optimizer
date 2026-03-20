@@ -223,9 +223,10 @@
               Normalized shapes: demand sums to 8760, generation sums to 1.0.
               Solar DST-aware zeroing. Nuclear monthly CF derate from NRC.
               Fossil mix: hourly coal/gas/oil shares for merit-order dispatch.
+              Inter-regional interchange profiles (EIA-930 net imports).
             </div>
             <div class="sc-io">
-              <span class="out">Out:</span> eia_demand_profiles.json, eia_gen_profiles.json, eia_fossil_mix.json
+              <span class="out">Out:</span> eia_demand_profiles.json, eia_gen_profiles.json, eia_fossil_mix.json, eia_interchange_profiles.json
             </div>
           </div>
           <div class="step-card">
@@ -233,22 +234,24 @@
             <div class="sc-script">pipeline_config.py</div>
             <div class="sc-detail">
               <strong>Single source of truth.</strong> 7 ISOs, 21 thresholds.
-              LCOE tables (L/M/H &times; 7 ISOs &times; 10 resources).
+              LCOE tables (L/M/H &times; 7 ISOs &times; 10 resources). Fossil new-build CAPEX (L/M/H &times; CCGT/CT/coal).
               Transmission adders, FOAK/NOAK costs, Wright&rsquo;s Law params.
               Demand growth rates, storage parameters, grid mix shares, capacity caps.
+              ORDC params (VOLL, knee_mw, lambda, cap per ISO). Tech-differentiated queue caps.
               All scripts import from here &mdash; no local constant definitions.
             </div>
             <div class="sc-io">
-              <span>Sources:</span> NREL ATB 2024, Lazard v17-18, EIA AEO 2025, EPA eGRID, LBNL
+              <span>Sources:</span> NREL ATB 2024, Lazard v17-18, EIA AEO 2025, EPA eGRID, LBNL Queued Up 2024
             </div>
           </div>
           <div class="step-card">
             <div class="sc-id">Fleet Inventory (Optional)</div>
             <div class="sc-script">fleet_model.py</div>
             <div class="sc-detail">
-              Real generator data from EIA 860 (capacity, fuel, prime mover), EIA 923 (generation, fuel consumption &rarr; revealed heat rates), EPA CAMPD (hourly emissions).
+              Real generator data from EIA 860 (capacity, fuel, prime mover, BA code), EIA 923 (generation, fuel consumption &rarr; revealed heat rates), EPA CAMPD (hourly emissions).
               Cross-references to build unit-level merit-order stacks.
-              BA_TO_ISO mapping. Falls back to stylized bins when data unavailable.
+              BA_TO_ISO mapping. Falls back to stylized 4-bin stack when data unavailable.
+              Two-tier dispatch: Tier 1 (fleet-average), Tier 2 (plant-level with vintage-adjusted UC).
             </div>
             <div class="sc-io">
               <span>In:</span> data/eia-860/{state}/, data/eia-923/{state}/, data/epa-campd/{state}/
@@ -259,7 +262,7 @@
     </div>
 
   </div>
-  <div class="footnote">Constellation Energy &mdash; Market Simulator v1.0 &mdash; Page 1 of 3</div>
+  <div class="footnote">Constellation Energy &mdash; Market Simulator &mdash; Page 1 of 3</div>
 </div>
 
 <!-- PAGE 2: Simulation Engine -->
@@ -274,45 +277,40 @@
             <div class="sc-id accent">Core &mdash; Market Simulation</div>
             <div class="sc-script">market_simulation.py</div>
             <div class="sc-detail">
-              <strong>Entry point:</strong> <span class="module-ref">run_market_simulation()</span> (single), <span class="module-ref">run_full_sweep()</span> (270&times;).
+              <strong>Entry point:</strong> <span class="module-ref">run_market_simulation()</span> (single), <span class="module-ref">run_full_sweep()</span> (1,215&times;).
               <strong>Flow:</strong> load_common_data() &rarr; build_market_scenarios() &rarr; build_single_scenario() &times; N &rarr; save_results().
               Profit-driven: clean resources deploy where revenue &gt; cost. Deployment stops at first unprofitable zone.
               Clean energy level is an OUTPUT, not a target constraint.
+              <strong>New-build fossil:</strong> <span class="module-ref">apply_economic_new_build()</span> &mdash; RA trigger (reserve margin &lt; 15%) + economic trigger.
+              ORDC feedback loop: low reserves &rarr; scarcity spikes &rarr; new fossil viable &rarr; reserves restored.
             </div>
             <div class="sc-io">
               <span>In:</span> EF parquets, EIA profiles, user params &nbsp;
-              <span class="out">Out:</span> data/results/run_NNN/ (CSV, JSON, text)
+              <span class="out">Out:</span> results/ (parquet, JSON, CSV)
             </div>
           </div>
         </div>
         <div class="step-row">
           <div class="step-card">
-            <div class="sc-id">LMP Engine + Zonal Decomposition</div>
+            <div class="sc-id">LMP Engine + ORDC + Zonal</div>
             <div class="sc-script">lmp_engine.py, zonal_lmp.py</div>
             <div class="sc-detail">
-              <strong>build_merit_order_stack():</strong> Sort fossil units by marginal cost = HR &times; fuel + VOM + CO&sub2; &times; carbon.
-              Coal &rarr; oil &rarr; gas CT &rarr; gas CCGT merit order.<br>
-              <strong>compute_hourly_lmp_vectorized():</strong> 8,760-hour clearing price. Demand response dampening at ISO-specific trigger prices.<br>
-              <strong>Zonal LP (zonal_lmp.py):</strong> Pipe-and-bubble model, 2&ndash;5 zones/ISO. scipy linprog (HiGHS) per hour.
-              Zonal LMPs from dual prices on balance constraints. Inter-zonal transfer limits from ISO planning reports.<br>
-              <strong>Inter-regional imports:</strong> EIA-930 hourly net import profiles reduce residual demand. FIRM_IMPORT_MW caps per ISO.<br>
-              <strong>Demand response:</strong> Price-elastic curtailment (PJM 10 GW @$100, ERCOT 5 GW @$200, MISO 8 GW @$120). Off/Low/Med/High.
-            </div>
-            <div class="sc-io">
-              <span>Constants:</span> HEAT_RATES, VOM, CO2_RATES, FUEL_PRICES, INSTALLED_FOSSIL_MW, FOSSIL_CAPACITY_SHARES, ZONE_CONFIG, FIRM_IMPORT_MW, DEMAND_RESPONSE
+              <strong>build_merit_order_stack():</strong> Sort fossil units by MC = HR &times; fuel + VOM + CO&sub2; &times; carbon. ISO-specific offer adders (10% capacity-market, 0% energy-only).<br>
+              <strong>ORDC scarcity pricing:</strong> Exponential knee model &mdash; adder = 0 above knee, min(cap, VOLL &times; e^(&minus;&lambda;R)) below. Per-ISO VOLL ($2K&ndash;$5K), knee_mw, cap.<br>
+              <strong>VRE cannibalization:</strong> Capture-rate feedback &mdash; solar/wind revenue uses generation-weighted LMP, not average. Sigmoid depression at high VRE shares.<br>
+              <strong>Zonal LP (zonal_lmp.py):</strong> Pipe-and-bubble, 2&ndash;5 zones/ISO. ORDC integrated into zonal path. Dual prices on balance constraints.<br>
+              <strong>Demand response:</strong> Price-elastic curtailment (PJM 10 GW @$100, ERCOT 5 GW @$200). Off/Low/Med/High toggle.
             </div>
           </div>
           <div class="step-card">
-            <div class="sc-id">LP Storage Co-Dispatch</div>
+            <div class="sc-id">LP Storage + Retirement</div>
             <div class="sc-script">dispatch_utils.py</div>
             <div class="sc-detail">
               <strong>co_dispatch_storage_lp():</strong> Rolling-window LP co-optimization of all storage types.
-              scipy linprog with sparse matrix constraints (COO &rarr; CSC). Objective: minimize unmet demand.<br>
-              Windows: 24hr (bat4), 48hr (bat8), 168hr (LDES), 720hr (H&sub2;). SOC carryover for multi-day storage.
-              Falls back to greedy sequential dispatch if LP infeasible.<br>
-              <strong>compute_fossil_retirement():</strong> Coal retires first (&gt;60% clean), then oil, then gas.
-              Returns remaining capacity per fuel type.<br>
-              <strong>load_common_data():</strong> EIA demand, supply, emission rates, fossil mix, interchange profiles.
+              scipy linprog (HiGHS) with sparse matrix constraints. Objective: minimize unmet demand.<br>
+              Windows: 24hr (bat4), 48hr (bat8), 168hr (LDES), 720hr (H&sub2;). SOC carryover for multi-day.<br>
+              <strong>Fossil retirement cascade:</strong> Coal &rarr; oil &rarr; gas CT &rarr; gas CCGT. Margin-threshold heuristic.<br>
+              <strong>Nuclear retirement:</strong> Revenue floor (&sect;45U PTC). Retires if energy + capacity + PTC &lt; threshold.
             </div>
           </div>
         </div>
@@ -320,32 +318,27 @@
           <div class="step-card">
             <div class="sc-id">Revenue Model</div>
             <div class="sc-detail">
-              Per zone / threshold step:<br>
-              <strong>1. Energy:</strong> Hourly LMP &times; resource generation profile (generation-weighted LMP).<br>
-              <strong>2. Capacity market:</strong> ISO-specific $/kW-yr, degraded by clean share: price &times; max(0, 1 &minus; &alpha; &times; clean%).<br>
-              <strong>3. Incentives:</strong> PTC &sect;45Y ($26/MWh wind/solar/nuclear), &sect;45U (existing nuclear floor $40/MWh, max $15/MWh credit), ITC 30% (storage/offshore).<br>
+              <strong>1. Energy:</strong> Hourly LMP &times; resource CF (capture-rate-adjusted for VRE).<br>
+              <strong>2. Capacity:</strong> ISO-specific $/kW-yr, degraded by clean share.<br>
+              <strong>3. Incentives:</strong> &sect;45Y PTC ($26/MWh), &sect;45U nuclear floor ($40/MWh, max $15 credit), ITC 30% (storage/offshore).<br>
               <strong>4. REC:</strong> Scarcity-driven: ACP &times; (1 &minus; exp(&minus;k &times; gap%)).
             </div>
           </div>
           <div class="step-card">
-            <div class="sc-id">Cost Model</div>
+            <div class="sc-id">Cost Model + New-Build Fossil</div>
             <div class="sc-detail">
-              <strong>LCOE:</strong> From <span class="module-ref">pipeline_config.py</span> tables (L/M/H &times; 7 ISOs &times; resource).
-              Wright&rsquo;s Law adjustment in trajectory mode: C(Q) = FOAK &times; (Q/Q_ref)^(-b).<br>
-              <strong>Transmission:</strong> Per-resource, per-ISO flat adders ($/MWh).<br>
-              <strong>Gas backup:</strong> Existing gas FOM ($/kW-yr) on used capacity; new CCGT capital on new-build.
-              Peak capacity credits (ELCC) reduce backup requirements.<br>
-              <strong>PPA discount:</strong> Regional market depth scaling (ERCOT=1.0 &rarr; SPP=0.50).
+              <strong>LCOE:</strong> L/M/H &times; 7 ISOs &times; resource. Wright&rsquo;s Law: C(Q) = FOAK &times; (Q/Q_ref)^(-b).<br>
+              <strong>Transmission:</strong> Per-resource, per-ISO flat adders.<br>
+              <strong>New-build fossil CAPEX:</strong> CCGT/CT/coal, L/M/H per ISO. Coal blocked in CAISO/NYISO/NEISO. Max build rate (GW/yr).<br>
+              <strong>PPA discount:</strong> Regional market depth (ERCOT=1.0 &rarr; SPP=0.50).
             </div>
           </div>
           <div class="step-card">
-            <div class="sc-id">Scenario Modes</div>
+            <div class="sc-id">Fleet Dispatch Engine</div>
+            <div class="sc-script">fleet_dispatch.py, fleet-dispatch-engine.js</div>
             <div class="sc-detail">
-              <strong>Snapshot:</strong> Single point-in-time, user inputs, no learning. 5&ndash;15 sec.<br>
-              <strong>Trajectory:</strong> 6 timesteps (2023&ndash;2050). Wright&rsquo;s Law + demand growth + queue caps.
-              Deploy zone-by-zone; stop at first loss. 30&ndash;120 sec.<br>
-              <strong>Sweep:</strong> 270 scenarios = 2 conditions &times; 3 demand &times; 5 price &times; 3 PPA &times; ~3 gas friction.
-              Shared LMP cache avoids redundant 8,760h computation. 5&ndash;30 min.
+              <strong>Python:</strong> Plant-level economics across 1,215 sweep scenarios. Efficiency ratios, CCS ramp (0/2/5/8yr), economic retirement. Grid+fleet fossil reconciliation (additive rule). P10/P50/P90 envelopes.<br>
+              <strong>JS port:</strong> Identical logic in browser. Instant recalc with fleet sidebar modifications. 200 plants &times; 1,215 scenarios &times; 6 years in &lt;50ms.
             </div>
           </div>
         </div>
@@ -355,7 +348,7 @@
     <div class="arrow-down"><svg width="14" height="8"><polygon points="7,7 2,1 12,1" fill="#2372B9"/></svg></div>
 
     <div class="section" style="flex:0.6;">
-      <div class="section-hdr bg-scenarios">Scenario Parameters &amp; Sweep Grid<span class="runtime">270 scenario combinations</span></div>
+      <div class="section-hdr bg-scenarios">Scenario Parameters &amp; Sweep Grid<span class="runtime">1,215 scenario combinations &times; 7 ISOs &times; 6 years = 51,030 runs</span></div>
       <div class="section-body">
         <div class="step-row">
           <div class="step-card">
@@ -374,20 +367,19 @@
             </div>
           </div>
           <div class="step-card">
-            <div class="sc-id">Market &amp; Policy</div>
+            <div class="sc-id">6-Dimension Sweep Grid</div>
             <div class="sc-detail">
-              Demand growth: L/M/H (0.5&ndash;5.5%/yr by ISO).<br>
-              Transmission: None/L/M/H adder.<br>
-              PPA availability: L/M/H. Gas friction: L/M/H.<br>
-              45Q on/off. Nuclear retirement floor: $10&ndash;60/MWh.
+              3 demand &times; 5 price &times; 3 PPA &times; 3 gas friction &times; 3 queue cap &times; 3 NB fossil cost = <strong>1,215</strong>.<br>
+              Snapshot (single), Trajectory (6 timesteps 2023&ndash;2050), Sweep (full grid).<br>
+              Tech-differentiated queue caps per ISO (LBNL Queued Up 2024).
             </div>
           </div>
           <div class="step-card">
-            <div class="sc-id">Queue &amp; Learning</div>
+            <div class="sc-id">Learning &amp; Queue</div>
             <div class="sc-detail">
-              Interconnection caps: 2&ndash;8 GW/yr per ISO (Facilitating vs Challenging).<br>
               Wright&rsquo;s Law: nuclear 10&ndash;15%, CCS 10&ndash;12%, LDES 15&ndash;20%, battery 18&ndash;20%, offshore 8&ndash;12%.<br>
-              2025 baselines: nuclear 2 GW, battery 50 GW, solar/wind 150 GW.
+              2025 baselines: nuclear 2 GW, battery 50 GW, solar/wind 150 GW.<br>
+              New-build fossil: NO learning curves (only clean resources learn).
             </div>
           </div>
         </div>
@@ -395,7 +387,7 @@
     </div>
 
   </div>
-  <div class="footnote">Constellation Energy &mdash; Market Simulator v1.0 &mdash; Page 2 of 3</div>
+  <div class="footnote">Constellation Energy &mdash; Market Simulator &mdash; Page 2 of 3</div>
 </div>
 
 <!-- PAGE 3: Frontend & API -->
