@@ -525,6 +525,7 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
 
     # Try zonal LMP if zone config available
     zonal_lmp_matrix = None
+    zonal_zone_names = None
     zonal_stats = None
     try:
         from pipeline_config import ZONE_CONFIG
@@ -549,6 +550,7 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
                 price_model=price_model, vre_penetration=vre_pen,
                 full_demand_mw_profile=effective_demand_mw,
             )
+            zonal_zone_names = zone_config['zones']
             hourly_lmp = system_lmp
             unit_idx = np.full(len(hourly_lmp), -1, dtype=np.int8)
     except Exception:
@@ -644,7 +646,7 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
         _ordc_adder = price_model.compute_ordc_adder(_reserves_mw)
         scarcity_hours_fraction = float(np.sum(_ordc_adder > 50.0)) / H
 
-    return hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_stats, scarcity_hours_fraction
+    return hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_stats, scarcity_hours_fraction, zonal_lmp_matrix, zonal_zone_names
 
 
 @njit(cache=True)
@@ -1361,8 +1363,26 @@ def compute_nuclear_revenue(iso, clean_pct, hourly_lmp, year, conditions=None):
 
 
 def compute_energy_revenue_by_resource(hourly_lmp, supply_profiles, resource_pcts,
-                                        demand_total_mwh):
-    """Compute energy revenue ($/MWh) per resource from hourly LMP × generation."""
+                                        demand_total_mwh, iso=None,
+                                        zonal_lmp_matrix=None,
+                                        zonal_zone_names=None):
+    """Compute energy revenue ($/MWh) per resource from hourly LMP × generation.
+
+    When zonal LMP data is available, VRE resources (solar, wind, offshore_wind)
+    use the LMP of their primary zone (from VRE_PRIMARY_ZONE) instead of the
+    system-average LMP. Non-VRE resources and VRE resources without a zone
+    mapping fall back to system-average LMP.
+
+    Returns:
+        dict {resource: $/MWh} — profile-weighted average energy revenue
+    """
+    # Build zone name → row index lookup for zonal LMP
+    _zone_idx = {}
+    if zonal_lmp_matrix is not None and zonal_zone_names is not None:
+        _zone_idx = {z: i for i, z in enumerate(zonal_zone_names)}
+
+    vre_zone_map = VRE_PRIMARY_ZONE.get(iso, {}) if iso else {}
+
     revenues = {}
     for res, pct in resource_pcts.items():
         if pct <= 0:
@@ -1373,7 +1393,14 @@ def compute_energy_revenue_by_resource(hourly_lmp, supply_profiles, resource_pct
         gen_profile = np.array(profile, dtype=np.float64) * (pct / 100.0)
         gen_mwh = float(np.sum(gen_profile)) * demand_total_mwh / H
         if gen_mwh > 0:
-            revenue_weighted = float(np.sum(gen_profile * hourly_lmp))
+            # Use zonal LMP for VRE resources when available
+            effective_lmp = hourly_lmp
+            if _zone_idx and res in vre_zone_map:
+                zone_name = vre_zone_map[res]
+                z_idx = _zone_idx.get(zone_name)
+                if z_idx is not None:
+                    effective_lmp = zonal_lmp_matrix[z_idx]
+            revenue_weighted = float(np.sum(gen_profile * effective_lmp))
             gen_total = float(np.sum(gen_profile))
             revenues[res] = revenue_weighted / gen_total if gen_total > 0 else 0
     return revenues
@@ -1452,17 +1479,40 @@ def compute_rec_revenue(iso, resource_pcts, clean_pct, year, rec_price_override=
 
 def compute_zone_revenue(iso, clean_pct, resource_pcts, hourly_lmp,
                           supply_profiles, demand_total_mwh, year,
-                          rec_price_override=None, conditions=None):
-    """Total blended revenue ($/MWh) for resources at this zone."""
+                          rec_price_override=None, conditions=None,
+                          zonal_lmp_matrix=None, zonal_zone_names=None):
+    """Total blended revenue ($/MWh) for resources at this zone.
+
+    When zonal_lmp_matrix is provided, VRE resources use zone-specific LMP
+    for energy revenue. The basis_differential per resource ($/MWh difference
+    between zone LMP and system LMP) is included in the breakdown.
+    """
     energy_revs = compute_energy_revenue_by_resource(
-        hourly_lmp, supply_profiles, resource_pcts, demand_total_mwh)
+        hourly_lmp, supply_profiles, resource_pcts, demand_total_mwh,
+        iso=iso, zonal_lmp_matrix=zonal_lmp_matrix,
+        zonal_zone_names=zonal_zone_names)
     cap_revs = compute_capacity_revenue(iso, clean_pct, resource_pcts, conditions=conditions)
     rec_revs = compute_rec_revenue(iso, resource_pcts, clean_pct, year,
                                     rec_price_override=rec_price_override)
 
+    # Compute basis differentials: zone LMP − system LMP for VRE resources
+    basis_diffs = {}
+    if zonal_lmp_matrix is not None and zonal_zone_names is not None and iso:
+        _zone_idx = {z: i for i, z in enumerate(zonal_zone_names)}
+        vre_zone_map = VRE_PRIMARY_ZONE.get(iso, {})
+        system_avg = float(np.mean(hourly_lmp))
+        for res in resource_pcts:
+            if res in vre_zone_map:
+                zone_name = vre_zone_map[res]
+                z_idx = _zone_idx.get(zone_name)
+                if z_idx is not None:
+                    zone_avg = float(np.mean(zonal_lmp_matrix[z_idx]))
+                    basis_diffs[res] = round(zone_avg - system_avg, 2)
+
     total_pct = sum(pct for pct in resource_pcts.values() if pct > 0)
     if total_pct <= 0:
-        return 0, {}, {'energy_rev_mwh': 0, 'capacity_rev_mwh': 0, 'rec_rev_mwh': 0}
+        return 0, {}, {'energy_rev_mwh': 0, 'capacity_rev_mwh': 0, 'rec_rev_mwh': 0,
+                        'basis_differentials': {}}
 
     per_resource_rev = {}
     blended = 0
@@ -1485,6 +1535,7 @@ def compute_zone_revenue(iso, clean_pct, resource_pcts, hourly_lmp,
         'energy_rev_mwh': round(blended_energy, 2),
         'capacity_rev_mwh': round(blended_cap, 2),
         'rec_rev_mwh': round(blended_rec, 2),
+        'basis_differentials': basis_diffs,
     }
     return round(blended, 2), per_resource_rev, breakdown
 
@@ -2073,8 +2124,11 @@ def _compute_zone_capture_adjustments(iso, system_vre_penetration, zonal_stats):
     adjustments = {}
 
     for vre_res, canonical in [('solar', 'solar'), ('wind', 'wind'),
-                                ('offshore_wind', 'wind')]:
+                                ('offshore_wind', 'offshore_wind')]:
         zone_name = vre_zones.get(canonical)
+        if zone_name is None and vre_res == 'offshore_wind':
+            # Fallback: use wind zone for offshore_wind if no dedicated zone
+            zone_name = vre_zones.get('wind')
         if zone_name and zone_name in zone_avg_lmps:
             zone_lmp = zone_avg_lmps[zone_name]
             # Ratio of zone LMP to system LMP — zones with lower average
@@ -2092,7 +2146,9 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
                                gen_econ, state, tech_queue_budget=None,
                                per_resource_energy_rev=None,
                                scarcity_hours_fraction=0.0,
-                               zonal_stats=None):
+                               zonal_stats=None,
+                               zonal_lmp_matrix=None,
+                               zonal_zone_names=None):
     """Pure economics-driven resource deployment via LCOE merit order.
 
     Ranks all available clean resources by net LCOE (after incentives, learning
@@ -2135,6 +2191,18 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
 
     # Per-resource energy revenue (temporal value) or fallback to flat avg_lmp
     per_res_rev = dict(per_resource_energy_rev) if per_resource_energy_rev else {}
+
+    # Compute per-resource basis differentials (zone LMP − system LMP)
+    _basis_diffs = {}
+    if zonal_lmp_matrix is not None and zonal_zone_names is not None:
+        _zone_idx = {z: i for i, z in enumerate(zonal_zone_names)}
+        _vre_zone_map = VRE_PRIMARY_ZONE.get(iso, {})
+        _sys_avg = float(np.mean(hourly_lmp))
+        for res_key, zone_name in _vre_zone_map.items():
+            z_idx = _zone_idx.get(zone_name)
+            if z_idx is not None:
+                _basis_diffs[res_key] = round(
+                    float(np.mean(zonal_lmp_matrix[z_idx])) - _sys_avg, 2)
 
     # Compute per-resource LCOE and rank by net cost
     resource_economics = []
@@ -2311,6 +2379,7 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
             'capture_rate': round(entry['energy_rev'] / avg_lmp, 3) if avg_lmp > 0 else 1.0,
             'capacity_rev_mwh': round(entry['capacity_rev'], 2),
             'rec_rev_mwh': round(entry['rec_rev'], 2),
+            'basis_differential': _basis_diffs.get(res, 0.0),
         })
 
         # Intra-deployment cannibalization: depress VRE energy revenue for
@@ -2358,6 +2427,7 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
         'energy_rev_mwh': round(total_energy, 2),
         'capacity_rev_mwh': round(total_cap, 2),
         'rec_rev_mwh': round(total_rec, 2),
+        'basis_differentials': _basis_diffs,
     }
 
     blended_cost = 0
@@ -3063,9 +3133,9 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             zonal_congestion_data = None
             scarcity_hours_frac = 0.0
             if _lmp_cache is not None and _lmp_key in _lmp_cache:
-                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac = _lmp_cache[_lmp_key]
+                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names = _lmp_cache[_lmp_key]
             else:
-                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac = compute_lmp_at_threshold(
+                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names = compute_lmp_at_threshold(
                     iso, current_pct, conditions['fuel_level'],
                     demand_norm, demand_mw_profile,
                     supply_profiles_iso, resource_pcts,
@@ -3086,13 +3156,15 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                     new_fossil_builds=state.get('new_fossil_builds'),
                 )
                 if _lmp_cache is not None:
-                    _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac)
+                    _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names)
 
             # --- LCOE MERIT-ORDER DEPLOYMENT ---
             # Compute per-resource temporal energy revenue for deployment economics
             if CANNIBALIZATION_ENABLED:
                 _per_res_rev = compute_energy_revenue_by_resource(
-                    hourly_lmp, supply_profiles_iso, resource_pcts, demand_total_mwh)
+                    hourly_lmp, supply_profiles_iso, resource_pcts, demand_total_mwh,
+                    iso=iso, zonal_lmp_matrix=_zonal_lmp_matrix,
+                    zonal_zone_names=_zonal_zone_names)
             else:
                 _per_res_rev = None
 
@@ -3109,6 +3181,8 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 per_resource_energy_rev=_per_res_rev,
                 scarcity_hours_fraction=scarcity_hours_frac,
                 zonal_stats=zonal_congestion_data,
+                zonal_lmp_matrix=_zonal_lmp_matrix,
+                zonal_zone_names=_zonal_zone_names,
             )
 
             # Sync queue budget after deployment
@@ -3356,6 +3430,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 'energy_rev_mwh': rev_breakdown['energy_rev_mwh'],
                 'capacity_rev_mwh': rev_breakdown['capacity_rev_mwh'],
                 'rec_rev_mwh': rev_breakdown['rec_rev_mwh'],
+                'basis_differentials': rev_breakdown.get('basis_differentials', {}),
                 'avg_lmp': round(avg_lmp, 1),
                 'lmp_p90': round(p90_lmp, 1),
                 'gas_built_gw': round(state.get('gas_built_gw', 0), 2),
