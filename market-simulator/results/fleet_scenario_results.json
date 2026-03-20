@@ -1,0 +1,5918 @@
+{
+  "scenarios": {
+    "baseline": {
+      "fleet_summary": {
+        "total_plants": 16,
+        "total_capacity_mw": 15406.2,
+        "isos": [
+          "ERCOT",
+          "NEISO",
+          "PJM"
+        ],
+        "n_scenarios": 1215,
+        "years": [
+          2023,
+          2030,
+          2035,
+          2040,
+          2045,
+          2050
+        ]
+      },
+      "envelope": {
+        "2023": {
+          "p10": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "mean": 0.0,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 0.0,
+            "gas_built_gw": 0.0,
+            "fossil_built_gw": 0.0,
+            "nb_gas_ct_mw": 0.0,
+            "nb_gas_ccgt_mw": 0.0,
+            "nb_coal_mw": 0.0
+          }
+        },
+        "2030": {
+          "p10": 26.1328,
+          "p50": 32.6135,
+          "p90": 37.9623,
+          "mean": 32.6445,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 47990.0,
+            "gas_built_gw": 47.99,
+            "fossil_built_gw": 47.99,
+            "nb_gas_ct_mw": 29198.0,
+            "nb_gas_ccgt_mw": 18792.0,
+            "nb_coal_mw": 0.0
+          }
+        },
+        "2035": {
+          "p10": 24.0734,
+          "p50": 30.9139,
+          "p90": 34.2479,
+          "mean": 30.0882,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 23803.0,
+            "gas_built_gw": 59.47,
+            "fossil_built_gw": 59.47,
+            "nb_gas_ct_mw": 15724.0,
+            "nb_gas_ccgt_mw": 8079.0,
+            "nb_coal_mw": 0.0
+          }
+        },
+        "2040": {
+          "p10": 25.6377,
+          "p50": 32.0017,
+          "p90": 35.4327,
+          "mean": 31.3234,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 36408.0,
+            "gas_built_gw": 116.29,
+            "fossil_built_gw": 116.29,
+            "nb_gas_ct_mw": 24449.0,
+            "nb_gas_ccgt_mw": 11959.0,
+            "nb_coal_mw": 0.0
+          }
+        },
+        "2045": {
+          "p10": 26.4714,
+          "p50": 32.3221,
+          "p90": 36.5545,
+          "mean": 32.0015,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 35579.0,
+            "gas_built_gw": 133.62,
+            "fossil_built_gw": 133.72,
+            "nb_gas_ct_mw": 25532.0,
+            "nb_gas_ccgt_mw": 10048.0,
+            "nb_coal_mw": 0.0
+          }
+        },
+        "2050": {
+          "p10": 26.9472,
+          "p50": 33.2871,
+          "p90": 38.039,
+          "mean": 32.9795,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 44100.0,
+            "gas_built_gw": 203.46,
+            "fossil_built_gw": 216.22,
+            "nb_gas_ct_mw": 27500.0,
+            "nb_gas_ccgt_mw": 12308.0,
+            "nb_coal_mw": 4292.0
+          }
+        }
+      },
+      "envelope_by_fossil_cost": {
+        "Low": {
+          "2023": {
+            "p10": 0.0,
+            "p50": 0.0,
+            "p90": 0.0,
+            "mean": 0.0
+          },
+          "2030": {
+            "p10": 26.1328,
+            "p50": 32.6135,
+            "p90": 37.9623,
+            "mean": 32.6445
+          },
+          "2035": {
+            "p10": 23.8958,
+            "p50": 30.8257,
+            "p90": 34.1837,
+            "mean": 30.0194
+          },
+          "2040": {
+            "p10": 25.5185,
+            "p50": 31.991,
+            "p90": 35.4327,
+            "mean": 31.238
+          },
+          "2045": {
+            "p10": 26.4714,
+            "p50": 32.1251,
+            "p90": 36.5349,
+            "mean": 31.9967
+          },
+          "2050": {
+            "p10": 27.1158,
+            "p50": 33.2871,
+            "p90": 38.039,
+            "mean": 32.981
+          }
+        },
+        "Medium": {
+          "2023": {
+            "p10": 0.0,
+            "p50": 0.0,
+            "p90": 0.0,
+            "mean": 0.0
+          },
+          "2030": {
+            "p10": 26.1328,
+            "p50": 32.6135,
+            "p90": 37.9623,
+            "mean": 32.6445
+          },
+          "2035": {
+            "p10": 24.0734,
+            "p50": 30.9974,
+            "p90": 34.1837,
+            "mean": 30.0765
+          },
+          "2040": {
+            "p10": 25.767,
+            "p50": 31.991,
+            "p90": 35.4327,
+            "mean": 31.2978
+          },
+          "2045": {
+            "p10": 25.9695,
+            "p50": 32.3221,
+            "p90": 36.5545,
+            "mean": 32.0124
+          },
+          "2050": {
+            "p10": 27.1793,
+            "p50": 32.6266,
+            "p90": 38.039,
+            "mean": 32.9665
+          }
+        },
+        "High": {
+          "2023": {
+            "p10": 0.0,
+            "p50": 0.0,
+            "p90": 0.0,
+            "mean": 0.0
+          },
+          "2030": {
+            "p10": 26.1328,
+            "p50": 32.6135,
+            "p90": 37.9623,
+            "mean": 32.6445
+          },
+          "2035": {
+            "p10": 24.0734,
+            "p50": 30.9974,
+            "p90": 34.3366,
+            "mean": 30.1687
+          },
+          "2040": {
+            "p10": 25.767,
+            "p50": 32.1026,
+            "p90": 35.4327,
+            "mean": 31.4345
+          },
+          "2045": {
+            "p10": 26.6385,
+            "p50": 32.5127,
+            "p90": 36.5545,
+            "mean": 31.9954
+          },
+          "2050": {
+            "p10": 26.7493,
+            "p50": 33.495,
+            "p90": 38.039,
+            "mean": 32.9911
+          }
+        }
+      },
+      "plant_detail": {
+        "2023": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          }
+        ],
+        "2030": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "operating",
+            "capacity_factor": 0.8674,
+            "generation_gwh": 10888.67,
+            "emissions_kt": 4665.14
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "operating",
+            "capacity_factor": 0.9247,
+            "generation_gwh": 9202.05,
+            "emissions_kt": 3693.79
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9387.22,
+            "emissions_kt": 1370.63
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 5916.94,
+            "emissions_kt": 2189.27
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 10294.31,
+            "emissions_kt": 3384.05
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "operating",
+            "capacity_factor": 0.8095,
+            "generation_gwh": 8582.09,
+            "emissions_kt": 3465.36
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "operating",
+            "capacity_factor": 0.8876,
+            "generation_gwh": 9182.8,
+            "emissions_kt": 3383.31
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9337.28,
+            "emissions_kt": 2939.19
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "operating",
+            "capacity_factor": 0.7089,
+            "generation_gwh": 6470.42,
+            "emissions_kt": 2984.68
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "operating",
+            "capacity_factor": 0.05,
+            "generation_gwh": 545.31,
+            "emissions_kt": 299.92
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 6574.38,
+            "emissions_kt": 1170.24
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 6066.74,
+            "emissions_kt": 1750.98
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 4871.7,
+            "emissions_kt": 1316.97
+          }
+        ],
+        "2035": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "operating",
+            "capacity_factor": 0.8501,
+            "generation_gwh": 10670.9,
+            "emissions_kt": 4571.84
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "operating",
+            "capacity_factor": 0.9062,
+            "generation_gwh": 9018.01,
+            "emissions_kt": 3619.92
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9387.22,
+            "emissions_kt": 1370.63
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 5916.94,
+            "emissions_kt": 2189.27
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 10294.31,
+            "emissions_kt": 3384.05
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "operating",
+            "capacity_factor": 0.8003,
+            "generation_gwh": 8484.57,
+            "emissions_kt": 3425.98
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "operating",
+            "capacity_factor": 0.8775,
+            "generation_gwh": 9078.45,
+            "emissions_kt": 3344.87
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9337.28,
+            "emissions_kt": 2939.19
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "operating",
+            "capacity_factor": 0.7008,
+            "generation_gwh": 6396.9,
+            "emissions_kt": 2950.76
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "operating",
+            "capacity_factor": 0.04,
+            "generation_gwh": 436.25,
+            "emissions_kt": 239.94
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "operating",
+            "capacity_factor": 0.705,
+            "generation_gwh": 4878.88,
+            "emissions_kt": 868.44
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "operating",
+            "capacity_factor": 0.6048,
+            "generation_gwh": 3862.15,
+            "emissions_kt": 1114.69
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "operating",
+            "capacity_factor": 0.6451,
+            "generation_gwh": 3308.13,
+            "emissions_kt": 894.29
+          }
+        ],
+        "2040": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "operating",
+            "capacity_factor": 0.8587,
+            "generation_gwh": 10779.78,
+            "emissions_kt": 4618.49
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "operating",
+            "capacity_factor": 0.9155,
+            "generation_gwh": 9110.03,
+            "emissions_kt": 3656.86
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9387.22,
+            "emissions_kt": 1370.63
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "operating",
+            "capacity_factor": 0.04,
+            "generation_gwh": 293.71,
+            "emissions_kt": 161.54
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 5916.94,
+            "emissions_kt": 2189.27
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "operating",
+            "capacity_factor": 0.04,
+            "generation_gwh": 173.38,
+            "emissions_kt": 95.36
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "operating",
+            "capacity_factor": 0.9484,
+            "generation_gwh": 10276.84,
+            "emissions_kt": 3378.3
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "operating",
+            "capacity_factor": 0.7727,
+            "generation_gwh": 8192.0,
+            "emissions_kt": 3307.85
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "operating",
+            "capacity_factor": 0.8473,
+            "generation_gwh": 8765.4,
+            "emissions_kt": 3229.52
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9337.28,
+            "emissions_kt": 2939.19
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "operating",
+            "capacity_factor": 0.6766,
+            "generation_gwh": 6176.31,
+            "emissions_kt": 2849.01
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "operating",
+            "capacity_factor": 0.15,
+            "generation_gwh": 1635.93,
+            "emissions_kt": 899.76
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "operating",
+            "capacity_factor": 0.81,
+            "generation_gwh": 5605.52,
+            "emissions_kt": 997.78
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "operating",
+            "capacity_factor": 0.6949,
+            "generation_gwh": 4437.36,
+            "emissions_kt": 1280.71
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "operating",
+            "capacity_factor": 0.7412,
+            "generation_gwh": 3800.83,
+            "emissions_kt": 1027.48
+          }
+        ],
+        "2045": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "operating",
+            "capacity_factor": 0.8414,
+            "generation_gwh": 10562.01,
+            "emissions_kt": 4525.19
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "operating",
+            "capacity_factor": 0.897,
+            "generation_gwh": 8925.99,
+            "emissions_kt": 3582.98
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9387.22,
+            "emissions_kt": 1370.63
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 5916.94,
+            "emissions_kt": 2189.27
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 10294.31,
+            "emissions_kt": 3384.05
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "operating",
+            "capacity_factor": 0.8187,
+            "generation_gwh": 8679.62,
+            "emissions_kt": 3504.74
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "operating",
+            "capacity_factor": 0.8977,
+            "generation_gwh": 9287.15,
+            "emissions_kt": 3421.76
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9337.28,
+            "emissions_kt": 2939.19
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "operating",
+            "capacity_factor": 0.7169,
+            "generation_gwh": 6543.95,
+            "emissions_kt": 3018.59
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "operating",
+            "capacity_factor": 0.08,
+            "generation_gwh": 872.5,
+            "emissions_kt": 479.87
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 6574.38,
+            "emissions_kt": 1170.24
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "operating",
+            "capacity_factor": 0.8235,
+            "generation_gwh": 5259.09,
+            "emissions_kt": 1517.88
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "operating",
+            "capacity_factor": 0.8784,
+            "generation_gwh": 4504.69,
+            "emissions_kt": 1217.75
+          }
+        ],
+        "2050": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "operating",
+            "capacity_factor": 0.8674,
+            "generation_gwh": 10888.67,
+            "emissions_kt": 4665.14
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "operating",
+            "capacity_factor": 0.9247,
+            "generation_gwh": 9202.05,
+            "emissions_kt": 3693.79
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9387.22,
+            "emissions_kt": 1370.63
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "operating",
+            "capacity_factor": 0.08,
+            "generation_gwh": 587.41,
+            "emissions_kt": 323.08
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 5916.94,
+            "emissions_kt": 2189.27
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "operating",
+            "capacity_factor": 0.08,
+            "generation_gwh": 346.76,
+            "emissions_kt": 190.72
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "operating",
+            "capacity_factor": 0.9258,
+            "generation_gwh": 10032.15,
+            "emissions_kt": 3297.87
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "operating",
+            "capacity_factor": 0.7543,
+            "generation_gwh": 7996.95,
+            "emissions_kt": 3229.09
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "operating",
+            "capacity_factor": 0.8271,
+            "generation_gwh": 8556.7,
+            "emissions_kt": 3152.63
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9337.28,
+            "emissions_kt": 2939.19
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "operating",
+            "capacity_factor": 0.6605,
+            "generation_gwh": 6029.26,
+            "emissions_kt": 2781.18
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "operating",
+            "capacity_factor": 0.21,
+            "generation_gwh": 2290.3,
+            "emissions_kt": 1259.67
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 6574.38,
+            "emissions_kt": 1170.24
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "operating",
+            "capacity_factor": 0.9265,
+            "generation_gwh": 5916.48,
+            "emissions_kt": 1707.61
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 4871.7,
+            "emissions_kt": 1316.97
+          }
+        ]
+      },
+      "grid_new_fossil": {
+        "2023": {
+          "total_new_fossil_mw": 0.0,
+          "gas_built_gw": 0.0,
+          "fossil_built_gw": 0.0,
+          "nb_gas_ct_mw": 0.0,
+          "nb_gas_ccgt_mw": 0.0,
+          "nb_coal_mw": 0.0
+        },
+        "2030": {
+          "total_new_fossil_mw": 47990.0,
+          "gas_built_gw": 47.99,
+          "fossil_built_gw": 47.99,
+          "nb_gas_ct_mw": 29198.0,
+          "nb_gas_ccgt_mw": 18792.0,
+          "nb_coal_mw": 0.0
+        },
+        "2035": {
+          "total_new_fossil_mw": 23803.0,
+          "gas_built_gw": 59.47,
+          "fossil_built_gw": 59.47,
+          "nb_gas_ct_mw": 15724.0,
+          "nb_gas_ccgt_mw": 8079.0,
+          "nb_coal_mw": 0.0
+        },
+        "2040": {
+          "total_new_fossil_mw": 36408.0,
+          "gas_built_gw": 116.29,
+          "fossil_built_gw": 116.29,
+          "nb_gas_ct_mw": 24449.0,
+          "nb_gas_ccgt_mw": 11959.0,
+          "nb_coal_mw": 0.0
+        },
+        "2045": {
+          "total_new_fossil_mw": 35579.0,
+          "gas_built_gw": 133.62,
+          "fossil_built_gw": 133.72,
+          "nb_gas_ct_mw": 25532.0,
+          "nb_gas_ccgt_mw": 10048.0,
+          "nb_coal_mw": 0.0
+        },
+        "2050": {
+          "total_new_fossil_mw": 44100.0,
+          "gas_built_gw": 203.46,
+          "fossil_built_gw": 216.22,
+          "nb_gas_ct_mw": 27500.0,
+          "nb_gas_ccgt_mw": 12308.0,
+          "nb_coal_mw": 4292.0
+        }
+      },
+      "new_fossil_summary": {
+        "2023": {
+          "grid_new_fossil_mw": 0.0,
+          "fleet_new_fossil_mw": 0.0,
+          "total_new_fossil_mw": 0.0
+        },
+        "2030": {
+          "grid_new_fossil_mw": 47990.0,
+          "fleet_new_fossil_mw": 0.0,
+          "total_new_fossil_mw": 47990.0
+        },
+        "2035": {
+          "grid_new_fossil_mw": 23803.0,
+          "fleet_new_fossil_mw": 0.0,
+          "total_new_fossil_mw": 23803.0
+        },
+        "2040": {
+          "grid_new_fossil_mw": 36408.0,
+          "fleet_new_fossil_mw": 0.0,
+          "total_new_fossil_mw": 36408.0
+        },
+        "2045": {
+          "grid_new_fossil_mw": 35579.0,
+          "fleet_new_fossil_mw": 0.0,
+          "total_new_fossil_mw": 35579.0
+        },
+        "2050": {
+          "grid_new_fossil_mw": 44100.0,
+          "fleet_new_fossil_mw": 0.0,
+          "total_new_fossil_mw": 44100.0
+        }
+      },
+      "new_fossil_overlap_notes": null,
+      "description": "Status quo \u2014 no CCS, no new gas, no early retirements. Economic retirements only (driven by market conditions in each sweep scenario).",
+      "targets": {
+        "sbti_15c": {
+          "gap_to_target_mt": {
+            "2023": -49.96,
+            "2030": -2.6582,
+            "2035": 6.1337,
+            "2040": 17.7132,
+            "2045": 28.5252,
+            "2050": 33.2871
+          },
+          "year_of_target_achievement": 2030,
+          "probability_of_meeting_target": {
+            "2023": 100.0,
+            "2030": 80.0,
+            "2035": 14.1,
+            "2040": 0.0,
+            "2045": 0.0,
+            "2050": 0.0
+          }
+        },
+        "at_power_nz": {
+          "gap_to_target_mt": {
+            "2023": -49.96,
+            "2030": -2.3865,
+            "2035": 10.9139,
+            "2040": 29.5017,
+            "2045": 32.3221,
+            "2050": 33.2871
+          },
+          "year_of_target_achievement": 2030,
+          "probability_of_meeting_target": {
+            "2023": 100.0,
+            "2030": 80.0,
+            "2035": 3.0,
+            "2040": 0.0,
+            "2045": 0.0,
+            "2050": 0.0
+          }
+        },
+        "custom_moderate": {
+          "gap_to_target_mt": {
+            "2023": -49.96,
+            "2030": -4.3865,
+            "2035": 5.9139,
+            "2040": 17.0017,
+            "2045": 22.3221,
+            "2050": 28.2871
+          },
+          "year_of_target_achievement": 2030,
+          "probability_of_meeting_target": {
+            "2023": 100.0,
+            "2030": 86.7,
+            "2035": 14.1,
+            "2040": 0.0,
+            "2045": 0.0,
+            "2050": 0.0
+          }
+        }
+      }
+    },
+    "ccs_top_emitters": {
+      "fleet_summary": {
+        "total_plants": 16,
+        "total_capacity_mw": 15406.2,
+        "isos": [
+          "ERCOT",
+          "NEISO",
+          "PJM"
+        ],
+        "n_scenarios": 1215,
+        "years": [
+          2023,
+          2030,
+          2035,
+          2040,
+          2045,
+          2050
+        ]
+      },
+      "envelope": {
+        "2023": {
+          "p10": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "mean": 0.0,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 0.0,
+            "gas_built_gw": 0.0,
+            "fossil_built_gw": 0.0,
+            "nb_gas_ct_mw": 0.0,
+            "nb_gas_ccgt_mw": 0.0,
+            "nb_coal_mw": 0.0
+          }
+        },
+        "2030": {
+          "p10": 27.537,
+          "p50": 34.464,
+          "p90": 39.8128,
+          "mean": 34.4098,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 47990.0,
+            "gas_built_gw": 47.99,
+            "fossil_built_gw": 47.99,
+            "nb_gas_ct_mw": 29198.0,
+            "nb_gas_ccgt_mw": 18792.0,
+            "nb_coal_mw": 0.0
+          }
+        },
+        "2035": {
+          "p10": 18.6427,
+          "p50": 23.8214,
+          "p90": 26.5066,
+          "mean": 23.2697,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 41825.0,
+            "gas_built_gw": 94.18,
+            "fossil_built_gw": 106.56,
+            "nb_gas_ct_mw": 23329.0,
+            "nb_gas_ccgt_mw": 13101.0,
+            "nb_coal_mw": 5395.0
+          }
+        },
+        "2040": {
+          "p10": 16.3692,
+          "p50": 19.9203,
+          "p90": 22.8092,
+          "mean": 19.7311,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 36226.0,
+            "gas_built_gw": 116.88,
+            "fossil_built_gw": 116.88,
+            "nb_gas_ct_mw": 24449.0,
+            "nb_gas_ccgt_mw": 11777.0,
+            "nb_coal_mw": 0.0
+          }
+        },
+        "2045": {
+          "p10": 16.7068,
+          "p50": 20.5337,
+          "p90": 24.1389,
+          "mean": 20.4411,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 43673.0,
+            "gas_built_gw": 165.63,
+            "fossil_built_gw": 174.67,
+            "nb_gas_ct_mw": 27500.0,
+            "nb_gas_ccgt_mw": 12308.0,
+            "nb_coal_mw": 3865.0
+          }
+        },
+        "2050": {
+          "p10": 16.8351,
+          "p50": 21.2221,
+          "p90": 25.6507,
+          "mean": 21.2658,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 31216.0,
+            "gas_built_gw": 164.88,
+            "fossil_built_gw": 164.88,
+            "nb_gas_ct_mw": 21313.0,
+            "nb_gas_ccgt_mw": 9902.0,
+            "nb_coal_mw": 0.0
+          }
+        }
+      },
+      "envelope_by_fossil_cost": {
+        "Low": {
+          "2023": {
+            "p10": 0.0,
+            "p50": 0.0,
+            "p90": 0.0,
+            "mean": 0.0
+          },
+          "2030": {
+            "p10": 27.537,
+            "p50": 34.464,
+            "p90": 39.8128,
+            "mean": 34.4098
+          },
+          "2035": {
+            "p10": 18.4651,
+            "p50": 23.8214,
+            "p90": 26.4661,
+            "mean": 23.2184
+          },
+          "2040": {
+            "p10": 16.2651,
+            "p50": 19.9203,
+            "p90": 22.7272,
+            "mean": 19.6807
+          },
+          "2045": {
+            "p10": 16.7068,
+            "p50": 20.5337,
+            "p90": 24.1389,
+            "mean": 20.385
+          },
+          "2050": {
+            "p10": 17.0231,
+            "p50": 21.1366,
+            "p90": 25.6507,
+            "mean": 21.2179
+          }
+        },
+        "Medium": {
+          "2023": {
+            "p10": 0.0,
+            "p50": 0.0,
+            "p90": 0.0,
+            "mean": 0.0
+          },
+          "2030": {
+            "p10": 27.537,
+            "p50": 34.464,
+            "p90": 39.8128,
+            "mean": 34.4098
+          },
+          "2035": {
+            "p10": 18.566,
+            "p50": 23.8214,
+            "p90": 26.4661,
+            "mean": 23.2563
+          },
+          "2040": {
+            "p10": 16.3692,
+            "p50": 19.9353,
+            "p90": 22.8092,
+            "mean": 19.7166
+          },
+          "2045": {
+            "p10": 16.768,
+            "p50": 20.3016,
+            "p90": 24.1389,
+            "mean": 20.43
+          },
+          "2050": {
+            "p10": 16.8351,
+            "p50": 21.2221,
+            "p90": 25.6507,
+            "mean": 21.2547
+          }
+        },
+        "High": {
+          "2023": {
+            "p10": 0.0,
+            "p50": 0.0,
+            "p90": 0.0,
+            "mean": 0.0
+          },
+          "2030": {
+            "p10": 27.537,
+            "p50": 34.464,
+            "p90": 39.8128,
+            "mean": 34.4098
+          },
+          "2035": {
+            "p10": 18.6427,
+            "p50": 23.8214,
+            "p90": 26.8109,
+            "mean": 23.3342
+          },
+          "2040": {
+            "p10": 16.385,
+            "p50": 19.9203,
+            "p90": 22.8092,
+            "mean": 19.7959
+          },
+          "2045": {
+            "p10": 16.5744,
+            "p50": 20.5949,
+            "p90": 24.1389,
+            "mean": 20.5083
+          },
+          "2050": {
+            "p10": 16.7739,
+            "p50": 21.4004,
+            "p90": 25.6507,
+            "mean": 21.3248
+          }
+        }
+      },
+      "plant_detail": {
+        "2023": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          }
+        ],
+        "2030": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "operating",
+            "capacity_factor": 0.8674,
+            "generation_gwh": 10888.67,
+            "emissions_kt": 4665.14
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "operating",
+            "capacity_factor": 0.9247,
+            "generation_gwh": 9202.05,
+            "emissions_kt": 3693.79
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9387.22,
+            "emissions_kt": 1370.63
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 5916.94,
+            "emissions_kt": 2189.27
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 10294.31,
+            "emissions_kt": 3857.82
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.8095,
+            "generation_gwh": 8582.09,
+            "emissions_kt": 3950.51
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "operating",
+            "capacity_factor": 0.8876,
+            "generation_gwh": 9182.8,
+            "emissions_kt": 3856.98
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9337.28,
+            "emissions_kt": 2939.19
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "operating",
+            "capacity_factor": 0.7089,
+            "generation_gwh": 6470.42,
+            "emissions_kt": 3402.53
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "operating",
+            "capacity_factor": 0.05,
+            "generation_gwh": 545.31,
+            "emissions_kt": 299.92
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 6574.38,
+            "emissions_kt": 1170.24
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 6066.74,
+            "emissions_kt": 1750.98
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 4871.7,
+            "emissions_kt": 1316.97
+          }
+        ],
+        "2035": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "operating",
+            "capacity_factor": 0.7373,
+            "generation_gwh": 9255.37,
+            "emissions_kt": 3965.37
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "operating",
+            "capacity_factor": 0.786,
+            "generation_gwh": 7821.74,
+            "emissions_kt": 3139.73
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9387.22,
+            "emissions_kt": 1370.63
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "operating",
+            "capacity_factor": 0.11,
+            "generation_gwh": 807.69,
+            "emissions_kt": 444.23
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "operating",
+            "capacity_factor": 0.85,
+            "generation_gwh": 5294.11,
+            "emissions_kt": 1958.82
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "operating",
+            "capacity_factor": 0.11,
+            "generation_gwh": 476.79,
+            "emissions_kt": 262.23
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.8355,
+            "generation_gwh": 7941.58,
+            "emissions_kt": 997.0
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.6807,
+            "generation_gwh": 6330.49,
+            "emissions_kt": 976.21
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.7464,
+            "generation_gwh": 6773.6,
+            "emissions_kt": 1313.47
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "operating",
+            "capacity_factor": 0.8735,
+            "generation_gwh": 8585.63,
+            "emissions_kt": 2702.58
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.5961,
+            "generation_gwh": 4772.84,
+            "emissions_kt": 1476.62
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "operating",
+            "capacity_factor": 0.17,
+            "generation_gwh": 1854.05,
+            "emissions_kt": 1019.73
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 6574.38,
+            "emissions_kt": 1170.24
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "operating",
+            "capacity_factor": 0.9265,
+            "generation_gwh": 5916.48,
+            "emissions_kt": 1707.61
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 4871.7,
+            "emissions_kt": 1316.97
+          }
+        ],
+        "2040": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "operating",
+            "capacity_factor": 0.8587,
+            "generation_gwh": 10779.78,
+            "emissions_kt": 4618.49
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "operating",
+            "capacity_factor": 0.9155,
+            "generation_gwh": 9110.03,
+            "emissions_kt": 3656.86
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9387.22,
+            "emissions_kt": 1370.63
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "operating",
+            "capacity_factor": 0.04,
+            "generation_gwh": 293.71,
+            "emissions_kt": 161.54
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 5916.94,
+            "emissions_kt": 2189.27
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "operating",
+            "capacity_factor": 0.04,
+            "generation_gwh": 173.38,
+            "emissions_kt": 95.36
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9030.1,
+            "emissions_kt": 169.2
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.8463,
+            "generation_gwh": 7870.34,
+            "emissions_kt": 181.14
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.928,
+            "generation_gwh": 8421.23,
+            "emissions_kt": 176.85
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9337.28,
+            "emissions_kt": 2939.19
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.7411,
+            "generation_gwh": 5933.8,
+            "emissions_kt": 156.02
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "operating",
+            "capacity_factor": 0.15,
+            "generation_gwh": 1635.93,
+            "emissions_kt": 899.76
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "operating",
+            "capacity_factor": 0.81,
+            "generation_gwh": 5605.52,
+            "emissions_kt": 997.78
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "operating",
+            "capacity_factor": 0.6949,
+            "generation_gwh": 4437.36,
+            "emissions_kt": 1280.71
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "operating",
+            "capacity_factor": 0.7412,
+            "generation_gwh": 3800.83,
+            "emissions_kt": 1027.48
+          }
+        ],
+        "2045": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "operating",
+            "capacity_factor": 0.8587,
+            "generation_gwh": 10779.78,
+            "emissions_kt": 4618.49
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "operating",
+            "capacity_factor": 0.9155,
+            "generation_gwh": 9110.03,
+            "emissions_kt": 3656.86
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9387.22,
+            "emissions_kt": 1370.63
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "operating",
+            "capacity_factor": 0.05,
+            "generation_gwh": 367.13,
+            "emissions_kt": 201.92
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 5916.94,
+            "emissions_kt": 2189.27
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "operating",
+            "capacity_factor": 0.05,
+            "generation_gwh": 216.72,
+            "emissions_kt": 119.2
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9030.1,
+            "emissions_kt": 169.2
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.8555,
+            "generation_gwh": 7955.89,
+            "emissions_kt": 183.11
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.938,
+            "generation_gwh": 8512.77,
+            "emissions_kt": 178.78
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9337.28,
+            "emissions_kt": 2939.19
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.7491,
+            "generation_gwh": 5998.3,
+            "emissions_kt": 157.71
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "operating",
+            "capacity_factor": 0.21,
+            "generation_gwh": 2290.3,
+            "emissions_kt": 1259.67
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "operating",
+            "capacity_factor": 0.855,
+            "generation_gwh": 5916.94,
+            "emissions_kt": 1053.22
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "operating",
+            "capacity_factor": 0.7335,
+            "generation_gwh": 4683.88,
+            "emissions_kt": 1351.86
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "operating",
+            "capacity_factor": 0.7824,
+            "generation_gwh": 4011.99,
+            "emissions_kt": 1084.56
+          }
+        ],
+        "2050": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "operating",
+            "capacity_factor": 0.8067,
+            "generation_gwh": 10126.46,
+            "emissions_kt": 4338.58
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "operating",
+            "capacity_factor": 0.86,
+            "generation_gwh": 8557.91,
+            "emissions_kt": 3435.23
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9387.22,
+            "emissions_kt": 1370.63
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "operating",
+            "capacity_factor": 0.09,
+            "generation_gwh": 660.84,
+            "emissions_kt": 363.46
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "operating",
+            "capacity_factor": 0.93,
+            "generation_gwh": 5792.37,
+            "emissions_kt": 2143.18
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "operating",
+            "capacity_factor": 0.09,
+            "generation_gwh": 390.1,
+            "emissions_kt": 214.56
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9030.1,
+            "emissions_kt": 169.2
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.8095,
+            "generation_gwh": 7528.15,
+            "emissions_kt": 173.27
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.8876,
+            "generation_gwh": 8055.09,
+            "emissions_kt": 169.17
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9337.28,
+            "emissions_kt": 2939.19
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.7089,
+            "generation_gwh": 5675.81,
+            "emissions_kt": 149.23
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "operating",
+            "capacity_factor": 0.28,
+            "generation_gwh": 3053.74,
+            "emissions_kt": 1679.55
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 6574.38,
+            "emissions_kt": 1170.24
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "operating",
+            "capacity_factor": 0.875,
+            "generation_gwh": 5587.78,
+            "emissions_kt": 1612.75
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "operating",
+            "capacity_factor": 0.9333,
+            "generation_gwh": 4786.23,
+            "emissions_kt": 1293.86
+          }
+        ]
+      },
+      "grid_new_fossil": {
+        "2023": {
+          "total_new_fossil_mw": 0.0,
+          "gas_built_gw": 0.0,
+          "fossil_built_gw": 0.0,
+          "nb_gas_ct_mw": 0.0,
+          "nb_gas_ccgt_mw": 0.0,
+          "nb_coal_mw": 0.0
+        },
+        "2030": {
+          "total_new_fossil_mw": 47990.0,
+          "gas_built_gw": 47.99,
+          "fossil_built_gw": 47.99,
+          "nb_gas_ct_mw": 29198.0,
+          "nb_gas_ccgt_mw": 18792.0,
+          "nb_coal_mw": 0.0
+        },
+        "2035": {
+          "total_new_fossil_mw": 41825.0,
+          "gas_built_gw": 94.18,
+          "fossil_built_gw": 106.56,
+          "nb_gas_ct_mw": 23329.0,
+          "nb_gas_ccgt_mw": 13101.0,
+          "nb_coal_mw": 5395.0
+        },
+        "2040": {
+          "total_new_fossil_mw": 36226.0,
+          "gas_built_gw": 116.88,
+          "fossil_built_gw": 116.88,
+          "nb_gas_ct_mw": 24449.0,
+          "nb_gas_ccgt_mw": 11777.0,
+          "nb_coal_mw": 0.0
+        },
+        "2045": {
+          "total_new_fossil_mw": 43673.0,
+          "gas_built_gw": 165.63,
+          "fossil_built_gw": 174.67,
+          "nb_gas_ct_mw": 27500.0,
+          "nb_gas_ccgt_mw": 12308.0,
+          "nb_coal_mw": 3865.0
+        },
+        "2050": {
+          "total_new_fossil_mw": 31216.0,
+          "gas_built_gw": 164.88,
+          "fossil_built_gw": 164.88,
+          "nb_gas_ct_mw": 21313.0,
+          "nb_gas_ccgt_mw": 9902.0,
+          "nb_coal_mw": 0.0
+        }
+      },
+      "new_fossil_summary": {
+        "2023": {
+          "grid_new_fossil_mw": 0.0,
+          "fleet_new_fossil_mw": 0.0,
+          "total_new_fossil_mw": 0.0
+        },
+        "2030": {
+          "grid_new_fossil_mw": 47990.0,
+          "fleet_new_fossil_mw": 0.0,
+          "total_new_fossil_mw": 47990.0
+        },
+        "2035": {
+          "grid_new_fossil_mw": 41825.0,
+          "fleet_new_fossil_mw": 0.0,
+          "total_new_fossil_mw": 41825.0
+        },
+        "2040": {
+          "grid_new_fossil_mw": 36226.0,
+          "fleet_new_fossil_mw": 0.0,
+          "total_new_fossil_mw": 36226.0
+        },
+        "2045": {
+          "grid_new_fossil_mw": 43673.0,
+          "fleet_new_fossil_mw": 0.0,
+          "total_new_fossil_mw": 43673.0
+        },
+        "2050": {
+          "grid_new_fossil_mw": 31216.0,
+          "fleet_new_fossil_mw": 0.0,
+          "total_new_fossil_mw": 31216.0
+        }
+      },
+      "new_fossil_overlap_notes": null,
+      "description": "CCS retrofit on the 4 largest ERCOT CCGTs (Deer Park, Colorado Bend II, Wolf Hollow II, Guadalupe) by 2030-2032. These 4 plants represent ~4.7 GW and ~10 Mt/yr baseline emissions.",
+      "targets": {
+        "sbti_15c": {
+          "gap_to_target_mt": {
+            "2023": -49.96,
+            "2030": -0.8078,
+            "2035": -0.9587,
+            "2040": 5.6317,
+            "2045": 16.7367,
+            "2050": 21.2221
+          },
+          "year_of_target_achievement": 2030,
+          "probability_of_meeting_target": {
+            "2023": 100.0,
+            "2030": 60.0,
+            "2035": 66.7,
+            "2040": 6.7,
+            "2045": 0.0,
+            "2050": 0.0
+          }
+        },
+        "at_power_nz": {
+          "gap_to_target_mt": {
+            "2023": -49.96,
+            "2030": -0.536,
+            "2035": 3.8214,
+            "2040": 17.4203,
+            "2045": 20.5337,
+            "2050": 21.2221
+          },
+          "year_of_target_achievement": 2030,
+          "probability_of_meeting_target": {
+            "2023": 100.0,
+            "2030": 60.0,
+            "2035": 15.6,
+            "2040": 0.0,
+            "2045": 0.0,
+            "2050": 0.0
+          }
+        },
+        "custom_moderate": {
+          "gap_to_target_mt": {
+            "2023": -49.96,
+            "2030": -2.536,
+            "2035": -1.1786,
+            "2040": 4.9203,
+            "2045": 10.5337,
+            "2050": 16.2221
+          },
+          "year_of_target_achievement": 2030,
+          "probability_of_meeting_target": {
+            "2023": 100.0,
+            "2030": 80.0,
+            "2035": 68.4,
+            "2040": 6.9,
+            "2045": 0.0,
+            "2050": 0.0
+          }
+        }
+      }
+    },
+    "ccs_plus_new_gas": {
+      "fleet_summary": {
+        "total_plants": 18,
+        "total_capacity_mw": 16606.2,
+        "isos": [
+          "ERCOT",
+          "NEISO",
+          "PJM"
+        ],
+        "n_scenarios": 1215,
+        "years": [
+          2023,
+          2030,
+          2035,
+          2040,
+          2045,
+          2050
+        ]
+      },
+      "envelope": {
+        "2023": {
+          "p10": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "mean": 0.0,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 0.0,
+            "gas_built_gw": 0.0,
+            "fossil_built_gw": 0.0,
+            "nb_gas_ct_mw": 0.0,
+            "nb_gas_ccgt_mw": 0.0,
+            "nb_coal_mw": 0.0
+          }
+        },
+        "2030": {
+          "p10": 30.0738,
+          "p50": 37.3844,
+          "p90": 42.7332,
+          "mean": 37.2548,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 47990.0,
+            "gas_built_gw": 47.99,
+            "fossil_built_gw": 47.99,
+            "nb_gas_ct_mw": 29198.0,
+            "nb_gas_ccgt_mw": 18792.0,
+            "nb_coal_mw": 0.0
+          }
+        },
+        "2035": {
+          "p10": 22.0583,
+          "p50": 28.1885,
+          "p90": 31.0642,
+          "mean": 27.5767,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 21244.0,
+            "gas_built_gw": 56.92,
+            "fossil_built_gw": 56.92,
+            "nb_gas_ct_mw": 14481.0,
+            "nb_gas_ccgt_mw": 6763.0,
+            "nb_coal_mw": 0.0
+          }
+        },
+        "2040": {
+          "p10": 21.311,
+          "p50": 26.0345,
+          "p90": 29.1118,
+          "mean": 25.5655,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 34317.0,
+            "gas_built_gw": 93.86,
+            "fossil_built_gw": 93.86,
+            "nb_gas_ct_mw": 24449.0,
+            "nb_gas_ccgt_mw": 9868.0,
+            "nb_coal_mw": 0.0
+          }
+        },
+        "2045": {
+          "p10": 22.2428,
+          "p50": 26.5075,
+          "p90": 30.3282,
+          "mean": 26.2967,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 36680.0,
+            "gas_built_gw": 133.08,
+            "fossil_built_gw": 133.08,
+            "nb_gas_ct_mw": 26056.0,
+            "nb_gas_ccgt_mw": 10624.0,
+            "nb_coal_mw": 0.0
+          }
+        },
+        "2050": {
+          "p10": 22.3966,
+          "p50": 27.2994,
+          "p90": 31.8208,
+          "mean": 27.1636,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 38800.0,
+            "gas_built_gw": 189.68,
+            "fossil_built_gw": 192.91,
+            "nb_gas_ct_mw": 24449.0,
+            "nb_gas_ccgt_mw": 12042.0,
+            "nb_coal_mw": 2309.0
+          }
+        }
+      },
+      "envelope_by_fossil_cost": {
+        "Low": {
+          "2023": {
+            "p10": 0.0,
+            "p50": 0.0,
+            "p90": 0.0,
+            "mean": 0.0
+          },
+          "2030": {
+            "p10": 30.0738,
+            "p50": 37.3844,
+            "p90": 42.7332,
+            "mean": 37.2548
+          },
+          "2035": {
+            "p10": 21.7906,
+            "p50": 28.1734,
+            "p90": 31.0519,
+            "mean": 27.5214
+          },
+          "2040": {
+            "p10": 21.1911,
+            "p50": 25.8657,
+            "p90": 28.9626,
+            "mean": 25.5052
+          },
+          "2045": {
+            "p10": 22.1816,
+            "p50": 26.3364,
+            "p90": 30.3126,
+            "mean": 26.2498
+          },
+          "2050": {
+            "p10": 22.7775,
+            "p50": 27.114,
+            "p90": 31.8208,
+            "mean": 27.1244
+          }
+        },
+        "Medium": {
+          "2023": {
+            "p10": 0.0,
+            "p50": 0.0,
+            "p90": 0.0,
+            "mean": 0.0
+          },
+          "2030": {
+            "p10": 30.0738,
+            "p50": 37.3844,
+            "p90": 42.7332,
+            "mean": 37.2548
+          },
+          "2035": {
+            "p10": 21.9054,
+            "p50": 28.1885,
+            "p90": 31.0519,
+            "mean": 27.5629
+          },
+          "2040": {
+            "p10": 21.3274,
+            "p50": 25.9801,
+            "p90": 29.1118,
+            "mean": 25.5467
+          },
+          "2045": {
+            "p10": 22.2428,
+            "p50": 26.5075,
+            "p90": 30.3282,
+            "mean": 26.2896
+          },
+          "2050": {
+            "p10": 22.3966,
+            "p50": 27.174,
+            "p90": 31.8208,
+            "mean": 27.1512
+          }
+        },
+        "High": {
+          "2023": {
+            "p10": 0.0,
+            "p50": 0.0,
+            "p90": 0.0,
+            "mean": 0.0
+          },
+          "2030": {
+            "p10": 30.0738,
+            "p50": 37.3844,
+            "p90": 42.7332,
+            "mean": 37.2548
+          },
+          "2035": {
+            "p10": 22.0583,
+            "p50": 28.204,
+            "p90": 31.2941,
+            "mean": 27.6459
+          },
+          "2040": {
+            "p10": 21.311,
+            "p50": 26.0345,
+            "p90": 29.1118,
+            "mean": 25.6444
+          },
+          "2045": {
+            "p10": 22.4725,
+            "p50": 26.6406,
+            "p90": 30.3577,
+            "mean": 26.3507
+          },
+          "2050": {
+            "p10": 22.3354,
+            "p50": 27.4663,
+            "p90": 31.8208,
+            "mean": 27.2153
+          }
+        }
+      },
+      "plant_detail": {
+        "2023": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 0,
+            "name": "New PJM CCGT East",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 600.0,
+            "status": "not_yet_built",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 0,
+            "name": "New PJM CCGT West",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 600.0,
+            "status": "not_yet_built",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          }
+        ],
+        "2030": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "operating",
+            "capacity_factor": 0.8674,
+            "generation_gwh": 10888.67,
+            "emissions_kt": 4665.14
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "operating",
+            "capacity_factor": 0.9247,
+            "generation_gwh": 9202.05,
+            "emissions_kt": 3693.79
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9387.22,
+            "emissions_kt": 1370.63
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 5916.94,
+            "emissions_kt": 2189.27
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 0,
+            "name": "New PJM CCGT East",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 600.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 4993.2,
+            "emissions_kt": 1669.13
+          },
+          {
+            "orispl": 0,
+            "name": "New PJM CCGT West",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 600.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 4993.2,
+            "emissions_kt": 1669.13
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 10294.31,
+            "emissions_kt": 3857.82
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.8095,
+            "generation_gwh": 8582.09,
+            "emissions_kt": 3950.51
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "operating",
+            "capacity_factor": 0.8876,
+            "generation_gwh": 9182.8,
+            "emissions_kt": 3856.98
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9337.28,
+            "emissions_kt": 2939.19
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "operating",
+            "capacity_factor": 0.7089,
+            "generation_gwh": 6470.42,
+            "emissions_kt": 2984.68
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "operating",
+            "capacity_factor": 0.05,
+            "generation_gwh": 545.31,
+            "emissions_kt": 299.92
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 6574.38,
+            "emissions_kt": 1170.24
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 6066.74,
+            "emissions_kt": 1750.98
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 4871.7,
+            "emissions_kt": 1316.97
+          }
+        ],
+        "2035": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "operating",
+            "capacity_factor": 0.8587,
+            "generation_gwh": 10779.78,
+            "emissions_kt": 4618.49
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "operating",
+            "capacity_factor": 0.9155,
+            "generation_gwh": 9110.03,
+            "emissions_kt": 3656.86
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9387.22,
+            "emissions_kt": 1370.63
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 5916.94,
+            "emissions_kt": 2189.27
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 0,
+            "name": "New PJM CCGT East",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 600.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 4993.2,
+            "emissions_kt": 1669.13
+          },
+          {
+            "orispl": 0,
+            "name": "New PJM CCGT West",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 600.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 4993.2,
+            "emissions_kt": 1669.13
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.8694,
+            "generation_gwh": 8263.54,
+            "emissions_kt": 1037.42
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.7083,
+            "generation_gwh": 6587.13,
+            "emissions_kt": 1015.78
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.7767,
+            "generation_gwh": 7048.2,
+            "emissions_kt": 1366.72
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "operating",
+            "capacity_factor": 0.9089,
+            "generation_gwh": 8933.69,
+            "emissions_kt": 2812.15
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "operating",
+            "capacity_factor": 0.6203,
+            "generation_gwh": 5661.62,
+            "emissions_kt": 2611.59
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "operating",
+            "capacity_factor": 0.03,
+            "generation_gwh": 327.19,
+            "emissions_kt": 179.95
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 6574.38,
+            "emissions_kt": 1170.24
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "operating",
+            "capacity_factor": 0.8493,
+            "generation_gwh": 5423.44,
+            "emissions_kt": 1565.31
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "operating",
+            "capacity_factor": 0.9059,
+            "generation_gwh": 4645.46,
+            "emissions_kt": 1255.81
+          }
+        ],
+        "2040": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "operating",
+            "capacity_factor": 0.8501,
+            "generation_gwh": 10670.9,
+            "emissions_kt": 4571.84
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "operating",
+            "capacity_factor": 0.9062,
+            "generation_gwh": 9018.01,
+            "emissions_kt": 3619.92
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9387.22,
+            "emissions_kt": 1370.63
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 5916.94,
+            "emissions_kt": 2189.27
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 0,
+            "name": "New PJM CCGT East",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 600.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 4993.2,
+            "emissions_kt": 1669.13
+          },
+          {
+            "orispl": 0,
+            "name": "New PJM CCGT West",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 600.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 4993.2,
+            "emissions_kt": 1669.13
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9030.1,
+            "emissions_kt": 169.2
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.8187,
+            "generation_gwh": 7613.7,
+            "emissions_kt": 175.24
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.8977,
+            "generation_gwh": 8146.63,
+            "emissions_kt": 171.09
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9337.28,
+            "emissions_kt": 2939.19
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "operating",
+            "capacity_factor": 0.7169,
+            "generation_gwh": 6543.95,
+            "emissions_kt": 3018.59
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "operating",
+            "capacity_factor": 0.08,
+            "generation_gwh": 872.5,
+            "emissions_kt": 479.87
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 6574.38,
+            "emissions_kt": 1170.24
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "operating",
+            "capacity_factor": 0.8493,
+            "generation_gwh": 5423.44,
+            "emissions_kt": 1565.31
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "operating",
+            "capacity_factor": 0.9059,
+            "generation_gwh": 4645.46,
+            "emissions_kt": 1255.81
+          }
+        ],
+        "2045": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "operating",
+            "capacity_factor": 0.7893,
+            "generation_gwh": 9908.69,
+            "emissions_kt": 4245.28
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "operating",
+            "capacity_factor": 0.8415,
+            "generation_gwh": 8373.87,
+            "emissions_kt": 3361.35
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9387.22,
+            "emissions_kt": 1370.63
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "operating",
+            "capacity_factor": 0.1,
+            "generation_gwh": 734.26,
+            "emissions_kt": 403.84
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "operating",
+            "capacity_factor": 0.91,
+            "generation_gwh": 5667.81,
+            "emissions_kt": 2097.09
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "operating",
+            "capacity_factor": 0.1,
+            "generation_gwh": 433.44,
+            "emissions_kt": 238.39
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 0,
+            "name": "New PJM CCGT East",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 600.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 4993.2,
+            "emissions_kt": 1669.13
+          },
+          {
+            "orispl": 0,
+            "name": "New PJM CCGT West",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 600.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 4993.2,
+            "emissions_kt": 1669.13
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9030.1,
+            "emissions_kt": 169.2
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.8187,
+            "generation_gwh": 7613.7,
+            "emissions_kt": 175.24
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.8977,
+            "generation_gwh": 8146.63,
+            "emissions_kt": 171.09
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9337.28,
+            "emissions_kt": 2939.19
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "operating",
+            "capacity_factor": 0.7169,
+            "generation_gwh": 6543.95,
+            "emissions_kt": 3018.59
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "operating",
+            "capacity_factor": 0.33,
+            "generation_gwh": 3599.05,
+            "emissions_kt": 1979.48
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "operating",
+            "capacity_factor": 0.735,
+            "generation_gwh": 5086.49,
+            "emissions_kt": 905.4
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "operating",
+            "capacity_factor": 0.6305,
+            "generation_gwh": 4026.49,
+            "emissions_kt": 1162.13
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "operating",
+            "capacity_factor": 0.6725,
+            "generation_gwh": 3448.9,
+            "emissions_kt": 932.34
+          }
+        ],
+        "2050": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "operating",
+            "capacity_factor": 0.8587,
+            "generation_gwh": 10779.78,
+            "emissions_kt": 4618.49
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "operating",
+            "capacity_factor": 0.9155,
+            "generation_gwh": 9110.03,
+            "emissions_kt": 3656.86
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9387.22,
+            "emissions_kt": 1370.63
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "operating",
+            "capacity_factor": 0.08,
+            "generation_gwh": 587.41,
+            "emissions_kt": 323.08
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 5916.94,
+            "emissions_kt": 2189.27
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "operating",
+            "capacity_factor": 0.08,
+            "generation_gwh": 346.76,
+            "emissions_kt": 190.72
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 0,
+            "name": "New PJM CCGT East",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 600.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 4993.2,
+            "emissions_kt": 1669.13
+          },
+          {
+            "orispl": 0,
+            "name": "New PJM CCGT West",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 600.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 4993.2,
+            "emissions_kt": 1669.13
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9030.1,
+            "emissions_kt": 169.2
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.8095,
+            "generation_gwh": 7528.15,
+            "emissions_kt": 173.27
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.8876,
+            "generation_gwh": 8055.09,
+            "emissions_kt": 169.17
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9337.28,
+            "emissions_kt": 2939.19
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "operating",
+            "capacity_factor": 0.7089,
+            "generation_gwh": 6470.42,
+            "emissions_kt": 2984.68
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "operating",
+            "capacity_factor": 0.22,
+            "generation_gwh": 2399.36,
+            "emissions_kt": 1319.65
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "operating",
+            "capacity_factor": 0.945,
+            "generation_gwh": 6539.78,
+            "emissions_kt": 1164.08
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "operating",
+            "capacity_factor": 0.8107,
+            "generation_gwh": 5176.92,
+            "emissions_kt": 1494.16
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "operating",
+            "capacity_factor": 0.8647,
+            "generation_gwh": 4434.3,
+            "emissions_kt": 1198.72
+          }
+        ]
+      },
+      "grid_new_fossil": {
+        "2023": {
+          "total_new_fossil_mw": 0.0,
+          "gas_built_gw": 0.0,
+          "fossil_built_gw": 0.0,
+          "nb_gas_ct_mw": 0.0,
+          "nb_gas_ccgt_mw": 0.0,
+          "nb_coal_mw": 0.0
+        },
+        "2030": {
+          "total_new_fossil_mw": 47990.0,
+          "gas_built_gw": 47.99,
+          "fossil_built_gw": 47.99,
+          "nb_gas_ct_mw": 29198.0,
+          "nb_gas_ccgt_mw": 18792.0,
+          "nb_coal_mw": 0.0
+        },
+        "2035": {
+          "total_new_fossil_mw": 21244.0,
+          "gas_built_gw": 56.92,
+          "fossil_built_gw": 56.92,
+          "nb_gas_ct_mw": 14481.0,
+          "nb_gas_ccgt_mw": 6763.0,
+          "nb_coal_mw": 0.0
+        },
+        "2040": {
+          "total_new_fossil_mw": 34317.0,
+          "gas_built_gw": 93.86,
+          "fossil_built_gw": 93.86,
+          "nb_gas_ct_mw": 24449.0,
+          "nb_gas_ccgt_mw": 9868.0,
+          "nb_coal_mw": 0.0
+        },
+        "2045": {
+          "total_new_fossil_mw": 36680.0,
+          "gas_built_gw": 133.08,
+          "fossil_built_gw": 133.08,
+          "nb_gas_ct_mw": 26056.0,
+          "nb_gas_ccgt_mw": 10624.0,
+          "nb_coal_mw": 0.0
+        },
+        "2050": {
+          "total_new_fossil_mw": 38800.0,
+          "gas_built_gw": 189.68,
+          "fossil_built_gw": 192.91,
+          "nb_gas_ct_mw": 24449.0,
+          "nb_gas_ccgt_mw": 12042.0,
+          "nb_coal_mw": 2309.0
+        }
+      },
+      "new_fossil_summary": {
+        "2023": {
+          "grid_new_fossil_mw": 0.0,
+          "fleet_new_fossil_mw": 0.0,
+          "total_new_fossil_mw": 0.0
+        },
+        "2030": {
+          "grid_new_fossil_mw": 47990.0,
+          "fleet_new_fossil_mw": 1200.0,
+          "total_new_fossil_mw": 49190.0
+        },
+        "2035": {
+          "grid_new_fossil_mw": 21244.0,
+          "fleet_new_fossil_mw": 1200.0,
+          "total_new_fossil_mw": 22444.0
+        },
+        "2040": {
+          "grid_new_fossil_mw": 34317.0,
+          "fleet_new_fossil_mw": 1200.0,
+          "total_new_fossil_mw": 35517.0
+        },
+        "2045": {
+          "grid_new_fossil_mw": 36680.0,
+          "fleet_new_fossil_mw": 1200.0,
+          "total_new_fossil_mw": 37880.0
+        },
+        "2050": {
+          "grid_new_fossil_mw": 38800.0,
+          "fleet_new_fossil_mw": 1200.0,
+          "total_new_fossil_mw": 40000.0
+        }
+      },
+      "new_fossil_overlap_notes": [
+        "Both grid-level (47,990 MW) and fleet-level (1,200 MW) new fossil in PJM 2030. Combined 49,190 MW is additive per interaction rule.",
+        "Both grid-level (21,244 MW) and fleet-level (1,200 MW) new fossil in PJM 2035. Combined 22,444 MW is additive per interaction rule.",
+        "Both grid-level (34,317 MW) and fleet-level (1,200 MW) new fossil in PJM 2040. Combined 35,517 MW is additive per interaction rule.",
+        "Both grid-level (36,680 MW) and fleet-level (1,200 MW) new fossil in PJM 2045. Combined 37,880 MW is additive per interaction rule.",
+        "Both grid-level (38,800 MW) and fleet-level (1,200 MW) new fossil in PJM 2050. Combined 40,000 MW is additive per interaction rule."
+      ],
+      "description": "CCS on top ERCOT emitters + 1,200 MW new efficient CCGT in PJM to replace aging peakers. New plant online 2028 with best-in-class heat rate (6.3 MMBtu/MWh). Fleet-level gas additions are additive to grid-level new fossil builds (see new_build_interaction rule).",
+      "targets": {
+        "sbti_15c": {
+          "gap_to_target_mt": {
+            "2023": -49.96,
+            "2030": 2.1126,
+            "2035": 3.4083,
+            "2040": 11.7459,
+            "2045": 22.7105,
+            "2050": 27.2994
+          },
+          "year_of_target_achievement": null,
+          "probability_of_meeting_target": {
+            "2023": 100.0,
+            "2030": 20.0,
+            "2035": 17.0,
+            "2040": 0.7,
+            "2045": 0.0,
+            "2050": 0.0
+          }
+        },
+        "at_power_nz": {
+          "gap_to_target_mt": {
+            "2023": -49.96,
+            "2030": 2.3844,
+            "2035": 8.1885,
+            "2040": 23.5345,
+            "2045": 26.5075,
+            "2050": 27.2994
+          },
+          "year_of_target_achievement": null,
+          "probability_of_meeting_target": {
+            "2023": 100.0,
+            "2030": 20.0,
+            "2035": 4.4,
+            "2040": 0.0,
+            "2045": 0.0,
+            "2050": 0.0
+          }
+        },
+        "custom_moderate": {
+          "gap_to_target_mt": {
+            "2023": -49.96,
+            "2030": 0.3844,
+            "2035": 3.1885,
+            "2040": 11.0345,
+            "2045": 16.5075,
+            "2050": 22.2994
+          },
+          "year_of_target_achievement": null,
+          "probability_of_meeting_target": {
+            "2023": 100.0,
+            "2030": 40.0,
+            "2035": 17.3,
+            "2040": 1.0,
+            "2045": 0.0,
+            "2050": 0.0
+          }
+        }
+      }
+    },
+    "retire_peakers_ccs_baseload": {
+      "fleet_summary": {
+        "total_plants": 16,
+        "total_capacity_mw": 15406.2,
+        "isos": [
+          "ERCOT",
+          "NEISO",
+          "PJM"
+        ],
+        "n_scenarios": 1215,
+        "years": [
+          2023,
+          2030,
+          2035,
+          2040,
+          2045,
+          2050
+        ]
+      },
+      "envelope": {
+        "2023": {
+          "p10": 0.0,
+          "p50": 0.0,
+          "p90": 0.0,
+          "mean": 0.0,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 0.0,
+            "gas_built_gw": 0.0,
+            "fossil_built_gw": 0.0,
+            "nb_gas_ct_mw": 0.0,
+            "nb_gas_ccgt_mw": 0.0,
+            "nb_coal_mw": 0.0
+          }
+        },
+        "2030": {
+          "p10": 29.4495,
+          "p50": 36.8375,
+          "p90": 37.3471,
+          "mean": 35.3766,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 47753.0,
+            "gas_built_gw": 47.75,
+            "fossil_built_gw": 47.75,
+            "nb_gas_ct_mw": 22507.0,
+            "nb_gas_ccgt_mw": 25246.0,
+            "nb_coal_mw": 0.0
+          }
+        },
+        "2035": {
+          "p10": 26.3205,
+          "p50": 34.1551,
+          "p90": 36.5603,
+          "mean": 32.8023,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 36490.0,
+            "gas_built_gw": 94.24,
+            "fossil_built_gw": 97.74,
+            "nb_gas_ct_mw": 18652.0,
+            "nb_gas_ccgt_mw": 17838.0,
+            "nb_coal_mw": 0.0
+          }
+        },
+        "2040": {
+          "p10": 8.4058,
+          "p50": 10.1179,
+          "p90": 10.8459,
+          "mean": 9.8834,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 42330.0,
+            "gas_built_gw": 130.89,
+            "fossil_built_gw": 148.9,
+            "nb_gas_ct_mw": 17316.0,
+            "nb_gas_ccgt_mw": 19390.0,
+            "nb_coal_mw": 5625.0
+          }
+        },
+        "2045": {
+          "p10": 1.2775,
+          "p50": 1.5298,
+          "p90": 1.6213,
+          "mean": 1.4862,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 33806.0,
+            "gas_built_gw": 137.31,
+            "fossil_built_gw": 140.97,
+            "nb_gas_ct_mw": 22513.0,
+            "nb_gas_ccgt_mw": 10554.0,
+            "nb_coal_mw": 739.0
+          }
+        },
+        "2050": {
+          "p10": 1.3204,
+          "p50": 1.5429,
+          "p90": 1.6311,
+          "mean": 1.5056,
+          "grid_new_fossil": {
+            "total_new_fossil_mw": 44501.0,
+            "gas_built_gw": 206.3,
+            "fossil_built_gw": 220.94,
+            "nb_gas_ct_mw": 26662.0,
+            "nb_gas_ccgt_mw": 12286.0,
+            "nb_coal_mw": 5552.0
+          }
+        }
+      },
+      "envelope_by_fossil_cost": {
+        "Low": {
+          "2023": {
+            "p10": 0.0,
+            "p50": 0.0,
+            "p90": 0.0,
+            "mean": 0.0
+          },
+          "2030": {
+            "p10": 29.4495,
+            "p50": 36.8375,
+            "p90": 37.3471,
+            "mean": 35.3766
+          },
+          "2035": {
+            "p10": 26.3205,
+            "p50": 34.143,
+            "p90": 36.5603,
+            "mean": 32.7561
+          },
+          "2040": {
+            "p10": 8.4058,
+            "p50": 10.1179,
+            "p90": 10.8459,
+            "mean": 9.8679
+          },
+          "2045": {
+            "p10": 1.2744,
+            "p50": 1.5293,
+            "p90": 1.6213,
+            "mean": 1.4874
+          },
+          "2050": {
+            "p10": 1.3256,
+            "p50": 1.5429,
+            "p90": 1.6271,
+            "mean": 1.5069
+          }
+        },
+        "Medium": {
+          "2023": {
+            "p10": 0.0,
+            "p50": 0.0,
+            "p90": 0.0,
+            "mean": 0.0
+          },
+          "2030": {
+            "p10": 29.4495,
+            "p50": 36.8375,
+            "p90": 37.3471,
+            "mean": 35.3766
+          },
+          "2035": {
+            "p10": 26.3205,
+            "p50": 34.1994,
+            "p90": 36.5603,
+            "mean": 32.8055
+          },
+          "2040": {
+            "p10": 8.4058,
+            "p50": 10.1179,
+            "p90": 10.8459,
+            "mean": 9.8781
+          },
+          "2045": {
+            "p10": 1.2775,
+            "p50": 1.5301,
+            "p90": 1.6213,
+            "mean": 1.4863
+          },
+          "2050": {
+            "p10": 1.3288,
+            "p50": 1.5388,
+            "p90": 1.6311,
+            "mean": 1.5052
+          }
+        },
+        "High": {
+          "2023": {
+            "p10": 0.0,
+            "p50": 0.0,
+            "p90": 0.0,
+            "mean": 0.0
+          },
+          "2030": {
+            "p10": 29.4495,
+            "p50": 36.8375,
+            "p90": 37.3471,
+            "mean": 35.3766
+          },
+          "2035": {
+            "p10": 26.3205,
+            "p50": 34.2703,
+            "p90": 36.5603,
+            "mean": 32.8452
+          },
+          "2040": {
+            "p10": 8.4058,
+            "p50": 10.1293,
+            "p90": 10.8459,
+            "mean": 9.9042
+          },
+          "2045": {
+            "p10": 1.3047,
+            "p50": 1.531,
+            "p90": 1.6213,
+            "mean": 1.485
+          },
+          "2050": {
+            "p10": 1.3101,
+            "p50": 1.5448,
+            "p90": 1.6342,
+            "mean": 1.5046
+          }
+        }
+      },
+      "plant_detail": {
+        "2023": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "operating",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          }
+        ],
+        "2030": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "operating",
+            "capacity_factor": 0.8674,
+            "generation_gwh": 10888.67,
+            "emissions_kt": 5318.26
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "operating",
+            "capacity_factor": 0.9247,
+            "generation_gwh": 9202.05,
+            "emissions_kt": 4210.93
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9387.22,
+            "emissions_kt": 1562.52
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "retired",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 5916.94,
+            "emissions_kt": 2495.77
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "retired",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "retired",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 10294.31,
+            "emissions_kt": 3857.82
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "operating",
+            "capacity_factor": 0.8095,
+            "generation_gwh": 8582.09,
+            "emissions_kt": 3950.51
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "operating",
+            "capacity_factor": 0.8876,
+            "generation_gwh": 9182.8,
+            "emissions_kt": 3856.98
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9337.28,
+            "emissions_kt": 3350.68
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "operating",
+            "capacity_factor": 0.7089,
+            "generation_gwh": 6470.42,
+            "emissions_kt": 3402.53
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "retired",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 6574.38,
+            "emissions_kt": 1334.07
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 6066.74,
+            "emissions_kt": 1996.12
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "operating",
+            "capacity_factor": 0.95,
+            "generation_gwh": 4871.7,
+            "emissions_kt": 1501.34
+          }
+        ],
+        "2035": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.8587,
+            "generation_gwh": 10779.78,
+            "emissions_kt": 5265.08
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.9155,
+            "generation_gwh": 9110.03,
+            "emissions_kt": 4168.82
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9387.22,
+            "emissions_kt": 1562.52
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "retired",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 5916.94,
+            "emissions_kt": 2495.77
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "retired",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "retired",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.9145,
+            "generation_gwh": 9909.81,
+            "emissions_kt": 3713.72
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.7451,
+            "generation_gwh": 7899.43,
+            "emissions_kt": 3636.27
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.817,
+            "generation_gwh": 8452.35,
+            "emissions_kt": 3550.17
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9337.28,
+            "emissions_kt": 3350.68
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.6525,
+            "generation_gwh": 5955.73,
+            "emissions_kt": 3131.88
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "retired",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.705,
+            "generation_gwh": 4878.88,
+            "emissions_kt": 990.02
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.6048,
+            "generation_gwh": 3862.15,
+            "emissions_kt": 1270.75
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.6451,
+            "generation_gwh": 3308.13,
+            "emissions_kt": 1019.49
+          }
+        ],
+        "2040": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.7893,
+            "generation_gwh": 8691.83,
+            "emissions_kt": 1422.17
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.8415,
+            "generation_gwh": 7345.5,
+            "emissions_kt": 1126.05
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 8234.4,
+            "emissions_kt": 459.16
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "retired",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.91,
+            "generation_gwh": 4971.76,
+            "emissions_kt": 702.52
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "retired",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "retired",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.8919,
+            "generation_gwh": 8478.18,
+            "emissions_kt": 1064.37
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.7267,
+            "generation_gwh": 6758.23,
+            "emissions_kt": 1042.17
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.7968,
+            "generation_gwh": 7231.27,
+            "emissions_kt": 1017.49
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.9325,
+            "generation_gwh": 8040.12,
+            "emissions_kt": 966.54
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.6364,
+            "generation_gwh": 5095.33,
+            "emissions_kt": 897.61
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "retired",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 5767.0,
+            "emissions_kt": 392.03
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 5321.7,
+            "emissions_kt": 586.58
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 4273.42,
+            "emissions_kt": 441.18
+          }
+        ],
+        "2045": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.824,
+            "generation_gwh": 9073.89,
+            "emissions_kt": 221.59
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.8785,
+            "generation_gwh": 7668.38,
+            "emissions_kt": 175.46
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 8234.4,
+            "emissions_kt": 68.53
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "retired",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 5190.3,
+            "emissions_kt": 109.46
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "retired",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "retired",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 9030.1,
+            "emissions_kt": 169.2
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.8095,
+            "generation_gwh": 7528.15,
+            "emissions_kt": 173.27
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.8876,
+            "generation_gwh": 8055.09,
+            "emissions_kt": 169.17
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 8190.6,
+            "emissions_kt": 146.96
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.7089,
+            "generation_gwh": 5675.81,
+            "emissions_kt": 149.23
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "retired",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.72,
+            "generation_gwh": 4370.78,
+            "emissions_kt": 44.35
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.6176,
+            "generation_gwh": 3459.93,
+            "emissions_kt": 56.92
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.6588,
+            "generation_gwh": 2963.61,
+            "emissions_kt": 45.67
+          }
+        ],
+        "2050": [
+          {
+            "orispl": 55524,
+            "name": "York",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1433.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.8674,
+            "generation_gwh": 9551.46,
+            "emissions_kt": 233.26
+          },
+          {
+            "orispl": 55690,
+            "name": "Bethlehem",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1136.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.9247,
+            "generation_gwh": 8071.97,
+            "emissions_kt": 184.69
+          },
+          {
+            "orispl": 7153,
+            "name": "Hay Road",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1128.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 8234.4,
+            "emissions_kt": 68.53
+          },
+          {
+            "orispl": 3161,
+            "name": "Eddystone",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 838.2,
+            "status": "retired",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 593,
+            "name": "Edge Moor",
+            "iso": "PJM",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 711.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 5190.3,
+            "emissions_kt": 109.46
+          },
+          {
+            "orispl": 1556,
+            "name": "Perryman",
+            "iso": "PJM",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 494.8,
+            "status": "retired",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 8012,
+            "name": "Croydon",
+            "iso": "PJM",
+            "fuel_type": "oil_ct",
+            "capacity_mw": 523.5,
+            "status": "retired",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55464,
+            "name": "Deer Park",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1237.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.8806,
+            "generation_gwh": 8370.86,
+            "emissions_kt": 156.85
+          },
+          {
+            "orispl": 60122,
+            "name": "Colorado Bend II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1210.3,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.7175,
+            "generation_gwh": 6672.68,
+            "emissions_kt": 153.58
+          },
+          {
+            "orispl": 59812,
+            "name": "Wolf Hollow II",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1181.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.7867,
+            "generation_gwh": 7139.74,
+            "emissions_kt": 149.94
+          },
+          {
+            "orispl": 55327,
+            "name": "Baytown",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1122.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.9207,
+            "generation_gwh": 7938.35,
+            "emissions_kt": 142.43
+          },
+          {
+            "orispl": 55153,
+            "name": "Guadalupe",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1042.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.6283,
+            "generation_gwh": 5030.83,
+            "emissions_kt": 132.28
+          },
+          {
+            "orispl": 3491,
+            "name": "Handley 3",
+            "iso": "ERCOT",
+            "fuel_type": "gas_ct",
+            "capacity_mw": 1245.0,
+            "status": "retired",
+            "capacity_factor": 0.0,
+            "generation_gwh": 0.0,
+            "emissions_kt": 0.0
+          },
+          {
+            "orispl": 55317,
+            "name": "Fore River",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 790.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 5767.0,
+            "emissions_kt": 58.51
+          },
+          {
+            "orispl": 55170,
+            "name": "Granite Ridge",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 729.0,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 5321.7,
+            "emissions_kt": 87.55
+          },
+          {
+            "orispl": 55294,
+            "name": "Westbrook",
+            "iso": "NEISO",
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 585.4,
+            "status": "ccs_retrofit",
+            "capacity_factor": 0.95,
+            "generation_gwh": 4273.42,
+            "emissions_kt": 65.85
+          }
+        ]
+      },
+      "grid_new_fossil": {
+        "2023": {
+          "total_new_fossil_mw": 0.0,
+          "gas_built_gw": 0.0,
+          "fossil_built_gw": 0.0,
+          "nb_gas_ct_mw": 0.0,
+          "nb_gas_ccgt_mw": 0.0,
+          "nb_coal_mw": 0.0
+        },
+        "2030": {
+          "total_new_fossil_mw": 47753.0,
+          "gas_built_gw": 47.75,
+          "fossil_built_gw": 47.75,
+          "nb_gas_ct_mw": 22507.0,
+          "nb_gas_ccgt_mw": 25246.0,
+          "nb_coal_mw": 0.0
+        },
+        "2035": {
+          "total_new_fossil_mw": 36490.0,
+          "gas_built_gw": 94.24,
+          "fossil_built_gw": 97.74,
+          "nb_gas_ct_mw": 18652.0,
+          "nb_gas_ccgt_mw": 17838.0,
+          "nb_coal_mw": 0.0
+        },
+        "2040": {
+          "total_new_fossil_mw": 42330.0,
+          "gas_built_gw": 130.89,
+          "fossil_built_gw": 148.9,
+          "nb_gas_ct_mw": 17316.0,
+          "nb_gas_ccgt_mw": 19390.0,
+          "nb_coal_mw": 5625.0
+        },
+        "2045": {
+          "total_new_fossil_mw": 33806.0,
+          "gas_built_gw": 137.31,
+          "fossil_built_gw": 140.97,
+          "nb_gas_ct_mw": 22513.0,
+          "nb_gas_ccgt_mw": 10554.0,
+          "nb_coal_mw": 739.0
+        },
+        "2050": {
+          "total_new_fossil_mw": 44501.0,
+          "gas_built_gw": 206.3,
+          "fossil_built_gw": 220.94,
+          "nb_gas_ct_mw": 26662.0,
+          "nb_gas_ccgt_mw": 12286.0,
+          "nb_coal_mw": 5552.0
+        }
+      },
+      "new_fossil_summary": {
+        "2023": {
+          "grid_new_fossil_mw": 0.0,
+          "fleet_new_fossil_mw": 0.0,
+          "total_new_fossil_mw": 0.0
+        },
+        "2030": {
+          "grid_new_fossil_mw": 47753.0,
+          "fleet_new_fossil_mw": 0.0,
+          "total_new_fossil_mw": 47753.0
+        },
+        "2035": {
+          "grid_new_fossil_mw": 36490.0,
+          "fleet_new_fossil_mw": 0.0,
+          "total_new_fossil_mw": 36490.0
+        },
+        "2040": {
+          "grid_new_fossil_mw": 42330.0,
+          "fleet_new_fossil_mw": 0.0,
+          "total_new_fossil_mw": 42330.0
+        },
+        "2045": {
+          "grid_new_fossil_mw": 33806.0,
+          "fleet_new_fossil_mw": 0.0,
+          "total_new_fossil_mw": 33806.0
+        },
+        "2050": {
+          "grid_new_fossil_mw": 44501.0,
+          "fleet_new_fossil_mw": 0.0,
+          "total_new_fossil_mw": 44501.0
+        }
+      },
+      "new_fossil_overlap_notes": null,
+      "description": "Retire all oil CTs and gas CTs by 2030, CCS retrofit on all remaining gas CCGTs by 2035. Aggressive decarbonization pathway \u2014 eliminates peaker fleet entirely and captures residual CCGT emissions.",
+      "targets": {
+        "sbti_15c": {
+          "gap_to_target_mt": {
+            "2023": -49.96,
+            "2030": 1.5658,
+            "2035": 9.375,
+            "2040": -4.1707,
+            "2045": -2.2672,
+            "2050": 1.5429
+          },
+          "year_of_target_achievement": 2040,
+          "probability_of_meeting_target": {
+            "2023": 100.0,
+            "2030": 20.0,
+            "2035": 4.4,
+            "2040": 100.0,
+            "2045": 100.0,
+            "2050": 0.0
+          }
+        },
+        "at_power_nz": {
+          "gap_to_target_mt": {
+            "2023": -49.96,
+            "2030": 1.8375,
+            "2035": 14.1551,
+            "2040": 7.6179,
+            "2045": 1.5298,
+            "2050": 1.5429
+          },
+          "year_of_target_achievement": null,
+          "probability_of_meeting_target": {
+            "2023": 100.0,
+            "2030": 20.0,
+            "2035": 1.5,
+            "2040": 0.0,
+            "2045": 0.0,
+            "2050": 0.0
+          }
+        },
+        "custom_moderate": {
+          "gap_to_target_mt": {
+            "2023": -49.96,
+            "2030": -0.1625,
+            "2035": 9.1551,
+            "2040": -4.8821,
+            "2045": -8.4702,
+            "2050": -3.4571
+          },
+          "year_of_target_achievement": 2030,
+          "probability_of_meeting_target": {
+            "2023": 100.0,
+            "2030": 73.3,
+            "2035": 4.4,
+            "2040": 100.0,
+            "2045": 100.0,
+            "2050": 100.0
+          }
+        }
+      }
+    }
+  },
+  "target_trajectories": {
+    "sbti_15c": {
+      "description": "SBTi 1.5\u00b0C pathway: -4.2% annual linear reduction from 2023 baseline.",
+      "values": {
+        "2023": 49.96,
+        "2030": 35.2718,
+        "2035": 24.7802,
+        "2040": 14.2886,
+        "2045": 3.797,
+        "2050": 0.0
+      }
+    },
+    "at_power_nz": {
+      "description": "Constellation committed target: 95% reduction by 2040, net-zero by 2045.",
+      "values": {
+        "2023": 49.96,
+        "2030": 35.0,
+        "2035": 20.0,
+        "2040": 2.5,
+        "2045": 0.0,
+        "2050": 0.0
+      }
+    },
+    "custom_moderate": {
+      "description": "Moderate decarbonization: 50% reduction by 2035, 80% by 2045.",
+      "values": {
+        "2023": 49.96,
+        "2030": 37.0,
+        "2035": 25.0,
+        "2040": 15.0,
+        "2045": 10.0,
+        "2050": 5.0
+      }
+    }
+  },
+  "baseline_mt": 49.96
+}
