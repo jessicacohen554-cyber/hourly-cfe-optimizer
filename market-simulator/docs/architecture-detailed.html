@@ -238,6 +238,7 @@
               Transmission adders, FOAK/NOAK costs, Wright&rsquo;s Law params.
               Demand growth rates, storage parameters, grid mix shares, capacity caps.
               ORDC params (VOLL, knee_mw, lambda, cap per ISO). Tech-differentiated queue caps.
+              <strong>Data model:</strong> ProvenanceMetadata (git_sha, config_hash, run_timestamp, input_snapshot) &mdash; attached to every simulation response.
               All scripts import from here &mdash; no local constant definitions.
             </div>
             <div class="sc-io">
@@ -281,14 +282,14 @@
               <strong>Flow:</strong> load_common_data() &rarr; build_market_scenarios() &rarr; build_single_scenario() &times; N &rarr; save_results().
               Profit-driven: clean resources deploy where revenue &gt; cost. Deployment stops at first unprofitable zone.
               Clean energy level is an OUTPUT, not a target constraint.
-              <strong>Plant-level retirement (G1):</strong> Per-plant margin &rarr; merit-order retirement &rarr; 15% zonal reserve floor. Nuclear per-contract.
-              <strong>LMP confidence (G5):</strong> Confidence factor degrades at &gt;60% VRE. IPM trigger on extrapolation.
-              <strong>Provenance (G3):</strong> git_sha + config_hash + input_snapshot attached to every response.
+              <strong>Plant-level retirement (G1):</strong> compute_plant_level_economics() &rarr; sort by margin &rarr; retire worst-first &rarr; check 15% zonal reliability floor &rarr; persist retired_plants in YearResult. Nuclear per-contract economics.
+              <strong>LMP confidence (G5):</strong> lmp_confidence_factor computed in LMP engine; degrades at &gt;60% VRE (&le;50%=1.0, 60&ndash;75%=0.8, 75&ndash;90%=0.6, &gt;90%=0.4). IPM trigger on extrapolation.
+              <strong>Provenance (G3):</strong> ProvenanceMetadata (git_sha + config_hash + run_timestamp + input_snapshot) attached at simulation start, returned in every response.
               <strong>New-build fossil:</strong> <span class="module-ref">apply_economic_new_build()</span> &mdash; RA trigger + economic trigger. ORDC feedback loop.
             </div>
             <div class="sc-io">
               <span>In:</span> EF parquets, EIA profiles, user params &nbsp;
-              <span class="out">Out:</span> results/ (parquet, JSON, CSV)
+              <span class="out">Out:</span> results/ (parquet, JSON, CSV) &mdash; includes plant_retirements (G1), lmp_confidence_factor (G5), tornado_data (G7), ProvenanceMetadata (G3)
             </div>
           </div>
         </div>
@@ -301,7 +302,8 @@
               <strong>ORDC scarcity pricing:</strong> Exponential knee model &mdash; adder = 0 above knee, min(cap, VOLL &times; e^(&minus;&lambda;R)) below. Per-ISO VOLL ($2K&ndash;$5K), knee_mw, cap.<br>
               <strong>VRE cannibalization:</strong> Capture-rate feedback &mdash; solar/wind revenue uses generation-weighted LMP, not average. Sigmoid depression at high VRE shares.<br>
               <strong>Zonal LP (zonal_lmp.py):</strong> Pipe-and-bubble, 2&ndash;5 zones/ISO. ORDC integrated into zonal path. Dual prices on balance constraints.<br>
-              <strong>Demand response:</strong> Price-elastic curtailment (PJM 10 GW @$100, ERCOT 5 GW @$200). Off/Low/Med/High toggle.
+              <strong>Demand response:</strong> Price-elastic curtailment (PJM 10 GW @$100, ERCOT 5 GW @$200). Off/Low/Med/High toggle.<br>
+              <strong>Confidence Guard (G5):</strong> lmp_confidence_factor computed per hour; degrades at &gt;60% VRE share (&le;50%=1.0, 60&ndash;75%=0.8, 75&ndash;90%=0.6, &gt;90%=0.4). IPM trigger on extrapolation.
             </div>
           </div>
           <div class="step-card">
@@ -311,7 +313,7 @@
               <strong>co_dispatch_storage_lp():</strong> Rolling-window LP co-optimization of all storage types.
               scipy linprog (HiGHS) with sparse matrix constraints. Objective: minimize unmet demand.<br>
               Windows: 24hr (bat4), 48hr (bat8), 168hr (LDES), 720hr (H&sub2;). SOC carryover for multi-day.<br>
-              <strong>Plant-level retirement (G1):</strong> Per-plant margin evaluation. Merit-order retirement (worst-margin first). 15% per-zone reserve floor. Nuclear per-contract economics.<br>
+              <strong>Plant-level retirement (G1):</strong> compute_plant_level_economics() per unit: margin = energy_rev + capacity_rev + ancillary_rev &minus; variable_cost &minus; fixed_cost. Sort by margin &rarr; retire worst-first &rarr; 15% per-zone reserve floor. Nuclear per-contract. plant_retirements returned in YearResult.<br>
               <strong>Fallback:</strong> Fleet-fraction cascade (coal &rarr; oil &rarr; gas CT &rarr; gas CCGT) when plant data unavailable.
             </div>
           </div>
@@ -384,6 +386,13 @@
               New-build fossil: NO learning curves (only clean resources learn).
             </div>
           </div>
+          <div class="step-card">
+            <div class="sc-id">Correlated Scenarios (G4)</div>
+            <div class="sc-detail">
+              5 IEA-aligned bundles: IEA_STEPS, IEA_APS, IEA_NZE, HIGH_FRICTION, RAPID_TRANSITION.<br>
+              Cross-correlated parameter sets (fuel + carbon + LCOE + demand co-move). Complements independent 1,215 sweep.
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -404,10 +413,10 @@
             <div class="sc-id">Simulation</div>
             <div class="sc-script">POST /api/simulate &bull; POST /api/sweep &bull; POST /api/sensitivity &bull; POST /api/correlated-scenarios</div>
             <div class="sc-detail">
-              <strong>simulate:</strong> Single snapshot or trajectory. Full parameter set &rarr; generator economics, LMP, supply mix, KPIs, zone details. Result provenance (G3) on all responses.<br>
-              <strong>sweep:</strong> Async 1,215-scenario sweep. Returns job_id; client polls GET /api/sweep/{job_id} for progress. Includes tornado_data (G7).<br>
-              <strong>correlated-scenarios (G4):</strong> 5 IEA-aligned bundles (STEPS, APS, NZE, HIGH_FRICTION, RAPID_TRANSITION).<br>
-              <strong>sensitivity:</strong> Single-parameter variation (base_params + vary_param + values[]).
+              <strong>simulate:</strong> Single snapshot or trajectory. Full parameter set &rarr; generator economics, LMP, supply mix, KPIs, zone details. ProvenanceMetadata (G3) on all responses. plant_retirements (G1) in YearResult. lmp_confidence_factor (G5) per year.<br>
+              <strong>sweep:</strong> Async 1,215-scenario sweep. Returns job_id; client polls GET /api/sweep/{job_id} for progress. Includes tornado_data (G7) in uncertainty envelope.<br>
+              <strong>correlated-scenarios (G4):</strong> POST /api/correlated-scenarios &mdash; 5 IEA-aligned bundles (STEPS, APS, NZE, HIGH_FRICTION, RAPID_TRANSITION). Cross-correlated parameter sets.<br>
+              <strong>sensitivity:</strong> Single-parameter variation (base_params + vary_param + values[]). Morris method screening (G7).
             </div>
           </div>
           <div class="step-card">
@@ -574,8 +583,8 @@
               data/eia-860/, eia-923/, epa-campd/ &mdash; fleet model by state<br>
               data/sweep_results/ &mdash; pre-computed 1,215-scenario sweep parquets<br>
               data/fleet/ &mdash; fleet dispatch results, plant-level economics<br>
-              scripts/sensitivity_analysis.py &mdash; G7: Morris method screening<br>
-              scripts/tests/validate_cross_model.py &mdash; G6: cross-validation vs AEO/ReEDS/IPM
+              <strong>scripts/sensitivity_analysis.py</strong> &mdash; G7: Morris method screening + first-order variance decomposition + tornado diagrams<br>
+              <strong>scripts/tests/validate_cross_model.py</strong> &mdash; G6: cross-validation vs AEO 2025, ReEDS 2024, EPA IPM v6 (clean share, capacity additions, coal retirement timing)
             </div>
           </div>
         </div>
