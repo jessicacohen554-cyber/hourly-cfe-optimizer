@@ -1413,7 +1413,37 @@ def compute_hourly_lmp_vectorized(dispatch_result, demand_mw_profile, stack, pri
     # DR is applied as post-processing in market_simulation.py so it works
     # with both zonal and copper-plate LMP paths.
     dr_curtailed_mw = np.zeros(H, dtype=np.float64)
-    return hourly_lmp, hourly_marginal_unit, dr_curtailed_mw
+
+    # Confidence factor: degrades when VRE penetration exceeds calibration range.
+    confidence = compute_lmp_confidence_factor(vre_penetration)
+
+    return hourly_lmp, hourly_marginal_unit, dr_curtailed_mw, confidence
+
+
+def compute_lmp_confidence_factor(vre_penetration):
+    """Compute confidence factor for LMP results based on VRE penetration.
+
+    The merit-order LMP model is calibrated against 2019-2024 ISO data where
+    VRE penetration rarely exceeds 50%.  Above 60%, price formation dynamics
+    (negative pricing depth, curtailment interactions, storage arbitrage) move
+    beyond the calibration envelope and results should be treated as
+    extrapolations with decreasing reliability.
+
+    Args:
+        vre_penetration: VRE share as fraction (0-1), or None.
+
+    Returns:
+        float: Confidence factor in [0.4, 1.0].
+    """
+    if vre_penetration is None:
+        return 1.0
+    if vre_penetration <= 0.60:
+        return 1.0          # Fully calibrated
+    if vre_penetration <= 0.75:
+        return 0.8          # Moderate extrapolation
+    if vre_penetration <= 0.90:
+        return 0.6          # Significant extrapolation
+    return 0.4              # Beyond model validity
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1682,7 +1712,7 @@ def run_lmp_for_iso(iso, scenarios, demand_data, gen_profiles,
             h2_pct=h2)
 
         # Compute hourly LMP
-        hourly_lmp, hourly_mu, _dr = compute_hourly_lmp_vectorized(
+        hourly_lmp, hourly_mu, _dr, _conf = compute_hourly_lmp_vectorized(
             dispatch, demand_mw_profile, stack, price_model, iso)
 
         # Compute stats
@@ -1814,7 +1844,7 @@ def run_test_cases(iso='PJM'):
         price_model = get_price_model(iso, fuel_level)
 
         # LMP computation
-        hourly_lmp, hourly_mu, _dr = compute_hourly_lmp_vectorized(
+        hourly_lmp, hourly_mu, _dr, _conf = compute_hourly_lmp_vectorized(
             dispatch, demand_mw_profile, stack, price_model, iso)
 
         # Stats
