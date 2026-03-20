@@ -1952,6 +1952,50 @@ def get_confidence_zone(year: int) -> str:
     return 'low'
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# SCENARIO PROBABILITY WEIGHTS — Prior beliefs for weighted percentiles
+# ══════════════════════════════════════════════════════════════════════════════
+# Each sweep dimension has per-level weights reflecting prior likelihood.
+# Combined scenario weight = product of individual dimension weights.
+# Weights within each dimension should sum to 1.0.
+# Set all weights equal (uniform) to recover unweighted percentiles.
+
+SCENARIO_WEIGHTS = {
+    'demand': {
+        'Low': 0.2,
+        'Medium': 0.6,
+        'High': 0.2,
+    },
+    'price': {
+        'all_low': 0.10,
+        'all_med': 0.50,
+        'all_high': 0.10,
+        'high_vre_low_firm': 0.15,
+        'high_firm_low_vre': 0.15,
+    },
+    'ppa': {
+        'Low': 0.2,
+        'Medium': 0.6,
+        'High': 0.2,
+    },
+    'gas_friction': {
+        'Low': 0.2,
+        'Medium': 0.5,
+        'High': 0.3,
+    },
+    'queue_cap': {
+        'Low': 0.25,
+        'Medium': 0.50,
+        'High': 0.25,
+    },
+    'new_fossil_cost': {
+        'Low': 0.2,
+        'Medium': 0.6,
+        'High': 0.2,
+    },
+}
+
+
 def adjust_confidence_for_triggers(year_zone: str, ipm_triggers: list) -> tuple:
     """Downgrade confidence zone based on IPM trigger severity.
 

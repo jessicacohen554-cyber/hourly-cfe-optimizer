@@ -3446,19 +3446,127 @@ def run_full_sweep(isos=None, nuclear_retirement_threshold=None,
     return all_results
 
 
-def aggregate_sweep_percentiles(all_results):
-    """Compute P10/P50/P90 uncertainty bands across all sweep scenarios.
+def _compute_weighted_percentiles(values, weights, percentiles):
+    """Compute weighted percentiles using linear interpolation.
 
-    Groups year_results by (iso, year), computes percentiles across 1,215 scenarios
-    for all scalar metrics and per-resource breakdowns. This is the primary
-    uncertainty quantification output — it shows how sensitive each outcome is
-    to parametric uncertainty (fuel prices, demand growth, grid conditions, etc.).
+    Args:
+        values: 1-D numpy array of metric values.
+        weights: 1-D numpy array of scenario weights (same length as values).
+        percentiles: list of percentiles in [0, 100].
+
+    Returns:
+        list of weighted percentile values (same order as *percentiles*).
+    """
+    sort_idx = np.argsort(values)
+    sorted_vals = values[sort_idx]
+    sorted_wts = weights[sort_idx]
+
+    # Cumulative weight, normalised to [0, 100]
+    cum_wt = np.cumsum(sorted_wts)
+    cum_wt = 100.0 * (cum_wt - 0.5 * sorted_wts) / cum_wt[-1]
+
+    return [float(np.interp(p, cum_wt, sorted_vals)) for p in percentiles]
+
+
+def _scenario_weight(scenario_id):
+    """Compute combined probability weight for a scenario from its ID.
+
+    Scenario IDs follow the pattern:
+        MKT_{demand_code}_{price_name}_{ppa_code}_{gas_code}_{queue_code}_{nfc_code}
+
+    Combined weight = product of individual dimension weights from
+    ``pipeline_config.SCENARIO_WEIGHTS``.  Falls back to 1.0 for any
+    unrecognised dimension value.
+    """
+    try:
+        from scripts.pipeline_config import SCENARIO_WEIGHTS
+    except ImportError:
+        try:
+            from pipeline_config import SCENARIO_WEIGHTS
+        except ImportError:
+            return 1.0
+
+    parts = scenario_id.split('_')
+    # Expected: MKT, demand_code, price_name, ppa_code, gas_code, queue_code, nfc_code
+    # But price_name can itself contain underscores (e.g. "high_vre_low_firm")
+    # so we parse from both ends.
+    if len(parts) < 7 or parts[0] != 'MKT':
+        return 1.0
+
+    # Decode single-character codes back to level names
+    code_to_level = {'L': 'Low', 'M': 'Medium', 'H': 'High'}
+
+    demand_code = parts[1]
+    ppa_code = parts[-3]
+    gas_code = parts[-2]
+    # The queue_code and nfc_code are the last two? Re-check format:
+    # MKT_{D}_{price_name}_{P}_{G}_{Q}_{N}  → 7 minimum tokens
+    queue_code = parts[-2]
+    nfc_code = parts[-1]
+
+    # Actually re-parse: parts = [MKT, D, ...price_name..., P, G, Q, N]
+    # Last 4 single-char codes: ppa, gas, queue, nfc
+    nfc_code = parts[-1]
+    queue_code = parts[-2]
+    gas_code = parts[-3]
+    ppa_code = parts[-4]
+    # price_name is everything between index 2 and -4
+    price_name = '_'.join(parts[2:-4])
+
+    demand = code_to_level.get(demand_code, demand_code)
+    ppa = code_to_level.get(ppa_code, ppa_code)
+    gas = code_to_level.get(gas_code, gas_code)
+    queue = code_to_level.get(queue_code, queue_code)
+    nfc = code_to_level.get(nfc_code, nfc_code)
+
+    w = 1.0
+    w *= SCENARIO_WEIGHTS.get('demand', {}).get(demand, 1.0)
+    w *= SCENARIO_WEIGHTS.get('price', {}).get(price_name, 1.0)
+    w *= SCENARIO_WEIGHTS.get('ppa', {}).get(ppa, 1.0)
+    w *= SCENARIO_WEIGHTS.get('gas_friction', {}).get(gas, 1.0)
+    w *= SCENARIO_WEIGHTS.get('queue_cap', {}).get(queue, 1.0)
+    w *= SCENARIO_WEIGHTS.get('new_fossil_cost', {}).get(nfc, 1.0)
+
+    return w
+
+
+def _percentile_dict(arr, weights=None):
+    """Return dict with P10/P25/P50/P75/P90/mean/std, plus weighted variants."""
+    result = {
+        'p10': round(float(np.percentile(arr, 10)), 3),
+        'p25': round(float(np.percentile(arr, 25)), 3),
+        'p50': round(float(np.percentile(arr, 50)), 3),
+        'p75': round(float(np.percentile(arr, 75)), 3),
+        'p90': round(float(np.percentile(arr, 90)), 3),
+        'mean': round(float(np.mean(arr)), 3),
+        'std': round(float(np.std(arr)), 3),
+        'n': len(arr),
+    }
+
+    if weights is not None and len(weights) == len(arr):
+        wp = _compute_weighted_percentiles(arr, weights, [10, 25, 50, 75, 90])
+        result['wp10'] = round(wp[0], 3)
+        result['wp25'] = round(wp[1], 3)
+        result['wp50'] = round(wp[2], 3)
+        result['wp75'] = round(wp[3], 3)
+        result['wp90'] = round(wp[4], 3)
+
+    return result
+
+
+def aggregate_sweep_percentiles(all_results):
+    """Compute P10/P25/P50/P75/P90 uncertainty bands across all sweep scenarios.
+
+    Groups year_results by (iso, year), computes unweighted and weighted
+    percentiles across 1,215 scenarios for all scalar metrics and per-resource
+    breakdowns.  Weighted percentiles use prior probability weights from
+    ``pipeline_config.SCENARIO_WEIGHTS``.
 
     Args:
         all_results: dict[scenario_id, dict[iso, list[year_result]]]
 
     Returns:
-        dict[iso, dict[year, dict[metric, dict[p10/p50/p90, float]]]]
+        dict[iso, dict[year, dict[metric, dict[p10/p25/p50/p75/p90/wp10/.., float]]]]
     """
     # Scalar metrics to aggregate
     SCALAR_METRICS = [
@@ -3470,6 +3578,11 @@ def aggregate_sweep_percentiles(all_results):
     # Boolean metrics: report % of scenarios where condition is True
     BOOL_METRICS = ['market_stop', 'nuclear_retired']
 
+    # Pre-compute scenario weights
+    scenario_weights = {}
+    for scenario_id in all_results:
+        scenario_weights[scenario_id] = _scenario_weight(scenario_id)
+
     # Collect values by (iso, year)
     from collections import defaultdict
     grouped = defaultdict(lambda: defaultdict(list))  # (iso, year) → [year_result, ...]
@@ -3478,11 +3591,11 @@ def aggregate_sweep_percentiles(all_results):
         for iso, year_results in iso_results.items():
             for yr in year_results:
                 key = (iso, yr.get('year', 0))
-                grouped[key]['_results'].append(yr)
+                grouped[key]['_results'].append((scenario_id, yr))
 
     aggregates = {}
     for (iso, year), data in grouped.items():
-        results_list = data['_results']
+        results_list = data['_results']  # list of (scenario_id, year_result)
         n = len(results_list)
         if n < 3:
             continue  # Need at least 3 scenarios for meaningful percentiles
@@ -3492,85 +3605,145 @@ def aggregate_sweep_percentiles(all_results):
 
         year_agg = {}
 
+        # Build weight array aligned with results
+        wt_arr = np.array([scenario_weights.get(sid, 1.0)
+                           for sid, _ in results_list], dtype=np.float64)
+
         # Scalar metrics
         for metric in SCALAR_METRICS:
-            values = [r.get(metric, 0) or 0 for r in results_list]
-            values = [v for v in values if isinstance(v, (int, float))]
+            values = []
+            valid_wts = []
+            for i, (sid, r) in enumerate(results_list):
+                v = r.get(metric, 0) or 0
+                if isinstance(v, (int, float)):
+                    values.append(v)
+                    valid_wts.append(wt_arr[i])
             if values:
                 arr = np.array(values, dtype=np.float64)
-                year_agg[metric] = {
-                    'p10': round(float(np.percentile(arr, 10)), 3),
-                    'p50': round(float(np.percentile(arr, 50)), 3),
-                    'p90': round(float(np.percentile(arr, 90)), 3),
-                    'mean': round(float(np.mean(arr)), 3),
-                    'std': round(float(np.std(arr)), 3),
-                    'n': len(values),
-                }
+                w = np.array(valid_wts, dtype=np.float64)
+                year_agg[metric] = _percentile_dict(arr, w)
 
-        # Boolean metrics: fraction of scenarios where True
+        # Boolean metrics: fraction of scenarios where True (unweighted + weighted)
         for metric in BOOL_METRICS:
-            values = [1 if r.get(metric) else 0 for r in results_list]
+            bool_vals = np.array([1.0 if r.get(metric) else 0.0
+                                  for _, r in results_list], dtype=np.float64)
+            pct_true = round(100.0 * float(np.mean(bool_vals)), 1)
+            weighted_pct = round(
+                100.0 * float(np.average(bool_vals, weights=wt_arr)), 1
+            )
             year_agg[metric] = {
-                'pct_true': round(100 * sum(values) / n, 1),
+                'pct_true': pct_true,
+                'weighted_pct_true': weighted_pct,
                 'n': n,
             }
 
         # Per-resource mix breakdown
         resource_agg = {}
         all_resources = set()
-        for r in results_list:
+        for _, r in results_list:
             rmix = r.get('resource_mix_twh', {})
             if isinstance(rmix, dict):
                 all_resources.update(rmix.keys())
 
         for resource in sorted(all_resources):
             values = []
-            for r in results_list:
+            valid_wts = []
+            for i, (sid, r) in enumerate(results_list):
                 rmix = r.get('resource_mix_twh', {})
                 if isinstance(rmix, dict):
                     values.append(rmix.get(resource, 0) or 0)
+                    valid_wts.append(wt_arr[i])
             if values:
                 arr = np.array(values, dtype=np.float64)
-                resource_agg[resource] = {
-                    'p10': round(float(np.percentile(arr, 10)), 3),
-                    'p50': round(float(np.percentile(arr, 50)), 3),
-                    'p90': round(float(np.percentile(arr, 90)), 3),
-                }
+                w = np.array(valid_wts, dtype=np.float64)
+                resource_agg[resource] = _percentile_dict(arr, w)
 
         if resource_agg:
             year_agg['resource_mix_twh'] = resource_agg
 
         # Nuclear revenue aggregation
         nuc_rev_values = []
-        for r in results_list:
+        nuc_rev_wts = []
+        for i, (sid, r) in enumerate(results_list):
             nr = r.get('nuclear_revenue', {})
             if isinstance(nr, dict) and 'total_mwh' in nr:
                 nuc_rev_values.append(nr['total_mwh'])
+                nuc_rev_wts.append(wt_arr[i])
         if nuc_rev_values:
             arr = np.array(nuc_rev_values, dtype=np.float64)
-            year_agg['nuclear_revenue_mwh'] = {
-                'p10': round(float(np.percentile(arr, 10)), 3),
-                'p50': round(float(np.percentile(arr, 50)), 3),
-                'p90': round(float(np.percentile(arr, 90)), 3),
-            }
+            w = np.array(nuc_rev_wts, dtype=np.float64)
+            year_agg['nuclear_revenue_mwh'] = _percentile_dict(arr, w)
 
         # Zone deployment count
-        zone_counts = [len(r.get('zones_deployed', [])) for r in results_list]
-        if zone_counts:
-            arr = np.array(zone_counts, dtype=np.float64)
-            year_agg['zones_deployed_count'] = {
-                'p10': round(float(np.percentile(arr, 10)), 1),
-                'p50': round(float(np.percentile(arr, 50)), 1),
-                'p90': round(float(np.percentile(arr, 90)), 1),
-            }
+        zone_counts = np.array([len(r.get('zones_deployed', []))
+                                for _, r in results_list], dtype=np.float64)
+        if len(zone_counts):
+            year_agg['zones_deployed_count'] = _percentile_dict(zone_counts, wt_arr)
 
         aggregates[iso][str(year)] = year_agg
 
     return aggregates
 
 
+def compute_sweep_uncertainty(all_results):
+    """High-level uncertainty quantification entry point.
+
+    Wraps ``aggregate_sweep_percentiles`` and returns both the raw aggregates
+    dict and a structured list of ``UncertaintyBands`` dicts suitable for the
+    API response.
+
+    Args:
+        all_results: dict[scenario_id, dict[iso, list[year_result]]]
+
+    Returns:
+        (aggregates_dict, uncertainty_list) where *uncertainty_list* is a list
+        of ``{iso, year, bands: [{metric, p10, p25, p50, p75, p90, ...}]}``
+        dicts matching the ``SweepUncertainty`` schema.
+    """
+    aggregates = aggregate_sweep_percentiles(all_results)
+
+    # KEY_METRICS are the headline metrics surfaced in UncertaintyBands
+    KEY_METRICS = [
+        'clean_pct', 'total_cost_per_mwh', 'cost_per_mwh',
+        'emissions_mt', 'avg_lmp', 'demand_twh',
+        'gas_built_gw', 'fossil_built_gw',
+    ]
+
+    uncertainty_list = []
+    for iso, years in aggregates.items():
+        for year_str, metrics in years.items():
+            bands = []
+            for metric in KEY_METRICS:
+                m = metrics.get(metric)
+                if m and isinstance(m, dict) and 'p50' in m:
+                    bands.append({
+                        'metric': metric,
+                        'p10': m.get('p10', 0),
+                        'p25': m.get('p25', 0),
+                        'p50': m.get('p50', 0),
+                        'p75': m.get('p75', 0),
+                        'p90': m.get('p90', 0),
+                        'mean': m.get('mean', 0),
+                        'std': m.get('std', 0),
+                        'n': m.get('n', 0),
+                        'wp10': m.get('wp10'),
+                        'wp25': m.get('wp25'),
+                        'wp50': m.get('wp50'),
+                        'wp75': m.get('wp75'),
+                        'wp90': m.get('wp90'),
+                    })
+            if bands:
+                uncertainty_list.append({
+                    'iso': iso,
+                    'year': int(year_str),
+                    'bands': bands,
+                })
+
+    return aggregates, uncertainty_list
+
+
 def save_results(all_results, output_dir=None):
-    """Save results as JSON, including P10/P50/P90 uncertainty bands."""
+    """Save results as JSON, including P10/P25/P50/P75/P90 uncertainty bands."""
     if output_dir is None:
         output_dir = OUTPUT_DIR
     os.makedirs(output_dir, exist_ok=True)
@@ -3583,15 +3756,18 @@ def save_results(all_results, output_dir=None):
         for iso, year_results in iso_results.items():
             serializable[scenario_id][iso] = year_results
 
-    # Compute P10/P50/P90 uncertainty bands across all scenarios
+    # Compute uncertainty bands across all scenarios
     if len(all_results) > 1:
-        print("Computing P10/P50/P90 uncertainty bands across sweep scenarios...")
-        aggregates = aggregate_sweep_percentiles(all_results)
+        print("Computing P10/P25/P50/P75/P90 uncertainty bands across sweep scenarios...")
+        aggregates, uncertainty_list = compute_sweep_uncertainty(all_results)
         serializable['_aggregates'] = aggregates
+        serializable['_uncertainty_bands'] = uncertainty_list
         n_isos = len(aggregates)
         n_years = sum(len(yrs) for yrs in aggregates.values())
         print(f"  Aggregated {n_isos} ISOs × {n_years} year-groups "
               f"from {len(all_results)} scenarios")
+        print(f"  {len(uncertainty_list)} ISO×year uncertainty band entries "
+              f"(weighted + unweighted)")
 
     with open(output_path, 'w') as f:
         json.dump(serializable, f, indent=2, default=str)
