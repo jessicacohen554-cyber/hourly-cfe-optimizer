@@ -641,11 +641,32 @@ class UncertaintyBands(BaseModel):
     wp90: Optional[float] = None
 
 
+class TornadoBar(BaseModel):
+    """Single bar in a tornado diagram — one input dimension's variance contribution."""
+    dimension: str
+    label: str
+    variance_fraction: float
+
+
+class TornadoMetric(BaseModel):
+    """Tornado diagram data for a single output metric, sorted by importance."""
+    metric: str
+    metric_label: str
+    bars: List[TornadoBar] = Field(default_factory=list)
+    total_variance: float = 0.0
+
+
 class SweepUncertainty(BaseModel):
     """Uncertainty bands for one ISO × year across the scenario sweep."""
     iso: str
     year: int
     bands: List[UncertaintyBands] = Field(default_factory=list)
+    tornado_data: Optional[List[TornadoMetric]] = Field(
+        default=None,
+        description="Variance decomposition tornado diagram data per output metric. "
+                    "Each entry contains sorted bars showing which input dimensions "
+                    "explain the most output variance (first-order Sobol indices).",
+    )
 
 
 class CorrelatedScenarioRequest(BaseModel):
