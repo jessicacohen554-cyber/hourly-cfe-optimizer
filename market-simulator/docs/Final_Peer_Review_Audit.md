@@ -84,3 +84,68 @@ The market simulator underwent a three-phase review process:
 
 **Net improvement**: Two dimensions elevated from Weak to Adequate. No dimensions degraded. The model's two most critical weaknesses (storage economics and uncertainty communication) have been substantively addressed.
 
+---
+
+## 4. Appropriate Use-Case Description
+
+### 4.1 What This Model Is
+
+The market simulator is a **profit-driven, agent-based generator and investor dispatch model** that projects clean energy deployment trajectories across 7 US ISOs (CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP) under 1,215+ parametric scenarios.
+
+**Core mechanism**: The model constructs a merit-order fossil dispatch stack, computes hourly LMPs from residual demand after clean supply, evaluates technology-specific revenue (energy + capacity + RECs), and deploys resources when total revenue exceeds LCOE. Fossil units retire when operating margins turn negative. Clean energy percentage emerges as an *output* of market forces — not an input target.
+
+This is fundamentally different from constrained optimization models (e.g., the hourly CFE optimizer in the parent repository, or capacity expansion models like GenX/ReEDS). The simulator does not minimize cost subject to a clean energy constraint. Instead, it answers: **"What gets built, what retires, and at what cost — driven by market economics rather than policy mandates?"**
+
+### 4.2 Appropriate Uses
+
+| Use Case | Description | Confidence Level |
+|----------|-------------|-----------------|
+| **Corporate fleet strategy** | Screen retirement risk for fossil assets, identify ISOs where clean investment is market-viable earliest, evaluate capacity revenue trajectories | **High** — core design purpose |
+| **Policy scenario analysis** | Assess impact of carbon prices, IRA credits (45Q, PTC/ITC), RPS compliance costs, and fuel price shocks on deployment trajectories | **High** — 1,215 scenarios with 9 interpretable dimensions |
+| **Regional comparison** | Compare which ISOs reach clean energy milestones fastest under identical market assumptions; identify structural advantages (hydro endowment, gas dependence, nuclear fleet) | **High** — 7 ISO-specific calibrated models |
+| **Technology investment timing** | Screen when specific technologies (solar, wind, storage, CCS, nuclear) become market-viable under different cost trajectories | **High** — Wright's Law learning + LCOE merit-order deployment |
+| **Capacity market strategy** | Model how clean penetration affects capacity prices, fossil stranding risk, and reserve margin dynamics | **Medium-High** — endogenous capacity prices (R7), but no forward capacity auction modeling |
+| **Sensitivity analysis** | Identify which input assumptions (fuel prices, LCOE, carbon price, demand growth) drive the most outcome variance | **Medium** — 1,215-scenario sweep provides broad coverage, but no formal decomposition (see G7) |
+| **Client presentations** | Show market-driven deployment trajectories with P10/P50/P90 uncertainty bands for strategic planning discussions | **High** — confidence intervals (R5) + scenario weights |
+| **Screening for production-model deep dives** | Identify scenarios and ISOs that warrant detailed IPM/PLEXOS analysis based on screening results and IPM trigger indicators | **High** — IPM triggers flag boundary conditions automatically |
+
+### 4.3 Boundary Conditions — Where NOT to Use This Model
+
+| Boundary | Why | What to Use Instead |
+|----------|-----|-------------------|
+| **Operational dispatch planning** | No unit commitment (startup costs, ramp rates, minimum run times are approximated). No sub-hourly resolution. No ancillary service co-optimization. | PLEXOS, PSO, GE MAPS, or production cost models |
+| **Transmission planning** | Zonal LMP uses lossless DC power flow (no reactive power, voltage constraints, N-1 contingency). 2–5 zones per ISO vs. 1000+ nodes in nodal models. | PowerWorld, PSS/E, TARA, nodal production cost models |
+| **Individual plant investment decisions** | Fleet-fraction retirement doesn't capture plant-specific economics (contract structures, age, location value). Use as screening input, not final decision basis. | Plant-level financial models + IPM validation |
+| **Results above ~60% VRE penetration** | Demand-quantile pricing layer is empirically calibrated to 2019–2024 data. Extrapolation beyond observed VRE levels introduces unquantified uncertainty in LMP formation. | Production cost models with detailed unit commitment |
+| **Regulatory filings** | Not NERC/FERC-grade. No reliability assessment (LOLE, EUE). Resource adequacy backstop is a simplified reserve margin check, not a probabilistic reliability model. | SERVM, RECAP, or utility-grade IRP models |
+| **Post-2035 trajectory precision** | Trajectory confidence degrades with horizon. 25-year projections are directional, not precise — technology disruptions, policy shifts, and demand evolution are unpredictable at that range. | Treat 2040+ results as directional scenarios, not forecasts |
+| **Nodal congestion analysis** | System-average LMP per zone masks intra-zonal congestion. Basis differentials (R4) improve this but don't replace nodal analysis for siting decisions. | Nodal LMP models (FESTIV, PLEXOS nodal) |
+
+### 4.4 Model Comparison — Screening Context
+
+| Attribute | This Model | NREL ReEDS | MIT GenX | EPA IPM | Energy Exemplar PLEXOS |
+|-----------|-----------|------------|---------|---------|----------------------|
+| **Purpose** | Market-driven screening | Capacity expansion planning | Capacity expansion + operations | Regulatory compliance | Production cost simulation |
+| **Mechanism** | Agent-based profit-driven | Least-cost optimization | Least-cost optimization | Least-cost optimization | Chronological dispatch |
+| **Clean % treatment** | Emergent (output) | Target (input constraint) | Target (input constraint) | Target (input constraint) | Emergent from commitments |
+| **Temporal resolution** | 8,760 hours | 17 time-slices | 8,760 hours | Seasonal blocks | Sub-hourly capable |
+| **Spatial resolution** | 7 ISOs, 2–5 zones each | 134 BAs | Configurable zones | ~64 IPM regions | Nodal (1000+ nodes) |
+| **Runtime** | Minutes (single ISO) | Hours–Days | Hours | Hours–Days | Hours–Days |
+| **Scenarios** | 1,215+ parametric | ~10–20 scenarios | ~10–20 scenarios | 3–5 reference cases | 5–10 scenarios |
+| **Learning curves** | Endogenous Wright's Law | Exogenous ATB trajectories | Exogenous or endogenous | Exogenous | N/A (short-term model) |
+| **Data requirements** | EIA/eGRID public data | Extensive proprietary | Moderate | EPA datasets | Utility-specific data |
+| **License** | Internal tool | Open-source | Open-source | EPA internal | Commercial ($100K+/yr) |
+| **Best for** | Strategic screening, scenario exploration | National/regional planning | Academic research | EPA rulemaking | Utility operations planning |
+
+### 4.5 Interpreting Results Correctly
+
+**Always present results as ranges, not point estimates.** The P10/P50/P90 bands from the 1,215-scenario sweep represent the model's view of plausible outcomes under different assumptions — not probabilistic forecasts.
+
+**Key caveats that should accompany any results presentation:**
+
+1. This is a screening model. Results identify promising regions of the decision space for deeper analysis, not investment-grade projections.
+2. Clean energy deployment trajectories are market-driven (profit-seeking) — they do not assume policy mandates, corporate commitments, or utility IRP targets.
+3. Results at high VRE penetration (>60%) should be interpreted with additional caution due to empirical pricing extrapolation.
+4. The model assumes competitive wholesale markets. Results may not apply to vertically integrated utilities or bilateral markets outside ISO footprints.
+5. IPM trigger indicators in the output flag when results cross screening-model validity boundaries. When triggered, escalate to production-grade models before making decisions.
+
