@@ -1,20 +1,25 @@
 name: Cleanup Large File Blobs from History (Protected)
 
 # Removes old/deleted/overwritten data blobs from git history — but PROTECTS
-# every file currently live in HEAD. Targets the data/ and dashboard/ directories
-# plus any *.parquet, *.npz, and *.json files anywhere in the repo.
+# every file currently live in HEAD of ANY branch or tag.
 #
 # How it works:
-#   1. Record the master HEAD tree hash (for post-cleanup integrity verification)
-#   2. Snapshot all blob SHAs live in ANY branch HEAD or tag (the "protected set")
-#   3. Walk all history to find blobs under data/ or matching target extensions
-#   4. Only blobs NOT in the protected set are candidates for removal
-#   5. Strip dead blobs via git-filter-repo --strip-blobs-with-ids
-#   6. Verify master HEAD tree hash is unchanged after rewrite
+#   1. Fetch ALL remote branches and create local tracking branches
+#   2. Snapshot all blob SHAs live in ANY local branch HEAD or tag (the "protected set")
+#   3. Record per-branch file manifests (mode+sha+path) for integrity verification
+#   4. Walk all history to find blobs under data/ or matching target extensions
+#   5. Only blobs NOT in the protected set are candidates for removal
+#   6. Strip dead blobs via git-filter-repo --strip-blobs-with-ids
+#   7. Repack + gc to actually reclaim pack space
+#   8. Verify EVERY branch's file manifest is byte-identical before and after
+#   9. Force push all branches and tags
 #
-# Protected files include ALL live files across ALL refs: EIA 930 profiles,
-# eGRID data, pipeline parquets (step1–step5), dashboard JSON results,
-# feature branch files, and everything else reachable from any branch tip or tag.
+# Safety guarantees:
+#   - Protected set includes ALL blobs reachable from ANY branch tip or tag
+#   - Disjointness assertion: removable ∩ protected == ∅ (enforced, aborts if violated)
+#   - Per-branch manifest comparison (not just master) catches any unexpected changes
+#   - Dry run (default) shows full breakdown before any destructive action
+#   - Confirmation string required for non-dry-run execution
 #
 # WARNING: This rewrites history. All collaborators must re-clone afterward.
 
@@ -50,24 +55,40 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Ensure latest master HEAD (hard refresh)
+      - name: Fetch all branches and create local tracking branches
         run: |
-          echo "=== Ensuring we are on the absolute latest master ==="
-          echo "Pre-fetch HEAD: $(git rev-parse HEAD)"
+          set -euo pipefail
 
-          # Fetch the latest remote state
-          git fetch origin master --force
+          # Fetch everything including all remote branches and tags
+          git fetch origin --force --tags --prune
 
-          # Hard reset to the remote master tip
+          # Create a local branch for EVERY remote branch.
+          # Critical: git filter-repo rewrites refs/heads/* (local branches).
+          # git push --force --all pushes refs/heads/* only.
+          # Without local branches, remote-only branches keep old bloated history
+          # and the cleanup is pointless — cloners still pull the big blobs.
+          created=0
+          skipped=0
+          for remote_branch in $(git branch -r | grep -v 'HEAD' | sed 's|^ *origin/||'); do
+            if git show-ref --verify --quiet "refs/heads/$remote_branch"; then
+              skipped=$((skipped + 1))
+            else
+              git branch "$remote_branch" "origin/$remote_branch" 2>/dev/null && \
+                created=$((created + 1)) || true
+            fi
+          done
+
+          # Ensure master is at the absolute latest remote tip
+          git checkout master
           git reset --hard origin/master
 
-          echo "Post-reset HEAD: $(git rev-parse HEAD)"
-          echo "HEAD commit: $(git log -1 --oneline)"
-          echo "Verified: working tree matches origin/master"
+          total=$(git for-each-ref --format='%(refname:short)' refs/heads/ | wc -l)
+          echo "Local branches: $total ($created newly created, $skipped already existed)"
+          echo "Master HEAD: $(git log -1 --oneline)"
 
-          # Sanity check: confirm no uncommitted differences
+          # Sanity check
           if ! git diff --quiet; then
-            echo "::error::Working tree has unexpected changes after reset. Aborting."
+            echo "::error::Working tree dirty after reset. Aborting."
             exit 1
           fi
 
@@ -79,131 +100,124 @@ jobs:
           echo "=== Repo size BEFORE ==="
           git count-objects -vH
 
-      - name: Build protected blob set and record HEAD file manifest
+      - name: Build protected blob set and record branch manifests
         id: protect
         run: |
-          echo "=== Building protected blob set (all blobs live in ANY branch HEAD) ==="
+          set -euo pipefail
 
-          # Record HEAD file manifest for post-cleanup integrity verification.
-          # We compare file listings (mode+sha+path) rather than tree hashes because
-          # git-filter-repo rewrites commit/tree objects, which can change tree hashes
-          # even when file content is fully preserved.
-          HEAD_MANIFEST=$(mktemp)
-          git ls-tree -r HEAD | sort > "$HEAD_MANIFEST"
-          HEAD_FILE_COUNT=$(wc -l < "$HEAD_MANIFEST")
-          HEAD_MANIFEST_HASH=$(sha256sum "$HEAD_MANIFEST" | awk '{print $1}')
-          echo "HEAD file count: $HEAD_FILE_COUNT"
-          echo "HEAD manifest hash: $HEAD_MANIFEST_HASH"
-          echo "head_manifest=$HEAD_MANIFEST" >> "$GITHUB_OUTPUT"
-          echo "head_manifest_hash=$HEAD_MANIFEST_HASH" >> "$GITHUB_OUTPUT"
-          echo "head_file_count=$HEAD_FILE_COUNT" >> "$GITHUB_OUTPUT"
-
-          # Protect blobs from ALL branch tips — not just master.
-          # This is critical because --force --all pushes every branch,
-          # so stripping a blob live in another branch would corrupt it.
+          MANIFEST_DIR=$(mktemp -d)
           PROTECTED_BLOBS=$(mktemp)
+          BRANCH_HASHES=$(mktemp)
 
-          # Start with master HEAD (the primary branch)
-          git ls-tree -r HEAD | awk '{print $3}' >> "$PROTECTED_BLOBS"
+          echo "=== Recording per-branch manifests ==="
 
-          # Add blobs from every other branch tip
-          BRANCH_COUNT=1
-          for ref in $(git for-each-ref --format='%(refname)' refs/heads/ refs/remotes/origin/ | grep -v HEAD); do
-            # Skip master since we already included it
-            branch_name=$(basename "$ref")
-            if [ "$branch_name" = "master" ] || [ "$branch_name" = "main" ]; then
-              continue
-            fi
-            git ls-tree -r "$ref" 2>/dev/null | awk '{print $3}' >> "$PROTECTED_BLOBS" || true
-            BRANCH_COUNT=$((BRANCH_COUNT + 1))
+          # Build manifest + protected set for EVERY local branch
+          branch_count=0
+          for branch in $(git for-each-ref --format='%(refname:short)' refs/heads/); do
+            # Sanitize branch name for filename (replace / with __)
+            safe_name="${branch//\//__}"
+            manifest="$MANIFEST_DIR/${safe_name}.manifest"
+
+            git ls-tree -r "refs/heads/$branch" | sort > "$manifest"
+            git ls-tree -r "refs/heads/$branch" | awk '{print $3}' >> "$PROTECTED_BLOBS"
+
+            file_count=$(wc -l < "$manifest")
+            hash=$(sha256sum "$manifest" | awk '{print $1}')
+            # Store: branch_name  manifest_hash  file_count  safe_name
+            echo "$branch $hash $file_count $safe_name" >> "$BRANCH_HASHES"
+            echo "  $branch: $file_count files (hash: ${hash:0:16}...)"
+            branch_count=$((branch_count + 1))
           done
 
-          # Also protect blobs reachable from all tags
-          TAG_COUNT=0
+          # Protect blobs from all tags too
+          tag_count=0
           for tag in $(git for-each-ref --format='%(refname)' refs/tags/); do
             git ls-tree -r "$tag" 2>/dev/null | awk '{print $3}' >> "$PROTECTED_BLOBS" || true
-            TAG_COUNT=$((TAG_COUNT + 1))
+            tag_count=$((tag_count + 1))
           done
 
           # Deduplicate
           sort -u -o "$PROTECTED_BLOBS" "$PROTECTED_BLOBS"
           protected_count=$(wc -l < "$PROTECTED_BLOBS")
-          echo "Protected blob SHAs (live in any ref): $protected_count"
-          echo "  Branches scanned: $BRANCH_COUNT"
-          echo "  Tags scanned: $TAG_COUNT"
 
-          # Also show what's protected in data/ specifically (master HEAD only for readability)
-          PROTECTED_DATA=$(mktemp)
-          git ls-tree -r HEAD -- data/ | awk '{print $3, $4}' > "$PROTECTED_DATA"
-          protected_data_count=$(wc -l < "$PROTECTED_DATA")
-          echo "Protected data/ files (master HEAD): $protected_data_count"
           echo ""
+          echo "Protected: $protected_count unique blob SHAs from $branch_count branches + $tag_count tags"
 
-          echo "--- Protected data/ files by directory (master HEAD) ---"
+          # Master-specific values for summary
+          master_manifest="$MANIFEST_DIR/master.manifest"
+          head_file_count=$(wc -l < "$master_manifest")
+          head_manifest_hash=$(sha256sum "$master_manifest" | awk '{print $1}')
+
+          echo "manifest_dir=$MANIFEST_DIR" >> "$GITHUB_OUTPUT"
+          echo "protected_blobs=$PROTECTED_BLOBS" >> "$GITHUB_OUTPUT"
+          echo "branch_hashes=$BRANCH_HASHES" >> "$GITHUB_OUTPUT"
+          echo "head_manifest_hash=$head_manifest_hash" >> "$GITHUB_OUTPUT"
+          echo "head_file_count=$head_file_count" >> "$GITHUB_OUTPUT"
+
+          # Show protected data/ breakdown
+          echo ""
+          echo "--- Protected data/ files (master HEAD) ---"
           for dir in data/eia-930 data/step1-pfs \
                      data/step2.1-ef data/step2.2-cost \
                      data/step3-dispatch data/step4-analysis \
                      data/step5-scenarios data/step5-wrights \
                      data/step6-smartargets; do
-            count=$(grep -c "^.* ${dir}/" "$PROTECTED_DATA" 2>/dev/null || echo 0)
+            count=$(git ls-tree -r HEAD -- "$dir" 2>/dev/null | wc -l)
             [ "$count" -gt 0 ] && echo "  ${dir}/  →  ${count} live files"
           done
-          # Top-level data/ files
-          toplevel=$(git ls-tree HEAD -- data/ | grep -c blob || echo 0)
-          [ "$toplevel" -gt 0 ] && echo "  data/ (top-level)  →  ${toplevel} live files"
 
-          echo "protected_blobs=$PROTECTED_BLOBS" >> "$GITHUB_OUTPUT"
-          echo "protected_data=$PROTECTED_DATA" >> "$GITHUB_OUTPUT"
-
-      - name: Enumerate all historical blobs in target scope
+      - name: Enumerate and classify historical blobs
         id: enumerate
         run: |
+          set -euo pipefail
           PROTECTED_BLOBS="${{ steps.protect.outputs.protected_blobs }}"
 
-          echo "=== Enumerating all historical blobs ==="
+          echo "=== Scanning all historical blobs ==="
 
-          # Dump every blob in entire history: SHA, size, path
           ALL_BLOBS=$(mktemp)
           git rev-list --objects --all \
             | git cat-file --batch-check='%(objecttype) %(objectname) %(objectsize) %(rest)' \
             | awk '/^blob /{print $2, $3, substr($0, index($0,$4))}' > "$ALL_BLOBS"
+          echo "Total blobs in history: $(wc -l < "$ALL_BLOBS")"
 
-          echo "Total blobs in all history: $(wc -l < "$ALL_BLOBS")"
-
-          # Target scope: everything under data/ or dashboard/ + any *.parquet/*.npz/*.json anywhere
+          # Target scope: data/ + dashboard/ paths, plus *.parquet/*.npz/*.json anywhere
           TARGET_BLOBS=$(mktemp)
           grep -E ' (data|dashboard)/' "$ALL_BLOBS" > "$TARGET_BLOBS" || true
           grep -iE '\.(parquet|npz|json)$' "$ALL_BLOBS" >> "$TARGET_BLOBS" || true
-          # Deduplicate (a data/*.parquet would match both patterns)
           sort -u -o "$TARGET_BLOBS" "$TARGET_BLOBS"
-          echo "Target blobs (data/ + dashboard/ + *.parquet + *.npz + *.json): $(wc -l < "$TARGET_BLOBS")"
+          echo "Target blobs (data/ + dashboard/ + parquet/npz/json): $(wc -l < "$TARGET_BLOBS")"
 
-          # Split into protected vs removable using fast comm instead of per-line grep
-          REMOVABLE=$(mktemp)
-          KEPT=$(mktemp)
-
-          # Extract just SHAs from target blobs for set comparison
+          # Classify using comm (O(n log n) sort + O(n) merge)
           TARGET_SHAS=$(mktemp)
           awk '{print $1}' "$TARGET_BLOBS" | sort -u > "$TARGET_SHAS"
 
-          # SHAs that are in targets but NOT in protected = removable
           REMOVABLE_SHAS=$(mktemp)
           comm -23 "$TARGET_SHAS" "$PROTECTED_BLOBS" > "$REMOVABLE_SHAS"
 
-          # SHAs that are in BOTH targets and protected = kept
           KEPT_SHAS=$(mktemp)
           comm -12 "$TARGET_SHAS" "$PROTECTED_BLOBS" > "$KEPT_SHAS"
 
-          # Now filter the full blob list by these SHA sets using awk for O(n) performance
-          # (The previous while+grep approach was O(n²) and extremely slow on large repos)
+          # Safety assertion: removable and protected must be completely disjoint
+          overlap=$(comm -12 "$REMOVABLE_SHAS" "$KEPT_SHAS" | wc -l)
+          if [ "$overlap" -gt 0 ]; then
+            echo "::error::FATAL: $overlap blob SHAs in both removable AND protected sets!"
+            echo "This should be impossible (comm -23 guarantees disjointness)."
+            echo "Something is wrong with the classification logic. Aborting."
+            comm -12 "$REMOVABLE_SHAS" "$KEPT_SHAS" | head -10
+            exit 1
+          fi
+          echo "Disjointness check: PASSED (removable ∩ protected = ∅)"
+
+          # Build full removable/kept lists with sizes and paths
+          REMOVABLE=$(mktemp)
+          KEPT=$(mktemp)
+          touch "$REMOVABLE" "$KEPT"
+
           awk -v removable_file="$REMOVABLE" -v kept_file="$KEPT" '
             FILENAME == ARGV[1] { removable[$1]=1; next }
             FILENAME == ARGV[2] { kept[$1]=1; next }
             { if($1 in removable) print >> removable_file; else if($1 in kept) print >> kept_file }
           ' "$REMOVABLE_SHAS" "$KEPT_SHAS" "$TARGET_BLOBS"
-
-          # Ensure files exist even if empty
-          touch "$REMOVABLE" "$KEPT"
 
           removable_count=$(wc -l < "$REMOVABLE")
           kept_count=$(wc -l < "$KEPT")
@@ -212,14 +226,12 @@ jobs:
 
           echo ""
           echo "========================================"
-          echo "  PROTECTED (live in HEAD): $kept_count blob entries ($(echo "$kept_bytes" | awk '{printf "%.1f MB", $1/1048576}'))"
-          echo "  REMOVABLE (dead/old):     $removable_count blob entries ($(echo "$removable_bytes" | awk '{printf "%.1f MB", $1/1048576}'))"
+          echo "  PROTECTED (live in any ref): $kept_count blob entries ($(awk -v b="$kept_bytes" 'BEGIN{printf "%.1f MB", b/1048576}'))"
+          echo "  REMOVABLE (dead/old):        $removable_count blob entries ($(awk -v b="$removable_bytes" 'BEGIN{printf "%.1f MB", b/1048576}'))"
           echo "========================================"
 
           echo "removable=$REMOVABLE" >> "$GITHUB_OUTPUT"
           echo "kept=$KEPT" >> "$GITHUB_OUTPUT"
-          echo "all_blobs=$ALL_BLOBS" >> "$GITHUB_OUTPUT"
-          echo "target_blobs=$TARGET_BLOBS" >> "$GITHUB_OUTPUT"
           echo "removable_count=$removable_count" >> "$GITHUB_OUTPUT"
           echo "removable_shas=$REMOVABLE_SHAS" >> "$GITHUB_OUTPUT"
 
@@ -230,7 +242,7 @@ jobs:
           KEPT="${{ steps.enumerate.outputs.kept }}"
 
           echo "============================================================"
-          echo "  PROTECTED FILES — will NOT be touched (live in HEAD)"
+          echo "  PROTECTED FILES — will NOT be touched (live in any ref)"
           echo "============================================================"
           if [ -s "$KEPT" ]; then
             echo ""
@@ -255,7 +267,6 @@ jobs:
               size=$(echo "$matched" | awk '{s+=$2} END{printf "%.1f MB", s/1048576}')
               [ "$count" -gt 0 ] && echo "  ${dir}/  →  ${count} blobs, ${size}"
             done
-            # Top-level data/ files (not in subdirectories)
             toplevel=$(grep -E ' data/[^/]+$' "$KEPT" || true)
             tl_count=$(echo "$toplevel" | grep -c "." 2>/dev/null || echo 0)
             tl_size=$(echo "$toplevel" | awk '{s+=$2} END{printf "%.1f MB", s/1048576}')
@@ -295,7 +306,6 @@ jobs:
               size=$(echo "$matched" | awk '{s+=$2} END{printf "%.1f MB", s/1048576}')
               [ "$count" -gt 0 ] && echo "  ${dir}/  →  ${count} dead blobs, ${size}"
             done
-            # Top-level data/ files
             toplevel=$(grep -E ' data/[^/]+$' "$REMOVABLE" || true)
             tl_count=$(echo "$toplevel" | grep -c "." 2>/dev/null || echo 0)
             tl_size=$(echo "$toplevel" | awk '{s+=$2} END{printf "%.1f MB", s/1048576}')
@@ -312,11 +322,11 @@ jobs:
 
       - name: Check if cleanup needed
         if: ${{ inputs.dry_run == false }}
-        id: blobmap
+        id: check
         run: |
           removable_count="${{ steps.enumerate.outputs.removable_count }}"
 
-          if [ "$removable_count" = "0" ]; then
+          if [ "$removable_count" = "0" ] || [ -z "$removable_count" ]; then
             echo "No removable blobs found. Nothing to do."
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
@@ -325,47 +335,81 @@ jobs:
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "Will strip $removable_count unique dead blob SHAs."
 
-      - name: Run git-filter-repo to strip dead blobs
-        if: ${{ inputs.dry_run == false && steps.blobmap.outputs.skip != 'true' }}
+      - name: Strip dead blobs with git-filter-repo
+        if: ${{ inputs.dry_run == false && steps.check.outputs.skip != 'true' }}
         run: |
+          set -euo pipefail
           REMOVABLE_SHAS="${{ steps.enumerate.outputs.removable_shas }}"
-          echo "Stripping $(wc -l < "$REMOVABLE_SHAS") dead blobs..."
-          echo "(All live HEAD blobs are protected and untouched)"
+          count=$(wc -l < "$REMOVABLE_SHAS")
+          echo "Stripping $count dead blobs..."
+          echo "(All live HEAD blobs across all branches are protected and untouched)"
           git filter-repo --strip-blobs-with-ids "$REMOVABLE_SHAS" --force
 
-      - name: Verify HEAD integrity after cleanup
-        if: ${{ inputs.dry_run == false && steps.blobmap.outputs.skip != 'true' }}
+      - name: Repack and garbage collect
+        if: ${{ inputs.dry_run == false && steps.check.outputs.skip != 'true' }}
         run: |
-          EXPECTED_HASH="${{ steps.protect.outputs.head_manifest_hash }}"
-          EXPECTED_COUNT="${{ steps.protect.outputs.head_file_count }}"
-          ORIGINAL_MANIFEST="${{ steps.protect.outputs.head_manifest }}"
+          echo "=== Repacking to reclaim space ==="
+          git reflog expire --expire=now --all
+          git gc --aggressive --prune=now
+          echo "Repack complete."
 
-          # Build post-cleanup manifest and compare
-          POST_MANIFEST=$(mktemp)
-          git ls-tree -r HEAD | sort > "$POST_MANIFEST"
-          ACTUAL_HASH=$(sha256sum "$POST_MANIFEST" | awk '{print $1}')
-          ACTUAL_COUNT=$(wc -l < "$POST_MANIFEST")
+      - name: Verify ALL branch integrity
+        if: ${{ inputs.dry_run == false && steps.check.outputs.skip != 'true' }}
+        run: |
+          set -euo pipefail
+          MANIFEST_DIR="${{ steps.protect.outputs.manifest_dir }}"
+          BRANCH_HASHES="${{ steps.protect.outputs.branch_hashes }}"
 
-          echo "=== HEAD File Integrity Check ==="
-          echo "  Files expected: $EXPECTED_COUNT"
-          echo "  Files actual:   $ACTUAL_COUNT"
-          echo "  Manifest hash expected: $EXPECTED_HASH"
-          echo "  Manifest hash actual:   $ACTUAL_HASH"
+          echo "=== Verifying ALL branch file manifests ==="
 
-          if [ "$EXPECTED_HASH" = "$ACTUAL_HASH" ]; then
-            echo "PASSED — all $ACTUAL_COUNT files are identical (same modes, SHAs, paths)."
-          else
-            echo "::error::FAILED — HEAD file manifest changed after cleanup!"
-            echo ""
-            echo "Files removed or modified:"
-            diff "$ORIGINAL_MANIFEST" "$POST_MANIFEST" || true
-            echo ""
-            echo "Aborting push. The protected blob set may be incomplete."
+          failures=0
+          verified=0
+          while IFS=' ' read -r branch expected_hash expected_count safe_name; do
+            ref="refs/heads/$branch"
+
+            # Check branch still exists after filter-repo
+            if ! git show-ref --verify --quiet "$ref"; then
+              echo "  FAIL  $branch — branch missing after filter-repo!"
+              failures=$((failures + 1))
+              continue
+            fi
+
+            # Build post-cleanup manifest and compare
+            post_manifest=$(mktemp)
+            git ls-tree -r "$ref" | sort > "$post_manifest"
+            actual_hash=$(sha256sum "$post_manifest" | awk '{print $1}')
+            actual_count=$(wc -l < "$post_manifest")
+
+            if [ "$expected_hash" = "$actual_hash" ]; then
+              echo "  PASS  $branch ($actual_count files)"
+              verified=$((verified + 1))
+            else
+              echo "  FAIL  $branch"
+              echo "        Expected: $expected_count files, hash=${expected_hash:0:16}..."
+              echo "        Actual:   $actual_count files, hash=${actual_hash:0:16}..."
+              original="$MANIFEST_DIR/${safe_name}.manifest"
+              if [ -f "$original" ]; then
+                echo "        Diff (first 20 lines):"
+                diff "$original" "$post_manifest" | head -20 || true
+              fi
+              failures=$((failures + 1))
+            fi
+            rm -f "$post_manifest"
+          done < "$BRANCH_HASHES"
+
+          echo ""
+          echo "Verified: $verified branches"
+
+          if [ "$failures" -gt 0 ]; then
+            echo "::error::$failures branch(es) failed integrity check! Aborting push."
+            echo "No data was pushed. The remote is untouched."
             exit 1
           fi
 
+          echo "All branches verified — every file (mode + SHA + path) is identical."
+
       - name: Repo size after
-        if: ${{ inputs.dry_run == false && steps.blobmap.outputs.skip != 'true' }}
+        if: ${{ inputs.dry_run == false && steps.check.outputs.skip != 'true' }}
         run: |
           echo "=== Repo size AFTER ==="
           git count-objects -vH
@@ -375,7 +419,7 @@ jobs:
           echo "Files in HEAD after cleanup: $file_count"
           echo ""
 
-          echo "=== Top 25 remaining blobs ==="
+          echo "=== Top 25 remaining blobs by size ==="
           BLOB_LIST=$(mktemp)
           git rev-list --objects --all \
             | git cat-file --batch-check='%(objecttype) %(objectname) %(objectsize) %(rest)' \
@@ -384,12 +428,32 @@ jobs:
           rm -f "$BLOB_LIST"
 
       - name: Force push cleaned history
-        if: ${{ inputs.dry_run == false && steps.blobmap.outputs.skip != 'true' }}
+        if: ${{ inputs.dry_run == false && steps.check.outputs.skip != 'true' }}
         run: |
-          git remote add origin-rw https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git 2>/dev/null || true
-          git push --force --all origin-rw
-          git push --force --tags origin-rw
+          set -euo pipefail
+
+          # git-filter-repo removes the origin remote. Re-add it.
+          REPO_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          git remote add origin "$REPO_URL" 2>/dev/null || git remote set-url origin "$REPO_URL"
+
+          echo "=== Force pushing ALL branches ==="
+          branch_count=$(git for-each-ref --format='%(refname:short)' refs/heads/ | wc -l)
+          echo "Pushing $branch_count branches..."
+          git push --force --all origin
+
           echo ""
-          echo "Done. All branches force-pushed with cleaned history."
-          echo "Live HEAD content is UNCHANGED — only dead/overwritten blobs were removed."
-          echo "WARNING: All collaborators must re-clone the repository."
+          echo "=== Force pushing all tags ==="
+          git push --force --tags origin
+
+          echo ""
+          echo "============================================================"
+          echo "  DONE — History rewritten successfully"
+          echo "============================================================"
+          echo "  - All $branch_count branches force-pushed with cleaned history"
+          echo "  - All tags force-pushed"
+          echo "  - Live HEAD content is UNCHANGED on every branch"
+          echo "  - Only dead/overwritten blobs were stripped"
+          echo ""
+          echo "  WARNING: All collaborators must re-clone the repository."
+          echo "  Run: git clone ${{ github.server_url }}/${{ github.repository }}.git"
+          echo "============================================================"
