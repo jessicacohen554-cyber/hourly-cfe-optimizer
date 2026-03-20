@@ -610,6 +610,82 @@ CAPACITY_DEGRADATION_PARAMS = {
     'SPP':   {'max_degrade': 0.0,  'midpoint': 0.50, 'k': 8,  'floor': 0.0},   # energy-only
 }
 
+# Capacity price scarcity parameters — reserve margin thresholds
+# When reserve margins fall below target_rm, capacity prices increase via a
+# piecewise-linear scarcity multiplier. This creates a feedback loop:
+#   fossil retirements → lower reserves → higher capacity prices →
+#   new fossil builds become economic → reserves recover → prices stabilize
+#
+# Calibration:
+#   PJM RPM: BRA clearing jumps 2-3× when reserves drop below 15%
+#   NYISO ICAP: Monthly spot prices spike when summer margins tighten
+#   NEISO FCM: FCA clearing inversely correlated with projected reserves
+#   Target reserve margin (15%) matches NERC Reference Margin Level
+#   Max multiplier (3×) reflects PJM 2023/2024 BRA price spike pattern
+CAPACITY_SCARCITY_PARAMS = {
+    'target_reserve_margin_pct': 15.0,   # NERC Reference Margin Level
+    'max_scarcity_multiplier': 3.0,      # Price ceiling at 0% reserve margin
+    'floor_multiplier': 1.0,             # No scarcity effect above target RM
+}
+
+
+def compute_capacity_price(iso, reserve_margin_pct, clean_pct):
+    """Compute endogenous capacity market price given current grid conditions.
+
+    Combines two effects:
+    1. Scarcity multiplier: price increases as reserve margin falls below target
+       (piecewise linear from 1× at target to max× at 0% reserve margin)
+    2. Clean penetration degradation: existing sigmoid S-curve from
+       CAPACITY_DEGRADATION_PARAMS (higher clean share → lower capacity value)
+
+    Args:
+        iso: ISO region string
+        reserve_margin_pct: Current reserve margin as percentage
+            (e.g. 12.0 means 12% reserve margin)
+        clean_pct: Current clean energy percentage (0-100)
+
+    Returns:
+        Effective capacity price in $/kW-yr (endogenous)
+    """
+    import numpy as np
+
+    base_price = CAPACITY_MARKET_PRICES.get(iso, 0)
+    if base_price <= 0:
+        return 0.0  # Energy-only markets (ERCOT, SPP)
+
+    # --- Scarcity multiplier (reserve margin effect) ---
+    target_rm = CAPACITY_SCARCITY_PARAMS['target_reserve_margin_pct']
+    max_mult = CAPACITY_SCARCITY_PARAMS['max_scarcity_multiplier']
+    floor_mult = CAPACITY_SCARCITY_PARAMS['floor_multiplier']
+
+    if reserve_margin_pct >= target_rm:
+        scarcity_mult = floor_mult
+    else:
+        # Linear ramp from floor_mult at target_rm to max_mult at 0%
+        scarcity_mult = floor_mult + (max_mult - floor_mult) * (
+            (target_rm - reserve_margin_pct) / target_rm
+        )
+        # Clamp — reserve margins can go negative in extreme retirements
+        scarcity_mult = min(scarcity_mult, max_mult)
+
+    # --- Clean penetration degradation (existing sigmoid) ---
+    params = CAPACITY_DEGRADATION_PARAMS.get(iso, {})
+    max_degrade = params.get('max_degrade', 0.0)
+    midpoint = params.get('midpoint', 0.50)
+    k = params.get('k', 8)
+    floor = params.get('floor', 0.0)
+
+    if max_degrade > 0:
+        x = clean_pct / 100.0
+        sigmoid = 1.0 / (1.0 + np.exp(-k * (x - midpoint)))
+        clean_mult = 1.0 - max_degrade * sigmoid
+        clean_mult = max(floor, clean_mult)
+    else:
+        clean_mult = 1.0
+
+    return base_price * scarcity_mult * clean_mult
+
+
 # Backward compat — legacy alpha values (deprecated, use CAPACITY_DEGRADATION_PARAMS)
 CAPACITY_DEGRADATION_ALPHA = {
     'CAISO': 0.40, 'ERCOT': 0.0, 'PJM': 0.35, 'NYISO': 0.40,

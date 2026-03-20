@@ -55,6 +55,7 @@ from pipeline_config import (
     ISOS, REGIONAL_DEMAND_TWH, DEMAND_GROWTH_RATES,
     GRID_MIX_SHARES, WHOLESALE_PRICES, THRESHOLDS,
     CAPACITY_MARKET_PRICES, CAPACITY_DEGRADATION_ALPHA, CAPACITY_DEGRADATION_PARAMS,
+    CAPACITY_SCARCITY_PARAMS, compute_capacity_price,
     PEAK_CAPACITY_CREDITS, RESOURCE_CAPACITY_FACTORS,
     LCOE_TABLES, TX_TABLES, get_tx,
     NUCLEAR_NEWBUILD_LCOE, CCS_LCOE_45Q_ON, CCS_LCOE_45Q_OFF, GEOTHERMAL_LCOE,
@@ -1074,7 +1075,8 @@ def apply_economic_retirement(gen_econ, iso, year, state, _log=print):
 
 
 def apply_economic_new_build(gen_econ, iso, year, state, conditions,
-                              demand_twh, hourly_lmp, _log=print):
+                              demand_twh, hourly_lmp, _log=print,
+                              reserve_margin_pct=None):
     """Evaluate and apply economic new-build fossil capacity (CCGT, CT, coal).
 
     New fossil capacity is built when:
@@ -1201,8 +1203,10 @@ def apply_economic_new_build(gen_econ, iso, year, state, conditions,
         else:
             net_margin = -999
 
-        # Capacity market revenue offset
-        cap_mkt_price = CAPACITY_MARKET_PRICES.get(iso, 0)
+        # Capacity market revenue offset — endogenous pricing
+        _rm = reserve_margin_pct if reserve_margin_pct is not None else 100.0
+        _cp = state.get('clean_pct', 0)
+        cap_mkt_price = compute_capacity_price(iso, _rm, _cp)
         if cap_mkt_price > 0:
             # New builds get full ELCC (1.0 for dispatchable)
             cap_rev_per_mwh = cap_mkt_price / (expected_cf * 8.760) if expected_cf > 0 else 0
@@ -1287,6 +1291,27 @@ def apply_economic_new_build(gen_econ, iso, year, state, conditions,
     return new_builds, total_new_mw, build_details
 
 
+def compute_reserve_margin(gen_econ, cumulative_gw, demand_twh):
+    """Compute reserve margin percentage from current fleet state.
+
+    Args:
+        gen_econ: Dict of generator economics {unit_id: {capacity_mw, ...}}
+        cumulative_gw: Dict of cumulative deployed clean GW {tech: GW}
+        demand_twh: Total annual demand in TWh
+
+    Returns:
+        Reserve margin as percentage (e.g., 15.0 means 15%)
+    """
+    total_cap_mw = sum(e.get('capacity_mw', 0) for e in gen_econ.values())
+    clean_cap_mw = sum(v * 1000 for v in cumulative_gw.values())
+    total_supply_mw = total_cap_mw + clean_cap_mw
+    avg_demand_mw = demand_twh * 1e6 / 8760
+    peak_demand_mw = avg_demand_mw * _PEAK_TO_AVG_RATIO
+    if peak_demand_mw <= 0:
+        return 100.0  # Default to high reserve margin if no demand
+    return (total_supply_mw - peak_demand_mw) / peak_demand_mw * 100
+
+
 def compute_capacity_degradation(iso, clean_pct):
     """Compute capacity price degradation factor using S-curve (sigmoid) model.
 
@@ -1315,11 +1340,13 @@ def compute_capacity_degradation(iso, clean_pct):
     return max(floor, factor)
 
 
-def compute_nuclear_revenue(iso, clean_pct, hourly_lmp, year, conditions=None):
+def compute_nuclear_revenue(iso, clean_pct, hourly_lmp, year, conditions=None,
+                             reserve_margin_pct=None):
     """Compute nuclear plant revenue stack by ISO.
 
     Returns dict with energy_rev, capacity_rev, ptc, total (all $/MWh).
     Uses 45U contract-for-difference floor mechanism when conditions provided.
+    Capacity price is endogenous — responds to reserve margin and clean share.
     """
     nuclear_cf = 0.93
     nuclear_gen = np.ones(H) * nuclear_cf  # Flat baseload
@@ -1327,12 +1354,12 @@ def compute_nuclear_revenue(iso, clean_pct, hourly_lmp, year, conditions=None):
     # Energy revenue: LMP × generation
     energy_rev = float(np.mean(hourly_lmp * nuclear_gen)) / nuclear_cf
 
-    # Capacity revenue — S-curve degradation
-    base_price = CAPACITY_MARKET_PRICES.get(iso, 0)
+    # Capacity revenue — endogenous pricing (scarcity + clean degradation)
+    _rm = reserve_margin_pct if reserve_margin_pct is not None else 100.0
     if conditions and conditions.get('capacity_market_price') is not None:
-        base_price = conditions['capacity_market_price']
-    degrade_factor = compute_capacity_degradation(iso, clean_pct)
-    degraded_price = base_price * degrade_factor
+        degraded_price = conditions['capacity_market_price']
+    else:
+        degraded_price = compute_capacity_price(iso, _rm, clean_pct)
     cap_rev = degraded_price * 1.0 / (nuclear_cf * 8.760)  # ELCC=1.0 for nuclear
 
     # PTC 45U — contract-for-difference floor mechanism
@@ -1406,13 +1433,14 @@ def compute_energy_revenue_by_resource(hourly_lmp, supply_profiles, resource_pct
     return revenues
 
 
-def compute_capacity_revenue(iso, clean_pct, resource_pcts, conditions=None):
+def compute_capacity_revenue(iso, clean_pct, resource_pcts, conditions=None,
+                              reserve_margin_pct=None):
     """Compute capacity market revenue ($/MWh) per resource."""
-    base_price = CAPACITY_MARKET_PRICES.get(iso, 0)
+    _rm = reserve_margin_pct if reserve_margin_pct is not None else 100.0
     if conditions and conditions.get('capacity_market_price') is not None:
-        base_price = conditions['capacity_market_price']
-    degrade_factor = compute_capacity_degradation(iso, clean_pct)
-    degraded_price = base_price * degrade_factor
+        degraded_price = conditions['capacity_market_price']
+    else:
+        degraded_price = compute_capacity_price(iso, _rm, clean_pct)
 
     cap_revs = {}
     for res, pct in resource_pcts.items():
@@ -1480,7 +1508,8 @@ def compute_rec_revenue(iso, resource_pcts, clean_pct, year, rec_price_override=
 def compute_zone_revenue(iso, clean_pct, resource_pcts, hourly_lmp,
                           supply_profiles, demand_total_mwh, year,
                           rec_price_override=None, conditions=None,
-                          zonal_lmp_matrix=None, zonal_zone_names=None):
+                          zonal_lmp_matrix=None, zonal_zone_names=None,
+                          reserve_margin_pct=None):
     """Total blended revenue ($/MWh) for resources at this zone.
 
     When zonal_lmp_matrix is provided, VRE resources use zone-specific LMP
@@ -1491,7 +1520,9 @@ def compute_zone_revenue(iso, clean_pct, resource_pcts, hourly_lmp,
         hourly_lmp, supply_profiles, resource_pcts, demand_total_mwh,
         iso=iso, zonal_lmp_matrix=zonal_lmp_matrix,
         zonal_zone_names=zonal_zone_names)
-    cap_revs = compute_capacity_revenue(iso, clean_pct, resource_pcts, conditions=conditions)
+    cap_revs = compute_capacity_revenue(iso, clean_pct, resource_pcts,
+                                         conditions=conditions,
+                                         reserve_margin_pct=reserve_margin_pct)
     rec_revs = compute_rec_revenue(iso, resource_pcts, clean_pct, year,
                                     rec_price_override=rec_price_override)
 
@@ -2148,7 +2179,8 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
                                scarcity_hours_fraction=0.0,
                                zonal_stats=None,
                                zonal_lmp_matrix=None,
-                               zonal_zone_names=None):
+                               zonal_zone_names=None,
+                               reserve_margin_pct=None):
     """Pure economics-driven resource deployment via LCOE merit order.
 
     Ranks all available clean resources by net LCOE (after incentives, learning
@@ -2244,7 +2276,12 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
         # Resource-specific revenue adjustments
         capacity_rev = 0
         rec_rev = 0
-        base_cap_price = conditions.get('capacity_market_price') or CAPACITY_MARKET_PRICES.get(iso, 0)
+        # Endogenous capacity price: scarcity (reserve margin) × clean degradation
+        _rm = reserve_margin_pct if reserve_margin_pct is not None else 100.0
+        if conditions.get('capacity_market_price') is not None:
+            base_cap_price = conditions['capacity_market_price']
+        else:
+            base_cap_price = compute_capacity_price(iso, _rm, clean_pct)
         if base_cap_price > 0:
             # Capacity credit varies by resource
             cap_credit = PEAK_CAPACITY_CREDITS.get(res, 0)
@@ -3026,6 +3063,9 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                     'cumulative_acp_million': 0,
                     'data_source': _data_sources.get(iso, 'synthetic'),
                     'data_quality': _build_data_quality(iso, _full_data_sources),
+                    # Baseline capacity pricing (assume healthy reserves in 2023)
+                    'reserve_margin_pct': 20.0,
+                    'capacity_price_kw_yr': round(CAPACITY_MARKET_PRICES.get(iso, 0), 2),
                 }
                 results[iso].append(year_result)
                 _log(f"  {iso}: 2023 baseline — {baseline_co2_mt:.1f} Mt, "
@@ -3158,6 +3198,10 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 if _lmp_cache is not None:
                     _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names)
 
+            # --- RESERVE MARGIN (for endogenous capacity pricing) ---
+            reserve_margin_pct = compute_reserve_margin(
+                gen_econ, cumulative_gw, demand_twh)
+
             # --- LCOE MERIT-ORDER DEPLOYMENT ---
             # Compute per-resource temporal energy revenue for deployment economics
             if CANNIBALIZATION_ENABLED:
@@ -3183,6 +3227,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 zonal_stats=zonal_congestion_data,
                 zonal_lmp_matrix=_zonal_lmp_matrix,
                 zonal_zone_names=_zonal_zone_names,
+                reserve_margin_pct=reserve_margin_pct,
             )
 
             # Sync queue budget after deployment
@@ -3209,7 +3254,9 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                  f"across {len(deployed)} resources")
 
             # Nuclear revenue at current threshold
-            nuclear_rev = compute_nuclear_revenue(iso, current_pct, hourly_lmp, year, conditions=conditions)
+            nuclear_rev = compute_nuclear_revenue(iso, current_pct, hourly_lmp, year,
+                                                   conditions=conditions,
+                                                   reserve_margin_pct=reserve_margin_pct)
 
             # --- NUCLEAR RETIREMENT CHECK ---
             offtake = NUCLEAR_OFFTAKE_CONTRACTS.get(iso)
@@ -3307,9 +3354,13 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             # built based on RA needs and/or economic viability (positive margins).
             # Pass cumulative_gw through state for RA calculation.
             state['cumulative_gw'] = cumulative_gw
+            # Recompute reserve margin after retirements (before new-build decision)
+            reserve_margin_pct_post_retire = compute_reserve_margin(
+                adjusted_gen_econ, cumulative_gw, demand_twh)
             new_fossil_builds, new_fossil_mw, new_fossil_details = apply_economic_new_build(
                 adjusted_gen_econ, iso, year, state, conditions,
-                demand_twh, hourly_lmp, _log=_log)
+                demand_twh, hourly_lmp, _log=_log,
+                reserve_margin_pct=reserve_margin_pct_post_retire)
 
             # Add new-build capacity to adjusted gen_econ for emission accounting.
             # New units have better heat rates than fleet average, so they
@@ -3472,6 +3523,10 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 # ORDC scarcity metrics
                 'ordc_scarcity_hours': round(scarcity_hours_frac * H),
                 'ordc_scarcity_hours_fraction': round(scarcity_hours_frac, 4),
+                # Endogenous capacity market pricing
+                'reserve_margin_pct': round(reserve_margin_pct, 1),
+                'capacity_price_kw_yr': round(
+                    compute_capacity_price(iso, reserve_margin_pct, current_pct), 2),
             }
 
             # ── LCOE trajectory (endogenous Wright's Law) ────────────
@@ -3699,7 +3754,7 @@ def aggregate_sweep_percentiles(all_results):
         'clean_pct', 'demand_twh', 'emissions_mt', 'emission_rate_tco2_mwh',
         'cost_per_mwh', 'revenue_per_mwh', 'energy_rev_mwh', 'capacity_rev_mwh',
         'rec_rev_mwh', 'avg_lmp', 'lmp_p90', 'gas_built_gw', 'fossil_built_gw',
-        'total_new_fossil_mw',
+        'total_new_fossil_mw', 'reserve_margin_pct', 'capacity_price_kw_yr',
     ]
     # Boolean metrics: report % of scenarios where condition is True
     BOOL_METRICS = ['market_stop', 'nuclear_retired']
