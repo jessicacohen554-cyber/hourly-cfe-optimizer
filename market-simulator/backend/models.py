@@ -7,7 +7,20 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Constants
+# ─────────────────────────────────────────────────────────────────────────────
+
+VALID_ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
+VALID_LEVELS = {'Low', 'Medium', 'High'}
+VALID_TX_LEVELS = {'None', 'Low', 'Medium', 'High'}
+VALID_DR_LEVELS = {'Off', 'Low', 'Medium', 'High'}
+VALID_SCARCITY_MODES = {'ordc', 'demand_quantile'}
+VALID_LEARNING_SPEEDS = {'Slow', 'Medium', 'Fast'}
+MAX_LCOE = 500.0  # $/MWh — upper bound for any LCOE input
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -184,6 +197,98 @@ class SimulationRequest(BaseModel):
     # Fleet overrides from fleet-config page
     fleet_overrides: Optional[Dict[str, str]] = None  # {plant_id: "Operating"|"Retired"|"CCS Retrofit"}
 
+    # ── Validators ──────────────────────────────────────────────────────────
+
+    @field_validator('iso')
+    @classmethod
+    def validate_iso(cls, v: str) -> str:
+        v = v.upper()
+        if v not in VALID_ISOS:
+            raise ValueError(f"ISO must be one of {VALID_ISOS}, got '{v}'")
+        return v
+
+    @field_validator('years')
+    @classmethod
+    def validate_years_monotonic(cls, v: List[int]) -> List[int]:
+        if v and v != sorted(v):
+            raise ValueError(f"Years must be in ascending order, got {v}")
+        if v:
+            for yr in v:
+                if yr < 2020 or yr > 2100:
+                    raise ValueError(f"Year {yr} out of valid range [2020, 2100]")
+        return v
+
+    @field_validator('transmission_level')
+    @classmethod
+    def validate_transmission_level(cls, v: str) -> str:
+        if v not in VALID_TX_LEVELS:
+            raise ValueError(f"transmission_level must be one of {VALID_TX_LEVELS}, got '{v}'")
+        return v
+
+    @field_validator('ppa_level', 'gas_friction', 'queue_cap_level')
+    @classmethod
+    def validate_lmh_levels(cls, v: str) -> str:
+        if v not in VALID_LEVELS:
+            raise ValueError(f"Level must be one of {VALID_LEVELS}, got '{v}'")
+        return v
+
+    @field_validator('dr_level')
+    @classmethod
+    def validate_dr_level(cls, v: str) -> str:
+        if v not in VALID_DR_LEVELS:
+            raise ValueError(f"dr_level must be one of {VALID_DR_LEVELS}, got '{v}'")
+        return v
+
+    @field_validator('scarcity_mode')
+    @classmethod
+    def validate_scarcity_mode(cls, v: str) -> str:
+        if v not in VALID_SCARCITY_MODES:
+            raise ValueError(f"scarcity_mode must be one of {VALID_SCARCITY_MODES}, got '{v}'")
+        return v
+
+    @field_validator('learning_speed')
+    @classmethod
+    def validate_learning_speed(cls, v: str) -> str:
+        if v not in VALID_LEARNING_SPEEDS:
+            raise ValueError(f"learning_speed must be one of {VALID_LEARNING_SPEEDS}, got '{v}'")
+        return v
+
+    @field_validator('carbon_price')
+    @classmethod
+    def validate_carbon_price(cls, v: float) -> float:
+        if v < 0 or v > 1000:
+            raise ValueError(f"carbon_price must be 0–1000 $/ton, got {v}")
+        return v
+
+    @model_validator(mode='after')
+    def validate_cost_bounds(self):
+        """Ensure LCOE values are within physically plausible bounds."""
+        if self.clean_lcoes:
+            for field_name in ['solar', 'wind', 'offshore_wind', 'nuclear', 'ccs_ccgt']:
+                val = getattr(self.clean_lcoes, field_name, None)
+                if val is not None and (val < 0 or val > MAX_LCOE):
+                    raise ValueError(
+                        f"clean_lcoes.{field_name} must be 0–{MAX_LCOE} $/MWh, got {val}"
+                    )
+            if self.clean_lcoes.geothermal is not None:
+                if self.clean_lcoes.geothermal < 0 or self.clean_lcoes.geothermal > MAX_LCOE:
+                    raise ValueError(
+                        f"clean_lcoes.geothermal must be 0–{MAX_LCOE} $/MWh, "
+                        f"got {self.clean_lcoes.geothermal}"
+                    )
+        if self.fuel_prices:
+            for field_name in ['coal', 'gas', 'oil']:
+                val = getattr(self.fuel_prices, field_name, None)
+                if val is not None and (val < 0 or val > 100):
+                    raise ValueError(
+                        f"fuel_prices.{field_name} must be 0–100 $/MMBtu, got {val}"
+                    )
+        if self.start_year >= self.end_year:
+            raise ValueError(
+                f"start_year ({self.start_year}) must be before end_year ({self.end_year})"
+            )
+        return self
+
 
 class SweepRequest(BaseModel):
     """Parameters for a full 1,215-scenario parametric sweep."""
@@ -199,6 +304,15 @@ class SweepRequest(BaseModel):
     price_sens_keys: Optional[List[str]] = None    # e.g. ["all_low", "all_med"]
     ppa_levels: Optional[List[str]] = None
     gas_friction_levels: Optional[List[str]] = None
+
+    @field_validator('isos')
+    @classmethod
+    def validate_isos(cls, v: List[str]) -> List[str]:
+        normalized = [iso.upper() for iso in v]
+        invalid = [iso for iso in normalized if iso not in VALID_ISOS]
+        if invalid:
+            raise ValueError(f"Invalid ISOs: {invalid}. Must be from {VALID_ISOS}")
+        return normalized
 
 
 class SensitivityRequest(BaseModel):
@@ -424,6 +538,8 @@ class SimulationResponse(BaseModel):
     data_tiers: Optional[dict] = None
     # Aggregated data quality across all year results
     data_quality: Optional[dict] = None
+    # Caveats specific to this run (data limitations, model approximations)
+    result_caveats: List[str] = Field(default_factory=list)
 
 
 class SweepJob(BaseModel):
