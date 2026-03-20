@@ -179,7 +179,7 @@
 
 <div class="title-bar">
   <h1>Market Simulator &mdash; High-Level Architecture</h1>
-  <span class="subtitle">Profit-Driven Electricity Market Model &bull; 7 ISOs &bull; 3 Simulation Modes &bull; 1,215-Scenario Sweep + 5 IEA-Aligned Bundles</span>
+  <span class="subtitle">Profit-Driven Electricity Market Model &bull; 7 ISOs &bull; 3 Simulation Modes &bull; 1,215-Scenario Sweep + 5 IEA-Aligned Bundles &bull; Result Provenance &bull; Cross-Validation</span>
 </div>
 
 <div class="pipeline">
@@ -224,7 +224,7 @@
       <div class="step-box highlight">
         <div class="step-id">Core</div>
         <div class="step-name">LMP + ORDC + Zonal</div>
-        <div class="step-desc">Merit-order stack + ORDC scarcity pricing (exponential knee) + pipe-and-bubble zonal LP. Demand response dampening. VRE cannibalization feedback.</div>
+        <div class="step-desc">Merit-order stack + ORDC scarcity pricing (exponential knee) + pipe-and-bubble zonal LP. Demand response dampening. VRE cannibalization feedback. <strong>Confidence Guard (G5):</strong> lmp_confidence_factor degrades at &gt;60% VRE.</div>
         <div class="step-script">lmp_engine.py, zonal_lmp.py</div>
       </div>
       <div class="step-box">
@@ -235,8 +235,8 @@
       </div>
       <div class="step-box">
         <div class="step-id">Core</div>
-        <div class="step-name">Profitability + Retirement</div>
-        <div class="step-desc">Revenue vs Cost dispatch. Clean deploys where profit &gt; 0. Plant-level retirement (G1): per-plant margin, reliability floor, nuclear per-contract. New-build fossil via RA &amp; economic triggers. LMP confidence guard (G5).</div>
+        <div class="step-name">Profitability + Plant-Level Retirement</div>
+        <div class="step-desc">Revenue vs Cost dispatch. Clean deploys where profit &gt; 0. <strong>Plant-Level Retirement (G1):</strong> compute_plant_level_economics() &rarr; sort by margin &rarr; retire worst-first &rarr; check 15% zonal reliability floor &rarr; persist retired_plants. Nuclear per-contract. New-build fossil via RA &amp; economic triggers.</div>
         <div class="step-script">market_simulation.py</div>
       </div>
       <div class="step-box">
@@ -269,6 +269,11 @@
         <div class="step-name">Parametric Sweep</div>
         <div class="step-desc">1,215 scenarios = 3 demand &times; 5 price &times; 3 PPA &times; 3 gas friction &times; 3 queue &times; 3 NB fossil cost. &times; 7 ISOs &times; 6 years = 51,030 runs.</div>
       </div>
+      <div class="step-box">
+        <div class="step-id">Mode 4</div>
+        <div class="step-name">Correlated Scenarios</div>
+        <div class="step-desc"><strong>(G4)</strong> 5 IEA-aligned bundles: STEPS, APS, NZE, HIGH_FRICTION, RAPID_TRANSITION. Cross-correlated parameter sets vs. independent sweep.</div>
+      </div>
     </div>
   </div>
 
@@ -291,7 +296,24 @@
       <div class="step-box">
         <div class="step-id">Export</div>
         <div class="step-name">CSV / JSON / Parquet</div>
-        <div class="step-desc">Full results table, sweep parquet (51K rows), aggregates JSON (P10/P50/P90), fleet results, chart PNG exports.</div>
+        <div class="step-desc">Full results table, sweep parquet (51K rows), aggregates JSON (P10/P50/P90), fleet results, chart PNG exports. tornado_data (G7) in sweep responses.</div>
+      </div>
+      <div class="step-box">
+        <div class="step-id">Provenance</div>
+        <div class="step-name">Provenance Layer</div>
+        <div class="step-desc"><strong>(G3)</strong> ProvenanceMetadata injected into every response: git_sha, config_hash, run_timestamp, input_snapshot. Enables audit trails &amp; reproducibility.</div>
+      </div>
+      <div class="step-box">
+        <div class="step-id">Post</div>
+        <div class="step-name">Sensitivity Analysis</div>
+        <div class="step-desc"><strong>(G7)</strong> Morris method screening + first-order variance decomposition. Tornado diagrams identify which inputs drive output variance.</div>
+        <div class="step-script">sensitivity_analysis.py</div>
+      </div>
+      <div class="step-box">
+        <div class="step-id">Validation</div>
+        <div class="step-name">Cross-Validation</div>
+        <div class="step-desc"><strong>(G6)</strong> Systematic comparison vs. AEO 2025, ReEDS 2024, EPA IPM v6. Clean share, capacity additions, coal retirement timing divergences flagged.</div>
+        <div class="step-script">validate_cross_model.py</div>
       </div>
       <div class="step-box">
         <div class="step-id">API</div>
