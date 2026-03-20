@@ -23,6 +23,7 @@ Usage:
 
 import argparse
 import json
+import logging
 import os
 import sys
 import time
@@ -70,6 +71,7 @@ from pipeline_config import (
     get_rps_floor,
     FIRM_IMPORT_MW,
     CANNIBALIZATION_ENABLED,
+    SYNTHETIC_DATA_MODE,
     SCARCITY_MODE,
     VRE_PRIMARY_ZONE,
     ENDOGENOUS_LEARNING,
@@ -88,6 +90,8 @@ from lmp_engine import (
 from procurement_utils import get_rps_target_at_year, PPA_PREMIUMS
 
 OUTPUT_DIR = os.path.join(MODULE_ROOT, 'data', 'results')
+
+logger = logging.getLogger(__name__)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # CONSTANTS
@@ -2457,9 +2461,25 @@ def load_step3_data():
 
         all_data[iso] = iso_data
 
-    # If no parquet data found, generate synthetic threshold data
+    # If no parquet data found, handle based on SYNTHETIC_DATA_MODE
     if not all_data:
-        print("  INFO: No step2.2 parquets found — generating synthetic threshold data")
+        missing_isos = list(ISOS)
+
+        if SYNTHETIC_DATA_MODE == "error":
+            raise RuntimeError(
+                f"SYNTHETIC_DATA_MODE='error' but no step2.2 parquets found. "
+                f"Missing ISOs: {missing_isos}. Run the full pipeline (Steps 1-2) "
+                f"or set SYNTHETIC_DATA_MODE='warn' to use synthetic fallback."
+            )
+        elif SYNTHETIC_DATA_MODE == "warn":
+            logger.warning(
+                "No step2.2 parquets found for ISOs: %s. "
+                "Generating synthetic threshold data. Results are ILLUSTRATIVE ONLY.",
+                missing_isos,
+            )
+        else:  # "silent"
+            logger.info("No step2.2 parquets found — generating synthetic threshold data")
+
         all_data = _generate_synthetic_step3_data()
 
     return all_data
@@ -2524,6 +2544,33 @@ def check_data_sources():
         }
 
     return {'simple': simple, 'tiers': tiers}
+
+
+def _build_data_quality(iso: str, data_sources: dict) -> dict:
+    """Build structured data_quality metadata for a given ISO.
+
+    Returns dict with:
+      - synthetic_backed: True if resource mix uses synthetic fallback
+      - missing_sources: list of missing data source identifiers
+      - mode: current SYNTHETIC_DATA_MODE value
+    """
+    ds_simple = data_sources.get('simple', data_sources)
+    ds_tiers = data_sources.get('tiers', {}).get(iso, {})
+    is_synthetic = ds_simple.get(iso, 'synthetic') == 'synthetic'
+
+    missing = []
+    if is_synthetic:
+        missing.append('step2.2_parquet')
+    if ds_tiers.get('interchange') == 'none':
+        missing.append('eia_interchange')
+    if ds_tiers.get('fleet_data') == 'aggregated':
+        missing.append('eia_860_plant_data')
+
+    return {
+        'synthetic_backed': is_synthetic,
+        'missing_sources': missing,
+        'mode': SYNTHETIC_DATA_MODE,
+    }
 
 
 def _generate_synthetic_step3_data():
@@ -2818,8 +2865,10 @@ def run_market_simulation(scenario_id, conditions, isos=None,
 
     # Determine data source per ISO (parquet vs synthetic)
     if _data_sources is None:
-        _ds = check_data_sources()
-        _data_sources = _ds.get('simple', _ds) if isinstance(_ds, dict) and 'simple' in _ds else _ds
+        _full_data_sources = check_data_sources()
+        _data_sources = _full_data_sources.get('simple', _full_data_sources) if isinstance(_full_data_sources, dict) and 'simple' in _full_data_sources else _full_data_sources
+    else:
+        _full_data_sources = {'simple': _data_sources}
 
     cumulative_gw = dict(WRIGHT_CUMULATIVE_GW_2025)
     # Endogenous learning: allow conditions to override the global toggle
@@ -2906,6 +2955,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                     'acp_cost_million': 0,
                     'cumulative_acp_million': 0,
                     'data_source': _data_sources.get(iso, 'synthetic'),
+                    'data_quality': _build_data_quality(iso, _full_data_sources),
                 }
                 results[iso].append(year_result)
                 _log(f"  {iso}: 2023 baseline — {baseline_co2_mt:.1f} Mt, "
@@ -3343,6 +3393,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 'dr_hours': dr_metrics.get('dr_hours', 0),
                 'dr_avg_price': dr_metrics.get('dr_avg_price', 0),
                 'data_source': _data_sources.get(iso, 'synthetic'),
+                'data_quality': _build_data_quality(iso, _full_data_sources),
                 # ORDC scarcity metrics
                 'ordc_scarcity_hours': round(scarcity_hours_frac * H),
                 'ordc_scarcity_hours_fraction': round(scarcity_hours_frac, 4),
