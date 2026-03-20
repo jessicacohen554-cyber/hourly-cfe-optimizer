@@ -22,6 +22,8 @@ SWEEP_PATH = ROOT / "results" / "sweep_1215" / "sweep_1215_flat.parquet"
 OUTPUT_PATH = ROOT / "frontend" / "data" / "sweep_dispatch_data.json"
 
 FUEL_TYPES = ["gas_ccgt", "gas_ct", "coal_steam", "oil_ct"]
+NEW_FOSSIL_COLS = ["total_new_fossil_mw", "gas_built_gw", "fossil_built_gw",
+                   "nb_gas_ccgt_mw", "nb_gas_ct_mw", "nb_coal_mw"]
 
 
 def main():
@@ -70,6 +72,14 @@ def main():
             iso_data[f"{fuel}_cf"] = np.round(cf_arr, 4).tolist()
             iso_data[f"{fuel}_margin"] = np.round(margin_arr, 2).tolist()
 
+        # New fossil build columns (per-ISO, per-scenario, per-year)
+        nf_cols_present = [c for c in NEW_FOSSIL_COLS if c in iso_df.columns]
+        for col in nf_cols_present:
+            arr = np.full((n_scenarios, n_years), 0.0)
+            vals = iso_df[col].fillna(0).values
+            arr[si, yi] = vals
+            iso_data[col] = np.round(arr, 2).tolist()
+
         data[iso] = iso_data
 
     output = {
@@ -77,6 +87,7 @@ def main():
         "years": [int(y) for y in years],
         "isos": [str(i) for i in isos],
         "fuel_types": FUEL_TYPES,
+        "new_fossil_cols": [c for c in NEW_FOSSIL_COLS if c in df.columns],
         "n_scenarios": n_scenarios,
         "n_years": n_years,
         "data": data,
