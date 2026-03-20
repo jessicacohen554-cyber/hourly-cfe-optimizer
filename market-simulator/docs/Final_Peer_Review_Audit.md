@@ -149,3 +149,127 @@ This is fundamentally different from constrained optimization models (e.g., the 
 4. The model assumes competitive wholesale markets. Results may not apply to vertically integrated utilities or bilateral markets outside ISO footprints.
 5. IPM trigger indicators in the output flag when results cross screening-model validity boundaries. When triggered, escalate to production-grade models before making decisions.
 
+---
+
+## 5. Remaining Gaps — Prioritized Improvement Roadmap
+
+### 5.1 High Priority — Address Before External Distribution
+
+These gaps could produce materially misleading results or undermine auditability if the model is shared outside the immediate team.
+
+#### G1: Plant-Level Retirement (Original R6 — Moderate Gaps M1, M2)
+
+**Current state**: Retirement operates on fleet fractions (`apply_economic_retirement()`, market_simulation.py:999–1067). When gas CCGT margin falls below -$5/MWh, a percentage of the entire gas CCGT fleet retires based on loss depth. Nuclear retirement is binary — the entire fleet exits at a trigger year.
+
+**Problem**: Real fleets have heterogeneous economics. A 2020-vintage high-efficiency CCGT may be profitable while a 1990s unit with high heat rates is stranded. Fleet-fraction retirement over-retires profitable units and under-retires uneconomic ones, biasing trajectories in both directions.
+
+**Impact**: Medium. Affects retirement timing and pace, which cascades to reserve margins, capacity prices (R7 feedback loop), and new deployment timing. Most consequential in ISOs with large, diverse fossil fleets (PJM, MISO, ERCOT).
+
+**Effort**: 2 sessions. Plant-level data already available via `build_plant_level_merit_order()` in lmp_engine.py (lines 442–553) and `compute_plant_level_economics()` in market_simulation.py (lines 868–997).
+
+---
+
+#### G2: Methodology Equation Documentation (Original R9 — Minor Gap m3)
+
+**Current state**: The Model Methodology Specification (1,592 lines) describes *what* is modeled comprehensively but is missing mathematical formulations for two key subsystems: (1) the pipe-and-bubble LP zonal decomposition, and (2) the VRE cannibalization / capture rate model. ORDC scarcity pricing equations were added in v2.0.
+
+**Problem**: Without equations, an independent reviewer cannot verify that the code implements the stated methodology without reading source code. This is a reproducibility and auditability gap.
+
+**Impact**: Low for internal use, Medium for peer review or publication. The equations exist in the codebase — they just need to be extracted into the specification document.
+
+**Effort**: 1 session.
+
+---
+
+#### G3: Result Provenance and Reproducibility (New Finding)
+
+**Current state**: Simulation outputs (JSON responses, sweep results) contain scenario parameters and results but no metadata linking them to the exact code version, configuration state, or input data versions that produced them.
+
+**Problem**: If a decision is made based on model outputs from March 2026, and the code is updated in April 2026, there is no way to determine which code version produced the original results. No git SHA, `pipeline_config.py` hash, or input parameter snapshot is embedded in output.
+
+**Impact**: Medium. This is a governance and audit trail gap. Any regulatory or investment decision based on model outputs should be traceable to exact inputs + code version.
+
+**Effort**: 0.5 session. Add `model_version`, `git_sha`, `config_hash`, and `input_snapshot` fields to `SimulationResponse` in models.py.
+
+---
+
+### 5.2 Medium Priority — Strengthen for Peer Review or Regulatory Use
+
+These gaps don't undermine the model's screening utility but would strengthen it for more rigorous audiences.
+
+#### G4: Correlated Scenario Construction (Original Moderate Gap M5)
+
+**Current state**: The 1,215 scenarios sweep demand, fuel prices, renewable LCOE, and other dimensions independently. Each dimension's values are combined with every other dimension's values in a full Cartesian grid.
+
+**Problem**: In reality, these dimensions are correlated. High electricity demand tends to coincide with higher gas prices (both driven by economic growth) and faster renewable cost decline (driven by deployment scale from higher demand). The independent sweep assigns equal probability to implausible combinations like "high demand + low gas prices + slow renewable cost decline."
+
+**Impact**: Medium. The scenario sweep still covers the relevant outcome space, but the distributional summary (P10/P50/P90 from R5) may be misleading because implausible combinations dilute the probability mass. The scenario weights added in R5 partially mitigate this but are still applied independently per dimension.
+
+**Effort**: 1 session. Add IEA World Energy Outlook-aligned scenario bundles (Stated Policies, Announced Pledges, Net Zero) as curated, internally-consistent scenario sets alongside the independent sweep.
+
+---
+
+#### G5: Demand-Quantile Pricing Extrapolation Guard (Original Moderate Gap M6)
+
+**Current state**: The demand-quantile pricing layer in `lmp_engine.py` is empirically calibrated to 2019–2024 ISO State of Market data. At VRE penetrations above ~60%, the model extrapolates beyond observed data.
+
+**Problem**: The relationship between VRE penetration and LMP shape may be non-linear in ways not captured by the calibrated coefficients. Negative pricing, duck curve depth, and minimum generation constraints behave differently at penetrations never observed in US ISOs.
+
+**Impact**: Medium. IPM trigger indicators already flag high-VRE conditions, but the current implementation doesn't explicitly degrade confidence or warn users in API responses.
+
+**Effort**: 0.5 session. Add explicit confidence degradation factor to LMP results above 60% VRE and enhance the existing IPM trigger to include a structured warning in the API response.
+
+---
+
+#### G6: Cross-Validation Against Established Models (New Finding)
+
+**Current state**: Individual calibration targets exist for each ISO (2024 State of Market reports), and plant-level economics are validated against EIA data. However, there is no systematic comparison of model trajectories against NREL ReEDS Annual Technology Baseline scenarios, EIA Annual Energy Outlook projections, or EPA IPM reference cases.
+
+**Problem**: Without cross-validation, it's impossible to distinguish between "the model produces different results because it uses a different mechanism (profit-driven vs. cost-minimizing)" and "the model produces different results because it has a bug or calibration error."
+
+**Impact**: Medium. Cross-validation doesn't mean the model must match other models — divergence is expected and valuable — but the divergence should be explainable. A structured comparison against 2–3 reference cases would significantly strengthen credibility.
+
+**Effort**: 1 session. Create a validation script that compares model outputs for a reference scenario against published ReEDS/AEO mid-case trajectories, with commentary on expected divergences.
+
+---
+
+#### G7: Sensitivity Analysis Framework (New Finding)
+
+**Current state**: The 1,215-scenario sweep provides broad parametric coverage, but no formal sensitivity decomposition identifies which inputs drive the most output variance. Users must inspect results manually to understand sensitivity.
+
+**Problem**: A decision-maker asking "which assumptions matter most?" cannot get a direct answer from the model. Tornado diagrams, Morris method screening, or first-order Sobol indices would provide this. This is standard practice in energy system modeling (NREL, IEA, EPA all publish sensitivity decompositions).
+
+**Impact**: Medium. Useful for prioritizing which assumptions to refine and for communicating uncertainty to non-technical stakeholders.
+
+**Effort**: 1–2 sessions. The 1,215-scenario sweep results already contain all the data needed — this is a post-processing analysis, not a model change.
+
+---
+
+### 5.3 Low Priority — Proportional to Screening Purpose
+
+These are quality-of-life improvements that enhance the model but aren't required for its stated screening purpose.
+
+#### G8: Code Quality Improvements (New Finding)
+
+**Current state**: Type hint coverage is approximately 5% (~14 of ~298 functions have return type annotations). Test suite has 65 passing tests across 12 files but no formal coverage percentage tracked. No CI/CD pipeline runs tests on PR.
+
+**Effort**: 1–2 sessions.
+
+#### G9: Financing Cost Sensitivity / WACC Toggle (Original Moderate Gap M9)
+
+**Current state**: LCOE calculations include an implicit WACC assumption but no sensitivity toggle for interest rates, project risk premiums, or PPA structures.
+
+**Effort**: 0.5 session.
+
+#### G10: Demand Response Parameter Update (Original Moderate Gap M4)
+
+**Current state**: DR parameters frozen at 2023–2024 values. FERC Order 2222 implementation could materially change DR availability by 2028–2030.
+
+**Effort**: 0.5 session.
+
+#### G11: Multi-Weather-Year Option (Original Minor Gap)
+
+**Current state**: Single weather year (2024) as default. 2021–2025 sensitivity available but not wired into the sweep.
+
+**Effort**: 0.5 session.
+
