@@ -27,6 +27,7 @@ from market_simulation import (
     _percentile_dict,
     _compute_weighted_percentiles,
     compute_market_deployment,
+    build_provenance_metadata,
     H,
 )
 from pipeline_config import (
@@ -39,7 +40,7 @@ from pipeline_config import (
     SCENARIO_WEIGHTS,
     compute_capacity_price,
 )
-from models import SimulationRequest, UncertaintyBands
+from models import SimulationRequest, UncertaintyBands, ProvenanceMetadata
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -400,3 +401,66 @@ class TestR10CurtailmentFeedback:
             effective_lcoe = float('inf')
         assert effective_lcoe > 1000, \
             f"Near-100% curtailment should produce very high LCOE: {effective_lcoe:.2f}"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# R11: RESULT PROVENANCE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class TestProvenance:
+    """Verify result provenance metadata is populated correctly."""
+
+    def test_git_sha_non_empty(self):
+        """git_sha must be a non-empty string."""
+        prov = build_provenance_metadata({'test': True})
+        assert isinstance(prov.git_sha, str)
+        assert len(prov.git_sha) > 0, "git_sha should be non-empty"
+
+    def test_config_hash_is_64_char_hex(self):
+        """config_hash must be a 64-character hex string (SHA-256)."""
+        prov = build_provenance_metadata({'test': True})
+        assert isinstance(prov.config_hash, str)
+        assert len(prov.config_hash) == 64, \
+            f"config_hash should be 64 chars, got {len(prov.config_hash)}"
+        assert all(c in '0123456789abcdef' for c in prov.config_hash), \
+            "config_hash should be lowercase hex"
+
+    def test_run_timestamp_is_valid_iso8601(self):
+        """run_timestamp must be a valid ISO 8601 datetime string."""
+        import datetime as dt
+        prov = build_provenance_metadata({'test': True})
+        # fromisoformat should parse without error
+        parsed = dt.datetime.fromisoformat(prov.run_timestamp)
+        assert parsed.tzinfo is not None, "timestamp should be timezone-aware (UTC)"
+
+    def test_input_snapshot_round_trips(self):
+        """input_snapshot should preserve the exact input dict."""
+        input_params = {
+            'scenario_id': 'test_001',
+            'conditions': {'name': 'All-Medium', 'lcoe_level': 'Medium'},
+            'isos': ['CAISO', 'ERCOT'],
+            'nuclear_retirement_threshold': 25.0,
+        }
+        prov = build_provenance_metadata(input_params)
+        assert prov.input_snapshot == input_params, \
+            "input_snapshot should round-trip the exact input dict"
+
+    def test_provenance_model_fields(self):
+        """ProvenanceMetadata model should accept all required fields."""
+        prov = ProvenanceMetadata(
+            model_version='2.1.0',
+            git_sha='abc1234',
+            git_branch='main',
+            config_hash='a' * 64,
+            run_timestamp='2026-01-01T00:00:00+00:00',
+            python_version='3.11.0',
+            input_snapshot={'test': True},
+        )
+        assert prov.model_version == '2.1.0'
+        assert prov.git_branch == 'main'
+
+    def test_python_version_populated(self):
+        """python_version should match the running interpreter."""
+        import sys as _sys
+        prov = build_provenance_metadata({})
+        assert prov.python_version == _sys.version
