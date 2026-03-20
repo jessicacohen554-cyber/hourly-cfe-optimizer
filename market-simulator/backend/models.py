@@ -471,6 +471,8 @@ class YearResult(BaseModel):
     # Economic retirement tracking
     economic_retirements_mw: Dict[str, float] = Field(default_factory=dict)
     total_economic_retirement_mw: float = 0.0
+    # Plant-level retirement details (G1: individual plant economics)
+    plant_retirements: List[dict] = Field(default_factory=list)  # [{plant_id, capacity_mw, unit_type, margin, iso, zone}]
     # IPM trigger indicators
     ipm_triggers: List[IPMTrigger] = Field(default_factory=list)
     # Data source tracking (parquet = physics data, synthetic = illustrative only)
