@@ -1,0 +1,213 @@
+{
+  "sweep_rows": 42525,
+  "isos": [
+    "CAISO",
+    "ERCOT",
+    "MISO",
+    "NEISO",
+    "NYISO",
+    "PJM",
+    "SPP"
+  ],
+  "years": [
+    2030,
+    2035,
+    2040,
+    2045,
+    2050
+  ],
+  "calibration": {
+    "CAISO": {
+      "avg_scarcity_hours": 0.0,
+      "expected_range": [
+        50,
+        200
+      ],
+      "acceptable_range": [
+        20,
+        500
+      ],
+      "status": "fail"
+    },
+    "ERCOT": {
+      "avg_scarcity_hours": 293.8,
+      "expected_range": [
+        100,
+        400
+      ],
+      "acceptable_range": [
+        50,
+        800
+      ],
+      "status": "pass"
+    },
+    "MISO": {
+      "avg_scarcity_hours": 115.6,
+      "expected_range": [
+        50,
+        250
+      ],
+      "acceptable_range": [
+        20,
+        600
+      ],
+      "status": "pass"
+    },
+    "NEISO": {
+      "avg_scarcity_hours": 4.7,
+      "expected_range": [
+        30,
+        150
+      ],
+      "acceptable_range": [
+        10,
+        400
+      ],
+      "status": "fail"
+    },
+    "NYISO": {
+      "avg_scarcity_hours": 0.0,
+      "expected_range": [
+        40,
+        200
+      ],
+      "acceptable_range": [
+        15,
+        500
+      ],
+      "status": "fail"
+    },
+    "PJM": {
+      "avg_scarcity_hours": 2.3,
+      "expected_range": [
+        30,
+        150
+      ],
+      "acceptable_range": [
+        10,
+        400
+      ],
+      "status": "fail"
+    },
+    "SPP": {
+      "avg_scarcity_hours": 5.5,
+      "expected_range": [
+        40,
+        200
+      ],
+      "acceptable_range": [
+        15,
+        500
+      ],
+      "status": "fail"
+    }
+  },
+  "new_fossil_impact": {
+    "CAISO": {
+      "low_nf_cost_avg": 0.0,
+      "high_nf_cost_avg": 0.0,
+      "increase_pct": 0
+    },
+    "ERCOT": {
+      "low_nf_cost_avg": 285.6,
+      "high_nf_cost_avg": 301.8,
+      "increase_pct": 5.7
+    },
+    "MISO": {
+      "low_nf_cost_avg": 98.4,
+      "high_nf_cost_avg": 132.8,
+      "increase_pct": 35.0
+    },
+    "NEISO": {
+      "low_nf_cost_avg": 4.7,
+      "high_nf_cost_avg": 4.7,
+      "increase_pct": 0.0
+    },
+    "NYISO": {
+      "low_nf_cost_avg": 0.0,
+      "high_nf_cost_avg": 0.0,
+      "increase_pct": 0
+    },
+    "PJM": {
+      "low_nf_cost_avg": 1.5,
+      "high_nf_cost_avg": 3.1,
+      "increase_pct": 109.1
+    },
+    "SPP": {
+      "low_nf_cost_avg": 2.1,
+      "high_nf_cost_avg": 8.5,
+      "increase_pct": 304.2
+    }
+  },
+  "red_flags": [
+    "\u26a0 CAISO: 100% of scenarios have ZERO scarcity hours \u2014 ORDC caps may be too low or knee_mw too aggressive",
+    "\u26a0 MISO: 53% of scenarios have ZERO scarcity hours \u2014 ORDC caps may be too low or knee_mw too aggressive",
+    "\u26a0 NEISO: 93% of scenarios have ZERO scarcity hours \u2014 ORDC caps may be too low or knee_mw too aggressive",
+    "\u26a0 NYISO: 100% of scenarios have ZERO scarcity hours \u2014 ORDC caps may be too low or knee_mw too aggressive",
+    "\u26a0 PJM: 94% of scenarios have ZERO scarcity hours \u2014 ORDC caps may be too low or knee_mw too aggressive",
+    "\u26a0 SPP: 80% of scenarios have ZERO scarcity hours \u2014 ORDC caps may be too low or knee_mw too aggressive",
+    "\u26a0 ERCOT 2050 scenario=MKT_H_all_low_L_L_L_L: 2628 scarcity hours (>2000 is extreme)",
+    "\u26a0 ERCOT 2050 scenario=MKT_H_all_low_L_L_L_M: 2628 scarcity hours (>2000 is extreme)",
+    "\u26a0 ERCOT 2050 scenario=MKT_H_all_low_L_L_L_H: 2628 scarcity hours (>2000 is extreme)",
+    "\u26a0 ERCOT 2050 scenario=MKT_H_all_low_L_M_L_L: 2628 scarcity hours (>2000 is extreme)",
+    "\u26a0 ERCOT 2050 scenario=MKT_H_all_low_L_M_L_M: 2628 scarcity hours (>2000 is extreme)",
+    "\u26a0 ERCOT 2050 scenario=MKT_H_all_low_L_M_L_H: 2628 scarcity hours (>2000 is extreme)",
+    "\u26a0 ERCOT 2050 scenario=MKT_H_all_low_L_H_L_L: 2628 scarcity hours (>2000 is extreme)",
+    "\u26a0 ERCOT 2050 scenario=MKT_H_all_low_L_H_L_M: 2628 scarcity hours (>2000 is extreme)",
+    "\u26a0 ERCOT 2050 scenario=MKT_H_all_low_L_H_L_H: 2628 scarcity hours (>2000 is extreme)",
+    "\u26a0 ERCOT 2050 scenario=MKT_H_all_low_M_L_L_L: 2561 scarcity hours (>2000 is extreme)"
+  ],
+  "recommendations": [
+    "  CAISO: avg=0 hrs is BELOW target [50, 200]. Consider INCREASING knee_mw (currently 4000 MW) or DECREASING cap (currently $300/MWh).",
+    "  NEISO: avg=5 hrs is BELOW target [30, 150]. Consider INCREASING knee_mw (currently 2500 MW) or DECREASING cap (currently $250/MWh).",
+    "  NYISO: avg=0 hrs is BELOW target [40, 200]. Consider INCREASING knee_mw (currently 3000 MW) or DECREASING cap (currently $300/MWh).",
+    "  PJM: avg=2 hrs is BELOW target [30, 150]. Consider INCREASING knee_mw (currently 6000 MW) or DECREASING cap (currently $300/MWh).",
+    "  SPP: avg=6 hrs is BELOW target [40, 200]. Consider INCREASING knee_mw (currently 3500 MW) or DECREASING cap (currently $200/MWh).",
+    "  ERCOT: Expected LARGEST scarcity sensitivity to NF cost (energy-only market) but increase (6%) is below average of other ISOs (149%). May need ERCOT-specific tuning."
+  ],
+  "all_pass": false,
+  "ordc_params": {
+    "ERCOT": {
+      "voll": 5000,
+      "knee_mw": 3000,
+      "lam": 0.002,
+      "cap": 500
+    },
+    "PJM": {
+      "voll": 3700,
+      "knee_mw": 6000,
+      "lam": 0.0015,
+      "cap": 300
+    },
+    "CAISO": {
+      "voll": 2000,
+      "knee_mw": 4000,
+      "lam": 0.002,
+      "cap": 300
+    },
+    "NYISO": {
+      "voll": 2500,
+      "knee_mw": 3000,
+      "lam": 0.002,
+      "cap": 300
+    },
+    "NEISO": {
+      "voll": 2000,
+      "knee_mw": 2500,
+      "lam": 0.002,
+      "cap": 250
+    },
+    "MISO": {
+      "voll": 3500,
+      "knee_mw": 5000,
+      "lam": 0.0015,
+      "cap": 300
+    },
+    "SPP": {
+      "voll": 2000,
+      "knee_mw": 3500,
+      "lam": 0.002,
+      "cap": 200
+    }
+  }
+}
