@@ -38,13 +38,13 @@
             width: 24px; height: 10px; border-radius: 3px; flex-shrink: 0;
         }
 
-        /* Target radios */
-        .target-radios { display: flex; gap: var(--space-lg); flex-wrap: wrap; }
+        /* Target checkboxes (allow multiple simultaneous overlays) */
+        .target-checks { display: flex; gap: var(--space-lg); flex-wrap: wrap; }
         .target-radio {
             display: flex; align-items: center; gap: var(--space-sm);
             cursor: pointer; font-size: 0.95rem; min-height: 44px; user-select: none;
         }
-        .target-radio input[type="radio"] {
+        .target-radio input[type="checkbox"] {
             width: 20px; height: 20px; accent-color: var(--ceg-blue);
             cursor: pointer; flex-shrink: 0;
         }
@@ -352,9 +352,9 @@
                 </div>
             </div>
             <div class="controls-group">
-                <div class="controls-group-label">Target Overlay</div>
-                <div class="target-radios" id="targetRadios">
-                    <!-- Populated by JS -->
+                <div class="controls-group-label">Target Overlays</div>
+                <div class="target-checks" id="targetRadios">
+                    <!-- Populated by JS (checkboxes, allows multiple) -->
                 </div>
             </div>
             <div class="controls-group">
@@ -478,8 +478,8 @@
                         <select id="apFuelType">
                             <option value="gas_ccgt">Gas CCGT</option>
                             <option value="gas_ct">Gas CT</option>
-                            <option value="coal_steam">Coal</option>
                             <option value="oil_ct">Oil CT</option>
+                            <option value="gas_oil_ct">Gas/Oil Dual</option>
                         </select>
                     </div>
                     <div><label>Year Online</label><input type="number" id="apYearOnline" value="2028" min="2023" max="2050"></div>

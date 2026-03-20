@@ -17,22 +17,22 @@ var FleetDispatchEngine = (function () {
     var REFERENCE_HEAT_RATES = {
         gas_ccgt: 7.0,
         gas_ct: 10.5,
-        coal_steam: 10.0,
-        oil_ct: 10.5
+        oil_ct: 10.5,
+        gas_oil_ct: 10.5
     };
 
     var EMISSION_FACTORS = {
         gas_ccgt: 0.05306,
         gas_ct: 0.05306,
-        coal_steam: 0.09552,
-        oil_ct: 0.07396
+        oil_ct: 0.07396,
+        gas_oil_ct: 0.06351
     };
 
     var DEFAULT_CO2_RATES = {
         gas_ccgt: 0.37,
         gas_ct: 0.55,
-        coal_steam: 0.95,
-        oil_ct: 0.65
+        oil_ct: 0.65,
+        gas_oil_ct: 0.58
     };
 
     var CCS_MILESTONES = [[0, 0.0], [2, 0.30], [5, 0.70], [8, 1.00]];
