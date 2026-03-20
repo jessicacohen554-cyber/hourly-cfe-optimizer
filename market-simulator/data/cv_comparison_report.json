@@ -1,0 +1,472 @@
+{
+  "comparisons": {
+    "CV_Reference_Zero_Carbon_vs_AEO_Reference": {
+      "national": {
+        "reference": "EIA Annual Energy Outlook 2025, Table 8",
+        "metric": "clean_share_pct",
+        "milestones": {
+          "2030": {
+            "model": 55.27,
+            "reference": 47,
+            "abs_div": 8.27,
+            "rel_div_pct": 17.6,
+            "flag": [
+              {
+                "status": "expected",
+                "reason": "Within 10 pp of AEO Reference (current policy)"
+              }
+            ]
+          },
+          "2035": {
+            "model": 62.77,
+            "reference": 51,
+            "abs_div": 11.77,
+            "rel_div_pct": 23.08,
+            "flag": [
+              {
+                "status": "expected",
+                "reason": "Model shows higher clean share than AEO \u2014 plausible if market economics favor renewables"
+              }
+            ]
+          },
+          "2040": {
+            "model": 69.87,
+            "reference": 54,
+            "abs_div": 15.87,
+            "rel_div_pct": 29.39,
+            "flag": [
+              {
+                "status": "expected",
+                "reason": "Model shows higher clean share than AEO \u2014 plausible if market economics favor renewables"
+              }
+            ]
+          }
+        },
+        "mean_abs_divergence": 11.97,
+        "max_abs_divergence": 15.87
+      },
+      "by_iso": {
+        "CAISO": {
+          "reference": "EIA Annual Energy Outlook 2025, Table 8",
+          "metric": "clean_share_pct",
+          "milestones": {
+            "2030": {
+              "model": 60.0,
+              "reference": 47,
+              "abs_div": 13.0,
+              "rel_div_pct": 27.66,
+              "flag": [
+                {
+                  "status": "expected",
+                  "reason": "Model shows higher clean share than AEO \u2014 plausible if market economics favor renewables"
+                }
+              ]
+            },
+            "2035": {
+              "model": 78.6,
+              "reference": 51,
+              "abs_div": 27.6,
+              "rel_div_pct": 54.12,
+              "flag": [
+                {
+                  "status": "investigate",
+                  "reason": "Divergence of +27.6 pp exceeds 20 pp threshold"
+                },
+                {
+                  "status": "expected",
+                  "reason": "Model shows higher clean share than AEO \u2014 plausible if market economics favor renewables"
+                }
+              ]
+            },
+            "2040": {
+              "model": 90.0,
+              "reference": 54,
+              "abs_div": 36.0,
+              "rel_div_pct": 66.67,
+              "flag": [
+                {
+                  "status": "investigate",
+                  "reason": "Divergence of +36.0 pp exceeds 20 pp threshold"
+                },
+                {
+                  "status": "expected",
+                  "reason": "Model shows higher clean share than AEO \u2014 plausible if market economics favor renewables"
+                }
+              ]
+            }
+          },
+          "mean_abs_divergence": 25.53,
+          "max_abs_divergence": 36.0
+        },
+        "ERCOT": {
+          "reference": "EIA Annual Energy Outlook 2025, Table 8",
+          "metric": "clean_share_pct",
+          "milestones": {
+            "2030": {
+              "model": 59.2,
+              "reference": 47,
+              "abs_div": 12.2,
+              "rel_div_pct": 25.96,
+              "flag": [
+                {
+                  "status": "expected",
+                  "reason": "Model shows higher clean share than AEO \u2014 plausible if market economics favor renewables"
+                }
+              ]
+            },
+            "2035": {
+              "model": 59.2,
+              "reference": 51,
+              "abs_div": 8.2,
+              "rel_div_pct": 16.08,
+              "flag": [
+                {
+                  "status": "expected",
+                  "reason": "Within 10 pp of AEO Reference (current policy)"
+                }
+              ]
+            },
+            "2040": {
+              "model": 65.7,
+              "reference": 54,
+              "abs_div": 11.7,
+              "rel_div_pct": 21.67,
+              "flag": [
+                {
+                  "status": "expected",
+                  "reason": "Model shows higher clean share than AEO \u2014 plausible if market economics favor renewables"
+                }
+              ]
+            }
+          },
+          "mean_abs_divergence": 10.7,
+          "max_abs_divergence": 12.2
+        },
+        "PJM": {
+          "reference": "EIA Annual Energy Outlook 2025, Table 8",
+          "metric": "clean_share_pct",
+          "milestones": {
+            "2030": {
+              "model": 46.6,
+              "reference": 47,
+              "abs_div": -0.4,
+              "rel_div_pct": -0.85,
+              "flag": [
+                {
+                  "status": "expected",
+                  "reason": "Within 10 pp of AEO Reference (current policy)"
+                }
+              ]
+            },
+            "2035": {
+              "model": 50.5,
+              "reference": 51,
+              "abs_div": -0.5,
+              "rel_div_pct": -0.98,
+              "flag": [
+                {
+                  "status": "expected",
+                  "reason": "Within 10 pp of AEO Reference (current policy)"
+                }
+              ]
+            },
+            "2040": {
+              "model": 53.9,
+              "reference": 54,
+              "abs_div": -0.1,
+              "rel_div_pct": -0.19,
+              "flag": [
+                {
+                  "status": "expected",
+                  "reason": "Within 10 pp of AEO Reference (current policy)"
+                }
+              ]
+            }
+          },
+          "mean_abs_divergence": 0.33,
+          "max_abs_divergence": 0.5
+        }
+      }
+    },
+    "CV_Reference_Zero_Carbon_vs_REEDS_Mid": {
+      "national": {
+        "reference": "NREL Standard Scenarios 2024, Mid-Case",
+        "metric": "clean_share_pct",
+        "milestones": {
+          "2030": {
+            "model": 55.27,
+            "reference": 52,
+            "abs_div": 3.27,
+            "rel_div_pct": 6.29,
+            "flag": [
+              {
+                "status": "investigate",
+                "reason": "Model shows HIGHER clean share than ReEDS \u2014 unexpected without policy mandates"
+              }
+            ]
+          },
+          "2035": {
+            "model": 62.77,
+            "reference": 60,
+            "abs_div": 2.77,
+            "rel_div_pct": 4.62,
+            "flag": [
+              {
+                "status": "investigate",
+                "reason": "Model shows HIGHER clean share than ReEDS \u2014 unexpected without policy mandates"
+              }
+            ]
+          },
+          "2040": {
+            "model": 69.87,
+            "reference": 67,
+            "abs_div": 2.87,
+            "rel_div_pct": 4.28,
+            "flag": [
+              {
+                "status": "investigate",
+                "reason": "Model shows HIGHER clean share than ReEDS \u2014 unexpected without policy mandates"
+              }
+            ]
+          }
+        },
+        "mean_abs_divergence": 2.97,
+        "max_abs_divergence": 3.27
+      },
+      "by_iso": {
+        "CAISO": {
+          "reference": "NREL Standard Scenarios 2024, Mid-Case",
+          "metric": "clean_share_pct",
+          "milestones": {
+            "2030": {
+              "model": 60.0,
+              "reference": 52,
+              "abs_div": 8.0,
+              "rel_div_pct": 15.38,
+              "flag": [
+                {
+                  "status": "investigate",
+                  "reason": "Model shows HIGHER clean share than ReEDS \u2014 unexpected without policy mandates"
+                }
+              ]
+            },
+            "2035": {
+              "model": 78.6,
+              "reference": 60,
+              "abs_div": 18.6,
+              "rel_div_pct": 31.0,
+              "flag": [
+                {
+                  "status": "investigate",
+                  "reason": "Model shows HIGHER clean share than ReEDS \u2014 unexpected without policy mandates"
+                }
+              ]
+            },
+            "2040": {
+              "model": 90.0,
+              "reference": 67,
+              "abs_div": 23.0,
+              "rel_div_pct": 34.33,
+              "flag": [
+                {
+                  "status": "investigate",
+                  "reason": "Divergence of +23.0 pp exceeds 20 pp threshold"
+                },
+                {
+                  "status": "investigate",
+                  "reason": "Model shows HIGHER clean share than ReEDS \u2014 unexpected without policy mandates"
+                }
+              ]
+            }
+          },
+          "mean_abs_divergence": 16.53,
+          "max_abs_divergence": 23.0
+        },
+        "ERCOT": {
+          "reference": "NREL Standard Scenarios 2024, Mid-Case",
+          "metric": "clean_share_pct",
+          "milestones": {
+            "2030": {
+              "model": 59.2,
+              "reference": 52,
+              "abs_div": 7.2,
+              "rel_div_pct": 13.85,
+              "flag": [
+                {
+                  "status": "investigate",
+                  "reason": "Model shows HIGHER clean share than ReEDS \u2014 unexpected without policy mandates"
+                }
+              ]
+            },
+            "2035": {
+              "model": 59.2,
+              "reference": 60,
+              "abs_div": -0.8,
+              "rel_div_pct": -1.33,
+              "flag": [
+                {
+                  "status": "expected",
+                  "reason": "Profit-driven model shows lower clean share than ReEDS cost-minimizing model with RPS mandates"
+                }
+              ]
+            },
+            "2040": {
+              "model": 65.7,
+              "reference": 67,
+              "abs_div": -1.3,
+              "rel_div_pct": -1.94,
+              "flag": [
+                {
+                  "status": "expected",
+                  "reason": "Profit-driven model shows lower clean share than ReEDS cost-minimizing model with RPS mandates"
+                }
+              ]
+            }
+          },
+          "mean_abs_divergence": 3.1,
+          "max_abs_divergence": 7.2
+        },
+        "PJM": {
+          "reference": "NREL Standard Scenarios 2024, Mid-Case",
+          "metric": "clean_share_pct",
+          "milestones": {
+            "2030": {
+              "model": 46.6,
+              "reference": 52,
+              "abs_div": -5.4,
+              "rel_div_pct": -10.38,
+              "flag": [
+                {
+                  "status": "expected",
+                  "reason": "Profit-driven model shows lower clean share than ReEDS cost-minimizing model with RPS mandates"
+                }
+              ]
+            },
+            "2035": {
+              "model": 50.5,
+              "reference": 60,
+              "abs_div": -9.5,
+              "rel_div_pct": -15.83,
+              "flag": [
+                {
+                  "status": "expected",
+                  "reason": "Profit-driven model shows lower clean share than ReEDS cost-minimizing model with RPS mandates"
+                }
+              ]
+            },
+            "2040": {
+              "model": 53.9,
+              "reference": 67,
+              "abs_div": -13.1,
+              "rel_div_pct": -19.55,
+              "flag": [
+                {
+                  "status": "expected",
+                  "reason": "Profit-driven model shows lower clean share than ReEDS cost-minimizing model with RPS mandates"
+                }
+              ]
+            }
+          },
+          "mean_abs_divergence": 9.33,
+          "max_abs_divergence": 13.1
+        }
+      }
+    },
+    "CV_Reference_EPA_Carbon_vs_EPA_IPM_Ref": {
+      "national": {
+        "reference": "EPA IPM v6 Reference Case (2023)",
+        "metric": "coal_share_pct",
+        "milestones": {
+          "2030": {
+            "reference": 12,
+            "error": "Metric 'coal_share_pct' not found in model results for 2030"
+          },
+          "2035": {
+            "reference": 8,
+            "error": "Metric 'coal_share_pct' not found in model results for 2035"
+          },
+          "2040": {
+            "reference": 5,
+            "error": "Metric 'coal_share_pct' not found in model results for 2040"
+          }
+        },
+        "mean_abs_divergence": null,
+        "max_abs_divergence": null
+      },
+      "by_iso": {
+        "CAISO": {
+          "reference": "EPA IPM v6 Reference Case (2023)",
+          "metric": "coal_share_pct",
+          "milestones": {
+            "2030": {
+              "reference": 12,
+              "error": "Metric 'coal_share_pct' not found in model results for 2030"
+            },
+            "2035": {
+              "reference": 8,
+              "error": "Metric 'coal_share_pct' not found in model results for 2035"
+            },
+            "2040": {
+              "reference": 5,
+              "error": "Metric 'coal_share_pct' not found in model results for 2040"
+            }
+          },
+          "mean_abs_divergence": null,
+          "max_abs_divergence": null
+        },
+        "ERCOT": {
+          "reference": "EPA IPM v6 Reference Case (2023)",
+          "metric": "coal_share_pct",
+          "milestones": {
+            "2030": {
+              "reference": 12,
+              "error": "Metric 'coal_share_pct' not found in model results for 2030"
+            },
+            "2035": {
+              "reference": 8,
+              "error": "Metric 'coal_share_pct' not found in model results for 2035"
+            },
+            "2040": {
+              "reference": 5,
+              "error": "Metric 'coal_share_pct' not found in model results for 2040"
+            }
+          },
+          "mean_abs_divergence": null,
+          "max_abs_divergence": null
+        },
+        "PJM": {
+          "reference": "EPA IPM v6 Reference Case (2023)",
+          "metric": "coal_share_pct",
+          "milestones": {
+            "2030": {
+              "reference": 12,
+              "error": "Metric 'coal_share_pct' not found in model results for 2030"
+            },
+            "2035": {
+              "reference": 8,
+              "error": "Metric 'coal_share_pct' not found in model results for 2035"
+            },
+            "2040": {
+              "reference": 5,
+              "error": "Metric 'coal_share_pct' not found in model results for 2040"
+            }
+          },
+          "mean_abs_divergence": null,
+          "max_abs_divergence": null
+        }
+      }
+    },
+    "CV_Reference_High_Clean_vs_REEDS_Mid": {
+      "error": "Scenario 'CV_Reference_High_Clean' not found in simulation results"
+    }
+  },
+  "references_used": [
+    "AEO_Reference",
+    "REEDS_Mid",
+    "EPA_IPM_Ref"
+  ],
+  "scenarios_evaluated": [
+    "CV_Reference_Zero_Carbon",
+    "CV_Reference_EPA_Carbon"
+  ]
+}
