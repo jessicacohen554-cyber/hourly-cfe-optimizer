@@ -486,6 +486,9 @@ class YearResult(BaseModel):
     capacity_revenue_profile: Optional[HourlyProfile] = None
     # VRE curtailment rate (R10: fraction of VRE generation curtailed)
     curtailment_rate: float = 0.0
+    # LMP confidence factor (G5): degrades above 60% VRE penetration
+    # 1.0 = fully calibrated, 0.4 = beyond model validity
+    lmp_confidence_factor: float = 1.0
     # Year-over-year LCOE trajectory by technology (endogenous Wright's Law)
     lcoe_trajectory: Dict[str, float] = Field(default_factory=dict)
 
