@@ -542,6 +542,19 @@ class SimulationResponse(BaseModel):
     data_quality: Optional[dict] = None
     # Caveats specific to this run (data limitations, model approximations)
     result_caveats: List[str] = Field(default_factory=list)
+    # Result provenance — code version, config hash, inputs that produced this result
+    provenance: Optional[ProvenanceMetadata] = None
+
+
+class ProvenanceMetadata(BaseModel):
+    """Tracks the exact code version, config, and inputs that produced a result."""
+    model_version: str          # e.g., "2.1.0"
+    git_sha: str                # short SHA of current commit
+    git_branch: str             # current branch name
+    config_hash: str            # SHA-256 of pipeline_config.py contents
+    run_timestamp: str          # ISO 8601 UTC timestamp
+    python_version: str         # sys.version
+    input_snapshot: dict = Field(default_factory=dict)  # full request parameters as submitted
 
 
 class SweepJob(BaseModel):
