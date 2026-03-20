@@ -132,7 +132,7 @@ SCENARIO_BUILDERS = {
 # ---------------------------------------------------------------------------
 
 def compute_divergence_metrics(model_results, reference_data,
-                               milestone_years=None):
+                               milestone_years=None, iso=None):
     """Compare model outputs against a reference trajectory.
 
     Parameters
@@ -215,11 +215,16 @@ def compute_divergence_metrics(model_results, reference_data,
         abs_div = model_val - ref_val
         rel_div = (abs_div / ref_val * 100) if ref_val != 0 else None
 
+        # Flag divergence as "expected" or "investigate"
+        flag = classify_divergence(model_val, ref_val, abs_div,
+                                   reference_data, metric, iso=iso)
+
         milestones[year] = {
             'model': round(model_val, 2),
             'reference': ref_val,
             'abs_div': round(abs_div, 2),
             'rel_div_pct': round(rel_div, 2) if rel_div is not None else None,
+            'flag': flag,
         }
         abs_divs.append(abs(abs_div))
 
@@ -230,6 +235,117 @@ def compute_divergence_metrics(model_results, reference_data,
         'mean_abs_divergence': round(sum(abs_divs) / len(abs_divs), 2) if abs_divs else None,
         'max_abs_divergence': round(max(abs_divs), 2) if abs_divs else None,
     }
+
+
+def classify_divergence(model_val, ref_val, abs_div, reference_data, metric,
+                        iso=None):
+    """Classify a divergence as 'expected' or 'investigate' with explanation.
+
+    Our model is profit-driven WITH RPS/CES mandate enforcement — it's not a
+    pure free-market model. In mandate-heavy ISOs (CAISO, NYISO, NEISO), the
+    RPS floor forces deployment beyond what pure economics would deliver,
+    which can push clean share above national-average references like ReEDS.
+
+    The only hard flag is the absolute pp threshold. Direction of divergence
+    is descriptive context, not a pass/fail signal.
+
+    When comparing ISO-level results against national references, an
+    additional structural offset is expected.
+
+    Parameters
+    ----------
+    iso : str, optional
+        ISO name. Used to adjust thresholds for ISO-vs-national comparisons.
+    """
+    source = reference_data.get('source', '')
+    is_reeds = 'ReEDS' in source or 'REEDS' in source or 'NREL' in source
+    is_epa = 'EPA' in source or 'IPM' in source
+    is_aeo = 'AEO' in source or 'EIA' in source
+
+    # ISOs with binding RPS/CES mandates in our model
+    mandate_isos = {'CAISO', 'NYISO', 'NEISO', 'PJM', 'MISO', 'SPP'}
+    has_mandate = iso in mandate_isos if iso else False
+
+    # ISO-vs-national comparisons have inherent structural offset
+    is_iso_vs_national = iso is not None
+    # Higher threshold for ISO-level comparisons against national references
+    investigate_threshold = 30 if is_iso_vs_national else 20
+
+    flags = []
+
+    # Check absolute threshold — the only hard "investigate" trigger
+    if abs(abs_div) > investigate_threshold:
+        note = ' (ISO vs national reference — higher threshold applied)' if is_iso_vs_national else ''
+        flags.append({
+            'status': 'investigate',
+            'reason': (f'Divergence of {abs_div:+.1f} pp exceeds '
+                       f'{investigate_threshold} pp threshold{note}'),
+        })
+
+    # Directional context — descriptive, not pass/fail
+    if metric in ('clean_share_pct', 'clean_pct'):
+        if is_reeds:
+            if model_val > ref_val:
+                reason = ('Model clean share exceeds ReEDS national average')
+                if has_mandate:
+                    reason += (f' — {iso} has binding RPS/CES mandates that '
+                               'force deployment beyond pure market economics')
+                elif is_iso_vs_national:
+                    reason += (f' — comparing {iso} against national reference '
+                               'introduces structural offset')
+                else:
+                    reason += (' — plausible where regional economics or '
+                               'mandates favor renewables')
+                flags.append({'status': 'expected', 'reason': reason})
+            else:
+                flags.append({
+                    'status': 'expected',
+                    'reason': ('Model clean share below ReEDS — consistent with '
+                               'region having less favorable economics or weaker '
+                               'mandates than the national cost-optimal path'),
+                })
+        elif is_aeo:
+            if abs(abs_div) <= 10:
+                flags.append({
+                    'status': 'expected',
+                    'reason': 'Within 10 pp of AEO Reference (current policy)',
+                })
+            else:
+                direction = 'higher' if model_val > ref_val else 'lower'
+                reason = (f'Model {direction} than AEO by {abs(abs_div):.1f} pp')
+                if has_mandate and model_val > ref_val:
+                    reason += (f' — {iso} RPS/CES mandates push clean share '
+                               'above the current-policy national average')
+                elif is_iso_vs_national:
+                    reason += (' — expected offset from comparing ISO-level '
+                               'against national average')
+                else:
+                    reason += ' — review regional assumptions if unexpected'
+                flags.append({'status': 'expected', 'reason': reason})
+
+    elif metric == 'coal_share_pct':
+        if is_epa:
+            if model_val > ref_val:
+                flags.append({
+                    'status': 'expected',
+                    'reason': ('Model retires coal slower than EPA IPM — '
+                               'plausible without full regulatory enforcement'),
+                })
+            else:
+                flags.append({
+                    'status': 'expected',
+                    'reason': ('Model retires coal faster than EPA IPM — '
+                               'plausible with carbon pricing or unfavorable '
+                               'coal economics'),
+                })
+
+    if not flags:
+        flags.append({
+            'status': 'expected',
+            'reason': 'Within normal range for profit-driven vs reference model comparison',
+        })
+
+    return flags
 
 
 def format_comparison_table(divergences):
@@ -352,7 +468,7 @@ def run_cross_validation(simulation_results, references=None):
                 iso_data = by_iso.get(iso, {})
                 if iso_data:
                     iso_comparisons[iso] = compute_divergence_metrics(
-                        iso_data, ref_data
+                        iso_data, ref_data, iso=iso
                     )
             comparisons[pair_key]['by_iso'] = iso_comparisons
 
@@ -532,10 +648,474 @@ class TestCrossValidationStructure(unittest.TestCase):
         self.assertEqual(national['milestones'][2030]['model'], 48)
         self.assertEqual(national['milestones'][2030]['reference'], 47)
 
+    def test_classify_divergence_below_reeds_expected(self):
+        """classify_divergence() flags lower clean share vs ReEDS as expected."""
+        flags = classify_divergence(45, 52, -7, REEDS_MID, 'clean_share_pct')
+        statuses = [f['status'] for f in flags]
+        self.assertIn('expected', statuses)
+
+    def test_classify_divergence_above_reeds_also_expected(self):
+        """classify_divergence() treats higher clean share vs ReEDS as expected
+        (profit-driven can exceed cost-minimizing where economics are strong)."""
+        flags = classify_divergence(70, 52, 18, REEDS_MID, 'clean_share_pct')
+        statuses = [f['status'] for f in flags]
+        self.assertIn('expected', statuses)
+        # Should NOT be flagged as investigate (under 20pp)
+        self.assertNotIn('investigate', statuses)
+
+    def test_classify_divergence_flags_investigate_over_20pp(self):
+        """classify_divergence() flags >20pp divergence as investigate."""
+        flags = classify_divergence(25, 52, -27, REEDS_MID, 'clean_share_pct')
+        statuses = [f['status'] for f in flags]
+        self.assertIn('investigate', statuses)
+
+    def test_classify_divergence_iso_vs_national_higher_threshold(self):
+        """ISO-vs-national comparisons use 30pp threshold instead of 20pp."""
+        # 25pp divergence: investigate at national level, expected at ISO level
+        flags_national = classify_divergence(77, 52, 25, REEDS_MID,
+                                             'clean_share_pct')
+        flags_iso = classify_divergence(77, 52, 25, REEDS_MID,
+                                        'clean_share_pct', iso='CAISO')
+        national_statuses = [f['status'] for f in flags_national]
+        iso_statuses = [f['status'] for f in flags_iso]
+        self.assertIn('investigate', national_statuses)
+        self.assertNotIn('investigate', iso_statuses)
+
 
 # ---------------------------------------------------------------------------
-# 6. __main__ — load cached results or print instructions
+# 6. Cache loading — transform cv_reference_results.json into analysis format
 # ---------------------------------------------------------------------------
+
+# Mapping from cache scenario keys to internal scenario names
+_CACHE_TO_SCENARIO = {
+    'reference': 'CV_Reference_Zero_Carbon',
+    'epa_carbon': 'CV_Reference_EPA_Carbon',
+    'high_clean': 'CV_Reference_High_Clean',
+}
+
+
+def load_cached_results(path=None):
+    """Load cv_reference_results.json and transform to run_cross_validation format.
+
+    The cached file has structure:
+        { "reference": { "CAISO": [ {year, clean_pct, ...}, ... ], ... },
+          "epa_carbon": { ... } }
+
+    We transform to:
+        { "scenarios": {
+            "CV_Reference_Zero_Carbon": {
+                "national": { 2030: {"clean_share_pct": X}, ... },
+                "by_iso": { "CAISO": { 2030: {"clean_share_pct": X}, ... }, ... }
+            }, ...
+        }}
+    """
+    if path is None:
+        path = CV_RESULTS_PATH
+    path = Path(path)
+
+    if not path.exists():
+        raise FileNotFoundError(f"Cached results not found: {path}")
+
+    with open(path) as f:
+        raw = json.load(f)
+
+    scenarios = {}
+
+    for cache_key, scenario_name in _CACHE_TO_SCENARIO.items():
+        scenario_raw = raw.get(cache_key)
+        if scenario_raw is None:
+            continue
+
+        by_iso = {}
+        all_years = {}  # year -> list of clean_pct values (for national avg)
+
+        for iso_name, records in scenario_raw.items():
+            if iso_name.startswith('_'):
+                continue
+            if not isinstance(records, list):
+                continue
+
+            iso_by_year = {}
+            for rec in records:
+                year = rec.get('year')
+                if year is None:
+                    continue
+                clean_pct = rec.get('clean_pct')
+                iso_by_year[year] = {
+                    'clean_share_pct': clean_pct,
+                    'clean_pct': clean_pct,
+                    'demand_twh': rec.get('demand_twh'),
+                    'emissions_mt': rec.get('emissions_mt'),
+                    'emission_rate': rec.get('emission_rate_tco2_mwh'),
+                }
+                all_years.setdefault(year, []).append(clean_pct)
+
+            by_iso[iso_name] = iso_by_year
+
+        # Compute national average as mean across ISOs
+        national = {}
+        for year, vals in all_years.items():
+            avg = sum(v for v in vals if v is not None) / len(vals) if vals else None
+            national[year] = {
+                'clean_share_pct': round(avg, 2) if avg is not None else None,
+                'clean_pct': round(avg, 2) if avg is not None else None,
+            }
+
+        scenarios[scenario_name] = {
+            'national': national,
+            'by_iso': by_iso,
+        }
+
+    return {'scenarios': scenarios}
+
+
+def run_full_analysis(cached_path=None):
+    """Load cached results, run cross-validation, and return structured output.
+
+    Returns (cv_results, iso_divergence_table) where iso_divergence_table is a
+    list of dicts suitable for the markdown summary table.
+    """
+    simulation_results = load_cached_results(cached_path)
+    cv_results = run_cross_validation(simulation_results)
+
+    # Build flat ISO × Reference × Year divergence table
+    table_rows = []
+    comparisons = cv_results.get('comparisons', {})
+
+    for pair_key, pair_data in comparisons.items():
+        if 'error' in pair_data:
+            continue
+        by_iso = pair_data.get('by_iso', {})
+        for iso, iso_div in by_iso.items():
+            milestones = iso_div.get('milestones', {})
+            ref_source = iso_div.get('reference', pair_key)
+            for year, m in sorted(milestones.items()):
+                if 'error' in m:
+                    continue
+                flags = m.get('flag', [])
+                flag_str = '; '.join(f['reason'] for f in flags)
+                status = 'investigate' if any(
+                    f['status'] == 'investigate' for f in flags
+                ) else 'expected'
+                table_rows.append({
+                    'pair': pair_key,
+                    'iso': iso,
+                    'reference': ref_source,
+                    'year': year,
+                    'model': m.get('model'),
+                    'ref_val': m.get('reference'),
+                    'abs_div': m.get('abs_div'),
+                    'status': status,
+                    'explanation': flag_str,
+                })
+
+    return cv_results, table_rows
+
+
+def generate_markdown_report(cv_results, table_rows):
+    """Generate the Cross_Validation_Results.md content."""
+    lines = [
+        "# Cross-Validation Results",
+        "",
+        "Comparison of the profit-driven market simulator against published reference",
+        "trajectories from EIA AEO 2025, NREL ReEDS Standard Scenarios 2024, and EPA IPM v6.",
+        "",
+        "**Generated from cached simulation results** (`data/cv_reference_results.json`).",
+        "No simulations were run to produce this document.",
+        "",
+        "---",
+        "",
+        "## Summary Table",
+        "",
+        "ISO × Reference Model × Milestone Year → Divergence (percentage points)",
+        "",
+        "| ISO | Comparison | Year | Model (%) | Reference (%) | Divergence (pp) | Status |",
+        "|-----|-----------|------|-----------|---------------|-----------------|--------|",
+    ]
+
+    for row in sorted(table_rows, key=lambda r: (r['iso'], r['pair'], r['year'])):
+        div_str = f"{row['abs_div']:+.1f}" if row['abs_div'] is not None else "N/A"
+        lines.append(
+            f"| {row['iso']} | {row['pair']} | {row['year']} "
+            f"| {row['model']:.1f} | {row['ref_val']} "
+            f"| {div_str} | {row['status']} |"
+        )
+
+    # Expected divergences
+    expected = [r for r in table_rows if r['status'] == 'expected']
+    investigate = [r for r in table_rows if r['status'] == 'investigate']
+
+    lines.extend([
+        "",
+        "---",
+        "",
+        "## Expected Divergences",
+        "",
+        "These divergences are consistent with the structural differences between",
+        "our profit-driven market simulator and the reference models.",
+        "",
+    ])
+
+    if expected:
+        for row in expected:
+            lines.append(
+                f"- **{row['iso']} {row['year']}** ({row['pair']}): "
+                f"{row['abs_div']:+.1f} pp — {row['explanation']}"
+            )
+    else:
+        lines.append("_No expected divergences recorded._")
+
+    lines.extend([
+        "",
+        "### Our Model: Profit-Driven WITH Policy Mandates",
+        "",
+        "Our model simulates **profit-maximizing generator behavior** in competitive",
+        "wholesale markets, **subject to binding RPS/CES mandate floors**. Generators",
+        "build or retire based on projected revenue vs. cost, but state-level clean",
+        "energy mandates (SB100, CLCPA, etc.) enforce minimum clean share thresholds",
+        "at each milestone year. If profit-driven deployment falls short of the",
+        "mandate, the model forces additional procurement up to interconnection queue",
+        "capacity, with alternative compliance payments (ACP) for any remaining shortfall.",
+        "",
+        "This means our model is neither purely market-driven nor purely policy-driven —",
+        "it's a hybrid. The mandate floor acts as a ratchet: in ISOs with aggressive",
+        "mandates (CAISO: 100% by 2045, NYISO: 100% by 2040), the floor dominates the",
+        "trajectory at higher targets. In ISOs with weak or no mandates (ERCOT: 0%),",
+        "deployment is purely profit-driven.",
+        "",
+        "### Key mandate floors enforced in the model",
+        "",
+        "| ISO | 2030 | 2035 | 2040 | 2045 | Basis |",
+        "|-----|------|------|------|------|-------|",
+        "| CAISO | 60% | 80% | 90% | 100% | SB100 |",
+        "| NYISO | 70% | 80% | 90% | 100% | CLCPA |",
+        "| NEISO | 50% | 60% | 75% | 90% | State CES composite |",
+        "| PJM | 30% | 40% | 50% | 60% | State RPS composite |",
+        "| MISO | 20% | 30% | 40% | 50% | State RPS composite |",
+        "| SPP | 15% | 20% | 30% | 40% | State RPS composite |",
+        "| ERCOT | 0% | 0% | 0% | 0% | No state RPS |",
+        "",
+        "### Comparison with reference models",
+        "",
+        "- **vs. ReEDS (NREL)**: ReEDS minimizes system-wide cost subject to policy",
+        "  constraints with perfect foresight. Our model can land above or below",
+        "  ReEDS depending on the region. In mandate-heavy ISOs (CAISO, NYISO),",
+        "  our RPS floors can push clean share above the ReEDS national average.",
+        "  In weaker-mandate ISOs (PJM), our model may show lower clean share.",
+        "",
+        "- **vs. AEO (EIA)**: AEO Reference assumes current policy only at the",
+        "  national level. Our model enforces ISO-specific mandates, so ISOs with",
+        "  aggressive mandates (CAISO, NYISO) will exceed the AEO trajectory, while",
+        "  ISOs with weak mandates will track closer.",
+        "",
+        "- **vs. EPA IPM**: IPM models coal retirement under existing environmental",
+        "  regulations. Coal retirement pace in our model depends on regional fuel",
+        "  economics, carbon pricing assumptions, and RPS mandate pressure.",
+        "",
+        "### ISO vs. National Reference Comparisons",
+        "",
+        "All three reference models publish **national** trajectories. Our model",
+        "produces **ISO-level** results. This creates an inherent structural offset —",
+        "individual ISOs can diverge significantly from the national average due to",
+        "regional resource quality, existing fleet composition, and state mandate",
+        "stringency. CAISO (California, SB100 100% by 2045) will naturally show much",
+        "higher clean share than the national average; ERCOT (no mandate) will track",
+        "closer to or below it. A 30 pp threshold is used for ISO-vs-national comparisons",
+        "(vs. 20 pp for national-level) to account for this structural offset.",
+        "",
+    ])
+
+    lines.extend([
+        "---",
+        "",
+        "## Unexplained Divergences",
+        "",
+    ])
+
+    if investigate:
+        lines.append(
+            "The following divergences warrant investigation — they suggest the model"
+        )
+        lines.append(
+            "may be producing results inconsistent with its structural assumptions."
+        )
+        lines.append("")
+        for row in investigate:
+            lines.append(
+                f"- **{row['iso']} {row['year']}** ({row['pair']}): "
+                f"{row['abs_div']:+.1f} pp — {row['explanation']}"
+            )
+        lines.append("")
+        lines.append("### Investigation Notes")
+        lines.append("")
+
+        # Group by ISO for investigation notes
+        investigate_isos = set(r['iso'] for r in investigate)
+        for iso in sorted(investigate_isos):
+            iso_rows = [r for r in investigate if r['iso'] == iso]
+            max_div = max(abs(r['abs_div']) for r in iso_rows)
+            lines.append(f"**{iso}** (max divergence: {max_div:.1f} pp):")
+            lines.append(
+                f"  - Divergence exceeds threshold. Review input assumptions"
+                f" (demand growth, LCOE trajectory, fuel prices) for this ISO."
+                f" Note: reference models use national averages, so ISO-level"
+                f" divergence includes structural regional offset."
+            )
+            lines.append("")
+    else:
+        lines.append("_No unexplained divergences found. All results are consistent_")
+        lines.append("_with expected structural differences between the models._")
+        lines.append("")
+
+    lines.extend([
+        "---",
+        "",
+        "## Methodology Note",
+        "",
+        "### What Divergence Tells Us",
+        "",
+        "Divergence between our profit-driven model and reference trajectories is",
+        "**informative, not diagnostic**. These models answer different questions:",
+        "",
+        "| Model | Question Answered |",
+        "|-------|------------------|",
+        "| Our simulator | What do profit-maximizing generators build in competitive markets? |",
+        "| NREL ReEDS | What's the least-cost pathway to meet clean energy targets? |",
+        "| EIA AEO | What happens under current policy with moderate assumptions? |",
+        "| EPA IPM | How do environmental regulations affect coal/gas fleet composition? |",
+        "",
+        "A **large divergence** doesn't mean either model is wrong — it means the models'",
+        "structural assumptions produce different outcomes. Our model lacks policy mandates",
+        "(RPS, CES) that drive deployment in ReEDS; conversely, ReEDS doesn't model the",
+        "strategic timing and revenue-seeking behavior that shapes real investment decisions.",
+        "",
+        "### What Divergence Does NOT Tell Us",
+        "",
+        "- Divergence is NOT a measure of model accuracy (none of these models predict the future).",
+        "- Small divergence doesn't validate our model (could be right for wrong reasons).",
+        "- Large divergence doesn't invalidate our model (structural differences are expected).",
+        "",
+        "### Flagging Rules",
+        "",
+        "- **Expected**: Divergence in either direction that is plausible given the",
+        "  structural differences between a profit-driven model and the reference.",
+        "  Both above and below the reference are valid outcomes depending on",
+        "  regional economics.",
+        "- **Investigate**: Divergence exceeds the absolute threshold (20 pp for",
+        "  national comparisons, 30 pp for ISO-vs-national) — magnitude warrants",
+        "  reviewing input assumptions regardless of direction.",
+        "",
+    ])
+
+    # National-level summary
+    comparisons = cv_results.get('comparisons', {})
+    lines.extend(["---", "", "## National-Level Comparisons", ""])
+    for pair_key, pair_data in comparisons.items():
+        if 'error' in pair_data:
+            lines.append(f"### {pair_key}\n\n{pair_data['error']}\n")
+            continue
+        national = pair_data.get('national')
+        if national:
+            lines.append(format_comparison_table(national))
+            lines.append("")
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# 7. Result tests — non-blocking warnings, not failures
+# ---------------------------------------------------------------------------
+
+import warnings
+
+
+class TestCrossValidationResults(unittest.TestCase):
+    """Tests that load cached results and run divergence computation.
+
+    Non-blocking: uses warnings instead of assertion failures for divergence
+    thresholds, since these reflect model structural differences rather than bugs.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """Load cached results and run analysis once for all tests."""
+        if not CV_RESULTS_PATH.exists():
+            raise unittest.SkipTest(
+                f"Cached results not found at {CV_RESULTS_PATH}")
+        cls.simulation_results = load_cached_results()
+        cls.cv_results = run_cross_validation(cls.simulation_results)
+        _, cls.table_rows = run_full_analysis()
+
+    def test_divergence_computed_for_all_isos_and_years(self):
+        """Divergence must be computed for all available ISOs × 3 milestone years."""
+        comparisons = self.cv_results.get('comparisons', {})
+        # Find pairs that have by_iso data
+        iso_year_pairs = set()
+        for pair_key, pair_data in comparisons.items():
+            if 'error' in pair_data:
+                continue
+            by_iso = pair_data.get('by_iso', {})
+            for iso, iso_div in by_iso.items():
+                milestones = iso_div.get('milestones', {})
+                for year in milestones:
+                    if 'error' not in milestones[year]:
+                        iso_year_pairs.add((iso, year))
+
+        # We expect at least 3 ISOs × 3 milestone years = 9 pairs
+        isos_found = set(p[0] for p in iso_year_pairs)
+        years_found = set(p[1] for p in iso_year_pairs)
+
+        self.assertGreaterEqual(len(isos_found), 3,
+            f"Expected >= 3 ISOs with divergence data, got {len(isos_found)}: {isos_found}")
+        for year in [2030, 2035, 2040]:
+            self.assertIn(year, years_found,
+                f"Milestone year {year} missing from divergence computation")
+
+    def test_warn_divergence_exceeds_20pp(self):
+        """Warn (don't fail) if any divergence exceeds 20 percentage points."""
+        large_divs = [
+            r for r in self.table_rows
+            if r.get('abs_div') is not None and abs(r['abs_div']) > 20
+        ]
+        if large_divs:
+            for r in large_divs:
+                warnings.warn(
+                    f"Large divergence: {r['iso']} {r['year']} "
+                    f"({r['pair']}): {r['abs_div']:+.1f} pp — {r['explanation']}",
+                    UserWarning,
+                )
+
+    def test_warn_large_reeds_divergence(self):
+        """Warn if any ReEDS comparison exceeds 20pp in either direction."""
+        reeds_rows = [
+            r for r in self.table_rows
+            if 'REEDS' in r.get('pair', '') and r.get('abs_div') is not None
+        ]
+        large_reeds = [r for r in reeds_rows if abs(r['abs_div']) > 20]
+        if large_reeds:
+            for r in large_reeds:
+                direction = 'above' if r['abs_div'] > 0 else 'below'
+                warnings.warn(
+                    f"Large ReEDS divergence: {r['iso']} {r['year']} model "
+                    f"({r['model']:.1f}%) is {abs(r['abs_div']):.1f} pp "
+                    f"{direction} ReEDS national ({r['ref_val']}%) — "
+                    f"review regional assumptions",
+                    UserWarning,
+                )
+
+    def test_all_rows_have_status(self):
+        """Every divergence row should have an expected/investigate classification."""
+        for r in self.table_rows:
+            self.assertIn(r.get('status'), ('expected', 'investigate'),
+                f"Row missing valid status: {r}")
+
+
+# ---------------------------------------------------------------------------
+# 8. __main__ — load cached results, run analysis, generate report
+# ---------------------------------------------------------------------------
+
+DOCS_DIR = SCRIPT_DIR.parent / 'docs'
+
 
 if __name__ == '__main__':
     # If run with pytest flags, defer to unittest
@@ -549,17 +1129,36 @@ if __name__ == '__main__':
     # Check for cached results
     if CV_RESULTS_PATH.exists():
         print(f"Loading cached results from {CV_RESULTS_PATH}")
-        with open(CV_RESULTS_PATH, 'r') as f:
-            simulation_results = json.load(f)
 
-        cv_results = run_cross_validation(simulation_results)
+        cv_results, table_rows = run_full_analysis()
         print_cross_validation_report(cv_results)
 
-        # Save comparison report
+        # Print ISO-level divergence summary
+        print("\n" + "=" * 72)
+        print("ISO-LEVEL DIVERGENCE SUMMARY")
+        print("=" * 72)
+        for row in sorted(table_rows, key=lambda r: (r['iso'], r['year'])):
+            status_icon = "!!" if row['status'] == 'investigate' else "OK"
+            print(
+                f"  [{status_icon}] {row['iso']:6s} {row['year']} "
+                f"({row['pair']:40s}): "
+                f"model={row['model']:5.1f}%  ref={row['ref_val']:3d}%  "
+                f"Δ={row['abs_div']:+6.1f} pp"
+            )
+
+        # Save comparison report JSON
         report_path = DATA_DIR / 'cv_comparison_report.json'
         with open(report_path, 'w') as f:
             json.dump(cv_results, f, indent=2, default=str)
-        print(f"\nReport saved to {report_path}")
+        print(f"\nJSON report saved to {report_path}")
+
+        # Generate markdown documentation
+        md_content = generate_markdown_report(cv_results, table_rows)
+        DOCS_DIR.mkdir(parents=True, exist_ok=True)
+        md_path = DOCS_DIR / 'Cross_Validation_Results.md'
+        with open(md_path, 'w') as f:
+            f.write(md_content)
+        print(f"Markdown report saved to {md_path}")
 
     else:
         print(f"\nNo cached results found at:")
