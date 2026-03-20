@@ -1766,6 +1766,12 @@ NUCLEAR_MONTHLY_CF = {
 # ============================================================================
 # WRIGHT'S LAW — ENDOGENOUS DEPLOYMENT-BASED LEARNING CURVES
 # ============================================================================
+# Toggle: when True, cumulative GW is updated at the end of each simulation
+# year and LCOE is recomputed from the updated learning-curve position before
+# the next year's deployment loop.  When False, cumulative GW stays frozen at
+# the 2025 baseline (static comparison mode — original behavior).
+ENDOGENOUS_LEARNING = True
+
 # Endogenous learning model from Wright (1936): cost declines as a power law
 # of cumulative production. Used by step8 procurement strategies and step10
 # SBTi target analysis.
