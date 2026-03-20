@@ -148,6 +148,19 @@ var FleetDispatchEngine = (function () {
         return fleet;
     }
 
+    // ── Generation estimates for non-fossil plants (TWh, fleet-level) ──
+    // These are used to provide static generation for non-dispatchable plants.
+    // Per-plant generation is estimated from fleet totals proportional to capacity.
+    var NON_FOSSIL_CF = {
+        nuclear: 0.92,      // ~92% capacity factor
+        geothermal: 0.85,   // ~85% capacity factor (baseload)
+        wind: 0.30,         // ~30% capacity factor (intermittent)
+        solar: 0.22,        // ~22% capacity factor (intermittent)
+        hydro: 0.40,        // ~40% capacity factor (Conowingo)
+        battery: 0.0,       // Storage, net zero gen
+        pumped_storage: 0.0 // Pumped storage, net zero gen
+    };
+
     // ── Main dispatch computation ──
 
     function computeFleetDispatch(plants, sweepData) {
@@ -160,8 +173,8 @@ var FleetDispatchEngine = (function () {
             return !(p.status === 'retired' && !p._action);
         });
 
-        // Only dispatch fossil-fuel plants (non-fossil don't use sweep fuel CF/margin)
-        var fossilFuels = new Set(['gas_ccgt', 'gas_ct', 'coal_steam', 'oil_ct']);
+        // Only dispatch fossil-fuel plants via sweep (non-fossil use static CF)
+        var fossilFuels = new Set(['gas_ccgt', 'gas_ct', 'coal_steam', 'oil_ct', 'gas_oil_ct']);
 
         // Initialize fleet emissions array: [scenario][year] = total Mt
         var fleetEmissions = [];
@@ -175,7 +188,7 @@ var FleetDispatchEngine = (function () {
         // Generation and emissions accumulators by fuel: [scenario][year]
         var genByFuel = {};
         var emisByFuel = {};
-        ['coal_steam', 'gas_ccgt', 'gas_ct', 'oil_ct', 'nuclear', 'ccs_ccgt'].forEach(function (f) {
+        ['coal_steam', 'gas_ccgt', 'gas_ct', 'oil_ct', 'gas_oil_ct', 'nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'ccs_ccgt'].forEach(function (f) {
             genByFuel[f] = [];
             emisByFuel[f] = [];
             for (var s = 0; s < nScenarios; s++) {
@@ -184,11 +197,70 @@ var FleetDispatchEngine = (function () {
             }
         });
 
+        // First pass: handle non-fossil plants (static generation, zero emissions)
+        activePlants.forEach(function (p) {
+            var fuel = p.fuel_type;
+            if (fossilFuels.has(fuel)) return; // Handle in second pass
+
+            var cf = NON_FOSSIL_CF[fuel] || 0;
+            if (cf <= 0) return; // Skip storage (net zero gen)
+
+            var capMW = (p.capacity_mw || 0) * (p.equity_share || 1.0);
+            var action = p._action;
+            var yearOnline = p._year_online;
+
+            var genArr = [];
+            var emisArr = [];
+            var cfArr = [];
+            var statusPerYear = [];
+
+            for (var si = 0; si < nScenarios; si++) {
+                genArr[si] = new Float64Array(nYears);
+                emisArr[si] = new Float64Array(nYears);
+                cfArr[si] = new Float64Array(nYears);
+            }
+
+            for (var yi = 0; yi < nYears; yi++) {
+                var y = years[yi];
+
+                // Status
+                if (action === 'retire' && yearOnline && y >= yearOnline) {
+                    statusPerYear[yi] = 'retired';
+                } else if (action === 'add_plant' && yearOnline && y < yearOnline) {
+                    statusPerYear[yi] = 'not_yet_built';
+                } else {
+                    statusPerYear[yi] = p.status || 'operating';
+                }
+
+                var activeCf = (statusPerYear[yi] === 'retired' || statusPerYear[yi] === 'not_yet_built') ? 0 : cf;
+                var genMwh = capMW * activeCf * 8760;
+
+                // Same generation across all sweep scenarios (non-fossil isn't affected by fossil cost sweeps)
+                for (var si2 = 0; si2 < nScenarios; si2++) {
+                    genArr[si2][yi] = genMwh;
+                    emisArr[si2][yi] = 0; // Zero emissions
+                    cfArr[si2][yi] = activeCf;
+
+                    if (genByFuel[fuel]) {
+                        genByFuel[fuel][si2][yi] += genMwh / 1e6; // TWh
+                    }
+                }
+            }
+
+            plantResults.push({
+                plant: p,
+                genArr: genArr,
+                emisArr: emisArr,
+                cfArr: cfArr,
+                statusPerYear: statusPerYear
+            });
+        });
+
+        // Second pass: fossil plants via sweep dispatch
         activePlants.forEach(function (p) {
             var fuel = p.fuel_type;
             if (!fossilFuels.has(fuel)) {
-                // Non-fossil (nuclear, solar, etc.) — zero emissions, skip dispatch
-                return;
+                return; // Already handled above
             }
 
             var iso = p.iso;
@@ -382,9 +454,13 @@ var FleetDispatchEngine = (function () {
 
             var genObj = {};
             var emisObj = {};
-            ['coal_steam', 'gas_ccgt', 'gas_ct', 'oil_ct', 'nuclear', 'ccs_ccgt'].forEach(function (f) {
-                genObj[f] = Math.round(genByFuel[f][p50Si][yi6] * 100) / 100;
-                emisObj[f] = Math.round(emisByFuel[f][p50Si][yi6] * 100) / 100;
+            ['coal_steam', 'gas_ccgt', 'gas_ct', 'oil_ct', 'gas_oil_ct', 'nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'ccs_ccgt'].forEach(function (f) {
+                if (genByFuel[f]) {
+                    genObj[f] = Math.round(genByFuel[f][p50Si][yi6] * 100) / 100;
+                }
+                if (emisByFuel[f]) {
+                    emisObj[f] = Math.round(emisByFuel[f][p50Si][yi6] * 100) / 100;
+                }
             });
             generationByFuel[yr] = genObj;
             emissionsByFuel[yr] = emisObj;
