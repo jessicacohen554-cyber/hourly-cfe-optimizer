@@ -543,11 +543,43 @@ When EIA-860 fleet data is available, the model decomposes each ISO into 2–5 z
 - **CAISO** (2 zones): NP15 (Northern), SP15 (Southern)
 - **SPP** (2 zones): North (KS/NE), South (OK/TX panhandle)
 
-**LP formulation** (per hour):
-- Minimize total generation cost subject to zonal demand balance and inter-zonal transfer limits
-- Solver: scipy.optimize.linprog with HiGHS backend
-- Zonal LMPs: extracted from dual prices on balance constraints (shadow prices of zonal demand equality)
-- `_approximate_zonal_lmp()`: fast fallback from marginal unit costs per zone when LP fails
+**LP formulation** (per hour, `_build_lp_structure()` + `solve_zonal_dispatch_hour()`, lines 549–633):
+
+*Sets and indices:*
+- $Z$ = set of zones (2–5 per ISO), $U_z$ = set of generating units in zone $z$
+- $I$ = set of inter-zonal interfaces, each connecting zones $(a_i, b_i)$
+
+*Decision variables:*
+- $g_u \geq 0$ — generation (MW) from unit $u$
+- $f^+_i, f^-_i \geq 0$ — directional flow variables for interface $i$; net flow $a_i \to b_i = f^+_i - f^-_i$
+
+*Objective — minimize total generation cost:*
+
+$$\min \sum_{u \in U} \text{mc}_u \cdot g_u$$
+
+where $\text{mc}_u$ is the marginal cost ($/MWh) of unit $u$. Flow variables carry zero cost in the objective.
+
+*Constraints:*
+
+1. **Zonal balance** (one equality per zone $z$):
+
+$$\sum_{u \in U_z} g_u + \sum_{i : b_i = z} (f^+_i - f^-_i) - \sum_{i : a_i = z} (f^+_i - f^-_i) = D_z(h) \quad \forall z \in Z$$
+
+   where $D_z(h)$ is hour-$h$ demand in zone $z$.
+
+2. **Capacity bounds**: $0 \leq g_u \leq \overline{G}_u$ for each unit $u$
+
+3. **Transfer limits**: $0 \leq f^+_i \leq T_i$, $0 \leq f^-_i \leq T_i$ for each interface $i$, where $T_i$ is the MW transfer limit from `TRANSFER_LIMITS` in `pipeline_config.py`.
+
+*Dual extraction — zonal LMPs:*
+
+$$\text{LMP}_z(h) = \mu_z(h)$$
+
+where $\mu_z$ is the shadow price (dual variable) on the zonal balance equality constraint for zone $z$. The system-average LMP is the demand-weighted mean: $\text{LMP}_{\text{sys}}(h) = \sum_z D_z(h) \cdot \mu_z(h) / \sum_z D_z(h)$.
+
+*Solver:* `scipy.optimize.linprog` with HiGHS backend. The LP structure (objective vector, $A_{\text{eq}}$ matrix, bounds) is pre-built once by `_build_lp_structure()` — only the RHS demand vector $b_{\text{eq}}$ changes per hour, enabling efficient re-solves across 8,760 hours.
+
+- `_approximate_zonal_lmp()`: fast fallback from marginal unit costs per zone when LP fails or returns infeasible
 
 **Plant-to-zone assignment**: Plants assigned via `BA_TO_ZONE` mapping (balancing authority → zone) or `ZONE_BOUNDS` lat/lon bounding boxes as fallback. The `FleetModel.assign_zones()` method and `get_zone_for_plant()` utility handle this.
 
@@ -642,15 +674,30 @@ These per-fuel rates (sourced from EPA eGRID 2022 fleet-weighted averages) repla
 
 The Operating Reserve Demand Curve (ORDC) models scarcity pricing structurally rather than statistically. It replaces the legacy demand-quantile overlay approach.
 
-**Formula — Exponential Knee with Cap:**
+**Algorithm — Exponential Knee with Cap** (`compute_ordc_adder()`, `lmp_engine.py` lines 622–643):
 
-$$\text{price}(h) = \text{MC}_{\text{marginal}}(h) + \text{ORDC\_adder}(\text{reserves}(h))$$
+*Step 1 — Compute hourly reserves:*
 
-$$\text{ORDC\_adder}(R) = \begin{cases} 0 & \text{if } R \geq \text{knee} \\ \min(\text{cap},\ \text{VOLL} \times e^{-\lambda R}) & \text{if } R < \text{knee} \end{cases}$$
+$$R(h) = \text{total\_fossil\_capacity} - \text{residual\_demand}(h) \quad \forall h \in \{1, \ldots, 8760\}$$
 
-where:
+*Step 2 — Compute Loss-of-Load Probability via exponential knee:*
+
+$$\text{LOLP}(h) = \begin{cases} 0 & \text{if } R(h) \geq \text{knee\_mw} \\ \exp\bigl(-\lambda \cdot \max(0,\; R(h))\bigr) & \text{if } R(h) < \text{knee\_mw} \end{cases}$$
+
+*Step 3 — Compute scarcity adder:*
+
+$$\text{ORDC\_adder}(h) = \min\bigl(\text{cap},\; \text{VOLL} \times \text{LOLP}(h)\bigr)$$
+
+*Step 4 — Form final price:*
+
+$$\text{LMP}(h) = \text{MC}_{\text{marginal}}(h) + \text{ORDC\_adder}(h)$$
+
+The implementation is fully vectorized over 8,760 hours using numpy boolean masking (`below_knee = reserves < knee_mw`), `np.exp`, and `np.minimum` — no Python loops.
+
+**Parameters** (from `ORDC_PARAMS` in `pipeline_config.py`):
+
 - **VOLL** (Value of Lost Load, $/MWh): ISO-calibrated from regulatory proceedings
-- **knee** (MW): Reserve threshold above which the ORDC adder is exactly $0. Set at ~1.5–2× the ISO's minimum operating reserve requirement per NERC/ISO standards.
+- **knee_mw** (MW): Reserve threshold above which the ORDC adder is exactly $0. Set at ~1.5–2× the ISO's minimum operating reserve requirement per NERC/ISO standards.
 - **λ** (1/MW): Exponential decay rate controlling how steeply LOLP rises as reserves deplete below the knee. λ=0.002 → adder reaches ~$92/MWh at 1,000 MW below knee (for VOLL=$5,000). λ=0.0015 → slower decay for larger systems (PJM, MISO).
 - **cap** ($/MWh): Maximum ORDC adder per hour, preventing single-hour spikes from polluting average LMP. Capacity-market ISOs capped at $200–300; energy-only ERCOT at $500.
 
@@ -682,13 +729,44 @@ Sources: ERCOT ORDC regulatory proceedings, PJM RPM capacity demand curve, MISO 
 
 VRE cannibalization captures the revenue depression that solar and wind experience as their penetration increases. At high VRE shares, these resources generate most of their output during the same hours, depressing the LMP they earn.
 
-**Capture Rate**: The ratio of a resource's generation-weighted LMP to the time-average LMP:
+**Algorithm — Capture Rate Computation** (`compute_energy_revenue_by_resource()`, `market_simulation.py` lines 1493–1534):
 
-$$\text{capture\_rate}_r = \frac{\sum_h \text{gen}_r(h) \times \text{LMP}(h)}{\sum_h \text{gen}_r(h)} \div \text{avg\_LMP}$$
+For each resource $r$ with hourly generation profile $\text{gen}_r(h)$ and effective LMP series $\text{LMP}_r(h)$:
+
+*Step 1 — Generation-weighted average revenue:*
+
+$$\text{Revenue}_r = \frac{\sum_{h=1}^{8760} \text{gen}_r(h) \times \text{LMP}_r(h)}{\sum_{h=1}^{8760} \text{gen}_r(h)} \quad [\$/\text{MWh}]$$
+
+*Step 2 — Capture rate (ratio to time-average LMP):*
+
+$$\text{capture\_rate}_r = \frac{\text{Revenue}_r}{\overline{\text{LMP}}} \quad \text{where} \quad \overline{\text{LMP}} = \frac{1}{8760} \sum_{h=1}^{8760} \text{LMP}(h)$$
 
 A capture rate < 1.0 means the resource earns less per MWh than the market average. Solar capture rates typically fall to 0.6–0.8 at high penetration due to the duck curve.
 
+**Zone-Aware Capture**: VRE resources (solar, wind, offshore wind) use zonal LMP when available:
+
+$$\text{LMP}_r(h) = \begin{cases} \text{LMP}_{z(r)}(h) & \text{if } r \in \text{VRE} \text{ and zone mapping exists} \\ \text{LMP}_{\text{sys}}(h) & \text{otherwise} \end{cases}$$
+
+where $z(r)$ is the primary zone for resource $r$ from `VRE_PRIMARY_ZONE` in `pipeline_config.py`.
+
 **Cannibalization-ORDC Interaction**: During ORDC scarcity hours (adder > $50/MWh), a revenue floor prevents capture rates from collapsing completely. This reflects reality: during tight reserve conditions, all generation earns elevated prices regardless of technology.
+
+**Algorithm — VRE Negative-Price Floor Scaling** (`lmp_engine.py` lines 1284–1294):
+
+At high VRE penetration, negative pricing becomes more frequent and deeper, calibrated against CAISO DMM data (2019–2024). The baseline is 25% VRE (~2024 US average):
+
+$$\text{vre\_excess} = \max(0,\; \text{vre\_pct} - 0.25)$$
+
+$$\text{floor\_scale} = \min\bigl(2.0,\; 1.0 + 1.5 \times \text{vre\_excess}\bigr)$$
+
+$$\text{pct\_scale} = \min\bigl(2.0,\; 1.0 + 1.0 \times \text{vre\_excess}\bigr)$$
+
+These multiplicatively scale the negative-price floor depth and the percentile band of hours experiencing negative prices:
+
+$$\text{effective\_low\_floor} = \text{dq\_low\_floor} \times \text{floor\_scale}$$
+$$\text{effective\_low\_pct} = \text{dq\_low\_percentile} \times \text{pct\_scale}$$
+
+Example: at 50% VRE penetration, `floor_scale` = 1.375× (37.5% deeper negative prices) and `pct_scale` = 1.25× (25% more negative-price hours). Both are capped at 2× to prevent unrealistic extremes.
 
 **Deployment Dampening**: The deployment loop applies a sigmoid damping function as VRE penetration increases. Subsequent tranches of VRE experience progressively lower capture rates:
 
@@ -696,9 +774,7 @@ $$\text{depression} = 0.55 \times \sigma(\text{vre\_penetration} - 0.6)$$
 
 where $\sigma$ is the logistic sigmoid. This smoothly reduces VRE revenue as penetration rises, preventing the model from overestimating VRE deployment.
 
-**Zone-Aware Capture**: Each VRE resource is assigned a primary zone via `VRE_PRIMARY_ZONE` mapping (pipeline_config.py). Capture rates are computed against zonal LMP when zonal data is available, not just system-average LMP.
-
-**Implementation**: `compute_energy_revenue_by_resource()` (market_simulation.py line 1126), deployment loop with cannibalization damping (lines 2054–2109).
+**Implementation**: `compute_energy_revenue_by_resource()` (market_simulation.py lines 1493–1534), VRE floor scaling (lmp_engine.py lines 1284–1294), deployment loop with cannibalization damping (lines 2054–2109).
 
 ### 4.5 Fleet Model (`fleet_model.py`)
 
