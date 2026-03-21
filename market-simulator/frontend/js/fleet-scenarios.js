@@ -195,6 +195,10 @@
     }
 
     function updateAllCharts() {
+        // Dismiss tooltip when chart data changes (e.g. scenario toggled)
+        var tooltipEl = document.getElementById('fanTooltip');
+        if (tooltipEl) tooltipEl.classList.remove('visible');
+
         updateFanChart();
         updateFanLegend();
         updateWaterfallChart();
@@ -208,11 +212,30 @@
     var BASELINE_COLOR = '#7E8083';
     var CUSTOM_COLOR = '#2372B9';
 
+    // Empty-state inline plugin for fan chart
+    var fanEmptyStatePlugin = {
+        id: 'fanEmptyState',
+        afterDraw: function (chart) {
+            if (chart.data.datasets.length === 0) {
+                var ctx = chart.ctx;
+                var w = chart.width, h = chart.height;
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#9CA3AF';
+                ctx.font = '14px sans-serif';
+                ctx.fillText('No scenarios visible. Toggle a scenario on in the sidebar.', w / 2, h / 2);
+                ctx.restore();
+            }
+        }
+    };
+
     function buildFanChart() {
         var ctx = document.getElementById('fanChart').getContext('2d');
         fanChart = new Chart(ctx, {
             type: 'line',
             data: { labels: [], datasets: [] },
+            plugins: [fanEmptyStatePlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -248,6 +271,37 @@
                                 var ds = chartData.datasets[item.datasetIndex];
                                 return ds && ds._showInLegend;
                             },
+                            sort: function (a, b, chartData) {
+                                var dsA = chartData.datasets[a.datasetIndex];
+                                var dsB = chartData.datasets[b.datasetIndex];
+                                // Baseline always first
+                                if (dsA._isBaseline && !dsB._isBaseline) return -1;
+                                if (!dsA._isBaseline && dsB._isBaseline) return 1;
+                                // Targets after scenarios
+                                if (dsA._target && !dsB._target) return 1;
+                                if (!dsA._target && dsB._target) return -1;
+                                // Then by creation order (dataset index)
+                                return a.datasetIndex - b.datasetIndex;
+                            },
+                            generateLabels: function (chart) {
+                                var defaultLabels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                                return defaultLabels.filter(function (item) {
+                                    var ds = chart.data.datasets[item.datasetIndex];
+                                    return ds && ds._showInLegend;
+                                }).map(function (item) {
+                                    var ds = chart.data.datasets[item.datasetIndex];
+                                    if (ds._isBaseline) {
+                                        item.text = ds._scenarioName + ' (Baseline)';
+                                    } else if (ds._scenarioName) {
+                                        item.text = ds._scenarioName;
+                                    }
+                                    item.pointStyle = 'line';
+                                    item.lineWidth = ds.borderWidth || 2.5;
+                                    item.strokeStyle = ds.borderColor;
+                                    item.lineDash = ds.borderDash || [];
+                                    return item;
+                                });
+                            },
                             usePointStyle: true,
                             pointStyle: 'line',
                             padding: 16,
@@ -271,6 +325,16 @@
                 }
             }
         });
+
+        // Dismiss tooltip on mouse leave
+        var chartCanvas = document.getElementById('fanChart');
+        if (chartCanvas) {
+            chartCanvas.addEventListener('mouseleave', function () {
+                var tooltipEl = document.getElementById('fanTooltip');
+                if (tooltipEl) tooltipEl.classList.remove('visible');
+            });
+        }
+
         updateFanChart();
     }
 
@@ -291,7 +355,7 @@
     // ── Build 5-band fan datasets for a single scenario ──
     // mode: 'single' = green/red semantic colors, 'multi' = scenario's own color
     // p50Style: { color, width, dash } for the p50 line specifically
-    function addFanDatasets(datasets, env, years, color, label, mode, p50Style) {
+    function addFanDatasets(datasets, env, years, color, label, mode, p50Style, meta) {
         var p10 = [], p25 = [], p50 = [], p75 = [], p90 = [];
         years.forEach(function (y) {
             var e = env[String(y)];
@@ -361,7 +425,9 @@
                 pointHoverRadius: 5,
                 fill: false, tension: 0.3,
                 _scenarioKey: label, _band: 'p50',
-                _showInLegend: true
+                _showInLegend: true,
+                _isBaseline: meta && meta.isBaseline,
+                _scenarioName: (meta && meta.scenarioName) || label
             });
             // 6. p50→p75 fill (medium red)
             datasets.push({
@@ -441,7 +507,9 @@
                 pointHoverRadius: 5,
                 fill: false, tension: 0.3,
                 _scenarioKey: label, _band: 'p50',
-                _showInLegend: true
+                _showInLegend: true,
+                _isBaseline: meta && meta.isBaseline,
+                _scenarioName: (meta && meta.scenarioName) || label
             });
             // 6. p50→p75 fill
             datasets.push({
@@ -509,7 +577,8 @@
                     borderWidth: 2, borderDash: [],
                     pointRadius: 0, pointHoverRadius: 3,
                     fill: false, tension: 0.3,
-                    _scenarioKey: 'Baseline', _band: 'p50', _showInLegend: true
+                    _scenarioKey: 'Baseline', _band: 'p50', _showInLegend: true,
+                    _isBaseline: true, _scenarioName: 'Baseline'
                 });
 
                 // Custom scenario gets the full green/red fan
@@ -519,32 +588,42 @@
                 addFanDatasets(datasets, custEnv, years, custColor, custName, 'single', {
                     color: custColor, width: 2.5, dash: [], pointRadius: 3,
                     legendLabel: custName
-                });
+                }, { isBaseline: false, scenarioName: custName });
             } else if (baseline) {
                 // Baseline only: show full green/red fan with baseline's own color for p50
                 var baseEnv = getEnvelope(baseline);
                 addFanDatasets(datasets, baseEnv, years, BASELINE_COLOR, 'Baseline', 'single', {
                     color: BASELINE_COLOR, width: 2.5, dash: [], pointRadius: 3,
                     legendLabel: 'Baseline'
-                });
+                }, { isBaseline: true, scenarioName: 'Baseline' });
             }
         } else {
             // ── Multi-scenario mode ──
             // Baseline always gets its fan
             if (baseline) {
                 var baseEnv = getEnvelope(baseline);
-                addFanDatasets(datasets, baseEnv, years, BASELINE_COLOR, 'Baseline', 'multi');
+                addFanDatasets(datasets, baseEnv, years, BASELINE_COLOR, 'Baseline', 'multi', null,
+                    { isBaseline: true, scenarioName: 'Baseline' });
             }
 
             // Custom overlay
             if (customScenario) {
-                addFanDatasets(datasets, customScenario.envelope, years, CUSTOM_COLOR, 'Custom', 'multi');
+                addFanDatasets(datasets, customScenario.envelope, years, CUSTOM_COLOR, 'Custom', 'multi', null,
+                    { isBaseline: false, scenarioName: 'Custom' });
             }
 
-            // Saved scenario overlays
-            savedScenarioOverlays.forEach(function (s) {
+            // Saved scenario overlays — sorted: baseline first, then by creation date
+            var sortedOverlays = savedScenarioOverlays.slice().sort(function (a, b) {
+                if (a.isBaseline && !b.isBaseline) return -1;
+                if (!a.isBaseline && b.isBaseline) return 1;
+                var aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                var bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                return aTime - bTime;
+            });
+            sortedOverlays.forEach(function (s) {
                 if (s.results && s.results.envelope) {
-                    addFanDatasets(datasets, s.results.envelope, years, s.color, s.name, 'multi');
+                    addFanDatasets(datasets, s.results.envelope, years, s.color, s.name, 'multi', null,
+                        { isBaseline: !!s.isBaseline, scenarioName: s.name || 'Saved' });
                 }
             });
         }
@@ -605,25 +684,33 @@
         fanChart.update('none');
     }
 
-    // ── Tooltip helper: format a scenario's envelope row ──
+    // ── Tooltip helper: format a scenario's p50 row with % reduction ──
+    function tooltipP50Row(env, year, color, label, baseline2023, isBaseline) {
+        var e = env[year];
+        if (!e) return '';
+        var pctStr = '';
+        if (baseline2023 && baseline2023 > 0) {
+            var pct = ((baseline2023 - e.p50) / baseline2023 * 100).toFixed(1);
+            pctStr = '<span style="opacity:0.7;margin-left:6px;">(' +
+                (pct >= 0 ? '−' : '+') + Math.abs(pct) + '% vs 2023)</span>';
+        }
+        var baselineSuffix = isBaseline ? '<span style="opacity:0.5;font-weight:400;"> (Baseline)</span>' : '';
+        return '<div class="fan-tooltip-row">' +
+            '<span class="fan-tooltip-swatch" style="background:' + color + '"></span>' +
+            '<span class="fan-tooltip-label">' + label + baselineSuffix + '</span>' +
+            '<span class="fan-tooltip-vals">' + e.p50.toFixed(1) + ' Mt' + pctStr + '</span></div>';
+    }
+
+    // ── Tooltip helper: format full envelope detail row (expanded view) ──
     function tooltipEnvelopeRow(env, year, color, label, baseline2023) {
         var e = env[year];
         if (!e) return '';
         var p25 = e.p25 != null ? e.p25 : (e.p10 + e.p50) / 2;
         var p75 = e.p75 != null ? e.p75 : (e.p50 + e.p90) / 2;
-        var pctStr = '';
-        if (baseline2023 && baseline2023 > 0) {
-            var pct = ((baseline2023 - e.p50) / baseline2023 * 100).toFixed(1);
-            pctStr = ' (' + (pct >= 0 ? '-' : '+') + Math.abs(pct) + '% vs 2023)';
-        }
-        return '<div class="fan-tooltip-row">' +
-            '<span class="fan-tooltip-swatch" style="background:' + color + '"></span>' +
-            '<span class="fan-tooltip-label">' + label + '</span>' +
-            '<span class="fan-tooltip-vals">P10: ' + e.p10.toFixed(1) +
-            '  P25: ' + p25.toFixed(1) +
-            '  P50: ' + e.p50.toFixed(1) +
-            '  P75: ' + p75.toFixed(1) +
-            '  P90: ' + e.p90.toFixed(1) + pctStr + '</span></div>';
+        return '<div style="font-size:0.75rem;color:var(--text-dim);padding-left:20px;margin-top:-2px;margin-bottom:4px;">' +
+            'P10: ' + e.p10.toFixed(1) + '  P25: ' + p25.toFixed(1) +
+            '  <strong>P50: ' + e.p50.toFixed(1) + '</strong>' +
+            '  P75: ' + p75.toFixed(1) + '  P90: ' + e.p90.toFixed(1) + '</div>';
     }
 
     // ── Custom tooltip ──
@@ -645,14 +732,14 @@
             var baseYear = baseEnv ? baseEnv[year] : null;
             var baseline2023 = baseEnv && baseEnv['2023'] ? baseEnv['2023'].p50 : null;
 
-            // Baseline row
+            // Baseline row — always first
             if (baseYear && baseEnv) {
-                html += tooltipEnvelopeRow(baseEnv, year, BASELINE_COLOR, 'Baseline', baseline2023);
+                html += tooltipP50Row(baseEnv, year, BASELINE_COLOR, 'Baseline', baseline2023, true);
             }
 
-            // Custom row
+            // Custom (unsaved) scenario row
             if (customScenario && customScenario.envelope) {
-                html += tooltipEnvelopeRow(customScenario.envelope, year, CUSTOM_COLOR, 'Custom', baseline2023);
+                html += tooltipP50Row(customScenario.envelope, year, CUSTOM_COLOR, 'Custom', baseline2023, false);
                 if (baseYear && customScenario.envelope[year]) {
                     var delta = customScenario.envelope[year].p50 - baseYear.p50;
                     var cls = delta < 0 ? 'gap-negative' : 'gap-positive';
@@ -662,10 +749,17 @@
                 }
             }
 
-            // Saved scenario rows
-            savedScenarioOverlays.forEach(function (s) {
+            // Saved scenario rows — sorted: baseline first, then by creation date
+            var sortedSaved = savedScenarioOverlays.slice().sort(function (a, b) {
+                if (a.isBaseline && !b.isBaseline) return -1;
+                if (!a.isBaseline && b.isBaseline) return 1;
+                var aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                var bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                return aTime - bTime;
+            });
+            sortedSaved.forEach(function (s) {
                 if (!s.results || !s.results.envelope) return;
-                html += tooltipEnvelopeRow(s.results.envelope, year, s.color, s.name || 'Saved', baseline2023);
+                html += tooltipP50Row(s.results.envelope, year, s.color, s.name || 'Saved', baseline2023, !!s.isBaseline);
                 if (baseYear && s.results.envelope[year]) {
                     var sDelta = s.results.envelope[year].p50 - baseYear.p50;
                     var sCls = sDelta < 0 ? 'gap-negative' : 'gap-positive';
@@ -734,7 +828,7 @@
             }
         });
 
-        el.innerHTML = items.map(function(item) {
+        var html = items.map(function(item) {
             var swatch;
             if (item.type === 'dashed') {
                 swatch = '<span style="width:24px;height:0;border-top:2px dashed ' + item.color + ';display:inline-block;"></span>';
@@ -744,6 +838,15 @@
             return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:16px;">' +
                 swatch + item.label + '</span>';
         }).join('');
+
+        // In single mode, add a green/red shading annotation note below the legend items
+        if (mode === 'single') {
+            html += '<div style="margin-top:6px;font-size:0.78rem;color:var(--text-dim);font-style:italic;">' +
+                '<span style="color:rgb(34,197,94);font-weight:600;">Green</span> = optimistic (lower emissions), ' +
+                '<span style="color:rgb(239,68,68);font-weight:600;">Red</span> = pessimistic (higher emissions)</div>';
+        }
+
+        el.innerHTML = html;
     }
 
     // ====================================================================
