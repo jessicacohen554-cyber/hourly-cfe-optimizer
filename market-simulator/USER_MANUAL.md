@@ -39,13 +39,24 @@ market-simulator/
 │   └── CONSTELLATION_STYLE_GUIDE.md  # UI style reference
 ├── custom-user-inputs/         # User-provided override CSVs
 ├── data/                       # Model input data (EIA, eGRID, etc.)
+├── data/                       # Model input data (EIA, eGRID, etc.)
+│   ├── CEG_fleet_rosetta.csv         # Canonical Constellation Energy asset roster (single source of truth)
+│   ├── constellation_fleet.json      # 146-plant JSON derived from Rosetta CSV
+│   └── ...
 ├── docs/                       # Documentation & architecture
 │   ├── Cross_Validation_Results.md   # G6: Cross-model validation report
 │   ├── Sensitivity_Analysis_Results.md # G7: Morris method sensitivity results
 │   ├── architecture-high-level.html  # High-level architecture diagram
 │   └── architecture-detailed.html    # Detailed system architecture
+├── frontend/                   # HTML/CSS/JS frontend
+│   └── data/
+│       ├── fleet_scenario_results_sample.json  # Pre-computed scenario results from Rosetta data
+│       └── fleet_scenarios/
+│           └── constellation_scenarios.json    # Plant-level config with CCS eligibility, heat rates, CO2 rates, capacity factors
 ├── results/                    # Simulation output directories
 └── scripts/                    # Utility scripts
+    ├── build_fleet_scenario_data.py  # Builds fleet scenario data from Rosetta CSV
+    ├── generate_constellation_scenarios.py  # Generates constellation scenario configurations
     ├── sensitivity_analysis.py       # G7: Morris method sensitivity analysis
     └── tests/
         └── validate_cross_model.py   # G6: Cross-validation against AEO/ReEDS/IPM
@@ -88,10 +99,11 @@ The Market Simulation Screening Tool models electricity market economics across 
 
 1. **Guide** (`/`) — Instructions, tool overview, and data setup documentation
 2. **Setup** (`/setup`) — Input parameters and run simulation
-3. **Fleet Config** (`/fleet-config`) — Constellation/Calpine asset configuration (toggle plants between Operating / Retired / CCS Retrofit)
+3. **Fleet Config** (`/fleet-config`) — Constellation Energy 146-plant fleet configuration grouped by category (Nuclear, Renewables, Fossil, Storage). Toggle plants between Operating / Retired, with CCS Retrofit available for CCS-eligible fossil plants only. Non-fossil plants show Operating/Retired toggle only.
 4. **Results** (`/results`) — Charts, tables, and analysis
-5. **CCS Emissions** (`/emissions`) — CCS emissions dashboard with plant-level dispatch and capture analysis
-6. **IPP Report** (`/ipp-report`) — Constellation fleet transition report with 9-section executive summary
+5. **Fleet Scenarios** (`/fleet-scenarios`) — P10/P50/P90 emissions envelopes across 4 fleet decarbonization scenarios (baseline, CCS top emitters, retire peakers + CCS baseload, full transition). Fan chart with climate target overlays (SBTi 1.5C, Absolute Target). Waterfall charts for plant-level impacts. Target selection uses multi-select checkboxes — users can overlay both SBTi and Absolute Target simultaneously.
+6. **CCS Emissions** (`/emissions`) — CCS emissions dashboard with plant-level dispatch and capture analysis
+7. **IPP Report** (`/ipp-report`) — Constellation fleet transition report with 9-section executive summary
 
 ### User Interface
 
@@ -411,25 +423,55 @@ Click "Download CSV" to download the full results as a CSV file.
 
 ## Fleet Configuration Page
 
-The Fleet Config page (`/fleet-config`) lets you modify the status of individual Constellation/Calpine plants before running a simulation.
+The Fleet Config page (`/fleet-config`) provides access to the full Constellation Energy fleet of 146 plants (15 nuclear, 43 renewable, 81 fossil, 7 storage) derived from the canonical `CEG_fleet_rosetta.csv` asset roster. Constellation has no coal assets.
 
-### Plant Statuses
+### Plant Categories & Statuses
+
+Plants are grouped by category with different available controls:
+
+| Category | Plant Count | Available Statuses |
+|----------|-------------|-------------------|
+| **Nuclear** | 15 (~190 TWh equity-weighted) | Operating / Retired |
+| **Renewables** (solar, wind, hydro, geothermal) | 43 (~13.8 TWh) | Operating / Retired |
+| **Fossil** (gas CCGT, gas CT, oil) | 81 | Operating / Retired / CCS Retrofit (CCS-eligible only) |
+| **Storage** (battery) | 7 | Operating / Retired |
 
 | Status | Effect on Simulation |
 |--------|---------------------|
-| **Operating** (default) | Plant dispatches normally in merit order |
+| **Operating** (default) | Plant dispatches normally in merit order (fossil) or at static capacity factor (non-fossil) |
 | **Retired** | Plant capacity zeroed — removed from dispatch |
-| **CCS Retrofit** | 95% CO2 capture, 14% heat rate penalty, 80% CF floor (available for 39 eligible CCGT plants only) |
+| **CCS Retrofit** | 95% CO2 capture, 14% heat rate penalty, 80% CF floor (available for CCS-eligible fossil plants only) |
 
 ### Page Layout
 
-- Plants grouped by ISO → fuel type (expandable sections)
-- Fossil sections (coal, gas CCGT, gas CT, oil) expanded by default
-- Clean sections (nuclear, solar, wind, hydro) collapsed by default
+- Plants grouped by category: Nuclear, Renewables, Fossil, Storage
+- Each category is expandable/collapsible
+- Non-fossil plants (nuclear, renewables, storage) show Operating/Retired toggle only — no CCS option
+- CCS Retrofit option restricted to CCS-eligible fossil plants
 - Search/filter bar for finding specific plants
-- Bulk controls: "Set All Coal to Retired", "Set All CCGT to CCS Retrofit", "Reset to Defaults"
+- Bulk controls: "Set All CCGT to CCS Retrofit", "Reset to Defaults"
 
 Fleet selections persist in browser localStorage and are included in the simulation request when you run from the Setup page. The Setup page shows a summary badge: "X plants modified (Y retired, Z CCS retrofit)".
+
+### Non-Fossil Plant Dispatch Model
+
+Non-fossil plants use static capacity factors (not hourly profiles):
+
+| Fuel Type | Capacity Factor | Profile Shape |
+|-----------|----------------|---------------|
+| Nuclear | 92% | Flat year-round |
+| Geothermal | 85% | Flat year-round |
+| Wind | 30% | Static average (no hourly profile) |
+| Solar | 22% | Static average (no hourly profile) |
+| Hydro | 40% | Static average |
+| Storage | Pass-through | Capacity tracked, generation excluded from emissions accounting |
+
+### Fleet Data Sources
+
+- **`data/CEG_fleet_rosetta.csv`** — Canonical Constellation Energy asset roster. Single source of truth for all fleet composition data.
+- **`data/constellation_fleet.json`** — 146-plant JSON derived from the Rosetta CSV, used by the frontend and backend.
+- **`frontend/data/fleet_scenarios/constellation_scenarios.json`** — Plant-level configuration with CCS eligibility flags, heat rates, CO2 rates, and capacity factors.
+- **`frontend/data/fleet_scenario_results_sample.json`** — Pre-computed scenario results from Rosetta-derived data (primary data source; sweep-based results used as fallback).
 
 ---
 
