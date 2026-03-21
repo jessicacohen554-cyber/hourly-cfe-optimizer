@@ -1736,28 +1736,38 @@ def compute_storage_arbitrage_from_lmp(hourly_lmp, iso=None):
         #   - Units: $/MWh × hours = $/MW per cycle → ÷ 1000 for $/kW per cycle
         total_revenue_dollar_per_mw = 0.0
         charge_hours_per_window = min(duration, window_hours // 2)
-        discharge_hours_per_window = charge_hours_per_window  # symmetric
+        discharge_hours_per_window = charge_hours_per_window
 
-        for w in range(n_windows):
-            w_start = w * window_hours
-            w_end = min(w_start + window_hours, H)
-            if w_end - w_start < 2 * charge_hours_per_window:
-                continue  # window too short
+        # Vectorized: reshape LMP into (n_windows, window_hours) matrix
+        # Truncate to exact multiple of window_hours for clean reshape
+        usable_hours = n_windows * window_hours
+        if usable_hours > H:
+            usable_hours = (H // window_hours) * window_hours
+            n_windows = usable_hours // window_hours
+        if n_windows <= 0 or usable_hours <= 0:
+            results[tech] = 0.0
+            continue
 
-            window_lmp = lmp[w_start:w_end]
-            sorted_idx = np.argsort(window_lmp)
+        lmp_matrix = lmp[:usable_hours].reshape(n_windows, window_hours)
 
-            # Charge at cheapest hours, discharge at most expensive
-            # Each hour: 1 MW power → 1 MWh energy, cost/revenue = LMP × 1 MWh
-            charge_cost = np.sum(window_lmp[sorted_idx[:charge_hours_per_window]])
-            discharge_rev = np.sum(window_lmp[sorted_idx[-discharge_hours_per_window:]])
+        # Check minimum window size (need at least 2 × charge_hours)
+        if window_hours < 2 * charge_hours_per_window:
+            results[tech] = 0.0
+            continue
 
-            # Net revenue per cycle in $/MW (1 MW power capacity assumed)
-            cycle_revenue = discharge_rev * rte - charge_cost
-            total_revenue_dollar_per_mw += cycle_revenue
+        # Sort each window independently along axis=1
+        sorted_matrix = np.sort(lmp_matrix, axis=1)
+
+        # Charge at cheapest hours (left columns), discharge at most expensive (right columns)
+        charge_cost_per_window = sorted_matrix[:, :charge_hours_per_window].sum(axis=1)
+        discharge_rev_per_window = sorted_matrix[:, -discharge_hours_per_window:].sum(axis=1)
+
+        # Net revenue per cycle: discharge × RTE - charge
+        cycle_revenues = discharge_rev_per_window * rte - charge_cost_per_window
+        total_revenue_dollar_per_mw = float(np.sum(np.maximum(cycle_revenues, 0.0)))
 
         # Convert $/MW-yr → $/kW-yr (÷ 1000)
-        results[tech] = max(0.0, total_revenue_dollar_per_mw / 1000.0)
+        results[tech] = total_revenue_dollar_per_mw / 1000.0
 
     return results
 
