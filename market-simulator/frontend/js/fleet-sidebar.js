@@ -15,9 +15,14 @@ var FleetSidebar = (function () {
     var addedPlants = [];      // User-added plants
     var sweepData = null;      // From sweep_dispatch_data.json
     var scenarioConfig = null; // Full constellation_scenarios.json
-    var savedScenarios = {};   // localStorage
+    var savedScenarios = [];   // Array of SavedScenario objects (max 5)
     var isOpen = false;
     var nextAddId = 90000;     // ID counter for added plants
+    var lastComputedResults = null; // Cache most recent recalculation results
+
+    var MAX_SCENARIOS = 5;
+    var SCENARIO_STORAGE_KEY = 'market-sim-scenarios';
+    var SCENARIO_COLORS = ['#2372B9', '#F47B27', '#6BA543', '#9C27B0', '#E91E63'];
 
     // ── Fuel labels ──
     var FUEL_LABELS = {
@@ -60,6 +65,9 @@ var FleetSidebar = (function () {
         if (els.recalcBtn) els.recalcBtn.addEventListener('click', recalculate);
         if (els.saveBtn) els.saveBtn.addEventListener('click', saveScenario);
         if (els.addBtn) els.addBtn.addEventListener('click', addPlant);
+        if (els.nameInput) {
+            els.nameInput.addEventListener('input', updateSaveButtonState);
+        }
 
         // Keyboard: Escape to close
         document.addEventListener('keydown', function (e) {
@@ -113,9 +121,17 @@ var FleetSidebar = (function () {
 
         // Load saved scenarios from localStorage
         try {
-            var saved = localStorage.getItem('fleet_custom_scenarios');
-            if (saved) savedScenarios = JSON.parse(saved);
-        } catch (e) { savedScenarios = {}; }
+            var saved = localStorage.getItem(SCENARIO_STORAGE_KEY);
+            if (saved) {
+                var parsed = JSON.parse(saved);
+                // Handle migration from old object format
+                if (Array.isArray(parsed)) {
+                    savedScenarios = parsed;
+                } else {
+                    savedScenarios = [];
+                }
+            }
+        } catch (e) { savedScenarios = []; }
     }
 
     function loadFleetFallback(callback) {
@@ -159,6 +175,9 @@ var FleetSidebar = (function () {
 
     function onAllLoaded() {
         renderSavedScenarios();
+        updateSaveButtonState();
+        // Push any previously saved visible scenarios to charts
+        setTimeout(syncVisibleScenarios, 200);
 
         // Count by category
         var nuclearCount = 0, renewableCount = 0, fossilCount = 0, storageCount = 0;
@@ -481,6 +500,15 @@ var FleetSidebar = (function () {
                     var result = FleetDispatchEngine.computeFleetDispatch(allPlants, sweepData);
                     var elapsed = Math.round(performance.now() - t0);
 
+                    // Cache the results and current params for save
+                    lastComputedResults = {
+                        envelope: result.envelope,
+                        plant_detail: result.plant_detail,
+                        generation_by_fuel: result.generation_by_fuel,
+                        emissions_by_fuel: result.emissions_by_fuel,
+                        fleet_summary: result.fleet_summary
+                    };
+
                     var scenarioName = (els.nameInput && els.nameInput.value.trim()) || 'Custom';
 
                     var scenarioData = {
@@ -500,6 +528,7 @@ var FleetSidebar = (function () {
                         console.warn('FLEET_SCENARIOS_API not available');
                         setStatus('Computed in ' + elapsed + 'ms but chart API unavailable');
                     }
+                    updateSaveButtonState();
                 } catch (err) {
                     console.error('Recalculation failed:', err);
                     setStatus('Error: ' + err.message);
@@ -513,34 +542,96 @@ var FleetSidebar = (function () {
         });
     }
 
+    // ── UUID generator ──
+    function generateId() {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            var r = Math.random() * 16 | 0;
+            return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+        });
+    }
+
+    // ── Get next available color ──
+    function getNextColor() {
+        var usedColors = savedScenarios.map(function (s) { return s.color; });
+        for (var i = 0; i < SCENARIO_COLORS.length; i++) {
+            if (usedColors.indexOf(SCENARIO_COLORS[i]) === -1) return SCENARIO_COLORS[i];
+        }
+        return SCENARIO_COLORS[0];
+    }
+
+    // ── Save button state ──
+    function updateSaveButtonState() {
+        if (!els.saveBtn) return;
+        var name = (els.nameInput && els.nameInput.value.trim()) || '';
+        var atMax = savedScenarios.length >= MAX_SCENARIOS;
+        els.saveBtn.disabled = !name || atMax;
+        if (atMax) {
+            els.saveBtn.title = 'Maximum ' + MAX_SCENARIOS + ' scenarios reached';
+        } else if (!name) {
+            els.saveBtn.title = 'Enter a name to save';
+        } else {
+            els.saveBtn.title = '';
+        }
+    }
+
+    // ── Persist to localStorage ──
+    function persistScenarios() {
+        try {
+            localStorage.setItem(SCENARIO_STORAGE_KEY, JSON.stringify(savedScenarios));
+        } catch (e) { console.warn('localStorage save failed:', e); }
+    }
+
     // ── Save/Load Scenarios ──
     function saveScenario() {
         var name = (els.nameInput && els.nameInput.value.trim()) || '';
         if (!name) { alert('Please enter a scenario name'); return; }
+        if (savedScenarios.length >= MAX_SCENARIOS) {
+            alert('Maximum ' + MAX_SCENARIOS + ' scenarios. Delete one to save a new one.');
+            return;
+        }
 
-        savedScenarios[name] = {
-            timestamp: Date.now(),
+        // Build params from current fleet state
+        var params = {
             fleetMods: fleetPlants.filter(function (p) { return p._action; }).map(function (p) {
                 return { _idx: p._idx, orispl: p.orispl, _action: p._action, _year_online: p._year_online, _ccs_target_rate: p._ccs_target_rate, capacity_mw: p.capacity_mw };
             }),
             addedPlants: JSON.parse(JSON.stringify(addedPlants))
         };
 
-        try {
-            localStorage.setItem('fleet_custom_scenarios', JSON.stringify(savedScenarios));
-        } catch (e) { console.warn('localStorage save failed:', e); }
+        // If we haven't computed results yet, run recalculate first
+        if (!lastComputedResults && sweepData) {
+            recalculate();
+        }
 
+        var scenario = {
+            id: generateId(),
+            name: name,
+            description: '',
+            params: params,
+            results: lastComputedResults ? JSON.parse(JSON.stringify(lastComputedResults)) : null,
+            color: getNextColor(),
+            isVisible: true,
+            isBaseline: savedScenarios.length === 0, // First scenario is baseline
+            createdAt: new Date().toISOString()
+        };
+
+        savedScenarios.push(scenario);
+        persistScenarios();
         renderSavedScenarios();
-        setStatus('Saved "' + name + '"');
+        updateSaveButtonState();
+        syncVisibleScenarios();
+        if (els.nameInput) els.nameInput.value = '';
+        setStatus('Saved "' + name + '" (' + savedScenarios.length + '/' + MAX_SCENARIOS + ')');
     }
 
-    function loadScenario(name) {
-        var saved = savedScenarios[name];
-        if (!saved) return;
+    function loadScenario(id) {
+        var saved = savedScenarios.find(function (s) { return s.id === id; });
+        if (!saved || !saved.params) return;
 
         fleetPlants = JSON.parse(JSON.stringify(baseFleet));
 
-        (saved.fleetMods || []).forEach(function (mod) {
+        (saved.params.fleetMods || []).forEach(function (mod) {
             var p = fleetPlants[mod._idx];
             if (p && p.orispl === mod.orispl) {
                 p._action = mod._action;
@@ -550,46 +641,180 @@ var FleetSidebar = (function () {
             }
         });
 
-        addedPlants = JSON.parse(JSON.stringify(saved.addedPlants || []));
-
-        if (els.nameInput) els.nameInput.value = name;
+        addedPlants = JSON.parse(JSON.stringify(saved.params.addedPlants || []));
+        lastComputedResults = null; // Clear — user must recalculate after tweaking
 
         renderFleetList();
-        setStatus('Loaded "' + name + '" — click Recalculate to update charts');
+        setStatus('Loaded "' + saved.name + '" — tweak & Recalculate, or save as new');
     }
 
-    function deleteScenario(name) {
-        delete savedScenarios[name];
-        try {
-            localStorage.setItem('fleet_custom_scenarios', JSON.stringify(savedScenarios));
-        } catch (e) {}
+    function deleteScenario(id) {
+        var idx = savedScenarios.findIndex(function (s) { return s.id === id; });
+        if (idx === -1) return;
+        var name = savedScenarios[idx].name;
+        savedScenarios.splice(idx, 1);
+        persistScenarios();
         renderSavedScenarios();
+        updateSaveButtonState();
+        syncVisibleScenarios();
+        setStatus('Deleted "' + name + '"');
+    }
+
+    function toggleVisibility(id) {
+        var s = savedScenarios.find(function (s) { return s.id === id; });
+        if (!s) return;
+        s.isVisible = !s.isVisible;
+        persistScenarios();
+        renderSavedScenarios();
+        syncVisibleScenarios();
+    }
+
+    function setBaseline(id) {
+        savedScenarios.forEach(function (s) {
+            s.isBaseline = (s.id === id);
+        });
+        persistScenarios();
+        renderSavedScenarios();
+        syncVisibleScenarios();
+    }
+
+    function updateScenarioName(id, newName) {
+        var s = savedScenarios.find(function (s) { return s.id === id; });
+        if (!s) return;
+        s.name = newName.trim() || s.name;
+        persistScenarios();
+        renderSavedScenarios();
+        syncVisibleScenarios();
+    }
+
+    // ── Push visible scenarios to chart system ──
+    function syncVisibleScenarios() {
+        if (!window.FLEET_SCENARIOS_API) return;
+        var visible = savedScenarios.filter(function (s) { return s.isVisible && s.results; });
+        window.FLEET_SCENARIOS_API.setSavedScenarios(visible);
+    }
+
+    // ── Escape HTML for safe rendering ──
+    function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     }
 
     function renderSavedScenarios() {
         if (!els.savedList) return;
-        var names = Object.keys(savedScenarios);
-        if (!names.length) {
+
+        // Update count
+        var countEl = document.getElementById('saveCount');
+        if (countEl) {
+            countEl.textContent = savedScenarios.length + '/' + MAX_SCENARIOS + ' scenarios saved';
+        }
+
+        if (!savedScenarios.length) {
             els.savedList.innerHTML = '<div style="color:#9ca3af;font-size:0.82rem;padding:8px 0;">No saved scenarios yet</div>';
             return;
         }
+
         var html = '';
-        names.forEach(function (name) {
-            html += '<div class="sb-saved-item">';
-            html += '<span>' + name + '</span>';
+        savedScenarios.forEach(function (s) {
+            var baselineClass = s.isBaseline ? ' is-baseline' : '';
+            html += '<div class="sb-saved-item' + baselineClass + '" data-scenario-id="' + s.id + '">';
+
+            // Color swatch
+            html += '<span class="sb-scenario-swatch" style="background:' + s.color + '"></span>';
+
+            // Name (click to load params)
+            html += '<span class="sb-scenario-name" data-load-id="' + s.id + '" title="Click to load params">' + escapeHtml(s.name) + '</span>';
+
+            // Baseline badge
+            if (s.isBaseline) {
+                html += '<span class="sb-baseline-badge">Baseline</span>';
+            }
+
+            // Action buttons
             html += '<div class="sb-saved-actions">';
-            html += '<button class="sb-btn" data-load="' + name + '" style="padding:4px 10px;font-size:0.78rem;min-height:32px;">Load</button>';
-            html += '<button class="sb-btn-danger" data-delete="' + name + '">✕</button>';
-            html += '</div>';
-            html += '</div>';
+
+            // Visibility toggle (eye)
+            var eyeIcon = s.isVisible ? '&#128065;' : '&#128065;&#xFE0E;';
+            var eyeClass = s.isVisible ? ' active' : '';
+            html += '<button class="sb-icon-btn' + eyeClass + '" data-toggle-id="' + s.id + '" title="' + (s.isVisible ? 'Hide from chart' : 'Show on chart') + '">';
+            html += s.isVisible ? '👁' : '👁‍🗨';
+            html += '</button>';
+
+            // Set baseline
+            if (!s.isBaseline) {
+                html += '<button class="sb-icon-btn sb-icon-baseline" data-baseline-id="' + s.id + '" title="Set as baseline reference">★</button>';
+            }
+
+            // Delete
+            html += '<button class="sb-icon-btn sb-icon-delete" data-delete-id="' + s.id + '" title="Delete scenario">✕</button>';
+
+            html += '</div></div>';
         });
+
         els.savedList.innerHTML = html;
 
-        els.savedList.querySelectorAll('[data-load]').forEach(function (btn) {
-            btn.addEventListener('click', function () { loadScenario(this.dataset.load); });
+        // Bind click-to-load (on name)
+        els.savedList.querySelectorAll('[data-load-id]').forEach(function (el) {
+            el.addEventListener('click', function () { loadScenario(this.dataset.loadId); });
+            // Double-click to rename
+            el.addEventListener('dblclick', function (e) {
+                e.stopPropagation();
+                var id = this.dataset.loadId;
+                var s = savedScenarios.find(function (sc) { return sc.id === id; });
+                if (!s) return;
+                var nameEl = this;
+                var input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'sb-scenario-name-input';
+                input.value = s.name;
+                input.maxLength = 60;
+                nameEl.replaceWith(input);
+                input.focus();
+                input.select();
+
+                function finishRename() {
+                    var newName = input.value.trim();
+                    if (newName && newName !== s.name) {
+                        updateScenarioName(id, newName);
+                    } else {
+                        renderSavedScenarios();
+                    }
+                }
+                input.addEventListener('blur', finishRename);
+                input.addEventListener('keydown', function (ke) {
+                    if (ke.key === 'Enter') { ke.preventDefault(); input.blur(); }
+                    if (ke.key === 'Escape') { input.value = s.name; input.blur(); }
+                });
+            });
         });
-        els.savedList.querySelectorAll('[data-delete]').forEach(function (btn) {
-            btn.addEventListener('click', function () { deleteScenario(this.dataset.delete); });
+
+        // Bind visibility toggle
+        els.savedList.querySelectorAll('[data-toggle-id]').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                toggleVisibility(this.dataset.toggleId);
+            });
+        });
+
+        // Bind set baseline
+        els.savedList.querySelectorAll('[data-baseline-id]').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                setBaseline(this.dataset.baselineId);
+            });
+        });
+
+        // Bind delete
+        els.savedList.querySelectorAll('[data-delete-id]').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var id = this.dataset.deleteId;
+                var s = savedScenarios.find(function (sc) { return sc.id === id; });
+                if (s && confirm('Delete "' + s.name + '"?')) {
+                    deleteScenario(id);
+                }
+            });
         });
     }
 
@@ -612,7 +837,11 @@ var FleetSidebar = (function () {
         open: open,
         close: close,
         recalculate: recalculate,
-        resetFleet: resetFleet
+        resetFleet: resetFleet,
+        getSavedScenarios: function () { return savedScenarios; },
+        getVisibleScenarios: function () {
+            return savedScenarios.filter(function (s) { return s.isVisible && s.results; });
+        }
     };
 
 })();
