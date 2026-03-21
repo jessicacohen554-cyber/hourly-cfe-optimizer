@@ -3571,6 +3571,54 @@ def build_provenance_metadata(input_params: dict) -> ProvenanceMetadata:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# LMP CACHE HELPER
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _compute_or_cache_lmp(iso, current_pct, conditions, demand_norm, demand_mw_profile,
+                           supply_profiles_iso, resource_pcts, storage_pcts,
+                           ic_norm, ic_firm_mw, dr_level, growth_factor, state,
+                           year, carbon_price, interchange_enabled, nb_bucket,
+                           lmp_cache=None):
+    """Compute LMP at threshold, with caching. Returns LmpResult."""
+    stor_key = tuple(sorted(storage_pcts.items())) if storage_pcts else ()
+    cache_key = (iso, current_pct, conditions['fuel_level'],
+                 conditions['demand_growth'], year, carbon_price,
+                 interchange_enabled, dr_level, nb_bucket, stor_key)
+
+    if lmp_cache is not None and cache_key in lmp_cache:
+        return lmp_cache[cache_key]
+
+    result = compute_lmp_at_threshold(
+        iso, current_pct, conditions['fuel_level'],
+        demand_norm, demand_mw_profile,
+        supply_profiles_iso, resource_pcts,
+        battery_pct=storage_pcts.get('battery', 0),
+        battery8_pct=storage_pcts.get('battery8', 0),
+        ldes_pct=storage_pcts.get('ldes', 0),
+        h2_pct=storage_pcts.get('h2', 0),
+        carbon_price=carbon_price,
+        nox_price=conditions.get('nox_price', 0.0),
+        sox_price=conditions.get('sox_price', 0.0),
+        nox_limit=conditions.get('nox_limit'),
+        sox_limit=conditions.get('sox_limit'),
+        custom_fuel_prices=conditions.get('custom_fuel_prices'),
+        custom_co2_price=conditions.get('custom_co2_price'),
+        custom_heat_rates=conditions.get('custom_heat_rates'),
+        custom_vom=conditions.get('custom_vom'),
+        interchange_norm=ic_norm,
+        firm_import_mw=ic_firm_mw,
+        dr_level=dr_level,
+        demand_growth_factor=growth_factor,
+        new_fossil_builds=state.get('new_fossil_builds'),
+    )
+
+    if lmp_cache is not None:
+        lmp_cache[cache_key] = result
+
+    return result
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # CORE MARKET SIMULATION
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -3855,42 +3903,15 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             _nb_bucket = round(_nb_total / 5000) * 5000  # 5 GW buckets
             # R1: Include storage state in LMP cache key
             _prev_stor = state.get('storage_deployed', {})
-            _stor_key = tuple(sorted(_prev_stor.items())) if _prev_stor else ()
-            _lmp_key = (iso, current_pct, conditions['fuel_level'],
-                        conditions['demand_growth'], year, carbon_price,
-                        interchange_enabled, dr_level, _nb_bucket, _stor_key)
-            zonal_congestion_data = None
-            scarcity_hours_frac = 0.0
-            curtailment_rate = 0.0
-            if _lmp_cache is not None and _lmp_key in _lmp_cache:
-                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate, lmp_confidence = _lmp_cache[_lmp_key]
-            else:
-                # R1: Use previously deployed storage in LMP calculation (Pass 1)
-                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate, lmp_confidence = compute_lmp_at_threshold(
-                    iso, current_pct, conditions['fuel_level'],
-                    demand_norm, demand_mw_profile,
-                    supply_profiles_iso, resource_pcts,
-                    battery_pct=_prev_stor.get('battery', 0),
-                    battery8_pct=_prev_stor.get('battery8', 0),
-                    ldes_pct=_prev_stor.get('ldes', 0),
-                    h2_pct=_prev_stor.get('h2', 0),
-                    carbon_price=carbon_price,
-                    nox_price=conditions.get('nox_price', 0.0),
-                    sox_price=conditions.get('sox_price', 0.0),
-                    nox_limit=conditions.get('nox_limit'),
-                    sox_limit=conditions.get('sox_limit'),
-                    custom_fuel_prices=conditions.get('custom_fuel_prices'),
-                    custom_co2_price=conditions.get('custom_co2_price'),
-                    custom_heat_rates=conditions.get('custom_heat_rates'),
-                    custom_vom=conditions.get('custom_vom'),
-                    interchange_norm=ic_norm,
-                    firm_import_mw=ic_firm_mw,
-                    dr_level=dr_level,
-                    demand_growth_factor=growth_factor,
-                    new_fossil_builds=state.get('new_fossil_builds'),
-                )
-                if _lmp_cache is not None:
-                    _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate, lmp_confidence)
+            lmp_result = _compute_or_cache_lmp(
+                iso, current_pct, conditions, demand_norm, demand_mw_profile,
+                supply_profiles_iso, resource_pcts, _prev_stor,
+                ic_norm, ic_firm_mw, dr_level, growth_factor, state,
+                year, carbon_price, interchange_enabled, _nb_bucket,
+                lmp_cache=_lmp_cache)
+            (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics,
+             zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix,
+             _zonal_zone_names, curtailment_rate, lmp_confidence) = lmp_result
 
             # --- RESERVE MARGIN (for endogenous capacity pricing) ---
             reserve_margin_pct = compute_reserve_margin(
@@ -3910,38 +3931,15 @@ def run_market_simulation(scenario_id, conditions, isos=None,
 
             if _storage_changed:
                 # LMP Pass 2: recompute with new storage deployment
-                _stor_key2 = tuple(sorted(_new_stor.items()))
-                _lmp_key2 = (iso, current_pct, conditions['fuel_level'],
-                             conditions['demand_growth'], year, carbon_price,
-                             interchange_enabled, dr_level, _nb_bucket, _stor_key2)
-                if _lmp_cache is not None and _lmp_key2 in _lmp_cache:
-                    hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate, lmp_confidence = _lmp_cache[_lmp_key2]
-                else:
-                    hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate, lmp_confidence = compute_lmp_at_threshold(
-                        iso, current_pct, conditions['fuel_level'],
-                        demand_norm, demand_mw_profile,
-                        supply_profiles_iso, resource_pcts,
-                        battery_pct=_new_stor.get('battery', 0),
-                        battery8_pct=_new_stor.get('battery8', 0),
-                        ldes_pct=_new_stor.get('ldes', 0),
-                        h2_pct=_new_stor.get('h2', 0),
-                        carbon_price=carbon_price,
-                        nox_price=conditions.get('nox_price', 0.0),
-                        sox_price=conditions.get('sox_price', 0.0),
-                        nox_limit=conditions.get('nox_limit'),
-                        sox_limit=conditions.get('sox_limit'),
-                        custom_fuel_prices=conditions.get('custom_fuel_prices'),
-                        custom_co2_price=conditions.get('custom_co2_price'),
-                        custom_heat_rates=conditions.get('custom_heat_rates'),
-                        custom_vom=conditions.get('custom_vom'),
-                        interchange_norm=ic_norm,
-                        firm_import_mw=ic_firm_mw,
-                        dr_level=dr_level,
-                        demand_growth_factor=growth_factor,
-                        new_fossil_builds=state.get('new_fossil_builds'),
-                    )
-                    if _lmp_cache is not None:
-                        _lmp_cache[_lmp_key2] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate, lmp_confidence)
+                lmp_result = _compute_or_cache_lmp(
+                    iso, current_pct, conditions, demand_norm, demand_mw_profile,
+                    supply_profiles_iso, resource_pcts, _new_stor,
+                    ic_norm, ic_firm_mw, dr_level, growth_factor, state,
+                    year, carbon_price, interchange_enabled, _nb_bucket,
+                    lmp_cache=_lmp_cache)
+                (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics,
+                 zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix,
+                 _zonal_zone_names, curtailment_rate, lmp_confidence) = lmp_result
 
                 _log(f"  {iso} R1 storage: "
                      + ", ".join(f"{t}={_new_stor.get(t, 0):.4f}%"
