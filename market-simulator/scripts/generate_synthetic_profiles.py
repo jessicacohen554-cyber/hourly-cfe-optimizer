@@ -13,7 +13,18 @@ import sys
 import numpy as np
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+MODULE_ROOT = os.path.dirname(SCRIPT_DIR)
 sys.path.insert(0, SCRIPT_DIR)
+sys.path.insert(0, MODULE_ROOT)
+
+# Centralized path resolution
+try:
+    from paths import resolve_data_path
+except ImportError:
+    from pathlib import Path as _Path
+
+    def resolve_data_path(rel):
+        return _Path(MODULE_ROOT) / "data" / rel
 
 from pipeline_config import ISOS, REGIONAL_DEMAND_TWH, H
 
@@ -160,7 +171,7 @@ def generate_fossil_mix(iso, year='2024'):
 def generate_all_profiles(output_dir=None, isos=None):
     """Generate all synthetic profiles and save as JSON files."""
     if output_dir is None:
-        output_dir = os.path.join(os.path.dirname(SCRIPT_DIR), 'data', 'profiles')
+        output_dir = str(resolve_data_path('profiles'))
     os.makedirs(output_dir, exist_ok=True)
 
     if isos is None:
@@ -223,6 +234,12 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Generate synthetic EIA profiles for testing')
     parser.add_argument('--isos', nargs='+', default=None)
-    parser.add_argument('--output-dir', default=None)
+    parser.add_argument('--output-dir', default=None,
+                        help='Output directory for generated profiles')
+    parser.add_argument('--data-dir', default=None,
+                        help='Root data directory (sets output-dir to data-dir/profiles if --output-dir not given)')
     args = parser.parse_args()
-    generate_all_profiles(args.output_dir, args.isos)
+    output = args.output_dir
+    if output is None and args.data_dir:
+        output = os.path.join(args.data_dir, 'profiles')
+    generate_all_profiles(output, args.isos)
