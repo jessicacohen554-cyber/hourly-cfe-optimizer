@@ -81,9 +81,15 @@
         <div class="meth-section">
             <h2>1. What This Tool Does</h2>
             <p>
-                This is a <strong>reduced-form market screening model</strong> that evaluates generator profitability,
-                clean energy deployment economics, and retirement pressure across 7 US ISOs under parametric
-                sensitivity scenarios.
+                This is a <strong>fossil dispatch overlay on exogenous clean generation shapes</strong>. The upstream
+                hourly-cfe-optimizer pipeline generates physics-feasible clean energy mixes and optimizes their costs.
+                This tool takes those clean generation profiles as inputs, subtracts them from demand to derive residual
+                fossil load, and dispatches the fossil fleet against that residual &mdash; computing LMP formation,
+                plant-level economics, retirement trajectories, emissions, and capacity adequacy across 7 US ISOs.
+            </p>
+            <p>
+                The core question is not <em>"what does clean energy cost?"</em> &mdash; that's answered upstream.
+                The core question is: <strong>"Given this clean generation backdrop, what happens to the incumbent fossil fleet?"</strong>
             </p>
             <h3>Core Capabilities</h3>
             <ul>
@@ -113,6 +119,90 @@
                 <li><strong>Cross-validation framework</strong> — Structured comparison against EIA AEO, NREL ReEDS, and EPA IPM reference trajectories with expected vs. unexplained divergence classification (G6).</li>
                 <li><strong>Morris sensitivity analysis</strong> — Formal sensitivity decomposition identifies which inputs drive the most output variance. Tornado diagrams and variance decomposition (G7).</li>
             </ul>
+        </div>
+
+        <!-- Section 1b: Parametric Robustness -->
+        <div class="meth-section">
+            <h2>1b. Methodological Approach &mdash; Parametric Robustness vs. Single-Point Optimization</h2>
+            <p>
+                Traditional capacity expansion models (IPM, GenX, PLEXOS) solve a constrained optimization:
+                <em>"What's the least-cost generation portfolio?"</em> They deliver a single "optimal" plan per
+                scenario. Running 5&ndash;10 scenarios takes days to weeks.
+            </p>
+            <p>
+                This tool takes a fundamentally different approach. The 1,215-scenario parametric sweep evaluates
+                fossil fleet consequences across <strong>thousands of plausible futures</strong>, delivering
+                P10/P50/P90 distributions rather than single point estimates. This trades dispatch fidelity
+                for parametric coverage &mdash; identifying conclusions that are <strong>robust across uncertain futures</strong>
+                rather than optimal for one assumed future.
+            </p>
+            <div style="overflow-x: auto;">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Single-Point Optimization (IPM/GenX)</th>
+                            <th>Parametric Sweep (This Tool)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Core question</strong></td>
+                            <td>"What's optimal for this assumed future?"</td>
+                            <td>"What's robust across all plausible futures?"</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Assumption treatment</strong></td>
+                            <td>Fixed inputs &rarr; one "optimal" solution</td>
+                            <td>Swept inputs &rarr; probability-weighted distribution</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Fragility</strong></td>
+                            <td>Small input changes can flip outcomes ($2/MWh gas shift changes retirement timing by years)</td>
+                            <td>P10/P50/P90 bands explicitly show where outcomes are assumption-sensitive</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Decision support</strong></td>
+                            <td>Prescriptive: "Build 43.2 GW solar"</td>
+                            <td>Descriptive: "Solar + battery is no-regrets above 70% clean across all fuel/carbon scenarios"</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Runtime</strong></td>
+                            <td>Hours to days per scenario</td>
+                            <td>5 sec &ndash; 30 min (full 1,215-scenario sweep)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Scenario coverage</strong></td>
+                            <td>3&ndash;10 reference cases</td>
+                            <td>1,215+ parametric combinations</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p>
+                For corporate procurement, technology investment timing, and policy screening &mdash; all decisions under
+                uncertainty &mdash; robustness across uncertain futures is more actionable than optimality under assumed
+                futures. The decision-relevant question is <em>"which investments are no-regrets?"</em> not
+                <em>"what's the optimal portfolio?"</em>
+            </p>
+            <h3>Alignment with Emerging Methodological Direction</h3>
+            <p>This approach aligns with a broader shift in energy systems analysis:</p>
+            <ul>
+                <li><strong>DMDU (Decision Making Under Deep Uncertainty)</strong> &mdash; Lempert et al. at RAND argue that "predict-then-optimize" fails under deep uncertainty. Scenario discovery &mdash; identifying which conclusions survive across input ranges &mdash; is the recommended alternative.</li>
+                <li><strong>Robust Decision Making (RDM)</strong> &mdash; Applied by the California Energy Commission and NYSERDA to long-term energy planning, evaluating strategies across hundreds of scenarios rather than optimizing for one.</li>
+                <li><strong>NREL Standard Scenarios</strong> &mdash; NREL publishes 30+ scenarios annually, explicitly stating that no single scenario should guide investment. The 2024 report: <em>"The value of scenario analysis comes from exploring the space of possible outcomes."</em></li>
+                <li><strong>EPRI US-REGEN</strong> &mdash; Runs 100+ scenarios across technology cost, policy, and demand assumptions, presenting results as ranges rather than point estimates.</li>
+                <li><strong>MIT GenX</strong> &mdash; Recent developments incorporate stochastic programming and Monte Carlo sampling, moving away from deterministic single-run optimization.</li>
+                <li><strong>IEA World Energy Outlook</strong> &mdash; Shifted from a single "reference case" to three named scenarios (STEPS, APS, NZE) &mdash; an implicit acknowledgment that single-point forecasts are insufficient.</li>
+            </ul>
+            <div class="callout">
+                <p>
+                    <strong>Where single-point optimization retains its advantage:</strong>
+                    Regulatory proceedings (FERC/PUCs require specific plans), transmission planning (specific lines in specific locations),
+                    and short-term operations (exact commitment schedules). The IPM trigger system (&sect;9b) bridges this gap:
+                    when parametric results cross into territory requiring dispatch fidelity, the model flags it automatically.
+                </p>
+            </div>
         </div>
 
         <!-- Section 2: Retirement Mechanism -->
@@ -390,8 +480,11 @@
             <h2>5. What This Tool Does NOT Do</h2>
             <div class="callout callout-warn">
                 <p>
-                    This tool is <strong>not</strong> a production capacity expansion model. It complements — rather than
-                    replaces — tools like GenX, ReEDS, PLEXOS, IPM, and Aurora for detailed planning analysis.
+                    This tool is <strong>not</strong> a production capacity expansion model. It deliberately trades dispatch
+                    fidelity for parametric coverage &mdash; evaluating fossil fleet consequences across 1,215+ scenarios in
+                    minutes rather than one scenario in days. These limitations are the cost of that tradeoff. The IPM trigger
+                    system (&sect;9b) automatically identifies when dispatch fidelity matters and production-grade tools
+                    (GenX, PLEXOS, IPM, Aurora) should validate a specific finding.
                 </p>
             </div>
             <ul>
@@ -435,7 +528,7 @@
         <!-- Section 4: Comparison to Production Models -->
         <div class="meth-section">
             <h2>7. Comparison to Production Models</h2>
-            <p>Where this tool sits relative to industry-standard capacity expansion and dispatch models:</p>
+            <p>Where this tool sits relative to industry-standard capacity expansion and dispatch models. The key tradeoff: production models trade scenario coverage for dispatch fidelity (exact answers for one future); this tool trades dispatch fidelity for scenario coverage (robust answers across thousands of futures).</p>
             <div style="overflow-x: auto;">
                 <table class="comparison-table">
                     <thead>
@@ -576,14 +669,35 @@
                             <td>Minutes–Hours</td>
                             <td class="yes">5–120 sec</td>
                         </tr>
+                        <tr>
+                            <td>Scenarios per analysis</td>
+                            <td class="partial">5–10</td>
+                            <td class="partial">30+ (Standard Scenarios)</td>
+                            <td class="partial">3–5</td>
+                            <td class="partial">3–5</td>
+                            <td class="partial">5–10</td>
+                            <td class="yes">1,215+</td>
+                        </tr>
+                        <tr>
+                            <td>Output form</td>
+                            <td>Single optimal plan</td>
+                            <td>Single plan per scenario</td>
+                            <td>Single dispatch</td>
+                            <td>Single optimal plan</td>
+                            <td>Single plan per scenario</td>
+                            <td class="yes">P10/P50/P90 distributions</td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
             <div class="callout">
                 <p>
-                    <strong>Positioning:</strong> This tool occupies a distinct niche — rapid interactive screening with
-                    stakeholder-friendly visualization. It is closest in spirit to Bloomberg NEF market outlook models
-                    or internal utility "what-if" analysis tools, but with transparent, configurable assumptions.
+                    <strong>Positioning:</strong> This tool is a fossil dispatch simulator that trades dispatch fidelity
+                    for parametric coverage. Production models deliver precise answers to assumed futures; this tool identifies
+                    robust conclusions across uncertain futures. The 1,215-scenario sweep with P10/P50/P90 output aligns with the
+                    broader methodological shift toward uncertainty-aware analysis (DMDU, RDM, NREL Standard Scenarios, EPRI US-REGEN)
+                    &mdash; if scenarios are valuable, more scenarios with faster turnaround and probabilistic framing are more valuable.
+                    The IPM trigger system automatically flags when results need production-grade validation.
                 </p>
             </div>
         </div>
