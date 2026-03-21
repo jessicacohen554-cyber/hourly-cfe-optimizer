@@ -119,6 +119,54 @@ OUTPUT_DIR = str(resolve_data_path('results'))
 
 logger = logging.getLogger(__name__)
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# RESULT DATACLASSES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@dataclass
+class LmpResult:
+    """Return type for compute_lmp_at_threshold()."""
+    hourly_lmp: np.ndarray
+    avg_lmp: float
+    lmp_p90: float
+    gen_econ: dict
+    dr_metrics: dict
+    zonal_stats: Optional[dict]
+    scarcity_hours_fraction: float
+    zonal_lmp_matrix: Optional[np.ndarray]
+    zonal_zone_names: Optional[list]
+    curtailment_rate: float
+    lmp_confidence: float
+
+    def __iter__(self):
+        return iter((self.hourly_lmp, self.avg_lmp, self.lmp_p90,
+                     self.gen_econ, self.dr_metrics, self.zonal_stats,
+                     self.scarcity_hours_fraction, self.zonal_lmp_matrix,
+                     self.zonal_zone_names, self.curtailment_rate,
+                     self.lmp_confidence))
+
+
+@dataclass
+class DeploymentResult:
+    """Return type for compute_market_deployment()."""
+    new_clean_pct: float
+    deployed: Dict[str, float]
+    zone_results: List[dict]
+    rev_breakdown: dict
+    blended_cost: float
+    blended_revenue: float
+    remaining_gw: float
+    energy_rev_by_resource: Dict[str, float]
+    capture_rates: Dict[str, float]
+
+    def __iter__(self):
+        return iter((self.new_clean_pct, self.deployed, self.zone_results,
+                     self.rev_breakdown, self.blended_cost, self.blended_revenue,
+                     self.remaining_gw, self.energy_rev_by_resource,
+                     self.capture_rates))
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # CONSTANTS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -580,9 +628,10 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
             zonal_zone_names = zone_config['zones']
             hourly_lmp = system_lmp
             unit_idx = np.full(len(hourly_lmp), -1, dtype=np.int8)
-    except Exception:
-        # Fall back to copper-plate
-        pass
+    except Exception as _zonal_err:
+        # Fall back to copper-plate LMP — log the failure for debugging
+        logger.debug("Zonal LMP failed for %s (clean=%.1f%%): %s — using copper-plate",
+                     iso, clean_pct, _zonal_err)
 
     if zonal_lmp_matrix is None:
         hourly_lmp, unit_idx, _dr_unused, lmp_confidence = compute_hourly_lmp_vectorized(
@@ -692,7 +741,13 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
         _ordc_adder = price_model.compute_ordc_adder(_reserves_mw)
         scarcity_hours_fraction = float(np.sum(_ordc_adder > 50.0)) / H
 
-    return hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_stats, scarcity_hours_fraction, zonal_lmp_matrix, zonal_zone_names, curtailment_rate, lmp_confidence
+    return LmpResult(
+        hourly_lmp=hourly_lmp, avg_lmp=avg_lmp, lmp_p90=p90_lmp,
+        gen_econ=gen_econ, dr_metrics=dr_metrics, zonal_stats=zonal_stats,
+        scarcity_hours_fraction=scarcity_hours_fraction,
+        zonal_lmp_matrix=zonal_lmp_matrix, zonal_zone_names=zonal_zone_names,
+        curtailment_rate=curtailment_rate, lmp_confidence=lmp_confidence,
+    )
 
 
 @njit(cache=True)
@@ -1194,7 +1249,7 @@ def _is_nuclear_plant(plant):
     mover = str(plant.get('prime_mover', '')).upper()
     utype = str(plant.get('unit_type', '')).lower()
     return ('NUC' in fuel or 'UR' in fuel or  # NUC, NUCLEAR, URANIUM
-            'ST' == mover and 'NUC' in fuel or
+            (mover == 'ST' and 'NUC' in fuel) or
             utype == 'nuclear')
 
 
@@ -1681,28 +1736,38 @@ def compute_storage_arbitrage_from_lmp(hourly_lmp, iso=None):
         #   - Units: $/MWh × hours = $/MW per cycle → ÷ 1000 for $/kW per cycle
         total_revenue_dollar_per_mw = 0.0
         charge_hours_per_window = min(duration, window_hours // 2)
-        discharge_hours_per_window = charge_hours_per_window  # symmetric
+        discharge_hours_per_window = charge_hours_per_window
 
-        for w in range(n_windows):
-            w_start = w * window_hours
-            w_end = min(w_start + window_hours, H)
-            if w_end - w_start < 2 * charge_hours_per_window:
-                continue  # window too short
+        # Vectorized: reshape LMP into (n_windows, window_hours) matrix
+        # Truncate to exact multiple of window_hours for clean reshape
+        usable_hours = n_windows * window_hours
+        if usable_hours > H:
+            usable_hours = (H // window_hours) * window_hours
+            n_windows = usable_hours // window_hours
+        if n_windows <= 0 or usable_hours <= 0:
+            results[tech] = 0.0
+            continue
 
-            window_lmp = lmp[w_start:w_end]
-            sorted_idx = np.argsort(window_lmp)
+        lmp_matrix = lmp[:usable_hours].reshape(n_windows, window_hours)
 
-            # Charge at cheapest hours, discharge at most expensive
-            # Each hour: 1 MW power → 1 MWh energy, cost/revenue = LMP × 1 MWh
-            charge_cost = np.sum(window_lmp[sorted_idx[:charge_hours_per_window]])
-            discharge_rev = np.sum(window_lmp[sorted_idx[-discharge_hours_per_window:]])
+        # Check minimum window size (need at least 2 × charge_hours)
+        if window_hours < 2 * charge_hours_per_window:
+            results[tech] = 0.0
+            continue
 
-            # Net revenue per cycle in $/MW (1 MW power capacity assumed)
-            cycle_revenue = discharge_rev * rte - charge_cost
-            total_revenue_dollar_per_mw += cycle_revenue
+        # Sort each window independently along axis=1
+        sorted_matrix = np.sort(lmp_matrix, axis=1)
+
+        # Charge at cheapest hours (left columns), discharge at most expensive (right columns)
+        charge_cost_per_window = sorted_matrix[:, :charge_hours_per_window].sum(axis=1)
+        discharge_rev_per_window = sorted_matrix[:, -discharge_hours_per_window:].sum(axis=1)
+
+        # Net revenue per cycle: discharge × RTE - charge
+        cycle_revenues = discharge_rev_per_window * rte - charge_cost_per_window
+        total_revenue_dollar_per_mw = float(np.sum(np.maximum(cycle_revenues, 0.0)))
 
         # Convert $/MW-yr → $/kW-yr (÷ 1000)
-        results[tech] = max(0.0, total_revenue_dollar_per_mw / 1000.0)
+        results[tech] = total_revenue_dollar_per_mw / 1000.0
 
     return results
 
@@ -3039,16 +3104,16 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
         energy_rev_by_res[res] = round(rev, 2)
         capture_rates[res] = round(rev / avg_lmp, 3) if avg_lmp > 0 else 1.0
 
-    return (
-        round(clean_pct, 2),
-        deployed,
-        zone_results,
-        rev_breakdown,
-        round(blended_cost, 2),
-        round(blended_revenue, 2),
-        remaining_gw,
-        energy_rev_by_res,
-        capture_rates,
+    return DeploymentResult(
+        new_clean_pct=round(clean_pct, 2),
+        deployed=deployed,
+        zone_results=zone_results,
+        rev_breakdown=rev_breakdown,
+        blended_cost=round(blended_cost, 2),
+        blended_revenue=round(blended_revenue, 2),
+        remaining_gw=remaining_gw,
+        energy_rev_by_resource=energy_rev_by_res,
+        capture_rates=capture_rates,
     )
 
 
@@ -3516,6 +3581,54 @@ def build_provenance_metadata(input_params: dict) -> ProvenanceMetadata:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# LMP CACHE HELPER
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _compute_or_cache_lmp(iso, current_pct, conditions, demand_norm, demand_mw_profile,
+                           supply_profiles_iso, resource_pcts, storage_pcts,
+                           ic_norm, ic_firm_mw, dr_level, growth_factor, state,
+                           year, carbon_price, interchange_enabled, nb_bucket,
+                           lmp_cache=None):
+    """Compute LMP at threshold, with caching. Returns LmpResult."""
+    stor_key = tuple(sorted(storage_pcts.items())) if storage_pcts else ()
+    cache_key = (iso, current_pct, conditions['fuel_level'],
+                 conditions['demand_growth'], year, carbon_price,
+                 interchange_enabled, dr_level, nb_bucket, stor_key)
+
+    if lmp_cache is not None and cache_key in lmp_cache:
+        return lmp_cache[cache_key]
+
+    result = compute_lmp_at_threshold(
+        iso, current_pct, conditions['fuel_level'],
+        demand_norm, demand_mw_profile,
+        supply_profiles_iso, resource_pcts,
+        battery_pct=storage_pcts.get('battery', 0),
+        battery8_pct=storage_pcts.get('battery8', 0),
+        ldes_pct=storage_pcts.get('ldes', 0),
+        h2_pct=storage_pcts.get('h2', 0),
+        carbon_price=carbon_price,
+        nox_price=conditions.get('nox_price', 0.0),
+        sox_price=conditions.get('sox_price', 0.0),
+        nox_limit=conditions.get('nox_limit'),
+        sox_limit=conditions.get('sox_limit'),
+        custom_fuel_prices=conditions.get('custom_fuel_prices'),
+        custom_co2_price=conditions.get('custom_co2_price'),
+        custom_heat_rates=conditions.get('custom_heat_rates'),
+        custom_vom=conditions.get('custom_vom'),
+        interchange_norm=ic_norm,
+        firm_import_mw=ic_firm_mw,
+        dr_level=dr_level,
+        demand_growth_factor=growth_factor,
+        new_fossil_builds=state.get('new_fossil_builds'),
+    )
+
+    if lmp_cache is not None:
+        lmp_cache[cache_key] = result
+
+    return result
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # CORE MARKET SIMULATION
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -3602,6 +3715,9 @@ def run_market_simulation(scenario_id, conditions, isos=None,
     else:
         _full_data_sources = {'simple': _data_sources}
 
+    # Global cumulative GW — shared across all ISOs (intentional: represents worldwide
+    # technology learning. ISO-specific deployments contribute to global cost reductions
+    # via Wright's Law. This is the standard assumption in IEA WEO / IRENA models.)
     cumulative_gw = dict(WRIGHT_CUMULATIVE_GW_2025)
     # Endogenous learning: allow conditions to override the global toggle
     _endogenous = conditions.get('endogenous_learning', ENDOGENOUS_LEARNING)
@@ -3797,42 +3913,15 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             _nb_bucket = round(_nb_total / 5000) * 5000  # 5 GW buckets
             # R1: Include storage state in LMP cache key
             _prev_stor = state.get('storage_deployed', {})
-            _stor_key = tuple(sorted(_prev_stor.items())) if _prev_stor else ()
-            _lmp_key = (iso, current_pct, conditions['fuel_level'],
-                        conditions['demand_growth'], year, carbon_price,
-                        interchange_enabled, dr_level, _nb_bucket, _stor_key)
-            zonal_congestion_data = None
-            scarcity_hours_frac = 0.0
-            curtailment_rate = 0.0
-            if _lmp_cache is not None and _lmp_key in _lmp_cache:
-                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate, lmp_confidence = _lmp_cache[_lmp_key]
-            else:
-                # R1: Use previously deployed storage in LMP calculation (Pass 1)
-                hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate, lmp_confidence = compute_lmp_at_threshold(
-                    iso, current_pct, conditions['fuel_level'],
-                    demand_norm, demand_mw_profile,
-                    supply_profiles_iso, resource_pcts,
-                    battery_pct=_prev_stor.get('battery', 0),
-                    battery8_pct=_prev_stor.get('battery8', 0),
-                    ldes_pct=_prev_stor.get('ldes', 0),
-                    h2_pct=_prev_stor.get('h2', 0),
-                    carbon_price=carbon_price,
-                    nox_price=conditions.get('nox_price', 0.0),
-                    sox_price=conditions.get('sox_price', 0.0),
-                    nox_limit=conditions.get('nox_limit'),
-                    sox_limit=conditions.get('sox_limit'),
-                    custom_fuel_prices=conditions.get('custom_fuel_prices'),
-                    custom_co2_price=conditions.get('custom_co2_price'),
-                    custom_heat_rates=conditions.get('custom_heat_rates'),
-                    custom_vom=conditions.get('custom_vom'),
-                    interchange_norm=ic_norm,
-                    firm_import_mw=ic_firm_mw,
-                    dr_level=dr_level,
-                    demand_growth_factor=growth_factor,
-                    new_fossil_builds=state.get('new_fossil_builds'),
-                )
-                if _lmp_cache is not None:
-                    _lmp_cache[_lmp_key] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate, lmp_confidence)
+            lmp_result = _compute_or_cache_lmp(
+                iso, current_pct, conditions, demand_norm, demand_mw_profile,
+                supply_profiles_iso, resource_pcts, _prev_stor,
+                ic_norm, ic_firm_mw, dr_level, growth_factor, state,
+                year, carbon_price, interchange_enabled, _nb_bucket,
+                lmp_cache=_lmp_cache)
+            (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics,
+             zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix,
+             _zonal_zone_names, curtailment_rate, lmp_confidence) = lmp_result
 
             # --- RESERVE MARGIN (for endogenous capacity pricing) ---
             reserve_margin_pct = compute_reserve_margin(
@@ -3852,38 +3941,15 @@ def run_market_simulation(scenario_id, conditions, isos=None,
 
             if _storage_changed:
                 # LMP Pass 2: recompute with new storage deployment
-                _stor_key2 = tuple(sorted(_new_stor.items()))
-                _lmp_key2 = (iso, current_pct, conditions['fuel_level'],
-                             conditions['demand_growth'], year, carbon_price,
-                             interchange_enabled, dr_level, _nb_bucket, _stor_key2)
-                if _lmp_cache is not None and _lmp_key2 in _lmp_cache:
-                    hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate, lmp_confidence = _lmp_cache[_lmp_key2]
-                else:
-                    hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate, lmp_confidence = compute_lmp_at_threshold(
-                        iso, current_pct, conditions['fuel_level'],
-                        demand_norm, demand_mw_profile,
-                        supply_profiles_iso, resource_pcts,
-                        battery_pct=_new_stor.get('battery', 0),
-                        battery8_pct=_new_stor.get('battery8', 0),
-                        ldes_pct=_new_stor.get('ldes', 0),
-                        h2_pct=_new_stor.get('h2', 0),
-                        carbon_price=carbon_price,
-                        nox_price=conditions.get('nox_price', 0.0),
-                        sox_price=conditions.get('sox_price', 0.0),
-                        nox_limit=conditions.get('nox_limit'),
-                        sox_limit=conditions.get('sox_limit'),
-                        custom_fuel_prices=conditions.get('custom_fuel_prices'),
-                        custom_co2_price=conditions.get('custom_co2_price'),
-                        custom_heat_rates=conditions.get('custom_heat_rates'),
-                        custom_vom=conditions.get('custom_vom'),
-                        interchange_norm=ic_norm,
-                        firm_import_mw=ic_firm_mw,
-                        dr_level=dr_level,
-                        demand_growth_factor=growth_factor,
-                        new_fossil_builds=state.get('new_fossil_builds'),
-                    )
-                    if _lmp_cache is not None:
-                        _lmp_cache[_lmp_key2] = (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix, _zonal_zone_names, curtailment_rate, lmp_confidence)
+                lmp_result = _compute_or_cache_lmp(
+                    iso, current_pct, conditions, demand_norm, demand_mw_profile,
+                    supply_profiles_iso, resource_pcts, _new_stor,
+                    ic_norm, ic_firm_mw, dr_level, growth_factor, state,
+                    year, carbon_price, interchange_enabled, _nb_bucket,
+                    lmp_cache=_lmp_cache)
+                (hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics,
+                 zonal_congestion_data, scarcity_hours_frac, _zonal_lmp_matrix,
+                 _zonal_zone_names, curtailment_rate, lmp_confidence) = lmp_result
 
                 _log(f"  {iso} R1 storage: "
                      + ", ".join(f"{t}={_new_stor.get(t, 0):.4f}%"
@@ -4548,20 +4614,13 @@ def _scenario_weight(scenario_id):
     code_to_level = {'L': 'Low', 'M': 'Medium', 'H': 'High'}
 
     demand_code = parts[1]
-    ppa_code = parts[-3]
-    gas_code = parts[-2]
-    # The queue_code and nfc_code are the last two? Re-check format:
-    # MKT_{D}_{price_name}_{P}_{G}_{Q}_{N}  → 7 minimum tokens
-    queue_code = parts[-2]
-    nfc_code = parts[-1]
-
-    # Actually re-parse: parts = [MKT, D, ...price_name..., P, G, Q, N]
-    # Last 4 single-char codes: ppa, gas, queue, nfc
+    # Scenario ID format: MKT_{D}_{price_name}_{P}_{G}_{Q}_{N}
+    # Last 4 single-char codes: ppa, gas_friction, queue, new_fossil_cost
+    # price_name occupies all tokens between index 2 and -4 (may contain underscores)
     nfc_code = parts[-1]
     queue_code = parts[-2]
     gas_code = parts[-3]
     ppa_code = parts[-4]
-    # price_name is everything between index 2 and -4
     price_name = '_'.join(parts[2:-4])
 
     demand = code_to_level.get(demand_code, demand_code)
@@ -4639,6 +4698,10 @@ def aggregate_sweep_percentiles(all_results):
     grouped = defaultdict(lambda: defaultdict(list))  # (iso, year) → [year_result, ...]
 
     for scenario_id, iso_results in all_results.items():
+        if scenario_id.startswith('_'):
+            continue  # Skip _provenance and other metadata keys
+        if not isinstance(iso_results, dict):
+            continue
         for iso, year_results in iso_results.items():
             for yr in year_results:
                 key = (iso, yr.get('year', 0))
