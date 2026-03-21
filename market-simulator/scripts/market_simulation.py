@@ -119,6 +119,54 @@ OUTPUT_DIR = str(resolve_data_path('results'))
 
 logger = logging.getLogger(__name__)
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# RESULT DATACLASSES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@dataclass
+class LmpResult:
+    """Return type for compute_lmp_at_threshold()."""
+    hourly_lmp: np.ndarray
+    avg_lmp: float
+    lmp_p90: float
+    gen_econ: dict
+    dr_metrics: dict
+    zonal_stats: Optional[dict]
+    scarcity_hours_fraction: float
+    zonal_lmp_matrix: Optional[np.ndarray]
+    zonal_zone_names: Optional[list]
+    curtailment_rate: float
+    lmp_confidence: float
+
+    def __iter__(self):
+        return iter((self.hourly_lmp, self.avg_lmp, self.lmp_p90,
+                     self.gen_econ, self.dr_metrics, self.zonal_stats,
+                     self.scarcity_hours_fraction, self.zonal_lmp_matrix,
+                     self.zonal_zone_names, self.curtailment_rate,
+                     self.lmp_confidence))
+
+
+@dataclass
+class DeploymentResult:
+    """Return type for compute_market_deployment()."""
+    new_clean_pct: float
+    deployed: Dict[str, float]
+    zone_results: List[dict]
+    rev_breakdown: dict
+    blended_cost: float
+    blended_revenue: float
+    remaining_gw: float
+    energy_rev_by_resource: Dict[str, float]
+    capture_rates: Dict[str, float]
+
+    def __iter__(self):
+        return iter((self.new_clean_pct, self.deployed, self.zone_results,
+                     self.rev_breakdown, self.blended_cost, self.blended_revenue,
+                     self.remaining_gw, self.energy_rev_by_resource,
+                     self.capture_rates))
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # CONSTANTS
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -693,7 +741,13 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
         _ordc_adder = price_model.compute_ordc_adder(_reserves_mw)
         scarcity_hours_fraction = float(np.sum(_ordc_adder > 50.0)) / H
 
-    return hourly_lmp, avg_lmp, p90_lmp, gen_econ, dr_metrics, zonal_stats, scarcity_hours_fraction, zonal_lmp_matrix, zonal_zone_names, curtailment_rate, lmp_confidence
+    return LmpResult(
+        hourly_lmp=hourly_lmp, avg_lmp=avg_lmp, lmp_p90=p90_lmp,
+        gen_econ=gen_econ, dr_metrics=dr_metrics, zonal_stats=zonal_stats,
+        scarcity_hours_fraction=scarcity_hours_fraction,
+        zonal_lmp_matrix=zonal_lmp_matrix, zonal_zone_names=zonal_zone_names,
+        curtailment_rate=curtailment_rate, lmp_confidence=lmp_confidence,
+    )
 
 
 @njit(cache=True)
@@ -3040,16 +3094,16 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
         energy_rev_by_res[res] = round(rev, 2)
         capture_rates[res] = round(rev / avg_lmp, 3) if avg_lmp > 0 else 1.0
 
-    return (
-        round(clean_pct, 2),
-        deployed,
-        zone_results,
-        rev_breakdown,
-        round(blended_cost, 2),
-        round(blended_revenue, 2),
-        remaining_gw,
-        energy_rev_by_res,
-        capture_rates,
+    return DeploymentResult(
+        new_clean_pct=round(clean_pct, 2),
+        deployed=deployed,
+        zone_results=zone_results,
+        rev_breakdown=rev_breakdown,
+        blended_cost=round(blended_cost, 2),
+        blended_revenue=round(blended_revenue, 2),
+        remaining_gw=remaining_gw,
+        energy_rev_by_resource=energy_rev_by_res,
+        capture_rates=capture_rates,
     )
 
 
