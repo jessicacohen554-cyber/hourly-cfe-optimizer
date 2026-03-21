@@ -121,6 +121,65 @@ logger = logging.getLogger(__name__)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# TIME-SERIES FUEL PRICE RESOLUTION
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _resolve_fuel_prices_for_year(conditions: dict, year: int, iso: str = None) -> dict | None:
+    """Resolve custom fuel prices for a specific simulation year.
+
+    If conditions contains 'custom_fuel_timeseries' (year-indexed from CSV),
+    returns a flat {'coal': X, 'gas': Y, 'oil': Z} dict for the given year/ISO,
+    averaging across months.
+
+    Falls back to conditions['custom_fuel_prices'] (static scalar dict) if no
+    time-series is present, or None if neither exists.
+    """
+    ts = conditions.get('custom_fuel_timeseries')
+    if not ts:
+        return conditions.get('custom_fuel_prices')
+
+    result = {}
+    for fuel_type in ('gas', 'coal', 'oil'):
+        fuel_ts = ts.get(fuel_type)
+        if not fuel_ts:
+            continue
+
+        # Static (legacy) format — None key means applies to all years
+        if None in fuel_ts:
+            months_data = fuel_ts[None]
+            vals = []
+            for mo_data in months_data.values():
+                zd = mo_data.get('system', {})
+                if iso and iso in zd:
+                    vals.append(zd[iso])
+                elif zd:
+                    vals.append(next(iter(zd.values())))
+            result[fuel_type] = sum(vals) / len(vals) if vals else 0
+            continue
+
+        # Time-series — find exact or nearest year
+        available_years = sorted(fuel_ts.keys())
+        if year in fuel_ts:
+            target_year = year
+        elif available_years:
+            target_year = min(available_years, key=lambda y: abs(y - year))
+        else:
+            continue
+
+        months_data = fuel_ts[target_year]
+        vals = []
+        for mo_data in months_data.values():
+            zd = mo_data.get('system', {})
+            if iso and iso in zd:
+                vals.append(zd[iso])
+            elif zd:
+                vals.append(next(iter(zd.values())))
+        result[fuel_type] = sum(vals) / len(vals) if vals else 0
+
+    return result if result else conditions.get('custom_fuel_prices')
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # RESULT DATACLASSES
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -3658,7 +3717,7 @@ def _compute_or_cache_lmp(iso, current_pct, conditions, demand_norm, demand_mw_p
         sox_price=conditions.get('sox_price', 0.0),
         nox_limit=conditions.get('nox_limit'),
         sox_limit=conditions.get('sox_limit'),
-        custom_fuel_prices=conditions.get('custom_fuel_prices'),
+        custom_fuel_prices=_resolve_fuel_prices_for_year(conditions, year, iso),
         custom_co2_price=conditions.get('custom_co2_price'),
         custom_heat_rates=conditions.get('custom_heat_rates'),
         custom_vom=conditions.get('custom_vom'),
@@ -4154,7 +4213,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             plant_retirement_list = []
             try:
                 fuel_level = conditions.get('fuel_level', 'Medium')
-                _fuel_prices = conditions.get('custom_fuel_prices') or FUEL_PRICES.get(fuel_level, FUEL_PRICES['Medium'])
+                _fuel_prices = _resolve_fuel_prices_for_year(conditions, year, iso) or FUEL_PRICES.get(fuel_level, FUEL_PRICES['Medium'])
                 plant_stack, _plant_total_mw = build_plant_level_merit_order(
                     iso, current_pct, fuel_level=fuel_level,
                     carbon_price=carbon_price,
