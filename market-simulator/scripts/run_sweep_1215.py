@@ -7,7 +7,7 @@ across all ISOs and years.
 
 Usage:
     cd market-simulator/scripts
-    python run_sweep_405.py [--isos CAISO PJM] [--output-dir ../results/sweep_1215]
+    python run_sweep_1215.py [--isos CAISO PJM] [--output-dir ../results/sweep_1215]
 
 Produces:
     sweep_1215/sweep_1215_flat.parquet           — flat table for analysis (~10 MB)
