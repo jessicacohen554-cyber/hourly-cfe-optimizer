@@ -482,11 +482,10 @@ var FleetSidebar = (function () {
                     var elapsed = Math.round(performance.now() - t0);
 
                     var scenarioName = (els.nameInput && els.nameInput.value.trim()) || 'Custom';
-                    var scenarioKey = 'custom_' + Date.now();
 
                     var scenarioData = {
                         description: scenarioName,
-                        color: '#8B5CF6',
+                        color: '#2372B9',
                         envelope: result.envelope,
                         plant_detail: result.plant_detail,
                         generation_by_fuel: result.generation_by_fuel,
@@ -495,8 +494,8 @@ var FleetSidebar = (function () {
                     };
 
                     if (window.FLEET_SCENARIOS_API) {
-                        window.FLEET_SCENARIOS_API.addScenario(scenarioKey, scenarioName, scenarioData);
-                        setStatus('Done in ' + elapsed + 'ms — "' + scenarioName + '" added to charts');
+                        window.FLEET_SCENARIOS_API.setCustomScenario(scenarioName, scenarioData);
+                        setStatus('Done in ' + elapsed + 'ms — custom scenario updated');
                     } else {
                         console.warn('FLEET_SCENARIOS_API not available');
                         setStatus('Computed in ' + elapsed + 'ms but chart API unavailable');
