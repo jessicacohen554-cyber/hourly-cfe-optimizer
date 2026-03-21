@@ -2,7 +2,17 @@
 
 ## Quick Start
 
-### Option 1: Double-Click Launcher (Recommended)
+### Option 1: Desktop App (Recommended — No Python Required)
+
+**Windows:**
+Double-click `MarketSimulator.exe`. A native window opens with a loading splash, then the full application once the server is ready. No Python installation, terminal, or browser required.
+
+**macOS:**
+Open `MarketSimulator.app`. If Gatekeeper blocks it, right-click the app and select "Open" to bypass the unsigned-app warning. See [macOS Signing & Gatekeeper](#macos-signing--gatekeeper) for details.
+
+On first launch, the app creates an `app_data/` directory next to the executable with writable copies of templates, profiles, and result storage.
+
+### Option 2: Double-Click Launcher (Requires Python)
 
 **Windows:**
 Double-click `run.bat`. This calls `python app-startup\start.py`, which installs dependencies and launches the server.
@@ -13,13 +23,22 @@ cd app-startup
 python start.py
 ```
 
-### Option 2: Manual
+### Option 3: Manual (Developer Mode)
 
 ```bash
 pip install -r app-startup/requirements.txt
 python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```
 Then open http://127.0.0.1:8000 in your browser.
+
+### Option 4: Desktop App in Dev Mode (Developer)
+
+```bash
+pip install -r app-startup/requirements.txt
+cd market-simulator
+python desktop_app.py
+```
+Opens the native pywebview window connected to the local dev server.
 
 ---
 
@@ -66,10 +85,16 @@ market-simulator/
 
 ## System Requirements
 
+### Desktop App (No Python Required)
+- **Windows 10+** with Edge WebView2 Runtime (pre-installed on Windows 10 2004+)
+- **macOS 10.15+** (Catalina or later)
+- ~500 MB disk space for the application bundle
+
+### Development Mode (Python Required)
 - **Python 3.9+** (3.11 recommended)
 - **pip** (comes with Python)
 - **Modern web browser** (Chrome, Firefox, Edge, Safari)
-- **No other software required** — all dependencies install automatically via pip
+- No other software required — all dependencies install automatically via pip
 
 ---
 
@@ -878,3 +903,191 @@ Check that your CSV has exactly the right number of rows and all 7 ISO columns. 
 - **Data**: EIA 860 plant fleet, EIA demand profiles, eGRID emission rates, fossil fleet data, EIA-930 interchange profiles
 - The tool runs entirely locally — no data is sent to external servers
 - All input fields include info-hover tooltips with parameter explanations
+
+---
+
+## Desktop App
+
+### Overview
+
+The desktop app packages the entire Market Simulator into a standalone executable using PyInstaller + pywebview. Users double-click a single file — no Python, no terminal, no browser required. The app opens in a native OS window backed by an embedded FastAPI/uvicorn server.
+
+### How It Works
+
+1. **Splash screen** appears immediately showing "Starting server..." with a loading spinner
+2. **First-run setup** creates the writable `app_data/` directory tree next to the executable
+3. **Uvicorn server** starts in a background daemon thread on an automatically-selected free port
+4. **Readiness poll** hits `/api/isos` every 0.3s (up to 30s timeout)
+5. **Navigation** — once the server responds, the splash window navigates to the full application
+6. **Shutdown** — closing the window kills the server and exits the process
+
+### Directory Layout (Installed)
+
+```
+MarketSimulator/
+├── MarketSimulator.exe          (Windows) / MarketSimulator.app (macOS)
+├── _internal/                   ← PyInstaller bundle (READ-ONLY)
+│   └── market-simulator/
+│       ├── frontend/            ← HTML, CSS, JS, brand-assets
+│       ├── scripts/             ← Simulation engine modules
+│       ├── backend/             ← FastAPI app + models
+│       └── data/                ← Bundled defaults only
+│
+└── app_data/                    ← User-writable (created on first run)
+    ├── data/
+    │   ├── eia-860/             ← Drop EIA-860 data here
+    │   ├── eia-923/             ← Drop EIA-923 data here
+    │   ├── epa-campd/           ← Drop EPA CAMPD data here
+    │   ├── profiles/            ← Copied from bundle on first run
+    │   └── plant_heat_rates.json  ← Auto-regenerated when source data changes
+    ├── custom-user-inputs/      ← Templates + user CSV overrides
+    └── results/                 ← Persists across restarts
+        ├── sweep_1215/
+        ├── fleet_results.json
+        └── fleet_scenario_results.json
+```
+
+### Data Drop-In
+
+The app ships with synthetic default data. To use real data:
+
+1. Navigate to the `app_data/data/` directory next to the executable
+2. Place EIA-860 JSON files in `eia-860/` (organized by state subdirectories)
+3. Place EIA-923 JSON files in `eia-923/` (organized by state/month)
+4. Place EPA CAMPD JSON files in `epa-campd/` (organized by state/month)
+5. Restart the app — heat rates auto-regenerate when source data is newer than the cache
+
+Custom CSV overrides (LMP, capacity prices, fuel prices, REC prices) go in `app_data/custom-user-inputs/`. Templates are pre-copied on first launch.
+
+### Persistence
+
+- **Results** persist in `app_data/results/` across restarts
+- **Sweep results** (`sweep_1215/`) persist once generated (first generation takes ~10-30 min)
+- **Numba JIT cache** persists in `app_data/.numba_cache/` — second launch is faster
+- **Custom inputs and dropped-in data** persist indefinitely
+
+### Building from Source
+
+**Prerequisites:** Python 3.9+, pip
+
+```bash
+cd market-simulator
+pip install -r app-startup/requirements.txt
+pip install pyinstaller pywebview
+pyinstaller market_simulator.spec
+```
+
+Output: `dist/MarketSimulator/` folder containing the executable and all dependencies.
+
+**Estimated bundle size:** 350–500 MB (Numba/llvmlite ~150 MB, NumPy/SciPy/Pandas/PyArrow ~200 MB, Python runtime ~30 MB, app code + data ~30 MB).
+
+### macOS Signing & Gatekeeper
+
+Unsigned `.app` bundles are blocked by macOS Gatekeeper. Options:
+
+1. **For internal use:** Right-click the app → "Open" → confirm the security dialog. This bypasses Gatekeeper for that specific app.
+
+2. **Ad-hoc signing (no Apple Developer account):**
+   ```bash
+   codesign --force --deep --sign - dist/MarketSimulator.app
+   ```
+   This satisfies basic Gatekeeper checks but won't pass notarization.
+
+3. **Full signing + notarization (for distribution):**
+   ```bash
+   # Sign with Developer ID
+   codesign --force --deep --sign "Developer ID Application: Your Name (TEAM_ID)" dist/MarketSimulator.app
+
+   # Create ZIP for notarization
+   ditto -c -k --keepParent dist/MarketSimulator.app MarketSimulator.zip
+
+   # Submit for notarization
+   xcrun notarytool submit MarketSimulator.zip --apple-id YOUR_APPLE_ID --team-id TEAM_ID --password APP_SPECIFIC_PASSWORD --wait
+
+   # Staple the notarization ticket
+   xcrun stapler staple dist/MarketSimulator.app
+   ```
+
+### Windows Defender / Antivirus
+
+PyInstaller executables are sometimes flagged as false positives by Windows Defender. Mitigations:
+
+- **Code-sign the .exe** with a valid code-signing certificate for external distribution
+- **For internal use:** Add the `MarketSimulator/` directory to Windows Defender exclusions:
+  Settings → Virus & threat protection → Exclusions → Add folder
+
+### Troubleshooting (Desktop App)
+
+| Problem | Solution |
+|---------|----------|
+| Splash stays on "Starting server..." | Check `app_data/server_debug.log` for server errors. Common cause: port conflict or missing dependency. |
+| Window opens but pages are blank | Check `app_data/startup.log` for path resolution issues. |
+| "No module named X" in server log | Missing hidden import — add to `market_simulator.spec` and rebuild. |
+| macOS blocks the app | Right-click → Open, or sign with `codesign`. |
+| Windows Defender flags the exe | Add to exclusions or code-sign the executable. |
+| Slow first launch | Normal — Numba JIT compiles on first run. Subsequent launches use cached compilation. |
+| Heat rates not updating | Ensure EIA-923/EPA CAMPD files are placed in `app_data/data/` subdirectories, not the bundle's `_internal/` directory. |
+
+---
+
+## End-to-End Testing Procedures
+
+### Windows Clean Machine Test
+
+1. **Environment:** Fresh Windows 10/11 VM with no Python installed
+2. **Steps:**
+   - Copy `dist/MarketSimulator/` folder to the VM
+   - Double-click `MarketSimulator.exe`
+   - Verify: splash screen appears → app loads in native window (no terminal, no browser)
+   - Verify: `app_data/` directory created with correct subdirectories
+   - Navigate all pages: Guide → Setup → Fleet Config → Results → Fleet Scenarios → IPP Report
+   - Run a single simulation on Setup page → verify results returned
+   - Check `app_data/custom-user-inputs/` has template CSVs
+   - Close window → verify process exits cleanly (no orphan processes)
+
+3. **Data drop-in test:**
+   - Place EIA-860/923 JSON files in `app_data/data/eia-860/` and `app_data/data/eia-923/`
+   - Restart app → verify `plant_heat_rates.json` is regenerated
+   - Run simulation → verify real data is used (data tier indicator should change)
+
+4. **Custom CSV test:**
+   - Copy a custom `lmp_hourly.csv` to `app_data/custom-user-inputs/`
+   - Restart app → navigate to Setup → verify custom input toggle appears
+
+5. **Persistence test:**
+   - Run a simulation and note results
+   - Close and reopen the app → verify results are still in `app_data/results/`
+   - If sweep was generated, verify `sweep_1215/` persists across restarts
+
+### macOS Clean Machine Test
+
+1. **Environment:** Fresh macOS user account (or clean VM)
+2. **Steps:**
+   - Copy `dist/MarketSimulator.app` to Applications or Desktop
+   - Open the app (right-click → Open if Gatekeeper blocks)
+   - Verify: splash screen → app loads in WebKit-based native window
+   - Run same functional tests as Windows (all pages, simulation, data drop-in, persistence)
+
+3. **Gatekeeper behavior:**
+   - Unsigned: first open is blocked. Right-click → Open shows a dialog with "Open" button.
+   - Ad-hoc signed (`codesign --force --deep --sign -`): first open shows warning but allows opening.
+   - Fully signed + notarized: opens without warnings.
+
+### Test Matrix Checklist
+
+| Test | Windows | macOS |
+|------|---------|-------|
+| App launches without Python | [ ] | [ ] |
+| Splash screen shows, then navigates to app | [ ] | [ ] |
+| app_data/ created on first run | [ ] | [ ] |
+| All 6+ pages navigate correctly | [ ] | [ ] |
+| Single simulation runs and returns results | [ ] | [ ] |
+| Fleet config loads 146 plants | [ ] | [ ] |
+| Custom input templates copied to app_data | [ ] | [ ] |
+| EIA data drop-in triggers heat rate regen | [ ] | [ ] |
+| Custom CSV detected on Setup page | [ ] | [ ] |
+| Results persist across app restarts | [ ] | [ ] |
+| Sweep results persist across restarts | [ ] | [ ] |
+| No console/terminal window visible | [ ] | [ ] |
+| App shuts down cleanly on window close | [ ] | [ ] |
+| Second launch is faster (Numba cache) | [ ] | [ ] |
