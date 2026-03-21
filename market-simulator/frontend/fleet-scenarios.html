@@ -269,15 +269,72 @@
             font-size: 0.75rem; cursor: pointer;
         }
 
+        /* Save row */
+        .sb-save-row {
+            display: flex; gap: 8px; align-items: center; margin-bottom: 4px;
+        }
+        .sb-save-row input[type="text"] {
+            flex: 1; padding: 8px 12px; border-radius: var(--radius-sm);
+            border: 1px solid #e2e8f0; font-size: 0.85rem; min-height: 40px;
+            font-family: var(--font-body);
+        }
+        .sb-save-row input[type="text"]:focus {
+            outline: none; border-color: var(--ceg-blue);
+            box-shadow: 0 0 0 2px rgba(35, 114, 185, 0.15);
+        }
+        .sb-save-btn {
+            white-space: nowrap; flex-shrink: 0;
+        }
+        .sb-save-btn:disabled {
+            opacity: 0.4; cursor: not-allowed; pointer-events: none;
+        }
+        .sb-save-count {
+            font-size: 0.78rem; color: var(--text-dim, #6b7280);
+            margin-bottom: 12px; padding: 0 2px;
+        }
+
         /* Saved scenarios list */
         .sb-saved-item {
-            display: flex; align-items: center; justify-content: space-between;
+            display: flex; align-items: center; gap: 8px;
             padding: 8px 12px; border: 1px solid #e2e8f0;
             border-radius: var(--radius-sm); margin-bottom: 6px;
             font-size: 0.85rem; background: #f8fafc;
+            transition: border-color 0.15s, background 0.15s;
         }
-        .sb-saved-item button { min-height: 32px; }
-        .sb-saved-actions { display: flex; gap: 4px; }
+        .sb-saved-item:hover { background: #f1f5f9; }
+        .sb-saved-item.is-baseline { border-color: var(--ceg-blue); background: #eff6ff; }
+        .sb-scenario-swatch {
+            width: 12px; height: 12px; border-radius: 50%;
+            flex-shrink: 0; border: 1px solid rgba(0,0,0,0.1);
+        }
+        .sb-scenario-name {
+            flex: 1; font-weight: 500; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap;
+            cursor: pointer; min-width: 0;
+        }
+        .sb-scenario-name:hover { color: var(--ceg-blue); }
+        .sb-scenario-name-input {
+            flex: 1; border: 1px solid var(--ceg-blue); border-radius: var(--radius-sm);
+            padding: 2px 6px; font-size: 0.85rem; font-family: var(--font-body);
+            min-width: 0; min-height: 28px;
+        }
+        .sb-baseline-badge {
+            font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.5px; padding: 2px 6px; border-radius: var(--radius-pill);
+            background: var(--ceg-blue); color: white; flex-shrink: 0;
+        }
+        .sb-saved-actions { display: flex; gap: 2px; flex-shrink: 0; align-items: center; }
+        .sb-icon-btn {
+            width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+            border: none; background: none; cursor: pointer; border-radius: var(--radius-sm);
+            color: var(--text-dim, #6b7280); font-size: 0.9rem; transition: all 0.15s;
+            padding: 0;
+        }
+        .sb-icon-btn:hover { background: #e2e8f0; color: var(--text-bright); }
+        .sb-icon-btn.active { color: var(--ceg-blue); }
+        .sb-icon-btn.sb-icon-delete:hover { background: #fef2f2; color: #991b1b; }
+        .sb-icon-btn.sb-icon-baseline { font-size: 0.7rem; }
+        .sb-icon-btn.sb-icon-baseline.active { color: var(--ceg-blue); font-weight: 700; }
 
         /* Recalc status */
         .sb-status {
@@ -478,15 +535,18 @@
             </div>
 
             <div class="sb-actions">
-                <input type="text" id="scenarioNameInput" placeholder="Custom scenario name...">
                 <div class="sb-btn-row">
-                    <button class="sb-btn" id="saveScenarioBtn">Save Scenario</button>
                     <button class="sb-btn-primary" id="recalcBtn">Recalculate</button>
                 </div>
                 <div class="sb-status" id="recalcStatus"></div>
             </div>
 
             <div class="sb-section-title">Saved Scenarios</div>
+            <div class="sb-save-row">
+                <input type="text" id="scenarioNameInput" placeholder="Name this scenario..." maxlength="60">
+                <button class="sb-btn sb-save-btn" id="saveScenarioBtn" disabled>Save Current</button>
+            </div>
+            <div class="sb-save-count" id="saveCount"></div>
             <div id="savedScenariosList"></div>
         </div>
     </div>
