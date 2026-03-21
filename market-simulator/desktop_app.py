@@ -1,0 +1,186 @@
+"""
+Desktop application entry point for Market Simulator.
+
+Launches a native pywebview window backed by the FastAPI/uvicorn server
+running in a daemon thread. Works in both development mode (run directly)
+and frozen mode (PyInstaller bundle).
+"""
+
+import os
+import shutil
+import socket
+import sys
+import threading
+import time
+import urllib.request
+from pathlib import Path
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Path resolution helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def is_frozen():
+    """True when running inside a PyInstaller bundle."""
+    return getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS')
+
+
+def get_bundle_dir():
+    """Read-only bundled assets (frontend, scripts, default data)."""
+    if is_frozen():
+        return Path(sys._MEIPASS) / "market-simulator"
+    return Path(__file__).resolve().parent
+
+
+def get_app_data_dir():
+    """Writable user data directory (next to exe when frozen, same as bundle in dev)."""
+    if is_frozen():
+        return Path(sys.executable).parent / "app_data"
+    return Path(__file__).resolve().parent
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# First-run setup
+# ─────────────────────────────────────────────────────────────────────────────
+
+def first_run_setup():
+    """Create writable app_data/ tree and copy templates from bundle on first run."""
+    app_data = get_app_data_dir()
+    bundle = get_bundle_dir()
+
+    if not is_frozen():
+        # In dev mode, directories already exist in-place
+        return
+
+    # Create directory structure
+    dirs_to_create = [
+        app_data / "data" / "eia-860",
+        app_data / "data" / "eia-923",
+        app_data / "data" / "epa-campd",
+        app_data / "data" / "profiles",
+        app_data / "custom-user-inputs",
+        app_data / "results",
+    ]
+    for d in dirs_to_create:
+        d.mkdir(parents=True, exist_ok=True)
+
+    # Copy bundled profiles to writable location if not already present
+    bundled_profiles = bundle / "data" / "profiles"
+    target_profiles = app_data / "data" / "profiles"
+    if bundled_profiles.exists():
+        for src_file in bundled_profiles.iterdir():
+            dest = target_profiles / src_file.name
+            if not dest.exists():
+                shutil.copy2(src_file, dest)
+
+    # Copy bundled fleet/reference data
+    for filename in ["CEG_fleet_rosetta.csv", "constellation_fleet.json",
+                     "cv_reference_results.json", "cv_comparison_report.json"]:
+        src = bundle / "data" / filename
+        dest = app_data / "data" / filename
+        if src.exists() and not dest.exists():
+            shutil.copy2(src, dest)
+
+    # Copy custom-user-inputs templates
+    bundled_templates = bundle / "custom-user-inputs"
+    target_templates = app_data / "custom-user-inputs"
+    if bundled_templates.exists():
+        for src_file in bundled_templates.iterdir():
+            dest = target_templates / src_file.name
+            if not dest.exists():
+                shutil.copy2(src_file, dest)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Free port selection
+# ─────────────────────────────────────────────────────────────────────────────
+
+def find_free_port():
+    """Find an available port on localhost."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(('127.0.0.1', 0))
+        return s.getsockname()[1]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Server management
+# ─────────────────────────────────────────────────────────────────────────────
+
+def start_server(port):
+    """Start uvicorn in the current thread (called from daemon thread)."""
+    import uvicorn
+
+    config = uvicorn.Config(
+        "backend.main:app",
+        host="127.0.0.1",
+        port=port,
+        log_level="warning",
+        install_signal_handlers=False,  # Avoid conflict with pywebview main loop
+    )
+    server = uvicorn.Server(config)
+    server.run()
+
+
+def wait_for_server(port, timeout=30):
+    """Poll /api/isos until the server is ready, up to timeout seconds."""
+    url = f"http://127.0.0.1:{port}/api/isos"
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            urllib.request.urlopen(url, timeout=2)
+            return True
+        except Exception:
+            time.sleep(0.3)
+    return False
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Main entry point
+# ─────────────────────────────────────────────────────────────────────────────
+
+def main():
+    # Set up Numba cache directory before any imports
+    if is_frozen():
+        app_data = get_app_data_dir()
+        numba_cache = app_data / ".numba_cache"
+        numba_cache.mkdir(parents=True, exist_ok=True)
+        os.environ['NUMBA_CACHE_DIR'] = str(numba_cache)
+
+    # Run first-run setup (creates directories, copies templates)
+    first_run_setup()
+
+    # Find a free port
+    port = find_free_port()
+
+    # Set environment variables BEFORE importing the backend
+    os.environ['MARKET_SIM_PORT'] = str(port)
+    os.environ['MARKET_SIM_BUNDLE_DIR'] = str(get_bundle_dir())
+    os.environ['MARKET_SIM_DATA_DIR'] = str(get_app_data_dir())
+
+    # Start server in daemon thread
+    server_thread = threading.Thread(target=start_server, args=(port,), daemon=True)
+    server_thread.start()
+
+    # Wait for server readiness
+    if not wait_for_server(port):
+        print("ERROR: Server failed to start within 30 seconds.", file=sys.stderr)
+        sys.exit(1)
+
+    # Launch native window
+    import webview
+
+    window = webview.create_window(
+        "Market Simulator",
+        f"http://127.0.0.1:{port}",
+        width=1400,
+        height=900,
+        min_size=(1024, 700),
+    )
+    webview.start()  # Blocks until window closes
+
+    # Kill server thread and exit cleanly
+    os._exit(0)
+
+
+if __name__ == "__main__":
+    main()
