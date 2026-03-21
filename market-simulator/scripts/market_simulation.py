@@ -53,6 +53,16 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 MODULE_ROOT = os.path.dirname(SCRIPT_DIR)
 # Add scripts dir to path for shared utilities
 sys.path.insert(0, SCRIPT_DIR)
+# Add project root to path for paths.py
+sys.path.insert(0, MODULE_ROOT)
+
+# Centralized path resolution — supports frozen (PyInstaller) and dev modes
+try:
+    from paths import resolve_data_path, MODULE_ROOT as _PATHS_ROOT
+    MODULE_ROOT = str(_PATHS_ROOT)
+except ImportError:
+    def resolve_data_path(rel):
+        return Path(MODULE_ROOT) / "data" / rel
 
 from pipeline_config import (
     PIPELINE_VERSION,
@@ -103,7 +113,7 @@ from procurement_utils import get_rps_target_at_year, PPA_PREMIUMS
 sys.path.insert(0, os.path.join(MODULE_ROOT, 'backend'))
 from models import ProvenanceMetadata
 
-OUTPUT_DIR = os.path.join(MODULE_ROOT, 'data', 'results')
+OUTPUT_DIR = str(resolve_data_path('results'))
 
 logger = logging.getLogger(__name__)
 
@@ -395,7 +405,7 @@ def get_unit_commitment_params(unit_type, online_year=None):
 
 def load_egrid_baselines():
     """Load 2023 eGRID absolute emission baselines."""
-    egrid_path = os.path.join(MODULE_ROOT, 'data', 'egrid_2023_baseline_emissions.json')
+    egrid_path = str(resolve_data_path('egrid_2023_baseline_emissions.json'))
     if os.path.exists(egrid_path):
         with open(egrid_path) as f:
             data = json.load(f)
@@ -3143,17 +3153,16 @@ def check_data_sources():
     """
     from pipeline_config import ZONE_CONFIG, DEMAND_RESPONSE
 
-    search_dirs = [os.path.join(MODULE_ROOT, 'data', 'step2.2-cost')]
+    search_dirs = [str(resolve_data_path('step2.2-cost'))]
     simple = {}
     tiers = {}
 
     # Check interchange data availability (shared across ISOs)
-    interchange_file = os.path.join(MODULE_ROOT, 'data', 'profiles',
-                                    'eia_interchange_profiles.json')
+    interchange_file = str(resolve_data_path('profiles/eia_interchange_profiles.json'))
     has_interchange = os.path.isfile(interchange_file)
 
     # Check EIA-860 plant-level data
-    eia860_dir = os.path.join(MODULE_ROOT, 'data', 'eia-860')
+    eia860_dir = str(resolve_data_path('eia-860'))
     has_eia860 = os.path.isdir(eia860_dir) and bool(os.listdir(eia860_dir))
 
     for iso in ISOS:

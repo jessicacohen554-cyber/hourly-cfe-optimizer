@@ -15,16 +15,30 @@ Files:
 import os
 import json
 
-MODULE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR = os.path.join(MODULE_ROOT, 'data')
+# Centralized path resolution — supports frozen (PyInstaller) and dev modes
+try:
+    from paths import MODULE_ROOT, get_data_search_dirs, resolve_data_path
+    _DATA_SEARCH_DIRS = get_data_search_dirs(["profiles", "eia-930"])
+except ImportError:
+    MODULE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    _DATA_SEARCH_DIRS = None
+
+    def resolve_data_path(rel):
+        from pathlib import Path
+        return Path(MODULE_ROOT) / "data" / rel
+
+DATA_DIR = os.path.join(str(MODULE_ROOT), 'data')
 
 # Search local directories for EIA data
 # 1. market-simulator/data/profiles/ (synthetic or generated)
 # 2. market-simulator/data/eia-930/ (standard EIA 930 location)
-EIA_SEARCH_DIRS = [
-    os.path.join(DATA_DIR, 'profiles'),
-    os.path.join(DATA_DIR, 'eia-930'),
-]
+if _DATA_SEARCH_DIRS:
+    EIA_SEARCH_DIRS = [str(d) for d in _DATA_SEARCH_DIRS]
+else:
+    EIA_SEARCH_DIRS = [
+        os.path.join(DATA_DIR, 'profiles'),
+        os.path.join(DATA_DIR, 'eia-930'),
+    ]
 EIA_DIR = os.path.join(DATA_DIR, 'eia-930')  # Default for error messages
 
 
