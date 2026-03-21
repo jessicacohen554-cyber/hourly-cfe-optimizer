@@ -31,6 +31,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from market_simulation import (
     build_market_scenarios,
+    build_sim_years,
     run_full_sweep,
     aggregate_sweep_percentiles,
     SIM_YEARS,
@@ -124,7 +125,15 @@ def main():
                         help='Output directory (default: ../results/sweep_1215)')
     parser.add_argument('--nuclear-retirement', type=float, default=None,
                         help='Nuclear retirement threshold $/MWh')
+    parser.add_argument('--start-year', type=int, default=2026,
+                        help='First simulation year (default: 2026)')
+    parser.add_argument('--end-year', type=int, default=2060,
+                        help='Last simulation year (default: 2060)')
+    parser.add_argument('--year-step', type=int, default=1,
+                        help='Year step size (default: 1 = annual)')
     args = parser.parse_args()
+
+    sim_years = build_sim_years(args.start_year, args.end_year, args.year_step)
 
     output_dir = args.output_dir or os.path.join(
         os.path.dirname(__file__), '..', 'results', 'sweep_1215')
@@ -132,9 +141,10 @@ def main():
 
     # Verify scenario count
     scenarios = build_market_scenarios()
+    n_isos_planned = len(args.isos or ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'])
     print(f"Sweep configuration: {len(scenarios)} scenarios × "
-          f"{len(SIM_YEARS)} years × {len(args.isos or ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'])} ISOs")
-    print(f"Years: {SIM_YEARS}")
+          f"{len(sim_years)} years × {n_isos_planned} ISOs")
+    print(f"Years: {sim_years[0]}–{sim_years[-1]} (step={args.year_step}, n={len(sim_years)})")
     print(f"Output: {os.path.abspath(output_dir)}")
 
     # ── Run the sweep ──
@@ -142,6 +152,7 @@ def main():
     all_results = run_full_sweep(
         isos=args.isos,
         nuclear_retirement_threshold=args.nuclear_retirement,
+        sim_years=sim_years,
     )
     elapsed = time.time() - t0
     print(f"\nSweep completed in {elapsed:.1f}s")
@@ -154,7 +165,7 @@ def main():
     print(f"Parquet saved: {parquet_path}")
     print(f"  Shape: {df.shape[0]} rows × {df.shape[1]} columns")
 
-    # Expected: 1,215 scenarios × 7 ISOs × 6 years = 51,030
+    # Expected: 1,215 scenarios × 7 ISOs × N years (default 35 annual = 297,675)
     n_scenarios = len([k for k in all_results if not k.startswith('_')])
     n_isos = len(set(df['iso'].dropna()))
     n_years = len(set(df['year'].dropna()))
