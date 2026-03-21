@@ -281,10 +281,7 @@ PTC_45U_SUNSET_YEAR = 2032
 # Nuclear retirement threshold — default operating cost
 NUCLEAR_FOM_PER_MWH = 30.0  # $/MWh equivalent at 93% CF
 
-# Simulation years — default sparse set (legacy); annual mode uses build_sim_years()
-SIM_YEARS = [2023, 2030, 2035, 2040, 2045, 2050]
-
-
+# Simulation years — annual 2026–2060 (35 points)
 def build_sim_years(start=2025, end=2060, step=1):
     """Build simulation year list from user-specified range and step.
 
@@ -296,6 +293,8 @@ def build_sim_years(start=2025, end=2060, step=1):
     if end not in years:
         years.append(end)
     return years
+
+SIM_YEARS = build_sim_years(start=2026, end=2060, step=1)  # 35 annual points
 
 # 2023 eGRID actual clean energy share (%)
 EGRID_2023_CLEAN_PCT = {
@@ -4369,12 +4368,14 @@ def run_market_simulation(scenario_id, conditions, isos=None,
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def run_full_sweep(isos=None, nuclear_retirement_threshold=None,
-                    snapshot_mode=False, weather_years=None):
+                    snapshot_mode=False, weather_years=None, sim_years=None):
     """Run full 1,215-scenario market sweep.
 
     Pre-loads data once, shares LMP cache across scenarios.
 
     Args:
+        sim_years: Optional list of years to simulate. Defaults to SIM_YEARS
+            (annual 2026–2060). Use build_sim_years() to construct custom ranges.
         weather_years: Optional list of year strings (e.g., ['2021', '2023', '2025'])
             to run weather-year sensitivity. Each year runs the full sweep
             independently, then results are combined. If None, uses default
@@ -4420,6 +4421,7 @@ def run_full_sweep(isos=None, nuclear_retirement_threshold=None,
                 full_id, conditions, isos=isos,
                 nuclear_retirement_threshold=nuclear_retirement_threshold,
                 snapshot_mode=snapshot_mode,
+                sim_years=sim_years,
                 _preloaded=preloaded,
                 _lmp_cache=lmp_cache,
                 _quiet=True,
