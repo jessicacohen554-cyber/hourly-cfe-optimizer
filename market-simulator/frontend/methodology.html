@@ -104,7 +104,8 @@
                 <li><strong>Fleet vs grid fossil reconciliation</strong> — Two independent new-fossil mechanisms (grid-level market-driven builds and fleet-level user-defined additions) follow an additive interaction rule. Both are tracked and reported separately with overlap detection when both trigger in the same region and year.</li>
                 <li><strong>Tech-differentiated queue caps</strong> — Per-technology interconnection limits from LBNL &ldquo;Queued Up 2024&rdquo; completion rates. 20% flex pool across technologies.</li>
                 <li><strong>Data tier warnings</strong> — Color-coded indicators distinguish synthetic vs. EIA-930 vs. pipeline vs. full-fidelity data quality.</li>
-                <li><strong>Client-side fleet dispatch</strong> — The fleet_dispatch.py logic (efficiency ratios, CCS ramp schedules, economic retirement, year-aware retirement/addition masks) has been ported to JavaScript for real-time browser-based recalculation. Users can modify fleet configurations and see updated P10/P50/P90 emissions envelopes across all 1,215 scenarios without a backend round-trip.</li>
+                <li><strong>Full-fleet Rosetta-based dispatch</strong> — The 146-plant Constellation Energy fleet (15 nuclear, 43 renewable, 81 fossil, 7 storage) sourced from CEG_fleet_rosetta.csv. Non-fossil plants dispatched via static capacity factors (nuclear 92%, geothermal 85%, wind 30%, solar 22%, hydro 40%). Fossil plants use the merit-order dispatch engine. CCS retrofit restricted to CCS-eligible plants only. Four fleet scenarios: baseline, CCS top emitters, retire peakers + CCS baseload, full transition.</li>
+                <li><strong>Client-side fleet dispatch</strong> — The fleet dispatch logic (efficiency ratios, CCS ramp schedules, economic retirement, year-aware retirement/addition masks) has been ported to JavaScript for real-time browser-based recalculation. Users can modify fleet configurations and see updated P10/P50/P90 emissions envelopes without a backend round-trip. Backend serves Rosetta-derived sample data as primary source, sweep-based results as fallback.</li>
                 <li><strong>Interactive web interface</strong> — Real-time parametric sensitivity with immediate visual feedback, designed for stakeholder accessibility.</li>
                 <li><strong>Result provenance</strong> — Every simulation output includes audit metadata: git SHA, config hash, timestamp, and full input snapshot for reproducibility and governance (G3).</li>
                 <li><strong>Correlated scenario bundles</strong> — 5 IEA-aligned scenarios (STEPS, APS, NZE, High Friction, Rapid Transition) with internally consistent input pairings, complementing the independent sweep (G4).</li>
@@ -295,6 +296,92 @@
             <p>
                 Results show which assumptions matter most for each ISO, enabling decision-makers to focus
                 analytical effort on the parameters with the highest leverage.
+            </p>
+        </div>
+
+        <!-- Section 4b: Fleet Dispatch Methodology -->
+        <div class="meth-section">
+            <h2>4b. Fleet Dispatch &mdash; Rosetta-Based Methodology</h2>
+            <p>
+                The fleet scenario analysis operates on the full Constellation Energy fleet of
+                <strong>146 plants</strong> (15 nuclear, 43 renewable, 81 fossil, 7 storage) derived from
+                the canonical <code>CEG_fleet_rosetta.csv</code> data source. Constellation has no coal assets.
+            </p>
+
+            <h3>Data Provenance</h3>
+            <p>The fleet data pipeline flows through two build scripts:</p>
+            <ul>
+                <li><code>CEG_fleet_rosetta.csv</code> &rarr; <code>generate_constellation_scenarios.py</code> &rarr; <code>constellation_scenarios.json</code> (plant-level configuration with CCS eligibility, heat rates, CO&sub2; rates, capacity factors)</li>
+                <li><code>CEG_fleet_rosetta.csv</code> &rarr; <code>build_fleet_scenario_data.py</code> &rarr; <code>fleet_scenario_results_sample.json</code> (pre-computed scenario results)</li>
+            </ul>
+            <p>Nuclear generation uses equity-weighted capacity, totaling ~190 TWh. Geothermal contributes ~9 TWh (Geysers complex). Wind/solar/hydro contribute ~4.8 TWh combined.</p>
+
+            <h3>Non-Fossil Dispatch Model</h3>
+            <p>Non-fossil plants are dispatched using <strong>static capacity factors</strong> rather than hourly profiles:</p>
+            <div style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Fuel Type</th><th>Capacity Factor</th><th>Profile</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Nuclear</td><td>92%</td><td>Flat year-round</td></tr>
+                        <tr><td>Geothermal</td><td>85%</td><td>Flat year-round</td></tr>
+                        <tr><td>Wind</td><td>30%</td><td>Static average (no hourly profile)</td></tr>
+                        <tr><td>Solar</td><td>22%</td><td>Static average (no hourly profile)</td></tr>
+                        <tr><td>Hydro</td><td>40%</td><td>Static average</td></tr>
+                        <tr><td>Storage</td><td>&mdash;</td><td>Pass-through (capacity tracked, generation excluded from emissions)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Fleet Scenarios</h3>
+            <p>Four fleet decarbonization scenarios modify the 146-plant fleet at the plant level:</p>
+            <div style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Scenario Key</th><th>Name</th><th>Plant-Level Actions</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>baseline</code></td>
+                            <td>Baseline</td>
+                            <td>Current fleet as-is. All plants at existing operational status.</td>
+                        </tr>
+                        <tr>
+                            <td><code>ccs_top_emitters</code></td>
+                            <td>CCS Top Emitters</td>
+                            <td>CCS retrofit applied to the highest-emitting CCS-eligible fossil plants. Other plants unchanged.</td>
+                        </tr>
+                        <tr>
+                            <td><code>retire_peakers_ccs_baseload</code></td>
+                            <td>Retire Peakers + CCS Baseload</td>
+                            <td>Peaker plants (gas CT, oil CT) retired. Baseload gas CCGT plants receive CCS retrofit where eligible.</td>
+                        </tr>
+                        <tr>
+                            <td><code>full_transition</code></td>
+                            <td>Full Transition</td>
+                            <td>Maximum decarbonization: all eligible CCS retrofits applied, remaining high-emission plants retired.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Climate Target Overlays</h3>
+            <p>
+                Target selection uses <strong>multi-select checkboxes</strong> (not radio buttons), allowing users to overlay
+                both targets simultaneously:
+            </p>
+            <ul>
+                <li><strong>SBTi 1.5C Power Sector v2</strong> &mdash; Science-Based Targets initiative pathway targeting net zero by 2040</li>
+                <li><strong>Absolute Target</strong> &mdash; Absolute emissions reduction target</li>
+            </ul>
+
+            <h3>CCS Eligibility</h3>
+            <p>
+                CCS Retrofit is restricted to CCS-eligible fossil plants only. CCS eligibility is determined by
+                plant characteristics in the Rosetta CSV (fuel type, heat rate, capacity, siting feasibility).
+                Non-fossil plants (nuclear, renewables, storage) render in the sidebar grouped by category with
+                Operating/Retired toggle only &mdash; no CCS option is shown.
             </p>
         </div>
 
