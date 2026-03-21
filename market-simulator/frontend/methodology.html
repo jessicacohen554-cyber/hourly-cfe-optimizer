@@ -133,8 +133,8 @@
                 This tool takes a fundamentally different approach. The 1,215-scenario parametric sweep evaluates
                 fossil fleet consequences across <strong>thousands of plausible futures</strong>, delivering
                 P10/P50/P90 distributions rather than single point estimates. This trades dispatch fidelity
-                for parametric coverage &mdash; identifying conclusions that are <strong>robust across uncertain futures</strong>
-                rather than optimal for one assumed future.
+                for parametric coverage &mdash; showing which findings hold across a wide range of input assumptions
+                rather than what's optimal for one assumed future.
             </p>
             <div style="overflow-x: auto;">
                 <table class="comparison-table">
@@ -149,7 +149,7 @@
                         <tr>
                             <td><strong>Core question</strong></td>
                             <td>"What's optimal for this assumed future?"</td>
-                            <td>"What's robust across all plausible futures?"</td>
+                            <td>"Which findings hold across a wide range of assumptions?"</td>
                         </tr>
                         <tr>
                             <td><strong>Assumption treatment</strong></td>
@@ -181,20 +181,23 @@
             </div>
             <p>
                 For corporate procurement, technology investment timing, and policy screening &mdash; all decisions under
-                uncertainty &mdash; robustness across uncertain futures is more actionable than optimality under assumed
-                futures. The decision-relevant question is <em>"which investments are no-regrets?"</em> not
-                <em>"what's the optimal portfolio?"</em>
+                uncertainty &mdash; knowing which findings survive across a range of assumptions is often more actionable than
+                a single optimal answer contingent on getting every assumption right. The decision-relevant question is
+                <em>"which investments hold up even if we're wrong about gas prices?"</em> not
+                <em>"what's the optimal portfolio if gas is $4.50/MMBtu?"</em>
             </p>
-            <h3>Alignment with Emerging Methodological Direction</h3>
-            <p>This approach aligns with a broader shift in energy systems analysis:</p>
+            <h3>Context in Energy Systems Analysis</h3>
+            <p>Multi-scenario analysis with distributional output is increasingly common in energy planning, though this tool's approach is simpler than formal uncertainty frameworks:</p>
             <ul>
-                <li><strong>DMDU (Decision Making Under Deep Uncertainty)</strong> &mdash; Lempert et al. at RAND argue that "predict-then-optimize" fails under deep uncertainty. Scenario discovery &mdash; identifying which conclusions survive across input ranges &mdash; is the recommended alternative.</li>
-                <li><strong>Robust Decision Making (RDM)</strong> &mdash; Applied by the California Energy Commission and NYSERDA to long-term energy planning, evaluating strategies across hundreds of scenarios rather than optimizing for one.</li>
-                <li><strong>NREL Standard Scenarios</strong> &mdash; NREL publishes 30+ scenarios annually, explicitly stating that no single scenario should guide investment. The 2024 report: <em>"The value of scenario analysis comes from exploring the space of possible outcomes."</em></li>
-                <li><strong>EPRI US-REGEN</strong> &mdash; Runs 100+ scenarios across technology cost, policy, and demand assumptions, presenting results as ranges rather than point estimates.</li>
-                <li><strong>MIT GenX</strong> &mdash; Recent developments incorporate stochastic programming and Monte Carlo sampling, moving away from deterministic single-run optimization.</li>
-                <li><strong>IEA World Energy Outlook</strong> &mdash; Shifted from a single "reference case" to three named scenarios (STEPS, APS, NZE) &mdash; an implicit acknowledgment that single-point forecasts are insufficient.</li>
+                <li><strong>NREL Standard Scenarios</strong> &mdash; NREL publishes 30+ scenarios annually, explicitly stating that no single scenario should guide investment. The parametric sweep here follows the same logic &mdash; more scenario coverage reveals which findings are assumption-dependent &mdash; though NREL runs a full capacity expansion model (ReEDS) for each scenario, which this tool does not.</li>
+                <li><strong>IEA World Energy Outlook</strong> &mdash; Shifted from a single "reference case" to three named scenarios (STEPS, APS, NZE), an acknowledgment that single-point forecasts are insufficient. This tool extends that principle to 1,215 combinations but with a simpler dispatch model.</li>
+                <li><strong>EPRI US-REGEN</strong> &mdash; Runs 100+ scenarios across technology cost, policy, and demand assumptions, presenting results as ranges. Similar philosophy, much higher dispatch fidelity.</li>
             </ul>
+            <p>
+                The tool does <strong>not</strong> implement formal robust optimization (Bertsimas, Ben-Tal), stochastic programming,
+                or DMDU/RDM frameworks. It's a brute-force parametric sweep &mdash; run the same dispatch model 1,215 times with
+                different inputs and report the distribution. The value comes from coverage and speed, not methodological sophistication.
+            </p>
             <div class="callout">
                 <p>
                     <strong>Where single-point optimization retains its advantage:</strong>
@@ -693,10 +696,11 @@
             <div class="callout">
                 <p>
                     <strong>Positioning:</strong> This tool is a fossil dispatch simulator that trades dispatch fidelity
-                    for parametric coverage. Production models deliver precise answers to assumed futures; this tool identifies
-                    robust conclusions across uncertain futures. The 1,215-scenario sweep with P10/P50/P90 output aligns with the
-                    broader methodological shift toward uncertainty-aware analysis (DMDU, RDM, NREL Standard Scenarios, EPRI US-REGEN)
-                    &mdash; if scenarios are valuable, more scenarios with faster turnaround and probabilistic framing are more valuable.
+                    for parametric coverage. Production models deliver precise answers for assumed futures; this tool shows
+                    which findings hold across a wide range of assumptions. Whether that tradeoff is worthwhile depends on the
+                    decision context &mdash; for decisions sensitive to specific dispatch outcomes (transmission siting, unit
+                    commitment), production models are necessary. For decisions sensitive to assumption uncertainty (procurement
+                    strategy, investment timing, policy screening), parametric coverage may matter more.
                     The IPM trigger system automatically flags when results need production-grade validation.
                 </p>
             </div>
