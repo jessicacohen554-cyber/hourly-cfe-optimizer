@@ -170,6 +170,138 @@ else:
     CUSTOM_INPUTS_DIR = MARKET_SIM_ROOT / "custom-user-inputs"
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
+ISOS = ["CAISO", "ERCOT", "PJM", "NYISO", "NEISO", "MISO", "SPP"]
+
+
+def load_custom_timeseries_csv(filepath: Path) -> dict:
+    """Load a custom input CSV (fuel, capacity, or REC) into a year-indexed lookup.
+
+    Supports two formats:
+      - Legacy (12 rows): month × 7 ISOs → returns {None: {month: {iso: val}}}
+        (None key = static, applies to all years)
+      - Time-series (year × month × zone × 7 ISOs) →
+        returns {year: {month: {zone: {iso: val}}}}
+
+    When zone column is absent or all blank, zone key is 'system'.
+    """
+    import pandas as pd
+
+    try:
+        df = pd.read_csv(filepath, sep=',')
+        if len(df.columns) <= 2:
+            df = pd.read_csv(filepath, sep='\t')
+    except Exception:
+        df = pd.read_csv(filepath, sep='\t')
+
+    iso_cols = [c for c in df.columns if c in set(ISOS)]
+    has_year = 'year' in df.columns
+    has_zone = 'zone' in df.columns
+
+    result = {}
+
+    if has_year:
+        df['year'] = df['year'].astype(int)
+        if has_zone:
+            df['_zone'] = df['zone'].fillna('').replace('', 'system')
+        else:
+            df['_zone'] = 'system'
+
+        for _, row in df.iterrows():
+            yr = int(row['year'])
+            mo = int(row['month'])
+            zn = row['_zone']
+            if yr not in result:
+                result[yr] = {}
+            if mo not in result[yr]:
+                result[yr][mo] = {}
+            result[yr][mo][zn] = {iso: float(row[iso]) for iso in iso_cols}
+    else:
+        # Legacy: no year column → key is None (applies to all years)
+        for _, row in df.iterrows():
+            mo = int(row['month'])
+            result[mo] = {'system': {iso: float(row[iso]) for iso in iso_cols}}
+        result = {None: result}  # None = static/all years
+
+    return result
+
+
+def resolve_fuel_prices_for_year(timeseries_lookup: dict, year: int,
+                                 iso: str, month: int = None,
+                                 zone: str = 'system') -> float:
+    """Look up a price from a timeseries lookup dict for a specific year/ISO.
+
+    Falls back to nearest available year if exact year not found.
+    If month is None, returns average across months.
+    """
+    # Static (legacy) format — None key
+    if None in timeseries_lookup:
+        months_data = timeseries_lookup[None]
+        if month and month in months_data:
+            return months_data[month].get(zone, months_data[month].get('system', {})).get(iso, 0)
+        # Average across months
+        vals = []
+        for mo_data in months_data.values():
+            zd = mo_data.get(zone, mo_data.get('system', {}))
+            if iso in zd:
+                vals.append(zd[iso])
+        return sum(vals) / len(vals) if vals else 0
+
+    # Time-series — find exact or nearest year
+    available_years = sorted(timeseries_lookup.keys())
+    if year in timeseries_lookup:
+        target_year = year
+    elif available_years:
+        # Nearest year
+        target_year = min(available_years, key=lambda y: abs(y - year))
+    else:
+        return 0
+
+    months_data = timeseries_lookup[target_year]
+    if month and month in months_data:
+        zd = months_data[month].get(zone, months_data[month].get('system', {}))
+        return zd.get(iso, 0)
+    # Average across months
+    vals = []
+    for mo_data in months_data.values():
+        zd = mo_data.get(zone, mo_data.get('system', {}))
+        if iso in zd:
+            vals.append(zd[iso])
+    return sum(vals) / len(vals) if vals else 0
+
+
+def load_custom_fuel_overrides() -> dict | None:
+    """Load all 3 fuel CSVs into a structured timeseries dict.
+
+    Returns dict with keys 'gas', 'coal', 'oil' each containing a
+    timeseries lookup, or None if no files found.
+    """
+    fuel_files = {
+        'gas': CUSTOM_INPUTS_DIR / "fuel_prices_gas.csv",
+        'coal': CUSTOM_INPUTS_DIR / "fuel_prices_coal.csv",
+        'oil': CUSTOM_INPUTS_DIR / "fuel_prices_oil.csv",
+    }
+    result = {}
+    for fuel_type, fpath in fuel_files.items():
+        if fpath.exists():
+            result[fuel_type] = load_custom_timeseries_csv(fpath)
+    return result if result else None
+
+
+def load_custom_capacity_overrides() -> dict | None:
+    """Load capacity prices CSV into a timeseries lookup."""
+    fpath = CUSTOM_INPUTS_DIR / "capacity_prices.csv"
+    if fpath.exists():
+        return load_custom_timeseries_csv(fpath)
+    return None
+
+
+def load_custom_rec_overrides() -> dict | None:
+    """Load REC prices CSV into a timeseries lookup."""
+    fpath = CUSTOM_INPUTS_DIR / "rec_prices.csv"
+    if fpath.exists():
+        return load_custom_timeseries_csv(fpath)
+    return None
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # In-memory stores
@@ -1229,6 +1361,21 @@ async def simulate(req: SimulationRequest):
     try:
         conditions = _map_request_to_conditions(req)
 
+        # Load custom CSV overrides if enabled (time-series aware)
+        co = req.custom_overrides
+        if co and co.fuel:
+            fuel_ts = load_custom_fuel_overrides()
+            if fuel_ts:
+                conditions['custom_fuel_timeseries'] = fuel_ts
+        if co and co.capacity:
+            cap_ts = load_custom_capacity_overrides()
+            if cap_ts:
+                conditions['custom_capacity_timeseries'] = cap_ts
+        if co and co.rec:
+            rec_ts = load_custom_rec_overrides()
+            if rec_ts:
+                conditions['custom_rec_timeseries'] = rec_ts
+
         # Apply scarcity mode from user request to global config
         import pipeline_config
         scarcity_mode = conditions.get('scarcity_mode', 'ordc')
@@ -1283,12 +1430,14 @@ async def simulate(req: SimulationRequest):
             fuel_level = conditions.get("fuel_level", "Medium")
             carbon_price_val = conditions.get("carbon_price", 0)
 
-            # Fuel prices (shared across years)
+            # Fuel prices — will be resolved per-year if time-series available
+            has_fuel_timeseries = 'custom_fuel_timeseries' in conditions
             fuel_prices_dict = {}
-            if conditions.get("custom_fuel_prices"):
-                fuel_prices_dict = conditions["custom_fuel_prices"]
-            else:
-                fuel_prices_dict = FUEL_PRICES.get(fuel_level, FUEL_PRICES.get("Medium", {}))
+            if not has_fuel_timeseries:
+                if conditions.get("custom_fuel_prices"):
+                    fuel_prices_dict = conditions["custom_fuel_prices"]
+                else:
+                    fuel_prices_dict = FUEL_PRICES.get(fuel_level, FUEL_PRICES.get("Medium", {}))
 
             # Iterate over each year result from the simulation
             years_to_process = iso_results if iso_results else []
@@ -1298,6 +1447,13 @@ async def simulate(req: SimulationRequest):
                 yr_clean_pct = yr_data.get("clean_pct", 50.0) / 100.0
                 yr_demand_twh = yr_data.get("demand_twh", REGIONAL_DEMAND_TWH.get(iso, 300))
                 yr_avg_lmp = yr_data.get("avg_lmp", WHOLESALE_PRICES.get(iso, 30.0))
+
+                # Resolve fuel prices for this year (time-series or static)
+                if has_fuel_timeseries:
+                    from market_simulation import _resolve_fuel_prices_for_year
+                    fuel_prices_dict = _resolve_fuel_prices_for_year(
+                        conditions, yr_year, iso
+                    ) or FUEL_PRICES.get(fuel_level, FUEL_PRICES.get("Medium", {}))
 
                 try:
                     plant_stack, total_cap = build_plant_level_merit_order(
@@ -2268,27 +2424,39 @@ def _flatten_dict(d: dict, prefix: str, writer):
 CUSTOM_FILE_MAP = {
     "fuel": {
         "files": ["fuel_prices_gas.csv", "fuel_prices_coal.csv", "fuel_prices_oil.csv"],
-        "expected_rows": 12,
+        "expected_rows": 12,       # legacy; time-series = n_years * 12 * n_zones
+        "time_series_ok": True,    # accepts year×month×zone format
     },
     "lmp": {
         "files": ["lmp_hourly.csv"],
         "expected_rows": 8760,
+        "time_series_ok": False,   # hourly file has its own format
     },
     "capacity": {
         "files": ["capacity_prices.csv"],
         "expected_rows": 12,
+        "time_series_ok": True,
     },
     "rec": {
         "files": ["rec_prices.csv"],
         "expected_rows": 12,
+        "time_series_ok": True,
     },
 }
 
 EXPECTED_ISO_COLS = {"CAISO", "ERCOT", "PJM", "NYISO", "NEISO", "MISO", "SPP"}
 
 
-def _validate_custom_file(filepath: Path, expected_rows: int) -> dict:
-    """Validate a custom input CSV file."""
+def _validate_custom_file(filepath: Path, expected_rows: int,
+                          time_series_ok: bool = False) -> dict:
+    """Validate a custom input CSV file.
+
+    Supports two formats for monthly files (fuel, capacity, REC):
+      - Legacy: 12 rows (month × 7 ISOs) — static prices for all years
+      - Time-series: year × month × zone (optional) × 7 ISOs — annual projections
+
+    The ``time_series_ok`` flag enables the expanded validation path.
+    """
     if not filepath.exists():
         return {"found": False, "valid": False, "error": "File not found"}
 
@@ -2310,10 +2478,67 @@ def _validate_custom_file(filepath: Path, expected_rows: int) -> dict:
             return {"found": True, "valid": False,
                     "error": f"Missing columns: {', '.join(sorted(missing_isos))}"}
 
-        # Check row count
-        if len(df) != expected_rows:
-            return {"found": True, "valid": False,
-                    "error": f"Expected {expected_rows} rows, found {len(df)}"}
+        # Determine format: legacy (no 'year' col) vs time-series ('year' col present)
+        has_year = 'year' in df.columns
+        has_zone = 'zone' in df.columns
+        is_time_series = has_year and time_series_ok
+
+        if is_time_series:
+            # --- Time-series validation ---
+            # year must be integer-like
+            if not pd.to_numeric(df['year'], errors='coerce').notna().all():
+                return {"found": True, "valid": False,
+                        "error": "Column 'year' contains non-numeric values"}
+            df['year'] = df['year'].astype(int)
+
+            # month must be 1-12
+            if 'month' not in df.columns:
+                return {"found": True, "valid": False,
+                        "error": "Time-series format requires 'month' column"}
+            months = df['month'].unique()
+            if not set(months).issubset(set(range(1, 13))):
+                return {"found": True, "valid": False,
+                        "error": f"Month values must be 1-12, found: {sorted(months)}"}
+
+            # Each year must have exactly 12 months (per zone if zones exist)
+            if has_zone:
+                # Fill blank zones with 'system' for grouping
+                df['_zone'] = df['zone'].fillna('').replace('', 'system')
+                zones = sorted(df['_zone'].unique())
+                for yr in df['year'].unique():
+                    for z in zones:
+                        subset = df[(df['year'] == yr) & (df['_zone'] == z)]
+                        if len(subset) != 12:
+                            return {"found": True, "valid": False,
+                                    "error": f"Year {yr}, zone '{z}': expected 12 months, "
+                                             f"found {len(subset)}"}
+                n_years = df['year'].nunique()
+                n_zones = len(zones)
+                expected_total = n_years * 12 * n_zones
+            else:
+                for yr in df['year'].unique():
+                    subset = df[df['year'] == yr]
+                    if len(subset) != 12:
+                        return {"found": True, "valid": False,
+                                "error": f"Year {yr}: expected 12 months, found {len(subset)}"}
+                expected_total = df['year'].nunique() * 12
+
+            if len(df) != expected_total:
+                return {"found": True, "valid": False,
+                        "error": f"Row count {len(df)} doesn't match "
+                                 f"years×months×zones = {expected_total}"}
+
+            fmt = "time-series"
+            n_years_found = df['year'].nunique()
+            year_range = f"{df['year'].min()}-{df['year'].max()}"
+        else:
+            # --- Legacy validation ---
+            if len(df) != expected_rows:
+                return {"found": True, "valid": False,
+                        "error": f"Expected {expected_rows} rows, found {len(df)}"}
+            fmt = "legacy"
+            n_years_found = 1
+            year_range = "static"
 
         # Check for NaN/blank values in ISO columns
         iso_cols = [c for c in df.columns if c in EXPECTED_ISO_COLS]
@@ -2326,7 +2551,13 @@ def _validate_custom_file(filepath: Path, expected_rows: int) -> dict:
                 return {"found": True, "valid": False,
                         "error": f"Column '{col}' contains non-numeric values"}
 
-        return {"found": True, "valid": True, "rows": len(df)}
+        result = {"found": True, "valid": True, "rows": len(df), "format": fmt}
+        if is_time_series:
+            result["years"] = n_years_found
+            result["year_range"] = year_range
+            if has_zone:
+                result["zones"] = zones
+        return result
 
     except Exception as e:
         return {"found": True, "valid": False, "error": str(e)}
@@ -2344,7 +2575,9 @@ async def custom_input_status():
         file_results = []
         for fname in files:
             filepath = CUSTOM_INPUTS_DIR / fname
-            file_result = _validate_custom_file(filepath, config["expected_rows"])
+            file_result = _validate_custom_file(
+                filepath, config["expected_rows"],
+                time_series_ok=config.get("time_series_ok", False))
             file_results.append((fname, file_result))
             if file_result.get("found"):
                 any_found = True
@@ -2358,8 +2591,15 @@ async def custom_input_status():
             if not any_found:
                 result[category] = {"found": False, "valid": False, "error": "No files found"}
             elif all_valid:
-                result[category] = {"found": True, "valid": True, "rows": config["expected_rows"],
-                                    "files_checked": len(files)}
+                agg = {"found": True, "valid": True,
+                       "files_checked": len(files)}
+                # Report time-series metadata from first valid file
+                first_valid = file_results[0][1]
+                agg["rows"] = first_valid.get("rows", config["expected_rows"])
+                agg["format"] = first_valid.get("format", "legacy")
+                if first_valid.get("year_range"):
+                    agg["year_range"] = first_valid["year_range"]
+                result[category] = agg
             else:
                 # Report first invalid file
                 for fname, fr in file_results:
