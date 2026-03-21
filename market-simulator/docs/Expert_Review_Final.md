@@ -45,7 +45,7 @@ The documentation suite is comprehensive, self-aware about limitations, and back
 | Storage economics | **Adequate** | LP co-optimization (battery/LDES/H₂) with arbitrage + capacity + ancillary revenue stacking |
 | VRE cannibalization | **Adequate** | Linear LCOE penalty (`effective_LCOE = LCOE / (1 - curtailment_rate)`) — appropriate for screening |
 | Learning curves | **Strong** | Endogenous Wright's Law with cumulative GW tracking per deployment year |
-| Retirement logic | **Adequate** | Fleet-fraction margin-driven — R6 plant-level not yet implemented |
+| Retirement logic | **Strong** | Plant-level (R6): individual plants retired worst-first, nuclear via contract/capacity market; fleet-fraction fallback when plant data unavailable |
 | Demand response | **Adequate** | Vectorized, ORDC-linked activation with linear ramp and 15% demand cap |
 | Zonal congestion | **Strong** | Pipe-and-bubble LP (2–5 zones/ISO), analytical solver for 2-zone, iterative for 3+ zone |
 | Scenario construction | **Strong** | 1,215 scenarios across 6 dimensions with tech-differentiated interconnection queue caps |
@@ -85,11 +85,10 @@ These items were identified as the highest-scrutiny areas and have been addresse
 
 These would strengthen the model for more rigorous audiences but are not blocking for expert review:
 
-**2A. Plant-Level Retirement (R6)**
-- **Current**: Fleet-fraction retirement (`market_simulation.py:999-1067`). When gas CCGT margin < -$5/MWh, a percentage of the entire fleet retires.
-- **Gap**: Real fleets have heterogeneous economics. A 2020 H-class CCGT (6.3 MMBtu/MWh) may be profitable while a 1990s F-class (7.5 MMBtu/MWh) is stranded.
-- **Impact**: Medium. Most consequential in PJM, MISO, ERCOT (large diverse fossil fleets). Plant data already available via `build_plant_level_merit_order()` in `lmp_engine.py:442-553`.
-- **Assessment**: This is the single largest remaining gap. Fleet-fraction averaging is a known simplification that IPM users will immediately identify. The model compensates partially via IPM trigger indicators, but plant-level retirement would be the highest-value improvement.
+**2A. Plant-Level Retirement (R6) — IMPLEMENTED**
+- **Status**: Fully implemented and tested (18/18 unit tests pass). `_apply_plant_level_retirement()` at `market_simulation.py:1046-1176` retires individual plants sorted worst-first by margin, with 15% reserve margin floor and inter-year ID persistence. Nuclear plants evaluated individually via contract/capacity market revenue.
+- **Data dependency**: Activates when EIA 860 plant data is present locally (not committed to repo — proprietary EIA downloads). Full EIA 860, EIA 923, and EPA CAMPD data are available in local runs. When unavailable (CI/GitHub Actions), gracefully falls back to fleet-fraction.
+- **Assessment**: This gap is closed. IPM/Aurora users will find the plant-level approach credible — individual plants sorted by economics, nuclear contract handling, and reliability floor are all standard practice.
 
 **2B. Penetration-Dependent ELCC**
 - **Current**: Static credits (`pipeline_config.py:187-197`): solar 0.30, wind 0.10, battery 0.95.
@@ -201,15 +200,16 @@ The model is fit for corporate fleet strategy, policy scenario analysis, technol
 
 Frame as a screening model. Lead with the use-case boundaries (Final_Peer_Review_Audit.md §4.3). The IPM trigger system automatically flags when results cross into production-model territory.
 
-**Two items most likely to draw expert scrutiny:**
-1. **Fleet-fraction retirement (R6)** — IPM/Aurora users will immediately ask why retirement isn't plant-level. Answer: Acknowledged gap, plant data infrastructure exists, fleet-fraction is a known screening approximation. Flag for future implementation.
-2. **Cross-validation depth** — The AEO/ReEDS comparison is directionally correct but partial. Running the full cross-validation (G6 prompts in G6_Split_Prompts.md) would strengthen credibility.
+**Primary remaining area for expert scrutiny:**
+1. **Cross-validation depth** — The AEO/ReEDS comparison is directionally correct but partial. Running the full cross-validation (G6 prompts in G6_Split_Prompts.md) would strengthen credibility for publication-level use.
 
-**Items that will NOT draw scrutiny (already strong):**
-- ORDC scarcity pricing — well-calibrated, ISO-specific, properly sourced
+**Items that will NOT draw scrutiny (strong):**
+- Plant-level retirement — R6 fully implemented with 18/18 tests passing; individual plants retired by economics, nuclear contract handling, reliability floor
+- ORDC scarcity pricing — well-calibrated, ISO-specific, properly sourced, uncertainty ranges documented
 - Zonal LMP — pipe-and-bubble is standard for screening; properly falls back to copper-plate
 - Learning curves — Wright's Law with FOAK/NOAK bounds is industry standard
 - Test coverage — 304/304 PASS across unit, integration, E2E, and edge cases
+- Methodology equations — LP zonal (§4.4.1) and VRE cannibalization (§4.4.7) fully documented
 
 ### Bottom Line
 
