@@ -3410,33 +3410,81 @@ def _map_price_sens_to_lcoe_fuel_tx(sens):
 NEW_FOSSIL_COST_LEVELS = ['Low', 'Medium', 'High']
 
 
-def build_market_scenarios():
+def _level_code(level_name):
+    """Short code for scenario IDs. Low→L, Medium→M, High→H, custom→first 2 chars."""
+    standard = {'Low': 'L', 'Medium': 'M', 'High': 'H'}
+    if level_name in standard:
+        return standard[level_name]
+    parts = level_name.replace('-', '_').split('_')
+    if len(parts) >= 2:
+        return ''.join(p[0].upper() for p in parts[:2])
+    return level_name[:2].upper()
+
+
+def build_market_scenarios(params_csv=None, price_sens_csv=None):
     """Generate all parametric sweep scenarios.
 
-    3 demand × 5 price × 3 PPA × 3 gas friction × 3 queue × 3 new fossil cost
-    = 1,215 scenarios.
-    No emission constraints, no NZ targets — purely market-driven reference trajectory.
+    Without CSV args: uses hardcoded defaults (3×5×3×3×3×3 = 1,215 scenarios).
+    With CSV args: loads parameter space from CSV files, allowing custom
+    levels, values, and scenario counts.
+
+    Args:
+        params_csv: path to sweep_params.csv (5 axes + demand growth rates)
+        price_sens_csv: path to sweep_price_sensitivities.csv (9-dim bundles)
 
     Returns list of (scenario_id_str, conditions_dict).
     """
-    combos = []
-    demand_keys = DEMAND_GROWTH_LEVELS
-    price_keys = list(PRICE_SENSITIVITIES.keys())
-    ppa_keys = PPA_LEVELS
-    gas_keys = list(GAS_FRICTION_LEVELS.keys())
-    queue_keys = ['Low', 'Medium', 'High']
-    nfc_keys = NEW_FOSSIL_COST_LEVELS
+    # Load parameter space — CSV overrides or hardcoded defaults
+    if params_csv or price_sens_csv:
+        from sweep_params_io import load_sweep_params, load_price_sensitivities
 
+    if params_csv:
+        params = load_sweep_params(params_csv)
+        demand_keys = params['demand_growth_levels']
+        gas_friction_map = params['gas_friction_levels']
+        gas_keys = list(gas_friction_map.keys())
+        ppa_keys = params['ppa_levels']
+        queue_keys = params['queue_levels']
+        nfc_keys = params['new_fossil_cost_levels']
+        # Override module-level DEMAND_GROWTH_RATES with CSV values
+        custom_demand_rates = params['demand_growth_rates']
+        for iso in DEMAND_GROWTH_RATES:
+            for level, rates in custom_demand_rates.items():
+                if iso in rates:
+                    DEMAND_GROWTH_RATES[iso][level] = rates[iso]
+    else:
+        demand_keys = DEMAND_GROWTH_LEVELS
+        gas_friction_map = GAS_FRICTION_LEVELS
+        gas_keys = list(GAS_FRICTION_LEVELS.keys())
+        ppa_keys = PPA_LEVELS
+        queue_keys = ['Low', 'Medium', 'High']
+        nfc_keys = NEW_FOSSIL_COST_LEVELS
+
+    if price_sens_csv:
+        price_sens = load_price_sensitivities(price_sens_csv)
+    else:
+        price_sens = PRICE_SENSITIVITIES
+    price_keys = list(price_sens.keys())
+
+    n_total = (len(demand_keys) * len(price_keys) * len(ppa_keys)
+               * len(gas_keys) * len(queue_keys) * len(nfc_keys))
+    if n_total > 10000:
+        import warnings
+        warnings.warn(
+            f"CSV parameters produce {n_total:,} scenarios — this may take a "
+            f"long time. Consider reducing levels.")
+
+    combos = []
     for demand, price_name, ppa, gas_name, queue, nfc in cartesian(
             demand_keys, price_keys, ppa_keys, gas_keys, queue_keys, nfc_keys):
 
-        price_mapping = _map_price_sens_to_lcoe_fuel_tx(PRICE_SENSITIVITIES[price_name])
+        price_mapping = _map_price_sens_to_lcoe_fuel_tx(price_sens[price_name])
 
-        demand_code = demand[0]
-        ppa_code = ppa[0]
-        gas_code = gas_name[0]
-        queue_code = queue[0]
-        nfc_code = nfc[0]
+        demand_code = _level_code(demand)
+        ppa_code = _level_code(ppa)
+        gas_code = _level_code(gas_name)
+        queue_code = _level_code(queue)
+        nfc_code = _level_code(nfc)
         scenario_id = f"MKT_{demand_code}_{price_name}_{ppa_code}_{gas_code}_{queue_code}_{nfc_code}"
 
         conditions = {
@@ -3446,7 +3494,7 @@ def build_market_scenarios():
             'lcoe_level': price_mapping['lcoe_level'],
             'learning_speed': QUEUE_LEARNING_MAP.get(queue, 'Medium'),
             'queue_cap_level': queue,
-            'gas_friction': GAS_FRICTION_LEVELS[gas_name],
+            'gas_friction': gas_friction_map[gas_name],
             'carbon_price': 0,
             'fuel_level': price_mapping['fuel_level'],
             'tx_level': price_mapping['tx_level'],
@@ -4368,8 +4416,9 @@ def run_market_simulation(scenario_id, conditions, isos=None,
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def run_full_sweep(isos=None, nuclear_retirement_threshold=None,
-                    snapshot_mode=False, weather_years=None, sim_years=None):
-    """Run full 1,215-scenario market sweep.
+                    snapshot_mode=False, weather_years=None, sim_years=None,
+                    params_csv=None, price_sens_csv=None):
+    """Run full parametric market sweep.
 
     Pre-loads data once, shares LMP cache across scenarios.
 
@@ -4381,6 +4430,9 @@ def run_full_sweep(isos=None, nuclear_retirement_threshold=None,
             independently, then results are combined. If None, uses default
             year only (1× sweep = 1,215 scenarios). With 5 years, runs 5× sweep
             = 6,075 scenarios total.
+        params_csv: Optional path to sweep_params.csv for custom parameter axes.
+        price_sens_csv: Optional path to sweep_price_sensitivities.csv for custom
+            price sensitivity bundles.
     """
     t0 = time.time()
     print("Loading common data...")
@@ -4396,7 +4448,8 @@ def run_full_sweep(isos=None, nuclear_retirement_threshold=None,
         'egrid_baselines': egrid_baselines,
     }
 
-    scenarios = build_market_scenarios()
+    scenarios = build_market_scenarios(
+        params_csv=params_csv, price_sens_csv=price_sens_csv)
 
     # Weather-year iteration: run each weather year as a separate sweep pass
     wy_list = weather_years or [None]  # None = default year (DATA_YEAR)

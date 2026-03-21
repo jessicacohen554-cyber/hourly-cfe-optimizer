@@ -1,20 +1,25 @@
 #!/usr/bin/env python3
 """Run the full parametric sweep and save as parquet only (no large JSON).
 
-The sweep covers 3 demand × 5 price × 3 PPA × 3 gas friction × 3 queue
-× 3 new-build fossil cost = 1,215 scenarios. Each scenario is simulated
-across all ISOs and years.
+Default: 3 demand × 5 price × 3 PPA × 3 gas friction × 3 queue × 3 new-build
+fossil cost = 1,215 scenarios. Each scenario is simulated across all ISOs/years.
+
+The parameter space can be customized via CSV templates:
+  --params-csv <path>      Override sweep axes (demand growth rates, gas friction,
+                           PPA, queue, new fossil cost levels)
+  --price-sens-csv <path>  Override price sensitivity bundles (9-dim toggle vectors)
+  --export-defaults <dir>  Export current defaults as editable CSV templates
 
 Usage:
     cd market-simulator/scripts
     python run_sweep_1215.py [--isos CAISO PJM] [--output-dir ../results/sweep_1215]
+    python run_sweep_1215.py --export-defaults ../configs/
+    python run_sweep_1215.py --params-csv ../configs/sweep_params_default.csv \\
+                             --price-sens-csv ../configs/sweep_price_sensitivities_default.csv
 
 Produces:
     sweep_1215/sweep_1215_flat.parquet           — flat table for analysis (~10 MB)
     sweep_1215/sweep_1215_aggregates.json        — P10/P50/P90 percentile bands (~1 MB)
-
-The combined JSON (~300 MB) is NO LONGER produced. All downstream consumers
-(backend API, validation scripts, dashboard) read from parquet instead.
 """
 
 import argparse
@@ -118,7 +123,7 @@ def results_to_dataframe(all_results):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Run 1,215-scenario sweep → parquet')
+    parser = argparse.ArgumentParser(description='Run parametric market sweep → parquet')
     parser.add_argument('--isos', nargs='+', default=None,
                         help='ISOs to simulate (default: all 7)')
     parser.add_argument('--output-dir', default=None,
@@ -131,7 +136,23 @@ def main():
                         help='Last simulation year (default: 2060)')
     parser.add_argument('--year-step', type=int, default=1,
                         help='Year step size (default: 1 = annual)')
+    parser.add_argument('--params-csv', default=None,
+                        help='CSV file defining sweep parameter axes '
+                             '(demand growth, gas friction, PPA, queue, '
+                             'new fossil cost). Overrides hardcoded defaults.')
+    parser.add_argument('--price-sens-csv', default=None,
+                        help='CSV file defining price sensitivity bundles '
+                             '(9-dim toggle vectors). Overrides hardcoded defaults.')
+    parser.add_argument('--export-defaults', metavar='DIR', default=None,
+                        help='Export current hardcoded defaults as CSV templates '
+                             'to the specified directory, then exit.')
     args = parser.parse_args()
+
+    # Handle --export-defaults
+    if args.export_defaults:
+        from sweep_params_io import export_default_params
+        export_default_params(args.export_defaults)
+        return
 
     sim_years = build_sim_years(args.start_year, args.end_year, args.year_step)
 
@@ -139,11 +160,18 @@ def main():
         os.path.dirname(__file__), '..', 'results', 'sweep_1215')
     os.makedirs(output_dir, exist_ok=True)
 
-    # Verify scenario count
-    scenarios = build_market_scenarios()
+    # Build scenarios — from CSV overrides or hardcoded defaults
+    scenarios = build_market_scenarios(
+        params_csv=args.params_csv,
+        price_sens_csv=args.price_sens_csv,
+    )
     n_isos_planned = len(args.isos or ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'])
     print(f"Sweep configuration: {len(scenarios)} scenarios × "
           f"{len(sim_years)} years × {n_isos_planned} ISOs")
+    if args.params_csv:
+        print(f"  Parameters CSV: {os.path.abspath(args.params_csv)}")
+    if args.price_sens_csv:
+        print(f"  Price sensitivities CSV: {os.path.abspath(args.price_sens_csv)}")
     print(f"Years: {sim_years[0]}–{sim_years[-1]} (step={args.year_step}, n={len(sim_years)})")
     print(f"Output: {os.path.abspath(output_dir)}")
 
@@ -153,6 +181,8 @@ def main():
         isos=args.isos,
         nuclear_retirement_threshold=args.nuclear_retirement,
         sim_years=sim_years,
+        params_csv=args.params_csv,
+        price_sens_csv=args.price_sens_csv,
     )
     elapsed = time.time() - t0
     print(f"\nSweep completed in {elapsed:.1f}s")
