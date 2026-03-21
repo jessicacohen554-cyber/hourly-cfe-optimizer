@@ -81,7 +81,7 @@ a = Analysis(
         'generate_synthetic_profiles', 'generate_plant_heat_rates',
         'zonal_lmp', 'build_fleet_scenario_data',
         'generate_constellation_scenarios',
-        'run_cv_simulations', 'run_sweep_405',
+        'run_cv_simulations', 'run_sweep_1215',
         'validate_plant_retirement',
     ] + pyarrow_hiddenimports + numba_hiddenimports,
     excludes=['tkinter', 'matplotlib', 'IPython', 'notebook', 'pytest'],

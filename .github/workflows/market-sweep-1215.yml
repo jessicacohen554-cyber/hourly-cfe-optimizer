@@ -76,7 +76,7 @@ jobs:
       - name: "Run 1,215-scenario sweep — ${{ matrix.iso }}"
         working-directory: market-simulator/scripts
         run: |
-          python run_sweep_405.py \
+          python run_sweep_1215.py \
             --isos ${{ matrix.iso }} \
             --output-dir ../results/sweep_1215/${{ matrix.iso }}
 
@@ -194,7 +194,7 @@ jobs:
           git checkout -b "$TARGET_BRANCH"
 
           git add -f market-simulator/results/sweep_1215/
-          git add -f market-simulator/scripts/run_sweep_405.py
+          git add -f market-simulator/scripts/run_sweep_1215.py
 
           if git diff --cached --quiet; then
             echo "No changes to commit"
