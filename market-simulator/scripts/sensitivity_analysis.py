@@ -537,7 +537,7 @@ def main():
 
     if not os.path.exists(parquet_path):
         print(f"ERROR: Parquet not found at {parquet_path}")
-        print("Run the 1,215-scenario sweep first: python run_sweep_405.py")
+        print("Run the 1,215-scenario sweep first: python run_sweep_1215.py")
         sys.exit(1)
 
     print(f"Loading sweep results from: {parquet_path}")
