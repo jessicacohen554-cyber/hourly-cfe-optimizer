@@ -113,7 +113,13 @@ from procurement_utils import get_rps_target_at_year, PPA_PREMIUMS
 
 # Add backend dir to path for model imports
 sys.path.insert(0, os.path.join(MODULE_ROOT, 'backend'))
-from models import ProvenanceMetadata
+try:
+    from models import ProvenanceMetadata
+except ImportError:
+    # pydantic may not be installed in CI sweep environments;
+    # ProvenanceMetadata is only used by build_provenance_metadata(),
+    # not by the core sweep functions.
+    ProvenanceMetadata = None
 
 OUTPUT_DIR = str(resolve_data_path('results'))
 
