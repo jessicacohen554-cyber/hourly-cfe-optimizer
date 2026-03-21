@@ -92,6 +92,64 @@ def first_run_setup():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Heat rate staleness detection
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _newest_mtime(directory):
+    """Return the newest file mtime under a directory, or 0 if empty/missing."""
+    directory = Path(directory)
+    if not directory.is_dir():
+        return 0
+    newest = 0
+    for f in directory.rglob("*"):
+        if f.is_file():
+            newest = max(newest, f.stat().st_mtime)
+    return newest
+
+
+def check_heat_rate_staleness():
+    """Regenerate plant_heat_rates.json if source data is newer than the cache."""
+    app_data = get_app_data_dir()
+    data_dir = app_data / "data" if is_frozen() else app_data / "data"
+
+    heat_rates_file = data_dir / "plant_heat_rates.json"
+    eia923_dir = data_dir / "eia-923"
+    campd_dir = data_dir / "epa-campd"
+
+    # If neither source directory exists, nothing to do
+    if not eia923_dir.is_dir() and not campd_dir.is_dir():
+        return
+
+    # If heat rates file doesn't exist, regenerate
+    if not heat_rates_file.exists():
+        _regenerate_heat_rates(str(data_dir), str(heat_rates_file))
+        return
+
+    # Compare mtimes: if any source file is newer than cache, regenerate
+    cache_mtime = heat_rates_file.stat().st_mtime
+    source_mtime = max(_newest_mtime(eia923_dir), _newest_mtime(campd_dir))
+
+    if source_mtime > cache_mtime:
+        print("Heat rate source data is newer than cache — regenerating...")
+        _regenerate_heat_rates(str(data_dir), str(heat_rates_file))
+
+
+def _regenerate_heat_rates(data_dir, output_file):
+    """Run heat rate generation with configurable paths."""
+    import subprocess
+    bundle = get_bundle_dir()
+    script = bundle / "scripts" / "generate_plant_heat_rates.py"
+    if not script.exists():
+        # Dev mode — script is right next to us
+        script = Path(__file__).resolve().parent / "scripts" / "generate_plant_heat_rates.py"
+    if script.exists():
+        subprocess.run(
+            [sys.executable, str(script), "--data-dir", data_dir, "--output", output_file],
+            check=False,
+        )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Free port selection
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -148,6 +206,9 @@ def main():
 
     # Run first-run setup (creates directories, copies templates)
     first_run_setup()
+
+    # Check heat rate staleness and auto-regenerate if needed
+    check_heat_rate_staleness()
 
     # Find a free port
     port = find_free_port()

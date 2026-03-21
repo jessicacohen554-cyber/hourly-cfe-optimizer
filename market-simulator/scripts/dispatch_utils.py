@@ -39,10 +39,23 @@ except ImportError:
             return args[0]
         return decorator
 
-MODULE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Centralized path resolution — supports frozen (PyInstaller) and dev modes
+try:
+    from paths import MODULE_ROOT as _MODULE_ROOT, get_data_search_dirs, resolve_data_path
+    MODULE_ROOT = str(_MODULE_ROOT)
+    _search = get_data_search_dirs(["", "profiles"])
+    _DATA_SEARCH = [str(d) for d in _search] if _search else None
+except ImportError:
+    MODULE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    _DATA_SEARCH = None
+
+    def resolve_data_path(rel):
+        from pathlib import Path
+        return Path(MODULE_ROOT) / "data" / rel
+
 DATA_DIR = os.path.join(MODULE_ROOT, 'data')
-# Search local data directory and profiles subdirectory
-_DATA_SEARCH = [DATA_DIR, os.path.join(DATA_DIR, 'profiles')]
+if not _DATA_SEARCH:
+    _DATA_SEARCH = [DATA_DIR, os.path.join(DATA_DIR, 'profiles')]
 SCRIPT_DIR = MODULE_ROOT  # backward compat
 
 # Import shared constants from pipeline_config (single source of truth)
