@@ -239,7 +239,21 @@
                     }
                 },
                 plugins: {
-                    legend: { display: false },
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        align: 'end',
+                        labels: {
+                            filter: function (item, chartData) {
+                                var ds = chartData.datasets[item.datasetIndex];
+                                return ds && ds._showInLegend;
+                            },
+                            usePointStyle: true,
+                            pointStyle: 'line',
+                            padding: 16,
+                            font: { size: 12 }
+                        }
+                    },
                     tooltip: { enabled: false, external: fanTooltipHandler },
                     annotation: { annotations: {} }
                 },
@@ -260,66 +274,206 @@
         updateFanChart();
     }
 
-    function addFanDatasets(datasets, env, years, color, label, isMuted) {
-        var p10 = [], p50 = [], p90 = [];
+    // ── Determine color mode ──
+    function getColorMode() {
+        // Collect visible scenarios: baseline is always present, plus savedScenarioOverlays
+        var visibleCount = savedScenarioOverlays.length;
+        if (customScenario) visibleCount++;
+        // Single mode: 0 overlays (baseline only), or exactly 1 overlay
+        // where the overlay count ≤1 (baseline + 1 custom = single)
+        var hasBaselineOverlay = savedScenarioOverlays.some(function (s) { return s.isBaseline; });
+        if (visibleCount <= 1 || (visibleCount === 2 && hasBaselineOverlay)) {
+            return 'single';
+        }
+        return 'multi';
+    }
+
+    // ── Build 5-band fan datasets for a single scenario ──
+    // mode: 'single' = green/red semantic colors, 'multi' = scenario's own color
+    // p50Style: { color, width, dash } for the p50 line specifically
+    function addFanDatasets(datasets, env, years, color, label, mode, p50Style) {
+        var p10 = [], p25 = [], p50 = [], p75 = [], p90 = [];
         years.forEach(function (y) {
             var e = env[String(y)];
-            p10.push(e ? e.p10 : null);
-            p50.push(e ? e.p50 : null);
-            p90.push(e ? e.p90 : null);
+            if (e) {
+                p10.push(e.p10);
+                p25.push(e.p25 != null ? e.p25 : (e.p10 + e.p50) / 2);
+                p50.push(e.p50);
+                p75.push(e.p75 != null ? e.p75 : (e.p50 + e.p90) / 2);
+                p90.push(e.p90);
+            } else {
+                p10.push(null); p25.push(null); p50.push(null);
+                p75.push(null); p90.push(null);
+            }
         });
 
-        var bandAlpha = isMuted ? 0.08 : 0.20;
-        var lineAlpha = isMuted ? 0.25 : 0.4;
-        var p50Alpha = isMuted ? 0.4 : 1.0;
-        var borderWidth = isMuted ? 1.5 : 2.5;
-        var pointRadius = isMuted ? 0 : 3;
-        var dash = isMuted ? [6, 4] : [];
+        var startIdx = datasets.length;
 
-        // P90
-        datasets.push({
-            label: label + ' P90',
-            data: p90,
-            borderColor: hexToRgba(color, lineAlpha),
-            backgroundColor: hexToRgba(color, 0.0),
-            borderWidth: 1,
-            borderDash: dash,
-            pointRadius: 0,
-            fill: false,
-            tension: 0.3,
-            _scenarioKey: label,
-            _band: 'p90'
-        });
-        // P10 (fill up to P90)
-        datasets.push({
-            label: label + ' P10',
-            data: p10,
-            borderColor: hexToRgba(color, lineAlpha),
-            backgroundColor: hexToRgba(color, bandAlpha),
-            borderWidth: 1,
-            borderDash: dash,
-            pointRadius: 0,
-            fill: '-1',
-            tension: 0.3,
-            _scenarioKey: label,
-            _band: 'p10'
-        });
-        // P50
-        datasets.push({
-            label: label + ' P50',
-            data: p50,
-            borderColor: hexToRgba(color, p50Alpha),
-            backgroundColor: 'transparent',
-            borderWidth: borderWidth,
-            borderDash: dash,
-            pointRadius: pointRadius,
-            pointBackgroundColor: color,
-            pointHoverRadius: isMuted ? 3 : 5,
-            fill: false,
-            tension: 0.3,
-            _scenarioKey: label,
-            _band: 'p50'
-        });
+        if (mode === 'single') {
+            // ── Single-scenario mode: green (optimistic) below p50, red (pessimistic) above ──
+            var greenLight = 'rgba(34, 197, 94, 0.08)';
+            var greenMed   = 'rgba(34, 197, 94, 0.15)';
+            var greenLine  = 'rgb(34, 197, 94)';
+            var redLight   = 'rgba(239, 68, 68, 0.08)';
+            var redMed     = 'rgba(239, 68, 68, 0.15)';
+            var redLine    = 'rgb(239, 68, 68)';
+
+            // 1. p10 (invisible bottom boundary)
+            datasets.push({
+                label: label + ' p10', data: p10,
+                borderColor: 'transparent', backgroundColor: 'transparent',
+                borderWidth: 0, pointRadius: 0, fill: false,
+                tension: 0.3, showLegend: false, _scenarioKey: label, _band: 'p10'
+            });
+            // 2. p10→p25 fill (light green)
+            datasets.push({
+                label: label + ' p10-p25', data: p25,
+                borderColor: 'transparent', backgroundColor: greenLight,
+                borderWidth: 0, pointRadius: 0,
+                fill: { target: startIdx, above: greenLight, below: greenLight },
+                tension: 0.3, _scenarioKey: label, _band: 'fill'
+            });
+            // 3. p25 dashed line (green)
+            datasets.push({
+                label: label + ' P25', data: p25,
+                borderColor: greenLine, backgroundColor: 'transparent',
+                borderWidth: 1.5, borderDash: [6, 4], pointRadius: 0,
+                fill: false, tension: 0.3, _scenarioKey: label, _band: 'p25'
+            });
+            // 4. p25→p50 fill (medium green)
+            datasets.push({
+                label: label + ' p25-p50', data: p50,
+                borderColor: 'transparent', backgroundColor: greenMed,
+                borderWidth: 0, pointRadius: 0,
+                fill: { target: startIdx + 2, above: greenMed, below: greenMed },
+                tension: 0.3, _scenarioKey: label, _band: 'fill'
+            });
+            // 5. p50 solid line
+            datasets.push({
+                label: p50Style.legendLabel || label,
+                data: p50,
+                borderColor: p50Style.color,
+                backgroundColor: 'transparent',
+                borderWidth: p50Style.width || 2.5,
+                borderDash: p50Style.dash || [],
+                pointRadius: p50Style.pointRadius != null ? p50Style.pointRadius : 3,
+                pointBackgroundColor: p50Style.color,
+                pointHoverRadius: 5,
+                fill: false, tension: 0.3,
+                _scenarioKey: label, _band: 'p50',
+                _showInLegend: true
+            });
+            // 6. p50→p75 fill (medium red)
+            datasets.push({
+                label: label + ' p50-p75', data: p75,
+                borderColor: 'transparent', backgroundColor: redMed,
+                borderWidth: 0, pointRadius: 0,
+                fill: { target: startIdx + 4, above: redMed, below: redMed },
+                tension: 0.3, _scenarioKey: label, _band: 'fill'
+            });
+            // 7. p75 dashed line (red)
+            datasets.push({
+                label: label + ' P75', data: p75,
+                borderColor: redLine, backgroundColor: 'transparent',
+                borderWidth: 1.5, borderDash: [6, 4], pointRadius: 0,
+                fill: false, tension: 0.3, _scenarioKey: label, _band: 'p75'
+            });
+            // 8. p75→p90 fill (light red)
+            datasets.push({
+                label: label + ' p75-p90', data: p90,
+                borderColor: 'transparent', backgroundColor: redLight,
+                borderWidth: 0, pointRadius: 0,
+                fill: { target: startIdx + 6, above: redLight, below: redLight },
+                tension: 0.3, _scenarioKey: label, _band: 'fill'
+            });
+            // 9. p90 (invisible top boundary)
+            datasets.push({
+                label: label + ' p90', data: p90,
+                borderColor: 'transparent', backgroundColor: 'transparent',
+                borderWidth: 0, pointRadius: 0, fill: false,
+                tension: 0.3, _scenarioKey: label, _band: 'p90'
+            });
+        } else {
+            // ── Multi-scenario mode: color-matched shading using scenario's assigned color ──
+            var veryLight = hexToRgba(color, 0.06);
+            var light     = hexToRgba(color, 0.12);
+
+            // 1. p10 (invisible bottom boundary)
+            datasets.push({
+                label: label + ' p10', data: p10,
+                borderColor: 'transparent', backgroundColor: 'transparent',
+                borderWidth: 0, pointRadius: 0, fill: false,
+                tension: 0.3, _scenarioKey: label, _band: 'p10'
+            });
+            // 2. p10→p25 fill
+            datasets.push({
+                label: label + ' p10-p25', data: p25,
+                borderColor: 'transparent', backgroundColor: veryLight,
+                borderWidth: 0, pointRadius: 0,
+                fill: { target: startIdx, above: veryLight, below: veryLight },
+                tension: 0.3, _scenarioKey: label, _band: 'fill'
+            });
+            // 3. p25 dashed line
+            datasets.push({
+                label: label + ' P25', data: p25,
+                borderColor: color, backgroundColor: 'transparent',
+                borderWidth: 1, borderDash: [5, 3], pointRadius: 0,
+                fill: false, tension: 0.3, _scenarioKey: label, _band: 'p25'
+            });
+            // 4. p25→p50 fill
+            datasets.push({
+                label: label + ' p25-p50', data: p50,
+                borderColor: 'transparent', backgroundColor: light,
+                borderWidth: 0, pointRadius: 0,
+                fill: { target: startIdx + 2, above: light, below: light },
+                tension: 0.3, _scenarioKey: label, _band: 'fill'
+            });
+            // 5. p50 solid line
+            datasets.push({
+                label: label,
+                data: p50,
+                borderColor: color,
+                backgroundColor: 'transparent',
+                borderWidth: 2.5,
+                borderDash: [],
+                pointRadius: 3,
+                pointBackgroundColor: color,
+                pointHoverRadius: 5,
+                fill: false, tension: 0.3,
+                _scenarioKey: label, _band: 'p50',
+                _showInLegend: true
+            });
+            // 6. p50→p75 fill
+            datasets.push({
+                label: label + ' p50-p75', data: p75,
+                borderColor: 'transparent', backgroundColor: light,
+                borderWidth: 0, pointRadius: 0,
+                fill: { target: startIdx + 4, above: light, below: light },
+                tension: 0.3, _scenarioKey: label, _band: 'fill'
+            });
+            // 7. p75 dashed line
+            datasets.push({
+                label: label + ' P75', data: p75,
+                borderColor: color, backgroundColor: 'transparent',
+                borderWidth: 1, borderDash: [5, 3], pointRadius: 0,
+                fill: false, tension: 0.3, _scenarioKey: label, _band: 'p75'
+            });
+            // 8. p75→p90 fill
+            datasets.push({
+                label: label + ' p75-p90', data: p90,
+                borderColor: 'transparent', backgroundColor: veryLight,
+                borderWidth: 0, pointRadius: 0,
+                fill: { target: startIdx + 6, above: veryLight, below: veryLight },
+                tension: 0.3, _scenarioKey: label, _band: 'fill'
+            });
+            // 9. p90 (invisible)
+            datasets.push({
+                label: label + ' p90', data: p90,
+                borderColor: 'transparent', backgroundColor: 'transparent',
+                borderWidth: 0, pointRadius: 0, fill: false,
+                tension: 0.3, _scenarioKey: label, _band: 'p90'
+            });
+        }
     }
 
     function updateFanChart() {
@@ -327,28 +481,75 @@
         var years = getYears();
         var labels = years.map(String);
         var datasets = [];
-        var hasOverlays = !!customScenario || savedScenarioOverlays.length > 0;
         var baseline = DATA.scenarios.baseline;
+        var mode = getColorMode();
 
-        // Baseline fan — muted when overlays are active, prominent otherwise
-        if (baseline) {
-            var baseEnv = getEnvelope(baseline);
-            addFanDatasets(datasets, baseEnv, years, BASELINE_COLOR, 'Baseline', hasOverlays);
-        }
-
-        // Custom overlay (live recalculation) — prominent
-        if (customScenario) {
-            addFanDatasets(datasets, customScenario.envelope, years, CUSTOM_COLOR, 'Custom', false);
-        }
-
-        // Saved scenario overlays
-        savedScenarioOverlays.forEach(function (s) {
-            if (s.results && s.results.envelope) {
-                addFanDatasets(datasets, s.results.envelope, years, s.color, s.name, false);
+        if (mode === 'single') {
+            // ── Single-scenario mode ──
+            // Determine if it's baseline-only, or baseline + one custom/saved
+            var customOrSaved = customScenario ? customScenario : null;
+            if (!customOrSaved && savedScenarioOverlays.length === 1) {
+                customOrSaved = savedScenarioOverlays[0];
             }
-        });
 
-        // Target overlays
+            if (customOrSaved && baseline) {
+                // Baseline + 1 custom: baseline gets gray p50, custom gets green/red fan
+                var baseEnv = getEnvelope(baseline);
+                // Only show baseline p50 as a gray reference line
+                var baseP50 = [];
+                years.forEach(function (y) {
+                    var e = baseEnv[String(y)];
+                    baseP50.push(e ? e.p50 : null);
+                });
+                datasets.push({
+                    label: 'Baseline',
+                    data: baseP50,
+                    borderColor: '#6B7280',
+                    backgroundColor: 'transparent',
+                    borderWidth: 2, borderDash: [],
+                    pointRadius: 0, pointHoverRadius: 3,
+                    fill: false, tension: 0.3,
+                    _scenarioKey: 'Baseline', _band: 'p50', _showInLegend: true
+                });
+
+                // Custom scenario gets the full green/red fan
+                var custEnv = customOrSaved.results ? customOrSaved.results.envelope : customOrSaved.envelope;
+                var custColor = customOrSaved.color || CUSTOM_COLOR;
+                var custName = customOrSaved.name || 'Custom';
+                addFanDatasets(datasets, custEnv, years, custColor, custName, 'single', {
+                    color: custColor, width: 2.5, dash: [], pointRadius: 3,
+                    legendLabel: custName
+                });
+            } else if (baseline) {
+                // Baseline only: show full green/red fan with baseline's own color for p50
+                var baseEnv = getEnvelope(baseline);
+                addFanDatasets(datasets, baseEnv, years, BASELINE_COLOR, 'Baseline', 'single', {
+                    color: BASELINE_COLOR, width: 2.5, dash: [], pointRadius: 3,
+                    legendLabel: 'Baseline'
+                });
+            }
+        } else {
+            // ── Multi-scenario mode ──
+            // Baseline always gets its fan
+            if (baseline) {
+                var baseEnv = getEnvelope(baseline);
+                addFanDatasets(datasets, baseEnv, years, BASELINE_COLOR, 'Baseline', 'multi');
+            }
+
+            // Custom overlay
+            if (customScenario) {
+                addFanDatasets(datasets, customScenario.envelope, years, CUSTOM_COLOR, 'Custom', 'multi');
+            }
+
+            // Saved scenario overlays
+            savedScenarioOverlays.forEach(function (s) {
+                if (s.results && s.results.envelope) {
+                    addFanDatasets(datasets, s.results.envelope, years, s.color, s.name, 'multi');
+                }
+            });
+        }
+
+        // Target overlays (same in both modes)
         selectedTargets.forEach(function (selTgt) {
             if (!selTgt || selTgt === 'none' || !DATA.targets || !DATA.targets[selTgt]) return;
             var tgt = DATA.targets[selTgt];
@@ -366,7 +567,8 @@
                 pointRadius: 0,
                 fill: false,
                 tension: 0.3,
-                _target: true
+                _target: true,
+                _showInLegend: true
             });
         });
 
@@ -403,6 +605,27 @@
         fanChart.update('none');
     }
 
+    // ── Tooltip helper: format a scenario's envelope row ──
+    function tooltipEnvelopeRow(env, year, color, label, baseline2023) {
+        var e = env[year];
+        if (!e) return '';
+        var p25 = e.p25 != null ? e.p25 : (e.p10 + e.p50) / 2;
+        var p75 = e.p75 != null ? e.p75 : (e.p50 + e.p90) / 2;
+        var pctStr = '';
+        if (baseline2023 && baseline2023 > 0) {
+            var pct = ((baseline2023 - e.p50) / baseline2023 * 100).toFixed(1);
+            pctStr = ' (' + (pct >= 0 ? '-' : '+') + Math.abs(pct) + '% vs 2023)';
+        }
+        return '<div class="fan-tooltip-row">' +
+            '<span class="fan-tooltip-swatch" style="background:' + color + '"></span>' +
+            '<span class="fan-tooltip-label">' + label + '</span>' +
+            '<span class="fan-tooltip-vals">P10: ' + e.p10.toFixed(1) +
+            '  P25: ' + p25.toFixed(1) +
+            '  P50: ' + e.p50.toFixed(1) +
+            '  P75: ' + p75.toFixed(1) +
+            '  P90: ' + e.p90.toFixed(1) + pctStr + '</span></div>';
+    }
+
     // ── Custom tooltip ──
     function fanTooltipHandler(context) {
         var tooltipEl = document.getElementById('fanTooltip');
@@ -423,65 +646,28 @@
             var baseline2023 = baseEnv && baseEnv['2023'] ? baseEnv['2023'].p50 : null;
 
             // Baseline row
-            if (baseYear) {
-                var basePctStr = '';
-                if (baseline2023 && baseline2023 > 0) {
-                    var basePct = ((baseline2023 - baseYear.p50) / baseline2023 * 100).toFixed(1);
-                    basePctStr = ' (' + (basePct >= 0 ? '-' : '+') + Math.abs(basePct) + '% vs 2023)';
-                }
-                html += '<div class="fan-tooltip-row">' +
-                    '<span class="fan-tooltip-swatch" style="background:' + BASELINE_COLOR + '"></span>' +
-                    '<span class="fan-tooltip-label">Baseline</span>' +
-                    '<span class="fan-tooltip-vals">P10: ' + baseYear.p10.toFixed(1) +
-                    '  P50: ' + baseYear.p50.toFixed(1) +
-                    '  P90: ' + baseYear.p90.toFixed(1) + basePctStr + '</span></div>';
+            if (baseYear && baseEnv) {
+                html += tooltipEnvelopeRow(baseEnv, year, BASELINE_COLOR, 'Baseline', baseline2023);
             }
 
             // Custom row
-            if (customScenario) {
-                var custYear = customScenario.envelope[year];
-                if (custYear) {
-                    var custPctStr = '';
-                    if (baseline2023 && baseline2023 > 0) {
-                        var custPct = ((baseline2023 - custYear.p50) / baseline2023 * 100).toFixed(1);
-                        custPctStr = ' (' + (custPct >= 0 ? '-' : '+') + Math.abs(custPct) + '% vs 2023)';
-                    }
-                    html += '<div class="fan-tooltip-row">' +
-                        '<span class="fan-tooltip-swatch" style="background:' + CUSTOM_COLOR + '"></span>' +
-                        '<span class="fan-tooltip-label">Custom</span>' +
-                        '<span class="fan-tooltip-vals">P10: ' + custYear.p10.toFixed(1) +
-                        '  P50: ' + custYear.p50.toFixed(1) +
-                        '  P90: ' + custYear.p90.toFixed(1) + custPctStr + '</span></div>';
-
-                    // Delta
-                    if (baseYear) {
-                        var delta = custYear.p50 - baseYear.p50;
-                        var cls = delta < 0 ? 'gap-negative' : 'gap-positive';
-                        var sign = delta > 0 ? '+' : '';
-                        html += '<div class="fan-tooltip-gap"><span class="' + cls + '">' +
-                            sign + delta.toFixed(1) + ' Mt vs Baseline</span></div>';
-                    }
+            if (customScenario && customScenario.envelope) {
+                html += tooltipEnvelopeRow(customScenario.envelope, year, CUSTOM_COLOR, 'Custom', baseline2023);
+                if (baseYear && customScenario.envelope[year]) {
+                    var delta = customScenario.envelope[year].p50 - baseYear.p50;
+                    var cls = delta < 0 ? 'gap-negative' : 'gap-positive';
+                    var sign = delta > 0 ? '+' : '';
+                    html += '<div class="fan-tooltip-gap"><span class="' + cls + '">' +
+                        sign + delta.toFixed(1) + ' Mt vs Baseline</span></div>';
                 }
             }
 
             // Saved scenario rows
             savedScenarioOverlays.forEach(function (s) {
                 if (!s.results || !s.results.envelope) return;
-                var sYear = s.results.envelope[year];
-                if (!sYear) return;
-                var sPctStr = '';
-                if (baseline2023 && baseline2023 > 0) {
-                    var sPct = ((baseline2023 - sYear.p50) / baseline2023 * 100).toFixed(1);
-                    sPctStr = ' (' + (sPct >= 0 ? '-' : '+') + Math.abs(sPct) + '% vs 2023)';
-                }
-                html += '<div class="fan-tooltip-row">' +
-                    '<span class="fan-tooltip-swatch" style="background:' + s.color + '"></span>' +
-                    '<span class="fan-tooltip-label">' + (s.name || 'Saved') + '</span>' +
-                    '<span class="fan-tooltip-vals">P10: ' + sYear.p10.toFixed(1) +
-                    '  P50: ' + sYear.p50.toFixed(1) +
-                    '  P90: ' + sYear.p90.toFixed(1) + sPctStr + '</span></div>';
-                if (baseYear) {
-                    var sDelta = sYear.p50 - baseYear.p50;
+                html += tooltipEnvelopeRow(s.results.envelope, year, s.color, s.name || 'Saved', baseline2023);
+                if (baseYear && s.results.envelope[year]) {
+                    var sDelta = s.results.envelope[year].p50 - baseYear.p50;
                     var sCls = sDelta < 0 ? 'gap-negative' : 'gap-positive';
                     var sSign = sDelta > 0 ? '+' : '';
                     html += '<div class="fan-tooltip-gap"><span class="' + sCls + '">' +
@@ -520,17 +706,23 @@
         tooltipEl.classList.add('visible');
     }
 
-    // ── Fan legend ──
+    // ── Fan legend (below chart — shows band key in single mode) ──
     function updateFanLegend() {
         var el = document.getElementById('fanLegend');
         if (!el || !DATA) return;
-        var items = [{ label: 'Baseline', color: BASELINE_COLOR, type: 'band' }];
-        if (customScenario) {
-            items.push({ label: 'Custom', color: CUSTOM_COLOR, type: 'band' });
+        var mode = getColorMode();
+        var items = [];
+
+        if (mode === 'single') {
+            // Show green/red band explanation
+            items.push({ label: 'P25 (optimistic)', color: 'rgb(34, 197, 94)', type: 'dashed' });
+            items.push({ label: 'P10–P50 range', color: 'rgba(34, 197, 94, 0.15)', type: 'band' });
+            items.push({ label: 'P75 (pessimistic)', color: 'rgb(239, 68, 68)', type: 'dashed' });
+            items.push({ label: 'P50–P90 range', color: 'rgba(239, 68, 68, 0.15)', type: 'band' });
         }
-        savedScenarioOverlays.forEach(function (s) {
-            items.push({ label: s.name, color: s.color, type: 'band' });
-        });
+        // In multi mode, the Chart.js built-in legend handles p50 lines
+
+        // Targets always shown
         selectedTargets.forEach(function (selTgt) {
             if (selTgt && selTgt !== 'none' && DATA.targets && DATA.targets[selTgt]) {
                 var style = TARGET_STYLES[selTgt] || TARGET_STYLES.custom;
@@ -541,10 +733,16 @@
                 });
             }
         });
+
         el.innerHTML = items.map(function(item) {
+            var swatch;
+            if (item.type === 'dashed') {
+                swatch = '<span style="width:24px;height:0;border-top:2px dashed ' + item.color + ';display:inline-block;"></span>';
+            } else {
+                swatch = '<span style="width:24px;height:10px;border-radius:3px;background:' + item.color + ';display:inline-block;"></span>';
+            }
             return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:16px;">' +
-                '<span style="width:24px;height:10px;border-radius:3px;background:' + item.color + ';display:inline-block;"></span>' +
-                item.label + '</span>';
+                swatch + item.label + '</span>';
         }).join('');
     }
 
