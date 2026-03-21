@@ -66,7 +66,7 @@ if not exist "results\sweep_1215\sweep_1215_flat.parquet" (
     echo ================================================================
     echo.
     set PYTHONPATH=%~dp0;%~dp0backend;%~dp0scripts
-    %PYTHON% scripts\run_sweep_405.py --output-dir results\sweep_1215
+    %PYTHON% scripts\run_sweep_1215.py --output-dir results\sweep_1215
     if errorlevel 1 (
         echo WARNING: Sweep generation failed. The UI will still load but
         echo sweep-dependent features will be unavailable.
