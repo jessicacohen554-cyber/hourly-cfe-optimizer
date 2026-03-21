@@ -334,9 +334,9 @@
             <div class="hero-eyebrow">Fleet Analysis</div>
             <h1>Fleet Climate <strong>Scenarios</strong></h1>
             <p class="hero-desc">
-                P10/P50/P90 emissions envelopes across fleet decarbonization scenarios.
-                Compare baseline, CCS retrofit, new gas, and retirement pathways against climate targets.
-                Edit fleet configuration and recalculate in real-time.
+                Explore your fleet's emissions trajectory under market-driven dispatch.
+                Use the sidebar to model CCS retrofits, retirements, and new builds —
+                see how your changes shift the P10/P50/P90 envelope against climate targets.
             </p>
         </div>
     </div>
@@ -345,12 +345,6 @@
 
         <!-- Controls Strip -->
         <div class="glass-card controls-strip" id="controlsStrip">
-            <div class="controls-group">
-                <div class="controls-group-label">Scenarios</div>
-                <div class="scenario-checks" id="scenarioChecks">
-                    <!-- Populated by JS -->
-                </div>
-            </div>
             <div class="controls-group">
                 <div class="controls-group-label">Target Overlays</div>
                 <div class="target-checks" id="targetRadios">
@@ -383,7 +377,7 @@
             <div class="chart-card-header">
                 <div class="section-eyebrow">Emissions Trajectory</div>
                 <h3>Fleet Emissions Fan Chart</h3>
-                <p>P10/P50/P90 probability envelopes for each fleet scenario vs. climate targets</p>
+                <p>Baseline fleet trajectory (muted) vs. your custom modifications (bold). Use the sidebar to model changes.</p>
             </div>
             <div class="fan-chart-container">
                 <canvas id="fanChart"></canvas>
@@ -399,10 +393,7 @@
                 <div class="chart-card-header">
                     <div class="section-eyebrow">Plant Impact</div>
                     <h3 id="waterfallTitle">Emissions Delta vs. Baseline — 2030</h3>
-                    <p>
-                        Which plants drive the biggest emissions changes?
-                        <select class="waterfall-scenario-select" id="waterfallScenarioSelect"></select>
-                    </p>
+                    <p>Which plants drive the biggest emissions changes vs. baseline?</p>
                 </div>
                 <div class="waterfall-chart-container">
                     <canvas id="waterfallChart"></canvas>
@@ -428,10 +419,7 @@
             <div class="chart-card-header">
                 <div class="section-eyebrow">Emissions Breakdown</div>
                 <h3 id="fuelEmissionsTitle">Emissions by Fuel Type — Baseline</h3>
-                <p>
-                    Stacked area showing coal/gas/oil emissions over time.
-                    <select class="fuel-scenario-select" id="fuelScenarioSelect"></select>
-                </p>
+                <p>Stacked area showing coal/gas/oil emissions over time for your scenario.</p>
             </div>
             <div class="secondary-chart-container">
                 <canvas id="fuelEmissionsChart"></canvas>
