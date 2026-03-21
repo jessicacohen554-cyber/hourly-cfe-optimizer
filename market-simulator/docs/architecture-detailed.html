@@ -341,8 +341,8 @@
             <div class="sc-id">Fleet Dispatch Engine</div>
             <div class="sc-script">fleet_dispatch.py, fleet-dispatch-engine.js</div>
             <div class="sc-detail">
-              <strong>Python:</strong> Plant-level economics across 1,215 sweep scenarios. Efficiency ratios, CCS ramp (0/2/5/8yr), economic retirement. Grid+fleet fossil reconciliation (additive rule). P10/P50/P90 envelopes.<br>
-              <strong>JS port:</strong> Identical logic in browser. Instant recalc with fleet sidebar modifications. 200 plants &times; 1,215 scenarios &times; 6 years in &lt;50ms.
+              <strong>Python:</strong> 146-plant Constellation fleet (15 nuclear, 43 renewable, 81 fossil, 7 storage) from CEG Rosetta CSV. Non-fossil dispatch via static CFs (nuclear 92%, geothermal 85%, wind 30%, solar 22%, hydro 40%). Fossil: efficiency ratios, CCS ramp (0/2/5/8yr), economic retirement. Grid+fleet fossil reconciliation (additive rule). P10/P50/P90 envelopes.<br>
+              <strong>JS port:</strong> Identical logic in browser. Instant recalc with fleet sidebar modifications. 146 plants &times; 1,215 scenarios &times; 6 years in &lt;50ms.
             </div>
           </div>
         </div>
@@ -580,9 +580,13 @@
             <div class="sc-id">Data Layout</div>
             <div class="sc-detail">
               data/profiles/ &mdash; EIA demand, gen, fossil, emission, interchange profiles<br>
+              data/CEG_fleet_rosetta.csv &mdash; Canonical Constellation 146-plant fleet roster<br>
+              data/constellation_fleet.json &mdash; 146 plants (nuclear, renewable, fossil, storage)<br>
               data/eia-860/, eia-923/, epa-campd/ &mdash; fleet model by state<br>
               data/sweep_results/ &mdash; pre-computed 1,215-scenario sweep parquets<br>
               data/fleet/ &mdash; fleet dispatch results, plant-level economics<br>
+              <strong>scripts/build_fleet_scenario_data.py</strong> &mdash; Builds fleet scenario data from Rosetta CSV<br>
+              <strong>scripts/generate_constellation_scenarios.py</strong> &mdash; Generates scenario configurations from Rosetta CSV<br>
               <strong>scripts/sensitivity_analysis.py</strong> &mdash; G7: Morris method screening + first-order variance decomposition + tornado diagrams<br>
               <strong>scripts/tests/validate_cross_model.py</strong> &mdash; G6: cross-validation vs AEO 2025, ReEDS 2024, EPA IPM v6 (clean share, capacity additions, coal retirement timing)
             </div>

@@ -207,10 +207,10 @@
         <div class="step-script">eia_data_io.py, pipeline_config.py</div>
       </div>
       <div class="step-box">
-        <div class="step-id">EIA 860/923</div>
+        <div class="step-id">CEG Rosetta + EIA</div>
         <div class="step-name">Fleet Inventory</div>
-        <div class="step-desc">Real generator-level data: capacity, heat rates, emissions. EIA + EPA CAMPD cross-reference. BA&rarr;ISO mapping.</div>
-        <div class="step-script">fleet_model.py</div>
+        <div class="step-desc">146 Constellation plants (nuclear, renewable, fossil, storage) from CEG_fleet_rosetta.csv. EIA 860/923 + EPA CAMPD cross-ref. No coal. BA&rarr;ISO mapping.</div>
+        <div class="step-script">fleet_model.py, build_fleet_scenario_data.py</div>
       </div>
     </div>
   </div>
@@ -242,7 +242,7 @@
       <div class="step-box">
         <div class="step-id">Core</div>
         <div class="step-name">Fleet Dispatch</div>
-        <div class="step-desc">Plant-level economics across sweep. Grid+fleet fossil reconciliation (additive rule). P10/P50/P90 envelopes. JS port for browser-side recalc.</div>
+        <div class="step-desc">146-plant Rosetta fleet. Non-fossil: static CFs (nuc 92%, geo 85%, wind 30%, solar 22%, hydro 40%). Fossil: merit-order. 4 scenarios. P10/P50/P90 envelopes. JS port for browser-side recalc.</div>
         <div class="step-script">fleet_dispatch.py, fleet-dispatch-engine.js</div>
       </div>
     </div>
@@ -318,7 +318,7 @@
       <div class="step-box">
         <div class="step-id">API</div>
         <div class="step-name">REST Endpoints</div>
-        <div class="step-desc">FastAPI: /api/simulate, /api/sweep, /api/correlated-scenarios, /api/validate-request, /api/sweep-cached/status, /api/fleet-scenarios-config. Result provenance (G3) on all responses.</div>
+        <div class="step-desc">FastAPI: /api/simulate, /api/sweep, /api/correlated-scenarios, /api/validate-request, /api/sweep-cached/status, /api/fleet-scenarios-config, /api/fleet-scenario-results. Result provenance (G3) on all responses.</div>
         <div class="step-script">backend/main.py, models.py</div>
       </div>
     </div>

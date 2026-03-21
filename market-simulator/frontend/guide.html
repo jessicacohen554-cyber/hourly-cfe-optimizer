@@ -600,32 +600,38 @@
         <div class="guide-section">
             <h2>Fleet Configuration &amp; Climate Scenario Analysis</h2>
             <p>
-                The tool includes a full Constellation/Calpine plant roster (202 plants). Configure fleet
-                decarbonization scenarios directly from the Fleet Climate Scenarios page using the built-in
-                sidebar, or pre-configure plants on the Fleet Config page.
+                The tool includes the full Constellation Energy fleet of 146 plants (15 nuclear, 43 renewable,
+                81 fossil, 7 storage) sourced from the canonical CEG_fleet_rosetta.csv asset roster. Constellation
+                has no coal assets. Configure fleet decarbonization scenarios directly from the Fleet Climate
+                Scenarios page using the built-in sidebar, or pre-configure plants on the Fleet Config page.
             </p>
             <ol class="guide-steps">
                 <li>
                     <strong>Open Fleet Climate Scenarios</strong>
                     Go to <a href="/fleet-scenarios">Fleet Climate Scenarios</a> to see P10/P50/P90 emissions
-                    envelopes for pre-built scenarios (Baseline, CCS-Only, CCS + New Gas, Retire + CCS).
+                    envelopes for 4 pre-built scenarios: Baseline, CCS Top Emitters, Retire Peakers + CCS Baseload,
+                    and Full Transition. Use the <strong>checkbox target selectors</strong> to overlay one or both
+                    climate targets (SBTi 1.5C Power Sector v2 and Absolute Target) simultaneously.
                 </li>
                 <li>
-                    <strong>Open the Fleet Config Sidebar</strong>
-                    Click "Edit Fleet" to open the sidebar. View all plants grouped by ISO. Toggle each
-                    plant between Operating, Retired, or CCS Retrofit. Set the year for retirements
-                    and CCS installations.
+                    <strong>Browse the fleet by category</strong>
+                    Plants are grouped into four categories: <strong>Nuclear</strong> (~190 TWh equity-weighted),
+                    <strong>Renewables</strong> (geothermal ~9 TWh, wind/solar/hydro ~4.8 TWh combined),
+                    <strong>Fossil</strong> (81 gas and oil plants), and <strong>Storage</strong> (7 battery facilities).
+                    Each category section is expandable/collapsible.
                 </li>
                 <li>
-                    <strong>Add new plants</strong>
-                    Use the "Add Plant" form at the bottom of the sidebar to model new gas or other generation
-                    additions, specifying capacity, heat rate, fuel type, and commissioning year.
+                    <strong>Configure plant statuses</strong>
+                    Non-fossil plants (nuclear, renewables, storage) show <strong>Operating / Retired</strong> toggle only.
+                    Fossil plants additionally offer <strong>CCS Retrofit</strong> — but only for CCS-eligible plants.
+                    Non-eligible fossil plants show Operating / Retired only.
                 </li>
                 <li>
                     <strong>Recalculate in real-time</strong>
-                    Click "Recalculate" to run fleet dispatch against the 1,215-scenario sweep results entirely
-                    in your browser. All four charts (fan chart, waterfall, generation mix, emissions by fuel)
-                    update instantly with your custom configuration.
+                    Click "Recalculate" to run fleet dispatch against scenario results entirely
+                    in your browser. Non-fossil plants use static capacity factors (nuclear 92%, geothermal 85%,
+                    wind 30%, solar 22%, hydro 40%). All four charts (fan chart, waterfall, generation mix,
+                    emissions by fuel) update instantly with your custom configuration.
                 </li>
                 <li>
                     <strong>Save and compare</strong>
@@ -639,6 +645,8 @@
                     <a href="/fleet-scenarios">Fleet Climate Scenarios</a> (sidebar config + real-time dispatch)
                 </p>
                 <p style="margin-top: 0.5rem; font-size: 0.88rem; color: #5a6577;">
+                    Fleet data sourced from <code>CEG_fleet_rosetta.csv</code> via
+                    <code>build_fleet_scenario_data.py</code> and <code>generate_constellation_scenarios.py</code>.
                     For detailed model methodology, see the <a href="/methodology">Methodology</a> page.
                 </p>
             </div>
