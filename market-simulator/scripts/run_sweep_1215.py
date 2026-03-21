@@ -126,6 +126,8 @@ def results_to_dataframe(all_results):
         if scenario_id.startswith('_'):
             continue  # skip _aggregates
         for iso, year_results in iso_results.items():
+            if iso.startswith('_'):
+                continue  # skip per-scenario _provenance metadata
             for yr in year_results:
                 rows.append(flatten_year_result(scenario_id, yr))
     return pd.DataFrame(rows)
