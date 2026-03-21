@@ -51,6 +51,7 @@ var FleetSidebar = (function () {
         els.close = document.getElementById('sidebarClose');
         els.fleetList = document.getElementById('sidebarFleetList');
         els.recalcBtn = document.getElementById('recalcBtn');
+        els.resetBtn = document.getElementById('resetBaselineBtn');
         els.saveBtn = document.getElementById('saveScenarioBtn');
         els.addBtn = document.getElementById('addPlantBtn');
         els.nameInput = document.getElementById('scenarioNameInput');
@@ -63,6 +64,7 @@ var FleetSidebar = (function () {
         if (els.close) els.close.addEventListener('click', close);
         if (els.backdrop) els.backdrop.addEventListener('click', close);
         if (els.recalcBtn) els.recalcBtn.addEventListener('click', recalculate);
+        if (els.resetBtn) els.resetBtn.addEventListener('click', function () { resetFleet(); });
         if (els.saveBtn) els.saveBtn.addEventListener('click', saveScenario);
         if (els.addBtn) els.addBtn.addEventListener('click', addPlant);
         if (els.nameInput) {
@@ -225,7 +227,7 @@ var FleetSidebar = (function () {
 
         // Group by category first, then by ISO within each category
         var byCategoryISO = {};
-        var categoryOrder = ['nuclear', 'renewable', 'fossil', 'storage', 'other'];
+        var categoryOrder = ['fossil', 'nuclear', 'renewable', 'storage', 'other'];
         allPlants.forEach(function (p) {
             var cat = p.plant_category || (FOSSIL_FUELS.has(p.fuel_type) ? 'fossil' : 'other');
             var iso = p.iso || 'Other';
@@ -352,7 +354,7 @@ var FleetSidebar = (function () {
 
         els.fleetList.innerHTML = html;
 
-        // Bind ISO group collapse
+        // Bind ISO group collapse + auto-collapse non-fossil categories
         els.fleetList.querySelectorAll('.sb-iso-header').forEach(function (header) {
             header.addEventListener('click', function () {
                 var key = this.dataset.iso;
@@ -362,6 +364,17 @@ var FleetSidebar = (function () {
                     this.classList.toggle('collapsed', collapsed);
                 }
             });
+
+            // Auto-collapse non-fossil categories so only fossil is expanded by default
+            var key = header.dataset.iso;
+            var cat = key.split('|')[0];
+            if (cat !== 'fossil') {
+                var body = els.fleetList.querySelector('[data-iso-body="' + key + '"]');
+                if (body) {
+                    body.classList.add('collapsed');
+                    header.classList.add('collapsed');
+                }
+            }
         });
 
         // Bind status selects
@@ -822,7 +835,12 @@ var FleetSidebar = (function () {
     function resetFleet() {
         fleetPlants = JSON.parse(JSON.stringify(baseFleet));
         addedPlants = [];
+        lastComputedResults = null;
         renderFleetList();
+        // Clear custom scenario from charts
+        if (window.FLEET_SCENARIOS_API && window.FLEET_SCENARIOS_API.clearCustomScenario) {
+            window.FLEET_SCENARIOS_API.clearCustomScenario();
+        }
         setStatus('Fleet reset to baseline');
     }
 
