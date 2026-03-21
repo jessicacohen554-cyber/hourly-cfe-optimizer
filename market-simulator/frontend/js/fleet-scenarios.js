@@ -35,6 +35,7 @@
     // ── State ──
     var DATA = null;
     var customScenario = null;  // Set when user recalculates from sidebar
+    var savedScenarioOverlays = []; // Array of saved scenarios with .isVisible, .color, .results
     var selectedTargets = ['sbti_15'];
     var selectedYear = 2030;
     var selectedFossilCost = 'All';
@@ -326,19 +327,26 @@
         var years = getYears();
         var labels = years.map(String);
         var datasets = [];
-        var hasCustom = !!customScenario;
+        var hasOverlays = !!customScenario || savedScenarioOverlays.length > 0;
         var baseline = DATA.scenarios.baseline;
 
-        // Baseline fan — muted when custom is active, prominent otherwise
+        // Baseline fan — muted when overlays are active, prominent otherwise
         if (baseline) {
             var baseEnv = getEnvelope(baseline);
-            addFanDatasets(datasets, baseEnv, years, BASELINE_COLOR, 'Baseline', hasCustom);
+            addFanDatasets(datasets, baseEnv, years, BASELINE_COLOR, 'Baseline', hasOverlays);
         }
 
-        // Custom overlay — prominent
+        // Custom overlay (live recalculation) — prominent
         if (customScenario) {
             addFanDatasets(datasets, customScenario.envelope, years, CUSTOM_COLOR, 'Custom', false);
         }
+
+        // Saved scenario overlays
+        savedScenarioOverlays.forEach(function (s) {
+            if (s.results && s.results.envelope) {
+                addFanDatasets(datasets, s.results.envelope, years, s.color, s.name, false);
+            }
+        });
 
         // Target overlays
         selectedTargets.forEach(function (selTgt) {
@@ -456,6 +464,31 @@
                 }
             }
 
+            // Saved scenario rows
+            savedScenarioOverlays.forEach(function (s) {
+                if (!s.results || !s.results.envelope) return;
+                var sYear = s.results.envelope[year];
+                if (!sYear) return;
+                var sPctStr = '';
+                if (baseline2023 && baseline2023 > 0) {
+                    var sPct = ((baseline2023 - sYear.p50) / baseline2023 * 100).toFixed(1);
+                    sPctStr = ' (' + (sPct >= 0 ? '-' : '+') + Math.abs(sPct) + '% vs 2023)';
+                }
+                html += '<div class="fan-tooltip-row">' +
+                    '<span class="fan-tooltip-swatch" style="background:' + s.color + '"></span>' +
+                    '<span class="fan-tooltip-label">' + (s.name || 'Saved') + '</span>' +
+                    '<span class="fan-tooltip-vals">P10: ' + sYear.p10.toFixed(1) +
+                    '  P50: ' + sYear.p50.toFixed(1) +
+                    '  P90: ' + sYear.p90.toFixed(1) + sPctStr + '</span></div>';
+                if (baseYear) {
+                    var sDelta = sYear.p50 - baseYear.p50;
+                    var sCls = sDelta < 0 ? 'gap-negative' : 'gap-positive';
+                    var sSign = sDelta > 0 ? '+' : '';
+                    html += '<div class="fan-tooltip-gap"><span class="' + sCls + '">' +
+                        sSign + sDelta.toFixed(1) + ' Mt vs Baseline</span></div>';
+                }
+            });
+
             // Gap to targets
             selectedTargets.forEach(function (selTgt) {
                 if (!selTgt || selTgt === 'none' || !DATA.targets || !DATA.targets[selTgt]) return;
@@ -495,6 +528,9 @@
         if (customScenario) {
             items.push({ label: 'Custom', color: CUSTOM_COLOR, type: 'band' });
         }
+        savedScenarioOverlays.forEach(function (s) {
+            items.push({ label: s.name, color: s.color, type: 'band' });
+        });
         selectedTargets.forEach(function (selTgt) {
             if (selTgt && selTgt !== 'none' && DATA.targets && DATA.targets[selTgt]) {
                 var style = TARGET_STYLES[selTgt] || TARGET_STYLES.custom;
@@ -809,6 +845,12 @@
             customScenario = null;
             updateAllCharts();
         },
+        // Saved scenarios — array of {name, color, results, isBaseline}
+        setSavedScenarios: function (scenarios) {
+            savedScenarioOverlays = scenarios || [];
+            updateAllCharts();
+        },
+        getSavedScenarioOverlays: function () { return savedScenarioOverlays; },
         updateAllCharts: updateAllCharts,
         getData: function () { return DATA; },
         getYears: getYears
