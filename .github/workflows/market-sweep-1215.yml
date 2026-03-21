@@ -2,7 +2,7 @@ name: "Market Simulator: 1,215-Scenario Sweep"
 
 # Runs the full 1,215-scenario parametric sweep
 # (3 demand × 5 price × 3 PPA × 3 gas friction × 3 queue × 3 new-build fossil cost)
-# across all 7 ISOs, simulating years 2023/2030/2035/2040/2045/2050.
+# across all 7 ISOs, simulating annual years 2023–2060.
 #
 # Each ISO runs in a parallel matrix job.
 # Results are merged into a single branch with parquet output only (no large JSON).
@@ -11,7 +11,7 @@ name: "Market Simulator: 1,215-Scenario Sweep"
 #   - sweep_1215_flat.parquet         (flat table, ~10 MB)
 #   - sweep_1215_aggregates.json      (P10/P50/P90 bands, ~1 MB)
 #
-# Total simulations: 1,215 scenarios × 7 ISOs × 6 years = 51,030 ISO-year runs
+# Total simulations: 1,215 scenarios × 7 ISOs × 38 years = 323,190 ISO-year runs
 
 on:
   workflow_dispatch:
