@@ -7,16 +7,16 @@
 ## Status
 
 - [x] **Rename** `run_sweep_405.py` → `run_sweep_1215.py` (done, pushed)
-- [ ] **Fix #1**: `_is_nuclear_plant()` operator precedence
-- [ ] **Fix #2**: Vectorize `compute_storage_arbitrage_from_lmp()`
-- [ ] **Fix #3**: `_scenario_weight()` dead code cleanup
-- [ ] **Fix #4**: `_retire_nuclear_plants()` cumulative_retired_mw tracking
-- [ ] **Fix #5**: `cumulative_gw` shared-across-ISOs documentation
-- [ ] **Fix #6**: Skip `_provenance` in `aggregate_sweep_percentiles()`
-- [ ] **Fix #7**: Add logging to zonal LMP exception swallowing
-- [ ] **Refactor #8**: Extract LMP computation helper (deduplicate Pass 1/Pass 2)
-- [ ] **Refactor #9**: Dataclass returns for `compute_lmp_at_threshold()` (11-tuple)
-- [ ] **Refactor #10**: Dataclass returns for `compute_market_deployment()` (9-tuple)
+- [x] **Fix #1**: `_is_nuclear_plant()` operator precedence
+- [x] **Fix #2**: Vectorize `compute_storage_arbitrage_from_lmp()`
+- [x] **Fix #3**: `_scenario_weight()` dead code cleanup
+- [x] **Fix #4**: `_retire_nuclear_plants()` cumulative_retired_mw tracking (no change needed — see doc)
+- [x] **Fix #5**: `cumulative_gw` shared-across-ISOs documentation
+- [x] **Fix #6**: Skip `_provenance` in `aggregate_sweep_percentiles()`
+- [x] **Fix #7**: Add logging to zonal LMP exception swallowing
+- [x] **Refactor #8**: Extract LMP computation helper (deduplicate Pass 1/Pass 2)
+- [x] **Refactor #9**: Dataclass returns for `compute_lmp_at_threshold()` (11-tuple)
+- [x] **Refactor #10**: Dataclass returns for `compute_market_deployment()` (9-tuple)
 
 ---
 
