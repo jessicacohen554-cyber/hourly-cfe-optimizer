@@ -1,5 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
+import sys
 from PyInstaller.utils.hooks import collect_all, collect_submodules
+
+# Platform-specific icon
+if sys.platform == 'darwin':
+    APP_ICON = 'frontend/brand-assets/app.icns'
+else:
+    APP_ICON = 'frontend/brand-assets/favicon.ico'
 
 # Collect all pyarrow data files and binaries
 pyarrow_datas, pyarrow_binaries, pyarrow_hiddenimports = collect_all('pyarrow')
@@ -88,7 +95,7 @@ exe = EXE(
     [],
     name='MarketSimulator',
     console=False,               # No terminal window
-    icon='frontend/brand-assets/favicon.ico',
+    icon=APP_ICON,
     exclude_binaries=True,       # Required for COLLECT (folder mode)
 )
 
@@ -98,3 +105,18 @@ coll = COLLECT(
     a.datas,
     name='MarketSimulator',
 )
+
+# macOS .app bundle
+if sys.platform == 'darwin':
+    app = BUNDLE(
+        coll,
+        name='MarketSimulator.app',
+        icon=APP_ICON,
+        bundle_identifier='com.constellation.marketsimulator',
+        info_plist={
+            'CFBundleShortVersionString': '1.0.0',
+            'CFBundleName': 'Market Simulator',
+            'NSHighResolutionCapable': True,
+            'LSMinimumSystemVersion': '10.15',
+        },
+    )
