@@ -978,12 +978,52 @@ Computes per-plant dispatch hours, capacity factor, revenue, cost, emissions, an
 
 **Output fields per plant**: entity, plant name, plant ID, generator ID, state, county, lat/lon, capacity MW, heat rate, fuel type, prime mover, online year, age, capacity factor, MWh generated, fuel consumed, CO₂/NOx/SOx emissions, revenue/VOM/fuel cost/profit per MWh, total revenue/cost/profit ($M), status.
 
-### 4.6.1 Client-Side Fleet Dispatch Engine
+### 4.6.1 Constellation Fleet Composition (Rosetta Update)
+
+The fleet scenario analysis uses the full Constellation Energy fleet of **146 plants** (15 nuclear, 43 renewable, 81 fossil, 7 storage) sourced from the canonical `CEG_fleet_rosetta.csv` asset roster. Constellation has no coal assets.
+
+**Fleet breakdown by category:**
+
+| Category | Count | Key Characteristics |
+|---|---|---|
+| **Nuclear** | 15 | ~190 TWh equity-weighted generation |
+| **Renewables** | 43 | Geothermal ~9 TWh (Geysers), wind/solar/hydro ~4.8 TWh combined |
+| **Fossil** | 81 | Gas CCGT, gas CT, oil CT (no coal) |
+| **Storage** | 7 | Battery facilities |
+
+**Non-fossil dispatch model**: Non-fossil plants use static capacity factors (not hourly profiles):
+- Nuclear: 92% CF, flat year-round
+- Geothermal: 85% CF, flat year-round
+- Wind: 30% CF (static average, no hourly profile)
+- Solar: 22% CF (static average, no hourly profile)
+- Hydro: 40% CF
+- Storage: pass-through (capacity tracked, generation excluded from emissions accounting)
+
+**Data pipeline:**
+- `CEG_fleet_rosetta.csv` → `scripts/generate_constellation_scenarios.py` → `constellation_scenarios.json`
+- `CEG_fleet_rosetta.csv` → `scripts/build_fleet_scenario_data.py` → `fleet_scenario_results_sample.json`
+
+**Fleet scenarios** — four decarbonization scenarios modify the fleet at the plant level:
+
+| Scenario Key | Name | Actions |
+|---|---|---|
+| `baseline` | Baseline | Current fleet as-is |
+| `ccs_top_emitters` | CCS Top Emitters | CCS retrofit on highest-emitting CCS-eligible fossil plants |
+| `retire_peakers_ccs_baseload` | Retire Peakers + CCS Baseload | Peakers retired; baseload gas CCGT gets CCS where eligible |
+| `full_transition` | Full Transition | Maximum decarbonization: all eligible CCS retrofits + remaining high-emission retirements |
+
+**CCS eligibility**: Restricted to CCS-eligible fossil plants only, determined by fuel type, heat rate, capacity, and siting feasibility flags in the Rosetta CSV. Non-fossil plants show Operating/Retired toggle only.
+
+**Target selection**: Multi-select checkboxes (not radio buttons) allow simultaneous overlay of SBTi 1.5C Power Sector v2 (net zero by 2040) and Absolute Target.
+
+**Data loading priority**: Backend serves Rosetta-derived sample data (`fleet_scenario_results_sample.json`) as the primary source, with sweep-based results as fallback.
+
+### 4.6.2 Client-Side Fleet Dispatch Engine
 
 The fleet dispatch model (originally `scripts/fleet_dispatch.py`) has been ported to JavaScript (`frontend/js/fleet-dispatch-engine.js`) for real-time browser-based recalculation. The JS port maintains identical logic:
 
 **Dispatch Logic**:
-- **Efficiency ratio**: `min(ref_hr / plant_hr, 1.5)` where reference heat rates are gas_ccgt=7.0, gas_ct=10.5, coal_steam=10.0, oil_ct=10.5 MMBtu/MWh
+- **Efficiency ratio**: `min(ref_hr / plant_hr, 1.5)` where reference heat rates are gas_ccgt=7.0, gas_ct=10.5, oil_ct=10.5 MMBtu/MWh
 - **Economic retirement**: Zero CF when margin < 0
 - **CCS ramp schedule**: 0% at year_online, 30% at +2yr, 70% at +5yr, 100% at +8yr (linear interpolation)
 - **CCS heat rate penalty**: 1.14×, effective CO₂ = base_co2 × hr_penalty × (1 − capture_rate)
@@ -994,9 +1034,9 @@ The fleet dispatch model (originally `scripts/fleet_dispatch.py`) has been porte
 - P10/P50/P90 envelopes computed via sort-based percentile on 1,215 scenarios per year
 
 **Emission Factors (t CO₂ / MMBtu)**:
-- gas_ccgt: 0.05306, gas_ct: 0.05306, coal_steam: 0.09552, oil_ct: 0.07396
+- gas_ccgt: 0.05306, gas_ct: 0.05306, oil_ct: 0.07396
 
-**Performance**: 200 plants × 1,215 scenarios × 6 years computed in <50ms in modern browsers.
+**Performance**: 146 plants × 1,215 scenarios × 6 years computed in <50ms in modern browsers.
 
 ### 4.7 Scenario Construction
 
@@ -1887,5 +1927,6 @@ def wright_adjusted_cost(foak_cost, cumulative_gw, baseline_gw, learning_rate):
 | 2.1 | Mar 2026 | ORDC fix: replaced logistic sigmoid with exponential knee + cap model. New params: {voll, knee_mw, lam, cap}. Double-counting guard on _scarcity_adder. Calibrated $2–8/MWh avg contribution. |
 | 3.0 | Mar 2026 | Peer review implementation: G1 plant-level retirement (§2.3.0), G3 result provenance (§6.7.1), G4 correlated scenarios (§4.7), G5 LMP extrapolation guard (§6.8 `LMP_EXTRAPOLATION` trigger), G6 cross-validation framework (§7.5), G7 Morris sensitivity analysis (§7.4.1). Updated ToC, output spec, validation sections. |
 | 3.1 | Mar 2026 | Comprehensive methodology documentation update for G1–G7 implementations: **G1** — expanded plant-level retirement with full margin formula (energy + capacity + ancillary revenue − variable − fixed cost), VOM rates by unit type, reliability floor math, nuclear per-plant evaluation details. **G3** — expanded ProvenanceMetadata schema documentation with audit trail capabilities (config drift detection, code reproducibility, input completeness). **G4** — added rationale for correlated scenarios complementing independent sweep (implausible corner dilution), relationship to R5 weighted percentile confidence intervals. **G5** — added LMP extrapolation guard section to §4.3 with confidence degradation table (1.0/0.8/0.6/0.4 by VRE tier), calibration range boundaries (2019–2024 ISO data, 5–42% VRE), IPM trigger integration. **G6** — expanded cross-validation with scenario-reference pairings, divergence classification thresholds (20 pp national, 30 pp ISO), 4 documented mechanism-driven divergences. **G7** — expanded Morris method with elementary effects formula, first-order variance decomposition (ANOVA/Sobol), 6 input dimensions, 4 output metrics, per-ISO aggregation methodology. |
+| 3.2 | Mar 2026 | Fleet Rosetta update: Fleet expanded from ~200 fossil-only to 146 plants across all fuel types (15 nuclear, 43 renewable, 81 fossil, 7 storage) sourced from CEG_fleet_rosetta.csv. Coal removed (Constellation has no coal assets). Added §4.6.1 fleet composition and non-fossil dispatch model (static CFs). Scenario keys realigned: `ccs_top_emitters`, `retire_peakers_ccs_baseload` (replacing `ccs_only`, `retire_peakers_ccs_gas`, `retire_coal_ccs_gas`). Build scripts documented: `build_fleet_scenario_data.py`, `generate_constellation_scenarios.py`. |
 
-*Constellation Energy — Market Simulator v3.1 — Internal & Confidential*
+*Constellation Energy — Market Simulator v3.2 — Internal & Confidential*
