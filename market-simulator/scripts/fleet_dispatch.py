@@ -397,14 +397,16 @@ def compute_fleet_emissions_fast(plants: list[dict], sweep_df: pd.DataFrame) -> 
                     for y in years
                 ], dtype=np.float64)
 
-                # Effective CO2 per year: base × hr_penalty × (1 - capture)
-                # Shape: (n_years,) → broadcast to (n_scenarios, n_years)
-                effective_co2 = base_co2 * hr_penalty * (1.0 - capture_arr)
+                # Only apply hr_penalty in years where CCS is actually capturing.
+                # Before CCS ramp starts (capture=0), plant emits at baseline rate.
+                ccs_active = capture_arr > 0  # (n_years,)
+                co2_penalty = np.where(ccs_active, hr_penalty, 1.0)
+
+                # Effective CO2 per year: base × penalty × (1 - capture)
+                effective_co2 = base_co2 * co2_penalty * (1.0 - capture_arr)
                 effective_co2 = effective_co2[np.newaxis, :]  # (1, n_years)
 
-                # Net generation after parasitic load (also year-varying:
-                # only apply penalty in years where CCS is active)
-                ccs_active = capture_arr > 0  # (n_years,)
+                # Net generation after parasitic load (year-varying)
                 penalty_arr = np.where(ccs_active, hr_penalty, 1.0)
                 gen_mwh = gen_mwh / penalty_arr[np.newaxis, :]
 
