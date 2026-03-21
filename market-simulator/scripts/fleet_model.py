@@ -23,6 +23,7 @@ Usage:
     python fleet_model.py --state CA
 """
 
+import json
 import logging
 import os
 import sys
@@ -595,6 +596,34 @@ class FleetModel:
         self.campd = df
         return df
 
+    def load_plant_heat_rates(self) -> Dict[str, float]:
+        """Load pre-computed plant heat rates from plant_heat_rates.json.
+
+        Returns dict of plant_id (str) -> heat_rate (float).
+        Returns empty dict if file not found.
+        """
+        hr_path = os.path.join(self.data_root, 'plant_heat_rates.json')
+        if not os.path.exists(hr_path):
+            logger.debug(f"plant_heat_rates.json not found at {hr_path}")
+            return {}
+        try:
+            with open(hr_path) as f:
+                raw = json.load(f)
+            result = {}
+            for k, v in raw.items():
+                if isinstance(v, dict) and 'heat_rate' in v and v['heat_rate'] is not None:
+                    try:
+                        result[str(k)] = float(v['heat_rate'])
+                    except (ValueError, TypeError):
+                        continue
+                elif isinstance(v, (int, float)):
+                    result[str(k)] = float(v)
+            logger.info(f"Loaded {len(result)} plant heat rates from {hr_path}")
+            return result
+        except Exception as e:
+            logger.warning(f"Failed to load plant_heat_rates.json: {e}")
+            return {}
+
     def validate_emissions(self) -> Optional[pd.DataFrame]:
         """Validate fleet emission rates against EPA CAMPD data.
 
@@ -626,12 +655,16 @@ class FleetModel:
         load = agg['gross_load'].values.astype(float)
         co2 = agg['co2_tons'].values.astype(float)
         valid = (load > 0) & np.isfinite(load) & np.isfinite(co2)
-        agg['measured_co2_rate'] = np.where(valid, co2 / load, np.nan)
+        measured_co2 = np.full(len(load), np.nan)
+        measured_co2[valid] = co2[valid] / load[valid]
+        agg['measured_co2_rate'] = measured_co2
 
         # Compute measured heat rate from CAMPD
         heat = agg['heat_input'].values.astype(float)
         valid_hr = (load > 0) & np.isfinite(load) & np.isfinite(heat)
-        agg['measured_heat_rate'] = np.where(valid_hr, heat / load, np.nan)
+        measured_hr = np.full(len(load), np.nan)
+        measured_hr[valid_hr] = heat[valid_hr] / load[valid_hr]
+        agg['measured_heat_rate'] = measured_hr
 
         # If we have fleet data, aggregate by unit type
         if self.fleet is not None and len(self.fleet) > 0:
@@ -800,8 +833,9 @@ class FleetModel:
                 load_arr = campd_agg['gross_load'].values.astype(float)
                 heat_arr = campd_agg['heat_input'].values.astype(float)
                 valid_campd = (load_arr > 0) & np.isfinite(load_arr) & np.isfinite(heat_arr)
-                campd_agg['measured_heat_rate'] = np.where(
-                    valid_campd, heat_arr / load_arr, np.nan)
+                campd_hr_arr = np.full(len(load_arr), np.nan)
+                campd_hr_arr[valid_campd] = heat_arr[valid_campd] / load_arr[valid_campd]
+                campd_agg['measured_heat_rate'] = campd_hr_arr
                 campd_hr = campd_agg[['facility_id', 'measured_heat_rate']].rename(
                     columns={'facility_id': 'plant_id', 'measured_heat_rate': 'heat_rate_campd'})
                 campd_hr['plant_id'] = campd_hr['plant_id'].astype(str).str.strip()
@@ -813,7 +847,20 @@ class FleetModel:
                 logger.info(f"[{self.state}] CAMPD heat rates: {matched_campd}/{len(df)} "
                             f"generators matched")
 
-        # Best heat rate: revealed (923) > CAMPD measured > design (860) > default
+        # Load pre-computed plant heat rates (highest priority — best-of EIA 923 > CAMPD)
+        precomputed_hr_map = self.load_plant_heat_rates()
+        if precomputed_hr_map:
+            df['heat_rate_precomputed'] = (
+                df['plant_id'].astype(str).str.strip().map(precomputed_hr_map)
+            )
+            n_precomputed = int(df['heat_rate_precomputed'].notna().sum())
+            logger.info(f"[{self.state}] Pre-computed heat rates: {n_precomputed}/{len(df)} "
+                        f"generators matched from plant_heat_rates.json")
+        else:
+            df['heat_rate_precomputed'] = np.nan
+
+        # Best heat rate: precomputed > revealed (923) > CAMPD measured > design (860) > default
+        hr_precomputed = df['heat_rate_precomputed'].values.astype(float)
         hr_design = df['heat_rate_design'].values.astype(float)
         hr_revealed = df['heat_rate_revealed'].values.astype(float)
         hr_campd = df['heat_rate_campd'].values.astype(float)
@@ -821,27 +868,30 @@ class FleetModel:
 
         valid_range = lambda hr: np.isfinite(hr) & (hr > 3.0) & (hr < 30.0)
 
-        best_hr = np.where(valid_range(hr_revealed), hr_revealed,
+        best_hr = np.where(valid_range(hr_precomputed), hr_precomputed,
+                  np.where(valid_range(hr_revealed), hr_revealed,
                   np.where(valid_range(hr_campd), hr_campd,
                   np.where(valid_range(hr_design), hr_design,
-                           hr_default)))
+                           hr_default))))
         df['heat_rate'] = best_hr
 
         # Track which source was used for each generator
-        hr_source = np.where(valid_range(hr_revealed), 'revealed_923',
+        hr_source = np.where(valid_range(hr_precomputed), 'precomputed',
+                   np.where(valid_range(hr_revealed), 'revealed_923',
                    np.where(valid_range(hr_campd), 'campd',
                    np.where(valid_range(hr_design), 'design_860',
-                            'default')))
+                            'default'))))
         df['heat_rate_source'] = hr_source
 
         # Diagnostic logging
+        n_precomputed = int((hr_source == 'precomputed').sum())
         n_revealed = int((hr_source == 'revealed_923').sum())
         n_campd = int((hr_source == 'campd').sum())
         n_design = int((hr_source == 'design_860').sum())
         n_default = int((hr_source == 'default').sum())
         logger.info(f"[{self.state}] Heat rate sources: "
-                    f"{n_revealed} revealed (923), {n_campd} CAMPD, "
-                    f"{n_design} design (860), {n_default} default")
+                    f"{n_precomputed} precomputed, {n_revealed} revealed (923), "
+                    f"{n_campd} CAMPD, {n_design} design (860), {n_default} default")
         logger.info(f"[{self.state}] Heat rate stats: "
                     f"min={df['heat_rate'].min():.2f}, "
                     f"median={df['heat_rate'].median():.2f}, "
