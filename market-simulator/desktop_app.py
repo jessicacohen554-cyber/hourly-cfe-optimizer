@@ -226,6 +226,95 @@ def wait_for_server(port, timeout=30):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Splash screen HTML
+# ─────────────────────────────────────────────────────────────────────────────
+
+SPLASH_HTML = """
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Market Simulator</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+    color: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    overflow: hidden;
+  }
+  .splash {
+    text-align: center;
+    animation: fadeIn 0.6s ease-out;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .logo-circle {
+    width: 80px; height: 80px;
+    margin: 0 auto 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    font-weight: 700;
+    color: white;
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.3);
+  }
+  h1 {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #60a5fa, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .status {
+    font-size: 15px;
+    color: #94a3b8;
+    margin-bottom: 32px;
+  }
+  .spinner {
+    width: 40px; height: 40px;
+    margin: 0 auto;
+    border: 3px solid rgba(148, 163, 184, 0.2);
+    border-top: 3px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  .error {
+    color: #f87171;
+    margin-top: 24px;
+    display: none;
+    font-size: 14px;
+    max-width: 400px;
+  }
+</style>
+</head>
+<body>
+  <div class="splash">
+    <div class="logo-circle">M</div>
+    <h1>Market Simulator</h1>
+    <p class="status" id="status">Starting server...</p>
+    <div class="spinner" id="spinner"></div>
+    <p class="error" id="error"></p>
+  </div>
+</body>
+</html>
+"""
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Main entry point
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -234,9 +323,52 @@ def _get_log_path():
     return get_app_data_dir() / "startup.log"
 
 
-def main():
-    import traceback
+def _boot_and_navigate(window, port):
+    """Background thread: start server, wait for readiness, navigate window."""
+    log = _get_log_path()
 
+    # Start server in daemon thread
+    server_thread = threading.Thread(target=start_server, args=(port,), daemon=True)
+    server_thread.start()
+
+    # Poll for readiness — update splash status via JS
+    url = f"http://127.0.0.1:{port}/api/isos"
+    deadline = time.time() + 30
+    ready = False
+    while time.time() < deadline:
+        try:
+            urllib.request.urlopen(url, timeout=2)
+            ready = True
+            break
+        except Exception:
+            time.sleep(0.3)
+
+    if ready:
+        with open(log, "a") as f:
+            f.write(f"server ready on port {port}\n")
+        # Navigate the splash window to the actual app
+        window.load_url(f"http://127.0.0.1:{port}")
+    else:
+        msg = f"Server failed to start on port {port} within 30 seconds."
+        server_log = get_app_data_dir() / "server_debug.log"
+        if server_log.exists():
+            msg += f"\n{server_log.read_text()}"
+        with open(log, "a") as f:
+            f.write(f"ERROR: {msg}\n")
+        # Show error in splash window
+        safe_msg = msg.replace("'", "\\'").replace("\n", "\\n")
+        try:
+            window.evaluate_js(
+                f"document.getElementById('spinner').style.display='none';"
+                f"document.getElementById('status').textContent='Failed to start';"
+                f"var e=document.getElementById('error');e.style.display='block';"
+                f"e.textContent='{safe_msg}';"
+            )
+        except Exception:
+            pass
+
+
+def main():
     # Set up Numba cache directory before any imports
     if is_frozen():
         app_data = get_app_data_dir()
@@ -247,7 +379,7 @@ def main():
     # Run first-run setup (creates directories, copies templates)
     first_run_setup()
 
-    # Write startup log for debugging (survives even if GUI crashes)
+    # Write startup log for debugging
     log = _get_log_path()
     with open(log, "w") as f:
         f.write(f"frozen={is_frozen()}\n")
@@ -263,35 +395,19 @@ def main():
     os.environ['MARKET_SIM_BUNDLE_DIR'] = str(get_bundle_dir())
     os.environ['MARKET_SIM_DATA_DIR'] = str(get_app_data_dir())
 
-    # Start server in daemon thread
-    server_thread = threading.Thread(target=start_server, args=(port,), daemon=True)
-    server_thread.start()
-
-    # Wait for server readiness
-    if not wait_for_server(port):
-        msg = f"Server failed to start on port {port} within 30 seconds."
-        server_log = get_app_data_dir() / "server_debug.log"
-        if server_log.exists():
-            msg += f"\nServer log:\n{server_log.read_text()}"
-        with open(log, "a") as f:
-            f.write(f"ERROR: {msg}\n")
-        print(f"ERROR: {msg}", file=sys.stderr)
-        sys.exit(1)
-
-    with open(log, "a") as f:
-        f.write(f"server ready on port {port}\n")
-
-    # Launch native window
+    # Import webview and show splash immediately
     import webview
 
     window = webview.create_window(
         "Market Simulator",
-        f"http://127.0.0.1:{port}",
+        html=SPLASH_HTML,
         width=1400,
         height=900,
         min_size=(1024, 700),
     )
-    webview.start()  # Blocks until window closes
+
+    # Boot server + navigate in background thread once webview is running
+    webview.start(func=_boot_and_navigate, args=(window, port))
 
     # Kill server thread and exit cleanly
     os._exit(0)
