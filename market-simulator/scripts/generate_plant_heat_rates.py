@@ -10,13 +10,25 @@ Output: data/plant_heat_rates.json
   { "<plantCode>": { "heat_rate": float, "source": str, "plant_name": str, "state": str } }
 """
 
+import argparse
 import json
 import os
 import sys
 from pathlib import Path
 from collections import defaultdict
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+# Centralized path resolution
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+try:
+    from paths import resolve_data_path
+    _DEFAULT_DATA_DIR = resolve_data_path("")
+except ImportError:
+    _DEFAULT_DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+
+    def resolve_data_path(rel):
+        return _DEFAULT_DATA_DIR / rel
+
+DATA_DIR = _DEFAULT_DATA_DIR
 OUTPUT_FILE = DATA_DIR / "plant_heat_rates.json"
 
 # Default heat rates (MMBtu/MWh) by fuel type
@@ -29,9 +41,9 @@ DEFAULTS = {
 }
 
 
-def load_eia923_heat_rates():
+def load_eia923_heat_rates(data_dir=None):
     """Compute heat rates from EIA 923 monthly generation/fuel data."""
-    eia923_dir = DATA_DIR / "eia-923"
+    eia923_dir = Path(data_dir or DATA_DIR) / "eia-923"
     if not eia923_dir.exists():
         return {}
 
@@ -100,9 +112,9 @@ def load_eia923_heat_rates():
     return results
 
 
-def load_campd_heat_rates():
+def load_campd_heat_rates(data_dir=None):
     """Compute heat rates from EPA CAMPD hourly data."""
-    campd_dir = DATA_DIR / "epa-campd"
+    campd_dir = Path(data_dir or DATA_DIR) / "epa-campd"
     if not campd_dir.exists():
         return {}
 
@@ -164,16 +176,19 @@ def load_campd_heat_rates():
     return results
 
 
-def main():
+def main(data_dir=None, output_file=None):
+    data_dir = Path(data_dir) if data_dir else DATA_DIR
+    output_file = Path(output_file) if output_file else OUTPUT_FILE
+
     print("Generating plant heat rates...")
 
     # Priority 1: EIA 923
-    heat_rates = load_eia923_heat_rates()
+    heat_rates = load_eia923_heat_rates(data_dir)
     eia923_count = len(heat_rates)
     print(f"  EIA 923: {eia923_count} plants with valid heat rates")
 
     # Priority 2: EPA CAMPD (fill gaps only)
-    campd_rates = load_campd_heat_rates()
+    campd_rates = load_campd_heat_rates(data_dir)
     campd_added = 0
     for plant_id, data in campd_rates.items():
         if plant_id not in heat_rates:
@@ -182,11 +197,17 @@ def main():
     print(f"  EPA CAMPD: {campd_added} additional plants (total: {len(heat_rates)})")
 
     # Save
-    OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(OUTPUT_FILE, "w") as f:
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_file, "w") as f:
         json.dump(heat_rates, f, indent=2)
-    print(f"  Saved to {OUTPUT_FILE} ({len(heat_rates)} plants)")
+    print(f"  Saved to {output_file} ({len(heat_rates)} plants)")
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description='Generate plant heat rates from EIA/CAMPD data')
+    parser.add_argument('--data-dir', type=str, default=None,
+                        help='Root data directory containing eia-923/ and epa-campd/ subdirs')
+    parser.add_argument('--output', type=str, default=None,
+                        help='Output file path (default: data/plant_heat_rates.json)')
+    args = parser.parse_args()
+    main(data_dir=args.data_dir, output_file=args.output)
