@@ -24,7 +24,19 @@ import numpy as np
 import pandas as pd
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+MODULE_ROOT = os.path.dirname(SCRIPT_DIR)
 sys.path.insert(0, SCRIPT_DIR)
+sys.path.insert(0, MODULE_ROOT)
+
+# Centralized path resolution — supports frozen (PyInstaller) and dev modes
+try:
+    from paths import resolve_data_path, MODULE_ROOT as _PATHS_ROOT
+    MODULE_ROOT = str(_PATHS_ROOT)
+except ImportError:
+    from pathlib import Path as _Path
+
+    def resolve_data_path(rel):
+        return _Path(MODULE_ROOT) / "data" / rel
 
 from pipeline_config import MUST_RUN_PCT, ORDC_PARAMS, SCARCITY_MODE
 
@@ -39,8 +51,9 @@ from dispatch_utils import (
     load_dispatch_cache, save_dispatch_cache, get_or_compute_dispatch,
 )
 
-LMP_DIR = os.path.join(SCRIPT_DIR, 'data', 'step4-analysis', 'lmp')
-STEP3_PARQUET_DIR = os.path.join(SCRIPT_DIR, 'data', 'step2.2-cost')
+# Fixed: was SCRIPT_DIR / "data" which resolved to scripts/data/ (doesn't exist)
+LMP_DIR = str(resolve_data_path('step4-analysis/lmp'))
+STEP3_PARQUET_DIR = str(resolve_data_path('step2.2-cost'))
 
 # ══════════════════════════════════════════════════════════════════════════════
 # FOSSIL MERIT-ORDER STACK — heat rates, VOM, marginal cost
