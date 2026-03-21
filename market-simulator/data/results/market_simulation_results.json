@@ -1,0 +1,1400 @@
+{
+  "MKT_CUSTOM": {
+    "CAISO": [
+      {
+        "iso": "CAISO",
+        "scenario": "MKT_CUSTOM",
+        "year": 2023,
+        "clean_pct": 48.5,
+        "demand_twh": 224.0,
+        "emissions_mt": 31.38,
+        "emission_rate_tco2_mwh": 0.2719,
+        "cost_per_mwh": 0,
+        "revenue_per_mwh": 0,
+        "energy_rev_mwh": 0,
+        "capacity_rev_mwh": 0,
+        "rec_rev_mwh": 0,
+        "avg_lmp": 36.0,
+        "lmp_p90": 54.0,
+        "gas_built_gw": 0,
+        "fossil_built_gw": 0,
+        "total_gas_gw": 0,
+        "market_stop": false,
+        "resource_mix_twh": {},
+        "cumulative_gw": {
+          "nuclear": 2.0,
+          "ccs": 0.3,
+          "ldes": 0.01,
+          "h2": 0.1,
+          "geothermal": 0.05,
+          "battery": 50.0,
+          "battery8": 50.0,
+          "solar": 150.0,
+          "wind": 150.0,
+          "offshore_wind": 5.0
+        },
+        "zones_deployed": [],
+        "generator_economics": {},
+        "nuclear_revenue": {},
+        "nuclear_retired": false,
+        "ccs_breakeven": {},
+        "new_fossil_builds_mw": {},
+        "total_new_fossil_mw": 0,
+        "new_fossil_details": {},
+        "rps_mandated_pct": 0,
+        "rps_eligible_pct": 40.6,
+        "rps_shortfall_pct": 0,
+        "acp_cost_million": 0,
+        "cumulative_acp_million": 0,
+        "data_source": "synthetic",
+        "data_quality": {
+          "synthetic_backed": true,
+          "missing_sources": [
+            "step2.2_parquet"
+          ],
+          "mode": "warn"
+        },
+        "reserve_margin_pct": 20.0,
+        "capacity_price_kw_yr": 75
+      },
+      {
+        "iso": "CAISO",
+        "scenario": "MKT_CUSTOM",
+        "year": 2030,
+        "clean_pct": 60.0,
+        "demand_twh": 255.6,
+        "emissions_mt": 24.11,
+        "emission_rate_tco2_mwh": 0.3992,
+        "cost_per_mwh": 0,
+        "revenue_per_mwh": 0,
+        "energy_rev_mwh": 0,
+        "capacity_rev_mwh": 0,
+        "rec_rev_mwh": 0,
+        "basis_differentials": {
+          "solar": 0.0,
+          "wind": 0.0
+        },
+        "avg_lmp": 32.6,
+        "lmp_p90": 42.2,
+        "gas_built_gw": 0.82,
+        "fossil_built_gw": 0.82,
+        "total_gas_gw": 25.96,
+        "market_stop": true,
+        "resource_mix_twh": {
+          "clean_firm": 20.19,
+          "solar": 57.0,
+          "wind": 22.49,
+          "offshore_wind": 0.0,
+          "ccs_ccgt": 0.0,
+          "hydro": 24.28
+        },
+        "cumulative_gw": {
+          "nuclear": 2.0,
+          "ccs": 0.3,
+          "ldes": 0.01,
+          "h2": 0.1,
+          "geothermal": 0.05,
+          "battery": 50.0,
+          "battery8": 50.0,
+          "solar": 150.0,
+          "wind": 150.0,
+          "offshore_wind": 5.0
+        },
+        "zones_deployed": [],
+        "zone_details": [],
+        "energy_rev_by_resource": {},
+        "capture_rates": {},
+        "generator_economics": {
+          "gas_ccgt": {
+            "dispatch_hours": 8315,
+            "cf": 0.57,
+            "avg_rev_mwh": 33.97,
+            "var_cost_mwh": 33.04,
+            "margin_mwh": -0.36,
+            "capacity_mw": 25850.000000000004
+          },
+          "gas_ct": {
+            "dispatch_hours": 0,
+            "cf": 0.0,
+            "avg_rev_mwh": 0.0,
+            "var_cost_mwh": 49.25,
+            "margin_mwh": -49.25,
+            "capacity_mw": 18800.0
+          },
+          "oil_ct": {
+            "dispatch_hours": 0,
+            "cf": 0.0,
+            "avg_rev_mwh": 0.0,
+            "var_cost_mwh": 131.81,
+            "margin_mwh": -131.81,
+            "capacity_mw": 2350.0
+          }
+        },
+        "adjusted_generator_economics": {
+          "gas_ccgt": {
+            "dispatch_hours": 8315,
+            "cf": 0.57,
+            "avg_rev_mwh": 33.97,
+            "var_cost_mwh": 33.04,
+            "margin_mwh": -0.36,
+            "capacity_mw": 24084.420689736195
+          },
+          "gas_ct": {
+            "dispatch_hours": 0,
+            "cf": 0.0,
+            "avg_rev_mwh": 0.0,
+            "var_cost_mwh": 49.25,
+            "margin_mwh": -49.25,
+            "capacity_mw": 1880.0
+          },
+          "oil_ct": {
+            "dispatch_hours": 0,
+            "cf": 0.0,
+            "avg_rev_mwh": 0.0,
+            "var_cost_mwh": 131.81,
+            "margin_mwh": -131.81,
+            "capacity_mw": 235.0
+          }
+        },
+        "economic_retirements_mw": {
+          "gas_ccgt": 2585.0,
+          "gas_ct": 16920.0,
+          "oil_ct": 2115.0
+        },
+        "total_economic_retirement_mw": 21620.0,
+        "plant_retirements": [],
+        "new_fossil_builds_mw": {
+          "gas_ccgt": 819.0
+        },
+        "total_new_fossil_mw": 819.0,
+        "new_fossil_details": {
+          "gas_ccgt": {
+            "capex_kw_yr": 112,
+            "var_cost": 24.55,
+            "all_in_at_min_cf": 67.17,
+            "expected_cf": 0.8644,
+            "avg_rev": 36.24,
+            "net_margin": 1.56,
+            "dispatch_hours": 7572,
+            "viable": "True"
+          },
+          "gas_ct": {
+            "capex_kw_yr": 65,
+            "var_cost": 38.3,
+            "all_in_at_min_cf": 186.7,
+            "expected_cf": 0.1204,
+            "avg_rev": 56.45,
+            "net_margin": -9.98,
+            "dispatch_hours": 1055,
+            "viable": "False"
+          }
+        },
+        "emissions_by_fuel": {
+          "gas_ccgt": 15.7
+        },
+        "nuclear_revenue": {
+          "energy_rev_mwh": 32.59,
+          "capacity_rev_mwh": 6.52,
+          "ptc_mwh": 0.89,
+          "total_mwh": 40.0
+        },
+        "nuclear_retired": false,
+        "ccs_breakeven": {
+          "ccs_vs_existing_carbon_price": 178.7,
+          "new_gas_vs_old_carbon_price": 0,
+          "existing_ccgt_var_cost": 28.0,
+          "ccs_lcoe": 87.5
+        },
+        "rps_mandated_pct": 11.5,
+        "rps_eligible_pct": 52.1,
+        "rps_shortfall_pct": 0,
+        "acp_cost_million": 0,
+        "cumulative_acp_million": 0,
+        "dr_curtailed_gwh": 0,
+        "dr_peak_gw": 0,
+        "dr_hours": 0,
+        "dr_avg_price": 0,
+        "data_source": "synthetic",
+        "data_quality": {
+          "synthetic_backed": true,
+          "missing_sources": [
+            "step2.2_parquet"
+          ],
+          "mode": "warn"
+        },
+        "ordc_scarcity_hours": 0,
+        "ordc_scarcity_hours_fraction": 0.0,
+        "reserve_margin_pct": 938.4,
+        "capacity_price_kw_yr": 35.32,
+        "curtailment_rate": 0.0,
+        "lmp_confidence_factor": 1.0,
+        "battery_pct": 0.0,
+        "battery8_pct": 0.0,
+        "ldes_pct": 0.0,
+        "h2_pct": 0.0,
+        "storage_revenue_details": {
+          "battery": {
+            "revenue_kw_yr": 92.8,
+            "arb_kw_yr": 32.6,
+            "cap_kw_yr": 53.1,
+            "anc_kw_yr": 24.0,
+            "revenue_lcoe": 23192.5,
+            "cost_lcoe": 41610.0,
+            "margin": -18417.5,
+            "deployed_pct": 0.0
+          },
+          "battery8": {
+            "revenue_kw_yr": 93.1,
+            "arb_kw_yr": 33.0,
+            "cap_kw_yr": 53.1,
+            "anc_kw_yr": 24.0,
+            "revenue_lcoe": 11633.2,
+            "cost_lcoe": 35565.6,
+            "margin": -23932.4,
+            "deployed_pct": 0.0
+          },
+          "ldes": {
+            "revenue_kw_yr": 67.5,
+            "arb_kw_yr": 0.6,
+            "cap_kw_yr": 53.1,
+            "anc_kw_yr": 20.0,
+            "revenue_lcoe": 675.3,
+            "cost_lcoe": 5518.8,
+            "margin": -4843.5,
+            "deployed_pct": 0.0
+          },
+          "h2": {
+            "revenue_kw_yr": 0,
+            "arb_kw_yr": 0,
+            "cap_kw_yr": 0,
+            "anc_kw_yr": 0,
+            "revenue_lcoe": 0,
+            "cost_lcoe": 0,
+            "margin": 0,
+            "deployed_pct": 0,
+            "reason": "below_threshold"
+          }
+        },
+        "storage_cost_per_mwh": 0.0,
+        "lcoe_trajectory": {
+          "solar": 60.0,
+          "wind": 73.0,
+          "offshore_wind": 150,
+          "nuclear": 128.0,
+          "ccs": 124.2,
+          "geothermal": 127.5,
+          "battery": 41610.0,
+          "battery8": 35565.6,
+          "ldes": 5518.8
+        },
+        "zonal_lmp_spread": 0.0,
+        "zonal_spread_pair": null,
+        "congested_hours": 8360,
+        "zonal_congestion": {
+          "interfaces": [
+            {
+              "zone_a": "NP15",
+              "zone_b": "SP15",
+              "spread_avg": 0.0,
+              "spread_p50": 0.0,
+              "spread_p90": 0.0,
+              "avg_utilization_pct": 95.4,
+              "hours_above_70pct": 8360,
+              "hours_above_95pct": 8335
+            }
+          ],
+          "max_spread_p50": 0.0,
+          "max_spread_pair": null,
+          "max_congested_hours": 8360
+        },
+        "ipm_triggers": [
+          {
+            "trigger_id": "HIGH_CONGESTION",
+            "severity": "high",
+            "explanation": "Transmission congestion is binding. NP15-SP15 interface at 95%+ utilization for 8335 hours/year. A nodal or detailed zonal dispatch model would better capture locational price signals and congestion rent allocation.",
+            "metric_value": 0.0,
+            "threshold": 25.0,
+            "recommended_model": "Zonal/nodal dispatch model (PLEXOS, nodal IPM)"
+          },
+          {
+            "trigger_id": "RETIREMENT_CASCADE",
+            "severity": "high",
+            "explanation": "Large-scale fossil retirement is occurring. Binary plant-level retirement decisions, reliability-must-run contracts, and regulatory backstop interventions would significantly alter this trajectory. Plant-level modeling (EIA 860 fleet) is recommended.",
+            "metric_value": 46.0,
+            "threshold": 35.0,
+            "recommended_model": "Plant-level retirement model (EIA 860, IPM)"
+          }
+        ]
+      },
+      {
+        "iso": "CAISO",
+        "scenario": "MKT_CUSTOM",
+        "year": 2035,
+        "clean_pct": 78.6,
+        "demand_twh": 280.8,
+        "emissions_mt": 11.27,
+        "emission_rate_tco2_mwh": 0.3992,
+        "cost_per_mwh": 0,
+        "revenue_per_mwh": 0,
+        "energy_rev_mwh": 0,
+        "capacity_rev_mwh": 0,
+        "rec_rev_mwh": 0,
+        "basis_differentials": {
+          "solar": 0.0,
+          "wind": 0.0
+        },
+        "avg_lmp": 32.5,
+        "lmp_p90": 42.2,
+        "gas_built_gw": 0.82,
+        "fossil_built_gw": 0.82,
+        "total_gas_gw": 22.36,
+        "market_stop": true,
+        "resource_mix_twh": {
+          "clean_firm": 22.18,
+          "solar": 62.62,
+          "wind": 24.71,
+          "offshore_wind": 0.0,
+          "ccs_ccgt": 0.0,
+          "hydro": 26.68
+        },
+        "cumulative_gw": {
+          "nuclear": 2.0,
+          "ccs": 0.3,
+          "ldes": 0.01,
+          "h2": 0.1,
+          "geothermal": 0.05,
+          "battery": 50.0,
+          "battery8": 50.0,
+          "solar": 150.0,
+          "wind": 150.0,
+          "offshore_wind": 5.0
+        },
+        "zones_deployed": [],
+        "zone_details": [],
+        "energy_rev_by_resource": {},
+        "capture_rates": {},
+        "generator_economics": {
+          "gas_ccgt": {
+            "dispatch_hours": 8305,
+            "cf": 0.59,
+            "avg_rev_mwh": 34.09,
+            "var_cost_mwh": 33.04,
+            "margin_mwh": 1.05,
+            "capacity_mw": 26669.420689736195
+          },
+          "gas_ct": {
+            "dispatch_hours": 5,
+            "cf": 0.0,
+            "avg_rev_mwh": 91.29,
+            "var_cost_mwh": 49.25,
+            "margin_mwh": -32.97,
+            "capacity_mw": 18800.0
+          },
+          "oil_ct": {
+            "dispatch_hours": 0,
+            "cf": 0.0,
+            "avg_rev_mwh": 0.0,
+            "var_cost_mwh": 131.81,
+            "margin_mwh": -131.81,
+            "capacity_mw": 2350.0
+          }
+        },
+        "adjusted_generator_economics": {
+          "gas_ccgt": {
+            "dispatch_hours": 8305,
+            "cf": 0.59,
+            "avg_rev_mwh": 34.09,
+            "var_cost_mwh": 33.04,
+            "margin_mwh": 1.05,
+            "capacity_mw": 21417.478620762573
+          },
+          "gas_ct": {
+            "dispatch_hours": 5,
+            "cf": 0.0,
+            "avg_rev_mwh": 91.29,
+            "var_cost_mwh": 49.25,
+            "margin_mwh": -32.97,
+            "capacity_mw": 940.0
+          },
+          "oil_ct": {
+            "dispatch_hours": 0,
+            "cf": 0.0,
+            "avg_rev_mwh": 0.0,
+            "var_cost_mwh": 131.81,
+            "margin_mwh": -131.81,
+            "capacity_mw": 117.5
+          }
+        },
+        "economic_retirements_mw": {
+          "gas_ccgt": 5252.0,
+          "gas_ct": 17860.0,
+          "oil_ct": 2232.0
+        },
+        "total_economic_retirement_mw": 25344.0,
+        "plant_retirements": [],
+        "new_fossil_builds_mw": {},
+        "total_new_fossil_mw": 0.0,
+        "new_fossil_details": {
+          "gas_ccgt": {
+            "capex_kw_yr": 112,
+            "var_cost": 24.55,
+            "all_in_at_min_cf": 67.17,
+            "expected_cf": 0.8615,
+            "avg_rev": 36.25,
+            "net_margin": -0.92,
+            "dispatch_hours": 7547,
+            "viable": "False"
+          },
+          "gas_ct": {
+            "capex_kw_yr": 65,
+            "var_cost": 38.3,
+            "all_in_at_min_cf": 186.7,
+            "expected_cf": 0.1197,
+            "avg_rev": 56.55,
+            "net_margin": -27.75,
+            "dispatch_hours": 1049,
+            "viable": "False"
+          }
+        },
+        "emissions_by_fuel": {
+          "gas_ccgt": 11.274
+        },
+        "nuclear_revenue": {
+          "energy_rev_mwh": 32.46,
+          "capacity_rev_mwh": 4.34,
+          "ptc_mwh": 0.0,
+          "total_mwh": 36.79
+        },
+        "nuclear_retired": false,
+        "ccs_breakeven": {
+          "ccs_vs_existing_carbon_price": 178.7,
+          "new_gas_vs_old_carbon_price": 0,
+          "existing_ccgt_var_cost": 28.0,
+          "ccs_lcoe": 87.5
+        },
+        "rps_mandated_pct": 18.6,
+        "rps_eligible_pct": 70.7,
+        "rps_shortfall_pct": 1.4,
+        "acp_cost_million": 0.2,
+        "cumulative_acp_million": 0.2,
+        "dr_curtailed_gwh": 0,
+        "dr_peak_gw": 0,
+        "dr_hours": 0,
+        "dr_avg_price": 0,
+        "data_source": "synthetic",
+        "data_quality": {
+          "synthetic_backed": true,
+          "missing_sources": [
+            "step2.2_parquet"
+          ],
+          "mode": "warn"
+        },
+        "ordc_scarcity_hours": 0,
+        "ordc_scarcity_hours_fraction": 0.0,
+        "reserve_margin_pct": 846.8,
+        "capacity_price_kw_yr": 16.75,
+        "curtailment_rate": 0.0,
+        "lmp_confidence_factor": 1.0,
+        "battery_pct": 0.0,
+        "battery8_pct": 0.0,
+        "ldes_pct": 0.0,
+        "h2_pct": 0.0,
+        "storage_revenue_details": {
+          "battery": {
+            "revenue_kw_yr": 74.6,
+            "arb_kw_yr": 32.1,
+            "cap_kw_yr": 35.3,
+            "anc_kw_yr": 24.0,
+            "revenue_lcoe": 18652.2,
+            "cost_lcoe": 41610.0,
+            "margin": -22957.8,
+            "deployed_pct": 0.0
+          },
+          "battery8": {
+            "revenue_kw_yr": 75.0,
+            "arb_kw_yr": 32.6,
+            "cap_kw_yr": 35.3,
+            "anc_kw_yr": 24.0,
+            "revenue_lcoe": 9370.7,
+            "cost_lcoe": 35565.6,
+            "margin": -26194.9,
+            "deployed_pct": 0.0
+          },
+          "ldes": {
+            "revenue_kw_yr": 50.4,
+            "arb_kw_yr": 1.5,
+            "cap_kw_yr": 35.3,
+            "anc_kw_yr": 20.0,
+            "revenue_lcoe": 503.7,
+            "cost_lcoe": 5518.8,
+            "margin": -5015.1,
+            "deployed_pct": 0.0
+          },
+          "h2": {
+            "revenue_kw_yr": 0,
+            "arb_kw_yr": 0,
+            "cap_kw_yr": 0,
+            "anc_kw_yr": 0,
+            "revenue_lcoe": 0,
+            "cost_lcoe": 0,
+            "margin": 0,
+            "deployed_pct": 0,
+            "reason": "below_threshold"
+          }
+        },
+        "storage_cost_per_mwh": 0.0,
+        "lcoe_trajectory": {
+          "solar": 60.0,
+          "wind": 73.0,
+          "offshore_wind": 150,
+          "nuclear": 128.0,
+          "ccs": 124.2,
+          "geothermal": 127.5,
+          "battery": 41610.0,
+          "battery8": 35565.6,
+          "ldes": 5518.8
+        },
+        "zonal_lmp_spread": 0.0,
+        "zonal_spread_pair": null,
+        "congested_hours": 8341,
+        "zonal_congestion": {
+          "interfaces": [
+            {
+              "zone_a": "NP15",
+              "zone_b": "SP15",
+              "spread_avg": 0.0,
+              "spread_p50": 0.0,
+              "spread_p90": 0.0,
+              "avg_utilization_pct": 95.1,
+              "hours_above_70pct": 8341,
+              "hours_above_95pct": 8263
+            }
+          ],
+          "max_spread_p50": 0.0,
+          "max_spread_pair": null,
+          "max_congested_hours": 8341
+        },
+        "ipm_triggers": [
+          {
+            "trigger_id": "HIGH_CONGESTION",
+            "severity": "high",
+            "explanation": "Transmission congestion is binding. NP15-SP15 interface at 95%+ utilization for 8263 hours/year. A nodal or detailed zonal dispatch model would better capture locational price signals and congestion rent allocation.",
+            "metric_value": 0.0,
+            "threshold": 25.0,
+            "recommended_model": "Zonal/nodal dispatch model (PLEXOS, nodal IPM)"
+          },
+          {
+            "trigger_id": "RETIREMENT_CASCADE",
+            "severity": "high",
+            "explanation": "Large-scale fossil retirement is occurring. Binary plant-level retirement decisions, reliability-must-run contracts, and regulatory backstop interventions would significantly alter this trajectory. Plant-level modeling (EIA 860 fleet) is recommended.",
+            "metric_value": 53.0,
+            "threshold": 35.0,
+            "recommended_model": "Plant-level retirement model (EIA 860, IPM)"
+          }
+        ]
+      },
+      {
+        "iso": "CAISO",
+        "scenario": "MKT_CUSTOM",
+        "year": 2040,
+        "clean_pct": 90.0,
+        "demand_twh": 308.5,
+        "emissions_mt": 4.73,
+        "emission_rate_tco2_mwh": 0.3992,
+        "cost_per_mwh": 0,
+        "revenue_per_mwh": 0,
+        "energy_rev_mwh": 0,
+        "capacity_rev_mwh": 0,
+        "rec_rev_mwh": 0,
+        "basis_differentials": {
+          "solar": 0.0,
+          "wind": 0.0
+        },
+        "avg_lmp": 32.5,
+        "lmp_p90": 42.6,
+        "gas_built_gw": 0.82,
+        "fossil_built_gw": 0.82,
+        "total_gas_gw": 18.38,
+        "market_stop": true,
+        "resource_mix_twh": {
+          "clean_firm": 24.37,
+          "solar": 68.8,
+          "wind": 27.15,
+          "offshore_wind": 0.0,
+          "ccs_ccgt": 0.0,
+          "hydro": 29.31
+        },
+        "cumulative_gw": {
+          "nuclear": 2.0,
+          "ccs": 0.3,
+          "ldes": 0.01,
+          "h2": 0.1,
+          "geothermal": 0.05,
+          "battery": 50.0,
+          "battery8": 50.0,
+          "solar": 150.0,
+          "wind": 150.0,
+          "offshore_wind": 5.0
+        },
+        "zones_deployed": [],
+        "zone_details": [],
+        "energy_rev_by_resource": {},
+        "capture_rates": {},
+        "generator_economics": {
+          "gas_ccgt": {
+            "dispatch_hours": 8311,
+            "cf": 0.62,
+            "avg_rev_mwh": 34.31,
+            "var_cost_mwh": 33.04,
+            "margin_mwh": 1.27,
+            "capacity_mw": 28029.947005525664
+          },
+          "gas_ct": {
+            "dispatch_hours": 27,
+            "cf": 0.0,
+            "avg_rev_mwh": 83.91,
+            "var_cost_mwh": 49.25,
+            "margin_mwh": -26.45,
+            "capacity_mw": 19789.473684210527
+          }
+        },
+        "adjusted_generator_economics": {
+          "gas_ccgt": {
+            "dispatch_hours": 8311,
+            "cf": 0.62,
+            "avg_rev_mwh": 34.31,
+            "var_cost_mwh": 33.04,
+            "margin_mwh": 1.27,
+            "capacity_mw": 17390.010235999474
+          },
+          "gas_ct": {
+            "dispatch_hours": 27,
+            "cf": 0.0,
+            "avg_rev_mwh": 83.91,
+            "var_cost_mwh": 49.25,
+            "margin_mwh": -26.45,
+            "capacity_mw": 989.4736842105267
+          }
+        },
+        "economic_retirements_mw": {
+          "gas_ccgt": 10640.0,
+          "gas_ct": 18800.0
+        },
+        "total_economic_retirement_mw": 29440.0,
+        "plant_retirements": [],
+        "new_fossil_builds_mw": {},
+        "total_new_fossil_mw": 0.0,
+        "new_fossil_details": {
+          "gas_ccgt": {
+            "capex_kw_yr": 112,
+            "var_cost": 24.55,
+            "all_in_at_min_cf": 67.17,
+            "expected_cf": 0.8595,
+            "avg_rev": 36.39,
+            "net_margin": -1.29,
+            "dispatch_hours": 7529,
+            "viable": "False"
+          },
+          "gas_ct": {
+            "capex_kw_yr": 65,
+            "var_cost": 38.3,
+            "all_in_at_min_cf": 186.7,
+            "expected_cf": 0.121,
+            "avg_rev": 57.25,
+            "net_margin": -29.99,
+            "dispatch_hours": 1060,
+            "viable": "False"
+          }
+        },
+        "emissions_by_fuel": {
+          "gas_ccgt": 4.733
+        },
+        "nuclear_revenue": {
+          "energy_rev_mwh": 32.48,
+          "capacity_rev_mwh": 2.06,
+          "ptc_mwh": 0.0,
+          "total_mwh": 34.54
+        },
+        "nuclear_retired": false,
+        "ccs_breakeven": {
+          "ccs_vs_existing_carbon_price": 178.7,
+          "new_gas_vs_old_carbon_price": 0,
+          "existing_ccgt_var_cost": 28.0,
+          "ccs_lcoe": 87.5
+        },
+        "rps_mandated_pct": 11.4,
+        "rps_eligible_pct": 82.1,
+        "rps_shortfall_pct": 0,
+        "acp_cost_million": 0,
+        "cumulative_acp_million": 0.2,
+        "dr_curtailed_gwh": 0,
+        "dr_peak_gw": 0,
+        "dr_hours": 0,
+        "dr_avg_price": 0,
+        "data_source": "synthetic",
+        "data_quality": {
+          "synthetic_backed": true,
+          "missing_sources": [
+            "step2.2_parquet"
+          ],
+          "mode": "warn"
+        },
+        "ordc_scarcity_hours": 0,
+        "ordc_scarcity_hours_fraction": 0.0,
+        "reserve_margin_pct": 761.8,
+        "capacity_price_kw_yr": 13.12,
+        "curtailment_rate": 0.0,
+        "lmp_confidence_factor": 0.6,
+        "battery_pct": 0.0,
+        "battery8_pct": 0.0,
+        "ldes_pct": 0.0,
+        "h2_pct": 0.0,
+        "storage_revenue_details": {
+          "battery": {
+            "revenue_kw_yr": 55.3,
+            "arb_kw_yr": 31.0,
+            "cap_kw_yr": 16.7,
+            "anc_kw_yr": 24.0,
+            "revenue_lcoe": 13815.1,
+            "cost_lcoe": 41610.0,
+            "margin": -27794.9,
+            "deployed_pct": 0.0
+          },
+          "battery8": {
+            "revenue_kw_yr": 55.8,
+            "arb_kw_yr": 31.7,
+            "cap_kw_yr": 16.7,
+            "anc_kw_yr": 24.0,
+            "revenue_lcoe": 6969.8,
+            "cost_lcoe": 35565.6,
+            "margin": -28595.8,
+            "deployed_pct": 0.0
+          },
+          "ldes": {
+            "revenue_kw_yr": 32.6,
+            "arb_kw_yr": 2.7,
+            "cap_kw_yr": 16.7,
+            "anc_kw_yr": 20.0,
+            "revenue_lcoe": 326.1,
+            "cost_lcoe": 5518.8,
+            "margin": -5192.7,
+            "deployed_pct": 0.0
+          },
+          "h2": {
+            "revenue_kw_yr": 0,
+            "arb_kw_yr": 0,
+            "cap_kw_yr": 0,
+            "anc_kw_yr": 0,
+            "revenue_lcoe": 0,
+            "cost_lcoe": 0,
+            "margin": 0,
+            "deployed_pct": 0,
+            "reason": "below_threshold"
+          }
+        },
+        "storage_cost_per_mwh": 0.0,
+        "lcoe_trajectory": {
+          "solar": 60.0,
+          "wind": 73.0,
+          "offshore_wind": 150,
+          "nuclear": 128.0,
+          "ccs": 124.2,
+          "geothermal": 127.5,
+          "battery": 41610.0,
+          "battery8": 35565.6,
+          "ldes": 5518.8
+        },
+        "zonal_lmp_spread": 0.0,
+        "zonal_spread_pair": null,
+        "congested_hours": 8337,
+        "zonal_congestion": {
+          "interfaces": [
+            {
+              "zone_a": "NP15",
+              "zone_b": "SP15",
+              "spread_avg": 0.0,
+              "spread_p50": 0.0,
+              "spread_p90": 0.0,
+              "avg_utilization_pct": 95.0,
+              "hours_above_70pct": 8337,
+              "hours_above_95pct": 8207
+            }
+          ],
+          "max_spread_p50": 0.0,
+          "max_spread_pair": null,
+          "max_congested_hours": 8337
+        },
+        "ipm_triggers": [
+          {
+            "trigger_id": "HIGH_CONGESTION",
+            "severity": "high",
+            "explanation": "Transmission congestion is binding. NP15-SP15 interface at 95%+ utilization for 8207 hours/year. A nodal or detailed zonal dispatch model would better capture locational price signals and congestion rent allocation.",
+            "metric_value": 0.0,
+            "threshold": 25.0,
+            "recommended_model": "Zonal/nodal dispatch model (PLEXOS, nodal IPM)"
+          },
+          {
+            "trigger_id": "RETIREMENT_CASCADE",
+            "severity": "high",
+            "explanation": "Large-scale fossil retirement is occurring. Binary plant-level retirement decisions, reliability-must-run contracts, and regulatory backstop interventions would significantly alter this trajectory. Plant-level modeling (EIA 860 fleet) is recommended.",
+            "metric_value": 61.6,
+            "threshold": 35.0,
+            "recommended_model": "Plant-level retirement model (EIA 860, IPM)"
+          },
+          {
+            "trigger_id": "NUCLEAR_AT_RISK",
+            "severity": "high",
+            "explanation": "Nuclear plant revenue is near the retirement cliff. Small changes in LMP assumptions could flip the retirement decision. Detailed plant-level economics with contract-specific data is recommended before acting on this result.",
+            "metric_value": 34.54,
+            "threshold": 30.0,
+            "recommended_model": "Plant-level nuclear economics (contract-specific)"
+          }
+        ]
+      },
+      {
+        "iso": "CAISO",
+        "scenario": "MKT_CUSTOM",
+        "year": 2045,
+        "clean_pct": 100.0,
+        "demand_twh": 339.0,
+        "emissions_mt": 0.0,
+        "emission_rate_tco2_mwh": 0,
+        "cost_per_mwh": 0,
+        "revenue_per_mwh": 0,
+        "energy_rev_mwh": 0,
+        "capacity_rev_mwh": 0,
+        "rec_rev_mwh": 0,
+        "basis_differentials": {
+          "solar": 0.0,
+          "wind": 0.0
+        },
+        "avg_lmp": 32.5,
+        "lmp_p90": 42.8,
+        "gas_built_gw": 0.82,
+        "fossil_built_gw": 0.82,
+        "total_gas_gw": 15.0,
+        "market_stop": true,
+        "resource_mix_twh": {
+          "clean_firm": 26.78,
+          "solar": 75.59,
+          "wind": 29.83,
+          "offshore_wind": 0.0,
+          "ccs_ccgt": 0.0,
+          "hydro": 32.2
+        },
+        "cumulative_gw": {
+          "nuclear": 2.0,
+          "ccs": 0.3,
+          "ldes": 0.01,
+          "h2": 0.1,
+          "geothermal": 0.05,
+          "battery": 50.0,
+          "battery8": 50.0,
+          "solar": 150.0,
+          "wind": 150.0,
+          "offshore_wind": 5.0
+        },
+        "zones_deployed": [],
+        "zone_details": [],
+        "energy_rev_by_resource": {},
+        "capture_rates": {},
+        "generator_economics": {
+          "gas_ccgt": {
+            "dispatch_hours": 8302,
+            "cf": 0.67,
+            "avg_rev_mwh": 34.5,
+            "var_cost_mwh": 33.04,
+            "margin_mwh": 1.46,
+            "capacity_mw": 28029.947005525664
+          },
+          "gas_ct": {
+            "dispatch_hours": 393,
+            "cf": 0.01,
+            "avg_rev_mwh": 64.2,
+            "var_cost_mwh": 49.25,
+            "margin_mwh": -26.84,
+            "capacity_mw": 19789.473684210527
+          }
+        },
+        "adjusted_generator_economics": {
+          "gas_ccgt": {
+            "dispatch_hours": 8302,
+            "cf": 0.67,
+            "avg_rev_mwh": 34.5,
+            "var_cost_mwh": 33.04,
+            "margin_mwh": 1.46,
+            "capacity_mw": 14014.973502762832
+          },
+          "gas_ct": {
+            "dispatch_hours": 393,
+            "cf": 0.01,
+            "avg_rev_mwh": 64.2,
+            "var_cost_mwh": 49.25,
+            "margin_mwh": -26.84,
+            "capacity_mw": 989.4736842105267
+          }
+        },
+        "economic_retirements_mw": {
+          "gas_ccgt": 14015.0,
+          "gas_ct": 18800.0
+        },
+        "total_economic_retirement_mw": 32815.0,
+        "plant_retirements": [],
+        "new_fossil_builds_mw": {},
+        "total_new_fossil_mw": 0.0,
+        "new_fossil_details": {
+          "gas_ccgt": {
+            "capex_kw_yr": 112,
+            "var_cost": 24.55,
+            "all_in_at_min_cf": 67.17,
+            "expected_cf": 0.8571,
+            "avg_rev": 36.51,
+            "net_margin": -1.37,
+            "dispatch_hours": 7508,
+            "viable": "False"
+          },
+          "gas_ct": {
+            "capex_kw_yr": 65,
+            "var_cost": 38.3,
+            "all_in_at_min_cf": 186.7,
+            "expected_cf": 0.1216,
+            "avg_rev": 57.94,
+            "net_margin": -30.17,
+            "dispatch_hours": 1065,
+            "viable": "False"
+          }
+        },
+        "emissions_by_fuel": {},
+        "nuclear_revenue": {
+          "energy_rev_mwh": 32.5,
+          "capacity_rev_mwh": 1.61,
+          "ptc_mwh": 0.0,
+          "total_mwh": 34.11
+        },
+        "nuclear_retired": false,
+        "ccs_breakeven": {
+          "ccs_vs_existing_carbon_price": 178.7,
+          "new_gas_vs_old_carbon_price": 0,
+          "existing_ccgt_var_cost": 28.0,
+          "ccs_lcoe": 87.5
+        },
+        "rps_mandated_pct": 10.0,
+        "rps_eligible_pct": 92.1,
+        "rps_shortfall_pct": 0,
+        "acp_cost_million": 0,
+        "cumulative_acp_million": 0.2,
+        "dr_curtailed_gwh": 0,
+        "dr_peak_gw": 0,
+        "dr_hours": 0,
+        "dr_avg_price": 0,
+        "data_source": "synthetic",
+        "data_quality": {
+          "synthetic_backed": true,
+          "missing_sources": [
+            "step2.2_parquet"
+          ],
+          "mode": "warn"
+        },
+        "ordc_scarcity_hours": 0,
+        "ordc_scarcity_hours_fraction": 0.0,
+        "reserve_margin_pct": 684.4,
+        "capacity_price_kw_yr": 11.95,
+        "curtailment_rate": 0.0,
+        "lmp_confidence_factor": 0.6,
+        "battery_pct": 0.0,
+        "battery8_pct": 0.0,
+        "ldes_pct": 0.0,
+        "h2_pct": 0.0,
+        "storage_revenue_details": {
+          "battery": {
+            "revenue_kw_yr": 50.7,
+            "arb_kw_yr": 29.6,
+            "cap_kw_yr": 13.1,
+            "anc_kw_yr": 24.0,
+            "revenue_lcoe": 12665.7,
+            "cost_lcoe": 41610.0,
+            "margin": -28944.3,
+            "deployed_pct": 0.0
+          },
+          "battery8": {
+            "revenue_kw_yr": 51.2,
+            "arb_kw_yr": 30.5,
+            "cap_kw_yr": 13.1,
+            "anc_kw_yr": 24.0,
+            "revenue_lcoe": 6405.6,
+            "cost_lcoe": 35565.6,
+            "margin": -29160.0,
+            "deployed_pct": 0.0
+          },
+          "ldes": {
+            "revenue_kw_yr": 29.7,
+            "arb_kw_yr": 3.7,
+            "cap_kw_yr": 13.1,
+            "anc_kw_yr": 20.0,
+            "revenue_lcoe": 297.1,
+            "cost_lcoe": 5518.8,
+            "margin": -5221.7,
+            "deployed_pct": 0.0
+          },
+          "h2": {
+            "revenue_kw_yr": 0,
+            "arb_kw_yr": 0,
+            "cap_kw_yr": 0,
+            "anc_kw_yr": 0,
+            "revenue_lcoe": 0,
+            "cost_lcoe": 0,
+            "margin": 0,
+            "deployed_pct": 0,
+            "reason": "below_threshold"
+          }
+        },
+        "storage_cost_per_mwh": 0.0,
+        "lcoe_trajectory": {
+          "solar": 60.0,
+          "wind": 73.0,
+          "offshore_wind": 150,
+          "nuclear": 128.0,
+          "ccs": 124.2,
+          "geothermal": 127.5,
+          "battery": 41610.0,
+          "battery8": 35565.6,
+          "ldes": 5518.8
+        },
+        "zonal_lmp_spread": 0.0,
+        "zonal_spread_pair": null,
+        "congested_hours": 8037,
+        "zonal_congestion": {
+          "interfaces": [
+            {
+              "zone_a": "NP15",
+              "zone_b": "SP15",
+              "spread_avg": 0.0,
+              "spread_p50": 0.0,
+              "spread_p90": 0.0,
+              "avg_utilization_pct": 92.4,
+              "hours_above_70pct": 8037,
+              "hours_above_95pct": 7342
+            }
+          ],
+          "max_spread_p50": 0.0,
+          "max_spread_pair": null,
+          "max_congested_hours": 8037
+        },
+        "ipm_triggers": [
+          {
+            "trigger_id": "HIGH_CONGESTION",
+            "severity": "high",
+            "explanation": "Transmission congestion is binding. NP15-SP15 interface at 95%+ utilization for 7342 hours/year. A nodal or detailed zonal dispatch model would better capture locational price signals and congestion rent allocation.",
+            "metric_value": 0.0,
+            "threshold": 25.0,
+            "recommended_model": "Zonal/nodal dispatch model (PLEXOS, nodal IPM)"
+          },
+          {
+            "trigger_id": "RETIREMENT_CASCADE",
+            "severity": "high",
+            "explanation": "Large-scale fossil retirement is occurring. Binary plant-level retirement decisions, reliability-must-run contracts, and regulatory backstop interventions would significantly alter this trajectory. Plant-level modeling (EIA 860 fleet) is recommended.",
+            "metric_value": 68.6,
+            "threshold": 35.0,
+            "recommended_model": "Plant-level retirement model (EIA 860, IPM)"
+          },
+          {
+            "trigger_id": "NUCLEAR_AT_RISK",
+            "severity": "high",
+            "explanation": "Nuclear plant revenue is near the retirement cliff. Small changes in LMP assumptions could flip the retirement decision. Detailed plant-level economics with contract-specific data is recommended before acting on this result.",
+            "metric_value": 34.11,
+            "threshold": 30.0,
+            "recommended_model": "Plant-level nuclear economics (contract-specific)"
+          }
+        ]
+      },
+      {
+        "iso": "CAISO",
+        "scenario": "MKT_CUSTOM",
+        "year": 2050,
+        "clean_pct": 100.0,
+        "demand_twh": 372.4,
+        "emissions_mt": 0.0,
+        "emission_rate_tco2_mwh": 0,
+        "cost_per_mwh": 0,
+        "revenue_per_mwh": 0,
+        "energy_rev_mwh": 0,
+        "capacity_rev_mwh": 0,
+        "rec_rev_mwh": 0,
+        "basis_differentials": {
+          "solar": 0.0,
+          "wind": 0.0
+        },
+        "avg_lmp": 32.7,
+        "lmp_p90": 43.3,
+        "gas_built_gw": 0.82,
+        "fossil_built_gw": 0.82,
+        "total_gas_gw": 15.0,
+        "market_stop": true,
+        "resource_mix_twh": {
+          "clean_firm": 29.42,
+          "solar": 83.05,
+          "wind": 32.77,
+          "offshore_wind": 0.0,
+          "ccs_ccgt": 0.0,
+          "hydro": 35.38
+        },
+        "cumulative_gw": {
+          "nuclear": 2.0,
+          "ccs": 0.3,
+          "ldes": 0.01,
+          "h2": 0.1,
+          "geothermal": 0.05,
+          "battery": 50.0,
+          "battery8": 50.0,
+          "solar": 150.0,
+          "wind": 150.0,
+          "offshore_wind": 5.0
+        },
+        "zones_deployed": [],
+        "zone_details": [],
+        "energy_rev_by_resource": {},
+        "capture_rates": {},
+        "generator_economics": {
+          "gas_ccgt": {
+            "dispatch_hours": 8329,
+            "cf": 0.73,
+            "avg_rev_mwh": 34.55,
+            "var_cost_mwh": 33.04,
+            "margin_mwh": 1.51,
+            "capacity_mw": 28029.947005525664
+          },
+          "gas_ct": {
+            "dispatch_hours": 1553,
+            "cf": 0.04,
+            "avg_rev_mwh": 48.96,
+            "var_cost_mwh": 49.25,
+            "margin_mwh": -26.56,
+            "capacity_mw": 19789.473684210527
+          }
+        },
+        "adjusted_generator_economics": {
+          "gas_ccgt": {
+            "dispatch_hours": 8329,
+            "cf": 0.73,
+            "avg_rev_mwh": 34.55,
+            "var_cost_mwh": 33.04,
+            "margin_mwh": 1.51,
+            "capacity_mw": 14014.973502762832
+          },
+          "gas_ct": {
+            "dispatch_hours": 1553,
+            "cf": 0.04,
+            "avg_rev_mwh": 48.96,
+            "var_cost_mwh": 49.25,
+            "margin_mwh": -26.56,
+            "capacity_mw": 989.4736842105267
+          }
+        },
+        "economic_retirements_mw": {
+          "gas_ccgt": 14015.0,
+          "gas_ct": 18800.0
+        },
+        "total_economic_retirement_mw": 32815.0,
+        "plant_retirements": [],
+        "new_fossil_builds_mw": {},
+        "total_new_fossil_mw": 0.0,
+        "new_fossil_details": {
+          "gas_ccgt": {
+            "capex_kw_yr": 112,
+            "var_cost": 24.55,
+            "all_in_at_min_cf": 67.17,
+            "expected_cf": 0.8573,
+            "avg_rev": 36.75,
+            "net_margin": -1.12,
+            "dispatch_hours": 7510,
+            "viable": "False"
+          },
+          "gas_ct": {
+            "capex_kw_yr": 65,
+            "var_cost": 38.3,
+            "all_in_at_min_cf": 186.7,
+            "expected_cf": 0.1227,
+            "avg_rev": 59.46,
+            "net_margin": -28.19,
+            "dispatch_hours": 1075,
+            "viable": "False"
+          }
+        },
+        "emissions_by_fuel": {},
+        "nuclear_revenue": {
+          "energy_rev_mwh": 32.72,
+          "capacity_rev_mwh": 1.47,
+          "ptc_mwh": 0.0,
+          "total_mwh": 34.19
+        },
+        "nuclear_retired": false,
+        "ccs_breakeven": {
+          "ccs_vs_existing_carbon_price": 178.7,
+          "new_gas_vs_old_carbon_price": 0,
+          "existing_ccgt_var_cost": 28.0,
+          "ccs_lcoe": 87.5
+        },
+        "rps_mandated_pct": 0,
+        "rps_eligible_pct": 92.1,
+        "rps_shortfall_pct": 0,
+        "acp_cost_million": 0,
+        "cumulative_acp_million": 0.2,
+        "dr_curtailed_gwh": 0,
+        "dr_peak_gw": 0,
+        "dr_hours": 0,
+        "dr_avg_price": 0,
+        "data_source": "synthetic",
+        "data_quality": {
+          "synthetic_backed": true,
+          "missing_sources": [
+            "step2.2_parquet"
+          ],
+          "mode": "warn"
+        },
+        "ordc_scarcity_hours": 0,
+        "ordc_scarcity_hours_fraction": 0.0,
+        "reserve_margin_pct": 613.9,
+        "capacity_price_kw_yr": 11.95,
+        "curtailment_rate": 0.0,
+        "lmp_confidence_factor": 0.4,
+        "battery_pct": 0.0,
+        "battery8_pct": 0.0,
+        "ldes_pct": 0.0,
+        "h2_pct": 0.0,
+        "storage_revenue_details": {
+          "battery": {
+            "revenue_kw_yr": 49.2,
+            "arb_kw_yr": 29.2,
+            "cap_kw_yr": 12.0,
+            "anc_kw_yr": 24.0,
+            "revenue_lcoe": 12301.4,
+            "cost_lcoe": 41610.0,
+            "margin": -29308.6,
+            "deployed_pct": 0.0
+          },
+          "battery8": {
+            "revenue_kw_yr": 49.8,
+            "arb_kw_yr": 30.1,
+            "cap_kw_yr": 12.0,
+            "anc_kw_yr": 24.0,
+            "revenue_lcoe": 6223.5,
+            "cost_lcoe": 35565.6,
+            "margin": -29342.1,
+            "deployed_pct": 0.0
+          },
+          "ldes": {
+            "revenue_kw_yr": 29.1,
+            "arb_kw_yr": 4.4,
+            "cap_kw_yr": 12.0,
+            "anc_kw_yr": 20.0,
+            "revenue_lcoe": 290.6,
+            "cost_lcoe": 5518.8,
+            "margin": -5228.2,
+            "deployed_pct": 0.0
+          },
+          "h2": {
+            "revenue_kw_yr": 26.8,
+            "arb_kw_yr": 1.2,
+            "cap_kw_yr": 12.0,
+            "anc_kw_yr": 20.0,
+            "revenue_lcoe": 26.8,
+            "cost_lcoe": 25404.0,
+            "margin": -25377.2,
+            "deployed_pct": 0.0
+          }
+        },
+        "storage_cost_per_mwh": 0.0,
+        "lcoe_trajectory": {
+          "solar": 60.0,
+          "wind": 73.0,
+          "offshore_wind": 150,
+          "nuclear": 128.0,
+          "ccs": 124.2,
+          "geothermal": 127.5,
+          "battery": 41610.0,
+          "battery8": 35565.6,
+          "ldes": 5518.8
+        },
+        "zonal_lmp_spread": 0.0,
+        "zonal_spread_pair": null,
+        "congested_hours": 6905,
+        "zonal_congestion": {
+          "interfaces": [
+            {
+              "zone_a": "NP15",
+              "zone_b": "SP15",
+              "spread_avg": 0.0,
+              "spread_p50": 0.0,
+              "spread_p90": 0.0,
+              "avg_utilization_pct": 84.3,
+              "hours_above_70pct": 6905,
+              "hours_above_95pct": 5900
+            }
+          ],
+          "max_spread_p50": 0.0,
+          "max_spread_pair": null,
+          "max_congested_hours": 6905
+        },
+        "ipm_triggers": [
+          {
+            "trigger_id": "HIGH_CONGESTION",
+            "severity": "high",
+            "explanation": "Transmission congestion is binding. NP15-SP15 interface at 95%+ utilization for 5900 hours/year. A nodal or detailed zonal dispatch model would better capture locational price signals and congestion rent allocation.",
+            "metric_value": 0.0,
+            "threshold": 25.0,
+            "recommended_model": "Zonal/nodal dispatch model (PLEXOS, nodal IPM)"
+          },
+          {
+            "trigger_id": "RETIREMENT_CASCADE",
+            "severity": "high",
+            "explanation": "Large-scale fossil retirement is occurring. Binary plant-level retirement decisions, reliability-must-run contracts, and regulatory backstop interventions would significantly alter this trajectory. Plant-level modeling (EIA 860 fleet) is recommended.",
+            "metric_value": 68.6,
+            "threshold": 35.0,
+            "recommended_model": "Plant-level retirement model (EIA 860, IPM)"
+          },
+          {
+            "trigger_id": "NUCLEAR_AT_RISK",
+            "severity": "high",
+            "explanation": "Nuclear plant revenue is near the retirement cliff. Small changes in LMP assumptions could flip the retirement decision. Detailed plant-level economics with contract-specific data is recommended before acting on this result.",
+            "metric_value": 34.19,
+            "threshold": 30.0,
+            "recommended_model": "Plant-level nuclear economics (contract-specific)"
+          }
+        ]
+      }
+    ],
+    "_provenance": {
+      "model_version": "1.0.0",
+      "git_sha": "153f96f",
+      "git_branch": "claude/peer-review-fixes-jaLPT",
+      "config_hash": "ac9bc2eba3f5cf84abe5fe5f241b5e6f8f18ab84da3d78005e2eaf2a0d739d20",
+      "run_timestamp": "2026-03-21T20:12:07.213276+00:00",
+      "python_version": "3.11.14 (main, Oct 10 2025, 08:54:04) [GCC 13.3.0]",
+      "input_snapshot": {
+        "scenario_id": "MKT_CUSTOM",
+        "conditions": {
+          "name": "Custom Market Scenario",
+          "demand_growth": "Medium",
+          "lcoe_level": "Medium",
+          "learning_speed": "Medium",
+          "queue_cap_level": "Medium",
+          "gas_friction": 0.7,
+          "carbon_price": 0,
+          "fuel_level": "Medium",
+          "tx_level": "Medium",
+          "ppa_level": "Medium",
+          "dr_level": "Off",
+          "new_fossil_cost_level": "Medium",
+          "new_fossil_enabled": true
+        },
+        "isos": [
+          "CAISO"
+        ],
+        "nuclear_retirement_threshold": null,
+        "snapshot_mode": false,
+        "sim_years": null,
+        "weather_year": null
+      }
+    }
+  }
+}
