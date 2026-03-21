@@ -580,9 +580,10 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
             zonal_zone_names = zone_config['zones']
             hourly_lmp = system_lmp
             unit_idx = np.full(len(hourly_lmp), -1, dtype=np.int8)
-    except Exception:
-        # Fall back to copper-plate
-        pass
+    except Exception as _zonal_err:
+        # Fall back to copper-plate LMP — log the failure for debugging
+        logger.debug("Zonal LMP failed for %s (clean=%.1f%%): %s — using copper-plate",
+                     iso, clean_pct, _zonal_err)
 
     if zonal_lmp_matrix is None:
         hourly_lmp, unit_idx, _dr_unused, lmp_confidence = compute_hourly_lmp_vectorized(
@@ -1194,7 +1195,7 @@ def _is_nuclear_plant(plant):
     mover = str(plant.get('prime_mover', '')).upper()
     utype = str(plant.get('unit_type', '')).lower()
     return ('NUC' in fuel or 'UR' in fuel or  # NUC, NUCLEAR, URANIUM
-            'ST' == mover and 'NUC' in fuel or
+            (mover == 'ST' and 'NUC' in fuel) or
             utype == 'nuclear')
 
 
@@ -3602,6 +3603,9 @@ def run_market_simulation(scenario_id, conditions, isos=None,
     else:
         _full_data_sources = {'simple': _data_sources}
 
+    # Global cumulative GW — shared across all ISOs (intentional: represents worldwide
+    # technology learning. ISO-specific deployments contribute to global cost reductions
+    # via Wright's Law. This is the standard assumption in IEA WEO / IRENA models.)
     cumulative_gw = dict(WRIGHT_CUMULATIVE_GW_2025)
     # Endogenous learning: allow conditions to override the global toggle
     _endogenous = conditions.get('endogenous_learning', ENDOGENOUS_LEARNING)
@@ -4548,20 +4552,13 @@ def _scenario_weight(scenario_id):
     code_to_level = {'L': 'Low', 'M': 'Medium', 'H': 'High'}
 
     demand_code = parts[1]
-    ppa_code = parts[-3]
-    gas_code = parts[-2]
-    # The queue_code and nfc_code are the last two? Re-check format:
-    # MKT_{D}_{price_name}_{P}_{G}_{Q}_{N}  → 7 minimum tokens
-    queue_code = parts[-2]
-    nfc_code = parts[-1]
-
-    # Actually re-parse: parts = [MKT, D, ...price_name..., P, G, Q, N]
-    # Last 4 single-char codes: ppa, gas, queue, nfc
+    # Scenario ID format: MKT_{D}_{price_name}_{P}_{G}_{Q}_{N}
+    # Last 4 single-char codes: ppa, gas_friction, queue, new_fossil_cost
+    # price_name occupies all tokens between index 2 and -4 (may contain underscores)
     nfc_code = parts[-1]
     queue_code = parts[-2]
     gas_code = parts[-3]
     ppa_code = parts[-4]
-    # price_name is everything between index 2 and -4
     price_name = '_'.join(parts[2:-4])
 
     demand = code_to_level.get(demand_code, demand_code)
@@ -4639,6 +4636,10 @@ def aggregate_sweep_percentiles(all_results):
     grouped = defaultdict(lambda: defaultdict(list))  # (iso, year) → [year_result, ...]
 
     for scenario_id, iso_results in all_results.items():
+        if scenario_id.startswith('_'):
+            continue  # Skip _provenance and other metadata keys
+        if not isinstance(iso_results, dict):
+            continue
         for iso, year_results in iso_results.items():
             for yr in year_results:
                 key = (iso, yr.get('year', 0))
