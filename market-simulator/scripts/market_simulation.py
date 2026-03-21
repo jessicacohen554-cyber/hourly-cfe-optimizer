@@ -4823,6 +4823,8 @@ def aggregate_sweep_percentiles(all_results):
         if not isinstance(iso_results, dict):
             continue
         for iso, year_results in iso_results.items():
+            if iso.startswith('_'):
+                continue  # skip _provenance metadata
             for yr in year_results:
                 key = (iso, yr.get('year', 0))
                 grouped[key]['_results'].append((scenario_id, yr))
