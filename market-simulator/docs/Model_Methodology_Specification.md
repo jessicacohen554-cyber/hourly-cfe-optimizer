@@ -48,9 +48,11 @@
 
 ### 1.1 Purpose
 
-The Market Simulator is a profit-driven electricity market model that answers a fundamentally different question than traditional clean energy optimization: **"Given fuel prices, carbon costs, and clean energy economics, what happens to generators?"**
+The Market Simulator is a **fossil dispatch overlay on exogenous clean generation shapes**. It takes hourly clean energy profiles from the upstream hourly-cfe-optimizer pipeline — physics-feasible mixes of solar, wind, hydro, storage, and clean firm resources — and subtracts them from demand to derive residual fossil load. It then dispatches the fossil fleet against that residual, computing LMP formation, plant-level economics, retirement trajectories, emissions, and capacity adequacy.
 
-Unlike constrained optimization models that target a specific clean energy percentage, the Market Simulator treats clean energy deployment as an **output** — it emerges from profitability. Resources deploy where revenue exceeds cost, and deployment stops when marginal profit turns negative. This approach is conceptually closer to agent-based models of electricity markets than to least-cost capacity expansion planning.
+The core question is not *"what does clean energy cost?"* — that's answered upstream. The core question is: **"Given this clean generation backdrop, what happens to the incumbent fossil fleet?"**
+
+The model's 1,215-scenario parametric sweep evaluates fossil fleet consequences across thousands of plausible futures (fuel prices × carbon prices × demand growth × PPA availability × gas friction × interconnection caps), delivering P10/P50/P90 distributions rather than single "optimal" plans. This trades dispatch fidelity for parametric coverage — identifying conclusions that are robust across uncertain futures rather than optimal for one assumed future. See §1.5 for the methodological rationale.
 
 ### 1.2 Scope
 
@@ -80,13 +82,32 @@ Three simulation modes are supported:
 - **Unit commitment constraints**: When plant-level EIA 860 data is available, the model applies vintage-adjusted unit commitment: newer CCGTs (2015+) have 30% minimum generation and lower start costs; older CCGTs (pre-2005) have 50% minimum generation and higher start costs. Without plant data, dispatch uses a simplified merit-order without UC constraints. Storage dispatch uses LP co-optimization (simultaneous battery/LDES/H₂ dispatch via scipy linprog with rolling windows), with greedy sequential fallback.
 - **Load profile**: Demand uses actual ISO-level 8,760-hour profiles from EIA-930, representing aggregate load.
 
-### 1.4 Key Differentiator
+### 1.4 Key Differentiator — Fossil Dispatch Overlay on Exogenous Clean Generation
 
-Traditional clean energy models ask: *"What does it cost to reach X% clean energy?"*
+Traditional capacity expansion models (IPM, GenX, PLEXOS) solve a constrained optimization: *"What's the least-cost generation portfolio to meet demand subject to policy constraints?"* They deliver a single "optimal" plan per scenario. Running 5–10 scenarios takes days to weeks.
 
-The Market Simulator asks: *"At these fuel prices, carbon costs, and clean energy economics, how much clean energy gets built — and what happens to the existing fossil fleet?"*
+The Market Simulator inverts this. It takes **exogenous clean energy generation shapes** — hourly profiles from the upstream hourly-cfe-optimizer's physics-feasible space — and overlays them on demand to derive residual fossil dispatch. The core question is: **"Given this clean generation backdrop, what happens to the fossil fleet?"**
 
-This profit-driven framing makes the simulator directly relevant to generator owners, capacity market participants, and policymakers evaluating market-based decarbonization pathways.
+This is a fossil dispatch simulator, not a clean energy optimizer. The clean energy cost optimization lives entirely in Steps 1–2 of the upstream pipeline. The Market Simulator's contribution is modeling fossil fleet consequences — retirements, LMP formation, emissions trajectories, capacity adequacy — across the full range of possible clean energy futures.
+
+### 1.5 Methodological Contribution — Parametric Robustness vs. Single-Point Optimization
+
+The model's 1,215-scenario parametric sweep in minutes delivers a fundamentally different analytical product than single-point optimization:
+
+**Single-point optimization (IPM/GenX)** solves for *the* optimal plan given fixed assumptions. But those assumptions — gas prices, load growth, policy trajectories, technology costs — are always wrong. The "optimal" plan is optimal for a future that won't happen. Small input perturbations can flip outcomes (a $2/MWh shift in gas price can change whether a plant retires in 2028 or 2035), and the precision of the solution masks the brittleness of the assumptions. Decision-makers treat the output as a forecast ("IPM says 40 GW retires by 2035") when it's a scenario result.
+
+**Parametric sweep** asks: *"What holds across all plausible futures?"* Instead of optimizing for one assumed future, the model evaluates thousands and identifies **robust findings** — conclusions that survive being wrong about specific inputs. "Solar + battery appears in every cost-optimal mix above 70% clean" is a stronger basis for investment decisions than "the optimal 2035 portfolio is 43.2 GW solar, 12.7 GW battery" — because the first statement survives gas price uncertainty, and the second doesn't.
+
+This distinction matters for the model's intended use case. Corporate procurement and strategic planning are decisions under uncertainty. The decision-relevant question is usually *"which investments are no-regrets across a wide range of futures?"* — not *"what's optimal under one set of assumptions?"* Robustness beats optimality when you can't predict the future.
+
+The energy modeling field is moving in this direction. Stochastic programming, robust optimization, and Lempert's Decision Making Under Deep Uncertainty (DMDU) framework all stem from the recognition that single-point optimization overfits to assumptions. The parametric sweep is scenario discovery conducted empirically — sweeping the uncertainty space and identifying which findings are invariant to input assumptions — rather than analytically via mathematical programming.
+
+**Where single-point optimization retains its advantage:**
+- **Regulatory proceedings**: FERC/PUCs require a specific plan with engineering precision. Probability bands aren't a filing.
+- **Transmission planning**: Specific lines must be built in specific locations. Robustness ranges don't direct construction.
+- **Short-term operations**: Day-ahead and real-time dispatch require exact commitment schedules.
+
+The model's IPM trigger system (§6.8) bridges this gap: when parametric results cross into territory where single-point optimization is needed (tight RA, high congestion, deep VRE cannibalization), the model automatically flags that a production-grade tool should validate the finding.
 
 ---
 
