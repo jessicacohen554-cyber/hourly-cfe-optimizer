@@ -28,6 +28,8 @@ import os
 import sys
 import time
 
+import math
+
 import numpy as np
 import pandas as pd
 
@@ -59,53 +61,60 @@ SCALAR_FIELDS = [
 ]
 
 
+def _sanitize(v):
+    """Replace inf/-inf with None so pyarrow can serialize to parquet."""
+    if isinstance(v, float) and (math.isinf(v) or math.isnan(v)):
+        return None
+    return v
+
+
 def flatten_year_result(scenario_id, yr):
     """Convert a single year_result dict into a flat row dict."""
     row = {'scenario_id': scenario_id}
 
     # Scalar fields
     for f in SCALAR_FIELDS:
-        row[f] = yr.get(f)
+        row[f] = _sanitize(yr.get(f))
 
     # resource_mix_twh → prefixed columns
     rmix = yr.get('resource_mix_twh', {}) or {}
     for res, twh in rmix.items():
-        row[f'mix_{res}_twh'] = twh
+        row[f'mix_{res}_twh'] = _sanitize(twh)
 
     # generator_economics → prefixed columns (capacity_mw, cf, margin_mwh per fuel)
     gen_econ = yr.get('generator_economics', {}) or {}
     for fuel, metrics in gen_econ.items():
         if isinstance(metrics, dict):
-            row[f'ge_{fuel}_capacity_mw'] = metrics.get('capacity_mw')
-            row[f'ge_{fuel}_cf'] = metrics.get('cf')
-            row[f'ge_{fuel}_margin_mwh'] = metrics.get('margin_mwh')
+            row[f'ge_{fuel}_capacity_mw'] = _sanitize(metrics.get('capacity_mw'))
+            row[f'ge_{fuel}_cf'] = _sanitize(metrics.get('cf'))
+            row[f'ge_{fuel}_margin_mwh'] = _sanitize(metrics.get('margin_mwh'))
 
     # economic_retirements_mw → prefixed columns
     econ_ret = yr.get('economic_retirements_mw', {}) or {}
     for fuel, mw in econ_ret.items():
-        row[f'ret_{fuel}_mw'] = mw
+        row[f'ret_{fuel}_mw'] = _sanitize(mw)
 
     # new_fossil_builds_mw → prefixed columns
     nfb = yr.get('new_fossil_builds_mw', {}) or {}
     for fuel, mw in nfb.items():
-        row[f'nb_{fuel}_mw'] = mw
+        row[f'nb_{fuel}_mw'] = _sanitize(mw)
 
     # emissions_by_fuel → prefixed columns
     ebf = yr.get('emissions_by_fuel', {}) or {}
     for fuel, mt in ebf.items():
-        row[f'emis_{fuel}_mt'] = mt
+        row[f'emis_{fuel}_mt'] = _sanitize(mt)
 
     # nuclear_revenue → prefixed columns
     nuc_rev = yr.get('nuclear_revenue', {}) or {}
     for k, v in nuc_rev.items():
         if isinstance(v, (int, float)):
-            row[f'nuc_{k}'] = v
+            row[f'nuc_{k}'] = _sanitize(v)
 
     # ccs_breakeven → prefixed columns
     ccs_be = yr.get('ccs_breakeven', {}) or {}
     for k, v in ccs_be.items():
         if isinstance(v, (int, float)):
-            row[f'ccs_be_{k}'] = v
+            row[f'ccs_be_{k}'] = _sanitize(v)
 
     return row
 
@@ -130,8 +139,8 @@ def main():
                         help='Output directory (default: ../results/sweep_1215)')
     parser.add_argument('--nuclear-retirement', type=float, default=None,
                         help='Nuclear retirement threshold $/MWh')
-    parser.add_argument('--start-year', type=int, default=2026,
-                        help='First simulation year (default: 2026)')
+    parser.add_argument('--start-year', type=int, default=2023,
+                        help='First simulation year (default: 2023, includes eGRID baseline)')
     parser.add_argument('--end-year', type=int, default=2060,
                         help='Last simulation year (default: 2060)')
     parser.add_argument('--year-step', type=int, default=1,
@@ -190,6 +199,9 @@ def main():
     # ── Save flat parquet (primary output) ──
     print("Converting to flat parquet...")
     df = results_to_dataframe(all_results)
+    # Replace any remaining inf/-inf with NaN (pyarrow cannot serialize inf)
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+    df[numeric_cols] = df[numeric_cols].replace([np.inf, -np.inf], np.nan)
     parquet_path = os.path.join(output_dir, 'sweep_1215_flat.parquet')
     df.to_parquet(parquet_path, index=False, engine='pyarrow')
     print(f"Parquet saved: {parquet_path}")
