@@ -380,7 +380,13 @@ coll = COLLECT(
 
 **Mitigation**: Sign with `codesign` and optionally notarize via `xcrun notarytool`. For internal use, users can right-click → Open to bypass.
 
-### 5.9 pywebview platform backends
+### 5.9 uvicorn signal handlers
+
+**Problem**: uvicorn installs signal handlers that conflict with pywebview's main loop (signals must be set from the main thread).
+
+**Mitigation**: Use `uvicorn.Config(install_signal_handlers=False)` in the programmatic API. The desktop_app.py entry point manages shutdown via `os._exit(0)` instead.
+
+### 5.10 pywebview platform backends
 
 **Problem**: pywebview uses different rendering backends per OS — Edge/WebView2 on Windows, WebKit on macOS.
 
@@ -490,17 +496,85 @@ Tasks:
 
 ---
 
-## 7. Files to Create/Modify
+## 7. Centralized Path Module: `paths.py`
+
+Instead of scattering env-var checks across every script, create a single `market-simulator/paths.py` that all modules import. This is cleaner and avoids forgetting to patch a file.
+
+```python
+"""Canonical path resolution for both development and PyInstaller-frozen modes."""
+import os, sys
+from pathlib import Path
+
+def _is_frozen():
+    return getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS')
+
+if _is_frozen():
+    BUNDLE_DIR = Path(sys._MEIPASS)          # Read-only bundled assets
+    APP_DIR = Path(sys.executable).parent     # Writable dir next to exe
+else:
+    BUNDLE_DIR = Path(__file__).resolve().parent
+    APP_DIR = BUNDLE_DIR
+
+# Read-only (bundled) paths
+BACKEND_DIR  = BUNDLE_DIR / "backend"
+SCRIPTS_DIR  = BUNDLE_DIR / "scripts"
+FRONTEND_DIR = BUNDLE_DIR / "frontend"
+
+# Writable paths — check external first, fall back to bundled
+def _resolve_data_dir():
+    external = APP_DIR / "app_data" / "data"
+    return external if external.exists() else BUNDLE_DIR / "data"
+
+def _resolve_results_dir():
+    d = APP_DIR / "app_data" / "results"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+def _resolve_custom_inputs_dir():
+    d = APP_DIR / "app_data" / "custom-user-inputs"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+DATA_DIR = _resolve_data_dir()
+RESULTS_DIR = _resolve_results_dir()
+CUSTOM_INPUTS_DIR = _resolve_custom_inputs_dir()
+```
+
+Each script that currently computes `MODULE_ROOT` / `SCRIPT_DIR` gets a simple patch:
+
+```python
+try:
+    from paths import BUNDLE_DIR as MODULE_ROOT, SCRIPTS_DIR, DATA_DIR
+except ImportError:
+    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+    MODULE_ROOT = os.path.dirname(SCRIPT_DIR)
+    DATA_DIR = os.path.join(MODULE_ROOT, 'data')
+```
+
+The `try/except ImportError` keeps backward compatibility for running scripts directly outside the desktop app.
+
+### Latent bug to fix
+
+`scripts/lmp_engine.py` (lines 42-43) computes `LMP_DIR = SCRIPT_DIR / "data"` — this resolves to `scripts/data/` which doesn't exist. Should be `MODULE_ROOT / "data"`. Fix this during the path centralization.
+
+---
+
+## 8. Files to Create/Modify
 
 | File | Action | Description |
 |------|--------|-------------|
-| `market-simulator/desktop_app.py` | **CREATE** | Entry point: pywebview + uvicorn thread + path resolution |
+| `market-simulator/paths.py` | **CREATE** | Centralized path resolution (frozen vs dev) |
+| `market-simulator/desktop_app.py` | **CREATE** | Entry point: pywebview + uvicorn thread |
 | `market-simulator/market_simulator.spec` | **CREATE** | PyInstaller build configuration |
-| `market-simulator/backend/main.py` | **MODIFY** | Add env-var-based path resolution for frozen mode |
-| `market-simulator/scripts/market_simulation.py` | **MODIFY** | Use `resolve_data_path()` in `load_common_data()` |
-| `market-simulator/scripts/dispatch_utils.py` | **MODIFY** | Use `resolve_data_path()` in data loading |
-| `market-simulator/scripts/generate_plant_heat_rates.py` | **MODIFY** | Add `--data-dir` / `--output` CLI args |
-| `market-simulator/scripts/generate_synthetic_profiles.py` | **MODIFY** | Add `--data-dir` / `--output` CLI args |
+| `market-simulator/backend/main.py` | **MODIFY** | Import from `paths.py` with fallback; remove hardcoded path computation |
+| `market-simulator/scripts/market_simulation.py` | **MODIFY** | Import from `paths.py` with fallback |
+| `market-simulator/scripts/lmp_engine.py` | **MODIFY** | Import from `paths.py`; **fix latent `SCRIPT_DIR/data` bug** |
+| `market-simulator/scripts/fleet_model.py` | **MODIFY** | Import from `paths.py` with fallback |
+| `market-simulator/scripts/eia_data_io.py` | **MODIFY** | Import from `paths.py` with fallback |
+| `market-simulator/scripts/dispatch_utils.py` | **MODIFY** | Import from `paths.py` with fallback |
+| `market-simulator/scripts/pipeline_config.py` | **MODIFY** | Import from `paths.py` with fallback |
+| `market-simulator/scripts/generate_plant_heat_rates.py` | **MODIFY** | Import from `paths.py`; add `--data-dir` / `--output` CLI args |
+| `market-simulator/scripts/generate_synthetic_profiles.py` | **MODIFY** | Import from `paths.py`; add `--data-dir` / `--output` CLI args |
 | `market-simulator/app-startup/requirements.txt` | **MODIFY** | Add `pywebview>=5.0`, `pyinstaller>=6.0` |
 
 ---
