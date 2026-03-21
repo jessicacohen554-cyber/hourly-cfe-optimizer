@@ -116,8 +116,12 @@ def check_heat_rate_staleness():
     eia923_dir = data_dir / "eia-923"
     campd_dir = data_dir / "epa-campd"
 
-    # If neither source directory exists, nothing to do
-    if not eia923_dir.is_dir() and not campd_dir.is_dir():
+    # If neither source directory has actual files, nothing to do.
+    # (first_run_setup creates empty dirs — don't trigger regeneration on those)
+    def _has_files(d):
+        return d.is_dir() and any(d.iterdir())
+
+    if not _has_files(eia923_dir) and not _has_files(campd_dir):
         return
 
     # If heat rates file doesn't exist, regenerate
@@ -136,6 +140,19 @@ def check_heat_rate_staleness():
 
 def _regenerate_heat_rates(data_dir, output_file):
     """Run heat rate generation with configurable paths."""
+    if is_frozen():
+        # In frozen mode, sys.executable is the bundle binary — can't use it
+        # to run Python scripts. The heat rates data should be pre-bundled.
+        # Fall back to importing the module directly if available.
+        try:
+            bundle = get_bundle_dir()
+            sys.path.insert(0, str(bundle / "scripts"))
+            from generate_plant_heat_rates import main as gen_main
+            gen_main(data_dir=data_dir, output=output_file)
+        except Exception:
+            pass  # Non-critical — bundled data should suffice
+        return
+
     import subprocess
     bundle = get_bundle_dir()
     script = bundle / "scripts" / "generate_plant_heat_rates.py"
@@ -166,17 +183,33 @@ def find_free_port():
 
 def start_server(port):
     """Start uvicorn in the current thread (called from daemon thread)."""
-    import uvicorn
+    import traceback
+    log_path = Path(get_app_data_dir()) / "server_debug.log"
+    try:
+        import uvicorn
 
-    config = uvicorn.Config(
-        "backend.main:app",
-        host="127.0.0.1",
-        port=port,
-        log_level="warning",
-        install_signal_handlers=False,  # Avoid conflict with pywebview main loop
-    )
-    server = uvicorn.Server(config)
-    server.run()
+        # Import the app object directly instead of using a string reference.
+        # String-based import ("backend.main:app") fails in frozen mode because
+        # PyInstaller's import system doesn't resolve package paths the same way.
+        from backend.main import app
+
+        config = uvicorn.Config(
+            app,
+            host="127.0.0.1",
+            port=port,
+            log_level="warning",
+        )
+        server = uvicorn.Server(config)
+        # Disable signal handlers — we're in a daemon thread, not the main thread.
+        server.install_signal_handlers = lambda: None
+        server.run()
+    except Exception:
+        tb = traceback.format_exc()
+        with open(log_path, "w") as f:
+            f.write(f"port={port}\n")
+            f.write(f"BUNDLE_DIR={os.environ.get('MARKET_SIM_BUNDLE_DIR')}\n")
+            f.write(f"DATA_DIR={os.environ.get('MARKET_SIM_DATA_DIR')}\n")
+            f.write(f"\nFATAL ERROR:\n{tb}\n")
 
 
 def wait_for_server(port, timeout=30):
@@ -196,7 +229,14 @@ def wait_for_server(port, timeout=30):
 # Main entry point
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _get_log_path():
+    """Return path to startup log file."""
+    return get_app_data_dir() / "startup.log"
+
+
 def main():
+    import traceback
+
     # Set up Numba cache directory before any imports
     if is_frozen():
         app_data = get_app_data_dir()
@@ -206,6 +246,11 @@ def main():
 
     # Run first-run setup (creates directories, copies templates)
     first_run_setup()
+
+    # Write startup log for debugging (survives even if GUI crashes)
+    log = _get_log_path()
+    with open(log, "w") as f:
+        f.write(f"frozen={is_frozen()}\n")
 
     # Check heat rate staleness and auto-regenerate if needed
     check_heat_rate_staleness()
@@ -224,8 +269,17 @@ def main():
 
     # Wait for server readiness
     if not wait_for_server(port):
-        print("ERROR: Server failed to start within 30 seconds.", file=sys.stderr)
+        msg = f"Server failed to start on port {port} within 30 seconds."
+        server_log = get_app_data_dir() / "server_debug.log"
+        if server_log.exists():
+            msg += f"\nServer log:\n{server_log.read_text()}"
+        with open(log, "a") as f:
+            f.write(f"ERROR: {msg}\n")
+        print(f"ERROR: {msg}", file=sys.stderr)
         sys.exit(1)
+
+    with open(log, "a") as f:
+        f.write(f"server ready on port {port}\n")
 
     # Launch native window
     import webview
