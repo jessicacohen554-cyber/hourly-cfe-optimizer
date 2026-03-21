@@ -217,7 +217,28 @@ def _read_data_files(directory: str) -> Optional[pd.DataFrame]:
         for fpath in glob.glob(os.path.join(directory, pattern)):
             try:
                 if fpath.lower().endswith('.json'):
-                    df = pd.read_json(fpath)
+                    # Handle both array-of-objects and wrapped JSON formats
+                    import json as _json
+                    with open(fpath) as _f:
+                        raw_json = _json.load(_f)
+                    # EPA CAMPD API returns array of objects
+                    if isinstance(raw_json, list):
+                        if not raw_json:
+                            logger.debug(f"Empty JSON array in {fpath}, skipping")
+                            continue
+                        df = pd.DataFrame(raw_json)
+                    elif isinstance(raw_json, dict):
+                        # Check for common wrapper keys (e.g., {"data": [...], "meta": ...})
+                        for key in ('data', 'records', 'results', 'rows'):
+                            if key in raw_json and isinstance(raw_json[key], list):
+                                df = pd.DataFrame(raw_json[key])
+                                break
+                        else:
+                            # Single-record dict or unknown structure
+                            df = pd.DataFrame([raw_json])
+                    else:
+                        logger.warning(f"Unexpected JSON type in {fpath}: {type(raw_json).__name__}")
+                        continue
                 elif fpath.lower().endswith(('.xlsx', '.xls')):
                     df = pd.read_excel(fpath, engine='openpyxl')
                 else:
@@ -229,11 +250,12 @@ def _read_data_files(directory: str) -> Optional[pd.DataFrame]:
                         except UnicodeDecodeError:
                             continue
                     else:
-                        warnings.warn(f"Could not decode {fpath}, skipping")
+                        logger.warning(f"Could not decode {fpath}, skipping")
                         continue
-                frames.append(df)
+                if len(df) > 0:
+                    frames.append(df)
             except Exception as e:
-                warnings.warn(f"Error reading {fpath}: {e}")
+                logger.warning(f"Error reading {fpath}: {e}")
                 continue
 
     if not frames:
@@ -352,7 +374,7 @@ class FleetModel:
         path = os.path.join(self.data_root, 'eia-860', self.state)
         raw = _read_data_files(path)
         if raw is None:
-            warnings.warn(f"No EIA 860 data found in {path}")
+            logger.debug(f"No EIA 860 data found in {path} — skipping (optional)")
             return None
 
         # Map columns to standard names
@@ -435,7 +457,7 @@ class FleetModel:
         path = os.path.join(self.data_root, 'eia-923', self.state)
         raw = _read_data_files(path)
         if raw is None:
-            warnings.warn(f"No EIA 923 data found in {path}")
+            logger.debug(f"No EIA 923 data found in {path} — skipping (optional)")
             return None
 
         col_map = {
@@ -512,7 +534,7 @@ class FleetModel:
         path = os.path.join(self.data_root, 'epa-campd', self.state)
         raw = _read_data_files(path)
         if raw is None:
-            warnings.warn(f"No EPA CAMPD data found in {path}")
+            logger.debug(f"No EPA CAMPD data files in {path} — skipping (optional)")
             return None
 
         col_map = {
@@ -531,9 +553,31 @@ class FleetModel:
             'so2_mass':     ['so2Mass', 'SO2 Mass', 'SO2_MASS', 'so2_mass'],
         }
 
-        df = pd.DataFrame()
+        # Check if the raw DataFrame has any recognizable CAMPD columns
+        matched_cols = {}
         for std_name, candidates in col_map.items():
             col = _fuzzy_col(raw, candidates)
+            matched_cols[std_name] = col
+
+        # Validate: at minimum we need facility_id and one of gross_load/heat_input/co2_tons
+        critical_fields = ['facility_id']
+        value_fields = ['gross_load', 'heat_input', 'co2_tons']
+        has_critical = all(matched_cols[f] is not None for f in critical_fields)
+        has_any_value = any(matched_cols[f] is not None for f in value_fields)
+
+        if not has_critical or not has_any_value:
+            found_cols = [f"{k}={v}" for k, v in matched_cols.items() if v is not None]
+            missing_cols = [k for k in critical_fields + value_fields if matched_cols[k] is None]
+            logger.warning(
+                f"EPA CAMPD data in {path} does not have valid columns for fleet modeling. "
+                f"Found: {found_cols or 'none'}. Missing required: {missing_cols}. "
+                f"Raw columns: {list(raw.columns[:20])}. Skipping CAMPD for {self.state}."
+            )
+            return None
+
+        df = pd.DataFrame()
+        for std_name, candidates in col_map.items():
+            col = matched_cols[std_name]
             if col is not None:
                 df[std_name] = raw[col]
             else:
@@ -541,6 +585,12 @@ class FleetModel:
 
         for col in ['co2_tons', 'heat_input', 'gross_load', 'nox_mass', 'so2_mass']:
             df[col] = pd.to_numeric(df[col], errors='coerce')
+
+        # Log validation summary
+        n_valid_load = int((df['gross_load'] > 0).sum())
+        n_total = len(df)
+        logger.info(f"[{self.state}] EPA CAMPD loaded: {n_total} records, "
+                     f"{n_valid_load} with valid gross_load")
 
         self.campd = df
         return df
@@ -557,7 +607,7 @@ class FleetModel:
         if self.campd is None:
             self.load_campd()
         if self.campd is None or len(self.campd) == 0:
-            warnings.warn("No CAMPD data available for emission validation")
+            logger.debug("No CAMPD data available for emission validation — skipping (optional)")
             return None
 
         campd = self.campd.copy()
@@ -819,7 +869,7 @@ class FleetModel:
         Returns:
             Fleet DataFrame with stylized generator entries.
         """
-        warnings.warn(f"No EIA data for {self.state} — using stylized defaults from lmp_engine")
+        logger.debug(f"No EIA data for {self.state} — using stylized defaults")
         self.using_fallback = True
 
         rows = []
@@ -1129,7 +1179,13 @@ class FleetModel:
         }
 
 
-def load_iso_fleet(iso, data_root=None):
+# Module-level cache for load_iso_fleet() — avoids re-reading all state
+# directories from disk on every call during the 1,215-scenario sweep.
+# Key: (iso, data_root), Value: DataFrame or None.
+_ISO_FLEET_CACHE: Dict[tuple, Optional[pd.DataFrame]] = {}
+
+
+def load_iso_fleet(iso, data_root=None, use_cache=True):
     """Load all EIA 860 generators for an ISO with real heat rates from 923/CAMPD.
 
     Uses FleetModel.build_fleet() to get the full heat rate cascade:
@@ -1138,13 +1194,25 @@ def load_iso_fleet(iso, data_root=None):
     Loads data from ALL available states and filters by BA_TO_ISO mapping.
     This correctly handles multi-BA states (e.g., TX has ERCOT + SPP).
 
+    Args:
+        iso: ISO region identifier (e.g., 'ERCOT', 'PJM').
+        data_root: Override data directory. Default: market-simulator/data/.
+        use_cache: If True (default), cache results to avoid redundant disk reads
+            during sweep runs. Set False to force reload.
+
     Returns DataFrame of generators belonging to the requested ISO, or None.
     """
     if data_root is None:
         data_root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
 
+    cache_key = (iso, data_root)
+    if use_cache and cache_key in _ISO_FLEET_CACHE:
+        cached = _ISO_FLEET_CACHE[cache_key]
+        return cached.copy() if cached is not None else None
+
     eia860_dir = os.path.join(data_root, 'eia-860')
     if not os.path.isdir(eia860_dir):
+        _ISO_FLEET_CACHE[cache_key] = None
         return None
 
     frames = []
@@ -1170,6 +1238,7 @@ def load_iso_fleet(iso, data_root=None):
             continue
 
     if not frames:
+        _ISO_FLEET_CACHE[cache_key] = None
         return None
 
     merged = pd.concat(frames, ignore_index=True)
@@ -1182,14 +1251,17 @@ def load_iso_fleet(iso, data_root=None):
                                           if pd.notna(x) else None)
         iso_mask = merged['iso'] == iso
     else:
+        _ISO_FLEET_CACHE[cache_key] = None
         return None
 
     result = merged[iso_mask].copy()
 
     if len(result) == 0:
+        _ISO_FLEET_CACHE[cache_key] = None
         return None
 
-    return result
+    _ISO_FLEET_CACHE[cache_key] = result
+    return result.copy()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
