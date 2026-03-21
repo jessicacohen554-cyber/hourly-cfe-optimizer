@@ -65,7 +65,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install numpy pandas pyarrow scipy numba
+        run: pip install numpy pandas pyarrow scipy numba pydantic
 
       - name: Create output directory
         run: mkdir -p market-simulator/results/sweep_405
@@ -106,7 +106,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install numpy pandas pyarrow scipy numba
+        run: pip install numpy pandas pyarrow scipy numba pydantic
 
       - name: Download all per-ISO artifacts
         uses: actions/download-artifact@v4
