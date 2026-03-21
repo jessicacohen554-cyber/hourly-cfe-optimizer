@@ -5,7 +5,7 @@ Checks that scarcity hours are realistic and that new fossil builds produce
 the expected moderate reduction in scarcity events.
 
 Prerequisites:
-    - results/sweep_1215/sweep_1215_flat.parquet must exist (run run_sweep_405.py first)
+    - results/sweep_1215/sweep_1215_flat.parquet must exist (run run_sweep_1215.py first)
 
 Usage:
     cd market-simulator/scripts
@@ -44,7 +44,7 @@ def load_sweep(parquet_path):
     """Load sweep parquet and validate required columns exist."""
     if not os.path.exists(parquet_path):
         print(f"ERROR: Sweep parquet not found: {parquet_path}")
-        print("Run run_sweep_405.py first to generate the 1,215-scenario sweep.")
+        print("Run run_sweep_1215.py first to generate the 1,215-scenario sweep.")
         sys.exit(1)
 
     df = pd.read_parquet(parquet_path)
