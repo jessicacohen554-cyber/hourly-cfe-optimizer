@@ -31,12 +31,23 @@ from fastapi.staticfiles import StaticFiles
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Path setup — import the simulation engine from ../scripts/
+# Supports env-var overrides for PyInstaller frozen builds (desktop_app.py).
 # ─────────────────────────────────────────────────────────────────────────────
 
-BACKEND_DIR = Path(__file__).resolve().parent
-MARKET_SIM_ROOT = BACKEND_DIR.parent
-SCRIPTS_DIR = MARKET_SIM_ROOT / "scripts"
-FRONTEND_DIR = MARKET_SIM_ROOT / "frontend"
+_bundle_dir = os.environ.get('MARKET_SIM_BUNDLE_DIR')
+_data_dir = os.environ.get('MARKET_SIM_DATA_DIR')
+
+if _bundle_dir:
+    # Frozen / desktop mode — paths set by desktop_app.py
+    MARKET_SIM_ROOT = Path(_bundle_dir)
+    SCRIPTS_DIR = MARKET_SIM_ROOT / "scripts"
+    FRONTEND_DIR = MARKET_SIM_ROOT / "frontend"
+else:
+    # Dev mode — resolve relative to this file
+    BACKEND_DIR = Path(__file__).resolve().parent
+    MARKET_SIM_ROOT = BACKEND_DIR.parent
+    SCRIPTS_DIR = MARKET_SIM_ROOT / "scripts"
+    FRONTEND_DIR = MARKET_SIM_ROOT / "frontend"
 
 sys.path.insert(0, str(SCRIPTS_DIR))
 
@@ -145,16 +156,19 @@ if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 # Mount brand assets
-brand_assets_dir = MARKET_SIM_ROOT / "frontend" / "brand-assets"
+brand_assets_dir = FRONTEND_DIR / "brand-assets"
 if brand_assets_dir.exists():
     app.mount("/brand-assets", StaticFiles(directory=str(brand_assets_dir)), name="brand-assets")
 
 # Ensure results directory exists
-RESULTS_DIR = MARKET_SIM_ROOT / "results"
-RESULTS_DIR.mkdir(exist_ok=True)
-
-# Custom user inputs directory
-CUSTOM_INPUTS_DIR = MARKET_SIM_ROOT / "custom-user-inputs"
+# In frozen mode, results go to app_data/results/ (writable)
+if _data_dir:
+    RESULTS_DIR = Path(_data_dir) / "results"
+    CUSTOM_INPUTS_DIR = Path(_data_dir) / "custom-user-inputs"
+else:
+    RESULTS_DIR = MARKET_SIM_ROOT / "results"
+    CUSTOM_INPUTS_DIR = MARKET_SIM_ROOT / "custom-user-inputs"
+RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
