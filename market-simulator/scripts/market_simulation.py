@@ -2695,7 +2695,8 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
                                zonal_lmp_matrix=None,
                                zonal_zone_names=None,
                                reserve_margin_pct=None,
-                               curtailment_rate=0.0):
+                               curtailment_rate=0.0,
+                               lmp_confidence=1.0):
     """Pure economics-driven resource deployment via LCOE merit order.
 
     Ranks all available clean resources by net LCOE (after incentives, learning
@@ -2826,6 +2827,16 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
 
         # Use temporal revenue for this resource; fallback to avg_lmp
         res_energy_rev = per_res_rev.get(res, avg_lmp)
+
+        # LMP confidence scaling: when VRE penetration pushes the merit-order
+        # LMP model beyond its calibration range (confidence < 1.0), scale
+        # energy revenue proportionally. This ensures deployment economics
+        # are self-consistent with the stated LMP reliability — the model
+        # won't deploy resources based on revenue estimates it flags as
+        # unreliable. Capacity and REC revenue are unaffected (not LMP-derived).
+        if lmp_confidence < 1.0:
+            res_energy_rev *= lmp_confidence
+
         total_revenue = res_energy_rev + capacity_rev + rec_rev
         net_profit = total_revenue - effective_lcoe
 
@@ -3896,6 +3907,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 zonal_zone_names=_zonal_zone_names,
                 reserve_margin_pct=reserve_margin_pct,
                 curtailment_rate=curtailment_rate,
+                lmp_confidence=lmp_confidence,
             )
 
             # Sync queue budget after deployment

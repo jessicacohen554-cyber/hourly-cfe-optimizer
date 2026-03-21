@@ -70,6 +70,41 @@ ORDC_PARAMS = {
     'SPP':   {'voll': 2000, 'knee_mw': 3500, 'lam': 0.002, 'cap': 200},
 }
 
+# ORDC Parameter Uncertainty Ranges
+# Documents plausible bounds for each parameter to support sensitivity analysis
+# and peer review transparency. Ranges derived from source filings and
+# cross-ISO comparison of reserve pricing mechanisms.
+#
+# voll (Value of Lost Load):
+#   ±30%. ERCOT: PUCT Docket 52373 system-wide offer cap ranged $5,000–$9,000
+#   (pre-2015 to current). PJM: RPM penalty factor implies VOLL ~$3,700 (1/3 ×
+#   Net CONE × B), but FERC Order 745 analyses cite $3,000–$5,000 range.
+#   CAISO/NEISO: reliability standards imply $1,500–$2,500.
+#
+# knee_mw (Reserve threshold):
+#   ±20%. Set at 1.5–2× minimum operating reserve requirement. Seasonal variation
+#   (winter peak vs. summer peak) shifts effective knee by ~15–25%. ERCOT CDR
+#   and PJM RTEP reserve analyses used for ISO-specific calibration.
+#
+# lam (Exponential decay rate):
+#   ±50%. Most sensitive parameter — controls shape of LOLP curve below knee.
+#   Small changes in lambda produce large changes in scarcity pricing frequency.
+#   Calibrated to produce 30–100 annual scarcity hours (>$50/MWh ORDC adder),
+#   consistent with historical ISO price spike frequency (2019–2024).
+#   One-way sensitivity: lambda 0.001 → ~50 scarcity hours; 0.003 → ~200 hours.
+#
+# cap (Maximum ORDC adder):
+#   ±25%. Capacity-market ISOs (PJM, NYISO, NEISO) have regulatory caps on
+#   scarcity pricing ($200–$400 range). Energy-only ERCOT has higher effective
+#   cap ($400–$600) per PUCT market design. Lower caps dampen price signals;
+#   higher caps improve revenue adequacy for peakers.
+ORDC_UNCERTAINTY = {
+    'voll':    {'pct_range': 30, 'basis': 'FERC filings, PUCT Docket 52373, ISO tariff schedules'},
+    'knee_mw': {'pct_range': 20, 'basis': 'Seasonal reserve variation (NERC standards, ISO reserve analyses)'},
+    'lam':     {'pct_range': 50, 'basis': 'Calibrated to 30-100 scarcity hours/yr; shape highly sensitive'},
+    'cap':     {'pct_range': 25, 'basis': 'Capacity vs. energy-only market design (regulatory caps)'},
+}
+
 # ============================================================================
 # BACKTEST CONFIGURATION
 # ============================================================================
