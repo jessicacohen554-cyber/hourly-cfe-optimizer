@@ -65,9 +65,9 @@
             <div class="hero-eyebrow">User Guide</div>
             <h1>Market Simulation <strong>Tool</strong></h1>
             <p class="hero-desc">
-                A screening tool for directionally correct analysis of how grid assets perform under
-                different market conditions. Use this to identify sensitivity ranges worth exploring
-                deeper with IPM or GenX capacity models.
+                A fossil dispatch simulator that evaluates what happens to the incumbent fleet across
+                thousands of market scenarios. Shows which findings hold across a wide range of
+                assumptions, not just one assumed future.
             </p>
         </div>
     </div>
@@ -228,13 +228,21 @@
         <div class="guide-section">
             <h2>What This Tool Does</h2>
             <p>
-                This simulator models electricity market economics across 7 US ISOs (CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP).
-                Given a set of market preconditions &mdash; fuel prices, carbon costs, clean energy LCOEs, tax incentives, and demand growth &mdash;
-                it computes merit-order dispatch, hourly LMPs, generator profitability, and clean energy deployment economics.
+                This is a <strong>fossil dispatch overlay on exogenous clean generation shapes</strong>. The upstream optimizer
+                pipeline generates physics-feasible clean energy mixes and optimizes their costs. This tool takes those clean
+                generation profiles, subtracts them from demand to derive residual fossil load, and dispatches the fossil fleet
+                against that residual across 7 US ISOs (CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP).
             </p>
             <p>
-                <strong>It answers:</strong> Under these cost assumptions, what happens to the fossil fleet? Which generators retire?
-                What clean resources can be profitably deployed? At what carbon price does CCS break even?
+                <strong>It answers:</strong> Given this clean generation backdrop, what happens to the fossil fleet?
+                Which generators retire? What are the LMP and emissions consequences? At what carbon price does CCS break even?
+            </p>
+            <p>
+                The 1,215-scenario parametric sweep evaluates these questions across thousands of plausible futures
+                (fuel prices &times; carbon prices &times; demand growth &times; PPA availability &times; gas friction &times;
+                interconnection caps), delivering P10/P50/P90 distributions. This shows <strong>which findings hold</strong>
+                across a wide range of input assumptions rather than a single
+                "optimal" answer contingent on getting every assumption right.
             </p>
 
             <h3>Advanced Modeling Features</h3>
@@ -310,8 +318,10 @@
             </div>
 
             <div class="callout">
-                <p><strong>Note:</strong> This is a screening tool producing directionally correct results, not a production capacity expansion model.
-                Use it to narrow the parameter space before running full IPM or GenX analyses.</p>
+                <p><strong>Note:</strong> This tool trades dispatch fidelity for parametric coverage &mdash; 1,215+ scenarios
+                in minutes rather than one scenario in days. It identifies which conclusions are robust across uncertain futures.
+                When results cross into territory requiring dispatch precision (flagged by IPM triggers), validate specific
+                findings with production-grade tools (IPM, GenX, PLEXOS).</p>
             </div>
         </div>
 
