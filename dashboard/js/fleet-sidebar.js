@@ -405,7 +405,7 @@ var FleetSidebar = (function () {
                 var fuelLabel = FUEL_LABELS[p._original_fuel_type] || FUEL_LABELS[p.fuel_type] || p.fuel_type;
                 var capStr = Math.round(p.capacity_mw || 0) + ' MW';
                 var equityStr = p.equity_share < 1 ? ' (' + Math.round(p.equity_share * 100) + '% equity)' : '';
-                var currentAction = p._action || 'operating';
+                var currentAction = p._action || 'default_market';
                 var isFossil = FOSSIL_FUELS.has(p.fuel_type);
 
                 html += '<div class="sb-plant-row" data-plant-idx="' + idx + '">';
@@ -419,9 +419,10 @@ var FleetSidebar = (function () {
                     html += '<div><input type="number" class="sb-cap-input" data-idx="' + idx + '" value="' + Math.round(p.capacity_mw || 0) + '" min="0" step="10" title="Capacity (MW)"></div>';
 
                     // Status dropdown
-                    var modClass = (currentAction && currentAction !== 'operating' && currentAction !== p.status) ? ' modified' : '';
+                    var modClass = (currentAction && currentAction !== 'default_market' && currentAction !== p.status) ? ' modified' : '';
                     html += '<div><select class="sb-status-select' + modClass + '" data-idx="' + idx + '">';
-                    html += '<option value="operating"' + (currentAction === 'operating' || !currentAction ? ' selected' : '') + '>Operating</option>';
+                    html += '<option value="default_market"' + (currentAction === 'default_market' ? ' selected' : '') + '>Default Market</option>';
+                    html += '<option value="operating"' + (currentAction === 'operating_override' ? ' selected' : '') + '>Operating (forced)</option>';
                     html += '<option value="retire"' + (currentAction === 'retire' ? ' selected' : '') + '>Retired</option>';
                     html += '<option value="ccs_retrofit"' + (currentAction === 'ccs_retrofit' ? ' selected' : '') + '>CCS Retrofit</option>';
                     html += '</select></div>';
@@ -452,8 +453,9 @@ var FleetSidebar = (function () {
                     }
 
                     // Status: Operating / Retired / Uprate (nuclear only)
-                    html += '<div><select class="sb-status-select' + ((currentAction && currentAction !== 'operating') ? ' modified' : '') + '" data-idx="' + idx + '">';
-                    html += '<option value="operating"' + (currentAction === 'operating' || !currentAction ? ' selected' : '') + '>Operating</option>';
+                    html += '<div><select class="sb-status-select' + ((currentAction && currentAction !== 'default_market') ? ' modified' : '') + '" data-idx="' + idx + '">';
+                    html += '<option value="default_market"' + (currentAction === 'default_market' ? ' selected' : '') + '>Default Market</option>';
+                    html += '<option value="operating"' + (currentAction === 'operating_override' ? ' selected' : '') + '>Operating (forced)</option>';
                     html += '<option value="retire"' + (currentAction === 'retire' ? ' selected' : '') + '>Retired</option>';
                     if (isNuclear) {
                         html += '<option value="uprate"' + (currentAction === 'uprate' ? ' selected' : '') + '>Uprate</option>';
@@ -560,22 +562,32 @@ var FleetSidebar = (function () {
     function onStatusChange(idx, newStatus) {
         var p = findPlant(idx);
         if (!p) return;
-        p._action = newStatus === 'operating' ? null : newStatus;
-        if (newStatus === 'retire' || newStatus === 'ccs_retrofit' || newStatus === 'uprate') {
-            if (!p._year_online) p._year_online = 2030;
-            if (newStatus === 'ccs_retrofit') {
-                // Use global CCS panel params
-                p._ccs_target_rate = ccsParams.capture_rate_pct / 100.0;
-                p._ccs_derate_pct = ccsParams.derate_pct;
-            }
-            if (newStatus === 'uprate') {
-                if (!p._uprate_mw) p._uprate_mw = 200; // Default uprate MW
-            }
-        }
-        if (newStatus === 'operating') {
+        if (newStatus === 'default_market') {
+            // Default Market: clear all action flags — plant follows sweep economics
+            p._action = null;
+            p._year_online = null;
             p._ccs_target_rate = 0;
             p._ccs_derate_pct = 0;
             p._uprate_mw = 0;
+        } else if (newStatus === 'operating') {
+            // Operating (forced): override economic retirement
+            p._action = 'operating_override';
+            p._ccs_target_rate = 0;
+            p._ccs_derate_pct = 0;
+            p._uprate_mw = 0;
+        } else {
+            p._action = newStatus;
+            if (newStatus === 'retire' || newStatus === 'ccs_retrofit' || newStatus === 'uprate') {
+                if (!p._year_online) p._year_online = 2030;
+                if (newStatus === 'ccs_retrofit') {
+                    // Use global CCS panel params
+                    p._ccs_target_rate = ccsParams.capture_rate_pct / 100.0;
+                    p._ccs_derate_pct = ccsParams.derate_pct;
+                }
+                if (newStatus === 'uprate') {
+                    if (!p._uprate_mw) p._uprate_mw = 200; // Default uprate MW
+                }
+            }
         }
         renderFleetList();
     }
