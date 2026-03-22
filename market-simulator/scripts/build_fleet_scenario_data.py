@@ -224,6 +224,10 @@ def parse_rosetta():
             plant_type_csv = row.get('Plant Type', '').strip()
             name = row.get('SP Name', '').strip() or row.get('Name', '').strip()
 
+            # Skip pumped storage — not a generating asset for fleet modeling
+            if 'Muddy Run' in name or 'Pumped Storage' in plant_type_csv:
+                continue
+
             # Map fuel type
             fuel = FUEL_MAP.get(fuel_csv, 'unknown')
             # Refine Gas plants by plant type (CT vs CCGT)
@@ -475,17 +479,36 @@ def get_plant_gen_twh(p, fuel, year, year_factor, re_growth):
             equity = p.get('equity', 1.0)
             return year_overrides[orispl]['net_gen_mwh'] * equity / 1e6  # MWh → TWh
 
-    # Years with actuals: use directly
-    if year in actual_gen and actual_gen[year] > 0:
-        return actual_gen[year] / 1e6  # MWh → TWh
+    # Years with actuals: use directly (including 0 — plants may not have generated)
+    if year in actual_gen and year != 'projection_base':
+        if actual_gen[year] > 0:
+            return actual_gen[year] / 1e6  # MWh → TWh
+        # Actual data says 0 generation for this year — respect it
+        return 0.0
 
     # Future years (2030+): project from projection_base (2024 actuals, or 2023 for solar)
     proj_base_mwh = actual_gen.get('projection_base', 0)
     if year > 2025:
+        # Nuclear special case: Crane Clean Energy Center comes online 2027
+        # Use CF-based generation for nuclear plants with 0 projection_base
+        # (new builds or plants acquired after baseline years)
+        if fuel == 'nuclear':
+            if proj_base_mwh > 0:
+                return proj_base_mwh / 1e6  # Constant from 2024 actuals
+            # Crane or other future nuclear: use CF-based gen from online year
+            online_year = p.get('online_year')
+            if online_year and year >= online_year:
+                cf = CAPACITY_FACTORS.get('nuclear', 0.93)
+                return cap * cf * 8.760 / 1000.0
+            elif not online_year and p['name'] == 'Crane':
+                # Legacy fallback: Crane online 2027
+                if year >= 2027:
+                    cf = CAPACITY_FACTORS.get('nuclear', 0.93)
+                    return cap * cf * 8.760 / 1000.0
+            return 0.0
+
         if proj_base_mwh > 0:
-            if fuel == 'nuclear':
-                return proj_base_mwh / 1e6  # Nuclear: constant (no decay)
-            elif fuel in ('wind', 'solar'):
+            if fuel in ('wind', 'solar'):
                 return proj_base_mwh / 1e6 * re_growth
             elif fuel in EMISSION_RATE:
                 return proj_base_mwh / 1e6 * year_factor
