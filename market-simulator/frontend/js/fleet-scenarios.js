@@ -16,14 +16,16 @@
         custom:      { color: '#6B7280', dash: [4, 4], label: 'Custom' }
     };
 
-    var FUEL_KEYS   = ['nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'gas_ccgt', 'gas_ct', 'gas_oil_ct', 'oil_ct', 'ccs_ccgt'];
-    var FUEL_LABELS = { nuclear: 'Nuclear', geothermal: 'Geothermal', wind: 'Wind', solar: 'Solar', hydro: 'Hydro', gas_ccgt: 'Gas CCGT', gas_ct: 'Gas CT', gas_oil_ct: 'Gas/Oil', oil_ct: 'Oil', ccs_ccgt: 'CCS-CCGT' };
+    var FUEL_KEYS   = ['nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'battery', 'ldes', 'gas_ccgt', 'gas_ct', 'gas_oil_ct', 'oil_ct', 'ccs_ccgt'];
+    var FUEL_LABELS = { nuclear: 'Nuclear', geothermal: 'Geothermal', wind: 'Wind', solar: 'Solar', hydro: 'Hydro', battery: 'Battery', ldes: 'LDES', gas_ccgt: 'Gas CCGT', gas_ct: 'Gas CT', gas_oil_ct: 'Gas/Oil', oil_ct: 'Oil', ccs_ccgt: 'CCS-CCGT' };
     var FUEL_COLORS = {
         nuclear:    RESOURCE_COLORS.nuclear,
         geothermal: RESOURCE_COLORS.geothermal || '#D97706',
         wind:       RESOURCE_COLORS.wind || '#22C55E',
         solar:      RESOURCE_COLORS.solar || '#F59E0B',
         hydro:      RESOURCE_COLORS.hydro || '#0EA5E9',
+        battery:    RESOURCE_COLORS.battery || '#06B6D4',
+        ldes:       RESOURCE_COLORS.ldes || '#E91E63',
         gas_ccgt:   RESOURCE_COLORS.fossilGas,
         gas_ct:     RESOURCE_COLORS.fossilGasCT || '#007FA4',
         gas_oil_ct: '#8B7355',
@@ -42,6 +44,8 @@
     var fanChart = null;
     var waterfallChart = null;
     var genMixChart = null;
+    var newCleanChart = null;
+    var intensityFanChart = null;
     var fuelEmissionsChart = null;
 
     // ── Helpers ──
@@ -65,90 +69,6 @@
         return best;
     }
 
-    // ── Find the earliest intervention year from the fleet sidebar modifications ──
-    function getFirstInterventionYear() {
-        if (typeof FleetSidebar !== 'undefined' && FleetSidebar.getFleetPlants) {
-            var plants = FleetSidebar.getFleetPlants();
-            var earliest = Infinity;
-            if (plants) {
-                plants.forEach(function (p) {
-                    if (p._action && p._year_online && p._year_online < earliest) {
-                        earliest = p._year_online;
-                    }
-                });
-            }
-            return earliest === Infinity ? null : earliest;
-        }
-        return null;
-    }
-
-    // Helper: linearly interpolate an envelope value between two surrounding years
-    function interpolateEnvAtYear(env, year) {
-        var keys = Object.keys(env).map(Number).sort(function (a, b) { return a - b; });
-        var lo = null, hi = null;
-        for (var i = 0; i < keys.length; i++) {
-            if (keys[i] <= year) lo = keys[i];
-            if (keys[i] >= year && hi === null) hi = keys[i];
-        }
-        if (lo === year && env[String(lo)]) return env[String(lo)];
-        if (lo === null || hi === null || lo === hi) return null;
-        var loE = env[String(lo)], hiE = env[String(hi)];
-        if (!loE || !hiE) return null;
-        var f = (year - lo) / (hi - lo);
-        return {
-            p10: loE.p10 + (hiE.p10 - loE.p10) * f,
-            p50: loE.p50 + (hiE.p50 - loE.p50) * f,
-            p90: loE.p90 + (hiE.p90 - loE.p90) * f,
-            mean: loE.mean + (hiE.mean - loE.mean) * f
-        };
-    }
-
-    // ── Merge custom envelope with baseline for pre-intervention years ──
-    // Injects the intervention year as an interpolated baseline data point
-    // so the chart shows a clean transition at the correct year.
-    function alignEnvelopeWithBaseline(custEnv, baseEnv, firstYear) {
-        if (!firstYear || !baseEnv) return custEnv;
-        var merged = {};
-        var keys = Object.keys(custEnv);
-        keys.forEach(function (yStr) {
-            var y = parseInt(yStr);
-            if (y < firstYear) {
-                merged[yStr] = baseEnv[yStr] || custEnv[yStr];
-            } else {
-                merged[yStr] = custEnv[yStr];
-            }
-        });
-
-        // If firstYear doesn't exist as a data point, inject it with interpolated
-        // baseline values so the chart shows a clean kink at the intervention year
-        var firstYearStr = String(firstYear);
-        if (!custEnv[firstYearStr]) {
-            var sortedYears = Object.keys(baseEnv).map(Number).sort(function (a, b) { return a - b; });
-            var lo = null, hi = null;
-            for (var i = 0; i < sortedYears.length; i++) {
-                if (sortedYears[i] <= firstYear) lo = sortedYears[i];
-                if (sortedYears[i] >= firstYear && hi === null) hi = sortedYears[i];
-            }
-            if (lo !== null && hi !== null && lo !== hi) {
-                var frac = (firstYear - lo) / (hi - lo);
-                var loEnv = baseEnv[String(lo)];
-                var hiEnv = baseEnv[String(hi)];
-                if (loEnv && hiEnv) {
-                    merged[firstYearStr] = {
-                        p10: loEnv.p10 + (hiEnv.p10 - loEnv.p10) * frac,
-                        p50: loEnv.p50 + (hiEnv.p50 - loEnv.p50) * frac,
-                        p90: loEnv.p90 + (hiEnv.p90 - loEnv.p90) * frac,
-                        mean: loEnv.mean + (hiEnv.mean - loEnv.mean) * frac
-                    };
-                }
-            } else if (lo !== null && lo === firstYear && baseEnv[firstYearStr]) {
-                merged[firstYearStr] = baseEnv[firstYearStr];
-            }
-        }
-
-        return merged;
-    }
-
     function getEnvelope(sc) {
         if (selectedFossilCost !== 'All' && sc.envelope_by_fossil_cost &&
             sc.envelope_by_fossil_cost[selectedFossilCost]) {
@@ -163,20 +83,10 @@
     }
 
     function loadData() {
-        fetch('/api/fleet-scenario-results')
-            .then(function (r) { if (r.ok) return r.json(); throw new Error('API not available'); })
+        fetch('data/fleet_scenario_results_sample.json')
+            .then(function (r) { if (r.ok) return r.json(); throw new Error('No data'); })
             .then(onDataLoaded)
-            .catch(function () {
-                fetch('data/fleet_scenario_results_sample.json')
-                    .then(function (r) { if (r.ok) return r.json(); throw new Error('No data'); })
-                    .then(onDataLoaded)
-                    .catch(function () {
-                        fetch('/data/fleet_scenario_results_sample.json')
-                            .then(function (r) { if (r.ok) return r.json(); throw new Error('No data'); })
-                            .then(onDataLoaded)
-                            .catch(showError);
-                    });
-            });
+            .catch(showError);
     }
 
     function showError() {
@@ -186,12 +96,46 @@
         }
     }
 
+    // Derive intensity_envelope from generation_by_fuel + emissions_by_fuel if not present
+    function deriveIntensityEnvelope(sc) {
+        if (sc.intensity_envelope) return;
+        var gen = sc.generation_by_fuel;
+        var emis = sc.emissions_by_fuel;
+        if (!gen || !emis) return;
+        var intEnv = {};
+        Object.keys(gen).forEach(function (yr) {
+            var totalGenTwh = 0;
+            var totalEmisMt = 0;
+            var gYear = gen[yr] || {};
+            var eYear = emis[yr] || {};
+            Object.keys(gYear).forEach(function (f) { totalGenTwh += gYear[f] || 0; });
+            Object.keys(eYear).forEach(function (f) { totalEmisMt += eYear[f] || 0; });
+            // TWh → MWh: ×1e6. Mt → kg: ×1e9. intensity = (Mt × 1e9) / (TWh × 1e6) = Mt/TWh × 1e3
+            var intensityKg = totalGenTwh > 0 ? (totalEmisMt / totalGenTwh) * 1e3 : 0;
+            intEnv[yr] = {
+                p10: Math.round(intensityKg * 100) / 100,
+                p50: Math.round(intensityKg * 100) / 100,
+                p90: Math.round(intensityKg * 100) / 100,
+                mean: Math.round(intensityKg * 100) / 100
+            };
+        });
+        sc.intensity_envelope = intEnv;
+    }
+
     function onDataLoaded(data) {
         DATA = data;
+        // Derive intensity envelope for precomputed scenarios that lack it
+        if (DATA.scenarios) {
+            Object.keys(DATA.scenarios).forEach(function (k) {
+                deriveIntensityEnvelope(DATA.scenarios[k]);
+            });
+        }
         buildControls();
         buildFanChart();
         buildWaterfallChart();
         buildGenMixChart();
+        buildNewCleanChart();
+        buildIntensityFanChart();
         buildFuelEmissionsChart();
         updateFanLegend();
     }
@@ -274,6 +218,7 @@
             sliderVal.textContent = slider.value;
             updateWaterfallChart();
             updateGenMixChart();
+            updateNewCleanChart();
             updateFanChartAnnotation();
         });
     }
@@ -287,6 +232,8 @@
         updateFanLegend();
         updateWaterfallChart();
         updateGenMixChart();
+        updateNewCleanChart();
+        updateIntensityFanChart();
         updateFuelEmissionsChart();
     }
 
@@ -404,6 +351,7 @@
                         document.getElementById('yearSliderValue').textContent = year;
                         updateWaterfallChart();
                         updateGenMixChart();
+                        updateNewCleanChart();
                         updateFanChartAnnotation();
                     }
                 }
@@ -437,7 +385,7 @@
     }
 
     // ── Build 5-band fan datasets for a single scenario ──
-    // mode: 'single' = green/red semantic colors, 'multi' = scenario's own color
+    // Always uses scenario's own color for the p10-p90 bands (transparent shading).
     // p50Style: { color, width, dash } for the p50 line specifically
     function addFanDatasets(datasets, env, years, color, label, mode, p50Style, meta) {
         var p10 = [], p25 = [], p50 = [], p75 = [], p90 = [];
@@ -457,175 +405,150 @@
 
         var startIdx = datasets.length;
 
-        if (mode === 'single') {
-            // ── Single-scenario mode: green (optimistic) below p50, red (pessimistic) above ──
-            var greenLight = 'rgba(34, 197, 94, 0.08)';
-            var greenMed   = 'rgba(34, 197, 94, 0.15)';
-            var greenLine  = 'rgb(34, 197, 94)';
-            var redLight   = 'rgba(239, 68, 68, 0.08)';
-            var redMed     = 'rgba(239, 68, 68, 0.15)';
-            var redLine    = 'rgb(239, 68, 68)';
+        // Always use scenario-matched color shading (gray for baseline, blue for custom, etc.)
+        var veryLight = hexToRgba(color, 0.08);
+        var light     = hexToRgba(color, 0.15);
+        var lineColor = hexToRgba(color, 0.35);
 
-            // 1. p10 (invisible bottom boundary)
-            datasets.push({
-                label: label + ' p10', data: p10,
-                borderColor: 'transparent', backgroundColor: 'transparent',
-                borderWidth: 0, pointRadius: 0, fill: false,
-                tension: 0.3, showLegend: false, _scenarioKey: label, _band: 'p10'
-            });
-            // 2. p10→p25 fill (light green)
-            datasets.push({
-                label: label + ' p10-p25', data: p25,
-                borderColor: 'transparent', backgroundColor: greenLight,
-                borderWidth: 0, pointRadius: 0,
-                fill: { target: startIdx, above: greenLight, below: greenLight },
-                tension: 0.3, _scenarioKey: label, _band: 'fill'
-            });
-            // 3. p25 dashed line (green)
-            datasets.push({
-                label: label + ' P25', data: p25,
-                borderColor: greenLine, backgroundColor: 'transparent',
-                borderWidth: 1.5, borderDash: [6, 4], pointRadius: 0,
-                fill: false, tension: 0.3, _scenarioKey: label, _band: 'p25'
-            });
-            // 4. p25→p50 fill (medium green)
-            datasets.push({
-                label: label + ' p25-p50', data: p50,
-                borderColor: 'transparent', backgroundColor: greenMed,
-                borderWidth: 0, pointRadius: 0,
-                fill: { target: startIdx + 2, above: greenMed, below: greenMed },
-                tension: 0.3, _scenarioKey: label, _band: 'fill'
-            });
-            // 5. p50 solid line
-            datasets.push({
-                label: p50Style.legendLabel || label,
-                data: p50,
-                borderColor: p50Style.color,
-                backgroundColor: 'transparent',
-                borderWidth: p50Style.width || 2.5,
-                borderDash: p50Style.dash || [],
-                pointRadius: p50Style.pointRadius != null ? p50Style.pointRadius : 3,
-                pointBackgroundColor: p50Style.color,
-                pointHoverRadius: 5,
-                fill: false, tension: 0.3,
-                _scenarioKey: label, _band: 'p50',
-                _showInLegend: true,
-                _isBaseline: meta && meta.isBaseline,
-                _scenarioName: (meta && meta.scenarioName) || label
-            });
-            // 6. p50→p75 fill (medium red)
-            datasets.push({
-                label: label + ' p50-p75', data: p75,
-                borderColor: 'transparent', backgroundColor: redMed,
-                borderWidth: 0, pointRadius: 0,
-                fill: { target: startIdx + 4, above: redMed, below: redMed },
-                tension: 0.3, _scenarioKey: label, _band: 'fill'
-            });
-            // 7. p75 dashed line (red)
-            datasets.push({
-                label: label + ' P75', data: p75,
-                borderColor: redLine, backgroundColor: 'transparent',
-                borderWidth: 1.5, borderDash: [6, 4], pointRadius: 0,
-                fill: false, tension: 0.3, _scenarioKey: label, _band: 'p75'
-            });
-            // 8. p75→p90 fill (light red)
-            datasets.push({
-                label: label + ' p75-p90', data: p90,
-                borderColor: 'transparent', backgroundColor: redLight,
-                borderWidth: 0, pointRadius: 0,
-                fill: { target: startIdx + 6, above: redLight, below: redLight },
-                tension: 0.3, _scenarioKey: label, _band: 'fill'
-            });
-            // 9. p90 (invisible top boundary)
-            datasets.push({
-                label: label + ' p90', data: p90,
-                borderColor: 'transparent', backgroundColor: 'transparent',
-                borderWidth: 0, pointRadius: 0, fill: false,
-                tension: 0.3, _scenarioKey: label, _band: 'p90'
-            });
-        } else {
-            // ── Multi-scenario mode: color-matched shading using scenario's assigned color ──
-            var veryLight = hexToRgba(color, 0.06);
-            var light     = hexToRgba(color, 0.12);
+        // Use p50Style overrides if provided, otherwise defaults from color
+        var p50Color = (p50Style && p50Style.color) ? p50Style.color : color;
+        var p50Width = (p50Style && p50Style.width) ? p50Style.width : 2.5;
+        var p50Dash  = (p50Style && p50Style.dash) ? p50Style.dash : [];
+        var p50Radius = (p50Style && p50Style.pointRadius != null) ? p50Style.pointRadius : 3;
+        var p50Label = (p50Style && p50Style.legendLabel) ? p50Style.legendLabel : label;
 
-            // 1. p10 (invisible bottom boundary)
-            datasets.push({
-                label: label + ' p10', data: p10,
-                borderColor: 'transparent', backgroundColor: 'transparent',
-                borderWidth: 0, pointRadius: 0, fill: false,
-                tension: 0.3, _scenarioKey: label, _band: 'p10'
-            });
-            // 2. p10→p25 fill
-            datasets.push({
-                label: label + ' p10-p25', data: p25,
-                borderColor: 'transparent', backgroundColor: veryLight,
-                borderWidth: 0, pointRadius: 0,
-                fill: { target: startIdx, above: veryLight, below: veryLight },
-                tension: 0.3, _scenarioKey: label, _band: 'fill'
-            });
-            // 3. p25 dashed line
-            datasets.push({
-                label: label + ' P25', data: p25,
-                borderColor: color, backgroundColor: 'transparent',
-                borderWidth: 1, borderDash: [5, 3], pointRadius: 0,
-                fill: false, tension: 0.3, _scenarioKey: label, _band: 'p25'
-            });
-            // 4. p25→p50 fill
-            datasets.push({
-                label: label + ' p25-p50', data: p50,
-                borderColor: 'transparent', backgroundColor: light,
-                borderWidth: 0, pointRadius: 0,
-                fill: { target: startIdx + 2, above: light, below: light },
-                tension: 0.3, _scenarioKey: label, _band: 'fill'
-            });
-            // 5. p50 solid line
-            datasets.push({
-                label: label,
-                data: p50,
-                borderColor: color,
-                backgroundColor: 'transparent',
-                borderWidth: 2.5,
-                borderDash: [],
-                pointRadius: 3,
-                pointBackgroundColor: color,
-                pointHoverRadius: 5,
-                fill: false, tension: 0.3,
-                _scenarioKey: label, _band: 'p50',
-                _showInLegend: true,
-                _isBaseline: meta && meta.isBaseline,
-                _scenarioName: (meta && meta.scenarioName) || label
-            });
-            // 6. p50→p75 fill
-            datasets.push({
-                label: label + ' p50-p75', data: p75,
-                borderColor: 'transparent', backgroundColor: light,
-                borderWidth: 0, pointRadius: 0,
-                fill: { target: startIdx + 4, above: light, below: light },
-                tension: 0.3, _scenarioKey: label, _band: 'fill'
-            });
-            // 7. p75 dashed line
-            datasets.push({
-                label: label + ' P75', data: p75,
-                borderColor: color, backgroundColor: 'transparent',
-                borderWidth: 1, borderDash: [5, 3], pointRadius: 0,
-                fill: false, tension: 0.3, _scenarioKey: label, _band: 'p75'
-            });
-            // 8. p75→p90 fill
-            datasets.push({
-                label: label + ' p75-p90', data: p90,
-                borderColor: 'transparent', backgroundColor: veryLight,
-                borderWidth: 0, pointRadius: 0,
-                fill: { target: startIdx + 6, above: veryLight, below: veryLight },
-                tension: 0.3, _scenarioKey: label, _band: 'fill'
-            });
-            // 9. p90 (invisible)
-            datasets.push({
-                label: label + ' p90', data: p90,
-                borderColor: 'transparent', backgroundColor: 'transparent',
-                borderWidth: 0, pointRadius: 0, fill: false,
-                tension: 0.3, _scenarioKey: label, _band: 'p90'
-            });
+        // 1. p10 (invisible bottom boundary)
+        datasets.push({
+            label: label + ' p10', data: p10,
+            borderColor: 'transparent', backgroundColor: 'transparent',
+            borderWidth: 0, pointRadius: 0, fill: false,
+            tension: 0.3, _scenarioKey: label, _band: 'p10'
+        });
+        // 2. p10→p50 fill (light shading)
+        datasets.push({
+            label: label + ' p10-p50', data: p50,
+            borderColor: 'transparent', backgroundColor: veryLight,
+            borderWidth: 0, pointRadius: 0,
+            fill: { target: startIdx, above: veryLight, below: veryLight },
+            tension: 0.3, _scenarioKey: label, _band: 'fill'
+        });
+        // 3. p50 solid line
+        datasets.push({
+            label: p50Label,
+            data: p50,
+            borderColor: p50Color,
+            backgroundColor: 'transparent',
+            borderWidth: p50Width,
+            borderDash: p50Dash,
+            pointRadius: p50Radius,
+            pointBackgroundColor: p50Color,
+            pointHoverRadius: 5,
+            fill: false, tension: 0.3,
+            _scenarioKey: label, _band: 'p50',
+            _showInLegend: true,
+            _isBaseline: meta && meta.isBaseline,
+            _scenarioName: (meta && meta.scenarioName) || label
+        });
+        // 4. p50→p90 fill (light shading)
+        datasets.push({
+            label: label + ' p50-p90', data: p90,
+            borderColor: 'transparent', backgroundColor: veryLight,
+            borderWidth: 0, pointRadius: 0,
+            fill: { target: startIdx + 2, above: veryLight, below: veryLight },
+            tension: 0.3, _scenarioKey: label, _band: 'fill'
+        });
+        // 5. p90 (invisible top boundary)
+        datasets.push({
+            label: label + ' p90', data: p90,
+            borderColor: 'transparent', backgroundColor: 'transparent',
+            borderWidth: 0, pointRadius: 0, fill: false,
+            tension: 0.3, _scenarioKey: label, _band: 'p90'
+        });
+    }
+
+    // ── Find the earliest intervention year from the fleet sidebar modifications ──
+    function getFirstInterventionYear() {
+        if (typeof FleetSidebar !== 'undefined' && FleetSidebar.getFleetPlants) {
+            var plants = FleetSidebar.getFleetPlants();
+            var earliest = Infinity;
+            if (plants) {
+                plants.forEach(function (p) {
+                    if (p._action && p._year_online && p._year_online < earliest) {
+                        earliest = p._year_online;
+                    }
+                });
+            }
+            return earliest === Infinity ? null : earliest;
         }
+        return null;
+    }
+
+    // ── Merge custom envelope with baseline for pre-intervention years ──
+    // Also injects the intervention year as an interpolated baseline data point
+    // so the chart shows a clean transition at the correct year (not before).
+    function alignEnvelopeWithBaseline(custEnv, baseEnv, firstYear) {
+        if (!firstYear || !baseEnv) return custEnv;
+        var merged = {};
+        var keys = Object.keys(custEnv);
+        keys.forEach(function (yStr) {
+            var y = parseInt(yStr);
+            if (y < firstYear) {
+                // Use baseline values for years before any intervention
+                merged[yStr] = baseEnv[yStr] || custEnv[yStr];
+            } else {
+                merged[yStr] = custEnv[yStr];
+            }
+        });
+
+        // If firstYear doesn't exist as a data point, inject it with interpolated
+        // baseline values so the chart shows a clean kink at the intervention year
+        var firstYearStr = String(firstYear);
+        if (!custEnv[firstYearStr]) {
+            var sortedYears = Object.keys(baseEnv).map(Number).sort(function (a, b) { return a - b; });
+            var lo = null, hi = null;
+            for (var i = 0; i < sortedYears.length; i++) {
+                if (sortedYears[i] <= firstYear) lo = sortedYears[i];
+                if (sortedYears[i] >= firstYear && hi === null) hi = sortedYears[i];
+            }
+            if (lo !== null && hi !== null && lo !== hi) {
+                var frac = (firstYear - lo) / (hi - lo);
+                var loEnv = baseEnv[String(lo)];
+                var hiEnv = baseEnv[String(hi)];
+                if (loEnv && hiEnv) {
+                    merged[firstYearStr] = {
+                        p10: loEnv.p10 + (hiEnv.p10 - loEnv.p10) * frac,
+                        p50: loEnv.p50 + (hiEnv.p50 - loEnv.p50) * frac,
+                        p90: loEnv.p90 + (hiEnv.p90 - loEnv.p90) * frac,
+                        mean: loEnv.mean + (hiEnv.mean - loEnv.mean) * frac
+                    };
+                }
+            } else if (lo !== null && lo === firstYear && baseEnv[firstYearStr]) {
+                merged[firstYearStr] = baseEnv[firstYearStr];
+            }
+        }
+
+        return merged;
+    }
+
+    // Helper: linearly interpolate an envelope value between two surrounding years
+    function interpolateEnvAtYear(env, year) {
+        var keys = Object.keys(env).map(Number).sort(function (a, b) { return a - b; });
+        var lo = null, hi = null;
+        for (var i = 0; i < keys.length; i++) {
+            if (keys[i] <= year) lo = keys[i];
+            if (keys[i] >= year && hi === null) hi = keys[i];
+        }
+        if (lo === year && env[String(lo)]) return env[String(lo)];
+        if (lo === null || hi === null || lo === hi) return null;
+        var loE = env[String(lo)], hiE = env[String(hi)];
+        if (!loE || !hiE) return null;
+        var f = (year - lo) / (hi - lo);
+        return {
+            p10: loE.p10 + (hiE.p10 - loE.p10) * f,
+            p50: loE.p50 + (hiE.p50 - loE.p50) * f,
+            p90: loE.p90 + (hiE.p90 - loE.p90) * f,
+            mean: loE.mean + (hiE.mean - loE.mean) * f
+        };
     }
 
     function updateFanChart() {
@@ -639,11 +562,29 @@
         var firstYear = getFirstInterventionYear();
         var hasCustom = customScenario || (mode === 'single' && savedScenarioOverlays.length === 1);
         if (firstYear && hasCustom && years.indexOf(firstYear) === -1) {
+            // Inject the intervention year into the years array for chart resolution
             years = years.slice();
             years.push(firstYear);
             years.sort(function (a, b) { return a - b; });
         }
         var labels = years.map(String);
+
+        // ── Always show baseline with gray p10-p90 band ──
+        // If we injected an extra year, interpolate baseline envelope at that year
+        if (baseline) {
+            var baseEnv = getEnvelope(baseline);
+            if (firstYear && !baseEnv[String(firstYear)]) {
+                var interpBase = interpolateEnvAtYear(baseEnv, firstYear);
+                if (interpBase) {
+                    baseEnv = Object.assign({}, baseEnv);
+                    baseEnv[String(firstYear)] = interpBase;
+                }
+            }
+            addFanDatasets(datasets, baseEnv, years, BASELINE_COLOR, 'Baseline', mode, {
+                color: BASELINE_COLOR, width: 2.5, dash: [], pointRadius: 0,
+                legendLabel: 'Baseline (Baseline)'
+            }, { isBaseline: true, scenarioName: 'Baseline' });
+        }
 
         if (mode === 'single') {
             // ── Single-scenario mode ──
@@ -652,67 +593,29 @@
                 customOrSaved = savedScenarioOverlays[0];
             }
 
-            if (customOrSaved && baseline) {
-                // Baseline + 1 custom: baseline gets gray p50, custom gets full fan
-                var baseEnv = getEnvelope(baseline);
-                // Interpolate baseline at intervention year if needed
-                if (firstYear && !baseEnv[String(firstYear)]) {
-                    var interpBase = interpolateEnvAtYear(baseEnv, firstYear);
-                    if (interpBase) {
-                        baseEnv = Object.assign({}, baseEnv);
-                        baseEnv[String(firstYear)] = interpBase;
-                    }
-                }
-                // Only show baseline p50 as a gray reference line
-                var baseP50 = [];
-                years.forEach(function (y) {
-                    var e = baseEnv[String(y)];
-                    baseP50.push(e ? e.p50 : null);
-                });
-                datasets.push({
-                    label: 'Baseline',
-                    data: baseP50,
-                    borderColor: '#6B7280',
-                    backgroundColor: 'transparent',
-                    borderWidth: 2, borderDash: [],
-                    pointRadius: 0, pointHoverRadius: 3,
-                    fill: false, tension: 0.3,
-                    _scenarioKey: 'Baseline', _band: 'p50', _showInLegend: true,
-                    _isBaseline: true, _scenarioName: 'Baseline'
-                });
-
-                // Custom scenario gets the full fan — aligned with baseline until intervention
+            if (customOrSaved) {
                 var custEnv = customOrSaved.results ? customOrSaved.results.envelope : customOrSaved.envelope;
                 var custColor = customOrSaved.color || CUSTOM_COLOR;
                 var custName = customOrSaved.name || 'Custom';
-                var baseEnvForAlign = getEnvelope(baseline);
+
+                // Align custom with baseline until first intervention year
+                var baseEnvForAlign = baseline ? getEnvelope(baseline) : null;
                 var alignedEnv = alignEnvelopeWithBaseline(custEnv, baseEnvForAlign, firstYear);
-                addFanDatasets(datasets, alignedEnv, years, custColor, custName, 'single', {
+
+                addFanDatasets(datasets, alignedEnv, years, custColor, custName, mode, {
                     color: custColor, width: 2.5, dash: [], pointRadius: 3,
                     legendLabel: custName
                 }, { isBaseline: false, scenarioName: custName });
-            } else if (baseline) {
-                // Baseline only: show full green/red fan with baseline's own color for p50
-                var baseEnv = getEnvelope(baseline);
-                addFanDatasets(datasets, baseEnv, years, BASELINE_COLOR, 'Baseline', 'single', {
-                    color: BASELINE_COLOR, width: 2.5, dash: [], pointRadius: 3,
-                    legendLabel: 'Baseline'
-                }, { isBaseline: true, scenarioName: 'Baseline' });
             }
         } else {
             // ── Multi-scenario mode ──
-            // Baseline always gets its fan
-            if (baseline) {
-                var baseEnv = getEnvelope(baseline);
-                addFanDatasets(datasets, baseEnv, years, BASELINE_COLOR, 'Baseline', 'multi', null,
-                    { isBaseline: true, scenarioName: 'Baseline' });
-            }
-
-            // Custom overlay — aligned with baseline until intervention year
+            // Custom overlay
             if (customScenario) {
+                var custEnvMulti = customScenario.envelope;
                 var baseEnvMulti = baseline ? getEnvelope(baseline) : null;
-                var alignedEnvMulti = alignEnvelopeWithBaseline(customScenario.envelope, baseEnvMulti, firstYear);
-                addFanDatasets(datasets, alignedEnvMulti, years, CUSTOM_COLOR, 'Custom', 'multi', null,
+                var alignedEnvMulti = alignEnvelopeWithBaseline(custEnvMulti, baseEnvMulti, firstYear);
+
+                addFanDatasets(datasets, alignedEnvMulti, years, CUSTOM_COLOR, 'Custom', mode, null,
                     { isBaseline: false, scenarioName: 'Custom' });
             }
 
@@ -726,7 +629,7 @@
             });
             sortedOverlays.forEach(function (s) {
                 if (s.results && s.results.envelope) {
-                    addFanDatasets(datasets, s.results.envelope, years, s.color, s.name, 'multi', null,
+                    addFanDatasets(datasets, s.results.envelope, years, s.color, s.name, mode, null,
                         { isBaseline: !!s.isBaseline, scenarioName: s.name || 'Saved' });
                 }
             });
@@ -911,14 +814,18 @@
         var mode = getColorMode();
         var items = [];
 
-        if (mode === 'single') {
-            // Show green/red band explanation
-            items.push({ label: 'P25 (optimistic)', color: 'rgb(34, 197, 94)', type: 'dashed' });
-            items.push({ label: 'P10–P50 range', color: 'rgba(34, 197, 94, 0.15)', type: 'band' });
-            items.push({ label: 'P75 (pessimistic)', color: 'rgb(239, 68, 68)', type: 'dashed' });
-            items.push({ label: 'P50–P90 range', color: 'rgba(239, 68, 68, 0.15)', type: 'band' });
+        // Show scenario bands explanation
+        items.push({ label: 'Baseline (P50)', color: BASELINE_COLOR, type: 'line' });
+        items.push({ label: 'Baseline P10–P90', color: hexToRgba(BASELINE_COLOR, 0.15), type: 'band' });
+
+        // Check if custom is shown
+        var hasCustom = customScenario || (mode === 'single' && savedScenarioOverlays.length === 1);
+        if (hasCustom) {
+            var custColor = (customScenario && customScenario.color) || CUSTOM_COLOR;
+            var custName = (customScenario && customScenario.name) || 'Custom';
+            items.push({ label: custName + ' (P50)', color: custColor, type: 'line' });
+            items.push({ label: custName + ' P10–P90', color: hexToRgba(custColor, 0.15), type: 'band' });
         }
-        // In multi mode, the Chart.js built-in legend handles p50 lines
 
         // Targets always shown
         selectedTargets.forEach(function (selTgt) {
@@ -936,6 +843,8 @@
             var swatch;
             if (item.type === 'dashed') {
                 swatch = '<span style="width:24px;height:0;border-top:2px dashed ' + item.color + ';display:inline-block;"></span>';
+            } else if (item.type === 'line') {
+                swatch = '<span style="width:24px;height:0;border-top:2.5px solid ' + item.color + ';display:inline-block;"></span>';
             } else {
                 swatch = '<span style="width:24px;height:10px;border-radius:3px;background:' + item.color + ';display:inline-block;"></span>';
             }
@@ -943,12 +852,9 @@
                 swatch + item.label + '</span>';
         }).join('');
 
-        // In single mode, add a green/red shading annotation note below the legend items
-        if (mode === 'single') {
-            html += '<div style="margin-top:6px;font-size:0.78rem;color:var(--text-dim);font-style:italic;">' +
-                '<span style="color:rgb(34,197,94);font-weight:600;">Green</span> = optimistic (lower emissions), ' +
-                '<span style="color:rgb(239,68,68);font-weight:600;">Red</span> = pessimistic (higher emissions)</div>';
-        }
+        // Shading explanation
+        html += '<div style="margin-top:6px;font-size:0.78rem;color:var(--text-dim);font-style:italic;">' +
+            'Shaded bands show P10–P90 confidence intervals across fossil fuel price scenarios</div>';
 
         el.innerHTML = html;
     }
@@ -1061,19 +967,20 @@
     }
 
     // ====================================================================
-    // CHART 3: GENERATION MIX (Stacked Bar) — Baseline vs Custom
+    // CHART 3: GENERATION MIX (Stacked Area Timeseries)
     // ====================================================================
     function buildGenMixChart() {
         var ctx = document.getElementById('genMixChart').getContext('2d');
         genMixChart = new Chart(ctx, {
-            type: 'bar',
+            type: 'line',
             data: { labels: [], datasets: [] },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: { duration: 300 },
+                interaction: { mode: 'index', intersect: false },
                 scales: {
-                    x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } },
+                    x: { grid: { display: false }, ticks: { font: { size: 11 }, maxRotation: 0 } },
                     y: {
                         stacked: true,
                         title: { display: true, text: 'Generation (TWh)', font: { size: 12 } },
@@ -1087,6 +994,7 @@
                     tooltip: {
                         callbacks: {
                             label: function (ctx) {
+                                if (!ctx.raw) return null;
                                 var total = 0;
                                 ctx.chart.data.datasets.forEach(function (ds) {
                                     total += ds.data[ctx.dataIndex] || 0;
@@ -1105,48 +1013,331 @@
     function updateGenMixChart() {
         if (!genMixChart || !DATA) return;
 
-        var yr = String(nearestYear(selectedYear, getYears()));
-        document.getElementById('genMixTitle').textContent = 'Fleet Generation by Fuel — ' + yr;
+        // Use custom scenario if available, otherwise baseline
+        var sc = customScenario || DATA.scenarios.baseline;
+        var scenarioLabel = customScenario ? 'Custom' : 'Baseline';
+        document.getElementById('genMixTitle').textContent = 'Fleet Generation by Fuel — ' + scenarioLabel;
 
-        var scenarios = ['baseline'];
-        var labels = ['Baseline'];
-        if (customScenario) {
-            scenarios.push('custom');
-            labels.push('Custom');
-        }
+        var years = getYears();
+        var labels = years.map(String);
+        var gen = sc.generation_by_fuel;
 
-        var datasets = FUEL_KEYS.map(function (fuel) {
-            var data = scenarios.map(function (sKey) {
-                var sc = sKey === 'custom' ? customScenario : DATA.scenarios[sKey];
-                if (!sc) return 0;
-                var gen = sc.generation_by_fuel;
-                if (!gen || !gen[yr]) return 0;
-                return gen[yr][fuel] || 0;
+        // Build stacked area datasets — only include fuels with non-zero generation
+        var datasets = [];
+        FUEL_KEYS.forEach(function (fuel) {
+            var data = years.map(function (y) {
+                if (!gen || !gen[String(y)]) return 0;
+                return gen[String(y)][fuel] || 0;
             });
-            return {
+            var hasData = data.some(function (v) { return v > 0; });
+            if (!hasData) return; // Skip empty fuels
+            datasets.push({
                 label: FUEL_LABELS[fuel] || fuel,
                 data: data,
-                backgroundColor: FUEL_COLORS[fuel],
-                borderColor: '#fff',
-                borderWidth: 1,
-                barPercentage: 0.7
-            };
+                backgroundColor: FUEL_COLORS[fuel] + 'CC',
+                borderColor: FUEL_COLORS[fuel],
+                borderWidth: 1.5,
+                fill: true,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                tension: 0.3
+            });
         });
 
         genMixChart.data.labels = labels;
         genMixChart.data.datasets = datasets;
         genMixChart.update('active');
 
+        // Build legend showing only fuels with data
         var legendEl = document.getElementById('genMixLegend');
-        legendEl.innerHTML = FUEL_KEYS.map(function (f) {
+        legendEl.innerHTML = datasets.map(function (ds) {
             return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:16px;">' +
-                '<span style="width:24px;height:10px;border-radius:3px;background:' + FUEL_COLORS[f] + ';display:inline-block;"></span>' +
-                (FUEL_LABELS[f] || f) + '</span>';
+                '<span style="width:24px;height:10px;border-radius:3px;background:' + ds.borderColor + ';display:inline-block;"></span>' +
+                ds.label + '</span>';
         }).join('');
     }
 
     // ====================================================================
-    // CHART 4: EMISSIONS BY FUEL (Stacked Area) — Custom or Baseline
+    // CHART 4: NEW CLEAN GENERATION SNAPSHOT (Bar) — Selected Year
+    // ====================================================================
+    var CLEAN_FUEL_KEYS = ['nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'battery', 'ldes', 'ccs_ccgt'];
+    var CLEAN_FUEL_LABELS = {
+        nuclear: 'Nuclear', geothermal: 'Geothermal', wind: 'Wind', solar: 'Solar',
+        hydro: 'Hydro', battery: 'Battery', ldes: 'LDES', ccs_ccgt: 'CCS-CCGT'
+    };
+
+    function buildNewCleanChart() {
+        var ctx = document.getElementById('newCleanChart');
+        if (!ctx) return;
+        newCleanChart = new Chart(ctx.getContext('2d'), {
+            type: 'bar',
+            data: { labels: [], datasets: [] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                animation: { duration: 300 },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Generation (TWh)', font: { size: 12 } },
+                        grid: { color: '#E0E6EF' },
+                        beginAtZero: true,
+                        ticks: { font: { size: 11 } }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { font: { size: 12, weight: '500' } }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                return ctx.raw.toFixed(2) + ' TWh';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        updateNewCleanChart();
+    }
+
+    function updateNewCleanChart() {
+        if (!newCleanChart || !DATA) return;
+
+        var yr = String(nearestYear(selectedYear, getYears()));
+        document.getElementById('newCleanTitle').textContent = 'New Clean Generation — ' + yr;
+
+        // Get custom and baseline generation by fuel for selected year
+        var baseGen = {};
+        var custGen = {};
+        var baseline = DATA.scenarios.baseline;
+        if (baseline && baseline.generation_by_fuel && baseline.generation_by_fuel[yr]) {
+            baseGen = baseline.generation_by_fuel[yr];
+        }
+        if (customScenario && customScenario.generation_by_fuel && customScenario.generation_by_fuel[yr]) {
+            custGen = customScenario.generation_by_fuel[yr];
+        }
+
+        // New clean = delta above baseline for clean fuels, plus all CCS generation
+        // (CCS doesn't exist in baseline, it's always "new")
+        var labels = [];
+        var values = [];
+        var colors = [];
+        CLEAN_FUEL_KEYS.forEach(function (fuel) {
+            var custVal = custGen[fuel] || 0;
+            var baseVal = baseGen[fuel] || 0;
+            var delta;
+            if (fuel === 'ccs_ccgt') {
+                // All CCS generation is "new" clean
+                delta = custVal;
+            } else {
+                // Only show the increment above baseline (uprates, new plants)
+                delta = custVal - baseVal;
+            }
+            if (delta > 0.001) {
+                labels.push(CLEAN_FUEL_LABELS[fuel] || fuel);
+                values.push(Math.round(delta * 100) / 100);
+                colors.push(FUEL_COLORS[fuel] || '#9CA3AF');
+            }
+        });
+
+        // If no custom scenario, show empty state
+        if (!customScenario) {
+            labels = [];
+            values = [];
+            colors = [];
+        }
+
+        newCleanChart.data.labels = labels;
+        newCleanChart.data.datasets = [{
+            data: values,
+            backgroundColor: colors.map(function (c) { return c + 'CC'; }),
+            borderColor: colors,
+            borderWidth: 1.5,
+            borderRadius: 4,
+            barPercentage: 0.7
+        }];
+        newCleanChart.update('active');
+
+        // Legend
+        var legendEl = document.getElementById('newCleanLegend');
+        if (legendEl) {
+            if (labels.length === 0) {
+                legendEl.innerHTML = '<span style="color:#9CA3AF;font-size:0.85rem;">Configure fleet changes and recalculate to see new clean generation.</span>';
+            } else {
+                legendEl.innerHTML = labels.map(function (lbl, i) {
+                    return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:16px;">' +
+                        '<span style="width:24px;height:10px;border-radius:3px;background:' + colors[i] + ';display:inline-block;"></span>' +
+                        lbl + ': ' + values[i].toFixed(1) + ' TWh</span>';
+                }).join('');
+            }
+        }
+    }
+
+    // ====================================================================
+    // CHART 5: EMISSIONS INTENSITY FAN (kgCO2/MWh) — Timeseries
+    // ====================================================================
+    function buildIntensityFanChart() {
+        var ctx = document.getElementById('intensityFanChart');
+        if (!ctx) return;
+        intensityFanChart = new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: { labels: [], datasets: [] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 800 },
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Year', font: { size: 13 } },
+                        grid: { display: false },
+                        ticks: {
+                            callback: function (val) {
+                                var year = this.getLabelForValue(val);
+                                var show = [2023, 2025, 2030, 2035, 2040, 2045, 2050];
+                                return show.indexOf(Number(year)) >= 0 ? year : '';
+                            },
+                            maxRotation: 0, font: { size: 12 }
+                        }
+                    },
+                    y: {
+                        title: { display: true, text: 'Emissions Intensity (kgCO₂/MWh)', font: { size: 13 } },
+                        grid: { color: '#E0E6EF' },
+                        beginAtZero: true,
+                        ticks: { font: { size: 12 } }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        align: 'end',
+                        labels: {
+                            filter: function (item, chartData) {
+                                var ds = chartData.datasets[item.datasetIndex];
+                                return ds && ds._showInLegend;
+                            },
+                            usePointStyle: true,
+                            pointStyle: 'line',
+                            padding: 16,
+                            font: { size: 12 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                if (ctx.raw == null) return null;
+                                return ctx.dataset.label + ': ' + ctx.raw.toFixed(1) + ' kgCO₂/MWh';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        updateIntensityFanChart();
+    }
+
+    function updateIntensityFanChart() {
+        if (!intensityFanChart || !DATA) return;
+
+        var years = getYears();
+        var datasets = [];
+        var baseline = DATA.scenarios.baseline;
+
+        // Inject intervention year for chart resolution (same as fan chart)
+        var firstYear = getFirstInterventionYear();
+        var hasCustom = customScenario != null;
+        if (firstYear && hasCustom && years.indexOf(firstYear) === -1) {
+            years = years.slice();
+            years.push(firstYear);
+            years.sort(function (a, b) { return a - b; });
+        }
+        var labels = years.map(String);
+
+        // Baseline intensity fan (interpolate at intervention year if needed)
+        if (baseline && baseline.intensity_envelope) {
+            var baseIntEnv = baseline.intensity_envelope;
+            if (firstYear && !baseIntEnv[String(firstYear)]) {
+                var interpBase = interpolateEnvAtYear(baseIntEnv, firstYear);
+                if (interpBase) {
+                    baseIntEnv = Object.assign({}, baseIntEnv);
+                    baseIntEnv[String(firstYear)] = interpBase;
+                }
+            }
+            addIntensityFanDatasets(datasets, baseIntEnv, years, BASELINE_COLOR, 'Baseline', true);
+        }
+
+        // Custom intensity fan
+        if (customScenario && customScenario.intensity_envelope) {
+            var alignedIntEnv = alignEnvelopeWithBaseline(
+                customScenario.intensity_envelope,
+                baseline ? baseline.intensity_envelope : null,
+                firstYear
+            );
+            addIntensityFanDatasets(datasets, alignedIntEnv, years, CUSTOM_COLOR, 'Custom', false);
+        }
+
+        intensityFanChart.data.labels = labels;
+        intensityFanChart.data.datasets = datasets;
+        intensityFanChart.update('active');
+    }
+
+    function addIntensityFanDatasets(datasets, env, years, color, label, isBaseline) {
+        if (!env) return;
+        var p10 = [], p50 = [], p90 = [];
+        years.forEach(function (y) {
+            var e = env[String(y)];
+            if (e) { p10.push(e.p10); p50.push(e.p50); p90.push(e.p90); }
+            else { p10.push(null); p50.push(null); p90.push(null); }
+        });
+
+        var startIdx = datasets.length;
+        var bandColor = hexToRgba(color, 0.12);
+
+        // p10 boundary
+        datasets.push({
+            label: label + ' p10', data: p10,
+            borderColor: 'transparent', backgroundColor: 'transparent',
+            borderWidth: 0, pointRadius: 0, fill: false, tension: 0.3
+        });
+        // p10→p50 fill
+        datasets.push({
+            label: label + ' band-low', data: p50,
+            borderColor: 'transparent', backgroundColor: bandColor,
+            borderWidth: 0, pointRadius: 0,
+            fill: { target: startIdx, above: bandColor, below: bandColor },
+            tension: 0.3
+        });
+        // p50 line
+        datasets.push({
+            label: label,
+            data: p50,
+            borderColor: color,
+            backgroundColor: 'transparent',
+            borderWidth: 2.5,
+            borderDash: isBaseline ? [] : [],
+            pointRadius: isBaseline ? 0 : 3,
+            pointBackgroundColor: color,
+            pointHoverRadius: 5,
+            fill: false, tension: 0.3,
+            _showInLegend: true
+        });
+        // p50→p90 fill
+        datasets.push({
+            label: label + ' band-high', data: p90,
+            borderColor: 'transparent', backgroundColor: bandColor,
+            borderWidth: 0, pointRadius: 0,
+            fill: { target: startIdx + 2, above: bandColor, below: bandColor },
+            tension: 0.3
+        });
+    }
+
+    // ====================================================================
+    // CHART 6: EMISSIONS BY FUEL (Stacked Area) — Custom or Baseline
     // ====================================================================
     function buildFuelEmissionsChart() {
         var ctx = document.getElementById('fuelEmissionsChart').getContext('2d');
@@ -1239,6 +1430,18 @@
         },
         clearCustomScenario: function () {
             customScenario = null;
+            updateAllCharts();
+        },
+        // Replace precomputed baseline with engine-computed baseline.
+        // Called by fleet-sidebar.js on load so baseline and custom scenarios
+        // use the exact same dispatch engine — eliminating phantom deltas.
+        setComputedBaseline: function (baselineData) {
+            if (!DATA) return;
+            // Replace the precomputed baseline with engine-computed baseline
+            DATA.scenarios.baseline = baselineData;
+            // Derive intensity envelope for the new baseline
+            deriveIntensityEnvelope(DATA.scenarios.baseline);
+            // Rebuild all charts with the new baseline
             updateAllCharts();
         },
         // Legacy compatibility — addScenario now sets as custom overlay
