@@ -812,6 +812,80 @@
         tooltipEl.classList.add('visible');
     }
 
+    // ── Custom tooltip for Intensity Fan Chart ──
+    function intensityFanTooltipHandler(context) {
+        var tooltipEl = document.getElementById('intensityFanTooltip');
+        if (!tooltipEl) return;
+        var tooltipModel = context.tooltip;
+
+        if (tooltipModel.opacity === 0) {
+            tooltipEl.classList.remove('visible');
+            return;
+        }
+
+        if (tooltipModel.dataPoints && tooltipModel.dataPoints.length) {
+            var idx = tooltipModel.dataPoints[0].dataIndex;
+            var year = intensityFanChart.data.labels[idx];
+            var html = '<div class="fan-tooltip-title">' + year + '</div>';
+
+            var baseline = DATA.scenarios.baseline;
+            var baseIntEnv = baseline && baseline.intensity_envelope ? baseline.intensity_envelope : null;
+            var baseYear = baseIntEnv ? baseIntEnv[year] : null;
+            var baseline2023 = baseIntEnv && baseIntEnv['2023'] ? baseIntEnv['2023'].p50 : null;
+
+            // Baseline row
+            if (baseYear) {
+                html += intensityTooltipRow(baseYear.p50, BASELINE_COLOR, 'Baseline', baseline2023);
+            }
+
+            // Custom scenario row
+            if (customScenario && customScenario.intensity_envelope && customScenario.intensity_envelope[year]) {
+                var custVal = customScenario.intensity_envelope[year].p50;
+                html += intensityTooltipRow(custVal, CUSTOM_COLOR, 'Custom', baseline2023);
+                if (baseYear) {
+                    var delta = custVal - baseYear.p50;
+                    var cls = delta < 0 ? 'gap-negative' : 'gap-positive';
+                    var sign = delta > 0 ? '+' : '';
+                    html += '<div class="fan-tooltip-gap"><span class="' + cls + '">' +
+                        sign + delta.toFixed(1) + ' kgCO₂/MWh vs Baseline</span></div>';
+                }
+            }
+
+            // Saved scenario rows
+            savedScenarioOverlays.forEach(function (s) {
+                if (!s.results || !s.results.intensity_envelope || !s.results.intensity_envelope[year]) return;
+                var sVal = s.results.intensity_envelope[year].p50;
+                html += intensityTooltipRow(sVal, s.color, s.name || 'Saved', baseline2023);
+            });
+
+            tooltipEl.innerHTML = html;
+        }
+
+        var canvas = context.chart.canvas;
+        var rect = canvas.getBoundingClientRect();
+        var left = tooltipModel.caretX;
+        var top = tooltipModel.caretY;
+        if (left + 320 > rect.width) left = left - 340;
+        if (left < 10) left = 10;
+        if (top < 10) top = 10;
+        tooltipEl.style.left = left + 'px';
+        tooltipEl.style.top = top + 'px';
+        tooltipEl.classList.add('visible');
+    }
+
+    function intensityTooltipRow(value, color, label, baseline2023) {
+        var pctStr = '';
+        if (baseline2023 && baseline2023 > 0) {
+            var pct = ((baseline2023 - value) / baseline2023 * 100).toFixed(1);
+            pctStr = '<span style="opacity:0.7;margin-left:6px;">(' +
+                (pct >= 0 ? '−' : '+') + Math.abs(parseFloat(pct)).toFixed(1) + '% vs 2023)</span>';
+        }
+        return '<div class="fan-tooltip-row">' +
+            '<span class="fan-tooltip-swatch" style="background:' + color + '"></span>' +
+            '<span class="fan-tooltip-label">' + label + '</span>' +
+            '<span class="fan-tooltip-vals">' + value.toFixed(1) + ' kgCO₂/MWh' + pctStr + '</span></div>';
+    }
+
     // ── Fan legend (below chart — shows band key in single mode) ──
     function updateFanLegend() {
         var el = document.getElementById('fanLegend');
@@ -1342,12 +1416,8 @@
                         }
                     },
                     tooltip: {
-                        callbacks: {
-                            label: function (ctx) {
-                                if (ctx.raw == null) return null;
-                                return ctx.dataset.label + ': ' + ctx.raw.toFixed(1) + ' kgCO₂/MWh';
-                            }
-                        }
+                        enabled: false,
+                        external: intensityFanTooltipHandler
                     }
                 }
             }
