@@ -16,14 +16,16 @@
         custom:      { color: '#6B7280', dash: [4, 4], label: 'Custom' }
     };
 
-    var FUEL_KEYS   = ['nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'gas_ccgt', 'gas_ct', 'gas_oil_ct', 'oil_ct', 'ccs_ccgt'];
-    var FUEL_LABELS = { nuclear: 'Nuclear', geothermal: 'Geothermal', wind: 'Wind', solar: 'Solar', hydro: 'Hydro', gas_ccgt: 'Gas CCGT', gas_ct: 'Gas CT', gas_oil_ct: 'Gas/Oil', oil_ct: 'Oil', ccs_ccgt: 'CCS-CCGT' };
+    var FUEL_KEYS   = ['nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'battery', 'ldes', 'gas_ccgt', 'gas_ct', 'gas_oil_ct', 'oil_ct', 'ccs_ccgt'];
+    var FUEL_LABELS = { nuclear: 'Nuclear', geothermal: 'Geothermal', wind: 'Wind', solar: 'Solar', hydro: 'Hydro', battery: 'Battery', ldes: 'LDES', gas_ccgt: 'Gas CCGT', gas_ct: 'Gas CT', gas_oil_ct: 'Gas/Oil', oil_ct: 'Oil', ccs_ccgt: 'CCS-CCGT' };
     var FUEL_COLORS = {
         nuclear:    RESOURCE_COLORS.nuclear,
         geothermal: RESOURCE_COLORS.geothermal || '#D97706',
         wind:       RESOURCE_COLORS.wind || '#22C55E',
         solar:      RESOURCE_COLORS.solar || '#F59E0B',
         hydro:      RESOURCE_COLORS.hydro || '#0EA5E9',
+        battery:    RESOURCE_COLORS.battery || '#06B6D4',
+        ldes:       RESOURCE_COLORS.ldes || '#E91E63',
         gas_ccgt:   RESOURCE_COLORS.fossilGas,
         gas_ct:     RESOURCE_COLORS.fossilGasCT || '#007FA4',
         gas_oil_ct: '#8B7355',
@@ -858,19 +860,20 @@
     }
 
     // ====================================================================
-    // CHART 3: GENERATION MIX (Stacked Bar) — Baseline vs Custom
+    // CHART 3: GENERATION MIX (Stacked Area Timeseries)
     // ====================================================================
     function buildGenMixChart() {
         var ctx = document.getElementById('genMixChart').getContext('2d');
         genMixChart = new Chart(ctx, {
-            type: 'bar',
+            type: 'line',
             data: { labels: [], datasets: [] },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: { duration: 300 },
+                interaction: { mode: 'index', intersect: false },
                 scales: {
-                    x: { stacked: true, grid: { display: false }, ticks: { font: { size: 11 } } },
+                    x: { grid: { display: false }, ticks: { font: { size: 11 }, maxRotation: 0 } },
                     y: {
                         stacked: true,
                         title: { display: true, text: 'Generation (TWh)', font: { size: 12 } },
@@ -884,6 +887,7 @@
                     tooltip: {
                         callbacks: {
                             label: function (ctx) {
+                                if (!ctx.raw) return null;
                                 var total = 0;
                                 ctx.chart.data.datasets.forEach(function (ds) {
                                     total += ds.data[ctx.dataIndex] || 0;
@@ -902,43 +906,47 @@
     function updateGenMixChart() {
         if (!genMixChart || !DATA) return;
 
-        var yr = String(nearestYear(selectedYear, getYears()));
-        document.getElementById('genMixTitle').textContent = 'Fleet Generation by Fuel — ' + yr;
+        // Use custom scenario if available, otherwise baseline
+        var sc = customScenario || DATA.scenarios.baseline;
+        var scenarioLabel = customScenario ? 'Custom' : 'Baseline';
+        document.getElementById('genMixTitle').textContent = 'Fleet Generation by Fuel — ' + scenarioLabel;
 
-        var scenarios = ['baseline'];
-        var labels = ['Baseline'];
-        if (customScenario) {
-            scenarios.push('custom');
-            labels.push('Custom');
-        }
+        var years = getYears();
+        var labels = years.map(String);
+        var gen = sc.generation_by_fuel;
 
-        var datasets = FUEL_KEYS.map(function (fuel) {
-            var data = scenarios.map(function (sKey) {
-                var sc = sKey === 'custom' ? customScenario : DATA.scenarios[sKey];
-                if (!sc) return 0;
-                var gen = sc.generation_by_fuel;
-                if (!gen || !gen[yr]) return 0;
-                return gen[yr][fuel] || 0;
+        // Build stacked area datasets — only include fuels with non-zero generation
+        var datasets = [];
+        FUEL_KEYS.forEach(function (fuel) {
+            var data = years.map(function (y) {
+                if (!gen || !gen[String(y)]) return 0;
+                return gen[String(y)][fuel] || 0;
             });
-            return {
+            var hasData = data.some(function (v) { return v > 0; });
+            if (!hasData) return; // Skip empty fuels
+            datasets.push({
                 label: FUEL_LABELS[fuel] || fuel,
                 data: data,
-                backgroundColor: FUEL_COLORS[fuel],
-                borderColor: '#fff',
-                borderWidth: 1,
-                barPercentage: 0.7
-            };
+                backgroundColor: FUEL_COLORS[fuel] + 'CC',
+                borderColor: FUEL_COLORS[fuel],
+                borderWidth: 1.5,
+                fill: true,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+                tension: 0.3
+            });
         });
 
         genMixChart.data.labels = labels;
         genMixChart.data.datasets = datasets;
         genMixChart.update('active');
 
+        // Build legend showing only fuels with data
         var legendEl = document.getElementById('genMixLegend');
-        legendEl.innerHTML = FUEL_KEYS.map(function (f) {
+        legendEl.innerHTML = datasets.map(function (ds) {
             return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:16px;">' +
-                '<span style="width:24px;height:10px;border-radius:3px;background:' + FUEL_COLORS[f] + ';display:inline-block;"></span>' +
-                (FUEL_LABELS[f] || f) + '</span>';
+                '<span style="width:24px;height:10px;border-radius:3px;background:' + ds.borderColor + ';display:inline-block;"></span>' +
+                ds.label + '</span>';
         }).join('');
     }
 
