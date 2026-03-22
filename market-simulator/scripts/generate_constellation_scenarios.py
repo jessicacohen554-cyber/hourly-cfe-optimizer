@@ -136,6 +136,13 @@ def main():
         for row in reader:
             # Read plant status from Rosetta (Operating / Retired)
             row_status = row.get('Status', '').strip().lower()
+            row_name = row.get('SP Name', '').strip()
+
+            # Skip retired plants — they predate the 2023 baseline snapshot.
+            # Exception: Mystic 8/9 was operating in 2023 under cost-of-service
+            # and retired June 2024, so it's needed for the 2023 baseline.
+            if row_status == 'retired' and row_name != 'Mystic 8 9':
+                continue
 
             stat_type = row.get('Stat Type', '').strip()
             fuel_csv = row.get('Fuel Type', '').strip()
