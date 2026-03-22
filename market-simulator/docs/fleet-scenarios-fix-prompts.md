@@ -27,7 +27,7 @@ Every custom fleet configuration increases emissions against baseline. This happ
 
 ### Other Issues
 - **Accordion collapse** (Issue 1): `renderFleetList()` in fleet-sidebar.js rebuilds full innerHTML on every status change, destroying accordion open/closed DOM state.
-- **Nuclear uprates decrease gen** (Issue 2): The uprate UI and dispatch engine code exist in `dashboard/js/` (fleet-sidebar.js:392-396 has uprate dropdown + MW input; fleet-dispatch-engine.js:265,283-284 adds `_uprate_mw` to capacity). But the uprate appears to decrease generation because the waterfall compares against the WRONG baseline (precomputed JSON vs dispatch engine). Once the baseline is unified (Prompt 2), uprates should work correctly. Verify after Prompt 2.
+- **Nuclear uprates decrease gen** (Issue 2): The uprate UI and dispatch engine code exist in `dashboard/js/` (fleet-sidebar.js:392-396 has uprate dropdown + MW input; fleet-dispatch-engine.js:265,283-284 adds `_uprate_mw` to capacity). The uprate appears to decrease generation because the waterfall compares against the WRONG baseline (precomputed JSON vs dispatch engine). Once the baseline is unified (Prompt 2), uprates should work correctly. **Important context**: No nuclear plants should retire before 2032 under any scenario due to 45U production tax credits, which are built into the 1215 sweep. Nuclear gen decreasing before 2032 is a clear sign of the baseline mismatch, not a real economic signal. Verify after Prompt 2.
 - **No "Default Market" option** (Issue 3): Plants only have Operating/Retired/CCS. Need an option that follows the sweep's economic retirement logic naturally, so plants can retire economically without being forced to operate.
 - **Missing 2023 baseline chart** (Issue 4): Only market trajectory delta exists. Need a chart showing delta vs actual 2023 eGRID baseline values.
 
@@ -465,4 +465,84 @@ git push -u origin claude/fix-fleet-scenarios-calcs-AYeYh
 
 ---
 
-*Prompt 5 (QA + verification) will be added in next commit.*
+## Prompt 5: End-to-End QA & Verification
+
+### Context
+Prompts 1-4 fix the accordion UI, unify the calculation engine, add Default Market status, and add the 2023 baseline chart. This prompt verifies everything works end-to-end with specific test cases the user provided.
+
+### Task
+
+#### Test Case 1: Colorado Bend II CCS Retrofit
+User's expected calculation:
+- 2023 eGRID: 73% CF, 2.828 Mt CO₂
+- With CCS: 80% CF, 15% derate, 95% capture rate
+- Gross gen at 80% CF: 1,210 MW × 0.80 × 8,760 = 8,479,680 MWh
+- Net gen (after 15% derate): 8,479,680 × 0.85 = 7,207,728 MWh
+- Baseline CO₂ rate: 2.828 Mt / (1,210 × 0.73 × 8,760 MWh) = ~0.366 t/MWh
+- Gross emissions: 8,479,680 × 0.366 / 1e6 = 3.104 Mt
+- After 95% capture: 3.104 × 0.05 = 0.155 Mt
+- **Reduction from 2023 baseline: 2.828 - 0.155 = 2.673 Mt (94.5% reduction)**
+
+Steps:
+1. Open dashboard/fleet_scenarios.html
+2. Open sidebar, find Colorado Bend II (ERCOT, gas_ccgt)
+3. Set CCS panel: Derate = 15%, Capture Rate = 95%, CF = 80%
+4. Set Colorado Bend II status to "CCS Retrofit", year 2028
+5. Click Recalculate
+6. Check "Emissions Delta vs 2023 Baseline" chart at year 2030 — Colorado Bend II should show ~-2.67 Mt
+7. Check "Emissions Delta vs Market Trajectory Baseline" chart — Colorado Bend II should show a negative delta (reduction vs what the sweep says it would emit without CCS)
+8. **Critical**: No other plants should show significant deltas unless they're economically retiring under the sweep
+
+#### Test Case 2: Limerick Nuclear Uprate
+User's expected calculation:
+- Limerick (PJM, nuclear): add +343 MW uprate in 2030
+- At 92% CF: 343 × 0.92 × 8,760 / 1e6 = 2.764 TWh additional clean generation
+- Total nuclear fleet should INCREASE by ~2.76 TWh (from ~187 TWh baseline)
+- Zero emission impact (nuclear = 0 emissions)
+
+Steps:
+1. Set Limerick to "Uprate", +343 MW, year 2030
+2. Click Recalculate
+3. Verify nuclear generation at 2030 is ~190 TWh (baseline + 2.76), NOT 171 TWh
+4. **Critical**: Morgan Energy Center (Alabama, ERCOT) and Hillabee (Alabama, ERCOT) should show ZERO delta — they're completely unrelated to Limerick
+
+#### Test Case 3: Baseline Identity
+Steps:
+1. Open sidebar, change NOTHING
+2. Click Recalculate
+3. Both waterfall charts should show zero or near-zero deltas for ALL plants
+4. The fan chart custom scenario line should overlap exactly with the baseline
+
+#### Test Case 4: Default Market Behavior
+Steps:
+1. Set all plants to "Default Market" (should be default)
+2. Click Recalculate — identical to baseline
+3. Change one plant to "Operating (forced)" that would normally retire economically
+4. That plant shows increased emissions; all others unchanged
+5. Change it to "Retired" — that plant shows zero emissions from retirement year
+
+#### Test Case 5: Accordion Persistence
+Steps:
+1. Expand Nuclear > PJM group
+2. Change a fossil plant status in a different group
+3. Nuclear > PJM should remain open
+4. Expand 3 groups across categories, make changes — all stay open
+
+### Debug Checklist (if tests fail)
+- Open browser console, check for errors
+- After Recalculate, log `customScenario.envelope['2030']` and `DATA.scenarios.baseline.envelope['2030']` — if baseline is still from precomputed JSON (~23 Mt), the engine baseline wasn't set correctly
+- Check `DATA.scenarios.baseline.plant_detail['2023']` has Colorado Bend II with ~2.83 Mt — if not, the 2023 static CF fallback isn't working
+- If uprates show wrong gen, check `FleetSidebar.getFleetPlants()` for the plant — `_action` should be `'uprate'` and `_uprate_mw` should be 343
+
+### Files Changed
+- None (QA only) — or minor fixes found during testing
+
+### After Completing
+```bash
+git add -A
+git commit -m "QA verification complete — all fleet scenario calculations verified
+
+Tested: CCS retrofit (Colorado Bend II), nuclear uprate (Limerick),
+baseline identity, Default Market behavior, accordion persistence."
+git push -u origin claude/fix-fleet-scenarios-calcs-AYeYh
+```
