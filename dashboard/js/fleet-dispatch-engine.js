@@ -156,11 +156,24 @@ var FleetDispatchEngine = (function () {
     var NON_FOSSIL_CF = {
         nuclear: 0.92,      // ~92% capacity factor
         geothermal: 0.85,   // ~85% capacity factor (baseload)
-        wind: 0.30,         // ~30% capacity factor (intermittent)
-        solar: 0.22,        // ~22% capacity factor (intermittent)
+        wind: 0.30,         // ~30% capacity factor (intermittent, national avg)
+        solar: 0.22,        // ~22% capacity factor (intermittent, national avg)
         hydro: 0.40,        // ~40% capacity factor (Conowingo)
         battery: 0.0,       // Storage, net zero gen
+        ldes: 0.0,          // Long duration storage, net zero gen
         pumped_storage: 0.0 // Pumped storage, net zero gen
+    };
+
+    // Regional capacity factors by ISO (from EIA 2023 fleet-weighted averages)
+    var REGIONAL_CF = {
+        solar: {
+            CAISO: 0.27, ERCOT: 0.24, PJM: 0.18, NYISO: 0.16,
+            NEISO: 0.16, MISO: 0.20, SPP: 0.23
+        },
+        wind: {
+            CAISO: 0.26, ERCOT: 0.35, PJM: 0.28, NYISO: 0.28,
+            NEISO: 0.30, MISO: 0.34, SPP: 0.38
+        }
     };
 
     // Static fallback CFs for fossil plants when sweep data is missing (e.g. 2023 baseline).
@@ -206,7 +219,7 @@ var FleetDispatchEngine = (function () {
         // Generation and emissions accumulators by fuel: [scenario][year]
         var genByFuel = {};
         var emisByFuel = {};
-        ['coal_steam', 'gas_ccgt', 'gas_ct', 'oil_ct', 'gas_oil_ct', 'nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'ccs_ccgt'].forEach(function (f) {
+        ['coal_steam', 'gas_ccgt', 'gas_ct', 'oil_ct', 'gas_oil_ct', 'nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'ccs_ccgt', 'battery', 'ldes'].forEach(function (f) {
             genByFuel[f] = [];
             emisByFuel[f] = [];
             for (var s = 0; s < nScenarios; s++) {
@@ -220,7 +233,15 @@ var FleetDispatchEngine = (function () {
             var fuel = p.fuel_type;
             if (fossilFuels.has(fuel)) return; // Handle in second pass
 
-            var cf = NON_FOSSIL_CF[fuel] || 0;
+            // Use custom CF if set, then regional CF if available, then national average
+            var cf;
+            if (p._custom_cf && p._custom_cf > 0) {
+                cf = p._custom_cf;
+            } else if (REGIONAL_CF[fuel] && REGIONAL_CF[fuel][p.iso]) {
+                cf = REGIONAL_CF[fuel][p.iso];
+            } else {
+                cf = NON_FOSSIL_CF[fuel] || 0;
+            }
             if (cf <= 0) return; // Skip storage (net zero gen)
 
             var capMW = (p.capacity_mw || 0) * (p.equity_share || 1.0);
@@ -513,7 +534,7 @@ var FleetDispatchEngine = (function () {
 
             var genObj = {};
             var emisObj = {};
-            ['coal_steam', 'gas_ccgt', 'gas_ct', 'oil_ct', 'gas_oil_ct', 'nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'ccs_ccgt'].forEach(function (f) {
+            ['coal_steam', 'gas_ccgt', 'gas_ct', 'oil_ct', 'gas_oil_ct', 'nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'ccs_ccgt', 'battery', 'ldes'].forEach(function (f) {
                 if (genByFuel[f]) {
                     genObj[f] = Math.round(genByFuel[f][p50Si][yi6] * 100) / 100;
                 }

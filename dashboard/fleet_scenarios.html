@@ -604,9 +604,9 @@
             <div class="sb-section-title">Add New Plant</div>
             <div id="addPlantSection">
                 <div class="sb-form-row">
-                    <div><label>Plant Name</label><input type="text" id="apName" placeholder="New CCGT"></div>
+                    <div><label>Plant Name</label><input type="text" id="apName" placeholder="New Plant"></div>
                     <div><label>ISO</label>
-                        <select id="apISO">
+                        <select id="apISO" onchange="window._apFuelTypeChanged && window._apFuelTypeChanged()">
                             <option value="PJM">PJM</option>
                             <option value="ERCOT">ERCOT</option>
                             <option value="CAISO">CAISO</option>
@@ -619,17 +619,37 @@
                 </div>
                 <div class="sb-form-row">
                     <div><label>Capacity (MW)</label><input type="number" id="apCapacity" value="1200" min="1"></div>
-                    <div><label>Heat Rate (MMBtu/MWh)</label><input type="number" id="apHeatRate" value="6.5" step="0.1" min="1"></div>
-                </div>
-                <div class="sb-form-row">
-                    <div><label>Fuel Type</label>
-                        <select id="apFuelType">
-                            <option value="gas_ccgt">Gas CCGT</option>
-                            <option value="gas_ct">Gas CT</option>
-                            <option value="oil_ct">Oil CT</option>
-                            <option value="gas_oil_ct">Gas/Oil Dual</option>
+                    <div><label>Fuel / Resource Type</label>
+                        <select id="apFuelType" onchange="window._apFuelTypeChanged && window._apFuelTypeChanged()">
+                            <optgroup label="Fossil">
+                                <option value="gas_ccgt">Gas CCGT</option>
+                                <option value="gas_ct">Gas CT</option>
+                                <option value="oil_ct">Oil CT</option>
+                                <option value="gas_oil_ct">Gas/Oil Dual</option>
+                            </optgroup>
+                            <optgroup label="Clean Firm">
+                                <option value="nuclear">Nuclear</option>
+                                <option value="geothermal">Geothermal</option>
+                            </optgroup>
+                            <optgroup label="Renewable">
+                                <option value="solar">Solar</option>
+                                <option value="wind">Wind</option>
+                            </optgroup>
+                            <optgroup label="Storage">
+                                <option value="battery_4hr">Battery (4hr)</option>
+                                <option value="battery_8hr">Battery (8hr)</option>
+                                <option value="ldes">LDES (100hr Iron-Air)</option>
+                            </optgroup>
                         </select>
                     </div>
+                </div>
+                <div class="sb-form-row" id="apFossilFields">
+                    <div><label>Heat Rate (MMBtu/MWh)</label><input type="number" id="apHeatRate" value="6.5" step="0.1" min="1"></div>
+                </div>
+                <div class="sb-form-row" id="apCleanFields" style="display:none;">
+                    <div><label>Capacity Factor (%)</label><input type="number" id="apCF" value="92" step="1" min="1" max="100"></div>
+                </div>
+                <div class="sb-form-row">
                     <div><label>Year Online</label><input type="number" id="apYearOnline" value="2028" min="2023" max="2050"></div>
                 </div>
                 <div class="sb-form-row full">
