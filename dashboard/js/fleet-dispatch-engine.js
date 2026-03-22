@@ -193,7 +193,8 @@ var FleetDispatchEngine = (function () {
         // CCS parameters from sidebar panel (override per-plant defaults)
         var globalDeratePct = options.ccs_derate_pct != null ? options.ccs_derate_pct : 14;
         var globalCapturePct = options.ccs_capture_rate_pct != null ? options.ccs_capture_rate_pct : 90;
-        var globalCcsCfCap = (options.ccs_cf_pct != null ? options.ccs_cf_pct : 85) / 100.0; // max CF for CCS plants
+        // Note: CCS plants now keep market-driven CF (matching market-simulator behavior)
+        // The ccs_cf_pct option is no longer used to override CF
 
         var nScenarios = sweepData.n_scenarios;
         var nYears = sweepData.n_years;
@@ -422,15 +423,13 @@ var FleetDispatchEngine = (function () {
                     // Generation
                     var genMwh = capMW * adjustedCf * 8760;
 
-                    // CCS: runs baseload at user-set CF (to maximize 45Q), derate for parasitic load,
-                    // capture rate reduces CO₂
+                    // CCS: derate reduces net generation, capture reduces CO₂
+                    // CCS plants keep market-driven CF (matching market-simulator behavior)
                     var effectiveCO2 = baseCO2;
                     var reportFuel = fuel;
                     if (action === 'ccs_retrofit' && yearOnline) {
                         var capture = capturePerYear[yi3];
                         if (capture > 0) {
-                            // CCS plants run baseload at the user-set CF, not market-driven
-                            genMwh = capMW * globalCcsCfCap * 8760;
                             // Derate reduces generation (parasitic load)
                             genMwh = genMwh * derateFactor;
                             // Capture reduces CO₂ emissions
@@ -440,7 +439,6 @@ var FleetDispatchEngine = (function () {
                     } else if (p.status === 'ccs_retrofit' && statusPerYear[yi3] === 'ccs_retrofit') {
                         // Plant already has CCS in base fleet config — only apply if status matches
                         var staticCapture = p.ccs_capture_rate || (globalCapturePct / 100.0);
-                        genMwh = capMW * globalCcsCfCap * 8760;
                         genMwh = genMwh * derateFactor;
                         effectiveCO2 = baseCO2 * (1.0 - staticCapture);
                         reportFuel = 'ccs_ccgt';
