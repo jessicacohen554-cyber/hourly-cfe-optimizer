@@ -342,6 +342,63 @@
             color: var(--ceg-green); font-weight: 600; margin-top: 8px;
         }
 
+        /* CCS Parameters Panel */
+        .sb-ccs-panel {
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%);
+            border: 1px solid #c7d2e8;
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-bottom: 12px;
+        }
+        .sb-ccs-panel-header {
+            display: flex; align-items: center; gap: 8px;
+            font-weight: 700; font-size: 0.85rem; color: #1e3a5f;
+            margin-bottom: 10px;
+        }
+        .sb-ccs-panel-icon { font-size: 1.1rem; }
+        .sb-ccs-param-row {
+            margin-bottom: 10px;
+        }
+        .sb-ccs-param-row label {
+            display: block; font-size: 0.78rem; font-weight: 600;
+            color: #374151; margin-bottom: 4px;
+        }
+        .sb-slider-wrap {
+            display: flex; align-items: center; gap: 10px;
+        }
+        .sb-slider-wrap input[type="range"] {
+            flex: 1; height: 6px; -webkit-appearance: none; appearance: none;
+            background: #c7d2e8; border-radius: 3px; outline: none;
+        }
+        .sb-slider-wrap input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 18px; height: 18px; border-radius: 50%;
+            background: var(--ceg-blue, #2372B9); cursor: pointer;
+            border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .sb-slider-wrap input[type="range"]::-moz-range-thumb {
+            width: 18px; height: 18px; border-radius: 50%;
+            background: var(--ceg-blue, #2372B9); cursor: pointer;
+            border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .sb-slider-value {
+            min-width: 36px; text-align: right; font-weight: 700;
+            font-size: 0.85rem; color: var(--ceg-blue, #2372B9);
+            font-variant-numeric: tabular-nums;
+        }
+        .sb-param-hint {
+            font-size: 0.7rem; color: #6b7280; margin-top: 2px;
+        }
+        .sb-ccs-apply-btn {
+            width: 100%; margin-top: 6px;
+            background: var(--ceg-blue, #2372B9) !important;
+            color: #fff !important; border: none !important;
+            font-weight: 600;
+        }
+        .sb-ccs-apply-btn:hover {
+            background: #1a5a9e !important;
+        }
+
         /* Responsive */
         @media (max-width: 900px) {
             .controls-strip { flex-direction: column; align-items: stretch; }
@@ -494,6 +551,32 @@
             <button class="sidebar-close" id="sidebarClose">&times;</button>
         </div>
         <div class="sidebar-body">
+
+            <!-- CCS Global Parameters Panel -->
+            <div class="sb-ccs-panel" id="ccsParamsPanel">
+                <div class="sb-ccs-panel-header">
+                    <span class="sb-ccs-panel-icon">⚙</span>
+                    <span>CCS Retrofit Parameters</span>
+                </div>
+                <div class="sb-ccs-param-row">
+                    <label for="ccsDerateSlider">Capacity Derate</label>
+                    <div class="sb-slider-wrap">
+                        <input type="range" id="ccsDerateSlider" min="0" max="30" value="14" step="1">
+                        <span class="sb-slider-value" id="ccsDerateValue">14%</span>
+                    </div>
+                    <div class="sb-param-hint">Parasitic load reduces net output</div>
+                </div>
+                <div class="sb-ccs-param-row">
+                    <label for="ccsCaptureSlider">Carbon Capture Rate</label>
+                    <div class="sb-slider-wrap">
+                        <input type="range" id="ccsCaptureSlider" min="50" max="99" value="90" step="1">
+                        <span class="sb-slider-value" id="ccsCaptureValue">90%</span>
+                    </div>
+                    <div class="sb-param-hint">Fraction of CO₂ captured and stored</div>
+                </div>
+                <button class="sb-btn sb-ccs-apply-btn" id="ccsApplyAllBtn">Apply to All CCS Plants</button>
+            </div>
+
             <div id="sidebarFleetList">
                 <div style="text-align:center; color:var(--text-dim); padding:24px;">Loading fleet data...</div>
             </div>
