@@ -43,6 +43,7 @@ jobs:
   # ── Phase 1: Run sweep per-ISO in parallel ──
   # ERCOT uses 4-zone iterative solver (~10× slower) so it's sharded into
   # 5 parallel jobs. All other ISOs run as single jobs.
+  # Select a specific ISO via the `iso` input to run only that ISO.
   sweep:
     runs-on: ubuntu-latest
     timeout-minutes: 350
@@ -85,6 +86,8 @@ jobs:
             shard: ""
             shard_label: ""
       fail-fast: false
+    # Only run the full matrix when ALL is selected (or default)
+    if: ${{ inputs.iso == 'ALL' || inputs.iso == '' }}
 
     steps:
       - name: Checkout repo
@@ -131,10 +134,121 @@ jobs:
           path: market-simulator/results/sweep_1215/${{ matrix.iso }}${{ matrix.shard_label }}/
           retention-days: 3
 
+  # ── Single-ISO job: runs when a specific non-ERCOT ISO is selected ──
+  sweep-single:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    if: ${{ inputs.iso != 'ALL' && inputs.iso != '' && inputs.iso != 'ERCOT' }}
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy pandas pyarrow scipy numba pydantic
+
+      - name: Create output directory
+        run: mkdir -p market-simulator/results/sweep_1215
+
+      - name: "Warmup Numba JIT cache"
+        working-directory: market-simulator/scripts
+        run: |
+          python -c "
+          print('Compiling Numba kernels...')
+          import dispatch_utils, market_simulation, scenario_common
+          print('Numba JIT compilation complete.')
+          "
+
+      - name: "Run 1,215-scenario sweep — ${{ inputs.iso }}"
+        working-directory: market-simulator/scripts
+        run: |
+          python run_sweep_1215.py \
+            --isos ${{ inputs.iso }} \
+            --output-dir ../results/sweep_1215/${{ inputs.iso }}
+
+      - name: Upload per-ISO parquet
+        uses: actions/upload-artifact@v4
+        with:
+          name: sweep-1215-${{ inputs.iso }}
+          path: market-simulator/results/sweep_1215/${{ inputs.iso }}/
+          retention-days: 3
+
+  # ── Single-ISO ERCOT: sharded into 5 parallel jobs ──
+  sweep-ercot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    if: ${{ inputs.iso == 'ERCOT' }}
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+    strategy:
+      matrix:
+        include:
+          - shard: "1/5"
+            shard_label: "-shard-1of5"
+          - shard: "2/5"
+            shard_label: "-shard-2of5"
+          - shard: "3/5"
+            shard_label: "-shard-3of5"
+          - shard: "4/5"
+            shard_label: "-shard-4of5"
+          - shard: "5/5"
+            shard_label: "-shard-5of5"
+      fail-fast: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy pandas pyarrow scipy numba pydantic
+
+      - name: Create output directory
+        run: mkdir -p market-simulator/results/sweep_1215
+
+      - name: "Warmup Numba JIT cache"
+        working-directory: market-simulator/scripts
+        run: |
+          python -c "
+          print('Compiling Numba kernels...')
+          import dispatch_utils, market_simulation, scenario_common
+          print('Numba JIT compilation complete.')
+          "
+
+      - name: "Run 1,215-scenario sweep — ERCOT${{ matrix.shard_label }}"
+        working-directory: market-simulator/scripts
+        run: |
+          python run_sweep_1215.py \
+            --isos ERCOT \
+            --output-dir ../results/sweep_1215/ERCOT${{ matrix.shard_label }} \
+            --shard ${{ matrix.shard }}
+
+      - name: Upload per-ISO parquet
+        uses: actions/upload-artifact@v4
+        with:
+          name: sweep-1215-ERCOT${{ matrix.shard_label }}
+          path: market-simulator/results/sweep_1215/ERCOT${{ matrix.shard_label }}/
+          retention-days: 3
+
   # ── Phase 2: Merge per-ISO parquets into combined output ──
   merge:
-    needs: sweep
-    if: always()  # Run merge even if some ISOs timed out — merges whatever completed
+    needs: [sweep, sweep-single, sweep-ercot]
+    if: always()  # Run merge even if some jobs were skipped or timed out
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
