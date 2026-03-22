@@ -413,9 +413,9 @@ var FleetDispatchEngine = (function () {
                     if (action === 'add_plant' && yearOnline && years[yi3] < yearOnline) {
                         adjustedCf = 0;
                     }
-                    // Plants marked retired in source data: run in first year (2023 baseline)
-                    // then zero for all subsequent years
-                    if (p.status === 'retired' && !action && years[yi3] > years[0]) {
+                    // Plants marked retired in source data: run through 2024 (Mystic retired June 2024)
+                    // then zero for 2025+
+                    if (p.status === 'retired' && !action && years[yi3] > 2024) {
                         adjustedCf = 0;
                     }
 
