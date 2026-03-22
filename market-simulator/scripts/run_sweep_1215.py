@@ -157,6 +157,9 @@ def main():
     parser.add_argument('--export-defaults', metavar='DIR', default=None,
                         help='Export current hardcoded defaults as CSV templates '
                              'to the specified directory, then exit.')
+    parser.add_argument('--shard', type=str, default=None,
+                        help='Scenario shard: "K/N" runs shard K of N '
+                             '(1-indexed). E.g., --shard 1/3 runs first third.')
     args = parser.parse_args()
 
     # Handle --export-defaults
@@ -186,6 +189,12 @@ def main():
     print(f"Years: {sim_years[0]}–{sim_years[-1]} (step={args.year_step}, n={len(sim_years)})")
     print(f"Output: {os.path.abspath(output_dir)}")
 
+    # Parse shard argument
+    shard = None
+    if args.shard:
+        parts = args.shard.split('/')
+        shard = (int(parts[0]), int(parts[1]))
+
     # ── Run the sweep ──
     t0 = time.time()
     all_results = run_full_sweep(
@@ -194,6 +203,7 @@ def main():
         sim_years=sim_years,
         params_csv=args.params_csv,
         price_sens_csv=args.price_sens_csv,
+        shard=shard,
     )
     elapsed = time.time() - t0
     print(f"\nSweep completed in {elapsed:.1f}s")
