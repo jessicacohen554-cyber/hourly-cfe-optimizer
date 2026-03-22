@@ -41,7 +41,8 @@ env:
 
 jobs:
   # ── Phase 1: Run sweep per-ISO in parallel ──
-  # ERCOT uses N-zone iterative solver (4 zones) so gets extra time via timeout.
+  # ERCOT uses 4-zone iterative solver (~10× slower) so it's sharded into
+  # 5 parallel jobs. All other ISOs run as single jobs.
   sweep:
     runs-on: ubuntu-latest
     timeout-minutes: 350
@@ -49,7 +50,40 @@ jobs:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
     strategy:
       matrix:
-        iso: [CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP]
+        include:
+          - iso: CAISO
+            shard: ""
+            shard_label: ""
+          - iso: ERCOT
+            shard: "1/5"
+            shard_label: "-shard-1of5"
+          - iso: ERCOT
+            shard: "2/5"
+            shard_label: "-shard-2of5"
+          - iso: ERCOT
+            shard: "3/5"
+            shard_label: "-shard-3of5"
+          - iso: ERCOT
+            shard: "4/5"
+            shard_label: "-shard-4of5"
+          - iso: ERCOT
+            shard: "5/5"
+            shard_label: "-shard-5of5"
+          - iso: PJM
+            shard: ""
+            shard_label: ""
+          - iso: NYISO
+            shard: ""
+            shard_label: ""
+          - iso: NEISO
+            shard: ""
+            shard_label: ""
+          - iso: MISO
+            shard: ""
+            shard_label: ""
+          - iso: SPP
+            shard: ""
+            shard_label: ""
       fail-fast: false
 
     steps:
@@ -78,18 +112,23 @@ jobs:
           print('Numba JIT compilation complete.')
           "
 
-      - name: "Run 1,215-scenario sweep — ${{ matrix.iso }}"
+      - name: "Run 1,215-scenario sweep — ${{ matrix.iso }}${{ matrix.shard_label }}"
         working-directory: market-simulator/scripts
         run: |
+          SHARD_ARG=""
+          if [ -n "${{ matrix.shard }}" ]; then
+            SHARD_ARG="--shard ${{ matrix.shard }}"
+          fi
           python run_sweep_1215.py \
             --isos ${{ matrix.iso }} \
-            --output-dir ../results/sweep_1215/${{ matrix.iso }}
+            --output-dir ../results/sweep_1215/${{ matrix.iso }}${{ matrix.shard_label }} \
+            $SHARD_ARG
 
       - name: Upload per-ISO parquet
         uses: actions/upload-artifact@v4
         with:
-          name: sweep-1215-${{ matrix.iso }}
-          path: market-simulator/results/sweep_1215/${{ matrix.iso }}/
+          name: sweep-1215-${{ matrix.iso }}${{ matrix.shard_label }}
+          path: market-simulator/results/sweep_1215/${{ matrix.iso }}${{ matrix.shard_label }}/
           retention-days: 3
 
   # ── Phase 2: Merge per-ISO parquets into combined output ──
