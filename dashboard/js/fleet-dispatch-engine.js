@@ -156,11 +156,24 @@ var FleetDispatchEngine = (function () {
     var NON_FOSSIL_CF = {
         nuclear: 0.92,      // ~92% capacity factor
         geothermal: 0.85,   // ~85% capacity factor (baseload)
-        wind: 0.30,         // ~30% capacity factor (intermittent)
-        solar: 0.22,        // ~22% capacity factor (intermittent)
+        wind: 0.30,         // ~30% capacity factor (intermittent, national avg)
+        solar: 0.22,        // ~22% capacity factor (intermittent, national avg)
         hydro: 0.40,        // ~40% capacity factor (Conowingo)
         battery: 0.0,       // Storage, net zero gen
+        ldes: 0.0,          // Long duration storage, net zero gen
         pumped_storage: 0.0 // Pumped storage, net zero gen
+    };
+
+    // Regional capacity factors by ISO (from EIA 2023 fleet-weighted averages)
+    var REGIONAL_CF = {
+        solar: {
+            CAISO: 0.27, ERCOT: 0.24, PJM: 0.18, NYISO: 0.16,
+            NEISO: 0.16, MISO: 0.20, SPP: 0.23
+        },
+        wind: {
+            CAISO: 0.26, ERCOT: 0.35, PJM: 0.28, NYISO: 0.28,
+            NEISO: 0.30, MISO: 0.34, SPP: 0.38
+        }
     };
 
     // Static fallback CFs for fossil plants when sweep data is missing (e.g. 2023 baseline).
@@ -180,6 +193,7 @@ var FleetDispatchEngine = (function () {
         // CCS parameters from sidebar panel (override per-plant defaults)
         var globalDeratePct = options.ccs_derate_pct != null ? options.ccs_derate_pct : 14;
         var globalCapturePct = options.ccs_capture_rate_pct != null ? options.ccs_capture_rate_pct : 90;
+        var globalCcsCfCap = (options.ccs_cf_pct != null ? options.ccs_cf_pct : 85) / 100.0; // max CF for CCS plants
 
         var nScenarios = sweepData.n_scenarios;
         var nYears = sweepData.n_years;
@@ -205,7 +219,7 @@ var FleetDispatchEngine = (function () {
         // Generation and emissions accumulators by fuel: [scenario][year]
         var genByFuel = {};
         var emisByFuel = {};
-        ['coal_steam', 'gas_ccgt', 'gas_ct', 'oil_ct', 'gas_oil_ct', 'nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'ccs_ccgt'].forEach(function (f) {
+        ['coal_steam', 'gas_ccgt', 'gas_ct', 'oil_ct', 'gas_oil_ct', 'nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'ccs_ccgt', 'battery', 'ldes'].forEach(function (f) {
             genByFuel[f] = [];
             emisByFuel[f] = [];
             for (var s = 0; s < nScenarios; s++) {
@@ -219,7 +233,15 @@ var FleetDispatchEngine = (function () {
             var fuel = p.fuel_type;
             if (fossilFuels.has(fuel)) return; // Handle in second pass
 
-            var cf = NON_FOSSIL_CF[fuel] || 0;
+            // Use custom CF if set, then regional CF if available, then national average
+            var cf;
+            if (p._custom_cf && p._custom_cf > 0) {
+                cf = p._custom_cf;
+            } else if (REGIONAL_CF[fuel] && REGIONAL_CF[fuel][p.iso]) {
+                cf = REGIONAL_CF[fuel][p.iso];
+            } else {
+                cf = NON_FOSSIL_CF[fuel] || 0;
+            }
             if (cf <= 0) return; // Skip storage (net zero gen)
 
             var capMW = (p.capacity_mw || 0) * (p.equity_share || 1.0);
@@ -237,6 +259,9 @@ var FleetDispatchEngine = (function () {
                 cfArr[si] = new Float64Array(nYears);
             }
 
+            // Uprate: additional MW from year_online onward at same CF
+            var uprateMW = (action === 'uprate' && p._uprate_mw) ? p._uprate_mw * (p.equity_share || 1.0) : 0;
+
             for (var yi = 0; yi < nYears; yi++) {
                 var y = years[yi];
 
@@ -245,12 +270,18 @@ var FleetDispatchEngine = (function () {
                     statusPerYear[yi] = 'retired';
                 } else if (action === 'add_plant' && yearOnline && y < yearOnline) {
                     statusPerYear[yi] = 'not_yet_built';
+                } else if (action === 'uprate' && yearOnline && y >= yearOnline) {
+                    statusPerYear[yi] = 'uprated';
                 } else {
                     statusPerYear[yi] = p.status || 'operating';
                 }
 
                 var activeCf = (statusPerYear[yi] === 'retired' || statusPerYear[yi] === 'not_yet_built') ? 0 : cf;
-                var genMwh = capMW * activeCf * 8760;
+                var effectiveCap = capMW;
+                if (statusPerYear[yi] === 'uprated') {
+                    effectiveCap = capMW + uprateMW;
+                }
+                var genMwh = effectiveCap * activeCf * 8760;
 
                 // Same generation across all sweep scenarios (non-fossil isn't affected by fossil cost sweeps)
                 for (var si2 = 0; si2 < nScenarios; si2++) {
@@ -383,12 +414,15 @@ var FleetDispatchEngine = (function () {
                     // Generation
                     var genMwh = capMW * adjustedCf * 8760;
 
-                    // CCS: derate reduces net capacity/generation, capture reduces CO₂
+                    // CCS: runs baseload at user-set CF (to maximize 45Q), derate for parasitic load,
+                    // capture rate reduces CO₂
                     var effectiveCO2 = baseCO2;
                     var reportFuel = fuel;
                     if (action === 'ccs_retrofit' && yearOnline) {
                         var capture = capturePerYear[yi3];
                         if (capture > 0) {
+                            // CCS plants run baseload at the user-set CF, not market-driven
+                            genMwh = capMW * globalCcsCfCap * 8760;
                             // Derate reduces generation (parasitic load)
                             genMwh = genMwh * derateFactor;
                             // Capture reduces CO₂ emissions
@@ -398,6 +432,7 @@ var FleetDispatchEngine = (function () {
                     } else if (p.status === 'ccs_retrofit') {
                         // Plant already has CCS in base fleet config
                         var staticCapture = p.ccs_capture_rate || (globalCapturePct / 100.0);
+                        genMwh = capMW * globalCcsCfCap * 8760;
                         genMwh = genMwh * derateFactor;
                         effectiveCO2 = baseCO2 * (1.0 - staticCapture);
                         reportFuel = 'ccs_ccgt';
@@ -405,10 +440,13 @@ var FleetDispatchEngine = (function () {
 
                     var emisMt = genMwh * effectiveCO2 / 1e6;
 
+                    // Derive effective CF from actual generation
+                    var effectiveCf = (capMW > 0) ? genMwh / (capMW * 8760) : 0;
+
                     fleetEmissions[si2][yi3] += emisMt;
                     genArr[si2][yi3] = genMwh;
                     emisArr[si2][yi3] = emisMt;
-                    cfArr[si2][yi3] = adjustedCf;
+                    cfArr[si2][yi3] = effectiveCf;
 
                     // Accumulate by fuel
                     if (genByFuel[reportFuel]) {
@@ -496,7 +534,7 @@ var FleetDispatchEngine = (function () {
 
             var genObj = {};
             var emisObj = {};
-            ['coal_steam', 'gas_ccgt', 'gas_ct', 'oil_ct', 'gas_oil_ct', 'nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'ccs_ccgt'].forEach(function (f) {
+            ['coal_steam', 'gas_ccgt', 'gas_ct', 'oil_ct', 'gas_oil_ct', 'nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'ccs_ccgt', 'battery', 'ldes'].forEach(function (f) {
                 if (genByFuel[f]) {
                     genObj[f] = Math.round(genByFuel[f][p50Si][yi6] * 100) / 100;
                 }
