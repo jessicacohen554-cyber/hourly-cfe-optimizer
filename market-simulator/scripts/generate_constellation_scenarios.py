@@ -134,6 +134,11 @@ def main():
     with open(CSV_PATH, 'r', encoding='latin-1') as f:
         reader = csv.DictReader(f)
         for row in reader:
+            # Skip retired plants — only include currently operating fleet
+            row_status = row.get('Status', '').strip().lower()
+            if row_status == 'retired':
+                continue
+
             stat_type = row.get('Stat Type', '').strip()
             fuel_csv = row.get('Fuel Type', '').strip()
             plant_type_csv = row.get('Plant Type', '').strip()
