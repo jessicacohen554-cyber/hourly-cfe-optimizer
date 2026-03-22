@@ -385,16 +385,21 @@ var FleetDispatchEngine = (function () {
                     var genMwh = capMW * adjustedCf * 8760;
 
                     // CCS: runs baseload at user-set CF, derate for parasitic load,
-                    // capture rate reduces CO₂
+                    // capture rate reduces CO₂.
+                    // Key: derate reduces NET electrical output (parasitic load for CCS equipment)
+                    // but does NOT reduce fuel burned. Emissions are based on GROSS generation.
                     var effectiveCO2 = baseCO2;
                     var reportFuel = fuel;
+                    var grossGenForEmissions = genMwh; // default: gross = net (no CCS)
                     if (action === 'ccs_retrofit' && yearOnline) {
                         var capture = capturePerYear[yi3];
                         if (capture > 0) {
-                            // CCS plants run baseload at the user-set CF, not market-driven
-                            genMwh = capMW * globalCcsCfCap * 8760;
-                            // Derate reduces generation (parasitic load)
-                            genMwh = genMwh * derateFactor;
+                            // CCS plants run baseload at the user-set CF
+                            var grossGen = capMW * globalCcsCfCap * 8760;
+                            // Net generation to grid = gross minus parasitic load
+                            genMwh = grossGen * derateFactor;
+                            // Emissions based on GROSS generation (fuel burned at full rate)
+                            grossGenForEmissions = grossGen;
                             // Capture reduces CO₂ emissions
                             effectiveCO2 = baseCO2 * (1.0 - capture);
                             reportFuel = 'ccs_ccgt';
@@ -407,13 +412,15 @@ var FleetDispatchEngine = (function () {
                     } else if (p.status === 'ccs_retrofit') {
                         // Plant already has CCS in base fleet config
                         var staticCapture = p.ccs_capture_rate || (globalCapturePct / 100.0);
-                        genMwh = capMW * globalCcsCfCap * 8760;
-                        genMwh = genMwh * derateFactor;
+                        var grossGen2 = capMW * globalCcsCfCap * 8760;
+                        genMwh = grossGen2 * derateFactor;
+                        grossGenForEmissions = grossGen2;
                         effectiveCO2 = baseCO2 * (1.0 - staticCapture);
                         reportFuel = 'ccs_ccgt';
                     }
 
-                    var emisMt = genMwh * effectiveCO2 / 1e6;
+                    // Emissions: use gross generation for CCS (fuel burned at full rate)
+                    var emisMt = grossGenForEmissions * effectiveCO2 / 1e6;
 
                     fleetEmissions[si2][yi3] += emisMt;
                     genArr[si2][yi3] = genMwh;
