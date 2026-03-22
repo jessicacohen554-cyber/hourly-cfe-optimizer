@@ -238,6 +238,9 @@ var FleetDispatchEngine = (function () {
                 cfArr[si] = new Float64Array(nYears);
             }
 
+            // Uprate: additional MW from year_online onward at same CF
+            var uprateMW = (action === 'uprate' && p._uprate_mw) ? p._uprate_mw * (p.equity_share || 1.0) : 0;
+
             for (var yi = 0; yi < nYears; yi++) {
                 var y = years[yi];
 
@@ -246,12 +249,18 @@ var FleetDispatchEngine = (function () {
                     statusPerYear[yi] = 'retired';
                 } else if (action === 'add_plant' && yearOnline && y < yearOnline) {
                     statusPerYear[yi] = 'not_yet_built';
+                } else if (action === 'uprate' && yearOnline && y >= yearOnline) {
+                    statusPerYear[yi] = 'uprated';
                 } else {
                     statusPerYear[yi] = p.status || 'operating';
                 }
 
                 var activeCf = (statusPerYear[yi] === 'retired' || statusPerYear[yi] === 'not_yet_built') ? 0 : cf;
-                var genMwh = capMW * activeCf * 8760;
+                var effectiveCap = capMW;
+                if (statusPerYear[yi] === 'uprated') {
+                    effectiveCap = capMW + uprateMW;
+                }
+                var genMwh = effectiveCap * activeCf * 8760;
 
                 // Same generation across all sweep scenarios (non-fossil isn't affected by fossil cost sweeps)
                 for (var si2 = 0; si2 < nScenarios; si2++) {

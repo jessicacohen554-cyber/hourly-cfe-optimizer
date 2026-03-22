@@ -381,17 +381,30 @@ var FleetSidebar = (function () {
                     }
                     html += '</div>';
                 } else {
-                    // Non-fossil: Operating/Retired toggle only, read-only capacity
-                    html += '<div><span class="sb-cap-readonly" style="font-size:0.78rem;color:#6b7280;">' + capStr + '</span></div>';
+                    var isNuclear = p.fuel_type === 'nuclear';
 
-                    // Status: Operating / Retired (no CCS option)
-                    html += '<div><select class="sb-status-select" data-idx="' + idx + '">';
+                    // Non-fossil: read-only capacity (plus uprate MW if applicable)
+                    if (isNuclear && currentAction === 'uprate') {
+                        var uprateMW = p._uprate_mw || 0;
+                        html += '<div style="display:flex;flex-direction:column;gap:2px;">';
+                        html += '<span class="sb-cap-readonly" style="font-size:0.78rem;color:#6b7280;">' + capStr + '</span>';
+                        html += '<input type="number" class="sb-uprate-input" data-idx="' + idx + '" value="' + Math.round(uprateMW) + '" min="0" max="2000" step="10" placeholder="+MW" title="Additional uprate capacity (MW)" style="width:72px;font-size:0.75rem;padding:2px 4px;border:1px solid #c7d2e8;border-radius:4px;">';
+                        html += '</div>';
+                    } else {
+                        html += '<div><span class="sb-cap-readonly" style="font-size:0.78rem;color:#6b7280;">' + capStr + '</span></div>';
+                    }
+
+                    // Status: Operating / Retired / Uprate (nuclear only)
+                    html += '<div><select class="sb-status-select' + ((currentAction && currentAction !== 'operating') ? ' modified' : '') + '" data-idx="' + idx + '">';
                     html += '<option value="operating"' + (currentAction === 'operating' || !currentAction ? ' selected' : '') + '>Operating</option>';
                     html += '<option value="retire"' + (currentAction === 'retire' ? ' selected' : '') + '>Retired</option>';
+                    if (isNuclear) {
+                        html += '<option value="uprate"' + (currentAction === 'uprate' ? ' selected' : '') + '>Uprate</option>';
+                    }
                     html += '</select></div>';
 
-                    // Year input for retirement
-                    var showYearNF = (currentAction === 'retire');
+                    // Year input for retirement or uprate
+                    var showYearNF = (currentAction === 'retire' || currentAction === 'uprate');
                     var yearValNF = p._year_online || 2030;
                     html += '<div>';
                     if (showYearNF) {
@@ -452,6 +465,14 @@ var FleetSidebar = (function () {
             });
         });
 
+        // Bind uprate MW inputs
+        els.fleetList.querySelectorAll('.sb-uprate-input').forEach(function (inp) {
+            inp.addEventListener('change', function () {
+                var p = findPlant(this.dataset.idx);
+                if (p) p._uprate_mw = Math.max(0, parseFloat(this.value) || 0);
+            });
+        });
+
         // Bind remove buttons for added plants
         els.fleetList.querySelectorAll('.sb-remove-added').forEach(function (btn) {
             btn.addEventListener('click', function () {
@@ -475,17 +496,21 @@ var FleetSidebar = (function () {
         var p = findPlant(idx);
         if (!p) return;
         p._action = newStatus === 'operating' ? null : newStatus;
-        if (newStatus === 'retire' || newStatus === 'ccs_retrofit') {
+        if (newStatus === 'retire' || newStatus === 'ccs_retrofit' || newStatus === 'uprate') {
             if (!p._year_online) p._year_online = 2030;
             if (newStatus === 'ccs_retrofit') {
                 // Use global CCS panel params
                 p._ccs_target_rate = ccsParams.capture_rate_pct / 100.0;
                 p._ccs_derate_pct = ccsParams.derate_pct;
             }
+            if (newStatus === 'uprate') {
+                if (!p._uprate_mw) p._uprate_mw = 200; // Default uprate MW
+            }
         }
         if (newStatus === 'operating') {
             p._ccs_target_rate = 0;
             p._ccs_derate_pct = 0;
+            p._uprate_mw = 0;
         }
         renderFleetList();
     }
