@@ -5,9 +5,9 @@
       "color": "#7E8083",
       "envelope": {
         "2023": {
-          "p10": 40.8,
-          "p50": 46.3,
-          "p90": 51.9
+          "p10": 41.2,
+          "p50": 46.8,
+          "p90": 52.4
         },
         "2025": {
           "p10": 50.6,
@@ -43,9 +43,9 @@
       "envelope_by_fossil_cost": {
         "Low": {
           "2023": {
-            "p10": 38.8,
-            "p50": 44.0,
-            "p90": 49.3
+            "p10": 39.1,
+            "p50": 44.5,
+            "p90": 49.8
           },
           "2025": {
             "p10": 48.1,
@@ -80,9 +80,9 @@
         },
         "Medium": {
           "2023": {
-            "p10": 40.8,
-            "p50": 46.3,
-            "p90": 51.9
+            "p10": 41.2,
+            "p50": 46.8,
+            "p90": 52.4
           },
           "2025": {
             "p10": 50.6,
@@ -117,9 +117,9 @@
         },
         "High": {
           "2023": {
-            "p10": 42.8,
-            "p50": 48.6,
-            "p90": 54.5
+            "p10": 43.3,
+            "p50": 49.1,
+            "p90": 55.0
           },
           "2025": {
             "p10": 53.1,
@@ -267,7 +267,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -486,6 +486,16 @@
             "status": "operating"
           },
           {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.867,
+            "emissions_mt": 0.348,
+            "status": "operating"
+          },
+          {
             "name": "Bethpage",
             "orispl": 50292,
             "fuel_type": "gas_ccgt",
@@ -497,7 +507,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -507,7 +517,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -523,6 +533,16 @@
             "ccs_capacity_mw": 0.0,
             "gen_twh": 0.311,
             "emissions_mt": 0.189,
+            "status": "operating"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.433,
+            "emissions_mt": 0.173,
             "status": "operating"
           },
           {
@@ -587,7 +607,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -597,7 +617,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -617,7 +637,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -627,7 +647,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -637,7 +657,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -647,7 +667,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -667,7 +687,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -777,7 +797,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -797,7 +817,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -823,6 +843,16 @@
             "ccs_capacity_mw": 0.0,
             "gen_twh": 0.002,
             "emissions_mt": 0.004,
+            "status": "operating"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.007,
+            "emissions_mt": 0.003,
             "status": "operating"
           },
           {
@@ -1039,7 +1069,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -1269,7 +1299,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -1279,7 +1309,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -1359,7 +1389,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -1369,7 +1399,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -1389,7 +1419,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -1399,7 +1429,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -1409,7 +1439,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -1429,7 +1459,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -1439,7 +1469,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -1549,7 +1579,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -1569,7 +1599,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -1656,6 +1686,36 @@
             "gen_twh": 0.001,
             "emissions_mt": 0.001,
             "status": "operating"
+          },
+          {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
           },
           {
             "name": "Delaware City 10",
@@ -1801,7 +1861,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -2031,7 +2091,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -2041,7 +2101,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -2121,7 +2181,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -2131,7 +2191,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -2151,7 +2211,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -2161,7 +2221,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -2171,7 +2231,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -2191,7 +2251,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -2201,7 +2261,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -2311,7 +2371,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -2331,7 +2391,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -2418,6 +2478,36 @@
             "gen_twh": 0.001,
             "emissions_mt": 0.001,
             "status": "operating"
+          },
+          {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
           },
           {
             "name": "Delaware City 10",
@@ -2563,7 +2653,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -2793,7 +2883,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -2803,7 +2893,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -2883,7 +2973,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -2893,7 +2983,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -2913,7 +3003,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -2923,7 +3013,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -2933,7 +3023,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -2943,7 +3033,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -2963,7 +3053,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -3073,7 +3163,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -3083,7 +3173,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -3180,6 +3270,36 @@
             "gen_twh": 0.001,
             "emissions_mt": 0.001,
             "status": "operating"
+          },
+          {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
           },
           {
             "name": "Delaware City 10",
@@ -3325,7 +3445,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -3555,7 +3675,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -3565,7 +3685,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -3645,7 +3765,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -3655,7 +3775,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -3675,7 +3795,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -3685,7 +3805,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -3695,7 +3815,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -3705,7 +3825,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -3725,7 +3845,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -3835,7 +3955,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -3855,7 +3975,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -3942,6 +4062,36 @@
             "gen_twh": 0.001,
             "emissions_mt": 0.001,
             "status": "operating"
+          },
+          {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
           },
           {
             "name": "Delaware City 10",
@@ -4087,7 +4237,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -4317,7 +4467,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -4327,7 +4477,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -4407,7 +4557,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -4417,7 +4567,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -4437,7 +4587,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -4447,7 +4597,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -4457,7 +4607,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -4467,7 +4617,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -4487,7 +4637,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -4597,7 +4747,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -4617,7 +4767,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -4704,6 +4854,36 @@
             "gen_twh": 0.001,
             "emissions_mt": 0.001,
             "status": "operating"
+          },
+          {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
           },
           {
             "name": "Delaware City 10",
@@ -4849,7 +5029,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -5079,7 +5259,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -5089,7 +5269,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -5169,7 +5349,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -5179,7 +5359,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -5199,7 +5379,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -5209,7 +5389,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -5219,7 +5399,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -5239,7 +5419,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -5249,7 +5429,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -5359,7 +5539,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -5379,7 +5559,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -5468,6 +5648,36 @@
             "status": "operating"
           },
           {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
             "name": "Delaware City 10",
             "orispl": 592,
             "fuel_type": "gas_oil_ct",
@@ -5496,9 +5706,9 @@
           "wind": 3.5,
           "solar": 0.5,
           "hydro": 1.9,
-          "gas_ccgt": 118.7,
+          "gas_ccgt": 119.6,
           "gas_ct": 20.8,
-          "oil_ct": 0.1,
+          "oil_ct": 0.6,
           "gas_oil_ct": 0.4,
           "ccs_ccgt": 0.0
         },
@@ -5577,8 +5787,8 @@
       },
       "emissions_by_fuel": {
         "2023": {
-          "gas_ccgt": 44.27,
-          "oil_ct": 0.18,
+          "gas_ccgt": 44.62,
+          "oil_ct": 0.35,
           "gas_ct": 1.59,
           "gas_oil_ct": 0.27,
           "ccs_ccgt": 0.0
@@ -5632,9 +5842,9 @@
       "color": "#2372B9",
       "envelope": {
         "2023": {
-          "p10": 40.8,
-          "p50": 46.3,
-          "p90": 51.9
+          "p10": 41.2,
+          "p50": 46.8,
+          "p90": 52.4
         },
         "2025": {
           "p10": 50.6,
@@ -5670,9 +5880,9 @@
       "envelope_by_fossil_cost": {
         "Low": {
           "2023": {
-            "p10": 38.8,
-            "p50": 44.0,
-            "p90": 49.3
+            "p10": 39.1,
+            "p50": 44.5,
+            "p90": 49.8
           },
           "2025": {
             "p10": 48.1,
@@ -5707,9 +5917,9 @@
         },
         "Medium": {
           "2023": {
-            "p10": 40.8,
-            "p50": 46.3,
-            "p90": 51.9
+            "p10": 41.2,
+            "p50": 46.8,
+            "p90": 52.4
           },
           "2025": {
             "p10": 50.6,
@@ -5744,9 +5954,9 @@
         },
         "High": {
           "2023": {
-            "p10": 42.8,
-            "p50": 48.6,
-            "p90": 54.5
+            "p10": 43.3,
+            "p50": 49.1,
+            "p90": 55.0
           },
           "2025": {
             "p10": 53.1,
@@ -5894,7 +6104,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -6113,6 +6323,16 @@
             "status": "operating"
           },
           {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.867,
+            "emissions_mt": 0.348,
+            "status": "operating"
+          },
+          {
             "name": "Bethpage",
             "orispl": 50292,
             "fuel_type": "gas_ccgt",
@@ -6124,7 +6344,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -6134,7 +6354,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -6150,6 +6370,16 @@
             "ccs_capacity_mw": 0.0,
             "gen_twh": 0.311,
             "emissions_mt": 0.189,
+            "status": "operating"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.433,
+            "emissions_mt": 0.173,
             "status": "operating"
           },
           {
@@ -6214,7 +6444,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -6224,7 +6454,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -6244,7 +6474,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -6254,7 +6484,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -6264,7 +6494,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -6274,7 +6504,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -6294,7 +6524,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -6404,7 +6634,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -6424,7 +6654,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -6450,6 +6680,16 @@
             "ccs_capacity_mw": 0.0,
             "gen_twh": 0.002,
             "emissions_mt": 0.004,
+            "status": "operating"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.007,
+            "emissions_mt": 0.003,
             "status": "operating"
           },
           {
@@ -6666,7 +6906,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -6896,7 +7136,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -6906,7 +7146,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -6986,7 +7226,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -6996,7 +7236,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -7016,7 +7256,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -7026,7 +7266,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -7036,7 +7276,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -7056,7 +7296,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -7066,7 +7306,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -7176,7 +7416,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -7196,7 +7436,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -7283,6 +7523,36 @@
             "gen_twh": 0.001,
             "emissions_mt": 0.001,
             "status": "operating"
+          },
+          {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
           },
           {
             "name": "Delaware City 10",
@@ -7438,7 +7708,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -7678,7 +7948,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -7688,7 +7958,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -7748,7 +8018,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -7768,7 +8038,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -7778,7 +8048,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -7788,7 +8058,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -7808,7 +8078,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -7818,7 +8088,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -7828,7 +8098,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -7938,7 +8208,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -7958,7 +8228,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -8045,6 +8315,36 @@
             "gen_twh": 0.001,
             "emissions_mt": 0.001,
             "status": "operating"
+          },
+          {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
           },
           {
             "name": "Delaware City 10",
@@ -8240,7 +8540,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -8350,7 +8650,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -8440,7 +8740,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -8470,7 +8770,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -8480,7 +8780,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -8490,7 +8790,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -8510,7 +8810,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -8600,7 +8900,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -8610,7 +8910,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -8650,7 +8950,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -8660,7 +8960,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -8720,7 +9020,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -8807,6 +9107,36 @@
             "gen_twh": 0.001,
             "emissions_mt": 0.001,
             "status": "operating"
+          },
+          {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
           },
           {
             "name": "Delaware City 10",
@@ -9002,7 +9332,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -9112,7 +9442,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -9212,7 +9542,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -9232,7 +9562,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -9242,7 +9572,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -9252,7 +9582,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -9272,7 +9602,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -9362,7 +9692,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -9382,7 +9712,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -9412,7 +9742,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -9432,7 +9762,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -9482,7 +9812,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -9569,6 +9899,36 @@
             "gen_twh": 0.001,
             "emissions_mt": 0.001,
             "status": "operating"
+          },
+          {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
           },
           {
             "name": "Delaware City 10",
@@ -9764,7 +10124,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -9874,7 +10234,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -9974,7 +10334,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -9994,7 +10354,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -10004,7 +10364,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -10014,7 +10374,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -10034,7 +10394,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -10124,7 +10484,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -10144,7 +10504,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -10174,7 +10534,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -10194,7 +10554,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -10244,7 +10604,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -10331,6 +10691,36 @@
             "gen_twh": 0.001,
             "emissions_mt": 0.001,
             "status": "operating"
+          },
+          {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
           },
           {
             "name": "Delaware City 10",
@@ -10526,7 +10916,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -10636,7 +11026,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -10736,7 +11126,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -10746,7 +11136,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -10766,7 +11156,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -10786,7 +11176,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -10796,7 +11186,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -10886,7 +11276,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -10906,7 +11296,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -10936,7 +11326,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -10956,7 +11346,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -11006,7 +11396,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -11095,6 +11485,36 @@
             "status": "operating"
           },
           {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
             "name": "Delaware City 10",
             "orispl": 592,
             "fuel_type": "gas_oil_ct",
@@ -11123,9 +11543,9 @@
           "wind": 3.5,
           "solar": 0.5,
           "hydro": 1.9,
-          "gas_ccgt": 118.7,
+          "gas_ccgt": 119.6,
           "gas_ct": 20.8,
-          "oil_ct": 0.1,
+          "oil_ct": 0.6,
           "gas_oil_ct": 0.4,
           "ccs_ccgt": 0.0
         },
@@ -11204,8 +11624,8 @@
       },
       "emissions_by_fuel": {
         "2023": {
-          "gas_ccgt": 44.27,
-          "oil_ct": 0.18,
+          "gas_ccgt": 44.62,
+          "oil_ct": 0.35,
           "gas_ct": 1.59,
           "gas_oil_ct": 0.27,
           "ccs_ccgt": 0.0
@@ -11259,9 +11679,9 @@
       "color": "#F47B27",
       "envelope": {
         "2023": {
-          "p10": 40.8,
-          "p50": 46.3,
-          "p90": 51.9
+          "p10": 41.2,
+          "p50": 46.8,
+          "p90": 52.4
         },
         "2025": {
           "p10": 50.6,
@@ -11297,9 +11717,9 @@
       "envelope_by_fossil_cost": {
         "Low": {
           "2023": {
-            "p10": 38.8,
-            "p50": 44.0,
-            "p90": 49.3
+            "p10": 39.1,
+            "p50": 44.5,
+            "p90": 49.8
           },
           "2025": {
             "p10": 48.1,
@@ -11334,9 +11754,9 @@
         },
         "Medium": {
           "2023": {
-            "p10": 40.8,
-            "p50": 46.3,
-            "p90": 51.9
+            "p10": 41.2,
+            "p50": 46.8,
+            "p90": 52.4
           },
           "2025": {
             "p10": 50.6,
@@ -11371,9 +11791,9 @@
         },
         "High": {
           "2023": {
-            "p10": 42.8,
-            "p50": 48.6,
-            "p90": 54.5
+            "p10": 43.3,
+            "p50": 49.1,
+            "p90": 55.0
           },
           "2025": {
             "p10": 53.1,
@@ -11521,7 +11941,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -11740,6 +12160,16 @@
             "status": "operating"
           },
           {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.867,
+            "emissions_mt": 0.348,
+            "status": "operating"
+          },
+          {
             "name": "Bethpage",
             "orispl": 50292,
             "fuel_type": "gas_ccgt",
@@ -11751,7 +12181,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -11761,7 +12191,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -11777,6 +12207,16 @@
             "ccs_capacity_mw": 0.0,
             "gen_twh": 0.311,
             "emissions_mt": 0.189,
+            "status": "operating"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.433,
+            "emissions_mt": 0.173,
             "status": "operating"
           },
           {
@@ -11841,7 +12281,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -11851,7 +12291,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -11871,7 +12311,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -11881,7 +12321,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -11891,7 +12331,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -11901,7 +12341,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -11921,7 +12361,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -12031,7 +12471,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -12051,7 +12491,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -12077,6 +12517,16 @@
             "ccs_capacity_mw": 0.0,
             "gen_twh": 0.002,
             "emissions_mt": 0.004,
+            "status": "operating"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.007,
+            "emissions_mt": 0.003,
             "status": "operating"
           },
           {
@@ -12293,7 +12743,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -12523,7 +12973,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -12533,7 +12983,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -12613,7 +13063,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -12623,7 +13073,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -12643,7 +13093,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -12653,7 +13103,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -12663,7 +13113,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -12683,7 +13133,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -12693,7 +13143,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -12803,7 +13253,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -12823,7 +13273,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -12910,6 +13360,36 @@
             "gen_twh": 0.001,
             "emissions_mt": 0.001,
             "status": "operating"
+          },
+          {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
           },
           {
             "name": "Delaware City 10",
@@ -13065,7 +13545,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -13305,7 +13785,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -13315,7 +13795,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -13375,7 +13855,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -13395,7 +13875,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -13405,7 +13885,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -13415,7 +13895,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -13435,7 +13915,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -13445,7 +13925,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -13455,7 +13935,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -13565,7 +14045,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -13585,7 +14065,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -13672,6 +14152,36 @@
             "gen_twh": 0.001,
             "emissions_mt": 0.001,
             "status": "operating"
+          },
+          {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
           },
           {
             "name": "Delaware City 10",
@@ -13867,7 +14377,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -13977,7 +14487,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -14067,7 +14577,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -14097,7 +14607,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -14107,7 +14617,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -14117,7 +14627,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -14137,7 +14647,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -14227,7 +14737,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -14237,7 +14747,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -14277,7 +14787,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -14287,7 +14797,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -14347,7 +14857,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -14434,6 +14944,36 @@
             "gen_twh": 0.001,
             "emissions_mt": 0.001,
             "status": "operating"
+          },
+          {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
           },
           {
             "name": "Delaware City 10",
@@ -14629,7 +15169,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -14739,7 +15279,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -14839,7 +15379,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -14859,7 +15399,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -14869,7 +15409,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -14879,7 +15419,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -14899,7 +15439,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -14989,7 +15529,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -15009,7 +15549,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -15039,7 +15579,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -15059,7 +15599,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -15109,7 +15649,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -15196,6 +15736,36 @@
             "gen_twh": 0.001,
             "emissions_mt": 0.001,
             "status": "operating"
+          },
+          {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
           },
           {
             "name": "Delaware City 10",
@@ -15391,7 +15961,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -15501,7 +16071,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -15601,7 +16171,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -15621,7 +16191,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -15631,7 +16201,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -15641,7 +16211,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -15661,7 +16231,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -15751,7 +16321,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -15771,7 +16341,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -15801,7 +16371,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -15821,7 +16391,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -15871,7 +16441,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -15958,6 +16528,36 @@
             "gen_twh": 0.001,
             "emissions_mt": 0.001,
             "status": "operating"
+          },
+          {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
           },
           {
             "name": "Delaware City 10",
@@ -16153,7 +16753,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -16263,7 +16863,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -16363,7 +16963,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -16373,7 +16973,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -16393,7 +16993,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -16413,7 +17013,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -16423,7 +17023,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -16513,7 +17113,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -16533,7 +17133,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -16563,7 +17163,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -16583,7 +17183,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -16633,7 +17233,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -16722,6 +17322,36 @@
             "status": "operating"
           },
           {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
             "name": "Delaware City 10",
             "orispl": 592,
             "fuel_type": "gas_oil_ct",
@@ -16750,9 +17380,9 @@
           "wind": 3.5,
           "solar": 0.5,
           "hydro": 1.9,
-          "gas_ccgt": 118.7,
+          "gas_ccgt": 119.6,
           "gas_ct": 20.8,
-          "oil_ct": 0.1,
+          "oil_ct": 0.6,
           "gas_oil_ct": 0.4,
           "ccs_ccgt": 0.0
         },
@@ -16831,8 +17461,8 @@
       },
       "emissions_by_fuel": {
         "2023": {
-          "gas_ccgt": 44.27,
-          "oil_ct": 0.18,
+          "gas_ccgt": 44.62,
+          "oil_ct": 0.35,
           "gas_ct": 1.59,
           "gas_oil_ct": 0.27,
           "ccs_ccgt": 0.0
@@ -16886,9 +17516,9 @@
       "color": "#6BA543",
       "envelope": {
         "2023": {
-          "p10": 40.8,
-          "p50": 46.3,
-          "p90": 51.9
+          "p10": 41.2,
+          "p50": 46.8,
+          "p90": 52.4
         },
         "2025": {
           "p10": 50.6,
@@ -16924,9 +17554,9 @@
       "envelope_by_fossil_cost": {
         "Low": {
           "2023": {
-            "p10": 38.8,
-            "p50": 44.0,
-            "p90": 49.3
+            "p10": 39.1,
+            "p50": 44.5,
+            "p90": 49.8
           },
           "2025": {
             "p10": 48.1,
@@ -16961,9 +17591,9 @@
         },
         "Medium": {
           "2023": {
-            "p10": 40.8,
-            "p50": 46.3,
-            "p90": 51.9
+            "p10": 41.2,
+            "p50": 46.8,
+            "p90": 52.4
           },
           "2025": {
             "p10": 50.6,
@@ -16998,9 +17628,9 @@
         },
         "High": {
           "2023": {
-            "p10": 42.8,
-            "p50": 48.6,
-            "p90": 54.5
+            "p10": 43.3,
+            "p50": 49.1,
+            "p90": 55.0
           },
           "2025": {
             "p10": 53.1,
@@ -17148,7 +17778,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -17367,6 +17997,16 @@
             "status": "operating"
           },
           {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.867,
+            "emissions_mt": 0.348,
+            "status": "operating"
+          },
+          {
             "name": "Bethpage",
             "orispl": 50292,
             "fuel_type": "gas_ccgt",
@@ -17378,7 +18018,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -17388,7 +18028,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -17404,6 +18044,16 @@
             "ccs_capacity_mw": 0.0,
             "gen_twh": 0.311,
             "emissions_mt": 0.189,
+            "status": "operating"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.433,
+            "emissions_mt": 0.173,
             "status": "operating"
           },
           {
@@ -17468,7 +18118,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -17478,7 +18128,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -17498,7 +18148,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -17508,7 +18158,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -17518,7 +18168,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -17528,7 +18178,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -17548,7 +18198,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -17658,7 +18308,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -17678,7 +18328,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -17704,6 +18354,16 @@
             "ccs_capacity_mw": 0.0,
             "gen_twh": 0.002,
             "emissions_mt": 0.004,
+            "status": "operating"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.007,
+            "emissions_mt": 0.003,
             "status": "operating"
           },
           {
@@ -17920,7 +18580,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -18150,7 +18810,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -18160,7 +18820,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -18240,7 +18900,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -18250,7 +18910,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -18270,7 +18930,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -18280,7 +18940,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -18290,7 +18950,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -18310,7 +18970,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -18320,7 +18980,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -18430,7 +19090,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -18450,7 +19110,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -18537,6 +19197,36 @@
             "gen_twh": 0.001,
             "emissions_mt": 0.001,
             "status": "operating"
+          },
+          {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
           },
           {
             "name": "Delaware City 10",
@@ -18672,7 +19362,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -18892,7 +19582,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -18902,7 +19592,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -18932,7 +19622,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -18962,7 +19652,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -18982,7 +19672,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -19012,7 +19702,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -19072,7 +19762,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -19112,7 +19802,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -19152,7 +19842,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -19172,7 +19862,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -19222,7 +19912,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -19315,6 +20005,36 @@
             "orispl": 55392,
             "fuel_type": "gas_ct",
             "capacity_mw": 532.0,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
             "ccs_capacity_mw": 0.0,
             "gen_twh": 0.0,
             "emissions_mt": 0.0,
@@ -19434,7 +20154,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -19654,7 +20374,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -19664,7 +20384,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -19694,7 +20414,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -19724,7 +20444,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -19744,7 +20464,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -19774,7 +20494,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -19834,7 +20554,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -19874,7 +20594,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -19914,7 +20634,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -19934,7 +20654,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -19984,7 +20704,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -20077,6 +20797,36 @@
             "orispl": 55392,
             "fuel_type": "gas_ct",
             "capacity_mw": 532.0,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
             "ccs_capacity_mw": 0.0,
             "gen_twh": 0.0,
             "emissions_mt": 0.0,
@@ -20196,7 +20946,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -20416,7 +21166,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -20426,7 +21176,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -20456,7 +21206,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -20486,7 +21236,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -20506,7 +21256,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -20536,7 +21286,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -20596,7 +21346,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -20636,7 +21386,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -20676,7 +21426,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -20696,7 +21446,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -20746,7 +21496,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -20839,6 +21589,36 @@
             "orispl": 55392,
             "fuel_type": "gas_ct",
             "capacity_mw": 532.0,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
             "ccs_capacity_mw": 0.0,
             "gen_twh": 0.0,
             "emissions_mt": 0.0,
@@ -20958,7 +21738,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -21178,7 +21958,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -21188,7 +21968,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -21218,7 +21998,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -21248,7 +22028,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -21268,7 +22048,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -21298,7 +22078,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -21358,7 +22138,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -21398,7 +22178,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -21438,7 +22218,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -21458,7 +22238,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -21508,7 +22288,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -21601,6 +22381,36 @@
             "orispl": 55392,
             "fuel_type": "gas_ct",
             "capacity_mw": 532.0,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
             "ccs_capacity_mw": 0.0,
             "gen_twh": 0.0,
             "emissions_mt": 0.0,
@@ -21720,7 +22530,7 @@
           },
           {
             "name": "Greenfield Energy Centre",
-            "orispl": 31127,
+            "orispl": 64353,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 1052.0,
             "ccs_capacity_mw": 904.7,
@@ -21940,7 +22750,7 @@
           },
           {
             "name": "Valladolid III",
-            "orispl": 96658,
+            "orispl": 55347,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 153.4,
             "ccs_capacity_mw": 132.0,
@@ -21950,7 +22760,7 @@
           },
           {
             "name": "Kennedy International Airport Cogen",
-            "orispl": 89133,
+            "orispl": 13427,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 128.8,
             "ccs_capacity_mw": 110.8,
@@ -21980,7 +22790,7 @@
           },
           {
             "name": "Agnews Cogeneration",
-            "orispl": 25211,
+            "orispl": 27133,
             "fuel_type": "gas_ccgt",
             "capacity_mw": 28.0,
             "ccs_capacity_mw": 24.1,
@@ -22010,7 +22820,7 @@
           },
           {
             "name": "Bayview",
-            "orispl": 26705,
+            "orispl": 20424,
             "fuel_type": "oil_ct",
             "capacity_mw": 12.6,
             "ccs_capacity_mw": 0.0,
@@ -22030,7 +22840,7 @@
           },
           {
             "name": "Chester",
-            "orispl": 57881,
+            "orispl": 19409,
             "fuel_type": "oil_ct",
             "capacity_mw": 56.2,
             "ccs_capacity_mw": 0.0,
@@ -22060,7 +22870,7 @@
           },
           {
             "name": "Crisfield",
-            "orispl": 58699,
+            "orispl": 68169,
             "fuel_type": "oil_ct",
             "capacity_mw": 10.4,
             "ccs_capacity_mw": 0.0,
@@ -22120,7 +22930,7 @@
           },
           {
             "name": "Falls",
-            "orispl": 76336,
+            "orispl": 40971,
             "fuel_type": "oil_ct",
             "capacity_mw": 62.1,
             "ccs_capacity_mw": 0.0,
@@ -22160,7 +22970,7 @@
           },
           {
             "name": "Northern Prairie Power Project (Grande Prairie)",
-            "orispl": 67076,
+            "orispl": 49300,
             "fuel_type": "gas_ct",
             "capacity_mw": 105.0,
             "ccs_capacity_mw": 0.0,
@@ -22200,7 +23010,7 @@
           },
           {
             "name": "Moser",
-            "orispl": 95042,
+            "orispl": 30608,
             "fuel_type": "oil_ct",
             "capacity_mw": 61.3,
             "ccs_capacity_mw": 0.0,
@@ -22220,7 +23030,7 @@
           },
           {
             "name": "Philadelphia Road",
-            "orispl": 78806,
+            "orispl": 58451,
             "fuel_type": "oil_ct",
             "capacity_mw": 64.4,
             "ccs_capacity_mw": 0.0,
@@ -22270,7 +23080,7 @@
           },
           {
             "name": "Southwark",
-            "orispl": 60580,
+            "orispl": 93511,
             "fuel_type": "oil_ct",
             "capacity_mw": 74.0,
             "ccs_capacity_mw": 0.0,
@@ -22367,6 +23177,36 @@
             "gen_twh": 0.0,
             "emissions_mt": 0.0,
             "status": "retired"
+          },
+          {
+            "name": "Mystic 8 & 9",
+            "orispl": 1588,
+            "fuel_type": "gas_ccgt",
+            "capacity_mw": 1686.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic CT",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 13.2,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
+          },
+          {
+            "name": "Mystic",
+            "orispl": 1588,
+            "fuel_type": "oil_ct",
+            "capacity_mw": 841.9,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 0.0,
+            "emissions_mt": 0.0,
+            "status": "retired"
           }
         ]
       },
@@ -22377,9 +23217,9 @@
           "wind": 3.5,
           "solar": 0.5,
           "hydro": 1.9,
-          "gas_ccgt": 118.7,
+          "gas_ccgt": 119.6,
           "gas_ct": 20.8,
-          "oil_ct": 0.1,
+          "oil_ct": 0.6,
           "gas_oil_ct": 0.4,
           "ccs_ccgt": 0.0
         },
@@ -22453,8 +23293,8 @@
       },
       "emissions_by_fuel": {
         "2023": {
-          "gas_ccgt": 44.27,
-          "oil_ct": 0.18,
+          "gas_ccgt": 44.62,
+          "oil_ct": 0.35,
           "gas_ct": 1.59,
           "gas_oil_ct": 0.27,
           "ccs_ccgt": 0.0
@@ -22493,10 +23333,10 @@
     "sbti_15": {
       "label": "SBTi 1.5\u00b0C (Power Sector v2)",
       "trajectory": {
-        "2023": 46.3,
-        "2025": 39.4,
-        "2030": 23.2,
-        "2035": 11.6,
+        "2023": 46.8,
+        "2025": 39.8,
+        "2030": 23.4,
+        "2035": 11.7,
         "2040": 0.0,
         "2045": 0.0,
         "2050": 0.0
@@ -22505,10 +23345,10 @@
     "at_power_nz": {
       "label": "AT Power NZ",
       "trajectory": {
-        "2023": 46.3,
-        "2025": 40.8,
-        "2030": 30.1,
-        "2035": 16.2,
+        "2023": 46.8,
+        "2025": 41.2,
+        "2030": 30.4,
+        "2035": 16.4,
         "2040": 2.3,
         "2045": 0.0,
         "2050": 0.0
@@ -22520,9 +23360,9 @@
       "sbti_15": {
         "gap_mt": {
           "2023": 0.0,
-          "2025": 18.1,
-          "2030": 31.9,
-          "2035": 41.2,
+          "2025": 17.7,
+          "2030": 31.7,
+          "2035": 41.1,
           "2040": 50.5,
           "2045": 48.1,
           "2050": 45.8
@@ -22537,9 +23377,9 @@
       "at_power_nz": {
         "gap_mt": {
           "2023": 0.0,
-          "2025": 16.7,
-          "2030": 25.0,
-          "2035": 36.6,
+          "2025": 16.3,
+          "2030": 24.7,
+          "2035": 36.4,
           "2040": 48.2,
           "2045": 48.1,
           "2050": 45.8
@@ -22556,9 +23396,9 @@
       "sbti_15": {
         "gap_mt": {
           "2023": 0.0,
-          "2025": 18.1,
-          "2030": 16.0,
-          "2035": 3.2,
+          "2025": 17.7,
+          "2030": 15.8,
+          "2035": 3.1,
           "2040": 14.1,
           "2045": 13.5,
           "2050": 12.8
@@ -22573,9 +23413,9 @@
       "at_power_nz": {
         "gap_mt": {
           "2023": 0.0,
-          "2025": 16.7,
-          "2030": 9.1,
-          "2035": -1.4,
+          "2025": 16.3,
+          "2030": 8.8,
+          "2035": -1.6,
           "2040": 11.8,
           "2045": 13.5,
           "2050": 12.8
@@ -22592,9 +23432,9 @@
       "sbti_15": {
         "gap_mt": {
           "2023": 0.0,
-          "2025": 18.1,
-          "2030": 16.0,
-          "2035": 3.2,
+          "2025": 17.7,
+          "2030": 15.8,
+          "2035": 3.1,
           "2040": 14.1,
           "2045": 13.5,
           "2050": 12.8
@@ -22609,9 +23449,9 @@
       "at_power_nz": {
         "gap_mt": {
           "2023": 0.0,
-          "2025": 16.7,
-          "2030": 9.1,
-          "2035": -1.4,
+          "2025": 16.3,
+          "2030": 8.8,
+          "2035": -1.6,
           "2040": 11.8,
           "2045": 13.5,
           "2050": 12.8
@@ -22628,16 +23468,16 @@
       "sbti_15": {
         "gap_mt": {
           "2023": 0.0,
-          "2025": 18.1,
-          "2030": 2.7,
-          "2035": -9.6,
+          "2025": 17.7,
+          "2030": 2.5,
+          "2035": -9.7,
           "2040": 1.9,
           "2045": 1.8,
           "2050": 1.7
         },
         "year_achieved": 2023,
         "prob_meeting": {
-          "2030": 0.85,
+          "2030": 0.82,
           "2040": 0.05,
           "2050": 0.05
         }
@@ -22645,9 +23485,9 @@
       "at_power_nz": {
         "gap_mt": {
           "2023": 0.0,
-          "2025": 16.7,
-          "2030": -4.2,
-          "2035": -14.2,
+          "2025": 16.3,
+          "2030": -4.5,
+          "2035": -14.4,
           "2040": -0.4,
           "2045": 1.8,
           "2050": 1.7
@@ -22663,8 +23503,8 @@
   },
   "fleet_summary": {
     "gas_ccgt": {
-      "count": 40,
-      "capacity_mw": 24131.1,
+      "count": 41,
+      "capacity_mw": 25817.6,
       "ccs_capacity_mw": 20637.1
     },
     "geothermal": {
@@ -22678,8 +23518,8 @@
       "ccs_capacity_mw": 0.0
     },
     "oil_ct": {
-      "count": 12,
-      "capacity_mw": 1714.5,
+      "count": 14,
+      "capacity_mw": 2569.6,
       "ccs_capacity_mw": 0.0
     },
     "battery": {
@@ -22718,11 +23558,11 @@
     "source": "CEG_fleet_rosetta.csv",
     "capacity_source": "Constellation Owned Capacity (MW) \u2014 equity-weighted from Rosetta",
     "sweep_count": 1215,
-    "generated_at": "2026-03-22T03:42:37Z",
-    "total_plants": 141,
-    "total_capacity_mw": 57953.0,
-    "fossil_plants": 76,
-    "fossil_capacity_mw": 30609.4,
-    "notes": "Rebuilt from Rosetta CSV with actual plant capacities. Nuclear: 23,067 MW, Gas CCGT: 24,131 MW, Total fleet: 57,953 MW. Envelope P10/P90 uses \u00b112% synthetic spread (pending 1215 sweep integration)."
+    "generated_at": "2026-03-22T03:57:27Z",
+    "total_plants": 144,
+    "total_capacity_mw": 60494.6,
+    "fossil_plants": 79,
+    "fossil_capacity_mw": 33151.0,
+    "notes": "Rebuilt from Rosetta CSV with actual plant capacities. Nuclear: 23,067 MW, Gas CCGT: 25,818 MW, Total fleet: 60,495 MW. Envelope P10/P90 uses \u00b112% synthetic spread (pending 1215 sweep integration)."
   }
 }
