@@ -28,11 +28,13 @@ var FleetDispatchEngine = (function () {
         gas_oil_ct: 0.06351
     };
 
+    // Default CO2 rates (t CO2/MWh) from eGRID 2023 CEG fleet averages.
+    // Used as fallback when plant has no co2_rate_t_mwh in fleet config.
     var DEFAULT_CO2_RATES = {
-        gas_ccgt: 0.37,
-        gas_ct: 0.55,
-        oil_ct: 0.65,
-        gas_oil_ct: 0.58
+        gas_ccgt: 0.382,   // eGRID avg: 843 lb/MWh
+        gas_ct: 0.657,     // eGRID avg: 1449 lb/MWh
+        oil_ct: 1.387,     // eGRID avg: 3058 lb/MWh
+        gas_oil_ct: 1.506  // eGRID avg: 3321 lb/MWh
     };
 
     var CCS_MILESTONES = [[0, 0.0], [2, 0.30], [5, 0.70], [8, 1.00]];
@@ -161,9 +163,24 @@ var FleetDispatchEngine = (function () {
         pumped_storage: 0.0 // Pumped storage, net zero gen
     };
 
+    // Static fallback CFs for fossil plants when sweep data is missing (e.g. 2023 baseline).
+    // Derived from eGRID 2023: actual generation / (capacity × 8760) for CEG fleet.
+    var FOSSIL_STATIC_CF = {
+        gas_ccgt: 0.57,    // eGRID 2023 CEG avg (higher than generic 0.44 due to fleet mix)
+        gas_ct: 0.08,
+        oil_ct: 0.01,
+        gas_oil_ct: 0.03,
+        coal_steam: 0.50
+    };
+
     // ── Main dispatch computation ──
 
-    function computeFleetDispatch(plants, sweepData) {
+    function computeFleetDispatch(plants, sweepData, options) {
+        options = options || {};
+        // CCS parameters from sidebar panel (override per-plant defaults)
+        var globalDeratePct = options.ccs_derate_pct != null ? options.ccs_derate_pct : 14;
+        var globalCapturePct = options.ccs_capture_rate_pct != null ? options.ccs_capture_rate_pct : 90;
+
         var nScenarios = sweepData.n_scenarios;
         var nYears = sweepData.n_years;
         var years = sweepData.years;
@@ -273,6 +290,20 @@ var FleetDispatchEngine = (function () {
             var marginArrays = isoData[marginKey];
             if (!cfArrays || !marginArrays) return;
 
+            // Pre-detect years where ALL sweep CFs are zero (e.g. 2023 baseline)
+            // For these years, use static fallback CFs
+            var fallbackCf = FOSSIL_STATIC_CF[fuel] || 0.10;
+            var yearHasData = new Uint8Array(nYears);
+            for (var yCheck = 0; yCheck < nYears; yCheck++) {
+                // Check first few scenarios for non-zero data
+                for (var sCheck = 0; sCheck < Math.min(10, nScenarios); sCheck++) {
+                    if (cfArrays[sCheck] && cfArrays[sCheck][yCheck] > 0) {
+                        yearHasData[yCheck] = 1;
+                        break;
+                    }
+                }
+            }
+
             var refHR = REFERENCE_HEAT_RATES[fuel] || 10.0;
             var plantHR = p.heat_rate_mmbtu_mwh || refHR;
             var efficiencyRatio = plantHR > 0 ? Math.min(refHR / plantHR, 1.5) : 1.0;
@@ -309,11 +340,14 @@ var FleetDispatchEngine = (function () {
 
             // Pre-compute CCS capture per year
             var capturePerYear = new Float64Array(nYears);
-            var hrPenalty = p.ccs_heat_rate_penalty || 1.14;
+            // Use per-plant derate if set, otherwise fall back to global panel value
+            var plantDeratePct = (p._ccs_derate_pct != null && p._ccs_derate_pct > 0) ? p._ccs_derate_pct : globalDeratePct;
+            var derateFactor = 1.0 - plantDeratePct / 100.0; // e.g. 0.86 for 14% derate
+            // Use per-plant capture if set, otherwise global
+            var plantCaptureFrac = (p._ccs_target_rate > 0) ? p._ccs_target_rate : (globalCapturePct / 100.0);
             if (action === 'ccs_retrofit' && yearOnline) {
-                var targetRate = p._ccs_target_rate || 0.95;
                 for (var yi2 = 0; yi2 < nYears; yi2++) {
-                    capturePerYear[yi2] = ccsRampFraction(years[yi2], yearOnline, targetRate);
+                    capturePerYear[yi2] = ccsRampFraction(years[yi2], yearOnline, plantCaptureFrac);
                 }
             }
 
@@ -326,11 +360,17 @@ var FleetDispatchEngine = (function () {
                     var baseCf = scenarioCF[yi3] || 0;
                     var margin = scenarioMargin[yi3] || 0;
 
+                    // Fallback to static CF when sweep has no data for this year
+                    if (!yearHasData[yi3]) {
+                        baseCf = fallbackCf;
+                        margin = 1; // Assume positive margin for baseline year
+                    }
+
                     // Efficiency adjustment
                     var adjustedCf = Math.min(baseCf * efficiencyRatio, 0.95);
 
-                    // Economic retirement
-                    if (margin < 0) adjustedCf = 0;
+                    // Economic retirement (skip for fallback years)
+                    if (yearHasData[yi3] && margin < 0) adjustedCf = 0;
 
                     // Year-aware masks
                     if (action === 'retire' && yearOnline && years[yi3] >= yearOnline) {
@@ -343,21 +383,23 @@ var FleetDispatchEngine = (function () {
                     // Generation
                     var genMwh = capMW * adjustedCf * 8760;
 
-                    // CCS
+                    // CCS: derate reduces net capacity/generation, capture reduces CO₂
                     var effectiveCO2 = baseCO2;
                     var reportFuel = fuel;
                     if (action === 'ccs_retrofit' && yearOnline) {
                         var capture = capturePerYear[yi3];
                         if (capture > 0) {
-                            effectiveCO2 = baseCO2 * hrPenalty * (1.0 - capture);
-                            genMwh = genMwh / hrPenalty;
+                            // Derate reduces generation (parasitic load)
+                            genMwh = genMwh * derateFactor;
+                            // Capture reduces CO₂ emissions
+                            effectiveCO2 = baseCO2 * (1.0 - capture);
                             reportFuel = 'ccs_ccgt';
                         }
                     } else if (p.status === 'ccs_retrofit') {
-                        var staticCapture = p.ccs_capture_rate || 0.95;
-                        var staticPenalty = p.ccs_heat_rate_penalty || 1.14;
-                        effectiveCO2 = baseCO2 * staticPenalty * (1.0 - staticCapture);
-                        genMwh = genMwh / staticPenalty;
+                        // Plant already has CCS in base fleet config
+                        var staticCapture = p.ccs_capture_rate || (globalCapturePct / 100.0);
+                        genMwh = genMwh * derateFactor;
+                        effectiveCO2 = baseCO2 * (1.0 - staticCapture);
                         reportFuel = 'ccs_ccgt';
                     }
 
