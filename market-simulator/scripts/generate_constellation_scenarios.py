@@ -28,18 +28,18 @@ CAPACITY_DEFAULTS = {
     'hydro': 500, 'battery': 100, 'pumped_storage': 800,
 }
 
-# Generation estimates (TWh, equity-weighted, 2023 baseline)
-# Based on EIA/eGRID cross-reference + user guidance
+# Generation estimates (TWh, equity-weighted, 2024 Rosetta actuals)
+# Source: CEG_fleet_rosetta.csv 2024_equity_netgen_MWh aggregated by fuel type
 GENERATION_ESTIMATES_TWH = {
-    'nuclear': 190.0,       # 12 stations, equity shares 43-100%, ~90% CF
-    'geothermal': 9.0,      # Geysers dominant, ~1.1 GW nameplate
-    'wind': 3.5,            # 38 wind farms, mostly 51% equity
-    'solar': 0.8,           # 6 solar plants, 51-100% equity
-    'hydro': 0.5,           # Conowingo
-    'gas_ccgt': 50.0,       # ~13 GW nameplate, ~44% CF equity-weighted
-    'gas_ct': 1.5,          # Peakers, low CF
-    'oil_ct': 0.3,          # Oil peakers, very low CF
-    'gas_oil_ct': 0.8,      # Dual-fuel peakers
+    'nuclear': 181.8,       # 12 stations, equity shares 43-100%, ~90% CF (2024 actual)
+    'geothermal': 5.6,      # Geysers, ~0.87 GW equity capacity (2024 actual)
+    'wind': 1.9,            # 38 wind farms, mostly 51% equity (2024 actual)
+    'solar': 0.01,          # 6 solar plants (2024 actual)
+    'hydro': 1.5,           # Conowingo (2024 actual)
+    'gas_ccgt': 109.5,      # ~13 GW nameplate, post-Calpine acquisition (2024 actual)
+    'gas_ct': 1.5,          # Peakers, low CF (2024 actual)
+    'oil_ct': 0.02,         # Oil peakers, very low CF (2024 actual)
+    'gas_oil_ct': 0.35,     # Dual-fuel peakers (2024 actual)
     'battery': 0.0,         # Storage, net zero gen
     'pumped_storage': 0.0,  # Pumped storage, net zero gen
 }
@@ -279,26 +279,26 @@ def main():
             "company": "Constellation Energy",
             "as_of_date": "2025-01-01",
             "source": "CEG_fleet_rosetta.csv",
-            "notes": f"Full fleet of {len(plants)} plants across all fuel types. Includes CEG legacy fleet and CPN (Calpine) acquisition. Nuclear ~190 TWh, Geothermal ~9 TWh, Wind/Solar/Hydro ~4-5 TWh.",
+            "notes": f"Full fleet of {len(plants)} plants across all fuel types. Includes CEG legacy fleet and CPN (Calpine) acquisition. 2024 Rosetta actuals: Nuclear ~182 TWh, Gas CCGT ~110 TWh, Geothermal ~5.6 TWh.",
             "generation_estimates_twh": GENERATION_ESTIMATES_TWH,
         },
         "new_build_interaction": {
             "rule": "additive",
             "description": "Fleet-level add_plant actions are additive to grid-level new fossil builds.",
         },
-        "baseline_mt": 23.16,
+        "baseline_mt": 48.63,
         "targets": {
             "sbti_15": {
                 "type": "sbti_15c",
                 "label": "SBTi 1.5\u00b0C (Power Sector v2)",
                 "description": "SBTi Power Sector v2 draft guidance: net zero by 2040 for power sector companies.",
                 "base_year": 2023,
-                "baseline_mt": 23.16,
+                "baseline_mt": 48.63,
                 "milestones": {
-                    "2023": 23.16,
-                    "2025": 19.7,
-                    "2030": 11.6,
-                    "2035": 5.8,
+                    "2023": 48.6,
+                    "2025": 41.4,
+                    "2030": 24.4,
+                    "2035": 12.2,
                     "2040": 0.0,
                     "2045": 0.0,
                     "2050": 0.0
@@ -309,11 +309,11 @@ def main():
                 "label": "AT Power NZ",
                 "description": "Constellation committed target: 95% reduction by 2040, net zero by 2045.",
                 "milestones": {
-                    "2023": 23.16,
-                    "2025": 20.4,
-                    "2030": 15.1,
-                    "2035": 8.1,
-                    "2040": 1.2,
+                    "2023": 48.6,
+                    "2025": 42.8,
+                    "2030": 31.7,
+                    "2035": 17.0,
+                    "2040": 2.5,
                     "2045": 0.0,
                     "2050": 0.0
                 }
