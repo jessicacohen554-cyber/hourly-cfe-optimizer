@@ -180,6 +180,7 @@ var FleetDispatchEngine = (function () {
         // CCS parameters from sidebar panel (override per-plant defaults)
         var globalDeratePct = options.ccs_derate_pct != null ? options.ccs_derate_pct : 14;
         var globalCapturePct = options.ccs_capture_rate_pct != null ? options.ccs_capture_rate_pct : 90;
+        var globalCcsCfCap = (options.ccs_cf_pct != null ? options.ccs_cf_pct : 85) / 100.0; // baseload CF for CCS plants
 
         var nScenarios = sweepData.n_scenarios;
         var nYears = sweepData.n_years;
@@ -383,21 +384,30 @@ var FleetDispatchEngine = (function () {
                     // Generation
                     var genMwh = capMW * adjustedCf * 8760;
 
-                    // CCS: derate reduces net capacity/generation, capture reduces CO₂
+                    // CCS: runs baseload at user-set CF, derate for parasitic load,
+                    // capture rate reduces CO₂
                     var effectiveCO2 = baseCO2;
                     var reportFuel = fuel;
                     if (action === 'ccs_retrofit' && yearOnline) {
                         var capture = capturePerYear[yi3];
                         if (capture > 0) {
+                            // CCS plants run baseload at the user-set CF, not market-driven
+                            genMwh = capMW * globalCcsCfCap * 8760;
                             // Derate reduces generation (parasitic load)
                             genMwh = genMwh * derateFactor;
                             // Capture reduces CO₂ emissions
                             effectiveCO2 = baseCO2 * (1.0 - capture);
                             reportFuel = 'ccs_ccgt';
+                        } else if (si2 === 0) {
+                            // Debug: log when CCS plant has 0 capture (ramp hasn't started)
+                            console.log('[CCS] ' + p.name + ' year=' + years[yi3] +
+                                ' capture=0 (yearOnline=' + yearOnline +
+                                ', targetRate=' + plantCaptureFrac + ')');
                         }
                     } else if (p.status === 'ccs_retrofit') {
                         // Plant already has CCS in base fleet config
                         var staticCapture = p.ccs_capture_rate || (globalCapturePct / 100.0);
+                        genMwh = capMW * globalCcsCfCap * 8760;
                         genMwh = genMwh * derateFactor;
                         effectiveCO2 = baseCO2 * (1.0 - staticCapture);
                         reportFuel = 'ccs_ccgt';
@@ -418,6 +428,16 @@ var FleetDispatchEngine = (function () {
                         emisByFuel[reportFuel][si2][yi3] += emisMt;
                     }
                 }
+            }
+
+            // Debug summary for CCS plants
+            if (action === 'ccs_retrofit') {
+                var captureVals = [];
+                for (var ci = 0; ci < nYears; ci++) captureVals.push(Math.round(capturePerYear[ci] * 1000) / 1000);
+                console.log('[CCS Summary] ' + p.name + ': yearOnline=' + yearOnline +
+                    ', targetRate=' + plantCaptureFrac + ', derate=' + plantDeratePct + '%' +
+                    ', captureByYear=' + JSON.stringify(captureVals) +
+                    ', years=' + JSON.stringify(years.slice()));
             }
 
             plantResults.push({

@@ -47,7 +47,8 @@ var FleetSidebar = (function () {
     // ── CCS global parameters ──
     var ccsParams = {
         derate_pct: 14,       // 0-30%, default 14%
-        capture_rate_pct: 90  // 50-99%, default 90%
+        capture_rate_pct: 90, // 50-99%, default 90%
+        cf_pct: 85            // 20-95%, default 85% — baseload CF for CCS-retrofitted plants
     };
 
     function cacheElements() {
@@ -69,6 +70,8 @@ var FleetSidebar = (function () {
         els.ccsDerateValue = document.getElementById('ccsDerateValue');
         els.ccsCaptureSlider = document.getElementById('ccsCaptureSlider');
         els.ccsCaptureValue = document.getElementById('ccsCaptureValue');
+        els.ccsCfSlider = document.getElementById('ccsCfSlider');
+        els.ccsCfValue = document.getElementById('ccsCfValue');
         els.ccsApplyAllBtn = document.getElementById('ccsApplyAllBtn');
     }
 
@@ -95,6 +98,12 @@ var FleetSidebar = (function () {
             els.ccsCaptureSlider.addEventListener('input', function () {
                 ccsParams.capture_rate_pct = parseInt(this.value);
                 if (els.ccsCaptureValue) els.ccsCaptureValue.textContent = ccsParams.capture_rate_pct + '%';
+            });
+        }
+        if (els.ccsCfSlider) {
+            els.ccsCfSlider.addEventListener('input', function () {
+                ccsParams.cf_pct = parseInt(this.value);
+                if (els.ccsCfValue) els.ccsCfValue.textContent = ccsParams.cf_pct + '%';
             });
         }
         if (els.ccsApplyAllBtn) {
@@ -567,7 +576,8 @@ var FleetSidebar = (function () {
                     var t0 = performance.now();
                     var result = FleetDispatchEngine.computeFleetDispatch(allPlants, sweepData, {
                         ccs_derate_pct: ccsParams.derate_pct,
-                        ccs_capture_rate_pct: ccsParams.capture_rate_pct
+                        ccs_capture_rate_pct: ccsParams.capture_rate_pct,
+                        ccs_cf_pct: ccsParams.cf_pct
                     });
                     var elapsed = Math.round(performance.now() - t0);
 
@@ -917,7 +927,8 @@ var FleetSidebar = (function () {
         getSavedScenarios: function () { return savedScenarios; },
         getVisibleScenarios: function () {
             return savedScenarios.filter(function (s) { return s.isVisible && s.results; });
-        }
+        },
+        getFleetPlants: function () { return fleetPlants.concat(addedPlants); }
     };
 
 })();

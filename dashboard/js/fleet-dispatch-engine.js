@@ -422,7 +422,7 @@ var FleetDispatchEngine = (function () {
                     // Generation
                     var genMwh = capMW * adjustedCf * 8760;
 
-                    // CCS: runs baseload at user-set CF (to maximize 45Q), derate for parasitic load,
+                    // CCS: runs baseload at user-set CF, derate for parasitic load,
                     // capture rate reduces CO₂
                     var effectiveCO2 = baseCO2;
                     var reportFuel = fuel;
@@ -436,6 +436,11 @@ var FleetDispatchEngine = (function () {
                             // Capture reduces CO₂ emissions
                             effectiveCO2 = baseCO2 * (1.0 - capture);
                             reportFuel = 'ccs_ccgt';
+                        } else if (si2 === 0) {
+                            // Debug: log when CCS plant has 0 capture (ramp hasn't started)
+                            console.log('[CCS] ' + p.name + ' year=' + years[yi3] +
+                                ' capture=0 (yearOnline=' + yearOnline +
+                                ', targetRate=' + plantCaptureFrac + ')');
                         }
                     } else if (p.status === 'ccs_retrofit' && statusPerYear[yi3] === 'ccs_retrofit') {
                         // Plant already has CCS in base fleet config — only apply if status matches
@@ -465,6 +470,16 @@ var FleetDispatchEngine = (function () {
                         emisByFuel[reportFuel][si2][yi3] += emisMt;
                     }
                 }
+            }
+
+            // Debug summary for CCS plants
+            if (action === 'ccs_retrofit') {
+                var captureVals = [];
+                for (var ci = 0; ci < nYears; ci++) captureVals.push(Math.round(capturePerYear[ci] * 1000) / 1000);
+                console.log('[CCS Summary] ' + p.name + ': yearOnline=' + yearOnline +
+                    ', targetRate=' + plantCaptureFrac + ', derate=' + plantDeratePct + '%' +
+                    ', captureByYear=' + JSON.stringify(captureVals) +
+                    ', years=' + JSON.stringify(years.slice()));
             }
 
             plantResults.push({

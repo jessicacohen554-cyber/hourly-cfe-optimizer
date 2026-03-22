@@ -484,6 +484,8 @@
     }
 
     // ── Merge custom envelope with baseline for pre-intervention years ──
+    // Also injects the intervention year as an interpolated baseline data point
+    // so the chart shows a clean transition at the correct year (not before).
     function alignEnvelopeWithBaseline(custEnv, baseEnv, firstYear) {
         if (!firstYear || !baseEnv) return custEnv;
         var merged = {};
@@ -497,20 +499,87 @@
                 merged[yStr] = custEnv[yStr];
             }
         });
+
+        // If firstYear doesn't exist as a data point, inject it with interpolated
+        // baseline values so the chart shows a clean kink at the intervention year
+        var firstYearStr = String(firstYear);
+        if (!custEnv[firstYearStr]) {
+            var sortedYears = Object.keys(baseEnv).map(Number).sort(function (a, b) { return a - b; });
+            var lo = null, hi = null;
+            for (var i = 0; i < sortedYears.length; i++) {
+                if (sortedYears[i] <= firstYear) lo = sortedYears[i];
+                if (sortedYears[i] >= firstYear && hi === null) hi = sortedYears[i];
+            }
+            if (lo !== null && hi !== null && lo !== hi) {
+                var frac = (firstYear - lo) / (hi - lo);
+                var loEnv = baseEnv[String(lo)];
+                var hiEnv = baseEnv[String(hi)];
+                if (loEnv && hiEnv) {
+                    merged[firstYearStr] = {
+                        p10: loEnv.p10 + (hiEnv.p10 - loEnv.p10) * frac,
+                        p50: loEnv.p50 + (hiEnv.p50 - loEnv.p50) * frac,
+                        p90: loEnv.p90 + (hiEnv.p90 - loEnv.p90) * frac,
+                        mean: loEnv.mean + (hiEnv.mean - loEnv.mean) * frac
+                    };
+                }
+            } else if (lo !== null && lo === firstYear && baseEnv[firstYearStr]) {
+                merged[firstYearStr] = baseEnv[firstYearStr];
+            }
+        }
+
         return merged;
+    }
+
+    // Helper: linearly interpolate an envelope value between two surrounding years
+    function interpolateEnvAtYear(env, year) {
+        var keys = Object.keys(env).map(Number).sort(function (a, b) { return a - b; });
+        var lo = null, hi = null;
+        for (var i = 0; i < keys.length; i++) {
+            if (keys[i] <= year) lo = keys[i];
+            if (keys[i] >= year && hi === null) hi = keys[i];
+        }
+        if (lo === year && env[String(lo)]) return env[String(lo)];
+        if (lo === null || hi === null || lo === hi) return null;
+        var loE = env[String(lo)], hiE = env[String(hi)];
+        if (!loE || !hiE) return null;
+        var f = (year - lo) / (hi - lo);
+        return {
+            p10: loE.p10 + (hiE.p10 - loE.p10) * f,
+            p50: loE.p50 + (hiE.p50 - loE.p50) * f,
+            p90: loE.p90 + (hiE.p90 - loE.p90) * f,
+            mean: loE.mean + (hiE.mean - loE.mean) * f
+        };
     }
 
     function updateFanChart() {
         if (!fanChart || !DATA) return;
         var years = getYears();
-        var labels = years.map(String);
         var datasets = [];
         var baseline = DATA.scenarios.baseline;
         var mode = getColorMode();
 
+        // Check if we need to inject the intervention year into the timeline
+        var firstYear = getFirstInterventionYear();
+        var hasCustom = customScenario || (mode === 'single' && savedScenarioOverlays.length === 1);
+        if (firstYear && hasCustom && years.indexOf(firstYear) === -1) {
+            // Inject the intervention year into the years array for chart resolution
+            years = years.slice();
+            years.push(firstYear);
+            years.sort(function (a, b) { return a - b; });
+        }
+        var labels = years.map(String);
+
         // ── Always show baseline with gray p10-p90 band ──
+        // If we injected an extra year, interpolate baseline envelope at that year
         if (baseline) {
             var baseEnv = getEnvelope(baseline);
+            if (firstYear && !baseEnv[String(firstYear)]) {
+                var interpBase = interpolateEnvAtYear(baseEnv, firstYear);
+                if (interpBase) {
+                    baseEnv = Object.assign({}, baseEnv);
+                    baseEnv[String(firstYear)] = interpBase;
+                }
+            }
             addFanDatasets(datasets, baseEnv, years, BASELINE_COLOR, 'Baseline', mode, {
                 color: BASELINE_COLOR, width: 2.5, dash: [], pointRadius: 0,
                 legendLabel: 'Baseline (Baseline)'
@@ -530,7 +599,6 @@
                 var custName = customOrSaved.name || 'Custom';
 
                 // Align custom with baseline until first intervention year
-                var firstYear = getFirstInterventionYear();
                 var baseEnvForAlign = baseline ? getEnvelope(baseline) : null;
                 var alignedEnv = alignEnvelopeWithBaseline(custEnv, baseEnvForAlign, firstYear);
 
@@ -544,9 +612,8 @@
             // Custom overlay
             if (customScenario) {
                 var custEnvMulti = customScenario.envelope;
-                var firstYearMulti = getFirstInterventionYear();
                 var baseEnvMulti = baseline ? getEnvelope(baseline) : null;
-                var alignedEnvMulti = alignEnvelopeWithBaseline(custEnvMulti, baseEnvMulti, firstYearMulti);
+                var alignedEnvMulti = alignEnvelopeWithBaseline(custEnvMulti, baseEnvMulti, firstYear);
 
                 addFanDatasets(datasets, alignedEnvMulti, years, CUSTOM_COLOR, 'Custom', mode, null,
                     { isBaseline: false, scenarioName: 'Custom' });
@@ -1178,18 +1245,34 @@
         if (!intensityFanChart || !DATA) return;
 
         var years = getYears();
-        var labels = years.map(String);
         var datasets = [];
-
-        // Baseline intensity fan
         var baseline = DATA.scenarios.baseline;
+
+        // Inject intervention year for chart resolution (same as fan chart)
+        var firstYear = getFirstInterventionYear();
+        var hasCustom = customScenario != null;
+        if (firstYear && hasCustom && years.indexOf(firstYear) === -1) {
+            years = years.slice();
+            years.push(firstYear);
+            years.sort(function (a, b) { return a - b; });
+        }
+        var labels = years.map(String);
+
+        // Baseline intensity fan (interpolate at intervention year if needed)
         if (baseline && baseline.intensity_envelope) {
-            addIntensityFanDatasets(datasets, baseline.intensity_envelope, years, BASELINE_COLOR, 'Baseline', true);
+            var baseIntEnv = baseline.intensity_envelope;
+            if (firstYear && !baseIntEnv[String(firstYear)]) {
+                var interpBase = interpolateEnvAtYear(baseIntEnv, firstYear);
+                if (interpBase) {
+                    baseIntEnv = Object.assign({}, baseIntEnv);
+                    baseIntEnv[String(firstYear)] = interpBase;
+                }
+            }
+            addIntensityFanDatasets(datasets, baseIntEnv, years, BASELINE_COLOR, 'Baseline', true);
         }
 
         // Custom intensity fan
         if (customScenario && customScenario.intensity_envelope) {
-            var firstYear = getFirstInterventionYear();
             var alignedIntEnv = alignEnvelopeWithBaseline(
                 customScenario.intensity_envelope,
                 baseline ? baseline.intensity_envelope : null,
