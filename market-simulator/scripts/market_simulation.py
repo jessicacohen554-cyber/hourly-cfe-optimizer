@@ -4482,7 +4482,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
 
 def run_full_sweep(isos=None, nuclear_retirement_threshold=None,
                     snapshot_mode=False, weather_years=None, sim_years=None,
-                    params_csv=None, price_sens_csv=None):
+                    params_csv=None, price_sens_csv=None, shard=None):
     """Run full parametric market sweep.
 
     Pre-loads data once, shares LMP cache across scenarios.
@@ -4498,6 +4498,9 @@ def run_full_sweep(isos=None, nuclear_retirement_threshold=None,
         params_csv: Optional path to sweep_params.csv for custom parameter axes.
         price_sens_csv: Optional path to sweep_price_sensitivities.csv for custom
             price sensitivity bundles.
+        shard: Optional tuple (k, n) to run only shard k of n total shards
+            (1-indexed). Divides scenarios evenly across shards for parallel
+            execution. E.g., shard=(1,3) runs scenarios 0,3,6,...
     """
     t0 = time.time()
     print("Loading common data...")
@@ -4515,6 +4518,12 @@ def run_full_sweep(isos=None, nuclear_retirement_threshold=None,
 
     scenarios = build_market_scenarios(
         params_csv=params_csv, price_sens_csv=price_sens_csv)
+
+    # Apply sharding if requested
+    if shard is not None:
+        shard_k, shard_n = shard
+        scenarios = [s for i, s in enumerate(scenarios) if i % shard_n == (shard_k - 1)]
+        print(f"Shard {shard_k}/{shard_n}: running {len(scenarios)} of total scenarios")
 
     # Weather-year iteration: run each weather year as a separate sweep pass
     wy_list = weather_years or [None]  # None = default year (DATA_YEAR)
