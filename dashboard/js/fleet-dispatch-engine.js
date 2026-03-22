@@ -403,8 +403,10 @@ var FleetDispatchEngine = (function () {
                     // Efficiency adjustment
                     var adjustedCf = Math.min(baseCf * efficiencyRatio, 0.95);
 
-                    // Economic retirement (skip for fallback years)
-                    if (yearHasData[yi3] && margin < 0) adjustedCf = 0;
+                    // Economic retirement — only for default_market plants (no action set)
+                    // operating_override skips this: plant runs at sweep CF regardless of margin
+                    var isDefaultMarket = !action || action === 'default_market';
+                    if (isDefaultMarket && yearHasData[yi3] && margin < 0) adjustedCf = 0;
 
                     // Year-aware masks
                     if (action === 'retire' && yearOnline && years[yi3] >= yearOnline) {
