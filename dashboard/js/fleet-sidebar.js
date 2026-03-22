@@ -281,19 +281,10 @@ var FleetSidebar = (function () {
 
         var allPlants = fleetPlants.concat(addedPlants);
 
-        // Filter out plants that are already retired (real-world retirement before 2024)
-        // They still exist in fleetPlants for dispatch (baseline 2023 emissions), just hidden from the UI
-        var visiblePlants = allPlants.filter(function (p) {
-            // Hide plants with a retirement_year in the source data (confirmed real-world retirements)
-            if (p.retirement_year && p.retirement_year <= 2023) return false;
-            if (p.status === 'retired') return false;
-            return true;
-        });
-
         // Group by category first, then by ISO within each category
         var byCategoryISO = {};
         var categoryOrder = ['fossil', 'nuclear', 'renewable', 'storage', 'other'];
-        visiblePlants.forEach(function (p) {
+        allPlants.forEach(function (p) {
             var cat = p.plant_category || (FOSSIL_FUELS.has(p.fuel_type) ? 'fossil' : 'other');
             var iso = p.iso || 'Other';
             var key = cat + '|' + iso;
