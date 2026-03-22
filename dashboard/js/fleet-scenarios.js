@@ -43,6 +43,7 @@
     var selectedFossilCost = 'All';
     var fanChart = null;
     var waterfallChart = null;
+    var waterfall2023Chart = null;
     var genMixChart = null;
     var newCleanChart = null;
     var intensityFanChart = null;
@@ -133,6 +134,7 @@
         buildControls();
         buildFanChart();
         buildWaterfallChart();
+        buildWaterfall2023Chart();
         buildGenMixChart();
         buildNewCleanChart();
         buildIntensityFanChart();
@@ -217,6 +219,7 @@
             selectedYear = Number(slider.value);
             sliderVal.textContent = slider.value;
             updateWaterfallChart();
+            updateWaterfall2023Chart();
             updateGenMixChart();
             updateNewCleanChart();
             updateFanChartAnnotation();
@@ -231,6 +234,7 @@
         updateFanChart();
         updateFanLegend();
         updateWaterfallChart();
+        updateWaterfall2023Chart();
         updateGenMixChart();
         updateNewCleanChart();
         updateIntensityFanChart();
@@ -350,6 +354,7 @@
                         selectedYear = year;
                         document.getElementById('yearSliderValue').textContent = year;
                         updateWaterfallChart();
+                        updateWaterfall2023Chart();
                         updateGenMixChart();
                         updateNewCleanChart();
                         updateFanChartAnnotation();
@@ -903,7 +908,7 @@
         if (!waterfallChart || !DATA) return;
 
         var yr = String(nearestYear(selectedYear, getYears()));
-        document.getElementById('waterfallTitle').textContent = 'Emissions Delta vs. Baseline — ' + yr;
+        document.getElementById('waterfallTitle').textContent = 'Emissions Delta vs Market Trajectory Baseline — ' + yr;
 
         if (!customScenario) {
             waterfallChart.data.labels = ['Edit fleet to see changes'];
@@ -964,6 +969,115 @@
             barPercentage: 0.7
         }];
         waterfallChart.update('active');
+    }
+
+    // ====================================================================
+    // CHART 2b: PLANT-LEVEL WATERFALL vs 2023 BASELINE
+    // ====================================================================
+    function buildWaterfall2023Chart() {
+        var ctx = document.getElementById('waterfall2023Chart').getContext('2d');
+        waterfall2023Chart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: [], datasets: [] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                animation: { duration: 300 },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Emissions Delta vs 2023 (Mt CO₂)', font: { size: 12 } },
+                        grid: { color: '#E0E6EF' },
+                        ticks: { font: { size: 11 } }
+                    },
+                    y: {
+                        ticks: { font: { size: 11 } },
+                        grid: { display: false }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                var v = ctx.raw;
+                                return (v > 0 ? '+' : '') + v.toFixed(2) + ' Mt CO₂ vs 2023';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        updateWaterfall2023Chart();
+    }
+
+    function updateWaterfall2023Chart() {
+        if (!waterfall2023Chart || !DATA) return;
+
+        var yr = String(nearestYear(selectedYear, getYears()));
+        document.getElementById('waterfall2023Title').textContent =
+            'Emissions Delta vs 2023 Baseline — ' + yr;
+
+        // Use custom scenario if available, otherwise use baseline at selectedYear
+        var scenarioToCompare = customScenario || DATA.scenarios.baseline;
+        var scPlants = scenarioToCompare.plant_detail ? scenarioToCompare.plant_detail[yr] : null;
+
+        // 2023 baseline from engine-computed baseline
+        var base2023Plants = DATA.scenarios.baseline.plant_detail ?
+            DATA.scenarios.baseline.plant_detail['2023'] : null;
+
+        if (!base2023Plants || !scPlants) {
+            waterfall2023Chart.data.labels = ['No 2023 data'];
+            waterfall2023Chart.data.datasets = [{ data: [0], backgroundColor: '#ddd' }];
+            waterfall2023Chart.update('active');
+            return;
+        }
+
+        // Build delta: baseline[2023] emissions - scenario[yr] emissions per plant
+        var baseMap = {};
+        base2023Plants.forEach(function (p) { baseMap[p.orispl] = p; });
+
+        var deltas = [];
+        scPlants.forEach(function (p) {
+            var baseP = baseMap[p.orispl];
+            var baseE = baseP ? baseP.emissions_mt : 0;
+            var delta = baseE - p.emissions_mt;  // positive = reduction from 2023
+            if (Math.abs(delta) > 0.001) {
+                deltas.push({ name: p.name, delta: delta });
+            }
+        });
+        // Also check for plants in 2023 that are missing from scenario (retired)
+        base2023Plants.forEach(function (p) {
+            var found = scPlants.some(function (sp) { return sp.orispl === p.orispl; });
+            if (!found && p.emissions_mt > 0.001) {
+                deltas.push({ name: p.name + ' (retired)', delta: p.emissions_mt });
+            }
+        });
+
+        deltas.sort(function (a, b) { return Math.abs(b.delta) - Math.abs(a.delta); });
+
+        // Truncate to top 15 + Other
+        var other = 0;
+        if (deltas.length > 15) {
+            for (var i = 15; i < deltas.length; i++) other += deltas[i].delta;
+            deltas = deltas.slice(0, 15);
+            if (Math.abs(other) > 0.001) deltas.push({ name: 'Other', delta: other });
+        }
+
+        var labels = deltas.map(function (d) { return d.name; });
+        var values = deltas.map(function (d) { return d.delta; });
+        var colors = values.map(function (v) { return v >= 0 ? '#6BA543' : '#DC2626'; });
+
+        waterfall2023Chart.data.labels = labels;
+        waterfall2023Chart.data.datasets = [{
+            data: values,
+            backgroundColor: colors,
+            borderColor: colors,
+            borderWidth: 1,
+            borderRadius: 3,
+            barPercentage: 0.7
+        }];
+        waterfall2023Chart.update('active');
     }
 
     // ====================================================================

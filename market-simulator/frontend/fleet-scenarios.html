@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
     <title>Fleet Climate Scenarios — Constellation Energy</title>
     <link rel="stylesheet" href="styles/CEG-style.css">
     <link rel="stylesheet" href="styles/simulator.css">
@@ -414,6 +415,23 @@
         @media (max-width: 480px) {
             .scenario-checks { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
             .target-radios { flex-direction: column; }
+            .sb-plant-row { grid-template-columns: 1fr 50px 90px 60px; gap: 4px; padding: 6px 8px; }
+            .sb-plant-row select { font-size: 0.72rem; min-height: 28px; }
+            .sb-plant-row input[type="number"] { width: 52px; font-size: 0.72rem; min-height: 28px; }
+        }
+        @media (max-width: 375px) {
+            .year-slider-wrap { min-width: 0; }
+            .year-slider-value { font-size: 1.1rem; min-width: 2.5rem; }
+            .sb-plant-row { grid-template-columns: 1fr 45px 80px 55px; gap: 3px; padding: 4px 6px; font-size: 0.75rem; }
+            .sidebar-body { padding: 12px 12px; }
+            .chart-card { padding: var(--space-md); }
+        }
+        @media (max-width: 320px) {
+            .fan-chart-container { min-height: 280px; }
+            .secondary-chart-container { min-height: 240px; }
+            .waterfall-chart-container { min-height: 240px; }
+            .controls-group-label { font-size: 0.65rem; }
+            .sb-plant-row { grid-template-columns: 1fr 40px 70px 50px; }
         }
     </style>
 </head>
@@ -424,21 +442,15 @@
     <!-- Nav -->
     <nav>
         <div class="nav-logo">
-            <a href="/" style="display:flex;align-items:center;gap:0.75rem;text-decoration:none;">
-                <img src="/brand-assets/logo.png" alt="Constellation Energy" style="height:36px;" onerror="this.style.display='none'">
+            <a href="#" style="display:flex;align-items:center;gap:0.75rem;text-decoration:none;">
                 <div>
                     <div class="nav-title">Constellation Energy</div>
-                    <div class="nav-subtitle">Market Simulation Screening Tool</div>
+                    <div class="nav-subtitle">Fleet Climate Scenario Analysis</div>
                 </div>
             </a>
         </div>
         <ul class="nav-links">
-            <li><a href="/">Guide</a></li>
-            <li><a href="/setup">Setup</a></li>
-            <li><a href="/fleet-config">Fleet Config</a></li>
-            <li><a href="/results">Results</a></li>
-            <li><a href="/fleet-scenarios" class="active">Fleet Climate Scenarios</a></li>
-            <li><a href="/methodology">Methodology</a></li>
+            <li><a href="#" class="active">Fleet Climate Scenarios</a></li>
         </ul>
     </nav>
 
@@ -474,7 +486,7 @@
                     <button class="toggle-btn" data-value="High">High</button>
                 </div>
             </div>
-            <div class="controls-group" style="flex:1; min-width: 180px;">
+            <div class="controls-group" style="flex:1; min-width: 140px;">
                 <div class="controls-group-label">Year (Waterfall)</div>
                 <div class="year-slider-wrap">
                     <input type="range" id="yearSlider" min="2023" max="2050" value="2030" step="1">
@@ -506,11 +518,23 @@
             <div class="chart-card" id="waterfallCard">
                 <div class="chart-card-header">
                     <div class="section-eyebrow">Plant Impact</div>
-                    <h3 id="waterfallTitle">Emissions Delta vs. Baseline — 2030</h3>
-                    <p>Which plants drive the biggest emissions changes vs. baseline?</p>
+                    <h3 id="waterfallTitle">Emissions Delta vs Market Trajectory Baseline — 2030</h3>
+                    <p>Which plants drive the biggest emissions changes vs. market trajectory baseline?</p>
                 </div>
                 <div class="waterfall-chart-container">
                     <canvas id="waterfallChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Waterfall vs 2023 Baseline -->
+            <div class="chart-card" id="waterfall2023Card">
+                <div class="chart-card-header">
+                    <div class="section-eyebrow">Historical Comparison</div>
+                    <h3 id="waterfall2023Title">Emissions Delta vs 2023 Baseline</h3>
+                    <p>How much have emissions changed from the actual 2023 starting point?</p>
+                </div>
+                <div class="waterfall-chart-container">
+                    <canvas id="waterfall2023Chart"></canvas>
                 </div>
             </div>
 
@@ -518,13 +542,38 @@
             <div class="chart-card" id="genMixCard">
                 <div class="chart-card-header">
                     <div class="section-eyebrow">Generation Mix</div>
-                    <h3 id="genMixTitle">Fleet Generation by Fuel — 2030</h3>
-                    <p>TWh by fuel type for each visible scenario</p>
+                    <h3 id="genMixTitle">Fleet Generation by Fuel — Baseline</h3>
+                    <p>TWh by fuel type over time</p>
                 </div>
                 <div class="secondary-chart-container">
                     <canvas id="genMixChart"></canvas>
                 </div>
                 <div class="chart-legend-bar" id="genMixLegend"></div>
+            </div>
+        </div>
+
+        <!-- New Clean Generation Snapshot -->
+        <div class="chart-card" id="newCleanCard">
+            <div class="chart-card-header">
+                <div class="section-eyebrow">Clean Generation</div>
+                <h3 id="newCleanTitle">New Clean Generation — 2030</h3>
+                <p>TWh from new clean resources and CCS in the selected year</p>
+            </div>
+            <div class="secondary-chart-container">
+                <canvas id="newCleanChart"></canvas>
+            </div>
+            <div class="chart-legend-bar" id="newCleanLegend"></div>
+        </div>
+
+        <!-- Emissions Intensity Fan Chart -->
+        <div class="chart-card" id="intensityFanCard">
+            <div class="chart-card-header">
+                <div class="section-eyebrow">Emissions Intensity</div>
+                <h3 id="intensityFanTitle">Fleet Emissions Intensity (kgCO₂/MWh)</h3>
+                <p>Total fossil emissions divided by total generation (clean + fossil). Lower = cleaner grid.</p>
+            </div>
+            <div class="primary-chart-container">
+                <canvas id="intensityFanChart"></canvas>
             </div>
         </div>
 
@@ -555,7 +604,7 @@
             <!-- CCS Global Parameters Panel -->
             <div class="sb-ccs-panel" id="ccsParamsPanel">
                 <div class="sb-ccs-panel-header">
-                    <span class="sb-ccs-panel-icon">⚙</span>
+                    <span class="sb-ccs-panel-icon">&#9881;</span>
                     <span>CCS Retrofit Parameters</span>
                 </div>
                 <div class="sb-ccs-param-row">
@@ -572,7 +621,7 @@
                         <input type="range" id="ccsCaptureSlider" min="50" max="99" value="90" step="1">
                         <span class="sb-slider-value" id="ccsCaptureValue">90%</span>
                     </div>
-                    <div class="sb-param-hint">Fraction of CO₂ captured and stored</div>
+                    <div class="sb-param-hint">Fraction of CO&#8322; captured and stored</div>
                 </div>
                 <div class="sb-ccs-param-row">
                     <label for="ccsCfSlider">Post-Retrofit Capacity Factor</label>
@@ -592,9 +641,9 @@
             <div class="sb-section-title">Add New Plant</div>
             <div id="addPlantSection">
                 <div class="sb-form-row">
-                    <div><label>Plant Name</label><input type="text" id="apName" placeholder="New CCGT"></div>
+                    <div><label>Plant Name</label><input type="text" id="apName" placeholder="New Plant"></div>
                     <div><label>ISO</label>
-                        <select id="apISO">
+                        <select id="apISO" onchange="window._apFuelTypeChanged && window._apFuelTypeChanged()">
                             <option value="PJM">PJM</option>
                             <option value="ERCOT">ERCOT</option>
                             <option value="CAISO">CAISO</option>
@@ -607,17 +656,37 @@
                 </div>
                 <div class="sb-form-row">
                     <div><label>Capacity (MW)</label><input type="number" id="apCapacity" value="1200" min="1"></div>
-                    <div><label>Heat Rate (MMBtu/MWh)</label><input type="number" id="apHeatRate" value="6.5" step="0.1" min="1"></div>
-                </div>
-                <div class="sb-form-row">
-                    <div><label>Fuel Type</label>
-                        <select id="apFuelType">
-                            <option value="gas_ccgt">Gas CCGT</option>
-                            <option value="gas_ct">Gas CT</option>
-                            <option value="oil_ct">Oil CT</option>
-                            <option value="gas_oil_ct">Gas/Oil Dual</option>
+                    <div><label>Fuel / Resource Type</label>
+                        <select id="apFuelType" onchange="window._apFuelTypeChanged && window._apFuelTypeChanged()">
+                            <optgroup label="Fossil">
+                                <option value="gas_ccgt">Gas CCGT</option>
+                                <option value="gas_ct">Gas CT</option>
+                                <option value="oil_ct">Oil CT</option>
+                                <option value="gas_oil_ct">Gas/Oil Dual</option>
+                            </optgroup>
+                            <optgroup label="Clean Firm">
+                                <option value="nuclear">Nuclear</option>
+                                <option value="geothermal">Geothermal</option>
+                            </optgroup>
+                            <optgroup label="Renewable">
+                                <option value="solar">Solar</option>
+                                <option value="wind">Wind</option>
+                            </optgroup>
+                            <optgroup label="Storage">
+                                <option value="battery_4hr">Battery (4hr)</option>
+                                <option value="battery_8hr">Battery (8hr)</option>
+                                <option value="ldes">LDES (100hr Iron-Air)</option>
+                            </optgroup>
                         </select>
                     </div>
+                </div>
+                <div class="sb-form-row" id="apFossilFields">
+                    <div><label>Heat Rate (MMBtu/MWh)</label><input type="number" id="apHeatRate" value="6.5" step="0.1" min="1"></div>
+                </div>
+                <div class="sb-form-row" id="apCleanFields" style="display:none;">
+                    <div><label>Capacity Factor (%)</label><input type="number" id="apCF" value="92" step="1" min="1" max="100"></div>
+                </div>
+                <div class="sb-form-row">
                     <div><label>Year Online</label><input type="number" id="apYearOnline" value="2028" min="2023" max="2050"></div>
                 </div>
                 <div class="sb-form-row full">
@@ -645,7 +714,7 @@
 
     <!-- Footer -->
     <footer>
-        <div class="footer-brand"><strong>Constellation Energy</strong> &middot; Market Simulation Screening Tool</div>
+        <div class="footer-brand"><strong>Constellation Energy</strong> &middot; Fleet Climate Scenario Analysis</div>
         <div class="footer-note">Fleet scenario analysis powered by 1,215-scenario parametric sweep</div>
     </footer>
     <div class="bottom-banner"></div>
