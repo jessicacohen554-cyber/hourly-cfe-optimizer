@@ -413,6 +413,11 @@ var FleetDispatchEngine = (function () {
                     if (action === 'add_plant' && yearOnline && years[yi3] < yearOnline) {
                         adjustedCf = 0;
                     }
+                    // Plants marked retired in source data: run in first year (2023 baseline)
+                    // then zero for all subsequent years
+                    if (p.status === 'retired' && !action && years[yi3] > years[0]) {
+                        adjustedCf = 0;
+                    }
 
                     // Generation
                     var genMwh = capMW * adjustedCf * 8760;

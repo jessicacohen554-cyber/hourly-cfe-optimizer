@@ -281,10 +281,16 @@ var FleetSidebar = (function () {
 
         var allPlants = fleetPlants.concat(addedPlants);
 
+        // Filter out retired plants — they exist in data for 2023 baseline
+        // emissions but shouldn't appear in the sidebar for user interaction
+        var visiblePlants = allPlants.filter(function (p) {
+            return p.status !== 'retired';
+        });
+
         // Group by category first, then by ISO within each category
         var byCategoryISO = {};
         var categoryOrder = ['fossil', 'nuclear', 'renewable', 'storage', 'other'];
-        allPlants.forEach(function (p) {
+        visiblePlants.forEach(function (p) {
             var cat = p.plant_category || (FOSSIL_FUELS.has(p.fuel_type) ? 'fossil' : 'other');
             var iso = p.iso || 'Other';
             var key = cat + '|' + iso;
