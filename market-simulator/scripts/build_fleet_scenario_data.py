@@ -27,6 +27,7 @@ OUTPUT_DIR = os.path.join(SCRIPT_DIR, '..', 'frontend', 'data')
 
 ROSETTA_PATH = os.path.join(DATA_DIR, 'CEG_fleet_rosetta.csv')
 EGRID_EMISSIONS_PATH = os.path.join(DATA_DIR, 'egrid_2023_ceg_plant_emissions.json')
+OVERRIDES_PATH = os.path.join(DATA_DIR, 'plant_emissions_overrides.json')
 
 # ── Canonical fuel type mapping from Rosetta CSV ──
 FUEL_MAP = {
@@ -85,6 +86,52 @@ CAPACITY_FACTORS = {
     'hydro': 0.20,
     'battery': 0.0,
 }
+
+
+def load_overrides():
+    """Load user-supplied plant emissions overrides by year.
+
+    Returns dict: {year_str: {campd_id: {co2_short_tons, net_gen_mwh, ...}}}
+    """
+    if not os.path.exists(OVERRIDES_PATH):
+        return {}
+
+    with open(OVERRIDES_PATH, 'r') as f:
+        data = json.load(f)
+
+    overrides = {}
+    for year_str, plants in data.items():
+        if year_str.startswith('_'):
+            continue
+        by_id = {}
+        for campd_str, vals in plants.items():
+            try:
+                cid = int(campd_str)
+            except ValueError:
+                continue
+            by_id[cid] = {
+                'co2_short_tons': vals.get('co2_short_tons', 0),
+                'net_gen_mwh': vals.get('net_gen_mwh', 0),
+                'heat_input_mmbtu': vals.get('heat_input_mmbtu'),
+            }
+        if by_id:
+            overrides[year_str] = by_id
+
+    if overrides:
+        total_plants = sum(len(v) for v in overrides.values())
+        print(f"  Loaded overrides: {total_plants} plant entries across years {list(overrides.keys())}")
+    return overrides
+
+
+# Module-level overrides cache (loaded once, used by all functions)
+_OVERRIDES = None
+
+
+def get_overrides():
+    global _OVERRIDES
+    if _OVERRIDES is None:
+        _OVERRIDES = load_overrides()
+    return _OVERRIDES
 
 
 def load_egrid_emissions():
@@ -301,10 +348,21 @@ def get_fossil_plants(plants):
 def get_plant_gen_twh(p, fuel, year, year_factor, re_growth):
     """Get generation for a single plant in a given year.
 
-    For 2023 fossil plants with eGRID data: uses actual measured generation.
-    For all other cases: uses capacity × CF × temporal adjustments.
+    Priority chain:
+      1. User override (plant_emissions_overrides.json) — highest priority
+      2. eGRID 2023 actuals (for 2023 fossil plants)
+      3. Capacity × CF × temporal adjustments (fallback)
     """
     cap = p['capacity_mw']
+    orispl = p.get('orispl')
+
+    # Check user overrides first
+    if orispl and fuel in EMISSION_RATE:
+        overrides = get_overrides()
+        year_overrides = overrides.get(str(year), {})
+        if orispl in year_overrides:
+            equity = p.get('equity', 1.0)
+            return year_overrides[orispl]['net_gen_mwh'] * equity / 1e6  # MWh → TWh
 
     # 2023 fossil plants: prefer eGRID actual generation
     if year == 2023 and p.get('egrid_gen_twh') is not None and fuel in EMISSION_RATE:
@@ -441,12 +499,23 @@ def compute_fleet_emissions(plants, year, scenario='baseline', retired_fuels=Non
         if p.get('retired_year') and year >= p['retired_year']:
             continue
 
-        # 2023: use eGRID actual CO₂ directly if available
+        orispl = p.get('orispl')
+
+        # Priority 1: user override (actual reported emissions)
+        overrides = get_overrides()
+        year_overrides = overrides.get(str(year), {})
+        if orispl and orispl in year_overrides:
+            equity = p.get('equity', 1.0)
+            co2_st = year_overrides[orispl]['co2_short_tons'] * equity
+            emissions_by_fuel[fuel] += co2_st * 0.907185 / 1e6  # short tons → Mt metric
+            continue
+
+        # Priority 2: eGRID 2023 actual CO₂
         if year == 2023 and p.get('egrid_co2_mt') is not None:
             emissions_by_fuel[fuel] += p['egrid_co2_mt']
             continue
 
-        # Future years or plants without eGRID: compute from generation × rate
+        # Priority 3: modeled from generation × emission rate
         gen_twh = get_plant_gen_twh(p, fuel, year, year_factor, re_growth)
         if year > 2023 and p.get('egrid_gen_twh') is not None:
             gen_twh = p['egrid_gen_twh'] * year_factor
@@ -544,8 +613,16 @@ def build_plant_detail(fossil_plants, year, scenario='baseline', retired_fuels=N
             })
             continue
 
-        # Generation: eGRID actual for 2023, scaled for future
-        if year == 2023 and p.get('egrid_gen_twh') is not None:
+        # Priority 1: user override
+        overrides = get_overrides()
+        year_overrides = overrides.get(str(year), {})
+        if orispl and orispl in year_overrides:
+            equity = p.get('equity', 1.0)
+            ov = year_overrides[orispl]
+            gen_twh = ov['net_gen_mwh'] * equity / 1e6
+            emissions_mt = ov['co2_short_tons'] * equity * 0.907185 / 1e6
+        # Priority 2: eGRID actual for 2023, scaled for future
+        elif year == 2023 and p.get('egrid_gen_twh') is not None:
             gen_twh = p['egrid_gen_twh']
         elif year > 2023 and p.get('egrid_gen_twh') is not None:
             gen_twh = p['egrid_gen_twh'] * year_factor
@@ -553,12 +630,13 @@ def build_plant_detail(fossil_plants, year, scenario='baseline', retired_fuels=N
             cf = CAPACITY_FACTORS.get(fuel, 0.1)
             gen_twh = cap * cf * 8.760 * year_factor / 1000.0
 
-        # Emissions: eGRID actual for 2023, plant-specific rate for future
-        if year == 2023 and p.get('egrid_co2_mt') is not None:
-            emissions_mt = p['egrid_co2_mt']
-        else:
-            co2_rate = get_plant_co2_rate(p, fuel)
-            emissions_mt = gen_twh * co2_rate
+        # Emissions: override already set above, otherwise derive
+        if not (orispl and orispl in year_overrides):
+            if year == 2023 and p.get('egrid_co2_mt') is not None:
+                emissions_mt = p['egrid_co2_mt']
+            else:
+                co2_rate = get_plant_co2_rate(p, fuel)
+                emissions_mt = gen_twh * co2_rate
 
         gen_twh = round(gen_twh, 3)
         emissions_mt = round(emissions_mt, 3)
