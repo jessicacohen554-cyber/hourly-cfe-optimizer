@@ -413,6 +413,11 @@ var FleetDispatchEngine = (function () {
                     if (action === 'add_plant' && yearOnline && years[yi3] < yearOnline) {
                         adjustedCf = 0;
                     }
+                    // Plants with retirement_year in source data: zero gen after retirement
+                    // (keep their emissions only for years before they retired)
+                    if (p.retirement_year && years[yi3] > p.retirement_year) {
+                        adjustedCf = 0;
+                    }
 
                     // Generation
                     var genMwh = capMW * adjustedCf * 8760;

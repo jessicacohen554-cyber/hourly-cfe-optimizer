@@ -281,10 +281,12 @@ var FleetSidebar = (function () {
 
         var allPlants = fleetPlants.concat(addedPlants);
 
-        // Filter out plants that are retired before the current snapshot year
-        // They still exist in fleetPlants for dispatch (baseline emissions), just hidden from the UI
+        // Filter out plants that are already retired (real-world retirement before 2024)
+        // They still exist in fleetPlants for dispatch (baseline 2023 emissions), just hidden from the UI
         var visiblePlants = allPlants.filter(function (p) {
-            if (p._action === 'retire' && p._year_online && p._year_online <= 2023) return false;
+            // Hide plants with a retirement_year in the source data (confirmed real-world retirements)
+            if (p.retirement_year && p.retirement_year <= 2023) return false;
+            if (p.status === 'retired') return false;
             return true;
         });
 
