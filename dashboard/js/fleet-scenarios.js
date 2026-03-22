@@ -1432,6 +1432,18 @@
             customScenario = null;
             updateAllCharts();
         },
+        // Replace precomputed baseline with engine-computed baseline.
+        // Called by fleet-sidebar.js on load so baseline and custom scenarios
+        // use the exact same dispatch engine — eliminating phantom deltas.
+        setComputedBaseline: function (baselineData) {
+            if (!DATA) return;
+            // Replace the precomputed baseline with engine-computed baseline
+            DATA.scenarios.baseline = baselineData;
+            // Derive intensity envelope for the new baseline
+            deriveIntensityEnvelope(DATA.scenarios.baseline);
+            // Rebuild all charts with the new baseline
+            updateAllCharts();
+        },
         // Legacy compatibility — addScenario now sets as custom overlay
         addScenario: function (key, label, data) {
             customScenario = data;

@@ -255,6 +255,47 @@ var FleetSidebar = (function () {
             statusMsg += ', ' + (sweepData.n_scenarios || 0) + ' sweep scenarios';
         }
         setStatus(statusMsg);
+
+        // AUTO-COMPUTE BASELINE using same engine as custom scenarios
+        // This ensures baseline and custom use identical calculation paths,
+        // eliminating phantom deltas from precomputed vs engine mismatch.
+        if (sweepData && baseFleet.length > 0) {
+            computeAndSetBaseline();
+        }
+    }
+
+    function computeAndSetBaseline() {
+        // Use unmodified base fleet (no _action flags) — this IS the market trajectory
+        var unmodifiedFleet = baseFleet.map(function (p) {
+            return Object.assign({}, p, {
+                _action: null,
+                _year_online: null,
+                _ccs_target_rate: 0,
+                _uprate_mw: 0
+            });
+        });
+
+        try {
+            var result = FleetDispatchEngine.computeFleetDispatch(unmodifiedFleet, sweepData, {
+                ccs_derate_pct: 0,
+                ccs_capture_rate_pct: 0,
+                ccs_cf_pct: 85
+            });
+
+            // Push to chart system as the BASELINE (replacing precomputed JSON baseline)
+            if (window.FLEET_SCENARIOS_API && window.FLEET_SCENARIOS_API.setComputedBaseline) {
+                window.FLEET_SCENARIOS_API.setComputedBaseline({
+                    envelope: result.envelope,
+                    plant_detail: result.plant_detail,
+                    generation_by_fuel: result.generation_by_fuel,
+                    emissions_by_fuel: result.emissions_by_fuel,
+                    fleet_summary: result.fleet_summary
+                });
+                console.log('Baseline computed via dispatch engine — unified with custom scenario path');
+            }
+        } catch (err) {
+            console.warn('Baseline auto-compute failed, falling back to precomputed JSON:', err);
+        }
     }
 
     // ── Sidebar Open/Close ──
