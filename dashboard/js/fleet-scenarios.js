@@ -1553,8 +1553,11 @@
             if (!DATA) return;
             // Replace the precomputed baseline with engine-computed baseline
             DATA.scenarios.baseline = baselineData;
-            // Derive intensity envelope for the new baseline
-            deriveIntensityEnvelope(DATA.scenarios.baseline);
+            // Only derive intensity envelope if engine didn't provide one
+            // (engine computes proper P10/P50/P90 spread across all scenarios)
+            if (!DATA.scenarios.baseline.intensity_envelope) {
+                deriveIntensityEnvelope(DATA.scenarios.baseline);
+            }
             // Rebuild all charts with the new baseline
             updateAllCharts();
         },
