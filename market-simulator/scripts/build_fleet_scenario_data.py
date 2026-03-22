@@ -199,6 +199,14 @@ def parse_rosetta():
 
             stat_type = row.get('Stat Type', '').strip()
             group = row.get('Group', '').strip()
+            status = row.get('Status', 'Operating').strip()
+
+            # Retired plants: included in 2023 baseline, excluded from future
+            # Mystic retired May 2024 — last full operating year was 2023
+            RETIRED_YEARS = {
+                1588: 2024,  # Mystic (retired May 31, 2024)
+            }
+            retired_year = RETIRED_YEARS.get(orispl) if orispl and status == 'Retired' else None
 
             # Attach eGRID 2023 actual emissions if available
             # For shared CAMPD IDs, split proportionally by capacity
@@ -227,6 +235,7 @@ def parse_rosetta():
                 'stat_type': stat_type,
                 'group': group,
                 'plant_type': plant_type_csv,
+                'retired_year': retired_year,  # None if still operating
                 # eGRID 2023 actuals (None if not available)
                 'egrid_co2_mt': egrid_co2_mt,
                 'egrid_gen_twh': egrid_gen_twh,
@@ -315,10 +324,14 @@ def compute_fleet_generation(plants, year, scenario='baseline', retired_fuels=No
         if cap <= 0:
             continue
 
-        # Check retirement
+        # Check retirement (fleet-wide by fuel type)
         if fuel in retired_fuels and year >= retired_fuels[fuel]:
             continue
         if fuel == 'gas_oil_ct' and 'oil_ct' in retired_fuels and year >= retired_fuels['oil_ct']:
+            continue
+
+        # Check plant-specific retirement (e.g., Mystic retired 2024)
+        if p.get('retired_year') and year >= p['retired_year']:
             continue
 
         gen_twh = get_plant_gen_twh(p, fuel, year, year_factor, re_growth)
@@ -382,10 +395,14 @@ def compute_fleet_emissions(plants, year, scenario='baseline', retired_fuels=Non
         if cap <= 0:
             continue
 
-        # Check retirement
+        # Check fleet-wide retirement
         if fuel in retired_fuels and year >= retired_fuels[fuel]:
             continue
         if fuel == 'gas_oil_ct' and 'oil_ct' in retired_fuels and year >= retired_fuels['oil_ct']:
+            continue
+
+        # Check plant-specific retirement (e.g., Mystic retired 2024)
+        if p.get('retired_year') and year >= p['retired_year']:
             continue
 
         # 2023: use eGRID actual CO₂ directly if available
@@ -473,11 +490,13 @@ def build_plant_detail(fossil_plants, year, scenario='baseline', retired_fuels=N
         cap = p['capacity_mw']
         orispl = p['orispl'] or hash(name) % 90000 + 10000
 
-        # Check retirement
+        # Check retirement (fleet-wide + plant-specific)
         is_retired = False
         if fuel in retired_fuels and year >= retired_fuels[fuel]:
             is_retired = True
         if fuel == 'gas_oil_ct' and 'oil_ct' in retired_fuels and year >= retired_fuels['oil_ct']:
+            is_retired = True
+        if p.get('retired_year') and year >= p['retired_year']:
             is_retired = True
 
         if is_retired:
