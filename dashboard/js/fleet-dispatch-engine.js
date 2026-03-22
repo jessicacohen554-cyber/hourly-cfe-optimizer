@@ -207,10 +207,12 @@ var FleetDispatchEngine = (function () {
         // Only dispatch fossil-fuel plants via sweep (non-fossil use static CF)
         var fossilFuels = new Set(['gas_ccgt', 'gas_ct', 'coal_steam', 'oil_ct', 'gas_oil_ct']);
 
-        // Initialize fleet emissions array: [scenario][year] = total Mt
-        var fleetEmissions = [];
+        // Initialize fleet emissions and generation arrays: [scenario][year]
+        var fleetEmissions = [];  // Mt CO2
+        var fleetGeneration = []; // MWh (for intensity calc)
         for (var s = 0; s < nScenarios; s++) {
             fleetEmissions[s] = new Float64Array(nYears);
+            fleetGeneration[s] = new Float64Array(nYears);
         }
 
         // Per-plant results for P50 detail
@@ -288,6 +290,7 @@ var FleetDispatchEngine = (function () {
                     genArr[si2][yi] = genMwh;
                     emisArr[si2][yi] = 0; // Zero emissions
                     cfArr[si2][yi] = activeCf;
+                    fleetGeneration[si2][yi] += genMwh; // Accumulate total gen for intensity
 
                     if (genByFuel[fuel]) {
                         genByFuel[fuel][si2][yi] += genMwh / 1e6; // TWh
@@ -444,6 +447,7 @@ var FleetDispatchEngine = (function () {
                     var effectiveCf = (capMW > 0) ? genMwh / (capMW * 8760) : 0;
 
                     fleetEmissions[si2][yi3] += emisMt;
+                    fleetGeneration[si2][yi3] += genMwh; // Accumulate total gen for intensity
                     genArr[si2][yi3] = genMwh;
                     emisArr[si2][yi3] = emisMt;
                     cfArr[si2][yi3] = effectiveCf;
@@ -479,6 +483,25 @@ var FleetDispatchEngine = (function () {
                 p50: Math.round(percentile(col, 50) * 10000) / 10000,
                 p90: Math.round(percentile(col, 90) * 10000) / 10000,
                 mean: Math.round(col.reduce(function (a, b) { return a + b; }, 0) / col.length * 10000) / 10000
+            };
+        }
+
+        // ── Build intensity envelope (kgCO2/MWh) = emissions / total generation ──
+        var intensityEnvelope = {};
+        for (var yi4b = 0; yi4b < nYears; yi4b++) {
+            var intCol = [];
+            for (var si3b = 0; si3b < nScenarios; si3b++) {
+                var totalGenMwh = fleetGeneration[si3b][yi4b];
+                var totalEmisMt = fleetEmissions[si3b][yi4b];
+                // Mt CO2 → kg CO2: multiply by 1e9. Then divide by MWh.
+                var intensityKg = totalGenMwh > 0 ? (totalEmisMt * 1e9) / totalGenMwh : 0;
+                intCol.push(intensityKg);
+            }
+            intensityEnvelope[String(years[yi4b])] = {
+                p10: Math.round(percentile(intCol, 10) * 100) / 100,
+                p50: Math.round(percentile(intCol, 50) * 100) / 100,
+                p90: Math.round(percentile(intCol, 90) * 100) / 100,
+                mean: Math.round(intCol.reduce(function (a, b) { return a + b; }, 0) / intCol.length * 100) / 100
             };
         }
 
@@ -548,6 +571,7 @@ var FleetDispatchEngine = (function () {
 
         return {
             envelope: envelope,
+            intensity_envelope: intensityEnvelope,
             plant_detail: plantDetail,
             generation_by_fuel: generationByFuel,
             emissions_by_fuel: emissionsByFuel,

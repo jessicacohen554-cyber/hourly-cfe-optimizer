@@ -44,6 +44,8 @@
     var fanChart = null;
     var waterfallChart = null;
     var genMixChart = null;
+    var newCleanChart = null;
+    var intensityFanChart = null;
     var fuelEmissionsChart = null;
 
     // ── Helpers ──
@@ -94,12 +96,46 @@
         }
     }
 
+    // Derive intensity_envelope from generation_by_fuel + emissions_by_fuel if not present
+    function deriveIntensityEnvelope(sc) {
+        if (sc.intensity_envelope) return;
+        var gen = sc.generation_by_fuel;
+        var emis = sc.emissions_by_fuel;
+        if (!gen || !emis) return;
+        var intEnv = {};
+        Object.keys(gen).forEach(function (yr) {
+            var totalGenTwh = 0;
+            var totalEmisMt = 0;
+            var gYear = gen[yr] || {};
+            var eYear = emis[yr] || {};
+            Object.keys(gYear).forEach(function (f) { totalGenTwh += gYear[f] || 0; });
+            Object.keys(eYear).forEach(function (f) { totalEmisMt += eYear[f] || 0; });
+            // TWh → MWh: ×1e6. Mt → kg: ×1e9. intensity = (Mt × 1e9) / (TWh × 1e6) = Mt/TWh × 1e3
+            var intensityKg = totalGenTwh > 0 ? (totalEmisMt / totalGenTwh) * 1e3 : 0;
+            intEnv[yr] = {
+                p10: Math.round(intensityKg * 100) / 100,
+                p50: Math.round(intensityKg * 100) / 100,
+                p90: Math.round(intensityKg * 100) / 100,
+                mean: Math.round(intensityKg * 100) / 100
+            };
+        });
+        sc.intensity_envelope = intEnv;
+    }
+
     function onDataLoaded(data) {
         DATA = data;
+        // Derive intensity envelope for precomputed scenarios that lack it
+        if (DATA.scenarios) {
+            Object.keys(DATA.scenarios).forEach(function (k) {
+                deriveIntensityEnvelope(DATA.scenarios[k]);
+            });
+        }
         buildControls();
         buildFanChart();
         buildWaterfallChart();
         buildGenMixChart();
+        buildNewCleanChart();
+        buildIntensityFanChart();
         buildFuelEmissionsChart();
         updateFanLegend();
     }
@@ -182,6 +218,7 @@
             sliderVal.textContent = slider.value;
             updateWaterfallChart();
             updateGenMixChart();
+            updateNewCleanChart();
             updateFanChartAnnotation();
         });
     }
@@ -195,6 +232,8 @@
         updateFanLegend();
         updateWaterfallChart();
         updateGenMixChart();
+        updateNewCleanChart();
+        updateIntensityFanChart();
         updateFuelEmissionsChart();
     }
 
@@ -312,6 +351,7 @@
                         document.getElementById('yearSliderValue').textContent = year;
                         updateWaterfallChart();
                         updateGenMixChart();
+                        updateNewCleanChart();
                         updateFanChartAnnotation();
                     }
                 }
@@ -951,7 +991,242 @@
     }
 
     // ====================================================================
-    // CHART 4: EMISSIONS BY FUEL (Stacked Area) — Custom or Baseline
+    // CHART 4: NEW CLEAN GENERATION SNAPSHOT (Bar) — Selected Year
+    // ====================================================================
+    var CLEAN_FUEL_KEYS = ['nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'battery', 'ldes', 'ccs_ccgt'];
+    var CLEAN_FUEL_LABELS = {
+        nuclear: 'Nuclear', geothermal: 'Geothermal', wind: 'Wind', solar: 'Solar',
+        hydro: 'Hydro', battery: 'Battery', ldes: 'LDES', ccs_ccgt: 'CCS-CCGT'
+    };
+
+    function buildNewCleanChart() {
+        var ctx = document.getElementById('newCleanChart');
+        if (!ctx) return;
+        newCleanChart = new Chart(ctx.getContext('2d'), {
+            type: 'bar',
+            data: { labels: [], datasets: [] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                animation: { duration: 300 },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Generation (TWh)', font: { size: 12 } },
+                        grid: { color: '#E0E6EF' },
+                        beginAtZero: true,
+                        ticks: { font: { size: 11 } }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { font: { size: 12, weight: '500' } }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                return ctx.raw.toFixed(2) + ' TWh';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        updateNewCleanChart();
+    }
+
+    function updateNewCleanChart() {
+        if (!newCleanChart || !DATA) return;
+
+        var yr = String(nearestYear(selectedYear, getYears()));
+        document.getElementById('newCleanTitle').textContent = 'New Clean Generation — ' + yr;
+
+        var sc = customScenario || DATA.scenarios.baseline;
+        var gen = sc.generation_by_fuel;
+        var yearGen = (gen && gen[yr]) ? gen[yr] : {};
+
+        // Filter to only fuels with non-zero generation
+        var labels = [];
+        var values = [];
+        var colors = [];
+        CLEAN_FUEL_KEYS.forEach(function (fuel) {
+            var val = yearGen[fuel] || 0;
+            if (val > 0.001) {
+                labels.push(CLEAN_FUEL_LABELS[fuel] || fuel);
+                values.push(Math.round(val * 100) / 100);
+                colors.push(FUEL_COLORS[fuel] || '#9CA3AF');
+            }
+        });
+
+        newCleanChart.data.labels = labels;
+        newCleanChart.data.datasets = [{
+            data: values,
+            backgroundColor: colors.map(function (c) { return c + 'CC'; }),
+            borderColor: colors,
+            borderWidth: 1.5,
+            borderRadius: 4,
+            barPercentage: 0.7
+        }];
+        newCleanChart.update('active');
+
+        // Legend
+        var legendEl = document.getElementById('newCleanLegend');
+        if (legendEl) {
+            legendEl.innerHTML = labels.map(function (lbl, i) {
+                return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:16px;">' +
+                    '<span style="width:24px;height:10px;border-radius:3px;background:' + colors[i] + ';display:inline-block;"></span>' +
+                    lbl + ': ' + values[i].toFixed(1) + ' TWh</span>';
+            }).join('');
+        }
+    }
+
+    // ====================================================================
+    // CHART 5: EMISSIONS INTENSITY FAN (kgCO2/MWh) — Timeseries
+    // ====================================================================
+    function buildIntensityFanChart() {
+        var ctx = document.getElementById('intensityFanChart');
+        if (!ctx) return;
+        intensityFanChart = new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: { labels: [], datasets: [] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 800 },
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Year', font: { size: 13 } },
+                        grid: { display: false },
+                        ticks: {
+                            callback: function (val) {
+                                var year = this.getLabelForValue(val);
+                                var show = [2023, 2025, 2030, 2035, 2040, 2045, 2050];
+                                return show.indexOf(Number(year)) >= 0 ? year : '';
+                            },
+                            maxRotation: 0, font: { size: 12 }
+                        }
+                    },
+                    y: {
+                        title: { display: true, text: 'Emissions Intensity (kgCO₂/MWh)', font: { size: 13 } },
+                        grid: { color: '#E0E6EF' },
+                        beginAtZero: true,
+                        ticks: { font: { size: 12 } }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        align: 'end',
+                        labels: {
+                            filter: function (item, chartData) {
+                                var ds = chartData.datasets[item.datasetIndex];
+                                return ds && ds._showInLegend;
+                            },
+                            usePointStyle: true,
+                            pointStyle: 'line',
+                            padding: 16,
+                            font: { size: 12 }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                if (ctx.raw == null) return null;
+                                return ctx.dataset.label + ': ' + ctx.raw.toFixed(1) + ' kgCO₂/MWh';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        updateIntensityFanChart();
+    }
+
+    function updateIntensityFanChart() {
+        if (!intensityFanChart || !DATA) return;
+
+        var years = getYears();
+        var labels = years.map(String);
+        var datasets = [];
+
+        // Baseline intensity fan
+        var baseline = DATA.scenarios.baseline;
+        if (baseline && baseline.intensity_envelope) {
+            addIntensityFanDatasets(datasets, baseline.intensity_envelope, years, BASELINE_COLOR, 'Baseline', true);
+        }
+
+        // Custom intensity fan
+        if (customScenario && customScenario.intensity_envelope) {
+            var firstYear = getFirstInterventionYear();
+            var alignedIntEnv = alignEnvelopeWithBaseline(
+                customScenario.intensity_envelope,
+                baseline ? baseline.intensity_envelope : null,
+                firstYear
+            );
+            addIntensityFanDatasets(datasets, alignedIntEnv, years, CUSTOM_COLOR, 'Custom', false);
+        }
+
+        intensityFanChart.data.labels = labels;
+        intensityFanChart.data.datasets = datasets;
+        intensityFanChart.update('active');
+    }
+
+    function addIntensityFanDatasets(datasets, env, years, color, label, isBaseline) {
+        if (!env) return;
+        var p10 = [], p50 = [], p90 = [];
+        years.forEach(function (y) {
+            var e = env[String(y)];
+            if (e) { p10.push(e.p10); p50.push(e.p50); p90.push(e.p90); }
+            else { p10.push(null); p50.push(null); p90.push(null); }
+        });
+
+        var startIdx = datasets.length;
+        var bandColor = hexToRgba(color, 0.12);
+
+        // p10 boundary
+        datasets.push({
+            label: label + ' p10', data: p10,
+            borderColor: 'transparent', backgroundColor: 'transparent',
+            borderWidth: 0, pointRadius: 0, fill: false, tension: 0.3
+        });
+        // p10→p50 fill
+        datasets.push({
+            label: label + ' band-low', data: p50,
+            borderColor: 'transparent', backgroundColor: bandColor,
+            borderWidth: 0, pointRadius: 0,
+            fill: { target: startIdx, above: bandColor, below: bandColor },
+            tension: 0.3
+        });
+        // p50 line
+        datasets.push({
+            label: label,
+            data: p50,
+            borderColor: color,
+            backgroundColor: 'transparent',
+            borderWidth: 2.5,
+            borderDash: isBaseline ? [] : [],
+            pointRadius: isBaseline ? 0 : 3,
+            pointBackgroundColor: color,
+            pointHoverRadius: 5,
+            fill: false, tension: 0.3,
+            _showInLegend: true
+        });
+        // p50→p90 fill
+        datasets.push({
+            label: label + ' band-high', data: p90,
+            borderColor: 'transparent', backgroundColor: bandColor,
+            borderWidth: 0, pointRadius: 0,
+            fill: { target: startIdx + 2, above: bandColor, below: bandColor },
+            tension: 0.3
+        });
+    }
+
+    // ====================================================================
+    // CHART 6: EMISSIONS BY FUEL (Stacked Area) — Custom or Baseline
     // ====================================================================
     function buildFuelEmissionsChart() {
         var ctx = document.getElementById('fuelEmissionsChart').getContext('2d');
