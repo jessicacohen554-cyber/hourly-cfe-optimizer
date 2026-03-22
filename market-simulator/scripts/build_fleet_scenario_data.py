@@ -43,12 +43,14 @@ PLANT_TYPE_REFINEMENT = {
     'Dry bottom wall-fired boiler': 'oil_ct',
 }
 
-# ── Emission factors (Mt CO2 / TWh) ──
+# ── Emission factors (t CO2 / MWh) ──
+# Aligned with fleet-dispatch-engine.js DEFAULT_CO2_RATES for baseline consistency.
+# Values = heat_rate × fuel_emission_factor (stack emissions only).
 EMISSION_RATE = {
-    'gas_ccgt': 0.434,    # ~870 lb/MWh
-    'gas_ct': 0.550,      # ~1100 lb/MWh (less efficient)
-    'oil_ct': 0.650,      # ~1300 lb/MWh
-    'gas_oil_ct': 0.580,  # blend
+    'gas_ccgt': 0.37,     # 7.0 MMBtu/MWh × 0.05306 tCO2/MMBtu
+    'gas_ct': 0.55,       # 10.5 × 0.05306 (rounded)
+    'oil_ct': 0.65,       # 10.5 × 0.07396 (fuel oil)
+    'gas_oil_ct': 0.58,   # blend
 }
 
 # ── Heat rates (MMBtu/MWh) ──
@@ -57,13 +59,6 @@ HEAT_RATES = {
     'gas_ct': 10.5,
     'oil_ct': 10.5,
     'gas_oil_ct': 10.5,
-}
-
-CO2_RATE_PER_MWH = {
-    'gas_ccgt': 0.37,
-    'gas_ct': 0.55,
-    'oil_ct': 0.65,
-    'gas_oil_ct': 0.58,
 }
 
 # ── Simulation years ──
