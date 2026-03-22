@@ -432,8 +432,8 @@ var FleetDispatchEngine = (function () {
                             effectiveCO2 = baseCO2 * (1.0 - capture);
                             reportFuel = 'ccs_ccgt';
                         }
-                    } else if (p.status === 'ccs_retrofit') {
-                        // Plant already has CCS in base fleet config
+                    } else if (p.status === 'ccs_retrofit' && statusPerYear[yi3] === 'ccs_retrofit') {
+                        // Plant already has CCS in base fleet config — only apply if status matches
                         var staticCapture = p.ccs_capture_rate || (globalCapturePct / 100.0);
                         genMwh = capMW * globalCcsCfCap * 8760;
                         genMwh = genMwh * derateFactor;
