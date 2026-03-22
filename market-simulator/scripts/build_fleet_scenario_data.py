@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """
-Build fleet_scenario_results_sample.json from CEG_fleet_rosetta.csv + eGRID 2023.
+Build fleet_scenario_results_sample.json from CEG_fleet_rosetta.csv + CAMPD 2025.
 
-2023 baseline emissions come directly from eGRID 2023 plant-level data (PLNT23),
-NOT from derived capacity factors. Each plant's actual CO₂ short tons and net
-generation are read from eGRID, equity-weighted via the Rosetta CSV.
+Uses three years of actual emissions/generation data:
+  - 2023/2024: Equity-weighted actuals read directly from Rosetta CSV columns
+  - 2025: CAMPD facility-level data aggregated from unit-level reports
+  - 2030+: Projected forward from 2024 actuals using year_factor scaling
 
-Plants without eGRID data (Canadian, small peakers) use heat-rate-derived estimates.
+Plants without actuals (Canadian, small peakers) use heat-rate-derived estimates.
 
 Sources:
-  - CEG_fleet_rosetta.csv: Plant inventory, capacity, equity, CCS eligibility
-  - egrid_2023_ceg_plant_emissions.json: Actual 2023 CO₂ + generation from eGRID
+  - CEG_fleet_rosetta.csv: Plant inventory, capacity, equity, 2023/2024 actuals
+  - 2025_annual_campd_emissions.csv: CAMPD 2025 unit-level emissions/generation
 
 Output: market-simulator/frontend/data/fleet_scenario_results_sample.json
 """
@@ -26,7 +27,7 @@ DATA_DIR = os.path.join(SCRIPT_DIR, '..', 'data')
 OUTPUT_DIR = os.path.join(SCRIPT_DIR, '..', 'frontend', 'data')
 
 ROSETTA_PATH = os.path.join(DATA_DIR, 'CEG_fleet_rosetta.csv')
-EGRID_EMISSIONS_PATH = os.path.join(DATA_DIR, 'egrid_2023_ceg_plant_emissions.json')
+CAMPD_2025_PATH = os.path.join(DATA_DIR, '2025_annual_campd_emissions.csv')
 OVERRIDES_PATH = os.path.join(DATA_DIR, 'plant_emissions_overrides.json')
 
 # ── Canonical fuel type mapping from Rosetta CSV ──
@@ -70,7 +71,7 @@ HEAT_RATES = {
 }
 
 # ── Simulation years ──
-YEARS = [2023, 2025, 2030, 2035, 2040, 2045, 2050]
+YEARS = [2023, 2024, 2025, 2030, 2035, 2040, 2045, 2050]
 
 # ── Capacity factors by fuel type ──
 # Used to estimate annual generation from actual plant capacity
@@ -134,32 +135,57 @@ def get_overrides():
     return _OVERRIDES
 
 
-def load_egrid_emissions():
-    """Load eGRID 2023 actual plant emissions (pre-extracted).
+def parse_number(s):
+    """Parse a number that may have commas, spaces, or be a dash/empty for zero."""
+    if not s:
+        return 0.0
+    s = s.strip()
+    if s in ('-', 'N/A', ''):
+        return 0.0
+    try:
+        return float(s.replace(',', ''))
+    except ValueError:
+        return 0.0
 
-    Returns dict keyed by CAMPD facility ID with equity-weighted CO₂ and generation.
+
+def load_campd_2025():
+    """Load 2025 CAMPD emissions/generation, aggregated from unit to facility level.
+
+    Returns dict: {facility_id: {'co2_mt': float, 'gen_mwh': float}}
+    CO2 is converted from short tons to metric tons (×0.907185).
     """
-    if not os.path.exists(EGRID_EMISSIONS_PATH):
-        print(f"  WARNING: {EGRID_EMISSIONS_PATH} not found, using derived estimates")
+    if not os.path.exists(CAMPD_2025_PATH):
+        print(f"  WARNING: {CAMPD_2025_PATH} not found, no 2025 CAMPD data")
         return {}
 
-    with open(EGRID_EMISSIONS_PATH, 'r') as f:
-        data = json.load(f)
+    by_facility = defaultdict(lambda: {'co2_st': 0.0, 'gen_mwh': 0.0})
+    with open(CAMPD_2025_PATH, 'r') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            fid_str = row.get('Facility ID', '').strip()
+            if not fid_str:
+                continue
+            try:
+                fid = int(fid_str)
+            except ValueError:
+                continue
+            co2_st = parse_number(row.get('CO2 Mass (short tons)', ''))
+            gen_mwh = parse_number(row.get('Gross Load (MWh)', ''))
+            by_facility[fid]['co2_st'] += co2_st
+            by_facility[fid]['gen_mwh'] += gen_mwh
 
-    by_campd = {}
-    for p in data.get('plants', []):
-        cid = p['campd_id']
-        by_campd[cid] = {
-            'co2_mt': p['co2_mt_equity'],           # Mt CO₂ (metric, equity-weighted)
-            'gen_twh': p['gen_twh_equity'],          # TWh (equity-weighted)
-            'co2_rate_lb_mwh': p['co2_rate_lb_mwh'], # eGRID lb/MWh (plant-specific)
-            'co2_short_tons_total': p['co2_short_tons_total'],
+    result = {}
+    for fid, vals in by_facility.items():
+        result[fid] = {
+            'co2_mt': vals['co2_st'] * 0.907185,  # short tons → metric tons
+            'gen_mwh': vals['gen_mwh'],
         }
 
-    print(f"  Loaded eGRID 2023: {len(by_campd)} plants, "
-          f"{data.get('total_co2_mt_equity', 0):.1f} Mt CO₂, "
-          f"{data.get('total_gen_twh_equity', 0):.0f} TWh")
-    return by_campd
+    total_co2 = sum(v['co2_mt'] for v in result.values())
+    total_gen = sum(v['gen_mwh'] for v in result.values())
+    print(f"  Loaded CAMPD 2025: {len(result)} facilities, "
+          f"{total_co2/1e6:.2f} MMt CO₂, {total_gen/1e6:.1f} TWh")
+    return result
 
 
 def parse_rosetta():
@@ -167,19 +193,28 @@ def parse_rosetta():
 
     Reads actual capacity from 'Constellation Owned Capacity (MW)' column
     (already equity-weighted) and CCS capacity from 'Available CCS Capacity'.
-    Attaches eGRID 2023 actual emissions where available.
+    Reads 2023/2024 actual emissions and generation directly from Rosetta columns.
+    Integrates 2025 CAMPD data for fossil plants.
     """
-    egrid = load_egrid_emissions()
+    campd_2025 = load_campd_2025()
 
-    # Pre-scan to find shared CAMPD IDs — we need to split eGRID data proportionally
-    campd_cap_totals = defaultdict(float)
+    # Pre-scan to find shared CAMPD IDs and their 2023/2024 emission totals
+    # Used to split 2025 CAMPD data proportionally
+    campd_emission_totals = defaultdict(float)  # campd_id → sum of 2023+2024 emissions
+    campd_plant_emissions = {}  # (campd_id, plant_name) → 2023+2024 emissions
+
     with open(ROSETTA_PATH, 'r', encoding='latin-1') as f:
         reader = csv.DictReader(f)
         for row in reader:
             campd = row.get('CAMPD Facility ID', '').strip()
             if campd and campd != 'N/A':
-                cap = float(row.get('Constellation Owned Capacity (MW)', '0').strip() or 0)
-                campd_cap_totals[int(campd)] += cap
+                cid = int(campd)
+                name = row.get('SP Name', '').strip() or row.get('Name', '').strip()
+                em23 = parse_number(row.get('2023_equity_emissions_mtco2', ''))
+                em24 = parse_number(row.get('2024_equity_emissions_mtco2', ''))
+                total = em23 + em24
+                campd_emission_totals[cid] += total
+                campd_plant_emissions[(cid, name)] = total
 
     plants = []
     with open(ROSETTA_PATH, 'r', encoding='latin-1') as f:
@@ -192,7 +227,6 @@ def parse_rosetta():
             # Map fuel type
             fuel = FUEL_MAP.get(fuel_csv, 'unknown')
             # Refine Gas plants by plant type (CT vs CCGT)
-            # Only refine Gas-sourced fuels — Oil plants stay as oil_ct
             if fuel_csv == 'Gas':
                 refined = PLANT_TYPE_REFINEMENT.get(plant_type_csv)
                 if refined:
@@ -209,14 +243,13 @@ def parse_rosetta():
             except ValueError:
                 capacity_mw = 0.0
 
-            # Available CCS capacity (informational)
+            # Available CCS capacity
             ccs_cap_str = row.get('Available CCS Capacity', '').strip()
             try:
                 ccs_capacity_mw = float(ccs_cap_str) if ccs_cap_str else 0.0
             except ValueError:
                 ccs_capacity_mw = 0.0
 
-            # CCS eligible if Available CCS Capacity > 0
             ccs_eligible = ccs_capacity_mw > 0
 
             equity_str = row.get('Equity Share %', '100%').strip().replace('%', '')
@@ -248,12 +281,7 @@ def parse_rosetta():
             group = row.get('Group', '').strip()
             status = row.get('Status', 'Operating').strip()
 
-            # Retired plants: included in 2023 baseline, excluded from future.
-            # For plants with Status=Retired, retired_year determines the first
-            # year they're excluded. Plants retired mid-year still count in that
-            # year's baseline (eGRID captures partial-year ops).
-            # Plants with no CAMPD / no eGRID data use default retired_year=2024
-            # (conservative: assume operating through 2023).
+            # Retired plants
             RETIRED_YEARS = {
                 1588: 2024,   # Mystic (retired May 31, 2024)
                 3169: 2024,   # Schuylkill
@@ -283,26 +311,95 @@ def parse_rosetta():
             else:
                 retired_year = None
 
-            # ORISPL mismatches: these CAMPD IDs map to wrong eGRID plant
-            # Salem CT (16 MW gas) shares ORISPL 2410 with Salem Nuclear (1 GW)
-            # Delaware City 10 / West Energy Center have parasitic load only
-            # Rolling Hills CT (5.5 MW) shares ORISPL with Rolling Hills Gen (797 MW)
-            EGRID_EXCLUDE = {2410, 592, 597, 55401}
-            if orispl in EGRID_EXCLUDE:
-                orispl = None  # Don't use eGRID data for these
+            # ORISPL mismatches: these CAMPD IDs map to wrong plant
+            CAMPD_EXCLUDE = {2410, 592, 597, 55401}
+            if orispl in CAMPD_EXCLUDE:
+                orispl = None
 
-            # Attach eGRID 2023 actual emissions if available
-            # For shared CAMPD IDs, split proportionally by capacity
-            egrid_data = egrid.get(orispl) if orispl else None
-            egrid_co2_mt = None
-            egrid_gen_twh = None
-            egrid_co2_rate = None
-            if egrid_data:
-                total_cap_for_campd = campd_cap_totals.get(orispl, capacity_mw)
-                share = capacity_mw / total_cap_for_campd if total_cap_for_campd > 0 else 1.0
-                egrid_co2_mt = egrid_data['co2_mt'] * share
-                egrid_gen_twh = egrid_data['gen_twh'] * share
-                egrid_co2_rate = egrid_data['co2_rate_lb_mwh']  # Rate is same for all units
+            # ── Read 2023/2024 actuals directly from Rosetta ──
+            # These are already equity-weighted — no additional multiplication needed
+            em_2023 = parse_number(row.get('2023_equity_emissions_mtco2', ''))
+            gen_2023 = parse_number(row.get('2023_equity_netgen_MWh', ''))
+            em_2024 = parse_number(row.get('2024_equity_emissions_mtco2', ''))
+            gen_2024 = parse_number(row.get('2024_equity_netgen_MWh', ''))
+
+            # Units: emissions in metric tons, generation in MWh
+            actual_co2_mt = {2023: em_2023, 2024: em_2024}
+            actual_gen_mwh = {2023: gen_2023, 2024: gen_2024}
+
+            # Solar exception: 2024 solar gen is anomalous (0.01 TWh vs 0.57 TWh in 2023)
+            # Use 2023 solar generation as the projection base
+            if fuel == 'solar' and gen_2023 > 0 and gen_2024 < gen_2023 * 0.1:
+                actual_gen_mwh['projection_base'] = gen_2023
+            else:
+                actual_gen_mwh['projection_base'] = gen_2024 if gen_2024 > 0 else gen_2023
+
+            # ── Derive CO2 rate from actuals (t CO2 / MWh) for forward projection ──
+            co2_rate_t_per_mwh = None
+            if gen_2023 > 0 and em_2023 > 0:
+                co2_rate_t_per_mwh = em_2023 / gen_2023  # metric tons / MWh
+            elif gen_2024 > 0 and em_2024 > 0:
+                co2_rate_t_per_mwh = em_2024 / gen_2024
+
+            # ── 2025 CAMPD data ──
+            # CAMPD reports total facility emissions/generation — must apply equity.
+            # Only assign 2025 CAMPD data to plants with prior emissions (2023 or 2024)
+            # to avoid inflating totals with new acquisitions or data anomalies.
+            # Also skip plants retired before 2025.
+            em_2025 = None
+            gen_2025 = None
+            has_prior_emissions = em_2023 > 0 or em_2024 > 0
+            is_retired_before_2025 = retired_year is not None and retired_year < 2025
+
+            if orispl and orispl in campd_2025 and has_prior_emissions and not is_retired_before_2025:
+                campd_data = campd_2025[orispl]
+                # For shared CAMPD IDs, split proportionally using 2023/2024 emission ratios
+                total_em_for_campd = campd_emission_totals.get(orispl, 0)
+                plant_em = campd_plant_emissions.get((orispl, name), 0)
+                if total_em_for_campd > 0 and plant_em > 0:
+                    share = plant_em / total_em_for_campd
+                else:
+                    share = 1.0
+                em_2025 = campd_data['co2_mt'] * share * equity
+                gen_2025 = campd_data['gen_mwh'] * share * equity
+            elif fuel in EMISSION_RATE and has_prior_emissions and not is_retired_before_2025:
+                # Plants not in CAMPD 2025 but with prior emissions:
+                # use average of 2023/2024 Rosetta values
+                vals = [v for v in [em_2023, em_2024] if v > 0]
+                em_2025 = sum(vals) / len(vals) if vals else 0.0
+                gen_vals = [v for v in [gen_2023, gen_2024] if v > 0]
+                gen_2025 = sum(gen_vals) / len(gen_vals) if gen_vals else 0.0
+
+            if em_2025 is not None:
+                actual_co2_mt[2025] = em_2025
+            if gen_2025 is not None:
+                actual_gen_mwh[2025] = gen_2025
+
+            # Plants with zero emissions in both 2023 AND 2024 should not generate
+            # phantom modeled emissions — they're either not operated by CEG or non-emitting
+            if not has_prior_emissions and fuel in EMISSION_RATE and 2025 not in actual_co2_mt:
+                actual_co2_mt[2025] = 0.0
+                actual_gen_mwh[2025] = 0.0
+                actual_gen_mwh['projection_base'] = 0.0
+
+            # For renewables/nuclear not in CAMPD: use 2024 generation as 2025 proxy
+            # Solar: use 2023 generation (2024 is anomalous)
+            if fuel not in EMISSION_RATE and 2025 not in actual_gen_mwh:
+                if fuel == 'solar':
+                    actual_gen_mwh[2025] = gen_2023
+                else:
+                    actual_gen_mwh[2025] = gen_2024 if gen_2024 > 0 else gen_2023
+                # Geothermal emits CO2 — use average of 2023/2024 for 2025
+                if fuel == 'geothermal' and (em_2023 > 0 or em_2024 > 0):
+                    em_vals = [v for v in [em_2023, em_2024] if v > 0]
+                    actual_co2_mt[2025] = sum(em_vals) / len(em_vals)
+                else:
+                    actual_co2_mt[2025] = 0.0  # Non-emitting
+
+            # STP nuclear: bought mid-2023, so 2023 is partial year
+            # Use 2024 (full year) for forward projections
+            # Rosetta already has correct equity-weighted values for both years
+            # projection_base is already set to gen_2024 above for non-solar
 
             plants.append({
                 'name': name,
@@ -318,12 +415,24 @@ def parse_rosetta():
                 'stat_type': stat_type,
                 'group': group,
                 'plant_type': plant_type_csv,
-                'retired_year': retired_year,  # None if still operating
-                # eGRID 2023 actuals (None if not available)
-                'egrid_co2_mt': egrid_co2_mt,
-                'egrid_gen_twh': egrid_gen_twh,
-                'egrid_co2_rate_lb_mwh': egrid_co2_rate,
+                'retired_year': retired_year,
+                # Actual emissions by year (metric tons)
+                'actual_co2_mt': actual_co2_mt,
+                # Actual generation by year (MWh) + 'projection_base' key
+                'actual_gen_mwh': actual_gen_mwh,
+                # Derived CO2 rate (t CO2 / MWh) for forward projection
+                'co2_rate_t_per_mwh': co2_rate_t_per_mwh,
             })
+
+    # Print summary
+    total_em_23 = sum(p['actual_co2_mt'].get(2023, 0) for p in plants)
+    total_em_24 = sum(p['actual_co2_mt'].get(2024, 0) for p in plants)
+    total_gen_23 = sum(p['actual_gen_mwh'].get(2023, 0) for p in plants)
+    total_gen_24 = sum(p['actual_gen_mwh'].get(2024, 0) for p in plants)
+    print(f"  Rosetta actuals: 2023={total_em_23/1e6:.2f} MMt CO₂, {total_gen_23/1e6:.1f} TWh")
+    print(f"                   2024={total_em_24/1e6:.2f} MMt CO₂, {total_gen_24/1e6:.1f} TWh")
+    campd_count = sum(1 for p in plants if 2025 in p['actual_co2_mt'])
+    print(f"  2025 data: {campd_count} plants with CAMPD/interpolated actuals")
 
     return plants
 
@@ -350,11 +459,13 @@ def get_plant_gen_twh(p, fuel, year, year_factor, re_growth):
 
     Priority chain:
       1. User override (plant_emissions_overrides.json) — highest priority
-      2. eGRID 2023 actuals (for 2023 fossil plants)
-      3. Capacity × CF × temporal adjustments (fallback)
+      2. Actual data (Rosetta 2023/2024, CAMPD 2025) — for years with actuals
+      3. Projected from 2024 actuals using year_factor/re_growth — for 2030+
+      4. Capacity × CF × temporal adjustments (fallback for plants without actuals)
     """
     cap = p['capacity_mw']
     orispl = p.get('orispl')
+    actual_gen = p.get('actual_gen_mwh', {})
 
     # Check user overrides first
     if orispl and fuel in EMISSION_RATE:
@@ -364,9 +475,26 @@ def get_plant_gen_twh(p, fuel, year, year_factor, re_growth):
             equity = p.get('equity', 1.0)
             return year_overrides[orispl]['net_gen_mwh'] * equity / 1e6  # MWh → TWh
 
-    # 2023 fossil plants: prefer eGRID actual generation
-    if year == 2023 and p.get('egrid_gen_twh') is not None and fuel in EMISSION_RATE:
-        return p['egrid_gen_twh']
+    # Years with actuals: use directly
+    if year in actual_gen and actual_gen[year] > 0:
+        return actual_gen[year] / 1e6  # MWh → TWh
+
+    # Future years (2030+): project from projection_base (2024 actuals, or 2023 for solar)
+    proj_base_mwh = actual_gen.get('projection_base', 0)
+    if year > 2025:
+        if proj_base_mwh > 0:
+            if fuel == 'nuclear':
+                return proj_base_mwh / 1e6  # Nuclear: constant (no decay)
+            elif fuel in ('wind', 'solar'):
+                return proj_base_mwh / 1e6 * re_growth
+            elif fuel in EMISSION_RATE:
+                return proj_base_mwh / 1e6 * year_factor
+            else:
+                return proj_base_mwh / 1e6
+        # If projection_base is explicitly 0 (plant has Rosetta data but zero gen),
+        # don't fall through to CF fallback — the plant isn't generating
+        if 'projection_base' in actual_gen:
+            return 0.0
 
     cf = CAPACITY_FACTORS.get(fuel, 0.0)
     if cap <= 0 or cf <= 0:
@@ -385,29 +513,29 @@ def get_plant_gen_twh(p, fuel, year, year_factor, re_growth):
 
 
 def get_plant_co2_rate(p, fuel):
-    """Get CO₂ emission rate for a plant.
+    """Get CO₂ emission rate for a plant (t CO₂ / MWh).
 
-    For plants with eGRID data: uses measured lb/MWh → t/MWh.
+    For plants with actuals: uses rate derived from actual emissions/generation.
     Otherwise: uses default EMISSION_RATE by fuel type.
     """
-    if p.get('egrid_co2_rate_lb_mwh') and p['egrid_co2_rate_lb_mwh'] > 0:
-        # Convert lb/MWh to t/MWh (metric): lb × 0.453592 / 1000
-        return p['egrid_co2_rate_lb_mwh'] * 0.000453592
+    rate = p.get('co2_rate_t_per_mwh')
+    if rate and rate > 0:
+        return rate
     return EMISSION_RATE.get(fuel, 0.37)
 
 
 def compute_fleet_generation(plants, year, scenario='baseline', retired_fuels=None):
     """Compute generation by fuel from actual plant data.
 
-    2023 baseline: uses eGRID 2023 measured generation and CO₂ for fossil plants.
-    Future years: scales from 2023 actuals using market-driven decline factors.
-    Non-fossil plants: capacity × CF (no eGRID data needed — zero emissions).
+    2023/2024: Rosetta actuals. 2025: CAMPD actuals.
+    2030+: Projected from 2024 actuals using year_factor/re_growth.
     """
     if retired_fuels is None:
         retired_fuels = {}
 
-    year_factor = max(0.0, 1.0 - 0.008 * (year - 2023))
-    re_growth = 1.0 + 0.02 * (year - 2023)
+    # Rebase year_factor to 2024 for forward projections
+    year_factor = max(0.0, 1.0 - 0.008 * (year - 2024))
+    re_growth = 1.0 + 0.02 * (year - 2024)
 
     gen_by_fuel = defaultdict(float)
 
@@ -418,22 +546,22 @@ def compute_fleet_generation(plants, year, scenario='baseline', retired_fuels=No
         if cap <= 0:
             continue
 
-        # Check retirement (fleet-wide by fuel type)
-        if fuel in retired_fuels and year >= retired_fuels[fuel]:
-            continue
-        if fuel == 'gas_oil_ct' and 'oil_ct' in retired_fuels and year >= retired_fuels['oil_ct']:
-            continue
+        # For years with actuals, skip retirement check — actuals already
+        # reflect partial-year operations
+        actual_gen = p.get('actual_gen_mwh', {})
+        has_actual_for_year = year in actual_gen and actual_gen[year] > 0
 
-        # Check plant-specific retirement (e.g., Mystic retired 2024)
-        if p.get('retired_year') and year >= p['retired_year']:
-            continue
+        if not has_actual_for_year:
+            # Check retirement (fleet-wide by fuel type)
+            if fuel in retired_fuels and year >= retired_fuels[fuel]:
+                continue
+            if fuel == 'gas_oil_ct' and 'oil_ct' in retired_fuels and year >= retired_fuels['oil_ct']:
+                continue
+            # Check plant-specific retirement
+            if p.get('retired_year') and year >= p['retired_year']:
+                continue
 
         gen_twh = get_plant_gen_twh(p, fuel, year, year_factor, re_growth)
-
-        # For future years with eGRID plants: scale from 2023 actual by year_factor
-        if year > 2023 and p.get('egrid_gen_twh') is not None and fuel in EMISSION_RATE:
-            gen_twh = p['egrid_gen_twh'] * year_factor
-
         gen_by_fuel[fuel] += gen_twh
 
     # CCS conversion for applicable scenarios
@@ -445,9 +573,9 @@ def compute_fleet_generation(plants, year, scenario='baseline', retired_fuels=No
                 continue
             if not p['ccs_eligible']:
                 continue
+            if p.get('retired_year') and year >= p['retired_year']:
+                continue
             plant_gen = get_plant_gen_twh(p, 'gas_ccgt', year, year_factor, re_growth)
-            if year > 2023 and p.get('egrid_gen_twh') is not None:
-                plant_gen = p['egrid_gen_twh'] * year_factor
             ccs_gen += plant_gen
 
         ccs_ramp = min(1.0, max(0.0, (year - 2028) / 5.0))
@@ -467,41 +595,52 @@ def compute_fleet_generation(plants, year, scenario='baseline', retired_fuels=No
 
 
 def compute_fleet_emissions(plants, year, scenario='baseline', retired_fuels=None):
-    """Calculate emissions at the plant level using eGRID-measured CO₂ rates.
+    """Calculate emissions at the plant level using actual data.
 
-    For 2023: uses actual eGRID CO₂ (equity-weighted Mt) directly.
-    For future years: scales 2023 actuals by year_factor, applies plant-specific rate.
-    Plants without eGRID data: uses default EMISSION_RATE by fuel type.
+    2023/2024: Rosetta actuals (equity-weighted metric tons).
+    2025: CAMPD actuals where available, 2023/2024 average otherwise.
+    2030+: Projected from 2024 actuals using year_factor × CO2 rate.
     """
     if retired_fuels is None:
         retired_fuels = {}
 
-    year_factor = max(0.0, 1.0 - 0.008 * (year - 2023))
-    re_growth = 1.0 + 0.02 * (year - 2023)
+    # Rebase year_factor to 2024 for forward projections
+    year_factor = max(0.0, 1.0 - 0.008 * (year - 2024))
+    re_growth = 1.0 + 0.02 * (year - 2024)
 
     emissions_by_fuel = defaultdict(float)
 
     for p in plants:
         fuel = p['fuel_type']
-        if fuel not in EMISSION_RATE:
+        actual_co2 = p.get('actual_co2_mt', {})
+        has_actual_emissions = any(v > 0 for k, v in actual_co2.items() if isinstance(k, int))
+
+        # Skip fuels with no emissions (nuclear, wind, solar, hydro, battery)
+        # unless they have actual emissions data (e.g., geothermal)
+        if fuel not in EMISSION_RATE and not has_actual_emissions:
             continue
         cap = p['capacity_mw']
         if cap <= 0:
             continue
 
-        # Check fleet-wide retirement
-        if fuel in retired_fuels and year >= retired_fuels[fuel]:
-            continue
-        if fuel == 'gas_oil_ct' and 'oil_ct' in retired_fuels and year >= retired_fuels['oil_ct']:
-            continue
+        # For years with actuals, skip retirement check — actuals already
+        # reflect partial-year operations (e.g., Mystic retired May 2024
+        # but has actual 2024 emissions for the months it operated)
+        has_actual_for_year = year in actual_co2
 
-        # Check plant-specific retirement (e.g., Mystic retired 2024)
-        if p.get('retired_year') and year >= p['retired_year']:
-            continue
+        if not has_actual_for_year:
+            # Check fleet-wide retirement
+            if fuel in retired_fuels and year >= retired_fuels[fuel]:
+                continue
+            if fuel == 'gas_oil_ct' and 'oil_ct' in retired_fuels and year >= retired_fuels['oil_ct']:
+                continue
+            # Check plant-specific retirement
+            if p.get('retired_year') and year >= p['retired_year']:
+                continue
 
         orispl = p.get('orispl')
 
-        # Priority 1: user override (actual reported emissions)
+        # Priority 1: user override
         overrides = get_overrides()
         year_overrides = overrides.get(str(year), {})
         if orispl and orispl in year_overrides:
@@ -510,16 +649,13 @@ def compute_fleet_emissions(plants, year, scenario='baseline', retired_fuels=Non
             emissions_by_fuel[fuel] += co2_st * 0.907185 / 1e6  # short tons → Mt metric
             continue
 
-        # Priority 2: eGRID 2023 actual CO₂
-        if year == 2023 and p.get('egrid_co2_mt') is not None:
-            emissions_by_fuel[fuel] += p['egrid_co2_mt']
+        # Priority 2: actual emissions for years with data
+        if has_actual_for_year:
+            emissions_by_fuel[fuel] += actual_co2[year] / 1e6  # metric tons → MMt
             continue
 
-        # Priority 3: modeled from generation × emission rate
+        # Priority 3: modeled from generation × emission rate (2030+)
         gen_twh = get_plant_gen_twh(p, fuel, year, year_factor, re_growth)
-        if year > 2023 and p.get('egrid_gen_twh') is not None:
-            gen_twh = p['egrid_gen_twh'] * year_factor
-
         co2_rate = get_plant_co2_rate(p, fuel)
         emissions_by_fuel[fuel] += gen_twh * co2_rate
 
@@ -531,15 +667,13 @@ def compute_fleet_emissions(plants, year, scenario='baseline', retired_fuels=Non
                 continue
             if not p['ccs_eligible']:
                 continue
+            if p.get('retired_year') and year >= p['retired_year']:
+                continue
             gen_twh = get_plant_gen_twh(p, 'gas_ccgt', year, year_factor, re_growth)
-            if year > 2023 and p.get('egrid_gen_twh') is not None:
-                gen_twh = p['egrid_gen_twh'] * year_factor
-
             co2_rate = get_plant_co2_rate(p, 'gas_ccgt')
             ccs_ramp = min(1.0, max(0.0, (year - 2028) / 5.0))
             ccs_emis_plant = gen_twh * co2_rate * ccs_ramp * 0.05  # 95% capture
             ccs_emis += ccs_emis_plant
-            # Subtract from gas_ccgt (moved to ccs_ccgt)
             emissions_by_fuel['gas_ccgt'] -= gen_twh * co2_rate * ccs_ramp
             emissions_by_fuel['gas_ccgt'] = max(0, emissions_by_fuel['gas_ccgt'])
 
@@ -581,11 +715,11 @@ def build_envelope(base_emissions_2023, scenario_emissions_by_year):
 
 
 def build_plant_detail(fossil_plants, year, scenario='baseline', retired_fuels=None):
-    """Build plant-level detail using eGRID actuals for 2023, scaled for future."""
+    """Build plant-level detail using actuals for 2023-2025, projected for future."""
     if retired_fuels is None:
         retired_fuels = {}
 
-    year_factor = max(0.0, 1.0 - 0.008 * (year - 2023))
+    year_factor = max(0.0, 1.0 - 0.008 * (year - 2024))
     re_growth = 1.0  # Not used for fossil but needed by helper
     details = []
 
@@ -595,14 +729,18 @@ def build_plant_detail(fossil_plants, year, scenario='baseline', retired_fuels=N
         cap = p['capacity_mw']
         orispl = p['orispl'] or hash(name) % 90000 + 10000
 
-        # Check retirement (fleet-wide + plant-specific)
+        # Check retirement — skip for years with actuals (partial-year ops captured)
+        actual_co2 = p.get('actual_co2_mt', {})
+        has_actual_for_year = year in actual_co2
+
         is_retired = False
-        if fuel in retired_fuels and year >= retired_fuels[fuel]:
-            is_retired = True
-        if fuel == 'gas_oil_ct' and 'oil_ct' in retired_fuels and year >= retired_fuels['oil_ct']:
-            is_retired = True
-        if p.get('retired_year') and year >= p['retired_year']:
-            is_retired = True
+        if not has_actual_for_year:
+            if fuel in retired_fuels and year >= retired_fuels[fuel]:
+                is_retired = True
+            if fuel == 'gas_oil_ct' and 'oil_ct' in retired_fuels and year >= retired_fuels['oil_ct']:
+                is_retired = True
+            if p.get('retired_year') and year >= p['retired_year']:
+                is_retired = True
 
         if is_retired:
             details.append({
@@ -621,19 +759,13 @@ def build_plant_detail(fossil_plants, year, scenario='baseline', retired_fuels=N
             ov = year_overrides[orispl]
             gen_twh = ov['net_gen_mwh'] * equity / 1e6
             emissions_mt = ov['co2_short_tons'] * equity * 0.907185 / 1e6
-        # Priority 2: eGRID actual for 2023, scaled for future
-        elif year == 2023 and p.get('egrid_gen_twh') is not None:
-            gen_twh = p['egrid_gen_twh']
-        elif year > 2023 and p.get('egrid_gen_twh') is not None:
-            gen_twh = p['egrid_gen_twh'] * year_factor
         else:
-            cf = CAPACITY_FACTORS.get(fuel, 0.1)
-            gen_twh = cap * cf * 8.760 * year_factor / 1000.0
-
-        # Emissions: override already set above, otherwise derive
-        if not (orispl and orispl in year_overrides):
-            if year == 2023 and p.get('egrid_co2_mt') is not None:
-                emissions_mt = p['egrid_co2_mt']
+            # Use get_plant_gen_twh which handles actuals + projection
+            gen_twh = get_plant_gen_twh(p, fuel, year, year_factor, re_growth)
+            # Emissions: use actuals if available, otherwise derive from gen × rate
+            actual_co2 = p.get('actual_co2_mt', {})
+            if year in actual_co2:
+                emissions_mt = actual_co2[year] / 1e6  # metric tons → MMt
             else:
                 co2_rate = get_plant_co2_rate(p, fuel)
                 emissions_mt = gen_twh * co2_rate
@@ -721,6 +853,7 @@ def build_targets(baseline_emissions_2023):
 
     sbti = {
         '2023': round(base, 1),
+        '2024': round(base * 0.925, 1),
         '2025': round(base * 0.85, 1),
         '2030': round(base * 0.50, 1),
         '2035': round(base * 0.25, 1),
@@ -731,6 +864,7 @@ def build_targets(baseline_emissions_2023):
 
     at = {
         '2023': round(base, 1),
+        '2024': round(base * 0.94, 1),
         '2025': round(base * 0.88, 1),
         '2030': round(base * 0.65, 1),
         '2035': round(base * 0.35, 1),
@@ -888,7 +1022,7 @@ def main():
             'fossil_plants': len(fossil_plants),
             'fossil_capacity_mw': round(fossil_cap, 1),
             'notes': (
-                f'Rebuilt from Rosetta CSV with actual plant capacities. '
+                f'Rebuilt from Rosetta CSV (2023/2024 actuals) + CAMPD 2025. '
                 f'Nuclear: {fleet_summary.get("nuclear", {}).get("capacity_mw", 0):,.0f} MW, '
                 f'Gas CCGT: {fleet_summary.get("gas_ccgt", {}).get("capacity_mw", 0):,.0f} MW, '
                 f'Total fleet: {total_cap:,.0f} MW. '
