@@ -18,6 +18,7 @@ var FleetSidebar = (function () {
     var savedScenarios = [];   // Array of SavedScenario objects (max 5)
     var isOpen = false;
     var nextAddId = 90000;     // ID counter for added plants
+    var openGroups = new Set(); // Track which accordion groups are open across re-renders
     var lastComputedResults = null; // Cache most recent recalculation results
 
     var MAX_SCENARIOS = 5;
@@ -274,6 +275,16 @@ var FleetSidebar = (function () {
     // ── Render Fleet List ──
     function renderFleetList() {
         if (!els.fleetList) return;
+
+        // Snapshot open groups before DOM rebuild
+        var prevOpen = new Set();
+        els.fleetList.querySelectorAll('.sb-iso-body').forEach(function(body) {
+            if (!body.classList.contains('collapsed')) {
+                prevOpen.add(body.dataset.isoBody);
+            }
+        });
+        if (prevOpen.size > 0) openGroups = prevOpen;
+
         if (!fleetPlants.length && !addedPlants.length) {
             els.fleetList.innerHTML = '<div style="text-align:center;color:#6b7280;padding:24px;">No fleet data loaded</div>';
             return;
@@ -426,7 +437,7 @@ var FleetSidebar = (function () {
 
         els.fleetList.innerHTML = html;
 
-        // Bind ISO group collapse + auto-collapse non-fossil categories
+        // Bind ISO group collapse + restore open/collapsed state
         els.fleetList.querySelectorAll('.sb-iso-header').forEach(function (header) {
             header.addEventListener('click', function () {
                 var key = this.dataset.iso;
@@ -434,15 +445,26 @@ var FleetSidebar = (function () {
                 if (body) {
                     var collapsed = body.classList.toggle('collapsed');
                     this.classList.toggle('collapsed', collapsed);
+                    if (collapsed) {
+                        openGroups.delete(key);
+                    } else {
+                        openGroups.add(key);
+                    }
                 }
             });
 
-            // Auto-collapse all categories by default
+            // Restore state: if openGroups has entries, use them; otherwise default all collapsed
             var key = header.dataset.iso;
             var body = els.fleetList.querySelector('[data-iso-body="' + key + '"]');
             if (body) {
-                body.classList.add('collapsed');
-                header.classList.add('collapsed');
+                if (openGroups.size > 0) {
+                    var shouldCollapse = !openGroups.has(key);
+                    body.classList.toggle('collapsed', shouldCollapse);
+                    header.classList.toggle('collapsed', shouldCollapse);
+                } else {
+                    body.classList.add('collapsed');
+                    header.classList.add('collapsed');
+                }
             }
         });
 
