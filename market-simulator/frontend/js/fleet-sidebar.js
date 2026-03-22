@@ -44,6 +44,12 @@ var FleetSidebar = (function () {
         loadData();
     }
 
+    // ── CCS global parameters ──
+    var ccsParams = {
+        derate_pct: 14,       // 0-30%, default 14%
+        capture_rate_pct: 90  // 50-99%, default 90%
+    };
+
     function cacheElements() {
         els.sidebar = document.getElementById('fleetSidebar');
         els.backdrop = document.getElementById('sidebarBackdrop');
@@ -57,6 +63,13 @@ var FleetSidebar = (function () {
         els.nameInput = document.getElementById('scenarioNameInput');
         els.status = document.getElementById('recalcStatus');
         els.savedList = document.getElementById('savedScenariosList');
+
+        // CCS panel elements
+        els.ccsDerateSlider = document.getElementById('ccsDerateSlider');
+        els.ccsDerateValue = document.getElementById('ccsDerateValue');
+        els.ccsCaptureSlider = document.getElementById('ccsCaptureSlider');
+        els.ccsCaptureValue = document.getElementById('ccsCaptureValue');
+        els.ccsApplyAllBtn = document.getElementById('ccsApplyAllBtn');
     }
 
     function bindEvents() {
@@ -71,10 +84,44 @@ var FleetSidebar = (function () {
             els.nameInput.addEventListener('input', updateSaveButtonState);
         }
 
+        // CCS parameter sliders
+        if (els.ccsDerateSlider) {
+            els.ccsDerateSlider.addEventListener('input', function () {
+                ccsParams.derate_pct = parseInt(this.value);
+                if (els.ccsDerateValue) els.ccsDerateValue.textContent = ccsParams.derate_pct + '%';
+            });
+        }
+        if (els.ccsCaptureSlider) {
+            els.ccsCaptureSlider.addEventListener('input', function () {
+                ccsParams.capture_rate_pct = parseInt(this.value);
+                if (els.ccsCaptureValue) els.ccsCaptureValue.textContent = ccsParams.capture_rate_pct + '%';
+            });
+        }
+        if (els.ccsApplyAllBtn) {
+            els.ccsApplyAllBtn.addEventListener('click', applyCcsToAll);
+        }
+
         // Keyboard: Escape to close
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape' && isOpen) close();
         });
+    }
+
+    // ── Apply CCS params to all CCS-eligible plants ──
+    function applyCcsToAll() {
+        var count = 0;
+        fleetPlants.forEach(function (p) {
+            if (p.ccs_eligible && FOSSIL_FUELS.has(p.fuel_type)) {
+                p._action = 'ccs_retrofit';
+                if (!p._year_online) p._year_online = 2030;
+                p._ccs_target_rate = ccsParams.capture_rate_pct / 100.0;
+                p._ccs_derate_pct = ccsParams.derate_pct;
+                count++;
+            }
+        });
+        renderFleetList();
+        setStatus('Applied CCS (' + ccsParams.derate_pct + '% derate, ' +
+            ccsParams.capture_rate_pct + '% capture) to ' + count + ' plants — click Recalculate');
     }
 
     // ── Data Loading ──
@@ -423,7 +470,15 @@ var FleetSidebar = (function () {
         p._action = newStatus === 'operating' ? null : newStatus;
         if (newStatus === 'retire' || newStatus === 'ccs_retrofit') {
             if (!p._year_online) p._year_online = 2030;
-            if (newStatus === 'ccs_retrofit') p._ccs_target_rate = 0.95;
+            if (newStatus === 'ccs_retrofit') {
+                // Use global CCS panel params
+                p._ccs_target_rate = ccsParams.capture_rate_pct / 100.0;
+                p._ccs_derate_pct = ccsParams.derate_pct;
+            }
+        }
+        if (newStatus === 'operating') {
+            p._ccs_target_rate = 0;
+            p._ccs_derate_pct = 0;
         }
         renderFleetList();
     }
@@ -510,7 +565,10 @@ var FleetSidebar = (function () {
             setTimeout(function () {
                 try {
                     var t0 = performance.now();
-                    var result = FleetDispatchEngine.computeFleetDispatch(allPlants, sweepData);
+                    var result = FleetDispatchEngine.computeFleetDispatch(allPlants, sweepData, {
+                        ccs_derate_pct: ccsParams.derate_pct,
+                        ccs_capture_rate_pct: ccsParams.capture_rate_pct
+                    });
                     var elapsed = Math.round(performance.now() - t0);
 
                     // Cache the results and current params for save
