@@ -168,9 +168,8 @@ def main():
             except ValueError:
                 equity_share = 1.0
 
-            # CCS eligible (only fossil CCGTs)
-            ccs_raw = row.get('CCS Eligible?', '').strip()
-            ccs_eligible = ccs_raw.lower() in ('yes', '1', 'true')
+            # CCS eligible: set in the sidebar UI by the user, default false
+            ccs_eligible = False
 
             # Year built
             year_str = row.get('First in Service Year', '').strip()
@@ -188,13 +187,27 @@ def main():
 
             category = CATEGORY_MAP.get(ft, 'other')
 
+            # Use actual capacity from CSV, fall back to defaults only if missing
+            cap_raw = row.get('Constellation Owned Capacity (MW)', '').strip()
+            try:
+                capacity_mw = float(cap_raw) if cap_raw else CAPACITY_DEFAULTS.get(ft, 200)
+            except ValueError:
+                capacity_mw = CAPACITY_DEFAULTS.get(ft, 200)
+
+            # Use actual CCS capacity from CSV if available
+            ccs_cap_raw = row.get('Available CCS Capacity', '').strip()
+            try:
+                ccs_capacity_mw = float(ccs_cap_raw) if ccs_cap_raw else None
+            except ValueError:
+                ccs_capacity_mw = None
+
             plant = {
                 'orispl': orispl,
                 'name': short_name or name,
                 'full_name': name,
                 'iso': iso,
                 'state': state,
-                'capacity_mw': CAPACITY_DEFAULTS.get(ft, 200),
+                'capacity_mw': capacity_mw,
                 'fuel_type': ft,
                 'plant_category': category,
                 'equity_share': equity_share,
@@ -206,6 +219,8 @@ def main():
             if category == 'fossil':
                 plant['heat_rate_mmbtu_mwh'] = HEAT_RATES.get(ft, 10.0)
                 plant['co2_rate_t_mwh'] = CO2_RATES.get(ft, 0.37)
+                if ccs_capacity_mw is not None:
+                    plant['ccs_capacity_mw'] = ccs_capacity_mw
 
             # Add year built if available
             if year_built:
@@ -240,9 +255,9 @@ def main():
     for iso, ps in sorted(by_iso.items()):
         print(f"  {iso}: {len(ps)}")
 
-    # Identify CCS-eligible CCGTs for scenario modifications
-    ccgt_ccs = [p for p in plants if p['fuel_type'] == 'gas_ccgt' and p['ccs_eligible']]
-    top6 = ccgt_ccs[:6] if len(ccgt_ccs) >= 6 else ccgt_ccs
+    # Hardcoded top CCS-eligible CCGT orispls for scenario definitions
+    # CCS eligibility is managed by the user in the sidebar UI, not derived from data
+    TOP_CCS_ORISPLS = [997153, 55327, 55327, 50292, 55172, 55299]
 
     # Build output JSON
     output = {
@@ -301,16 +316,16 @@ def main():
             "ccs_top_emitters": {
                 "description": "CCS retrofit on the top 6 largest CCS-eligible CCGTs by 2030-2032.",
                 "modifications": [
-                    {"orispl": top6[i]['orispl'], "action": "ccs_retrofit", "year_online": 2030 + (i // 2)}
-                    for i in range(min(6, len(top6)))
+                    {"orispl": TOP_CCS_ORISPLS[i], "action": "ccs_retrofit", "year_online": 2030 + (i // 2)}
+                    for i in range(len(TOP_CCS_ORISPLS))
                 ]
             },
             "ccs_plus_new_gas": {
                 "description": "CCS on top emitters + 1,200 MW new efficient CCGT in PJM.",
                 "modifications": [
-                    {"orispl": top6[0]['orispl'], "action": "ccs_retrofit", "year_online": 2030},
-                    {"orispl": top6[1]['orispl'], "action": "ccs_retrofit", "year_online": 2030},
-                    {"orispl": top6[2]['orispl'], "action": "ccs_retrofit", "year_online": 2031},
+                    {"orispl": TOP_CCS_ORISPLS[0], "action": "ccs_retrofit", "year_online": 2030},
+                    {"orispl": TOP_CCS_ORISPLS[1], "action": "ccs_retrofit", "year_online": 2030},
+                    {"orispl": TOP_CCS_ORISPLS[2], "action": "ccs_retrofit", "year_online": 2031},
                     {
                         "action": "add_plant",
                         "name": "New PJM CCGT East",
