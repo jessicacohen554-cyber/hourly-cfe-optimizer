@@ -208,6 +208,13 @@ def parse_rosetta():
             }
             retired_year = RETIRED_YEARS.get(orispl) if orispl and status == 'Retired' else None
 
+            # ORISPL mismatches: these CAMPD IDs map to wrong eGRID plant
+            # Salem CT (16 MW gas) shares ORISPL 2410 with Salem Nuclear (1 GW)
+            # Delaware City 10 / West Energy Center have parasitic load only
+            EGRID_EXCLUDE = {2410, 592, 597}
+            if orispl in EGRID_EXCLUDE:
+                orispl = None  # Don't use eGRID data for these
+
             # Attach eGRID 2023 actual emissions if available
             # For shared CAMPD IDs, split proportionally by capacity
             egrid_data = egrid.get(orispl) if orispl else None
