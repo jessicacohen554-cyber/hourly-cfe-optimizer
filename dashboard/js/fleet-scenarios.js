@@ -343,7 +343,7 @@
     }
 
     // ── Build 5-band fan datasets for a single scenario ──
-    // mode: 'single' = green/red semantic colors, 'multi' = scenario's own color
+    // Always uses scenario's own color for the p10-p90 bands (transparent shading).
     // p50Style: { color, width, dash } for the p50 line specifically
     function addFanDatasets(datasets, env, years, color, label, mode, p50Style, meta) {
         var p10 = [], p25 = [], p50 = [], p75 = [], p90 = [];
@@ -363,175 +363,99 @@
 
         var startIdx = datasets.length;
 
-        if (mode === 'single') {
-            // ── Single-scenario mode: green (optimistic) below p50, red (pessimistic) above ──
-            var greenLight = 'rgba(34, 197, 94, 0.08)';
-            var greenMed   = 'rgba(34, 197, 94, 0.15)';
-            var greenLine  = 'rgb(34, 197, 94)';
-            var redLight   = 'rgba(239, 68, 68, 0.08)';
-            var redMed     = 'rgba(239, 68, 68, 0.15)';
-            var redLine    = 'rgb(239, 68, 68)';
+        // Always use scenario-matched color shading (gray for baseline, blue for custom, etc.)
+        var veryLight = hexToRgba(color, 0.08);
+        var light     = hexToRgba(color, 0.15);
+        var lineColor = hexToRgba(color, 0.35);
 
-            // 1. p10 (invisible bottom boundary)
-            datasets.push({
-                label: label + ' p10', data: p10,
-                borderColor: 'transparent', backgroundColor: 'transparent',
-                borderWidth: 0, pointRadius: 0, fill: false,
-                tension: 0.3, showLegend: false, _scenarioKey: label, _band: 'p10'
-            });
-            // 2. p10→p25 fill (light green)
-            datasets.push({
-                label: label + ' p10-p25', data: p25,
-                borderColor: 'transparent', backgroundColor: greenLight,
-                borderWidth: 0, pointRadius: 0,
-                fill: { target: startIdx, above: greenLight, below: greenLight },
-                tension: 0.3, _scenarioKey: label, _band: 'fill'
-            });
-            // 3. p25 dashed line (green)
-            datasets.push({
-                label: label + ' P25', data: p25,
-                borderColor: greenLine, backgroundColor: 'transparent',
-                borderWidth: 1.5, borderDash: [6, 4], pointRadius: 0,
-                fill: false, tension: 0.3, _scenarioKey: label, _band: 'p25'
-            });
-            // 4. p25→p50 fill (medium green)
-            datasets.push({
-                label: label + ' p25-p50', data: p50,
-                borderColor: 'transparent', backgroundColor: greenMed,
-                borderWidth: 0, pointRadius: 0,
-                fill: { target: startIdx + 2, above: greenMed, below: greenMed },
-                tension: 0.3, _scenarioKey: label, _band: 'fill'
-            });
-            // 5. p50 solid line
-            datasets.push({
-                label: p50Style.legendLabel || label,
-                data: p50,
-                borderColor: p50Style.color,
-                backgroundColor: 'transparent',
-                borderWidth: p50Style.width || 2.5,
-                borderDash: p50Style.dash || [],
-                pointRadius: p50Style.pointRadius != null ? p50Style.pointRadius : 3,
-                pointBackgroundColor: p50Style.color,
-                pointHoverRadius: 5,
-                fill: false, tension: 0.3,
-                _scenarioKey: label, _band: 'p50',
-                _showInLegend: true,
-                _isBaseline: meta && meta.isBaseline,
-                _scenarioName: (meta && meta.scenarioName) || label
-            });
-            // 6. p50→p75 fill (medium red)
-            datasets.push({
-                label: label + ' p50-p75', data: p75,
-                borderColor: 'transparent', backgroundColor: redMed,
-                borderWidth: 0, pointRadius: 0,
-                fill: { target: startIdx + 4, above: redMed, below: redMed },
-                tension: 0.3, _scenarioKey: label, _band: 'fill'
-            });
-            // 7. p75 dashed line (red)
-            datasets.push({
-                label: label + ' P75', data: p75,
-                borderColor: redLine, backgroundColor: 'transparent',
-                borderWidth: 1.5, borderDash: [6, 4], pointRadius: 0,
-                fill: false, tension: 0.3, _scenarioKey: label, _band: 'p75'
-            });
-            // 8. p75→p90 fill (light red)
-            datasets.push({
-                label: label + ' p75-p90', data: p90,
-                borderColor: 'transparent', backgroundColor: redLight,
-                borderWidth: 0, pointRadius: 0,
-                fill: { target: startIdx + 6, above: redLight, below: redLight },
-                tension: 0.3, _scenarioKey: label, _band: 'fill'
-            });
-            // 9. p90 (invisible top boundary)
-            datasets.push({
-                label: label + ' p90', data: p90,
-                borderColor: 'transparent', backgroundColor: 'transparent',
-                borderWidth: 0, pointRadius: 0, fill: false,
-                tension: 0.3, _scenarioKey: label, _band: 'p90'
-            });
-        } else {
-            // ── Multi-scenario mode: color-matched shading using scenario's assigned color ──
-            var veryLight = hexToRgba(color, 0.06);
-            var light     = hexToRgba(color, 0.12);
+        // Use p50Style overrides if provided, otherwise defaults from color
+        var p50Color = (p50Style && p50Style.color) ? p50Style.color : color;
+        var p50Width = (p50Style && p50Style.width) ? p50Style.width : 2.5;
+        var p50Dash  = (p50Style && p50Style.dash) ? p50Style.dash : [];
+        var p50Radius = (p50Style && p50Style.pointRadius != null) ? p50Style.pointRadius : 3;
+        var p50Label = (p50Style && p50Style.legendLabel) ? p50Style.legendLabel : label;
 
-            // 1. p10 (invisible bottom boundary)
-            datasets.push({
-                label: label + ' p10', data: p10,
-                borderColor: 'transparent', backgroundColor: 'transparent',
-                borderWidth: 0, pointRadius: 0, fill: false,
-                tension: 0.3, _scenarioKey: label, _band: 'p10'
-            });
-            // 2. p10→p25 fill
-            datasets.push({
-                label: label + ' p10-p25', data: p25,
-                borderColor: 'transparent', backgroundColor: veryLight,
-                borderWidth: 0, pointRadius: 0,
-                fill: { target: startIdx, above: veryLight, below: veryLight },
-                tension: 0.3, _scenarioKey: label, _band: 'fill'
-            });
-            // 3. p25 dashed line
-            datasets.push({
-                label: label + ' P25', data: p25,
-                borderColor: color, backgroundColor: 'transparent',
-                borderWidth: 1, borderDash: [5, 3], pointRadius: 0,
-                fill: false, tension: 0.3, _scenarioKey: label, _band: 'p25'
-            });
-            // 4. p25→p50 fill
-            datasets.push({
-                label: label + ' p25-p50', data: p50,
-                borderColor: 'transparent', backgroundColor: light,
-                borderWidth: 0, pointRadius: 0,
-                fill: { target: startIdx + 2, above: light, below: light },
-                tension: 0.3, _scenarioKey: label, _band: 'fill'
-            });
-            // 5. p50 solid line
-            datasets.push({
-                label: label,
-                data: p50,
-                borderColor: color,
-                backgroundColor: 'transparent',
-                borderWidth: 2.5,
-                borderDash: [],
-                pointRadius: 3,
-                pointBackgroundColor: color,
-                pointHoverRadius: 5,
-                fill: false, tension: 0.3,
-                _scenarioKey: label, _band: 'p50',
-                _showInLegend: true,
-                _isBaseline: meta && meta.isBaseline,
-                _scenarioName: (meta && meta.scenarioName) || label
-            });
-            // 6. p50→p75 fill
-            datasets.push({
-                label: label + ' p50-p75', data: p75,
-                borderColor: 'transparent', backgroundColor: light,
-                borderWidth: 0, pointRadius: 0,
-                fill: { target: startIdx + 4, above: light, below: light },
-                tension: 0.3, _scenarioKey: label, _band: 'fill'
-            });
-            // 7. p75 dashed line
-            datasets.push({
-                label: label + ' P75', data: p75,
-                borderColor: color, backgroundColor: 'transparent',
-                borderWidth: 1, borderDash: [5, 3], pointRadius: 0,
-                fill: false, tension: 0.3, _scenarioKey: label, _band: 'p75'
-            });
-            // 8. p75→p90 fill
-            datasets.push({
-                label: label + ' p75-p90', data: p90,
-                borderColor: 'transparent', backgroundColor: veryLight,
-                borderWidth: 0, pointRadius: 0,
-                fill: { target: startIdx + 6, above: veryLight, below: veryLight },
-                tension: 0.3, _scenarioKey: label, _band: 'fill'
-            });
-            // 9. p90 (invisible)
-            datasets.push({
-                label: label + ' p90', data: p90,
-                borderColor: 'transparent', backgroundColor: 'transparent',
-                borderWidth: 0, pointRadius: 0, fill: false,
-                tension: 0.3, _scenarioKey: label, _band: 'p90'
-            });
+        // 1. p10 (invisible bottom boundary)
+        datasets.push({
+            label: label + ' p10', data: p10,
+            borderColor: 'transparent', backgroundColor: 'transparent',
+            borderWidth: 0, pointRadius: 0, fill: false,
+            tension: 0.3, _scenarioKey: label, _band: 'p10'
+        });
+        // 2. p10→p50 fill (light shading)
+        datasets.push({
+            label: label + ' p10-p50', data: p50,
+            borderColor: 'transparent', backgroundColor: veryLight,
+            borderWidth: 0, pointRadius: 0,
+            fill: { target: startIdx, above: veryLight, below: veryLight },
+            tension: 0.3, _scenarioKey: label, _band: 'fill'
+        });
+        // 3. p50 solid line
+        datasets.push({
+            label: p50Label,
+            data: p50,
+            borderColor: p50Color,
+            backgroundColor: 'transparent',
+            borderWidth: p50Width,
+            borderDash: p50Dash,
+            pointRadius: p50Radius,
+            pointBackgroundColor: p50Color,
+            pointHoverRadius: 5,
+            fill: false, tension: 0.3,
+            _scenarioKey: label, _band: 'p50',
+            _showInLegend: true,
+            _isBaseline: meta && meta.isBaseline,
+            _scenarioName: (meta && meta.scenarioName) || label
+        });
+        // 4. p50→p90 fill (light shading)
+        datasets.push({
+            label: label + ' p50-p90', data: p90,
+            borderColor: 'transparent', backgroundColor: veryLight,
+            borderWidth: 0, pointRadius: 0,
+            fill: { target: startIdx + 2, above: veryLight, below: veryLight },
+            tension: 0.3, _scenarioKey: label, _band: 'fill'
+        });
+        // 5. p90 (invisible top boundary)
+        datasets.push({
+            label: label + ' p90', data: p90,
+            borderColor: 'transparent', backgroundColor: 'transparent',
+            borderWidth: 0, pointRadius: 0, fill: false,
+            tension: 0.3, _scenarioKey: label, _band: 'p90'
+        });
+    }
+
+    // ── Find the earliest intervention year from the fleet sidebar modifications ──
+    function getFirstInterventionYear() {
+        if (typeof FleetSidebar !== 'undefined' && FleetSidebar.getFleetPlants) {
+            var plants = FleetSidebar.getFleetPlants();
+            var earliest = Infinity;
+            if (plants) {
+                plants.forEach(function (p) {
+                    if (p._action && p._year_online && p._year_online < earliest) {
+                        earliest = p._year_online;
+                    }
+                });
+            }
+            return earliest === Infinity ? null : earliest;
         }
+        return null;
+    }
+
+    // ── Merge custom envelope with baseline for pre-intervention years ──
+    function alignEnvelopeWithBaseline(custEnv, baseEnv, firstYear) {
+        if (!firstYear || !baseEnv) return custEnv;
+        var merged = {};
+        var keys = Object.keys(custEnv);
+        keys.forEach(function (yStr) {
+            var y = parseInt(yStr);
+            if (y < firstYear) {
+                // Use baseline values for years before any intervention
+                merged[yStr] = baseEnv[yStr] || custEnv[yStr];
+            } else {
+                merged[yStr] = custEnv[yStr];
+            }
+        });
+        return merged;
     }
 
     function updateFanChart() {
@@ -542,63 +466,47 @@
         var baseline = DATA.scenarios.baseline;
         var mode = getColorMode();
 
+        // ── Always show baseline with gray p10-p90 band ──
+        if (baseline) {
+            var baseEnv = getEnvelope(baseline);
+            addFanDatasets(datasets, baseEnv, years, BASELINE_COLOR, 'Baseline', mode, {
+                color: BASELINE_COLOR, width: 2.5, dash: [], pointRadius: 0,
+                legendLabel: 'Baseline (Baseline)'
+            }, { isBaseline: true, scenarioName: 'Baseline' });
+        }
+
         if (mode === 'single') {
             // ── Single-scenario mode ──
-            // Determine if it's baseline-only, or baseline + one custom/saved
             var customOrSaved = customScenario ? customScenario : null;
             if (!customOrSaved && savedScenarioOverlays.length === 1) {
                 customOrSaved = savedScenarioOverlays[0];
             }
 
-            if (customOrSaved && baseline) {
-                // Baseline + 1 custom: baseline gets gray p50, custom gets green/red fan
-                var baseEnv = getEnvelope(baseline);
-                // Only show baseline p50 as a gray reference line
-                var baseP50 = [];
-                years.forEach(function (y) {
-                    var e = baseEnv[String(y)];
-                    baseP50.push(e ? e.p50 : null);
-                });
-                datasets.push({
-                    label: 'Baseline',
-                    data: baseP50,
-                    borderColor: '#6B7280',
-                    backgroundColor: 'transparent',
-                    borderWidth: 2, borderDash: [],
-                    pointRadius: 0, pointHoverRadius: 3,
-                    fill: false, tension: 0.3,
-                    _scenarioKey: 'Baseline', _band: 'p50', _showInLegend: true,
-                    _isBaseline: true, _scenarioName: 'Baseline'
-                });
-
-                // Custom scenario gets the full green/red fan
+            if (customOrSaved) {
                 var custEnv = customOrSaved.results ? customOrSaved.results.envelope : customOrSaved.envelope;
                 var custColor = customOrSaved.color || CUSTOM_COLOR;
                 var custName = customOrSaved.name || 'Custom';
-                addFanDatasets(datasets, custEnv, years, custColor, custName, 'single', {
+
+                // Align custom with baseline until first intervention year
+                var firstYear = getFirstInterventionYear();
+                var baseEnvForAlign = baseline ? getEnvelope(baseline) : null;
+                var alignedEnv = alignEnvelopeWithBaseline(custEnv, baseEnvForAlign, firstYear);
+
+                addFanDatasets(datasets, alignedEnv, years, custColor, custName, mode, {
                     color: custColor, width: 2.5, dash: [], pointRadius: 3,
                     legendLabel: custName
                 }, { isBaseline: false, scenarioName: custName });
-            } else if (baseline) {
-                // Baseline only: show full green/red fan with baseline's own color for p50
-                var baseEnv = getEnvelope(baseline);
-                addFanDatasets(datasets, baseEnv, years, BASELINE_COLOR, 'Baseline', 'single', {
-                    color: BASELINE_COLOR, width: 2.5, dash: [], pointRadius: 3,
-                    legendLabel: 'Baseline'
-                }, { isBaseline: true, scenarioName: 'Baseline' });
             }
         } else {
             // ── Multi-scenario mode ──
-            // Baseline always gets its fan
-            if (baseline) {
-                var baseEnv = getEnvelope(baseline);
-                addFanDatasets(datasets, baseEnv, years, BASELINE_COLOR, 'Baseline', 'multi', null,
-                    { isBaseline: true, scenarioName: 'Baseline' });
-            }
-
             // Custom overlay
             if (customScenario) {
-                addFanDatasets(datasets, customScenario.envelope, years, CUSTOM_COLOR, 'Custom', 'multi', null,
+                var custEnvMulti = customScenario.envelope;
+                var firstYearMulti = getFirstInterventionYear();
+                var baseEnvMulti = baseline ? getEnvelope(baseline) : null;
+                var alignedEnvMulti = alignEnvelopeWithBaseline(custEnvMulti, baseEnvMulti, firstYearMulti);
+
+                addFanDatasets(datasets, alignedEnvMulti, years, CUSTOM_COLOR, 'Custom', mode, null,
                     { isBaseline: false, scenarioName: 'Custom' });
             }
 
@@ -612,7 +520,7 @@
             });
             sortedOverlays.forEach(function (s) {
                 if (s.results && s.results.envelope) {
-                    addFanDatasets(datasets, s.results.envelope, years, s.color, s.name, 'multi', null,
+                    addFanDatasets(datasets, s.results.envelope, years, s.color, s.name, mode, null,
                         { isBaseline: !!s.isBaseline, scenarioName: s.name || 'Saved' });
                 }
             });
@@ -797,14 +705,18 @@
         var mode = getColorMode();
         var items = [];
 
-        if (mode === 'single') {
-            // Show green/red band explanation
-            items.push({ label: 'P25 (optimistic)', color: 'rgb(34, 197, 94)', type: 'dashed' });
-            items.push({ label: 'P10–P50 range', color: 'rgba(34, 197, 94, 0.15)', type: 'band' });
-            items.push({ label: 'P75 (pessimistic)', color: 'rgb(239, 68, 68)', type: 'dashed' });
-            items.push({ label: 'P50–P90 range', color: 'rgba(239, 68, 68, 0.15)', type: 'band' });
+        // Show scenario bands explanation
+        items.push({ label: 'Baseline (P50)', color: BASELINE_COLOR, type: 'line' });
+        items.push({ label: 'Baseline P10–P90', color: hexToRgba(BASELINE_COLOR, 0.15), type: 'band' });
+
+        // Check if custom is shown
+        var hasCustom = customScenario || (mode === 'single' && savedScenarioOverlays.length === 1);
+        if (hasCustom) {
+            var custColor = (customScenario && customScenario.color) || CUSTOM_COLOR;
+            var custName = (customScenario && customScenario.name) || 'Custom';
+            items.push({ label: custName + ' (P50)', color: custColor, type: 'line' });
+            items.push({ label: custName + ' P10–P90', color: hexToRgba(custColor, 0.15), type: 'band' });
         }
-        // In multi mode, the Chart.js built-in legend handles p50 lines
 
         // Targets always shown
         selectedTargets.forEach(function (selTgt) {
@@ -822,6 +734,8 @@
             var swatch;
             if (item.type === 'dashed') {
                 swatch = '<span style="width:24px;height:0;border-top:2px dashed ' + item.color + ';display:inline-block;"></span>';
+            } else if (item.type === 'line') {
+                swatch = '<span style="width:24px;height:0;border-top:2.5px solid ' + item.color + ';display:inline-block;"></span>';
             } else {
                 swatch = '<span style="width:24px;height:10px;border-radius:3px;background:' + item.color + ';display:inline-block;"></span>';
             }
@@ -829,12 +743,9 @@
                 swatch + item.label + '</span>';
         }).join('');
 
-        // In single mode, add a green/red shading annotation note below the legend items
-        if (mode === 'single') {
-            html += '<div style="margin-top:6px;font-size:0.78rem;color:var(--text-dim);font-style:italic;">' +
-                '<span style="color:rgb(34,197,94);font-weight:600;">Green</span> = optimistic (lower emissions), ' +
-                '<span style="color:rgb(239,68,68);font-weight:600;">Red</span> = pessimistic (higher emissions)</div>';
-        }
+        // Shading explanation
+        html += '<div style="margin-top:6px;font-size:0.78rem;color:var(--text-dim);font-style:italic;">' +
+            'Shaded bands show P10–P90 confidence intervals across fossil fuel price scenarios</div>';
 
         el.innerHTML = html;
     }

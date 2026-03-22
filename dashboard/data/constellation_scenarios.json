@@ -5,24 +5,26 @@
     "company": "Constellation Energy",
     "as_of_date": "2025-01-01",
     "source": "CEG_fleet_rosetta.csv",
-    "notes": "Full fleet of 182 plants across all fuel types. Includes CEG legacy fleet, CPN (Calpine) acquisition, and 42 retired/divested plants for 2023 baseline. Nuclear ~181 TWh, Gas CCGT ~120 TWh, Gas CT ~3 TWh. 2023 baseline emissions from eGRID 2023 PLNT23 plant-level actuals.",
+    "notes": "Full fleet of 182 plants across all fuel types. Includes CEG legacy fleet and CPN (Calpine) acquisition. Nuclear ~190 TWh, Geothermal ~9 TWh, Wind/Solar/Hydro ~4-5 TWh.",
     "generation_estimates_twh": {
-      "nuclear": 181.2,
-      "geothermal": 6.4,
+      "nuclear": 190.0,
+      "geothermal": 9.0,
       "wind": 3.5,
-      "solar": 0.5,
-      "hydro": 1.9,
-      "gas_ccgt": 119.6,
-      "gas_ct": 3.0,
-      "oil_ct": 0.8,
-      "gas_oil_ct": 0.5
+      "solar": 0.8,
+      "hydro": 0.5,
+      "gas_ccgt": 50.0,
+      "gas_ct": 1.5,
+      "oil_ct": 0.3,
+      "gas_oil_ct": 0.8,
+      "battery": 0.0,
+      "pumped_storage": 0.0
     }
   },
   "new_build_interaction": {
     "rule": "additive",
     "description": "Fleet-level add_plant actions are additive to grid-level new fossil builds."
   },
-  "baseline_mt": 50.17,
+  "baseline_mt": 23.16,
   "targets": {
     "sbti_15": {
       "type": "sbti_15c",
@@ -58,7 +60,7 @@
   "base_fleet": [
     {
       "orispl": 943722,
-      "name": "Braidwood",
+      "name": "Braidwood Clean Energy Center",
       "full_name": "Braidwood Clean Energy Center",
       "iso": "PJM",
       "state": "IL",
@@ -68,12 +70,11 @@
       "equity_share": 1.0,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 1988,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1988
     },
     {
       "orispl": 975425,
-      "name": "Byron",
+      "name": "Byron Generating Station",
       "full_name": "Byron Generating Station",
       "iso": "PJM",
       "state": "IL",
@@ -83,8 +84,7 @@
       "equity_share": 1.0,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 1985,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1985
     },
     {
       "orispl": 935897,
@@ -98,12 +98,11 @@
       "equity_share": 1.0,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 1975,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1975
     },
     {
       "orispl": 941893,
-      "name": "Clinton",
+      "name": "Clinton Power Station",
       "full_name": "Clinton Power Station",
       "iso": "MISO",
       "state": "IL",
@@ -113,8 +112,7 @@
       "equity_share": 1.0,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 1987,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1987
     },
     {
       "orispl": 989831,
@@ -128,8 +126,7 @@
       "equity_share": 1.0,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2027,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2027
     },
     {
       "orispl": 984150,
@@ -143,12 +140,11 @@
       "equity_share": 1.0,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 1970,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1970
     },
     {
       "orispl": 916151,
-      "name": "FitzPatrick",
+      "name": "James A. FitzPatrick",
       "full_name": "James A. FitzPatrick",
       "iso": "NYISO",
       "state": "NY",
@@ -158,27 +154,11 @@
       "equity_share": 1.0,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 1975,
-      "ccs_capacity_mw": 0.0
-    },
-    {
-      "orispl": 988963,
-      "name": "Ginna",
-      "full_name": "R.E. Ginna/Ontario Sta. 13",
-      "iso": "NYISO",
-      "state": "NY",
-      "capacity_mw": 582.0,
-      "fuel_type": "nuclear",
-      "plant_category": "nuclear",
-      "equity_share": 1.0,
-      "ccs_eligible": false,
-      "status": "operating",
-      "year_built": 1970,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1975
     },
     {
       "orispl": 987313,
-      "name": "LaSalle",
+      "name": "LaSalle County Generating Station",
       "full_name": "LaSalle County Generating Station",
       "iso": "PJM",
       "state": "IL",
@@ -188,8 +168,7 @@
       "equity_share": 1.0,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 1984,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1984
     },
     {
       "orispl": 925838,
@@ -203,8 +182,7 @@
       "equity_share": 1.0,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 1986,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1986
     },
     {
       "orispl": 965121,
@@ -218,8 +196,7 @@
       "equity_share": 1.0,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 1969,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1969
     },
     {
       "orispl": 999540,
@@ -233,8 +210,7 @@
       "equity_share": 0.5,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 1974,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1974
     },
     {
       "orispl": 921880,
@@ -248,8 +224,21 @@
       "equity_share": 0.75,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 1972,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1972
+    },
+    {
+      "orispl": 988963,
+      "name": "R.E. Ginna/Ontario Sta. 13",
+      "full_name": "R.E. Ginna/Ontario Sta. 13",
+      "iso": "NYISO",
+      "state": "NY",
+      "capacity_mw": 582.0,
+      "fuel_type": "nuclear",
+      "plant_category": "nuclear",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "year_built": 1970
     },
     {
       "orispl": 980346,
@@ -263,8 +252,7 @@
       "equity_share": 0.43,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 1977,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1977
     },
     {
       "orispl": 929800,
@@ -278,8 +266,7 @@
       "equity_share": 0.44,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 1988,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1988
     },
     {
       "orispl": 954209,
@@ -293,12 +280,11 @@
       "equity_share": 1.0,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 1989,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1989
     },
     {
       "orispl": 975528,
-      "name": "Calistoga",
+      "name": "Calistoga Geothermal",
       "full_name": "Calistoga Geothermal",
       "iso": "CAISO",
       "state": "CA",
@@ -308,12 +294,11 @@
       "equity_share": 1.0,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 1984,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1984
     },
     {
       "orispl": 947949,
-      "name": "Geysers",
+      "name": "Geysers Unit 5-20",
       "full_name": "Geysers Unit 5-20",
       "iso": "CAISO",
       "state": "CA",
@@ -323,12 +308,11 @@
       "equity_share": 1.0,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 1971,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1971
     },
     {
       "orispl": 987999,
-      "name": "Lake View",
+      "name": "Lake View Geothermal (Sonoma)",
       "full_name": "Lake View Geothermal (Sonoma)",
       "iso": "CAISO",
       "state": "CA",
@@ -338,27 +322,11 @@
       "equity_share": 1.0,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 1983,
-      "ccs_capacity_mw": 0.0
-    },
-    {
-      "orispl": 985107,
-      "name": "Beebe",
-      "full_name": "Beebe Community Wind Farm",
-      "iso": "MISO",
-      "state": "MI",
-      "capacity_mw": 81.6,
-      "fuel_type": "wind",
-      "plant_category": "renewable",
-      "equity_share": 0.51,
-      "ccs_eligible": false,
-      "status": "operating",
-      "year_built": 2012,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1983
     },
     {
       "orispl": 909857,
-      "name": "Beebe 1B",
+      "name": "Beebe 1B Wind Farm",
       "full_name": "Beebe 1B Wind Farm",
       "iso": "MISO",
       "state": "MI",
@@ -368,12 +336,25 @@
       "equity_share": 0.51,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2014,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2014
+    },
+    {
+      "orispl": 985107,
+      "name": "Beebe Community Wind Farm",
+      "full_name": "Beebe Community Wind Farm",
+      "iso": "MISO",
+      "state": "MI",
+      "capacity_mw": 81.6,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "ccs_eligible": false,
+      "status": "operating",
+      "year_built": 2012
     },
     {
       "orispl": 902367,
-      "name": "Bennett Creek",
+      "name": "Bennett Creek Wind (Mountain Home)",
       "full_name": "Bennett Creek Wind (Mountain Home)",
       "iso": "NA",
       "state": "ID",
@@ -383,8 +364,7 @@
       "equity_share": 0.51,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2008,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2008
     },
     {
       "orispl": 999821,
@@ -398,12 +378,11 @@
       "equity_share": 0.51,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2008,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2008
     },
     {
       "orispl": 955170,
-      "name": "Bluestem",
+      "name": "Bluestem Wind Project",
       "full_name": "Bluestem Wind Project",
       "iso": "SPP",
       "state": "OK",
@@ -413,8 +392,7 @@
       "equity_share": 0.51,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2016,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2016
     },
     {
       "orispl": 991425,
@@ -428,12 +406,11 @@
       "equity_share": 0.51,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2009,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2009
     },
     {
       "orispl": 918124,
-      "name": "Cassia Wind",
+      "name": "Cassia Wind Farm",
       "full_name": "Cassia Wind Farm",
       "iso": "NA",
       "state": "ID",
@@ -443,12 +420,11 @@
       "equity_share": 0.51,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2009,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2009
     },
     {
       "orispl": 974076,
-      "name": "Conception",
+      "name": "Conception Wind Farm",
       "full_name": "Conception Wind Farm",
       "iso": "NA",
       "state": "MO",
@@ -458,8 +434,7 @@
       "equity_share": 0.51,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2008,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2008
     },
     {
       "orispl": 921367,
@@ -473,12 +448,11 @@
       "equity_share": 0.51,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2008,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2008
     },
     {
       "orispl": 921195,
-      "name": "Criterion",
+      "name": "Criterion Wind Project",
       "full_name": "Criterion Wind Project",
       "iso": "PJM",
       "state": "MD",
@@ -488,16 +462,29 @@
       "equity_share": 0.51,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2010,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2010
+    },
+    {
+      "orispl": 909201,
+      "name": "Eastern Wind Farm (Four Mile Ridge)",
+      "full_name": "Eastern Wind Farm (Four Mile Ridge)",
+      "iso": "PJM",
+      "state": "MD",
+      "capacity_mw": 40.0,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "ccs_eligible": false,
+      "status": "operating",
+      "year_built": 2014
     },
     {
       "orispl": 927670,
-      "name": "Fairwind",
+      "name": "Fair Wind Generating Facility",
       "full_name": "Fair Wind Generating Facility",
       "iso": "PJM",
       "state": "MD",
-      "capacity_mw": 150,
+      "capacity_mw": 30.0,
       "fuel_type": "wind",
       "plant_category": "renewable",
       "equity_share": 1.0,
@@ -507,7 +494,7 @@
     },
     {
       "orispl": 975139,
-      "name": "Four Corners Windfarm",
+      "name": "Four Corners Windfarm (Echo II Project)",
       "full_name": "Four Corners Windfarm (Echo II Project)",
       "iso": "NA",
       "state": "OR",
@@ -517,12 +504,11 @@
       "equity_share": 0.51,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2009,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2009
     },
     {
       "orispl": 939634,
-      "name": "Four Mile Canyon Windfarm",
+      "name": "Four Mile Canyon Windfarm (Echo II)",
       "full_name": "Four Mile Canyon Windfarm (Echo II)",
       "iso": "NA",
       "state": "OR",
@@ -532,26 +518,11 @@
       "equity_share": 0.51,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2009,
-      "ccs_capacity_mw": 0.0
-    },
-    {
-      "orispl": 909201,
-      "name": "Fourmile Ridge",
-      "full_name": "Eastern Wind Farm (Four Mile Ridge)",
-      "iso": "PJM",
-      "state": "MD",
-      "capacity_mw": 150,
-      "fuel_type": "wind",
-      "plant_category": "renewable",
-      "equity_share": 0.51,
-      "ccs_eligible": false,
-      "status": "operating",
-      "year_built": 2014
+      "year_built": 2009
     },
     {
       "orispl": 951087,
-      "name": "Greensburg",
+      "name": "Greensburg Wind Farm",
       "full_name": "Greensburg Wind Farm",
       "iso": "SPP",
       "state": "KS",
@@ -561,12 +532,25 @@
       "equity_share": 0.51,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2010,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2010
+    },
+    {
+      "orispl": 956143,
+      "name": "Harvest I Wind Project",
+      "full_name": "Harvest I Wind Project",
+      "iso": "MISO",
+      "state": "MI",
+      "capacity_mw": 51.2,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "ccs_eligible": false,
+      "status": "operating",
+      "year_built": 2008
     },
     {
       "orispl": 971701,
-      "name": "Harvest",
+      "name": "Harvest II Project",
       "full_name": "Harvest II Project",
       "iso": "MISO",
       "state": "MI",
@@ -576,26 +560,11 @@
       "equity_share": 0.51,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2012,
-      "ccs_capacity_mw": 0.0
-    },
-    {
-      "orispl": 956143,
-      "name": "Harvest 2",
-      "full_name": "Harvest I Wind Project",
-      "iso": "MISO",
-      "state": "MI",
-      "capacity_mw": 150,
-      "fuel_type": "wind",
-      "plant_category": "renewable",
-      "equity_share": 0.51,
-      "ccs_eligible": false,
-      "status": "operating",
-      "year_built": 2008
+      "year_built": 2012
     },
     {
       "orispl": 985686,
-      "name": "High Mesa",
+      "name": "High Mesa Wind Project",
       "full_name": "High Mesa Wind Project",
       "iso": "NA",
       "state": "ID",
@@ -605,16 +574,15 @@
       "equity_share": 0.51,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2012,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2012
     },
     {
       "orispl": 998762,
-      "name": "Hot Springs Wind Farm",
+      "name": "Hot Springs Wind (Mountain Home)",
       "full_name": "Hot Springs Wind (Mountain Home)",
       "iso": "NA",
       "state": "ID",
-      "capacity_mw": 150,
+      "capacity_mw": 21.0,
       "fuel_type": "wind",
       "plant_category": "renewable",
       "equity_share": 0.51,
@@ -624,7 +592,7 @@
     },
     {
       "orispl": 998802,
-      "name": "Loess Hills",
+      "name": "Loess Hills Wind Farm",
       "full_name": "Loess Hills Wind Farm",
       "iso": "MISO",
       "state": "MO",
@@ -634,30 +602,15 @@
       "equity_share": 1.0,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2008,
-      "ccs_capacity_mw": 0.0
-    },
-    {
-      "orispl": 936525,
-      "name": "Michigan Wind I",
-      "full_name": "Thumb Wind Park (Michigan Wind 1)",
-      "iso": "MISO",
-      "state": "MI",
-      "capacity_mw": 150,
-      "fuel_type": "wind",
-      "plant_category": "renewable",
-      "equity_share": 0.51,
-      "ccs_eligible": false,
-      "status": "operating",
       "year_built": 2008
     },
     {
       "orispl": 970840,
-      "name": "Michigan Wind II",
+      "name": "Michigan Wind 2 Farm",
       "full_name": "Michigan Wind 2 Farm",
       "iso": "MISO",
       "state": "MI",
-      "capacity_mw": 150,
+      "capacity_mw": 90.0,
       "fuel_type": "wind",
       "plant_category": "renewable",
       "equity_share": 0.51,
@@ -667,11 +620,11 @@
     },
     {
       "orispl": 975573,
-      "name": "Oregon Trail Windfarm",
+      "name": "Oregon Trail (Energy Vision) (Echo I)",
       "full_name": "Oregon Trail (Energy Vision) (Echo I)",
       "iso": "NA",
       "state": "OR",
-      "capacity_mw": 150,
+      "capacity_mw": 9.8,
       "fuel_type": "wind",
       "plant_category": "renewable",
       "equity_share": 0.5,
@@ -681,7 +634,7 @@
     },
     {
       "orispl": 951931,
-      "name": "Pacific Canyon Windfarm",
+      "name": "Pacific Canyon Windfarm (Echo I)",
       "full_name": "Pacific Canyon Windfarm (Echo I)",
       "iso": "NA",
       "state": "OR",
@@ -691,12 +644,11 @@
       "equity_share": 0.5,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2009,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2009
     },
     {
       "orispl": 945707,
-      "name": "Sand Ranch Windfarm",
+      "name": "Sand Ranch Windfarm (Echo I)",
       "full_name": "Sand Ranch Windfarm (Echo I)",
       "iso": "NA",
       "state": "OR",
@@ -706,12 +658,11 @@
       "equity_share": 0.5,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2009,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2009
     },
     {
       "orispl": 925569,
-      "name": "Sendero",
+      "name": "Sendero Wind Energy Project",
       "full_name": "Sendero Wind Energy Project",
       "iso": "ERCOT",
       "state": "TX",
@@ -721,12 +672,11 @@
       "equity_share": 0.51,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2015,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2015
     },
     {
       "orispl": 929954,
-      "name": "Shooting Star",
+      "name": "Shooting Star Wind Project",
       "full_name": "Shooting Star Wind Project",
       "iso": "SPP",
       "state": "KS",
@@ -736,8 +686,7 @@
       "equity_share": 0.51,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2012,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2012
     },
     {
       "orispl": 942491,
@@ -751,12 +700,25 @@
       "equity_share": 0.51,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2009,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2009
+    },
+    {
+      "orispl": 936525,
+      "name": "Thumb Wind Park (Michigan Wind 1)",
+      "full_name": "Thumb Wind Park (Michigan Wind 1)",
+      "iso": "MISO",
+      "state": "MI",
+      "capacity_mw": 69.0,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "ccs_eligible": false,
+      "status": "operating",
+      "year_built": 2008
     },
     {
       "orispl": 985612,
-      "name": "Tuana Springs",
+      "name": "Tuana Springs Project",
       "full_name": "Tuana Springs Project",
       "iso": "NA",
       "state": "ID",
@@ -766,12 +728,11 @@
       "equity_share": 0.51,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2010,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2010
     },
     {
       "orispl": 962095,
-      "name": "Ward Butte Windfarm",
+      "name": "Ward Butte Windfarm (Echo I)",
       "full_name": "Ward Butte Windfarm (Echo I)",
       "iso": "NA",
       "state": "OR",
@@ -781,12 +742,11 @@
       "equity_share": 0.5,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2009,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2009
     },
     {
       "orispl": 964985,
-      "name": "Whitetail",
+      "name": "Whitetail Wind Energy Project",
       "full_name": "Whitetail Wind Energy Project",
       "iso": "ERCOT",
       "state": "TX",
@@ -796,12 +756,11 @@
       "equity_share": 0.51,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2012,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2012
     },
     {
       "orispl": 900232,
-      "name": "Wildcat",
+      "name": "Wildcat Wind Project (Lovington)",
       "full_name": "Wildcat Wind Project (Lovington)",
       "iso": "SPP",
       "state": "NM",
@@ -811,12 +770,11 @@
       "equity_share": 0.51,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2012,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2012
     },
     {
       "orispl": 942127,
-      "name": "Antelope Valley Solar",
+      "name": "Antelope Valley Solar Ranch One",
       "full_name": "Antelope Valley Solar Ranch One",
       "iso": "CAISO",
       "state": "CA",
@@ -826,16 +784,15 @@
       "equity_share": 1.0,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2013,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2013
     },
     {
-      "orispl": 942746,
-      "name": "Denver Airport Solar",
-      "full_name": "Denver International Airport III - Solar",
-      "iso": "NA",
-      "state": "CO",
-      "capacity_mw": 100,
+      "orispl": 988298,
+      "name": "Constellation New Energy Solar Farm",
+      "full_name": "Constellation New Energy Solar Farm",
+      "iso": "PJM",
+      "state": "NJ",
+      "capacity_mw": 3.9,
       "fuel_type": "solar",
       "plant_category": "renewable",
       "equity_share": 0.51,
@@ -844,25 +801,12 @@
       "year_built": 2011
     },
     {
-      "orispl": 923156,
-      "name": "MD Solar",
-      "full_name": "Multiple",
-      "iso": "PJM",
-      "state": "MD",
-      "capacity_mw": 100,
-      "fuel_type": "solar",
-      "plant_category": "renewable",
-      "equity_share": 0.51,
-      "ccs_eligible": false,
-      "status": "operating"
-    },
-    {
-      "orispl": 988298,
-      "name": "NJ Solar",
-      "full_name": "Constellation New Energy Solar Farm",
-      "iso": "PJM",
-      "state": "NJ",
-      "capacity_mw": 100,
+      "orispl": 942746,
+      "name": "Denver International Airport III - Solar",
+      "full_name": "Denver International Airport III - Solar",
+      "iso": "NA",
+      "state": "CO",
+      "capacity_mw": 3.4,
       "fuel_type": "solar",
       "plant_category": "renewable",
       "equity_share": 0.51,
@@ -872,11 +816,11 @@
     },
     {
       "orispl": 957234,
-      "name": "Sacramento Valley PV",
+      "name": "Fleshman Solar Project (Kost Road)",
       "full_name": "Fleshman Solar Project (Kost Road)",
       "iso": "NA",
       "state": "CA",
-      "capacity_mw": 100,
+      "capacity_mw": 1.48,
       "fuel_type": "solar",
       "plant_category": "renewable",
       "equity_share": 0.51,
@@ -885,8 +829,21 @@
       "year_built": 2011
     },
     {
+      "orispl": 923156,
+      "name": "Multiple",
+      "full_name": "Multiple",
+      "iso": "PJM",
+      "state": "MD",
+      "capacity_mw": 0.0,
+      "fuel_type": "solar",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "ccs_eligible": false,
+      "status": "operating"
+    },
+    {
       "orispl": 949493,
-      "name": "Vineland Solar One",
+      "name": "Vineland Solar One (Landis Sewage)",
       "full_name": "Vineland Solar One (Landis Sewage)",
       "iso": "PJM",
       "state": "NJ",
@@ -896,8 +853,7 @@
       "equity_share": 1.0,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2009,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2009
     },
     {
       "orispl": 955492,
@@ -910,12 +866,11 @@
       "plant_category": "renewable",
       "equity_share": 1.0,
       "ccs_eligible": false,
-      "status": "operating",
-      "ccs_capacity_mw": 0.0
+      "status": "operating"
     },
     {
       "orispl": 997153,
-      "name": "Agnews",
+      "name": "Agnews Cogeneration",
       "full_name": "Agnews Cogeneration",
       "iso": "CAISO",
       "state": "CA",
@@ -923,16 +878,33 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
       "co2_rate_t_mwh": 0.37,
-      "year_built": 1990,
-      "ccs_capacity_mw": 24.08
+      "ccs_capacity_mw": 24.08,
+      "year_built": 1990
     },
     {
       "orispl": 55327,
-      "name": "Baytown",
+      "name": "BTE Baytown Chiller Gas Plant",
+      "full_name": "BTE Baytown Chiller Gas Plant",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 270.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 232.2,
+      "year_built": 2018
+    },
+    {
+      "orispl": 55327,
+      "name": "Baytown Power Plant",
       "full_name": "Baytown Power Plant",
       "iso": "ERCOT",
       "state": "TX",
@@ -940,29 +912,12 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.331,
-      "year_built": 2002,
-      "ccs_capacity_mw": 732.72
-    },
-    {
-      "orispl": 55327,
-      "name": "Baytown",
-      "full_name": "BTE Baytown Chiller Gas Plant",
-      "iso": "ERCOT",
-      "state": "TX",
-      "capacity_mw": 852.0,
-      "fuel_type": "gas_ccgt",
-      "plant_category": "fossil",
-      "equity_share": 1.0,
-      "ccs_eligible": true,
-      "status": "operating",
-      "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.331,
-      "year_built": 2018,
-      "ccs_capacity_mw": 732.72
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 732.72,
+      "year_built": 2002
     },
     {
       "orispl": 50292,
@@ -974,33 +929,33 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.5293,
-      "year_built": 1989,
-      "ccs_capacity_mw": 122.98
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 122.98,
+      "year_built": 1989
     },
     {
       "orispl": 55172,
-      "name": "Bosque / Thad Hill",
+      "name": "Calpine Bosque Energy Center(Thad Hill)",
       "full_name": "Calpine Bosque Energy Center(Thad Hill)",
       "iso": "ERCOT",
       "state": "TX",
-      "capacity_mw": 801,
+      "capacity_mw": 801.0,
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.3766,
-      "year_built": 2001,
-      "ccs_capacity_mw": 688.86
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 688.86,
+      "year_built": 2001
     },
     {
       "orispl": 55299,
-      "name": "Channel",
+      "name": "Channel Energy Center",
       "full_name": "Channel Energy Center",
       "iso": "ERCOT",
       "state": "TX",
@@ -1008,16 +963,32 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.2757,
-      "year_built": 2001,
-      "ccs_capacity_mw": 679.4
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 679.4,
+      "year_built": 2001
+    },
+    {
+      "orispl": 10741,
+      "name": "Clear Lake",
+      "full_name": "Clear Lake",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 407.4,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 1985
     },
     {
       "orispl": 60122,
-      "name": "Colorado Bend II",
+      "name": "Colorado Bend Energy Center II",
       "full_name": "Colorado Bend Energy Center II",
       "iso": "ERCOT",
       "state": "TX",
@@ -1025,16 +996,16 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.3606,
-      "year_built": 2017,
-      "ccs_capacity_mw": 1040.858
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 1040.858,
+      "year_built": 2017
     },
     {
       "orispl": 55206,
-      "name": "Corpus Christi",
+      "name": "Corpus Christi Energy Center",
       "full_name": "Corpus Christi Energy Center",
       "iso": "ERCOT",
       "state": "TX",
@@ -1042,16 +1013,16 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.303,
-      "year_built": 2002,
-      "ccs_capacity_mw": 445.48
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 445.48,
+      "year_built": 2002
     },
     {
       "orispl": 55464,
-      "name": "Deer Park",
+      "name": "Deer Park Energy Center",
       "full_name": "Deer Park Energy Center",
       "iso": "ERCOT",
       "state": "TX",
@@ -1059,16 +1030,16 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.3204,
-      "year_built": 2003,
-      "ccs_capacity_mw": 1063.82
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 1063.82,
+      "year_built": 2003
     },
     {
       "orispl": 55333,
-      "name": "Delta",
+      "name": "Delta Energy Center",
       "full_name": "Delta Energy Center",
       "iso": "CAISO",
       "state": "CA",
@@ -1076,12 +1047,12 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.3878,
-      "year_built": 2002,
-      "ccs_capacity_mw": 737.88
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 737.88,
+      "year_built": 2002
     },
     {
       "orispl": 55317,
@@ -1093,16 +1064,16 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.4005,
-      "year_built": 2003,
-      "ccs_capacity_mw": 679.4
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 679.4,
+      "year_built": 2003
     },
     {
       "orispl": 55226,
-      "name": "Freestone",
+      "name": "Freestone Energy Center",
       "full_name": "Freestone Energy Center",
       "iso": "ERCOT",
       "state": "TX",
@@ -1110,29 +1081,12 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 0.75,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.3772,
-      "year_built": 2002,
-      "ccs_capacity_mw": 706.404
-    },
-    {
-      "orispl": 55357,
-      "name": "Fusco / Brazos Valley",
-      "full_name": "Jack A. Fusco Energy Center (Brazos Valley)",
-      "iso": "ERCOT",
-      "state": "TX",
-      "capacity_mw": 562,
-      "fuel_type": "gas_ccgt",
-      "plant_category": "fossil",
-      "equity_share": 1.0,
-      "ccs_eligible": true,
-      "status": "operating",
-      "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.3977,
-      "year_built": 2003,
-      "ccs_capacity_mw": 483.32
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 706.404,
+      "year_built": 2002
     },
     {
       "orispl": 10034,
@@ -1144,12 +1098,12 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.3605,
-      "year_built": 1988,
-      "ccs_capacity_mw": 192.64
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 192.64,
+      "year_built": 1988
     },
     {
       "orispl": 55170,
@@ -1161,16 +1115,16 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.3881,
-      "year_built": 2003,
-      "ccs_capacity_mw": 626.94
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 626.94,
+      "year_built": 2003
     },
     {
       "orispl": 977331,
-      "name": "Greenfield",
+      "name": "Greenfield Energy Centre",
       "full_name": "Greenfield Energy Centre",
       "iso": "NA",
       "state": "Ontario",
@@ -1178,12 +1132,12 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
       "co2_rate_t_mwh": 0.37,
-      "year_built": 2008,
-      "ccs_capacity_mw": 904.72
+      "ccs_capacity_mw": 904.72,
+      "year_built": 2008
     },
     {
       "orispl": 55086,
@@ -1195,16 +1149,16 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 0.34,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.5114,
-      "year_built": 2000,
-      "ccs_capacity_mw": 113.52
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 113.52,
+      "year_built": 2000
     },
     {
       "orispl": 55153,
-      "name": "Guadalupe",
+      "name": "Guadalupe Energy Center",
       "full_name": "Guadalupe Energy Center",
       "iso": "ERCOT",
       "state": "TX",
@@ -1212,16 +1166,16 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.406,
-      "year_built": 2000,
-      "ccs_capacity_mw": 896.12
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 896.12,
+      "year_built": 2000
     },
     {
       "orispl": 54761,
-      "name": "Hermiston",
+      "name": "Hermiston Power Project",
       "full_name": "Hermiston Power Project",
       "iso": "NA",
       "state": "OR",
@@ -1229,16 +1183,16 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.3974,
-      "year_built": 2002,
-      "ccs_capacity_mw": 565.88
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 565.88,
+      "year_built": 2002
     },
     {
       "orispl": 7762,
-      "name": "Hidalgo",
+      "name": "Hidalgo Energy Center",
       "full_name": "Hidalgo Energy Center",
       "iso": "ERCOT",
       "state": "TX",
@@ -1246,16 +1200,16 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 0.79,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.3802,
-      "year_built": 2000,
-      "ccs_capacity_mw": 357.7944
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 357.7944,
+      "year_built": 2000
     },
     {
       "orispl": 55411,
-      "name": "Hillabee",
+      "name": "Hillabee Energy Center",
       "full_name": "Hillabee Energy Center",
       "iso": "NA",
       "state": "AL",
@@ -1263,16 +1217,49 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.396,
-      "year_built": 2010,
-      "ccs_capacity_mw": 700.9
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 700.9,
+      "year_built": 2010
+    },
+    {
+      "orispl": 55853,
+      "name": "Inland Empire Energy Center",
+      "full_name": "Inland Empire Energy Center",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 742.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2009
+    },
+    {
+      "orispl": 55357,
+      "name": "Jack A. Fusco Energy Center (Brazos Valley)",
+      "full_name": "Jack A. Fusco Energy Center (Brazos Valley)",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 562.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 483.32,
+      "year_built": 2003
     },
     {
       "orispl": 990002,
-      "name": "Kennedy Airport",
+      "name": "Kennedy International Airport Cogen",
       "full_name": "Kennedy International Airport Cogen",
       "iso": "NYISO",
       "state": "NY",
@@ -1280,12 +1267,12 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
       "co2_rate_t_mwh": 0.37,
-      "year_built": 1995,
-      "ccs_capacity_mw": 110.768
+      "ccs_capacity_mw": 110.768,
+      "year_built": 1995
     },
     {
       "orispl": 10294,
@@ -1297,16 +1284,16 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.4228,
-      "year_built": 1989,
-      "ccs_capacity_mw": 24.08
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 24.08,
+      "year_built": 1989
     },
     {
       "orispl": 55748,
-      "name": "Los Esteros",
+      "name": "Los Esteros Critical CC Plant",
       "full_name": "Los Esteros Critical CC Plant",
       "iso": "CAISO",
       "state": "CA",
@@ -1314,16 +1301,16 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.4909,
-      "year_built": 2013,
-      "ccs_capacity_mw": 258.0
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 258.0,
+      "year_built": 2013
     },
     {
       "orispl": 55217,
-      "name": "Los Medanos",
+      "name": "Los Medanos Energy Center",
       "full_name": "Los Medanos Energy Center",
       "iso": "CAISO",
       "state": "CA",
@@ -1331,16 +1318,16 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.3584,
-      "year_built": 2001,
-      "ccs_capacity_mw": 494.5
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 494.5,
+      "year_built": 2001
     },
     {
       "orispl": 55123,
-      "name": "Magic Valley",
+      "name": "Magic Valley Generating Station",
       "full_name": "Magic Valley Generating Station",
       "iso": "ERCOT",
       "state": "TX",
@@ -1348,16 +1335,16 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.3936,
-      "year_built": 2002,
-      "ccs_capacity_mw": 599.42
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 599.42,
+      "year_built": 2002
     },
     {
       "orispl": 55393,
-      "name": "Metcalf",
+      "name": "Metcalf Energy Center",
       "full_name": "Metcalf Energy Center",
       "iso": "CAISO",
       "state": "CA",
@@ -1365,16 +1352,16 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.3973,
-      "year_built": 2005,
-      "ccs_capacity_mw": 509.12
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 509.12,
+      "year_built": 2005
     },
     {
       "orispl": 55293,
-      "name": "Morgan",
+      "name": "Morgan Energy Center",
       "full_name": "Morgan Energy Center",
       "iso": "NA",
       "state": "AL",
@@ -1382,16 +1369,64 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.3578,
-      "year_built": 2003,
-      "ccs_capacity_mw": 700.9
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 700.9,
+      "year_built": 2003
+    },
+    {
+      "orispl": 1588,
+      "name": "Mystic 8 9",
+      "full_name": "Mystic 8 9",
+      "iso": "NEISO",
+      "state": "MA",
+      "capacity_mw": 1686.5,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2003
+    },
+    {
+      "orispl": 943277,
+      "name": "Newark Power Plant",
+      "full_name": "Newark Power Plant",
+      "iso": "PJM",
+      "state": "NJ",
+      "capacity_mw": 59.6,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 1990
+    },
+    {
+      "orispl": 946260,
+      "name": "O'Brien California Cogen Ltd.",
+      "full_name": "O'Brien California Cogen Ltd.",
+      "iso": "NA",
+      "state": "CA",
+      "capacity_mw": 34.39,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 1989
     },
     {
       "orispl": 55345,
-      "name": "Otay Mesa",
+      "name": "Otay Mesa Generating Project",
       "full_name": "Otay Mesa Generating Project",
       "iso": "CAISO",
       "state": "CA",
@@ -1399,16 +1434,16 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.3847,
-      "year_built": 2009,
-      "ccs_capacity_mw": 509.98
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 509.98,
+      "year_built": 2009
     },
     {
       "orispl": 55047,
-      "name": "Pasadena",
+      "name": "Pasadena Cogeneration Power Plant",
       "full_name": "Pasadena Cogeneration Power Plant",
       "iso": "ERCOT",
       "state": "TX",
@@ -1416,16 +1451,16 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.3638,
-      "year_built": 1998,
-      "ccs_capacity_mw": 667.36
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 667.36,
+      "year_built": 1998
     },
     {
       "orispl": 55656,
-      "name": "Pastoria",
+      "name": "Pastoria Energy Center",
       "full_name": "Pastoria Energy Center",
       "iso": "CAISO",
       "state": "CA",
@@ -1433,16 +1468,16 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.4146,
-      "year_built": 2005,
-      "ccs_capacity_mw": 694.02
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 694.02,
+      "year_built": 2005
     },
     {
       "orispl": 55075,
-      "name": "Pine Bluff",
+      "name": "Pine Bluff Energy Center",
       "full_name": "Pine Bluff Energy Center",
       "iso": "MISO",
       "state": "AR",
@@ -1450,12 +1485,12 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.3071,
-      "year_built": 2001,
-      "ccs_capacity_mw": 173.72
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 173.72,
+      "year_built": 2001
     },
     {
       "orispl": 56349,
@@ -1467,16 +1502,16 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.4787,
-      "year_built": 2007,
-      "ccs_capacity_mw": 457.692
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 457.692,
+      "year_built": 2007
     },
     {
       "orispl": 56467,
-      "name": "Russell City",
+      "name": "Russell City Energy Center",
       "full_name": "Russell City Energy Center",
       "iso": "CAISO",
       "state": "CA",
@@ -1484,16 +1519,16 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.4007,
-      "year_built": 2013,
-      "ccs_capacity_mw": 530.62
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 530.62,
+      "year_built": 2013
     },
     {
       "orispl": 55177,
-      "name": "South Point",
+      "name": "South Point Energy Center",
       "full_name": "South Point Energy Center",
       "iso": "NA",
       "state": "AZ",
@@ -1501,16 +1536,16 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.4143,
-      "year_built": 2001,
-      "ccs_capacity_mw": 414.52
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 414.52,
+      "year_built": 2001
     },
     {
       "orispl": 55112,
-      "name": "Sutter",
+      "name": "Sutter Energy Center",
       "full_name": "Sutter Energy Center",
       "iso": "CAISO",
       "state": "CA",
@@ -1518,12 +1553,12 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.3936,
-      "year_built": 2001,
-      "ccs_capacity_mw": 470.42
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 470.42,
+      "year_built": 2001
     },
     {
       "orispl": 52088,
@@ -1535,12 +1570,12 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.3131,
-      "year_built": 1987,
-      "ccs_capacity_mw": 374.96
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 374.96,
+      "year_built": 1987
     },
     {
       "orispl": 912546,
@@ -1552,16 +1587,48 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 0.29,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
       "co2_rate_t_mwh": 0.37,
-      "year_built": 2006,
-      "ccs_capacity_mw": 131.967
+      "ccs_capacity_mw": 131.967,
+      "year_built": 2006
+    },
+    {
+      "orispl": 992067,
+      "name": "Vineland Cogeneration",
+      "full_name": "Vineland Cogeneration",
+      "iso": "PJM",
+      "state": "NJ",
+      "capacity_mw": 23.25,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 1994
+    },
+    {
+      "orispl": 915508,
+      "name": "Watsonville Cogeneration",
+      "full_name": "Watsonville Cogeneration",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 30.3,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 1990
     },
     {
       "orispl": 55294,
-      "name": "Westbrook",
+      "name": "Westbrook Energy Center",
       "full_name": "Westbrook Energy Center",
       "iso": "NEISO",
       "state": "ME",
@@ -1569,12 +1636,12 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.3683,
-      "year_built": 2001,
-      "ccs_capacity_mw": 503.444
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 503.444,
+      "year_built": 2001
     },
     {
       "orispl": 59812,
@@ -1586,33 +1653,64 @@
       "fuel_type": "gas_ccgt",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 7.0,
-      "co2_rate_t_mwh": 0.3681,
-      "year_built": 2017,
-      "ccs_capacity_mw": 1015.66
+      "co2_rate_t_mwh": 0.37,
+      "ccs_capacity_mw": 1015.66,
+      "year_built": 2017
     },
     {
-      "orispl": 50292,
-      "name": "Bethpage",
-      "full_name": "Bethpage CT",
-      "iso": "NYISO",
-      "state": "NY",
-      "capacity_mw": 143.0,
+      "orispl": 55833,
+      "name": "Auburndale Energy Center CT",
+      "full_name": "Auburndale Energy Center CT",
+      "iso": "NA",
+      "state": "FL",
+      "capacity_mw": 126.0,
       "fuel_type": "gas_ct",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 0.5293,
-      "year_built": 2002,
-      "ccs_capacity_mw": 122.98
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2002
+    },
+    {
+      "orispl": 50292,
+      "name": "Bethpage CT",
+      "full_name": "Bethpage CT",
+      "iso": "NYISO",
+      "state": "NY",
+      "capacity_mw": 49.6,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2002
+    },
+    {
+      "orispl": 2379,
+      "name": "Carll's Corner",
+      "full_name": "Carll's Corner",
+      "iso": "PJM",
+      "state": "NJ",
+      "capacity_mw": 99.6,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 1973
     },
     {
       "orispl": 55625,
-      "name": "Creed",
+      "name": "Creed Energy Center",
       "full_name": "Creed Energy Center",
       "iso": "CAISO",
       "state": "CA",
@@ -1623,13 +1721,12 @@
       "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 0.5921,
-      "year_built": 2003,
-      "ccs_capacity_mw": 0.0
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2003
     },
     {
       "orispl": 5083,
-      "name": "Cumberland",
+      "name": "Cumberland CT",
       "full_name": "Cumberland CT",
       "iso": "PJM",
       "state": "NJ",
@@ -1640,13 +1737,76 @@
       "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 0.5616,
-      "year_built": 1990,
-      "ccs_capacity_mw": 0.0
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 1990
+    },
+    {
+      "orispl": 2384,
+      "name": "Deepwater CT (NJ)",
+      "full_name": "Deepwater CT (NJ)",
+      "iso": "PJM",
+      "state": "NJ",
+      "capacity_mw": 24.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 1967
+    },
+    {
+      "orispl": 2384,
+      "name": "Deepwater ST (NJ) 1",
+      "full_name": "Deepwater ST (NJ) 1",
+      "iso": "PJM",
+      "state": "NJ",
+      "capacity_mw": 133.5,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 1930
+    },
+    {
+      "orispl": 2384,
+      "name": "Deepwater ST (NJ) 6",
+      "full_name": "Deepwater ST (NJ) 6",
+      "iso": "PJM",
+      "state": "NJ",
+      "capacity_mw": 82.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 1954
+    },
+    {
+      "orispl": 7701,
+      "name": "Fairless Hills Steam Generating Station",
+      "full_name": "Fairless Hills Steam Generating Station",
+      "iso": "PJM",
+      "state": "PA",
+      "capacity_mw": 60.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 1996
     },
     {
       "orispl": 55847,
-      "name": "Feather River",
+      "name": "Feather River Energy Center",
       "full_name": "Feather River Energy Center",
       "iso": "CAISO",
       "state": "CA",
@@ -1657,30 +1817,28 @@
       "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 0.645,
-      "year_built": 2002,
-      "ccs_capacity_mw": 0.0
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2002
     },
     {
       "orispl": 55810,
-      "name": "Gilroy",
+      "name": "Gilroy Peaking Energy Center",
       "full_name": "Gilroy Peaking Energy Center",
       "iso": "CAISO",
       "state": "CA",
-      "capacity_mw": 224.0,
+      "capacity_mw": 114.0,
       "fuel_type": "gas_ct",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
       "co2_rate_t_mwh": 0.55,
-      "year_built": 2002,
-      "ccs_capacity_mw": 192.64
+      "year_built": 2002
     },
     {
       "orispl": 55627,
-      "name": "Goose Haven",
+      "name": "Goose Haven Energy Center",
       "full_name": "Goose Haven Energy Center",
       "iso": "CAISO",
       "state": "CA",
@@ -1691,17 +1849,16 @@
       "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 0.582,
-      "year_built": 2003,
-      "ccs_capacity_mw": 0.0
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2003
     },
     {
-      "orispl": 907221,
-      "name": "Grand Prairie",
-      "full_name": "Northern Prairie Power Project (Grande Prairie)",
-      "iso": "NA",
-      "state": "Alberta",
-      "capacity_mw": 200,
+      "orispl": 1553,
+      "name": "Gould Street",
+      "full_name": "Gould Street",
+      "iso": "PJM",
+      "state": "MD",
+      "capacity_mw": 97.0,
       "fuel_type": "gas_ct",
       "plant_category": "fossil",
       "equity_share": 1.0,
@@ -1709,7 +1866,7 @@
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
       "co2_rate_t_mwh": 0.55,
-      "year_built": 2008
+      "year_built": 1952
     },
     {
       "orispl": 3491,
@@ -1724,13 +1881,12 @@
       "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 0.678,
-      "year_built": 1948,
-      "ccs_capacity_mw": 0.0
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 1948
     },
     {
       "orispl": 55233,
-      "name": "Handsome Lake",
+      "name": "Handsome Lake Energy",
       "full_name": "Handsome Lake Energy",
       "iso": "PJM",
       "state": "PA",
@@ -1741,30 +1897,28 @@
       "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 0.5327,
-      "year_built": 2001,
-      "ccs_capacity_mw": 0.0
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2001
     },
     {
       "orispl": 10294,
-      "name": "King City",
+      "name": "King City Peaking Energy Center",
       "full_name": "King City Peaking Energy Center",
       "iso": "CAISO",
       "state": "CA",
-      "capacity_mw": 162.5,
+      "capacity_mw": 44.5,
       "fuel_type": "gas_ct",
       "plant_category": "fossil",
       "equity_share": 1.0,
-      "ccs_eligible": true,
+      "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 0.4228,
-      "year_built": 2002,
-      "ccs_capacity_mw": 24.08
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2002
     },
     {
       "orispl": 55626,
-      "name": "Lambie",
+      "name": "Lambie Energy Center",
       "full_name": "Lambie Energy Center",
       "iso": "CAISO",
       "state": "CA",
@@ -1775,13 +1929,156 @@
       "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 0.5841,
-      "year_built": 2003,
-      "ccs_capacity_mw": 0.0
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2003
+    },
+    {
+      "orispl": 55748,
+      "name": "Los Esteros Critical Energy Facility",
+      "full_name": "Los Esteros Critical Energy Facility",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 180.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2003
+    },
+    {
+      "orispl": 8008,
+      "name": "Mickleton",
+      "full_name": "Mickleton",
+      "iso": "PJM",
+      "state": "NJ",
+      "capacity_mw": 78.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 1974
+    },
+    {
+      "orispl": 907221,
+      "name": "Northern Prairie Power Project (Grande Prairie)",
+      "full_name": "Northern Prairie Power Project (Grande Prairie)",
+      "iso": "NA",
+      "state": "Alberta",
+      "capacity_mw": 105.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2008
+    },
+    {
+      "orispl": 965704,
+      "name": "Notch Cliff",
+      "full_name": "Notch Cliff",
+      "iso": "PJM",
+      "state": "MD",
+      "capacity_mw": 128.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 1969
+    },
+    {
+      "orispl": 964262,
+      "name": "Pennsbury Generating Station",
+      "full_name": "Pennsbury Generating Station",
+      "iso": "PJM",
+      "state": "PA",
+      "capacity_mw": 5.6,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 1996
+    },
+    {
+      "orispl": 907018,
+      "name": "Pryor",
+      "full_name": "Pryor",
+      "iso": "SPP",
+      "state": "OK",
+      "capacity_mw": 101.1,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 1990
+    },
+    {
+      "orispl": 967957,
+      "name": "Pryor ST",
+      "full_name": "Pryor ST",
+      "iso": "SPP",
+      "state": "OK",
+      "capacity_mw": 28.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 1943
+    },
+    {
+      "orispl": 1559,
+      "name": "Riverside (MD)",
+      "full_name": "Riverside (MD)",
+      "iso": "PJM",
+      "state": "MD",
+      "capacity_mw": 74.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 1951
+    },
+    {
+      "orispl": 1559,
+      "name": "Riverside Jet",
+      "full_name": "Riverside Jet",
+      "iso": "PJM",
+      "state": "MD",
+      "capacity_mw": 159.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 1970
     },
     {
       "orispl": 55963,
-      "name": "Riverview",
+      "name": "Riverview Energy Center",
       "full_name": "Riverview Energy Center",
       "iso": "CAISO",
       "state": "CA",
@@ -1792,9 +2089,24 @@
       "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 0.5739,
-      "year_built": 2003,
-      "ccs_capacity_mw": 0.0
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2003
+    },
+    {
+      "orispl": 55401,
+      "name": "Rolling Hills CT",
+      "full_name": "Rolling Hills CT",
+      "iso": "PJM",
+      "state": "PA",
+      "capacity_mw": 5.5,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2005
     },
     {
       "orispl": 2410,
@@ -1810,8 +2122,7 @@
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
       "co2_rate_t_mwh": 0.55,
-      "year_built": 1971,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1971
     },
     {
       "orispl": 7288,
@@ -1826,13 +2137,28 @@
       "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 0.7305,
-      "year_built": 1991,
-      "ccs_capacity_mw": 0.0
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 1991
+    },
+    {
+      "orispl": 55281,
+      "name": "Southeast Chicago Energy",
+      "full_name": "Southeast Chicago Energy",
+      "iso": "PJM",
+      "state": "IL",
+      "capacity_mw": 320.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2002
     },
     {
       "orispl": 6081,
-      "name": "Stony Brook",
+      "name": "Stony Brook Cogeneration",
       "full_name": "Stony Brook Cogeneration",
       "iso": "NYISO",
       "state": "NY",
@@ -1843,13 +2169,28 @@
       "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 0.7441,
-      "year_built": 1995,
-      "ccs_capacity_mw": 0.0
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 1995
+    },
+    {
+      "orispl": 1560,
+      "name": "Westport Jet",
+      "full_name": "Westport Jet",
+      "iso": "PJM",
+      "state": "MD",
+      "capacity_mw": 115.8,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 1969
     },
     {
       "orispl": 55855,
-      "name": "Wolfskill",
+      "name": "Wolfskill Energy",
       "full_name": "Wolfskill Energy",
       "iso": "CAISO",
       "state": "CA",
@@ -1860,13 +2201,12 @@
       "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 0.6046,
-      "year_built": 2003,
-      "ccs_capacity_mw": 0.0
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2003
     },
     {
       "orispl": 10349,
-      "name": "Yuba City",
+      "name": "Yuba City Energy Center",
       "full_name": "Yuba City Energy Center",
       "iso": "CAISO",
       "state": "CA",
@@ -1877,13 +2217,12 @@
       "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 1.2353,
-      "year_built": 2002,
-      "ccs_capacity_mw": 0.0
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2002
     },
     {
       "orispl": 55392,
-      "name": "Zion",
+      "name": "Zion Energy Center",
       "full_name": "Zion Energy Center",
       "iso": "PJM",
       "state": "IL",
@@ -1894,9 +2233,8 @@
       "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 0.6071,
-      "year_built": 2002,
-      "ccs_capacity_mw": 0.0
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2002
     },
     {
       "orispl": 591,
@@ -1911,13 +2249,12 @@
       "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 3.7,
-      "year_built": 1973,
-      "ccs_capacity_mw": 0.0
+      "co2_rate_t_mwh": 0.58,
+      "year_built": 1973
     },
     {
       "orispl": 592,
-      "name": "Delaware City",
+      "name": "Delaware City 10",
       "full_name": "Delaware City 10",
       "iso": "PJM",
       "state": "DE",
@@ -1929,12 +2266,11 @@
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
       "co2_rate_t_mwh": 0.58,
-      "year_built": 1968,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1968
     },
     {
       "orispl": 3161,
-      "name": "Eddystone",
+      "name": "Eddystone 3-4",
       "full_name": "Eddystone 3-4",
       "iso": "PJM",
       "state": "PA",
@@ -1945,26 +2281,24 @@
       "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 0.9626,
-      "year_built": 1974,
-      "ccs_capacity_mw": 0.0
+      "co2_rate_t_mwh": 0.58,
+      "year_built": 1974
     },
     {
       "orispl": 3161,
-      "name": "Eddystone",
+      "name": "Eddystone CT",
       "full_name": "Eddystone CT",
       "iso": "PJM",
       "state": "PA",
-      "capacity_mw": 760.0,
+      "capacity_mw": 78.2,
       "fuel_type": "gas_oil_ct",
       "plant_category": "fossil",
       "equity_share": 1.0,
       "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 0.9626,
-      "year_built": 1967,
-      "ccs_capacity_mw": 0.0
+      "co2_rate_t_mwh": 0.58,
+      "year_built": 1967
     },
     {
       "orispl": 1556,
@@ -1979,9 +2313,8 @@
       "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 0.618,
-      "year_built": 1972,
-      "ccs_capacity_mw": 0.0
+      "co2_rate_t_mwh": 0.58,
+      "year_built": 1972
     },
     {
       "orispl": 3785,
@@ -1996,13 +2329,12 @@
       "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 1.7179,
-      "year_built": 1972,
-      "ccs_capacity_mw": 0.0
+      "co2_rate_t_mwh": 0.58,
+      "year_built": 1972
     },
     {
       "orispl": 597,
-      "name": "West",
+      "name": "West Energy Center",
       "full_name": "West Energy Center",
       "iso": "PJM",
       "state": "DE",
@@ -2014,8 +2346,7 @@
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
       "co2_rate_t_mwh": 0.58,
-      "year_built": 1964,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1964
     },
     {
       "orispl": 59882,
@@ -2030,26 +2361,8 @@
       "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 0.5339,
-      "year_built": 2019,
-      "ccs_capacity_mw": 0.0
-    },
-    {
-      "orispl": 59882,
-      "name": "West Medway II",
-      "full_name": "West Medway II",
-      "iso": "NEISO",
-      "state": "MA",
-      "capacity_mw": 414.0,
-      "fuel_type": "gas_oil_ct",
-      "plant_category": "fossil",
-      "equity_share": 1.0,
-      "ccs_eligible": false,
-      "status": "operating",
-      "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 0.5339,
-      "year_built": 2019,
-      "ccs_capacity_mw": 0.0
+      "co2_rate_t_mwh": 0.58,
+      "year_built": 2019
     },
     {
       "orispl": 935814,
@@ -2065,8 +2378,39 @@
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
       "co2_rate_t_mwh": 0.65,
-      "year_built": 1963,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1963
+    },
+    {
+      "orispl": 50292,
+      "name": "Bethpage IC",
+      "full_name": "Bethpage IC",
+      "iso": "NYISO",
+      "state": "NY",
+      "capacity_mw": 0.4,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1989
+    },
+    {
+      "orispl": 2380,
+      "name": "Cedar",
+      "full_name": "Cedar",
+      "iso": "PJM",
+      "state": "NJ",
+      "capacity_mw": 80.6,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1972
     },
     {
       "orispl": 999402,
@@ -2082,8 +2426,7 @@
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
       "co2_rate_t_mwh": 0.65,
-      "year_built": 1969,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1969
     },
     {
       "orispl": 929188,
@@ -2099,8 +2442,39 @@
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
       "co2_rate_t_mwh": 0.65,
-      "year_built": 1968,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1968
+    },
+    {
+      "orispl": 3159,
+      "name": "Cromby 2",
+      "full_name": "Cromby 2",
+      "iso": "PJM",
+      "state": "PA",
+      "capacity_mw": 211.0,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1955
+    },
+    {
+      "orispl": 3159,
+      "name": "Cromby IC",
+      "full_name": "Cromby IC",
+      "iso": "PJM",
+      "state": "PA",
+      "capacity_mw": 2.7,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1967
     },
     {
       "orispl": 8012,
@@ -2115,9 +2489,56 @@
       "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 1.164,
-      "year_built": 1974,
-      "ccs_capacity_mw": 0.0
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1974
+    },
+    {
+      "orispl": 926367,
+      "name": "Delaware",
+      "full_name": "Delaware",
+      "iso": "PJM",
+      "state": "PA",
+      "capacity_mw": 256.0,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1953
+    },
+    {
+      "orispl": 937981,
+      "name": "Delaware IC",
+      "full_name": "Delaware IC",
+      "iso": "PJM",
+      "state": "PA",
+      "capacity_mw": 2.7,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1967
+    },
+    {
+      "orispl": 946112,
+      "name": "Edgar",
+      "full_name": "Edgar",
+      "iso": "NEISO",
+      "state": "MA",
+      "capacity_mw": 28.4,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1969
     },
     {
       "orispl": 941205,
@@ -2133,8 +2554,7 @@
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
       "co2_rate_t_mwh": 0.65,
-      "year_built": 1970,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1970
     },
     {
       "orispl": 1586,
@@ -2150,8 +2570,71 @@
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
       "co2_rate_t_mwh": 0.65,
-      "year_built": 1969,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1969
+    },
+    {
+      "orispl": 975007,
+      "name": "Madison Street",
+      "full_name": "Madison Street",
+      "iso": "PJM",
+      "state": "DE",
+      "capacity_mw": 12.0,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1962
+    },
+    {
+      "orispl": 1592,
+      "name": "Medway CT",
+      "full_name": "Medway CT",
+      "iso": "NEISO",
+      "state": "MA",
+      "capacity_mw": 548.4,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1970
+    },
+    {
+      "orispl": 2382,
+      "name": "Middle",
+      "full_name": "Middle",
+      "iso": "PJM",
+      "state": "NJ",
+      "capacity_mw": 93.5,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1970
+    },
+    {
+      "orispl": 2383,
+      "name": "Missouri Avenue",
+      "full_name": "Missouri Avenue",
+      "iso": "PJM",
+      "state": "NJ",
+      "capacity_mw": 71.2,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1969
     },
     {
       "orispl": 972330,
@@ -2167,8 +2650,39 @@
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
       "co2_rate_t_mwh": 0.65,
-      "year_built": 1970,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1970
+    },
+    {
+      "orispl": 1588,
+      "name": "Mystic",
+      "full_name": "Mystic",
+      "iso": "NEISO",
+      "state": "MA",
+      "capacity_mw": 841.91,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1957
+    },
+    {
+      "orispl": 1588,
+      "name": "Mystic CT",
+      "full_name": "Mystic CT",
+      "iso": "NEISO",
+      "state": "MA",
+      "capacity_mw": 13.2,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1969
     },
     {
       "orispl": 905097,
@@ -2184,12 +2698,11 @@
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
       "co2_rate_t_mwh": 0.65,
-      "year_built": 1970,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1970
     },
     {
       "orispl": 3168,
-      "name": "Richmond",
+      "name": "Richmond CT",
       "full_name": "Richmond CT",
       "iso": "PJM",
       "state": "PA",
@@ -2200,9 +2713,40 @@
       "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 0.9616,
-      "year_built": 1973,
-      "ccs_capacity_mw": 0.0
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1973
+    },
+    {
+      "orispl": 3169,
+      "name": "Schuylkill",
+      "full_name": "Schuylkill",
+      "iso": "PJM",
+      "state": "PA",
+      "capacity_mw": 175.0,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1958
+    },
+    {
+      "orispl": 3169,
+      "name": "Schuylkill IC",
+      "full_name": "Schuylkill IC",
+      "iso": "PJM",
+      "state": "PA",
+      "capacity_mw": 2.7,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "ccs_eligible": false,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1967
     },
     {
       "orispl": 939713,
@@ -2218,63 +2762,11 @@
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
       "co2_rate_t_mwh": 0.65,
-      "year_built": 1967,
-      "ccs_capacity_mw": 0.0
-    },
-    {
-      "orispl": 1592,
-      "name": "West Medway I",
-      "full_name": "Medway CT",
-      "iso": "NEISO",
-      "state": "MA",
-      "capacity_mw": 414.0,
-      "fuel_type": "oil_ct",
-      "plant_category": "fossil",
-      "equity_share": 1.0,
-      "ccs_eligible": false,
-      "status": "operating",
-      "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 2.4019,
-      "year_built": 1970,
-      "ccs_capacity_mw": 0.0
-    },
-    {
-      "orispl": 1592,
-      "name": "West Medway I",
-      "full_name": "Medway CT",
-      "iso": "NEISO",
-      "state": "MA",
-      "capacity_mw": 414.0,
-      "fuel_type": "oil_ct",
-      "plant_category": "fossil",
-      "equity_share": 1.0,
-      "ccs_eligible": false,
-      "status": "operating",
-      "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 2.4019,
-      "year_built": 1970,
-      "ccs_capacity_mw": 0.0
-    },
-    {
-      "orispl": 1592,
-      "name": "West Medway I",
-      "full_name": "Medway CT",
-      "iso": "NEISO",
-      "state": "MA",
-      "capacity_mw": 414.0,
-      "fuel_type": "oil_ct",
-      "plant_category": "fossil",
-      "equity_share": 1.0,
-      "ccs_eligible": false,
-      "status": "operating",
-      "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 2.4019,
-      "year_built": 1970,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1967
     },
     {
       "orispl": 1507,
-      "name": "Wyman",
+      "name": "William F. Wyman",
       "full_name": "William F. Wyman",
       "iso": "NEISO",
       "state": "ME",
@@ -2285,13 +2777,12 @@
       "ccs_eligible": false,
       "status": "operating",
       "heat_rate_mmbtu_mwh": 10.5,
-      "co2_rate_t_mwh": 1.0206,
-      "year_built": 1957,
-      "ccs_capacity_mw": 0.0
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1957
     },
     {
       "orispl": 903371,
-      "name": "Bear Canyon",
+      "name": "Bear Canyon Energy Storage Project",
       "full_name": "Bear Canyon Energy Storage Project",
       "iso": "CAISO",
       "state": "CA",
@@ -2301,12 +2792,11 @@
       "equity_share": 1.0,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2024,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2024
     },
     {
       "orispl": 986867,
-      "name": "Clinton Battery Storage",
+      "name": "Clinton Battery Storage Project",
       "full_name": "Clinton Battery Storage Project",
       "iso": "PJM",
       "state": "OH",
@@ -2316,16 +2806,15 @@
       "equity_share": 1.0,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2016,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2016
     },
     {
       "orispl": 942332,
-      "name": "Johanna Storage",
+      "name": "Johanna Battery Storage Center (Santa Ana)",
       "full_name": "Johanna Battery Storage Center (Santa Ana)",
       "iso": "CAISO",
       "state": "CA",
-      "capacity_mw": 100,
+      "capacity_mw": 20.0,
       "fuel_type": "battery",
       "plant_category": "storage",
       "equity_share": 1.0,
@@ -2335,11 +2824,11 @@
     },
     {
       "orispl": 921280,
-      "name": "Menifee Storage",
+      "name": "Menifee Power Bank Storage Project (Nova Power)",
       "full_name": "Menifee Power Bank Storage Project (Nova Power)",
       "iso": "CAISO",
       "state": "CA",
-      "capacity_mw": 100,
+      "capacity_mw": 680.0,
       "fuel_type": "battery",
       "plant_category": "storage",
       "equity_share": 1.0,
@@ -2349,11 +2838,11 @@
     },
     {
       "orispl": 966699,
-      "name": "Santa Ana Storage",
+      "name": "Santa Ana Battery Storage 2",
       "full_name": "Santa Ana Battery Storage 2",
       "iso": "CAISO",
       "state": "CA",
-      "capacity_mw": 100,
+      "capacity_mw": 20.0,
       "fuel_type": "battery",
       "plant_category": "storage",
       "equity_share": 1.0,
@@ -2373,12 +2862,11 @@
       "equity_share": 1.0,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 2024,
-      "ccs_capacity_mw": 0.0
+      "year_built": 2024
     },
     {
       "orispl": 956587,
-      "name": "Muddy Run",
+      "name": "Muddy Run Pumped Storage Facility",
       "full_name": "Muddy Run Pumped Storage Facility",
       "iso": "PJM",
       "state": "PA",
@@ -2388,8 +2876,7 @@
       "equity_share": 1.0,
       "ccs_eligible": false,
       "status": "operating",
-      "year_built": 1967,
-      "ccs_capacity_mw": 0.0
+      "year_built": 1967
     }
   ],
   "scenarios": {
