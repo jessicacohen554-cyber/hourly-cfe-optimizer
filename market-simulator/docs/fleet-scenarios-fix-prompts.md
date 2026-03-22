@@ -297,4 +297,172 @@ git push -u origin claude/fix-fleet-scenarios-calcs-AYeYh
 
 ---
 
-*Prompts 4-5 will be added in subsequent commits.*
+## Prompt 4: Add Emissions Delta vs 2023 Baseline Chart + Rename Existing
+
+### Context
+The existing waterfall chart shows "Emissions Delta vs. Baseline — {year}" comparing custom scenario to market trajectory baseline. The user also needs a chart comparing against the actual 2023 eGRID baseline — this answers "how much have I reduced from where I started?" vs "how much have I reduced from where the market would take me?"
+
+### Task
+
+#### Step 1: Rename existing waterfall chart
+
+In `dashboard/fleet_scenarios.html`, rename the waterfall chart heading:
+- From: `Emissions Delta vs. Baseline — {year}`
+- To: `Emissions Delta vs Market Trajectory Baseline — {year}`
+
+In `dashboard/js/fleet-scenarios.js`, update the `updateWaterfallChart()` function (around line 1000):
+```javascript
+document.getElementById('waterfallTitle').textContent =
+    'Emissions Delta vs Market Trajectory Baseline — ' + yr;
+```
+
+#### Step 2: Add new chart HTML (fleet_scenarios.html)
+
+Add a new chart card AFTER the existing waterfall chart card (after its closing `</div>`). Place it before the generation mix chart:
+
+```html
+<div class="chart-card">
+    <h3 id="waterfall2023Title">Emissions Delta vs 2023 Baseline</h3>
+    <div class="chart-wrap" style="height:400px;">
+        <canvas id="waterfall2023Chart"></canvas>
+    </div>
+</div>
+```
+
+#### Step 3: Build the 2023 baseline chart (fleet-scenarios.js)
+
+Add a new chart variable and build/update functions. The 2023 baseline data comes from the engine-computed baseline's `plant_detail['2023']` — this represents actual eGRID 2023 emissions per plant (since the dispatch engine uses static fallback CFs for 2023 that match eGRID actuals).
+
+```javascript
+var waterfall2023Chart = null;
+
+function buildWaterfall2023Chart() {
+    var ctx = document.getElementById('waterfall2023Chart').getContext('2d');
+    waterfall2023Chart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: [], datasets: [] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            animation: { duration: 300 },
+            scales: {
+                x: {
+                    title: { display: true, text: 'Emissions Delta vs 2023 (Mt CO₂)', font: { size: 12 } },
+                    grid: { color: '#E0E6EF' }
+                },
+                y: { ticks: { font: { size: 11 } }, grid: { display: false } }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            var v = ctx.raw;
+                            return (v > 0 ? '+' : '') + v.toFixed(2) + ' Mt CO₂ vs 2023';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    updateWaterfall2023Chart();
+}
+```
+
+The `updateWaterfall2023Chart()` function compares the CUSTOM scenario's plant_detail at selectedYear against the baseline's plant_detail at 2023:
+
+```javascript
+function updateWaterfall2023Chart() {
+    if (!waterfall2023Chart || !DATA) return;
+
+    var yr = String(nearestYear(selectedYear, getYears()));
+    document.getElementById('waterfall2023Title').textContent =
+        'Emissions Delta vs 2023 Baseline — ' + yr;
+
+    // Use custom scenario if available, otherwise use baseline at selectedYear
+    var scenarioToCompare = customScenario || DATA.scenarios.baseline;
+    var scPlants = scenarioToCompare.plant_detail ? scenarioToCompare.plant_detail[yr] : null;
+
+    // 2023 baseline from engine-computed baseline
+    var base2023Plants = DATA.scenarios.baseline.plant_detail ?
+        DATA.scenarios.baseline.plant_detail['2023'] : null;
+
+    if (!base2023Plants || !scPlants) {
+        waterfall2023Chart.data.labels = ['No 2023 data'];
+        waterfall2023Chart.data.datasets = [{ data: [0], backgroundColor: '#ddd' }];
+        waterfall2023Chart.update('active');
+        return;
+    }
+
+    // Build delta: scenario[yr] emissions - baseline[2023] emissions per plant
+    var baseMap = {};
+    base2023Plants.forEach(function(p) { baseMap[p.orispl] = p; });
+
+    var deltas = [];
+    scPlants.forEach(function(p) {
+        var baseP = baseMap[p.orispl];
+        var baseE = baseP ? baseP.emissions_mt : 0;
+        var delta = baseE - p.emissions_mt;  // positive = reduction from 2023
+        if (Math.abs(delta) > 0.001) {
+            deltas.push({ name: p.name, delta: delta });
+        }
+    });
+
+    deltas.sort(function(a, b) { return Math.abs(b.delta) - Math.abs(a.delta); });
+
+    // Truncate to top 15 + Other
+    var other = 0;
+    if (deltas.length > 15) {
+        for (var i = 15; i < deltas.length; i++) other += deltas[i].delta;
+        deltas = deltas.slice(0, 15);
+        if (Math.abs(other) > 0.001) deltas.push({ name: 'Other', delta: other });
+    }
+
+    var labels = deltas.map(function(d) { return d.name; });
+    var values = deltas.map(function(d) { return d.delta; });
+    var colors = values.map(function(v) { return v >= 0 ? '#6BA543' : '#DC2626'; });
+
+    waterfall2023Chart.data.labels = labels;
+    waterfall2023Chart.data.datasets = [{
+        data: values,
+        backgroundColor: colors,
+        borderRadius: 3
+    }];
+    waterfall2023Chart.update('active');
+}
+```
+
+#### Step 4: Wire into existing update flow
+
+- Call `buildWaterfall2023Chart()` in `onDataLoaded()` after building the existing waterfall
+- Call `updateWaterfall2023Chart()` in `updateAllCharts()` and whenever the year slider changes
+- Call `updateWaterfall2023Chart()` in `setCustomScenario()` after setting `customScenario`
+
+### Verification
+1. Load page — both waterfall charts render. The 2023 chart shows deltas between market trajectory at selectedYear vs 2023 actuals.
+2. Slide the year slider — both charts update title and data for the selected year.
+3. Apply CCS to Colorado Bend II — the 2023 chart shows a large negative delta (reduction from 2023 baseline). The market trajectory chart shows the delta vs what would have happened without intervention.
+4. At year 2023, the 2023 chart should show ~0 delta for all plants (comparing 2023 to itself).
+
+### Files Changed
+- `dashboard/fleet_scenarios.html` — add new chart card HTML
+- `dashboard/js/fleet-scenarios.js` — add chart build/update functions, wire into update flow
+
+### After Completing
+```bash
+cp dashboard/fleet_scenarios.html market-simulator/frontend/fleet-scenarios.html
+cp dashboard/js/fleet-scenarios.js market-simulator/frontend/js/fleet-scenarios.js
+git add dashboard/fleet_scenarios.html dashboard/js/fleet-scenarios.js \
+    market-simulator/frontend/fleet-scenarios.html market-simulator/frontend/js/fleet-scenarios.js
+git commit -m "Add Emissions Delta vs 2023 Baseline chart, rename existing waterfall
+
+Two waterfall charts: (1) Delta vs Market Trajectory Baseline shows impact of
+interventions against probabilistic market sweep. (2) Delta vs 2023 Baseline
+shows total reduction from actual eGRID 2023 starting point."
+git push -u origin claude/fix-fleet-scenarios-calcs-AYeYh
+```
+
+---
+
+*Prompt 5 (QA + verification) will be added in next commit.*
