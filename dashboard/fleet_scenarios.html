@@ -415,6 +415,23 @@
         @media (max-width: 480px) {
             .scenario-checks { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
             .target-radios { flex-direction: column; }
+            .sb-plant-row { grid-template-columns: 1fr 50px 90px 60px; gap: 4px; padding: 6px 8px; }
+            .sb-plant-row select { font-size: 0.72rem; min-height: 28px; }
+            .sb-plant-row input[type="number"] { width: 52px; font-size: 0.72rem; min-height: 28px; }
+        }
+        @media (max-width: 375px) {
+            .year-slider-wrap { min-width: 0; }
+            .year-slider-value { font-size: 1.1rem; min-width: 2.5rem; }
+            .sb-plant-row { grid-template-columns: 1fr 45px 80px 55px; gap: 3px; padding: 4px 6px; font-size: 0.75rem; }
+            .sidebar-body { padding: 12px 12px; }
+            .chart-card { padding: var(--space-md); }
+        }
+        @media (max-width: 320px) {
+            .fan-chart-container { min-height: 280px; }
+            .secondary-chart-container { min-height: 240px; }
+            .waterfall-chart-container { min-height: 240px; }
+            .controls-group-label { font-size: 0.65rem; }
+            .sb-plant-row { grid-template-columns: 1fr 40px 70px 50px; }
         }
     </style>
 </head>
@@ -469,7 +486,7 @@
                     <button class="toggle-btn" data-value="High">High</button>
                 </div>
             </div>
-            <div class="controls-group" style="flex:1; min-width: 180px;">
+            <div class="controls-group" style="flex:1; min-width: 140px;">
                 <div class="controls-group-label">Year (Waterfall)</div>
                 <div class="year-slider-wrap">
                     <input type="range" id="yearSlider" min="2023" max="2050" value="2030" step="1">
