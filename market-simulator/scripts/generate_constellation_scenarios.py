@@ -134,10 +134,8 @@ def main():
     with open(CSV_PATH, 'r', encoding='latin-1') as f:
         reader = csv.DictReader(f)
         for row in reader:
-            # Skip retired plants — only include currently operating fleet
+            # Read plant status from Rosetta (Operating / Retired)
             row_status = row.get('Status', '').strip().lower()
-            if row_status == 'retired':
-                continue
 
             stat_type = row.get('Stat Type', '').strip()
             fuel_csv = row.get('Fuel Type', '').strip()
@@ -206,6 +204,9 @@ def main():
             except ValueError:
                 ccs_capacity_mw = None
 
+            # Set status from Rosetta
+            plant_status = 'retired' if row_status == 'retired' else 'operating'
+
             plant = {
                 'orispl': orispl,
                 'name': short_name or name,
@@ -216,8 +217,7 @@ def main():
                 'fuel_type': ft,
                 'plant_category': category,
                 'equity_share': equity_share,
-                'ccs_eligible': ccs_eligible,
-                'status': 'operating',
+                'status': plant_status,
             }
 
             # Add fossil-specific fields
