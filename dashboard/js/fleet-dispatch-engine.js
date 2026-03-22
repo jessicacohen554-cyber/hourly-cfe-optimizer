@@ -154,11 +154,11 @@ var FleetDispatchEngine = (function () {
     // These are used to provide static generation for non-dispatchable plants.
     // Per-plant generation is estimated from fleet totals proportional to capacity.
     var NON_FOSSIL_CF = {
-        nuclear: 0.92,      // ~92% capacity factor
-        geothermal: 0.85,   // ~85% capacity factor (baseload)
-        wind: 0.30,         // ~30% capacity factor (intermittent, national avg)
+        nuclear: 0.90,      // ~90% capacity factor (2024 Rosetta: 181.8 TWh / 23,067 MW)
+        geothermal: 0.739,  // ~73.9% capacity factor (2024 Rosetta: 5.6 TWh / 866 MW)
+        wind: 0.158,        // ~15.8% capacity factor (2024 Rosetta actual)
         solar: 0.22,        // ~22% capacity factor (intermittent, national avg)
-        hydro: 0.40,        // ~40% capacity factor (Conowingo)
+        hydro: 0.16,        // ~16.0% capacity factor (2024 Rosetta actual)
         battery: 0.0,       // Storage, net zero gen
         ldes: 0.0,          // Long duration storage, net zero gen
         pumped_storage: 0.0 // Pumped storage, net zero gen

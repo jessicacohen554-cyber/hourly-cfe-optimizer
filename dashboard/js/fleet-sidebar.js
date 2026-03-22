@@ -607,7 +607,7 @@ var FleetSidebar = (function () {
     var FOSSIL_FUEL_TYPES = new Set(['gas_ccgt', 'gas_ct', 'oil_ct', 'gas_oil_ct', 'coal_steam']);
     var STORAGE_FUEL_TYPES = new Set(['battery_4hr', 'battery_8hr', 'ldes']);
     var DEFAULT_CF = {
-        nuclear: 92, geothermal: 85, solar: 22, wind: 30,
+        nuclear: 90, geothermal: 74, solar: 22, wind: 16,
         battery_4hr: 0, battery_8hr: 0, ldes: 0
     };
 
