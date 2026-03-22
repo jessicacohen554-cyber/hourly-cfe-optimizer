@@ -286,6 +286,7 @@ var FleetSidebar = (function () {
             if (window.FLEET_SCENARIOS_API && window.FLEET_SCENARIOS_API.setComputedBaseline) {
                 window.FLEET_SCENARIOS_API.setComputedBaseline({
                     envelope: result.envelope,
+                    intensity_envelope: result.intensity_envelope,
                     plant_detail: result.plant_detail,
                     generation_by_fuel: result.generation_by_fuel,
                     emissions_by_fuel: result.emissions_by_fuel,
@@ -766,6 +767,7 @@ var FleetSidebar = (function () {
                     // Cache the results and current params for save
                     lastComputedResults = {
                         envelope: result.envelope,
+                        intensity_envelope: result.intensity_envelope,
                         plant_detail: result.plant_detail,
                         generation_by_fuel: result.generation_by_fuel,
                         emissions_by_fuel: result.emissions_by_fuel,
@@ -778,6 +780,7 @@ var FleetSidebar = (function () {
                         description: scenarioName,
                         color: '#2372B9',
                         envelope: result.envelope,
+                        intensity_envelope: result.intensity_envelope,
                         plant_detail: result.plant_detail,
                         generation_by_fuel: result.generation_by_fuel,
                         emissions_by_fuel: result.emissions_by_fuel,
