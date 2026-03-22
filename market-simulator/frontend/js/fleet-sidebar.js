@@ -18,6 +18,7 @@ var FleetSidebar = (function () {
     var savedScenarios = [];   // Array of SavedScenario objects (max 5)
     var isOpen = false;
     var nextAddId = 90000;     // ID counter for added plants
+    var openGroups = new Set(); // Track which accordion groups are open across re-renders
     var lastComputedResults = null; // Cache most recent recalculation results
 
     var MAX_SCENARIOS = 5;
@@ -27,9 +28,11 @@ var FleetSidebar = (function () {
     // ── Fuel labels ──
     var FUEL_LABELS = {
         gas_ccgt: 'CCGT', gas_ct: 'CT', oil_ct: 'Oil', gas_oil_ct: 'Gas/Oil',
+        coal_steam: 'Coal', ccs_ccgt: 'CCS-CCGT',
         nuclear: 'Nuclear', geothermal: 'Geothermal', wind: 'Wind',
         solar: 'Solar', hydro: 'Hydro', battery: 'Battery',
-        pumped_storage: 'Pumped Storage'
+        battery_4hr: 'Battery 4hr', battery_8hr: 'Battery 8hr',
+        ldes: 'LDES (Iron-Air)', pumped_storage: 'Pumped Storage'
     };
 
     var FOSSIL_FUELS = new Set(['gas_ccgt', 'gas_ct', 'oil_ct', 'gas_oil_ct']);
@@ -48,7 +51,7 @@ var FleetSidebar = (function () {
     var ccsParams = {
         derate_pct: 14,       // 0-30%, default 14%
         capture_rate_pct: 90, // 50-99%, default 90%
-        cf_pct: 85            // 20-95%, default 85% — baseload CF for CCS-retrofitted plants
+        cf_pct: 85            // 20-95%, default 85% — max CF for CCS-retrofitted plants
     };
 
     function cacheElements() {
@@ -138,7 +141,7 @@ var FleetSidebar = (function () {
         var fleetLoaded = false, sweepLoaded = false;
 
         // 1. Fleet scenarios config (base fleet + scenario definitions)
-        fetch('/api/fleet-scenarios-config')
+        fetch('data/constellation_scenarios.json')
             .then(function (r) { if (r.ok) return r.json(); throw new Error('No config'); })
             .then(function (data) {
                 scenarioConfig = data;
@@ -157,14 +160,12 @@ var FleetSidebar = (function () {
             })
             .catch(function (err) {
                 console.warn('Fleet config not available:', err);
-                loadFleetFallback(function () {
-                    fleetLoaded = true;
-                    if (sweepLoaded) onAllLoaded();
-                });
+                fleetLoaded = true;
+                if (sweepLoaded) onAllLoaded();
             });
 
         // 2. Sweep dispatch data
-        fetch('/api/sweep-dispatch-data')
+        fetch('data/sweep_dispatch_data.json')
             .then(function (r) { if (r.ok) return r.json(); throw new Error('No sweep data'); })
             .then(function (data) {
                 sweepData = data;
@@ -193,7 +194,7 @@ var FleetSidebar = (function () {
     }
 
     function loadFleetFallback(callback) {
-        fetch('/api/fleet-config')
+        fetch('data/constellation_scenarios.json')
             .then(function (r) { if (r.ok) return r.json(); throw new Error('No fleet'); })
             .then(function (plants) {
                 var fossilFuels = { 'Gas': 'gas_ccgt', 'Oil': 'oil_ct', 'Gas/Oil': 'gas_oil_ct' };
@@ -274,6 +275,16 @@ var FleetSidebar = (function () {
     // ── Render Fleet List ──
     function renderFleetList() {
         if (!els.fleetList) return;
+
+        // Snapshot open groups before DOM rebuild
+        var prevOpen = new Set();
+        els.fleetList.querySelectorAll('.sb-iso-body').forEach(function(body) {
+            if (!body.classList.contains('collapsed')) {
+                prevOpen.add(body.dataset.isoBody);
+            }
+        });
+        if (prevOpen.size > 0) openGroups = prevOpen;
+
         if (!fleetPlants.length && !addedPlants.length) {
             els.fleetList.innerHTML = '<div style="text-align:center;color:#6b7280;padding:24px;">No fleet data loaded</div>';
             return;
@@ -281,10 +292,16 @@ var FleetSidebar = (function () {
 
         var allPlants = fleetPlants.concat(addedPlants);
 
+        // Filter out retired plants — they exist in data for 2023 baseline
+        // emissions but shouldn't appear in the sidebar for user interaction
+        var visiblePlants = allPlants.filter(function (p) {
+            return p.status !== 'retired';
+        });
+
         // Group by category first, then by ISO within each category
         var byCategoryISO = {};
         var categoryOrder = ['fossil', 'nuclear', 'renewable', 'storage', 'other'];
-        allPlants.forEach(function (p) {
+        visiblePlants.forEach(function (p) {
             var cat = p.plant_category || (FOSSIL_FUELS.has(p.fuel_type) ? 'fossil' : 'other');
             var iso = p.iso || 'Other';
             var key = cat + '|' + iso;
@@ -344,12 +361,11 @@ var FleetSidebar = (function () {
             plants.forEach(function (p) {
                 var isAdded = p._isAdded;
                 var idx = isAdded ? 'add_' + p._addId : p._idx;
-                var fuelLabel = FUEL_LABELS[p.fuel_type] || p.fuel_type;
+                var fuelLabel = FUEL_LABELS[p._original_fuel_type] || FUEL_LABELS[p.fuel_type] || p.fuel_type;
                 var capStr = Math.round(p.capacity_mw || 0) + ' MW';
                 var equityStr = p.equity_share < 1 ? ' (' + Math.round(p.equity_share * 100) + '% equity)' : '';
                 var currentAction = p._action || 'operating';
                 var isFossil = FOSSIL_FUELS.has(p.fuel_type);
-                var isCcsEligible = p.ccs_eligible === true;
 
                 html += '<div class="sb-plant-row" data-plant-idx="' + idx + '">';
                 html += '<div class="sb-plant-name" title="' + (p.full_name || p.name || '') + ' (' + fuelLabel + ')">';
@@ -366,9 +382,7 @@ var FleetSidebar = (function () {
                     html += '<div><select class="sb-status-select' + modClass + '" data-idx="' + idx + '">';
                     html += '<option value="operating"' + (currentAction === 'operating' || !currentAction ? ' selected' : '') + '>Operating</option>';
                     html += '<option value="retire"' + (currentAction === 'retire' ? ' selected' : '') + '>Retired</option>';
-                    if (isCcsEligible) {
-                        html += '<option value="ccs_retrofit"' + (currentAction === 'ccs_retrofit' ? ' selected' : '') + '>CCS Retrofit</option>';
-                    }
+                    html += '<option value="ccs_retrofit"' + (currentAction === 'ccs_retrofit' ? ' selected' : '') + '>CCS Retrofit</option>';
                     html += '</select></div>';
 
                     // Year input (for retire/CCS)
@@ -383,17 +397,30 @@ var FleetSidebar = (function () {
                     }
                     html += '</div>';
                 } else {
-                    // Non-fossil: Operating/Retired toggle only, read-only capacity
-                    html += '<div><span class="sb-cap-readonly" style="font-size:0.78rem;color:#6b7280;">' + capStr + '</span></div>';
+                    var isNuclear = p.fuel_type === 'nuclear';
 
-                    // Status: Operating / Retired (no CCS option)
-                    html += '<div><select class="sb-status-select" data-idx="' + idx + '">';
+                    // Non-fossil: read-only capacity (plus uprate MW if applicable)
+                    if (isNuclear && currentAction === 'uprate') {
+                        var uprateMW = p._uprate_mw || 0;
+                        html += '<div style="display:flex;flex-direction:column;gap:2px;">';
+                        html += '<span class="sb-cap-readonly" style="font-size:0.78rem;color:#6b7280;">' + capStr + '</span>';
+                        html += '<input type="number" class="sb-uprate-input" data-idx="' + idx + '" value="' + Math.round(uprateMW) + '" min="0" max="2000" step="10" placeholder="+MW" title="Additional uprate capacity (MW)" style="width:72px;font-size:0.75rem;padding:2px 4px;border:1px solid #c7d2e8;border-radius:4px;">';
+                        html += '</div>';
+                    } else {
+                        html += '<div><span class="sb-cap-readonly" style="font-size:0.78rem;color:#6b7280;">' + capStr + '</span></div>';
+                    }
+
+                    // Status: Operating / Retired / Uprate (nuclear only)
+                    html += '<div><select class="sb-status-select' + ((currentAction && currentAction !== 'operating') ? ' modified' : '') + '" data-idx="' + idx + '">';
                     html += '<option value="operating"' + (currentAction === 'operating' || !currentAction ? ' selected' : '') + '>Operating</option>';
                     html += '<option value="retire"' + (currentAction === 'retire' ? ' selected' : '') + '>Retired</option>';
+                    if (isNuclear) {
+                        html += '<option value="uprate"' + (currentAction === 'uprate' ? ' selected' : '') + '>Uprate</option>';
+                    }
                     html += '</select></div>';
 
-                    // Year input for retirement
-                    var showYearNF = (currentAction === 'retire');
+                    // Year input for retirement or uprate
+                    var showYearNF = (currentAction === 'retire' || currentAction === 'uprate');
                     var yearValNF = p._year_online || 2030;
                     html += '<div>';
                     if (showYearNF) {
@@ -410,7 +437,7 @@ var FleetSidebar = (function () {
 
         els.fleetList.innerHTML = html;
 
-        // Bind ISO group collapse + auto-collapse non-fossil categories
+        // Bind ISO group collapse + restore open/collapsed state
         els.fleetList.querySelectorAll('.sb-iso-header').forEach(function (header) {
             header.addEventListener('click', function () {
                 var key = this.dataset.iso;
@@ -418,15 +445,23 @@ var FleetSidebar = (function () {
                 if (body) {
                     var collapsed = body.classList.toggle('collapsed');
                     this.classList.toggle('collapsed', collapsed);
+                    if (collapsed) {
+                        openGroups.delete(key);
+                    } else {
+                        openGroups.add(key);
+                    }
                 }
             });
 
-            // Auto-collapse non-fossil categories so only fossil is expanded by default
+            // Restore state: if openGroups has entries, use them; otherwise default all collapsed
             var key = header.dataset.iso;
-            var cat = key.split('|')[0];
-            if (cat !== 'fossil') {
-                var body = els.fleetList.querySelector('[data-iso-body="' + key + '"]');
-                if (body) {
+            var body = els.fleetList.querySelector('[data-iso-body="' + key + '"]');
+            if (body) {
+                if (openGroups.size > 0) {
+                    var shouldCollapse = !openGroups.has(key);
+                    body.classList.toggle('collapsed', shouldCollapse);
+                    header.classList.toggle('collapsed', shouldCollapse);
+                } else {
                     body.classList.add('collapsed');
                     header.classList.add('collapsed');
                 }
@@ -454,6 +489,14 @@ var FleetSidebar = (function () {
             });
         });
 
+        // Bind uprate MW inputs
+        els.fleetList.querySelectorAll('.sb-uprate-input').forEach(function (inp) {
+            inp.addEventListener('change', function () {
+                var p = findPlant(this.dataset.idx);
+                if (p) p._uprate_mw = Math.max(0, parseFloat(this.value) || 0);
+            });
+        });
+
         // Bind remove buttons for added plants
         els.fleetList.querySelectorAll('.sb-remove-added').forEach(function (btn) {
             btn.addEventListener('click', function () {
@@ -477,17 +520,21 @@ var FleetSidebar = (function () {
         var p = findPlant(idx);
         if (!p) return;
         p._action = newStatus === 'operating' ? null : newStatus;
-        if (newStatus === 'retire' || newStatus === 'ccs_retrofit') {
+        if (newStatus === 'retire' || newStatus === 'ccs_retrofit' || newStatus === 'uprate') {
             if (!p._year_online) p._year_online = 2030;
             if (newStatus === 'ccs_retrofit') {
                 // Use global CCS panel params
                 p._ccs_target_rate = ccsParams.capture_rate_pct / 100.0;
                 p._ccs_derate_pct = ccsParams.derate_pct;
             }
+            if (newStatus === 'uprate') {
+                if (!p._uprate_mw) p._uprate_mw = 200; // Default uprate MW
+            }
         }
         if (newStatus === 'operating') {
             p._ccs_target_rate = 0;
             p._ccs_derate_pct = 0;
+            p._uprate_mw = 0;
         }
         renderFleetList();
     }
@@ -502,39 +549,121 @@ var FleetSidebar = (function () {
         if (p) p.capacity_mw = cap;
     }
 
+    // ── Fuel type → category mapping ──
+    var FOSSIL_FUEL_TYPES = new Set(['gas_ccgt', 'gas_ct', 'oil_ct', 'gas_oil_ct', 'coal_steam']);
+    var STORAGE_FUEL_TYPES = new Set(['battery_4hr', 'battery_8hr', 'ldes']);
+    var DEFAULT_CF = {
+        nuclear: 92, geothermal: 85, solar: 22, wind: 30,
+        battery_4hr: 0, battery_8hr: 0, ldes: 0
+    };
+
+    // Regional CFs (%) — mirrors dispatch engine REGIONAL_CF
+    var REGIONAL_CF_PCT = {
+        solar: { CAISO: 27, ERCOT: 24, PJM: 18, NYISO: 16, NEISO: 16, MISO: 20, SPP: 23 },
+        wind:  { CAISO: 26, ERCOT: 35, PJM: 28, NYISO: 28, NEISO: 30, MISO: 34, SPP: 38 }
+    };
+
+    // Show/hide form fields based on selected fuel type
+    function onFuelTypeChanged() {
+        var sel = document.getElementById('apFuelType');
+        if (!sel) return;
+        var ft = sel.value;
+        var isFossil = FOSSIL_FUEL_TYPES.has(ft);
+        var isStorage = STORAGE_FUEL_TYPES.has(ft);
+        var isClean = !isFossil && !isStorage;
+
+        var fossilFields = document.getElementById('apFossilFields');
+        var cleanFields = document.getElementById('apCleanFields');
+        if (fossilFields) fossilFields.style.display = isFossil ? '' : 'none';
+        if (cleanFields) cleanFields.style.display = isClean ? '' : 'none';
+
+        // Update default CF for clean types — use regional value if available
+        if (isClean) {
+            var cfInput = document.getElementById('apCF');
+            var isoSel = document.getElementById('apISO');
+            var iso = isoSel ? isoSel.value : '';
+            var regionalVal = REGIONAL_CF_PCT[ft] && REGIONAL_CF_PCT[ft][iso];
+            if (cfInput) cfInput.value = regionalVal || DEFAULT_CF[ft] || 30;
+        }
+
+        // Update placeholder and default capacity
+        var nameInput = document.getElementById('apName');
+        var capInput = document.getElementById('apCapacity');
+        var labels = {
+            gas_ccgt: ['New CCGT', 1200], gas_ct: ['New CT', 400], oil_ct: ['New Oil CT', 200],
+            gas_oil_ct: ['New Dual Fuel', 400], nuclear: ['New Nuclear', 1100],
+            geothermal: ['New Geothermal', 50], solar: ['New Solar Farm', 500],
+            wind: ['New Wind Farm', 300], battery_4hr: ['New Battery 4hr', 200],
+            battery_8hr: ['New Battery 8hr', 200], ldes: ['New LDES', 100]
+        };
+        if (nameInput && labels[ft]) nameInput.placeholder = labels[ft][0];
+        if (capInput && labels[ft]) capInput.value = labels[ft][1];
+    }
+    window._apFuelTypeChanged = onFuelTypeChanged;
+
     // ── Add Plant ──
     function addPlant() {
         var name = document.getElementById('apName').value.trim();
         var iso = document.getElementById('apISO').value;
         var capacity = parseFloat(document.getElementById('apCapacity').value);
-        var heatRate = parseFloat(document.getElementById('apHeatRate').value);
         var fuelType = document.getElementById('apFuelType').value;
         var yearOnline = parseInt(document.getElementById('apYearOnline').value);
 
         if (!name) { alert('Please enter a plant name'); return; }
         if (!capacity || capacity <= 0) { alert('Please enter a valid capacity'); return; }
-        if (!heatRate || heatRate <= 0) { alert('Please enter a valid heat rate'); return; }
         if (!yearOnline || yearOnline < 2023 || yearOnline > 2050) { alert('Year must be 2023-2050'); return; }
 
-        var ef = FleetDispatchEngine.EMISSION_FACTORS[fuelType] || 0.05306;
-        var co2Rate = Math.round(heatRate * ef * 100000) / 100000;
+        var isFossil = FOSSIL_FUEL_TYPES.has(fuelType);
+        var isStorage = STORAGE_FUEL_TYPES.has(fuelType);
+
+        // Validate fossil-specific fields
+        var heatRate = 0;
+        var co2Rate = 0;
+        if (isFossil) {
+            heatRate = parseFloat(document.getElementById('apHeatRate').value);
+            if (!heatRate || heatRate <= 0) { alert('Please enter a valid heat rate'); return; }
+            var ef = FleetDispatchEngine.EMISSION_FACTORS[fuelType] || 0.05306;
+            co2Rate = Math.round(heatRate * ef * 100000) / 100000;
+        }
+
+        // Get custom CF for clean types
+        var customCF = 0;
+        if (!isFossil && !isStorage) {
+            customCF = parseFloat(document.getElementById('apCF').value) / 100.0;
+            if (customCF <= 0 || customCF > 1) { alert('Capacity factor must be 1-100%'); return; }
+        }
+
+        // Normalize storage fuel types to dispatch engine names
+        var dispatchFuel = fuelType;
+        if (fuelType === 'battery_4hr' || fuelType === 'battery_8hr') dispatchFuel = 'battery';
+        // LDES stays as 'ldes'
+
+        var category;
+        if (isFossil) category = 'fossil';
+        else if (isStorage) category = 'storage';
+        else if (fuelType === 'nuclear') category = 'nuclear';
+        else if (fuelType === 'geothermal') category = 'nuclear'; // Groups with clean firm
+        else category = 'renewable';
 
         var newPlant = {
             orispl: nextAddId,
             name: name,
             iso: iso,
             capacity_mw: capacity,
-            fuel_type: fuelType,
-            plant_category: 'fossil',
+            fuel_type: dispatchFuel,
+            _original_fuel_type: fuelType, // preserve 4hr vs 8hr distinction
+            plant_category: category,
             heat_rate_mmbtu_mwh: heatRate,
             co2_rate_t_mwh: co2Rate,
             equity_share: 1.0,
             status: 'operating',
             ccs_capture_rate: 0,
             ccs_heat_rate_penalty: 1.0,
+            ccs_eligible: isFossil && fuelType === 'gas_ccgt',
             _action: 'add_plant',
             _year_online: yearOnline,
             _ccs_target_rate: 0,
+            _custom_cf: customCF,
             _isAdded: true,
             _addId: nextAddId
         };
@@ -548,7 +677,7 @@ var FleetSidebar = (function () {
         document.getElementById('apYearOnline').value = '2028';
 
         renderFleetList();
-        setStatus('Added "' + name + '" — click Recalculate to update charts');
+        setStatus('Added "' + name + '" (' + fuelType + ') in ' + iso + ' — click Recalculate to update charts');
     }
 
     // ── Recalculate ──
