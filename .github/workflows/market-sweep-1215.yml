@@ -92,6 +92,15 @@ jobs:
       - name: Create output directory
         run: mkdir -p market-simulator/results/sweep_1215
 
+      - name: "Warmup Numba JIT cache"
+        working-directory: market-simulator/scripts
+        run: |
+          python -c "
+          print('Compiling Numba kernels...')
+          import dispatch_utils, market_simulation, scenario_common
+          print('Numba JIT compilation complete.')
+          "
+
       - name: "Run 1,215-scenario sweep — ${{ matrix.iso }}${{ matrix.shard && format(' shard {0}', matrix.shard) || '' }}"
         working-directory: market-simulator/scripts
         run: |
