@@ -356,7 +356,7 @@ def _solve_nzone_vectorized(zone_demand_all, zone_stacks, zone_names,
 
     Uses iterative bilateral transfer optimization: repeatedly scan all
     interfaces, flowing power from cheap to expensive zone, bounded by
-    transfer limits and spare capacity. Converges in 3-5 passes for
+    transfer limits and spare capacity. Converges in 2-3 passes for
     typical grid topologies.
 
     Same algorithm as 3-zone but generalized to N zones and M interfaces.
@@ -390,6 +390,10 @@ def _solve_nzone_vectorized(zone_demand_all, zone_stacks, zone_names,
         for iface_idx, (z_from, z_to) in enumerate(iface_zones):
             limit = iface_limits[iface_idx]
             price_diff = zonal_lmp[z_to] - zonal_lmp[z_from]
+
+            # Skip interface entirely if no hour has meaningful price difference
+            if np.all(np.abs(price_diff) <= 0.1):
+                continue
 
             # Existing flow on this interface
             existing_flow = flows[iface_idx]
@@ -431,15 +435,6 @@ def _solve_nzone_vectorized(zone_demand_all, zone_stacks, zone_names,
                 # Update effective demands for affected zones
                 eff_demand[z_from] = zone_demand_all[z_from] + np.maximum(flows[iface_idx], 0) - np.maximum(-flows[iface_idx], 0)
                 eff_demand[z_to] = zone_demand_all[z_to] - np.maximum(flows[iface_idx], 0) + np.maximum(-flows[iface_idx], 0)
-
-                # Re-clamp to account for all interfaces on these zones
-                for other_iface_idx, (zf, zt) in enumerate(iface_zones):
-                    if other_iface_idx == iface_idx:
-                        continue
-                    if zf == z_from or zt == z_from:
-                        pass  # already handled
-                    if zf == z_to or zt == z_to:
-                        pass
 
                 eff_demand[z_from] = np.maximum(eff_demand[z_from], 0.0)
                 eff_demand[z_to] = np.maximum(eff_demand[z_to], 0.0)
