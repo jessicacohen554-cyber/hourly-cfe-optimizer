@@ -201,17 +201,46 @@ def parse_rosetta():
             group = row.get('Group', '').strip()
             status = row.get('Status', 'Operating').strip()
 
-            # Retired plants: included in 2023 baseline, excluded from future
-            # Mystic retired May 2024 — last full operating year was 2023
+            # Retired plants: included in 2023 baseline, excluded from future.
+            # For plants with Status=Retired, retired_year determines the first
+            # year they're excluded. Plants retired mid-year still count in that
+            # year's baseline (eGRID captures partial-year ops).
+            # Plants with no CAMPD / no eGRID data use default retired_year=2024
+            # (conservative: assume operating through 2023).
             RETIRED_YEARS = {
-                1588: 2024,  # Mystic (retired May 31, 2024)
+                1588: 2024,   # Mystic (retired May 31, 2024)
+                3169: 2024,   # Schuylkill
+                55281: 2024,  # Southeast Chicago Energy
+                55748: 2024,  # Los Esteros Critical Energy Facility
+                55853: 2024,  # Inland Empire Energy Center
+                10741: 2024,  # Clear Lake
+                3159: 2024,   # Cromby
+                2384: 2024,   # Deepwater
+                7701: 2024,   # Fairless Hills
+                1553: 2024,   # Gould Street
+                8008: 2024,   # Mickleton
+                2382: 2024,   # Middle
+                2383: 2024,   # Missouri Avenue
+                1559: 2024,   # Riverside
+                55401: 2024,  # Rolling Hills CT
+                1560: 2024,   # Westport Jet
+                2379: 2024,   # Carll's Corner
+                2380: 2024,   # Cedar
+                55833: 2024,  # Auburndale Energy Center CT
+                50292: 2024,  # Bethpage IC (0.4 MW)
+                10294: 2024,  # King City Peaking
+                55810: 2024,  # Gilroy Peaking
             }
-            retired_year = RETIRED_YEARS.get(orispl) if orispl and status == 'Retired' else None
+            if status == 'Retired':
+                retired_year = RETIRED_YEARS.get(orispl, 2024) if orispl else 2024
+            else:
+                retired_year = None
 
             # ORISPL mismatches: these CAMPD IDs map to wrong eGRID plant
             # Salem CT (16 MW gas) shares ORISPL 2410 with Salem Nuclear (1 GW)
             # Delaware City 10 / West Energy Center have parasitic load only
-            EGRID_EXCLUDE = {2410, 592, 597}
+            # Rolling Hills CT (5.5 MW) shares ORISPL with Rolling Hills Gen (797 MW)
+            EGRID_EXCLUDE = {2410, 592, 597, 55401}
             if orispl in EGRID_EXCLUDE:
                 orispl = None  # Don't use eGRID data for these
 
