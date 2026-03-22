@@ -65,6 +65,90 @@
         return best;
     }
 
+    // ── Find the earliest intervention year from the fleet sidebar modifications ──
+    function getFirstInterventionYear() {
+        if (typeof FleetSidebar !== 'undefined' && FleetSidebar.getFleetPlants) {
+            var plants = FleetSidebar.getFleetPlants();
+            var earliest = Infinity;
+            if (plants) {
+                plants.forEach(function (p) {
+                    if (p._action && p._year_online && p._year_online < earliest) {
+                        earliest = p._year_online;
+                    }
+                });
+            }
+            return earliest === Infinity ? null : earliest;
+        }
+        return null;
+    }
+
+    // Helper: linearly interpolate an envelope value between two surrounding years
+    function interpolateEnvAtYear(env, year) {
+        var keys = Object.keys(env).map(Number).sort(function (a, b) { return a - b; });
+        var lo = null, hi = null;
+        for (var i = 0; i < keys.length; i++) {
+            if (keys[i] <= year) lo = keys[i];
+            if (keys[i] >= year && hi === null) hi = keys[i];
+        }
+        if (lo === year && env[String(lo)]) return env[String(lo)];
+        if (lo === null || hi === null || lo === hi) return null;
+        var loE = env[String(lo)], hiE = env[String(hi)];
+        if (!loE || !hiE) return null;
+        var f = (year - lo) / (hi - lo);
+        return {
+            p10: loE.p10 + (hiE.p10 - loE.p10) * f,
+            p50: loE.p50 + (hiE.p50 - loE.p50) * f,
+            p90: loE.p90 + (hiE.p90 - loE.p90) * f,
+            mean: loE.mean + (hiE.mean - loE.mean) * f
+        };
+    }
+
+    // ── Merge custom envelope with baseline for pre-intervention years ──
+    // Injects the intervention year as an interpolated baseline data point
+    // so the chart shows a clean transition at the correct year.
+    function alignEnvelopeWithBaseline(custEnv, baseEnv, firstYear) {
+        if (!firstYear || !baseEnv) return custEnv;
+        var merged = {};
+        var keys = Object.keys(custEnv);
+        keys.forEach(function (yStr) {
+            var y = parseInt(yStr);
+            if (y < firstYear) {
+                merged[yStr] = baseEnv[yStr] || custEnv[yStr];
+            } else {
+                merged[yStr] = custEnv[yStr];
+            }
+        });
+
+        // If firstYear doesn't exist as a data point, inject it with interpolated
+        // baseline values so the chart shows a clean kink at the intervention year
+        var firstYearStr = String(firstYear);
+        if (!custEnv[firstYearStr]) {
+            var sortedYears = Object.keys(baseEnv).map(Number).sort(function (a, b) { return a - b; });
+            var lo = null, hi = null;
+            for (var i = 0; i < sortedYears.length; i++) {
+                if (sortedYears[i] <= firstYear) lo = sortedYears[i];
+                if (sortedYears[i] >= firstYear && hi === null) hi = sortedYears[i];
+            }
+            if (lo !== null && hi !== null && lo !== hi) {
+                var frac = (firstYear - lo) / (hi - lo);
+                var loEnv = baseEnv[String(lo)];
+                var hiEnv = baseEnv[String(hi)];
+                if (loEnv && hiEnv) {
+                    merged[firstYearStr] = {
+                        p10: loEnv.p10 + (hiEnv.p10 - loEnv.p10) * frac,
+                        p50: loEnv.p50 + (hiEnv.p50 - loEnv.p50) * frac,
+                        p90: loEnv.p90 + (hiEnv.p90 - loEnv.p90) * frac,
+                        mean: loEnv.mean + (hiEnv.mean - loEnv.mean) * frac
+                    };
+                }
+            } else if (lo !== null && lo === firstYear && baseEnv[firstYearStr]) {
+                merged[firstYearStr] = baseEnv[firstYearStr];
+            }
+        }
+
+        return merged;
+    }
+
     function getEnvelope(sc) {
         if (selectedFossilCost !== 'All' && sc.envelope_by_fossil_cost &&
             sc.envelope_by_fossil_cost[selectedFossilCost]) {
@@ -547,22 +631,38 @@
     function updateFanChart() {
         if (!fanChart || !DATA) return;
         var years = getYears();
-        var labels = years.map(String);
         var datasets = [];
         var baseline = DATA.scenarios.baseline;
         var mode = getColorMode();
 
+        // Check if we need to inject the intervention year into the timeline
+        var firstYear = getFirstInterventionYear();
+        var hasCustom = customScenario || (mode === 'single' && savedScenarioOverlays.length === 1);
+        if (firstYear && hasCustom && years.indexOf(firstYear) === -1) {
+            years = years.slice();
+            years.push(firstYear);
+            years.sort(function (a, b) { return a - b; });
+        }
+        var labels = years.map(String);
+
         if (mode === 'single') {
             // ── Single-scenario mode ──
-            // Determine if it's baseline-only, or baseline + one custom/saved
             var customOrSaved = customScenario ? customScenario : null;
             if (!customOrSaved && savedScenarioOverlays.length === 1) {
                 customOrSaved = savedScenarioOverlays[0];
             }
 
             if (customOrSaved && baseline) {
-                // Baseline + 1 custom: baseline gets gray p50, custom gets green/red fan
+                // Baseline + 1 custom: baseline gets gray p50, custom gets full fan
                 var baseEnv = getEnvelope(baseline);
+                // Interpolate baseline at intervention year if needed
+                if (firstYear && !baseEnv[String(firstYear)]) {
+                    var interpBase = interpolateEnvAtYear(baseEnv, firstYear);
+                    if (interpBase) {
+                        baseEnv = Object.assign({}, baseEnv);
+                        baseEnv[String(firstYear)] = interpBase;
+                    }
+                }
                 // Only show baseline p50 as a gray reference line
                 var baseP50 = [];
                 years.forEach(function (y) {
@@ -581,11 +681,13 @@
                     _isBaseline: true, _scenarioName: 'Baseline'
                 });
 
-                // Custom scenario gets the full green/red fan
+                // Custom scenario gets the full fan — aligned with baseline until intervention
                 var custEnv = customOrSaved.results ? customOrSaved.results.envelope : customOrSaved.envelope;
                 var custColor = customOrSaved.color || CUSTOM_COLOR;
                 var custName = customOrSaved.name || 'Custom';
-                addFanDatasets(datasets, custEnv, years, custColor, custName, 'single', {
+                var baseEnvForAlign = getEnvelope(baseline);
+                var alignedEnv = alignEnvelopeWithBaseline(custEnv, baseEnvForAlign, firstYear);
+                addFanDatasets(datasets, alignedEnv, years, custColor, custName, 'single', {
                     color: custColor, width: 2.5, dash: [], pointRadius: 3,
                     legendLabel: custName
                 }, { isBaseline: false, scenarioName: custName });
@@ -606,9 +708,11 @@
                     { isBaseline: true, scenarioName: 'Baseline' });
             }
 
-            // Custom overlay
+            // Custom overlay — aligned with baseline until intervention year
             if (customScenario) {
-                addFanDatasets(datasets, customScenario.envelope, years, CUSTOM_COLOR, 'Custom', 'multi', null,
+                var baseEnvMulti = baseline ? getEnvelope(baseline) : null;
+                var alignedEnvMulti = alignEnvelopeWithBaseline(customScenario.envelope, baseEnvMulti, firstYear);
+                addFanDatasets(datasets, alignedEnvMulti, years, CUSTOM_COLOR, 'Custom', 'multi', null,
                     { isBaseline: false, scenarioName: 'Custom' });
             }
 
