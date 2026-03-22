@@ -1,0 +1,18 @@
+{
+  "_documentation": {
+    "purpose": "User-supplied actual plant emissions that override modeled estimates. Fill in CO2 short tons and net generation MWh from CAMPD, EIA 923, or internal reporting for any year. These values take precedence over eGRID baselines and capacity-factor-derived estimates.",
+    "sources": [
+      "EPA CAMPD: https://campd.epa.gov/ — hourly CO2 mass (short tons) + gross load",
+      "EIA 923: https://www.eia.gov/electricity/data/eia923/ — monthly net gen + fuel consumption",
+      "Internal reporting: Persefoni, SP Global, or operator-reported actuals"
+    ],
+    "units": {
+      "co2_short_tons": "Annual CO2 emissions in US short tons (as reported by CAMPD/eGRID)",
+      "net_gen_mwh": "Annual net generation in MWh",
+      "heat_input_mmbtu": "Optional: annual heat input in MMBtu (for heat rate validation)"
+    },
+    "usage": "Add entries under the year key (e.g. '2024', '2025'). Each entry is keyed by CAMPD Facility ID (ORISPL code). Only plants with entries here will be overridden; all others use eGRID 2023 baselines scaled by year_factor or capacity-factor estimates."
+  },
+  "2024": {},
+  "2025": {}
+}
