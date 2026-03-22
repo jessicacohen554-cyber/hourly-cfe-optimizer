@@ -574,6 +574,14 @@
                     </div>
                     <div class="sb-param-hint">Fraction of CO₂ captured and stored</div>
                 </div>
+                <div class="sb-ccs-param-row">
+                    <label for="ccsCfSlider">Post-Retrofit Capacity Factor</label>
+                    <div class="sb-slider-wrap">
+                        <input type="range" id="ccsCfSlider" min="20" max="95" value="85" step="1">
+                        <span class="sb-slider-value" id="ccsCfValue">85%</span>
+                    </div>
+                    <div class="sb-param-hint">CCS plants run baseload to maximize 45Q credits</div>
+                </div>
                 <button class="sb-btn sb-ccs-apply-btn" id="ccsApplyAllBtn">Apply to All CCS Plants</button>
             </div>
 
