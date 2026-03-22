@@ -281,10 +281,16 @@ var FleetSidebar = (function () {
 
         var allPlants = fleetPlants.concat(addedPlants);
 
+        // Filter out retired plants — they exist in data for 2023 baseline
+        // emissions but shouldn't appear in the sidebar for user interaction
+        var visiblePlants = allPlants.filter(function (p) {
+            return p.status !== 'retired';
+        });
+
         // Group by category first, then by ISO within each category
         var byCategoryISO = {};
         var categoryOrder = ['fossil', 'nuclear', 'renewable', 'storage', 'other'];
-        allPlants.forEach(function (p) {
+        visiblePlants.forEach(function (p) {
             var cat = p.plant_category || (FOSSIL_FUELS.has(p.fuel_type) ? 'fossil' : 'other');
             var iso = p.iso || 'Other';
             var key = cat + '|' + iso;
@@ -349,7 +355,6 @@ var FleetSidebar = (function () {
                 var equityStr = p.equity_share < 1 ? ' (' + Math.round(p.equity_share * 100) + '% equity)' : '';
                 var currentAction = p._action || 'operating';
                 var isFossil = FOSSIL_FUELS.has(p.fuel_type);
-                var isCcsEligible = p.ccs_eligible === true;
 
                 html += '<div class="sb-plant-row" data-plant-idx="' + idx + '">';
                 html += '<div class="sb-plant-name" title="' + (p.full_name || p.name || '') + ' (' + fuelLabel + ')">';
@@ -366,9 +371,7 @@ var FleetSidebar = (function () {
                     html += '<div><select class="sb-status-select' + modClass + '" data-idx="' + idx + '">';
                     html += '<option value="operating"' + (currentAction === 'operating' || !currentAction ? ' selected' : '') + '>Operating</option>';
                     html += '<option value="retire"' + (currentAction === 'retire' ? ' selected' : '') + '>Retired</option>';
-                    if (isCcsEligible) {
-                        html += '<option value="ccs_retrofit"' + (currentAction === 'ccs_retrofit' ? ' selected' : '') + '>CCS Retrofit</option>';
-                    }
+                    html += '<option value="ccs_retrofit"' + (currentAction === 'ccs_retrofit' ? ' selected' : '') + '>CCS Retrofit</option>';
                     html += '</select></div>';
 
                     // Year input (for retire/CCS)
@@ -434,15 +437,12 @@ var FleetSidebar = (function () {
                 }
             });
 
-            // Auto-collapse non-fossil categories so only fossil is expanded by default
+            // Auto-collapse all categories by default
             var key = header.dataset.iso;
-            var cat = key.split('|')[0];
-            if (cat !== 'fossil') {
-                var body = els.fleetList.querySelector('[data-iso-body="' + key + '"]');
-                if (body) {
-                    body.classList.add('collapsed');
-                    header.classList.add('collapsed');
-                }
+            var body = els.fleetList.querySelector('[data-iso-body="' + key + '"]');
+            if (body) {
+                body.classList.add('collapsed');
+                header.classList.add('collapsed');
             }
         });
 

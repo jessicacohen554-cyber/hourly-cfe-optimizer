@@ -134,6 +134,16 @@ def main():
     with open(CSV_PATH, 'r', encoding='latin-1') as f:
         reader = csv.DictReader(f)
         for row in reader:
+            # Read plant status from Rosetta (Operating / Retired)
+            row_status = row.get('Status', '').strip().lower()
+            row_name = row.get('SP Name', '').strip()
+
+            # Skip retired plants — they predate the 2023 baseline snapshot.
+            # Exception: Mystic 8/9 was operating in 2023 under cost-of-service
+            # and retired June 2024, so it's needed for the 2023 baseline.
+            if row_status == 'retired' and row_name != 'Mystic 8 9':
+                continue
+
             stat_type = row.get('Stat Type', '').strip()
             fuel_csv = row.get('Fuel Type', '').strip()
             plant_type_csv = row.get('Plant Type', '').strip()
@@ -201,6 +211,9 @@ def main():
             except ValueError:
                 ccs_capacity_mw = None
 
+            # Set status from Rosetta
+            plant_status = 'retired' if row_status == 'retired' else 'operating'
+
             plant = {
                 'orispl': orispl,
                 'name': short_name or name,
@@ -211,8 +224,7 @@ def main():
                 'fuel_type': ft,
                 'plant_category': category,
                 'equity_share': equity_share,
-                'ccs_eligible': ccs_eligible,
-                'status': 'operating',
+                'status': plant_status,
             }
 
             # Add fossil-specific fields

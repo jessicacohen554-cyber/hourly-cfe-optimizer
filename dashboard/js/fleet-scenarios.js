@@ -1043,22 +1043,46 @@
         var yr = String(nearestYear(selectedYear, getYears()));
         document.getElementById('newCleanTitle').textContent = 'New Clean Generation — ' + yr;
 
-        var sc = customScenario || DATA.scenarios.baseline;
-        var gen = sc.generation_by_fuel;
-        var yearGen = (gen && gen[yr]) ? gen[yr] : {};
+        // Get custom and baseline generation by fuel for selected year
+        var baseGen = {};
+        var custGen = {};
+        var baseline = DATA.scenarios.baseline;
+        if (baseline && baseline.generation_by_fuel && baseline.generation_by_fuel[yr]) {
+            baseGen = baseline.generation_by_fuel[yr];
+        }
+        if (customScenario && customScenario.generation_by_fuel && customScenario.generation_by_fuel[yr]) {
+            custGen = customScenario.generation_by_fuel[yr];
+        }
 
-        // Filter to only fuels with non-zero generation
+        // New clean = delta above baseline for clean fuels, plus all CCS generation
+        // (CCS doesn't exist in baseline, it's always "new")
         var labels = [];
         var values = [];
         var colors = [];
         CLEAN_FUEL_KEYS.forEach(function (fuel) {
-            var val = yearGen[fuel] || 0;
-            if (val > 0.001) {
+            var custVal = custGen[fuel] || 0;
+            var baseVal = baseGen[fuel] || 0;
+            var delta;
+            if (fuel === 'ccs_ccgt') {
+                // All CCS generation is "new" clean
+                delta = custVal;
+            } else {
+                // Only show the increment above baseline (uprates, new plants)
+                delta = custVal - baseVal;
+            }
+            if (delta > 0.001) {
                 labels.push(CLEAN_FUEL_LABELS[fuel] || fuel);
-                values.push(Math.round(val * 100) / 100);
+                values.push(Math.round(delta * 100) / 100);
                 colors.push(FUEL_COLORS[fuel] || '#9CA3AF');
             }
         });
+
+        // If no custom scenario, show empty state
+        if (!customScenario) {
+            labels = [];
+            values = [];
+            colors = [];
+        }
 
         newCleanChart.data.labels = labels;
         newCleanChart.data.datasets = [{
@@ -1074,11 +1098,15 @@
         // Legend
         var legendEl = document.getElementById('newCleanLegend');
         if (legendEl) {
-            legendEl.innerHTML = labels.map(function (lbl, i) {
-                return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:16px;">' +
-                    '<span style="width:24px;height:10px;border-radius:3px;background:' + colors[i] + ';display:inline-block;"></span>' +
-                    lbl + ': ' + values[i].toFixed(1) + ' TWh</span>';
-            }).join('');
+            if (labels.length === 0) {
+                legendEl.innerHTML = '<span style="color:#9CA3AF;font-size:0.85rem;">Configure fleet changes and recalculate to see new clean generation.</span>';
+            } else {
+                legendEl.innerHTML = labels.map(function (lbl, i) {
+                    return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:16px;">' +
+                        '<span style="width:24px;height:10px;border-radius:3px;background:' + colors[i] + ';display:inline-block;"></span>' +
+                        lbl + ': ' + values[i].toFixed(1) + ' TWh</span>';
+                }).join('');
+            }
         }
     }
 

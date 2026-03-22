@@ -413,6 +413,11 @@ var FleetDispatchEngine = (function () {
                     if (action === 'add_plant' && yearOnline && years[yi3] < yearOnline) {
                         adjustedCf = 0;
                     }
+                    // Plants marked retired in source data: run through 2024 (Mystic retired June 2024)
+                    // then zero for 2025+
+                    if (p.status === 'retired' && !action && years[yi3] > 2024) {
+                        adjustedCf = 0;
+                    }
 
                     // Generation
                     var genMwh = capMW * adjustedCf * 8760;
@@ -432,8 +437,8 @@ var FleetDispatchEngine = (function () {
                             effectiveCO2 = baseCO2 * (1.0 - capture);
                             reportFuel = 'ccs_ccgt';
                         }
-                    } else if (p.status === 'ccs_retrofit') {
-                        // Plant already has CCS in base fleet config
+                    } else if (p.status === 'ccs_retrofit' && statusPerYear[yi3] === 'ccs_retrofit') {
+                        // Plant already has CCS in base fleet config — only apply if status matches
                         var staticCapture = p.ccs_capture_rate || (globalCapturePct / 100.0);
                         genMwh = capMW * globalCcsCfCap * 8760;
                         genMwh = genMwh * derateFactor;
