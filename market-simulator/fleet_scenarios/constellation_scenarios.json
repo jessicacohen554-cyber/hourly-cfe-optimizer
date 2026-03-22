@@ -5,26 +5,24 @@
     "company": "Constellation Energy",
     "as_of_date": "2025-01-01",
     "source": "CEG_fleet_rosetta.csv",
-    "notes": "Full fleet of 146 plants across all fuel types. Includes CEG legacy fleet and CPN (Calpine) acquisition. Nuclear ~190 TWh, Geothermal ~9 TWh, Wind/Solar/Hydro ~4-5 TWh.",
+    "notes": "Full fleet of 182 plants across all fuel types. Includes CEG legacy fleet, CPN (Calpine) acquisition, and 42 retired/divested plants for 2023 baseline. Nuclear ~181 TWh, Gas CCGT ~120 TWh, Gas CT ~3 TWh. 2023 baseline emissions from eGRID 2023 PLNT23 plant-level actuals.",
     "generation_estimates_twh": {
-      "nuclear": 190.0,
-      "geothermal": 9.0,
+      "nuclear": 181.2,
+      "geothermal": 6.4,
       "wind": 3.5,
-      "solar": 0.8,
-      "hydro": 0.5,
-      "gas_ccgt": 50.0,
-      "gas_ct": 1.5,
-      "oil_ct": 0.3,
-      "gas_oil_ct": 0.8,
-      "battery": 0.0,
-      "pumped_storage": 0.0
+      "solar": 0.5,
+      "hydro": 1.9,
+      "gas_ccgt": 119.6,
+      "gas_ct": 3.0,
+      "oil_ct": 0.8,
+      "gas_oil_ct": 0.5
     }
   },
   "new_build_interaction": {
     "rule": "additive",
     "description": "Fleet-level add_plant actions are additive to grid-level new fossil builds."
   },
-  "baseline_mt": 23.16,
+  "baseline_mt": 50.17,
   "targets": {
     "sbti_15": {
       "type": "sbti_15c",
