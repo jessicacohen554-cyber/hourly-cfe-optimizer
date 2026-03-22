@@ -200,4 +200,101 @@ git push -u origin claude/fix-fleet-scenarios-calcs-AYeYh
 
 ---
 
-*Prompts 3-5 will be added in subsequent commits.*
+## Prompt 3: Add "Default Market" Status Option
+
+### Context
+Currently the status dropdown for each plant has: Operating, Retired, CCS Retrofit (fossil CCS-eligible), Uprate (nuclear). The problem: selecting "Operating" forces the plant to run at its sweep CF even if it would economically retire. There's no way to say "let the market decide" — which is what the baseline trajectory represents.
+
+The user needs a "Default Market" option that is the AUTO-SELECTED DEFAULT for all plants. This means: the plant follows whatever the 1,215-scenario sweep says — if it's economic it runs, if not it retires. "Operating" should mean "force this plant to operate regardless of economics." "Retired" means "force retire regardless."
+
+### Task
+
+#### Step 1: Add "Default Market" to dropdowns (fleet-sidebar.js)
+
+In `renderFleetList()`, change the status `<select>` for both fossil and non-fossil plants:
+
+**For fossil plants** (currently around line 366-372):
+```html
+<option value="default_market" [selected if no _action]>Default Market</option>
+<option value="operating" [selected if _action === 'operating_override']>Operating (forced)</option>
+<option value="retire" [selected if _action === 'retire']>Retired</option>
+<option value="ccs_retrofit" [selected if _action === 'ccs_retrofit']>CCS Retrofit</option>  <!-- CCS-eligible only -->
+```
+
+**For non-fossil plants** (currently around line 390-393):
+```html
+<option value="default_market" [selected if no _action]>Default Market</option>
+<option value="operating" [selected if _action === 'operating_override']>Operating (forced)</option>
+<option value="retire" [selected if _action === 'retire']>Retired</option>
+<option value="uprate" [selected if _action === 'uprate']>Uprate</option>  <!-- nuclear only -->
+```
+
+#### Step 2: Handle "Default Market" in dispatch engine (fleet-dispatch-engine.js)
+
+In the fossil plant dispatch loop (second pass), the current logic at line 374 already applies economic retirement:
+```javascript
+if (yearHasData[yi3] && margin < 0) adjustedCf = 0;
+```
+
+This needs to be conditional on the plant's action:
+- `_action === null` or `_action === 'default_market'`: Apply economic retirement as-is (margin < 0 → CF = 0). This IS the market trajectory.
+- `_action === 'operating_override'`: Skip economic retirement — force the plant to run at its sweep CF regardless of margin.
+- `_action === 'retire'`: Force CF = 0 from `_year_online` onward (already works).
+
+```javascript
+// Economic retirement — only for default_market plants
+var isDefaultMarket = !action || action === 'default_market';
+if (isDefaultMarket && yearHasData[yi3] && margin < 0) {
+    adjustedCf = 0;
+}
+// Forced operating: skip economic retirement entirely (plant runs at sweep CF)
+// No change needed — just don't zero out the CF
+```
+
+#### Step 3: Update onStatusChange (fleet-sidebar.js)
+
+When a plant is set to "Default Market", clear all action flags:
+```javascript
+if (newStatus === 'default_market') {
+    p._action = null;  // null = default market behavior
+    p._year_online = null;
+    p._ccs_target_rate = 0;
+    p._uprate_mw = 0;
+}
+if (newStatus === 'operating') {
+    p._action = 'operating_override';  // New: distinguishes forced-operate from default
+}
+```
+
+#### Step 4: Baseline identity guarantee
+
+Since baseline is computed with all plants at `_action = null` (Prompt 2), and "Default Market" also sets `_action = null`, a fleet with all plants on "Default Market" will produce EXACTLY the same result as baseline. No divergence until the user changes something.
+
+### Verification
+1. Load page — all plants should show "Default Market" selected by default
+2. Change nothing, click Recalculate — zero delta everywhere (same as baseline)
+3. Change one plant to "Operating (forced)" where it would economically retire — that plant's emissions increase (it's now forced to run), all other plants unchanged
+4. Change one plant to "Retired" — that plant's emissions drop to zero from the retirement year
+5. Baseline and custom trajectories are identical until the first year where any intervention occurs
+
+### Files Changed
+- `dashboard/js/fleet-sidebar.js` — dropdown options, `onStatusChange()` handler
+- `dashboard/js/fleet-dispatch-engine.js` — conditional economic retirement logic
+
+### After Completing
+```bash
+cp dashboard/js/fleet-sidebar.js market-simulator/frontend/js/fleet-sidebar.js
+cp dashboard/js/fleet-dispatch-engine.js market-simulator/frontend/js/fleet-dispatch-engine.js
+git add dashboard/js/fleet-sidebar.js dashboard/js/fleet-dispatch-engine.js \
+    market-simulator/frontend/js/fleet-sidebar.js market-simulator/frontend/js/fleet-dispatch-engine.js
+git commit -m "Add Default Market status option — plants follow sweep economics by default
+
+Default Market is the auto-selected default. Plants follow 1215 sweep
+economic retirement logic. Operating (forced) overrides retirement.
+Guarantees baseline identity when no interventions are applied."
+git push -u origin claude/fix-fleet-scenarios-calcs-AYeYh
+```
+
+---
+
+*Prompts 4-5 will be added in subsequent commits.*
