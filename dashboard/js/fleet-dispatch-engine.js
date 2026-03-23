@@ -250,6 +250,10 @@ var FleetDispatchEngine = (function () {
             var action = p._action;
             var yearOnline = p._year_online;
 
+            // Rosetta-sourced actual generation for historic years (2023/2024)
+            var actualGen = p.actual_gen_mwh || {};
+            var actualEmis = p.actual_emis_t || {};
+
             var genArr = [];
             var emisArr = [];
             var cfArr = [];
@@ -278,17 +282,26 @@ var FleetDispatchEngine = (function () {
                     statusPerYear[yi] = p.status || 'operating';
                 }
 
-                var activeCf = (statusPerYear[yi] === 'retired' || statusPerYear[yi] === 'not_yet_built') ? 0 : cf;
-                var effectiveCap = capMW;
-                if (statusPerYear[yi] === 'uprated') {
-                    effectiveCap = capMW + uprateMW;
+                var genMwh, activeCf;
+
+                // For historic years with Rosetta actuals, use per-plant actual generation
+                var historicGen = actualGen[String(y)];
+                if (historicGen != null && historicGen > 0 && !action) {
+                    genMwh = historicGen;
+                    activeCf = (capMW > 0) ? genMwh / (capMW * 8760) : 0;
+                } else {
+                    activeCf = (statusPerYear[yi] === 'retired' || statusPerYear[yi] === 'not_yet_built') ? 0 : cf;
+                    var effectiveCap = capMW;
+                    if (statusPerYear[yi] === 'uprated') {
+                        effectiveCap = capMW + uprateMW;
+                    }
+                    genMwh = effectiveCap * activeCf * 8760;
                 }
-                var genMwh = effectiveCap * activeCf * 8760;
 
                 // Same generation across all sweep scenarios (non-fossil isn't affected by fossil cost sweeps)
                 for (var si2 = 0; si2 < nScenarios; si2++) {
                     genArr[si2][yi] = genMwh;
-                    emisArr[si2][yi] = 0; // Zero emissions
+                    emisArr[si2][yi] = 0; // Zero emissions for non-fossil
                     cfArr[si2][yi] = activeCf;
                     fleetGeneration[si2][yi] += genMwh; // Accumulate total gen for intensity
 
@@ -347,6 +360,10 @@ var FleetDispatchEngine = (function () {
             var yearOnline = p._year_online;
             var baseCO2 = p.co2_rate_t_mwh || DEFAULT_CO2_RATES[fuel] || 0.37;
 
+            // Rosetta-sourced actual generation/emissions for historic years
+            var actualGen = p.actual_gen_mwh || {};
+            var actualEmis = p.actual_emis_t || {};
+
             // Per-plant tracking for detail
             var genArr = [];
             var emisArr = [];
@@ -391,6 +408,25 @@ var FleetDispatchEngine = (function () {
                 var scenarioMargin = marginArrays[si2];
 
                 for (var yi3 = 0; yi3 < nYears; yi3++) {
+                    // For historic years with Rosetta actuals and no user action, use actual data directly
+                    var historicGen = actualGen[String(years[yi3])];
+                    var historicEmis = actualEmis[String(years[yi3])];
+                    if (historicGen != null && historicGen > 0 && !action) {
+                        var hGenMwh = historicGen;
+                        var hEmisMt = (historicEmis || 0) / 1e6; // tons → Mt
+                        var hCf = (capMW > 0) ? hGenMwh / (capMW * 8760) : 0;
+
+                        fleetEmissions[si2][yi3] += hEmisMt;
+                        fleetGeneration[si2][yi3] += hGenMwh;
+                        genArr[si2][yi3] = hGenMwh;
+                        emisArr[si2][yi3] = hEmisMt;
+                        cfArr[si2][yi3] = hCf;
+
+                        if (genByFuel[fuel]) genByFuel[fuel][si2][yi3] += hGenMwh / 1e6;
+                        if (emisByFuel[fuel]) emisByFuel[fuel][si2][yi3] += hEmisMt;
+                        continue; // Skip sweep-based dispatch for this year
+                    }
+
                     var baseCf = scenarioCF[yi3] || 0;
                     var margin = scenarioMargin[yi3] || 0;
 
@@ -534,6 +570,39 @@ var FleetDispatchEngine = (function () {
             };
         }
 
+        // ── Build per-plant envelopes (P10/P50/P90 gen GWh + emissions metric tons) ──
+        var plantEnvelopes = {};
+        plantResults.forEach(function (pr) {
+            var key = String(pr.plant.orispl || pr.plant.name);
+            var genEnv = {};
+            var emisEnv = {};
+            for (var yiPE = 0; yiPE < nYears; yiPE++) {
+                var genCol = [];
+                var emisCol = [];
+                for (var siPE = 0; siPE < nScenarios; siPE++) {
+                    genCol.push(pr.genArr[siPE][yiPE] / 1e3);    // MWh → GWh
+                    emisCol.push(pr.emisArr[siPE][yiPE] * 1e6);   // Mt → metric tons
+                }
+                genEnv[String(years[yiPE])] = {
+                    p10: Math.round(percentile(genCol, 10) * 10) / 10,
+                    p50: Math.round(percentile(genCol, 50) * 10) / 10,
+                    p90: Math.round(percentile(genCol, 90) * 10) / 10
+                };
+                emisEnv[String(years[yiPE])] = {
+                    p10: Math.round(percentile(emisCol, 10)),
+                    p50: Math.round(percentile(emisCol, 50)),
+                    p90: Math.round(percentile(emisCol, 90))
+                };
+            }
+            plantEnvelopes[key] = {
+                name: pr.plant.name,
+                fuel_type: pr.plant.fuel_type,
+                capacity_mw: Math.round((pr.plant.capacity_mw || 0) * (pr.plant.equity_share || 1) * 10) / 10,
+                gen_gwh: genEnv,
+                emissions_t: emisEnv
+            };
+        });
+
         // ── Build plant detail at P50 scenario ──
         var plantDetail = {};
         for (var yi5 = 0; yi5 < nYears; yi5++) {
@@ -602,6 +671,7 @@ var FleetDispatchEngine = (function () {
             envelope: envelope,
             intensity_envelope: intensityEnvelope,
             plant_detail: plantDetail,
+            plant_envelopes: plantEnvelopes,
             generation_by_fuel: generationByFuel,
             emissions_by_fuel: emissionsByFuel,
             fleet_summary: {

@@ -286,6 +286,7 @@ var FleetSidebar = (function () {
             if (window.FLEET_SCENARIOS_API && window.FLEET_SCENARIOS_API.setComputedBaseline) {
                 window.FLEET_SCENARIOS_API.setComputedBaseline({
                     envelope: result.envelope,
+                    intensity_envelope: result.intensity_envelope,
                     plant_detail: result.plant_detail,
                     generation_by_fuel: result.generation_by_fuel,
                     emissions_by_fuel: result.emissions_by_fuel,
@@ -606,7 +607,7 @@ var FleetSidebar = (function () {
     var FOSSIL_FUEL_TYPES = new Set(['gas_ccgt', 'gas_ct', 'oil_ct', 'gas_oil_ct', 'coal_steam']);
     var STORAGE_FUEL_TYPES = new Set(['battery_4hr', 'battery_8hr', 'ldes']);
     var DEFAULT_CF = {
-        nuclear: 92, geothermal: 85, solar: 22, wind: 30,
+        nuclear: 90, geothermal: 74, solar: 22, wind: 16,
         battery_4hr: 0, battery_8hr: 0, ldes: 0
     };
 
@@ -766,6 +767,7 @@ var FleetSidebar = (function () {
                     // Cache the results and current params for save
                     lastComputedResults = {
                         envelope: result.envelope,
+                        intensity_envelope: result.intensity_envelope,
                         plant_detail: result.plant_detail,
                         generation_by_fuel: result.generation_by_fuel,
                         emissions_by_fuel: result.emissions_by_fuel,
@@ -778,6 +780,7 @@ var FleetSidebar = (function () {
                         description: scenarioName,
                         color: '#2372B9',
                         envelope: result.envelope,
+                        intensity_envelope: result.intensity_envelope,
                         plant_detail: result.plant_detail,
                         generation_by_fuel: result.generation_by_fuel,
                         emissions_by_fuel: result.emissions_by_fuel,
@@ -1110,7 +1113,9 @@ var FleetSidebar = (function () {
         getVisibleScenarios: function () {
             return savedScenarios.filter(function (s) { return s.isVisible && s.results; });
         },
-        getFleetPlants: function () { return fleetPlants.concat(addedPlants); }
+        getFleetPlants: function () { return fleetPlants.concat(addedPlants); },
+        getSweepData: function () { return sweepData; },
+        getCcsParams: function () { return Object.assign({}, ccsParams); }
     };
 
 })();
