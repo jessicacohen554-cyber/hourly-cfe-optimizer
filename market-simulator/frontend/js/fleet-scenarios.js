@@ -55,6 +55,17 @@
         return Object.keys(DATA.scenarios.baseline.envelope).map(Number).sort(function (a, b) { return a - b; });
     }
 
+    /** Return an array of pointRadius values: `radius` at 5-year intervals, 0 elsewhere. */
+    function fiveYearRadii(years, radius) {
+        return years.map(function (y) { return y % 5 === 0 ? radius : 0; });
+    }
+
+    /** Tooltip filter: only show tooltips at 5-year intervals. */
+    function fiveYearTooltipFilter(item) {
+        var label = item.label || '';
+        return Number(label) % 5 === 0;
+    }
+
     function hexToRgba(hex, alpha) {
         var r = parseInt(hex.slice(1, 3), 16);
         var g = parseInt(hex.slice(3, 5), 16);
@@ -140,6 +151,7 @@
         buildIntensityFanChart();
         buildFuelEmissionsChart();
         updateFanLegend();
+        buildPlantDrilldownCharts();
     }
 
     // ====================================================================
@@ -420,6 +432,8 @@
         var p50Width = (p50Style && p50Style.width) ? p50Style.width : 2.5;
         var p50Dash  = (p50Style && p50Style.dash) ? p50Style.dash : [];
         var p50Radius = (p50Style && p50Style.pointRadius != null) ? p50Style.pointRadius : 3;
+        var p50RadiusArr = fiveYearRadii(years, p50Radius);
+        var p50HoverArr  = fiveYearRadii(years, 5);
         var p50Label = (p50Style && p50Style.legendLabel) ? p50Style.legendLabel : label;
 
         // 1. p10 (invisible bottom boundary)
@@ -445,9 +459,9 @@
             backgroundColor: 'transparent',
             borderWidth: p50Width,
             borderDash: p50Dash,
-            pointRadius: p50Radius,
+            pointRadius: p50RadiusArr,
             pointBackgroundColor: p50Color,
-            pointHoverRadius: 5,
+            pointHoverRadius: p50HoverArr,
             fill: false, tension: 0.3,
             _scenarioKey: label, _band: 'p50',
             _showInLegend: true,
@@ -586,7 +600,7 @@
                 }
             }
             addFanDatasets(datasets, baseEnv, years, BASELINE_COLOR, 'Baseline', mode, {
-                color: BASELINE_COLOR, width: 2.5, dash: [], pointRadius: 0,
+                color: BASELINE_COLOR, width: 2.5, dash: [], pointRadius: 3,
                 legendLabel: 'Baseline (Baseline)'
             }, { isBaseline: true, scenarioName: 'Baseline' });
         }
@@ -738,6 +752,12 @@
         if (tooltipModel.dataPoints && tooltipModel.dataPoints.length) {
             var idx = tooltipModel.dataPoints[0].dataIndex;
             var year = fanChart.data.labels[idx];
+
+            // Only show tooltip at 5-year intervals
+            if (Number(year) % 5 !== 0) {
+                tooltipEl.classList.remove('visible');
+                return;
+            }
             var html = '<div class="fan-tooltip-title">' + year + '</div>';
 
             var baseEnv = DATA.scenarios.baseline ? getEnvelope(DATA.scenarios.baseline) : null;
@@ -810,6 +830,87 @@
         tooltipEl.style.left = left + 'px';
         tooltipEl.style.top = top + 'px';
         tooltipEl.classList.add('visible');
+    }
+
+    // ── Custom tooltip for Intensity Fan Chart ──
+    function intensityFanTooltipHandler(context) {
+        var tooltipEl = document.getElementById('intensityFanTooltip');
+        if (!tooltipEl) return;
+        var tooltipModel = context.tooltip;
+
+        if (tooltipModel.opacity === 0) {
+            tooltipEl.classList.remove('visible');
+            return;
+        }
+
+        if (tooltipModel.dataPoints && tooltipModel.dataPoints.length) {
+            var idx = tooltipModel.dataPoints[0].dataIndex;
+            var year = intensityFanChart.data.labels[idx];
+
+            // Only show tooltip at 5-year intervals
+            if (Number(year) % 5 !== 0) {
+                tooltipEl.classList.remove('visible');
+                return;
+            }
+
+            var html = '<div class="fan-tooltip-title">' + year + '</div>';
+
+            var baseline = DATA.scenarios.baseline;
+            var baseIntEnv = baseline && baseline.intensity_envelope ? baseline.intensity_envelope : null;
+            var baseYear = baseIntEnv ? baseIntEnv[year] : null;
+            var baseline2023 = baseIntEnv && baseIntEnv['2023'] ? baseIntEnv['2023'].p50 : null;
+
+            // Baseline row
+            if (baseYear) {
+                html += intensityTooltipRow(baseYear.p50, BASELINE_COLOR, 'Baseline', baseline2023);
+            }
+
+            // Custom scenario row
+            if (customScenario && customScenario.intensity_envelope && customScenario.intensity_envelope[year]) {
+                var custVal = customScenario.intensity_envelope[year].p50;
+                html += intensityTooltipRow(custVal, CUSTOM_COLOR, 'Custom', baseline2023);
+                if (baseYear) {
+                    var delta = custVal - baseYear.p50;
+                    var cls = delta < 0 ? 'gap-negative' : 'gap-positive';
+                    var sign = delta > 0 ? '+' : '';
+                    html += '<div class="fan-tooltip-gap"><span class="' + cls + '">' +
+                        sign + delta.toFixed(1) + ' kgCO₂/MWh vs Baseline</span></div>';
+                }
+            }
+
+            // Saved scenario rows
+            savedScenarioOverlays.forEach(function (s) {
+                if (!s.results || !s.results.intensity_envelope || !s.results.intensity_envelope[year]) return;
+                var sVal = s.results.intensity_envelope[year].p50;
+                html += intensityTooltipRow(sVal, s.color, s.name || 'Saved', baseline2023);
+            });
+
+            tooltipEl.innerHTML = html;
+        }
+
+        var canvas = context.chart.canvas;
+        var rect = canvas.getBoundingClientRect();
+        var left = tooltipModel.caretX;
+        var top = tooltipModel.caretY;
+        if (left + 320 > rect.width) left = left - 340;
+        if (left < 10) left = 10;
+        if (top < 10) top = 10;
+        tooltipEl.style.left = left + 'px';
+        tooltipEl.style.top = top + 'px';
+        tooltipEl.classList.add('visible');
+    }
+
+    function intensityTooltipRow(value, color, label, baseline2023) {
+        var pctStr = '';
+        if (baseline2023 && baseline2023 > 0) {
+            var pct = ((baseline2023 - value) / baseline2023 * 100).toFixed(1);
+            pctStr = '<span style="opacity:0.7;margin-left:6px;">(' +
+                (pct >= 0 ? '−' : '+') + Math.abs(parseFloat(pct)).toFixed(1) + '% vs 2023)</span>';
+        }
+        return '<div class="fan-tooltip-row">' +
+            '<span class="fan-tooltip-swatch" style="background:' + color + '"></span>' +
+            '<span class="fan-tooltip-label">' + label + '</span>' +
+            '<span class="fan-tooltip-vals">' + value.toFixed(1) + ' kgCO₂/MWh' + pctStr + '</span></div>';
     }
 
     // ── Fan legend (below chart — shows band key in single mode) ──
@@ -1106,6 +1207,7 @@
                 plugins: {
                     legend: { display: false },
                     tooltip: {
+                        filter: fiveYearTooltipFilter,
                         callbacks: {
                             label: function (ctx) {
                                 if (!ctx.raw) return null;
@@ -1153,7 +1255,7 @@
                 borderWidth: 1.5,
                 fill: true,
                 pointRadius: 0,
-                pointHoverRadius: 4,
+                pointHoverRadius: fiveYearRadii(years, 4),
                 tension: 0.3
             });
         });
@@ -1342,12 +1444,8 @@
                         }
                     },
                     tooltip: {
-                        callbacks: {
-                            label: function (ctx) {
-                                if (ctx.raw == null) return null;
-                                return ctx.dataset.label + ': ' + ctx.raw.toFixed(1) + ' kgCO₂/MWh';
-                            }
-                        }
+                        enabled: false,
+                        external: intensityFanTooltipHandler
                     }
                 }
             }
@@ -1427,6 +1525,7 @@
             tension: 0.3
         });
         // p50 line
+        var r = isBaseline ? 3 : 3;
         datasets.push({
             label: label,
             data: p50,
@@ -1434,9 +1533,9 @@
             backgroundColor: 'transparent',
             borderWidth: 2.5,
             borderDash: isBaseline ? [] : [],
-            pointRadius: isBaseline ? 0 : 3,
+            pointRadius: fiveYearRadii(years, r),
             pointBackgroundColor: color,
-            pointHoverRadius: 5,
+            pointHoverRadius: fiveYearRadii(years, 5),
             fill: false, tension: 0.3,
             _showInLegend: true
         });
@@ -1476,6 +1575,7 @@
                 plugins: {
                     legend: { display: false },
                     tooltip: {
+                        filter: fiveYearTooltipFilter,
                         callbacks: {
                             label: function (ctx) {
                                 var total = 0;
@@ -1517,8 +1617,8 @@
                 borderColor: FUEL_COLORS[fuel],
                 backgroundColor: hexToRgba(FUEL_COLORS[fuel], 0.55),
                 borderWidth: 1.5,
-                pointRadius: 2,
-                pointHoverRadius: 4,
+                pointRadius: fiveYearRadii(years, 2),
+                pointHoverRadius: fiveYearRadii(years, 4),
                 fill: true,
                 tension: 0.3
             };
@@ -1553,8 +1653,11 @@
             if (!DATA) return;
             // Replace the precomputed baseline with engine-computed baseline
             DATA.scenarios.baseline = baselineData;
-            // Derive intensity envelope for the new baseline
-            deriveIntensityEnvelope(DATA.scenarios.baseline);
+            // Only derive intensity envelope if engine didn't provide one
+            // (engine computes proper P10/P50/P90 spread across all scenarios)
+            if (!DATA.scenarios.baseline.intensity_envelope) {
+                deriveIntensityEnvelope(DATA.scenarios.baseline);
+            }
             // Rebuild all charts with the new baseline
             updateAllCharts();
         },
@@ -1577,6 +1680,309 @@
         getData: function () { return DATA; },
         getYears: getYears
     };
+
+    // ====================================================================
+    // PLANT DRILL-DOWN CHARTS
+    // ====================================================================
+    var plantGenChart = null;
+    var plantEmisChart = null;
+
+    function buildPlantDrilldownCharts() {
+        if (!DATA) return;
+        populatePlantSelector();
+
+        var genCtx = document.getElementById('plantGenChart');
+        var emisCtx = document.getElementById('plantEmisChart');
+        if (!genCtx || !emisCtx) return;
+
+        var chartOpts = {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 600 },
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                x: {
+                    title: { display: true, text: 'Year', font: { size: 12 } },
+                    grid: { display: false },
+                    ticks: { maxRotation: 0, font: { size: 11 } }
+                },
+                y: {
+                    grid: { color: '#E0E6EF' },
+                    beginAtZero: true,
+                    ticks: { font: { size: 11 } }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true, position: 'top', align: 'end',
+                    labels: {
+                        filter: function (item, chartData) {
+                            var ds = chartData.datasets[item.datasetIndex];
+                            return ds && ds._showInLegend;
+                        },
+                        usePointStyle: true, pointStyle: 'line', padding: 12,
+                        font: { size: 11 }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function (ctx) {
+                            if (ctx.dataset._band) return null;
+                            var val = ctx.parsed.y;
+                            return ctx.dataset.label + ': ' + val.toLocaleString(undefined, { maximumFractionDigits: 0 });
+                        }
+                    },
+                    filter: function (item) {
+                        if (Number(item.label) % 5 !== 0) return false;
+                        return item.dataset._band === 'p50' || !item.dataset._band;
+                    }
+                }
+            }
+        };
+
+        plantGenChart = new Chart(genCtx.getContext('2d'), {
+            type: 'line',
+            data: { labels: [], datasets: [] },
+            options: Object.assign({}, chartOpts, {
+                scales: Object.assign({}, chartOpts.scales, {
+                    y: Object.assign({}, chartOpts.scales.y, {
+                        title: { display: true, text: 'GWh', font: { size: 12 } }
+                    })
+                })
+            })
+        });
+        plantEmisChart = new Chart(emisCtx.getContext('2d'), {
+            type: 'line',
+            data: { labels: [], datasets: [] },
+            options: Object.assign({}, chartOpts, {
+                scales: Object.assign({}, chartOpts.scales, {
+                    y: Object.assign({}, chartOpts.scales.y, {
+                        title: { display: true, text: 'Metric tons CO₂', font: { size: 12 } }
+                    })
+                })
+            })
+        });
+
+        // Wire events
+        var plantSel = document.getElementById('plantSelector');
+        var intSel = document.getElementById('interventionSelector');
+        var intYear = document.getElementById('interventionYear');
+        if (plantSel) plantSel.addEventListener('change', function () {
+            updateInterventionOptions();
+            updatePlantDrilldownCharts();
+        });
+        if (intSel) intSel.addEventListener('change', updatePlantDrilldownCharts);
+        if (intYear) intYear.addEventListener('change', updatePlantDrilldownCharts);
+    }
+
+    function populatePlantSelector() {
+        var sel = document.getElementById('plantSelector');
+        if (!sel || !DATA || !DATA.scenarios || !DATA.scenarios.baseline) return;
+
+        var pp = DATA.scenarios.baseline.plant_percentiles;
+        if (!pp) return;
+
+        // Group by fuel type
+        var groups = {};
+        Object.keys(pp).forEach(function (oid) {
+            var p = pp[oid];
+            var ft = p.fuel_type;
+            var label = ft === 'nuclear' ? 'Nuclear' :
+                        ft === 'geothermal' ? 'Geothermal' :
+                        ft === 'gas_ccgt' ? 'Gas CCGT' :
+                        ft === 'gas_ct' ? 'Gas CT' :
+                        ft === 'oil_ct' ? 'Oil CT' :
+                        ft === 'gas_oil_ct' ? 'Gas/Oil CT' : ft;
+            if (!groups[label]) groups[label] = [];
+            groups[label].push({ oid: oid, name: p.name, cap: p.capacity_mw });
+        });
+
+        sel.innerHTML = '<option value="">— Select a plant —</option>';
+        var order = ['Nuclear', 'Gas CCGT', 'Gas CT', 'Gas/Oil CT', 'Oil CT', 'Geothermal'];
+        order.forEach(function (grp) {
+            if (!groups[grp]) return;
+            var og = document.createElement('optgroup');
+            og.label = grp;
+            groups[grp].sort(function (a, b) { return b.cap - a.cap; });
+            groups[grp].forEach(function (p) {
+                var opt = document.createElement('option');
+                opt.value = p.oid;
+                opt.textContent = p.name + ' (' + Math.round(p.cap) + ' MW)';
+                og.appendChild(opt);
+            });
+            sel.appendChild(og);
+        });
+    }
+
+    function updateInterventionOptions() {
+        var plantSel = document.getElementById('plantSelector');
+        var intSel = document.getElementById('interventionSelector');
+        if (!plantSel || !intSel || !DATA) return;
+
+        var oid = plantSel.value;
+        var pp = DATA.scenarios.baseline.plant_percentiles || {};
+        var plant = pp[oid];
+        if (!plant) return;
+
+        var isNuclear = plant.fuel_type === 'nuclear';
+        var isCCGT = plant.fuel_type === 'gas_ccgt';
+
+        intSel.innerHTML = '';
+        var options = [
+            { val: 'default_market', label: 'Default Market' },
+            { val: 'operating_override', label: 'Operating (forced)' },
+            { val: 'retire', label: 'Retire' }
+        ];
+        if (isCCGT) {
+            options.push({ val: 'ccs_retrofit', label: 'CCS Retrofit' });
+        }
+        if (isNuclear) {
+            options.push({ val: 'uprate', label: 'Uprate' });
+        }
+        options.forEach(function (o) {
+            var opt = document.createElement('option');
+            opt.value = o.val;
+            opt.textContent = o.label;
+            intSel.appendChild(opt);
+        });
+    }
+
+    function updatePlantDrilldownCharts() {
+        if (!plantGenChart || !plantEmisChart || !DATA) return;
+
+        var plantSel = document.getElementById('plantSelector');
+        var intSel = document.getElementById('interventionSelector');
+        var intYearEl = document.getElementById('interventionYear');
+        if (!plantSel) return;
+
+        var oid = plantSel.value;
+        if (!oid) {
+            plantGenChart.data = { labels: [], datasets: [] };
+            plantEmisChart.data = { labels: [], datasets: [] };
+            plantGenChart.update();
+            plantEmisChart.update();
+            return;
+        }
+
+        var pp = DATA.scenarios.baseline.plant_percentiles || {};
+        var plant = pp[oid];
+        if (!plant) return;
+
+        var years = getYears();
+        if (!years.length) {
+            years = [2023, 2024, 2025, 2030, 2035, 2040, 2045, 2050];
+        }
+        var labels = years.map(String);
+
+        // ── Build baseline envelope ──
+        var baseGenEnv = {};
+        var baseEmisEnv = {};
+        years.forEach(function (y) {
+            var ys = String(y);
+            var gd = plant.gen_gwh[ys];
+            var ed = plant.emissions_t[ys];
+            baseGenEnv[ys] = gd ? { p10: gd.p10, p50: gd.p50, p90: gd.p90 } : { p10: 0, p50: 0, p90: 0 };
+            baseEmisEnv[ys] = ed ? { p10: ed.p10, p50: ed.p50, p90: ed.p90 } : { p10: 0, p50: 0, p90: 0 };
+        });
+
+        // ── Build intervention envelope ──
+        var intervention = intSel ? intSel.value : 'default_market';
+        var intYear = intYearEl ? parseInt(intYearEl.value, 10) : 2030;
+        var intGenEnv = null;
+        var intEmisEnv = null;
+
+        if (intervention !== 'default_market') {
+            intGenEnv = {};
+            intEmisEnv = {};
+            years.forEach(function (y) {
+                var ys = String(y);
+                var bg = baseGenEnv[ys];
+                var be = baseEmisEnv[ys];
+
+                if (intervention === 'retire' && y >= intYear) {
+                    intGenEnv[ys] = { p10: 0, p50: 0, p90: 0 };
+                    intEmisEnv[ys] = { p10: 0, p50: 0, p90: 0 };
+                } else if (intervention === 'ccs_retrofit' && y >= intYear) {
+                    // CCS ramp: 0→30%→70%→100% over 8 years
+                    var elapsed = y - intYear;
+                    var rampFrac;
+                    if (elapsed <= 0) rampFrac = 0;
+                    else if (elapsed <= 2) rampFrac = 0.30 * elapsed / 2;
+                    else if (elapsed <= 5) rampFrac = 0.30 + 0.40 * (elapsed - 2) / 3;
+                    else if (elapsed <= 8) rampFrac = 0.70 + 0.30 * (elapsed - 5) / 3;
+                    else rampFrac = 1.0;
+                    var captureRate = rampFrac * 0.90;
+                    var derate = 0.14;
+                    // Gen decreases by derate, emissions decrease by capture
+                    intGenEnv[ys] = {
+                        p10: Math.round(bg.p10 * (1 - derate)),
+                        p50: Math.round(bg.p50 * (1 - derate)),
+                        p90: Math.round(bg.p90 * (1 - derate))
+                    };
+                    intEmisEnv[ys] = {
+                        p10: Math.round(be.p10 * (1 - captureRate)),
+                        p50: Math.round(be.p50 * (1 - captureRate)),
+                        p90: Math.round(be.p90 * (1 - captureRate))
+                    };
+                } else if (intervention === 'uprate' && y >= intYear) {
+                    // Uprate: +10% generation, 0 emissions (nuclear)
+                    var uprateFactor = 1.10;
+                    intGenEnv[ys] = {
+                        p10: Math.round(bg.p10 * uprateFactor),
+                        p50: Math.round(bg.p50 * uprateFactor),
+                        p90: Math.round(bg.p90 * uprateFactor)
+                    };
+                    intEmisEnv[ys] = { p10: 0, p50: 0, p90: 0 };
+                } else {
+                    // Before intervention year or operating_override: same as baseline
+                    intGenEnv[ys] = { p10: bg.p10, p50: bg.p50, p90: bg.p90 };
+                    intEmisEnv[ys] = { p10: be.p10, p50: be.p50, p90: be.p90 };
+                }
+            });
+        }
+
+        // ── Build datasets ──
+        var genDs = [];
+        var emisDs = [];
+
+        // Baseline fan (gray)
+        addFanDatasets(genDs, baseGenEnv, years, BASELINE_COLOR, 'Baseline', 'single', {
+            color: BASELINE_COLOR, width: 2.5, dash: [], pointRadius: 3,
+            legendLabel: 'Baseline (Market)'
+        }, { isBaseline: true, scenarioName: 'Baseline' });
+
+        addFanDatasets(emisDs, baseEmisEnv, years, BASELINE_COLOR, 'Baseline', 'single', {
+            color: BASELINE_COLOR, width: 2.5, dash: [], pointRadius: 3,
+            legendLabel: 'Baseline (Market)'
+        }, { isBaseline: true, scenarioName: 'Baseline' });
+
+        // Intervention fan (blue)
+        if (intGenEnv) {
+            var intColor = '#2372B9';
+            var intLabel = intervention === 'retire' ? 'Retire (' + intYear + ')' :
+                           intervention === 'ccs_retrofit' ? 'CCS Retrofit (' + intYear + ')' :
+                           intervention === 'uprate' ? 'Uprate (' + intYear + ')' :
+                           intervention === 'operating_override' ? 'Operating (forced)' :
+                           'Intervention';
+            addFanDatasets(genDs, intGenEnv, years, intColor, intLabel, 'single', {
+                color: intColor, width: 2.5, dash: [], pointRadius: 3,
+                legendLabel: intLabel
+            }, { isBaseline: false, scenarioName: intLabel });
+
+            addFanDatasets(emisDs, intEmisEnv, years, intColor, intLabel, 'single', {
+                color: intColor, width: 2.5, dash: [], pointRadius: 3,
+                legendLabel: intLabel
+            }, { isBaseline: false, scenarioName: intLabel });
+        }
+
+        plantGenChart.data.labels = labels;
+        plantGenChart.data.datasets = genDs;
+        plantGenChart.update('active');
+
+        plantEmisChart.data.labels = labels;
+        plantEmisChart.data.datasets = emisDs;
+        plantEmisChart.update('active');
+    }
 
     // ── Boot ──
     if (document.readyState === 'loading') {
