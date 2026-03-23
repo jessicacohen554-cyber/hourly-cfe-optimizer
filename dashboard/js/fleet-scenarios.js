@@ -1301,10 +1301,16 @@
                 backgroundColor: hexToRgba(FUEL_COLORS[fuel], 0.55),
                 borderColor: FUEL_COLORS[fuel],
                 borderWidth: 1.5,
-                borderSkipped: 'start',
-                borderRadius: { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 }
+                borderSkipped: true
             });
         });
+
+        // Only the topmost dataset gets rounded corners
+        if (datasets.length > 0) {
+            var last = datasets[datasets.length - 1];
+            last.borderRadius = { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 };
+            last.borderSkipped = 'start';
+        }
 
         var paddedLabels = padLabelsTo2052(labels);
         // Pad data arrays to match padded labels (fill trailing years with 0)
