@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from __future__ import annotations
 """
 Market Simulator — What happens to generators under different market conditions?
 ================================================================================
