@@ -246,8 +246,26 @@ def main():
     print("Computing aggregates...")
     aggregates = aggregate_sweep_percentiles(all_results)
     agg_path = os.path.join(output_dir, 'sweep_1215_aggregates.json')
+
+    class _SafeEncoder(json.JSONEncoder):
+        """Replace inf/NaN with null; stringify non-serializable types."""
+        def default(self, obj):
+            return str(obj)
+
+        def encode(self, o):
+            return super().encode(self._clean(o))
+
+        def _clean(self, o):
+            if isinstance(o, float) and (math.isinf(o) or math.isnan(o)):
+                return None
+            if isinstance(o, dict):
+                return {k: self._clean(v) for k, v in o.items()}
+            if isinstance(o, (list, tuple)):
+                return [self._clean(v) for v in o]
+            return o
+
     with open(agg_path, 'w') as f:
-        json.dump(aggregates, f, indent=2, default=str)
+        json.dump(aggregates, f, indent=2, cls=_SafeEncoder)
     print(f"Aggregates saved: {agg_path}")
 
     print(f"\nDone. Total time: {time.time() - t0:.1f}s")
