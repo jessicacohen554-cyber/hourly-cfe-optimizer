@@ -512,6 +512,19 @@
             <div class="chart-legend-bar" id="fanLegend"></div>
         </div>
 
+        <!-- Emissions Intensity Fan Chart -->
+        <div class="chart-card" id="intensityFanCard">
+            <div class="chart-card-header">
+                <div class="section-eyebrow">Emissions Intensity</div>
+                <h3 id="intensityFanTitle">Fleet Emissions Intensity (kgCO₂/MWh)</h3>
+                <p>Total fossil emissions divided by total generation (clean + fossil). Lower = cleaner grid.</p>
+            </div>
+            <div class="fan-chart-container">
+                <canvas id="intensityFanChart"></canvas>
+                <div class="fan-tooltip" id="intensityFanTooltip"></div>
+            </div>
+        </div>
+
         <!-- Secondary Charts: 2-col grid -->
         <div class="charts-grid-2">
             <!-- Waterfall -->
@@ -565,18 +578,6 @@
             <div class="chart-legend-bar" id="newCleanLegend"></div>
         </div>
 
-        <!-- Emissions Intensity Fan Chart -->
-        <div class="chart-card" id="intensityFanCard">
-            <div class="chart-card-header">
-                <div class="section-eyebrow">Emissions Intensity</div>
-                <h3 id="intensityFanTitle">Fleet Emissions Intensity (kgCO₂/MWh)</h3>
-                <p>Total fossil emissions divided by total generation (clean + fossil). Lower = cleaner grid.</p>
-            </div>
-            <div class="primary-chart-container">
-                <canvas id="intensityFanChart"></canvas>
-            </div>
-        </div>
-
         <!-- Emissions by Fuel (full width) -->
         <div class="chart-card" id="fuelEmissionsCard">
             <div class="chart-card-header">
@@ -588,6 +589,41 @@
                 <canvas id="fuelEmissionsChart"></canvas>
             </div>
             <div class="chart-legend-bar" id="fuelEmissionsLegend"></div>
+        </div>
+
+        <!-- Plant Drill-Down -->
+        <div class="chart-card" id="plantDrilldownCard">
+            <div class="chart-card-header">
+                <div class="section-eyebrow">Asset Drill-Down</div>
+                <h3>Individual Plant Trajectory</h3>
+                <p>Select a plant to inspect its baseline market trajectory. Choose an intervention to overlay the comparison.</p>
+            </div>
+            <div style="display:flex; gap:var(--space-md); flex-wrap:wrap; margin-bottom:var(--space-md); align-items:center;">
+                <select id="plantSelector" class="sb-status-select" style="flex:1; min-width:220px; padding:8px 12px; font-size:14px;">
+                    <option value="">— Select a plant —</option>
+                </select>
+                <select id="interventionSelector" class="sb-status-select" style="flex:0 0 180px; padding:8px 12px; font-size:14px;">
+                    <option value="default_market">Default Market</option>
+                    <option value="operating_override">Operating (forced)</option>
+                    <option value="retire">Retire</option>
+                    <option value="ccs_retrofit">CCS Retrofit</option>
+                </select>
+                <label style="display:flex; align-items:center; gap:4px; font-size:13px; color:var(--text-muted);">
+                    Year:
+                    <input type="number" id="interventionYear" value="2030" min="2025" max="2050" style="width:72px; padding:6px 8px; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:14px;">
+                </label>
+            </div>
+            <div class="grid-2col">
+                <div>
+                    <h4 style="text-align:center; margin-bottom:var(--space-sm); font-size:14px; color:var(--text-secondary);">Generation (GWh)</h4>
+                    <div class="chart-container-lg"><canvas id="plantGenChart"></canvas></div>
+                </div>
+                <div>
+                    <h4 style="text-align:center; margin-bottom:var(--space-sm); font-size:14px; color:var(--text-secondary);">Emissions (metric tons CO₂)</h4>
+                    <div class="chart-container-lg"><canvas id="plantEmisChart"></canvas></div>
+                </div>
+            </div>
+            <div class="chart-legend-bar" id="plantDrilldownLegend"></div>
         </div>
 
     </div>
