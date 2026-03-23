@@ -487,7 +487,7 @@
                 </div>
             </div>
             <div class="controls-group" style="flex:1; min-width: 140px;">
-                <div class="controls-group-label">Year (Waterfall)</div>
+                <div class="controls-group-label">Year (Snapshot)</div>
                 <div class="year-slider-wrap">
                     <input type="range" id="yearSlider" min="2023" max="2050" value="2030" step="1">
                     <div class="year-slider-value" id="yearSliderValue">2030</div>
@@ -498,12 +498,12 @@
             </div>
         </div>
 
-        <!-- Main Fan Chart -->
+        <!-- Main Fan Chart — All saved scenarios overlaid -->
         <div class="chart-card" id="fanChartCard">
             <div class="chart-card-header">
                 <div class="section-eyebrow">Emissions Trajectory</div>
                 <h3>Fleet Emissions Fan Chart</h3>
-                <p>Baseline fleet trajectory (muted) vs. your custom modifications (bold). Use the sidebar to model changes.</p>
+                <p>Baseline fleet trajectory (gray) with saved scenario overlays. Save a scenario to see it here.</p>
             </div>
             <div class="fan-chart-container">
                 <canvas id="fanChart"></canvas>
@@ -512,7 +512,7 @@
             <div class="chart-legend-bar" id="fanLegend"></div>
         </div>
 
-        <!-- Emissions Intensity Fan Chart -->
+        <!-- Emissions Intensity Fan Chart — All saved scenarios overlaid -->
         <div class="chart-card" id="intensityFanCard">
             <div class="chart-card-header">
                 <div class="section-eyebrow">Emissions Intensity</div>
@@ -525,7 +525,15 @@
             </div>
         </div>
 
-        <!-- Generation Mix (full width, after intensity) -->
+        <!-- Scenario Toggle Bar — Select which saved scenario drives lower charts -->
+        <div class="chart-card" id="scenarioSelectorCard" style="padding: var(--space-md) var(--space-xl); display: none;">
+            <div class="controls-group-label" style="margin-bottom: var(--space-sm);">Select Scenario for Detail Charts</div>
+            <div class="toggle-btn-group" id="scenarioToggleBar" style="flex-wrap: wrap;">
+                <button class="toggle-btn active" data-scenario-id="">Baseline</button>
+            </div>
+        </div>
+
+        <!-- Generation Mix (full width) -->
         <div class="chart-card" id="genMixCard">
             <div class="chart-card-header">
                 <div class="section-eyebrow">Generation Mix</div>
@@ -538,34 +546,7 @@
             <div class="chart-legend-bar" id="genMixLegend"></div>
         </div>
 
-        <!-- Emissions Delta Charts: 2-col grid -->
-        <div class="charts-grid-2">
-            <!-- Waterfall -->
-            <div class="chart-card" id="waterfallCard">
-                <div class="chart-card-header">
-                    <div class="section-eyebrow">Plant Impact</div>
-                    <h3 id="waterfallTitle">Emissions Delta vs Market Trajectory Baseline — 2030</h3>
-                    <p>Which plants drive the biggest emissions changes vs. market trajectory baseline?</p>
-                </div>
-                <div class="waterfall-chart-container">
-                    <canvas id="waterfallChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Waterfall vs 2023 Baseline -->
-            <div class="chart-card" id="waterfall2023Card">
-                <div class="chart-card-header">
-                    <div class="section-eyebrow">Historical Comparison</div>
-                    <h3 id="waterfall2023Title">Emissions Delta vs 2023 Baseline</h3>
-                    <p>How much have emissions changed from the actual 2023 starting point?</p>
-                </div>
-                <div class="waterfall-chart-container">
-                    <canvas id="waterfall2023Chart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- New Clean + Remaining Emissions: 2-col grid -->
+        <!-- New Clean Gen + Historical Comparison: 2-col grid -->
         <div class="charts-grid-2">
             <!-- New Clean Generation Snapshot -->
             <div class="chart-card" id="newCleanCard">
@@ -580,18 +561,43 @@
                 <div class="chart-legend-bar" id="newCleanLegend"></div>
             </div>
 
-            <!-- Emissions by Fuel -->
-            <div class="chart-card" id="fuelEmissionsCard">
+            <!-- Historical Comparison (Waterfall vs 2023) -->
+            <div class="chart-card" id="waterfall2023Card">
                 <div class="chart-card-header">
-                    <div class="section-eyebrow">Emissions Breakdown</div>
-                    <h3 id="fuelEmissionsTitle">Emissions by Fuel Type — Baseline</h3>
-                    <p>Stacked area showing coal/gas/oil emissions over time for your scenario.</p>
+                    <div class="section-eyebrow">Historical Comparison</div>
+                    <h3 id="waterfall2023Title">Emissions Delta vs 2023 Baseline</h3>
+                    <p>How much have emissions changed from the actual 2023 starting point?</p>
                 </div>
-                <div class="secondary-chart-container">
-                    <canvas id="fuelEmissionsChart"></canvas>
+                <div class="waterfall-chart-container">
+                    <canvas id="waterfall2023Chart"></canvas>
                 </div>
-                <div class="chart-legend-bar" id="fuelEmissionsLegend"></div>
             </div>
+        </div>
+
+        <!-- Emissions by Fuel Type (full width) -->
+        <div class="chart-card" id="fuelEmissionsCard">
+            <div class="chart-card-header">
+                <div class="section-eyebrow">Emissions Breakdown</div>
+                <h3 id="fuelEmissionsTitle">Emissions by Fuel Type — Baseline</h3>
+                <p>Stacked area showing gas/oil emissions over time for the selected scenario.</p>
+            </div>
+            <div class="fan-chart-container">
+                <canvas id="fuelEmissionsChart"></canvas>
+            </div>
+            <div class="chart-legend-bar" id="fuelEmissionsLegend"></div>
+        </div>
+
+        <!-- Top Emitting Plants (full width — new chart) -->
+        <div class="chart-card" id="topEmittersCard">
+            <div class="chart-card-header">
+                <div class="section-eyebrow">Plant-Level Emissions</div>
+                <h3 id="topEmittersTitle">Top Emitting Plants — Baseline</h3>
+                <p>Which unabated fossil plants contribute most to residual fleet emissions over time?</p>
+            </div>
+            <div class="fan-chart-container">
+                <canvas id="topEmittersChart"></canvas>
+            </div>
+            <div class="chart-legend-bar" id="topEmittersLegend"></div>
         </div>
 
         <!-- Plant Drill-Down -->
