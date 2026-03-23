@@ -169,7 +169,7 @@ class SimulationRequest(BaseModel):
     years: List[int] = Field(default_factory=lambda: [2030, 2035, 2040, 2045, 2050])
     # Annual granularity controls (trajectory/sweep modes)
     start_year: int = 2025              # First simulation year
-    end_year: int = 2060                # Last simulation year
+    end_year: int = 2050                # Last simulation year (aligned with EIA AEO 2025)
     year_step: int = 1                  # 1 = every year, 5 = every 5 years
     custom_overrides: CustomOverrides = Field(default_factory=CustomOverrides)
 
@@ -296,7 +296,7 @@ class SweepRequest(BaseModel):
     nuclear_retirement_threshold: Optional[float] = 30.0
     # Annual granularity controls
     start_year: int = 2025
-    end_year: int = 2060
+    end_year: int = 2050
     year_step: int = 5                  # Default to 5yr steps for sweeps (performance)
     # Optional overrides for sweep bounds (future use)
     queue_cap_levels: Optional[List[str]] = None   # e.g. ["Low", "Medium"]

@@ -58,7 +58,7 @@ const PLOTLY_LAYOUT_BASE = {
 const CONFIDENCE_ZONES = {
     high:     { start: 2025, end: 2030, color: 'rgba(34,197,94,0.08)',  border: '#22C55E', label: 'Calibrated' },
     moderate: { start: 2030, end: 2040, color: 'rgba(245,158,11,0.08)', border: '#F59E0B', label: 'Moderate Extrapolation' },
-    low:      { start: 2040, end: 2060, color: 'rgba(239,68,68,0.08)',  border: '#EF4444', label: 'High Uncertainty' },
+    low:      { start: 2040, end: 2050, color: 'rgba(239,68,68,0.08)',  border: '#EF4444', label: 'High Uncertainty' },
 };
 
 const CONFIDENCE_UNCERTAINTY = { high: 0.05, moderate: 0.15, low: 0.30 };
