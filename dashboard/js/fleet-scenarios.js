@@ -19,18 +19,18 @@
     var FUEL_KEYS   = ['nuclear', 'geothermal', 'hydro', 'wind', 'solar', 'battery', 'ldes', 'ccs_ccgt', 'gas_ccgt', 'gas_ct', 'gas_oil_ct', 'oil_ct'];
     var FUEL_LABELS = { nuclear: 'Nuclear', geothermal: 'Geothermal', wind: 'Wind', solar: 'Solar', hydro: 'Hydro', battery: 'Battery', ldes: 'LDES', gas_ccgt: 'Gas CCGT', gas_ct: 'Gas CT', gas_oil_ct: 'Gas/Oil', oil_ct: 'Oil', ccs_ccgt: 'CCS-CCGT' };
     var FUEL_COLORS = {
-        nuclear:    RESOURCE_COLORS.nuclear    || '#2372B9',
-        geothermal: RESOURCE_COLORS.geothermal || '#F47B27',
-        wind:       RESOURCE_COLORS.wind       || '#6BA543',
-        solar:      RESOURCE_COLORS.solar      || '#FBB254',
-        hydro:      RESOURCE_COLORS.hydro      || '#007FA4',
-        battery:    RESOURCE_COLORS.battery    || '#651dda',
-        ldes:       RESOURCE_COLORS.ldes       || '#651dda9a',
-        gas_ccgt:   RESOURCE_COLORS.fossilGas  || '#7F8F97',
-        gas_ct:     RESOURCE_COLORS.fossilGasCT || '#7E8083',
-        gas_oil_ct: RESOURCE_COLORS.fossilOil  ||'#8B7355',
-        oil_ct:     RESOURCE_COLORS.fossilOil  || '#6b5942',
-        ccs_ccgt:   RESOURCE_COLORS.ccs        || '#CADB2E',
+        nuclear:    '#2372B9',
+        geothermal: '#F47B27',
+        wind:       '#6BA543',
+        solar:      '#FBB254',
+        hydro:      '#007FA4',
+        battery:    '#651dda',
+        ldes:       '#651dda9a',
+        gas_ccgt:   '#7F8F97',
+        gas_ct:     '#7E8083',
+        gas_oil_ct: '#8B7355',
+        oil_ct:     '#6b5942',
+        ccs_ccgt:   '#CADB2E',
     };
     var EMISSION_FUEL_KEYS = ['gas_ccgt', 'gas_ct', 'gas_oil_ct', 'oil_ct', 'ccs_ccgt'];
 
@@ -1229,7 +1229,7 @@
     function buildGenMixChart() {
         var ctx = document.getElementById('genMixChart').getContext('2d');
         genMixChart = new Chart(ctx, {
-            type: 'line',
+            type: 'bar',
             data: { labels: [], datasets: [] },
             options: {
                 responsive: true,
@@ -1237,7 +1237,11 @@
                 animation: { duration: 300 },
                 interaction: { mode: 'index', intersect: false },
                 scales: {
-                    x: { grid: { display: false }, ticks: { font: { size: 11 }, maxRotation: 0, callback: function (val) { var y = Number(this.getLabelForValue(val)); return y > 2050 ? '' : y; } } },
+                    x: {
+                        stacked: true,
+                        grid: { display: false },
+                        ticks: { font: { size: 11 }, maxRotation: 0, callback: function (val) { var y = Number(this.getLabelForValue(val)); return y > 2050 ? '' : y; } }
+                    },
                     y: {
                         stacked: true,
                         title: { display: true, text: 'Generation (TWh)', font: { size: 12 } },
@@ -1303,17 +1307,22 @@
             datasets.push({
                 label: FUEL_LABELS[fuel] || fuel,
                 data: data,
-                backgroundColor: hexToRgba(FUEL_COLORS[fuel], 0.45),
-                borderColor: FUEL_COLORS[fuel],
-                borderWidth: 1.5,
-                fill: 'origin',
-                pointRadius: 0,
-                pointHoverRadius: 0,
-                tension: 0.3
+                backgroundColor: FUEL_COLORS[fuel],
+                borderColor: '#ffffff',
+                borderWidth: 0.5,
+                borderSkipped: true
             });
         });
 
-        genMixChart.data.labels = padLabelsTo2052(labels);
+        var paddedLabels = padLabelsTo2052(labels);
+        // Pad data arrays to match padded labels (fill trailing years with 0)
+        var padCount = paddedLabels.length - years.length;
+        if (padCount > 0) {
+            datasets.forEach(function (ds) {
+                for (var p = 0; p < padCount; p++) ds.data.push(0);
+            });
+        }
+        genMixChart.data.labels = paddedLabels;
         genMixChart.data.datasets = datasets;
         genMixChart.update('active');
 

@@ -782,11 +782,21 @@ var FleetSidebar = (function () {
                     var baseline = precomputed.scenarios.baseline;
                     var years = Object.keys(baseline.envelope).sort();
 
-                    // Build orispl → plant lookup for modified plants
+                    // Build orispl → plant AND name → plant lookup for modified plants
+                    // (orispl values may differ between constellation_scenarios.json and
+                    //  fleet_scenario_results_sample.json, so name is the reliable fallback)
                     var modifiedPlants = {};
+                    var modifiedByName = {};
+                    // Also track restart plants (year_built > 2024) for new clean gen detection
+                    var restartByName = {};
                     allPlants.forEach(function (p) {
                         if (p._action && p._action !== 'default_market') {
                             modifiedPlants[p.orispl] = p;
+                            if (p.name) modifiedByName[p.name] = p;
+                        }
+                        // Crane-type restart plants: clean fuel, year_built in future
+                        if (p.year_built && p.year_built > 2024 && !FOSSIL_FUELS.has(p.fuel_type)) {
+                            if (p.name) restartByName[p.name] = p;
                         }
                     });
 
@@ -822,7 +832,7 @@ var FleetSidebar = (function () {
 
                         // Process each baseline plant
                         basePlants.forEach(function (bp) {
-                            var mod = modifiedPlants[bp.orispl];
+                            var mod = modifiedPlants[bp.orispl] || modifiedByName[bp.name];
                             if (!mod) {
                                 // Default market — use precomputed values exactly
                                 yearPlants.push({
@@ -835,6 +845,14 @@ var FleetSidebar = (function () {
                                     gen_twh: bp.gen_twh,
                                     emissions_mt: bp.emissions_mt
                                 });
+                                // Auto-detect restart plants (e.g. Crane) as new clean generation
+                                var restartPlant = restartByName[bp.name];
+                                if (restartPlant && bp.gen_twh > 0 && yearNum >= (restartPlant.year_built || 9999)) {
+                                    var rFuel = bp.fuel_type || restartPlant.fuel_type;
+                                    if (!FOSSIL_FUELS.has(rFuel)) {
+                                        newCleanGen[rFuel] = (newCleanGen[rFuel] || 0) + bp.gen_twh;
+                                    }
+                                }
                                 return;
                             }
 
