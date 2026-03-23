@@ -22,6 +22,14 @@ import os
 from collections import defaultdict
 from datetime import datetime, timezone
 
+import numpy as np
+
+try:
+    import pandas as pd
+    HAS_PANDAS = True
+except ImportError:
+    HAS_PANDAS = False
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(SCRIPT_DIR, '..', 'data')
 OUTPUT_DIR = os.path.join(SCRIPT_DIR, '..', 'frontend', 'data')
@@ -75,6 +83,17 @@ YEARS = list(range(2023, 2061))  # Annual: 2023–2060 (38 years)
 
 # ── Capacity factors by fuel type ──
 # Used to estimate annual generation from actual plant capacity
+SWEEP_PARQUET_PATH = os.path.join(
+    SCRIPT_DIR, '..', 'results', 'sweep_1215', 'sweep_1215_flat.parquet'
+)
+
+# Mapping from fleet fuel types to sweep CF column names
+SWEEP_CF_COLS = {
+    'gas_ccgt': 'ge_gas_ccgt_cf',
+    'gas_ct': 'ge_gas_ct_cf',
+    'oil_ct': 'ge_oil_ct_cf',
+}
+
 CAPACITY_FACTORS = {
     'nuclear': 0.93,
     'gas_ccgt': 0.44,
@@ -133,6 +152,179 @@ def get_overrides():
     if _OVERRIDES is None:
         _OVERRIDES = load_overrides()
     return _OVERRIDES
+
+
+# ── Sweep percentile cache ──
+_SWEEP_CF_PERCENTILES = None
+
+
+def load_sweep_cf_percentiles():
+    """Load 1,215-scenario sweep and compute CF percentiles per ISO/year/fuel.
+
+    Returns dict: {iso: {year: {fuel: {p10, p50, p90}}}}
+    Falls back to None if sweep parquet not available.
+    """
+    global _SWEEP_CF_PERCENTILES
+    if _SWEEP_CF_PERCENTILES is not None:
+        return _SWEEP_CF_PERCENTILES
+
+    if not HAS_PANDAS or not os.path.exists(SWEEP_PARQUET_PATH):
+        print("  WARNING: Sweep parquet not found — using synthetic ±12% spread")
+        _SWEEP_CF_PERCENTILES = {}
+        return _SWEEP_CF_PERCENTILES
+
+    print("  Loading 1,215-scenario sweep for real CF percentiles...")
+    df = pd.read_parquet(SWEEP_PARQUET_PATH)
+
+    result = {}
+    for iso in df['iso'].unique():
+        result[iso] = {}
+        iso_df = df[df['iso'] == iso]
+        for year in iso_df['year'].unique():
+            yr_df = iso_df[iso_df['year'] == year]
+            year_int = int(year)
+            result[iso][year_int] = {}
+            for fuel, col in SWEEP_CF_COLS.items():
+                vals = yr_df[col].dropna()
+                if len(vals) > 10:
+                    result[iso][year_int][fuel] = {
+                        'p10': float(vals.quantile(0.10)),
+                        'p50': float(vals.quantile(0.50)),
+                        'p90': float(vals.quantile(0.90)),
+                    }
+
+    sweep_years = set()
+    for iso_data in result.values():
+        sweep_years.update(iso_data.keys())
+    print(f"  Sweep loaded: {len(result)} ISOs, years {min(sweep_years)}-{max(sweep_years)}")
+    _SWEEP_CF_PERCENTILES = result
+    return result
+
+
+def compute_fleet_emissions_sweep(plants, year, scenario='baseline',
+                                  retired_fuels=None,
+                                  base_emissions_mt=None):
+    """Compute fleet emissions at P10/P50/P90 using sweep CF variation.
+
+    Uses the sweep's P10/P50/P90 capacity factors as *relative* multipliers
+    around the fleet's central (P50) projection. For each ISO/fuel, computes
+    the ratio P10_cf/P50_cf and P90_cf/P50_cf, then applies those ratios to
+    the plant's base projected emissions.
+
+    For years with actuals (2023-2025), emissions are known — no uncertainty.
+    P10/P50/P90 are all equal to the actual value.
+
+    Returns: dict {p10: float, p50: float, p90: float} in Mt CO2
+    """
+    if retired_fuels is None:
+        retired_fuels = {}
+
+    sweep = load_sweep_cf_percentiles()
+    if not sweep:
+        return None  # Caller falls back to synthetic spread
+
+    year_factor = max(0.0, 1.0 - 0.008 * (year - 2024))
+    re_growth = 1.0 + 0.02 * (year - 2024)
+
+    # For years with actual data, emissions are known — no sweep modulation
+    # Check if all fossil plants have actuals for this year
+    has_actuals_year = year <= 2025
+
+    if has_actuals_year and base_emissions_mt is not None:
+        return {'p10': base_emissions_mt, 'p50': base_emissions_mt,
+                'p90': base_emissions_mt}
+
+    # Separate fixed emissions (non-fossil, actuals, overrides) from
+    # variable emissions (modeled fossil, subject to market conditions)
+    fixed_emissions = 0.0
+    variable_by_iso_fuel = defaultdict(float)  # (iso, fuel) -> base emissions Mt
+
+    for p in plants:
+        fuel = p['fuel_type']
+        actual_co2 = p.get('actual_co2_mt', {})
+        has_actual_emissions = any(v > 0 for k, v in actual_co2.items()
+                                   if isinstance(k, int))
+
+        if fuel not in EMISSION_RATE and not has_actual_emissions:
+            continue
+        cap = p['capacity_mw']
+        if cap <= 0:
+            continue
+
+        has_actual_for_year = year in actual_co2
+
+        if not has_actual_for_year:
+            if fuel in retired_fuels and year >= retired_fuels[fuel]:
+                continue
+            if fuel == 'gas_oil_ct' and 'oil_ct' in retired_fuels \
+                    and year >= retired_fuels['oil_ct']:
+                continue
+            if p.get('retired_year') and year >= p['retired_year']:
+                continue
+
+        orispl = p.get('orispl')
+        overrides = get_overrides()
+        year_overrides = overrides.get(str(year), {})
+        if orispl and orispl in year_overrides:
+            equity = p.get('equity', 1.0)
+            co2_mt = year_overrides[orispl]['co2_short_tons'] * equity \
+                * 0.907185 / 1e6
+            fixed_emissions += co2_mt
+            continue
+
+        if has_actual_for_year:
+            fixed_emissions += actual_co2[year] / 1e6
+            continue
+
+        # Modeled emissions — variable with market conditions
+        base_gen_twh = get_plant_gen_twh(p, fuel, year, year_factor, re_growth)
+        co2_rate = get_plant_co2_rate(p, fuel)
+        base_em = base_gen_twh * co2_rate
+        iso = p.get('iso', '')
+        variable_by_iso_fuel[(iso, fuel)] += base_em
+
+    # Apply sweep CF ratios to variable emissions
+    totals = {'p10': fixed_emissions, 'p50': fixed_emissions,
+              'p90': fixed_emissions}
+
+    for (iso, fuel), base_em in variable_by_iso_fuel.items():
+        sweep_fuel = fuel if fuel != 'gas_oil_ct' else 'gas_ct'
+        iso_year = sweep.get(iso, {}).get(year, {})
+        fuel_pcts = iso_year.get(sweep_fuel)
+
+        if fuel_pcts and fuel_pcts['p50'] > 0.001:
+            # Relative scaling: how much does P10/P90 deviate from P50?
+            ratio_p10 = fuel_pcts['p10'] / fuel_pcts['p50']
+            ratio_p90 = fuel_pcts['p90'] / fuel_pcts['p50']
+            # P10 market CF → lower dispatch → lower emissions
+            totals['p10'] += base_em * ratio_p10
+            totals['p50'] += base_em
+            totals['p90'] += base_em * ratio_p90
+        else:
+            # No sweep data — add base emissions unchanged
+            for pct in ('p10', 'p50', 'p90'):
+                totals[pct] += base_em
+
+    # CCS adjustment — applied uniformly to all percentiles
+    if scenario in ('ccs_top_emitters', 'ccs_plus_new_gas',
+                     'retire_peakers_ccs_baseload'):
+        for p in plants:
+            if p['fuel_type'] != 'gas_ccgt' or p['capacity_mw'] <= 0:
+                continue
+            if not p['ccs_eligible']:
+                continue
+            if p.get('retired_year') and year >= p['retired_year']:
+                continue
+            gen_twh = get_plant_gen_twh(p, 'gas_ccgt', year, year_factor,
+                                        re_growth)
+            co2_rate = get_plant_co2_rate(p, 'gas_ccgt')
+            ccs_ramp = min(1.0, max(0.0, (year - 2028) / 5.0))
+            reduction = gen_twh * co2_rate * ccs_ramp * 0.95
+            for pct in ('p10', 'p50', 'p90'):
+                totals[pct] -= reduction
+                totals[pct] = max(0.0, totals[pct])
+
+    return {k: round(v, 2) for k, v in totals.items()}
 
 
 def parse_number(s):
@@ -709,20 +901,31 @@ def total_emissions(emissions_by_fuel):
     return round(sum(emissions_by_fuel.values()), 2)
 
 
-def build_envelope(base_emissions_2023, scenario_emissions_by_year):
-    """Build P10/P50/P90 envelope from base emissions trajectory."""
+def build_envelope(base_emissions_2023, scenario_emissions_by_year,
+                   sweep_emissions_by_year=None):
+    """Build P10/P50/P90 envelope from sweep-derived percentiles.
+
+    If sweep_emissions_by_year is provided (from compute_fleet_emissions_sweep),
+    uses real P10/P50/P90 from 1,215 market scenarios. Otherwise falls back to
+    synthetic ±12% spread.
+    """
     envelope = {}
     envelope_by_cost = {'Low': {}, 'Medium': {}, 'High': {}}
 
     for year in YEARS:
         e = scenario_emissions_by_year.get(year, base_emissions_2023)
-        # P10/P50/P90 spread: ±12% around central estimate
-        # TODO: Replace with real 1215 sweep percentiles when available
-        spread = 0.12
-        p50 = e
-        p10 = round(p50 * (1 - spread), 1)
-        p90 = round(p50 * (1 + spread), 1)
-        p50 = round(p50, 1)
+
+        if sweep_emissions_by_year and year in sweep_emissions_by_year:
+            sw = sweep_emissions_by_year[year]
+            p10 = round(sw['p10'], 1)
+            p50 = round(sw['p50'], 1)
+            p90 = round(sw['p90'], 1)
+        else:
+            # Fallback: synthetic ±12% for years outside sweep range
+            spread = 0.12
+            p50 = round(e, 1)
+            p10 = round(p50 * (1 - spread), 1)
+            p90 = round(p50 * (1 + spread), 1)
 
         envelope[str(year)] = {'p10': p10, 'p50': p50, 'p90': p90}
 
@@ -932,8 +1135,20 @@ def build_scenario(plants, fossil_plants, scenario_key):
         )
         plant_detail[str(year)] = pd
 
+    # Compute sweep-derived P10/P50/P90 emissions per year
+    sweep_emissions = {}
+    for year in YEARS:
+        sw = compute_fleet_emissions_sweep(
+            plants, year, scenario=scenario_key, retired_fuels=retired_fuels,
+            base_emissions_mt=emissions_trajectory.get(year)
+        )
+        if sw is not None:
+            sweep_emissions[year] = sw
+
     base_e = emissions_trajectory[2023]
-    envelope, envelope_by_cost = build_envelope(base_e, emissions_trajectory)
+    envelope, envelope_by_cost = build_envelope(
+        base_e, emissions_trajectory, sweep_emissions_by_year=sweep_emissions
+    )
 
     # ── Build per-plant percentile bands for drill-down charts ──
     # Uses ±12% spread (same as fleet-level envelope) applied per-plant
@@ -1130,7 +1345,7 @@ def main():
                 f'Nuclear: {fleet_summary.get("nuclear", {}).get("capacity_mw", 0):,.0f} MW, '
                 f'Gas CCGT: {fleet_summary.get("gas_ccgt", {}).get("capacity_mw", 0):,.0f} MW, '
                 f'Total fleet: {total_cap:,.0f} MW. '
-                'Envelope P10/P90 uses ±12% synthetic spread (pending 1215 sweep integration).'
+                'Envelope P10/P90 derived from 1,215-scenario market sweep CF percentiles.'
             ),
         }
     }
@@ -1142,6 +1357,17 @@ def main():
 
     print(f"\nOutput written to: {output_path}")
     print(f"File size: {os.path.getsize(output_path):,} bytes")
+
+    # Also copy to dashboard/data/ for fleet_scenarios.html
+    dashboard_data_dir = os.path.join(SCRIPT_DIR, '..', '..', 'dashboard', 'data')
+    if os.path.isdir(dashboard_data_dir):
+        dashboard_path = os.path.join(dashboard_data_dir,
+                                       'fleet_scenario_results_sample.json')
+        with open(dashboard_path, 'w') as f:
+            json.dump(output, f, indent=2)
+        print(f"Dashboard copy: {dashboard_path}")
+    else:
+        print(f"  WARNING: dashboard/data/ not found — skipping dashboard copy")
 
 
 if __name__ == '__main__':
