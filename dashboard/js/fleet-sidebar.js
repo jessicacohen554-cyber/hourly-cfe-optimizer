@@ -986,9 +986,6 @@ var FleetSidebar = (function () {
                             });
                         });
 
-                        // Attach new clean gen to the fuel data for this year
-                        genByFuel._new_clean_gen = newCleanGen;
-
                         // Apply delta to precomputed envelope
                         customEnvelope[yr] = {
                             p10: Math.round((baseEnv.p10 + emisDelta) * 10000) / 10000,
@@ -1007,6 +1004,9 @@ var FleetSidebar = (function () {
                             p50: Math.round(intensityKg * 100) / 100,
                             p90: Math.round(intensityKg * 100) / 100
                         };
+
+                        // Attach new clean gen AFTER intensity calc (it's an object, not a number)
+                        genByFuel._new_clean_gen = newCleanGen;
 
                         customPlantDetail[yr] = yearPlants;
                         customGenByFuel[yr] = genByFuel;
