@@ -25,8 +25,8 @@ const ISO_DATA = {
 };
 
 const MODE_DESCRIPTIONS = {
-    trajectory5: "Multi-year market trajectory to 2060 at 5-year intervals. Wright's Law learning curves reduce costs each year. Shows when the market flips for each resource type.",
-    trajectory1: "Multi-year market trajectory to 2060 at annual resolution. Same model as 5-year but with single-year granularity. Detailed results downloadable as CSV.",
+    trajectory5: "Multi-year market trajectory to 2050 at 5-year intervals. Wright's Law learning curves reduce costs each year. Shows when the market flips for each resource type.",
+    trajectory1: "Multi-year market trajectory to 2050 at annual resolution. Same model as 5-year but with single-year granularity. Detailed results downloadable as CSV.",
     sweep: "Parametric market reference sweep at 5-year intervals: 3 demand × 5 price × 3 PPA × 3 gas friction × 3 queue speed × 3 new-build fossil cost = 1,215 scenarios. Upload custom CSV templates to override defaults."
 };
 
@@ -107,7 +107,7 @@ document.querySelectorAll('.mode-toggle .toggle-btn').forEach(btn => {
 // ── Year range controls ──
 function updateYearCountHint() {
     const start = parseInt(document.getElementById('startYear')?.value || 2025);
-    const end = parseInt(document.getElementById('endYear')?.value || 2060);
+    const end = parseInt(document.getElementById('endYear')?.value || 2050);
     const mode = document.querySelector('.mode-toggle .toggle-btn.active')?.dataset.mode || 'trajectory5';
     const step = MODE_STEP[mode] || 5;
     const count = Math.floor((end - start) / step) + 1;
@@ -582,7 +582,7 @@ function collectFormData() {
     // Trajectory params (all modes are trajectory-based now)
     const activeMode = document.querySelector('.mode-toggle .toggle-btn.active')?.dataset.mode || 'trajectory5';
     params.start_year = parseInt(document.getElementById('startYear')?.value || 2025);
-    params.end_year = parseInt(document.getElementById('endYear')?.value || 2060);
+    params.end_year = parseInt(document.getElementById('endYear')?.value || 2050);
     params.year_step = MODE_STEP[activeMode] || 5;
     params.learning_curves = document.querySelector('#learningToggle .toggle-btn.active')?.dataset.value === 'On';
     params.learning_speed = document.querySelector('#learningSpeedToggle .toggle-btn.active')?.dataset.value || 'Medium';
