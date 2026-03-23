@@ -256,11 +256,11 @@ var FleetSidebar = (function () {
         }
         setStatus(statusMsg);
 
-        // AUTO-COMPUTE BASELINE using same engine as custom scenarios.
-        // sweep_dispatch_data.json must contain all 7 ISOs for accurate results.
-        if (sweepData && baseFleet.length > 0) {
-            computeAndSetBaseline();
-        }
+        // Baseline uses the precomputed trajectory from fleet_scenario_results_sample.json.
+        // The JS dispatch engine doesn't model coal retirement, fleet turnover, or other
+        // dynamics that the Python sweep captures, so live-computing the baseline here
+        // produces an incorrect +14% trajectory instead of the correct -24% decline.
+        // Custom scenarios still use the live dispatch engine for accurate deltas.
     }
 
     function computeAndSetBaseline() {
