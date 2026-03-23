@@ -68,11 +68,16 @@ DEFAULT_CO2_RATES = {
     'oil_ct':     0.65,
 }
 
-DEFAULT_FUEL_PRICES = {
-    'Low':    {'coal': 2.00, 'gas': 2.00, 'oil': 8.00},
-    'Medium': {'coal': 2.25, 'gas': 3.50, 'oil': 10.50},
-    'High':   {'coal': 2.50, 'gas': 6.00, 'oil': 13.00},
-}
+# Year-varying fuel prices from EIA AEO 2025 projections
+# Falls back to static values if projection data unavailable
+try:
+    from fuel_price_projections import FUEL_PRICES as DEFAULT_FUEL_PRICES
+except ImportError:
+    DEFAULT_FUEL_PRICES = {
+        'Low':    {'coal': 2.00, 'gas': 2.00, 'oil': 8.00},
+        'Medium': {'coal': 2.25, 'gas': 3.50, 'oil': 10.50},
+        'High':   {'coal': 2.50, 'gas': 6.00, 'oil': 13.00},
+    }
 
 # ---------------------------------------------------------------------------
 # Balancing Authority → ISO mapping

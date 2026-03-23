@@ -2109,7 +2109,7 @@ CONFIDENCE_ZONES = {
         'tooltip': 'Technology costs and market structure may diverge from calibration assumptions',
     },
     'low': {
-        'start': 2040, 'end': 2060,
+        'start': 2040, 'end': 2050,
         'color': '#EF4444',
         'label': 'High Uncertainty',
         'tooltip': 'Multiple compounding uncertainties — treat as scenario exploration, not forecast',

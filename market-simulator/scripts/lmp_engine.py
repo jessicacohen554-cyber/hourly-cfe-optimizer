@@ -150,12 +150,22 @@ COST_BASED_ADDERS = {
     'SPP':   0.00,   # Energy-only — competitive offers, no regulatory markup
 }
 
-# Fuel prices ($/MMBtu) by sensitivity level
-FUEL_PRICES = {
-    'Low':    {'coal': 2.00, 'gas': 2.00, 'oil': 8.00},
-    'Medium': {'coal': 2.25, 'gas': 3.50, 'oil': 10.50},
-    'High':   {'coal': 2.50, 'gas': 6.00, 'oil': 13.00},
-}
+# Fuel prices — year-varying EIA AEO 2025 projections (real 2024 $/MMBtu)
+# Low = AEO Low Oil Price case, Medium = Reference, High = High Oil Price case
+# FUEL_PRICES dict uses 2026 values for backward compatibility with code
+# that does FUEL_PRICES['Medium']['gas']. For year-specific prices, use
+# get_fuel_prices(year, level) from fuel_price_projections.
+try:
+    from fuel_price_projections import FUEL_PRICES, get_fuel_prices as _get_fuel_prices
+except ImportError:
+    # Fallback if fuel_price_projections module not available
+    FUEL_PRICES = {
+        'Low':    {'coal': 2.00, 'gas': 2.00, 'oil': 8.00},
+        'Medium': {'coal': 2.25, 'gas': 3.50, 'oil': 10.50},
+        'High':   {'coal': 2.50, 'gas': 6.00, 'oil': 13.00},
+    }
+    def _get_fuel_prices(year, level='Medium'):
+        return dict(FUEL_PRICES.get(level, FUEL_PRICES['Medium']))
 
 # Capacity shares within fossil fleet (fraction of total fossil capacity)
 # PJM: Monitoring Analytics 2024 SOM — coal 37.8/130.6=0.29, gas 88.8/130.6=0.68, oil 4.0/130.6=0.03
