@@ -19,18 +19,18 @@
     var FUEL_KEYS   = ['nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'battery', 'ldes', 'gas_ccgt', 'gas_ct', 'gas_oil_ct', 'oil_ct', 'ccs_ccgt'];
     var FUEL_LABELS = { nuclear: 'Nuclear', geothermal: 'Geothermal', wind: 'Wind', solar: 'Solar', hydro: 'Hydro', battery: 'Battery', ldes: 'LDES', gas_ccgt: 'Gas CCGT', gas_ct: 'Gas CT', gas_oil_ct: 'Gas/Oil', oil_ct: 'Oil', ccs_ccgt: 'CCS-CCGT' };
     var FUEL_COLORS = {
-        nuclear:    RESOURCE_COLORS.nuclear || #2372B9 ,
+        nuclear:    RESOURCE_COLORS.nuclear    || '#2372B9',
         geothermal: RESOURCE_COLORS.geothermal || '#F47B27',
-        wind:       RESOURCE_COLORS.wind || '#6BA543',
-        solar:      RESOURCE_COLORS.solar || '#FBB254 ',
-        hydro:      RESOURCE_COLORS.hydro || '#007FA4',
-        battery:    RESOURCE_COLORS.battery || '#651dda',
-        ldes:       RESOURCE_COLORS.ldes || '#651dda9a',
-        gas_ccgt:   RESOURCE_COLORS.fossilGas || #7F8F97,
+        wind:       RESOURCE_COLORS.wind       || '#6BA543',
+        solar:      RESOURCE_COLORS.solar      || '#FBB254',
+        hydro:      RESOURCE_COLORS.hydro      || '#007FA4',
+        battery:    RESOURCE_COLORS.battery    || '#651dda',
+        ldes:       RESOURCE_COLORS.ldes       || '#651dda9a',
+        gas_ccgt:   RESOURCE_COLORS.fossilGas  || '#7F8F97',
         gas_ct:     RESOURCE_COLORS.fossilGasCT || '#7E8083',
         gas_oil_ct: '#8B7355',
-        oil_ct:     RESOURCE_COLORS.fossilOil || '#8B7355',
-        ccs_ccgt:   RESOURCE_COLORS.ccs || '#CADB2E',
+        oil_ct:     RESOURCE_COLORS.fossilOil  || '#8B7355',
+        ccs_ccgt:   RESOURCE_COLORS.ccs        || '#CADB2E',
     };
     var EMISSION_FUEL_KEYS = ['gas_ccgt', 'gas_ct', 'gas_oil_ct', 'oil_ct', 'ccs_ccgt'];
 
@@ -56,6 +56,13 @@
         return Object.keys(DATA.scenarios.baseline.envelope).map(Number).sort(function (a, b) { return a - b; });
     }
 
+    /** Pad labels array to 2052 for x-axis breathing room (data ends at 2050). */
+    function padLabelsTo2052(labels) {
+        var last = Number(labels[labels.length - 1]) || 2050;
+        for (var yr = last + 1; yr <= 2052; yr++) labels.push(String(yr));
+        return labels;
+    }
+
     /** Return an array of pointRadius values: `radius` at 5-year intervals, 0 elsewhere. */
     function fiveYearRadii(years, radius) {
         return years.map(function (y) { return y % 5 === 0 ? radius : 0; });
@@ -65,6 +72,35 @@
     function fiveYearTooltipFilter(item) {
         var label = item.label || '';
         return Number(label) % 5 === 0;
+    }
+
+    /** Linearly interpolate trajectory data so every year has a value (no gaps). */
+    function interpolateTrajectory(trajectory, years) {
+        // Collect known (year, value) pairs sorted by year
+        var known = [];
+        Object.keys(trajectory).forEach(function (k) {
+            if (trajectory[k] != null) known.push({ y: Number(k), v: trajectory[k] });
+        });
+        known.sort(function (a, b) { return a.y - b.y; });
+        if (known.length === 0) return years.map(function () { return null; });
+
+        return years.map(function (yr) {
+            // Exact match
+            for (var i = 0; i < known.length; i++) {
+                if (known[i].y === yr) return known[i].v;
+            }
+            // Before first known point or after last
+            if (yr <= known[0].y) return known[0].v;
+            if (yr >= known[known.length - 1].y) return known[known.length - 1].v;
+            // Find bracketing points and interpolate
+            for (var j = 0; j < known.length - 1; j++) {
+                if (yr > known[j].y && yr < known[j + 1].y) {
+                    var t = (yr - known[j].y) / (known[j + 1].y - known[j].y);
+                    return known[j].v + t * (known[j + 1].v - known[j].v);
+                }
+            }
+            return null;
+        });
     }
 
     function hexToRgba(hex, alpha) {
@@ -660,9 +696,7 @@
             if (!selTgt || selTgt === 'none' || !DATA.targets || !DATA.targets[selTgt]) return;
             var tgt = DATA.targets[selTgt];
             var style = TARGET_STYLES[selTgt] || TARGET_STYLES.custom;
-            var tgtData = years.map(function (y) {
-                return tgt.trajectory[String(y)] != null ? tgt.trajectory[String(y)] : null;
-            });
+            var tgtData = interpolateTrajectory(tgt.trajectory, years);
             datasets.push({
                 label: tgt.label,
                 data: tgtData,
@@ -678,7 +712,7 @@
             });
         });
 
-        fanChart.data.labels = labels;
+        fanChart.data.labels = padLabelsTo2052(labels);
         fanChart.data.datasets = datasets;
         updateFanChartAnnotation();
         fanChart.update('active');
@@ -1196,7 +1230,7 @@
                 animation: { duration: 300 },
                 interaction: { mode: 'index', intersect: false },
                 scales: {
-                    x: { grid: { display: false }, ticks: { font: { size: 11 }, maxRotation: 0 } },
+                    x: { grid: { display: false }, ticks: { font: { size: 11 }, maxRotation: 0, callback: function (val) { var y = Number(this.getLabelForValue(val)); return y > 2050 ? '' : y; } } },
                     y: {
                         stacked: true,
                         title: { display: true, text: 'Generation (TWh)', font: { size: 12 } },
@@ -1251,17 +1285,17 @@
             datasets.push({
                 label: FUEL_LABELS[fuel] || fuel,
                 data: data,
-                backgroundColor: FUEL_COLORS[fuel] + 'CC',
+                backgroundColor: hexToRgba(FUEL_COLORS[fuel], 0.45),
                 borderColor: FUEL_COLORS[fuel],
                 borderWidth: 1.5,
                 fill: true,
                 pointRadius: 0,
-                pointHoverRadius: fiveYearRadii(years, 4),
+                pointHoverRadius: 0,
                 tension: 0.3
             });
         });
 
-        genMixChart.data.labels = labels;
+        genMixChart.data.labels = padLabelsTo2052(labels);
         genMixChart.data.datasets = datasets;
         genMixChart.update('active');
 
@@ -1371,7 +1405,7 @@
         newCleanChart.data.labels = labels;
         newCleanChart.data.datasets = [{
             data: values,
-            backgroundColor: colors.map(function (c) { return c + 'CC'; }),
+            backgroundColor: colors.map(function (c) { return hexToRgba(c, 0.45); }),
             borderColor: colors,
             borderWidth: 1.5,
             borderRadius: 4,
@@ -1494,7 +1528,7 @@
             addIntensityFanDatasets(datasets, alignedIntEnv, years, CUSTOM_COLOR, 'Custom', false);
         }
 
-        intensityFanChart.data.labels = labels;
+        intensityFanChart.data.labels = padLabelsTo2052(labels);
         intensityFanChart.data.datasets = datasets;
         intensityFanChart.update('active');
     }
@@ -1564,7 +1598,7 @@
                 animation: { duration: 300 },
                 interaction: { mode: 'index', intersect: false },
                 scales: {
-                    x: { grid: { display: false }, ticks: { font: { size: 12 }, maxRotation: 0 } },
+                    x: { grid: { display: false }, ticks: { font: { size: 12 }, maxRotation: 0, callback: function (val) { var y = Number(this.getLabelForValue(val)); return y > 2050 ? '' : y; } } },
                     y: {
                         stacked: true,
                         title: { display: true, text: 'Emissions (Mt CO₂)', font: { size: 12 } },
@@ -1616,16 +1650,16 @@
                 label: FUEL_LABELS[fuel] || fuel,
                 data: data,
                 borderColor: FUEL_COLORS[fuel],
-                backgroundColor: hexToRgba(FUEL_COLORS[fuel], 0.55),
+                backgroundColor: hexToRgba(FUEL_COLORS[fuel], 0.45),
                 borderWidth: 1.5,
-                pointRadius: fiveYearRadii(years, 2),
-                pointHoverRadius: fiveYearRadii(years, 4),
+                pointRadius: 0,
+                pointHoverRadius: 0,
                 fill: true,
                 tension: 0.3
             };
         });
 
-        fuelEmissionsChart.data.labels = labels;
+        fuelEmissionsChart.data.labels = padLabelsTo2052(labels);
         fuelEmissionsChart.data.datasets = datasets;
         fuelEmissionsChart.update('active');
 
