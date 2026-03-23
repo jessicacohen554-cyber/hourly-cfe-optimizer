@@ -11,28 +11,29 @@
     'use strict';
 
     var TARGET_STYLES = {
-        sbti_15:     { color: '#DC2626', dash: [8, 4], label: 'SBTi 1.5°C' },
-        at_power_nz: { color: '#6366F1', dash: [],     label: 'AT Power NZ' },
-        custom:      { color: '#6B7280', dash: [4, 4], label: 'Custom' }
+        sbti_15:     { color: '#ad1dca', dash: [8, 4], label: 'SBTi 1.5°C' },
+        at_power_nz: { color: '#6366F1', dash: [8, 4],     label: 'AT Power NZ' },
+        custom:      { color: '#000205', dash: [4, 4], label: 'Custom' }
     };
 
     var FUEL_KEYS   = ['nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'battery', 'ldes', 'gas_ccgt', 'gas_ct', 'gas_oil_ct', 'oil_ct', 'ccs_ccgt'];
     var FUEL_LABELS = { nuclear: 'Nuclear', geothermal: 'Geothermal', wind: 'Wind', solar: 'Solar', hydro: 'Hydro', battery: 'Battery', ldes: 'LDES', gas_ccgt: 'Gas CCGT', gas_ct: 'Gas CT', gas_oil_ct: 'Gas/Oil', oil_ct: 'Oil', ccs_ccgt: 'CCS-CCGT' };
     var FUEL_COLORS = {
-        nuclear:    RESOURCE_COLORS.nuclear,
-        geothermal: RESOURCE_COLORS.geothermal || '#D97706',
-        wind:       RESOURCE_COLORS.wind || '#22C55E',
-        solar:      RESOURCE_COLORS.solar || '#F59E0B',
-        hydro:      RESOURCE_COLORS.hydro || '#0EA5E9',
-        battery:    RESOURCE_COLORS.battery || '#06B6D4',
-        ldes:       RESOURCE_COLORS.ldes || '#E91E63',
-        gas_ccgt:   RESOURCE_COLORS.fossilGas,
-        gas_ct:     RESOURCE_COLORS.fossilGasCT || '#007FA4',
+        nuclear:    RESOURCE_COLORS.nuclear || #2372B9 ,
+        geothermal: RESOURCE_COLORS.geothermal || '#F47B27',
+        wind:       RESOURCE_COLORS.wind || '#6BA543',
+        solar:      RESOURCE_COLORS.solar || '#FBB254 ',
+        hydro:      RESOURCE_COLORS.hydro || '#007FA4',
+        battery:    RESOURCE_COLORS.battery || '#651dda',
+        ldes:       RESOURCE_COLORS.ldes || '#651dda9a',
+        gas_ccgt:   RESOURCE_COLORS.fossilGas || #7F8F97,
+        gas_ct:     RESOURCE_COLORS.fossilGasCT || '#7E8083',
         gas_oil_ct: '#8B7355',
-        oil_ct:     RESOURCE_COLORS.fossilOil,
-        ccs_ccgt:   RESOURCE_COLORS.ccs
+        oil_ct:     RESOURCE_COLORS.fossilOil || '#8B7355',
+        ccs_ccgt:   RESOURCE_COLORS.ccs || '#CADB2E',
     };
     var EMISSION_FUEL_KEYS = ['gas_ccgt', 'gas_ct', 'gas_oil_ct', 'oil_ct', 'ccs_ccgt'];
+
 
     // ── State ──
     var DATA = null;
