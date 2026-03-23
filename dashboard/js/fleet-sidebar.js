@@ -21,9 +21,9 @@ var FleetSidebar = (function () {
     var openGroups = new Set(); // Track which accordion groups are open across re-renders
     var lastComputedResults = null; // Cache most recent recalculation results
 
-    var MAX_SCENARIOS = 5;
+    var MAX_SCENARIOS = 8;
     var SCENARIO_STORAGE_KEY = 'market-sim-scenarios';
-    var SCENARIO_COLORS = ['#2372B9', '#F47B27', '#6BA543', '#9C27B0', '#E91E63'];
+    var SCENARIO_COLORS = ['#2372B9', '#F47B27', '#6BA543', '#651dda','#007FA4', '#FBB254', '#CADB2E', '#651dda9a'];
 
     // ── Fuel labels ──
     var FUEL_LABELS = {
@@ -49,9 +49,9 @@ var FleetSidebar = (function () {
 
     // ── CCS global parameters ──
     var ccsParams = {
-        derate_pct: 14,       // 0-30%, default 14%
-        capture_rate_pct: 90, // 50-99%, default 90%
-        cf_pct: 85            // 20-95%, default 85% — max CF for CCS-retrofitted plants
+        derate_pct: 14,       // 0-30%, default 13%
+        capture_rate_pct: 90, // 50-99%, default 95%
+        cf_pct: 85            // 20-95%, default 80% — max CF for CCS-retrofitted plants
     };
 
     function cacheElements() {
@@ -382,10 +382,10 @@ var FleetSidebar = (function () {
                     storage: 'Energy Storage'
                 };
                 var catColors = {
-                    nuclear: '#6366F1',
-                    renewable: '#22C55E',
-                    fossil: '#6B7280',
-                    storage: '#06B6D4'
+                    nuclear: '#2372B9',
+                    renewable: '#6BA543',
+                    fossil: '#7E8083',
+                    storage: '#651dda'
                 };
                 html += '<div class="sb-category-header" style="background:' + (catColors[group.category] || '#888') + ';color:#fff;padding:8px 12px;font-weight:700;font-size:0.85rem;margin-top:8px;border-radius:6px 6px 0 0;">';
                 html += (catLabels[group.category] || group.category);
