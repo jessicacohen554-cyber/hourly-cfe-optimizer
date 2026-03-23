@@ -15,7 +15,7 @@ var RESOURCE_COLORS = {
     offshoreWind: '#009688',
     hydro:        '#0EA5E9',
     nuclear:      '#6366F1',
-    ccs:          '#64748B',
+    ccs:          '#26A69A',
     cleanFirm:    '#6366F1',
     battery:      '#06B6D4',   // Battery 4hr - cyan
     battery4:     '#06B6D4',   // Battery 4hr alias
@@ -35,7 +35,7 @@ var RESOURCE_COLORS = {
     offshoreWindT: 'rgba(0, 150, 136, 0.55)',
     hydroT:        'rgba(14, 165, 233, 0.55)',
     nuclearT:      'rgba(99, 102, 241, 0.55)',
-    ccsT:          'rgba(100, 116, 139, 0.55)',
+    ccsT:          'rgba(38, 166, 154, 0.55)',
     cleanFirmT:    'rgba(99, 102, 241, 0.55)',
     batteryT:      'rgba(6, 182, 212, 0.55)',   // Battery 4hr
     battery4T:     'rgba(6, 182, 212, 0.55)',   // Battery 4hr alias
@@ -52,7 +52,7 @@ var RESOURCE_COLORS = {
     offshoreWindBg: 'rgba(0, 150, 136, 0.08)',
     hydroBg:        'rgba(14, 165, 233, 0.08)',
     nuclearBg:      'rgba(99, 102, 241, 0.08)',
-    ccsBg:          'rgba(100, 116, 139, 0.08)',
+    ccsBg:          'rgba(38, 166, 154, 0.08)',
     batteryBg:      'rgba(6, 182, 212, 0.08)',   // Battery 4hr
     battery4Bg:     'rgba(6, 182, 212, 0.08)',
     battery8Bg:     'rgba(8, 145, 178, 0.08)',

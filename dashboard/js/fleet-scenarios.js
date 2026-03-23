@@ -280,14 +280,21 @@
         var tooltipEl = document.getElementById('fanTooltip');
         if (tooltipEl) tooltipEl.classList.remove('visible');
 
-        updateFanChart();
-        updateFanLegend();
-        updateWaterfallChart();
-        updateWaterfall2023Chart();
-        updateGenMixChart();
-        updateNewCleanChart();
-        updateIntensityFanChart();
-        updateFuelEmissionsChart();
+        // Wrap each chart update in try/catch so one failure doesn't cascade
+        var updates = [
+            ['fanChart', updateFanChart],
+            ['fanLegend', updateFanLegend],
+            ['waterfallChart', updateWaterfallChart],
+            ['waterfall2023Chart', updateWaterfall2023Chart],
+            ['genMixChart', updateGenMixChart],
+            ['newCleanChart', updateNewCleanChart],
+            ['intensityFanChart', updateIntensityFanChart],
+            ['fuelEmissionsChart', updateFuelEmissionsChart]
+        ];
+        updates.forEach(function (pair) {
+            try { pair[1](); }
+            catch (err) { console.error('updateAllCharts — ' + pair[0] + ' failed:', err); }
+        });
     }
 
     // ====================================================================
@@ -1273,6 +1280,15 @@
         var labels = years.map(String);
         var gen = sc.generation_by_fuel;
 
+        // Debug: log what scenario we're using and sample data
+        if (customScenario) {
+            var g30 = gen && gen['2030'];
+            console.log('[fleet-scenarios] updateGenMixChart: using CUSTOM scenario',
+                '| has gen_by_fuel:', !!gen,
+                '| 2030 fuels:', g30 ? Object.keys(g30).join(',') : 'MISSING',
+                '| 2030 nuclear:', g30 ? g30.nuclear : 'N/A');
+        }
+
         // Build stacked area datasets — only include fuels with non-zero generation
         var datasets = [];
         FUEL_KEYS.forEach(function (fuel) {
@@ -1394,6 +1410,13 @@
                 colors.push(FUEL_COLORS[fuel] || '#9CA3AF');
             }
         });
+
+        // Debug: log new clean gen deltas
+        if (customScenario) {
+            console.log('[fleet-scenarios] updateNewCleanChart:', yr,
+                '| deltas:', labels.map(function(l, i) { return l + '=' + values[i]; }).join(', ') || 'NONE',
+                '| baseGen nuclear:', baseGen.nuclear, '| custGen nuclear:', custGen.nuclear);
+        }
 
         // If no custom scenario, show empty state
         if (!customScenario) {
@@ -1525,7 +1548,17 @@
                 baseline ? baseline.intensity_envelope : null,
                 firstYear
             );
+            console.log('[fleet-scenarios] updateIntensityFanChart: custom line rendering',
+                '| firstYear:', firstYear,
+                '| custom intensity 2030:', customScenario.intensity_envelope['2030'],
+                '| aligned 2030:', alignedIntEnv['2030'],
+                '| dataset count before:', datasets.length);
             addIntensityFanDatasets(datasets, alignedIntEnv, years, CUSTOM_COLOR, 'Custom', false);
+            console.log('[fleet-scenarios] updateIntensityFanChart: dataset count after:', datasets.length);
+        } else {
+            console.log('[fleet-scenarios] updateIntensityFanChart: NO custom line',
+                '| customScenario:', !!customScenario,
+                '| has intensity_envelope:', customScenario ? !!customScenario.intensity_envelope : false);
         }
 
         intensityFanChart.data.labels = padLabelsTo2052(labels);
@@ -1675,6 +1708,17 @@
     window.FLEET_SCENARIOS_API = {
         setCustomScenario: function (label, data) {
             customScenario = data;
+            // Debug: verify custom scenario data integrity
+            if (data) {
+                var yr2030 = data.generation_by_fuel && data.generation_by_fuel['2030'];
+                var intYr = data.intensity_envelope && data.intensity_envelope['2030'];
+                console.log('[fleet-scenarios] setCustomScenario:', label,
+                    '| gen_by_fuel keys:', data.generation_by_fuel ? Object.keys(data.generation_by_fuel).length : 0,
+                    '| 2030 gen:', yr2030 ? JSON.stringify(yr2030) : 'MISSING',
+                    '| 2030 intensity:', intYr ? intYr.p50 + ' kg/MWh' : 'MISSING',
+                    '| has envelope:', !!data.envelope,
+                    '| has intensity_envelope:', !!data.intensity_envelope);
+            }
             updateAllCharts();
         },
         clearCustomScenario: function () {
