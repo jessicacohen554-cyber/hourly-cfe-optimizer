@@ -11,48 +11,68 @@
     'use strict';
 
     var TARGET_STYLES = {
-        sbti_15:     { color: '#DC2626', dash: [8, 4], label: 'SBTi 1.5°C' },
-        at_power_nz: { color: '#6366F1', dash: [],     label: 'AT Power NZ' },
-        custom:      { color: '#6B7280', dash: [4, 4], label: 'Custom' }
+        sbti_15:     { color: '#ad1dca', dash: [8, 4], label: 'SBTi 1.5°C' },
+        at_power_nz: { color: '#6366F1', dash: [8, 4],     label: 'AT Power NZ' },
+        custom:      { color: '#000205', dash: [4, 4], label: 'Custom' }
     };
 
-    var FUEL_KEYS   = ['nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'battery', 'ldes', 'gas_ccgt', 'gas_ct', 'gas_oil_ct', 'oil_ct', 'ccs_ccgt'];
+    var FUEL_KEYS   = ['nuclear', 'geothermal', 'hydro', 'wind', 'solar', 'battery', 'ldes', 'ccs_ccgt', 'gas_ccgt', 'gas_ct', 'gas_oil_ct', 'oil_ct'];
     var FUEL_LABELS = { nuclear: 'Nuclear', geothermal: 'Geothermal', wind: 'Wind', solar: 'Solar', hydro: 'Hydro', battery: 'Battery', ldes: 'LDES', gas_ccgt: 'Gas CCGT', gas_ct: 'Gas CT', gas_oil_ct: 'Gas/Oil', oil_ct: 'Oil', ccs_ccgt: 'CCS-CCGT' };
     var FUEL_COLORS = {
-        nuclear:    RESOURCE_COLORS.nuclear,
-        geothermal: RESOURCE_COLORS.geothermal || '#D97706',
-        wind:       RESOURCE_COLORS.wind || '#22C55E',
-        solar:      RESOURCE_COLORS.solar || '#F59E0B',
-        hydro:      RESOURCE_COLORS.hydro || '#0EA5E9',
-        battery:    RESOURCE_COLORS.battery || '#06B6D4',
-        ldes:       RESOURCE_COLORS.ldes || '#E91E63',
-        gas_ccgt:   RESOURCE_COLORS.fossilGas,
-        gas_ct:     RESOURCE_COLORS.fossilGasCT || '#007FA4',
+        nuclear:    '#2372B9',
+        geothermal: '#F47B27',
+        wind:       '#6BA543',
+        solar:      '#FBB254',
+        hydro:      '#007FA4',
+        battery:    '#651dda',
+        ldes:       '#651dda9a',
+        gas_ccgt:   '#7F8F97',
+        gas_ct:     '#7E8083',
         gas_oil_ct: '#8B7355',
-        oil_ct:     RESOURCE_COLORS.fossilOil,
-        ccs_ccgt:   RESOURCE_COLORS.ccs
+        oil_ct:     '#6b5942',
+        ccs_ccgt:   '#CADB2E',
     };
     var EMISSION_FUEL_KEYS = ['gas_ccgt', 'gas_ct', 'gas_oil_ct', 'oil_ct', 'ccs_ccgt'];
 
+
     // ── State ──
     var DATA = null;
-    var customScenario = null;  // Set when user recalculates from sidebar
+    var customScenario = null;  // Legacy — no longer auto-displayed; kept for API compat
     var savedScenarioOverlays = []; // Array of saved scenarios with .isVisible, .color, .results
     var selectedTargets = ['sbti_15'];
     var selectedYear = 2030;
     var selectedFossilCost = 'All';
+    var selectedLowerScenarioId = null; // null = baseline; string = saved scenario ID
     var fanChart = null;
-    var waterfallChart = null;
     var waterfall2023Chart = null;
     var genMixChart = null;
     var newCleanChart = null;
     var intensityFanChart = null;
-    var fuelEmissionsChart = null;
+
+    var topEmittersChart = null;
+
+    // ── Clean fuel keys for % low-carbon calculation ──
+    var CLEAN_FUEL_SET = { nuclear: 1, geothermal: 1, hydro: 1, wind: 1, solar: 1, battery: 1, ldes: 1, ccs_ccgt: 1 };
+
+    // ── Plant color palette for top emitters chart ──
+    var PLANT_PALETTE = ['#E53935','#1E88E5','#43A047','#FB8C00','#8E24AA','#00ACC1','#F4511E','#3949AB','#7CB342','#FFB300','#5E35B1','#00897B','#6D4C41','#C62828','#0D47A1'];
+    function plantColor(name) {
+        var h = 0;
+        for (var i = 0; i < name.length; i++) h = ((h << 5) - h + name.charCodeAt(i)) | 0;
+        return PLANT_PALETTE[Math.abs(h) % PLANT_PALETTE.length];
+    }
 
     // ── Helpers ──
     function getYears() {
         if (!DATA || !DATA.scenarios || !DATA.scenarios.baseline) return [];
         return Object.keys(DATA.scenarios.baseline.envelope).map(Number).sort(function (a, b) { return a - b; });
+    }
+
+    /** Pad labels array to 2052 for x-axis breathing room (data ends at 2050). */
+    function padLabelsTo2052(labels) {
+        var last = Number(labels[labels.length - 1]) || 2050;
+        for (var yr = last + 1; yr <= 2052; yr++) labels.push(String(yr));
+        return labels;
     }
 
     /** Return an array of pointRadius values: `radius` at 5-year intervals, 0 elsewhere. */
@@ -64,6 +84,35 @@
     function fiveYearTooltipFilter(item) {
         var label = item.label || '';
         return Number(label) % 5 === 0;
+    }
+
+    /** Linearly interpolate trajectory data so every year has a value (no gaps). */
+    function interpolateTrajectory(trajectory, years) {
+        // Collect known (year, value) pairs sorted by year
+        var known = [];
+        Object.keys(trajectory).forEach(function (k) {
+            if (trajectory[k] != null) known.push({ y: Number(k), v: trajectory[k] });
+        });
+        known.sort(function (a, b) { return a.y - b.y; });
+        if (known.length === 0) return years.map(function () { return null; });
+
+        return years.map(function (yr) {
+            // Exact match
+            for (var i = 0; i < known.length; i++) {
+                if (known[i].y === yr) return known[i].v;
+            }
+            // Before first known point or after last
+            if (yr <= known[0].y) return known[0].v;
+            if (yr >= known[known.length - 1].y) return known[known.length - 1].v;
+            // Find bracketing points and interpolate
+            for (var j = 0; j < known.length - 1; j++) {
+                if (yr > known[j].y && yr < known[j + 1].y) {
+                    var t = (yr - known[j].y) / (known[j + 1].y - known[j].y);
+                    return known[j].v + t * (known[j + 1].v - known[j].v);
+                }
+            }
+            return null;
+        });
     }
 
     function hexToRgba(hex, alpha) {
@@ -120,8 +169,8 @@
             var totalEmisMt = 0;
             var gYear = gen[yr] || {};
             var eYear = emis[yr] || {};
-            Object.keys(gYear).forEach(function (f) { totalGenTwh += gYear[f] || 0; });
-            Object.keys(eYear).forEach(function (f) { totalEmisMt += eYear[f] || 0; });
+            Object.keys(gYear).forEach(function (f) { if (f[0] !== '_') totalGenTwh += gYear[f] || 0; });
+            Object.keys(eYear).forEach(function (f) { if (f[0] !== '_') totalEmisMt += eYear[f] || 0; });
             // TWh → MWh: ×1e6. Mt → kg: ×1e9. intensity = (Mt × 1e9) / (TWh × 1e6) = Mt/TWh × 1e3
             var intensityKg = totalGenTwh > 0 ? (totalEmisMt / totalGenTwh) * 1e3 : 0;
             intEnv[yr] = {
@@ -144,13 +193,14 @@
         }
         buildControls();
         buildFanChart();
-        buildWaterfallChart();
         buildWaterfall2023Chart();
         buildGenMixChart();
         buildNewCleanChart();
         buildIntensityFanChart();
-        buildFuelEmissionsChart();
+
+        buildTopEmittersChart();
         updateFanLegend();
+        buildScenarioSelector();
         buildPlantDrilldownCharts();
     }
 
@@ -230,10 +280,10 @@
         slider.addEventListener('input', function () {
             selectedYear = Number(slider.value);
             sliderVal.textContent = slider.value;
-            updateWaterfallChart();
             updateWaterfall2023Chart();
             updateGenMixChart();
             updateNewCleanChart();
+            updateTopEmittersChart();
             updateFanChartAnnotation();
         });
     }
@@ -243,14 +293,22 @@
         var tooltipEl = document.getElementById('fanTooltip');
         if (tooltipEl) tooltipEl.classList.remove('visible');
 
-        updateFanChart();
-        updateFanLegend();
-        updateWaterfallChart();
-        updateWaterfall2023Chart();
-        updateGenMixChart();
-        updateNewCleanChart();
-        updateIntensityFanChart();
-        updateFuelEmissionsChart();
+        // Wrap each chart update in try/catch so one failure doesn't cascade
+        var updates = [
+            ['fanChart', updateFanChart],
+            ['fanLegend', updateFanLegend],
+            ['scenarioSelector', updateScenarioSelector],
+            ['waterfall2023Chart', updateWaterfall2023Chart],
+            ['genMixChart', updateGenMixChart],
+            ['newCleanChart', updateNewCleanChart],
+            ['intensityFanChart', updateIntensityFanChart],
+
+            ['topEmittersChart', updateTopEmittersChart]
+        ];
+        updates.forEach(function (pair) {
+            try { pair[1](); }
+            catch (err) { console.error('updateAllCharts — ' + pair[0] + ' failed:', err); }
+        });
     }
 
     // ====================================================================
@@ -365,10 +423,10 @@
                         document.getElementById('yearSlider').value = year;
                         selectedYear = year;
                         document.getElementById('yearSliderValue').textContent = year;
-                        updateWaterfallChart();
                         updateWaterfall2023Chart();
                         updateGenMixChart();
                         updateNewCleanChart();
+                        updateTopEmittersChart();
                         updateFanChartAnnotation();
                     }
                 }
@@ -389,11 +447,7 @@
 
     // ── Determine color mode ──
     function getColorMode() {
-        // Collect visible scenarios: baseline is always present, plus savedScenarioOverlays
         var visibleCount = savedScenarioOverlays.length;
-        if (customScenario) visibleCount++;
-        // Single mode: 0 overlays (baseline only), or exactly 1 overlay
-        // where the overlay count ≤1 (baseline + 1 custom = single)
         var hasBaselineOverlay = savedScenarioOverlays.some(function (s) { return s.isBaseline; });
         if (visibleCount <= 1 || (visibleCount === 2 && hasBaselineOverlay)) {
             return 'single';
@@ -579,9 +633,8 @@
 
         // Check if we need to inject the intervention year into the timeline
         var firstYear = getFirstInterventionYear();
-        var hasCustom = customScenario || (mode === 'single' && savedScenarioOverlays.length === 1);
-        if (firstYear && hasCustom && years.indexOf(firstYear) === -1) {
-            // Inject the intervention year into the years array for chart resolution
+        var hasOverlays = savedScenarioOverlays.length > 0;
+        if (firstYear && hasOverlays && years.indexOf(firstYear) === -1) {
             years = years.slice();
             years.push(firstYear);
             years.sort(function (a, b) { return a - b; });
@@ -605,47 +658,27 @@
             }, { isBaseline: true, scenarioName: 'Baseline' });
         }
 
-        if (mode === 'single') {
-            // ── Single-scenario mode ──
-            var customOrSaved = customScenario ? customScenario : null;
-            if (!customOrSaved && savedScenarioOverlays.length === 1) {
-                customOrSaved = savedScenarioOverlays[0];
-            }
+        // ── Saved scenario overlays only (no unsaved custom scenario on charts) ──
+        var sortedOverlays = savedScenarioOverlays.slice().sort(function (a, b) {
+            if (a.isBaseline && !b.isBaseline) return -1;
+            if (!a.isBaseline && b.isBaseline) return 1;
+            var aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            var bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return aTime - bTime;
+        });
 
-            if (customOrSaved) {
-                var custEnv = customOrSaved.results ? customOrSaved.results.envelope : customOrSaved.envelope;
-                var custColor = customOrSaved.color || CUSTOM_COLOR;
-                var custName = customOrSaved.name || 'Custom';
-
-                // Align custom with baseline until first intervention year
+        if (mode === 'single' && sortedOverlays.length === 1) {
+            var s = sortedOverlays[0];
+            if (s.results && s.results.envelope) {
+                var sEnv = s.results.envelope;
                 var baseEnvForAlign = baseline ? getEnvelope(baseline) : null;
-                var alignedEnv = alignEnvelopeWithBaseline(custEnv, baseEnvForAlign, firstYear);
-
-                addFanDatasets(datasets, alignedEnv, years, custColor, custName, mode, {
-                    color: custColor, width: 2.5, dash: [], pointRadius: 3,
-                    legendLabel: custName
-                }, { isBaseline: false, scenarioName: custName });
+                var alignedEnv = alignEnvelopeWithBaseline(sEnv, baseEnvForAlign, firstYear);
+                addFanDatasets(datasets, alignedEnv, years, s.color, s.name, mode, {
+                    color: s.color, width: 2.5, dash: [], pointRadius: 3,
+                    legendLabel: s.name
+                }, { isBaseline: !!s.isBaseline, scenarioName: s.name });
             }
         } else {
-            // ── Multi-scenario mode ──
-            // Custom overlay
-            if (customScenario) {
-                var custEnvMulti = customScenario.envelope;
-                var baseEnvMulti = baseline ? getEnvelope(baseline) : null;
-                var alignedEnvMulti = alignEnvelopeWithBaseline(custEnvMulti, baseEnvMulti, firstYear);
-
-                addFanDatasets(datasets, alignedEnvMulti, years, CUSTOM_COLOR, 'Custom', mode, null,
-                    { isBaseline: false, scenarioName: 'Custom' });
-            }
-
-            // Saved scenario overlays — sorted: baseline first, then by creation date
-            var sortedOverlays = savedScenarioOverlays.slice().sort(function (a, b) {
-                if (a.isBaseline && !b.isBaseline) return -1;
-                if (!a.isBaseline && b.isBaseline) return 1;
-                var aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                var bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-                return aTime - bTime;
-            });
             sortedOverlays.forEach(function (s) {
                 if (s.results && s.results.envelope) {
                     addFanDatasets(datasets, s.results.envelope, years, s.color, s.name, mode, null,
@@ -659,9 +692,7 @@
             if (!selTgt || selTgt === 'none' || !DATA.targets || !DATA.targets[selTgt]) return;
             var tgt = DATA.targets[selTgt];
             var style = TARGET_STYLES[selTgt] || TARGET_STYLES.custom;
-            var tgtData = years.map(function (y) {
-                return tgt.trajectory[String(y)] != null ? tgt.trajectory[String(y)] : null;
-            });
+            var tgtData = interpolateTrajectory(tgt.trajectory, years);
             datasets.push({
                 label: tgt.label,
                 data: tgtData,
@@ -677,7 +708,7 @@
             });
         });
 
-        fanChart.data.labels = labels;
+        fanChart.data.labels = padLabelsTo2052(labels);
         fanChart.data.datasets = datasets;
         updateFanChartAnnotation();
         fanChart.update('active');
@@ -924,14 +955,13 @@
         items.push({ label: 'Baseline (P50)', color: BASELINE_COLOR, type: 'line' });
         items.push({ label: 'Baseline P10–P90', color: hexToRgba(BASELINE_COLOR, 0.15), type: 'band' });
 
-        // Check if custom is shown
-        var hasCustom = customScenario || (mode === 'single' && savedScenarioOverlays.length === 1);
-        if (hasCustom) {
-            var custColor = (customScenario && customScenario.color) || CUSTOM_COLOR;
-            var custName = (customScenario && customScenario.name) || 'Custom';
-            items.push({ label: custName + ' (P50)', color: custColor, type: 'line' });
-            items.push({ label: custName + ' P10–P90', color: hexToRgba(custColor, 0.15), type: 'band' });
-        }
+        // Saved scenario legend items
+        savedScenarioOverlays.forEach(function (s) {
+            if (s.results && s.results.envelope) {
+                items.push({ label: s.name + ' (P50)', color: s.color, type: 'line' });
+                items.push({ label: s.name + ' P10–P90', color: hexToRgba(s.color, 0.15), type: 'band' });
+            }
+        });
 
         // Targets always shown
         selectedTargets.forEach(function (selTgt) {
@@ -965,112 +995,7 @@
         el.innerHTML = html;
     }
 
-    // ====================================================================
-    // CHART 2: PLANT-LEVEL WATERFALL (Custom vs Baseline)
-    // ====================================================================
-    function buildWaterfallChart() {
-        var ctx = document.getElementById('waterfallChart').getContext('2d');
-        waterfallChart = new Chart(ctx, {
-            type: 'bar',
-            data: { labels: [], datasets: [] },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                indexAxis: 'y',
-                animation: { duration: 300 },
-                scales: {
-                    x: {
-                        title: { display: true, text: 'Emissions Delta (Mt CO₂)', font: { size: 12 } },
-                        grid: { color: '#E0E6EF' },
-                        ticks: { font: { size: 11 } }
-                    },
-                    y: {
-                        ticks: { font: { size: 11 } },
-                        grid: { display: false }
-                    }
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function (ctx) {
-                                var v = ctx.raw;
-                                return (v > 0 ? '+' : '') + v.toFixed(2) + ' Mt CO₂';
-                            }
-                        }
-                    }
-                }
-            }
-        });
-        updateWaterfallChart();
-    }
-
-    function updateWaterfallChart() {
-        if (!waterfallChart || !DATA) return;
-
-        var yr = String(nearestYear(selectedYear, getYears()));
-        document.getElementById('waterfallTitle').textContent = 'Emissions Delta vs Market Trajectory Baseline — ' + yr;
-
-        if (!customScenario) {
-            waterfallChart.data.labels = ['Edit fleet to see changes'];
-            waterfallChart.data.datasets = [{ data: [0], backgroundColor: '#ddd' }];
-            waterfallChart.update('active');
-            return;
-        }
-
-        var basePlants = DATA.scenarios.baseline && DATA.scenarios.baseline.plant_detail ? DATA.scenarios.baseline.plant_detail[yr] : null;
-        var scPlants = customScenario.plant_detail ? customScenario.plant_detail[yr] : null;
-
-        if (!basePlants || !scPlants) {
-            waterfallChart.data.labels = ['No data for ' + yr];
-            waterfallChart.data.datasets = [{ data: [0], backgroundColor: '#ddd' }];
-            waterfallChart.update('active');
-            return;
-        }
-
-        var baseMap = {};
-        basePlants.forEach(function (p) { baseMap[p.orispl] = p; });
-
-        var deltas = [];
-        scPlants.forEach(function (p) {
-            var baseP = baseMap[p.orispl];
-            var baseE = baseP ? baseP.emissions_mt : 0;
-            var delta = baseE - p.emissions_mt;
-            if (Math.abs(delta) > 0.001) {
-                deltas.push({ name: p.name, delta: delta });
-            }
-        });
-        basePlants.forEach(function (p) {
-            var found = scPlants.some(function (sp) { return sp.orispl === p.orispl; });
-            if (!found && p.emissions_mt > 0.001) {
-                deltas.push({ name: p.name + ' (retired)', delta: p.emissions_mt });
-            }
-        });
-
-        deltas.sort(function (a, b) { return Math.abs(b.delta) - Math.abs(a.delta); });
-
-        var other = 0;
-        if (deltas.length > 15) {
-            for (var i = 15; i < deltas.length; i++) other += deltas[i].delta;
-            deltas = deltas.slice(0, 15);
-            if (Math.abs(other) > 0.001) deltas.push({ name: 'Other', delta: other });
-        }
-
-        var labels = deltas.map(function (d) { return d.name; });
-        var values = deltas.map(function (d) { return d.delta; });
-        var colors = values.map(function (v) { return v >= 0 ? '#6BA543' : '#DC2626'; });
-
-        waterfallChart.data.labels = labels;
-        waterfallChart.data.datasets = [{
-            data: values,
-            backgroundColor: colors,
-            borderColor: colors,
-            borderWidth: 1,
-            borderRadius: 3,
-            barPercentage: 0.7
-        }];
-        waterfallChart.update('active');
-    }
+    // (Waterfall vs market trajectory chart — removed per Task 4)
 
     // ====================================================================
     // CHART 2b: PLANT-LEVEL WATERFALL vs 2023 BASELINE
@@ -1119,8 +1044,7 @@
         document.getElementById('waterfall2023Title').textContent =
             'Emissions Delta vs 2023 Baseline — ' + yr;
 
-        // Use custom scenario if available, otherwise use baseline at selectedYear
-        var scenarioToCompare = customScenario || DATA.scenarios.baseline;
+        var scenarioToCompare = getSelectedLowerScenario();
         var scPlants = scenarioToCompare.plant_detail ? scenarioToCompare.plant_detail[yr] : null;
 
         // 2023 baseline from engine-computed baseline
@@ -1172,35 +1096,146 @@
         waterfall2023Chart.data.labels = labels;
         waterfall2023Chart.data.datasets = [{
             data: values,
-            backgroundColor: colors,
+            backgroundColor: colors.map(function (c) { return hexToRgba(c, 0.45); }),
             borderColor: colors,
-            borderWidth: 1,
-            borderRadius: 3,
+            borderWidth: 1.5,
+            borderRadius: 4,
             barPercentage: 0.7
         }];
         waterfall2023Chart.update('active');
     }
 
     // ====================================================================
+    // SCENARIO SELECTOR — Toggle between saved scenarios for lower charts
+    // ====================================================================
+    function getSelectedLowerScenario() {
+        if (!selectedLowerScenarioId) return DATA ? DATA.scenarios.baseline : null;
+        var found = savedScenarioOverlays.find(function (s) { return s.id === selectedLowerScenarioId; });
+        if (found && found.results) return found.results;
+        return DATA ? DATA.scenarios.baseline : null;
+    }
+
+    function getSelectedLowerScenarioLabel() {
+        if (!selectedLowerScenarioId) return 'Baseline';
+        var found = savedScenarioOverlays.find(function (s) { return s.id === selectedLowerScenarioId; });
+        return found ? found.name : 'Baseline';
+    }
+
+    function buildScenarioSelector() {
+        updateScenarioSelector();
+        var bar = document.getElementById('scenarioToggleBar');
+        if (bar) {
+            bar.addEventListener('click', function (e) {
+                var btn = e.target.closest('.toggle-btn');
+                if (!btn) return;
+                bar.querySelectorAll('.toggle-btn').forEach(function (b) { b.classList.remove('active'); });
+                btn.classList.add('active');
+                selectedLowerScenarioId = btn.dataset.scenarioId || null;
+                updateGenMixChart();
+                updateWaterfall2023Chart();
+                updateNewCleanChart();
+
+                updateTopEmittersChart();
+            });
+        }
+    }
+
+    function updateScenarioSelector() {
+        var bar = document.getElementById('scenarioToggleBar');
+        if (!bar) return;
+        var html = '<button class="toggle-btn' + (!selectedLowerScenarioId ? ' active' : '') + '" data-scenario-id="">Baseline</button>';
+        savedScenarioOverlays.forEach(function (s) {
+            var isActive = selectedLowerScenarioId === s.id;
+            html += '<button class="toggle-btn' + (isActive ? ' active' : '') + '" data-scenario-id="' + s.id + '">' +
+                '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + s.color + ';margin-right:6px;vertical-align:middle;"></span>' +
+                (s.name || 'Scenario') + '</button>';
+        });
+        bar.innerHTML = html;
+
+        // If selected scenario was deleted, fall back to baseline
+        if (selectedLowerScenarioId && !savedScenarioOverlays.find(function (s) { return s.id === selectedLowerScenarioId; })) {
+            selectedLowerScenarioId = null;
+        }
+
+        // Show/hide the selector card
+        var card = document.getElementById('scenarioSelectorCard');
+        if (card) card.style.display = savedScenarioOverlays.length > 0 ? '' : 'none';
+    }
+
+    // ====================================================================
     // CHART 3: GENERATION MIX (Stacked Area Timeseries)
     // ====================================================================
+    // Custom plugin to draw 5-year labels (total TWh + % low carbon) above bars
+    var genMixLabelPlugin = {
+        id: 'genMixLabels',
+        afterDraw: function (chart) {
+            var meta0 = chart.getDatasetMeta(0);
+            if (!meta0 || !meta0.data || !meta0.data.length) return;
+            var ctx = chart.ctx;
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.font = '600 10px sans-serif';
+
+            var labelYears = [2025, 2030, 2035, 2040, 2045, 2050];
+            chart.data.labels.forEach(function (label, idx) {
+                var yr = Number(label);
+                if (labelYears.indexOf(yr) === -1) return;
+
+                // Sum total and clean for this bar index
+                var total = 0, clean = 0;
+                chart.data.datasets.forEach(function (ds) {
+                    var v = ds.data[idx] || 0;
+                    total += v;
+                    if (ds._fuelKey && CLEAN_FUEL_SET[ds._fuelKey]) clean += v;
+                });
+                if (total <= 0) return;
+
+                var pctClean = (clean / total * 100).toFixed(0);
+
+                // Find the top of the stacked bar
+                var topY = Infinity;
+                for (var di = 0; di < chart.data.datasets.length; di++) {
+                    var barMeta = chart.getDatasetMeta(di);
+                    if (barMeta.hidden || !barMeta.data[idx]) continue;
+                    var barEl = barMeta.data[idx];
+                    if (barEl.y < topY) topY = barEl.y;
+                }
+                if (!isFinite(topY)) return;
+
+                var x = meta0.data[idx].x;
+                ctx.fillStyle = '#374151';
+                ctx.fillText(total.toFixed(0) + ' TWh', x, topY - 16);
+                ctx.fillStyle = '#059669';
+                ctx.fillText(pctClean + '% clean', x, topY - 4);
+            });
+            ctx.restore();
+        }
+    };
+
     function buildGenMixChart() {
         var ctx = document.getElementById('genMixChart').getContext('2d');
         genMixChart = new Chart(ctx, {
-            type: 'line',
+            type: 'bar',
             data: { labels: [], datasets: [] },
+            plugins: [genMixLabelPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: { duration: 300 },
                 interaction: { mode: 'index', intersect: false },
+                layout: { padding: { top: 30 } },
                 scales: {
-                    x: { grid: { display: false }, ticks: { font: { size: 11 }, maxRotation: 0 } },
+                    x: {
+                        stacked: true,
+                        grid: { display: false },
+                        ticks: { font: { size: 11 }, maxRotation: 0, callback: function (val) { var y = Number(this.getLabelForValue(val)); return y > 2050 ? '' : y; } }
+                    },
                     y: {
                         stacked: true,
                         title: { display: true, text: 'Generation (TWh)', font: { size: 12 } },
                         grid: { color: '#E0E6EF' },
                         beginAtZero: true,
+                        min: 0,
                         ticks: { font: { size: 11 } }
                     }
                 },
@@ -1209,6 +1244,18 @@
                     tooltip: {
                         filter: fiveYearTooltipFilter,
                         callbacks: {
+                            title: function (tooltipItems) {
+                                if (!tooltipItems.length) return '';
+                                var idx = tooltipItems[0].dataIndex;
+                                var total = 0, clean = 0;
+                                tooltipItems[0].chart.data.datasets.forEach(function (ds) {
+                                    var v = ds.data[idx] || 0;
+                                    total += v;
+                                    if (ds._fuelKey && CLEAN_FUEL_SET[ds._fuelKey]) clean += v;
+                                });
+                                var pct = total > 0 ? (clean / total * 100).toFixed(1) : '0.0';
+                                return tooltipItems[0].label + ' — ' + total.toFixed(1) + ' TWh | ' + pct + '% Low Carbon';
+                            },
                             label: function (ctx) {
                                 if (!ctx.raw) return null;
                                 var total = 0;
@@ -1229,38 +1276,51 @@
     function updateGenMixChart() {
         if (!genMixChart || !DATA) return;
 
-        // Use custom scenario if available, otherwise baseline
-        var sc = customScenario || DATA.scenarios.baseline;
-        var scenarioLabel = customScenario ? 'Custom' : 'Baseline';
+        var sc = getSelectedLowerScenario();
+        var scenarioLabel = getSelectedLowerScenarioLabel();
         document.getElementById('genMixTitle').textContent = 'Fleet Generation by Fuel — ' + scenarioLabel;
 
         var years = getYears();
         var labels = years.map(String);
         var gen = sc.generation_by_fuel;
 
-        // Build stacked area datasets — only include fuels with non-zero generation
+        // Build stacked bar datasets with semi-transparent fill + saturated outline
         var datasets = [];
         FUEL_KEYS.forEach(function (fuel) {
             var data = years.map(function (y) {
                 if (!gen || !gen[String(y)]) return 0;
-                return gen[String(y)][fuel] || 0;
+                var val = gen[String(y)][fuel] || 0;
+                return Math.max(val, 0);
             });
             var hasData = data.some(function (v) { return v > 0; });
             if (!hasData) return; // Skip empty fuels
             datasets.push({
                 label: FUEL_LABELS[fuel] || fuel,
+                _fuelKey: fuel,
                 data: data,
-                backgroundColor: FUEL_COLORS[fuel] + 'CC',
+                backgroundColor: hexToRgba(FUEL_COLORS[fuel], 0.55),
                 borderColor: FUEL_COLORS[fuel],
                 borderWidth: 1.5,
-                fill: true,
-                pointRadius: 0,
-                pointHoverRadius: fiveYearRadii(years, 4),
-                tension: 0.3
+                borderSkipped: true
             });
         });
 
-        genMixChart.data.labels = labels;
+        // Only the topmost dataset gets rounded corners
+        if (datasets.length > 0) {
+            var last = datasets[datasets.length - 1];
+            last.borderRadius = { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 };
+            last.borderSkipped = 'start';
+        }
+
+        var paddedLabels = padLabelsTo2052(labels);
+        // Pad data arrays to match padded labels (fill trailing years with 0)
+        var padCount = paddedLabels.length - years.length;
+        if (padCount > 0) {
+            datasets.forEach(function (ds) {
+                for (var p = 0; p < padCount; p++) ds.data.push(0);
+            });
+        }
+        genMixChart.data.labels = paddedLabels;
         genMixChart.data.datasets = datasets;
         genMixChart.update('active');
 
@@ -1326,42 +1386,49 @@
         var yr = String(nearestYear(selectedYear, getYears()));
         document.getElementById('newCleanTitle').textContent = 'New Clean Generation — ' + yr;
 
-        // Get custom and baseline generation by fuel for selected year
         var baseGen = {};
         var custGen = {};
         var baseline = DATA.scenarios.baseline;
+        var selectedSc = getSelectedLowerScenario();
         if (baseline && baseline.generation_by_fuel && baseline.generation_by_fuel[yr]) {
             baseGen = baseline.generation_by_fuel[yr];
         }
-        if (customScenario && customScenario.generation_by_fuel && customScenario.generation_by_fuel[yr]) {
-            custGen = customScenario.generation_by_fuel[yr];
+        if (selectedSc && selectedSc.generation_by_fuel && selectedSc.generation_by_fuel[yr]) {
+            custGen = selectedSc.generation_by_fuel[yr];
         }
 
-        // New clean = delta above baseline for clean fuels, plus all CCS generation
-        // (CCS doesn't exist in baseline, it's always "new")
+        // New clean gen: use explicit _new_clean_gen from recalculate if available,
+        // otherwise fall back to delta approach
         var labels = [];
         var values = [];
         var colors = [];
-        CLEAN_FUEL_KEYS.forEach(function (fuel) {
-            var custVal = custGen[fuel] || 0;
-            var baseVal = baseGen[fuel] || 0;
-            var delta;
-            if (fuel === 'ccs_ccgt') {
-                // All CCS generation is "new" clean
-                delta = custVal;
-            } else {
-                // Only show the increment above baseline (uprates, new plants)
-                delta = custVal - baseVal;
-            }
-            if (delta > 0.001) {
-                labels.push(CLEAN_FUEL_LABELS[fuel] || fuel);
-                values.push(Math.round(delta * 100) / 100);
-                colors.push(FUEL_COLORS[fuel] || '#9CA3AF');
-            }
-        });
+        var newClean = custGen._new_clean_gen;
+        if (newClean) {
+            // Explicit tracking: crane (full gen), uprate (increment), CCS (full), new builds (full)
+            CLEAN_FUEL_KEYS.forEach(function (fuel) {
+                var val = newClean[fuel] || 0;
+                if (val > 0.001) {
+                    labels.push(CLEAN_FUEL_LABELS[fuel] || fuel);
+                    values.push(Math.round(val * 100) / 100);
+                    colors.push(FUEL_COLORS[fuel] || '#9CA3AF');
+                }
+            });
+        } else {
+            // Fallback: delta above baseline for clean fuels, plus all CCS
+            CLEAN_FUEL_KEYS.forEach(function (fuel) {
+                var custVal = custGen[fuel] || 0;
+                var baseVal = baseGen[fuel] || 0;
+                var delta = (fuel === 'ccs_ccgt') ? custVal : (custVal - baseVal);
+                if (delta > 0.001) {
+                    labels.push(CLEAN_FUEL_LABELS[fuel] || fuel);
+                    values.push(Math.round(delta * 100) / 100);
+                    colors.push(FUEL_COLORS[fuel] || '#9CA3AF');
+                }
+            });
+        }
 
-        // If no custom scenario, show empty state
-        if (!customScenario) {
+        // If viewing baseline (no scenario selected), show empty state
+        if (!selectedLowerScenarioId) {
             labels = [];
             values = [];
             colors = [];
@@ -1370,7 +1437,7 @@
         newCleanChart.data.labels = labels;
         newCleanChart.data.datasets = [{
             data: values,
-            backgroundColor: colors.map(function (c) { return c + 'CC'; }),
+            backgroundColor: colors.map(function (c) { return hexToRgba(c, 0.45); }),
             borderColor: colors,
             borderWidth: 1.5,
             borderRadius: 4,
@@ -1382,7 +1449,7 @@
         var legendEl = document.getElementById('newCleanLegend');
         if (legendEl) {
             if (labels.length === 0) {
-                legendEl.innerHTML = '<span style="color:#9CA3AF;font-size:0.85rem;">Configure fleet changes and recalculate to see new clean generation.</span>';
+                legendEl.innerHTML = '<span style="color:#9CA3AF;font-size:0.85rem;">Select a saved scenario to see new clean generation vs baseline.</span>';
             } else {
                 legendEl.innerHTML = labels.map(function (lbl, i) {
                     return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:16px;">' +
@@ -1462,8 +1529,8 @@
 
         // Inject intervention year for chart resolution (same as fan chart)
         var firstYear = getFirstInterventionYear();
-        var hasCustom = customScenario != null;
-        if (firstYear && hasCustom && years.indexOf(firstYear) === -1) {
+        var hasOverlays = savedScenarioOverlays.length > 0;
+        if (firstYear && hasOverlays && years.indexOf(firstYear) === -1) {
             years = years.slice();
             years.push(firstYear);
             years.sort(function (a, b) { return a - b; });
@@ -1483,17 +1550,19 @@
             addIntensityFanDatasets(datasets, baseIntEnv, years, BASELINE_COLOR, 'Baseline', true);
         }
 
-        // Custom intensity fan
-        if (customScenario && customScenario.intensity_envelope) {
-            var alignedIntEnv = alignEnvelopeWithBaseline(
-                customScenario.intensity_envelope,
-                baseline ? baseline.intensity_envelope : null,
-                firstYear
-            );
-            addIntensityFanDatasets(datasets, alignedIntEnv, years, CUSTOM_COLOR, 'Custom', false);
-        }
+        // Saved scenario intensity overlays
+        savedScenarioOverlays.forEach(function (s) {
+            if (s.results && s.results.intensity_envelope) {
+                var alignedIntEnv = alignEnvelopeWithBaseline(
+                    s.results.intensity_envelope,
+                    baseline ? baseline.intensity_envelope : null,
+                    firstYear
+                );
+                addIntensityFanDatasets(datasets, alignedIntEnv, years, s.color, s.name, false);
+            }
+        });
 
-        intensityFanChart.data.labels = labels;
+        intensityFanChart.data.labels = padLabelsTo2052(labels);
         intensityFanChart.data.datasets = datasets;
         intensityFanChart.update('active');
     }
@@ -1549,12 +1618,17 @@
         });
     }
 
+
     // ====================================================================
-    // CHART 6: EMISSIONS BY FUEL (Stacked Area) — Custom or Baseline
+    // CHART 7: TOP EMITTING PLANTS — Stacked area time series
     // ====================================================================
-    function buildFuelEmissionsChart() {
-        var ctx = document.getElementById('fuelEmissionsChart').getContext('2d');
-        fuelEmissionsChart = new Chart(ctx, {
+    var FOSSIL_FUEL_SET = { gas_ccgt: 1, gas_ct: 1, gas_oil_ct: 1, oil_ct: 1 };
+    var TOP_EMITTER_COUNT = 12;
+
+    function buildTopEmittersChart() {
+        var ctx = document.getElementById('topEmittersChart');
+        if (!ctx) return;
+        topEmittersChart = new Chart(ctx.getContext('2d'), {
             type: 'line',
             data: { labels: [], datasets: [] },
             options: {
@@ -1563,7 +1637,7 @@
                 animation: { duration: 300 },
                 interaction: { mode: 'index', intersect: false },
                 scales: {
-                    x: { grid: { display: false }, ticks: { font: { size: 12 }, maxRotation: 0 } },
+                    x: { grid: { display: false }, ticks: { font: { size: 12 }, maxRotation: 0, callback: function (val) { var y = Number(this.getLabelForValue(val)); return y > 2050 ? '' : y; } } },
                     y: {
                         stacked: true,
                         title: { display: true, text: 'Emissions (Mt CO₂)', font: { size: 12 } },
@@ -1577,70 +1651,145 @@
                     tooltip: {
                         filter: fiveYearTooltipFilter,
                         callbacks: {
+                            title: function (tooltipItems) {
+                                if (!tooltipItems.length) return '';
+                                var idx = tooltipItems[0].dataIndex;
+                                var total = 0;
+                                tooltipItems[0].chart.data.datasets.forEach(function (ds) {
+                                    total += ds.data[idx] || 0;
+                                });
+                                return tooltipItems[0].label + ' — Total: ' + total.toFixed(2) + ' Mt CO₂';
+                            },
                             label: function (ctx) {
+                                if (!ctx.raw || ctx.raw < 0.001) return null;
                                 var total = 0;
                                 ctx.chart.data.datasets.forEach(function (ds) {
                                     total += ds.data[ctx.dataIndex] || 0;
                                 });
                                 var pct = total > 0 ? ((ctx.raw / total) * 100).toFixed(1) : '0.0';
-                                return ctx.dataset.label + ': ' + ctx.raw.toFixed(1) + ' Mt (' + pct + '%)';
+                                return ctx.dataset.label + ': ' + ctx.raw.toFixed(3) + ' Mt (' + pct + '%)';
                             }
                         }
                     }
                 }
             }
         });
-        updateFuelEmissionsChart();
+        updateTopEmittersChart();
     }
 
-    function updateFuelEmissionsChart() {
-        if (!fuelEmissionsChart || !DATA) return;
-
-        // Use custom scenario if available, otherwise baseline
-        var sc = customScenario || DATA.scenarios.baseline;
-        var scenarioLabel = customScenario ? 'Custom' : 'Baseline';
-
-        document.getElementById('fuelEmissionsTitle').textContent =
-            'Emissions by Fuel Type — ' + scenarioLabel;
+    function updateTopEmittersChart() {
+        if (!topEmittersChart || !DATA) return;
+        var sc = getSelectedLowerScenario();
+        var scenarioLabel = getSelectedLowerScenarioLabel();
+        var titleEl = document.getElementById('topEmittersTitle');
+        if (titleEl) titleEl.textContent = 'Top Emitting Plants — ' + scenarioLabel;
 
         var years = getYears();
         var labels = years.map(String);
 
-        var datasets = EMISSION_FUEL_KEYS.map(function (fuel) {
-            var data = years.map(function (y) {
-                var emf = sc.emissions_by_fuel ? sc.emissions_by_fuel[String(y)] : null;
-                return emf ? (emf[fuel] || 0) : 0;
+        if (!sc.plant_detail) {
+            topEmittersChart.data.labels = labels;
+            topEmittersChart.data.datasets = [];
+            topEmittersChart.update('active');
+            return;
+        }
+
+        // Identify top emitters: rank by total emissions across all years
+        var plantTotalEmis = {};
+        var plantNames = {};
+        years.forEach(function (yr) {
+            var plants = sc.plant_detail[String(yr)];
+            if (!plants) return;
+            plants.forEach(function (p) {
+                if (!FOSSIL_FUEL_SET[p.fuel_type] || !p.emissions_mt || p.emissions_mt <= 0) return;
+                var key = p.orispl || p.name;
+                plantTotalEmis[key] = (plantTotalEmis[key] || 0) + p.emissions_mt;
+                if (!plantNames[key]) plantNames[key] = p.name;
             });
-            return {
-                label: FUEL_LABELS[fuel] || fuel,
-                data: data,
-                borderColor: FUEL_COLORS[fuel],
-                backgroundColor: hexToRgba(FUEL_COLORS[fuel], 0.55),
-                borderWidth: 1.5,
-                pointRadius: fiveYearRadii(years, 2),
-                pointHoverRadius: fiveYearRadii(years, 4),
-                fill: true,
-                tension: 0.3
-            };
         });
 
-        fuelEmissionsChart.data.labels = labels;
-        fuelEmissionsChart.data.datasets = datasets;
-        fuelEmissionsChart.update('active');
+        // Sort and take top N
+        var ranked = Object.keys(plantTotalEmis).sort(function (a, b) {
+            return plantTotalEmis[b] - plantTotalEmis[a];
+        });
+        var topKeys = ranked.slice(0, TOP_EMITTER_COUNT);
+        var topSet = {};
+        topKeys.forEach(function (k) { topSet[k] = true; });
 
-        var legendEl = document.getElementById('fuelEmissionsLegend');
-        legendEl.innerHTML = EMISSION_FUEL_KEYS.map(function (f) {
-            return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:16px;">' +
-                '<span style="width:24px;height:10px;border-radius:3px;background:' + FUEL_COLORS[f] + ';display:inline-block;"></span>' +
-                (FUEL_LABELS[f] || f) + '</span>';
-        }).join('');
+        // Build per-plant time series + "Other" bucket
+        var seriesData = {}; // key → [val per year]
+        topKeys.forEach(function (k) { seriesData[k] = []; });
+        seriesData['_other'] = [];
+
+        years.forEach(function (yr) {
+            var plants = sc.plant_detail[String(yr)] || [];
+            var byKey = {};
+            plants.forEach(function (p) {
+                if (!FOSSIL_FUEL_SET[p.fuel_type] || !p.emissions_mt || p.emissions_mt <= 0) return;
+                var key = p.orispl || p.name;
+                byKey[key] = (byKey[key] || 0) + p.emissions_mt;
+            });
+
+            var otherVal = 0;
+            Object.keys(byKey).forEach(function (k) {
+                if (!topSet[k]) otherVal += byKey[k];
+            });
+
+            topKeys.forEach(function (k) {
+                seriesData[k].push(byKey[k] || 0);
+            });
+            seriesData['_other'].push(otherVal);
+        });
+
+        // Build datasets — top plants first (bottom of stack), "Other" on top
+        var datasets = [];
+        topKeys.forEach(function (k) {
+            datasets.push({
+                label: plantNames[k] || k,
+                data: seriesData[k],
+                borderColor: plantColor(plantNames[k] || k),
+                backgroundColor: hexToRgba(plantColor(plantNames[k] || k), 0.45),
+                borderWidth: 1.5,
+                pointRadius: 0,
+                pointHoverRadius: 0,
+                fill: 'origin',
+                tension: 0.3
+            });
+        });
+        if (seriesData['_other'].some(function (v) { return v > 0.001; })) {
+            datasets.push({
+                label: 'Other Plants',
+                data: seriesData['_other'],
+                borderColor: '#9CA3AF',
+                backgroundColor: hexToRgba('#9CA3AF', 0.35),
+                borderWidth: 1,
+                pointRadius: 0,
+                fill: 'origin',
+                tension: 0.3
+            });
+        }
+
+        topEmittersChart.data.labels = padLabelsTo2052(labels);
+        topEmittersChart.data.datasets = datasets;
+        topEmittersChart.update('active');
+
+        // Legend
+        var legendEl = document.getElementById('topEmittersLegend');
+        if (legendEl) {
+            var items = datasets.map(function (ds) {
+                return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;font-size:0.8rem;">' +
+                    '<span style="width:20px;height:8px;border-radius:3px;background:' + ds.borderColor + ';display:inline-block;"></span>' +
+                    ds.label + '</span>';
+            });
+            legendEl.innerHTML = items.join('');
+        }
     }
 
     // ── Public API for sidebar integration ──
     window.FLEET_SCENARIOS_API = {
         setCustomScenario: function (label, data) {
+            // No longer auto-displays on charts — user must save scenario first
             customScenario = data;
-            updateAllCharts();
         },
         clearCustomScenario: function () {
             customScenario = null;
@@ -1903,22 +2052,20 @@
                     intGenEnv[ys] = { p10: 0, p50: 0, p90: 0 };
                     intEmisEnv[ys] = { p10: 0, p50: 0, p90: 0 };
                 } else if (intervention === 'ccs_retrofit' && y >= intYear) {
-                    // CCS ramp: 0→30%→70%→100% over 8 years
-                    var elapsed = y - intYear;
-                    var rampFrac;
-                    if (elapsed <= 0) rampFrac = 0;
-                    else if (elapsed <= 2) rampFrac = 0.30 * elapsed / 2;
-                    else if (elapsed <= 5) rampFrac = 0.30 + 0.40 * (elapsed - 2) / 3;
-                    else if (elapsed <= 8) rampFrac = 0.70 + 0.30 * (elapsed - 5) / 3;
-                    else rampFrac = 1.0;
-                    var captureRate = rampFrac * 0.90;
-                    var derate = 0.14;
-                    // Gen decreases by derate, emissions decrease by capture
-                    intGenEnv[ys] = {
-                        p10: Math.round(bg.p10 * (1 - derate)),
-                        p50: Math.round(bg.p50 * (1 - derate)),
-                        p90: Math.round(bg.p90 * (1 - derate))
-                    };
+                    // Read CCS parameters from sidebar (or defaults)
+                    var ccsP = (typeof FleetSidebar !== 'undefined' && FleetSidebar.getCcsParams)
+                        ? FleetSidebar.getCcsParams()
+                        : { derate_pct: 14, capture_rate_pct: 90, cf_pct: 85 };
+                    var derate = ccsP.derate_pct / 100.0;
+                    var captureRate = ccsP.capture_rate_pct / 100.0;
+                    var cfFrac = ccsP.cf_pct / 100.0;
+
+                    // Generation: capacity × sidebar CF × (1 - derate) × 8760 / 1000 for GWh
+                    var capMW = plant.capacity_mw || 0;
+                    var ccsGenGwh = Math.round(capMW * cfFrac * (1 - derate) * 8760 / 1000);
+                    intGenEnv[ys] = { p10: ccsGenGwh, p50: ccsGenGwh, p90: ccsGenGwh };
+
+                    // Emissions: instant full capture at retrofit year (no ramp)
                     intEmisEnv[ys] = {
                         p10: Math.round(be.p10 * (1 - captureRate)),
                         p50: Math.round(be.p50 * (1 - captureRate)),
