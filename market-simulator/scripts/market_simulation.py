@@ -3209,6 +3209,76 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
 # DATA LOADING
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
+def _load_ef_fallback(iso):
+    """Load step 2.1 efficient frontier parquets as fallback when step 2.2 is missing.
+
+    Step 2.1 EF parquets contain physics-optimal mixes without cost optimization.
+    Each file covers one threshold band: step_2_1_EF_{ISO}_{threshold}.parquet.
+    We pick the best mix (highest hourly_match_score) per threshold and map
+    columns to the format expected by the market simulator.
+    """
+    import glob as globmod
+    import re
+
+    ef_dir = str(resolve_data_path('step2.1-ef'))
+    if not os.path.isdir(ef_dir):
+        return None
+
+    # Find all EF parquets for this ISO (exclude batch files)
+    pattern = os.path.join(ef_dir, f'step_2_1_EF_{iso}_*.parquet')
+    files = sorted(globmod.glob(pattern))
+    files = [f for f in files if '_batch_' not in os.path.basename(f)]
+
+    if not files:
+        return None
+
+    iso_data = {}
+    for fpath in files:
+        # Extract threshold from filename: step_2_1_EF_NEISO_90.parquet or _99.9.parquet
+        basename = os.path.basename(fpath)
+        m = re.search(r'_(\d+(?:\.\d+)?)\.parquet$', basename)
+        if not m:
+            continue
+        threshold = float(m.group(1))
+
+        try:
+            df = pd.read_parquet(fpath)
+        except Exception:
+            continue
+
+        if df.empty or 'hourly_match_score' not in df.columns:
+            continue
+
+        # Pick the best mix by hourly match score
+        best_idx = df['hourly_match_score'].idxmax()
+        row = df.loc[best_idx]
+
+        resource_pcts = {
+            'clean_firm': float(row.get('clean_firm', 0)),
+            'solar': float(row.get('solar', 0)),
+            'wind': float(row.get('wind', 0)),
+            'offshore_wind': float(row.get('offshore_wind', 0)),
+            'ccs_ccgt': float(row.get('ccs_ccgt', 0)),
+            'hydro': float(row.get('hydro', 0)),
+        }
+
+        iso_data[threshold] = {
+            'resource_pcts': resource_pcts,
+            'total_cost': 0.0,  # No cost data in EF parquets
+            'hourly_match_score': float(row.get('hourly_match_score', 0)),
+            'battery_pct': float(row.get('battery_dispatch_pct', 0)),
+            'battery8_pct': float(row.get('battery8_dispatch_pct', 0)),
+            'ldes_pct': float(row.get('ldes_dispatch_pct', 0)),
+            'h2_pct': float(row.get('h2_dispatch_pct', 0)),
+            'gas_backup_mw': 0.0,
+            'new_gas_mw': 0.0,
+            'gas_cost_per_mwh': 0.0,
+        }
+
+    return iso_data if iso_data else None
+
+
 def load_step3_data():
     """Load step2.2 cost optimization results for all ISOs.
 
@@ -3240,7 +3310,13 @@ def load_step3_data():
                 break
 
         if path is None:
-            print(f"  WARNING: No cost parquet for {iso}, skipping")
+            # Fallback: try step 2.1 EF parquets
+            ef_data = _load_ef_fallback(iso)
+            if ef_data:
+                print(f"  Loaded step2.1 EF parquets for {iso} (no step2.2 cost data)")
+                all_data[iso] = ef_data
+            else:
+                print(f"  WARNING: No cost or EF parquet for {iso}, skipping")
             continue
 
         print(f"  Loaded {os.path.basename(path)} for {iso}")
@@ -3333,7 +3409,15 @@ def check_data_sources():
                     break
             if found_parquet:
                 break
-        resource_mix = 'parquet' if found_parquet else 'synthetic'
+        if found_parquet:
+            resource_mix = 'parquet'
+        else:
+            # Check for step 2.1 EF parquets as fallback
+            import glob as globmod
+            ef_dir = str(resolve_data_path('step2.1-ef'))
+            ef_files = globmod.glob(os.path.join(ef_dir, f'step_2_1_EF_{iso}_*.parquet')) if os.path.isdir(ef_dir) else []
+            ef_files = [f for f in ef_files if '_batch_' not in os.path.basename(f)]
+            resource_mix = 'ef_parquet' if ef_files else 'synthetic'
         simple[iso] = resource_mix
 
         # Tier 2: zonal configuration
