@@ -74,38 +74,6 @@
 
     <div class="content-section" style="max-width: 960px;">
 
-        <!-- What's New — Recent Enhancements -->
-        <div class="guide-section">
-            <h2>What's New &mdash; Recent Enhancements</h2>
-            <p>The simulator has been significantly upgraded with six new capabilities that improve realism, transparency, and analytical depth:</p>
-            <div class="metric-grid">
-                <div class="metric-card" style="border-left-color: #22C55E;">
-                    <h4>Plant-Level Retirement</h4>
-                    <p>Individual generators now retire based on their own heat rate, revenue, and margin &mdash; not fleet-average economics. A 15% per-zone reserve margin floor prevents cascading over-retirement. Results include per-plant status (operating / at-risk / stranded).</p>
-                </div>
-                <div class="metric-card" style="border-left-color: #6366F1;">
-                    <h4>Correlated Scenario Bundles</h4>
-                    <p>Five IEA-aligned bundles (STEPS, APS, NZE, High Friction, Rapid Transition) pair inputs that co-move in reality &mdash; e.g., high gas prices with high carbon prices. Use these alongside the independent 1,215-scenario sweep for internally consistent narratives.</p>
-                </div>
-                <div class="metric-card" style="border-left-color: #F59E0B;">
-                    <h4>Sensitivity Analysis</h4>
-                    <p>Morris method screening identifies which input parameters drive the most output variance. Tornado diagrams and variance decomposition help you prioritize which assumptions to refine before commissioning a full production model run.</p>
-                </div>
-                <div class="metric-card" style="border-left-color: #0EA5E9;">
-                    <h4>Result Provenance</h4>
-                    <p>Every simulation now embeds full audit metadata: git commit SHA, config hash, timestamp, Python version, and a complete input snapshot. Enables exact reproducibility and result traceability for governance reviews.</p>
-                </div>
-                <div class="metric-card" style="border-left-color: #EF4444;">
-                    <h4>LMP Confidence Indicators</h4>
-                    <p>A confidence factor (0&ndash;1) degrades as VRE penetration exceeds the model&rsquo;s calibration range (&gt;60%). Results at high VRE now carry explicit uncertainty flags so you know when to validate with a production dispatch model.</p>
-                </div>
-                <div class="metric-card" style="border-left-color: #9C27B0;">
-                    <h4>Cross-Validation Framework</h4>
-                    <p>Structured comparison against EIA AEO, NREL ReEDS, and EPA IPM reference trajectories. Divergences are classified as &ldquo;expected&rdquo; (mechanism difference) or &ldquo;unexplained&rdquo; (potential calibration issue).</p>
-                </div>
-            </div>
-        </div>
-
         <!-- Section 0: Getting Started / Data Setup -->
         <div class="guide-section">
             <h2>Getting Started</h2>
@@ -412,8 +380,8 @@
                 </div>
             </div>
 
-            <h3>New Result Fields</h3>
-            <p>Recent enhancements add several new fields to the results JSON. Here's how to interpret them:</p>
+            <h3>Result Fields Reference</h3>
+            <p>The results JSON includes several specialized fields. Here's how to interpret them:</p>
             <div class="metric-grid">
                 <div class="metric-card">
                     <h4><code>plant_retirements</code></h4>
