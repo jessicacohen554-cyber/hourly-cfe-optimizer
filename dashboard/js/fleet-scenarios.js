@@ -1243,6 +1243,7 @@
                         title: { display: true, text: 'Generation (TWh)', font: { size: 12 } },
                         grid: { color: '#E0E6EF' },
                         beginAtZero: true,
+                        min: 0,
                         ticks: { font: { size: 11 } }
                     }
                 },
@@ -1294,17 +1295,18 @@
         FUEL_KEYS.forEach(function (fuel) {
             var data = years.map(function (y) {
                 if (!gen || !gen[String(y)]) return 0;
-                return gen[String(y)][fuel] || 0;
+                var val = gen[String(y)][fuel] || 0;
+                return Math.max(val, 0); // Clamp negatives to zero
             });
             var hasData = data.some(function (v) { return v > 0; });
             if (!hasData) return; // Skip empty fuels
             datasets.push({
                 label: FUEL_LABELS[fuel] || fuel,
                 data: data,
-                backgroundColor: hexToRgba(FUEL_COLORS[fuel], 0.75),
+                backgroundColor: hexToRgba(FUEL_COLORS[fuel], 0.92),
                 borderColor: FUEL_COLORS[fuel],
                 borderWidth: 1.5,
-                fill: true,
+                fill: 'origin',
                 pointRadius: 0,
                 pointHoverRadius: 0,
                 tension: 0.3
@@ -1684,17 +1686,18 @@
         var datasets = EMISSION_FUEL_KEYS.map(function (fuel) {
             var data = years.map(function (y) {
                 var emf = sc.emissions_by_fuel ? sc.emissions_by_fuel[String(y)] : null;
-                return emf ? (emf[fuel] || 0) : 0;
+                var val = emf ? (emf[fuel] || 0) : 0;
+                return Math.max(val, 0);
             });
             return {
                 label: FUEL_LABELS[fuel] || fuel,
                 data: data,
                 borderColor: FUEL_COLORS[fuel],
-                backgroundColor: hexToRgba(FUEL_COLORS[fuel], 0.45),
+                backgroundColor: hexToRgba(FUEL_COLORS[fuel], 0.92),
                 borderWidth: 1.5,
                 pointRadius: 0,
                 pointHoverRadius: 0,
-                fill: true,
+                fill: 'origin',
                 tension: 0.3
             };
         });
