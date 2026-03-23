@@ -818,6 +818,7 @@ var FleetSidebar = (function () {
                         var emisDelta = 0; // Mt change from baseline
                         var genDelta = 0;  // TWh change from baseline
                         var yearPlants = [];
+                        var newCleanGen = {}; // {fuel: TWh} — generation from active investment decisions (crane, uprate, CCS, new builds)
 
                         // Process each baseline plant
                         basePlants.forEach(function (bp) {
@@ -871,6 +872,14 @@ var FleetSidebar = (function () {
                                 customStatus = 'ccs_retrofit';
                                 customFuel = 'ccs_ccgt';
 
+                                console.log('[CCS-DEBUG] Plant:', bp.name,
+                                    '| slider CF:', ccsParams.cf_pct, '% → cfFrac:', cfFrac.toFixed(3),
+                                    '| capMW:', capMW.toFixed(0), '| grossMwh:', grossMwh.toFixed(0),
+                                    '| derate:', derateFrac.toFixed(2), '| netMwh:', netMwh.toFixed(0),
+                                    '| customGenTwh:', customGenTwh.toFixed(3),
+                                    '| baselineGenTwh:', bp.gen_twh,
+                                    '| capture:', captureFrac.toFixed(2));
+
                             } else if (action === 'uprate' && yearNum >= yearOnline) {
                                 // Uprate: scale by capacity ratio
                                 var uprateMW = mod._uprate_mw || 0;
@@ -882,10 +891,33 @@ var FleetSidebar = (function () {
                                 }
 
                             } else if (action === 'operating_override') {
-                                // Forced operating: use precomputed values as-is
-                                // (plant keeps running even if baseline has it retired)
+                                // Forced operating: keep plant running even if baseline retired it
+                                if (bp.gen_twh <= 0 && capMW > 0) {
+                                    // Plant was economically retired in baseline — force to run at regional CF
+                                    var forcedCf = mod._custom_cf || 0.90;
+                                    customGenTwh = capMW * forcedCf * 8760 / 1e6;
+                                    // Clean fuel = zero emissions; fossil = use co2Rate
+                                    customEmisMt = FOSSIL_FUELS.has(fuel) ? (capMW * forcedCf * 8760 * co2Rate / 1e6) : 0;
+                                }
+                                // Otherwise uses baseline gen (plant already running)
                             }
                             // Before yearOnline for retire/ccs/uprate: use precomputed values
+
+                            // Track new clean generation from investment decisions
+                            var isCleanFuel = !FOSSIL_FUELS.has(customFuel);
+                            if (action === 'operating_override' && isCleanFuel) {
+                                // Crane: ALL generation counts as new clean
+                                newCleanGen[customFuel] = (newCleanGen[customFuel] || 0) + customGenTwh;
+                            } else if (action === 'uprate' && isCleanFuel && yearNum >= yearOnline) {
+                                // Uprate: incremental generation from uprate MW
+                                var uprateIncrement = customGenTwh - (bp.gen_twh || 0);
+                                if (uprateIncrement > 0) {
+                                    newCleanGen[customFuel] = (newCleanGen[customFuel] || 0) + uprateIncrement;
+                                }
+                            } else if (action === 'ccs_retrofit' && yearNum >= yearOnline) {
+                                // CCS: all CCS generation is new clean
+                                newCleanGen['ccs_ccgt'] = (newCleanGen['ccs_ccgt'] || 0) + customGenTwh;
+                            }
 
                             // Compute delta from baseline
                             var dEmis = customEmisMt - (bp.emissions_mt || 0);
@@ -937,6 +969,11 @@ var FleetSidebar = (function () {
                             emisByFuel[fuel] = (emisByFuel[fuel] || 0) + emisMt;
                             genByFuel[fuel] = (genByFuel[fuel] || 0) + genTwh;
 
+                            // Track new clean generation from added plants
+                            if (!FOSSIL_FUELS.has(fuel)) {
+                                newCleanGen[fuel] = (newCleanGen[fuel] || 0) + genTwh;
+                            }
+
                             yearPlants.push({
                                 orispl: np.orispl,
                                 name: np.name,
@@ -948,6 +985,9 @@ var FleetSidebar = (function () {
                                 emissions_mt: Math.round(emisMt * 10000) / 10000
                             });
                         });
+
+                        // Attach new clean gen to the fuel data for this year
+                        genByFuel._new_clean_gen = newCleanGen;
 
                         // Apply delta to precomputed envelope
                         customEnvelope[yr] = {
