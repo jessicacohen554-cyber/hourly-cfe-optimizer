@@ -256,14 +256,11 @@ var FleetSidebar = (function () {
         }
         setStatus(statusMsg);
 
-        // NOTE: Baseline auto-compute disabled — sweep_dispatch_data.json only
-        // covers ERCOT, so the dispatch engine falls back to static CFs (57%)
-        // for all other ISOs, producing inflated emissions (+7.8% instead of
-        // the correct -24%). The pre-computed fleet_scenario_results_sample.json
-        // uses the full 7-ISO sweep and is authoritative.
-        // if (sweepData && baseFleet.length > 0) {
-        //     computeAndSetBaseline();
-        // }
+        // AUTO-COMPUTE BASELINE using same engine as custom scenarios.
+        // sweep_dispatch_data.json must contain all 7 ISOs for accurate results.
+        if (sweepData && baseFleet.length > 0) {
+            computeAndSetBaseline();
+        }
     }
 
     function computeAndSetBaseline() {
