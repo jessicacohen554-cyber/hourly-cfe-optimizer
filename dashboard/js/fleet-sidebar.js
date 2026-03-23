@@ -993,11 +993,11 @@ var FleetSidebar = (function () {
                             p90: Math.round((baseEnv.p90 + emisDelta) * 10000) / 10000
                         };
 
-                        // Derive intensity from adjusted totals
+                        // Derive intensity from adjusted totals (skip _-prefixed metadata keys)
                         var totalGenTwh = 0;
                         var totalEmisMt = 0;
-                        Object.keys(genByFuel).forEach(function (f) { totalGenTwh += genByFuel[f] || 0; });
-                        Object.keys(emisByFuel).forEach(function (f) { totalEmisMt += emisByFuel[f] || 0; });
+                        Object.keys(genByFuel).forEach(function (f) { if (f[0] !== '_') totalGenTwh += genByFuel[f] || 0; });
+                        Object.keys(emisByFuel).forEach(function (f) { if (f[0] !== '_') totalEmisMt += emisByFuel[f] || 0; });
                         var intensityKg = totalGenTwh > 0 ? (totalEmisMt / totalGenTwh) * 1e3 : 0;
                         customIntensity[yr] = {
                             p10: Math.round(intensityKg * 100) / 100,

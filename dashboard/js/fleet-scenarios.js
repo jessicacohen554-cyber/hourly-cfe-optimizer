@@ -157,8 +157,8 @@
             var totalEmisMt = 0;
             var gYear = gen[yr] || {};
             var eYear = emis[yr] || {};
-            Object.keys(gYear).forEach(function (f) { totalGenTwh += gYear[f] || 0; });
-            Object.keys(eYear).forEach(function (f) { totalEmisMt += eYear[f] || 0; });
+            Object.keys(gYear).forEach(function (f) { if (f[0] !== '_') totalGenTwh += gYear[f] || 0; });
+            Object.keys(eYear).forEach(function (f) { if (f[0] !== '_') totalEmisMt += eYear[f] || 0; });
             // TWh → MWh: ×1e6. Mt → kg: ×1e9. intensity = (Mt × 1e9) / (TWh × 1e6) = Mt/TWh × 1e3
             var intensityKg = totalGenTwh > 0 ? (totalEmisMt / totalGenTwh) * 1e3 : 0;
             intEnv[yr] = {
