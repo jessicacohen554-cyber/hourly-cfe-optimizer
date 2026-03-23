@@ -1315,6 +1315,9 @@ async def validate_request(req: SimulationRequest):
     missing: List[str] = []
     if simple.get(iso) == 'synthetic':
         missing.append(f"step2.2-cost parquet for {iso} (using synthetic fallback)")
+    elif simple.get(iso) == 'ef_parquet':
+        # EF data available but no cost optimization — note but don't flag as missing
+        pass
     if tiers.get('interchange') == 'none':
         missing.append(f"EIA interchange profiles for {iso}")
     if tiers.get('fleet_data') in ('none', 'synthetic'):
