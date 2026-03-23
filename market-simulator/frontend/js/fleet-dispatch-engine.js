@@ -398,7 +398,9 @@ var FleetDispatchEngine = (function () {
             var plantCaptureFrac = (p._ccs_target_rate > 0) ? p._ccs_target_rate : (globalCapturePct / 100.0);
             if (action === 'ccs_retrofit' && yearOnline) {
                 for (var yi2 = 0; yi2 < nYears; yi2++) {
-                    capturePerYear[yi2] = ccsRampFraction(years[yi2], yearOnline, plantCaptureFrac);
+                    // Full capture applied immediately at yearOnline — no multi-year ramp.
+                    // The user sets the capture rate and expects it reflected in emissions.
+                    capturePerYear[yi2] = (years[yi2] >= yearOnline) ? plantCaptureFrac : 0.0;
                 }
             }
 
