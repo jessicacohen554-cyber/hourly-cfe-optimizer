@@ -48,7 +48,7 @@
     var genMixChart = null;
     var newCleanChart = null;
     var intensityFanChart = null;
-    var fuelEmissionsChart = null;
+
     var topEmittersChart = null;
 
     // ── Clean fuel keys for % low-carbon calculation ──
@@ -197,7 +197,7 @@
         buildGenMixChart();
         buildNewCleanChart();
         buildIntensityFanChart();
-        buildFuelEmissionsChart();
+
         buildTopEmittersChart();
         updateFanLegend();
         buildScenarioSelector();
@@ -302,7 +302,7 @@
             ['genMixChart', updateGenMixChart],
             ['newCleanChart', updateNewCleanChart],
             ['intensityFanChart', updateIntensityFanChart],
-            ['fuelEmissionsChart', updateFuelEmissionsChart],
+
             ['topEmittersChart', updateTopEmittersChart]
         ];
         updates.forEach(function (pair) {
@@ -1134,7 +1134,7 @@
                 updateGenMixChart();
                 updateWaterfall2023Chart();
                 updateNewCleanChart();
-                updateFuelEmissionsChart();
+
                 updateTopEmittersChart();
             });
         }
@@ -1618,92 +1618,6 @@
         });
     }
 
-    // ====================================================================
-    // CHART 6: EMISSIONS BY FUEL (Stacked Area) — Custom or Baseline
-    // ====================================================================
-    function buildFuelEmissionsChart() {
-        var ctx = document.getElementById('fuelEmissionsChart').getContext('2d');
-        fuelEmissionsChart = new Chart(ctx, {
-            type: 'line',
-            data: { labels: [], datasets: [] },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: { duration: 300 },
-                interaction: { mode: 'index', intersect: false },
-                scales: {
-                    x: { grid: { display: false }, ticks: { font: { size: 12 }, maxRotation: 0, callback: function (val) { var y = Number(this.getLabelForValue(val)); return y > 2050 ? '' : y; } } },
-                    y: {
-                        stacked: true,
-                        title: { display: true, text: 'Emissions (Mt CO₂)', font: { size: 12 } },
-                        grid: { color: '#E0E6EF' },
-                        beginAtZero: true,
-                        ticks: { font: { size: 11 } }
-                    }
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        filter: fiveYearTooltipFilter,
-                        callbacks: {
-                            label: function (ctx) {
-                                var total = 0;
-                                ctx.chart.data.datasets.forEach(function (ds) {
-                                    total += ds.data[ctx.dataIndex] || 0;
-                                });
-                                var pct = total > 0 ? ((ctx.raw / total) * 100).toFixed(1) : '0.0';
-                                return ctx.dataset.label + ': ' + ctx.raw.toFixed(1) + ' Mt (' + pct + '%)';
-                            }
-                        }
-                    }
-                }
-            }
-        });
-        updateFuelEmissionsChart();
-    }
-
-    function updateFuelEmissionsChart() {
-        if (!fuelEmissionsChart || !DATA) return;
-
-        var sc = getSelectedLowerScenario();
-        var scenarioLabel = getSelectedLowerScenarioLabel();
-
-        document.getElementById('fuelEmissionsTitle').textContent =
-            'Emissions by Fuel Type — ' + scenarioLabel;
-
-        var years = getYears();
-        var labels = years.map(String);
-
-        var datasets = EMISSION_FUEL_KEYS.map(function (fuel) {
-            var data = years.map(function (y) {
-                var emf = sc.emissions_by_fuel ? sc.emissions_by_fuel[String(y)] : null;
-                var val = emf ? (emf[fuel] || 0) : 0;
-                return Math.max(val, 0);
-            });
-            return {
-                label: FUEL_LABELS[fuel] || fuel,
-                data: data,
-                borderColor: FUEL_COLORS[fuel],
-                backgroundColor: hexToRgba(FUEL_COLORS[fuel], 0.45),
-                borderWidth: 1.5,
-                pointRadius: 0,
-                pointHoverRadius: 0,
-                fill: 'origin',
-                tension: 0.3
-            };
-        });
-
-        fuelEmissionsChart.data.labels = padLabelsTo2052(labels);
-        fuelEmissionsChart.data.datasets = datasets;
-        fuelEmissionsChart.update('active');
-
-        var legendEl = document.getElementById('fuelEmissionsLegend');
-        legendEl.innerHTML = EMISSION_FUEL_KEYS.map(function (f) {
-            return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:16px;">' +
-                '<span style="width:24px;height:10px;border-radius:3px;background:' + FUEL_COLORS[f] + ';display:inline-block;"></span>' +
-                (FUEL_LABELS[f] || f) + '</span>';
-        }).join('');
-    }
 
     // ====================================================================
     // CHART 7: TOP EMITTING PLANTS — Stacked area time series

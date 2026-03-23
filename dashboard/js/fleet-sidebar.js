@@ -326,6 +326,20 @@ var FleetSidebar = (function () {
         });
         if (prevOpen.size > 0) openGroups = prevOpen;
 
+        // Capture dirty input values before DOM rebuild so they aren't lost
+        els.fleetList.querySelectorAll('.sb-uprate-input').forEach(function (inp) {
+            var p = findPlant(inp.dataset.idx);
+            if (p) p._uprate_mw = Math.max(0, parseFloat(inp.value) || 0);
+        });
+        els.fleetList.querySelectorAll('.sb-year-input').forEach(function (inp) {
+            var p = findPlant(inp.dataset.idx);
+            if (p) p._year_online = parseInt(inp.value) || null;
+        });
+        els.fleetList.querySelectorAll('.sb-cap-input').forEach(function (inp) {
+            var p = findPlant(inp.dataset.idx);
+            if (p) p.capacity_mw = Math.max(0, parseFloat(inp.value) || 0);
+        });
+
         if (!fleetPlants.length && !addedPlants.length) {
             els.fleetList.innerHTML = '<div style="text-align:center;color:#6b7280;padding:24px;">No fleet data loaded</div>';
             return;
@@ -1232,8 +1246,17 @@ var FleetSidebar = (function () {
     }
 
     // ── Push visible scenarios to chart system ──
+    var _syncRetries = 0;
     function syncVisibleScenarios() {
-        if (!window.FLEET_SCENARIOS_API) return;
+        if (!window.FLEET_SCENARIOS_API) {
+            // API not ready yet — retry with backoff (up to ~5 seconds total)
+            if (_syncRetries < 8) {
+                _syncRetries++;
+                setTimeout(syncVisibleScenarios, 250 * _syncRetries);
+            }
+            return;
+        }
+        _syncRetries = 0;
         var visible = savedScenarios.filter(function (s) { return s.isVisible && s.results; });
         window.FLEET_SCENARIOS_API.setSavedScenarios(visible);
     }
