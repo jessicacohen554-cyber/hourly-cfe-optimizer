@@ -23,7 +23,7 @@ var FleetSidebar = (function () {
 
     var MAX_SCENARIOS = 8;
     var SCENARIO_STORAGE_KEY = 'market-sim-scenarios';
-    var SCENARIO_COLORS = ['#2372B9', '#F47B27', '#6BA543', '#651dda','#007FA4', '#FBB254', '#CADB2E', '#651dda9a'];
+    var SCENARIO_COLORS = ['#2372B9', '#F47B27', '#6BA543', '#651dda', '#E91E63', '#007FA4', '#CADB2E', '#14B8A6'];
 
     // ── Fuel labels ──
     var FUEL_LABELS = {
@@ -261,6 +261,60 @@ var FleetSidebar = (function () {
         // dynamics that the Python sweep captures, so live-computing the baseline here
         // produces an incorrect +14% trajectory instead of the correct -24% decline.
         // Custom scenarios still use the live dispatch engine for accurate deltas.
+
+        // ── Migration: recompute results for saved scenarios that have null results ──
+        // (fixes scenarios saved before the async race condition fix)
+        migrateNullResultScenarios();
+    }
+
+    function migrateNullResultScenarios() {
+        if (!window.FLEET_SCENARIOS_API) {
+            // API not ready yet — retry once after a delay
+            setTimeout(migrateNullResultScenarios, 500);
+            return;
+        }
+        var precomputed = window.FLEET_SCENARIOS_API.getData();
+        if (!precomputed || !precomputed.scenarios || !precomputed.scenarios.baseline) return;
+
+        var baseline = precomputed.scenarios.baseline;
+        var migrated = 0;
+
+        savedScenarios.forEach(function (s) {
+            if (s.results) return; // Already has results
+            if (!s.params) return; // No params to recompute from
+
+            // Reconstruct fleet state from saved params
+            var tempFleet = JSON.parse(JSON.stringify(baseFleet));
+            (s.params.fleetMods || []).forEach(function (mod) {
+                var p = tempFleet[mod._idx];
+                if (p && p.orispl === mod.orispl) {
+                    p._action = mod._action;
+                    p._year_online = mod._year_online;
+                    p._ccs_target_rate = mod._ccs_target_rate;
+                    p._ccs_derate_pct = mod._ccs_derate_pct || 0;
+                    p._uprate_mw = mod._uprate_mw || 0;
+                    p._custom_cf = mod._custom_cf || 0;
+                    if (mod.capacity_mw != null) p.capacity_mw = mod.capacity_mw;
+                }
+            });
+            var tempAdded = JSON.parse(JSON.stringify(s.params.addedPlants || []));
+            var allPlants = tempFleet.concat(tempAdded);
+
+            try {
+                s.results = computeScenarioResults(allPlants, tempAdded, baseline, ccsParams);
+                migrated++;
+                console.log('[fleet-sidebar] Migrated scenario "' + s.name + '" — recomputed results from params');
+            } catch (err) {
+                console.warn('[fleet-sidebar] Failed to migrate scenario "' + s.name + '":', err);
+            }
+        });
+
+        if (migrated > 0) {
+            persistScenarios();
+            renderSavedScenarios();
+            syncVisibleScenarios();
+            console.log('[fleet-sidebar] Migrated ' + migrated + ' scenarios with null results');
+        }
     }
 
     function computeAndSetBaseline() {
@@ -755,6 +809,212 @@ var FleetSidebar = (function () {
         setStatus('Added "' + name + '" (' + fuelType + ') in ' + iso + ' — click Recalculate to update charts');
     }
 
+    // ── Core computation (synchronous) ──
+    // Takes fleet + added plants + baseline data → returns results object
+    function computeScenarioResults(allPlantsList, addedPlantsList, baseline, ccsP) {
+        var years = Object.keys(baseline.envelope).sort();
+
+        // Build orispl → plant AND name → plant lookup for modified plants
+        var modifiedPlants = {};
+        var modifiedByName = {};
+        var restartByName = {};
+        allPlantsList.forEach(function (p) {
+            if (p._action && p._action !== 'default_market') {
+                modifiedPlants[p.orispl] = p;
+                if (p.name) modifiedByName[p.name] = p;
+            }
+            if (p.year_built && p.year_built > 2024 && !FOSSIL_FUELS.has(p.fuel_type)) {
+                if (p.name) restartByName[p.name] = p;
+            }
+        });
+
+        var newPlants = addedPlantsList.filter(function (p) {
+            return p._action === 'add_plant';
+        });
+
+        var customEnvelope = {};
+        var customIntensity = {};
+        var customPlantDetail = {};
+        var customGenByFuel = {};
+        var customEmisByFuel = {};
+
+        years.forEach(function (yr) {
+            var yearNum = parseInt(yr);
+            var basePlants = baseline.plant_detail[yr] || [];
+            var baseEnv = baseline.envelope[yr] || { p10: 0, p50: 0, p90: 0 };
+            var baseGen = baseline.generation_by_fuel[yr] || {};
+            var baseEmis = baseline.emissions_by_fuel[yr] || {};
+
+            var genByFuel = {};
+            Object.keys(baseGen).forEach(function (f) { genByFuel[f] = baseGen[f]; });
+            var emisByFuel = {};
+            Object.keys(baseEmis).forEach(function (f) { emisByFuel[f] = baseEmis[f]; });
+
+            var emisDelta = 0;
+            var genDelta = 0;
+            var yearPlants = [];
+            var newCleanGen = {};
+
+            basePlants.forEach(function (bp) {
+                var mod = modifiedPlants[bp.orispl] || modifiedByName[bp.name];
+                if (!mod) {
+                    yearPlants.push({
+                        orispl: bp.orispl, name: bp.name, iso: bp.iso,
+                        fuel_type: bp.fuel_type, capacity_mw: bp.capacity_mw,
+                        status: bp.status, gen_twh: bp.gen_twh, emissions_mt: bp.emissions_mt
+                    });
+                    var restartPlant = restartByName[bp.name];
+                    if (restartPlant && bp.gen_twh > 0 && yearNum >= (restartPlant.year_built || 9999)) {
+                        var rFuel = bp.fuel_type || restartPlant.fuel_type;
+                        if (!FOSSIL_FUELS.has(rFuel)) {
+                            newCleanGen[rFuel] = (newCleanGen[rFuel] || 0) + bp.gen_twh;
+                        }
+                    }
+                    return;
+                }
+
+                var action = mod._action;
+                var yearOnline = mod._year_online || 2030;
+                var fuel = bp.fuel_type || mod.fuel_type;
+                var capMW = (mod.capacity_mw || bp.capacity_mw || 0) * (mod.equity_share || 1.0);
+                var co2Rate = (mod.co2_rate_t_mwh != null) ? mod.co2_rate_t_mwh : ((bp.co2_rate_t_mwh != null) ? bp.co2_rate_t_mwh : 0.37);
+                var customGenTwh = bp.gen_twh;
+                var customEmisMt = bp.emissions_mt;
+                var customStatus = bp.status;
+                var customFuel = fuel;
+
+                if (action === 'retire' && yearNum >= yearOnline) {
+                    customGenTwh = 0;
+                    customEmisMt = 0;
+                    customStatus = 'retired';
+                } else if (action === 'ccs_retrofit' && yearNum >= yearOnline) {
+                    var cfFrac = (ccsP.cf_pct || 85) / 100.0;
+                    var derateFrac = (ccsP.derate_pct || 14) / 100.0;
+                    var captureFrac = (mod._ccs_target_rate > 0) ?
+                        mod._ccs_target_rate : (ccsP.capture_rate_pct || 90) / 100.0;
+                    var grossMwh = capMW * cfFrac * 8760;
+                    var netMwh = grossMwh * (1.0 - derateFrac);
+                    var emisTons = grossMwh * co2Rate * (1.0 - captureFrac);
+                    customGenTwh = netMwh / 1e6;
+                    customEmisMt = emisTons / 1e6;
+                    customStatus = 'ccs_retrofit';
+                    customFuel = 'ccs_ccgt';
+                } else if (action === 'uprate' && yearNum >= yearOnline) {
+                    var uprateMW = mod._uprate_mw || 0;
+                    var origMW = bp.capacity_mw || capMW;
+                    if (origMW > 0) {
+                        var scale = (origMW + uprateMW) / origMW;
+                        customGenTwh = bp.gen_twh * scale;
+                        customEmisMt = bp.emissions_mt * scale;
+                    }
+                } else if (action === 'operating_override') {
+                    if (bp.gen_twh <= 0 && capMW > 0) {
+                        var forcedCf = mod._custom_cf || 0.90;
+                        customGenTwh = capMW * forcedCf * 8760 / 1e6;
+                        customEmisMt = FOSSIL_FUELS.has(fuel) ? (capMW * forcedCf * 8760 * co2Rate / 1e6) : 0;
+                    }
+                }
+
+                var isCleanFuel = !FOSSIL_FUELS.has(customFuel);
+                if (action === 'operating_override' && isCleanFuel) {
+                    newCleanGen[customFuel] = (newCleanGen[customFuel] || 0) + customGenTwh;
+                } else if (action === 'uprate' && isCleanFuel && yearNum >= yearOnline) {
+                    var uprateIncrement = customGenTwh - (bp.gen_twh || 0);
+                    if (uprateIncrement > 0) {
+                        newCleanGen[customFuel] = (newCleanGen[customFuel] || 0) + uprateIncrement;
+                    }
+                } else if (action === 'ccs_retrofit' && yearNum >= yearOnline) {
+                    newCleanGen['ccs_ccgt'] = (newCleanGen['ccs_ccgt'] || 0) + customGenTwh;
+                }
+
+                var dEmis = customEmisMt - (bp.emissions_mt || 0);
+                var dGen = customGenTwh - (bp.gen_twh || 0);
+                emisDelta += dEmis;
+                genDelta += dGen;
+
+                var oldFuel = bp.fuel_type || 'gas_ccgt';
+                if (customFuel !== oldFuel) {
+                    emisByFuel[oldFuel] = (emisByFuel[oldFuel] || 0) - (bp.emissions_mt || 0);
+                    emisByFuel[customFuel] = (emisByFuel[customFuel] || 0) + customEmisMt;
+                    genByFuel[oldFuel] = (genByFuel[oldFuel] || 0) - (bp.gen_twh || 0);
+                    genByFuel[customFuel] = (genByFuel[customFuel] || 0) + customGenTwh;
+                } else {
+                    emisByFuel[oldFuel] = (emisByFuel[oldFuel] || 0) + dEmis;
+                    genByFuel[oldFuel] = (genByFuel[oldFuel] || 0) + dGen;
+                }
+
+                yearPlants.push({
+                    orispl: bp.orispl, name: bp.name, iso: bp.iso || mod.iso,
+                    fuel_type: customFuel, capacity_mw: bp.capacity_mw,
+                    status: customStatus,
+                    gen_twh: Math.round(customGenTwh * 100) / 100,
+                    emissions_mt: Math.round(customEmisMt * 10000) / 10000
+                });
+            });
+
+            // Process new (added) plants
+            newPlants.forEach(function (np) {
+                var yearOnline = np._year_online || 2028;
+                if (yearNum < yearOnline) return;
+                var fuel = np.fuel_type || 'gas_ccgt';
+                var capMW = (np.capacity_mw || 0) * (np.equity_share || 1.0);
+                var co2Rate = (np.co2_rate_t_mwh != null) ? np.co2_rate_t_mwh : 0.37;
+                var cf = (np._custom_cf && np._custom_cf > 0) ? np._custom_cf : 0.57;
+                var grossMwh = capMW * cf * 8760;
+                var emisTons = grossMwh * co2Rate;
+                var genTwh = grossMwh / 1e6;
+                var emisMt = emisTons / 1e6;
+
+                emisDelta += emisMt;
+                genDelta += genTwh;
+                emisByFuel[fuel] = (emisByFuel[fuel] || 0) + emisMt;
+                genByFuel[fuel] = (genByFuel[fuel] || 0) + genTwh;
+
+                if (!FOSSIL_FUELS.has(fuel)) {
+                    newCleanGen[fuel] = (newCleanGen[fuel] || 0) + genTwh;
+                }
+
+                yearPlants.push({
+                    orispl: np.orispl, name: np.name, iso: np.iso,
+                    fuel_type: fuel, capacity_mw: np.capacity_mw,
+                    status: 'operating',
+                    gen_twh: Math.round(genTwh * 100) / 100,
+                    emissions_mt: Math.round(emisMt * 10000) / 10000
+                });
+            });
+
+            customEnvelope[yr] = {
+                p10: Math.round((baseEnv.p10 + emisDelta) * 10000) / 10000,
+                p50: Math.round((baseEnv.p50 + emisDelta) * 10000) / 10000,
+                p90: Math.round((baseEnv.p90 + emisDelta) * 10000) / 10000
+            };
+
+            var totalGenTwh = 0;
+            var totalEmisMt = 0;
+            Object.keys(genByFuel).forEach(function (f) { if (f[0] !== '_') totalGenTwh += genByFuel[f] || 0; });
+            Object.keys(emisByFuel).forEach(function (f) { if (f[0] !== '_') totalEmisMt += emisByFuel[f] || 0; });
+            var intensityKg = totalGenTwh > 0 ? (totalEmisMt / totalGenTwh) * 1e3 : 0;
+            customIntensity[yr] = {
+                p10: Math.round(intensityKg * 100) / 100,
+                p50: Math.round(intensityKg * 100) / 100,
+                p90: Math.round(intensityKg * 100) / 100
+            };
+
+            genByFuel._new_clean_gen = newCleanGen;
+            customPlantDetail[yr] = yearPlants;
+            customGenByFuel[yr] = genByFuel;
+            customEmisByFuel[yr] = emisByFuel;
+        });
+
+        return {
+            envelope: customEnvelope,
+            intensity_envelope: customIntensity,
+            plant_detail: customPlantDetail,
+            generation_by_fuel: customGenByFuel,
+            emissions_by_fuel: customEmisByFuel
+        };
+    }
+
     // ── Recalculate ──
     // Delta-based approach: uses precomputed baseline per-plant values for unmodified
     // plants, computes only modified plants via simple formulas, then applies the
@@ -794,280 +1054,21 @@ var FleetSidebar = (function () {
                 try {
                     var t0 = performance.now();
                     var baseline = precomputed.scenarios.baseline;
-                    var years = Object.keys(baseline.envelope).sort();
 
-                    // Build orispl → plant AND name → plant lookup for modified plants
-                    // (orispl values may differ between constellation_scenarios.json and
-                    //  fleet_scenario_results_sample.json, so name is the reliable fallback)
-                    var modifiedPlants = {};
-                    var modifiedByName = {};
-                    // Also track restart plants (year_built > 2024) for new clean gen detection
-                    var restartByName = {};
-                    allPlants.forEach(function (p) {
-                        if (p._action && p._action !== 'default_market') {
-                            modifiedPlants[p.orispl] = p;
-                            if (p.name) modifiedByName[p.name] = p;
-                        }
-                        // Crane-type restart plants: clean fuel, year_built in future
-                        if (p.year_built && p.year_built > 2024 && !FOSSIL_FUELS.has(p.fuel_type)) {
-                            if (p.name) restartByName[p.name] = p;
-                        }
-                    });
-
-                    // Also track added plants (not in baseline)
-                    var newPlants = addedPlants.filter(function (p) {
-                        return p._action === 'add_plant';
-                    });
-
-                    // Per-year: compute deltas from modified plants
-                    var customEnvelope = {};
-                    var customIntensity = {};
-                    var customPlantDetail = {};
-                    var customGenByFuel = {};
-                    var customEmisByFuel = {};
-
-                    years.forEach(function (yr) {
-                        var yearNum = parseInt(yr);
-                        var basePlants = baseline.plant_detail[yr] || [];
-                        var baseEnv = baseline.envelope[yr] || { p10: 0, p50: 0, p90: 0 };
-                        var baseGen = baseline.generation_by_fuel[yr] || {};
-                        var baseEmis = baseline.emissions_by_fuel[yr] || {};
-
-                        // Start with copies of baseline values
-                        var genByFuel = {};
-                        Object.keys(baseGen).forEach(function (f) { genByFuel[f] = baseGen[f]; });
-                        var emisByFuel = {};
-                        Object.keys(baseEmis).forEach(function (f) { emisByFuel[f] = baseEmis[f]; });
-
-                        var emisDelta = 0; // Mt change from baseline
-                        var genDelta = 0;  // TWh change from baseline
-                        var yearPlants = [];
-                        var newCleanGen = {}; // {fuel: TWh} — generation from active investment decisions (crane, uprate, CCS, new builds)
-
-                        // Process each baseline plant
-                        basePlants.forEach(function (bp) {
-                            var mod = modifiedPlants[bp.orispl] || modifiedByName[bp.name];
-                            if (!mod) {
-                                // Default market — use precomputed values exactly
-                                yearPlants.push({
-                                    orispl: bp.orispl,
-                                    name: bp.name,
-                                    iso: bp.iso,
-                                    fuel_type: bp.fuel_type,
-                                    capacity_mw: bp.capacity_mw,
-                                    status: bp.status,
-                                    gen_twh: bp.gen_twh,
-                                    emissions_mt: bp.emissions_mt
-                                });
-                                // Auto-detect restart plants (e.g. Crane) as new clean generation
-                                var restartPlant = restartByName[bp.name];
-                                if (restartPlant && bp.gen_twh > 0 && yearNum >= (restartPlant.year_built || 9999)) {
-                                    var rFuel = bp.fuel_type || restartPlant.fuel_type;
-                                    if (!FOSSIL_FUELS.has(rFuel)) {
-                                        newCleanGen[rFuel] = (newCleanGen[rFuel] || 0) + bp.gen_twh;
-                                    }
-                                }
-                                return;
-                            }
-
-                            // Modified plant — compute custom values
-                            var action = mod._action;
-                            var yearOnline = mod._year_online || 2030;
-                            var fuel = bp.fuel_type || mod.fuel_type;
-                            var capMW = (mod.capacity_mw || bp.capacity_mw || 0) * (mod.equity_share || 1.0);
-                            var co2Rate = (mod.co2_rate_t_mwh != null) ? mod.co2_rate_t_mwh : ((bp.co2_rate_t_mwh != null) ? bp.co2_rate_t_mwh : 0.37);
-                            var customGenTwh = bp.gen_twh;
-                            var customEmisMt = bp.emissions_mt;
-                            var customStatus = bp.status;
-                            var customFuel = fuel;
-
-                            if (action === 'retire' && yearNum >= yearOnline) {
-                                // Retired: zero from retirement year onward
-                                customGenTwh = 0;
-                                customEmisMt = 0;
-                                customStatus = 'retired';
-
-                            } else if (action === 'ccs_retrofit' && yearNum >= yearOnline) {
-                                // CCS retrofit: simple formula
-                                var cfFrac = (ccsParams.cf_pct || 85) / 100.0;
-                                var derateFrac = (ccsParams.derate_pct || 14) / 100.0;
-                                var captureFrac = (mod._ccs_target_rate > 0) ?
-                                    mod._ccs_target_rate : (ccsParams.capture_rate_pct || 90) / 100.0;
-
-                                var grossMwh = capMW * cfFrac * 8760;
-                                var netMwh = grossMwh * (1.0 - derateFrac);
-                                // Emissions based on gross gen (fuel burned at full rate)
-                                var emisTons = grossMwh * co2Rate * (1.0 - captureFrac);
-
-                                customGenTwh = netMwh / 1e6;  // MWh → TWh
-                                customEmisMt = emisTons / 1e6; // tons → Mt
-                                customStatus = 'ccs_retrofit';
-                                customFuel = 'ccs_ccgt';
-
-                                console.log('[CCS-DEBUG] Plant:', bp.name,
-                                    '| slider CF:', ccsParams.cf_pct, '% → cfFrac:', cfFrac.toFixed(3),
-                                    '| capMW:', capMW.toFixed(0), '| grossMwh:', grossMwh.toFixed(0),
-                                    '| derate:', derateFrac.toFixed(2), '| netMwh:', netMwh.toFixed(0),
-                                    '| customGenTwh:', customGenTwh.toFixed(3),
-                                    '| baselineGenTwh:', bp.gen_twh,
-                                    '| capture:', captureFrac.toFixed(2));
-
-                            } else if (action === 'uprate' && yearNum >= yearOnline) {
-                                // Uprate: scale by capacity ratio
-                                var uprateMW = mod._uprate_mw || 0;
-                                var origMW = bp.capacity_mw || capMW;
-                                if (origMW > 0) {
-                                    var scale = (origMW + uprateMW) / origMW;
-                                    customGenTwh = bp.gen_twh * scale;
-                                    customEmisMt = bp.emissions_mt * scale;
-                                }
-
-                            } else if (action === 'operating_override') {
-                                // Forced operating: keep plant running even if baseline retired it
-                                if (bp.gen_twh <= 0 && capMW > 0) {
-                                    // Plant was economically retired in baseline — force to run at regional CF
-                                    var forcedCf = mod._custom_cf || 0.90;
-                                    customGenTwh = capMW * forcedCf * 8760 / 1e6;
-                                    // Clean fuel = zero emissions; fossil = use co2Rate
-                                    customEmisMt = FOSSIL_FUELS.has(fuel) ? (capMW * forcedCf * 8760 * co2Rate / 1e6) : 0;
-                                }
-                                // Otherwise uses baseline gen (plant already running)
-                            }
-                            // Before yearOnline for retire/ccs/uprate: use precomputed values
-
-                            // Track new clean generation from investment decisions
-                            var isCleanFuel = !FOSSIL_FUELS.has(customFuel);
-                            if (action === 'operating_override' && isCleanFuel) {
-                                // Crane: ALL generation counts as new clean
-                                newCleanGen[customFuel] = (newCleanGen[customFuel] || 0) + customGenTwh;
-                            } else if (action === 'uprate' && isCleanFuel && yearNum >= yearOnline) {
-                                // Uprate: incremental generation from uprate MW
-                                var uprateIncrement = customGenTwh - (bp.gen_twh || 0);
-                                if (uprateIncrement > 0) {
-                                    newCleanGen[customFuel] = (newCleanGen[customFuel] || 0) + uprateIncrement;
-                                }
-                            } else if (action === 'ccs_retrofit' && yearNum >= yearOnline) {
-                                // CCS: all CCS generation is new clean
-                                newCleanGen['ccs_ccgt'] = (newCleanGen['ccs_ccgt'] || 0) + customGenTwh;
-                            }
-
-                            // Compute delta from baseline
-                            var dEmis = customEmisMt - (bp.emissions_mt || 0);
-                            var dGen = customGenTwh - (bp.gen_twh || 0);
-                            emisDelta += dEmis;
-                            genDelta += dGen;
-
-                            // Update fuel buckets
-                            var oldFuel = bp.fuel_type || 'gas_ccgt';
-                            if (customFuel !== oldFuel) {
-                                // Subtract from old fuel, add to new fuel
-                                emisByFuel[oldFuel] = (emisByFuel[oldFuel] || 0) - (bp.emissions_mt || 0);
-                                emisByFuel[customFuel] = (emisByFuel[customFuel] || 0) + customEmisMt;
-                                genByFuel[oldFuel] = (genByFuel[oldFuel] || 0) - (bp.gen_twh || 0);
-                                genByFuel[customFuel] = (genByFuel[customFuel] || 0) + customGenTwh;
-                            } else {
-                                emisByFuel[oldFuel] = (emisByFuel[oldFuel] || 0) + dEmis;
-                                genByFuel[oldFuel] = (genByFuel[oldFuel] || 0) + dGen;
-                            }
-
-                            yearPlants.push({
-                                orispl: bp.orispl,
-                                name: bp.name,
-                                iso: bp.iso || mod.iso,
-                                fuel_type: customFuel,
-                                capacity_mw: bp.capacity_mw,
-                                status: customStatus,
-                                gen_twh: Math.round(customGenTwh * 100) / 100,
-                                emissions_mt: Math.round(customEmisMt * 10000) / 10000
-                            });
-                        });
-
-                        // Process new (added) plants
-                        newPlants.forEach(function (np) {
-                            var yearOnline = np._year_online || 2028;
-                            if (yearNum < yearOnline) return;
-                            var fuel = np.fuel_type || 'gas_ccgt';
-                            var capMW = (np.capacity_mw || 0) * (np.equity_share || 1.0);
-                            var co2Rate = (np.co2_rate_t_mwh != null) ? np.co2_rate_t_mwh : 0.37;
-                            // Use custom CF for renewables/clean, default gas CF for fossil
-                            var cf = (np._custom_cf && np._custom_cf > 0) ? np._custom_cf : 0.57;
-                            var grossMwh = capMW * cf * 8760;
-                            var emisTons = grossMwh * co2Rate;
-                            var genTwh = grossMwh / 1e6;
-                            var emisMt = emisTons / 1e6;
-
-                            emisDelta += emisMt;
-                            genDelta += genTwh;
-                            emisByFuel[fuel] = (emisByFuel[fuel] || 0) + emisMt;
-                            genByFuel[fuel] = (genByFuel[fuel] || 0) + genTwh;
-
-                            // Track new clean generation from added plants
-                            if (!FOSSIL_FUELS.has(fuel)) {
-                                newCleanGen[fuel] = (newCleanGen[fuel] || 0) + genTwh;
-                            }
-
-                            yearPlants.push({
-                                orispl: np.orispl,
-                                name: np.name,
-                                iso: np.iso,
-                                fuel_type: fuel,
-                                capacity_mw: np.capacity_mw,
-                                status: 'operating',
-                                gen_twh: Math.round(genTwh * 100) / 100,
-                                emissions_mt: Math.round(emisMt * 10000) / 10000
-                            });
-                        });
-
-                        // Apply delta to precomputed envelope
-                        customEnvelope[yr] = {
-                            p10: Math.round((baseEnv.p10 + emisDelta) * 10000) / 10000,
-                            p50: Math.round((baseEnv.p50 + emisDelta) * 10000) / 10000,
-                            p90: Math.round((baseEnv.p90 + emisDelta) * 10000) / 10000
-                        };
-
-                        // Derive intensity from adjusted totals (skip _-prefixed metadata keys)
-                        var totalGenTwh = 0;
-                        var totalEmisMt = 0;
-                        Object.keys(genByFuel).forEach(function (f) { if (f[0] !== '_') totalGenTwh += genByFuel[f] || 0; });
-                        Object.keys(emisByFuel).forEach(function (f) { if (f[0] !== '_') totalEmisMt += emisByFuel[f] || 0; });
-                        var intensityKg = totalGenTwh > 0 ? (totalEmisMt / totalGenTwh) * 1e3 : 0;
-                        customIntensity[yr] = {
-                            p10: Math.round(intensityKg * 100) / 100,
-                            p50: Math.round(intensityKg * 100) / 100,
-                            p90: Math.round(intensityKg * 100) / 100
-                        };
-
-                        // Attach new clean gen AFTER intensity calc (it's an object, not a number)
-                        genByFuel._new_clean_gen = newCleanGen;
-
-                        customPlantDetail[yr] = yearPlants;
-                        customGenByFuel[yr] = genByFuel;
-                        customEmisByFuel[yr] = emisByFuel;
-                    });
+                    // Use extracted computation function
+                    lastComputedResults = computeScenarioResults(allPlants, addedPlants, baseline, ccsParams);
 
                     var elapsed = Math.round(performance.now() - t0);
-
-                    // Cache results
-                    lastComputedResults = {
-                        envelope: customEnvelope,
-                        intensity_envelope: customIntensity,
-                        plant_detail: customPlantDetail,
-                        generation_by_fuel: customGenByFuel,
-                        emissions_by_fuel: customEmisByFuel
-                    };
-
                     var scenarioName = (els.nameInput && els.nameInput.value.trim()) || 'Custom';
 
-                    // Debug: log computed results before passing to chart system
-                    var dbgGen2030 = customGenByFuel['2030'];
-                    var dbgInt2030 = customIntensity['2030'];
+                    // Debug log
+                    var dbgGen2030 = lastComputedResults.generation_by_fuel['2030'];
+                    var dbgInt2030 = lastComputedResults.intensity_envelope['2030'];
                     console.log('[fleet-sidebar] recalculate complete:',
-                        '| newPlants:', newPlants.length,
-                        '| modifiedPlants:', Object.keys(modifiedPlants).length,
-                        '| years:', years.length,
+                        '| addedPlants:', addedPlants.length,
                         '| 2030 gen_by_fuel:', dbgGen2030 ? JSON.stringify(dbgGen2030) : 'MISSING',
                         '| 2030 intensity:', dbgInt2030 ? dbgInt2030.p50 + ' kg/MWh' : 'MISSING',
-                        '| 2030 envelope:', customEnvelope['2030'] ? JSON.stringify(customEnvelope['2030']) : 'MISSING');
+                        '| 2030 envelope:', lastComputedResults.envelope['2030'] ? JSON.stringify(lastComputedResults.envelope['2030']) : 'MISSING');
 
                     var scenarioData = {
                         description: scenarioName,
