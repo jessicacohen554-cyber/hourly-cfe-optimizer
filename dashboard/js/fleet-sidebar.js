@@ -1065,9 +1065,14 @@ var FleetSidebar = (function () {
                         emissions_by_fuel: customEmisByFuel
                     };
 
-                    window.FLEET_SCENARIOS_API.setCustomScenario(scenarioName, scenarioData);
-                    setStatus('Done in ' + elapsed + 'ms — custom scenario updated');
+                    // Don't auto-display on charts — user must save & name first
+                    // window.FLEET_SCENARIOS_API.setCustomScenario(scenarioName, scenarioData);
+                    setStatus('Computed in ' + elapsed + 'ms — name & save to display on charts');
                     updateSaveButtonState();
+                    // Auto-focus name input to encourage saving
+                    if (els.nameInput && !els.nameInput.value.trim()) {
+                        els.nameInput.focus();
+                    }
                 } catch (err) {
                     console.error('Recalculation failed:', err, err.stack);
                     setStatus('Error: ' + err.message + ' (see console for details)');
