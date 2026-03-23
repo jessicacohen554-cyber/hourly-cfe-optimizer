@@ -329,24 +329,24 @@ var FleetDispatchEngine = (function () {
 
             var iso = p.iso;
             var isoData = sweepData.data[iso];
-            if (!isoData) return;
 
             var cfKey = fuel + '_cf';
             var marginKey = fuel + '_margin';
-            var cfArrays = isoData[cfKey];    // [scenario][year_idx]
-            var marginArrays = isoData[marginKey];
-            if (!cfArrays || !marginArrays) return;
+            var cfArrays = isoData ? isoData[cfKey] : null;
+            var marginArrays = isoData ? isoData[marginKey] : null;
+            var hasSweepArrays = !!(cfArrays && marginArrays);
 
             // Pre-detect years where ALL sweep CFs are zero (e.g. 2023 baseline)
-            // For these years, use static fallback CFs
+            // For these years (or ISOs missing from sweep data), use static fallback CFs
             var fallbackCf = FOSSIL_STATIC_CF[fuel] || 0.10;
             var yearHasData = new Uint8Array(nYears);
-            for (var yCheck = 0; yCheck < nYears; yCheck++) {
-                // Check first few scenarios for non-zero data
-                for (var sCheck = 0; sCheck < Math.min(10, nScenarios); sCheck++) {
-                    if (cfArrays[sCheck] && cfArrays[sCheck][yCheck] > 0) {
-                        yearHasData[yCheck] = 1;
-                        break;
+            if (hasSweepArrays) {
+                for (var yCheck = 0; yCheck < nYears; yCheck++) {
+                    for (var sCheck = 0; sCheck < Math.min(10, nScenarios); sCheck++) {
+                        if (cfArrays[sCheck] && cfArrays[sCheck][yCheck] > 0) {
+                            yearHasData[yCheck] = 1;
+                            break;
+                        }
                     }
                 }
             }
@@ -404,8 +404,8 @@ var FleetDispatchEngine = (function () {
 
             // Dispatch across all scenarios × years
             for (var si2 = 0; si2 < nScenarios; si2++) {
-                var scenarioCF = cfArrays[si2];
-                var scenarioMargin = marginArrays[si2];
+                var scenarioCF = hasSweepArrays ? cfArrays[si2] : null;
+                var scenarioMargin = hasSweepArrays ? marginArrays[si2] : null;
 
                 for (var yi3 = 0; yi3 < nYears; yi3++) {
                     // For historic years with Rosetta actuals and no user action, use actual data directly
@@ -427,13 +427,14 @@ var FleetDispatchEngine = (function () {
                         continue; // Skip sweep-based dispatch for this year
                     }
 
-                    var baseCf = scenarioCF[yi3] || 0;
-                    var margin = scenarioMargin[yi3] || 0;
-
-                    // Fallback to static CF when sweep has no data for this year
-                    if (!yearHasData[yi3]) {
+                    var baseCf, margin;
+                    if (hasSweepArrays && yearHasData[yi3]) {
+                        baseCf = (scenarioCF ? scenarioCF[yi3] : 0) || 0;
+                        margin = (scenarioMargin ? scenarioMargin[yi3] : 0) || 0;
+                    } else {
+                        // No sweep data for this ISO or year — use static CF
                         baseCf = fallbackCf;
-                        margin = 1; // Assume positive margin for baseline year
+                        margin = 1;
                     }
 
                     // Efficiency adjustment
