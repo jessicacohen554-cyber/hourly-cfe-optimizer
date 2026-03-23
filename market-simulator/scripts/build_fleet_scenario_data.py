@@ -737,15 +737,50 @@ def build_envelope(base_emissions_2023, scenario_emissions_by_year):
     return envelope, envelope_by_cost
 
 
-def build_plant_detail(fossil_plants, year, scenario='baseline', retired_fuels=None):
-    """Build plant-level detail using actuals for 2023-2025, projected for future."""
+def build_plant_detail(fossil_plants, year, scenario='baseline', retired_fuels=None,
+                       all_plants=None):
+    """Build plant-level detail using actuals for 2023-2025, projected for future.
+
+    Includes fossil plants (with emissions) AND nuclear/geothermal plants
+    (for generation drill-down debugging).
+    """
     if retired_fuels is None:
         retired_fuels = {}
 
     year_factor = max(0.0, 1.0 - 0.008 * (year - 2024))
-    re_growth = 1.0  # Not used for fossil but needed by helper
+    re_growth = 1.0 + 0.02 * (year - 2024)
     details = []
 
+    # ── Nuclear & geothermal plants (non-fossil with generation) ──
+    if all_plants:
+        for p in all_plants:
+            fuel = p['fuel_type']
+            if fuel not in ('nuclear', 'geothermal'):
+                continue
+            name = p['name']
+            cap = p['capacity_mw']
+            orispl = p.get('orispl') or hash(name) % 90000 + 10000
+            if cap <= 0:
+                continue
+
+            gen_twh = get_plant_gen_twh(p, fuel, year, year_factor, re_growth)
+            # Geothermal has small emissions; nuclear has 0
+            actual_co2 = p.get('actual_co2_mt', {})
+            if year in actual_co2:
+                emissions_mt = actual_co2[year] / 1e6
+            else:
+                emissions_mt = 0.0
+
+            details.append({
+                'name': name, 'orispl': orispl, 'fuel_type': fuel,
+                'capacity_mw': round(cap, 1),
+                'ccs_capacity_mw': 0.0,
+                'gen_twh': round(gen_twh, 3),
+                'emissions_mt': round(emissions_mt, 3),
+                'status': 'operating'
+            })
+
+    # ── Fossil plants ──
     for p in fossil_plants:
         fuel = p['fuel_type']
         name = p['name']
@@ -815,6 +850,46 @@ def build_plant_detail(fossil_plants, year, scenario='baseline', retired_fuels=N
     return details
 
 
+def build_plant_percentiles(plant_detail):
+    """Build per-plant P10/P50/P90 bands for drill-down charts.
+
+    Uses ±12% spread around point estimates (same as fleet-level envelope).
+    Output keyed by orispl → {name, fuel_type, capacity_mw, gen_gwh, emissions_t}
+    where gen_gwh[year] and emissions_t[year] each have {p10, p50, p90}.
+    Units: GWh for generation, metric tons for emissions.
+    """
+    SPREAD = 0.12
+
+    # Collect all unique plants across years
+    plant_map = {}  # orispl → {name, fuel_type, ...}
+    for year_str, plants_list in plant_detail.items():
+        for p in plants_list:
+            oid = p['orispl']
+            if oid not in plant_map:
+                plant_map[oid] = {
+                    'name': p['name'],
+                    'fuel_type': p['fuel_type'],
+                    'capacity_mw': p['capacity_mw'],
+                    'gen_gwh': {},
+                    'emissions_t': {}
+                }
+            # gen_twh → GWh (×1000), emissions_mt → metric tons (×1e6)
+            gen_gwh = p['gen_twh'] * 1000
+            emis_t = p['emissions_mt'] * 1e6
+            plant_map[oid]['gen_gwh'][year_str] = {
+                'p10': round(gen_gwh * (1 - SPREAD), 1),
+                'p50': round(gen_gwh, 1),
+                'p90': round(gen_gwh * (1 + SPREAD), 1)
+            }
+            plant_map[oid]['emissions_t'][year_str] = {
+                'p10': round(emis_t * (1 - SPREAD)),
+                'p50': round(emis_t),
+                'p90': round(emis_t * (1 + SPREAD))
+            }
+
+    return plant_map
+
+
 def build_scenario(plants, fossil_plants, scenario_key):
     """Build a complete scenario data structure using actual fleet capacities."""
     descriptions = {
@@ -852,12 +927,17 @@ def build_scenario(plants, fossil_plants, scenario_key):
         emissions_trajectory[year] = total_emissions(emf)
 
         pd = build_plant_detail(
-            fossil_plants, year, scenario=scenario_key, retired_fuels=retired_fuels
+            fossil_plants, year, scenario=scenario_key, retired_fuels=retired_fuels,
+            all_plants=plants
         )
         plant_detail[str(year)] = pd
 
     base_e = emissions_trajectory[2023]
     envelope, envelope_by_cost = build_envelope(base_e, emissions_trajectory)
+
+    # ── Build per-plant percentile bands for drill-down charts ──
+    # Uses ±12% spread (same as fleet-level envelope) applied per-plant
+    plant_percentiles = build_plant_percentiles(plant_detail)
 
     return {
         'description': descriptions.get(scenario_key, scenario_key),
@@ -865,6 +945,7 @@ def build_scenario(plants, fossil_plants, scenario_key):
         'envelope': envelope,
         'envelope_by_fossil_cost': envelope_by_cost,
         'plant_detail': plant_detail,
+        'plant_percentiles': plant_percentiles,
         'generation_by_fuel': generation_by_fuel,
         'emissions_by_fuel': emissions_by_fuel_data
     }

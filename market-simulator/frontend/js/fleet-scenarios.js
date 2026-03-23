@@ -140,6 +140,7 @@
         buildIntensityFanChart();
         buildFuelEmissionsChart();
         updateFanLegend();
+        buildPlantDrilldownCharts();
     }
 
     // ====================================================================
@@ -1650,6 +1651,308 @@
         getData: function () { return DATA; },
         getYears: getYears
     };
+
+    // ====================================================================
+    // PLANT DRILL-DOWN CHARTS
+    // ====================================================================
+    var plantGenChart = null;
+    var plantEmisChart = null;
+
+    function buildPlantDrilldownCharts() {
+        if (!DATA) return;
+        populatePlantSelector();
+
+        var genCtx = document.getElementById('plantGenChart');
+        var emisCtx = document.getElementById('plantEmisChart');
+        if (!genCtx || !emisCtx) return;
+
+        var chartOpts = {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 600 },
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+                x: {
+                    title: { display: true, text: 'Year', font: { size: 12 } },
+                    grid: { display: false },
+                    ticks: { maxRotation: 0, font: { size: 11 } }
+                },
+                y: {
+                    grid: { color: '#E0E6EF' },
+                    beginAtZero: true,
+                    ticks: { font: { size: 11 } }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true, position: 'top', align: 'end',
+                    labels: {
+                        filter: function (item, chartData) {
+                            var ds = chartData.datasets[item.datasetIndex];
+                            return ds && ds._showInLegend;
+                        },
+                        usePointStyle: true, pointStyle: 'line', padding: 12,
+                        font: { size: 11 }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function (ctx) {
+                            if (ctx.dataset._band) return null;
+                            var val = ctx.parsed.y;
+                            return ctx.dataset.label + ': ' + val.toLocaleString(undefined, { maximumFractionDigits: 0 });
+                        }
+                    },
+                    filter: function (item) {
+                        return item.dataset._band === 'p50' || !item.dataset._band;
+                    }
+                }
+            }
+        };
+
+        plantGenChart = new Chart(genCtx.getContext('2d'), {
+            type: 'line',
+            data: { labels: [], datasets: [] },
+            options: Object.assign({}, chartOpts, {
+                scales: Object.assign({}, chartOpts.scales, {
+                    y: Object.assign({}, chartOpts.scales.y, {
+                        title: { display: true, text: 'GWh', font: { size: 12 } }
+                    })
+                })
+            })
+        });
+        plantEmisChart = new Chart(emisCtx.getContext('2d'), {
+            type: 'line',
+            data: { labels: [], datasets: [] },
+            options: Object.assign({}, chartOpts, {
+                scales: Object.assign({}, chartOpts.scales, {
+                    y: Object.assign({}, chartOpts.scales.y, {
+                        title: { display: true, text: 'Metric tons CO₂', font: { size: 12 } }
+                    })
+                })
+            })
+        });
+
+        // Wire events
+        var plantSel = document.getElementById('plantSelector');
+        var intSel = document.getElementById('interventionSelector');
+        var intYear = document.getElementById('interventionYear');
+        if (plantSel) plantSel.addEventListener('change', function () {
+            updateInterventionOptions();
+            updatePlantDrilldownCharts();
+        });
+        if (intSel) intSel.addEventListener('change', updatePlantDrilldownCharts);
+        if (intYear) intYear.addEventListener('change', updatePlantDrilldownCharts);
+    }
+
+    function populatePlantSelector() {
+        var sel = document.getElementById('plantSelector');
+        if (!sel || !DATA || !DATA.scenarios || !DATA.scenarios.baseline) return;
+
+        var pp = DATA.scenarios.baseline.plant_percentiles;
+        if (!pp) return;
+
+        // Group by fuel type
+        var groups = {};
+        Object.keys(pp).forEach(function (oid) {
+            var p = pp[oid];
+            var ft = p.fuel_type;
+            var label = ft === 'nuclear' ? 'Nuclear' :
+                        ft === 'geothermal' ? 'Geothermal' :
+                        ft === 'gas_ccgt' ? 'Gas CCGT' :
+                        ft === 'gas_ct' ? 'Gas CT' :
+                        ft === 'oil_ct' ? 'Oil CT' :
+                        ft === 'gas_oil_ct' ? 'Gas/Oil CT' : ft;
+            if (!groups[label]) groups[label] = [];
+            groups[label].push({ oid: oid, name: p.name, cap: p.capacity_mw });
+        });
+
+        sel.innerHTML = '<option value="">— Select a plant —</option>';
+        var order = ['Nuclear', 'Gas CCGT', 'Gas CT', 'Gas/Oil CT', 'Oil CT', 'Geothermal'];
+        order.forEach(function (grp) {
+            if (!groups[grp]) return;
+            var og = document.createElement('optgroup');
+            og.label = grp;
+            groups[grp].sort(function (a, b) { return b.cap - a.cap; });
+            groups[grp].forEach(function (p) {
+                var opt = document.createElement('option');
+                opt.value = p.oid;
+                opt.textContent = p.name + ' (' + Math.round(p.cap) + ' MW)';
+                og.appendChild(opt);
+            });
+            sel.appendChild(og);
+        });
+    }
+
+    function updateInterventionOptions() {
+        var plantSel = document.getElementById('plantSelector');
+        var intSel = document.getElementById('interventionSelector');
+        if (!plantSel || !intSel || !DATA) return;
+
+        var oid = plantSel.value;
+        var pp = DATA.scenarios.baseline.plant_percentiles || {};
+        var plant = pp[oid];
+        if (!plant) return;
+
+        var isNuclear = plant.fuel_type === 'nuclear';
+        var isCCGT = plant.fuel_type === 'gas_ccgt';
+
+        intSel.innerHTML = '';
+        var options = [
+            { val: 'default_market', label: 'Default Market' },
+            { val: 'operating_override', label: 'Operating (forced)' },
+            { val: 'retire', label: 'Retire' }
+        ];
+        if (isCCGT) {
+            options.push({ val: 'ccs_retrofit', label: 'CCS Retrofit' });
+        }
+        if (isNuclear) {
+            options.push({ val: 'uprate', label: 'Uprate' });
+        }
+        options.forEach(function (o) {
+            var opt = document.createElement('option');
+            opt.value = o.val;
+            opt.textContent = o.label;
+            intSel.appendChild(opt);
+        });
+    }
+
+    function updatePlantDrilldownCharts() {
+        if (!plantGenChart || !plantEmisChart || !DATA) return;
+
+        var plantSel = document.getElementById('plantSelector');
+        var intSel = document.getElementById('interventionSelector');
+        var intYearEl = document.getElementById('interventionYear');
+        if (!plantSel) return;
+
+        var oid = plantSel.value;
+        if (!oid) {
+            plantGenChart.data = { labels: [], datasets: [] };
+            plantEmisChart.data = { labels: [], datasets: [] };
+            plantGenChart.update();
+            plantEmisChart.update();
+            return;
+        }
+
+        var pp = DATA.scenarios.baseline.plant_percentiles || {};
+        var plant = pp[oid];
+        if (!plant) return;
+
+        var years = getYears();
+        if (!years.length) {
+            years = [2023, 2024, 2025, 2030, 2035, 2040, 2045, 2050];
+        }
+        var labels = years.map(String);
+
+        // ── Build baseline envelope ──
+        var baseGenEnv = {};
+        var baseEmisEnv = {};
+        years.forEach(function (y) {
+            var ys = String(y);
+            var gd = plant.gen_gwh[ys];
+            var ed = plant.emissions_t[ys];
+            baseGenEnv[ys] = gd ? { p10: gd.p10, p50: gd.p50, p90: gd.p90 } : { p10: 0, p50: 0, p90: 0 };
+            baseEmisEnv[ys] = ed ? { p10: ed.p10, p50: ed.p50, p90: ed.p90 } : { p10: 0, p50: 0, p90: 0 };
+        });
+
+        // ── Build intervention envelope ──
+        var intervention = intSel ? intSel.value : 'default_market';
+        var intYear = intYearEl ? parseInt(intYearEl.value, 10) : 2030;
+        var intGenEnv = null;
+        var intEmisEnv = null;
+
+        if (intervention !== 'default_market') {
+            intGenEnv = {};
+            intEmisEnv = {};
+            years.forEach(function (y) {
+                var ys = String(y);
+                var bg = baseGenEnv[ys];
+                var be = baseEmisEnv[ys];
+
+                if (intervention === 'retire' && y >= intYear) {
+                    intGenEnv[ys] = { p10: 0, p50: 0, p90: 0 };
+                    intEmisEnv[ys] = { p10: 0, p50: 0, p90: 0 };
+                } else if (intervention === 'ccs_retrofit' && y >= intYear) {
+                    // CCS ramp: 0→30%→70%→100% over 8 years
+                    var elapsed = y - intYear;
+                    var rampFrac;
+                    if (elapsed <= 0) rampFrac = 0;
+                    else if (elapsed <= 2) rampFrac = 0.30 * elapsed / 2;
+                    else if (elapsed <= 5) rampFrac = 0.30 + 0.40 * (elapsed - 2) / 3;
+                    else if (elapsed <= 8) rampFrac = 0.70 + 0.30 * (elapsed - 5) / 3;
+                    else rampFrac = 1.0;
+                    var captureRate = rampFrac * 0.90;
+                    var derate = 0.14;
+                    // Gen decreases by derate, emissions decrease by capture
+                    intGenEnv[ys] = {
+                        p10: Math.round(bg.p10 * (1 - derate)),
+                        p50: Math.round(bg.p50 * (1 - derate)),
+                        p90: Math.round(bg.p90 * (1 - derate))
+                    };
+                    intEmisEnv[ys] = {
+                        p10: Math.round(be.p10 * (1 - captureRate)),
+                        p50: Math.round(be.p50 * (1 - captureRate)),
+                        p90: Math.round(be.p90 * (1 - captureRate))
+                    };
+                } else if (intervention === 'uprate' && y >= intYear) {
+                    // Uprate: +10% generation, 0 emissions (nuclear)
+                    var uprateFactor = 1.10;
+                    intGenEnv[ys] = {
+                        p10: Math.round(bg.p10 * uprateFactor),
+                        p50: Math.round(bg.p50 * uprateFactor),
+                        p90: Math.round(bg.p90 * uprateFactor)
+                    };
+                    intEmisEnv[ys] = { p10: 0, p50: 0, p90: 0 };
+                } else {
+                    // Before intervention year or operating_override: same as baseline
+                    intGenEnv[ys] = { p10: bg.p10, p50: bg.p50, p90: bg.p90 };
+                    intEmisEnv[ys] = { p10: be.p10, p50: be.p50, p90: be.p90 };
+                }
+            });
+        }
+
+        // ── Build datasets ──
+        var genDs = [];
+        var emisDs = [];
+
+        // Baseline fan (gray)
+        addFanDatasets(genDs, baseGenEnv, years, BASELINE_COLOR, 'Baseline', 'single', {
+            color: BASELINE_COLOR, width: 2.5, dash: [], pointRadius: 3,
+            legendLabel: 'Baseline (Market)'
+        }, { isBaseline: true, scenarioName: 'Baseline' });
+
+        addFanDatasets(emisDs, baseEmisEnv, years, BASELINE_COLOR, 'Baseline', 'single', {
+            color: BASELINE_COLOR, width: 2.5, dash: [], pointRadius: 3,
+            legendLabel: 'Baseline (Market)'
+        }, { isBaseline: true, scenarioName: 'Baseline' });
+
+        // Intervention fan (blue)
+        if (intGenEnv) {
+            var intColor = '#2372B9';
+            var intLabel = intervention === 'retire' ? 'Retire (' + intYear + ')' :
+                           intervention === 'ccs_retrofit' ? 'CCS Retrofit (' + intYear + ')' :
+                           intervention === 'uprate' ? 'Uprate (' + intYear + ')' :
+                           intervention === 'operating_override' ? 'Operating (forced)' :
+                           'Intervention';
+            addFanDatasets(genDs, intGenEnv, years, intColor, intLabel, 'single', {
+                color: intColor, width: 2.5, dash: [], pointRadius: 3,
+                legendLabel: intLabel
+            }, { isBaseline: false, scenarioName: intLabel });
+
+            addFanDatasets(emisDs, intEmisEnv, years, intColor, intLabel, 'single', {
+                color: intColor, width: 2.5, dash: [], pointRadius: 3,
+                legendLabel: intLabel
+            }, { isBaseline: false, scenarioName: intLabel });
+        }
+
+        plantGenChart.data.labels = labels;
+        plantGenChart.data.datasets = genDs;
+        plantGenChart.update('active');
+
+        plantEmisChart.data.labels = labels;
+        plantEmisChart.data.datasets = emisDs;
+        plantEmisChart.update('active');
+    }
 
     // ── Boot ──
     if (document.readyState === 'loading') {
