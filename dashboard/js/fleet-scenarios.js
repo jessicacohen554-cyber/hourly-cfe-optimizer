@@ -55,6 +55,17 @@
         return Object.keys(DATA.scenarios.baseline.envelope).map(Number).sort(function (a, b) { return a - b; });
     }
 
+    /** Return an array of pointRadius values: `radius` at 5-year intervals, 0 elsewhere. */
+    function fiveYearRadii(years, radius) {
+        return years.map(function (y) { return y % 5 === 0 ? radius : 0; });
+    }
+
+    /** Tooltip filter: only show tooltips at 5-year intervals. */
+    function fiveYearTooltipFilter(item) {
+        var label = item.label || '';
+        return Number(label) % 5 === 0;
+    }
+
     function hexToRgba(hex, alpha) {
         var r = parseInt(hex.slice(1, 3), 16);
         var g = parseInt(hex.slice(3, 5), 16);
@@ -421,6 +432,8 @@
         var p50Width = (p50Style && p50Style.width) ? p50Style.width : 2.5;
         var p50Dash  = (p50Style && p50Style.dash) ? p50Style.dash : [];
         var p50Radius = (p50Style && p50Style.pointRadius != null) ? p50Style.pointRadius : 3;
+        var p50RadiusArr = fiveYearRadii(years, p50Radius);
+        var p50HoverArr  = fiveYearRadii(years, 5);
         var p50Label = (p50Style && p50Style.legendLabel) ? p50Style.legendLabel : label;
 
         // 1. p10 (invisible bottom boundary)
@@ -446,9 +459,9 @@
             backgroundColor: 'transparent',
             borderWidth: p50Width,
             borderDash: p50Dash,
-            pointRadius: p50Radius,
+            pointRadius: p50RadiusArr,
             pointBackgroundColor: p50Color,
-            pointHoverRadius: 5,
+            pointHoverRadius: p50HoverArr,
             fill: false, tension: 0.3,
             _scenarioKey: label, _band: 'p50',
             _showInLegend: true,
@@ -587,7 +600,7 @@
                 }
             }
             addFanDatasets(datasets, baseEnv, years, BASELINE_COLOR, 'Baseline', mode, {
-                color: BASELINE_COLOR, width: 2.5, dash: [], pointRadius: 0,
+                color: BASELINE_COLOR, width: 2.5, dash: [], pointRadius: 3,
                 legendLabel: 'Baseline (Baseline)'
             }, { isBaseline: true, scenarioName: 'Baseline' });
         }
@@ -739,6 +752,12 @@
         if (tooltipModel.dataPoints && tooltipModel.dataPoints.length) {
             var idx = tooltipModel.dataPoints[0].dataIndex;
             var year = fanChart.data.labels[idx];
+
+            // Only show tooltip at 5-year intervals
+            if (Number(year) % 5 !== 0) {
+                tooltipEl.classList.remove('visible');
+                return;
+            }
             var html = '<div class="fan-tooltip-title">' + year + '</div>';
 
             var baseEnv = DATA.scenarios.baseline ? getEnvelope(DATA.scenarios.baseline) : null;
@@ -827,6 +846,13 @@
         if (tooltipModel.dataPoints && tooltipModel.dataPoints.length) {
             var idx = tooltipModel.dataPoints[0].dataIndex;
             var year = intensityFanChart.data.labels[idx];
+
+            // Only show tooltip at 5-year intervals
+            if (Number(year) % 5 !== 0) {
+                tooltipEl.classList.remove('visible');
+                return;
+            }
+
             var html = '<div class="fan-tooltip-title">' + year + '</div>';
 
             var baseline = DATA.scenarios.baseline;
@@ -1181,6 +1207,7 @@
                 plugins: {
                     legend: { display: false },
                     tooltip: {
+                        filter: fiveYearTooltipFilter,
                         callbacks: {
                             label: function (ctx) {
                                 if (!ctx.raw) return null;
@@ -1228,7 +1255,7 @@
                 borderWidth: 1.5,
                 fill: true,
                 pointRadius: 0,
-                pointHoverRadius: 4,
+                pointHoverRadius: fiveYearRadii(years, 4),
                 tension: 0.3
             });
         });
@@ -1498,6 +1525,7 @@
             tension: 0.3
         });
         // p50 line
+        var r = isBaseline ? 3 : 3;
         datasets.push({
             label: label,
             data: p50,
@@ -1505,9 +1533,9 @@
             backgroundColor: 'transparent',
             borderWidth: 2.5,
             borderDash: isBaseline ? [] : [],
-            pointRadius: isBaseline ? 0 : 3,
+            pointRadius: fiveYearRadii(years, r),
             pointBackgroundColor: color,
-            pointHoverRadius: 5,
+            pointHoverRadius: fiveYearRadii(years, 5),
             fill: false, tension: 0.3,
             _showInLegend: true
         });
@@ -1547,6 +1575,7 @@
                 plugins: {
                     legend: { display: false },
                     tooltip: {
+                        filter: fiveYearTooltipFilter,
                         callbacks: {
                             label: function (ctx) {
                                 var total = 0;
@@ -1588,8 +1617,8 @@
                 borderColor: FUEL_COLORS[fuel],
                 backgroundColor: hexToRgba(FUEL_COLORS[fuel], 0.55),
                 borderWidth: 1.5,
-                pointRadius: 2,
-                pointHoverRadius: 4,
+                pointRadius: fiveYearRadii(years, 2),
+                pointHoverRadius: fiveYearRadii(years, 4),
                 fill: true,
                 tension: 0.3
             };
@@ -1704,6 +1733,7 @@
                         }
                     },
                     filter: function (item) {
+                        if (Number(item.label) % 5 !== 0) return false;
                         return item.dataset._band === 'p50' || !item.dataset._band;
                     }
                 }
