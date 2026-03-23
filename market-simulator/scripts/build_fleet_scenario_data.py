@@ -71,7 +71,7 @@ HEAT_RATES = {
 }
 
 # ── Simulation years ──
-YEARS = [2023, 2024, 2025, 2030, 2035, 2040, 2045, 2050]
+YEARS = list(range(2023, 2061))  # Annual: 2023–2060 (38 years)
 
 # ── Capacity factors by fuel type ──
 # Used to estimate annual generation from actual plant capacity
