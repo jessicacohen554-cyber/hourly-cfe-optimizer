@@ -1545,7 +1545,8 @@ async def simulate(req: SimulationRequest):
                         p90_lmp=round(s['p90_lmp'], 2),
                         price_spread_vs_system=round(s['price_spread_vs_system'], 2),
                     )
-                    for s in last_zonal_stats.values()
+                    for key, s in last_zonal_stats.items()
+                    if key != '_congestion'
                 ]
 
             # Compute summary from the final year's plant data
