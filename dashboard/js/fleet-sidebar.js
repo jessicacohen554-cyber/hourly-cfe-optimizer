@@ -734,9 +734,17 @@ var FleetSidebar = (function () {
     }
 
     // ── Recalculate ──
+    // Delta-based approach: uses precomputed baseline per-plant values for unmodified
+    // plants, computes only modified plants via simple formulas, then applies the
+    // per-plant delta to the precomputed baseline envelope.
     function recalculate() {
-        if (!sweepData) {
-            setStatus('Error: Sweep data not loaded');
+        if (!window.FLEET_SCENARIOS_API) {
+            setStatus('Error: Chart API not available');
+            return;
+        }
+        var precomputed = window.FLEET_SCENARIOS_API.getData();
+        if (!precomputed || !precomputed.scenarios || !precomputed.scenarios.baseline) {
+            setStatus('Error: Precomputed baseline not loaded');
             return;
         }
 
@@ -756,21 +764,208 @@ var FleetSidebar = (function () {
             setTimeout(function () {
                 try {
                     var t0 = performance.now();
-                    var result = FleetDispatchEngine.computeFleetDispatch(allPlants, sweepData, {
-                        ccs_derate_pct: ccsParams.derate_pct,
-                        ccs_capture_rate_pct: ccsParams.capture_rate_pct,
-                        ccs_cf_pct: ccsParams.cf_pct
+                    var baseline = precomputed.scenarios.baseline;
+                    var years = Object.keys(baseline.envelope).sort();
+
+                    // Build orispl → plant lookup for modified plants
+                    var modifiedPlants = {};
+                    allPlants.forEach(function (p) {
+                        if (p._action && p._action !== 'default_market') {
+                            modifiedPlants[p.orispl] = p;
+                        }
                     });
+
+                    // Also track added plants (not in baseline)
+                    var newPlants = addedPlants.filter(function (p) {
+                        return p._action === 'add_plant';
+                    });
+
+                    // Per-year: compute deltas from modified plants
+                    var customEnvelope = {};
+                    var customIntensity = {};
+                    var customPlantDetail = {};
+                    var customGenByFuel = {};
+                    var customEmisByFuel = {};
+
+                    years.forEach(function (yr) {
+                        var yearNum = parseInt(yr);
+                        var basePlants = baseline.plant_detail[yr] || [];
+                        var baseEnv = baseline.envelope[yr] || { p10: 0, p50: 0, p90: 0 };
+                        var baseGen = baseline.generation_by_fuel[yr] || {};
+                        var baseEmis = baseline.emissions_by_fuel[yr] || {};
+
+                        // Start with copies of baseline values
+                        var genByFuel = {};
+                        Object.keys(baseGen).forEach(function (f) { genByFuel[f] = baseGen[f]; });
+                        var emisByFuel = {};
+                        Object.keys(baseEmis).forEach(function (f) { emisByFuel[f] = baseEmis[f]; });
+
+                        var emisDelta = 0; // Mt change from baseline
+                        var genDelta = 0;  // TWh change from baseline
+                        var yearPlants = [];
+
+                        // Process each baseline plant
+                        basePlants.forEach(function (bp) {
+                            var mod = modifiedPlants[bp.orispl];
+                            if (!mod) {
+                                // Default market — use precomputed values exactly
+                                yearPlants.push({
+                                    orispl: bp.orispl,
+                                    name: bp.name,
+                                    iso: bp.iso,
+                                    fuel_type: bp.fuel_type,
+                                    capacity_mw: bp.capacity_mw,
+                                    status: bp.status,
+                                    gen_twh: bp.gen_twh,
+                                    emissions_mt: bp.emissions_mt
+                                });
+                                return;
+                            }
+
+                            // Modified plant — compute custom values
+                            var action = mod._action;
+                            var yearOnline = mod._year_online || 2030;
+                            var fuel = bp.fuel_type || mod.fuel_type;
+                            var capMW = (mod.capacity_mw || bp.capacity_mw || 0) * (mod.equity_share || 1.0);
+                            var co2Rate = mod.co2_rate_t_mwh || bp.co2_rate_t_mwh || 0.37;
+                            var customGenTwh = bp.gen_twh;
+                            var customEmisMt = bp.emissions_mt;
+                            var customStatus = bp.status;
+                            var customFuel = fuel;
+
+                            if (action === 'retire' && yearNum >= yearOnline) {
+                                // Retired: zero from retirement year onward
+                                customGenTwh = 0;
+                                customEmisMt = 0;
+                                customStatus = 'retired';
+
+                            } else if (action === 'ccs_retrofit' && yearNum >= yearOnline) {
+                                // CCS retrofit: simple formula
+                                var cfFrac = (ccsParams.cf_pct || 85) / 100.0;
+                                var derateFrac = (ccsParams.derate_pct || 14) / 100.0;
+                                var captureFrac = (mod._ccs_target_rate > 0) ?
+                                    mod._ccs_target_rate : (ccsParams.capture_rate_pct || 90) / 100.0;
+
+                                var grossMwh = capMW * cfFrac * 8760;
+                                var netMwh = grossMwh * (1.0 - derateFrac);
+                                // Emissions based on gross gen (fuel burned at full rate)
+                                var emisTons = grossMwh * co2Rate * (1.0 - captureFrac);
+
+                                customGenTwh = netMwh / 1e6;  // MWh → TWh
+                                customEmisMt = emisTons / 1e6; // tons → Mt
+                                customStatus = 'ccs_retrofit';
+                                customFuel = 'ccs_ccgt';
+
+                            } else if (action === 'uprate' && yearNum >= yearOnline) {
+                                // Uprate: scale by capacity ratio
+                                var uprateMW = mod._uprate_mw || 0;
+                                var origMW = bp.capacity_mw || capMW;
+                                if (origMW > 0) {
+                                    var scale = (origMW + uprateMW) / origMW;
+                                    customGenTwh = bp.gen_twh * scale;
+                                    customEmisMt = bp.emissions_mt * scale;
+                                }
+
+                            } else if (action === 'operating_override') {
+                                // Forced operating: use precomputed values as-is
+                                // (plant keeps running even if baseline has it retired)
+                            }
+                            // Before yearOnline for retire/ccs/uprate: use precomputed values
+
+                            // Compute delta from baseline
+                            var dEmis = customEmisMt - (bp.emissions_mt || 0);
+                            var dGen = customGenTwh - (bp.gen_twh || 0);
+                            emisDelta += dEmis;
+                            genDelta += dGen;
+
+                            // Update fuel buckets
+                            var oldFuel = bp.fuel_type || 'gas_ccgt';
+                            if (customFuel !== oldFuel) {
+                                // Subtract from old fuel, add to new fuel
+                                emisByFuel[oldFuel] = (emisByFuel[oldFuel] || 0) - (bp.emissions_mt || 0);
+                                emisByFuel[customFuel] = (emisByFuel[customFuel] || 0) + customEmisMt;
+                                genByFuel[oldFuel] = (genByFuel[oldFuel] || 0) - (bp.gen_twh || 0);
+                                genByFuel[customFuel] = (genByFuel[customFuel] || 0) + customGenTwh;
+                            } else {
+                                emisByFuel[oldFuel] = (emisByFuel[oldFuel] || 0) + dEmis;
+                                genByFuel[oldFuel] = (genByFuel[oldFuel] || 0) + dGen;
+                            }
+
+                            yearPlants.push({
+                                orispl: bp.orispl,
+                                name: bp.name,
+                                iso: bp.iso || mod.iso,
+                                fuel_type: customFuel,
+                                capacity_mw: bp.capacity_mw,
+                                status: customStatus,
+                                gen_twh: Math.round(customGenTwh * 100) / 100,
+                                emissions_mt: Math.round(customEmisMt * 10000) / 10000
+                            });
+                        });
+
+                        // Process new (added) plants
+                        newPlants.forEach(function (np) {
+                            var yearOnline = np._year_online || 2028;
+                            if (yearNum < yearOnline) return;
+                            var fuel = np.fuel_type || 'gas_ccgt';
+                            var capMW = (np.capacity_mw || 0) * (np.equity_share || 1.0);
+                            var co2Rate = np.co2_rate_t_mwh || 0.37;
+                            var cf = 0.57; // default gas_ccgt CF
+                            var grossMwh = capMW * cf * 8760;
+                            var emisTons = grossMwh * co2Rate;
+                            var genTwh = grossMwh / 1e6;
+                            var emisMt = emisTons / 1e6;
+
+                            emisDelta += emisMt;
+                            genDelta += genTwh;
+                            emisByFuel[fuel] = (emisByFuel[fuel] || 0) + emisMt;
+                            genByFuel[fuel] = (genByFuel[fuel] || 0) + genTwh;
+
+                            yearPlants.push({
+                                orispl: np.orispl,
+                                name: np.name,
+                                iso: np.iso,
+                                fuel_type: fuel,
+                                capacity_mw: np.capacity_mw,
+                                status: 'operating',
+                                gen_twh: Math.round(genTwh * 100) / 100,
+                                emissions_mt: Math.round(emisMt * 10000) / 10000
+                            });
+                        });
+
+                        // Apply delta to precomputed envelope
+                        customEnvelope[yr] = {
+                            p10: Math.round((baseEnv.p10 + emisDelta) * 10000) / 10000,
+                            p50: Math.round((baseEnv.p50 + emisDelta) * 10000) / 10000,
+                            p90: Math.round((baseEnv.p90 + emisDelta) * 10000) / 10000
+                        };
+
+                        // Derive intensity from adjusted totals
+                        var totalGenTwh = 0;
+                        var totalEmisMt = 0;
+                        Object.keys(genByFuel).forEach(function (f) { totalGenTwh += genByFuel[f] || 0; });
+                        Object.keys(emisByFuel).forEach(function (f) { totalEmisMt += emisByFuel[f] || 0; });
+                        var intensityKg = totalGenTwh > 0 ? (totalEmisMt / totalGenTwh) * 1e3 : 0;
+                        customIntensity[yr] = {
+                            p10: Math.round(intensityKg * 100) / 100,
+                            p50: Math.round(intensityKg * 100) / 100,
+                            p90: Math.round(intensityKg * 100) / 100
+                        };
+
+                        customPlantDetail[yr] = yearPlants;
+                        customGenByFuel[yr] = genByFuel;
+                        customEmisByFuel[yr] = emisByFuel;
+                    });
+
                     var elapsed = Math.round(performance.now() - t0);
 
-                    // Cache the results and current params for save
+                    // Cache results
                     lastComputedResults = {
-                        envelope: result.envelope,
-                        intensity_envelope: result.intensity_envelope,
-                        plant_detail: result.plant_detail,
-                        generation_by_fuel: result.generation_by_fuel,
-                        emissions_by_fuel: result.emissions_by_fuel,
-                        fleet_summary: result.fleet_summary
+                        envelope: customEnvelope,
+                        intensity_envelope: customIntensity,
+                        plant_detail: customPlantDetail,
+                        generation_by_fuel: customGenByFuel,
+                        emissions_by_fuel: customEmisByFuel
                     };
 
                     var scenarioName = (els.nameInput && els.nameInput.value.trim()) || 'Custom';
@@ -778,21 +973,15 @@ var FleetSidebar = (function () {
                     var scenarioData = {
                         description: scenarioName,
                         color: '#2372B9',
-                        envelope: result.envelope,
-                        intensity_envelope: result.intensity_envelope,
-                        plant_detail: result.plant_detail,
-                        generation_by_fuel: result.generation_by_fuel,
-                        emissions_by_fuel: result.emissions_by_fuel,
-                        fleet_summary: result.fleet_summary
+                        envelope: customEnvelope,
+                        intensity_envelope: customIntensity,
+                        plant_detail: customPlantDetail,
+                        generation_by_fuel: customGenByFuel,
+                        emissions_by_fuel: customEmisByFuel
                     };
 
-                    if (window.FLEET_SCENARIOS_API) {
-                        window.FLEET_SCENARIOS_API.setCustomScenario(scenarioName, scenarioData);
-                        setStatus('Done in ' + elapsed + 'ms — custom scenario updated');
-                    } else {
-                        console.warn('FLEET_SCENARIOS_API not available');
-                        setStatus('Computed in ' + elapsed + 'ms but chart API unavailable');
-                    }
+                    window.FLEET_SCENARIOS_API.setCustomScenario(scenarioName, scenarioData);
+                    setStatus('Done in ' + elapsed + 'ms — custom scenario updated');
                     updateSaveButtonState();
                 } catch (err) {
                     console.error('Recalculation failed:', err);
