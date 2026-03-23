@@ -1105,10 +1105,10 @@
         waterfallChart.data.labels = labels;
         waterfallChart.data.datasets = [{
             data: values,
-            backgroundColor: colors,
+            backgroundColor: colors.map(function (c) { return hexToRgba(c, 0.45); }),
             borderColor: colors,
-            borderWidth: 1,
-            borderRadius: 3,
+            borderWidth: 1.5,
+            borderRadius: 4,
             barPercentage: 0.7
         }];
         waterfallChart.update('active');
@@ -1214,10 +1214,10 @@
         waterfall2023Chart.data.labels = labels;
         waterfall2023Chart.data.datasets = [{
             data: values,
-            backgroundColor: colors,
+            backgroundColor: colors.map(function (c) { return hexToRgba(c, 0.45); }),
             borderColor: colors,
-            borderWidth: 1,
-            borderRadius: 3,
+            borderWidth: 1.5,
+            borderRadius: 4,
             barPercentage: 0.7
         }];
         waterfall2023Chart.update('active');
@@ -1303,7 +1303,7 @@
             datasets.push({
                 label: FUEL_LABELS[fuel] || fuel,
                 data: data,
-                backgroundColor: hexToRgba(FUEL_COLORS[fuel], 0.92),
+                backgroundColor: hexToRgba(FUEL_COLORS[fuel], 0.45),
                 borderColor: FUEL_COLORS[fuel],
                 borderWidth: 1.5,
                 fill: 'origin',
@@ -1693,7 +1693,7 @@
                 label: FUEL_LABELS[fuel] || fuel,
                 data: data,
                 borderColor: FUEL_COLORS[fuel],
-                backgroundColor: hexToRgba(FUEL_COLORS[fuel], 0.92),
+                backgroundColor: hexToRgba(FUEL_COLORS[fuel], 0.45),
                 borderWidth: 1.5,
                 pointRadius: 0,
                 pointHoverRadius: 0,
