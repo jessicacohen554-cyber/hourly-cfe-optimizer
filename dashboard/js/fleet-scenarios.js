@@ -16,7 +16,7 @@
         custom:      { color: '#000205', dash: [4, 4], label: 'Custom' }
     };
 
-    var FUEL_KEYS   = ['nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'battery', 'ldes', 'gas_ccgt', 'gas_ct', 'gas_oil_ct', 'oil_ct', 'ccs_ccgt'];
+    var FUEL_KEYS   = ['nuclear', 'geothermal', 'hydro', 'wind', 'solar', 'battery', 'ldes', 'ccs_ccgt', 'gas_ccgt', 'gas_ct', 'gas_oil_ct', 'oil_ct'];
     var FUEL_LABELS = { nuclear: 'Nuclear', geothermal: 'Geothermal', wind: 'Wind', solar: 'Solar', hydro: 'Hydro', battery: 'Battery', ldes: 'LDES', gas_ccgt: 'Gas CCGT', gas_ct: 'Gas CT', gas_oil_ct: 'Gas/Oil', oil_ct: 'Oil', ccs_ccgt: 'CCS-CCGT' };
     var FUEL_COLORS = {
         nuclear:    RESOURCE_COLORS.nuclear    || '#2372B9',
@@ -1301,7 +1301,7 @@
             datasets.push({
                 label: FUEL_LABELS[fuel] || fuel,
                 data: data,
-                backgroundColor: hexToRgba(FUEL_COLORS[fuel], 0.45),
+                backgroundColor: hexToRgba(FUEL_COLORS[fuel], 0.75),
                 borderColor: FUEL_COLORS[fuel],
                 borderWidth: 1.5,
                 fill: true,
@@ -1388,28 +1388,35 @@
             custGen = customScenario.generation_by_fuel[yr];
         }
 
-        // New clean = delta above baseline for clean fuels, plus all CCS generation
-        // (CCS doesn't exist in baseline, it's always "new")
+        // New clean gen: use explicit _new_clean_gen from recalculate if available,
+        // otherwise fall back to delta approach
         var labels = [];
         var values = [];
         var colors = [];
-        CLEAN_FUEL_KEYS.forEach(function (fuel) {
-            var custVal = custGen[fuel] || 0;
-            var baseVal = baseGen[fuel] || 0;
-            var delta;
-            if (fuel === 'ccs_ccgt') {
-                // All CCS generation is "new" clean
-                delta = custVal;
-            } else {
-                // Only show the increment above baseline (uprates, new plants)
-                delta = custVal - baseVal;
-            }
-            if (delta > 0.001) {
-                labels.push(CLEAN_FUEL_LABELS[fuel] || fuel);
-                values.push(Math.round(delta * 100) / 100);
-                colors.push(FUEL_COLORS[fuel] || '#9CA3AF');
-            }
-        });
+        var newClean = custGen._new_clean_gen;
+        if (newClean) {
+            // Explicit tracking: crane (full gen), uprate (increment), CCS (full), new builds (full)
+            CLEAN_FUEL_KEYS.forEach(function (fuel) {
+                var val = newClean[fuel] || 0;
+                if (val > 0.001) {
+                    labels.push(CLEAN_FUEL_LABELS[fuel] || fuel);
+                    values.push(Math.round(val * 100) / 100);
+                    colors.push(FUEL_COLORS[fuel] || '#9CA3AF');
+                }
+            });
+        } else {
+            // Fallback: delta above baseline for clean fuels, plus all CCS
+            CLEAN_FUEL_KEYS.forEach(function (fuel) {
+                var custVal = custGen[fuel] || 0;
+                var baseVal = baseGen[fuel] || 0;
+                var delta = (fuel === 'ccs_ccgt') ? custVal : (custVal - baseVal);
+                if (delta > 0.001) {
+                    labels.push(CLEAN_FUEL_LABELS[fuel] || fuel);
+                    values.push(Math.round(delta * 100) / 100);
+                    colors.push(FUEL_COLORS[fuel] || '#9CA3AF');
+                }
+            });
+        }
 
         // Debug: log new clean gen deltas
         if (customScenario) {
