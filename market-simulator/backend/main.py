@@ -75,6 +75,7 @@ from lmp_engine import (
     VOM,
     CO2_RATES,
     FUEL_PRICES,
+    _get_fuel_prices,
     INSTALLED_FOSSIL_MW,
     FOSSIL_CAPACITY_SHARES,
     NOX_RATES,
@@ -837,7 +838,8 @@ def _compute_gas_fleet_shift(iso, final_year):
     avg_hr = (HEAT_RATES.get('gas_ccgt', 7.0) + HEAT_RATES.get('gas_ct', 10.5)) / 2
     old_hr = HEAT_RATES.get('gas_ct', 10.5)
 
-    base_gas_price = FUEL_PRICES.get('Medium', {}).get('gas', 3.5)
+    final_yr = final_year.get('year', 2050)
+    base_gas_price = _get_fuel_prices(final_yr, 'Medium').get('gas', 3.5)
     base_lmp = final_year.get("avg_lmp", WHOLESALE_PRICES.get(iso, 30))
 
     carbon_prices = [0, 10, 25, 50, 75, 100, 150, 200]
@@ -917,7 +919,7 @@ def _compute_ccs_analysis(iso):
     """
     carbon_prices = [0, 10, 25, 50, 75, 100, 150, 200]
 
-    gas_price = FUEL_PRICES.get('Medium', {}).get('gas', 3.5)
+    gas_price = _get_fuel_prices(2050, 'Medium').get('gas', 3.5)  # End-of-horizon price for CCS viability
 
     # Existing CCGT: HR=7.0, VOM=$3.50, CO2=0.37 t/MWh (no capture)
     ccgt_hr = HEAT_RATES.get('gas_ccgt', 7.0)
@@ -1430,14 +1432,9 @@ async def simulate(req: SimulationRequest):
             fuel_level = conditions.get("fuel_level", "Medium")
             carbon_price_val = conditions.get("carbon_price", 0)
 
-            # Fuel prices — will be resolved per-year if time-series available
+            # Fuel prices — resolved per-year using EIA AEO projections
             has_fuel_timeseries = 'custom_fuel_timeseries' in conditions
-            fuel_prices_dict = {}
-            if not has_fuel_timeseries:
-                if conditions.get("custom_fuel_prices"):
-                    fuel_prices_dict = conditions["custom_fuel_prices"]
-                else:
-                    fuel_prices_dict = FUEL_PRICES.get(fuel_level, FUEL_PRICES.get("Medium", {}))
+            has_custom_static = bool(conditions.get("custom_fuel_prices"))
 
             # Iterate over each year result from the simulation
             years_to_process = iso_results if iso_results else []
@@ -1448,18 +1445,24 @@ async def simulate(req: SimulationRequest):
                 yr_demand_twh = yr_data.get("demand_twh", REGIONAL_DEMAND_TWH.get(iso, 300))
                 yr_avg_lmp = yr_data.get("avg_lmp", WHOLESALE_PRICES.get(iso, 30.0))
 
-                # Resolve fuel prices for this year (time-series or static)
+                # Resolve fuel prices for this year
                 if has_fuel_timeseries:
                     from market_simulation import _resolve_fuel_prices_for_year
                     fuel_prices_dict = _resolve_fuel_prices_for_year(
                         conditions, yr_year, iso
-                    ) or FUEL_PRICES.get(fuel_level, FUEL_PRICES.get("Medium", {}))
+                    ) or _get_fuel_prices(yr_year, fuel_level)
+                elif has_custom_static:
+                    fuel_prices_dict = conditions["custom_fuel_prices"]
+                else:
+                    # Year-varying EIA AEO 2025 projections
+                    fuel_prices_dict = _get_fuel_prices(yr_year, fuel_level)
 
                 try:
                     plant_stack, total_cap = build_plant_level_merit_order(
                         iso, yr_clean_pct,
                         fuel_level=fuel_level,
                         carbon_price=carbon_price_val,
+                        custom_fuel_prices=fuel_prices_dict,
                     )
 
                     hourly_lmp = np.full(8760, yr_avg_lmp)
@@ -1488,7 +1491,8 @@ async def simulate(req: SimulationRequest):
                             if fm.fleet is not None and not fm.fleet.empty:
                                 fm.assign_zones()
                                 zone_stacks = fm.build_zonal_merit_order_stacks(
-                                    fuel_level=fuel_level, co2_price=carbon_price_val)
+                                    fuel_level=fuel_level, co2_price=carbon_price_val,
+                                    custom_fuel_prices=fuel_prices_dict)
                                 zonal_lmp_matrix, system_lmp_arr, _, yr_zonal_stats = \
                                     compute_hourly_lmp_zonal(
                                         dispatch, demand_mw_profile, zone_stacks,

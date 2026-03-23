@@ -143,8 +143,8 @@ def main():
                         help='Nuclear retirement threshold $/MWh')
     parser.add_argument('--start-year', type=int, default=2023,
                         help='First simulation year (default: 2023, includes eGRID baseline)')
-    parser.add_argument('--end-year', type=int, default=2060,
-                        help='Last simulation year (default: 2060)')
+    parser.add_argument('--end-year', type=int, default=2050,
+                        help='Last simulation year (default: 2050)')
     parser.add_argument('--year-step', type=int, default=1,
                         help='Year step size (default: 1 = annual)')
     parser.add_argument('--params-csv', default=None,
