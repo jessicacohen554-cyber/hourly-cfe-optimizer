@@ -214,12 +214,23 @@ def main():
     # Replace any remaining inf/-inf with NaN (pyarrow cannot serialize inf)
     numeric_cols = df.select_dtypes(include=[np.number]).columns
     df[numeric_cols] = df[numeric_cols].replace([np.inf, -np.inf], np.nan)
+
+    # Write per-ISO parquets so each ISO can be run independently
+    # without overwriting results from other ISOs
+    isos_in_df = sorted(df['iso'].dropna().unique())
+    for iso_name in isos_in_df:
+        iso_df = df[df['iso'] == iso_name]
+        iso_parquet_path = os.path.join(output_dir, f'sweep_1215_{iso_name}.parquet')
+        iso_df.to_parquet(iso_parquet_path, index=False, engine='pyarrow')
+        print(f"  Per-ISO parquet: {iso_parquet_path} ({len(iso_df)} rows)")
+
+    # Also write combined parquet for backward compatibility
     parquet_path = os.path.join(output_dir, 'sweep_1215_flat.parquet')
     df.to_parquet(parquet_path, index=False, engine='pyarrow')
-    print(f"Parquet saved: {parquet_path}")
+    print(f"Combined parquet saved: {parquet_path}")
     print(f"  Shape: {df.shape[0]} rows × {df.shape[1]} columns")
 
-    # Expected: 1,215 scenarios × 7 ISOs × N years (default 35 annual = 297,675)
+    # Expected: 1,215 scenarios × N ISOs × N years
     n_scenarios = len([k for k in all_results if not k.startswith('_')])
     n_isos = len(set(df['iso'].dropna()))
     n_years = len(set(df['year'].dropna()))

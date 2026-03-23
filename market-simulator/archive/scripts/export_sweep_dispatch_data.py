@@ -2,13 +2,17 @@
 """
 Export sweep dispatch data for client-side fleet recalculation.
 
-Reads sweep_1215_flat.parquet and extracts per-ISO, per-fuel CF and margin arrays
-into a compact JSON that the browser can use for real-time fleet dispatch.
+Reads per-ISO parquets (sweep_1215_ERCOT.parquet, sweep_1215_PJM.parquet, etc.)
+OR a combined sweep_1215_flat.parquet, and extracts per-ISO, per-fuel CF and
+margin arrays into a compact JSON for browser-side fleet dispatch.
 
 Usage:
     python scripts/export_sweep_dispatch_data.py
+    python scripts/export_sweep_dispatch_data.py --sweep-dir ../results/sweep_1215
 """
 
+import argparse
+import glob
 import json
 import sys
 from pathlib import Path
@@ -18,21 +22,65 @@ import pandas as pd
 
 SCRIPT_DIR = Path(__file__).parent
 ROOT = SCRIPT_DIR.parent
-SWEEP_PATH = ROOT / "results" / "sweep_1215" / "sweep_1215_flat.parquet"
+DEFAULT_SWEEP_DIR = ROOT / "results" / "sweep_1215"
 OUTPUT_PATH = ROOT / "frontend" / "data" / "sweep_dispatch_data.json"
+
+# Also write to dashboard/data/ for the main repo
+DASHBOARD_OUTPUT_PATH = ROOT.parent / "dashboard" / "data" / "sweep_dispatch_data.json"
 
 FUEL_TYPES = ["gas_ccgt", "gas_ct", "coal_steam", "oil_ct"]
 NEW_FOSSIL_COLS = ["total_new_fossil_mw", "gas_built_gw", "fossil_built_gw",
                    "nb_gas_ccgt_mw", "nb_gas_ct_mw", "nb_coal_mw"]
 
+ALL_ISOS = ["CAISO", "ERCOT", "MISO", "NEISO", "NYISO", "PJM", "SPP"]
+
+
+def load_sweep_data(sweep_dir: Path) -> pd.DataFrame:
+    """Load sweep data from per-ISO parquets or combined parquet.
+
+    Prefers per-ISO parquets (sweep_1215_<ISO>.parquet) so that ISOs can be
+    run independently without overwriting each other. Falls back to the
+    combined sweep_1215_flat.parquet for backward compatibility.
+    """
+    # Try per-ISO parquets first
+    iso_parquets = sorted(sweep_dir.glob("sweep_1215_[A-Z]*.parquet"))
+    if iso_parquets:
+        frames = []
+        for p in iso_parquets:
+            iso_name = p.stem.replace("sweep_1215_", "")
+            if iso_name in ALL_ISOS:
+                df_iso = pd.read_parquet(p)
+                frames.append(df_iso)
+                print(f"  Loaded {p.name}: {len(df_iso)} rows ({iso_name})")
+        if frames:
+            df = pd.concat(frames, ignore_index=True)
+            print(f"  Merged {len(frames)} per-ISO parquets: {len(df)} total rows")
+            return df
+
+    # Fall back to combined parquet
+    combined = sweep_dir / "sweep_1215_flat.parquet"
+    if combined.exists():
+        print(f"  Loading combined parquet: {combined}")
+        df = pd.read_parquet(combined)
+        return df
+
+    print(f"ERROR: No sweep parquets found in {sweep_dir}", file=sys.stderr)
+    sys.exit(1)
+
 
 def main():
-    if not SWEEP_PATH.exists():
-        print(f"ERROR: {SWEEP_PATH} not found", file=sys.stderr)
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description='Export sweep dispatch data to JSON')
+    parser.add_argument('--sweep-dir', type=Path, default=DEFAULT_SWEEP_DIR,
+                        help='Directory containing sweep parquets')
+    parser.add_argument('--output', type=Path, default=None,
+                        help='Output JSON path (default: frontend/data/sweep_dispatch_data.json)')
+    args = parser.parse_args()
 
-    print(f"Reading {SWEEP_PATH}")
-    df = pd.read_parquet(SWEEP_PATH)
+    sweep_dir = args.sweep_dir
+    output_path = args.output or OUTPUT_PATH
+
+    print(f"Reading sweep data from {sweep_dir}")
+    df = load_sweep_data(sweep_dir)
     print(f"  {len(df)} rows, {df['scenario'].nunique()} scenarios, "
           f"{df['iso'].nunique()} ISOs, {df['year'].nunique()} years")
 
@@ -93,13 +141,20 @@ def main():
         "data": data,
     }
 
-    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(OUTPUT_PATH, "w") as f:
+    # Write to primary output path
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w") as f:
         json.dump(output, f, separators=(",", ":"))
 
-    size_mb = OUTPUT_PATH.stat().st_size / (1024 * 1024)
-    print(f"Exported {OUTPUT_PATH} ({size_mb:.1f} MB)")
+    size_mb = output_path.stat().st_size / (1024 * 1024)
+    print(f"Exported {output_path} ({size_mb:.1f} MB)")
     print(f"  {n_scenarios} scenarios × {len(isos)} ISOs × {n_years} years × {len(FUEL_TYPES)} fuels")
+
+    # Also write to dashboard/data/ if it exists
+    if DASHBOARD_OUTPUT_PATH.parent.exists() and output_path != DASHBOARD_OUTPUT_PATH:
+        with open(DASHBOARD_OUTPUT_PATH, "w") as f:
+            json.dump(output, f, separators=(",", ":"))
+        print(f"  Also exported to {DASHBOARD_OUTPUT_PATH}")
 
 
 if __name__ == "__main__":
