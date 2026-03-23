@@ -27,7 +27,6 @@
         <ul class="nav-links">
             <li><a href="/">Guide</a></li>
             <li><a href="/setup" class="active">Setup</a></li>
-            <li><a href="/fleet-config">Fleet Config</a></li>
             <li><a href="/results">Results</a></li>
             <li><a href="/fleet-scenarios">Fleet Climate Scenarios</a></li>
             <li><a href="/methodology">Methodology</a></li>
@@ -48,14 +47,6 @@
 
     <div class="content-section">
         <form id="simulationForm">
-
-            <!-- ═══════════════════════════════════════════════════════════
-                 FLEET CONFIG CTA — First thing user sees
-                 ═══════════════════════════════════════════════════════════ -->
-            <a href="/fleet-config" id="fleetCTA" style="display: block; margin-bottom: var(--space-lg); padding: 1rem 1.5rem; background: var(--ceg-blue, #1d4ed8); color: #fff; border-radius: var(--radius-md); text-decoration: none; font-weight: 700; font-size: 1.1rem; text-align: center; transition: opacity 0.15s;"
-               onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-                Configure Constellation Fleet →
-            </a>
 
             <!-- ═══════════════════════════════════════════════════════════
                  CSV Configuration Import/Export
@@ -890,21 +881,6 @@
                             <button type="button" class="toggle-btn" data-value="Fast">Fast</button>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Fleet Configuration Summary -->
-            <div class="glass-card form-section" id="fleetConfigCard">
-                <div class="section-eyebrow">Fleet</div>
-                <h2 class="section-heading">Fleet Configuration (Constellation/Calpine)</h2>
-                <div id="fleetConfigSummary" style="display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap;">
-                    <div style="flex: 1; min-width: 200px;">
-                        <span id="fleetStatusText" style="color: var(--text-muted);">Using defaults (all plants at baseline status)</span>
-                    </div>
-                    <a href="/fleet-config" class="btn" style="display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: var(--radius-md); border: 1px solid var(--border); text-decoration: none; color: var(--navy); background: var(--bg-card); font-weight: 500; transition: all 0.15s;"
-                       onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='var(--bg-card)'">
-                        Configure Fleet →
-                    </a>
                 </div>
             </div>
 
