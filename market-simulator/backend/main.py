@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import csv
 import json
+import math
 import os
 import re
 import shutil
@@ -1705,6 +1706,17 @@ async def get_sweep_status(job_id: str):
 SWEEP_CACHE_DIR = MARKET_SIM_ROOT / "results" / "sweep_1215"
 
 
+def _sanitize_for_json(obj):
+    """Recursively replace inf/NaN floats with None so json.dumps() succeeds."""
+    if isinstance(obj, dict):
+        return {k: _sanitize_for_json(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_for_json(v) for v in obj]
+    if isinstance(obj, float) and (math.isinf(obj) or math.isnan(obj)):
+        return None
+    return obj
+
+
 @app.get("/api/sweep-cached/status")
 async def sweep_cached_status():
     """Check whether pre-computed sweep results exist and return metadata."""
@@ -1752,6 +1764,9 @@ async def sweep_cached_aggregates(iso: str = None):
     with open(agg_path) as f:
         aggregates = json.load(f)
 
+    # Sanitize any stringified inf/NaN values that slipped through default=str
+    aggregates = _sanitize_for_json(aggregates)
+
     if iso:
         iso = iso.upper()
         if iso not in aggregates:
@@ -1789,12 +1804,8 @@ async def sweep_cached_results(iso: str = None, scenario: str = None):
         if df.empty:
             raise HTTPException(status_code=404, detail=f"No results for ISO '{iso}'.")
 
-    # Replace inf/nan with None so JSON serialization succeeds
-    df = df.replace([float('inf'), float('-inf')], None)
-    df = df.where(df.notna(), None)
-
-    # Convert to records for JSON response
-    records = df.to_dict(orient='records')
+    # Convert to records, then sanitize inf/NaN that survive pandas → dict conversion
+    records = _sanitize_for_json(df.to_dict(orient='records'))
 
     return {
         "row_count": len(records),
@@ -1865,7 +1876,7 @@ async def sweep_cached_sensitivity(iso: str = None, year: int = 2050):
             'metadata': iso_data.get('metadata', {}),
         }
 
-    return response
+    return _sanitize_for_json(response)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
