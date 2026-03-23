@@ -591,6 +591,41 @@
             <div class="chart-legend-bar" id="fuelEmissionsLegend"></div>
         </div>
 
+        <!-- Plant Drill-Down -->
+        <div class="chart-card" id="plantDrilldownCard">
+            <div class="chart-card-header">
+                <div class="section-eyebrow">Asset Drill-Down</div>
+                <h3>Individual Plant Trajectory</h3>
+                <p>Select a plant to inspect its baseline market trajectory. Choose an intervention to overlay the comparison.</p>
+            </div>
+            <div style="display:flex; gap:var(--space-md); flex-wrap:wrap; margin-bottom:var(--space-md); align-items:center;">
+                <select id="plantSelector" class="sb-status-select" style="flex:1; min-width:220px; padding:8px 12px; font-size:14px;">
+                    <option value="">— Select a plant —</option>
+                </select>
+                <select id="interventionSelector" class="sb-status-select" style="flex:0 0 180px; padding:8px 12px; font-size:14px;">
+                    <option value="default_market">Default Market</option>
+                    <option value="operating_override">Operating (forced)</option>
+                    <option value="retire">Retire</option>
+                    <option value="ccs_retrofit">CCS Retrofit</option>
+                </select>
+                <label style="display:flex; align-items:center; gap:4px; font-size:13px; color:var(--text-muted);">
+                    Year:
+                    <input type="number" id="interventionYear" value="2030" min="2025" max="2050" style="width:72px; padding:6px 8px; border:1px solid var(--border); border-radius:var(--radius-sm); font-size:14px;">
+                </label>
+            </div>
+            <div class="grid-2col">
+                <div>
+                    <h4 style="text-align:center; margin-bottom:var(--space-sm); font-size:14px; color:var(--text-secondary);">Generation (GWh)</h4>
+                    <div class="chart-container-lg"><canvas id="plantGenChart"></canvas></div>
+                </div>
+                <div>
+                    <h4 style="text-align:center; margin-bottom:var(--space-sm); font-size:14px; color:var(--text-secondary);">Emissions (metric tons CO₂)</h4>
+                    <div class="chart-container-lg"><canvas id="plantEmisChart"></canvas></div>
+                </div>
+            </div>
+            <div class="chart-legend-bar" id="plantDrilldownLegend"></div>
+        </div>
+
     </div>
 
     <!-- Fleet Config Sidebar -->
