@@ -21,9 +21,9 @@ var FleetSidebar = (function () {
     var openGroups = new Set(); // Track which accordion groups are open across re-renders
     var lastComputedResults = null; // Cache most recent recalculation results
 
-    var MAX_SCENARIOS = 5;
+    var MAX_SCENARIOS = 8;
     var SCENARIO_STORAGE_KEY = 'market-sim-scenarios';
-    var SCENARIO_COLORS = ['#2372B9', '#F47B27', '#6BA543', '#9C27B0', '#E91E63'];
+    var SCENARIO_COLORS = ['#2372B9', '#F47B27', '#6BA543', '#651dda', '#E91E63', '#007FA4', '#CADB2E', '#14B8A6'];
 
     // ── Fuel labels ──
     var FUEL_LABELS = {
@@ -49,9 +49,9 @@ var FleetSidebar = (function () {
 
     // ── CCS global parameters ──
     var ccsParams = {
-        derate_pct: 14,       // 0-30%, default 14%
-        capture_rate_pct: 90, // 50-99%, default 90%
-        cf_pct: 85            // 20-95%, default 85% — max CF for CCS-retrofitted plants
+        derate_pct: 14,       // 0-30%, default 13%
+        capture_rate_pct: 90, // 50-99%, default 95%
+        cf_pct: 85            // 20-95%, default 80% — max CF for CCS-retrofitted plants
     };
 
     function cacheElements() {
@@ -256,11 +256,64 @@ var FleetSidebar = (function () {
         }
         setStatus(statusMsg);
 
-        // AUTO-COMPUTE BASELINE using same engine as custom scenarios
-        // This ensures baseline and custom use identical calculation paths,
-        // eliminating phantom deltas from precomputed vs engine mismatch.
-        if (sweepData && baseFleet.length > 0) {
-            computeAndSetBaseline();
+        // Baseline uses the precomputed trajectory from fleet_scenario_results_sample.json.
+        // The JS dispatch engine doesn't model coal retirement, fleet turnover, or other
+        // dynamics that the Python sweep captures, so live-computing the baseline here
+        // produces an incorrect +14% trajectory instead of the correct -24% decline.
+        // Custom scenarios still use the live dispatch engine for accurate deltas.
+
+        // ── Migration: recompute results for saved scenarios that have null results ──
+        // (fixes scenarios saved before the async race condition fix)
+        migrateNullResultScenarios();
+    }
+
+    function migrateNullResultScenarios() {
+        if (!window.FLEET_SCENARIOS_API) {
+            // API not ready yet — retry once after a delay
+            setTimeout(migrateNullResultScenarios, 500);
+            return;
+        }
+        var precomputed = window.FLEET_SCENARIOS_API.getData();
+        if (!precomputed || !precomputed.scenarios || !precomputed.scenarios.baseline) return;
+
+        var baseline = precomputed.scenarios.baseline;
+        var migrated = 0;
+
+        savedScenarios.forEach(function (s) {
+            if (s.results) return; // Already has results
+            if (!s.params) return; // No params to recompute from
+
+            // Reconstruct fleet state from saved params
+            var tempFleet = JSON.parse(JSON.stringify(baseFleet));
+            (s.params.fleetMods || []).forEach(function (mod) {
+                var p = tempFleet[mod._idx];
+                if (p && p.orispl === mod.orispl) {
+                    p._action = mod._action;
+                    p._year_online = mod._year_online;
+                    p._ccs_target_rate = mod._ccs_target_rate;
+                    p._ccs_derate_pct = mod._ccs_derate_pct || 0;
+                    p._uprate_mw = mod._uprate_mw || 0;
+                    p._custom_cf = mod._custom_cf || 0;
+                    if (mod.capacity_mw != null) p.capacity_mw = mod.capacity_mw;
+                }
+            });
+            var tempAdded = JSON.parse(JSON.stringify(s.params.addedPlants || []));
+            var allPlants = tempFleet.concat(tempAdded);
+
+            try {
+                s.results = computeScenarioResults(allPlants, tempAdded, baseline, ccsParams);
+                migrated++;
+                console.log('[fleet-sidebar] Migrated scenario "' + s.name + '" — recomputed results from params');
+            } catch (err) {
+                console.warn('[fleet-sidebar] Failed to migrate scenario "' + s.name + '":', err);
+            }
+        });
+
+        if (migrated > 0) {
+            persistScenarios();
+            renderSavedScenarios();
+            syncVisibleScenarios();
+            console.log('[fleet-sidebar] Migrated ' + migrated + ' scenarios with null results');
         }
     }
 
@@ -327,6 +380,20 @@ var FleetSidebar = (function () {
         });
         if (prevOpen.size > 0) openGroups = prevOpen;
 
+        // Capture dirty input values before DOM rebuild so they aren't lost
+        els.fleetList.querySelectorAll('.sb-uprate-input').forEach(function (inp) {
+            var p = findPlant(inp.dataset.idx);
+            if (p) p._uprate_mw = Math.max(0, parseFloat(inp.value) || 0);
+        });
+        els.fleetList.querySelectorAll('.sb-year-input').forEach(function (inp) {
+            var p = findPlant(inp.dataset.idx);
+            if (p) p._year_online = parseInt(inp.value) || null;
+        });
+        els.fleetList.querySelectorAll('.sb-cap-input').forEach(function (inp) {
+            var p = findPlant(inp.dataset.idx);
+            if (p) p.capacity_mw = Math.max(0, parseFloat(inp.value) || 0);
+        });
+
         if (!fleetPlants.length && !addedPlants.length) {
             els.fleetList.innerHTML = '<div style="text-align:center;color:#6b7280;padding:24px;">No fleet data loaded</div>';
             return;
@@ -383,10 +450,10 @@ var FleetSidebar = (function () {
                     storage: 'Energy Storage'
                 };
                 var catColors = {
-                    nuclear: '#6366F1',
-                    renewable: '#22C55E',
-                    fossil: '#6B7280',
-                    storage: '#06B6D4'
+                    nuclear: '#2372B9',
+                    renewable: '#6BA543',
+                    fossil: '#7E8083',
+                    storage: '#651dda'
                 };
                 html += '<div class="sb-category-header" style="background:' + (catColors[group.category] || '#888') + ';color:#fff;padding:8px 12px;font-weight:700;font-size:0.85rem;margin-top:8px;border-radius:6px 6px 0 0;">';
                 html += (catLabels[group.category] || group.category);
@@ -724,6 +791,14 @@ var FleetSidebar = (function () {
         nextAddId++;
         addedPlants.push(newPlant);
 
+        console.log('[fleet-sidebar] addPlant:', newPlant.name,
+            '| fuel:', newPlant.fuel_type,
+            '| capacity:', newPlant.capacity_mw, 'MW',
+            '| cf:', newPlant._custom_cf,
+            '| co2_rate:', newPlant.co2_rate_t_mwh,
+            '| year:', newPlant._year_online,
+            '| addedPlants count:', addedPlants.length);
+
         // Reset form
         document.getElementById('apName').value = '';
         document.getElementById('apCapacity').value = '1200';
@@ -734,10 +809,224 @@ var FleetSidebar = (function () {
         setStatus('Added "' + name + '" (' + fuelType + ') in ' + iso + ' — click Recalculate to update charts');
     }
 
+    // ── Core computation (synchronous) ──
+    // Takes fleet + added plants + baseline data → returns results object
+    function computeScenarioResults(allPlantsList, addedPlantsList, baseline, ccsP) {
+        var years = Object.keys(baseline.envelope).sort();
+
+        // Build orispl → plant AND name → plant lookup for modified plants
+        var modifiedPlants = {};
+        var modifiedByName = {};
+        var restartByName = {};
+        allPlantsList.forEach(function (p) {
+            if (p._action && p._action !== 'default_market') {
+                modifiedPlants[p.orispl] = p;
+                if (p.name) modifiedByName[p.name] = p;
+            }
+            if (p.year_built && p.year_built > 2024 && !FOSSIL_FUELS.has(p.fuel_type)) {
+                if (p.name) restartByName[p.name] = p;
+            }
+        });
+
+        var newPlants = addedPlantsList.filter(function (p) {
+            return p._action === 'add_plant';
+        });
+
+        var customEnvelope = {};
+        var customIntensity = {};
+        var customPlantDetail = {};
+        var customGenByFuel = {};
+        var customEmisByFuel = {};
+
+        years.forEach(function (yr) {
+            var yearNum = parseInt(yr);
+            var basePlants = baseline.plant_detail[yr] || [];
+            var baseEnv = baseline.envelope[yr] || { p10: 0, p50: 0, p90: 0 };
+            var baseGen = baseline.generation_by_fuel[yr] || {};
+            var baseEmis = baseline.emissions_by_fuel[yr] || {};
+
+            var genByFuel = {};
+            Object.keys(baseGen).forEach(function (f) { genByFuel[f] = baseGen[f]; });
+            var emisByFuel = {};
+            Object.keys(baseEmis).forEach(function (f) { emisByFuel[f] = baseEmis[f]; });
+
+            var emisDelta = 0;
+            var genDelta = 0;
+            var yearPlants = [];
+            var newCleanGen = {};
+
+            basePlants.forEach(function (bp) {
+                var mod = modifiedPlants[bp.orispl] || modifiedByName[bp.name];
+                if (!mod) {
+                    yearPlants.push({
+                        orispl: bp.orispl, name: bp.name, iso: bp.iso,
+                        fuel_type: bp.fuel_type, capacity_mw: bp.capacity_mw,
+                        status: bp.status, gen_twh: bp.gen_twh, emissions_mt: bp.emissions_mt
+                    });
+                    var restartPlant = restartByName[bp.name];
+                    if (restartPlant && bp.gen_twh > 0 && yearNum >= (restartPlant.year_built || 9999)) {
+                        var rFuel = bp.fuel_type || restartPlant.fuel_type;
+                        if (!FOSSIL_FUELS.has(rFuel)) {
+                            newCleanGen[rFuel] = (newCleanGen[rFuel] || 0) + bp.gen_twh;
+                        }
+                    }
+                    return;
+                }
+
+                var action = mod._action;
+                var yearOnline = mod._year_online || 2030;
+                var fuel = bp.fuel_type || mod.fuel_type;
+                var capMW = (mod.capacity_mw || bp.capacity_mw || 0) * (mod.equity_share || 1.0);
+                var co2Rate = (mod.co2_rate_t_mwh != null) ? mod.co2_rate_t_mwh : ((bp.co2_rate_t_mwh != null) ? bp.co2_rate_t_mwh : 0.37);
+                var customGenTwh = bp.gen_twh;
+                var customEmisMt = bp.emissions_mt;
+                var customStatus = bp.status;
+                var customFuel = fuel;
+
+                if (action === 'retire' && yearNum >= yearOnline) {
+                    customGenTwh = 0;
+                    customEmisMt = 0;
+                    customStatus = 'retired';
+                } else if (action === 'ccs_retrofit' && yearNum >= yearOnline) {
+                    var cfFrac = (ccsP.cf_pct || 85) / 100.0;
+                    var derateFrac = (ccsP.derate_pct || 14) / 100.0;
+                    var captureFrac = (mod._ccs_target_rate > 0) ?
+                        mod._ccs_target_rate : (ccsP.capture_rate_pct || 90) / 100.0;
+                    var grossMwh = capMW * cfFrac * 8760;
+                    var netMwh = grossMwh * (1.0 - derateFrac);
+                    var emisTons = grossMwh * co2Rate * (1.0 - captureFrac);
+                    customGenTwh = netMwh / 1e6;
+                    customEmisMt = emisTons / 1e6;
+                    customStatus = 'ccs_retrofit';
+                    customFuel = 'ccs_ccgt';
+                } else if (action === 'uprate' && yearNum >= yearOnline) {
+                    var uprateMW = mod._uprate_mw || 0;
+                    var origMW = bp.capacity_mw || capMW;
+                    if (origMW > 0) {
+                        var scale = (origMW + uprateMW) / origMW;
+                        customGenTwh = bp.gen_twh * scale;
+                        customEmisMt = bp.emissions_mt * scale;
+                    }
+                } else if (action === 'operating_override') {
+                    if (bp.gen_twh <= 0 && capMW > 0) {
+                        var forcedCf = mod._custom_cf || 0.90;
+                        customGenTwh = capMW * forcedCf * 8760 / 1e6;
+                        customEmisMt = FOSSIL_FUELS.has(fuel) ? (capMW * forcedCf * 8760 * co2Rate / 1e6) : 0;
+                    }
+                }
+
+                var isCleanFuel = !FOSSIL_FUELS.has(customFuel);
+                if (action === 'operating_override' && isCleanFuel) {
+                    newCleanGen[customFuel] = (newCleanGen[customFuel] || 0) + customGenTwh;
+                } else if (action === 'uprate' && isCleanFuel && yearNum >= yearOnline) {
+                    var uprateIncrement = customGenTwh - (bp.gen_twh || 0);
+                    if (uprateIncrement > 0) {
+                        newCleanGen[customFuel] = (newCleanGen[customFuel] || 0) + uprateIncrement;
+                    }
+                } else if (action === 'ccs_retrofit' && yearNum >= yearOnline) {
+                    newCleanGen['ccs_ccgt'] = (newCleanGen['ccs_ccgt'] || 0) + customGenTwh;
+                }
+
+                var dEmis = customEmisMt - (bp.emissions_mt || 0);
+                var dGen = customGenTwh - (bp.gen_twh || 0);
+                emisDelta += dEmis;
+                genDelta += dGen;
+
+                var oldFuel = bp.fuel_type || 'gas_ccgt';
+                if (customFuel !== oldFuel) {
+                    emisByFuel[oldFuel] = (emisByFuel[oldFuel] || 0) - (bp.emissions_mt || 0);
+                    emisByFuel[customFuel] = (emisByFuel[customFuel] || 0) + customEmisMt;
+                    genByFuel[oldFuel] = (genByFuel[oldFuel] || 0) - (bp.gen_twh || 0);
+                    genByFuel[customFuel] = (genByFuel[customFuel] || 0) + customGenTwh;
+                } else {
+                    emisByFuel[oldFuel] = (emisByFuel[oldFuel] || 0) + dEmis;
+                    genByFuel[oldFuel] = (genByFuel[oldFuel] || 0) + dGen;
+                }
+
+                yearPlants.push({
+                    orispl: bp.orispl, name: bp.name, iso: bp.iso || mod.iso,
+                    fuel_type: customFuel, capacity_mw: bp.capacity_mw,
+                    status: customStatus,
+                    gen_twh: Math.round(customGenTwh * 100) / 100,
+                    emissions_mt: Math.round(customEmisMt * 10000) / 10000
+                });
+            });
+
+            // Process new (added) plants
+            newPlants.forEach(function (np) {
+                var yearOnline = np._year_online || 2028;
+                if (yearNum < yearOnline) return;
+                var fuel = np.fuel_type || 'gas_ccgt';
+                var capMW = (np.capacity_mw || 0) * (np.equity_share || 1.0);
+                var co2Rate = (np.co2_rate_t_mwh != null) ? np.co2_rate_t_mwh : 0.37;
+                var cf = (np._custom_cf && np._custom_cf > 0) ? np._custom_cf : 0.57;
+                var grossMwh = capMW * cf * 8760;
+                var emisTons = grossMwh * co2Rate;
+                var genTwh = grossMwh / 1e6;
+                var emisMt = emisTons / 1e6;
+
+                emisDelta += emisMt;
+                genDelta += genTwh;
+                emisByFuel[fuel] = (emisByFuel[fuel] || 0) + emisMt;
+                genByFuel[fuel] = (genByFuel[fuel] || 0) + genTwh;
+
+                if (!FOSSIL_FUELS.has(fuel)) {
+                    newCleanGen[fuel] = (newCleanGen[fuel] || 0) + genTwh;
+                }
+
+                yearPlants.push({
+                    orispl: np.orispl, name: np.name, iso: np.iso,
+                    fuel_type: fuel, capacity_mw: np.capacity_mw,
+                    status: 'operating',
+                    gen_twh: Math.round(genTwh * 100) / 100,
+                    emissions_mt: Math.round(emisMt * 10000) / 10000
+                });
+            });
+
+            customEnvelope[yr] = {
+                p10: Math.round((baseEnv.p10 + emisDelta) * 10000) / 10000,
+                p50: Math.round((baseEnv.p50 + emisDelta) * 10000) / 10000,
+                p90: Math.round((baseEnv.p90 + emisDelta) * 10000) / 10000
+            };
+
+            var totalGenTwh = 0;
+            var totalEmisMt = 0;
+            Object.keys(genByFuel).forEach(function (f) { if (f[0] !== '_') totalGenTwh += genByFuel[f] || 0; });
+            Object.keys(emisByFuel).forEach(function (f) { if (f[0] !== '_') totalEmisMt += emisByFuel[f] || 0; });
+            var intensityKg = totalGenTwh > 0 ? (totalEmisMt / totalGenTwh) * 1e3 : 0;
+            customIntensity[yr] = {
+                p10: Math.round(intensityKg * 100) / 100,
+                p50: Math.round(intensityKg * 100) / 100,
+                p90: Math.round(intensityKg * 100) / 100
+            };
+
+            genByFuel._new_clean_gen = newCleanGen;
+            customPlantDetail[yr] = yearPlants;
+            customGenByFuel[yr] = genByFuel;
+            customEmisByFuel[yr] = emisByFuel;
+        });
+
+        return {
+            envelope: customEnvelope,
+            intensity_envelope: customIntensity,
+            plant_detail: customPlantDetail,
+            generation_by_fuel: customGenByFuel,
+            emissions_by_fuel: customEmisByFuel
+        };
+    }
+
     // ── Recalculate ──
+    // Delta-based approach: uses precomputed baseline per-plant values for unmodified
+    // plants, computes only modified plants via simple formulas, then applies the
+    // per-plant delta to the precomputed baseline envelope.
     function recalculate() {
-        if (!sweepData) {
-            setStatus('Error: Sweep data not loaded');
+        if (!window.FLEET_SCENARIOS_API) {
+            setStatus('Error: Chart API not available');
+            return;
+        }
+        var precomputed = window.FLEET_SCENARIOS_API.getData();
+        if (!precomputed || !precomputed.scenarios || !precomputed.scenarios.baseline) {
+            setStatus('Error: Precomputed baseline not loaded');
             return;
         }
 
@@ -746,6 +1035,13 @@ var FleetSidebar = (function () {
             setStatus('Error: No plants in fleet');
             return;
         }
+
+        console.log('[fleet-sidebar] recalculate starting:',
+            '| fleetPlants:', fleetPlants.length,
+            '| addedPlants:', addedPlants.length,
+            '| allPlants:', allPlants.length,
+            '| API available:', !!window.FLEET_SCENARIOS_API,
+            '| baseline years:', Object.keys(precomputed.scenarios.baseline.envelope).length);
 
         setStatus('Calculating...');
         if (els.recalcBtn) {
@@ -757,47 +1053,44 @@ var FleetSidebar = (function () {
             setTimeout(function () {
                 try {
                     var t0 = performance.now();
-                    var result = FleetDispatchEngine.computeFleetDispatch(allPlants, sweepData, {
-                        ccs_derate_pct: ccsParams.derate_pct,
-                        ccs_capture_rate_pct: ccsParams.capture_rate_pct,
-                        ccs_cf_pct: ccsParams.cf_pct
-                    });
+                    var baseline = precomputed.scenarios.baseline;
+
+                    // Use extracted computation function
+                    lastComputedResults = computeScenarioResults(allPlants, addedPlants, baseline, ccsParams);
+
                     var elapsed = Math.round(performance.now() - t0);
-
-                    // Cache the results and current params for save
-                    lastComputedResults = {
-                        envelope: result.envelope,
-                        intensity_envelope: result.intensity_envelope,
-                        plant_detail: result.plant_detail,
-                        generation_by_fuel: result.generation_by_fuel,
-                        emissions_by_fuel: result.emissions_by_fuel,
-                        fleet_summary: result.fleet_summary
-                    };
-
                     var scenarioName = (els.nameInput && els.nameInput.value.trim()) || 'Custom';
+
+                    // Debug log
+                    var dbgGen2030 = lastComputedResults.generation_by_fuel['2030'];
+                    var dbgInt2030 = lastComputedResults.intensity_envelope['2030'];
+                    console.log('[fleet-sidebar] recalculate complete:',
+                        '| addedPlants:', addedPlants.length,
+                        '| 2030 gen_by_fuel:', dbgGen2030 ? JSON.stringify(dbgGen2030) : 'MISSING',
+                        '| 2030 intensity:', dbgInt2030 ? dbgInt2030.p50 + ' kg/MWh' : 'MISSING',
+                        '| 2030 envelope:', lastComputedResults.envelope['2030'] ? JSON.stringify(lastComputedResults.envelope['2030']) : 'MISSING');
 
                     var scenarioData = {
                         description: scenarioName,
                         color: '#2372B9',
-                        envelope: result.envelope,
-                        intensity_envelope: result.intensity_envelope,
-                        plant_detail: result.plant_detail,
-                        generation_by_fuel: result.generation_by_fuel,
-                        emissions_by_fuel: result.emissions_by_fuel,
-                        fleet_summary: result.fleet_summary
+                        envelope: customEnvelope,
+                        intensity_envelope: customIntensity,
+                        plant_detail: customPlantDetail,
+                        generation_by_fuel: customGenByFuel,
+                        emissions_by_fuel: customEmisByFuel
                     };
 
-                    if (window.FLEET_SCENARIOS_API) {
-                        window.FLEET_SCENARIOS_API.setCustomScenario(scenarioName, scenarioData);
-                        setStatus('Done in ' + elapsed + 'ms — custom scenario updated');
-                    } else {
-                        console.warn('FLEET_SCENARIOS_API not available');
-                        setStatus('Computed in ' + elapsed + 'ms but chart API unavailable');
-                    }
+                    // Don't auto-display on charts — user must save & name first
+                    // window.FLEET_SCENARIOS_API.setCustomScenario(scenarioName, scenarioData);
+                    setStatus('Computed in ' + elapsed + 'ms — name & save to display on charts');
                     updateSaveButtonState();
+                    // Auto-focus name input to encourage saving
+                    if (els.nameInput && !els.nameInput.value.trim()) {
+                        els.nameInput.focus();
+                    }
                 } catch (err) {
-                    console.error('Recalculation failed:', err);
-                    setStatus('Error: ' + err.message);
+                    console.error('Recalculation failed:', err, err.stack);
+                    setStatus('Error: ' + err.message + ' (see console for details)');
                 }
 
                 if (els.recalcBtn) {
@@ -831,9 +1124,12 @@ var FleetSidebar = (function () {
         if (!els.saveBtn) return;
         var name = (els.nameInput && els.nameInput.value.trim()) || '';
         var atMax = savedScenarios.length >= MAX_SCENARIOS;
-        els.saveBtn.disabled = !name || atMax;
+        var noResults = !lastComputedResults;
+        els.saveBtn.disabled = !name || atMax || noResults;
         if (atMax) {
             els.saveBtn.title = 'Maximum ' + MAX_SCENARIOS + ' scenarios reached';
+        } else if (noResults) {
+            els.saveBtn.title = 'Click Recalculate first to compute results';
         } else if (!name) {
             els.saveBtn.title = 'Enter a name to save';
         } else {
@@ -860,14 +1156,16 @@ var FleetSidebar = (function () {
         // Build params from current fleet state
         var params = {
             fleetMods: fleetPlants.filter(function (p) { return p._action; }).map(function (p) {
-                return { _idx: p._idx, orispl: p.orispl, _action: p._action, _year_online: p._year_online, _ccs_target_rate: p._ccs_target_rate, capacity_mw: p.capacity_mw };
+                return { _idx: p._idx, orispl: p.orispl, _action: p._action, _year_online: p._year_online, _ccs_target_rate: p._ccs_target_rate, _ccs_derate_pct: p._ccs_derate_pct, _uprate_mw: p._uprate_mw, _custom_cf: p._custom_cf, capacity_mw: p.capacity_mw };
             }),
             addedPlants: JSON.parse(JSON.stringify(addedPlants))
         };
 
-        // If we haven't computed results yet, run recalculate first
-        if (!lastComputedResults && sweepData) {
-            recalculate();
+        // Require recalculation before saving — recalculate is async so we can't
+        // auto-run it here and expect results to be ready synchronously
+        if (!lastComputedResults) {
+            alert('Please click "Recalculate" first to compute results before saving.');
+            return;
         }
 
         var scenario = {
@@ -875,7 +1173,7 @@ var FleetSidebar = (function () {
             name: name,
             description: '',
             params: params,
-            results: lastComputedResults ? JSON.parse(JSON.stringify(lastComputedResults)) : null,
+            results: JSON.parse(JSON.stringify(lastComputedResults)),
             color: getNextColor(),
             isVisible: true,
             isBaseline: savedScenarios.length === 0, // First scenario is baseline
@@ -903,6 +1201,9 @@ var FleetSidebar = (function () {
                 p._action = mod._action;
                 p._year_online = mod._year_online;
                 p._ccs_target_rate = mod._ccs_target_rate;
+                p._ccs_derate_pct = mod._ccs_derate_pct || 0;
+                p._uprate_mw = mod._uprate_mw || 0;
+                p._custom_cf = mod._custom_cf || 0;
                 if (mod.capacity_mw != null) p.capacity_mw = mod.capacity_mw;
             }
         });
@@ -954,8 +1255,17 @@ var FleetSidebar = (function () {
     }
 
     // ── Push visible scenarios to chart system ──
+    var _syncRetries = 0;
     function syncVisibleScenarios() {
-        if (!window.FLEET_SCENARIOS_API) return;
+        if (!window.FLEET_SCENARIOS_API) {
+            // API not ready yet — retry with backoff (up to ~5 seconds total)
+            if (_syncRetries < 8) {
+                _syncRetries++;
+                setTimeout(syncVisibleScenarios, 250 * _syncRetries);
+            }
+            return;
+        }
+        _syncRetries = 0;
         var visible = savedScenarios.filter(function (s) { return s.isVisible && s.results; });
         window.FLEET_SCENARIOS_API.setSavedScenarios(visible);
     }
