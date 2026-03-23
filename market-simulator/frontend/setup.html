@@ -89,7 +89,7 @@
                         <button type="button" class="toggle-btn" data-mode="sweep">Market Sweep (5-yr intervals)</button>
                     </div>
                     <p class="mode-description" id="modeDescription">
-                        Multi-year market trajectory to 2060 at 5-year intervals. Wright's Law learning curves reduce costs each year. Shows when the market flips for each resource type.
+                        Multi-year market trajectory to 2050 at 5-year intervals. Wright's Law learning curves reduce costs each year. Shows when the market flips for each resource type.
                     </p>
 
                     <!-- Sweep cache info panel — shown only in sweep mode -->
@@ -836,7 +836,7 @@
                 <h2 class="section-heading">Trajectory Settings</h2>
                 <div class="grid-2col">
                     <div class="input-group">
-                        <label>Year Range <span class="info-icon" data-tooltip="Simulation runs from start year to 2060. Step size is determined by the mode selected above.">i</span></label>
+                        <label>Year Range <span class="info-icon" data-tooltip="Simulation runs from start year to 2050. Step size is determined by the mode selected above.">i</span></label>
                         <div style="display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap;">
                             <select id="startYear" style="padding: 8px 12px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-card); font-family: var(--font-body);">
                                 <option value="2025" selected>2025</option>
@@ -849,9 +849,7 @@
                                 <option value="2035">2035</option>
                                 <option value="2040">2040</option>
                                 <option value="2045">2045</option>
-                                <option value="2050">2050</option>
-                                <option value="2055">2055</option>
-                                <option value="2060" selected>2060</option>
+                                <option value="2050" selected>2050</option>
                             </select>
                         </div>
                         <div class="input-hint" id="yearCountHint" style="margin-top: 4px; color: var(--text-muted); font-size: 0.85rem;">8 simulation years (5-yr intervals)</div>
