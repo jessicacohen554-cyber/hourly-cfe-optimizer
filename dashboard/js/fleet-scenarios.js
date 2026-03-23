@@ -28,8 +28,8 @@
         ldes:       RESOURCE_COLORS.ldes       || '#651dda9a',
         gas_ccgt:   RESOURCE_COLORS.fossilGas  || '#7F8F97',
         gas_ct:     RESOURCE_COLORS.fossilGasCT || '#7E8083',
-        gas_oil_ct: '#8B7355',
-        oil_ct:     RESOURCE_COLORS.fossilOil  || '#8B7355',
+        gas_oil_ct: RESOURCE_COLORS.fossilOil  ||'#8B7355',
+        oil_ct:     RESOURCE_COLORS.fossilOil  || '#6b5942',
         ccs_ccgt:   RESOURCE_COLORS.ccs        || '#CADB2E',
     };
     var EMISSION_FUEL_KEYS = ['gas_ccgt', 'gas_ct', 'gas_oil_ct', 'oil_ct', 'ccs_ccgt'];
