@@ -1,8 +1,8 @@
 // ============================================================================
-// CHART COLORS — Canonical color constants for Chart.js
+// CHART COLORS - Canonical color constants for Chart.js
 // ============================================================================
 // Single source of truth for all chart colors. NEVER hardcode hex values
-// in Chart.js dataset configurations — always use these constants.
+// in Chart.js dataset configurations - always use these constants.
 //
 // Usage: <script src="js/chart-colors.js"></script>
 //        Then reference: RESOURCE_COLORS.solar, ISO_COLORS.CAISO, etc.
@@ -15,11 +15,11 @@ var RESOURCE_COLORS = {
     offshoreWind: '#009688',
     hydro:        '#0EA5E9',
     nuclear:      '#6366F1',
-    ccs:          '#64748B',
+    ccs:          '#26A69A',
     cleanFirm:    '#6366F1',
-    battery:      '#06B6D4',   // Battery 4hr — cyan
+    battery:      '#06B6D4',   // Battery 4hr - cyan
     battery4:     '#06B6D4',   // Battery 4hr alias
-    battery8:     '#0891B2',   // Battery 8hr — deep cyan
+    battery8:     '#0891B2',   // Battery 8hr - deep cyan
     ldes:         '#E91E63',
     greenH2:      '#10B981',
     geothermal:   '#D97706',
@@ -35,7 +35,7 @@ var RESOURCE_COLORS = {
     offshoreWindT: 'rgba(0, 150, 136, 0.55)',
     hydroT:        'rgba(14, 165, 233, 0.55)',
     nuclearT:      'rgba(99, 102, 241, 0.55)',
-    ccsT:          'rgba(100, 116, 139, 0.55)',
+    ccsT:          'rgba(38, 166, 154, 0.55)',
     cleanFirmT:    'rgba(99, 102, 241, 0.55)',
     batteryT:      'rgba(6, 182, 212, 0.55)',   // Battery 4hr
     battery4T:     'rgba(6, 182, 212, 0.55)',   // Battery 4hr alias
@@ -52,7 +52,7 @@ var RESOURCE_COLORS = {
     offshoreWindBg: 'rgba(0, 150, 136, 0.08)',
     hydroBg:        'rgba(14, 165, 233, 0.08)',
     nuclearBg:      'rgba(99, 102, 241, 0.08)',
-    ccsBg:          'rgba(100, 116, 139, 0.08)',
+    ccsBg:          'rgba(38, 166, 154, 0.08)',
     batteryBg:      'rgba(6, 182, 212, 0.08)',   // Battery 4hr
     battery4Bg:     'rgba(6, 182, 212, 0.08)',
     battery8Bg:     'rgba(8, 145, 178, 0.08)',
@@ -100,14 +100,95 @@ var SEMANTIC_COLORS = {
     muted:    '#6B7280'
 };
 
+// ============================================================================
+// withAlpha() - Create semi-transparent fill from any hex color
+// ============================================================================
+// Usage: withAlpha(RESOURCE_COLORS.solar, 0.15) → 'rgba(245,158,11,0.15)'
+// Pattern: borderColor: RESOURCE_COLORS.solar, backgroundColor: withAlpha(RESOURCE_COLORS.solar, 0.15)
+function withAlpha(hex, alpha) {
+    if (!hex || hex.charAt(0) !== '#') return hex;
+    var r = parseInt(hex.slice(1, 3), 16);
+    var g = parseInt(hex.slice(3, 5), 16);
+    var b = parseInt(hex.slice(5, 7), 16);
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+
+// ============================================================================
+// OUTLINE / SOLID DATASET FACTORIES
+// ============================================================================
+// outlineDataset: semi-transparent fill + saturated border (default for new-build)
+// solidDataset:   saturated fill + matching border (for existing clean energy)
+//
+// Usage:
+//   datasets: [
+//     outlineDataset(RESOURCE_COLORS.solar, 'New Solar', [10, 20, 30]),
+//     solidDataset(RESOURCE_COLORS.nuclear, 'Existing Nuclear', [50, 50, 50])
+//   ]
+// ============================================================================
+
+function outlineDataset(color, label, data, opts) {
+    opts = opts || {};
+    var result = {
+        label: label,
+        data: data,
+        backgroundColor: withAlpha(color, opts.fillAlpha || 0.15),
+        borderColor: color,
+        borderWidth: opts.borderWidth || 2,
+        borderRadius: opts.borderRadius || 3,
+        hoverBackgroundColor: withAlpha(color, 0.35),
+        hoverBorderColor: color,
+        hoverBorderWidth: (opts.borderWidth || 2) + 0.5
+    };
+    if (opts.extra) {
+        for (var k in opts.extra) { result[k] = opts.extra[k]; }
+    }
+    return result;
+}
+
+function solidDataset(color, label, data, opts) {
+    opts = opts || {};
+    var result = {
+        label: label,
+        data: data,
+        backgroundColor: withAlpha(color, opts.fillAlpha || 0.85),
+        borderColor: color,
+        borderWidth: opts.borderWidth || 2,
+        borderRadius: opts.borderRadius || 3
+    };
+    if (opts.extra) {
+        for (var k in opts.extra) { result[k] = opts.extra[k]; }
+    }
+    return result;
+}
+
 // Resource generation stack order (bottom to top for stacked charts)
 var RESOURCE_STACK_ORDER = ['nuclear', 'geothermal', 'ccs', 'hydro', 'offshoreWind', 'wind', 'solar', 'battery', 'battery8', 'ldes', 'greenH2'];
 
-// Curtailment stack order (bottom to top — reverse of generation: solar curtailed first, nuclear last)
+// Curtailment stack order (bottom to top - reverse of generation: solar curtailed first, nuclear last)
 var CURTAILMENT_STACK_ORDER = ['solar', 'wind', 'offshoreWind', 'hydro', 'ccs', 'geothermal', 'nuclear'];
 
 // ============================================================================
-// SHARED LEGEND UTILITY — buildLegend()
+// CHART.JS DEFAULT FONT SIZES - Desktop readability
+// Applied after DOM loads to ensure Chart.js is available
+// ============================================================================
+function _applyChartDefaults() {
+    if (typeof Chart === 'undefined') return;
+    Chart.defaults.font.size = 14;
+    if (Chart.defaults.plugins.legend && Chart.defaults.plugins.legend.labels) {
+        Chart.defaults.plugins.legend.labels.font = { size: 14 };
+    }
+    if (Chart.defaults.plugins.title) {
+        Chart.defaults.plugins.title.font = { size: 16, weight: '600' };
+    }
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _applyChartDefaults);
+} else {
+    _applyChartDefaults();
+}
+
+// ============================================================================
+// SHARED LEGEND UTILITY - buildLegend()
 // ============================================================================
 // Generates consistent HTML legends with correct swatch types for all pages.
 // Swatch types: 'line', 'band', 'dashed', 'dot-line', 'hatch'
