@@ -1017,7 +1017,8 @@ class FleetModel:
     # ------------------------------------------------------------------
 
     def build_merit_order_stack(self, fuel_level: str = 'Medium',
-                                co2_price: float = 0.0
+                                co2_price: float = 0.0,
+                                custom_fuel_prices: dict = None,
                                 ) -> Tuple[List[Tuple[str, float, float]], float]:
         """Build a merit-order stack from the real fleet data.
 
@@ -1029,6 +1030,8 @@ class FleetModel:
         Args:
             fuel_level: 'Low', 'Medium', or 'High' fuel price scenario.
             co2_price: Carbon price in $/ton CO2.
+            custom_fuel_prices: Optional dict {'gas': X, 'coal': Y, 'oil': Z}
+                overriding fuel_level defaults (e.g. year-varying AEO prices).
 
         Returns:
             stack: List of (bin_name, capacity_mw, marginal_cost_per_mwh) tuples,
@@ -1038,7 +1041,7 @@ class FleetModel:
         if not self.bins:
             self.bin_by_heat_rate()
 
-        fp = DEFAULT_FUEL_PRICES.get(fuel_level, DEFAULT_FUEL_PRICES['Medium'])
+        fp = custom_fuel_prices if custom_fuel_prices else DEFAULT_FUEL_PRICES.get(fuel_level, DEFAULT_FUEL_PRICES['Medium'])
 
         stack = []
         for bin_name, bin_df in self.bins.items():
@@ -1103,7 +1106,8 @@ class FleetModel:
         self.fleet['zone'] = self.fleet.apply(_get_zone, axis=1)
 
     def build_zonal_merit_order_stacks(self, fuel_level: str = 'Medium',
-                                        co2_price: float = 0.0
+                                        co2_price: float = 0.0,
+                                        custom_fuel_prices: dict = None,
                                         ) -> Dict[str, List[Tuple[str, float, float]]]:
         """Build per-zone merit-order stacks.
 
@@ -1113,6 +1117,8 @@ class FleetModel:
         Args:
             fuel_level: 'Low', 'Medium', or 'High' fuel price scenario.
             co2_price: Carbon price in $/ton CO2.
+            custom_fuel_prices: Optional dict {'gas': X, 'coal': Y, 'oil': Z}
+                overriding fuel_level defaults (e.g. year-varying AEO prices).
 
         Returns:
             Dict mapping zone name to sorted merit-order stack.
@@ -1129,7 +1135,7 @@ class FleetModel:
         if iso not in ZONE_CONFIG:
             return {}
 
-        fp = DEFAULT_FUEL_PRICES.get(fuel_level, DEFAULT_FUEL_PRICES['Medium'])
+        fp = custom_fuel_prices if custom_fuel_prices else DEFAULT_FUEL_PRICES.get(fuel_level, DEFAULT_FUEL_PRICES['Medium'])
         zone_stacks = {}
 
         for zone_name in ZONE_CONFIG[iso]['zones']:
