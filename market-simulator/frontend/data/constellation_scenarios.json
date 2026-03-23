@@ -1,0 +1,3314 @@
+{
+  "$schema_version": "2.2",
+  "$schema_description": "Full fleet scenario schema \u2014 includes all plant types (nuclear, fossil, renewable, geothermal, storage). Scenarios apply modifications only to fossil plants.",
+  "metadata": {
+    "company": "Constellation Energy",
+    "as_of_date": "2025-01-01",
+    "source": "CEG_fleet_rosetta.csv",
+    "notes": "Full fleet of 142 plants across all fuel types. Includes CEG legacy fleet and CPN (Calpine) acquisition. 2024 Rosetta actuals: Nuclear ~182 TWh, Gas CCGT ~110 TWh, Geothermal ~5.6 TWh.",
+    "generation_estimates_twh": {
+      "nuclear": 181.8,
+      "geothermal": 5.6,
+      "wind": 1.9,
+      "solar": 0.01,
+      "hydro": 1.5,
+      "gas_ccgt": 109.5,
+      "gas_ct": 1.5,
+      "oil_ct": 0.02,
+      "gas_oil_ct": 0.35,
+      "battery": 0.0,
+      "pumped_storage": 0.0
+    }
+  },
+  "new_build_interaction": {
+    "rule": "additive",
+    "description": "Fleet-level add_plant actions are additive to grid-level new fossil builds."
+  },
+  "baseline_mt": 48.63,
+  "targets": {
+    "sbti_15": {
+      "type": "sbti_15c",
+      "label": "SBTi 1.5\u00b0C (Power Sector v2)",
+      "description": "SBTi Power Sector v2 draft guidance: net zero by 2040 for power sector companies.",
+      "base_year": 2023,
+      "baseline_mt": 48.63,
+      "milestones": {
+        "2023": 48.6,
+        "2025": 41.4,
+        "2030": 24.4,
+        "2035": 12.2,
+        "2040": 0.0,
+        "2045": 0.0,
+        "2050": 0.0
+      }
+    },
+    "at_power_nz": {
+      "type": "at_power_nz",
+      "label": "AT Power NZ",
+      "description": "Constellation committed target: 95% reduction by 2040, net zero by 2045.",
+      "milestones": {
+        "2023": 48.6,
+        "2025": 42.8,
+        "2030": 31.7,
+        "2035": 17.0,
+        "2040": 2.5,
+        "2045": 0.0,
+        "2050": 0.0
+      }
+    }
+  },
+  "base_fleet": [
+    {
+      "orispl": 943722,
+      "name": "Braidwood Clean Energy Center",
+      "full_name": "Braidwood Clean Energy Center",
+      "iso": "PJM",
+      "state": "IL",
+      "capacity_mw": 2401.2,
+      "fuel_type": "nuclear",
+      "plant_category": "nuclear",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 1988,
+      "actual_gen_mwh": {
+        "2023": 20113596.0,
+        "2024": 19466789.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 975425,
+      "name": "Byron Generating Station",
+      "full_name": "Byron Generating Station",
+      "iso": "PJM",
+      "state": "IL",
+      "capacity_mw": 2378.9,
+      "fuel_type": "nuclear",
+      "plant_category": "nuclear",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 1985,
+      "actual_gen_mwh": {
+        "2023": 19465588.0,
+        "2024": 19848717.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 935897,
+      "name": "Calvert Cliffs",
+      "full_name": "Calvert Cliffs",
+      "iso": "PJM",
+      "state": "MD",
+      "capacity_mw": 1809.5,
+      "fuel_type": "nuclear",
+      "plant_category": "nuclear",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 1975,
+      "actual_gen_mwh": {
+        "2023": 14983752.4,
+        "2024": 14724066.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 941893,
+      "name": "Clinton Power Station",
+      "full_name": "Clinton Power Station",
+      "iso": "MISO",
+      "state": "IL",
+      "capacity_mw": 1060.5,
+      "fuel_type": "nuclear",
+      "plant_category": "nuclear",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 1987,
+      "actual_gen_mwh": {
+        "2023": 8101564.0,
+        "2024": 9548998.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 989831,
+      "name": "Crane",
+      "full_name": "Crane",
+      "iso": "PJM",
+      "state": "PA",
+      "capacity_mw": 829.0,
+      "fuel_type": "nuclear",
+      "plant_category": "nuclear",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 2027,
+      "actual_gen_mwh": {
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 984150,
+      "name": "Dresden",
+      "full_name": "Dresden",
+      "iso": "PJM",
+      "state": "IL",
+      "capacity_mw": 1879.1,
+      "fuel_type": "nuclear",
+      "plant_category": "nuclear",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 1970,
+      "actual_gen_mwh": {
+        "2023": 15269256.0,
+        "2024": 15252473.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 916151,
+      "name": "James A. FitzPatrick",
+      "full_name": "James A. FitzPatrick",
+      "iso": "NYISO",
+      "state": "NY",
+      "capacity_mw": 853.4,
+      "fuel_type": "nuclear",
+      "plant_category": "nuclear",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 1975,
+      "actual_gen_mwh": {
+        "2023": 7366492.5,
+        "2024": 6780337.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 987313,
+      "name": "LaSalle County Generating Station",
+      "full_name": "LaSalle County Generating Station",
+      "iso": "PJM",
+      "state": "IL",
+      "capacity_mw": 2346.3,
+      "fuel_type": "nuclear",
+      "plant_category": "nuclear",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 1984,
+      "actual_gen_mwh": {
+        "2023": 19444055.0,
+        "2024": 19507843.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 925838,
+      "name": "Limerick",
+      "full_name": "Limerick",
+      "iso": "PJM",
+      "state": "PA",
+      "capacity_mw": 2348.2,
+      "fuel_type": "nuclear",
+      "plant_category": "nuclear",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 1986,
+      "actual_gen_mwh": {
+        "2023": 19094075.4,
+        "2024": 19359985.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 965121,
+      "name": "Nine Mile Point",
+      "full_name": "Nine Mile Point",
+      "iso": "NYISO",
+      "state": "NY",
+      "capacity_mw": 1687.5,
+      "fuel_type": "nuclear",
+      "plant_category": "nuclear",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 1969,
+      "actual_gen_mwh": {
+        "2023": 13534316.4,
+        "2024": 13575400.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 999540,
+      "name": "Peach Bottom",
+      "full_name": "Peach Bottom",
+      "iso": "PJM",
+      "state": "PA",
+      "capacity_mw": 1342.3,
+      "fuel_type": "nuclear",
+      "plant_category": "nuclear",
+      "equity_share": 0.5,
+      "status": "operating",
+      "year_built": 1974,
+      "actual_gen_mwh": {
+        "2023": 11098545.3,
+        "2024": 10922185.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 921880,
+      "name": "Quad Cities",
+      "full_name": "Quad Cities",
+      "iso": "MISO",
+      "state": "IL",
+      "capacity_mw": 1405.5,
+      "fuel_type": "nuclear",
+      "plant_category": "nuclear",
+      "equity_share": 0.75,
+      "status": "operating",
+      "year_built": 1972,
+      "actual_gen_mwh": {
+        "2023": 11373730.5,
+        "2024": 11670279.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 988963,
+      "name": "R.E. Ginna/Ontario Sta. 13",
+      "full_name": "R.E. Ginna/Ontario Sta. 13",
+      "iso": "NYISO",
+      "state": "NY",
+      "capacity_mw": 582.0,
+      "fuel_type": "nuclear",
+      "plant_category": "nuclear",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 1970,
+      "actual_gen_mwh": {
+        "2023": 4644952.9,
+        "2024": 4799085.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 980346,
+      "name": "Salem",
+      "full_name": "Salem",
+      "iso": "PJM",
+      "state": "NJ",
+      "capacity_mw": 973.05,
+      "fuel_type": "nuclear",
+      "plant_category": "nuclear",
+      "equity_share": 0.43,
+      "status": "operating",
+      "year_built": 1977,
+      "actual_gen_mwh": {
+        "2023": 7835304.0,
+        "2024": 7968466.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 929800,
+      "name": "South Texas Project",
+      "full_name": "South Texas Project",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 1170.4,
+      "fuel_type": "nuclear",
+      "plant_category": "nuclear",
+      "equity_share": 0.44,
+      "status": "operating",
+      "year_built": 1988,
+      "actual_gen_mwh": {
+        "2023": 1721241.9,
+        "2024": 8358081.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 954209,
+      "name": "Aidlin Geothermal",
+      "full_name": "Aidlin Geothermal",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 20.0,
+      "fuel_type": "geothermal",
+      "plant_category": "renewable",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 1989,
+      "actual_gen_mwh": {
+        "2023": 77312.0,
+        "2024": 107929.2
+      },
+      "actual_emis_t": {
+        "2023": 3114.0,
+        "2024": 9486.7
+      }
+    },
+    {
+      "orispl": 975528,
+      "name": "Calistoga Geothermal",
+      "full_name": "Calistoga Geothermal",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 110.0,
+      "fuel_type": "geothermal",
+      "plant_category": "renewable",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 1984,
+      "actual_gen_mwh": {
+        "2023": 472942.0,
+        "2024": 488441.8
+      },
+      "actual_emis_t": {
+        "2023": 19049.6,
+        "2024": 43273.3
+      }
+    },
+    {
+      "orispl": 947949,
+      "name": "Geysers Unit 5-20",
+      "full_name": "Geysers Unit 5-20",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 673.0,
+      "fuel_type": "geothermal",
+      "plant_category": "renewable",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 1971,
+      "actual_gen_mwh": {
+        "2023": 4499612.0,
+        "2024": 4602116.9
+      },
+      "actual_emis_t": {
+        "2023": 181240.1,
+        "2024": 388816.3
+      }
+    },
+    {
+      "orispl": 987999,
+      "name": "Lake View Geothermal (Sonoma)",
+      "full_name": "Lake View Geothermal (Sonoma)",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 55.0,
+      "fuel_type": "geothermal",
+      "plant_category": "renewable",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 1983,
+      "actual_gen_mwh": {
+        "2023": 431536.0,
+        "2024": 355102.9
+      },
+      "actual_emis_t": {
+        "2023": 17381.9,
+        "2024": 30415.7
+      }
+    },
+    {
+      "orispl": 909857,
+      "name": "Beebe 1B Wind Farm",
+      "full_name": "Beebe 1B Wind Farm",
+      "iso": "MISO",
+      "state": "MI",
+      "capacity_mw": 50.4,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2014,
+      "actual_gen_mwh": {
+        "2023": 93170.1,
+        "2024": 48646.2
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 985107,
+      "name": "Beebe Community Wind Farm",
+      "full_name": "Beebe Community Wind Farm",
+      "iso": "MISO",
+      "state": "MI",
+      "capacity_mw": 81.6,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2012,
+      "actual_gen_mwh": {
+        "2023": 93170.1,
+        "2024": 48646.2
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 902367,
+      "name": "Bennett Creek Wind (Mountain Home)",
+      "full_name": "Bennett Creek Wind (Mountain Home)",
+      "iso": "NA",
+      "state": "ID",
+      "capacity_mw": 21.0,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2008,
+      "actual_gen_mwh": {
+        "2023": 19934.9,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 999821,
+      "name": "Bluegrass Ridge",
+      "full_name": "Bluegrass Ridge",
+      "iso": "NA",
+      "state": "MO",
+      "capacity_mw": 56.13,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2008,
+      "actual_gen_mwh": {
+        "2023": 50946.0,
+        "2024": 21398.8
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 955170,
+      "name": "Bluestem Wind Project",
+      "full_name": "Bluestem Wind Project",
+      "iso": "SPP",
+      "state": "OK",
+      "capacity_mw": 198.0,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2016,
+      "actual_gen_mwh": {
+        "2023": 384694.6,
+        "2024": 211939.8
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 991425,
+      "name": "Cassia Gulch",
+      "full_name": "Cassia Gulch",
+      "iso": "NA",
+      "state": "ID",
+      "capacity_mw": 18.9,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2009,
+      "actual_gen_mwh": {
+        "2023": 20271.3,
+        "2024": 15243.9
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 918124,
+      "name": "Cassia Wind Farm",
+      "full_name": "Cassia Wind Farm",
+      "iso": "NA",
+      "state": "ID",
+      "capacity_mw": 8.4,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2009,
+      "actual_gen_mwh": {
+        "2023": 9195.0,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 974076,
+      "name": "Conception Wind Farm",
+      "full_name": "Conception Wind Farm",
+      "iso": "NA",
+      "state": "MO",
+      "capacity_mw": 50.4,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2008,
+      "actual_gen_mwh": {
+        "2023": 50872.3,
+        "2024": 46642.6
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 921367,
+      "name": "Cow Branch",
+      "full_name": "Cow Branch",
+      "iso": "NA",
+      "state": "MO",
+      "capacity_mw": 50.4,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2008,
+      "actual_gen_mwh": {
+        "2023": 48394.6,
+        "2024": 45473.9
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 921195,
+      "name": "Criterion Wind Project",
+      "full_name": "Criterion Wind Project",
+      "iso": "PJM",
+      "state": "MD",
+      "capacity_mw": 35.7,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2010,
+      "actual_gen_mwh": {
+        "2023": 84737.0,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 909201,
+      "name": "Eastern Wind Farm (Four Mile Ridge)",
+      "full_name": "Eastern Wind Farm (Four Mile Ridge)",
+      "iso": "PJM",
+      "state": "MD",
+      "capacity_mw": 40.0,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2014,
+      "actual_gen_mwh": {
+        "2023": 56820.4,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 927670,
+      "name": "Fair Wind Generating Facility",
+      "full_name": "Fair Wind Generating Facility",
+      "iso": "PJM",
+      "state": "MD",
+      "capacity_mw": 30.0,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 2015,
+      "actual_gen_mwh": {
+        "2023": 87045.1,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 975139,
+      "name": "Four Corners Windfarm (Echo II Project)",
+      "full_name": "Four Corners Windfarm (Echo II Project)",
+      "iso": "NA",
+      "state": "OR",
+      "capacity_mw": 8.0,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2009,
+      "actual_gen_mwh": {
+        "2023": 8781.4,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 939634,
+      "name": "Four Mile Canyon Windfarm (Echo II)",
+      "full_name": "Four Mile Canyon Windfarm (Echo II)",
+      "iso": "NA",
+      "state": "OR",
+      "capacity_mw": 10.0,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2009,
+      "actual_gen_mwh": {
+        "2023": 9223.1,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 951087,
+      "name": "Greensburg Wind Farm",
+      "full_name": "Greensburg Wind Farm",
+      "iso": "SPP",
+      "state": "KS",
+      "capacity_mw": 12.5,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2010,
+      "actual_gen_mwh": {
+        "2023": 6643.1,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 956143,
+      "name": "Harvest I Wind Project",
+      "full_name": "Harvest I Wind Project",
+      "iso": "MISO",
+      "state": "MI",
+      "capacity_mw": 51.2,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2008,
+      "actual_gen_mwh": {
+        "2023": 52937.9,
+        "2024": 1424811.1
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 971701,
+      "name": "Harvest II Project",
+      "full_name": "Harvest II Project",
+      "iso": "MISO",
+      "state": "MI",
+      "capacity_mw": 59.4,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2012,
+      "actual_gen_mwh": {
+        "2023": 52937.9,
+        "2024": 1424811.1
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 985686,
+      "name": "High Mesa Wind Project",
+      "full_name": "High Mesa Wind Project",
+      "iso": "NA",
+      "state": "ID",
+      "capacity_mw": 39.9,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2012,
+      "actual_gen_mwh": {
+        "2023": 41830.5,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 998762,
+      "name": "Hot Springs Wind (Mountain Home)",
+      "full_name": "Hot Springs Wind (Mountain Home)",
+      "iso": "NA",
+      "state": "ID",
+      "capacity_mw": 21.0,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2008,
+      "actual_gen_mwh": {
+        "2023": 18016.6,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 998802,
+      "name": "Loess Hills Wind Farm",
+      "full_name": "Loess Hills Wind Farm",
+      "iso": "MISO",
+      "state": "MO",
+      "capacity_mw": 5.0,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 2008,
+      "actual_gen_mwh": {
+        "2023": 6490.5,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 970840,
+      "name": "Michigan Wind 2 Farm",
+      "full_name": "Michigan Wind 2 Farm",
+      "iso": "MISO",
+      "state": "MI",
+      "capacity_mw": 90.0,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2012,
+      "actual_gen_mwh": {
+        "2023": 70156.0,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 975573,
+      "name": "Oregon Trail (Energy Vision) (Echo I)",
+      "full_name": "Oregon Trail (Energy Vision) (Echo I)",
+      "iso": "NA",
+      "state": "OR",
+      "capacity_mw": 9.8,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.5,
+      "status": "operating",
+      "year_built": 2009,
+      "actual_gen_mwh": {
+        "2023": 11119.3,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 951931,
+      "name": "Pacific Canyon Windfarm (Echo I)",
+      "full_name": "Pacific Canyon Windfarm (Echo I)",
+      "iso": "NA",
+      "state": "OR",
+      "capacity_mw": 8.22,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.5,
+      "status": "operating",
+      "year_built": 2009,
+      "actual_gen_mwh": {
+        "2023": 8406.9,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 945707,
+      "name": "Sand Ranch Windfarm (Echo I)",
+      "full_name": "Sand Ranch Windfarm (Echo I)",
+      "iso": "NA",
+      "state": "OR",
+      "capacity_mw": 9.8,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.5,
+      "status": "operating",
+      "year_built": 2009,
+      "actual_gen_mwh": {
+        "2023": 10065.5,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 925569,
+      "name": "Sendero Wind Energy Project",
+      "full_name": "Sendero Wind Energy Project",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 39.78,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2015,
+      "actual_gen_mwh": {
+        "2023": 141304.5,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 929954,
+      "name": "Shooting Star Wind Project",
+      "full_name": "Shooting Star Wind Project",
+      "iso": "SPP",
+      "state": "KS",
+      "capacity_mw": 104.0,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2012,
+      "actual_gen_mwh": {
+        "2023": 99867.1,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 942491,
+      "name": "Threemile Canyon",
+      "full_name": "Threemile Canyon",
+      "iso": "NA",
+      "state": "OR",
+      "capacity_mw": 9.9,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2009,
+      "actual_gen_mwh": {
+        "2023": 10376.8,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 936525,
+      "name": "Thumb Wind Park (Michigan Wind 1)",
+      "full_name": "Thumb Wind Park (Michigan Wind 1)",
+      "iso": "MISO",
+      "state": "MI",
+      "capacity_mw": 69.0,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2008,
+      "actual_gen_mwh": {
+        "2023": 70156.0,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 985612,
+      "name": "Tuana Springs Project",
+      "full_name": "Tuana Springs Project",
+      "iso": "NA",
+      "state": "ID",
+      "capacity_mw": 16.8,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2010,
+      "actual_gen_mwh": {
+        "2023": 15541.5,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 962095,
+      "name": "Ward Butte Windfarm (Echo I)",
+      "full_name": "Ward Butte Windfarm (Echo I)",
+      "iso": "NA",
+      "state": "OR",
+      "capacity_mw": 6.53,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.5,
+      "status": "operating",
+      "year_built": 2009,
+      "actual_gen_mwh": {
+        "2023": 7428.6,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 964985,
+      "name": "Whitetail Wind Energy Project",
+      "full_name": "Whitetail Wind Energy Project",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 92.3,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2012,
+      "actual_gen_mwh": {
+        "2023": 85969.8,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 900232,
+      "name": "Wildcat Wind Project (Lovington)",
+      "full_name": "Wildcat Wind Project (Lovington)",
+      "iso": "SPP",
+      "state": "NM",
+      "capacity_mw": 27.3,
+      "fuel_type": "wind",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2012,
+      "actual_gen_mwh": {
+        "2023": 29346.1,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 942127,
+      "name": "Antelope Valley Solar Ranch One",
+      "full_name": "Antelope Valley Solar Ranch One",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 241.5,
+      "fuel_type": "solar",
+      "plant_category": "renewable",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 2013,
+      "actual_gen_mwh": {
+        "2023": 568699.2,
+        "2024": 568699.2,
+        "2025": 568699.2
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0,
+        "2025": 0
+      }
+    },
+    {
+      "orispl": 988298,
+      "name": "Constellation New Energy Solar Farm",
+      "full_name": "Constellation New Energy Solar Farm",
+      "iso": "PJM",
+      "state": "NJ",
+      "capacity_mw": 3.9,
+      "fuel_type": "solar",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2011,
+      "actual_gen_mwh": {
+        "2023": 0.0,
+        "2024": 0.0,
+        "2025": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0,
+        "2025": 0
+      }
+    },
+    {
+      "orispl": 942746,
+      "name": "Denver International Airport III - Solar",
+      "full_name": "Denver International Airport III - Solar",
+      "iso": "NA",
+      "state": "CO",
+      "capacity_mw": 3.4,
+      "fuel_type": "solar",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2011,
+      "actual_gen_mwh": {
+        "2023": 0.0,
+        "2024": 0.0,
+        "2025": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0,
+        "2025": 0
+      }
+    },
+    {
+      "orispl": 957234,
+      "name": "Fleshman Solar Project (Kost Road)",
+      "full_name": "Fleshman Solar Project (Kost Road)",
+      "iso": "NA",
+      "state": "CA",
+      "capacity_mw": 1.48,
+      "fuel_type": "solar",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "year_built": 2011,
+      "actual_gen_mwh": {
+        "2023": 0,
+        "2024": 0,
+        "2025": 0
+      },
+      "actual_emis_t": {
+        "2023": 0,
+        "2024": 0,
+        "2025": 0
+      }
+    },
+    {
+      "orispl": 923156,
+      "name": "Multiple",
+      "full_name": "Multiple",
+      "iso": "PJM",
+      "state": "MD",
+      "capacity_mw": 0.0,
+      "fuel_type": "solar",
+      "plant_category": "renewable",
+      "equity_share": 0.51,
+      "status": "operating",
+      "actual_gen_mwh": {
+        "2023": 0,
+        "2024": 0,
+        "2025": 0
+      },
+      "actual_emis_t": {
+        "2023": 0,
+        "2024": 0,
+        "2025": 0
+      }
+    },
+    {
+      "orispl": 949493,
+      "name": "Vineland Solar One (Landis Sewage)",
+      "full_name": "Vineland Solar One (Landis Sewage)",
+      "iso": "PJM",
+      "state": "NJ",
+      "capacity_mw": 4.1,
+      "fuel_type": "solar",
+      "plant_category": "renewable",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 2009,
+      "actual_gen_mwh": {
+        "2023": 5640.0,
+        "2024": 5640.0,
+        "2025": 5640.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0,
+        "2025": 0
+      }
+    },
+    {
+      "orispl": 955492,
+      "name": "Conowingo",
+      "full_name": "Conowingo",
+      "iso": "PJM",
+      "state": "MD",
+      "capacity_mw": 0.0,
+      "fuel_type": "hydro",
+      "plant_category": "renewable",
+      "equity_share": 1.0,
+      "status": "operating",
+      "actual_gen_mwh": {
+        "2023": 1467441.5,
+        "2024": 1500497.6
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 997153,
+      "name": "Agnews Cogeneration",
+      "full_name": "Agnews Cogeneration",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 28.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 1990,
+      "actual_gen_mwh": {
+        "2023": 35748.0,
+        "2024": 10346.0
+      },
+      "actual_emis_t": {
+        "2023": 19512.9,
+        "2024": 5641.0
+      }
+    },
+    {
+      "orispl": 55327,
+      "name": "BTE Baytown Chiller Gas Plant",
+      "full_name": "BTE Baytown Chiller Gas Plant",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 270.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2018,
+      "actual_gen_mwh": {
+        "2023": 1563497.0,
+        "2024": 1576007.5
+      },
+      "actual_emis_t": {
+        "2023": 632439.8,
+        "2024": 651380.5
+      }
+    },
+    {
+      "orispl": 55327,
+      "name": "Baytown Power Plant",
+      "full_name": "Baytown Power Plant",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 852.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2002,
+      "actual_gen_mwh": {
+        "2023": 3487830.0,
+        "2024": 3515738.4
+      },
+      "actual_emis_t": {
+        "2023": 1410839.0,
+        "2024": 1453091.6
+      }
+    },
+    {
+      "orispl": 50292,
+      "name": "Bethpage",
+      "full_name": "Bethpage",
+      "iso": "NYISO",
+      "state": "NY",
+      "capacity_mw": 143.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 1989,
+      "actual_gen_mwh": {
+        "2023": 576992.8,
+        "2024": 556781.0
+      },
+      "actual_emis_t": {
+        "2023": 314817.9,
+        "2024": 297835.0
+      }
+    },
+    {
+      "orispl": 55172,
+      "name": "Calpine Bosque Energy Center(Thad Hill)",
+      "full_name": "Calpine Bosque Energy Center(Thad Hill)",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 801.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2001,
+      "actual_gen_mwh": {
+        "2023": 4172244.8,
+        "2024": 3385364.2
+      },
+      "actual_emis_t": {
+        "2023": 1832266.4,
+        "2024": 1564319.1
+      }
+    },
+    {
+      "orispl": 55299,
+      "name": "Channel Energy Center",
+      "full_name": "Channel Energy Center",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 790.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2001,
+      "actual_gen_mwh": {
+        "2023": 5269087.5,
+        "2024": 6001244.9
+      },
+      "actual_emis_t": {
+        "2023": 2065563.4,
+        "2024": 2387175.4
+      }
+    },
+    {
+      "orispl": 60122,
+      "name": "Colorado Bend Energy Center II",
+      "full_name": "Colorado Bend Energy Center II",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 1210.3,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2017,
+      "actual_gen_mwh": {
+        "2023": 7823299.4,
+        "2024": 6966082.0
+      },
+      "actual_emis_t": {
+        "2023": 2828692.8,
+        "2024": 2530491.9
+      }
+    },
+    {
+      "orispl": 55206,
+      "name": "Corpus Christi Energy Center",
+      "full_name": "Corpus Christi Energy Center",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 518.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2002,
+      "actual_gen_mwh": {
+        "2023": 2929808.1,
+        "2024": 2870962.5
+      },
+      "actual_emis_t": {
+        "2023": 1296071.5,
+        "2024": 1285465.1
+      }
+    },
+    {
+      "orispl": 55464,
+      "name": "Deer Park Energy Center",
+      "full_name": "Deer Park Energy Center",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 1237.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2003,
+      "actual_gen_mwh": {
+        "2023": 6602889.1,
+        "2024": 7683457.0
+      },
+      "actual_emis_t": {
+        "2023": 3733505.8,
+        "2024": 4207464.2
+      }
+    },
+    {
+      "orispl": 55333,
+      "name": "Delta Energy Center",
+      "full_name": "Delta Energy Center",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 858.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2002,
+      "actual_gen_mwh": {
+        "2023": 4037049.0,
+        "2024": 2974799.1
+      },
+      "actual_emis_t": {
+        "2023": 1628750.3,
+        "2024": 1193543.8
+      }
+    },
+    {
+      "orispl": 55317,
+      "name": "Fore River",
+      "full_name": "Fore River",
+      "iso": "NEISO",
+      "state": "MA",
+      "capacity_mw": 790.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2003,
+      "actual_gen_mwh": {
+        "2023": 2095675.6,
+        "2024": 3102592.8
+      },
+      "actual_emis_t": {
+        "2023": 883972.5,
+        "2024": 1304453.5
+      }
+    },
+    {
+      "orispl": 55226,
+      "name": "Freestone Energy Center",
+      "full_name": "Freestone Energy Center",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 821.4,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 0.75,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2002,
+      "actual_gen_mwh": {
+        "2023": 5416116.3,
+        "2024": 4904972.8
+      },
+      "actual_emis_t": {
+        "2023": 2138468.9,
+        "2024": 1925131.3
+      }
+    },
+    {
+      "orispl": 10034,
+      "name": "Gilroy",
+      "full_name": "Gilroy",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 224.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 1988,
+      "actual_gen_mwh": {
+        "2023": 79825.4,
+        "2024": 64615.7
+      },
+      "actual_emis_t": {
+        "2023": 42555.5,
+        "2024": 34998.6
+      }
+    },
+    {
+      "orispl": 55170,
+      "name": "Granite Ridge",
+      "full_name": "Granite Ridge",
+      "iso": "NEISO",
+      "state": "NH",
+      "capacity_mw": 729.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2003,
+      "actual_gen_mwh": {
+        "2023": 2107782.8,
+        "2024": 1993032.8
+      },
+      "actual_emis_t": {
+        "2023": 1298256.8,
+        "2024": 1202203.6
+      }
+    },
+    {
+      "orispl": 977331,
+      "name": "Greenfield Energy Centre",
+      "full_name": "Greenfield Energy Centre",
+      "iso": "NA",
+      "state": "Ontario",
+      "capacity_mw": 1052.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2008,
+      "actual_gen_mwh": {
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 55086,
+      "name": "Gregory",
+      "full_name": "Gregory",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 132.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 0.34,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2000,
+      "actual_gen_mwh": {
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 55153,
+      "name": "Guadalupe Energy Center",
+      "full_name": "Guadalupe Energy Center",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 1042.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2000,
+      "actual_gen_mwh": {
+        "2023": 6671522.3,
+        "2024": 6127123.3
+      },
+      "actual_emis_t": {
+        "2023": 2858196.5,
+        "2024": 2644012.0
+      }
+    },
+    {
+      "orispl": 54761,
+      "name": "Hermiston Power Project",
+      "full_name": "Hermiston Power Project",
+      "iso": "NA",
+      "state": "OR",
+      "capacity_mw": 658.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2002,
+      "actual_gen_mwh": {
+        "2023": 2819075.7,
+        "2024": 3165632.6
+      },
+      "actual_emis_t": {
+        "2023": 1197840.6,
+        "2024": 1344418.2
+      }
+    },
+    {
+      "orispl": 7762,
+      "name": "Hidalgo Energy Center",
+      "full_name": "Hidalgo Energy Center",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 416.04,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 0.79,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2000,
+      "actual_gen_mwh": {
+        "2023": 2063327.0,
+        "2024": 1515843.9
+      },
+      "actual_emis_t": {
+        "2023": 832995.0,
+        "2024": 605826.8
+      }
+    },
+    {
+      "orispl": 55411,
+      "name": "Hillabee Energy Center",
+      "full_name": "Hillabee Energy Center",
+      "iso": "NA",
+      "state": "AL",
+      "capacity_mw": 815.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2010,
+      "actual_gen_mwh": {
+        "2023": 4204534.0,
+        "2024": 4375039.0
+      },
+      "actual_emis_t": {
+        "2023": 1615140.1,
+        "2024": 1697590.8
+      }
+    },
+    {
+      "orispl": 55357,
+      "name": "Jack A. Fusco Energy Center (Brazos Valley)",
+      "full_name": "Jack A. Fusco Energy Center (Brazos Valley)",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 562.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2003,
+      "actual_gen_mwh": {
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 990002,
+      "name": "Kennedy International Airport Cogen",
+      "full_name": "Kennedy International Airport Cogen",
+      "iso": "NYISO",
+      "state": "NY",
+      "capacity_mw": 128.8,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 1995,
+      "actual_gen_mwh": {
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 10294,
+      "name": "King City",
+      "full_name": "King City",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 162.5,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 1989,
+      "actual_gen_mwh": {
+        "2023": 64444.3,
+        "2024": 47037.2
+      },
+      "actual_emis_t": {
+        "2023": 34585.0,
+        "2024": 25578.0
+      }
+    },
+    {
+      "orispl": 55748,
+      "name": "Los Esteros Critical CC Plant",
+      "full_name": "Los Esteros Critical CC Plant",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 300.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2013,
+      "actual_gen_mwh": {
+        "2023": 177796.2,
+        "2024": 234046.7
+      },
+      "actual_emis_t": {
+        "2023": 88142.0,
+        "2024": 112363.4
+      }
+    },
+    {
+      "orispl": 55217,
+      "name": "Los Medanos Energy Center",
+      "full_name": "Los Medanos Energy Center",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 575.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2001,
+      "actual_gen_mwh": {
+        "2023": 3218660.6,
+        "2024": 3383603.7
+      },
+      "actual_emis_t": {
+        "2023": 1281064.1,
+        "2024": 1350545.3
+      }
+    },
+    {
+      "orispl": 55123,
+      "name": "Magic Valley Generating Station",
+      "full_name": "Magic Valley Generating Station",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 697.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2002,
+      "actual_gen_mwh": {
+        "2023": 2942667.5,
+        "2024": 2281424.3
+      },
+      "actual_emis_t": {
+        "2023": 1135027.8,
+        "2024": 878277.2
+      }
+    },
+    {
+      "orispl": 55393,
+      "name": "Metcalf Energy Center",
+      "full_name": "Metcalf Energy Center",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 592.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2005,
+      "actual_gen_mwh": {
+        "2023": 2247858.8,
+        "2024": 2662525.8
+      },
+      "actual_emis_t": {
+        "2023": 929125.0,
+        "2024": 1096634.3
+      }
+    },
+    {
+      "orispl": 55293,
+      "name": "Morgan Energy Center",
+      "full_name": "Morgan Energy Center",
+      "iso": "NA",
+      "state": "AL",
+      "capacity_mw": 815.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2003,
+      "actual_gen_mwh": {
+        "2023": 5201521.1,
+        "2024": 4182283.3
+      },
+      "actual_emis_t": {
+        "2023": 2218213.6,
+        "2024": 1759783.3
+      }
+    },
+    {
+      "orispl": 1588,
+      "name": "Mystic 8 9",
+      "full_name": "Mystic 8 9",
+      "iso": "NEISO",
+      "state": "MA",
+      "capacity_mw": 1686.5,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "retired",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2003,
+      "actual_gen_mwh": {
+        "2023": 1309039.2,
+        "2024": 1269976.0
+      },
+      "actual_emis_t": {
+        "2023": 523705.0,
+        "2024": 502314.8
+      }
+    },
+    {
+      "orispl": 55345,
+      "name": "Otay Mesa Generating Project",
+      "full_name": "Otay Mesa Generating Project",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 593.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2009,
+      "actual_gen_mwh": {
+        "2023": 2076238.3,
+        "2024": 2243409.4
+      },
+      "actual_emis_t": {
+        "2023": 838236.4,
+        "2024": 905288.6
+      }
+    },
+    {
+      "orispl": 55047,
+      "name": "Pasadena Cogeneration Power Plant",
+      "full_name": "Pasadena Cogeneration Power Plant",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 776.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 1998,
+      "actual_gen_mwh": {
+        "2023": 4797274.2,
+        "2024": 5111246.1
+      },
+      "actual_emis_t": {
+        "2023": 1852803.5,
+        "2024": 1971411.8
+      }
+    },
+    {
+      "orispl": 55656,
+      "name": "Pastoria Energy Center",
+      "full_name": "Pastoria Energy Center",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 807.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2005,
+      "actual_gen_mwh": {
+        "2023": 3726907.0,
+        "2024": 3435850.6
+      },
+      "actual_emis_t": {
+        "2023": 1798464.9,
+        "2024": 1657180.3
+      }
+    },
+    {
+      "orispl": 55075,
+      "name": "Pine Bluff Energy Center",
+      "full_name": "Pine Bluff Energy Center",
+      "iso": "MISO",
+      "state": "AR",
+      "capacity_mw": 202.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2001,
+      "actual_gen_mwh": {
+        "2023": 1648221.3,
+        "2024": 1456973.1
+      },
+      "actual_emis_t": {
+        "2023": 656557.2,
+        "2024": 586188.8
+      }
+    },
+    {
+      "orispl": 56349,
+      "name": "Quail Run",
+      "full_name": "Quail Run",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 532.2,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2007,
+      "actual_gen_mwh": {
+        "2023": 2204765.5,
+        "2024": 2877957.8
+      },
+      "actual_emis_t": {
+        "2023": 1097701.1,
+        "2024": 1451952.7
+      }
+    },
+    {
+      "orispl": 56467,
+      "name": "Russell City Energy Center",
+      "full_name": "Russell City Energy Center",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 617.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2013,
+      "actual_gen_mwh": {
+        "2023": 1724800.4,
+        "2024": 1313244.5
+      },
+      "actual_emis_t": {
+        "2023": 716660.3,
+        "2024": 549444.8
+      }
+    },
+    {
+      "orispl": 55177,
+      "name": "South Point Energy Center",
+      "full_name": "South Point Energy Center",
+      "iso": "NA",
+      "state": "AZ",
+      "capacity_mw": 482.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2001,
+      "actual_gen_mwh": {
+        "2023": 2561918.0,
+        "2024": 2578414.8
+      },
+      "actual_emis_t": {
+        "2023": 1106831.8,
+        "2024": 1114824.7
+      }
+    },
+    {
+      "orispl": 55112,
+      "name": "Sutter Energy Center",
+      "full_name": "Sutter Energy Center",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 547.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2001,
+      "actual_gen_mwh": {
+        "2023": 2159956.6,
+        "2024": 1628387.1
+      },
+      "actual_emis_t": {
+        "2023": 840485.6,
+        "2024": 638625.2
+      }
+    },
+    {
+      "orispl": 52088,
+      "name": "Texas City",
+      "full_name": "Texas City",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 436.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 1987,
+      "actual_gen_mwh": {
+        "2023": 2454828.7,
+        "2024": 2538520.3
+      },
+      "actual_emis_t": {
+        "2023": 1039715.0,
+        "2024": 1073840.8
+      }
+    },
+    {
+      "orispl": 921621,
+      "name": "Valladolid III",
+      "full_name": "Valladolid III",
+      "iso": "NA",
+      "state": "Yucat\u00ffn",
+      "capacity_mw": 153.45,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 0.29,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2006,
+      "actual_gen_mwh": {
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 55294,
+      "name": "Westbrook Energy Center",
+      "full_name": "Westbrook Energy Center",
+      "iso": "NEISO",
+      "state": "ME",
+      "capacity_mw": 585.4,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2001,
+      "actual_gen_mwh": {
+        "2023": 46.9,
+        "2024": 137.3
+      },
+      "actual_emis_t": {
+        "2023": 81411.5,
+        "2024": 238531.3
+      }
+    },
+    {
+      "orispl": 59812,
+      "name": "Wolf Hollow II",
+      "full_name": "Wolf Hollow II",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 1181.0,
+      "fuel_type": "gas_ccgt",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 7.0,
+      "co2_rate_t_mwh": 0.37,
+      "year_built": 2017,
+      "actual_gen_mwh": {
+        "2023": 7035611.1,
+        "2024": 6512637.0
+      },
+      "actual_emis_t": {
+        "2023": 2582875.5,
+        "2024": 2409493.6
+      }
+    },
+    {
+      "orispl": 50292,
+      "name": "Bethpage CT",
+      "full_name": "Bethpage CT",
+      "iso": "NYISO",
+      "state": "NY",
+      "capacity_mw": 49.6,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2002,
+      "actual_gen_mwh": {
+        "2023": 576992.8,
+        "2024": 556781.0
+      },
+      "actual_emis_t": {
+        "2023": 314817.9,
+        "2024": 297835.0
+      }
+    },
+    {
+      "orispl": 55625,
+      "name": "Creed Energy Center",
+      "full_name": "Creed Energy Center",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 45.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2003,
+      "actual_gen_mwh": {
+        "2023": 7849.4,
+        "2024": 6143.4
+      },
+      "actual_emis_t": {
+        "2023": 4848.3,
+        "2024": 3779.6
+      }
+    },
+    {
+      "orispl": 5083,
+      "name": "Cumberland CT",
+      "full_name": "Cumberland CT",
+      "iso": "PJM",
+      "state": "NJ",
+      "capacity_mw": 201.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 1990,
+      "actual_gen_mwh": {
+        "2023": 63798.0,
+        "2024": 57787.5
+      },
+      "actual_emis_t": {
+        "2023": 36840.2,
+        "2024": 35215.2
+      }
+    },
+    {
+      "orispl": 55847,
+      "name": "Feather River Energy Center",
+      "full_name": "Feather River Energy Center",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 48.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2002,
+      "actual_gen_mwh": {
+        "2023": 44523.8,
+        "2024": 44976.7
+      },
+      "actual_emis_t": {
+        "2023": 29181.6,
+        "2024": 29234.8
+      }
+    },
+    {
+      "orispl": 55627,
+      "name": "Goose Haven Energy Center",
+      "full_name": "Goose Haven Energy Center",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 48.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2003,
+      "actual_gen_mwh": {
+        "2023": 15115.0,
+        "2024": 12426.7
+      },
+      "actual_emis_t": {
+        "2023": 9158.5,
+        "2024": 7478.9
+      }
+    },
+    {
+      "orispl": 3491,
+      "name": "Handley",
+      "full_name": "Handley",
+      "iso": "ERCOT",
+      "state": "TX",
+      "capacity_mw": 1245.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 1948,
+      "actual_gen_mwh": {
+        "2023": 1572354.4,
+        "2024": 870736.0
+      },
+      "actual_emis_t": {
+        "2023": 1029916.2,
+        "2024": 569047.5
+      }
+    },
+    {
+      "orispl": 55233,
+      "name": "Handsome Lake Energy",
+      "full_name": "Handsome Lake Energy",
+      "iso": "PJM",
+      "state": "PA",
+      "capacity_mw": 267.5,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2001,
+      "actual_gen_mwh": {
+        "2023": 41586.7,
+        "2024": 57910.0
+      },
+      "actual_emis_t": {
+        "2023": 70712.1,
+        "2024": 57716.9
+      }
+    },
+    {
+      "orispl": 55626,
+      "name": "Lambie Energy Center",
+      "full_name": "Lambie Energy Center",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 46.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2003,
+      "actual_gen_mwh": {
+        "2023": 13771.4,
+        "2024": 9477.0
+      },
+      "actual_emis_t": {
+        "2023": 8327.1,
+        "2024": 5737.7
+      }
+    },
+    {
+      "orispl": 907221,
+      "name": "Northern Prairie Power Project (Grande Prairie)",
+      "full_name": "Northern Prairie Power Project (Grande Prairie)",
+      "iso": "NA",
+      "state": "Alberta",
+      "capacity_mw": 105.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2008,
+      "actual_gen_mwh": {
+        "2023": 572687.1,
+        "2024": 400238.0
+      },
+      "actual_emis_t": {
+        "2023": 355461.1,
+        "2024": 248423.6
+      }
+    },
+    {
+      "orispl": 55963,
+      "name": "Riverview Energy Center",
+      "full_name": "Riverview Energy Center",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 47.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2003,
+      "actual_gen_mwh": {
+        "2023": 26698.9,
+        "2024": 20738.8
+      },
+      "actual_emis_t": {
+        "2023": 15992.4,
+        "2024": 12457.5
+      }
+    },
+    {
+      "orispl": 2410,
+      "name": "Salem CT",
+      "full_name": "Salem CT",
+      "iso": "PJM",
+      "state": "NJ",
+      "capacity_mw": 16.35,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 1971,
+      "actual_gen_mwh": {
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 7288,
+      "name": "Sherman Avenue",
+      "full_name": "Sherman Avenue",
+      "iso": "PJM",
+      "state": "NJ",
+      "capacity_mw": 99.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 1991,
+      "actual_gen_mwh": {
+        "2023": 30685.2,
+        "2024": 23954.6
+      },
+      "actual_emis_t": {
+        "2023": 24018.8,
+        "2024": 18806.2
+      }
+    },
+    {
+      "orispl": 6081,
+      "name": "Stony Brook Cogeneration",
+      "full_name": "Stony Brook Cogeneration",
+      "iso": "NYISO",
+      "state": "NY",
+      "capacity_mw": 47.1,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 1995,
+      "actual_gen_mwh": {
+        "2023": 19072.9,
+        "2024": 34574.4
+      },
+      "actual_emis_t": {
+        "2023": 16419.8,
+        "2024": 32490.3
+      }
+    },
+    {
+      "orispl": 55855,
+      "name": "Wolfskill Energy",
+      "full_name": "Wolfskill Energy",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 45.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2003,
+      "actual_gen_mwh": {
+        "2023": 7690.2,
+        "2024": 7182.3
+      },
+      "actual_emis_t": {
+        "2023": 4810.5,
+        "2024": 4445.3
+      }
+    },
+    {
+      "orispl": 10349,
+      "name": "Yuba City Energy Center",
+      "full_name": "Yuba City Energy Center",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 48.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2002,
+      "actual_gen_mwh": {
+        "2023": 48080.7,
+        "2024": 37923.4
+      },
+      "actual_emis_t": {
+        "2023": 28642.5,
+        "2024": 21246.0
+      }
+    },
+    {
+      "orispl": 55392,
+      "name": "Zion Energy Center",
+      "full_name": "Zion Energy Center",
+      "iso": "PJM",
+      "state": "IL",
+      "capacity_mw": 532.0,
+      "fuel_type": "gas_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.55,
+      "year_built": 2002,
+      "actual_gen_mwh": {
+        "2023": 293028.0,
+        "2024": 343289.0
+      },
+      "actual_emis_t": {
+        "2023": 188530.5,
+        "2024": 225741.5
+      }
+    },
+    {
+      "orispl": 591,
+      "name": "Christiana",
+      "full_name": "Christiana",
+      "iso": "PJM",
+      "state": "DE",
+      "capacity_mw": 50.0,
+      "fuel_type": "gas_oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.58,
+      "year_built": 1973,
+      "actual_gen_mwh": {
+        "2023": 446.5,
+        "2024": 402.4
+      },
+      "actual_emis_t": {
+        "2023": 810.3,
+        "2024": 786.6
+      }
+    },
+    {
+      "orispl": 592,
+      "name": "Delaware City 10",
+      "full_name": "Delaware City 10",
+      "iso": "PJM",
+      "state": "DE",
+      "capacity_mw": 18.0,
+      "fuel_type": "gas_oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.58,
+      "year_built": 1968,
+      "actual_gen_mwh": {
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 3161,
+      "name": "Eddystone 3-4",
+      "full_name": "Eddystone 3-4",
+      "iso": "PJM",
+      "state": "PA",
+      "capacity_mw": 760.0,
+      "fuel_type": "gas_oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.58,
+      "year_built": 1974,
+      "actual_gen_mwh": {
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 3161,
+      "name": "Eddystone CT",
+      "full_name": "Eddystone CT",
+      "iso": "PJM",
+      "state": "PA",
+      "capacity_mw": 78.2,
+      "fuel_type": "gas_oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.58,
+      "year_built": 1967,
+      "actual_gen_mwh": {
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 1556,
+      "name": "Perryman",
+      "full_name": "Perryman",
+      "iso": "PJM",
+      "state": "MD",
+      "capacity_mw": 494.8,
+      "fuel_type": "gas_oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.58,
+      "year_built": 1972,
+      "actual_gen_mwh": {
+        "2023": 246826.3,
+        "2024": 151214.0
+      },
+      "actual_emis_t": {
+        "2023": 152568.7,
+        "2024": 96046.2
+      }
+    },
+    {
+      "orispl": 3785,
+      "name": "Tasley",
+      "full_name": "Tasley",
+      "iso": "PJM",
+      "state": "VA",
+      "capacity_mw": 40.3,
+      "fuel_type": "gas_oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.58,
+      "year_built": 1972,
+      "actual_gen_mwh": {
+        "2023": 2194.8,
+        "2024": 1937.2
+      },
+      "actual_emis_t": {
+        "2023": 4016.6,
+        "2024": 3702.2
+      }
+    },
+    {
+      "orispl": 597,
+      "name": "West Energy Center",
+      "full_name": "West Energy Center",
+      "iso": "PJM",
+      "state": "DE",
+      "capacity_mw": 19.0,
+      "fuel_type": "gas_oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.58,
+      "year_built": 1964,
+      "actual_gen_mwh": {
+        "2023": 46.9,
+        "2024": 137.3
+      },
+      "actual_emis_t": {
+        "2023": 81411.5,
+        "2024": 238531.3
+      }
+    },
+    {
+      "orispl": 59882,
+      "name": "West Medway II",
+      "full_name": "West Medway II",
+      "iso": "NEISO",
+      "state": "MA",
+      "capacity_mw": 414.0,
+      "fuel_type": "gas_oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.58,
+      "year_built": 2019,
+      "actual_gen_mwh": {
+        "2023": 162366.7,
+        "2024": 201172.0
+      },
+      "actual_emis_t": {
+        "2023": 87684.8,
+        "2024": 102810.5
+      }
+    },
+    {
+      "orispl": 935814,
+      "name": "Bayview",
+      "full_name": "Bayview",
+      "iso": "PJM",
+      "state": "VA",
+      "capacity_mw": 12.6,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1963,
+      "actual_gen_mwh": {
+        "2023": 1548.0,
+        "2024": 1864.0
+      },
+      "actual_emis_t": {
+        "2023": 1142.2,
+        "2024": 1414.2
+      }
+    },
+    {
+      "orispl": 999402,
+      "name": "Chester",
+      "full_name": "Chester",
+      "iso": "PJM",
+      "state": "PA",
+      "capacity_mw": 56.2,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1969,
+      "actual_gen_mwh": {
+        "2023": 51.0,
+        "2024": 125.0
+      },
+      "actual_emis_t": {
+        "2023": 103.4,
+        "2024": 172.8
+      }
+    },
+    {
+      "orispl": 929188,
+      "name": "Crisfield",
+      "full_name": "Crisfield",
+      "iso": "PJM",
+      "state": "MD",
+      "capacity_mw": 10.4,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1968,
+      "actual_gen_mwh": {
+        "2023": 2153.0,
+        "2024": 2721.0
+      },
+      "actual_emis_t": {
+        "2023": 1618.6,
+        "2024": 2108.3
+      }
+    },
+    {
+      "orispl": 8012,
+      "name": "Croydon",
+      "full_name": "Croydon",
+      "iso": "PJM",
+      "state": "PA",
+      "capacity_mw": 523.5,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1974,
+      "actual_gen_mwh": {
+        "2023": 663.3,
+        "2024": 1989.0
+      },
+      "actual_emis_t": {
+        "2023": 772.9,
+        "2024": 2102.1
+      }
+    },
+    {
+      "orispl": 941205,
+      "name": "Falls",
+      "full_name": "Falls",
+      "iso": "PJM",
+      "state": "PA",
+      "capacity_mw": 62.1,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1970,
+      "actual_gen_mwh": {
+        "2023": 60.1,
+        "2024": 175.0
+      },
+      "actual_emis_t": {
+        "2023": 99.1,
+        "2024": 234.5
+      }
+    },
+    {
+      "orispl": 1586,
+      "name": "Framingham",
+      "full_name": "Framingham",
+      "iso": "NEISO",
+      "state": "MA",
+      "capacity_mw": 132.6,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1969,
+      "actual_gen_mwh": {
+        "2023": 791.9,
+        "2024": 251.0
+      },
+      "actual_emis_t": {
+        "2023": 1075.8,
+        "2024": 406.5
+      }
+    },
+    {
+      "orispl": 1592,
+      "name": "Medway CT",
+      "full_name": "Medway CT",
+      "iso": "NEISO",
+      "state": "MA",
+      "capacity_mw": 548.4,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1970,
+      "actual_gen_mwh": {
+        "2023": 3724.2,
+        "2024": 1986.0
+      },
+      "actual_emis_t": {
+        "2023": 8947.1,
+        "2024": 4703.3
+      }
+    },
+    {
+      "orispl": 972330,
+      "name": "Moser",
+      "full_name": "Moser",
+      "iso": "PJM",
+      "state": "PA",
+      "capacity_mw": 61.3,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1970,
+      "actual_gen_mwh": {
+        "2023": 268.2,
+        "2024": 158.0
+      },
+      "actual_emis_t": {
+        "2023": 329.2,
+        "2024": 235.4
+      }
+    },
+    {
+      "orispl": 905097,
+      "name": "Philadelphia Road",
+      "full_name": "Philadelphia Road",
+      "iso": "PJM",
+      "state": "MD",
+      "capacity_mw": 64.4,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1970,
+      "actual_gen_mwh": {
+        "2023": 1804.6,
+        "2024": 4942.0
+      },
+      "actual_emis_t": {
+        "2023": 2226.6,
+        "2024": 6226.8
+      }
+    },
+    {
+      "orispl": 3168,
+      "name": "Richmond CT",
+      "full_name": "Richmond CT",
+      "iso": "PJM",
+      "state": "PA",
+      "capacity_mw": 133.3,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1973,
+      "actual_gen_mwh": {
+        "2023": 831.4,
+        "2024": 249.0
+      },
+      "actual_emis_t": {
+        "2023": 798.1,
+        "2024": 170771.3
+      }
+    },
+    {
+      "orispl": 939713,
+      "name": "Southwark",
+      "full_name": "Southwark",
+      "iso": "PJM",
+      "state": "PA",
+      "capacity_mw": 74.0,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 1.0,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1967,
+      "actual_gen_mwh": {
+        "2023": 71.7,
+        "2024": 257.0
+      },
+      "actual_emis_t": {
+        "2023": 123.5,
+        "2024": 317.2
+      }
+    },
+    {
+      "orispl": 1507,
+      "name": "William F. Wyman",
+      "full_name": "William F. Wyman",
+      "iso": "NEISO",
+      "state": "ME",
+      "capacity_mw": 35.68,
+      "fuel_type": "oil_ct",
+      "plant_category": "fossil",
+      "equity_share": 0.06,
+      "status": "operating",
+      "heat_rate_mmbtu_mwh": 10.5,
+      "co2_rate_t_mwh": 0.65,
+      "year_built": 1957,
+      "actual_gen_mwh": {
+        "2023": 135.0,
+        "2024": 211.0
+      },
+      "actual_emis_t": {
+        "2023": 2122.3,
+        "2024": 1748.0
+      }
+    },
+    {
+      "orispl": 903371,
+      "name": "Bear Canyon Energy Storage Project",
+      "full_name": "Bear Canyon Energy Storage Project",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 13.0,
+      "fuel_type": "battery",
+      "plant_category": "storage",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 2024,
+      "actual_gen_mwh": {
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 986867,
+      "name": "Clinton Battery Storage Project",
+      "full_name": "Clinton Battery Storage Project",
+      "iso": "PJM",
+      "state": "OH",
+      "capacity_mw": 5.0,
+      "fuel_type": "battery",
+      "plant_category": "storage",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 2016,
+      "actual_gen_mwh": {
+        "2023": 8101564.0,
+        "2024": 9548998.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 942332,
+      "name": "Johanna Battery Storage Center (Santa Ana)",
+      "full_name": "Johanna Battery Storage Center (Santa Ana)",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 20.0,
+      "fuel_type": "battery",
+      "plant_category": "storage",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 2021,
+      "actual_gen_mwh": {
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 921280,
+      "name": "Menifee Power Bank Storage Project (Nova Power)",
+      "full_name": "Menifee Power Bank Storage Project (Nova Power)",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 680.0,
+      "fuel_type": "battery",
+      "plant_category": "storage",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 2024,
+      "actual_gen_mwh": {
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 966699,
+      "name": "Santa Ana Battery Storage 2",
+      "full_name": "Santa Ana Battery Storage 2",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 20.0,
+      "fuel_type": "battery",
+      "plant_category": "storage",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 2022,
+      "actual_gen_mwh": {
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 918738,
+      "name": "West Ford Flat Energy Storage",
+      "full_name": "West Ford Flat Energy Storage",
+      "iso": "CAISO",
+      "state": "CA",
+      "capacity_mw": 25.0,
+      "fuel_type": "battery",
+      "plant_category": "storage",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 2024,
+      "actual_gen_mwh": {
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    },
+    {
+      "orispl": 956587,
+      "name": "Muddy Run Pumped Storage Facility",
+      "full_name": "Muddy Run Pumped Storage Facility",
+      "iso": "PJM",
+      "state": "PA",
+      "capacity_mw": 1070.0,
+      "fuel_type": "pumped_storage",
+      "plant_category": "storage",
+      "equity_share": 1.0,
+      "status": "operating",
+      "year_built": 1967,
+      "actual_gen_mwh": {
+        "2023": 0.0,
+        "2024": 0.0
+      },
+      "actual_emis_t": {
+        "2023": 0.0,
+        "2024": 0.0
+      }
+    }
+  ],
+  "scenarios": {
+    "baseline": {
+      "description": "Status quo \u2014 no CCS, no new gas, no early retirements. Economic retirements only.",
+      "modifications": []
+    },
+    "ccs_top_emitters": {
+      "description": "CCS retrofit on the top 6 largest CCS-eligible CCGTs by 2030-2032.",
+      "modifications": [
+        {
+          "orispl": 997153,
+          "action": "ccs_retrofit",
+          "year_online": 2030
+        },
+        {
+          "orispl": 55327,
+          "action": "ccs_retrofit",
+          "year_online": 2030
+        },
+        {
+          "orispl": 55327,
+          "action": "ccs_retrofit",
+          "year_online": 2031
+        },
+        {
+          "orispl": 50292,
+          "action": "ccs_retrofit",
+          "year_online": 2031
+        },
+        {
+          "orispl": 55172,
+          "action": "ccs_retrofit",
+          "year_online": 2032
+        },
+        {
+          "orispl": 55299,
+          "action": "ccs_retrofit",
+          "year_online": 2032
+        }
+      ]
+    },
+    "ccs_plus_new_gas": {
+      "description": "CCS on top emitters + 1,200 MW new efficient CCGT in PJM.",
+      "modifications": [
+        {
+          "orispl": 997153,
+          "action": "ccs_retrofit",
+          "year_online": 2030
+        },
+        {
+          "orispl": 55327,
+          "action": "ccs_retrofit",
+          "year_online": 2030
+        },
+        {
+          "orispl": 55327,
+          "action": "ccs_retrofit",
+          "year_online": 2031
+        },
+        {
+          "action": "add_plant",
+          "name": "New PJM CCGT East",
+          "iso": "PJM",
+          "capacity_mw": 600,
+          "fuel_type": "gas_ccgt",
+          "heat_rate_mmbtu_mwh": 6.3,
+          "equity_share": 1.0,
+          "year_online": 2028
+        },
+        {
+          "action": "add_plant",
+          "name": "New PJM CCGT West",
+          "iso": "PJM",
+          "capacity_mw": 600,
+          "fuel_type": "gas_ccgt",
+          "heat_rate_mmbtu_mwh": 6.3,
+          "equity_share": 1.0,
+          "year_online": 2029
+        }
+      ]
+    },
+    "retire_peakers_ccs_baseload": {
+      "description": "Retire all oil CTs, gas/oil CTs, and gas CTs by 2030, CCS retrofit on all remaining gas CCGTs by 2035.",
+      "modifications": [
+        {
+          "fuel_type": "oil_ct",
+          "action": "retire",
+          "year_online": 2030
+        },
+        {
+          "fuel_type": "gas_oil_ct",
+          "action": "retire",
+          "year_online": 2030
+        },
+        {
+          "fuel_type": "gas_ct",
+          "action": "retire",
+          "year_online": 2030
+        },
+        {
+          "fuel_type": "gas_ccgt",
+          "action": "ccs_retrofit",
+          "year_online": 2035
+        }
+      ]
+    }
+  }
+}
