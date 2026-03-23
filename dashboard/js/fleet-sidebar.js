@@ -723,6 +723,14 @@ var FleetSidebar = (function () {
         nextAddId++;
         addedPlants.push(newPlant);
 
+        console.log('[fleet-sidebar] addPlant:', newPlant.name,
+            '| fuel:', newPlant.fuel_type,
+            '| capacity:', newPlant.capacity_mw, 'MW',
+            '| cf:', newPlant._custom_cf,
+            '| co2_rate:', newPlant.co2_rate_t_mwh,
+            '| year:', newPlant._year_online,
+            '| addedPlants count:', addedPlants.length);
+
         // Reset form
         document.getElementById('apName').value = '';
         document.getElementById('apCapacity').value = '1200';
@@ -753,6 +761,13 @@ var FleetSidebar = (function () {
             setStatus('Error: No plants in fleet');
             return;
         }
+
+        console.log('[fleet-sidebar] recalculate starting:',
+            '| fleetPlants:', fleetPlants.length,
+            '| addedPlants:', addedPlants.length,
+            '| allPlants:', allPlants.length,
+            '| API available:', !!window.FLEET_SCENARIOS_API,
+            '| baseline years:', Object.keys(precomputed.scenarios.baseline.envelope).length);
 
         setStatus('Calculating...');
         if (els.recalcBtn) {
@@ -971,6 +986,17 @@ var FleetSidebar = (function () {
 
                     var scenarioName = (els.nameInput && els.nameInput.value.trim()) || 'Custom';
 
+                    // Debug: log computed results before passing to chart system
+                    var dbgGen2030 = customGenByFuel['2030'];
+                    var dbgInt2030 = customIntensity['2030'];
+                    console.log('[fleet-sidebar] recalculate complete:',
+                        '| newPlants:', newPlants.length,
+                        '| modifiedPlants:', Object.keys(modifiedPlants).length,
+                        '| years:', years.length,
+                        '| 2030 gen_by_fuel:', dbgGen2030 ? JSON.stringify(dbgGen2030) : 'MISSING',
+                        '| 2030 intensity:', dbgInt2030 ? dbgInt2030.p50 + ' kg/MWh' : 'MISSING',
+                        '| 2030 envelope:', customEnvelope['2030'] ? JSON.stringify(customEnvelope['2030']) : 'MISSING');
+
                     var scenarioData = {
                         description: scenarioName,
                         color: '#2372B9',
@@ -985,8 +1011,8 @@ var FleetSidebar = (function () {
                     setStatus('Done in ' + elapsed + 'ms — custom scenario updated');
                     updateSaveButtonState();
                 } catch (err) {
-                    console.error('Recalculation failed:', err);
-                    setStatus('Error: ' + err.message);
+                    console.error('Recalculation failed:', err, err.stack);
+                    setStatus('Error: ' + err.message + ' (see console for details)');
                 }
 
                 if (els.recalcBtn) {
