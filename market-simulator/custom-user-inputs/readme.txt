@@ -47,12 +47,12 @@ These files support TWO formats:
         for sub-ISO granularity
       - If zones are used, each year×zone must have exactly 12 months
 
-    Example (annual, no zones — 432 rows for 2025-2060):
+    Example (annual, no zones — 432 rows for 2025-2050):
       year,month,zone,CAISO,ERCOT,PJM,NYISO,NEISO,MISO,SPP
       2025,1,,3.50,3.50,3.50,4.00,4.50,3.25,3.25
       2025,2,,3.50,3.50,3.50,4.00,4.50,3.25,3.25
       ...
-      2060,12,,4.20,4.00,4.10,5.00,5.50,3.80,3.80
+      2050,12,,4.20,4.00,4.10,5.00,5.50,3.80,3.80
 
     Example (annual + zonal):
       year,month,zone,CAISO,ERCOT,PJM,NYISO,NEISO,MISO,SPP
@@ -67,7 +67,7 @@ FILE: fuel_prices_gas.csv
   Units: $/MMBtu
   Default template: Henry Hub Medium projection with regional basis
   differentials (NEISO +$1.00, NYISO +$0.50), seasonal shape, ~1.5%/yr
-  annual escalation from 2025-2060.
+  annual escalation from 2025-2050.
 
 FILE: fuel_prices_coal.csv
   Units: $/MMBtu

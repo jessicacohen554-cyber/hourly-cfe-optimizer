@@ -758,7 +758,7 @@ Trajectory projections include confidence classification based on calibration ho
 
 - **Calibrated** (2025–2030): Based on calibrated 2024 market data and near-term policy environment. ±5% LMP uncertainty, ±3pp clean% uncertainty.
 - **Moderate Extrapolation** (2030–2040): Technology costs and market structure may diverge from calibration assumptions. ±15% LMP, ±8pp clean%.
-- **High Uncertainty** (2040–2060): Multiple compounding uncertainties — treat as scenario exploration, not forecast. ±30% LMP, ±15pp clean%.
+- **High Uncertainty** (2040–2050): Multiple compounding uncertainties — treat as scenario exploration, not forecast. ±30% LMP, ±15pp clean%.
 
 Confidence zones appear as:
 - Background bands on trajectory charts (LMP, emissions, supply stack)
