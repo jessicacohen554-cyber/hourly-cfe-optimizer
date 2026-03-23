@@ -1123,9 +1123,12 @@ var FleetSidebar = (function () {
         if (!els.saveBtn) return;
         var name = (els.nameInput && els.nameInput.value.trim()) || '';
         var atMax = savedScenarios.length >= MAX_SCENARIOS;
-        els.saveBtn.disabled = !name || atMax;
+        var noResults = !lastComputedResults;
+        els.saveBtn.disabled = !name || atMax || noResults;
         if (atMax) {
             els.saveBtn.title = 'Maximum ' + MAX_SCENARIOS + ' scenarios reached';
+        } else if (noResults) {
+            els.saveBtn.title = 'Click Recalculate first to compute results';
         } else if (!name) {
             els.saveBtn.title = 'Enter a name to save';
         } else {
@@ -1152,14 +1155,16 @@ var FleetSidebar = (function () {
         // Build params from current fleet state
         var params = {
             fleetMods: fleetPlants.filter(function (p) { return p._action; }).map(function (p) {
-                return { _idx: p._idx, orispl: p.orispl, _action: p._action, _year_online: p._year_online, _ccs_target_rate: p._ccs_target_rate, capacity_mw: p.capacity_mw };
+                return { _idx: p._idx, orispl: p.orispl, _action: p._action, _year_online: p._year_online, _ccs_target_rate: p._ccs_target_rate, _ccs_derate_pct: p._ccs_derate_pct, _uprate_mw: p._uprate_mw, _custom_cf: p._custom_cf, capacity_mw: p.capacity_mw };
             }),
             addedPlants: JSON.parse(JSON.stringify(addedPlants))
         };
 
-        // If we haven't computed results yet, run recalculate first
-        if (!lastComputedResults && sweepData) {
-            recalculate();
+        // Require recalculation before saving — recalculate is async so we can't
+        // auto-run it here and expect results to be ready synchronously
+        if (!lastComputedResults) {
+            alert('Please click "Recalculate" first to compute results before saving.');
+            return;
         }
 
         var scenario = {
@@ -1167,7 +1172,7 @@ var FleetSidebar = (function () {
             name: name,
             description: '',
             params: params,
-            results: lastComputedResults ? JSON.parse(JSON.stringify(lastComputedResults)) : null,
+            results: JSON.parse(JSON.stringify(lastComputedResults)),
             color: getNextColor(),
             isVisible: true,
             isBaseline: savedScenarios.length === 0, // First scenario is baseline
@@ -1195,6 +1200,9 @@ var FleetSidebar = (function () {
                 p._action = mod._action;
                 p._year_online = mod._year_online;
                 p._ccs_target_rate = mod._ccs_target_rate;
+                p._ccs_derate_pct = mod._ccs_derate_pct || 0;
+                p._uprate_mw = mod._uprate_mw || 0;
+                p._custom_cf = mod._custom_cf || 0;
                 if (mod.capacity_mw != null) p.capacity_mw = mod.capacity_mw;
             }
         });
