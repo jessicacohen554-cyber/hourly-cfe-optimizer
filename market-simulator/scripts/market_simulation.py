@@ -106,7 +106,7 @@ from dispatch_utils import (
 from lmp_engine import (
     build_merit_order_stack, build_plant_level_merit_order,
     compute_hourly_lmp_vectorized, compute_lmp_confidence_factor, PriceModel,
-    HEAT_RATES, VOM, CO2_RATES, FUEL_PRICES,
+    HEAT_RATES, VOM, CO2_RATES, FUEL_PRICES, _get_fuel_prices,
     INSTALLED_FOSSIL_MW, FOSSIL_CAPACITY_SHARES,
 )
 from procurement_utils import get_rps_target_at_year, PPA_PREMIUMS
@@ -1546,7 +1546,7 @@ def apply_economic_new_build(gen_econ, iso, year, state, conditions,
 
     # Get fuel prices for variable cost calculation — year-varying via AEO projections
     fuel_level = conditions.get('fuel_level', 'Medium')
-    fp = _resolve_fuel_prices_for_year(conditions, year, iso) or FUEL_PRICES.get(fuel_level, FUEL_PRICES['Medium'])
+    fp = _resolve_fuel_prices_for_year(conditions, year, iso) or _get_fuel_prices(year, fuel_level)
 
     # --- Compute RA gap ---
     # Total existing fossil capacity (post-retirement)
@@ -2320,9 +2320,9 @@ def compute_ccs_retrofit_breakeven(iso, fuel_level='Medium', conditions=None, ye
     # Year-varying fuel prices from AEO projections
     if year and conditions:
         _fp = _resolve_fuel_prices_for_year(conditions, year, iso)
-        fuel_price = _fp.get('gas', 3.50) if _fp else FUEL_PRICES.get(fuel_level, {}).get('gas', 3.50)
+        fuel_price = _fp.get('gas', 3.50) if _fp else _get_fuel_prices(year, fuel_level).get('gas', 3.50)
     else:
-        fuel_price = FUEL_PRICES.get(fuel_level, {}).get('gas', 3.50)
+        fuel_price = _get_fuel_prices(year or 2026, fuel_level).get('gas', 3.50)
 
     # Existing CCGT variable cost (rises with carbon price)
     # MC_existing = HR × fuel + VOM + CO2_rate × carbon_price
@@ -4242,7 +4242,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             plant_retirement_list = []
             try:
                 fuel_level = conditions.get('fuel_level', 'Medium')
-                _fuel_prices = _resolve_fuel_prices_for_year(conditions, year, iso) or FUEL_PRICES.get(fuel_level, FUEL_PRICES['Medium'])
+                _fuel_prices = _resolve_fuel_prices_for_year(conditions, year, iso) or _get_fuel_prices(year, fuel_level)
                 plant_stack, _plant_total_mw = build_plant_level_merit_order(
                     iso, current_pct, fuel_level=fuel_level,
                     carbon_price=carbon_price,

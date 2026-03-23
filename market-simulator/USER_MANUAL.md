@@ -321,7 +321,7 @@ Trajectory results include visual confidence indicators:
 |------|-------|-------|---------|
 | Calibrated | 2025–2030 | Green | Based on calibrated 2024 market data and near-term policy |
 | Moderate Extrapolation | 2030–2040 | Yellow | Technology costs and market structure may diverge from calibration |
-| High Uncertainty | 2040–2060 | Red | Multiple compounding uncertainties — scenario exploration, not forecast |
+| High Uncertainty | 2040–2050 | Red | Multiple compounding uncertainties — scenario exploration, not forecast |
 
 These appear as colored background bands on trajectory charts and as a badge on year-level KPI cards.
 
