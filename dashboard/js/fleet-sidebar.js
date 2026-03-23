@@ -827,7 +827,7 @@ var FleetSidebar = (function () {
                             var yearOnline = mod._year_online || 2030;
                             var fuel = bp.fuel_type || mod.fuel_type;
                             var capMW = (mod.capacity_mw || bp.capacity_mw || 0) * (mod.equity_share || 1.0);
-                            var co2Rate = mod.co2_rate_t_mwh || bp.co2_rate_t_mwh || 0.37;
+                            var co2Rate = (mod.co2_rate_t_mwh != null) ? mod.co2_rate_t_mwh : ((bp.co2_rate_t_mwh != null) ? bp.co2_rate_t_mwh : 0.37);
                             var customGenTwh = bp.gen_twh;
                             var customEmisMt = bp.emissions_mt;
                             var customStatus = bp.status;
@@ -909,8 +909,9 @@ var FleetSidebar = (function () {
                             if (yearNum < yearOnline) return;
                             var fuel = np.fuel_type || 'gas_ccgt';
                             var capMW = (np.capacity_mw || 0) * (np.equity_share || 1.0);
-                            var co2Rate = np.co2_rate_t_mwh || 0.37;
-                            var cf = 0.57; // default gas_ccgt CF
+                            var co2Rate = (np.co2_rate_t_mwh != null) ? np.co2_rate_t_mwh : 0.37;
+                            // Use custom CF for renewables/clean, default gas CF for fossil
+                            var cf = (np._custom_cf && np._custom_cf > 0) ? np._custom_cf : 0.57;
                             var grossMwh = capMW * cf * 8760;
                             var emisTons = grossMwh * co2Rate;
                             var genTwh = grossMwh / 1e6;

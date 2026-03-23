@@ -91,11 +91,13 @@ var FleetDispatchEngine = (function () {
 
             if (action === 'add_plant') {
                 var fuel = mod.fuel_type;
-                var hr = mod.heat_rate_mmbtu_mwh || REFERENCE_HEAT_RATES[fuel] || 10.0;
+                var hr = (mod.heat_rate_mmbtu_mwh != null && mod.heat_rate_mmbtu_mwh > 0)
+                    ? mod.heat_rate_mmbtu_mwh
+                    : (REFERENCE_HEAT_RATES[fuel] || 0);
                 var co2 = mod.co2_rate_t_mwh;
                 if (co2 == null) {
-                    var ef = EMISSION_FACTORS[fuel] || 0.05306;
-                    co2 = Math.round(hr * ef * 100000) / 100000;
+                    var ef = EMISSION_FACTORS[fuel] || 0;
+                    co2 = (hr > 0 && ef > 0) ? Math.round(hr * ef * 100000) / 100000 : 0;
                 }
                 fleet.push({
                     orispl: 0,
