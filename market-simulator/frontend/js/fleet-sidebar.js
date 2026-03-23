@@ -1113,7 +1113,9 @@ var FleetSidebar = (function () {
         getVisibleScenarios: function () {
             return savedScenarios.filter(function (s) { return s.isVisible && s.results; });
         },
-        getFleetPlants: function () { return fleetPlants.concat(addedPlants); }
+        getFleetPlants: function () { return fleetPlants.concat(addedPlants); },
+        getSweepData: function () { return sweepData; },
+        getCcsParams: function () { return Object.assign({}, ccsParams); }
     };
 
 })();

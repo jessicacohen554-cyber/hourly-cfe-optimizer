@@ -570,6 +570,39 @@ var FleetDispatchEngine = (function () {
             };
         }
 
+        // ── Build per-plant envelopes (P10/P50/P90 gen GWh + emissions metric tons) ──
+        var plantEnvelopes = {};
+        plantResults.forEach(function (pr) {
+            var key = String(pr.plant.orispl || pr.plant.name);
+            var genEnv = {};
+            var emisEnv = {};
+            for (var yiPE = 0; yiPE < nYears; yiPE++) {
+                var genCol = [];
+                var emisCol = [];
+                for (var siPE = 0; siPE < nScenarios; siPE++) {
+                    genCol.push(pr.genArr[siPE][yiPE] / 1e3);    // MWh → GWh
+                    emisCol.push(pr.emisArr[siPE][yiPE] * 1e6);   // Mt → metric tons
+                }
+                genEnv[String(years[yiPE])] = {
+                    p10: Math.round(percentile(genCol, 10) * 10) / 10,
+                    p50: Math.round(percentile(genCol, 50) * 10) / 10,
+                    p90: Math.round(percentile(genCol, 90) * 10) / 10
+                };
+                emisEnv[String(years[yiPE])] = {
+                    p10: Math.round(percentile(emisCol, 10)),
+                    p50: Math.round(percentile(emisCol, 50)),
+                    p90: Math.round(percentile(emisCol, 90))
+                };
+            }
+            plantEnvelopes[key] = {
+                name: pr.plant.name,
+                fuel_type: pr.plant.fuel_type,
+                capacity_mw: Math.round((pr.plant.capacity_mw || 0) * (pr.plant.equity_share || 1) * 10) / 10,
+                gen_gwh: genEnv,
+                emissions_t: emisEnv
+            };
+        });
+
         // ── Build plant detail at P50 scenario ──
         var plantDetail = {};
         for (var yi5 = 0; yi5 < nYears; yi5++) {
@@ -638,6 +671,7 @@ var FleetDispatchEngine = (function () {
             envelope: envelope,
             intensity_envelope: intensityEnvelope,
             plant_detail: plantDetail,
+            plant_envelopes: plantEnvelopes,
             generation_by_fuel: generationByFuel,
             emissions_by_fuel: emissionsByFuel,
             fleet_summary: {
