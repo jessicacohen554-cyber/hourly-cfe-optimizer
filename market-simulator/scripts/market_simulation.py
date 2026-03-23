@@ -106,7 +106,7 @@ from dispatch_utils import (
 from lmp_engine import (
     build_merit_order_stack, build_plant_level_merit_order,
     compute_hourly_lmp_vectorized, compute_lmp_confidence_factor, PriceModel,
-    HEAT_RATES, VOM, CO2_RATES, FUEL_PRICES,
+    HEAT_RATES, VOM, CO2_RATES, FUEL_PRICES, _get_fuel_prices,
     INSTALLED_FOSSIL_MW, FOSSIL_CAPACITY_SHARES,
 )
 from procurement_utils import get_rps_target_at_year, PPA_PREMIUMS
@@ -131,28 +131,48 @@ logger = logging.getLogger(__name__)
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def _resolve_fuel_prices_for_year(conditions: dict, year: int, iso: str = None) -> dict | None:
-    """Resolve custom fuel prices for a specific simulation year.
+    """Resolve fuel prices for a specific simulation year.
 
-    If conditions contains 'custom_fuel_timeseries' (year-indexed from CSV),
-    returns a flat {'coal': X, 'gas': Y, 'oil': Z} dict for the given year/ISO,
-    averaging across months.
+    Priority order:
+      1. conditions['custom_fuel_timeseries'] — user-provided year/ISO-indexed CSV
+      2. conditions['custom_fuel_prices'] — user-provided static scalar dict
+      3. EIA AEO 2025 projections — year-varying L/M/H from fuel_price_projections
+      4. None — caller falls back to static FUEL_PRICES[fuel_level]
 
-    Falls back to conditions['custom_fuel_prices'] (static scalar dict) if no
-    time-series is present, or None if neither exists.
+    Returns a flat {'coal': X, 'gas': Y, 'oil': Z} dict in $/MMBtu, or None.
     """
+    # Priority 1: user-provided time-series override
     ts = conditions.get('custom_fuel_timeseries')
-    if not ts:
-        return conditions.get('custom_fuel_prices')
+    if ts:
+        result = {}
+        for fuel_type in ('gas', 'coal', 'oil'):
+            fuel_ts = ts.get(fuel_type)
+            if not fuel_ts:
+                continue
 
-    result = {}
-    for fuel_type in ('gas', 'coal', 'oil'):
-        fuel_ts = ts.get(fuel_type)
-        if not fuel_ts:
-            continue
+            # Static (legacy) format — None key means applies to all years
+            if None in fuel_ts:
+                months_data = fuel_ts[None]
+                vals = []
+                for mo_data in months_data.values():
+                    zd = mo_data.get('system', {})
+                    if iso and iso in zd:
+                        vals.append(zd[iso])
+                    elif zd:
+                        vals.append(next(iter(zd.values())))
+                result[fuel_type] = sum(vals) / len(vals) if vals else 0
+                continue
 
-        # Static (legacy) format — None key means applies to all years
-        if None in fuel_ts:
-            months_data = fuel_ts[None]
+            # Time-series — find exact or nearest year
+            available_years = sorted(fuel_ts.keys())
+            if year in fuel_ts:
+                target_year = year
+            elif available_years:
+                target_year = min(available_years, key=lambda y: abs(y - year))
+            else:
+                continue
+
+            months_data = fuel_ts[target_year]
             vals = []
             for mo_data in months_data.values():
                 zd = mo_data.get('system', {})
@@ -161,28 +181,25 @@ def _resolve_fuel_prices_for_year(conditions: dict, year: int, iso: str = None) 
                 elif zd:
                     vals.append(next(iter(zd.values())))
             result[fuel_type] = sum(vals) / len(vals) if vals else 0
-            continue
 
-        # Time-series — find exact or nearest year
-        available_years = sorted(fuel_ts.keys())
-        if year in fuel_ts:
-            target_year = year
-        elif available_years:
-            target_year = min(available_years, key=lambda y: abs(y - year))
-        else:
-            continue
+        if result:
+            return result
 
-        months_data = fuel_ts[target_year]
-        vals = []
-        for mo_data in months_data.values():
-            zd = mo_data.get('system', {})
-            if iso and iso in zd:
-                vals.append(zd[iso])
-            elif zd:
-                vals.append(next(iter(zd.values())))
-        result[fuel_type] = sum(vals) / len(vals) if vals else 0
+    # Priority 2: user-provided static override
+    custom_static = conditions.get('custom_fuel_prices')
+    if custom_static:
+        return custom_static
 
-    return result if result else conditions.get('custom_fuel_prices')
+    # Priority 3: EIA AEO 2025 year-varying projections
+    fuel_level = conditions.get('fuel_level', 'Medium')
+    try:
+        from fuel_price_projections import get_fuel_prices
+        return get_fuel_prices(year, fuel_level)
+    except ImportError:
+        pass
+
+    # Priority 4: None — caller will use static FUEL_PRICES[fuel_level]
+    return None
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -346,12 +363,13 @@ PTC_45U_SUNSET_YEAR = 2032
 # Nuclear retirement threshold — default operating cost
 NUCLEAR_FOM_PER_MWH = 30.0  # $/MWh equivalent at 93% CF
 
-# Simulation years — annual 2026–2060 (35 points)
-def build_sim_years(start=2025, end=2060, step=1):
+# Simulation years — annual 2026–2050 (25 points)
+# Aligned with EIA AEO 2025 projection horizon (ends at 2050)
+def build_sim_years(start=2025, end=2050, step=1):
     """Build simulation year list from user-specified range and step.
 
-    Returns a list like [2025, 2026, ..., 2060] for step=1
-    or [2025, 2030, 2035, ..., 2060] for step=5.
+    Returns a list like [2025, 2026, ..., 2050] for step=1
+    or [2025, 2030, 2035, ..., 2050] for step=5.
     Always includes the end year if not already present.
     """
     years = list(range(start, end + 1, step))
@@ -359,7 +377,7 @@ def build_sim_years(start=2025, end=2060, step=1):
         years.append(end)
     return years
 
-SIM_YEARS = build_sim_years(start=2026, end=2060, step=1)  # 35 annual points
+SIM_YEARS = build_sim_years(start=2026, end=2050, step=1)  # 25 annual points
 
 # 2023 eGRID actual clean energy share (%)
 EGRID_2023_CLEAN_PCT = {
@@ -1526,9 +1544,9 @@ def apply_economic_new_build(gen_econ, iso, year, state, conditions,
     min_cf_override = conditions.get('new_fossil_min_cf_override', {})
     carbon_price = conditions.get('carbon_price', 0)
 
-    # Get fuel prices for variable cost calculation
+    # Get fuel prices for variable cost calculation — year-varying via AEO projections
     fuel_level = conditions.get('fuel_level', 'Medium')
-    fp = FUEL_PRICES.get(fuel_level, FUEL_PRICES['Medium'])
+    fp = _resolve_fuel_prices_for_year(conditions, year, iso) or _get_fuel_prices(year, fuel_level)
 
     # --- Compute RA gap ---
     # Total existing fossil capacity (post-retirement)
@@ -2289,7 +2307,7 @@ def compute_zone_cost(iso, delta_resources, lcoe_level, cumulative_gw,
 # CCS RETROFIT BREAKEVEN
 # ═══════════════════════════════════════════════════════════════════════════════
 
-def compute_ccs_retrofit_breakeven(iso, fuel_level='Medium', conditions=None):
+def compute_ccs_retrofit_breakeven(iso, fuel_level='Medium', conditions=None, year=None):
     """Find carbon price where CCS retrofit beats continued unabated CCGT operation.
 
     Returns dict with breakeven carbon prices for:
@@ -2299,7 +2317,12 @@ def compute_ccs_retrofit_breakeven(iso, fuel_level='Medium', conditions=None):
     gas_hr = HEAT_RATES.get('gas_ccgt', 7.0)
     gas_vom = VOM.get('gas_ccgt', 3.5)
     gas_co2 = CO2_RATES.get('gas_ccgt', 0.37)
-    fuel_price = FUEL_PRICES.get(fuel_level, {}).get('gas', 3.50)
+    # Year-varying fuel prices from AEO projections
+    if year and conditions:
+        _fp = _resolve_fuel_prices_for_year(conditions, year, iso)
+        fuel_price = _fp.get('gas', 3.50) if _fp else _get_fuel_prices(year, fuel_level).get('gas', 3.50)
+    else:
+        fuel_price = _get_fuel_prices(year or 2026, fuel_level).get('gas', 3.50)
 
     # Existing CCGT variable cost (rises with carbon price)
     # MC_existing = HR × fuel + VOM + CO2_rate × carbon_price
@@ -4219,7 +4242,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             plant_retirement_list = []
             try:
                 fuel_level = conditions.get('fuel_level', 'Medium')
-                _fuel_prices = _resolve_fuel_prices_for_year(conditions, year, iso) or FUEL_PRICES.get(fuel_level, FUEL_PRICES['Medium'])
+                _fuel_prices = _resolve_fuel_prices_for_year(conditions, year, iso) or _get_fuel_prices(year, fuel_level)
                 plant_stack, _plant_total_mw = build_plant_level_merit_order(
                     iso, current_pct, fuel_level=fuel_level,
                     carbon_price=carbon_price,
@@ -4285,8 +4308,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                         'capacity_mw': new_mw,
                         'cf': 0.50,
                         'avg_rev_mwh': float(np.mean(hourly_lmp)),
-                        'var_cost_mwh': hr * FUEL_PRICES.get(
-                            conditions.get('fuel_level', 'Medium'), {}).get(
+                        'var_cost_mwh': hr * _fuel_prices.get(
                             'gas' if 'gas' in ftype else 'coal', 3.5) + vom,
                         'margin_mwh': 0,
                         'dispatch_hours': 4380,
@@ -4489,7 +4511,7 @@ def run_full_sweep(isos=None, nuclear_retirement_threshold=None,
 
     Args:
         sim_years: Optional list of years to simulate. Defaults to SIM_YEARS
-            (annual 2026–2060). Use build_sim_years() to construct custom ranges.
+            (annual 2026–2050). Use build_sim_years() to construct custom ranges.
         weather_years: Optional list of year strings (e.g., ['2021', '2023', '2025'])
             to run weather-year sensitivity. Each year runs the full sweep
             independently, then results are combined. If None, uses default
