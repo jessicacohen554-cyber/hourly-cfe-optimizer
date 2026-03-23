@@ -1992,22 +1992,20 @@
                     intGenEnv[ys] = { p10: 0, p50: 0, p90: 0 };
                     intEmisEnv[ys] = { p10: 0, p50: 0, p90: 0 };
                 } else if (intervention === 'ccs_retrofit' && y >= intYear) {
-                    // CCS ramp: 0→30%→70%→100% over 8 years
-                    var elapsed = y - intYear;
-                    var rampFrac;
-                    if (elapsed <= 0) rampFrac = 0;
-                    else if (elapsed <= 2) rampFrac = 0.30 * elapsed / 2;
-                    else if (elapsed <= 5) rampFrac = 0.30 + 0.40 * (elapsed - 2) / 3;
-                    else if (elapsed <= 8) rampFrac = 0.70 + 0.30 * (elapsed - 5) / 3;
-                    else rampFrac = 1.0;
-                    var captureRate = rampFrac * 0.90;
-                    var derate = 0.14;
-                    // Gen decreases by derate, emissions decrease by capture
-                    intGenEnv[ys] = {
-                        p10: Math.round(bg.p10 * (1 - derate)),
-                        p50: Math.round(bg.p50 * (1 - derate)),
-                        p90: Math.round(bg.p90 * (1 - derate))
-                    };
+                    // Read CCS parameters from sidebar (or defaults)
+                    var ccsP = (typeof FleetSidebar !== 'undefined' && FleetSidebar.getCcsParams)
+                        ? FleetSidebar.getCcsParams()
+                        : { derate_pct: 14, capture_rate_pct: 90, cf_pct: 85 };
+                    var derate = ccsP.derate_pct / 100.0;
+                    var captureRate = ccsP.capture_rate_pct / 100.0;
+                    var cfFrac = ccsP.cf_pct / 100.0;
+
+                    // Generation: capacity × sidebar CF × (1 - derate) × 8760 / 1000 for GWh
+                    var capMW = plant.capacity_mw || 0;
+                    var ccsGenGwh = Math.round(capMW * cfFrac * (1 - derate) * 8760 / 1000);
+                    intGenEnv[ys] = { p10: ccsGenGwh, p50: ccsGenGwh, p90: ccsGenGwh };
+
+                    // Emissions: instant full capture at retrofit year (no ramp)
                     intEmisEnv[ys] = {
                         p10: Math.round(be.p10 * (1 - captureRate)),
                         p50: Math.round(be.p50 * (1 - captureRate)),
