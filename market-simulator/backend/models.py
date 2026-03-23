@@ -194,9 +194,6 @@ class SimulationRequest(BaseModel):
     # Learning curves toggle (separate from learning speed)
     learning_curves: bool = True  # On/Off — when Off, skip Wright's Law cost decline
 
-    # Fleet overrides from fleet-config page
-    fleet_overrides: Optional[Dict[str, str]] = None  # {plant_id: "Operating"|"Retired"|"CCS Retrofit"}
-
     # ── Validators ──────────────────────────────────────────────────────────
 
     @field_validator('iso')
