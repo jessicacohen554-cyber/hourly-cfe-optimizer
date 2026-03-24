@@ -394,9 +394,9 @@ async def serve_results_page():
 @app.get("/fleet-scenarios", response_class=HTMLResponse)
 async def serve_fleet_scenarios_page():
     """Serve the Fleet Climate Scenarios page."""
-    page_path = FRONTEND_DIR / "fleet-scenarios.html"
+    page_path = FRONTEND_DIR / "fleet_scenarios.html"
     if not page_path.exists():
-        raise HTTPException(status_code=404, detail="fleet-scenarios.html not found")
+        raise HTTPException(status_code=404, detail="fleet_scenarios.html not found")
     return FileResponse(str(page_path), media_type="text/html")
 
 
