@@ -141,7 +141,34 @@ The model uses the most accurate heat rate available:
 1. **EIA-923 revealed**: `fuel_mmbtu / net_generation_mwh` (preferred)
 2. **EPA CAMPD measured**: `heat_input / gross_load` (hourly)
 3. **EIA-860 design**: `heat_rate` field (least accurate)
-4. **Fallback defaults**: coal 10.0, gas_ccgt 7.0, gas_ct 10.5, oil_ct 10.5 MMBtu/MWh
+4. **Fallback defaults**: 5-tier table below
+
+### 5-Tier Heat Rate Model
+
+Plants are assigned to efficiency tiers that reflect the ~30% heat-rate spread
+within each fuel class. `build_fleet_scenario_data.py` maps plants to tiers
+via vintage year (e.g., post-2010 H-class → `very_low`, pre-1980 → `very_high`).
+
+| Tier | gas_ccgt | coal_steam | gas_ct | Typical vintage |
+|------|----------|------------|--------|-----------------|
+| `very_low` | 6.2 | 8.5 | 9.0 | Post-2010 H-class |
+| `low` | 6.8 | 9.5 | 10.0 | 2000s F-class |
+| `mid` | 7.5 | 10.5 | 10.5 | 1990s fleet average |
+| `high` | 8.1 | 11.5 | 11.5 | 1980s legacy |
+| `very_high` | 9.0 | 12.5 | 13.0 | Pre-1980 |
+
+*All values in MMBtu/MWh.*
+
+This tiered dispatch produces a smoother S-curve in the price-duration curve
+compared to a flat single-tier stack: efficient H-class CCGTs (~$22–25/MWh)
+set the price during low-demand hours, mid-fleet F-class units (~$28–32/MWh)
+during moderate demand, and the oldest legacy CCGTs and coal (~$38–43/MWh)
+during peaks.
+
+Sweep outputs include per-tier capacity-factor columns:
+`ge_gas_ccgt_very_low_cf` through `ge_gas_ccgt_very_high_cf` (and likewise for
+`coal_steam` and `gas_ct`), enabling granular dispatch projections per
+efficiency vintage.
 
 ---
 
