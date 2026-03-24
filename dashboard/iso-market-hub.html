@@ -167,22 +167,84 @@
                         <option value="emissions_mt">Total Emissions (MT CO₂)</option>
                         <option value="emission_rate_tco2_mwh">Emission Rate (tCO₂/MWh)</option>
                         <option value="clean_pct">Clean Energy %</option>
+                        <option value="emis_gas_mt">Gas Emissions (MT CO₂)</option>
+                        <option value="emis_coal_mt">Coal Emissions (MT CO₂)</option>
+                        <option value="emis_oil_mt">Oil Emissions (MT CO₂)</option>
                     </optgroup>
                     <optgroup label="Demand & Supply">
                         <option value="demand_twh">Demand (TWh)</option>
                         <option value="mix_solar_twh">Solar Generation (TWh)</option>
                         <option value="mix_wind_twh">Wind Generation (TWh)</option>
+                        <option value="mix_offshore_wind_twh">Offshore Wind (TWh)</option>
                         <option value="mix_clean_firm_twh">Clean Firm (TWh)</option>
+                        <option value="mix_ccs_ccgt_twh">CCS-CCGT (TWh)</option>
+                        <option value="mix_hydro_twh">Hydro (TWh)</option>
                     </optgroup>
-                    <optgroup label="Generator Economics">
+                    <optgroup label="CCGT Economics (Fleet)">
                         <option value="ge_gas_ccgt_cf">CCGT Capacity Factor</option>
                         <option value="ge_gas_ccgt_margin_mwh">CCGT Margin ($/MWh)</option>
-                        <option value="nuc_total_mwh">Nuclear Revenue ($/MWh)</option>
+                        <option value="ge_gas_ccgt_capacity_mw">CCGT Capacity (MW)</option>
                     </optgroup>
-                    <optgroup label="Retirements & New Build">
+                    <optgroup label="CCGT Economics (By Tier)">
+                        <option value="ge_gas_ccgt_very_low_cf">CCGT Very Low HR — CF</option>
+                        <option value="ge_gas_ccgt_low_cf">CCGT Low HR — CF</option>
+                        <option value="ge_gas_ccgt_medium_cf">CCGT Medium HR — CF</option>
+                        <option value="ge_gas_ccgt_high_cf">CCGT High HR — CF</option>
+                        <option value="ge_gas_ccgt_very_high_cf">CCGT Very High HR — CF</option>
+                    </optgroup>
+                    <optgroup label="Gas CT Economics (Fleet)">
+                        <option value="ge_gas_ct_cf">Gas CT Capacity Factor</option>
+                        <option value="ge_gas_ct_margin_mwh">Gas CT Margin ($/MWh)</option>
+                        <option value="ge_gas_ct_capacity_mw">Gas CT Capacity (MW)</option>
+                    </optgroup>
+                    <optgroup label="Gas CT Economics (By Tier)">
+                        <option value="ge_gas_ct_very_low_cf">Gas CT Very Low HR — CF</option>
+                        <option value="ge_gas_ct_low_cf">Gas CT Low HR — CF</option>
+                        <option value="ge_gas_ct_medium_cf">Gas CT Medium HR — CF</option>
+                        <option value="ge_gas_ct_high_cf">Gas CT High HR — CF</option>
+                        <option value="ge_gas_ct_very_high_cf">Gas CT Very High HR — CF</option>
+                    </optgroup>
+                    <optgroup label="Coal Economics (Fleet)">
+                        <option value="ge_coal_steam_cf">Coal Capacity Factor</option>
+                        <option value="ge_coal_steam_margin_mwh">Coal Margin ($/MWh)</option>
+                        <option value="ge_coal_steam_capacity_mw">Coal Capacity (MW)</option>
+                    </optgroup>
+                    <optgroup label="Nuclear">
+                        <option value="nuc_total_mwh">Nuclear Revenue ($/MWh)</option>
+                        <option value="nuc_energy_rev_mwh">Nuclear Energy Revenue ($/MWh)</option>
+                        <option value="nuc_capacity_rev_mwh">Nuclear Capacity Revenue ($/MWh)</option>
+                        <option value="nuc_ptc_mwh">Nuclear PTC ($/MWh)</option>
+                    </optgroup>
+                    <optgroup label="CCS Breakeven">
+                        <option value="ccs_be_ccs_vs_existing_carbon_price">CCS vs Existing — Carbon Price</option>
+                        <option value="ccs_be_new_gas_vs_old_carbon_price">New Gas vs Old — Carbon Price</option>
+                        <option value="ccs_be_ccs_lcoe">CCS LCOE ($/MWh)</option>
+                    </optgroup>
+                    <optgroup label="Retirements (Aggregate)">
                         <option value="total_economic_retirement_mw">Economic Retirements (MW)</option>
                         <option value="ret_coal_steam_mw">Coal Retirements (MW)</option>
+                        <option value="ret_gas_ct_mw">Gas CT Retirements (MW)</option>
+                        <option value="ret_oil_ct_mw">Oil CT Retirements (MW)</option>
+                    </optgroup>
+                    <optgroup label="Retirements (By Tier)">
+                        <option value="ret_gas_ccgt_high_mw">CCGT High HR Retirements (MW)</option>
+                        <option value="ret_gas_ccgt_very_high_mw">CCGT Very High HR Retirements (MW)</option>
+                        <option value="ret_coal_steam_high_mw">Coal High HR Retirements (MW)</option>
+                        <option value="ret_coal_steam_very_high_mw">Coal Very High HR Retirements (MW)</option>
+                        <option value="ret_gas_ct_very_high_mw">Gas CT Very High HR Retirements (MW)</option>
+                    </optgroup>
+                    <optgroup label="New Build & Capacity">
                         <option value="nb_gas_ccgt_mw">New CCGT Build (MW)</option>
+                        <option value="nb_gas_ct_mw">New Gas CT Build (MW)</option>
+                        <option value="fossil_built_gw">Total Fossil Built (GW)</option>
+                        <option value="total_gas_gw">Total Gas Capacity (GW)</option>
+                    </optgroup>
+                    <optgroup label="RPS Compliance">
+                        <option value="rps_eligible_pct">RPS Eligible %</option>
+                        <option value="rps_mandated_pct">RPS Mandated %</option>
+                        <option value="rps_shortfall_pct">RPS Shortfall %</option>
+                        <option value="acp_cost_million">ACP Cost ($M)</option>
+                        <option value="cumulative_acp_million">Cumulative ACP ($M)</option>
                     </optgroup>
                 </select>
             </div>
@@ -307,15 +369,63 @@ const STATE = { iso: 'PJM', year: '2030', metric: 'avg_lmp', bundle: 'all_med' }
 const D = ISO_SWEEP_DATA;
 
 const METRIC_LABELS = {
+    // Market Prices
     avg_lmp: 'Average LMP ($/MWh)', lmp_p90: 'LMP P90 ($/MWh)',
-    cost_per_mwh: 'Cost per MWh', emissions_mt: 'Emissions (MT CO₂)',
-    emission_rate_tco2_mwh: 'Emission Rate (tCO₂/MWh)', clean_pct: 'Clean Energy %',
+    cost_per_mwh: 'Cost per MWh', revenue_per_mwh: 'Revenue ($/MWh)',
+    energy_rev_mwh: 'Energy Revenue ($/MWh)', capacity_rev_mwh: 'Capacity Revenue ($/MWh)',
+    rec_rev_mwh: 'REC Revenue ($/MWh)', ordc_scarcity_hours: 'Scarcity Hours',
+    // Emissions
+    emissions_mt: 'Emissions (MT CO₂)', emission_rate_tco2_mwh: 'Emission Rate (tCO₂/MWh)',
+    clean_pct: 'Clean Energy %',
+    emis_gas_mt: 'Gas Emissions (MT CO₂)', emis_coal_mt: 'Coal Emissions (MT CO₂)',
+    emis_oil_mt: 'Oil Emissions (MT CO₂)',
+    // Demand & Supply
     demand_twh: 'Demand (TWh)', mix_solar_twh: 'Solar (TWh)',
-    mix_wind_twh: 'Wind (TWh)', mix_clean_firm_twh: 'Clean Firm (TWh)',
+    mix_wind_twh: 'Wind (TWh)', mix_offshore_wind_twh: 'Offshore Wind (TWh)',
+    mix_clean_firm_twh: 'Clean Firm (TWh)', mix_ccs_ccgt_twh: 'CCS-CCGT (TWh)',
+    mix_hydro_twh: 'Hydro (TWh)',
+    // CCGT Economics — fleet
     ge_gas_ccgt_cf: 'CCGT Capacity Factor', ge_gas_ccgt_margin_mwh: 'CCGT Margin ($/MWh)',
-    nuc_total_mwh: 'Nuclear Revenue ($/MWh)',
+    ge_gas_ccgt_capacity_mw: 'CCGT Capacity (MW)',
+    // CCGT Economics — by tier
+    ge_gas_ccgt_very_low_cf: 'CCGT Very Low HR — CF', ge_gas_ccgt_low_cf: 'CCGT Low HR — CF',
+    ge_gas_ccgt_medium_cf: 'CCGT Medium HR — CF', ge_gas_ccgt_high_cf: 'CCGT High HR — CF',
+    ge_gas_ccgt_very_high_cf: 'CCGT Very High HR — CF',
+    // Gas CT Economics — fleet
+    ge_gas_ct_cf: 'Gas CT Capacity Factor', ge_gas_ct_margin_mwh: 'Gas CT Margin ($/MWh)',
+    ge_gas_ct_capacity_mw: 'Gas CT Capacity (MW)',
+    // Gas CT Economics — by tier
+    ge_gas_ct_very_low_cf: 'Gas CT Very Low HR — CF', ge_gas_ct_low_cf: 'Gas CT Low HR — CF',
+    ge_gas_ct_medium_cf: 'Gas CT Medium HR — CF', ge_gas_ct_high_cf: 'Gas CT High HR — CF',
+    ge_gas_ct_very_high_cf: 'Gas CT Very High HR — CF',
+    // Coal Economics
+    ge_coal_steam_cf: 'Coal Capacity Factor', ge_coal_steam_margin_mwh: 'Coal Margin ($/MWh)',
+    ge_coal_steam_capacity_mw: 'Coal Capacity (MW)',
+    // Oil CT
+    ge_oil_ct_cf: 'Oil CT Capacity Factor', ge_oil_ct_margin_mwh: 'Oil CT Margin ($/MWh)',
+    // Nuclear
+    nuc_total_mwh: 'Nuclear Revenue ($/MWh)', nuc_energy_rev_mwh: 'Nuclear Energy Rev ($/MWh)',
+    nuc_capacity_rev_mwh: 'Nuclear Capacity Rev ($/MWh)', nuc_ptc_mwh: 'Nuclear PTC ($/MWh)',
+    // CCS Breakeven
+    ccs_be_ccs_vs_existing_carbon_price: 'CCS vs Existing — Carbon Price',
+    ccs_be_new_gas_vs_old_carbon_price: 'New Gas vs Old — Carbon Price',
+    ccs_be_ccs_lcoe: 'CCS LCOE ($/MWh)',
+    // Retirements — aggregate
     total_economic_retirement_mw: 'Retirements (MW)',
-    ret_coal_steam_mw: 'Coal Retirements (MW)', nb_gas_ccgt_mw: 'New CCGT (MW)'
+    ret_coal_steam_mw: 'Coal Retirements (MW)', ret_gas_ct_mw: 'Gas CT Retirements (MW)',
+    ret_oil_ct_mw: 'Oil CT Retirements (MW)',
+    // Retirements — by tier
+    ret_gas_ccgt_high_mw: 'CCGT High HR Ret. (MW)', ret_gas_ccgt_very_high_mw: 'CCGT Very High HR Ret. (MW)',
+    ret_coal_steam_high_mw: 'Coal High HR Ret. (MW)', ret_coal_steam_very_high_mw: 'Coal Very High HR Ret. (MW)',
+    ret_gas_ct_very_high_mw: 'Gas CT Very High HR Ret. (MW)',
+    // New Build & Capacity
+    nb_gas_ccgt_mw: 'New CCGT (MW)', nb_gas_ct_mw: 'New Gas CT (MW)',
+    fossil_built_gw: 'Fossil Built (GW)', total_gas_gw: 'Total Gas (GW)',
+    total_new_fossil_mw: 'New Fossil (MW)',
+    // RPS Compliance
+    rps_eligible_pct: 'RPS Eligible %', rps_mandated_pct: 'RPS Mandated %',
+    rps_shortfall_pct: 'RPS Shortfall %',
+    acp_cost_million: 'ACP Cost ($M)', cumulative_acp_million: 'Cumulative ACP ($M)',
 };
 
 const SENS_DIM_LABELS = {
