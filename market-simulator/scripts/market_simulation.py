@@ -1022,10 +1022,40 @@ def compute_generator_economics(stack, hourly_lmp, unit_idx, dispatch,
             }
 
     # Clean up internal fields and round
-    for key in gen_econ:
+    for key in list(gen_econ.keys()):
         del gen_econ[key]['_total_mwh']
         for field in ('cf', 'avg_rev_mwh', 'var_cost_mwh', 'margin_mwh'):
             gen_econ[key][field] = round(gen_econ[key][field], 2)
+
+    # Synthesize aggregate entries for base fuel types (gas_ccgt, coal_steam,
+    # gas_ct) by capacity-weighting the per-tier results. Downstream code
+    # (extract_iso_sweep_data, build_fleet_scenario_data) expects ge_gas_ccgt_cf.
+    _BASE_TYPES = ('gas_ccgt', 'coal_steam', 'gas_ct')
+    for base in _BASE_TYPES:
+        tiers = {k: v for k, v in gen_econ.items()
+                 if k.startswith(base + '_') and k != base}
+        if not tiers:
+            continue
+        total_cap = sum(v['capacity_mw'] for v in tiers.values())
+        if total_cap <= 0:
+            continue
+        total_mwh = sum(v['cf'] * v['capacity_mw'] * H for v in tiers.values())
+        agg_cf = total_mwh / (total_cap * H)
+        agg_rev = sum(v['avg_rev_mwh'] * v['cf'] * v['capacity_mw'] * H
+                      for v in tiers.values())
+        agg_rev = agg_rev / total_mwh if total_mwh > 0 else 0
+        agg_cost = sum(v['var_cost_mwh'] * v['cf'] * v['capacity_mw'] * H
+                       for v in tiers.values())
+        agg_cost = agg_cost / total_mwh if total_mwh > 0 else 0
+        agg_hours = max(v['dispatch_hours'] for v in tiers.values())
+        gen_econ[base] = {
+            'dispatch_hours': agg_hours,
+            'cf': round(agg_cf, 2),
+            'avg_rev_mwh': round(agg_rev, 2),
+            'var_cost_mwh': round(agg_cost, 2),
+            'margin_mwh': round(agg_rev - agg_cost, 2),
+            'capacity_mw': round(total_cap, 1),
+        }
 
     return gen_econ
 
