@@ -286,9 +286,14 @@ var FleetDispatchEngine = (function () {
 
                 var genMwh, activeCf;
 
-                // For historic years with Rosetta actuals, use per-plant actual generation
+                // For historic years with Rosetta actuals, use per-plant actual generation.
+                // Allow historic path for actions that haven't taken effect yet.
                 var historicGen = actualGen[String(y)];
-                if (historicGen != null && historicGen > 0 && !action) {
+                var useHistoricNF = !action ||
+                    (action === 'uprate' && yearOnline && y < yearOnline) ||
+                    (action === 'ccs_retrofit' && yearOnline && y < yearOnline) ||
+                    (action === 'retire' && yearOnline && y < yearOnline);
+                if (historicGen != null && historicGen > 0 && useHistoricNF) {
                     genMwh = historicGen;
                     activeCf = (capMW > 0) ? genMwh / (capMW * 8760) : 0;
                 } else {

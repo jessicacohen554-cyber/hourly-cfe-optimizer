@@ -22,7 +22,7 @@ var FleetSidebar = (function () {
     var lastComputedResults = null; // Cache most recent recalculation results
 
     var MAX_SCENARIOS = 8;
-    var SCENARIO_STORAGE_KEY = 'market-sim-scenarios';
+    var SCENARIO_STORAGE_KEY = 'market-sim-scenarios-v2';
     var SCENARIO_COLORS = ['#2372B9', '#F47B27', '#6BA543', '#651dda', '#E91E63', '#007FA4', '#CADB2E', '#14B8A6'];
 
     // ── Fuel labels ──
@@ -256,11 +256,12 @@ var FleetSidebar = (function () {
         }
         setStatus(statusMsg);
 
-        // Baseline uses the precomputed trajectory from fleet_scenario_results_sample.json.
-        // The JS dispatch engine doesn't model coal retirement, fleet turnover, or other
-        // dynamics that the Python sweep captures, so live-computing the baseline here
-        // produces an incorrect +14% trajectory instead of the correct -24% decline.
-        // Custom scenarios still use the live dispatch engine for accurate deltas.
+        // Compute baseline via the same dispatch engine used for custom scenarios.
+        // This ensures deltas between baseline and user modifications are accurate
+        // (apples-to-apples comparison using the same methodology).
+        if (sweepData) {
+            computeAndSetBaseline();
+        }
 
         // ── Migration: recompute results for saved scenarios that have null results ──
         // (fixes scenarios saved before the async race condition fix)
