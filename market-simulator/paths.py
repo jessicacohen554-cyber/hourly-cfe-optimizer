@@ -20,9 +20,13 @@ def _is_frozen():
 if _is_frozen():
     BUNDLE_DIR = Path(sys._MEIPASS) / "market-simulator"
     APP_DIR = Path(sys.executable).parent
+    PARENT_PROJECT_DIR = None  # No parent project in frozen mode
 else:
     BUNDLE_DIR = Path(__file__).resolve().parent
     APP_DIR = BUNDLE_DIR
+    # Dev mode: parent project may have pipeline output data (step2.1-ef, step2.2-cost, etc.)
+    _candidate = BUNDLE_DIR.parent / "data"
+    PARENT_PROJECT_DIR = _candidate if _candidate.is_dir() else None
 
 # Read-only (bundled) paths
 BACKEND_DIR = BUNDLE_DIR / "backend"
@@ -62,7 +66,17 @@ def resolve_data_path(relative_path):
             return bundle_path
 
     # Tier 3: Dev mode fallback (project root / data/)
-    return BUNDLE_DIR / "data" / relative_path
+    dev_path = BUNDLE_DIR / "data" / relative_path
+    if dev_path.exists():
+        return dev_path
+
+    # Tier 4: Parent project data (dev mode only — pipeline outputs like step2.1-ef/)
+    if PARENT_PROJECT_DIR:
+        parent_path = PARENT_PROJECT_DIR / relative_path
+        if parent_path.exists():
+            return parent_path
+
+    return dev_path  # Return dev path for callers to raise their own error
 
 
 def resolve_data_dir(relative_dir=""):
@@ -85,7 +99,17 @@ def resolve_data_dir(relative_dir=""):
         if bundle_path.is_dir():
             return bundle_path
 
-    return BUNDLE_DIR / "data" / relative_dir
+    dev_path = BUNDLE_DIR / "data" / relative_dir
+    if dev_path.is_dir():
+        return dev_path
+
+    # Tier 4: Parent project data (dev mode only)
+    if PARENT_PROJECT_DIR:
+        parent_path = PARENT_PROJECT_DIR / relative_dir
+        if parent_path.is_dir():
+            return parent_path
+
+    return dev_path
 
 
 def get_data_search_dirs(subdirs=None):
@@ -113,6 +137,10 @@ def get_data_search_dirs(subdirs=None):
     dev_path = BUNDLE_DIR / "data"
     if dev_path not in roots:
         roots.append(dev_path)
+
+    # Tier 4: Parent project data (dev mode only)
+    if PARENT_PROJECT_DIR and PARENT_PROJECT_DIR not in roots:
+        roots.append(PARENT_PROJECT_DIR)
 
     if subdirs is None:
         return [r for r in roots if r.exists()]
