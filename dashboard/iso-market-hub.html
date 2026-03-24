@@ -432,9 +432,95 @@ function updateArchetypeTable() {
 }
 
 // ── Chart placeholders (Steps 3–6 will fill these) ──
-function updateEnvelope() { /* Step 3 */ }
-function updateSensitivity() { /* Step 4 */ }
-function updateSensHeatmap() { /* Step 4 */ }
+function updateEnvelope() {
+    const isoEnv = D.envelopes[STATE.iso];
+    if (!isoEnv) return;
+    const years = Object.keys(isoEnv).map(Number).sort((a,b) => a - b);
+    const metric = STATE.metric;
+    const p10 = [], p25 = [], p50 = [], p75 = [], p90 = [];
+    for (const yr of years) {
+        const m = isoEnv[String(yr)]?.[metric];
+        p10.push(m?.p10 ?? null); p25.push(m?.p25 ?? null);
+        p50.push(m?.p50 ?? null); p75.push(m?.p75 ?? null);
+        p90.push(m?.p90 ?? null);
+    }
+    const traces = [
+        // P10-P90 outer band (fill between)
+        { x: years, y: p90, mode: 'lines', line: { width: 0 }, showlegend: false, hoverinfo: 'skip' },
+        { x: years, y: p10, mode: 'lines', line: { width: 0 }, fill: 'tonexty',
+          fillcolor: 'rgba(35,114,185,0.10)', showlegend: false, hoverinfo: 'skip' },
+        // P25-P75 inner band
+        { x: years, y: p75, mode: 'lines', line: { width: 0 }, showlegend: false, hoverinfo: 'skip' },
+        { x: years, y: p25, mode: 'lines', line: { width: 0 }, fill: 'tonexty',
+          fillcolor: 'rgba(35,114,185,0.25)', showlegend: false, hoverinfo: 'skip' },
+        // Median line
+        { x: years, y: p50, mode: 'lines+markers', line: { color: '#2372B9', width: 2.5 },
+          marker: { size: 5 }, name: 'Median (P50)',
+          hovertemplate: '%{x}: %{y:.2f}<extra>P50</extra>' },
+        // P10 / P90 dashed
+        { x: years, y: p10, mode: 'lines', line: { color: '#2372B9', width: 1, dash: 'dot' },
+          name: 'P10', hovertemplate: '%{x}: %{y:.2f}<extra>P10</extra>' },
+        { x: years, y: p90, mode: 'lines', line: { color: '#2372B9', width: 1, dash: 'dot' },
+          name: 'P90', hovertemplate: '%{x}: %{y:.2f}<extra>P90</extra>' },
+    ];
+    const layout = {
+        ...PLOTLY_LAYOUT_BASE,
+        xaxis: { ...PLOTLY_LAYOUT_BASE.xaxis, title: 'Year', dtick: 5 },
+        yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, title: METRIC_LABELS[metric] || metric },
+        legend: { orientation: 'h', y: -0.15, x: 0.5, xanchor: 'center' },
+        hovermode: 'x unified'
+    };
+    Plotly.react('chartEnvelope', traces, layout, { responsive: true, displayModeBar: false });
+}
+function updateSensitivity() {
+    const sens = D.sensitivity[STATE.iso]?.[STATE.year];
+    if (!sens) { Plotly.purge('chartSensitivity'); return; }
+    // Use the currently selected metric if available, else avg_lmp
+    const metric = sens[STATE.metric] ? STATE.metric : 'avg_lmp';
+    const data = sens[metric];
+    if (!data) return;
+    const dims = Object.keys(data).sort((a,b) => data[b] - data[a]);
+    const colors = ['#2372B9','#007FA4','#6BA543','#FBB254','#F47B27','#7E8083'];
+    const traces = [{
+        type: 'bar', orientation: 'h',
+        y: dims.map(d => SENS_DIM_LABELS[d] || d),
+        x: dims.map(d => (data[d] * 100)),
+        marker: { color: dims.map((_,i) => colors[i % colors.length]) },
+        text: dims.map(d => (data[d] * 100).toFixed(1) + '%'),
+        textposition: 'outside',
+        hovertemplate: '%{y}: %{x:.1f}%<extra></extra>'
+    }];
+    const layout = {
+        ...PLOTLY_LAYOUT_BASE,
+        xaxis: { ...PLOTLY_LAYOUT_BASE.xaxis, title: '% of Variance Explained', range: [0, 100] },
+        yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, autorange: 'reversed' },
+        margin: { ...PLOTLY_LAYOUT_BASE.margin, l: 140 }
+    };
+    Plotly.react('chartSensitivity', traces, layout, { responsive: true, displayModeBar: false });
+}
+
+function updateSensHeatmap() {
+    const sens = D.sensitivity[STATE.iso]?.[STATE.year];
+    if (!sens) { Plotly.purge('chartSensHeatmap'); return; }
+    const metrics = Object.keys(sens);
+    const metricLabels = metrics.map(m => METRIC_LABELS[m] || m);
+    const allDims = ['demand_growth','price_sensitivity','ppa_level','gas_friction','queue_capacity','new_fossil_cost'];
+    const dimLabels = allDims.map(d => SENS_DIM_LABELS[d] || d);
+    const z = metrics.map(m => allDims.map(d => (sens[m]?.[d] ?? 0) * 100));
+    const traces = [{
+        type: 'heatmap', z: z, x: dimLabels, y: metricLabels,
+        colorscale: [[0,'#F7FAFC'],[0.5,'#007FA4'],[1,'#2372B9']],
+        hovertemplate: '%{y}<br>%{x}: %{z:.1f}%<extra></extra>',
+        colorbar: { title: '% Var', titleside: 'right', len: 0.9 }
+    }];
+    const layout = {
+        ...PLOTLY_LAYOUT_BASE,
+        margin: { l: 180, r: 80, t: 10, b: 80 },
+        xaxis: { ...PLOTLY_LAYOUT_BASE.xaxis, tickangle: -30 },
+        yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis }
+    };
+    Plotly.react('chartSensHeatmap', traces, layout, { responsive: true, displayModeBar: false });
+}
 function updateSupplyStack() { /* Step 5 */ }
 function updateArchetypeChart() { /* Step 6 */ }
 function updateDrivers() { /* Step 6 */ }
