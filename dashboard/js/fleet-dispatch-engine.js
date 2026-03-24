@@ -286,9 +286,14 @@ var FleetDispatchEngine = (function () {
 
                 var genMwh, activeCf;
 
-                // For historic years with Rosetta actuals, use per-plant actual generation
+                // For historic years with Rosetta actuals, use per-plant actual generation.
+                // Allow historic path for actions that haven't taken effect yet.
                 var historicGen = actualGen[String(y)];
-                if (historicGen != null && historicGen > 0 && !action) {
+                var useHistoricNF = !action ||
+                    (action === 'uprate' && yearOnline && y < yearOnline) ||
+                    (action === 'ccs_retrofit' && yearOnline && y < yearOnline) ||
+                    (action === 'retire' && yearOnline && y < yearOnline);
+                if (historicGen != null && historicGen > 0 && useHistoricNF) {
                     genMwh = historicGen;
                     activeCf = (capMW > 0) ? genMwh / (capMW * 8760) : 0;
                 } else {
@@ -332,8 +337,16 @@ var FleetDispatchEngine = (function () {
             var iso = p.iso;
             var isoData = sweepData.data[iso];
 
-            var cfKey = fuel + '_cf';
-            var marginKey = fuel + '_margin';
+            // Prefer per-tier CF/margin arrays (e.g., gas_ccgt_very_low_cf) when
+            // the plant has a heat_rate_tier and the sweep data includes tier columns.
+            // Falls back to aggregate fuel CF (gas_ccgt_cf) if tier data is missing.
+            var tier = p.heat_rate_tier;
+            var tierCfKey = tier ? (fuel + '_' + tier + '_cf') : null;
+            var tierMarginKey = tier ? (fuel + '_' + tier + '_margin') : null;
+            var hasTierData = !!(isoData && tierCfKey && isoData[tierCfKey]);
+
+            var cfKey = hasTierData ? tierCfKey : (fuel + '_cf');
+            var marginKey = hasTierData ? tierMarginKey : (fuel + '_margin');
             var cfArrays = isoData ? isoData[cfKey] : null;
             var marginArrays = isoData ? isoData[marginKey] : null;
             var hasSweepArrays = !!(cfArrays && marginArrays);
@@ -412,10 +425,15 @@ var FleetDispatchEngine = (function () {
                 var scenarioMargin = hasSweepArrays ? marginArrays[si2] : null;
 
                 for (var yi3 = 0; yi3 < nYears; yi3++) {
-                    // For historic years with Rosetta actuals and no user action, use actual data directly
+                    // For historic years with Rosetta actuals, use actual data directly.
+                    // Allow historic path for: no action, CCS before online year, retired plants
+                    // (actions that haven't taken effect yet should use real data).
                     var historicGen = actualGen[String(years[yi3])];
                     var historicEmis = actualEmis[String(years[yi3])];
-                    if (historicGen != null && historicGen > 0 && !action) {
+                    var useHistoric = !action ||
+                        (action === 'ccs_retrofit' && yearOnline && years[yi3] < yearOnline) ||
+                        (action === 'retire' && yearOnline && years[yi3] < yearOnline);
+                    if (historicGen != null && historicGen > 0 && useHistoric) {
                         var hGenMwh = historicGen;
                         var hEmisMt = (historicEmis || 0) / 1e6; // tons → Mt
                         var hCf = (capMW > 0) ? hGenMwh / (capMW * 8760) : 0;
@@ -445,7 +463,7 @@ var FleetDispatchEngine = (function () {
                     var adjustedCf = Math.min(baseCf * efficiencyRatio, 0.95);
 
                     // Economic retirement — only for default_market plants (no action set)
-                    // operating_override skips this: plant runs at sweep CF regardless of margin
+                    // operating_override and ccs_retrofit skip this: they run regardless of margin
                     var isDefaultMarket = !action || action === 'default_market';
                     if (isDefaultMarket && yearHasData[yi3] && margin < 0) adjustedCf = 0;
 
