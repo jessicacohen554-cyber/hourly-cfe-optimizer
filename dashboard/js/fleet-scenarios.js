@@ -43,6 +43,7 @@
     var selectedYear = 2030;
     var selectedFossilCost = 'All';
     var selectedLowerScenarioId = null; // null = baseline; string = saved scenario ID
+    var hideBaselineFan = false;
     var fanChart = null;
     var waterfall2023Chart = null;
     var genMixChart = null;
@@ -50,6 +51,7 @@
     var intensityFanChart = null;
 
     var topEmittersChart = null;
+    var ccgtTierChart = null;
 
     // ── Clean fuel keys for % low-carbon calculation ──
     var CLEAN_FUEL_SET = { nuclear: 1, geothermal: 1, hydro: 1, wind: 1, solar: 1, battery: 1, ldes: 1, ccs_ccgt: 1 };
@@ -160,27 +162,30 @@
     // Derive intensity_envelope from generation_by_fuel + emissions_by_fuel if not present
     function deriveIntensityEnvelope(sc) {
         if (sc.intensity_envelope) return;
+        sc.intensity_envelope = computeIntensityFromGenAndEmissions(sc);
+    }
+
+    // Compute intensity envelope directly from p50 emissions (envelope) and
+    // total fleet generation (generation_by_fuel).  This ensures the intensity
+    // chart is always consistent with the emissions fan and gen-mix charts.
+    function computeIntensityFromGenAndEmissions(sc) {
         var gen = sc.generation_by_fuel;
-        var emis = sc.emissions_by_fuel;
-        if (!gen || !emis) return;
+        var envelope = sc.envelope;
+        if (!gen || !envelope) return {};
         var intEnv = {};
         Object.keys(gen).forEach(function (yr) {
-            var totalGenTwh = 0;
-            var totalEmisMt = 0;
             var gYear = gen[yr] || {};
-            var eYear = emis[yr] || {};
+            var totalGenTwh = 0;
             Object.keys(gYear).forEach(function (f) { if (f[0] !== '_') totalGenTwh += gYear[f] || 0; });
-            Object.keys(eYear).forEach(function (f) { if (f[0] !== '_') totalEmisMt += eYear[f] || 0; });
-            // TWh → MWh: ×1e6. Mt → kg: ×1e9. intensity = (Mt × 1e9) / (TWh × 1e6) = Mt/TWh × 1e3
-            var intensityKg = totalGenTwh > 0 ? (totalEmisMt / totalGenTwh) * 1e3 : 0;
-            intEnv[yr] = {
-                p10: Math.round(intensityKg * 100) / 100,
-                p50: Math.round(intensityKg * 100) / 100,
-                p90: Math.round(intensityKg * 100) / 100,
-                mean: Math.round(intensityKg * 100) / 100
-            };
+            var env = envelope[yr];
+            if (!env || totalGenTwh <= 0) return;
+            // emissions are in Mt CO2, gen in TWh → (Mt/TWh)×1e3 = kgCO2/MWh
+            var p10 = Math.round((env.p10 / totalGenTwh) * 1e3 * 100) / 100;
+            var p50 = Math.round((env.p50 / totalGenTwh) * 1e3 * 100) / 100;
+            var p90 = Math.round((env.p90 / totalGenTwh) * 1e3 * 100) / 100;
+            intEnv[yr] = { p10: p10, p50: p50, p90: p90, mean: p50 };
         });
-        sc.intensity_envelope = intEnv;
+        return intEnv;
     }
 
     function onDataLoaded(data) {
@@ -192,9 +197,17 @@
             });
         }
         buildControls();
+        var hideBaselineEl = document.getElementById('hideBaselineFan');
+        if (hideBaselineEl) {
+            hideBaselineEl.addEventListener('change', function () {
+                hideBaselineFan = hideBaselineEl.checked;
+                updateFanChart();
+            });
+        }
         buildFanChart();
         buildWaterfall2023Chart();
         buildGenMixChart();
+        buildCcgtTierChart();
         buildNewCleanChart();
         buildIntensityFanChart();
 
@@ -282,6 +295,7 @@
             sliderVal.textContent = slider.value;
             updateWaterfall2023Chart();
             updateGenMixChart();
+            updateCcgtTierChart();
             updateNewCleanChart();
             updateTopEmittersChart();
             updateFanChartAnnotation();
@@ -300,6 +314,7 @@
             ['scenarioSelector', updateScenarioSelector],
             ['waterfall2023Chart', updateWaterfall2023Chart],
             ['genMixChart', updateGenMixChart],
+            ['ccgtTierChart', updateCcgtTierChart],
             ['newCleanChart', updateNewCleanChart],
             ['intensityFanChart', updateIntensityFanChart],
 
@@ -641,9 +656,8 @@
         }
         var labels = years.map(String);
 
-        // ── Always show baseline with gray p10-p90 band ──
-        // If we injected an extra year, interpolate baseline envelope at that year
-        if (baseline) {
+        // ── Baseline with gray p10-p90 band (skipped if user hides it) ──
+        if (baseline && !hideBaselineFan) {
             var baseEnv = getEnvelope(baseline);
             if (firstYear && !baseEnv[String(firstYear)]) {
                 var interpBase = interpolateEnvAtYear(baseEnv, firstYear);
@@ -887,7 +901,7 @@
             var html = '<div class="fan-tooltip-title">' + year + '</div>';
 
             var baseline = DATA.scenarios.baseline;
-            var baseIntEnv = baseline && baseline.intensity_envelope ? baseline.intensity_envelope : null;
+            var baseIntEnv = baseline ? computeIntensityFromGenAndEmissions(baseline) : null;
             var baseYear = baseIntEnv ? baseIntEnv[year] : null;
             var baseline2023 = baseIntEnv && baseIntEnv['2023'] ? baseIntEnv['2023'].p50 : null;
 
@@ -896,23 +910,28 @@
                 html += intensityTooltipRow(baseYear.p50, BASELINE_COLOR, 'Baseline', baseline2023);
             }
 
-            // Custom scenario row
-            if (customScenario && customScenario.intensity_envelope && customScenario.intensity_envelope[year]) {
-                var custVal = customScenario.intensity_envelope[year].p50;
-                html += intensityTooltipRow(custVal, CUSTOM_COLOR, 'Custom', baseline2023);
-                if (baseYear) {
-                    var delta = custVal - baseYear.p50;
-                    var cls = delta < 0 ? 'gap-negative' : 'gap-positive';
-                    var sign = delta > 0 ? '+' : '';
-                    html += '<div class="fan-tooltip-gap"><span class="' + cls + '">' +
-                        sign + delta.toFixed(1) + ' kgCO₂/MWh vs Baseline</span></div>';
+            // Custom scenario row (legacy)
+            if (customScenario && customScenario.envelope && customScenario.generation_by_fuel) {
+                var custIntEnv = computeIntensityFromGenAndEmissions(customScenario);
+                if (custIntEnv[year]) {
+                    var custVal = custIntEnv[year].p50;
+                    html += intensityTooltipRow(custVal, CUSTOM_COLOR, 'Custom', baseline2023);
+                    if (baseYear) {
+                        var delta = custVal - baseYear.p50;
+                        var cls = delta < 0 ? 'gap-negative' : 'gap-positive';
+                        var sign = delta > 0 ? '+' : '';
+                        html += '<div class="fan-tooltip-gap"><span class="' + cls + '">' +
+                            sign + delta.toFixed(1) + ' kgCO₂/MWh vs Baseline</span></div>';
+                    }
                 }
             }
 
-            // Saved scenario rows
+            // Saved scenario rows — compute from emissions / total gen
             savedScenarioOverlays.forEach(function (s) {
-                if (!s.results || !s.results.intensity_envelope || !s.results.intensity_envelope[year]) return;
-                var sVal = s.results.intensity_envelope[year].p50;
+                if (!s.results || !s.results.envelope || !s.results.generation_by_fuel) return;
+                var scIntEnv = computeIntensityFromGenAndEmissions(s.results);
+                if (!scIntEnv[year]) return;
+                var sVal = scIntEnv[year].p50;
                 html += intensityTooltipRow(sVal, s.color, s.name || 'Saved', baseline2023);
             });
 
@@ -1047,7 +1066,7 @@
         var scenarioToCompare = getSelectedLowerScenario();
         var scPlants = scenarioToCompare.plant_detail ? scenarioToCompare.plant_detail[yr] : null;
 
-        // 2023 baseline from engine-computed baseline
+        // 2023 actual emissions baseline — fixed reference point
         var base2023Plants = DATA.scenarios.baseline.plant_detail ?
             DATA.scenarios.baseline.plant_detail['2023'] : null;
 
@@ -1334,6 +1353,137 @@
     }
 
     // ====================================================================
+    // CHART 3B: CCGT TIER CAPACITY FACTORS (Grouped Bar) — Selected Year
+    // ====================================================================
+    var TIER_KEYS = ['very_low', 'low', 'medium', 'high', 'very_high'];
+    var TIER_LABELS = {
+        very_low: 'Very Low HR (6.2)',
+        low: 'Low HR (6.8)',
+        medium: 'Medium HR (7.5)',
+        high: 'High HR (8.1)',
+        very_high: 'Very High HR (9.0)'
+    };
+    var TIER_COLORS = {
+        very_low: '#22C55E',
+        low: '#0EA5E9',
+        medium: '#6366F1',
+        high: '#F59E0B',
+        very_high: '#EF4444'
+    };
+
+    function buildCcgtTierChart() {
+        var ctx = document.getElementById('ccgtTierChart');
+        if (!ctx) return;
+        ccgtTierChart = new Chart(ctx.getContext('2d'), {
+            type: 'bar',
+            data: { labels: [], datasets: [] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 300 },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 11 } }
+                    },
+                    y: {
+                        title: { display: true, text: 'Capacity Factor', font: { size: 12 } },
+                        grid: { color: '#E0E6EF' },
+                        beginAtZero: true,
+                        max: 1.0,
+                        ticks: {
+                            font: { size: 11 },
+                            callback: function (v) { return Math.round(v * 100) + '%'; }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                return ctx.dataset.label + ': ' + (ctx.raw * 100).toFixed(1) + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        updateCcgtTierChart();
+    }
+
+    function updateCcgtTierChart() {
+        if (!ccgtTierChart || !DATA) return;
+
+        var yearStr = String(selectedYear);
+        var yearEl = document.getElementById('ccgtTierYear');
+        if (yearEl) yearEl.textContent = yearStr;
+
+        // Aggregate CCGT plants by tier from plant_detail for the selected scenario/year
+        var sc = getSelectedLowerScenario();
+        var plants = (sc.plant_detail && sc.plant_detail[yearStr]) || [];
+
+        // Group CCGT plants by tier — compute implied CF from gen/capacity
+        var tierData = {};
+        TIER_KEYS.forEach(function (t) {
+            tierData[t] = { gen_twh: 0, cap_mw: 0, count: 0, emis_mt: 0 };
+        });
+
+        plants.forEach(function (p) {
+            if (p.fuel_type !== 'gas_ccgt') return;
+            if (p.status === 'retired') return;
+            var tier = p.heat_rate_tier || 'medium';
+            if (!tierData[tier]) tier = 'medium';
+            tierData[tier].gen_twh += p.gen_twh || 0;
+            tierData[tier].cap_mw += p.capacity_mw || 0;
+            tierData[tier].count += 1;
+            tierData[tier].emis_mt += p.emissions_mt || 0;
+        });
+
+        // Compute CF = gen_twh * 1e6 / (cap_mw * 8760) for each tier
+        var labels = [];
+        var cfValues = [];
+        var colors = [];
+        var borderColors = [];
+
+        TIER_KEYS.forEach(function (tier) {
+            var d = tierData[tier];
+            if (d.cap_mw <= 0) return; // Skip tiers with no capacity
+            var cf = (d.gen_twh * 1e6) / (d.cap_mw * 8760);
+            labels.push(TIER_LABELS[tier] + '\n' + d.count + ' plants, ' + Math.round(d.cap_mw).toLocaleString() + ' MW');
+            cfValues.push(Math.min(cf, 1.0));
+            colors.push(hexToRgba(TIER_COLORS[tier], 0.6));
+            borderColors.push(TIER_COLORS[tier]);
+        });
+
+        ccgtTierChart.data.labels = labels;
+        ccgtTierChart.data.datasets = [{
+            label: 'Capacity Factor',
+            data: cfValues,
+            backgroundColor: colors,
+            borderColor: borderColors,
+            borderWidth: 2,
+            borderRadius: 6
+        }];
+        ccgtTierChart.update('active');
+
+        // Build legend
+        var legendEl = document.getElementById('ccgtTierLegend');
+        if (legendEl) {
+            legendEl.innerHTML = TIER_KEYS.map(function (tier) {
+                var d = tierData[tier];
+                if (d.cap_mw <= 0) return '';
+                var cf = (d.gen_twh * 1e6) / (d.cap_mw * 8760);
+                return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:16px;">' +
+                    '<span style="width:24px;height:10px;border-radius:3px;background:' + TIER_COLORS[tier] + ';display:inline-block;"></span>' +
+                    TIER_LABELS[tier] + ': ' + (cf * 100).toFixed(1) + '% CF, ' +
+                    d.emis_mt.toFixed(1) + ' Mt CO₂' +
+                    '</span>';
+            }).filter(Boolean).join('');
+        }
+    }
+
+    // ====================================================================
     // CHART 4: NEW CLEAN GENERATION SNAPSHOT (Bar) — Selected Year
     // ====================================================================
     var CLEAN_FUEL_KEYS = ['nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'battery', 'ldes', 'ccs_ccgt'];
@@ -1537,9 +1687,9 @@
         }
         var labels = years.map(String);
 
-        // Baseline intensity fan (interpolate at intervention year if needed)
-        if (baseline && baseline.intensity_envelope) {
-            var baseIntEnv = baseline.intensity_envelope;
+        // Recompute baseline intensity from p50 emissions / total gen (always consistent)
+        if (baseline) {
+            var baseIntEnv = computeIntensityFromGenAndEmissions(baseline);
             if (firstYear && !baseIntEnv[String(firstYear)]) {
                 var interpBase = interpolateEnvAtYear(baseIntEnv, firstYear);
                 if (interpBase) {
@@ -1550,12 +1700,13 @@
             addIntensityFanDatasets(datasets, baseIntEnv, years, BASELINE_COLOR, 'Baseline', true);
         }
 
-        // Saved scenario intensity overlays
+        // Saved scenario intensity overlays — recompute from p50 emissions / total gen
         savedScenarioOverlays.forEach(function (s) {
-            if (s.results && s.results.intensity_envelope) {
+            if (s.results && s.results.envelope && s.results.generation_by_fuel) {
+                var scIntEnv = computeIntensityFromGenAndEmissions(s.results);
                 var alignedIntEnv = alignEnvelopeWithBaseline(
-                    s.results.intensity_envelope,
-                    baseline ? baseline.intensity_envelope : null,
+                    scIntEnv,
+                    baseline ? computeIntensityFromGenAndEmissions(baseline) : null,
                     firstYear
                 );
                 addIntensityFanDatasets(datasets, alignedIntEnv, years, s.color, s.name, false);
