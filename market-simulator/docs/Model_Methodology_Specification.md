@@ -2,8 +2,8 @@
 
 **Constellation Energy — Commercial Strategy & Analytics**
 
-**Document Version:** 3.0
-**Model Version:** Market Simulator v3.0.0
+**Document Version:** 3.3
+**Model Version:** Market Simulator v3.3.0
 **Base Year:** 2025 (snapshot model)
 **Date:** March 2026
 **Classification:** Internal — Confidential
@@ -196,14 +196,15 @@ The `plant_retirements` field in year results contains: `[{plant_id, capacity_mw
 
 #### 2.3.1 Fleet-Fraction Fallback
 
-When plant-level data is unavailable, retirement falls back to fleet-fraction logic. Fossil generators retire by type in merit order:
+When plant-level data is unavailable, retirement falls back to fleet-fraction logic using the **5-tier heat-rate dispatch model**. Retirement cascades from least-efficient tier first within each fuel type:
 
-1. **Coal steam** retires first — highest emission rates (0.95 tCO₂/MWh), lowest efficiency, highest marginal cost under any carbon price
-2. **Oil combustion turbines** retire next — high heat rates (10.5 MMBtu/MWh), limited dispatch hours
-3. **Gas combustion turbines** — inefficient peakers with high heat rates
-4. **Gas CCGT** retires last — most efficient fossil (7.0 MMBtu/MWh), lowest emission rate (0.37 tCO₂/MWh)
+1. **very_high tier** retires first — oldest, least-efficient units (coal HR 12.5, gas CT HR 13.0, gas CCGT HR 9.0)
+2. **high tier** retires next (coal HR 11.5, gas CT HR 11.5, gas CCGT HR 8.1)
+3. **medium tier** (coal HR 10.5, gas CT HR 10.5, gas CCGT HR 7.5)
+4. **low tier** (coal HR 9.5, gas CT HR 10.0, gas CCGT HR 6.8)
+5. **very_low tier** retires last — newest, most efficient (coal HR 8.5, gas CT HR 9.0, gas CCGT HR 6.2)
 
-The retirement cascade is threshold-driven: as clean energy share increases, progressively more efficient fossil units become unprofitable.
+Within each tier, fuel types retire in traditional merit order: coal → oil → gas CT → gas CCGT. The retirement cascade is threshold-driven: as clean energy share increases, progressively less-efficient tiers become unprofitable, starting with `very_high` and working inward.
 
 ### 2.3.1 Economic New-Build Fossil Logic
 
@@ -389,18 +390,28 @@ The Fleet Model (`fleet_model.py`) provides real unit-level data for plant-level
 - Prime mover `GT`/`IC`/`OT`/`CE` → `gas_ct` (combustion turbine)
 - Prime mover `ST` → resolved by fuel type: coal fuels (`BIT`/`SUB`/`LIG`/`ANT`/`RC`) → `coal_steam`, gas fuels (`NG`/`BFG`) → `gas_ccgt`, oil fuels (`DFO`/`RFO`) → `oil_ct`
 
-When real fleet data is available, the simulator uses unit-level merit-order stacks with per-generator heat rates instead of stylized efficiency bins. Otherwise, it falls back to ISO-level aggregate parameters with default heat rates.
+When real fleet data is available, the simulator uses unit-level merit-order stacks with per-generator heat rates. Otherwise, it falls back to the 5-tier heat-rate dispatch model (15 entries: 5 tiers × 3 fuel types) with tier-specific heat rates from `lmp_engine.py EFFICIENCY_TIERS`.
 
 #### Two-Tier Dispatch and Emission Model
 
 The simulator uses a two-tier system depending on available data:
 
 **Tier 1 — Fleet-Average (No Plant Data):**
-Without EIA-860/923 or EPA CAMPD data, the model uses aggregate parameters per unit type:
-- Heat rates: coal 10.0, gas CCGT 7.0, gas CT 10.5, oil CT 10.5 MMBtu/MWh
-- Emission rates: fleet-average CO2/NOx/SOx per unit type from eGRID
-- Dispatch: 4-bin merit-order stack (coal, gas CCGT, gas CT, oil CT) sorted by marginal cost
-- Generator economics: aggregate capacity factor and margin per unit type
+Without EIA-860/923 or EPA CAMPD data, the model uses the **5-tier heat-rate dispatch model** with 15 merit-order entries (5 efficiency tiers × 3 fuel types: `gas_ccgt`, `coal_steam`, `gas_ct`):
+
+| Tier | Gas CCGT HR | Coal HR | Gas CT HR | Description |
+|------|------------|---------|-----------|-------------|
+| very_low | 6.2 | 8.5 | 9.0 | Newest / most efficient |
+| low | 6.8 | 9.5 | 10.0 | Above-average efficiency |
+| medium | 7.5 | 10.5 | 10.5 | Fleet average |
+| high | 8.1 | 11.5 | 11.5 | Below-average efficiency |
+| very_high | 9.0 | 12.5 | 13.0 | Oldest / least efficient |
+
+Each tier carries its own CO₂ rate (derived from heat rate × fuel emission factor), VOM, and capacity fraction. The 15 entries are sorted by marginal cost — an H-class CCGT (`very_low`, ~$22.51/MWh at Medium gas) dispatches first; the oldest coal (`very_high`, ~$42.85/MWh) dispatches last.
+
+- Emission rates: per-tier CO₂/NOx/SOx computed from tier-specific heat rates
+- Dispatch: 15-entry merit-order stack sorted by marginal cost
+- Generator economics: per-tier capacity factor and margin
 
 **Tier 2 — Plant-Level (With EIA/EPA Data):**
 When plant-level data is present in `data/eia-860/`, `data/eia-923/`, and/or `data/epa-campd/`:
@@ -457,7 +468,7 @@ The Market Simulator operates as a web application with three layers:
 │  market_simulation.py                       │
 │  ├── lmp_engine.py                          │
 │  │   ├── build_merit_order_stack()          │
-│  │   │   (aggregate 4-bin fossil stack)     │
+│  │   │   (15-entry 5-tier fossil stack)     │
 │  │   ├── build_plant_level_merit_order()    │
 │  │   │   (per-generator EIA 860 stack)      │
 │  │   └── compute_hourly_lmp_vectorized()    │
@@ -518,23 +529,29 @@ For each year in [2023, 2030, 2035, 2040, 2045, 2050]:
 
 ### 4.3 Merit-Order LMP Engine (`lmp_engine.py`)
 
-#### Aggregate Stack Construction
+#### Aggregate Stack Construction (5-Tier Heat-Rate Model)
 
 `build_merit_order_stack(iso, clean_pct, fuel_level, total_fossil_mw, ...)`:
 
-1. Compute marginal cost per unit type using `compute_marginal_costs()`:
-   - MC = (Heat Rate × Fuel Price + VOM + CO₂ Rate × CO₂ Price) × (1 + cost-based adder)
+The aggregate stack uses a **15-entry merit-order** (5 efficiency tiers × 3 fuel types) from `lmp_engine.py EFFICIENCY_TIERS`:
+
+1. Build 15 stack entries — one per (tier, fuel_type) combination. Each entry has tier-specific heat rate, CO₂ rate, VOM, and capacity fraction:
+   - **Gas CCGT tiers**: very_low=6.2, low=6.8, medium=7.5, high=8.1, very_high=9.0 MMBtu/MWh
+   - **Coal tiers**: very_low=8.5, low=9.5, medium=10.5, high=11.5, very_high=12.5 MMBtu/MWh
+   - **Gas CT tiers**: very_low=9.0, low=10.0, medium=10.5, high=11.5, very_high=13.0 MMBtu/MWh
+2. Compute per-tier marginal cost:
+   - MC = (Tier Heat Rate × Fuel Price + Tier VOM + Tier CO₂ Rate × CO₂ Price) × (1 + cost-based adder)
    - ISO-specific cost-based adders: PJM/CAISO/NYISO/NEISO = 10%, MISO = 7%, ERCOT/SPP = 0% (energy-only markets)
-2. Size fossil fleet using RA-aware model: residual peak demand (after clean ELCC credit) ÷ Gas Availability Factor (GAF), floored by linear retirement estimate
-3. Apply retirement model: coal and oil retire above `COAL_OIL_RETIREMENT_THRESHOLD`; remaining gas CCGT/CT capacity is renormalized
-4. Enforce NOx/SOx emission limits if specified — retire generators exceeding caps
-5. Sort by marginal cost (ascending) — cheapest dispatched first
+3. Size fossil fleet using RA-aware model: residual peak demand (after clean ELCC credit) ÷ Gas Availability Factor (GAF), floored by linear retirement estimate
+4. Apply retirement model: tiers retire from least-efficient first (`very_high` → `high` → ...). Coal and oil retire above `COAL_OIL_RETIREMENT_THRESHOLD`; remaining capacity is renormalized across surviving tiers
+5. Enforce NOx/SOx emission limits if specified — retire tiers/generators exceeding caps
+6. Sort all 15 entries by marginal cost (ascending) — H-class CCGT dispatches first (~$22.51/MWh), oldest coal dispatches last (~$42.85/MWh)
 
 #### Plant-Level Stack Construction
 
 `build_plant_level_merit_order(iso, clean_pct, fuel_level, carbon_price, ...)`:
 
-Uses real EIA 860 generator data instead of the 4 aggregated unit types:
+Uses real EIA 860 generator data instead of the 15-entry tiered aggregate stack:
 
 1. Load per-ISO fleet via `fleet_model.load_iso_fleet(iso)` — filters all available EIA 860 data by `balancing_authority_code` → ISO via `BA_TO_ISO` mapping
 2. Classify each generator by prime mover and fuel type using `_classify_unit()`
@@ -972,7 +989,7 @@ fleet_df = load_iso_fleet('PJM')  # Loads all states, filters by BA_TO_ISO
 
 **BA → ISO mapping**: The `BA_TO_ISO` dictionary maps ~70 balancing authority codes to the 7 model ISOs. Examples: `CISO` → CAISO, `ERCO` → ERCOT, `PJME`/`PJMW`/`AEP`/`COMED`/`DOM` → PJM (13 BAs), `SWPP`/`KCPL`/`OKGE` → SPP (21 BAs), `MISO`/`ALTE`/`CONS`/`NSP` → MISO (26 BAs).
 
-When real data is available, the fleet model produces unit-level merit-order stacks with per-generator heat rates that replace the stylized 4-bin stack. This enables plant-level dispatch economics (see §4.7).
+When real data is available, the fleet model produces unit-level merit-order stacks with per-generator heat rates that replace the 15-entry tiered aggregate stack. This enables plant-level dispatch economics (see §4.7).
 
 ### 4.6 Plant-Level Dispatch Economics (`market_simulation.py`)
 
@@ -1246,14 +1263,32 @@ Source: LBNL "Queued Up" 2025, ISO interconnection study aggregates.
 | Medium | 2.25 | 3.50 | 10.50 |
 | High | 2.50 | 6.00 | 13.00 |
 
-**Heat Rates (MMBtu/MWh):**
+**Heat Rates — 5-Tier Dispatch Model (MMBtu/MWh):**
 
-| Generator Type | Default | Efficient Bin | Inefficient Bin |
-|---|---|---|---|
-| Coal Steam | 10.0 | 9.0 | 11.5 |
-| Gas CCGT | 7.0 | 6.3 | 8.0 |
-| Gas CT | 10.5 | 9.5 | 12.0 |
-| Oil CT | 10.5 | — | — |
+Source of truth: `lmp_engine.py EFFICIENCY_TIERS`
+
+| Fuel Type | very_low | low | medium | high | very_high |
+|-----------|----------|-----|--------|------|-----------|
+| Gas CCGT | 6.2 | 6.8 | 7.5 | 8.1 | 9.0 |
+| Coal Steam | 8.5 | 9.5 | 10.5 | 11.5 | 12.5 |
+| Gas CT | 9.0 | 10.0 | 10.5 | 11.5 | 13.0 |
+| Oil CT | 10.5 | — | — | — | — |
+
+Tiers represent fleet efficiency quintiles: `very_low` = newest/most efficient, `very_high` = oldest/least efficient. Each tier carries its own CO₂ emission rate (heat rate × fuel emission factor), VOM, and capacity fraction.
+
+**Constellation Fleet Mapping — Vintage Year → Tier:**
+
+Plant vintage (online year from EIA 860) maps to efficiency tier via `VINTAGE_TIER_THRESHOLDS`:
+
+| Tier | Gas CCGT | Coal Steam | Gas CT |
+|------|----------|------------|--------|
+| very_low | 2010+ | 2005+ | 2010+ |
+| low | 2002–2009 | 1995–2004 | 2000–2009 |
+| medium | 1998–2001 | 1985–1994 | 1995–1999 |
+| high | 1993–1997 | 1975–1984 | 1985–1994 |
+| very_high | pre-1993 | pre-1975 | pre-1985 |
+
+Per-tier sweep capacity factors feed into plant-level dispatch projections, enabling vintage-specific economic analysis for fleet planning.
 
 **Variable O&M ($/MWh):**
 
@@ -1809,28 +1844,65 @@ Place custom CSV files in `custom-user-inputs/`:
 
 ## Appendix A — Key Algorithm Code Blocks
 
-### A.1 Aggregate Merit-Order Stack Construction
+### A.1 Aggregate Merit-Order Stack Construction (5-Tier Model)
 
 ```python
+# Source of truth: lmp_engine.py EFFICIENCY_TIERS
+EFFICIENCY_TIERS = {
+    'gas_ccgt': {
+        'very_low': {'heat_rate': 6.2, 'co2_rate': 0.329, 'vom': 2.50},
+        'low':      {'heat_rate': 6.8, 'co2_rate': 0.361, 'vom': 3.00},
+        'medium':   {'heat_rate': 7.5, 'co2_rate': 0.398, 'vom': 3.50},
+        'high':     {'heat_rate': 8.1, 'co2_rate': 0.430, 'vom': 4.00},
+        'very_high':{'heat_rate': 9.0, 'co2_rate': 0.478, 'vom': 4.50},
+    },
+    'coal_steam': {
+        'very_low': {'heat_rate': 8.5, 'co2_rate': 0.808, 'vom': 4.50},
+        'low':      {'heat_rate': 9.5, 'co2_rate': 0.903, 'vom': 5.00},
+        'medium':   {'heat_rate': 10.5,'co2_rate': 0.998, 'vom': 5.50},
+        'high':     {'heat_rate': 11.5,'co2_rate': 1.093, 'vom': 6.00},
+        'very_high':{'heat_rate': 12.5,'co2_rate': 1.188, 'vom': 6.50},
+    },
+    'gas_ct': {
+        'very_low': {'heat_rate': 9.0, 'co2_rate': 0.478, 'vom': 4.00},
+        'low':      {'heat_rate': 10.0,'co2_rate': 0.531, 'vom': 4.50},
+        'medium':   {'heat_rate': 10.5,'co2_rate': 0.557, 'vom': 5.00},
+        'high':     {'heat_rate': 11.5,'co2_rate': 0.610, 'vom': 5.50},
+        'very_high':{'heat_rate': 13.0,'co2_rate': 0.690, 'vom': 6.00},
+    },
+}
+
 def build_merit_order_stack(iso, clean_pct, fuel_level='Medium',
                              total_fossil_mw=None, co2_level='Medium',
                              nox_price=0.0, sox_price=0.0, ...):
-    """Build sorted fossil dispatch stack by marginal cost."""
-    mc = compute_marginal_costs(fuel_level, co2_level,
-                                nox_price=nox_price, sox_price=sox_price, iso=iso)
+    """Build 15-entry (5 tiers × 3 fuels) fossil dispatch stack."""
+    fp = FUEL_PRICES[fuel_level]
+    adder = 1.0 + COST_BASED_ADDERS.get(iso, 0.10)
     # RA-aware fleet sizing with GAF deration
     if total_fossil_mw is None:
         peak_mw = PEAK_DEMAND_MW[iso] * (1 + RESOURCE_ADEQUACY_MARGIN)
         clean_peak_mw = _compute_clean_peak_mw(iso, resource_mix, ...)
         residual_peak = max(0, peak_mw - clean_peak_mw)
         total_fossil_mw = min(installed, max(residual_peak / GAF, linear_mw))
-    # Apply retirement (coal/oil retire above threshold)
-    shares = FOSSIL_CAPACITY_SHARES[iso]
+    # Build 15-entry stack from EFFICIENCY_TIERS
+    shares = FOSSIL_CAPACITY_SHARES[iso]  # per fuel type
+    stack = []
+    for fuel_type, tiers in EFFICIENCY_TIERS.items():
+        fuel_share = shares.get(fuel_type, 0)
+        fuel_key = 'coal' if fuel_type == 'coal_steam' else 'gas'
+        for tier_name, params in tiers.items():
+            tier_cap = total_fossil_mw * fuel_share * params['capacity_fraction']
+            mc = (params['heat_rate'] * fp[fuel_key] + params['vom']
+                  + params['co2_rate'] * co2_price) * adder
+            stack.append((f"{fuel_type}_{tier_name}", tier_cap, mc))
+    # Retire from least-efficient tier first (very_high → high → ...)
     if clean_pct >= COAL_OIL_RETIREMENT_THRESHOLD:
-        shares = renormalize(gas_ccgt + gas_ct only)
-    stack = [(ut, total_fossil_mw * sh, mc[ut]) for ut, sh in shares.items()]
+        stack = [s for s in stack if 'coal' not in s[0] and 'oil' not in s[0]]
+        stack = renormalize_tiers(stack)
     return sorted(stack, key=lambda x: x[2]), total_fossil_mw
 ```
+
+*Note: Simplified for readability. `capacity_fraction` within each fuel type sums to 1.0 across 5 tiers.*
 
 ### A.1b Plant-Level Merit-Order Stack Construction
 
@@ -1949,5 +2021,6 @@ def wright_adjusted_cost(foak_cost, cumulative_gw, baseline_gw, learning_rate):
 | 3.0 | Mar 2026 | Peer review implementation: G1 plant-level retirement (§2.3.0), G3 result provenance (§6.7.1), G4 correlated scenarios (§4.7), G5 LMP extrapolation guard (§6.8 `LMP_EXTRAPOLATION` trigger), G6 cross-validation framework (§7.5), G7 Morris sensitivity analysis (§7.4.1). Updated ToC, output spec, validation sections. |
 | 3.1 | Mar 2026 | Comprehensive methodology documentation update for G1–G7 implementations: **G1** — expanded plant-level retirement with full margin formula (energy + capacity + ancillary revenue − variable − fixed cost), VOM rates by unit type, reliability floor math, nuclear per-plant evaluation details. **G3** — expanded ProvenanceMetadata schema documentation with audit trail capabilities (config drift detection, code reproducibility, input completeness). **G4** — added rationale for correlated scenarios complementing independent sweep (implausible corner dilution), relationship to R5 weighted percentile confidence intervals. **G5** — added LMP extrapolation guard section to §4.3 with confidence degradation table (1.0/0.8/0.6/0.4 by VRE tier), calibration range boundaries (2019–2024 ISO data, 5–42% VRE), IPM trigger integration. **G6** — expanded cross-validation with scenario-reference pairings, divergence classification thresholds (20 pp national, 30 pp ISO), 4 documented mechanism-driven divergences. **G7** — expanded Morris method with elementary effects formula, first-order variance decomposition (ANOVA/Sobol), 6 input dimensions, 4 output metrics, per-ISO aggregation methodology. |
 | 3.2 | Mar 2026 | Fleet Rosetta update: Fleet expanded from ~200 fossil-only to 146 plants across all fuel types (15 nuclear, 43 renewable, 81 fossil, 7 storage) sourced from CEG_fleet_rosetta.csv. Coal removed (Constellation has no coal assets). Added §4.6.1 fleet composition and non-fossil dispatch model (static CFs). Scenario keys realigned: `ccs_top_emitters`, `retire_peakers_ccs_baseload` (replacing `ccs_only`, `retire_peakers_ccs_gas`, `retire_coal_ccs_gas`). Build scripts documented: `build_fleet_scenario_data.py`, `generate_constellation_scenarios.py`. |
+| 3.3 | Mar 2026 | **5-tier heat-rate dispatch model**: Replaced 3-bin (efficient/mid/inefficient) aggregate stack with 15-entry model (5 tiers × 3 fuel types). Tiers: very_low → very_high representing fleet efficiency quintiles. Per-tier heat rates, CO₂ rates, VOM, and capacity fractions from `lmp_engine.py EFFICIENCY_TIERS`. Retirement cascade updated: least-efficient tier retires first. Added Constellation fleet vintage-to-tier mapping via `VINTAGE_TIER_THRESHOLDS`. Updated §§2.3.1, 3.x, 4.3, 5.5, Appendix A.1. |
 
-*Constellation Energy — Market Simulator v3.2 — Internal & Confidential*
+*Constellation Energy — Market Simulator v3.3 — Internal & Confidential*
