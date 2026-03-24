@@ -301,7 +301,15 @@ var FleetSidebar = (function () {
             var allPlants = tempFleet.concat(tempAdded);
 
             try {
-                s.results = computeScenarioResults(allPlants, tempAdded, baseline, ccsParams);
+                if (sweepData && sweepData.years) {
+                    s.results = FleetDispatchEngine.computeFleetDispatch(allPlants, sweepData, {
+                        ccs_derate_pct: ccsParams.derate_pct,
+                        ccs_capture_rate_pct: ccsParams.capture_rate_pct,
+                        ccs_cf_pct: ccsParams.cf_pct
+                    });
+                } else {
+                    s.results = computeScenarioResults(allPlants, tempAdded, baseline, ccsParams);
+                }
                 migrated++;
                 console.log('[fleet-sidebar] Migrated scenario "' + s.name + '" — recomputed results from params');
             } catch (err) {
@@ -1016,17 +1024,17 @@ var FleetSidebar = (function () {
     }
 
     // ── Recalculate ──
-    // Delta-based approach: uses precomputed baseline per-plant values for unmodified
-    // plants, computes only modified plants via simple formulas, then applies the
-    // per-plant delta to the precomputed baseline envelope.
+    // Full dispatch engine approach: runs all plants (modified + added) through the
+    // same FleetDispatchEngine.computeFleetDispatch() used for the baseline. This
+    // gives proper P10/P50/P90 envelopes from the parametric sweep dispatch data,
+    // with heat-rate-adjusted capacity factors for new fossil plants.
     function recalculate() {
         if (!window.FLEET_SCENARIOS_API) {
             setStatus('Error: Chart API not available');
             return;
         }
-        var precomputed = window.FLEET_SCENARIOS_API.getData();
-        if (!precomputed || !precomputed.scenarios || !precomputed.scenarios.baseline) {
-            setStatus('Error: Precomputed baseline not loaded');
+        if (!sweepData || !sweepData.years) {
+            setStatus('Error: Sweep dispatch data not loaded');
             return;
         }
 
@@ -1036,12 +1044,12 @@ var FleetSidebar = (function () {
             return;
         }
 
-        console.log('[fleet-sidebar] recalculate starting:',
+        console.log('[fleet-sidebar] recalculate starting (dispatch engine):',
             '| fleetPlants:', fleetPlants.length,
             '| addedPlants:', addedPlants.length,
             '| allPlants:', allPlants.length,
-            '| API available:', !!window.FLEET_SCENARIOS_API,
-            '| baseline years:', Object.keys(precomputed.scenarios.baseline.envelope).length);
+            '| sweepScenarios:', sweepData.n_scenarios,
+            '| sweepYears:', sweepData.years.length);
 
         setStatus('Calculating...');
         if (els.recalcBtn) {
@@ -1053,35 +1061,29 @@ var FleetSidebar = (function () {
             setTimeout(function () {
                 try {
                     var t0 = performance.now();
-                    var baseline = precomputed.scenarios.baseline;
 
-                    // Use extracted computation function
-                    lastComputedResults = computeScenarioResults(allPlants, addedPlants, baseline, ccsParams);
+                    // Run the full dispatch engine — same path as baseline, but with
+                    // user modifications and added plants included in the fleet.
+                    lastComputedResults = FleetDispatchEngine.computeFleetDispatch(
+                        allPlants, sweepData, {
+                            ccs_derate_pct: ccsParams.derate_pct,
+                            ccs_capture_rate_pct: ccsParams.capture_rate_pct,
+                            ccs_cf_pct: ccsParams.cf_pct
+                        }
+                    );
 
                     var elapsed = Math.round(performance.now() - t0);
-                    var scenarioName = (els.nameInput && els.nameInput.value.trim()) || 'Custom';
 
                     // Debug log
                     var dbgGen2030 = lastComputedResults.generation_by_fuel['2030'];
                     var dbgInt2030 = lastComputedResults.intensity_envelope['2030'];
-                    console.log('[fleet-sidebar] recalculate complete:',
+                    console.log('[fleet-sidebar] recalculate complete (dispatch engine):',
                         '| addedPlants:', addedPlants.length,
+                        '| elapsed:', elapsed + 'ms',
                         '| 2030 gen_by_fuel:', dbgGen2030 ? JSON.stringify(dbgGen2030) : 'MISSING',
                         '| 2030 intensity:', dbgInt2030 ? dbgInt2030.p50 + ' kg/MWh' : 'MISSING',
                         '| 2030 envelope:', lastComputedResults.envelope['2030'] ? JSON.stringify(lastComputedResults.envelope['2030']) : 'MISSING');
 
-                    var scenarioData = {
-                        description: scenarioName,
-                        color: '#2372B9',
-                        envelope: customEnvelope,
-                        intensity_envelope: customIntensity,
-                        plant_detail: customPlantDetail,
-                        generation_by_fuel: customGenByFuel,
-                        emissions_by_fuel: customEmisByFuel
-                    };
-
-                    // Don't auto-display on charts — user must save & name first
-                    // window.FLEET_SCENARIOS_API.setCustomScenario(scenarioName, scenarioData);
                     setStatus('Computed in ' + elapsed + 'ms — name & save to display on charts');
                     updateSaveButtonState();
                     // Auto-focus name input to encourage saving
