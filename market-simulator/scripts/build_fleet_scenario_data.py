@@ -1489,7 +1489,7 @@ def main():
     # Build all scenarios
     print("\nBuilding scenarios...")
     scenarios = {}
-    for skey in ['baseline', 'ccs_top_emitters', 'ccs_plus_new_gas', 'retire_peakers_ccs_baseload']:
+    for skey in ['baseline']:
         print(f"  Building {skey}...")
         scenarios[skey] = build_scenario(plants, fossil_plants, skey)
 
