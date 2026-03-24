@@ -504,6 +504,9 @@
                 <div class="section-eyebrow">Emissions Trajectory</div>
                 <h3>Fleet Emissions Fan Chart</h3>
                 <p>Baseline fleet trajectory (gray) with saved scenario overlays. Save a scenario to see it here.</p>
+                <label style="display:inline-flex;align-items:center;gap:6px;margin-top:6px;font-size:13px;color:#64748B;cursor:pointer;">
+                    <input type="checkbox" id="hideBaselineFan"> Hide baseline
+                </label>
             </div>
             <div class="fan-chart-container">
                 <canvas id="fanChart"></canvas>
@@ -544,6 +547,19 @@
                 <canvas id="genMixChart"></canvas>
             </div>
             <div class="chart-legend-bar" id="genMixLegend"></div>
+        </div>
+
+        <!-- CCGT Tier Capacity Factors (binned heat-rate dispatch) -->
+        <div class="chart-card" id="ccgtTierCard">
+            <div class="chart-card-header">
+                <div class="section-eyebrow">Dispatch Granularity</div>
+                <h3 id="ccgtTierTitle">CCGT Capacity Factors by Heat-Rate Tier — <span id="ccgtTierYear">2030</span></h3>
+                <p>How market conditions dispatch efficient vs. legacy CCGTs differently across 1,215 scenarios</p>
+            </div>
+            <div class="fan-chart-container">
+                <canvas id="ccgtTierChart"></canvas>
+            </div>
+            <div class="chart-legend-bar" id="ccgtTierLegend"></div>
         </div>
 
         <!-- New Clean Gen + Historical Comparison: 2-col grid -->
