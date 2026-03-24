@@ -32,6 +32,13 @@ FUEL_TYPES = ["gas_ccgt", "gas_ct", "coal_steam", "oil_ct"]
 NEW_FOSSIL_COLS = ["total_new_fossil_mw", "gas_built_gw", "fossil_built_gw",
                    "nb_gas_ccgt_mw", "nb_gas_ct_mw", "nb_coal_mw"]
 
+# 5-tier heat-rate bins for per-plant dispatch granularity
+HEAT_RATE_TIERS = ["very_low", "low", "medium", "high", "very_high"]
+# Fuels that have per-tier columns in the sweep parquet.
+# Only export gas_ccgt tiers for now — Constellation fleet focus.
+# gas_ct and coal_steam tiers available but excluded to keep JSON < 30 MB.
+TIERED_FUELS = ["gas_ccgt"]
+
 ALL_ISOS = ["CAISO", "ERCOT", "MISO", "NEISO", "NYISO", "PJM", "SPP"]
 
 
@@ -120,6 +127,24 @@ def main():
             iso_data[f"{fuel}_cf"] = np.round(cf_arr, 4).tolist()
             iso_data[f"{fuel}_margin"] = np.round(margin_arr, 2).tolist()
 
+        # Per-tier CF and margin arrays (e.g., gas_ccgt_very_low_cf)
+        for fuel in TIERED_FUELS:
+            for tier in HEAT_RATE_TIERS:
+                tier_cf_col = f"ge_{fuel}_{tier}_cf"
+                tier_margin_col = f"ge_{fuel}_{tier}_margin_mwh"
+
+                if tier_cf_col in iso_df.columns:
+                    cf_arr = np.full((n_scenarios, n_years), 0.0)
+                    vals = iso_df[tier_cf_col].fillna(0).values
+                    cf_arr[si, yi] = vals
+                    iso_data[f"{fuel}_{tier}_cf"] = np.round(cf_arr, 4).tolist()
+
+                if tier_margin_col in iso_df.columns:
+                    margin_arr = np.full((n_scenarios, n_years), 0.0)
+                    vals = iso_df[tier_margin_col].fillna(0).values
+                    margin_arr[si, yi] = vals
+                    iso_data[f"{fuel}_{tier}_margin"] = np.round(margin_arr, 2).tolist()
+
         # New fossil build columns (per-ISO, per-scenario, per-year)
         nf_cols_present = [c for c in NEW_FOSSIL_COLS if c in iso_df.columns]
         for col in nf_cols_present:
@@ -130,11 +155,20 @@ def main():
 
         data[iso] = iso_data
 
+    # Collect tier columns that were actually exported
+    tier_fuel_types = []
+    for fuel in TIERED_FUELS:
+        for tier in HEAT_RATE_TIERS:
+            col = f"ge_{fuel}_{tier}_cf"
+            if col in df.columns:
+                tier_fuel_types.append(f"{fuel}_{tier}")
+
     output = {
         "scenarios": [str(s) for s in scenarios],
         "years": [int(y) for y in years],
         "isos": [str(i) for i in isos],
         "fuel_types": FUEL_TYPES,
+        "tier_fuel_types": tier_fuel_types,
         "new_fossil_cols": [c for c in NEW_FOSSIL_COLS if c in df.columns],
         "n_scenarios": n_scenarios,
         "n_years": n_years,
