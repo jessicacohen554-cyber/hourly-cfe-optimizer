@@ -23,7 +23,8 @@ from pathlib import Path
 import pytest
 
 # ── Path setup ──
-MARKET_SIM_ROOT = Path(__file__).resolve().parent.parent
+# tests/ is two levels under scripts/, and scripts/ is one level under market-simulator/
+MARKET_SIM_ROOT = Path(__file__).resolve().parent.parent.parent
 RESULTS_DIR = MARKET_SIM_ROOT / "results"
 SWEEP_DIR = RESULTS_DIR / "sweep_1215"
 SCRIPTS_DIR = MARKET_SIM_ROOT / "scripts"
@@ -80,9 +81,11 @@ def aggregates():
 # 1. Parquet Schema & Row Count
 # ─────────────────────────────────────────────────────────────────────────────
 
-EXPECTED_ROWS = 1215 * 7 * 6  # 51,030
+EXPECTED_SCENARIOS_PER_ISO_YEAR = 2430
+EXPECTED_NUM_YEARS = 28  # 2023–2050 annual
+EXPECTED_ROWS = EXPECTED_SCENARIOS_PER_ISO_YEAR * 7 * EXPECTED_NUM_YEARS  # 476,280
 EXPECTED_ISOS = {"CAISO", "ERCOT", "PJM", "NYISO", "NEISO", "MISO", "SPP"}
-EXPECTED_YEARS = {2023, 2030, 2035, 2040, 2045, 2050}
+EXPECTED_YEARS = set(range(2023, 2051))  # 2023–2050 inclusive
 
 NEW_FOSSIL_COLS = {
     "nb_gas_ccgt_mw",
@@ -125,16 +128,16 @@ class TestParquetValidation:
         )
 
     def test_all_years_present(self, sweep_df):
-        """All 6 projection years must appear."""
+        """All projection years (2023–2050) must appear."""
         actual_years = set(sweep_df["year"].unique())
         assert actual_years == EXPECTED_YEARS, (
             f"Year mismatch. Expected {EXPECTED_YEARS}, got {actual_years}"
         )
 
     def test_scenario_count_per_iso_year(self, sweep_df):
-        """Each ISO-year combo must have exactly 1,215 scenarios."""
+        """Each ISO-year combo must have exactly 2,430 scenarios."""
         counts = sweep_df.groupby(["iso", "year"]).size()
-        bad = counts[counts != 1215]
+        bad = counts[counts != EXPECTED_SCENARIOS_PER_ISO_YEAR]
         assert bad.empty, (
             f"ISO-year combos with wrong scenario count:\n{bad}"
         )
