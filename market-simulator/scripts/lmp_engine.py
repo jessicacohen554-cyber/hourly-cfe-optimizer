@@ -108,6 +108,27 @@ TIER_CAPACITY_FRACTIONS = {
 
 TIER_NAMES = ['very_low', 'low', 'medium', 'high', 'very_high']
 
+# Fuel-specific CO2 emission factors (t CO2 per MMBtu of fuel burned).
+# Derived from EPA AP-42 emission factors:
+#   Natural gas: 53.06 kg/MMBtu = 0.05306 t/MMBtu
+#   Coal (bituminous): 95.0 kg/MMBtu = 0.0950 t/MMBtu (eGRID fleet avg)
+#   Oil (distillate): 73.16 kg/MMBtu = 0.07316 t/MMBtu
+# Used to compute per-tier CO2 rates: rate = heat_rate × fuel_factor.
+FUEL_CO2_FACTORS = {
+    'gas':  0.05286,   # t CO2/MMBtu — calibrated to existing gas_ccgt: 0.37/7.0
+    'coal': 0.09500,   # t CO2/MMBtu — calibrated to existing coal_steam: 0.95/10.0
+    'oil':  0.06190,   # t CO2/MMBtu — calibrated to existing oil_ct: 0.65/10.5
+}
+
+# Per-tier CO2 emission rates (t CO2/MWh) = tier heat rate × fuel emission factor.
+# More efficient tiers burn less fuel → emit less CO2 per MWh.
+CO2_RATES_BY_TIER = {}
+_FUEL_MAP_FOR_CO2 = {'gas_ccgt': 'gas', 'coal_steam': 'coal', 'gas_ct': 'gas'}
+for _fuel_type, _tiers in HEAT_RATE_TIERS.items():
+    _factor = FUEL_CO2_FACTORS[_FUEL_MAP_FOR_CO2[_fuel_type]]
+    for _tier, _hr in _tiers.items():
+        CO2_RATES_BY_TIER[f'{_fuel_type}_{_tier}'] = round(_hr * _factor, 4)
+
 # Variable O&M ($/MWh) — PJM SOM 2024 decomposition
 # SOM 2024 breakdown: Variable Maintenance $3.18 + Variable Operations $1.43 = $4.61 fleet avg
 # Split by technology using NREL ATB relativities
@@ -313,15 +334,16 @@ def compute_marginal_costs(fuel_level='Medium', co2_level='Medium',
             base_cost += SOX_RATES.get(unit_type, 0) * sox_price / 2000.0
         costs[unit_type] = base_cost * adder
 
-        # Per heat-rate tier costs (same VOM/CO2/NOx/SOx, different heat rate)
+        # Per heat-rate tier costs: different heat rate AND CO2 rate per tier.
+        # More efficient tiers burn less fuel per MWh → lower CO2 per MWh.
         if unit_type in HEAT_RATE_TIERS:
-            co2_rate = CO2_RATES.get(unit_type, 0.5)
             nox_rate = NOX_RATES.get(unit_type, 0)
             sox_rate = SOX_RATES.get(unit_type, 0)
             for tier, tier_hr in HEAT_RATE_TIERS[unit_type].items():
                 tier_key = f'{unit_type}_{tier}'
+                tier_co2_rate = CO2_RATES_BY_TIER.get(tier_key, CO2_RATES.get(unit_type, 0.5))
                 tier_cost = (tier_hr * fp[fuel_key] + vm[unit_type]
-                             + co2_rate * co2_price)
+                             + tier_co2_rate * co2_price)
                 if nox_price > 0:
                     tier_cost += nox_rate * nox_price / 2000.0
                 if sox_price > 0:
