@@ -420,10 +420,15 @@ var FleetDispatchEngine = (function () {
                 var scenarioMargin = hasSweepArrays ? marginArrays[si2] : null;
 
                 for (var yi3 = 0; yi3 < nYears; yi3++) {
-                    // For historic years with Rosetta actuals and no user action, use actual data directly
+                    // For historic years with Rosetta actuals, use actual data directly.
+                    // Allow historic path for: no action, CCS before online year, retired plants
+                    // (actions that haven't taken effect yet should use real data).
                     var historicGen = actualGen[String(years[yi3])];
                     var historicEmis = actualEmis[String(years[yi3])];
-                    if (historicGen != null && historicGen > 0 && !action) {
+                    var useHistoric = !action ||
+                        (action === 'ccs_retrofit' && yearOnline && years[yi3] < yearOnline) ||
+                        (action === 'retire' && yearOnline && years[yi3] < yearOnline);
+                    if (historicGen != null && historicGen > 0 && useHistoric) {
                         var hGenMwh = historicGen;
                         var hEmisMt = (historicEmis || 0) / 1e6; // tons → Mt
                         var hCf = (capMW > 0) ? hGenMwh / (capMW * 8760) : 0;
@@ -453,7 +458,7 @@ var FleetDispatchEngine = (function () {
                     var adjustedCf = Math.min(baseCf * efficiencyRatio, 0.95);
 
                     // Economic retirement — only for default_market plants (no action set)
-                    // operating_override skips this: plant runs at sweep CF regardless of margin
+                    // operating_override and ccs_retrofit skip this: they run regardless of margin
                     var isDefaultMarket = !action || action === 'default_market';
                     if (isDefaultMarket && yearHasData[yi3] && margin < 0) adjustedCf = 0;
 
