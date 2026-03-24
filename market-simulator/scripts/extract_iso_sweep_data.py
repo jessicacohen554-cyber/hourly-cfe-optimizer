@@ -36,27 +36,56 @@ ENVELOPE_METRICS = [
     "mix_ccs_ccgt_twh", "mix_hydro_twh", "mix_clean_firm_twh",
     # Generator economics — fleet aggregate
     "ge_gas_ccgt_cf", "ge_gas_ccgt_margin_mwh", "ge_gas_ccgt_capacity_mw",
-    "ge_gas_ct_cf", "ge_gas_ct_margin_mwh",
+    "ge_gas_ct_cf", "ge_gas_ct_margin_mwh", "ge_gas_ct_capacity_mw",
     "ge_coal_steam_cf", "ge_coal_steam_margin_mwh", "ge_coal_steam_capacity_mw",
-    # Generator economics — per heat-rate tier (5 tiers: very_low → very_high)
+    "ge_oil_ct_cf", "ge_oil_ct_margin_mwh", "ge_oil_ct_capacity_mw",
+    # Generator economics — per heat-rate tier: CCGT (5 tiers: very_low → very_high)
     "ge_gas_ccgt_very_low_cf", "ge_gas_ccgt_very_low_margin_mwh", "ge_gas_ccgt_very_low_capacity_mw",
     "ge_gas_ccgt_low_cf", "ge_gas_ccgt_low_margin_mwh", "ge_gas_ccgt_low_capacity_mw",
     "ge_gas_ccgt_medium_cf", "ge_gas_ccgt_medium_margin_mwh", "ge_gas_ccgt_medium_capacity_mw",
     "ge_gas_ccgt_high_cf", "ge_gas_ccgt_high_margin_mwh", "ge_gas_ccgt_high_capacity_mw",
     "ge_gas_ccgt_very_high_cf", "ge_gas_ccgt_very_high_margin_mwh", "ge_gas_ccgt_very_high_capacity_mw",
-    "ge_coal_steam_very_low_cf", "ge_coal_steam_low_cf", "ge_coal_steam_medium_cf",
-    "ge_coal_steam_high_cf", "ge_coal_steam_very_high_cf",
+    # Generator economics — per heat-rate tier: Gas CT (5 tiers)
+    "ge_gas_ct_very_low_cf", "ge_gas_ct_very_low_margin_mwh", "ge_gas_ct_very_low_capacity_mw",
+    "ge_gas_ct_low_cf", "ge_gas_ct_low_margin_mwh", "ge_gas_ct_low_capacity_mw",
+    "ge_gas_ct_medium_cf", "ge_gas_ct_medium_margin_mwh", "ge_gas_ct_medium_capacity_mw",
+    "ge_gas_ct_high_cf", "ge_gas_ct_high_margin_mwh", "ge_gas_ct_high_capacity_mw",
+    "ge_gas_ct_very_high_cf", "ge_gas_ct_very_high_margin_mwh", "ge_gas_ct_very_high_capacity_mw",
+    # Generator economics — per heat-rate tier: Coal (5 tiers)
+    "ge_coal_steam_very_low_cf", "ge_coal_steam_very_low_margin_mwh", "ge_coal_steam_very_low_capacity_mw",
+    "ge_coal_steam_low_cf", "ge_coal_steam_low_margin_mwh", "ge_coal_steam_low_capacity_mw",
+    "ge_coal_steam_medium_cf", "ge_coal_steam_medium_margin_mwh", "ge_coal_steam_medium_capacity_mw",
+    "ge_coal_steam_high_cf", "ge_coal_steam_high_margin_mwh", "ge_coal_steam_high_capacity_mw",
+    "ge_coal_steam_very_high_cf", "ge_coal_steam_very_high_margin_mwh", "ge_coal_steam_very_high_capacity_mw",
     # Nuclear
     "nuc_energy_rev_mwh", "nuc_capacity_rev_mwh", "nuc_ptc_mwh", "nuc_total_mwh",
+    "nuclear_retired",
     # CCS breakeven
     "ccs_be_ccs_vs_existing_carbon_price", "ccs_be_new_gas_vs_old_carbon_price",
-    "ccs_be_ccs_lcoe",
-    # Retirements by fuel
-    "ret_gas_ccgt_mw", "ret_gas_ct_mw", "ret_oil_ct_mw", "ret_coal_steam_mw",
+    "ccs_be_ccs_lcoe", "ccs_be_existing_ccgt_var_cost",
+    # Retirements — aggregate
+    "ret_gas_ct_mw", "ret_oil_ct_mw", "ret_coal_steam_mw",
+    # Retirements — per heat-rate tier: CCGT
+    "ret_gas_ccgt_low_mw", "ret_gas_ccgt_medium_mw",
+    "ret_gas_ccgt_high_mw", "ret_gas_ccgt_very_high_mw",
+    # Retirements — per heat-rate tier: Gas CT
+    "ret_gas_ct_very_low_mw", "ret_gas_ct_low_mw", "ret_gas_ct_medium_mw",
+    "ret_gas_ct_high_mw", "ret_gas_ct_very_high_mw",
+    # Retirements — per heat-rate tier: Coal
+    "ret_coal_steam_very_low_mw", "ret_coal_steam_low_mw", "ret_coal_steam_medium_mw",
+    "ret_coal_steam_high_mw", "ret_coal_steam_very_high_mw",
+    # Retirements — by EIA fuel code
+    "ret_NG_mw", "ret_SUB_mw", "ret_LIG_mw", "ret_PC_mw",
+    "ret_DFO_mw", "ret_LFG_mw", "ret_OG_mw",
     # New builds
     "nb_gas_ccgt_mw", "nb_gas_ct_mw",
+    "fossil_built_gw", "gas_built_gw", "total_gas_gw",
     # Emissions by fuel
-    "emis_gas_ccgt_mt", "emis_coal_mt", "emis_oil_mt",
+    "emis_gas_mt", "emis_coal_mt", "emis_oil_mt",
+    # RPS compliance
+    "rps_eligible_pct", "rps_mandated_pct", "rps_shortfall_pct",
+    # ACP costs
+    "acp_cost_million", "cumulative_acp_million",
 ]
 
 # CEG asset metrics for archetype analysis
@@ -66,15 +95,20 @@ CEG_METRICS = [
     # Per heat-rate tier CCGT CFs (Constellation fleet dispatch fidelity)
     "ge_gas_ccgt_very_low_cf", "ge_gas_ccgt_low_cf", "ge_gas_ccgt_medium_cf",
     "ge_gas_ccgt_high_cf", "ge_gas_ccgt_very_high_cf",
-    "ge_gas_ct_cf", "ge_gas_ct_margin_mwh",
+    # Per heat-rate tier Gas CT CFs
+    "ge_gas_ct_cf", "ge_gas_ct_margin_mwh", "ge_gas_ct_capacity_mw",
+    "ge_gas_ct_very_low_cf", "ge_gas_ct_low_cf", "ge_gas_ct_medium_cf",
+    "ge_gas_ct_high_cf", "ge_gas_ct_very_high_cf",
     "emissions_mt", "clean_pct", "avg_lmp",
-    "ret_gas_ccgt_mw", "ret_gas_ct_mw",
+    "ret_gas_ct_mw", "ret_coal_steam_mw",
     "total_economic_retirement_mw",
+    "fossil_built_gw", "rps_shortfall_pct",
 ]
 
 SENSITIVITY_METRICS = [
     "avg_lmp", "clean_pct", "emissions_mt",
     "ge_gas_ccgt_cf", "nuc_total_mwh", "total_economic_retirement_mw",
+    "rps_shortfall_pct", "fossil_built_gw",
 ]
 
 PERCENTILES = [10, 25, 50, 75, 90]
@@ -122,6 +156,9 @@ def compute_envelopes(df: pd.DataFrame) -> dict:
                 vals = ydf[metric].dropna()
                 if len(vals) == 0:
                     continue
+                # Convert boolean columns to float for percentile computation
+                if vals.dtype == bool or vals.dtype == 'boolean':
+                    vals = vals.astype(float)
                 year_data[metric] = {
                     f"p{p}": round(float(np.percentile(vals, p)), 4)
                     for p in PERCENTILES
