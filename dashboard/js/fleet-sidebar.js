@@ -35,7 +35,7 @@ var FleetSidebar = (function () {
         ldes: 'LDES (Iron-Air)', pumped_storage: 'Pumped Storage'
     };
 
-    var FOSSIL_FUELS = new Set(['gas_ccgt', 'gas_ct', 'oil_ct', 'gas_oil_ct']);
+    var FOSSIL_FUELS = new Set(['gas_ccgt', 'gas_ct', 'coal_steam', 'oil_ct', 'gas_oil_ct']);
 
     // ── DOM refs ──
     var els = {};
@@ -326,6 +326,144 @@ var FleetSidebar = (function () {
         }
     }
 
+    // ── Rebase engine results onto Python baseline ──
+    // Computes: Python baseline + (engine_custom - engine_baseline)
+    // This preserves Python's authoritative absolute values while applying
+    // only the user's modification deltas from the engine.
+    var CLEAN_FUEL_SET = { nuclear: 1, geothermal: 1, wind: 1, solar: 1, hydro: 1, battery: 1, ldes: 1, ccs_ccgt: 1 };
+    var ALL_FUELS = ['coal_steam', 'gas_ccgt', 'gas_ct', 'oil_ct', 'gas_oil_ct', 'nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'ccs_ccgt', 'battery', 'ldes'];
+
+    function rebaseOnPythonBaseline(engineCustom, engineBase, pyBaseline) {
+        var result = {
+            envelope: {},
+            intensity_envelope: {},
+            generation_by_fuel: {},
+            emissions_by_fuel: {},
+            plant_detail: {},
+            fleet_summary: engineCustom.fleet_summary
+        };
+
+        // Use union of years from Python baseline and engine
+        var years = Object.keys(pyBaseline.envelope || {});
+
+        years.forEach(function (yr) {
+            // ── Envelope: rebase P10/P50/P90 emissions ──
+            var pyEnv = (pyBaseline.envelope || {})[yr] || { p10: 0, p50: 0, p90: 0 };
+            var ecEnv = (engineCustom.envelope || {})[yr] || { p10: 0, p50: 0, p90: 0 };
+            var ebEnv = (engineBase.envelope || {})[yr] || { p10: 0, p50: 0, p90: 0 };
+
+            result.envelope[yr] = {
+                p10: Math.round((pyEnv.p10 + (ecEnv.p10 - ebEnv.p10)) * 100) / 100,
+                p50: Math.round((pyEnv.p50 + (ecEnv.p50 - ebEnv.p50)) * 100) / 100,
+                p90: Math.round((pyEnv.p90 + (ecEnv.p90 - ebEnv.p90)) * 100) / 100
+            };
+            // Floor at 0
+            if (result.envelope[yr].p10 < 0) result.envelope[yr].p10 = 0;
+            if (result.envelope[yr].p50 < 0) result.envelope[yr].p50 = 0;
+            if (result.envelope[yr].p90 < 0) result.envelope[yr].p90 = 0;
+
+            // ── Intensity envelope: rebase if available ──
+            var pyInt = (pyBaseline.intensity_envelope || {})[yr];
+            var ecInt = (engineCustom.intensity_envelope || {})[yr];
+            var ebInt = (engineBase.intensity_envelope || {})[yr];
+            if (ecInt && ebInt) {
+                var baseP50 = pyInt ? pyInt.p50 : ebInt.p50;
+                var baseP10 = pyInt ? pyInt.p10 : ebInt.p10;
+                var baseP90 = pyInt ? pyInt.p90 : ebInt.p90;
+                result.intensity_envelope[yr] = {
+                    p10: Math.round((baseP10 + (ecInt.p10 - ebInt.p10)) * 100) / 100,
+                    p50: Math.round((baseP50 + (ecInt.p50 - ebInt.p50)) * 100) / 100,
+                    p90: Math.round((baseP90 + (ecInt.p90 - ebInt.p90)) * 100) / 100
+                };
+            }
+
+            // ── Generation by fuel: rebase per fuel ──
+            var pyGen = (pyBaseline.generation_by_fuel || {})[yr] || {};
+            var ecGen = (engineCustom.generation_by_fuel || {})[yr] || {};
+            var ebGen = (engineBase.generation_by_fuel || {})[yr] || {};
+            var genObj = {};
+            var newCleanGen = {};
+
+            ALL_FUELS.forEach(function (fuel) {
+                var pyVal = pyGen[fuel] || 0;
+                var ecVal = ecGen[fuel] || 0;
+                var ebVal = ebGen[fuel] || 0;
+                var delta = ecVal - ebVal;
+                genObj[fuel] = Math.round((pyVal + delta) * 100) / 100;
+
+                // Track new clean gen: for CCS show full custom value (fuel switch),
+                // for other clean fuels show only the positive delta
+                if (CLEAN_FUEL_SET[fuel]) {
+                    var cleanDelta = (fuel === 'ccs_ccgt') ? ecVal : delta;
+                    if (cleanDelta > 0.001) {
+                        newCleanGen[fuel] = Math.round(cleanDelta * 100) / 100;
+                    }
+                }
+            });
+            genObj._new_clean_gen = newCleanGen;
+            result.generation_by_fuel[yr] = genObj;
+
+            // ── Emissions by fuel: rebase per fuel ──
+            var pyEmis = (pyBaseline.emissions_by_fuel || {})[yr] || {};
+            var ecEmis = (engineCustom.emissions_by_fuel || {})[yr] || {};
+            var ebEmis = (engineBase.emissions_by_fuel || {})[yr] || {};
+            var emisObj = {};
+
+            ALL_FUELS.forEach(function (fuel) {
+                var pyVal = pyEmis[fuel] || 0;
+                var ecVal = ecEmis[fuel] || 0;
+                var ebVal = ebEmis[fuel] || 0;
+                var delta = ecVal - ebVal;
+                emisObj[fuel] = Math.round((pyVal + delta) * 1000) / 1000;
+                if (emisObj[fuel] < 0) emisObj[fuel] = 0;
+            });
+            result.emissions_by_fuel[yr] = emisObj;
+
+            // ── Plant detail: use Python baseline plants, replace modified ones ──
+            var pyPlants = (pyBaseline.plant_detail || {})[yr] || [];
+            var ecPlants = (engineCustom.plant_detail || {})[yr] || [];
+
+            // Index engine plants by orispl for fast lookup
+            var ecPlantMap = {};
+            ecPlants.forEach(function (p) {
+                if (p.orispl) ecPlantMap[p.orispl] = p;
+                // Also index by name for added plants (no orispl in Python baseline)
+                if (p.name) ecPlantMap['name:' + p.name] = p;
+            });
+
+            // Build modified plant set (plants with user actions)
+            var modifiedOrispl = {};
+            fleetPlants.forEach(function (p) {
+                if (p._action && p.orispl) modifiedOrispl[p.orispl] = true;
+            });
+
+            var mergedPlants = pyPlants.map(function (pyP) {
+                if (pyP.orispl && modifiedOrispl[pyP.orispl] && ecPlantMap[pyP.orispl]) {
+                    // Use engine values for modified plants
+                    return ecPlantMap[pyP.orispl];
+                }
+                return pyP; // Keep Python values for unmodified plants
+            });
+
+            // Add any new plants (from addedPlants) that aren't in Python baseline
+            addedPlants.forEach(function (ap) {
+                var key = ap.orispl ? String(ap.orispl) : ('name:' + ap.name);
+                var enginePlant = ecPlantMap[key] || ecPlantMap['name:' + ap.name];
+                if (enginePlant) {
+                    mergedPlants.push(enginePlant);
+                }
+            });
+
+            result.plant_detail[yr] = mergedPlants;
+        });
+
+        return result;
+    }
+
+    // Shadow engine baseline — used ONLY for computing deltas.
+    // We do NOT replace the displayed baseline (precomputed Python pipeline is more accurate).
+    var engineBaseline = null;
+
     function computeAndSetBaseline() {
         // Use unmodified base fleet (no _action flags) — this IS the market trajectory
         var unmodifiedFleet = baseFleet.map(function (p) {
@@ -344,28 +482,14 @@ var FleetSidebar = (function () {
                 ccs_cf_pct: 85
             });
 
-            // Push to chart system as the BASELINE (replacing precomputed JSON baseline).
-            // Retry if FLEET_SCENARIOS_API or DATA aren't ready yet (race with JSON fetch).
-            function applyBaseline(retries) {
-                if (window.FLEET_SCENARIOS_API && window.FLEET_SCENARIOS_API.getData()) {
-                    window.FLEET_SCENARIOS_API.setComputedBaseline({
-                        envelope: result.envelope,
-                        intensity_envelope: result.intensity_envelope,
-                        plant_detail: result.plant_detail,
-                        generation_by_fuel: result.generation_by_fuel,
-                        emissions_by_fuel: result.emissions_by_fuel,
-                        fleet_summary: result.fleet_summary
-                    });
-                    console.log('Baseline computed via dispatch engine — unified with custom scenario path');
-                } else if (retries > 0) {
-                    setTimeout(function () { applyBaseline(retries - 1); }, 300);
-                } else {
-                    console.warn('Baseline auto-compute: FLEET_SCENARIOS_API/DATA not ready after retries');
-                }
-            }
-            applyBaseline(20); // Up to 6 seconds of retries
+            // Store as shadow baseline for delta calculations only.
+            // The precomputed Python baseline remains the displayed baseline —
+            // it uses more sophisticated modeling (proper economic retirement,
+            // CCS heat rate penalties, calibrated sweep handling for 2023).
+            engineBaseline = result;
+            console.log('Shadow engine baseline computed (for delta calculations only)');
         } catch (err) {
-            console.warn('Baseline auto-compute failed, falling back to precomputed JSON:', err);
+            console.warn('Shadow engine baseline computation failed:', err);
         }
     }
 
@@ -1071,9 +1195,8 @@ var FleetSidebar = (function () {
                 try {
                     var t0 = performance.now();
 
-                    // Run the full dispatch engine — same path as baseline, but with
-                    // user modifications and added plants included in the fleet.
-                    lastComputedResults = FleetDispatchEngine.computeFleetDispatch(
+                    // Run the full dispatch engine with user modifications.
+                    var engineCustom = FleetDispatchEngine.computeFleetDispatch(
                         allPlants, sweepData, {
                             ccs_derate_pct: ccsParams.derate_pct,
                             ccs_capture_rate_pct: ccsParams.capture_rate_pct,
@@ -1081,44 +1204,34 @@ var FleetSidebar = (function () {
                         }
                     );
 
-                    // ── Post-process: compute _new_clean_gen layer ──
-                    // Track incremental clean generation from user modifications
-                    // (uprates, CCS retrofits, operating overrides, added plants)
-                    var baselineData = window.FLEET_SCENARIOS_API ? window.FLEET_SCENARIOS_API.getData() : null;
-                    var baselineGenByFuel = (baselineData && baselineData.scenarios && baselineData.scenarios.baseline) ?
-                        baselineData.scenarios.baseline.generation_by_fuel : {};
+                    // ── REBASE: Python baseline + engine deltas ──
+                    // The engine computes the whole fleet but its absolute values
+                    // differ from the Python pipeline (~14 Mt). We only trust the
+                    // engine for DELTAS caused by user modifications.
+                    // Result = Python baseline + (engine_custom - engine_baseline)
+                    var pyData = window.FLEET_SCENARIOS_API ? window.FLEET_SCENARIOS_API.getData() : null;
+                    var pyBaseline = (pyData && pyData.scenarios && pyData.scenarios.baseline) ? pyData.scenarios.baseline : null;
 
-                    var cleanFuelSet = { nuclear: 1, geothermal: 1, wind: 1, solar: 1, hydro: 1, battery: 1, ldes: 1, ccs_ccgt: 1 };
-                    var years = Object.keys(lastComputedResults.generation_by_fuel);
-                    years.forEach(function (yr) {
-                        var custGen = lastComputedResults.generation_by_fuel[yr];
-                        var baseGen = baselineGenByFuel[yr] || {};
-                        var newClean = {};
-
-                        Object.keys(cleanFuelSet).forEach(function (fuel) {
-                            var custVal = custGen[fuel] || 0;
-                            var baseVal = baseGen[fuel] || 0;
-                            // CCS: full value is "new clean" (fuel switch from gas_ccgt)
-                            // Others: only the increment above baseline
-                            var delta = (fuel === 'ccs_ccgt') ? custVal : (custVal - baseVal);
-                            if (delta > 0.001) {
-                                newClean[fuel] = Math.round(delta * 100) / 100;
-                            }
-                        });
-                        custGen._new_clean_gen = newClean;
-                    });
+                    if (pyBaseline && engineBaseline) {
+                        lastComputedResults = rebaseOnPythonBaseline(engineCustom, engineBaseline, pyBaseline);
+                    } else {
+                        // Fallback: no Python baseline available, use raw engine results
+                        console.warn('[fleet-sidebar] No Python baseline for rebasing — using raw engine values');
+                        lastComputedResults = engineCustom;
+                    }
 
                     var elapsed = Math.round(performance.now() - t0);
 
                     // Debug log
                     var dbgGen2030 = lastComputedResults.generation_by_fuel['2030'];
-                    var dbgInt2030 = lastComputedResults.intensity_envelope['2030'];
-                    console.log('[fleet-sidebar] recalculate complete (dispatch engine):',
+                    var dbgEnv2030 = lastComputedResults.envelope['2030'];
+                    var dbgNewClean2030 = dbgGen2030 ? dbgGen2030._new_clean_gen : null;
+                    console.log('[fleet-sidebar] recalculate complete (rebased):',
                         '| addedPlants:', addedPlants.length,
                         '| elapsed:', elapsed + 'ms',
-                        '| 2030 gen_by_fuel:', dbgGen2030 ? JSON.stringify(dbgGen2030) : 'MISSING',
-                        '| 2030 intensity:', dbgInt2030 ? dbgInt2030.p50 + ' kg/MWh' : 'MISSING',
-                        '| 2030 envelope:', lastComputedResults.envelope['2030'] ? JSON.stringify(lastComputedResults.envelope['2030']) : 'MISSING');
+                        '| 2030 envelope:', dbgEnv2030 ? JSON.stringify(dbgEnv2030) : 'MISSING',
+                        '| 2030 _new_clean_gen:', dbgNewClean2030 ? JSON.stringify(dbgNewClean2030) : 'NONE',
+                        '| 2030 gen_by_fuel:', dbgGen2030 ? JSON.stringify(dbgGen2030) : 'MISSING');
 
                     setStatus('Computed in ' + elapsed + 'ms — name & save to display on charts');
                     updateSaveButtonState();

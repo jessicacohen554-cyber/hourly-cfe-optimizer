@@ -1051,7 +1051,7 @@
         var scenarioToCompare = getSelectedLowerScenario();
         var scPlants = scenarioToCompare.plant_detail ? scenarioToCompare.plant_detail[yr] : null;
 
-        // 2023 baseline from engine-computed baseline
+        // 2023 actual emissions baseline — fixed reference point
         var base2023Plants = DATA.scenarios.baseline.plant_detail ?
             DATA.scenarios.baseline.plant_detail['2023'] : null;
 
