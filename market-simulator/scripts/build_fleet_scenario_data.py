@@ -81,18 +81,80 @@ HEAT_RATES = {
 # ── Simulation years ──
 YEARS = list(range(2023, 2051))  # Annual: 2023–2050 (28 years)
 
+# ── Vintage → heat-rate tier mapping ──
+# Maps plant first-in-service year to the sweep's 5-tier heat-rate bins.
+# Based on turbine technology eras:
+#   very_low  = 2010+ (H/J-class, HA-class; HR 6.2 MMBtu/MWh)
+#   low       = 2002-2009 (F-class at peak efficiency; HR 6.8)
+#   medium    = 1998-2001 (early F-class / multi-shaft 2×1; HR 7.5)
+#   high      = 1993-1997 (E-class / early F; HR 8.1)
+#   very_high = pre-1993 (B/D/E legacy CCGTs; HR 9.0)
+# For coal_steam: similar mapping but coal vintages are older:
+#   very_low  = 2005+ (supercritical / ultra-supercritical)
+#   low       = 1990-2004 (efficient subcritical w/ FGD)
+#   medium    = 1975-1989 (fleet average subcritical)
+#   high      = 1965-1974 (older subcritical)
+#   very_high = pre-1965 (oldest units)
+# Gas CTs: same as CCGT thresholds (aeroderivative vs frame)
+VINTAGE_TIER_THRESHOLDS = {
+    'gas_ccgt': [
+        (2010, 'very_low'),
+        (2002, 'low'),
+        (1998, 'medium'),
+        (1993, 'high'),
+        (0,    'very_high'),
+    ],
+    'coal_steam': [
+        (2005, 'very_low'),
+        (1990, 'low'),
+        (1975, 'medium'),
+        (1965, 'high'),
+        (0,    'very_high'),
+    ],
+    'gas_ct': [
+        (2010, 'very_low'),
+        (2002, 'low'),
+        (1998, 'medium'),
+        (1993, 'high'),
+        (0,    'very_high'),
+    ],
+}
+
+
+def vintage_to_tier(fuel_type, year_built):
+    """Map plant vintage to heat-rate tier.
+
+    Returns tier name ('very_low' through 'very_high') or 'medium' as fallback.
+    """
+    thresholds = VINTAGE_TIER_THRESHOLDS.get(fuel_type)
+    if not thresholds or not year_built:
+        return 'medium'
+    for min_year, tier in thresholds:
+        if year_built >= min_year:
+            return tier
+    return 'very_high'
+
+
 # ── Capacity factors by fuel type ──
 # Used to estimate annual generation from actual plant capacity
 SWEEP_PARQUET_PATH = os.path.join(
     SCRIPT_DIR, '..', 'results', 'sweep_1215', 'sweep_1215_flat.parquet'
 )
 
-# Mapping from fleet fuel types to sweep CF column names
+# Mapping from fleet fuel types to sweep CF column names.
+# Includes both aggregate (backward compat) and per-tier columns.
 SWEEP_CF_COLS = {
     'gas_ccgt': 'ge_gas_ccgt_cf',
     'gas_ct': 'ge_gas_ct_cf',
     'oil_ct': 'ge_oil_ct_cf',
 }
+
+# Per-tier sweep CF columns — used for plant-level dispatch granularity.
+# Keys are (fuel_type, tier) tuples → sweep parquet column name.
+SWEEP_TIER_CF_COLS = {}
+for _ft in ('gas_ccgt', 'gas_ct', 'coal_steam'):
+    for _tier in ('very_low', 'low', 'medium', 'high', 'very_high'):
+        SWEEP_TIER_CF_COLS[(_ft, _tier)] = f'ge_{_ft}_{_tier}_cf'
 
 CAPACITY_FACTORS = {
     'nuclear': 0.93,
@@ -184,6 +246,7 @@ def load_sweep_cf_percentiles():
             yr_df = iso_df[iso_df['year'] == year]
             year_int = int(year)
             result[iso][year_int] = {}
+            # Aggregate fuel-type CFs (backward compat)
             for fuel, col in SWEEP_CF_COLS.items():
                 vals = yr_df[col].dropna()
                 if len(vals) > 10:
@@ -192,6 +255,17 @@ def load_sweep_cf_percentiles():
                         'p50': float(vals.quantile(0.50)),
                         'p90': float(vals.quantile(0.90)),
                     }
+            # Per-tier CFs (e.g., gas_ccgt_very_low, gas_ccgt_high)
+            for (fuel, tier), col in SWEEP_TIER_CF_COLS.items():
+                if col in yr_df.columns:
+                    vals = yr_df[col].dropna()
+                    if len(vals) > 10:
+                        tier_key = f'{fuel}_{tier}'
+                        result[iso][year_int][tier_key] = {
+                            'p10': float(vals.quantile(0.10)),
+                            'p50': float(vals.quantile(0.50)),
+                            'p90': float(vals.quantile(0.90)),
+                        }
 
     sweep_years = set()
     for iso_data in result.values():
@@ -235,9 +309,10 @@ def compute_fleet_emissions_sweep(plants, year, scenario='baseline',
                 'p90': base_emissions_mt}
 
     # Separate fixed emissions (non-fossil, actuals, overrides) from
-    # variable emissions (modeled fossil, subject to market conditions)
+    # variable emissions (modeled fossil, subject to market conditions).
+    # Key by (iso, fuel, tier) for per-tier sweep CF lookup.
     fixed_emissions = 0.0
-    variable_by_iso_fuel = defaultdict(float)  # (iso, fuel) -> base emissions Mt
+    variable_by_iso_fuel = defaultdict(float)  # (iso, fuel, tier) -> base emissions Mt
 
     for p in plants:
         fuel = p['fuel_type']
@@ -281,7 +356,8 @@ def compute_fleet_emissions_sweep(plants, year, scenario='baseline',
         co2_rate = get_plant_co2_rate(p, fuel)
         base_em = base_gen_twh * co2_rate
         iso = p.get('iso', '')
-        variable_by_iso_fuel[(iso, fuel)] += base_em
+        tier = p.get('heat_rate_tier', 'medium')
+        variable_by_iso_fuel[(iso, fuel, tier)] += base_em
 
     # Apply sweep CF percentiles to variable emissions.
     # Use the sweep's absolute P50 CF trajectory (normalized to 2024 reference)
@@ -290,13 +366,17 @@ def compute_fleet_emissions_sweep(plants, year, scenario='baseline',
     totals = {'p10': fixed_emissions, 'p50': fixed_emissions,
               'p90': fixed_emissions}
 
-    for (iso, fuel), base_em in variable_by_iso_fuel.items():
+    for (iso, fuel, tier), base_em in variable_by_iso_fuel.items():
         sweep_fuel = fuel if fuel != 'gas_oil_ct' else 'gas_ct'
         iso_year = sweep.get(iso, {}).get(year, {})
-        fuel_pcts = iso_year.get(sweep_fuel)
 
-        # Get 2024 reference CF to normalize the sweep trajectory
-        ref_pcts = sweep.get(iso, {}).get(2024, {}).get(sweep_fuel)
+        # Prefer per-tier CF (e.g., 'gas_ccgt_very_low'); fall back to aggregate
+        tier_key = f'{sweep_fuel}_{tier}'
+        fuel_pcts = iso_year.get(tier_key) or iso_year.get(sweep_fuel)
+
+        # Reference: use per-tier 2024 CF, falling back to aggregate
+        ref_year = sweep.get(iso, {}).get(2024, {})
+        ref_pcts = ref_year.get(tier_key) or ref_year.get(sweep_fuel)
 
         if (fuel_pcts and fuel_pcts['p50'] > 0.001
                 and ref_pcts and ref_pcts['p50'] > 0.001
@@ -304,7 +384,6 @@ def compute_fleet_emissions_sweep(plants, year, scenario='baseline',
             # Scale base_em from linear model → sweep-based trajectory.
             # base_em was computed with linear year_factor; replace it with
             # the sweep's CF ratio relative to 2024 reference.
-            # sweep_scale = (sweep_cf[year] / sweep_cf[2024]) / year_factor
             inv_linear = 1.0 / year_factor
             ref_cf = ref_pcts['p50']
             totals['p10'] += base_em * inv_linear * fuel_pcts['p10'] / ref_cf
@@ -607,6 +686,9 @@ def parse_rosetta():
             # Rosetta already has correct equity-weighted values for both years
             # projection_base is already set to gen_2024 above for non-solar
 
+            # Assign heat-rate tier from vintage for per-tier dispatch CF
+            tier = vintage_to_tier(fuel, year_built)
+
             plants.append({
                 'name': name,
                 'fuel_type': fuel,
@@ -618,6 +700,7 @@ def parse_rosetta():
                 'orispl': orispl,
                 'ccs_eligible': ccs_eligible,
                 'year_built': year_built,
+                'heat_rate_tier': tier,
                 'stat_type': stat_type,
                 'group': group,
                 'plant_type': plant_type_csv,
@@ -1086,6 +1169,8 @@ def build_plant_detail(fossil_plants, year, scenario='baseline', retired_fuels=N
         if is_retired:
             details.append({
                 'name': name, 'orispl': orispl, 'fuel_type': fuel,
+                'heat_rate_tier': p.get('heat_rate_tier', 'medium'),
+                'year_built': p.get('year_built'),
                 'capacity_mw': round(cap, 1),
                 'ccs_capacity_mw': round(p['ccs_capacity_mw'], 1),
                 'gen_twh': 0.0, 'emissions_mt': 0.0, 'status': 'retired'
@@ -1124,6 +1209,8 @@ def build_plant_detail(fossil_plants, year, scenario='baseline', retired_fuels=N
 
         details.append({
             'name': name, 'orispl': orispl, 'fuel_type': fuel,
+            'heat_rate_tier': p.get('heat_rate_tier', 'medium'),
+            'year_built': p.get('year_built'),
             'capacity_mw': round(cap, 1),
             'ccs_capacity_mw': round(p['ccs_capacity_mw'], 1),
             'gen_twh': gen_twh, 'emissions_mt': emissions_mt, 'status': status
