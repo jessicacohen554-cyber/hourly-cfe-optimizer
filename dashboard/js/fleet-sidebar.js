@@ -362,20 +362,9 @@ var FleetSidebar = (function () {
             if (result.envelope[yr].p50 < 0) result.envelope[yr].p50 = 0;
             if (result.envelope[yr].p90 < 0) result.envelope[yr].p90 = 0;
 
-            // ── Intensity envelope: rebase if available ──
-            var pyInt = (pyBaseline.intensity_envelope || {})[yr];
-            var ecInt = (engineCustom.intensity_envelope || {})[yr];
-            var ebInt = (engineBase.intensity_envelope || {})[yr];
-            if (ecInt && ebInt) {
-                var baseP50 = pyInt ? pyInt.p50 : ebInt.p50;
-                var baseP10 = pyInt ? pyInt.p10 : ebInt.p10;
-                var baseP90 = pyInt ? pyInt.p90 : ebInt.p90;
-                result.intensity_envelope[yr] = {
-                    p10: Math.round((baseP10 + (ecInt.p10 - ebInt.p10)) * 100) / 100,
-                    p50: Math.round((baseP50 + (ecInt.p50 - ebInt.p50)) * 100) / 100,
-                    p90: Math.round((baseP90 + (ecInt.p90 - ebInt.p90)) * 100) / 100
-                };
-            }
+            // ── Intensity envelope: computed AFTER generation & emissions rebasing ──
+            // (Intensity = emissions/generation is a ratio — cannot be rebased as additive delta.
+            //  We derive it from the rebased totals below.)
 
             // ── Generation by fuel: rebase per fuel ──
             var pyGen = (pyBaseline.generation_by_fuel || {})[yr] || {};
@@ -418,6 +407,20 @@ var FleetSidebar = (function () {
                 if (emisObj[fuel] < 0) emisObj[fuel] = 0;
             });
             result.emissions_by_fuel[yr] = emisObj;
+
+            // ── Intensity envelope: derive from rebased emissions / rebased generation ──
+            // Intensity is a ratio (kgCO2/MWh) so it must be computed from totals, not rebased as a delta.
+            var totalGenTwh = 0;
+            var totalEmisMt = 0;
+            Object.keys(genObj).forEach(function (f) { if (f[0] !== '_') totalGenTwh += genObj[f] || 0; });
+            Object.keys(emisObj).forEach(function (f) { if (f[0] !== '_') totalEmisMt += emisObj[f] || 0; });
+            // Mt/TWh × 1e3 = kgCO2/MWh
+            var intensityKg = totalGenTwh > 0 ? (totalEmisMt / totalGenTwh) * 1e3 : 0;
+            result.intensity_envelope[yr] = {
+                p10: Math.round(intensityKg * 100) / 100,
+                p50: Math.round(intensityKg * 100) / 100,
+                p90: Math.round(intensityKg * 100) / 100
+            };
 
             // ── Plant detail: use Python baseline plants, replace modified ones ──
             var pyPlants = (pyBaseline.plant_detail || {})[yr] || [];
