@@ -408,10 +408,13 @@ document.getElementById('simulationForm').addEventListener('submit', async (e) =
             const fullResults = await resResp.json();
 
             // Store in sessionStorage for results page
-            sessionStorage.setItem('sweepResult', JSON.stringify({
-                scenario_count: fullResults.scenario_count,
+            // NOTE: Only store aggregates + metadata — full row-level results
+            // are too large for sessionStorage (5-10 MB quota).  The results
+            // page can lazy-fetch detail rows from /api/sweep-cached/results
+            // if it needs them.
+            sessionStorage.setItem('simulationResult', JSON.stringify({
+                scenario_count: fullResults.row_count,
                 aggregates: aggregates,
-                results: fullResults.results,
                 iso: selectedISO || 'ALL',
                 cached: true,
             }));
@@ -603,7 +606,7 @@ async function pollSweepStatus(jobId) {
             const data = await resp.json();
 
             if (data.status === 'completed') {
-                sessionStorage.setItem('sweepResult', JSON.stringify(data.results));
+                sessionStorage.setItem('simulationResult', JSON.stringify(data.results));
                 status.className = 'submit-status success';
                 status.textContent = `Sweep complete! ${data.scenarios_completed} scenarios. Redirecting...`;
                 setTimeout(() => { window.location.href = '/results'; }, 500);
