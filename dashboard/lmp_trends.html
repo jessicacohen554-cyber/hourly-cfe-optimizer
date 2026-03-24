@@ -377,7 +377,7 @@
                 <span class="section-tag" style="background:rgba(14,165,233,0.08);color:#0369A1;">Price Drivers</span>
                 <h3>Fuel prices explain 88&ndash;100% of wholesale cost variation - until they don't</h3>
                 <p>From 50% to 95% clean energy, the single biggest determinant of wholesale prices is the fossil fuel price assumption. At 50% clean, fuel level explains <strong>100%</strong> of the variance in average LMP. At 80%, it still accounts for <strong>88%</strong>.</p>
-                <p>The gap between Low and High fuel scenarios in PJM is massive: at 80% clean, Low fuel yields $17/MWh while High fuel yields $37/MWh - a 2.2&times; difference driven entirely by what marginal gas plants cost to run.</p>
+                <p>The gap between Low and High fuel scenarios in PJM is massive: at 80% clean, Low fuel yields $17/MWh while High fuel yields $37/MWh - a 2.2&times; difference. Our 5-tier dispatch model captures the real ~30% heat-rate spread within each fuel class: efficient H-class CCGTs (~$22&ndash;25/MWh) set the price during low-demand hours, mid-fleet F-class units (~$28&ndash;32/MWh) during moderate demand, and the oldest legacy CCGTs and coal (~$38&ndash;43/MWh) during peaks &mdash; producing a smoother, more realistic S-curve in the price-duration curve than a flat single-tier stack.</p>
                 <span class="stat-badge stat-badge-blue">Low fuel: $17/MWh at 80% &middot; High fuel: $37/MWh at 80%</span>
             </div>
             <div class="narrative-card">
@@ -422,7 +422,7 @@
                 <span class="section-tag" style="background:rgba(34,197,94,0.08);color:#15803D;">Market Structure</span>
                 <h3>PJM zero-price hours explode from 265 to 7,980</h3>
                 <p>At 50% clean, PJM sees about 265 zero-or-negative-price hours per year - roughly 3% of the time, typically overnight with must-run nuclear surplus. By 95%, that figure hits <strong>4,268 hours</strong> - nearly half the year. At &ge;99.99%, it's <strong>7,980 hours</strong>: 91% of all hours produce free or negatively-priced electricity.</p>
-                <p>This isn't a gradual shift. The curve accelerates sharply past 75%, as each incremental percentage of clean energy adds more zero-marginal-cost generation to hours where fossil was already barely dispatching.</p>
+                <p>This isn't a gradual shift. The curve accelerates sharply past 75%, as each incremental percentage of clean energy displaces progressively cheaper fossil tiers &mdash; first retiring the least-efficient legacy plants, then pushing into the mid-fleet, until only the most efficient CCGTs remain dispatching in a shrinking number of peak hours.</p>
                 <span class="stat-badge stat-badge-green">265 &rarr; 7,980 zero-price hours: a 30&times; increase</span>
             </div>
             <div class="narrative-card">
@@ -588,7 +588,7 @@
             </div>
             <div class="narrative-card">
                 <h3>Fuel prices explain everything &mdash; until they don't</h3>
-                <p>At 50% clean, fuel costs explain <strong>100%</strong> of wholesale price variance. At 80%, still 88%. But at &ge;99.99%, no single factor exceeds 15% &mdash; variance fragments across renewable costs, transmission, policy, and CO&#8322; price. The market transitions from fuel-driven to structurally-driven pricing.</p>
+                <p>At 50% clean, fuel costs explain <strong>100%</strong> of wholesale price variance &mdash; with the 5-tier dispatch stack translating fuel price changes into a graduated price response across efficiency vintages. At 80%, still 88%. But at &ge;99.99%, no single factor exceeds 15% &mdash; variance fragments across renewable costs, transmission, policy, and CO&#8322; price. The market transitions from fuel-driven to structurally-driven pricing.</p>
                 <span class="stat-badge stat-badge-blue">Fuel variance: 100% at 50% &rarr; 14% at &ge;99.99%</span>
                 <a href="clean_firm_case.html#critical-mass" class="explore-link" style="font-size:0.82rem; margin-top:var(--space-sm); display:inline-block;">Why market revenue alone won&rsquo;t finance firm clean <span class="arrow">&rarr;</span></a>
             </div>

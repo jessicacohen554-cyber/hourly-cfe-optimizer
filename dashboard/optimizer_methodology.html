@@ -959,6 +959,57 @@
         cost (SRMC) metric.
     </p>
 
+    <h3>Heat-Rate Tiered Dispatch</h3>
+    <div class="card">
+        <p>
+            The fossil dispatch stack uses a <strong>5-tier heat-rate model</strong> rather than a single
+            fleet-average per fuel type. Each of the three fossil fuel types (gas CCGT, coal steam, gas CT)
+            is split into five efficiency tiers&mdash;from <em>very_low</em> (newest, most efficient) to
+            <em>very_high</em> (oldest, least efficient)&mdash;producing a <strong>15-entry merit-order
+            stack</strong>. This captures the ~30% intra-class heat rate spread that a single fleet-average
+            misses: an H-class CCGT (2010+, HR 6.2) dispatches at ~$22.51/MWh while a legacy pre-1993 CCGT
+            (HR 9.0) dispatches at ~$35/MWh&mdash;a gap invisible to fleet-average models.
+        </p>
+        <p>
+            Tiers are mapped to plant vintages: newer units (H/J-class CCGTs commissioned after 2010) populate
+            the most efficient tier, while the oldest legacy units (pre-1993) populate the least efficient.
+            The result is more realistic LMP formation&mdash;efficient CCGTs set price during low-demand hours
+            while inefficient coal and CTs set price during peak demand. Retirement cascades naturally from the
+            least-efficient tier first as clean energy displaces fossil generation, reflecting real-world plant
+            economics where the highest-cost units exit first.
+        </p>
+
+        <table class="data-table" style="margin-top:var(--space-md);">
+            <thead>
+                <tr>
+                    <th>Tier</th>
+                    <th>Heat Rate (MMBtu/MWh)</th>
+                    <th>CO&#8322; Rate (t/MWh)</th>
+                    <th>Vintage Range</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>very_low</td><td>6.2</td><td>0.329</td><td>2010+ (H/J-class)</td></tr>
+                <tr><td>low</td><td>6.8</td><td>0.361</td><td>2002&ndash;2009 (F-class)</td></tr>
+                <tr><td>medium</td><td>7.5</td><td>0.398</td><td>1998&ndash;2001</td></tr>
+                <tr><td>high</td><td>8.1</td><td>0.430</td><td>1993&ndash;1997</td></tr>
+                <tr><td>very_high</td><td>9.0</td><td>0.478</td><td>Pre-1993 (legacy)</td></tr>
+            </tbody>
+        </table>
+        <p style="font-size:0.85rem;color:var(--text-muted);margin-top:var(--space-xs);">
+            Gas CCGT tiers shown. Coal and gas CT follow the same 5-tier structure with fuel-appropriate
+            heat rates (coal: 8.5&ndash;12.5, gas CT: 9.0&ndash;13.0 MMBtu/MWh). Source: <code>lmp_engine.py EFFICIENCY_TIERS</code>.
+        </p>
+    </div>
+
+    <div class="insight-box" style="margin-top:var(--space-md);">
+        <strong>Why this matters:</strong> Fleet-average dispatch models overstate the competitiveness of
+        the oldest, dirtiest units (by blending their costs with newer efficient ones) and understate how
+        quickly retirement economics bite. The tiered model shows that the first ~20% of fossil displacement
+        retires units with 45% higher CO&#8322; intensity than the fleet average&mdash;front-loading
+        emission reductions.
+    </div>
+
     <!-- ================================================================ -->
     <!-- SECTION 7: METHODOLOGICAL RIGOR                                  -->
     <!-- ================================================================ -->
