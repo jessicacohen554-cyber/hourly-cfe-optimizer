@@ -148,7 +148,9 @@ function renderDataTierIndicator(iso) {
 
     // Resource mix
     if (tiers.resource_mix === 'parquet') {
-        items.push(`${dot('#22C55E')}Resource mix: Physics data`);
+        items.push(`${dot('#22C55E')}Resource mix: Cost-optimized data`);
+    } else if (tiers.resource_mix === 'ef_parquet') {
+        items.push(`${dot('#22C55E')}Resource mix: Efficient frontier data`);
     } else {
         items.push(`${dot('#EF4444')}Resource mix: Synthetic`);
     }
@@ -181,10 +183,11 @@ function renderDataTierIndicator(iso) {
         items.push(`${dot('#0EA5E9')}DR params: Default`);
     }
 
-    const allGreen = tiers.resource_mix === 'parquet' && tiers.interchange === 'eia_930'
+    const hasRealMix = tiers.resource_mix === 'parquet' || tiers.resource_mix === 'ef_parquet';
+    const allGreen = hasRealMix && tiers.interchange === 'eia_930'
         && tiers.fleet_data === 'plant_level';
-    const headerColor = tiers.resource_mix === 'synthetic' ? '#EF4444' : (allGreen ? '#22C55E' : '#F59E0B');
-    const headerLabel = tiers.resource_mix === 'synthetic' ? 'Synthetic Data' : (allGreen ? 'Full Data' : 'Partial Data');
+    const headerColor = !hasRealMix ? '#EF4444' : (allGreen ? '#22C55E' : '#F59E0B');
+    const headerLabel = !hasRealMix ? 'Synthetic Data' : (allGreen ? 'Full Data' : 'Partial Data');
 
     el.innerHTML = `<div style="padding:0.75rem 1rem;border-radius:8px;border:1px solid ${headerColor}33;background:${headerColor}08;font-size:0.8rem;">
         <div style="font-weight:600;margin-bottom:0.5rem;color:${headerColor};">${headerLabel}</div>
