@@ -50,6 +50,7 @@
     var intensityFanChart = null;
 
     var topEmittersChart = null;
+    var ccgtTierChart = null;
 
     // ── Clean fuel keys for % low-carbon calculation ──
     var CLEAN_FUEL_SET = { nuclear: 1, geothermal: 1, hydro: 1, wind: 1, solar: 1, battery: 1, ldes: 1, ccs_ccgt: 1 };
@@ -195,6 +196,7 @@
         buildFanChart();
         buildWaterfall2023Chart();
         buildGenMixChart();
+        buildCcgtTierChart();
         buildNewCleanChart();
         buildIntensityFanChart();
 
@@ -282,6 +284,7 @@
             sliderVal.textContent = slider.value;
             updateWaterfall2023Chart();
             updateGenMixChart();
+            updateCcgtTierChart();
             updateNewCleanChart();
             updateTopEmittersChart();
             updateFanChartAnnotation();
@@ -300,6 +303,7 @@
             ['scenarioSelector', updateScenarioSelector],
             ['waterfall2023Chart', updateWaterfall2023Chart],
             ['genMixChart', updateGenMixChart],
+            ['ccgtTierChart', updateCcgtTierChart],
             ['newCleanChart', updateNewCleanChart],
             ['intensityFanChart', updateIntensityFanChart],
 
@@ -1331,6 +1335,137 @@
                 '<span style="width:24px;height:10px;border-radius:3px;background:' + ds.borderColor + ';display:inline-block;"></span>' +
                 ds.label + '</span>';
         }).join('');
+    }
+
+    // ====================================================================
+    // CHART 3B: CCGT TIER CAPACITY FACTORS (Grouped Bar) — Selected Year
+    // ====================================================================
+    var TIER_KEYS = ['very_low', 'low', 'medium', 'high', 'very_high'];
+    var TIER_LABELS = {
+        very_low: 'Very Low HR (6.2)',
+        low: 'Low HR (6.8)',
+        medium: 'Medium HR (7.5)',
+        high: 'High HR (8.1)',
+        very_high: 'Very High HR (9.0)'
+    };
+    var TIER_COLORS = {
+        very_low: '#22C55E',
+        low: '#0EA5E9',
+        medium: '#6366F1',
+        high: '#F59E0B',
+        very_high: '#EF4444'
+    };
+
+    function buildCcgtTierChart() {
+        var ctx = document.getElementById('ccgtTierChart');
+        if (!ctx) return;
+        ccgtTierChart = new Chart(ctx.getContext('2d'), {
+            type: 'bar',
+            data: { labels: [], datasets: [] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 300 },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 11 } }
+                    },
+                    y: {
+                        title: { display: true, text: 'Capacity Factor', font: { size: 12 } },
+                        grid: { color: '#E0E6EF' },
+                        beginAtZero: true,
+                        max: 1.0,
+                        ticks: {
+                            font: { size: 11 },
+                            callback: function (v) { return Math.round(v * 100) + '%'; }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                return ctx.dataset.label + ': ' + (ctx.raw * 100).toFixed(1) + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        updateCcgtTierChart();
+    }
+
+    function updateCcgtTierChart() {
+        if (!ccgtTierChart || !DATA) return;
+
+        var yearStr = String(selectedYear);
+        var yearEl = document.getElementById('ccgtTierYear');
+        if (yearEl) yearEl.textContent = yearStr;
+
+        // Aggregate CCGT plants by tier from plant_detail for the selected scenario/year
+        var sc = getSelectedLowerScenario();
+        var plants = (sc.plant_detail && sc.plant_detail[yearStr]) || [];
+
+        // Group CCGT plants by tier — compute implied CF from gen/capacity
+        var tierData = {};
+        TIER_KEYS.forEach(function (t) {
+            tierData[t] = { gen_twh: 0, cap_mw: 0, count: 0, emis_mt: 0 };
+        });
+
+        plants.forEach(function (p) {
+            if (p.fuel_type !== 'gas_ccgt') return;
+            if (p.status === 'retired') return;
+            var tier = p.heat_rate_tier || 'medium';
+            if (!tierData[tier]) tier = 'medium';
+            tierData[tier].gen_twh += p.gen_twh || 0;
+            tierData[tier].cap_mw += p.capacity_mw || 0;
+            tierData[tier].count += 1;
+            tierData[tier].emis_mt += p.emissions_mt || 0;
+        });
+
+        // Compute CF = gen_twh * 1e6 / (cap_mw * 8760) for each tier
+        var labels = [];
+        var cfValues = [];
+        var colors = [];
+        var borderColors = [];
+
+        TIER_KEYS.forEach(function (tier) {
+            var d = tierData[tier];
+            if (d.cap_mw <= 0) return; // Skip tiers with no capacity
+            var cf = (d.gen_twh * 1e6) / (d.cap_mw * 8760);
+            labels.push(TIER_LABELS[tier] + '\n' + d.count + ' plants, ' + Math.round(d.cap_mw).toLocaleString() + ' MW');
+            cfValues.push(Math.min(cf, 1.0));
+            colors.push(hexToRgba(TIER_COLORS[tier], 0.6));
+            borderColors.push(TIER_COLORS[tier]);
+        });
+
+        ccgtTierChart.data.labels = labels;
+        ccgtTierChart.data.datasets = [{
+            label: 'Capacity Factor',
+            data: cfValues,
+            backgroundColor: colors,
+            borderColor: borderColors,
+            borderWidth: 2,
+            borderRadius: 6
+        }];
+        ccgtTierChart.update('active');
+
+        // Build legend
+        var legendEl = document.getElementById('ccgtTierLegend');
+        if (legendEl) {
+            legendEl.innerHTML = TIER_KEYS.map(function (tier) {
+                var d = tierData[tier];
+                if (d.cap_mw <= 0) return '';
+                var cf = (d.gen_twh * 1e6) / (d.cap_mw * 8760);
+                return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:16px;">' +
+                    '<span style="width:24px;height:10px;border-radius:3px;background:' + TIER_COLORS[tier] + ';display:inline-block;"></span>' +
+                    TIER_LABELS[tier] + ': ' + (cf * 100).toFixed(1) + '% CF, ' +
+                    d.emis_mt.toFixed(1) + ' Mt CO₂' +
+                    '</span>';
+            }).filter(Boolean).join('');
+        }
     }
 
     // ====================================================================

@@ -332,8 +332,16 @@ var FleetDispatchEngine = (function () {
             var iso = p.iso;
             var isoData = sweepData.data[iso];
 
-            var cfKey = fuel + '_cf';
-            var marginKey = fuel + '_margin';
+            // Prefer per-tier CF/margin arrays (e.g., gas_ccgt_very_low_cf) when
+            // the plant has a heat_rate_tier and the sweep data includes tier columns.
+            // Falls back to aggregate fuel CF (gas_ccgt_cf) if tier data is missing.
+            var tier = p.heat_rate_tier;
+            var tierCfKey = tier ? (fuel + '_' + tier + '_cf') : null;
+            var tierMarginKey = tier ? (fuel + '_' + tier + '_margin') : null;
+            var hasTierData = !!(isoData && tierCfKey && isoData[tierCfKey]);
+
+            var cfKey = hasTierData ? tierCfKey : (fuel + '_cf');
+            var marginKey = hasTierData ? tierMarginKey : (fuel + '_margin');
             var cfArrays = isoData ? isoData[cfKey] : null;
             var marginArrays = isoData ? isoData[marginKey] : null;
             var hasSweepArrays = !!(cfArrays && marginArrays);
