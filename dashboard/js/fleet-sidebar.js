@@ -408,19 +408,16 @@ var FleetSidebar = (function () {
             });
             result.emissions_by_fuel[yr] = emisObj;
 
-            // ── Intensity envelope: derive from rebased emissions / rebased generation ──
-            // Intensity is a ratio (kgCO2/MWh) so it must be computed from totals, not rebased as a delta.
+            // ── Intensity envelope: derive from rebased emissions envelope / total gen ──
+            // Use p50 emissions from the envelope (same as emissions fan chart)
+            // divided by total fleet generation (same as gen mix chart) for consistency.
             var totalGenTwh = 0;
-            var totalEmisMt = 0;
             Object.keys(genObj).forEach(function (f) { if (f[0] !== '_') totalGenTwh += genObj[f] || 0; });
-            Object.keys(emisObj).forEach(function (f) { if (f[0] !== '_') totalEmisMt += emisObj[f] || 0; });
-            // Mt/TWh × 1e3 = kgCO2/MWh
-            var intensityKg = totalGenTwh > 0 ? (totalEmisMt / totalGenTwh) * 1e3 : 0;
-            result.intensity_envelope[yr] = {
-                p10: Math.round(intensityKg * 100) / 100,
-                p50: Math.round(intensityKg * 100) / 100,
-                p90: Math.round(intensityKg * 100) / 100
-            };
+            var envYr = result.envelope[yr] || { p10: 0, p50: 0, p90: 0 };
+            var iP10 = totalGenTwh > 0 ? Math.round((envYr.p10 / totalGenTwh) * 1e3 * 100) / 100 : 0;
+            var iP50 = totalGenTwh > 0 ? Math.round((envYr.p50 / totalGenTwh) * 1e3 * 100) / 100 : 0;
+            var iP90 = totalGenTwh > 0 ? Math.round((envYr.p90 / totalGenTwh) * 1e3 * 100) / 100 : 0;
+            result.intensity_envelope[yr] = { p10: iP10, p50: iP50, p90: iP90 };
 
             // ── Plant detail: use Python baseline plants, replace modified ones ──
             var pyPlants = (pyBaseline.plant_detail || {})[yr] || [];
@@ -1133,16 +1130,14 @@ var FleetSidebar = (function () {
                 p90: Math.round((baseEnv.p90 + emisDelta) * 10000) / 10000
             };
 
+            // Intensity = emissions envelope / total fleet gen (consistent with charts)
             var totalGenTwh = 0;
-            var totalEmisMt = 0;
             Object.keys(genByFuel).forEach(function (f) { if (f[0] !== '_') totalGenTwh += genByFuel[f] || 0; });
-            Object.keys(emisByFuel).forEach(function (f) { if (f[0] !== '_') totalEmisMt += emisByFuel[f] || 0; });
-            var intensityKg = totalGenTwh > 0 ? (totalEmisMt / totalGenTwh) * 1e3 : 0;
-            customIntensity[yr] = {
-                p10: Math.round(intensityKg * 100) / 100,
-                p50: Math.round(intensityKg * 100) / 100,
-                p90: Math.round(intensityKg * 100) / 100
-            };
+            var cEnv = customEnvelope[yr];
+            var ciP10 = totalGenTwh > 0 ? Math.round((cEnv.p10 / totalGenTwh) * 1e3 * 100) / 100 : 0;
+            var ciP50 = totalGenTwh > 0 ? Math.round((cEnv.p50 / totalGenTwh) * 1e3 * 100) / 100 : 0;
+            var ciP90 = totalGenTwh > 0 ? Math.round((cEnv.p90 / totalGenTwh) * 1e3 * 100) / 100 : 0;
+            customIntensity[yr] = { p10: ciP10, p50: ciP50, p90: ciP90 };
 
             genByFuel._new_clean_gen = newCleanGen;
             customPlantDetail[yr] = yearPlants;
