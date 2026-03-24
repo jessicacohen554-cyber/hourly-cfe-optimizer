@@ -521,9 +521,106 @@ function updateSensHeatmap() {
     };
     Plotly.react('chartSensHeatmap', traces, layout, { responsive: true, displayModeBar: false });
 }
-function updateSupplyStack() { /* Step 5 */ }
-function updateArchetypeChart() { /* Step 6 */ }
-function updateDrivers() { /* Step 6 */ }
+function updateSupplyStack() {
+    const stacks = D.supply_stacks[STATE.iso]?.[STATE.bundle];
+    if (!stacks) { Plotly.purge('chartSupplyStack'); return; }
+    const years = Object.keys(stacks).map(Number).sort((a,b) => a - b);
+    const resources = ['clean_firm','solar','wind','offshore_wind','ccs_ccgt','hydro'];
+    const resLabels = { clean_firm:'Clean Firm', solar:'Solar', wind:'Wind', offshore_wind:'Offshore Wind', ccs_ccgt:'CCS-CCGT', hydro:'Hydro' };
+    const resColors = { clean_firm:'#6366F1', solar:'#F59E0B', wind:'#22C55E', offshore_wind:'#009688', ccs_ccgt:'#64748B', hydro:'#0EA5E9' };
+    const traces = [];
+    for (const res of resources) {
+        const vals = years.map(yr => stacks[String(yr)]?.[res]?.p50 ?? 0);
+        // skip if all zeros
+        if (vals.every(v => v === 0)) continue;
+        traces.push({
+            x: years, y: vals, type: 'scatter', mode: 'lines',
+            stackgroup: 'one', name: resLabels[res] || res,
+            line: { width: 0.5, color: resColors[res] || '#999' },
+            fillcolor: resColors[res] ? resColors[res] + 'CC' : '#999CC',
+            hovertemplate: resLabels[res] + ': %{y:.1f} TWh<extra></extra>'
+        });
+    }
+    const layout = {
+        ...PLOTLY_LAYOUT_BASE,
+        xaxis: { ...PLOTLY_LAYOUT_BASE.xaxis, title: 'Year', dtick: 5 },
+        yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, title: 'Generation (TWh)' },
+        legend: { orientation: 'h', y: -0.15, x: 0.5, xanchor: 'center' },
+        hovermode: 'x unified'
+    };
+    Plotly.react('chartSupplyStack', traces, layout, { responsive: true, displayModeBar: false });
+}
+function updateArchetypeChart() {
+    const arch = D.ceg_archetypes[STATE.iso]?.price_bundles;
+    if (!arch) { Plotly.purge('chartArchetypes'); return; }
+    const bundles = ['all_low','all_med','all_high','high_vre_low_firm','high_firm_low_vre'];
+    const bundleLabels = { all_low:'All Low', all_med:'All Med', all_high:'All High', high_vre_low_firm:'High VRE/Low Firm', high_firm_low_vre:'High Firm/Low VRE' };
+    const bundleColors = ['#007FA4','#2372B9','#F47B27','#6BA543','#FBB254'];
+    // Show 3 key metrics as grouped bars
+    const metricKeys = ['nuc_total_mwh','ge_gas_ccgt_margin_mwh','clean_pct'];
+    const metricNames = ['Nuclear Rev ($/MWh)','CCGT Margin ($/MWh)','Clean %'];
+    const traces = bundles.map((b, bi) => ({
+        type: 'bar', name: bundleLabels[b],
+        x: metricNames,
+        y: metricKeys.map(mk => arch[b]?.[STATE.year]?.[mk]?.p50 ?? 0),
+        marker: { color: bundleColors[bi] },
+        hovertemplate: '%{x}: %{y:.2f}<extra>' + bundleLabels[b] + '</extra>'
+    }));
+    const layout = {
+        ...PLOTLY_LAYOUT_BASE, barmode: 'group',
+        xaxis: { ...PLOTLY_LAYOUT_BASE.xaxis },
+        yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, title: 'Value' },
+        legend: { orientation: 'h', y: -0.2, x: 0.5, xanchor: 'center' }
+    };
+    Plotly.react('chartArchetypes', traces, layout, { responsive: true, displayModeBar: false });
+}
+
+function updateDrivers() {
+    const drivers = D.outcome_drivers[STATE.iso]?.[STATE.year];
+    if (!drivers) { Plotly.purge('chartDrivers'); return; }
+    const outcomes = Object.keys(drivers);
+    const outcomeLabels = {
+        high_nuc_revenue: 'High Nuclear Rev', low_nuc_revenue: 'Low Nuclear Rev',
+        high_lmp: 'High LMP', low_lmp: 'Low LMP',
+        high_retirement: 'High Retirements', low_retirement: 'Low Retirements',
+        high_clean: 'High Clean %', low_clean: 'Low Clean %',
+        high_emissions: 'High Emissions', low_emissions: 'Low Emissions'
+    };
+    // Build dimension × level grid
+    const allDimLevels = [];
+    const dimLevelLabels = [];
+    // Get dimensions from first outcome
+    const firstOutcome = drivers[outcomes[0]];
+    if (!firstOutcome?.drivers) return;
+    for (const [dim, levels] of Object.entries(firstOutcome.drivers)) {
+        for (const level of Object.keys(levels)) {
+            allDimLevels.push([dim, level]);
+            dimLevelLabels.push((SENS_DIM_LABELS[dim] || dim) + ' = ' + level);
+        }
+    }
+    // Build z matrix: outcomes × dim-levels
+    const z = outcomes.map(o => allDimLevels.map(([dim, level]) => {
+        const val = drivers[o]?.drivers?.[dim]?.[level];
+        return val != null ? val : 1;
+    }));
+    const traces = [{
+        type: 'heatmap',
+        z: z,
+        x: dimLevelLabels,
+        y: outcomes.map(o => outcomeLabels[o] || o),
+        colorscale: [[0,'#DC2626'],[0.33,'#FFFFFF'],[0.5,'#F7FAFC'],[0.67,'#FFFFFF'],[1,'#6BA543']],
+        zmid: 1, zmin: 0, zmax: 2,
+        hovertemplate: '%{y}<br>%{x}: %{z:.2f}×<extra></extra>',
+        colorbar: { title: 'Lift', titleside: 'right', len: 0.9 }
+    }];
+    const layout = {
+        ...PLOTLY_LAYOUT_BASE,
+        margin: { l: 150, r: 80, t: 10, b: 140 },
+        xaxis: { ...PLOTLY_LAYOUT_BASE.xaxis, tickangle: -45, tickfont: { size: 10 } },
+        yaxis: { ...PLOTLY_LAYOUT_BASE.yaxis, tickfont: { size: 11 } }
+    };
+    Plotly.react('chartDrivers', traces, layout, { responsive: true, displayModeBar: false });
+}
 
 // ── Master Update ──
 function updateAll() {
