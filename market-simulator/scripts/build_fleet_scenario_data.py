@@ -283,7 +283,10 @@ def compute_fleet_emissions_sweep(plants, year, scenario='baseline',
         iso = p.get('iso', '')
         variable_by_iso_fuel[(iso, fuel)] += base_em
 
-    # Apply sweep CF ratios to variable emissions
+    # Apply sweep CF percentiles to variable emissions.
+    # Use the sweep's absolute P50 CF trajectory (normalized to 2024 reference)
+    # instead of the linear year_factor, so the P50 line reflects actual market
+    # dynamics (e.g., the 2034-35 inflection from renewables displacement).
     totals = {'p10': fixed_emissions, 'p50': fixed_emissions,
               'p90': fixed_emissions}
 
@@ -292,14 +295,21 @@ def compute_fleet_emissions_sweep(plants, year, scenario='baseline',
         iso_year = sweep.get(iso, {}).get(year, {})
         fuel_pcts = iso_year.get(sweep_fuel)
 
-        if fuel_pcts and fuel_pcts['p50'] > 0.001:
-            # Relative scaling: how much does P10/P90 deviate from P50?
-            ratio_p10 = fuel_pcts['p10'] / fuel_pcts['p50']
-            ratio_p90 = fuel_pcts['p90'] / fuel_pcts['p50']
-            # P10 market CF → lower dispatch → lower emissions
-            totals['p10'] += base_em * ratio_p10
-            totals['p50'] += base_em
-            totals['p90'] += base_em * ratio_p90
+        # Get 2024 reference CF to normalize the sweep trajectory
+        ref_pcts = sweep.get(iso, {}).get(2024, {}).get(sweep_fuel)
+
+        if (fuel_pcts and fuel_pcts['p50'] > 0.001
+                and ref_pcts and ref_pcts['p50'] > 0.001
+                and year_factor > 0.001):
+            # Scale base_em from linear model → sweep-based trajectory.
+            # base_em was computed with linear year_factor; replace it with
+            # the sweep's CF ratio relative to 2024 reference.
+            # sweep_scale = (sweep_cf[year] / sweep_cf[2024]) / year_factor
+            inv_linear = 1.0 / year_factor
+            ref_cf = ref_pcts['p50']
+            totals['p10'] += base_em * inv_linear * fuel_pcts['p10'] / ref_cf
+            totals['p50'] += base_em * inv_linear * fuel_pcts['p50'] / ref_cf
+            totals['p90'] += base_em * inv_linear * fuel_pcts['p90'] / ref_cf
         else:
             # No sweep data — add base emissions unchanged
             for pct in ('p10', 'p50', 'p90'):
@@ -739,11 +749,13 @@ def get_plant_co2_rate(p, fuel):
     return EMISSION_RATE.get(fuel, 0.37)
 
 
-def compute_fleet_generation(plants, year, scenario='baseline', retired_fuels=None):
+def compute_fleet_generation(plants, year, scenario='baseline', retired_fuels=None,
+                              use_sweep=True):
     """Compute generation by fuel from actual plant data.
 
     2023/2024: Rosetta actuals. 2025: CAMPD actuals.
-    2030+: Projected from 2024 actuals using year_factor/re_growth.
+    2030+: Projected from 2024 actuals, scaled by sweep P50 CFs when available
+    (replaces the old linear 0.8% annual decay with actual market dynamics).
     """
     if retired_fuels is None:
         retired_fuels = {}
@@ -752,7 +764,28 @@ def compute_fleet_generation(plants, year, scenario='baseline', retired_fuels=No
     year_factor = max(0.0, 1.0 - 0.008 * (year - 2024))
     re_growth = 1.0 + 0.02 * (year - 2024)
 
+    # Load sweep CFs for market-based fossil generation scaling
+    sweep = load_sweep_cf_percentiles() if use_sweep else {}
+
+    # Pre-compute per-ISO/fuel sweep scale factors:
+    # sweep_scale = (sweep_p50[year] / sweep_p50[2024]) / year_factor
+    # This replaces the linear decay with the sweep's actual CF trajectory.
+    sweep_scales = {}
+    if sweep and year > 2025 and year_factor > 0.001:
+        for iso_key, iso_data in sweep.items():
+            year_data = iso_data.get(year, {})
+            ref_data = iso_data.get(2024, {})
+            for fuel_key, pcts in year_data.items():
+                ref_pcts = ref_data.get(fuel_key)
+                if (pcts and ref_pcts
+                        and pcts['p50'] > 0.001 and ref_pcts['p50'] > 0.001):
+                    sweep_scales[(iso_key, fuel_key)] = (
+                        pcts['p50'] / ref_pcts['p50'] / year_factor
+                    )
+
     gen_by_fuel = defaultdict(float)
+    # Track fossil gen by ISO/fuel for sweep scaling
+    gen_by_iso_fuel = defaultdict(float)
 
     for p in plants:
         fuel = p['fuel_type']
@@ -777,6 +810,15 @@ def compute_fleet_generation(plants, year, scenario='baseline', retired_fuels=No
                 continue
 
         gen_twh = get_plant_gen_twh(p, fuel, year, year_factor, re_growth)
+
+        # Apply sweep scaling to fossil fuels (non-actual years only)
+        if not has_actual_for_year and fuel in EMISSION_RATE and sweep_scales:
+            iso = p.get('iso', '')
+            sweep_fuel = fuel if fuel != 'gas_oil_ct' else 'gas_ct'
+            scale = sweep_scales.get((iso, sweep_fuel))
+            if scale is not None:
+                gen_twh *= scale
+
         gen_by_fuel[fuel] += gen_twh
 
     # CCS conversion for applicable scenarios
@@ -791,6 +833,12 @@ def compute_fleet_generation(plants, year, scenario='baseline', retired_fuels=No
             if p.get('retired_year') and year >= p['retired_year']:
                 continue
             plant_gen = get_plant_gen_twh(p, 'gas_ccgt', year, year_factor, re_growth)
+            # Apply same sweep scaling
+            if sweep_scales:
+                iso = p.get('iso', '')
+                scale = sweep_scales.get((iso, 'gas_ccgt'))
+                if scale is not None:
+                    plant_gen *= scale
             ccs_gen += plant_gen
 
         ccs_ramp = min(1.0, max(0.0, (year - 2028) / 5.0))
@@ -809,12 +857,14 @@ def compute_fleet_generation(plants, year, scenario='baseline', retired_fuels=No
     return result
 
 
-def compute_fleet_emissions(plants, year, scenario='baseline', retired_fuels=None):
+def compute_fleet_emissions(plants, year, scenario='baseline', retired_fuels=None,
+                             use_sweep=True):
     """Calculate emissions at the plant level using actual data.
 
     2023/2024: Rosetta actuals (equity-weighted metric tons).
     2025: CAMPD actuals where available, 2023/2024 average otherwise.
-    2030+: Projected from 2024 actuals using year_factor × CO2 rate.
+    2030+: Projected from 2024 actuals, scaled by sweep P50 CFs when available
+    (replaces linear decay with actual market dynamics from 1,215-scenario sweep).
     """
     if retired_fuels is None:
         retired_fuels = {}
@@ -822,6 +872,21 @@ def compute_fleet_emissions(plants, year, scenario='baseline', retired_fuels=Non
     # Rebase year_factor to 2024 for forward projections
     year_factor = max(0.0, 1.0 - 0.008 * (year - 2024))
     re_growth = 1.0 + 0.02 * (year - 2024)
+
+    # Load sweep CFs for market-based fossil scaling
+    sweep = load_sweep_cf_percentiles() if use_sweep else {}
+    sweep_scales = {}
+    if sweep and year > 2025 and year_factor > 0.001:
+        for iso_key, iso_data in sweep.items():
+            year_data = iso_data.get(year, {})
+            ref_data = iso_data.get(2024, {})
+            for fuel_key, pcts in year_data.items():
+                ref_pcts = ref_data.get(fuel_key)
+                if (pcts and ref_pcts
+                        and pcts['p50'] > 0.001 and ref_pcts['p50'] > 0.001):
+                    sweep_scales[(iso_key, fuel_key)] = (
+                        pcts['p50'] / ref_pcts['p50'] / year_factor
+                    )
 
     emissions_by_fuel = defaultdict(float)
 
@@ -872,7 +937,16 @@ def compute_fleet_emissions(plants, year, scenario='baseline', retired_fuels=Non
         # Priority 3: modeled from generation × emission rate (2030+)
         gen_twh = get_plant_gen_twh(p, fuel, year, year_factor, re_growth)
         co2_rate = get_plant_co2_rate(p, fuel)
-        emissions_by_fuel[fuel] += gen_twh * co2_rate
+
+        # Apply sweep scaling to fossil fuels
+        em = gen_twh * co2_rate
+        if fuel in EMISSION_RATE and sweep_scales:
+            iso = p.get('iso', '')
+            sweep_fuel = fuel if fuel != 'gas_oil_ct' else 'gas_ct'
+            scale = sweep_scales.get((iso, sweep_fuel))
+            if scale is not None:
+                em *= scale
+        emissions_by_fuel[fuel] += em
 
     # CCS: handled by scenario logic
     ccs_emis = 0.0
@@ -885,6 +959,12 @@ def compute_fleet_emissions(plants, year, scenario='baseline', retired_fuels=Non
             if p.get('retired_year') and year >= p['retired_year']:
                 continue
             gen_twh = get_plant_gen_twh(p, 'gas_ccgt', year, year_factor, re_growth)
+            # Apply sweep scaling
+            if sweep_scales:
+                iso = p.get('iso', '')
+                scale = sweep_scales.get((iso, 'gas_ccgt'))
+                if scale is not None:
+                    gen_twh *= scale
             co2_rate = get_plant_co2_rate(p, 'gas_ccgt')
             ccs_ramp = min(1.0, max(0.0, (year - 2028) / 5.0))
             ccs_emis_plant = gen_twh * co2_rate * ccs_ramp * 0.05  # 95% capture
