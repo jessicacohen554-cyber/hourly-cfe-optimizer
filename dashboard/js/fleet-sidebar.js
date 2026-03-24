@@ -344,18 +344,26 @@ var FleetSidebar = (function () {
                 ccs_cf_pct: 85
             });
 
-            // Push to chart system as the BASELINE (replacing precomputed JSON baseline)
-            if (window.FLEET_SCENARIOS_API && window.FLEET_SCENARIOS_API.setComputedBaseline) {
-                window.FLEET_SCENARIOS_API.setComputedBaseline({
-                    envelope: result.envelope,
-                    intensity_envelope: result.intensity_envelope,
-                    plant_detail: result.plant_detail,
-                    generation_by_fuel: result.generation_by_fuel,
-                    emissions_by_fuel: result.emissions_by_fuel,
-                    fleet_summary: result.fleet_summary
-                });
-                console.log('Baseline computed via dispatch engine — unified with custom scenario path');
+            // Push to chart system as the BASELINE (replacing precomputed JSON baseline).
+            // Retry if FLEET_SCENARIOS_API or DATA aren't ready yet (race with JSON fetch).
+            function applyBaseline(retries) {
+                if (window.FLEET_SCENARIOS_API && window.FLEET_SCENARIOS_API.getData()) {
+                    window.FLEET_SCENARIOS_API.setComputedBaseline({
+                        envelope: result.envelope,
+                        intensity_envelope: result.intensity_envelope,
+                        plant_detail: result.plant_detail,
+                        generation_by_fuel: result.generation_by_fuel,
+                        emissions_by_fuel: result.emissions_by_fuel,
+                        fleet_summary: result.fleet_summary
+                    });
+                    console.log('Baseline computed via dispatch engine — unified with custom scenario path');
+                } else if (retries > 0) {
+                    setTimeout(function () { applyBaseline(retries - 1); }, 300);
+                } else {
+                    console.warn('Baseline auto-compute: FLEET_SCENARIOS_API/DATA not ready after retries');
+                }
             }
+            applyBaseline(20); // Up to 6 seconds of retries
         } catch (err) {
             console.warn('Baseline auto-compute failed, falling back to precomputed JSON:', err);
         }
@@ -1072,6 +1080,33 @@ var FleetSidebar = (function () {
                             ccs_cf_pct: ccsParams.cf_pct
                         }
                     );
+
+                    // ── Post-process: compute _new_clean_gen layer ──
+                    // Track incremental clean generation from user modifications
+                    // (uprates, CCS retrofits, operating overrides, added plants)
+                    var baselineData = window.FLEET_SCENARIOS_API ? window.FLEET_SCENARIOS_API.getData() : null;
+                    var baselineGenByFuel = (baselineData && baselineData.scenarios && baselineData.scenarios.baseline) ?
+                        baselineData.scenarios.baseline.generation_by_fuel : {};
+
+                    var cleanFuelSet = { nuclear: 1, geothermal: 1, wind: 1, solar: 1, hydro: 1, battery: 1, ldes: 1, ccs_ccgt: 1 };
+                    var years = Object.keys(lastComputedResults.generation_by_fuel);
+                    years.forEach(function (yr) {
+                        var custGen = lastComputedResults.generation_by_fuel[yr];
+                        var baseGen = baselineGenByFuel[yr] || {};
+                        var newClean = {};
+
+                        Object.keys(cleanFuelSet).forEach(function (fuel) {
+                            var custVal = custGen[fuel] || 0;
+                            var baseVal = baseGen[fuel] || 0;
+                            // CCS: full value is "new clean" (fuel switch from gas_ccgt)
+                            // Others: only the increment above baseline
+                            var delta = (fuel === 'ccs_ccgt') ? custVal : (custVal - baseVal);
+                            if (delta > 0.001) {
+                                newClean[fuel] = Math.round(delta * 100) / 100;
+                            }
+                        });
+                        custGen._new_clean_gen = newClean;
+                    });
 
                     var elapsed = Math.round(performance.now() - t0);
 
