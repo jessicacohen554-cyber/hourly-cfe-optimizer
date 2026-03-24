@@ -111,6 +111,7 @@ from lmp_engine import (
     INSTALLED_FOSSIL_MW, FOSSIL_CAPACITY_SHARES,
 )
 from procurement_utils import get_rps_target_at_year, PPA_PREMIUMS
+from fleet_model import bin_name_to_base_type
 
 # Add backend dir to path for model imports
 sys.path.insert(0, os.path.join(MODULE_ROOT, 'backend'))
@@ -946,10 +947,11 @@ def compute_generator_economics(stack, hourly_lmp, unit_idx, dispatch,
     total_annual_mwh = float(np.sum(demand_mw_profile))
     fossil_demand_mw = residual * total_annual_mwh
 
-    # Compute carbon adder per unit
+    # Compute carbon adder per unit — resolve bin names to base types for lookup
     carbon_adder = {}
     for utype in set(unit_types):
-        co2_rate = CO2_RATES.get(utype, 0.5)
+        base = bin_name_to_base_type(utype)
+        co2_rate = CO2_RATES.get(base, 0.5)
         carbon_adder[utype] = co2_rate * carbon_price
 
     # Track per-unit economics
@@ -963,7 +965,9 @@ def compute_generator_economics(stack, hourly_lmp, unit_idx, dispatch,
         mw_dispatched = np.clip(fossil_demand_mw - low, 0, cap_mw) * dispatched
 
         # Apply unit commitment constraints (min up/down, min gen)
-        uc = UNIT_COMMITMENT.get(utype, {})
+        # Resolve bin name (e.g. gas_ccgt_very_low) to base type for UC lookup
+        base = bin_name_to_base_type(utype)
+        uc = UNIT_COMMITMENT.get(base, {})
         start_cost_total = 0.0
         if uc:
             dispatched, mw_dispatched, n_starts = apply_unit_commitment(
