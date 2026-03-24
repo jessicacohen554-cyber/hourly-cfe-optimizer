@@ -70,6 +70,44 @@ HEAT_RATES = {
     'oil_ct': 10.5,       # Similar to gas CT
 }
 
+# 5-tier heat rate distribution within each fuel type (MMBtu/MWh).
+# Tiers: very_low (most efficient) → very_high (least efficient).
+# Derived from EIA Form 860 generator inventory, weighted by capacity.
+HEAT_RATE_TIERS = {
+    'gas_ccgt': {
+        'very_low':  6.2,   # Newest H/J-class (GE 7HA, Siemens 9000HL)
+        'low':       6.8,   # Modern F-class
+        'medium':    7.5,   # Fleet average vintage
+        'high':      8.1,   # Older 2-on-1 multi-shaft
+        'very_high': 9.0,   # Oldest, least efficient CCGTs
+    },
+    'coal_steam': {
+        'very_low':  8.5,   # Supercritical units
+        'low':       9.3,   # Efficient subcritical
+        'medium':   10.0,   # Fleet average
+        'high':     10.7,   # Older subcritical
+        'very_high': 11.5,  # Oldest/smallest units
+    },
+    'gas_ct': {
+        'very_low':   9.2,  # Aeroderivative LM6000+
+        'low':        9.8,  # Modern frame CTs
+        'medium':    10.5,  # Fleet average
+        'high':      11.2,  # Older frame CTs
+        'very_high': 12.0,  # Oldest peakers
+    },
+}
+
+# Fraction of each fuel type's total capacity in each heat-rate tier.
+# Based on EIA 860 capacity-weighted age/efficiency distributions.
+# Sums to 1.0 within each fuel type.
+TIER_CAPACITY_FRACTIONS = {
+    'gas_ccgt':   {'very_low': 0.15, 'low': 0.25, 'medium': 0.30, 'high': 0.20, 'very_high': 0.10},
+    'coal_steam': {'very_low': 0.10, 'low': 0.20, 'medium': 0.30, 'high': 0.25, 'very_high': 0.15},
+    'gas_ct':     {'very_low': 0.10, 'low': 0.20, 'medium': 0.30, 'high': 0.25, 'very_high': 0.15},
+}
+
+TIER_NAMES = ['very_low', 'low', 'medium', 'high', 'very_high']
+
 # Variable O&M ($/MWh) — PJM SOM 2024 decomposition
 # SOM 2024 breakdown: Variable Maintenance $3.18 + Variable Operations $1.43 = $4.61 fleet avg
 # Split by technology using NREL ATB relativities
@@ -275,6 +313,21 @@ def compute_marginal_costs(fuel_level='Medium', co2_level='Medium',
             base_cost += SOX_RATES.get(unit_type, 0) * sox_price / 2000.0
         costs[unit_type] = base_cost * adder
 
+        # Per heat-rate tier costs (same VOM/CO2/NOx/SOx, different heat rate)
+        if unit_type in HEAT_RATE_TIERS:
+            co2_rate = CO2_RATES.get(unit_type, 0.5)
+            nox_rate = NOX_RATES.get(unit_type, 0)
+            sox_rate = SOX_RATES.get(unit_type, 0)
+            for tier, tier_hr in HEAT_RATE_TIERS[unit_type].items():
+                tier_key = f'{unit_type}_{tier}'
+                tier_cost = (tier_hr * fp[fuel_key] + vm[unit_type]
+                             + co2_rate * co2_price)
+                if nox_price > 0:
+                    tier_cost += nox_rate * nox_price / 2000.0
+                if sox_price > 0:
+                    tier_cost += sox_rate * sox_price / 2000.0
+                costs[tier_key] = tier_cost * adder
+
     return costs
 
 
@@ -440,20 +493,36 @@ def build_merit_order_stack(iso, clean_pct, fuel_level='Medium', total_fossil_mw
         if total_sh > 0:
             active_shares = {k: v / total_sh for k, v in active_shares.items()}
 
-    # Build stack: list of (type, capacity_mw, mc)
+    # Build stack: split each fuel type into 5 heat-rate tiers for
+    # within-fuel-type merit-order dispatch (efficient plants run more).
     stack = []
     for unit_type, share in active_shares.items():
         if share <= 0:
             continue
-        cap_mw = total_fossil_mw * share
-        stack.append((unit_type, cap_mw, mc[unit_type]))
+        base_cap_mw = total_fossil_mw * share
+
+        if unit_type in TIER_CAPACITY_FRACTIONS:
+            # Split into 5 heat-rate tiers
+            for tier in TIER_NAMES:
+                tier_key = f'{unit_type}_{tier}'
+                tier_frac = TIER_CAPACITY_FRACTIONS[unit_type][tier]
+                tier_cap = base_cap_mw * tier_frac
+                if tier_cap > 0 and tier_key in mc:
+                    stack.append((tier_key, tier_cap, mc[tier_key]))
+        else:
+            # Oil CT or unknown — single entry (small fleet, not worth splitting)
+            stack.append((unit_type, base_cap_mw, mc[unit_type]))
 
     # Add new-build fossil from prior simulation years as separate stack entries.
-    # New builds are on top of the base fleet (not subject to retirement logic).
+    # New builds enter the most efficient tier (very_low heat rate).
     if new_build_total_mw > 0:
         for nb_type, nb_mw in _new_fossil_builds.items():
-            if nb_mw > 0 and nb_type in mc:
-                stack.append((nb_type, nb_mw, mc[nb_type]))
+            if nb_mw > 0:
+                # New builds use very_low tier cost (most efficient)
+                tier_key = f'{nb_type}_very_low'
+                cost_key = tier_key if tier_key in mc else nb_type
+                if cost_key in mc:
+                    stack.append((tier_key, nb_mw, mc[cost_key]))
         total_fossil_mw += new_build_total_mw
 
     # Sort by marginal cost (cheapest first)
