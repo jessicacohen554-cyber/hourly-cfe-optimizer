@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<title>ISO Market Hub - Constellation Energy</title>
+<link rel="stylesheet" href="styles/ceg-market.css">
+<link rel="stylesheet" href="styles/ceg-results.css">
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<script src="js/iso-sweep-data.js"></script>
+<style>
+/* contrast-fix overrides */
+:root { --text-dim: #585B5F; }
+.hero-eyebrow { color: #B45A1A; }
+
+/* ── Sticky controls ── */
+.hub-controls { background: white; border-bottom: 1px solid var(--glass-border); padding: var(--space-lg) 0; position: sticky; top: 60px; z-index: 100; box-shadow: var(--shadow-sm); }
+.hub-controls-inner { max-width: 1400px; margin: 0 auto; padding: 0 var(--pad-page); }
+.controls-row { display: flex; align-items: center; gap: var(--space-2xl); flex-wrap: wrap; }
+.control-block { display: flex; flex-direction: column; gap: 6px; }
+.control-label { font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #585B5F; }
+
+/* ISO pills */
+.iso-pills { display: flex; gap: 4px; flex-wrap: wrap; }
+.iso-pill { padding: 8px 14px; border: 1.5px solid var(--glass-border); border-radius: var(--radius-pill); background: white; cursor: pointer; font-family: var(--font); font-weight: 600; font-size: 0.85rem; color: #585B5F; transition: all 0.15s; min-height: 44px; display: flex; align-items: center; }
+.iso-pill:hover { border-color: var(--ceg-blue); color: #1A5F9E; }
+.iso-pill.active { background: var(--ceg-blue); border-color: var(--ceg-blue); color: #F8F9FA; }
+
+/* Year pills */
+.year-pills { display: flex; gap: 4px; flex-wrap: wrap; }
+.year-pill { padding: 6px 12px; border: 1.5px solid var(--glass-border); border-radius: var(--radius-pill); background: white; cursor: pointer; font-family: var(--font); font-weight: 600; font-size: 0.82rem; color: #585B5F; transition: all 0.15s; min-height: 40px; display: flex; align-items: center; }
+.year-pill:hover { border-color: var(--ceg-teal); color: #006680; }
+.year-pill.active { background: #006680; border-color: #006680; color: #FFFFFF; }
+
+/* Metric select */
+.metric-select { padding: 8px 14px; border: 1.5px solid var(--glass-border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 0.9rem; background: white; color: var(--text-bright); max-width: 280px; min-height: 44px; }
+
+/* ── KPI row ── */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-md); margin-bottom: var(--space-xl); }
+.kpi-card { background: white; border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: var(--space-md); text-align: center; }
+.kpi-value { font-size: 1.8rem; font-weight: 700; color: var(--text-bright); }
+.kpi-unit { font-size: 0.75rem; color: #585B5F; font-weight: 600; }
+.kpi-label { font-size: 0.72rem; color: #585B5F; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+
+/* ── Chart cards ── */
+.chart-card { background: white; border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: var(--space-lg); margin-bottom: var(--space-xl); }
+.chart-card h3 { font-size: 1.1rem; font-weight: 700; color: var(--text-bright); margin: 0 0 4px; }
+.chart-card p { font-size: 0.85rem; color: #585B5F; margin: 0 0 var(--space-md); }
+.chart-container-lg { height: 420px; }
+.chart-container { height: 340px; }
+
+/* ── Section dividers ── */
+.section-divider { margin: var(--space-3xl) 0 var(--space-xl); border: 0; border-top: 2px solid var(--glass-border); }
+.section-eyebrow { font-size: 0.72rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #1A5F9E; margin-bottom: var(--space-sm); }
+.section-heading { font-size: 1.6rem; font-weight: 300; color: var(--text-bright); margin-bottom: var(--space-lg); }
+
+/* ── Grid layouts ── */
+.grid-2col { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xl); margin-bottom: var(--space-xl); }
+
+/* ── Bundle pills (supply stack) ── */
+.bundle-pills { display: flex; gap: 4px; flex-wrap: wrap; }
+.bundle-pill { padding: 6px 12px; border: 1.5px solid var(--glass-border); border-radius: var(--radius-pill); background: white; cursor: pointer; font-family: var(--font); font-weight: 600; font-size: 0.78rem; color: #585B5F; transition: all 0.15s; min-height: 38px; display: flex; align-items: center; }
+.bundle-pill:hover { border-color: var(--ceg-green); color: #3d6b28; }
+.bundle-pill.active { background: var(--ceg-green); border-color: var(--ceg-green); color: #FFFFFF; }
+
+/* ── Archetype table ── */
+.archetype-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.archetype-table th { text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--glass-border); font-weight: 700; color: var(--text-bright); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.archetype-table td { padding: 8px 12px; border-bottom: 1px solid var(--glass-border); color: var(--text-bright); }
+.archetype-table tr:hover { background: var(--bg-mid); }
+.val-good { color: var(--ceg-green); font-weight: 600; }
+.val-bad { color: #DC2626; font-weight: 600; }
+.val-neutral { color: var(--text-bright); }
+
+/* ── Fleet cards ── */
+.fleet-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-md); margin-bottom: var(--space-xl); }
+.fleet-card { background: white; border: 1px solid var(--glass-border); border-radius: var(--radius-md); padding: var(--space-md); }
+.fleet-card .fuel-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #585B5F; margin-bottom: 4px; }
+.fleet-card .fleet-val { font-size: 1.4rem; font-weight: 700; color: var(--text-bright); }
+.fleet-card .fleet-sub { font-size: 0.8rem; color: #585B5F; margin-top: 2px; }
+
+@media (max-width: 768px) {
+    .controls-row { gap: var(--space-lg); }
+    .iso-pills, .year-pills, .bundle-pills { flex-wrap: wrap; }
+    .grid-2col { grid-template-columns: 1fr; }
+    .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+    .chart-container-lg { height: 320px; }
+    .chart-container { height: 280px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Progress bar -->
+<div class="progress-bar"><div class="progress-bar-fill"></div></div>
+
+<!-- Nav -->
+<nav>
+    <div class="nav-logo">
+        <div class="nav-logo-mark">
+            <svg viewBox="0 0 32 32" width="32" height="32">
+                <circle cx="16" cy="16" r="14" fill="none" stroke="#2372B9" stroke-width="2"/>
+                <circle cx="16" cy="16" r="6" fill="#2372B9"/>
+                <line x1="16" y1="2" x2="16" y2="10" stroke="#2372B9" stroke-width="2"/>
+                <line x1="16" y1="22" x2="16" y2="30" stroke="#2372B9" stroke-width="2"/>
+                <line x1="2" y1="16" x2="10" y2="16" stroke="#2372B9" stroke-width="2"/>
+                <line x1="22" y1="16" x2="30" y2="16" stroke="#2372B9" stroke-width="2"/>
+            </svg>
+        </div>
+        <div>
+            <div class="nav-title">Constellation Energy</div>
+            <div class="nav-subtitle">ISO Market Hub</div>
+        </div>
+    </div>
+    <div style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:var(--radius-pill);background:rgba(244,123,39,0.12);color:#92400E;font-size:0.75rem;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;">7 ISO × 2,430 Scenarios</div>
+</nav>
+
+<!-- Hero -->
+<div class="hero-section">
+    <div class="hero-inner" style="padding-bottom: 1.5rem;">
+        <div class="hero-eyebrow">Market Scenario Analysis</div>
+        <h1>ISO Market <strong>Hub</strong></h1>
+        <p class="hero-desc">
+            Explore how 2,430 scenario combinations shape electricity markets across all 7 U.S. ISOs from 2023–2050.
+            Toggle regions and years to see cost envelopes, sensitivity drivers, supply mix shifts, and fleet economics.
+        </p>
+    </div>
+</div>
+
+<!-- Sticky Controls -->
+<div class="hub-controls">
+    <div class="hub-controls-inner">
+        <div class="controls-row">
+            <div class="control-block">
+                <div class="control-label">ISO Region</div>
+                <div class="iso-pills" id="isoSelector">
+                    <button class="iso-pill active" data-iso="PJM">PJM</button>
+                    <button class="iso-pill" data-iso="CAISO">CAISO</button>
+                    <button class="iso-pill" data-iso="ERCOT">ERCOT</button>
+                    <button class="iso-pill" data-iso="MISO">MISO</button>
+                    <button class="iso-pill" data-iso="NYISO">NYISO</button>
+                    <button class="iso-pill" data-iso="NEISO">NEISO</button>
+                    <button class="iso-pill" data-iso="SPP">SPP</button>
+                </div>
+            </div>
+            <div class="control-block">
+                <div class="control-label">Year</div>
+                <div class="year-pills" id="yearSelector">
+                    <button class="year-pill" data-year="2025">2025</button>
+                    <button class="year-pill active" data-year="2030">2030</button>
+                    <button class="year-pill" data-year="2035">2035</button>
+                    <button class="year-pill" data-year="2040">2040</button>
+                    <button class="year-pill" data-year="2045">2045</button>
+                    <button class="year-pill" data-year="2050">2050</button>
+                </div>
+            </div>
+            <div class="control-block">
+                <div class="control-label">Envelope Metric</div>
+                <select class="metric-select" id="metricSelect">
+                    <optgroup label="Market Prices">
+                        <option value="avg_lmp" selected>Average LMP ($/MWh)</option>
+                        <option value="lmp_p90">LMP P90 ($/MWh)</option>
+                        <option value="cost_per_mwh">Cost per MWh</option>
+                    </optgroup>
+                    <optgroup label="Emissions">
+                        <option value="emissions_mt">Total Emissions (MT CO₂)</option>
+                        <option value="emission_rate_tco2_mwh">Emission Rate (tCO₂/MWh)</option>
+                        <option value="clean_pct">Clean Energy %</option>
+                    </optgroup>
+                    <optgroup label="Demand & Supply">
+                        <option value="demand_twh">Demand (TWh)</option>
+                        <option value="mix_solar_twh">Solar Generation (TWh)</option>
+                        <option value="mix_wind_twh">Wind Generation (TWh)</option>
+                        <option value="mix_clean_firm_twh">Clean Firm (TWh)</option>
+                    </optgroup>
+                    <optgroup label="Generator Economics">
+                        <option value="ge_gas_ccgt_cf">CCGT Capacity Factor</option>
+                        <option value="ge_gas_ccgt_margin_mwh">CCGT Margin ($/MWh)</option>
+                        <option value="nuc_total_mwh">Nuclear Revenue ($/MWh)</option>
+                    </optgroup>
+                    <optgroup label="Retirements & New Build">
+                        <option value="total_economic_retirement_mw">Economic Retirements (MW)</option>
+                        <option value="ret_coal_steam_mw">Coal Retirements (MW)</option>
+                        <option value="nb_gas_ccgt_mw">New CCGT Build (MW)</option>
+                    </optgroup>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="content-section" style="max-width:1400px;margin:0 auto;padding:var(--space-xl) var(--pad-page);">
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid" id="kpiGrid">
+        <div class="kpi-card"><div class="kpi-value" id="kpiLMP">--</div><div class="kpi-unit">$/MWh</div><div class="kpi-label">Median LMP</div></div>
+        <div class="kpi-card"><div class="kpi-value" id="kpiClean">--</div><div class="kpi-unit">%</div><div class="kpi-label">Clean Energy</div></div>
+        <div class="kpi-card"><div class="kpi-value" id="kpiEmissions">--</div><div class="kpi-unit">MT CO₂</div><div class="kpi-label">Emissions</div></div>
+        <div class="kpi-card"><div class="kpi-value" id="kpiRetirements">--</div><div class="kpi-unit">GW</div><div class="kpi-label">Retirements</div></div>
+        <div class="kpi-card"><div class="kpi-value" id="kpiNucRev">--</div><div class="kpi-unit">$/MWh</div><div class="kpi-label">Nuclear Rev</div></div>
+        <div class="kpi-card"><div class="kpi-value" id="kpiCCSBE">--</div><div class="kpi-unit">$/ton</div><div class="kpi-label">CCS Breakeven</div></div>
+    </div>
+
+    <!-- Section 1: Envelope Fan Chart -->
+    <div class="chart-card">
+        <h3>Scenario Envelope: <span id="envelopeTitle">Average LMP</span></h3>
+        <p>P10–P90 uncertainty range across 2,430 scenarios. Dark band = P25–P75 (interquartile). Line = median.</p>
+        <div class="chart-container-lg" id="chartEnvelope"></div>
+    </div>
+
+    <!-- Section 2: Sensitivity Decomposition -->
+    <hr class="section-divider">
+    <div class="section-eyebrow">Sensitivity Analysis</div>
+    <div class="section-heading">What Drives Outcomes in <span id="sensIsoLabel">PJM</span>?</div>
+    <div class="grid-2col">
+        <div class="chart-card">
+            <h3>Variance Decomposition (<span id="sensYearLabel">2030</span>)</h3>
+            <p>Share of outcome variance explained by each scenario dimension. Based on ANOVA decomposition across 2,430 runs.</p>
+            <div class="chart-container" id="chartSensitivity"></div>
+        </div>
+        <div class="chart-card">
+            <h3>Sensitivity Across Metrics</h3>
+            <p>Which levers matter most for LMP, clean %, emissions, CCGT utilization, nuclear revenue, and retirements.</p>
+            <div class="chart-container" id="chartSensHeatmap"></div>
+        </div>
+    </div>
+
+    <!-- Section 3: Supply Stack -->
+    <hr class="section-divider">
+    <div class="section-eyebrow">Generation Mix</div>
+    <div class="section-heading">Supply Stack by Scenario Bundle</div>
+    <div class="control-block" style="margin-bottom:var(--space-lg);">
+        <div class="control-label">Price Bundle</div>
+        <div class="bundle-pills" id="bundleSelector">
+            <button class="bundle-pill" data-bundle="all_low">All Low</button>
+            <button class="bundle-pill active" data-bundle="all_med">All Med</button>
+            <button class="bundle-pill" data-bundle="all_high">All High</button>
+            <button class="bundle-pill" data-bundle="high_vre_low_firm">High VRE / Low Firm</button>
+            <button class="bundle-pill" data-bundle="high_firm_low_vre">High Firm / Low VRE</button>
+        </div>
+    </div>
+    <div class="chart-card">
+        <h3>Generation Mix Over Time</h3>
+        <p>Stacked area showing median TWh by resource under the selected price bundle. Bands show P10–P90 range.</p>
+        <div class="chart-container-lg" id="chartSupplyStack"></div>
+    </div>
+
+    <!-- Section 4: Fleet Mapping -->
+    <hr class="section-divider">
+    <div class="section-eyebrow">Fleet Economics</div>
+    <div class="section-heading">Fleet in <span id="fleetIsoLabel">PJM</span></div>
+    <div class="fleet-grid" id="fleetGrid">
+        <!-- Populated by JS -->
+    </div>
+
+    <!-- Section 5: CEG Archetype Analysis -->
+    <hr class="section-divider">
+    <div class="section-eyebrow">Asset Performance</div>
+    <div class="section-heading">CEG Asset Archetypes by Scenario Bundle</div>
+    <div class="chart-card">
+        <h3>Nuclear & Gas Economics Across Scenarios (<span id="archYearLabel">2030</span>)</h3>
+        <p>How Constellation's nuclear and gas assets perform under different price environments.</p>
+        <div class="chart-container-lg" id="chartArchetypes"></div>
+    </div>
+    <div class="chart-card" style="overflow-x:auto;">
+        <h3>Archetype Detail Table</h3>
+        <p>P50 values across price bundles for key asset metrics.</p>
+        <table class="archetype-table" id="archetypeTable">
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>All Low</th>
+                    <th>All Med</th>
+                    <th>All High</th>
+                    <th>High VRE / Low Firm</th>
+                    <th>High Firm / Low VRE</th>
+                </tr>
+            </thead>
+            <tbody id="archetypeBody">
+                <!-- Populated by JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Section 6: Outcome Drivers -->
+    <hr class="section-divider">
+    <div class="section-eyebrow">Conditional Analysis</div>
+    <div class="section-heading">What Drives Specific Outcomes?</div>
+    <div class="chart-card">
+        <h3>Outcome Driver Heatmap (<span id="driverYearLabel">2030</span>)</h3>
+        <p>Conditional probability that each scenario dimension level appears when a specific outcome occurs (e.g., high nuclear revenue). Values above 1.0 indicate overrepresentation.</p>
+        <div class="chart-container-lg" id="chartDrivers"></div>
+    </div>
+
+</div>
+
+<!-- Footer -->
+<footer style="background:var(--bg-mid);border-top:1px solid var(--glass-border);padding:var(--space-xl) var(--pad-page);text-align:center;color:#585B5F;font-size:0.8rem;">
+    <p>ISO Market Hub &middot; 7 ISOs × 2,430 Scenarios × 28 Years &middot; Data: EIA 860/923, market simulator sweep_1215</p>
+</footer>
+
+<script>
+// ── Global State ──
+const STATE = { iso: 'PJM', year: '2030', metric: 'avg_lmp', bundle: 'all_med' };
+const D = ISO_SWEEP_DATA;
+
+const METRIC_LABELS = {
+    avg_lmp: 'Average LMP ($/MWh)', lmp_p90: 'LMP P90 ($/MWh)',
+    cost_per_mwh: 'Cost per MWh', emissions_mt: 'Emissions (MT CO₂)',
+    emission_rate_tco2_mwh: 'Emission Rate (tCO₂/MWh)', clean_pct: 'Clean Energy %',
+    demand_twh: 'Demand (TWh)', mix_solar_twh: 'Solar (TWh)',
+    mix_wind_twh: 'Wind (TWh)', mix_clean_firm_twh: 'Clean Firm (TWh)',
+    ge_gas_ccgt_cf: 'CCGT Capacity Factor', ge_gas_ccgt_margin_mwh: 'CCGT Margin ($/MWh)',
+    nuc_total_mwh: 'Nuclear Revenue ($/MWh)',
+    total_economic_retirement_mw: 'Retirements (MW)',
+    ret_coal_steam_mw: 'Coal Retirements (MW)', nb_gas_ccgt_mw: 'New CCGT (MW)'
+};
+
+const SENS_DIM_LABELS = {
+    demand_growth: 'Demand Growth', price_sensitivity: 'Price Sensitivity',
+    ppa_level: 'PPA Level', gas_friction: 'Gas Friction',
+    queue_capacity: 'Queue Capacity', new_fossil_cost: 'New Fossil Cost'
+};
+
+const PLOTLY_LAYOUT_BASE = {
+    font: { family: "'Source Sans Pro', Calibri, Arial, sans-serif", color: '#1A232F' },
+    paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+    margin: { l: 60, r: 20, t: 10, b: 50 },
+    xaxis: { gridcolor: '#E0E6EF', zerolinecolor: '#E0E6EF' },
+    yaxis: { gridcolor: '#E0E6EF', zerolinecolor: '#E0E6EF' }
+};
+
+// ── Control Wiring ──
+function wireControls() {
+    document.getElementById('isoSelector').addEventListener('click', e => {
+        const btn = e.target.closest('.iso-pill');
+        if (!btn) return;
+        document.querySelectorAll('#isoSelector .iso-pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        STATE.iso = btn.dataset.iso;
+        updateAll();
+    });
+    document.getElementById('yearSelector').addEventListener('click', e => {
+        const btn = e.target.closest('.year-pill');
+        if (!btn) return;
+        document.querySelectorAll('#yearSelector .year-pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        STATE.year = btn.dataset.year;
+        updateAll();
+    });
+    document.getElementById('metricSelect').addEventListener('change', e => {
+        STATE.metric = e.target.value;
+        updateAll();
+    });
+    document.getElementById('bundleSelector').addEventListener('click', e => {
+        const btn = e.target.closest('.bundle-pill');
+        if (!btn) return;
+        document.querySelectorAll('#bundleSelector .bundle-pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        STATE.bundle = btn.dataset.bundle;
+        updateSupplyStack();
+    });
+}
+
+// ── KPI Update ──
+function updateKPIs() {
+    const env = D.envelopes[STATE.iso]?.[STATE.year];
+    if (!env) return;
+    const fmt = (v, d=1) => v != null ? v.toFixed(d) : '--';
+    document.getElementById('kpiLMP').textContent = fmt(env.avg_lmp?.p50);
+    document.getElementById('kpiClean').textContent = fmt(env.clean_pct?.p50);
+    document.getElementById('kpiEmissions').textContent = fmt(env.emissions_mt?.p50);
+    const retGW = env.total_economic_retirement_mw?.p50;
+    document.getElementById('kpiRetirements').textContent = retGW != null ? (retGW / 1000).toFixed(1) : '--';
+    document.getElementById('kpiNucRev').textContent = fmt(env.nuc_total_mwh?.p50);
+    document.getElementById('kpiCCSBE').textContent = fmt(env.ccs_be_ccs_vs_existing_carbon_price?.p50, 0);
+    // Update labels
+    document.getElementById('sensIsoLabel').textContent = STATE.iso;
+    document.getElementById('sensYearLabel').textContent = STATE.year;
+    document.getElementById('fleetIsoLabel').textContent = STATE.iso;
+    document.getElementById('archYearLabel').textContent = STATE.year;
+    document.getElementById('driverYearLabel').textContent = STATE.year;
+    document.getElementById('envelopeTitle').textContent = METRIC_LABELS[STATE.metric] || STATE.metric;
+}
+
+// ── Fleet Cards ──
+function updateFleetCards() {
+    const fl = D.fleet?.by_iso?.[STATE.iso];
+    const grid = document.getElementById('fleetGrid');
+    if (!fl) { grid.innerHTML = '<p style="color:#585B5F;">No fleet data for ' + STATE.iso + '</p>'; return; }
+    grid.innerHTML = '';
+    const fuelLabels = { nuclear: 'Nuclear', gas_ccgt: 'Gas CCGT', gas_ct: 'Gas CT', coal: 'Coal', wind: 'Wind', solar: 'Solar', hydro: 'Hydro' };
+    for (const [fuel, info] of Object.entries(fl)) {
+        const card = document.createElement('div');
+        card.className = 'fleet-card';
+        card.innerHTML = `
+            <div class="fuel-label">${fuelLabels[fuel] || fuel}</div>
+            <div class="fleet-val">${(info.capacity_mw / 1000).toFixed(1)} GW</div>
+            <div class="fleet-sub">${info.count} plants</div>`;
+        grid.appendChild(card);
+    }
+}
+
+// ── Archetype Table ──
+function updateArchetypeTable() {
+    const arch = D.ceg_archetypes?.[STATE.iso]?.price_bundles;
+    const body = document.getElementById('archetypeBody');
+    if (!arch) { body.innerHTML = '<tr><td colspan="6">No archetype data</td></tr>'; return; }
+    const bundles = ['all_low', 'all_med', 'all_high', 'high_vre_low_firm', 'high_firm_low_vre'];
+    const metrics = [
+        ['nuc_total_mwh', 'Nuclear Rev ($/MWh)'],
+        ['nuc_energy_rev_mwh', 'Nuc Energy Rev ($/MWh)'],
+        ['ge_gas_ccgt_cf', 'CCGT Capacity Factor'],
+        ['ge_gas_ccgt_margin_mwh', 'CCGT Margin ($/MWh)'],
+        ['emissions_mt', 'Emissions (MT)'],
+        ['clean_pct', 'Clean Energy %'],
+        ['total_economic_retirement_mw', 'Retirements (MW)']
+    ];
+    body.innerHTML = '';
+    for (const [key, label] of metrics) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td><strong>' + label + '</strong></td>';
+        for (const b of bundles) {
+            const val = arch[b]?.[STATE.year]?.[key]?.p50;
+            const cls = val == null ? '' : key === 'emissions_mt' ? (val < 50 ? 'val-good' : 'val-neutral') : '';
+            tr.innerHTML += '<td class="' + cls + '">' + (val != null ? val.toFixed(2) : '—') + '</td>';
+        }
+        body.appendChild(tr);
+    }
+}
+
+// ── Chart placeholders (Steps 3–6 will fill these) ──
+function updateEnvelope() { /* Step 3 */ }
+function updateSensitivity() { /* Step 4 */ }
+function updateSensHeatmap() { /* Step 4 */ }
+function updateSupplyStack() { /* Step 5 */ }
+function updateArchetypeChart() { /* Step 6 */ }
+function updateDrivers() { /* Step 6 */ }
+
+// ── Master Update ──
+function updateAll() {
+    updateKPIs();
+    updateFleetCards();
+    updateArchetypeTable();
+    updateEnvelope();
+    updateSensitivity();
+    updateSensHeatmap();
+    updateSupplyStack();
+    updateArchetypeChart();
+    updateDrivers();
+}
+
+// ── Init ──
+wireControls();
+updateAll();
+</script>
+
+</body>
+</html>
