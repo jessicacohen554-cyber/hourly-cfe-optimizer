@@ -34,10 +34,18 @@ ENVELOPE_METRICS = [
     # Resource mix
     "mix_solar_twh", "mix_wind_twh", "mix_offshore_wind_twh",
     "mix_ccs_ccgt_twh", "mix_hydro_twh", "mix_clean_firm_twh",
-    # Generator economics
+    # Generator economics — fleet aggregate
     "ge_gas_ccgt_cf", "ge_gas_ccgt_margin_mwh", "ge_gas_ccgt_capacity_mw",
     "ge_gas_ct_cf", "ge_gas_ct_margin_mwh",
     "ge_coal_steam_cf", "ge_coal_steam_margin_mwh", "ge_coal_steam_capacity_mw",
+    # Generator economics — per heat-rate tier (5 tiers: very_low → very_high)
+    "ge_gas_ccgt_very_low_cf", "ge_gas_ccgt_very_low_margin_mwh", "ge_gas_ccgt_very_low_capacity_mw",
+    "ge_gas_ccgt_low_cf", "ge_gas_ccgt_low_margin_mwh", "ge_gas_ccgt_low_capacity_mw",
+    "ge_gas_ccgt_medium_cf", "ge_gas_ccgt_medium_margin_mwh", "ge_gas_ccgt_medium_capacity_mw",
+    "ge_gas_ccgt_high_cf", "ge_gas_ccgt_high_margin_mwh", "ge_gas_ccgt_high_capacity_mw",
+    "ge_gas_ccgt_very_high_cf", "ge_gas_ccgt_very_high_margin_mwh", "ge_gas_ccgt_very_high_capacity_mw",
+    "ge_coal_steam_very_low_cf", "ge_coal_steam_low_cf", "ge_coal_steam_medium_cf",
+    "ge_coal_steam_high_cf", "ge_coal_steam_very_high_cf",
     # Nuclear
     "nuc_energy_rev_mwh", "nuc_capacity_rev_mwh", "nuc_ptc_mwh", "nuc_total_mwh",
     # CCS breakeven
@@ -55,6 +63,9 @@ ENVELOPE_METRICS = [
 CEG_METRICS = [
     "nuc_total_mwh", "nuc_energy_rev_mwh", "nuc_capacity_rev_mwh",
     "ge_gas_ccgt_cf", "ge_gas_ccgt_margin_mwh", "ge_gas_ccgt_capacity_mw",
+    # Per heat-rate tier CCGT CFs (Constellation fleet dispatch fidelity)
+    "ge_gas_ccgt_very_low_cf", "ge_gas_ccgt_low_cf", "ge_gas_ccgt_medium_cf",
+    "ge_gas_ccgt_high_cf", "ge_gas_ccgt_very_high_cf",
     "ge_gas_ct_cf", "ge_gas_ct_margin_mwh",
     "emissions_mt", "clean_pct", "avg_lmp",
     "ret_gas_ccgt_mw", "ret_gas_ct_mw",
