@@ -157,22 +157,41 @@ FUEL_TYPE_MAP = {
 
 # Default heat-rate bin thresholds for gas CCGT
 DEFAULT_HR_BINS_CCGT = {
-    'gas_ccgt_efficient': (0.0, 7.2),
-    'gas_ccgt_avg':       (7.2, 8.0),
-    'gas_ccgt_old':       (8.0, 99.0),
+    'gas_ccgt_very_low':  (0.0, 6.5),    # Newest H/J-class, ~6.0-6.4 MMBtu/MWh
+    'gas_ccgt_low':       (6.5, 7.2),    # Modern F-class
+    'gas_ccgt_medium':    (7.2, 7.8),    # Fleet average
+    'gas_ccgt_high':      (7.8, 8.5),    # Older vintage
+    'gas_ccgt_very_high': (8.5, 99.0),   # Oldest, least efficient
 }
 
 DEFAULT_HR_BINS_COAL = {
-    'coal_steam_efficient': (0.0, 9.5),
-    'coal_steam_avg':       (9.5, 10.5),
-    'coal_steam_old':       (10.5, 99.0),
+    'coal_steam_very_low':  (0.0, 9.0),    # Supercritical
+    'coal_steam_low':       (9.0, 9.7),    # Efficient subcritical
+    'coal_steam_medium':    (9.7, 10.3),   # Fleet average
+    'coal_steam_high':      (10.3, 11.0),  # Older subcritical
+    'coal_steam_very_high': (11.0, 99.0),  # Oldest/smallest units
 }
 
 DEFAULT_HR_BINS_CT = {
-    'gas_ct_efficient': (0.0, 10.0),
-    'gas_ct_avg':       (10.0, 11.0),
-    'gas_ct_old':       (11.0, 99.0),
+    'gas_ct_very_low':  (0.0, 9.5),    # Aeroderivative LM6000+
+    'gas_ct_low':       (9.5, 10.2),   # Modern frame CTs
+    'gas_ct_medium':    (10.2, 10.8),  # Fleet average
+    'gas_ct_high':      (10.8, 11.5),  # Older frame CTs
+    'gas_ct_very_high': (11.5, 99.0),  # Oldest peakers
 }
+
+
+def bin_name_to_base_type(bin_name: str) -> str:
+    """Map a heat-rate bin name back to its base fuel type.
+
+    E.g. 'gas_ccgt_very_low' → 'gas_ccgt', 'coal_steam_high' → 'coal_steam'.
+    Used for CO2_RATES, UNIT_COMMITMENT, and VOM lookups that are keyed by
+    base fuel type, not by heat-rate tier.
+    """
+    for base in ('coal_steam', 'gas_ccgt', 'gas_ct', 'oil_ct'):
+        if bin_name.startswith(base):
+            return base
+    return bin_name  # fallback: already a base type
 
 
 def _fuzzy_col(df: pd.DataFrame, candidates: List[str]) -> Optional[str]:
@@ -987,11 +1006,11 @@ class FleetModel:
                     continue
                 q20, q40, q60, q80 = np.percentile(hr_vals, [20, 40, 60, 80])
                 quintile_bins = {
-                    f'{unit_type}_q1': (0.0, q20),
-                    f'{unit_type}_q2': (q20, q40),
-                    f'{unit_type}_q3': (q40, q60),
-                    f'{unit_type}_q4': (q60, q80),
-                    f'{unit_type}_q5': (q80, 99.0),
+                    f'{unit_type}_very_low':  (0.0, q20),
+                    f'{unit_type}_low':       (q20, q40),
+                    f'{unit_type}_medium':    (q40, q60),
+                    f'{unit_type}_high':      (q60, q80),
+                    f'{unit_type}_very_high': (q80, 99.0),
                 }
                 for bin_name, (lo, hi) in quintile_bins.items():
                     bmask = (subset['heat_rate'] >= lo) & (subset['heat_rate'] < hi)
