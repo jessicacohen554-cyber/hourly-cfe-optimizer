@@ -229,14 +229,17 @@ function renderAll() {
     if (dataSourceBadge) {
         const dataSource = data.data_source || 'unknown';
         const tiers = data.data_tiers || {};
-        const allTiersPresent = dataSource === 'parquet'
+        const hasRealMix = dataSource === 'parquet' || dataSource === 'ef_parquet';
+        const allTiersPresent = hasRealMix
             && tiers.interchange !== 'none'
             && tiers.fleet_data !== 'aggregated';
 
         if (allTiersPresent) {
             dataSourceBadge.innerHTML = '<span class="badge badge-green" style="font-size:0.75rem;">Full Data</span>';
         } else if (dataSource === 'parquet') {
-            dataSourceBadge.innerHTML = '<span class="badge badge-green" style="font-size:0.75rem;">Physics Data</span>';
+            dataSourceBadge.innerHTML = '<span class="badge badge-green" style="font-size:0.75rem;">Cost-Optimized Data</span>';
+        } else if (dataSource === 'ef_parquet') {
+            dataSourceBadge.innerHTML = '<span class="badge badge-green" style="font-size:0.75rem;">Efficient Frontier Data</span>';
         } else if (dataSource === 'synthetic') {
             dataSourceBadge.innerHTML = '<span class="badge badge-orange" style="font-size:0.75rem;">Synthetic: Illustrative Only</span>';
         } else {
