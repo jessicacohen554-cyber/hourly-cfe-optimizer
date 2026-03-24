@@ -326,6 +326,10 @@ var FleetSidebar = (function () {
         }
     }
 
+    // Shadow engine baseline — used ONLY for computing deltas (new clean gen).
+    // We do NOT replace the displayed baseline (precomputed Python pipeline is more accurate).
+    var engineBaseline = null;
+
     function computeAndSetBaseline() {
         // Use unmodified base fleet (no _action flags) — this IS the market trajectory
         var unmodifiedFleet = baseFleet.map(function (p) {
@@ -344,28 +348,14 @@ var FleetSidebar = (function () {
                 ccs_cf_pct: 85
             });
 
-            // Push to chart system as the BASELINE (replacing precomputed JSON baseline).
-            // Retry if FLEET_SCENARIOS_API or DATA aren't ready yet (race with JSON fetch).
-            function applyBaseline(retries) {
-                if (window.FLEET_SCENARIOS_API && window.FLEET_SCENARIOS_API.getData()) {
-                    window.FLEET_SCENARIOS_API.setComputedBaseline({
-                        envelope: result.envelope,
-                        intensity_envelope: result.intensity_envelope,
-                        plant_detail: result.plant_detail,
-                        generation_by_fuel: result.generation_by_fuel,
-                        emissions_by_fuel: result.emissions_by_fuel,
-                        fleet_summary: result.fleet_summary
-                    });
-                    console.log('Baseline computed via dispatch engine — unified with custom scenario path');
-                } else if (retries > 0) {
-                    setTimeout(function () { applyBaseline(retries - 1); }, 300);
-                } else {
-                    console.warn('Baseline auto-compute: FLEET_SCENARIOS_API/DATA not ready after retries');
-                }
-            }
-            applyBaseline(20); // Up to 6 seconds of retries
+            // Store as shadow baseline for delta calculations only.
+            // The precomputed Python baseline remains the displayed baseline —
+            // it uses more sophisticated modeling (proper economic retirement,
+            // CCS heat rate penalties, calibrated sweep handling for 2023).
+            engineBaseline = result;
+            console.log('Shadow engine baseline computed (for delta calculations only)');
         } catch (err) {
-            console.warn('Baseline auto-compute failed, falling back to precomputed JSON:', err);
+            console.warn('Shadow engine baseline computation failed:', err);
         }
     }
 
@@ -1083,10 +1073,10 @@ var FleetSidebar = (function () {
 
                     // ── Post-process: compute _new_clean_gen layer ──
                     // Track incremental clean generation from user modifications
-                    // (uprates, CCS retrofits, operating overrides, added plants)
-                    var baselineData = window.FLEET_SCENARIOS_API ? window.FLEET_SCENARIOS_API.getData() : null;
-                    var baselineGenByFuel = (baselineData && baselineData.scenarios && baselineData.scenarios.baseline) ?
-                        baselineData.scenarios.baseline.generation_by_fuel : {};
+                    // (uprates, CCS retrofits, operating overrides, added plants).
+                    // Uses the SHADOW ENGINE baseline (same methodology as custom scenario)
+                    // for consistent deltas. The displayed baseline (Python pipeline) stays untouched.
+                    var baselineGenByFuel = engineBaseline ? engineBaseline.generation_by_fuel : {};
 
                     var cleanFuelSet = { nuclear: 1, geothermal: 1, wind: 1, solar: 1, hydro: 1, battery: 1, ldes: 1, ccs_ccgt: 1 };
                     var years = Object.keys(lastComputedResults.generation_by_fuel);
@@ -1113,10 +1103,12 @@ var FleetSidebar = (function () {
                     // Debug log
                     var dbgGen2030 = lastComputedResults.generation_by_fuel['2030'];
                     var dbgInt2030 = lastComputedResults.intensity_envelope['2030'];
+                    var dbgNewClean2030 = dbgGen2030 ? dbgGen2030._new_clean_gen : null;
                     console.log('[fleet-sidebar] recalculate complete (dispatch engine):',
                         '| addedPlants:', addedPlants.length,
                         '| elapsed:', elapsed + 'ms',
                         '| 2030 gen_by_fuel:', dbgGen2030 ? JSON.stringify(dbgGen2030) : 'MISSING',
+                        '| 2030 _new_clean_gen:', dbgNewClean2030 ? JSON.stringify(dbgNewClean2030) : 'NONE',
                         '| 2030 intensity:', dbgInt2030 ? dbgInt2030.p50 + ' kg/MWh' : 'MISSING',
                         '| 2030 envelope:', lastComputedResults.envelope['2030'] ? JSON.stringify(lastComputedResults.envelope['2030']) : 'MISSING');
 
