@@ -109,8 +109,10 @@ from lmp_engine import (
     compute_hourly_lmp_vectorized, compute_lmp_confidence_factor, PriceModel,
     HEAT_RATES, VOM, CO2_RATES, FUEL_PRICES, _get_fuel_prices,
     INSTALLED_FOSSIL_MW, FOSSIL_CAPACITY_SHARES,
+    CO2_RATES_BY_TIER, FUEL_CO2_FACTORS, TIER_NAMES,
 )
 from procurement_utils import get_rps_target_at_year, PPA_PREMIUMS
+from fleet_model import bin_name_to_base_type
 
 # Add backend dir to path for model imports
 sys.path.insert(0, os.path.join(MODULE_ROOT, 'backend'))
@@ -946,10 +948,11 @@ def compute_generator_economics(stack, hourly_lmp, unit_idx, dispatch,
     total_annual_mwh = float(np.sum(demand_mw_profile))
     fossil_demand_mw = residual * total_annual_mwh
 
-    # Compute carbon adder per unit
+    # Compute carbon adder per unit — resolve bin names to base types for lookup
     carbon_adder = {}
     for utype in set(unit_types):
-        co2_rate = CO2_RATES.get(utype, 0.5)
+        base = bin_name_to_base_type(utype)
+        co2_rate = CO2_RATES.get(base, 0.5)
         carbon_adder[utype] = co2_rate * carbon_price
 
     # Track per-unit economics
@@ -963,7 +966,9 @@ def compute_generator_economics(stack, hourly_lmp, unit_idx, dispatch,
         mw_dispatched = np.clip(fossil_demand_mw - low, 0, cap_mw) * dispatched
 
         # Apply unit commitment constraints (min up/down, min gen)
-        uc = UNIT_COMMITMENT.get(utype, {})
+        # Resolve bin name (e.g. gas_ccgt_very_low) to base type for UC lookup
+        base = bin_name_to_base_type(utype)
+        uc = UNIT_COMMITMENT.get(base, {})
         start_cost_total = 0.0
         if uc:
             dispatched, mw_dispatched, n_starts = apply_unit_commitment(
@@ -1018,11 +1023,50 @@ def compute_generator_economics(stack, hourly_lmp, unit_idx, dispatch,
             }
 
     # Clean up internal fields and round
-    for key in gen_econ:
+    for key in list(gen_econ.keys()):
         del gen_econ[key]['_total_mwh']
         for field in ('cf', 'avg_rev_mwh', 'var_cost_mwh', 'margin_mwh'):
             gen_econ[key][field] = round(gen_econ[key][field], 2)
 
+    return gen_econ
+
+
+def synthesize_base_type_aggregates(gen_econ):
+    """Add aggregate base-type entries (gas_ccgt, coal_steam, gas_ct) to gen_econ.
+
+    Capacity-weights per-tier results into a single aggregate entry per base type.
+    Downstream code (extract_iso_sweep_data, build_fleet_scenario_data) expects
+    ge_gas_ccgt_cf, so this must be called before serializing results.
+
+    Call AFTER retirement so aggregates reflect surviving capacity only.
+    Modifies gen_econ in-place and returns it.
+    """
+    _BASE_TYPES = ('gas_ccgt', 'coal_steam', 'gas_ct')
+    for base in _BASE_TYPES:
+        tiers = {k: v for k, v in gen_econ.items()
+                 if k.startswith(base + '_') and k != base}
+        if not tiers:
+            continue
+        total_cap = sum(v.get('capacity_mw', 0) for v in tiers.values())
+        if total_cap <= 0:
+            continue
+        total_mwh = sum(v.get('cf', 0) * v.get('capacity_mw', 0) * H for v in tiers.values())
+        agg_cf = total_mwh / (total_cap * H)
+        agg_rev = sum(v.get('avg_rev_mwh', 0) * v.get('cf', 0) * v.get('capacity_mw', 0) * H
+                      for v in tiers.values())
+        agg_rev = agg_rev / total_mwh if total_mwh > 0 else 0
+        agg_cost = sum(v.get('var_cost_mwh', 0) * v.get('cf', 0) * v.get('capacity_mw', 0) * H
+                       for v in tiers.values())
+        agg_cost = agg_cost / total_mwh if total_mwh > 0 else 0
+        agg_hours = max(v.get('dispatch_hours', 0) for v in tiers.values())
+        gen_econ[base] = {
+            'dispatch_hours': agg_hours,
+            'cf': round(agg_cf, 2),
+            'avg_rev_mwh': round(agg_rev, 2),
+            'var_cost_mwh': round(agg_cost, 2),
+            'margin_mwh': round(agg_rev - agg_cost, 2),
+            'capacity_mw': round(total_cap, 1),
+        }
     return gen_econ
 
 
@@ -1310,14 +1354,52 @@ def _apply_plant_level_retirement(gen_econ, iso, year, state, plant_economics,
         prior_econ_retirements[utype] = prior_econ_retirements.get(utype, 0) + mw
     state['economic_retirements'] = prior_econ_retirements
 
-    # Build adjusted gen_econ: reduce capacity per unit type by retired amount
+    # Build adjusted gen_econ: reduce capacity per unit type by retired amount.
+    # Plant-level retirements are keyed by EIA codes (NG, PC, SUB, DFO, etc.)
+    # or base fleet types (gas_ccgt, coal_steam). Map to fleet base types, then
+    # distribute retirement MW from least efficient tier first.
+    _TIER_RETIRE_ORDER = list(reversed(TIER_NAMES))  # very_high first
+    _EIA_TO_FLEET = {
+        'NG': 'gas_ccgt', 'CT': 'gas_ct', 'GT': 'gas_ct', 'CA': 'gas_ccgt',
+        'CS': 'gas_ccgt', 'CC': 'gas_ccgt', 'ST': 'coal_steam',
+        'PC': 'coal_steam', 'SUB': 'coal_steam', 'LIG': 'coal_steam',
+        'BIT': 'coal_steam', 'RC': 'coal_steam',
+        'DFO': 'oil_ct', 'RFO': 'oil_ct', 'KER': 'oil_ct',
+        'gas_ccgt': 'gas_ccgt', 'gas_ct': 'gas_ct',
+        'coal_steam': 'coal_steam', 'oil_ct': 'oil_ct',
+    }
+
     adjusted = {}
     for utype, econ in gen_econ.items():
-        adj = dict(econ)
-        retired_mw = retired_by_type.get(utype, 0)
-        if retired_mw > 0 and adj.get('capacity_mw', 0) > 0:
-            adj['capacity_mw'] = max(0, adj['capacity_mw'] - retired_mw)
-        adjusted[utype] = adj
+        adjusted[utype] = dict(econ)
+
+    # Aggregate retirements by fleet base type before distributing
+    fleet_retirements = {}
+    for raw_type, retire_mw in retired_by_type.items():
+        if retire_mw <= 0:
+            continue
+        fleet_base = _EIA_TO_FLEET.get(raw_type, raw_type)
+        fleet_retirements[fleet_base] = fleet_retirements.get(fleet_base, 0) + retire_mw
+
+    for base_type, retire_mw in fleet_retirements.items():
+        remaining_to_retire = retire_mw
+        # Check if base_type is a direct key in gen_econ (non-tiered, e.g., oil_ct)
+        if base_type in adjusted and not any(
+                f'{base_type}_{t}' in adjusted for t in TIER_NAMES):
+            cap = adjusted[base_type].get('capacity_mw', 0)
+            adjusted[base_type]['capacity_mw'] = max(0, cap - remaining_to_retire)
+            continue
+        # Distribute across tiers: retire least efficient first
+        for tier in _TIER_RETIRE_ORDER:
+            tier_key = f'{base_type}_{tier}'
+            if tier_key not in adjusted:
+                continue
+            tier_cap = adjusted[tier_key].get('capacity_mw', 0)
+            if tier_cap <= 0 or remaining_to_retire <= 0:
+                continue
+            reduce = min(tier_cap, remaining_to_retire)
+            adjusted[tier_key]['capacity_mw'] = tier_cap - reduce
+            remaining_to_retire -= reduce
 
     if total_retired_mw > 0:
         _log(f"    {iso} total plant-level retirement: {total_retired_mw:.0f} MW "
@@ -4412,74 +4494,64 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                         'dispatch_hours': 4380,
                     }
 
-            # --- EMISSION ACCOUNTING ---
-            gf = demand_twh / REGIONAL_DEMAND_TWH[iso]
-            _, retirement_info = compute_fossil_retirement(
-                iso, current_pct, emission_rates, fossil_mix, gf)
-            # Use remaining fleet emission rate (not displaced rate) for actual emissions
-            er = retirement_info.get('remaining_rate_tco2_mwh', 0)
-            fossil_twh = (1 - current_pct / 100.0) * demand_twh
+            # --- EMISSION ACCOUNTING (dispatch-based) ---
+            # Compute emissions bottom-up from actual per-tier generator dispatch.
+            # Each tier has its own CO2 rate (= heat_rate × fuel_co2_factor),
+            # so shifting dispatch from inefficient to efficient tiers reduces
+            # total emissions even at the same total fossil MWh.
+            #
+            # Uses adjusted_gen_econ (post-retirement capacity) to ensure
+            # retired capacity doesn't contribute phantom emissions.
+            _FUEL_KEY_CO2 = {
+                'gas_ccgt': 'gas', 'coal_steam': 'coal', 'gas_ct': 'gas', 'oil_ct': 'oil',
+            }
+            emissions_by_fuel = {}
+            emissions_mt = 0.0
+            fossil_twh = 0.0
+            for utype, econ in adjusted_gen_econ.items():
+                cf = econ.get('cf', 0)
+                cap_mw = econ.get('capacity_mw', 0)
+                if cf <= 0 or cap_mw <= 0:
+                    continue
+                gen_twh = cap_mw * cf * 8760 / 1e6  # MW × CF × hours → TWh
 
-            # Adjust fossil generation downward for economic retirements.
-            # Economically retired capacity can't generate — reduce fossil TWh
-            # proportionally to retired fraction of total fossil fleet.
-            total_fossil_cap = sum(e.get('capacity_mw', 0) for e in gen_econ.values())
-            if total_fossil_cap > 0 and econ_retired_mw > 0:
-                surviving_frac = max(0.05, 1.0 - econ_retired_mw / total_fossil_cap)
-                fossil_twh *= surviving_frac
-                _log(f"    {iso} fossil TWh adjusted: ×{surviving_frac:.2f} "
-                     f"({econ_retired_mw:.0f} MW retired of {total_fossil_cap:.0f} MW)")
+                # Get CO2 rate: per-tier if available, else base-type
+                co2_rate = CO2_RATES_BY_TIER.get(utype, CO2_RATES.get(utype, 0))
+                tier_emissions = gen_twh * co2_rate  # TWh × t/MWh = Mt
 
-            # Add generation from new-build fossil capacity.
-            # New builds generate at their expected CF with their own emission rate.
+                # Aggregate to base fuel type for emissions_by_fuel
+                base_type = bin_name_to_base_type(utype)
+                fuel_key = _FUEL_KEY_CO2.get(base_type)
+                if fuel_key:
+                    emissions_by_fuel[fuel_key] = emissions_by_fuel.get(fuel_key, 0) + tier_emissions
+                    emissions_mt += tier_emissions
+                    fossil_twh += gen_twh
+
+            # Add new-build fossil emissions (already in adjusted_gen_econ above
+            # if capacity was added there, but new-build details may have a
+            # more accurate expected CF for the first partial year).
             new_build_twh = 0.0
             new_build_emissions_mt = 0.0
             for ftype, new_mw in new_fossil_builds.items():
                 detail = new_fossil_details.get(ftype, {})
                 nb_cf = detail.get('expected_cf', 0.30)
-                nb_twh = new_mw * nb_cf * 8.760 / 1000.0  # MW → GW → TWh
+                nb_twh = new_mw * nb_cf * 8.760 / 1000.0
                 nb_co2_rate = NEW_BUILD_CO2_RATES.get(ftype, 0.37)
-                nb_emissions = nb_twh * nb_co2_rate  # Mt CO2
-                new_build_twh += nb_twh
-                new_build_emissions_mt += nb_emissions
+                # Only add delta if new-build wasn't already in adjusted_gen_econ
+                fleet_key = ftype if ftype != 'coal' else 'coal_steam'
+                if fleet_key not in adjusted_gen_econ:
+                    nb_emissions = nb_twh * nb_co2_rate
+                    new_build_twh += nb_twh
+                    new_build_emissions_mt += nb_emissions
+                    fuel_k = _FUEL_KEY_CO2.get(fleet_key, 'gas')
+                    emissions_by_fuel[fuel_k] = emissions_by_fuel.get(fuel_k, 0) + nb_emissions
+                    emissions_mt += nb_emissions
 
-            emissions_mt = fossil_twh * 1e6 * er / 1e6 + new_build_emissions_mt
+            # Round for output
+            emissions_by_fuel = {k: round(v, 3) for k, v in emissions_by_fuel.items() if v > 0.0005}
 
-            # Per-fuel-type emissions breakdown (Mt CO2) derived from fossil
-            # retirement model — consistent with the emissions_mt total.
-            # Previously used gen_econ capacity factors which ran a separate
-            # dispatch disconnected from clean_pct, producing phantom emissions.
-            regional_er = emission_rates.get(iso, {})
-            coal_co2_rate = regional_er.get('coal_co2_lb_per_mwh', 0.0) / 2204.62
-            gas_co2_rate = regional_er.get('gas_co2_lb_per_mwh', 0.0) / 2204.62
-            oil_co2_rate = regional_er.get('oil_co2_lb_per_mwh', 0.0) / 2204.62
-
-            # Derive per-fuel remaining TWh from retirement model
-            emissions_by_fuel = {}
-            if retirement_info.get('remaining_rate_tco2_mwh', 0) == 0:
-                # 100% clean or zero fossil — no emissions by fuel
-                pass
-            elif retirement_info.get('forced_gas_only'):
-                # Coal/oil fully retired — all remaining fossil is gas
-                emissions_by_fuel['gas_ccgt'] = round(fossil_twh * gas_co2_rate, 3)
-            elif 'coal_remaining_twh' in retirement_info:
-                # Merit-order path — use remaining TWh from retirement model,
-                # scaled by economic retirement surviving fraction
-                econ_scale = 1.0
-                if total_fossil_cap > 0 and econ_retired_mw > 0:
-                    econ_scale = max(0.05, 1.0 - econ_retired_mw / total_fossil_cap)
-                coal_rem = retirement_info['coal_remaining_twh'] * econ_scale
-                oil_rem = retirement_info['oil_remaining_twh'] * econ_scale
-                gas_rem = retirement_info['gas_remaining_twh'] * econ_scale
-                if coal_rem > 0:
-                    emissions_by_fuel['coal'] = round(coal_rem * coal_co2_rate, 3)
-                if oil_rem > 0:
-                    emissions_by_fuel['oil'] = round(oil_rem * oil_co2_rate, 3)
-                if gas_rem > 0:
-                    emissions_by_fuel['gas_ccgt'] = round(gas_rem * gas_co2_rate, 3)
-            else:
-                # Fallback: use total emissions_mt with blended rate
-                emissions_by_fuel['fossil'] = round(emissions_mt, 3)
+            # Compute blended emission rate for backward compat
+            er = emissions_mt / fossil_twh if fossil_twh > 0 else 0
 
             # Update TWh ratchet floor after all deployment
             current_rps_twh = state['rps_eligible_pct'] / 100.0 * demand_twh
@@ -4494,6 +4566,11 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             resource_mix_twh = dict(existing_mix_twh)
             for res, twh in deployed.items():
                 resource_mix_twh[res] = resource_mix_twh.get(res, 0) + twh
+
+            # Synthesize aggregate base-type entries (gas_ccgt, coal_steam, gas_ct)
+            # AFTER retirement so aggregates reflect surviving capacity only.
+            synthesize_base_type_aggregates(gen_econ)
+            synthesize_base_type_aggregates(adjusted_gen_econ)
 
             year_result = {
                 'iso': iso,
@@ -4515,7 +4592,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 'fossil_built_gw': round(state.get('fossil_built_gw', 0), 2),
                 'total_gas_gw': round(
                     sum(e.get('capacity_mw', 0) for k, e in adjusted_gen_econ.items()
-                        if k.startswith('gas')) / 1000.0, 2),
+                        if k in ('gas_ccgt', 'gas_ct')) / 1000.0, 2),
                 'market_stop': state['market_stopped'],
                 'resource_mix_twh': {k: round(v, 2) for k, v in resource_mix_twh.items()},
                 'cumulative_gw': {k: round(v, 2) for k, v in cumulative_gw.items()},
