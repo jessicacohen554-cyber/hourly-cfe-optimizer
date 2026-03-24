@@ -162,27 +162,30 @@
     // Derive intensity_envelope from generation_by_fuel + emissions_by_fuel if not present
     function deriveIntensityEnvelope(sc) {
         if (sc.intensity_envelope) return;
+        sc.intensity_envelope = computeIntensityFromGenAndEmissions(sc);
+    }
+
+    // Compute intensity envelope directly from p50 emissions (envelope) and
+    // total fleet generation (generation_by_fuel).  This ensures the intensity
+    // chart is always consistent with the emissions fan and gen-mix charts.
+    function computeIntensityFromGenAndEmissions(sc) {
         var gen = sc.generation_by_fuel;
-        var emis = sc.emissions_by_fuel;
-        if (!gen || !emis) return;
+        var envelope = sc.envelope;
+        if (!gen || !envelope) return {};
         var intEnv = {};
         Object.keys(gen).forEach(function (yr) {
-            var totalGenTwh = 0;
-            var totalEmisMt = 0;
             var gYear = gen[yr] || {};
-            var eYear = emis[yr] || {};
+            var totalGenTwh = 0;
             Object.keys(gYear).forEach(function (f) { if (f[0] !== '_') totalGenTwh += gYear[f] || 0; });
-            Object.keys(eYear).forEach(function (f) { if (f[0] !== '_') totalEmisMt += eYear[f] || 0; });
-            // TWh → MWh: ×1e6. Mt → kg: ×1e9. intensity = (Mt × 1e9) / (TWh × 1e6) = Mt/TWh × 1e3
-            var intensityKg = totalGenTwh > 0 ? (totalEmisMt / totalGenTwh) * 1e3 : 0;
-            intEnv[yr] = {
-                p10: Math.round(intensityKg * 100) / 100,
-                p50: Math.round(intensityKg * 100) / 100,
-                p90: Math.round(intensityKg * 100) / 100,
-                mean: Math.round(intensityKg * 100) / 100
-            };
+            var env = envelope[yr];
+            if (!env || totalGenTwh <= 0) return;
+            // emissions are in Mt CO2, gen in TWh → (Mt/TWh)×1e3 = kgCO2/MWh
+            var p10 = Math.round((env.p10 / totalGenTwh) * 1e3 * 100) / 100;
+            var p50 = Math.round((env.p50 / totalGenTwh) * 1e3 * 100) / 100;
+            var p90 = Math.round((env.p90 / totalGenTwh) * 1e3 * 100) / 100;
+            intEnv[yr] = { p10: p10, p50: p50, p90: p90, mean: p50 };
         });
-        sc.intensity_envelope = intEnv;
+        return intEnv;
     }
 
     function onDataLoaded(data) {
@@ -898,7 +901,7 @@
             var html = '<div class="fan-tooltip-title">' + year + '</div>';
 
             var baseline = DATA.scenarios.baseline;
-            var baseIntEnv = baseline && baseline.intensity_envelope ? baseline.intensity_envelope : null;
+            var baseIntEnv = baseline ? computeIntensityFromGenAndEmissions(baseline) : null;
             var baseYear = baseIntEnv ? baseIntEnv[year] : null;
             var baseline2023 = baseIntEnv && baseIntEnv['2023'] ? baseIntEnv['2023'].p50 : null;
 
@@ -907,23 +910,28 @@
                 html += intensityTooltipRow(baseYear.p50, BASELINE_COLOR, 'Baseline', baseline2023);
             }
 
-            // Custom scenario row
-            if (customScenario && customScenario.intensity_envelope && customScenario.intensity_envelope[year]) {
-                var custVal = customScenario.intensity_envelope[year].p50;
-                html += intensityTooltipRow(custVal, CUSTOM_COLOR, 'Custom', baseline2023);
-                if (baseYear) {
-                    var delta = custVal - baseYear.p50;
-                    var cls = delta < 0 ? 'gap-negative' : 'gap-positive';
-                    var sign = delta > 0 ? '+' : '';
-                    html += '<div class="fan-tooltip-gap"><span class="' + cls + '">' +
-                        sign + delta.toFixed(1) + ' kgCO₂/MWh vs Baseline</span></div>';
+            // Custom scenario row (legacy)
+            if (customScenario && customScenario.envelope && customScenario.generation_by_fuel) {
+                var custIntEnv = computeIntensityFromGenAndEmissions(customScenario);
+                if (custIntEnv[year]) {
+                    var custVal = custIntEnv[year].p50;
+                    html += intensityTooltipRow(custVal, CUSTOM_COLOR, 'Custom', baseline2023);
+                    if (baseYear) {
+                        var delta = custVal - baseYear.p50;
+                        var cls = delta < 0 ? 'gap-negative' : 'gap-positive';
+                        var sign = delta > 0 ? '+' : '';
+                        html += '<div class="fan-tooltip-gap"><span class="' + cls + '">' +
+                            sign + delta.toFixed(1) + ' kgCO₂/MWh vs Baseline</span></div>';
+                    }
                 }
             }
 
-            // Saved scenario rows
+            // Saved scenario rows — compute from emissions / total gen
             savedScenarioOverlays.forEach(function (s) {
-                if (!s.results || !s.results.intensity_envelope || !s.results.intensity_envelope[year]) return;
-                var sVal = s.results.intensity_envelope[year].p50;
+                if (!s.results || !s.results.envelope || !s.results.generation_by_fuel) return;
+                var scIntEnv = computeIntensityFromGenAndEmissions(s.results);
+                if (!scIntEnv[year]) return;
+                var sVal = scIntEnv[year].p50;
                 html += intensityTooltipRow(sVal, s.color, s.name || 'Saved', baseline2023);
             });
 
@@ -1679,9 +1687,9 @@
         }
         var labels = years.map(String);
 
-        // Baseline intensity fan (interpolate at intervention year if needed)
-        if (baseline && baseline.intensity_envelope) {
-            var baseIntEnv = baseline.intensity_envelope;
+        // Recompute baseline intensity from p50 emissions / total gen (always consistent)
+        if (baseline) {
+            var baseIntEnv = computeIntensityFromGenAndEmissions(baseline);
             if (firstYear && !baseIntEnv[String(firstYear)]) {
                 var interpBase = interpolateEnvAtYear(baseIntEnv, firstYear);
                 if (interpBase) {
@@ -1692,12 +1700,13 @@
             addIntensityFanDatasets(datasets, baseIntEnv, years, BASELINE_COLOR, 'Baseline', true);
         }
 
-        // Saved scenario intensity overlays
+        // Saved scenario intensity overlays — recompute from p50 emissions / total gen
         savedScenarioOverlays.forEach(function (s) {
-            if (s.results && s.results.intensity_envelope) {
+            if (s.results && s.results.envelope && s.results.generation_by_fuel) {
+                var scIntEnv = computeIntensityFromGenAndEmissions(s.results);
                 var alignedIntEnv = alignEnvelopeWithBaseline(
-                    s.results.intensity_envelope,
-                    baseline ? baseline.intensity_envelope : null,
+                    scIntEnv,
+                    baseline ? computeIntensityFromGenAndEmissions(baseline) : null,
                     firstYear
                 );
                 addIntensityFanDatasets(datasets, alignedIntEnv, years, s.color, s.name, false);
