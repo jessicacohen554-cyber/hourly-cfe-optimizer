@@ -372,8 +372,8 @@ class ZoneDetail(BaseModel):
 
 class FuelBinRow(BaseModel):
     """One row in the fuel source / heat rate bin breakdown table."""
-    fuel_type: str              # e.g. "coal_steam", "gas_ccgt_efficient"
-    heat_rate_bin: str          # e.g. "< 7.2", "7.2-8.0", "> 8.0"
+    fuel_type: str              # e.g. "coal_steam", "gas_ccgt_very_low"
+    heat_rate_bin: str          # e.g. "< 6.5", "6.5-7.2", "> 8.5"
     capacity_gw: float          # Total capacity in GW
     capacity_factor: float      # 0–1
     generation_twh: float       # Annual generation in TWh
