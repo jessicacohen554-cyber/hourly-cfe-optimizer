@@ -3384,7 +3384,11 @@ def check_data_sources():
     """
     from pipeline_config import ZONE_CONFIG, DEMAND_RESPONSE
 
-    search_dirs = [str(resolve_data_path('step2.2-cost'))]
+    try:
+        from paths import get_data_search_dirs
+        search_dirs = [str(d) for d in get_data_search_dirs(subdirs=['step2.2-cost'])]
+    except ImportError:
+        search_dirs = [str(resolve_data_path('step2.2-cost'))]
     simple = {}
     tiers = {}
 
@@ -3412,11 +3416,20 @@ def check_data_sources():
         if found_parquet:
             resource_mix = 'parquet'
         else:
-            # Check for step 2.1 EF parquets as fallback
+            # Check for step 2.1 EF parquets as fallback (search all data tiers)
             import glob as globmod
-            ef_dir = str(resolve_data_path('step2.1-ef'))
-            ef_files = globmod.glob(os.path.join(ef_dir, f'step_2_1_EF_{iso}_*.parquet')) if os.path.isdir(ef_dir) else []
-            ef_files = [f for f in ef_files if '_batch_' not in os.path.basename(f)]
+            ef_files = []
+            try:
+                from paths import get_data_search_dirs
+                ef_search_dirs = [str(d) for d in get_data_search_dirs(subdirs=['step2.1-ef'])]
+            except ImportError:
+                ef_search_dirs = [str(resolve_data_path('step2.1-ef'))]
+            for ef_dir in ef_search_dirs:
+                if os.path.isdir(ef_dir):
+                    ef_files = globmod.glob(os.path.join(ef_dir, f'step_2_1_EF_{iso}_*.parquet'))
+                    ef_files = [f for f in ef_files if '_batch_' not in os.path.basename(f)]
+                    if ef_files:
+                        break
             resource_mix = 'ef_parquet' if ef_files else 'synthetic'
         simple[iso] = resource_mix
 

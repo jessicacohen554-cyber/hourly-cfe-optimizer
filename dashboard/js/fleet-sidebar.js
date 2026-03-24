@@ -1073,11 +1073,11 @@ var FleetSidebar = (function () {
                     var scenarioData = {
                         description: scenarioName,
                         color: '#2372B9',
-                        envelope: customEnvelope,
-                        intensity_envelope: customIntensity,
-                        plant_detail: customPlantDetail,
-                        generation_by_fuel: customGenByFuel,
-                        emissions_by_fuel: customEmisByFuel
+                        envelope: lastComputedResults.envelope,
+                        intensity_envelope: lastComputedResults.intensity_envelope,
+                        plant_detail: lastComputedResults.plant_detail,
+                        generation_by_fuel: lastComputedResults.generation_by_fuel,
+                        emissions_by_fuel: lastComputedResults.emissions_by_fuel
                     };
 
                     // Don't auto-display on charts — user must save & name first
