@@ -394,22 +394,43 @@ def compute_fleet_emissions_sweep(plants, year, scenario='baseline',
             for pct in ('p10', 'p50', 'p90'):
                 totals[pct] += base_em
 
-    # CCS adjustment — applied uniformly to all percentiles
+    # CCS adjustment — compute fraction of CCGT emissions captured, then apply
+    # proportionally to each percentile. This avoids the linear-model reduction
+    # exceeding the sweep-derived emissions (which would floor to 0 incorrectly).
     if scenario in ('ccs_top_emitters', 'ccs_plus_new_gas',
                      'retire_peakers_ccs_baseload'):
+        total_ccgt_em = 0.0
+        ccs_reduction_em = 0.0
         for p in plants:
             if p['fuel_type'] != 'gas_ccgt' or p['capacity_mw'] <= 0:
-                continue
-            if not p['ccs_eligible']:
                 continue
             if p.get('retired_year') and year >= p['retired_year']:
                 continue
             gen_twh = get_plant_gen_twh(p, 'gas_ccgt', year, year_factor,
                                         re_growth)
             co2_rate = get_plant_co2_rate(p, 'gas_ccgt')
-            ccs_ramp = min(1.0, max(0.0, (year - 2028) / 5.0))
-            reduction = gen_twh * co2_rate * ccs_ramp * 0.95
+            plant_em = gen_twh * co2_rate
+            total_ccgt_em += plant_em
+            if p['ccs_eligible']:
+                ccs_ramp = min(1.0, max(0.0, (year - 2028) / 5.0))
+                ccs_reduction_em += plant_em * ccs_ramp * 0.95
+
+        # Apply as a proportional reduction: if CCS captures X% of linear-model
+        # CCGT emissions, apply that same X% to the sweep-derived variable emissions.
+        if total_ccgt_em > 0 and ccs_reduction_em > 0:
+            reduction_frac = min(ccs_reduction_em / total_ccgt_em, 0.95)
+            # The variable_by_iso_fuel emissions that were sweep-modulated are the
+            # CCGT portion. Compute what fraction of each percentile is CCGT-derived.
+            # Approximate: CCGT share of total variable ≈ total_ccgt_em / total_variable
+            total_variable = sum(variable_by_iso_fuel.values())
+            if total_variable > 0:
+                ccgt_share = min(total_ccgt_em / total_variable, 1.0)
+            else:
+                ccgt_share = 1.0
             for pct in ('p10', 'p50', 'p90'):
+                variable_portion = totals[pct] - fixed_emissions
+                ccgt_portion = variable_portion * ccgt_share
+                reduction = ccgt_portion * reduction_frac
                 totals[pct] -= reduction
                 totals[pct] = max(0.0, totals[pct])
 
@@ -528,14 +549,23 @@ def parse_rosetta():
             except ValueError:
                 capacity_mw = 0.0
 
-            # Available CCS capacity
+            # Available CCS capacity — fall back to capacity-based eligibility
+            # if the Rosetta CSV doesn't have a dedicated CCS column.
             ccs_cap_str = row.get('Available CCS Capacity', '').strip()
             try:
                 ccs_capacity_mw = float(ccs_cap_str) if ccs_cap_str else 0.0
             except ValueError:
                 ccs_capacity_mw = 0.0
 
-            ccs_eligible = ccs_capacity_mw > 0
+            # CCS eligibility: explicit CCS capacity > 0, OR any CCGT >= 100 MW
+            # (large combined-cycle plants are the primary CCS retrofit candidates)
+            if ccs_capacity_mw > 0:
+                ccs_eligible = True
+            elif fuel == 'gas_ccgt' and capacity_mw >= 100:
+                ccs_eligible = True
+                ccs_capacity_mw = capacity_mw  # Full capacity eligible for CCS
+            else:
+                ccs_eligible = False
 
             equity_str = row.get('Equity Share %', '100%').strip().replace('%', '')
             try:
