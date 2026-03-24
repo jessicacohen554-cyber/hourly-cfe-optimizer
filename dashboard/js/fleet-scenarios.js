@@ -43,6 +43,7 @@
     var selectedYear = 2030;
     var selectedFossilCost = 'All';
     var selectedLowerScenarioId = null; // null = baseline; string = saved scenario ID
+    var hideBaselineFan = false;
     var fanChart = null;
     var waterfall2023Chart = null;
     var genMixChart = null;
@@ -193,6 +194,13 @@
             });
         }
         buildControls();
+        var hideBaselineEl = document.getElementById('hideBaselineFan');
+        if (hideBaselineEl) {
+            hideBaselineEl.addEventListener('change', function () {
+                hideBaselineFan = hideBaselineEl.checked;
+                updateFanChart();
+            });
+        }
         buildFanChart();
         buildWaterfall2023Chart();
         buildGenMixChart();
@@ -645,9 +653,8 @@
         }
         var labels = years.map(String);
 
-        // ── Always show baseline with gray p10-p90 band ──
-        // If we injected an extra year, interpolate baseline envelope at that year
-        if (baseline) {
+        // ── Baseline with gray p10-p90 band (skipped if user hides it) ──
+        if (baseline && !hideBaselineFan) {
             var baseEnv = getEnvelope(baseline);
             if (firstYear && !baseEnv[String(firstYear)]) {
                 var interpBase = interpolateEnvAtYear(baseEnv, firstYear);
