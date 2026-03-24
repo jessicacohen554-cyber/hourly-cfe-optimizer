@@ -266,6 +266,46 @@ MUST_RUN_PCT = {'nuclear': 1.0, 'coal_steam': 0.40, 'gas_ccgt': 0.0, 'gas_ct': 0
 
 ---
 
+### 5-Tier Heat-Rate Dispatch (March 2026)
+
+**Decision**: Replaced the 3-bin (efficient/mid/inefficient) aggregate dispatch model with a **5-tier model** (`very_low` through `very_high`) per fuel type, producing a 15-entry merit-order stack (5 tiers × 3 fuel types: `gas_ccgt`, `coal_steam`, `gas_ct`).
+
+**Rationale**: The 3-bin model masked the real-world ~30% heat rate spread within fuel classes. An H-class CCGT (HR 6.2) and a pre-1993 legacy CCGT (HR 9.0) have fundamentally different dispatch economics — blending them into a single "gas CCGT" bin distorts LMP formation and retirement timing. The 5-tier structure also enables vintage-based Constellation fleet mapping for `fleet_scenarios.html`, where each plant's online year determines its efficiency tier.
+
+**Tier Definitions:**
+
+| Tier | Gas CCGT HR | Gas CCGT CO₂ | Gas CCGT VOM | Coal HR | Coal CO₂ | Coal VOM | Gas CT HR | Gas CT CO₂ | Gas CT VOM |
+|------|------------|-------------|-------------|---------|---------|---------|----------|-----------|-----------|
+| very_low | 6.2 | 0.329 | $2.50 | 8.5 | 0.808 | $4.50 | 9.0 | 0.478 | $4.00 |
+| low | 6.8 | 0.361 | $3.00 | 9.5 | 0.903 | $5.00 | 10.0 | 0.531 | $4.50 |
+| medium | 7.5 | 0.398 | $3.50 | 10.5 | 0.998 | $5.50 | 10.5 | 0.557 | $5.00 |
+| high | 8.1 | 0.430 | $4.00 | 11.5 | 1.093 | $6.00 | 11.5 | 0.610 | $5.50 |
+| very_high | 9.0 | 0.478 | $4.50 | 12.5 | 1.188 | $6.50 | 13.0 | 0.690 | $6.00 |
+
+Each tier also has a `capacity_fraction` (share of installed capacity within that fuel type, sums to 1.0 across 5 tiers).
+
+**Vintage → Tier Mapping** (`VINTAGE_TIER_THRESHOLDS`):
+
+| Tier | Gas CCGT | Coal Steam | Gas CT |
+|------|----------|------------|--------|
+| very_low | 2010+ | 2005+ | 2010+ |
+| low | 2002–2009 | 1995–2004 | 2000–2009 |
+| medium | 1998–2001 | 1985–1994 | 1995–1999 |
+| high | 1993–1997 | 1975–1984 | 1985–1994 |
+| very_high | pre-1993 | pre-1975 | pre-1985 |
+
+**Retirement order**: `very_high` retires first → `high` → `medium` → `low` → `very_low` last. Within each tier, fuel types retire in traditional merit order: coal → oil → gas CT → gas CCGT.
+
+**Per-tier sweep CFs**: Loaded from sweep parquet via `SWEEP_TIER_CF_COLS` (e.g., `gas_ccgt_very_low_cf`, `coal_steam_high_cf`). These feed into plant-level dispatch projections in `fleet_scenarios.html`.
+
+**Backward compatibility**: Falls back to aggregate fuel-type CF columns (e.g., `gas_ccgt_cf`) if per-tier columns are missing from the sweep parquet. This ensures older cached sweep results still work.
+
+**Source files**:
+- `scripts/lmp_engine.py` — `EFFICIENCY_TIERS` dict (canonical tier definitions: HR, CO₂, VOM, capacity fraction per fuel type per tier)
+- `market-simulator/scripts/build_fleet_scenario_data.py` — `VINTAGE_TIER_THRESHOLDS` dict, `vintage_to_tier()` function (online year → tier mapping)
+
+---
+
 ## Previous Status (Mar 9, 2026)
 
 ### Nuclear Policy Sensitivity Toggle (Added — Mar 9, 2026)
