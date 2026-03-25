@@ -14,12 +14,20 @@ import json
 import hashlib
 import os
 
-CSV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data', 'CEG_fleet_rosetta.csv')
-OUT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'fleet_scenarios', 'constellation_scenarios.json')
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+CSV_PATH = os.path.join(SCRIPT_DIR, '..', 'data', 'CEG_fleet_rosetta.csv')
+OUT_PATH = os.path.join(SCRIPT_DIR, '..', 'fleet_scenarios', 'constellation_scenarios.json')
+HEAT_RATES_JSON = os.path.join(SCRIPT_DIR, '..', 'data', 'plant_heat_rates.json')
 
 # --- Constants ---
 HEAT_RATES = {'gas_ccgt': 7.0, 'gas_ct': 10.5, 'oil_ct': 10.5, 'gas_oil_ct': 10.5}
 CO2_RATES = {'gas_ccgt': 0.37, 'gas_ct': 0.55, 'oil_ct': 0.65, 'gas_oil_ct': 0.58}
+EMISSION_FACTORS = {'gas_ccgt': 0.05306, 'gas_ct': 0.05306, 'oil_ct': 0.07396, 'gas_oil_ct': 0.06351}
+
+# Per-plant heat rate overrides (new-build H-class units with better efficiency)
+PLANT_HEAT_RATE_OVERRIDES = {
+    'Thad Hill II': 6.5,
+}
 
 # Capacity defaults by fuel type (MW, nameplate estimate per unit)
 CAPACITY_DEFAULTS = {
@@ -128,6 +136,15 @@ def stable_hash_id(name, state, unit_detail):
 
 
 def main():
+    # Load actual plant heat rates from EIA 923 / EPA CAMPD
+    actual_heat_rates = {}
+    if os.path.exists(HEAT_RATES_JSON):
+        with open(HEAT_RATES_JSON) as f:
+            actual_heat_rates = json.load(f)
+        print(f"Loaded {len(actual_heat_rates)} actual plant heat rates from EIA 923 / CAMPD")
+    else:
+        print(f"WARNING: {HEAT_RATES_JSON} not found — using type defaults")
+
     plants = []
     seen_keys = set()
 
@@ -229,8 +246,22 @@ def main():
 
             # Add fossil-specific fields
             if category == 'fossil':
-                plant['heat_rate_mmbtu_mwh'] = HEAT_RATES.get(ft, 10.0)
-                plant['co2_rate_t_mwh'] = CO2_RATES.get(ft, 0.37)
+                # Heat rate priority: manual override > EIA 923/CAMPD actual > type default
+                campd_str = str(orispl)
+                if name in PLANT_HEAT_RATE_OVERRIDES:
+                    hr = PLANT_HEAT_RATE_OVERRIDES[name]
+                    hr_source = 'override'
+                elif campd_str in actual_heat_rates:
+                    hr = actual_heat_rates[campd_str]['heat_rate']
+                    hr_source = actual_heat_rates[campd_str].get('source', 'eia923')
+                else:
+                    hr = HEAT_RATES.get(ft, 10.0)
+                    hr_source = 'default'
+                plant['heat_rate_mmbtu_mwh'] = round(hr, 2)
+                plant['heat_rate_source'] = hr_source
+                # Derive CO2 from actual heat rate × fuel emission factor
+                ef = EMISSION_FACTORS.get(ft, 0.05306)
+                plant['co2_rate_t_mwh'] = round(hr * ef, 3)
                 if ccs_capacity_mw is not None:
                     plant['ccs_capacity_mw'] = ccs_capacity_mw
 
@@ -266,10 +297,6 @@ def main():
         by_iso.setdefault(p['iso'], []).append(p)
     for iso, ps in sorted(by_iso.items()):
         print(f"  {iso}: {len(ps)}")
-
-    # Hardcoded top CCS-eligible CCGT orispls for scenario definitions
-    # CCS eligibility is managed by the user in the sidebar UI, not derived from data
-    TOP_CCS_ORISPLS = [997153, 55327, 55327, 50292, 55172, 55299]
 
     # Build output JSON
     output = {
@@ -325,50 +352,6 @@ def main():
                 "description": "Status quo \u2014 no CCS, no new gas, no early retirements. Economic retirements only.",
                 "modifications": []
             },
-            "ccs_top_emitters": {
-                "description": "CCS retrofit on the top 6 largest CCS-eligible CCGTs by 2030-2032.",
-                "modifications": [
-                    {"orispl": TOP_CCS_ORISPLS[i], "action": "ccs_retrofit", "year_online": 2030 + (i // 2)}
-                    for i in range(len(TOP_CCS_ORISPLS))
-                ]
-            },
-            "ccs_plus_new_gas": {
-                "description": "CCS on top emitters + 1,200 MW new efficient CCGT in PJM.",
-                "modifications": [
-                    {"orispl": TOP_CCS_ORISPLS[0], "action": "ccs_retrofit", "year_online": 2030},
-                    {"orispl": TOP_CCS_ORISPLS[1], "action": "ccs_retrofit", "year_online": 2030},
-                    {"orispl": TOP_CCS_ORISPLS[2], "action": "ccs_retrofit", "year_online": 2031},
-                    {
-                        "action": "add_plant",
-                        "name": "New PJM CCGT East",
-                        "iso": "PJM",
-                        "capacity_mw": 600,
-                        "fuel_type": "gas_ccgt",
-                        "heat_rate_mmbtu_mwh": 6.3,
-                        "equity_share": 1.0,
-                        "year_online": 2028
-                    },
-                    {
-                        "action": "add_plant",
-                        "name": "New PJM CCGT West",
-                        "iso": "PJM",
-                        "capacity_mw": 600,
-                        "fuel_type": "gas_ccgt",
-                        "heat_rate_mmbtu_mwh": 6.3,
-                        "equity_share": 1.0,
-                        "year_online": 2029
-                    }
-                ]
-            },
-            "retire_peakers_ccs_baseload": {
-                "description": "Retire all oil CTs, gas/oil CTs, and gas CTs by 2030, CCS retrofit on all remaining gas CCGTs by 2035.",
-                "modifications": [
-                    {"fuel_type": "oil_ct", "action": "retire", "year_online": 2030},
-                    {"fuel_type": "gas_oil_ct", "action": "retire", "year_online": 2030},
-                    {"fuel_type": "gas_ct", "action": "retire", "year_online": 2030},
-                    {"fuel_type": "gas_ccgt", "action": "ccs_retrofit", "year_online": 2035}
-                ]
-            }
         }
     }
 
