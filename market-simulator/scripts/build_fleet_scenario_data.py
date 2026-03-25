@@ -37,6 +37,7 @@ OUTPUT_DIR = os.path.join(SCRIPT_DIR, '..', 'frontend', 'data')
 ROSETTA_PATH = os.path.join(DATA_DIR, 'CEG_fleet_rosetta.csv')
 CAMPD_2025_PATH = os.path.join(DATA_DIR, '2025_annual_campd_emissions.csv')
 OVERRIDES_PATH = os.path.join(DATA_DIR, 'plant_emissions_overrides.json')
+HEAT_RATES_JSON_PATH = os.path.join(DATA_DIR, 'plant_heat_rates.json')
 
 # ── Canonical fuel type mapping from Rosetta CSV ──
 FUEL_MAP = {
@@ -490,6 +491,37 @@ def load_campd_2025():
     return result
 
 
+# ── Actual heat rate data (EIA 923 / EPA CAMPD) ──
+# Loaded once, keyed by CAMPD facility ID (string)
+_actual_heat_rates = {}
+if os.path.exists(HEAT_RATES_JSON_PATH):
+    with open(HEAT_RATES_JSON_PATH) as _f:
+        _actual_heat_rates = json.load(_f)
+
+# Heat-rate thresholds for tier assignment from measured HR values (MMBtu/MWh)
+_HR_TIER_THRESHOLDS = {
+    'gas_ccgt': [(0, 6.5, 'very_low'), (6.5, 7.2, 'low'), (7.2, 7.8, 'medium'),
+                 (7.8, 8.5, 'high'), (8.5, 999, 'very_high')],
+    'gas_ct':   [(0, 9.5, 'very_low'), (9.5, 10.2, 'low'), (10.2, 10.8, 'medium'),
+                 (10.8, 11.5, 'high'), (11.5, 999, 'very_high')],
+    'coal_steam': [(0, 9.0, 'very_low'), (9.0, 9.8, 'low'), (9.8, 10.5, 'medium'),
+                   (10.5, 11.5, 'high'), (11.5, 999, 'very_high')],
+    'oil_ct':   [(0, 10.0, 'very_low'), (10.0, 10.5, 'low'), (10.5, 11.0, 'medium'),
+                 (11.0, 12.0, 'high'), (12.0, 999, 'very_high')],
+}
+
+
+def _hr_value_to_tier(fuel_type, hr_value):
+    """Map a measured heat rate (MMBtu/MWh) to a 5-tier bin."""
+    thresholds = _HR_TIER_THRESHOLDS.get(fuel_type)
+    if not thresholds:
+        return 'medium'
+    for lo, hi, tier in thresholds:
+        if lo <= hr_value < hi:
+            return tier
+    return 'very_high'
+
+
 def parse_rosetta():
     """Parse Rosetta CSV into structured plant list.
 
@@ -716,8 +748,16 @@ def parse_rosetta():
             # Rosetta already has correct equity-weighted values for both years
             # projection_base is already set to gen_2024 above for non-solar
 
-            # Assign heat-rate tier from vintage for per-tier dispatch CF
-            tier = vintage_to_tier(fuel, year_built)
+            # Assign heat-rate tier from actual EIA 923/CAMPD data when available,
+            # fall back to vintage-based estimate only for plants without measured data.
+            actual_hr = _actual_heat_rates.get(str(orispl), {}).get('heat_rate')
+            if actual_hr and fuel in ('gas_ccgt', 'gas_ct', 'coal_steam', 'oil_ct'):
+                tier = _hr_value_to_tier(fuel, actual_hr)
+                hr_source = _actual_heat_rates[str(orispl)].get('source', 'eia923')
+            else:
+                tier = vintage_to_tier(fuel, year_built)
+                actual_hr = None
+                hr_source = 'vintage'
 
             plants.append({
                 'name': name,
@@ -731,6 +771,8 @@ def parse_rosetta():
                 'ccs_eligible': ccs_eligible,
                 'year_built': year_built,
                 'heat_rate_tier': tier,
+                'actual_heat_rate': actual_hr,
+                'heat_rate_source': hr_source,
                 'stat_type': stat_type,
                 'group': group,
                 'plant_type': plant_type_csv,
