@@ -392,11 +392,11 @@
                     var pt = dsMeta.data[idx];
 
                     ctx.save();
-                    ctx.font = "bold 24px 'Franklin Gothic Demi', 'Franklin Gothic Medium', 'Source Sans Pro', sans-serif";
+                    ctx.font = "bold 36px 'Franklin Gothic Demi', 'Franklin Gothic Medium', 'Source Sans Pro', sans-serif";
                     ctx.fillStyle = color;
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'bottom';
-                    ctx.fillText(labelText, pt.x, pt.y - 12);
+                    ctx.fillText(labelText, pt.x, pt.y - 18);
                     ctx.restore();
                 });
             });
