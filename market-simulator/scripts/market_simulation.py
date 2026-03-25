@@ -4827,7 +4827,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                                 if _new_stor.get(t, 0) > 0)
                      + f" (LMP pass 2: avg=${avg_lmp:.1f})")
 
-            # --- LCOE MERIT-ORDER DEPLOYMENT ---
+            # --- UNIFIED DEPLOYMENT: CLEAN + FOSSIL COMPETE HEAD-TO-HEAD ---
             # Compute per-resource temporal energy revenue for deployment economics
             if CANNIBALIZATION_ENABLED:
                 _per_res_rev = compute_energy_revenue_by_resource(
@@ -4837,10 +4837,42 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             else:
                 _per_res_rev = None
 
-            # Deploy cheapest profitable clean resources until queue cap or no more profitable
-            (new_clean_pct, deployed, zone_results, rev_breakdown,
-             blended_cost, blended_revenue, remaining_gw,
-             energy_rev_by_resource, capture_rates) = compute_market_deployment(
+            # Build plant-level economics for retirement decisions
+            _plant_economics = None
+            try:
+                fuel_level = conditions.get('fuel_level', 'Medium')
+                _fuel_prices = _resolve_fuel_prices_for_year(conditions, year, iso) or _get_fuel_prices(year, fuel_level)
+                plant_stack, _plant_total_mw = build_plant_level_merit_order(
+                    iso, current_pct, fuel_level=fuel_level,
+                    carbon_price=carbon_price,
+                    custom_fuel_prices=_fuel_prices,
+                    custom_vom=conditions.get('custom_vom'),
+                )
+                if plant_stack:
+                    prior_retired_ids = set(state.get('retired_plants', []))
+                    plant_stack = [p for p in plant_stack
+                                   if p.get('plant_id') not in prior_retired_ids]
+                    _stor = state.get('storage_deployed', {})
+                    _dispatch = reconstruct_hourly_dispatch(
+                        demand_norm, supply_profiles_iso, resource_pcts,
+                        procurement_pct=100,
+                        battery_dispatch_pct=_stor.get('battery', 0),
+                        battery8_dispatch_pct=_stor.get('battery8', 0),
+                        ldes_dispatch_pct=_stor.get('ldes', 0),
+                        h2_dispatch_pct=_stor.get('h2', 0),
+                    )
+                    _plant_economics = compute_plant_level_economics(
+                        plant_stack, hourly_lmp, _dispatch,
+                        demand_mw_profile, _fuel_prices, carbon_price,
+                        year=year,
+                    )
+            except Exception as _pe:
+                _log(f"    {iso} plant-level economics unavailable ({_pe}), "
+                     f"falling back to fleet-fraction retirement")
+
+            # Unified deployment: clean and fossil in single merit order,
+            # then retirement informed by what was built.
+            unified = compute_unified_deployment(
                 iso, year, demand_twh, current_pct,
                 conditions, cumulative_gw, queue_remaining_gw,
                 hourly_lmp, avg_lmp, p90_lmp,
@@ -4855,14 +4887,34 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 reserve_margin_pct=reserve_margin_pct,
                 curtailment_rate=curtailment_rate,
                 lmp_confidence=lmp_confidence,
+                demand_norm=demand_norm,
+                demand_mw_profile=demand_mw_profile,
+                plant_economics=_plant_economics,
+                _log=_log,
             )
 
+            # Unpack unified results into the same variable names
+            deployed = unified.deployed
+            zone_results = unified.zone_results
+            rev_breakdown = unified.rev_breakdown
+            blended_cost = unified.blended_cost
+            blended_revenue = unified.blended_revenue
+            energy_rev_by_resource = unified.energy_rev_by_resource
+            capture_rates = unified.capture_rates
+            new_fossil_builds = unified.new_fossil_builds
+            new_fossil_mw = unified.total_new_fossil_mw
+            new_fossil_details = unified.new_fossil_details
+            adjusted_gen_econ = unified.adjusted_gen_econ
+            econ_retired = unified.economic_retirements
+            econ_retired_mw = unified.total_economic_retirement_mw
+            plant_retirement_list = unified.plant_retirement_list
+
             # Sync queue budget after deployment
-            queue_remaining_gw = remaining_gw
+            queue_remaining_gw = unified.remaining_gw
 
             # Update state
             old_pct = current_pct
-            current_pct = new_clean_pct
+            current_pct = unified.new_clean_pct
             state['clean_pct'] = current_pct
             state['market_stopped'] = (current_pct <= old_pct + 0.01)
 
@@ -4878,7 +4930,8 @@ def run_market_simulation(scenario_id, conditions, isos=None,
 
             _log(f"  {iso} → {current_pct:.1f}% clean (was {old_pct:.1f}%): "
                  f"LMP avg=${avg_lmp:.1f}, deployed {sum(deployed.values()):.1f} TWh "
-                 f"across {len(deployed)} resources")
+                 f"across {len(deployed)} resources"
+                 + (f", new fossil {new_fossil_mw:.0f} MW" if new_fossil_mw > 0 else ""))
 
             # Nuclear revenue at current threshold
             nuclear_rev = compute_nuclear_revenue(iso, current_pct, hourly_lmp, year,
@@ -4970,93 +5023,10 @@ def run_market_simulation(scenario_id, conditions, isos=None,
 
                     state['clean_pct'] = current_pct
 
-            # --- ECONOMIC RETIREMENT (G1: Plant-Level) ---
-            # Build plant-level merit order and compute per-plant economics.
-            # Retire individual plants by margin (worst-first) with zonal reliability floor.
-            plant_economics = None
-            plant_retirement_list = []
-            try:
-                fuel_level = conditions.get('fuel_level', 'Medium')
-                _fuel_prices = _resolve_fuel_prices_for_year(conditions, year, iso) or _get_fuel_prices(year, fuel_level)
-                plant_stack, _plant_total_mw = build_plant_level_merit_order(
-                    iso, current_pct, fuel_level=fuel_level,
-                    carbon_price=carbon_price,
-                    custom_fuel_prices=_fuel_prices,
-                    custom_vom=conditions.get('custom_vom'),
-                )
-                if plant_stack:
-                    # Filter out previously retired plants
-                    prior_retired_ids = set(state.get('retired_plants', []))
-                    plant_stack = [p for p in plant_stack
-                                   if p.get('plant_id') not in prior_retired_ids]
-                    # Reconstruct dispatch for plant-level economics
-                    _stor = state.get('storage_deployed', {})
-                    _dispatch = reconstruct_hourly_dispatch(
-                        demand_norm, supply_profiles_iso, resource_pcts,
-                        procurement_pct=100,
-                        battery_dispatch_pct=_stor.get('battery', 0),
-                        battery8_dispatch_pct=_stor.get('battery8', 0),
-                        ldes_dispatch_pct=_stor.get('ldes', 0),
-                        h2_dispatch_pct=_stor.get('h2', 0),
-                    )
-                    plant_economics = compute_plant_level_economics(
-                        plant_stack, hourly_lmp, _dispatch,
-                        demand_mw_profile, _fuel_prices, carbon_price,
-                        year=year,
-                    )
-            except Exception as _pe:
-                _log(f"    {iso} plant-level economics unavailable ({_pe}), "
-                     f"falling back to fleet-fraction retirement")
-                plant_economics = None
-
-            # Pass cumulative_gw to state so reliability floor can account for clean capacity
-            state['cumulative_gw'] = cumulative_gw
-
-            adjusted_gen_econ, econ_retired, econ_retired_mw, plant_retirement_list = apply_economic_retirement(
-                gen_econ, iso, year, state, _log=_log,
-                plant_economics=plant_economics, demand_twh=demand_twh)
-
-            # --- ECONOMIC NEW-BUILD FOSSIL ---
-            # After retirements, evaluate whether new fossil capacity should be
-            # built based on RA needs and/or economic viability (positive margins).
-            # Recompute reserve margin after retirements (before new-build decision)
-            reserve_margin_pct_post_retire = compute_reserve_margin(
-                adjusted_gen_econ, cumulative_gw, demand_twh)
-            new_fossil_builds, new_fossil_mw, new_fossil_details = apply_economic_new_build(
-                adjusted_gen_econ, iso, year, state, conditions,
-                demand_twh, hourly_lmp, _log=_log,
-                reserve_margin_pct=reserve_margin_pct_post_retire)
-
-            # Add new-build capacity to adjusted gen_econ for emission accounting.
-            # New units have better heat rates than fleet average, so they
-            # enter at their own cost/emission characteristics.
-            for ftype, new_mw in new_fossil_builds.items():
-                fleet_key = ftype if ftype != 'coal' else 'coal_steam'
-                if fleet_key in adjusted_gen_econ:
-                    adjusted_gen_econ[fleet_key]['capacity_mw'] += new_mw
-                else:
-                    # New type entering the fleet
-                    hr = NEW_BUILD_HEAT_RATES.get(ftype, HEAT_RATES.get(fleet_key, 7.0))
-                    vom = NEW_BUILD_VOM.get(ftype, VOM.get(fleet_key, 3.5))
-                    co2 = NEW_BUILD_CO2_RATES.get(ftype, CO2_RATES.get(fleet_key, 0.37))
-                    adjusted_gen_econ[fleet_key] = {
-                        'capacity_mw': new_mw,
-                        'cf': 0.50,
-                        'avg_rev_mwh': float(np.mean(hourly_lmp)),
-                        'var_cost_mwh': hr * _fuel_prices.get(
-                            'gas' if 'gas' in ftype else 'coal', 3.5) + vom,
-                        'margin_mwh': 0,
-                        'dispatch_hours': 4380,
-                    }
-
             # --- EMISSION ACCOUNTING (dispatch-based) ---
             # Compute emissions bottom-up from actual per-tier generator dispatch.
-            # Each tier has its own CO2 rate (= heat_rate × fuel_co2_factor),
-            # so shifting dispatch from inefficient to efficient tiers reduces
-            # total emissions even at the same total fossil MWh.
-            #
-            # Uses adjusted_gen_econ (post-retirement capacity) to ensure
-            # retired capacity doesn't contribute phantom emissions.
+            # Uses adjusted_gen_econ (post-retirement, post-new-build) from unified
+            # deployment — retired capacity removed, new fossil already included.
             _FUEL_KEY_CO2 = {
                 'gas_ccgt': 'gas', 'coal_steam': 'coal', 'gas_ct': 'gas', 'oil_ct': 'oil',
             }
@@ -5068,13 +5038,11 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 cap_mw = econ.get('capacity_mw', 0)
                 if cf <= 0 or cap_mw <= 0:
                     continue
-                gen_twh = cap_mw * cf * 8760 / 1e6  # MW × CF × hours → TWh
+                gen_twh = cap_mw * cf * 8760 / 1e6
 
-                # Get CO2 rate: per-tier if available, else base-type
                 co2_rate = CO2_RATES_BY_TIER.get(utype, CO2_RATES.get(utype, 0))
-                tier_emissions = gen_twh * co2_rate  # TWh × t/MWh = Mt
+                tier_emissions = gen_twh * co2_rate
 
-                # Aggregate to base fuel type for emissions_by_fuel
                 base_type = bin_name_to_base_type(utype)
                 fuel_key = _FUEL_KEY_CO2.get(base_type)
                 if fuel_key:
@@ -5082,30 +5050,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                     emissions_mt += tier_emissions
                     fossil_twh += gen_twh
 
-            # Add new-build fossil emissions (already in adjusted_gen_econ above
-            # if capacity was added there, but new-build details may have a
-            # more accurate expected CF for the first partial year).
-            new_build_twh = 0.0
-            new_build_emissions_mt = 0.0
-            for ftype, new_mw in new_fossil_builds.items():
-                detail = new_fossil_details.get(ftype, {})
-                nb_cf = detail.get('expected_cf', 0.30)
-                nb_twh = new_mw * nb_cf * 8.760 / 1000.0
-                nb_co2_rate = NEW_BUILD_CO2_RATES.get(ftype, 0.37)
-                # Only add delta if new-build wasn't already in adjusted_gen_econ
-                fleet_key = ftype if ftype != 'coal' else 'coal_steam'
-                if fleet_key not in adjusted_gen_econ:
-                    nb_emissions = nb_twh * nb_co2_rate
-                    new_build_twh += nb_twh
-                    new_build_emissions_mt += nb_emissions
-                    fuel_k = _FUEL_KEY_CO2.get(fleet_key, 'gas')
-                    emissions_by_fuel[fuel_k] = emissions_by_fuel.get(fuel_k, 0) + nb_emissions
-                    emissions_mt += nb_emissions
-
-            # Round for output
             emissions_by_fuel = {k: round(v, 3) for k, v in emissions_by_fuel.items() if v > 0.0005}
-
-            # Compute blended emission rate for backward compat
             er = emissions_mt / fossil_twh if fossil_twh > 0 else 0
 
             # Update TWh ratchet floor after all deployment
@@ -5163,6 +5108,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                 'new_fossil_builds_mw': {k: round(v, 0) for k, v in new_fossil_builds.items()},
                 'total_new_fossil_mw': round(new_fossil_mw, 0),
                 'new_fossil_details': new_fossil_details,
+                'unified_merit_order': unified.unified_merit_order,
                 'emissions_by_fuel': emissions_by_fuel,
                 'nuclear_revenue': nuclear_rev,
                 'nuclear_retired': state['nuclear_retired'],
