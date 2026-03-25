@@ -102,9 +102,18 @@ main.py (FastAPI)           ← REST API orchestrating all above
 
 **What it does:** Profit-driven market simulator where clean energy deployment is an *output* (emerges from profitability), not a mandated target. Resources deploy only when NPV ≥ 0 and stop when profitable deployment is exhausted or queue caps are hit.
 
-**Deployment order:** clean_firm (baseload) → solar/wind (capture-rate dependent) → battery/LDES → hydro
+**Year-loop execution order (sequential within each period):**
+1. Clean deployment: clean_firm (baseload) → solar/wind (capture-rate dependent) → battery/LDES → hydro — profit-driven, only if NPV ≥ 0
+2. Economic retirement: plant-level or fleet-fraction; least-efficient units retire first; 15% reserve margin floor
+3. **New fossil build evaluation:** After clean deployment and retirements, evaluates whether new gas CCGT, gas CT, or coal should be built
 
-**Key mechanisms:**
+**New fossil build has two independent triggers (`apply_economic_new_build`, lines 1585–1799):**
+- **RA trigger:** If reserve margin < 15% after retirements + clean, fills the gap with cheapest dispatchable (prefers CTs — lower CAPEX). Sized to close the gap.
+- **Economic trigger:** Even without RA gap, if hourly LMP supports positive NPV for new fossil (dispatch revenue − variable cost − CAPEX annuity + capacity market credit > 0), it builds. Sized proportional to margin attractiveness (up to 50% of remaining annual build cap, minimum 100 MW). Uses `NEW_BUILD_CAPEX_KW_YR` tables and `NEW_BUILD_HEAT_RATES` for new-build-specific efficiency.
+
+**Important modeling choice:** Clean deploys *before* fossil in each period. Fossil evaluates on the residual market after clean has taken profitable opportunities. This means fossil and clean do not compete head-to-head for the same MW — clean has deployment priority in the queue. The `new_fossil_cost` sweep dimension (Low/Medium/High) tests sensitivity to this ordering by varying fossil CAPEX, which shifts the threshold at which fossil becomes viable on residual market economics.
+
+**Other key mechanisms:**
 - **Wright's Law integration:** Cumulative deployment feeds learning curves → lower costs → more deployment (virtuous cycle)
 - **Interconnection queue caps:** Per-ISO, per-technology annual MW limits based on LBNL "Queued Up 2024" completion rates (e.g., CAISO Medium = 4.5 GW/yr total)
 - **Fuel price time-series:** Supports year-varying fuel prices from EIA AEO 2025 projections
@@ -664,6 +673,8 @@ The Morris method sensitivity analysis, ANOVA variance decomposition, backtestin
 9. **Large client-side data:** `sweep_dispatch_data.json` at ~27 MB is significant for browser loading. Could benefit from lazy loading or compression.
 
 10. **No demand-side flexibility beyond DR:** The model includes demand response (GW caps, trigger prices) but no load flexibility, electrification profiles, or behind-the-meter resources.
+
+11. **Sequential clean-then-fossil deployment ordering:** Clean energy deploys first each period; new fossil only evaluates on the residual market. This means fossil and clean never compete head-to-head for the same MW opportunity. In reality, developers evaluate both simultaneously, and a low-cost gas plant could displace a marginal clean project. The `new_fossil_cost` sweep dimension partially mitigates this by varying fossil CAPEX, but the structural priority given to clean may understate fossil build-out in scenarios where gas is cheaper than marginal clean resources. This is a consequential modeling choice that affects all trajectory results.
 
 ---
 

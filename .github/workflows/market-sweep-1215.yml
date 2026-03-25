@@ -250,7 +250,7 @@ jobs:
     needs: [sweep, sweep-single, sweep-ercot]
     if: always()  # Run merge even if some jobs were skipped or timed out
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
@@ -345,6 +345,47 @@ jobs:
           print(f"Aggregates saved: {agg_path} ({len(aggregates)} ISOs)")
           PYEOF
 
+      - name: Run sensitivity analysis (Morris + ANOVA)
+        working-directory: market-simulator/scripts
+        run: |
+          python sensitivity_analysis.py \
+            --parquet ../results/sweep_1215/sweep_1215_flat.parquet \
+            --output-dir ../results/sensitivity
+
+      - name: Extract ISO sweep data for dashboard
+        working-directory: market-simulator/scripts
+        run: python extract_iso_sweep_data.py
+
+      - name: Build fleet scenario data
+        working-directory: market-simulator/scripts
+        run: python build_fleet_scenario_data.py
+
+      - name: Generate constellation scenarios JSON
+        working-directory: market-simulator/scripts
+        run: python generate_constellation_scenarios.py
+
+      - name: Sync fleet data to dashboard
+        run: |
+          # fleet_scenario_results_sample.json → dashboard/data/
+          mkdir -p dashboard/data
+          cp -v market-simulator/frontend/data/fleet_scenario_results_sample.json \
+                dashboard/data/fleet_scenario_results_sample.json
+
+          # constellation_scenarios.json → dashboard/data/
+          cp -v market-simulator/fleet_scenarios/constellation_scenarios.json \
+                dashboard/data/constellation_scenarios.json
+
+          # fleet JS modules → dashboard/js/ (ensure parity)
+          for f in fleet-scenarios.js fleet-dispatch-engine.js fleet-sidebar.js; do
+            if [ -f "market-simulator/frontend/js/$f" ]; then
+              cp -v "market-simulator/frontend/js/$f" "dashboard/js/$f"
+            fi
+          done
+
+          echo "Fleet data synced to dashboard/"
+          ls -la dashboard/data/fleet_scenario_results_sample.json
+          ls -la dashboard/data/constellation_scenarios.json
+
       - name: Create output branch and commit
         run: |
           TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
@@ -354,21 +395,34 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$TARGET_BRANCH"
 
+          # Sweep results
           git add -f market-simulator/results/sweep_1215/
-          git add -f market-simulator/scripts/run_sweep_1215.py
+          git add -f market-simulator/results/sensitivity/
+
+          # Fleet scenario data (both locations)
+          git add -f market-simulator/frontend/data/fleet_scenario_results_sample.json
+          git add -f market-simulator/fleet_scenarios/constellation_scenarios.json
+          git add -f dashboard/data/fleet_scenario_results_sample.json
+          git add -f dashboard/data/constellation_scenarios.json
+
+          # Dashboard JS exports
+          git add -f dashboard/js/iso-sweep-data.js
+          git add -f dashboard/js/fleet-scenarios.js
+          git add -f dashboard/js/fleet-dispatch-engine.js
+          git add -f dashboard/js/fleet-sidebar.js
 
           if git diff --cached --quiet; then
             echo "No changes to commit"
             exit 0
           fi
 
-          git commit -m "Market simulator: 1,215-scenario sweep results (parquet-only) — $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          git commit -m "Market simulator: 1,215-scenario sweep + fleet data — $(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-          1,215 scenarios (3 demand × 5 price × 3 PPA × 3 gas friction × 3 queue × 3 new fossil cost)
-          × 7 ISOs × 6 years (2023, 2030, 2035, 2040, 2045, 2050) = 51,030 results.
-
-          Output: parquet (flat table) + aggregates JSON (P10/P50/P90).
-          Combined JSON removed — was 300+ MB, parquet is ~10 MB with same data."
+          Sweep: 1,215 scenarios × 7 ISOs (unified deployment model).
+          Post-processing: sensitivity analysis (Morris + ANOVA), fleet scenario
+          trajectories (P10/P50/P90 envelopes), constellation scenarios, ISO sweep
+          data for dashboard. Fleet data synced to both market-simulator/frontend/
+          and dashboard/ for fleet_scenarios.html parity."
 
           MAX_RETRIES=4
           for i in $(seq 1 $MAX_RETRIES); do
