@@ -267,10 +267,6 @@ def main():
     for iso, ps in sorted(by_iso.items()):
         print(f"  {iso}: {len(ps)}")
 
-    # Hardcoded top CCS-eligible CCGT orispls for scenario definitions
-    # CCS eligibility is managed by the user in the sidebar UI, not derived from data
-    TOP_CCS_ORISPLS = [997153, 55327, 55327, 50292, 55172, 55299]
-
     # Build output JSON
     output = {
         "$schema_version": "2.2",
@@ -325,50 +321,6 @@ def main():
                 "description": "Status quo \u2014 no CCS, no new gas, no early retirements. Economic retirements only.",
                 "modifications": []
             },
-            "ccs_top_emitters": {
-                "description": "CCS retrofit on the top 6 largest CCS-eligible CCGTs by 2030-2032.",
-                "modifications": [
-                    {"orispl": TOP_CCS_ORISPLS[i], "action": "ccs_retrofit", "year_online": 2030 + (i // 2)}
-                    for i in range(len(TOP_CCS_ORISPLS))
-                ]
-            },
-            "ccs_plus_new_gas": {
-                "description": "CCS on top emitters + 1,200 MW new efficient CCGT in PJM.",
-                "modifications": [
-                    {"orispl": TOP_CCS_ORISPLS[0], "action": "ccs_retrofit", "year_online": 2030},
-                    {"orispl": TOP_CCS_ORISPLS[1], "action": "ccs_retrofit", "year_online": 2030},
-                    {"orispl": TOP_CCS_ORISPLS[2], "action": "ccs_retrofit", "year_online": 2031},
-                    {
-                        "action": "add_plant",
-                        "name": "New PJM CCGT East",
-                        "iso": "PJM",
-                        "capacity_mw": 600,
-                        "fuel_type": "gas_ccgt",
-                        "heat_rate_mmbtu_mwh": 6.3,
-                        "equity_share": 1.0,
-                        "year_online": 2028
-                    },
-                    {
-                        "action": "add_plant",
-                        "name": "New PJM CCGT West",
-                        "iso": "PJM",
-                        "capacity_mw": 600,
-                        "fuel_type": "gas_ccgt",
-                        "heat_rate_mmbtu_mwh": 6.3,
-                        "equity_share": 1.0,
-                        "year_online": 2029
-                    }
-                ]
-            },
-            "retire_peakers_ccs_baseload": {
-                "description": "Retire all oil CTs, gas/oil CTs, and gas CTs by 2030, CCS retrofit on all remaining gas CCGTs by 2035.",
-                "modifications": [
-                    {"fuel_type": "oil_ct", "action": "retire", "year_online": 2030},
-                    {"fuel_type": "gas_oil_ct", "action": "retire", "year_online": 2030},
-                    {"fuel_type": "gas_ct", "action": "retire", "year_online": 2030},
-                    {"fuel_type": "gas_ccgt", "action": "ccs_retrofit", "year_online": 2035}
-                ]
-            }
         }
     }
 
