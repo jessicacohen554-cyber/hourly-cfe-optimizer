@@ -212,3 +212,198 @@ Commit with message: "Merge 2035+2040 gap slides with SMR timeline overlay"
 ```
 
 ---
+
+### Prompt 3: NEW Slide 7 — The Consequential Advantage: Coal Wall (Analysis + HTML)
+
+```
+## Task: Create New Slide — "The Consequential Advantage: Coal Wall in MISO/SPP"
+
+This prompt requires BOTH analytical computation AND HTML slide creation.
+
+### Part A: Analytical Computation
+
+Write a Python script `data-center-cfe/analysis/coal_wall_analysis.py` that computes:
+
+**Inputs:**
+- Meta 2030 demand: 134 TWh (from `data-center-cfe/data-inputs/us_hyperscaler_gap_analysis.csv`)
+- Amazon 2030 demand: 164 TWh (same source)
+- Combined: 298 TWh
+- Both companies use consequential accounting (Strategy 1B, fossil-average baseline)
+- Both compete for the same consequential queue in MISO, SPP, and PJM
+
+**Data to load:**
+1. `data/step3-dispatch/mac_queue/consequential_queue.json` — the ordered queue of clean energy steps by MAC ($/tCO2). Each entry has: iso, threshold_start, threshold_end, marginal_mac, co2_displaced_mt, delta_resources (TWh by resource type)
+2. `scripts/pipeline_config.py` — coal retirement constants:
+   - ANNOUNCED_COAL_RETIREMENTS: MISO {2025: 2 GW, 2028: 6 GW, 2030: 10 GW, 2035: 18 GW}, SPP {2025: 1 GW, 2028: 3 GW, 2030: 5 GW, 2035: 9 GW}
+   - Fossil mix: MISO 35% coal, SPP 30% coal (from `scripts/lmp_engine.py` FOSSIL_MIX)
+3. `scripts/procurement_utils.py` — CONTRACTED_CLEAN_TWH: PJM 18.8 TWh, MISO 18 TWh
+
+**Computation:**
+1. Calculate the fossil-average emission rate for each ISO where Meta/Amazon plan to build:
+   - MISO: weighted average of coal (1.0 tCO2/MWh × 35%) + gas CCGT (0.4 × 40%) + gas CT (0.55 × 24%) + oil (0.65 × 1%) = ~0.642 tCO2/MWh
+   - SPP: coal (1.0 × 30%) + gas CCGT (0.4 × 42%) + gas CT (0.55 × 27%) + oil (0.65 × 1%) = ~0.623 tCO2/MWh
+   - PJM: use the lmp_engine.py FOSSIL_MIX for PJM
+
+2. Calculate Meta+Amazon combined CO2 baseline: their demand × fossil-average rate in their respective ISOs. This is what they need to offset.
+
+3. Walk the consequential queue (sorted by MAC ascending):
+   - For each queue step, the displaced CO2 is the coal/fossil being retired
+   - Coal displacement is MUCH higher CO2 per MWh than the fossil-average baseline (~1.0 vs ~0.6 tCO2/MWh)
+   - This means each TWh of VRE that displaces coal offsets ~1.0 tCO2, but they only NEED to offset ~0.6 tCO2 per TWh of their demand
+   - **Result: they need FEWER TWh of VRE procurement to achieve the same CO2 reduction**
+
+4. Compute:
+   - How many TWh of VRE do Meta+Amazon need under consequential (displacing coal first) vs. hourly matching (must match 1:1)?
+   - The "savings" in TWh — how much LESS VRE they buy
+   - At what participation level does the cheap coal displacement pool exhaust?
+   - When does the pool "run out" (year) given announced coal retirements?
+
+5. Output results as JSON: `data-center-cfe/data-inputs/coal_wall_analysis_results.json`
+
+**Expected findings (approximate):**
+- Under consequential: Meta+Amazon might need ~180-220 TWh of VRE (displacing high-emitting coal) instead of 298 TWh (1:1 hourly)
+- Savings: ~80-120 TWh LESS procurement needed
+- MISO cheap pool ($49/MWh) lasts through ~30% C&I participation
+- Coal retirements shrink the pool: MISO loses ~18 GW coal by 2035, reducing displacement opportunity
+- Window: the coal wall advantage is strongest 2025-2032, diminishes as coal retires
+
+### Part B: HTML Slide Creation
+
+Insert a new slide after slide 6 (Clean Firm Won't Arrive in Time) in the deck HTML.
+
+**Title**: "The Consequential Advantage: Leveraging the Coal Wall"
+**Slide number**: 7
+
+**Layout**:
+- Top: 3 KPI cards
+  - Card 1 (green): "[X] TWh saved" / "Less VRE procurement needed vs. hourly matching"
+  - Card 2 (blue): "$49/MWh" / "Consequential cost (flat to 30% participation)"
+  - Card 3 (orange): "2032" / "Window closes as coal retires"
+
+- Middle: Two-column
+  - Left: "How the Coal Wall Works" explanation
+    - When Meta/Amazon buy VRE that displaces COAL (1.0 tCO2/MWh), each TWh offsets more CO2 than their fossil-average baseline (~0.6 tCO2/MWh)
+    - Result: fewer TWh needed to hit the same emissions reduction target
+    - This is Strategy 1B (fossil-average baseline) from the Constellation Hourly CFE Optimizer
+  - Right: Table showing the queue walk
+    - Columns: Participation %, MISO Coal Displaced (TWh), SPP Coal Displaced (TWh), VRE Procured (TWh), CO2 Offset (Mt), Cost ($/MWh)
+    - Rows: 5%, 10%, 20%, 30%, 40%, 50%
+    - Highlight the row where the pool exhausts
+
+- Bottom: Callout
+  "Meta and Amazon's combined 298 TWh demand (2030) can be offset with ~[X] TWh of consequential VRE procurement — [Y]% less than hourly matching requires. But this advantage shrinks as coal retires: MISO loses 18 GW of coal by 2035. Early movers capture the deepest displacement value."
+
+Use the deck's existing CSS classes (kpi-row, kpi-card, left-right, data-table, callout, source-note).
+
+Fill in [X], [Y] values from the analysis script output.
+
+Commit with message: "New slide 7: Consequential coal wall analysis — Meta+Amazon combined queue depletion"
+```
+
+---
+
+### Prompt 4: NEW Slide 8 — VRE Development Timeline Advantage
+
+```
+## Task: Create New Slide — "VRE Development Timeline Advantage"
+
+Insert a new slide after the Coal Wall slide (new slide 7) in `data-center-cfe/output/vre-investment-thesis-deck.html`.
+
+**Title**: "VRE: The Only Technology That Can Deploy at Scale Now"
+**Slide number**: 8
+
+This slide makes the case that VRE development captures value even WITHOUT storage because:
+1. VRE deploys in 2-3 years; nuclear/SMR takes 8-15 years
+2. IRA PTC/ITC applies to standalone VRE (no storage required)
+3. Corporate PPA market is deep and growing
+4. Interconnection position is the scarce asset — storage can be added later
+
+**Layout**: Two-column
+
+**Left column — "Development Timeline Comparison"**:
+A visual timeline comparison (use the existing .timeline CSS):
+
+| Technology | Permit→COD | First GW available |
+|-----------|-----------|-------------------|
+| Solar (utility) | 2-3 years | Now (2025) |
+| Onshore Wind | 2-4 years | Now (2025) |
+| Battery (standalone) | 1-2 years | Now (2025) |
+| Offshore Wind | 5-8 years | 2028-2030 |
+| SMR Nuclear | 8-12 years | 2033-2038 |
+| Large Nuclear | 10-15 years | 2035+ |
+| Enhanced Geothermal | 5-8 years | 2030+ |
+
+Show as horizontal bars with color coding: green (available now), blue (near-term), orange (long-term).
+
+Below the timeline, add:
+"VRE captures the interconnection queue position. Storage can be co-located later — the land, permits, and grid connection are the scarce assets, not the panels or turbines."
+
+**Right column — "Standalone VRE Economics"**:
+
+Table: "IRA Incentives — No Storage Required"
+| Incentive | Value | Applies to standalone VRE? |
+|-----------|-------|--------------------------|
+| PTC (wind) | $26/MWh (10 yr) | Yes |
+| ITC (solar) | 30% of capex | Yes |
+| Domestic content bonus | +10% ITC / +$2.6/MWh PTC | Yes |
+| Energy community bonus | +10% ITC / +$2.6/MWh PTC | Yes |
+| Low-income bonus | +10-20% ITC | Yes (solar) |
+
+Below table, add callout (green):
+"Corporate PPA market: Big 4 hyperscalers executed 41.6 GW of clean energy deals through 2025. The buyer pool is deep and growing — $35-50/MWh premiums over wholesale for VRE PPAs. Storage pairing is valued but NOT required for offtake."
+
+Source: hyperscaler_ppa_deals.csv shows 41.6 GW procured_gw_nameplate for Big_4_Total.
+
+**Source note**: "Development timelines: LBNL Queued Up 2025, NRC licensing data, DOE Pathways to Commercial Liftoff (Nuclear, 2023). IRA incentives: Inflation Reduction Act §§45, 48 as amended; Treasury final rules (2024). PPA market: BNEF 1H 2026 Corporate Energy Market Outlook; LevelTen Q1 2026 PPA Price Index."
+
+Commit with message: "New slide 8: VRE development timeline advantage — deploy now, add storage later"
+```
+
+---
+
+### Prompt 5: Slide 9 — Regional VRE Opportunity Matrix (Strip Storage)
+
+```
+## Task: Modify the Regional Opportunity Matrix — VRE-Only Focus
+
+Edit `data-center-cfe/output/vre-investment-thesis-deck.html`, the slide titled "Regional Opportunity Matrix".
+
+### Changes to the heatmap table:
+
+1. **Delete column**: "Storage Arb Value" — remove the entire column (header + all 7 ISO rows)
+
+2. **Rename column**: "VRE+S Rating" → "VRE Rating"
+
+3. **Update ratings** using VRE-only data from `data-center-cfe/data-inputs/vre_investment_thesis.csv` (use the non-Storage rows):
+   - PJM: Strong Buy (Solar VRE-only = Strong Buy, Wind = Buy)
+   - ERCOT: Buy (Solar standalone = "Buy with Storage" → downgrade to "Buy" since we're VRE-only; Wind = Hold)
+   - MISO: Buy (Solar = Buy, Wind = Hold) — note: conditional on consequential accounting survival
+   - CAISO: Hold (Solar standalone = "Sell standalone" per the CSV; adjusted to "Hold" acknowledging VRE-only limitations)
+   - NYISO: Buy (Solar = Buy, premium market)
+   - NEISO: Buy — small scale (Solar = Buy small scale)
+   - SPP: Speculative Buy (Solar = Speculative Buy)
+
+4. **Update "Strategic Play" column** — remove all storage references:
+   - PJM: "Largest DC market. 30 GW growth by 2030. Capacity market pays $666/MW-day. PPA prices high — VRE captures corporate premium."
+   - ERCOT: "67 GW DC pipeline. Cheapest VRE in US. Consequential + behind-meter demand. Solar capture declining but PPA premiums offset."
+   - MISO: "Meta/Amazon primary consequential procurement market. Deep cheap wind pool ($49/MWh). Coal wall advantage for early movers."
+   - CAISO: "Solar standalone challenging (<30% capture). Wind + geothermal more viable. Google HQ demand supports premium pricing."
+   - NYISO: "Highest PPA prices in US. Zero cannibalization. Premium but constrained market."
+   - NEISO: "Premium pricing, minimal cannibalization. Small scale only. Highest commercial rates."
+   - SPP: "Cheapest wind in US. Consequential-only play. Limited local DC presence."
+
+5. **Update tier callouts** at bottom:
+   - Tier 1 (green): "PJM + ERCOT: Highest conviction. 165 GW combined DC pipeline. Corporate PPA demand guarantees offtake under any accounting regime."
+   - Tier 2 (blue): "MISO + NYISO: Strong fundamentals. MISO = consequential buyer magnet (coal wall). NYISO = premium, zero cannibalization."
+   - Tier 3 (orange): "CAISO/SPP/NEISO: Selective only. CAISO solar needs pairing (future storage add). SPP is speculative. NEISO is small but premium."
+
+6. **Remove the "Solar Capture" column references to "Mitigated by storage"** — change to actual capture rate language:
+   - PJM: "capture ~95% → ~70% by 2030"
+   - ERCOT: "capture ~70% → ~45% by 2030"
+   - MISO: "capture ~98% → ~70% by 2030"
+   - etc.
+
+Commit with message: "Slide 9: Strip storage from regional opportunity matrix, VRE-only ratings"
+```
+
+---
