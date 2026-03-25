@@ -21,6 +21,11 @@ OUT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'fleet
 HEAT_RATES = {'gas_ccgt': 7.0, 'gas_ct': 10.5, 'oil_ct': 10.5, 'gas_oil_ct': 10.5}
 CO2_RATES = {'gas_ccgt': 0.37, 'gas_ct': 0.55, 'oil_ct': 0.65, 'gas_oil_ct': 0.58}
 
+# Per-plant heat rate overrides (new-build H-class units with better efficiency)
+PLANT_HEAT_RATE_OVERRIDES = {
+    'Thad Hill II': 6.5,
+}
+
 # Capacity defaults by fuel type (MW, nameplate estimate per unit)
 CAPACITY_DEFAULTS = {
     'gas_ccgt': 800, 'gas_ct': 200, 'oil_ct': 150, 'gas_oil_ct': 200,
@@ -229,8 +234,13 @@ def main():
 
             # Add fossil-specific fields
             if category == 'fossil':
-                plant['heat_rate_mmbtu_mwh'] = HEAT_RATES.get(ft, 10.0)
-                plant['co2_rate_t_mwh'] = CO2_RATES.get(ft, 0.37)
+                hr = PLANT_HEAT_RATE_OVERRIDES.get(name, HEAT_RATES.get(ft, 10.0))
+                plant['heat_rate_mmbtu_mwh'] = hr
+                # Derive CO2 from actual heat rate for gas (0.05306 tCO2/MMBtu)
+                if ft in ('gas_ccgt', 'gas_ct') and name in PLANT_HEAT_RATE_OVERRIDES:
+                    plant['co2_rate_t_mwh'] = round(hr * 0.05306, 3)
+                else:
+                    plant['co2_rate_t_mwh'] = CO2_RATES.get(ft, 0.37)
                 if ccs_capacity_mw is not None:
                     plant['ccs_capacity_mw'] = ccs_capacity_mw
 
