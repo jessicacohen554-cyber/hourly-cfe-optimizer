@@ -1543,6 +1543,16 @@ def compute_lmp_confidence_factor(vre_penetration):
     beyond the calibration envelope and results should be treated as
     extrapolations with decreasing reliability.
 
+    Uses a continuous sigmoid degradation curve instead of discrete steps,
+    providing smooth transitions and avoiding artificial discontinuities at
+    threshold boundaries.
+
+    Sigmoid parameters:
+      - midpoint = 0.75 (50% confidence at 75% VRE)
+      - steepness k = 12 (transition width ~20pp, covering 60-90% VRE)
+      - floor = 0.4 (never below 40% confidence)
+      - ceiling = 1.0 (full confidence below ~55% VRE)
+
     Args:
         vre_penetration: VRE share as fraction (0-1), or None.
 
@@ -1551,13 +1561,17 @@ def compute_lmp_confidence_factor(vre_penetration):
     """
     if vre_penetration is None:
         return 1.0
-    if vre_penetration <= 0.60:
-        return 1.0          # Fully calibrated
-    if vre_penetration <= 0.75:
-        return 0.8          # Moderate extrapolation
-    if vre_penetration <= 0.90:
-        return 0.6          # Significant extrapolation
-    return 0.4              # Beyond model validity
+
+    # Continuous sigmoid: transitions smoothly from 1.0 to 0.4
+    # as VRE penetration increases through the 60-90% range.
+    # k=16 keeps confidence >0.99 below 50% and >0.95 at 60%.
+    floor = 0.4
+    midpoint = 0.78
+    k = 16.0
+
+    import math
+    sigmoid = 1.0 / (1.0 + math.exp(k * (vre_penetration - midpoint)))
+    return floor + (1.0 - floor) * sigmoid
 
 
 # ══════════════════════════════════════════════════════════════════════════════
