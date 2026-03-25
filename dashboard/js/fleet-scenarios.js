@@ -44,6 +44,7 @@
     var selectedFossilCost = 'All';
     var selectedLowerScenarioId = null; // null = baseline; string = saved scenario ID
     var hideBaselineFan = false;
+    var showScreenshotLabels = false;
     var fanChart = null;
     var waterfall2023Chart = null;
     var genMixChart = null;
@@ -204,6 +205,14 @@
                 updateFanChart();
             });
         }
+        var ssLabelEl = document.getElementById('screenshotLabels');
+        if (ssLabelEl) {
+            ssLabelEl.addEventListener('change', function () {
+                showScreenshotLabels = ssLabelEl.checked;
+                if (fanChart) fanChart.update('none');
+                if (intensityFanChart) intensityFanChart.update('none');
+            });
+        }
         buildFanChart();
         buildWaterfall2023Chart();
         buildGenMixChart();
@@ -350,12 +359,56 @@
         }
     };
 
+    // ── Screenshot label plugin — draws large % reduction labels on fan charts ──
+    var screenshotLabelPlugin = {
+        id: 'screenshotLabels',
+        afterDatasetsDraw: function (chart) {
+            if (!showScreenshotLabels || !DATA) return;
+            var ctx = chart.ctx;
+            var labels = chart.data.labels;
+            var labelYears = [2030, 2040, 2050];
+
+            chart.data.datasets.forEach(function (ds, dsIdx) {
+                if (!ds._showInLegend || !ds._scenarioName || ds._target) return;
+                var color = ds.borderColor;
+
+                var idx2023 = labels.indexOf('2023');
+                if (idx2023 < 0) return;
+                var val2023 = ds.data[idx2023];
+                if (!val2023 || val2023 <= 0) return;
+
+                labelYears.forEach(function (year) {
+                    var idx = labels.indexOf(String(year));
+                    if (idx < 0) return;
+                    var val = ds.data[idx];
+                    if (val == null) return;
+
+                    var pctReduction = ((val2023 - val) / val2023 * 100);
+                    var sign = pctReduction >= 0 ? '\u2212' : '+';
+                    var labelText = sign + Math.abs(pctReduction).toFixed(0) + '%';
+
+                    var dsMeta = chart.getDatasetMeta(dsIdx);
+                    if (!dsMeta || !dsMeta.data || !dsMeta.data[idx]) return;
+                    var pt = dsMeta.data[idx];
+
+                    ctx.save();
+                    ctx.font = "bold 24px 'Franklin Gothic Demi', 'Franklin Gothic Medium', 'Source Sans Pro', sans-serif";
+                    ctx.fillStyle = color;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    ctx.fillText(labelText, pt.x, pt.y - 12);
+                    ctx.restore();
+                });
+            });
+        }
+    };
+
     function buildFanChart() {
         var ctx = document.getElementById('fanChart').getContext('2d');
         fanChart = new Chart(ctx, {
             type: 'line',
             data: { labels: [], datasets: [] },
-            plugins: [fanEmptyStatePlugin],
+            plugins: [fanEmptyStatePlugin, screenshotLabelPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -1619,6 +1672,7 @@
         intensityFanChart = new Chart(ctx.getContext('2d'), {
             type: 'line',
             data: { labels: [], datasets: [] },
+            plugins: [screenshotLabelPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
