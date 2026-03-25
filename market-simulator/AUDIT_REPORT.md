@@ -574,4 +574,194 @@ CCS impact dashboard and fleet intelligence dashboard. Session storage handoff p
 
 ---
 
+## 12. Potential Use Cases
+
+Based solely on the code's capabilities (not documentation claims), this tool could serve:
+
+### 12.1 Corporate Clean Energy Procurement
+
+The simulator models hourly clean energy matching, annual matching, and consequential matching strategies with Wright's Law cost trajectories. The SBTi milestone timeline (2025→0% to 2050→99.99%) and procurement strategy comparison (Consequential, Hourly, Annual — each with 3–4 variants) suggests this is designed for corporations setting science-based clean energy targets. The 1,215-scenario sweep provides uncertainty bands on procurement costs.
+
+### 12.2 IPP / Generator Fleet Strategy
+
+The fleet scenario tool allows an IPP to:
+- Model plant-level economics under market scenarios (which plants are profitable, which strand)
+- Evaluate CCS retrofit ROI with realistic ramp schedules
+- Assess nuclear revenue risk (energy + capacity + PTC stacking)
+- Compare fleet transformation pathways (retire peakers vs. CCS baseload vs. new builds)
+- The Constellation Energy-specific data (fleet rosetta, CAMPD IDs, equity shares) suggests this was built for or with a specific IPP client.
+
+### 12.3 Regional Grid Decarbonization Analysis
+
+The 7-ISO coverage with region-specific parameters (hydro caps, CCS geologic limits, capacity market designs, fossil fleet composition) enables comparative analysis of decarbonization pathways across US electricity markets. The tool can answer: "What does it take to reach 90% clean in PJM vs. ERCOT, and what does it cost?"
+
+### 12.4 Policy Impact Assessment
+
+The tool models:
+- Carbon price effects on dispatch order and plant economics ($0–$1,000/ton range)
+- 45Q tax credit impact on CCS viability
+- RPS target trajectories (state-specific 2025–2050)
+- Nuclear ZEC/CMC policy expirations
+- Capacity market design effects (energy-only vs. capacity payments)
+- Interconnection queue constraints on deployment speed
+
+### 12.5 Electricity Market Price Forecasting
+
+The LMP engine produces synthetic hourly prices calibrated against ISO-specific market structures (ORDC for ERCOT, cost-based offer adders for PJM, etc.). With confidence degradation at high VRE penetration, this acknowledges model limitations while still providing forward-looking price signals for investment decisions.
+
+### 12.6 Storage Technology Valuation
+
+The multi-technology storage model (4hr battery, 8hr battery, 100hr LDES, 1000hr H2) with technology-specific dispatch windows and efficiency losses can evaluate which storage technologies are profitable under different grid conditions and cost trajectories.
+
+### 12.7 Academic / Research
+
+The Morris method sensitivity analysis, ANOVA variance decomposition, backtesting framework, and confidence interval methodology suggest this is intended to meet academic rigor standards. The tool could support peer-reviewed research on grid decarbonization economics.
+
+---
+
+## 13. Strengths & Weaknesses
+
+### Strengths
+
+1. **Physically grounded dispatch:** 8,760-hour sequential merit-order dispatch captures hourly dynamics (duck curves, scarcity events, seasonal patterns) that capacity-factor-based models miss.
+
+2. **Configuration centralization:** `pipeline_config.py` as single source of truth prevents constant drift between modules. Any cost table change propagates automatically.
+
+3. **Vectorized compute:** No Python for-loops over large arrays. Numba @njit for storage dispatch, NumPy broadcasting for fleet emissions, `np.searchsorted` for merit-order. Fallback to pure NumPy when Numba unavailable.
+
+4. **Multi-tier solver strategy:** Analytical zonal LMP for simple topologies (10–100× faster), LP for complex — automatically selected based on zone count.
+
+5. **Comprehensive uncertainty quantification:** 1,215 scenarios with P10/P50/P90 envelopes, Morris/ANOVA sensitivity decomposition, and explicit confidence degradation at high VRE penetration. The tool knows where its model is unreliable.
+
+6. **Client-side recalculation:** Fleet dispatch engine ported to JavaScript enables real-time what-if analysis without server round-trips. This is a significant UX advantage.
+
+7. **Test suite depth:** 21 test files covering solver accuracy, energy conservation, calibration, peer review recommendations, and cross-model parity. Key thresholds are explicitly validated.
+
+8. **Backtesting framework:** Validates against 2020–2024 observed data with scarcity-mode-aware tolerance bands. This is rare in forward-looking energy models.
+
+9. **Data quality transparency:** Every result includes synthetic_backed flags and IPM triggers. The tool explicitly warns when its predictions are less reliable.
+
+10. **Desktop + web delivery:** PyWebView desktop app with PyInstaller support alongside standard web deployment. Lowers barrier for non-technical users.
+
+### Weaknesses & Observations
+
+1. **Stylized vs. real stacks:** The primary LMP engine uses aggregated 5-tier heat-rate distributions, not actual generator bids. Real plant-level stacks are available (`fleet_model.py`) but appear to be a secondary path. This limits accuracy for specific plant-level price predictions.
+
+2. **Static demand shapes:** Demand profiles are annual shapes scaled by growth factors. No weather-correlated demand spikes (polar vortex, heat dome) beyond the 5-year weather sensitivity. Extreme events may be underrepresented.
+
+3. **No transmission build-out:** Transmission is modeled as fixed zones with static transfer limits. No endogenous transmission expansion — the grid topology doesn't evolve with clean energy deployment.
+
+4. **CCS availability assumption:** CCS modeled as flat baseload with deterministic ramp schedule. No outage modeling, no CO₂ storage rate constraints beyond regional caps.
+
+5. **Single-year snapshot extrapolated:** The physics (dispatch profiles, capacity factors) appear to come from a 2025 snapshot year, extrapolated via growth factors. Multi-year weather variability is limited to 5 historical years (2021–2025).
+
+6. **IPP-specific data coupling:** Constellation Energy fleet data (`CEG_fleet_rosetta.csv`, CAMPD IDs, equity shares) is embedded in the codebase. This creates maintenance overhead if the fleet changes and limits portability to other IPPs without data substitution.
+
+7. **Confidence zone thresholds are coarse:** 4 discrete confidence levels (1.0/0.8/0.6/0.4) at fixed VRE penetration boundaries. A continuous degradation function might be more appropriate.
+
+8. **Duplicate CSS:** `CEG-style.css` is identical to `shared.css` — dead code adding 950 lines of maintenance burden.
+
+9. **Large client-side data:** `sweep_dispatch_data.json` at ~27 MB is significant for browser loading. Could benefit from lazy loading or compression.
+
+10. **No demand-side flexibility beyond DR:** The model includes demand response (GW caps, trigger prices) but no load flexibility, electrification profiles, or behind-the-meter resources.
+
+---
+
+## 14. Appendix: File Inventory
+
+### Python Scripts (30 files, 27,578 lines)
+
+| File | Lines | Category |
+|------|-------|----------|
+| `scripts/pipeline_config.py` | ~800 | Configuration |
+| `scripts/market_simulation.py` | ~2,500 | Core engine |
+| `scripts/dispatch_utils.py` | ~1,200 | Dispatch reconstruction |
+| `scripts/lmp_engine.py` | ~1,500 | LMP pricing |
+| `scripts/fleet_dispatch.py` | ~600 | Plant-level emissions |
+| `scripts/fleet_model.py` | ~800 | EIA/EPA data loading |
+| `scripts/zonal_lmp.py` | ~1,065 | Transmission-constrained LMP |
+| `scripts/fuel_price_projections.py` | ~200 | AEO fuel prices |
+| `scripts/sensitivity_analysis.py` | ~500 | Morris + ANOVA |
+| `scripts/scenario_common.py` | ~600 | Shared scenario utilities |
+| `scripts/procurement_utils.py` | ~800 | Wright's Law, SSS, SBTi |
+| `scripts/generate_constellation_scenarios.py` | ~500 | Fleet scenario builder |
+| `scripts/generate_plant_heat_rates.py` | ~300 | Plant efficiency |
+| `scripts/generate_synthetic_profiles.py` | ~400 | Testing fallback profiles |
+| `scripts/eia_data_io.py` | ~200 | Parquet/JSON I/O |
+| `scripts/sweep_params_io.py` | ~269 | CSV parameter templates |
+| `scripts/run_sweep_1215.py` | ~300 | Sweep orchestration |
+| `scripts/run_cv_simulations.py` | ~200 | Cross-validation |
+| `scripts/extract_iso_sweep_data.py` | ~500 | Dashboard data export |
+| `scripts/build_fleet_scenario_data.py` | ~1,571 | Fleet trajectory builder |
+| `scripts/validate_plant_retirement.py` | ~400 | Retirement validation |
+| `scripts/step0_fetch_interchange.py` | ~198 | Interchange profiles |
+| `scripts/step0_parse_aeo_fuel_prices.py` | ~211 | AEO CSV parser |
+| `backend/main.py` | ~2,768 | FastAPI backend |
+| `backend/models.py` | ~711 | Pydantic schemas |
+| `desktop_app.py` | ~418 | Desktop launcher |
+| `paths.py` | ~155 | Path resolution |
+| `app-startup/start.py` | ~103 | Dev launcher |
+
+### Test Files (21 files, 7,177 lines)
+
+| File | What it tests |
+|------|---------------|
+| `test_analytical_vs_lp.py` | Analytical vs LP solver accuracy |
+| `test_lp_batch_sim.py` | LP co-dispatch on real EF data |
+| `test_lp_codispatch.py` | Multi-storage LP optimization |
+| `test_e2e_integration.py` | Full sweep parquet → API validation |
+| `test_e2e_differentiation.py` | Input responsiveness (8 scenarios) |
+| `test_correlated_scenarios.py` | 5 IEA scenario definitions |
+| `test_data_path_resolution.py` | 4-tier path priority |
+| `test_lmp_confidence.py` | VRE confidence degradation |
+| `test_ercot_diagnostic.py` | ERCOT high-growth LMP diagnosis |
+| `test_scarcity_fix.py` | New-build fossil feedback |
+| `test_targeted_validation.py` | Worst-case ERCOT/NEISO bounds |
+| `test_r9_integration.py` | Peer review R1–R10 integration |
+| `test_r9_e2e_sweep.py` | Mini-sweep exercising all R recs |
+| `test_r9_qa_qc.py` | Unit tests for R1–R5, R7–R8, R10 |
+| `test_sensitivity_analysis.py` | Morris + ANOVA validation |
+| `test_storage_deployment.py` | Storage economics & H2 threshold |
+| `test_plant_retirement.py` | Retirement with reliability floor |
+| `test_fleet_scenario_parity.py` | Dashboard/simulator file parity |
+| `validate_ordc_calibration.py` | ORDC scarcity hour calibration |
+| `validate_cross_model.py` | Cross-model consistency |
+| `validate_fleet_dispatch.py` | Fleet vs emissions dashboard parity |
+
+### Frontend (14 files, 14,230 lines)
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `frontend/setup.html` | 911 | Configuration form |
+| `frontend/results.html` | 416 | Simulation output |
+| `frontend/fleet_scenarios.html` | 781 | Fleet analysis |
+| `frontend/methodology.html` | 1,066 | Technical documentation |
+| `frontend/guide.html` | 646 | User guide |
+| `frontend/js/setup.js` | 872 | Form controller |
+| `frontend/js/results.js` | 1,573 | Results visualization |
+| `frontend/js/fleet-scenarios.js` | 2,292 | Fleet analysis controller |
+| `frontend/js/fleet-dispatch-engine.js` | 724 | Client-side dispatch |
+| `frontend/js/fleet-sidebar.js` | 1,580 | Sidebar UI controller |
+| `frontend/js/chart-colors.js` | 261 | Color constants |
+| `frontend/js/shared-header.js` | 185 | SVG banner |
+| `frontend/styles/shared.css` | 950 | Design system |
+| `frontend/styles/simulator.css` | 512 | Setup styling |
+| `frontend/styles/results.css` | 511 | Results styling |
+| `frontend/styles/CEG-style.css` | 950 | Legacy duplicate |
+
+### Archive (7 files)
+
+| File | Purpose |
+|------|---------|
+| `archive/scripts/constellation_dispatch_integrated.py` | Per-plant CCS analysis |
+| `archive/scripts/backtest_trajectory.py` | 2020–2024 backtesting |
+| `archive/scripts/build_tx_fleet_json.py` | ERCOT fleet inventory |
+| `archive/scripts/export_sweep_dispatch_data.py` | Sweep → browser JSON |
+| `archive/emissions.html` + `emissions.js` | CCS impact dashboard |
+| `archive/ipp-report.html` + `ipp-report.js` | Fleet intelligence dashboard |
+
+---
+
+*End of audit report.*
+
 ---
