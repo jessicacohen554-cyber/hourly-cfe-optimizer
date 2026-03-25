@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
     <title>Fleet Climate Scenarios — Constellation Energy</title>
-    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/constellation.css">
     <link rel="stylesheet" href="styles/simulator.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
@@ -492,6 +492,11 @@
                     <input type="range" id="yearSlider" min="2023" max="2050" value="2030" step="1">
                     <div class="year-slider-value" id="yearSliderValue">2030</div>
                 </div>
+            </div>
+            <div class="controls-group" style="align-self: flex-end;">
+                <label class="scenario-check" style="font-size:0.82rem;">
+                    <input type="checkbox" id="screenshotLabels"> Screenshot Labels
+                </label>
             </div>
             <div class="controls-group" style="align-self: flex-end;">
                 <button class="sidebar-toggle-btn" id="sidebarToggle">Edit Fleet</button>
