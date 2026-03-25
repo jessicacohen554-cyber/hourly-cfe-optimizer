@@ -14,12 +14,15 @@ import json
 import hashlib
 import os
 
-CSV_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'data', 'CEG_fleet_rosetta.csv')
-OUT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'fleet_scenarios', 'constellation_scenarios.json')
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+CSV_PATH = os.path.join(SCRIPT_DIR, '..', 'data', 'CEG_fleet_rosetta.csv')
+OUT_PATH = os.path.join(SCRIPT_DIR, '..', 'fleet_scenarios', 'constellation_scenarios.json')
+HEAT_RATES_JSON = os.path.join(SCRIPT_DIR, '..', 'data', 'plant_heat_rates.json')
 
 # --- Constants ---
 HEAT_RATES = {'gas_ccgt': 7.0, 'gas_ct': 10.5, 'oil_ct': 10.5, 'gas_oil_ct': 10.5}
 CO2_RATES = {'gas_ccgt': 0.37, 'gas_ct': 0.55, 'oil_ct': 0.65, 'gas_oil_ct': 0.58}
+EMISSION_FACTORS = {'gas_ccgt': 0.05306, 'gas_ct': 0.05306, 'oil_ct': 0.07396, 'gas_oil_ct': 0.06351}
 
 # Per-plant heat rate overrides (new-build H-class units with better efficiency)
 PLANT_HEAT_RATE_OVERRIDES = {
@@ -133,6 +136,15 @@ def stable_hash_id(name, state, unit_detail):
 
 
 def main():
+    # Load actual plant heat rates from EIA 923 / EPA CAMPD
+    actual_heat_rates = {}
+    if os.path.exists(HEAT_RATES_JSON):
+        with open(HEAT_RATES_JSON) as f:
+            actual_heat_rates = json.load(f)
+        print(f"Loaded {len(actual_heat_rates)} actual plant heat rates from EIA 923 / CAMPD")
+    else:
+        print(f"WARNING: {HEAT_RATES_JSON} not found — using type defaults")
+
     plants = []
     seen_keys = set()
 
@@ -234,13 +246,22 @@ def main():
 
             # Add fossil-specific fields
             if category == 'fossil':
-                hr = PLANT_HEAT_RATE_OVERRIDES.get(name, HEAT_RATES.get(ft, 10.0))
-                plant['heat_rate_mmbtu_mwh'] = hr
-                # Derive CO2 from actual heat rate for gas (0.05306 tCO2/MMBtu)
-                if ft in ('gas_ccgt', 'gas_ct') and name in PLANT_HEAT_RATE_OVERRIDES:
-                    plant['co2_rate_t_mwh'] = round(hr * 0.05306, 3)
+                # Heat rate priority: manual override > EIA 923/CAMPD actual > type default
+                campd_str = str(orispl)
+                if name in PLANT_HEAT_RATE_OVERRIDES:
+                    hr = PLANT_HEAT_RATE_OVERRIDES[name]
+                    hr_source = 'override'
+                elif campd_str in actual_heat_rates:
+                    hr = actual_heat_rates[campd_str]['heat_rate']
+                    hr_source = actual_heat_rates[campd_str].get('source', 'eia923')
                 else:
-                    plant['co2_rate_t_mwh'] = CO2_RATES.get(ft, 0.37)
+                    hr = HEAT_RATES.get(ft, 10.0)
+                    hr_source = 'default'
+                plant['heat_rate_mmbtu_mwh'] = round(hr, 2)
+                plant['heat_rate_source'] = hr_source
+                # Derive CO2 from actual heat rate × fuel emission factor
+                ef = EMISSION_FACTORS.get(ft, 0.05306)
+                plant['co2_rate_t_mwh'] = round(hr * ef, 3)
                 if ccs_capacity_mw is not None:
                     plant['ccs_capacity_mw'] = ccs_capacity_mw
 
