@@ -98,7 +98,7 @@
                 <li><strong>Zonal LMP decomposition</strong> — 2&ndash;5 zone pipe-and-bubble model per ISO with ORDC integration. LP solver with dual prices as zonal marginals.</li>
                 <li><strong>LP storage co-dispatch</strong> — Simultaneous optimization of battery 4hr/8hr, LDES 100hr, and green H&#8322; via scipy linprog. Rolling windows match storage duration.</li>
                 <li><strong>Multi-stream revenue decomposition</strong> — Energy revenue (LMP &times; capacity factor) + capacity market payments + REC/PTC/ITC incentives, per resource type.</li>
-                <li><strong>Profit-driven deployment</strong> — Deploys clean resources where expected revenue exceeds LCOE. Clean energy level is an <em>output</em> of market economics, not a mandated target.</li>
+                <li><strong>Unified merit-order deployment</strong> — Clean and fossil resources compete head-to-head in a single ranked list sorted by net cost. Resources deploy cheapest-first regardless of type. Clean energy level is an <em>output</em> of market economics, not a mandated target. A $41/MWh gas CCGT will deploy before a $95/MWh nuclear plant — the model is economics-neutral.</li>
                 <li><strong>Wright's Law learning curves</strong> — Technology-specific cost reduction per doubling of cumulative deployment, with FOAK/NOAK bounds calibrated to published literature.</li>
                 <li><strong>Demand response</strong> — Price-elastic curtailment with ORDC-linked dynamic triggers. Fully vectorized (numpy boolean masks). Off/Low/Medium/High levels.</li>
                 <li><strong>IPM trigger framework</strong> — 6 automated indicators flag when screening approximations are unreliable, recommending production-model validation.</li>
@@ -265,7 +265,8 @@
             <h3>Confidence Degradation at High VRE Penetration</h3>
             <p>
                 The demand-quantile pricing layer is empirically calibrated to <strong>2019–2024 ISO State of Market data</strong>.
-                As VRE penetration increases beyond the calibration range, a confidence factor is applied to LMP results:
+                As VRE penetration increases beyond the calibration range, a <strong>continuous sigmoid</strong> confidence factor
+                smoothly degrades LMP reliability. This eliminates artificial jumps at fixed thresholds:
             </p>
             <div style="overflow-x: auto;">
                 <table class="data-table">
@@ -273,10 +274,13 @@
                         <tr><th>VRE Penetration</th><th>Confidence Factor</th><th>Interpretation</th></tr>
                     </thead>
                     <tbody>
-                        <tr><td>≤ 60%</td><td><span style="color:#16a34a;font-weight:600;">1.0</span></td><td>Fully within calibration range</td></tr>
-                        <tr><td>60–75%</td><td><span style="color:#d97706;font-weight:600;">0.8</span></td><td>Moderate extrapolation — directionally reliable</td></tr>
-                        <tr><td>75–90%</td><td><span style="color:#dc2626;font-weight:600;">0.6</span></td><td>Significant extrapolation — use with caution</td></tr>
-                        <tr><td>&gt; 90%</td><td><span style="color:#dc2626;font-weight:600;">0.4</span></td><td>Beyond model validity — production model recommended</td></tr>
+                        <tr><td>≤ 50%</td><td><span style="color:#16a34a;font-weight:600;">~1.0</span></td><td>Fully within calibration range</td></tr>
+                        <tr><td>60%</td><td><span style="color:#16a34a;font-weight:600;">~0.97</span></td><td>Near-calibration boundary</td></tr>
+                        <tr><td>70%</td><td><span style="color:#d97706;font-weight:600;">~0.87</span></td><td>Moderate extrapolation — directionally reliable</td></tr>
+                        <tr><td>78% (midpoint)</td><td><span style="color:#d97706;font-weight:600;">~0.70</span></td><td>Transition zone — magnitudes increasingly uncertain</td></tr>
+                        <tr><td>85%</td><td><span style="color:#dc2626;font-weight:600;">~0.55</span></td><td>Significant extrapolation — use with caution</td></tr>
+                        <tr><td>90%</td><td><span style="color:#dc2626;font-weight:600;">~0.48</span></td><td>Beyond calibration — results are indicative only</td></tr>
+                        <tr><td>95–100%</td><td><span style="color:#dc2626;font-weight:600;">~0.40</span></td><td>Floor — minimum confidence</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -883,7 +887,7 @@
                 <li class="critical">
                     <strong>No endogenous capacity expansion</strong> — Storage is LP-co-dispatched within a given mix, but the
                     generation + storage + transmission mix is not jointly optimized (unlike GenX/ReEDS). Resource deployment
-                    is profit-driven sequential, not globally optimal.
+                    uses a unified merit order (clean and fossil ranked together by net cost), not a global LP.
                 </li>
                 <li class="critical">
                     <strong>Synthetic data fallback</strong> — When pipeline parquets are absent, the model uses synthetic
