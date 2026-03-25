@@ -352,6 +352,16 @@ jobs:
             --parquet ../results/sweep_1215/sweep_1215_flat.parquet \
             --output-dir ../results/sensitivity
 
+      - name: Generate constellation scenarios JSON
+        working-directory: market-simulator/scripts
+        run: python generate_constellation_scenarios.py
+
+      - name: Copy constellation JSON to frontend/data for extract script
+        run: |
+          mkdir -p market-simulator/frontend/data
+          cp market-simulator/fleet_scenarios/constellation_scenarios.json \
+             market-simulator/frontend/data/constellation_scenarios.json
+
       - name: Extract ISO sweep data for dashboard
         working-directory: market-simulator/scripts
         run: python extract_iso_sweep_data.py
@@ -359,10 +369,6 @@ jobs:
       - name: Build fleet scenario data
         working-directory: market-simulator/scripts
         run: python build_fleet_scenario_data.py
-
-      - name: Generate constellation scenarios JSON
-        working-directory: market-simulator/scripts
-        run: python generate_constellation_scenarios.py
 
       - name: Sync fleet data to dashboard
         run: |
