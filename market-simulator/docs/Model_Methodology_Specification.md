@@ -206,12 +206,19 @@ When plant-level data is unavailable, retirement falls back to fleet-fraction lo
 
 Within each tier, fuel types retire in traditional merit order: coal → oil → gas CT → gas CCGT. The retirement cascade is threshold-driven: as clean energy share increases, progressively less-efficient tiers become unprofitable, starting with `very_high` and working inward.
 
-### 2.3.1 Economic New-Build Fossil Logic
+### 2.3.1 Unified Deployment: Clean and Fossil Compete Head-to-Head
 
-After economic retirement, the dispatch loop evaluates whether new fossil capacity should be built. Two triggers exist:
+Clean and fossil resources are evaluated in a single unified merit order (`compute_unified_deployment()`), sorted by net cost ($/MWh). Resources deploy cheapest-first regardless of type. This replaces the prior sequential model where clean deployed first and fossil only evaluated the residual market, which structurally biased results toward clean deployment even when fossil was cheaper.
 
-1. **Resource adequacy (RA) trigger**: If the post-retirement reserve margin falls below the 15% target, new dispatchable capacity is added to close the gap. The cheapest viable type is built first.
-2. **Economic trigger**: If a fossil type's expected capacity factor (from LMP-based dispatch analysis) exceeds its minimum CF threshold AND net margin (energy revenue + capacity revenue − variable cost − annualized CAPEX) is positive, it is built.
+**Merit-order construction:**
+1. **Clean candidates**: Each deployable resource (solar, wind, offshore wind, nuclear, CCS, geothermal) is scored by LCOE + transmission − PPA discount, with revenue estimated from temporal energy value + capacity market + RECs. Wright's Law learning curves reduce LCOE with cumulative deployment.
+2. **Fossil candidates**: Each buildable type (gas CCGT, gas CT, coal) is scored by all-in cost (annualized CAPEX / expected CF + variable cost) vs. expected revenue (dispatch hours × avg LMP when dispatching + capacity market credit).
+3. **Unified ranking**: All candidates sorted by net cost ascending. Resources with positive profit deploy in order, subject to per-technology constraints (queue caps for clean, annual build rate for fossil).
+
+**After deployment, two backstop mechanisms apply:**
+
+1. **Resource adequacy (RA) backstop**: If the post-deployment reserve margin falls below the 15% target, the cheapest viable dispatchable resource is built to close the gap, even if not independently profitable.
+2. **Economic retirement**: Existing plants with negative margins are retired, informed by the expanded fleet (including any new fossil just deployed). A new efficient CCGT (HR 6.3) entering the merit order depresses LMP for marginal incumbents, accelerating retirement of inefficient units.
 
 **New-build parameters by type:**
 
@@ -513,13 +520,16 @@ For each ISO at each scenario:
 7. Compute KPIs: clean %, avg LMP, emissions, nuclear revenue, CCS breakeven
 
 **Step 4 — Trajectory Stepping** (trajectory mode only):
-For each year in [2023, 2030, 2035, 2040, 2045, 2050]:
+For each year in [2023, 2028, 2033, 2038, 2043, 2048, 2050]:
 1. Apply Wright's Law learning to technology costs
 2. Scale demand by compound growth
-3. Deploy clean resources where profitable (revenue > cost)
-4. Stop deployment at first unprofitable zone
-5. Track cumulative GW deployed, resource mix evolution, retirement decisions
-6. Enforce interconnection queue caps (GW/yr per ISO)
+3. Compute hourly LMP from merit-order fossil dispatch
+4. **Unified deployment**: Rank ALL candidate resources — clean AND new fossil — by net cost in a single merit order. Deploy cheapest-first regardless of type, subject to per-technology constraints (queue caps for clean, annual build rate for fossil). This eliminates structural ordering bias between clean and fossil resources.
+5. Stop deployment at first unprofitable resource in the merit order
+6. **Economic retirement**: Retire existing plants whose margins are negative, informed by what was just deployed (including new fossil displacing inefficient incumbents)
+7. **RA backstop**: If reserve margin is still below 15% after economic deployment + retirement, build cheapest dispatchable to fill the gap regardless of profitability
+8. Track cumulative GW deployed, resource mix evolution, retirement decisions
+9. Enforce interconnection queue caps (GW/yr per ISO)
 
 **Step 5 — Save Results** (`save_results()`):
 - `results_data.csv`: Full generator economics table
@@ -575,14 +585,23 @@ The computation is fully vectorized using NumPy — no Python loops over hours.
 
 #### LMP Extrapolation Guard (G5)
 
-The merit-order LMP model is calibrated against 2019–2024 ISO State of Market reports (PJM MMU, Potomac Economics, CAISO DMM), where VRE penetration rarely exceeds 50%. At higher VRE shares, price formation dynamics — negative pricing depth, curtailment interactions, storage arbitrage patterns — move beyond the calibration envelope. A confidence degradation function (`compute_lmp_confidence_factor()` in `lmp_engine.py`) quantifies this:
+The merit-order LMP model is calibrated against 2019–2024 ISO State of Market reports (PJM MMU, Potomac Economics, CAISO DMM), where VRE penetration rarely exceeds 50%. At higher VRE shares, price formation dynamics — negative pricing depth, curtailment interactions, storage arbitrage patterns — move beyond the calibration envelope. A continuous sigmoid confidence degradation function (`compute_lmp_confidence_factor()` in `lmp_engine.py`) quantifies this:
+
+$$\text{confidence} = 0.4 + 0.6 \times \sigma(-k \cdot (\text{VRE} - \text{midpoint}))$$
+
+where $k = 16$ (steepness), midpoint $= 0.78$ (78% VRE), and the floor is 0.4. This produces a smooth S-curve transition:
 
 | VRE Penetration | Confidence Factor | Interpretation |
 |---|---|---|
-| ≤ 60% | 1.0 | Fully within calibration range |
-| 60–75% | 0.8 | Moderate extrapolation — price levels reliable, volatility patterns less certain |
-| 75–90% | 0.6 | Significant extrapolation — directional trends reliable, magnitudes uncertain |
-| > 90% | 0.4 | Beyond model validity — results are indicative only |
+| ≤ 50% | ~1.0 (>0.99) | Fully within calibration range |
+| 60% | ~0.97 | Near-calibration boundary — minimal degradation |
+| 70% | ~0.87 | Moderate extrapolation — price levels reliable, volatility patterns less certain |
+| 78% (midpoint) | ~0.70 | Transition zone — directional trends reliable, magnitudes increasingly uncertain |
+| 85% | ~0.55 | Significant extrapolation — use with caution |
+| 90% | ~0.48 | Beyond calibration — results are indicative only |
+| 95–100% | ~0.42–0.40 | Floor — minimum confidence, never drops below 0.4 |
+
+The continuous sigmoid eliminates artificial discontinuities at fixed VRE thresholds (the prior 4-step model produced abrupt jumps at 60%/75%/90%). The confidence factor scales energy revenue estimates in the deployment economics, so at high VRE penetration, the model naturally becomes more conservative about deploying resources that depend on high energy prices.
 
 The confidence factor is computed alongside hourly LMP prices in `compute_hourly_lmp_vectorized()` and is propagated to the output metadata. When VRE penetration exceeds 60%, the `LMP_EXTRAPOLATION` IPM trigger fires (see §6.8), recommending validation with production cost models (IPM, PLEXOS) that have explicit curtailment and unit commitment modeling. At >75% VRE, the trigger escalates to `high` severity.
 
@@ -1276,19 +1295,25 @@ Source of truth: `lmp_engine.py EFFICIENCY_TIERS`
 
 Tiers represent fleet efficiency quintiles: `very_low` = newest/most efficient, `very_high` = oldest/least efficient. Each tier carries its own CO₂ emission rate (heat rate × fuel emission factor), VOM, and capacity fraction.
 
-**Constellation Fleet Mapping — Vintage Year → Tier:**
+**Constellation Fleet Mapping — Actual Heat Rate → Tier:**
 
-Plant vintage (online year from EIA 860) maps to efficiency tier via `VINTAGE_TIER_THRESHOLDS`:
+Plant-specific heat rates are sourced from EIA Form 923 (generation ÷ fuel consumption) and EPA CAMPD hourly data, loaded from `plant_heat_rates.json` (1,557 plants). Measured heat rates are preferred over vintage-based estimates because actual plant performance diverges significantly from design specifications — maintenance history, turbine upgrades, operational patterns, and ambient conditions all affect real-world efficiency.
 
-| Tier | Gas CCGT | Coal Steam | Gas CT |
-|------|----------|------------|--------|
-| very_low | 2010+ | 2005+ | 2010+ |
-| low | 2002–2009 | 1995–2004 | 2000–2009 |
-| medium | 1998–2001 | 1985–1994 | 1995–1999 |
-| high | 1993–1997 | 1975–1984 | 1985–1994 |
-| very_high | pre-1993 | pre-1975 | pre-1985 |
+Heat rate priority chain: **manual override** (for new-builds without EIA data) > **EIA 923/CAMPD actual** (revealed heat rate) > **type default** (fallback).
 
-Per-tier sweep capacity factors feed into plant-level dispatch projections, enabling vintage-specific economic analysis for fleet planning.
+Measured heat rates map to tiers via value-based thresholds:
+
+| Tier | Gas CCGT (MMBtu/MWh) | Coal Steam | Gas CT |
+|------|---------------------|------------|--------|
+| very_low | < 6.5 | < 9.0 | < 9.5 |
+| low | 6.5–7.2 | 9.0–9.8 | 9.5–10.2 |
+| medium | 7.2–7.8 | 9.8–10.5 | 10.2–10.8 |
+| high | 7.8–8.5 | 10.5–11.5 | 10.8–11.5 |
+| very_high | > 8.5 | > 11.5 | > 11.5 |
+
+Vintage-based mapping (online year → tier) is retained as a fallback for plants without EIA 923/CAMPD data, but most Constellation fleet plants have measured heat rates. Example impact: Channel Energy Center (ERCOT, 2001 CCGT) was vintage-mapped to "low" tier (HR ~6.8) but EIA 923 shows actual HR 9.12 — a 34% error on emissions. Now correctly assigned to "very_high."
+
+Per-tier sweep capacity factors feed into plant-level dispatch projections, enabling efficiency-specific economic analysis for fleet planning.
 
 **Variable O&M ($/MWh):**
 
@@ -1492,7 +1517,8 @@ Per ISO × year:
 - Nuclear retirement status
 - CCS breakeven at each year
 - `plant_retirements` — list of individual plant retirement events (G1): `[{plant_id, capacity_mw, unit_type, margin, iso, zone}]`
-- `lmp_confidence_factor` — confidence degradation factor based on VRE penetration (G5): 1.0 (≤60% VRE), 0.8 (60–75%), 0.6 (75–90%), 0.4 (>90%)
+- `lmp_confidence_factor` — continuous sigmoid confidence degradation based on VRE penetration (G5): ~1.0 at ≤50% VRE, smoothly transitions through 0.7 at 78%, floors at 0.4 above 95%
+- `unified_merit_order` — ranked candidate list from unified deployment showing all clean and fossil resources sorted by net cost, with profit/loss for each
 
 ### 6.6 Sweep Results
 
@@ -2023,4 +2049,6 @@ def wright_adjusted_cost(foak_cost, cumulative_gw, baseline_gw, learning_rate):
 | 3.2 | Mar 2026 | Fleet Rosetta update: Fleet expanded from ~200 fossil-only to 146 plants across all fuel types (15 nuclear, 43 renewable, 81 fossil, 7 storage) sourced from CEG_fleet_rosetta.csv. Coal removed (Constellation has no coal assets). Added §4.6.1 fleet composition and non-fossil dispatch model (static CFs). Scenario keys realigned: `ccs_top_emitters`, `retire_peakers_ccs_baseload` (replacing `ccs_only`, `retire_peakers_ccs_gas`, `retire_coal_ccs_gas`). Build scripts documented: `build_fleet_scenario_data.py`, `generate_constellation_scenarios.py`. |
 | 3.3 | Mar 2026 | **5-tier heat-rate dispatch model**: Replaced 3-bin (efficient/mid/inefficient) aggregate stack with 15-entry model (5 tiers × 3 fuel types). Tiers: very_low → very_high representing fleet efficiency quintiles. Per-tier heat rates, CO₂ rates, VOM, and capacity fractions from `lmp_engine.py EFFICIENCY_TIERS`. Retirement cascade updated: least-efficient tier retires first. Added Constellation fleet vintage-to-tier mapping via `VINTAGE_TIER_THRESHOLDS`. Updated §§2.3.1, 3.x, 4.3, 5.5, Appendix A.1. |
 
-*Constellation Energy — Market Simulator v3.3 — Internal & Confidential*
+| 4.0 | Mar 2026 | **Unified deployment model**: Clean and fossil resources now compete head-to-head in a single merit order (`compute_unified_deployment()`), eliminating the prior sequential clean→retire→fossil ordering bias. Retirement happens after unified deployment, informed by what was built. **Continuous LMP confidence**: Replaced 4-step discrete brackets (1.0/0.8/0.6/0.4) with continuous sigmoid (k=16, midpoint=0.78, floor=0.4) — eliminates artificial discontinuities at VRE threshold boundaries. **Actual heat rates**: Plant-specific heat rates from EIA 923/CAMPD now used for tier assignment and CO₂ derivation instead of vintage-year proxies. Priority chain: manual override > EIA 923 actual > type default. Example: Channel Energy (ERCOT) corrected from HR 6.8 (vintage) to 9.12 (actual). **Fleet update**: Thad Hill II (400 MW CCGT, HR 6.5, ERCOT, 2026) added. Non-baseline scenarios removed from constellation JSON. Updated §§2.3.1, 4.2, 4.4.4, 5.5, 6.5. |
+
+*Constellation Energy — Market Simulator v4.0 — Internal & Confidential*
