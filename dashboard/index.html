@@ -4421,6 +4421,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     var STEP_MATCH = [0, 0, 0, 0, 0, 0];
 
     var chart6 = null;
+    var cumulData = null;
     var currentStep = -1;
     var profileData = null;
     var animated = false;
@@ -4499,31 +4500,51 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         }
     }
 
+    /* --- Precompute cumulative stack data ---
+       Chart.js stacked line + fill is unreliable, so we precompute cumulative
+       upper bounds ourselves and use fill: '-1' (fill down to previous dataset).
+       Each dataset[i].data = sum of layers 0..i.  The visual band for layer i
+       is the area between dataset[i-1] and dataset[i]. */
+    function buildCumulativeData(norm) {
+        var cumul = {};
+        var running = new Array(24).fill(0);
+        LAYERS.forEach(function(l) {
+            var upper = [];
+            for (var h = 0; h < 24; h++) {
+                running[h] += (norm.layers[l.key][h] || 0);
+                upper.push(running[h]);
+            }
+            cumul[l.key] = upper.slice();
+        });
+        return cumul;
+    }
+
     /* --- Create Chart --- */
     function createChart(norm) {
         var ctx = document.getElementById('act6Chart');
         if (!ctx) return;
 
+        cumulData = buildCumulativeData(norm);
         var datasets = [];
 
-        /* Stacked area datasets — all start hidden (data zeroed) */
-        LAYERS.forEach(function(l) {
+        /* Stacked area datasets — precomputed cumulative, fill to previous */
+        LAYERS.forEach(function(l, idx) {
             datasets.push({
                 label: l.label,
                 data: new Array(24).fill(0),
-                _realData: norm.layers[l.key],
-                fill: true,
-                backgroundColor: hexAlpha(l.color, 0.35),
+                _cumulData: cumulData[l.key],
+                _rawData: norm.layers[l.key],
+                fill: idx === 0 ? 'origin' : '-1',
+                backgroundColor: hexAlpha(l.color, 0.55),
                 borderColor: l.color,
                 borderWidth: 2,
                 pointRadius: 0,
                 pointHitRadius: 8,
-                tension: 0.35,
-                order: 2
+                tension: 0.35
             });
         });
 
-        /* Demand line — always visible */
+        /* Demand line — always visible, not stacked */
         datasets.push({
             label: 'Demand',
             data: norm.demand.slice(),
@@ -4533,8 +4554,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             borderDash: [6, 4],
             pointRadius: 0,
             pointHitRadius: 8,
-            tension: 0.35,
-            order: 1
+            tension: 0.35
         });
 
         chart6 = new Chart(ctx, {
@@ -4563,7 +4583,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                         }
                     },
                     y: {
-                        stacked: true,
+                        stacked: false,
                         beginAtZero: true,
                         max: 1.08,
                         grid: {
@@ -4593,12 +4613,16 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                         padding: 12,
                         cornerRadius: 8,
                         callbacks: {
-                            label: function(ctx) {
-                                if (ctx.dataset.label === 'Demand') {
-                                    return 'Demand: ' + (ctx.parsed.y * 100).toFixed(1) + '%';
+                            label: function(tip) {
+                                if (tip.dataset.label === 'Demand') {
+                                    return 'Demand: ' + (tip.parsed.y * 100).toFixed(1) + '%';
                                 }
-                                if (ctx.parsed.y === 0) return null;
-                                return ctx.dataset.label + ': ' + (ctx.parsed.y * 100).toFixed(1) + '%';
+                                /* Show the individual layer value, not cumulative */
+                                var raw = tip.dataset._rawData;
+                                if (!raw) return null;
+                                var val = raw[tip.dataIndex] || 0;
+                                if (val < 0.001) return null;
+                                return tip.dataset.label + ': ' + (val * 100).toFixed(1) + '%';
                             }
                         }
                     }
@@ -4616,20 +4640,22 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         if (!chart6 || !profileData || step === currentStep) return;
         currentStep = step;
 
-        /* Update chart data — show layers whose step <= current step */
+        /* For each layer dataset, show its cumulative data if revealed, else zero.
+           Each revealed dataset gets its precomputed cumulative upper bound.
+           Hidden datasets get the same data as the previous revealed one
+           (so fill: '-1' produces a zero-height band). */
         var dsCount = LAYERS.length;
+        var lastRevealed = new Array(24).fill(0);
         for (var i = 0; i < dsCount; i++) {
-            var layerStep = LAYERS[i].step;
             var ds = chart6.data.datasets[i];
-            if (layerStep <= step) {
-                ds.data = ds._realData.slice();
+            if (LAYERS[i].step <= step) {
+                ds.data = ds._cumulData.slice();
+                lastRevealed = ds.data;
             } else {
-                ds.data = new Array(24).fill(0);
+                /* Collapsed to the top of the last revealed layer */
+                ds.data = lastRevealed.slice();
             }
         }
-        /* Demand line is always last dataset — keep stacked false */
-        chart6.data.datasets[dsCount].fill = false;
-        chart6.options.scales.y.stacked = true;
         chart6.update('default');
 
         /* Update match counter */
@@ -4793,8 +4819,13 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
 
     function startScrollSequence(section) {
         /* Use scroll position within the section to determine step.
-           Split the section's visible scroll range into 6 steps. */
-        var totalSteps = 6;
+           6 steps (0-5), mapped to specific progress thresholds so each
+           step has enough visual breathing room. */
+
+        /* Progress thresholds: step activates when progress >= threshold.
+           The chart sits near the top of the section, so we want steps
+           to advance as the user scrolls through the section body. */
+        var STEP_THRESHOLDS = [0.05, 0.18, 0.32, 0.46, 0.60, 0.75];
 
         function getStep() {
             var rect = section.getBoundingClientRect();
@@ -4806,9 +4837,11 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             var range = sectionH + viewH;
             var progress = Math.max(0, Math.min(1, scrolled / range));
 
-            /* Map progress to steps with bias toward earlier reveals */
-            var step = Math.floor(progress * (totalSteps + 2)) - 1;
-            return Math.max(0, Math.min(totalSteps - 1, step));
+            var step = 0;
+            for (var i = STEP_THRESHOLDS.length - 1; i >= 0; i--) {
+                if (progress >= STEP_THRESHOLDS[i]) { step = i; break; }
+            }
+            return step;
         }
 
         /* Initial reveal */
