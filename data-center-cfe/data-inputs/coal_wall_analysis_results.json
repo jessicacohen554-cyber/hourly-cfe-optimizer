@@ -1,0 +1,144 @@
+{
+  "fossil_avg_rates": {
+    "MISO": 0.6485,
+    "SPP": 0.623,
+    "PJM": 0.628
+  },
+  "weighted_fossil_avg_rate": 0.6357,
+  "leverage_ratios": {
+    "MISO": 1.54,
+    "SPP": 1.61,
+    "PJM": 1.59
+  },
+  "avg_leverage_ratio": 1.58,
+  "meta_demand_twh": 134.0,
+  "amazon_demand_twh": 164.0,
+  "combined_demand_twh": 298.0,
+  "co2_baseline_mt": 189.4,
+  "hourly_vre_needed_twh": 298.0,
+  "consequential_vre_needed_twh": 189.0,
+  "twh_savings": 109.0,
+  "pct_savings": 36.0,
+  "cheap_pool_cost_per_mwh": 49,
+  "cheap_pool_exhaustion_pct": 30,
+  "window_closes_year": 2031,
+  "window_close_years_by_iso": {
+    "MISO": 2032,
+    "SPP": 2031,
+    "PJM": 2030
+  },
+  "participation_table": [
+    {
+      "participation_pct": 5,
+      "miso_coal_displaced_twh": 6.2,
+      "spp_coal_displaced_twh": 2.1,
+      "pjm_coal_displaced_twh": 7.0,
+      "vre_procured_twh": 15.3,
+      "co2_offset_mt": 15.3,
+      "cost_per_mwh": 49,
+      "pool_exhausted": false
+    },
+    {
+      "participation_pct": 10,
+      "miso_coal_displaced_twh": 12.5,
+      "spp_coal_displaced_twh": 4.2,
+      "pjm_coal_displaced_twh": 13.9,
+      "vre_procured_twh": 30.6,
+      "co2_offset_mt": 30.6,
+      "cost_per_mwh": 49,
+      "pool_exhausted": false
+    },
+    {
+      "participation_pct": 20,
+      "miso_coal_displaced_twh": 25.0,
+      "spp_coal_displaced_twh": 8.4,
+      "pjm_coal_displaced_twh": 27.8,
+      "vre_procured_twh": 61.2,
+      "co2_offset_mt": 61.2,
+      "cost_per_mwh": 51,
+      "pool_exhausted": false
+    },
+    {
+      "participation_pct": 30,
+      "miso_coal_displaced_twh": 37.5,
+      "spp_coal_displaced_twh": 12.6,
+      "pjm_coal_displaced_twh": 41.7,
+      "vre_procured_twh": 91.8,
+      "co2_offset_mt": 91.8,
+      "cost_per_mwh": 52,
+      "pool_exhausted": false
+    },
+    {
+      "participation_pct": 40,
+      "miso_coal_displaced_twh": 50.0,
+      "spp_coal_displaced_twh": 16.8,
+      "pjm_coal_displaced_twh": 55.6,
+      "vre_procured_twh": 122.4,
+      "co2_offset_mt": 122.4,
+      "cost_per_mwh": 58,
+      "pool_exhausted": false
+    },
+    {
+      "participation_pct": 50,
+      "miso_coal_displaced_twh": 62.5,
+      "spp_coal_displaced_twh": 21.0,
+      "pjm_coal_displaced_twh": 69.5,
+      "vre_procured_twh": 153.0,
+      "co2_offset_mt": 153.0,
+      "cost_per_mwh": 66,
+      "pool_exhausted": false
+    }
+  ],
+  "coal_retirement_timeline": {
+    "MISO": {
+      "2025": 119.4,
+      "2026": 115.7,
+      "2027": 112.0,
+      "2028": 108.3,
+      "2029": 102.8,
+      "2030": 97.2,
+      "2031": 90.3,
+      "2032": 83.3,
+      "2033": 80.6,
+      "2034": 77.8,
+      "2035": 75.0
+    },
+    "SPP": {
+      "2025": 39.9,
+      "2026": 38.5,
+      "2027": 37.1,
+      "2028": 35.7,
+      "2029": 33.6,
+      "2030": 31.5,
+      "2031": 28.4,
+      "2032": 25.2,
+      "2033": 24.5,
+      "2034": 23.8,
+      "2035": 23.1
+    },
+    "PJM": {
+      "2025": 131.5,
+      "2026": 125.6,
+      "2027": 119.7,
+      "2028": 113.8,
+      "2029": 103.7,
+      "2030": 93.6,
+      "2031": 84.7,
+      "2032": 75.9,
+      "2033": 71.7,
+      "2034": 67.4,
+      "2035": 63.2
+    }
+  },
+  "total_coal_twh_2025": 306.09000000000003,
+  "meta_amazon_demand_share": 0.148,
+  "methodology": {
+    "strategy": "1B \u2014 Consequential, fossil-average baseline",
+    "coal_emission_rate": 1.0,
+    "gas_ccgt_rate": 0.4,
+    "gas_ct_rate": 0.55,
+    "oil_rate": 0.65,
+    "coal_displaced_first": true,
+    "note": "Coal is retired first in merit-order dispatch. Each TWh displacing coal offsets ~1.56x more CO2 than the fossil-average baseline requires."
+  }
+}
