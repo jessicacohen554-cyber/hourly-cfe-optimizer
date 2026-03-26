@@ -2135,10 +2135,11 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         <p>
             This is what hourly matching actually looks like when you get it right:
             a 24-hour dispatch stack where clean resources fill demand hour by hour,
-            not on paper across a year. Watch each resource layer in&mdash;solar
-            captures the day, wind fills the shoulders, storage shifts energy across
-            time, and firm clean capacity seals the remaining gaps. The result is a
-            system where supply meets demand in every single hour.
+            not on paper across a year. Watch each resource layer in&mdash;firm
+            capacity sets the baseload floor, wind fills broadly (strongest when
+            the sun can&rsquo;t reach), solar captures the midday peak, and battery
+            storage time-shifts the surplus into the night. The result is a system
+            where supply meets demand in every single hour.
         </p>
     </div>
 
@@ -2173,7 +2174,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     <div style="text-align: center;">
         <div class="act6-badge" id="act6Badge">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            99.9% Hourly Matched &mdash; System Integral Solved
+            <span id="act6BadgeText">99% Hourly Matched &mdash; System Integral Solved</span>
         </div>
     </div>
 
@@ -2197,12 +2198,12 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     <div class="act6-postscript">
         <p>
             This isn&rsquo;t a theoretical exercise&mdash;it&rsquo;s the optimizer&rsquo;s
-            actual output for CAISO at a 99.9% hourly CFE target. Every hour of every
-            representative day is physically matched by a diversified portfolio of clean
-            resources, each playing a specific temporal role. Solar captures midday abundance.
-            Wind bridges the shoulders. Storage shifts surplus to deficit hours. And firm
-            clean capacity&mdash;geothermal, nuclear&mdash;provides the always-on backbone
-            that makes true hourly matching achievable.
+            actual output for ERCOT at a 99% hourly CFE target. Every hour of a
+            representative day is physically matched by four complementary clean
+            resources, each playing a specific temporal role. Firm capacity provides
+            the always-on baseload. Wind fills broadly&mdash;strongest at night when
+            solar drops off. Solar captures midday abundance. And battery storage
+            time-shifts daytime surplus into the evening peak and overnight hours.
         </p>
         <p>
             The system integral is solved: supply meets demand, hour by hour, with
@@ -4500,39 +4501,39 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     'use strict';
 
     /* --- Config --- */
-    var PROFILE_KEY = '92_22_18_0_9_0.02_0.0_0.0'; /* CAISO 99.88% match */
-    var ISO = 'CAISO';
+    var PROFILE_KEY = '40_65_40_0_0_0.1_0.0_0.0'; /* ERCOT 99.1% match — balanced mix */
+    var ISO = 'ERCOT';
     var HOURS = [];
     for (var h = 0; h < 24; h++) HOURS.push(h + ':00');
 
-    /* Resource layers in stack order (bottom to top) */
+    /* Resource layers in stack order (bottom to top).
+       Each layer's step controls when it appears during the scroll animation.
+       Order: clean_firm (baseload floor) → wind (broad fill) → solar (midday) → battery (time-shift) */
     var LAYERS = [
-        { key: 'clean_firm', label: 'Clean Firm',  color: RESOURCE_COLORS.cleanFirm, step: 4 },
-        { key: 'hydro',      label: 'Hydro',       color: RESOURCE_COLORS.hydro,     step: 4 },
+        { key: 'clean_firm', label: 'Clean Firm',  color: RESOURCE_COLORS.cleanFirm, step: 1 },
         { key: 'wind',       label: 'Wind',        color: RESOURCE_COLORS.wind,      step: 2 },
-        { key: 'offshore_wind', label: 'Offshore Wind', color: RESOURCE_COLORS.offshoreWind || '#009688', step: 2 },
-        { key: 'solar',      label: 'Solar',       color: RESOURCE_COLORS.solar,     step: 1 },
-        { key: 'battery',    label: 'Battery',     color: RESOURCE_COLORS.battery,   step: 3 },
-        { key: 'ldes',       label: 'LDES',        color: RESOURCE_COLORS.ldes,      step: 3 }
+        { key: 'solar',      label: 'Solar',       color: RESOURCE_COLORS.solar,     step: 3 },
+        { key: 'battery',    label: 'Battery',     color: RESOURCE_COLORS.battery,   step: 4 }
     ];
 
     /* Scroll steps:
        0 = demand line only
-       1 = + solar
-       2 = + wind + offshore wind
-       3 = + storage (battery + ldes)
-       4 = + clean firm + hydro (seals it)
+       1 = + clean firm (always-on baseload)
+       2 = + wind (broad coverage, stronger at night)
+       3 = + solar (midday bell curve)
+       4 = + battery (time-shifts solar to evening/night)
        5 = final — badge + stats
     */
     var STEP_TEXT = [
         'The challenge: meet demand every hour, cleanly.',
+        'Clean firm provides a constant baseload floor\u2026',
+        'Wind fills broadly\u2014strongest when solar can\u2019t reach\u2026',
         'Solar captures the midday peak\u2026',
-        'Wind fills the shoulders and nighttime gaps\u2026',
-        'Storage shifts surplus to deficit hours\u2026',
-        'Firm clean capacity seals every remaining gap.',
-        'System integral solved.'
+        'Battery shifts daytime surplus into the night.',
+        'System integral solved \u2014 99% hourly matched.'
     ];
-    var STEP_MATCH = [0, 1.3, 7.9, 15.5, 99.9, 99.9];
+    /* Match percentages are computed dynamically from actual profile data — see computeStepMatch() */
+    var STEP_MATCH = [0, 0, 0, 0, 0, 0];
 
     var chart6 = null;
     var currentStep = -1;
@@ -4594,6 +4595,25 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         return norm;
     }
 
+    /* --- Compute cumulative match % for each scroll step from actual data --- */
+    function computeStepMatch(norm) {
+        for (var step = 0; step <= 5; step++) {
+            if (step === 0) { STEP_MATCH[0] = 0; continue; }
+            if (step === 5) { STEP_MATCH[5] = STEP_MATCH[4]; continue; }
+            var totalMatched = 0;
+            var totalDemand = 0;
+            for (var h = 0; h < 24; h++) {
+                var supply = 0;
+                LAYERS.forEach(function(l) {
+                    if (l.step <= step) supply += norm.layers[l.key][h] || 0;
+                });
+                totalDemand += norm.demand[h];
+                totalMatched += Math.min(supply, norm.demand[h]);
+            }
+            STEP_MATCH[step] = totalDemand > 0 ? (totalMatched / totalDemand * 100) : 0;
+        }
+    }
+
     /* --- Create Chart --- */
     function createChart(norm) {
         var ctx = document.getElementById('act6Chart');
@@ -4608,7 +4628,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                 data: new Array(24).fill(0),
                 _realData: norm.layers[l.key],
                 fill: true,
-                backgroundColor: hexAlpha(l.color, 0.15),
+                backgroundColor: hexAlpha(l.color, 0.35),
                 borderColor: l.color,
                 borderWidth: 2,
                 pointRadius: 0,
@@ -4808,11 +4828,16 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         var stats = document.getElementById('act6Stats');
         if (stats) stats.classList.add('stats-visible');
 
-        /* Populate stats */
+        /* Populate stats with computed values */
+        var finalMatch = STEP_MATCH[4] || 99;
         var statMatch = document.querySelector('#act6StatMatch .act6-stat-value');
         if (statMatch) {
-            statMatch.textContent = '99.9%';
+            statMatch.textContent = finalMatch.toFixed(1) + '%';
             document.getElementById('act6StatMatch').classList.add('stat-success');
+        }
+        var badgeText = document.getElementById('act6BadgeText');
+        if (badgeText) {
+            badgeText.textContent = Math.round(finalMatch) + '% Hourly Matched \u2014 System Integral Solved';
         }
         var statRes = document.querySelector('#act6StatResources .act6-stat-value');
         if (statRes) {
@@ -4854,6 +4879,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                 }
                 var raw = data[ISO].profiles[PROFILE_KEY];
                 profileData = normalizeProfile(raw);
+                computeStepMatch(profileData);
                 createChart(profileData);
                 setupScrollTrigger();
             })
