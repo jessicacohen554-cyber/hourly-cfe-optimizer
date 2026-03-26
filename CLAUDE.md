@@ -459,6 +459,11 @@ Each color has transparent variants: CSS `--iso-caiso-t` (12% opacity) / JS `ISO
 - **Chart.js responsive options**: Always set `responsive: true`, `maintainAspectRatio: false`, and use `padding` options for readable labels
 - **Mobile tap targets**: Touch targets on charts/controls must be 44px minimum
 
+### Scrollytell Layout & Interaction Patterns
+- **Linear layout for all acts**: intro text above → visual (chart/viz + toggle) → post-visual narrative below. No side-by-side grids. Content flows top-to-bottom on all screen sizes.
+- **Illusion/Reality toggle on every act**: Reuse the `.mode-toggle-wrap` switch component. Illusion shows simplified/flat data (the common misconception). Reality shows actual data with animated transition. Auto-transitions to Reality on first scroll, but user can toggle back and forth.
+- **Legend markers**: Use thin line swatches (16×3px), not circle dots. Demand shown as dashed swatch.
+
 ### Animations & Interactivity
 - Abatement analysis page should be illustrative and dynamic with animations
 - Abatement comparison page: creative animations, animated number counters, scroll-triggered transitions
