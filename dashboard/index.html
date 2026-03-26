@@ -1183,6 +1183,10 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     <div class="act4-tile-value" id="act4Mac1B" style="color: var(--text-primary, #1A2744);">&mdash;</div>
                     <div class="act4-tile-label">MAC</div>
                 </div>
+                <div class="act4-tile">
+                    <div class="act4-tile-value" id="act4Tc1B" style="color: var(--text-primary, #1A2744);">&mdash;</div>
+                    <div class="act4-tile-label">System Cost</div>
+                </div>
             </div>
             <div class="act4-dac-label below-dac" id="act4Dac1B"></div>
         </div>
@@ -1209,6 +1213,10 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                 <div class="act4-tile">
                     <div class="act4-tile-value" id="act4Mac2C" style="color: var(--text-primary, #1A2744);">&mdash;</div>
                     <div class="act4-tile-label">MAC</div>
+                </div>
+                <div class="act4-tile">
+                    <div class="act4-tile-value" id="act4Tc2C" style="color: var(--text-primary, #1A2744);">&mdash;</div>
+                    <div class="act4-tile-label">System Cost</div>
                 </div>
             </div>
             <div class="act4-dac-label above-dac" id="act4Dac2C"></div>
@@ -2599,9 +2607,13 @@ html, body { overflow-x: hidden; max-width: 100vw; }
         animVal('act4Gas1B', d1B.gasGw || 0, '', ' GW');
         animVal('act4Curt1B', d1B.curtTwh || 0, '', ' TWh');
         animVal('act4Mac1B', d1B.mac || 0, '$', '/t');
+        var tc1B = d1B.tc || 0;
+        animVal('act4Tc1B', tc1B >= 1000 ? Math.round(tc1B / 1000 * 10) / 10 : tc1B, tc1B >= 1000 ? '$' : '$', tc1B >= 1000 ? 'B' : 'M');
         animVal('act4Gas2C', d2C.gasGw || 0, '', ' GW');
         animVal('act4Curt2C', d2C.curtTwh || 0, '', ' TWh');
         animVal('act4Mac2C', d2C.mac || 0, '$', '/t');
+        var tc2C = d2C.tc || 0;
+        animVal('act4Tc2C', tc2C >= 1000 ? Math.round(tc2C / 1000 * 10) / 10 : tc2C, tc2C >= 1000 ? '$' : '$', tc2C >= 1000 ? 'B' : 'M');
 
         // DAC labels
         var dac1B = document.getElementById('act4Dac1B');
