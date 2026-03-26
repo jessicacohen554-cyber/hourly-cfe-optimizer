@@ -2759,13 +2759,33 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         animVal('act4Gas1B', d1B.gasGw || 0, '', ' GW');
         animVal('act4Curt1B', d1B.curtTwh || 0, '', ' TWh');
         animVal('act4Mac1B', d1B.mac || 0, '$', '/t');
-        var tc1B = d1B.tc || 0;
-        animVal('act4Tc1B', tc1B >= 1000 ? Math.round(tc1B / 1000 * 10) / 10 : tc1B, tc1B >= 1000 ? '$' : '$', tc1B >= 1000 ? 'B' : 'M');
+
+        // System cost = clean procurement + new-build gas backup (PJM only)
+        // c ($/MWh) × bl (TWh) = $M of demand-side clean cost
+        // Gas: PJM existing 75 GW, new CCGT annualized $99M/GW-yr
+        var EXISTING_GAS_GW = 75;
+        var CCGT_COST_M_PER_GW = 99; // $99/kW-yr = $99M/GW-yr
+        function systemCostM(rec) {
+            var cleanM = (rec.c || 0) * (rec.bl || 0); // $/MWh × TWh = $M
+            var newGasGw = Math.max(0, (rec.gasGw || 0) - EXISTING_GAS_GW);
+            var gasCostM = newGasGw * CCGT_COST_M_PER_GW;
+            return cleanM + gasCostM;
+        }
+        var sc1B = systemCostM(d1B);
+        var sc2C = systemCostM(d2C);
+        function fmtCost(id, valM) {
+            if (valM >= 1000) {
+                animVal(id, Math.round(valM / 100) / 10, '$', 'B');
+            } else {
+                animVal(id, Math.round(valM), '$', 'M');
+            }
+        }
+        fmtCost('act4Tc1B', sc1B);
+
         animVal('act4Gas2C', d2C.gasGw || 0, '', ' GW');
         animVal('act4Curt2C', d2C.curtTwh || 0, '', ' TWh');
         animVal('act4Mac2C', d2C.mac || 0, '$', '/t');
-        var tc2C = d2C.tc || 0;
-        animVal('act4Tc2C', tc2C >= 1000 ? Math.round(tc2C / 1000 * 10) / 10 : tc2C, tc2C >= 1000 ? '$' : '$', tc2C >= 1000 ? 'B' : 'M');
+        fmtCost('act4Tc2C', sc2C);
 
         // DAC labels
         var dac1B = document.getElementById('act4Dac1B');
