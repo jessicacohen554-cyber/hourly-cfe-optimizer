@@ -88,14 +88,17 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     gap: 2px;
     border-radius: var(--radius-md, 8px);
     overflow: hidden;
+    align-items: end;
+    min-height: 48px;
 }
 .heatstrip-cell {
-    aspect-ratio: 1 / 1.1;
     min-height: 36px;
+    height: 36px;
     border-radius: 3px;
     position: relative;
-    transition: background-color 0.8s cubic-bezier(0.4,0,0.2,1),
-                border-color 0.8s cubic-bezier(0.4,0,0.2,1);
+    transition: background-color 1.5s cubic-bezier(0.4,0,0.2,1),
+                border-color 1.5s cubic-bezier(0.4,0,0.2,1),
+                height 1.2s cubic-bezier(0.4,0,0.2,1);
     cursor: default;
 }
 /* Tooltip on hover */
@@ -145,33 +148,46 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 .mode-toggle-label {
     font-family: var(--font-heading);
-    font-weight: 600;
-    font-size: 0.8rem;
+    font-weight: 700;
+    font-size: 0.85rem;
     letter-spacing: 0.5px;
     text-transform: uppercase;
     color: var(--text-muted, #94A3B8);
-    transition: color 0.3s;
+    transition: color 0.3s, text-shadow 0.3s;
 }
 .mode-toggle-label.active-label {
     color: var(--text-primary, #1A2744);
 }
+.mode-toggle-label.active-label[data-mode="illusion"] {
+    text-shadow: 0 0 8px rgba(245,158,11,0.3);
+}
+.mode-toggle-label.active-label[data-mode="reality"] {
+    text-shadow: 0 0 8px rgba(14,165,233,0.3);
+}
 .mode-toggle-track {
     position: relative;
-    width: 52px;
-    height: 28px;
-    background: rgba(26,39,68,0.12);
+    width: 56px;
+    height: 30px;
+    background: rgba(26,39,68,0.15);
     border-radius: var(--radius-pill, 9999px);
     cursor: pointer;
-    transition: background 0.3s;
+    transition: background 0.3s, box-shadow 0.3s;
     flex-shrink: 0;
+    animation: toggle-pulse 2s ease-in-out infinite;
 }
 .mode-toggle-track.reality {
     background: var(--hydro, #0EA5E9);
+    animation: none;
+    box-shadow: 0 0 12px rgba(14,165,233,0.3);
+}
+@keyframes toggle-pulse {
+    0%, 100% { box-shadow: 0 0 4px rgba(26,39,68,0.1); }
+    50% { box-shadow: 0 0 12px rgba(245,158,11,0.25); }
 }
 .mode-toggle-thumb {
     position: absolute;
-    top: 3px;
-    left: 3px;
+    top: 4px;
+    left: 4px;
     width: 22px;
     height: 22px;
     background: #fff;
@@ -180,8 +196,17 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     transition: left 0.3s cubic-bezier(0.4,0,0.2,1);
 }
 .mode-toggle-track.reality .mode-toggle-thumb {
-    left: 27px;
+    left: 30px;
 }
+.mode-toggle-hint {
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    color: var(--text-muted, #94A3B8);
+    margin-left: var(--space-sm);
+    opacity: 1;
+    transition: opacity 1s ease-out;
+}
+.mode-toggle-hint.hidden { opacity: 0; pointer-events: none; }
 
 /* --- Scanline sweep animation --- */
 @keyframes scanline-sweep {
@@ -234,16 +259,240 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 /* --- Responsive --- */
 @media (max-width: 900px) {
     .heatstrip-cell {
+        min-height: 36px;
+    }
+    .heatstrip-grid {
         min-height: 44px;
     }
 }
 @media (max-width: 480px) {
     .heatstrip-cell {
-        min-height: 44px;
-        aspect-ratio: auto;
+        min-height: 28px;
     }
     .heatstrip-hours span {
         font-size: 0.5rem;
+    }
+}
+
+/* === Act 0: The Grid is Not a Bank — Jar Illustration === */
+.act0-intro,
+.act0-postscript {
+    max-width: 780px;
+}
+.act0-intro p,
+.act0-postscript p {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--text-secondary, #475569);
+    margin-bottom: var(--space-md);
+}
+.act0-intro .lead-text {
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: var(--text-primary, #1A2744);
+    line-height: 1.6;
+}
+.act0-panel {
+    position: relative;
+    margin-top: var(--space-lg);
+}
+.act0-visual {
+    position: relative;
+    min-height: 320px;
+}
+.act0-view {
+    transition: opacity 0.8s ease, transform 0.6s ease;
+}
+.act0-view.hidden {
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    transform: translateY(12px);
+}
+/* Single annual jar (illusion) */
+.act0-annual-jar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+}
+.act0-jar-container {
+    position: relative;
+    width: 180px;
+    height: 280px;
+    background: rgba(255,255,255,0.12);
+    backdrop-filter: blur(8px);
+    border: 2px solid rgba(26,39,68,0.15);
+    border-radius: 0 0 16px 16px;
+    border-top: 3px solid rgba(26,39,68,0.25);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+.act0-jar-fill {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-end;
+    gap: 3px;
+    padding: 6px;
+    justify-content: center;
+}
+.act0-ball {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: ball-float-gentle 3s ease-in-out infinite;
+}
+@keyframes ball-float-gentle {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-1.5px); }
+}
+.act0-ball.solar { background: var(--solar, #F59E0B); }
+.act0-ball.wind { background: var(--wind, #22C55E); }
+.act0-jar-label {
+    font-family: var(--font-heading);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-secondary, #475569);
+    text-align: center;
+}
+.act0-jar-check {
+    font-size: 1.1rem;
+    color: #16A34A;
+    font-weight: 700;
+}
+/* 24-hour jars (reality) */
+.act0-hourly-jars {
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+    gap: 3px;
+    align-items: end;
+}
+.act0-hour-jar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.act0-hour-jar-body {
+    position: relative;
+    width: 100%;
+    background: rgba(255,255,255,0.10);
+    backdrop-filter: blur(4px);
+    border: 1.5px solid rgba(26,39,68,0.12);
+    border-radius: 0 0 4px 4px;
+    border-top: 2px solid rgba(26,39,68,0.2);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    transition: height 0.8s cubic-bezier(0.4,0,0.2,1);
+}
+.act0-hour-fill {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-end;
+    gap: 1px;
+    padding: 2px;
+    justify-content: center;
+}
+.act0-hour-ball {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.act0-hour-ball.solar { background: var(--solar, #F59E0B); }
+.act0-hour-ball.wind { background: var(--wind, #22C55E); }
+.act0-hour-overflow {
+    position: absolute;
+    bottom: 100%;
+    left: 0; right: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1px;
+    padding: 2px;
+    justify-content: center;
+}
+.act0-hour-overflow .act0-hour-ball {
+    opacity: 0.45;
+    border: 1px dashed rgba(0,0,0,0.2);
+    background: transparent;
+}
+.act0-hour-overflow .act0-hour-ball.solar { background: rgba(245,158,11,0.35); }
+.act0-hour-overflow .act0-hour-ball.wind { background: rgba(34,197,94,0.35); }
+.act0-hour-gap {
+    width: 100%;
+    background: rgba(220,38,38,0.08);
+    border-top: 1px dashed rgba(220,38,38,0.2);
+}
+.act0-hour-label {
+    font-family: var(--font-data);
+    font-size: 0.5rem;
+    color: var(--text-muted, #94A3B8);
+    text-align: center;
+    margin-top: 2px;
+}
+.act0-legend {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+    margin-top: var(--space-md);
+    padding: 0 4px;
+}
+.act0-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    color: var(--text-muted, #94A3B8);
+}
+.act0-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.act0-insight {
+    margin-top: var(--space-lg);
+    padding: 16px 20px;
+    border-left: 4px solid var(--hydro, #0EA5E9);
+    background: rgba(14,165,233,0.06);
+    border-radius: 0 var(--radius-md, 8px) var(--radius-md, 8px) 0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text-secondary, #475569);
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.5s, transform 0.5s;
+}
+.act0-insight.insight-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.act0-insight strong {
+    color: var(--text-primary, #1A2744);
+}
+@media (max-width: 900px) {
+    .act0-jar-container {
+        width: 140px;
+        height: 220px;
+    }
+    .act0-hourly-jars {
+        grid-template-columns: repeat(12, 1fr);
+    }
+}
+@media (max-width: 480px) {
+    .act0-hourly-jars {
+        grid-template-columns: repeat(12, 1fr);
+        gap: 2px;
+    }
+    .act0-hour-ball {
+        width: 4px;
+        height: 4px;
     }
 }
 
@@ -489,6 +738,13 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     gap: var(--space-md);
     margin-top: var(--space-lg);
     flex-wrap: wrap;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.act3-stats.stats-visible {
+    opacity: 1;
+    transform: translateY(0);
 }
 .act3-stat {
     flex: 1;
@@ -1359,26 +1615,90 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
 </header>
 
 <!-- ================================================================== -->
-<!-- ACT 1: THE GRID IS NOT A BANK                                       -->
+<!-- ACT 0: THE THESIS                                                   -->
 <!-- ================================================================== -->
-<section class="story-section" id="act1">
-    <span class="story-badge story-badge-red">Act 1</span>
+<section class="story-section" id="act0">
+    <span class="story-badge story-badge-red">The Thesis</span>
     <h2>The Grid is Not a Bank</h2>
 
     <!-- Intro text above visual -->
-    <div class="act1-intro">
+    <div class="act0-intro">
         <p class="lead-text">
-            The grid is a live, interconnected machine where carbon intensity
-            varies wildly by the hour and location. Most clean energy policies
-            ignore this physics, treating all megawatt-hours as equal.
+            The grid is a live, interconnected machine&mdash;not a vault where
+            megawatt-hours can be deposited and withdrawn at will.
         </p>
         <p>
-            Each cell below represents one hour of the day. The color shows
-            how carbon-intensive the grid is during that hour&mdash;green when
-            clean energy dominates, red when fossil fuels fill the gaps.
-            Start with the <strong>Illusion</strong>&mdash;the flat daily average
-            that annual accounting assumes. Then watch the <strong>Reality</strong>
-            emerge.
+            We can&rsquo;t store MWhs in a vault to be distributed later, so we
+            can&rsquo;t account for clean energy that way either. Incentive structures
+            and policies that don&rsquo;t consider grid physics have adverse
+            consequences&mdash;and the difference between the illusion of paper
+            accounting and grid reality is significant.
+        </p>
+        <p>
+            What you count, where you start, and where you&rsquo;re going matter
+            profoundly in a complex spatial, temporal, and physical system like the
+            grid. Throughout this analysis, toggle between <strong>Illusion</strong>
+            (the paper accounting view) and <strong>Reality</strong> (what actually
+            happens on the grid) to see why.
+        </p>
+    </div>
+
+    <!-- Jar illustration -->
+    <div class="act0-panel" id="act0Panel">
+        <div class="mode-toggle-wrap">
+            <span class="mode-toggle-label active-label" id="act0LabelIllusion" data-mode="illusion">Illusion</span>
+            <div class="mode-toggle-track" id="act0Toggle" role="switch" aria-checked="false" tabindex="0">
+                <div class="mode-toggle-thumb"></div>
+            </div>
+            <span class="mode-toggle-label" id="act0LabelReality" data-mode="reality">Reality</span>
+            <span class="mode-toggle-hint" id="act0Hint">&larr; toggle to see reality</span>
+        </div>
+
+        <div class="act0-visual" id="act0Visual">
+            <!-- Illusion: single annual jar (rendered by JS) -->
+            <div class="act0-view" id="act0IllusionView">
+                <div class="act0-annual-jar" id="act0AnnualJar"></div>
+            </div>
+            <!-- Reality: 24-hour jars (rendered by JS) -->
+            <div class="act0-view hidden" id="act0RealityView">
+                <div class="act0-hourly-jars" id="act0HourlyJars"></div>
+            </div>
+        </div>
+
+        <div class="act0-legend" id="act0Legend"></div>
+    </div>
+
+    <!-- Insight box (shown on reality) -->
+    <div class="act0-insight" id="act0Insight"></div>
+</section>
+
+<div class="story-divider-wrap"><hr class="story-divider"></div>
+
+<!-- ================================================================== -->
+<!-- ACT 1: EVERY HOUR IS DIFFERENT                                      -->
+<!-- ================================================================== -->
+<section class="story-section" id="act1">
+    <span class="story-badge story-badge-red">Act 1</span>
+    <h2>Every Hour is Different</h2>
+
+    <!-- All text above the figure -->
+    <div class="act1-intro">
+        <p class="lead-text">
+            Carbon intensity and demand both vary dramatically by the hour
+            and by region. Annual averages hide these differences completely.
+        </p>
+        <p>
+            A solar MWh generated at noon in California displaces almost no
+            fossil fuel&mdash;the grid is already clean at that hour. That same
+            MWh at 8&nbsp;PM in PJM displaces coal. Annual accounting treats
+            them as identical. Hourly data reveals the truth.
+        </p>
+        <p>
+            Each cell below represents one hour. In <strong>Illusion</strong> mode,
+            every hour looks the same&mdash;flat boxes, identical emission rates
+            across all regions. Toggle to <strong>Reality</strong> to see both
+            <em>color</em> (emission intensity, normalized within each region) and
+            <em>height</em> (demand level) change hour by hour.
         </p>
     </div>
 
@@ -1386,11 +1706,11 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     <div class="heatstrip-panel" id="heatstripPanel">
         <!-- Mode toggle -->
         <div class="mode-toggle-wrap">
-            <span class="mode-toggle-label active-label" id="labelIllusion">Illusion</span>
+            <span class="mode-toggle-label active-label" id="labelIllusion" data-mode="illusion">Illusion</span>
             <div class="mode-toggle-track" id="modeToggle" role="switch" aria-checked="false" tabindex="0">
                 <div class="mode-toggle-thumb"></div>
             </div>
-            <span class="mode-toggle-label" id="labelReality">Reality</span>
+            <span class="mode-toggle-label" id="labelReality" data-mode="reality">Reality</span>
         </div>
 
         <!-- Strips rendered by JS -->
@@ -1401,17 +1721,12 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             <span>Low carbon</span>
             <div class="heatstrip-legend-bar"></div>
             <span>High carbon</span>
+            <span style="margin-left:var(--space-lg); font-style:italic;">Bar height = relative demand</span>
         </div>
     </div>
 
-    <!-- Post-visual narrative -->
+    <!-- Post-visual findings -->
     <div class="act1-postscript">
-        <p>
-            A solar MWh generated at noon in California displaces almost no
-            fossil fuel&mdash;the grid is already clean. That same MWh at 8 PM
-            in PJM displaces coal. Annual accounting treats them as identical.
-            Hourly data reveals the truth.
-        </p>
         <a href="lmp_trends.html" class="act1-explore-link">
             Explore regional patterns <span aria-hidden="true">&rarr;</span>
         </a>
@@ -1463,7 +1778,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             </div>
             <div class="act2-stat">
                 <div class="act2-stat-value" id="act2HourlyVal" style="color:#DC2626;">—</div>
-                <div class="act2-stat-label">Actual Clean Hours</div>
+                <div class="act2-stat-label">Hours Matched with 100% Clean Energy</div>
             </div>
         </div>
     </div>
@@ -1509,14 +1824,24 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         VRE deployment in a vacuum creates structural lock-in for gas.
     </p>
 
+    <!-- Moved above figures: surplus solar paragraph -->
+    <div class="act3-postscript" style="margin-top:0; margin-bottom: var(--space-lg);">
+        <p>
+            Every hour of surplus solar that crashes prices to zero is an hour you
+            chose not to invest in firm clean resources that could have displaced gas
+            permanently. The VRE-gas trap isn&rsquo;t inevitable&mdash;it&rsquo;s
+            the cost of ignoring the grid&rsquo;s temporal and spatial requirements.
+        </p>
+    </div>
+
     <!-- Toggle + dual charts -->
     <div class="act3-chart-wrap">
         <div class="mode-toggle-wrap">
-            <span class="mode-toggle-label active-label" id="act3LabelIllusion">Illusion</span>
+            <span class="mode-toggle-label active-label" id="act3LabelIllusion" data-mode="illusion">Illusion</span>
             <div class="mode-toggle-track" id="act3Toggle" role="switch" aria-checked="false" tabindex="0">
                 <div class="mode-toggle-thumb"></div>
             </div>
-            <span class="mode-toggle-label" id="act3LabelReality">Reality</span>
+            <span class="mode-toggle-label" id="act3LabelReality" data-mode="reality">Reality</span>
         </div>
 
         <div class="act3-charts-grid">
@@ -1538,8 +1863,8 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             </div>
         </div>
 
-        <!-- Stat cards — always at reality values, no toggle -->
-        <div class="act3-stats">
+        <!-- Stat cards — hidden until reality toggle -->
+        <div class="act3-stats" id="act3Stats">
             <div class="act3-stat">
                 <div class="act3-stat-value" id="act3ZeroVal" style="color:#DC2626;">&mdash;</div>
                 <div class="act3-stat-label">Zero-Price Hours / yr at 95% Clean</div>
@@ -1563,14 +1888,8 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         </div>
     </div>
 
-    <!-- Post-visual narrative -->
+    <!-- Post-visual link -->
     <div class="act3-postscript">
-        <p>
-            Every hour of surplus solar that crashes prices to zero is an hour you
-            chose not to invest in firm clean resources that could have displaced gas
-            permanently. The VRE-gas trap isn&rsquo;t inevitable&mdash;it&rsquo;s
-            the cost of ignoring the grid&rsquo;s temporal and spatial requirements.
-        </p>
         <a href="lmp_trends.html" class="act3-explore-link">
             See the full market analysis <span aria-hidden="true">&rarr;</span>
         </a>
@@ -1908,11 +2227,281 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
 <div class="bottom-banner"></div>
 
 <!-- ================================================================== -->
+<!-- ACT 0 SCRIPT: The Grid is Not a Bank — Jar Illustration             -->
+<!-- ================================================================== -->
+<script>
+(function() {
+    'use strict';
+
+    var UTC_OFFSETS = {CAISO:8, PJM:5, ERCOT:6, NYISO:5, NEISO:5, MISO:6, SPP:6};
+    function rotateToLocal(arr, offset) {
+        var o = offset % 24;
+        return arr.slice(24 - o).concat(arr.slice(0, 24 - o));
+    }
+
+    var HOUR_LABELS = [];
+    for (var i = 0; i < 24; i++) {
+        if (i === 0) HOUR_LABELS.push('12a');
+        else if (i < 12) HOUR_LABELS.push(i + 'a');
+        else if (i === 12) HOUR_LABELS.push('12p');
+        else HOUR_LABELS.push((i - 12) + 'p');
+    }
+
+    var COL = typeof RESOURCE_COLORS !== 'undefined' ? RESOURCE_COLORS : {};
+    var solarHex = COL.solar || '#F59E0B';
+    var windHex = COL.wind || '#22C55E';
+
+    fetch('compressed_day_profiles.json')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var iso = 'CAISO';
+            var profiles = data[iso].profiles;
+            var key = Object.keys(profiles)[0];
+            var prof = profiles[key];
+            var offset = UTC_OFFSETS[iso];
+
+            // Rotate to local time
+            var demand = rotateToLocal(prof.demand, offset);
+            var solarMatched = rotateToLocal(prof.matched.solar, offset);
+            var solarSurplus = rotateToLocal(prof.surplus.solar, offset);
+            var windMatched = rotateToLocal(prof.matched.wind, offset);
+            var windSurplus = rotateToLocal(prof.surplus.wind, offset);
+
+            // Compute per-hour solar and wind total generation
+            var solarGen = [], windGen = [], totalGen = [];
+            var demandSum = 0, genSum = 0;
+            for (var h = 0; h < 24; h++) {
+                var s = solarMatched[h] + solarSurplus[h];
+                var w = windMatched[h] + windSurplus[h];
+                solarGen.push(s);
+                windGen.push(w);
+                totalGen.push(s + w);
+                demandSum += demand[h];
+                genSum += s + w;
+            }
+
+            // Scale generation to match annual demand (100% annual match)
+            var scale = demandSum / (genSum || 1);
+            for (var h = 0; h < 24; h++) {
+                solarGen[h] *= scale;
+                windGen[h] *= scale;
+                totalGen[h] = solarGen[h] + windGen[h];
+            }
+
+            var maxDemand = Math.max.apply(null, demand);
+            var maxVal = Math.max(maxDemand, Math.max.apply(null, totalGen));
+
+            // Count matched hours
+            var matchedHours = 0;
+            for (var h = 0; h < 24; h++) {
+                if (totalGen[h] >= demand[h] - 0.0001) matchedHours++;
+            }
+
+            // ---- Build Illusion View: Single annual jar ----
+            var annualJar = document.getElementById('act0AnnualJar');
+            var totalSolarBalls = 0, totalWindBalls = 0;
+            var ballsPerUnit = 100 / demandSum; // ~100 balls total
+            for (var h = 0; h < 24; h++) {
+                totalSolarBalls += Math.round(solarGen[h] * ballsPerUnit);
+                totalWindBalls += Math.round(windGen[h] * ballsPerUnit);
+            }
+            // Ensure total = ~100
+            var totalBalls = totalSolarBalls + totalWindBalls;
+            if (totalBalls > 120) {
+                var ratio = 100 / totalBalls;
+                totalSolarBalls = Math.round(totalSolarBalls * ratio);
+                totalWindBalls = Math.round(totalWindBalls * ratio);
+            }
+
+            var jarHTML = '<div class="act0-jar-container">';
+            jarHTML += '<div class="act0-jar-fill">';
+            for (var i = 0; i < totalSolarBalls; i++) {
+                jarHTML += '<div class="act0-ball solar" style="animation-delay:' + (Math.random() * 2).toFixed(1) + 's"></div>';
+            }
+            for (var i = 0; i < totalWindBalls; i++) {
+                jarHTML += '<div class="act0-ball wind" style="animation-delay:' + (Math.random() * 2).toFixed(1) + 's"></div>';
+            }
+            jarHTML += '</div></div>';
+            jarHTML += '<div class="act0-jar-label">Annual Generation = Annual Demand <span class="act0-jar-check">&check;</span></div>';
+            jarHTML += '<div class="act0-jar-label" style="font-size:0.75rem; color:var(--text-muted);">CAISO &mdash; 100% Annually Matched</div>';
+            annualJar.innerHTML = jarHTML;
+
+            // ---- Build Reality View: 24 hourly jars ----
+            var hourlyJars = document.getElementById('act0HourlyJars');
+            var jarsHTML = '';
+            for (var h = 0; h < 24; h++) {
+                var demandPct = (demand[h] / maxVal) * 100;
+                var jarHeight = Math.max(30, Math.round(demandPct * 2.2)); // px, scaled
+                var gen = totalGen[h];
+                var d = demand[h];
+                var solarPart = solarGen[h];
+                var windPart = windGen[h];
+
+                // Number of balls proportional to generation
+                var nSolar = Math.round(solarPart * ballsPerUnit);
+                var nWind = Math.round(windPart * ballsPerUnit);
+                var nDemandBalls = Math.round(d * ballsPerUnit);
+
+                // Balls that fit vs overflow
+                var fittingBalls = Math.min(nSolar + nWind, nDemandBalls);
+                var overflowBalls = Math.max(0, (nSolar + nWind) - nDemandBalls);
+                var gapHeight = gen < d ? Math.round((1 - gen / d) * jarHeight * 0.3) : 0;
+
+                jarsHTML += '<div class="act0-hour-jar">';
+                jarsHTML += '<div class="act0-hour-jar-body" style="height:' + jarHeight + 'px">';
+
+                // Gap (fossil needed)
+                if (gapHeight > 0) {
+                    jarsHTML += '<div class="act0-hour-gap" style="height:' + gapHeight + 'px"></div>';
+                }
+
+                // Balls inside jar
+                jarsHTML += '<div class="act0-hour-fill">';
+                var solarInside = Math.min(nSolar, fittingBalls);
+                var windInside = Math.min(nWind, Math.max(0, fittingBalls - solarInside));
+                for (var b = 0; b < windInside; b++) {
+                    jarsHTML += '<div class="act0-hour-ball wind"></div>';
+                }
+                for (var b = 0; b < solarInside; b++) {
+                    jarsHTML += '<div class="act0-hour-ball solar"></div>';
+                }
+                jarsHTML += '</div>';
+
+                // Overflow above jar
+                if (overflowBalls > 0) {
+                    jarsHTML += '<div class="act0-hour-overflow">';
+                    var solarOver = Math.max(0, nSolar - solarInside);
+                    var windOver = Math.max(0, nWind - windInside);
+                    for (var b = 0; b < Math.min(windOver, 4); b++) {
+                        jarsHTML += '<div class="act0-hour-ball wind"></div>';
+                    }
+                    for (var b = 0; b < Math.min(solarOver, 4); b++) {
+                        jarsHTML += '<div class="act0-hour-ball solar"></div>';
+                    }
+                    jarsHTML += '</div>';
+                }
+
+                jarsHTML += '</div>'; // close jar body
+                // Hour label (show every 3rd)
+                var lbl = (h % 3 === 0) ? HOUR_LABELS[h] : '';
+                jarsHTML += '<div class="act0-hour-label">' + lbl + '</div>';
+                jarsHTML += '</div>'; // close hour-jar
+            }
+            hourlyJars.innerHTML = jarsHTML;
+
+            // ---- Build legend ----
+            var legendEl = document.getElementById('act0Legend');
+            [
+                { label: 'Solar', color: solarHex },
+                { label: 'Wind', color: windHex },
+                { label: 'Fossil gap', color: 'rgba(220,38,38,0.15)', border: '1px dashed rgba(220,38,38,0.4)' },
+                { label: 'Curtailed', color: 'rgba(200,200,200,0.3)', border: '1px dashed rgba(0,0,0,0.2)' }
+            ].forEach(function(item) {
+                var el = document.createElement('div');
+                el.className = 'act0-legend-item';
+                var dot = document.createElement('span');
+                dot.className = 'act0-legend-dot';
+                dot.style.background = item.color;
+                if (item.border) dot.style.border = item.border;
+                el.appendChild(dot);
+                el.appendChild(document.createTextNode(item.label));
+                legendEl.appendChild(el);
+            });
+
+            // ---- Toggle logic ----
+            var toggle = document.getElementById('act0Toggle');
+            var labelIll = document.getElementById('act0LabelIllusion');
+            var labelReal = document.getElementById('act0LabelReality');
+            var illusionView = document.getElementById('act0IllusionView');
+            var realityView = document.getElementById('act0RealityView');
+            var insightEl = document.getElementById('act0Insight');
+            var hintEl = document.getElementById('act0Hint');
+            var isReality = false;
+
+            insightEl.innerHTML = 'Only <strong>' + matchedHours + ' of 24 hours</strong> are actually covered by clean generation. ' +
+                'The other <strong>' + (24 - matchedHours) + ' hours</strong> rely entirely on the fossil grid. ' +
+                'The annual ledger balances, but the atmosphere sees every gap.';
+
+            function act0SwitchToReality() {
+                if (isReality) return;
+                isReality = true;
+                toggle.classList.add('reality');
+                toggle.setAttribute('aria-checked', 'true');
+                labelIll.classList.remove('active-label');
+                labelReal.classList.add('active-label');
+
+                illusionView.classList.add('hidden');
+                realityView.classList.remove('hidden');
+
+                setTimeout(function() {
+                    insightEl.classList.add('insight-visible');
+                }, 800);
+                if (hintEl) hintEl.classList.add('hidden');
+            }
+
+            function act0SwitchToIllusion() {
+                if (!isReality) return;
+                isReality = false;
+                toggle.classList.remove('reality');
+                toggle.setAttribute('aria-checked', 'false');
+                labelIll.classList.add('active-label');
+                labelReal.classList.remove('active-label');
+
+                illusionView.classList.remove('hidden');
+                realityView.classList.add('hidden');
+
+                insightEl.classList.remove('insight-visible');
+            }
+
+            toggle.addEventListener('click', function() {
+                if (isReality) act0SwitchToIllusion();
+                else act0SwitchToReality();
+            });
+            toggle.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggle.click();
+                }
+            });
+
+            // Auto-transition on scroll
+            var act0Initialized = false;
+            if (typeof IntersectionObserver !== 'undefined') {
+                var obs0 = new IntersectionObserver(function(entries) {
+                    entries.forEach(function(entry) {
+                        if (entry.isIntersecting && !act0Initialized) {
+                            act0Initialized = true;
+                            setTimeout(act0SwitchToReality, 2000);
+                            obs0.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.25 });
+                obs0.observe(document.getElementById('act0'));
+            }
+
+            // Fade out hint after 4s
+            if (hintEl) {
+                setTimeout(function() { hintEl.classList.add('hidden'); }, 4000);
+            }
+        })
+        .catch(function(err) {
+            console.error('Act 0: Failed to load profiles:', err);
+        });
+})();
+</script>
+
+<!-- ================================================================== -->
 <!-- ACT 1 SCRIPT: Carbon intensity heatstrips                           -->
 <!-- ================================================================== -->
 <script>
 (function() {
     'use strict';
+
+    var UTC_OFFSETS = {CAISO:8, PJM:5, ERCOT:6, NYISO:5, NEISO:5, MISO:6, SPP:6};
+    function rotateToLocal(arr, offset) {
+        var o = offset % 24;
+        return arr.slice(24 - o).concat(arr.slice(0, 24 - o));
+    }
 
     // --- Config ---
     var ISOS = ['CAISO', 'PJM', 'ERCOT'];
@@ -1922,27 +2511,22 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         ERCOT: 'ERCOT — Texas'
     };
 
-    // Regional average fossil emission intensity (tCO2/MWh)
-    // Blended rates reflecting each ISO's fossil fuel mix
     var FOSSIL_EMISSION_RATE = {
-        CAISO: 0.39,  // mostly gas
-        PJM:   0.52,  // coal + gas mix
-        ERCOT: 0.42   // gas-heavy with some coal
+        CAISO: 0.39,
+        PJM:   0.52,
+        ERCOT: 0.42
     };
 
     // Color scale: green (0) -> amber (0.5) -> red (1)
-    // Takes a NORMALIZED 0-1 value (caller must normalize to data range)
     function carbonColor(t01, alpha) {
         var t = Math.max(0, Math.min(1, t01));
         var r, g, b;
         if (t < 0.5) {
-            // green to amber
             var s = t / 0.5;
             r = Math.round(34 + (245 - 34) * s);
             g = Math.round(197 + (158 - 197) * s);
             b = Math.round(94 + (11 - 94) * s);
         } else {
-            // amber to red
             var s = (t - 0.5) / 0.5;
             r = Math.round(245 + (239 - 245) * s);
             g = Math.round(158 + (68 - 158) * s);
@@ -1951,63 +2535,81 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
     }
 
-    // Normalize a raw fossil fraction to 0-1 using the global data range
-    // so the full green→amber→red spectrum is used across all ISOs
-    var globalMin = Infinity, globalMax = -Infinity;
-    function normalizeToRange(val) {
-        if (globalMax <= globalMin) return 0.5;
-        return (val - globalMin) / (globalMax - globalMin);
-    }
+    // Illusion uses a single uniform color (grand average across all ISOs)
+    var ILLUSION_COLOR_BG, ILLUSION_COLOR_BORDER;
+    // Bar heights: base (illusion) and reality
+    var BASE_HEIGHT = 36; // px, flat illusion height
+    var MAX_BAR_HEIGHT = 80; // px, tallest reality bar
 
-    // --- Load data and render ---
     fetch('compressed_day_profiles.json')
         .then(function(r) { return r.json(); })
         .then(function(data) {
             var container = document.getElementById('heatstripContainer');
             var profileData = {};
+            var grandTotalFossil = 0;
+            var grandCount = 0;
 
-            // Pass 1: compute fossil fractions and find global min/max
+            // Pass 1: compute fossil fractions per ISO, normalize WITHIN each ISO
             ISOS.forEach(function(iso) {
                 var profiles = data[iso].profiles;
                 var keys = Object.keys(profiles);
                 var prof = profiles[keys[0]];
+                var offset = UTC_OFFSETS[iso];
+
+                // Rotate to local time
+                var demandLocal = rotateToLocal(prof.demand, offset);
+                var gapLocal = rotateToLocal(prof.gap || new Array(24).fill(0), offset);
 
                 var fossilFractions = [];
                 var avgFossil = 0;
+                var isoMin = Infinity, isoMax = -Infinity;
+                var demandMin = Infinity, demandMax = -Infinity;
+
                 for (var h = 0; h < 24; h++) {
-                    var demand = prof.demand[h];
-                    var gap = prof.gap ? prof.gap[h] : 0;
-                    var fraction = demand > 0 ? gap / demand : 0;
-                    fossilFractions.push(fraction);
-                    avgFossil += fraction;
-                    if (fraction < globalMin) globalMin = fraction;
-                    if (fraction > globalMax) globalMax = fraction;
+                    var d = demandLocal[h];
+                    var g = gapLocal[h];
+                    var frac = d > 0 ? g / d : 0;
+                    fossilFractions.push(frac);
+                    avgFossil += frac;
+                    if (frac < isoMin) isoMin = frac;
+                    if (frac > isoMax) isoMax = frac;
+                    if (d < demandMin) demandMin = d;
+                    if (d > demandMax) demandMax = d;
                 }
                 avgFossil /= 24;
+                grandTotalFossil += avgFossil;
+                grandCount++;
+
+                // Per-ISO normalization
+                var isoRange = isoMax - isoMin;
+                var isoPad = isoRange * 0.05;
+                var normMin = Math.max(0, isoMin - isoPad);
+                var normMax = isoMax + isoPad;
 
                 profileData[iso] = {
                     fractions: fossilFractions,
                     avg: avgFossil,
+                    demand: demandLocal,
+                    demandMin: demandMin,
+                    demandMax: demandMax,
+                    normMin: normMin,
+                    normMax: normMax,
                     emissionRate: FOSSIL_EMISSION_RATE[iso]
                 };
             });
 
-            // Pad range slightly so edges aren't at 0/1 exactly
-            var rangePad = (globalMax - globalMin) * 0.05;
-            globalMin = Math.max(0, globalMin - rangePad);
-            globalMax = globalMax + rangePad;
+            // Illusion: uniform color = grand average mapped to 0.5 (mid-amber)
+            ILLUSION_COLOR_BG = carbonColor(0.5, 0.15);
+            ILLUSION_COLOR_BORDER = carbonColor(0.5, 0.9);
 
-            // Pass 2: build DOM with normalized colors
+            // Pass 2: build DOM
             ISOS.forEach(function(iso) {
                 var pd = profileData[iso];
-                var fossilFractions = pd.fractions;
-                var avgFossil = pd.avg;
 
                 var row = document.createElement('div');
                 row.className = 'heatstrip-row';
                 row.setAttribute('data-iso', iso);
 
-                // Label
                 var label = document.createElement('div');
                 label.className = 'heatstrip-label';
                 var dot = document.createElement('span');
@@ -2017,7 +2619,6 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                 label.appendChild(document.createTextNode(ISO_LABELS[iso]));
                 row.appendChild(label);
 
-                // Grid
                 var grid = document.createElement('div');
                 grid.className = 'heatstrip-grid';
                 grid.setAttribute('data-iso', iso);
@@ -2026,18 +2627,31 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                     var cell = document.createElement('div');
                     cell.className = 'heatstrip-cell';
                     cell.setAttribute('data-hour', h);
-                    // Start in "illusion" mode — normalized average
-                    var nAvg = normalizeToRange(avgFossil);
-                    cell.style.background = carbonColor(nAvg, 0.15);
-                    cell.style.border = '2px solid ' + carbonColor(nAvg, 0.9);
-                    // Tooltip shows actual g/kWh
+                    // Illusion: uniform color, flat height
+                    cell.style.background = ILLUSION_COLOR_BG;
+                    cell.style.border = '2px solid ' + ILLUSION_COLOR_BORDER;
+                    cell.style.height = BASE_HEIGHT + 'px';
+
+                    // Tooltip with local time label
                     var hourLabel = (h === 0 ? '12' : h <= 12 ? '' + h : '' + (h - 12))
                         + (h < 12 ? 'AM' : 'PM');
                     if (h === 0) hourLabel = '12AM';
                     if (h === 12) hourLabel = '12PM';
-                    var realIntensity = fossilFractions[h] * FOSSIL_EMISSION_RATE[iso] * 1000;
+                    var realIntensity = pd.fractions[h] * pd.emissionRate * 1000;
                     cell.setAttribute('data-tooltip',
                         hourLabel + ': ' + Math.round(realIntensity) + ' g/kWh');
+
+                    // Store reality data on element for toggle
+                    var normFrac = pd.normMax > pd.normMin
+                        ? (pd.fractions[h] - pd.normMin) / (pd.normMax - pd.normMin)
+                        : 0.5;
+                    var demandNorm = pd.demandMax > pd.demandMin
+                        ? (pd.demand[h] - pd.demandMin) / (pd.demandMax - pd.demandMin)
+                        : 0.5;
+                    var barHeight = Math.round(BASE_HEIGHT + (MAX_BAR_HEIGHT - BASE_HEIGHT) * demandNorm);
+                    cell.setAttribute('data-norm-frac', normFrac.toFixed(4));
+                    cell.setAttribute('data-bar-height', barHeight);
+
                     grid.appendChild(cell);
                 }
                 row.appendChild(grid);
@@ -2061,7 +2675,6 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             });
 
             // --- Staggered reveal on scroll ---
-            var section = document.getElementById('act1');
             var rows = container.querySelectorAll('.heatstrip-row');
             var revealed = false;
             var transitioned = false;
@@ -2074,13 +2687,12 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                         row.classList.add('strip-visible');
                     }, i * 200);
                 });
-                // Auto-transition to Reality after strips appear
+                // Auto-transition to Reality after strips appear + 2s pause on illusion
                 setTimeout(function() {
-                    if (!transitioned) switchToReality(true);
-                }, ISOS.length * 200 + 800);
+                    if (!transitioned) switchToReality();
+                }, ISOS.length * 200 + 2000);
             }
 
-            // Use IntersectionObserver for heatstrip reveal
             if (typeof IntersectionObserver !== 'undefined') {
                 var obs = new IntersectionObserver(function(entries) {
                     entries.forEach(function(entry) {
@@ -2101,7 +2713,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             var labelReal = document.getElementById('labelReality');
             var isReality = false;
 
-            function switchToReality(withSweep) {
+            function switchToReality() {
                 if (isReality) return;
                 isReality = true;
                 transitioned = true;
@@ -2110,25 +2722,17 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                 labelIll.classList.remove('active-label');
                 labelReal.classList.add('active-label');
 
-                ISOS.forEach(function(iso, isoIdx) {
+                // No sweep animation — just smooth CSS transitions
+                ISOS.forEach(function(iso) {
                     var grid = container.querySelector('.heatstrip-grid[data-iso="' + iso + '"]');
                     var cells = grid.querySelectorAll('.heatstrip-cell');
-                    var pd = profileData[iso];
 
-                    if (withSweep) {
-                        grid.classList.add('sweep-active');
-                        setTimeout(function() {
-                            grid.classList.remove('sweep-active');
-                        }, 1300);
-                    }
-
-                    cells.forEach(function(cell, h) {
-                        var delay = withSweep ? (h * 45 + isoIdx * 100) : 0;
-                        setTimeout(function() {
-                            var n = normalizeToRange(pd.fractions[h]);
-                            cell.style.background = carbonColor(n, 0.15);
-                            cell.style.border = '2px solid ' + carbonColor(n, 0.9);
-                        }, delay);
+                    cells.forEach(function(cell) {
+                        var nf = parseFloat(cell.getAttribute('data-norm-frac'));
+                        var bh = parseInt(cell.getAttribute('data-bar-height'));
+                        cell.style.background = carbonColor(nf, 0.15);
+                        cell.style.border = '2px solid ' + carbonColor(nf, 0.9);
+                        cell.style.height = bh + 'px';
                     });
                 });
             }
@@ -2144,19 +2748,18 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                 ISOS.forEach(function(iso) {
                     var grid = container.querySelector('.heatstrip-grid[data-iso="' + iso + '"]');
                     var cells = grid.querySelectorAll('.heatstrip-cell');
-                    var pd = profileData[iso];
 
                     cells.forEach(function(cell) {
-                        var nAvg = normalizeToRange(pd.avg);
-                        cell.style.background = carbonColor(nAvg, 0.15);
-                        cell.style.border = '2px solid ' + carbonColor(nAvg, 0.9);
+                        cell.style.background = ILLUSION_COLOR_BG;
+                        cell.style.border = '2px solid ' + ILLUSION_COLOR_BORDER;
+                        cell.style.height = BASE_HEIGHT + 'px';
                     });
                 });
             }
 
             toggle.addEventListener('click', function() {
                 if (isReality) switchToIllusion();
-                else switchToReality(true);
+                else switchToReality();
             });
             toggle.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -2180,6 +2783,12 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
 (function() {
     'use strict';
 
+    var UTC_OFFSETS = {CAISO:8, PJM:5, ERCOT:6, NYISO:5, NEISO:5, MISO:6, SPP:6};
+    function rotateToLocal(arr, offset) {
+        var o = offset % 24;
+        return arr.slice(24 - o).concat(arr.slice(0, 24 - o));
+    }
+
     var HOUR_LABELS = [];
     for (var i = 0; i < 24; i++) {
         if (i === 0) HOUR_LABELS.push('12AM');
@@ -2192,43 +2801,46 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         .then(function(r) { return r.json(); })
         .then(function(data) {
             var prof = data.CAISO.profiles[Object.keys(data.CAISO.profiles)[0]];
-            var demand = prof.demand;
+            var offset = UTC_OFFSETS.CAISO;
+
+            // Rotate all arrays to local time
+            var demand = rotateToLocal(prof.demand, offset);
+            var solarMatched = rotateToLocal(prof.matched.solar, offset);
+            var solarSurplus = rotateToLocal(prof.surplus.solar, offset);
+            var windMatched = rotateToLocal(prof.matched.wind, offset);
+            var windSurplus = rotateToLocal(prof.surplus.wind, offset);
+
             var demandSum = demand.reduce(function(a, b) { return a + b; }, 0);
 
-            // Get raw solar & wind shapes (matched + surplus = total generation)
             var solarRaw = [], windRaw = [];
             for (var h = 0; h < 24; h++) {
-                solarRaw.push(prof.matched.solar[h] + prof.surplus.solar[h]);
-                windRaw.push(prof.matched.wind[h] + prof.surplus.wind[h]);
+                solarRaw.push(solarMatched[h] + solarSurplus[h]);
+                windRaw.push(windMatched[h] + windSurplus[h]);
             }
             var solarSum = solarRaw.reduce(function(a, b) { return a + b; }, 0);
             var windSum = windRaw.reduce(function(a, b) { return a + b; }, 0);
 
-            // Normalize to per-unit shapes, then scale so 50% each = 100% annual
             var solarShape = solarRaw.map(function(v) { return solarSum > 0 ? v / solarSum : 0; });
             var windShape = windRaw.map(function(v) { return windSum > 0 ? v / windSum : 0; });
             var demandShape = demand.map(function(v) { return v / demandSum; });
 
-            // Scale to display units (multiply by 1000 for readability)
             var S = 1000;
             var demandDisp = demandShape.map(function(v) { return v * S; });
-            var avgDemand = S / 24; // flat average
+            var avgDemand = S / 24;
 
-            // Reality: actual hourly profiles scaled to 50% each
             var realWind = windShape.map(function(v) { return v * 0.5 * S; });
-            var realSolar = []; // stacked on top of wind
+            var realSolar = [];
             for (var h = 0; h < 24; h++) {
                 realSolar.push(realWind[h] + solarShape[h] * 0.5 * S);
             }
 
-            // Illusion: flat 50/50 split
-            var flatWindTop = avgDemand * 0.5; // wind fills bottom half
-            var flatSolarTop = avgDemand; // solar fills top half (stacked)
+            var flatWindTop = avgDemand * 0.5;
+            var flatSolarTop = avgDemand;
             var illusionWind = demandDisp.map(function() { return flatWindTop; });
             var illusionSolar = demandDisp.map(function() { return flatSolarTop; });
             var illusionDemand = demandDisp.map(function() { return avgDemand; });
 
-            // Stats: count hours where total gen >= demand
+            // Compute hourly match score (HMS)
             var cleanHours = 0;
             for (var h = 0; h < 24; h++) {
                 var totalGen = (solarShape[h] * 0.5 + windShape[h] * 0.5);
@@ -2236,10 +2848,10 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             }
             var cleanHourPct = Math.round(cleanHours / 24 * 100);
 
-            // Colors
             var COL = typeof RESOURCE_COLORS !== 'undefined' ? RESOURCE_COLORS : {};
             var solarHex = COL.solar || '#F59E0B';
             var windHex = COL.wind || '#22C55E';
+            var fontStack = "'Plus Jakarta Sans', sans-serif";
 
             function hexAlpha(hex, a) {
                 var r = parseInt(hex.slice(1,3),16);
@@ -2281,7 +2893,23 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                 legendEl.appendChild(el);
             });
 
-            // Chart
+            // HMS annotation for reality mode
+            var hmsAnnotation = {
+                hmsLabel: {
+                    type: 'label',
+                    xScaleID: 'x', yScaleID: 'y',
+                    xValue: 12, yValue: Math.max.apply(null, demandDisp) * 0.15,
+                    content: cleanHourPct + '% Hourly Matched',
+                    font: { size: 13, weight: '700', family: fontStack },
+                    color: '#DC2626',
+                    backgroundColor: 'rgba(254,226,226,0.92)',
+                    padding: { top: 5, bottom: 5, left: 10, right: 10 },
+                    borderRadius: 6
+                }
+            };
+
+            // Chart — y-axis has extra headroom for the 100% badge
+            var yMax = avgDemand * 1.35; // extra space above flat line
             var ctx = document.getElementById('act2Chart').getContext('2d');
             var chart = new Chart(ctx, {
                 type: 'line',
@@ -2333,8 +2961,8 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                         legend: { display: false },
                         tooltip: {
                             backgroundColor: 'rgba(26,39,68,0.95)',
-                            titleFont: { family: "'Plus Jakarta Sans', sans-serif", weight: '600' },
-                            bodyFont: { family: "'Plus Jakarta Sans', sans-serif", size: 12 },
+                            titleFont: { family: fontStack, weight: '600' },
+                            bodyFont: { family: fontStack, size: 12 },
                             padding: 12,
                             cornerRadius: 8,
                             callbacks: {
@@ -2352,13 +2980,14 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                                     return ctx.dataset.label + ': ' + val.toFixed(1);
                                 }
                             }
-                        }
+                        },
+                        annotation: { annotations: {} }
                     },
                     scales: {
                         x: {
                             grid: { display: false },
                             ticks: {
-                                font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 },
+                                font: { family: fontStack, size: 11 },
                                 color: '#94A3B8',
                                 maxRotation: 0,
                                 callback: function(val, idx) {
@@ -2369,16 +2998,17 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                         },
                         y: {
                             beginAtZero: true,
+                            suggestedMax: yMax,
                             grid: { color: 'rgba(0,0,0,0.04)' },
                             ticks: {
-                                font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 },
+                                font: { family: fontStack, size: 11 },
                                 color: '#94A3B8',
                                 callback: function(val) { return val.toFixed(0); }
                             },
                             title: {
                                 display: true,
                                 text: 'Generation & Demand (relative units)',
-                                font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: '500' },
+                                font: { family: fontStack, size: 11, weight: '500' },
                                 color: '#94A3B8'
                             }
                         }
@@ -2424,6 +3054,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                 chart.data.datasets[0].data = realWind;
                 chart.data.datasets[1].data = realSolar;
                 chart.data.datasets[2].data = demandDisp;
+                chart.options.plugins.annotation.annotations = hmsAnnotation;
                 chart.update('active');
 
                 badge.classList.add('cracked');
@@ -2443,6 +3074,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                 chart.data.datasets[0].data = illusionWind.slice();
                 chart.data.datasets[1].data = illusionSolar.slice();
                 chart.data.datasets[2].data = illusionDemand.slice();
+                chart.options.plugins.annotation.annotations = {};
                 chart.update('active');
 
                 badge.classList.remove('cracked');
@@ -2468,7 +3100,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                     entries.forEach(function(entry) {
                         if (entry.isIntersecting && !act2Initialized) {
                             act2Initialized = true;
-                            setTimeout(act2SwitchToReality, 800);
+                            setTimeout(act2SwitchToReality, 2000);
                             obs2.unobserve(entry.target);
                         }
                     });
@@ -2943,6 +3575,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     var act3IsReality = false;
     var act3Initialized = false;
     var insightEl = document.getElementById('act3Insight');
+    var statsEl = document.getElementById('act3Stats');
 
     function act3SwitchToReality() {
         if (act3IsReality) return;
@@ -2967,10 +3600,11 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         lmpChart.options.plugins.annotation.annotations = lmpRealityAnnotations;
         lmpChart.update('active');
 
-        // Show insight
+        // Show stats tiles and insight after chart animation
         setTimeout(function() {
+            if (statsEl) statsEl.classList.add('stats-visible');
             insightEl.classList.add('insight-visible');
-        }, 1000);
+        }, 1200);
     }
 
     function act3SwitchToIllusion() {
@@ -2996,6 +3630,8 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         lmpChart.options.plugins.annotation.annotations = {};
         lmpChart.update('active');
 
+        // Hide stats tiles and insight
+        if (statsEl) statsEl.classList.remove('stats-visible');
         insightEl.classList.remove('insight-visible');
     }
 
@@ -3010,7 +3646,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         }
     });
 
-    // Auto-transition on scroll
+    // Auto-transition on scroll — sit on illusion for 2s first
     if (typeof IntersectionObserver !== 'undefined') {
         var obs3 = new IntersectionObserver(function(entries) {
             entries.forEach(function(entry) {
@@ -3018,7 +3654,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                     act3Initialized = true;
                     setTimeout(function() {
                         act3SwitchToReality();
-                    }, 800);
+                    }, 2000);
                     obs3.unobserve(entry.target);
                 }
             });
