@@ -564,6 +564,33 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 <script src="js/shared-footer.js"></script>
 <script src="js/lmp-data.js"></script>
 
+<!-- Shared chart utilities -->
+<script>
+function createHatchPattern(color, spacing) {
+    var c = document.createElement('canvas');
+    c.width = spacing || 8;
+    c.height = spacing || 8;
+    var cx = c.getContext('2d');
+    cx.strokeStyle = color;
+    cx.lineWidth = 1.5;
+    cx.beginPath();
+    cx.moveTo(0, c.height);
+    cx.lineTo(c.width, 0);
+    cx.stroke();
+    cx.beginPath();
+    cx.moveTo(-1, 1);
+    cx.lineTo(1, -1);
+    cx.stroke();
+    cx.beginPath();
+    cx.moveTo(c.width - 1, c.height + 1);
+    cx.lineTo(c.width + 1, c.height - 1);
+    cx.stroke();
+    return cx.createPattern(c, 'repeat');
+}
+var HATCH_GRAY = createHatchPattern('rgba(107,114,128,0.45)', 8);
+var GAS_RED = 'rgba(220,38,38,0.18)';
+</script>
+
 <!-- HEADER BANNER -->
 <header class="header" id="pageHeader">
     <h1>The 8,760 Problem</h1>
@@ -1151,18 +1178,28 @@ html, body { overflow-x: hidden; max-width: 100vw; }
             // Build legend
             var legendEl = document.getElementById('act2Legend');
             [
-                { label: 'Wind', color: windHex },
-                { label: 'Solar', color: solarHex },
-                { label: 'Demand', color: '#1A2744', dashed: true }
+                { label: 'Wind', color: windHex, type: 'solid' },
+                { label: 'Solar', color: solarHex, type: 'solid' },
+                { label: 'Demand', color: '#1A2744', type: 'dash' },
+                { label: 'Gas Needed', color: '#DC2626', type: 'fill' },
+                { label: 'Curtailed', color: null, type: 'hatch' }
             ].forEach(function(item) {
                 var el = document.createElement('div');
                 el.className = 'act2-legend-item';
                 var sw = document.createElement('span');
                 sw.className = 'act2-legend-dot';
-                if (item.dashed) {
+                if (item.type === 'dash') {
                     sw.style.background = 'transparent';
                     sw.style.height = '0';
                     sw.style.borderTop = '2px dashed ' + item.color;
+                } else if (item.type === 'fill') {
+                    sw.style.background = 'rgba(220,38,38,0.25)';
+                    sw.style.height = '8px';
+                    sw.style.border = '1px solid rgba(220,38,38,0.4)';
+                } else if (item.type === 'hatch') {
+                    sw.style.height = '8px';
+                    sw.style.background = 'repeating-linear-gradient(-45deg, transparent, transparent 2px, rgba(107,114,128,0.45) 2px, rgba(107,114,128,0.45) 3px)';
+                    sw.style.border = '1px solid rgba(107,114,128,0.3)';
                 } else {
                     sw.style.background = item.color;
                 }
@@ -1203,7 +1240,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                         {
                             label: 'Demand',
                             data: illusionDemand.slice(),
-                            fill: false,
+                            fill: { target: 1, above: GAS_RED, below: HATCH_GRAY },
                             borderColor: '#1A2744',
                             borderWidth: 2,
                             borderDash: [6, 4],
@@ -1400,6 +1437,10 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
     var fontStack = "'Plus Jakarta Sans', sans-serif";
 
+    // Use shared hatch pattern & gas red from global scope
+    var hatchGray = HATCH_GRAY;
+    var gasRed = GAS_RED;
+
     // ==========================================
     // DUCK CURVE — ERCOT Peak Summer Day, 87% Clean
     // ==========================================
@@ -1453,17 +1494,28 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
     // Build duck chart legend
     var duckLegendEl = document.getElementById('act3DuckLegend');
-    [{label:'Wind', color:windHex, dash:false},
-     {label:'Solar', color:solarHex, dash:false},
-     {label:'Demand', color:demandColor, dash:true}].forEach(function(item) {
+    [{label:'Wind', color:windHex, type:'solid'},
+     {label:'Solar', color:solarHex, type:'solid'},
+     {label:'Demand', color:demandColor, type:'dash'},
+     {label:'Gas Needed', color:'#DC2626', type:'fill'},
+     {label:'Curtailed', color:null, type:'hatch'}
+    ].forEach(function(item) {
         var el = document.createElement('div');
         el.className = 'act3-legend-item';
         var sw = document.createElement('span');
         sw.className = 'act3-legend-swatch';
-        if (item.dash) {
+        if (item.type === 'dash') {
             sw.style.background = 'transparent';
             sw.style.borderTop = '2px dashed ' + item.color;
             sw.style.height = '0';
+        } else if (item.type === 'fill') {
+            sw.style.background = 'rgba(220,38,38,0.25)';
+            sw.style.height = '8px';
+            sw.style.border = '1px solid rgba(220,38,38,0.4)';
+        } else if (item.type === 'hatch') {
+            sw.style.height = '8px';
+            sw.style.background = 'repeating-linear-gradient(-45deg, transparent, transparent 2px, rgba(107,114,128,0.45) 2px, rgba(107,114,128,0.45) 3px)';
+            sw.style.border = '1px solid rgba(107,114,128,0.3)';
         } else {
             sw.style.background = item.color;
         }
@@ -1473,64 +1525,11 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     });
 
     // Annotation sets for duck curve
-    var duckIllusionAnnotations = {
-        solarLabel: {
-            type: 'label', xValue: 12,
-            yValue: (flatWind + flatSolarTop) / 2,
-            content: 'Solar',
-            font: { size: 11, weight: '700', family: fontStack },
-            color: solarHex,
-            backgroundColor: 'rgba(255,255,255,0.88)',
-            padding: { top: 2, bottom: 2, left: 5, right: 5 }, borderRadius: 4
-        },
-        windLabel: {
-            type: 'label', xValue: 12,
-            yValue: flatWind / 2,
-            content: 'Wind',
-            font: { size: 11, weight: '700', family: fontStack },
-            color: windHex,
-            backgroundColor: 'rgba(255,255,255,0.88)',
-            padding: { top: 2, bottom: 2, left: 5, right: 5 }, borderRadius: 4
-        },
-        demandLabel: {
-            type: 'label', xValue: 20,
-            yValue: flatSolarTop + 4,
-            content: 'Demand',
-            font: { size: 11, weight: '700', family: fontStack },
-            color: demandColor,
-            backgroundColor: 'rgba(255,255,255,0.88)',
-            padding: { top: 2, bottom: 2, left: 5, right: 5 }, borderRadius: 4
-        }
-    };
+    // Illusion: no annotations (everything looks balanced)
+    var duckIllusionAnnotations = {};
 
+    // Reality: only "Gas needed" label on chart
     var duckRealityAnnotations = {
-        solarLabel: {
-            type: 'label', xValue: 11,
-            yValue: (realDkWind[11] + realDkSolar[11]) / 2,
-            content: 'Solar',
-            font: { size: 11, weight: '700', family: fontStack },
-            color: solarHex,
-            backgroundColor: 'rgba(255,255,255,0.88)',
-            padding: { top: 2, bottom: 2, left: 5, right: 5 }, borderRadius: 4
-        },
-        windLabel: {
-            type: 'label', xValue: 2,
-            yValue: realDkWind[2] * 0.55,
-            content: 'Wind',
-            font: { size: 11, weight: '700', family: fontStack },
-            color: windHex,
-            backgroundColor: 'rgba(255,255,255,0.88)',
-            padding: { top: 2, bottom: 2, left: 5, right: 5 }, borderRadius: 4
-        },
-        demandLabel: {
-            type: 'label', xValue: 16,
-            yValue: dkDemand[16] + 5,
-            content: 'Demand',
-            font: { size: 11, weight: '700', family: fontStack },
-            color: demandColor,
-            backgroundColor: 'rgba(255,255,255,0.88)',
-            padding: { top: 2, bottom: 2, left: 5, right: 5 }, borderRadius: 4
-        },
         gasLabel: {
             type: 'label', xValue: 20,
             yValue: (realDkSolar[20] + dkDemand[20]) / 2,
@@ -1538,15 +1537,6 @@ html, body { overflow-x: hidden; max-width: 100vw; }
             font: { size: 10, weight: '700', family: fontStack },
             color: '#DC2626',
             backgroundColor: 'rgba(254,226,226,0.92)',
-            padding: { top: 3, bottom: 3, left: 6, right: 6 }, borderRadius: 4
-        },
-        curtailLabel: {
-            type: 'label', xValue: 13,
-            yValue: dkDemand[13] + (realDkSolar[13] - dkDemand[13]) * 0.55,
-            content: 'Curtailed',
-            font: { size: 10, weight: '700', family: fontStack },
-            color: '#94A3B8',
-            backgroundColor: 'rgba(241,245,249,0.92)',
             padding: { top: 3, bottom: 3, left: 6, right: 6 }, borderRadius: 4
         }
     };
@@ -1583,7 +1573,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                 {
                     label: 'Demand',
                     data: illDkDemand.slice(),
-                    fill: false,
+                    fill: { target: 1, above: gasRed, below: hatchGray },
                     borderColor: demandColor,
                     borderWidth: 2.5,
                     borderDash: [6, 4],
