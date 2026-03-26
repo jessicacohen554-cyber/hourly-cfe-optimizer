@@ -1015,7 +1015,7 @@ body {
     <span class="slide-number">7</span>
   </div>
   <div class="slide-body">
-    <p style="font-size:11pt;margin-bottom:0.1in;color:var(--text-dim);">Not all markets are equal. Investment priority depends on the intersection of demand growth, cannibalization risk, capacity market value, and storage arbitrage opportunity.</p>
+    <p style="font-size:11pt;margin-bottom:0.1in;color:var(--text-dim);">Not all markets are equal. Investment priority depends on the intersection of demand growth, cannibalization trajectory, capacity market value, and corporate PPA demand.</p>
 
     <div style="flex:1;">
       <table class="heatmap-table">
@@ -1023,77 +1023,90 @@ body {
           <th style="width:90px;">ISO</th>
           <th>DC Load Growth</th>
           <th>Solar Capture</th>
-          <th>Storage Arb Value</th>
           <th>Capacity Mkt</th>
           <th>Queue Position</th>
-          <th>VRE+S Rating</th>
-          <th style="width:200px;">Strategic Play</th>
+          <th>VRE Rating</th>
+          <th style="width:220px;">Strategic Play</th>
         </tr>
-                <tr>
+        <tr>
           <td><strong>PJM</strong></td>
-          <td class="heat-3">Mitigated by storage</td>
-          <td class="heat-5">Very High (RPM capacity + arbitrage)</td>
+          <td class="heat-5">30 GW by 2030</td>
+          <td class="heat-2">capture ~95% &rarr; ~70% by 2030</td>
+          <td class="heat-5">$666/MW-day (RPM)</td>
+          <td class="heat-1">170 GW queue</td>
           <td style="background:var(--ceg-green);color:white;font-weight:700;">Strong Buy</td>
-          <td style="font-size:8.5pt;text-align:left;">PJM capacity auction shortfall (6.6 GW in 2025).</td>
+          <td style="font-size:8.5pt;text-align:left;">Largest DC market. 30 GW growth by 2030. Capacity market pays $666/MW-day. PPA prices high &mdash; VRE captures corporate premium.</td>
         </tr>
         <tr>
           <td><strong>ERCOT</strong></td>
-          <td class="heat-3">Mitigated</td>
-          <td class="heat-5">Very High</td>
-          <td style="background:var(--ceg-green);color:white;font-weight:700;">Strong Buy</td>
-          <td style="font-size:8.5pt;text-align:left;">Behind-meter demand from DCs.</td>
+          <td class="heat-5">67 GW pipeline</td>
+          <td class="heat-3">capture ~70% &rarr; ~45% by 2030</td>
+          <td class="heat-1">None</td>
+          <td class="heat-2">233 GW queue</td>
+          <td style="background:var(--ceg-blue);color:white;font-weight:700;">Buy</td>
+          <td style="font-size:8.5pt;text-align:left;">67 GW DC pipeline. Cheapest VRE in US. Consequential + behind-meter demand. Solar capture declining but PPA premiums offset.</td>
         </tr>
         <tr>
           <td><strong>MISO</strong></td>
-          <td class="heat-2">capture ~98% today → ~70% by 2030</td>
-          <td class="heat-4">High</td>
+          <td class="heat-3">Moderate</td>
+          <td class="heat-2">capture ~98% &rarr; ~70% by 2030</td>
+          <td class="heat-3">PRA auction</td>
+          <td class="heat-3">Moderate</td>
           <td style="background:var(--ceg-blue);color:white;font-weight:700;">Buy</td>
-          <td style="font-size:8.5pt;text-align:left;">Meta/Amazon primary REC procurement market.</td>
+          <td style="font-size:8.5pt;text-align:left;">Meta/Amazon primary consequential procurement market. Deep cheap wind pool ($49/MWh). Coal wall advantage for early movers.</td>
         </tr>
         <tr>
           <td><strong>CAISO</strong></td>
-          <td class="heat-3">Mitigated but storage saturation emerging</td>
-          <td class="heat-3">Declining</td>
-          <td style="background:var(--ceg-yellow);color:#1A232F;font-weight:700;">Buy (selective)</td>
-          <td style="font-size:8.5pt;text-align:left;">Google HQ demand.</td>
+          <td class="heat-2">4.9 GW by 2040</td>
+          <td class="heat-5">capture &lt;30% today</td>
+          <td class="heat-3">RA program</td>
+          <td class="heat-2">Large (98% paired)</td>
+          <td style="background:var(--ceg-yellow);color:#1A232F;font-weight:700;">Hold</td>
+          <td style="font-size:8.5pt;text-align:left;">Solar standalone challenging (&lt;30% capture). Wind + geothermal more viable. Google HQ demand supports premium pricing.</td>
         </tr>
         <tr>
           <td><strong>NYISO</strong></td>
-          <td class="heat-5">capture ~100% today</td>
-          <td class="heat-3">Premium</td>
+          <td class="heat-3">Moderate</td>
+          <td class="heat-1">capture ~100% today</td>
+          <td class="heat-4">ICAP</td>
+          <td class="heat-2">Constrained</td>
           <td style="background:var(--ceg-blue);color:white;font-weight:700;">Buy</td>
-          <td style="font-size:8.5pt;text-align:left;">Highest PPA prices in US.</td>
+          <td style="font-size:8.5pt;text-align:left;">Highest PPA prices in US. Zero cannibalization. Premium but constrained market.</td>
         </tr>
         <tr>
           <td><strong>NEISO</strong></td>
-          <td class="heat-5">capture ~100% today</td>
-          <td class="heat-3">Premium</td>
-          <td style="background:var(--ceg-teal);color:white;font-weight:700;">Buy (small scale)</td>
-          <td style="font-size:8.5pt;text-align:left;">Premium pricing.</td>
+          <td class="heat-2">Small</td>
+          <td class="heat-1">capture ~100% today</td>
+          <td class="heat-4">FCM</td>
+          <td class="heat-2">Limited</td>
+          <td style="background:var(--ceg-teal);color:white;font-weight:700;">Buy &mdash; small scale</td>
+          <td style="font-size:8.5pt;text-align:left;">Premium pricing, minimal cannibalization. Small scale only. Highest commercial rates.</td>
         </tr>
         <tr>
           <td><strong>SPP</strong></td>
-          <td class="heat-4">capture ~98% today</td>
-          <td class="heat-4">High (no storage today)</td>
+          <td class="heat-1">Limited</td>
+          <td class="heat-2">capture ~98% today</td>
+          <td class="heat-1">None</td>
+          <td class="heat-3">Moderate</td>
           <td style="background:var(--ceg-gray);color:white;font-weight:700;">Speculative Buy</td>
-          <td style="font-size:8.5pt;text-align:left;">Cheapest wholesale power.</td>
+          <td style="font-size:8.5pt;text-align:left;">Cheapest wind in US. Consequential-only play. Limited local DC presence.</td>
         </tr>
       </table>
 
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.15in;margin-top:0.15in;">
         <div class="callout green" style="font-size:9.5pt;">
-          <strong>Tier 1 — PJM + ERCOT:</strong> Highest conviction. 122 GW combined DC pipeline. Storage is the differentiator in both markets (capacity in PJM, arbitrage in ERCOT).
+          <strong>Tier 1 &mdash; PJM + ERCOT:</strong> Highest conviction. 165 GW combined DC pipeline. Corporate PPA demand guarantees offtake under any accounting regime.
         </div>
         <div class="callout" style="font-size:9.5pt;">
-          <strong>Tier 2 — MISO + NYISO:</strong> Strong fundamentals. MISO offers early-mover advantage before solar cannibalization hits. NYISO = premium but constrained.
+          <strong>Tier 2 &mdash; MISO + NYISO:</strong> Strong fundamentals. MISO = consequential buyer magnet (coal wall). NYISO = premium, zero cannibalization.
         </div>
         <div class="callout orange" style="font-size:9.5pt;">
-          <strong>Tier 3 — CAISO/SPP/NEISO:</strong> Selective only. CAISO requires storage pairing. SPP is speculative. NEISO is small but premium.
+          <strong>Tier 3 &mdash; CAISO/SPP/NEISO:</strong> Selective only. CAISO solar needs pairing (future storage add). SPP is speculative. NEISO is small but premium.
         </div>
       </div>
     </div>
 
-    <div class="source-note">Sources: PJM 55 GW by 2030 &amp; 170 GW queue: PJM Interconnection, "2025 Regional Transmission Expansion Plan" (Jan 2026), §3.2; PJM queue statistics (Dec 2025). PJM $666/MW-day: PJM RPM BRA 2025/2026 clearing price (Jul 2025). ERCOT 67 GW pipeline: ERCOT, "Report on the Capacity, Demand and Reserves" (CDR, Dec 2025). ERCOT arbitrage $150+/kW-yr: Modo Energy, "ERCOT Battery Revenue Analysis" (Q3 2025). CAISO 4.9 GW by 2040: CAISO, "20-Year Transmission Outlook" (May 2025). CAISO &lt;30% solar capture: S&amp;P Global Market Intelligence (Q4 2025). CAISO 13 GW storage: CAISO interconnection queue (Feb 2026). CAISO 98% paired: CAISO, "Hybrid Resource Trends in the Interconnection Queue" (2025). MISO, NYISO, NEISO, SPP metrics: respective ISO/RTO annual market reports (2025); capture rates from S&amp;P Global PPA tracker. DC load growth by region: DC Byte, "United States SitesData" (Mar 2026), aggregated by ISO footprint. VRE+S ratings: Constellation Hourly CFE Optimizer regional analysis (Steps 4–5), cross-referenced with Constellation Energy vre_investment_thesis.csv ratings.</div>
+    <div class="source-note">Sources: PJM 30 GW by 2030 &amp; 170 GW queue: PJM Interconnection, "2025 Regional Transmission Expansion Plan" (Jan 2026), §3.2; PJM queue statistics (Dec 2025). PJM $666/MW-day: PJM RPM BRA 2025/2026 clearing price (Jul 2025). ERCOT 67 GW pipeline: ERCOT, "Report on the Capacity, Demand and Reserves" (CDR, Dec 2025). CAISO 4.9 GW by 2040: CAISO, "20-Year Transmission Outlook" (May 2025). CAISO &lt;30% solar capture: S&amp;P Global Market Intelligence (Q4 2025). CAISO 98% paired: CAISO, "Hybrid Resource Trends in the Interconnection Queue" (2025). MISO, NYISO, NEISO, SPP metrics: respective ISO/RTO annual market reports (2025); capture rates from S&amp;P Global PPA tracker. DC load growth by region: DC Byte, "United States SitesData" (Mar 2026), aggregated by ISO footprint. VRE ratings: Constellation Hourly CFE Optimizer regional analysis (Steps 4–5), cross-referenced with Constellation Energy vre_investment_thesis.csv VRE-only ratings (non-storage rows).</div>
   </div>
   <div class="slide-footer">
     <span class="brand">CONSTELLATION ENERGY</span>
