@@ -247,29 +247,25 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 
 /* === Act 2: The 100% Clean Illusion === */
-.act2-layout {
-    display: grid;
-    grid-template-columns: 1fr 1.6fr;
-    gap: var(--space-xl);
-    align-items: start;
-    max-width: var(--max-content-wide, 1320px);
-    margin: 0 auto;
-    padding: 0 var(--pad-page, 24px);
+.act2-intro,
+.act2-postscript {
+    max-width: 780px;
 }
-.act2-narrative {
-    padding-right: var(--space-lg);
-}
-.act2-narrative p {
+.act2-intro p,
+.act2-postscript p {
     font-size: 1.05rem;
     line-height: 1.7;
     color: var(--text-secondary, #475569);
     margin-bottom: var(--space-md);
 }
-.act2-narrative .lead-text {
+.act2-intro .lead-text {
     font-size: 1.15rem;
     font-weight: 500;
     color: var(--text-primary, #1A2744);
     line-height: 1.6;
+}
+.act2-postscript {
+    margin-top: var(--space-xl);
 }
 .act2-explore-link {
     display: inline-flex;
@@ -383,19 +379,13 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     color: var(--text-muted, #94A3B8);
 }
 .act2-legend-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 3px;
+    width: 16px;
+    height: 3px;
+    border-radius: 2px;
     flex-shrink: 0;
 }
 
 @media (max-width: 900px) {
-    .act2-layout {
-        grid-template-columns: 1fr;
-    }
-    .act2-narrative {
-        padding-right: 0;
-    }
     .act2-chart-container {
         min-height: 280px;
     }
@@ -488,52 +478,55 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     <span class="story-badge story-badge-green">Act 2</span>
     <h2>The 100% Clean Illusion</h2>
 
-    <div class="act2-layout">
-        <!-- LEFT: Narrative panel -->
-        <div class="act2-narrative">
-            <p class="lead-text">
-                Annual accounting matches abundant daytime solar with nighttime demand.
-                The math works on paper, but physically, the company relies entirely
-                on the dirty grid after dark.
-            </p>
-            <p>
-                Consider a CAISO buyer who procures enough wind and solar to cover
-                100% of annual load. Spreadsheet says: mission accomplished. But
-                look at any single hour&mdash;solar generates nothing at midnight,
-                and wind can&rsquo;t fill the gap alone.
-            </p>
-            <p>
-                The chart shows a real 24-hour dispatch profile from our optimizer.
-                Watch the &ldquo;balanced&rdquo; average dissolve into the actual
-                hourly shape&mdash;daytime surplus spills onto the grid while
-                nighttime demand pulls from fossil plants.
-            </p>
-            <p>
-                The annual ledger balances. The atmosphere does not.
-            </p>
-            <a href="procurement_strategies.html" class="act2-explore-link">
-                Compare procurement strategies <span aria-hidden="true">&rarr;</span>
-            </a>
-        </div>
+    <!-- Intro text above visual -->
+    <div class="act2-intro">
+        <p class="lead-text">
+            Annual accounting matches abundant daytime solar with nighttime demand.
+            The math works on paper, but physically, the company relies entirely
+            on the dirty grid after dark.
+        </p>
+        <p>
+            Consider a CAISO buyer who procures enough wind and solar to cover
+            100% of annual load. Spreadsheet says: mission accomplished. But
+            look at any single hour&mdash;solar generates nothing at midnight,
+            and wind can&rsquo;t fill the gap alone.
+        </p>
+    </div>
 
-        <!-- RIGHT: Chart + stats -->
-        <div class="act2-chart-wrap">
-            <div class="act2-chart-container">
-                <span class="act2-badge-overlay" id="act2Badge">100% Annually Matched</span>
-                <canvas id="act2Chart"></canvas>
+    <!-- Toggle + chart -->
+    <div class="act2-chart-wrap">
+        <div class="mode-toggle-wrap">
+            <span class="mode-toggle-label active-label" id="act2LabelIllusion">Illusion</span>
+            <div class="mode-toggle-track" id="act2Toggle" role="switch" aria-checked="false" tabindex="0">
+                <div class="mode-toggle-thumb"></div>
             </div>
-            <div class="act2-legend" id="act2Legend"></div>
-            <div class="act2-stats">
-                <div class="act2-stat">
-                    <div class="act2-stat-value" id="act2AnnualVal" style="color:#16A34A;">—</div>
-                    <div class="act2-stat-label">Annual Match</div>
-                </div>
-                <div class="act2-stat">
-                    <div class="act2-stat-value" id="act2HourlyVal" style="color:#DC2626;">—</div>
-                    <div class="act2-stat-label">Actual Clean Hours</div>
-                </div>
+            <span class="mode-toggle-label" id="act2LabelReality">Reality</span>
+        </div>
+        <div class="act2-chart-container">
+            <span class="act2-badge-overlay" id="act2Badge">100% Annually Matched</span>
+            <canvas id="act2Chart"></canvas>
+        </div>
+        <div class="act2-legend" id="act2Legend"></div>
+        <div class="act2-stats">
+            <div class="act2-stat">
+                <div class="act2-stat-value" id="act2AnnualVal" style="color:#16A34A;">—</div>
+                <div class="act2-stat-label">Annual Match</div>
+            </div>
+            <div class="act2-stat">
+                <div class="act2-stat-value" id="act2HourlyVal" style="color:#DC2626;">—</div>
+                <div class="act2-stat-label">Actual Clean Hours</div>
             </div>
         </div>
+    </div>
+
+    <!-- Post-visual narrative -->
+    <div class="act2-postscript">
+        <p>
+            The annual ledger balances. The atmosphere does not.
+        </p>
+        <a href="procurement_strategies.html" class="act2-explore-link">
+            Compare procurement strategies <span aria-hidden="true">&rarr;</span>
+        </a>
     </div>
 </section>
 
@@ -944,7 +937,6 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                 { label: 'Hydro', color: hydroHex },
                 { label: 'Wind', color: windHex },
                 { label: 'Solar', color: solarHex },
-                { label: 'Storage', color: batteryHex },
                 { label: 'Fossil Gap', color: fossilHex },
                 { label: 'Demand', color: '#1A2744' }
             ];
@@ -956,7 +948,8 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                 dot.style.background = item.color;
                 if (item.label === 'Demand') {
                     dot.style.background = 'transparent';
-                    dot.style.border = '2px dashed ' + item.color;
+                    dot.style.height = '0';
+                    dot.style.borderTop = '2px dashed ' + item.color;
                 }
                 el.appendChild(dot);
                 el.appendChild(document.createTextNode(item.label));
@@ -1119,11 +1112,21 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                 }
             });
 
-            // --- Scroll-triggered transition ---
-            var hasRevealed = false;
+            // --- Toggle + scroll-triggered transition ---
             var badge = document.getElementById('act2Badge');
             var annualEl = document.getElementById('act2AnnualVal');
             var hourlyEl = document.getElementById('act2HourlyVal');
+            var act2Toggle = document.getElementById('act2Toggle');
+            var act2LabelIll = document.getElementById('act2LabelIllusion');
+            var act2LabelReal = document.getElementById('act2LabelReality');
+            var act2IsReality = false;
+            var act2Initialized = false;
+
+            // Show illusion stats on load
+            annualEl.textContent = annualMatchPct + '%';
+            annualEl.style.color = '#16A34A';
+            hourlyEl.textContent = '100%';
+            hourlyEl.style.color = '#16A34A';
 
             // Animated counter
             function animateCounter(el, from, to, suffix, duration, color) {
@@ -1131,7 +1134,6 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                 el.style.color = color;
                 function tick(now) {
                     var t = Math.min((now - start) / duration, 1);
-                    // Ease out cubic
                     var ease = 1 - Math.pow(1 - t, 3);
                     var val = Math.round(from + (to - from) * ease);
                     el.textContent = val + suffix;
@@ -1140,51 +1142,86 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                 requestAnimationFrame(tick);
             }
 
-            function revealReality() {
-                if (hasRevealed) return;
-                hasRevealed = true;
+            function act2SwitchToReality() {
+                if (act2IsReality) return;
+                act2IsReality = true;
+                act2Toggle.classList.add('reality');
+                act2Toggle.setAttribute('aria-checked', 'true');
+                act2LabelIll.classList.remove('active-label');
+                act2LabelReal.classList.add('active-label');
 
-                // 1. Show "illusion" stats briefly
+                // Morph chart to real hourly data
+                chart.data.datasets[0].data = stackFirm;
+                chart.data.datasets[1].data = stackHydro;
+                chart.data.datasets[2].data = stackWind;
+                chart.data.datasets[3].data = stackSolar;
+                chart.data.datasets[4].data = stackBattery;
+                chart.data.datasets[5].data = stackGap;
+                chart.data.datasets[6].data = demand;
+                chart.update('active');
+
+                // Crack the badge
+                badge.classList.add('cracked');
+
+                // Animate hourly counter from 100 → actual
+                setTimeout(function() {
+                    animateCounter(hourlyEl, 100, cleanHourPct, '%', 1400, '#DC2626');
+                }, 400);
+            }
+
+            function act2SwitchToIllusion() {
+                if (!act2IsReality) return;
+                act2IsReality = false;
+                act2Toggle.classList.remove('reality');
+                act2Toggle.setAttribute('aria-checked', 'false');
+                act2LabelIll.classList.add('active-label');
+                act2LabelReal.classList.remove('active-label');
+
+                // Morph chart back to flat averages
+                chart.data.datasets[0].data = flatFirm.slice();
+                chart.data.datasets[1].data = flatHydro.slice();
+                chart.data.datasets[2].data = flatWind.slice();
+                chart.data.datasets[3].data = flatSolar.slice();
+                chart.data.datasets[4].data = flatBattery.slice();
+                chart.data.datasets[5].data = flatGap.slice();
+                chart.data.datasets[6].data = flatDemand.slice();
+                chart.update('active');
+
+                // Restore badge
+                badge.classList.remove('cracked');
+
+                // Restore illusion stats
                 annualEl.textContent = annualMatchPct + '%';
                 annualEl.style.color = '#16A34A';
                 hourlyEl.textContent = '100%';
                 hourlyEl.style.color = '#16A34A';
-
-                // 2. After a beat, morph chart to reality
-                setTimeout(function() {
-                    // Update all datasets to real hourly data
-                    chart.data.datasets[0].data = stackFirm;
-                    chart.data.datasets[1].data = stackHydro;
-                    chart.data.datasets[2].data = stackWind;
-                    chart.data.datasets[3].data = stackSolar;
-                    chart.data.datasets[4].data = stackBattery;
-                    chart.data.datasets[5].data = stackGap;
-                    chart.data.datasets[6].data = demand;
-                    chart.update('active');
-
-                    // Crack the badge
-                    badge.classList.add('cracked');
-
-                    // Animate hourly counter from 100 → actual
-                    setTimeout(function() {
-                        animateCounter(hourlyEl, 100, cleanHourPct, '%', 1400, '#DC2626');
-                    }, 400);
-                }, 1200);
             }
 
-            // Observe the Act 2 section
+            act2Toggle.addEventListener('click', function() {
+                if (act2IsReality) act2SwitchToIllusion();
+                else act2SwitchToReality();
+            });
+            act2Toggle.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    act2Toggle.click();
+                }
+            });
+
+            // Auto-transition to reality on scroll (first time only)
             if (typeof IntersectionObserver !== 'undefined') {
                 var obs2 = new IntersectionObserver(function(entries) {
                     entries.forEach(function(entry) {
-                        if (entry.isIntersecting) {
-                            revealReality();
+                        if (entry.isIntersecting && !act2Initialized) {
+                            act2Initialized = true;
+                            setTimeout(function() {
+                                act2SwitchToReality();
+                            }, 800);
                             obs2.unobserve(entry.target);
                         }
                     });
                 }, { threshold: 0.25 });
                 obs2.observe(document.getElementById('act2'));
-            } else {
-                revealReality();
             }
         })
         .catch(function(err) {
