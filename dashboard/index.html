@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hourly Clean Energy Cost Optimizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/shared.css">
+<link rel="stylesheet" href="styles/scrollytell.css">
+<style>
+/* === Act 1: Heatstrip-specific styles === */
+html, body { overflow-x: hidden; max-width: 100vw; }
+
+.act1-layout {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: var(--space-xl);
+    align-items: start;
+    max-width: var(--max-content-wide, 1320px);
+    margin: 0 auto;
+    padding: 0 var(--pad-page, 24px);
+}
+
+.act1-narrative {
+    padding-right: var(--space-lg);
+}
+.act1-narrative p {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--text-secondary, #475569);
+    margin-bottom: var(--space-md);
+}
+.act1-narrative .lead-text {
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: var(--text-primary, #1A2744);
+    line-height: 1.6;
+}
+.act1-explore-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--hydro, #0EA5E9);
+    text-decoration: none;
+    margin-top: var(--space-md);
+    transition: gap 0.2s;
+}
+.act1-explore-link:hover { gap: 10px; }
+
+/* --- Heatstrip visual container --- */
+.heatstrip-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+.heatstrip-row {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s cubic-bezier(0.23,1,0.32,1),
+                transform 0.6s cubic-bezier(0.23,1,0.32,1);
+}
+.heatstrip-row.strip-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.heatstrip-label {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.heatstrip-label .iso-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+.heatstrip-grid {
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+    gap: 2px;
+    border-radius: var(--radius-md, 8px);
+    overflow: hidden;
+}
+.heatstrip-cell {
+    aspect-ratio: 1 / 1.1;
+    min-height: 36px;
+    border-radius: 3px;
+    position: relative;
+    transition: background-color 0.8s cubic-bezier(0.4,0,0.2,1),
+                border-color 0.8s cubic-bezier(0.4,0,0.2,1);
+    cursor: default;
+}
+/* Tooltip on hover */
+.heatstrip-cell::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%) scale(0.9);
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    padding: 3px 7px;
+    border-radius: 4px;
+    background: var(--navy, #1A2744);
+    color: #fff;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s, transform 0.15s;
+    z-index: 10;
+}
+.heatstrip-cell:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+}
+/* Hour axis labels */
+.heatstrip-hours {
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+    gap: 2px;
+    margin-top: 2px;
+}
+.heatstrip-hours span {
+    font-family: var(--font-data);
+    font-size: 0.6rem;
+    color: var(--text-muted, #94A3B8);
+    text-align: center;
+}
+
+/* --- Illusion / Reality toggle --- */
+.mode-toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+.mode-toggle-label {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-muted, #94A3B8);
+    transition: color 0.3s;
+}
+.mode-toggle-label.active-label {
+    color: var(--text-primary, #1A2744);
+}
+.mode-toggle-track {
+    position: relative;
+    width: 52px;
+    height: 28px;
+    background: rgba(26,39,68,0.12);
+    border-radius: var(--radius-pill, 9999px);
+    cursor: pointer;
+    transition: background 0.3s;
+    flex-shrink: 0;
+}
+.mode-toggle-track.reality {
+    background: var(--hydro, #0EA5E9);
+}
+.mode-toggle-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.1));
+    transition: left 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.mode-toggle-track.reality .mode-toggle-thumb {
+    left: 27px;
+}
+
+/* --- Scanline sweep animation --- */
+@keyframes scanline-sweep {
+    0%   { clip-path: inset(0 100% 0 0); }
+    100% { clip-path: inset(0 0 0 0); }
+}
+.heatstrip-grid.sweeping .heatstrip-cell {
+    animation: none; /* cells transition via inline style changes */
+}
+/* Sweep overlay for visual effect */
+.heatstrip-grid.sweep-active {
+    position: relative;
+}
+.heatstrip-grid.sweep-active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: rgba(255,255,255,0.9);
+    box-shadow: 0 0 12px 4px rgba(14,165,233,0.4);
+    z-index: 5;
+    animation: scan-move 1.2s cubic-bezier(0.4,0,0.2,1) forwards;
+    border-radius: 2px;
+}
+@keyframes scan-move {
+    0%   { left: 0; opacity: 1; }
+    90%  { opacity: 1; }
+    100% { left: 100%; opacity: 0; }
+}
+
+/* --- Legend --- */
+.heatstrip-legend {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm, 8px);
+    margin-top: var(--space-md);
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    color: var(--text-muted, #94A3B8);
+}
+.heatstrip-legend-bar {
+    width: 120px;
+    height: 10px;
+    border-radius: 5px;
+    background: linear-gradient(90deg, #22C55E, #F59E0B, #EF4444);
+}
+
+/* --- Responsive --- */
+@media (max-width: 900px) {
+    .act1-layout {
+        grid-template-columns: 1fr;
+    }
+    .act1-narrative {
+        padding-right: 0;
+    }
+    .heatstrip-cell {
+        min-height: 44px;
+    }
+}
+@media (max-width: 480px) {
+    .heatstrip-cell {
+        min-height: 44px;
+        aspect-ratio: auto;
+    }
+    .heatstrip-hours span {
+        font-size: 0.5rem;
+    }
+}
+</style>
+</head>
+<body>
+
+<!-- TOP NAV (injected by nav.js) -->
+<nav id="topNav"></nav>
+<script src="js/nav.js"></script>
+<script src="js/chart-colors.js"></script>
+<script src="js/shared-header.js"></script>
+<script src="js/scroll-observer.js"></script>
+<script src="js/shared-footer.js"></script>
+
+<!-- HEADER BANNER -->
+<header class="header" id="pageHeader">
+    <h1>The 8,760 Problem</h1>
+    <div class="subtitle">Why hourly matching changes everything about clean energy procurement</div>
+    <div class="header-accent"></div>
+</header>
+
+<!-- ================================================================== -->
+<!-- ACT 1: THE GRID IS NOT A BANK                                       -->
+<!-- ================================================================== -->
+<section class="story-section" id="act1">
+    <span class="story-badge story-badge-red">Act 1</span>
+    <h2>The Grid is Not a Bank</h2>
+
+    <div class="act1-layout">
+        <!-- LEFT: Narrative panel -->
+        <div class="act1-narrative">
+            <p class="lead-text">
+                The grid is a live, interconnected machine where carbon intensity
+                varies wildly by the hour and location. Most clean energy policies
+                ignore this physics, treating all megawatt-hours as equal.
+            </p>
+            <p>
+                A solar MWh generated at noon in California displaces almost no
+                fossil fuel&mdash;the grid is already clean. That same MWh at 8 PM
+                in PJM displaces coal. Annual accounting treats them as identical.
+                Hourly data reveals the truth.
+            </p>
+            <p>
+                Below, each cell represents one hour of the day. The color shows
+                how carbon-intensive the grid is during that hour&mdash;green when
+                clean energy dominates, red when fossil fuels fill the gaps.
+            </p>
+            <p>
+                Start with the <strong>Illusion</strong>&mdash;the flat daily average
+                that annual accounting assumes. Then watch the <strong>Reality</strong>
+                emerge.
+            </p>
+            <a href="lmp_trends.html" class="act1-explore-link">
+                Explore regional patterns <span aria-hidden="true">&rarr;</span>
+            </a>
+        </div>
+
+        <!-- RIGHT: Heatstrip visualization -->
+        <div class="heatstrip-panel" id="heatstripPanel">
+            <!-- Mode toggle -->
+            <div class="mode-toggle-wrap">
+                <span class="mode-toggle-label active-label" id="labelIllusion">Illusion</span>
+                <div class="mode-toggle-track" id="modeToggle" role="switch" aria-checked="false" tabindex="0">
+                    <div class="mode-toggle-thumb"></div>
+                </div>
+                <span class="mode-toggle-label" id="labelReality">Reality</span>
+            </div>
+
+            <!-- Strips rendered by JS -->
+            <div id="heatstripContainer"></div>
+
+            <!-- Legend -->
+            <div class="heatstrip-legend">
+                <span>Low carbon</span>
+                <div class="heatstrip-legend-bar"></div>
+                <span>High carbon</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="story-divider-wrap"><hr class="story-divider"></div>
+
+<!-- Placeholder for Acts 2-6 -->
+
+<!-- FOOTER -->
+<footer class="page-footer">
+    <div class="footer-links">
+        <a href="dashboard.html">Cost Optimizer</a>
+        <a href="abatement_dashboard.html">Abatement Analysis</a>
+        <a href="research_paper.html">Research Paper</a>
+    </div>
+    <p style="margin-top:12px; opacity:0.6; font-size:0.8rem;">
+        7 ISOs &middot; 5,832 scenarios &middot; 8,760 hours
+    </p>
+</footer>
+<div class="bottom-banner"></div>
+
+<!-- ================================================================== -->
+<!-- ACT 1 SCRIPT: Carbon intensity heatstrips                           -->
+<!-- ================================================================== -->
+<script>
+(function() {
+    'use strict';
+
+    // --- Config ---
+    var ISOS = ['CAISO', 'PJM', 'ERCOT'];
+    var ISO_LABELS = {
+        CAISO: 'CAISO — California',
+        PJM:   'PJM — Mid-Atlantic',
+        ERCOT: 'ERCOT — Texas'
+    };
+
+    // Regional average fossil emission intensity (tCO2/MWh)
+    // Blended rates reflecting each ISO's fossil fuel mix
+    var FOSSIL_EMISSION_RATE = {
+        CAISO: 0.39,  // mostly gas
+        PJM:   0.52,  // coal + gas mix
+        ERCOT: 0.42   // gas-heavy with some coal
+    };
+
+    // Color scale: green (0) -> amber (0.5) -> red (1)
+    function carbonColor(fraction, alpha) {
+        // fraction: 0 = clean, 1 = fully fossil
+        var t = Math.max(0, Math.min(1, fraction));
+        var r, g, b;
+        if (t < 0.5) {
+            // green to amber
+            var s = t / 0.5;
+            r = Math.round(34 + (245 - 34) * s);
+            g = Math.round(197 + (158 - 197) * s);
+            b = Math.round(94 + (11 - 94) * s);
+        } else {
+            // amber to red
+            var s = (t - 0.5) / 0.5;
+            r = Math.round(245 + (239 - 245) * s);
+            g = Math.round(158 + (68 - 158) * s);
+            b = Math.round(11 + (68 - 11) * s);
+        }
+        return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+    }
+
+    // --- Load data and render ---
+    fetch('compressed_day_profiles.json')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var container = document.getElementById('heatstripContainer');
+            var profileData = {};
+
+            ISOS.forEach(function(iso) {
+                var profiles = data[iso].profiles;
+                var keys = Object.keys(profiles);
+                // Pick a representative low-CFE profile (first one)
+                var prof = profiles[keys[0]];
+
+                // Compute fossil fraction per hour
+                var fossilFractions = [];
+                var avgFossil = 0;
+                for (var h = 0; h < 24; h++) {
+                    var demand = prof.demand[h];
+                    var gap = prof.gap ? prof.gap[h] : 0;
+                    var fraction = demand > 0 ? gap / demand : 0;
+                    fossilFractions.push(fraction);
+                    avgFossil += fraction;
+                }
+                avgFossil /= 24;
+
+                profileData[iso] = {
+                    fractions: fossilFractions,
+                    avg: avgFossil,
+                    emissionRate: FOSSIL_EMISSION_RATE[iso]
+                };
+
+                // Build DOM
+                var row = document.createElement('div');
+                row.className = 'heatstrip-row';
+                row.setAttribute('data-iso', iso);
+
+                // Label
+                var label = document.createElement('div');
+                label.className = 'heatstrip-label';
+                var dot = document.createElement('span');
+                dot.className = 'iso-dot';
+                dot.style.background = typeof ISO_COLORS !== 'undefined' ? ISO_COLORS[iso] : '#666';
+                label.appendChild(dot);
+                label.appendChild(document.createTextNode(ISO_LABELS[iso]));
+                row.appendChild(label);
+
+                // Grid
+                var grid = document.createElement('div');
+                grid.className = 'heatstrip-grid';
+                grid.setAttribute('data-iso', iso);
+
+                for (var h = 0; h < 24; h++) {
+                    var cell = document.createElement('div');
+                    cell.className = 'heatstrip-cell';
+                    cell.setAttribute('data-hour', h);
+                    // Start in "illusion" mode (flat average)
+                    var avgIntensity = avgFossil * FOSSIL_EMISSION_RATE[iso] * 1000;
+                    cell.style.background = carbonColor(avgFossil, 0.12);
+                    cell.style.border = '2px solid ' + carbonColor(avgFossil, 0.85);
+                    // Tooltip
+                    var hourLabel = (h === 0 ? '12' : h <= 12 ? '' + h : '' + (h - 12))
+                        + (h < 12 ? 'AM' : 'PM');
+                    if (h === 0) hourLabel = '12AM';
+                    if (h === 12) hourLabel = '12PM';
+                    var realIntensity = fossilFractions[h] * FOSSIL_EMISSION_RATE[iso] * 1000;
+                    cell.setAttribute('data-tooltip',
+                        hourLabel + ': ' + Math.round(realIntensity) + ' g/kWh');
+                    grid.appendChild(cell);
+                }
+                row.appendChild(grid);
+
+                // Hour axis
+                var hours = document.createElement('div');
+                hours.className = 'heatstrip-hours';
+                for (var h = 0; h < 24; h++) {
+                    var sp = document.createElement('span');
+                    // Show select hours to avoid crowding
+                    if (h === 0) sp.textContent = '12a';
+                    else if (h === 6) sp.textContent = '6a';
+                    else if (h === 12) sp.textContent = '12p';
+                    else if (h === 18) sp.textContent = '6p';
+                    else if (h === 23) sp.textContent = '11p';
+                    else sp.textContent = '';
+                    hours.appendChild(sp);
+                }
+                row.appendChild(hours);
+
+                container.appendChild(row);
+            });
+
+            // --- Staggered reveal on scroll ---
+            var section = document.getElementById('act1');
+            var rows = container.querySelectorAll('.heatstrip-row');
+            var revealed = false;
+            var transitioned = false;
+
+            function revealStrips() {
+                if (revealed) return;
+                revealed = true;
+                rows.forEach(function(row, i) {
+                    setTimeout(function() {
+                        row.classList.add('strip-visible');
+                    }, i * 200);
+                });
+                // Auto-transition to Reality after strips appear
+                setTimeout(function() {
+                    if (!transitioned) switchToReality(true);
+                }, ISOS.length * 200 + 800);
+            }
+
+            // Use IntersectionObserver for heatstrip reveal
+            if (typeof IntersectionObserver !== 'undefined') {
+                var obs = new IntersectionObserver(function(entries) {
+                    entries.forEach(function(entry) {
+                        if (entry.isIntersecting) {
+                            revealStrips();
+                            obs.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.2 });
+                obs.observe(document.getElementById('heatstripPanel'));
+            } else {
+                revealStrips();
+            }
+
+            // --- Illusion / Reality toggle ---
+            var toggle = document.getElementById('modeToggle');
+            var labelIll = document.getElementById('labelIllusion');
+            var labelReal = document.getElementById('labelReality');
+            var isReality = false;
+
+            function switchToReality(withSweep) {
+                if (isReality) return;
+                isReality = true;
+                transitioned = true;
+                toggle.classList.add('reality');
+                toggle.setAttribute('aria-checked', 'true');
+                labelIll.classList.remove('active-label');
+                labelReal.classList.add('active-label');
+
+                ISOS.forEach(function(iso, isoIdx) {
+                    var grid = container.querySelector('.heatstrip-grid[data-iso="' + iso + '"]');
+                    var cells = grid.querySelectorAll('.heatstrip-cell');
+                    var pd = profileData[iso];
+
+                    if (withSweep) {
+                        grid.classList.add('sweep-active');
+                        setTimeout(function() {
+                            grid.classList.remove('sweep-active');
+                        }, 1300);
+                    }
+
+                    cells.forEach(function(cell, h) {
+                        var delay = withSweep ? (h * 45 + isoIdx * 100) : 0;
+                        setTimeout(function() {
+                            var f = pd.fractions[h];
+                            cell.style.background = carbonColor(f, 0.12);
+                            cell.style.border = '2px solid ' + carbonColor(f, 0.85);
+                        }, delay);
+                    });
+                });
+            }
+
+            function switchToIllusion() {
+                if (!isReality) return;
+                isReality = false;
+                toggle.classList.remove('reality');
+                toggle.setAttribute('aria-checked', 'false');
+                labelIll.classList.add('active-label');
+                labelReal.classList.remove('active-label');
+
+                ISOS.forEach(function(iso) {
+                    var grid = container.querySelector('.heatstrip-grid[data-iso="' + iso + '"]');
+                    var cells = grid.querySelectorAll('.heatstrip-cell');
+                    var pd = profileData[iso];
+
+                    cells.forEach(function(cell) {
+                        cell.style.background = carbonColor(pd.avg, 0.12);
+                        cell.style.border = '2px solid ' + carbonColor(pd.avg, 0.85);
+                    });
+                });
+            }
+
+            toggle.addEventListener('click', function() {
+                if (isReality) switchToIllusion();
+                else switchToReality(true);
+            });
+            toggle.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggle.click();
+                }
+            });
+        })
+        .catch(function(err) {
+            console.error('Act 1: Failed to load day profiles:', err);
+            document.getElementById('heatstripContainer').innerHTML =
+                '<p style="color:var(--text-muted)">Carbon intensity data unavailable.</p>';
+        });
+})();
+</script>
+
+</body>
+</html>
