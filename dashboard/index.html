@@ -365,6 +365,11 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     font-weight: 700;
 }
 /* 24-hour jars (reality) */
+.act0-reality-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
 .act0-hourly-jars {
     display: grid;
     grid-template-columns: repeat(24, 1fr);
@@ -374,7 +379,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 .act0-hour-jar {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
 }
 .act0-hour-jar-body {
     position: relative;
@@ -384,56 +389,57 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     border: 1.5px solid rgba(26,39,68,0.12);
     border-radius: 0 0 4px 4px;
     border-top: 2px solid rgba(26,39,68,0.2);
-    overflow: hidden;
+    overflow: visible;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
     transition: height 0.8s cubic-bezier(0.4,0,0.2,1);
 }
+/* Filled color bar segments instead of dots */
 .act0-hour-fill {
     display: flex;
-    flex-wrap: wrap;
-    align-content: flex-end;
-    gap: 1px;
-    padding: 2px;
-    justify-content: center;
+    flex-direction: column;
+    justify-content: flex-end;
+    width: 100%;
+    position: relative;
 }
-.act0-hour-ball {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    flex-shrink: 0;
+.act0-fill-segment {
+    width: 100%;
+    transition: height 0.6s ease;
 }
-.act0-hour-ball.solar { background: var(--solar, #F59E0B); }
-.act0-hour-ball.wind { background: var(--wind, #22C55E); }
+.act0-fill-segment.solar { background: var(--solar, #F59E0B); }
+.act0-fill-segment.wind { background: var(--wind, #22C55E); }
+.act0-hour-gap {
+    width: 100%;
+    background: rgba(220,38,38,0.10);
+    border-bottom: 1px dashed rgba(220,38,38,0.3);
+}
+/* Overflow bar above the jar */
 .act0-hour-overflow {
     position: absolute;
     bottom: 100%;
     left: 0; right: 0;
     display: flex;
-    flex-wrap: wrap;
-    gap: 1px;
-    padding: 2px;
-    justify-content: center;
+    flex-direction: column;
+    justify-content: flex-end;
 }
-.act0-hour-overflow .act0-hour-ball {
-    opacity: 0.45;
-    border: 1px dashed rgba(0,0,0,0.2);
-    background: transparent;
+.act0-hour-overflow .act0-fill-segment {
+    opacity: 0.35;
 }
-.act0-hour-overflow .act0-hour-ball.solar { background: rgba(245,158,11,0.35); }
-.act0-hour-overflow .act0-hour-ball.wind { background: rgba(34,197,94,0.35); }
-.act0-hour-gap {
-    width: 100%;
-    background: rgba(220,38,38,0.08);
-    border-top: 1px dashed rgba(220,38,38,0.2);
+.act0-hour-overflow .act0-fill-segment.solar { background: var(--solar, #F59E0B); border: 1px dashed rgba(245,158,11,0.5); }
+.act0-hour-overflow .act0-fill-segment.wind { background: var(--wind, #22C55E); border: 1px dashed rgba(34,197,94,0.5); }
+/* Shared x-axis labels row */
+.act0-hour-labels-row {
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+    gap: 3px;
+    margin-top: 4px;
 }
 .act0-hour-label {
     font-family: var(--font-data);
-    font-size: 0.5rem;
+    font-size: 0.55rem;
     color: var(--text-muted, #94A3B8);
     text-align: center;
-    margin-top: 2px;
 }
 .act0-legend {
     display: flex;
@@ -481,19 +487,19 @@ html, body { overflow-x: hidden; max-width: 100vw; }
         width: 140px;
         height: 220px;
     }
-    .act0-hourly-jars {
-        grid-template-columns: repeat(12, 1fr);
+    .act0-hourly-jars,
+    .act0-hour-labels-row {
+        grid-template-columns: repeat(24, 1fr);
+        gap: 2px;
     }
 }
 @media (max-width: 480px) {
-    .act0-hourly-jars {
-        grid-template-columns: repeat(12, 1fr);
-        gap: 2px;
+    .act0-hourly-jars,
+    .act0-hour-labels-row {
+        grid-template-columns: repeat(24, 1fr);
+        gap: 1px;
     }
-    .act0-hour-ball {
-        width: 4px;
-        height: 4px;
-    }
+    .act0-hour-label { font-size: 0.45rem; }
 }
 
 /* === Act 2: The 100% Clean Illusion === */
@@ -1661,7 +1667,10 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             </div>
             <!-- Reality: 24-hour jars (rendered by JS) -->
             <div class="act0-view hidden" id="act0RealityView">
-                <div class="act0-hourly-jars" id="act0HourlyJars"></div>
+                <div class="act0-reality-wrap">
+                    <div class="act0-hourly-jars" id="act0HourlyJars"></div>
+                    <div class="act0-hour-labels-row" id="act0HourLabels"></div>
+                </div>
             </div>
         </div>
 
@@ -2236,7 +2245,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     var UTC_OFFSETS = {CAISO:8, PJM:5, ERCOT:6, NYISO:5, NEISO:5, MISO:6, SPP:6};
     function rotateToLocal(arr, offset) {
         var o = offset % 24;
-        return arr.slice(24 - o).concat(arr.slice(0, 24 - o));
+        return arr.slice(o).concat(arr.slice(0, o));
     }
 
     var HOUR_LABELS = [];
@@ -2326,68 +2335,77 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             jarHTML += '<div class="act0-jar-label" style="font-size:0.75rem; color:var(--text-muted);">CAISO &mdash; 100% Annually Matched</div>';
             annualJar.innerHTML = jarHTML;
 
-            // ---- Build Reality View: 24 hourly jars ----
+            // ---- Build Reality View: 24 hourly jars with color-fill bars ----
             var hourlyJars = document.getElementById('act0HourlyJars');
+            var hourLabelsRow = document.getElementById('act0HourLabels');
+            var MAX_JAR_PX = 180;
+            var MIN_JAR_PX = 24;
             var jarsHTML = '';
+            var labelsHTML = '';
+
             for (var h = 0; h < 24; h++) {
-                var demandPct = (demand[h] / maxVal) * 100;
-                var jarHeight = Math.max(30, Math.round(demandPct * 2.2)); // px, scaled
-                var gen = totalGen[h];
                 var d = demand[h];
+                var jarHeight = Math.max(MIN_JAR_PX, Math.round((d / maxVal) * MAX_JAR_PX));
                 var solarPart = solarGen[h];
                 var windPart = windGen[h];
+                var gen = solarPart + windPart;
 
-                // Number of balls proportional to generation
-                var nSolar = Math.round(solarPart * ballsPerUnit);
-                var nWind = Math.round(windPart * ballsPerUnit);
-                var nDemandBalls = Math.round(d * ballsPerUnit);
-
-                // Balls that fit vs overflow
-                var fittingBalls = Math.min(nSolar + nWind, nDemandBalls);
-                var overflowBalls = Math.max(0, (nSolar + nWind) - nDemandBalls);
-                var gapHeight = gen < d ? Math.round((1 - gen / d) * jarHeight * 0.3) : 0;
+                // Heights inside jar (proportional to jar)
+                var solarFillPx, windFillPx, gapPx, solarOverPx, windOverPx;
+                if (gen <= d) {
+                    // Generation fits inside — fill proportionally, gap at top
+                    var fillRatio = d > 0 ? gen / d : 0;
+                    var totalFillPx = Math.round(fillRatio * jarHeight);
+                    solarFillPx = gen > 0 ? Math.round((solarPart / gen) * totalFillPx) : 0;
+                    windFillPx = totalFillPx - solarFillPx;
+                    gapPx = jarHeight - totalFillPx;
+                    solarOverPx = 0;
+                    windOverPx = 0;
+                } else {
+                    // Overflow — jar filled to top, excess spills above
+                    solarFillPx = Math.round((solarPart / gen) * jarHeight);
+                    windFillPx = jarHeight - solarFillPx;
+                    gapPx = 0;
+                    var overRatio = (gen - d) / d;
+                    var overPx = Math.round(overRatio * jarHeight * 0.6);
+                    var solarExcess = Math.max(0, solarPart - (solarPart / gen) * d);
+                    var windExcess = Math.max(0, windPart - (windPart / gen) * d);
+                    var totalExcess = solarExcess + windExcess || 1;
+                    solarOverPx = Math.round((solarExcess / totalExcess) * overPx);
+                    windOverPx = overPx - solarOverPx;
+                }
 
                 jarsHTML += '<div class="act0-hour-jar">';
                 jarsHTML += '<div class="act0-hour-jar-body" style="height:' + jarHeight + 'px">';
 
-                // Gap (fossil needed)
-                if (gapHeight > 0) {
-                    jarsHTML += '<div class="act0-hour-gap" style="height:' + gapHeight + 'px"></div>';
+                // Gap at top (fossil needed)
+                if (gapPx > 0) {
+                    jarsHTML += '<div class="act0-hour-gap" style="height:' + gapPx + 'px"></div>';
                 }
 
-                // Balls inside jar
+                // Fill segments (wind on bottom, solar on top)
                 jarsHTML += '<div class="act0-hour-fill">';
-                var solarInside = Math.min(nSolar, fittingBalls);
-                var windInside = Math.min(nWind, Math.max(0, fittingBalls - solarInside));
-                for (var b = 0; b < windInside; b++) {
-                    jarsHTML += '<div class="act0-hour-ball wind"></div>';
-                }
-                for (var b = 0; b < solarInside; b++) {
-                    jarsHTML += '<div class="act0-hour-ball solar"></div>';
-                }
+                if (solarFillPx > 0) jarsHTML += '<div class="act0-fill-segment solar" style="height:' + solarFillPx + 'px"></div>';
+                if (windFillPx > 0) jarsHTML += '<div class="act0-fill-segment wind" style="height:' + windFillPx + 'px"></div>';
                 jarsHTML += '</div>';
 
                 // Overflow above jar
-                if (overflowBalls > 0) {
+                if (solarOverPx > 0 || windOverPx > 0) {
                     jarsHTML += '<div class="act0-hour-overflow">';
-                    var solarOver = Math.max(0, nSolar - solarInside);
-                    var windOver = Math.max(0, nWind - windInside);
-                    for (var b = 0; b < Math.min(windOver, 4); b++) {
-                        jarsHTML += '<div class="act0-hour-ball wind"></div>';
-                    }
-                    for (var b = 0; b < Math.min(solarOver, 4); b++) {
-                        jarsHTML += '<div class="act0-hour-ball solar"></div>';
-                    }
+                    if (solarOverPx > 0) jarsHTML += '<div class="act0-fill-segment solar" style="height:' + solarOverPx + 'px"></div>';
+                    if (windOverPx > 0) jarsHTML += '<div class="act0-fill-segment wind" style="height:' + windOverPx + 'px"></div>';
                     jarsHTML += '</div>';
                 }
 
                 jarsHTML += '</div>'; // close jar body
-                // Hour label (show every 3rd)
-                var lbl = (h % 3 === 0) ? HOUR_LABELS[h] : '';
-                jarsHTML += '<div class="act0-hour-label">' + lbl + '</div>';
                 jarsHTML += '</div>'; // close hour-jar
+
+                // Labels row (show every 3rd hour)
+                var lbl = (h % 3 === 0) ? HOUR_LABELS[h] : '';
+                labelsHTML += '<div class="act0-hour-label">' + lbl + '</div>';
             }
             hourlyJars.innerHTML = jarsHTML;
+            hourLabelsRow.innerHTML = labelsHTML;
 
             // ---- Build legend ----
             var legendEl = document.getElementById('act0Legend');
@@ -2500,7 +2518,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     var UTC_OFFSETS = {CAISO:8, PJM:5, ERCOT:6, NYISO:5, NEISO:5, MISO:6, SPP:6};
     function rotateToLocal(arr, offset) {
         var o = offset % 24;
-        return arr.slice(24 - o).concat(arr.slice(0, 24 - o));
+        return arr.slice(o).concat(arr.slice(0, o));
     }
 
     // --- Config ---
@@ -2786,7 +2804,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     var UTC_OFFSETS = {CAISO:8, PJM:5, ERCOT:6, NYISO:5, NEISO:5, MISO:6, SPP:6};
     function rotateToLocal(arr, offset) {
         var o = offset % 24;
-        return arr.slice(24 - o).concat(arr.slice(0, 24 - o));
+        return arr.slice(o).concat(arr.slice(0, o));
     }
 
     var HOUR_LABELS = [];
