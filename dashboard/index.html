@@ -1280,18 +1280,16 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     <!-- Intro text -->
     <div class="act4-intro">
         <p class="lead-text">
-            In regions like PJM, you might successfully deplete the coal wall with
-            cheap wind. But you&rsquo;re left with a massive gas fleet, mountains
-            of curtailed energy, and redundant VRE that IPPs will defend as
-            &ldquo;necessary for resource adequacy.&rdquo;
+            PJM&rsquo;s grid starts at 38% clean. Same goal for both strategies:
+            get the grid to exactly 95% clean energy. Same hourly matching standard.
+            The only difference is <em>how</em> the resources are selected.
         </p>
         <p>
-            Two strategies. Same 95% clean target. 70% corporate participation
-            (~312 TWh of PJM&rsquo;s 843 TWh demand). Radically different outcomes.
-            The <strong>MAC queue</strong> deploys resources cheapest-first&mdash;mostly
-            wind and solar. The <strong>hourly matching</strong> strategy co-optimizes
-            firm clean, storage, and VRE to actually displace gas. The capital investment
-            tells the real story.
+            The <strong>MAC queue</strong> deploys cheapest resources first&mdash;mostly
+            wind and solar. It gets there but leaves the gas fleet stranded on the system.
+            The <strong>hourly matching</strong> strategy co-optimizes firm clean, storage,
+            and VRE to cover every hour. Same 95% grid. Radically different capital
+            infrastructure&mdash;and radically different futures for gas.
         </p>
     </div>
 
@@ -1303,22 +1301,22 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                 <span class="hdr-dot" style="background: var(--fossil-gas, #6B7280);"></span>
                 <span style="color: var(--fossil-gas, #6B7280);">Strategy 1B &mdash; MAC Queue</span>
             </div>
-            <div class="act4-panel-sub">Cheapest resources first. 70% corporate participation.</div>
+            <div class="act4-panel-sub" id="act4Sub1B">Cheapest resources first. Grid → 95% clean.</div>
             <div class="act4-chart-container">
                 <canvas id="act4ChartLeft"></canvas>
             </div>
             <div class="act4-tiles">
                 <div class="act4-tile">
+                    <div class="act4-tile-value" id="act4Grid1B" style="color: var(--fossil-gas, #6B7280);">&mdash;</div>
+                    <div class="act4-tile-label">Grid Clean %</div>
+                </div>
+                <div class="act4-tile">
                     <div class="act4-tile-value" id="act4Gas1B" style="color: var(--fossil-gas, #6B7280);">&mdash;</div>
-                    <div class="act4-tile-label">Gas Backup</div>
+                    <div class="act4-tile-label">Gas Remaining</div>
                 </div>
                 <div class="act4-tile">
                     <div class="act4-tile-value" id="act4Curt1B" style="color: var(--storage, #EF4444);">&mdash;</div>
                     <div class="act4-tile-label">Curtailed</div>
-                </div>
-                <div class="act4-tile">
-                    <div class="act4-tile-value" id="act4Mac1B" style="color: var(--text-primary, #1A2744);">&mdash;</div>
-                    <div class="act4-tile-label">MAC</div>
                 </div>
                 <div class="act4-tile">
                     <div class="act4-tile-value" id="act4Tc1B" style="color: var(--text-primary, #1A2744);">&mdash;</div>
@@ -1334,22 +1332,22 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                 <span class="hdr-dot" style="background: var(--clean-firm, #6366F1);"></span>
                 <span style="color: var(--clean-firm, #6366F1);">Strategy 2C &mdash; Hourly Matching</span>
             </div>
-            <div class="act4-panel-sub">Co-optimized portfolio with learning curves. 70% participation.</div>
+            <div class="act4-panel-sub" id="act4Sub2C">Co-optimized portfolio. Grid → 95% clean.</div>
             <div class="act4-chart-container">
                 <canvas id="act4ChartRight"></canvas>
             </div>
             <div class="act4-tiles">
                 <div class="act4-tile">
+                    <div class="act4-tile-value" id="act4Grid2C" style="color: var(--clean-firm, #6366F1);">&mdash;</div>
+                    <div class="act4-tile-label">Grid Clean %</div>
+                </div>
+                <div class="act4-tile">
                     <div class="act4-tile-value" id="act4Gas2C" style="color: var(--clean-firm, #6366F1);">&mdash;</div>
-                    <div class="act4-tile-label">Gas Backup</div>
+                    <div class="act4-tile-label">Gas Remaining</div>
                 </div>
                 <div class="act4-tile">
                     <div class="act4-tile-value" id="act4Curt2C" style="color: var(--hydro, #0EA5E9);">&mdash;</div>
                     <div class="act4-tile-label">Curtailed</div>
-                </div>
-                <div class="act4-tile">
-                    <div class="act4-tile-value" id="act4Mac2C" style="color: var(--text-primary, #1A2744);">&mdash;</div>
-                    <div class="act4-tile-label">MAC</div>
                 </div>
                 <div class="act4-tile">
                     <div class="act4-tile-value" id="act4Tc2C" style="color: var(--text-primary, #1A2744);">&mdash;</div>
@@ -2651,10 +2649,11 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     'use strict';
 
     // --- Config ---
+    // Target: get the PJM GRID to ~95% clean. Find the participation level each strategy needs.
     var ISO = 'PJM';
-    var PARTICIPATION = '70';
     var THRESHOLD = '95';
-    var DAC_CENTRAL_95 = 250; // $/tCO2 — central DAC estimate at 95% target
+    var GRID_TARGET = 95; // % clean target for the grid
+    var DAC_CENTRAL_95 = 250; // $/tCO2 — central DAC estimate
 
     // --- Load data ---
     if (typeof DEPLOYMENT_DATA === 'undefined') {
@@ -2662,15 +2661,50 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         return;
     }
 
-    var d1B = DEPLOYMENT_DATA.data['1B'] && DEPLOYMENT_DATA.data['1B'][ISO] &&
-              DEPLOYMENT_DATA.data['1B'][ISO][PARTICIPATION] &&
-              DEPLOYMENT_DATA.data['1B'][ISO][PARTICIPATION][THRESHOLD];
-    var d2C = DEPLOYMENT_DATA.data['2C'] && DEPLOYMENT_DATA.data['2C'][ISO] &&
-              DEPLOYMENT_DATA.data['2C'][ISO][PARTICIPATION] &&
-              DEPLOYMENT_DATA.data['2C'][ISO][PARTICIPATION][THRESHOLD];
+    // Interpolate BOTH strategies to exactly 95% grid clean
+    // Helper: find two bracketing participation levels and interpolate
+    function lerpVal(a, b, f) { return a + f * (b - a); }
+    function lerpObj(oLo, oHi, f) {
+        var out = {};
+        var allKeys = {};
+        var k;
+        for (k in (oLo || {})) allKeys[k] = 1;
+        for (k in (oHi || {})) allKeys[k] = 1;
+        for (k in allKeys) {
+            out[k] = lerpVal((oLo && oLo[k]) || 0, (oHi && oHi[k]) || 0, f);
+        }
+        return out;
+    }
+    function interpStrategy(strat, partLo, partHi) {
+        var dLo = DEPLOYMENT_DATA.data[strat][ISO][partLo][THRESHOLD];
+        var dHi = DEPLOYMENT_DATA.data[strat][ISO][partHi][THRESHOLD];
+        if (!dLo || !dHi) return null;
+        var gLo = dLo.gridCleanPct || 0;
+        var gHi = dHi.gridCleanPct || 0;
+        if (gHi === gLo) return dLo;
+        var f = Math.max(0, Math.min(1, (GRID_TARGET - gLo) / (gHi - gLo)));
+        var partPct = parseFloat(partLo) + f * (parseFloat(partHi) - parseFloat(partLo));
+        return {
+            n: lerpObj(dLo.n, dHi.n, f),
+            e: lerpObj(dLo.e, dHi.e, f),
+            c: lerpVal(dLo.c || 0, dHi.c || 0, f),
+            bl: lerpVal(dLo.bl || 0, dHi.bl || 0, f),
+            gasGw: lerpVal(dLo.gasGw || 0, dHi.gasGw || 0, f),
+            curtTwh: lerpVal(dLo.curtTwh || 0, dHi.curtTwh || 0, f),
+            mac: lerpVal(dLo.mac || 0, dHi.mac || 0, f),
+            gridCleanPct: GRID_TARGET,
+            gridGasGw: lerpVal(dLo.gridGasGw || 0, dHi.gridGasGw || 0, f),
+            _partPct: Math.round(partPct * 10) / 10
+        };
+    }
+
+    // 1B: 40% → 81.7%, 50% → 95.7% — interpolate to 95%
+    var d1B = interpStrategy('1B', '40', '50');
+    // 2C: 50% → 86.1%, 60% → 98.4% — interpolate to 95%
+    var d2C = interpStrategy('2C', '50', '60');
 
     if (!d1B || !d2C) {
-        console.error('Act 4: No deployment data for ' + ISO + '/' + PARTICIPATION + '/' + THRESHOLD);
+        console.error('Act 4: Could not interpolate deployment data for ' + ISO);
         return;
     }
 
@@ -2706,15 +2740,18 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     var r1B = extractResources(d1B);
     var r2C = extractResources(d2C);
 
-    // Total generation and demand
-    var demand = d1B.bl || d2C.bl || 200;
+    // Demand per strategy (different participation levels)
+    var demand1B = d1B.bl || 200;
+    var demand2C = d2C.bl || 200;
+    // Grid-level demand for context
+    var GRID_DEMAND = 843; // PJM total TWh
 
     function totalGen(r) {
         return r.solar + r.wind + r.cleanFirm + r.battery + r.ldes + r.existing;
     }
 
     // --- Build stacked horizontal bar chart ---
-    function makeStackedBar(canvasId, res, rec, stratLabel) {
+    function makeStackedBar(canvasId, res, rec, stratLabel, demandTwh) {
         var ctx = document.getElementById(canvasId);
         if (!ctx) return null;
 
@@ -2796,14 +2833,14 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                         annotations: {
                             demandLine: {
                                 type: 'line',
-                                xMin: demand,
-                                xMax: demand,
+                                xMin: demandTwh,
+                                xMax: demandTwh,
                                 borderColor: 'rgba(26,39,68,0.6)',
                                 borderWidth: 2,
                                 borderDash: [6, 3],
                                 label: {
                                     display: true,
-                                    content: 'Demand: ' + Math.round(demand) + ' TWh',
+                                    content: 'Demand: ' + Math.round(demandTwh) + ' TWh',
                                     position: 'start',
                                     backgroundColor: 'rgba(26,39,68,0.8)',
                                     color: '#fff',
@@ -2826,22 +2863,29 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         if (act4Animated) return;
         act4Animated = true;
 
-        // Show panels
+        // Show panels and set dynamic subtitles
         var leftP = document.getElementById('act4PanelLeft');
         var rightP = document.getElementById('act4PanelRight');
         if (leftP) leftP.classList.add('panel-visible');
         if (rightP) rightP.classList.add('panel-visible');
 
+        var sub1B = document.getElementById('act4Sub1B');
+        var sub2C = document.getElementById('act4Sub2C');
+        if (sub1B) sub1B.textContent = 'Cheapest first. ~' + Math.round(d1B._partPct) + '% participation → grid 95% clean.';
+        if (sub2C) sub2C.textContent = 'Co-optimized. ~' + Math.round(d2C._partPct) + '% participation → grid 95% clean.';
+
         // Create charts
-        makeStackedBar('act4ChartLeft', r1B, d1B, 'Resources Built');
+        makeStackedBar('act4ChartLeft', r1B, d1B, 'Resources Built', demand1B);
         setTimeout(function() {
-            makeStackedBar('act4ChartRight', r2C, d2C, 'Resources Built');
+            makeStackedBar('act4ChartRight', r2C, d2C, 'Resources Built', demand2C);
         }, 400);
 
-        // Animate tiles
-        animVal('act4Gas1B', d1B.gasGw || 0, '', ' GW');
+        // Animate tiles — grid-level outcomes
+        var gridClean1B = d1B.gridCleanPct || 0;
+        var gridGas1B = d1B.gridGasGw != null ? d1B.gridGasGw : (d1B.gasGw || 0);
+        animVal('act4Grid1B', gridClean1B, '', '%');
+        animVal('act4Gas1B', gridGas1B, '', ' GW');
         animVal('act4Curt1B', d1B.curtTwh || 0, '', ' TWh');
-        animVal('act4Mac1B', d1B.mac || 0, '$', '/t');
 
         // System cost = clean procurement + new-build gas backup (PJM only)
         // c ($/MWh) × bl (TWh) = $M of demand-side clean cost
@@ -2850,7 +2894,8 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         var CCGT_COST_M_PER_GW = 99; // $99/kW-yr = $99M/GW-yr
         function systemCostM(rec) {
             var cleanM = (rec.c || 0) * (rec.bl || 0); // $/MWh × TWh = $M
-            var newGasGw = Math.max(0, (rec.gasGw || 0) - EXISTING_GAS_GW);
+            var gridGas = rec.gridGasGw != null ? rec.gridGasGw : (rec.gasGw || 0);
+            var newGasGw = Math.max(0, gridGas - EXISTING_GAS_GW);
             var gasCostM = newGasGw * CCGT_COST_M_PER_GW;
             return cleanM + gasCostM;
         }
@@ -2865,9 +2910,11 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         }
         fmtCost('act4Tc1B', sc1B);
 
-        animVal('act4Gas2C', d2C.gasGw || 0, '', ' GW');
+        var gridClean2C = d2C.gridCleanPct || 0;
+        var gridGas2C = d2C.gridGasGw != null ? d2C.gridGasGw : (d2C.gasGw || 0);
+        animVal('act4Grid2C', gridClean2C, '', '%');
+        animVal('act4Gas2C', gridGas2C, '', ' GW');
         animVal('act4Curt2C', d2C.curtTwh || 0, '', ' TWh');
-        animVal('act4Mac2C', d2C.mac || 0, '$', '/t');
         fmtCost('act4Tc2C', sc2C);
 
         // DAC labels
