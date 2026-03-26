@@ -1007,12 +1007,118 @@ body {
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     SLIDE 7: REGIONAL OPPORTUNITY MATRIX
+     SLIDE 7: THE CONSEQUENTIAL ADVANTAGE — COAL WALL
+     ═══════════════════════════════════════════════════════════════════ -->
+<section class="slide">
+  <div class="slide-header">
+    <h1>The Consequential Advantage: Leveraging the Coal Wall</h1>
+    <span class="slide-number">7</span>
+  </div>
+  <div class="slide-body">
+
+    <!-- KPI Row -->
+    <div class="kpi-row">
+      <div class="kpi-card green">
+        <span class="kpi-value">109</span>
+        <span class="kpi-unit">TWh saved</span>
+        <span class="kpi-label">Less VRE procurement needed vs. hourly matching</span>
+      </div>
+      <div class="kpi-card teal">
+        <span class="kpi-value">$49</span>
+        <span class="kpi-unit">/MWh</span>
+        <span class="kpi-label">Consequential cost (flat to 30% participation)</span>
+      </div>
+      <div class="kpi-card orange">
+        <span class="kpi-value">2031</span>
+        <span class="kpi-unit">window</span>
+        <span class="kpi-label">Advantage shrinks as coal retires</span>
+      </div>
+    </div>
+
+    <!-- Two-column layout -->
+    <div class="left-right">
+      <!-- Left: Explanation -->
+      <div>
+        <h3 style="color:var(--ceg-blue-dark);font-size:12pt;margin:0 0 0.08in 0;">How the Coal Wall Works</h3>
+        <p style="font-size:9.5pt;line-height:1.5;margin:0 0 0.08in 0;">
+          When Meta and Amazon buy VRE that displaces <strong>coal</strong> (1.0 tCO&#8322;/MWh), each TWh offsets significantly more CO&#8322; than their fossil-average baseline requires (~0.64 tCO&#8322;/MWh).
+        </p>
+        <p style="font-size:9.5pt;line-height:1.5;margin:0 0 0.08in 0;">
+          <strong>Result:</strong> Fewer TWh of procurement needed to hit the same emissions reduction target. The &ldquo;leverage ratio&rdquo; is <strong>1.58&times;</strong> &mdash; each TWh of coal-displacing VRE satisfies 1.58 TWh of demand-equivalent offsets.
+        </p>
+        <p style="font-size:9.5pt;line-height:1.5;margin:0 0 0.08in 0;">
+          This is <strong>Strategy 1B</strong> (fossil-average baseline) from the Constellation Hourly CFE Optimizer. It works because coal is retired <em>first</em> in merit-order dispatch &mdash; new VRE enters at the margin and pushes out the dirtiest generation.
+        </p>
+        <div style="background:#f0f7ff;border-left:3px solid var(--ceg-blue);padding:0.06in 0.12in;margin-top:0.1in;font-size:9pt;">
+          <strong>Fossil-Average Emission Rates:</strong><br>
+          MISO: 0.649 tCO&#8322;/MWh &nbsp;|&nbsp; SPP: 0.623 &nbsp;|&nbsp; PJM: 0.628<br>
+          <em>Coal alone: 1.0 tCO&#8322;/MWh &mdash; 56% higher than the baseline</em>
+        </div>
+      </div>
+
+      <!-- Right: Participation Table -->
+      <div>
+        <h3 style="color:var(--ceg-blue-dark);font-size:12pt;margin:0 0 0.08in 0;">Queue Walk: Coal Displacement by Participation</h3>
+        <table class="data-table" style="font-size:8.5pt;">
+          <thead>
+            <tr>
+              <th>C&amp;I %</th>
+              <th>MISO Coal (TWh)</th>
+              <th>SPP Coal (TWh)</th>
+              <th>PJM Coal (TWh)</th>
+              <th>VRE (TWh)</th>
+              <th>CO&#8322; (Mt)</th>
+              <th>$/MWh</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>5%</td><td>6.2</td><td>2.1</td><td>7.0</td><td>15.3</td><td>15.3</td><td>$49</td>
+            </tr>
+            <tr>
+              <td>10%</td><td>12.5</td><td>4.2</td><td>13.9</td><td>30.6</td><td>30.6</td><td>$49</td>
+            </tr>
+            <tr>
+              <td>20%</td><td>25.0</td><td>8.4</td><td>27.8</td><td>61.2</td><td>61.2</td><td>$51</td>
+            </tr>
+            <tr style="background:#e8f5e9;font-weight:600;">
+              <td>30%</td><td>37.5</td><td>12.6</td><td>41.7</td><td>91.8</td><td>91.8</td><td>$52</td>
+            </tr>
+            <tr>
+              <td>40%</td><td>50.0</td><td>16.8</td><td>55.6</td><td>122.4</td><td>122.4</td><td>$58</td>
+            </tr>
+            <tr>
+              <td>50%</td><td>62.5</td><td>21.0</td><td>69.5</td><td>153.0</td><td>153.0</td><td>$66</td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="font-size:8pt;color:var(--text-dim);margin:0.04in 0 0;">
+          &#9654; Highlighted row: cheap pool edge. Beyond 30%, marginal costs rise as coal exhausts.
+        </p>
+      </div>
+    </div>
+
+    <!-- Bottom Callout -->
+    <div class="callout green" style="margin-top:0.12in;font-size:9.5pt;">
+      <strong>Meta and Amazon&rsquo;s combined 298 TWh demand (2030) can be offset with ~189 TWh of consequential VRE procurement &mdash; 36% less than hourly matching requires.</strong> But this advantage shrinks as coal retires: MISO loses 18 GW of coal by 2035, PJM loses 30 GW. Early movers (2025&ndash;2031) capture the deepest displacement value before the coal wall disappears.
+    </div>
+
+    <div class="source-note">Sources: Fossil fuel mix shares from EIA-860 (2024) via Constellation Hourly CFE Optimizer lmp_engine.py. Coal retirement schedules: S&amp;P Global Market Intelligence, &ldquo;US Coal Plant Retirements&rdquo; (Jan 2026); Sierra Club Beyond Coal tracker (updated Feb 2026). Emission rates: EPA eGRID 2022 (published Jan 2024). Consequential queue: Constellation Hourly CFE Optimizer step3b_mac_queue.py (Strategy 1B, fossil-average baseline, all-Medium sensitivity). Meta 134 TWh &amp; Amazon 164 TWh 2030 demand: Goldman Sachs, &ldquo;AI, Data Centers, and the Coming US Power Demand Surge&rdquo; (Apr 2024); cross-referenced with company sustainability reports (Meta 2024, Amazon 2024).</div>
+  </div>
+  <div class="slide-footer">
+    <span class="brand">CONSTELLATION ENERGY</span>
+    <span class="confidential">Confidential &mdash; Not for Distribution</span>
+  </div>
+  <div class="footer-accent"></div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     SLIDE 8: REGIONAL OPPORTUNITY MATRIX
      ═══════════════════════════════════════════════════════════════════ -->
 <section class="slide">
   <div class="slide-header">
     <h1>Regional Opportunity Matrix</h1>
-    <span class="slide-number">7</span>
+    <span class="slide-number">8</span>
   </div>
   <div class="slide-body">
     <p style="font-size:11pt;margin-bottom:0.1in;color:var(--text-dim);">Not all markets are equal. Investment priority depends on the intersection of demand growth, cannibalization trajectory, capacity market value, and corporate PPA demand.</p>
@@ -1116,12 +1222,12 @@ body {
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     SLIDE 8: VRE DEVELOPMENT TIMELINE ADVANTAGE
+     SLIDE 9: VRE DEVELOPMENT TIMELINE ADVANTAGE
      ═══════════════════════════════════════════════════════════════════ -->
 <section class="slide">
   <div class="slide-header">
     <h1>VRE: The Only Technology That Can Deploy at Scale Now</h1>
-    <span class="slide-number">8</span>
+    <span class="slide-number">9</span>
   </div>
   <div class="slide-body">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.3in;flex:1;">
@@ -1267,12 +1373,12 @@ body {
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     SLIDE 9: THE INVESTMENT CASE
+     SLIDE 10: THE INVESTMENT CASE
      ═══════════════════════════════════════════════════════════════════ -->
 <section class="slide">
   <div class="slide-header">
     <h1>The Investment Case</h1>
-    <span class="slide-number">9</span>
+    <span class="slide-number">10</span>
   </div>
   <div class="slide-body">
     <div class="kpi-row">
@@ -1372,16 +1478,16 @@ body {
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     SLIDE 10: (removed — content split into slides 12–14)
+     SLIDE 11: (removed — content split into slides 12–14)
      ═══════════════════════════════════════════════════════════════════ -->
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     SLIDE 11: VRE PIPELINE VALUE — SCENARIO ANALYSIS BY ISO
+     SLIDE 12: VRE PIPELINE VALUE — SCENARIO ANALYSIS BY ISO
      ═══════════════════════════════════════════════════════════════════ -->
 <section class="slide">
   <div class="slide-header">
     <h1>VRE Pipeline Value: Scenario Analysis by ISO</h1>
-    <span class="slide-number">11</span>
+    <span class="slide-number">12</span>
   </div>
   <div class="slide-body">
     <p style="font-size:10.5pt;margin-bottom:0.08in;color:var(--text-dim);">GW of VRE pipeline value under different accounting regime assumptions, 10% C&amp;I participation, 95% CFE target</p>
@@ -1486,12 +1592,12 @@ body {
 
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     SLIDE 12: PROCUREMENT STRATEGIES OVERVIEW
+     SLIDE 13: PROCUREMENT STRATEGIES OVERVIEW
      ═══════════════════════════════════════════════════════════════════ -->
 <section class="slide">
   <div class="slide-header">
     <h1>Three Procurement Strategies &mdash; One VRE Thesis</h1>
-    <span class="slide-number">12</span>
+    <span class="slide-number">13</span>
   </div>
   <div class="slide-body">
     <p style="font-size:11pt;margin-bottom:0.1in;color:var(--text-dim);">Different accounting methods shape <em>where</em> to weight VRE procurement, not <em>whether</em> to invest.</p>
@@ -1537,12 +1643,12 @@ body {
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     SLIDE 13: PARTICIPATION → VRE PIPELINE VALUE
+     SLIDE 14: PARTICIPATION → VRE PIPELINE VALUE
      ═══════════════════════════════════════════════════════════════════ -->
 <section class="slide">
   <div class="slide-header">
     <h1>How Much VRE Does Each Strategy Deploy?</h1>
-    <span class="slide-number">13</span>
+    <span class="slide-number">14</span>
   </div>
   <div class="slide-body">
     <p style="font-size:10.5pt;margin-bottom:0.1in;color:var(--text-dim);">At 95% CFE target, Medium growth scenario. Source: Constellation Hourly CFE Optimizer (Steps 5.2B/C).</p>
@@ -1614,12 +1720,12 @@ body {
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     SLIDE 14: REGIONAL PORTFOLIO IMPACT BY STRATEGY
+     SLIDE 15: REGIONAL PORTFOLIO IMPACT BY STRATEGY
      ═══════════════════════════════════════════════════════════════════ -->
 <section class="slide">
   <div class="slide-header">
     <h1>Where VRE Pipeline Wins Under Each Strategy</h1>
-    <span class="slide-number">14</span>
+    <span class="slide-number">15</span>
   </div>
   <div class="slide-body">
     <p style="font-size:10.5pt;margin-bottom:0.1in;color:var(--text-dim);">ISO-by-ISO analysis at 10% C&amp;I participation, 95% CFE, Medium growth.</p>
@@ -1695,12 +1801,12 @@ body {
 </section>
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     SLIDE 15: METHODOLOGY & FULL SOURCE BIBLIOGRAPHY
+     SLIDE 16: METHODOLOGY & FULL SOURCE BIBLIOGRAPHY
      ═══════════════════════════════════════════════════════════════════ -->
 <section class="slide">
   <div class="slide-header">
     <h1>Appendix B: Methodology &amp; Source Bibliography</h1>
-    <span class="slide-number">15</span>
+    <span class="slide-number">16</span>
   </div>
   <div class="slide-body">
     <div class="two-col" style="flex:1;">
