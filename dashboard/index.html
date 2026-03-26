@@ -1440,6 +1440,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     var flatSolarTop = Math.round(avgDemand * 0.87 * 10) / 10;
     var illDkWind = hours.map(function() { return flatWind; });
     var illDkSolar = hours.map(function() { return flatSolarTop; });
+    var illDkDemand = hours.map(function() { return flatSolarTop; }); // flat, aligned to solar top
 
     // Hour labels for x-axis
     var hourLabels = hours.map(function(h) {
@@ -1492,8 +1493,8 @@ html, body { overflow-x: hidden; max-width: 100vw; }
             padding: { top: 2, bottom: 2, left: 5, right: 5 }, borderRadius: 4
         },
         demandLabel: {
-            type: 'label', xValue: 16,
-            yValue: dkDemand[16] + 4,
+            type: 'label', xValue: 20,
+            yValue: flatSolarTop + 4,
             content: 'Demand',
             font: { size: 11, weight: '700', family: fontStack },
             color: demandColor,
@@ -1581,7 +1582,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                 },
                 {
                     label: 'Demand',
-                    data: dkDemand.slice(),
+                    data: illDkDemand.slice(),
                     fill: false,
                     borderColor: demandColor,
                     borderWidth: 2.5,
@@ -1891,6 +1892,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
         // Duck curve → reality shapes
         duckChart.data.datasets[0].data = realDkWind.slice();
         duckChart.data.datasets[1].data = realDkSolar.slice();
+        duckChart.data.datasets[2].data = dkDemand.slice();
         duckChart.options.plugins.annotation.annotations = duckRealityAnnotations;
         duckChart.update('active');
 
@@ -1919,6 +1921,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
         // Duck curve → flat illusion
         duckChart.data.datasets[0].data = illDkWind.slice();
         duckChart.data.datasets[1].data = illDkSolar.slice();
+        duckChart.data.datasets[2].data = illDkDemand.slice();
         duckChart.options.plugins.annotation.annotations = duckIllusionAnnotations;
         duckChart.update('active');
 
