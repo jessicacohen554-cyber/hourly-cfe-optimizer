@@ -15,30 +15,25 @@
 /* === Act 1: Heatstrip-specific styles === */
 html, body { overflow-x: hidden; max-width: 100vw; }
 
-.act1-layout {
-    display: grid;
-    grid-template-columns: 1fr 1.4fr;
-    gap: var(--space-xl);
-    align-items: start;
-    max-width: var(--max-content-wide, 1320px);
-    margin: 0 auto;
-    padding: 0 var(--pad-page, 24px);
+.act1-intro,
+.act1-postscript {
+    max-width: 780px;
 }
-
-.act1-narrative {
-    padding-right: var(--space-lg);
-}
-.act1-narrative p {
+.act1-intro p,
+.act1-postscript p {
     font-size: 1.05rem;
     line-height: 1.7;
     color: var(--text-secondary, #475569);
     margin-bottom: var(--space-md);
 }
-.act1-narrative .lead-text {
+.act1-intro .lead-text {
     font-size: 1.15rem;
     font-weight: 500;
     color: var(--text-primary, #1A2744);
     line-height: 1.6;
+}
+.act1-postscript {
+    margin-top: var(--space-xl);
 }
 .act1-explore-link {
     display: inline-flex;
@@ -237,12 +232,6 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
 /* --- Responsive --- */
 @media (max-width: 900px) {
-    .act1-layout {
-        grid-template-columns: 1fr;
-    }
-    .act1-narrative {
-        padding-right: 0;
-    }
     .heatstrip-cell {
         min-height: 44px;
     }
@@ -437,56 +426,56 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     <span class="story-badge story-badge-red">Act 1</span>
     <h2>The Grid is Not a Bank</h2>
 
-    <div class="act1-layout">
-        <!-- LEFT: Narrative panel -->
-        <div class="act1-narrative">
-            <p class="lead-text">
-                The grid is a live, interconnected machine where carbon intensity
-                varies wildly by the hour and location. Most clean energy policies
-                ignore this physics, treating all megawatt-hours as equal.
-            </p>
-            <p>
-                A solar MWh generated at noon in California displaces almost no
-                fossil fuel&mdash;the grid is already clean. That same MWh at 8 PM
-                in PJM displaces coal. Annual accounting treats them as identical.
-                Hourly data reveals the truth.
-            </p>
-            <p>
-                Below, each cell represents one hour of the day. The color shows
-                how carbon-intensive the grid is during that hour&mdash;green when
-                clean energy dominates, red when fossil fuels fill the gaps.
-            </p>
-            <p>
-                Start with the <strong>Illusion</strong>&mdash;the flat daily average
-                that annual accounting assumes. Then watch the <strong>Reality</strong>
-                emerge.
-            </p>
-            <a href="lmp_trends.html" class="act1-explore-link">
-                Explore regional patterns <span aria-hidden="true">&rarr;</span>
-            </a>
+    <!-- Intro text above visual -->
+    <div class="act1-intro">
+        <p class="lead-text">
+            The grid is a live, interconnected machine where carbon intensity
+            varies wildly by the hour and location. Most clean energy policies
+            ignore this physics, treating all megawatt-hours as equal.
+        </p>
+        <p>
+            Each cell below represents one hour of the day. The color shows
+            how carbon-intensive the grid is during that hour&mdash;green when
+            clean energy dominates, red when fossil fuels fill the gaps.
+            Start with the <strong>Illusion</strong>&mdash;the flat daily average
+            that annual accounting assumes. Then watch the <strong>Reality</strong>
+            emerge.
+        </p>
+    </div>
+
+    <!-- Heatstrip visualization (full-width) -->
+    <div class="heatstrip-panel" id="heatstripPanel">
+        <!-- Mode toggle -->
+        <div class="mode-toggle-wrap">
+            <span class="mode-toggle-label active-label" id="labelIllusion">Illusion</span>
+            <div class="mode-toggle-track" id="modeToggle" role="switch" aria-checked="false" tabindex="0">
+                <div class="mode-toggle-thumb"></div>
+            </div>
+            <span class="mode-toggle-label" id="labelReality">Reality</span>
         </div>
 
-        <!-- RIGHT: Heatstrip visualization -->
-        <div class="heatstrip-panel" id="heatstripPanel">
-            <!-- Mode toggle -->
-            <div class="mode-toggle-wrap">
-                <span class="mode-toggle-label active-label" id="labelIllusion">Illusion</span>
-                <div class="mode-toggle-track" id="modeToggle" role="switch" aria-checked="false" tabindex="0">
-                    <div class="mode-toggle-thumb"></div>
-                </div>
-                <span class="mode-toggle-label" id="labelReality">Reality</span>
-            </div>
+        <!-- Strips rendered by JS -->
+        <div id="heatstripContainer"></div>
 
-            <!-- Strips rendered by JS -->
-            <div id="heatstripContainer"></div>
-
-            <!-- Legend -->
-            <div class="heatstrip-legend">
-                <span>Low carbon</span>
-                <div class="heatstrip-legend-bar"></div>
-                <span>High carbon</span>
-            </div>
+        <!-- Legend -->
+        <div class="heatstrip-legend">
+            <span>Low carbon</span>
+            <div class="heatstrip-legend-bar"></div>
+            <span>High carbon</span>
         </div>
+    </div>
+
+    <!-- Post-visual narrative -->
+    <div class="act1-postscript">
+        <p>
+            A solar MWh generated at noon in California displaces almost no
+            fossil fuel&mdash;the grid is already clean. That same MWh at 8 PM
+            in PJM displaces coal. Annual accounting treats them as identical.
+            Hourly data reveals the truth.
+        </p>
+        <a href="lmp_trends.html" class="act1-explore-link">
+            Explore regional patterns <span aria-hidden="true">&rarr;</span>
+        </a>
     </div>
 </section>
 
@@ -589,9 +578,9 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     };
 
     // Color scale: green (0) -> amber (0.5) -> red (1)
-    function carbonColor(fraction, alpha) {
-        // fraction: 0 = clean, 1 = fully fossil
-        var t = Math.max(0, Math.min(1, fraction));
+    // Takes a NORMALIZED 0-1 value (caller must normalize to data range)
+    function carbonColor(t01, alpha) {
+        var t = Math.max(0, Math.min(1, t01));
         var r, g, b;
         if (t < 0.5) {
             // green to amber
@@ -609,6 +598,14 @@ html, body { overflow-x: hidden; max-width: 100vw; }
         return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
     }
 
+    // Normalize a raw fossil fraction to 0-1 using the global data range
+    // so the full green→amber→red spectrum is used across all ISOs
+    var globalMin = Infinity, globalMax = -Infinity;
+    function normalizeToRange(val) {
+        if (globalMax <= globalMin) return 0.5;
+        return (val - globalMin) / (globalMax - globalMin);
+    }
+
     // --- Load data and render ---
     fetch('compressed_day_profiles.json')
         .then(function(r) { return r.json(); })
@@ -616,13 +613,12 @@ html, body { overflow-x: hidden; max-width: 100vw; }
             var container = document.getElementById('heatstripContainer');
             var profileData = {};
 
+            // Pass 1: compute fossil fractions and find global min/max
             ISOS.forEach(function(iso) {
                 var profiles = data[iso].profiles;
                 var keys = Object.keys(profiles);
-                // Pick a representative low-CFE profile (first one)
                 var prof = profiles[keys[0]];
 
-                // Compute fossil fraction per hour
                 var fossilFractions = [];
                 var avgFossil = 0;
                 for (var h = 0; h < 24; h++) {
@@ -631,6 +627,8 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     var fraction = demand > 0 ? gap / demand : 0;
                     fossilFractions.push(fraction);
                     avgFossil += fraction;
+                    if (fraction < globalMin) globalMin = fraction;
+                    if (fraction > globalMax) globalMax = fraction;
                 }
                 avgFossil /= 24;
 
@@ -639,8 +637,19 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     avg: avgFossil,
                     emissionRate: FOSSIL_EMISSION_RATE[iso]
                 };
+            });
 
-                // Build DOM
+            // Pad range slightly so edges aren't at 0/1 exactly
+            var rangePad = (globalMax - globalMin) * 0.05;
+            globalMin = Math.max(0, globalMin - rangePad);
+            globalMax = globalMax + rangePad;
+
+            // Pass 2: build DOM with normalized colors
+            ISOS.forEach(function(iso) {
+                var pd = profileData[iso];
+                var fossilFractions = pd.fractions;
+                var avgFossil = pd.avg;
+
                 var row = document.createElement('div');
                 row.className = 'heatstrip-row';
                 row.setAttribute('data-iso', iso);
@@ -664,11 +673,11 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     var cell = document.createElement('div');
                     cell.className = 'heatstrip-cell';
                     cell.setAttribute('data-hour', h);
-                    // Start in "illusion" mode (flat average)
-                    var avgIntensity = avgFossil * FOSSIL_EMISSION_RATE[iso] * 1000;
-                    cell.style.background = carbonColor(avgFossil, 0.12);
-                    cell.style.border = '2px solid ' + carbonColor(avgFossil, 0.85);
-                    // Tooltip
+                    // Start in "illusion" mode — normalized average
+                    var nAvg = normalizeToRange(avgFossil);
+                    cell.style.background = carbonColor(nAvg, 0.15);
+                    cell.style.border = '2px solid ' + carbonColor(nAvg, 0.9);
+                    // Tooltip shows actual g/kWh
                     var hourLabel = (h === 0 ? '12' : h <= 12 ? '' + h : '' + (h - 12))
                         + (h < 12 ? 'AM' : 'PM');
                     if (h === 0) hourLabel = '12AM';
@@ -685,7 +694,6 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                 hours.className = 'heatstrip-hours';
                 for (var h = 0; h < 24; h++) {
                     var sp = document.createElement('span');
-                    // Show select hours to avoid crowding
                     if (h === 0) sp.textContent = '12a';
                     else if (h === 6) sp.textContent = '6a';
                     else if (h === 12) sp.textContent = '12p';
@@ -764,9 +772,9 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     cells.forEach(function(cell, h) {
                         var delay = withSweep ? (h * 45 + isoIdx * 100) : 0;
                         setTimeout(function() {
-                            var f = pd.fractions[h];
-                            cell.style.background = carbonColor(f, 0.12);
-                            cell.style.border = '2px solid ' + carbonColor(f, 0.85);
+                            var n = normalizeToRange(pd.fractions[h]);
+                            cell.style.background = carbonColor(n, 0.15);
+                            cell.style.border = '2px solid ' + carbonColor(n, 0.9);
                         }, delay);
                     });
                 });
@@ -786,8 +794,9 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     var pd = profileData[iso];
 
                     cells.forEach(function(cell) {
-                        cell.style.background = carbonColor(pd.avg, 0.12);
-                        cell.style.border = '2px solid ' + carbonColor(pd.avg, 0.85);
+                        var nAvg = normalizeToRange(pd.avg);
+                        cell.style.background = carbonColor(nAvg, 0.15);
+                        cell.style.border = '2px solid ' + carbonColor(nAvg, 0.9);
                     });
                 });
             }
