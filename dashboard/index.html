@@ -695,6 +695,64 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     padding: 0 4px;
     justify-content: center;
 }
+/* Capex comparison chart */
+.act4-capex-wrap {
+    margin-top: var(--space-xl, 32px);
+    max-width: 780px;
+}
+.act4-capex-title {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary, #1A2744);
+    margin-bottom: 6px;
+}
+.act4-capex-sub {
+    font-size: 0.92rem;
+    line-height: 1.6;
+    color: var(--text-secondary, #475569);
+    margin-bottom: var(--space-md, 16px);
+}
+.act4-capex-chart-container {
+    position: relative;
+    min-height: 340px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-radius: var(--radius-xl, 16px);
+    padding: 20px 16px;
+}
+.act4-capex-stats {
+    display: flex;
+    gap: var(--space-md, 16px);
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+.act4-capex-stat {
+    flex: 1;
+    min-width: 140px;
+    text-align: center;
+    padding: 12px 8px;
+    background: var(--bg-page, #F8FAFC);
+    border-radius: var(--radius-md, 8px);
+}
+.act4-capex-stat-value {
+    font-family: var(--font-data);
+    font-size: 1.4rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+.act4-capex-stat-label {
+    font-family: var(--font-heading);
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: var(--text-muted, #94A3B8);
+    margin-top: 3px;
+}
+
 .act4-legend-item {
     display: flex;
     align-items: center;
@@ -741,6 +799,12 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     }
     .act4-panel.panel-right {
         transition-delay: 0.15s;
+    }
+    .act4-capex-chart-container {
+        min-height: 280px;
+    }
+    .act4-capex-stats {
+        flex-direction: column;
     }
 }
 
@@ -1218,14 +1282,16 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         <p class="lead-text">
             In regions like PJM, you might successfully deplete the coal wall with
             cheap wind. But you&rsquo;re left with a massive gas fleet, mountains
-            of curtailed energy, and redundant VRE that eventually become stranded.
+            of curtailed energy, and redundant VRE that IPPs will defend as
+            &ldquo;necessary for resource adequacy.&rdquo;
         </p>
         <p>
-            Two strategies. Same 95% clean target. Radically different outcomes.
+            Two strategies. Same 95% clean target. 70% corporate participation
+            (~312 TWh of PJM&rsquo;s 843 TWh demand). Radically different outcomes.
             The <strong>MAC queue</strong> deploys resources cheapest-first&mdash;mostly
             wind and solar. The <strong>hourly matching</strong> strategy co-optimizes
-            firm clean, storage, and VRE to actually displace gas. The charts show
-            what gets built, what gets wasted, and what stays stranded.
+            firm clean, storage, and VRE to actually displace gas. The capital investment
+            tells the real story.
         </p>
     </div>
 
@@ -1237,7 +1303,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                 <span class="hdr-dot" style="background: var(--fossil-gas, #6B7280);"></span>
                 <span style="color: var(--fossil-gas, #6B7280);">Strategy 1B &mdash; MAC Queue</span>
             </div>
-            <div class="act4-panel-sub">Cheapest resources first. 50% corporate participation.</div>
+            <div class="act4-panel-sub">Cheapest resources first. 70% corporate participation.</div>
             <div class="act4-chart-container">
                 <canvas id="act4ChartLeft"></canvas>
             </div>
@@ -1268,7 +1334,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                 <span class="hdr-dot" style="background: var(--clean-firm, #6366F1);"></span>
                 <span style="color: var(--clean-firm, #6366F1);">Strategy 2C &mdash; Hourly Matching</span>
             </div>
-            <div class="act4-panel-sub">Co-optimized portfolio with learning curves. 50% participation.</div>
+            <div class="act4-panel-sub">Co-optimized portfolio with learning curves. 70% participation.</div>
             <div class="act4-chart-container">
                 <canvas id="act4ChartRight"></canvas>
             </div>
@@ -1297,14 +1363,29 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     <!-- Shared legend -->
     <div class="act4-legend" id="act4Legend"></div>
 
+    <!-- Cumulative Capex comparison chart -->
+    <div class="act4-capex-wrap">
+        <h3 class="act4-capex-title">Cumulative Capital Investment Through 2050</h3>
+        <p class="act4-capex-sub">
+            Total overnight capital expenditure by technology. Strategy 2C invests heavily in
+            firm clean resources upfront&mdash;but eliminates gas dependency entirely.
+            Strategy 1B&rsquo;s cheap VRE keeps the gas fleet running (and stranded).
+        </p>
+        <div class="act4-capex-chart-container">
+            <canvas id="act4CapexChart"></canvas>
+        </div>
+        <div class="act4-capex-stats" id="act4CapexStats"></div>
+    </div>
+
     <!-- Insight box -->
     <div class="act4-insight" id="act4Insight">
-        <strong>The cheapest path leaves the gas fleet stranded.</strong>
-        Strategy 1B builds cheap VRE but can&rsquo;t retire gas plants&mdash;they&rsquo;re
-        needed for the hours wind and solar can&rsquo;t cover. Strategy 2C pays more
-        per MWh but actually eliminates gas dependency. The &ldquo;expensive&rdquo;
-        resources&mdash;firm clean and long-duration storage&mdash;are the only ones
-        that solve the hardest hours.
+        <strong>The cheapest path leaves the gas fleet stranded&mdash;but not retired.</strong>
+        Strategy 1B builds cheap VRE but can&rsquo;t retire gas plants. They&rsquo;re
+        needed for the hours wind and solar can&rsquo;t cover. IPPs who built those plants
+        will fight to protect them. Strategy 2C invests heavily in firm clean resources
+        upfront&mdash;nuclear, CCS, long-duration storage&mdash;eliminating gas dependency
+        entirely. The capital investment is larger, but the stranded asset risk is zero.
+        That $200B+ in clean firm is the price of actually finishing the transition.
     </div>
 
     <!-- Post-visual narrative -->
@@ -1312,9 +1393,11 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         <p>
             The cliff isn&rsquo;t a failure of ambition&mdash;it&rsquo;s what happens
             when you optimize for cost alone. Cheap renewables saturate the easy hours
-            and strand the gas fleet in the hard ones. Solving those hours requires
-            first-of-a-kind firm clean tech that costs more today but drives learning
-            curves toward cost parity tomorrow.
+            and strand the gas fleet in the hard ones. The capital invested in new gas
+            during the &ldquo;bridge fuel&rdquo; era becomes a political anchor&mdash;IPPs
+            will defend those assets for decades. The only way to avoid that trap is to
+            invest in firm clean tech upfront, accepting higher capital costs today
+            to drive learning curves and eliminate stranded asset lock-in.
         </p>
         <a href="abatement_dashboard.html" class="act4-explore-link">
             Explore regional abatement curves <span aria-hidden="true">&rarr;</span>
@@ -2569,7 +2652,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
 
     // --- Config ---
     var ISO = 'PJM';
-    var PARTICIPATION = '50';
+    var PARTICIPATION = '70';
     var THRESHOLD = '95';
     var DAC_CENTRAL_95 = 250; // $/tCO2 — central DAC estimate at 95% target
 
@@ -2810,6 +2893,160 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                 dac2C.textContent = 'MAC $' + mac2C + '/t — exceeds DAC median ($' + DAC_CENTRAL_95 + ')';
             }
         }
+
+        // --- Cumulative Capex Chart ---
+        // Convert TWh → GW using capacity factors, then GW × overnight $/kW → $B
+        var CAP_FACTORS = { solar: 0.25, wind: 0.33, cleanFirm: 0.90, battery: 0.15, ldes: 0.10 };
+        // Overnight capital costs $/kW (NREL ATB 2024, mid estimates)
+        var OCC = {
+            solar: 1100,    // utility-scale PV
+            wind: 1400,     // onshore wind
+            cleanFirm: 6500, // blended nuclear FOAK/NOAK + CCS
+            battery: 1400,  // 4hr Li-ion (power)
+            ldes: 2000,     // 100hr iron-air
+            gas: 1100       // new CCGT
+        };
+
+        function twhToGw(twh, cf) { return twh / (8.76 * cf); }
+        function capexB(gw, occKw) { return gw * occKw * 1e6 / 1e9; } // GW × $/kW × 1e6 kW/GW / 1e9 = $B
+
+        // 1B capex
+        var s1B_solar_gw  = twhToGw(r1B.solar, CAP_FACTORS.solar);
+        var s1B_wind_gw   = twhToGw(r1B.wind, CAP_FACTORS.wind);
+        var s1B_firm_gw   = twhToGw(r1B.cleanFirm, CAP_FACTORS.cleanFirm);
+        var s1B_batt_gw   = twhToGw(r1B.battery, CAP_FACTORS.battery);
+        var s1B_ldes_gw   = twhToGw(r1B.ldes, CAP_FACTORS.ldes);
+        var s1B_newgas_gw = Math.max(0, (d1B.gasGw || 0) - EXISTING_GAS_GW);
+
+        var cx1B = {
+            solar:  capexB(s1B_solar_gw, OCC.solar),
+            wind:   capexB(s1B_wind_gw, OCC.wind),
+            firm:   capexB(s1B_firm_gw, OCC.cleanFirm),
+            batt:   capexB(s1B_batt_gw, OCC.battery),
+            ldes:   capexB(s1B_ldes_gw, OCC.ldes),
+            gas:    capexB(s1B_newgas_gw, OCC.gas)
+        };
+
+        // 2C capex
+        var s2C_solar_gw  = twhToGw(r2C.solar, CAP_FACTORS.solar);
+        var s2C_wind_gw   = twhToGw(r2C.wind, CAP_FACTORS.wind);
+        var s2C_firm_gw   = twhToGw(r2C.cleanFirm, CAP_FACTORS.cleanFirm);
+        var s2C_batt_gw   = twhToGw(r2C.battery, CAP_FACTORS.battery);
+        var s2C_ldes_gw   = twhToGw(r2C.ldes, CAP_FACTORS.ldes);
+        var s2C_newgas_gw = Math.max(0, (d2C.gasGw || 0) - EXISTING_GAS_GW);
+
+        var cx2C = {
+            solar:  capexB(s2C_solar_gw, OCC.solar),
+            wind:   capexB(s2C_wind_gw, OCC.wind),
+            firm:   capexB(s2C_firm_gw, OCC.cleanFirm),
+            batt:   capexB(s2C_batt_gw, OCC.battery),
+            ldes:   capexB(s2C_ldes_gw, OCC.ldes),
+            gas:    capexB(s2C_newgas_gw, OCC.gas)
+        };
+
+        var total1B = cx1B.solar + cx1B.wind + cx1B.firm + cx1B.batt + cx1B.ldes + cx1B.gas;
+        var total2C = cx2C.solar + cx2C.wind + cx2C.firm + cx2C.batt + cx2C.ldes + cx2C.gas;
+        var clean1B = total1B - cx1B.gas;
+        var clean2C = total2C - cx2C.gas;
+
+        // Build vertical stacked bar chart
+        setTimeout(function() {
+            var capexCtx = document.getElementById('act4CapexChart');
+            if (!capexCtx) return;
+
+            var gasColor = '#6B7280';
+
+            new Chart(capexCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Strategy 1B\n(MAC Queue)', 'Strategy 2C\n(Hourly Matching)'],
+                    datasets: [
+                        { label: 'Solar', data: [cx1B.solar, cx2C.solar], backgroundColor: alpha(solarC, 0.75), borderColor: solarC, borderWidth: 2 },
+                        { label: 'Wind', data: [cx1B.wind, cx2C.wind], backgroundColor: alpha(windC, 0.75), borderColor: windC, borderWidth: 2 },
+                        { label: 'Clean Firm (Nuclear + CCS)', data: [cx1B.firm, cx2C.firm], backgroundColor: alpha(firmC, 0.75), borderColor: firmC, borderWidth: 2 },
+                        { label: 'Battery', data: [cx1B.batt, cx2C.batt], backgroundColor: alpha(battC, 0.75), borderColor: battC, borderWidth: 2 },
+                        { label: 'LDES', data: [cx1B.ldes, cx2C.ldes], backgroundColor: alpha(ldesC, 0.75), borderColor: ldesC, borderWidth: 2 },
+                        { label: 'New Gas CCGT', data: [cx1B.gas, cx2C.gas], backgroundColor: alpha(gasColor, 0.6), borderColor: gasColor, borderWidth: 2, borderDash: [4, 2] }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            stacked: true,
+                            ticks: {
+                                font: { family: 'DM Sans', size: 11, weight: 600 },
+                                color: '#64748B'
+                            },
+                            grid: { display: false }
+                        },
+                        y: {
+                            stacked: true,
+                            title: {
+                                display: true,
+                                text: 'Capital Investment ($B)',
+                                font: { family: 'DM Sans', size: 11, weight: 600 },
+                                color: '#64748B'
+                            },
+                            ticks: {
+                                font: { family: 'DM Sans', size: 10 },
+                                color: '#94A3B8',
+                                callback: function(v) { return '$' + v + 'B'; }
+                            },
+                            grid: { color: 'rgba(0,0,0,0.04)' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: {
+                                font: { family: 'DM Sans', size: 10 },
+                                color: '#64748B',
+                                boxWidth: 14,
+                                padding: 12,
+                                usePointStyle: false
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(26,39,68,0.92)',
+                            titleFont: { family: 'DM Sans', size: 12, weight: 600 },
+                            bodyFont: { family: 'DM Sans', size: 11 },
+                            cornerRadius: 8,
+                            padding: 12,
+                            callbacks: {
+                                label: function(ctx) {
+                                    return ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(0) + 'B';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Populate capex stat cards
+            var statsEl = document.getElementById('act4CapexStats');
+            if (statsEl) {
+                statsEl.innerHTML =
+                    '<div class="act4-capex-stat">' +
+                        '<div class="act4-capex-stat-value" style="color:' + gasColor + ';">$' + Math.round(total1B) + 'B</div>' +
+                        '<div class="act4-capex-stat-label">1B Total Capex</div>' +
+                    '</div>' +
+                    '<div class="act4-capex-stat">' +
+                        '<div class="act4-capex-stat-value" style="color:' + firmC + ';">$' + Math.round(total2C) + 'B</div>' +
+                        '<div class="act4-capex-stat-label">2C Total Capex</div>' +
+                    '</div>' +
+                    '<div class="act4-capex-stat">' +
+                        '<div class="act4-capex-stat-value" style="color:' + firmC + ';">$' + Math.round(cx2C.firm) + 'B</div>' +
+                        '<div class="act4-capex-stat-label">2C Firm Clean Investment</div>' +
+                    '</div>' +
+                    '<div class="act4-capex-stat">' +
+                        '<div class="act4-capex-stat-value" style="color: #16A34A;">0 GW</div>' +
+                        '<div class="act4-capex-stat-label">2C New Gas Needed</div>' +
+                    '</div>';
+            }
+        }, 800);
 
         // Show insight
         setTimeout(function() {
