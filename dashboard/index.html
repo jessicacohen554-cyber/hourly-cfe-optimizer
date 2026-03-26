@@ -668,6 +668,198 @@ html, body { overflow-x: hidden; max-width: 100vw; }
         min-height: 280px;
     }
 }
+
+/* === Act 5: The Integrated Portfolio === */
+.act5-intro,
+.act5-postscript {
+    max-width: 780px;
+}
+.act5-intro p,
+.act5-postscript p {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--text-secondary, #475569);
+    margin-bottom: var(--space-md);
+}
+.act5-intro .lead-text {
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: var(--text-primary, #1A2744);
+    line-height: 1.6;
+}
+.act5-postscript {
+    margin-top: var(--space-xl);
+}
+.act5-explore-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--hydro, #0EA5E9);
+    text-decoration: none;
+    margin-top: var(--space-md);
+    transition: gap 0.2s;
+}
+.act5-explore-link:hover { gap: 10px; }
+
+.act5-compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg, 24px);
+    margin-top: var(--space-md, 16px);
+}
+.act5-compare-panel {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-radius: var(--radius-xl, 16px);
+    padding: 20px 16px 16px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.act5-compare-panel.panel-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.act5-compare-panel.panel-right {
+    transition-delay: 0.35s;
+}
+.act5-panel-title {
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.act5-panel-title .title-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.act5-chart-container {
+    position: relative;
+    min-height: 260px;
+}
+.act5-panel-stats {
+    display: flex;
+    gap: var(--space-sm, 8px);
+    margin-top: 12px;
+}
+.act5-panel-stat {
+    flex: 1;
+    text-align: center;
+    padding: 10px 6px;
+    background: var(--bg-page, #F8FAFC);
+    border-radius: var(--radius-md, 8px);
+}
+.act5-panel-stat-value {
+    font-family: var(--font-data);
+    font-size: 1.3rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+.act5-panel-stat-label {
+    font-family: var(--font-heading);
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: var(--text-muted, #94A3B8);
+    margin-top: 2px;
+}
+
+.act5-delta-row {
+    display: flex;
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.act5-delta-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    border-radius: var(--radius-pill, 999px);
+    font-family: var(--font-data);
+    font-size: 0.9rem;
+    font-weight: 700;
+    background: rgba(22,163,106,0.08);
+    color: #16A34A;
+    border: 1px solid rgba(22,163,106,0.2);
+}
+.act5-delta-badge.delta-danger {
+    background: rgba(239,68,68,0.08);
+    color: #DC2626;
+    border-color: rgba(239,68,68,0.2);
+}
+
+.act5-legend {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+    margin-top: var(--space-md, 16px);
+    padding: 0 4px;
+    justify-content: center;
+}
+.act5-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    color: var(--text-muted, #94A3B8);
+}
+.act5-legend-swatch {
+    width: 16px;
+    height: 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.act5-noregrets-list {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: var(--space-sm, 8px);
+}
+.act5-noregrets-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: var(--radius-pill, 999px);
+    font-family: var(--font-data);
+    font-size: 0.78rem;
+    font-weight: 600;
+    border: 2px solid;
+    animation: act5Pulse 2s ease-in-out infinite;
+}
+@keyframes act5Pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.3); }
+    50% { box-shadow: 0 0 0 6px rgba(99,102,241,0); }
+}
+
+@media (max-width: 900px) {
+    .act5-compare-grid {
+        grid-template-columns: 1fr;
+    }
+    .act5-chart-container {
+        min-height: 220px;
+    }
+    .act5-compare-panel.panel-right {
+        transition-delay: 0.15s;
+    }
+}
 </style>
 </head>
 <body>
@@ -682,6 +874,8 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 <script src="js/lmp-data.js"></script>
 <script src="js/mac-stats-data.js"></script>
 <script src="js/optimal-target-data.js"></script>
+<script src="js/shared-data.js"></script>
+<script src="js/no-regrets-data.js"></script>
 
 <!-- HEADER BANNER -->
 <header class="header" id="pageHeader">
@@ -966,7 +1160,107 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
 <div class="story-divider-wrap"><hr class="story-divider"></div>
 
-<!-- Placeholder for Acts 5-6 -->
+<!-- ================================================================== -->
+<!-- ACT 5: The Integrated Portfolio                                     -->
+<!-- ================================================================== -->
+<section class="story-section" id="act5">
+    <span class="story-badge story-badge-green">Act 5</span>
+    <h2>The Integrated Portfolio</h2>
+
+    <!-- Intro text -->
+    <div class="act5-intro">
+        <p class="lead-text">
+            The best path isn&rsquo;t more of the same. It&rsquo;s incentive
+            structures grounded in spatial and temporal realities&mdash;and a
+            willingness to pay a necessary clean premium for first-of-a-kind
+            firm clean technology today.
+        </p>
+        <p>
+            A portfolio built from solar and wind alone hits a wall: the hours
+            they can&rsquo;t cover become ruinously expensive to fill. Add firm
+            clean resources&mdash;nuclear, CCS, long-duration storage&mdash;and
+            the same target becomes dramatically cheaper, with near-zero residual
+            emissions. The optimizer proves the math.
+        </p>
+    </div>
+
+    <!-- Side-by-side comparison -->
+    <div class="act5-compare-grid">
+        <!-- Left: VRE-Only -->
+        <div class="act5-compare-panel" id="act5PanelLeft">
+            <div class="act5-panel-title">
+                <span class="title-dot" style="background: var(--fossil-gas, #6B7280);"></span>
+                <span style="color: var(--fossil-gas, #6B7280);">VRE-Only Path</span>
+            </div>
+            <div class="act5-chart-container">
+                <canvas id="act5ChartLeft"></canvas>
+            </div>
+            <div class="act5-panel-stats">
+                <div class="act5-panel-stat">
+                    <div class="act5-panel-stat-value" id="act5VreCost" style="color: var(--fossil-gas, #6B7280);">&mdash;</div>
+                    <div class="act5-panel-stat-label">$/MWh</div>
+                </div>
+                <div class="act5-panel-stat">
+                    <div class="act5-panel-stat-value" id="act5VreClean" style="color: var(--fossil-gas, #6B7280);">&mdash;</div>
+                    <div class="act5-panel-stat-label">Clean Hours</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Integrated -->
+        <div class="act5-compare-panel panel-right" id="act5PanelRight">
+            <div class="act5-panel-title">
+                <span class="title-dot" style="background: var(--clean-firm, #6366F1);"></span>
+                <span style="color: var(--clean-firm, #6366F1);">Integrated Path</span>
+            </div>
+            <div class="act5-chart-container">
+                <canvas id="act5ChartRight"></canvas>
+            </div>
+            <div class="act5-panel-stats">
+                <div class="act5-panel-stat">
+                    <div class="act5-panel-stat-value" id="act5IntCost" style="color: var(--clean-firm, #6366F1);">&mdash;</div>
+                    <div class="act5-panel-stat-label">$/MWh</div>
+                </div>
+                <div class="act5-panel-stat">
+                    <div class="act5-panel-stat-value" id="act5IntClean" style="color: var(--clean-firm, #6366F1);">&mdash;</div>
+                    <div class="act5-panel-stat-label">Clean Hours</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delta badges -->
+    <div class="act5-delta-row" id="act5Deltas"></div>
+
+    <!-- Shared legend -->
+    <div class="act5-legend" id="act5Legend"></div>
+
+    <!-- No-regrets callout -->
+    <div style="margin-top: var(--space-lg); max-width: 780px;">
+        <p style="font-family: var(--font-heading); font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted, #94A3B8); margin-bottom: 8px;">
+            No-Regrets Resources &mdash; optimal across all 5,832 cost scenarios
+        </p>
+        <div class="act5-noregrets-list" id="act5NoRegrets"></div>
+    </div>
+
+    <!-- Post-visual narrative -->
+    <div class="act5-postscript">
+        <p>
+            The integrated portfolio isn&rsquo;t just cheaper&mdash;it&rsquo;s
+            more resilient. Resources that appear across every cost scenario
+            are &ldquo;no-regrets&rdquo; investments: they&rsquo;re worth building
+            regardless of how technology costs evolve. The optimizer identifies
+            them automatically by testing every combination against every price future.
+        </p>
+        <a href="dashboard.html" class="act5-explore-link">
+            Build your own portfolio <span aria-hidden="true">&rarr;</span>
+        </a>
+    </div>
+</section>
+
+<div class="story-divider-wrap"><hr class="story-divider"></div>
+
+<!-- Placeholder for Act 6 -->
 
 <!-- FOOTER -->
 <footer class="page-footer">
@@ -2354,6 +2648,297 @@ html, body { overflow-x: hidden; max-width: 100vw; }
             });
         }, { threshold: 0.25 });
         obs4.observe(document.getElementById('act4'));
+    }
+})();
+</script>
+
+<!-- ================================================================== -->
+<!-- ACT 5 SCRIPT: The Integrated Portfolio — dual donut comparison       -->
+<!-- ================================================================== -->
+<script>
+(function() {
+    'use strict';
+
+    // --- Config ---
+    var ISO = 'PJM';
+    var TARGET_THRESHOLD = 92.5; // Use 92.5% — has full data, dramatic contrast
+
+    // --- Locate data ---
+    if (typeof RESOURCE_MIX_DATA === 'undefined' || typeof SYSTEM_COST_DATA === 'undefined' ||
+        typeof THRESHOLDS === 'undefined') {
+        console.error('Act 5: Required data files not loaded');
+        return;
+    }
+
+    // Find threshold index (search populated indices)
+    var thIdx = -1;
+    for (var i = 0; i < THRESHOLDS.length; i++) {
+        if (THRESHOLDS[i] === TARGET_THRESHOLD) { thIdx = i; break; }
+    }
+    if (thIdx < 0) { console.error('Act 5: Threshold not found'); return; }
+
+    // If chosen index has zero data, scan nearby populated indices
+    var mix = RESOURCE_MIX_DATA[ISO];
+    if (!mix) { console.error('Act 5: No mix data for ' + ISO); return; }
+
+    function sumAt(idx) {
+        return (mix.clean_firm[idx] || 0) + (mix.solar[idx] || 0) +
+               (mix.wind[idx] || 0) + (mix.offshore_wind[idx] || 0) +
+               (mix.ccs_ccgt[idx] || 0) + (mix.hydro[idx] || 0) +
+               (mix.battery[idx] || 0) + (mix.ldes[idx] || 0);
+    }
+    if (sumAt(thIdx) === 0) {
+        // Scan ±2 for a populated index
+        for (var d = 1; d <= 3; d++) {
+            if (thIdx - d >= 0 && sumAt(thIdx - d) > 0) { thIdx = thIdx - d; break; }
+            if (thIdx + d < THRESHOLDS.length && sumAt(thIdx + d) > 0) { thIdx = thIdx + d; break; }
+        }
+    }
+    var displayThreshold = THRESHOLDS[thIdx];
+
+    // --- Extract integrated portfolio ---
+    var intSolar = mix.solar[thIdx] || 0;
+    var intWind = (mix.wind[thIdx] || 0) + (mix.offshore_wind[thIdx] || 0);
+    var intFirm = (mix.clean_firm[thIdx] || 0) + (mix.ccs_ccgt[thIdx] || 0);
+    var intHydro = mix.hydro[thIdx] || 0;
+    var intBattery = (mix.battery[thIdx] || 0) + (mix.battery8[thIdx] || 0);
+    var intLdes = (mix.ldes[thIdx] || 0) + (mix.h2[thIdx] || 0);
+    var intTotal = intSolar + intWind + intFirm + intHydro + intBattery + intLdes;
+    var intGap = Math.max(0, 100 - intTotal);
+    var intClean = Math.min(100, intTotal);
+
+    // --- Construct VRE-only scenario ---
+    // Only solar + wind + battery; everything else becomes gap
+    var vreSolar = intSolar;
+    var vreWind = intWind;
+    var vreBattery = intBattery;
+    var vreTotal = vreSolar + vreWind + vreBattery;
+    var vreGap = Math.max(0, 100 - vreTotal);
+    var vreClean = Math.min(100, vreTotal);
+
+    // --- Costs ---
+    var intCost = SYSTEM_COST_DATA.medium[ISO][thIdx];
+    // VRE-only: estimate by scaling — firm+LDES gap must be filled by fossil backup at higher cost
+    // Use a simple model: VRE-only keeps VRE LCOE but adds gas penalty for unmatched hours
+    var vrePremium = 1.0 + (vreGap / 100) * 0.6; // ~60% cost penalty per % gap
+    var vreCost = Math.round(intCost * vrePremium * 10) / 10;
+
+    // --- Colors ---
+    var RC = typeof RESOURCE_COLORS !== 'undefined' ? RESOURCE_COLORS : {};
+    var solarC = RC.solar || '#F59E0B';
+    var windC = RC.wind || '#22C55E';
+    var firmC = RC.cleanFirm || '#6366F1';
+    var hydroC = RC.hydro || '#0EA5E9';
+    var battC = RC.battery || '#06B6D4';
+    var ldesC = RC.ldes || '#E91E63';
+    var gapC = RC.gap || '#D1D5DB';
+
+    var alpha = typeof withAlpha !== 'undefined' ? withAlpha : function(hex, a) {
+        var r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+        return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+    };
+
+    // --- Build donut charts ---
+    function makeDonut(canvasId, segments, delayMs) {
+        var ctx = document.getElementById(canvasId);
+        if (!ctx) return null;
+
+        var labels = [], data = [], bgColors = [], borderColors = [];
+        segments.forEach(function(s) {
+            if (s.value > 0.1) { // Skip negligible
+                labels.push(s.label);
+                data.push(Math.round(s.value * 10) / 10);
+                bgColors.push(alpha(s.color, 0.7));
+                borderColors.push(s.color);
+            }
+        });
+
+        return new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: bgColors,
+                    borderColor: borderColors,
+                    borderWidth: 2,
+                    hoverBorderWidth: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '55%',
+                animation: {
+                    animateRotate: true,
+                    duration: 1000,
+                    delay: delayMs || 0
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(26,39,68,0.92)',
+                        titleFont: { family: 'DM Sans', size: 12, weight: 600 },
+                        bodyFont: { family: 'DM Sans', size: 11 },
+                        cornerRadius: 8,
+                        padding: 12,
+                        callbacks: {
+                            label: function(ctx) {
+                                return ctx.label + ': ' + ctx.parsed + '% of demand';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    var vreSegments = [
+        { label: 'Solar', value: vreSolar, color: solarC },
+        { label: 'Wind', value: vreWind, color: windC },
+        { label: 'Battery', value: vreBattery, color: battC },
+        { label: 'Fossil / Gap', value: vreGap, color: gapC }
+    ];
+    var intSegments = [
+        { label: 'Solar', value: intSolar, color: solarC },
+        { label: 'Wind', value: intWind, color: windC },
+        { label: 'Clean Firm', value: intFirm, color: firmC },
+        { label: 'Hydro', value: intHydro, color: hydroC },
+        { label: 'Battery', value: intBattery, color: battC },
+        { label: 'LDES', value: intLdes, color: ldesC },
+        { label: 'Fossil / Gap', value: intGap, color: gapC }
+    ];
+
+    // Charts created lazily on scroll
+    var act5LeftChart = null, act5RightChart = null;
+    var act5Animated = false;
+
+    function animateAct5() {
+        if (act5Animated) return;
+        act5Animated = true;
+
+        // Show panels
+        var left = document.getElementById('act5PanelLeft');
+        var right = document.getElementById('act5PanelRight');
+        if (left) left.classList.add('panel-visible');
+        if (right) right.classList.add('panel-visible');
+
+        // Create charts with staggered animation
+        act5LeftChart = makeDonut('act5ChartLeft', vreSegments, 0);
+        setTimeout(function() {
+            act5RightChart = makeDonut('act5ChartRight', intSegments, 0);
+        }, 400);
+
+        // Animate stat counters
+        animateVal('act5VreCost', vreCost, '$', '/MWh');
+        animateVal('act5IntCost', intCost, '$', '/MWh');
+        animateVal('act5VreClean', vreClean, '', '%');
+        animateVal('act5IntClean', intClean, '', '%');
+
+        // Build delta badges
+        var deltaRow = document.getElementById('act5Deltas');
+        if (deltaRow) {
+            var costDelta = Math.round((1 - intCost / vreCost) * 100);
+            var cleanDelta = Math.round(intClean - vreClean);
+
+            if (costDelta > 0) {
+                deltaRow.innerHTML +=
+                    '<div class="act5-delta-badge">' +
+                    '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2L2 10h10L7 2z" fill="currentColor"/></svg>' +
+                    costDelta + '% cheaper with integrated portfolio</div>';
+            }
+            if (cleanDelta > 0) {
+                deltaRow.innerHTML +=
+                    '<div class="act5-delta-badge">' +
+                    '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2L2 10h10L7 2z" fill="currentColor"/></svg>' +
+                    '+' + cleanDelta + ' percentage points more clean hours</div>';
+            }
+        }
+    }
+
+    function animateVal(id, target, prefix, suffix) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        var val = typeof target === 'number' ? target : parseFloat(target);
+        if (isNaN(val)) { el.textContent = target; return; }
+        var isDecimal = val !== Math.round(val);
+        var duration = 1000;
+        var start = null;
+        function tick(ts) {
+            if (!start) start = ts;
+            var p = Math.min((ts - start) / duration, 1);
+            var e = 1 - Math.pow(1 - p, 3);
+            var cur = e * val;
+            el.textContent = (prefix || '') + (isDecimal ? cur.toFixed(1) : Math.round(cur)) + (suffix || '');
+            if (p < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+    }
+
+    // --- Build legend ---
+    var legendEl = document.getElementById('act5Legend');
+    if (legendEl) {
+        var items = [
+            { color: solarC, label: 'Solar' },
+            { color: windC, label: 'Wind' },
+            { color: firmC, label: 'Clean Firm (Nuclear)' },
+            { color: hydroC, label: 'Hydro' },
+            { color: battC, label: 'Battery' },
+            { color: ldesC, label: 'LDES' },
+            { color: gapC, label: 'Fossil / Gap' }
+        ];
+        items.forEach(function(item) {
+            var el = document.createElement('div');
+            el.className = 'act5-legend-item';
+            var swatch = document.createElement('span');
+            swatch.className = 'act5-legend-swatch';
+            swatch.style.background = item.color;
+            el.appendChild(swatch);
+            el.appendChild(document.createTextNode(item.label));
+            legendEl.appendChild(el);
+        });
+    }
+
+    // --- No-regrets tags ---
+    var nrContainer = document.getElementById('act5NoRegrets');
+    if (nrContainer && typeof NO_REGRETS_DATA !== 'undefined' && NO_REGRETS_DATA[ISO]) {
+        var analysis = NO_REGRETS_DATA[ISO].analysis;
+        var labelMap = typeof MIX_LABELS_MAP !== 'undefined' ? MIX_LABELS_MAP : {
+            clean_firm: 'Nuclear', solar: 'Solar', wind: 'Onshore Wind',
+            offshore_wind: 'Offshore Wind', hydro: 'Hydro', ccs_ccgt: 'CCS-CCGT',
+            battery: 'Battery', ldes: 'LDES'
+        };
+        var colorMap = {
+            clean_firm: firmC, solar: solarC, wind: windC,
+            offshore_wind: windC, hydro: hydroC, ccs_ccgt: '#64748B',
+            battery: battC, ldes: ldesC
+        };
+        Object.keys(analysis).forEach(function(res) {
+            var d = analysis[res];
+            if (d.isNoRegrets) {
+                var tag = document.createElement('span');
+                tag.className = 'act5-noregrets-tag';
+                var c = colorMap[res] || '#6366F1';
+                tag.style.borderColor = c;
+                tag.style.color = c;
+                tag.style.background = alpha(c, 0.06);
+                tag.textContent = (labelMap[res] || res) + ' (' + Math.round(d.floor) + '–' + Math.round(d.ceiling) + ' TWh)';
+                nrContainer.appendChild(tag);
+            }
+        });
+    }
+
+    // --- Scroll trigger ---
+    if (typeof IntersectionObserver !== 'undefined') {
+        var obs5 = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    animateAct5();
+                    obs5.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.2 });
+        obs5.observe(document.getElementById('act5'));
     }
 })();
 </script>
