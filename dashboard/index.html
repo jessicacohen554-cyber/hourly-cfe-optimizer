@@ -88,14 +88,17 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     gap: 2px;
     border-radius: var(--radius-md, 8px);
     overflow: hidden;
+    align-items: end;
+    min-height: 48px;
 }
 .heatstrip-cell {
-    aspect-ratio: 1 / 1.1;
     min-height: 36px;
+    height: 36px;
     border-radius: 3px;
     position: relative;
-    transition: background-color 0.8s cubic-bezier(0.4,0,0.2,1),
-                border-color 0.8s cubic-bezier(0.4,0,0.2,1);
+    transition: background-color 1.5s cubic-bezier(0.4,0,0.2,1),
+                border-color 1.5s cubic-bezier(0.4,0,0.2,1),
+                height 1.2s cubic-bezier(0.4,0,0.2,1);
     cursor: default;
 }
 /* Tooltip on hover */
@@ -145,33 +148,46 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 .mode-toggle-label {
     font-family: var(--font-heading);
-    font-weight: 600;
-    font-size: 0.8rem;
+    font-weight: 700;
+    font-size: 0.85rem;
     letter-spacing: 0.5px;
     text-transform: uppercase;
     color: var(--text-muted, #94A3B8);
-    transition: color 0.3s;
+    transition: color 0.3s, text-shadow 0.3s;
 }
 .mode-toggle-label.active-label {
     color: var(--text-primary, #1A2744);
 }
+.mode-toggle-label.active-label[data-mode="illusion"] {
+    text-shadow: 0 0 8px rgba(245,158,11,0.3);
+}
+.mode-toggle-label.active-label[data-mode="reality"] {
+    text-shadow: 0 0 8px rgba(14,165,233,0.3);
+}
 .mode-toggle-track {
     position: relative;
-    width: 52px;
-    height: 28px;
-    background: rgba(26,39,68,0.12);
+    width: 56px;
+    height: 30px;
+    background: rgba(26,39,68,0.15);
     border-radius: var(--radius-pill, 9999px);
     cursor: pointer;
-    transition: background 0.3s;
+    transition: background 0.3s, box-shadow 0.3s;
     flex-shrink: 0;
+    animation: toggle-pulse 2s ease-in-out infinite;
 }
 .mode-toggle-track.reality {
     background: var(--hydro, #0EA5E9);
+    animation: none;
+    box-shadow: 0 0 12px rgba(14,165,233,0.3);
+}
+@keyframes toggle-pulse {
+    0%, 100% { box-shadow: 0 0 4px rgba(26,39,68,0.1); }
+    50% { box-shadow: 0 0 12px rgba(245,158,11,0.25); }
 }
 .mode-toggle-thumb {
     position: absolute;
-    top: 3px;
-    left: 3px;
+    top: 4px;
+    left: 4px;
     width: 22px;
     height: 22px;
     background: #fff;
@@ -180,8 +196,17 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     transition: left 0.3s cubic-bezier(0.4,0,0.2,1);
 }
 .mode-toggle-track.reality .mode-toggle-thumb {
-    left: 27px;
+    left: 30px;
 }
+.mode-toggle-hint {
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    color: var(--text-muted, #94A3B8);
+    margin-left: var(--space-sm);
+    opacity: 1;
+    transition: opacity 1s ease-out;
+}
+.mode-toggle-hint.hidden { opacity: 0; pointer-events: none; }
 
 /* --- Scanline sweep animation --- */
 @keyframes scanline-sweep {
@@ -234,16 +259,240 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 /* --- Responsive --- */
 @media (max-width: 900px) {
     .heatstrip-cell {
+        min-height: 36px;
+    }
+    .heatstrip-grid {
         min-height: 44px;
     }
 }
 @media (max-width: 480px) {
     .heatstrip-cell {
-        min-height: 44px;
-        aspect-ratio: auto;
+        min-height: 28px;
     }
     .heatstrip-hours span {
         font-size: 0.5rem;
+    }
+}
+
+/* === Act 0: The Grid is Not a Bank — Jar Illustration === */
+.act0-intro,
+.act0-postscript {
+    max-width: 780px;
+}
+.act0-intro p,
+.act0-postscript p {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--text-secondary, #475569);
+    margin-bottom: var(--space-md);
+}
+.act0-intro .lead-text {
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: var(--text-primary, #1A2744);
+    line-height: 1.6;
+}
+.act0-panel {
+    position: relative;
+    margin-top: var(--space-lg);
+}
+.act0-visual {
+    position: relative;
+    min-height: 320px;
+}
+.act0-view {
+    transition: opacity 0.8s ease, transform 0.6s ease;
+}
+.act0-view.hidden {
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    transform: translateY(12px);
+}
+/* Single annual jar (illusion) */
+.act0-annual-jar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+}
+.act0-jar-container {
+    position: relative;
+    width: 180px;
+    height: 280px;
+    background: rgba(255,255,255,0.12);
+    backdrop-filter: blur(8px);
+    border: 2px solid rgba(26,39,68,0.15);
+    border-radius: 0 0 16px 16px;
+    border-top: 3px solid rgba(26,39,68,0.25);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+.act0-jar-fill {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-end;
+    gap: 3px;
+    padding: 6px;
+    justify-content: center;
+}
+.act0-ball {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: ball-float-gentle 3s ease-in-out infinite;
+}
+@keyframes ball-float-gentle {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-1.5px); }
+}
+.act0-ball.solar { background: var(--solar, #F59E0B); }
+.act0-ball.wind { background: var(--wind, #22C55E); }
+.act0-jar-label {
+    font-family: var(--font-heading);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-secondary, #475569);
+    text-align: center;
+}
+.act0-jar-check {
+    font-size: 1.1rem;
+    color: #16A34A;
+    font-weight: 700;
+}
+/* 24-hour jars (reality) */
+.act0-hourly-jars {
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+    gap: 3px;
+    align-items: end;
+}
+.act0-hour-jar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.act0-hour-jar-body {
+    position: relative;
+    width: 100%;
+    background: rgba(255,255,255,0.10);
+    backdrop-filter: blur(4px);
+    border: 1.5px solid rgba(26,39,68,0.12);
+    border-radius: 0 0 4px 4px;
+    border-top: 2px solid rgba(26,39,68,0.2);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    transition: height 0.8s cubic-bezier(0.4,0,0.2,1);
+}
+.act0-hour-fill {
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-end;
+    gap: 1px;
+    padding: 2px;
+    justify-content: center;
+}
+.act0-hour-ball {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.act0-hour-ball.solar { background: var(--solar, #F59E0B); }
+.act0-hour-ball.wind { background: var(--wind, #22C55E); }
+.act0-hour-overflow {
+    position: absolute;
+    bottom: 100%;
+    left: 0; right: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1px;
+    padding: 2px;
+    justify-content: center;
+}
+.act0-hour-overflow .act0-hour-ball {
+    opacity: 0.45;
+    border: 1px dashed rgba(0,0,0,0.2);
+    background: transparent;
+}
+.act0-hour-overflow .act0-hour-ball.solar { background: rgba(245,158,11,0.35); }
+.act0-hour-overflow .act0-hour-ball.wind { background: rgba(34,197,94,0.35); }
+.act0-hour-gap {
+    width: 100%;
+    background: rgba(220,38,38,0.08);
+    border-top: 1px dashed rgba(220,38,38,0.2);
+}
+.act0-hour-label {
+    font-family: var(--font-data);
+    font-size: 0.5rem;
+    color: var(--text-muted, #94A3B8);
+    text-align: center;
+    margin-top: 2px;
+}
+.act0-legend {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+    margin-top: var(--space-md);
+    padding: 0 4px;
+}
+.act0-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    color: var(--text-muted, #94A3B8);
+}
+.act0-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.act0-insight {
+    margin-top: var(--space-lg);
+    padding: 16px 20px;
+    border-left: 4px solid var(--hydro, #0EA5E9);
+    background: rgba(14,165,233,0.06);
+    border-radius: 0 var(--radius-md, 8px) var(--radius-md, 8px) 0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text-secondary, #475569);
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.5s, transform 0.5s;
+}
+.act0-insight.insight-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.act0-insight strong {
+    color: var(--text-primary, #1A2744);
+}
+@media (max-width: 900px) {
+    .act0-jar-container {
+        width: 140px;
+        height: 220px;
+    }
+    .act0-hourly-jars {
+        grid-template-columns: repeat(12, 1fr);
+    }
+}
+@media (max-width: 480px) {
+    .act0-hourly-jars {
+        grid-template-columns: repeat(12, 1fr);
+        gap: 2px;
+    }
+    .act0-hour-ball {
+        width: 4px;
+        height: 4px;
     }
 }
 
@@ -489,6 +738,13 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     gap: var(--space-md);
     margin-top: var(--space-lg);
     flex-wrap: wrap;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.act3-stats.stats-visible {
+    opacity: 1;
+    transform: translateY(0);
 }
 .act3-stat {
     flex: 1;
@@ -1282,26 +1538,90 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
 </header>
 
 <!-- ================================================================== -->
-<!-- ACT 1: THE GRID IS NOT A BANK                                       -->
+<!-- ACT 0: THE THESIS                                                   -->
 <!-- ================================================================== -->
-<section class="story-section" id="act1">
-    <span class="story-badge story-badge-red">Act 1</span>
+<section class="story-section" id="act0">
+    <span class="story-badge story-badge-red">The Thesis</span>
     <h2>The Grid is Not a Bank</h2>
 
     <!-- Intro text above visual -->
-    <div class="act1-intro">
+    <div class="act0-intro">
         <p class="lead-text">
-            The grid is a live, interconnected machine where carbon intensity
-            varies wildly by the hour and location. Most clean energy policies
-            ignore this physics, treating all megawatt-hours as equal.
+            The grid is a live, interconnected machine&mdash;not a vault where
+            megawatt-hours can be deposited and withdrawn at will.
         </p>
         <p>
-            Each cell below represents one hour of the day. The color shows
-            how carbon-intensive the grid is during that hour&mdash;green when
-            clean energy dominates, red when fossil fuels fill the gaps.
-            Start with the <strong>Illusion</strong>&mdash;the flat daily average
-            that annual accounting assumes. Then watch the <strong>Reality</strong>
-            emerge.
+            We can&rsquo;t store MWhs in a vault to be distributed later, so we
+            can&rsquo;t account for clean energy that way either. Incentive structures
+            and policies that don&rsquo;t consider grid physics have adverse
+            consequences&mdash;and the difference between the illusion of paper
+            accounting and grid reality is significant.
+        </p>
+        <p>
+            What you count, where you start, and where you&rsquo;re going matter
+            profoundly in a complex spatial, temporal, and physical system like the
+            grid. Throughout this analysis, toggle between <strong>Illusion</strong>
+            (the paper accounting view) and <strong>Reality</strong> (what actually
+            happens on the grid) to see why.
+        </p>
+    </div>
+
+    <!-- Jar illustration -->
+    <div class="act0-panel" id="act0Panel">
+        <div class="mode-toggle-wrap">
+            <span class="mode-toggle-label active-label" id="act0LabelIllusion" data-mode="illusion">Illusion</span>
+            <div class="mode-toggle-track" id="act0Toggle" role="switch" aria-checked="false" tabindex="0">
+                <div class="mode-toggle-thumb"></div>
+            </div>
+            <span class="mode-toggle-label" id="act0LabelReality" data-mode="reality">Reality</span>
+            <span class="mode-toggle-hint" id="act0Hint">&larr; toggle to see reality</span>
+        </div>
+
+        <div class="act0-visual" id="act0Visual">
+            <!-- Illusion: single annual jar (rendered by JS) -->
+            <div class="act0-view" id="act0IllusionView">
+                <div class="act0-annual-jar" id="act0AnnualJar"></div>
+            </div>
+            <!-- Reality: 24-hour jars (rendered by JS) -->
+            <div class="act0-view hidden" id="act0RealityView">
+                <div class="act0-hourly-jars" id="act0HourlyJars"></div>
+            </div>
+        </div>
+
+        <div class="act0-legend" id="act0Legend"></div>
+    </div>
+
+    <!-- Insight box (shown on reality) -->
+    <div class="act0-insight" id="act0Insight"></div>
+</section>
+
+<div class="story-divider-wrap"><hr class="story-divider"></div>
+
+<!-- ================================================================== -->
+<!-- ACT 1: EVERY HOUR IS DIFFERENT                                      -->
+<!-- ================================================================== -->
+<section class="story-section" id="act1">
+    <span class="story-badge story-badge-red">Act 1</span>
+    <h2>Every Hour is Different</h2>
+
+    <!-- All text above the figure -->
+    <div class="act1-intro">
+        <p class="lead-text">
+            Carbon intensity and demand both vary dramatically by the hour
+            and by region. Annual averages hide these differences completely.
+        </p>
+        <p>
+            A solar MWh generated at noon in California displaces almost no
+            fossil fuel&mdash;the grid is already clean at that hour. That same
+            MWh at 8&nbsp;PM in PJM displaces coal. Annual accounting treats
+            them as identical. Hourly data reveals the truth.
+        </p>
+        <p>
+            Each cell below represents one hour. In <strong>Illusion</strong> mode,
+            every hour looks the same&mdash;flat boxes, identical emission rates
+            across all regions. Toggle to <strong>Reality</strong> to see both
+            <em>color</em> (emission intensity, normalized within each region) and
+            <em>height</em> (demand level) change hour by hour.
         </p>
     </div>
 
@@ -1309,11 +1629,11 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     <div class="heatstrip-panel" id="heatstripPanel">
         <!-- Mode toggle -->
         <div class="mode-toggle-wrap">
-            <span class="mode-toggle-label active-label" id="labelIllusion">Illusion</span>
+            <span class="mode-toggle-label active-label" id="labelIllusion" data-mode="illusion">Illusion</span>
             <div class="mode-toggle-track" id="modeToggle" role="switch" aria-checked="false" tabindex="0">
                 <div class="mode-toggle-thumb"></div>
             </div>
-            <span class="mode-toggle-label" id="labelReality">Reality</span>
+            <span class="mode-toggle-label" id="labelReality" data-mode="reality">Reality</span>
         </div>
 
         <!-- Strips rendered by JS -->
@@ -1324,17 +1644,12 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             <span>Low carbon</span>
             <div class="heatstrip-legend-bar"></div>
             <span>High carbon</span>
+            <span style="margin-left:var(--space-lg); font-style:italic;">Bar height = relative demand</span>
         </div>
     </div>
 
-    <!-- Post-visual narrative -->
+    <!-- Post-visual findings -->
     <div class="act1-postscript">
-        <p>
-            A solar MWh generated at noon in California displaces almost no
-            fossil fuel&mdash;the grid is already clean. That same MWh at 8 PM
-            in PJM displaces coal. Annual accounting treats them as identical.
-            Hourly data reveals the truth.
-        </p>
         <a href="lmp_trends.html" class="act1-explore-link">
             Explore regional patterns <span aria-hidden="true">&rarr;</span>
         </a>
@@ -1386,7 +1701,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             </div>
             <div class="act2-stat">
                 <div class="act2-stat-value" id="act2HourlyVal" style="color:#DC2626;">—</div>
-                <div class="act2-stat-label">Actual Clean Hours</div>
+                <div class="act2-stat-label">Hours Matched with 100% Clean Energy</div>
             </div>
         </div>
     </div>
@@ -1432,14 +1747,24 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         VRE deployment in a vacuum creates structural lock-in for gas.
     </p>
 
+    <!-- Moved above figures: surplus solar paragraph -->
+    <div class="act3-postscript" style="margin-top:0; margin-bottom: var(--space-lg);">
+        <p>
+            Every hour of surplus solar that crashes prices to zero is an hour you
+            chose not to invest in firm clean resources that could have displaced gas
+            permanently. The VRE-gas trap isn&rsquo;t inevitable&mdash;it&rsquo;s
+            the cost of ignoring the grid&rsquo;s temporal and spatial requirements.
+        </p>
+    </div>
+
     <!-- Toggle + dual charts -->
     <div class="act3-chart-wrap">
         <div class="mode-toggle-wrap">
-            <span class="mode-toggle-label active-label" id="act3LabelIllusion">Illusion</span>
+            <span class="mode-toggle-label active-label" id="act3LabelIllusion" data-mode="illusion">Illusion</span>
             <div class="mode-toggle-track" id="act3Toggle" role="switch" aria-checked="false" tabindex="0">
                 <div class="mode-toggle-thumb"></div>
             </div>
-            <span class="mode-toggle-label" id="act3LabelReality">Reality</span>
+            <span class="mode-toggle-label" id="act3LabelReality" data-mode="reality">Reality</span>
         </div>
 
         <div class="act3-charts-grid">
@@ -1461,8 +1786,8 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             </div>
         </div>
 
-        <!-- Stat cards — always at reality values, no toggle -->
-        <div class="act3-stats">
+        <!-- Stat cards — hidden until reality toggle -->
+        <div class="act3-stats" id="act3Stats">
             <div class="act3-stat">
                 <div class="act3-stat-value" id="act3ZeroVal" style="color:#DC2626;">&mdash;</div>
                 <div class="act3-stat-label">Zero-Price Hours / yr at 95% Clean</div>
@@ -1486,14 +1811,8 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         </div>
     </div>
 
-    <!-- Post-visual narrative -->
+    <!-- Post-visual link -->
     <div class="act3-postscript">
-        <p>
-            Every hour of surplus solar that crashes prices to zero is an hour you
-            chose not to invest in firm clean resources that could have displaced gas
-            permanently. The VRE-gas trap isn&rsquo;t inevitable&mdash;it&rsquo;s
-            the cost of ignoring the grid&rsquo;s temporal and spatial requirements.
-        </p>
         <a href="lmp_trends.html" class="act3-explore-link">
             See the full market analysis <span aria-hidden="true">&rarr;</span>
         </a>
