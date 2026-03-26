@@ -407,3 +407,311 @@ Commit with message: "Slide 9: Strip storage from regional opportunity matrix, V
 ```
 
 ---
+
+### Prompt 6: Slide 10 — The VRE Investment Case (Strip Storage, >8% IRR)
+
+```
+## Task: Modify the Investment Case Slide — VRE-Only Focus
+
+Edit `data-center-cfe/output/vre-investment-thesis-deck.html`, the slide titled "The Investment Case".
+
+### KPI Cards (top row) — currently 4 cards:
+
+1. **Keep**: "639 TWh" / "Unmet Big 4 clean energy demand by 2030" — still accurate
+2. **Keep**: "208 GW" / "Additional VRE needed (35% CF)" — still accurate
+3. **DELETE**: "+169% Revenue uplift: VRE+Storage vs. standalone" — this was a storage argument
+4. **MODIFY**: "10–12% Target levered IRR achievable with hybrid" → ">8%" / "Target levered IRR for standalone VRE portfolio"
+
+Replace the deleted card 3 with a new card:
+- Card 3 (green): "2–3 yr" / "Permit-to-COD for utility solar/wind"
+
+So final 4 KPIs: 639 TWh gap | 208 GW VRE needed | 2–3 yr deploy cycle | >8% levered IRR
+
+### Investment Thesis Summary (left column) — update the 4 bullet points:
+
+1. **Keep**: "Demand is structural, not cyclical." — unchanged
+2. **Keep**: "The green premium is real and liquid." — unchanged
+3. **REPLACE**: "Storage is the unlock." → "VRE captures the interconnection position."
+   New text: "Securing grid interconnection, land rights, and offtake agreements is the scarce, value-creating step. Storage can be co-located later — the queue position and PPA relationship persist. Early VRE developers own the optionality."
+4. **MODIFY**: "The window is finite." — keep the heading but change body:
+   "VRE is the only technology that can deploy at scale in the 2025–2032 bridge period. The consequential coal wall in MISO/SPP creates a time-limited procurement advantage. First movers capture cheap displacement AND long-term interconnection scarcity."
+
+### Optimal Pipeline Composition (right column, top table):
+
+Update rows:
+| Criterion | Requirement |
+|-----------|-------------|
+| Technology | Solar + Wind (primary), storage optionality for later pairing |
+| Priority markets | PJM + ERCOT (Tier 1), MISO (Tier 2 — consequential play) |
+| Interconnection status | Late-stage IA > early-stage greenfield |
+| Offtake structure | Corporate PPA (fixed-price preferred); avoid pure merchant |
+| Minimum scale | 100+ MW per project for hyperscaler relevance |
+| Storage strategy | Secure co-location rights; add BESS when economics justify |
+
+### Key Risks & Mitigants (right column, bottom table):
+
+Update:
+| Risk | Probability | Mitigant |
+|------|-------------|---------|
+| Capture rate erosion | Medium | PPA structure locks in price; consequential accounting bypasses capture risk |
+| Supply chain / tariff | Medium | Multi-source procurement, IRA domestic content |
+| Interconnection delays | High | Acquire late-stage queue positions |
+| Policy (IRA/PTC repeal) | Low | Bipartisan support; red-state benefits |
+| SMR faster than expected | Low | Complementary, not competitive — VRE still needed even with SMRs |
+| Accounting regime shift | Medium | Portfolio weighted 80% to strategy-proof markets (PJM, ERCOT) |
+
+### Source note:
+Update to remove storage revenue uplift source. Add: "Target IRR >8% based on Lazard LCOE+ v18.0 standalone VRE project finance returns with IRA PTC/ITC. Interconnection position value: LBNL Queued Up 2025 (<20% queue completion rate, 5-year median wait)."
+
+Commit with message: "Slide 10: VRE-only investment case, >8% IRR, storage optionality framing"
+```
+
+---
+
+### Prompt 7: Slides 11–13 — Split Procurement Accounting into 3 Slides
+
+```
+## Task: Split Procurement Accounting into 3 Readable Slides
+
+Edit `data-center-cfe/output/vre-investment-thesis-deck.html`. The current slide "Procurement Accounting: What It Means for Where to Buy" is a single cramped 2-column slide with tiny fonts (8-9pt). Split it into 3 full-width slides.
+
+### Current content to redistribute:
+
+The current slide has:
+- LEFT COLUMN: Three strategy descriptions + deployment model table + MISO analysis callout
+- RIGHT COLUMN: Regional portfolio impact table + strategy-proof/leveraged callouts + bottom line
+
+### New Slide 11: "Procurement Strategies Overview"
+
+**Full-width layout** (no 2-column split). Each strategy gets a substantial card.
+
+Title: "Three Procurement Strategies — One VRE Thesis"
+Subtitle: "Different accounting methods shape WHERE to weight VRE procurement, not WHETHER to invest."
+
+Three strategy cards (use .callout boxes, but BIGGER — padding 0.15in, font-size 11pt):
+
+**Card 1 — Consequential (Cross-Regional)** (blue callout):
+- "Buy cheapest $/tCO₂ clean energy anywhere in the US. No hourly constraint."
+- "Buyer picks lowest-cost ISO — drives VRE development in MISO/SPP/ERCOT where wind is cheapest"
+- "Buyers: Meta, Amazon (large MISO/SPP unbundled REC purchases)"
+- "VRE implication: Pipeline value concentrated in wind-rich ISOs. Coal wall creates procurement advantage for early movers."
+
+**Card 2 — Hourly Matching (Same-ISO)** (green callout):
+- "Match consumption with clean generation every hour, same ISO."
+- "Requires 1.7× over-procurement at 95% CFE to cover nights and low-wind periods"
+- "Buyers: Google (24/7 CFE), Microsoft (nuclear PPAs + VRE)"
+- "VRE implication: Forces local VRE build. Higher $/MWh but guaranteed offtake in buyer's ISO."
+
+**Card 3 — Annual Volumetric (Status Quo)** (orange callout):
+- "Match total MWh over the year. Cheapest unbundled RECs satisfy targets."
+- "Being phased out by leading buyers as SBTi/SEC tighten standards"
+- "VRE implication: Minimal NEW pipeline value — existing RECs suffice. Sunset strategy."
+
+Bottom callout (blue border):
+"Key insight: The market is adopting a hybrid of all three strategies. Google hourly, Meta consequential, most corporates still annual. This fragmentation INCREASES total VRE demand — different methods, different regions, same need for new VRE development."
+
+Remove ALL storage references from strategy descriptions.
+
+### New Slide 12: "Participation → VRE Pipeline Value"
+
+**Full-width layout.**
+
+Title: "How Much VRE Does Each Strategy Deploy?"
+Subtitle: "At 95% CFE target, Medium growth scenario. Source: Constellation Hourly CFE Optimizer (Steps 5.2B/C)."
+
+**Full-width table** (font-size 10pt minimum, not 8pt):
+
+| C&I Load Participating | Consequential Cost ($/MWh) | Hourly Cost ($/MWh) | VRE Deployed (GW) | What Happens |
+|----------------------|--------------------------|--------------------|--------------------|-------------|
+| 5% | $49 | $223 | 13 GW | Cheap coal displacement. Consequential still buying existing wind RECs. |
+| 10% | $49 | $223 | 26 GW | MISO consequential pool still deep. Hourly forces 26 GW new VRE build. |
+| 20% | $49 | $223 | 53 GW | PJM consequential cost rises to $58. MISO still flat at $49. |
+| **30%** | **$49** | **$223** | **79 GW** | **MISO threshold — cheap pool begins to exhaust. New-build required.** |
+| 40% | $51 | $223 | 105 GW | MISO consequential cost rising. Now drives new VRE pipeline value. |
+| 50% | $59 | $223 | 132 GW | Convergence begins. Both strategies now building new generation. |
+
+Highlight the 30% row (use background rgba(244,123,39,0.06)).
+
+**Below table — "The MISO Inflection Point" callout** (orange):
+"MISO's consequential displacement pool stays cheap ($49/MWh) through 30% C&I participation — far deeper than PJM (exhausts at 15–20%). This makes MISO VRE pipeline attractive specifically for consequential buyers (Meta, Amazon). Above 30%, MISO too requires new-build, and costs converge with hourly matching."
+
+### New Slide 13: "Regional Portfolio Impact by Strategy"
+
+**Full-width layout.**
+
+Title: "Where VRE Pipeline Wins Under Each Strategy"
+Subtitle: "ISO-by-ISO analysis at 10% C&I participation, 95% CFE, Medium growth"
+
+**Full-width table** (font-size 9.5pt):
+
+| ISO | Consequential Cost | Hourly Cost | VRE Pipeline Value |
+|-----|-------------------|-------------|-------------------|
+| PJM | $49→$72/MWh | $151/MWh | Core hold. Capacity market ($666/MW-day) ensures value. Consequential cost rises fastest (pool exhausts at 15%) — PJM VRE needed regardless. |
+| ERCOT | $49→$72/MWh | $253/MWh | Core hold. Cheapest VRE market. BTM co-location bypasses accounting. 67 GW DC pipeline guarantees offtake. |
+| MISO | $49 (flat to 30%) | $223/MWh | Hedge + upside. Deep cheap wind pool = #1 source for consequential buyers. At 10%: 34 TWh clean procurement. Question: how much Meta/Amazon load materializes? |
+| SPP | $47→$57/MWh | $213/MWh | Consequential-only play. Cheapest wind in US ($47/MWh at 10%). No local DC load for hourly. Speculative position. |
+| NYISO | Moderate | Strong | Premium insulated. Zero cannibalization = highest PPA prices under any method. |
+| NEISO | Moderate | Premium | Small scale only. Premium pricing. No cannibalization risk. |
+| CAISO | Moderate | Very High | Solar standalone challenging. Geothermal + wind more viable. Google HQ demand. |
+
+**Bottom — two callout boxes side by side**:
+
+Left (green): "Strategy-proof portfolio (PJM, ERCOT, NYISO — 80% weight): VRE holds value regardless of which accounting method dominates."
+
+Right (blue): "Strategy-leveraged hedge (MISO, SPP — 15-20%): Upside if consequential persists + Meta/Amazon load materializes. Downside protected by cheap basis."
+
+**Delete the old single procurement slide** after creating these three.
+
+Commit with message: "Split procurement into 3 slides: strategies overview, deployment table, regional impact"
+```
+
+---
+
+### Prompt 8: Slide 14 — Cross-Regional VRE Procurement (Expanded Table, No Jar SVG)
+
+```
+## Task: Overhaul Cross-Regional Procurement Slide — Expanded Scenario × ISO Table
+
+Edit `data-center-cfe/output/vre-investment-thesis-deck.html`, the slide titled "How Accounting Rules Shape Cross-Regional VRE Procurement".
+
+### Step 1: Delete the jar/ball SVG illustration
+
+Remove the entire SVG block (roughly 140 lines of SVG code showing jar illustrations with balls representing nuclear, wind, solar, unmet demand, etc.). This is the <svg viewBox="0 0 1000 310"> element.
+
+### Step 2: Replace with expanded scenario × ISO table
+
+**New title**: "VRE Pipeline Value: Scenario Analysis by ISO"
+**Subtitle**: "GW of VRE pipeline value under different accounting regime assumptions, 10% C&I participation, 95% CFE target"
+
+**Full-width table** — 5 scenario rows × 7 ISO columns + totals:
+
+| Scenario | CAISO | ERCOT | PJM | NYISO | NEISO | MISO | SPP | Total GW |
+|----------|-------|-------|-----|-------|-------|------|-----|----------|
+| All Consequential (100% Strategy 1B) | Low | High | Moderate | Low | Low | Very High | Very High | [compute] |
+| All Hourly (100% Strategy 2A) | Very High | Very High | Very High | High | Moderate | Low | Low | [compute] |
+| Hybrid — Likely (40% conseq / 40% hourly / 20% annual) | Moderate | Very High | High | Moderate | Low | High | Moderate | [compute] |
+| Transition (60% annual → 40% hourly by 2030) | Moderate | High | High | Moderate | Low | Moderate | Low | [compute] |
+| Hyperscaler-Led (mirrors actual company strategies) | Moderate | High | Very High | Moderate | Low | High | Moderate | [compute] |
+
+Color-code cells using the existing heatmap CSS classes:
+- Very High = heat-5 (strong blue)
+- High = heat-4
+- Moderate = heat-3
+- Low = heat-2
+- Minimal = heat-1
+
+**Below the table, add a "Hyperscaler-Led" breakdown callout**:
+"Hyperscaler-Led scenario mirrors actual company strategies: Google (hourly, CAISO/PJM), Microsoft (hourly, PJM), Meta (consequential, MISO), Amazon (consequential, MISO/PJM). This is the most realistic near-term scenario."
+
+**Data sources for filling in values:**
+- `data-center-cfe/data-inputs/accounting_regime_scenarios.csv` — has 4 scenarios (A=All Hourly, B=All Consequential, C=Hybrid, D=Hybrid+Regulation) with VRE demand GW and where_vre_built
+- `data-center-cfe/data-inputs/vre_investment_thesis.csv` — has per-ISO VRE ratings and demand growth
+- Use the accounting_regime_scenarios.csv "where_vre_built" field to distribute the total VRE demand across ISOs
+
+The "Transition" scenario (row 4) is new — model it as: 60% of demand uses annual matching (cheapest RECs, minimal new VRE) transitioning to 40% hourly by 2030 (local VRE build). This weights more toward PJM/ERCOT than pure consequential.
+
+### Step 3: Keep the source note, update it
+
+Remove references to the jar visualization. Add: "Scenario GW estimates derived from Constellation Hourly CFE Optimizer (Steps 5.2B-D) and accounting_regime_scenarios.csv. Hyperscaler-Led scenario based on company sustainability reports (2024) and public procurement strategies."
+
+Commit with message: "Slide 14: Expanded scenario × ISO table, delete jar/ball SVG"
+```
+
+---
+
+### Prompt 9: Final QA — Renumbering, Consistency, Global Storage Scrub
+
+```
+## Task: Final QA Pass — Renumber, Consistency Check, Storage Language Scrub
+
+Edit `data-center-cfe/output/vre-investment-thesis-deck.html`.
+
+### Step 1: Renumber all slides sequentially 1–15
+
+After all previous prompts, the deck should have 15 slides. Verify each <span class="slide-number">N</span> is correct:
+1. Title
+2. Where the Load Is Landing
+3. The Clean Energy Gap (2030)
+4. The Gap Persists: 2035–2040 Even with SMRs
+5. The Clean Energy Gap: 2050
+6. Clean Firm Won't Arrive in Time
+7. The Consequential Advantage: Leveraging the Coal Wall
+8. VRE: The Only Technology That Can Deploy at Scale Now
+9. Regional VRE Opportunity Matrix
+10. The VRE Investment Case
+11. Three Procurement Strategies — One VRE Thesis
+12. How Much VRE Does Each Strategy Deploy?
+13. Where VRE Pipeline Wins Under Each Strategy
+14. VRE Pipeline Value: Scenario Analysis by ISO
+15. Appendix: Methodology & Source Bibliography
+
+### Step 2: Global storage language scrub
+
+Search the ENTIRE file for these terms and remove/rewrite storage-centric language:
+- "VRE+Storage" → "VRE" or "VRE development"
+- "VRE+S" → "VRE"
+- "hybrid" (when referring to VRE+storage hybrid) → remove or reframe
+- "storage pairing" → "storage optionality" or "future storage co-location"
+- "BESS" / "battery" — only acceptable in context of "storage can be added later"
+- "storage is mandatory" / "must pair" → reframe as optionality
+
+Do NOT remove storage from:
+- The "Clean Firm Won't Arrive in Time" slide (slide 6) — this discusses technology timelines where storage is a real consideration
+- The Methodology appendix — factual description of the optimizer
+- Contexts where storage is mentioned as a FUTURE option, not a current requirement
+
+### Step 3: Verify HTML structure
+
+- Count exactly 15 <section class="slide"> blocks
+- All slide numbers sequential
+- No orphaned HTML comments referencing deleted slides
+- No broken CSS class references
+- <title> tag says "VRE Development Investment Thesis"
+
+### Step 4: Verify no empty slides
+
+For each slide, confirm:
+- Has actual content (not just a header + empty body)
+- Tables have data in them (no placeholder [X] or [compute] values remaining)
+- KPI cards have real numbers
+- Source notes are present
+
+### Step 5: Update HTML comment separators
+
+Each slide should have a clean comment block above it:
+<!-- ═══ SLIDE N: TITLE ═══ -->
+
+Commit with message: "Final QA: renumber to 15 slides, global storage scrub, consistency check"
+Push to branch: git push -u origin claude/vre-portfolio-analysis-overhaul-cUEkh
+```
+
+---
+
+## Execution Notes
+
+### Dependencies between prompts:
+- **Prompt 0 must run first** (deletions + renumbering baseline)
+- **Prompts 1, 2, 4, 5, 6** can run in any order after Prompt 0
+- **Prompt 3** (coal wall) is the most complex — requires running a Python analysis script before building the HTML slide. May take the longest.
+- **Prompt 7** (procurement split) should run after Prompts 1-6 so the slide ordering context is clear
+- **Prompt 8** (expanded table) should run after Prompt 7
+- **Prompt 9** (QA) must run last
+
+### Analytical work required:
+- **Prompt 3** is the only prompt that requires running Python code (coal wall analysis)
+- All other prompts are pure HTML editing
+- The coal wall analysis script should output a JSON file that the HTML slide references
+
+### Estimated effort per prompt:
+| Prompt | Type | Complexity | Est. time |
+|--------|------|-----------|-----------|
+| 0 | HTML deletion | Low | 10 min |
+| 1 | HTML edit | Medium | 15 min |
+| 2 | HTML merge | Medium | 20 min |
+| 3 | Python + HTML | **High** | 45 min |
+| 4 | HTML creation | Medium | 20 min |
+| 5 | HTML edit | Medium | 15 min |
+| 6 | HTML edit | Medium | 15 min |
+| 7 | HTML creation (3 slides) | **High** | 30 min |
+| 8 | HTML edit + data | Medium-High | 25 min |
+| 9 | QA sweep | Medium | 20 min |
