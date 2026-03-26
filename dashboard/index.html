@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="styles/shared.css">
 <link rel="stylesheet" href="styles/scrollytell.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <style>
 /* === Act 1: Heatstrip-specific styles === */
 html, body { overflow-x: hidden; max-width: 100vw; }
@@ -390,6 +391,141 @@ html, body { overflow-x: hidden; max-width: 100vw; }
         min-height: 280px;
     }
 }
+
+/* === Act 3: The VRE-Gas Trap === */
+.act3-intro,
+.act3-postscript {
+    max-width: 780px;
+}
+.act3-intro p,
+.act3-postscript p {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--text-secondary, #475569);
+    margin-bottom: var(--space-md);
+}
+.act3-intro .lead-text {
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: var(--text-primary, #1A2744);
+    line-height: 1.6;
+}
+.act3-postscript {
+    margin-top: var(--space-xl);
+}
+.act3-explore-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--hydro, #0EA5E9);
+    text-decoration: none;
+    margin-top: var(--space-md);
+    transition: gap 0.2s;
+}
+.act3-explore-link:hover { gap: 10px; }
+
+.act3-chart-wrap {
+    position: relative;
+}
+.act3-chart-container {
+    position: relative;
+    min-height: 370px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-radius: var(--radius-xl, 16px);
+    padding: 20px 16px 12px;
+}
+.act3-legend {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+    margin-top: var(--space-sm, 8px);
+    padding: 0 4px;
+}
+.act3-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    color: var(--text-muted, #94A3B8);
+}
+.act3-legend-swatch {
+    width: 16px;
+    height: 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.act3-stats {
+    display: flex;
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+    flex-wrap: wrap;
+}
+.act3-stat {
+    flex: 1;
+    min-width: 140px;
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: var(--radius-xl, 16px);
+    padding: 20px 16px;
+    text-align: center;
+    box-shadow: 0 4px 6px -4px rgba(0,0,0,0.04);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+.act3-stat:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08);
+}
+.act3-stat-value {
+    font-family: var(--font-data);
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 4px;
+}
+.act3-stat-label {
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: var(--text-muted, #94A3B8);
+}
+
+/* Insight box (inline, appears on reality) */
+.act3-insight {
+    margin-top: var(--space-lg);
+    padding: 16px 20px;
+    border-left: 4px solid var(--fossil-gas, #6B7280);
+    background: rgba(107,114,128,0.06);
+    border-radius: 0 var(--radius-md, 8px) var(--radius-md, 8px) 0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text-secondary, #475569);
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.5s, transform 0.5s;
+}
+.act3-insight.insight-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.act3-insight strong {
+    color: var(--text-primary, #1A2744);
+}
+
+@media (max-width: 900px) {
+    .act3-chart-container {
+        min-height: 280px;
+    }
+}
 </style>
 </head>
 <body>
@@ -401,6 +537,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 <script src="js/shared-header.js"></script>
 <script src="js/scroll-observer.js"></script>
 <script src="js/shared-footer.js"></script>
+<script src="js/lmp-data.js"></script>
 
 <!-- HEADER BANNER -->
 <header class="header" id="pageHeader">
@@ -532,7 +669,86 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
 <div class="story-divider-wrap"><hr class="story-divider"></div>
 
-<!-- Placeholder for Acts 3-6 -->
+<!-- ================================================================== -->
+<!-- ACT 3: THE VRE-GAS TRAP                                             -->
+<!-- ================================================================== -->
+<section class="story-section" id="act3">
+    <span class="story-badge story-badge-red">Act 3</span>
+    <h2>The VRE-Gas Trap</h2>
+
+    <!-- Intro text -->
+    <div class="act3-intro">
+        <p class="lead-text">
+            Every megawatt of solar and wind added to the grid pushes wholesale
+            electricity prices lower. Past a tipping point, gas plants lose money
+            most hours of the year&mdash;but the grid still needs them at night.
+            They can&rsquo;t retire. They can&rsquo;t profit. They&rsquo;re trapped.
+        </p>
+        <p>
+            The chart shows how wholesale prices collapse as clean energy grows.
+            In the <strong>Illusion</strong>, prices stay flat&mdash;the market
+            looks stable. Switch to <strong>Reality</strong> to see the structural
+            price erosion that locks gas plants into unprofitable operation.
+        </p>
+    </div>
+
+    <!-- Toggle + chart -->
+    <div class="act3-chart-wrap">
+        <div class="mode-toggle-wrap">
+            <span class="mode-toggle-label active-label" id="act3LabelIllusion">Illusion</span>
+            <div class="mode-toggle-track" id="act3Toggle" role="switch" aria-checked="false" tabindex="0">
+                <div class="mode-toggle-thumb"></div>
+            </div>
+            <span class="mode-toggle-label" id="act3LabelReality">Reality</span>
+        </div>
+        <div class="act3-chart-container">
+            <canvas id="act3Chart"></canvas>
+        </div>
+        <div class="act3-legend" id="act3Legend"></div>
+
+        <!-- Stat cards -->
+        <div class="act3-stats">
+            <div class="act3-stat">
+                <div class="act3-stat-value" id="act3ZeroVal" style="color:#0EA5E9;">—</div>
+                <div class="act3-stat-label">Zero-Price Hours / yr</div>
+            </div>
+            <div class="act3-stat">
+                <div class="act3-stat-value" id="act3RevenueVal" style="color:#6B7280;">—</div>
+                <div class="act3-stat-label">Gas Revenue Loss</div>
+            </div>
+            <div class="act3-stat">
+                <div class="act3-stat-value" id="act3LockinVal" style="color:#16A34A;">—</div>
+                <div class="act3-stat-label">Structural Lock-in</div>
+            </div>
+        </div>
+
+        <!-- Insight box (shown on reality) -->
+        <div class="act3-insight" id="act3Insight">
+            At <strong>95% clean energy</strong>, gas plants lose money
+            <strong>6,350 hours per year</strong>&mdash;73% of the time.
+            But the grid still needs them for the remaining 2,410 hours.
+            They can&rsquo;t shut down without blackouts. They can&rsquo;t
+            stay open without subsidies. This is the structural trap
+            at the heart of the energy transition.
+        </div>
+    </div>
+
+    <!-- Post-visual narrative -->
+    <div class="act3-postscript">
+        <p>
+            The VRE-gas trap isn&rsquo;t a market failure&mdash;it&rsquo;s
+            a physics constraint. Solving it requires firm clean resources
+            that can fill the gap without the carbon.
+        </p>
+        <a href="lmp_trends.html" class="act3-explore-link">
+            See the full market analysis <span aria-hidden="true">&rarr;</span>
+        </a>
+    </div>
+</section>
+
+<div class="story-divider-wrap"><hr class="story-divider"></div>
+
+<!-- Placeholder for Acts 4-6 -->
 
 <!-- FOOTER -->
 <footer class="page-footer">
@@ -1227,6 +1443,363 @@ html, body { overflow-x: hidden; max-width: 100vw; }
         .catch(function(err) {
             console.error('Act 2: Failed to load profiles:', err);
         });
+})();
+</script>
+
+<!-- ================================================================== -->
+<!-- ACT 3 SCRIPT: The VRE-Gas Trap — LMP collapse chart                 -->
+<!-- ================================================================== -->
+<script>
+(function() {
+    'use strict';
+
+    // Use PJM as the primary ISO — deepest data, most dramatic narrative
+    if (typeof LMP_ALL === 'undefined' || typeof PJM_RAW === 'undefined') {
+        console.error('Act 3: lmp-data.js not loaded');
+        return;
+    }
+
+    var D = PJM_RAW;
+    var T = D.thresholds; // 15 thresholds
+    var dataLen = D.envelope.p50.length; // 13 data points
+    var TData = T.slice(0, dataLen); // thresholds that have data
+
+    // Helper: create {x,y} points
+    function pts(xArr, yArr) {
+        var out = [];
+        for (var i = 0; i < xArr.length && i < yArr.length; i++) {
+            out.push({ x: xArr[i], y: yArr[i] });
+        }
+        return out;
+    }
+
+    function hexToRgba(hex, a) {
+        var r = parseInt(hex.slice(1,3),16);
+        var g = parseInt(hex.slice(3,5),16);
+        var b = parseInt(hex.slice(5,7),16);
+        return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+    }
+
+    // Colors
+    var fossilHex = '#6B7280';
+    var blueHex = '#0EA5E9';
+    var redHex = '#DC2626';
+
+    // Compute "illusion" state: flat lines at the 50% baseline value
+    var baselineLMP = D.envelope.p50[0]; // ~$34.80
+    var baselineZero = D.regime.zeroP50[0]; // ~265 hrs
+    var flatP50 = TData.map(function() { return baselineLMP; });
+    var flatP10 = TData.map(function() { return D.envelope.p10[0]; });
+    var flatP90 = TData.map(function() { return D.envelope.p90[0]; });
+    var flatZero = TData.map(function() { return baselineZero; });
+
+    // Reality data
+    var realP50 = D.envelope.p50.slice(0, dataLen);
+    var realP10 = D.envelope.p10.slice(0, dataLen);
+    var realP90 = D.envelope.p90.slice(0, dataLen);
+    var realZero = D.regime.zeroP50.slice(0, dataLen);
+
+    // Stats at 95% clean (index 11)
+    var idx95 = 11; // threshold index for 95%
+    var zeroAt95 = realZero[idx95]; // ~6350
+    var lmpAt95 = realP50[idx95]; // ~$10.83
+    var revenueDropPct = Math.round((1 - lmpAt95 / baselineLMP) * 100);
+
+    // Build legend
+    var legendEl = document.getElementById('act3Legend');
+    var legendItems = [
+        { label: 'P10–P90 range', color: fossilHex, type: 'band' },
+        { label: 'Median LMP (P50)', color: fossilHex, type: 'line' },
+        { label: 'Zero-price hours', color: blueHex, type: 'line' }
+    ];
+    legendItems.forEach(function(item) {
+        var el = document.createElement('div');
+        el.className = 'act3-legend-item';
+        var sw = document.createElement('span');
+        sw.className = 'act3-legend-swatch';
+        if (item.type === 'band') {
+            sw.style.height = '8px';
+            sw.style.background = hexToRgba(item.color, 0.12);
+            sw.style.border = '1px solid ' + hexToRgba(item.color, 0.3);
+        } else {
+            sw.style.background = item.color;
+        }
+        el.appendChild(sw);
+        el.appendChild(document.createTextNode(item.label));
+        legendEl.appendChild(el);
+    });
+
+    // Build chart
+    var ctx = document.getElementById('act3Chart').getContext('2d');
+    var chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [
+                // P10-P90 band (fill between P90 top and P10 bottom)
+                {
+                    label: 'P90',
+                    data: pts(TData, flatP90),
+                    borderColor: 'transparent',
+                    backgroundColor: hexToRgba(fossilHex, 0.09),
+                    borderWidth: 0,
+                    pointRadius: 0,
+                    fill: '+2', // fill to P10 dataset (index +2)
+                    tension: 0.35,
+                    order: 10,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Median LMP',
+                    data: pts(TData, flatP50),
+                    borderColor: fossilHex,
+                    backgroundColor: hexToRgba(fossilHex, 0.12),
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0.35,
+                    order: 5,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'P10',
+                    data: pts(TData, flatP10),
+                    borderColor: hexToRgba(fossilHex, 0.25),
+                    backgroundColor: 'transparent',
+                    borderWidth: 1,
+                    borderDash: [4, 3],
+                    pointRadius: 0,
+                    fill: false,
+                    tension: 0.35,
+                    order: 10,
+                    yAxisID: 'y'
+                },
+                // Zero-price hours (secondary y-axis, bar-like area)
+                {
+                    label: 'Zero-price hours',
+                    data: pts(TData, flatZero),
+                    borderColor: blueHex,
+                    backgroundColor: hexToRgba(blueHex, 0.10),
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: 'origin',
+                    tension: 0.35,
+                    order: 8,
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 1200, easing: 'easeInOutQuart' },
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(26,39,68,0.95)',
+                    titleFont: { family: "'Plus Jakarta Sans', sans-serif", weight: '600' },
+                    bodyFont: { family: "'Plus Jakarta Sans', sans-serif", size: 12 },
+                    padding: 12,
+                    cornerRadius: 8,
+                    callbacks: {
+                        title: function(items) {
+                            return items[0] ? items[0].raw.x + '% Clean Energy' : '';
+                        },
+                        label: function(item) {
+                            if (item.dataset.label === 'P90' || item.dataset.label === 'P10') return null;
+                            if (item.dataset.yAxisID === 'y1') {
+                                return item.dataset.label + ': ' + Math.round(item.raw.y).toLocaleString() + ' hrs/yr';
+                            }
+                            return item.dataset.label + ': $' + item.raw.y.toFixed(1) + '/MWh';
+                        }
+                    }
+                },
+                annotation: {
+                    annotations: {
+                        zeroLine: {
+                            type: 'line',
+                            yMin: 0, yMax: 0,
+                            borderColor: 'rgba(0,0,0,0.15)',
+                            borderWidth: 1,
+                            borderDash: [4, 4],
+                            yScaleID: 'y',
+                            display: false // shown on reality
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    min: 48,
+                    max: 97,
+                    grid: { display: false },
+                    title: {
+                        display: true,
+                        text: 'Clean Energy Share (%)',
+                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: '500' },
+                        color: '#94A3B8'
+                    },
+                    ticks: {
+                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 },
+                        color: '#94A3B8',
+                        callback: function(v) { return v + '%'; }
+                    }
+                },
+                y: {
+                    position: 'left',
+                    beginAtZero: false,
+                    grid: { color: 'rgba(0,0,0,0.04)' },
+                    title: {
+                        display: true,
+                        text: 'Wholesale LMP ($/MWh)',
+                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: '500' },
+                        color: '#94A3B8'
+                    },
+                    ticks: {
+                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 },
+                        color: '#94A3B8',
+                        callback: function(v) { return '$' + v; }
+                    }
+                },
+                y1: {
+                    position: 'right',
+                    beginAtZero: true,
+                    grid: { drawOnChartArea: false },
+                    title: {
+                        display: true,
+                        text: 'Zero-Price Hours / yr',
+                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: '500' },
+                        color: blueHex
+                    },
+                    ticks: {
+                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 },
+                        color: blueHex,
+                        callback: function(v) { return v.toLocaleString(); }
+                    }
+                }
+            }
+        }
+    });
+
+    // --- Toggle logic ---
+    var act3Toggle = document.getElementById('act3Toggle');
+    var act3LabelIll = document.getElementById('act3LabelIllusion');
+    var act3LabelReal = document.getElementById('act3LabelReality');
+    var act3IsReality = false;
+    var act3Initialized = false;
+    var insightEl = document.getElementById('act3Insight');
+    var zeroEl = document.getElementById('act3ZeroVal');
+    var revenueEl = document.getElementById('act3RevenueVal');
+    var lockinEl = document.getElementById('act3LockinVal');
+
+    // Illusion stats
+    zeroEl.textContent = baselineZero.toLocaleString();
+    zeroEl.style.color = '#0EA5E9';
+    revenueEl.textContent = 'Stable';
+    revenueEl.style.color = '#16A34A';
+    lockinEl.textContent = 'None';
+    lockinEl.style.color = '#16A34A';
+
+    function animateCount(el, from, to, prefix, suffix, duration, color) {
+        var start = performance.now();
+        el.style.color = color;
+        function tick(now) {
+            var t = Math.min((now - start) / duration, 1);
+            var ease = 1 - Math.pow(1 - t, 3);
+            var val = Math.round(from + (to - from) * ease);
+            el.textContent = prefix + val.toLocaleString() + suffix;
+            if (t < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+    }
+
+    function act3SwitchToReality() {
+        if (act3IsReality) return;
+        act3IsReality = true;
+        act3Toggle.classList.add('reality');
+        act3Toggle.setAttribute('aria-checked', 'true');
+        act3LabelIll.classList.remove('active-label');
+        act3LabelReal.classList.add('active-label');
+
+        // Update chart data to reality
+        chart.data.datasets[0].data = pts(TData, realP90);
+        chart.data.datasets[1].data = pts(TData, realP50);
+        chart.data.datasets[2].data = pts(TData, realP10);
+        chart.data.datasets[3].data = pts(TData, realZero);
+        // Show zero line annotation
+        chart.options.plugins.annotation.annotations.zeroLine.display = true;
+        chart.update('active');
+
+        // Animate stats
+        setTimeout(function() {
+            animateCount(zeroEl, baselineZero, zeroAt95, '', '', 1200, '#DC2626');
+            animateCount(revenueEl, 0, revenueDropPct, '-', '%', 1200, '#DC2626');
+        }, 300);
+        setTimeout(function() {
+            lockinEl.textContent = 'Structural';
+            lockinEl.style.color = '#DC2626';
+        }, 800);
+
+        // Show insight box
+        setTimeout(function() {
+            insightEl.classList.add('insight-visible');
+        }, 1000);
+    }
+
+    function act3SwitchToIllusion() {
+        if (!act3IsReality) return;
+        act3IsReality = false;
+        act3Toggle.classList.remove('reality');
+        act3Toggle.setAttribute('aria-checked', 'false');
+        act3LabelIll.classList.add('active-label');
+        act3LabelReal.classList.remove('active-label');
+
+        // Reset chart to flat lines
+        chart.data.datasets[0].data = pts(TData, flatP90);
+        chart.data.datasets[1].data = pts(TData, flatP50);
+        chart.data.datasets[2].data = pts(TData, flatP10);
+        chart.data.datasets[3].data = pts(TData, flatZero);
+        chart.options.plugins.annotation.annotations.zeroLine.display = false;
+        chart.update('active');
+
+        // Reset stats
+        zeroEl.textContent = baselineZero.toLocaleString();
+        zeroEl.style.color = '#0EA5E9';
+        revenueEl.textContent = 'Stable';
+        revenueEl.style.color = '#16A34A';
+        lockinEl.textContent = 'None';
+        lockinEl.style.color = '#16A34A';
+
+        insightEl.classList.remove('insight-visible');
+    }
+
+    act3Toggle.addEventListener('click', function() {
+        if (act3IsReality) act3SwitchToIllusion();
+        else act3SwitchToReality();
+    });
+    act3Toggle.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            act3Toggle.click();
+        }
+    });
+
+    // Auto-transition on scroll
+    if (typeof IntersectionObserver !== 'undefined') {
+        var obs3 = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting && !act3Initialized) {
+                    act3Initialized = true;
+                    setTimeout(function() {
+                        act3SwitchToReality();
+                    }, 800);
+                    obs3.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.25 });
+        obs3.observe(document.getElementById('act3'));
+    }
 })();
 </script>
 
