@@ -427,12 +427,34 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 .act3-explore-link:hover { gap: 10px; }
 
+.act3-bold-statement {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary, #1A2744);
+    margin: var(--space-lg) 0 var(--space-md);
+    max-width: 780px;
+}
+
 .act3-chart-wrap {
     position: relative;
 }
+.act3-charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg);
+    margin-top: var(--space-md);
+}
+.act3-panel-title {
+    font-family: var(--font-heading);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-secondary, #475569);
+    margin-bottom: var(--space-sm, 8px);
+    letter-spacing: 0.3px;
+}
 .act3-chart-container {
     position: relative;
-    min-height: 370px;
+    min-height: 340px;
     background: rgba(255,255,255,0.92);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -470,7 +492,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 .act3-stat {
     flex: 1;
-    min-width: 140px;
+    min-width: 160px;
     background: #FFFFFF;
     border: 1px solid #E5E7EB;
     border-radius: var(--radius-xl, 16px);
@@ -492,9 +514,9 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 .act3-stat-label {
     font-family: var(--font-heading);
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 600;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
     text-transform: uppercase;
     color: var(--text-muted, #94A3B8);
 }
@@ -522,6 +544,9 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 
 @media (max-width: 900px) {
+    .act3-charts-grid {
+        grid-template-columns: 1fr;
+    }
     .act3-chart-container {
         min-height: 280px;
     }
@@ -1017,20 +1042,25 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     <!-- Intro text -->
     <div class="act3-intro">
         <p class="lead-text">
-            Every megawatt of solar and wind added to the grid pushes wholesale
-            electricity prices lower. Past a tipping point, gas plants lose money
-            most hours of the year&mdash;but the grid still needs them at night.
-            They can&rsquo;t retire. They can&rsquo;t profit. They&rsquo;re trapped.
+            Adding solar and wind without considering <em>when</em> and <em>where</em>
+            the grid needs power doesn&rsquo;t just leave gaps&mdash;it creates a
+            structural dependency on the very fossil plants you&rsquo;re trying to replace.
         </p>
         <p>
-            The chart shows how wholesale prices collapse as clean energy grows.
-            In the <strong>Illusion</strong>, prices stay flat&mdash;the market
-            looks stable. Switch to <strong>Reality</strong> to see the structural
-            price erosion that locks gas plants into unprofitable operation.
+            When you procure clean energy on an annual basis without matching hourly
+            demand, you flood the grid with power it can&rsquo;t use at midday and
+            starve it during evening peaks. Wholesale prices collapse during surplus
+            hours, but gas plants still have to run when renewables can&rsquo;t.
+            You haven&rsquo;t displaced gas&mdash;you&rsquo;ve made it unprofitable
+            <em>and</em> indispensable.
         </p>
     </div>
 
-    <!-- Toggle + chart -->
+    <p class="act3-bold-statement">
+        VRE deployment in a vacuum creates structural lock-in for gas.
+    </p>
+
+    <!-- Toggle + dual charts -->
     <div class="act3-chart-wrap">
         <div class="mode-toggle-wrap">
             <span class="mode-toggle-label active-label" id="act3LabelIllusion">Illusion</span>
@@ -1039,44 +1069,58 @@ html, body { overflow-x: hidden; max-width: 100vw; }
             </div>
             <span class="mode-toggle-label" id="act3LabelReality">Reality</span>
         </div>
-        <div class="act3-chart-container">
-            <canvas id="act3Chart"></canvas>
-        </div>
-        <div class="act3-legend" id="act3Legend"></div>
 
-        <!-- Stat cards -->
+        <div class="act3-charts-grid">
+            <!-- LEFT: Duck Curve -->
+            <div class="act3-duck-panel">
+                <div class="act3-panel-title">ERCOT Net Peak Demand Day &mdash; 87% Clean Grid</div>
+                <div class="act3-chart-container">
+                    <canvas id="act3DuckChart"></canvas>
+                </div>
+                <div class="act3-legend" id="act3DuckLegend"></div>
+            </div>
+            <!-- RIGHT: LMP Collapse -->
+            <div class="act3-lmp-panel">
+                <div class="act3-panel-title">Wholesale Price Erosion &mdash; ERCOT (Energy-Only Market)</div>
+                <div class="act3-chart-container">
+                    <canvas id="act3LmpChart"></canvas>
+                </div>
+                <div class="act3-legend" id="act3LmpLegend"></div>
+            </div>
+        </div>
+
+        <!-- Stat cards — always at reality values, no toggle -->
         <div class="act3-stats">
             <div class="act3-stat">
-                <div class="act3-stat-value" id="act3ZeroVal" style="color:#0EA5E9;">—</div>
-                <div class="act3-stat-label">Zero-Price Hours / yr</div>
+                <div class="act3-stat-value" id="act3ZeroVal" style="color:#DC2626;">&mdash;</div>
+                <div class="act3-stat-label">Zero-Price Hours / yr at 95% Clean</div>
             </div>
             <div class="act3-stat">
-                <div class="act3-stat-value" id="act3RevenueVal" style="color:#6B7280;">—</div>
-                <div class="act3-stat-label">Gas Revenue Loss</div>
-            </div>
-            <div class="act3-stat">
-                <div class="act3-stat-value" id="act3LockinVal" style="color:#16A34A;">—</div>
-                <div class="act3-stat-label">Structural Lock-in</div>
+                <div class="act3-stat-value" id="act3RevenueVal" style="color:#DC2626;">&mdash;</div>
+                <div class="act3-stat-label">Gas Revenue Loss from Wholesale Market Price</div>
             </div>
         </div>
 
         <!-- Insight box (shown on reality) -->
         <div class="act3-insight" id="act3Insight">
-            At <strong>95% clean energy</strong>, gas plants lose money
-            <strong>6,350 hours per year</strong>&mdash;73% of the time.
-            But the grid still needs them for the remaining 2,410 hours.
-            They can&rsquo;t shut down without blackouts. They can&rsquo;t
-            stay open without subsidies. This is the structural trap
-            at the heart of the energy transition.
+            At <strong>95% clean energy</strong>, ERCOT gas plants see
+            <strong>zero or negative wholesale prices for over 6,000 hours per year</strong>&mdash;more
+            than 70% of the time. But the grid still needs them for evening peaks
+            and calm nights. This isn&rsquo;t a market failure&mdash;it&rsquo;s the
+            predictable consequence of deploying clean energy without matching it to
+            when and where it&rsquo;s needed. The solution isn&rsquo;t to subsidize
+            stranded gas&mdash;it&rsquo;s to procure the right clean resources
+            from the start.
         </div>
     </div>
 
     <!-- Post-visual narrative -->
     <div class="act3-postscript">
         <p>
-            The VRE-gas trap isn&rsquo;t a market failure&mdash;it&rsquo;s
-            a physics constraint. Solving it requires firm clean resources
-            that can fill the gap without the carbon.
+            Every hour of surplus solar that crashes prices to zero is an hour you
+            chose not to invest in firm clean resources that could have displaced gas
+            permanently. The VRE-gas trap isn&rsquo;t inevitable&mdash;it&rsquo;s
+            the cost of ignoring the grid&rsquo;s temporal and spatial requirements.
         </p>
         <a href="lmp_trends.html" class="act3-explore-link">
             See the full market analysis <span aria-hidden="true">&rarr;</span>
@@ -1841,30 +1885,15 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 </script>
 
 <!-- ================================================================== -->
-<!-- ACT 3 SCRIPT: The VRE-Gas Trap — LMP collapse chart                 -->
+<!-- ACT 3 SCRIPT: The VRE-Gas Trap — Dual chart (Duck Curve + LMP)      -->
 <!-- ================================================================== -->
 <script>
 (function() {
     'use strict';
 
-    // Use PJM as the primary ISO — deepest data, most dramatic narrative
-    if (typeof LMP_ALL === 'undefined' || typeof PJM_RAW === 'undefined') {
+    if (typeof LMP_ALL === 'undefined') {
         console.error('Act 3: lmp-data.js not loaded');
         return;
-    }
-
-    var D = PJM_RAW;
-    var T = D.thresholds; // 15 thresholds
-    var dataLen = D.envelope.p50.length; // 13 data points
-    var TData = T.slice(0, dataLen); // thresholds that have data
-
-    // Helper: create {x,y} points
-    function pts(xArr, yArr) {
-        var out = [];
-        for (var i = 0; i < xArr.length && i < yArr.length; i++) {
-            out.push({ x: xArr[i], y: yArr[i] });
-        }
-        return out;
     }
 
     function hexToRgba(hex, a) {
@@ -1875,38 +1904,308 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     }
 
     // Colors
+    var solarHex = (typeof RESOURCE_COLORS !== 'undefined') ? RESOURCE_COLORS.solar : '#F59E0B';
+    var windHex  = (typeof RESOURCE_COLORS !== 'undefined') ? RESOURCE_COLORS.wind  : '#22C55E';
     var fossilHex = '#6B7280';
-    var blueHex = '#0EA5E9';
-    var redHex = '#DC2626';
+    var blueHex   = '#0EA5E9';
+    var demandColor = '#1A2744';
 
-    // Compute "illusion" state: flat lines at the 50% baseline value
-    var baselineLMP = D.envelope.p50[0]; // ~$34.80
-    var baselineZero = D.regime.zeroP50[0]; // ~265 hrs
+    var fontStack = "'Plus Jakarta Sans', sans-serif";
+
+    // ==========================================
+    // DUCK CURVE — ERCOT Peak Summer Day, 87% Clean
+    // ==========================================
+    var hours = [];
+    for (var h = 0; h < 24; h++) hours.push(h);
+
+    // ERCOT summer peak demand (GW)
+    var dkDemand = [47,44,42,41,40,41,44,50,56,61,65,68,70,72,73,74,75,74,71,67,63,58,53,49];
+
+    // Solar capacity factor shape (ERCOT summer, peaks ~noon)
+    var solarCF = [0,0,0,0,0,0.02,0.12,0.32,0.55,0.75,0.89,0.96,1.0,0.97,0.89,0.75,0.55,0.30,0.08,0,0,0,0,0];
+
+    // Wind capacity factor shape (West Texas — counter-cyclical, higher at night)
+    var windCF = [0.45,0.47,0.46,0.44,0.42,0.38,0.32,0.25,0.20,0.17,0.15,0.14,0.13,0.13,0.14,0.17,0.22,0.30,0.38,0.43,0.45,0.46,0.46,0.45];
+
+    // Scale to 87% of daily demand (55% solar, 32% wind)
+    var dailyDemand = 0, solarCFSum = 0, windCFSum = 0;
+    for (var i = 0; i < 24; i++) {
+        dailyDemand += dkDemand[i];
+        solarCFSum += solarCF[i];
+        windCFSum += windCF[i];
+    }
+    var avgDemand = dailyDemand / 24;
+    var solScale = (dailyDemand * 0.55) / solarCFSum;
+    var wndScale = (dailyDemand * 0.32) / windCFSum;
+
+    // Reality: actual hourly profiles (stacked: wind bottom, solar on top)
+    var realDkWind = [], realDkSolar = [];
+    for (var i = 0; i < 24; i++) {
+        var w = Math.round(windCF[i] * wndScale * 10) / 10;
+        var s = Math.round(solarCF[i] * solScale * 10) / 10;
+        realDkWind.push(w);
+        realDkSolar.push(w + s); // stacked top
+    }
+
+    // Illusion: flat annual averages (wind + solar = 87% of avg demand)
+    var flatWind = Math.round(avgDemand * 0.32 * 10) / 10;
+    var flatSolarTop = Math.round(avgDemand * 0.87 * 10) / 10;
+    var illDkWind = hours.map(function() { return flatWind; });
+    var illDkSolar = hours.map(function() { return flatSolarTop; });
+
+    // Hour labels for x-axis
+    var hourLabels = hours.map(function(h) {
+        if (h === 0) return '12a';
+        if (h === 6) return '6a';
+        if (h === 12) return '12p';
+        if (h === 18) return '6p';
+        return '';
+    });
+
+    // Build duck chart legend
+    var duckLegendEl = document.getElementById('act3DuckLegend');
+    [{label:'Wind', color:windHex, dash:false},
+     {label:'Solar', color:solarHex, dash:false},
+     {label:'Demand', color:demandColor, dash:true}].forEach(function(item) {
+        var el = document.createElement('div');
+        el.className = 'act3-legend-item';
+        var sw = document.createElement('span');
+        sw.className = 'act3-legend-swatch';
+        if (item.dash) {
+            sw.style.background = 'transparent';
+            sw.style.borderTop = '2px dashed ' + item.color;
+            sw.style.height = '0';
+        } else {
+            sw.style.background = item.color;
+        }
+        el.appendChild(sw);
+        el.appendChild(document.createTextNode(item.label));
+        duckLegendEl.appendChild(el);
+    });
+
+    // Annotation sets for duck curve
+    var duckIllusionAnnotations = {
+        solarLabel: {
+            type: 'label', xValue: 12,
+            yValue: (flatWind + flatSolarTop) / 2,
+            content: 'Solar',
+            font: { size: 11, weight: '700', family: fontStack },
+            color: solarHex,
+            backgroundColor: 'rgba(255,255,255,0.88)',
+            padding: { top: 2, bottom: 2, left: 5, right: 5 }, borderRadius: 4
+        },
+        windLabel: {
+            type: 'label', xValue: 12,
+            yValue: flatWind / 2,
+            content: 'Wind',
+            font: { size: 11, weight: '700', family: fontStack },
+            color: windHex,
+            backgroundColor: 'rgba(255,255,255,0.88)',
+            padding: { top: 2, bottom: 2, left: 5, right: 5 }, borderRadius: 4
+        },
+        demandLabel: {
+            type: 'label', xValue: 16,
+            yValue: dkDemand[16] + 4,
+            content: 'Demand',
+            font: { size: 11, weight: '700', family: fontStack },
+            color: demandColor,
+            backgroundColor: 'rgba(255,255,255,0.88)',
+            padding: { top: 2, bottom: 2, left: 5, right: 5 }, borderRadius: 4
+        }
+    };
+
+    var duckRealityAnnotations = {
+        solarLabel: {
+            type: 'label', xValue: 11,
+            yValue: (realDkWind[11] + realDkSolar[11]) / 2,
+            content: 'Solar',
+            font: { size: 11, weight: '700', family: fontStack },
+            color: solarHex,
+            backgroundColor: 'rgba(255,255,255,0.88)',
+            padding: { top: 2, bottom: 2, left: 5, right: 5 }, borderRadius: 4
+        },
+        windLabel: {
+            type: 'label', xValue: 2,
+            yValue: realDkWind[2] * 0.55,
+            content: 'Wind',
+            font: { size: 11, weight: '700', family: fontStack },
+            color: windHex,
+            backgroundColor: 'rgba(255,255,255,0.88)',
+            padding: { top: 2, bottom: 2, left: 5, right: 5 }, borderRadius: 4
+        },
+        demandLabel: {
+            type: 'label', xValue: 16,
+            yValue: dkDemand[16] + 5,
+            content: 'Demand',
+            font: { size: 11, weight: '700', family: fontStack },
+            color: demandColor,
+            backgroundColor: 'rgba(255,255,255,0.88)',
+            padding: { top: 2, bottom: 2, left: 5, right: 5 }, borderRadius: 4
+        },
+        gasLabel: {
+            type: 'label', xValue: 20,
+            yValue: (realDkSolar[20] + dkDemand[20]) / 2,
+            content: 'Gas needed',
+            font: { size: 10, weight: '700', family: fontStack },
+            color: '#DC2626',
+            backgroundColor: 'rgba(254,226,226,0.92)',
+            padding: { top: 3, bottom: 3, left: 6, right: 6 }, borderRadius: 4
+        },
+        curtailLabel: {
+            type: 'label', xValue: 13,
+            yValue: dkDemand[13] + (realDkSolar[13] - dkDemand[13]) * 0.55,
+            content: 'Curtailed',
+            font: { size: 10, weight: '700', family: fontStack },
+            color: '#94A3B8',
+            backgroundColor: 'rgba(241,245,249,0.92)',
+            padding: { top: 3, bottom: 3, left: 6, right: 6 }, borderRadius: 4
+        }
+    };
+
+    // Duck curve chart
+    var duckCtx = document.getElementById('act3DuckChart').getContext('2d');
+    var duckChart = new Chart(duckCtx, {
+        type: 'line',
+        data: {
+            labels: hours,
+            datasets: [
+                {
+                    label: 'Wind',
+                    data: illDkWind.slice(),
+                    fill: 'origin',
+                    backgroundColor: hexToRgba(windHex, 0.18),
+                    borderColor: windHex,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.35,
+                    order: 3
+                },
+                {
+                    label: 'Solar',
+                    data: illDkSolar.slice(),
+                    fill: '-1',
+                    backgroundColor: hexToRgba(solarHex, 0.18),
+                    borderColor: solarHex,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.35,
+                    order: 2
+                },
+                {
+                    label: 'Demand',
+                    data: dkDemand.slice(),
+                    fill: false,
+                    borderColor: demandColor,
+                    borderWidth: 2.5,
+                    borderDash: [6, 4],
+                    pointRadius: 0,
+                    tension: 0.35,
+                    order: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 1200, easing: 'easeInOutQuart' },
+            interaction: { mode: 'index', intersect: false },
+            elements: { point: { radius: 0, hoverRadius: 0 } },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(26,39,68,0.95)',
+                    titleFont: { family: fontStack, weight: '600' },
+                    bodyFont: { family: fontStack, size: 12 },
+                    padding: 12, cornerRadius: 8,
+                    callbacks: {
+                        title: function(items) {
+                            var h = items[0] ? items[0].dataIndex : 0;
+                            var ampm = h < 12 ? 'am' : 'pm';
+                            var hr = h === 0 ? 12 : (h > 12 ? h - 12 : h);
+                            return hr + ampm;
+                        },
+                        label: function(item) {
+                            return item.dataset.label + ': ' + item.raw.toFixed(1) + ' GW';
+                        }
+                    }
+                },
+                annotation: { annotations: duckIllusionAnnotations }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: {
+                        callback: function(val, idx) { return hourLabels[idx]; },
+                        font: { family: fontStack, size: 10 },
+                        color: '#94A3B8',
+                        maxRotation: 0
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    max: 125,
+                    grid: { color: 'rgba(0,0,0,0.04)' },
+                    title: {
+                        display: true, text: 'Power (GW)',
+                        font: { family: fontStack, size: 11, weight: '500' },
+                        color: '#94A3B8'
+                    },
+                    ticks: {
+                        font: { family: fontStack, size: 11 },
+                        color: '#94A3B8'
+                    }
+                }
+            }
+        }
+    });
+
+    // ==========================================
+    // LMP CHART — ERCOT wholesale price erosion
+    // ==========================================
+    var E = LMP_ALL.ERCOT;
+    var T = E.thresholds;
+    var dataLen = E.envelope.p50.length;
+    var TData = T.slice(0, dataLen);
+
+    function pts(xArr, yArr) {
+        var out = [];
+        for (var i = 0; i < xArr.length && i < yArr.length; i++) {
+            out.push({ x: xArr[i], y: yArr[i] });
+        }
+        return out;
+    }
+
+    var baselineLMP = E.envelope.p50[0];
+    var baselineZero = E.regime.zeroP50[0];
+
+    // Illusion: flat at baseline
     var flatP50 = TData.map(function() { return baselineLMP; });
-    var flatP10 = TData.map(function() { return D.envelope.p10[0]; });
-    var flatP90 = TData.map(function() { return D.envelope.p90[0]; });
+    var flatP10 = TData.map(function() { return E.envelope.p10[0]; });
+    var flatP90 = TData.map(function() { return E.envelope.p90[0]; });
     var flatZero = TData.map(function() { return baselineZero; });
 
-    // Reality data
-    var realP50 = D.envelope.p50.slice(0, dataLen);
-    var realP10 = D.envelope.p10.slice(0, dataLen);
-    var realP90 = D.envelope.p90.slice(0, dataLen);
-    var realZero = D.regime.zeroP50.slice(0, dataLen);
+    // Reality
+    var realP50 = E.envelope.p50.slice(0, dataLen);
+    var realP10 = E.envelope.p10.slice(0, dataLen);
+    var realP90 = E.envelope.p90.slice(0, dataLen);
+    var realZero = E.regime.zeroP50.slice(0, dataLen);
 
-    // Stats at 95% clean (index 11)
-    var idx95 = 11; // threshold index for 95%
-    var zeroAt95 = realZero[idx95]; // ~6350
-    var lmpAt95 = realP50[idx95]; // ~$10.83
+    // Stats at 95% (index 11) — set immediately, tiles don't toggle
+    var idx95 = 11;
+    var zeroAt95 = realZero[idx95];
+    var lmpAt95 = realP50[idx95];
     var revenueDropPct = Math.round((1 - lmpAt95 / baselineLMP) * 100);
 
-    // Build legend
-    var legendEl = document.getElementById('act3Legend');
-    var legendItems = [
-        { label: 'P10–P90 range', color: fossilHex, type: 'band' },
-        { label: 'Median LMP (P50)', color: fossilHex, type: 'line' },
+    document.getElementById('act3ZeroVal').textContent = zeroAt95.toLocaleString();
+    document.getElementById('act3RevenueVal').textContent = '-' + revenueDropPct + '%';
+
+    // Build LMP legend
+    var lmpLegendEl = document.getElementById('act3LmpLegend');
+    [
+        { label: 'P10\u2013P90 range', color: fossilHex, type: 'band' },
+        { label: 'Median LMP', color: fossilHex, type: 'line' },
         { label: 'Zero-price hours', color: blueHex, type: 'line' }
-    ];
-    legendItems.forEach(function(item) {
+    ].forEach(function(item) {
         var el = document.createElement('div');
         el.className = 'act3-legend-item';
         var sw = document.createElement('span');
@@ -1920,16 +2219,39 @@ html, body { overflow-x: hidden; max-width: 100vw; }
         }
         el.appendChild(sw);
         el.appendChild(document.createTextNode(item.label));
-        legendEl.appendChild(el);
+        lmpLegendEl.appendChild(el);
     });
 
-    // Build chart
-    var ctx = document.getElementById('act3Chart').getContext('2d');
-    var chart = new Chart(ctx, {
+    // LMP annotation labels for reality mode
+    var lmpRealityAnnotations = {
+        medianLabel: {
+            type: 'label',
+            xScaleID: 'x', yScaleID: 'y',
+            xValue: 73, yValue: realP50[4] + 3,
+            content: 'Median LMP',
+            font: { size: 10, weight: '700', family: fontStack },
+            color: fossilHex,
+            backgroundColor: 'rgba(255,255,255,0.9)',
+            padding: { top: 2, bottom: 2, left: 5, right: 5 }, borderRadius: 4
+        },
+        zeroLabel: {
+            type: 'label',
+            xScaleID: 'x', yScaleID: 'y1',
+            xValue: 83, yValue: realZero[6] + 350,
+            content: 'Zero-price hours',
+            font: { size: 10, weight: '700', family: fontStack },
+            color: blueHex,
+            backgroundColor: 'rgba(255,255,255,0.9)',
+            padding: { top: 2, bottom: 2, left: 5, right: 5 }, borderRadius: 4
+        }
+    };
+
+    // LMP Chart
+    var lmpCtx = document.getElementById('act3LmpChart').getContext('2d');
+    var lmpChart = new Chart(lmpCtx, {
         type: 'line',
         data: {
             datasets: [
-                // P10-P90 band (fill between P90 top and P10 bottom)
                 {
                     label: 'P90',
                     data: pts(TData, flatP90),
@@ -1937,7 +2259,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     backgroundColor: hexToRgba(fossilHex, 0.09),
                     borderWidth: 0,
                     pointRadius: 0,
-                    fill: '+2', // fill to P10 dataset (index +2)
+                    fill: '+2',
                     tension: 0.35,
                     order: 10,
                     yAxisID: 'y'
@@ -1967,7 +2289,6 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     order: 10,
                     yAxisID: 'y'
                 },
-                // Zero-price hours (secondary y-axis, bar-like area)
                 {
                     label: 'Zero-price hours',
                     data: pts(TData, flatZero),
@@ -1992,10 +2313,9 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                 legend: { display: false },
                 tooltip: {
                     backgroundColor: 'rgba(26,39,68,0.95)',
-                    titleFont: { family: "'Plus Jakarta Sans', sans-serif", weight: '600' },
-                    bodyFont: { family: "'Plus Jakarta Sans', sans-serif", size: 12 },
-                    padding: 12,
-                    cornerRadius: 8,
+                    titleFont: { family: fontStack, weight: '600' },
+                    bodyFont: { family: fontStack, size: 12 },
+                    padding: 12, cornerRadius: 8,
                     callbacks: {
                         title: function(items) {
                             return items[0] ? items[0].raw.x + '% Clean Energy' : '';
@@ -2009,34 +2329,20 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                         }
                     }
                 },
-                annotation: {
-                    annotations: {
-                        zeroLine: {
-                            type: 'line',
-                            yMin: 0, yMax: 0,
-                            borderColor: 'rgba(0,0,0,0.15)',
-                            borderWidth: 1,
-                            borderDash: [4, 4],
-                            yScaleID: 'y',
-                            display: false // shown on reality
-                        }
-                    }
-                }
+                annotation: { annotations: {} }
             },
             scales: {
                 x: {
                     type: 'linear',
-                    min: 48,
-                    max: 97,
+                    min: 48, max: 97,
                     grid: { display: false },
                     title: {
-                        display: true,
-                        text: 'Clean Energy Share (%)',
-                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: '500' },
+                        display: true, text: 'Clean Energy Share (%)',
+                        font: { family: fontStack, size: 11, weight: '500' },
                         color: '#94A3B8'
                     },
                     ticks: {
-                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 },
+                        font: { family: fontStack, size: 11 },
                         color: '#94A3B8',
                         callback: function(v) { return v + '%'; }
                     }
@@ -2046,13 +2352,12 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     beginAtZero: false,
                     grid: { color: 'rgba(0,0,0,0.04)' },
                     title: {
-                        display: true,
-                        text: 'Wholesale LMP ($/MWh)',
-                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: '500' },
+                        display: true, text: 'Wholesale LMP ($/MWh)',
+                        font: { family: fontStack, size: 11, weight: '500' },
                         color: '#94A3B8'
                     },
                     ticks: {
-                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 },
+                        font: { family: fontStack, size: 11 },
                         color: '#94A3B8',
                         callback: function(v) { return '$' + v; }
                     }
@@ -2062,13 +2367,12 @@ html, body { overflow-x: hidden; max-width: 100vw; }
                     beginAtZero: true,
                     grid: { drawOnChartArea: false },
                     title: {
-                        display: true,
-                        text: 'Zero-Price Hours / yr',
-                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 11, weight: '500' },
+                        display: true, text: 'Zero-Price Hours / yr',
+                        font: { family: fontStack, size: 11, weight: '500' },
                         color: blueHex
                     },
                     ticks: {
-                        font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 },
+                        font: { family: fontStack, size: 11 },
                         color: blueHex,
                         callback: function(v) { return v.toLocaleString(); }
                     }
@@ -2077,37 +2381,16 @@ html, body { overflow-x: hidden; max-width: 100vw; }
         }
     });
 
-    // --- Toggle logic ---
+    // ==========================================
+    // TOGGLE LOGIC — only charts animate
+    // Stats stay fixed at reality values
+    // ==========================================
     var act3Toggle = document.getElementById('act3Toggle');
     var act3LabelIll = document.getElementById('act3LabelIllusion');
     var act3LabelReal = document.getElementById('act3LabelReality');
     var act3IsReality = false;
     var act3Initialized = false;
     var insightEl = document.getElementById('act3Insight');
-    var zeroEl = document.getElementById('act3ZeroVal');
-    var revenueEl = document.getElementById('act3RevenueVal');
-    var lockinEl = document.getElementById('act3LockinVal');
-
-    // Illusion stats
-    zeroEl.textContent = baselineZero.toLocaleString();
-    zeroEl.style.color = '#0EA5E9';
-    revenueEl.textContent = 'Stable';
-    revenueEl.style.color = '#16A34A';
-    lockinEl.textContent = 'None';
-    lockinEl.style.color = '#16A34A';
-
-    function animateCount(el, from, to, prefix, suffix, duration, color) {
-        var start = performance.now();
-        el.style.color = color;
-        function tick(now) {
-            var t = Math.min((now - start) / duration, 1);
-            var ease = 1 - Math.pow(1 - t, 3);
-            var val = Math.round(from + (to - from) * ease);
-            el.textContent = prefix + val.toLocaleString() + suffix;
-            if (t < 1) requestAnimationFrame(tick);
-        }
-        requestAnimationFrame(tick);
-    }
 
     function act3SwitchToReality() {
         if (act3IsReality) return;
@@ -2117,26 +2400,21 @@ html, body { overflow-x: hidden; max-width: 100vw; }
         act3LabelIll.classList.remove('active-label');
         act3LabelReal.classList.add('active-label');
 
-        // Update chart data to reality
-        chart.data.datasets[0].data = pts(TData, realP90);
-        chart.data.datasets[1].data = pts(TData, realP50);
-        chart.data.datasets[2].data = pts(TData, realP10);
-        chart.data.datasets[3].data = pts(TData, realZero);
-        // Show zero line annotation
-        chart.options.plugins.annotation.annotations.zeroLine.display = true;
-        chart.update('active');
+        // Duck curve → reality shapes
+        duckChart.data.datasets[0].data = realDkWind.slice();
+        duckChart.data.datasets[1].data = realDkSolar.slice();
+        duckChart.options.plugins.annotation.annotations = duckRealityAnnotations;
+        duckChart.update('active');
 
-        // Animate stats
-        setTimeout(function() {
-            animateCount(zeroEl, baselineZero, zeroAt95, '', '', 1200, '#DC2626');
-            animateCount(revenueEl, 0, revenueDropPct, '-', '%', 1200, '#DC2626');
-        }, 300);
-        setTimeout(function() {
-            lockinEl.textContent = 'Structural';
-            lockinEl.style.color = '#DC2626';
-        }, 800);
+        // LMP → reality curves
+        lmpChart.data.datasets[0].data = pts(TData, realP90);
+        lmpChart.data.datasets[1].data = pts(TData, realP50);
+        lmpChart.data.datasets[2].data = pts(TData, realP10);
+        lmpChart.data.datasets[3].data = pts(TData, realZero);
+        lmpChart.options.plugins.annotation.annotations = lmpRealityAnnotations;
+        lmpChart.update('active');
 
-        // Show insight box
+        // Show insight
         setTimeout(function() {
             insightEl.classList.add('insight-visible');
         }, 1000);
@@ -2150,21 +2428,19 @@ html, body { overflow-x: hidden; max-width: 100vw; }
         act3LabelIll.classList.add('active-label');
         act3LabelReal.classList.remove('active-label');
 
-        // Reset chart to flat lines
-        chart.data.datasets[0].data = pts(TData, flatP90);
-        chart.data.datasets[1].data = pts(TData, flatP50);
-        chart.data.datasets[2].data = pts(TData, flatP10);
-        chart.data.datasets[3].data = pts(TData, flatZero);
-        chart.options.plugins.annotation.annotations.zeroLine.display = false;
-        chart.update('active');
+        // Duck curve → flat illusion
+        duckChart.data.datasets[0].data = illDkWind.slice();
+        duckChart.data.datasets[1].data = illDkSolar.slice();
+        duckChart.options.plugins.annotation.annotations = duckIllusionAnnotations;
+        duckChart.update('active');
 
-        // Reset stats
-        zeroEl.textContent = baselineZero.toLocaleString();
-        zeroEl.style.color = '#0EA5E9';
-        revenueEl.textContent = 'Stable';
-        revenueEl.style.color = '#16A34A';
-        lockinEl.textContent = 'None';
-        lockinEl.style.color = '#16A34A';
+        // LMP → flat illusion
+        lmpChart.data.datasets[0].data = pts(TData, flatP90);
+        lmpChart.data.datasets[1].data = pts(TData, flatP50);
+        lmpChart.data.datasets[2].data = pts(TData, flatP10);
+        lmpChart.data.datasets[3].data = pts(TData, flatZero);
+        lmpChart.options.plugins.annotation.annotations = {};
+        lmpChart.update('active');
 
         insightEl.classList.remove('insight-visible');
     }
