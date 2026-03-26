@@ -552,7 +552,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     }
 }
 
-/* === Act 4: The Stranded Asset Cliff === */
+/* === Act 4: The Stranded Asset Cliff — Pathway Timeline === */
 .act4-intro,
 .act4-postscript {
     max-width: 780px;
@@ -587,13 +587,14 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 .act4-explore-link:hover { gap: 10px; }
 
-.act4-compare-grid {
+/* Pathway columns */
+.act4-pathway-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: var(--space-lg, 24px);
-    margin-top: var(--space-md, 16px);
+    gap: var(--space-xl, 32px);
+    margin-top: var(--space-lg, 24px);
 }
-.act4-panel {
+.act4-pathway-col {
     background: rgba(255,255,255,0.92);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -604,62 +605,176 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     transform: translateY(20px);
     transition: opacity 0.6s ease, transform 0.6s ease;
 }
-.act4-panel.panel-visible {
+.act4-pathway-col.col-visible {
     opacity: 1;
     transform: translateY(0);
 }
-.act4-panel.panel-right {
-    transition-delay: 0.35s;
+.act4-pathway-col.col-right {
+    transition-delay: 0.3s;
 }
-.act4-panel-header {
+.act4-col-header {
     font-family: var(--font-heading);
     font-size: 0.82rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
     display: flex;
     align-items: center;
     gap: 8px;
 }
-.act4-panel-header .hdr-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
+.act4-col-header .hdr-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
 }
-.act4-panel-sub {
+.act4-col-sub {
     font-family: var(--font-body);
     font-size: 0.78rem;
     color: var(--text-muted, #94A3B8);
-    margin-bottom: 12px;
-}
-.act4-chart-container {
-    position: relative;
-    min-height: 280px;
+    margin-bottom: 14px;
 }
 
-.act4-tiles {
-    display: flex;
-    gap: var(--space-sm, 8px);
-    margin-top: 12px;
+/* Milestone rows */
+.act4-milestone-row {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+    opacity: 0;
+    transform: translateX(-8px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
 }
-.act4-tile {
-    flex: 1;
+.act4-milestone-row.row-visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+.act4-milestone-row:last-child {
+    border-bottom: none;
+}
+.act4-milestone-row.row-start {
+    border-bottom: 2px solid rgba(0,0,0,0.08);
+    padding-bottom: 8px;
+    margin-bottom: 2px;
+}
+
+/* Left metrics column */
+.act4-row-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding-right: 4px;
+}
+.act4-row-year {
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-primary, #1A2744);
+}
+.act4-row-target {
+    font-family: var(--font-data);
+    font-size: 0.85rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+.act4-row-metric {
+    font-family: var(--font-data);
+    font-size: 0.68rem;
+    color: var(--text-muted, #94A3B8);
+    white-space: nowrap;
+}
+.act4-row-metric strong {
+    font-weight: 700;
+    color: var(--text-secondary, #475569);
+}
+.act4-row-metric.metric-warn strong {
+    color: #DC2626;
+}
+.act4-row-metric.metric-good strong {
+    color: #16A34A;
+}
+
+/* Stacked bar */
+.act4-bar-wrap {
+    display: flex;
+    height: 28px;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+.act4-bar-seg {
+    height: 100%;
+    transition: width 0.8s ease;
+    position: relative;
+    min-width: 0;
+}
+.act4-bar-seg[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 110%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(26,39,68,0.92);
+    color: #fff;
+    font-family: var(--font-data);
+    font-size: 0.68rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* Cumulative summary stats */
+.act4-summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-lg, 24px);
+    margin-top: var(--space-xl, 32px);
+}
+.act4-summary-card {
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-radius: var(--radius-xl, 16px);
+    padding: 20px 16px;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.6s, transform 0.6s;
+}
+.act4-summary-card.card-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.act4-summary-card h4 {
+    font-family: var(--font-heading);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 12px;
+}
+.act4-summary-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+.act4-summary-stat {
     text-align: center;
     padding: 10px 6px;
     background: var(--bg-page, #F8FAFC);
     border-radius: var(--radius-md, 8px);
 }
-.act4-tile-value {
+.act4-summary-stat-value {
     font-family: var(--font-data);
-    font-size: 1.3rem;
+    font-size: 1.15rem;
     font-weight: 800;
     line-height: 1.1;
 }
-.act4-tile-label {
+.act4-summary-stat-label {
     font-family: var(--font-heading);
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     font-weight: 600;
     letter-spacing: 0.3px;
     text-transform: uppercase;
@@ -667,26 +782,36 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     margin-top: 2px;
 }
 
-.act4-dac-label {
-    margin-top: 10px;
-    padding: 8px 12px;
-    border-radius: var(--radius-md, 8px);
-    font-family: var(--font-data);
-    font-size: 0.78rem;
-    font-weight: 600;
-    text-align: center;
+/* LCOE trajectory chart */
+.act4-lcoe-wrap {
+    margin-top: var(--space-xl, 32px);
+    max-width: 780px;
 }
-.act4-dac-label.below-dac {
-    background: rgba(22,163,106,0.08);
-    color: #16A34A;
-    border: 1px solid rgba(22,163,106,0.2);
+.act4-lcoe-title {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary, #1A2744);
+    margin-bottom: 6px;
 }
-.act4-dac-label.above-dac {
-    background: rgba(239,68,68,0.08);
-    color: #DC2626;
-    border: 1px solid rgba(239,68,68,0.2);
+.act4-lcoe-sub {
+    font-size: 0.92rem;
+    line-height: 1.6;
+    color: var(--text-secondary, #475569);
+    margin-bottom: var(--space-md, 16px);
+}
+.act4-lcoe-chart-container {
+    position: relative;
+    min-height: 300px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(221,208,192,0.5);
+    border-radius: var(--radius-xl, 16px);
+    padding: 20px 16px;
 }
 
+/* Legend */
 .act4-legend {
     display: flex;
     gap: var(--space-md);
@@ -695,64 +820,6 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     padding: 0 4px;
     justify-content: center;
 }
-/* Capex comparison chart */
-.act4-capex-wrap {
-    margin-top: var(--space-xl, 32px);
-    max-width: 780px;
-}
-.act4-capex-title {
-    font-family: var(--font-heading);
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--text-primary, #1A2744);
-    margin-bottom: 6px;
-}
-.act4-capex-sub {
-    font-size: 0.92rem;
-    line-height: 1.6;
-    color: var(--text-secondary, #475569);
-    margin-bottom: var(--space-md, 16px);
-}
-.act4-capex-chart-container {
-    position: relative;
-    min-height: 340px;
-    background: rgba(255,255,255,0.92);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(221,208,192,0.5);
-    border-radius: var(--radius-xl, 16px);
-    padding: 20px 16px;
-}
-.act4-capex-stats {
-    display: flex;
-    gap: var(--space-md, 16px);
-    margin-top: 12px;
-    flex-wrap: wrap;
-}
-.act4-capex-stat {
-    flex: 1;
-    min-width: 140px;
-    text-align: center;
-    padding: 12px 8px;
-    background: var(--bg-page, #F8FAFC);
-    border-radius: var(--radius-md, 8px);
-}
-.act4-capex-stat-value {
-    font-family: var(--font-data);
-    font-size: 1.4rem;
-    font-weight: 800;
-    line-height: 1.1;
-}
-.act4-capex-stat-label {
-    font-family: var(--font-heading);
-    font-size: 0.65rem;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-    text-transform: uppercase;
-    color: var(--text-muted, #94A3B8);
-    margin-top: 3px;
-}
-
 .act4-legend-item {
     display: flex;
     align-items: center;
@@ -768,6 +835,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     flex-shrink: 0;
 }
 
+/* Insight box */
 .act4-insight {
     margin-top: var(--space-lg);
     padding: 16px 20px;
@@ -791,20 +859,29 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 
 @media (max-width: 900px) {
-    .act4-compare-grid {
+    .act4-pathway-grid,
+    .act4-summary-grid {
         grid-template-columns: 1fr;
     }
-    .act4-chart-container {
-        min-height: 240px;
-    }
-    .act4-panel.panel-right {
+    .act4-pathway-col.col-right {
         transition-delay: 0.15s;
     }
-    .act4-capex-chart-container {
-        min-height: 280px;
+    .act4-milestone-row {
+        grid-template-columns: 100px 1fr;
     }
-    .act4-capex-stats {
-        flex-direction: column;
+    .act4-bar-wrap {
+        height: 24px;
+    }
+    .act4-lcoe-chart-container {
+        min-height: 250px;
+    }
+}
+@media (max-width: 480px) {
+    .act4-milestone-row {
+        grid-template-columns: 80px 1fr;
+    }
+    .act4-row-metric {
+        font-size: 0.62rem;
     }
 }
 
@@ -1512,122 +1589,98 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     <!-- Intro text -->
     <div class="act4-intro">
         <p class="lead-text">
-            PJM&rsquo;s grid starts at 38% clean. Same goal for both strategies:
-            get the grid to exactly 95% clean energy. Same hourly matching standard.
-            The only difference is <em>how</em> the resources are selected.
+            Two strategies, same destination: PJM&rsquo;s grid from 38% clean to 95%.
+            The difference is the journey&mdash;what gets built, what gets stranded,
+            and what it costs everyone in the end.
         </p>
         <p>
-            The <strong>MAC queue</strong> deploys cheapest resources first&mdash;mostly
-            wind and solar. It gets there but leaves the gas fleet stranded on the system.
-            The <strong>hourly matching</strong> strategy co-optimizes firm clean, storage,
-            and VRE to cover every hour. Same 95% grid. Radically different capital
-            infrastructure&mdash;and radically different futures for gas.
+            Strategy 1B deploys the cheapest resources first. Solar and wind saturate the easy hours,
+            but scarcity hours still need gas. IPPs respond to that signal by building CCGT capacity
+            that&rsquo;s needed at 60% clean but stranded by 90%. That locked-in gas capex becomes
+            a political anchor&mdash;an industrial complex that will fight to protect its investments.
+        </p>
+        <p>
+            Strategy 2C co-optimizes hourly matching from day one. Clean firm and storage deploy early,
+            driving Wright&rsquo;s Law learning curves that make each subsequent GW cheaper.
+            Gas retires steadily. No stranded assets. No lock-in. The transition costs more upfront
+            for buyers&mdash;but costs less for everyone.
         </p>
     </div>
 
-    <!-- Side-by-side strategy comparison -->
-    <div class="act4-compare-grid">
-        <!-- Left: Strategy 1B (MAC Queue) -->
-        <div class="act4-panel" id="act4PanelLeft">
-            <div class="act4-panel-header">
+    <!-- Pathway timeline: side-by-side deployment -->
+    <div class="act4-pathway-grid">
+        <!-- Left: Strategy 1B -->
+        <div class="act4-pathway-col" id="act4Col1B">
+            <div class="act4-col-header">
                 <span class="hdr-dot" style="background: var(--fossil-gas, #6B7280);"></span>
-                <span style="color: var(--fossil-gas, #6B7280);">Strategy 1B &mdash; MAC Queue</span>
+                <span style="color: var(--fossil-gas, #6B7280);">Strategy 1B &mdash; Annual Matching</span>
             </div>
-            <div class="act4-panel-sub" id="act4Sub1B">Cheapest resources first. Grid → 95% clean.</div>
-            <div class="act4-chart-container">
-                <canvas id="act4ChartLeft"></canvas>
-            </div>
-            <div class="act4-tiles">
-                <div class="act4-tile">
-                    <div class="act4-tile-value" id="act4Grid1B" style="color: var(--fossil-gas, #6B7280);">&mdash;</div>
-                    <div class="act4-tile-label">Grid Clean %</div>
-                </div>
-                <div class="act4-tile">
-                    <div class="act4-tile-value" id="act4Gas1B" style="color: var(--fossil-gas, #6B7280);">&mdash;</div>
-                    <div class="act4-tile-label">Gas Remaining</div>
-                </div>
-                <div class="act4-tile">
-                    <div class="act4-tile-value" id="act4Curt1B" style="color: var(--storage, #EF4444);">&mdash;</div>
-                    <div class="act4-tile-label">Curtailed</div>
-                </div>
-                <div class="act4-tile">
-                    <div class="act4-tile-value" id="act4Tc1B" style="color: var(--text-primary, #1A2744);">&mdash;</div>
-                    <div class="act4-tile-label">System Cost</div>
-                </div>
-            </div>
-            <div class="act4-dac-label below-dac" id="act4Dac1B"></div>
+            <div class="act4-col-sub">Cheapest first. Externalizes gas buildout for resource adequacy.</div>
+            <div id="act4Rows1B"></div>
         </div>
-
-        <!-- Right: Strategy 2C (Hourly Matching) -->
-        <div class="act4-panel panel-right" id="act4PanelRight">
-            <div class="act4-panel-header">
+        <!-- Right: Strategy 2C -->
+        <div class="act4-pathway-col col-right" id="act4Col2C">
+            <div class="act4-col-header">
                 <span class="hdr-dot" style="background: var(--clean-firm, #6366F1);"></span>
                 <span style="color: var(--clean-firm, #6366F1);">Strategy 2C &mdash; Hourly Matching</span>
             </div>
-            <div class="act4-panel-sub" id="act4Sub2C">Co-optimized portfolio. Grid → 95% clean.</div>
-            <div class="act4-chart-container">
-                <canvas id="act4ChartRight"></canvas>
-            </div>
-            <div class="act4-tiles">
-                <div class="act4-tile">
-                    <div class="act4-tile-value" id="act4Grid2C" style="color: var(--clean-firm, #6366F1);">&mdash;</div>
-                    <div class="act4-tile-label">Grid Clean %</div>
-                </div>
-                <div class="act4-tile">
-                    <div class="act4-tile-value" id="act4Gas2C" style="color: var(--clean-firm, #6366F1);">&mdash;</div>
-                    <div class="act4-tile-label">Gas Remaining</div>
-                </div>
-                <div class="act4-tile">
-                    <div class="act4-tile-value" id="act4Curt2C" style="color: var(--hydro, #0EA5E9);">&mdash;</div>
-                    <div class="act4-tile-label">Curtailed</div>
-                </div>
-                <div class="act4-tile">
-                    <div class="act4-tile-value" id="act4Tc2C" style="color: var(--text-primary, #1A2744);">&mdash;</div>
-                    <div class="act4-tile-label">System Cost</div>
-                </div>
-            </div>
-            <div class="act4-dac-label above-dac" id="act4Dac2C"></div>
+            <div class="act4-col-sub">Co-optimized portfolio. Builds clean firm early, drives learning curves.</div>
+            <div id="act4Rows2C"></div>
         </div>
     </div>
 
     <!-- Shared legend -->
     <div class="act4-legend" id="act4Legend"></div>
 
-    <!-- Cumulative Capex comparison chart -->
-    <div class="act4-capex-wrap">
-        <h3 class="act4-capex-title">Cumulative Capital Investment Through 2050</h3>
-        <p class="act4-capex-sub">
-            Total overnight capital expenditure by technology. Strategy 2C invests heavily in
-            firm clean resources upfront&mdash;but eliminates gas dependency entirely.
-            Strategy 1B&rsquo;s cheap VRE keeps the gas fleet running (and stranded).
+    <!-- Clean Firm LCOE trajectory -->
+    <div class="act4-lcoe-wrap">
+        <h3 class="act4-lcoe-title">Clean Firm LCOE: Endogenous Learning Curves</h3>
+        <p class="act4-lcoe-sub">
+            Strategy 2C&rsquo;s early firm clean deployment drives Wright&rsquo;s Law cost reductions.
+            By 2040, cumulative build crosses the first doubling threshold and LCOE drops toward NOAK.
+            Strategy 1B barely moves the needle&mdash;firm clean stays at FOAK prices because
+            almost none gets built.
         </p>
-        <div class="act4-capex-chart-container">
-            <canvas id="act4CapexChart"></canvas>
+        <div class="act4-lcoe-chart-container">
+            <canvas id="act4LcoeChart"></canvas>
         </div>
-        <div class="act4-capex-stats" id="act4CapexStats"></div>
+    </div>
+
+    <!-- Cumulative system cost summary -->
+    <div class="act4-summary-grid" id="act4SummaryGrid">
+        <div class="act4-summary-card" id="act4Summary1B">
+            <h4 style="color: var(--fossil-gas, #6B7280);">Strategy 1B &mdash; Total System Cost</h4>
+            <div class="act4-summary-stats" id="act4SummaryStats1B"></div>
+        </div>
+        <div class="act4-summary-card" id="act4Summary2C">
+            <h4 style="color: var(--clean-firm, #6366F1);">Strategy 2C &mdash; Total System Cost</h4>
+            <div class="act4-summary-stats" id="act4SummaryStats2C"></div>
+        </div>
     </div>
 
     <!-- Insight box -->
     <div class="act4-insight" id="act4Insight">
-        <strong>The cheapest path leaves the gas fleet stranded&mdash;but not retired.</strong>
-        Strategy 1B builds cheap VRE but can&rsquo;t retire gas plants. They&rsquo;re
-        needed for the hours wind and solar can&rsquo;t cover. IPPs who built those plants
-        will fight to protect them. Strategy 2C invests heavily in firm clean resources
-        upfront&mdash;nuclear, CCS, long-duration storage&mdash;eliminating gas dependency
-        entirely. The capital investment is larger, but the stranded asset risk is zero.
-        That $200B+ in clean firm is the price of actually finishing the transition.
+        <strong>Cheap for the buyer ≠ cheap for the system.</strong>
+        Strategy 1B reduces corporate emissions on paper at $12&ndash;22/MWh&mdash;by externalizing the cost
+        of gas buildout needed for resource adequacy. IPPs build gas to cover the scarcity hours VRE can&rsquo;t.
+        That gas capex gets stranded as clean targets tighten, but the capital is already spent, the plants
+        are already built, and the political constituency to protect them is already organized.
+        The result: a climate transition that&rsquo;s more expensive for everyone, rate increases
+        that erode public support, and an industrial complex locked into defending fossil assets.
+        Strategy 2C pays more upfront but builds the infrastructure that actually finishes the job.
     </div>
 
     <!-- Post-visual narrative -->
     <div class="act4-postscript">
         <p>
-            The cliff isn&rsquo;t a failure of ambition&mdash;it&rsquo;s what happens
-            when you optimize for cost alone. Cheap renewables saturate the easy hours
-            and strand the gas fleet in the hard ones. The capital invested in new gas
-            during the &ldquo;bridge fuel&rdquo; era becomes a political anchor&mdash;IPPs
-            will defend those assets for decades. The only way to avoid that trap is to
-            invest in firm clean tech upfront, accepting higher capital costs today
-            to drive learning curves and eliminate stranded asset lock-in.
+            This isn&rsquo;t about ambition&mdash;it&rsquo;s about sequencing.
+            Building VRE without firm clean for the hard hours forces gas buildout that
+            becomes unnecessary at high clean targets. The capital is spent. The lobbying
+            apparatus is built. The rates are higher. And the people who pay those rates
+            see &ldquo;more renewables&rdquo; and &ldquo;higher bills&rdquo; and draw
+            the obvious conclusion. Strategy 2C avoids the trap by investing in clean firm
+            early&mdash;when it&rsquo;s expensive but catalytic&mdash;so that by the time
+            the grid needs it most, learning curves have made it affordable.
         </p>
         <a href="abatement_dashboard.html" class="act4-explore-link">
             Explore regional abatement curves <span aria-hidden="true">&rarr;</span>
