@@ -143,12 +143,15 @@ body {
 
 .source-note {
   font-size: 8pt;
-  color: var(--ceg-gray);
+  color: #000000;
   margin-top: auto;
   padding-top: 0.1in;
   border-top: 1px solid #F0F3F7;
   font-style: italic;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
+.source-note a { color: inherit; text-decoration: underline; }
 
 /* ─── Layout Helpers ─── */
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4in; height: 100%; }
@@ -181,7 +184,7 @@ body {
 }
 .kpi-card .kpi-label {
   font-size: 9pt;
-  color: var(--text-dim);
+  color: #000000;
   margin-top: 2px;
   font-weight: 400;
 }
@@ -335,7 +338,7 @@ body {
   padding: 5px 8px;
   font-weight: 600;
   font-size: 9pt;
-  color: var(--text-dim);
+  color: #000000;
   text-align: center;
   border-bottom: 2px solid var(--glass-border);
 }
@@ -380,7 +383,7 @@ body {
 }
 .wf-label {
   font-size: 8pt;
-  color: var(--text-dim);
+  color: #000000;
   margin-top: 4px;
   text-align: center;
   font-weight: 400;
@@ -414,7 +417,7 @@ body {
   display: flex;
   justify-content: space-between;
   font-size: 9pt;
-  color: var(--text-dim);
+  color: #000000;
 }
 .timeline-marker {
   position: absolute;
@@ -491,7 +494,7 @@ body {
   align-items: center;
   gap: 5px;
   font-size: 9pt;
-  color: var(--text-dim);
+  color: #000000;
 }
 .legend-dot {
   width: 10px;
@@ -538,7 +541,7 @@ body {
     <span class="slide-number">2</span>
   </div>
   <div class="slide-body">
-    <p style="font-size:11pt;margin-bottom:0.12in;color:var(--text-dim);">2,073 tracked US data center sites &mdash; 231 GW total IT pipeline across all development stages. Demand is concentrated in a handful of ISOs, creating acute local grid scarcity.</p>
+    <p style="font-size:11pt;margin-bottom:0.12in;color:#000000;">2,073 tracked US data center sites &mdash; 231 GW total IT pipeline across all development stages. Demand is concentrated in a handful of ISOs, creating acute local grid scarcity.</p>
 
     <div class="left-right-wide">
       <div>
@@ -571,7 +574,7 @@ body {
           <tr class="highlight"><td><strong>Microsoft</strong></td><td>64</td><td>2.1</td><td>1.2</td><td>2.8</td><td>2.2</td><td><strong>8.3</strong></td></tr>
           <tr><td>QTS Datacenters</td><td>40</td><td>1.4</td><td>0.8</td><td>3.1</td><td>2.4</td><td><strong>7.7</strong></td></tr>
           <tr><td>Digital Realty</td><td>106</td><td>2.6</td><td>0.9</td><td>1.2</td><td>0.6</td><td><strong>5.3</strong></td></tr>
-          <tr><td colspan="6" style="color:var(--ceg-gray);font-style:italic;">+ 145 additional operators</td><td><strong>145.0</strong></td></tr>
+          <tr><td colspan="6" style="color:#000000;font-style:italic;">+ 145 additional operators</td><td><strong>145.0</strong></td></tr>
           <tr style="border-top:2px solid var(--ceg-blue);"><td><strong>TOTAL</strong></td><td><strong>2,073</strong></td><td><strong>30.9</strong></td><td><strong>18.1</strong></td><td><strong>57.3</strong></td><td><strong>125.1</strong></td><td style="color:var(--ceg-blue);font-size:11pt;"><strong>231.3</strong></td></tr>
         </table>
         <div class="callout orange" style="margin-top:0.1in;font-size:10pt;">
@@ -580,7 +583,7 @@ body {
       </div>
     </div>
 
-    <div class="source-note"><strong>Site data:</strong> DC Byte, United_States_SitesData_2026 (March 10, 2026) — 2,073 US facilities, IT MW by development stage. Company/state aggregations are Constellation analysis of DC Byte microdata. <strong>ISO aggregations:</strong> Constellation analysis of DC Byte microdata mapped to ISO footprints. <strong>CoreWeave:</strong> S-1 filing (Mar 2025), press releases, DC Byte tracking. <strong>55 GW PJM:</strong> Wood Mackenzie, "US utility large load commitments reach 160 GW" (2025); PJM Load Forecast Report (Jan 2026). <strong>2× load vs. generation:</strong> Grid Status, "Capacity Constraints in PJM have Grown Beyond Dominion" (2025). <strong>67 GW ERCOT:</strong> ERCOT Large Load Interconnection Queue, PUCT Report 1250NPRR-18 (Mar 2025).</div>
+    <div class="source-note"><strong>Site data:</strong> <a href="https://www.dcbyte.com/">DC Byte</a>, United_States_SitesData_2026 (March 10, 2026) &mdash; 2,073 US facilities, IT MW by development stage. Company/state aggregations are Constellation analysis of DC Byte microdata. <strong>ISO aggregations:</strong> Constellation analysis of DC Byte microdata mapped to ISO footprints. <strong>CoreWeave:</strong> S-1 filing (Mar 2025), press releases, DC Byte tracking. <strong>55 GW PJM:</strong> Wood Mackenzie, &ldquo;US utility large load commitments reach 160 GW&rdquo; (2025); <a href="https://www.pjm.com/markets-and-operations/rpm">PJM Load Forecast Report</a> (Jan 2026). <strong>2&times; load vs. generation:</strong> Grid Status, &ldquo;Capacity Constraints in PJM have Grown Beyond Dominion&rdquo; (2025). <strong>67 GW ERCOT:</strong> <a href="https://www.ercot.com/gridinfo/resource">ERCOT Large Load Interconnection Queue</a>, PUCT Report 1250NPRR-18 (Mar 2025).</div>
   </div>
   <div class="slide-footer">
     <span class="brand">CONSTELLATION ENERGY</span>
@@ -596,7 +599,7 @@ body {
     <span class="slide-number">3</span>
   </div>
   <div class="slide-body">
-    <p style="font-size:11pt;margin-bottom:0.1in;color:var(--text-dim);">Even if every announced clean energy deal materializes, the Big 4 hyperscalers cover only 26% of their 2030 energy needs. The remaining 639 TWh gap represents the largest corporate clean energy procurement wave in history.</p>
+    <p style="font-size:11pt;margin-bottom:0.1in;color:#000000;">Even if every announced clean energy deal materializes, the Big 4 hyperscalers cover only 26% of their 2030 energy needs. The remaining 639 TWh gap represents the largest corporate clean energy procurement wave in history.</p>
 
     <div class="two-col" style="flex:1;">
       <div>
@@ -606,44 +609,44 @@ body {
           <!-- Y axis -->
           <line x1="60" y1="20" x2="60" y2="240" stroke="#E0E6EF" stroke-width="1"/>
           <!-- Grid lines -->
-          <line x1="60" y1="40" x2="460" y2="40" stroke="#F0F3F7" stroke-width="1"/><text x="55" y="44" text-anchor="end" font-size="9" fill="#7E8083">750</text>
-          <line x1="60" y1="80" x2="460" y2="80" stroke="#F0F3F7" stroke-width="1"/><text x="55" y="84" text-anchor="end" font-size="9" fill="#7E8083">600</text>
-          <line x1="60" y1="120" x2="460" y2="120" stroke="#F0F3F7" stroke-width="1"/><text x="55" y="124" text-anchor="end" font-size="9" fill="#7E8083">450</text>
-          <line x1="60" y1="160" x2="460" y2="160" stroke="#F0F3F7" stroke-width="1"/><text x="55" y="164" text-anchor="end" font-size="9" fill="#7E8083">300</text>
-          <line x1="60" y1="200" x2="460" y2="200" stroke="#F0F3F7" stroke-width="1"/><text x="55" y="204" text-anchor="end" font-size="9" fill="#7E8083">150</text>
-          <line x1="60" y1="240" x2="460" y2="240" stroke="#E0E6EF" stroke-width="1"/><text x="55" y="244" text-anchor="end" font-size="9" fill="#7E8083">0</text>
+          <line x1="60" y1="40" x2="460" y2="40" stroke="#F0F3F7" stroke-width="1"/><text x="55" y="44" text-anchor="end" font-size="12" fill="#000000">750</text>
+          <line x1="60" y1="80" x2="460" y2="80" stroke="#F0F3F7" stroke-width="1"/><text x="55" y="84" text-anchor="end" font-size="12" fill="#000000">600</text>
+          <line x1="60" y1="120" x2="460" y2="120" stroke="#F0F3F7" stroke-width="1"/><text x="55" y="124" text-anchor="end" font-size="12" fill="#000000">450</text>
+          <line x1="60" y1="160" x2="460" y2="160" stroke="#F0F3F7" stroke-width="1"/><text x="55" y="164" text-anchor="end" font-size="12" fill="#000000">300</text>
+          <line x1="60" y1="200" x2="460" y2="200" stroke="#F0F3F7" stroke-width="1"/><text x="55" y="204" text-anchor="end" font-size="12" fill="#000000">150</text>
+          <line x1="60" y1="240" x2="460" y2="240" stroke="#E0E6EF" stroke-width="1"/><text x="55" y="244" text-anchor="end" font-size="12" fill="#000000">0</text>
 
                     <!-- Bar 1: Total Demand (596 TWh) -->
           <rect x="80" y="50" width="55" height="190" rx="3" fill="#2372B9"/>
-          <text x="107" y="43" text-anchor="middle" font-size="11" font-weight="700" fill="#2372B9">596</text>
-          <text x="107" y="258" text-anchor="middle" font-size="8.5" fill="#1A232F">2030 Need</text>
+          <text x="107" y="43" text-anchor="middle" font-size="14" font-weight="700" fill="#2372B9">596</text>
+          <text x="107" y="258" text-anchor="middle" font-size="11" fill="#000000">2030 Need</text>
 
           <!-- Bridge: Firm contracted (64 TWh) -->
           <rect x="155" y="50" width="55" height="20" rx="3" fill="#6BA543"/>
-          <text x="182" y="43" text-anchor="middle" font-size="10" font-weight="600" fill="#6BA543">-64</text>
-          <text x="182" y="258" text-anchor="middle" font-size="8.5" fill="#1A232F">Firm</text>
-          <text x="182" y="268" text-anchor="middle" font-size="7.5" fill="#7E8083">Contracted</text>
+          <text x="182" y="43" text-anchor="middle" font-size="13" font-weight="600" fill="#6BA543">-64</text>
+          <text x="182" y="258" text-anchor="middle" font-size="11" fill="#000000">Firm</text>
+          <text x="182" y="268" text-anchor="middle" font-size="10" fill="#000000">Contracted</text>
           <line x1="135" y1="50" x2="155" y2="50" stroke="#E0E6EF" stroke-width="1" stroke-dasharray="3,2"/>
 
           <!-- Bridge: Probable deals (44 TWh) -->
           <rect x="230" y="70" width="55" height="14" rx="3" fill="#007FA4"/>
-          <text x="257" y="63" text-anchor="middle" font-size="10" font-weight="600" fill="#007FA4">-44</text>
-          <text x="257" y="258" text-anchor="middle" font-size="8.5" fill="#1A232F">Probable</text>
-          <text x="257" y="268" text-anchor="middle" font-size="7.5" fill="#7E8083">Deals</text>
+          <text x="257" y="63" text-anchor="middle" font-size="13" font-weight="600" fill="#007FA4">-44</text>
+          <text x="257" y="258" text-anchor="middle" font-size="11" fill="#000000">Probable</text>
+          <text x="257" y="268" text-anchor="middle" font-size="10" fill="#000000">Deals</text>
           <line x1="210" y1="70" x2="230" y2="70" stroke="#E0E6EF" stroke-width="1" stroke-dasharray="3,2"/>
 
           <!-- Bridge: All announced (89 TWh) -->
           <rect x="305" y="84" width="55" height="28" rx="3" fill="#FBB254"/>
-          <text x="332" y="77" text-anchor="middle" font-size="10" font-weight="600" fill="#B45309">-89</text>
-          <text x="332" y="258" text-anchor="middle" font-size="8.5" fill="#1A232F">All Other</text>
-          <text x="332" y="268" text-anchor="middle" font-size="7.5" fill="#7E8083">Announced</text>
+          <text x="332" y="77" text-anchor="middle" font-size="13" font-weight="600" fill="#B45309">-89</text>
+          <text x="332" y="258" text-anchor="middle" font-size="11" fill="#000000">All Other</text>
+          <text x="332" y="268" text-anchor="middle" font-size="10" fill="#000000">Announced</text>
           <line x1="285" y1="84" x2="305" y2="84" stroke="#E0E6EF" stroke-width="1" stroke-dasharray="3,2"/>
 
           <!-- Bar: Remaining Gap (399 TWh) -->
           <rect x="380" y="112" width="55" height="128" rx="3" fill="#F47B27"/>
-          <text x="407" y="105" text-anchor="middle" font-size="12" font-weight="700" fill="#F47B27">399</text>
-          <text x="407" y="258" text-anchor="middle" font-size="8.5" font-weight="700" fill="#F47B27">UNMET</text>
-          <text x="407" y="268" text-anchor="middle" font-size="8.5" font-weight="700" fill="#F47B27">GAP</text>
+          <text x="407" y="105" text-anchor="middle" font-size="14" font-weight="700" fill="#F47B27">399</text>
+          <text x="407" y="258" text-anchor="middle" font-size="11" font-weight="700" fill="#F47B27">UNMET</text>
+          <text x="407" y="268" text-anchor="middle" font-size="11" font-weight="700" fill="#F47B27">GAP</text>
           <line x1="360" y1="112" x2="380" y2="112" stroke="#E0E6EF" stroke-width="1" stroke-dasharray="3,2"/>
         </svg>
       </div>
@@ -668,7 +671,7 @@ body {
       </div>
     </div>
 
-    <div class="source-note"><strong>Gap analysis methodology:</strong> 2030 energy need = projected US load (GW) × 8,760 hrs × 1.35 hourly matching penalty (for companies transitioning to 24/7 CFE). Probability-weighted procurement applies 100% to firm/operating, 50% to framework/announced, 25% to early-stage. <strong>Google 151 TWh:</strong> Google Sustainability Operations (2025); Kairos Power, Elementl, TotalEnergies, Clearway PRs. <strong>Microsoft 251 TWh:</strong> Microsoft Cloud Blog (Sep 2024); Brookfield 10.5 GW PR (May 2024); Constellation TMI restart PR (Sep 2024). <strong>Amazon 164 TWh:</strong> About Amazon (Jan 2025); Talen 1.92 GW (TechCrunch, Jun 2025); X-energy 5 GW (Power Mag, Oct 2024). <strong>Meta 181 TWh:</strong> Meta Sustainability (2026); Constellation Clinton PPA (Jun 2025); NextEra 2.5 GW (Dec 2025); Oklo/Vistra/TerraPower 6.6 GW (TechCrunch, Jan 2026). <strong>231 GW total pipeline:</strong> DC Byte (March 2026). <strong>Waterfall chart:</strong> Firm = executed PPAs at commercial operation; Probable = signed frameworks; All Other = announced/LOI stage.</div>
+    <div class="source-note"><strong>Gap analysis methodology:</strong> 2030 energy need = projected US load (GW) &times; 8,760 hrs &times; 1.35 hourly matching penalty (for companies transitioning to 24/7 CFE). Probability-weighted procurement applies 100% to firm/operating, 50% to framework/announced, 25% to early-stage. <strong>Google 151 TWh:</strong> <a href="https://sustainability.google/operating-sustainably/">Google Sustainability Operations</a> (2025); Kairos Power, Elementl, TotalEnergies, Clearway PRs. <strong>Microsoft 251 TWh:</strong> <a href="https://blogs.microsoft.com/blog/">Microsoft Cloud Blog</a> (Sep 2024); Brookfield 10.5 GW PR (May 2024); <a href="https://www.constellationenergy.com/investor-relations.html">Constellation TMI restart PR</a> (Sep 2024). <strong>Amazon 164 TWh:</strong> <a href="https://www.aboutamazon.com/news/sustainability">About Amazon</a> (Jan 2025); Talen 1.92 GW (TechCrunch, Jun 2025); X-energy 5 GW (Power Mag, Oct 2024). <strong>Meta 181 TWh:</strong> <a href="https://sustainability.fb.com/">Meta Sustainability</a> (2026); <a href="https://www.constellationenergy.com/investor-relations.html">Constellation Clinton PPA</a> (Jun 2025); NextEra 2.5 GW (Dec 2025); Oklo/Vistra/TerraPower 6.6 GW (TechCrunch, Jan 2026). <strong>231 GW total pipeline:</strong> <a href="https://www.dcbyte.com/">DC Byte</a> (March 2026). <strong>Waterfall chart:</strong> Firm = executed PPAs at commercial operation; Probable = signed frameworks; All Other = announced/LOI stage.</div>
   </div>
   <div class="slide-footer">
     <span class="brand">CONSTELLATION ENERGY</span>
@@ -684,7 +687,7 @@ body {
     <span class="slide-number">4</span>
   </div>
   <div class="slide-body">
-    <p style="font-size:10.5pt;margin-bottom:0.08in;color:var(--text-dim);">Big 4 demand reaches 789 TWh by 2035 and 1,042 TWh by 2040. Even with aggressive SMR deployment, the clean energy gap persists across all scenarios.</p>
+    <p style="font-size:10.5pt;margin-bottom:0.08in;color:#000000;">Big 4 demand reaches 789 TWh by 2035 and 1,042 TWh by 2040. Even with aggressive SMR deployment, the clean energy gap persists across all scenarios.</p>
 
     <div class="left-right" style="flex:0 0 auto;">
       <!-- LEFT: 2035 Waterfall -->
@@ -692,43 +695,43 @@ body {
         <h3 style="font-size:10pt;">2035 Gap — 789 TWh Demand</h3>
         <svg viewBox="0 0 440 200" style="width:100%;max-height:2.2in;" xmlns="http://www.w3.org/2000/svg">
           <line x1="35" y1="15" x2="35" y2="170" stroke="#E0E6EF" stroke-width="1"/>
-          <line x1="35" y1="30" x2="420" y2="30" stroke="#F0F3F7" stroke-width="1"/><text x="30" y="34" text-anchor="end" font-size="7.5" fill="#7E8083">800</text>
-          <line x1="35" y1="65" x2="420" y2="65" stroke="#F0F3F7" stroke-width="1"/><text x="30" y="69" text-anchor="end" font-size="7.5" fill="#7E8083">600</text>
-          <line x1="35" y1="100" x2="420" y2="100" stroke="#F0F3F7" stroke-width="1"/><text x="30" y="104" text-anchor="end" font-size="7.5" fill="#7E8083">400</text>
-          <line x1="35" y1="135" x2="420" y2="135" stroke="#F0F3F7" stroke-width="1"/><text x="30" y="139" text-anchor="end" font-size="7.5" fill="#7E8083">200</text>
-          <line x1="35" y1="170" x2="420" y2="170" stroke="#E0E6EF" stroke-width="1"/><text x="30" y="174" text-anchor="end" font-size="7.5" fill="#7E8083">0</text>
+          <line x1="35" y1="30" x2="420" y2="30" stroke="#F0F3F7" stroke-width="1"/><text x="30" y="34" text-anchor="end" font-size="10" fill="#000000">800</text>
+          <line x1="35" y1="65" x2="420" y2="65" stroke="#F0F3F7" stroke-width="1"/><text x="30" y="69" text-anchor="end" font-size="10" fill="#000000">600</text>
+          <line x1="35" y1="100" x2="420" y2="100" stroke="#F0F3F7" stroke-width="1"/><text x="30" y="104" text-anchor="end" font-size="10" fill="#000000">400</text>
+          <line x1="35" y1="135" x2="420" y2="135" stroke="#F0F3F7" stroke-width="1"/><text x="30" y="139" text-anchor="end" font-size="10" fill="#000000">200</text>
+          <line x1="35" y1="170" x2="420" y2="170" stroke="#E0E6EF" stroke-width="1"/><text x="30" y="174" text-anchor="end" font-size="10" fill="#000000">0</text>
 
           <!-- Demand: 789 TWh -->
           <rect x="50" y="32" width="50" height="138" rx="3" fill="#2372B9"/>
-          <text x="75" y="26" text-anchor="middle" font-size="10" font-weight="700" fill="#2372B9">789</text>
-          <text x="75" y="184" text-anchor="middle" font-size="7.5" fill="#1A232F">Demand</text>
+          <text x="75" y="26" text-anchor="middle" font-size="13" font-weight="700" fill="#2372B9">789</text>
+          <text x="75" y="184" text-anchor="middle" font-size="11" fill="#000000">Demand</text>
 
           <!-- High: -480 -->
           <rect x="115" y="32" width="50" height="84" rx="3" fill="rgba(107,165,67,0.3)" stroke="#6BA543" stroke-width="1.5"/>
-          <text x="140" y="26" text-anchor="middle" font-size="8" font-weight="600" fill="#6BA543">-480</text>
-          <text x="140" y="184" text-anchor="middle" font-size="7" fill="#1A232F">High</text>
+          <text x="140" y="26" text-anchor="middle" font-size="11" font-weight="600" fill="#6BA543">-480</text>
+          <text x="140" y="184" text-anchor="middle" font-size="10" fill="#000000">High</text>
           <line x1="100" y1="32" x2="115" y2="32" stroke="#E0E6EF" stroke-width="1" stroke-dasharray="3,2"/>
 
           <!-- Med: -380 -->
           <rect x="180" y="32" width="50" height="67" rx="3" fill="#6BA543"/>
-          <text x="205" y="26" text-anchor="middle" font-size="9" font-weight="600" fill="#6BA543">-380</text>
-          <text x="205" y="184" text-anchor="middle" font-size="7" fill="#1A232F">Med</text>
+          <text x="205" y="26" text-anchor="middle" font-size="12" font-weight="600" fill="#6BA543">-380</text>
+          <text x="205" y="184" text-anchor="middle" font-size="10" fill="#000000">Med</text>
 
           <!-- Low: -280 -->
           <rect x="245" y="32" width="50" height="49" rx="3" fill="#007FA4"/>
-          <text x="270" y="26" text-anchor="middle" font-size="8" font-weight="600" fill="#007FA4">-280</text>
-          <text x="270" y="184" text-anchor="middle" font-size="7" fill="#1A232F">Low</text>
+          <text x="270" y="26" text-anchor="middle" font-size="11" font-weight="600" fill="#007FA4">-280</text>
+          <text x="270" y="184" text-anchor="middle" font-size="10" fill="#000000">Low</text>
 
           <!-- Gap (Med): 409 TWh -->
           <rect x="320" y="99" width="55" height="71" rx="3" fill="#F47B27"/>
-          <text x="347" y="93" text-anchor="middle" font-size="11" font-weight="700" fill="#F47B27">409</text>
-          <text x="347" y="184" text-anchor="middle" font-size="7.5" font-weight="700" fill="#F47B27">GAP (Med)</text>
+          <text x="347" y="93" text-anchor="middle" font-size="14" font-weight="700" fill="#F47B27">409</text>
+          <text x="347" y="184" text-anchor="middle" font-size="11" font-weight="700" fill="#F47B27">GAP (Med)</text>
           <line x1="230" y1="99" x2="320" y2="99" stroke="#E0E6EF" stroke-width="1" stroke-dasharray="3,2"/>
 
           <!-- Range annotation -->
-          <text x="410" y="80" text-anchor="end" font-size="7" fill="#7E8083">Range:</text>
-          <text x="410" y="92" text-anchor="end" font-size="8" font-weight="600" fill="#F47B27">309&ndash;509</text>
-          <text x="410" y="102" text-anchor="end" font-size="7" fill="#7E8083">TWh</text>
+          <text x="410" y="80" text-anchor="end" font-size="10" fill="#000000">Range:</text>
+          <text x="410" y="92" text-anchor="end" font-size="11" font-weight="600" fill="#F47B27">309&ndash;509</text>
+          <text x="410" y="102" text-anchor="end" font-size="10" fill="#000000">TWh</text>
         </svg>
       </div>
 
@@ -737,43 +740,43 @@ body {
         <h3 style="font-size:10pt;">2040 Gap — 1,042 TWh Demand</h3>
         <svg viewBox="0 0 440 200" style="width:100%;max-height:2.2in;" xmlns="http://www.w3.org/2000/svg">
           <line x1="35" y1="15" x2="35" y2="170" stroke="#E0E6EF" stroke-width="1"/>
-          <line x1="35" y1="22" x2="420" y2="22" stroke="#F0F3F7" stroke-width="1"/><text x="30" y="26" text-anchor="end" font-size="7.5" fill="#7E8083">1050</text>
-          <line x1="35" y1="57" x2="420" y2="57" stroke="#F0F3F7" stroke-width="1"/><text x="30" y="61" text-anchor="end" font-size="7.5" fill="#7E8083">800</text>
-          <line x1="35" y1="92" x2="420" y2="92" stroke="#F0F3F7" stroke-width="1"/><text x="30" y="96" text-anchor="end" font-size="7.5" fill="#7E8083">550</text>
-          <line x1="35" y1="127" x2="420" y2="127" stroke="#F0F3F7" stroke-width="1"/><text x="30" y="131" text-anchor="end" font-size="7.5" fill="#7E8083">300</text>
-          <line x1="35" y1="170" x2="420" y2="170" stroke="#E0E6EF" stroke-width="1"/><text x="30" y="174" text-anchor="end" font-size="7.5" fill="#7E8083">0</text>
+          <line x1="35" y1="22" x2="420" y2="22" stroke="#F0F3F7" stroke-width="1"/><text x="30" y="26" text-anchor="end" font-size="10" fill="#000000">1050</text>
+          <line x1="35" y1="57" x2="420" y2="57" stroke="#F0F3F7" stroke-width="1"/><text x="30" y="61" text-anchor="end" font-size="10" fill="#000000">800</text>
+          <line x1="35" y1="92" x2="420" y2="92" stroke="#F0F3F7" stroke-width="1"/><text x="30" y="96" text-anchor="end" font-size="10" fill="#000000">550</text>
+          <line x1="35" y1="127" x2="420" y2="127" stroke="#F0F3F7" stroke-width="1"/><text x="30" y="131" text-anchor="end" font-size="10" fill="#000000">300</text>
+          <line x1="35" y1="170" x2="420" y2="170" stroke="#E0E6EF" stroke-width="1"/><text x="30" y="174" text-anchor="end" font-size="10" fill="#000000">0</text>
 
           <!-- Demand: 1042 TWh -->
           <rect x="50" y="24" width="50" height="146" rx="3" fill="#2372B9"/>
-          <text x="75" y="18" text-anchor="middle" font-size="10" font-weight="700" fill="#2372B9">1042</text>
-          <text x="75" y="184" text-anchor="middle" font-size="7.5" fill="#1A232F">Demand</text>
+          <text x="75" y="18" text-anchor="middle" font-size="13" font-weight="700" fill="#2372B9">1042</text>
+          <text x="75" y="184" text-anchor="middle" font-size="11" fill="#000000">Demand</text>
 
           <!-- High: -780 -->
           <rect x="115" y="24" width="50" height="109" rx="3" fill="rgba(107,165,67,0.3)" stroke="#6BA543" stroke-width="1.5"/>
-          <text x="140" y="18" text-anchor="middle" font-size="8" font-weight="600" fill="#6BA543">-780</text>
-          <text x="140" y="184" text-anchor="middle" font-size="7" fill="#1A232F">High</text>
+          <text x="140" y="18" text-anchor="middle" font-size="11" font-weight="600" fill="#6BA543">-780</text>
+          <text x="140" y="184" text-anchor="middle" font-size="10" fill="#000000">High</text>
           <line x1="100" y1="24" x2="115" y2="24" stroke="#E0E6EF" stroke-width="1" stroke-dasharray="3,2"/>
 
           <!-- Med: -560 -->
           <rect x="180" y="24" width="50" height="78" rx="3" fill="#6BA543"/>
-          <text x="205" y="18" text-anchor="middle" font-size="9" font-weight="600" fill="#6BA543">-560</text>
-          <text x="205" y="184" text-anchor="middle" font-size="7" fill="#1A232F">Med</text>
+          <text x="205" y="18" text-anchor="middle" font-size="12" font-weight="600" fill="#6BA543">-560</text>
+          <text x="205" y="184" text-anchor="middle" font-size="10" fill="#000000">Med</text>
 
           <!-- Low: -380 -->
           <rect x="245" y="24" width="50" height="53" rx="3" fill="#007FA4"/>
-          <text x="270" y="18" text-anchor="middle" font-size="8" font-weight="600" fill="#007FA4">-380</text>
-          <text x="270" y="184" text-anchor="middle" font-size="7" fill="#1A232F">Low</text>
+          <text x="270" y="18" text-anchor="middle" font-size="11" font-weight="600" fill="#007FA4">-380</text>
+          <text x="270" y="184" text-anchor="middle" font-size="10" fill="#000000">Low</text>
 
           <!-- Gap (Med): 482 TWh -->
           <rect x="320" y="102" width="55" height="68" rx="3" fill="#F47B27"/>
-          <text x="347" y="96" text-anchor="middle" font-size="11" font-weight="700" fill="#F47B27">482</text>
-          <text x="347" y="184" text-anchor="middle" font-size="7.5" font-weight="700" fill="#F47B27">GAP (Med)</text>
+          <text x="347" y="96" text-anchor="middle" font-size="14" font-weight="700" fill="#F47B27">482</text>
+          <text x="347" y="184" text-anchor="middle" font-size="11" font-weight="700" fill="#F47B27">GAP (Med)</text>
           <line x1="230" y1="102" x2="320" y2="102" stroke="#E0E6EF" stroke-width="1" stroke-dasharray="3,2"/>
 
           <!-- Range annotation -->
-          <text x="410" y="80" text-anchor="end" font-size="7" fill="#7E8083">Range:</text>
-          <text x="410" y="92" text-anchor="end" font-size="8" font-weight="600" fill="#F47B27">262&ndash;662</text>
-          <text x="410" y="102" text-anchor="end" font-size="7" fill="#7E8083">TWh</text>
+          <text x="410" y="80" text-anchor="end" font-size="10" fill="#000000">Range:</text>
+          <text x="410" y="92" text-anchor="end" font-size="11" font-weight="600" fill="#F47B27">262&ndash;662</text>
+          <text x="410" y="102" text-anchor="end" font-size="10" fill="#000000">TWh</text>
         </svg>
       </div>
     </div>
@@ -791,12 +794,12 @@ body {
         <div class="timeline-marker" style="left:65%;"><div style="width:10px;height:10px;background:var(--ceg-orange);border-radius:50%;"></div></div>
       </div>
       <div class="timeline-labels">
-        <span><strong>2025</strong><br>NuScale FOAK certified<br><span style="font-size:7pt;color:var(--text-dim);">(only SMR with NRC design cert)</span></span>
-        <span><strong>2030</strong><br>First SMR site prep<br><span style="font-size:7pt;color:var(--text-dim);">(optimistic)</span></span>
+        <span><strong>2025</strong><br>NuScale FOAK certified<br><span style="font-size:7pt;color:#000000;">(only SMR with NRC design cert)</span></span>
+        <span><strong>2030</strong><br>First SMR site prep<br><span style="font-size:7pt;color:#000000;">(optimistic)</span></span>
         <span style="color:var(--ceg-green);"><strong>2033&ndash;2035</strong><br>First SMR commercial<br><span style="font-size:7pt;">operation (optimistic)</span></span>
         <span style="color:var(--ceg-orange);"><strong>2038&ndash;2040</strong><br>Meaningful SMR fleet<br><span style="font-size:7pt;">5&ndash;10 GW (realistic)</span></span>
       </div>
-      <p style="font-size:8.5pt;color:var(--text-dim);margin-top:0.04in;text-align:center;font-style:italic;">Even at aggressive timelines, SMRs add &lt;50 TWh by 2035 and &lt;150 TWh by 2040</p>
+      <p style="font-size:8.5pt;color:#000000;margin-top:0.04in;text-align:center;font-style:italic;">Even at aggressive timelines, SMRs add &lt;50 TWh by 2035 and &lt;150 TWh by 2040</p>
     </div>
 
     <!-- Callout -->
@@ -804,7 +807,7 @@ body {
       <strong>VRE fills the 2025&ndash;2035 bridge AND remains essential alongside SMRs post-2035.</strong> The 400+ TWh gap in 2035 cannot wait for nuclear timelines. Even by 2040 with an optimistic SMR fleet, 260&ndash;480 TWh of gap remains &mdash; VRE development today captures interconnection positions and offtake relationships that persist regardless of SMR deployment.
     </div>
 
-    <div class="source-note">2035 demand (789 TWh): BNEF 1H 2026 (106 GW US total by 2035); IEA Energy &amp; AI Base Case. 2040 demand (1,042 TWh): McKinsey Global Energy Perspective 2025 extrapolation; CAGR deceleration model. Procurement scenarios: Constellation analysis of BNEF PPA pipeline, SMR deployment timelines (NuScale/X-energy/Kairos), and IRA policy trajectory. SMR timeline: NuScale NRC design certification (Jan 2023); DOE Liftoff: Advanced Nuclear (Mar 2024); ITIF, &ldquo;The State of Small Modular Reactors&rdquo; (Jan 2025). Supply: NREL ATB 2024 cost curves; DOE Liftoff reports (nuclear, geothermal, LDES). Grid: FERC interconnection queue data (2025).</div>
+    <div class="source-note">2035 demand (789 TWh): <a href="https://about.bnef.com/blog/corporate-clean-energy-buying-grew-12-in-2023/">BNEF 1H 2026</a> (106 GW US total by 2035); <a href="https://www.iea.org/reports/electricity-2024">IEA Energy &amp; AI Base Case</a>. 2040 demand (1,042 TWh): McKinsey Global Energy Perspective 2025 extrapolation; CAGR deceleration model. Procurement scenarios: Constellation analysis of BNEF PPA pipeline, SMR deployment timelines (NuScale/X-energy/Kairos), and IRA policy trajectory. SMR timeline: NuScale NRC design certification (Jan 2023); <a href="https://liftoff.energy.gov/nuclear/">DOE Liftoff: Advanced Nuclear</a> (Mar 2024); <a href="https://itif.org/publications/2025/01/13/the-state-of-small-modular-reactors/">ITIF, &ldquo;The State of Small Modular Reactors&rdquo;</a> (Jan 2025). Supply: <a href="https://atb.nrel.gov/">NREL ATB 2024</a> cost curves; DOE Liftoff reports (nuclear, geothermal, LDES). Grid: <a href="https://www.ferc.gov/media/order-no-2023">FERC interconnection queue data</a> (2025).</div>
   </div>
   <div class="slide-footer">
     <span class="brand">CONSTELLATION ENERGY</span>
@@ -897,7 +900,7 @@ body {
             </tr>
           </tbody>
         </table>
-        <p style="font-size:8pt;color:var(--text-dim);margin:0.04in 0 0;">
+        <p style="font-size:8pt;color:#000000;margin:0.04in 0 0;">
           &#9654; Highlighted row: cheap pool edge. Beyond 30%, marginal costs rise as coal exhausts.
         </p>
       </div>
@@ -908,7 +911,7 @@ body {
       <strong>Meta and Amazon&rsquo;s combined 298 TWh demand (2030) can be offset with ~189 TWh of consequential VRE procurement &mdash; 36% less than hourly matching requires.</strong> But this advantage shrinks as coal retires: MISO loses 18 GW of coal by 2035, PJM loses 30 GW. Early movers (2025&ndash;2031) capture the deepest displacement value before the coal wall disappears.
     </div>
 
-    <div class="source-note">Sources: Fossil fuel mix shares from EIA-860 (2024) via Constellation Hourly CFE Optimizer lmp_engine.py. Coal retirement schedules: S&amp;P Global Market Intelligence, &ldquo;US Coal Plant Retirements&rdquo; (Jan 2026); Sierra Club Beyond Coal tracker (updated Feb 2026). Emission rates: EPA eGRID 2022 (published Jan 2024). Consequential queue: Constellation Hourly CFE Optimizer step3b_mac_queue.py (Strategy 1B, fossil-average baseline, all-Medium sensitivity). Meta 134 TWh &amp; Amazon 164 TWh 2030 demand: Goldman Sachs, &ldquo;AI, Data Centers, and the Coming US Power Demand Surge&rdquo; (Apr 2024); cross-referenced with company sustainability reports (Meta 2024, Amazon 2024).</div>
+    <div class="source-note">Sources: Fossil fuel mix shares from <a href="https://www.eia.gov/electricity/data/eia860/">EIA-860</a> (2024) via Constellation Hourly CFE Optimizer lmp_engine.py. Coal retirement schedules: S&amp;P Global Market Intelligence, &ldquo;US Coal Plant Retirements&rdquo; (Jan 2026); <a href="https://coal.sierraclub.org/">Sierra Club Beyond Coal tracker</a> (updated Feb 2026). Emission rates: <a href="https://www.epa.gov/egrid">EPA eGRID 2022</a> (published Jan 2024). Consequential queue: Constellation Hourly CFE Optimizer step3b_mac_queue.py (Strategy 1B, fossil-average baseline, all-Medium sensitivity). Meta 134 TWh &amp; Amazon 164 TWh 2030 demand: <a href="https://www.goldmansachs.com/insights/articles/AI-is-poised-to-drive-160-increase-in-data-center-power-demand">Goldman Sachs, &ldquo;AI, Data Centers, and the Coming US Power Demand Surge&rdquo;</a> (Apr 2024); cross-referenced with company sustainability reports (Meta 2024, Amazon 2024).</div>
   </div>
   <div class="slide-footer">
     <span class="brand">CONSTELLATION ENERGY</span>
@@ -929,7 +932,7 @@ body {
       <!-- LEFT COLUMN: Development Timeline Comparison -->
       <div>
         <h3 style="font-size:12pt;font-weight:700;color:var(--ceg-blue);margin-bottom:0.12in;">Development Timeline Comparison</h3>
-        <p style="font-size:9pt;color:var(--text-dim);margin-bottom:0.12in;">Permit → Commercial Operation Date (COD)</p>
+        <p style="font-size:9pt;color:#000000;margin-bottom:0.12in;">Permit → Commercial Operation Date (COD)</p>
 
         <div class="timeline" style="padding:0;">
           <!-- Solar -->
@@ -1057,7 +1060,7 @@ body {
       </div>
     </div>
 
-    <div class="source-note">Sources: Development timelines: LBNL Queued Up 2025, NRC licensing data, DOE Pathways to Commercial Liftoff (Nuclear, 2023). IRA incentives: Inflation Reduction Act &sect;&sect;45, 48 as amended; Treasury final rules (2024). PPA market: BNEF 1H 2026 Corporate Energy Market Outlook; LevelTen Q1 2026 PPA Price Index. Hyperscaler PPAs: hyperscaler_ppa_deals.csv (41.6 GW Big 4 total procured nameplate).</div>
+    <div class="source-note">Sources: Development timelines: <a href="https://emp.lbl.gov/queued-up">LBNL Queued Up 2025</a>, NRC licensing data, <a href="https://liftoff.energy.gov/nuclear/">DOE Pathways to Commercial Liftoff (Nuclear, 2023)</a>. IRA incentives: Inflation Reduction Act &sect;&sect;45, 48 as amended; Treasury final rules (2024). PPA market: <a href="https://about.bnef.com/blog/corporate-clean-energy-buying-grew-12-in-2023/">BNEF 1H 2026 Corporate Energy Market Outlook</a>; <a href="https://www.leveltenenergy.com/ppa-price-index">LevelTen Q1 2026 PPA Price Index</a>. Hyperscaler PPAs: hyperscaler_ppa_deals.csv (41.6 GW Big 4 total procured nameplate).</div>
   </div>
   <div class="slide-footer">
     <span class="brand">CONSTELLATION ENERGY</span>
@@ -1073,7 +1076,7 @@ body {
     <span class="slide-number">7</span>
   </div>
   <div class="slide-body">
-    <p style="font-size:11pt;margin-bottom:0.1in;color:var(--text-dim);">Not all markets are equal. Investment priority depends on the intersection of demand growth, cannibalization trajectory, capacity market value, and corporate PPA demand.</p>
+    <p style="font-size:11pt;margin-bottom:0.1in;color:#000000;">Not all markets are equal. Investment priority depends on the intersection of demand growth, cannibalization trajectory, capacity market value, and corporate PPA demand.</p>
 
     <div style="flex:1;">
       <table class="heatmap-table">
@@ -1142,12 +1145,12 @@ body {
         </tr>
         <tr>
           <td><strong>SPP</strong></td>
-          <td class="heat-1">Limited</td>
+          <td class="heat-3">44 GW pipeline (early-stage)</td>
           <td class="heat-2">capture ~98% today</td>
           <td class="heat-1">None</td>
           <td class="heat-3">Moderate</td>
           <td style="background:var(--ceg-gray);color:white;font-weight:700;">Speculative Buy</td>
-          <td style="font-size:8.5pt;text-align:left;">Cheapest wind in US. Consequential-only play. Limited local DC presence.</td>
+          <td style="font-size:8.5pt;text-align:left;">44 GW early-stage pipeline (OK behind-meter law). Cheapest wind in US. Consequential play &mdash; mostly non-Big-4 demand.</td>
         </tr>
       </table>
 
@@ -1164,7 +1167,7 @@ body {
       </div>
     </div>
 
-    <div class="source-note">Sources: PJM 30 GW by 2030 &amp; 170 GW queue: PJM Interconnection, "2025 Regional Transmission Expansion Plan" (Jan 2026), §3.2; PJM queue statistics (Dec 2025). PJM $666/MW-day: PJM RPM BRA 2025/2026 clearing price (Jul 2025). ERCOT 67 GW pipeline: ERCOT, "Report on the Capacity, Demand and Reserves" (CDR, Dec 2025). CAISO 4.9 GW by 2040: CAISO, "20-Year Transmission Outlook" (May 2025). CAISO &lt;30% solar capture: S&amp;P Global Market Intelligence (Q4 2025). CAISO 98% paired: CAISO, "Hybrid Resource Trends in the Interconnection Queue" (2025). MISO, NYISO, NEISO, SPP metrics: respective ISO/RTO annual market reports (2025); capture rates from S&amp;P Global PPA tracker. DC load growth by region: DC Byte, "United States SitesData" (Mar 2026), aggregated by ISO footprint. VRE ratings: Constellation Hourly CFE Optimizer regional analysis (Steps 4–5), cross-referenced with Constellation Energy vre_investment_thesis.csv VRE-only ratings (non-storage rows).</div>
+    <div class="source-note">Sources: PJM 30 GW by 2030 &amp; 170 GW queue: <a href="https://www.pjm.com/markets-and-operations/rpm">PJM Interconnection, &ldquo;2025 Regional Transmission Expansion Plan&rdquo;</a> (Jan 2026), &sect;3.2; PJM queue statistics (Dec 2025). PJM $666/MW-day: <a href="https://www.pjm.com/markets-and-operations/rpm">PJM RPM BRA 2025/2026</a> clearing price (Jul 2025). ERCOT 67 GW pipeline: <a href="https://www.ercot.com/gridinfo/resource">ERCOT, &ldquo;Report on the Capacity, Demand and Reserves&rdquo;</a> (CDR, Dec 2025). CAISO 4.9 GW by 2040: <a href="https://www.caiso.com/planning/transmission-planning">CAISO, &ldquo;20-Year Transmission Outlook&rdquo;</a> (May 2025). CAISO &lt;30% solar capture: S&amp;P Global Market Intelligence (Q4 2025). CAISO 98% paired: <a href="https://www.caiso.com/planning/transmission-planning">CAISO, &ldquo;Hybrid Resource Trends in the Interconnection Queue&rdquo;</a> (2025). MISO, NYISO, NEISO, SPP metrics: respective ISO/RTO annual market reports (2025); capture rates from S&amp;P Global PPA tracker. DC load growth by region: <a href="https://www.dcbyte.com/">DC Byte, &ldquo;United States SitesData&rdquo;</a> (Mar 2026), aggregated by ISO footprint. VRE ratings: Constellation Hourly CFE Optimizer regional analysis (Steps 4&ndash;5), cross-referenced with Constellation Energy vre_investment_thesis.csv VRE-only ratings (non-storage rows).</div>
   </div>
   <div class="slide-footer">
     <span class="brand">CONSTELLATION ENERGY</span>
@@ -1267,7 +1270,7 @@ body {
       </div>
     </div>
 
-    <div class="source-note">Sources: 639 TWh unmet demand: Derived from BNEF 1H 2026 Corporate Energy Market Outlook (Feb 2026) &mdash; Big 4 hyperscaler 2030 demand minus contracted clean supply per company sustainability reports (Microsoft 2024, Google 2024, Amazon 2024, Meta 2024). 208 GW additional VRE at 35% CF: 639 TWh &divide; (8,760 hrs &times; 0.35) = 208 GW. 2&ndash;3 yr permit-to-COD: LBNL, "Utility-Scale Solar and Wind Project Development Timelines" (2025 edition). Target IRR &gt;8% based on Lazard LCOE+ v18.0 standalone VRE project finance returns with IRA PTC/ITC. Interconnection position value: LBNL Queued Up 2025 (&lt;20% queue completion rate, 5-year median wait). 231 GW US DC pipeline: DC Byte, "United States SitesData" (Mar 2026) &mdash; sum of Live (30.9 GW) + U/C (18.1 GW) + Committed (57.3 GW) + Early Stage (125.3 GW). Risk probability assessments: Constellation Energy analysis based on policy tracking (ClearView Energy Partners, Q1 2026), interconnection data (Lawrence Berkeley National Laboratory, "Queued Up" 2025 edition), and supply chain monitoring (Wood Mackenzie Solar Supply Chain Tracker, 2025). Optimal pipeline criteria: Constellation Hourly CFE Optimizer regional optimization results (Steps 2, 4, 5) cross-referenced with LevelTen Energy PPA market data (Q1 2026).</div>
+    <div class="source-note">Sources: 639 TWh unmet demand: Derived from <a href="https://about.bnef.com/blog/corporate-clean-energy-buying-grew-12-in-2023/">BNEF 1H 2026 Corporate Energy Market Outlook</a> (Feb 2026) &mdash; Big 4 hyperscaler 2030 demand minus contracted clean supply per company sustainability reports (Microsoft 2024, Google 2024, Amazon 2024, Meta 2024). 208 GW additional VRE at 35% CF: 639 TWh &divide; (8,760 hrs &times; 0.35) = 208 GW. 2&ndash;3 yr permit-to-COD: <a href="https://emp.lbl.gov/queued-up">LBNL, &ldquo;Utility-Scale Solar and Wind Project Development Timelines&rdquo;</a> (2025 edition). Target IRR &gt;8% based on <a href="https://www.lazard.com/research-insights/levelized-cost-of-energyplus/">Lazard LCOE+ v18.0</a> standalone VRE project finance returns with IRA PTC/ITC. Interconnection position value: <a href="https://emp.lbl.gov/queued-up">LBNL Queued Up 2025</a> (&lt;20% queue completion rate, 5-year median wait). 231 GW US DC pipeline: <a href="https://www.dcbyte.com/">DC Byte, &ldquo;United States SitesData&rdquo;</a> (Mar 2026) &mdash; sum of Live (30.9 GW) + U/C (18.1 GW) + Committed (57.3 GW) + Early Stage (125.3 GW). Risk probability assessments: Constellation Energy analysis based on policy tracking (ClearView Energy Partners, Q1 2026), interconnection data (<a href="https://emp.lbl.gov/queued-up">Lawrence Berkeley National Laboratory, &ldquo;Queued Up&rdquo; 2025 edition</a>), and supply chain monitoring (Wood Mackenzie Solar Supply Chain Tracker, 2025). Optimal pipeline criteria: Constellation Hourly CFE Optimizer regional optimization results (Steps 2, 4, 5) cross-referenced with <a href="https://www.leveltenenergy.com/ppa-price-index">LevelTen Energy PPA market data</a> (Q1 2026).</div>
   </div>
   <div class="slide-footer">
     <span class="brand">CONSTELLATION ENERGY</span>
@@ -1283,7 +1286,7 @@ body {
     <span class="slide-number">9</span>
   </div>
   <div class="slide-body">
-    <p style="font-size:11pt;margin-bottom:0.1in;color:var(--text-dim);">Different accounting methods shape <em>where</em> to weight VRE procurement, not <em>whether</em> to invest.</p>
+    <p style="font-size:11pt;margin-bottom:0.1in;color:#000000;">Different accounting methods shape <em>where</em> to weight VRE procurement, not <em>whether</em> to invest.</p>
 
     <!-- Strategy 1: Consequential -->
     <div class="callout" style="padding:0.15in;font-size:11pt;margin-bottom:0.1in;">
@@ -1316,7 +1319,7 @@ body {
       <strong style="color:var(--ceg-blue);">Key insight:</strong> The market is adopting a hybrid of all three strategies. Google hourly, Meta consequential, most corporates still annual. This fragmentation <strong>increases</strong> total VRE demand &mdash; different methods, different regions, same need for new VRE development.
     </div>
 
-    <div class="source-note">Sources: Google, &ldquo;24/7 Carbon-Free Energy: Methodology &amp; Results&rdquo; (2022). Meta, Amazon sustainability reports (2024). Eurelectric/EY, &ldquo;24/7 CFE: The Ecosystem&rdquo; (Nov 2023). SBTi FLAG Technical Criteria v2.0 (2024). SEC Climate Disclosure Rule (Mar 2024).</div>
+    <div class="source-note">Sources: <a href="https://www.gstatic.com/gumdrop/sustainability/247-carbon-free-energy.pdf">Google, &ldquo;24/7 Carbon-Free Energy: Methodology &amp; Results&rdquo;</a> (2022). Meta, Amazon sustainability reports (2024). <a href="https://www.eurelectric.org/resource-hub/247-cfe-the-ecosystem/">Eurelectric/EY, &ldquo;24/7 CFE: The Ecosystem&rdquo;</a> (Nov 2023). <a href="https://sciencebasedtargets.org/">SBTi FLAG Technical Criteria v2.0</a> (2024). <a href="https://www.sec.gov/rules/final/2024/33-11275.pdf">SEC Climate Disclosure Rule</a> (Mar 2024).</div>
   </div>
   <div class="slide-footer">
     <span class="brand">CONSTELLATION ENERGY</span>
@@ -1332,66 +1335,73 @@ body {
     <span class="slide-number">10</span>
   </div>
   <div class="slide-body">
-    <p style="font-size:10.5pt;margin-bottom:0.1in;color:var(--text-dim);">At 95% CFE target, Medium growth scenario. Source: Constellation Hourly CFE Optimizer (Steps 5.2B/C).</p>
+    <p style="font-size:10.5pt;margin-bottom:0.1in;color:#000000;">At 95% CFE target, Medium growth scenario. Source: Constellation Hourly CFE Optimizer (Steps 5.2B/C).</p>
 
-    <table class="data-table" style="font-size:10pt;margin-bottom:0.1in;">
+    <table class="data-table" style="font-size:9.5pt;margin-bottom:0.1in;">
       <tr>
-        <th>C&amp;I Load Participating</th>
-        <th>Consequential Cost ($/MWh)</th>
-        <th>Hourly Cost ($/MWh)</th>
-        <th>VRE Deployed (GW)</th>
-        <th style="width:220px;">What Happens</th>
+        <th>C&amp;I %</th>
+        <th>Conseq. $/MWh</th>
+        <th>Hourly $/MWh</th>
+        <th>Conseq. New VRE (GW)</th>
+        <th>Hourly New VRE (GW)</th>
+        <th style="width:200px;">What Happens</th>
       </tr>
       <tr>
         <td>5%</td>
         <td style="color:var(--ceg-green);">$49</td>
         <td style="color:#DC2626;">$223</td>
-        <td>13 GW</td>
-        <td>Cheap coal displacement. Consequential still buying existing wind RECs.</td>
+        <td style="color:#000000;">&lt;1 (existing RECs)</td>
+        <td style="font-weight:600;">13</td>
+        <td>Consequential buys existing wind RECs. Hourly forces 13 GW new VRE build.</td>
       </tr>
       <tr>
         <td>10%</td>
         <td style="color:var(--ceg-green);">$49</td>
         <td style="color:#DC2626;">$223</td>
-        <td>26 GW</td>
-        <td>MISO consequential pool still deep. Hourly forces 26 GW new VRE build.</td>
+        <td style="color:#000000;">&lt;1 (existing RECs)</td>
+        <td style="font-weight:600;">26</td>
+        <td>MISO consequential pool still deep. Hourly demands 26 GW new generation.</td>
       </tr>
       <tr>
         <td>20%</td>
         <td style="color:var(--ceg-green);">$49</td>
         <td style="color:#DC2626;">$223</td>
-        <td>53 GW</td>
-        <td>PJM consequential cost rises to $58. MISO still flat at $49.</td>
+        <td style="color:#000000;">~1</td>
+        <td style="font-weight:600;">53</td>
+        <td>PJM consequential cost rises to $58. MISO still flat. Hourly at 53 GW new-build.</td>
       </tr>
       <tr style="background:rgba(244,123,39,0.06);">
         <td><strong>30%</strong></td>
         <td style="color:var(--ceg-green);"><strong>$49</strong></td>
         <td style="color:#DC2626;"><strong>$223</strong></td>
-        <td><strong>79 GW</strong></td>
-        <td><strong>MISO threshold &mdash; cheap pool begins to exhaust. New-build required.</strong></td>
+        <td style="color:#000000;"><strong>~3</strong></td>
+        <td style="font-weight:600;"><strong>79</strong></td>
+        <td><strong>MISO cheap pool begins to exhaust. Consequential starts requiring new-build.</strong></td>
       </tr>
       <tr>
         <td>40%</td>
         <td style="color:var(--ceg-orange);">$51</td>
         <td style="color:#DC2626;">$223</td>
-        <td>105 GW</td>
-        <td>MISO consequential cost rising. Now drives new VRE pipeline value.</td>
+        <td style="color:#000000;">~8</td>
+        <td style="font-weight:600;">105</td>
+        <td>Consequential now driving new VRE in MISO. Both strategies building new generation.</td>
       </tr>
       <tr>
         <td>50%</td>
         <td style="color:var(--ceg-orange);">$59</td>
         <td style="color:#DC2626;">$223</td>
-        <td>132 GW</td>
-        <td>Convergence begins. Both strategies now building new generation.</td>
+        <td style="color:#000000;">~15</td>
+        <td style="font-weight:600;">132</td>
+        <td>Convergence: both strategies require substantial new-build. Costs converging.</td>
       </tr>
     </table>
 
     <!-- MISO Inflection Point callout -->
     <div class="callout orange" style="padding:0.12in 0.15in;font-size:10.5pt;">
-      <strong style="color:var(--ceg-orange);">The MISO Inflection Point:</strong> MISO&rsquo;s consequential displacement pool stays cheap ($49/MWh) through 30% C&amp;I participation &mdash; far deeper than PJM (exhausts at 15&ndash;20%). This makes MISO VRE pipeline attractive specifically for consequential buyers (Meta, Amazon). Above 30%, MISO too requires new-build, and costs converge with hourly matching.
+      <strong style="color:var(--ceg-orange);">The MISO Inflection Point:</strong> MISO&rsquo;s consequential displacement pool stays cheap ($49/MWh) through 30% C&amp;I participation &mdash; far deeper than PJM (exhausts at 15&ndash;20%). This makes MISO VRE pipeline attractive specifically for consequential buyers (Meta, Amazon). Above 30%, MISO too requires new-build, and costs converge with hourly matching. At low participation, consequential deploys near-zero new VRE (buying existing RECs), while hourly matching forces new pipeline from day one &mdash; a critical distinction for VRE developers.
     </div>
 
-    <div class="source-note">Sources: All cost and deployment figures from Constellation Hourly CFE Optimizer (Step 5.2B consequential, Step 5.2C hourly matching), Medium growth scenario, 95% CFE target, Strategy 1B (fossil-avg baseline) and Strategy 2A (hourly matching). Participation sweep: 5%&ndash;100% of C&amp;I load (C&amp;I = 62% of total demand per EIA 2024). MISO $49/MWh flat to 30%: consequential queue exhaustion analysis. PJM exhaustion at 15&ndash;20%: same analysis. Over-procurement 1.7&times;: Step 5.2C hourly matching model at 95% threshold.</div>
+    <div class="source-note">Sources: All cost and deployment figures from Constellation Hourly CFE Optimizer (Step 5.2B consequential, Step 5.2C hourly matching), Medium growth scenario, 95% CFE target, Strategy 1B (fossil-avg baseline) and Strategy 2A (hourly matching). Participation sweep: 5%&ndash;100% of C&amp;I load (C&amp;I = 62% of total demand per <a href="https://www.eia.gov/electricity/data/">EIA 2024</a>). MISO $49/MWh flat to 30%: consequential queue exhaustion analysis. PJM exhaustion at 15&ndash;20%: same analysis. Over-procurement 1.7&times;: Step 5.2C hourly matching model at 95% threshold. Consequential new VRE estimates: near-zero at low participation reflects existing REC purchasing; new-build begins at ~30% as existing pool exhausts.</div>
   </div>
   <div class="slide-footer">
     <span class="brand">CONSTELLATION ENERGY</span>
@@ -1407,7 +1417,7 @@ body {
     <span class="slide-number">11</span>
   </div>
   <div class="slide-body">
-    <p style="font-size:10.5pt;margin-bottom:0.1in;color:var(--text-dim);">ISO-by-ISO analysis at 10% C&amp;I participation, 95% CFE, Medium growth.</p>
+    <p style="font-size:10.5pt;margin-bottom:0.1in;color:#000000;">ISO-by-ISO analysis at 10% C&amp;I participation, 95% CFE, Medium growth.</p>
 
     <table class="data-table" style="font-size:9.5pt;margin-bottom:0.1in;">
       <tr>
@@ -1437,7 +1447,7 @@ body {
       <tr>
         <td><strong>SPP</strong></td>
         <td style="color:var(--ceg-blue);font-weight:600;">$47&rarr;$57/MWh</td>
-        <td style="color:var(--ceg-gray);font-weight:600;">$213/MWh</td>
+        <td style="color:#000000;font-weight:600;">$213/MWh</td>
         <td>Consequential-only play. Cheapest wind in US ($47/MWh at 10%). No local DC load for hourly. Speculative position.</td>
       </tr>
       <tr>
@@ -1470,7 +1480,7 @@ body {
       </div>
     </div>
 
-    <div class="source-note">Sources: All cost figures from Constellation Hourly CFE Optimizer (Step 5.2B consequential, Step 5.2C hourly matching), 10% C&amp;I participation, 95% CFE target, Medium growth. PJM $666/MW-day: RPM BRA 2025/2026. ERCOT 67 GW pipeline: DC Byte (Mar 2026). MISO 34 TWh: consequential queue at 10% participation. SPP $47/MWh: cheapest wind basis. Meta/Amazon consequential procurement: company sustainability reports (2024). Google 24/7 CFE: Google (2022).</div>
+    <div class="source-note">Sources: All cost figures from Constellation Hourly CFE Optimizer (Step 5.2B consequential, Step 5.2C hourly matching), 10% C&amp;I participation, 95% CFE target, Medium growth. PJM $666/MW-day: <a href="https://www.pjm.com/markets-and-operations/rpm">RPM BRA 2025/2026</a>. ERCOT 67 GW pipeline: <a href="https://www.dcbyte.com/">DC Byte</a> (Mar 2026). MISO 34 TWh: consequential queue at 10% participation. SPP $47/MWh: cheapest wind basis. Meta/Amazon consequential procurement: company sustainability reports (2024). <a href="https://www.gstatic.com/gumdrop/sustainability/247-carbon-free-energy.pdf">Google 24/7 CFE</a>: Google (2022).</div>
   </div>
   <div class="slide-footer">
     <span class="brand">CONSTELLATION ENERGY</span>
@@ -1486,7 +1496,7 @@ body {
     <span class="slide-number">12</span>
   </div>
   <div class="slide-body">
-    <p style="font-size:10.5pt;margin-bottom:0.08in;color:var(--text-dim);">GW of VRE pipeline value under different accounting regime assumptions, 10% C&amp;I participation, 95% CFE target</p>
+    <p style="font-size:10.5pt;margin-bottom:0.08in;color:#000000;">GW of VRE pipeline value under different accounting regime assumptions, 10% C&amp;I participation, 95% CFE target</p>
 
     <!-- Expanded scenario × ISO heatmap table -->
     <table class="data-table" style="font-size:8.5pt;width:100%;border-collapse:collapse;text-align:center;">
@@ -1505,7 +1515,7 @@ body {
       </thead>
       <tbody>
         <tr>
-          <td style="text-align:left;"><strong>All Consequential</strong><br><span style="font-size:7.5pt;color:var(--text-dim);">100% Strategy 1B</span></td>
+          <td style="text-align:left;"><strong>All Consequential</strong><br><span style="font-size:7.5pt;color:#000000;">100% Strategy 1B</span></td>
           <td class="heat-2">Low</td>
           <td class="heat-4">High</td>
           <td class="heat-3">Moderate</td>
@@ -1516,7 +1526,7 @@ body {
           <td style="font-weight:700;text-align:center;">5</td>
         </tr>
         <tr>
-          <td style="text-align:left;"><strong>All Hourly</strong><br><span style="font-size:7.5pt;color:var(--text-dim);">100% Strategy 2A</span></td>
+          <td style="text-align:left;"><strong>All Hourly</strong><br><span style="font-size:7.5pt;color:#000000;">100% Strategy 2A</span></td>
           <td class="heat-5">Very High</td>
           <td class="heat-5">Very High</td>
           <td class="heat-5">Very High</td>
@@ -1527,7 +1537,7 @@ body {
           <td style="font-weight:700;text-align:center;">25</td>
         </tr>
         <tr>
-          <td style="text-align:left;"><strong>Hybrid &mdash; Likely</strong><br><span style="font-size:7.5pt;color:var(--text-dim);">40% conseq / 40% hourly / 20% annual</span></td>
+          <td style="text-align:left;"><strong>Hybrid &mdash; Likely</strong><br><span style="font-size:7.5pt;color:#000000;">40% conseq / 40% hourly / 20% annual</span></td>
           <td class="heat-3">Moderate</td>
           <td class="heat-5">Very High</td>
           <td class="heat-4">High</td>
@@ -1538,7 +1548,7 @@ body {
           <td style="font-weight:700;text-align:center;">18</td>
         </tr>
         <tr>
-          <td style="text-align:left;"><strong>Transition</strong><br><span style="font-size:7.5pt;color:var(--text-dim);">60% annual &rarr; 40% hourly by 2030</span></td>
+          <td style="text-align:left;"><strong>Transition</strong><br><span style="font-size:7.5pt;color:#000000;">60% annual &rarr; 40% hourly by 2030</span></td>
           <td class="heat-3">Moderate</td>
           <td class="heat-4">High</td>
           <td class="heat-4">High</td>
@@ -1549,7 +1559,7 @@ body {
           <td style="font-weight:700;text-align:center;">12</td>
         </tr>
         <tr style="background:rgba(35,114,185,0.06);">
-          <td style="text-align:left;"><strong>Hyperscaler-Led</strong><br><span style="font-size:7.5pt;color:var(--text-dim);">Mirrors actual company strategies</span></td>
+          <td style="text-align:left;"><strong>Hyperscaler-Led</strong><br><span style="font-size:7.5pt;color:#000000;">Mirrors actual company strategies</span></td>
           <td class="heat-3">Moderate</td>
           <td class="heat-4">High</td>
           <td class="heat-5">Very High</td>
@@ -1563,7 +1573,7 @@ body {
     </table>
 
     <!-- Heatmap legend -->
-    <div style="display:flex;gap:0.12in;align-items:center;margin:0.06in 0 0.08in 0;font-size:7.5pt;color:var(--text-dim);">
+    <div style="display:flex;gap:0.12in;align-items:center;margin:0.06in 0 0.08in 0;font-size:7.5pt;color:#000000;">
       <span style="font-weight:600;">Pipeline value:</span>
       <span class="heat-1" style="padding:1px 6px;border-radius:3px;">Minimal</span>
       <span class="heat-2" style="padding:1px 6px;border-radius:3px;">Low</span>
