@@ -849,75 +849,99 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 .act4-explore-link:hover { gap: 10px; }
 
-/* Pathway columns */
-.act4-pathway-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-xl, 32px);
+/* Timeline layout */
+.act4-timeline {
     margin-top: var(--space-lg, 24px);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md, 16px);
 }
-.act4-pathway-col {
+.act4-milestone-group {
     background: rgba(255,255,255,0.92);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(221,208,192,0.5);
     border-radius: var(--radius-xl, 16px);
-    padding: 20px 16px 16px;
+    padding: 16px 16px 12px;
     opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.6s ease, transform 0.6s ease;
+    transform: translateY(16px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
 }
-.act4-pathway-col.col-visible {
+.act4-milestone-group.group-visible {
     opacity: 1;
     transform: translateY(0);
 }
-.act4-pathway-col.col-right {
-    transition-delay: 0.3s;
-}
-.act4-col-header {
+.act4-milestone-group-header {
     font-family: var(--font-heading);
-    font-size: 0.82rem;
+    font-size: 0.9rem;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 2px;
+    color: var(--text-primary, #1A2744);
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(0,0,0,0.06);
     display: flex;
-    align-items: center;
+    align-items: baseline;
     gap: 8px;
 }
-.act4-col-header .hdr-dot {
-    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+.act4-group-year {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--text-primary, #1A2744);
 }
-.act4-col-sub {
-    font-family: var(--font-body);
+.act4-group-target {
     font-size: 0.78rem;
+    font-weight: 600;
     color: var(--text-muted, #94A3B8);
-    margin-bottom: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+.act4-strat-label {
+    font-family: var(--font-data);
+    font-size: 0.72rem;
+    font-weight: 800;
+    width: 28px;
+    flex-shrink: 0;
+    text-align: center;
+    line-height: 28px;
+}
+.act4-subtitle {
+    font-family: var(--font-heading);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--iso-pjm, #0EA5E9);
+    margin-top: -4px;
+    margin-bottom: var(--space-md);
+}
+.act4-sequencing {
+    max-width: 780px;
+    margin-bottom: var(--space-lg);
+}
+.act4-sequencing p {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--text-secondary, #475569);
 }
 
 /* Milestone rows */
 .act4-milestone-row {
     display: grid;
-    grid-template-columns: 120px 1fr;
-    gap: 8px;
+    grid-template-columns: 28px 110px 1fr;
+    gap: 6px;
     align-items: center;
-    padding: 6px 0;
-    border-bottom: 1px solid rgba(0,0,0,0.04);
+    padding: 4px 0;
     opacity: 0;
     transform: translateX(-8px);
     transition: opacity 0.4s ease, transform 0.4s ease;
 }
+.act4-milestone-row + .act4-milestone-row {
+    border-top: 1px solid rgba(0,0,0,0.04);
+    padding-top: 4px;
+}
 .act4-milestone-row.row-visible {
     opacity: 1;
     transform: translateX(0);
-}
-.act4-milestone-row:last-child {
-    border-bottom: none;
-}
-.act4-milestone-row.row-start {
-    border-bottom: 2px solid rgba(0,0,0,0.08);
-    padding-bottom: 8px;
-    margin-bottom: 2px;
 }
 
 /* Left metrics column */
@@ -961,7 +985,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     display: flex;
     height: 28px;
     border-radius: 4px;
-    overflow: hidden;
+    overflow: visible;
     position: relative;
 }
 .act4-bar-seg {
@@ -985,6 +1009,30 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     white-space: nowrap;
     z-index: 10;
     pointer-events: none;
+}
+.act4-bar-seg-hatch {
+    border-radius: 0 4px 4px 0;
+}
+.act4-bar-100-mark {
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    width: 2px;
+    background: var(--text-primary, #1A2744);
+    opacity: 0.4;
+    z-index: 5;
+    pointer-events: none;
+}
+.act4-bar-100-label {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-data);
+    font-size: 0.55rem;
+    font-weight: 600;
+    color: var(--text-muted, #94A3B8);
+    white-space: nowrap;
 }
 
 /* Cumulative summary stats */
@@ -1044,34 +1092,6 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     margin-top: 2px;
 }
 
-/* LCOE trajectory chart */
-.act4-lcoe-wrap {
-    margin-top: var(--space-xl, 32px);
-    max-width: 780px;
-}
-.act4-lcoe-title {
-    font-family: var(--font-heading);
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--text-primary, #1A2744);
-    margin-bottom: 6px;
-}
-.act4-lcoe-sub {
-    font-size: 0.92rem;
-    line-height: 1.6;
-    color: var(--text-secondary, #475569);
-    margin-bottom: var(--space-md, 16px);
-}
-.act4-lcoe-chart-container {
-    position: relative;
-    min-height: 300px;
-    background: rgba(255,255,255,0.92);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(221,208,192,0.5);
-    border-radius: var(--radius-xl, 16px);
-    padding: 20px 16px;
-}
 
 /* Legend */
 .act4-legend {
@@ -1121,29 +1141,26 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 
 @media (max-width: 900px) {
-    .act4-pathway-grid,
     .act4-summary-grid {
         grid-template-columns: 1fr;
     }
-    .act4-pathway-col.col-right {
-        transition-delay: 0.15s;
-    }
     .act4-milestone-row {
-        grid-template-columns: 100px 1fr;
+        grid-template-columns: 24px 90px 1fr;
     }
     .act4-bar-wrap {
         height: 24px;
     }
-    .act4-lcoe-chart-container {
-        min-height: 250px;
-    }
 }
 @media (max-width: 480px) {
     .act4-milestone-row {
-        grid-template-columns: 80px 1fr;
+        grid-template-columns: 22px 72px 1fr;
     }
     .act4-row-metric {
         font-size: 0.62rem;
+    }
+    .act4-strat-label {
+        font-size: 0.62rem;
+        width: 22px;
     }
 }
 
@@ -1913,6 +1930,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
 <section class="story-section" id="act4">
     <span class="story-badge story-badge-red">Act 4</span>
     <h2>The Stranded Asset Cliff</h2>
+    <p class="act4-subtitle">PJM&rsquo;s Journey to 95% Hourly Clean Energy</p>
 
     <!-- Intro text -->
     <div class="act4-intro">
@@ -1935,53 +1953,34 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         </p>
     </div>
 
-    <!-- Pathway timeline: side-by-side deployment -->
-    <div class="act4-pathway-grid">
-        <!-- Left: Strategy 1B -->
-        <div class="act4-pathway-col" id="act4Col1B">
-            <div class="act4-col-header">
-                <span class="hdr-dot" style="background: var(--fossil-gas, #6B7280);"></span>
-                <span style="color: var(--fossil-gas, #6B7280);">Strategy 1B &mdash; Annual Matching</span>
-            </div>
-            <div class="act4-col-sub">Cheapest first. Externalizes gas buildout for resource adequacy.</div>
-            <div id="act4Rows1B"></div>
-        </div>
-        <!-- Right: Strategy 2C -->
-        <div class="act4-pathway-col col-right" id="act4Col2C">
-            <div class="act4-col-header">
-                <span class="hdr-dot" style="background: var(--clean-firm, #6366F1);"></span>
-                <span style="color: var(--clean-firm, #6366F1);">Strategy 2C &mdash; Hourly Matching</span>
-            </div>
-            <div class="act4-col-sub">Co-optimized portfolio. Builds clean firm early, drives learning curves.</div>
-            <div id="act4Rows2C"></div>
-        </div>
+    <!-- Sequencing thesis (moved from postscript) -->
+    <div class="act4-sequencing">
+        <p>
+            This isn&rsquo;t about ambition&mdash;it&rsquo;s about sequencing.
+            Building VRE without firm clean for the hard hours forces gas buildout that
+            becomes unnecessary at high clean targets. The capital is spent. The lobbying
+            apparatus is built. The rates are higher. And the people who pay those rates
+            see &ldquo;more renewables&rdquo; and &ldquo;higher bills&rdquo; and draw
+            the obvious conclusion. Strategy 2C avoids the trap by investing in clean firm
+            early&mdash;when it&rsquo;s expensive but catalytic&mdash;so that by the time
+            the grid needs it most, learning curves have made it affordable.
+        </p>
     </div>
+
+    <!-- Unified timeline: paired 1B/2C rows per milestone -->
+    <div class="act4-timeline" id="act4Timeline"></div>
 
     <!-- Shared legend -->
     <div class="act4-legend" id="act4Legend"></div>
 
-    <!-- Clean Firm LCOE trajectory -->
-    <div class="act4-lcoe-wrap">
-        <h3 class="act4-lcoe-title">Clean Firm LCOE: Endogenous Learning Curves</h3>
-        <p class="act4-lcoe-sub">
-            Strategy 2C&rsquo;s early firm clean deployment drives Wright&rsquo;s Law cost reductions.
-            By 2040, cumulative build crosses the first doubling threshold and LCOE drops toward NOAK.
-            Strategy 1B barely moves the needle&mdash;firm clean stays at FOAK prices because
-            almost none gets built.
-        </p>
-        <div class="act4-lcoe-chart-container">
-            <canvas id="act4LcoeChart"></canvas>
-        </div>
-    </div>
-
     <!-- Cumulative system cost summary -->
     <div class="act4-summary-grid" id="act4SummaryGrid">
         <div class="act4-summary-card" id="act4Summary1B">
-            <h4 style="color: var(--fossil-gas, #6B7280);">Strategy 1B &mdash; Total System Cost</h4>
+            <h4 style="color: var(--fossil-gas, #6B7280);">Strategy 1B &mdash; Annual Matching</h4>
             <div class="act4-summary-stats" id="act4SummaryStats1B"></div>
         </div>
         <div class="act4-summary-card" id="act4Summary2C">
-            <h4 style="color: var(--clean-firm, #6366F1);">Strategy 2C &mdash; Total System Cost</h4>
+            <h4 style="color: var(--clean-firm, #6366F1);">Strategy 2C &mdash; Hourly Matching</h4>
             <div class="act4-summary-stats" id="act4SummaryStats2C"></div>
         </div>
     </div>
@@ -1998,18 +1997,8 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         Strategy 2C pays more upfront but builds the infrastructure that actually finishes the job.
     </div>
 
-    <!-- Post-visual narrative -->
+    <!-- Post-visual link -->
     <div class="act4-postscript">
-        <p>
-            This isn&rsquo;t about ambition&mdash;it&rsquo;s about sequencing.
-            Building VRE without firm clean for the hard hours forces gas buildout that
-            becomes unnecessary at high clean targets. The capital is spent. The lobbying
-            apparatus is built. The rates are higher. And the people who pay those rates
-            see &ldquo;more renewables&rdquo; and &ldquo;higher bills&rdquo; and draw
-            the obvious conclusion. Strategy 2C avoids the trap by investing in clean firm
-            early&mdash;when it&rsquo;s expensive but catalytic&mdash;so that by the time
-            the grid needs it most, learning curves have made it affordable.
-        </p>
         <a href="abatement_dashboard.html" class="act4-explore-link">
             Explore regional abatement curves <span aria-hidden="true">&rarr;</span>
         </a>
@@ -3684,7 +3673,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
 </script>
 
 <!-- ================================================================== -->
-<!-- ACT 4 SCRIPT: The Stranded Asset Cliff — Pathway Timeline          -->
+<!-- ACT 4 SCRIPT: The Stranded Asset Cliff — Unified Timeline           -->
 <!-- ================================================================== -->
 <script>
 (function() {
@@ -3693,17 +3682,10 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     // --- Config ---
     var ISO = 'PJM';
     var THRESHOLD = '95';
-    var EXISTING_GAS_GW = 145; // PJM existing gas fleet
-    var MILESTONES = [50, 60, 70, 80, 90, 95]; // grid clean % targets
+    var EXISTING_GAS_GW = 145;
+    var PJM_DEMAND_TWH = 843.331;
+    var MILESTONES = [50, 60, 70, 80, 90, 95]; // HMS targets
     var MILESTONE_YEARS = { 50: 2030, 60: 2033, 70: 2035, 80: 2037, 90: 2040, 95: 2045 };
-
-    // Wright's Law parameters (from wrights_law_data.json)
-    var FIRM_FOAK = 120; // $/MWh blended nuclear+CCS FOAK
-    var FIRM_NOAK = 74;  // $/MWh blended NOAK
-    var NUCLEAR_FOAK = 148; var NUCLEAR_NOAK = 71;
-    var CCS_FOAK = 99; var CCS_NOAK = 78;
-    var FIRST_DOUBLING_GW = 6.5; // blended nuclear(5) + CCS(8) avg
-    var LEARNING_EXP = 0.32; // ~20% cost reduction per doubling (conservative)
 
     // Capex parameters
     var CAP_FACTORS = { solar: 0.25, wind: 0.33, cleanFirm: 0.90, battery: 0.15, ldes: 0.10 };
@@ -3722,16 +3704,24 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     var firmC = RC.cleanFirm || '#6366F1';
     var battC = RC.battery || '#06B6D4';
     var ldesC = RC.ldes || '#E91E63';
-    var curtC = RC.storage || '#EF4444';
     var existC = '#94A3B8';
     var gasC = '#6B7280';
+    var fossilC = '#9CA3AF';
 
     var alpha = typeof withAlpha !== 'undefined' ? withAlpha : function(hex, a) {
         var r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
         return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
     };
 
-    // --- Interpolate deployment data at grid clean % milestones ---
+    // --- Crosshatch pattern for curtailment ---
+    function hatchBg(hexColor) {
+        var r = parseInt(hexColor.slice(1,3),16), g = parseInt(hexColor.slice(3,5),16), b = parseInt(hexColor.slice(5,7),16);
+        return 'repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(' +
+            r + ',' + g + ',' + b + ',0.45) 3px, rgba(' + r + ',' + g + ',' + b + ',0.45) 5px)' +
+            ', rgba(' + r + ',' + g + ',' + b + ',0.12)';
+    }
+
+    // --- Data loading ---
     function getParticipationData(strat) {
         var parts = Object.keys(DEPLOYMENT_DATA.data[strat][ISO]).sort(function(a,b) { return parseFloat(a) - parseFloat(b); });
         var rows = [];
@@ -3742,6 +3732,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             var e = rec.e || {};
             rows.push({
                 part: parseFloat(p),
+                hms: rec.hms || 38.5,
                 gridClean: rec.gridCleanPct || 38.5,
                 gasGw: rec.gasGw || 0,
                 curtTwh: rec.curtTwh || 0,
@@ -3758,242 +3749,202 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         return rows;
     }
 
-    function interpToGridClean(rows, target) {
+    // --- Interpolate to HMS milestones ---
+    function interpToHms(rows, target) {
         var below = null, above = null;
         for (var i = 0; i < rows.length; i++) {
-            if (rows[i].gridClean <= target) below = rows[i];
-            if (rows[i].gridClean > target && !above) above = rows[i];
+            if (rows[i].hms <= target) below = rows[i];
+            if (rows[i].hms > target && !above) above = rows[i];
         }
         if (!below || !above) return below || above || rows[0];
-        if (above.gridClean === below.gridClean) return below;
-        var f = (target - below.gridClean) / (above.gridClean - below.gridClean);
+        if (above.hms === below.hms) return below;
+        var f = (target - below.hms) / (above.hms - below.hms);
         f = Math.max(0, Math.min(1, f));
         var result = {};
-        var keys = ['gasGw', 'curtTwh', 'c', 'bl', 'solar', 'wind', 'firm', 'battery', 'ldes', 'existing', 'part'];
+        var keys = ['gasGw', 'curtTwh', 'c', 'bl', 'solar', 'wind', 'firm', 'battery', 'ldes', 'existing', 'part', 'gridClean'];
         keys.forEach(function(k) { result[k] = below[k] + f * (above[k] - below[k]); });
-        result.gridClean = target;
+        result.hms = target;
         return result;
     }
 
+    // --- Curtailment allocation (solar first, then wind, then firm) ---
+    function allocateCurtailment(d) {
+        var remaining = d.curtTwh || 0;
+        var solarCurt = Math.min(remaining, d.solar); remaining -= solarCurt;
+        var windCurt = Math.min(remaining, d.wind); remaining -= windCurt;
+        var firmCurt = Math.min(remaining, d.firm); remaining -= firmCurt;
+        return {
+            solarUtil: d.solar - solarCurt, solarCurt: solarCurt,
+            windUtil: d.wind - windCurt, windCurt: windCurt,
+            firmUtil: d.firm - firmCurt, firmCurt: firmCurt,
+            battery: d.battery || 0,
+            ldes: d.ldes || 0,
+            existing: d.existing || 0
+        };
+    }
+
+    // --- Capex helpers ---
+    function twhToGw(twh, cf) { return twh / (8.76 * cf); }
+    function capexB_fn(gw, occKw) { return gw * occKw * 1e6 / 1e9; }
+
+    function computeCleanGenCapex(d) {
+        return capexB_fn(twhToGw(d.solar, CAP_FACTORS.solar), OCC.solar) +
+               capexB_fn(twhToGw(d.wind, CAP_FACTORS.wind), OCC.wind) +
+               capexB_fn(twhToGw(d.firm, CAP_FACTORS.cleanFirm), OCC.cleanFirm);
+    }
+
+    function computeTotalCapex(d) {
+        var total = computeCleanGenCapex(d);
+        total += capexB_fn(twhToGw(d.battery, CAP_FACTORS.battery), OCC.battery);
+        total += capexB_fn(twhToGw(d.ldes, CAP_FACTORS.ldes), OCC.ldes);
+        total += capexB_fn(Math.max(0, d.gasGw - EXISTING_GAS_GW), OCC.gas);
+        return total;
+    }
+
+    // --- Build data ---
     var rows1B = getParticipationData('1B');
     var rows2C = getParticipationData('2C');
 
-    // Build pathway data for each milestone
     var pathway1B = [], pathway2C = [];
-    var peakGas1B = EXISTING_GAS_GW; // floor ratchet tracker
-
     MILESTONES.forEach(function(m) {
-        var d1 = interpToGridClean(rows1B, m);
-        var d2 = interpToGridClean(rows2C, m);
-
-        // Floor ratchet for 1B: gas built at earlier stages can't be retired
-        // If new gas was needed at a prior milestone, it stays
-        var newGas1B = Math.max(0, d1.gasGw - EXISTING_GAS_GW);
-        // Track peak new gas — once built, it doesn't go away
-        if (d1.gasGw > peakGas1B) peakGas1B = d1.gasGw;
-        d1.ratchetGasGw = peakGas1B;
-
-        // Wright's Law LCOE for clean firm based on cumulative GW deployed
-        var firmGw1B = d1.firm / (8.76 * CAP_FACTORS.cleanFirm);
-        var firmGw2C = d2.firm / (8.76 * CAP_FACTORS.cleanFirm);
-        d1.firmLcoe = wrightLcoe(firmGw1B);
-        d2.firmLcoe = wrightLcoe(firmGw2C);
-
-        // Cumulative capex
-        d1.capexB = computeCapex(d1, true);
-        d2.capexB = computeCapex(d2, false);
-
-        // Stranded gas capex for 1B
-        d1.strandedGasCapexB = capexB_fn(Math.max(0, d1.ratchetGasGw - EXISTING_GAS_GW), OCC.gas);
-
+        var d1 = interpToHms(rows1B, m);
+        var d2 = interpToHms(rows2C, m);
+        d1.cleanCapexB = computeCleanGenCapex(d1);
+        d2.cleanCapexB = computeCleanGenCapex(d2);
+        d1.totalCapexB = computeTotalCapex(d1);
+        d2.totalCapexB = computeTotalCapex(d2);
         pathway1B.push(d1);
         pathway2C.push(d2);
     });
 
-    function wrightLcoe(cumGw) {
-        if (cumGw < 0.1) return FIRM_FOAK;
-        var ratio = cumGw / FIRST_DOUBLING_GW;
-        var reduction = Math.pow(ratio, -LEARNING_EXP);
-        var lcoe = FIRM_FOAK * reduction;
-        return Math.max(lcoe, FIRM_NOAK);
-    }
+    // Pre-compute max curtailment pct for consistent bar widths
+    var maxCurtPct = 0;
+    MILESTONES.forEach(function(m, i) {
+        var c1 = (pathway1B[i].curtTwh || 0) / PJM_DEMAND_TWH * 100;
+        var c2 = (pathway2C[i].curtTwh || 0) / PJM_DEMAND_TWH * 100;
+        maxCurtPct = Math.max(maxCurtPct, c1, c2);
+    });
+    var maxBarPct = 100 + Math.max(maxCurtPct, 5); // at least 5% overflow space
 
-    function twhToGw(twh, cf) { return twh / (8.76 * cf); }
-    function capexB_fn(gw, occKw) { return gw * occKw * 1e6 / 1e9; }
-
-    function computeCapex(d, includeGas) {
-        var total = 0;
-        total += capexB_fn(twhToGw(d.solar, CAP_FACTORS.solar), OCC.solar);
-        total += capexB_fn(twhToGw(d.wind, CAP_FACTORS.wind), OCC.wind);
-        total += capexB_fn(twhToGw(d.firm, CAP_FACTORS.cleanFirm), OCC.cleanFirm);
-        total += capexB_fn(twhToGw(d.battery, CAP_FACTORS.battery), OCC.battery);
-        total += capexB_fn(twhToGw(d.ldes, CAP_FACTORS.ldes), OCC.ldes);
-        if (includeGas) {
-            total += capexB_fn(Math.max(0, d.gasGw - EXISTING_GAS_GW), OCC.gas);
-        }
-        return total;
-    }
-
-    // --- Build milestone row HTML ---
-    function buildRow(d, milestone, isStart, stratColor) {
-        var year = MILESTONE_YEARS[milestone] || '';
-        var total = d.solar + d.wind + d.firm + d.battery + d.ldes + d.existing;
-        var curt = d.curtTwh || 0;
-        var barTotal = total + curt;
-        if (barTotal < 1) barTotal = 1;
-
-        var firmGw = d.firm / (8.76 * CAP_FACTORS.cleanFirm);
-        var gasWarn = d.gasGw > EXISTING_GAS_GW * 0.9;
-        var gasGood = d.gasGw < EXISTING_GAS_GW * 0.5;
+    // --- Build milestone row ---
+    function buildRow(d, stratKey, stratColor) {
+        var alloc = allocateCurtailment(d);
+        var hms = d.hms;
+        var fossilPct = 100 - hms;
 
         var row = document.createElement('div');
-        row.className = 'act4-milestone-row' + (isStart ? ' row-start' : '');
+        row.className = 'act4-milestone-row';
 
-        // Left metrics
+        // Strategy label
+        var label = document.createElement('div');
+        label.className = 'act4-strat-label';
+        label.style.color = stratColor;
+        label.textContent = stratKey;
+
+        // Metrics
+        var gasWarn = d.gasGw > EXISTING_GAS_GW * 0.9;
+        var gasGood = d.gasGw < EXISTING_GAS_GW * 0.5;
         var metrics = document.createElement('div');
         metrics.className = 'act4-row-metrics';
         metrics.innerHTML =
-            '<div class="act4-row-year">' + year + '</div>' +
-            '<div class="act4-row-target" style="color:' + stratColor + ';">' + milestone + '% clean</div>' +
-            '<div class="act4-row-metric ' + (gasWarn ? 'metric-warn' : gasGood ? 'metric-good' : '') + '">Gas: <strong>' + Math.round(d.gasGw) + ' GW</strong></div>' +
-            '<div class="act4-row-metric">Firm LCOE: <strong>$' + Math.round(d.firmLcoe) + '</strong></div>' +
-            (curt > 1 ? '<div class="act4-row-metric metric-warn">Curtailed: <strong>' + Math.round(curt) + ' TWh</strong></div>' : '') +
-            '<div class="act4-row-metric">Capex: <strong>$' + Math.round(d.capexB) + 'B</strong></div>';
+            '<div class="act4-row-metric ' + (gasWarn ? 'metric-warn' : gasGood ? 'metric-good' : '') +
+            '">Gas: <strong>' + Math.round(d.gasGw) + ' GW</strong></div>' +
+            '<div class="act4-row-metric">Clean: <strong>$' + Math.round(d.cleanCapexB) + 'B</strong></div>' +
+            '<div class="act4-row-metric">Total: <strong>$' + Math.round(d.totalCapexB) + 'B</strong></div>';
 
         // Stacked bar
         var barWrap = document.createElement('div');
         barWrap.className = 'act4-bar-wrap';
 
-        var segs = [];
-        if (d.existing > 0.5) segs.push({ val: d.existing, color: existC, label: 'Existing: ' + Math.round(d.existing) + ' TWh' });
-        if (d.solar > 0.5) segs.push({ val: d.solar, color: solarC, label: 'Solar: ' + Math.round(d.solar) + ' TWh' });
-        if (d.wind > 0.5) segs.push({ val: d.wind, color: windC, label: 'Wind: ' + Math.round(d.wind) + ' TWh' });
-        if (d.firm > 0.5) segs.push({ val: d.firm, color: firmC, label: 'Clean Firm: ' + Math.round(d.firm) + ' TWh (' + firmGw.toFixed(1) + ' GW)' });
-        if (d.battery > 0.5) segs.push({ val: d.battery, color: battC, label: 'Battery: ' + Math.round(d.battery) + ' TWh' });
-        if (d.ldes > 0.5) segs.push({ val: d.ldes, color: ldesC, label: 'LDES: ' + Math.round(d.ldes) + ' TWh' });
-        if (curt > 1) segs.push({ val: curt, color: curtC, label: 'Curtailed: ' + Math.round(curt) + ' TWh', opacity: 0.3 });
-
-        segs.forEach(function(s) {
+        // Helper to add a segment
+        function addSeg(twh, color, opacity, tooltipLabel, isHatch) {
+            if (twh < 0.3) return;
+            var pct = (twh / PJM_DEMAND_TWH) / (maxBarPct / 100) * 100;
             var seg = document.createElement('div');
-            seg.className = 'act4-bar-seg';
-            seg.style.width = (s.val / barTotal * 100).toFixed(1) + '%';
-            seg.style.background = s.opacity ? alpha(s.color, s.opacity) : alpha(s.color, 0.75);
-            seg.setAttribute('data-tooltip', s.label);
+            seg.className = 'act4-bar-seg' + (isHatch ? ' act4-bar-seg-hatch' : '');
+            seg.style.width = pct.toFixed(2) + '%';
+            if (isHatch) {
+                seg.style.background = hatchBg(color);
+            } else {
+                seg.style.background = alpha(color, opacity);
+            }
+            seg.setAttribute('data-tooltip', tooltipLabel);
             barWrap.appendChild(seg);
-        });
+        }
 
+        // Existing clean — full saturation
+        addSeg(alloc.existing, existC, 1.0, 'Existing Clean: ' + Math.round(alloc.existing) + ' TWh', false);
+        // Solar utilized — semi-transparent
+        addSeg(alloc.solarUtil, solarC, 0.5, 'Solar: ' + Math.round(alloc.solarUtil) + ' TWh', false);
+        // Wind utilized — semi-transparent
+        addSeg(alloc.windUtil, windC, 0.5, 'Wind: ' + Math.round(alloc.windUtil) + ' TWh', false);
+        // Clean firm utilized — semi-transparent
+        addSeg(alloc.firmUtil, firmC, 0.5, 'Clean Firm: ' + Math.round(alloc.firmUtil) + ' TWh', false);
+        // Battery — semi-transparent
+        addSeg(alloc.battery, battC, 0.5, 'Battery: ' + Math.round(alloc.battery) + ' TWh', false);
+        // LDES — semi-transparent
+        addSeg(alloc.ldes, ldesC, 0.5, 'LDES: ' + Math.round(alloc.ldes) + ' TWh', false);
+        // Fossil — fills to 100% of demand
+        var fossilTwh = PJM_DEMAND_TWH * fossilPct / 100;
+        addSeg(fossilTwh, fossilC, 0.5, 'Fossil: ' + Math.round(fossilTwh) + ' TWh (' + Math.round(fossilPct) + '%)', false);
+
+        // 100% demand mark
+        var mark = document.createElement('div');
+        mark.className = 'act4-bar-100-mark';
+        mark.style.left = (100 / maxBarPct * 100).toFixed(1) + '%';
+        var markLabel = document.createElement('span');
+        markLabel.className = 'act4-bar-100-label';
+        markLabel.textContent = '100%';
+        mark.appendChild(markLabel);
+        barWrap.appendChild(mark);
+
+        // Curtailment — crosshatch extending past 100%
+        addSeg(alloc.solarCurt, solarC, 0.3, 'Solar Curtailed: ' + Math.round(alloc.solarCurt) + ' TWh', true);
+        addSeg(alloc.windCurt, windC, 0.3, 'Wind Curtailed: ' + Math.round(alloc.windCurt) + ' TWh', true);
+        addSeg(alloc.firmCurt, firmC, 0.3, 'Firm Curtailed: ' + Math.round(alloc.firmCurt) + ' TWh', true);
+
+        row.appendChild(label);
         row.appendChild(metrics);
         row.appendChild(barWrap);
         return row;
     }
 
-    // --- Build summary stats HTML ---
-    function buildSummary(containerId, pathway, stratLabel, stratColor) {
+    // --- Build milestone group (year header + paired 1B/2C rows) ---
+    function buildMilestoneGroup(milestone, idx) {
+        var year = MILESTONE_YEARS[milestone] || '';
+        var group = document.createElement('div');
+        group.className = 'act4-milestone-group';
+
+        var header = document.createElement('div');
+        header.className = 'act4-milestone-group-header';
+        header.innerHTML = '<span class="act4-group-year">' + year + '</span>' +
+            '<span class="act4-group-target">' + milestone + '% Hourly Matching</span>';
+        group.appendChild(header);
+
+        var row1B = buildRow(pathway1B[idx], '1B', gasC);
+        var row2C = buildRow(pathway2C[idx], '2C', firmC);
+        group.appendChild(row1B);
+        group.appendChild(row2C);
+
+        return group;
+    }
+
+    // --- Summary stats ---
+    function buildSummary(containerId, pathway, stratColor) {
         var el = document.getElementById(containerId);
         if (!el) return;
         var final = pathway[pathway.length - 1];
-        var firmGw = final.firm / (8.76 * CAP_FACTORS.cleanFirm);
-        var strandedGas = final.strandedGasCapexB || 0;
-
         var stats = [
-            { value: '$' + Math.round(final.capexB) + 'B', label: 'Total Capex', color: stratColor },
-            { value: Math.round(final.gasGw) + ' GW', label: 'Gas Remaining', color: final.gasGw > 50 ? '#DC2626' : '#16A34A' },
-            { value: '$' + Math.round(final.firmLcoe) + '/MWh', label: 'Firm LCOE at 95%', color: stratColor },
-            { value: Math.round(final.curtTwh) + ' TWh', label: 'Curtailment', color: final.curtTwh > 50 ? '#DC2626' : '#16A34A' }
+            { value: Math.round(final.gasGw) + ' GW', label: 'Gas Capacity', color: final.gasGw > 50 ? '#DC2626' : '#16A34A' },
+            { value: '$' + Math.round(final.cleanCapexB) + 'B', label: 'Clean Gen Capex', color: stratColor },
+            { value: '$' + Math.round(final.totalCapexB) + 'B', label: 'Total Capex', color: stratColor }
         ];
-        if (strandedGas > 0.5) {
-            stats.push({ value: '$' + Math.round(strandedGas) + 'B', label: 'Stranded Gas Capex', color: '#DC2626' });
-            stats.push({ value: firmGw.toFixed(0) + ' GW', label: 'Clean Firm Built', color: stratColor });
-        } else {
-            stats.push({ value: firmGw.toFixed(0) + ' GW', label: 'Clean Firm Built', color: stratColor });
-            stats.push({ value: '0 GW', label: 'New Gas Needed', color: '#16A34A' });
-        }
-
         el.innerHTML = stats.map(function(s) {
             return '<div class="act4-summary-stat">' +
                 '<div class="act4-summary-stat-value" style="color:' + s.color + ';">' + s.value + '</div>' +
                 '<div class="act4-summary-stat-label">' + s.label + '</div>' +
             '</div>';
         }).join('');
-    }
-
-    // --- Build LCOE trajectory chart ---
-    function buildLcoeChart() {
-        var ctx = document.getElementById('act4LcoeChart');
-        if (!ctx) return;
-
-        var years = MILESTONES.map(function(m) { return MILESTONE_YEARS[m]; });
-        var lcoe1B = pathway1B.map(function(d) { return Math.round(d.firmLcoe); });
-        var lcoe2C = pathway2C.map(function(d) { return Math.round(d.firmLcoe); });
-
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: years,
-                datasets: [
-                    {
-                        label: 'Strategy 1B — Firm LCOE',
-                        data: lcoe1B,
-                        borderColor: gasC,
-                        backgroundColor: alpha(gasC, 0.1),
-                        borderWidth: 3,
-                        borderDash: [8, 4],
-                        pointRadius: 5,
-                        pointBackgroundColor: gasC,
-                        fill: false,
-                        tension: 0.3
-                    },
-                    {
-                        label: 'Strategy 2C — Firm LCOE',
-                        data: lcoe2C,
-                        borderColor: firmC,
-                        backgroundColor: alpha(firmC, 0.15),
-                        borderWidth: 3,
-                        pointRadius: 5,
-                        pointBackgroundColor: firmC,
-                        fill: true,
-                        tension: 0.3
-                    },
-                    {
-                        label: 'NOAK Floor',
-                        data: years.map(function() { return FIRM_NOAK; }),
-                        borderColor: alpha('#16A34A', 0.5),
-                        borderWidth: 2,
-                        borderDash: [4, 4],
-                        pointRadius: 0,
-                        fill: false
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        title: { display: true, text: 'Year (SBTi trajectory)', font: { family: 'DM Sans', size: 11, weight: 600 }, color: '#64748B' },
-                        ticks: { font: { family: 'DM Sans', size: 10 }, color: '#94A3B8' },
-                        grid: { color: 'rgba(0,0,0,0.04)' }
-                    },
-                    y: {
-                        title: { display: true, text: 'Clean Firm LCOE ($/MWh)', font: { family: 'DM Sans', size: 11, weight: 600 }, color: '#64748B' },
-                        ticks: { font: { family: 'DM Sans', size: 10 }, color: '#94A3B8', callback: function(v) { return '$' + v; } },
-                        grid: { color: 'rgba(0,0,0,0.04)' },
-                        min: 50,
-                        max: 140
-                    }
-                },
-                plugins: {
-                    legend: { display: true, position: 'bottom', labels: { font: { family: 'DM Sans', size: 10 }, color: '#64748B', boxWidth: 14, padding: 12 } },
-                    tooltip: {
-                        backgroundColor: 'rgba(26,39,68,0.92)',
-                        titleFont: { family: 'DM Sans', size: 12, weight: 600 },
-                        bodyFont: { family: 'DM Sans', size: 11 },
-                        cornerRadius: 8, padding: 12,
-                        callbacks: { label: function(c) { return c.dataset.label + ': $' + c.parsed.y + '/MWh'; } }
-                    }
-                }
-            }
-        });
     }
 
     // --- Scroll animation ---
@@ -4003,69 +3954,67 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         if (act4Animated) return;
         act4Animated = true;
 
-        // Show columns
-        var col1B = document.getElementById('act4Col1B');
-        var col2C = document.getElementById('act4Col2C');
-        if (col1B) col1B.classList.add('col-visible');
-        if (col2C) col2C.classList.add('col-visible');
-
-        // Build milestone rows
-        var container1B = document.getElementById('act4Rows1B');
-        var container2C = document.getElementById('act4Rows2C');
+        var timeline = document.getElementById('act4Timeline');
+        var groups = [];
 
         MILESTONES.forEach(function(m, i) {
-            var row1B = buildRow(pathway1B[i], m, i === 0, gasC);
-            var row2C = buildRow(pathway2C[i], m, i === 0, firmC);
-            if (container1B) container1B.appendChild(row1B);
-            if (container2C) container2C.appendChild(row2C);
+            var group = buildMilestoneGroup(m, i);
+            if (timeline) timeline.appendChild(group);
+            groups.push(group);
 
-            // Stagger row animations
             setTimeout(function() {
-                row1B.classList.add('row-visible');
-                row2C.classList.add('row-visible');
-            }, 200 + i * 150);
+                group.classList.add('group-visible');
+                // Stagger row visibility within group
+                var rows = group.querySelectorAll('.act4-milestone-row');
+                rows.forEach(function(r, ri) {
+                    setTimeout(function() { r.classList.add('row-visible'); }, ri * 100);
+                });
+            }, 200 + i * 200);
         });
 
-        // Build summary stats
+        // Summary stats
         setTimeout(function() {
-            buildSummary('act4SummaryStats1B', pathway1B, '1B', gasC);
-            buildSummary('act4SummaryStats2C', pathway2C, '2C', firmC);
+            buildSummary('act4SummaryStats1B', pathway1B, gasC);
+            buildSummary('act4SummaryStats2C', pathway2C, firmC);
             var s1 = document.getElementById('act4Summary1B');
             var s2 = document.getElementById('act4Summary2C');
             if (s1) s1.classList.add('card-visible');
             if (s2) s2.classList.add('card-visible');
-        }, 200 + MILESTONES.length * 150 + 200);
+        }, 200 + MILESTONES.length * 200 + 200);
 
-        // Build LCOE chart
-        setTimeout(function() {
-            buildLcoeChart();
-        }, 200 + MILESTONES.length * 150 + 400);
-
-        // Show insight
+        // Insight
         setTimeout(function() {
             var ins = document.getElementById('act4Insight');
             if (ins) ins.classList.add('insight-visible');
-        }, 200 + MILESTONES.length * 150 + 800);
+        }, 200 + MILESTONES.length * 200 + 600);
     }
 
     // --- Legend ---
     var legendEl = document.getElementById('act4Legend');
     if (legendEl) {
         var items = [
-            { color: existC, label: 'Existing Clean' },
-            { color: solarC, label: 'Solar' },
-            { color: windC, label: 'Wind' },
-            { color: firmC, label: 'Clean Firm (Nuclear + CCS)' },
-            { color: battC, label: 'Battery' },
-            { color: ldesC, label: 'LDES' },
-            { color: curtC, label: 'Curtailment' }
+            { color: existC, label: 'Existing Clean', opacity: 1.0 },
+            { color: solarC, label: 'Solar (new)', opacity: 0.5 },
+            { color: windC, label: 'Wind (new)', opacity: 0.5 },
+            { color: firmC, label: 'Clean Firm (new)', opacity: 0.5 },
+            { color: battC, label: 'Battery', opacity: 0.5 },
+            { color: ldesC, label: 'LDES', opacity: 0.5 },
+            { color: fossilC, label: 'Fossil', opacity: 0.5 },
+            { color: null, label: 'Curtailment', hatch: true }
         ];
         items.forEach(function(item) {
             var el = document.createElement('div');
             el.className = 'act4-legend-item';
             var swatch = document.createElement('span');
             swatch.className = 'act4-legend-swatch';
-            swatch.style.background = item.color;
+            if (item.hatch) {
+                swatch.style.background = 'repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(107,114,128,0.5) 2px, rgba(107,114,128,0.5) 3px)';
+                swatch.style.height = '10px';
+                swatch.style.width = '18px';
+                swatch.style.borderRadius = '2px';
+            } else {
+                swatch.style.background = alpha(item.color, item.opacity);
+            }
             el.appendChild(swatch);
             el.appendChild(document.createTextNode(item.label));
             legendEl.appendChild(el);
