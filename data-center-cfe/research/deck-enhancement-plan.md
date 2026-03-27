@@ -422,3 +422,115 @@ After user approval, create scripts in data-center-cfe/analysis/ for the approve
 - Expected outputs described in enough detail to design slide visualizations
 
 ---
+
+## Prompt 5: Existing Slide Updates
+
+> **Goal:** Update existing slides with new data, refined framing, and additional citations from `vreresearch.md`. Focus on the reframing: VRE as a standalone strategic decision within a strong clean firm + storage portfolio.
+
+### Context
+
+The deck currently has 16 slides (after Slides 6-7 were added). The core narrative is strong, but several slides can be sharpened with new research data and the refined framing that assumes existing/new firm clean in CAISO/ERCOT/PJM and storage willingness everywhere viable.
+
+**Critical framing shift:** The current deck sometimes presents VRE as "the only option" — but the refined framing is "VRE is a high-value ADDITION to an already strong portfolio." This is a subtle but important distinction. An IPP with firm clean assets isn't desperate for VRE — they're evaluating whether it's a smart standalone bet that complements their existing strengths.
+
+### Prompt
+
+```
+Read the full current deck: data-center-cfe/output/vre-investment-thesis-deck.html
+Read the new research: data-center-cfe/research/vreresearch.md
+Read the thesis validation memo (if completed): data-center-cfe/research/thesis-validation-memo.md
+
+For each existing slide, apply updates from the checklist below. Only modify
+slides that have actionable changes — don't touch slides that are already
+correct and complete.
+
+After all updates, regenerate the deck: python data-center-cfe/generate_deck.py
+Then update dashboard/dvre.html to match (per Prompt 0 methodology).
+
+---
+
+### Slide 1: Title Slide
+- No changes needed (branding and title are set)
+
+### Slide 2: Where the Load Is Landing
+- **Framing update**: Add a brief note that "this load growth is the CONTEXT, not the thesis — the question is how to serve it profitably within a diversified clean portfolio"
+- **Data check**: Verify DC Byte pipeline numbers (265 GW total) against vreresearch.md figures
+- **New callout**: Reference the 2,073 tracked US facilities from DC Byte March 2026 data
+
+### Slide 3: The Clean Energy Gap
+- **Data update**: BNEF 2025 shows corporate procurement fell 10% to 55.9 GW — but Big 4 accounted for 49% of deals. ADD this as an insight callout: "Even in a down procurement year, hyperscaler demand is structural — they took half the market"
+- **Gap numbers**: Verify 596 TWh / 488 TWh gap against latest vreresearch.md figures
+- **New framing**: "For an IPP with firm clean assets, this gap represents CUSTOMER DEMAND, not just a market stat — these buyers are actively seeking what we can sell"
+
+### Slide 4: The Gap Persists: 2035–2040 Even with SMRs
+- **SMR timeline update**: Incorporate Nuclear Innovation Alliance data (FOAK early 2030s, NOAK late 2030s-2045)
+- **Add nuance**: "SMRs are complementary to VRE, not competitive — both serve different hours and different cost profiles. An IPP developing both creates maximum portfolio value."
+- **Data point**: Add the 5-10% cost reduction per production doubling for SMR NOAK (GOV.UK citation)
+
+### Slide 5: The Consequential Advantage: Leveraging the Coal Wall
+- **Verify data**: Coal wall analysis numbers ($49/MWh, 109 TWh savings, 1.58x leverage) against coal_wall_analysis_results.json
+- **Portfolio framing**: "Consequential accounting rewards ISOs where VRE displaces the dirtiest generation — even without storage or firm clean pairing, standalone VRE in MISO/SPP/PJM captures this premium"
+- **Add**: Coal retirement acceleration data from vreresearch.md (PJM 30 GW by 2035, MISO retirements)
+
+### Slide 6: The Energy Timeline (NEW — just added, review only)
+- **Review for completeness**: Verify all major deals from vreresearch.md Section "Deal Timeline" are represented
+- **Check**: Does it include Google Intersect Power $4.75B acquisition (Dec 2025)?
+- **Check**: Does it include Meta Calpine 400 MW gas deal (Q3 2025)?
+- **Framing**: Ensure the narrative emphasizes "VRE dominance persists" — not just "lots of deals happening"
+
+### Slide 7: The Secondary Vanguard: Colocation Developers (NEW — just added, review only)
+- **Data verification**: Confirm energy consumption figures match vreresearch.md:
+  - Digital Realty: 11.1 TWh (2023)
+  - Equinix: 8.56 TWh (2024), 96% renewable
+  - CyrusOne: 4.2 TWh
+  - QTS: 2.6 TWh, Vantage: 2.6 TWh
+- **Add GHG Protocol vulnerability**: "Under proposed Scope 2 hourly matching + deliverability rules (est. 2027), 30-50% of current unbundled REC portfolios will be disqualified — creating urgent demand for localized VRE"
+- **IPP framing**: "These capital-constrained providers cannot fund nuclear. They NEED third-party IPPs offering VRE + firm clean 24/7 CFE products."
+
+### Slide 8: Regional VRE Opportunity Matrix
+- **Update with interconnection data**: Add PJM "D-minus" scorecard vs ERCOT's faster process (Grid Strategies AEI 2024)
+- **Add ERCOT context**: Current VRE penetration frequently ~50%; solar/wind capture ~$17/MWh — standalone VRE challenged but storage pairing critical
+- **Add CAISO context**: 62% clean already; midday negatives chronic; VRE standalone is "sell" but VRE + storage or VRE within firm portfolio is viable
+- **Portfolio lens**: Reframe ratings through "what does VRE add to an IPP that already has firm clean here?" rather than "is VRE good here in isolation?"
+
+### Slide 9: The VRE Investment Case (currently Slide 10 area)
+- **Add BNEF citation**: "Even as global procurement dipped 10% in 2025, hyperscalers increased share to 49% — demand is concentrating, not declining"
+- **Vertical integration risk callout**: "Google's $4.75B Intersect Power acquisition signals hyperscaler self-supply trend — but >400 TWh gap remains, and Tier 2 colos can't self-develop"
+- **Portfolio value add**: Reframe from "VRE is the answer" to "VRE captures the near-term opportunity while firm clean captures the long-term — together they dominate both"
+
+### Slide 10: Three Procurement Strategies
+- **GHG Protocol update**: Add note that Scope 2 consultation is moving toward hourly matching + deliverability, which favors Strategy 2 (hourly) and increases total VRE demand
+- **Citation**: GHG Protocol upcoming public consultation (Citation #35)
+
+### Slides 11-13: Strategy Deployment / Pipeline Wins / Scenario Analysis
+- **Data check only**: Verify numbers against latest Step 5 scenario outputs
+- **No major framing changes** — these are analytical slides driven by model outputs
+
+### Slide 14: Appendix / Bibliography
+- **Add new citations**: All sources from vreresearch.md not already listed
+- **Organize**: Group by category (Market Intelligence, Cost & Technology, Regulatory, Corporate, Research)
+
+---
+
+IMPORTANT: After all updates:
+1. Run python data-center-cfe/generate_deck.py to regenerate the output deck
+2. Verify the output deck renders correctly (check slide count, all charts load)
+3. Commit with descriptive message listing which slides were updated and why
+```
+
+### Files to Modify
+- `data-center-cfe/templates/deck_template.html` (slide content updates)
+- `data-center-cfe/data-inputs/*.csv` (if any data points change)
+- `data-center-cfe/generate_deck.py` (if new data fields need to be passed to template)
+- `data-center-cfe/output/vre-investment-thesis-deck.html` (regenerated)
+
+### Success Criteria
+- Framing consistently reflects "VRE as standalone value-add to firm clean portfolio"
+- New research data points incorporated where relevant (with citations)
+- BNEF 2025 procurement decline addressed honestly (not ignored)
+- Vertical integration risk acknowledged (Google Intersect Power)
+- GHG Protocol Scope 2 changes referenced on relevant slides
+- No slide left with stale data when newer numbers exist in vreresearch.md
+- Deck regenerates cleanly after template updates
+
+---
