@@ -640,7 +640,7 @@ def main():
     print(f"\nDeck generated: {out_path}")
     print(f"  Size: {out_path.stat().st_size / 1024:.0f} KB")
     print(f"  Data sources: {len(list(DATA_DIR.glob('*.csv')))} CSVs from {DATA_DIR}/")
-    print(f"\nOpen in browser to view the 14-slide presentation.")
+    print(f"\nOpen in browser to view the 18-slide presentation.")
 
 
 if __name__ == "__main__":
