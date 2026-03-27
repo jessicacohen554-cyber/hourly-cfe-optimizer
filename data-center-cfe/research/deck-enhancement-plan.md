@@ -740,3 +740,146 @@ placement, implementation). Keep specs concise — we're proposing, not building
 - GHG Protocol slide (Candidate A) specifically evaluated for whether it should be standalone or folded into existing procurement strategy slides
 
 ---
+
+## Prompt 8: Final QA & Narrative Polish
+
+> **Goal:** End-to-end quality check of the complete enhanced deck. Verify data consistency, narrative coherence, visual quality, and alignment with the refined VRE-as-standalone-within-portfolio framing.
+
+### Prompt
+
+```
+This is the FINAL QA pass on the VRE Investment Thesis deck after all
+enhancements from Prompts 0-7 have been applied.
+
+Read the full deck: data-center-cfe/output/vre-investment-thesis-deck.html
+Read dashboard version: dashboard/dvre.html
+
+## 1. Data Consistency Audit
+
+For every quantitative claim in the deck, verify against source data:
+
+| Claim | Slide | Source File | Matches? | Fix Needed? |
+|-------|-------|-------------|----------|-------------|
+
+Priority checks:
+- 596 TWh Big 4 demand → us_hyperscaler_gap_analysis.csv
+- 488 TWh gap → same
+- 639 TWh total gap (including non-Big-4) → verify source
+- 109 TWh coal wall savings → coal_wall_analysis_results.json
+- $49/MWh consequential cost → same
+- 1.58x leverage ratio → same
+- 55.9 GW 2025 procurement → global_corporate_cfe_procurement.csv
+- 49% hyperscaler share → same
+- Colocation provider TWh figures → colocation_energy_profiles.csv
+- All ISO-specific numbers (queue sizes, capacity market values, capture rates)
+
+## 2. Narrative Coherence Check
+
+Read the deck front-to-back as a story. Check:
+- Does it flow logically from context → gap → opportunity → investment case → strategy?
+- Is the framing CONSISTENTLY "VRE as standalone strategic value-add" (not "VRE as only option")?
+- Are there any slides that still frame VRE as a desperation play rather than a smart portfolio addition?
+- Does the conclusion tie back to the opening premise?
+- Are there any narrative dead-ends (data presented but never tied to the thesis)?
+
+## 3. Visual Quality Check
+
+For each slide:
+- All charts render correctly (no broken images, no missing data series)
+- Color palette is consistent (CEG Blue/Orange/Green/Teal/Gray)
+- Font sizes readable (min 14pt body, 24pt titles on slide format)
+- No overlapping text or chart elements
+- Legends clear and complete
+- Source citations present on data-heavy slides
+
+## 4. Cross-Version Sync
+
+Verify dvre.html matches the output deck:
+- Same slide count
+- Same data on every slide
+- Same narrative framing
+- No stale content in either version
+
+## 5. Citation Trail
+
+Every data point should trace to a source. Check:
+- Appendix bibliography is complete (all citations from vreresearch.md that were used)
+- No orphaned citations (listed but never referenced)
+- No uncited claims (data presented without attribution)
+
+## 6. Framing Integrity
+
+The refined framing is:
+"VRE is being evaluated as a STANDALONE strategic business decision within
+an IPP that has existing firm clean generation (CAISO, ERCOT, PJM), new firm
+clean development opportunities, and willingness to invest in storage wherever
+economically viable. The question is whether a VRE pipeline creates incremental
+value on its own merits."
+
+Check EVERY slide against this framing:
+- Does Slide 2 (Load Landing) set context without being the thesis?
+- Does the Investment Case slide frame VRE as additive, not existential?
+- Does the Regional Matrix evaluate "VRE value within portfolio" not "VRE vs. nothing"?
+- Are storage and firm clean treated as GIVEN (already decided) not as comparisons?
+
+## 7. Final Polish
+
+- Spell check all text
+- Verify all hyperlinks work
+- Check mobile rendering (if applicable for dvre.html)
+- Confirm generate_deck.py runs without errors
+- Confirm generate_figures.py runs without errors
+- Final commit with "Final QA pass complete" message
+
+Write any issues found to data-center-cfe/research/qa-findings.md.
+Fix all issues before the final commit.
+```
+
+### Success Criteria
+- Zero data inconsistencies between slides and source files
+- Narrative flows coherently front-to-back
+- All charts render correctly
+- dvre.html and output deck are perfectly synced
+- Every data point has a traceable citation
+- Framing is consistently "VRE as standalone value-add within strong portfolio"
+- No QA issues remain unresolved
+
+---
+
+## Execution Sequence
+
+These prompts should be executed in order, with each session building on the prior one's outputs. Recommended batching:
+
+| Session | Prompts | Estimated Effort | Dependencies |
+|---------|---------|-----------------|--------------|
+| **Session 1** | Prompt 0 (Reconcile) | 30-60 min | None — do this first to establish baseline |
+| **Session 2** | Prompt 1 (Audit) + Prompt 2 (Scrape) | 60-90 min | Session 1 completed |
+| **Session 3** | Prompt 3 (Thesis) + Prompt 4 (Analysis) | 60-90 min | Session 2 completed (audit table needed) |
+| **Session 4** | Prompt 5 (Slide Updates) | 60-90 min | Sessions 2-3 completed (new data + thesis validation) |
+| **Session 5** | Prompt 6 (Dominance Slide) | 45-60 min | Session 2 completed (procurement data scraped) |
+| **Session 6** | Prompt 7 (New Slides) | 30-60 min | Session 4 completed (know what's in updated deck) |
+| **Session 7** | Prompt 8 (Final QA) | 30-45 min | All prior sessions completed |
+
+**Sessions 5 and 6 can run in parallel** (they don't depend on each other).
+
+**Total estimated effort: 5-8 sessions, ~6-9 hours**
+
+### Key Files Reference
+
+| File | Purpose |
+|------|---------|
+| `data-center-cfe/output/vre-investment-thesis-deck.html` | Output deck (primary deliverable) |
+| `dashboard/dvre.html` | Dashboard version (must match output deck) |
+| `data-center-cfe/templates/deck_template.html` | Jinja2 template for deck generation |
+| `data-center-cfe/generate_deck.py` | Deck generation script |
+| `data-center-cfe/generate_figures.py` | Figure generation script |
+| `data-center-cfe/data-inputs/*.csv` | Source data for deck |
+| `data-center-cfe/research/vreresearch.md` | New research document |
+| `data-center-cfe/research/citation-audit.md` | Output of Prompt 1 |
+| `data-center-cfe/research/thesis-validation-memo.md` | Output of Prompt 3 |
+| `data-center-cfe/research/new-analysis-proposals.md` | Output of Prompt 4 |
+| `data-center-cfe/research/qa-findings.md` | Output of Prompt 8 |
+| `data-center-cfe/sources.md` | Bibliography (update in Prompt 2) |
+| `data-center-cfe/analysis/coal_wall_analysis.py` | Existing analysis script |
+| `data-center-cfe/analysis/gap_analysis.py` | Existing analysis script |
+| `pipeline_config.py` | Main repo cost assumptions |
