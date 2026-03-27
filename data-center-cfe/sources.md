@@ -78,6 +78,46 @@
 - WRI / LBNL / EPRI / BCG: US Data Centers Electricity Demand — https://www.wri.org/insights/us-data-centers-electricity-demand
 - IEA 4E: Data Centre Energy Use Critical Review — https://www.iea-4e.org/wp-content/uploads/2025/05/Data-Centre-Energy-Use-Critical-Review-of-Models-and-Results.pdf
 
+## Interconnection & Grid Analysis Sources
+
+- LBNL: "Queued Up: 2024 Edition" — Interconnection completion rates (14% solar, 11% battery), queue times, proposed capacity — https://eta-publications.lbl.gov/sites/default/files/queued_up_2024_edition_r2.pdf
+- Grid Strategies: AEI 2024 Generator Interconnection Scorecard — ISO grades (ERCOT B, CAISO B-, PJM D-, ISO-NE F) — https://gridstrategiesllc.com/wp-content/uploads/2024/03/AEI-2024-Generation-Interconnection-Scorecard.pdf
+- DOE Office of Electricity: Clean Energy Resources to Meet Data Center Demand — https://www.energy.gov/oe/clean-energy-resources-meet-data-center-electricity-demand
+- PJM: Role in the Energy Transition — 40 GW thermal retirements by 2030, 229 GW peak demand by 2045 — https://www.pjm.com/-/media/DotCom/committees-groups/user-groups/pieoug/2024/20240508/20240508-public-interest-environmental-organizations-pieoug---presentation.pdf
+- California Energy Commission: 2024 Total System Electric Generation — CAISO 62% clean energy — https://www.energy.ca.gov/data-reports/energy-almanac/california-electricity-data/2024-total-system-electric-generation
+
+## GHG Protocol & Regulatory Sources
+
+- Watershed: "Analyzing the GHG Protocol's proposed scope 2 changes" — 30-50% REC disqualification, 3-7x price multiplier — https://watershed.com/blog/ghgp-analysis
+- GHG Protocol: "Upcoming Scope 2 Public Consultation: Hourly Matching and Deliverability" — https://ghgprotocol.org/blog/upcoming-scope-2-public-consultation-hourly-matching-and-deliverability
+- Climate Resource Solutions: "Missteps in Proposed Updates to GHG Protocol" (counterargument) — https://resource-solutions.org/missteps-in-proposed-updates-to-ghg-protocols-scope-2-guidance/
+- Flexidao: "How to Practically Start a 24/7 CFE Journey" — 40-65% actual hourly CFE under annual matching — https://www.flexidao.com/resources/how-to-practically-start-a-24-7-carbon-free-energy-journey
+
+## Storage & BESS Revenue Sources
+
+- Modo Energy: "US Research Roundup: BESS insights Q3 2025" — ERCOT 4hr battery arbitrage $150+/kW-yr — https://modoenergy.com/research/en/ercot-pjm-caiso-nyiso-us-bess-research-roundup-q3-2025
+  - Access: **Paywalled** — headline figure sourced via vreresearch.md
+
+## Emissions & Sustainability Accountability Sources
+
+- Clarity AI: "Data Center Emissions Are Rising" — DC emissions rising despite clean energy commitments — https://clarity.ai/research-and-insights/climate/data-center-emissions-are-rising-are-firms-doing-enough/
+  - Access: **Paywalled (403)** — narrative framing used; company-level data from sustainability reports
+
+## Colocation Provider Sources
+
+- Equinix Sustainability Report 2024: 8.56 TWh, 96% renewable coverage — https://sustainability.equinix.com/environment/efficiency-and-clean-power/
+- Digital Realty Sustainability Report 2023: 11.1 TWh, 75% renewable coverage
+- CyrusOne Sustainability Report 2023: 4.2 TWh, climate neutral by 2030 (SBTi)
+- QTS Sustainability Report 2023: 2.6 TWh, 100% renewable electricity
+- Vantage Data Centers Sustainability Report 2023: 2.6 TWh, net-zero by 2030
+- Iron Mountain: Data Center Sustainability — 100% annual RE, 24/7 CFE by 2040 — https://www.ironmountain.com/data-centers/sustainability
+
+## Vertical Integration & Market Structure Sources
+
+- Introl Blog: Google's $4.75B Intersect Power Acquisition (10.8 GW solar + storage) — https://introl.com/blog/google-intersect-power-acquisition-energy-parks-2026
+- GE Vernova: "A tale of two ISOs: ERCOT and CAISO" — market structure comparison — https://www.gevernova.com/gas-power/resources/articles/2018/a-tale-of-two-isos-energy-market-design-in-Texas-and-California
+- Utility Dive: "ERCOT, CAISO offer best grid interconnection" — https://www.utilitydive.com/news/ercot-caiso-pjm-grid-interconnection-queue-scorecard-advanced-energy-aeu/708450/
+
 ## Access Notes
 
 | Source | Access | Quality |
@@ -89,3 +129,11 @@
 | Company PRs | Public | Primary source for named deals |
 | ESG/Carbon Credits | Public | Good secondary coverage of BNEF data |
 | Google/Amazon/Meta sustainability | Public | Aggregate portfolio data |
+| Watershed | Public (403 on fetch) | Best quantitative analysis of GHG Protocol impact |
+| Flexidao | Public | Key 40-65% hourly CFE gap statistic |
+| Modo Energy | Paywalled | BESS revenue breakdown by ISO |
+| Clarity AI | Paywalled (403) | DC emissions accountability analysis |
+| LBNL Queued Up | Public | Gold standard for interconnection queue data |
+| Grid Strategies AEI | Public | ISO interconnection scorecards |
+| CEC / CAISO | Public | California grid generation mix data |
+| Colocation sustainability reports | Public | Company-level energy and emissions data |
