@@ -12,15 +12,15 @@
 
 | # | Claim | Slide | Source File | Issue | Resolution |
 |---|-------|-------|-------------|-------|------------|
-| 1 | 639 TWh gap | 4 | `data-inputs/us_hyperscaler_gap_analysis.csv` | CSV in `data-inputs/` had raw numbers (596 TWh need, 488 TWh gap) without 1.35× hourly matching penalty. Template narrative hardcoded 639 TWh from `data/` version. Table showed 488 TWh while text said 639 TWh. | Synced `data-inputs/` CSV with `data/` version (747 TWh need, 639 TWh gap, 14% prob-weighted coverage) |
-| 2 | "cover only 26%" | 4 | Same | Narrative mixed all-deals coverage (26%) with prob-weighted gap (639 TWh) — two different scenarios in one sentence | Rewrote to use prob-weighted framing consistently ("less than 15%... 639 TWh gap") with 26% as secondary supporting stat |
-| 3 | 208 GW VRE / 81 GW nuclear | 4 | Same | Derived from 639 TWh — correct after CSV sync | Confirmed consistent |
+| 1 | 383 TWh gap | 4 | `data-inputs/us_hyperscaler_gap_analysis.csv` | Removed 1.35× hourly matching penalty. Now uses 70% DC utilization factor: TWh = GW × 8,760 × 0.70. Total 2030 need = 491 TWh, gap = 383 TWh (prob-weighted), 22% coverage. | Updated all CSVs, template, and output HTML |
+| 2 | "cover only 40%" | 4 | Same | Updated coverage stats to reflect new utilization-based TWh | Rewrote to use prob-weighted framing consistently ("only 22%... 383 TWh gap") with 40% as all-deals secondary stat |
+| 3 | 125 GW VRE / 49 GW nuclear | 4 | Same | Derived from 383 TWh gap | Confirmed consistent |
 
 ### Verified Correct (No Issues)
 
 | Claim | Slide | Source File | Status |
 |-------|-------|-------------|--------|
-| 596 TWh Big 4 demand (raw, pre-penalty) | CSV internal | `us_hyperscaler_gap_analysis.csv` | ✓ Source correctly has 596 TWh raw; 747 TWh with 1.35× hourly matching penalty |
+| 491 TWh Big 4 demand (70% utilization) | CSV internal | `us_hyperscaler_gap_analysis.csv` | ✓ 80 GW × 8,760 × 0.70 = 491 TWh. No hourly matching penalty applied. |
 | 109 TWh coal wall savings | 14 | `coal_wall_analysis_results.json` | ✓ Exact match |
 | $49/MWh consequential cost | 14 | Same | ✓ Exact match |
 | 1.58× leverage ratio | 14 | Same | ✓ Exact match |
