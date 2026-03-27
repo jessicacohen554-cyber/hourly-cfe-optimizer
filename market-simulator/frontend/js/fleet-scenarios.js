@@ -11,48 +11,62 @@
     'use strict';
 
     var TARGET_STYLES = {
-        sbti_15:     { color: '#DC2626', dash: [8, 4], label: 'SBTi 1.5°C' },
-        at_power_nz: { color: '#6366F1', dash: [],     label: 'AT Power NZ' },
-        custom:      { color: '#6B7280', dash: [4, 4], label: 'Custom' }
+        sbti_15:     { color: '#ad1dca', dash: [8, 4], label: 'SBTi 1.5°C' },
+        at_power_nz: { color: '#6366F1', dash: [8, 4],     label: 'AT Power NZ' },
+        custom:      { color: '#000205', dash: [4, 4], label: 'Custom' }
     };
 
-    var FUEL_KEYS   = ['nuclear', 'geothermal', 'wind', 'solar', 'hydro', 'battery', 'ldes', 'gas_ccgt', 'gas_ct', 'gas_oil_ct', 'oil_ct', 'ccs_ccgt'];
+    var FUEL_KEYS   = ['nuclear', 'geothermal', 'hydro', 'wind', 'solar', 'battery', 'ldes', 'ccs_ccgt', 'gas_ccgt', 'gas_ct', 'gas_oil_ct', 'oil_ct'];
     var FUEL_LABELS = { nuclear: 'Nuclear', geothermal: 'Geothermal', wind: 'Wind', solar: 'Solar', hydro: 'Hydro', battery: 'Battery', ldes: 'LDES', gas_ccgt: 'Gas CCGT', gas_ct: 'Gas CT', gas_oil_ct: 'Gas/Oil', oil_ct: 'Oil', ccs_ccgt: 'CCS-CCGT' };
     var FUEL_COLORS = {
-        nuclear:    RESOURCE_COLORS.nuclear,
-        geothermal: RESOURCE_COLORS.geothermal || '#D97706',
-        wind:       RESOURCE_COLORS.wind || '#22C55E',
-        solar:      RESOURCE_COLORS.solar || '#F59E0B',
-        hydro:      RESOURCE_COLORS.hydro || '#0EA5E9',
-        battery:    RESOURCE_COLORS.battery || '#06B6D4',
-        ldes:       RESOURCE_COLORS.ldes || '#E91E63',
-        gas_ccgt:   RESOURCE_COLORS.fossilGas,
-        gas_ct:     RESOURCE_COLORS.fossilGasCT || '#007FA4',
+        nuclear:    '#2372B9',
+        geothermal: '#F47B27',
+        wind:       '#6BA543',
+        solar:      '#FBB254',
+        hydro:      '#007FA4',
+        battery:    '#651dda',
+        ldes:       '#651dda9a',
+        gas_ccgt:   '#7F8F97',
+        gas_ct:     '#7E8083',
         gas_oil_ct: '#8B7355',
-        oil_ct:     RESOURCE_COLORS.fossilOil,
-        ccs_ccgt:   RESOURCE_COLORS.ccs
+        oil_ct:     '#6b5942',
+        ccs_ccgt:   '#CADB2E',
     };
     var EMISSION_FUEL_KEYS = ['gas_ccgt', 'gas_ct', 'gas_oil_ct', 'oil_ct', 'ccs_ccgt'];
 
+
     // ── State ──
     var DATA = null;
-    var customScenario = null;  // Set when user recalculates from sidebar
+    var customScenario = null;  // Legacy — no longer auto-displayed; kept for API compat
     var savedScenarioOverlays = []; // Array of saved scenarios with .isVisible, .color, .results
     var selectedTargets = ['sbti_15'];
     var selectedYear = 2030;
     var selectedFossilCost = 'All';
+    var selectedLowerScenarioId = null; // null = baseline; string = saved scenario ID
+    var hideBaselineFan = false;
     var fanChart = null;
-    var waterfallChart = null;
     var waterfall2023Chart = null;
     var genMixChart = null;
     var newCleanChart = null;
     var intensityFanChart = null;
-    var fuelEmissionsChart = null;
+
+    var ccgtTierChart = null;
+    var fossilMixChart = null;
+
+    // ── Clean fuel keys for % low-carbon calculation ──
+    var CLEAN_FUEL_SET = { nuclear: 1, geothermal: 1, hydro: 1, wind: 1, solar: 1, battery: 1, ldes: 1, ccs_ccgt: 1 };
 
     // ── Helpers ──
     function getYears() {
         if (!DATA || !DATA.scenarios || !DATA.scenarios.baseline) return [];
         return Object.keys(DATA.scenarios.baseline.envelope).map(Number).sort(function (a, b) { return a - b; });
+    }
+
+    /** Pad labels array to 2052 for x-axis breathing room (data ends at 2050). */
+    function padLabelsTo2052(labels) {
+        var last = Number(labels[labels.length - 1]) || 2050;
+        for (var yr = last + 1; yr <= 2052; yr++) labels.push(String(yr));
+        return labels;
     }
 
     /** Return an array of pointRadius values: `radius` at 5-year intervals, 0 elsewhere. */
@@ -64,6 +78,35 @@
     function fiveYearTooltipFilter(item) {
         var label = item.label || '';
         return Number(label) % 5 === 0;
+    }
+
+    /** Linearly interpolate trajectory data so every year has a value (no gaps). */
+    function interpolateTrajectory(trajectory, years) {
+        // Collect known (year, value) pairs sorted by year
+        var known = [];
+        Object.keys(trajectory).forEach(function (k) {
+            if (trajectory[k] != null) known.push({ y: Number(k), v: trajectory[k] });
+        });
+        known.sort(function (a, b) { return a.y - b.y; });
+        if (known.length === 0) return years.map(function () { return null; });
+
+        return years.map(function (yr) {
+            // Exact match
+            for (var i = 0; i < known.length; i++) {
+                if (known[i].y === yr) return known[i].v;
+            }
+            // Before first known point or after last
+            if (yr <= known[0].y) return known[0].v;
+            if (yr >= known[known.length - 1].y) return known[known.length - 1].v;
+            // Find bracketing points and interpolate
+            for (var j = 0; j < known.length - 1; j++) {
+                if (yr > known[j].y && yr < known[j + 1].y) {
+                    var t = (yr - known[j].y) / (known[j + 1].y - known[j].y);
+                    return known[j].v + t * (known[j + 1].v - known[j].v);
+                }
+            }
+            return null;
+        });
     }
 
     function hexToRgba(hex, alpha) {
@@ -111,27 +154,30 @@
     // Derive intensity_envelope from generation_by_fuel + emissions_by_fuel if not present
     function deriveIntensityEnvelope(sc) {
         if (sc.intensity_envelope) return;
+        sc.intensity_envelope = computeIntensityFromGenAndEmissions(sc);
+    }
+
+    // Compute intensity envelope directly from p50 emissions (envelope) and
+    // total fleet generation (generation_by_fuel).  This ensures the intensity
+    // chart is always consistent with the emissions fan and gen-mix charts.
+    function computeIntensityFromGenAndEmissions(sc) {
         var gen = sc.generation_by_fuel;
-        var emis = sc.emissions_by_fuel;
-        if (!gen || !emis) return;
+        var envelope = sc.envelope;
+        if (!gen || !envelope) return {};
         var intEnv = {};
         Object.keys(gen).forEach(function (yr) {
-            var totalGenTwh = 0;
-            var totalEmisMt = 0;
             var gYear = gen[yr] || {};
-            var eYear = emis[yr] || {};
-            Object.keys(gYear).forEach(function (f) { totalGenTwh += gYear[f] || 0; });
-            Object.keys(eYear).forEach(function (f) { totalEmisMt += eYear[f] || 0; });
-            // TWh → MWh: ×1e6. Mt → kg: ×1e9. intensity = (Mt × 1e9) / (TWh × 1e6) = Mt/TWh × 1e3
-            var intensityKg = totalGenTwh > 0 ? (totalEmisMt / totalGenTwh) * 1e3 : 0;
-            intEnv[yr] = {
-                p10: Math.round(intensityKg * 100) / 100,
-                p50: Math.round(intensityKg * 100) / 100,
-                p90: Math.round(intensityKg * 100) / 100,
-                mean: Math.round(intensityKg * 100) / 100
-            };
+            var totalGenTwh = 0;
+            Object.keys(gYear).forEach(function (f) { if (f[0] !== '_') totalGenTwh += gYear[f] || 0; });
+            var env = envelope[yr];
+            if (!env || totalGenTwh <= 0) return;
+            // emissions are in Mt CO2, gen in TWh → (Mt/TWh)×1e3 = kgCO2/MWh
+            var p10 = Math.round((env.p10 / totalGenTwh) * 1e3 * 100) / 100;
+            var p50 = Math.round((env.p50 / totalGenTwh) * 1e3 * 100) / 100;
+            var p90 = Math.round((env.p90 / totalGenTwh) * 1e3 * 100) / 100;
+            intEnv[yr] = { p10: p10, p50: p50, p90: p90, mean: p50 };
         });
-        sc.intensity_envelope = intEnv;
+        return intEnv;
     }
 
     function onDataLoaded(data) {
@@ -143,14 +189,22 @@
             });
         }
         buildControls();
+        var hideBaselineEl = document.getElementById('hideBaselineFan');
+        if (hideBaselineEl) {
+            hideBaselineEl.addEventListener('change', function () {
+                hideBaselineFan = hideBaselineEl.checked;
+                updateFanChart();
+            });
+        }
         buildFanChart();
-        buildWaterfallChart();
         buildWaterfall2023Chart();
         buildGenMixChart();
+        buildCcgtTierChart();
         buildNewCleanChart();
         buildIntensityFanChart();
-        buildFuelEmissionsChart();
+        buildFossilMixChart();
         updateFanLegend();
+        buildScenarioSelector();
         buildPlantDrilldownCharts();
     }
 
@@ -200,22 +254,6 @@
             updateFanLegend();
         });
 
-        // Fossil cost toggle
-        var fossilToggle = document.getElementById('fossilCostToggle');
-        if (fossilToggle) {
-            fossilToggle.addEventListener('click', function (e) {
-                var btn = e.target.closest('.toggle-btn');
-                if (!btn) return;
-                fossilToggle.querySelectorAll('.toggle-btn').forEach(function (b) {
-                    b.classList.remove('active');
-                });
-                btn.classList.add('active');
-                selectedFossilCost = btn.dataset.value;
-                updateFanChart();
-                updateFanLegend();
-            });
-        }
-
         // Year slider
         var slider = document.getElementById('yearSlider');
         var sliderVal = document.getElementById('yearSliderValue');
@@ -230,9 +268,8 @@
         slider.addEventListener('input', function () {
             selectedYear = Number(slider.value);
             sliderVal.textContent = slider.value;
-            updateWaterfallChart();
             updateWaterfall2023Chart();
-            updateGenMixChart();
+            updateCcgtTierChart();
             updateNewCleanChart();
             updateFanChartAnnotation();
         });
@@ -243,14 +280,23 @@
         var tooltipEl = document.getElementById('fanTooltip');
         if (tooltipEl) tooltipEl.classList.remove('visible');
 
-        updateFanChart();
-        updateFanLegend();
-        updateWaterfallChart();
-        updateWaterfall2023Chart();
-        updateGenMixChart();
-        updateNewCleanChart();
-        updateIntensityFanChart();
-        updateFuelEmissionsChart();
+        // Wrap each chart update in try/catch so one failure doesn't cascade
+        var updates = [
+            ['fanChart', updateFanChart],
+            ['fanLegend', updateFanLegend],
+            ['scenarioSelector', updateScenarioSelector],
+            ['waterfall2023Chart', updateWaterfall2023Chart],
+            ['genMixChart', updateGenMixChart],
+            ['ccgtTierChart', updateCcgtTierChart],
+            ['newCleanChart', updateNewCleanChart],
+            ['intensityFanChart', updateIntensityFanChart],
+            ['fossilMixChart', updateFossilMixChart],
+            ['scenarioCheckboxes', updateScenarioCheckboxes]
+        ];
+        updates.forEach(function (pair) {
+            try { pair[1](); }
+            catch (err) { console.error('updateAllCharts — ' + pair[0] + ' failed:', err); }
+        });
     }
 
     // ====================================================================
@@ -365,10 +411,10 @@
                         document.getElementById('yearSlider').value = year;
                         selectedYear = year;
                         document.getElementById('yearSliderValue').textContent = year;
-                        updateWaterfallChart();
                         updateWaterfall2023Chart();
                         updateGenMixChart();
                         updateNewCleanChart();
+                        updateTopEmittersChart();
                         updateFanChartAnnotation();
                     }
                 }
@@ -389,12 +435,9 @@
 
     // ── Determine color mode ──
     function getColorMode() {
-        // Collect visible scenarios: baseline is always present, plus savedScenarioOverlays
-        var visibleCount = savedScenarioOverlays.length;
-        if (customScenario) visibleCount++;
-        // Single mode: 0 overlays (baseline only), or exactly 1 overlay
-        // where the overlay count ≤1 (baseline + 1 custom = single)
-        var hasBaselineOverlay = savedScenarioOverlays.some(function (s) { return s.isBaseline; });
+        var visible = savedScenarioOverlays.filter(function (s) { return s.isVisible !== false; });
+        var visibleCount = visible.length;
+        var hasBaselineOverlay = visible.some(function (s) { return s.isBaseline; });
         if (visibleCount <= 1 || (visibleCount === 2 && hasBaselineOverlay)) {
             return 'single';
         }
@@ -579,18 +622,16 @@
 
         // Check if we need to inject the intervention year into the timeline
         var firstYear = getFirstInterventionYear();
-        var hasCustom = customScenario || (mode === 'single' && savedScenarioOverlays.length === 1);
-        if (firstYear && hasCustom && years.indexOf(firstYear) === -1) {
-            // Inject the intervention year into the years array for chart resolution
+        var hasOverlays = savedScenarioOverlays.some(function (s) { return s.isVisible !== false; });
+        if (firstYear && hasOverlays && years.indexOf(firstYear) === -1) {
             years = years.slice();
             years.push(firstYear);
             years.sort(function (a, b) { return a - b; });
         }
         var labels = years.map(String);
 
-        // ── Always show baseline with gray p10-p90 band ──
-        // If we injected an extra year, interpolate baseline envelope at that year
-        if (baseline) {
+        // ── Baseline with gray p10-p90 band (skipped if user hides it) ──
+        if (baseline && !hideBaselineFan) {
             var baseEnv = getEnvelope(baseline);
             if (firstYear && !baseEnv[String(firstYear)]) {
                 var interpBase = interpolateEnvAtYear(baseEnv, firstYear);
@@ -605,47 +646,27 @@
             }, { isBaseline: true, scenarioName: 'Baseline' });
         }
 
-        if (mode === 'single') {
-            // ── Single-scenario mode ──
-            var customOrSaved = customScenario ? customScenario : null;
-            if (!customOrSaved && savedScenarioOverlays.length === 1) {
-                customOrSaved = savedScenarioOverlays[0];
-            }
+        // ── Saved scenario overlays only (no unsaved custom scenario on charts) ──
+        var sortedOverlays = savedScenarioOverlays.filter(function (s) { return s.isVisible !== false; }).slice().sort(function (a, b) {
+            if (a.isBaseline && !b.isBaseline) return -1;
+            if (!a.isBaseline && b.isBaseline) return 1;
+            var aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            var bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return aTime - bTime;
+        });
 
-            if (customOrSaved) {
-                var custEnv = customOrSaved.results ? customOrSaved.results.envelope : customOrSaved.envelope;
-                var custColor = customOrSaved.color || CUSTOM_COLOR;
-                var custName = customOrSaved.name || 'Custom';
-
-                // Align custom with baseline until first intervention year
+        if (mode === 'single' && sortedOverlays.length === 1) {
+            var s = sortedOverlays[0];
+            if (s.results && s.results.envelope) {
+                var sEnv = s.results.envelope;
                 var baseEnvForAlign = baseline ? getEnvelope(baseline) : null;
-                var alignedEnv = alignEnvelopeWithBaseline(custEnv, baseEnvForAlign, firstYear);
-
-                addFanDatasets(datasets, alignedEnv, years, custColor, custName, mode, {
-                    color: custColor, width: 2.5, dash: [], pointRadius: 3,
-                    legendLabel: custName
-                }, { isBaseline: false, scenarioName: custName });
+                var alignedEnv = alignEnvelopeWithBaseline(sEnv, baseEnvForAlign, firstYear);
+                addFanDatasets(datasets, alignedEnv, years, s.color, s.name, mode, {
+                    color: s.color, width: 2.5, dash: [], pointRadius: 3,
+                    legendLabel: s.name
+                }, { isBaseline: !!s.isBaseline, scenarioName: s.name });
             }
         } else {
-            // ── Multi-scenario mode ──
-            // Custom overlay
-            if (customScenario) {
-                var custEnvMulti = customScenario.envelope;
-                var baseEnvMulti = baseline ? getEnvelope(baseline) : null;
-                var alignedEnvMulti = alignEnvelopeWithBaseline(custEnvMulti, baseEnvMulti, firstYear);
-
-                addFanDatasets(datasets, alignedEnvMulti, years, CUSTOM_COLOR, 'Custom', mode, null,
-                    { isBaseline: false, scenarioName: 'Custom' });
-            }
-
-            // Saved scenario overlays — sorted: baseline first, then by creation date
-            var sortedOverlays = savedScenarioOverlays.slice().sort(function (a, b) {
-                if (a.isBaseline && !b.isBaseline) return -1;
-                if (!a.isBaseline && b.isBaseline) return 1;
-                var aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                var bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-                return aTime - bTime;
-            });
             sortedOverlays.forEach(function (s) {
                 if (s.results && s.results.envelope) {
                     addFanDatasets(datasets, s.results.envelope, years, s.color, s.name, mode, null,
@@ -659,9 +680,7 @@
             if (!selTgt || selTgt === 'none' || !DATA.targets || !DATA.targets[selTgt]) return;
             var tgt = DATA.targets[selTgt];
             var style = TARGET_STYLES[selTgt] || TARGET_STYLES.custom;
-            var tgtData = years.map(function (y) {
-                return tgt.trajectory[String(y)] != null ? tgt.trajectory[String(y)] : null;
-            });
+            var tgtData = interpolateTrajectory(tgt.trajectory, years);
             datasets.push({
                 label: tgt.label,
                 data: tgtData,
@@ -677,7 +696,7 @@
             });
         });
 
-        fanChart.data.labels = labels;
+        fanChart.data.labels = padLabelsTo2052(labels);
         fanChart.data.datasets = datasets;
         updateFanChartAnnotation();
         fanChart.update('active');
@@ -782,7 +801,7 @@
             }
 
             // Saved scenario rows — sorted: baseline first, then by creation date
-            var sortedSaved = savedScenarioOverlays.slice().sort(function (a, b) {
+            var sortedSaved = savedScenarioOverlays.filter(function (s) { return s.isVisible !== false; }).slice().sort(function (a, b) {
                 if (a.isBaseline && !b.isBaseline) return -1;
                 if (!a.isBaseline && b.isBaseline) return 1;
                 var aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -856,7 +875,7 @@
             var html = '<div class="fan-tooltip-title">' + year + '</div>';
 
             var baseline = DATA.scenarios.baseline;
-            var baseIntEnv = baseline && baseline.intensity_envelope ? baseline.intensity_envelope : null;
+            var baseIntEnv = baseline ? computeIntensityFromGenAndEmissions(baseline) : null;
             var baseYear = baseIntEnv ? baseIntEnv[year] : null;
             var baseline2023 = baseIntEnv && baseIntEnv['2023'] ? baseIntEnv['2023'].p50 : null;
 
@@ -865,23 +884,28 @@
                 html += intensityTooltipRow(baseYear.p50, BASELINE_COLOR, 'Baseline', baseline2023);
             }
 
-            // Custom scenario row
-            if (customScenario && customScenario.intensity_envelope && customScenario.intensity_envelope[year]) {
-                var custVal = customScenario.intensity_envelope[year].p50;
-                html += intensityTooltipRow(custVal, CUSTOM_COLOR, 'Custom', baseline2023);
-                if (baseYear) {
-                    var delta = custVal - baseYear.p50;
-                    var cls = delta < 0 ? 'gap-negative' : 'gap-positive';
-                    var sign = delta > 0 ? '+' : '';
-                    html += '<div class="fan-tooltip-gap"><span class="' + cls + '">' +
-                        sign + delta.toFixed(1) + ' kgCO₂/MWh vs Baseline</span></div>';
+            // Custom scenario row (legacy)
+            if (customScenario && customScenario.envelope && customScenario.generation_by_fuel) {
+                var custIntEnv = computeIntensityFromGenAndEmissions(customScenario);
+                if (custIntEnv[year]) {
+                    var custVal = custIntEnv[year].p50;
+                    html += intensityTooltipRow(custVal, CUSTOM_COLOR, 'Custom', baseline2023);
+                    if (baseYear) {
+                        var delta = custVal - baseYear.p50;
+                        var cls = delta < 0 ? 'gap-negative' : 'gap-positive';
+                        var sign = delta > 0 ? '+' : '';
+                        html += '<div class="fan-tooltip-gap"><span class="' + cls + '">' +
+                            sign + delta.toFixed(1) + ' kgCO₂/MWh vs Baseline</span></div>';
+                    }
                 }
             }
 
-            // Saved scenario rows
-            savedScenarioOverlays.forEach(function (s) {
-                if (!s.results || !s.results.intensity_envelope || !s.results.intensity_envelope[year]) return;
-                var sVal = s.results.intensity_envelope[year].p50;
+            // Saved scenario rows — compute from emissions / total gen
+            savedScenarioOverlays.filter(function (s) { return s.isVisible !== false; }).forEach(function (s) {
+                if (!s.results || !s.results.envelope || !s.results.generation_by_fuel) return;
+                var scIntEnv = computeIntensityFromGenAndEmissions(s.results);
+                if (!scIntEnv[year]) return;
+                var sVal = scIntEnv[year].p50;
                 html += intensityTooltipRow(sVal, s.color, s.name || 'Saved', baseline2023);
             });
 
@@ -924,14 +948,13 @@
         items.push({ label: 'Baseline (P50)', color: BASELINE_COLOR, type: 'line' });
         items.push({ label: 'Baseline P10–P90', color: hexToRgba(BASELINE_COLOR, 0.15), type: 'band' });
 
-        // Check if custom is shown
-        var hasCustom = customScenario || (mode === 'single' && savedScenarioOverlays.length === 1);
-        if (hasCustom) {
-            var custColor = (customScenario && customScenario.color) || CUSTOM_COLOR;
-            var custName = (customScenario && customScenario.name) || 'Custom';
-            items.push({ label: custName + ' (P50)', color: custColor, type: 'line' });
-            items.push({ label: custName + ' P10–P90', color: hexToRgba(custColor, 0.15), type: 'band' });
-        }
+        // Saved scenario legend items (visible only)
+        savedScenarioOverlays.filter(function (s) { return s.isVisible !== false; }).forEach(function (s) {
+            if (s.results && s.results.envelope) {
+                items.push({ label: s.name + ' (P50)', color: s.color, type: 'line' });
+                items.push({ label: s.name + ' P10–P90', color: hexToRgba(s.color, 0.15), type: 'band' });
+            }
+        });
 
         // Targets always shown
         selectedTargets.forEach(function (selTgt) {
@@ -965,112 +988,7 @@
         el.innerHTML = html;
     }
 
-    // ====================================================================
-    // CHART 2: PLANT-LEVEL WATERFALL (Custom vs Baseline)
-    // ====================================================================
-    function buildWaterfallChart() {
-        var ctx = document.getElementById('waterfallChart').getContext('2d');
-        waterfallChart = new Chart(ctx, {
-            type: 'bar',
-            data: { labels: [], datasets: [] },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                indexAxis: 'y',
-                animation: { duration: 300 },
-                scales: {
-                    x: {
-                        title: { display: true, text: 'Emissions Delta (Mt CO₂)', font: { size: 12 } },
-                        grid: { color: '#E0E6EF' },
-                        ticks: { font: { size: 11 } }
-                    },
-                    y: {
-                        ticks: { font: { size: 11 } },
-                        grid: { display: false }
-                    }
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function (ctx) {
-                                var v = ctx.raw;
-                                return (v > 0 ? '+' : '') + v.toFixed(2) + ' Mt CO₂';
-                            }
-                        }
-                    }
-                }
-            }
-        });
-        updateWaterfallChart();
-    }
-
-    function updateWaterfallChart() {
-        if (!waterfallChart || !DATA) return;
-
-        var yr = String(nearestYear(selectedYear, getYears()));
-        document.getElementById('waterfallTitle').textContent = 'Emissions Delta vs Market Trajectory Baseline — ' + yr;
-
-        if (!customScenario) {
-            waterfallChart.data.labels = ['Edit fleet to see changes'];
-            waterfallChart.data.datasets = [{ data: [0], backgroundColor: '#ddd' }];
-            waterfallChart.update('active');
-            return;
-        }
-
-        var basePlants = DATA.scenarios.baseline && DATA.scenarios.baseline.plant_detail ? DATA.scenarios.baseline.plant_detail[yr] : null;
-        var scPlants = customScenario.plant_detail ? customScenario.plant_detail[yr] : null;
-
-        if (!basePlants || !scPlants) {
-            waterfallChart.data.labels = ['No data for ' + yr];
-            waterfallChart.data.datasets = [{ data: [0], backgroundColor: '#ddd' }];
-            waterfallChart.update('active');
-            return;
-        }
-
-        var baseMap = {};
-        basePlants.forEach(function (p) { baseMap[p.orispl] = p; });
-
-        var deltas = [];
-        scPlants.forEach(function (p) {
-            var baseP = baseMap[p.orispl];
-            var baseE = baseP ? baseP.emissions_mt : 0;
-            var delta = baseE - p.emissions_mt;
-            if (Math.abs(delta) > 0.001) {
-                deltas.push({ name: p.name, delta: delta });
-            }
-        });
-        basePlants.forEach(function (p) {
-            var found = scPlants.some(function (sp) { return sp.orispl === p.orispl; });
-            if (!found && p.emissions_mt > 0.001) {
-                deltas.push({ name: p.name + ' (retired)', delta: p.emissions_mt });
-            }
-        });
-
-        deltas.sort(function (a, b) { return Math.abs(b.delta) - Math.abs(a.delta); });
-
-        var other = 0;
-        if (deltas.length > 15) {
-            for (var i = 15; i < deltas.length; i++) other += deltas[i].delta;
-            deltas = deltas.slice(0, 15);
-            if (Math.abs(other) > 0.001) deltas.push({ name: 'Other', delta: other });
-        }
-
-        var labels = deltas.map(function (d) { return d.name; });
-        var values = deltas.map(function (d) { return d.delta; });
-        var colors = values.map(function (v) { return v >= 0 ? '#6BA543' : '#DC2626'; });
-
-        waterfallChart.data.labels = labels;
-        waterfallChart.data.datasets = [{
-            data: values,
-            backgroundColor: colors,
-            borderColor: colors,
-            borderWidth: 1,
-            borderRadius: 3,
-            barPercentage: 0.7
-        }];
-        waterfallChart.update('active');
-    }
+    // (Waterfall vs market trajectory chart — removed per Task 4)
 
     // ====================================================================
     // CHART 2b: PLANT-LEVEL WATERFALL vs 2023 BASELINE
@@ -1102,7 +1020,8 @@
                         callbacks: {
                             label: function (ctx) {
                                 var v = ctx.raw;
-                                return (v > 0 ? '+' : '') + v.toFixed(2) + ' Mt CO₂ vs 2023';
+                                if (v >= 0) return '−' + v.toFixed(2) + ' Mt CO₂ (reduced vs 2023)';
+                                return '+' + Math.abs(v).toFixed(2) + ' Mt CO₂ (added vs 2023)';
                             }
                         }
                     }
@@ -1119,11 +1038,10 @@
         document.getElementById('waterfall2023Title').textContent =
             'Emissions Delta vs 2023 Baseline — ' + yr;
 
-        // Use custom scenario if available, otherwise use baseline at selectedYear
-        var scenarioToCompare = customScenario || DATA.scenarios.baseline;
+        var scenarioToCompare = getSelectedLowerScenario();
         var scPlants = scenarioToCompare.plant_detail ? scenarioToCompare.plant_detail[yr] : null;
 
-        // 2023 baseline from engine-computed baseline
+        // 2023 actual emissions baseline — fixed reference point
         var base2023Plants = DATA.scenarios.baseline.plant_detail ?
             DATA.scenarios.baseline.plant_detail['2023'] : null;
 
@@ -1172,35 +1090,144 @@
         waterfall2023Chart.data.labels = labels;
         waterfall2023Chart.data.datasets = [{
             data: values,
-            backgroundColor: colors,
+            backgroundColor: colors.map(function (c) { return hexToRgba(c, 0.45); }),
             borderColor: colors,
-            borderWidth: 1,
-            borderRadius: 3,
+            borderWidth: 1.5,
+            borderRadius: 4,
             barPercentage: 0.7
         }];
         waterfall2023Chart.update('active');
     }
 
     // ====================================================================
+    // SCENARIO SELECTOR — Toggle between saved scenarios for lower charts
+    // ====================================================================
+    function getSelectedLowerScenario() {
+        if (!selectedLowerScenarioId) return DATA ? DATA.scenarios.baseline : null;
+        var found = savedScenarioOverlays.find(function (s) { return s.id === selectedLowerScenarioId; });
+        if (found && found.results) return found.results;
+        return DATA ? DATA.scenarios.baseline : null;
+    }
+
+    function getSelectedLowerScenarioLabel() {
+        if (!selectedLowerScenarioId) return 'Baseline';
+        var found = savedScenarioOverlays.find(function (s) { return s.id === selectedLowerScenarioId; });
+        return found ? found.name : 'Baseline';
+    }
+
+    function buildScenarioSelector() {
+        updateScenarioSelector();
+        var bar = document.getElementById('scenarioToggleBar');
+        if (bar) {
+            bar.addEventListener('click', function (e) {
+                var btn = e.target.closest('.toggle-btn');
+                if (!btn) return;
+                bar.querySelectorAll('.toggle-btn').forEach(function (b) { b.classList.remove('active'); });
+                btn.classList.add('active');
+                selectedLowerScenarioId = btn.dataset.scenarioId || null;
+                updateGenMixChart();
+                updateWaterfall2023Chart();
+                updateNewCleanChart();
+                updateFossilMixChart();
+            });
+        }
+    }
+
+    function updateScenarioSelector() {
+        var bar = document.getElementById('scenarioToggleBar');
+        if (!bar) return;
+        var html = '<button class="toggle-btn' + (!selectedLowerScenarioId ? ' active' : '') + '" data-scenario-id="">Baseline</button>';
+        savedScenarioOverlays.forEach(function (s) {
+            var isActive = selectedLowerScenarioId === s.id;
+            html += '<button class="toggle-btn' + (isActive ? ' active' : '') + '" data-scenario-id="' + s.id + '">' +
+                '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + s.color + ';margin-right:6px;vertical-align:middle;"></span>' +
+                (s.name || 'Scenario') + '</button>';
+        });
+        bar.innerHTML = html;
+
+        // If selected scenario was deleted, fall back to baseline
+        if (selectedLowerScenarioId && !savedScenarioOverlays.find(function (s) { return s.id === selectedLowerScenarioId; })) {
+            selectedLowerScenarioId = null;
+        }
+
+        // Show/hide the selector card
+        var card = document.getElementById('scenarioSelectorCard');
+        if (card) card.style.display = savedScenarioOverlays.length > 0 ? '' : 'none';
+    }
+
+    // ====================================================================
     // CHART 3: GENERATION MIX (Stacked Area Timeseries)
     // ====================================================================
+    // Custom plugin to draw 5-year labels (total TWh + % low carbon) above bars
+    var genMixLabelPlugin = {
+        id: 'genMixLabels',
+        afterDraw: function (chart) {
+            var meta0 = chart.getDatasetMeta(0);
+            if (!meta0 || !meta0.data || !meta0.data.length) return;
+            var ctx = chart.ctx;
+            ctx.save();
+            ctx.textAlign = 'center';
+            ctx.font = '600 10px sans-serif';
+
+            chart.data.labels.forEach(function (label, idx) {
+                var yr = Number(label);
+                if (yr > 2050 || yr < 2020) return;
+
+                // Sum total and clean for this bar index
+                var total = 0, clean = 0;
+                chart.data.datasets.forEach(function (ds) {
+                    var v = ds.data[idx] || 0;
+                    total += v;
+                    if (ds._fuelKey && CLEAN_FUEL_SET[ds._fuelKey]) clean += v;
+                });
+                if (total <= 0) return;
+
+                var pctClean = (clean / total * 100).toFixed(0);
+
+                // Find the top of the stacked bar
+                var topY = Infinity;
+                for (var di = 0; di < chart.data.datasets.length; di++) {
+                    var barMeta = chart.getDatasetMeta(di);
+                    if (barMeta.hidden || !barMeta.data[idx]) continue;
+                    var barEl = barMeta.data[idx];
+                    if (barEl.y < topY) topY = barEl.y;
+                }
+                if (!isFinite(topY)) return;
+
+                var x = meta0.data[idx].x;
+                ctx.fillStyle = '#374151';
+                ctx.fillText(total.toFixed(0) + ' TWh', x, topY - 16);
+                ctx.fillStyle = '#059669';
+                ctx.fillText(pctClean + '%', x, topY - 4);
+            });
+            ctx.restore();
+        }
+    };
+
     function buildGenMixChart() {
         var ctx = document.getElementById('genMixChart').getContext('2d');
         genMixChart = new Chart(ctx, {
-            type: 'line',
+            type: 'bar',
             data: { labels: [], datasets: [] },
+            plugins: [genMixLabelPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: { duration: 300 },
                 interaction: { mode: 'index', intersect: false },
+                layout: { padding: { top: 30 } },
                 scales: {
-                    x: { grid: { display: false }, ticks: { font: { size: 11 }, maxRotation: 0 } },
+                    x: {
+                        stacked: true,
+                        grid: { display: false },
+                        ticks: { font: { size: 11 }, maxRotation: 0, callback: function (val) { var y = Number(this.getLabelForValue(val)); return y > 2050 ? '' : y; } }
+                    },
                     y: {
                         stacked: true,
                         title: { display: true, text: 'Generation (TWh)', font: { size: 12 } },
                         grid: { color: '#E0E6EF' },
                         beginAtZero: true,
+                        min: 0,
                         ticks: { font: { size: 11 } }
                     }
                 },
@@ -1209,6 +1236,18 @@
                     tooltip: {
                         filter: fiveYearTooltipFilter,
                         callbacks: {
+                            title: function (tooltipItems) {
+                                if (!tooltipItems.length) return '';
+                                var idx = tooltipItems[0].dataIndex;
+                                var total = 0, clean = 0;
+                                tooltipItems[0].chart.data.datasets.forEach(function (ds) {
+                                    var v = ds.data[idx] || 0;
+                                    total += v;
+                                    if (ds._fuelKey && CLEAN_FUEL_SET[ds._fuelKey]) clean += v;
+                                });
+                                var pct = total > 0 ? (clean / total * 100).toFixed(1) : '0.0';
+                                return tooltipItems[0].label + ' — ' + total.toFixed(1) + ' TWh | ' + pct + '% Low Carbon';
+                            },
                             label: function (ctx) {
                                 if (!ctx.raw) return null;
                                 var total = 0;
@@ -1226,39 +1265,51 @@
         updateGenMixChart();
     }
 
+    var FIVE_YEAR_INTERVALS = [2025, 2030, 2035, 2040, 2045, 2050];
+
     function updateGenMixChart() {
         if (!genMixChart || !DATA) return;
 
-        // Use custom scenario if available, otherwise baseline
-        var sc = customScenario || DATA.scenarios.baseline;
-        var scenarioLabel = customScenario ? 'Custom' : 'Baseline';
+        var sc = getSelectedLowerScenario();
+        var scenarioLabel = getSelectedLowerScenarioLabel();
         document.getElementById('genMixTitle').textContent = 'Fleet Generation by Fuel — ' + scenarioLabel;
 
-        var years = getYears();
+        var allYears = getYears();
+        // Filter to 5-year intervals only
+        var years = FIVE_YEAR_INTERVALS.filter(function (y) {
+            return allYears.indexOf(y) !== -1;
+        });
+        if (years.length === 0) years = allYears.filter(function (y) { return y % 5 === 0; });
         var labels = years.map(String);
         var gen = sc.generation_by_fuel;
 
-        // Build stacked area datasets — only include fuels with non-zero generation
+        // Build stacked bar datasets with semi-transparent fill + saturated outline
         var datasets = [];
         FUEL_KEYS.forEach(function (fuel) {
             var data = years.map(function (y) {
                 if (!gen || !gen[String(y)]) return 0;
-                return gen[String(y)][fuel] || 0;
+                var val = gen[String(y)][fuel] || 0;
+                return Math.max(val, 0);
             });
             var hasData = data.some(function (v) { return v > 0; });
             if (!hasData) return; // Skip empty fuels
             datasets.push({
                 label: FUEL_LABELS[fuel] || fuel,
+                _fuelKey: fuel,
                 data: data,
-                backgroundColor: FUEL_COLORS[fuel] + 'CC',
+                backgroundColor: hexToRgba(FUEL_COLORS[fuel], 0.55),
                 borderColor: FUEL_COLORS[fuel],
                 borderWidth: 1.5,
-                fill: true,
-                pointRadius: 0,
-                pointHoverRadius: fiveYearRadii(years, 4),
-                tension: 0.3
+                borderSkipped: true
             });
         });
+
+        // Only the topmost dataset gets rounded corners
+        if (datasets.length > 0) {
+            var last = datasets[datasets.length - 1];
+            last.borderRadius = { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 };
+            last.borderSkipped = 'start';
+        }
 
         genMixChart.data.labels = labels;
         genMixChart.data.datasets = datasets;
@@ -1271,6 +1322,137 @@
                 '<span style="width:24px;height:10px;border-radius:3px;background:' + ds.borderColor + ';display:inline-block;"></span>' +
                 ds.label + '</span>';
         }).join('');
+    }
+
+    // ====================================================================
+    // CHART 3B: CCGT TIER CAPACITY FACTORS (Grouped Bar) — Selected Year
+    // ====================================================================
+    var TIER_KEYS = ['very_low', 'low', 'medium', 'high', 'very_high'];
+    var TIER_LABELS = {
+        very_low: 'Very Low HR (6.2)',
+        low: 'Low HR (6.8)',
+        medium: 'Medium HR (7.5)',
+        high: 'High HR (8.1)',
+        very_high: 'Very High HR (9.0)'
+    };
+    var TIER_COLORS = {
+        very_low: '#22C55E',
+        low: '#0EA5E9',
+        medium: '#6366F1',
+        high: '#F59E0B',
+        very_high: '#EF4444'
+    };
+
+    function buildCcgtTierChart() {
+        var ctx = document.getElementById('ccgtTierChart');
+        if (!ctx) return;
+        ccgtTierChart = new Chart(ctx.getContext('2d'), {
+            type: 'bar',
+            data: { labels: [], datasets: [] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 300 },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { font: { size: 11 } }
+                    },
+                    y: {
+                        title: { display: true, text: 'Capacity Factor', font: { size: 12 } },
+                        grid: { color: '#E0E6EF' },
+                        beginAtZero: true,
+                        max: 1.0,
+                        ticks: {
+                            font: { size: 11 },
+                            callback: function (v) { return Math.round(v * 100) + '%'; }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                return ctx.dataset.label + ': ' + (ctx.raw * 100).toFixed(1) + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        updateCcgtTierChart();
+    }
+
+    function updateCcgtTierChart() {
+        if (!ccgtTierChart || !DATA) return;
+
+        var yearStr = String(selectedYear);
+        var yearEl = document.getElementById('ccgtTierYear');
+        if (yearEl) yearEl.textContent = yearStr;
+
+        // Aggregate CCGT plants by tier from plant_detail for the selected scenario/year
+        var sc = getSelectedLowerScenario();
+        var plants = (sc.plant_detail && sc.plant_detail[yearStr]) || [];
+
+        // Group CCGT plants by tier — compute implied CF from gen/capacity
+        var tierData = {};
+        TIER_KEYS.forEach(function (t) {
+            tierData[t] = { gen_twh: 0, cap_mw: 0, count: 0, emis_mt: 0 };
+        });
+
+        plants.forEach(function (p) {
+            if (p.fuel_type !== 'gas_ccgt') return;
+            if (p.status === 'retired') return;
+            var tier = p.heat_rate_tier || 'medium';
+            if (!tierData[tier]) tier = 'medium';
+            tierData[tier].gen_twh += p.gen_twh || 0;
+            tierData[tier].cap_mw += p.capacity_mw || 0;
+            tierData[tier].count += 1;
+            tierData[tier].emis_mt += p.emissions_mt || 0;
+        });
+
+        // Compute CF = gen_twh * 1e6 / (cap_mw * 8760) for each tier
+        var labels = [];
+        var cfValues = [];
+        var colors = [];
+        var borderColors = [];
+
+        TIER_KEYS.forEach(function (tier) {
+            var d = tierData[tier];
+            if (d.cap_mw <= 0) return; // Skip tiers with no capacity
+            var cf = (d.gen_twh * 1e6) / (d.cap_mw * 8760);
+            labels.push(TIER_LABELS[tier] + '\n' + d.count + ' plants, ' + Math.round(d.cap_mw).toLocaleString() + ' MW');
+            cfValues.push(Math.min(cf, 1.0));
+            colors.push(hexToRgba(TIER_COLORS[tier], 0.6));
+            borderColors.push(TIER_COLORS[tier]);
+        });
+
+        ccgtTierChart.data.labels = labels;
+        ccgtTierChart.data.datasets = [{
+            label: 'Capacity Factor',
+            data: cfValues,
+            backgroundColor: colors,
+            borderColor: borderColors,
+            borderWidth: 2,
+            borderRadius: 6
+        }];
+        ccgtTierChart.update('active');
+
+        // Build legend
+        var legendEl = document.getElementById('ccgtTierLegend');
+        if (legendEl) {
+            legendEl.innerHTML = TIER_KEYS.map(function (tier) {
+                var d = tierData[tier];
+                if (d.cap_mw <= 0) return '';
+                var cf = (d.gen_twh * 1e6) / (d.cap_mw * 8760);
+                return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:16px;">' +
+                    '<span style="width:24px;height:10px;border-radius:3px;background:' + TIER_COLORS[tier] + ';display:inline-block;"></span>' +
+                    TIER_LABELS[tier] + ': ' + (cf * 100).toFixed(1) + '% CF, ' +
+                    d.emis_mt.toFixed(1) + ' Mt CO₂' +
+                    '</span>';
+            }).filter(Boolean).join('');
+        }
     }
 
     // ====================================================================
@@ -1326,42 +1508,49 @@
         var yr = String(nearestYear(selectedYear, getYears()));
         document.getElementById('newCleanTitle').textContent = 'New Clean Generation — ' + yr;
 
-        // Get custom and baseline generation by fuel for selected year
         var baseGen = {};
         var custGen = {};
         var baseline = DATA.scenarios.baseline;
+        var selectedSc = getSelectedLowerScenario();
         if (baseline && baseline.generation_by_fuel && baseline.generation_by_fuel[yr]) {
             baseGen = baseline.generation_by_fuel[yr];
         }
-        if (customScenario && customScenario.generation_by_fuel && customScenario.generation_by_fuel[yr]) {
-            custGen = customScenario.generation_by_fuel[yr];
+        if (selectedSc && selectedSc.generation_by_fuel && selectedSc.generation_by_fuel[yr]) {
+            custGen = selectedSc.generation_by_fuel[yr];
         }
 
-        // New clean = delta above baseline for clean fuels, plus all CCS generation
-        // (CCS doesn't exist in baseline, it's always "new")
+        // New clean gen: use explicit _new_clean_gen from recalculate if available,
+        // otherwise fall back to delta approach
         var labels = [];
         var values = [];
         var colors = [];
-        CLEAN_FUEL_KEYS.forEach(function (fuel) {
-            var custVal = custGen[fuel] || 0;
-            var baseVal = baseGen[fuel] || 0;
-            var delta;
-            if (fuel === 'ccs_ccgt') {
-                // All CCS generation is "new" clean
-                delta = custVal;
-            } else {
-                // Only show the increment above baseline (uprates, new plants)
-                delta = custVal - baseVal;
-            }
-            if (delta > 0.001) {
-                labels.push(CLEAN_FUEL_LABELS[fuel] || fuel);
-                values.push(Math.round(delta * 100) / 100);
-                colors.push(FUEL_COLORS[fuel] || '#9CA3AF');
-            }
-        });
+        var newClean = custGen._new_clean_gen;
+        if (newClean) {
+            // Explicit tracking: crane (full gen), uprate (increment), CCS (full), new builds (full)
+            CLEAN_FUEL_KEYS.forEach(function (fuel) {
+                var val = newClean[fuel] || 0;
+                if (val > 0.001) {
+                    labels.push(CLEAN_FUEL_LABELS[fuel] || fuel);
+                    values.push(Math.round(val * 100) / 100);
+                    colors.push(FUEL_COLORS[fuel] || '#9CA3AF');
+                }
+            });
+        } else {
+            // Fallback: delta above baseline for clean fuels, plus all CCS
+            CLEAN_FUEL_KEYS.forEach(function (fuel) {
+                var custVal = custGen[fuel] || 0;
+                var baseVal = baseGen[fuel] || 0;
+                var delta = (fuel === 'ccs_ccgt') ? custVal : (custVal - baseVal);
+                if (delta > 0.001) {
+                    labels.push(CLEAN_FUEL_LABELS[fuel] || fuel);
+                    values.push(Math.round(delta * 100) / 100);
+                    colors.push(FUEL_COLORS[fuel] || '#9CA3AF');
+                }
+            });
+        }
 
-        // If no custom scenario, show empty state
-        if (!customScenario) {
+        // If viewing baseline (no scenario selected), show empty state
+        if (!selectedLowerScenarioId) {
             labels = [];
             values = [];
             colors = [];
@@ -1370,7 +1559,7 @@
         newCleanChart.data.labels = labels;
         newCleanChart.data.datasets = [{
             data: values,
-            backgroundColor: colors.map(function (c) { return c + 'CC'; }),
+            backgroundColor: colors.map(function (c) { return hexToRgba(c, 0.45); }),
             borderColor: colors,
             borderWidth: 1.5,
             borderRadius: 4,
@@ -1378,11 +1567,24 @@
         }];
         newCleanChart.update('active');
 
+        // TWh callout tile
+        var calloutEl = document.getElementById('newCleanCallout');
+        var calloutVal = document.getElementById('newCleanTwhValue');
+        if (calloutEl && calloutVal) {
+            var totalNewClean = values.reduce(function (s, v) { return s + v; }, 0);
+            if (totalNewClean > 0.01) {
+                calloutVal.textContent = totalNewClean.toFixed(1) + ' TWh';
+                calloutEl.style.display = '';
+            } else {
+                calloutEl.style.display = 'none';
+            }
+        }
+
         // Legend
         var legendEl = document.getElementById('newCleanLegend');
         if (legendEl) {
             if (labels.length === 0) {
-                legendEl.innerHTML = '<span style="color:#9CA3AF;font-size:0.85rem;">Configure fleet changes and recalculate to see new clean generation.</span>';
+                legendEl.innerHTML = '<span style="color:#9CA3AF;font-size:0.85rem;">Select a saved scenario to see new clean generation vs baseline.</span>';
             } else {
                 legendEl.innerHTML = labels.map(function (lbl, i) {
                     return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:16px;">' +
@@ -1402,6 +1604,7 @@
         intensityFanChart = new Chart(ctx.getContext('2d'), {
             type: 'line',
             data: { labels: [], datasets: [] },
+            plugins: [],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -1462,17 +1665,17 @@
 
         // Inject intervention year for chart resolution (same as fan chart)
         var firstYear = getFirstInterventionYear();
-        var hasCustom = customScenario != null;
-        if (firstYear && hasCustom && years.indexOf(firstYear) === -1) {
+        var hasOverlays = savedScenarioOverlays.some(function (s) { return s.isVisible !== false; });
+        if (firstYear && hasOverlays && years.indexOf(firstYear) === -1) {
             years = years.slice();
             years.push(firstYear);
             years.sort(function (a, b) { return a - b; });
         }
         var labels = years.map(String);
 
-        // Baseline intensity fan (interpolate at intervention year if needed)
-        if (baseline && baseline.intensity_envelope) {
-            var baseIntEnv = baseline.intensity_envelope;
+        // Recompute baseline intensity from p50 emissions / total gen (always consistent)
+        if (baseline) {
+            var baseIntEnv = computeIntensityFromGenAndEmissions(baseline);
             if (firstYear && !baseIntEnv[String(firstYear)]) {
                 var interpBase = interpolateEnvAtYear(baseIntEnv, firstYear);
                 if (interpBase) {
@@ -1483,17 +1686,20 @@
             addIntensityFanDatasets(datasets, baseIntEnv, years, BASELINE_COLOR, 'Baseline', true);
         }
 
-        // Custom intensity fan
-        if (customScenario && customScenario.intensity_envelope) {
-            var alignedIntEnv = alignEnvelopeWithBaseline(
-                customScenario.intensity_envelope,
-                baseline ? baseline.intensity_envelope : null,
-                firstYear
-            );
-            addIntensityFanDatasets(datasets, alignedIntEnv, years, CUSTOM_COLOR, 'Custom', false);
-        }
+        // Saved scenario intensity overlays — recompute from p50 emissions / total gen
+        savedScenarioOverlays.filter(function (s) { return s.isVisible !== false; }).forEach(function (s) {
+            if (s.results && s.results.envelope && s.results.generation_by_fuel) {
+                var scIntEnv = computeIntensityFromGenAndEmissions(s.results);
+                var alignedIntEnv = alignEnvelopeWithBaseline(
+                    scIntEnv,
+                    baseline ? computeIntensityFromGenAndEmissions(baseline) : null,
+                    firstYear
+                );
+                addIntensityFanDatasets(datasets, alignedIntEnv, years, s.color, s.name, false);
+            }
+        });
 
-        intensityFanChart.data.labels = labels;
+        intensityFanChart.data.labels = padLabelsTo2052(labels);
         intensityFanChart.data.datasets = datasets;
         intensityFanChart.update('active');
     }
@@ -1549,24 +1755,42 @@
         });
     }
 
+
     // ====================================================================
-    // CHART 6: EMISSIONS BY FUEL (Stacked Area) — Custom or Baseline
+    // CHART 7: FOSSIL MIX BY HEAT-RATE BIN — Stacked bar (5-year intervals)
     // ====================================================================
-    function buildFuelEmissionsChart() {
-        var ctx = document.getElementById('fuelEmissionsChart').getContext('2d');
-        fuelEmissionsChart = new Chart(ctx, {
-            type: 'line',
+    var FOSSIL_FUEL_SET = { gas_ccgt: 1, gas_ct: 1, gas_oil_ct: 1, oil_ct: 1 };
+
+    // Heat-rate bins: boundaries in MMBtu/MWh
+    var HR_BINS = [
+        { key: 'very_efficient', label: 'HR < 6.5', min: 0, max: 6.5, color: '#22C55E' },
+        { key: 'efficient',      label: 'HR 6.5–7.5', min: 6.5, max: 7.5, color: '#0EA5E9' },
+        { key: 'moderate',       label: 'HR 7.5–8.5', min: 7.5, max: 8.5, color: '#6366F1' },
+        { key: 'inefficient',    label: 'HR 8.5–10', min: 8.5, max: 10.0, color: '#F59E0B' },
+        { key: 'very_inefficient', label: 'HR ≥ 10', min: 10.0, max: 999, color: '#EF4444' }
+    ];
+
+    function buildFossilMixChart() {
+        var ctx = document.getElementById('fossilMixChart');
+        if (!ctx) return;
+        fossilMixChart = new Chart(ctx.getContext('2d'), {
+            type: 'bar',
             data: { labels: [], datasets: [] },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: { duration: 300 },
                 interaction: { mode: 'index', intersect: false },
+                layout: { padding: { top: 20 } },
                 scales: {
-                    x: { grid: { display: false }, ticks: { font: { size: 12 }, maxRotation: 0 } },
+                    x: {
+                        stacked: true,
+                        grid: { display: false },
+                        ticks: { font: { size: 11 }, maxRotation: 0 }
+                    },
                     y: {
                         stacked: true,
-                        title: { display: true, text: 'Emissions (Mt CO₂)', font: { size: 12 } },
+                        title: { display: true, text: 'Generation (TWh)', font: { size: 12 } },
                         grid: { color: '#E0E6EF' },
                         beginAtZero: true,
                         ticks: { font: { size: 11 } }
@@ -1575,72 +1799,153 @@
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                        filter: fiveYearTooltipFilter,
                         callbacks: {
-                            label: function (ctx) {
+                            title: function (tooltipItems) {
+                                if (!tooltipItems.length) return '';
+                                var idx = tooltipItems[0].dataIndex;
                                 var total = 0;
-                                ctx.chart.data.datasets.forEach(function (ds) {
-                                    total += ds.data[ctx.dataIndex] || 0;
+                                tooltipItems[0].chart.data.datasets.forEach(function (ds) {
+                                    total += ds.data[idx] || 0;
                                 });
-                                var pct = total > 0 ? ((ctx.raw / total) * 100).toFixed(1) : '0.0';
-                                return ctx.dataset.label + ': ' + ctx.raw.toFixed(1) + ' Mt (' + pct + '%)';
+                                return tooltipItems[0].label + ' — Total Fossil: ' + total.toFixed(1) + ' TWh';
+                            },
+                            label: function (ctx) {
+                                if (!ctx.raw || ctx.raw < 0.001) return null;
+                                var meta = ctx.dataset._binMeta ? ctx.dataset._binMeta[ctx.dataIndex] : null;
+                                var line = ctx.dataset.label + ': ' + ctx.raw.toFixed(1) + ' TWh';
+                                if (meta) {
+                                    line += ' | CF: ' + (meta.cf * 100).toFixed(1) + '% | Cap: ' + meta.capacity.toFixed(0) + ' MW';
+                                }
+                                return line;
                             }
                         }
                     }
                 }
             }
         });
-        updateFuelEmissionsChart();
+        updateFossilMixChart();
     }
 
-    function updateFuelEmissionsChart() {
-        if (!fuelEmissionsChart || !DATA) return;
+    function updateFossilMixChart() {
+        if (!fossilMixChart || !DATA) return;
 
-        // Use custom scenario if available, otherwise baseline
-        var sc = customScenario || DATA.scenarios.baseline;
-        var scenarioLabel = customScenario ? 'Custom' : 'Baseline';
+        var sc = getSelectedLowerScenario();
+        var scenarioLabel = getSelectedLowerScenarioLabel();
+        var titleEl = document.getElementById('fossilMixTitle');
+        if (titleEl) titleEl.textContent = 'Fossil Generation by Heat-Rate Bin — ' + scenarioLabel;
 
-        document.getElementById('fuelEmissionsTitle').textContent =
-            'Emissions by Fuel Type — ' + scenarioLabel;
-
-        var years = getYears();
+        var allYears = getYears();
+        var years = FIVE_YEAR_INTERVALS.filter(function (y) {
+            return allYears.indexOf(y) !== -1;
+        });
+        if (years.length === 0) years = allYears.filter(function (y) { return y % 5 === 0; });
         var labels = years.map(String);
 
-        var datasets = EMISSION_FUEL_KEYS.map(function (fuel) {
-            var data = years.map(function (y) {
-                var emf = sc.emissions_by_fuel ? sc.emissions_by_fuel[String(y)] : null;
-                return emf ? (emf[fuel] || 0) : 0;
+        // Build datasets per heat-rate bin
+        var datasets = HR_BINS.map(function (bin) {
+            var data = [];
+            var binMeta = [];
+            years.forEach(function (yr) {
+                var plants = sc.plant_detail ? sc.plant_detail[String(yr)] : null;
+                var binTwh = 0, binCapMw = 0, binGenGwh = 0;
+                if (plants) {
+                    plants.forEach(function (p) {
+                        if (!FOSSIL_FUEL_SET[p.fuel_type]) return;
+                        if (p.fuel_type === 'ccs_ccgt') return; // exclude CCS
+                        var hr = p.heat_rate || 0;
+                        if (hr >= bin.min && hr < bin.max) {
+                            var genTwh = (p.gen_gwh || 0) / 1000;
+                            binTwh += genTwh;
+                            binCapMw += p.capacity_mw || 0;
+                            binGenGwh += p.gen_gwh || 0;
+                        }
+                    });
+                }
+                data.push(Math.round(binTwh * 100) / 100);
+                var hoursInYear = 8760;
+                var cf = binCapMw > 0 ? (binGenGwh * 1000) / (binCapMw * hoursInYear) : 0;
+                binMeta.push({ cf: cf, capacity: binCapMw });
             });
             return {
-                label: FUEL_LABELS[fuel] || fuel,
+                label: bin.label,
                 data: data,
-                borderColor: FUEL_COLORS[fuel],
-                backgroundColor: hexToRgba(FUEL_COLORS[fuel], 0.55),
+                _binMeta: binMeta,
+                backgroundColor: hexToRgba(bin.color, 0.55),
+                borderColor: bin.color,
                 borderWidth: 1.5,
-                pointRadius: fiveYearRadii(years, 2),
-                pointHoverRadius: fiveYearRadii(years, 4),
-                fill: true,
-                tension: 0.3
+                borderSkipped: true
             };
         });
 
-        fuelEmissionsChart.data.labels = labels;
-        fuelEmissionsChart.data.datasets = datasets;
-        fuelEmissionsChart.update('active');
+        // Remove empty bins
+        datasets = datasets.filter(function (ds) {
+            return ds.data.some(function (v) { return v > 0.001; });
+        });
 
-        var legendEl = document.getElementById('fuelEmissionsLegend');
-        legendEl.innerHTML = EMISSION_FUEL_KEYS.map(function (f) {
-            return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:16px;">' +
-                '<span style="width:24px;height:10px;border-radius:3px;background:' + FUEL_COLORS[f] + ';display:inline-block;"></span>' +
-                (FUEL_LABELS[f] || f) + '</span>';
-        }).join('');
+        // Top dataset gets rounded corners
+        if (datasets.length > 0) {
+            var last = datasets[datasets.length - 1];
+            last.borderRadius = { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 };
+            last.borderSkipped = 'start';
+        }
+
+        fossilMixChart.data.labels = labels;
+        fossilMixChart.data.datasets = datasets;
+        fossilMixChart.update('active');
+
+        // Legend
+        var legendEl = document.getElementById('fossilMixLegend');
+        if (legendEl) {
+            legendEl.innerHTML = datasets.map(function (ds) {
+                return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:16px;">' +
+                    '<span style="width:24px;height:10px;border-radius:3px;background:' + ds.borderColor + ';display:inline-block;"></span>' +
+                    ds.label + '</span>';
+            }).join('');
+        }
+    }
+
+    // ====================================================================
+    // SCENARIO CHECKBOXES — Toggle saved scenarios on/off in fan charts
+    // ====================================================================
+    function updateScenarioCheckboxes() {
+        var container = document.getElementById('scenarioCheckboxes');
+        if (!container) return;
+
+        if (savedScenarioOverlays.length === 0) {
+            container.innerHTML = '<span style="color:#9CA3AF;font-size:0.85rem;">Save a scenario to toggle visibility</span>';
+            return;
+        }
+
+        var html = '';
+        savedScenarioOverlays.forEach(function (sc) {
+            var checked = sc.isVisible !== false ? ' checked' : '';
+            html += '<label class="scenario-check">' +
+                '<input type="checkbox" data-scenario-id="' + sc.id + '"' + checked + '>' +
+                '<span class="scenario-swatch" style="background:' + sc.color + ';"></span>' +
+                (sc.name || 'Scenario') + '</label>';
+        });
+        container.innerHTML = html;
+
+        // Wire up change events
+        container.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+            cb.addEventListener('change', function () {
+                var scId = cb.dataset.scenarioId;
+                var found = savedScenarioOverlays.find(function (s) { return s.id === scId; });
+                if (found) {
+                    found.isVisible = cb.checked;
+                    updateFanChart();
+                    updateFanLegend();
+                    updateIntensityFanChart();
+                }
+            });
+        });
     }
 
     // ── Public API for sidebar integration ──
     window.FLEET_SCENARIOS_API = {
         setCustomScenario: function (label, data) {
+            // No longer auto-displays on charts — user must save scenario first
             customScenario = data;
-            updateAllCharts();
         },
         clearCustomScenario: function () {
             customScenario = null;
@@ -1903,22 +2208,20 @@
                     intGenEnv[ys] = { p10: 0, p50: 0, p90: 0 };
                     intEmisEnv[ys] = { p10: 0, p50: 0, p90: 0 };
                 } else if (intervention === 'ccs_retrofit' && y >= intYear) {
-                    // CCS ramp: 0→30%→70%→100% over 8 years
-                    var elapsed = y - intYear;
-                    var rampFrac;
-                    if (elapsed <= 0) rampFrac = 0;
-                    else if (elapsed <= 2) rampFrac = 0.30 * elapsed / 2;
-                    else if (elapsed <= 5) rampFrac = 0.30 + 0.40 * (elapsed - 2) / 3;
-                    else if (elapsed <= 8) rampFrac = 0.70 + 0.30 * (elapsed - 5) / 3;
-                    else rampFrac = 1.0;
-                    var captureRate = rampFrac * 0.90;
-                    var derate = 0.14;
-                    // Gen decreases by derate, emissions decrease by capture
-                    intGenEnv[ys] = {
-                        p10: Math.round(bg.p10 * (1 - derate)),
-                        p50: Math.round(bg.p50 * (1 - derate)),
-                        p90: Math.round(bg.p90 * (1 - derate))
-                    };
+                    // Read CCS parameters from sidebar (or defaults)
+                    var ccsP = (typeof FleetSidebar !== 'undefined' && FleetSidebar.getCcsParams)
+                        ? FleetSidebar.getCcsParams()
+                        : { derate_pct: 14, capture_rate_pct: 90, cf_pct: 85 };
+                    var derate = ccsP.derate_pct / 100.0;
+                    var captureRate = ccsP.capture_rate_pct / 100.0;
+                    var cfFrac = ccsP.cf_pct / 100.0;
+
+                    // Generation: capacity × sidebar CF × (1 - derate) × 8760 / 1000 for GWh
+                    var capMW = plant.capacity_mw || 0;
+                    var ccsGenGwh = Math.round(capMW * cfFrac * (1 - derate) * 8760 / 1000);
+                    intGenEnv[ys] = { p10: ccsGenGwh, p50: ccsGenGwh, p90: ccsGenGwh };
+
+                    // Emissions: instant full capture at retrofit year (no ramp)
                     intEmisEnv[ys] = {
                         p10: Math.round(be.p10 * (1 - captureRate)),
                         p50: Math.round(be.p50 * (1 - captureRate)),
