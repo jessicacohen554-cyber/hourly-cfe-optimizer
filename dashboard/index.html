@@ -951,18 +951,6 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     gap: 1px;
     padding-right: 4px;
 }
-.act4-row-year {
-    font-family: var(--font-data);
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: var(--text-primary, #1A2744);
-}
-.act4-row-target {
-    font-family: var(--font-data);
-    font-size: 0.85rem;
-    font-weight: 800;
-    line-height: 1.1;
-}
 .act4-row-metric {
     font-family: var(--font-data);
     font-size: 0.68rem;
@@ -1067,7 +1055,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 .act4-summary-stats {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: 8px;
 }
 .act4-summary-stat {
