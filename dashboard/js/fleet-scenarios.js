@@ -44,25 +44,18 @@
     var selectedFossilCost = 'All';
     var selectedLowerScenarioId = null; // null = baseline; string = saved scenario ID
     var hideBaselineFan = false;
+    var showScreenshotLabels = false;
     var fanChart = null;
     var waterfall2023Chart = null;
     var genMixChart = null;
     var newCleanChart = null;
     var intensityFanChart = null;
 
-    var topEmittersChart = null;
     var ccgtTierChart = null;
+    var fossilMixChart = null;
 
     // ── Clean fuel keys for % low-carbon calculation ──
     var CLEAN_FUEL_SET = { nuclear: 1, geothermal: 1, hydro: 1, wind: 1, solar: 1, battery: 1, ldes: 1, ccs_ccgt: 1 };
-
-    // ── Plant color palette for top emitters chart ──
-    var PLANT_PALETTE = ['#E53935','#1E88E5','#43A047','#FB8C00','#8E24AA','#00ACC1','#F4511E','#3949AB','#7CB342','#FFB300','#5E35B1','#00897B','#6D4C41','#C62828','#0D47A1'];
-    function plantColor(name) {
-        var h = 0;
-        for (var i = 0; i < name.length; i++) h = ((h << 5) - h + name.charCodeAt(i)) | 0;
-        return PLANT_PALETTE[Math.abs(h) % PLANT_PALETTE.length];
-    }
 
     // ── Helpers ──
     function getYears() {
@@ -204,14 +197,21 @@
                 updateFanChart();
             });
         }
+        var ssLabelEl = document.getElementById('screenshotLabels');
+        if (ssLabelEl) {
+            ssLabelEl.addEventListener('change', function () {
+                showScreenshotLabels = ssLabelEl.checked;
+                if (fanChart) fanChart.update('none');
+                if (intensityFanChart) intensityFanChart.update('none');
+            });
+        }
         buildFanChart();
         buildWaterfall2023Chart();
         buildGenMixChart();
         buildCcgtTierChart();
         buildNewCleanChart();
         buildIntensityFanChart();
-
-        buildTopEmittersChart();
+        buildFossilMixChart();
         updateFanLegend();
         buildScenarioSelector();
         buildPlantDrilldownCharts();
@@ -263,22 +263,6 @@
             updateFanLegend();
         });
 
-        // Fossil cost toggle
-        var fossilToggle = document.getElementById('fossilCostToggle');
-        if (fossilToggle) {
-            fossilToggle.addEventListener('click', function (e) {
-                var btn = e.target.closest('.toggle-btn');
-                if (!btn) return;
-                fossilToggle.querySelectorAll('.toggle-btn').forEach(function (b) {
-                    b.classList.remove('active');
-                });
-                btn.classList.add('active');
-                selectedFossilCost = btn.dataset.value;
-                updateFanChart();
-                updateFanLegend();
-            });
-        }
-
         // Year slider
         var slider = document.getElementById('yearSlider');
         var sliderVal = document.getElementById('yearSliderValue');
@@ -294,10 +278,8 @@
             selectedYear = Number(slider.value);
             sliderVal.textContent = slider.value;
             updateWaterfall2023Chart();
-            updateGenMixChart();
             updateCcgtTierChart();
             updateNewCleanChart();
-            updateTopEmittersChart();
             updateFanChartAnnotation();
         });
     }
@@ -317,8 +299,8 @@
             ['ccgtTierChart', updateCcgtTierChart],
             ['newCleanChart', updateNewCleanChart],
             ['intensityFanChart', updateIntensityFanChart],
-
-            ['topEmittersChart', updateTopEmittersChart]
+            ['fossilMixChart', updateFossilMixChart],
+            ['scenarioCheckboxes', updateScenarioCheckboxes]
         ];
         updates.forEach(function (pair) {
             try { pair[1](); }
@@ -350,12 +332,56 @@
         }
     };
 
+    // ── Screenshot label plugin — draws large % reduction labels on fan charts ──
+    var screenshotLabelPlugin = {
+        id: 'screenshotLabels',
+        afterDatasetsDraw: function (chart) {
+            if (!showScreenshotLabels || !DATA) return;
+            var ctx = chart.ctx;
+            var labels = chart.data.labels;
+            var labelYears = [2030, 2040, 2050];
+
+            chart.data.datasets.forEach(function (ds, dsIdx) {
+                if (!ds._showInLegend || !ds._scenarioName || ds._target) return;
+                var color = ds.borderColor;
+
+                var idx2023 = labels.indexOf('2023');
+                if (idx2023 < 0) return;
+                var val2023 = ds.data[idx2023];
+                if (!val2023 || val2023 <= 0) return;
+
+                labelYears.forEach(function (year) {
+                    var idx = labels.indexOf(String(year));
+                    if (idx < 0) return;
+                    var val = ds.data[idx];
+                    if (val == null) return;
+
+                    var pctReduction = ((val2023 - val) / val2023 * 100);
+                    var sign = pctReduction >= 0 ? '\u2212' : '+';
+                    var labelText = sign + Math.abs(pctReduction).toFixed(0) + '%';
+
+                    var dsMeta = chart.getDatasetMeta(dsIdx);
+                    if (!dsMeta || !dsMeta.data || !dsMeta.data[idx]) return;
+                    var pt = dsMeta.data[idx];
+
+                    ctx.save();
+                    ctx.font = "bold 36px 'Franklin Gothic Demi', 'Franklin Gothic Medium', 'Source Sans Pro', sans-serif";
+                    ctx.fillStyle = color;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    ctx.fillText(labelText, pt.x, pt.y - 18);
+                    ctx.restore();
+                });
+            });
+        }
+    };
+
     function buildFanChart() {
         var ctx = document.getElementById('fanChart').getContext('2d');
         fanChart = new Chart(ctx, {
             type: 'line',
             data: { labels: [], datasets: [] },
-            plugins: [fanEmptyStatePlugin],
+            plugins: [fanEmptyStatePlugin, screenshotLabelPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -462,8 +488,9 @@
 
     // ── Determine color mode ──
     function getColorMode() {
-        var visibleCount = savedScenarioOverlays.length;
-        var hasBaselineOverlay = savedScenarioOverlays.some(function (s) { return s.isBaseline; });
+        var visible = savedScenarioOverlays.filter(function (s) { return s.isVisible !== false; });
+        var visibleCount = visible.length;
+        var hasBaselineOverlay = visible.some(function (s) { return s.isBaseline; });
         if (visibleCount <= 1 || (visibleCount === 2 && hasBaselineOverlay)) {
             return 'single';
         }
@@ -648,7 +675,7 @@
 
         // Check if we need to inject the intervention year into the timeline
         var firstYear = getFirstInterventionYear();
-        var hasOverlays = savedScenarioOverlays.length > 0;
+        var hasOverlays = savedScenarioOverlays.some(function (s) { return s.isVisible !== false; });
         if (firstYear && hasOverlays && years.indexOf(firstYear) === -1) {
             years = years.slice();
             years.push(firstYear);
@@ -673,7 +700,7 @@
         }
 
         // ── Saved scenario overlays only (no unsaved custom scenario on charts) ──
-        var sortedOverlays = savedScenarioOverlays.slice().sort(function (a, b) {
+        var sortedOverlays = savedScenarioOverlays.filter(function (s) { return s.isVisible !== false; }).slice().sort(function (a, b) {
             if (a.isBaseline && !b.isBaseline) return -1;
             if (!a.isBaseline && b.isBaseline) return 1;
             var aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -827,7 +854,7 @@
             }
 
             // Saved scenario rows — sorted: baseline first, then by creation date
-            var sortedSaved = savedScenarioOverlays.slice().sort(function (a, b) {
+            var sortedSaved = savedScenarioOverlays.filter(function (s) { return s.isVisible !== false; }).slice().sort(function (a, b) {
                 if (a.isBaseline && !b.isBaseline) return -1;
                 if (!a.isBaseline && b.isBaseline) return 1;
                 var aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -927,7 +954,7 @@
             }
 
             // Saved scenario rows — compute from emissions / total gen
-            savedScenarioOverlays.forEach(function (s) {
+            savedScenarioOverlays.filter(function (s) { return s.isVisible !== false; }).forEach(function (s) {
                 if (!s.results || !s.results.envelope || !s.results.generation_by_fuel) return;
                 var scIntEnv = computeIntensityFromGenAndEmissions(s.results);
                 if (!scIntEnv[year]) return;
@@ -974,8 +1001,8 @@
         items.push({ label: 'Baseline (P50)', color: BASELINE_COLOR, type: 'line' });
         items.push({ label: 'Baseline P10–P90', color: hexToRgba(BASELINE_COLOR, 0.15), type: 'band' });
 
-        // Saved scenario legend items
-        savedScenarioOverlays.forEach(function (s) {
+        // Saved scenario legend items (visible only)
+        savedScenarioOverlays.filter(function (s) { return s.isVisible !== false; }).forEach(function (s) {
             if (s.results && s.results.envelope) {
                 items.push({ label: s.name + ' (P50)', color: s.color, type: 'line' });
                 items.push({ label: s.name + ' P10–P90', color: hexToRgba(s.color, 0.15), type: 'band' });
@@ -1046,7 +1073,8 @@
                         callbacks: {
                             label: function (ctx) {
                                 var v = ctx.raw;
-                                return (v > 0 ? '+' : '') + v.toFixed(2) + ' Mt CO₂ vs 2023';
+                                if (v >= 0) return '−' + v.toFixed(2) + ' Mt CO₂ (reduced vs 2023)';
+                                return '+' + Math.abs(v).toFixed(2) + ' Mt CO₂ (added vs 2023)';
                             }
                         }
                     }
@@ -1153,8 +1181,7 @@
                 updateGenMixChart();
                 updateWaterfall2023Chart();
                 updateNewCleanChart();
-
-                updateTopEmittersChart();
+                updateFossilMixChart();
             });
         }
     }
@@ -1195,10 +1222,9 @@
             ctx.textAlign = 'center';
             ctx.font = '600 10px sans-serif';
 
-            var labelYears = [2025, 2030, 2035, 2040, 2045, 2050];
             chart.data.labels.forEach(function (label, idx) {
                 var yr = Number(label);
-                if (labelYears.indexOf(yr) === -1) return;
+                if (yr > 2050 || yr < 2020) return;
 
                 // Sum total and clean for this bar index
                 var total = 0, clean = 0;
@@ -1225,7 +1251,7 @@
                 ctx.fillStyle = '#374151';
                 ctx.fillText(total.toFixed(0) + ' TWh', x, topY - 16);
                 ctx.fillStyle = '#059669';
-                ctx.fillText(pctClean + '% clean', x, topY - 4);
+                ctx.fillText(pctClean + '%', x, topY - 4);
             });
             ctx.restore();
         }
@@ -1292,6 +1318,8 @@
         updateGenMixChart();
     }
 
+    var FIVE_YEAR_INTERVALS = [2025, 2030, 2035, 2040, 2045, 2050];
+
     function updateGenMixChart() {
         if (!genMixChart || !DATA) return;
 
@@ -1299,7 +1327,12 @@
         var scenarioLabel = getSelectedLowerScenarioLabel();
         document.getElementById('genMixTitle').textContent = 'Fleet Generation by Fuel — ' + scenarioLabel;
 
-        var years = getYears();
+        var allYears = getYears();
+        // Filter to 5-year intervals only
+        var years = FIVE_YEAR_INTERVALS.filter(function (y) {
+            return allYears.indexOf(y) !== -1;
+        });
+        if (years.length === 0) years = allYears.filter(function (y) { return y % 5 === 0; });
         var labels = years.map(String);
         var gen = sc.generation_by_fuel;
 
@@ -1331,15 +1364,7 @@
             last.borderSkipped = 'start';
         }
 
-        var paddedLabels = padLabelsTo2052(labels);
-        // Pad data arrays to match padded labels (fill trailing years with 0)
-        var padCount = paddedLabels.length - years.length;
-        if (padCount > 0) {
-            datasets.forEach(function (ds) {
-                for (var p = 0; p < padCount; p++) ds.data.push(0);
-            });
-        }
-        genMixChart.data.labels = paddedLabels;
+        genMixChart.data.labels = labels;
         genMixChart.data.datasets = datasets;
         genMixChart.update('active');
 
@@ -1595,6 +1620,19 @@
         }];
         newCleanChart.update('active');
 
+        // TWh callout tile
+        var calloutEl = document.getElementById('newCleanCallout');
+        var calloutVal = document.getElementById('newCleanTwhValue');
+        if (calloutEl && calloutVal) {
+            var totalNewClean = values.reduce(function (s, v) { return s + v; }, 0);
+            if (totalNewClean > 0.01) {
+                calloutVal.textContent = totalNewClean.toFixed(1) + ' TWh';
+                calloutEl.style.display = '';
+            } else {
+                calloutEl.style.display = 'none';
+            }
+        }
+
         // Legend
         var legendEl = document.getElementById('newCleanLegend');
         if (legendEl) {
@@ -1619,6 +1657,7 @@
         intensityFanChart = new Chart(ctx.getContext('2d'), {
             type: 'line',
             data: { labels: [], datasets: [] },
+            plugins: [screenshotLabelPlugin],
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -1679,7 +1718,7 @@
 
         // Inject intervention year for chart resolution (same as fan chart)
         var firstYear = getFirstInterventionYear();
-        var hasOverlays = savedScenarioOverlays.length > 0;
+        var hasOverlays = savedScenarioOverlays.some(function (s) { return s.isVisible !== false; });
         if (firstYear && hasOverlays && years.indexOf(firstYear) === -1) {
             years = years.slice();
             years.push(firstYear);
@@ -1701,7 +1740,7 @@
         }
 
         // Saved scenario intensity overlays — recompute from p50 emissions / total gen
-        savedScenarioOverlays.forEach(function (s) {
+        savedScenarioOverlays.filter(function (s) { return s.isVisible !== false; }).forEach(function (s) {
             if (s.results && s.results.envelope && s.results.generation_by_fuel) {
                 var scIntEnv = computeIntensityFromGenAndEmissions(s.results);
                 var alignedIntEnv = alignEnvelopeWithBaseline(
@@ -1771,27 +1810,40 @@
 
 
     // ====================================================================
-    // CHART 7: TOP EMITTING PLANTS — Stacked area time series
+    // CHART 7: FOSSIL MIX BY HEAT-RATE BIN — Stacked bar (5-year intervals)
     // ====================================================================
     var FOSSIL_FUEL_SET = { gas_ccgt: 1, gas_ct: 1, gas_oil_ct: 1, oil_ct: 1 };
-    var TOP_EMITTER_COUNT = 12;
 
-    function buildTopEmittersChart() {
-        var ctx = document.getElementById('topEmittersChart');
+    // Heat-rate bins: boundaries in MMBtu/MWh
+    var HR_BINS = [
+        { key: 'very_efficient', label: 'HR < 6.5', min: 0, max: 6.5, color: '#22C55E' },
+        { key: 'efficient',      label: 'HR 6.5–7.5', min: 6.5, max: 7.5, color: '#0EA5E9' },
+        { key: 'moderate',       label: 'HR 7.5–8.5', min: 7.5, max: 8.5, color: '#6366F1' },
+        { key: 'inefficient',    label: 'HR 8.5–10', min: 8.5, max: 10.0, color: '#F59E0B' },
+        { key: 'very_inefficient', label: 'HR ≥ 10', min: 10.0, max: 999, color: '#EF4444' }
+    ];
+
+    function buildFossilMixChart() {
+        var ctx = document.getElementById('fossilMixChart');
         if (!ctx) return;
-        topEmittersChart = new Chart(ctx.getContext('2d'), {
-            type: 'line',
+        fossilMixChart = new Chart(ctx.getContext('2d'), {
+            type: 'bar',
             data: { labels: [], datasets: [] },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: { duration: 300 },
                 interaction: { mode: 'index', intersect: false },
+                layout: { padding: { top: 20 } },
                 scales: {
-                    x: { grid: { display: false }, ticks: { font: { size: 12 }, maxRotation: 0, callback: function (val) { var y = Number(this.getLabelForValue(val)); return y > 2050 ? '' : y; } } },
+                    x: {
+                        stacked: true,
+                        grid: { display: false },
+                        ticks: { font: { size: 11 }, maxRotation: 0 }
+                    },
                     y: {
                         stacked: true,
-                        title: { display: true, text: 'Emissions (Mt CO₂)', font: { size: 12 } },
+                        title: { display: true, text: 'Generation (TWh)', font: { size: 12 } },
                         grid: { color: '#E0E6EF' },
                         beginAtZero: true,
                         ticks: { font: { size: 11 } }
@@ -1800,7 +1852,6 @@
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                        filter: fiveYearTooltipFilter,
                         callbacks: {
                             title: function (tooltipItems) {
                                 if (!tooltipItems.length) return '';
@@ -1809,131 +1860,138 @@
                                 tooltipItems[0].chart.data.datasets.forEach(function (ds) {
                                     total += ds.data[idx] || 0;
                                 });
-                                return tooltipItems[0].label + ' — Total: ' + total.toFixed(2) + ' Mt CO₂';
+                                return tooltipItems[0].label + ' — Total Fossil: ' + total.toFixed(1) + ' TWh';
                             },
                             label: function (ctx) {
                                 if (!ctx.raw || ctx.raw < 0.001) return null;
-                                var total = 0;
-                                ctx.chart.data.datasets.forEach(function (ds) {
-                                    total += ds.data[ctx.dataIndex] || 0;
-                                });
-                                var pct = total > 0 ? ((ctx.raw / total) * 100).toFixed(1) : '0.0';
-                                return ctx.dataset.label + ': ' + ctx.raw.toFixed(3) + ' Mt (' + pct + '%)';
+                                var meta = ctx.dataset._binMeta ? ctx.dataset._binMeta[ctx.dataIndex] : null;
+                                var line = ctx.dataset.label + ': ' + ctx.raw.toFixed(1) + ' TWh';
+                                if (meta) {
+                                    line += ' | CF: ' + (meta.cf * 100).toFixed(1) + '% | Cap: ' + meta.capacity.toFixed(0) + ' MW';
+                                }
+                                return line;
                             }
                         }
                     }
                 }
             }
         });
-        updateTopEmittersChart();
+        updateFossilMixChart();
     }
 
-    function updateTopEmittersChart() {
-        if (!topEmittersChart || !DATA) return;
+    function updateFossilMixChart() {
+        if (!fossilMixChart || !DATA) return;
+
         var sc = getSelectedLowerScenario();
         var scenarioLabel = getSelectedLowerScenarioLabel();
-        var titleEl = document.getElementById('topEmittersTitle');
-        if (titleEl) titleEl.textContent = 'Top Emitting Plants — ' + scenarioLabel;
+        var titleEl = document.getElementById('fossilMixTitle');
+        if (titleEl) titleEl.textContent = 'Fossil Generation by Heat-Rate Bin — ' + scenarioLabel;
 
-        var years = getYears();
+        var allYears = getYears();
+        var years = FIVE_YEAR_INTERVALS.filter(function (y) {
+            return allYears.indexOf(y) !== -1;
+        });
+        if (years.length === 0) years = allYears.filter(function (y) { return y % 5 === 0; });
         var labels = years.map(String);
 
-        if (!sc.plant_detail) {
-            topEmittersChart.data.labels = labels;
-            topEmittersChart.data.datasets = [];
-            topEmittersChart.update('active');
+        // Build datasets per heat-rate bin
+        var datasets = HR_BINS.map(function (bin) {
+            var data = [];
+            var binMeta = [];
+            years.forEach(function (yr) {
+                var plants = sc.plant_detail ? sc.plant_detail[String(yr)] : null;
+                var binTwh = 0, binCapMw = 0, binGenGwh = 0;
+                if (plants) {
+                    plants.forEach(function (p) {
+                        if (!FOSSIL_FUEL_SET[p.fuel_type]) return;
+                        if (p.fuel_type === 'ccs_ccgt') return; // exclude CCS
+                        var hr = p.heat_rate || 0;
+                        if (hr >= bin.min && hr < bin.max) {
+                            var genTwh = (p.gen_gwh || 0) / 1000;
+                            binTwh += genTwh;
+                            binCapMw += p.capacity_mw || 0;
+                            binGenGwh += p.gen_gwh || 0;
+                        }
+                    });
+                }
+                data.push(Math.round(binTwh * 100) / 100);
+                var hoursInYear = 8760;
+                var cf = binCapMw > 0 ? (binGenGwh * 1000) / (binCapMw * hoursInYear) : 0;
+                binMeta.push({ cf: cf, capacity: binCapMw });
+            });
+            return {
+                label: bin.label,
+                data: data,
+                _binMeta: binMeta,
+                backgroundColor: hexToRgba(bin.color, 0.55),
+                borderColor: bin.color,
+                borderWidth: 1.5,
+                borderSkipped: true
+            };
+        });
+
+        // Remove empty bins
+        datasets = datasets.filter(function (ds) {
+            return ds.data.some(function (v) { return v > 0.001; });
+        });
+
+        // Top dataset gets rounded corners
+        if (datasets.length > 0) {
+            var last = datasets[datasets.length - 1];
+            last.borderRadius = { topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0 };
+            last.borderSkipped = 'start';
+        }
+
+        fossilMixChart.data.labels = labels;
+        fossilMixChart.data.datasets = datasets;
+        fossilMixChart.update('active');
+
+        // Legend
+        var legendEl = document.getElementById('fossilMixLegend');
+        if (legendEl) {
+            legendEl.innerHTML = datasets.map(function (ds) {
+                return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:16px;">' +
+                    '<span style="width:24px;height:10px;border-radius:3px;background:' + ds.borderColor + ';display:inline-block;"></span>' +
+                    ds.label + '</span>';
+            }).join('');
+        }
+    }
+
+    // ====================================================================
+    // SCENARIO CHECKBOXES — Toggle saved scenarios on/off in fan charts
+    // ====================================================================
+    function updateScenarioCheckboxes() {
+        var container = document.getElementById('scenarioCheckboxes');
+        if (!container) return;
+
+        if (savedScenarioOverlays.length === 0) {
+            container.innerHTML = '<span style="color:#9CA3AF;font-size:0.85rem;">Save a scenario to toggle visibility</span>';
             return;
         }
 
-        // Identify top emitters: rank by total emissions across all years
-        var plantTotalEmis = {};
-        var plantNames = {};
-        years.forEach(function (yr) {
-            var plants = sc.plant_detail[String(yr)];
-            if (!plants) return;
-            plants.forEach(function (p) {
-                if (!FOSSIL_FUEL_SET[p.fuel_type] || !p.emissions_mt || p.emissions_mt <= 0) return;
-                var key = p.orispl || p.name;
-                plantTotalEmis[key] = (plantTotalEmis[key] || 0) + p.emissions_mt;
-                if (!plantNames[key]) plantNames[key] = p.name;
+        var html = '';
+        savedScenarioOverlays.forEach(function (sc) {
+            var checked = sc.isVisible !== false ? ' checked' : '';
+            html += '<label class="scenario-check">' +
+                '<input type="checkbox" data-scenario-id="' + sc.id + '"' + checked + '>' +
+                '<span class="scenario-swatch" style="background:' + sc.color + ';"></span>' +
+                (sc.name || 'Scenario') + '</label>';
+        });
+        container.innerHTML = html;
+
+        // Wire up change events
+        container.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+            cb.addEventListener('change', function () {
+                var scId = cb.dataset.scenarioId;
+                var found = savedScenarioOverlays.find(function (s) { return s.id === scId; });
+                if (found) {
+                    found.isVisible = cb.checked;
+                    updateFanChart();
+                    updateFanLegend();
+                    updateIntensityFanChart();
+                }
             });
         });
-
-        // Sort and take top N
-        var ranked = Object.keys(plantTotalEmis).sort(function (a, b) {
-            return plantTotalEmis[b] - plantTotalEmis[a];
-        });
-        var topKeys = ranked.slice(0, TOP_EMITTER_COUNT);
-        var topSet = {};
-        topKeys.forEach(function (k) { topSet[k] = true; });
-
-        // Build per-plant time series + "Other" bucket
-        var seriesData = {}; // key → [val per year]
-        topKeys.forEach(function (k) { seriesData[k] = []; });
-        seriesData['_other'] = [];
-
-        years.forEach(function (yr) {
-            var plants = sc.plant_detail[String(yr)] || [];
-            var byKey = {};
-            plants.forEach(function (p) {
-                if (!FOSSIL_FUEL_SET[p.fuel_type] || !p.emissions_mt || p.emissions_mt <= 0) return;
-                var key = p.orispl || p.name;
-                byKey[key] = (byKey[key] || 0) + p.emissions_mt;
-            });
-
-            var otherVal = 0;
-            Object.keys(byKey).forEach(function (k) {
-                if (!topSet[k]) otherVal += byKey[k];
-            });
-
-            topKeys.forEach(function (k) {
-                seriesData[k].push(byKey[k] || 0);
-            });
-            seriesData['_other'].push(otherVal);
-        });
-
-        // Build datasets — top plants first (bottom of stack), "Other" on top
-        var datasets = [];
-        topKeys.forEach(function (k) {
-            datasets.push({
-                label: plantNames[k] || k,
-                data: seriesData[k],
-                borderColor: plantColor(plantNames[k] || k),
-                backgroundColor: hexToRgba(plantColor(plantNames[k] || k), 0.45),
-                borderWidth: 1.5,
-                pointRadius: 0,
-                pointHoverRadius: 0,
-                fill: 'origin',
-                tension: 0.3
-            });
-        });
-        if (seriesData['_other'].some(function (v) { return v > 0.001; })) {
-            datasets.push({
-                label: 'Other Plants',
-                data: seriesData['_other'],
-                borderColor: '#9CA3AF',
-                backgroundColor: hexToRgba('#9CA3AF', 0.35),
-                borderWidth: 1,
-                pointRadius: 0,
-                fill: 'origin',
-                tension: 0.3
-            });
-        }
-
-        topEmittersChart.data.labels = padLabelsTo2052(labels);
-        topEmittersChart.data.datasets = datasets;
-        topEmittersChart.update('active');
-
-        // Legend
-        var legendEl = document.getElementById('topEmittersLegend');
-        if (legendEl) {
-            var items = datasets.map(function (ds) {
-                return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;font-size:0.8rem;">' +
-                    '<span style="width:20px;height:8px;border-radius:3px;background:' + ds.borderColor + ';display:inline-block;"></span>' +
-                    ds.label + '</span>';
-            });
-            legendEl.innerHTML = items.join('');
-        }
     }
 
     // ── Public API for sidebar integration ──
