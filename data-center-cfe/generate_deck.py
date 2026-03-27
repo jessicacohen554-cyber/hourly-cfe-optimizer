@@ -181,6 +181,28 @@ def build_premium_chart_data():
 # TABLE DATA BUILDERS
 # ══════════════════════════════════════════════════════════════════════
 
+def build_hyperscaler_chart_data():
+    """Build Chart.js data for hyperscaler dominance stacked area chart."""
+    path = DATA_DIR / "global_corporate_cfe_procurement.csv"
+    if not path.exists():
+        print(f"WARNING: {path} not found, skipping hyperscaler chart.")
+        return "[]", "[]", "[]", "[]"
+    df = pd.read_csv(path, comment="#", encoding="utf-8")
+    if df.empty:
+        return "[]", "[]", "[]", "[]"
+
+    df = df[df["year"].apply(lambda x: str(x).strip().isdigit())].copy()
+    df["year"] = df["year"].astype(int)
+    df = df.sort_values("year")
+
+    labels = json.dumps(df["year"].tolist())
+    hyper = json.dumps(df["hyperscaler_gw"].astype(float).tolist())
+    total = json.dumps(df["total_gw"].astype(float).tolist())
+    pct = json.dumps(df["hyperscaler_pct"].astype(float).tolist())
+
+    return labels, hyper, total, pct
+
+
 def build_gap_table_rows():
     """
     Build HTML table rows for Slide 4: Company-Level Gap table.
@@ -573,6 +595,7 @@ def main():
     demand_labels, demand_datasets = build_demand_chart_data()
     capture_labels, capture_datasets = build_capture_chart_data()
     premium_labels, premium_data = build_premium_chart_data()
+    hyper_labels, hyper_hyper, hyper_total, hyper_pct = build_hyperscaler_chart_data()
     gap_rows = build_gap_table_rows()
     waterfall = build_waterfall_svg()
     matrix_rows = build_regional_matrix_rows()
@@ -591,6 +614,10 @@ def main():
         capture_chart_datasets=capture_datasets,
         premium_chart_labels=premium_labels,
         premium_chart_data=premium_data,
+        hyperscaler_chart_labels=hyper_labels,
+        hyperscaler_chart_hyper=hyper_hyper,
+        hyperscaler_chart_total=hyper_total,
+        hyperscaler_chart_pct=hyper_pct,
         # Table data
         gap_table_rows=gap_rows,
         waterfall_svg_bars=waterfall,
