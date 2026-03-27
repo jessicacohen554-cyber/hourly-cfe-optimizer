@@ -18,6 +18,7 @@
 7. [Prompt 6: New Slide — Hyperscaler Contract Dominance Timeline](#prompt-6-new-slide-hyperscaler-contract-dominance-timeline)
 8. [Prompt 7: Other New Slide Candidates](#prompt-7-other-new-slide-candidates)
 9. [Prompt 8: Final QA & Narrative Polish](#prompt-8-final-qa--narrative-polish)
+10. [Prompt 9: Slide Formatting Fix — Content Overflow](#prompt-9-slide-formatting-fix--content-overflow)
 
 ---
 
@@ -846,6 +847,166 @@ Fix all issues before the final commit.
 
 ---
 
+## Prompt 9: Slide Formatting Fix — Content Overflow
+
+> **Goal:** Fix content being cut off on slides. The current slide CSS uses a fixed `7.5in` height with `overflow: hidden`, causing content to get clipped. Convert slides to flexible-height panels that adapt to their content. Also ensure every slide has inline citations WITH clickable links.
+
+### Context
+
+The deck uses a fixed slide dimension of `14in × 7.5in` with `overflow: hidden` on `.slide` in the CSS. As slides have gotten more content-dense (especially the new Slides 6-7 and content-heavy slides like the Regional Matrix and Investment Case), text and visual elements are getting clipped at the bottom.
+
+**Design intent change:** Stop treating slides as fixed-size presentation windows. Treat them as **flexible panels** — each slide should be as tall as its content requires. The deck is an HTML document, not PowerPoint. Let the content breathe.
+
+Key CSS in `templates/deck_template.html` (line ~42-53):
+```css
+.slide {
+  width: 14in;
+  height: 7.5in;        /* ← REMOVE fixed height */
+  margin: 0.5in auto;
+  background: white;
+  position: relative;
+  overflow: hidden;      /* ← REMOVE or change to visible */
+  box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+  page-break-after: always;
+  display: flex;
+  flex-direction: column;
+}
+```
+
+### Prompt
+
+```
+Fix slide content overflow in the VRE Investment Thesis deck. Content is
+getting cut off on multiple slides.
+
+## Step 1: Convert Slides to Flexible-Height Panels
+
+In data-center-cfe/templates/deck_template.html, update the .slide CSS:
+
+1. REMOVE `height: 7.5in` — replace with `min-height: 7.5in` (so simple slides
+   still look good, but content-heavy slides can grow)
+2. REMOVE `overflow: hidden` — replace with `overflow: visible`
+3. Keep `width: 14in` (horizontal constraint stays)
+4. Keep `page-break-after: always` for print
+5. Keep the box-shadow, flex layout, and other properties
+
+Target CSS:
+```css
+.slide {
+  width: 14in;
+  min-height: 7.5in;    /* minimum — grows with content */
+  /* NO max-height, NO overflow: hidden */
+  margin: 0.5in auto;
+  background: white;
+  position: relative;
+  overflow: visible;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+  page-break-after: always;
+  display: flex;
+  flex-direction: column;
+}
+```
+
+The same CSS exists inline in data-center-cfe/output/vre-investment-thesis-deck.html
+(line ~44) — but this gets regenerated from the template, so only edit the template.
+
+If any child elements (slide-body, slide-footer) use absolute positioning that
+depends on the fixed 7.5in height, convert them to flex-based positioning so
+they flow naturally with content height.
+
+## Step 2: Add Per-Slide Citations with Clickable Links
+
+Every slide that references data should have a citation footer at the bottom
+with clickable hyperlinks. Format:
+
+```html
+<div class="slide-citations">
+  Sources: <a href="https://..." target="_blank">BNEF 2026 Factbook</a> ·
+  <a href="https://..." target="_blank">LBNL Queued Up 2024</a> ·
+  <a href="https://..." target="_blank">Company sustainability reports</a>
+</div>
+```
+
+Style the citation div:
+- Font size: 8-9pt, muted gray (#7E8083)
+- Positioned at bottom of slide content (not absolute — flows with content)
+- Links: underline on hover, same muted color
+- Separator: middle dot (·) between citations
+
+Map citations to slides:
+- Slide 2 (Load Landing): DC Byte March 2026, Goldman Sachs AI/Power report
+- Slide 3 (Clean Energy Gap): BNEF 1H 2026, ESG Today 2025, hyperscaler sustainability reports
+- Slide 4 (Gap Persists): Nuclear Innovation Alliance, NREL ATB 2024, INL meta-analysis
+- Slide 5 (Coal Wall): EPA eGRID 2022, EIA-860, main repo coal_wall_analysis
+- Slide 6 (Energy Timeline): Individual deal announcements (link each deal to source)
+- Slide 7 (Colocation): Company sustainability reports (Equinix, Digital Realty, etc.)
+- Slide 8 (Regional Matrix): PJM/ERCOT/CAISO ISO data, Grid Strategies AEI scorecard, LBNL
+- Slide 9 (Investment Case): Lazard LCOE+, LevelTen PPA Index, BNEF
+- Slides 10-13 (Strategies): GHG Protocol consultation, WRI 24/7 CFE, Watershed analysis
+- Slide 14 (Appendix): Full bibliography already exists — add hyperlinks to each citation
+
+Use citation URLs from data-center-cfe/sources.md and data-center-cfe/research/vreresearch.md.
+
+## Step 3: Slide-by-Slide Formatting Audit
+
+After the CSS change and citation additions, go through EVERY slide:
+
+For each slide, verify:
+- [ ] All body text is fully visible (no clipping)
+- [ ] Tables are complete (all rows visible)
+- [ ] Charts/figures have adequate spacing
+- [ ] Citation footer visible with working links
+- [ ] KPI cards / stat boxes fully rendered
+- [ ] Slide looks clean — no excessive whitespace, no cramped content
+
+Slides most likely to have had overflow issues (check these FIRST):
+- Slide 5 (Coal Wall): Queue walk table + explanation text + KPI cards
+- Slide 6 (Energy Timeline): Vertical timeline with 15 deals + KPI row + chart
+- Slide 7 (Colocation Developers): Bar chart + commitment table + callout
+- Slide 8 (Regional Matrix): Large heatmap table (7 ISOs × 6 criteria)
+- Slide 10 (Investment Case): 4 KPI cards + thesis checkboxes + portfolio table + risk table
+- Slide 14 (Appendix): Dense bibliography + methodology text
+
+If any single slide is STILL too dense after flex-height + citations:
+- Split it into two slides (Part 1 / Part 2) rather than shrinking content
+- DO NOT reduce font sizes below 11pt body / 9pt table cells to make things fit
+
+## Step 4: Regenerate and Verify
+
+1. Run: python data-center-cfe/generate_deck.py
+2. Open the output HTML and verify EVERY slide visually
+3. Confirm: zero content clipped, all citations present with working links
+4. If dashboard/dvre.html has matching CSS dimensions, update those too
+5. Test clicking citation links — verify they open in new tab
+
+## Step 5: Print Check
+
+Verify page-break-after: always still works for print:
+- Each slide starts on a new page
+- Content-heavy slides that grew beyond 7.5in print cleanly (no mid-element breaks)
+- Citation links are visible as text in print (consider a print stylesheet
+  that shows URLs after link text)
+
+Commit with message: "Fix slide overflow — convert to flex-height panels,
+add per-slide citations with clickable links"
+```
+
+### Files to Modify
+- `data-center-cfe/templates/deck_template.html` (primary — CSS height + any scaling)
+- `data-center-cfe/output/vre-investment-thesis-deck.html` (regenerated by generate_deck.py)
+- `dashboard/dvre.html` (if it has matching slide dimensions)
+
+### Success Criteria
+- Zero content clipped on any slide
+- All table rows fully visible
+- All KPI cards, charts, and text blocks render completely
+- Footer/source lines visible on every slide
+- No excessive whitespace on simple slides
+- Deck regenerates cleanly
+- Print layout still works (page breaks correct)
+
+---
+
 ## Execution Sequence
 
 These prompts should be executed in order, with each session building on the prior one's outputs. Recommended batching:
@@ -858,11 +1019,14 @@ These prompts should be executed in order, with each session building on the pri
 | **Session 4** | Prompt 5 (Slide Updates) | 60-90 min | Sessions 2-3 completed (new data + thesis validation) |
 | **Session 5** | Prompt 6 (Dominance Slide) | 45-60 min | Session 2 completed (procurement data scraped) |
 | **Session 6** | Prompt 7 (New Slides) | 30-60 min | Session 4 completed (know what's in updated deck) |
-| **Session 7** | Prompt 8 (Final QA) | 30-45 min | All prior sessions completed |
+| **Session 7** | Prompt 9 (Formatting Fix) | 30-45 min | Session 1 completed (needs current deck) |
+| **Session 8** | Prompt 8 (Final QA) | 30-45 min | All prior sessions completed |
 
-**Sessions 5 and 6 can run in parallel** (they don't depend on each other).
+**Sessions 5, 6, and 7 can run in parallel** (they don't depend on each other).
 
-**Total estimated effort: 5-8 sessions, ~6-9 hours**
+**Prompt 9 (formatting) can also run FIRST** as a standalone fix before any content changes — it only touches CSS and citation markup, not slide content.
+
+**Total estimated effort: 6-9 sessions, ~7-10 hours**
 
 ### Key Files Reference
 
