@@ -118,6 +118,24 @@
 - GE Vernova: "A tale of two ISOs: ERCOT and CAISO" — market structure comparison — https://www.gevernova.com/gas-power/resources/articles/2018/a-tale-of-two-isos-energy-market-design-in-Texas-and-California
 - Utility Dive: "ERCOT, CAISO offer best grid interconnection" — https://www.utilitydive.com/news/ercot-caiso-pjm-grid-interconnection-queue-scorecard-advanced-energy-aeu/708450/
 
+## Additional Sources Cited in Deck Slides
+
+- Breckinridge Capital: "Quantifying Power Demand from AI" (2025) — cited on Slide 2
+- Grid Status: "Capacity Constraints in PJM have Grown Beyond Dominion" (2025) — cited on Slide 3
+- ERCOT PUCT Report 1250NPRR-18 (Mar 2025) — cited on Slide 3
+- Ascend Analytics: "CAISO Solar Cannibalization Outlook" (2025) — cited on Slide 5
+- Wiser et al. / LBNL: "Benchmarking Utility-Scale PV Operational Performance" (2024) — cited on Slide 5
+- Fervo Energy: Project Cape pilot results (2024) — cited on Slide 12
+- NRC: "Advanced Reactor Designs Under Review" — cited on Slide 12
+- CAISO: "20-Year Transmission Outlook" (May 2025) — cited on Slide 13
+- CAISO: "Hybrid Resource Trends in the Interconnection Queue" (2025) — cited on Slide 13
+- NREL: "Hybrid Power Plants: Status of Installed and Proposed Projects" (2024) — cited on Slide 10
+- Eurelectric/EY: "24/7 Carbon-Free Energy: The Ecosystem" (Nov 2023) — cited on Slide 9, in Appendix B
+- Google/Princeton: "24/7 Carbon-Free Energy: Methodology & Results" (2022) — cited on Slide 9, in Appendix B
+- LevelTen Energy PPA Price Index Q1 2026 — cited on Slides 5, 9, in Appendix B
+- EIA Annual Energy Outlook 2025 — cited on Slide 4D
+- BNEF New Energy Outlook — cited on Slide 4D
+
 ## Access Notes
 
 | Source | Access | Quality |
