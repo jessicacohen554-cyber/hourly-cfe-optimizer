@@ -112,3 +112,109 @@
    - **HIGH:** Surface LBNL 14%/11% completion rates in slide body (#17). Scrape + add BNEF 2025 procurement decline data (#24). Add Flexidao 40–65% hourly CFE gap stat (#22).
    - **MEDIUM:** Add ISO scorecard grades to Slide 11 (#18). Flag vertical integration risk from Google/Intersect (#28). Scrape Clarity AI emissions data for Slide 7 (#32).
    - **LOW:** Verify GlobeNewswire CAGR source attribution on Slide 7 (#29). All others are SKIP.
+
+---
+
+## Part C: Regulatory, Regional & VRE Economics (Citations 34–47)
+
+**Audited:** March 27, 2026
+**Source:** `data-center-cfe/research/vreresearch.md` (final ~25% — GHG Protocol Scope 2, regional ISO analysis, VRE capture rates, storage/BESS, grid operations)
+**Deck:** `data-center-cfe/output/vre-investment-thesis-deck.html` (16 slides)
+**Filter:** VRE standalone investment thesis value. Prioritize GHG Protocol regulatory shifts, regional ISO differentiation, storage economics, and VRE capture rate data.
+
+### Audit Table
+
+| # | Citation | Key Data Point | Already in Deck? | Action | Priority |
+|---|---------|---------------|-------------------|--------|----------|
+| 34 | **Watershed — "Analyzing the GHG Protocol's proposed scope 2 changes"** | Analysis of proposed Scope 2 updates: hourly matching + deliverability requirements will disqualify 30–50% of existing unbundled REC portfolios. REC price increases of 3–7× in constrained regions following in-region eligibility shifts. | Partially — Slide 7 and 8 discuss GHG Protocol Scope 2 shifts, hourly matching, and the 40–65% actual CFE gap. The 30–50% REC disqualification figure and 3–7× price multiplier are in vreresearch.md (line 208) but NOT explicitly surfaced in the deck as data points. | **ADD** — The 30–50% REC disqualification rate and 3–7× price premium are the most concrete quantitative arguments for why the GHG Protocol update creates a VRE+Storage revenue supercycle. Add as a callout on Slide 8 (24/7 CFE Premium) or Slide 9 (Storage). These numbers directly justify the $35–50/MWh PPA premium already shown on Slide 8. | H |
+| 35 | **GHG Protocol — "Upcoming Scope 2 Public Consultation: Hourly Matching"** | Official GHG Protocol consultation document confirming hourly matching and deliverability as proposed pillars. Timeline: public consultation late 2025, finalization expected 2027. | **Yes** — Slide 7 includes "GHG Protocol Scope 2 finalization" milestone in 2027. Slide 8 discusses annual-to-hourly shift. The timeline and pillars are incorporated. | **SKIP** — Already incorporated. The 2027 timeline and hourly+deliverability framework are in Slides 7–8. Could add as a source citation in Slide 16 bibliography if not already there, but no content changes needed. | L |
+| 36 | **Climate Resource Solutions — "Missteps in Proposed Updates to GHG Protocol"** | Critical analysis arguing proposed GHG Protocol updates may have unintended consequences — could penalize early movers or create perverse incentives. Counterpoint to the bullish hourly-matching narrative. | Not in deck. No counterargument to the GHG Protocol update is presented. | **ADD (risk)** — This is a meaningful risk factor. If the GHG Protocol update is weakened, delayed beyond 2027, or modified to grandfather existing annual-matching contracts, the VRE+Storage premium thesis weakens. Add as a risk row in Slide 12 (Investment Case) risk table: "GHG Protocol delay/dilution" with mitigation "Storage arbitrage revenue is regulation-independent; only the REC premium is at risk." | M |
+| 37 | **World Resources Institute — "24/7 Carbon-Free Energy Resources & Tools"** | WRI toolkit for implementing 24/7 CFE procurement. Provides methodology frameworks, measurement tools, and best practices for hourly matching. | Not directly cited. Slide 8 covers 24/7 CFE concepts using Google/Princeton and Eurelectric/EY as sources. | **SKIP** — Toolkit/methodology resource. The deck already presents 24/7 CFE concepts with sufficient rigor using primary research sources. WRI toolkit is an implementation guide, not an analytical data source. Could add to Slide 16 bibliography for completeness. | L |
+| 38 | **Wood Mackenzie — "US seasonal power outlooks Summer 2025"** | Seasonal power price forecasts by ISO; summer 2025 outlook shows elevated prices in PJM/ERCOT due to demand growth outpacing supply additions. Seasonal price spreads relevant to storage arbitrage. | Not specifically cited. WoodMac is referenced generically in Slide 15–16 for demand data, but the seasonal power outlook and ISO-specific price forecasts are not in the deck. | **SCRAPE** — Seasonal price spread data by ISO would strengthen Slide 9 (Storage revenue stack) and Slide 11 (Regional Matrix). Summer/winter price differentials directly quantify storage arbitrage opportunity. Target: `data-inputs/woodmac-seasonal-prices.json` with fields: ISO, season, avg wholesale price, peak/off-peak spread, year-over-year change. | M |
+| 39 | **Utility Dive — "ERCOT, CAISO offer best grid interconnection"** | ERCOT and CAISO have the fastest, most efficient interconnection processes among US ISOs. Contrasts with PJM's severe backlog ("D-minus" grade). | Partially — Slide 11 implicitly captures this: ERCOT rated "Strong Buy," CAISO rated "Buy (selective)," PJM noted for queue friction. The interconnection speed advantage is embedded in the regional ratings but not explicitly cited as a differentiator with specific process metrics. | **UPDATE** — Add interconnection timeline estimates to Slide 11's regional matrix. Currently the matrix has qualitative ratings; adding "Avg. queue time: ERCOT 1–2yr, CAISO 2–3yr, PJM 4–5yr" would quantify the speed advantage and strengthen the Tier 1/2/3 justification. | M |
+| 40 | **GE Vernova — "A tale of two ISOs: ERCOT and CAISO"** | Comparative analysis of ERCOT vs. CAISO market structures, VRE penetration levels, and grid management approaches. ERCOT energy-only market vs. CAISO capacity market. Highlights divergent approaches to managing high VRE penetration. | Partially — Slide 11 covers ERCOT vs. CAISO with different strategic recommendations. Slide 4 mentions CAISO solar <30% capture and ERCOT wind at 54%. The market structure differences (energy-only vs. capacity) are implied but not explicitly compared. | **UPDATE** — The ERCOT/CAISO market structure comparison would strengthen Slide 11's rationale. Add a footnote or callout: "ERCOT's energy-only market creates extreme price volatility ($150+/kW-yr battery arbitrage) vs. CAISO's capacity market which caps upside but reduces risk." This explains *why* the strategic plays differ by region. | M |
+| 41 | **Grid Strategies — "Strategic Industries Surging: Driving US Power Demand"** | Analysis of industrial load growth beyond data centers — manufacturing reshoring, EV charging, electrification of industrial heat. Broader demand context showing DCs are one of several simultaneous demand shocks. | Not directly cited. Slide 2–3 focus on DC-specific demand. The broader industrial demand context (manufacturing, EVs, heat) is not in the deck. | **SKIP** — The deck is intentionally focused on the DC/AI demand driver for the VRE thesis. Adding manufacturing/EV demand dilutes the narrative. The broader demand context is implicit — all load growth tightens supply and benefits VRE. No specific data point changes the investment case. | L |
+| 42 | **Modo Energy — "US Research Roundup: BESS insights Q3 2025"** | BESS performance data: ERCOT 4hr battery arbitrage revenue $150+/kW-yr actual; degradation curves; utilization rates; revenue by market (energy arbitrage vs. ancillary services vs. capacity). | Partially — Slide 9 cites "$150/kW-yr" ERCOT battery arbitrage. Slide 16 source note: "Modo Energy — ERCOT BESS revenue analysis (Q3 2025)." The headline revenue figure is incorporated but granular breakdowns (degradation, utilization, revenue mix) are not. | **SCRAPE** — The detailed BESS revenue breakdown (energy vs. ancillary vs. capacity by ISO) would strengthen Slide 9's storage revenue stack and provide backup for the $150/kW-yr claim. Target: `data-inputs/modo-bess-revenue.json` with fields: ISO, duration (4hr/8hr), revenue_energy, revenue_ancillary, revenue_capacity, utilization_pct, degradation_annual_pct. | H |
+| 43 | **Amperon — "How the Grid Changed in 2024"** | Grid transformation metrics: record VRE penetration hours, storage deployment acceleration, demand growth patterns by region. Provides 2024 retrospective on grid evolution. | Not in deck. No Amperon references found. | **SKIP** — Retrospective analysis. The deck uses forward-looking data (BNEF, WoodMac, PJM/ERCOT forecasts) rather than 2024 retrospectives. Specific data points (record VRE hours, storage deployment) are covered by ISO-specific sources already in the deck. | L |
+| 44 | **California Energy Commission — "2024 Total System Electric Generation"** | CAISO grid reached 62% clean energy in 2024. Generation mix breakdown: solar, wind, hydro, nuclear, geothermal, gas. Quantifies the saturation level driving CAISO's declining VRE value. | Not in deck. The 62% figure is in vreresearch.md (line 226: "62% clean energy") but NOT in the deck. Slide 11 rates CAISO "Declining" opportunity without citing this specific saturation metric. | **ADD** — The 62% clean energy figure is the single best justification for CAISO's "Not Recommended for new VRE" rating. Add to Slide 11's CAISO row as a data point: "Already 62% clean — incremental VRE faces severe diminishing returns." This converts a qualitative rating into a quantified one. | H |
+| 45 | **California ISO — "Managing the evolving grid"** | CAISO grid management challenges: duck curve deepening, curtailment increasing, negative pricing hours expanding. Operational perspective on managing high-VRE grid. | Partially — Slide 4 references CAISO solar <30% capture (a consequence of the duck curve). The duck curve and curtailment dynamics are implied but not explicitly cited. | **UPDATE** — Add CAISO curtailment data to Slide 11's CAISO row or Slide 4's cannibalization discussion. "CAISO curtailed X GWh of solar in 2024" would quantify the oversupply problem. However, without scraping the specific curtailment figure, this is a low-priority update — the <30% capture rate already communicates the problem. | L |
+| 46 | **Eavor — "California needs clean firm power"** | Eavor (enhanced geothermal developer) argues California's path to 100% clean requires firm, dispatchable clean power — not more VRE. Supports the thesis that CAISO is VRE-saturated and needs firm resources. | Not in deck. Slide 10 mentions "Enhanced geothermal" generically but doesn't cite Eavor or apply the argument to CAISO specifically. | **SKIP** — Self-serving analysis from a geothermal developer. The deck already makes the CAISO case through market data (Slide 11: "Declining" opportunity). Adding a vendor's argument adds bias without analytical rigor. The geothermal point is already in Slide 10's clean firm discussion. | L |
+| 47 | **LBNL — "Variable Renewable Energy Participation in Ancillary Services"** | LBNL analysis of VRE participation in ancillary services markets. Quantifies potential revenue uplift from VRE providing frequency regulation, voltage support, and spinning reserves. Emerging revenue stream that improves VRE standalone economics. | Partially — Slide 6 revenue table includes "Ancillary Services: $0 to +$6/MWh." Slide 9 shows "$6/MWh" ancillary in revenue stack. The revenue range is in the deck but not sourced to LBNL specifically. | **UPDATE** — Add LBNL as source citation for the ancillary services revenue line in Slide 6 and 9. The $0–6/MWh range should be attributed. If LBNL provides higher upside estimates for VRE ancillary participation, update the range. Low priority since the figure is already in the deck. | L |
+
+### Summary
+
+| Action | Count | Citations |
+|--------|-------|-----------|
+| **SKIP** | 5 | #35, #37, #41, #43, #46 |
+| **UPDATE** | 4 | #39, #40, #45, #47 |
+| **ADD** | 3 | #34, #36, #44 |
+| **SCRAPE** | 2 | #38, #42 |
+| **NEW SLIDE** | 0 | — |
+
+**5 SKIP, 4 UPDATE, 3 ADD, 2 SCRAPE, 0 NEW SLIDE**
+
+### Key Findings
+
+1. **GHG Protocol citations (#34–36) are the regulatory backbone of the thesis.** The 30–50% REC disqualification rate and 3–7× price premium (#34) are the most impactful missing data points — they directly quantify why the Scope 2 update creates a VRE+Storage revenue supercycle. The counterargument (#36) belongs in the risk table. The official GHG Protocol timeline (#35) is already incorporated.
+
+2. **CAISO "62% clean" (#44) is a critical missing justification.** Slide 11 rates CAISO as "Declining" opportunity but doesn't cite the 62% clean energy saturation figure that makes the case self-evident. This is a one-line add with high impact.
+
+3. **Modo Energy BESS data (#42) needs scraping for Slide 9 depth.** The $150/kW-yr headline is in the deck, but the revenue breakdown (energy vs. ancillary vs. capacity) would make the storage investment case more granular and defensible.
+
+4. **Regional ISO analysis (#38–40) could strengthen Slide 11** with quantified interconnection timelines and market structure comparisons, but the existing qualitative ratings are functional. Medium priority.
+
+5. **No citations warrant a new slide.** The regulatory, regional, and storage themes are covered by existing Slides 4, 8, 9, 11, and 12.
+
+6. **Priority actions:**
+   - **HIGH:** Add Watershed 30–50% REC disqualification + 3–7× price premium to Slide 8 (#34). Add CEC 62% clean figure to Slide 11 CAISO row (#44). Scrape Modo BESS revenue breakdown for Slide 9 (#42).
+   - **MEDIUM:** Add GHG Protocol delay risk to Slide 12 (#36). Scrape WoodMac seasonal prices for Slides 9/11 (#38). Add interconnection timelines to Slide 11 (#39). Add ERCOT/CAISO market structure comparison to Slide 11 (#40).
+   - **LOW:** Update LBNL ancillary source attribution (#47). Add CAISO curtailment data (#45). All others SKIP.
+
+---
+
+## Consolidated Audit Summary
+
+**Completed:** March 27, 2026
+**Scope:** All 47 citations from `vreresearch.md` audited against `vre-investment-thesis-deck.html` (16 slides)
+
+### Counts
+
+| Action | Count | Citations |
+|--------|-------|-----------|
+| **SKIP** | 23 | #1, #3, #4, #5, #7, #8, #10, #12, #14, #15, #19, #20, #21, #23, #25, #26, #27, #30, #31, #35, #37, #41, #43 |
+| **UPDATE** | 9 | #9, #16, #17, #18, #29, #39, #40, #45, #47 |
+| **ADD** | 9 | #2, #6, #11, #13, #22, #28, #34, #36, #44 |
+| **SCRAPE + ADD** | 2 | #24, #32 |
+| **SCRAPE** | 2 | #38, #42 |
+| **NEW SLIDE** | 0 | — |
+| **Total** | **47** | — |
+
+**Summary: 23 SKIP, 9 UPDATE, 9 ADD, 2 SCRAPE+ADD, 2 SCRAPE, 0 NEW SLIDE**
+
+UPDATE targets: Slides 4, 6, 7, 9, 10, 11 (most updates), 12
+ADD targets: Slides 2, 4, 5, 8, 9, 10, 11, 12
+SCRAPE targets: 4 data files for Prompt 2
+
+### Top 10 Highest-Priority Actions
+
+| Rank | Cit. # | Action | Slide | What to Do | Why It Matters |
+|------|--------|--------|-------|------------|----------------|
+| 1 | #34 | ADD | Slide 8 | Add Watershed 30–50% REC disqualification rate and 3–7× price premium as callout | Quantifies the GHG Protocol revenue supercycle — the single biggest regulatory catalyst for VRE+Storage value. Without these numbers, the thesis relies on qualitative claims. |
+| 2 | #17 | UPDATE | Slide 11 / Slide 4 | Surface LBNL 14% solar / 11% battery interconnection completion rates as a prominent data point | The strongest quantitative argument for why the 2,000+ GW queue is illusory. Already in source notes but buried — needs to be a headline stat. |
+| 3 | #24 | SCRAPE+ADD | Slide 6 / Slide 4 | Scrape BNEF 2025 procurement decline data (55.9 GW, -10%) and add as market consolidation callout | The procurement market bifurcation — smaller buyers dropping out, Big 4 consolidating to 49% — proves IPP-scale VRE developers become essential suppliers. |
+| 4 | #22 | ADD | Slide 8 / Slide 9 | Add Flexidao 40–65% actual hourly CFE stat as KPI card | Devastatingly quantifies why "100% renewable" under annual matching is a fiction. Already in Slide 7 text; needs promotion to a headline data point on Slide 8. |
+| 5 | #44 | ADD | Slide 11 | Add CEC "62% clean energy" to CAISO row in Regional Matrix | Converts CAISO's qualitative "Declining" rating into a self-evident quantified case. One line, high impact. |
+| 6 | #42 | SCRAPE | Slide 9 | Scrape Modo Energy BESS revenue breakdown (energy/ancillary/capacity by ISO) | Strengthens the $150/kW-yr ERCOT arbitrage claim with granular revenue components. Makes the storage investment case defensible under scrutiny. |
+| 7 | #6 | ADD | Slide 4 / Slide 5 | Add DOE 14% solar / 11% battery completion rates as callout | Corroborates LBNL data (#17) from a federal source. Two independent sources confirming the same bottleneck = high credibility. |
+| 8 | #16 | UPDATE | Slide 4 / Slide 11 | Add/verify PJM 40 GW thermal retirement figure | Critical for the clean energy gap narrative — quantifies the supply-side erosion that makes new VRE essential even in PJM. |
+| 9 | #36 | ADD (risk) | Slide 12 | Add "GHG Protocol delay/dilution" as risk row with mitigation | Acknowledges the counterargument that the regulatory catalyst could be weakened. Demonstrates intellectual honesty and strengthens the thesis by addressing it head-on. |
+| 10 | #28 | ADD (risk) | Slide 12 | Flag vertical integration risk from Google/Intersect $4.75B acquisition | If hyperscalers bypass IPPs by acquiring developers directly, the addressable market shrinks. Needs explicit acknowledgment with Tier 2 colo mitigation. |
+
+### Data Scraping Queue (for Prompt 2)
+
+| Priority | Cit. # | Source | Target Filename | Key Data Fields |
+|----------|--------|--------|----------------|-----------------|
+| 1 | #24 | Bloomberg NEF — "Corporate Clean Energy Buying Fell in 2025" | `data-inputs/bnef-corporate-procurement-2025.json` | total_gw, yoy_change_pct, big4_share_pct, big4_gw, tier2_gw, buyer_count_change, market_bifurcation_narrative |
+| 2 | #42 | Modo Energy — "US Research Roundup: BESS insights Q3 2025" | `data-inputs/modo-bess-revenue.json` | iso, duration_hr, revenue_energy_kwyr, revenue_ancillary_kwyr, revenue_capacity_kwyr, total_revenue_kwyr, utilization_pct, degradation_annual_pct, sample_period |
+| 3 | #32 | Clarity AI — "Data Center Emissions Are Rising" | `data-inputs/clarity-dc-emissions.json` | company, year, scope2_emissions_mtco2, yoy_change_pct, renewable_claim_pct, actual_cfe_pct, emissions_gap_narrative |
+| 4 | #38 | Wood Mackenzie — "US seasonal power outlooks Summer 2025" | `data-inputs/woodmac-seasonal-prices.json` | iso, season, avg_wholesale_mwh, peak_offpeak_spread_mwh, yoy_price_change_pct, demand_forecast_gw, supply_margin_pct |
