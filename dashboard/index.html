@@ -3671,11 +3671,22 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     var ISO = 'PJM';
     var THRESHOLD = '95';
     var EXISTING_GAS_GW = 145;
-    var PJM_DEMAND_TWH = 843.331;
+    var PJM_DEMAND_TWH_2025 = 843.331;
+    var PJM_GROWTH_RATE = 0.024; // Medium growth (2.4%/yr)
     var PJM_BASELINE_CLEAN_PCT = 38.5; // 2025 existing clean share
-    var PJM_EXISTING_CLEAN_TWH = PJM_DEMAND_TWH * PJM_BASELINE_CLEAN_PCT / 100; // ~325 TWh
+    var PJM_EXISTING_CLEAN_TWH = PJM_DEMAND_TWH_2025 * PJM_BASELINE_CLEAN_PCT / 100; // ~325 TWh
     var MILESTONES = [50, 60, 70, 80, 90, 95]; // grid HMS targets
     var MILESTONE_YEARS = { 50: 2030, 60: 2033, 70: 2035, 80: 2037, 90: 2040, 95: 2045 };
+
+    // Demand at each milestone year with growth
+    function demandAtYear(year) {
+        var years = Math.max(0, year - 2025);
+        return PJM_DEMAND_TWH_2025 * Math.pow(1 + PJM_GROWTH_RATE, years);
+    }
+    var MILESTONE_DEMAND = {};
+    Object.keys(MILESTONE_YEARS).forEach(function(m) {
+        MILESTONE_DEMAND[m] = demandAtYear(MILESTONE_YEARS[m]);
+    });
 
     // Capex parameters
     var CAP_FACTORS = { solar: 0.25, wind: 0.33, cleanFirm: 0.90, battery: 0.15, ldes: 0.10 };
@@ -3778,13 +3789,9 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     }
 
     // --- Curtailment allocation (solar first, then wind, then firm) ---
-    function allocateCurtailment(d) {
-        // Total clean gen on PJM = existing + new build on-grid
-        var totalClean = PJM_EXISTING_CLEAN_TWH + d.solar + d.wind + d.firm + d.battery + d.ldes;
-        // Utilized clean = gridHms% of demand
-        var utilizedClean = PJM_DEMAND_TWH * d.gridHms / 100;
-        // Grid curtailment from data (or compute from clean - utilized)
-        var totalCurt = d.gridCurtTwh || Math.max(0, totalClean - utilizedClean);
+    function allocateCurtailment(d, demandTwh) {
+        // Grid curtailment from data
+        var totalCurt = d.gridCurtTwh || 0;
 
         // Allocate in order: solar → wind → firm (existing not curtailed first)
         var remaining = totalCurt;
@@ -3799,7 +3806,8 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             firmUtil: d.firm - firmCurt, firmCurt: firmCurt,
             battery: d.battery || 0,
             ldes: d.ldes || 0,
-            totalCurt: solarCurt + windCurt + firmCurt
+            totalCurt: solarCurt + windCurt + firmCurt,
+            demandTwh: demandTwh
         };
     }
 
@@ -3842,17 +3850,19 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     // Pre-compute max curtailment for consistent bar widths
     var maxCurtPct = 0;
     MILESTONES.forEach(function(m, i) {
-        var alloc1B = allocateCurtailment(pathway1B[i]);
-        var alloc2C = allocateCurtailment(pathway2C[i]);
-        var c1 = alloc1B.totalCurt / PJM_DEMAND_TWH * 100;
-        var c2 = alloc2C.totalCurt / PJM_DEMAND_TWH * 100;
+        var dem = MILESTONE_DEMAND[m];
+        var alloc1B = allocateCurtailment(pathway1B[i], dem);
+        var alloc2C = allocateCurtailment(pathway2C[i], dem);
+        var c1 = alloc1B.totalCurt / dem * 100;
+        var c2 = alloc2C.totalCurt / dem * 100;
         maxCurtPct = Math.max(maxCurtPct, c1, c2);
     });
     var maxBarPct = 100 + Math.max(maxCurtPct, 5);
 
     // --- Build milestone row ---
-    function buildRow(d, stratKey, stratColor) {
-        var alloc = allocateCurtailment(d);
+    function buildRow(d, stratKey, stratColor, milestone) {
+        var demandTwh = MILESTONE_DEMAND[milestone];
+        var alloc = allocateCurtailment(d, demandTwh);
         var hms = d.gridHms;
         var fossilPct = 100 - hms;
 
@@ -3876,13 +3886,13 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             '<div class="act4-row-metric">Clean: <strong>$' + Math.round(d.cleanCapexB) + 'B</strong></div>' +
             '<div class="act4-row-metric">Total: <strong>$' + Math.round(d.totalCapexB) + 'B</strong></div>';
 
-        // Stacked bar
+        // Stacked bar — normalized to demand at this milestone year
         var barWrap = document.createElement('div');
         barWrap.className = 'act4-bar-wrap';
 
         function addSeg(twh, color, opacity, tooltipLabel, isHatch) {
             if (twh < 0.3) return;
-            var pct = (twh / PJM_DEMAND_TWH) / (maxBarPct / 100) * 100;
+            var pct = (twh / demandTwh) / (maxBarPct / 100) * 100;
             var seg = document.createElement('div');
             seg.className = 'act4-bar-seg' + (isHatch ? ' act4-bar-seg-hatch' : '');
             seg.style.width = pct.toFixed(2) + '%';
@@ -3915,7 +3925,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         addSeg(alloc.ldes, ldesC, 0.5,
             'LDES: ' + Math.round(alloc.ldes) + ' TWh', false);
         // Fossil — fills to 100% of demand
-        var fossilTwh = PJM_DEMAND_TWH * fossilPct / 100;
+        var fossilTwh = demandTwh * fossilPct / 100;
         addSeg(fossilTwh, fossilC, 0.5,
             'Fossil: ' + Math.round(fossilTwh) + ' TWh (' + Math.round(fossilPct) + '%)', false);
 
@@ -3951,12 +3961,14 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
 
         var header = document.createElement('div');
         header.className = 'act4-milestone-group-header';
+        var dem = Math.round(MILESTONE_DEMAND[milestone]);
         header.innerHTML = '<span class="act4-group-year">' + year + '</span>' +
-            '<span class="act4-group-target">' + milestone + '% Hourly Matching</span>';
+            '<span class="act4-group-target">' + milestone + '% Hourly Matching</span>' +
+            '<span class="act4-group-target" style="margin-left:auto;">' + dem + ' TWh demand</span>';
         group.appendChild(header);
 
-        var row1B = buildRow(pathway1B[idx], '1B', gasC);
-        var row2C = buildRow(pathway2C[idx], '2C', firmC);
+        var row1B = buildRow(pathway1B[idx], '1B', gasC, milestone);
+        var row2C = buildRow(pathway2C[idx], '2C', firmC, milestone);
         group.appendChild(row1B);
         group.appendChild(row2C);
 
