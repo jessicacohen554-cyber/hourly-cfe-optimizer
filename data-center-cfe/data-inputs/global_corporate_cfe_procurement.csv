@@ -1,14 +1,15 @@
-# Source: BNEF 1H 2026 Corporate Energy Market Outlook (paywalled); secondary coverage via ESG Today, Carbon Credits, Utility Dive
+# Source: BNEF Corporate Energy Market Outlook series (2018-2026); secondary coverage via ESG Today, Utility Dive, pv magazine, Carbon Credits
 # Access date: 2026-03-27
-# Notes: 2018-2023 figures from BNEF historical tracking; 2024-2025 from BNEF 1H 2026 report via secondary sources
-# Big 4 = Amazon, Google, Microsoft, Meta
+# Notes: Total GW from BNEF published figures. Hyperscaler GW from BNEF individual buyer data where available; estimated from sector breakdowns where paywalled.
+# Big 4 = Amazon, Google, Microsoft, Meta. 2022 total uses BNEF revised figure (41.0 vs initial 36.7).
+# Confidence: P = published by BNEF, E = estimated from partial data/sector breakdowns
 year,total_gw,hyperscaler_gw,hyperscaler_pct,non_hyperscaler_gw,notes
-2017,5.4,0.8,14.8,4.6,Early corporate PPA era; Google and Microsoft primary hyperscaler buyers
-2018,13.4,2.7,20.1,10.7,Early corporate PPA market; hyperscaler share growing
-2019,20.1,5.0,24.9,15.1,Record year at the time; Amazon and Google leading
-2020,23.7,7.8,32.9,15.9,COVID year but procurement accelerated
-2021,31.1,12.1,38.9,19.0,Post-COVID rebound; Microsoft Brookfield early discussions
-2022,36.7,15.4,42.0,21.3,Record year; all Big 4 increasing commitments
-2023,44.7,19.7,44.1,25.0,Strong growth; hyperscaler share crossing 40%
-2024,62.2,28.0,45.0,34.2,All-time high; AI buildout drives massive procurement
-2025,55.9,27.4,49.0,28.5,First decline in nearly a decade (-10% YoY); smaller buyers paralyzed by regulatory uncertainty and high prices; Big 4 consolidated to 49% of all global deals
+2017,6.1,1.5,25,4.6,BNEF published total (P); hyperscaler est. from sector data (E) — Google and Microsoft primary buyers
+2018,13.4,4.5,34,8.9,BNEF published total (P); Facebook 2.6 GW confirmed; others estimated (E)
+2019,19.5,5.5,28,14.0,BNEF published total (P); all 4 individually reported (P) — Google 2.7 + Facebook 1.1 + Amazon 0.9 + Microsoft 0.8
+2020,23.7,7.5,32,16.2,BNEF published total (P); Amazon 5.1 confirmed; others estimated (E)
+2021,31.1,12.5,40,18.6,BNEF published total (P); Amazon 6.2 + Microsoft ~6.2 confirmed; Meta/Google estimated (E)
+2022,41.0,16.4,40,24.6,BNEF revised total (P); all 4 individually reported (P) — Amazon 10.9 + Meta 2.6 + Google 1.6 + Microsoft 1.3
+2023,46.0,14.0,30,32.0,BNEF published total (P); 3 of 4 reported (P) — Amazon 8.8 + Meta 3.0 + Google 1.0; Microsoft ~1.2 est. (E)
+2024,62.0,28.0,45,34.0,BNEF published total (P); individual breakdown paywalled; 84% of US tech deals; estimated (E)
+2025,55.9,27.4,49,28.5,BNEF published total (P); hyperscaler 49% published (P) — Meta 10.24 + Amazon 10.22 + Google/Microsoft ~6.9
