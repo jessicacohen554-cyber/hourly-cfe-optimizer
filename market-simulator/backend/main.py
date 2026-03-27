@@ -154,6 +154,10 @@ if FRONTEND_DIR.exists():
         app.mount("/styles", StaticFiles(directory=str(styles_dir)), name="styles")
     if js_dir.exists():
         app.mount("/js", StaticFiles(directory=str(js_dir)), name="js")
+    # Mount data directory for frontend JSON fetches (fleet scenarios, sweep data, etc.)
+    data_dir = FRONTEND_DIR / "data"
+    if data_dir.exists():
+        app.mount("/data", StaticFiles(directory=str(data_dir)), name="data")
     # Mount the entire frontend as a fallback for any other static assets
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
