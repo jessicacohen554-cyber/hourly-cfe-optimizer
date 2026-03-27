@@ -3672,7 +3672,9 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     var THRESHOLD = '95';
     var EXISTING_GAS_GW = 145;
     var PJM_DEMAND_TWH = 843.331;
-    var MILESTONES = [50, 60, 70, 80, 90, 95]; // HMS targets
+    var PJM_BASELINE_CLEAN_PCT = 38.5; // 2025 existing clean share
+    var PJM_EXISTING_CLEAN_TWH = PJM_DEMAND_TWH * PJM_BASELINE_CLEAN_PCT / 100; // ~325 TWh
+    var MILESTONES = [50, 60, 70, 80, 90, 95]; // grid HMS targets
     var MILESTONE_YEARS = { 50: 2030, 60: 2033, 70: 2035, 80: 2037, 90: 2040, 95: 2045 };
 
     // Capex parameters
@@ -3693,8 +3695,8 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     var battC = RC.battery || '#06B6D4';
     var ldesC = RC.ldes || '#E91E63';
     var existC = '#94A3B8';
-    var gasC = '#6B7280';
     var fossilC = '#9CA3AF';
+    var gasC = '#6B7280';
 
     var alpha = typeof withAlpha !== 'undefined' ? withAlpha : function(hex, a) {
         var r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
@@ -3709,7 +3711,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             ', rgba(' + r + ',' + g + ',' + b + ',0.12)';
     }
 
-    // --- Data loading ---
+    // --- Extract participation data with grid-level fields ---
     function getParticipationData(strat) {
         var parts = Object.keys(DEPLOYMENT_DATA.data[strat][ISO]).sort(function(a,b) { return parseFloat(a) - parseFloat(b); });
         var rows = [];
@@ -3717,86 +3719,118 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             var rec = DEPLOYMENT_DATA.data[strat][ISO][p][THRESHOLD];
             if (!rec) return;
             var n = rec.n || {};
-            var e = rec.e || {};
+            var x = rec.x || {};
+
+            // Compute cross-ISO totals to subtract from n (for 1B)
+            var xTotals = {};
+            Object.keys(x).forEach(function(srcIso) {
+                Object.keys(x[srcIso]).forEach(function(res) {
+                    xTotals[res] = (xTotals[res] || 0) + x[srcIso][res];
+                });
+            });
+
+            // PJM on-grid new-build = n minus cross-ISO outflows
+            var pjmSolar = Math.max(0, (n.solar || 0) - (xTotals.solar || 0));
+            var pjmWind = Math.max(0, (n.wind || 0) - (xTotals.wind || 0));
+            var pjmFirm = Math.max(0, (n.clean_firm || 0) + (n.nuclear_uprate || 0) - (xTotals.clean_firm || 0) - (xTotals.nuclear_uprate || 0));
+            var pjmBattery = Math.max(0, (n.battery || 0) + (n.battery8 || 0) - (xTotals.battery || 0) - (xTotals.battery8 || 0));
+            var pjmLdes = Math.max(0, (n.ldes || 0) + (n.h2 || 0) - (xTotals.ldes || 0) - (xTotals.h2 || 0));
+
             rows.push({
                 part: parseFloat(p),
-                hms: rec.hms || 38.5,
-                gridClean: rec.gridCleanPct || 38.5,
-                gasGw: rec.gasGw || 0,
-                curtTwh: rec.curtTwh || 0,
-                c: rec.c || 0,
-                bl: rec.bl || 0,
-                solar: n.solar || 0,
-                wind: n.wind || 0,
-                firm: (n.clean_firm || 0) + (n.nuclear_uprate || 0),
-                battery: (n.battery || 0) + (n.battery8 || 0),
-                ldes: (n.ldes || 0) + (n.h2 || 0),
-                existing: (e.existing_merchant || 0) + (e.sss_allocation || 0)
+                gridHms: rec.gridHms || rec.hms || PJM_BASELINE_CLEAN_PCT,
+                gridGasGw: rec.gridGasGw || rec.gasGw || EXISTING_GAS_GW,
+                gridCurtTwh: rec.gridCurtTwh || rec.curtTwh || 0,
+                // PJM on-grid new-build TWh
+                solar: pjmSolar,
+                wind: pjmWind,
+                firm: pjmFirm,
+                battery: pjmBattery,
+                ldes: pjmLdes,
+                // Total buyer new-build (for capex calc — buyer pays for all including cross-ISO)
+                totalNewSolar: n.solar || 0,
+                totalNewWind: n.wind || 0,
+                totalNewFirm: (n.clean_firm || 0) + (n.nuclear_uprate || 0),
+                totalNewBattery: (n.battery || 0) + (n.battery8 || 0),
+                totalNewLdes: (n.ldes || 0) + (n.h2 || 0)
             });
         });
         return rows;
     }
 
-    // --- Interpolate to HMS milestones ---
-    function interpToHms(rows, target) {
+    // --- Interpolate to grid HMS milestones ---
+    function interpToGridHms(rows, target) {
         var below = null, above = null;
         for (var i = 0; i < rows.length; i++) {
-            if (rows[i].hms <= target) below = rows[i];
-            if (rows[i].hms > target && !above) above = rows[i];
+            if (rows[i].gridHms <= target) below = rows[i];
+            if (rows[i].gridHms > target && !above) above = rows[i];
         }
         if (!below || !above) return below || above || rows[0];
-        if (above.hms === below.hms) return below;
-        var f = (target - below.hms) / (above.hms - below.hms);
+        if (above.gridHms === below.gridHms) return below;
+        var f = (target - below.gridHms) / (above.gridHms - below.gridHms);
         f = Math.max(0, Math.min(1, f));
         var result = {};
-        var keys = ['gasGw', 'curtTwh', 'c', 'bl', 'solar', 'wind', 'firm', 'battery', 'ldes', 'existing', 'part', 'gridClean'];
+        var keys = ['gridGasGw', 'gridCurtTwh', 'solar', 'wind', 'firm', 'battery', 'ldes',
+                    'totalNewSolar', 'totalNewWind', 'totalNewFirm', 'totalNewBattery', 'totalNewLdes', 'part'];
         keys.forEach(function(k) { result[k] = below[k] + f * (above[k] - below[k]); });
-        result.hms = target;
+        result.gridHms = target;
         return result;
     }
 
     // --- Curtailment allocation (solar first, then wind, then firm) ---
     function allocateCurtailment(d) {
-        var remaining = d.curtTwh || 0;
+        // Total clean gen on PJM = existing + new build on-grid
+        var totalClean = PJM_EXISTING_CLEAN_TWH + d.solar + d.wind + d.firm + d.battery + d.ldes;
+        // Utilized clean = gridHms% of demand
+        var utilizedClean = PJM_DEMAND_TWH * d.gridHms / 100;
+        // Grid curtailment from data (or compute from clean - utilized)
+        var totalCurt = d.gridCurtTwh || Math.max(0, totalClean - utilizedClean);
+
+        // Allocate in order: solar → wind → firm (existing not curtailed first)
+        var remaining = totalCurt;
         var solarCurt = Math.min(remaining, d.solar); remaining -= solarCurt;
         var windCurt = Math.min(remaining, d.wind); remaining -= windCurt;
         var firmCurt = Math.min(remaining, d.firm); remaining -= firmCurt;
+
         return {
+            existing: PJM_EXISTING_CLEAN_TWH,
             solarUtil: d.solar - solarCurt, solarCurt: solarCurt,
             windUtil: d.wind - windCurt, windCurt: windCurt,
             firmUtil: d.firm - firmCurt, firmCurt: firmCurt,
             battery: d.battery || 0,
             ldes: d.ldes || 0,
-            existing: d.existing || 0
+            totalCurt: solarCurt + windCurt + firmCurt
         };
     }
 
-    // --- Capex helpers ---
+    // --- Capex helpers (buyer pays for all procurement including cross-ISO) ---
     function twhToGw(twh, cf) { return twh / (8.76 * cf); }
     function capexB_fn(gw, occKw) { return gw * occKw * 1e6 / 1e9; }
 
     function computeCleanGenCapex(d) {
-        return capexB_fn(twhToGw(d.solar, CAP_FACTORS.solar), OCC.solar) +
-               capexB_fn(twhToGw(d.wind, CAP_FACTORS.wind), OCC.wind) +
-               capexB_fn(twhToGw(d.firm, CAP_FACTORS.cleanFirm), OCC.cleanFirm);
+        return capexB_fn(twhToGw(d.totalNewSolar, CAP_FACTORS.solar), OCC.solar) +
+               capexB_fn(twhToGw(d.totalNewWind, CAP_FACTORS.wind), OCC.wind) +
+               capexB_fn(twhToGw(d.totalNewFirm, CAP_FACTORS.cleanFirm), OCC.cleanFirm);
     }
 
     function computeTotalCapex(d) {
         var total = computeCleanGenCapex(d);
-        total += capexB_fn(twhToGw(d.battery, CAP_FACTORS.battery), OCC.battery);
-        total += capexB_fn(twhToGw(d.ldes, CAP_FACTORS.ldes), OCC.ldes);
-        total += capexB_fn(Math.max(0, d.gasGw - EXISTING_GAS_GW), OCC.gas);
+        total += capexB_fn(twhToGw(d.totalNewBattery, CAP_FACTORS.battery), OCC.battery);
+        total += capexB_fn(twhToGw(d.totalNewLdes, CAP_FACTORS.ldes), OCC.ldes);
+        // New gas = gridGasGw above existing (only if grid needs more gas)
+        // For 1B this is significant; for 2C minimal
+        total += capexB_fn(Math.max(0, d.gridGasGw - EXISTING_GAS_GW), OCC.gas);
         return total;
     }
 
-    // --- Build data ---
+    // --- Build pathway data ---
     var rows1B = getParticipationData('1B');
     var rows2C = getParticipationData('2C');
 
     var pathway1B = [], pathway2C = [];
     MILESTONES.forEach(function(m) {
-        var d1 = interpToHms(rows1B, m);
-        var d2 = interpToHms(rows2C, m);
+        var d1 = interpToGridHms(rows1B, m);
+        var d2 = interpToGridHms(rows2C, m);
         d1.cleanCapexB = computeCleanGenCapex(d1);
         d2.cleanCapexB = computeCleanGenCapex(d2);
         d1.totalCapexB = computeTotalCapex(d1);
@@ -3805,19 +3839,21 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         pathway2C.push(d2);
     });
 
-    // Pre-compute max curtailment pct for consistent bar widths
+    // Pre-compute max curtailment for consistent bar widths
     var maxCurtPct = 0;
     MILESTONES.forEach(function(m, i) {
-        var c1 = (pathway1B[i].curtTwh || 0) / PJM_DEMAND_TWH * 100;
-        var c2 = (pathway2C[i].curtTwh || 0) / PJM_DEMAND_TWH * 100;
+        var alloc1B = allocateCurtailment(pathway1B[i]);
+        var alloc2C = allocateCurtailment(pathway2C[i]);
+        var c1 = alloc1B.totalCurt / PJM_DEMAND_TWH * 100;
+        var c2 = alloc2C.totalCurt / PJM_DEMAND_TWH * 100;
         maxCurtPct = Math.max(maxCurtPct, c1, c2);
     });
-    var maxBarPct = 100 + Math.max(maxCurtPct, 5); // at least 5% overflow space
+    var maxBarPct = 100 + Math.max(maxCurtPct, 5);
 
     // --- Build milestone row ---
     function buildRow(d, stratKey, stratColor) {
         var alloc = allocateCurtailment(d);
-        var hms = d.hms;
+        var hms = d.gridHms;
         var fossilPct = 100 - hms;
 
         var row = document.createElement('div');
@@ -3830,13 +3866,13 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         label.textContent = stratKey;
 
         // Metrics
-        var gasWarn = d.gasGw > EXISTING_GAS_GW * 0.9;
-        var gasGood = d.gasGw < EXISTING_GAS_GW * 0.5;
         var metrics = document.createElement('div');
         metrics.className = 'act4-row-metrics';
+        var gasWarn = d.gridGasGw > EXISTING_GAS_GW * 0.9;
+        var gasGood = d.gridGasGw < EXISTING_GAS_GW * 0.5;
         metrics.innerHTML =
             '<div class="act4-row-metric ' + (gasWarn ? 'metric-warn' : gasGood ? 'metric-good' : '') +
-            '">Gas: <strong>' + Math.round(d.gasGw) + ' GW</strong></div>' +
+            '">Gas: <strong>' + Math.round(d.gridGasGw) + ' GW</strong></div>' +
             '<div class="act4-row-metric">Clean: <strong>$' + Math.round(d.cleanCapexB) + 'B</strong></div>' +
             '<div class="act4-row-metric">Total: <strong>$' + Math.round(d.totalCapexB) + 'B</strong></div>';
 
@@ -3844,7 +3880,6 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         var barWrap = document.createElement('div');
         barWrap.className = 'act4-bar-wrap';
 
-        // Helper to add a segment
         function addSeg(twh, color, opacity, tooltipLabel, isHatch) {
             if (twh < 0.3) return;
             var pct = (twh / PJM_DEMAND_TWH) / (maxBarPct / 100) * 100;
@@ -3860,23 +3895,31 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             barWrap.appendChild(seg);
         }
 
-        // Existing clean — full saturation
-        addSeg(alloc.existing, existC, 1.0, 'Existing Clean: ' + Math.round(alloc.existing) + ' TWh', false);
-        // Solar utilized — semi-transparent
-        addSeg(alloc.solarUtil, solarC, 0.5, 'Solar: ' + Math.round(alloc.solarUtil) + ' TWh', false);
-        // Wind utilized — semi-transparent
-        addSeg(alloc.windUtil, windC, 0.5, 'Wind: ' + Math.round(alloc.windUtil) + ' TWh', false);
-        // Clean firm utilized — semi-transparent
-        addSeg(alloc.firmUtil, firmC, 0.5, 'Clean Firm: ' + Math.round(alloc.firmUtil) + ' TWh', false);
-        // Battery — semi-transparent
-        addSeg(alloc.battery, battC, 0.5, 'Battery: ' + Math.round(alloc.battery) + ' TWh', false);
-        // LDES — semi-transparent
-        addSeg(alloc.ldes, ldesC, 0.5, 'LDES: ' + Math.round(alloc.ldes) + ' TWh', false);
+        // === Main bar (0% to 100% of demand) ===
+        // Existing clean — fully saturated, leftmost
+        addSeg(alloc.existing, existC, 1.0,
+            'Existing Clean: ' + Math.round(alloc.existing) + ' TWh', false);
+        // New solar utilized
+        addSeg(alloc.solarUtil, solarC, 0.5,
+            'Solar (new): ' + Math.round(alloc.solarUtil) + ' TWh', false);
+        // New wind utilized
+        addSeg(alloc.windUtil, windC, 0.5,
+            'Wind (new): ' + Math.round(alloc.windUtil) + ' TWh', false);
+        // New clean firm utilized
+        addSeg(alloc.firmUtil, firmC, 0.5,
+            'Clean Firm (new): ' + Math.round(alloc.firmUtil) + ' TWh', false);
+        // Battery
+        addSeg(alloc.battery, battC, 0.5,
+            'Battery: ' + Math.round(alloc.battery) + ' TWh', false);
+        // LDES
+        addSeg(alloc.ldes, ldesC, 0.5,
+            'LDES: ' + Math.round(alloc.ldes) + ' TWh', false);
         // Fossil — fills to 100% of demand
         var fossilTwh = PJM_DEMAND_TWH * fossilPct / 100;
-        addSeg(fossilTwh, fossilC, 0.5, 'Fossil: ' + Math.round(fossilTwh) + ' TWh (' + Math.round(fossilPct) + '%)', false);
+        addSeg(fossilTwh, fossilC, 0.5,
+            'Fossil: ' + Math.round(fossilTwh) + ' TWh (' + Math.round(fossilPct) + '%)', false);
 
-        // 100% demand mark
+        // === 100% demand mark ===
         var mark = document.createElement('div');
         mark.className = 'act4-bar-100-mark';
         mark.style.left = (100 / maxBarPct * 100).toFixed(1) + '%';
@@ -3886,10 +3929,13 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         mark.appendChild(markLabel);
         barWrap.appendChild(mark);
 
-        // Curtailment — crosshatch extending past 100%
-        addSeg(alloc.solarCurt, solarC, 0.3, 'Solar Curtailed: ' + Math.round(alloc.solarCurt) + ' TWh', true);
-        addSeg(alloc.windCurt, windC, 0.3, 'Wind Curtailed: ' + Math.round(alloc.windCurt) + ' TWh', true);
-        addSeg(alloc.firmCurt, firmC, 0.3, 'Firm Curtailed: ' + Math.round(alloc.firmCurt) + ' TWh', true);
+        // === Curtailment — crosshatch PAST the 100% line ===
+        addSeg(alloc.solarCurt, solarC, 0.3,
+            'Solar Curtailed: ' + Math.round(alloc.solarCurt) + ' TWh', true);
+        addSeg(alloc.windCurt, windC, 0.3,
+            'Wind Curtailed: ' + Math.round(alloc.windCurt) + ' TWh', true);
+        addSeg(alloc.firmCurt, firmC, 0.3,
+            'Firm Curtailed: ' + Math.round(alloc.firmCurt) + ' TWh', true);
 
         row.appendChild(label);
         row.appendChild(metrics);
@@ -3897,7 +3943,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         return row;
     }
 
-    // --- Build milestone group (year header + paired 1B/2C rows) ---
+    // --- Build milestone group ---
     function buildMilestoneGroup(milestone, idx) {
         var year = MILESTONE_YEARS[milestone] || '';
         var group = document.createElement('div');
@@ -3923,7 +3969,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         if (!el) return;
         var final = pathway[pathway.length - 1];
         var stats = [
-            { value: Math.round(final.gasGw) + ' GW', label: 'Gas Capacity', color: final.gasGw > 50 ? '#DC2626' : '#16A34A' },
+            { value: Math.round(final.gridGasGw) + ' GW', label: 'Gas Capacity', color: final.gridGasGw > 50 ? '#DC2626' : '#16A34A' },
             { value: '$' + Math.round(final.cleanCapexB) + 'B', label: 'Clean Gen Capex', color: stratColor },
             { value: '$' + Math.round(final.totalCapexB) + 'B', label: 'Total Capex', color: stratColor }
         ];
@@ -3943,16 +3989,13 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         act4Animated = true;
 
         var timeline = document.getElementById('act4Timeline');
-        var groups = [];
 
         MILESTONES.forEach(function(m, i) {
             var group = buildMilestoneGroup(m, i);
             if (timeline) timeline.appendChild(group);
-            groups.push(group);
 
             setTimeout(function() {
                 group.classList.add('group-visible');
-                // Stagger row visibility within group
                 var rows = group.querySelectorAll('.act4-milestone-row');
                 rows.forEach(function(r, ri) {
                     setTimeout(function() { r.classList.add('row-visible'); }, ri * 100);
@@ -3960,7 +4003,6 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             }, 200 + i * 200);
         });
 
-        // Summary stats
         setTimeout(function() {
             buildSummary('act4SummaryStats1B', pathway1B, gasC);
             buildSummary('act4SummaryStats2C', pathway2C, firmC);
@@ -3970,7 +4012,6 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             if (s2) s2.classList.add('card-visible');
         }, 200 + MILESTONES.length * 200 + 200);
 
-        // Insight
         setTimeout(function() {
             var ins = document.getElementById('act4Insight');
             if (ins) ins.classList.add('insight-visible');
