@@ -518,6 +518,108 @@ def fig_cost_projections():
 
 
 # ══════════════════════════════════════════════════════════════════════
+# FIGURE 10: Hyperscaler Contract Dominance Timeline
+# ══════════════════════════════════════════════════════════════════════
+
+def fig_hyperscaler_dominance():
+    """Stacked area chart of hyperscaler vs non-hyperscaler clean energy procurement
+    with secondary axis showing hyperscaler market share percentage."""
+    path = DATA_DIR / "global_corporate_cfe_procurement.csv"
+    if not path.exists():
+        print(f"  WARNING: {path} not found, skipping.")
+        return None
+    df = pd.read_csv(path, comment="#", encoding="utf-8")
+    if df.empty:
+        return None
+
+    df = df[df["year"].apply(lambda x: str(x).strip().isdigit())].copy()
+    df["year"] = df["year"].astype(int)
+    df = df.sort_values("year")
+
+    years = df["year"].values
+    hyper = df["hyperscaler_gw"].astype(float).values
+    non_hyper = df["non_hyperscaler_gw"].astype(float).values
+    total = df["total_gw"].astype(float).values
+    share_pct = df["hyperscaler_pct"].astype(float).values
+
+    fig, ax1 = plt.subplots(figsize=(10, 5.5))
+
+    # ── Stacked area ──
+    ax1.fill_between(years, 0, hyper, color=CEG_BLUE, alpha=0.85,
+                     label="Hyperscalers (Amazon, Google, Microsoft, Meta)", zorder=3)
+    ax1.fill_between(years, hyper, hyper + non_hyper, color="#D1D5DB", alpha=0.70,
+                     label="All other corporate buyers", zorder=2)
+
+    # Subtle top edge line
+    ax1.plot(years, total, color="#9CA3AF", linewidth=1.2, zorder=4)
+
+    ax1.set_xlabel("")
+    ax1.set_ylabel("Annual Corporate Clean Energy Procurement (GW)",
+                   fontsize=11, fontweight="bold", color="#374151")
+    ax1.set_xlim(years[0] - 0.3, years[-1] + 0.3)
+    ax1.set_ylim(0, max(total) * 1.15)
+    ax1.set_xticks(years)
+    ax1.set_xticklabels([str(y) for y in years], fontsize=10)
+    ax1.tick_params(axis="y", labelsize=10)
+    ax1.spines["top"].set_visible(False)
+    ax1.spines["right"].set_visible(False)
+    ax1.grid(axis="y", color="#F0F3F7", linewidth=0.8, zorder=0)
+    ax1.grid(axis="x", visible=False)
+
+    # ── Secondary Y-axis: hyperscaler share % ──
+    ax2 = ax1.twinx()
+    ax2.plot(years, share_pct, color=CEG_ORANGE, linewidth=2.5, linestyle="--",
+             marker="o", markersize=5, markerfacecolor=CEG_ORANGE,
+             markeredgecolor="white", markeredgewidth=1.5, zorder=5,
+             label="Hyperscaler market share (%)")
+    ax2.set_ylabel("Hyperscaler Share of Global Market (%)",
+                   fontsize=11, fontweight="bold", color=CEG_ORANGE)
+    ax2.set_ylim(0, 60)
+    ax2.tick_params(axis="y", labelsize=10, colors=CEG_ORANGE)
+    ax2.spines["top"].set_visible(False)
+    ax2.spines["left"].set_visible(False)
+    ax2.spines["right"].set_color(CEG_ORANGE)
+    ax2.spines["right"].set_linewidth(1.5)
+
+    # ── Annotate 2025 share ──
+    ax2.annotate("49%\nBig 4 alone",
+                 xy=(2025, 49), xytext=(2025, 56),
+                 fontsize=9.5, fontweight="bold", color=CEG_ORANGE,
+                 ha="center", va="bottom", zorder=6)
+
+    # ── Annotate 2024 peak + 2025 decline ──
+    ax1.annotate("62 GW peak",
+                 xy=(2024, total[-2]), xytext=(2021.5, total[-2] + 5),
+                 fontsize=8, fontweight="bold", color="#6B7280",
+                 ha="center", va="bottom", zorder=6,
+                 arrowprops=dict(arrowstyle="-|>", color="#9CA3AF",
+                                 lw=1.0, connectionstyle="arc3,rad=0.2"))
+
+    # ── Combined legend ──
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines1 + lines2, labels1 + labels2,
+               loc="upper left", fontsize=9, frameon=True,
+               facecolor="white", edgecolor="#E0E6EF",
+               framealpha=0.95)
+
+    # ── Title ──
+    fig.suptitle("The Concentration of Clean Energy Demand",
+                 fontsize=16, fontweight="bold", color="#1B2A4A",
+                 y=0.98, x=0.08, ha="left")
+    ax1.set_title("Hyperscaler dominance of corporate clean energy contracts, 2017–2025",
+                  fontsize=10.5, color="#6B7280", loc="left", pad=8)
+
+    # ── Source line ──
+    fig.text(0.08, -0.02,
+             "Sources: BNEF 1H 2026 Corporate Energy Market Outlook; ESG Today; company sustainability reports",
+             fontsize=7.5, color="#9CA3AF", ha="left", style="italic")
+
+    fig.tight_layout(rect=[0, 0.02, 1, 0.93])
+    return fig
+
+
+# ══════════════════════════════════════════════════════════════════════
 # MAIN
 # ══════════════════════════════════════════════════════════════════════
 
@@ -534,6 +636,7 @@ def main():
         ("gap_analysis_waterfall_2040.png", lambda: fig_gap_analysis_waterfall_extended(2040), "Clean Energy Gap 2040"),
         ("gap_analysis_waterfall_2050.png", lambda: fig_gap_analysis_waterfall_extended(2050), "Clean Energy Gap 2050"),
         ("cost_projections.png", fig_cost_projections, "LCOE Cost Projections"),
+        ("hyperscaler_dominance.png", fig_hyperscaler_dominance, "Hyperscaler Contract Dominance"),
     ]
 
     print(f"Generating {len(figures)} figures into {FIG_DIR}/\n")
