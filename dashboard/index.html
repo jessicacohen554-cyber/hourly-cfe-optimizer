@@ -1067,6 +1067,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
 .act5-chart-wrap {
     position: relative;
+    cursor: pointer;
 }
 .act5-chart-container {
     position: relative;
@@ -4359,6 +4360,8 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
     }
 
     /* --- Fetch data and initialize --- */
+    var dataReady = false;
+
     function init() {
         buildLegend();
 
@@ -4373,26 +4376,76 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                 profileData = normalizeProfile(raw);
                 computeStepMatch(profileData);
                 createChart(profileData);
-                autoPlayAnimation();
                 setupDotClicks();
+                dataReady = true;
+                /* If already visible (e.g. scrolled there before data loaded), start now */
+                startIfVisible();
             })
             .catch(function(err) {
                 console.error('Act 5: failed to load dispatch profiles', err);
             });
+
+        /* Start animation only when Act 5 scrolls into view */
+        if (typeof IntersectionObserver !== 'undefined') {
+            var act5El = document.getElementById('act5');
+            var obs5 = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting && dataReady && !animated) {
+                        animated = true;
+                        autoPlayAnimation();
+                    }
+                    /* Pause loop when scrolled away, resume when back */
+                    if (!entry.isIntersecting && autoPlayTimer) {
+                        clearInterval(autoPlayTimer);
+                        autoPlayTimer = null;
+                    }
+                    if (entry.isIntersecting && animated && !autoPlayTimer && !loopPaused) {
+                        autoPlayAnimation();
+                    }
+                });
+            }, { threshold: 0.15 });
+            if (act5El) obs5.observe(act5El);
+        }
     }
 
-    /* --- Auto-play animation: run through steps 0→5 once on load --- */
+    function startIfVisible() {
+        var el = document.getElementById('act5');
+        if (!el) return;
+        var rect = el.getBoundingClientRect();
+        if (rect.top < window.innerHeight && rect.bottom > 0 && !animated) {
+            animated = true;
+            autoPlayAnimation();
+        }
+    }
+
+    /* --- Auto-play animation: loops continuously while visible --- */
     var autoPlayTimer = null;
     var STEP_DELAY = 1200; /* ms between steps */
+    var LOOP_PAUSE = 2500; /* ms pause before restarting loop */
+    var loopPaused = false; /* true when user clicks a dot */
 
     function autoPlayAnimation() {
+        if (loopPaused) return;
+        currentStep = -1;
         revealStep(0);
         var step = 0;
         autoPlayTimer = setInterval(function() {
+            if (loopPaused) { clearInterval(autoPlayTimer); autoPlayTimer = null; return; }
             step++;
             if (step > 5) {
                 clearInterval(autoPlayTimer);
                 autoPlayTimer = null;
+                /* Restart loop after a pause */
+                setTimeout(function() {
+                    if (!loopPaused) {
+                        /* Reset badge and stats before restarting */
+                        var badge = document.getElementById('act5Badge');
+                        if (badge) badge.classList.remove('badge-visible');
+                        var stats = document.getElementById('act5Stats');
+                        if (stats) stats.classList.remove('stats-visible');
+                        autoPlayAnimation();
+                    }
+                }, LOOP_PAUSE);
                 return;
             }
             revealStep(step);
@@ -4406,27 +4459,48 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             dot.addEventListener('click', function() {
                 var targetStep = parseInt(dot.getAttribute('data-step'), 10);
                 if (isNaN(targetStep)) return;
-                /* Stop any running auto-play */
+                /* Pause the auto-loop */
+                loopPaused = true;
                 if (autoPlayTimer) {
                     clearInterval(autoPlayTimer);
                     autoPlayTimer = null;
                 }
+                /* Reset badge/stats */
+                var badge = document.getElementById('act5Badge');
+                if (badge) badge.classList.remove('badge-visible');
+                var stats = document.getElementById('act5Stats');
+                if (stats) stats.classList.remove('stats-visible');
                 /* Reset to step 0 then play up to clicked step */
                 currentStep = -1;
                 revealStep(0);
                 if (targetStep === 0) return;
                 var s = 0;
-                autoPlayTimer = setInterval(function() {
+                var playTimer = setInterval(function() {
                     s++;
                     if (s > targetStep) {
-                        clearInterval(autoPlayTimer);
-                        autoPlayTimer = null;
+                        clearInterval(playTimer);
                         return;
                     }
                     revealStep(s);
                 }, STEP_DELAY);
             });
         });
+
+        /* Click the chart area to restart the loop */
+        var chartWrap = document.querySelector('.act5-chart-wrap');
+        if (chartWrap) {
+            chartWrap.addEventListener('click', function(e) {
+                /* Don't interfere with dot clicks */
+                if (e.target.closest('.act5-step-dot')) return;
+                if (!loopPaused) return;
+                loopPaused = false;
+                var badge = document.getElementById('act5Badge');
+                if (badge) badge.classList.remove('badge-visible');
+                var stats = document.getElementById('act5Stats');
+                if (stats) stats.classList.remove('stats-visible');
+                autoPlayAnimation();
+            });
+        }
     }
 
     /* --- Boot --- */
