@@ -274,7 +274,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     }
 }
 
-/* === Act 0: The Grid is Not a Bank — Jar Illustration === */
+/* === Act 0: The Grid is Not a Bank — Vault vs Live Wire === */
 .act0-intro,
 .act0-postscript {
     max-width: 780px;
@@ -310,136 +310,21 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     top: 0; left: 0; right: 0;
     transform: translateY(12px);
 }
-/* Single annual jar (illusion) */
-.act0-annual-jar {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-md);
+/* Canvas containers */
+#act0IllusionCanvas,
+#act0RealityCanvas {
+    width: 100%;
+    height: 380px;
+    border-radius: var(--radius-md, 8px);
+    display: block;
 }
-.act0-jar-container {
-    position: relative;
-    width: 180px;
-    height: 280px;
-    background: rgba(255,255,255,0.12);
-    backdrop-filter: blur(8px);
-    border: 2px solid rgba(26,39,68,0.15);
-    border-radius: 0 0 16px 16px;
-    border-top: 3px solid rgba(26,39,68,0.25);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-}
-.act0-jar-fill {
-    display: flex;
-    flex-wrap: wrap;
-    align-content: flex-end;
-    gap: 3px;
-    padding: 6px;
-    justify-content: center;
-}
-.act0-ball {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    animation: ball-float-gentle 3s ease-in-out infinite;
-}
-@keyframes ball-float-gentle {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-1.5px); }
-}
-.act0-ball.solar { background: var(--solar, #F59E0B); }
-.act0-ball.wind { background: var(--wind, #22C55E); }
-.act0-jar-label {
-    font-family: var(--font-heading);
+.act0-canvas-caption {
+    font-family: var(--font-body);
     font-size: 0.82rem;
-    font-weight: 600;
-    color: var(--text-secondary, #475569);
-    text-align: center;
-}
-.act0-jar-check {
-    font-size: 1.1rem;
-    color: #16A34A;
-    font-weight: 700;
-}
-/* 24-hour jars (reality) */
-.act0-reality-wrap {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-}
-.act0-hourly-jars {
-    display: grid;
-    grid-template-columns: repeat(24, 1fr);
-    gap: 3px;
-    align-items: end;
-}
-.act0-hour-jar {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-}
-.act0-hour-jar-body {
-    position: relative;
-    width: 100%;
-    background: rgba(255,255,255,0.10);
-    backdrop-filter: blur(4px);
-    border: 1.5px solid rgba(26,39,68,0.12);
-    border-radius: 0 0 4px 4px;
-    border-top: 2px solid rgba(26,39,68,0.2);
-    overflow: visible;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    transition: height 0.8s cubic-bezier(0.4,0,0.2,1);
-}
-/* Filled color bar segments instead of dots */
-.act0-hour-fill {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    width: 100%;
-    position: relative;
-}
-.act0-fill-segment {
-    width: 100%;
-    transition: height 0.6s ease;
-}
-.act0-fill-segment.solar { background: var(--solar, #F59E0B); }
-.act0-fill-segment.wind { background: var(--wind, #22C55E); }
-.act0-hour-gap {
-    width: 100%;
-    background: rgba(220,38,38,0.10);
-    border-bottom: 1px dashed rgba(220,38,38,0.3);
-}
-/* Overflow bar above the jar */
-.act0-hour-overflow {
-    position: absolute;
-    bottom: 100%;
-    left: 0; right: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-}
-.act0-hour-overflow .act0-fill-segment {
-    opacity: 0.35;
-}
-.act0-hour-overflow .act0-fill-segment.solar { background: var(--solar, #F59E0B); border: 1px dashed rgba(245,158,11,0.5); }
-.act0-hour-overflow .act0-fill-segment.wind { background: var(--wind, #22C55E); border: 1px dashed rgba(34,197,94,0.5); }
-/* Shared x-axis labels row */
-.act0-hour-labels-row {
-    display: grid;
-    grid-template-columns: repeat(24, 1fr);
-    gap: 3px;
-    margin-top: 4px;
-}
-.act0-hour-label {
-    font-family: var(--font-data);
-    font-size: 0.55rem;
     color: var(--text-muted, #94A3B8);
     text-align: center;
+    margin-top: var(--space-sm);
+    font-style: italic;
 }
 .act0-legend {
     display: flex;
@@ -482,24 +367,17 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 .act0-insight strong {
     color: var(--text-primary, #1A2744);
 }
-@media (max-width: 900px) {
-    .act0-jar-container {
-        width: 140px;
-        height: 220px;
-    }
-    .act0-hourly-jars,
-    .act0-hour-labels-row {
-        grid-template-columns: repeat(24, 1fr);
-        gap: 2px;
+@media (max-width: 768px) {
+    #act0IllusionCanvas,
+    #act0RealityCanvas {
+        height: 300px;
     }
 }
 @media (max-width: 480px) {
-    .act0-hourly-jars,
-    .act0-hour-labels-row {
-        grid-template-columns: repeat(24, 1fr);
-        gap: 1px;
+    #act0IllusionCanvas,
+    #act0RealityCanvas {
+        height: 260px;
     }
-    .act0-hour-label { font-size: 0.45rem; }
 }
 
 /* === Act 2: The 100% Clean Illusion === */
@@ -1463,7 +1341,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         </p>
     </div>
 
-    <!-- Jar illustration -->
+    <!-- Vault vs Live Wire illustration -->
     <div class="act0-panel" id="act0Panel">
         <div class="mode-toggle-wrap">
             <span class="mode-toggle-label active-label" id="act0LabelIllusion" data-mode="illusion">Illusion</span>
@@ -1475,16 +1353,15 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         </div>
 
         <div class="act0-visual" id="act0Visual">
-            <!-- Illusion: single annual jar (rendered by JS) -->
+            <!-- Illusion: vault with dropping MWh coins -->
             <div class="act0-view" id="act0IllusionView">
-                <div class="act0-annual-jar" id="act0AnnualJar"></div>
+                <canvas id="act0IllusionCanvas"></canvas>
+                <div class="act0-canvas-caption">Annual accounting: deposit clean MWh, withdraw whenever you need them</div>
             </div>
-            <!-- Reality: 24-hour jars (rendered by JS) -->
+            <!-- Reality: live wire with flowing electricity -->
             <div class="act0-view hidden" id="act0RealityView">
-                <div class="act0-reality-wrap">
-                    <div class="act0-hourly-jars" id="act0HourlyJars"></div>
-                    <div class="act0-hour-labels-row" id="act0HourLabels"></div>
-                </div>
+                <canvas id="act0RealityCanvas"></canvas>
+                <div class="act0-canvas-caption">Grid reality: electricity must be consumed the instant it&rsquo;s generated</div>
             </div>
         </div>
 
@@ -1912,275 +1789,581 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
 <div class="bottom-banner"></div>
 
 <!-- ================================================================== -->
-<!-- ACT 0 SCRIPT: The Grid is Not a Bank — Jar Illustration             -->
+<!-- ACT 0 SCRIPT: The Grid is Not a Bank — Vault vs Live Wire           -->
 <!-- ================================================================== -->
 <script>
 (function() {
     'use strict';
 
-    var UTC_OFFSETS = {CAISO:8, PJM:5, ERCOT:6, NYISO:5, NEISO:5, MISO:6, SPP:6};
-    function rotateToLocal(arr, offset) {
-        var o = offset % 24;
-        return arr.slice(o).concat(arr.slice(0, o));
-    }
-
-    var HOUR_LABELS = [];
-    for (var i = 0; i < 24; i++) {
-        if (i === 0) HOUR_LABELS.push('12a');
-        else if (i < 12) HOUR_LABELS.push(i + 'a');
-        else if (i === 12) HOUR_LABELS.push('12p');
-        else HOUR_LABELS.push((i - 12) + 'p');
-    }
-
+    /* --- Colors & Canvas Utils --- */
     var COL = typeof RESOURCE_COLORS !== 'undefined' ? RESOURCE_COLORS : {};
     var solarHex = COL.solar || '#F59E0B';
-    var windHex = COL.wind || '#22C55E';
+    var windHex  = COL.wind  || '#22C55E';
+    var gapRed   = '#EF4444';
+    var navyDark = '#1A2744';
+    var mutedGray = '#94A3B8';
 
-    fetch('compressed_day_profiles.json')
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            var iso = 'CAISO';
-            var profiles = data[iso].profiles;
-            var key = Object.keys(profiles)[0];
-            var prof = profiles[key];
-            var offset = UTC_OFFSETS[iso];
+    function setupCanvas(canvas) {
+        var dpr = window.devicePixelRatio || 1;
+        var rect = canvas.getBoundingClientRect();
+        canvas.width  = rect.width  * dpr;
+        canvas.height = rect.height * dpr;
+        var ctx = canvas.getContext('2d');
+        ctx.scale(dpr, dpr);
+        return { ctx: ctx, w: rect.width, h: rect.height };
+    }
+    /* === ILLUSION: Vault with dropping MWh coins === */
+    var vaultCanvas = document.getElementById('act0IllusionCanvas');
+    var vaultSetup = setupCanvas(vaultCanvas);
+    var vCtx = vaultSetup.ctx, vW = vaultSetup.w, vH = vaultSetup.h;
+    var vaultCoins = [];
+    var settledCoins = [];
+    var vaultBanked = 0;
+    var vaultRAF = null;
+    var lastCoinTime = 0;
+    var COIN_INTERVAL = 380;
 
-            // Rotate to local time
-            var demand = rotateToLocal(prof.demand, offset);
-            var solarMatched = rotateToLocal(prof.matched.solar, offset);
-            var solarSurplus = rotateToLocal(prof.surplus.solar, offset);
-            var windMatched = rotateToLocal(prof.matched.wind, offset);
-            var windSurplus = rotateToLocal(prof.surplus.wind, offset);
+    // Vault geometry
+    var vaultW = vW * 0.38;
+    var vaultH = vH * 0.55;
+    var vaultX = (vW - vaultW) / 2;
+    var vaultY = vH * 0.30;
+    var vaultSlotW = vaultW * 0.35;
+    var vaultFloor = vaultY + vaultH;
+    var COIN_R = Math.max(10, Math.min(18, vW * 0.025));
 
-            // Compute per-hour solar and wind total generation
-            var solarGen = [], windGen = [], totalGen = [];
-            var demandSum = 0, genSum = 0;
-            for (var h = 0; h < 24; h++) {
-                var s = solarMatched[h] + solarSurplus[h];
-                var w = windMatched[h] + windSurplus[h];
-                solarGen.push(s);
-                windGen.push(w);
-                totalGen.push(s + w);
-                demandSum += demand[h];
-                genSum += s + w;
-            }
+    function drawVaultBody() {
+        var r = 18;
+        vCtx.save();
+        // Vault body
+        vCtx.beginPath();
+        vCtx.moveTo(vaultX, vaultY);
+        vCtx.lineTo(vaultX + vaultW, vaultY);
+        vCtx.lineTo(vaultX + vaultW, vaultFloor - r);
+        vCtx.quadraticCurveTo(vaultX + vaultW, vaultFloor, vaultX + vaultW - r, vaultFloor);
+        vCtx.lineTo(vaultX + r, vaultFloor);
+        vCtx.quadraticCurveTo(vaultX, vaultFloor, vaultX, vaultFloor - r);
+        vCtx.lineTo(vaultX, vaultY);
+        vCtx.closePath();
+        vCtx.fillStyle = 'rgba(26,39,68,0.06)';
+        vCtx.fill();
+        vCtx.strokeStyle = 'rgba(26,39,68,0.25)';
+        vCtx.lineWidth = 2.5;
+        vCtx.stroke();
 
-            // Scale generation to match annual demand (100% annual match)
-            var scale = demandSum / (genSum || 1);
-            for (var h = 0; h < 24; h++) {
-                solarGen[h] *= scale;
-                windGen[h] *= scale;
-                totalGen[h] = solarGen[h] + windGen[h];
-            }
+        // Top plate with slot
+        var slotX1 = vW / 2 - vaultSlotW / 2;
+        var slotX2 = vW / 2 + vaultSlotW / 2;
+        vCtx.beginPath();
+        vCtx.moveTo(vaultX - 8, vaultY);
+        vCtx.lineTo(slotX1, vaultY);
+        vCtx.moveTo(slotX2, vaultY);
+        vCtx.lineTo(vaultX + vaultW + 8, vaultY);
+        vCtx.lineWidth = 4;
+        vCtx.strokeStyle = 'rgba(26,39,68,0.35)';
+        vCtx.stroke();
 
-            var maxDemand = Math.max.apply(null, demand);
-            var maxVal = Math.max(maxDemand, Math.max.apply(null, totalGen));
+        // Vault label
+        vCtx.font = '600 ' + Math.max(11, vW * 0.017) + 'px "Plus Jakarta Sans", sans-serif';
+        vCtx.fillStyle = mutedGray;
+        vCtx.textAlign = 'center';
+        vCtx.fillText('ANNUAL ENERGY VAULT', vW / 2, vaultFloor + 22);
 
-            // Count matched hours
-            var matchedHours = 0;
-            for (var h = 0; h < 24; h++) {
-                if (totalGen[h] >= demand[h] - 0.0001) matchedHours++;
-            }
+        // Counter
+        vCtx.font = '700 ' + Math.max(16, vW * 0.028) + 'px "Plus Jakarta Sans", sans-serif';
+        vCtx.fillStyle = navyDark;
+        vCtx.fillText(vaultBanked + ' MWh Banked', vW / 2, vaultFloor + 46);
 
-            // ---- Build Illusion View: Single annual jar ----
-            var annualJar = document.getElementById('act0AnnualJar');
-            var totalSolarBalls = 0, totalWindBalls = 0;
-            var ballsPerUnit = 100 / demandSum; // ~100 balls total
-            for (var h = 0; h < 24; h++) {
-                totalSolarBalls += Math.round(solarGen[h] * ballsPerUnit);
-                totalWindBalls += Math.round(windGen[h] * ballsPerUnit);
-            }
-            // Ensure total = ~100
-            var totalBalls = totalSolarBalls + totalWindBalls;
-            if (totalBalls > 120) {
-                var ratio = 100 / totalBalls;
-                totalSolarBalls = Math.round(totalSolarBalls * ratio);
-                totalWindBalls = Math.round(totalWindBalls * ratio);
-            }
+        if (vaultBanked >= 30) {
+            vCtx.font = '700 ' + Math.max(13, vW * 0.02) + 'px "Plus Jakarta Sans", sans-serif';
+            vCtx.fillStyle = '#16A34A';
+            vCtx.fillText('\u2713 Balanced!', vW / 2, vaultFloor + 66);
+        }
+        vCtx.restore();
+    }
 
-            var jarHTML = '<div class="act0-jar-container">';
-            jarHTML += '<div class="act0-jar-fill">';
-            for (var i = 0; i < totalSolarBalls; i++) {
-                jarHTML += '<div class="act0-ball solar" style="animation-delay:' + (Math.random() * 2).toFixed(1) + 's"></div>';
-            }
-            for (var i = 0; i < totalWindBalls; i++) {
-                jarHTML += '<div class="act0-ball wind" style="animation-delay:' + (Math.random() * 2).toFixed(1) + 's"></div>';
-            }
-            jarHTML += '</div></div>';
-            jarHTML += '<div class="act0-jar-label">Annual Generation = Annual Demand <span class="act0-jar-check">&check;</span></div>';
-            jarHTML += '<div class="act0-jar-label" style="font-size:0.75rem; color:var(--text-muted);">CAISO &mdash; 100% Annually Matched</div>';
-            annualJar.innerHTML = jarHTML;
-
-            // ---- Build Reality View: 24 hourly jars with color-fill bars ----
-            var hourlyJars = document.getElementById('act0HourlyJars');
-            var hourLabelsRow = document.getElementById('act0HourLabels');
-            var MAX_JAR_PX = 180;
-            var MIN_JAR_PX = 24;
-            var jarsHTML = '';
-            var labelsHTML = '';
-
-            for (var h = 0; h < 24; h++) {
-                var d = demand[h];
-                var jarHeight = Math.max(MIN_JAR_PX, Math.round((d / maxVal) * MAX_JAR_PX));
-                var solarPart = solarGen[h];
-                var windPart = windGen[h];
-                var gen = solarPart + windPart;
-
-                // Heights inside jar (proportional to jar)
-                var solarFillPx, windFillPx, gapPx, solarOverPx, windOverPx;
-                if (gen <= d) {
-                    // Generation fits inside — fill proportionally, gap at top
-                    var fillRatio = d > 0 ? gen / d : 0;
-                    var totalFillPx = Math.round(fillRatio * jarHeight);
-                    solarFillPx = gen > 0 ? Math.round((solarPart / gen) * totalFillPx) : 0;
-                    windFillPx = totalFillPx - solarFillPx;
-                    gapPx = jarHeight - totalFillPx;
-                    solarOverPx = 0;
-                    windOverPx = 0;
-                } else {
-                    // Overflow — jar filled to top, excess spills above
-                    solarFillPx = Math.round((solarPart / gen) * jarHeight);
-                    windFillPx = jarHeight - solarFillPx;
-                    gapPx = 0;
-                    var overRatio = (gen - d) / d;
-                    var overPx = Math.round(overRatio * jarHeight * 0.6);
-                    var solarExcess = Math.max(0, solarPart - (solarPart / gen) * d);
-                    var windExcess = Math.max(0, windPart - (windPart / gen) * d);
-                    var totalExcess = solarExcess + windExcess || 1;
-                    solarOverPx = Math.round((solarExcess / totalExcess) * overPx);
-                    windOverPx = overPx - solarOverPx;
-                }
-
-                jarsHTML += '<div class="act0-hour-jar">';
-                jarsHTML += '<div class="act0-hour-jar-body" style="height:' + jarHeight + 'px">';
-
-                // Gap at top (fossil needed)
-                if (gapPx > 0) {
-                    jarsHTML += '<div class="act0-hour-gap" style="height:' + gapPx + 'px"></div>';
-                }
-
-                // Fill segments (wind on bottom, solar on top)
-                jarsHTML += '<div class="act0-hour-fill">';
-                if (solarFillPx > 0) jarsHTML += '<div class="act0-fill-segment solar" style="height:' + solarFillPx + 'px"></div>';
-                if (windFillPx > 0) jarsHTML += '<div class="act0-fill-segment wind" style="height:' + windFillPx + 'px"></div>';
-                jarsHTML += '</div>';
-
-                // Overflow above jar
-                if (solarOverPx > 0 || windOverPx > 0) {
-                    jarsHTML += '<div class="act0-hour-overflow">';
-                    if (solarOverPx > 0) jarsHTML += '<div class="act0-fill-segment solar" style="height:' + solarOverPx + 'px"></div>';
-                    if (windOverPx > 0) jarsHTML += '<div class="act0-fill-segment wind" style="height:' + windOverPx + 'px"></div>';
-                    jarsHTML += '</div>';
-                }
-
-                jarsHTML += '</div>'; // close jar body
-                jarsHTML += '</div>'; // close hour-jar
-
-                // Labels row (show every 3rd hour)
-                var lbl = (h % 3 === 0) ? HOUR_LABELS[h] : '';
-                labelsHTML += '<div class="act0-hour-label">' + lbl + '</div>';
-            }
-            hourlyJars.innerHTML = jarsHTML;
-            hourLabelsRow.innerHTML = labelsHTML;
-
-            // ---- Build legend ----
-            var legendEl = document.getElementById('act0Legend');
-            [
-                { label: 'Solar', color: solarHex },
-                { label: 'Wind', color: windHex },
-                { label: 'Fossil gap', color: 'rgba(220,38,38,0.15)', border: '1px dashed rgba(220,38,38,0.4)' },
-                { label: 'Curtailed', color: 'rgba(200,200,200,0.3)', border: '1px dashed rgba(0,0,0,0.2)' }
-            ].forEach(function(item) {
-                var el = document.createElement('div');
-                el.className = 'act0-legend-item';
-                var dot = document.createElement('span');
-                dot.className = 'act0-legend-dot';
-                dot.style.background = item.color;
-                if (item.border) dot.style.border = item.border;
-                el.appendChild(dot);
-                el.appendChild(document.createTextNode(item.label));
-                legendEl.appendChild(el);
-            });
-
-            // ---- Toggle logic ----
-            var toggle = document.getElementById('act0Toggle');
-            var labelIll = document.getElementById('act0LabelIllusion');
-            var labelReal = document.getElementById('act0LabelReality');
-            var illusionView = document.getElementById('act0IllusionView');
-            var realityView = document.getElementById('act0RealityView');
-            var insightEl = document.getElementById('act0Insight');
-            var hintEl = document.getElementById('act0Hint');
-            var isReality = false;
-
-            insightEl.innerHTML = 'Only <strong>' + matchedHours + ' of 24 hours</strong> are actually covered by clean generation. ' +
-                'The other <strong>' + (24 - matchedHours) + ' hours</strong> rely entirely on the fossil grid. ' +
-                'The annual ledger balances, but the atmosphere sees every gap.';
-
-            function act0SwitchToReality() {
-                if (isReality) return;
-                isReality = true;
-                toggle.classList.add('reality');
-                toggle.setAttribute('aria-checked', 'true');
-                labelIll.classList.remove('active-label');
-                labelReal.classList.add('active-label');
-
-                illusionView.classList.add('hidden');
-                realityView.classList.remove('hidden');
-
-                setTimeout(function() {
-                    insightEl.classList.add('insight-visible');
-                }, 800);
-                if (hintEl) hintEl.classList.add('hidden');
-            }
-
-            function act0SwitchToIllusion() {
-                if (!isReality) return;
-                isReality = false;
-                toggle.classList.remove('reality');
-                toggle.setAttribute('aria-checked', 'false');
-                labelIll.classList.add('active-label');
-                labelReal.classList.remove('active-label');
-
-                illusionView.classList.remove('hidden');
-                realityView.classList.add('hidden');
-
-                insightEl.classList.remove('insight-visible');
-            }
-
-            toggle.addEventListener('click', function() {
-                if (isReality) act0SwitchToIllusion();
-                else act0SwitchToReality();
-            });
-            toggle.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    toggle.click();
-                }
-            });
-
-            // Auto-transition on scroll
-            var act0Initialized = false;
-            if (typeof IntersectionObserver !== 'undefined') {
-                var obs0 = new IntersectionObserver(function(entries) {
-                    entries.forEach(function(entry) {
-                        if (entry.isIntersecting && !act0Initialized) {
-                            act0Initialized = true;
-                            setTimeout(act0SwitchToReality, 2000);
-                            obs0.unobserve(entry.target);
-                        }
-                    });
-                }, { threshold: 0.25 });
-                obs0.observe(document.getElementById('act0'));
-            }
-
-            // Fade out hint after 4s
-            if (hintEl) {
-                setTimeout(function() { hintEl.classList.add('hidden'); }, 4000);
-            }
-        })
-        .catch(function(err) {
-            console.error('Act 0: Failed to load profiles:', err);
+    function spawnCoin() {
+        var isSolar = Math.random() < 0.55;
+        vaultCoins.push({
+            x: vW / 2 + (Math.random() - 0.5) * vaultSlotW * 0.5,
+            y: -COIN_R * 2,
+            vy: 0,
+            vx: (Math.random() - 0.5) * 0.8,
+            r: COIN_R + (Math.random() - 0.5) * 4,
+            color: isSolar ? solarHex : windHex,
+            label: isSolar ? 'S' : 'W',
+            settled: false,
+            bounces: 0,
+            opacity: 1
         });
+    }
+
+    function tickVault(now) {
+        vCtx.clearRect(0, 0, vW, vH);
+
+        // Spawn coins
+        if (now - lastCoinTime > COIN_INTERVAL && vaultBanked < 42) {
+            spawnCoin();
+            lastCoinTime = now;
+        }
+
+        drawVaultBody();
+
+        // Compute settle floor based on stacked coins
+        var stackH = settledCoins.length * (COIN_R * 0.6);
+        var settleY = vaultFloor - COIN_R - stackH;
+
+        // Draw settled coins
+        for (var s = 0; s < settledCoins.length; s++) {
+            var sc = settledCoins[s];
+            vCtx.globalAlpha = 0.85;
+            vCtx.beginPath();
+            vCtx.arc(sc.x, sc.y, sc.r, 0, Math.PI * 2);
+            vCtx.fillStyle = sc.color;
+            vCtx.fill();
+            vCtx.globalAlpha = 1;
+        }
+
+        // Update & draw falling coins
+        for (var i = vaultCoins.length - 1; i >= 0; i--) {
+            var c = vaultCoins[i];
+            c.vy += 0.35; // gravity
+            c.y += c.vy;
+            c.x += c.vx;
+
+            // Bounce off vault walls
+            if (c.x - c.r < vaultX) { c.x = vaultX + c.r; c.vx *= -0.5; }
+            if (c.x + c.r > vaultX + vaultW) { c.x = vaultX + vaultW - c.r; c.vx *= -0.5; }
+
+            // Settle
+            if (c.y + c.r >= settleY) {
+                c.y = settleY - c.r + c.r;
+                c.bounces++;
+                if (c.bounces >= 2) {
+                    c.y = settleY;
+                    settledCoins.push({ x: c.x, y: c.y, r: c.r, color: c.color });
+                    vaultBanked++;
+                    vaultCoins.splice(i, 1);
+                    continue;
+                }
+                c.vy *= -0.4;
+                c.vx *= 0.6;
+            }
+
+            // Draw coin
+            vCtx.save();
+            vCtx.shadowColor = c.color;
+            vCtx.shadowBlur = 6;
+            vCtx.beginPath();
+            vCtx.arc(c.x, c.y, c.r, 0, Math.PI * 2);
+            vCtx.fillStyle = c.color;
+            vCtx.fill();
+            vCtx.restore();
+
+            // MWh label on coin
+            vCtx.font = '700 ' + Math.max(7, c.r * 0.6) + 'px "DM Sans", sans-serif';
+            vCtx.fillStyle = '#fff';
+            vCtx.textAlign = 'center';
+            vCtx.textBaseline = 'middle';
+            vCtx.fillText('MWh', c.x, c.y);
+        }
+
+        // Reset cycle when full
+        if (vaultBanked >= 42 && vaultCoins.length === 0) {
+            setTimeout(function() {
+                settledCoins = [];
+                vaultBanked = 0;
+            }, 2000);
+        }
+
+        vaultRAF = requestAnimationFrame(tickVault);
+    }
+
+    // Start vault animation immediately
+    vaultRAF = requestAnimationFrame(tickVault);
+    /* === REALITY: Live Wire with flowing electricity === */
+    var wireCanvas = document.getElementById('act0RealityCanvas');
+    var wireSetup = setupCanvas(wireCanvas);
+    var wCtx = wireSetup.ctx, wW = wireSetup.w, wH = wireSetup.h;
+    var wireParticles = [];
+    var wireRAF = null;
+    var CYCLE_MS = 10000; // 10s = one "day"
+    var wireY = wH * 0.50;
+    var srcX = wW * 0.12;
+    var dstX = wW * 0.88;
+    var wireLen = dstX - srcX;
+    var buildingBrightness = 0;
+    var recentArrivals = [];
+
+    // Day phase: 0-0.2 dawn, 0.2-0.5 midday, 0.5-0.7 evening, 0.7-1.0 night
+    function dayPhase(t) {
+        if (t < 0.15) return { name: 'dawn',    sun: 0.3 + t / 0.15 * 0.4, wind: 0.4, spawnRate: 0.08 };
+        if (t < 0.45) return { name: 'midday',  sun: 1.0, wind: 0.3, spawnRate: 0.45 };
+        if (t < 0.65) return { name: 'evening', sun: Math.max(0, 1.0 - (t - 0.45) / 0.2), wind: 0.6, spawnRate: 0.15 };
+        return { name: 'night', sun: 0, wind: 0.2 + Math.sin(t * 20) * 0.15, spawnRate: 0.04 };
+    }
+
+    function drawSun(opacity) {
+        var sx = srcX - 10, sy = wireY - 60;
+        vCtx = wCtx; // reuse ref
+        wCtx.save();
+        wCtx.globalAlpha = Math.max(0, opacity);
+        // Sun circle
+        wCtx.beginPath();
+        wCtx.arc(sx, sy, 22, 0, Math.PI * 2);
+        wCtx.fillStyle = solarHex;
+        wCtx.shadowColor = solarHex;
+        wCtx.shadowBlur = opacity * 20;
+        wCtx.fill();
+        // Rays
+        for (var r = 0; r < 8; r++) {
+            var angle = (r / 8) * Math.PI * 2 + Date.now() * 0.001;
+            wCtx.beginPath();
+            wCtx.moveTo(sx + Math.cos(angle) * 26, sy + Math.sin(angle) * 26);
+            wCtx.lineTo(sx + Math.cos(angle) * 34, sy + Math.sin(angle) * 34);
+            wCtx.strokeStyle = solarHex;
+            wCtx.lineWidth = 2;
+            wCtx.stroke();
+        }
+        wCtx.restore();
+        // Label
+        wCtx.font = '600 ' + Math.max(9, wW * 0.013) + 'px "Plus Jakarta Sans", sans-serif';
+        wCtx.fillStyle = mutedGray;
+        wCtx.textAlign = 'center';
+        wCtx.fillText('Solar', sx, sy + 42);
+    }
+
+    function drawTurbine(windStr) {
+        var tx = srcX + 30, ty = wireY - 65;
+        wCtx.save();
+        // Tower
+        wCtx.beginPath();
+        wCtx.moveTo(tx, ty + 10);
+        wCtx.lineTo(tx, ty + 55);
+        wCtx.strokeStyle = 'rgba(26,39,68,0.3)';
+        wCtx.lineWidth = 3;
+        wCtx.stroke();
+        // Blades (rotating)
+        var bladeAngle = Date.now() * 0.002 * (0.3 + windStr * 2);
+        wCtx.globalAlpha = 0.6 + windStr * 0.4;
+        for (var b = 0; b < 3; b++) {
+            var a = bladeAngle + (b / 3) * Math.PI * 2;
+            wCtx.beginPath();
+            wCtx.moveTo(tx, ty + 10);
+            wCtx.lineTo(tx + Math.cos(a) * 22, ty + 10 + Math.sin(a) * 22);
+            wCtx.strokeStyle = windHex;
+            wCtx.lineWidth = 3;
+            wCtx.stroke();
+        }
+        // Hub
+        wCtx.beginPath();
+        wCtx.arc(tx, ty + 10, 4, 0, Math.PI * 2);
+        wCtx.fillStyle = windHex;
+        wCtx.fill();
+        wCtx.restore();
+        // Label
+        wCtx.font = '600 ' + Math.max(9, wW * 0.013) + 'px "Plus Jakarta Sans", sans-serif';
+        wCtx.fillStyle = mutedGray;
+        wCtx.textAlign = 'center';
+        wCtx.fillText('Wind', tx, ty + 72);
+    }
+
+    function drawBuilding(brightness) {
+        var bx = dstX - 15, by = wireY - 50, bw = 36, bh = 50;
+        wCtx.save();
+        wCtx.fillStyle = 'rgba(26,39,68,' + (0.08 + brightness * 0.15) + ')';
+        wCtx.fillRect(bx, by, bw, bh);
+        wCtx.strokeStyle = 'rgba(26,39,68,0.25)';
+        wCtx.lineWidth = 1.5;
+        wCtx.strokeRect(bx, by, bw, bh);
+        // Windows — glow with brightness
+        var winColor = 'rgba(245,158,11,' + (0.15 + brightness * 0.7) + ')';
+        for (var row = 0; row < 3; row++) {
+            for (var col = 0; col < 2; col++) {
+                wCtx.fillStyle = winColor;
+                wCtx.fillRect(bx + 6 + col * 16, by + 6 + row * 15, 10, 8);
+            }
+        }
+        // Gap pulse when dark
+        if (brightness < 0.3) {
+            var pulse = 0.3 + Math.sin(Date.now() * 0.012) * 0.2;
+            wCtx.shadowColor = gapRed;
+            wCtx.shadowBlur = 12 * pulse;
+            wCtx.strokeStyle = 'rgba(239,68,68,' + pulse + ')';
+            wCtx.lineWidth = 2;
+            wCtx.strokeRect(bx - 2, by - 2, bw + 4, bh + 4);
+        }
+        wCtx.restore();
+        // Label
+        wCtx.font = '600 ' + Math.max(9, wW * 0.013) + 'px "Plus Jakarta Sans", sans-serif';
+        wCtx.fillStyle = mutedGray;
+        wCtx.textAlign = 'center';
+        wCtx.fillText('Consumer', bx + bw / 2, by + bh + 18);
+    }
+
+    function drawWire() {
+        wCtx.save();
+        // Wire glow
+        wCtx.beginPath();
+        wCtx.moveTo(srcX, wireY);
+        wCtx.lineTo(dstX, wireY);
+        wCtx.strokeStyle = 'rgba(26,39,68,0.12)';
+        wCtx.lineWidth = 6;
+        wCtx.stroke();
+        // Wire core
+        wCtx.beginPath();
+        wCtx.moveTo(srcX, wireY);
+        wCtx.lineTo(dstX, wireY);
+        wCtx.strokeStyle = 'rgba(26,39,68,0.3)';
+        wCtx.lineWidth = 2.5;
+        wCtx.stroke();
+        // Pylons
+        var pylonCount = 4;
+        for (var p = 0; p <= pylonCount; p++) {
+            var px = srcX + (wireLen * p / pylonCount);
+            wCtx.beginPath();
+            wCtx.moveTo(px, wireY);
+            wCtx.lineTo(px, wireY + 18);
+            wCtx.strokeStyle = 'rgba(26,39,68,0.2)';
+            wCtx.lineWidth = 2;
+            wCtx.stroke();
+            wCtx.beginPath();
+            wCtx.moveTo(px - 6, wireY + 18);
+            wCtx.lineTo(px + 6, wireY + 18);
+            wCtx.stroke();
+        }
+        wCtx.restore();
+    }
+
+    function drawTimeIndicator(t) {
+        var phases = [
+            { start: 0,    end: 0.15, label: 'dawn' },
+            { start: 0.15, end: 0.45, label: 'midday' },
+            { start: 0.45, end: 0.65, label: 'evening' },
+            { start: 0.65, end: 1.0,  label: 'night' }
+        ];
+        var barY = wireY + 40;
+        var barH = 4;
+        var colors = { dawn: '#F59E0B', midday: '#FBBF24', evening: '#6366F1', night: '#1E293B' };
+        for (var i = 0; i < phases.length; i++) {
+            var p = phases[i];
+            var x1 = srcX + p.start * wireLen;
+            var x2 = srcX + p.end * wireLen;
+            wCtx.fillStyle = colors[p.label];
+            wCtx.globalAlpha = 0.25;
+            wCtx.fillRect(x1, barY, x2 - x1, barH);
+            wCtx.globalAlpha = 1;
+            wCtx.font = '500 ' + Math.max(8, wW * 0.011) + 'px "DM Sans", sans-serif';
+            wCtx.fillStyle = mutedGray;
+            wCtx.textAlign = 'center';
+            wCtx.fillText(p.label, (x1 + x2) / 2, barY + 16);
+        }
+        // Current time marker
+        var markerX = srcX + t * wireLen;
+        wCtx.beginPath();
+        wCtx.arc(markerX, barY + barH / 2, 5, 0, Math.PI * 2);
+        wCtx.fillStyle = navyDark;
+        wCtx.fill();
+    }
+
+    function tickWire(now) {
+        wCtx.clearRect(0, 0, wW, wH);
+        var t = (now % CYCLE_MS) / CYCLE_MS;
+        var phase = dayPhase(t);
+
+        drawWire();
+        drawSun(phase.sun);
+        drawTurbine(phase.wind);
+
+        // Spawn particles
+        if (Math.random() < phase.spawnRate) {
+            var isSolar = phase.sun > 0.2 && Math.random() < 0.6;
+            wireParticles.push({
+                x: srcX,
+                speed: 1.5 + Math.random() * 2.5,
+                color: isSolar ? solarHex : windHex,
+                opacity: 0.8 + Math.random() * 0.2,
+                trail: []
+            });
+        }
+
+        // Cap particles
+        if (wireParticles.length > 60) wireParticles.splice(0, wireParticles.length - 60);
+
+        // Track arrivals for building brightness
+        var arrivedThisFrame = 0;
+
+        // Update & draw particles
+        for (var i = wireParticles.length - 1; i >= 0; i--) {
+            var p = wireParticles[i];
+            p.trail.push(p.x);
+            if (p.trail.length > 6) p.trail.shift();
+            p.x += p.speed;
+
+            if (p.x > dstX) {
+                arrivedThisFrame++;
+                wireParticles.splice(i, 1);
+                continue;
+            }
+
+            // Draw trail
+            for (var tr = 0; tr < p.trail.length; tr++) {
+                var ta = (tr / p.trail.length) * 0.3;
+                wCtx.beginPath();
+                wCtx.arc(p.trail[tr], wireY, 2.5, 0, Math.PI * 2);
+                wCtx.fillStyle = p.color;
+                wCtx.globalAlpha = ta;
+                wCtx.fill();
+            }
+
+            // Draw particle
+            wCtx.globalAlpha = p.opacity;
+            wCtx.save();
+            wCtx.shadowColor = p.color;
+            wCtx.shadowBlur = 8;
+            wCtx.beginPath();
+            wCtx.arc(p.x, wireY, 4, 0, Math.PI * 2);
+            wCtx.fillStyle = p.color;
+            wCtx.fill();
+            wCtx.restore();
+            wCtx.globalAlpha = 1;
+        }
+
+        // Building brightness from recent arrivals
+        recentArrivals.push(arrivedThisFrame);
+        if (recentArrivals.length > 30) recentArrivals.shift();
+        var totalRecent = 0;
+        for (var a = 0; a < recentArrivals.length; a++) totalRecent += recentArrivals[a];
+        buildingBrightness = Math.min(1, totalRecent / 12);
+
+        drawBuilding(buildingBrightness);
+        drawTimeIndicator(t);
+
+        // "No storage" label
+        wCtx.font = '600 ' + Math.max(10, wW * 0.015) + 'px "Plus Jakarta Sans", sans-serif';
+        wCtx.fillStyle = 'rgba(239,68,68,0.6)';
+        wCtx.textAlign = 'center';
+        wCtx.fillText('No vault. No storage. Use it or lose it.', wW / 2, wH - 16);
+
+        wireRAF = requestAnimationFrame(tickWire);
+    }
+
+    /* === LEGEND === */
+    var legendEl = document.getElementById('act0Legend');
+    [
+        { label: 'Solar', color: solarHex },
+        { label: 'Wind', color: windHex }
+    ].forEach(function(item) {
+        var el = document.createElement('div');
+        el.className = 'act0-legend-item';
+        var dot = document.createElement('span');
+        dot.className = 'act0-legend-dot';
+        dot.style.background = item.color;
+        el.appendChild(dot);
+        el.appendChild(document.createTextNode(item.label));
+        legendEl.appendChild(el);
+    });
+
+    /* === TOGGLE LOGIC === */
+    var toggle   = document.getElementById('act0Toggle');
+    var labelIll = document.getElementById('act0LabelIllusion');
+    var labelReal= document.getElementById('act0LabelReality');
+    var illusionView = document.getElementById('act0IllusionView');
+    var realityView  = document.getElementById('act0RealityView');
+    var insightEl    = document.getElementById('act0Insight');
+    var hintEl       = document.getElementById('act0Hint');
+    var isReality    = false;
+
+    insightEl.innerHTML = 'Electricity isn\u2019t a commodity you can warehouse. ' +
+        'Every electron must be consumed <strong>the instant it\u2019s generated</strong>. ' +
+        'When the sun sets or the wind dies, that clean energy doesn\u2019t wait in a vault\u2009\u2014\u2009' +
+        'it simply doesn\u2019t exist. Annual accounting hides this fundamental physics.';
+
+    function act0SwitchToReality() {
+        if (isReality) return;
+        isReality = true;
+        toggle.classList.add('reality');
+        toggle.setAttribute('aria-checked', 'true');
+        labelIll.classList.remove('active-label');
+        labelReal.classList.add('active-label');
+
+        // Stop vault, start wire
+        if (vaultRAF) { cancelAnimationFrame(vaultRAF); vaultRAF = null; }
+        illusionView.classList.add('hidden');
+        realityView.classList.remove('hidden');
+        wireRAF = requestAnimationFrame(tickWire);
+
+        setTimeout(function() { insightEl.classList.add('insight-visible'); }, 800);
+        if (hintEl) hintEl.classList.add('hidden');
+    }
+
+    function act0SwitchToIllusion() {
+        if (!isReality) return;
+        isReality = false;
+        toggle.classList.remove('reality');
+        toggle.setAttribute('aria-checked', 'false');
+        labelIll.classList.add('active-label');
+        labelReal.classList.remove('active-label');
+
+        // Stop wire, start vault
+        if (wireRAF) { cancelAnimationFrame(wireRAF); wireRAF = null; }
+        illusionView.classList.remove('hidden');
+        realityView.classList.add('hidden');
+        vaultRAF = requestAnimationFrame(tickVault);
+
+        insightEl.classList.remove('insight-visible');
+    }
+
+    toggle.addEventListener('click', function() {
+        if (isReality) act0SwitchToIllusion();
+        else act0SwitchToReality();
+    });
+    toggle.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggle.click();
+        }
+    });
+
+    // Auto-transition on scroll
+    var act0Initialized = false;
+    if (typeof IntersectionObserver !== 'undefined') {
+        var obs0 = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting && !act0Initialized) {
+                    act0Initialized = true;
+                    setTimeout(act0SwitchToReality, 2000);
+                    obs0.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.25 });
+        obs0.observe(document.getElementById('act0'));
+    }
+
+    // Fade out hint after 4s
+    if (hintEl) {
+        setTimeout(function() { hintEl.classList.add('hidden'); }, 4000);
+    }
+
+    // Resize handler
+    var resizeTimer;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function() {
+            // Re-setup illusion canvas
+            var vs = setupCanvas(vaultCanvas);
+            vCtx = vs.ctx; vW = vs.w; vH = vs.h;
+            vaultW = vW * 0.38; vaultH = vH * 0.55;
+            vaultX = (vW - vaultW) / 2; vaultY = vH * 0.30;
+            vaultSlotW = vaultW * 0.35; vaultFloor = vaultY + vaultH;
+            COIN_R = Math.max(10, Math.min(18, vW * 0.025));
+            // Re-setup reality canvas
+            var ws = setupCanvas(wireCanvas);
+            wCtx = ws.ctx; wW = ws.w; wH = ws.h;
+            wireY = wH * 0.50; srcX = wW * 0.12; dstX = wW * 0.88;
+            wireLen = dstX - srcX;
+        }, 200);
+    });
 })();
 </script>
 
