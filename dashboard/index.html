@@ -1351,9 +1351,11 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         <p>
             What you count, where you start, and where you&rsquo;re going matter
             profoundly in a complex spatial, temporal, and physical system like the
-            grid. Throughout this analysis, toggle between <strong>Illusion</strong>
-            (the paper accounting view) and <strong>Reality</strong> (what actually
-            happens on the grid) to see why.
+            grid.
+        </p>
+        <p class="toggle-cta" style="text-align:center; font-size:1.15em; font-weight:700; color:var(--accent-secondary, #E91E63); letter-spacing:0.01em; margin:var(--space-md) 0;">
+            Throughout this analysis, toggle between <span style="color:var(--text-primary, #1E293B);">Illusion</span>
+            and <span style="color:var(--text-primary, #1E293B);">Reality</span> to see why.
         </p>
     </div>
 
@@ -2349,7 +2351,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             entries.forEach(function(entry) {
                 if (entry.isIntersecting && !act0Initialized) {
                     act0Initialized = true;
-                    setTimeout(act0SwitchToReality, 2000);
+                    setTimeout(act0SwitchToReality, 3000);
                     obs0.unobserve(entry.target);
                 }
             });
@@ -2584,7 +2586,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                 // Auto-transition to Reality after strips appear + 2s pause on illusion
                 setTimeout(function() {
                     if (!transitioned) switchToReality();
-                }, ISOS.length * 200 + 2000);
+                }, ISOS.length * 200 + 3000);
             }
 
             if (typeof IntersectionObserver !== 'undefined') {
@@ -2994,7 +2996,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                     entries.forEach(function(entry) {
                         if (entry.isIntersecting && !act2Initialized) {
                             act2Initialized = true;
-                            setTimeout(act2SwitchToReality, 2000);
+                            setTimeout(act2SwitchToReality, 3000);
                             obs2.unobserve(entry.target);
                         }
                     });
@@ -3540,7 +3542,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         }
     });
 
-    // Auto-transition on scroll — sit on illusion for 2s first
+    // Auto-transition on scroll — sit on illusion for 3s first
     if (typeof IntersectionObserver !== 'undefined') {
         var obs3 = new IntersectionObserver(function(entries) {
             entries.forEach(function(entry) {
@@ -3548,7 +3550,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                     act3Initialized = true;
                     setTimeout(function() {
                         act3SwitchToReality();
-                    }, 2000);
+                    }, 3000);
                     obs3.unobserve(entry.target);
                 }
             });
