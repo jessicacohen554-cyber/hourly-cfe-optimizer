@@ -143,15 +143,12 @@ body {
 
 .source-note {
   font-size: 8pt;
-  color: #000000;
+  color: var(--ceg-gray);
   margin-top: auto;
   padding-top: 0.1in;
   border-top: 1px solid #F0F3F7;
   font-style: italic;
-  overflow-wrap: break-word;
-  word-break: break-word;
 }
-.source-note a { color: inherit; text-decoration: underline; }
 
 /* ─── Layout Helpers ─── */
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4in; height: 100%; }
@@ -184,7 +181,7 @@ body {
 }
 .kpi-card .kpi-label {
   font-size: 9pt;
-  color: #000000;
+  color: var(--text-dim);
   margin-top: 2px;
   font-weight: 400;
 }
@@ -719,7 +716,10 @@ body {
     <span class="slide-number">3</span>
   </div>
   <div class="slide-body">
-    <p style="font-size:11pt;margin-bottom:0.12in;color:var(--text-dim);">2,073 tracked US data center sites &mdash; 231 GW total IT pipeline across all development stages. Demand is concentrated in a handful of states, creating acute local grid scarcity.</p>
+    <p style="font-size:11pt;margin-bottom:0.08in;color:var(--text-dim);">2,073 tracked US data center sites &mdash; 231 GW total IT pipeline across all development stages. Demand is concentrated in a handful of states, creating acute local grid scarcity.</p>
+    <div class="callout" style="font-size:10pt;margin-bottom:0.08in;">
+      <strong>Framing:</strong> This load growth is the <em>context</em>, not the thesis. The question is how to serve it profitably within a diversified clean portfolio &mdash; and whether standalone VRE is a high-value addition to an already strong firm clean + storage position.
+    </div>
 
     <div class="left-right-wide">
       <div>
@@ -779,6 +779,10 @@ body {
   </div>
   <div class="slide-body">
     <p style="font-size:11pt;margin-bottom:0.1in;color:var(--text-dim);">Even if every announced clean energy deal materializes, the Big 4 hyperscalers cover only 26% of their 2030 energy needs. The remaining 639 TWh gap represents the largest corporate clean energy procurement wave in history.</p>
+
+    <div class="callout green" style="font-size:10pt;margin-bottom:0.08in;">
+      <strong>2025 market signal:</strong> Global corporate procurement fell 10% to 55.9 GW (BNEF) &mdash; but the Big 4 accounted for <strong>49% of all deals</strong>. Even in a down year, hyperscaler demand is structural. For an IPP with firm clean assets, this gap represents <em>customer demand</em>, not just a market stat &mdash; these buyers are actively seeking what we can sell.
+    </div>
 
     <div class="two-col" style="flex:1;">
       <div>
@@ -1548,11 +1552,11 @@ body {
         </table>
 
         <div class="callout red" style="font-size:9.5pt;margin-top:0.1in;">
-          <strong>GHG Protocol exposure:</strong> When Scope 2 shifts to hourly matching + deliverability (est. 2027), companies claiming &ldquo;100% renewable&rdquo; via annual RECs will see their actual CFE scores drop to 40&ndash;65%. These providers <em>cannot</em> fund SMRs or acquire platforms &mdash; they need IPP-supplied VRE + Storage PPAs.
+          <strong>GHG Protocol exposure:</strong> Under proposed Scope 2 hourly matching + deliverability rules (est. 2027), <strong>30&ndash;50% of current unbundled REC portfolios will be disqualified</strong>, forcing urgent demand for localized VRE. Regional REC prices could rise 3&ndash;7&times; under deliverability constraints. Companies claiming &ldquo;100% renewable&rdquo; via annual RECs will see actual CFE scores drop to 40&ndash;65%.
         </div>
 
         <div class="callout green" style="font-size:9.5pt;">
-          <strong>The IPP opportunity:</strong> Tier 2 providers represent a <em>captive market</em> for VRE + Storage PPAs. Unlike Big 4 hyperscalers who can vertically integrate, colos must buy from established IPPs &mdash; the exact customer base a VRE pipeline serves.
+          <strong>The IPP opportunity:</strong> These capital-constrained providers <em>cannot</em> fund nuclear or acquire development platforms. They <strong>need</strong> third-party IPPs offering VRE + firm clean 24/7 CFE products. Unlike Big 4 hyperscalers who can vertically integrate, colos are a <em>captive market</em> &mdash; the exact customer base a VRE pipeline serves.
         </div>
       </div>
     </div>
@@ -1734,7 +1738,7 @@ body {
     <span class="slide-number">10</span>
   </div>
   <div class="slide-body">
-    <p style="font-size:11pt;margin-bottom:0.1in;color:var(--text-dim);">Small Modular Reactors and Enhanced Geothermal are essential long-term assets &mdash; but Wright&rsquo;s Law and deployment timelines show they cannot meet the 2026&ndash;2032 demand window. VRE + Storage is the bridge.</p>
+    <p style="font-size:11pt;margin-bottom:0.1in;color:var(--text-dim);">Small Modular Reactors and Enhanced Geothermal are essential long-term assets &mdash; but Wright&rsquo;s Law and deployment timelines show they cannot meet the 2026&ndash;2032 demand window. SMRs are <em>complementary</em> to VRE, not competitive &mdash; both serve different hours and cost profiles. An IPP developing both creates maximum portfolio value.</p>
 
     <div class="two-col" style="flex:1;">
       <div>
@@ -1812,11 +1816,11 @@ body {
         </table>
 
         <div class="callout red" style="font-size:10pt;">
-          <strong>The SMR reality check:</strong> No SMR has completed NRC design certification. First commercial units (NuScale, Kairos, X-energy) targeted for 2029&ndash;2031, but FOAK costs will be $100+/MWh. Wright&rsquo;s Law requires 50+ deployed units for cost convergence &mdash; a 2035+ event.
+          <strong>The SMR reality check:</strong> Nuclear Innovation Alliance confirms FOAK demos in the early 2030s; NOAK commercialization not until late 2030s&ndash;2045. GOV.UK analysis shows 5&ndash;10% cost reduction per production doubling &mdash; requiring 50+ deployed units for cost convergence. First commercial units (NuScale, Kairos, X-energy) targeted 2029&ndash;2031, but FOAK costs will be $100+/MWh.
         </div>
 
         <div class="callout" style="font-size:10pt;">
-          <strong>Clean firm is complementary, not competitive:</strong> The 639 TWh gap requires BOTH VRE+Storage (bridge, 2025&ndash;2035) AND clean firm (baseload, 2032+). Load growth is so massive that both are needed &mdash; this isn&rsquo;t either/or.
+          <strong>Complementary, not competitive:</strong> The 639 TWh gap requires BOTH VRE+Storage (bridge, 2025&ndash;2035) AND clean firm (baseload, 2032+). An IPP building VRE now captures near-term market share; firm clean captures the long-term. Together they dominate both windows.
         </div>
       </div>
     </div>
@@ -1839,7 +1843,7 @@ body {
     <span class="slide-number">11</span>
   </div>
   <div class="slide-body">
-    <p style="font-size:11pt;margin-bottom:0.1in;color:var(--text-dim);">Not all markets are equal. Investment priority depends on the intersection of demand growth, cannibalization risk, capacity market value, and storage arbitrage opportunity.</p>
+    <p style="font-size:11pt;margin-bottom:0.1in;color:var(--text-dim);">Not all markets are equal. The key question: <em>what does VRE add to an IPP that already has firm clean here?</em> Priority depends on the intersection of demand growth, cannibalization risk, capacity market value, interconnection speed, and storage arbitrage.</p>
 
     <div style="flex:1;">
       <table class="heatmap-table">
@@ -1906,13 +1910,13 @@ body {
 
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.15in;margin-top:0.15in;">
         <div class="callout green" style="font-size:9.5pt;">
-          <strong>Tier 1 — PJM + ERCOT:</strong> Highest conviction. 122 GW combined DC pipeline. Storage is the differentiator in both markets (capacity in PJM, arbitrage in ERCOT).
+          <strong>Tier 1 &mdash; PJM + ERCOT:</strong> Highest conviction. 122 GW combined DC pipeline. PJM scored &ldquo;D-minus&rdquo; on interconnection (Grid Strategies AEI 2024) &mdash; queue scarcity protects late-stage assets. ERCOT scores &ldquo;B&rdquo; for speed but VRE capture at ~$17/MWh requires storage pairing.
         </div>
         <div class="callout" style="font-size:9.5pt;">
-          <strong>Tier 2 — MISO + NYISO:</strong> Strong fundamentals. MISO offers early-mover advantage before solar cannibalization hits. NYISO = premium but constrained.
+          <strong>Tier 2 &mdash; MISO + NYISO:</strong> Strong fundamentals. MISO offers early-mover advantage before solar cannibalization hits. NYISO = premium but constrained. Both benefit from IPP&rsquo;s existing firm clean as a nighttime backstop.
         </div>
         <div class="callout orange" style="font-size:9.5pt;">
-          <strong>Tier 3 — CAISO/SPP/NEISO:</strong> Selective only. CAISO requires storage pairing. SPP is speculative. NEISO is small but premium.
+          <strong>Tier 3 &mdash; CAISO/SPP/NEISO:</strong> CAISO already 62% clean with chronic midday negatives &mdash; standalone VRE is &ldquo;Sell&rdquo; but VRE+Storage within a firm portfolio remains viable. SPP is speculative (consequential-only). NEISO is small but premium.
         </div>
       </div>
     </div>
@@ -1973,7 +1977,7 @@ body {
               <svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 9 L7 13 L15 5" stroke="#6BA543" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
             </div>
             <div style="font-size:11pt;">
-              <strong style="color:var(--ceg-green);">The green premium is real and liquid.</strong> Hyperscalers are executing multi-GW deals at $35&ndash;50/MWh premiums above market. This isn&rsquo;t ESG posturing &mdash; it&rsquo;s a financial hedge.
+              <strong style="color:var(--ceg-green);">The green premium is structural and expanding.</strong> Hyperscalers are executing multi-GW deals at $35&ndash;50/MWh premiums above market. GHG Protocol Scope 2 updates (est. 2027) will disqualify 30&ndash;50% of existing corporate REC portfolios, forcing localized hourly procurement &mdash; regional REC premiums expected to increase 3&ndash;7&times;.
             </div>
           </div>
 
@@ -1991,7 +1995,7 @@ body {
               <svg width="18" height="18" viewBox="0 0 18 18"><path d="M3 9 L7 13 L15 5" stroke="#6BA543" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>
             </div>
             <div style="font-size:11pt;">
-              <strong style="color:var(--ceg-green);">The window is finite.</strong> VRE+Storage is the only technology that can deploy at scale in the 2025&ndash;2032 bridge period. First movers capture interconnection scarcity and long-term offtake.
+              <strong style="color:var(--ceg-green);">The window is finite &mdash; and the vertical integration signal is real.</strong> Google&rsquo;s $4.75B Intersect Power acquisition signals hyperscaler self-supply &mdash; but &gt;400 TWh gap remains, and Tier 2 colos can&rsquo;t self-develop. VRE+Storage is the only technology that can deploy at scale in the 2025&ndash;2032 bridge. First movers capture interconnection scarcity and long-term offtake.
             </div>
           </div>
         </div>
@@ -2017,6 +2021,7 @@ body {
           <tr><td>Interconnection delays</td><td style="color:#DC2626;">High</td><td>Acquire late-stage queue positions</td></tr>
           <tr><td>Policy (IRA/45Q repeal)</td><td style="color:var(--ceg-green);">Low</td><td>Bipartisan support; red-state benefits</td></tr>
           <tr><td>SMR faster than expected</td><td style="color:var(--ceg-green);">Low</td><td>Complementary, not competitive &mdash; both needed</td></tr>
+          <tr><td>Hyperscaler vertical integration</td><td style="color:var(--ceg-orange);">Medium</td><td>Tier 2 colo market (29+ TWh/yr, &gt;10% CAGR) diversifies offtake; firm clean backstop is differentiated</td></tr>
         </table>
       </div>
     </div>
@@ -2039,7 +2044,7 @@ body {
     <span class="slide-number">13</span>
   </div>
   <div class="slide-body">
-    <p style="font-size:10.5pt;margin-bottom:0.06in;color:var(--text-dim);">Three competing procurement strategies are fragmenting the market &mdash; but the VRE+Storage investment thesis holds under all of them. Strategy choice shapes <em>where</em> to weight the portfolio, not <em>whether</em> to invest.</p>
+    <p style="font-size:10.5pt;margin-bottom:0.06in;color:var(--text-dim);">Three competing procurement strategies are fragmenting the market &mdash; but the VRE+Storage investment thesis holds under all of them. Strategy choice shapes <em>where</em> to weight the portfolio, not <em>whether</em> to invest. <strong>Note:</strong> GHG Protocol Scope 2 consultation is moving toward hourly matching + deliverability (Citation #35), which structurally favors Strategy 2 and increases total VRE demand.</p>
 
     <div class="two-col" style="flex:1;">
       <div>
@@ -2608,6 +2613,28 @@ body {
             <li><a href="https://www.gstatic.com/gumdrop/sustainability/247-carbon-free-energy.pdf" style="color:inherit;">Google/Princeton &mdash; 24/7 CFE methodology &amp; results (2022)</a></li>
             <li><a href="https://www.nature.com/articles/s41586-022-05224-9" style="color:inherit;">Rennert et al. &mdash; Social cost of carbon ($185/ton), <em>Nature</em> (2022)</a></li>
             <li><a href="https://modoenergy.com/" style="color:inherit;">Modo Energy &mdash; ERCOT BESS revenue analysis (Q3 2025)</a></li>
+          </ul>
+
+          <strong style="color:var(--ceg-orange);">Regulatory &amp; GHG Protocol</strong>
+          <ul style="margin:1px 0 2px 10px;padding:0;line-height:1.25;">
+            <li><a href="https://ghgprotocol.org/blog/upcoming-scope-2-public-consultation-hourly-matching-and-deliverability" style="color:inherit;">GHG Protocol &mdash; Scope 2 Public Consultation: Hourly Matching &amp; Deliverability (2025)</a></li>
+            <li><a href="https://watershed.com/blog/ghgp-analysis" style="color:inherit;">Watershed &mdash; Analyzing GHG Protocol Scope 2 Changes (2025)</a></li>
+            <li><a href="https://resource-solutions.org/missteps-in-proposed-updates-to-ghg-protocols-scope-2-guidance/" style="color:inherit;">CRS &mdash; Proposed Scope 2 Guidance Updates Analysis (2025)</a></li>
+            <li><a href="https://www.flexidao.com/resources/how-to-practically-start-a-24-7-carbon-free-energy-journey" style="color:inherit;">Flexidao &mdash; 24/7 CFE Journey (2024); 40&ndash;65% actual CFE under hourly matching</a></li>
+            <li>Ali (MIT) &mdash; &ldquo;Demand-Driven Decarbonization&rdquo; thesis (2025)</li>
+          </ul>
+
+          <strong style="color:var(--ceg-orange);">Nuclear &amp; Clean Firm</strong>
+          <ul style="margin:1px 0 2px 10px;padding:0;line-height:1.25;">
+            <li><a href="https://nuclearinnovationalliance.org/sites/default/files/2025-06/NIA%20AR%20Timeline%20-%20June%202025%20v2.pdf" style="color:inherit;">Nuclear Innovation Alliance &mdash; Advanced Reactor Deployment Timelines (Jun 2025)</a></li>
+            <li><a href="https://assets.publishing.service.gov.uk/media/5a8244b8ed915d74e6236aef/TEA_Projects_5-7_-_SMR_Cost_Reduction_Study.pdf" style="color:inherit;">GOV.UK &mdash; SMR Cost Reduction Study (5&ndash;10% per production doubling)</a></li>
+            <li><a href="https://gain.inl.gov/content/uploads/4/2024/11/INL-RPT-24-77048-Meta-Analysis-of-Adv-Nuclear-Reactor-Cost-Estimations.pdf" style="color:inherit;">INL &mdash; Meta-Analysis of Advanced Nuclear Reactor Cost Estimations (2024)</a></li>
+          </ul>
+
+          <strong style="color:var(--ceg-orange);">Interconnection &amp; Grid</strong>
+          <ul style="margin:1px 0 2px 10px;padding:0;line-height:1.25;">
+            <li><a href="https://gridstrategiesllc.com/wp-content/uploads/2024/03/AEI-2024-Generation-Interconnection-Scorecard.pdf" style="color:inherit;">Grid Strategies &mdash; AEI 2024 Generator Interconnection Scorecard (PJM &ldquo;D-minus&rdquo;, ERCOT &ldquo;B&rdquo;)</a></li>
+            <li><a href="https://gridstrategiesllc.com/wp-content/uploads/National-Load-Growth-Report-2024.pdf" style="color:inherit;">Grid Strategies &mdash; National Load Growth Report (2024)</a></li>
           </ul>
         </div>
       </div>
