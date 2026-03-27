@@ -534,3 +534,209 @@ IMPORTANT: After all updates:
 - Deck regenerates cleanly after template updates
 
 ---
+
+## Prompt 6: New Slide — Hyperscaler Contract Dominance Timeline
+
+> **Goal:** Create a polished, professional slide showing the timeline takeover of clean energy contracts by hyperscalers — declining participation from smaller companies but increasing total CFE procurement over time, dominated by Big Tech.
+
+### Context
+
+Key data points from vreresearch.md and BNEF:
+- **2025**: Global corporate clean energy purchasing = 55.9 GW (down 10% from 2024)
+- **2025**: Big 4 hyperscalers = 49% of all global clean power deals
+- Amazon: 10.22 GW (2025), cumulative >40 GW across 700+ projects
+- Meta: 10.24 GW (2025)
+- Google: ~5 GW (2025), plus $4.75B Intersect Power acquisition (10.8 GW)
+- Microsoft: ~3 GW (2025)
+- **Trend**: Total market flat/declining, but hyperscaler share is monotonically increasing
+- **Implication**: Smaller corporates being crowded out or delaying procurement — concentrating demand into fewer, larger buyers
+
+This is a compelling visual story: the pie isn't growing much, but Big Tech is eating more and more of it. For an IPP, this means the customer base is consolidating — which affects negotiating leverage, deal size, and counterparty risk.
+
+### Prompt
+
+```
+Create a new slide for the VRE investment thesis deck that visualizes the
+hyperscaler takeover of clean energy contracts.
+
+## Data Requirements
+
+First, compile the historical data. Use WebSearch/WebFetch to find BNEF and
+other public sources for annual corporate PPA/clean energy procurement data
+from 2017-2025. Key series needed:
+
+| Year | Total Global Corporate Clean Energy (GW) | Hyperscaler Share (GW) | Non-Hyperscaler Share (GW) | Hyperscaler % |
+|------|------------------------------------------|------------------------|---------------------------|---------------|
+
+Known anchor points:
+- 2025: 55.9 GW total, ~27.4 GW hyperscaler (49%)
+- 2024: ~62 GW total (BNEF), hyperscalers ~40%+ (estimate from prior years)
+- 2023: ~46 GW total (BNEF record at time)
+- 2020-2022: Growing from ~20-35 GW range
+- 2017-2019: Early corporate PPA market ~10-15 GW
+
+For any years where exact hyperscaler share isn't published, note estimates
+and cite methodology.
+
+Save to: data-center-cfe/data-inputs/global_corporate_cfe_procurement.csv
+
+## Figure Design
+
+Create a publication-quality figure with TWO visual layers:
+
+### Layer 1: Stacked Area Chart (Primary)
+- X-axis: 2017-2025 (potentially extrapolating to 2027)
+- Y-axis: GW of annual corporate clean energy procurement
+- Two stacked areas:
+  - Bottom (CEG Blue #2372B9): Hyperscaler procurement (Amazon, Google, Microsoft, Meta)
+  - Top (Light Gray #D1D5DB): All other corporate buyers
+- The visual story: the blue area GROWS while the gray area SHRINKS — hyperscalers eating the market
+
+### Layer 2: Hyperscaler % Line (Secondary Y-axis)
+- Dashed orange line (#F47B27) showing hyperscaler share % rising from ~15% (2017) to 49% (2025)
+- Right Y-axis: 0%-60%
+- Key annotation at 2025: "49% — Big 4 alone"
+
+### Additional Elements
+- Title: "The Concentration of Clean Energy Demand" or "Who's Buying Clean Energy?"
+  (pick the more compelling framing)
+- Subtitle: "Hyperscaler dominance of corporate clean energy contracts, 2017–2025"
+- Callout box (bottom-right): "For IPPs: The customer base is consolidating. Fewer, larger,
+  more sophisticated buyers with higher willingness-to-pay for 24/7 CFE products."
+- Company logos or labels for Big 4 inside the blue area (optional, if clean)
+- Source line: "BNEF 1H 2026 Corporate Energy Market Outlook; ESG Today; company reports"
+
+### Slide Layout
+- Left 65%: The stacked area chart
+- Right 35%: Key stats panel:
+  - "49%" large — hyperscaler market share (2025)
+  - "55.9 GW" — total corporate procurement (2025)
+  - "10:1" — VRE to nuclear ratio in hyperscaler portfolios
+  - "700+" — Amazon's project count alone
+  - Arrow or trend indicator showing share trajectory
+
+### Technical Implementation
+- Add figure generation to data-center-cfe/generate_figures.py as fig_hyperscaler_dominance()
+- Add slide to data-center-cfe/templates/deck_template.html
+- Use CEG color palette (Blue #2372B9, Orange #F47B27, Gray #7E8083, Green #6BA543)
+- 200 DPI PNG export for the figure
+- Regenerate deck after adding
+
+### Placement in Deck
+- Insert after Slide 7 (Colocation Developers) and before the Regional Matrix
+- New slide number: 8
+- Renumber subsequent slides accordingly
+
+IMPORTANT: This should be a POLISHED, PROFESSIONAL figure — Bloomberg/McKinsey
+quality. Clean typography, no chart junk, clear visual hierarchy, smooth
+gradients. The story should be immediately obvious at a glance: Big Tech is
+taking over clean energy procurement.
+```
+
+### Files to Create/Modify
+- `data-center-cfe/data-inputs/global_corporate_cfe_procurement.csv` (NEW)
+- `data-center-cfe/generate_figures.py` (add fig_hyperscaler_dominance)
+- `data-center-cfe/templates/deck_template.html` (add slide)
+- `data-center-cfe/output/figures/hyperscaler_dominance.png` (NEW)
+- `data-center-cfe/output/vre-investment-thesis-deck.html` (regenerated)
+
+### Success Criteria
+- Stacked area chart clearly shows hyperscaler share growing while non-hyperscaler shrinks
+- Data points are sourced and cited (BNEF primary, ESG Today/company reports secondary)
+- Figure is publication-quality (200 DPI, clean layout, CEG colors)
+- Slide fits naturally in deck narrative flow (after colocation providers, before regional matrix)
+- Key insight is immediately legible: "the customer base is consolidating into Big Tech"
+- Stats panel reinforces the chart with specific numbers
+
+---
+
+## Prompt 7: Other New Slide Candidates
+
+> **Goal:** Evaluate whether additional slides beyond the hyperscaler dominance timeline are warranted by the new research. Propose candidates with mockup descriptions.
+
+### Context
+
+The deck will be at 17 slides after adding the hyperscaler dominance slide (Prompt 6). Current flow:
+
+1. Title
+2. Where the Load Is Landing
+3. The Clean Energy Gap
+4. The Gap Persists (SMRs)
+5. Consequential Advantage (Coal Wall)
+6. Energy Timeline (deals Q1 2024–Mar 2026) — NEW
+7. Colocation Developers (Tier 2 opportunity) — NEW
+8. Hyperscaler Contract Dominance — NEW (Prompt 6)
+9. Regional VRE Opportunity Matrix
+10. The VRE Investment Case
+11. Three Procurement Strategies
+12. Strategy Deployment
+13. Pipeline Wins by Strategy
+14. Scenario Analysis by ISO
+15. Appendix
+
+That's a solid 15-slide deck (plus title + appendix). Adding more than 2-3 additional slides risks bloat. Be selective.
+
+### Prompt
+
+```
+Read the full deck (data-center-cfe/output/vre-investment-thesis-deck.html)
+and the new research (data-center-cfe/research/vreresearch.md).
+
+Evaluate these candidate slides. For each, provide:
+- Title
+- One-sentence thesis
+- Key visual/chart concept
+- Data source (existing or needs scraping)
+- Whether it fills a GAP in the current narrative or is redundant
+- Recommendation: ADD / SKIP / MERGE INTO EXISTING SLIDE
+- If ADD: where it should go in slide order
+
+### Candidate A: GHG Protocol Scope 2 Impact Slide
+- Shows the upcoming regulatory shift (hourly matching + deliverability)
+- Visualizes: "Before" (annual matching, any-region RECs) vs "After" (hourly, same-ISO)
+- Quantifies: 30-50% of current REC portfolios disqualified; 3-7x price multiplier
+- Data: vreresearch.md citations #34-36
+- This directly supports the "why VRE NOW" argument
+
+### Candidate B: VRE Portfolio Value Within Firm Clean Context
+- Shows the incremental value of adding VRE to an existing firm clean + storage portfolio
+- Visualization: Stacked bar showing 24/7 CFE coverage at different thresholds
+  with/without VRE overlay
+- Data: Main repo Step 2 outputs (isolate VRE contribution)
+- This is THE central analytical slide for the refined framing
+
+### Candidate C: Capture Rate Erosion Deep Dive
+- Already partially covered in existing capture rate figure and regional matrix
+- Would show: ISO-specific capture rate trajectories + IRR impact
+- Risk of redundancy with existing regional matrix slide
+- Might be better as an appendix slide or merged into regional matrix
+
+### Candidate D: Storage Pairing Economics
+- Shows $/MWh value uplift from adding storage to standalone VRE by ISO
+- Relevant because framing assumes "storage willingness" — quantify what that means
+- Data: Main repo Step 3 dispatch cache
+- Could be merged into Investment Case slide as a supporting metric
+
+### Candidate E: Wright's Law Learning Curves
+- VRE cost trajectory (solar 24%, Li-ion 18%, wind 15% learning rates)
+- Already exists in main repo (step5_2e_wrights_law_curves.py)
+- Shows VRE getting cheaper while SMR costs remain uncertain
+- Might be redundant with cost projections already in the deck
+
+For each candidate, weigh: Does this slide tell the AUDIENCE something they
+need to know to make the VRE investment decision? If they'd decide the same
+way without seeing it, SKIP it.
+
+Write recommendations. For any slide recommended as ADD, provide a full slide
+spec following the format in Prompt 6 (data requirements, figure design, layout,
+placement, implementation). Keep specs concise — we're proposing, not building yet.
+```
+
+### Success Criteria
+- Each candidate honestly evaluated (no filler slides)
+- ADD recommendations limited to 1-2 slides maximum (deck shouldn't exceed ~18 slides)
+- Candidates that duplicate existing content correctly identified as MERGE or SKIP
+- Any ADD recommendation includes enough detail to execute in a follow-up session
+- GHG Protocol slide (Candidate A) specifically evaluated for whether it should be standalone or folded into existing procurement strategy slides
+
+---
