@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
     <title>Fleet Climate Scenarios — Constellation Energy</title>
-    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/constellation.css">
     <link rel="stylesheet" href="styles/simulator.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
@@ -450,7 +450,8 @@
             </a>
         </div>
         <ul class="nav-links">
-            <li><a href="#" class="active">Fleet Climate Scenarios</a></li>
+            <li><a href="fleet_scenarios.html" class="active">Fleet Scenarios</a></li>
+            <li><a href="fleet_trajectory.html">Trajectory Deep-Dive</a></li>
         </ul>
     </nav>
 
@@ -478,20 +479,16 @@
                 </div>
             </div>
             <div class="controls-group">
-                <div class="controls-group-label">New Fossil Cost</div>
-                <div class="toggle-btn-group" id="fossilCostToggle">
-                    <button class="toggle-btn active" data-value="All">All</button>
-                    <button class="toggle-btn" data-value="Low">Low</button>
-                    <button class="toggle-btn" data-value="Medium">Med</button>
-                    <button class="toggle-btn" data-value="High">High</button>
+                <div class="controls-group-label">Scenarios</div>
+                <div class="scenario-checks" id="scenarioCheckboxes">
+                    <!-- Populated by JS: checkboxes for each saved scenario -->
+                    <span style="color:#9CA3AF;font-size:0.85rem;">Save a scenario to toggle visibility</span>
                 </div>
             </div>
-            <div class="controls-group" style="flex:1; min-width: 140px;">
-                <div class="controls-group-label">Year (Snapshot)</div>
-                <div class="year-slider-wrap">
-                    <input type="range" id="yearSlider" min="2023" max="2050" value="2030" step="1">
-                    <div class="year-slider-value" id="yearSliderValue">2030</div>
-                </div>
+            <div class="controls-group" style="align-self: flex-end;">
+                <label class="scenario-check" style="font-size:0.82rem;">
+                    <input type="checkbox" id="screenshotLabels"> Screenshot Labels
+                </label>
             </div>
             <div class="controls-group" style="align-self: flex-end;">
                 <button class="sidebar-toggle-btn" id="sidebarToggle">Edit Fleet</button>
@@ -536,17 +533,33 @@
             </div>
         </div>
 
-        <!-- Generation Mix (full width) -->
-        <div class="chart-card" id="genMixCard">
-            <div class="chart-card-header">
-                <div class="section-eyebrow">Generation Mix</div>
-                <h3 id="genMixTitle">Fleet Generation by Fuel — Baseline</h3>
-                <p>TWh by fuel type over time</p>
+        <!-- Generation Mix + Fossil Mix: 2-col grid -->
+        <div class="charts-grid-2">
+            <!-- Generation Mix (5-year intervals) -->
+            <div class="chart-card" id="genMixCard">
+                <div class="chart-card-header">
+                    <div class="section-eyebrow">Generation Mix</div>
+                    <h3 id="genMixTitle">Fleet Generation by Fuel — Baseline</h3>
+                    <p>TWh by fuel type at 5-year intervals</p>
+                </div>
+                <div class="fan-chart-container">
+                    <canvas id="genMixChart"></canvas>
+                </div>
+                <div class="chart-legend-bar" id="genMixLegend"></div>
             </div>
-            <div class="fan-chart-container">
-                <canvas id="genMixChart"></canvas>
+
+            <!-- Fossil Mix by Heat-Rate Bin (5-year intervals) -->
+            <div class="chart-card" id="fossilMixCard">
+                <div class="chart-card-header">
+                    <div class="section-eyebrow">Unabated Fossil Mix</div>
+                    <h3 id="fossilMixTitle">Fossil Generation by Heat-Rate Bin — Baseline</h3>
+                    <p>TWh from unabated fossil plants grouped by efficiency tier (5-year intervals)</p>
+                </div>
+                <div class="fan-chart-container">
+                    <canvas id="fossilMixChart"></canvas>
+                </div>
+                <div class="chart-legend-bar" id="fossilMixLegend"></div>
             </div>
-            <div class="chart-legend-bar" id="genMixLegend"></div>
         </div>
 
         <!-- CCGT Tier Capacity Factors (binned heat-rate dispatch) -->
@@ -562,6 +575,17 @@
             <div class="chart-legend-bar" id="ccgtTierLegend"></div>
         </div>
 
+        <!-- Year Snapshot Slider — applies to clean gen & historical comparison -->
+        <div class="glass-card controls-strip" id="yearSnapshotStrip" style="margin-bottom: var(--space-lg);">
+            <div class="controls-group" style="flex:1; min-width: 200px;">
+                <div class="controls-group-label">Year (Snapshot)</div>
+                <div class="year-slider-wrap">
+                    <input type="range" id="yearSlider" min="2023" max="2050" value="2030" step="1">
+                    <div class="year-slider-value" id="yearSliderValue">2030</div>
+                </div>
+            </div>
+        </div>
+
         <!-- New Clean Gen + Historical Comparison: 2-col grid -->
         <div class="charts-grid-2">
             <!-- New Clean Generation Snapshot -->
@@ -570,6 +594,12 @@
                     <div class="section-eyebrow">Clean Generation</div>
                     <h3 id="newCleanTitle">New Clean Generation — 2030</h3>
                     <p>TWh from new clean resources and CCS in the selected year</p>
+                </div>
+                <div id="newCleanCallout" style="display:none; margin-bottom: var(--space-md);">
+                    <div style="display:inline-flex;align-items:center;gap:var(--space-sm);padding:10px 18px;background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #6ee7b7;border-radius:var(--radius-md);">
+                        <span style="font-size:0.72rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#059669;">Total New Low-Carbon</span>
+                        <span id="newCleanTwhValue" style="font-size:1.5rem;font-weight:800;color:#047857;font-variant-numeric:tabular-nums;">0 TWh</span>
+                    </div>
                 </div>
                 <div class="secondary-chart-container">
                     <canvas id="newCleanChart"></canvas>
@@ -584,24 +614,16 @@
                     <h3 id="waterfall2023Title">Emissions Delta vs 2023 Baseline</h3>
                     <p>How much have emissions changed from the actual 2023 starting point?</p>
                 </div>
+                <div style="display:flex;gap:var(--space-lg);margin-bottom:var(--space-sm);font-size:0.82rem;">
+                    <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:14px;height:10px;border-radius:2px;background:#DC2626;display:inline-block;"></span> Emissions increased</span>
+                    <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:14px;height:10px;border-radius:2px;background:#6BA543;display:inline-block;"></span> Emissions reduced</span>
+                </div>
                 <div class="waterfall-chart-container">
                     <canvas id="waterfall2023Chart"></canvas>
                 </div>
             </div>
         </div>
 
-        <!-- Top Emitting Plants (full width — new chart) -->
-        <div class="chart-card" id="topEmittersCard">
-            <div class="chart-card-header">
-                <div class="section-eyebrow">Plant-Level Emissions</div>
-                <h3 id="topEmittersTitle">Top Emitting Plants — Baseline</h3>
-                <p>Which unabated fossil plants contribute most to residual fleet emissions over time?</p>
-            </div>
-            <div class="fan-chart-container">
-                <canvas id="topEmittersChart"></canvas>
-            </div>
-            <div class="chart-legend-bar" id="topEmittersLegend"></div>
-        </div>
 
         <!-- Plant Drill-Down -->
         <div class="chart-card" id="plantDrilldownCard">
