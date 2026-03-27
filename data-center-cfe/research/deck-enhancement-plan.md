@@ -10,15 +10,17 @@
 ## Table of Contents
 
 1. [Prompt 0: Reconcile dvre.html and Output Deck](#prompt-0-reconcile-dvrehtml-and-output-deck)
-2. [Prompt 1: Research Integration Audit](#prompt-1-research-integration-audit)
-3. [Prompt 2: Data Scraping from New Citations](#prompt-2-data-scraping-from-new-citations)
-4. [Prompt 3: Thesis Validation — Does New Research Change Anything?](#prompt-3-thesis-validation)
-5. [Prompt 4: New Analytical Opportunities](#prompt-4-new-analytical-opportunities)
-6. [Prompt 5: Existing Slide Updates](#prompt-5-existing-slide-updates)
-7. [Prompt 6: New Slide — Hyperscaler Contract Dominance Timeline](#prompt-6-new-slide-hyperscaler-contract-dominance-timeline)
-8. [Prompt 7: Other New Slide Candidates](#prompt-7-other-new-slide-candidates)
-9. [Prompt 8: Final QA & Narrative Polish](#prompt-8-final-qa--narrative-polish)
-10. [Prompt 9: Slide Formatting Fix — Content Overflow](#prompt-9-slide-formatting-fix--content-overflow)
+2. [Prompt 1A: Research Audit — Demand, Infrastructure & SMR Citations](#prompt-1a-research-audit--demand-infrastructure--smr-citations)
+3. [Prompt 1B: Research Audit — Corporate Procurement & Hyperscaler Citations](#prompt-1b-research-audit--corporate-procurement--hyperscaler-citations)
+4. [Prompt 1C: Research Audit — Regulatory, Regional & VRE Economics Citations](#prompt-1c-research-audit--regulatory-regional--vre-economics-citations)
+5. [Prompt 2: Data Scraping from New Citations](#prompt-2-data-scraping-from-new-citations)
+6. [Prompt 3: Thesis Validation — Does New Research Change Anything?](#prompt-3-thesis-validation)
+7. [Prompt 4: New Analytical Opportunities](#prompt-4-new-analytical-opportunities)
+8. [Prompt 5: Existing Slide Updates](#prompt-5-existing-slide-updates)
+9. [Prompt 6: New Slide — Hyperscaler Contract Dominance Timeline](#prompt-6-new-slide-hyperscaler-contract-dominance-timeline)
+10. [Prompt 7: Other New Slide Candidates](#prompt-7-other-new-slide-candidates)
+11. [Prompt 8: Final QA & Narrative Polish](#prompt-8-final-qa--narrative-polish)
+12. [Prompt 9: Slide Formatting Fix — Content Overflow](#prompt-9-slide-formatting-fix--content-overflow)
 
 ---
 
@@ -67,71 +69,221 @@ After syncing, verify both decks have identical slide count, ordering, and data.
 
 ---
 
-## Prompt 1: Research Integration Audit
+## Prompt 1A: Research Audit — Demand, Infrastructure & SMR Citations
 
-> **Goal:** Systematically review all 47 citations in `vreresearch.md` against existing deck content. Identify what's already incorporated, what's new and useful, what contradicts the current thesis, and what can be ignored.
+> **Goal:** Audit citations #1–#16 from `vreresearch.md` (demand forecasts, data center infrastructure, SMR timelines, nuclear cost analysis). Classify each as SKIP/UPDATE/ADD/NEW SLIDE/SCRAPE.
 
-### Context
+### Shared Context for All 1A/1B/1C Prompts
 
-`data-center-cfe/research/vreresearch.md` (43KB) contains comprehensive strategic research with ~47 citations covering:
-- AI data center power physics and demand forecasts
-- SMR NOAK timeline and deployment gaps
-- Big 4 hyperscaler portfolios and deal activity
-- Second-tier colocation providers (Equinix, Digital Realty, etc.)
-- GHG Protocol Scope 2 hourly matching + deliverability proposals
-- Regional ISO analysis (PJM, ERCOT, CAISO, MISO, SPP)
-- Capture rate erosion and cannibalization
-- Corporate clean energy procurement trends (BNEF 2025 data)
+`data-center-cfe/research/vreresearch.md` (43KB) contains ~47 citations. Auditing all at once causes session timeouts, so the audit is split into three batches by theme. Each batch produces a section of `data-center-cfe/research/citation-audit.md`.
 
-The existing deck already covers many of these themes. This audit determines what's NEW and actionable.
+**Action categories:**
+- **SKIP**: Already incorporated or not relevant to VRE standalone thesis
+- **UPDATE**: New data that updates an existing slide's numbers/narrative
+- **ADD**: New insight that warrants adding to an existing slide
+- **NEW SLIDE**: Significant enough to warrant a new slide
+- **SCRAPE**: Has scrapeable quantitative data for `data-inputs/`
+
+**Framing filter** — this deck is about the VALUE PROPOSITION OF STANDALONE VRE within an IPP portfolio with strong clean firm assets and storage willingness. Deprioritize citations purely about DC growth volume or general AI hype. Prioritize anything affecting VRE economics, corporate procurement behavior, regulatory changes, regional siting, or thesis contradictions.
 
 ### Prompt
 
 ```
-Read data-center-cfe/research/vreresearch.md in full.
+Read the FIRST HALF of data-center-cfe/research/vreresearch.md (sections covering
+macroeconomic landscape, AI data center physics, demand forecasts, SMR NOAK
+timeline, and clean energy gap quantification).
 
 Then read the current deck: data-center-cfe/output/vre-investment-thesis-deck.html
 
-For EACH citation in vreresearch.md, create a table with these columns:
-| # | Citation (Author/Source) | Key Data Point | Already in Deck? | Action Needed | Priority |
+Also list files in: data-center-cfe/data-inputs/ (to check what data exists)
 
-Categorize actions as:
-- SKIP: Already incorporated or not relevant to VRE standalone thesis
-- UPDATE: New data that updates an existing slide's numbers/narrative
-- ADD: New insight that warrants adding to an existing slide
-- NEW SLIDE: Data/insight significant enough to warrant a new slide
-- SCRAPE: Citation has scrapeable data that should be added to data-inputs/
+Audit ONLY these citations (approximately #1–#16 as numbered in vreresearch.md):
 
-Key framing filter: This deck is about the VALUE PROPOSITION OF STANDALONE VRE
-within an IPP portfolio that has strong clean firm assets and storage willingness.
-Deprioritize citations that are purely about:
-- How much DC growth is happening (we know this)
-- General AI hype / macro trends
-- Nuclear/SMR details beyond the timeline gap framing
+1. McKinsey — "Scaling bigger, faster, cheaper data centers"
+2. Brattle Group — "Electricity Demand Growth and Forecasting"
+3. XENDEE — "Meeting Energy Demand for Data Centers With DER and Future SMR"
+4. Grid Strategies — "Power Demand Forecasts Revised Up"
+5. LBNL — "2024 United States Data Center Energy Usage Report"
+6. DOE Office of Electricity — "Clean Energy Resources to Meet Data Center Demand"
+7. IEA — "AI is set to drive surging electricity demand"
+8. Brattle Group — "The Future of Clean Energy"
+9. Future Markets Inc. — "Global Advanced Nuclear Technologies Market 2026-2045"
+10. Nuclear Innovation Alliance — "Advanced Reactor Deployment Timelines"
+11. NREL — "Nuclear | Electricity | 2024 | ATB"
+12. GOV.UK — "Small modular reactors" (cost reduction study)
+13. Idaho National Laboratory — "Meta-Analysis of Advanced Nuclear Reactor Cost"
+14. GlobeNewswire — "Nuclear SMRs Market Report 2025-2045"
+15. McKinsey — "How data centers and the energy sector can sate AI's hunger"
+16. PJM — "PJM's Role in the Energy Transition"
 
-Prioritize citations about:
-- VRE-specific economics, capture rates, PPA pricing
-- Corporate procurement behavior shifts (especially Big 4 dominance)
-- GHG Protocol changes affecting VRE value
-- Regional market dynamics relevant to VRE siting
-- Second-tier colocation provider demand (these are the IPP's target customers)
-- Storage-as-complement framing
-- Any data contradicting the VRE investment thesis
+For each, fill in this table:
+| # | Citation | Key Data Point | Already in Deck? | Action | Priority (H/M/L) |
 
-Write the completed audit table to a new section in this file or as a companion
-document at data-center-cfe/research/citation-audit.md.
+Write results to data-center-cfe/research/citation-audit.md with a header:
+# Citation Audit: VRE Research Integration
+## Part A: Demand, Infrastructure & SMR (Citations 1–16)
+
+Include a summary at the bottom: "X citations SKIP, Y UPDATE, Z ADD, W SCRAPE"
 ```
 
 ### Files to Read
-- `data-center-cfe/research/vreresearch.md` (primary input)
-- `data-center-cfe/output/vre-investment-thesis-deck.html` (comparison target)
-- `data-center-cfe/data-inputs/` directory listing (to check what data already exists)
+- `data-center-cfe/research/vreresearch.md` (first ~40% of the file)
+- `data-center-cfe/output/vre-investment-thesis-deck.html`
+- `data-center-cfe/data-inputs/` (directory listing)
 
 ### Success Criteria
-- Every citation in vreresearch.md accounted for in audit table
-- Clear action classification for each (SKIP/UPDATE/ADD/NEW SLIDE/SCRAPE)
-- Priority ranking (High/Medium/Low) based on VRE standalone thesis relevance
-- No citations misclassified as SKIP when they contain genuinely new data
+- All 16 citations audited with clear classification
+- Demand/infrastructure citations mostly classified SKIP (already in deck) with honest exceptions
+- SMR citations evaluated for whether they add nuance beyond what's on Slide 4
+- citation-audit.md created with Part A header, ready for Parts B and C
+
+---
+
+## Prompt 1B: Research Audit — Corporate Procurement & Hyperscaler Citations
+
+> **Goal:** Audit citations #17–#33 from `vreresearch.md` (interconnection queues, corporate procurement trends, hyperscaler deals, colocation providers, vertical integration). These are the highest-value citations for the VRE thesis.
+
+### Prompt
+
+```
+Read data-center-cfe/research/citation-audit.md (Part A already completed).
+
+Read the MIDDLE sections of data-center-cfe/research/vreresearch.md covering:
+interconnection queues, corporate clean energy procurement, hyperscaler
+portfolios, deal timeline, and second-tier colocation providers.
+
+Read the current deck: data-center-cfe/output/vre-investment-thesis-deck.html
+
+Audit these citations (approximately #17–#33):
+
+17. LBNL — "Queued Up: 2024 Edition" (interconnection completion rates)
+18. Grid Strategies — "AEI 2024 Generator Interconnection Scorecard"
+19. Wood Mackenzie — "US utilities to face significant challenge"
+20. Belfer Center — "AI, Data Centers, and the U.S. Electric Grid"
+21. Brown Advisory — "The Data Center Balancing Act"
+22. Flexidao — "How to Practically Start a 24/7 CFE Journey"
+23. MIT DSpace — "Demand-Driven Decarbonization: Impact of 24/7"
+24. Bloomberg NEF — "Corporate Clean Energy Buying Fell in 2025"
+25. ESG Today — "Amazon, Meta, Google, Microsoft Account for Half"
+26. Amazon Sustainability — "Carbon-free energy"
+27. Bloomberg NEF/BCSE — "2026 Sustainable Energy in America Factbook"
+28. Introl Blog — "Google's $4.75B Intersect Power Acquisition"
+29. GlobeNewswire — "U.S. Data Center Construction Market 2026-2031"
+30. Wood Mackenzie — "Largest data centers in the US: top 10 questions"
+31. IEA 4E — "Data Centre Energy Use: Critical Review"
+32. Clarity AI — "Data Center Emissions Are Rising"
+33. Iron Mountain — "Data Center Sustainability"
+
+For each, fill in the same table format:
+| # | Citation | Key Data Point | Already in Deck? | Action | Priority (H/M/L) |
+
+PAY SPECIAL ATTENTION to:
+- #24-25 (BNEF 2025 procurement decline + hyperscaler 49% share) — likely SCRAPE + ADD
+- #28 (Google Intersect Power $4.75B acquisition) — likely ADD as vertical integration risk
+- #17-18 (interconnection queues) — likely SCRAPE + UPDATE for regional matrix
+- #32-33 (colocation provider data) — likely SCRAPE for Slide 7 enhancement
+
+Append to data-center-cfe/research/citation-audit.md as:
+## Part B: Corporate Procurement & Hyperscaler (Citations 17–33)
+
+Include summary count at the bottom of this section.
+```
+
+### Files to Read
+- `data-center-cfe/research/vreresearch.md` (middle ~35%)
+- `data-center-cfe/research/citation-audit.md` (Part A — for context, don't re-audit)
+- `data-center-cfe/output/vre-investment-thesis-deck.html`
+
+### Success Criteria
+- All 17 citations audited
+- BNEF procurement data (#24-25) flagged as high-priority SCRAPE
+- Google Intersect Power (#28) flagged as ADD/risk factor
+- Interconnection queue data (#17-18) flagged for regional matrix update
+- Colocation provider data identified for Slide 7 enhancement
+- citation-audit.md updated with Part B appended
+
+---
+
+## Prompt 1C: Research Audit — Regulatory, Regional & VRE Economics Citations
+
+> **Goal:** Audit citations #34–#47 from `vreresearch.md` (GHG Protocol Scope 2, regional ISO analysis, VRE capture rates, storage economics, grid operations). Then write a consolidated summary across all three parts.
+
+### Prompt
+
+```
+Read data-center-cfe/research/citation-audit.md (Parts A and B completed).
+
+Read the FINAL sections of data-center-cfe/research/vreresearch.md covering:
+GHG Protocol Scope 2 changes, regional ISO analysis (ERCOT, CAISO, PJM),
+VRE capture rates, storage/BESS trends, and grid operations.
+
+Read the current deck: data-center-cfe/output/vre-investment-thesis-deck.html
+
+Audit these citations (approximately #34–#47):
+
+34. Watershed — "Analyzing the GHG Protocol's proposed scope 2 changes"
+35. GHG Protocol — "Upcoming Scope 2 Public Consultation: Hourly Matching"
+36. Climate Resource Solutions — "Missteps in Proposed Updates to GHG Protocol"
+37. World Resources Institute — "24/7 Carbon-Free Energy Resources & Tools"
+38. Wood Mackenzie — "US seasonal power outlooks Summer 2025"
+39. Utility Dive — "ERCOT, CAISO offer best grid interconnection"
+40. GE Vernova — "A tale of two ISOs: ERCOT and CAISO"
+41. Grid Strategies — "Strategic Industries Surging: Driving US Power Demand"
+42. Modo Energy — "US Research Roundup: BESS insights Q3 2025"
+43. Amperon — "How the Grid Changed in 2024"
+44. California Energy Commission — "2024 Total System Electric Generation"
+45. California ISO — "Managing the evolving grid"
+46. Eavor — "California needs clean firm power"
+47. LBNL — "Variable Renewable Energy Participation in Ancillary Services"
+
+For each, fill in the same table:
+| # | Citation | Key Data Point | Already in Deck? | Action | Priority (H/M/L) |
+
+PAY SPECIAL ATTENTION to:
+- #34-36 (GHG Protocol Scope 2) — likely HIGH priority ADD/SCRAPE, directly affects VRE value
+- #42 (Modo Energy BESS) — likely SCRAPE for storage pairing economics
+- #38-40 (regional ISO analysis) — likely UPDATE for regional matrix slide
+- #44-46 (CAISO data) — important for CAISO "not recommended" rating justification
+
+Append to data-center-cfe/research/citation-audit.md as:
+## Part C: Regulatory, Regional & VRE Economics (Citations 34–47)
+
+Then write a CONSOLIDATED SUMMARY at the end of citation-audit.md:
+
+## Consolidated Audit Summary
+
+### Counts
+- Total citations: 47
+- SKIP: X
+- UPDATE: Y (list which slides each updates)
+- ADD: Z (list which slides each adds to)
+- NEW SLIDE: W (describe each)
+- SCRAPE: V (list target data-inputs/ filenames)
+
+### Top 10 Highest-Priority Actions
+Ranked list of the 10 most impactful citation-driven changes, with:
+- Citation #
+- What to do
+- Which slide it affects
+- Why it matters for the VRE standalone thesis
+
+### Data Scraping Queue
+Ordered list of all SCRAPE actions for Prompt 2 to execute, with:
+- Citation #, source name, target filename, key data fields to extract
+```
+
+### Files to Read
+- `data-center-cfe/research/vreresearch.md` (final ~25%)
+- `data-center-cfe/research/citation-audit.md` (Parts A + B)
+- `data-center-cfe/output/vre-investment-thesis-deck.html`
+
+### Success Criteria
+- All 14 remaining citations audited
+- GHG Protocol citations (#34-36) flagged as high-priority (these are key to VRE value thesis)
+- Regional ISO data evaluated against existing regional matrix
+- Consolidated summary includes actionable Top 10 list and scraping queue
+- citation-audit.md is now COMPLETE — all 47 citations classified
+- Scraping queue feeds directly into Prompt 2
 
 ---
 
@@ -164,8 +316,9 @@ Existing data-inputs files:
 ### Prompt
 
 ```
-Run the Prompt 1 audit first (or read data-center-cfe/research/citation-audit.md
-if it already exists).
+Read data-center-cfe/research/citation-audit.md (all three parts: A, B, C).
+Use the "Data Scraping Queue" from the Consolidated Summary at the bottom
+of that file to know exactly which citations need scraping.
 
 For each citation marked SCRAPE, do the following:
 
@@ -1013,20 +1166,24 @@ These prompts should be executed in order, with each session building on the pri
 
 | Session | Prompts | Estimated Effort | Dependencies |
 |---------|---------|-----------------|--------------|
-| **Session 1** | Prompt 0 (Reconcile) | 30-60 min | None — do this first to establish baseline |
-| **Session 2** | Prompt 1 (Audit) + Prompt 2 (Scrape) | 60-90 min | Session 1 completed |
-| **Session 3** | Prompt 3 (Thesis) + Prompt 4 (Analysis) | 60-90 min | Session 2 completed (audit table needed) |
-| **Session 4** | Prompt 5 (Slide Updates) | 60-90 min | Sessions 2-3 completed (new data + thesis validation) |
-| **Session 5** | Prompt 6 (Dominance Slide) | 45-60 min | Session 2 completed (procurement data scraped) |
-| **Session 6** | Prompt 7 (New Slides) | 30-60 min | Session 4 completed (know what's in updated deck) |
-| **Session 7** | Prompt 9 (Formatting Fix) | 30-45 min | Session 1 completed (needs current deck) |
-| **Session 8** | Prompt 8 (Final QA) | 30-45 min | All prior sessions completed |
+| **Session 1** | Prompt 0 (Reconcile) + Prompt 9 (Formatting Fix) | 45-60 min | None — establish baseline + fix overflow |
+| **Session 2** | Prompt 1A (Audit: Demand/SMR) | 30-45 min | Session 1 completed |
+| **Session 3** | Prompt 1B (Audit: Procurement/Hyperscaler) | 30-45 min | Session 2 completed (Part A exists) |
+| **Session 4** | Prompt 1C (Audit: Regulatory/Regional) + summary | 30-45 min | Session 3 completed (Parts A+B exist) |
+| **Session 5** | Prompt 2 (Data Scraping) | 45-60 min | Session 4 completed (scraping queue defined) |
+| **Session 6** | Prompt 3 (Thesis) + Prompt 4 (Analysis) | 60-90 min | Session 4 completed (audit table needed) |
+| **Session 7** | Prompt 5 (Slide Updates) | 60-90 min | Sessions 5-6 completed (new data + thesis) |
+| **Session 8** | Prompt 6 (Dominance Slide) | 45-60 min | Session 5 completed (procurement data scraped) |
+| **Session 9** | Prompt 7 (New Slides) | 30-60 min | Session 7 completed (know what's in updated deck) |
+| **Session 10** | Prompt 8 (Final QA) | 30-45 min | All prior sessions completed |
 
-**Sessions 5, 6, and 7 can run in parallel** (they don't depend on each other).
+**Parallelizable sessions:**
+- Sessions 2-4 (audit parts) are sequential but each is small enough to avoid timeouts
+- Sessions 5 and 6 can run in parallel (scraping vs. thesis/analysis — independent)
+- Sessions 8 and 9 can run in parallel (dominance slide vs. other new slides)
+- Session 1 combines two independent prompts (reconcile + formatting) in one session
 
-**Prompt 9 (formatting) can also run FIRST** as a standalone fix before any content changes — it only touches CSS and citation markup, not slide content.
-
-**Total estimated effort: 6-9 sessions, ~7-10 hours**
+**Total estimated effort: 8-10 sessions, ~7-10 hours**
 
 ### Key Files Reference
 
