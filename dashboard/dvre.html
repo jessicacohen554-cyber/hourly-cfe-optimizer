@@ -502,6 +502,62 @@ body {
   border-radius: 2px;
   flex-shrink: 0;
 }
+
+/* ─── Vertical Timeline (Slide 6) ─── */
+.vtl { position: relative; padding: 0; }
+.vtl-line {
+  position: absolute; left: 14px; top: 0; bottom: 0;
+  width: 2px; background: var(--glass-border);
+}
+.vtl-entry {
+  position: relative; padding-left: 38px; margin-bottom: 5px;
+  display: grid; grid-template-columns: 52px 56px 1fr 62px; gap: 4px;
+  align-items: center; font-size: 8.5pt; line-height: 1.3;
+}
+.vtl-dot {
+  position: absolute; left: 7px; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid white; z-index: 1;
+}
+.vtl-dot.vre { background: var(--ceg-green); }
+.vtl-dot.nuclear { background: var(--ceg-blue); }
+.vtl-dot.gas { background: var(--ceg-gray); }
+.vtl-dot.infra { background: var(--ceg-orange); }
+.vtl-date { font-weight: 600; color: var(--text-dim); font-size: 7.5pt; }
+.vtl-company { font-weight: 700; color: var(--text-bright); font-size: 8pt; }
+.vtl-deal { font-weight: 300; color: var(--text-bright); font-size: 8pt; }
+.vtl-cap { font-weight: 700; font-family: var(--font-data); font-size: 8.5pt; text-align: right; }
+.vtl-cap.vre { color: var(--ceg-green); }
+.vtl-cap.nuclear { color: var(--ceg-blue); }
+.vtl-cap.gas { color: var(--ceg-gray); }
+.vtl-cap.infra { color: var(--ceg-orange); }
+.vtl-year-label {
+  font-size: 8pt; font-weight: 700; color: var(--ceg-blue);
+  padding: 2px 0 2px 38px; margin-bottom: 2px;
+  border-bottom: 1px solid var(--glass-border);
+  letter-spacing: 0.5px;
+}
+
+/* ─── Colocation Bars (Slide 7) ─── */
+.colo-row {
+  display: grid; grid-template-columns: 90px 1fr 60px; gap: 8px;
+  align-items: center; margin-bottom: 6px;
+}
+.colo-label { font-size: 9pt; font-weight: 600; color: var(--text-bright); }
+.colo-bar-track {
+  height: 22px; display: flex; border-radius: 4px; overflow: hidden;
+  background: #F0F3F7;
+}
+.colo-seg-green { background: var(--ceg-green); height: 100%; display: flex; align-items: center; justify-content: center; font-size: 7pt; color: white; font-weight: 600; }
+.colo-seg-gap { background: var(--ceg-orange); opacity: 0.6; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 7pt; color: white; font-weight: 600; }
+.colo-total { font-size: 9pt; font-weight: 700; color: var(--text-bright); text-align: right; font-family: var(--font-data); }
+.commitment-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 7pt; font-weight: 600; padding: 2px 6px;
+  border-radius: 10px; background: rgba(35,114,185,0.08);
+  color: var(--ceg-blue);
+}
+.commitment-badge.urgent { background: rgba(244,123,39,0.1); color: #B45309; }
 </style>
 </head>
 <body>
@@ -920,11 +976,405 @@ body {
   <div class="footer-accent"></div>
 </section>
 
-<!-- ═══ SLIDE 6: VRE: THE ONLY TECHNOLOGY THAT CAN DEPLOY AT SCALE NOW ═══ -->
+<!-- ═══ SLIDE 6: THE ENERGY TIMELINE — HYPERSCALER CLEAN ENERGY DEALS ═══ -->
+<section class="slide">
+  <div class="slide-header">
+    <h1>The Energy Timeline: Hyperscaler Clean Energy Deals</h1>
+    <span class="slide-number">6</span>
+  </div>
+  <div class="slide-body">
+    <p style="font-size:10pt;color:var(--text-dim);margin-bottom:0.08in;">Q1 2024 &ndash; March 2026: A chronological map of corporate procurement reveals the stark dichotomy between nuclear <em>headlines</em> and VRE <em>reality</em>.</p>
+
+    <div class="kpi-row" style="margin-bottom:0.1in;">
+      <div class="kpi-card green">
+        <div class="kpi-value" style="font-size:20pt;">~50+</div>
+        <div class="kpi-unit">GW VRE</div>
+        <div class="kpi-label">Big 4 cumulative VRE deals</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" style="font-size:20pt;">~4.7</div>
+        <div class="kpi-unit">GW Nuclear</div>
+        <div class="kpi-label">Big 4 nuclear deals (same period)</div>
+      </div>
+      <div class="kpi-card orange">
+        <div class="kpi-value" style="font-size:20pt;">10:1</div>
+        <div class="kpi-unit">Ratio</div>
+        <div class="kpi-label">VRE-to-nuclear deployment ratio</div>
+      </div>
+      <div class="kpi-card teal">
+        <div class="kpi-value" style="font-size:20pt;">49%</div>
+        <div class="kpi-unit">Market Share</div>
+        <div class="kpi-label">Big 4 share of global clean buying (2025)</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 3.4in;gap:0.3in;flex:1;overflow:hidden;">
+      <!-- LEFT: Vertical Timeline -->
+      <div style="overflow-y:auto;padding-right:4px;">
+        <div class="vtl">
+          <div class="vtl-line"></div>
+
+          <div class="vtl-year-label">2024</div>
+
+          <div class="vtl-entry">
+            <div class="vtl-dot vre"></div>
+            <div class="vtl-date">Q1 2024</div>
+            <div class="vtl-company">Google</div>
+            <div class="vtl-deal">Clearway &mdash; Wind &amp; Solar (MO, TX, WV)</div>
+            <div class="vtl-cap vre">1.17 GW</div>
+          </div>
+
+          <div class="vtl-entry">
+            <div class="vtl-dot nuclear"></div>
+            <div class="vtl-date">Q3 2024</div>
+            <div class="vtl-company">Microsoft</div>
+            <div class="vtl-deal">Constellation &mdash; TMI Unit 1 restart (20-yr PPA)</div>
+            <div class="vtl-cap nuclear">835 MW</div>
+          </div>
+
+          <div class="vtl-entry">
+            <div class="vtl-dot nuclear"></div>
+            <div class="vtl-date">Q3 2024</div>
+            <div class="vtl-company">Amazon</div>
+            <div class="vtl-deal">Talen &mdash; Susquehanna behind-the-meter nuclear</div>
+            <div class="vtl-cap nuclear">1.92 GW</div>
+          </div>
+
+          <div class="vtl-entry">
+            <div class="vtl-dot nuclear"></div>
+            <div class="vtl-date">Q4 2024</div>
+            <div class="vtl-company">Google</div>
+            <div class="vtl-deal">Kairos Power &mdash; SMR fleet (target 2030)</div>
+            <div class="vtl-cap nuclear">500 MW</div>
+          </div>
+
+          <div class="vtl-entry">
+            <div class="vtl-dot nuclear"></div>
+            <div class="vtl-date">Q4 2024</div>
+            <div class="vtl-company">Amazon</div>
+            <div class="vtl-deal">X-energy &mdash; SMR development (5+ GW pipeline)</div>
+            <div class="vtl-cap nuclear">~300 MW</div>
+          </div>
+
+          <div class="vtl-entry">
+            <div class="vtl-dot nuclear"></div>
+            <div class="vtl-date">Q4 2024</div>
+            <div class="vtl-company">Meta</div>
+            <div class="vtl-deal">Constellation &mdash; Clinton Clean Energy (20-yr)</div>
+            <div class="vtl-cap nuclear">1,121 MW</div>
+          </div>
+
+          <div class="vtl-entry" style="background:rgba(107,165,67,0.06);border-radius:4px;padding-top:3px;padding-bottom:3px;">
+            <div class="vtl-dot vre"></div>
+            <div class="vtl-date">2024 FY</div>
+            <div class="vtl-company">Meta</div>
+            <div class="vtl-deal">Various &mdash; record VRE procurement year</div>
+            <div class="vtl-cap vre">4.9 GW</div>
+          </div>
+
+          <div class="vtl-entry" style="background:rgba(107,165,67,0.06);border-radius:4px;padding-top:3px;padding-bottom:3px;">
+            <div class="vtl-dot vre"></div>
+            <div class="vtl-date">2024 FY</div>
+            <div class="vtl-company">Microsoft</div>
+            <div class="vtl-deal">Various &mdash; 100% matched annual RE by 2025</div>
+            <div class="vtl-cap vre">19.0 GW</div>
+          </div>
+
+          <div class="vtl-year-label">2025</div>
+
+          <div class="vtl-entry">
+            <div class="vtl-dot gas"></div>
+            <div class="vtl-date">Q3 2025</div>
+            <div class="vtl-company">Meta</div>
+            <div class="vtl-deal">Calpine &mdash; Thad Hill gas (transitional baseload)</div>
+            <div class="vtl-cap gas">400 MW</div>
+          </div>
+
+          <div class="vtl-entry">
+            <div class="vtl-dot vre"></div>
+            <div class="vtl-date">Q4 2025</div>
+            <div class="vtl-company">Google</div>
+            <div class="vtl-deal">TotalEnergies &mdash; Montpelier solar (PJM, 15-yr)</div>
+            <div class="vtl-cap vre">1.5 TWh/yr</div>
+          </div>
+
+          <div class="vtl-entry">
+            <div class="vtl-dot vre"></div>
+            <div class="vtl-date">Q4 2025</div>
+            <div class="vtl-company">Meta</div>
+            <div class="vtl-deal">NextEra &mdash; 11 PPAs + 2 storage (ERCOT/SPP/MISO)</div>
+            <div class="vtl-cap vre">2.5 GW</div>
+          </div>
+
+          <div class="vtl-entry" style="background:rgba(107,165,67,0.10);border-radius:4px;padding-top:3px;padding-bottom:3px;border-left:2px solid var(--ceg-green);">
+            <div class="vtl-dot vre"></div>
+            <div class="vtl-date">Dec 2025</div>
+            <div class="vtl-company">Google</div>
+            <div class="vtl-deal">Intersect Power &mdash; $4.75B acquisition &rarr; direct ownership</div>
+            <div class="vtl-cap vre">10.8 GW</div>
+          </div>
+
+          <div class="vtl-entry" style="background:rgba(107,165,67,0.06);border-radius:4px;padding-top:3px;padding-bottom:3px;">
+            <div class="vtl-dot vre"></div>
+            <div class="vtl-date">2025 FY</div>
+            <div class="vtl-company">Meta</div>
+            <div class="vtl-deal">Various &mdash; largest corporate buyer globally</div>
+            <div class="vtl-cap vre">10.24 GW</div>
+          </div>
+
+          <div class="vtl-entry" style="background:rgba(107,165,67,0.06);border-radius:4px;padding-top:3px;padding-bottom:3px;">
+            <div class="vtl-dot vre"></div>
+            <div class="vtl-date">2025 FY</div>
+            <div class="vtl-company">Amazon</div>
+            <div class="vtl-deal">Various &mdash; 40+ GW cumulative (700+ projects)</div>
+            <div class="vtl-cap vre">10.22 GW</div>
+          </div>
+
+          <div class="vtl-year-label">2026</div>
+
+          <div class="vtl-entry">
+            <div class="vtl-dot infra"></div>
+            <div class="vtl-date">Mar 2026</div>
+            <div class="vtl-company">Big 4</div>
+            <div class="vtl-deal">US Govt &mdash; Ratepayer Protection Pledge signed</div>
+            <div class="vtl-cap infra">N/A</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Cumulative Tally + Insight -->
+      <div style="display:flex;flex-direction:column;gap:0.12in;">
+        <h3 style="font-size:11pt;font-weight:700;color:var(--ceg-blue);margin-bottom:0;">Cumulative GW by Resource Type</h3>
+        <p style="font-size:8pt;color:var(--text-dim);margin-bottom:0.05in;">2024&ndash;2026 deal volume tells the real story</p>
+
+        <!-- Stacked comparison bar -->
+        <div style="background:var(--bg-mid);border-radius:8px;padding:0.12in;border:1px solid var(--glass-border);">
+          <div style="margin-bottom:8px;">
+            <div style="font-size:8pt;font-weight:600;color:var(--text-dim);margin-bottom:3px;">VRE + STORAGE</div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <div style="flex:1;height:28px;background:var(--ceg-green);border-radius:4px;display:flex;align-items:center;padding:0 8px;">
+                <span style="color:white;font-size:10pt;font-weight:700;">~50+ GW</span>
+              </div>
+            </div>
+          </div>
+          <div style="margin-bottom:8px;">
+            <div style="font-size:8pt;font-weight:600;color:var(--text-dim);margin-bottom:3px;">NUCLEAR (Existing + Advanced)</div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <div style="width:9.4%;height:28px;background:var(--ceg-blue);border-radius:4px;display:flex;align-items:center;padding:0 8px;min-width:60px;">
+                <span style="color:white;font-size:10pt;font-weight:700;">~4.7 GW</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:8pt;font-weight:600;color:var(--text-dim);margin-bottom:3px;">NATURAL GAS (Transitional)</div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <div style="width:0.8%;height:28px;background:var(--ceg-gray);border-radius:4px;display:flex;align-items:center;padding:0 8px;min-width:50px;">
+                <span style="color:white;font-size:10pt;font-weight:700;">0.4 GW</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend-row" style="margin-top:0.05in;">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--ceg-green);"></div> VRE / Storage</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--ceg-blue);"></div> Nuclear</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--ceg-gray);"></div> Gas</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--ceg-orange);"></div> Infrastructure</div>
+        </div>
+
+        <!-- Key Insight Callout -->
+        <div class="callout green" style="font-size:9.5pt;">
+          <strong>The numbers don&rsquo;t lie:</strong> Despite billions in nuclear headlines, <strong>85%+ of actual GW deployed in 2024&ndash;2026 is VRE.</strong> This ratio will persist through 2035+ as SMRs remain pre-commercial. VRE is not a stopgap &mdash; it is <em>the</em> dominant procurement vehicle for the foreseeable future.
+        </div>
+
+        <div class="callout orange" style="font-size:9pt;">
+          <strong>Google&rsquo;s Intersect Power acquisition ($4.75B, Dec 2025)</strong> signals a profound shift: from passive PPA purchasing to <em>direct infrastructure ownership</em> to bypass 5-year interconnection queues. The hyperscalers aren&rsquo;t waiting &mdash; they&rsquo;re buying the pipeline itself.
+        </div>
+
+        <div class="callout" style="font-size:9pt;">
+          <strong>Nuclear deals are future options, not present capacity.</strong> Microsoft/TMI targets 2028. Kairos/Google targets 2030. X-energy/Amazon is R&amp;D-stage. Meanwhile, Meta signed 2.5 GW of VRE in a single Q4 2025 deal with NextEra &mdash; operational within 2&ndash;3 years.
+        </div>
+      </div>
+    </div>
+
+    <div class="source-note">Sources: <a href="https://www.esgtoday.com/amazon-meta-google-microsoft-account-for-half-of-global-clean-energy-purchase-deals-in-2025-report/" style="color:inherit;">ESG Today / BNEF (Feb 2026)</a>: Big 4 = 49% of global clean energy purchasing in 2025. <a href="https://about.bnef.com/insights/clean-energy/corporate-clean-energy-buying-fell-in-2025-after-nearly-a-decade-of-growth/" style="color:inherit;">BNEF, &ldquo;Corporate Clean Energy Buying Fell in 2025&rdquo;</a>: global volumes dropped 10% to 55.9 GW. <a href="https://introl.com/blog/google-intersect-power-acquisition-energy-parks-2026" style="color:inherit;">Google/Intersect Power acquisition (Dec 2025)</a>: $4.75B, 10.8 GW. Individual deal data: Company sustainability reports (Amazon 2024, Meta 2024, Microsoft 2024, Google 2024); Constellation Energy press releases (TMI restart, Clinton PPA); <a href="https://sustainability.aboutamazon.com/climate-solutions/carbon-free-energy" style="color:inherit;">Amazon Sustainability</a>; Talen Energy Susquehanna disclosure (Mar 2024).</div>
+  </div>
+  <div class="slide-footer">
+    <span class="brand">CONSTELLATION ENERGY</span>
+    <span class="confidential">Confidential &mdash; Not for Distribution</span>
+  </div>
+  <div class="footer-accent"></div>
+</section>
+
+<!-- ═══ SLIDE 7: THE SECONDARY VANGUARD — COLOCATION DEVELOPERS ═══ -->
+<section class="slide">
+  <div class="slide-header">
+    <h1>The Secondary Vanguard: Colocation Developers</h1>
+    <span class="slide-number">7</span>
+  </div>
+  <div class="slide-body">
+    <p style="font-size:10pt;color:var(--text-dim);margin-bottom:0.1in;">Tier 2 colocation providers consume massive volumes of electricity but lack the balance sheets to fund nuclear or acquire VRE platforms. They are <strong>the most motivated off-taker base</strong> for an IPP&rsquo;s VRE + Storage pipeline.</p>
+
+    <div class="kpi-row" style="margin-bottom:0.12in;">
+      <div class="kpi-card orange">
+        <div class="kpi-value" style="font-size:20pt;">29.5</div>
+        <div class="kpi-unit">TWh</div>
+        <div class="kpi-label">Combined annual consumption (top 5)</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" style="font-size:20pt;">10%+</div>
+        <div class="kpi-unit">CAGR</div>
+        <div class="kpi-label">US colocation market growth</div>
+      </div>
+      <div class="kpi-card teal">
+        <div class="kpi-value" style="font-size:20pt;">2027</div>
+        <div class="kpi-unit">GHG Protocol</div>
+        <div class="kpi-label">Scope 2 hourly matching finalization</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-value" style="font-size:20pt;">24/7</div>
+        <div class="kpi-unit">CFE</div>
+        <div class="kpi-label">Iron Mountain: first colo to commit</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.3in;flex:1;">
+      <!-- LEFT: Consumption & Gap Bars -->
+      <div>
+        <h3 style="font-size:11pt;font-weight:700;color:var(--ceg-blue);margin-bottom:0.08in;">Electricity Consumption &amp; Clean Energy Coverage</h3>
+        <p style="font-size:8pt;color:var(--text-dim);margin-bottom:0.1in;">Green = renewable-covered &nbsp;|&nbsp; Orange = unmatched gap (fossil/grid mix)</p>
+
+        <!-- Equinix -->
+        <div class="colo-row">
+          <div class="colo-label">Equinix</div>
+          <div class="colo-bar-track">
+            <div class="colo-seg-green" style="width:96%;">96%</div>
+            <div class="colo-seg-gap" style="width:4%;">4%</div>
+          </div>
+          <div class="colo-total">8.56 TWh</div>
+        </div>
+        <div style="padding-left:98px;margin-bottom:6px;">
+          <span class="commitment-badge">100% clean by 2030</span>
+          <span class="commitment-badge urgent">Last 4% needs localized PPAs</span>
+        </div>
+
+        <!-- Digital Realty -->
+        <div class="colo-row">
+          <div class="colo-label">Digital Realty</div>
+          <div class="colo-bar-track">
+            <div class="colo-seg-green" style="width:75%;">75%</div>
+            <div class="colo-seg-gap" style="width:25%;">25%</div>
+          </div>
+          <div class="colo-total">11.1 TWh</div>
+        </div>
+        <div style="padding-left:98px;margin-bottom:6px;">
+          <span class="commitment-badge">1.5+ GW contracted</span>
+          <span class="commitment-badge urgent">25% gap = ~2.8 TWh exposed</span>
+        </div>
+
+        <!-- CyrusOne -->
+        <div class="colo-row">
+          <div class="colo-label">CyrusOne</div>
+          <div class="colo-bar-track">
+            <div class="colo-seg-green" style="width:85%;">~85%</div>
+            <div class="colo-seg-gap" style="width:15%;">15%</div>
+          </div>
+          <div class="colo-total">4.2 TWh</div>
+        </div>
+        <div style="padding-left:98px;margin-bottom:6px;">
+          <span class="commitment-badge">Climate neutral 2030 (SBTi)</span>
+          <span class="commitment-badge urgent">Relies on RECs &amp; offsets</span>
+        </div>
+
+        <!-- Vantage -->
+        <div class="colo-row">
+          <div class="colo-label">Vantage</div>
+          <div class="colo-bar-track">
+            <div class="colo-seg-green" style="width:50%;">~50%</div>
+            <div class="colo-seg-gap" style="width:50%;">50%</div>
+          </div>
+          <div class="colo-total">2.6 TWh</div>
+        </div>
+        <div style="padding-left:98px;margin-bottom:6px;">
+          <span class="commitment-badge">Net-zero by 2030</span>
+          <span class="commitment-badge urgent">Depends on grid mix</span>
+        </div>
+
+        <!-- QTS -->
+        <div class="colo-row">
+          <div class="colo-label">QTS</div>
+          <div class="colo-bar-track">
+            <div class="colo-seg-green" style="width:60%;">~60%</div>
+            <div class="colo-seg-gap" style="width:40%;">40%</div>
+          </div>
+          <div class="colo-total">2.6 TWh</div>
+        </div>
+        <div style="padding-left:98px;margin-bottom:6px;">
+          <span class="commitment-badge">100% renewable target</span>
+          <span class="commitment-badge urgent">Needs third-party IPP supply</span>
+        </div>
+
+        <!-- Iron Mountain -->
+        <div class="colo-row">
+          <div class="colo-label">Iron Mountain</div>
+          <div class="colo-bar-track">
+            <div class="colo-seg-green" style="width:100%;">100% annual</div>
+          </div>
+          <div class="colo-total">Growing</div>
+        </div>
+        <div style="padding-left:98px;margin-bottom:6px;">
+          <span class="commitment-badge" style="background:rgba(107,165,67,0.12);color:var(--ceg-green);">First colo: 24/7 CFE by 2040</span>
+        </div>
+      </div>
+
+      <!-- RIGHT: Analysis & Implications -->
+      <div style="display:flex;flex-direction:column;gap:0.1in;">
+        <h3 style="font-size:11pt;font-weight:700;color:var(--ceg-blue);margin-bottom:0;">Why Tier 2 Is the Opportunity</h3>
+
+        <div class="callout red" style="font-size:9.5pt;">
+          <strong>GHG Protocol Scope 2 update (finalizing 2027) will expose these gaps:</strong>
+          <ul style="margin:4px 0 0 15px;padding:0;">
+            <li><strong>Hourly matching:</strong> Solar RECs purchased in bulk can no longer offset nighttime data center consumption</li>
+            <li><strong>Deliverability regions:</strong> Cheap wind RECs from Texas can&rsquo;t offset Virginia data centers</li>
+            <li>Estimated <strong>30&ndash;50% of current REC portfolios</strong> will be disqualified</li>
+          </ul>
+        </div>
+
+        <div class="callout green" style="font-size:9.5pt;">
+          <strong>The IPP advantage:</strong> Unlike the Big 4, Tier 2 operators <em>cannot</em> acquire VRE platforms or fund nuclear. They need third-party PPAs &mdash; exactly what an IPP with VRE + Storage + Clean Firm can provide as a packaged 24/7 CFE product.
+        </div>
+
+        <div class="callout" style="font-size:9.5pt;">
+          <strong>Scope 2 &rarr; Scope 3 chain reaction:</strong> Colocation providers&rsquo; electricity emissions are their enterprise tenants&rsquo; Scope 3 emissions. As Fortune 500 companies tighten supply chain reporting, colos face commercial pressure to decarbonize or lose clients.
+        </div>
+
+        <table class="data-table" style="font-size:8.5pt;margin-top:auto;">
+          <tr><th style="font-size:8pt;">Metric</th><th style="font-size:8pt;">Big 4 Hyperscalers</th><th style="font-size:8pt;">Tier 2 Colocation</th></tr>
+          <tr><td>Balance sheet</td><td style="color:var(--ceg-green);font-weight:600;">$200B+ CapEx/yr</td><td style="color:#DC2626;font-weight:600;">Limited</td></tr>
+          <tr><td>Procurement model</td><td>Direct acquisition / PPA</td><td style="font-weight:600;">Third-party PPA only</td></tr>
+          <tr><td>Nuclear access</td><td style="color:var(--ceg-green);">Funding FOAK/restarts</td><td style="color:#DC2626;">No pathway</td></tr>
+          <tr><td>VRE dependence</td><td style="font-weight:600;">High (85%+ of GW)</td><td style="font-weight:600;color:var(--ceg-orange);">Total (100%)</td></tr>
+          <tr><td>IPP value prop</td><td>Complementary partner</td><td style="color:var(--ceg-green);font-weight:600;">Essential supplier</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="source-note">Sources: Equinix 8.56 TWh (2024), 96% renewable: Equinix Sustainability Report 2024. Digital Realty 11.1 TWh, 75% renewable, 1.5+ GW contracted: Digital Realty 2023 ESG Report; <a href="https://www.globenewswire.com/news-release/2026/03/11/3253645/0/en/" style="color:inherit;">GlobeNewswire, US Data Center Construction Outlook 2026&ndash;2031</a>. CyrusOne 4.2 TWh, SBTi validated: CyrusOne 2023 Sustainability Report. Vantage 2.6 TWh, QTS 2.6 TWh: Company sustainability disclosures (2023). Iron Mountain 24/7 CFE commitment: <a href="https://www.ironmountain.com/data-centers/sustainability" style="color:inherit;">Iron Mountain Data Center Sustainability</a>. GHG Protocol Scope 2 update timeline: <a href="https://ghgprotocol.org/blog/upcoming-scope-2-public-consultation-hourly-matching-and-deliverability" style="color:inherit;">GHG Protocol, &ldquo;Upcoming Scope 2 Public Consultation&rdquo;</a>; <a href="https://watershed.com/blog/ghgp-analysis" style="color:inherit;">Watershed analysis</a>. 30&ndash;50% REC disqualification estimate: <a href="https://resource-solutions.org/missteps-in-proposed-updates-to-ghg-protocols-scope-2-guidance/" style="color:inherit;">Center for Resource Solutions (2025)</a>. US colocation CAGR >10%: GlobeNewswire (Mar 2026).</div>
+  </div>
+  <div class="slide-footer">
+    <span class="brand">CONSTELLATION ENERGY</span>
+    <span class="confidential">Confidential &mdash; Not for Distribution</span>
+  </div>
+  <div class="footer-accent"></div>
+</section>
+
+<!-- ═══ SLIDE 8: VRE: THE ONLY TECHNOLOGY THAT CAN DEPLOY AT SCALE NOW ═══ -->
+<!-- (was Slide 6, renumbered after timeline + colocation inserts) -->
 <section class="slide">
   <div class="slide-header">
     <h1>VRE: The Only Technology That Can Deploy at Scale Now</h1>
-    <span class="slide-number">6</span>
+    <span class="slide-number">8</span>
   </div>
   <div class="slide-body">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.3in;flex:1;">
@@ -1073,7 +1523,7 @@ body {
 <section class="slide">
   <div class="slide-header">
     <h1>Regional VRE Opportunity Matrix</h1>
-    <span class="slide-number">7</span>
+    <span class="slide-number">9</span>
   </div>
   <div class="slide-body">
     <p style="font-size:11pt;margin-bottom:0.1in;color:#000000;">Not all markets are equal. Investment priority depends on the intersection of demand growth, cannibalization trajectory, capacity market value, and corporate PPA demand.</p>
@@ -1180,7 +1630,7 @@ body {
 <section class="slide">
   <div class="slide-header">
     <h1>The VRE Investment Case</h1>
-    <span class="slide-number">8</span>
+    <span class="slide-number">10</span>
   </div>
   <div class="slide-body">
     <div class="kpi-row">
@@ -1283,7 +1733,7 @@ body {
 <section class="slide">
   <div class="slide-header">
     <h1>Three Procurement Strategies &mdash; One VRE Thesis</h1>
-    <span class="slide-number">9</span>
+    <span class="slide-number">11</span>
   </div>
   <div class="slide-body">
     <p style="font-size:11pt;margin-bottom:0.1in;color:#000000;">Different accounting methods shape <em>where</em> to weight VRE procurement, not <em>whether</em> to invest.</p>
@@ -1332,7 +1782,7 @@ body {
 <section class="slide">
   <div class="slide-header">
     <h1>How Much VRE Does Each Strategy Deploy?</h1>
-    <span class="slide-number">10</span>
+    <span class="slide-number">12</span>
   </div>
   <div class="slide-body">
     <p style="font-size:10.5pt;margin-bottom:0.1in;color:#000000;">At 95% CFE target, Medium growth scenario. Source: Constellation Hourly CFE Optimizer (Steps 5.2B/C).</p>
@@ -1414,7 +1864,7 @@ body {
 <section class="slide">
   <div class="slide-header">
     <h1>Where VRE Pipeline Wins Under Each Strategy</h1>
-    <span class="slide-number">11</span>
+    <span class="slide-number">13</span>
   </div>
   <div class="slide-body">
     <p style="font-size:10.5pt;margin-bottom:0.1in;color:#000000;">ISO-by-ISO analysis at 10% C&amp;I participation, 95% CFE, Medium growth.</p>
@@ -1493,7 +1943,7 @@ body {
 <section class="slide">
   <div class="slide-header">
     <h1>VRE Pipeline Value: Scenario Analysis by ISO</h1>
-    <span class="slide-number">12</span>
+    <span class="slide-number">14</span>
   </div>
   <div class="slide-body">
     <p style="font-size:10.5pt;margin-bottom:0.08in;color:#000000;">GW of VRE pipeline value under different accounting regime assumptions, 10% C&amp;I participation, 95% CFE target</p>
@@ -1600,7 +2050,7 @@ body {
 <section class="slide">
   <div class="slide-header">
     <h1>Appendix: Methodology &amp; Source Bibliography</h1>
-    <span class="slide-number">13</span>
+    <span class="slide-number">15</span>
   </div>
   <div class="slide-body">
     <div class="two-col" style="flex:1;">
