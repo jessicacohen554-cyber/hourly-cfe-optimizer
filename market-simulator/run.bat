@@ -76,6 +76,50 @@ if not exist "results\sweep_1215\sweep_1215_flat.parquet" (
 )
 echo [OK] Sweep cache ready
 
+REM ── Build fleet scenario data if missing ─────────────────────────────────
+if not exist "frontend\data\fleet_scenario_results_sample.json" (
+    echo.
+    echo Building fleet scenario data from Rosetta + CAMPD...
+    set PYTHONPATH=%~dp0;%~dp0backend;%~dp0scripts
+    %PYTHON% scripts\build_fleet_scenario_data.py
+    if errorlevel 1 (
+        echo WARNING: Fleet scenario data build failed. Fleet scenarios page
+        echo will be unavailable.
+    ) else (
+        echo [OK] Fleet scenario data generated
+    )
+) else (
+    echo [OK] Fleet scenario data ready
+)
+
+REM ── Generate constellation scenarios if missing ──────────────────────────
+if not exist "frontend\data\constellation_scenarios.json" (
+    echo Generating constellation scenarios...
+    set PYTHONPATH=%~dp0;%~dp0backend;%~dp0scripts
+    %PYTHON% scripts\generate_constellation_scenarios.py
+    if errorlevel 1 (
+        echo WARNING: Constellation scenarios generation failed.
+    ) else (
+        echo [OK] Constellation scenarios generated
+    )
+) else (
+    echo [OK] Constellation scenarios ready
+)
+
+REM ── Extract ISO sweep data for dashboard if missing ──────────────────────
+if not exist "frontend\data\sweep_dispatch_data.json" (
+    echo Extracting ISO sweep data for dashboard...
+    set PYTHONPATH=%~dp0;%~dp0backend;%~dp0scripts
+    %PYTHON% scripts\extract_iso_sweep_data.py
+    if errorlevel 1 (
+        echo WARNING: ISO sweep data extraction failed.
+    ) else (
+        echo [OK] ISO sweep data extracted
+    )
+) else (
+    echo [OK] ISO sweep data ready
+)
+
 REM ── Open browser after short delay ─────────────────────────────────────
 start "" /b cmd /c "timeout /t 2 /nobreak >nul & start http://127.0.0.1:8000"
 
