@@ -235,3 +235,190 @@ After scraping, update data-center-cfe/sources.md with any new citations not alr
 - Data points match vreresearch.md exactly (no rounding errors or misattribution)
 
 ---
+
+## Prompt 3: Thesis Validation
+
+> **Goal:** Determine whether new research from `vreresearch.md` fundamentally changes the VRE investment thesis, or merely reinforces/refines it. Document findings as a brief memo.
+
+### Context
+
+The current deck thesis can be summarized as:
+
+**"Standalone VRE is the highest-conviction near-term clean energy investment for an IPP with existing firm clean assets, driven by (1) structural hyperscaler demand gap, (2) 15-year SMR deployment lag, (3) coal wall consequential advantage expiring ~2031, (4) GHG Protocol Scope 2 changes creating premium for localized hourly-matched RECs, and (5) VRE's 2-4 year deployment timeline vs. all alternatives."**
+
+The framing assumes:
+- Existing + new firm clean development in CAISO, ERCOT, PJM
+- Storage pursued wherever economically viable (complementary to all assets)
+- VRE is the STANDALONE variable — does it make sense on its own merits within this portfolio?
+
+### Prompt
+
+```
+Read data-center-cfe/research/vreresearch.md thoroughly.
+
+Then read the current deck thesis across all slides:
+data-center-cfe/output/vre-investment-thesis-deck.html
+
+Answer these questions in a structured memo (write to
+data-center-cfe/research/thesis-validation-memo.md):
+
+## 1. Does the new research change the core thesis?
+
+For each thesis pillar, assess whether vreresearch.md CONFIRMS, REFINES, or CONTRADICTS:
+
+| Pillar | Status | Evidence |
+|--------|--------|----------|
+| Structural hyperscaler demand gap | ? | ... |
+| 15-year SMR deployment lag | ? | ... |
+| Coal wall consequential advantage | ? | ... |
+| GHG Protocol Scope 2 premium | ? | ... |
+| VRE deployment speed advantage | ? | ... |
+
+## 2. Does new research identify risks NOT in the current deck?
+
+Look for:
+- Capture rate erosion data worse than modeled (CAISO midday negatives, ERCOT $17/MWh)
+- Hyperscaler vertical integration (Google's $4.75B Intersect Power acquisition) reducing third-party PPA demand
+- BNEF 2025 data showing corporate procurement FELL 10% — is this a demand signal or accounting noise?
+- Behind-the-meter gas buildout by hyperscalers (Meta Calpine 400 MW gas deal) — are they hedging away from renewables?
+- Interconnection queue completion rates (14% solar, 11% battery) — does this help or hurt the VRE thesis?
+
+## 3. Does the VRE-as-standalone framing hold up?
+
+The deck frames VRE as a standalone strategic decision within a firm-clean portfolio.
+Does the research suggest:
+- VRE is ONLY viable when bundled with storage? (If so, the standalone thesis weakens)
+- VRE value is entirely dependent on firm clean backstop? (If so, it's not truly standalone)
+- There's a "standalone VRE sweet spot" (specific regions/thresholds where it works without pairing)?
+
+## 4. What's the single most important new insight?
+
+Identify the ONE finding from vreresearch.md that most strengthens or most
+threatens the thesis. This should drive the highest-priority deck update.
+
+## 5. Recommended thesis modifications (if any)
+
+If the thesis needs refinement, propose specific language changes to the
+Investment Case slide (currently Slide 10 in the 16-slide deck). If no changes
+needed, state that explicitly with justification.
+
+IMPORTANT FRAMING: The VRE investment is being evaluated as a standalone
+strategic business decision in light of clean energy portfolio management.
+The IPP has existing firm clean and new firm clean development opportunities
+in CAISO, ERCOT, and PJM, and is willing to pursue storage complementary
+to all assets wherever economically viable. The question is: does adding a
+VRE pipeline create value on its own?
+```
+
+### Files to Read
+- `data-center-cfe/research/vreresearch.md`
+- `data-center-cfe/output/vre-investment-thesis-deck.html`
+- `data-center-cfe/data-inputs/vre_investment_thesis.csv` (current ratings)
+- `data-center-cfe/data-inputs/capture_rates_by_iso.csv` (current assumptions)
+
+### Success Criteria
+- Clear CONFIRMS/REFINES/CONTRADICTS classification for each thesis pillar
+- Honest assessment of risks (especially BNEF procurement decline, vertical integration, BTM gas)
+- Actionable recommendation: modify thesis or keep as-is, with specific language if modifying
+- Memo is concise (1-2 pages max)
+
+---
+
+## Prompt 4: New Analytical Opportunities
+
+> **Goal:** Identify new analyses that can be conducted using the main repo's modeling infrastructure + new research data to strengthen the VRE investment case. Propose scripts, data flows, and expected outputs.
+
+### Context
+
+The main repo (`hourly-cfe-optimizer/`) has a full 8-step optimization pipeline:
+- **Step 1**: Physics Feasible Space — 4D/5D grid search across clean_firm/solar/wind/hydro + storage dispatch (battery 4hr/8hr, LDES 100hr, Green H2 1000hr). 7 ISOs × 21 thresholds.
+- **Step 2**: Efficient frontier extraction + cost optimization across 5,832 scenarios (17,496 CAISO)
+- **Step 3**: Dispatch cache (8,760-hour) + MAC queue for consequential accounting
+- **Step 4**: CO2/LMP fossil dispatch, MAC stats, optimal targets, resource density
+- **Step 5**: 3 procurement strategies (consequential, hourly, annual) + Wright's Law learning curves
+- **Step 6**: SMARTargets regional policy modeling
+- **Step 7**: Dashboard data aggregation
+
+Key config: `pipeline_config.py` has all LCOE tables, fuel adjustments, wholesale prices, grid mix shares.
+
+The deck currently uses outputs from Steps 2-5 (gap analysis, coal wall, procurement strategies, capture rates). But there are untapped analytical opportunities.
+
+### Prompt
+
+```
+Read the following to understand available analytical infrastructure:
+1. pipeline_config.py (cost assumptions, resource parameters)
+2. data-center-cfe/research/vreresearch.md (new research context)
+3. data-center-cfe/output/vre-investment-thesis-deck.html (what's already shown)
+4. step2_2a_cost_optimization.py (understand cost model structure)
+5. step5_2c_strategy_hourly.py (hourly matching model)
+6. data-center-cfe/analysis/coal_wall_analysis.py (existing VRE-specific analysis)
+
+Then propose NEW analyses in a structured format. For each:
+
+### Analysis [N]: [Title]
+
+**Question it answers:** [One sentence]
+**Relevance to VRE standalone thesis:** [Why this matters for the deck]
+**Data inputs needed:** [Existing files + any new data from Prompt 2]
+**Script approach:** [Brief description of what the script does]
+**Expected output:** [File name, format, what it shows]
+**Which slide it enhances or creates:** [Slide number/title]
+**Estimated effort:** [Quick (< 1 hour) / Medium (1-3 hours) / Heavy (3+ hours)]
+
+Prioritize these analysis categories:
+
+A. **VRE-Only Portfolio Value Quantification**
+   - What's the standalone VRE portfolio worth across ISO regions WITHOUT storage or firm clean backstop?
+   - Use Step 2 cost optimization to isolate VRE-only mixes (solar + wind only, no clean firm, no storage)
+   - Compare against VRE + storage and full portfolio to quantify the "standalone premium" or "standalone discount"
+   - This directly answers: "Is VRE worth it on its own, or only as part of a bundle?"
+
+B. **Capture Rate Impact on VRE IRR**
+   - vreresearch.md cites solar capture declining to 70% (PJM) and <30% (CAISO) by 2030
+   - Model IRR sensitivity to capture rate erosion under different PPA structures (fixed-price, merchant, indexed)
+   - Use LCOE from pipeline_config + capture rates from data-inputs to compute levered IRR range
+
+C. **GHG Protocol Scenario Impact on VRE Value**
+   - Model the value uplift of localized, hourly-matched VRE RECs vs. unbundled distant RECs
+   - Use the 3-7x REC price multiplier from vreresearch.md
+   - Quantify the "GHG Protocol premium" for PJM-sited VRE vs. MISO/SPP-sited VRE
+   - This is a key differentiator for the deck's regional recommendations
+
+D. **Tier 2 Colocation Demand Sizing**
+   - vreresearch.md has consumption data for 6 colocation providers (37+ TWh combined)
+   - Model their clean energy gaps under hourly matching requirements
+   - Size the addressable market for an IPP selling VRE + firm clean 24/7 CFE products
+   - This quantifies the CUSTOMER BASE, not just the technology thesis
+
+E. **Hyperscaler Vertical Integration Risk**
+   - Google acquired Intersect Power ($4.75B, 10.8 GW) — direct VRE ownership
+   - Model what happens to third-party PPA demand if Big 4 increasingly self-develop
+   - Scenario: 25%/50%/75% of hyperscaler VRE demand goes self-supply by 2030
+   - Remaining market still profitable? This addresses the #1 bear case
+
+F. **Storage Pairing Value Quantification**
+   - Use Step 3 dispatch cache to compute the incremental value of adding 4hr/8hr battery to standalone VRE
+   - By ISO and threshold: what's the $/MWh uplift from storage co-location?
+   - Distinguish "storage as arbitrage" vs "storage as CFE enabler"
+   - Relevant because the deck frames storage as "complementary" — quantify HOW complementary
+
+Write each analysis proposal to data-center-cfe/research/new-analysis-proposals.md.
+After user approval, create scripts in data-center-cfe/analysis/ for the approved analyses.
+```
+
+### Files to Read
+- `pipeline_config.py` (lines 1-300 for cost tables)
+- `step2_2a_cost_optimization.py` (model structure)
+- `step5_2c_strategy_hourly.py` (hourly matching)
+- `data-center-cfe/analysis/coal_wall_analysis.py` (existing pattern)
+- `data-center-cfe/research/vreresearch.md`
+
+### Success Criteria
+- At least 4 concrete analysis proposals with clear data flows
+- Each proposal answers a specific question relevant to VRE standalone thesis
+- Effort estimates are realistic (flag anything requiring Step 1 re-runs as Heavy)
+- Scripts proposed are incremental (use existing Step 2-5 outputs, don't re-run Step 1)
+- Expected outputs described in enough detail to design slide visualizations
+
+---
