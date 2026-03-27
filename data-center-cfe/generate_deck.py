@@ -464,23 +464,23 @@ def build_extended_gap_table(year):
 EXTENDED_SLIDE_NARRATIVES = {
     2035: {
         "title": "The Clean Energy Gap: 2035 Outlook",
-        "intro": "By 2035, Big 4 demand reaches 789 TWh as AI workloads compound. Even in the high procurement scenario, a significant gap persists. SMR deployment timelines are the swing factor.",
-        "callout_main": "In the medium scenario, the gap grows to <strong>409 TWh</strong> — requiring 133 GW of additional VRE or 52 GW of nuclear. First-generation SMRs must be online and scaling by 2033 to bend the curve.",
-        "callout_secondary": "The low scenario assumes current procurement pace and SMR delays — producing a <strong>509 TWh gap</strong> (64% unmet). The high scenario requires unprecedented 50 GW/yr additions with SMR FOAK deployed.",
+        "intro": "By 2035, Big 4 demand reaches 650 TWh as AI workloads compound. Even in the high procurement scenario, a significant gap persists. SMR deployment timelines are the swing factor.",
+        "callout_main": "In the medium scenario, the gap reaches <strong>270 TWh</strong> — requiring 88 GW of additional VRE or 34 GW of nuclear. First-generation SMRs must be online and scaling by 2033 to bend the curve.",
+        "callout_secondary": "The low scenario assumes current procurement pace and SMR delays — producing a <strong>370 TWh gap</strong> (57% unmet). The high scenario requires unprecedented 50 GW/yr additions with SMR FOAK deployed.",
         "sources": "Demand: BNEF 1H 2026 (106 GW US total by 2035). IEA Energy & AI Base Case (1,200 TWh global). Procurement scenarios: Constellation analysis of BNEF PPA pipeline, SMR deployment timelines (NuScale/X-energy/Kairos), and IRA policy trajectory.",
     },
     2040: {
         "title": "The Clean Energy Gap: 2040 Outlook",
-        "intro": "By 2040, Big 4 demand reaches 1,042 TWh — nearly 2× the 2030 level. The procurement challenge shifts from deal volume to supply chain and grid interconnection constraints.",
-        "callout_main": "Medium scenario gap: <strong>482 TWh</strong> (157 GW VRE equivalent). This assumes SMR NOAK costs achieved, storage costs collapse 60%, and ~40 GW/yr sustained procurement. Even so, nearly half of demand remains unmet.",
-        "callout_secondary": "The high scenario narrows the gap to <strong>262 TWh</strong> — but requires a nuclear renaissance (60 GW/yr additions), enhanced geothermal at scale, and uninterrupted IRA-level policy support for 15+ years.",
+        "intro": "By 2040, Big 4 demand reaches 858 TWh — nearly 1.75× the 2030 level. The procurement challenge shifts from deal volume to supply chain and grid interconnection constraints.",
+        "callout_main": "Medium scenario gap: <strong>298 TWh</strong> (97 GW VRE equivalent). This assumes SMR NOAK costs achieved, storage costs collapse 60%, and ~40 GW/yr sustained procurement. Even so, roughly a third of demand remains unmet.",
+        "callout_secondary": "The high scenario narrows the gap to just <strong>78 TWh</strong> — but requires a nuclear renaissance (60 GW/yr additions), enhanced geothermal at scale, and uninterrupted IRA-level policy support for 15+ years.",
         "sources": "Demand: McKinsey Global Energy Perspective 2025 extrapolation; CAGR deceleration model. Supply: NREL ATB 2024 cost curves; DOE Liftoff reports (nuclear, geothermal, LDES). Grid: FERC interconnection queue data (2025).",
     },
     2050: {
         "title": "The Clean Energy Gap: 2050 Outlook",
-        "intro": "By 2050, Big 4 demand reaches 1,638 TWh. The Big 4 share of total DC market declines to ~45% as second-wave buyers scale, but absolute demand nearly triples from 2030.",
-        "callout_main": "Medium scenario gap: <strong>738 TWh</strong> (241 GW VRE). The 2050 gap is larger than the <em>entire</em> 2030 demand. Closing it requires technologies not yet commercially deployed: fusion, advanced geothermal, or AI-driven efficiency breakthroughs.",
-        "callout_secondary": "Even the high scenario leaves a <strong>288 TWh gap</strong> — roughly equal to France's annual electricity consumption. The total clean energy buildout needed across all scenarios dwarfs any historical precedent.",
+        "intro": "By 2050, Big 4 demand reaches 1,349 TWh. The Big 4 share of total DC market declines to ~45% as second-wave buyers scale, but absolute demand nearly triples from 2030.",
+        "callout_main": "Medium scenario gap: <strong>449 TWh</strong> (146 GW VRE). The 2050 gap approaches the <em>entire</em> 2030 demand. Closing it requires technologies not yet commercially deployed: fusion, advanced geothermal, or AI-driven efficiency breakthroughs.",
+        "callout_secondary": "The high scenario nearly closes the gap — but requires ~80 GW/yr additions sustained for a decade, a fusion pilot, and AI efficiency gains. The total clean energy buildout needed across all scenarios dwarfs any historical precedent.",
         "sources": "Demand: EIA AEO 2025 (computing → 20% of commercial electricity by 2050); BNEF New Energy Outlook (3,700 TWh global DC demand). Supply: DOE Pathways to Commercial Liftoff; IPCC AR6 technology deployment curves.",
     },
 }
