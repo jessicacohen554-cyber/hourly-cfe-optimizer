@@ -495,6 +495,20 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     border-color: rgba(239, 68, 68, 0.4);
     color: #DC2626;
 }
+.act2-hms-badge {
+    opacity: 0;
+    pointer-events: none;
+    background: rgba(239, 68, 68, 0.12);
+    color: #DC2626;
+    border: 2px solid rgba(239, 68, 68, 0.4);
+    transition: opacity 0.6s ease 0.3s, transform 0.6s ease 0.3s;
+    transform: scale(0.95);
+}
+.act2-hms-badge.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: scale(1);
+}
 
 /* Legend strip under chart */
 .act2-legend {
@@ -1468,6 +1482,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         </div>
         <div class="act2-chart-container">
             <span class="act2-badge-overlay" id="act2Badge">100% Annually Matched</span>
+            <span class="act2-badge-overlay act2-hms-badge" id="act2HmsBadge"></span>
             <canvas id="act2Chart"></canvas>
         </div>
         <div class="act2-legend" id="act2Legend"></div>
@@ -2717,13 +2732,24 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             var illusionSolar = demandDisp.map(function() { return flatSolarTop; });
             var illusionDemand = demandDisp.map(function() { return avgDemand; });
 
-            // Compute hourly match score (HMS)
+            // Compute hours where clean gen >= demand
             var cleanHours = 0;
             for (var h = 0; h < 24; h++) {
                 var totalGen = (solarShape[h] * 0.5 + windShape[h] * 0.5);
                 if (totalGen >= demandShape[h] - 0.0001) cleanHours++;
             }
             var cleanHourPct = Math.round(cleanHours / 24 * 100);
+
+            // Compute actual HMS = (delivered clean MWh) / (total demand MWh)
+            // delivered = sum(min(total_clean_gen, demand)) per hour
+            var deliveredSum = 0;
+            var demandTotal = 0;
+            for (var h = 0; h < 24; h++) {
+                var cleanGen = realSolar[h]; // realSolar is stacked wind+solar
+                deliveredSum += Math.min(cleanGen, demandDisp[h]);
+                demandTotal += demandDisp[h];
+            }
+            var hmsPct = Math.round(deliveredSum / demandTotal * 100);
 
             var COL = typeof RESOURCE_COLORS !== 'undefined' ? RESOURCE_COLORS : {};
             var solarHex = COL.solar || '#F59E0B';
@@ -2770,20 +2796,9 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                 legendEl.appendChild(el);
             });
 
-            // HMS annotation for reality mode
-            var hmsAnnotation = {
-                hmsLabel: {
-                    type: 'label',
-                    xScaleID: 'x', yScaleID: 'y',
-                    xValue: 12, yValue: Math.max.apply(null, demandDisp) * 0.15,
-                    content: cleanHourPct + '% Hourly Matched',
-                    font: { size: 13, weight: '700', family: fontStack },
-                    color: '#DC2626',
-                    backgroundColor: 'rgba(254,226,226,0.92)',
-                    padding: { top: 5, bottom: 5, left: 10, right: 10 },
-                    borderRadius: 6
-                }
-            };
+            // Set HMS badge text
+            var hmsBadge = document.getElementById('act2HmsBadge');
+            hmsBadge.textContent = hmsPct + '% Hourly Matching Score';
 
             // Chart — y-axis has extra headroom for the 100% badge
             var yMax = avgDemand * 1.35; // extra space above flat line
@@ -2931,10 +2946,10 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                 chart.data.datasets[0].data = realWind;
                 chart.data.datasets[1].data = realSolar;
                 chart.data.datasets[2].data = demandDisp;
-                chart.options.plugins.annotation.annotations = hmsAnnotation;
                 chart.update('active');
 
                 badge.classList.add('cracked');
+                hmsBadge.classList.add('visible');
                 setTimeout(function() {
                     animateCounter(hourlyEl, 100, cleanHourPct, '%', 1400, '#DC2626');
                 }, 400);
@@ -2951,10 +2966,10 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
                 chart.data.datasets[0].data = illusionWind.slice();
                 chart.data.datasets[1].data = illusionSolar.slice();
                 chart.data.datasets[2].data = illusionDemand.slice();
-                chart.options.plugins.annotation.annotations = {};
                 chart.update('active');
 
                 badge.classList.remove('cracked');
+                hmsBadge.classList.remove('visible');
                 annualEl.textContent = '100%';
                 annualEl.style.color = '#16A34A';
                 hourlyEl.textContent = '100%';
