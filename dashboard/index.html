@@ -1152,7 +1152,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     }
 }
 
-/* === Act 5: The Integrated Portfolio === */
+/* === Act 5: The True Endpoint === */
 .act5-intro,
 .act5-postscript {
     max-width: 780px;
@@ -1187,202 +1187,10 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 .act5-explore-link:hover { gap: 10px; }
 
-.act5-compare-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-lg, 24px);
-    margin-top: var(--space-md, 16px);
-}
-.act5-compare-panel {
-    background: rgba(255,255,255,0.92);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(221,208,192,0.5);
-    border-radius: var(--radius-xl, 16px);
-    padding: 20px 16px 16px;
-    opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.6s ease, transform 0.6s ease;
-}
-.act5-compare-panel.panel-visible {
-    opacity: 1;
-    transform: translateY(0);
-}
-.act5-compare-panel.panel-right {
-    transition-delay: 0.35s;
-}
-.act5-panel-title {
-    font-family: var(--font-heading);
-    font-size: 0.85rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.act5-panel-title .title-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
+.act5-chart-wrap {
+    position: relative;
 }
 .act5-chart-container {
-    position: relative;
-    min-height: 260px;
-}
-.act5-panel-stats {
-    display: flex;
-    gap: var(--space-sm, 8px);
-    margin-top: 12px;
-}
-.act5-panel-stat {
-    flex: 1;
-    text-align: center;
-    padding: 10px 6px;
-    background: var(--bg-page, #F8FAFC);
-    border-radius: var(--radius-md, 8px);
-}
-.act5-panel-stat-value {
-    font-family: var(--font-data);
-    font-size: 1.3rem;
-    font-weight: 800;
-    line-height: 1.1;
-}
-.act5-panel-stat-label {
-    font-family: var(--font-heading);
-    font-size: 0.65rem;
-    font-weight: 600;
-    letter-spacing: 0.3px;
-    text-transform: uppercase;
-    color: var(--text-muted, #94A3B8);
-    margin-top: 2px;
-}
-
-.act5-delta-row {
-    display: flex;
-    gap: var(--space-md);
-    margin-top: var(--space-lg);
-    flex-wrap: wrap;
-    justify-content: center;
-}
-.act5-delta-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 20px;
-    border-radius: var(--radius-pill, 999px);
-    font-family: var(--font-data);
-    font-size: 0.9rem;
-    font-weight: 700;
-    background: rgba(22,163,106,0.08);
-    color: #16A34A;
-    border: 1px solid rgba(22,163,106,0.2);
-}
-.act5-delta-badge.delta-danger {
-    background: rgba(239,68,68,0.08);
-    color: #DC2626;
-    border-color: rgba(239,68,68,0.2);
-}
-
-.act5-legend {
-    display: flex;
-    gap: var(--space-md);
-    flex-wrap: wrap;
-    margin-top: var(--space-md, 16px);
-    padding: 0 4px;
-    justify-content: center;
-}
-.act5-legend-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-family: var(--font-data);
-    font-size: 0.72rem;
-    color: var(--text-muted, #94A3B8);
-}
-.act5-legend-swatch {
-    width: 16px;
-    height: 3px;
-    border-radius: 2px;
-    flex-shrink: 0;
-}
-
-.act5-noregrets-list {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-top: var(--space-sm, 8px);
-}
-.act5-noregrets-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 5px 12px;
-    border-radius: var(--radius-pill, 999px);
-    font-family: var(--font-data);
-    font-size: 0.78rem;
-    font-weight: 600;
-    border: 2px solid;
-    animation: act5Pulse 2s ease-in-out infinite;
-}
-@keyframes act5Pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.3); }
-    50% { box-shadow: 0 0 0 6px rgba(99,102,241,0); }
-}
-
-@media (max-width: 900px) {
-    .act5-compare-grid {
-        grid-template-columns: 1fr;
-    }
-    .act5-chart-container {
-        min-height: 220px;
-    }
-    .act5-compare-panel.panel-right {
-        transition-delay: 0.15s;
-    }
-}
-
-/* === Act 6: The True Endpoint === */
-.act6-intro,
-.act6-postscript {
-    max-width: 780px;
-}
-.act6-intro p,
-.act6-postscript p {
-    font-size: 1.05rem;
-    line-height: 1.7;
-    color: var(--text-secondary, #475569);
-    margin-bottom: var(--space-md);
-}
-.act6-intro .lead-text {
-    font-size: 1.15rem;
-    font-weight: 500;
-    color: var(--text-primary, #1A2744);
-    line-height: 1.6;
-}
-.act6-postscript {
-    margin-top: var(--space-xl);
-}
-.act6-explore-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-family: var(--font-heading);
-    font-weight: 600;
-    font-size: 0.95rem;
-    color: var(--hydro, #0EA5E9);
-    text-decoration: none;
-    margin-top: var(--space-md);
-    transition: gap 0.2s;
-}
-.act6-explore-link:hover { gap: 10px; }
-
-.act6-chart-wrap {
-    position: relative;
-}
-.act6-chart-container {
     position: relative;
     min-height: 380px;
     background: rgba(255,255,255,0.92);
@@ -1394,14 +1202,14 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 
 /* Match counter overlay */
-.act6-match-counter {
+.act5-match-counter {
     position: absolute;
     top: 16px;
     right: 16px;
     z-index: 8;
     text-align: right;
 }
-.act6-match-pct {
+.act5-match-pct {
     font-family: var(--font-data);
     font-size: 2.2rem;
     font-weight: 800;
@@ -1409,10 +1217,10 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     color: var(--text-muted, #94A3B8);
     transition: color 0.6s;
 }
-.act6-match-pct.matched-high {
+.act5-match-pct.matched-high {
     color: #16A34A;
 }
-.act6-match-sublabel {
+.act5-match-sublabel {
     font-family: var(--font-heading);
     font-size: 0.7rem;
     font-weight: 600;
@@ -1423,36 +1231,37 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 
 /* Step indicator pills */
-.act6-step-indicator {
+.act5-step-indicator {
     display: flex;
     gap: 6px;
     margin-top: var(--space-md);
     justify-content: center;
 }
-.act6-step-dot {
+.act5-step-dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
     background: rgba(26,39,68,0.12);
     transition: background 0.4s, transform 0.4s;
+    cursor: pointer;
 }
-.act6-step-dot.step-active {
+.act5-step-dot.step-active {
     background: var(--clean-firm, #6366F1);
     transform: scale(1.3);
 }
-.act6-step-dot.step-done {
+.act5-step-dot.step-done {
     background: #16A34A;
 }
 
 /* Legend */
-.act6-legend {
+.act5-legend {
     display: flex;
     gap: var(--space-md);
     flex-wrap: wrap;
     margin-top: var(--space-sm, 8px);
     padding: 0 4px;
 }
-.act6-legend-item {
+.act5-legend-item {
     display: flex;
     align-items: center;
     gap: 6px;
@@ -1462,10 +1271,10 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     opacity: 0.4;
     transition: opacity 0.5s;
 }
-.act6-legend-item.legend-active {
+.act5-legend-item.legend-active {
     opacity: 1;
 }
-.act6-legend-swatch {
+.act5-legend-swatch {
     width: 16px;
     height: 3px;
     border-radius: 2px;
@@ -1473,7 +1282,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 
 /* Stats row */
-.act6-stats {
+.act5-stats {
     display: flex;
     gap: var(--space-md);
     margin-top: var(--space-lg);
@@ -1482,11 +1291,11 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     transform: translateY(16px);
     transition: opacity 0.6s ease, transform 0.6s ease;
 }
-.act6-stats.stats-visible {
+.act5-stats.stats-visible {
     opacity: 1;
     transform: translateY(0);
 }
-.act6-stat {
+.act5-stat {
     flex: 1;
     min-width: 140px;
     background: #FFFFFF;
@@ -1497,21 +1306,21 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     box-shadow: 0 4px 6px -4px rgba(0,0,0,0.04);
     transition: transform 0.3s, box-shadow 0.3s, border-color 0.6s;
 }
-.act6-stat:hover {
+.act5-stat:hover {
     transform: translateY(-2px);
     box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08);
 }
-.act6-stat.stat-success {
+.act5-stat.stat-success {
     border-color: #16A34A;
 }
-.act6-stat-value {
+.act5-stat-value {
     font-family: var(--font-data);
     font-size: 2rem;
     font-weight: 800;
     line-height: 1.1;
     margin-bottom: 4px;
 }
-.act6-stat-label {
+.act5-stat-label {
     font-family: var(--font-heading);
     font-size: 0.78rem;
     font-weight: 600;
@@ -1521,7 +1330,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 
 /* Success badge */
-.act6-badge {
+.act5-badge {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -1540,20 +1349,20 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     transform: scale(0.9);
     transition: opacity 0.6s, transform 0.6s cubic-bezier(0.34,1.56,0.64,1);
 }
-.act6-badge.badge-visible {
+.act5-badge.badge-visible {
     opacity: 1;
     transform: scale(1);
 }
-@keyframes act6Glow {
+@keyframes act5Glow {
     0%, 100% { box-shadow: 0 0 0 0 rgba(22,163,106,0.3); }
     50% { box-shadow: 0 0 0 8px rgba(22,163,106,0); }
 }
-.act6-badge.badge-visible {
-    animation: act6Glow 2s ease-in-out infinite;
+.act5-badge.badge-visible {
+    animation: act5Glow 2s ease-in-out infinite;
 }
 
 /* Step narration text */
-.act6-step-narration {
+.act5-step-narration {
     font-family: var(--font-heading);
     font-size: 0.85rem;
     font-weight: 600;
@@ -1565,13 +1374,13 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 
 @media (max-width: 900px) {
-    .act6-chart-container {
+    .act5-chart-container {
         min-height: 300px;
     }
-    .act6-match-pct {
+    .act5-match-pct {
         font-size: 1.6rem;
     }
-    .act6-stat-value {
+    .act5-stat-value {
         font-size: 1.5rem;
     }
 }
@@ -1996,202 +1805,91 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
 <div class="story-divider-wrap"><hr class="story-divider"></div>
 
 <!-- ================================================================== -->
-<!-- ACT 5: The Integrated Portfolio                                     -->
+<!-- ACT 5: The True Endpoint                                            -->
 <!-- ================================================================== -->
 <section class="story-section" id="act5">
     <span class="story-badge story-badge-green">Act 5</span>
-    <h2>The Integrated Portfolio</h2>
-
-    <!-- Intro text -->
-    <div class="act5-intro">
-        <p class="lead-text">
-            The best path isn&rsquo;t more of the same. It&rsquo;s incentive
-            structures grounded in spatial and temporal realities&mdash;and a
-            willingness to pay a necessary clean premium for first-of-a-kind
-            firm clean technology today.
-        </p>
-        <p>
-            A portfolio built from solar and wind alone hits a wall: the hours
-            they can&rsquo;t cover become ruinously expensive to fill. Add firm
-            clean resources&mdash;nuclear, CCS, long-duration storage&mdash;and
-            the same target becomes dramatically cheaper, with near-zero residual
-            emissions. The optimizer proves the math.
-        </p>
-    </div>
-
-    <!-- Side-by-side comparison -->
-    <div class="act5-compare-grid">
-        <!-- Left: VRE-Only -->
-        <div class="act5-compare-panel" id="act5PanelLeft">
-            <div class="act5-panel-title">
-                <span class="title-dot" style="background: var(--fossil-gas, #6B7280);"></span>
-                <span style="color: var(--fossil-gas, #6B7280);">VRE-Only Path</span>
-            </div>
-            <div class="act5-chart-container">
-                <canvas id="act5ChartLeft"></canvas>
-            </div>
-            <div class="act5-panel-stats">
-                <div class="act5-panel-stat">
-                    <div class="act5-panel-stat-value" id="act5VreCost" style="color: var(--fossil-gas, #6B7280);">&mdash;</div>
-                    <div class="act5-panel-stat-label">$/MWh</div>
-                </div>
-                <div class="act5-panel-stat">
-                    <div class="act5-panel-stat-value" id="act5VreClean" style="color: var(--fossil-gas, #6B7280);">&mdash;</div>
-                    <div class="act5-panel-stat-label">Clean Hours</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Right: Integrated -->
-        <div class="act5-compare-panel panel-right" id="act5PanelRight">
-            <div class="act5-panel-title">
-                <span class="title-dot" style="background: var(--clean-firm, #6366F1);"></span>
-                <span style="color: var(--clean-firm, #6366F1);">Integrated Path</span>
-            </div>
-            <div class="act5-chart-container">
-                <canvas id="act5ChartRight"></canvas>
-            </div>
-            <div class="act5-panel-stats">
-                <div class="act5-panel-stat">
-                    <div class="act5-panel-stat-value" id="act5IntCost" style="color: var(--clean-firm, #6366F1);">&mdash;</div>
-                    <div class="act5-panel-stat-label">$/MWh</div>
-                </div>
-                <div class="act5-panel-stat">
-                    <div class="act5-panel-stat-value" id="act5IntClean" style="color: var(--clean-firm, #6366F1);">&mdash;</div>
-                    <div class="act5-panel-stat-label">Clean Hours</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Delta badges -->
-    <div class="act5-delta-row" id="act5Deltas"></div>
-
-    <!-- Shared legend -->
-    <div class="act5-legend" id="act5Legend"></div>
-
-    <!-- No-regrets callout -->
-    <div style="margin-top: var(--space-lg); max-width: 780px;">
-        <p style="font-family: var(--font-heading); font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted, #94A3B8); margin-bottom: 8px;">
-            No-Regrets Resources &mdash; optimal across all 5,832 cost scenarios
-        </p>
-        <div class="act5-noregrets-list" id="act5NoRegrets"></div>
-    </div>
-
-    <!-- Post-visual narrative -->
-    <div class="act5-postscript">
-        <p>
-            The integrated portfolio isn&rsquo;t just cheaper&mdash;it&rsquo;s
-            more resilient. Resources that appear across every cost scenario
-            are &ldquo;no-regrets&rdquo; investments: they&rsquo;re worth building
-            regardless of how technology costs evolve. The optimizer identifies
-            them automatically by testing every combination against every price future.
-        </p>
-        <a href="dashboard.html" class="act5-explore-link">
-            Build your own portfolio <span aria-hidden="true">&rarr;</span>
-        </a>
-    </div>
-</section>
-
-<div class="story-divider-wrap"><hr class="story-divider"></div>
-
-<!-- ================================================================== -->
-<!-- ACT 6: The True Endpoint                                            -->
-<!-- ================================================================== -->
-<section class="story-section" id="act6">
-    <span class="story-badge story-badge-green">Act 6</span>
     <h2>The True Endpoint</h2>
 
-    <!-- Intro text -->
-    <div class="act6-intro">
+    <!-- Intro text (moved from postscript — "this isn't theoretical") -->
+    <div class="act5-intro">
         <p class="lead-text">
-            A high-fidelity grid where corporate procurement signals have solved
-            the temporal and spatial dependency. Every hour, every megawatt,
-            physically accounted for.
+            This isn&rsquo;t a theoretical exercise&mdash;it&rsquo;s the optimizer&rsquo;s
+            actual output for ERCOT at a 99% hourly CFE target.
         </p>
         <p>
-            This is what hourly matching actually looks like when you get it right:
-            a 24-hour dispatch stack where clean resources fill demand hour by hour,
-            not on paper across a year. Watch each resource layer in&mdash;firm
-            capacity sets the baseload floor, wind fills broadly (strongest when
-            the sun can&rsquo;t reach), solar captures the midday peak, and battery
-            storage time-shifts the surplus into the night. The result is a system
-            where supply meets demand in every single hour.
+            Every hour of a representative day is physically matched by four
+            complementary clean resources, each playing a specific temporal role.
+            Firm capacity provides the always-on baseload. Wind fills
+            broadly&mdash;strongest at night when solar drops off. Solar captures
+            midday abundance. And battery storage time-shifts daytime surplus into
+            the evening peak and overnight hours.
         </p>
     </div>
 
     <!-- Chart -->
-    <div class="act6-chart-wrap">
-        <div class="act6-chart-container">
-            <div class="act6-match-counter">
-                <div class="act6-match-pct" id="act6MatchPct">0%</div>
-                <div class="act6-match-sublabel">Hourly Matched</div>
+    <div class="act5-chart-wrap">
+        <div class="act5-chart-container">
+            <div class="act5-match-counter">
+                <div class="act5-match-pct" id="act5MatchPct">0%</div>
+                <div class="act5-match-sublabel">Hourly Matched</div>
             </div>
-            <canvas id="act6Chart"></canvas>
+            <canvas id="act5Chart"></canvas>
         </div>
 
         <!-- Step narration -->
-        <div class="act6-step-narration" id="act6StepText">Scroll to build the clean grid&hellip;</div>
+        <div class="act5-step-narration" id="act5StepText">Watch each resource layer build the clean grid&hellip;</div>
 
-        <!-- Step dots -->
-        <div class="act6-step-indicator" id="act6StepDots">
-            <div class="act6-step-dot"></div>
-            <div class="act6-step-dot"></div>
-            <div class="act6-step-dot"></div>
-            <div class="act6-step-dot"></div>
-            <div class="act6-step-dot"></div>
-            <div class="act6-step-dot"></div>
+        <!-- Step dots (clickable to replay individual steps) -->
+        <div class="act5-step-indicator" id="act5StepDots">
+            <div class="act5-step-dot" data-step="0"></div>
+            <div class="act5-step-dot" data-step="1"></div>
+            <div class="act5-step-dot" data-step="2"></div>
+            <div class="act5-step-dot" data-step="3"></div>
+            <div class="act5-step-dot" data-step="4"></div>
+            <div class="act5-step-dot" data-step="5"></div>
         </div>
 
         <!-- Legend -->
-        <div class="act6-legend" id="act6Legend"></div>
+        <div class="act5-legend" id="act5Legend"></div>
     </div>
 
     <!-- Success badge (hidden until final step) -->
     <div style="text-align: center;">
-        <div class="act6-badge" id="act6Badge">
+        <div class="act5-badge" id="act5Badge">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            <span id="act6BadgeText">99% Hourly Matched &mdash; System Integral Solved</span>
+            <span id="act5BadgeText">99% Hourly Matched &mdash; System Integral Solved</span>
         </div>
     </div>
 
     <!-- Stats -->
-    <div class="act6-stats" id="act6Stats">
-        <div class="act6-stat" id="act6StatMatch">
-            <div class="act6-stat-value" style="color: #16A34A;">&mdash;</div>
-            <div class="act6-stat-label">Hourly Match</div>
+    <div class="act5-stats" id="act5Stats">
+        <div class="act5-stat" id="act5StatMatch">
+            <div class="act5-stat-value" style="color: #16A34A;">&mdash;</div>
+            <div class="act5-stat-label">Hourly Match</div>
         </div>
-        <div class="act6-stat" id="act6StatResources">
-            <div class="act6-stat-value" style="color: var(--clean-firm, #6366F1);">&mdash;</div>
-            <div class="act6-stat-label">Resource Types</div>
+        <div class="act5-stat" id="act5StatResources">
+            <div class="act5-stat-value" style="color: var(--clean-firm, #6366F1);">&mdash;</div>
+            <div class="act5-stat-label">Resource Types</div>
         </div>
-        <div class="act6-stat" id="act6StatGap">
-            <div class="act6-stat-value" style="color: var(--hydro, #0EA5E9);">&mdash;</div>
-            <div class="act6-stat-label">Peak Gap</div>
+        <div class="act5-stat" id="act5StatGap">
+            <div class="act5-stat-value" style="color: var(--hydro, #0EA5E9);">&mdash;</div>
+            <div class="act5-stat-label">Peak Gap</div>
         </div>
     </div>
 
     <!-- Post-visual narrative -->
-    <div class="act6-postscript">
-        <p>
-            This isn&rsquo;t a theoretical exercise&mdash;it&rsquo;s the optimizer&rsquo;s
-            actual output for ERCOT at a 99% hourly CFE target. Every hour of a
-            representative day is physically matched by four complementary clean
-            resources, each playing a specific temporal role. Firm capacity provides
-            the always-on baseload. Wind fills broadly&mdash;strongest at night when
-            solar drops off. Solar captures midday abundance. And battery storage
-            time-shifts daytime surplus into the evening peak and overnight hours.
-        </p>
+    <div class="act5-postscript">
         <p>
             The system integral is solved: supply meets demand, hour by hour, with
             near-zero residual fossil generation. This is the endpoint that hourly
             procurement frameworks are designed to reach.
         </p>
         <div style="display: flex; gap: var(--space-lg); flex-wrap: wrap; margin-top: var(--space-lg);">
-            <a href="research_paper.html" class="act6-explore-link">
+            <a href="research_paper.html" class="act5-explore-link">
                 Read the full research paper <span aria-hidden="true">&rarr;</span>
             </a>
-            <a href="dashboard.html" class="act6-explore-link">
+            <a href="dashboard.html" class="act5-explore-link">
                 Explore all 7 regions <span aria-hidden="true">&rarr;</span>
             </a>
         </div>
@@ -4078,298 +3776,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
 </script>
 
 <!-- ================================================================== -->
-<!-- ACT 5 SCRIPT: The Integrated Portfolio — dual donut comparison       -->
-<!-- ================================================================== -->
-<script>
-(function() {
-    'use strict';
-
-    // --- Config ---
-    var ISO = 'PJM';
-    var TARGET_THRESHOLD = 92.5; // Use 92.5% — has full data, dramatic contrast
-
-    // --- Locate data ---
-    if (typeof RESOURCE_MIX_DATA === 'undefined' || typeof SYSTEM_COST_DATA === 'undefined' ||
-        typeof THRESHOLDS === 'undefined') {
-        console.error('Act 5: Required data files not loaded');
-        return;
-    }
-
-    // Find threshold index (search populated indices)
-    var thIdx = -1;
-    for (var i = 0; i < THRESHOLDS.length; i++) {
-        if (THRESHOLDS[i] === TARGET_THRESHOLD) { thIdx = i; break; }
-    }
-    if (thIdx < 0) { console.error('Act 5: Threshold not found'); return; }
-
-    // If chosen index has zero data, scan nearby populated indices
-    var mix = RESOURCE_MIX_DATA[ISO];
-    if (!mix) { console.error('Act 5: No mix data for ' + ISO); return; }
-
-    function sumAt(idx) {
-        return (mix.clean_firm[idx] || 0) + (mix.solar[idx] || 0) +
-               (mix.wind[idx] || 0) + (mix.offshore_wind[idx] || 0) +
-               (mix.ccs_ccgt[idx] || 0) + (mix.hydro[idx] || 0) +
-               (mix.battery[idx] || 0) + (mix.ldes[idx] || 0);
-    }
-    if (sumAt(thIdx) === 0) {
-        // Scan ±2 for a populated index
-        for (var d = 1; d <= 3; d++) {
-            if (thIdx - d >= 0 && sumAt(thIdx - d) > 0) { thIdx = thIdx - d; break; }
-            if (thIdx + d < THRESHOLDS.length && sumAt(thIdx + d) > 0) { thIdx = thIdx + d; break; }
-        }
-    }
-    var displayThreshold = THRESHOLDS[thIdx];
-
-    // --- Extract integrated portfolio ---
-    var intSolar = mix.solar[thIdx] || 0;
-    var intWind = (mix.wind[thIdx] || 0) + (mix.offshore_wind[thIdx] || 0);
-    var intFirm = (mix.clean_firm[thIdx] || 0) + (mix.ccs_ccgt[thIdx] || 0);
-    var intHydro = mix.hydro[thIdx] || 0;
-    var intBattery = (mix.battery[thIdx] || 0) + (mix.battery8[thIdx] || 0);
-    var intLdes = (mix.ldes[thIdx] || 0) + (mix.h2[thIdx] || 0);
-    var intTotal = intSolar + intWind + intFirm + intHydro + intBattery + intLdes;
-    var intGap = Math.max(0, 100 - intTotal);
-    var intClean = Math.min(100, intTotal);
-
-    // --- Construct VRE-only scenario ---
-    // Only solar + wind + battery; everything else becomes gap
-    var vreSolar = intSolar;
-    var vreWind = intWind;
-    var vreBattery = intBattery;
-    var vreTotal = vreSolar + vreWind + vreBattery;
-    var vreGap = Math.max(0, 100 - vreTotal);
-    var vreClean = Math.min(100, vreTotal);
-
-    // --- Costs ---
-    var intCost = SYSTEM_COST_DATA.medium[ISO][thIdx];
-    // VRE-only: estimate by scaling — firm+LDES gap must be filled by fossil backup at higher cost
-    // Use a simple model: VRE-only keeps VRE LCOE but adds gas penalty for unmatched hours
-    var vrePremium = 1.0 + (vreGap / 100) * 0.6; // ~60% cost penalty per % gap
-    var vreCost = Math.round(intCost * vrePremium * 10) / 10;
-
-    // --- Colors ---
-    var RC = typeof RESOURCE_COLORS !== 'undefined' ? RESOURCE_COLORS : {};
-    var solarC = RC.solar || '#F59E0B';
-    var windC = RC.wind || '#22C55E';
-    var firmC = RC.cleanFirm || '#6366F1';
-    var hydroC = RC.hydro || '#0EA5E9';
-    var battC = RC.battery || '#06B6D4';
-    var ldesC = RC.ldes || '#E91E63';
-    var gapC = RC.gap || '#D1D5DB';
-
-    var alpha = typeof withAlpha !== 'undefined' ? withAlpha : function(hex, a) {
-        var r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
-        return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
-    };
-
-    // --- Build donut charts ---
-    function makeDonut(canvasId, segments, delayMs) {
-        var ctx = document.getElementById(canvasId);
-        if (!ctx) return null;
-
-        var labels = [], data = [], bgColors = [], borderColors = [];
-        segments.forEach(function(s) {
-            if (s.value > 0.1) { // Skip negligible
-                labels.push(s.label);
-                data.push(Math.round(s.value * 10) / 10);
-                bgColors.push(alpha(s.color, 0.7));
-                borderColors.push(s.color);
-            }
-        });
-
-        return new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: data,
-                    backgroundColor: bgColors,
-                    borderColor: borderColors,
-                    borderWidth: 2,
-                    hoverBorderWidth: 3
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '55%',
-                animation: {
-                    animateRotate: true,
-                    duration: 1000,
-                    delay: delayMs || 0
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        backgroundColor: 'rgba(26,39,68,0.92)',
-                        titleFont: { family: 'DM Sans', size: 12, weight: 600 },
-                        bodyFont: { family: 'DM Sans', size: 11 },
-                        cornerRadius: 8,
-                        padding: 12,
-                        callbacks: {
-                            label: function(ctx) {
-                                return ctx.label + ': ' + ctx.parsed + '% of demand';
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    var vreSegments = [
-        { label: 'Solar', value: vreSolar, color: solarC },
-        { label: 'Wind', value: vreWind, color: windC },
-        { label: 'Battery', value: vreBattery, color: battC },
-        { label: 'Fossil / Gap', value: vreGap, color: gapC }
-    ];
-    var intSegments = [
-        { label: 'Solar', value: intSolar, color: solarC },
-        { label: 'Wind', value: intWind, color: windC },
-        { label: 'Clean Firm', value: intFirm, color: firmC },
-        { label: 'Hydro', value: intHydro, color: hydroC },
-        { label: 'Battery', value: intBattery, color: battC },
-        { label: 'LDES', value: intLdes, color: ldesC },
-        { label: 'Fossil / Gap', value: intGap, color: gapC }
-    ];
-
-    // Charts created lazily on scroll
-    var act5LeftChart = null, act5RightChart = null;
-    var act5Animated = false;
-
-    function animateAct5() {
-        if (act5Animated) return;
-        act5Animated = true;
-
-        // Show panels
-        var left = document.getElementById('act5PanelLeft');
-        var right = document.getElementById('act5PanelRight');
-        if (left) left.classList.add('panel-visible');
-        if (right) right.classList.add('panel-visible');
-
-        // Create charts with staggered animation
-        act5LeftChart = makeDonut('act5ChartLeft', vreSegments, 0);
-        setTimeout(function() {
-            act5RightChart = makeDonut('act5ChartRight', intSegments, 0);
-        }, 400);
-
-        // Animate stat counters
-        animateVal('act5VreCost', vreCost, '$', '/MWh');
-        animateVal('act5IntCost', intCost, '$', '/MWh');
-        animateVal('act5VreClean', vreClean, '', '%');
-        animateVal('act5IntClean', intClean, '', '%');
-
-        // Build delta badges
-        var deltaRow = document.getElementById('act5Deltas');
-        if (deltaRow) {
-            var costDelta = Math.round((1 - intCost / vreCost) * 100);
-            var cleanDelta = Math.round(intClean - vreClean);
-
-            if (costDelta > 0) {
-                deltaRow.innerHTML +=
-                    '<div class="act5-delta-badge">' +
-                    '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2L2 10h10L7 2z" fill="currentColor"/></svg>' +
-                    costDelta + '% cheaper with integrated portfolio</div>';
-            }
-            if (cleanDelta > 0) {
-                deltaRow.innerHTML +=
-                    '<div class="act5-delta-badge">' +
-                    '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2L2 10h10L7 2z" fill="currentColor"/></svg>' +
-                    '+' + cleanDelta + ' percentage points more clean hours</div>';
-            }
-        }
-    }
-
-    function animateVal(id, target, prefix, suffix) {
-        var el = document.getElementById(id);
-        if (!el) return;
-        var val = typeof target === 'number' ? target : parseFloat(target);
-        if (isNaN(val)) { el.textContent = target; return; }
-        var isDecimal = val !== Math.round(val);
-        var duration = 1000;
-        var start = null;
-        function tick(ts) {
-            if (!start) start = ts;
-            var p = Math.min((ts - start) / duration, 1);
-            var e = 1 - Math.pow(1 - p, 3);
-            var cur = e * val;
-            el.textContent = (prefix || '') + (isDecimal ? cur.toFixed(1) : Math.round(cur)) + (suffix || '');
-            if (p < 1) requestAnimationFrame(tick);
-        }
-        requestAnimationFrame(tick);
-    }
-
-    // --- Build legend ---
-    var legendEl = document.getElementById('act5Legend');
-    if (legendEl) {
-        var items = [
-            { color: solarC, label: 'Solar' },
-            { color: windC, label: 'Wind' },
-            { color: firmC, label: 'Clean Firm (Nuclear)' },
-            { color: hydroC, label: 'Hydro' },
-            { color: battC, label: 'Battery' },
-            { color: ldesC, label: 'LDES' },
-            { color: gapC, label: 'Fossil / Gap' }
-        ];
-        items.forEach(function(item) {
-            var el = document.createElement('div');
-            el.className = 'act5-legend-item';
-            var swatch = document.createElement('span');
-            swatch.className = 'act5-legend-swatch';
-            swatch.style.background = item.color;
-            el.appendChild(swatch);
-            el.appendChild(document.createTextNode(item.label));
-            legendEl.appendChild(el);
-        });
-    }
-
-    // --- No-regrets tags ---
-    var nrContainer = document.getElementById('act5NoRegrets');
-    if (nrContainer && typeof NO_REGRETS_DATA !== 'undefined' && NO_REGRETS_DATA[ISO]) {
-        var analysis = NO_REGRETS_DATA[ISO].analysis;
-        var labelMap = typeof MIX_LABELS_MAP !== 'undefined' ? MIX_LABELS_MAP : {
-            clean_firm: 'Nuclear', solar: 'Solar', wind: 'Onshore Wind',
-            offshore_wind: 'Offshore Wind', hydro: 'Hydro', ccs_ccgt: 'CCS-CCGT',
-            battery: 'Battery', ldes: 'LDES'
-        };
-        var colorMap = {
-            clean_firm: firmC, solar: solarC, wind: windC,
-            offshore_wind: windC, hydro: hydroC, ccs_ccgt: '#64748B',
-            battery: battC, ldes: ldesC
-        };
-        Object.keys(analysis).forEach(function(res) {
-            var d = analysis[res];
-            if (d.isNoRegrets) {
-                var tag = document.createElement('span');
-                tag.className = 'act5-noregrets-tag';
-                var c = colorMap[res] || '#6366F1';
-                tag.style.borderColor = c;
-                tag.style.color = c;
-                tag.style.background = alpha(c, 0.06);
-                tag.textContent = (labelMap[res] || res) + ' (' + Math.round(d.floor) + '–' + Math.round(d.ceiling) + ' TWh)';
-                nrContainer.appendChild(tag);
-            }
-        });
-    }
-
-    // --- Scroll trigger ---
-    if (typeof IntersectionObserver !== 'undefined') {
-        var obs5 = new IntersectionObserver(function(entries) {
-            entries.forEach(function(entry) {
-                if (entry.isIntersecting) {
-                    animateAct5();
-                    obs5.unobserve(entry.target);
-                }
-            });
-        }, { threshold: 0.2 });
-        obs5.observe(document.getElementById('act5'));
-    }
-})();
-</script>
-
-<!-- ================================================================== -->
-<!-- ACT 6 SCRIPT: The True Endpoint — 24-hour dispatch stack            -->
+<!-- ACT 5 SCRIPT: The True Endpoint — 24-hour dispatch stack            -->
 <!-- ================================================================== -->
 <script>
 (function() {
@@ -4391,13 +3798,14 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         { key: 'battery',    label: 'Battery',     color: RESOURCE_COLORS.battery,   step: 4 }
     ];
 
-    /* Scroll steps:
+    /* Animation steps:
        0 = demand line only
        1 = + clean firm (always-on baseload)
        2 = + wind (broad coverage, stronger at night)
        3 = + solar (midday bell curve)
        4 = + battery (time-shifts solar to evening/night)
        5 = final — badge + stats
+       Click any step dot to replay from start up to that step.
     */
     var STEP_TEXT = [
         'The challenge: meet demand every hour, cleanly.',
@@ -4426,7 +3834,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
 
     /* --- Build legend --- */
     function buildLegend() {
-        var el = document.getElementById('act6Legend');
+        var el = document.getElementById('act5Legend');
         if (!el) return;
         var items = [
             { color: '#1A2744', label: 'Demand', dashed: true }
@@ -4436,10 +3844,10 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         });
         items.forEach(function(it) {
             var d = document.createElement('div');
-            d.className = 'act6-legend-item';
+            d.className = 'act5-legend-item';
             d.setAttribute('data-layer', it.label.toLowerCase().replace(/\s+/g, '_'));
             var sw = document.createElement('span');
-            sw.className = 'act6-legend-swatch';
+            sw.className = 'act5-legend-swatch';
             sw.style.background = it.color;
             if (it.dashed) {
                 sw.style.background = 'transparent';
@@ -4511,7 +3919,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
 
     /* --- Create Chart --- */
     function createChart(norm) {
-        var ctx = document.getElementById('act6Chart');
+        var ctx = document.getElementById('act5Chart');
         if (!ctx) return;
 
         cumulData = buildCumulativeData(norm);
@@ -4649,7 +4057,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         chart6.update('default');
 
         /* Update match counter */
-        var pctEl = document.getElementById('act6MatchPct');
+        var pctEl = document.getElementById('act5MatchPct');
         if (pctEl) {
             var pct = STEP_MATCH[step] || 0;
             animateCounter(pctEl, pct);
@@ -4661,7 +4069,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         }
 
         /* Update step text */
-        var textEl = document.getElementById('act6StepText');
+        var textEl = document.getElementById('act5StepText');
         if (textEl) {
             textEl.style.opacity = '0';
             setTimeout(function() {
@@ -4671,7 +4079,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         }
 
         /* Update step dots */
-        var dots = document.querySelectorAll('#act6StepDots .act6-step-dot');
+        var dots = document.querySelectorAll('#act5StepDots .act5-step-dot');
         dots.forEach(function(dot, idx) {
             dot.classList.remove('step-active', 'step-done');
             if (idx < step) dot.classList.add('step-done');
@@ -4679,7 +4087,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
         });
 
         /* Update legend highlights */
-        var legendItems = document.querySelectorAll('#act6Legend .act6-legend-item');
+        var legendItems = document.querySelectorAll('#act5Legend .act5-legend-item');
         legendItems.forEach(function(item) {
             var isdemand = item.getAttribute('data-layer') === 'demand';
             if (isdemand) { item.classList.add('legend-active'); return; }
@@ -4723,24 +4131,24 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
 
     /* --- Show final state (badge + stats) --- */
     function showFinalState() {
-        var badge = document.getElementById('act6Badge');
+        var badge = document.getElementById('act5Badge');
         if (badge) badge.classList.add('badge-visible');
 
-        var stats = document.getElementById('act6Stats');
+        var stats = document.getElementById('act5Stats');
         if (stats) stats.classList.add('stats-visible');
 
         /* Populate stats with computed values */
         var finalMatch = STEP_MATCH[4] || 99;
-        var statMatch = document.querySelector('#act6StatMatch .act6-stat-value');
+        var statMatch = document.querySelector('#act5StatMatch .act5-stat-value');
         if (statMatch) {
             statMatch.textContent = finalMatch.toFixed(1) + '%';
-            document.getElementById('act6StatMatch').classList.add('stat-success');
+            document.getElementById('act5StatMatch').classList.add('stat-success');
         }
-        var badgeText = document.getElementById('act6BadgeText');
+        var badgeText = document.getElementById('act5BadgeText');
         if (badgeText) {
             badgeText.textContent = Math.round(finalMatch) + '% Hourly Matched \u2014 System Integral Solved';
         }
-        var statRes = document.querySelector('#act6StatResources .act6-stat-value');
+        var statRes = document.querySelector('#act5StatResources .act5-stat-value');
         if (statRes) {
             /* Count non-zero resources */
             var count = 0;
@@ -4751,7 +4159,7 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             });
             statRes.textContent = count;
         }
-        var statGap = document.querySelector('#act6StatGap .act6-stat-value');
+        var statGap = document.querySelector('#act5StatGap .act5-stat-value');
         if (statGap) {
             /* Max hourly gap as % */
             var maxGap = 0;
@@ -4775,89 +4183,67 @@ var GAS_RED = 'rgba(220,38,38,0.18)';
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (!data[ISO] || !data[ISO].profiles || !data[ISO].profiles[PROFILE_KEY]) {
-                    console.warn('Act 6: profile not found for', ISO, PROFILE_KEY);
+                    console.warn('Act 5: profile not found for', ISO, PROFILE_KEY);
                     return;
                 }
                 var raw = data[ISO].profiles[PROFILE_KEY];
                 profileData = normalizeProfile(raw);
                 computeStepMatch(profileData);
                 createChart(profileData);
-                setupScrollTrigger();
+                autoPlayAnimation();
+                setupDotClicks();
             })
             .catch(function(err) {
-                console.error('Act 6: failed to load dispatch profiles', err);
+                console.error('Act 5: failed to load dispatch profiles', err);
             });
     }
 
-    /* --- Scroll-driven step progression --- */
-    function setupScrollTrigger() {
-        var section = document.getElementById('act6');
-        if (!section || typeof IntersectionObserver === 'undefined') return;
+    /* --- Auto-play animation: run through steps 0→5 once on load --- */
+    var autoPlayTimer = null;
+    var STEP_DELAY = 1200; /* ms between steps */
 
-        /* Initial observation — start animation when section enters view */
-        var initObs = new IntersectionObserver(function(entries) {
-            entries.forEach(function(entry) {
-                if (entry.isIntersecting && !animated) {
-                    animated = true;
-                    startScrollSequence(section);
-                    initObs.unobserve(entry.target);
-                }
-            });
-        }, { threshold: 0.15 });
-        initObs.observe(section);
-    }
-
-    function startScrollSequence(section) {
-        /* Use scroll position within the section to determine step.
-           6 steps (0-5), mapped to specific progress thresholds so each
-           step has enough visual breathing room. */
-
-        /* Progress thresholds: step activates when progress >= threshold.
-           The chart sits near the top of the section, so we want steps
-           to advance as the user scrolls through the section body. */
-        var STEP_THRESHOLDS = [0.05, 0.18, 0.32, 0.46, 0.60, 0.75];
-
-        function getStep() {
-            var rect = section.getBoundingClientRect();
-            var sectionH = rect.height;
-            var viewH = window.innerHeight;
-            /* scrollProgress: 0 when top of section enters viewport bottom,
-               1 when bottom of section exits viewport top */
-            var scrolled = viewH - rect.top;
-            var range = sectionH + viewH;
-            var progress = Math.max(0, Math.min(1, scrolled / range));
-
-            var step = 0;
-            for (var i = STEP_THRESHOLDS.length - 1; i >= 0; i--) {
-                if (progress >= STEP_THRESHOLDS[i]) { step = i; break; }
-            }
-            return step;
-        }
-
-        /* Initial reveal */
+    function autoPlayAnimation() {
         revealStep(0);
-
-        /* Scroll listener */
-        var ticking = false;
-        function onScroll() {
-            if (!ticking) {
-                ticking = true;
-                requestAnimationFrame(function() {
-                    var step = getStep();
-                    revealStep(step);
-                    ticking = false;
-                });
+        var step = 0;
+        autoPlayTimer = setInterval(function() {
+            step++;
+            if (step > 5) {
+                clearInterval(autoPlayTimer);
+                autoPlayTimer = null;
+                return;
             }
-        }
-        window.addEventListener('scroll', onScroll, { passive: true });
+            revealStep(step);
+        }, STEP_DELAY);
+    }
 
-        /* Also handle resize */
-        window.addEventListener('resize', function() {
-            requestAnimationFrame(function() {
-                var step = getStep();
-                revealStep(step);
+    /* --- Clickable step dots to replay from any step --- */
+    function setupDotClicks() {
+        var dots = document.querySelectorAll('#act5StepDots .act5-step-dot');
+        dots.forEach(function(dot) {
+            dot.addEventListener('click', function() {
+                var targetStep = parseInt(dot.getAttribute('data-step'), 10);
+                if (isNaN(targetStep)) return;
+                /* Stop any running auto-play */
+                if (autoPlayTimer) {
+                    clearInterval(autoPlayTimer);
+                    autoPlayTimer = null;
+                }
+                /* Reset to step 0 then play up to clicked step */
+                currentStep = -1;
+                revealStep(0);
+                if (targetStep === 0) return;
+                var s = 0;
+                autoPlayTimer = setInterval(function() {
+                    s++;
+                    if (s > targetStep) {
+                        clearInterval(autoPlayTimer);
+                        autoPlayTimer = null;
+                        return;
+                    }
+                    revealStep(s);
+                }, STEP_DELAY);
             });
-        }, { passive: true });
+        });
     }
 
     /* --- Boot --- */
