@@ -10,17 +10,18 @@ Strategy 1B (Consequential / MAC queue):
   Walks PJM's MAC queue in marginal abatement cost order.
   Deploys cheapest-to-abate resources first (mostly VRE).
   Existing clean stays on grid; new-build adds on top.
+  Floor ratchet: resources never decrease between milestones.
 
-Strategy 2C (Hourly matching / EF-optimized):
-  Uses physics-co-optimized resource mixes from the Efficient Frontier.
-  At each threshold, deploys the EF winner mix that achieves the target HMS
-  with firm + storage + VRE balanced for hourly matching.
+Strategy 2C (Hourly matching / co-optimized):
+  Uses HOURLY_MIX_TEMPLATE from step5_2c which designs resource mixes
+  specifically for hourly matching (firm + storage + VRE balanced).
+  Deploys incrementally on top of existing + prior builds.
+  Floor ratchet: same cumulative floor as 1B.
 
-For each milestone:
-  - Runs reconstruct_hourly_dispatch() to get actual HMS
-  - Computes new gas CCGT needed for resource adequacy
-  - Tracks curtailment by resource type
-  - Outputs clean generation capex and total capex
+Gas calculation uses PEAK_CAPACITY_CREDITS (ELCC) matching step 2.2:
+  - All resources get capacity credit per ELCC table
+  - gas_needed = (RA_peak - clean_peak_mw) / GAS_AVAILABILITY_FACTOR
+  - new_gas = max(0, gas_needed - existing_gas)
 
 Output: dashboard/js/act4-pjm-data.js
 """
@@ -45,7 +46,8 @@ from pipeline_config import (
     RESOURCE_ADEQUACY_MARGIN, GRID_MIX_SHARES,
     DEMAND_GROWTH_RATES, THRESHOLD_TARGET_YEARS,
     RESOURCE_CAPACITY_FACTORS,
-    LCOE_TABLES, TX_TABLES,
+    PEAK_CAPACITY_CREDITS, GAS_AVAILABILITY_FACTOR,
+    NEW_CCGT_COST_KW_YR,
 )
 
 ISO = 'PJM'
@@ -58,8 +60,58 @@ HMS_MILESTONES = [50, 60, 70, 80, 90, 95]
 # Target years from pipeline_config
 TARGET_YEARS = THRESHOLD_TARGET_YEARS
 
-# Gas CCGT cost assumptions ($/kW overnight, Medium scenario)
-GAS_CCGT_CAPEX_PER_KW = 1200  # $/kW for new CCGT
+# HOURLY_MIX_TEMPLATE from step5_2c: co-optimized resource fractions for hourly matching
+# These represent the INCREMENTAL new-build mix allocated at each threshold step
+HOURLY_MIX_TEMPLATE = {
+    50:    {'solar': 0.40, 'wind': 0.35, 'firm': 0.10, 'battery': 0.08, 'ldes': 0.02, 'uprate': 0.05},
+    70:    {'solar': 0.35, 'wind': 0.30, 'firm': 0.15, 'battery': 0.10, 'ldes': 0.05, 'uprate': 0.05},
+    85:    {'solar': 0.25, 'wind': 0.25, 'firm': 0.25, 'battery': 0.12, 'ldes': 0.08, 'uprate': 0.05},
+    90:    {'solar': 0.22, 'wind': 0.22, 'firm': 0.28, 'battery': 0.13, 'ldes': 0.10, 'uprate': 0.05},
+    95:    {'solar': 0.18, 'wind': 0.18, 'firm': 0.32, 'battery': 0.14, 'ldes': 0.13, 'uprate': 0.05},
+    99:    {'solar': 0.15, 'wind': 0.15, 'firm': 0.35, 'battery': 0.15, 'ldes': 0.15, 'uprate': 0.05},
+    99.5:  {'solar': 0.14, 'wind': 0.14, 'firm': 0.36, 'battery': 0.15, 'ldes': 0.16, 'uprate': 0.05},
+    99.9:  {'solar': 0.13, 'wind': 0.13, 'firm': 0.37, 'battery': 0.15, 'ldes': 0.17, 'uprate': 0.05},
+    99.99: {'solar': 0.12, 'wind': 0.12, 'firm': 0.38, 'battery': 0.15, 'ldes': 0.18, 'uprate': 0.05},
+}
+
+# Over-procurement ratios (from step5_2c — physics penalty of hourly matching)
+OVER_PROCUREMENT_RATIO = {
+    50: 1.05, 55: 1.07, 60: 1.10, 65: 1.13, 70: 1.16, 75: 1.20,
+    80: 1.25, 85: 1.32, 87.5: 1.38, 90: 1.45, 92.5: 1.55, 95: 1.70,
+    97.5: 1.90, 99: 2.20, 99.5: 2.50, 99.9: 2.80, 99.99: 3.00,
+}
+
+
+def get_hourly_mix_fractions(threshold):
+    """Interpolate HOURLY_MIX_TEMPLATE for a given threshold."""
+    thresholds = sorted(HOURLY_MIX_TEMPLATE.keys())
+    resources = list(HOURLY_MIX_TEMPLATE[thresholds[0]].keys())
+    if threshold <= thresholds[0]:
+        return dict(HOURLY_MIX_TEMPLATE[thresholds[0]])
+    if threshold >= thresholds[-1]:
+        return dict(HOURLY_MIX_TEMPLATE[thresholds[-1]])
+    for i in range(len(thresholds) - 1):
+        if thresholds[i] <= threshold <= thresholds[i + 1]:
+            frac = (threshold - thresholds[i]) / (thresholds[i + 1] - thresholds[i])
+            low = HOURLY_MIX_TEMPLATE[thresholds[i]]
+            high = HOURLY_MIX_TEMPLATE[thresholds[i + 1]]
+            return {r: low[r] + frac * (high[r] - low[r]) for r in resources}
+    return dict(HOURLY_MIX_TEMPLATE[thresholds[-1]])
+
+
+def get_over_procurement_ratio(threshold):
+    """Interpolate over-procurement ratio."""
+    thresholds = sorted(OVER_PROCUREMENT_RATIO.keys())
+    if threshold <= thresholds[0]:
+        return OVER_PROCUREMENT_RATIO[thresholds[0]]
+    if threshold >= thresholds[-1]:
+        return OVER_PROCUREMENT_RATIO[thresholds[-1]]
+    for i in range(len(thresholds) - 1):
+        if thresholds[i] <= threshold <= thresholds[i + 1]:
+            frac = (threshold - thresholds[i]) / (thresholds[i + 1] - thresholds[i])
+            return OVER_PROCUREMENT_RATIO[thresholds[i]] + frac * (
+                OVER_PROCUREMENT_RATIO[thresholds[i + 1]] - OVER_PROCUREMENT_RATIO[thresholds[i]])
+    return OVER_PROCUREMENT_RATIO[thresholds[-1]]
 
 
 def load_pjm_mac_queue():
@@ -69,39 +121,6 @@ def load_pjm_mac_queue():
     df = df[(df['demand_growth'] == GROWTH_LEVEL) & (df['price_sensitivity'] == PRICE_SENSITIVITY)]
     df = df.sort_values('threshold')
     return df
-
-
-def load_ef_mixes():
-    """Load EF winner mixes for PJM at each threshold."""
-    import glob
-    ef_dir = os.path.join(ROOT_DIR, 'data', 'step2.1-ef')
-    results = {}
-    for f in glob.glob(os.path.join(ef_dir, 'step_2_1_EF_PJM_*.parquet')):
-        fname = os.path.basename(f)
-        # Parse threshold from filename: step_2_1_EF_PJM_50.parquet
-        thresh_str = fname.replace('step_2_1_EF_PJM_', '').replace('.parquet', '')
-        try:
-            thresh = float(thresh_str)
-        except ValueError:
-            continue
-        df = pd.read_parquet(f)
-        if df.empty:
-            continue
-        # Get the mix with highest HMS
-        best = df.loc[df['hourly_match_score'].idxmax()]
-        results[thresh] = {
-            'clean_firm': float(best['clean_firm']),
-            'solar': float(best['solar']),
-            'wind': float(best['wind']),
-            'hydro': float(best['hydro']),
-            'offshore_wind': float(best['offshore_wind']),
-            'battery_dispatch_pct': float(best['battery_dispatch_pct']),
-            'battery8_dispatch_pct': float(best['battery8_dispatch_pct']),
-            'ldes_dispatch_pct': float(best['ldes_dispatch_pct']),
-            'h2_dispatch_pct': float(best.get('h2_dispatch_pct', 0)),
-            'hourly_match_score': float(best['hourly_match_score']),
-        }
-    return results
 
 
 def compute_hms(demand_norm, supply_profiles, supply_matrix, resource_pcts,
@@ -135,86 +154,121 @@ def compute_hms(demand_norm, supply_profiles, supply_matrix, resource_pcts,
     return hms, float(curtailed), result, curt_by_resource
 
 
-def compute_gas_needed_mw(demand_twh, clean_firm_twh, year):
-    """Compute new gas CCGT capacity needed for resource adequacy.
+def compute_gas_dispatch_based(dispatch_result, demand_twh, baseline_gas_raw):
+    """Compute gas needed from dispatch residual demand, matching step 2.2.
 
-    Peak demand grows with demand_twh. Clean firm provides dispatchable capacity.
-    Gas fills the gap to meet peak × (1 + RA margin).
+    Uses the actual peak residual demand hour from 8760 dispatch to size gas.
+    This is the same method as scenario_common.py lines 414-448.
 
     Returns (new_gas_mw, total_gas_mw).
     """
-    base_demand = REGIONAL_DEMAND_TWH[ISO]
-    base_peak = PEAK_DEMAND_MW[ISO]
-    growth_factor = demand_twh / base_demand
-    peak_mw = base_peak * growth_factor
-
-    ra_target = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
-
-    # Dispatchable clean capacity: clean firm at its capacity factor
-    cf_firm = RESOURCE_CAPACITY_FACTORS['clean_firm'].get(ISO, 0.93)
-    clean_firm_mw = (clean_firm_twh * 1e6) / (8760 * cf_firm)
-
-    # Battery and LDES contribute some capacity credit but let's be conservative
-    # and only count clean firm + existing gas
+    demand_mwh = demand_twh * 1e6
+    gaf = GAS_AVAILABILITY_FACTOR[ISO]
     existing_gas = EXISTING_GAS_CAPACITY_MW[ISO]
 
-    total_dispatchable = clean_firm_mw + existing_gas
-    gas_gap = max(0, ra_target - total_dispatchable)
+    # Peak fossil gap hour from dispatch
+    net_peak_norm = float(np.max(dispatch_result['residual_demand']))
+    net_peak_mw = net_peak_norm * demand_mwh
+    gas_raw = net_peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN) / gaf
 
-    # new_gas = gap above existing gas capacity
-    # But existing gas already exists, so new gas = max(0, gas_gap)
-    # Actually: total gas needed = ra_target - clean_firm_mw
-    # new gas = total gas needed - existing gas
-    total_gas_needed = max(0, ra_target - clean_firm_mw)
-    new_gas_mw = max(0, total_gas_needed - existing_gas)
+    # Delta calibration: how much gas changed vs baseline
+    gas_delta = gas_raw - baseline_gas_raw
+    gas_needed_mw = max(0, existing_gas + gas_delta)
+    existing_gas_used = min(gas_needed_mw, existing_gas)
+    new_gas_mw = max(0, gas_needed_mw - existing_gas_used)
 
-    return new_gas_mw, total_gas_needed
+    return new_gas_mw, gas_needed_mw
 
 
-def compute_clean_gen_capex(new_build_twh, demand_twh):
-    """Compute clean generation capex (solar + wind + offshore wind + clean firm).
+def compute_baseline_gas(demand_norm, supply_profiles, supply_matrix):
+    """Compute baseline gas from existing resources only (for delta calibration)."""
+    base_demand_mwh = REGIONAL_DEMAND_TWH[ISO] * 1e6
+    gaf = GAS_AVAILABILITY_FACTOR[ISO]
+    baseline_pcts = dict(GRID_MIX_SHARES[ISO])
+    disp = reconstruct_hourly_dispatch(
+        demand_norm, supply_profiles, baseline_pcts,
+        procurement_pct=100, supply_matrix=supply_matrix,
+    )
+    baseline_peak = float(np.max(disp['residual_demand'])) * base_demand_mwh
+    return baseline_peak * (1 + RESOURCE_ADEQUACY_MARGIN) / gaf
 
-    Uses Medium LCOE × capacity factor to derive implied MW, then $/kW capex.
-    Simplified: use new_build_cost_total from MAC queue when available,
-    otherwise estimate from LCOE tables.
-    """
-    # We'll use a simplified capex model based on capacity implied by TWh
+
+def compute_clean_gen_capex(new_build_twh):
+    """Compute clean generation capex from new-build TWh."""
     capex = 0.0
     cf = RESOURCE_CAPACITY_FACTORS
 
-    # Solar: $/kW × MW
-    if 'solar' in new_build_twh and new_build_twh['solar'] > 0:
-        solar_cf = cf['solar'].get(ISO, 0.17)
-        solar_mw = (new_build_twh['solar'] * 1e6) / (8760 * solar_cf)
-        capex += solar_mw * 1300 * 1000  # $1300/kW
-
-    # Wind (onshore)
-    if 'wind' in new_build_twh and new_build_twh['wind'] > 0:
-        wind_cf = cf['wind'].get(ISO, 0.30)
-        wind_mw = (new_build_twh['wind'] * 1e6) / (8760 * wind_cf)
-        capex += wind_mw * 1500 * 1000  # $1500/kW
-
-    # Offshore wind
-    if 'offshore_wind' in new_build_twh and new_build_twh['offshore_wind'] > 0:
-        osw_cf = cf.get('offshore_wind', {}).get(ISO, 0.48)
-        osw_mw = (new_build_twh['offshore_wind'] * 1e6) / (8760 * osw_cf)
-        capex += osw_mw * 4500 * 1000  # $4500/kW
-
-    # Clean firm (nuclear)
-    if 'clean_firm' in new_build_twh and new_build_twh['clean_firm'] > 0:
-        firm_cf = cf['clean_firm'].get(ISO, 0.93)
-        firm_mw = (new_build_twh['clean_firm'] * 1e6) / (8760 * firm_cf)
-        capex += firm_mw * 8000 * 1000  # $8000/kW for nuclear
+    for res, occ_kw in [('solar', 1300), ('wind', 1500), ('offshore_wind', 4500), ('clean_firm', 8000)]:
+        twh = new_build_twh.get(res, 0)
+        if twh <= 0:
+            continue
+        res_cf = cf.get(res, {}).get(ISO, 0.25)
+        mw = (twh * 1e6) / (8760 * res_cf)
+        capex += mw * occ_kw * 1000  # MW * $/kW * 1000
 
     return capex
 
 
-def simulate_strategy_1b(mac_queue, demand_norm, supply_profiles, supply_matrix):
+def build_entry(resource_pcts, battery_pct, battery8_pct, ldes_pct, h2_pct,
+                demand_twh, target_year, threshold, existing_clean_twh,
+                demand_norm, supply_profiles, supply_matrix, base_demand, existing,
+                cum_new_build, baseline_gas_raw, mac_cost_total=None):
+    """Build one result entry: run dispatch, compute HMS, gas, capex."""
+
+    hms, curt_total, dispatch, curt_by_res = compute_hms(
+        demand_norm, supply_profiles, supply_matrix, resource_pcts,
+        battery_pct=battery_pct,
+        battery8_pct=battery8_pct,
+        ldes_pct=ldes_pct,
+        h2_pct=h2_pct,
+    )
+
+    curt_twh = curt_total * demand_twh
+
+    # Gas via dispatch-based residual demand (matching step 2.2)
+    new_gas_mw, total_gas_mw = compute_gas_dispatch_based(
+        dispatch, demand_twh, baseline_gas_raw)
+
+    # Capex
+    clean_capex = compute_clean_gen_capex(cum_new_build)
+    gas_capex_b = new_gas_mw * NEW_CCGT_COST_KW_YR[ISO] * 1000 * 20 / 1e9  # 20yr levelized
+    total_capex = clean_capex / 1e9 + gas_capex_b
+
+    # Per-resource curtailment in TWh
+    curt_solar_twh = curt_by_res.get('solar', 0) * demand_twh
+    curt_wind_twh = (curt_by_res.get('wind', 0) + curt_by_res.get('offshore_wind', 0)) * demand_twh
+    curt_firm_twh = curt_by_res.get('clean_firm', 0) * demand_twh
+
+    entry = {
+        'threshold': float(threshold),
+        'year': target_year,
+        'demandTwh': round(demand_twh, 1),
+        'hms': round(hms, 1),
+        'gasGw': round(new_gas_mw / 1000, 1),
+        'totalGasGw': round(total_gas_mw / 1000, 1),
+        'cleanCapexB': round(clean_capex / 1e9, 1),
+        'totalCapexB': round(total_capex, 1),
+        'curtTwh': round(curt_twh, 1),
+        'curtSolarTwh': round(curt_solar_twh, 1),
+        'curtWindTwh': round(curt_wind_twh, 1),
+        'curtFirmTwh': round(curt_firm_twh, 1),
+        # Bar chart data (TWh)
+        'existingCleanTwh': round(existing_clean_twh, 1),
+        'newSolarTwh': round(cum_new_build.get('solar', 0), 1),
+        'newWindTwh': round(cum_new_build.get('wind', 0) + cum_new_build.get('offshore_wind', 0), 1),
+        'newFirmTwh': round(cum_new_build.get('clean_firm', 0), 1),
+        'batteryTwh': round(battery_pct / 100 * demand_twh, 1) if battery_pct > 0 else 0,
+        'ldesTwh': round(ldes_pct / 100 * demand_twh, 1) if ldes_pct > 0 else 0,
+        'newBuildCostTotal': round(mac_cost_total / 1e9, 1) if mac_cost_total else round(clean_capex / 1e9, 1),
+    }
+
+    return entry, hms
+
+
+def simulate_strategy_1b(mac_queue, demand_norm, supply_profiles, supply_matrix, baseline_gas_raw):
     """Simulate Strategy 1B: walk PJM's MAC queue, compute HMS at each step.
 
-    The MAC queue's `deployed_*_twh` columns represent the cumulative resource
-    portfolio on PJM's grid at each threshold. We convert these to % of demand
-    and run 8760 dispatch to compute actual HMS.
+    The MAC queue's `deployed_*_twh` columns are cumulative (floor ratchet built in).
     """
     print("\n=== Strategy 1B (Consequential / MAC Queue) ===")
     results = []
@@ -227,13 +281,14 @@ def simulate_strategy_1b(mac_queue, demand_norm, supply_profiles, supply_matrix)
         demand_twh = float(row['demand_twh'])
         target_year = int(row['target_year'])
 
-        # Deployed resources as % of demand (for dispatch)
+        # MAC queue deployed_* columns are cumulative (already include floor ratchet)
+        # Convert to % of demand for dispatch (dispatch works in % of base demand)
         resource_pcts = {
-            'clean_firm': float(row['deployed_clean_firm_twh']) / demand_twh * 100,
-            'solar': float(row['deployed_solar_twh']) / demand_twh * 100,
-            'wind': float(row['deployed_wind_twh']) / demand_twh * 100,
-            'hydro': float(row['deployed_hydro_twh']) / demand_twh * 100,
-            'offshore_wind': float(row['deployed_offshore_wind_twh']) / demand_twh * 100,
+            'clean_firm': float(row['deployed_clean_firm_twh']) / base_demand * 100,
+            'solar': float(row['deployed_solar_twh']) / base_demand * 100,
+            'wind': float(row['deployed_wind_twh']) / base_demand * 100,
+            'hydro': float(row['deployed_hydro_twh']) / base_demand * 100,
+            'offshore_wind': float(row['deployed_offshore_wind_twh']) / base_demand * 100,
             'ccs_ccgt': 0,
         }
 
@@ -242,30 +297,6 @@ def simulate_strategy_1b(mac_queue, demand_norm, supply_profiles, supply_matrix)
         ldes_pct = float(row.get('deployed_ldes_dispatch_pct', 0))
         h2_pct = float(row.get('deployed_h2_dispatch_pct', 0))
 
-        # Scale demand_norm to account for demand growth
-        # The supply profiles are normalized to base demand, so we scale resource_pcts
-        # to reflect the deployment relative to base demand
-        growth_factor = demand_twh / base_demand
-        scaled_pcts = {k: v * growth_factor for k, v in resource_pcts.items()}
-
-        hms, curt_total, dispatch, curt_by_res = compute_hms(
-            demand_norm, supply_profiles, supply_matrix, scaled_pcts,
-            battery_pct=battery_pct * growth_factor,
-            battery8_pct=battery8_pct * growth_factor,
-            ldes_pct=ldes_pct * growth_factor,
-            h2_pct=h2_pct * growth_factor,
-        )
-
-        # Curtailment in TWh (dispatch is normalized, multiply by demand_twh)
-        curt_twh = curt_total * demand_twh
-
-        # New-build TWh
-        new_build = {
-            'clean_firm': float(row['new_build_clean_firm_twh']),
-            'solar': float(row['new_build_solar_twh']),
-            'wind': float(row['new_build_wind_twh']),
-            'offshore_wind': float(row['new_build_offshore_wind_twh']),
-        }
         # Cumulative new build = deployed - existing
         cum_new_build = {
             'clean_firm': max(0, float(row['deployed_clean_firm_twh']) - existing['clean_firm'] / 100 * base_demand),
@@ -274,57 +305,14 @@ def simulate_strategy_1b(mac_queue, demand_norm, supply_profiles, supply_matrix)
             'offshore_wind': max(0, float(row['deployed_offshore_wind_twh']) - existing.get('offshore_wind', 0) / 100 * base_demand),
         }
 
-        # Gas capacity
-        new_gas_mw, total_gas_mw = compute_gas_needed_mw(
-            demand_twh, float(row['deployed_clean_firm_twh']), target_year
-        )
-
-        # Capex
-        clean_capex = compute_clean_gen_capex(cum_new_build, demand_twh)
-        gas_capex = new_gas_mw * GAS_CCGT_CAPEX_PER_KW * 1000  # MW * $/kW * 1000 = $
-        total_capex = clean_capex + gas_capex
-
-        # Per-resource curtailment in TWh
-        curt_solar_twh = curt_by_res.get('solar', 0) * demand_twh
-        curt_wind_twh = (curt_by_res.get('wind', 0) + curt_by_res.get('offshore_wind', 0)) * demand_twh
-        curt_firm_twh = curt_by_res.get('clean_firm', 0) * demand_twh
-
-        # Deployed TWh for the bar chart
-        deployed = {
-            'existing_clean_twh': existing_clean_twh,
-            'solar_twh': max(0, float(row['deployed_solar_twh']) - existing['solar'] / 100 * base_demand),
-            'wind_twh': max(0, float(row['deployed_wind_twh']) - existing['wind'] / 100 * base_demand +
-                           float(row['deployed_offshore_wind_twh']) - existing.get('offshore_wind', 0) / 100 * base_demand),
-            'clean_firm_twh': max(0, float(row['deployed_clean_firm_twh']) - existing['clean_firm'] / 100 * base_demand),
-            'battery_twh': battery_pct / 100 * demand_twh * growth_factor if battery_pct > 0 else 0,
-            'ldes_twh': ldes_pct / 100 * demand_twh * growth_factor if ldes_pct > 0 else 0,
-        }
-
-        entry = {
-            'threshold': threshold,
-            'year': target_year,
-            'demandTwh': round(demand_twh, 1),
-            'hms': round(hms, 1),
-            'gasGw': round(new_gas_mw / 1000, 1),
-            'totalGasGw': round(total_gas_mw / 1000, 1),
-            'cleanCapexB': round(clean_capex / 1e9, 1),
-            'totalCapexB': round(total_capex / 1e9, 1),
-            'curtTwh': round(curt_twh, 1),
-            'curtSolarTwh': round(curt_solar_twh, 1),
-            'curtWindTwh': round(curt_wind_twh, 1),
-            'curtFirmTwh': round(curt_firm_twh, 1),
-            # Bar chart data (TWh)
-            'existingCleanTwh': round(existing_clean_twh, 1),
-            'newSolarTwh': round(deployed['solar_twh'], 1),
-            'newWindTwh': round(deployed['wind_twh'], 1),
-            'newFirmTwh': round(deployed['clean_firm_twh'], 1),
-            'batteryTwh': round(deployed['battery_twh'], 1),
-            'ldesTwh': round(deployed['ldes_twh'], 1),
-            'newBuildCostTotal': round(float(row['cumulative_new_build_cost']) / 1e9, 1),
-        }
+        entry, hms = build_entry(
+            resource_pcts, battery_pct, battery8_pct, ldes_pct, h2_pct,
+            demand_twh, target_year, threshold, existing_clean_twh,
+            demand_norm, supply_profiles, supply_matrix, base_demand, existing,
+            cum_new_build, baseline_gas_raw, mac_cost_total=float(row['cumulative_new_build_cost']))
 
         print(f"  Threshold {threshold:5.1f}% → HMS {hms:5.1f}%, "
-              f"Gas {new_gas_mw/1000:.1f} GW, Curt {curt_twh:.0f} TWh, "
+              f"New Gas {entry['gasGw']:.1f} GW, Curt {entry['curtTwh']:.0f} TWh, "
               f"Year {target_year}")
 
         results.append(entry)
@@ -332,123 +320,92 @@ def simulate_strategy_1b(mac_queue, demand_norm, supply_profiles, supply_matrix)
     return results
 
 
-def simulate_strategy_2c(ef_mixes, demand_norm, supply_profiles, supply_matrix):
-    """Simulate Strategy 2C: deploy EF-optimized mixes onto PJM's grid.
+def simulate_strategy_2c(demand_norm, supply_profiles, supply_matrix, baseline_gas_raw):
+    """Simulate Strategy 2C: deploy co-optimized hourly matching portfolio.
 
-    For each HMS milestone, find the EF mix closest to that target and deploy
-    it onto PJM's grid with demand growth. The EF mix represents the total
-    portfolio (as % of base demand) needed to achieve the target HMS.
+    Uses HOURLY_MIX_TEMPLATE to determine the resource mix for new-build at
+    each threshold. Each milestone adds incremental clean energy to hit the
+    target, with floor ratchet (never unbuild).
 
-    Key difference from 1B: the EF mixes are physics-co-optimized portfolios
-    that include clean firm + storage. They achieve higher HMS with less
-    curtailment because the resources are balanced for hourly matching.
+    The key difference from 1B: early investment in firm + storage alongside
+    VRE, not VRE-dominant. This costs more upfront but prevents gas lock-in.
     """
-    print("\n=== Strategy 2C (Hourly Matching / EF-Optimized) ===")
+    print("\n=== Strategy 2C (Hourly Matching / Co-Optimized) ===")
     results = []
     base_demand = REGIONAL_DEMAND_TWH[ISO]
     existing = GRID_MIX_SHARES[ISO]
     existing_clean_twh = sum(v / 100 * base_demand for v in existing.values())
 
-    # Use the same thresholds as the MAC queue for comparability
-    target_thresholds = sorted([t for t in ef_mixes.keys() if 50 <= t <= 95])
+    # Use same thresholds as the milestones we target
+    thresholds = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95]
 
-    for threshold in target_thresholds:
-        ef = ef_mixes[threshold]
+    # Floor ratchet: cumulative resources never decrease
+    floor_solar_twh = 0.0
+    floor_wind_twh = 0.0
+    floor_firm_twh = 0.0
+    floor_battery_pct = 0.0
+    floor_ldes_pct = 0.0
+
+    prev_hms = sum(existing.values())  # baseline HMS ~40%
+
+    for threshold in thresholds:
         target_year = TARGET_YEARS.get(int(threshold), TARGET_YEARS.get(threshold, 2045))
         demand_twh = base_demand * (1 + DEMAND_GROWTH_RATES[ISO][GROWTH_LEVEL]) ** (target_year - 2025)
 
-        # EF mix is in % of base demand. These are the TOTAL resources on-grid.
-        # The EF was optimized at base demand, so the percentages represent
-        # the correct resource ratios. We pass them directly — dispatch_utils
-        # handles the normalization (resource_pcts * supply_profiles / demand).
+        # How much NEW clean energy do we need to go from current HMS to target?
+        # The gap is (target - current) as % of demand, times over-procurement
+        hms_gap = max(0, threshold - prev_hms)
+        incremental_twh = hms_gap / 100 * demand_twh * get_over_procurement_ratio(threshold)
+
+        # Allocate incremental new-build using HOURLY_MIX_TEMPLATE fractions
+        mix = get_hourly_mix_fractions(threshold)
+        gen_frac = mix['solar'] + mix['wind'] + mix['firm'] + mix['uprate']
+
+        # Incremental adds on top of floor
+        solar_twh = floor_solar_twh + incremental_twh * mix['solar'] / gen_frac
+        wind_twh = floor_wind_twh + incremental_twh * mix['wind'] / gen_frac
+        firm_twh = floor_firm_twh + incremental_twh * (mix['firm'] + mix['uprate']) / gen_frac
+
+        # Storage: incremental capacity
+        battery_pct = floor_battery_pct + mix['battery'] * incremental_twh / demand_twh * 100
+        ldes_pct = floor_ldes_pct + mix['ldes'] * incremental_twh / demand_twh * 100
+
+        # Floor ratchet: update floors
+        floor_solar_twh = solar_twh
+        floor_wind_twh = wind_twh
+        floor_firm_twh = firm_twh
+        floor_battery_pct = battery_pct
+        floor_ldes_pct = ldes_pct
+
+        # Total resources on grid = existing + new build (as % of base demand for dispatch)
         resource_pcts = {
-            'clean_firm': ef['clean_firm'],
-            'solar': ef['solar'],
-            'wind': ef['wind'],
-            'hydro': ef.get('hydro', 0),
-            'offshore_wind': ef.get('offshore_wind', 0),
+            'clean_firm': (existing['clean_firm'] / 100 * base_demand + firm_twh) / base_demand * 100,
+            'solar': (existing['solar'] / 100 * base_demand + solar_twh) / base_demand * 100,
+            'wind': (existing['wind'] / 100 * base_demand + wind_twh) / base_demand * 100,
+            'hydro': existing['hydro'],  # hydro stays at existing
+            'offshore_wind': existing.get('offshore_wind', 0),
             'ccs_ccgt': 0,
         }
 
-        # Ensure existing clean is at least maintained
-        for res in ['clean_firm', 'solar', 'wind', 'hydro']:
-            existing_pct = GRID_MIX_SHARES[ISO].get(res, 0)
-            if resource_pcts[res] < existing_pct:
-                resource_pcts[res] = existing_pct
-
-        battery_pct = ef.get('battery_dispatch_pct', 0)
-        battery8_pct = ef.get('battery8_dispatch_pct', 0)
-        ldes_pct = ef.get('ldes_dispatch_pct', 0)
-        h2_pct = ef.get('h2_dispatch_pct', 0)
-
-        # Run dispatch at base demand ratios (EF was optimized for base)
-        hms, curt_total, dispatch, curt_by_res = compute_hms(
-            demand_norm, supply_profiles, supply_matrix, resource_pcts,
-            battery_pct=battery_pct,
-            battery8_pct=battery8_pct,
-            ldes_pct=ldes_pct,
-            h2_pct=h2_pct,
-        )
-
-        # Curtailment in TWh (using actual demand at year)
-        curt_twh = curt_total * demand_twh
-
-        # New build = total deployed - existing (in TWh at projected demand)
-        new_firm_twh = max(0, resource_pcts['clean_firm'] / 100 * demand_twh - existing['clean_firm'] / 100 * base_demand)
-        new_solar_twh = max(0, resource_pcts['solar'] / 100 * demand_twh - existing['solar'] / 100 * base_demand)
-        new_wind_twh = max(0, resource_pcts['wind'] / 100 * demand_twh - existing['wind'] / 100 * base_demand)
-        new_osw_twh = max(0, resource_pcts['offshore_wind'] / 100 * demand_twh)
-
         cum_new_build = {
-            'clean_firm': new_firm_twh,
-            'solar': new_solar_twh,
-            'wind': new_wind_twh,
-            'offshore_wind': new_osw_twh,
+            'clean_firm': firm_twh,
+            'solar': solar_twh,
+            'wind': wind_twh,
+            'offshore_wind': 0,
         }
 
-        # Gas capacity
-        total_firm_twh = resource_pcts['clean_firm'] / 100 * demand_twh
-        new_gas_mw, total_gas_mw = compute_gas_needed_mw(demand_twh, total_firm_twh, target_year)
+        entry, hms = build_entry(
+            resource_pcts, battery_pct, 0, ldes_pct, 0,
+            demand_twh, target_year, threshold, existing_clean_twh,
+            demand_norm, supply_profiles, supply_matrix, base_demand, existing,
+            cum_new_build, baseline_gas_raw)
 
-        # Capex
-        clean_capex = compute_clean_gen_capex(cum_new_build, demand_twh)
-        gas_capex = new_gas_mw * GAS_CCGT_CAPEX_PER_KW * 1000
-        total_capex = clean_capex + gas_capex
-
-        # Curtailment by resource
-        curt_solar_twh = curt_by_res.get('solar', 0) * demand_twh
-        curt_wind_twh = (curt_by_res.get('wind', 0) + curt_by_res.get('offshore_wind', 0)) * demand_twh
-        curt_firm_twh = curt_by_res.get('clean_firm', 0) * demand_twh
-
-        # Battery/LDES TWh dispatched
-        batt_twh = battery_pct / 100 * demand_twh if battery_pct > 0 else 0
-        ldes_twh_val = ldes_pct / 100 * demand_twh if ldes_pct > 0 else 0
-
-        entry = {
-            'threshold': float(threshold),
-            'year': target_year,
-            'demandTwh': round(demand_twh, 1),
-            'hms': round(hms, 1),
-            'gasGw': round(new_gas_mw / 1000, 1),
-            'totalGasGw': round(total_gas_mw / 1000, 1),
-            'cleanCapexB': round(clean_capex / 1e9, 1),
-            'totalCapexB': round(total_capex / 1e9, 1),
-            'curtTwh': round(curt_twh, 1),
-            'curtSolarTwh': round(curt_solar_twh, 1),
-            'curtWindTwh': round(curt_wind_twh, 1),
-            'curtFirmTwh': round(curt_firm_twh, 1),
-            'existingCleanTwh': round(existing_clean_twh, 1),
-            'newSolarTwh': round(new_solar_twh, 1),
-            'newWindTwh': round(new_wind_twh + new_osw_twh, 1),
-            'newFirmTwh': round(new_firm_twh, 1),
-            'batteryTwh': round(batt_twh, 1),
-            'ldesTwh': round(ldes_twh_val, 1),
-            'newBuildCostTotal': round(clean_capex / 1e9, 1),
-        }
+        # Update prev_hms for incremental gap calculation
+        prev_hms = hms
 
         print(f"  Threshold {threshold:5.1f}% → HMS {hms:5.1f}%, "
-              f"Gas {new_gas_mw/1000:.1f} GW, Curt {curt_twh:.0f} TWh, "
-              f"Year {target_year}")
+              f"New Gas {entry['gasGw']:.1f} GW, Curt {entry['curtTwh']:.0f} TWh, "
+              f"Year {target_year}, New: S={solar_twh:.0f} W={wind_twh:.0f} F={firm_twh:.0f} TWh")
 
         results.append(entry)
 
@@ -456,20 +413,14 @@ def simulate_strategy_2c(ef_mixes, demand_norm, supply_profiles, supply_matrix):
 
 
 def interpolate_to_hms_milestones(entries, milestones):
-    """Interpolate strategy results to exact HMS milestone values.
-
-    Given a list of entries with 'hms' field, find (or interpolate between)
-    entries that bracket each milestone HMS value.
-    """
+    """Interpolate strategy results to exact HMS milestone values."""
     if not entries:
         return []
 
-    # Sort by HMS
     sorted_entries = sorted(entries, key=lambda e: e['hms'])
     result = []
 
     for target_hms in milestones:
-        # Find bracketing entries
         below = None
         above = None
         for e in sorted_entries:
@@ -490,7 +441,6 @@ def interpolate_to_hms_milestones(entries, milestones):
             result.append(dict(below))
             continue
 
-        # Linear interpolation
         frac = (target_hms - below['hms']) / (above['hms'] - below['hms'])
         interp = {}
         for key in below:
@@ -499,7 +449,6 @@ def interpolate_to_hms_milestones(entries, milestones):
             else:
                 interp[key] = below[key] if frac < 0.5 else above[key]
         interp['hms'] = round(target_hms, 1)
-        # Year should be integer
         if 'year' in interp:
             interp['year'] = int(round(interp['year']))
         result.append(interp)
@@ -517,25 +466,28 @@ def main():
     supply_matrix = build_supply_matrix(supply_profiles)
 
     print(f"PJM base demand: {total_mwh/1e6:.1f} TWh")
-    print(f"PJM demand norm sum: {sum(demand_norm):.4f}")
+    print(f"PJM peak: {PEAK_DEMAND_MW[ISO]} MW, RA target: {PEAK_DEMAND_MW[ISO] * (1 + RESOURCE_ADEQUACY_MARGIN):.0f} MW")
+    print(f"PJM existing gas: {EXISTING_GAS_CAPACITY_MW[ISO]} MW")
+    print(f"ELCC credits: {PEAK_CAPACITY_CREDITS}")
 
-    # Load data sources
+    # Compute baseline gas (existing resources only) for delta calibration
+    baseline_gas_raw = compute_baseline_gas(demand_norm, supply_profiles, supply_matrix)
+    print(f"Baseline gas (existing only): {baseline_gas_raw/1000:.1f} GW")
+
+    # Load MAC queue for 1B
     mac_queue = load_pjm_mac_queue()
     print(f"MAC queue: {len(mac_queue)} entries")
 
-    ef_mixes = load_ef_mixes()
-    print(f"EF mixes: {len(ef_mixes)} thresholds")
-
     # Run simulations
-    results_1b = simulate_strategy_1b(mac_queue, demand_norm, supply_profiles, supply_matrix)
-    results_2c = simulate_strategy_2c(ef_mixes, demand_norm, supply_profiles, supply_matrix)
+    results_1b = simulate_strategy_1b(mac_queue, demand_norm, supply_profiles, supply_matrix, baseline_gas_raw)
+    results_2c = simulate_strategy_2c(demand_norm, supply_profiles, supply_matrix, baseline_gas_raw)
 
     # Interpolate to HMS milestones
     milestones_1b = interpolate_to_hms_milestones(results_1b, HMS_MILESTONES)
     milestones_2c = interpolate_to_hms_milestones(results_2c, HMS_MILESTONES)
 
     print("\n=== HMS Milestone Summary ===")
-    print(f"{'HMS':>6}  {'1B Year':>7} {'1B Gas GW':>9} {'1B Curt':>8}  {'2C Year':>7} {'2C Gas GW':>9} {'2C Curt':>8}")
+    print(f"{'HMS':>6}  {'1B Year':>7} {'1B NewGas':>9} {'1B Curt':>8}  {'2C Year':>7} {'2C NewGas':>9} {'2C Curt':>8}")
     for m1, m2 in zip(milestones_1b, milestones_2c):
         print(f"{m1['hms']:5.0f}%  {m1['year']:>7} {m1['gasGw']:>8.1f} {m1['curtTwh']:>7.0f}  "
               f"{m2['year']:>7} {m2['gasGw']:>8.1f} {m2['curtTwh']:>7.0f}")
@@ -544,6 +496,7 @@ def main():
     output = {
         'iso': ISO,
         'baseDemandTwh': REGIONAL_DEMAND_TWH[ISO],
+        'existingGasGw': EXISTING_GAS_CAPACITY_MW[ISO] / 1000,
         'growthLevel': GROWTH_LEVEL,
         'milestones': HMS_MILESTONES,
         'strategy1B': {
@@ -553,8 +506,8 @@ def main():
             'milestones': milestones_1b,
         },
         'strategy2C': {
-            'name': 'Hourly Matching (EF-Optimized)',
-            'description': 'Physics-co-optimized portfolio — firm + storage + VRE balanced',
+            'name': 'Hourly Matching (Co-Optimized)',
+            'description': 'Co-optimized portfolio — firm + storage + VRE balanced for hourly matching',
             'raw': results_2c,
             'milestones': milestones_2c,
         },
