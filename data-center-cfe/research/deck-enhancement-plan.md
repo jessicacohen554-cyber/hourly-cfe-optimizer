@@ -65,3 +65,173 @@ After syncing, verify both decks have identical slide count, ordering, and data.
 - No orphaned or stale content in either version
 
 ---
+
+## Prompt 1: Research Integration Audit
+
+> **Goal:** Systematically review all 47 citations in `vreresearch.md` against existing deck content. Identify what's already incorporated, what's new and useful, what contradicts the current thesis, and what can be ignored.
+
+### Context
+
+`data-center-cfe/research/vreresearch.md` (43KB) contains comprehensive strategic research with ~47 citations covering:
+- AI data center power physics and demand forecasts
+- SMR NOAK timeline and deployment gaps
+- Big 4 hyperscaler portfolios and deal activity
+- Second-tier colocation providers (Equinix, Digital Realty, etc.)
+- GHG Protocol Scope 2 hourly matching + deliverability proposals
+- Regional ISO analysis (PJM, ERCOT, CAISO, MISO, SPP)
+- Capture rate erosion and cannibalization
+- Corporate clean energy procurement trends (BNEF 2025 data)
+
+The existing deck already covers many of these themes. This audit determines what's NEW and actionable.
+
+### Prompt
+
+```
+Read data-center-cfe/research/vreresearch.md in full.
+
+Then read the current deck: data-center-cfe/output/vre-investment-thesis-deck.html
+
+For EACH citation in vreresearch.md, create a table with these columns:
+| # | Citation (Author/Source) | Key Data Point | Already in Deck? | Action Needed | Priority |
+
+Categorize actions as:
+- SKIP: Already incorporated or not relevant to VRE standalone thesis
+- UPDATE: New data that updates an existing slide's numbers/narrative
+- ADD: New insight that warrants adding to an existing slide
+- NEW SLIDE: Data/insight significant enough to warrant a new slide
+- SCRAPE: Citation has scrapeable data that should be added to data-inputs/
+
+Key framing filter: This deck is about the VALUE PROPOSITION OF STANDALONE VRE
+within an IPP portfolio that has strong clean firm assets and storage willingness.
+Deprioritize citations that are purely about:
+- How much DC growth is happening (we know this)
+- General AI hype / macro trends
+- Nuclear/SMR details beyond the timeline gap framing
+
+Prioritize citations about:
+- VRE-specific economics, capture rates, PPA pricing
+- Corporate procurement behavior shifts (especially Big 4 dominance)
+- GHG Protocol changes affecting VRE value
+- Regional market dynamics relevant to VRE siting
+- Second-tier colocation provider demand (these are the IPP's target customers)
+- Storage-as-complement framing
+- Any data contradicting the VRE investment thesis
+
+Write the completed audit table to a new section in this file or as a companion
+document at data-center-cfe/research/citation-audit.md.
+```
+
+### Files to Read
+- `data-center-cfe/research/vreresearch.md` (primary input)
+- `data-center-cfe/output/vre-investment-thesis-deck.html` (comparison target)
+- `data-center-cfe/data-inputs/` directory listing (to check what data already exists)
+
+### Success Criteria
+- Every citation in vreresearch.md accounted for in audit table
+- Clear action classification for each (SKIP/UPDATE/ADD/NEW SLIDE/SCRAPE)
+- Priority ranking (High/Medium/Low) based on VRE standalone thesis relevance
+- No citations misclassified as SKIP when they contain genuinely new data
+
+---
+
+## Prompt 2: Data Scraping from New Citations
+
+> **Goal:** For each citation flagged as SCRAPE in the Prompt 1 audit, extract quantitative data and add to `data-center-cfe/data-inputs/` as CSV or JSON files.
+
+### Context
+
+The deck generation pipeline (`generate_deck.py`) reads CSVs from `data-center-cfe/data-inputs/` and renders them into slides via Jinja2 templates. New data must follow this pattern to be usable.
+
+Existing data-inputs files:
+- `us_hyperscaler_gap_analysis.csv` / `_extended.csv`
+- `hyperscaler_ppa_deals.csv` / `hyperscaler_projects.csv`
+- `demand_forecasts.csv` / `demand_forecasts_by_iso.csv`
+- `capture_rates_by_iso.csv`
+- `clean_energy_supply_by_iso.csv`
+- `cost_projections.csv`
+- `cfe_premium.csv`
+- `ppa_value_framework.csv`
+- `vre_investment_thesis.csv`
+- `accounting_regime_scenarios.csv`
+- `emissions_trajectory.csv`
+- `dc_load_by_iso.csv` / `dc_load_profile_parameters.csv`
+- `resource_mix_projections.csv`
+- `us_regional_demand.csv`
+- `btm_gas_buildout.csv`
+- `coal_wall_analysis_results.json`
+
+### Prompt
+
+```
+Run the Prompt 1 audit first (or read data-center-cfe/research/citation-audit.md
+if it already exists).
+
+For each citation marked SCRAPE, do the following:
+
+1. Visit the citation URL (use WebFetch/WebSearch)
+2. Extract quantitative data points (tables, charts, statistics)
+3. Structure as CSV with clear column headers
+4. Save to data-center-cfe/data-inputs/ with descriptive filename
+
+Priority scraping targets (based on vreresearch.md analysis):
+
+A. **BNEF 2025 Corporate Clean Energy Data** (Citation #24-25)
+   - Global clean power purchasing: 55.9 GW in 2025 (down 10% from 2024)
+   - Big 4 hyperscalers: 49% of global deals
+   - Year-over-year trend data (2018-2025) showing hyperscaler share increasing
+   - Target file: `data-inputs/global_corporate_cfe_procurement.csv`
+   - Columns: year, total_gw, hyperscaler_gw, hyperscaler_pct, non_hyperscaler_gw
+
+B. **Colocation Provider Energy Data** (Citations #31-33)
+   - Digital Realty: 11.1 TWh (2023)
+   - Equinix: 8.56 TWh (2024), 96% renewable coverage
+   - CyrusOne: 4.2 TWh
+   - QTS: 2.6 TWh, Vantage: 2.6 TWh
+   - Target file: `data-inputs/colocation_energy_profiles.csv`
+   - Columns: company, twh_annual, renewable_pct, hourly_cfe_pct, commitment, gap_twh
+
+C. **GHG Protocol Scope 2 Timeline** (Citations #34-36)
+   - Key dates: consultation period, finalization, enforcement
+   - Impact: 30-50% of unbundled REC portfolios disqualified
+   - REC price multiplier: 3-7x under deliverability constraints
+   - Target file: `data-inputs/ghg_protocol_scope2_timeline.csv`
+
+D. **Interconnection Queue Statistics** (Citations #17-18)
+   - LBNL "Queued Up" 2024: completion rates by technology (14% solar, 11% battery)
+   - Average queue time: 5 years
+   - Grid Strategies AEI scorecard: PJM "D-minus", ERCOT faster
+   - Update existing or create: `data-inputs/interconnection_queue_stats.csv`
+
+E. **Hyperscaler CapEx Data** (vreresearch.md Section 2)
+   - Big 4 combined 2024 CapEx: >$200B (62% YoY increase)
+   - Amazon alone: $85.8B
+   - Target file: `data-inputs/hyperscaler_capex.csv`
+   - Columns: company, year, capex_bn, yoy_pct, energy_share_est
+
+F. **Deal Timeline Data** (vreresearch.md Section on deals Q1 2024-Mar 2026)
+   - 15+ major deals with dates, capacity, technology, partner
+   - May overlap with existing hyperscaler_ppa_deals.csv — UPDATE rather than create new
+   - Verify all deals from vreresearch.md are in hyperscaler_ppa_deals.csv
+   - Add any missing deals
+
+For each scrape:
+- If the source is paywalled, note it and use the data points already quoted in vreresearch.md
+- Format consistently with existing CSVs (lowercase column names, snake_case)
+- Add a comment row or separate metadata noting the source and access date
+- Commit each new file individually with descriptive message
+
+After scraping, update data-center-cfe/sources.md with any new citations not already listed.
+```
+
+### Files to Modify
+- `data-center-cfe/data-inputs/*.csv` (new and updated files)
+- `data-center-cfe/sources.md` (add new citations)
+
+### Success Criteria
+- All SCRAPE-flagged citations have corresponding data files
+- New CSVs follow existing naming/formatting conventions
+- No duplicate data across files (check against existing CSVs)
+- sources.md updated with all new references
+- Data points match vreresearch.md exactly (no rounding errors or misattribution)
+
+---
