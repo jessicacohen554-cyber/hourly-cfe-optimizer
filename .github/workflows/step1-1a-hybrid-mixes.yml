@@ -1,8 +1,9 @@
-name: "Step 1.1a: Generate Hybrid Mix Database"
+name: "Step 1.1: Hybrid Mix Database (Generate + Score)"
 
-# Generates co-located solar+batt / wind+batt family compositions.
+# Generates co-located solar+batt / wind+batt family compositions (1a)
+# and scores them against 8760 demand profiles (1b).
 # Uses tightened per-ISO windows (CF@10%, family splits@10%, hybrid cap 40%).
-# Output: data/step1-pfs/{ISO}_hybrid_mixes.parquet
+# Output: data/step1-pfs/{ISO}_hybrid_mixes.parquet, {ISO}_hybrid_coarse_cache.parquet
 #
 # Grid sizes (approx post-filter):
 #   SPP: 3.3M | MISO: 6.1M | PJM: 7.6M | ERCOT: 9.2M
@@ -30,6 +31,20 @@ on:
         required: false
         default: false
         type: boolean
+      script:
+        description: 'Which stage to run'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - generate-mixes
+          - score-mixes
+      chunk_size:
+        description: 'Scoring chunk size (default 50000)'
+        required: false
+        default: '50000'
+        type: string
       dry_run:
         description: 'Dry run (print grid sizes, no output files)'
         required: false
@@ -67,7 +82,8 @@ jobs:
     - name: Create output directories
       run: mkdir -p data/step1-pfs
 
-    - name: "Generate hybrid mix combinations"
+    - name: "Stage 1a: Generate hybrid mix combinations"
+      if: ${{ inputs.script == 'ALL' || inputs.script == 'generate-mixes' }}
       run: |
         ISO="${{ inputs.iso }}"
         FLAGS="--hybrid"
@@ -84,11 +100,32 @@ jobs:
           python scripts/step1_1a_generate_mixes.py --iso "$ISO" $FLAGS
         fi
 
+    - name: "Stage 1b: Score hybrid mix combinations"
+      if: ${{ inputs.dry_run != 'true' && (inputs.script == 'ALL' || inputs.script == 'score-mixes') }}
+      run: |
+        ISO="${{ inputs.iso }}"
+        CHUNK="${{ inputs.chunk_size || '50000' }}"
+        FLAGS="--hybrid"
+        if [ "${{ inputs.force }}" = "true" ]; then FLAGS="$FLAGS --force"; fi
+
+        if [ "$ISO" = "ALL" ]; then
+          for iso in SPP MISO ERCOT PJM NYISO NEISO CAISO; do
+            echo ""
+            echo "=== Scoring hybrid mixes for $iso ==="
+            python scripts/step1_1b_score_mixes.py --iso "$iso" --chunk-size "$CHUNK" $FLAGS
+          done
+        else
+          python scripts/step1_1b_score_mixes.py --iso "$ISO" --chunk-size "$CHUNK" $FLAGS
+        fi
+
     - name: Report output sizes
       if: ${{ inputs.dry_run != 'true' }}
       run: |
         echo "=== Hybrid mix parquet files ==="
-        ls -lh data/step1-pfs/*_hybrid_mixes.parquet 2>/dev/null || echo "No files generated"
+        ls -lh data/step1-pfs/*_hybrid_mixes.parquet 2>/dev/null || echo "No mix files"
+        echo ""
+        echo "=== Hybrid scored cache files ==="
+        ls -lh data/step1-pfs/*_hybrid_coarse_cache.parquet 2>/dev/null || echo "No scored files"
 
     - name: Commit and push hybrid mixes
       if: ${{ inputs.dry_run != 'true' }}
@@ -130,23 +167,23 @@ jobs:
 
         for iso in $ISOS; do
           echo ""
-          echo "--- Committing hybrid mixes for $iso ---"
+          echo "--- Committing hybrid data for $iso ---"
 
-          FILE="data/step1-pfs/${iso}_hybrid_mixes.parquet"
-          if [ ! -f "$FILE" ]; then
-            echo "  No hybrid mixes file for $iso — skipping"
+          FILES=$(ls data/step1-pfs/${iso}_hybrid_mixes.parquet data/step1-pfs/${iso}_hybrid_coarse_cache.parquet 2>/dev/null || true)
+          if [ -z "$FILES" ]; then
+            echo "  No hybrid files for $iso — skipping"
             continue
           fi
 
-          git add -f "$FILE"
+          git add -f $FILES
           if git diff --cached --quiet; then
             echo "  No changes for $iso — skipping"
             continue
           fi
 
-          BATCH_MB=$(du -m "$FILE" | cut -f1)
+          BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
           echo "  Staging ~${BATCH_MB} MB for $iso"
-          git commit -m "Step 1A Hybrid: ${iso} mixes — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "Step 1 Hybrid: ${iso} mixes + scores — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           if push_with_retry "$iso"; then
             PUSHED=true
