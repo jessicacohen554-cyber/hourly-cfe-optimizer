@@ -10,10 +10,10 @@ Standard mode:
     Columns: clean_firm, solar, wind, hydro, [offshore_wind], [geothermal], score
 
 Hybrid mode (--hybrid):
-  Loads hybrid mixes from {ISO}_hybrid_mixes.parquet (4 extra columns:
+  Loads hybrid mixes from {ISO}_mixes.parquet (4 extra columns:
   solar_batt4, solar_batt8, wind_batt4, wind_batt8) and hybrid 8760
   profiles from data/hybrid_profiles/{ISO}_hybrid_profiles.npz.
-  Output: data/step1-pfs/{ISO}_hybrid_coarse_cache.parquet
+  Output: data/step1-pfs/{ISO}_coarse_cache.parquet
 
 Memory: Peak ~1.4 GiB (20K × 8760 × 8 bytes per scoring chunk).
   CAISO 5D: 1.6M combos scored in ~80 chunks, not all at once.
@@ -51,13 +51,13 @@ def _mixes_path(iso):
 
 
 def _hybrid_mixes_path(iso):
-    """Path for the hybrid mixes parquet from step1a --hybrid."""
-    return os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR, f'{iso}_hybrid_mixes.parquet')
+    """Path for the hybrid mixes parquet from step1a --hybrid (same name as standard)."""
+    return os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR, f'{iso}_mixes.parquet')
 
 
 def _hybrid_cache_path(iso):
-    """Path for the hybrid scored cache."""
-    return os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR, f'{iso}_hybrid_coarse_cache.parquet')
+    """Path for the hybrid scored cache (same name as standard)."""
+    return os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR, f'{iso}_coarse_cache.parquet')
 
 
 def load_mixes(iso):
@@ -95,6 +95,71 @@ def load_hybrid_mixes(iso):
     combos = np.column_stack([table.column(rt).to_numpy() for rt in rtypes])
     print(f"  {iso}: Loaded {len(combos):,} hybrid mixes from {path} ({len(rtypes)}D)")
     return combos
+
+
+def score_and_save_hybrid_streaming(iso, demand_arr, supply_matrix, chunk_size=20000):
+    """Score hybrid mixes in streaming chunks and write directly to parquet.
+
+    For large ISOs (NEISO 28M, CAISO 87M), loading all mixes into RAM + scoring
+    exceeds the 7 GB GitHub Actions limit. This function reads parquet row groups,
+    scores each chunk, and streams scored results to the output parquet.
+
+    Peak memory: chunk_size × 8760 × 8 bytes (scoring) + chunk_size × n_res × 8 (mixes).
+    At chunk_size=20000: ~1.4 GB scoring + ~1.6 MB mixes = ~1.4 GB peak.
+    """
+    rtypes = s1.get_resource_types(iso, include_hybrids=True)
+    n_res = len(rtypes)
+    in_path = _hybrid_mixes_path(iso)
+    out_path = _hybrid_cache_path(iso)
+
+    if not os.path.exists(in_path):
+        print(f"  ERROR: {in_path} not found. Run step1_1a --hybrid first.")
+        sys.exit(1)
+
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+
+    # Read parquet metadata to get total rows
+    pf = pq.ParquetFile(in_path)
+    total_rows = pf.metadata.num_rows
+    n_row_groups = pf.metadata.num_row_groups
+
+    mem_chunk_gb = chunk_size * 8760 * 8 / (1024**3)
+    print(f"  {iso}: Streaming score — {total_rows:,} mixes in {n_row_groups} "
+          f"row groups, chunk_size={chunk_size:,} ({mem_chunk_gb:.1f} GiB peak)",
+          flush=True)
+
+    # Output schema: resource columns + score
+    out_schema = pa.schema([(rt, pa.float64()) for rt in rtypes] +
+                           [('score', pa.float64())])
+    writer = pq.ParquetWriter(out_path, out_schema, compression='snappy')
+
+    total_scored = 0
+
+    for rg_idx in range(n_row_groups):
+        rg_table = pf.read_row_group(rg_idx, columns=rtypes)
+        rg_combos = np.column_stack([rg_table.column(rt).to_numpy() for rt in rtypes])
+        n_rg = len(rg_combos)
+
+        # Score this row group in sub-chunks
+        rg_scores = s1.batch_hourly_scores(demand_arr, supply_matrix, rg_combos,
+                                           chunk_size=chunk_size)
+
+        # Build output table for this row group
+        out_data = {rt: rg_combos[:, i] for i, rt in enumerate(rtypes)}
+        out_data['score'] = rg_scores
+        writer.write_table(pa.table(out_data, schema=out_schema))
+
+        total_scored += n_rg
+        print(f"    Row group {rg_idx + 1}/{n_row_groups}: "
+              f"{n_rg:,} scored ({total_scored:,} total)", flush=True)
+
+        # Free memory
+        del rg_table, rg_combos, rg_scores, out_data
+
+    writer.close()
+    size_mb = os.path.getsize(out_path) / (1024 * 1024)
+    print(f"  {iso}: Hybrid scored database → {out_path} ({size_mb:.1f} MB)")
+    return total_scored
 
 
 def score_mixes(iso, combos, demand_arr, supply_matrix, chunk_size=20000):
@@ -198,12 +263,6 @@ def main():
         print(f"  Processing {iso}")
         t0 = time.time()
 
-        # Load mixes
-        if args.hybrid:
-            combos = load_hybrid_mixes(iso)
-        else:
-            combos = load_mixes(iso)
-
         # Prepare supply profiles (base + hybrid if applicable)
         demand_norm = demand_data[iso]["normalized"]
         supply_profiles = s1.get_supply_profiles(iso, gen_profiles)
@@ -213,24 +272,27 @@ def main():
                 iso, demand_norm, supply_profiles,
                 include_hybrids=True,
                 hybrid_profiles=hybrid_profiles_map[iso])
+
+            # Use streaming scorer for hybrid (avoids loading all mixes into RAM)
+            score_and_save_hybrid_streaming(
+                iso, demand_arr, supply_matrix, chunk_size=args.chunk_size)
         else:
             demand_arr, supply_matrix = s1.prepare_numpy_profiles(
                 iso, demand_norm, supply_profiles)
 
-        # Verify dimensions match
-        n_res_combos = combos.shape[1]
-        n_res_profiles = supply_matrix.shape[0]
-        if n_res_combos != n_res_profiles:
-            print(f"  ERROR: Mix columns ({n_res_combos}) != profile rows "
-                  f"({n_res_profiles}). Aborting.")
-            sys.exit(1)
+            combos = load_mixes(iso)
 
-        # Score in chunks
-        scores = score_mixes(iso, combos, demand_arr, supply_matrix,
-                             chunk_size=args.chunk_size)
+            # Verify dimensions match
+            n_res_combos = combos.shape[1]
+            n_res_profiles = supply_matrix.shape[0]
+            if n_res_combos != n_res_profiles:
+                print(f"  ERROR: Mix columns ({n_res_combos}) != profile rows "
+                      f"({n_res_profiles}). Aborting.")
+                sys.exit(1)
 
-        # Save scored database
-        save_scored(iso, combos, scores, hybrid=args.hybrid)
+            scores = score_mixes(iso, combos, demand_arr, supply_matrix,
+                                 chunk_size=args.chunk_size)
+            save_scored(iso, combos, scores, hybrid=False)
 
         elapsed = time.time() - t0
         print(f"  {iso}: Done in {elapsed:.1f}s")
