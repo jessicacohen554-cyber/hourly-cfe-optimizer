@@ -39,10 +39,17 @@ RESOURCE_COLS = [
 ]
 
 
-def scan_parquets(cost_dir):
-    """Scan all parquets for max resource values per ISO."""
+def scan_parquets(cost_dir, exclude_tx_none=False):
+    """Scan all parquets for max resource values per ISO.
+
+    If exclude_tx_none=True, filters out scenarios with transmission='N' (None).
+    Scenario format: {Ren}{Firm}{Batt}{LDES}_{Fuel}_{Tx}_{CCS}{45Q}_{Geo}
+    Transmission is parts[2] after splitting on '_'.
+    """
     all_files = sorted(glob.glob(os.path.join(cost_dir, '*.parquet')))
     print(f"Scanning {len(all_files)} parquet files in {cost_dir}/")
+    if exclude_tx_none:
+        print("  Excluding scenarios with transmission = None")
 
     iso_maxes = {iso: {} for iso in ISOS}
 
@@ -56,6 +63,15 @@ def scan_parquets(cost_dir):
         valid_cols = [c for c in RESOURCE_COLS if c in df.columns]
         if not valid_cols or 'iso' not in df.columns:
             continue
+
+        # Filter out transmission=None scenarios if requested
+        if exclude_tx_none and 'scenario' in df.columns:
+            before = len(df)
+            # Transmission is the 3rd underscore-delimited part (index 2)
+            tx_level = df['scenario'].str.split('_').str[2]
+            df = df[tx_level != 'N']
+            if len(df) == 0:
+                continue
 
         df['total_procurement'] = df[valid_cols].sum(axis=1)
 
@@ -88,9 +104,14 @@ def main():
     parser = argparse.ArgumentParser(description='Extract empirical resource caps')
     parser.add_argument('--buffer', type=int, default=10, help='Buffer in percentage points (default: 10)')
     parser.add_argument('--step', type=int, default=5, help='Round up to nearest step (default: 5)')
+    parser.add_argument('--exclude-tx-none', action='store_true', default=True,
+                        help='Exclude scenarios with transmission=None (default: True)')
+    parser.add_argument('--include-tx-none', action='store_true',
+                        help='Include scenarios with transmission=None')
     args = parser.parse_args()
 
-    raw_maxes = scan_parquets(COST_DIR)
+    exclude_tx = args.exclude_tx_none and not args.include_tx_none
+    raw_maxes = scan_parquets(COST_DIR, exclude_tx_none=exclude_tx)
 
     # Print raw maxes
     resources = ['total', 'clean_firm', 'solar', 'wind', 'offshore_wind', 'hydro', 'geothermal', 'ccs_ccgt']
