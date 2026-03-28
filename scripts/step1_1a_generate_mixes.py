@@ -201,6 +201,172 @@ def _generate_scouts(iso, rtypes, ranges_informed, ranges_full):
     return np.array(scouts, dtype=np.float64)
 
 
+def _generate_family_compositions(family_cap, hybrid_cap, step):
+    """Generate all (standalone, batt4, batt8) compositions within a family budget.
+
+    For each family total (0, step, 2*step, ..., family_cap), enumerate all
+    3-way splits where standalone + batt4 + batt8 = total, and each hybrid
+    type ≤ hybrid_cap.
+
+    Returns list of (standalone, batt4, batt8) tuples.
+    """
+    compositions = []
+    for total in range(0, family_cap + 1, step):
+        for b4 in range(0, min(hybrid_cap, total) + 1, step):
+            for b8 in range(0, min(hybrid_cap, total - b4) + 1, step):
+                standalone = total - b4 - b8
+                if standalone >= 0:
+                    compositions.append((standalone, b4, b8))
+    return compositions
+
+
+def generate_hybrid_mixes(iso):
+    """Generate coarse mix combos with hybrid family splits.
+
+    Uses tightened per-ISO windows:
+      - Solar family: (solar, solar_batt4, solar_batt8) compositions at 10% steps
+      - Wind family: (wind, wind_batt4, wind_batt8) compositions at 10% steps
+      - Clean firm: 10% steps within tightened per-ISO window
+      - CCS: 5% steps within tightened per-ISO cap
+      - Hydro: fixed at observed DG value (not a dimension)
+      - OSW, Geo: 5% steps (unchanged)
+
+    Returns combos array (N, n_res) with columns matching
+    get_resource_types(iso, include_hybrids=True).
+    """
+    step_h = s1.HYBRID_FAMILY_STEP  # 10% for family splits
+    h_cap = s1.HYBRID_MAX_PER_TYPE  # 40% max per hybrid type
+
+    # ── Family compositions ──
+    s_fam_cap = s1.SOLAR_FAMILY_CAP[iso]
+    w_fam_cap = s1.WIND_FAMILY_CAP[iso]
+    solar_comps = _generate_family_compositions(s_fam_cap, h_cap, step_h)
+    wind_comps = _generate_family_compositions(w_fam_cap, h_cap, step_h)
+
+    # ── Other dimensions ──
+    cf_lo, cf_hi = s1.CF_WINDOW[iso]
+    cf_step = s1.CF_COARSE_STEP  # 10%
+    cf_vals = list(range(cf_lo, cf_hi + 1, cf_step))
+
+    ccs_cap = s1.CCS_CAP[iso]
+    ccs_vals = list(range(0, ccs_cap + 1, 5))
+
+    hydro_val = s1.HYDRO_FIXED[iso]  # single fixed value
+
+    osw_cap = int(s1.OFFSHORE_WIND_CAP_PCT.get(iso, 0)) if iso in s1.OFFSHORE_ISOS else 0
+    osw_vals = list(range(0, osw_cap + 1, 5)) if osw_cap > 0 else [0]
+    if osw_cap > 0 and osw_cap not in osw_vals:
+        osw_vals.append(osw_cap)
+
+    geo_vals = list(range(0, s1.GEO_CAP_PCT + 1, 5)) if iso == 'CAISO' else [0]
+
+    # ── Build column order matching get_resource_types(iso, include_hybrids=True) ──
+    # Base: clean_firm, solar, wind, hydro, [offshore_wind], [geothermal]
+    # Hybrid: solar_batt4, solar_batt8, wind_batt4, wind_batt8
+    rtypes = s1.get_resource_types(iso, include_hybrids=True)
+    n_res = len(rtypes)
+
+    # Column index map
+    idx = {rt: i for i, rt in enumerate(rtypes)}
+
+    print(f"  {iso}: Generating hybrid grid — "
+          f"solar_fam={len(solar_comps)} splits (cap {s_fam_cap}%), "
+          f"wind_fam={len(wind_comps)} splits (cap {w_fam_cap}%), "
+          f"CF={len(cf_vals)} ({cf_lo}-{cf_hi}% @{cf_step}%), "
+          f"CCS={len(ccs_vals)} (0-{ccs_cap}% @5%), "
+          f"OSW={len(osw_vals)}, Geo={len(geo_vals)}")
+
+    # Pre-compute raw grid size
+    raw_size = (len(solar_comps) * len(wind_comps) * len(cf_vals) *
+                len(ccs_vals) * len(osw_vals) * len(geo_vals))
+    print(f"  {iso}: Raw Cartesian: {raw_size:,} — generating + filtering...")
+
+    # ── Generate via chunked numpy to limit peak memory ──
+    solar_arr = np.array(solar_comps, dtype=np.float64)  # (Ns, 3)
+    wind_arr = np.array(wind_comps, dtype=np.float64)    # (Nw, 3)
+    cf_arr = np.array(cf_vals, dtype=np.float64)
+    ccs_arr = np.array(ccs_vals, dtype=np.float64)
+    osw_arr = np.array(osw_vals, dtype=np.float64)
+    geo_arr = np.array(geo_vals, dtype=np.float64)
+
+    # Pre-compute the "other" grid (cf, ccs, osw, geo) once
+    grids = np.meshgrid(cf_arr, ccs_arr, osw_arr, geo_arr, indexing='ij')
+    other_combos = np.column_stack([g.ravel() for g in grids])
+    other_sums = other_combos.sum(axis=1)
+    n_other = len(other_combos)
+
+    pcap = s1.TOTAL_PROCUREMENT_CAP
+
+    # Two-pass: count first, then fill pre-allocated array
+    # Pass 1: count valid combos
+    total_count = 0
+    sw_sums = []  # cache (si, wi) → sw_sum for valid pairs
+    for si in range(len(solar_arr)):
+        s_sum = solar_arr[si].sum()
+        for wi in range(len(wind_arr)):
+            w_sum = wind_arr[wi].sum()
+            sw_sum = s_sum + w_sum + hydro_val
+            if sw_sum + cf_arr[0] > pcap:
+                continue
+            n_keep = int(np.sum((sw_sum + other_sums > 0) &
+                                (sw_sum + other_sums <= pcap)))
+            if n_keep > 0:
+                sw_sums.append((si, wi, sw_sum, n_keep))
+                total_count += n_keep
+
+    print(f"  {iso}: {total_count:,} valid combos from "
+          f"{len(sw_sums):,} (solar,wind) pairs — allocating...")
+
+    if total_count == 0:
+        return np.empty((0, n_res), dtype=np.float64)
+
+    # Pass 2: fill pre-allocated array
+    combos = np.empty((total_count, n_res), dtype=np.float64)
+    pos = 0
+    for si, wi, sw_sum, n_keep in sw_sums:
+        mask = (sw_sum + other_sums > 0) & (sw_sum + other_sums <= pcap)
+        other_kept = other_combos[mask]
+
+        end = pos + n_keep
+        combos[pos:end, idx['clean_firm']] = other_kept[:, 0]
+        combos[pos:end, idx['solar']] = solar_arr[si, 0]
+        combos[pos:end, idx['wind']] = wind_arr[wi, 0]
+        combos[pos:end, idx['hydro']] = hydro_val
+        if 'offshore_wind' in idx:
+            combos[pos:end, idx['offshore_wind']] = other_kept[:, 2]
+        if 'geothermal' in idx:
+            combos[pos:end, idx['geothermal']] = other_kept[:, 3]
+        combos[pos:end, idx['solar_batt4']] = solar_arr[si, 1]
+        combos[pos:end, idx['solar_batt8']] = solar_arr[si, 2]
+        combos[pos:end, idx['wind_batt4']] = wind_arr[wi, 1]
+        combos[pos:end, idx['wind_batt8']] = wind_arr[wi, 2]
+        pos = end
+
+    print(f"  {iso}: {len(combos):,} hybrid mixes after filtering "
+          f"(procurement cap ≤ {pcap}%)")
+    return combos
+
+
+def hybrid_mixes_path(iso):
+    """Path for the hybrid mixes parquet."""
+    return os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR, f'{iso}_hybrid_mixes.parquet')
+
+
+def save_hybrid_mixes(iso, combos):
+    """Write hybrid mix combinations to parquet."""
+    rtypes = s1.get_resource_types(iso, include_hybrids=True)
+    os.makedirs(s1.STEP1_RAW_PFS_PARQUET_DIR, exist_ok=True)
+
+    data = {rt: combos[:, i] for i, rt in enumerate(rtypes)}
+    table = pa.table(data)
+    out_path = hybrid_mixes_path(iso)
+    pq.write_table(table, out_path, compression='snappy')
+
+    size_mb = os.path.getsize(out_path) / (1024 * 1024)
+    print(f"  {iso}: {len(combos):,} hybrid mixes → {out_path} ({size_mb:.1f} MB)")
+    return out_path
+
+
 def save_mixes(iso, combos):
     """Write mix combinations to parquet (no scores)."""
     rtypes = s1.get_resource_types(iso)
@@ -232,6 +398,14 @@ def main():
         "--use-prior-windows", action="store_true",
         help="Use prior EF results to narrow search space",
     )
+    parser.add_argument(
+        "--hybrid", action="store_true",
+        help="Generate hybrid co-located mixes (solar+batt, wind+batt families)",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true",
+        help="Print grid sizes without generating (for QA/QC)",
+    )
     args = parser.parse_args()
 
     isos = list(s1.ISOS) if args.iso.upper() == 'ALL' else [args.iso.upper()]
@@ -241,6 +415,58 @@ def main():
             print(f"ERROR: Unknown ISO '{iso}'. Valid: {', '.join(s1.ISOS)}")
             sys.exit(1)
 
+    # ── Hybrid mode ──
+    if args.hybrid:
+        path_fn = hybrid_mixes_path
+        if not args.force and not args.dry_run:
+            skip = [iso for iso in isos if os.path.exists(path_fn(iso))]
+            if skip:
+                print(f"Skipping ISOs with existing hybrid mixes: {', '.join(skip)} "
+                      f"(use --force to regenerate)")
+                isos = [iso for iso in isos if iso not in skip]
+                if not isos:
+                    print("Nothing to do.")
+                    return
+
+        print("=" * 70)
+        print(f"  Step 1a — Generate HYBRID Mix Combinations")
+        print(f"  ISOs: {', '.join(isos)}")
+        print(f"  Family step: {s1.HYBRID_FAMILY_STEP}%  "
+              f"Hybrid cap: {s1.HYBRID_MAX_PER_TYPE}%  "
+              f"CF step: {s1.CF_COARSE_STEP}%")
+        print("=" * 70)
+
+        for iso in isos:
+            t0 = time.time()
+            combos = generate_hybrid_mixes(iso)
+            rtypes = s1.get_resource_types(iso, include_hybrids=True)
+            if args.dry_run:
+                print(f"  {iso}: DRY RUN — {len(combos):,} mixes ({len(rtypes)}D), "
+                      f"columns: {rtypes}")
+                # Print family composition counts for verification
+                s_comps = _generate_family_compositions(
+                    s1.SOLAR_FAMILY_CAP[iso], s1.HYBRID_MAX_PER_TYPE,
+                    s1.HYBRID_FAMILY_STEP)
+                w_comps = _generate_family_compositions(
+                    s1.WIND_FAMILY_CAP[iso], s1.HYBRID_MAX_PER_TYPE,
+                    s1.HYBRID_FAMILY_STEP)
+                print(f"          Solar family: {len(s_comps)} compositions")
+                print(f"          Wind family:  {len(w_comps)} compositions")
+                # Sample some compositions
+                for label, comps in [("Solar", s_comps[:5]), ("Wind", w_comps[:5])]:
+                    for c in comps:
+                        print(f"            {label}: stand={c[0]}% b4={c[1]}% b8={c[2]}%")
+                continue
+
+            save_hybrid_mixes(iso, combos)
+            elapsed = time.time() - t0
+            print(f"  {iso}: {len(combos):,} hybrid combos ({len(rtypes)}D) "
+                  f"in {elapsed:.1f}s")
+
+        print(f"\n  Done. Hybrid mixes generated.")
+        return
+
+    # ── Standard (non-hybrid) mode ──
     if not args.force:
         skip = [iso for iso in isos if os.path.exists(mixes_path(iso))]
         if skip:
