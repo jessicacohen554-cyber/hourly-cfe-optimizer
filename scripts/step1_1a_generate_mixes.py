@@ -474,8 +474,8 @@ def _flush_chunk(writer, rtypes, chunk):
 
 
 def hybrid_mixes_path(iso):
-    """Path for the hybrid mixes parquet."""
-    return os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR, f'{iso}_hybrid_mixes.parquet')
+    """Path for the hybrid mixes parquet (same name as standard mixes)."""
+    return os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR, f'{iso}_mixes.parquet')
 
 
 def save_hybrid_mixes(iso, combos):
