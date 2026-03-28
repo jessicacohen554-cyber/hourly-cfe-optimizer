@@ -23,10 +23,10 @@
       "hydro": 0
     },
     "PJM": {
-      "total": 211.0,
+      "total": 202.0,
       "clean_firm": 116.0,
       "solar": 73.0,
-      "wind": 147.0,
+      "wind": 97.0,
       "offshore_wind": 4.0,
       "geothermal": 0,
       "ccs_ccgt": 45.0,
@@ -45,7 +45,7 @@
     "NEISO": {
       "total": 207.0,
       "clean_firm": 120.0,
-      "solar": 81.0,
+      "solar": 78.0,
       "wind": 82.0,
       "offshore_wind": 33.0,
       "geothermal": 0,
@@ -75,106 +75,74 @@
   },
   "caps": {
     "CAISO": {
+      "total": 225,
       "clean_firm": 105,
       "solar": 95,
       "wind": 145,
       "offshore_wind": 20,
-      "hydro": 10,
-      "geothermal": 20,
+      "geothermal": 30,
       "ccs_ccgt": 50,
-      "solar_family": 120,
-      "wind_family": 155,
-      "total": 225
+      "hydro": 20
     },
     "ERCOT": {
+      "total": 240,
       "clean_firm": 110,
       "solar": 85,
       "wind": 205,
       "offshore_wind": 10,
-      "hydro": 0,
-      "geothermal": 0,
+      "geothermal": 10,
       "ccs_ccgt": 60,
-      "solar_family": 110,
-      "wind_family": 215,
-      "total": 240
+      "hydro": 10
     },
     "PJM": {
+      "total": 215,
       "clean_firm": 130,
       "solar": 85,
-      "wind": 160,
+      "wind": 110,
       "offshore_wind": 15,
-      "hydro": 5,
-      "geothermal": 0,
+      "geothermal": 10,
       "ccs_ccgt": 55,
-      "solar_family": 110,
-      "wind_family": 170,
-      "total": 225
+      "hydro": 15
     },
     "NYISO": {
+      "total": 185,
       "clean_firm": 125,
       "solar": 95,
       "wind": 90,
       "offshore_wind": 35,
-      "hydro": 15,
-      "geothermal": 0,
+      "geothermal": 10,
       "ccs_ccgt": 65,
-      "solar_family": 120,
-      "wind_family": 100,
-      "total": 185
+      "hydro": 25
     },
     "NEISO": {
+      "total": 220,
       "clean_firm": 130,
-      "solar": 95,
+      "solar": 90,
       "wind": 95,
       "offshore_wind": 45,
-      "hydro": 5,
-      "geothermal": 0,
+      "geothermal": 10,
       "ccs_ccgt": 60,
-      "solar_family": 120,
-      "wind_family": 105,
-      "total": 220
+      "hydro": 15
     },
     "MISO": {
+      "total": 255,
       "clean_firm": 130,
       "solar": 60,
       "wind": 215,
       "offshore_wind": 10,
-      "hydro": 5,
-      "geothermal": 0,
+      "geothermal": 10,
       "ccs_ccgt": 70,
-      "solar_family": 70,
-      "wind_family": 225,
-      "total": 255
+      "hydro": 15
     },
     "SPP": {
+      "total": 225,
       "clean_firm": 105,
       "solar": 60,
       "wind": 195,
       "offshore_wind": 10,
-      "hydro": 5,
-      "geothermal": 0,
+      "geothermal": 10,
       "ccs_ccgt": 60,
-      "solar_family": 70,
-      "wind_family": 205,
-      "total": 225
+      "hydro": 15
     }
-  },
-  "notes": {
-    "hybrid_caps": "First run: set equal to parent resource caps. Re-extract after results.",
-    "h2_dropped": "H2 storage removed \u2014 never wins in any scenario.",
-    "threshold_99.99_dropped": ">=99.9% is new ceiling, labeled effectively 100%.",
-    "top_threshold": "99.9 (>=99.9%, effectively 100%)"
-  },
-  "buffer_rules": {
-    "clean_firm": "+10pp, round to 5",
-    "solar_standalone": "+10pp, round to 5 (within family budget)",
-    "wind_standalone": "+10pp, round to 5 (within family budget)",
-    "solar_family": "max_solar \u00d7 1.4, round to 10 (standalone + sb4 + sb8)",
-    "wind_family": "standalone_cap + 10pp (standalone + wb4 + wb8)",
-    "offshore_wind": "+10pp",
-    "hydro": "+0pp (physical cap)",
-    "geothermal": "+0pp (physical cap)",
-    "ccs_ccgt": "+10pp",
-    "total": "+10pp"
   }
 }
