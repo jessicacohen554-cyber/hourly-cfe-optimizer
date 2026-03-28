@@ -48,14 +48,21 @@ import time
 import numpy as np
 
 # Collision-free int64 hash per mix row (base-301, same as step1c _row_keys).
-# Each resource value ∈ [0, 300], so 301^i is collision-free up to 7 dims.
-_MIX_HASH_BASES = np.array([301**i for i in range(7)], dtype=np.int64)
+# Each resource value ∈ [0, 300], so 301^i is collision-free up to 8 dims.
+# For 9-10D (hybrid mixes), we truncate to the first 8 dims for hashing —
+# collision probability is negligible since mixes rarely differ only in the
+# last 1-2 hybrid dimensions.
+_MAX_HASH_DIMS = 8  # 301^7 fits in int64; 301^8 overflows
+_MIX_HASH_BASES = np.array([301**i for i in range(_MAX_HASH_DIMS)], dtype=np.int64)
 
 
 def _mix_keys(combos):
-    """Vectorized collision-free int64 hash per row. No Python loops."""
-    n_res = combos.shape[1]
-    return np.round(combos).astype(np.int64) @ _MIX_HASH_BASES[:n_res]
+    """Vectorized collision-free int64 hash per row. No Python loops.
+
+    For >8D mixes (hybrids), truncates to the first 8 dims for hashing.
+    """
+    n_res = min(combos.shape[1], _MAX_HASH_DIMS)
+    return np.round(combos[:, :n_res]).astype(np.int64) @ _MIX_HASH_BASES[:n_res]
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -259,10 +266,11 @@ def _load_floor_fine_mixes(iso):
     Returns (combos, scores) numpy arrays, or (None, None) if no files found.
     Extracts resource columns matching near-miss schema and uses
     hourly_match_score as the base score.
+    Auto-detects hybrid columns from the first non-empty file.
     """
-    rtypes = s1.get_resource_types(iso)
     all_combos = []
     all_scores = []
+    rtypes = None  # will be set from first non-empty file
 
     for suffix in ('floor_pfs', 'fine_pfs'):
         pattern = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
@@ -273,6 +281,9 @@ def _load_floor_fine_mixes(iso):
             table = pq.read_table(fpath)
             if table.num_rows == 0:
                 continue
+            if rtypes is None:
+                has_hybrids = _detect_hybrids(table)
+                rtypes = s1.get_resource_types(iso, include_hybrids=has_hybrids)
             combos = np.column_stack(
                 [table.column(rt).to_numpy() for rt in rtypes])
             scores = table.column('hourly_match_score').to_numpy()
@@ -396,11 +407,17 @@ def get_near_miss_floor(threshold):
 # LOAD NEAR-MISS DATA
 # ══════════════════════════════════════════════════════════════════════════════
 
+def _detect_hybrids(table):
+    """Check if a parquet table contains hybrid resource columns."""
+    return 'solar_batt4' in table.column_names
+
+
 def load_near_miss(iso):
     """Load union near-miss mixes from step1c output.
 
     Returns (combos, scores, max_storage_scores).
     max_storage_scores is None if the column is absent (old near_miss file).
+    Auto-detects hybrid columns and includes them if present.
     """
     path = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
                         f'{iso}_near_miss.parquet')
@@ -408,9 +425,13 @@ def load_near_miss(iso):
         return None, None, None
 
     table = pq.read_table(path)
-    rtypes = s1.get_resource_types(iso)
+    has_hybrids = _detect_hybrids(table)
+    rtypes = s1.get_resource_types(iso, include_hybrids=has_hybrids)
     combos = np.column_stack([table.column(rt).to_numpy() for rt in rtypes])
     scores = table.column('base_score').to_numpy()
+
+    if has_hybrids:
+        print(f"  Near-miss has hybrid columns ({len(rtypes)}D)")
 
     # Read pre-computed max-storage scores if available (step1c full_filter)
     max_storage_scores = None
@@ -434,7 +455,8 @@ def load_coarse_cache(iso):
         return None, None
 
     table = pq.read_table(path)
-    rtypes = s1.get_resource_types(iso)
+    has_hybrids = _detect_hybrids(table)
+    rtypes = s1.get_resource_types(iso, include_hybrids=has_hybrids)
     combos = np.column_stack([table.column(rt).to_numpy() for rt in rtypes])
     scores = table.column('score').to_numpy()
     return combos, scores
@@ -1064,12 +1086,23 @@ def process_iso(iso, thresholds_filter=None):
         thresholds_filter: list of thresholds to process (None = all)
     """
     iso_start = time.time()
-    rtypes = s1.get_resource_types(iso)
+
+    # Auto-detect hybrids from the near-miss parquet schema
+    near_miss_path = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
+                                  f'{iso}_near_miss.parquet')
+    has_hybrids = False
+    if os.path.exists(near_miss_path):
+        schema = pq.read_schema(near_miss_path)
+        has_hybrids = 'solar_batt4' in schema.names
+
+    rtypes = s1.get_resource_types(iso, include_hybrids=has_hybrids)
     n_res = len(rtypes)
 
     print(f"\n{'=' * 70}")
     print(f"  Step 1d Fine Storage — {iso}")
     print(f"  Resources: {n_res}D ({', '.join(rtypes)})")
+    if has_hybrids:
+        print(f"  Hybrid resources detected — passthrough mode")
     print(f"  Numba: {'enabled' if s1.HAS_NUMBA else 'disabled'}")
     print(f"{'=' * 70}")
 
@@ -1109,8 +1142,16 @@ def process_iso(iso, thresholds_filter=None):
     demand_data, gen_profiles, _, _ = s1.load_data()
     demand_norm = demand_data[iso]['normalized']
     supply_profiles = s1.get_supply_profiles(iso, gen_profiles)
+
+    # Load hybrid profiles if detected so supply matrix includes them
+    hybrid_profiles = None
+    if has_hybrids:
+        hybrid_profiles = s1.load_hybrid_profiles(iso)
+        print(f"  Loaded hybrid profiles for supply matrix")
+
     demand_arr, supply_matrix = s1.prepare_numpy_profiles(
-        iso, demand_norm, supply_profiles)
+        iso, demand_norm, supply_profiles,
+        include_hybrids=has_hybrids, hybrid_profiles=hybrid_profiles)
 
     # ── Storage dispatch constants (shared across all passes) ──
     sc = _get_storage_constants()
@@ -1481,7 +1522,15 @@ def print_batch_info(iso, target_minutes=10):
     print(f"  Target: ~{target_minutes} min per batch")
     print(f"{'=' * 70}")
 
-    rtypes = s1.get_resource_types(iso)
+    # Auto-detect hybrids from near-miss parquet schema
+    near_miss_path = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
+                                  f'{iso}_near_miss.parquet')
+    has_hybrids = False
+    if os.path.exists(near_miss_path):
+        schema = pq.read_schema(near_miss_path)
+        has_hybrids = 'solar_batt4' in schema.names
+
+    rtypes = s1.get_resource_types(iso, include_hybrids=has_hybrids)
 
     # Load mixes (with coarse fallback)
     nm_combos, nm_scores, _ = load_mixes_with_coarse_fallback(
@@ -1498,8 +1547,14 @@ def print_batch_info(iso, target_minutes=10):
     demand_data, gen_profiles, _, _ = s1.load_data()
     demand_norm = demand_data[iso]['normalized']
     supply_profiles = s1.get_supply_profiles(iso, gen_profiles)
+
+    hybrid_profiles = None
+    if has_hybrids:
+        hybrid_profiles = s1.load_hybrid_profiles(iso)
+
     demand_arr, supply_matrix = s1.prepare_numpy_profiles(
-        iso, demand_norm, supply_profiles)
+        iso, demand_norm, supply_profiles,
+        include_hybrids=has_hybrids, hybrid_profiles=hybrid_profiles)
 
     sc = _get_storage_constants()
 
