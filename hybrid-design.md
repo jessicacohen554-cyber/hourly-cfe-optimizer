@@ -243,6 +243,10 @@ Files to modify:
 | 10 | All 4 hybrid types | 2026-03-28 | solar_batt4, solar_batt8, wind_batt4, wind_batt8 |
 | 11 | Wind battery sizing 25-40% | 2026-03-28 | POI ceiling logic, per-ISO TBD |
 | 12 | Integrated profiles (Option B) | 2026-03-28 | Pre-computed 8760 shapes, not decomposed |
+| 13 | Drop H2 storage | 2026-03-28 | Never wins in any scenario across all 161 parquets. Removes a dimension from Step 1.5 storage sweep (3× reduction). |
+| 14 | Drop 99.99% threshold | 2026-03-28 | Drives extreme mixes (230%+ procurement), minimal analytical value. ≥99.9% is the new ceiling, labeled "effectively 100%." Only 8.76 unmatched hours/year. |
+| 15 | Empirical resource caps | 2026-03-28 | +10pp buffer on observed max per ISO per resource from Step 2.2 results. Constrains Step 1 grid to proven-useful ranges. Script: `extract_empirical_caps.py`, output: `empirical_resource_caps.json`. |
+| 16 | Hybrids are additive, not substitutional | 2026-03-28 | A mix can include standalone solar AND solar_batt4 — they're different assets with different cost profiles. No forced substitution constraint. |
 
 ---
 
@@ -251,6 +255,38 @@ Files to modify:
 - [ ] Exact ITC treatment for wind+storage co-location under IRA rules
 - [x] ~~Offshore wind+storage hybrids~~ — **Skipped**
 - [ ] LCOE source data for hybrid-specific costs (NREL ATB 2024 has hybrid benchmarks)
-- [x] ~~DC:AC validation~~ — **Complete**. CAISO=1.35, all others=1.50.
+- [x] ~~DC:AC validation~~ — **Complete**. solar_batt4: CAISO=1.35, others=1.50. solar_batt8: CAISO=1.70, others=2.00.
 - [ ] Wind battery:wind MW ratio per ISO (pending wind profile analysis)
 - [ ] Wind arbitrage block duration per ISO (validates 4hr vs 8hr value)
+
+---
+
+## 9. Compute Trimming (Pipeline-Wide)
+
+Three changes to keep Step 1 tractable with 4 new hybrid dimensions:
+
+### 9.1 Drop H2 Storage
+- Never selected as cost-optimal in any of 161 Step 2.2 parquets
+- Step 1.5 storage grid: 11 bat4 × 10 bat8 × 9 LDES × ~~3 H2~~ = 2,970 → **990 combos** (3× reduction)
+
+### 9.2 Drop 99.99% Threshold
+- ≥99.9% becomes the ceiling, labeled "effectively 100%" (8.76 unmatched hours/year)
+- 99.99% drove extreme procurement mixes (230%+) that inflated the grid
+- **20 thresholds** instead of 21: 10, 20, 30, 40, 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, ≥99.9
+
+### 9.3 Empirical Resource Caps
+Source: `data/step2.2-cost/empirical_resource_caps.json`
+
+Max observed winning % + 10pp buffer, rounded to nearest 5:
+
+| ISO | Total | CF | Solar | Wind | OSW | Hydro | Geo | CCS |
+|-----|-------|-----|-------|------|-----|-------|-----|-----|
+| CAISO | 225 | 105 | 95 | 145 | 20 | 20 | 30 | 50 |
+| ERCOT | 240 | 110 | 85 | 205 | 10 | 10 | 10 | 60 |
+| PJM | 225 | 130 | 85 | 160 | 15 | 15 | 10 | 55 |
+| NYISO | 185 | 125 | 95 | 90 | 35 | 25 | 10 | 65 |
+| NEISO | 220 | 130 | 95 | 95 | 45 | 15 | 10 | 60 |
+| MISO | 255 | 130 | 60 | 215 | 10 | 15 | 10 | 70 |
+| SPP | 225 | 105 | 60 | 195 | 10 | 15 | 10 | 60 |
+
+Hybrid caps (initial, no prior data): TBD after first run, likely 50-70% of parent resource cap.
