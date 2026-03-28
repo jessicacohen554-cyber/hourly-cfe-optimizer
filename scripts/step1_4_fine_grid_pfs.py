@@ -98,6 +98,10 @@ MAX_CF_ADD = 30
 MAX_OSW_ADD = 20
 MAX_GEO_ADD = 15
 
+# Hybrid resource parameters
+HYBRID_STEP = 5         # 5% step for hybrids in fine grid
+MAX_HYBRID_ADD = 30     # Each hybrid type ≤ 30% (tighter than floor-aware)
+
 # Scoring
 CHUNK_SIZE = 20000    # Batch size for hourly scoring
 
@@ -106,7 +110,7 @@ CHUNK_SIZE = 20000    # Batch size for hourly scoring
 # GRID GENERATION
 # ============================================================================
 
-def generate_fine_grid(iso):
+def generate_fine_grid(iso, include_hybrids=False):
     """Generate resource mixes on 1% fine grid starting from existing clean floor.
 
     Returns:
@@ -146,33 +150,65 @@ def generate_fine_grid(iso):
     else:
         geo_additions = np.array([0.0])
 
+    # Hybrid resource additions
+    if include_hybrids:
+        sb4_additions = np.arange(0, MAX_HYBRID_ADD + HYBRID_STEP, HYBRID_STEP, dtype=np.float64)
+        sb8_additions = np.arange(0, MAX_HYBRID_ADD + HYBRID_STEP, HYBRID_STEP, dtype=np.float64)
+        wb4_additions = np.arange(0, MAX_HYBRID_ADD + HYBRID_STEP, HYBRID_STEP, dtype=np.float64)
+        wb8_additions = np.arange(0, MAX_HYBRID_ADD + HYBRID_STEP, HYBRID_STEP, dtype=np.float64)
+    else:
+        sb4_additions = np.array([0.0])
+        sb8_additions = np.array([0.0])
+        wb4_additions = np.array([0.0])
+        wb8_additions = np.array([0.0])
+
     # Count combos
-    n_combos = (len(cf_additions) * len(sol_additions) * len(wnd_additions) *
-                len(osw_additions) * len(geo_additions))
+    all_additions = [cf_additions, sol_additions, wnd_additions, osw_additions, geo_additions,
+                     sb4_additions, sb8_additions, wb4_additions, wb8_additions]
+    n_combos = 1
+    for a in all_additions:
+        n_combos *= len(a)
+
+    hybrid_str = ""
+    if include_hybrids:
+        hybrid_str = (f" × {len(sb4_additions)} sb4 × {len(sb8_additions)} sb8"
+                      f" × {len(wb4_additions)} wb4 × {len(wb8_additions)} wb8")
     print(f"  {iso}: {n_combos:,} fine-grid combos "
           f"({len(cf_additions)} CF × {len(sol_additions)} sol × {len(wnd_additions)} wnd "
-          f"× {len(osw_additions)} osw × {len(geo_additions)} geo)")
+          f"× {len(osw_additions)} osw × {len(geo_additions)} geo{hybrid_str})")
 
-    # Check if too many combos — if so, batch the generation
+    # OOM protection: increase step sizes if grid too large
     MAX_BATCH = 50_000_000  # 50M max at once to avoid OOM
     if n_combos > MAX_BATCH:
         print(f"  WARNING: {n_combos:,} combos exceeds {MAX_BATCH:,} limit. "
-              f"Increasing step size for this ISO.")
-        # Fall back to 2% grid for this ISO
+              f"Increasing step sizes.")
+        # Fall back to 2% grid for base resources
         sol_additions = np.arange(0, MAX_SOLAR_ADD + 2, 2, dtype=np.float64)
         wnd_additions = np.arange(0, MAX_WIND_ADD + 2, 2, dtype=np.float64)
         cf_additions = np.arange(0, MAX_CF_ADD + 2, 2, dtype=np.float64)
-        n_combos = (len(cf_additions) * len(sol_additions) * len(wnd_additions) *
-                    len(osw_additions) * len(geo_additions))
-        print(f"  → Reduced to {n_combos:,} combos with 2% step")
+        if include_hybrids:
+            # Increase hybrid step to 10%
+            sb4_additions = np.arange(0, MAX_HYBRID_ADD + 10, 10, dtype=np.float64)
+            sb8_additions = np.arange(0, MAX_HYBRID_ADD + 10, 10, dtype=np.float64)
+            wb4_additions = np.arange(0, MAX_HYBRID_ADD + 10, 10, dtype=np.float64)
+            wb8_additions = np.arange(0, MAX_HYBRID_ADD + 10, 10, dtype=np.float64)
+        all_additions = [cf_additions, sol_additions, wnd_additions, osw_additions, geo_additions,
+                         sb4_additions, sb8_additions, wb4_additions, wb8_additions]
+        n_combos = 1
+        for a in all_additions:
+            n_combos *= len(a)
+        print(f"  → Reduced to {n_combos:,} combos with increased step")
 
-    resource_names = list(RESOURCE_TYPES)
+    # Build resource names matching the supply_matrix order:
+    # base 6D RESOURCE_TYPES + hybrid extensions
+    resource_names = list(RESOURCE_TYPES)  # ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
+    if include_hybrids:
+        resource_names.extend(s1.HYBRID_TYPES)  # + ['solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
 
     has_geo = iso in GEOTHERMAL_ISOS
 
     # Generate grid via meshgrid
-    grids = np.meshgrid(cf_additions, sol_additions, wnd_additions, osw_additions, geo_additions,
-                        indexing='ij')
+    grids = np.meshgrid(*all_additions, indexing='ij')
     flat = [g.ravel() for g in grids]
     cf_vals = floor_cf + flat[0]
     sol_vals = floor_sol + flat[1]
@@ -180,15 +216,31 @@ def generate_fine_grid(iso):
     osw_vals = flat[3]  # offshore wind is all new-build (no existing)
     geo_vals = flat[4]  # geothermal is all new-build
 
-    # CCS residual: implicit (100 - sum of explicit resources)
-    explicit_sum = cf_vals + sol_vals + wnd_vals + hydro_val + osw_vals + geo_vals
+    # Hybrid values
+    sb4_vals = flat[5] if include_hybrids else np.zeros_like(cf_vals)
+    sb8_vals = flat[6] if include_hybrids else np.zeros_like(cf_vals)
+    wb4_vals = flat[7] if include_hybrids else np.zeros_like(cf_vals)
+    wb8_vals = flat[8] if include_hybrids else np.zeros_like(cf_vals)
+
+    # CCS residual: implicit (100 - sum of explicit resources including hybrids)
+    explicit_sum = (cf_vals + sol_vals + wnd_vals + hydro_val + osw_vals + geo_vals +
+                    sb4_vals + sb8_vals + wb4_vals + wb8_vals)
     ccs_vals = np.maximum(0, 100.0 - explicit_sum)
 
     # Filter: total procurement < 350% (same as step1a)
-    total = cf_vals + sol_vals + wnd_vals + hydro_val + osw_vals + geo_vals
+    total = explicit_sum
     mask = total <= 350.0
     # Also filter: at least some generation
     mask &= total > 0.1
+
+    # Family cap constraints for hybrids
+    if include_hybrids:
+        solar_fam_cap = s1.SOLAR_FAMILY_CAP.get(iso, 100)
+        wind_fam_cap = s1.WIND_FAMILY_CAP.get(iso, 100)
+        solar_family = sol_vals + sb4_vals + sb8_vals
+        wind_family = wnd_vals + wb4_vals + wb8_vals
+        mask &= solar_family <= solar_fam_cap
+        mask &= wind_family <= wind_fam_cap
 
     cf_vals = cf_vals[mask]
     sol_vals = sol_vals[mask]
@@ -196,37 +248,49 @@ def generate_fine_grid(iso):
     osw_vals = osw_vals[mask]
     geo_vals = geo_vals[mask]
     ccs_vals = ccs_vals[mask]
+    sb4_vals = sb4_vals[mask]
+    sb8_vals = sb8_vals[mask]
+    wb4_vals = wb4_vals[mask]
+    wb8_vals = wb8_vals[mask]
 
     N = len(cf_vals)
     print(f"  → {N:,} mixes after filtering")
 
-    # Build mix_batch matching RESOURCE_TYPES order:
-    # ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
+    # Build mix_batch matching resource_names order from get_resource_types()
     mix_batch = np.zeros((N, len(resource_names)), dtype=np.float64)
-    mix_batch[:, 0] = cf_vals       # clean_firm
-    mix_batch[:, 1] = sol_vals      # solar
-    mix_batch[:, 2] = wnd_vals      # wind
-    mix_batch[:, 3] = osw_vals      # offshore_wind
-    mix_batch[:, 4] = ccs_vals      # ccs_ccgt (implicit residual)
-    mix_batch[:, 5] = hydro_val     # hydro (constant)
+    res_vals = {
+        'clean_firm': cf_vals, 'solar': sol_vals, 'wind': wnd_vals,
+        'offshore_wind': osw_vals, 'ccs_ccgt': ccs_vals, 'hydro': np.full(N, hydro_val),
+        'geothermal': geo_vals,
+        'solar_batt4': sb4_vals, 'solar_batt8': sb8_vals,
+        'wind_batt4': wb4_vals, 'wind_batt8': wb8_vals,
+    }
+    for i, rt in enumerate(resource_names):
+        if rt in res_vals:
+            mix_batch[:, i] = res_vals[rt]
 
-    # For geothermal: add to clean_firm for scoring (both flat baseload profiles)
+    # For geothermal scoring: add to clean_firm (both flat baseload profiles)
     if has_geo and geo_vals.max() > 0:
-        mix_batch[:, 0] = cf_vals + geo_vals
+        cf_idx = resource_names.index('clean_firm')
+        mix_batch[:, cf_idx] = cf_vals + geo_vals
 
     # Store original component values for output
-    raw_cf = cf_vals.copy()
-    raw_geo = geo_vals.copy()
-
-    return mix_batch, resource_names, {
-        'clean_firm': raw_cf,
+    raw_components = {
+        'clean_firm': cf_vals.copy(),
         'solar': sol_vals,
         'wind': wnd_vals,
         'hydro': np.full(N, hydro_val),
         'offshore_wind': osw_vals,
-        'geothermal': raw_geo,
+        'geothermal': geo_vals.copy(),
         'ccs_ccgt': ccs_vals,
     }
+    if include_hybrids:
+        raw_components['solar_batt4'] = sb4_vals
+        raw_components['solar_batt8'] = sb8_vals
+        raw_components['wind_batt4'] = wb4_vals
+        raw_components['wind_batt8'] = wb8_vals
+
+    return mix_batch, resource_names, raw_components
 
 
 # ============================================================================
@@ -242,10 +306,18 @@ def score_mixes(mix_batch, demand_arr, supply_matrix):
     return scores * 100.0  # Convert to percentage
 
 
-def assign_and_save(iso, scores, raw_components, output_dir):
+def assign_and_save(iso, scores, raw_components, output_dir, include_hybrids=False):
     """Assign scored mixes to thresholds and save parquets."""
     N = len(scores)
     all_thresholds = FINE_THRESHOLDS + NEAR_MISS_THRESHOLDS
+
+    # Output columns: base resource types (excluding ccs_ccgt which is implicit)
+    # plus geothermal and hybrids as applicable
+    output_cols = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind']
+    if iso in GEOTHERMAL_ISOS:
+        output_cols.append('geothermal')
+    if include_hybrids:
+        output_cols.extend(s1.HYBRID_TYPES)
 
     saved_count = 0
     for threshold in all_thresholds:
@@ -260,23 +332,26 @@ def assign_and_save(iso, scores, raw_components, output_dir):
         if len(indices) == 0:
             continue
 
-        # Build output structure
+        # Build output structure dynamically
         rows = {
             'iso': [iso] * len(indices),
             'threshold': [float(threshold)] * len(indices),
-            'clean_firm': raw_components['clean_firm'][indices],
-            'solar': raw_components['solar'][indices],
-            'wind': raw_components['wind'][indices],
-            'hydro': raw_components['hydro'][indices],
-            'offshore_wind': raw_components['offshore_wind'][indices],
-            'battery_dispatch_pct': np.zeros(len(indices)),
-            'battery8_dispatch_pct': np.zeros(len(indices)),
-            'ldes_dispatch_pct': np.zeros(len(indices)),
-            'h2_dispatch_pct': np.zeros(len(indices)),
-            'hourly_match_score': scores[indices],
         }
+        for rt in output_cols:
+            if rt in raw_components:
+                rows[rt] = raw_components[rt][indices]
+            else:
+                rows[rt] = np.zeros(len(indices), dtype=np.float64)
 
-        if iso in GEOTHERMAL_ISOS:
+        # Storage dispatch columns (all zeros at this step)
+        rows['battery_dispatch_pct'] = np.zeros(len(indices))
+        rows['battery8_dispatch_pct'] = np.zeros(len(indices))
+        rows['ldes_dispatch_pct'] = np.zeros(len(indices))
+        rows['h2_dispatch_pct'] = np.zeros(len(indices))
+        rows['hourly_match_score'] = scores[indices]
+
+        # Geothermal if applicable (and not already in output_cols)
+        if iso in GEOTHERMAL_ISOS and 'geothermal' not in rows:
             rows['geothermal'] = raw_components['geothermal'][indices]
 
         # Save as parquet
@@ -393,22 +468,46 @@ def save_near_miss_cache(iso, scores, raw_components):
 # MAIN
 # ============================================================================
 
-def process_iso(iso, demand_data, gen_profiles):
+def process_iso(iso, demand_data, gen_profiles, include_hybrids=False):
     """Run fine-grid PFS generation for a single ISO."""
+    # Auto-detect hybrid mode from coarse cache
+    coarse_path = os.path.join(OUTPUT_DIR, f'{iso}_coarse_cache.parquet')
+    if not include_hybrids and HAS_PYARROW and os.path.exists(coarse_path):
+        coarse_schema = pq.read_schema(coarse_path)
+        if 'solar_batt4' in coarse_schema.names:
+            include_hybrids = True
+            print(f"  Auto-detected hybrid columns in coarse cache")
+
+    hybrid_str = " [HYBRID]" if include_hybrids else ""
     print(f"\n{'='*60}")
-    print(f"  {iso}: Fine-grid PFS (40-70%)")
+    print(f"  {iso}: Fine-grid PFS (40-70%){hybrid_str}")
     print(f"{'='*60}")
 
     # Load profiles
     demand_norm, total_mwh = get_demand_profile(iso, demand_data)
     supply_profiles = get_supply_profiles(iso, gen_profiles)
+
+    # Build supply matrix — base 6D (RESOURCE_TYPES including ccs_ccgt)
     supply_matrix = build_supply_matrix(supply_profiles)
+
+    # Extend supply matrix with hybrid profiles if needed
+    hybrid_profiles = None
+    if include_hybrids:
+        hybrid_profiles = s1.load_hybrid_profiles(iso)
+        print(f"  Loaded hybrid profiles: {list(hybrid_profiles.keys())}")
+        # Append hybrid profile rows to supply matrix
+        hybrid_rows = np.stack([
+            np.asarray(hybrid_profiles[ht][:H], dtype=np.float64)
+            for ht in s1.HYBRID_TYPES
+        ])  # (4, 8760)
+        supply_matrix = np.vstack([supply_matrix, hybrid_rows])
 
     demand_arr = demand_norm
 
     # Generate fine grid
     t0 = time.time()
-    mix_batch, resource_names, raw_components = generate_fine_grid(iso)
+    mix_batch, resource_names, raw_components = generate_fine_grid(
+        iso, include_hybrids=include_hybrids)
 
     # Score all mixes
     print(f"  Scoring {len(mix_batch):,} mixes...")
@@ -425,7 +524,8 @@ def process_iso(iso, demand_data, gen_profiles):
         print(f"    t{t:g}: {in_range:,} feasible")
 
     # Assign to thresholds and save PFS parquets
-    saved = assign_and_save(iso, scores, raw_components, OUTPUT_DIR)
+    saved = assign_and_save(iso, scores, raw_components, OUTPUT_DIR,
+                            include_hybrids=include_hybrids)
     print(f"  Total saved: {saved:,} mixes")
 
     # Write near-miss mixes to shared cache for step1c
@@ -439,9 +539,14 @@ def main():
     parser = argparse.ArgumentParser(description='Fine-Grid PFS Generator (40-70%)')
     parser.add_argument('--iso', type=str, default='ALL',
                         help='ISO to process (default: ALL)')
+    parser.add_argument('--hybrid', action='store_true',
+                        help='Enable hybrid resource types (solar+batt, wind+batt)')
     args = parser.parse_args()
 
     isos = ISOS if args.iso == 'ALL' else [args.iso]
+
+    if args.hybrid:
+        print("Hybrid mode: enabled (CLI flag)")
 
     print("Loading common data...")
     demand_data, gen_profiles, _, _ = load_common_data()
@@ -451,7 +556,8 @@ def main():
     t0 = time.time()
     total_saved = 0
     for iso in isos:
-        saved = process_iso(iso, demand_data, gen_profiles)
+        saved = process_iso(iso, demand_data, gen_profiles,
+                            include_hybrids=args.hybrid)
         total_saved += saved
 
     elapsed = time.time() - t0
