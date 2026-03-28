@@ -1,205 +1,218 @@
 # Hybrid Solar+Storage & Wind+Storage Design Document
 
-## Status: Design Phase
+## Status: Design Phase — DC:AC ratios validated, building 8760 profiles
 
 ---
 
 ## 1. Overview
 
-Adding co-located hybrid resources as new asset types in the optimizer:
-- **Solar+Battery (4hr)**: DC:AC overbuild captures clipped solar energy
-- **Wind+Battery (8hr)**: Temporal shifting of off-peak wind to net-peak demand
+Four co-located hybrid resource types added to the optimizer:
 
-These are distinct from standalone solar + standalone battery because:
-- Single interconnection (shared queue position, shared transmission upgrades)
-- Battery charges only from co-located generation (no grid charging → ITC-qualifying)
-- Combined output capped at interconnection (AC) rating
+| Type | Generation | Battery | Primary Value |
+|------|-----------|---------|---------------|
+| `solar_batt4` | Solar | 4hr | Core clipping recovery |
+| `solar_batt8` | Solar | 8hr | Extended clipping + deeper temporal shift |
+| `wind_batt4` | Wind | 4hr | Short shifting, dual-cycle, narrow arbitrage blocks |
+| `wind_batt8` | Wind | 8hr | Deep overnight-to-peak shifting |
+
+Distinct from standalone solar/wind + standalone battery because:
+- **Single interconnection** (shared queue position, shared transmission upgrades)
+- **No grid charging** (pure hybrid — ITC-qualifying)
+- **Combined output capped** at interconnection (AC) rating
+
+Offshore wind hybrids: **Skipped.** Co-located storage doesn't reshape the offshore gen profile — it's a transmission/grid-level problem better handled by standalone grid storage and transmission constraint adders.
 
 ---
 
-## 2. Solar+Battery Hybrid
+## 2. Solar Hybrids (solar_batt4, solar_batt8)
 
-### 2.1 DC:AC Ratio (Region-Specific)
+### 2.1 DC:AC Ratios — Validated
 
-Solar panels (DC) are oversized relative to the grid interconnection (AC). During peak sun, generation exceeds interconnection capacity — the excess ("clipped" energy) charges the co-located battery instead of being wasted.
+Solar panels (DC) oversized relative to grid interconnection (AC). During peak sun, excess generation ("clipped" energy) charges co-located battery.
 
-| ISO | Solar CF (approx) | DC:AC Ratio | Rationale |
-|--------|----------|-------------|-----------|
-| CAISO | ~29% | 1.40 | Strong resource, significant midday clipping |
-| ERCOT | ~26% | 1.35 | Good resource, moderate clipping |
-| SPP | ~24% | 1.30 | Decent resource |
-| MISO | ~22% | 1.30 | Moderate resource |
-| PJM | ~21% | 1.25 | Weaker resource, less clipping |
-| NYISO | ~19% | 1.20 | Weak resource, minimal clipping |
-| NEISO | ~18% | 1.20 | Weakest, minimal overbuild justified |
+**Validation sweep results** (EIA-930 profiles, `scripts/validate_dcac_ratios.py`):
 
-**Validation**: Initial test sweep against existing EIA-930 solar profiles to confirm clipping hours and recovered energy at each ratio. See Section 5.
+| ISO | Solar CF | DC:AC | Hybrid CF (4hr) | CF Gain | Battery Recovery |
+|-----|----------|-------|-----------------|---------|-----------------|
+| CAISO | 29.6% | **1.35** | 37.6% | +8.0% | 19% |
+| ERCOT | 25.2% | **1.50** | 35.8% | +10.6% | 40% |
+| PJM | 23.1% | **1.50** | 34.0% | +10.9% | 77% |
+| NYISO | 19.0% | **1.50** | 27.5% | +8.4% | 46% |
+| NEISO | 19.1% | **1.50** | 28.3% | +9.2% | 85% |
+| MISO | 20.8% | **1.50** | 30.2% | +9.4% | 26% |
+| SPP | 20.9% | **1.50** | 30.6% | +9.7% | 36% |
 
-### 2.2 Battery Specification
+Key finding: weaker solar ISOs benefit *more* from overbuilding — smaller clipping events mean the battery captures a higher share. CAISO is the only ISO where diminishing returns kick in (sweet spot 1.35).
 
-- **Duration**: 4 hours
-- **Round-trip efficiency**: 85% (consistent with existing standalone battery model)
-- **Grid charging**: None (pure hybrid — charges only from clipped solar)
-- **Discharge rule**: Net-peak hours (demand minus renewable generation is highest)
+MISO's 26% recovery rate suggests 4hr battery saturates there — solar_batt8 may outperform solar_batt4 in MISO specifically.
+
+### 2.2 Battery Specifications
+
+| Parameter | solar_batt4 | solar_batt8 |
+|-----------|------------|------------|
+| Duration | 4 hours | 8 hours |
+| Round-trip efficiency | 85% | 85% |
+| Grid charging | None | None |
+| Discharge rule | Top 4 net-peak hours/day | Top 8 net-peak hours/day |
+| Power rating | = AC interconnection capacity | = AC interconnection capacity |
 
 ### 2.3 Dispatch Model
 
-Hourly dispatch logic (per hour h):
+```python
+# Per hour h:
+solar_dc = dc_capacity × solar_profile[h]       # DC generation
+ac_cap = dc_capacity / dc_ac_ratio               # Interconnection limit
 
-```
-solar_dc[h] = installed_dc_capacity × solar_profile[h]
-interconnect_cap = installed_dc_capacity / dc_ac_ratio
-
-if solar_dc[h] > interconnect_cap:
-    to_grid[h] = interconnect_cap
-    clipped[h] = solar_dc[h] - interconnect_cap
-    charge[h] = min(clipped[h], battery_remaining_capacity) × rte_charge
-else:
-    to_grid[h] = solar_dc[h]
-    clipped[h] = 0
-    charge[h] = 0
+# Clipping → charge
+clipped = max(0, solar_dc - ac_cap)
+charge = min(clipped, battery_headroom) * sqrt(rte)  # Half RTE on charge
+to_grid = min(solar_dc, ac_cap)
 
 # Discharge during net-peak hours
-if is_net_peak[h] and battery_soc > 0:
-    discharge[h] = min(battery_power_rating, battery_soc)
-    to_grid[h] += discharge[h]
-    # Combined output still capped at interconnection
-    to_grid[h] = min(to_grid[h], interconnect_cap)
+if is_net_peak[h] and soc > 0:
+    discharge = min(power_rating, soc)
+    to_grid += discharge * sqrt(rte)              # Half RTE on discharge
+    to_grid = min(to_grid, ac_cap)                # Interconnection cap
 
-hybrid_output[h] = to_grid[h]
+hybrid_output[h] = to_grid
 ```
 
 ### 2.4 Net-Peak Definition
 
-Net peak = hours where (demand - total renewable generation) is highest in each day. For a 4hr battery, the top 4 net-peak hours per day trigger discharge. This avoids 8760 LMP optimization while producing nearly identical results (net peak and high LMP are highly correlated).
+Net peak = hours where (demand − total renewable generation) is highest each day.
+- solar_batt4: top 4 net-peak hours trigger discharge
+- solar_batt8: top 8 net-peak hours trigger discharge
 
 ---
 
-## 3. Wind+Battery Hybrid
+## 3. Wind Hybrids (wind_batt4, wind_batt8)
 
-### 3.1 Key Differences from Solar Hybrid
+### 3.1 Key Differences from Solar
 
-Wind does not have the DC:AC clipping dynamic. The value proposition is:
-- **Shared interconnection** — one queue slot, one set of transmission upgrades
-- **Temporal shifting** — overnight/off-peak wind generation shifted to daytime demand peak
-- No overbuild ratio; wind output goes directly to grid up to interconnection capacity
+- **No DC:AC overbuild** — wind turbines are AC machines, no clipping dynamic
+- **No overbuild ratio** — wind output goes directly to grid
+- **Charging trigger**: wind generation exceeding demand signal during off-peak hours (not clipping)
+- **Value**: shared interconnection savings + temporal shifting
 
-### 3.2 Battery Specification
+### 3.2 Battery Sizing (MW Ratio)
 
-- **Duration**: 8 hours (wind generates over longer continuous periods; 4hr would leave significant generation unshifted)
-- **Round-trip efficiency**: 85%
-- **Grid charging**: None (pure hybrid)
-- **Discharge rule**: Net-peak hours (top 8 hours per day)
+Battery MW sized at 25-40% of wind nameplate capacity:
+- **POI ceiling**: `battery_MW = POI_limit − avg_wind_during_peak_hours`
+- **Economics cap**: >40% means battery sits partially empty during average wind cycles (8hr duration is capital-intensive)
+- **Arbitrage block fit**: discharge duration must map to ISO's structural price spikes
 
-### 3.3 Dispatch Model
+Per-ISO sizing: **TBD** — pending wind profile analysis (same approach as solar DC:AC sweep).
 
-```
-wind_gen[h] = installed_capacity × wind_profile[h]
+### 3.3 Battery Specifications
 
-# Wind feeds grid directly; excess charges battery
-if wind_gen[h] > demand_signal[h] and battery_soc < max_soc:
-    to_grid[h] = demand_signal[h]
-    excess[h] = wind_gen[h] - demand_signal[h]
-    charge[h] = min(excess[h], battery_remaining_capacity) × rte_charge
+| Parameter | wind_batt4 | wind_batt8 |
+|-----------|-----------|-----------|
+| Duration | 4 hours | 8 hours |
+| Round-trip efficiency | 85% | 85% |
+| Grid charging | None | None |
+| Discharge rule | Top 4 net-peak hours/day | Top 8 net-peak hours/day |
+| Battery:wind MW ratio | 25-40% (ISO-specific, TBD) | 25-40% (ISO-specific, TBD) |
+
+### 3.4 Duration Selection Logic
+
+- **wind_batt4**: ISOs with narrow arbitrage blocks (4-5hr evening spike). Also enables dual-cycle dispatch (charge → discharge morning peak → recharge → discharge evening peak).
+- **wind_batt8**: ISOs with broad arbitrage blocks (8hr+ spanning morning + evening peaks, or extended afternoon). Captures full overnight-to-peak temporal shift.
+- Optimizer chooses — both offered as candidates, mutually exclusive per project.
+
+### 3.5 Dispatch Model
+
+```python
+# Per hour h:
+wind_gen = capacity × wind_profile[h]
+
+# Wind feeds grid; off-peak surplus charges battery
+if is_off_peak[h] and wind_gen > demand_share and soc < max_soc:
+    to_grid = demand_share
+    excess = wind_gen - demand_share
+    charge = min(excess, battery_headroom) * sqrt(rte)
 else:
-    to_grid[h] = wind_gen[h]
+    to_grid = wind_gen
 
 # Discharge during net-peak hours
-if is_net_peak[h] and battery_soc > 0:
-    discharge[h] = min(battery_power_rating, battery_soc)
-    to_grid[h] += discharge[h]
-    to_grid[h] = min(to_grid[h], interconnect_cap)
+if is_net_peak[h] and soc > 0:
+    discharge = min(power_rating, soc)
+    to_grid += discharge * sqrt(rte)
+    to_grid = min(to_grid, interconnect_cap)
 
-hybrid_output[h] = to_grid[h]
+hybrid_output[h] = to_grid
 ```
-
-### 3.4 Charging Trigger
-
-Unlike solar hybrids (where clipping is the charging trigger), wind hybrids charge when:
-- Wind generation exceeds the co-located demand signal (off-peak surplus)
-- Prioritize overnight hours when wind is typically strongest and demand is lowest
 
 ---
 
 ## 4. Cost Model
 
-### 4.1 Solar+Battery Hybrid
+### 4.1 LCOE Structure
 
-```
-hybrid_lcoe = weighted_blend(solar_lcoe, battery_lcoe)
-             - shared_interconnection_savings
-             + ITC_benefit (battery qualifies via co-location)
-```
+Hybrid LCOE = generation LCOE + storage LCOE (duration-weighted) − ITC benefit − interconnection savings.
 
-Components:
-- **Solar LCOE**: Same as standalone, from LCOE_TABLES (L/M/H by ISO)
-- **Battery LCOE**: 4hr standalone cost, reduced by ITC qualification
-- **Interconnection savings**: One queue position instead of two; reduced transmission adder
-- **ITC**: Co-located storage qualifies for solar ITC (30%+ depending on bonus criteria)
+| Component | solar_batt4 | solar_batt8 | wind_batt4 | wind_batt8 |
+|-----------|------------|------------|-----------|-----------|
+| Generation LCOE | solar L/M/H | solar L/M/H | wind L/M/H | wind L/M/H |
+| Storage LCOE | battery 4hr | battery 8hr | battery 4hr | battery 8hr |
+| ITC benefit | Yes (30%+) | Yes (30%+) | Needs research | Needs research |
+| Interconnection | 1× tx adder | 1× tx adder | 1× tx adder | 1× tx adder |
 
-### 4.2 Wind+Battery Hybrid
+### 4.2 Transmission
 
-```
-hybrid_lcoe = weighted_blend(wind_lcoe, battery_8hr_lcoe)
-             - shared_interconnection_savings
-```
+Hybrid = **one** transmission adder (sized to AC interconnection rating).
+Standalone equivalent = **two** adders (one per resource). Savings = 1× tx_adder per project.
 
-Components:
-- **Wind LCOE**: Onshore wind from LCOE_TABLES
-- **Battery LCOE**: 8hr standalone cost
-- **Interconnection savings**: Same shared-queue benefit
-- **ITC**: Wind uses PTC, not ITC — storage co-location ITC benefit is smaller/different (needs research for exact treatment under IRA rules)
+### 4.3 Learning Curves
 
-### 4.3 Transmission Adder
-
-Hybrid resources use a **single transmission adder** (not two). The adder is sized to the AC interconnection rating, not the total DC+storage capacity:
-
-```
-hybrid_tx = tx_adder[iso][level]  # One connection, not two
-standalone_tx = tx_adder[iso][level] × 2  # Solar + battery each need one
-savings = standalone_tx - hybrid_tx
-```
+Applied at component level: solar/wind learning + battery learning, weighted by cost share. No separate hybrid FOAK/NOAK — use component tables.
 
 ---
 
-## 5. Validation Plan
+## 5. Validation Results
 
-### 5.1 DC:AC Ratio Validation (Pre-Implementation)
+### 5.1 DC:AC Ratio Sweep — COMPLETE ✓
 
-Quick discovery script per ISO:
-1. Load existing EIA-930 solar profiles (8760 hours)
-2. Normalize to capacity factor
-3. For DC:AC ratios [1.1, 1.2, 1.25, 1.3, 1.35, 1.4, 1.5]:
-   - Count hours with clipping
-   - Total clipped energy (TWh)
-   - Energy recovered by 4hr battery (TWh)
-   - Net capacity factor improvement
-4. Confirm proposed regional ratios are in the sweet spot (diminishing returns above)
+Script: `scripts/validate_dcac_ratios.py`
+- Tested ratios [1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.5] × 7 ISOs
+- **Locked**: CAISO=1.35, all others=1.50
+- Ratios are time-invariant (physics of solar resource doesn't change; industry trend toward higher ratios means these are if anything conservative for later deployment years)
 
-### 5.2 Wind Shifting Value (Pre-Implementation)
+### 5.2 Wind Battery Sizing — PENDING
 
-Quick analysis per ISO:
-1. Load wind profiles
-2. Identify overnight surplus hours (generation > demand share)
-3. Quantify shiftable energy with 8hr battery
-4. Compare temporal match improvement vs standalone wind
+Need equivalent analysis:
+1. Load wind profiles per ISO
+2. Identify off-peak surplus hours and average surplus MW
+3. Size battery:wind ratio per ISO
+4. Compare 4hr vs 8hr value per ISO
 
 ---
 
 ## 6. Pipeline Integration
 
-### Phase 1: Step 1 (Physics)
-- Add `solar_batt` and `wind_batt` as new resource types
-- New dispatch columns in PFS output
-- DC:AC ratio applied during solar_batt dispatch
-- Hybrid output profiles stored alongside existing resource profiles
+### 6.1 Profile Generation (Current Step)
 
-### Phase 2: Steps 2-7 (Downstream)
-- Add hybrid cost model to pipeline_config.py
-- Include in Step 2.2 cost optimization candidate pool
-- Step 3B MAC queue: hybrids compete as archetypes
-- Dashboard: new resource colors and labels
-- Deferred — implement after Step 1 integration is validated
+Generate pre-computed 8760 hybrid profiles per ISO, normalized to sum ~1.0:
+- `solar_batt4_profile[iso]`: solar with DC:AC clipping + 4hr battery dispatch
+- `solar_batt8_profile[iso]`: solar with DC:AC clipping + 8hr battery dispatch
+- `wind_batt4_profile[iso]`: wind with 4hr temporal shifting
+- `wind_batt8_profile[iso]`: wind with 8hr temporal shifting
+
+These are **integrated profiles** (Option B from integration analysis) — the hybrid dispatch is pre-resolved into the 8760 shape. The optimizer sees hybrid output as a single resource, not decomposed solar+battery.
+
+### 6.2 Step 1 Integration
+
+Files to modify:
+- **`pipeline_config.py`**: Add to `RESOURCE_COLS_*`, `ISO_DIMENSIONS`, `LCOE_TABLES`, `TX_TABLES`, `RESOURCE_CAPACITY_FACTORS`
+- **`dispatch_utils.py`**: Add to `RESOURCE_TYPES`, add profile loading in `get_supply_profiles()`
+- **`step1_1a_generate_mixes.py`**: New dimensions in mix grid (capacity caps for each hybrid)
+- **`step1_1b_score_mixes.py`**: Auto-adapts (reads columns from parquet schema) — no changes needed
+
+### 6.3 Steps 2-7 (Deferred)
+
+- Step 2.2: Add hybrid cost model to cost optimization
+- Step 3B: Hybrids compete as MAC queue archetypes
+- Dashboard: New resource colors and labels
+- Implement after Step 1 integration is validated
 
 ---
 
@@ -211,17 +224,22 @@ Quick analysis per ISO:
 | 2 | Wind hybrid: 8hr battery | 2026-03-28 | Longer temporal shift needed |
 | 3 | Pure hybrid (no grid charging) | 2026-03-28 | ITC-qualifying, cleaner model |
 | 4 | Net-peak discharge rule | 2026-03-28 | Avoids 8760 LMP complexity |
-| 5 | DC:AC fixed per-ISO | 2026-03-28 | Based on solar CF, validated by sweep |
+| 5 | DC:AC fixed per-ISO | 2026-03-28 | Validated by sweep: CAISO=1.35, others=1.50 |
 | 6 | Wind: no DC:AC overbuild | 2026-03-28 | No clipping dynamic for wind |
 | 7 | Start with Step 1, propagate later | 2026-03-28 | Phase 1 = physics only |
-| 8 | Skip offshore wind hybrids | 2026-03-28 | Co-located storage doesn't reshape offshore gen profile — it's a transmission/grid-level problem, not a hybrid asset problem. Offshore bottlenecks better captured by transmission constraint adders. |
-| 9 | Revised DC:AC ratios downward | 2026-03-28 | Actual EIA-930 solar CFs lower than initial estimates for PJM/NYISO/NEISO/MISO. Pending validation sweep. |
+| 8 | Skip offshore wind hybrids | 2026-03-28 | Storage doesn't reshape gen profile — transmission problem |
+| 9 | DC:AC validated & locked | 2026-03-28 | CAISO=1.35, all others=1.50. Time-invariant. |
+| 10 | All 4 hybrid types | 2026-03-28 | solar_batt4, solar_batt8, wind_batt4, wind_batt8 |
+| 11 | Wind battery sizing 25-40% | 2026-03-28 | POI ceiling logic, per-ISO TBD |
+| 12 | Integrated profiles (Option B) | 2026-03-28 | Pre-computed 8760 shapes, not decomposed |
 
 ---
 
 ## 8. Open Questions
 
 - [ ] Exact ITC treatment for wind+storage co-location under IRA rules
-- [x] ~~Offshore wind+storage hybrids~~ — **Skipped**. Co-located storage doesn't reshape the gen profile; bottlenecks are a transmission problem handled by grid-level storage.
+- [x] ~~Offshore wind+storage hybrids~~ — **Skipped**
 - [ ] LCOE source data for hybrid-specific costs (NREL ATB 2024 has hybrid benchmarks)
-- [ ] DC:AC validation results (sweep running)
+- [x] ~~DC:AC validation~~ — **Complete**. CAISO=1.35, all others=1.50.
+- [ ] Wind battery:wind MW ratio per ISO (pending wind profile analysis)
+- [ ] Wind arbitrage block duration per ISO (validates 4hr vs 8hr value)
