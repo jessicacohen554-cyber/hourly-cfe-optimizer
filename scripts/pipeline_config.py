@@ -60,6 +60,19 @@ RESOURCE_COLS_BASE_HYBRID = RESOURCE_COLS_BASE + HYBRID_TYPES
 RESOURCE_COLS_OFFSHORE_HYBRID = RESOURCE_COLS_OFFSHORE + HYBRID_TYPES
 RESOURCE_COLS_CAISO_HYBRID = RESOURCE_COLS_CAISO + HYBRID_TYPES
 
+# Hybrid family caps — maximum total % of demand for each resource family
+# (standalone + co-located variants). Per-type cap limits any single hybrid.
+SOLAR_FAMILY_CAP = {
+    'CAISO': 120, 'ERCOT': 110, 'PJM': 100, 'NYISO': 120,
+    'NEISO': 110, 'MISO':  70, 'SPP':  60,
+}
+WIND_FAMILY_CAP = {
+    'CAISO': 140, 'ERCOT': 200, 'PJM': 110, 'NYISO':  80,
+    'NEISO':  90, 'MISO': 210, 'SPP': 190,
+}
+HYBRID_MAX_PER_TYPE = 40      # Each hybrid ≤ 40% of demand within its family
+HYBRID_FAMILY_STEP = 10       # 10% steps for family split compositions
+
 STORAGE_COLS = ['battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct', 'h2_dispatch_pct']
 
 def get_resource_cols(iso, include_hybrids=False):

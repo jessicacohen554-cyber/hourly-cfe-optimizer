@@ -225,16 +225,11 @@ TOTAL_PROCUREMENT_CAP = 350
 # Within each family, 10% step compositions: (standalone, batt4, batt8) sum to
 # the family total, with each hybrid capped at HYBRID_MAX_PER_TYPE.
 
-SOLAR_FAMILY_CAP = {
-    'CAISO': 120, 'ERCOT': 110, 'PJM': 100, 'NYISO': 120,
-    'NEISO': 110, 'MISO':  70, 'SPP':  60,
-}
-WIND_FAMILY_CAP = {
-    'CAISO': 140, 'ERCOT': 200, 'PJM': 110, 'NYISO':  80,
-    'NEISO':  90, 'MISO': 210, 'SPP': 190,
-}
-HYBRID_MAX_PER_TYPE = 40      # Each hybrid ≤ 40% of demand within its family
-HYBRID_FAMILY_STEP = 10       # 10% steps for family split compositions
+# Import hybrid family caps from pipeline_config (single source of truth)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from pipeline_config import (
+    SOLAR_FAMILY_CAP, WIND_FAMILY_CAP, HYBRID_MAX_PER_TYPE, HYBRID_FAMILY_STEP,
+)
 
 # Tightened clean_firm windows per ISO (from DG empirical range + buffer)
 # 10% steps in coarse grid; zone search refines to 1%.
