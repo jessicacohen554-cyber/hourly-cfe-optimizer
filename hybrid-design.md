@@ -214,12 +214,14 @@ Quick analysis per ISO:
 | 5 | DC:AC fixed per-ISO | 2026-03-28 | Based on solar CF, validated by sweep |
 | 6 | Wind: no DC:AC overbuild | 2026-03-28 | No clipping dynamic for wind |
 | 7 | Start with Step 1, propagate later | 2026-03-28 | Phase 1 = physics only |
+| 8 | Skip offshore wind hybrids | 2026-03-28 | Co-located storage doesn't reshape offshore gen profile — it's a transmission/grid-level problem, not a hybrid asset problem. Offshore bottlenecks better captured by transmission constraint adders. |
+| 9 | Revised DC:AC ratios downward | 2026-03-28 | Actual EIA-930 solar CFs lower than initial estimates for PJM/NYISO/NEISO/MISO. Pending validation sweep. |
 
 ---
 
 ## 8. Open Questions
 
 - [ ] Exact ITC treatment for wind+storage co-location under IRA rules
-- [ ] Offshore wind+storage hybrids — include or defer?
+- [x] ~~Offshore wind+storage hybrids~~ — **Skipped**. Co-located storage doesn't reshape the gen profile; bottlenecks are a transmission problem handled by grid-level storage.
 - [ ] LCOE source data for hybrid-specific costs (NREL ATB 2024 has hybrid benchmarks)
-- [ ] DC:AC validation results (pending sweep script)
+- [ ] DC:AC validation results (sweep running)
