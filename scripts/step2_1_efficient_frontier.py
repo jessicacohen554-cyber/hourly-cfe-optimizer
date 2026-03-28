@@ -58,6 +58,8 @@ from pipeline_config import (
     RESOURCE_COLS_BASE, RESOURCE_COLS_OFFSHORE, RESOURCE_COLS_CAISO,
     get_resource_cols,
     GRID_MIX_SHARES,
+    HYBRID_TYPES,
+    SOLAR_FAMILY_CAP, WIND_FAMILY_CAP, HYBRID_MAX_PER_TYPE,
 )
 
 PFS_DIR = os.path.join(SCRIPT_DIR, 'data')
@@ -80,10 +82,15 @@ SOLAR_CAP = 100       # Max solar as % of demand
 TOTAL_PROCUREMENT_CAP = 350  # Max sum of all resources as % of demand
 
 
-def normalize_table(t, iso):
+def _detect_hybrids_in_schema(schema_names):
+    """Check if any hybrid columns are present in a parquet schema."""
+    return any(h in schema_names for h in HYBRID_TYPES)
+
+
+def normalize_table(t, iso, include_hybrids=False):
     """Cast a table to have consistent types, filling missing columns with defaults."""
     cols = {}
-    resource_cols = get_resource_cols(iso)
+    resource_cols = get_resource_cols(iso, include_hybrids=include_hybrids)
 
     for name in ['iso']:
         if name in t.column_names:
@@ -108,7 +115,7 @@ def normalize_table(t, iso):
                 cols[name] = pc.cast(pc.round(col, 0), pa.int16())
             else:
                 cols[name] = pc.cast(col, pa.int16())
-        elif name in ('geothermal', 'offshore_wind'):
+        elif name in ('geothermal', 'offshore_wind') or name in HYBRID_TYPES:
             cols[name] = pa.array(np.zeros(t.num_rows, dtype=np.int16))
         else:
             raise ValueError(f"Missing required column '{name}' in {t.column_names}")
@@ -313,8 +320,19 @@ def load_and_process_iso(iso, fnames):
     Returns:
         (result_table, n_input, n_gated, n_dedup) or (None, n_input, 0, 0)
     """
-    resource_cols = get_resource_cols(iso)
+    # Detect hybrids from the first file's schema
+    include_hybrids = False
+    for fname in fnames:
+        path = os.path.join(STEP1_RAW_DIR, fname)
+        schema = pq.read_schema(path)
+        include_hybrids = _detect_hybrids_in_schema(schema.names)
+        break
+
+    resource_cols = get_resource_cols(iso, include_hybrids=include_hybrids)
     result_col_names = ['iso'] + resource_cols + STORAGE_COLS + ['hourly_match_score', 'pareto_type']
+
+    if include_hybrids:
+        print(f"    Hybrid columns detected for {iso}", flush=True)
 
     accumulated = None
     total_input = 0
@@ -336,6 +354,13 @@ def load_and_process_iso(iso, fnames):
             del pf
             continue
 
+        # Update hybrid detection — if any file has hybrids, enable for ISO
+        if not include_hybrids and _detect_hybrids_in_schema(schema_names):
+            include_hybrids = True
+            resource_cols = get_resource_cols(iso, include_hybrids=True)
+            result_col_names = ['iso'] + resource_cols + STORAGE_COLS + ['hourly_match_score', 'pareto_type']
+            print(f"    Hybrid columns detected in {fname}", flush=True)
+
         # Stream row groups to bound peak memory. Large PFS files
         # (SPP_t99.5: 23M rows) require ~4GB to load + dedup at once,
         # which OOMs GitHub Actions runners (7GB RAM). Row groups are
@@ -343,9 +368,9 @@ def load_and_process_iso(iso, fnames):
         for rg_idx in range(file_meta.num_row_groups):
             rg = pf.read_row_group(rg_idx)
 
-            rg = normalize_table(rg, iso)
+            rg = normalize_table(rg, iso, include_hybrids=include_hybrids)
             rg = threshold_gate(rg)
-            rg = resource_cap_filter(rg, iso)
+            rg = resource_cap_filter(rg, iso, include_hybrids=include_hybrids)
             total_gated += rg.num_rows
 
             if rg.num_rows == 0:
@@ -412,19 +437,24 @@ def threshold_gate(table):
     return table.filter(mask)
 
 
-def resource_cap_filter(table, iso):
-    """Enforce solar cap, total procurement cap, and hydro cap.
+def resource_cap_filter(table, iso, include_hybrids=False):
+    """Enforce solar cap, total procurement cap, hydro cap, and hybrid family caps.
 
     Removes mixes where:
-      - solar > SOLAR_CAP
+      - solar > SOLAR_CAP (standalone solar only, legacy constraint)
       - total resources > TOTAL_PROCUREMENT_CAP
       - hydro > existing hydro share (Step 1 explores +10pp above existing
         for physics experimentation; those mixes must not enter cost optimization)
+
+    With hybrids enabled, also enforces:
+      - solar + solar_batt4 + solar_batt8 <= SOLAR_FAMILY_CAP[iso]
+      - wind + wind_batt4 + wind_batt8 <= WIND_FAMILY_CAP[iso]
+      - Each hybrid type <= HYBRID_MAX_PER_TYPE (40%)
     """
     if table.num_rows == 0:
         return table
 
-    resource_cols = get_resource_cols(iso)
+    resource_cols = get_resource_cols(iso, include_hybrids=include_hybrids)
     solar = table.column('solar').to_numpy()
     mask = solar <= SOLAR_CAP
 
@@ -438,6 +468,28 @@ def resource_cap_filter(table, iso):
     hydro_existing_pct = math.floor(GRID_MIX_SHARES[iso].get('hydro', 0))
     hydro = table.column('hydro').to_numpy()
     mask &= hydro <= hydro_existing_pct
+
+    # Hybrid family caps — enforce family-level and per-type constraints
+    if include_hybrids:
+        # Solar family cap: solar + solar_batt4 + solar_batt8
+        solar_family = solar.copy()
+        for hcol in ('solar_batt4', 'solar_batt8'):
+            if hcol in table.column_names:
+                solar_family = solar_family + table.column(hcol).to_numpy()
+        mask &= solar_family <= SOLAR_FAMILY_CAP[iso]
+
+        # Wind family cap: wind + wind_batt4 + wind_batt8
+        wind = table.column('wind').to_numpy()
+        wind_family = wind.copy()
+        for hcol in ('wind_batt4', 'wind_batt8'):
+            if hcol in table.column_names:
+                wind_family = wind_family + table.column(hcol).to_numpy()
+        mask &= wind_family <= WIND_FAMILY_CAP[iso]
+
+        # Per-type hybrid cap
+        for hcol in HYBRID_TYPES:
+            if hcol in table.column_names:
+                mask &= table.column(hcol).to_numpy() <= HYBRID_MAX_PER_TYPE
 
     if mask.all():
         return table
@@ -571,7 +623,7 @@ def write_per_iso_threshold_outputs(results_by_iso, thresholds, batch_label=None
     return written
 
 
-def partitioned_dedup(table, iso):
+def partitioned_dedup(table, iso, include_hybrids=False):
     """Deduplicate a large table by partitioning on clean_firm to bound peak memory.
 
     Each partition (one clean_firm value at a time) is deduped independently.
@@ -582,7 +634,7 @@ def partitioned_dedup(table, iso):
     partition (~1-3M rows) instead of the full table (60-70M rows), preventing
     OOM on GitHub Actions runners (7 GB RAM).
     """
-    resource_cols = get_resource_cols(iso)
+    resource_cols = get_resource_cols(iso, include_hybrids=include_hybrids)
     cf_col = table.column('clean_firm').to_numpy()
     unique_cf = np.unique(cf_col)
 
@@ -678,6 +730,17 @@ def merge_batch_outputs(iso):
     if include_existing:
         files_to_merge.extend(existing_thr_files)
 
+    # Detect hybrids from first file's schema
+    include_hybrids = False
+    for fpath in files_to_merge:
+        schema = pq.read_schema(fpath)
+        if _detect_hybrids_in_schema(schema.names):
+            include_hybrids = True
+            break
+
+    if include_hybrids:
+        print(f"    Hybrid columns detected in merge inputs")
+
     # ── Streaming merge with incremental dedup ────────────────────────
     accumulated = None
     total_rows_in = 0
@@ -701,7 +764,7 @@ def merge_batch_outputs(iso):
             gc.collect()
 
             pre = merged.num_rows
-            accumulated = partitioned_dedup(merged, iso)
+            accumulated = partitioned_dedup(merged, iso, include_hybrids=include_hybrids)
             del merged
             gc.collect()
             print(f"    Streaming dedup: {pre:,} -> {accumulated.num_rows:,}", flush=True)
