@@ -128,17 +128,27 @@ RESOURCE_TYPES_BASE = ['clean_firm', 'solar', 'wind', 'hydro']
 RESOURCE_TYPES_OFFSHORE = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind']
 RESOURCE_TYPES_CAISO = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind', 'geothermal']
 
+# Hybrid resource types (co-located gen + storage)
+HYBRID_TYPES = ['solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
+
 # ISOs with offshore wind resource
 OFFSHORE_ISOS = ['NYISO', 'NEISO', 'PJM', 'CAISO']
 
-def get_resource_types(iso):
-    """Return resource type list for this ISO."""
+def get_resource_types(iso, include_hybrids=False):
+    """Return resource type list for this ISO.
+
+    If include_hybrids=True, appends the 4 hybrid resource types.
+    """
     if iso == 'CAISO':
-        return RESOURCE_TYPES_CAISO
+        base = list(RESOURCE_TYPES_CAISO)
     elif iso in OFFSHORE_ISOS:
-        return RESOURCE_TYPES_OFFSHORE
+        base = list(RESOURCE_TYPES_OFFSHORE)
     else:
-        return RESOURCE_TYPES_BASE
+        base = list(RESOURCE_TYPES_BASE)
+
+    if include_hybrids:
+        base.extend(HYBRID_TYPES)
+    return base
 
 # Regions
 ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
@@ -207,6 +217,44 @@ RESOURCE_CAPS = {
 # Observed max across all step 3 winners: 281% (MISO at 99.9%).
 # Cap at 350% to provide generous buffer while filtering combinatorial blowup.
 TOTAL_PROCUREMENT_CAP = 350
+
+# ─── Hybrid co-located solar+storage / wind+storage grid parameters ───────────
+# Family caps derived from DG parquet empirical maxes.
+# Solar family: DG max solar × 1.4, rounded to nearest 10pp.
+# Wind family: DG max wind + 10pp, rounded to nearest 10pp.
+# Within each family, 10% step compositions: (standalone, batt4, batt8) sum to
+# the family total, with each hybrid capped at HYBRID_MAX_PER_TYPE.
+
+SOLAR_FAMILY_CAP = {
+    'CAISO': 120, 'ERCOT': 110, 'PJM': 100, 'NYISO': 120,
+    'NEISO': 110, 'MISO':  70, 'SPP':  60,
+}
+WIND_FAMILY_CAP = {
+    'CAISO': 140, 'ERCOT': 200, 'PJM': 110, 'NYISO':  80,
+    'NEISO':  90, 'MISO': 210, 'SPP': 190,
+}
+HYBRID_MAX_PER_TYPE = 40      # Each hybrid ≤ 40% of demand within its family
+HYBRID_FAMILY_STEP = 10       # 10% steps for family split compositions
+
+# Tightened clean_firm windows per ISO (from DG empirical range + buffer)
+# 10% steps in coarse grid; zone search refines to 1%.
+CF_WINDOW = {
+    'CAISO': (0, 100), 'ERCOT': (0, 100), 'PJM': (30, 120),
+    'NYISO': (10, 120), 'NEISO': (20, 120), 'MISO': (10, 120), 'SPP': (0, 90),
+}
+CF_COARSE_STEP = 10           # 10% steps for clean firm in hybrid grid
+
+# Tightened CCS caps per ISO (from DG empirical max + buffer), 5% steps
+CCS_CAP = {
+    'CAISO': 40, 'ERCOT': 50, 'PJM': 50, 'NYISO': 60,
+    'NEISO': 50, 'MISO': 60, 'SPP': 50,
+}
+
+# Fixed hydro values per ISO (from DG data: hydro never varies in winners)
+HYDRO_FIXED = {
+    'CAISO': 9, 'ERCOT': 0, 'PJM': 1, 'NYISO': 15,
+    'NEISO': 4, 'MISO': 1, 'SPP': 4,
+}
 
 # 21 thresholds (10-40 added for Track 2/3 greenfield analysis)
 # Step 1 explores physics feasible space — exempt from pipeline_config dependency
