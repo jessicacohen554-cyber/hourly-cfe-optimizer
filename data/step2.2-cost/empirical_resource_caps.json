@@ -82,7 +82,11 @@
       "offshore_wind": 20,
       "geothermal": 30,
       "ccs_ccgt": 50,
-      "hydro": 20
+      "hydro": 20,
+      "solar_batt4": 95,
+      "solar_batt8": 95,
+      "wind_batt4": 145,
+      "wind_batt8": 145
     },
     "ERCOT": {
       "total": 240,
@@ -92,7 +96,11 @@
       "offshore_wind": 10,
       "geothermal": 10,
       "ccs_ccgt": 60,
-      "hydro": 10
+      "hydro": 10,
+      "solar_batt4": 85,
+      "solar_batt8": 85,
+      "wind_batt4": 205,
+      "wind_batt8": 205
     },
     "PJM": {
       "total": 225,
@@ -102,7 +110,11 @@
       "offshore_wind": 15,
       "geothermal": 10,
       "ccs_ccgt": 55,
-      "hydro": 15
+      "hydro": 15,
+      "solar_batt4": 85,
+      "solar_batt8": 85,
+      "wind_batt4": 160,
+      "wind_batt8": 160
     },
     "NYISO": {
       "total": 185,
@@ -112,7 +124,11 @@
       "offshore_wind": 35,
       "geothermal": 10,
       "ccs_ccgt": 65,
-      "hydro": 25
+      "hydro": 25,
+      "solar_batt4": 95,
+      "solar_batt8": 95,
+      "wind_batt4": 90,
+      "wind_batt8": 90
     },
     "NEISO": {
       "total": 220,
@@ -122,7 +138,11 @@
       "offshore_wind": 45,
       "geothermal": 10,
       "ccs_ccgt": 60,
-      "hydro": 15
+      "hydro": 15,
+      "solar_batt4": 95,
+      "solar_batt8": 95,
+      "wind_batt4": 95,
+      "wind_batt8": 95
     },
     "MISO": {
       "total": 255,
@@ -132,7 +152,11 @@
       "offshore_wind": 10,
       "geothermal": 10,
       "ccs_ccgt": 70,
-      "hydro": 15
+      "hydro": 15,
+      "solar_batt4": 60,
+      "solar_batt8": 60,
+      "wind_batt4": 215,
+      "wind_batt8": 215
     },
     "SPP": {
       "total": 225,
@@ -142,7 +166,17 @@
       "offshore_wind": 10,
       "geothermal": 10,
       "ccs_ccgt": 60,
-      "hydro": 15
+      "hydro": 15,
+      "solar_batt4": 60,
+      "solar_batt8": 60,
+      "wind_batt4": 195,
+      "wind_batt8": 195
     }
+  },
+  "notes": {
+    "hybrid_caps": "First run: set equal to parent resource caps. Re-extract after results.",
+    "h2_dropped": "H2 storage removed \u2014 never wins in any scenario.",
+    "threshold_99.99_dropped": ">=99.9% is new ceiling, labeled effectively 100%.",
+    "top_threshold": "99.9 (>=99.9%, effectively 100%)"
   }
 }
