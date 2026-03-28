@@ -64,6 +64,7 @@ from pipeline_config import (
     ANNOUNCED_COAL_RETIREMENTS, get_announced_coal_retired_gw,
     H,
     DISPATCH_CACHE_VERSION,
+    HYBRID_TYPES,
     # Dispatch-specific constants (migrated to pipeline_config)
     HYDRO_CAPS, COAL_CAP_TWH, OIL_CAP_TWH,
     NUCLEAR_SHARE_OF_CLEAN_FIRM, NUCLEAR_MONTHLY_CF,
@@ -71,6 +72,7 @@ from pipeline_config import (
 
 DATA_YEAR = '2025'
 RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
+RESOURCE_TYPES_HYBRID = RESOURCE_TYPES + HYBRID_TYPES
 
 # Alias for backward compatibility
 BASE_DEMAND_TWH = REGIONAL_DEMAND_TWH
@@ -600,14 +602,21 @@ def _dispatch_ldes(residual_surplus, residual_gap, dispatch_pct, demand_arr):
                       window_hours, H)
 
 
-def build_supply_matrix(supply_profiles):
+def build_supply_matrix(supply_profiles, resource_types=None):
     """Pre-convert supply profile dict → (N_RESOURCES, H) numpy matrix.
 
     Call once per ISO. Pass the matrix to reconstruct_hourly_dispatch via
     supply_matrix kwarg for ~3x speedup on repeated dispatches.
+
+    Args:
+        supply_profiles: Dict mapping resource type → 8760 profile array.
+        resource_types: Optional list of resource types to include. Defaults to
+            RESOURCE_TYPES (base 6). Pass RESOURCE_TYPES_HYBRID to include
+            hybrid co-located profiles.
     """
-    matrix = np.zeros((len(RESOURCE_TYPES), H), dtype=np.float64)
-    for i, rtype in enumerate(RESOURCE_TYPES):
+    rtypes = resource_types if resource_types is not None else RESOURCE_TYPES
+    matrix = np.zeros((len(rtypes), H), dtype=np.float64)
+    for i, rtype in enumerate(rtypes):
         p = supply_profiles.get(rtype, [0.0] * H)
         matrix[i, :] = np.array(p[:H], dtype=np.float64)
     return matrix
