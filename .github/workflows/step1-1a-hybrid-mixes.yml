@@ -1,0 +1,160 @@
+name: "Step 1.1a: Generate Hybrid Mix Database"
+
+# Generates co-located solar+batt / wind+batt family compositions.
+# Uses tightened per-ISO windows (CF@10%, family splits@10%, hybrid cap 40%).
+# Output: data/step1-pfs/{ISO}_hybrid_mixes.parquet
+#
+# Grid sizes (approx post-filter):
+#   SPP: 3.3M | MISO: 6.1M | PJM: 7.6M | ERCOT: 9.2M
+#   NYISO: 25.5M | NEISO: 28.5M | CAISO: 87.0M
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region to build'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      force:
+        description: 'Force regenerate even if parquet exists'
+        required: false
+        default: false
+        type: boolean
+      dry_run:
+        description: 'Dry run (print grid sizes, no output files)'
+        required: false
+        default: false
+        type: boolean
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+jobs:
+  generate-hybrid-mixes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch || 'master' }}
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: pip install numpy numba pyarrow pandas
+
+    - name: Create output directories
+      run: mkdir -p data/step1-pfs
+
+    - name: "Generate hybrid mix combinations"
+      run: |
+        ISO="${{ inputs.iso }}"
+        FLAGS="--hybrid"
+        if [ "${{ inputs.force }}" = "true" ]; then FLAGS="$FLAGS --force"; fi
+        if [ "${{ inputs.dry_run }}" = "true" ]; then FLAGS="$FLAGS --dry-run"; fi
+
+        if [ "$ISO" = "ALL" ]; then
+          for iso in SPP MISO ERCOT PJM NYISO NEISO CAISO; do
+            echo ""
+            echo "=== Generating hybrid mixes for $iso ==="
+            python scripts/step1_1a_generate_mixes.py --iso "$iso" $FLAGS
+          done
+        else
+          python scripts/step1_1a_generate_mixes.py --iso "$ISO" $FLAGS
+        fi
+
+    - name: Report output sizes
+      if: ${{ inputs.dry_run != 'true' }}
+      run: |
+        echo "=== Hybrid mix parquet files ==="
+        ls -lh data/step1-pfs/*_hybrid_mixes.parquet 2>/dev/null || echo "No files generated"
+
+    - name: Commit and push hybrid mixes
+      if: ${{ inputs.dry_run != 'true' }}
+      run: |
+        set -euo pipefail
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config http.postBuffer 524288000
+        git config push.default current
+
+        TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+        ISO_LABEL="${{ inputs.iso }}"
+        TARGET_BRANCH="auto/${TIMESTAMP}-step1a-hybrid-mixes-${ISO_LABEL}"
+        git checkout -b "$TARGET_BRANCH"
+
+        if [ "$ISO_LABEL" = "ALL" ]; then
+          ISOS="CAISO ERCOT PJM NYISO NEISO MISO SPP"
+        else
+          ISOS="$ISO_LABEL"
+        fi
+
+        push_with_retry() {
+          local label="$1"
+          local MAX_RETRIES=4
+          for i in $(seq 1 $MAX_RETRIES); do
+            echo "  Push attempt $i/$MAX_RETRIES for ${label}..."
+            git push -u origin "$TARGET_BRANCH" 2>&1 && return 0
+            if [ "$i" -eq "$MAX_RETRIES" ]; then
+              echo "  ERROR: Push failed for ${label} after $MAX_RETRIES attempts"
+              return 1
+            fi
+            BACKOFF=$((2 ** i))
+            echo "  Retrying in ${BACKOFF}s..."
+            sleep "$BACKOFF"
+          done
+        }
+
+        PUSHED=false
+
+        for iso in $ISOS; do
+          echo ""
+          echo "--- Committing hybrid mixes for $iso ---"
+
+          FILE="data/step1-pfs/${iso}_hybrid_mixes.parquet"
+          if [ ! -f "$FILE" ]; then
+            echo "  No hybrid mixes file for $iso — skipping"
+            continue
+          fi
+
+          git add -f "$FILE"
+          if git diff --cached --quiet; then
+            echo "  No changes for $iso — skipping"
+            continue
+          fi
+
+          BATCH_MB=$(du -m "$FILE" | cut -f1)
+          echo "  Staging ~${BATCH_MB} MB for $iso"
+          git commit -m "Step 1A Hybrid: ${iso} mixes — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          if push_with_retry "$iso"; then
+            PUSHED=true
+          fi
+        done
+
+        if [ "$PUSHED" = true ]; then
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+        else
+          echo "No changes were pushed"
+        fi
