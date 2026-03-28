@@ -289,4 +289,18 @@ Max observed winning % + 10pp buffer, rounded to nearest 5:
 | MISO | 255 | 130 | 60 | 215 | 10 | 15 | 10 | 70 |
 | SPP | 225 | 105 | 60 | 195 | 10 | 15 | 10 | 60 |
 
-Hybrid caps (initial, no prior data): TBD after first run, likely 50-70% of parent resource cap.
+### 9.4 Hybrid Resource Caps (First Run)
+
+No prior optimization data for hybrids. First-run caps set equal to parent resource caps — let the optimizer discover the natural split, then tighten after results.
+
+| ISO | solar_batt4 | solar_batt8 | wind_batt4 | wind_batt8 |
+|-----|------------|------------|-----------|-----------|
+| CAISO | 95 | 95 | 145 | 145 |
+| ERCOT | 85 | 85 | 205 | 205 |
+| PJM | 85 | 85 | 160 | 160 |
+| NYISO | 95 | 95 | 90 | 90 |
+| NEISO | 95 | 95 | 95 | 95 |
+| MISO | 60 | 60 | 215 | 215 |
+| SPP | 60 | 60 | 195 | 195 |
+
+Total procurement cap still constrains the sum of all resources. After first run, re-extract with `extract_empirical_caps.py` and tighten.
