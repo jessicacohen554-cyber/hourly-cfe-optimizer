@@ -289,18 +289,22 @@ Max observed winning % + 10pp buffer, rounded to nearest 5:
 | MISO | 255 | 130 | 60 | 215 | 10 | 15 | 10 | 70 |
 | SPP | 225 | 105 | 60 | 195 | 10 | 15 | 10 | 60 |
 
-### 9.4 Hybrid Resource Caps (First Run)
+### 9.4 Final Resource Caps
 
-No prior optimization data for hybrids. First-run caps set equal to parent resource caps — let the optimizer discover the natural split, then tighten after results.
+Buffer rules:
+- **Clean firm, solar, wind, offshore wind, CCS**: +10pp on max observed
+- **Hybrids (all 4)**: +30pp on parent resource max (no prior data, need exploration room)
+- **Hydro, geothermal**: +0pp (physical resource caps, not optimization frontiers)
+- **Total procurement**: +10pp on max observed
 
-| ISO | solar_batt4 | solar_batt8 | wind_batt4 | wind_batt8 |
-|-----|------------|------------|-----------|-----------|
-| CAISO | 95 | 95 | 145 | 145 |
-| ERCOT | 85 | 85 | 205 | 205 |
-| PJM | 85 | 85 | 160 | 160 |
-| NYISO | 95 | 95 | 90 | 90 |
-| NEISO | 95 | 95 | 95 | 95 |
-| MISO | 60 | 60 | 215 | 215 |
-| SPP | 60 | 60 | 195 | 195 |
+| ISO | CF | Sol | Wind | OSW | Hyd | Geo | CCS | SB4 | SB8 | WB4 | WB8 | Total |
+|-----|-----|-----|------|-----|-----|-----|-----|-----|-----|-----|-----|-------|
+| CAISO | 105 | 95 | 145 | 20 | 10 | 20 | 50 | 115 | 115 | 165 | 165 | 225 |
+| ERCOT | 110 | 85 | 205 | 10 | 0 | 0 | 60 | 105 | 105 | 225 | 225 | 240 |
+| PJM | 130 | 85 | 160 | 15 | 5 | 0 | 55 | 105 | 105 | 180 | 180 | 225 |
+| NYISO | 125 | 95 | 90 | 35 | 15 | 0 | 65 | 115 | 115 | 110 | 110 | 185 |
+| NEISO | 130 | 95 | 95 | 45 | 5 | 0 | 60 | 115 | 115 | 115 | 115 | 220 |
+| MISO | 130 | 60 | 215 | 10 | 5 | 0 | 70 | 80 | 80 | 235 | 235 | 255 |
+| SPP | 105 | 60 | 195 | 10 | 5 | 0 | 60 | 80 | 80 | 215 | 215 | 225 |
 
-Total procurement cap still constrains the sum of all resources. After first run, re-extract with `extract_empirical_caps.py` and tighten.
+After first hybrid-inclusive run, re-extract with `extract_empirical_caps.py` and tighten.
