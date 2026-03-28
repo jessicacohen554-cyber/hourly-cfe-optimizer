@@ -117,13 +117,30 @@ def get_near_miss_width(threshold):
 # Collision-free hashing: base-351 positional encoding.
 # Each resource dimension ∈ [0, 350], so 351^i gives unique int64 per mix.
 # 351^7 ≈ 8.0e17 < 2^63 ≈ 9.2e18 — fits int64 with no collisions.
+# For >7 dims (hybrid), we use two independent 6-dim hash lanes.
 _HASH_BASES = np.array([351**i for i in range(7)], dtype=np.int64)
 
 
 def _hash_mixes(combos):
-    """Vectorized collision-free int64 hash per mix row. No Python loops."""
+    """Vectorized collision-free int64 hash per mix row. No Python loops.
+
+    For >7 dimensions, uses two independent hash lanes (split at dim 6)
+    to stay within int64 range while remaining collision-free.
+    Returns (N,) int64 for ≤7 dims, or (N, 2) int64 for >7 dims.
+    Callers that use np.isin handle both shapes via set membership.
+    """
     n_res = combos.shape[1]
-    return combos.astype(np.int64) @ _HASH_BASES[:n_res]
+    int_combos = combos.astype(np.int64)
+    if n_res <= 7:
+        return int_combos @ _HASH_BASES[:n_res]
+    # Two-lane hash: pack into single int64 using modular arithmetic
+    # Lane A: dims 0-5 (351^6 ≈ 1.87e15, safe)
+    # Lane B: dims 6+ (≤5 dims, 351^5 ≈ 5.3e12, safe)
+    lane_a = int_combos[:, :6] @ _HASH_BASES[:6]
+    lane_b = int_combos[:, 6:] @ _HASH_BASES[:n_res - 6]
+    # Combine: lane_a fits in ~51 bits, lane_b in ~43 bits
+    # Use XOR with shifted lane_b for collision-free combination in int64
+    return lane_a ^ (lane_b << np.int64(20))
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -202,13 +219,14 @@ def _tighten_bounds_by_procurement_cap(bounds):
 
 def compute_zone_resource_bounds(iso, coarse_combos, coarse_scores,
                                  zone_score_low, zone_score_high,
-                                 prior_zone_bounds=None):
+                                 prior_zone_bounds=None,
+                                 include_hybrids=False):
     """Compute resource bounds for fine search within a score zone.
 
     Uses prior EF bounds if available, otherwise derives from coarse boundary
     mixes. Always clamps to resource caps and TOTAL_PROCUREMENT_CAP.
     """
-    rtypes = s1.get_resource_types(iso)
+    rtypes = s1.get_resource_types(iso, include_hybrids=include_hybrids)
     n_res = len(rtypes)
 
     caps = []
@@ -219,6 +237,8 @@ def compute_zone_resource_bounds(iso, coarse_combos, coarse_scores,
             caps.append(s1.GEO_CAP_PCT)
         elif rt == 'offshore_wind':
             caps.append(int(s1.OFFSHORE_WIND_CAP_PCT.get(iso, 0)))
+        elif rt in s1.HYBRID_TYPES:
+            caps.append(s1.HYBRID_MAX_PER_TYPE)
         else:
             caps.append(s1.RESOURCE_CAPS[rt])
 
@@ -741,19 +761,32 @@ def _save_manifest(iso, code_hash, zones_done, thresholds_done):
 # MAIN PIPELINE
 # ══════════════════════════════════════════════════════════════════════════════
 
-def process_iso(iso, thresholds_filter=None, zones_filter=None):
+def process_iso(iso, thresholds_filter=None, zones_filter=None,
+                include_hybrids=False):
     """Run zone-based fine search for one ISO.
 
     Args:
         thresholds_filter: list of thresholds to process (None = all)
         zones_filter: set of zone names to run, e.g. {'B', 'C'} (None = all)
+        include_hybrids: if True, use hybrid resource types (8-10D)
     """
     iso_start = time.time()
-    rtypes = s1.get_resource_types(iso)
+
+    # ── Auto-detect hybrid mode from coarse cache ──
+    coarse_path = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
+                               f'{iso}_coarse_cache.parquet')
+    if not include_hybrids and os.path.exists(coarse_path):
+        coarse_schema = pq.read_schema(coarse_path)
+        if 'solar_batt4' in coarse_schema.names:
+            include_hybrids = True
+            print(f"  Auto-detected hybrid columns in coarse cache")
+
+    rtypes = s1.get_resource_types(iso, include_hybrids=include_hybrids)
     n_res = len(rtypes)
 
+    hybrid_str = " [HYBRID]" if include_hybrids else ""
     print(f"\n{'=' * 70}")
-    print(f"  Step 1b Zone Search — {iso}")
+    print(f"  Step 1b Zone Search — {iso}{hybrid_str}")
     print(f"  Resources: {n_res}D ({', '.join(rtypes)})")
     print(f"  Numba: {'enabled' if s1.HAS_NUMBA else 'disabled'}")
     print(f"{'=' * 70}")
@@ -768,12 +801,26 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None):
         print(f"  Resuming — zones done: {sorted(zones_done)}")
 
     # ── Load coarse cache ──
+    # load_coarse_cache uses get_resource_types(iso) without hybrids by default.
+    # We need to load the right columns based on hybrid mode.
     print(f"\n  Loading coarse cache...")
-    cached = s1.load_coarse_cache(iso)
-    if cached is None:
-        print(f"  ERROR: No coarse cache for {iso}. Run step1b first.")
-        return
-    coarse_combos, coarse_scores = cached
+    if include_hybrids:
+        # Manual load with hybrid resource types
+        if not os.path.exists(coarse_path):
+            print(f"  ERROR: No coarse cache for {iso}. Run step1b first.")
+            return
+        table = pq.read_table(coarse_path)
+        coarse_combos = np.column_stack([
+            table.column(rt).to_numpy() for rt in rtypes
+        ])
+        coarse_scores = table.column('score').to_numpy()
+        print(f"    {iso}: Coarse cache loaded ({len(coarse_combos):,} combos)")
+    else:
+        cached = s1.load_coarse_cache(iso)
+        if cached is None:
+            print(f"  ERROR: No coarse cache for {iso}. Run step1b first.")
+            return
+        coarse_combos, coarse_scores = cached
     print(f"  Coarse cache: {len(coarse_combos):,} mixes")
 
     # ── Load EIA data for scoring fine mixes ──
@@ -781,8 +828,17 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None):
     demand_data, gen_profiles, _, _ = s1.load_data()
     demand_norm = demand_data[iso]['normalized']
     supply_profiles = s1.get_supply_profiles(iso, gen_profiles)
+
+    # Load hybrid profiles if needed
+    hybrid_profiles = None
+    if include_hybrids:
+        hybrid_profiles = s1.load_hybrid_profiles(iso)
+        print(f"  Loaded hybrid profiles: {list(hybrid_profiles.keys())}")
+
     demand_arr, supply_matrix = s1.prepare_numpy_profiles(
-        iso, demand_norm, supply_profiles)
+        iso, demand_norm, supply_profiles,
+        include_hybrids=include_hybrids,
+        hybrid_profiles=hybrid_profiles)
 
     # ── Load prior windows (optional) ──
     prior_windows = load_prior_windows(iso)
@@ -850,7 +906,8 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None):
 
         bounds = compute_zone_resource_bounds(
             iso, coarse_combos, coarse_scores,
-            z_score_low, z_score_high, pzb)
+            z_score_low, z_score_high, pzb,
+            include_hybrids=include_hybrids)
 
         bounds_str = ', '.join(f"{rtypes[i]}=[{lo},{hi}]"
                                for i, (lo, hi) in enumerate(bounds))
@@ -1018,6 +1075,8 @@ def main():
     parser.add_argument("--zones", default="",
                         help="Comma-separated zones to run: A, B, C "
                              "(e.g. 'B,C'). Default: all zones.")
+    parser.add_argument("--hybrid", action="store_true",
+                        help="Enable hybrid resource types (solar+batt, wind+batt)")
     args = parser.parse_args()
 
     isos = list(s1.ISOS) if args.iso.upper() == 'ALL' else [args.iso.upper()]
@@ -1034,11 +1093,14 @@ def main():
         print(f"Threshold filter: {thresholds_filter}")
     if zones_filter:
         print(f"Zone filter: {sorted(zones_filter)}")
+    if args.hybrid:
+        print(f"Hybrid mode: enabled (CLI flag)")
 
     for iso in isos:
         process_iso(iso,
                     thresholds_filter=thresholds_filter,
-                    zones_filter=zones_filter)
+                    zones_filter=zones_filter,
+                    include_hybrids=args.hybrid)
 
 
 if __name__ == "__main__":
