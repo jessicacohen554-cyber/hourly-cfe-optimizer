@@ -220,7 +220,7 @@ def _generate_family_compositions(family_cap, hybrid_cap, step):
     return compositions
 
 
-def generate_hybrid_mixes(iso):
+def generate_hybrid_mixes(iso, stream_to_parquet=False):
     """Generate coarse mix combos with hybrid family splits.
 
     Uses tightened per-ISO windows:
@@ -231,8 +231,11 @@ def generate_hybrid_mixes(iso):
       - Hydro: fixed at observed DG value (not a dimension)
       - OSW, Geo: 5% steps (unchanged)
 
-    Returns combos array (N, n_res) with columns matching
-    get_resource_types(iso, include_hybrids=True).
+    If stream_to_parquet=True, writes chunks directly to parquet (for large
+    ISOs like CAISO that exceed available RAM). Returns total count only.
+
+    If stream_to_parquet=False, returns combos array (N, n_res) with columns
+    matching get_resource_types(iso, include_hybrids=True).
     """
     step_h = s1.HYBRID_FAMILY_STEP  # 10% for family splits
     h_cap = s1.HYBRID_MAX_PER_TYPE  # 40% max per hybrid type
@@ -261,12 +264,8 @@ def generate_hybrid_mixes(iso):
     geo_vals = list(range(0, s1.GEO_CAP_PCT + 1, 5)) if iso == 'CAISO' else [0]
 
     # ── Build column order matching get_resource_types(iso, include_hybrids=True) ──
-    # Base: clean_firm, solar, wind, hydro, [offshore_wind], [geothermal]
-    # Hybrid: solar_batt4, solar_batt8, wind_batt4, wind_batt8
     rtypes = s1.get_resource_types(iso, include_hybrids=True)
     n_res = len(rtypes)
-
-    # Column index map
     idx = {rt: i for i, rt in enumerate(rtypes)}
 
     print(f"  {iso}: Generating hybrid grid — "
@@ -276,32 +275,37 @@ def generate_hybrid_mixes(iso):
           f"CCS={len(ccs_vals)} (0-{ccs_cap}% @5%), "
           f"OSW={len(osw_vals)}, Geo={len(geo_vals)}")
 
-    # Pre-compute raw grid size
     raw_size = (len(solar_comps) * len(wind_comps) * len(cf_vals) *
                 len(ccs_vals) * len(osw_vals) * len(geo_vals))
-    print(f"  {iso}: Raw Cartesian: {raw_size:,} — generating + filtering...")
+    est_mem_gb = raw_size * n_res * 8 / (1024**3)
+    print(f"  {iso}: Raw Cartesian: {raw_size:,} (~{est_mem_gb:.1f} GB) "
+          f"— generating + filtering...", flush=True)
 
-    # ── Generate via chunked numpy to limit peak memory ──
-    solar_arr = np.array(solar_comps, dtype=np.float64)  # (Ns, 3)
-    wind_arr = np.array(wind_comps, dtype=np.float64)    # (Nw, 3)
+    # ── Pre-compute the "other" grid (cf, ccs, osw, geo) once ──
+    solar_arr = np.array(solar_comps, dtype=np.float64)
+    wind_arr = np.array(wind_comps, dtype=np.float64)
     cf_arr = np.array(cf_vals, dtype=np.float64)
     ccs_arr = np.array(ccs_vals, dtype=np.float64)
     osw_arr = np.array(osw_vals, dtype=np.float64)
     geo_arr = np.array(geo_vals, dtype=np.float64)
 
-    # Pre-compute the "other" grid (cf, ccs, osw, geo) once
     grids = np.meshgrid(cf_arr, ccs_arr, osw_arr, geo_arr, indexing='ij')
     other_combos = np.column_stack([g.ravel() for g in grids])
     other_sums = other_combos.sum(axis=1)
-    n_other = len(other_combos)
 
     pcap = s1.TOTAL_PROCUREMENT_CAP
 
-    # Two-pass: count first, then fill pre-allocated array
-    # Pass 1: count valid combos
+    # ── Streaming mode: write parquet chunks directly to disk ──
+    if stream_to_parquet:
+        return _generate_hybrid_streaming(
+            iso, solar_arr, wind_arr, other_combos, other_sums,
+            hydro_val, pcap, rtypes, idx, n_res)
+
+    # ── In-memory mode: count then fill ──
     total_count = 0
-    sw_sums = []  # cache (si, wi) → sw_sum for valid pairs
-    for si in range(len(solar_arr)):
+    sw_pairs = []
+    n_solar = len(solar_arr)
+    for si in range(n_solar):
         s_sum = solar_arr[si].sum()
         for wi in range(len(wind_arr)):
             w_sum = wind_arr[wi].sum()
@@ -311,19 +315,21 @@ def generate_hybrid_mixes(iso):
             n_keep = int(np.sum((sw_sum + other_sums > 0) &
                                 (sw_sum + other_sums <= pcap)))
             if n_keep > 0:
-                sw_sums.append((si, wi, sw_sum, n_keep))
+                sw_pairs.append((si, wi, sw_sum, n_keep))
                 total_count += n_keep
+        if (si + 1) % 50 == 0:
+            print(f"    Counting: {si + 1}/{n_solar} solar splits, "
+                  f"{total_count:,} combos so far...", flush=True)
 
     print(f"  {iso}: {total_count:,} valid combos from "
-          f"{len(sw_sums):,} (solar,wind) pairs — allocating...")
+          f"{len(sw_pairs):,} (solar,wind) pairs — allocating...", flush=True)
 
     if total_count == 0:
         return np.empty((0, n_res), dtype=np.float64)
 
-    # Pass 2: fill pre-allocated array
     combos = np.empty((total_count, n_res), dtype=np.float64)
     pos = 0
-    for si, wi, sw_sum, n_keep in sw_sums:
+    for si, wi, sw_sum, n_keep in sw_pairs:
         mask = (sw_sum + other_sums > 0) & (sw_sum + other_sums <= pcap)
         other_kept = other_combos[mask]
 
@@ -345,6 +351,126 @@ def generate_hybrid_mixes(iso):
     print(f"  {iso}: {len(combos):,} hybrid mixes after filtering "
           f"(procurement cap ≤ {pcap}%)")
     return combos
+
+
+# Threshold for switching to streaming mode (bytes)
+# ~4 GB = safe for 7 GB runners with headroom for other allocations
+_STREAM_THRESHOLD_BYTES = 4 * 1024**3
+
+
+def _generate_hybrid_streaming(iso, solar_arr, wind_arr, other_combos,
+                                other_sums, hydro_val, pcap, rtypes, idx, n_res):
+    """Write hybrid mixes directly to parquet in chunks (low memory).
+
+    Instead of building the full N×10 array in memory, writes row groups
+    of ~2M rows each to a parquet file. Peak memory ≈ 2M × 10 × 8 = 160 MB.
+
+    Returns total count written.
+    """
+    out_path = hybrid_mixes_path(iso)
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+
+    schema = pa.schema([(rt, pa.float64()) for rt in rtypes])
+    writer = pq.ParquetWriter(out_path, schema, compression='snappy')
+
+    CHUNK_TARGET = 2_000_000  # rows per parquet row group
+    chunk_buf = np.empty((CHUNK_TARGET, n_res), dtype=np.float64)
+    chunk_pos = 0
+    total_written = 0
+    n_solar = len(solar_arr)
+
+    cf_min = other_combos[:, 0].min()
+
+    for si in range(n_solar):
+        s_stand, s_b4, s_b8 = solar_arr[si]
+        s_sum = s_stand + s_b4 + s_b8
+
+        for wi in range(len(wind_arr)):
+            w_stand, w_b4, w_b8 = wind_arr[wi]
+            w_sum = w_stand + w_b4 + w_b8
+            sw_sum = s_sum + w_sum + hydro_val
+
+            if sw_sum + cf_min > pcap:
+                continue
+
+            mask = (sw_sum + other_sums > 0) & (sw_sum + other_sums <= pcap)
+            n_keep = int(mask.sum())
+            if n_keep == 0:
+                continue
+
+            other_kept = other_combos[mask]
+
+            # Flush if chunk would overflow
+            if chunk_pos + n_keep > CHUNK_TARGET:
+                if chunk_pos > 0:
+                    _flush_chunk(writer, rtypes, chunk_buf[:chunk_pos])
+                    total_written += chunk_pos
+                    chunk_pos = 0
+                # If single batch exceeds chunk target, write directly
+                if n_keep > CHUNK_TARGET:
+                    rows = _build_rows(
+                        n_keep, n_res, idx, other_kept, s_stand, w_stand,
+                        hydro_val, s_b4, s_b8, w_b4, w_b8)
+                    _flush_chunk(writer, rtypes, rows)
+                    total_written += n_keep
+                    continue
+
+            end = chunk_pos + n_keep
+            chunk_buf[chunk_pos:end, idx['clean_firm']] = other_kept[:, 0]
+            chunk_buf[chunk_pos:end, idx['solar']] = s_stand
+            chunk_buf[chunk_pos:end, idx['wind']] = w_stand
+            chunk_buf[chunk_pos:end, idx['hydro']] = hydro_val
+            if 'offshore_wind' in idx:
+                chunk_buf[chunk_pos:end, idx['offshore_wind']] = other_kept[:, 2]
+            if 'geothermal' in idx:
+                chunk_buf[chunk_pos:end, idx['geothermal']] = other_kept[:, 3]
+            chunk_buf[chunk_pos:end, idx['solar_batt4']] = s_b4
+            chunk_buf[chunk_pos:end, idx['solar_batt8']] = s_b8
+            chunk_buf[chunk_pos:end, idx['wind_batt4']] = w_b4
+            chunk_buf[chunk_pos:end, idx['wind_batt8']] = w_b8
+            chunk_pos = end
+
+        if (si + 1) % 25 == 0:
+            print(f"    Streaming: {si + 1}/{n_solar} solar splits, "
+                  f"{total_written + chunk_pos:,} mixes...", flush=True)
+
+    # Final flush
+    if chunk_pos > 0:
+        _flush_chunk(writer, rtypes, chunk_buf[:chunk_pos])
+        total_written += chunk_pos
+
+    writer.close()
+
+    size_mb = os.path.getsize(out_path) / (1024 * 1024)
+    print(f"  {iso}: {total_written:,} hybrid mixes streamed → "
+          f"{out_path} ({size_mb:.1f} MB)")
+    return total_written
+
+
+def _build_rows(n_keep, n_res, idx, other_kept, s_stand, w_stand,
+                hydro_val, s_b4, s_b8, w_b4, w_b8):
+    """Build a single batch of rows (helper for oversized batches)."""
+    rows = np.empty((n_keep, n_res), dtype=np.float64)
+    rows[:, idx['clean_firm']] = other_kept[:, 0]
+    rows[:, idx['solar']] = s_stand
+    rows[:, idx['wind']] = w_stand
+    rows[:, idx['hydro']] = hydro_val
+    if 'offshore_wind' in idx:
+        rows[:, idx['offshore_wind']] = other_kept[:, 2]
+    if 'geothermal' in idx:
+        rows[:, idx['geothermal']] = other_kept[:, 3]
+    rows[:, idx['solar_batt4']] = s_b4
+    rows[:, idx['solar_batt8']] = s_b8
+    rows[:, idx['wind_batt4']] = w_b4
+    rows[:, idx['wind_batt8']] = w_b8
+    return rows
+
+
+def _flush_chunk(writer, rtypes, chunk):
+    """Write a chunk of rows to the parquet writer."""
+    data = {rt: chunk[:, i] for i, rt in enumerate(rtypes)}
+    table = pa.table(data)
+    writer.write_table(table)
 
 
 def hybrid_mixes_path(iso):
@@ -438,12 +564,14 @@ def main():
 
         for iso in isos:
             t0 = time.time()
-            combos = generate_hybrid_mixes(iso)
             rtypes = s1.get_resource_types(iso, include_hybrids=True)
+
             if args.dry_run:
-                print(f"  {iso}: DRY RUN — {len(combos):,} mixes ({len(rtypes)}D), "
+                # Still run generation to get the count, but don't save
+                combos = generate_hybrid_mixes(iso)
+                n = len(combos) if isinstance(combos, np.ndarray) else combos
+                print(f"  {iso}: DRY RUN — {n:,} mixes ({len(rtypes)}D), "
                       f"columns: {rtypes}")
-                # Print family composition counts for verification
                 s_comps = _generate_family_compositions(
                     s1.SOLAR_FAMILY_CAP[iso], s1.HYBRID_MAX_PER_TYPE,
                     s1.HYBRID_FAMILY_STEP)
@@ -452,16 +580,41 @@ def main():
                     s1.HYBRID_FAMILY_STEP)
                 print(f"          Solar family: {len(s_comps)} compositions")
                 print(f"          Wind family:  {len(w_comps)} compositions")
-                # Sample some compositions
-                for label, comps in [("Solar", s_comps[:5]), ("Wind", w_comps[:5])]:
-                    for c in comps:
-                        print(f"            {label}: stand={c[0]}% b4={c[1]}% b8={c[2]}%")
                 continue
 
-            save_hybrid_mixes(iso, combos)
-            elapsed = time.time() - t0
-            print(f"  {iso}: {len(combos):,} hybrid combos ({len(rtypes)}D) "
-                  f"in {elapsed:.1f}s")
+            # Estimate memory: if > 4 GB, use streaming mode
+            n_res = len(rtypes)
+            s_comps = _generate_family_compositions(
+                s1.SOLAR_FAMILY_CAP[iso], s1.HYBRID_MAX_PER_TYPE,
+                s1.HYBRID_FAMILY_STEP)
+            w_comps = _generate_family_compositions(
+                s1.WIND_FAMILY_CAP[iso], s1.HYBRID_MAX_PER_TYPE,
+                s1.HYBRID_FAMILY_STEP)
+            cf_lo, cf_hi = s1.CF_WINDOW[iso]
+            cf_levels = (cf_hi - cf_lo) // s1.CF_COARSE_STEP + 1
+            ccs_levels = s1.CCS_CAP[iso] // 5 + 1
+            osw_cap = int(s1.OFFSHORE_WIND_CAP_PCT.get(iso, 0)) if iso in s1.OFFSHORE_ISOS else 0
+            osw_levels = max(osw_cap // 5 + 1, 1)
+            geo_levels = (s1.GEO_CAP_PCT // 5 + 1) if iso == 'CAISO' else 1
+            raw_est = (len(s_comps) * len(w_comps) * cf_levels *
+                       ccs_levels * osw_levels * geo_levels)
+            est_bytes = raw_est * n_res * 8
+            use_streaming = est_bytes > _STREAM_THRESHOLD_BYTES
+
+            if use_streaming:
+                print(f"  {iso}: Estimated {raw_est:,} combos "
+                      f"(~{est_bytes / 1024**3:.1f} GB) — using streaming mode",
+                      flush=True)
+                total = generate_hybrid_mixes(iso, stream_to_parquet=True)
+                elapsed = time.time() - t0
+                print(f"  {iso}: {total:,} hybrid combos ({n_res}D) "
+                      f"streamed in {elapsed:.1f}s")
+            else:
+                combos = generate_hybrid_mixes(iso)
+                save_hybrid_mixes(iso, combos)
+                elapsed = time.time() - t0
+                print(f"  {iso}: {len(combos):,} hybrid combos ({n_res}D) "
+                      f"in {elapsed:.1f}s")
 
         print(f"\n  Done. Hybrid mixes generated.")
         return
