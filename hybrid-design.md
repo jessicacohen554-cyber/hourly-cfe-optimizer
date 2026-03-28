@@ -32,6 +32,8 @@ Solar panels (DC) oversized relative to grid interconnection (AC). During peak s
 
 **Validation sweep results** (EIA-930 profiles, `scripts/validate_dcac_ratios.py`):
 
+**solar_batt4 ratios** (current industry practice):
+
 | ISO | Solar CF | DC:AC | Hybrid CF (4hr) | CF Gain | Battery Recovery |
 |-----|----------|-------|-----------------|---------|-----------------|
 | CAISO | 29.6% | **1.35** | 37.6% | +8.0% | 19% |
@@ -42,9 +44,16 @@ Solar panels (DC) oversized relative to grid interconnection (AC). During peak s
 | MISO | 20.8% | **1.50** | 30.2% | +9.4% | 26% |
 | SPP | 20.9% | **1.50** | 30.6% | +9.7% | 36% |
 
-Key finding: weaker solar ISOs benefit *more* from overbuilding — smaller clipping events mean the battery captures a higher share. CAISO is the only ISO where diminishing returns kick in (sweet spot 1.35).
+**solar_batt8 ratios** (higher overbuild to justify 8hr capacity):
 
-MISO's 26% recovery rate suggests 4hr battery saturates there — solar_batt8 may outperform solar_batt4 in MISO specifically.
+| ISO | DC:AC | Rationale |
+|-----|-------|-----------|
+| CAISO | **1.70** | 8hr gains >1% CF over 4hr at this ratio |
+| All others | **2.00** | Need aggressive overbuild for 8hr to differentiate |
+
+At solar_batt4 ratios (1.35-1.50), the 4hr battery already captures all clipped energy — making 8hr redundant (identical profiles). Higher ratios create enough clipping to fill the 8hr battery, producing meaningfully different profiles: +434 to +666 more active hours, flatter output shapes (lower peak/mean).
+
+Key finding: weaker solar ISOs benefit *more* from overbuilding — smaller clipping events mean the battery captures a higher share. CAISO is the only ISO where diminishing returns kick in early.
 
 ### 2.2 Battery Specifications
 
@@ -173,9 +182,11 @@ Applied at component level: solar/wind learning + battery learning, weighted by 
 ### 5.1 DC:AC Ratio Sweep — COMPLETE ✓
 
 Script: `scripts/validate_dcac_ratios.py`
-- Tested ratios [1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.5] × 7 ISOs
-- **Locked**: CAISO=1.35, all others=1.50
-- Ratios are time-invariant (physics of solar resource doesn't change; industry trend toward higher ratios means these are if anything conservative for later deployment years)
+- Tested ratios [1.1–2.0] × 7 ISOs
+- **solar_batt4 locked**: CAISO=1.35, all others=1.50 (current industry practice)
+- **solar_batt8 locked**: CAISO=1.70, all others=2.00 (aggressive overbuild so 8hr battery differentiates from 4hr)
+- Ratios are time-invariant (physics of solar resource doesn't change; trend toward higher ratios means these are conservative for later deployment years)
+- At 4hr ratios, solar_batt8 was identical to solar_batt4 — insufficient clipping to fill 8hr battery. Higher ratios resolved this.
 
 ### 5.2 Wind Battery Sizing — PENDING
 
@@ -228,7 +239,7 @@ Files to modify:
 | 6 | Wind: no DC:AC overbuild | 2026-03-28 | No clipping dynamic for wind |
 | 7 | Start with Step 1, propagate later | 2026-03-28 | Phase 1 = physics only |
 | 8 | Skip offshore wind hybrids | 2026-03-28 | Storage doesn't reshape gen profile — transmission problem |
-| 9 | DC:AC validated & locked | 2026-03-28 | CAISO=1.35, all others=1.50. Time-invariant. |
+| 9 | DC:AC validated & locked | 2026-03-28 | solar_batt4: CAISO=1.35, others=1.50. solar_batt8: CAISO=1.70, others=2.00. Time-invariant. |
 | 10 | All 4 hybrid types | 2026-03-28 | solar_batt4, solar_batt8, wind_batt4, wind_batt8 |
 | 11 | Wind battery sizing 25-40% | 2026-03-28 | POI ceiling logic, per-ISO TBD |
 | 12 | Integrated profiles (Option B) | 2026-03-28 | Pre-computed 8760 shapes, not decomposed |
