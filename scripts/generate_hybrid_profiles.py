@@ -45,7 +45,9 @@ from pipeline_config import ISOS, H, REGIONAL_DEMAND_TWH
 DATA_YEAR = '2025'
 
 # DC:AC ratios — validated by scripts/validate_dcac_ratios.py
-DC_AC_RATIOS = {
+# solar_batt4 uses lower ratios (current industry practice)
+# solar_batt8 uses higher ratios (more clipping to justify 8hr capacity)
+DC_AC_RATIOS_4HR = {
     'CAISO': 1.35,
     'ERCOT': 1.50,
     'PJM':   1.50,
@@ -53,6 +55,15 @@ DC_AC_RATIOS = {
     'NEISO': 1.50,
     'MISO':  1.50,
     'SPP':   1.50,
+}
+DC_AC_RATIOS_8HR = {
+    'CAISO': 1.70,
+    'ERCOT': 2.00,
+    'PJM':   2.00,
+    'NYISO': 2.00,
+    'NEISO': 2.00,
+    'MISO':  2.00,
+    'SPP':   2.00,
 }
 
 # Battery parameters
@@ -374,19 +385,20 @@ def generate_profiles_for_iso(iso, gen_profiles, demand_data):
     if d_total > 0:
         demand_norm = demand_norm / d_total
 
-    dc_ac = DC_AC_RATIOS[iso]
+    dc_ac_4hr = DC_AC_RATIOS_4HR[iso]
+    dc_ac_8hr = DC_AC_RATIOS_8HR[iso]
     batt_mw = WIND_BATT_MW_RATIO[iso]
 
     # --- Generate 4 hybrid profiles ---
     results = {}
 
-    print(f"  {iso}: solar_batt4 (DC:AC={dc_ac:.2f}, 4hr)...")
+    print(f"  {iso}: solar_batt4 (DC:AC={dc_ac_4hr:.2f}, 4hr)...")
     results['solar_batt4'] = compute_solar_hybrid(
-        solar_profile, demand_norm, dc_ac, battery_hours=4, iso=iso)
+        solar_profile, demand_norm, dc_ac_4hr, battery_hours=4, iso=iso)
 
-    print(f"  {iso}: solar_batt8 (DC:AC={dc_ac:.2f}, 8hr)...")
+    print(f"  {iso}: solar_batt8 (DC:AC={dc_ac_8hr:.2f}, 8hr)...")
     results['solar_batt8'] = compute_solar_hybrid(
-        solar_profile, demand_norm, dc_ac, battery_hours=8, iso=iso)
+        solar_profile, demand_norm, dc_ac_8hr, battery_hours=8, iso=iso)
 
     print(f"  {iso}: wind_batt4 (MW ratio={batt_mw:.2f}, 4hr)...")
     results['wind_batt4'] = compute_wind_hybrid(
