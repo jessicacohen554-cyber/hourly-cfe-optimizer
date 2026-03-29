@@ -448,13 +448,13 @@ def load_coarse_cache(iso):
     Used as fallback when the near-miss file has no eligible mixes at low
     thresholds (e.g., ERCOT 50-75% where all near-miss mixes score >80%).
     The coarse cache contains mixes at all score levels.
+
+    Supports both single-file and multi-part cache layouts.
     """
-    path = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
-                        f'{iso}_coarse_cache.parquet')
-    if not os.path.exists(path):
+    table = s1.read_coarse_cache_table(iso)
+    if table is None:
         return None, None
 
-    table = pq.read_table(path)
     has_hybrids = _detect_hybrids(table)
     rtypes = s1.get_resource_types(iso, include_hybrids=has_hybrids)
     combos = np.column_stack([table.column(rt).to_numpy() for rt in rtypes])

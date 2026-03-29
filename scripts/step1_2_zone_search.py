@@ -772,11 +772,9 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None,
     """
     iso_start = time.time()
 
-    # ── Auto-detect hybrid mode from coarse cache ──
-    coarse_path = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
-                               f'{iso}_coarse_cache.parquet')
-    if not include_hybrids and os.path.exists(coarse_path):
-        coarse_schema = pq.read_schema(coarse_path)
+    # ── Auto-detect hybrid mode from coarse cache (supports multi-part files) ──
+    coarse_schema = s1.read_coarse_cache_schema(iso)
+    if not include_hybrids and coarse_schema is not None:
         if 'solar_batt4' in coarse_schema.names:
             include_hybrids = True
             print(f"  Auto-detected hybrid columns in coarse cache")
@@ -800,21 +798,21 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None,
     if zones_done:
         print(f"  Resuming — zones done: {sorted(zones_done)}")
 
-    # ── Load coarse cache ──
-    # load_coarse_cache uses get_resource_types(iso) without hybrids by default.
-    # We need to load the right columns based on hybrid mode.
+    # ── Load coarse cache (supports multi-part files) ──
     print(f"\n  Loading coarse cache...")
     if include_hybrids:
         # Manual load with hybrid resource types
-        if not os.path.exists(coarse_path):
+        table = s1.read_coarse_cache_table(iso)
+        if table is None:
             print(f"  ERROR: No coarse cache for {iso}. Run step1b first.")
             return
-        table = pq.read_table(coarse_path)
         coarse_combos = np.column_stack([
             table.column(rt).to_numpy() for rt in rtypes
         ])
         coarse_scores = table.column('score').to_numpy()
-        print(f"    {iso}: Coarse cache loaded ({len(coarse_combos):,} combos)")
+        n_parts = len(s1.coarse_cache_paths(iso))
+        parts_note = f" ({n_parts} parts)" if n_parts > 1 else ""
+        print(f"    {iso}: Coarse cache loaded ({len(coarse_combos):,} combos{parts_note})")
     else:
         cached = s1.load_coarse_cache(iso)
         if cached is None:

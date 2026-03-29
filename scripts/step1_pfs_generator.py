@@ -1471,6 +1471,51 @@ def _coarse_cache_path(iso):
     return os.path.join(STEP1_RAW_PFS_PARQUET_DIR, f'{iso}_coarse_cache.parquet')
 
 
+def coarse_cache_paths(iso):
+    """Return list of coarse cache parquet paths for an ISO.
+
+    Supports both single-file and multi-part layouts:
+      - Single: {ISO}_coarse_cache.parquet
+      - Multi:  {ISO}_coarse_cache_part001.parquet, ...
+
+    Returns sorted list of paths that exist on disk.
+    """
+    import glob as _glob
+    single = _coarse_cache_path(iso)
+    if os.path.exists(single):
+        return [single]
+    pattern = os.path.join(STEP1_RAW_PFS_PARQUET_DIR,
+                           f'{iso}_coarse_cache_part*.parquet')
+    parts = sorted(_glob.glob(pattern))
+    return parts
+
+
+def read_coarse_cache_table(iso):
+    """Read coarse cache as a pyarrow Table, supporting multi-part files.
+
+    Returns pyarrow.Table or None if no cache files exist.
+    """
+    paths = coarse_cache_paths(iso)
+    if not paths:
+        return None
+    if len(paths) == 1:
+        return pq.read_table(paths[0])
+    # Concatenate multi-part files
+    tables = [pq.read_table(p) for p in paths]
+    return pa.concat_tables(tables)
+
+
+def read_coarse_cache_schema(iso):
+    """Read schema from coarse cache (first part file if multi-part).
+
+    Returns pyarrow.Schema or None if no cache files exist.
+    """
+    paths = coarse_cache_paths(iso)
+    if not paths:
+        return None
+    return pq.read_schema(paths[0])
+
+
 def build_coarse_cache(iso, demand_arr, supply_matrix):
     """Two-stage adaptive coarse sweep: 10% recon → targeted 5% fill.
 
@@ -1543,18 +1588,29 @@ def build_coarse_cache(iso, demand_arr, supply_matrix):
 
 
 def load_coarse_cache(iso):
-    """Load cached coarse sweep results. Returns (combos, scores) or None."""
-    path = _coarse_cache_path(iso)
-    if not HAS_PARQUET or not os.path.exists(path):
+    """Load cached coarse sweep results. Returns (combos, scores) or None.
+
+    Supports both single-file and multi-part cache layouts.
+    """
+    if not HAS_PARQUET:
         return None
     try:
-        table = pq.read_table(path)
+        table = read_coarse_cache_table(iso)
+        if table is None:
+            return None
         rtypes = get_resource_types(iso)
+        # Auto-detect hybrid columns
+        schema_names = set(table.schema.names)
+        hybrid_cols = ['solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
+        if all(c in schema_names for c in hybrid_cols):
+            rtypes = get_resource_types(iso, include_hybrids=True)
         combos = np.column_stack([
             table.column(rt).to_numpy() for rt in rtypes
         ])
         scores = table.column('score').to_numpy()
-        print(f"    {iso}: Coarse cache loaded ({len(combos):,} combos)")
+        n_parts = len(coarse_cache_paths(iso))
+        parts_note = f" ({n_parts} parts)" if n_parts > 1 else ""
+        print(f"    {iso}: Coarse cache loaded ({len(combos):,} combos{parts_note})")
         return combos, scores
     except Exception as e:
         print(f"    {iso}: Could not load coarse cache: {e}")
