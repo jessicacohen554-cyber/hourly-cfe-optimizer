@@ -24,6 +24,11 @@ var RESOURCE_COLORS = {
     greenH2:      '#10B981',
     geothermal:   '#D97706',
     storage:      '#EF4444',
+    // Hybrid co-located resources (darker shades of parent renewable)
+    solarBatt4:   '#E6890B',
+    solarBatt8:   '#CC7A0A',
+    windBatt4:    '#1AA34E',
+    windBatt8:    '#158F42',
     gap:          '#D1D5DB',
     fossilGas:    '#6B7280',
     fossilCoal:   '#374151',
@@ -44,6 +49,10 @@ var RESOURCE_COLORS = {
     greenH2T:      'rgba(16, 185, 129, 0.55)',
     geothermalT:   'rgba(217, 119, 6, 0.55)',
     storageT:      'rgba(239, 68, 68, 0.55)',
+    solarBatt4T:   'rgba(230, 137, 11, 0.55)',
+    solarBatt8T:   'rgba(204, 122, 10, 0.55)',
+    windBatt4T:    'rgba(26, 163, 78, 0.55)',
+    windBatt8T:    'rgba(21, 143, 66, 0.55)',
     gapT:          'rgba(209, 213, 219, 0.55)',
 
     // Light backgrounds (8% opacity)
@@ -57,6 +66,10 @@ var RESOURCE_COLORS = {
     battery4Bg:     'rgba(6, 182, 212, 0.08)',
     battery8Bg:     'rgba(8, 145, 178, 0.08)',
     ldesBg:         'rgba(233, 30, 99, 0.08)',
+    solarBatt4Bg:   'rgba(230, 137, 11, 0.08)',
+    solarBatt8Bg:   'rgba(204, 122, 10, 0.08)',
+    windBatt4Bg:    'rgba(26, 163, 78, 0.08)',
+    windBatt8Bg:    'rgba(21, 143, 66, 0.08)',
     storageBg:      'rgba(239, 68, 68, 0.08)'
 };
 
@@ -162,7 +175,7 @@ function solidDataset(color, label, data, opts) {
 }
 
 // Resource generation stack order (bottom to top for stacked charts)
-var RESOURCE_STACK_ORDER = ['nuclear', 'geothermal', 'ccs', 'hydro', 'offshoreWind', 'wind', 'solar', 'battery', 'battery8', 'ldes', 'greenH2'];
+var RESOURCE_STACK_ORDER = ['nuclear', 'geothermal', 'ccs', 'hydro', 'offshoreWind', 'wind', 'solar', 'windBatt4', 'windBatt8', 'solarBatt4', 'solarBatt8', 'battery', 'battery8', 'ldes', 'greenH2'];
 
 // Curtailment stack order (bottom to top - reverse of generation: solar curtailed first, nuclear last)
 var CURTAILMENT_STACK_ORDER = ['solar', 'wind', 'offshoreWind', 'hydro', 'ccs', 'geothermal', 'nuclear'];
