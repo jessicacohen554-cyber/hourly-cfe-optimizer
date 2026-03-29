@@ -38,7 +38,7 @@ Steps 5–6 depend on Step 4 outputs. Step 7 runs last.
 | 4.1B | `step4-1b-day-profiles.yml` | **Step 4.1B: Compress Day Profiles** | 24-hour representative day profiles. | `step4_1b_compress_day_profiles.py` |
 | 4 | `step4-tracks.yml` | **Step 4: Track Analysis** | Export tracks + track cost envelopes. | `step4_1e_export_tracks.py`, `step4_2c_analyze_tracks.py` |
 | 4.2B | `step4-2b-storage-analysis.yml` | **Step 4.2B: Storage Analysis** | Battery/LDES utilization, dispatch patterns. | `step4_2b_analyze_storage.py` |
-| 5 | `step5-scenarios.yml` | **Step 5: Scenarios** | Scenario B + Compare (Scenario A from MAC queue). | `step5_1_scenario_hourly.py`, `step5_2a_scenario_comparison.py` |
+| 5 | *(retired — see step5-procurement.yml)* | **Step 5: Scenarios** | Scenario B + Compare (Scenario A from MAC queue). | `step5_1_scenario_hourly.py`, `step5_2a_scenario_comparison.py` |
 | 5 | `step5-procurement.yml` | **Step 5: Procurement Strategies** | 10 strategy variants → combined dashboard JS. | `step5_2b_*.py`, `step5_2c_*.py`, `step5_2d_*.py` |
 | 5.2E | `step5-2e-wrights-law.yml` | **Step 5.2E: Wright's Law Learning Curves** | FOAK→NOAK learning curve projections. | `step5_2e_wrights_law_curves.py` |
 | 6.1 | `step6-1-smartargets-reference.yml` | **Step 6.1: SMARTargets** | Regional SMARTargets — Reference scenario. | `step6_1_smartargets.py` |
@@ -57,6 +57,17 @@ Steps 5–6 depend on Step 4 outputs. Step 7 runs last.
 | `cleanup-large-files.yml` | **Cleanup Large File Blobs from History** | Rewrites git history to strip dead/overwritten data blobs. Destructive — all collaborators must re-clone. |
 | `run-tests.yml` | **Run Tests** | Runs test suite. |
 | `deploy-pages.yml` | **Deploy Pages** | Deploys dashboard to GitHub Pages. |
+
+## Hybrid Resource Support
+
+All pipeline steps support hybrid co-located resources (`solar_batt4`, `solar_batt8`, `wind_batt4`, `wind_batt8`).
+
+- **Step 1.1**: Generates hybrid mixes via `--hybrid` flag (always enabled, permanent feature — do not remove)
+- **Steps 1.2–1.5**: Auto-detect hybrids from input parquet schema (`'solar_batt4' in schema.names`). No `--hybrid` flag needed.
+- **Steps 2.1–2.2**: Dynamically read all columns from input parquets — hybrids flow through automatically
+- **Steps 3–7**: Same dynamic column handling — no hybrid-specific flags required
+
+**Key invariant**: Step 1.1 always produces hybrid columns, so all downstream steps will always see them. The auto-detection pattern (`_detect_hybrids()` or schema inspection) adapts to whatever columns are present in the input parquets.
 
 ## Common Inputs
 
