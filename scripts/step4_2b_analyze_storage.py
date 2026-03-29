@@ -80,11 +80,14 @@ def load_resource_mixes_from_parquets():
         print(f"  WARNING: {dg_dir} not found")
         return {}
 
-    RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
+    RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro',
+                 'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
     STORAGE = ['battery', 'battery8', 'ldes', 'h2']
     MIX_COL_MAP = {
         'clean_firm': 'mix_clean_firm', 'solar': 'mix_solar', 'wind': 'mix_wind',
         'offshore_wind': 'mix_offshore_wind', 'ccs_ccgt': 'mix_ccs_ccgt', 'hydro': 'mix_hydro',
+        'solar_batt4': 'mix_solar_batt4', 'solar_batt8': 'mix_solar_batt8',
+        'wind_batt4': 'mix_wind_batt4', 'wind_batt8': 'mix_wind_batt8',
         'battery': 'battery_dispatch_pct', 'battery8': 'battery8_dispatch_pct',
         'ldes': 'ldes_dispatch_pct', 'h2': 'h2_dispatch_pct',
     }
