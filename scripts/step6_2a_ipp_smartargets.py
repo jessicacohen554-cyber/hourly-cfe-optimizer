@@ -61,6 +61,9 @@ FIXED_OM = {
     'hydro': 15,
     'geothermal': 30,
     'oil': 35,
+    # Hybrid co-located: VRE FOM + battery FOM
+    'solar_batt4': 38, 'solar_batt8': 38,
+    'wind_batt4': 48, 'wind_batt8': 48,
 }
 
 # ─── ELCC (fraction of nameplate for capacity revenue) ───────────
@@ -75,6 +78,9 @@ ELCC = {
     'hydro': 0.50,
     'geothermal': 0.90,
     'oil': 0.85,
+    # Hybrid co-located: higher ELCC than standalone VRE due to dispatchable storage
+    'solar_batt4': 0.55, 'solar_batt8': 0.65,
+    'wind_batt4': 0.50, 'wind_batt8': 0.60,
 }
 
 # ─── CAPACITY MARKET PRICES ($/kW-yr) — from pipeline_config ────
@@ -107,6 +113,15 @@ CLEAN_CF = {
     'battery': 0.10,
     'hydro': 0.38,
     'geothermal': 0.85,
+    # Hybrid co-located CFs — higher than standalone VRE due to storage dispatch smoothing
+    'solar_batt4': {'CAISO': 0.376, 'ERCOT': 0.358, 'PJM': 0.340, 'NYISO': 0.275,
+                    'NEISO': 0.283, 'MISO': 0.302, 'SPP': 0.306},
+    'solar_batt8': {'CAISO': 0.400, 'ERCOT': 0.385, 'PJM': 0.370, 'NYISO': 0.300,
+                    'NEISO': 0.310, 'MISO': 0.330, 'SPP': 0.335},
+    'wind_batt4':  {'CAISO': 0.310, 'ERCOT': 0.380, 'PJM': 0.330, 'NYISO': 0.310,
+                    'NEISO': 0.320, 'MISO': 0.370, 'SPP': 0.400},
+    'wind_batt8':  {'CAISO': 0.330, 'ERCOT': 0.400, 'PJM': 0.350, 'NYISO': 0.330,
+                    'NEISO': 0.340, 'MISO': 0.390, 'SPP': 0.420},
 }
 
 # ─── FOSSIL EMISSION RATES (tCO2/MWh) ───────────────────────────
@@ -128,20 +143,31 @@ PPA_MARKET_DEPTH = {
 }
 
 # ─── ACTIVE QT: NEW CLEAN DEPLOYMENT ─────────────────────────────
-NEW_LCOE_2025 = {'solar': 60, 'wind': 50, 'battery': 10}
+NEW_LCOE_2025 = {'solar': 60, 'wind': 50, 'battery': 10,
+                 'solar_batt4': 85, 'solar_batt8': 90, 'wind_batt4': 75, 'wind_batt8': 80}
 # LCOE-based learning rates (not CapEx-only). Sources:
 #   Solar 24%: Bolinger et al. (2022) found ~19% LCOE LR; we use 24% to account for
 #     BOS/soft cost reductions beyond module price (Swanson's Law = 20% module only).
 #   Wind 15%: Bolinger et al. (2022) LCOE LR ~15% for utility-scale US wind.
 #   Battery 18%: BloombergNEF 2024 Li-ion pack price LR.
-LEARNING_RATE = {'solar': 0.24, 'wind': 0.15, 'battery': 0.18}
-CUMULATIVE_GW_2025 = {'solar': 180, 'wind': 160, 'battery': 35}
-NATIONAL_DEPLOY_GW_YR = {'solar': 40, 'wind': 15, 'battery': 12}
-DEPLOY_RATE_PER_5YR = {'solar': 0.08, 'wind': 0.04, 'battery': 0.03}
+#   Hybrid learning rates dominated by battery component decline.
+LEARNING_RATE = {'solar': 0.24, 'wind': 0.15, 'battery': 0.18,
+                 'solar_batt4': 0.18, 'solar_batt8': 0.18,
+                 'wind_batt4': 0.15, 'wind_batt8': 0.15}
+CUMULATIVE_GW_2025 = {'solar': 180, 'wind': 160, 'battery': 35,
+                      'solar_batt4': 15, 'solar_batt8': 3,
+                      'wind_batt4': 8, 'wind_batt8': 2}
+NATIONAL_DEPLOY_GW_YR = {'solar': 40, 'wind': 15, 'battery': 12,
+                         'solar_batt4': 10, 'solar_batt8': 3,
+                         'wind_batt4': 5, 'wind_batt8': 2}
+DEPLOY_RATE_PER_5YR = {'solar': 0.08, 'wind': 0.04, 'battery': 0.03,
+                       'solar_batt4': 0.06, 'solar_batt8': 0.02,
+                       'wind_batt4': 0.03, 'wind_batt8': 0.01}
 
 
 FOSSIL_FUELS = {'coal', 'gas_ccgt', 'gas_peaker', 'oil'}
-CLEAN_FUELS = {'nuclear', 'solar', 'wind', 'battery', 'hydro', 'geothermal'}
+CLEAN_FUELS = {'nuclear', 'solar', 'wind', 'battery', 'hydro', 'geothermal',
+               'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8'}
 
 # ─── FLEET DATA — loaded from external JSON config ──────────────
 # To add a new company, edit data/ipp_fleet_config.json — no code changes needed.
@@ -461,7 +487,9 @@ def _get_ppa_discount_for_new_clean(tech, ppa_level, iso):
     """PPA discount for new-build clean, scaled by regional market depth."""
     if ppa_level is None or ppa_level == 'None':
         return 0.0
-    category = 'VRE' if tech in ('solar', 'wind', 'battery') else 'Firm'
+    category = 'VRE' if tech in ('solar', 'wind', 'battery',
+                                    'solar_batt4', 'solar_batt8',
+                                    'wind_batt4', 'wind_batt8') else 'Firm'
     base_discount = PPA_PREMIUMS.get(category, {}).get(ppa_level, 0)
     depth = PPA_MARKET_DEPTH.get(iso, 0.75)
     return base_discount * depth
@@ -479,18 +507,28 @@ def compute_active_deployment(company, year, ppa_level=None):
     deployment = {}
     annual_cost_m = 0
 
-    for tech in ['solar', 'wind', 'battery']:
+    deploy_techs = ['solar', 'wind', 'battery',
+                     'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
+    for tech in deploy_techs:
+        if tech not in DEPLOY_RATE_PER_5YR:
+            continue
         rate = DEPLOY_RATE_PER_5YR[tech]
         cum_mw = cap_gw * rate * periods_elapsed * 1000
 
         if tech == 'battery':
             cf = 0.10
-        elif tech == 'solar':
-            cfs = [CLEAN_CF['solar'].get(iso, 0.22) for iso in isos]
-            cf = sum(cfs) / len(cfs) if cfs else 0.22
+        elif tech in ('solar', 'wind'):
+            cf_dict = CLEAN_CF[tech]
+            cfs = [cf_dict.get(iso, 0.22 if tech == 'solar' else 0.32) for iso in isos]
+            cf = sum(cfs) / len(cfs) if cfs else 0.25
         else:
-            cfs = [CLEAN_CF['wind'].get(iso, 0.32) for iso in isos]
-            cf = sum(cfs) / len(cfs) if cfs else 0.32
+            # Hybrid co-located — use regional CF dict
+            cf_dict = CLEAN_CF.get(tech, {})
+            if isinstance(cf_dict, dict):
+                cfs = [cf_dict.get(iso, 0.30) for iso in isos]
+                cf = sum(cfs) / len(cfs) if cfs else 0.30
+            else:
+                cf = cf_dict
 
         gen_twh = cum_mw * cf * 8.760 / 1000
         lcoe = _compute_lcoe(tech, year)
