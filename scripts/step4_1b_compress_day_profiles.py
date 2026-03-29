@@ -44,7 +44,8 @@ from parquet_io import load_from_parquets, find_input_dir
 
 from pipeline_config import ACTIVE_THRESHOLDS, THRESHOLD_TARGET_YEARS
 from dispatch_utils import (
-    H, ISOS, RESOURCE_TYPES, CACHE_VERSION, DISPATCH_ORDER,
+    H, ISOS, RESOURCE_TYPES, RESOURCE_TYPES_HYBRID, HYBRID_TYPES,
+    CACHE_VERSION, DISPATCH_ORDER,
     load_common_data, get_supply_profiles, get_demand_profile,
     build_supply_matrix, reconstruct_hourly_dispatch,
     _archetype_key, load_dispatch_cache,
@@ -72,6 +73,10 @@ def dispatch_from_cache(iso, mix, battery_pct, battery8_pct,
         'ccs_ccgt': mix.get('ccs_ccgt', 0),
         'hydro': mix.get('hydro', 0),
     }
+    # Add hybrid resources if present in mix dict
+    for ht in HYBRID_TYPES:
+        if ht in mix and mix[ht] > 0:
+            resource_pcts[ht] = mix[ht]
     key = _archetype_key(iso, resource_pcts, 100,
                          battery_pct, battery8_pct, ldes_pct)
 
@@ -81,7 +86,12 @@ def dispatch_from_cache(iso, mix, battery_pct, battery8_pct,
         cached = dispatch_cache[key]
         matched = {}
         surplus = {}
-        for rtype in RESOURCE_TYPES:
+        # Include base + hybrid resource types present in the cache entry
+        rtypes = list(RESOURCE_TYPES)
+        for ht in HYBRID_TYPES:
+            if f'matched_{ht}' in cached:
+                rtypes.append(ht)
+        for rtype in rtypes:
             mk = f'matched_{rtype}'
             sk = f'surplus_{rtype}'
             matched[rtype] = cached[mk] if mk in cached else np.zeros(H, dtype=np.float64)
@@ -138,6 +148,12 @@ def compress_to_24h(result):
         compressed['matched'][r] = sum_by_hod(result['matched'][r])
         compressed['surplus'][r] = sum_by_hod(result['surplus'][r])
 
+    # Add hybrid resources if present in dispatch result
+    for ht in HYBRID_TYPES:
+        if ht in result['matched']:
+            compressed['matched'][ht] = sum_by_hod(result['matched'][ht])
+            compressed['surplus'][ht] = sum_by_hod(result['surplus'][ht])
+
     # Battery (4hr, 8hr), LDES, and H2 as matched resources
     compressed['matched']['battery'] = sum_by_hod(result['battery_matched'])
     compressed['matched']['battery8'] = sum_by_hod(result.get('battery8_matched', np.zeros(H, dtype=np.float64)))
@@ -181,7 +197,12 @@ def mix_key(mix, battery_pct, ldes_pct, h2_pct=0):
     w = mix.get('wind', 0)
     c = mix.get('ccs_ccgt', 0)
     h = mix.get('hydro', 0)
-    return f"{cf}_{s}_{w}_{c}_{h}_{battery_pct}_{ldes_pct}_{h2_pct}"
+    key = f"{cf}_{s}_{w}_{c}_{h}_{battery_pct}_{ldes_pct}_{h2_pct}"
+    # Append hybrid values if any are non-zero
+    hybrid_vals = [mix.get(ht, 0) for ht in HYBRID_TYPES]
+    if any(v > 0 for v in hybrid_vals):
+        key += '_' + '_'.join(str(v) for v in hybrid_vals)
+    return key
 
 
 # ============================================================================
@@ -260,6 +281,10 @@ def main():
                         'ccs_ccgt': fmixes['ccs_ccgt'][i],
                         'hydro': fmixes['hydro'][i],
                     }
+                    # Add hybrid resources if present in feasible_mixes
+                    for ht in HYBRID_TYPES:
+                        if ht in fmixes:
+                            rm[ht] = fmixes[ht][i]
                     batt = fmixes.get('battery_dispatch_pct', [0] * n_mixes)[i]
                     batt8 = fmixes.get('battery8_dispatch_pct', [0] * n_mixes)[i]
                     ldes = fmixes.get('ldes_dispatch_pct', [0] * n_mixes)[i]
