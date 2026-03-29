@@ -5693,6 +5693,202 @@ CAISO empirical test at 99.9% threshold (Medium LCOE, Medium TX):
   storage. They over-represent fat overbuild mixes and under-represent lean+storage
   combos. Step 1D.2 specifically searches the storage dimension to find these cheaper
   alternatives.
+
+---
+
+## 23. Hybrid Co-Located Resources (Mar 2026)
+
+### 23.1 Overview
+
+Four co-located hybrid resource types extend the optimizer's resource set. Each pairs a generation technology with on-site battery storage behind a single point of interconnection (POI). The battery charges exclusively from co-located generation (no grid charging), qualifying for ITC benefits under IRA rules.
+
+| Type | Generation | Battery | Primary Value |
+|------|-----------|---------|---------------|
+| `solar_batt4` | Solar | 4hr Li-ion | Core clipping recovery — captures DC overgeneration |
+| `solar_batt8` | Solar | 8hr Li-ion | Extended clipping + deeper temporal shift |
+| `wind_batt4` | Wind | 4hr Li-ion | Short shifting, dual-cycle, narrow arbitrage blocks |
+| `wind_batt8` | Wind | 8hr Li-ion | Deep overnight-to-peak shifting |
+
+**Offshore wind hybrids skipped** — co-located storage doesn't reshape the offshore gen profile; it's a transmission/grid-level problem better handled by standalone grid storage.
+
+**Hybrids are additive, not substitutional** — a mix can include standalone solar AND solar_batt4 simultaneously. They're different assets with different cost and output profiles. No forced substitution constraint.
+
+### 23.2 Physical Models
+
+#### 23.2.1 Solar Hybrids — DC:AC Clipping Model
+
+Solar panels (DC) are oversized relative to grid interconnection (AC). During peak sun, excess generation ("clipped" energy) charges the co-located battery. Discharge occurs during net-peak hours.
+
+**DC:AC Ratios (validated via `scripts/validate_dcac_ratios.py`):**
+
+| Type | CAISO | All Other ISOs | Rationale |
+|------|-------|----------------|-----------|
+| `solar_batt4` | 1.35 | 1.50 | Current industry practice; 4hr captures all clipping |
+| `solar_batt8` | 1.70 | 2.00 | Aggressive overbuild so 8hr differentiates from 4hr |
+
+At solar_batt4 ratios, the 4hr battery already captures all clipped energy — making 8hr redundant (identical profiles). Higher ratios create enough clipping to fill the 8hr battery: +434 to +666 more active hours, flatter output shapes.
+
+**Dispatch model:**
+```
+solar_dc = dc_capacity × solar_profile[h]
+ac_cap = dc_capacity / dc_ac_ratio
+clipped = max(0, solar_dc - ac_cap)
+charge = min(clipped, battery_headroom) × √RTE
+to_grid = min(solar_dc, ac_cap)
+# Discharge during top-N net-peak hours/day (N = battery duration)
+if is_net_peak[h] and soc > 0:
+    discharge = min(power_rating, soc)
+    to_grid += discharge × √RTE
+    to_grid = min(to_grid, ac_cap)  # POI cap
+```
+
+#### 23.2.2 Wind Hybrids — Temporal Shifting Model
+
+No DC:AC overbuild — wind turbines are AC machines with no clipping dynamic. Battery charges from off-peak wind surplus and discharges during net-peak hours.
+
+**Battery:Wind MW Ratio:** 25–40% of wind nameplate (ISO-specific, derived from wind profile analysis). Sized to POI ceiling: `battery_MW = POI_limit − avg_wind_during_peak_hours`.
+
+**Dispatch model:**
+```
+wind_gen = capacity × wind_profile[h]
+if is_off_peak[h] and wind_gen > demand_share and soc < max_soc:
+    to_grid = demand_share
+    charge = min(wind_gen - demand_share, battery_headroom) × √RTE
+else:
+    to_grid = wind_gen
+# Discharge during top-N net-peak hours/day
+if is_net_peak[h] and soc > 0:
+    discharge = min(power_rating, soc)
+    to_grid += discharge × √RTE
+    to_grid = min(to_grid, interconnect_cap)  # POI cap
+```
+
+#### 23.2.3 Common Parameters
+
+| Parameter | 4hr variants | 8hr variants |
+|-----------|-------------|-------------|
+| Duration | 4 hours | 8 hours |
+| Round-trip efficiency | 85% | 85% |
+| Grid charging | None | None |
+| Discharge trigger | Top 4 net-peak hours/day | Top 8 net-peak hours/day |
+
+**Net peak** = hours where (demand − total renewable generation) is highest each day.
+
+**Profile integration**: Pre-computed 8760 hybrid profiles per ISO, normalized to sum ~1.0. The optimizer sees hybrid output as a single resource — dispatch is pre-resolved into the 8760 shape (not decomposed into solar+battery at runtime).
+
+### 23.3 Cost Model — Component-Additive LCOE
+
+**Formula:**
+```
+hybrid_LCOE = gen_LCOE + storage_LCOE_duration_weighted − ITC_benefit + TX_adder_AC
+```
+
+Where:
+- `gen_LCOE` = parent generation LCOE (solar or wind L/M/H from existing toggle)
+- `storage_LCOE_duration_weighted` = battery LCOE for the appropriate duration (4hr or 8hr) scaled by battery:gen capacity ratio
+- `ITC_benefit` = 30% ITC applied to total hybrid project cost (both solar and wind hybrids qualify under IRA §48)
+- `TX_adder_AC` = single transmission adder sized to AC interconnection rating (not DC nameplate)
+
+**Worked Example — solar_batt4, PJM, Medium costs:**
+```
+Solar LCOE (Med):        $31.80/MWh
+Battery 4hr LCOE (Med):  $11.20/MWh (duration-weighted at 1.0 battery:POI ratio)
+ITC 30% benefit:         −$12.90/MWh (30% × combined project cost)
+TX adder (Med, AC-rated): $5.50/MWh (single adder, not doubled)
+─────────────────────────
+Hybrid LCOE:             $35.60/MWh
+Standalone equivalent:   $31.80 + $11.20 + $5.50 + $5.50 = $54.00/MWh
+Savings:                 $18.40/MWh (34% cheaper — shared interconnection + ITC)
+```
+
+**Worked Example — wind_batt8, ERCOT, Medium costs:**
+```
+Wind LCOE (Med):         $24.50/MWh
+Battery 8hr LCOE (Med):  $16.80/MWh (duration-weighted at 0.35 battery:wind ratio)
+ITC 30% benefit:         −$12.39/MWh
+TX adder (Med, AC-rated): $4.20/MWh
+─────────────────────────
+Hybrid LCOE:             $33.11/MWh
+Standalone equivalent:   $24.50 + $16.80 + $4.20 + $4.20 = $49.70/MWh
+Savings:                 $16.59/MWh (33% cheaper)
+```
+
+#### 23.3.1 ITC Treatment
+
+- **30% ITC for both solar and wind hybrids** under IRA §48/§48E
+- Solar+storage: Well-established; battery must charge ≥80% from co-located solar (our model is 100% — no grid charging)
+- Wind+storage: Qualifies under IRA expansion of energy storage ITC to all qualified clean energy facilities
+- ITC applied to combined project capex (generation + storage), reducing effective LCOE
+- No separate hybrid FOAK/NOAK learning curves — component learning curves (solar/wind + battery) apply independently, weighted by cost share
+
+#### 23.3.2 AC-Rating-Adjusted Transmission
+
+Hybrid projects pay **one** transmission adder sized to the AC interconnection rating:
+- `solar_batt`: TX sized to `DC_nameplate / DC:AC_ratio` (the AC rating is smaller than DC nameplate)
+- `wind_batt`: TX sized to wind nameplate (already AC-rated)
+- Standalone equivalent would pay two adders (one per resource) — hybrid saves 1× TX adder per project
+
+### 23.4 Toggle Pairing — No New Toggles
+
+Hybrids inherit existing toggle sensitivities:
+- **Generation cost**: Follows parent resource toggle (Renewable Gen L/M/H for solar hybrids, same for wind)
+- **Storage cost**: Follows Storage toggle (L/M/H)
+- **Transmission**: Follows Transmission toggle (None/L/M/H)
+- **ITC**: Always 30% (not toggled independently)
+
+No new dashboard controls needed. The 5,832 existing scenario combinations (17,496 for CAISO) automatically cover hybrid cost variation through the existing toggle pairs.
+
+### 23.5 Family Caps
+
+Resource caps constrain the grid search to prevent combinatorial explosion:
+
+| Cap | Formula | Purpose |
+|-----|---------|---------|
+| `SOLAR_FAMILY_CAP` | `solar + solar_batt4 + solar_batt8 ≤ cap` | Prevents unrealistic total solar deployment |
+| `WIND_FAMILY_CAP` | `wind + wind_batt4 + wind_batt8 ≤ cap` | Prevents unrealistic total wind deployment |
+| `HYBRID_MAX_PER_TYPE` | Per-type cap (e.g., solar_batt4 ≤ 115%) | Individual hybrid resource ceiling |
+
+Per-ISO caps from empirical analysis + buffer:
+
+| ISO | Sol | SB4 | SB8 | Wind | WB4 | WB8 | Total |
+|-----|-----|-----|-----|------|-----|-----|-------|
+| CAISO | 95 | 115 | 115 | 145 | 165 | 165 | 225 |
+| ERCOT | 85 | 105 | 105 | 205 | 225 | 225 | 240 |
+| PJM | 85 | 105 | 105 | 160 | 180 | 180 | 225 |
+| NYISO | 95 | 115 | 115 | 90 | 110 | 110 | 185 |
+| NEISO | 95 | 115 | 115 | 95 | 115 | 115 | 220 |
+| MISO | 60 | 80 | 80 | 215 | 235 | 235 | 255 |
+| SPP | 60 | 80 | 80 | 195 | 215 | 215 | 225 |
+
+Hybrid caps = parent resource max + 30pp buffer (no prior data, need exploration room). After first hybrid-inclusive run, re-extract with `extract_empirical_caps.py` and tighten.
+
+### 23.6 Pipeline Integration Status
+
+| Step | Status | Notes |
+|------|--------|-------|
+| **Step 0** | No change | Existing EIA profiles used; hybrid profiles derived in Step 1 |
+| **Step 1.1** | Modified | 8–10D grid search (4D base + 4 hybrid dims; 5D CAISO + 4 hybrid). Memory-safe chunked generation. |
+| **Step 1.1b** | Auto-adapts | Reads columns from parquet schema — no changes needed |
+| **Step 1.2–1.5** | Modified | Zone/floor/fine/storage search extended to hybrid dimensions |
+| **Step 2.1** | Modified | Efficient frontier extraction includes hybrid resource columns |
+| **Step 2.2** | Modified | Component-additive LCOE with ITC and AC-adjusted TX in cost function |
+| **Step 3A** | Modified | Dispatch cache includes hybrid resource profiles |
+| **Step 3B** | Modified | MAC queue includes hybrid archetypes |
+| **Step 4** | Modified | All analysis scripts handle hybrid columns |
+| **Step 5** | Inherits | Procurement strategies auto-include hybrid resources via EF data |
+| **Step 6** | Inherits | SMARTargets consumes Step 2 output — hybrids flow through |
+| **Step 7** | Modified | Dashboard data extraction includes hybrid resources |
+| **Dashboard** | Modified | New resource colors/labels in `chart-colors.js` and `shared.css` |
+
+**Dimensionality**: Non-CAISO ISOs go from 4D → 8D (clean_firm, solar, wind, hydro + solar_batt4, solar_batt8, wind_batt4, wind_batt8). CAISO goes from 5D → 9D (adds geothermal). With offshore wind where applicable, up to 10D.
+
+### 23.7 Compute Trimming (Offsetting Hybrid Complexity)
+
+Three changes keep Step 1 tractable with 4 new hybrid dimensions:
+
+1. **Drop H2 storage** — never selected as cost-optimal in any of 161 Step 2.2 parquets. Step 1.5 storage grid: 990 combos (3× reduction from 2,970).
+2. **Drop 99.99% threshold** — ≥99.9% becomes the ceiling, labeled "effectively 100%" (8.76 unmatched hours/year). 20 thresholds instead of 21.
+3. **Empirical resource caps** — max observed winning % + 10pp buffer per resource per ISO, constraining the grid search to proven-useful ranges. Source: `data/step2.2-cost/empirical_resource_caps.json`.
 - **Implication for Step 1D.2**: The storage search IS the cost optimization mechanism
   for the last-mile thresholds (≥99%). The value is not in storage grid precision
   (LDES cost per pp is negligible) but in **unlocking cheaper resource mixes** that

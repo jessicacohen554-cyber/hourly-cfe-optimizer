@@ -1,6 +1,6 @@
 # Hybrid Solar+Storage & Wind+Storage Design Document
 
-## Status: Design Phase — DC:AC ratios validated, building 8760 profiles
+## Status: COMPLETE — All pipeline steps integrated, all open items resolved
 
 ---
 
@@ -200,30 +200,53 @@ Need equivalent analysis:
 
 ## 6. Pipeline Integration
 
-### 6.1 Profile Generation (Current Step)
+### 6.1 Profile Generation — ✅ COMPLETE
 
-Generate pre-computed 8760 hybrid profiles per ISO, normalized to sum ~1.0:
-- `solar_batt4_profile[iso]`: solar with DC:AC clipping + 4hr battery dispatch
-- `solar_batt8_profile[iso]`: solar with DC:AC clipping + 8hr battery dispatch
-- `wind_batt4_profile[iso]`: wind with 4hr temporal shifting
-- `wind_batt8_profile[iso]`: wind with 8hr temporal shifting
+Pre-computed 8760 hybrid profiles per ISO, normalized to sum ~1.0:
+- ✅ `solar_batt4_profile[iso]`: solar with DC:AC clipping + 4hr battery dispatch
+- ✅ `solar_batt8_profile[iso]`: solar with DC:AC clipping + 8hr battery dispatch
+- ✅ `wind_batt4_profile[iso]`: wind with 4hr temporal shifting
+- ✅ `wind_batt8_profile[iso]`: wind with 8hr temporal shifting
 
 These are **integrated profiles** (Option B from integration analysis) — the hybrid dispatch is pre-resolved into the 8760 shape. The optimizer sees hybrid output as a single resource, not decomposed solar+battery.
 
-### 6.2 Step 1 Integration
+### 6.2 Step 1 Integration — ✅ COMPLETE
 
-Files to modify:
-- **`pipeline_config.py`**: Add to `RESOURCE_COLS_*`, `ISO_DIMENSIONS`, `LCOE_TABLES`, `TX_TABLES`, `RESOURCE_CAPACITY_FACTORS`
-- **`dispatch_utils.py`**: Add to `RESOURCE_TYPES`, add profile loading in `get_supply_profiles()`
-- **`step1_1a_generate_mixes.py`**: New dimensions in mix grid (capacity caps for each hybrid)
-- **`step1_1b_score_mixes.py`**: Auto-adapts (reads columns from parquet schema) — no changes needed
+Files modified:
+- ✅ **`pipeline_config.py`**: Added to `RESOURCE_COLS_*`, `ISO_DIMENSIONS`, `LCOE_TABLES`, `TX_TABLES`, `RESOURCE_CAPACITY_FACTORS`
+- ✅ **`dispatch_utils.py`**: Added to `RESOURCE_TYPES`, hybrid profile loading in `get_supply_profiles()`
+- ✅ **`step1_1a_generate_mixes.py`**: 8–10D grid search with memory-safe chunked generation for hybrid dimensions
+- ✅ **`step1_1b_score_mixes.py`**: Auto-adapts (reads columns from parquet schema)
+- ✅ **`step1_2_zone_search.py`** through **`step1_5_storage_refinement.py`**: Extended to hybrid dimensions
 
-### 6.3 Steps 2-7 (Deferred)
+### 6.3 Step 2 Integration — ✅ COMPLETE
 
-- Step 2.2: Add hybrid cost model to cost optimization
-- Step 3B: Hybrids compete as MAC queue archetypes
-- Dashboard: New resource colors and labels
-- Implement after Step 1 integration is validated
+- ✅ **`step2_1_efficient_frontier.py`**: Efficient frontier extraction includes hybrid resource columns
+- ✅ **`step2_2a_cost_optimization.py`**: Component-additive LCOE with 30% ITC and AC-adjusted TX
+- ✅ **`step2_2b_track_nb_ctr.py`**: Track 2/3 includes hybrid resources in greenfield analysis
+
+### 6.4 Step 3 Integration — ✅ COMPLETE
+
+- ✅ **`step3a_build_dispatch_cache.py`**: Dispatch cache includes hybrid resource profiles
+- ✅ **`step3b_mac_queue.py`**: Hybrid archetypes compete in MAC queue
+
+### 6.5 Step 4 Integration — ✅ COMPLETE
+
+- ✅ **`step4_1a_fossil_dispatch.py`**: CO₂/LMP analysis handles hybrid columns
+- ✅ **`step4_1b_compress_day_profiles.py`**: Day profiles include hybrid resources
+- ✅ **`step4_1c_compute_mac_stats.py`**: MAC metrics include hybrid archetypes
+- ✅ **`step4_1d_compute_optimal_targets.py`**: Optimal targets reflect hybrid-inclusive EF
+- ✅ **`step4_1e_export_tracks.py`**: Track exports include hybrid columns
+- ✅ **`step4_2a_extract_resource_density.py`**: Resource density includes hybrids
+- ✅ **`step4_2b_analyze_storage.py`**: Storage analysis covers hybrid battery components
+- ✅ **`step4_2c_analyze_tracks.py`**: Track analysis includes hybrid cost envelopes
+
+### 6.6 Steps 5–7 & Dashboard — ✅ COMPLETE
+
+- ✅ **Step 5**: Procurement strategies auto-include hybrid resources via EF data
+- ✅ **Step 6**: SMARTargets consumes Step 2 output — hybrids flow through
+- ✅ **Step 7**: Dashboard data extraction includes hybrid resources
+- ✅ **Dashboard**: New resource colors/labels in `chart-colors.js` and `shared.css`
 
 ---
 
@@ -250,14 +273,14 @@ Files to modify:
 
 ---
 
-## 8. Open Questions
+## 8. Open Questions — ALL RESOLVED
 
-- [ ] Exact ITC treatment for wind+storage co-location under IRA rules
+- [x] ~~Exact ITC treatment for wind+storage co-location under IRA rules~~ — **Resolved**: 30% ITC for both solar and wind hybrids under IRA §48/§48E. Wind+storage qualifies under IRA expansion of energy storage ITC to all qualified clean energy facilities.
 - [x] ~~Offshore wind+storage hybrids~~ — **Skipped**
-- [ ] LCOE source data for hybrid-specific costs (NREL ATB 2024 has hybrid benchmarks)
+- [x] ~~LCOE source data for hybrid-specific costs~~ — **Resolved**: Component-additive model uses existing LCOE tables (solar/wind L/M/H + battery 4hr/8hr L/M/H) with 30% ITC reduction and single AC-rated TX adder. No separate hybrid LCOE tables needed.
 - [x] ~~DC:AC validation~~ — **Complete**. solar_batt4: CAISO=1.35, others=1.50. solar_batt8: CAISO=1.70, others=2.00.
-- [ ] Wind battery:wind MW ratio per ISO (pending wind profile analysis)
-- [ ] Wind arbitrage block duration per ISO (validates 4hr vs 8hr value)
+- [x] ~~Wind battery:wind MW ratio per ISO~~ — **Resolved**: 25–40% range with POI ceiling logic. Per-ISO ratios derived from wind profile analysis.
+- [x] ~~Wind arbitrage block duration per ISO~~ — **Resolved**: Both 4hr and 8hr offered as candidates; optimizer chooses based on cost-effectiveness per ISO.
 
 ---
 
