@@ -1,9 +1,13 @@
-name: "Step 1.1: Build Scored Mix Database"
+name: "Step 1.1: Build Scored Mix Database (Hybrid)"
 
-# Generates all resource fraction combos (1a) and scores them (1b) → coarse_cache.parquet.
-# This is the database that Step 1B (zone search) mines per-threshold.
-# Run once after physics changes or code updates.
+# Generates co-located solar+batt / wind+batt family compositions (1a)
+# and scores them against 8760 demand profiles (1b).
+# Uses tightened per-ISO windows (CF@10%, family splits@10%, hybrid cap 40%).
 # Output: data/step1-pfs/{ISO}_mixes.parquet, {ISO}_coarse_cache.parquet
+#
+# Grid sizes (approx post-filter):
+#   SPP: 3.3M | MISO: 6.1M | PJM: 7.6M | ERCOT: 9.2M
+#   NYISO: 25.5M | NEISO: 28.5M | CAISO: 87.0M
 
 on:
   workflow_dispatch:
@@ -22,6 +26,11 @@ on:
           - NEISO
           - MISO
           - SPP
+      force:
+        description: 'Force regenerate even if parquet exists'
+        required: false
+        default: false
+        type: boolean
       script:
         description: 'Which stage to run'
         required: true
@@ -36,13 +45,8 @@ on:
         required: false
         default: '20000'
         type: string
-      force_1a:
-        description: 'Force regenerate mixes even if parquet exists'
-        required: false
-        default: false
-        type: boolean
-      force_1b:
-        description: 'Force rescore even if coarse_cache exists'
+      dry_run:
+        description: 'Dry run (print grid sizes, no output files)'
         required: false
         default: false
         type: boolean
@@ -53,7 +57,7 @@ on:
         type: string
 
 jobs:
-  build-database:
+  generate-hybrid-mixes:
     runs-on: ubuntu-latest
     timeout-minutes: 180
 
@@ -82,36 +86,49 @@ jobs:
       if: ${{ inputs.script == 'ALL' || inputs.script == 'generate-mixes' }}
       run: |
         ISO="${{ inputs.iso }}"
-        FORCE_FLAG=""
-        if [ "${{ inputs.force_1a }}" = "true" ]; then FORCE_FLAG="--force"; fi
+        FLAGS="--hybrid"
+        if [ "${{ inputs.force }}" = "true" ]; then FLAGS="$FLAGS --force"; fi
+        if [ "${{ inputs.dry_run }}" = "true" ]; then FLAGS="$FLAGS --dry-run"; fi
 
         if [ "$ISO" = "ALL" ]; then
-          for iso in CAISO ERCOT PJM NYISO NEISO MISO SPP; do
+          for iso in SPP MISO ERCOT PJM NYISO NEISO CAISO; do
+            echo ""
             echo "=== Generating mixes for $iso ==="
-            python scripts/step1_1a_generate_mixes.py --iso "$iso" $FORCE_FLAG
+            python scripts/step1_1a_generate_mixes.py --iso "$iso" $FLAGS
           done
         else
-          python scripts/step1_1a_generate_mixes.py --iso "$ISO" $FORCE_FLAG
+          python scripts/step1_1a_generate_mixes.py --iso "$ISO" $FLAGS
         fi
 
-    - name: "Stage 1b: Score mix combinations (chunked)"
-      if: ${{ inputs.script == 'ALL' || inputs.script == 'score-mixes' }}
+    - name: "Stage 1b: Score mix combinations"
+      if: ${{ inputs.dry_run != 'true' && (inputs.script == 'ALL' || inputs.script == 'score-mixes') }}
       run: |
         ISO="${{ inputs.iso }}"
-        CHUNK="${{ inputs.chunk_size || '20000' }}"
-        FORCE_FLAG=""
-        if [ "${{ inputs.force_1b }}" = "true" ]; then FORCE_FLAG="--force"; fi
+        CHUNK="${{ inputs.chunk_size || '50000' }}"
+        FLAGS="--hybrid"
+        if [ "${{ inputs.force }}" = "true" ]; then FLAGS="$FLAGS --force"; fi
 
         if [ "$ISO" = "ALL" ]; then
-          for iso in CAISO ERCOT PJM NYISO NEISO MISO SPP; do
+          for iso in SPP MISO ERCOT PJM NYISO NEISO CAISO; do
+            echo ""
             echo "=== Scoring mixes for $iso ==="
-            python scripts/step1_1b_score_mixes.py --iso "$iso" --chunk-size "$CHUNK" $FORCE_FLAG
+            python scripts/step1_1b_score_mixes.py --iso "$iso" --chunk-size "$CHUNK" $FLAGS
           done
         else
-          python scripts/step1_1b_score_mixes.py --iso "$ISO" --chunk-size "$CHUNK" $FORCE_FLAG
+          python scripts/step1_1b_score_mixes.py --iso "$ISO" --chunk-size "$CHUNK" $FLAGS
         fi
 
+    - name: Report output sizes
+      if: ${{ inputs.dry_run != 'true' }}
+      run: |
+        echo "=== Mix parquet files ==="
+        ls -lh data/step1-pfs/*_mixes.parquet 2>/dev/null || echo "No mix files"
+        echo ""
+        echo "=== Scored cache files ==="
+        ls -lh data/step1-pfs/*_coarse_cache.parquet 2>/dev/null || echo "No scored files"
+
     - name: Commit and push scored database (batched by ISO)
+      if: ${{ inputs.dry_run != 'true' }}
       run: |
         set -euo pipefail
         git config user.name "github-actions[bot]"
@@ -151,11 +168,11 @@ jobs:
 
         for iso in $ISOS; do
           echo ""
-          echo "--- Batching commit for $iso ---"
+          echo "--- Committing data for $iso ---"
 
           FILES=$(ls data/step1-pfs/${iso}_mixes.parquet data/step1-pfs/${iso}_coarse_cache.parquet 2>/dev/null || true)
           if [ -z "$FILES" ]; then
-            echo "  No database files for $iso — skipping"
+            echo "  No files for $iso — skipping"
             continue
           fi
 
@@ -167,24 +184,10 @@ jobs:
 
           BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
           echo "  Staging ~${BATCH_MB} MB for $iso"
-          git commit -m "Step 1A Scored DB: ${iso} (${{ inputs.script }}) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "Step 1.1: ${iso} scored mixes + cache — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           if push_with_retry "$iso"; then
             PUSHED=true
-          else
-            echo "  Per-ISO push failed for $iso — falling back to per-file batching"
-            git reset HEAD~1
-            for f in $FILES; do
-              FNAME=$(basename "$f")
-              git add -f "$f"
-              if git diff --cached --quiet; then continue; fi
-              git commit -m "Step 1A: ${FNAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-              if push_with_retry "$FNAME"; then
-                PUSHED=true
-              else
-                git reset HEAD~1
-              fi
-            done
           fi
         done
 
@@ -193,4 +196,3 @@ jobs:
         else
           echo "No changes were pushed"
         fi
-
