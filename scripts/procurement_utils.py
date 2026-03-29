@@ -47,6 +47,8 @@ from pipeline_config import (
     WRIGHT_CUMULATIVE_GW_2025, WRIGHT_LEARNING_RATE, WRIGHT_BACKGROUND_GW,
     # Unified learning fraction
     threshold_learning_fraction,
+    # Hybrid resource support
+    HYBRID_TYPES, get_hybrid_lcoe, get_hybrid_tx,
 )
 
 SBTI_YEAR_MAP = THRESHOLD_TARGET_YEARS  # Backward compat alias
@@ -1066,8 +1068,10 @@ def load_ef_resource_mix(iso, threshold):
     for col, key in [('mix_solar', 'solar'), ('mix_wind', 'wind'),
                      ('mix_clean_firm', 'clean_firm'), ('mix_ccs_ccgt', 'ccs'),
                      ('mix_hydro', 'hydro'), ('mix_offshore_wind', 'offshore_wind'),
-                     ('mix_geothermal', 'geothermal')]:
-        val = float(row.get(col, 0) or 0)
+                     ('mix_geothermal', 'geothermal'),
+                     ('mix_solar_batt4', 'solar_batt4'), ('mix_solar_batt8', 'solar_batt8'),
+                     ('mix_wind_batt4', 'wind_batt4'), ('mix_wind_batt8', 'wind_batt8')]:
+        val = float(row.get(col, row.get(key, 0)) or 0)
         if val > 0:
             mix[key] = val
 
@@ -1087,7 +1091,13 @@ def load_ef_resource_mix(iso, threshold):
 def get_resource_ppa_price(resource, iso, threshold, year, scenario='B',
                            level='Medium', ppa_level='Medium'):
     """Get PPA price for a specific resource type."""
-    if resource in ('solar', 'wind', 'offshore_wind'):
+    if resource in HYBRID_TYPES:
+        # Hybrid PPA = component-additive LCOE (gen + co-located battery w/ ITC) + TX + premium
+        hybrid_lcoe = get_hybrid_lcoe(resource, level, level, iso)
+        hybrid_tx = get_hybrid_tx(resource, level, iso)
+        premium = PPA_PREMIUMS['VRE'][ppa_level]
+        return (hybrid_lcoe + hybrid_tx) * (1 + premium)
+    elif resource in ('solar', 'wind', 'offshore_wind'):
         return get_learning_adjusted_ppa(resource, iso, threshold, scenario, level, ppa_level)
     elif resource == 'clean_firm':
         nuc = get_learning_adjusted_ppa('nuclear_newbuild', iso, threshold, scenario, level, ppa_level)
@@ -1286,6 +1296,10 @@ def _load_ef_storage_cache():
                 'mix_hydro': float(row.get('mix_hydro', 0) or 0),
                 'hourly_match_score': float(row.get('hourly_match_score', 0) or 0),
             }
+            # Hybrid resources (may not be present in older parquets)
+            for ht in HYBRID_TYPES:
+                col = f'mix_{ht}'
+                ef_storage[key][col] = float(row.get(col, row.get(ht, 0)) or 0)
     _EF_STORAGE_CACHE = ef_storage
     return ef_storage
 
@@ -1377,6 +1391,11 @@ def compute_dispatch_hms(results, variant_keys, isos):
                                 'ccs_ccgt': ef['mix_ccs_ccgt'],
                                 'hydro': ef['mix_hydro'],
                             }
+                            # Add hybrid resources if present in EF data
+                            for ht in HYBRID_TYPES:
+                                val = ef.get(f'mix_{ht}', ef.get(ht, 0))
+                                if val and val > 0:
+                                    resource_pcts[ht] = val
                             batt_pct = ef['battery_dispatch_pct']
                             batt8_pct = ef['battery8_dispatch_pct']
                             ldes_pct = ef['ldes_dispatch_pct']
