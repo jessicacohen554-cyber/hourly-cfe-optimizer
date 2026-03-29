@@ -176,7 +176,7 @@ jobs:
       if: inputs.script == 'All' || inputs.script == 'Zone Search (1.2)'
       run: |
         ISO="${{ matrix.iso }}"
-        ARGS="--iso $ISO --auto-commit"
+        ARGS="--iso $ISO"
 
         THRESHOLDS="${{ inputs.thresholds }}"
         if [ -n "$THRESHOLDS" ]; then
