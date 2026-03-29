@@ -69,6 +69,8 @@ from pipeline_config import (
     LEVEL_NAME, LMH,
     PATHS, H,
     compute_clean_firm_tranches,
+    HYBRID_TYPES, get_hybrid_lcoe, get_hybrid_tx,
+    SOLAR_FAMILY_CAP, WIND_FAMILY_CAP, HYBRID_MAX_PER_TYPE,
 )
 from dispatch_utils import (
     load_common_data,
@@ -80,6 +82,7 @@ from dispatch_utils import (
     compute_fossil_retirement,
     COAL_CAP_TWH, OIL_CAP_TWH,
     RESOURCE_TYPES,
+    RESOURCE_TYPES_HYBRID,
 )
 import step1_pfs_generator as s1
 
@@ -111,8 +114,16 @@ PFS_DIRS = [
 ]
 
 RESOURCE_COLS = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind', 'geothermal']
+HYBRID_COLS = list(HYBRID_TYPES)  # ['solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
 STORAGE_COLS = ['battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct', 'h2_dispatch_pct']
-MIX_COLS = RESOURCE_COLS + STORAGE_COLS + ['hourly_match_score']
+MIX_COLS = RESOURCE_COLS + HYBRID_COLS + STORAGE_COLS + ['hourly_match_score']
+
+# Hybrid family mapping for cap enforcement
+_HYBRID_PARENT_FAMILY = {
+    'solar_batt4': 'solar', 'solar_batt8': 'solar',
+    'wind_batt4': 'wind', 'wind_batt8': 'wind',
+}
+_FAMILY_CAPS = {'solar': SOLAR_FAMILY_CAP, 'wind': WIND_FAMILY_CAP}
 
 # Active thresholds for the MAC queue (50%+ only — coarse thresholds excluded)
 MAC_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
@@ -289,11 +300,12 @@ def load_pfs_for_threshold(iso, threshold):
         if col not in combined.columns:
             combined[col] = 0.0
 
-    # Deduplicate by resource composition
-    dedup_cols = RESOURCE_COLS + STORAGE_COLS
+    # Deduplicate by resource composition (including hybrids)
+    dedup_cols = RESOURCE_COLS + HYBRID_COLS + STORAGE_COLS
     combined_rounded = combined.copy()
     for c in dedup_cols:
-        combined_rounded[c] = combined_rounded[c].round(3)
+        if c in combined_rounded.columns:
+            combined_rounded[c] = combined_rounded[c].round(3)
     combined = combined.loc[combined_rounded.drop_duplicates(subset=dedup_cols).index]
 
     return combined.reset_index(drop=True)
@@ -396,6 +408,22 @@ def compute_new_build_cost(iso, mix_pct, floor_twh, demand_twh, sens, target_yea
         total_cost += osw_cost
         breakdown['offshore_wind'] = {'new_twh': osw_new_twh, 'lcoe': osw_lcoe, 'cost': osw_cost}
 
+    # --- Hybrid co-located resources (all new-build, component-additive LCOE) ---
+    for ht in HYBRID_COLS:
+        ht_pct = mix_pct.get(ht, 0.0)
+        if ht_pct <= 0:
+            continue
+        ht_twh = ht_pct / 100.0 * demand_twh
+        existing_ht_twh = floor_twh.get(ht, 0.0)
+        ht_new_twh = max(0, ht_twh - existing_ht_twh)
+        if ht_new_twh > 0:
+            ht_lcoe = get_hybrid_lcoe(ht, ren_name, batt_name, iso)
+            ht_tx = get_hybrid_tx(ht, tx_name, iso)
+            ht_total = ht_lcoe + ht_tx
+            ht_cost = ht_new_twh * 1e6 * ht_total
+            total_cost += ht_cost
+            breakdown[ht] = {'new_twh': ht_new_twh, 'lcoe': ht_total, 'cost': ht_cost}
+
     # --- Physics Geothermal (CAISO only, priced separately from clean firm) ---
     # Geothermal from the Step 1 physics dimension: existing (≤2.37%) at $0,
     # new-build above existing at geothermal LCOE. Tracks against the shared
@@ -464,10 +492,9 @@ def compute_new_build_cost(iso, mix_pct, floor_twh, demand_twh, sens, target_yea
     # handled through the clean_firm tranche (uprate → geo → min(nuclear, CCS)).
     # Do NOT charge for the implicit residual — it's just the grid continuing to
     # run fossil while clean resources displace what they can hourly.
-    ccs_pct = 100.0 - (mix_pct.get('clean_firm', 0) + mix_pct.get('solar', 0) +
-                        mix_pct.get('wind', 0) + mix_pct.get('hydro', 0) +
-                        mix_pct.get('offshore_wind', 0) + mix_pct.get('geothermal', 0))
-    ccs_pct = max(0, ccs_pct)
+    explicit_pct = sum(mix_pct.get(r, 0) for r in RESOURCE_COLS)
+    hybrid_pct = sum(mix_pct.get(ht, 0) for ht in HYBRID_COLS)
+    ccs_pct = max(0, 100.0 - explicit_pct - hybrid_pct)
     breakdown['ccs_residual_pct'] = ccs_pct  # Track for diagnostics only
 
     # --- Storage (annualized capacity cost - revenue credits) ---
@@ -585,6 +612,9 @@ def init_floor(iso):
     floor = {}
     for res in RESOURCE_COLS:
         floor[res] = shares.get(res, 0.0) / 100.0 * demand
+    # Hybrid floor starts at 0 (no existing hybrid capacity in 2025 snapshot)
+    for ht in HYBRID_COLS:
+        floor[ht] = 0.0
     # Storage floor starts at 0 (no existing storage)
     for col in STORAGE_COLS:
         floor[col] = 0.0
@@ -596,6 +626,8 @@ def floor_to_pct(floor_twh, demand_twh):
     pct = {}
     for res in RESOURCE_COLS:
         pct[res] = floor_twh.get(res, 0.0) / demand_twh * 100.0
+    for ht in HYBRID_COLS:
+        pct[ht] = floor_twh.get(ht, 0.0) / demand_twh * 100.0 if demand_twh > 0 else 0.0
     for col in STORAGE_COLS:
         pct[col] = floor_twh.get(col, 0.0)  # Storage is already in %
     return pct
@@ -604,7 +636,7 @@ def floor_to_pct(floor_twh, demand_twh):
 def mix_row_to_pct(row):
     """Convert a DataFrame row to a mix_pct dict."""
     pct = {}
-    for col in RESOURCE_COLS + STORAGE_COLS:
+    for col in RESOURCE_COLS + HYBRID_COLS + STORAGE_COLS:
         pct[col] = float(row.get(col, 0.0))
     pct['hourly_match_score'] = float(row.get('hourly_match_score', 0.0))
     return pct
@@ -631,6 +663,14 @@ def ratchet_floor(floor_twh, winner_pct, demand_twh):
             # Winner deployed a HIGHER SHARE → ratchet floor to winner's absolute TWh
             new_floor[res] = winner_pct_res / 100.0 * demand_twh
         # else: keep floor at old absolute TWh (diminishes as % of growing demand)
+    # Hybrid resources: same ratcheting logic as base resources (TWh-based)
+    for ht in HYBRID_COLS:
+        floor_pct_ht = (floor_twh.get(ht, 0.0) / demand_twh * 100.0) if demand_twh > 0 else 0.0
+        winner_pct_ht = winner_pct.get(ht, 0.0)
+        if winner_pct_ht > floor_pct_ht + 0.01:
+            new_floor[ht] = winner_pct_ht / 100.0 * demand_twh
+        else:
+            new_floor[ht] = floor_twh.get(ht, 0.0)
     for col in STORAGE_COLS:
         new_floor[col] = max(floor_twh.get(col, 0.0), winner_pct.get(col, 0.0))
     return new_floor
@@ -651,6 +691,10 @@ def ratchet_deployed(deployed_twh, winner_pct, demand_twh):
     for res in RESOURCE_COLS:
         winner_res_twh = winner_pct.get(res, 0.0) / 100.0 * demand_twh
         new_deployed[res] = max(deployed_twh.get(res, 0.0), winner_res_twh)
+    # Hybrid resources: all new-build, track deployed TWh
+    for ht in HYBRID_COLS:
+        winner_ht_twh = winner_pct.get(ht, 0.0) / 100.0 * demand_twh
+        new_deployed[ht] = max(deployed_twh.get(ht, 0.0), winner_ht_twh)
     for col in STORAGE_COLS:
         new_deployed[col] = max(deployed_twh.get(col, 0.0), winner_pct.get(col, 0.0))
     return new_deployed
@@ -682,6 +726,11 @@ def filter_and_sample(df, floor_pct, threshold, max_samples=MAX_ARCHETYPES):
         if floor_val > 0.01:
             mask &= (df[res].values >= floor_val - 0.5)  # 0.5% tolerance
 
+    for ht in HYBRID_COLS:
+        floor_val = floor_pct.get(ht, 0.0)
+        if floor_val > 0.01 and ht in df.columns:
+            mask &= (df[ht].values >= floor_val - 0.5)
+
     for col in STORAGE_COLS:
         floor_val = floor_pct.get(col, 0.0)
         if floor_val > 0.01:
@@ -703,6 +752,10 @@ def filter_and_sample(df, floor_pct, threshold, max_samples=MAX_ARCHETYPES):
             floor_val = floor_pct.get(res, 0.0)
             if floor_val > 0.01:
                 mask2 &= (df[res].values >= floor_val - 1.0)
+        for ht in HYBRID_COLS:
+            floor_val = floor_pct.get(ht, 0.0)
+            if floor_val > 0.01 and ht in df.columns:
+                mask2 &= (df[ht].values >= floor_val - 1.0)
         for col in STORAGE_COLS:
             floor_val = floor_pct.get(col, 0.0)
             if floor_val > 0.01:
@@ -755,6 +808,13 @@ def phase2_refine(top_mixes, floor_pct, threshold, num_perturbations=PHASE2_PERT
             hyd_cap = HYDRO_CAP_PCT.get('', 50.0)  # Will be overridden per-ISO
             perturbed['hydro'] = max(floor_pct.get('hydro', 0.0),
                                      min(hyd_cap, perturbed['hydro'] + rng.uniform(-1.0, 1.0)))
+
+            # Perturb hybrid resources by ±2% (only if archetype uses them)
+            for ht in HYBRID_COLS:
+                if perturbed.get(ht, 0) > 0:
+                    delta = rng.uniform(-2.0, 2.0)
+                    new_val = max(floor_pct.get(ht, 0.0), perturbed.get(ht, 0) + delta)
+                    perturbed[ht] = min(HYBRID_MAX_PER_TYPE, max(0, new_val))
 
             # Perturb storage by ±0.5%
             for col in STORAGE_COLS:
@@ -867,7 +927,7 @@ def generate_floor_mixes(iso, floor_pct, threshold, demand_norm, supply_matrix,
     osw_vals = floor_osw + flat_r[3]
     hyd_vals = np.full(N_r, floor_hyd)
 
-    # CCS residual
+    # CCS residual (on-the-fly mixes don't include hybrids — they come from PFS)
     explicit_sum = cf_vals + sol_vals + wnd_vals + hyd_vals + osw_vals
     ccs_vals = np.maximum(0, 100.0 - explicit_sum)
 
@@ -1153,6 +1213,12 @@ def _precompute_nb_cost_params(iso, sens, target_year):
     else:
         params['geo_lcoe'] = 0.0
 
+    # Hybrid co-located resources (component-additive LCOE + TX)
+    for ht in HYBRID_COLS:
+        ht_lcoe = get_hybrid_lcoe(ht, ren_name, batt_name, iso)
+        ht_tx = get_hybrid_tx(ht, tx_name, iso)
+        params[f'{ht}_lcoe'] = ht_lcoe + ht_tx
+
     return params
 
 
@@ -1183,6 +1249,14 @@ def batch_score_mixes(filtered_df, iso, sens, demand_twh, target_year,
     ldes_pct = filtered_df['ldes_dispatch_pct'].values.astype(np.float64)
     h2_pct = filtered_df['h2_dispatch_pct'].values.astype(np.float64) if 'h2_dispatch_pct' in filtered_df.columns else np.zeros(N)
     scores = filtered_df['hourly_match_score'].values.astype(np.float64)
+
+    # Hybrid resource percentages
+    hybrid_pct_arrays = {}
+    for ht in HYBRID_COLS:
+        if ht in filtered_df.columns:
+            hybrid_pct_arrays[ht] = filtered_df[ht].values.astype(np.float64)
+        else:
+            hybrid_pct_arrays[ht] = np.zeros(N)
 
     # Cap hydro at physical limit
     hydro_cap_pct = HYDRO_CAP_PCT.get(iso, 50.0)
@@ -1229,6 +1303,13 @@ def batch_score_mixes(filtered_df, iso, sens, demand_twh, target_year,
     if iso == 'CAISO' and params['geo_lcoe'] > 0:
         geo_new_twh = np.maximum(0, geo_pct / 100.0 * demand_twh - existing_geo_twh)
 
+    # Hybrid new-build cost (all hybrid is new-build; subtract deployed floor if ratcheted)
+    hybrid_nb_cost = np.zeros(N)
+    for ht in HYBRID_COLS:
+        existing_ht_twh = deployed_twh.get(ht, 0.0)
+        ht_new_twh = np.maximum(0, hybrid_pct_arrays[ht] / 100.0 * demand_twh - existing_ht_twh)
+        hybrid_nb_cost += ht_new_twh * 1e6 * params[f'{ht}_lcoe']
+
     # Total new-build cost ($)
     nb_cost = (
         sol_new_twh * 1e6 * params['sol_lcoe'] +
@@ -1236,6 +1317,7 @@ def batch_score_mixes(filtered_df, iso, sens, demand_twh, target_year,
         osw_new_twh * 1e6 * params['osw_lcoe'] +
         cf_new_twh * 1e6 * params['cf_lcoe_approx'] +
         geo_new_twh * 1e6 * params['geo_lcoe'] +
+        hybrid_nb_cost +
         bat4_new / 100.0 * params['bat4_price'] * demand_twh * 1e6 +
         bat8_new / 100.0 * params['bat8_price'] * demand_twh * 1e6 +
         ldes_new / 100.0 * params['ldes_price'] * demand_twh * 1e6 +
@@ -1312,7 +1394,7 @@ def optimize_threshold(iso, threshold, floor_twh, deployed_twh, cumulative_caps,
                 if len(otf_filtered) > MAX_ARCHETYPES:
                     otf_filtered = otf_filtered.sample(n=MAX_ARCHETYPES, random_state=42)
                 filtered = pd.concat([filtered, otf_filtered], ignore_index=True)
-                dedup_cols = RESOURCE_COLS + STORAGE_COLS
+                dedup_cols = RESOURCE_COLS + HYBRID_COLS + STORAGE_COLS
                 filtered_rounded = filtered.copy()
                 for c in dedup_cols:
                     if c in filtered_rounded.columns:
@@ -1447,6 +1529,9 @@ def optimize_threshold(iso, threshold, floor_twh, deployed_twh, cumulative_caps,
 
         for mix_pct, scalar_mac, _, _ in top_candidates:
             resource_pcts = {res: mix_pct.get(res, 0) for res in RESOURCE_COLS}
+            # Include hybrid resources in dispatch if any are non-zero
+            for ht in HYBRID_COLS:
+                resource_pcts[ht] = mix_pct.get(ht, 0)
             dispatch_result = reconstruct_hourly_dispatch(
                 demand_norm, supply_profiles, resource_pcts,
                 procurement_pct=100,
@@ -1455,6 +1540,7 @@ def optimize_threshold(iso, threshold, floor_twh, deployed_twh, cumulative_caps,
                 ldes_dispatch_pct=mix_pct.get('ldes_dispatch_pct', 0),
                 supply_matrix=supply_matrix,
                 h2_dispatch_pct=mix_pct.get('h2_dispatch_pct', 0),
+                resource_types=RESOURCE_TYPES_HYBRID,
             )
             co2_result = compute_co2_from_dispatch(
                 iso, dispatch_result, emission_rates, demand_twh * 1e6)
@@ -1515,6 +1601,9 @@ def optimize_threshold(iso, threshold, floor_twh, deployed_twh, cumulative_caps,
     for res in RESOURCE_COLS:
         nb_twh = max(0, best_mix.get(res, 0) / 100.0 * demand_twh - deployed_twh.get(res, 0))
         total_new_build_twh += nb_twh
+    for ht in HYBRID_COLS:
+        nb_twh = max(0, best_mix.get(ht, 0) / 100.0 * demand_twh - deployed_twh.get(ht, 0))
+        total_new_build_twh += nb_twh
 
     # 9. Build result
     result = {
@@ -1537,6 +1626,9 @@ def optimize_threshold(iso, threshold, floor_twh, deployed_twh, cumulative_caps,
     for res in RESOURCE_COLS:
         result[f'winner_{res}_pct'] = round(best_mix.get(res, 0), 3)
         result[f'winner_{res}_twh'] = round(best_mix.get(res, 0) / 100.0 * demand_twh, 3)
+    for ht in HYBRID_COLS:
+        result[f'winner_{ht}_pct'] = round(best_mix.get(ht, 0), 3)
+        result[f'winner_{ht}_twh'] = round(best_mix.get(ht, 0) / 100.0 * demand_twh, 3)
     for col in STORAGE_COLS:
         result[f'winner_{col}'] = round(best_mix.get(col, 0), 3)
 
@@ -1544,6 +1636,9 @@ def optimize_threshold(iso, threshold, floor_twh, deployed_twh, cumulative_caps,
     for res in RESOURCE_COLS:
         nb_twh = max(0, best_mix.get(res, 0) / 100.0 * demand_twh - deployed_twh.get(res, 0))
         result[f'new_build_{res}_twh'] = round(nb_twh, 3)
+    for ht in HYBRID_COLS:
+        nb_twh = max(0, best_mix.get(ht, 0) / 100.0 * demand_twh - deployed_twh.get(ht, 0))
+        result[f'new_build_{ht}_twh'] = round(nb_twh, 3)
     for col in STORAGE_COLS:
         nb_pct = max(0, best_mix.get(col, 0) - deployed_twh.get(col, 0))
         result[f'new_build_{col}'] = round(nb_pct, 3)
@@ -1552,6 +1647,9 @@ def optimize_threshold(iso, threshold, floor_twh, deployed_twh, cumulative_caps,
     for res in RESOURCE_COLS:
         result[f'floor_{res}_twh'] = round(new_floor.get(res, 0), 3)
         result[f'deployed_{res}_twh'] = round(new_deployed.get(res, 0), 3)
+    for ht in HYBRID_COLS:
+        result[f'floor_{ht}_twh'] = round(new_floor.get(ht, 0), 3)
+        result[f'deployed_{ht}_twh'] = round(new_deployed.get(ht, 0), 3)
     for col in STORAGE_COLS:
         result[f'floor_{col}'] = round(new_floor.get(col, 0), 3)
         result[f'deployed_{col}'] = round(new_deployed.get(col, 0), 3)
@@ -1585,14 +1683,14 @@ def run_pathway(iso, price_sens_name, growth_level, demand_norm, supply_profiles
 
     # Compute existing clean HOURLY match score (not annual energy share!)
     # This accounts for solar curtailment — CAISO annual ~48% but hourly ~39.6%
+    # Supply matrix is hybrid-aware (RESOURCE_TYPES_HYBRID), but existing grid has no hybrids
     existing_mix = np.zeros((1, supply_matrix.shape[0]))
     shares = GRID_MIX_SHARES[iso]
-    from dispatch_utils import RESOURCE_TYPES
-    for i, rtype in enumerate(RESOURCE_TYPES):
+    for i, rtype in enumerate(RESOURCE_TYPES_HYBRID):
         existing_mix[0, i] = shares.get(rtype, 0.0)
     # CCS residual: the existing fossil fleet (not clean, don't include)
     # Zero out CCS column — only explicit clean resources count
-    ccs_idx = RESOURCE_TYPES.index('ccs_ccgt') if 'ccs_ccgt' in RESOURCE_TYPES else -1
+    ccs_idx = RESOURCE_TYPES_HYBRID.index('ccs_ccgt') if 'ccs_ccgt' in RESOURCE_TYPES_HYBRID else -1
     if ccs_idx >= 0:
         existing_mix[0, ccs_idx] = 0.0
     supply_existing = (existing_mix / 100.0) @ supply_matrix
@@ -1648,10 +1746,10 @@ def run_iso(iso, demand_data, gen_profiles, emission_rates):
     print(f"  Processing {iso}")
     print(f"{'='*60}")
 
-    # Load profiles
+    # Load profiles (include hybrids for dispatch scoring)
     demand_norm, total_mwh = get_demand_profile(iso, demand_data)
-    supply_profiles = get_supply_profiles(iso, gen_profiles)
-    supply_matrix = build_supply_matrix(supply_profiles)
+    supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
+    supply_matrix = build_supply_matrix(supply_profiles, resource_types=RESOURCE_TYPES_HYBRID)
 
     all_results = []
 
@@ -1726,6 +1824,10 @@ def _build_consequential_queue(all_results, demand_data=None, gen_profiles=None,
                 twh = min(twh, HYDRO_CAP_TWH[iso])
             existing_entry[f'winner_{res}_twh'] = twh
             existing_entry[f'winner_{res}_pct'] = share_pct
+        # Hybrid resources: 0 in existing baseline (no co-located capacity in 2025)
+        for ht in HYBRID_COLS:
+            existing_entry[f'winner_{ht}_twh'] = 0
+            existing_entry[f'winner_{ht}_pct'] = 0
         for stor in ['winner_battery_4h', 'winner_battery_8h', 'winner_ldes_100h']:
             existing_entry[stor] = 0
         for stor_pct in ['winner_battery_dispatch_pct', 'winner_battery8_dispatch_pct',
@@ -1762,7 +1864,7 @@ def _build_consequential_queue(all_results, demand_data=None, gen_profiles=None,
         for r in results:
             # Compute delta resources vs previous threshold
             delta_resources = {}
-            res_keys = ['solar', 'wind', 'clean_firm', 'hydro', 'offshore_wind', 'geothermal']
+            res_keys = ['solar', 'wind', 'clean_firm', 'hydro', 'offshore_wind', 'geothermal'] + HYBRID_COLS
             for res in res_keys:
                 twh_key = f'winner_{res}_twh'
                 curr_twh = r.get(twh_key, 0)
@@ -1799,6 +1901,8 @@ def _build_consequential_queue(all_results, demand_data=None, gen_profiles=None,
                         'ldes_dispatch_pct': r.get('winner_ldes_dispatch_pct', 0),
                         'h2_dispatch_pct': r.get('winner_h2_dispatch_pct', 0),
                     }
+                    for ht in HYBRID_COLS:
+                        mix_pcts[ht] = r.get(f'winner_{ht}_pct', 0)
                     demand_twh = r.get('demand_twh', base_demand)
                     gf = demand_twh / base_demand if base_demand > 0 else 1.0
                     gas_needed, new_gas, _, _, _ = _compute_gas_backup(
