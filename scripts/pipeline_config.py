@@ -609,6 +609,12 @@ RESOURCE_CAPACITY_FACTORS = {
     'ccs_ccgt':   {'CAISO': 0.85, 'ERCOT': 0.85, 'PJM': 0.85, 'NYISO': 0.85, 'NEISO': 0.85, 'MISO': 0.85, 'SPP': 0.85},
     'hydro':      {'CAISO': 0.40, 'ERCOT': 0.30, 'PJM': 0.35, 'NYISO': 0.40, 'NEISO': 0.40, 'MISO': 0.35, 'SPP': 0.30},
     'offshore_wind': {'CAISO': 0.43, 'ERCOT': 0.35, 'PJM': 0.48, 'NYISO': 0.49, 'NEISO': 0.51, 'MISO': 0.35, 'SPP': 0.35},
+    # Hybrid co-located — CF includes battery temporal shift (higher than standalone parent)
+    # Values derived from 8760 hybrid profile NPZ analysis (mean/max per ISO)
+    'solar_batt4': {'CAISO': 0.250, 'ERCOT': 0.315, 'PJM': 0.310, 'NYISO': 0.275, 'NEISO': 0.246, 'MISO': 0.349, 'SPP': 0.355},
+    'solar_batt8': {'CAISO': 0.309, 'ERCOT': 0.410, 'PJM': 0.404, 'NYISO': 0.360, 'NEISO': 0.321, 'MISO': 0.456, 'SPP': 0.462},
+    'wind_batt4':  {'CAISO': 0.385, 'ERCOT': 0.460, 'PJM': 0.363, 'NYISO': 0.339, 'NEISO': 0.325, 'MISO': 0.434, 'SPP': 0.524},
+    'wind_batt8':  {'CAISO': 0.384, 'ERCOT': 0.458, 'PJM': 0.362, 'NYISO': 0.337, 'NEISO': 0.324, 'MISO': 0.432, 'SPP': 0.521},
 }
 
 # ============================================================================
