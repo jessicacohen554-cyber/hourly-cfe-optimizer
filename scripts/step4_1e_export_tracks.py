@@ -50,6 +50,9 @@ import numpy as np
 import pandas as pd
 
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(SCRIPT_DIR, 'scripts'))
+from pipeline_config import HYBRID_TYPES
+
 PQ_SCENARIOS = os.path.join(SCRIPT_DIR, 'dashboard', 'track_scenarios.parquet')
 OUT_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'track_results.json')
 STEP5_DIR = os.path.join(SCRIPT_DIR, 'data', 'step4-analysis')
@@ -66,15 +69,21 @@ def _g(row, attr, default=0):
 def build_scenario_dict(row):
     """Convert a parquet row (namedtuple from itertuples) to the nested scenario
     dict the frontend expects. Uses getattr for optional columns with defaults."""
+    resource_mix = {
+        'clean_firm': int(row.mix_clean_firm),
+        'solar': int(row.mix_solar),
+        'wind': int(row.mix_wind),
+        'offshore_wind': int(_g(row, 'mix_offshore_wind', 0)),
+        'ccs_ccgt': int(row.mix_ccs_ccgt),
+        'hydro': int(row.mix_hydro),
+    }
+    # Add hybrid resources if present and non-zero
+    for ht in HYBRID_TYPES:
+        val = int(_g(row, f'mix_{ht}', 0))
+        if val > 0:
+            resource_mix[ht] = val
     return {
-        'resource_mix': {
-            'clean_firm': int(row.mix_clean_firm),
-            'solar': int(row.mix_solar),
-            'wind': int(row.mix_wind),
-            'offshore_wind': int(_g(row, 'mix_offshore_wind', 0)),
-            'ccs_ccgt': int(row.mix_ccs_ccgt),
-            'hydro': int(row.mix_hydro),
-        },
+        'resource_mix': resource_mix,
         'costs': {
             'total_cost': round(float(row.cost_total_cost), 2),
             'effective_cost': round(float(row.cost_effective_cost), 2),
