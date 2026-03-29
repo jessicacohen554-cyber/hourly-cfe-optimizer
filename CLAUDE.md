@@ -116,7 +116,7 @@
   - **1.5** `step1_5_storage_refinement.py` — Storage dispatch refinement (battery/LDES/H2 grid).
 - Storage grids are the union of V1 (near-term) and V2 (2050-oriented) caps. Floor/fine mix augmentation always on.
 - Utilities: `step1_prior_windows.py` (search window computation from prior EF results).
-- 4D adaptive grid search (clean_firm, solar, wind, hydro) + procurement sweep + battery dispatch (4hr 85% RTE, 8hr 85% RTE) + LDES dispatch (100hr 50% RTE) + Green H2 (1000hr 35% RTE, ≥95% only). CAISO uses 5D (adds geothermal).
+- 8–10D adaptive grid search: base resources (clean_firm, solar, wind, hydro) + 4 hybrid dimensions (solar_batt4, solar_batt8, wind_batt4, wind_batt8) + procurement sweep + battery dispatch (4hr 85% RTE, 8hr 85% RTE) + LDES dispatch (100hr 50% RTE). CAISO uses 9D (adds geothermal). With offshore wind where applicable, up to 10D. Hybrid profiles are pre-computed 8760 shapes loaded via `dispatch_utils.get_supply_profiles()`.
 - Output: `data/step1-pfs/`. **Only re-run if dispatch logic, generation profiles, or demand curves change.**
 
 **Step 2: Optimization** (sequential: 2.1 → 2.2):
