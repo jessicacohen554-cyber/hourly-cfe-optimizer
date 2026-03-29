@@ -31,7 +31,7 @@ OUT_PATH = ROOT / "dashboard" / "js" / "resource-density-data.js"
 ARCHIVE_DIR = ROOT / "data" / "step4-analysis" / "resource-density"
 
 sys.path.insert(0, str(ROOT / "scripts"))
-from pipeline_config import ACTIVE_THRESHOLDS, THRESHOLD_TARGET_YEARS, ISOS
+from pipeline_config import ACTIVE_THRESHOLDS, THRESHOLD_TARGET_YEARS, ISOS, HYBRID_TYPES
 # Single source of truth: pipeline_config
 ALL_THRESHOLDS = ACTIVE_THRESHOLDS
 
@@ -213,6 +213,14 @@ def process_iso(iso, ot_data):
 
     # LDES
     resources["ldes"] = np.maximum(0, df["ldes_dispatch_pct"].fillna(0) / 100 * demand_twh)
+
+    # Hybrid resources (all new-build, 0% existing)
+    for ht in HYBRID_TYPES:
+        col = f"mix_{ht}" if f"mix_{ht}" in df.columns else ht
+        if col in df.columns:
+            resources[ht] = np.maximum(0, df[col].fillna(0) / 100 * demand_twh)
+        else:
+            resources[ht] = pd.Series(np.zeros(len(df)), index=df.index)
 
     # Parse scenario toggles for driver analysis
     toggle_extractors = {
