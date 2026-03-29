@@ -28,7 +28,8 @@ CO2_BATCH_DIR = os.path.join(SCRIPT_DIR, 'data', 'step4-analysis', 'co2_results'
 
 from pipeline_config import OUTPUT_THRESHOLDS as THRESHOLDS, ISOS
 THRESHOLDS_STR = [str(t) for t in THRESHOLDS]
-RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
+RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro',
+             'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
 
 
 def load_from_co2_parquets(batch_dir):
