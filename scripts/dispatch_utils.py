@@ -112,10 +112,45 @@ def get_demand_profile(iso, demand_data):
 # SUPPLY PROFILES — Step 1 version (nuclear seasonal derate, DST correction)
 # ══════════════════════════════════════════════════════════════════════════════
 
-def get_supply_profiles(iso, gen_profiles):
+def _load_hybrid_profiles(iso):
+    """Load pre-computed hybrid 8760 profiles from data/hybrid_profiles/.
+
+    Hybrid profiles represent the combined output of a renewable + co-located
+    battery after internal dispatch. Each profile is normalized to sum=1.0
+    (same convention as base resource profiles).
+
+    Returns:
+        dict mapping hybrid type name → (H,) numpy array, or empty dict if
+        the NPZ file doesn't exist.
+    """
+    npz_path = os.path.join(DATA_DIR, 'hybrid_profiles', f'{iso}_hybrid_profiles.npz')
+    if not os.path.exists(npz_path):
+        print(f"  WARNING: No hybrid profiles at {npz_path}")
+        return {}
+    data = np.load(npz_path)
+    result = {}
+    for htype in HYBRID_TYPES:
+        if htype in data:
+            arr = data[htype].astype(np.float64)
+            total = arr.sum()
+            if total > 0:
+                result[htype] = arr / total
+            else:
+                result[htype] = np.zeros(H, dtype=np.float64)
+    return result
+
+
+def get_supply_profiles(iso, gen_profiles, include_hybrids=False, hybrid_profiles=None):
     """Get generation shape profiles with nuclear seasonal derate.
 
     This is the authoritative version used by all pipeline stages.
+
+    Args:
+        iso: ISO region name.
+        gen_profiles: Generation profile data dict.
+        include_hybrids: If True, include hybrid co-located profiles.
+        hybrid_profiles: Pre-loaded hybrid profile dict from _load_hybrid_profiles().
+            If None and include_hybrids=True, loads from data/hybrid_profiles/.
     """
     profiles = {}
 
@@ -216,6 +251,16 @@ def get_supply_profiles(iso, gen_profiles):
             p = list(p) + [0.0] * (H - len(p))
         profiles[rtype] = [max(0.0, v) for v in p]
 
+    # Hybrid co-located profiles (solar+battery, wind+battery)
+    if include_hybrids:
+        if hybrid_profiles is None:
+            hybrid_profiles = _load_hybrid_profiles(iso)
+        for htype in HYBRID_TYPES:
+            if htype in hybrid_profiles:
+                profiles[htype] = hybrid_profiles[htype]
+            else:
+                profiles[htype] = np.zeros(H, dtype=np.float64)
+
     return profiles
 
 
@@ -232,6 +277,30 @@ DISPATCH_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 's
 # DISPATCH_ORDER = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar']
 _DISPATCH_ORDER_INDICES = np.array([RESOURCE_TYPES.index(r) for r in DISPATCH_ORDER],
                                     dtype=np.int64)
+
+
+def _get_dispatch_order_indices(rtypes):
+    """Build dispatch order index array for given resource types.
+
+    Merit order: clean_firm → ccs_ccgt → hydro → offshore_wind →
+                 wind → wind_batt4 → wind_batt8 → solar → solar_batt4 → solar_batt8
+
+    Hybrid resources dispatch in the same tier as their parent renewable:
+    wind hybrids after wind, solar hybrids after solar (curtailed first).
+    """
+    order = ['clean_firm', 'ccs_ccgt', 'hydro', 'offshore_wind',
+             'wind', 'wind_batt4', 'wind_batt8',
+             'solar', 'solar_batt4', 'solar_batt8']
+    indices = []
+    for rtype in order:
+        if rtype in rtypes:
+            indices.append(rtypes.index(rtype))
+    # Add any remaining types not in the explicit order (e.g. geothermal)
+    for i, rtype in enumerate(rtypes):
+        if i not in indices:
+            indices.append(i)
+    return np.array(indices, dtype=np.int64)
+
 
 # Cache version — imported from pipeline_config (single source of truth).
 # Aliased here for backward compatibility with code referencing CACHE_VERSION.
@@ -542,28 +611,37 @@ def _per_resource_dispatch_njit(demand_arr, supply_matrix, resource_pcts_arr,
 
 
 def _compute_per_resource_dispatch(demand_arr, supply_profiles, resource_pcts,
-                                    procurement_factor, supply_matrix=None):
+                                    procurement_factor, supply_matrix=None,
+                                    resource_types=None):
     """Merit-order dispatch per resource: CF -> CCS -> hydro -> wind -> solar.
 
     Thin wrapper that converts dicts to arrays, calls the @njit inner function,
     and converts results back to dicts.
 
+    Args:
+        resource_types: Optional list of resource types. Defaults to RESOURCE_TYPES.
+            Pass RESOURCE_TYPES_HYBRID for hybrid-aware dispatch.
+
     Returns:
         matched: dict {resource: np.array(H)} -- dispatched to demand
         surplus: dict {resource: np.array(H)} -- excess above demand
     """
-    if supply_matrix is None:
-        supply_matrix = build_supply_matrix(supply_profiles)
+    rtypes = resource_types if resource_types is not None else RESOURCE_TYPES
 
-    resource_pcts_arr = np.array([resource_pcts.get(rt, 0) for rt in RESOURCE_TYPES],
+    if supply_matrix is None:
+        supply_matrix = build_supply_matrix(supply_profiles, resource_types=rtypes)
+
+    resource_pcts_arr = np.array([resource_pcts.get(rt, 0) for rt in rtypes],
                                   dtype=np.float64)
+
+    dispatch_order = _get_dispatch_order_indices(rtypes)
 
     matched_arr, surplus_arr = _per_resource_dispatch_njit(
         demand_arr, supply_matrix, resource_pcts_arr,
-        procurement_factor, _DISPATCH_ORDER_INDICES)
+        procurement_factor, dispatch_order)
 
-    matched = {RESOURCE_TYPES[i]: matched_arr[i] for i in range(len(RESOURCE_TYPES))}
-    surplus = {RESOURCE_TYPES[i]: surplus_arr[i] for i in range(len(RESOURCE_TYPES))}
+    matched = {rtypes[i]: matched_arr[i] for i in range(len(rtypes))}
+    surplus = {rtypes[i]: surplus_arr[i] for i in range(len(rtypes))}
     return matched, surplus
 
 
@@ -626,7 +704,7 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
                                  procurement_pct=100, battery_dispatch_pct=0,
                                  battery8_dispatch_pct=0, ldes_dispatch_pct=0,
                                  supply_matrix=None, detailed=False,
-                                 h2_dispatch_pct=0):
+                                 h2_dispatch_pct=0, resource_types=None):
     """Reconstruct full 8760 hourly dispatch for a resource mix.
 
     Args:
@@ -635,6 +713,9 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
         detailed: if True, also compute per-resource matched/surplus arrays and
             storage charge profiles. Used by step3a_build_dispatch_cache and step4_1b_compress_day_profiles.
         h2_dispatch_pct: green H2 seasonal storage capacity as % of demand (default 0).
+        resource_types: optional list of resource types matching supply_matrix rows.
+            Defaults to RESOURCE_TYPES. Pass RESOURCE_TYPES_HYBRID when supply_matrix
+            includes hybrid co-located profiles.
 
     Returns:
         result dict with keys:
@@ -657,6 +738,7 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
           - ldes_charge: (H,) LDES charge profile
           - h2_charge: (H,) H2 charge profile
     """
+    rtypes = resource_types if resource_types is not None else RESOURCE_TYPES
     procurement_factor = procurement_pct / 100.0
     demand_arr = np.array(demand_norm[:H], dtype=np.float64)
 
@@ -666,14 +748,15 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
 
     # Use pre-built matrix if available (batch optimization)
     if supply_matrix is not None:
-        mix_weights = np.array([resource_pcts.get(rt, 0) / 100.0 for rt in RESOURCE_TYPES],
+        mix_weights = np.array([resource_pcts.get(rt, 0) / 100.0 for rt in rtypes],
                                dtype=np.float64)
         supply_total = procurement_factor * (mix_weights @ supply_matrix)
-        ccs_idx = RESOURCE_TYPES.index('ccs_ccgt')
-        if mix_weights[ccs_idx] > 0:
-            ccs_supply = procurement_factor * mix_weights[ccs_idx] * supply_matrix[ccs_idx]
+        if 'ccs_ccgt' in rtypes:
+            ccs_idx = rtypes.index('ccs_ccgt')
+            if mix_weights[ccs_idx] > 0:
+                ccs_supply = procurement_factor * mix_weights[ccs_idx] * supply_matrix[ccs_idx]
     else:
-        for rtype in RESOURCE_TYPES:
+        for rtype in rtypes:
             pct = resource_pcts.get(rtype, 0)
             if pct <= 0:
                 continue
@@ -736,8 +819,9 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
 
     if detailed:
         matched, surplus = _compute_per_resource_dispatch(
-            demand_arr, supply_profiles, resource_pcts, procurement_factor, supply_matrix)
-        for rtype in RESOURCE_TYPES:
+            demand_arr, supply_profiles, resource_pcts, procurement_factor,
+            supply_matrix, resource_types=rtypes)
+        for rtype in rtypes:
             result[f'matched_{rtype}'] = matched[rtype]
             result[f'surplus_{rtype}'] = surplus[rtype]
         result['battery4_charge'] = battery4_charge
@@ -924,7 +1008,12 @@ DISPATCH_CACHE_DIR = os.path.join(DATA_DIR, 'step3-dispatch')
 
 def _archetype_key(iso, resource_pcts, procurement_pct=100, battery_dispatch_pct=0,
                    battery8_dispatch_pct=0, ldes_dispatch_pct=0):
-    """Deterministic hash key for a unique dispatch archetype."""
+    """Deterministic hash key for a unique dispatch archetype.
+
+    Backward compatible: non-hybrid mixes (all hybrid pcts = 0) produce
+    identical hashes to the pre-hybrid version. Hybrid mixes get additional
+    parts appended before the storage parameters.
+    """
     parts = [
         iso,
         str(float(resource_pcts.get('clean_firm', 0))),
@@ -933,11 +1022,18 @@ def _archetype_key(iso, resource_pcts, procurement_pct=100, battery_dispatch_pct
         str(float(resource_pcts.get('offshore_wind', 0))),
         str(float(resource_pcts.get('ccs_ccgt', 0))),
         str(float(resource_pcts.get('hydro', 0))),
+    ]
+    # Only append hybrid parts when any hybrid pct > 0 (backward compatible)
+    has_hybrids = any(resource_pcts.get(ht, 0) > 0 for ht in HYBRID_TYPES)
+    if has_hybrids:
+        for ht in HYBRID_TYPES:
+            parts.append(str(float(resource_pcts.get(ht, 0))))
+    parts.extend([
         str(float(procurement_pct)),
         str(float(battery_dispatch_pct)),
         str(float(battery8_dispatch_pct)),
         str(float(ldes_dispatch_pct)),
-    ]
+    ])
     key_str = '|'.join(parts)
     return hashlib.md5(key_str.encode()).hexdigest()[:16]
 
