@@ -1057,3 +1057,206 @@ rm = sc.get('resource_mix', {})
 
 ### Commit
 Commit with message: "Add hybrid resource support to Step 4.1A fossil dispatch and Step 4.1B compressed day profiles"
+
+---
+
+## Session K: Step 4 Tier 2 — Analytics Scripts (4.1C–4.2C)
+
+### Task
+Update the remaining Step 4 analytics scripts to propagate hybrid resource columns through parquet reads, resource iteration loops, and output schemas. These are lighter-touch changes — mostly extending hardcoded resource lists and column mappings.
+
+### Branch
+Develop on branch `claude/integrate-hybrid-resources-2pk5J`
+
+### Prerequisites
+- Session A complete (pipeline_config.py hybrid constants)
+- Session H complete (Step 3A dispatch cache with hybrid profiles)
+
+### Background
+
+**Integration depth by script** (from codebase analysis):
+
+| Script | Integration Effort | Key Changes |
+|--------|-------------------|-------------|
+| **4.1C** `compute_mac_stats.py` | LOW | Already uses dynamic `RESOURCE_TYPES` from imports. Hybrid columns flow through automatically if parquets have them. |
+| **4.1D** `compute_optimal_targets.py` | MEDIUM | Hardcoded `mix_resources` (line 428), `RESOURCES` (line 112), and EF column lookup (lines 491-493). Need hybrid entries in resource lists and no-regrets analysis. |
+| **4.1E** `export_tracks.py` | HIGH | Hardcoded `resource_mix` dict (lines 70-77). Must add hybrid resource keys to JSON output. |
+| **4.2A** `extract_resource_density.py` | HIGH | Hardcoded resource extraction (lines 181-216) and `EXISTING_PCT` (lines 39-47). Must add hybrid resource density analysis. |
+| **4.2B** `analyze_storage.py` | MEDIUM | Hardcoded `RESOURCES` list (line 83) and `MIX_COL_MAP` (lines 85-90). Well-structured — add entries and loops auto-adapt. |
+| **4.2C** `analyze_tracks.py` | MEDIUM | Hardcoded `RESOURCES` (line 31). Output loops need hybrid entries. |
+
+### Files to Modify
+
+#### 1. `scripts/step4_1c_compute_mac_stats.py` — Minimal Changes
+
+Already uses dynamic `RESOURCE_TYPES` from `parquet_io` for resource iteration (line 621-626). The mix dict is built from parquet columns via `.get()` with defaults.
+
+**Only change needed:** Verify that the `load_combined_df()` function (line 166) doesn't filter out hybrid columns when reading parquets. Check if it does a column subset selection — if so, add hybrid columns to the selection list. If it reads all columns, no change needed.
+
+```python
+# Verify this pattern in load_combined_df():
+# If it uses: df = pd.read_parquet(path, columns=SPECIFIC_LIST)
+# → add hybrid columns to SPECIFIC_LIST
+# If it uses: df = pd.read_parquet(path)
+# → no change needed (all columns read)
+```
+
+#### 2. `scripts/step4_1d_compute_optimal_targets.py` — Medium Changes
+
+**a) Update `RESOURCES` list (line 112):**
+```python
+RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro',
+             'battery', 'battery8', 'ldes', 'h2',
+             'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
+```
+
+**b) Update `mix_resources` (line 428):**
+```python
+mix_resources = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro',
+                 'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
+```
+
+**c) Update EF parquet column lookup (lines 491-493):**
+When matching mixes to EF parquet data, include hybrid columns in the match key. Read the current implementation — it matches on a subset of resource columns. Add hybrid columns to the match subset.
+
+**d) Update `compute_no_regrets_investments()` (line 1116-1240):**
+The no-regrets analysis computes floor/consensus/average per resource across thresholds. Add hybrid resources to the iteration:
+```python
+# After the existing resource loop:
+for ht in HYBRID_TYPES:
+    ht_col = f'mix_{ht}' if f'mix_{ht}' in df.columns else ht
+    if ht_col in df.columns:
+        # Same floor/consensus/average logic as base resources
+        no_regrets[ht] = {
+            'floor': df.groupby('threshold')[ht_col].min(),
+            'consensus': df.groupby('threshold')[ht_col].median(),
+            'average': df.groupby('threshold')[ht_col].mean(),
+        }
+```
+
+#### 3. `scripts/step4_1e_export_tracks.py` — Hardcoded Dict
+
+**Update `build_scenario_dict()` (lines 70-77):**
+```python
+def build_scenario_dict(row):
+    _g = lambda col, default=0: float(row.get(col, default))
+    d = {
+        'resource_mix': {
+            'clean_firm': _g('mix_clean_firm'),
+            'solar': _g('mix_solar'),
+            'wind': _g('mix_wind'),
+            'offshore_wind': _g('mix_offshore_wind'),
+            'ccs_ccgt': _g('mix_ccs_ccgt'),
+            'hydro': _g('mix_hydro'),
+        },
+        # ... existing fields ...
+    }
+    # Add hybrid resources if present
+    for ht in HYBRID_TYPES:
+        col = f'mix_{ht}'
+        val = _g(col)
+        if val > 0:
+            d['resource_mix'][ht] = val
+    return d
+```
+
+Add `from pipeline_config import HYBRID_TYPES` to imports (or `from dispatch_utils import HYBRID_TYPES`).
+
+#### 4. `scripts/step4_2a_extract_resource_density.py` — Hardcoded Extraction
+
+**a) Update `EXISTING_PCT` (lines 39-47):**
+Hybrid resources have zero existing capacity (all new-build):
+```python
+# After existing EXISTING_PCT dict:
+# Hybrid resources: 0% existing in all ISOs
+for ht in HYBRID_TYPES:
+    for iso in EXISTING_PCT:
+        EXISTING_PCT[iso][ht] = 0.0
+```
+
+**b) Update resource extraction block (lines 181-216):**
+This is the most labor-intensive change. Currently, each resource has a custom extraction block reading specific column names. Add a hybrid block:
+
+```python
+# After existing resource extraction blocks (line ~216):
+for ht in HYBRID_TYPES:
+    col = f'mix_{ht}' if f'mix_{ht}' in df.columns else ht
+    if col in df.columns:
+        ht_pct = df[col].values
+        existing_pct = 0.0  # All new-build
+        new_pct = np.maximum(0, ht_pct - existing_pct)
+        new_twh = new_pct / 100.0 * demand_twh
+        resources[ht] = new_twh
+```
+
+#### 5. `scripts/step4_2b_analyze_storage.py` — List + Map Extension
+
+**a) Update `RESOURCES` and `MIX_COL_MAP` (lines 83-90):**
+```python
+RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro',
+             'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
+STORAGE = ['battery', 'battery8', 'ldes', 'h2']
+
+MIX_COL_MAP = {
+    'clean_firm': 'mix_clean_firm',
+    'solar': 'mix_solar',
+    'wind': 'mix_wind',
+    'offshore_wind': 'mix_offshore_wind',
+    'ccs_ccgt': 'mix_ccs_ccgt',
+    'hydro': 'mix_hydro',
+    'solar_batt4': 'mix_solar_batt4',
+    'solar_batt8': 'mix_solar_batt8',
+    'wind_batt4': 'mix_wind_batt4',
+    'wind_batt8': 'mix_wind_batt8',
+    'battery': 'battery_dispatch_pct',
+    'battery8': 'battery8_dispatch_pct',
+    'ldes': 'ldes_dispatch_pct',
+    'h2': 'h2_dispatch_pct',
+}
+```
+
+The rest of the script iterates over these lists/maps dynamically, so adding entries is sufficient.
+
+**b) Storage analysis context:** The storage analysis examines standalone grid storage deployment patterns. Hybrid co-located batteries are NOT standalone storage — they should appear as generation resources (in `RESOURCES`), not in `STORAGE`. This is correct: the hybrid battery's dispatch is already embedded in the hybrid profile.
+
+#### 6. `scripts/step4_2c_analyze_tracks.py` — Resource List
+
+**Update `RESOURCES` (line 31):**
+```python
+RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro',
+             'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
+```
+
+This extends the mix differential analysis (line 285) to include hybrid resources.
+
+### Critical Pitfalls
+
+1. **Column naming**: Some scripts use `mix_solar_batt4`, others might use `solar_batt4`. Always use `.get()` with fallback for both conventions:
+   ```python
+   col = f'mix_{ht}' if f'mix_{ht}' in df.columns else ht
+   ```
+
+2. **Division by zero**: Resource density calculations divide new-build TWh by land area. Hybrid resources without land area data will cause division by zero. Either skip hybrids in density calculations or use parent renewable land area.
+
+3. **Storage analysis confusion**: Hybrid co-located batteries and standalone grid batteries are fundamentally different. Do NOT add hybrid types to the `STORAGE` list in step4_2b. Hybrids go in `RESOURCES` — they are generation resources, not dispatchable storage.
+
+4. **Dashboard compatibility**: Changes to output JSON schemas (step4_1e, step4_2a, step4_2b) affect dashboard JavaScript. The dashboard will need matching updates in a future session. For now, add hybrid data additively — don't remove or rename existing fields.
+
+5. **Backward compatibility**: All scripts must work with pre-hybrid parquets (hybrid columns absent). Use `.get()` with zero defaults everywhere. Never crash on missing columns.
+
+### Verification
+1. Run each script on one ISO and verify no crashes:
+   ```bash
+   python scripts/step4_1c_compute_mac_stats.py --iso SPP
+   python scripts/step4_1d_compute_optimal_targets.py --iso SPP
+   python scripts/step4_1e_export_tracks.py --iso SPP
+   python scripts/step4_2a_extract_resource_density.py --iso SPP
+   python scripts/step4_2b_analyze_storage.py --iso SPP
+   python scripts/step4_2c_analyze_tracks.py --iso SPP
+   ```
+2. Check output files for hybrid resource entries
+3. Verify non-hybrid ISOs produce identical output to before
+4. Spot-check: for an ISO with hybrid mixes, verify hybrid resources appear in no-regrets analysis (4.1D) and resource density (4.2A)
+
+### Commit
+Commit with message: "Add hybrid resource support to Step 4 tier-2 analytics — optimal targets, tracks, resource density, storage analysis"
