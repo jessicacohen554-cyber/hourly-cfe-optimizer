@@ -108,15 +108,17 @@ HOURLY_MIX_TEMPLATE = {
     # threshold: {resource: fraction of total procurement}
     # Storage split into battery (daily cycling) and LDES (multi-day weather events).
     # LDES share grows at higher thresholds where multi-day coverage is essential.
-    50:    {'solar': 0.40, 'wind': 0.35, 'firm': 0.10, 'battery': 0.08, 'ldes': 0.02, 'uprate': 0.05},
-    70:    {'solar': 0.35, 'wind': 0.30, 'firm': 0.15, 'battery': 0.10, 'ldes': 0.05, 'uprate': 0.05},
-    85:    {'solar': 0.25, 'wind': 0.25, 'firm': 0.25, 'battery': 0.12, 'ldes': 0.08, 'uprate': 0.05},
-    90:    {'solar': 0.22, 'wind': 0.22, 'firm': 0.28, 'battery': 0.13, 'ldes': 0.10, 'uprate': 0.05},
-    95:    {'solar': 0.18, 'wind': 0.18, 'firm': 0.32, 'battery': 0.14, 'ldes': 0.13, 'uprate': 0.05},
-    99:    {'solar': 0.15, 'wind': 0.15, 'firm': 0.35, 'battery': 0.15, 'ldes': 0.15, 'uprate': 0.05},
-    99.5:  {'solar': 0.14, 'wind': 0.14, 'firm': 0.36, 'battery': 0.15, 'ldes': 0.16, 'uprate': 0.05},
-    99.9:  {'solar': 0.13, 'wind': 0.13, 'firm': 0.37, 'battery': 0.15, 'ldes': 0.17, 'uprate': 0.05},
-    99.99: {'solar': 0.12, 'wind': 0.12, 'firm': 0.38, 'battery': 0.15, 'ldes': 0.18, 'uprate': 0.05},
+    # Hybrid co-located resources (solar_batt4, wind_batt4) included as fallback fractions;
+    # real EF data from load_ef_resource_mix() is preferred and will override these.
+    50:    {'solar': 0.35, 'wind': 0.30, 'firm': 0.10, 'battery': 0.08, 'ldes': 0.02, 'uprate': 0.05, 'solar_batt4': 0.05, 'wind_batt4': 0.05},
+    70:    {'solar': 0.28, 'wind': 0.25, 'firm': 0.15, 'battery': 0.08, 'ldes': 0.04, 'uprate': 0.05, 'solar_batt4': 0.08, 'wind_batt4': 0.07},
+    85:    {'solar': 0.20, 'wind': 0.20, 'firm': 0.22, 'battery': 0.08, 'ldes': 0.06, 'uprate': 0.05, 'solar_batt4': 0.10, 'wind_batt4': 0.09},
+    90:    {'solar': 0.18, 'wind': 0.18, 'firm': 0.25, 'battery': 0.08, 'ldes': 0.08, 'uprate': 0.05, 'solar_batt4': 0.10, 'wind_batt4': 0.08},
+    95:    {'solar': 0.14, 'wind': 0.14, 'firm': 0.30, 'battery': 0.09, 'ldes': 0.10, 'uprate': 0.05, 'solar_batt4': 0.10, 'wind_batt4': 0.08},
+    99:    {'solar': 0.12, 'wind': 0.12, 'firm': 0.33, 'battery': 0.09, 'ldes': 0.12, 'uprate': 0.05, 'solar_batt4': 0.09, 'wind_batt4': 0.08},
+    99.5:  {'solar': 0.11, 'wind': 0.11, 'firm': 0.34, 'battery': 0.09, 'ldes': 0.13, 'uprate': 0.05, 'solar_batt4': 0.09, 'wind_batt4': 0.08},
+    99.9:  {'solar': 0.10, 'wind': 0.10, 'firm': 0.35, 'battery': 0.09, 'ldes': 0.14, 'uprate': 0.05, 'solar_batt4': 0.09, 'wind_batt4': 0.08},
+    99.99: {'solar': 0.09, 'wind': 0.09, 'firm': 0.36, 'battery': 0.09, 'ldes': 0.15, 'uprate': 0.05, 'solar_batt4': 0.09, 'wind_batt4': 0.08},
 }
 
 
