@@ -811,3 +811,249 @@ for ht in HYBRID_COLS:
 
 ### Commit
 Commit with message: "Add hybrid resource support to Step 3B MAC queue — hybrid LCOE pricing, floor ratcheting, and vectorized scoring"
+
+---
+
+## Session J: Step 4.1A + 4.1B — Fossil Dispatch, LMP, and Day Profiles
+
+### Task
+Update `step4_1a_fossil_dispatch.py` and `step4_1b_compress_day_profiles.py` to handle hybrid resource columns flowing through the dispatch cache. These scripts consume the dispatch cache built in Step 3A and must construct archetype keys and resource dicts that include hybrid resources.
+
+### Branch
+Develop on branch `claude/integrate-hybrid-resources-2pk5J`
+
+### Prerequisites
+- Session G complete (dispatch_utils.py: hybrid-aware `_archetype_key()`, `reconstruct_hourly_dispatch()`)
+- Session H complete (Step 3A: dispatch cache includes hybrid matched/surplus profiles)
+
+### Background
+
+**Step 4.1A** (`step4_1a_fossil_dispatch.py`, ~362 lines) reads the dispatch cache and computes CO₂ and LMP for each archetype. It builds `resource_pcts` dicts from parquet columns, uses `_archetype_key()` to look up cached dispatch results, and iterates over `RESOURCE_TYPES` for capacity revenue calculation. The dispatch cache now contains `matched_solar_batt4`, `surplus_solar_batt4`, etc. — these need to flow through.
+
+**Step 4.1B** (`step4_1b_compress_day_profiles.py`, ~320 lines) reads the dispatch cache and compresses 8760-hour profiles to 24-hour representative days for dashboard visualization. It constructs `resource_pcts` dicts with hardcoded 6-resource keys, iterates over `RESOURCE_TYPES` for matched/surplus extraction, and generates mix keys without hybrid dimensions.
+
+**Key insight:** Both scripts primarily need changes to I/O and key construction — the core computation logic (CO₂, LMP, compression) doesn't care what resources exist, it just works with the profiles in the cache. The main work is ensuring hybrid resources are included in:
+1. Parquet column extraction → `resource_pcts` dict construction
+2. Archetype key computation (so cache lookups succeed)
+3. Per-resource loops for matched/surplus extraction
+4. Output schema (so hybrid data reaches the dashboard)
+
+### Files to Modify
+
+#### `scripts/step4_1a_fossil_dispatch.py` (~362 lines)
+
+##### 1. Update imports (line 44-58)
+
+Add hybrid-aware imports:
+```python
+from dispatch_utils import (
+    H, ISOS, RESOURCE_TYPES, RESOURCE_TYPES_HYBRID, HYBRID_TYPES,
+    # ... existing imports ...
+)
+```
+
+##### 2. Update `compute_capacity_market_revenue()` (line 79-145)
+
+Add hybrid resources to the capacity revenue calculation. Hybrid resources get higher ELCC than standalone solar/wind (batteries shift generation to peak hours):
+
+**a) Add hybrid resources to the per-resource loop (line 102-103):**
+```python
+for res in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt',
+            'hydro', 'battery', 'battery8', 'ldes', 'h2', 'geothermal',
+            'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']:
+```
+
+**b) Add hybrid resources to VRE category (line 113):**
+```python
+vre_res = ['solar', 'wind', 'offshore_wind', 'solar_batt4', 'solar_batt8',
+           'wind_batt4', 'wind_batt8']
+```
+
+**Note:** `PEAK_CAPACITY_CREDITS` in pipeline_config must have entries for hybrid types (Session A should have added these). Verify: `python -c "from pipeline_config import PEAK_CAPACITY_CREDITS; print({k: v for k, v in PEAK_CAPACITY_CREDITS.items() if 'batt' in k})"`
+
+##### 3. Update `run_fossil_dispatch_for_iso()` (line 194-338)
+
+**a) Update `mix_cols` (line 237-239):**
+```python
+mix_cols = ['mix_clean_firm', 'mix_solar', 'mix_wind', 'mix_offshore_wind',
+            'mix_ccs_ccgt', 'mix_hydro', 'battery_dispatch_pct',
+            'battery8_dispatch_pct', 'ldes_dispatch_pct']
+
+# Detect hybrids from parquet schema
+if co_path:
+    avail_cols = pq.read_schema(co_path).names
+    has_hybrids = any(f'mix_{ht}' in avail_cols or ht in avail_cols for ht in HYBRID_TYPES)
+    if has_hybrids:
+        for ht in HYBRID_TYPES:
+            col = f'mix_{ht}' if f'mix_{ht}' in avail_cols else ht
+            if col in avail_cols:
+                mix_cols.append(col)
+```
+
+**b) Update `resource_pcts` dict construction (line 243-250):**
+```python
+rp = {
+    'clean_firm': float(row['mix_clean_firm']),
+    'solar': float(row['mix_solar']),
+    'wind': float(row['mix_wind']),
+    'offshore_wind': float(row.get('mix_offshore_wind', 0)),
+    'ccs_ccgt': float(row['mix_ccs_ccgt']),
+    'hydro': float(row['mix_hydro']),
+}
+# Add hybrid resources if present
+for ht in HYBRID_TYPES:
+    col = f'mix_{ht}' if f'mix_{ht}' in row.index else ht
+    if col in row.index:
+        rp[ht] = float(row.get(col, 0))
+```
+
+This ensures `_archetype_key()` (updated in Session G) produces the correct hash including hybrid pcts.
+
+##### 4. Update CO₂ result metadata
+
+In the result dict construction, include hybrid resource shares for downstream analysis:
+```python
+co2_result = {
+    # ... existing fields ...
+}
+# Add hybrid resource shares if present
+for ht in HYBRID_TYPES:
+    if rp.get(ht, 0) > 0:
+        co2_result[f'mix_{ht}'] = rp[ht]
+```
+
+---
+
+#### `scripts/step4_1b_compress_day_profiles.py` (~320 lines)
+
+##### 1. Update imports (line 46-51)
+
+```python
+from dispatch_utils import (
+    H, ISOS, RESOURCE_TYPES, RESOURCE_TYPES_HYBRID, HYBRID_TYPES,
+    CACHE_VERSION, DISPATCH_ORDER,
+    load_common_data, get_supply_profiles, get_demand_profile,
+    build_supply_matrix, reconstruct_hourly_dispatch,
+    _archetype_key, load_dispatch_cache,
+)
+```
+
+##### 2. Update `dispatch_from_cache()` (line 60-107)
+
+**a) Extend `resource_pcts` dict (line 67-74):**
+```python
+resource_pcts = {
+    'clean_firm': mix.get('clean_firm', 0),
+    'solar': mix.get('solar', 0),
+    'wind': mix.get('wind', 0),
+    'offshore_wind': mix.get('offshore_wind', 0),
+    'ccs_ccgt': mix.get('ccs_ccgt', 0),
+    'hydro': mix.get('hydro', 0),
+}
+# Add hybrid resources if present in mix dict
+for ht in HYBRID_TYPES:
+    if ht in mix and mix[ht] > 0:
+        resource_pcts[ht] = mix[ht]
+```
+
+**b) Extend per-resource matched/surplus extraction (line 84-88):**
+```python
+# Determine which resource types are in this cache entry
+rtypes = list(RESOURCE_TYPES)
+for ht in HYBRID_TYPES:
+    if f'matched_{ht}' in cached:
+        rtypes.append(ht)
+
+matched = {}
+surplus = {}
+for rtype in rtypes:
+    mk = f'matched_{rtype}'
+    sk = f'surplus_{rtype}'
+    matched[rtype] = cached[mk] if mk in cached else np.zeros(H, dtype=np.float64)
+    surplus[rtype] = cached[sk] if sk in cached else np.zeros(H, dtype=np.float64)
+```
+
+##### 3. Update `compress_to_24h()` (line 110-147)
+
+Extend the resource loop (line 137-139):
+```python
+base_resources = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'offshore_wind', 'hydro']
+for r in base_resources:
+    compressed['matched'][r] = sum_by_hod(result['matched'][r])
+    compressed['surplus'][r] = sum_by_hod(result['surplus'][r])
+
+# Add hybrid resources if present
+for ht in HYBRID_TYPES:
+    if ht in result['matched']:
+        compressed['matched'][ht] = sum_by_hod(result['matched'][ht])
+        compressed['surplus'][ht] = sum_by_hod(result['surplus'][ht])
+```
+
+##### 4. Update `mix_key()` (line 173-184)
+
+Include hybrid dimensions in the key so different hybrid mixes get different entries:
+```python
+def mix_key(mix, battery_pct, ldes_pct, h2_pct=0):
+    cf = mix.get('clean_firm', 0)
+    s = mix.get('solar', 0)
+    w = mix.get('wind', 0)
+    c = mix.get('ccs_ccgt', 0)
+    h = mix.get('hydro', 0)
+    key = f"{cf}_{s}_{w}_{c}_{h}_{battery_pct}_{ldes_pct}_{h2_pct}"
+    # Append hybrid values if any are non-zero
+    hybrid_vals = [mix.get(ht, 0) for ht in HYBRID_TYPES]
+    if any(v > 0 for v in hybrid_vals):
+        key += '_' + '_'.join(str(v) for v in hybrid_vals)
+    return key
+```
+
+##### 5. Update `main()` mix extraction (line 252-294)
+
+When extracting resource mixes from feasible_mixes (both columnar and row formats), include hybrid columns:
+
+**Columnar format (line 256-261):**
+```python
+rm = {
+    'clean_firm': fmixes['clean_firm'][i],
+    'solar': fmixes['solar'][i],
+    'wind': fmixes['wind'][i],
+    'ccs_ccgt': fmixes['ccs_ccgt'][i],
+    'hydro': fmixes['hydro'][i],
+}
+# Add hybrid resources if present in feasible_mixes
+for ht in HYBRID_TYPES:
+    if ht in fmixes:
+        rm[ht] = fmixes[ht][i]
+```
+
+**Row format (line 272-273):**
+```python
+rm = fm['resource_mix']
+# Hybrid resources will already be in resource_mix dict if present
+```
+
+**Scenario format (line 285-286):**
+```python
+rm = sc.get('resource_mix', {})
+# Same — hybrid resources included if present
+```
+
+### Critical Pitfalls
+
+1. **Archetype key consistency**: The `resource_pcts` dict passed to `_archetype_key()` must include the same hybrid resource values as when the cache was built in Step 3A. If Step 3A used `mix_solar_batt4` as the column name but Step 4 reads `solar_batt4`, the dict key must be `'solar_batt4'` (not `'mix_solar_batt4'`). Standardize on the resource name without the `mix_` prefix for `resource_pcts` dicts.
+
+2. **Cache miss on hybrid mixes**: If the dispatch cache was built before hybrid integration, it won't have hybrid archetype keys. The scripts should handle this gracefully (skip with warning, not crash).
+
+3. **Dashboard compatibility**: `compressed_day_profiles.json` is consumed by dashboard JavaScript. Adding hybrid matched/surplus entries changes the JSON schema. The dashboard chart code will need to handle new resource keys — but that's a separate session. For now, just ensure the data is there.
+
+4. **`step4_1a_augment_capacity_rev.py`**: This secondary script also constructs `resource_pcts` dicts. Apply the same hybrid extension pattern (read file first to identify exact lines).
+
+### Verification
+1. Run step4_1a on one ISO: `python scripts/step4_1a_fossil_dispatch.py --iso SPP`
+2. Check CO₂ output includes hybrid metadata: `python -c "import pandas as pd; df = pd.read_parquet('data/step4-analysis/co2_results/SPP_co2.parquet'); print([c for c in df.columns if 'batt' in c])"`
+3. Run step4_1b: `python scripts/step4_1b_compress_day_profiles.py`
+4. Check compressed profiles include hybrid resources: `python -c "import json; d = json.load(open('dashboard/compressed_day_profiles.json')); iso = list(d.keys())[0]; mk = list(d[iso]['profiles'].keys())[0]; print(list(d[iso]['profiles'][mk]['matched'].keys()))"`
+5. Verify non-hybrid ISOs produce identical output to before.
+
+### Commit
+Commit with message: "Add hybrid resource support to Step 4.1A fossil dispatch and Step 4.1B compressed day profiles"
