@@ -573,3 +573,241 @@ Update function signatures to accept `has_hybrids` where needed.
 
 ### Commit
 Commit with message: "Add hybrid resource support to Step 3A dispatch cache — extract, dispatch, cache, and manifest hybrid columns"
+
+---
+
+## Session I: Step 3B — MAC Queue Hybrid Integration
+
+### Task
+Update `step3b_mac_queue.py` to include hybrid co-located resources in the path-dependent MAC deployment queue. This means hybrid resources can be selected as part of cost-optimal mixes at each threshold, with proper LCOE pricing using component-additive costs (Session A constants).
+
+### Branch
+Develop on branch `claude/integrate-hybrid-resources-2pk5J`
+
+### Prerequisites
+- Session A complete (pipeline_config.py: `HYBRID_TYPES`, `get_hybrid_lcoe()`, `get_hybrid_tx()`)
+- Session G complete (dispatch_utils.py: hybrid-aware `reconstruct_hourly_dispatch()`, `get_supply_profiles()`)
+
+### Background
+
+**What step3b does:** Path-dependent deployment queue that finds the cheapest $/mtCO₂ avoided at each SBTi threshold. For each ISO × price sensitivity × demand growth, it:
+1. Loads PFS archetypes from Step 1 parquets
+2. Filters to mixes that respect the ratcheting floor
+3. Scores MAC = new_build_cost / CO₂_avoided for all candidates
+4. Picks the winner, locks its resources as the new floor, repeats
+
+**What needs to change:**
+- `RESOURCE_COLS` (line 113) is hardcoded to 6 base resources — must include hybrids
+- `compute_new_build_cost()` (line 325) has per-resource cost blocks for solar, wind, offshore, etc. — needs hybrid cost blocks using `get_hybrid_lcoe()` + `get_hybrid_tx()`
+- CCS residual calculation (line 467) sums only base resources — must include hybrids
+- `load_pfs_for_threshold()` (line 216) reads PFS parquets with `MIX_COLS` — must include hybrid columns
+- `batch_score_mixes()` (line 1159) has vectorized cost for base resources — needs hybrid cost arrays
+- `filter_and_sample()` (line 663) applies floor constraints — must handle hybrid resource floors
+- Supply matrix construction in `run_pathway()` / `run_iso()` — must include hybrid profiles
+- `_archetype_key()` calls in CO₂ dispatch — already handled by Session G
+
+**Key design point:** All hybrid procurement is new-build. There is no "existing hybrid" capacity in the 2025 snapshot. Hybrid resources compete with standalone renewables on a levelized cost basis — the optimizer picks whichever mix minimizes MAC.
+
+### Files to Modify
+
+**`scripts/step3b_mac_queue.py`** (~2227 lines):
+
+#### 1. Update `RESOURCE_COLS` and `MIX_COLS` (line 113-115)
+
+```python
+from pipeline_config import HYBRID_TYPES
+# ...
+RESOURCE_COLS = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind', 'geothermal']
+HYBRID_COLS = list(HYBRID_TYPES)  # ['solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
+STORAGE_COLS = ['battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct', 'h2_dispatch_pct']
+MIX_COLS = RESOURCE_COLS + HYBRID_COLS + STORAGE_COLS + ['hourly_match_score']
+```
+
+**Note:** `RESOURCE_COLS` stays as-is (used for base resource iteration). `HYBRID_COLS` is separate. `MIX_COLS` is the superset used for parquet I/O.
+
+#### 2. Update `load_pfs_for_threshold()` (line 216-299)
+
+The function loads PFS parquets and selects columns via `MIX_COLS`. Since `MIX_COLS` now includes hybrid columns, they'll be loaded automatically. The key fix is handling the "fill missing columns with 0" logic (line 288-290):
+
+```python
+# Fill missing columns with 0 (includes hybrid cols if not in parquet)
+for col in MIX_COLS:
+    if col not in combined.columns:
+        combined[col] = 0.0
+```
+
+This already works — hybrid columns will be filled with 0 if the PFS parquet doesn't have them (pre-hybrid data). **No code change needed here if MIX_COLS is updated.**
+
+Also update the dedup key (line 293):
+```python
+dedup_cols = RESOURCE_COLS + HYBRID_COLS + STORAGE_COLS
+```
+
+#### 3. Update `compute_new_build_cost()` (line 325-530)
+
+Add hybrid resource cost blocks after the existing solar/wind/offshore blocks (~line 398):
+
+```python
+# --- Hybrid Solar+Battery (all new-build, component-additive LCOE) ---
+from pipeline_config import get_hybrid_lcoe, get_hybrid_tx
+
+for ht in HYBRID_TYPES:
+    ht_pct = mix_pct.get(ht, 0.0)
+    if ht_pct <= 0:
+        continue
+    ht_twh = ht_pct / 100.0 * demand_twh
+    existing_ht_twh = floor_twh.get(ht, 0.0)
+    ht_new_twh = max(0, ht_twh - existing_ht_twh)
+    if ht_new_twh > 0:
+        # Component-additive LCOE: renewable + ITC-discounted battery + TX
+        ht_lcoe = get_hybrid_lcoe(ht, ren_name, batt_name, iso)
+        ht_tx = get_hybrid_tx(ht, tx_name, iso)
+        ht_total = ht_lcoe + ht_tx
+        # Apply learning curve on battery component (solar/wind already at scale)
+        # Battery learning curve uses same FOAK/NOAK as standalone
+        # For simplicity in MAC queue, use static LCOE (learning curves are small for batteries)
+        ht_cost = ht_new_twh * 1e6 * ht_total
+        total_cost += ht_cost
+        breakdown[ht] = {'new_twh': ht_new_twh, 'lcoe': ht_total, 'cost': ht_cost}
+```
+
+**Learning curves for hybrids:** The MAC queue applies learning curves to technologies with FOAK/NOAK trajectories. Solar and wind are already at scale (no FOAK). The co-located battery component could use a learning curve, but batteries are also nearly at scale. **Recommendation:** Use static hybrid LCOE from `get_hybrid_lcoe()` (no learning curve). If the user wants learning curves on the battery component, that can be added later.
+
+#### 4. Update CCS residual calculation (line 467-471)
+
+Currently:
+```python
+ccs_pct = 100.0 - (mix_pct.get('clean_firm', 0) + mix_pct.get('solar', 0) +
+                    mix_pct.get('wind', 0) + mix_pct.get('hydro', 0) +
+                    mix_pct.get('offshore_wind', 0) + mix_pct.get('geothermal', 0))
+```
+
+Add hybrid resources to the sum:
+```python
+explicit_pct = sum(mix_pct.get(r, 0) for r in RESOURCE_COLS)
+hybrid_pct = sum(mix_pct.get(ht, 0) for ht in HYBRID_COLS)
+ccs_pct = max(0, 100.0 - explicit_pct - hybrid_pct)
+```
+
+#### 5. Update `batch_score_mixes()` (line 1159-1250)
+
+This is the vectorized Phase 1 scorer. Add hybrid cost computation:
+
+**a) Extract hybrid resource arrays (after line 1184):**
+```python
+# Hybrid resource percentages
+hybrid_pcts = {}
+for ht in HYBRID_COLS:
+    if ht in filtered_df.columns:
+        hybrid_pcts[ht] = filtered_df[ht].values.astype(np.float64)
+    else:
+        hybrid_pcts[ht] = np.zeros(N)
+```
+
+**b) Precompute hybrid LCOEs in `_precompute_nb_cost_params()` (find this function):**
+```python
+# In _precompute_nb_cost_params():
+for ht in HYBRID_COLS:
+    ht_lcoe = get_hybrid_lcoe(ht, sens['ren'], sens['batt'], iso)
+    ht_tx = get_hybrid_tx(ht, sens['tx'], iso)
+    params[f'{ht}_lcoe'] = ht_lcoe + ht_tx
+```
+
+**c) Add hybrid cost to the vectorized nb_cost sum (after line 1242):**
+```python
+# Hybrid new-build cost (all hybrid is new-build, no existing floor)
+for ht in HYBRID_COLS:
+    ht_pct = hybrid_pcts[ht]
+    ht_new_twh = np.maximum(0, ht_pct / 100.0 * demand_twh)  # No existing hybrid
+    nb_cost += ht_new_twh * 1e6 * params[f'{ht}_lcoe']
+```
+
+**Note:** If there IS a floor for hybrid resources (from ratcheting), subtract it:
+```python
+existing_ht = deployed_twh.get(ht, 0.0)
+ht_new_twh = np.maximum(0, ht_pct / 100.0 * demand_twh - existing_ht)
+```
+
+#### 6. Update `filter_and_sample()` (line 663-723)
+
+The floor constraint logic needs to handle hybrid resources. Currently, the floor is enforced per-resource: `mix[resource] >= floor[resource]`. With hybrids:
+
+```python
+# After existing floor checks, add hybrid floor enforcement:
+for ht in HYBRID_COLS:
+    ht_floor = floor_pct.get(ht, 0)
+    if ht_floor > 0 and ht in df.columns:
+        df = df[df[ht] >= ht_floor - 0.5]  # 0.5% tolerance
+```
+
+#### 7. Update `phase2_refine()` (line 725-777)
+
+Phase 2 perturbs the top candidates. Currently perturbs `clean_firm`, `solar`, `wind`. Add hybrid perturbation:
+
+```python
+# Add hybrid resources to perturbation dimensions
+for ht in HYBRID_COLS:
+    if top_mixes[ht].max() > 0:  # Only perturb if any candidate uses this hybrid
+        perturbation_dims.append(ht)
+```
+
+Read the function to see how `perturbation_dims` is structured and extend accordingly.
+
+#### 8. Update supply matrix construction in `run_pathway()` / `run_iso()`
+
+Find where `get_supply_profiles()` and `build_supply_matrix()` are called. Pass `include_hybrids=True`:
+
+```python
+# In run_iso() or run_pathway():
+supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
+rtypes = RESOURCE_TYPES_HYBRID  # from dispatch_utils
+supply_matrix = build_supply_matrix(supply_profiles, resource_types=rtypes)
+```
+
+This ensures the hourly dispatch scoring (Phase 3) accounts for hybrid generation.
+
+#### 9. Update winner extraction and floor ratcheting
+
+When the winner is selected and its resources become the new floor, hybrid resources must be included:
+
+Search for where `floor_twh` is updated (likely in `optimize_threshold()` or `run_pathway()`). Ensure hybrid resource TWh are added to the floor:
+
+```python
+# After selecting winner:
+for ht in HYBRID_COLS:
+    if winner.get(ht, 0) > 0:
+        winner_ht_twh = winner[ht] / 100.0 * demand_twh
+        floor_twh[ht] = max(floor_twh.get(ht, 0), winner_ht_twh)
+```
+
+#### 10. Update output parquet schema
+
+The output parquet (`mac_queue_{ISO}.parquet`) must include hybrid columns. Search for where the DataFrame is constructed for output and ensure hybrid columns are included:
+
+```python
+# When building output rows:
+for ht in HYBRID_COLS:
+    row[ht] = winner_mix.get(ht, 0)
+```
+
+### Critical Pitfalls
+
+1. **Family cap enforcement**: Hybrid resources are subject to family caps (`SOLAR_FAMILY_CAP`, `WIND_FAMILY_CAP`). In the MAC queue, this means `solar + solar_batt4 + solar_batt8` must not exceed the solar family cap for the ISO. Import these caps from `step1_pfs_generator` and enforce in `filter_and_sample()`.
+
+2. **CCS residual displacement**: Hybrids reduce the CCS residual (more explicit clean supply → less fossil needed). This is correct behavior — make sure the CCS residual calculation includes hybrid pcts.
+
+3. **Double-counting storage**: Hybrid co-located batteries are already in the 8760 profile. The standalone storage columns (`battery_dispatch_pct`, etc.) are separate grid-level storage. These must NOT be confused. The cost model already handles this correctly IF hybrid costs use `get_hybrid_lcoe()` (which includes battery LCOS) and standalone storage uses the existing annualized tables.
+
+4. **Backward compatibility**: If PFS parquets don't have hybrid columns (pre-hybrid runs), the script should work identically to before. The `MIX_COLS` fill-with-zero logic handles this.
+
+5. **Combinatorial explosion in Phase 2**: Adding 4 hybrid dimensions to perturbation can increase candidates significantly. Consider only perturbing hybrid dimensions when the top candidates actually use hybrids (conditional perturbation).
+
+### Verification
+1. Syntax check: `python -c "import py_compile; py_compile.compile('scripts/step3b_mac_queue.py')"`
+2. Run on one ISO with one pathway: `python scripts/step3b_mac_queue.py --iso SPP --sensitivities all_med --growth Medium`
+3. Check output: `python -c "import pandas as pd; df = pd.read_parquet('data/step3-dispatch/mac_queue/mac_queue_SPP.parquet'); print([c for c in df.columns if 'batt' in c and 'battery' not in c])"`
+4. Verify hybrid resources appear in winning mixes at some thresholds
+5. Verify CCS residual is lower when hybrids are present
+
+### Commit
+Commit with message: "Add hybrid resource support to Step 3B MAC queue — hybrid LCOE pricing, floor ratcheting, and vectorized scoring"
