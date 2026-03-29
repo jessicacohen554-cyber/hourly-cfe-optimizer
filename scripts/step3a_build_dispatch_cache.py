@@ -42,8 +42,8 @@ sys.path.insert(0, SCRIPT_DIR)
 sys.path.insert(0, os.path.join(SCRIPT_DIR, 'scripts'))
 
 from dispatch_utils import (
-    ISOS, RESOURCE_TYPES, CACHE_VERSION, H,
-    DISPATCH_CACHE_DIR,
+    ISOS, RESOURCE_TYPES, RESOURCE_TYPES_HYBRID, CACHE_VERSION, H,
+    DISPATCH_CACHE_DIR, HYBRID_TYPES,
     load_common_data, get_supply_profiles, get_demand_profile,
     build_supply_matrix, reconstruct_hourly_dispatch,
     _archetype_key, load_dispatch_cache, save_dispatch_cache,
@@ -51,18 +51,21 @@ from dispatch_utils import (
 from parquet_io import find_input_dir, find_parquet, ALL_ISOS
 
 
-MIX_COLUMNS = [
+MIX_COLUMNS_BASE = [
     'mix_clean_firm', 'mix_solar', 'mix_wind', 'mix_offshore_wind', 'mix_ccs_ccgt', 'mix_hydro',
     'battery_dispatch_pct', 'battery8_dispatch_pct',
     'ldes_dispatch_pct', 'h2_dispatch_pct',
 ]
+MIX_COLUMNS_HYBRID = [f'mix_{ht}' for ht in HYBRID_TYPES]
+# e.g. ['mix_solar_batt4', 'mix_solar_batt8', 'mix_wind_batt4', 'mix_wind_batt8']
 
 
 def extract_unique_mixes(iso, input_dir):
     """Read step4/step3 parquet for an ISO and extract unique mix tuples.
 
-    Returns list of dicts with keys: resource_pcts,
+    Returns (list_of_dicts, has_hybrids) where each dict has keys: resource_pcts,
     battery_dispatch_pct, battery8_dispatch_pct, ldes_dispatch_pct, h2_dispatch_pct.
+    has_hybrids is True when hybrid resource columns are present in the input.
 
     Uses vectorized numpy column extraction instead of iterrows() for ~50-100×
     speedup on large DataFrames (iterrows is notoriously slow due to per-row
@@ -70,17 +73,40 @@ def extract_unique_mixes(iso, input_dir):
     """
     path = find_parquet(input_dir, iso)
     if not path:
-        return []
+        return [], False
 
     # Read available columns (h2_dispatch_pct may be absent in older parquets)
     avail_cols = pq.read_schema(path).names
-    read_cols = [c for c in MIX_COLUMNS if c in avail_cols]
+
+    # Detect hybrid columns — check both mix_solar_batt4 and solar_batt4 conventions
+    has_hybrids = any(f'mix_{ht}' in avail_cols or ht in avail_cols for ht in HYBRID_TYPES)
+
+    # Build column list dynamically
+    mix_cols = list(MIX_COLUMNS_BASE)
+    if has_hybrids:
+        mix_cols.extend(MIX_COLUMNS_HYBRID)
+
+    read_cols = [c for c in mix_cols if c in avail_cols]
+    # Also read bare hybrid names (without mix_ prefix) if present
+    if has_hybrids:
+        for ht in HYBRID_TYPES:
+            if ht in avail_cols and ht not in read_cols:
+                read_cols.append(ht)
+
     df = pd.read_parquet(path, columns=read_cols)
+
+    # Normalize hybrid column names to mix_ prefix
+    if has_hybrids:
+        for ht in HYBRID_TYPES:
+            mix_col = f'mix_{ht}'
+            if mix_col not in df.columns and ht in df.columns:
+                df[mix_col] = df[ht]
+
     # Fill missing columns with 0
-    for c in MIX_COLUMNS:
+    for c in mix_cols:
         if c not in df.columns:
             df[c] = 0
-    unique = df.drop_duplicates()
+    unique = df[mix_cols].drop_duplicates()
 
     # Vectorized extraction: pull columns as numpy arrays, iterate indices
     cf = unique['mix_clean_firm'].to_numpy(dtype=np.float64)
@@ -94,39 +120,52 @@ def extract_unique_mixes(iso, input_dir):
     ldes = unique['ldes_dispatch_pct'].to_numpy(dtype=np.float64)
     h2 = unique['h2_dispatch_pct'].to_numpy(dtype=np.float64)
 
+    # Hybrid column arrays (zeros if not present)
+    hybrid_arrs = {}
+    if has_hybrids:
+        for ht in HYBRID_TYPES:
+            hybrid_arrs[ht] = unique[f'mix_{ht}'].to_numpy(dtype=np.float64)
+
     n = len(unique)
     mixes = [None] * n
     for i in range(n):
+        rp = {
+            'clean_firm': cf[i], 'solar': sol[i], 'wind': wnd[i],
+            'offshore_wind': osw[i], 'ccs_ccgt': ccs[i], 'hydro': hyd[i],
+        }
+        if has_hybrids:
+            for ht in HYBRID_TYPES:
+                rp[ht] = hybrid_arrs[ht][i]
+
         mixes[i] = {
-            'resource_pcts': {
-                'clean_firm': cf[i], 'solar': sol[i], 'wind': wnd[i],
-                'offshore_wind': osw[i], 'ccs_ccgt': ccs[i], 'hydro': hyd[i],
-            },
+            'resource_pcts': rp,
             'battery_dispatch_pct': bat[i],
             'battery8_dispatch_pct': bat8[i],
             'ldes_dispatch_pct': ldes[i],
             'h2_dispatch_pct': h2[i],
         }
 
-    return mixes
+    return mixes, has_hybrids
 
 
 def build_cache_for_iso(iso, unique_mixes, demand_data, gen_profiles,
-                         existing_cache=None, force=False):
+                         existing_cache=None, force=False, has_hybrids=False):
     """Compute dispatch for all unique mixes and return updated cache dict.
 
     Args:
         existing_cache: loaded cache dict. Mixes already in cache are skipped
             unless force=True.
         force: rebuild all mixes even if already cached.
+        has_hybrids: if True, include hybrid co-located profiles in dispatch.
 
     Returns:
         cache: dict {archetype_key: {field: array}}
         computed: number of newly computed mixes
         skipped: number of mixes already in cache
     """
-    supply_profiles = get_supply_profiles(iso, gen_profiles)
-    supply_matrix = build_supply_matrix(supply_profiles)
+    rtypes = RESOURCE_TYPES_HYBRID if has_hybrids else RESOURCE_TYPES
+    supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=has_hybrids)
+    supply_matrix = build_supply_matrix(supply_profiles, resource_types=rtypes)
     demand_norm, total_mwh = get_demand_profile(iso, demand_data)
 
     # Always start fresh — never carry forward stale archetypes from prior runs.
@@ -158,6 +197,7 @@ def build_cache_for_iso(iso, unique_mixes, demand_data, gen_profiles,
             supply_matrix=supply_matrix,
             detailed=True,
             h2_dispatch_pct=mix_info['h2_dispatch_pct'],
+            resource_types=rtypes,
         )
 
         cache[key] = {k: v for k, v in result.items()}
@@ -166,8 +206,8 @@ def build_cache_for_iso(iso, unique_mixes, demand_data, gen_profiles,
     return cache, computed, skipped
 
 
-def enrich_parquets_with_dispatch_shares(iso, input_dir, cache):
-    """Add actual battery/LDES dispatch share columns to step3 parquets.
+def enrich_parquets_with_dispatch_shares(iso, input_dir, cache, has_hybrids=False):
+    """Add actual battery/LDES/hybrid dispatch share columns to step3 parquets.
 
     For each row in the step3 parquet, looks up the dispatch cache entry,
     sums the 8760-hour dispatch profiles, and computes actual energy dispatched
@@ -201,6 +241,13 @@ def enrich_parquets_with_dispatch_shares(iso, input_dir, cache):
     bat8 = df['battery8_dispatch_pct'].to_numpy(dtype=np.float64)
     ldes_arr = df['ldes_dispatch_pct'].to_numpy(dtype=np.float64)
 
+    # Extract hybrid column arrays for archetype key construction
+    hybrid_col_arrays = {}
+    if has_hybrids:
+        for ht in HYBRID_TYPES:
+            col = f'mix_{ht}' if f'mix_{ht}' in df.columns else (ht if ht in df.columns else None)
+            hybrid_col_arrays[ht] = df[col].to_numpy(dtype=np.float64) if col else np.zeros(n)
+
     # Build unique key → dispatch share mapping (avoid redundant sums)
     key_cache = {}
     hits = 0
@@ -211,6 +258,10 @@ def enrich_parquets_with_dispatch_shares(iso, input_dir, cache):
             'clean_firm': cf[i], 'solar': sol[i], 'wind': wnd[i],
             'offshore_wind': osw[i], 'ccs_ccgt': ccs[i], 'hydro': hyd[i],
         }
+        if has_hybrids:
+            for ht in HYBRID_TYPES:
+                rp[ht] = hybrid_col_arrays[ht][i]
+
         key = _archetype_key(iso, rp, 100, bat[i], bat8[i], ldes_arr[i])
 
         if key in key_cache:
@@ -254,14 +305,14 @@ def enrich_parquets_with_dispatch_shares(iso, input_dir, cache):
         feas_path = os.path.join(input_dir, f'step3_feasible_{iso}.parquet')
     if os.path.exists(feas_path):
         try:
-            _enrich_single_parquet(feas_path, iso, cache)
+            _enrich_single_parquet(feas_path, iso, cache, has_hybrids=has_hybrids)
         except Exception as e:
             print(f"    WARNING: Could not enrich {os.path.basename(feas_path)}: {e}")
 
     return hits
 
 
-def _enrich_single_parquet(path, iso, cache):
+def _enrich_single_parquet(path, iso, cache, has_hybrids=False):
     """Add dispatch share columns to a single parquet file using the dispatch cache."""
     df = pd.read_parquet(path)
     n = len(df)
@@ -284,6 +335,18 @@ def _enrich_single_parquet(path, iso, cache):
     bat8 = df['battery8_dispatch_pct'].to_numpy(dtype=np.float64)
     ldes_arr = df['ldes_dispatch_pct'].to_numpy(dtype=np.float64)
 
+    # Extract hybrid column arrays
+    hybrid_col_arrays = {}
+    if has_hybrids:
+        for ht in HYBRID_TYPES:
+            # Check both bare and mix_ prefixed column names
+            col = None
+            for candidate in [ht, f'mix_{ht}']:
+                if candidate in df.columns:
+                    col = candidate
+                    break
+            hybrid_col_arrays[ht] = df[col].to_numpy(dtype=np.float64) if col else np.zeros(n)
+
     key_cache_local = {}
     hits = 0
 
@@ -292,6 +355,10 @@ def _enrich_single_parquet(path, iso, cache):
             'clean_firm': cf[i], 'solar': sol[i], 'wind': wnd[i],
             'offshore_wind': osw[i], 'ccs_ccgt': ccs[i], 'hydro': hyd[i],
         }
+        if has_hybrids:
+            for ht in HYBRID_TYPES:
+                rp[ht] = hybrid_col_arrays[ht][i]
+
         key = _archetype_key(iso, rp, 100, bat[i], bat8[i], ldes_arr[i])
 
         if key in key_cache_local:
@@ -322,7 +389,7 @@ def _enrich_single_parquet(path, iso, cache):
     print(f"    Enriched {os.path.basename(path)}: {n} rows, {hits} unique cache hits")
 
 
-def build_annual_manifest(iso, unique_mixes, cache):
+def build_annual_manifest(iso, unique_mixes, cache, has_hybrids=False):
     """Build annual manifest parquet from dispatch cache.
 
     Sums 8760h profiles into annual percentages (% of demand).
@@ -357,6 +424,11 @@ def build_annual_manifest(iso, unique_mixes, cache):
         row['mix_ccs_ccgt'] = rp.get('ccs_ccgt', 0)
         row['mix_hydro'] = rp.get('hydro', 0)
 
+        # Hybrid resource capacity values (if present)
+        if has_hybrids:
+            for ht in HYBRID_TYPES:
+                row[f'mix_{ht}'] = rp.get(ht, 0)
+
         # Storage CAPACITY values (from Step 3 — these are input parameters, not dispatch)
         row['battery_capacity_pct'] = mix_info['battery_dispatch_pct']
         row['battery8_capacity_pct'] = mix_info['battery8_dispatch_pct']
@@ -367,7 +439,11 @@ def build_annual_manifest(iso, unique_mixes, cache):
         # So sum(profile) * 100 gives % of annual demand met.
 
         # Dispatch (sum of 8760h matched profiles * 100 = % of demand met)
-        for resource in ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'offshore_wind', 'hydro']:
+        resources_to_iterate = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'offshore_wind', 'hydro']
+        if has_hybrids:
+            resources_to_iterate.extend(HYBRID_TYPES)
+
+        for resource in resources_to_iterate:
             matched = entry.get(f'matched_{resource}', np.zeros(H))
             surplus = entry.get(f'surplus_{resource}', np.zeros(H))
             row[f'{resource}_dispatch_pct'] = float(np.sum(matched)) * 100
@@ -522,18 +598,20 @@ def main():
         print(f"\n  {iso}:")
 
         # Extract unique mixes
-        unique_mixes = extract_unique_mixes(iso, input_dir)
+        unique_mixes, has_hybrids = extract_unique_mixes(iso, input_dir)
         if not unique_mixes:
             print(f"    No mixes found, skipping")
             continue
         total_mixes += len(unique_mixes)
         print(f"    {len(unique_mixes)} unique mixes from parquets")
+        if has_hybrids:
+            print(f"    Hybrid mode: detected hybrid resource columns")
 
         # Build cache fresh (no accumulation from prior runs)
         iso_t0 = time.time()
         cache, computed, skipped = build_cache_for_iso(
             iso, unique_mixes, demand_data, gen_profiles,
-            force=True)
+            force=True, has_hybrids=has_hybrids)
 
         # Save (fresh cache, only current winners)
         save_dispatch_cache(iso, cache, version=CACHE_VERSION)
@@ -543,10 +621,10 @@ def main():
         print(f"    Total archetypes: {len(cache)}, time: {iso_elapsed:.1f}s")
 
         # Enrich step3 parquets with actual dispatch shares
-        enrich_parquets_with_dispatch_shares(iso, input_dir, cache)
+        enrich_parquets_with_dispatch_shares(iso, input_dir, cache, has_hybrids=has_hybrids)
 
         # Build annual manifest (single source of truth for dispatch values)
-        build_annual_manifest(iso, unique_mixes, cache)
+        build_annual_manifest(iso, unique_mixes, cache, has_hybrids=has_hybrids)
 
         total_computed += computed
         total_skipped += skipped
