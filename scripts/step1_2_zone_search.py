@@ -330,7 +330,7 @@ def generate_fine_grid(bounds, step=1):
     return np.vstack(parts)
 
 
-def generate_archetype_fine_grid(iso, boundary_mixes, n_res):
+def generate_archetype_fine_grid(iso, boundary_mixes, n_res, include_hybrids=False):
     """Generate fine mixes around boundary archetypes (fallback when no prior windows)."""
     radius = FINE_RADIUS_5D if n_res >= 5 else FINE_RADIUS_DEFAULT
     max_arch = MAX_FINE_ARCHETYPES_5D if n_res >= 5 else MAX_FINE_ARCHETYPES
@@ -355,7 +355,7 @@ def generate_archetype_fine_grid(iso, boundary_mixes, n_res):
     parts = []
     for i in range(len(unique_archetypes)):
         base = unique_archetypes[i].astype(np.float64)
-        fine = s1.generate_resource_combos_around(base, iso, step=FINE_STEP, radius=radius)
+        fine = s1.generate_resource_combos_around(base, iso, step=FINE_STEP, radius=radius, include_hybrids=include_hybrids)
         if len(fine) > 0:
             parts.append(fine)
 
@@ -926,7 +926,7 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None,
             zone_mask = ((coarse_scores >= z_score_low) &
                          (coarse_scores <= z_score_high))
             boundary_mixes = coarse_combos[zone_mask]
-            fine_combos = generate_archetype_fine_grid(iso, boundary_mixes, n_res)
+            fine_combos = generate_archetype_fine_grid(iso, boundary_mixes, n_res, include_hybrids=include_hybrids)
 
         print(f"    Raw fine grid: {len(fine_combos):,} combos")
 
