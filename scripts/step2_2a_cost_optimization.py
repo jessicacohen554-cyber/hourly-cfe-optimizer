@@ -75,6 +75,8 @@ from pipeline_config import (
     PEAK_CAPACITY_CREDITS, RESOURCE_CAPACITY_FACTORS,
     NEW_CCGT_COST_KW_YR, EXISTING_GAS_FOM_KW_YR,
     STORAGE_REVENUE_CREDITS, OUTPUT_THRESHOLDS,
+    HYBRID_DC_AC_RATIOS, ITC_STORAGE_RATE, HYBRID_BATTERY_LCOS,
+    get_hybrid_tx, HYBRID_TYPES, _HYBRID_BATT_KEY, _HYBRID_PARENT_REN,
 )
 from pathlib import Path
 from itertools import chain, product
@@ -222,7 +224,14 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     hyd_pct = arrays['hydro']
     osw_pct = arrays.get('offshore_wind', np.zeros(N, dtype=np.float64))
     geo_pct = arrays.get('geothermal', np.zeros(N, dtype=np.float64))
-    ccs_pct = 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct + osw_pct + geo_pct)
+    # Hybrid resources (all new-build)
+    sb4_pct = arrays.get('solar_batt4', np.zeros(N, dtype=np.float64))
+    sb8_pct = arrays.get('solar_batt8', np.zeros(N, dtype=np.float64))
+    wb4_pct = arrays.get('wind_batt4', np.zeros(N, dtype=np.float64))
+    wb8_pct = arrays.get('wind_batt8', np.zeros(N, dtype=np.float64))
+    # Hybrids displace CCS in the residual calculation
+    ccs_pct = 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct + osw_pct + geo_pct
+                        + sb4_pct + sb8_pct + wb4_pct + wb8_pct)
     ccs_pct = np.maximum(ccs_pct, 0.0)
 
     # CCS regional cap — only relevant for clean_firm tranche (Tranche 3) headroom.
@@ -347,6 +356,18 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
                    ldes_pct / 100.0 * ldes_price +
                    h2_pct / 100.0 * h2_price)
 
+    # --- Hybrid Resources (all new-build, component-additive LCOE) ---
+    b4_lcos_itc = HYBRID_BATTERY_LCOS['battery4'][batt_name][iso] * (1 - ITC_STORAGE_RATE)
+    b8_lcos_itc = HYBRID_BATTERY_LCOS['battery8'][batt_name][iso] * (1 - ITC_STORAGE_RATE)
+    sb4_price_h = sol_lcoe / HYBRID_DC_AC_RATIOS['solar_batt4'][iso] + b4_lcos_itc + get_hybrid_tx('solar_batt4', tx_name, iso)
+    sb8_price_h = sol_lcoe / HYBRID_DC_AC_RATIOS['solar_batt8'][iso] + b8_lcos_itc + get_hybrid_tx('solar_batt8', tx_name, iso)
+    wb4_price_h = wnd_lcoe + b4_lcos_itc + get_hybrid_tx('wind_batt4', tx_name, iso)
+    wb8_price_h = wnd_lcoe + b8_lcos_itc + get_hybrid_tx('wind_batt8', tx_name, iso)
+    total_cost += (sb4_pct / 100.0 * sb4_price_h +
+                   sb8_pct / 100.0 * sb8_price_h +
+                   wb4_pct / 100.0 * wb4_price_h +
+                   wb8_pct / 100.0 * wb8_price_h)
+
     # --- Gas Capacity Backup (computed post-hoc, NOT included in optimization cost) ---
     # Gas backup is a consequence of not planning ahead — it shows what happens if you
     # don't invest in clean firm early. Computed here for output but excluded from
@@ -381,6 +402,18 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
         ldes_pct / 100.0 * demand_mwh / 100.0 * PEAK_CAPACITY_CREDITS['ldes'] +
         h2_pct / 100.0 * demand_mwh / 1000.0 * PEAK_CAPACITY_CREDITS['h2']
     )
+
+    # Hybrid peak capacity: energy fraction → installed MW → peak MW
+    for _htype, _hpct in [('solar_batt4', sb4_pct), ('solar_batt8', sb8_pct),
+                           ('wind_batt4', wb4_pct), ('wind_batt8', wb8_pct)]:
+        _parent = _HYBRID_PARENT_REN[_htype]
+        _cf_r = RESOURCE_CAPACITY_FACTORS[_parent][iso]
+        if _htype in HYBRID_DC_AC_RATIOS:
+            _cf_r = min(_cf_r * HYBRID_DC_AC_RATIOS[_htype][iso], 1.0)
+        _cc_r = PEAK_CAPACITY_CREDITS[_htype]
+        _h_avg_mw = _hpct / 100.0 * avg_demand_mw
+        _h_installed = _h_avg_mw / _cf_r
+        new_clean_peak_mw += _h_installed * _cc_r
 
     # Add CCS tranche peak contribution (from clean_firm Tranche 3, not residual)
     # ccs_tranche_twh is set by Tranche 3 above
@@ -517,9 +550,9 @@ def apply_hydro_cap(arrays, iso):
 # ============================================================================
 # For base year (no growth), total_cost decomposes into:
 #   tc[i] = Σ(coeff_matrix[i,k] × prices[k]) + constant[i]
-# where coefficients are scenario-invariant and prices are 10 scalars.
+# where coefficients are scenario-invariant and prices are 17 scalars.
 # This avoids recomputing existing/new splits, tranche allocations, and
-# gas backup for every scenario — just 10 scalar-vector multiplies.
+# gas backup for every scenario — just 17 scalar-vector multiplies.
 
 # Coefficient column indices
 _COL_WHOLESALE = 0  # existing generation — $0 (sunk fleet, coefficient zeroed out)
@@ -535,7 +568,11 @@ _COL_BAT4      = 9  # 4hr battery dispatch
 _COL_BAT8      = 10 # 8hr battery dispatch
 _COL_LDES      = 11 # LDES dispatch
 _COL_H2        = 12 # Green H2 seasonal storage dispatch
-_N_COEFFS = 13
+_COL_SB4       = 13 # solar_batt4 hybrid (component-additive LCOE)
+_COL_SB8       = 14 # solar_batt8 hybrid (component-additive LCOE)
+_COL_WB4       = 15 # wind_batt4 hybrid (component-additive LCOE)
+_COL_WB8       = 16 # wind_batt8 hybrid (component-additive LCOE)
+_N_COEFFS = 17
 
 
 def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_override=None,
@@ -554,7 +591,7 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
             keeps hydro at existing share, zeros everything else.
 
     Returns:
-        coeff_matrix: (N, 13) float64 — multiply by scenario prices
+        coeff_matrix: (N, 17) float64 — multiply by scenario prices
         constant: (N,) float64 — gas backup cost (scenario-invariant)
         extras: dict with per-element data needed for winner detail extraction
     """
@@ -570,8 +607,16 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
     hyd_pct = arrays['hydro']
     osw_pct = arrays.get('offshore_wind', np.zeros(N, dtype=np.float64))
     geo_pct = arrays.get('geothermal', np.zeros(N, dtype=np.float64))
+    # Hybrid resources (all new-build, no existing/new split needed)
+    sb4_pct = arrays.get('solar_batt4', np.zeros(N, dtype=np.float64))
+    sb8_pct = arrays.get('solar_batt8', np.zeros(N, dtype=np.float64))
+    wb4_pct = arrays.get('wind_batt4', np.zeros(N, dtype=np.float64))
+    wb8_pct = arrays.get('wind_batt8', np.zeros(N, dtype=np.float64))
+
     # CCS residual tracked for output only — NOT priced (see price_mix_batch comments)
-    ccs_pct = np.maximum(0.0, 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct + osw_pct + geo_pct))
+    # Hybrids displace CCS in the residual calculation
+    ccs_pct = np.maximum(0.0, 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct + osw_pct + geo_pct
+                                         + sb4_pct + sb8_pct + wb4_pct + wb8_pct))
 
     bat_pct = arrays['battery_dispatch_pct']
     bat8_pct = arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
@@ -645,6 +690,20 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
         h2_pct / 100.0 * demand_mwh / 1000.0 * PEAK_CAPACITY_CREDITS['h2']
     )
 
+    # Hybrid peak capacity: energy fraction → installed MW → peak MW
+    # Hybrids are all new-build. Parent CF used (solar adjusted by DC:AC ratio).
+    for _htype, _hpct in [('solar_batt4', sb4_pct), ('solar_batt8', sb8_pct),
+                           ('wind_batt4', wb4_pct), ('wind_batt8', wb8_pct)]:
+        _parent = _HYBRID_PARENT_REN[_htype]
+        _cf_r = RESOURCE_CAPACITY_FACTORS[_parent][iso]
+        # Solar hybrids: effective CF increased by DC:AC ratio (overbuild)
+        if _htype in HYBRID_DC_AC_RATIOS:
+            _cf_r = min(_cf_r * HYBRID_DC_AC_RATIOS[_htype][iso], 1.0)
+        _cc_r = PEAK_CAPACITY_CREDITS[_htype]
+        _h_avg_mw = _hpct / 100.0 * avg_demand_mw
+        _h_installed = _h_avg_mw / _cf_r
+        new_clean_peak_mw += _h_installed * _cc_r
+
     total_clean_peak = EXISTING_CLEAN_PEAK_MW[iso] + new_clean_peak_mw
 
     gas_raw = np.maximum(0, ra_peak_grown - total_clean_peak) / gaf
@@ -664,7 +723,7 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
     # Constant term = 0 (gas backup excluded from optimization)
     constant = np.zeros(N, dtype=np.float64)
 
-    # Build coefficient matrix (N, 12)
+    # Build coefficient matrix (N, 17)
     coeff_matrix = np.empty((N, _N_COEFFS), dtype=np.float64)
     coeff_matrix[:, _COL_WHOLESALE] = 0.0
     coeff_matrix[:, _COL_SOL_NEW] = sol_new_pct / 100.0
@@ -685,6 +744,11 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
     coeff_matrix[:, _COL_BAT8] = bat8_pct / 100.0
     coeff_matrix[:, _COL_LDES] = ldes_pct / 100.0
     coeff_matrix[:, _COL_H2] = h2_pct / 100.0
+    # Hybrid resources — all new-build, coefficient = fraction of demand
+    coeff_matrix[:, _COL_SB4] = sb4_pct / 100.0
+    coeff_matrix[:, _COL_SB8] = sb8_pct / 100.0
+    coeff_matrix[:, _COL_WB4] = wb4_pct / 100.0
+    coeff_matrix[:, _COL_WB8] = wb8_pct / 100.0
 
     ra_peak_mw = ra_peak_grown  # for output
 
@@ -714,10 +778,10 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
 
 
 def get_scenario_prices(iso, sens):
-    """Look up 13 scenario-dependent price scalars from sensitivity toggles.
+    """Look up 17 scenario-dependent price scalars from sensitivity toggles.
 
     Returns:
-        prices: (13,) float64 array matching coefficient column order
+        prices: (17,) float64 array matching coefficient column order
         wholesale: scalar for incremental cost calculation
         nuclear_price: scalar for tranche detail extraction
         ccs_tranche_price: scalar for tranche detail extraction
@@ -755,10 +819,20 @@ def get_scenario_prices(iso, sens):
     if iso in OFFSHORE_ISOS:
         osw_price = LCOE_TABLES['offshore_wind'][ren_name][iso] + get_tx('offshore_wind', tx_name, iso)
 
+    # Hybrid prices: component-additive LCOE with ITC discount and AC-adjusted TX
+    sol_lcoe = LCOE_TABLES['solar'][ren_name][iso]
+    wnd_lcoe = LCOE_TABLES['wind'][ren_name][iso]
+    b4_lcos_itc = HYBRID_BATTERY_LCOS['battery4'][batt_name][iso] * (1 - ITC_STORAGE_RATE)
+    b8_lcos_itc = HYBRID_BATTERY_LCOS['battery8'][batt_name][iso] * (1 - ITC_STORAGE_RATE)
+    sb4_price = sol_lcoe / HYBRID_DC_AC_RATIOS['solar_batt4'][iso] + b4_lcos_itc + get_hybrid_tx('solar_batt4', tx_name, iso)
+    sb8_price = sol_lcoe / HYBRID_DC_AC_RATIOS['solar_batt8'][iso] + b8_lcos_itc + get_hybrid_tx('solar_batt8', tx_name, iso)
+    wb4_price = wnd_lcoe + b4_lcos_itc + get_hybrid_tx('wind_batt4', tx_name, iso)
+    wb8_price = wnd_lcoe + b8_lcos_itc + get_hybrid_tx('wind_batt8', tx_name, iso)
+
     prices = np.array([
         wholesale,
-        LCOE_TABLES['solar'][ren_name][iso] + get_tx('solar', tx_name, iso),
-        LCOE_TABLES['wind'][ren_name][iso] + get_tx('wind', tx_name, iso),
+        sol_lcoe + get_tx('solar', tx_name, iso),
+        wnd_lcoe + get_tx('wind', tx_name, iso),
         osw_price,
         ccs_price,
         UPRATE_LCOE[firm_lev],
@@ -769,6 +843,10 @@ def get_scenario_prices(iso, sens):
         max(0, LCOE_TABLES['battery8'][batt_name][iso] + get_tx('battery8', tx_name, iso) - STORAGE_REVENUE_CREDITS['battery8'][iso]),
         max(0, LCOE_TABLES['ldes'][ldes_name][iso] + get_tx('ldes', tx_name, iso) - STORAGE_REVENUE_CREDITS['ldes'][iso]),
         max(0, LCOE_TABLES['h2'][ldes_name][iso] + get_tx('h2', tx_name, iso) - STORAGE_REVENUE_CREDITS['h2'][iso]),
+        sb4_price,  # _COL_SB4
+        sb8_price,  # _COL_SB8
+        wb4_price,  # _COL_WB4
+        wb8_price,  # _COL_WB8
     ], dtype=np.float64)
 
     return prices, wholesale, nuclear_price, ccs_price
@@ -897,7 +975,7 @@ def precompute_all_prices(iso, all_combos, target_year=None):
             uses static L/M/H costs from the LCOE tables.
 
     Returns:
-        price_matrix: (B, 13) float64 price vectors
+        price_matrix: (B, 17) float64 price vectors
         wholesale_arr: (B,) float64 wholesale prices
         nuclear_arr: (B,) float64 nuclear new-build prices
         ccs_arr: (B,) float64 CCS tranche prices
@@ -929,6 +1007,20 @@ def precompute_all_prices(iso, all_combos, target_year=None):
     for rtype in ['solar', 'wind', 'offshore_wind', 'clean_firm', 'ccs_ccgt', 'battery', 'battery8', 'ldes', 'h2']:
         for tx_name in ['None', 'Low', 'Medium', 'High']:
             _tx_cache[(rtype, tx_name)] = get_tx(rtype, tx_name, iso)
+
+    # Pre-resolve hybrid transmission (AC-rating-adjusted for solar, passthrough for wind)
+    _htx_cache = {}
+    for htype in HYBRID_TYPES:
+        for tx_name in ['None', 'Low', 'Medium', 'High']:
+            _htx_cache[(htype, tx_name)] = get_hybrid_tx(htype, tx_name, iso)
+
+    # Pre-resolve hybrid battery LCOS (before ITC) per batt level
+    _hb4_lcos = {name: HYBRID_BATTERY_LCOS['battery4'][name][iso] for name in ['Low', 'Medium', 'High']}
+    _hb8_lcos = {name: HYBRID_BATTERY_LCOS['battery8'][name][iso] for name in ['Low', 'Medium', 'High']}
+    # DC:AC ratios for solar hybrids
+    _dcac_sb4 = HYBRID_DC_AC_RATIOS['solar_batt4'][iso]
+    _dcac_sb8 = HYBRID_DC_AC_RATIOS['solar_batt8'][iso]
+    _itc_mult = 1.0 - ITC_STORAGE_RATE
 
     # Pre-compute year-adjusted FOAK→NOAK costs if target_year provided
     # Each (technology, toggle_level) gets a pre-resolved cost for this year
@@ -1083,6 +1175,15 @@ def precompute_all_prices(iso, all_combos, target_year=None):
             price_matrix[j, _COL_BAT8] = max(0, _bat8_lcoe_iso[batt_name] - _rc_bat8)
         price_matrix[j, _COL_LDES] = max(0, ldes_price - _rc_ldes)
         price_matrix[j, _COL_H2] = max(0, h2_price - _rc_h2)
+
+        # Hybrid prices: component-additive LCOE with ITC discount and AC-adjusted TX
+        _b4_itc = _hb4_lcos[batt_name] * _itc_mult
+        _b8_itc = _hb8_lcos[batt_name] * _itc_mult
+        price_matrix[j, _COL_SB4] = _sol_lcoe_iso[ren_name] / _dcac_sb4 + _b4_itc + _htx_cache[('solar_batt4', tx_name)]
+        price_matrix[j, _COL_SB8] = _sol_lcoe_iso[ren_name] / _dcac_sb8 + _b8_itc + _htx_cache[('solar_batt8', tx_name)]
+        price_matrix[j, _COL_WB4] = _wnd_lcoe_iso[ren_name] + _b4_itc + _htx_cache[('wind_batt4', tx_name)]
+        price_matrix[j, _COL_WB8] = _wnd_lcoe_iso[ren_name] + _b8_itc + _htx_cache[('wind_batt8', tx_name)]
+
         wholesale_arr[j] = wholesale
         nuclear_arr[j] = nuclear_price
         ccs_arr[j] = ccs_price
@@ -1234,12 +1335,24 @@ def preextract_winner_data(arrays, extras, unique_indices, iso, demand_twh):
     h2_arr = arrays.get('h2_dispatch_pct')
     h2_vals = h2_arr[idx_arr] if h2_arr is not None else np.zeros(n)
 
-    # CCS = 100 - sum of other resources including geothermal (int arithmetic for consistency)
+    # Hybrid resources
+    sb4_arr = arrays.get('solar_batt4')
+    sb4_vals = sb4_arr[idx_arr] if sb4_arr is not None else np.zeros(n, dtype=np.float64)
+    sb8_arr = arrays.get('solar_batt8')
+    sb8_vals = sb8_arr[idx_arr] if sb8_arr is not None else np.zeros(n, dtype=np.float64)
+    wb4_arr = arrays.get('wind_batt4')
+    wb4_vals = wb4_arr[idx_arr] if wb4_arr is not None else np.zeros(n, dtype=np.float64)
+    wb8_arr = arrays.get('wind_batt8')
+    wb8_vals = wb8_arr[idx_arr] if wb8_arr is not None else np.zeros(n, dtype=np.float64)
+
+    # CCS = 100 - sum of other resources including geothermal and hybrids (int arithmetic for consistency)
     geo_arr = arrays.get('geothermal')
     geo_vals = geo_arr[idx_arr].astype(np.int64) if geo_arr is not None else np.zeros(n, dtype=np.int64)
     ccs_vals = np.maximum(0, 100 - (cf_vals.astype(np.int64) + sol_vals.astype(np.int64) +
                                      wnd_vals.astype(np.int64) + hyd_vals.astype(np.int64) +
-                                     osw_vals.astype(np.int64) + geo_vals))
+                                     osw_vals.astype(np.int64) + geo_vals +
+                                     sb4_vals.astype(np.int64) + sb8_vals.astype(np.int64) +
+                                     wb4_vals.astype(np.int64) + wb8_vals.astype(np.int64)))
 
     # Batch extract from extras
     match_frac_vals = extras['match_frac'][idx_arr]
@@ -1268,14 +1381,17 @@ def preextract_winner_data(arrays, extras, unique_indices, iso, demand_twh):
     #   [4]ldes, [5]match_frac, [6]cf_ex_twh, [7]uprate_twh, [8]geo_twh,
     #   [9]remaining_twh, [10]new_cf_twh, [11]gas_needed_mw, [12]ex_gas_used_mw,
     #   [13]new_gas_mw, [14]gas_cost_mwh, [15]clean_peak_mw, [16]ra_peak_mw, [17]h2,
-    #   [18]ccs_eligible_twh, [19]nuc_overflow_twh
+    #   [18]ccs_eligible_twh, [19]nuc_overflow_twh,
+    #   [20]sb4, [21]sb8, [22]wb4, [23]wb8
     winner_data = {}
     for pos in range(n):
         winner_data[int(idx_arr[pos])] = (
             {'clean_firm': int(cf_vals[pos]), 'solar': int(sol_vals[pos]),
              'wind': int(wnd_vals[pos]), 'offshore_wind': int(osw_vals[pos]),
              'geothermal': int(geo_vals[pos]),
-             'ccs_ccgt': int(ccs_vals[pos]), 'hydro': int(hyd_vals[pos])},
+             'ccs_ccgt': int(ccs_vals[pos]), 'hydro': int(hyd_vals[pos]),
+             'solar_batt4': int(sb4_vals[pos]), 'solar_batt8': int(sb8_vals[pos]),
+             'wind_batt4': int(wb4_vals[pos]), 'wind_batt8': int(wb8_vals[pos])},
             round(float(match_vals[pos]), 4),
             round(float(bat_vals[pos]), 4),
             round(float(bat8_vals[pos]), 4),
@@ -1295,6 +1411,10 @@ def preextract_winner_data(arrays, extras, unique_indices, iso, demand_twh):
             round(float(h2_vals[pos]), 4),
             round(float(ccs_eligible_twh_vals[pos]), 3),
             round(float(nuc_overflow_twh_vals[pos]), 3),
+            round(float(sb4_vals[pos]), 4),
+            round(float(sb8_vals[pos]), 4),
+            round(float(wb4_vals[pos]), 4),
+            round(float(wb8_vals[pos]), 4),
         )
 
     return winner_data
@@ -1330,6 +1450,10 @@ def build_winner_scenario_from_cache(winner_cache, best_idx, tc_val, wholesale,
         'battery8_dispatch_pct': w[3],
         'ldes_dispatch_pct': w[4],
         'h2_dispatch_pct': w[17],
+        'solar_batt4_pct': w[20],
+        'solar_batt8_pct': w[21],
+        'wind_batt4_pct': w[22],
+        'wind_batt8_pct': w[23],
         'costs': {
             'total_cost': round(tc_val, 2),
             'effective_cost': round(ec_val, 2),
@@ -1380,7 +1504,16 @@ def build_winner_scenario(arrays, extras, best_idx, sens, iso, demand_twh,
     osw = int(osw_arr[best_idx]) if osw_arr is not None else 0
     geo_arr = arrays.get('geothermal')
     geo_mix = int(geo_arr[best_idx]) if geo_arr is not None else 0
-    ccs_alloc = max(0, 100 - (cf + sol + wnd + hyd + osw + geo_mix))
+    # Hybrid resources
+    sb4_arr = arrays.get('solar_batt4')
+    sb4 = int(sb4_arr[best_idx]) if sb4_arr is not None else 0
+    sb8_arr = arrays.get('solar_batt8')
+    sb8 = int(sb8_arr[best_idx]) if sb8_arr is not None else 0
+    wb4_arr = arrays.get('wind_batt4')
+    wb4 = int(wb4_arr[best_idx]) if wb4_arr is not None else 0
+    wb8_arr = arrays.get('wind_batt8')
+    wb8 = int(wb8_arr[best_idx]) if wb8_arr is not None else 0
+    ccs_alloc = max(0, 100 - (cf + sol + wnd + hyd + osw + geo_mix + sb4 + sb8 + wb4 + wb8))
     bat8_arr = arrays.get('battery8_dispatch_pct')
     h2_arr = arrays.get('h2_dispatch_pct')
 
@@ -1417,12 +1550,20 @@ def build_winner_scenario(arrays, extras, best_idx, sens, iso, demand_twh,
             'geothermal': geo_mix,
             'ccs_ccgt': ccs_alloc,
             'hydro': hyd,
+            'solar_batt4': sb4,
+            'solar_batt8': sb8,
+            'wind_batt4': wb4,
+            'wind_batt8': wb8,
         },
         'hourly_match_score': round(float(arrays['hourly_match_score'][best_idx]), 4),
         'battery_dispatch_pct': round(float(arrays['battery_dispatch_pct'][best_idx]), 4),
         'battery8_dispatch_pct': round(float(bat8_arr[best_idx]), 4) if bat8_arr is not None else 0.0,
         'ldes_dispatch_pct': round(float(arrays['ldes_dispatch_pct'][best_idx]), 4),
         'h2_dispatch_pct': round(float(h2_arr[best_idx]), 4) if h2_arr is not None else 0.0,
+        'solar_batt4_pct': round(float(sb4), 4),
+        'solar_batt8_pct': round(float(sb8), 4),
+        'wind_batt4_pct': round(float(wb4), 4),
+        'wind_batt8_pct': round(float(wb8), 4),
         'costs': {
             'total_cost': round(tc_val, 2),
             'effective_cost': round(ec_val, 2),
@@ -1667,6 +1808,10 @@ def _table_to_arrays(table):
     # CAISO geothermal (5th resource dimension)
     if 'geothermal' in table.column_names:
         result['geothermal'] = table.column('geothermal').to_numpy().astype(np.float64)
+    # Hybrid resources (solar_batt4, solar_batt8, wind_batt4, wind_batt8)
+    for col in HYBRID_TYPES:
+        if col in table.column_names:
+            result[col] = table.column(col).to_numpy().astype(np.float64)
     return result
 
 
@@ -1781,8 +1926,17 @@ def arrays_to_mix_dict(arrays, idx):
     osw = int(osw_arr[idx]) if osw_arr is not None else 0
     geo_arr = arrays.get('geothermal')
     geo_val = int(geo_arr[idx]) if geo_arr is not None else 0
+    sb4_arr = arrays.get('solar_batt4')
+    sb4 = int(sb4_arr[idx]) if sb4_arr is not None else 0
+    sb8_arr = arrays.get('solar_batt8')
+    sb8 = int(sb8_arr[idx]) if sb8_arr is not None else 0
+    wb4_arr = arrays.get('wind_batt4')
+    wb4 = int(wb4_arr[idx]) if wb4_arr is not None else 0
+    wb8_arr = arrays.get('wind_batt8')
+    wb8 = int(wb8_arr[idx]) if wb8_arr is not None else 0
     ccs_pct = max(0, 100 - (int(arrays['clean_firm'][idx]) + int(arrays['solar'][idx]) +
-                             int(arrays['wind'][idx]) + int(arrays['hydro'][idx]) + osw + geo_val))
+                             int(arrays['wind'][idx]) + int(arrays['hydro'][idx]) + osw + geo_val
+                             + sb4 + sb8 + wb4 + wb8))
     bat8 = arrays.get('battery8_dispatch_pct')
     h2 = arrays.get('h2_dispatch_pct')
     return {
@@ -1794,12 +1948,20 @@ def arrays_to_mix_dict(arrays, idx):
             'geothermal': geo_val,
             'ccs_ccgt': ccs_pct,
             'hydro': int(arrays['hydro'][idx]),
+            'solar_batt4': sb4,
+            'solar_batt8': sb8,
+            'wind_batt4': wb4,
+            'wind_batt8': wb8,
         },
         'hourly_match_score': round(float(arrays['hourly_match_score'][idx]), 4),
         'battery_dispatch_pct': round(float(arrays['battery_dispatch_pct'][idx]), 4),
         'battery8_dispatch_pct': round(float(bat8[idx]), 4) if bat8 is not None else 0.0,
         'ldes_dispatch_pct': round(float(arrays['ldes_dispatch_pct'][idx]), 4),
         'h2_dispatch_pct': round(float(h2[idx]), 4) if h2 is not None else 0.0,
+        'solar_batt4_pct': round(float(sb4), 4),
+        'solar_batt8_pct': round(float(sb8), 4),
+        'wind_batt4_pct': round(float(wb4), 4),
+        'wind_batt8_pct': round(float(wb8), 4),
     }
 
 
@@ -1901,7 +2063,7 @@ def main():
     # PHASE 1: Base year cross-evaluation (pre-computed + Numba)
     # ================================================================
     # Pre-compute scenario-invariant coefficient arrays per ISO, then
-    # evaluate total_cost as a fused multiply-add (10 coefficients × 10 prices).
+    # evaluate total_cost as a fused multiply-add (17 coefficients × 17 prices).
     # Numba prange parallelizes across CPU cores; no temporary arrays.
     print("\n--- PHASE 1: Base year cross-evaluation (pre-computed + Numba) ---")
     print(f"  Numba JIT: {'enabled' if HAS_NUMBA else 'DISABLED (numpy fallback)'}")
@@ -2641,6 +2803,10 @@ def main():
                 row['battery8_dispatch_pct'] = sc.get('battery8_dispatch_pct')
                 row['ldes_dispatch_pct'] = sc.get('ldes_dispatch_pct')
                 row['h2_dispatch_pct'] = sc.get('h2_dispatch_pct', 0)
+                row['solar_batt4_pct'] = sc.get('solar_batt4_pct', 0)
+                row['solar_batt8_pct'] = sc.get('solar_batt8_pct', 0)
+                row['wind_batt4_pct'] = sc.get('wind_batt4_pct', 0)
+                row['wind_batt8_pct'] = sc.get('wind_batt8_pct', 0)
                 for k, v in sc.get('costs', {}).items():
                     row[f'cost_{k}'] = v
                 for k, v in sc.get('tranche_costs', {}).items():
@@ -2802,13 +2968,28 @@ def main():
                         osw = int(_osw_a[mix_idx]) if _osw_a is not None else 0
                         _geo_a = arrs_.get('geothermal')
                         geo_mix = int(_geo_a[mix_idx]) if _geo_a is not None else 0
+                        # Hybrid resources
+                        _sb4_a = arrs_.get('solar_batt4')
+                        sb4_ = int(_sb4_a[mix_idx]) if _sb4_a is not None else 0
+                        _sb8_a = arrs_.get('solar_batt8')
+                        sb8_ = int(_sb8_a[mix_idx]) if _sb8_a is not None else 0
+                        _wb4_a = arrs_.get('wind_batt4')
+                        wb4_ = int(_wb4_a[mix_idx]) if _wb4_a is not None else 0
+                        _wb8_a = arrs_.get('wind_batt8')
+                        wb8_ = int(_wb8_a[mix_idx]) if _wb8_a is not None else 0
+
                         row['mix_clean_firm'] = cf
                         row['mix_solar'] = sol
                         row['mix_wind'] = wnd
                         row['mix_offshore_wind'] = osw
                         row['mix_geothermal'] = geo_mix
-                        row['mix_ccs_ccgt'] = max(0, 100 - (cf + sol + wnd + hyd + osw + geo_mix))
+                        row['mix_ccs_ccgt'] = max(0, 100 - (cf + sol + wnd + hyd + osw + geo_mix
+                                                             + sb4_ + sb8_ + wb4_ + wb8_))
                         row['mix_hydro'] = hyd
+                        row['mix_solar_batt4'] = sb4_
+                        row['mix_solar_batt8'] = sb8_
+                        row['mix_wind_batt4'] = wb4_
+                        row['mix_wind_batt8'] = wb8_
                         row['hourly_match_score'] = float(
                             arrs_['hourly_match_score'][mix_idx])
 
