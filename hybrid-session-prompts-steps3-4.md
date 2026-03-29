@@ -284,3 +284,292 @@ Two options:
 
 ### Commit
 Commit with message: "Add hybrid resource support to dispatch_utils core functions — dynamic resource types in dispatch, archetype key, and supply profiles"
+
+---
+
+## Session H: Step 3A — Dispatch Cache Hybrid Integration
+
+### Task
+Update `step3a_build_dispatch_cache.py` to extract, dispatch, cache, and manifest hybrid resource columns. After this session, the dispatch cache will contain per-resource matched/surplus profiles for all 10 resource types (6 base + 4 hybrid), and all downstream Step 4 scripts can consume hybrid data.
+
+### Branch
+Develop on branch `claude/integrate-hybrid-resources-2pk5J`
+
+### Prerequisites
+- Session A complete (pipeline_config.py hybrid constants)
+- Session G complete (dispatch_utils.py core hybrid dispatch)
+
+### Background
+
+**What step3a does:** Reads unique resource mixes from Step 2.2 parquets, runs `reconstruct_hourly_dispatch(detailed=True)` for each, and saves the 8760-hour per-resource profiles to a parquet-based dispatch cache. It also enriches step3 parquets with actual dispatch share columns and builds an annual manifest.
+
+**What needs to change:** The script has hardcoded `MIX_COLUMNS` (line 54-58), hardcoded resource extraction in `extract_unique_mixes()` (lines 86-103), and hardcoded resource loops in `enrich_parquets_with_dispatch_shares()` and `build_annual_manifest()`. All of these need to dynamically include hybrid columns when present.
+
+**Key design point:** Hybrid detection is automatic — if the Step 2.2 input parquet has `solar_batt4` columns, the script runs in hybrid mode. No CLI flag needed.
+
+### Files to Modify
+
+**`scripts/step3a_build_dispatch_cache.py`** (564 lines):
+
+#### 1. Update imports (line 44-51)
+
+Add hybrid-aware imports:
+```python
+from dispatch_utils import (
+    ISOS, RESOURCE_TYPES, RESOURCE_TYPES_HYBRID, CACHE_VERSION, H,
+    DISPATCH_CACHE_DIR, HYBRID_TYPES,
+    load_common_data, get_supply_profiles, get_demand_profile,
+    build_supply_matrix, reconstruct_hourly_dispatch,
+    _archetype_key, load_dispatch_cache, save_dispatch_cache,
+)
+```
+
+#### 2. Update `MIX_COLUMNS` (line 54-58)
+
+Currently hardcoded to 6 base resources + 4 storage columns. Make it dynamic:
+```python
+MIX_COLUMNS_BASE = [
+    'mix_clean_firm', 'mix_solar', 'mix_wind', 'mix_offshore_wind', 'mix_ccs_ccgt', 'mix_hydro',
+    'battery_dispatch_pct', 'battery8_dispatch_pct',
+    'ldes_dispatch_pct', 'h2_dispatch_pct',
+]
+MIX_COLUMNS_HYBRID = [f'mix_{ht}' for ht in HYBRID_TYPES]
+# e.g. ['mix_solar_batt4', 'mix_solar_batt8', 'mix_wind_batt4', 'mix_wind_batt8']
+```
+
+**IMPORTANT:** Check what column naming convention Step 2.2 uses for hybrid columns. It might be `mix_solar_batt4` (with `mix_` prefix) or `solar_batt4` (without prefix). Read a Step 2.2 output parquet schema to confirm:
+```python
+python -c "import pyarrow.parquet as pq; s = pq.read_schema('data/step2.2-cost/step_2_2a_CAISO.parquet'); print([c for c in s.names if 'batt' in c or 'hybrid' in c])"
+```
+
+#### 3. Update `extract_unique_mixes()` (line 61-111)
+
+Currently extracts 6 hardcoded resource columns into a `resource_pcts` dict. Extend to detect and include hybrid columns:
+
+```python
+def extract_unique_mixes(iso, input_dir):
+    path = find_parquet(input_dir, iso)
+    if not path:
+        return [], False  # Return has_hybrids flag
+
+    avail_cols = pq.read_schema(path).names
+
+    # Detect hybrid columns
+    has_hybrids = any(f'mix_{ht}' in avail_cols or ht in avail_cols for ht in HYBRID_TYPES)
+
+    # Build column list dynamically
+    mix_cols = list(MIX_COLUMNS_BASE)
+    if has_hybrids:
+        mix_cols.extend(MIX_COLUMNS_HYBRID)
+
+    read_cols = [c for c in mix_cols if c in avail_cols]
+    df = pd.read_parquet(path, columns=read_cols)
+    for c in mix_cols:
+        if c not in df.columns:
+            df[c] = 0
+    unique = df.drop_duplicates()
+
+    # Vectorized extraction — base resources
+    cf = unique['mix_clean_firm'].to_numpy(dtype=np.float64)
+    sol = unique['mix_solar'].to_numpy(dtype=np.float64)
+    wnd = unique['mix_wind'].to_numpy(dtype=np.float64)
+    osw = unique['mix_offshore_wind'].to_numpy(dtype=np.float64)
+    ccs = unique['mix_ccs_ccgt'].to_numpy(dtype=np.float64)
+    hyd = unique['mix_hydro'].to_numpy(dtype=np.float64)
+    bat = unique['battery_dispatch_pct'].to_numpy(dtype=np.float64)
+    bat8 = unique['battery8_dispatch_pct'].to_numpy(dtype=np.float64)
+    ldes = unique['ldes_dispatch_pct'].to_numpy(dtype=np.float64)
+    h2 = unique['h2_dispatch_pct'].to_numpy(dtype=np.float64)
+
+    # Hybrid columns (zeros if not present)
+    hybrid_arrs = {}
+    if has_hybrids:
+        for ht in HYBRID_TYPES:
+            col = f'mix_{ht}' if f'mix_{ht}' in unique.columns else ht
+            hybrid_arrs[ht] = unique[col].to_numpy(dtype=np.float64) if col in unique.columns else np.zeros(len(unique))
+
+    n = len(unique)
+    mixes = [None] * n
+    for i in range(n):
+        rp = {
+            'clean_firm': cf[i], 'solar': sol[i], 'wind': wnd[i],
+            'offshore_wind': osw[i], 'ccs_ccgt': ccs[i], 'hydro': hyd[i],
+        }
+        if has_hybrids:
+            for ht in HYBRID_TYPES:
+                rp[ht] = hybrid_arrs[ht][i]
+
+        mixes[i] = {
+            'resource_pcts': rp,
+            'battery_dispatch_pct': bat[i],
+            'battery8_dispatch_pct': bat8[i],
+            'ldes_dispatch_pct': ldes[i],
+            'h2_dispatch_pct': h2[i],
+        }
+
+    return mixes, has_hybrids
+```
+
+**Note:** The return signature changes from `list` to `(list, bool)`. Update all callers of `extract_unique_mixes()`.
+
+#### 4. Update `build_cache_for_iso()` (line 114-166)
+
+Pass hybrid-aware supply profiles and resource types to the dispatch engine:
+
+```python
+def build_cache_for_iso(iso, unique_mixes, demand_data, gen_profiles,
+                         existing_cache=None, force=False, has_hybrids=False):
+    rtypes = RESOURCE_TYPES_HYBRID if has_hybrids else RESOURCE_TYPES
+    supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=has_hybrids)
+    supply_matrix = build_supply_matrix(supply_profiles, resource_types=rtypes)
+    demand_norm, total_mwh = get_demand_profile(iso, demand_data)
+
+    cache = {}
+    computed = 0
+    skipped = 0
+
+    for mix_info in unique_mixes:
+        rp = mix_info['resource_pcts']
+        key = _archetype_key(
+            iso, rp, 100,
+            mix_info['battery_dispatch_pct'],
+            mix_info['battery8_dispatch_pct'],
+            mix_info['ldes_dispatch_pct'],
+        )
+
+        if not force and key in cache:
+            skipped += 1
+            continue
+
+        result = reconstruct_hourly_dispatch(
+            demand_norm, supply_profiles, rp,
+            100,
+            mix_info['battery_dispatch_pct'],
+            mix_info['battery8_dispatch_pct'],
+            mix_info['ldes_dispatch_pct'],
+            supply_matrix=supply_matrix,
+            detailed=True,
+            h2_dispatch_pct=mix_info['h2_dispatch_pct'],
+            resource_types=rtypes,  # NEW — pass dynamic resource types
+        )
+
+        cache[key] = {k: v for k, v in result.items()}
+        computed += 1
+
+    return cache, computed, skipped
+```
+
+#### 5. Update `enrich_parquets_with_dispatch_shares()` (line 169-261)
+
+Add hybrid resource columns to the archetype key construction. The function builds `rp` dicts from parquet columns — these need hybrid entries:
+
+In the loop (line 210-213), extend the `rp` dict:
+```python
+rp = {
+    'clean_firm': cf[i], 'solar': sol[i], 'wind': wnd[i],
+    'offshore_wind': osw[i], 'ccs_ccgt': ccs[i], 'hydro': hyd[i],
+}
+if has_hybrids:
+    for ht in HYBRID_TYPES:
+        rp[ht] = hybrid_col_arrays[ht][i]
+```
+
+Also extract hybrid column arrays at the top of the function (after line 202):
+```python
+hybrid_col_arrays = {}
+if has_hybrids:
+    for ht in HYBRID_TYPES:
+        col = f'mix_{ht}' if f'mix_{ht}' in df.columns else ht
+        hybrid_col_arrays[ht] = df[col].to_numpy(dtype=np.float64) if col in df.columns else np.zeros(n)
+```
+
+The `has_hybrids` parameter needs to be passed in from `main()`.
+
+#### 6. Update `_enrich_single_parquet()` (line 264-322)
+
+Same pattern as `enrich_parquets_with_dispatch_shares()` — extend the `rp` dict with hybrid columns when present:
+
+```python
+# Detect hybrids in this parquet
+has_hybrids_local = any(ht in df.columns or f'mix_{ht}' in df.columns for ht in HYBRID_TYPES)
+hybrid_col_arrays = {}
+if has_hybrids_local:
+    for ht in HYBRID_TYPES:
+        col = f'mix_{ht}' if f'mix_{ht}' in df.columns else (ht if ht in df.columns else None)
+        hybrid_col_arrays[ht] = df[col].to_numpy(dtype=np.float64) if col else np.zeros(n)
+```
+
+Then in the per-row loop, extend `rp` with hybrid values.
+
+#### 7. Update `build_annual_manifest()` (line 325-415)
+
+Two changes needed:
+
+**a) Add hybrid resource columns to manifest rows (line 353-358):**
+```python
+# Existing base resources
+row['mix_clean_firm'] = rp.get('clean_firm', 0)
+row['mix_solar'] = rp.get('solar', 0)
+# ... etc ...
+
+# Hybrid resources (if present)
+for ht in HYBRID_TYPES:
+    if rp.get(ht, 0) > 0 or has_hybrids:
+        row[f'mix_{ht}'] = rp.get(ht, 0)
+```
+
+**b) Add hybrid dispatch/surplus to the resource loop (line 370-374):**
+```python
+resources_to_iterate = ['clean_firm', 'ccs_ccgt', 'solar', 'wind', 'offshore_wind', 'hydro']
+if has_hybrids:
+    resources_to_iterate.extend(HYBRID_TYPES)
+
+for resource in resources_to_iterate:
+    matched = entry.get(f'matched_{resource}', np.zeros(H))
+    surplus = entry.get(f'surplus_{resource}', np.zeros(H))
+    row[f'{resource}_dispatch_pct'] = float(np.sum(matched)) * 100
+    row[f'{resource}_surplus_pct'] = float(np.sum(surplus)) * 100
+```
+
+#### 8. Update `main()` (line 481-564)
+
+Thread `has_hybrids` through the call chain:
+
+```python
+# In the per-ISO loop:
+unique_mixes, has_hybrids = extract_unique_mixes(iso, input_dir)  # Updated return
+if has_hybrids:
+    print(f"    Hybrid mode: detected hybrid resource columns")
+
+# Pass to build_cache_for_iso
+cache, computed, skipped = build_cache_for_iso(
+    iso, unique_mixes, demand_data, gen_profiles,
+    force=True, has_hybrids=has_hybrids)
+
+# Pass to enrich
+enrich_parquets_with_dispatch_shares(iso, input_dir, cache, has_hybrids=has_hybrids)
+
+# Pass to manifest
+build_annual_manifest(iso, unique_mixes, cache, has_hybrids=has_hybrids)
+```
+
+Update function signatures to accept `has_hybrids` where needed.
+
+### Critical Pitfalls
+
+1. **Column naming convention**: Step 2.2 parquets may use `mix_solar_batt4` or `solar_batt4`. Check both. The code must handle either convention gracefully.
+
+2. **Dispatch cache format**: `save_dispatch_cache()` in dispatch_utils stores dict entries as list columns in parquet. The new `matched_solar_batt4`, `surplus_solar_batt4`, etc. keys will automatically be saved IF they appear in the result dict. Verify `save_dispatch_cache()` iterates over all dict keys (not a hardcoded list).
+
+3. **Non-hybrid backward compatibility**: When no hybrid columns exist in input, the script must produce identical output to before. Zero hybrid pcts should not change archetype keys (see Session G Option A).
+
+4. **NPZ profile normalization**: Hybrid profiles from `data/hybrid_profiles/` must be normalized to sum=1.0 (same as base profiles). If `get_supply_profiles()` handles this in Session G, no extra work needed here.
+
+### Verification
+1. Run on one ISO: `python scripts/step3a_build_dispatch_cache.py --iso SPP`
+2. Check cache has hybrid entries: `python -c "from dispatch_utils import load_dispatch_cache; c = load_dispatch_cache('SPP'); k = list(c.keys())[0]; print([x for x in c[k].keys() if 'batt' in x])"`
+3. Check manifest has hybrid columns: `python -c "import pandas as pd; df = pd.read_parquet('data/step3-dispatch/SPP_annual_manifest.parquet'); print([c for c in df.columns if 'batt' in c and 'battery' not in c])"`
+4. Verify non-hybrid ISOs still work: run on an ISO without hybrid columns and check output is unchanged.
+
+### Commit
+Commit with message: "Add hybrid resource support to Step 3A dispatch cache — extract, dispatch, cache, and manifest hybrid columns"
