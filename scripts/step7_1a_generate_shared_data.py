@@ -39,8 +39,11 @@ from pipeline_config import (
 )
 THRESHOLDS_NUM = _OUTPUT_THRESHOLDS
 THRESHOLDS = [str(int(t)) if t == int(t) else str(t) for t in THRESHOLDS_NUM]
-RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
-MATCHED_RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes', 'h2']
+RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro',
+             'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
+MATCHED_RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro',
+                     'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8',
+                     'battery', 'battery8', 'ldes', 'h2']
 
 MAC_CAP = 1000  # Cap marginal MAC at $1000/ton
 
@@ -458,6 +461,11 @@ for iso in ISOS:
             iso_data['offshore_wind'].append(int(dg_row.get('mix_offshore_wind', 0)))
             iso_data['ccs_ccgt'].append(int(dg_row['mix_ccs_ccgt']))
             iso_data['hydro'].append(int(dg_row['mix_hydro']))
+            # Hybrid co-located resources (graceful fallback to 0 if columns missing)
+            iso_data['solar_batt4'].append(int(dg_row.get('mix_solar_batt4', 0)))
+            iso_data['solar_batt8'].append(int(dg_row.get('mix_solar_batt8', 0)))
+            iso_data['wind_batt4'].append(int(dg_row.get('mix_wind_batt4', 0)))
+            iso_data['wind_batt8'].append(int(dg_row.get('mix_wind_batt8', 0)))
 
             # Storage: capacity values (for cost calculations in dashboard)
             bat_cap = float(dg_row.get('battery_dispatch_pct', 0))
@@ -479,6 +487,10 @@ for iso in ISOS:
                     'offshore_wind': float(dg_row.get('mix_offshore_wind', 0)),
                     'ccs_ccgt': float(dg_row['mix_ccs_ccgt']),
                     'hydro': float(dg_row['mix_hydro']),
+                    'solar_batt4': float(dg_row.get('mix_solar_batt4', 0)),
+                    'solar_batt8': float(dg_row.get('mix_solar_batt8', 0)),
+                    'wind_batt4': float(dg_row.get('mix_wind_batt4', 0)),
+                    'wind_batt8': float(dg_row.get('mix_wind_batt8', 0)),
                 }
                 akey = _archetype_key(iso, rp, 100, bat_cap, bat8_cap, ldes_cap)
                 if akey in manifest.index:
@@ -579,7 +591,8 @@ for iso in ISOS:
     iso_cd = {
         'demand': [],
         'matched': {r: [] for r in MATCHED_RESOURCES},
-        'surplus': {r: [] for r in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']},
+        'surplus': {r: [] for r in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro',
+                                        'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']},
         'gap': [],
         'battery_charge': [],
         'battery8_charge': [],
@@ -618,7 +631,8 @@ for iso in ISOS:
             for res in MATCHED_RESOURCES:
                 vals = profile.get('matched', {}).get(res, [0]*24)
                 iso_cd['matched'][res].append([round(v, 5) for v in vals])
-            for res in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']:
+            for res in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro',
+                        'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']:
                 vals = profile.get('surplus', {}).get(res, [0]*24)
                 iso_cd['surplus'][res].append([round(v, 5) for v in vals])
         else:
@@ -630,7 +644,8 @@ for iso in ISOS:
             iso_cd['h2_charge'].append([0]*24)
             for res in MATCHED_RESOURCES:
                 iso_cd['matched'][res].append([0]*24)
-            for res in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']:
+            for res in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro',
+                        'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']:
                 iso_cd['surplus'][res].append([0]*24)
 
     compressed_day_data[iso] = iso_cd
@@ -666,7 +681,9 @@ for iso in ISOS:
 # ============================================================================
 
 print("\nExtracting WYN_RESOURCE_COSTS...")
-WYN_RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes', 'h2']
+WYN_RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro',
+                 'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8',
+                 'battery', 'battery8', 'ldes', 'h2']
 wyn_resource_costs = {}
 for iso in ISOS:
     iso_wyn = []
@@ -828,7 +845,7 @@ lines.append('')
 
 # MIX_RESOURCES, MIX_LABELS_MAP, MIX_COLORS
 lines.append("// --- Resource Colors & Labels (used by dashboard, index, region_deepdive) ---")
-lines.append("const MIX_RESOURCES = ['clean_firm', 'geothermal', 'hydro', 'ccs_ccgt', 'offshore_wind', 'wind', 'solar', 'battery', 'battery8', 'ldes', 'h2'];")
+lines.append("const MIX_RESOURCES = ['clean_firm', 'geothermal', 'hydro', 'ccs_ccgt', 'offshore_wind', 'wind', 'wind_batt4', 'wind_batt8', 'solar', 'solar_batt4', 'solar_batt8', 'battery', 'battery8', 'ldes', 'h2'];")
 lines.append('')
 lines.append('const MIX_LABELS_MAP = {')
 lines.append("    clean_firm:    'Nuclear',")
@@ -838,6 +855,10 @@ lines.append("    ccs_ccgt:      'CCS-CCGT',")
 lines.append("    offshore_wind: 'Offshore Wind',")
 lines.append("    wind:          'Onshore Wind',")
 lines.append("    solar:         'Solar',")
+lines.append("    solar_batt4:   'Solar+Batt (4hr)',")
+lines.append("    solar_batt8:   'Solar+Batt (8hr)',")
+lines.append("    wind_batt4:    'Wind+Batt (4hr)',")
+lines.append("    wind_batt8:    'Wind+Batt (8hr)',")
 lines.append("    battery:       'Battery (4hr)',")
 lines.append("    battery8:      'Battery (8hr)',")
 lines.append("    ldes:          'LDES (100hr)',")
@@ -852,6 +873,10 @@ lines.append("    ccs_ccgt:      { fill: 'rgba(100,116,139,0.50)', border: '#647
 lines.append("    offshore_wind: { fill: 'rgba(0,150,136,0.50)',   border: '#009688' },")
 lines.append("    wind:          { fill: 'rgba(34,197,94,0.50)',   border: '#22C55E' },")
 lines.append("    solar:         { fill: 'rgba(245,158,11,0.50)',  border: '#F59E0B' },")
+lines.append("    solar_batt4:   { fill: 'rgba(230,137,11,0.50)',  border: '#E6890B' },")
+lines.append("    solar_batt8:   { fill: 'rgba(204,122,10,0.50)',  border: '#CC7A0A' },")
+lines.append("    wind_batt4:    { fill: 'rgba(26,163,78,0.50)',   border: '#1AA34E' },")
+lines.append("    wind_batt8:    { fill: 'rgba(21,143,66,0.50)',   border: '#158F42' },")
 lines.append("    battery:       { fill: 'rgba(139,92,246,0.50)',  border: '#8B5CF6' },")
 lines.append("    battery8:      { fill: 'rgba(167,139,250,0.50)', border: '#A78BFA' },")
 lines.append("    ldes:          { fill: 'rgba(236,72,153,0.50)',  border: '#EC4899' },")
@@ -865,6 +890,7 @@ lines.append('const RESOURCE_CAPS = {')
 lines.append("    offshore_wind: { NYISO: 37, NEISO: 37, PJM: 30, CAISO: 20 },")
 lines.append("    ccs_ccgt: { ERCOT: 85, PJM: 120, NYISO: 15, NEISO: 10, MISO: 95, SPP: 110 },")
 lines.append("    geothermal: { CAISO: 39 }")
+lines.append("    // Hybrid resources (solar_batt4/8, wind_batt4/8): no separate physical cap — limited by parent renewable resource")
 lines.append('};')
 lines.append('')
 
@@ -1124,7 +1150,8 @@ for iso_idx, iso in enumerate(ISOS):
     lines.append('        },')
 
     # surplus
-    surplus_resources = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
+    surplus_resources = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro',
+                         'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
     lines.append('        surplus: {')
     for res_idx, res in enumerate(surplus_resources):
         res_comma = ',' if res_idx < len(surplus_resources) - 1 else ''
