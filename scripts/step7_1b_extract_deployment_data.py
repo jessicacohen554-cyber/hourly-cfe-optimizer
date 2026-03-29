@@ -57,6 +57,11 @@ RESOURCE_ALIASES = {
     'new_build_storage': 'storage',
     'battery8': 'battery',
     'clean_firm': 'clean_firm',
+    # Hybrid co-located resources
+    'solar_batt4': 'solar_batt4',
+    'solar_batt8': 'solar_batt8',
+    'wind_batt4': 'wind_batt4',
+    'wind_batt8': 'wind_batt8',
 }
 
 

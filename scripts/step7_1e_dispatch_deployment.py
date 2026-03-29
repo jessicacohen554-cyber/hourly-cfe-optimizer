@@ -45,6 +45,8 @@ CAPACITY_FACTORS = {
     'clean_firm': 0.90, 'nuclear_uprate': 0.90,
     'ccs': 0.85, 'ccs_ccgt': 0.85,
     'hydro': 0.40,
+    'solar_batt4': 0.25, 'solar_batt8': 0.25,  # Solar+storage hybrids (CF driven by solar component)
+    'wind_batt4': 0.35, 'wind_batt8': 0.35,    # Wind+storage hybrids (CF driven by wind component)
     'battery': 0.15,   # 4hr daily cycle: 4/24 * 0.85 eff ≈ 0.14
     'ldes': 0.10,      # 100hr, 7-day window, less frequent cycling
     'storage': 0.15,   # generic storage → battery assumption
@@ -55,7 +57,10 @@ PEAK_CREDITS = {
     'solar': 0.30, 'wind': 0.15, 'offshore_wind': 0.30,
     'clean_firm': 0.95, 'nuclear_uprate': 0.95,
     'ccs': 0.90, 'ccs_ccgt': 0.90,
-    'hydro': 0.50, 'battery': 0.80, 'ldes': 0.80,
+    'hydro': 0.50,
+    'solar_batt4': 0.70, 'solar_batt8': 0.80,  # Co-located storage boosts peak credit
+    'wind_batt4': 0.60, 'wind_batt8': 0.70,
+    'battery': 0.80, 'ldes': 0.80,
     'storage': 0.80, 'geothermal': 0.95, 'green_h2': 0.0,
 }
 
@@ -77,6 +82,10 @@ def compute_grid_baseline(iso_dispatch=None, emission_rates=None):
             'hydro': shares.get('hydro', 0),
             'clean_firm': shares.get('clean_firm', 0),
             'ccs_ccgt': shares.get('ccs_ccgt', 0),
+            'solar_batt4': shares.get('solar_batt4', 0),
+            'solar_batt8': shares.get('solar_batt8', 0),
+            'wind_batt4': shares.get('wind_batt4', 0),
+            'wind_batt8': shares.get('wind_batt8', 0),
             'totalPct': round(total_pct, 1),
         }
 
@@ -309,7 +318,7 @@ def main():
     iso_dispatch = {}
     for iso in ISOS:
         demand_norm, total_mwh = get_demand_profile(iso, demand_data)
-        supply_profiles = get_supply_profiles(iso, gen_profiles)
+        supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
         supply_matrix = build_supply_matrix(supply_profiles)
         iso_dispatch[iso] = {
             'demand_norm': demand_norm,

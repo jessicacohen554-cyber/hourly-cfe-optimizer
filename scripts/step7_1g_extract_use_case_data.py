@@ -88,7 +88,10 @@ def extract_tipping_points():
                 continue
 
             # Find the winning (cheapest) mix per scenario
-            mix_cols = ["mix_clean_firm", "mix_solar", "mix_wind"]
+            mix_cols = ["mix_clean_firm", "mix_solar", "mix_wind",
+                        "mix_solar_batt4", "mix_solar_batt8", "mix_wind_batt4", "mix_wind_batt8"]
+            # Filter to columns that actually exist in the dataframe
+            mix_cols = [c for c in mix_cols if c in sub.columns]
             storage_cols = [c for c in ["battery_dispatch_pct", "ldes_dispatch_pct",
                                         "h2_dispatch_pct"] if c in sub.columns]
 
@@ -291,6 +294,10 @@ def extract_datacenter_siting():
                     "clean_firm": round(float(best["mix_clean_firm"]), 1),
                     "solar": round(float(best["mix_solar"]), 1),
                     "wind": round(float(best["mix_wind"]), 1),
+                    "solar_batt4": round(float(best.get("mix_solar_batt4", 0)), 1),
+                    "solar_batt8": round(float(best.get("mix_solar_batt8", 0)), 1),
+                    "wind_batt4": round(float(best.get("mix_wind_batt4", 0)), 1),
+                    "wind_batt8": round(float(best.get("mix_wind_batt8", 0)), 1),
                 },
                 "storage": {
                     "battery": round(float(best.get("battery_dispatch_pct", 0)), 4),
@@ -517,6 +524,10 @@ def extract_grid_resilience():
                 "offshore_wind": float(best.get("mix_offshore_wind", 0)),
                 "ccs_ccgt": float(best.get("mix_ccs_ccgt", 0)),
                 "hydro": float(best.get("mix_hydro", 0)),
+                "solar_batt4": float(best.get("mix_solar_batt4", 0)),
+                "solar_batt8": float(best.get("mix_solar_batt8", 0)),
+                "wind_batt4": float(best.get("mix_wind_batt4", 0)),
+                "wind_batt8": float(best.get("mix_wind_batt8", 0)),
             }
             battery_pct = float(best.get("battery_dispatch_pct", 0))
             battery8_pct = float(best.get("battery8_dispatch_pct", 0))
@@ -657,6 +668,10 @@ def extract_curtailment_economics():
                 "offshore_wind": float(best.get("mix_offshore_wind", 0)),
                 "ccs_ccgt": float(best.get("mix_ccs_ccgt", 0)),
                 "hydro": float(best.get("mix_hydro", 0)),
+                "solar_batt4": float(best.get("mix_solar_batt4", 0)),
+                "solar_batt8": float(best.get("mix_solar_batt8", 0)),
+                "wind_batt4": float(best.get("mix_wind_batt4", 0)),
+                "wind_batt8": float(best.get("mix_wind_batt8", 0)),
             }
 
             result = reconstruct_hourly_dispatch(

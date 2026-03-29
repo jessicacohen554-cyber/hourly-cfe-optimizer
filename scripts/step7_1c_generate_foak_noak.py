@@ -127,6 +127,30 @@ print(f"Gas + carbon 2025: ${(avg_gas_base + scc_2025 * co2_intensity):.1f}/MWh,
       f"2050: ${(gas_base_trajectory[-1] + carbon_adder[-1]):.1f}/MWh")
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# HYBRID RESOURCE LEARNING CURVES
+# ═══════════════════════════════════════════════════════════════════════════════
+# Hybrid FOAK/NOAK — battery component drives the learning (renewable already at scale).
+# FOAK = current combined LCOE at Medium renewable + High battery, NOAK = Low renewable + Low battery.
+# Learning rates reflect battery cost decline (18% for solar hybrids, 15% for wind hybrids).
+
+HYBRID_TECHS = {
+    'solar_batt4':  {'foak': 95,  'noak': 70, 'lr': 0.18, 'label': 'Solar+Batt (4hr)'},
+    'solar_batt8':  {'foak': 105, 'noak': 75, 'lr': 0.18, 'label': 'Solar+Batt (8hr)'},
+    'wind_batt4':   {'foak': 85,  'noak': 60, 'lr': 0.15, 'label': 'Wind+Batt (4hr)'},
+    'wind_batt8':   {'foak': 95,  'noak': 65, 'lr': 0.15, 'label': 'Wind+Batt (8hr)'},
+}
+
+hybrid_learning = {}
+for tech, params in HYBRID_TECHS.items():
+    tech_learning = {}
+    for scenario, (foak_start, noak_year) in LEARNING_WINDOWS.items():
+        fracs = learning_fraction_vec(years, foak_start, noak_year)
+        trajectory = params['foak'] - fracs * (params['foak'] - params['noak'])
+        tech_learning[scenario] = [round(float(v), 1) for v in trajectory]
+    hybrid_learning[tech] = tech_learning
+    print(f"  {params['label']}: FOAK ${params['foak']}/MWh → NOAK ${params['noak']}/MWh")
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # WRITE TO shared-data.js
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -157,6 +181,18 @@ for key in ['base', 'with_carbon']:
     lines.append(f'    {key}: [{vals}],')
 lines.append('};')
 lines.append('')
+lines.append('// Hybrid resource FOAK → NOAK learning curves (battery component drives learning)')
+lines.append('const HYBRID_LEARNING = {')
+for tech, params in HYBRID_TECHS.items():
+    lines.append(f'    {tech}: {{')
+    lines.append(f"        label: '{params['label']}',")
+    lines.append(f"        foak: {params['foak']}, noak: {params['noak']},")
+    for scenario in ['central', 'conservative', 'optimistic']:
+        vals = ', '.join(str(v) for v in hybrid_learning[tech][scenario])
+        lines.append(f'        {scenario}: [{vals}],')
+    lines.append('    },')
+lines.append('};')
+lines.append('')
 
 block = '\n'.join(lines)
 
@@ -172,8 +208,11 @@ if marker_start in content:
     idx_start = content.index(marker_start)
     # Go back to find the preceding separator line
     line_start = content.rfind('\n', 0, idx_start)
-    # Find the end of the GAS_TRUE_COST block
-    search_from = content.index('const GAS_TRUE_COST', idx_start)
+    # Find the end of the HYBRID_LEARNING block (or GAS_TRUE_COST if no hybrid block yet)
+    if 'const HYBRID_LEARNING' in content[idx_start:]:
+        search_from = content.index('const HYBRID_LEARNING', idx_start)
+    else:
+        search_from = content.index('const GAS_TRUE_COST', idx_start)
     idx_end = content.index('};', search_from) + 2
     # Check if there's a trailing newline
     if idx_end < len(content) and content[idx_end] == '\n':
