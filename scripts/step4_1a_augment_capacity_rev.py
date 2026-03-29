@@ -30,7 +30,8 @@ ALL_ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 
 # Resource → category mapping
 CLEAN_FIRM_RES = ['clean_firm', 'geothermal']
-VRE_RES = ['solar', 'wind', 'offshore_wind']
+VRE_RES = ['solar', 'wind', 'offshore_wind',
+           'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
 STORAGE_RES = ['battery', 'battery8', 'ldes', 'h2']
 CCS_RES = ['ccs_ccgt']
 
@@ -42,7 +43,8 @@ def compute_per_resource_cap_rev(iso, threshold):
     degraded = base_price * max(0, 1.0 - alpha * threshold / 100.0)
 
     revs = {}
-    for res in (CLEAN_FIRM_RES + VRE_RES + STORAGE_RES + CCS_RES + ['hydro']):
+    all_res = CLEAN_FIRM_RES + VRE_RES + STORAGE_RES + CCS_RES + ['hydro']
+    for res in all_res:
         elcc = PEAK_CAPACITY_CREDITS.get(res, 0)
         cf = RESOURCE_CAPACITY_FACTORS.get(res, {}).get(iso, 0.30)
         if cf > 0 and elcc > 0 and degraded > 0:
@@ -125,10 +127,10 @@ def process_iso(iso):
         cap_ccs[idx] = weighted_category_rev(pr, row_dict, CCS_RES)
 
         # System average: weighted across all resources
-        all_res = CLEAN_FIRM_RES + VRE_RES + STORAGE_RES + CCS_RES + ['hydro']
+        all_res_loop = CLEAN_FIRM_RES + VRE_RES + STORAGE_RES + CCS_RES + ['hydro']
         total_share = 0
         weighted_rev = 0
-        for r in all_res:
+        for r in all_res_loop:
             share = row_dict.get(f'mix_{r}', 0)
             if share > 0:
                 weighted_rev += pr.get(r, 0) * share
