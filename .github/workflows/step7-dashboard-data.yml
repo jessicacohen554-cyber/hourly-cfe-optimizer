@@ -75,25 +75,29 @@ jobs:
           echo "=== Generating shared-data.js ==="
           python scripts/step7_1a_generate_shared_data.py
 
+      - name: "Commit shared-data.js (intermittent)"
+        run: |
+          git add -f dashboard/js/shared-data.js 2>/dev/null || true
+          git add -f data/step4-analysis/shared_data.json 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "Step 9 Shared Data: shared-data.js — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "  Committed shared-data.js"
+          fi
+
       - name: "Extract Resource Density Data"
         run: |
           echo "=== Extracting resource density data (step6e) ==="
           python scripts/step4_2a_extract_resource_density.py || echo "WARNING: step6e failed (non-fatal)"
 
-      - name: Commit and push
+      - name: Commit remaining and push
         run: |
           git config http.postBuffer 524288000
 
-          git add -f dashboard/js/shared-data.js 2>/dev/null || true
           git add -f dashboard/js/resource-density-data.js 2>/dev/null || true
-          git add -f data/step4-analysis/shared_data.json 2>/dev/null || true
 
-          if git diff --cached --quiet; then
-            echo "No changes to commit"
-            exit 0
+          if ! git diff --cached --quiet; then
+            git commit -m "Step 9 Shared Data: resource-density — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           fi
-
-          git commit -m "Step 9 Shared Data — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           MAX_RETRIES=4
           for i in $(seq 1 $MAX_RETRIES); do
