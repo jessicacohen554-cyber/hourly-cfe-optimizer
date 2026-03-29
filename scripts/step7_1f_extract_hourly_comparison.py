@@ -31,7 +31,8 @@ ACTIVE_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 9
 
 RESOURCE_KEYS = ['solar', 'wind', 'clean_firm', 'nuclear_uprate', 'battery', 'ldes',
                  'green_h2', 'geothermal', 'existing_merchant', 'sss_allocation',
-                 'grid_mix_allocation', 'offshore_wind']
+                 'grid_mix_allocation', 'offshore_wind',
+                 'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
 
 
 def extract_entry(entry):
