@@ -103,6 +103,10 @@ MAX_GEO_ADD = 20
 HYBRID_STEP = 10        # 10% step for hybrids in floor-aware (coarser to control explosion)
 MAX_HYBRID_ADD = 40     # Each hybrid type ≤ 40% (matches HYBRID_MAX_PER_TYPE)
 
+# Memory safety: max rows per generate-score-filter chunk.
+# 4M rows × 10 cols × 8 bytes = 320 MB — well within CI's 7 GB RAM.
+MAX_CHUNK_ROWS = 4_000_000
+
 # Scoring
 CHUNK_SIZE = 20000    # Batch size for hourly scoring
 
@@ -111,183 +115,225 @@ CHUNK_SIZE = 20000    # Batch size for hourly scoring
 # GRID GENERATION
 # ============================================================================
 
+def _build_base_grid(iso):
+    """Build the base (non-hybrid) resource grid as flat arrays.
+
+    Returns (cf, sol, wnd, osw, geo, hydro_val, has_geo) where each array
+    is the absolute resource allocation (floor + addition) after filtering.
+    """
+    existing = GRID_MIX_SHARES[iso]
+    floor_cf = existing.get('clean_firm', 0)
+    floor_sol = existing.get('solar', 0)
+    floor_wnd = existing.get('wind', 0)
+    floor_hyd = existing.get('hydro', 0)
+    hydro_val = min(floor_hyd, HYDRO_CAP_PCT.get(iso, 50))
+
+    cf_add = np.arange(0, MAX_CF_ADD + FIRM_STEP, FIRM_STEP, dtype=np.float64)
+    sol_add = np.arange(0, MAX_SOLAR_ADD + RESOURCE_STEP, RESOURCE_STEP, dtype=np.float64)
+    wnd_add = np.arange(0, MAX_WIND_ADD + RESOURCE_STEP, RESOURCE_STEP, dtype=np.float64)
+
+    if iso in OFFSHORE_ISOS:
+        osw_cap_pct = OFFSHORE_WIND_CAP_TWH.get(iso, 0) / REGIONAL_DEMAND_TWH[iso] * 100
+        osw_max = min(MAX_OSW_ADD, osw_cap_pct + 5)
+        osw_add = np.arange(0, osw_max + OSW_STEP, OSW_STEP, dtype=np.float64)
+    else:
+        osw_add = np.array([0.0])
+
+    if iso in GEOTHERMAL_ISOS:
+        geo_cap_pct = GEOTHERMAL_CAP_TWH / REGIONAL_DEMAND_TWH[iso] * 100
+        geo_max = min(MAX_GEO_ADD, geo_cap_pct + 2)
+        geo_add = np.arange(0, geo_max + GEO_STEP, GEO_STEP, dtype=np.float64)
+    else:
+        geo_add = np.array([0.0])
+
+    n_base = len(cf_add) * len(sol_add) * len(wnd_add) * len(osw_add) * len(geo_add)
+    print(f"  {iso}: {n_base:,} base combos "
+          f"({len(cf_add)} CF × {len(sol_add)} sol × {len(wnd_add)} wnd "
+          f"× {len(osw_add)} osw × {len(geo_add)} geo)")
+
+    grids = np.meshgrid(cf_add, sol_add, wnd_add, osw_add, geo_add, indexing='ij')
+    flat = [g.ravel() for g in grids]
+    cf = floor_cf + flat[0]
+    sol = floor_sol + flat[1]
+    wnd = floor_wnd + flat[2]
+    osw = flat[3]
+    geo = flat[4]
+
+    total = cf + sol + wnd + hydro_val + osw + geo
+    mask = (total <= 350.0) & (total > 0.1)
+    return cf[mask], sol[mask], wnd[mask], osw[mask], geo[mask], hydro_val, iso in GEOTHERMAL_ISOS
+
+
 def generate_floor_aware_grid(iso, include_hybrids=False):
     """Generate resource mixes starting from existing clean floor.
+
+    Non-hybrid mode uses the original single meshgrid approach.
+    Hybrid mode is handled by _process_hybrid_chunked() instead — this
+    function is only called for the non-hybrid path.
 
     Returns:
         mix_batch: numpy array (N, n_resources) of resource allocations (% of demand)
         resource_names: list of resource name strings matching columns
         raw_components: dict of numpy arrays for each resource's original values
     """
-    existing = GRID_MIX_SHARES[iso]
+    cf_vals, sol_vals, wnd_vals, osw_vals, geo_vals, hydro_val, has_geo = _build_base_grid(iso)
 
-    # Fixed floor values
-    floor_cf = existing.get('clean_firm', 0)
-    floor_sol = existing.get('solar', 0)
-    floor_wnd = existing.get('wind', 0)
-    floor_hyd = existing.get('hydro', 0)
-
-    # Hydro is always existing only (capped)
-    hydro_val = min(floor_hyd, HYDRO_CAP_PCT.get(iso, 50))
-
-    # Resource addition ranges
-    cf_additions = np.arange(0, MAX_CF_ADD + FIRM_STEP, FIRM_STEP, dtype=np.float64)
-    sol_additions = np.arange(0, MAX_SOLAR_ADD + RESOURCE_STEP, RESOURCE_STEP, dtype=np.float64)
-    wnd_additions = np.arange(0, MAX_WIND_ADD + RESOURCE_STEP, RESOURCE_STEP, dtype=np.float64)
-
-    # Offshore wind (only for ISOs with offshore resource)
-    if iso in OFFSHORE_ISOS:
-        osw_cap_pct = OFFSHORE_WIND_CAP_TWH.get(iso, 0) / REGIONAL_DEMAND_TWH[iso] * 100
-        osw_max = min(MAX_OSW_ADD, osw_cap_pct + 5)
-        osw_additions = np.arange(0, osw_max + OSW_STEP, OSW_STEP, dtype=np.float64)
-    else:
-        osw_additions = np.array([0.0])
-
-    # Geothermal (CAISO only)
-    if iso in GEOTHERMAL_ISOS:
-        geo_cap_pct = GEOTHERMAL_CAP_TWH / REGIONAL_DEMAND_TWH[iso] * 100
-        geo_max = min(MAX_GEO_ADD, geo_cap_pct + 2)
-        geo_additions = np.arange(0, geo_max + GEO_STEP, GEO_STEP, dtype=np.float64)
-    else:
-        geo_additions = np.array([0.0])
-
-    # Hybrid resource additions (co-located solar+battery, wind+battery)
-    if include_hybrids:
-        sb4_additions = np.arange(0, MAX_HYBRID_ADD + HYBRID_STEP, HYBRID_STEP, dtype=np.float64)
-        sb8_additions = np.arange(0, MAX_HYBRID_ADD + HYBRID_STEP, HYBRID_STEP, dtype=np.float64)
-        wb4_additions = np.arange(0, MAX_HYBRID_ADD + HYBRID_STEP, HYBRID_STEP, dtype=np.float64)
-        wb8_additions = np.arange(0, MAX_HYBRID_ADD + HYBRID_STEP, HYBRID_STEP, dtype=np.float64)
-    else:
-        sb4_additions = np.array([0.0])
-        sb8_additions = np.array([0.0])
-        wb4_additions = np.array([0.0])
-        wb8_additions = np.array([0.0])
-
-    # Count combos
-    n_combos = (len(cf_additions) * len(sol_additions) * len(wnd_additions) *
-                len(osw_additions) * len(geo_additions) *
-                len(sb4_additions) * len(sb8_additions) *
-                len(wb4_additions) * len(wb8_additions))
-
-    hybrid_str = ""
-    if include_hybrids:
-        hybrid_str = (f" × {len(sb4_additions)} sb4 × {len(sb8_additions)} sb8"
-                      f" × {len(wb4_additions)} wb4 × {len(wb8_additions)} wb8")
-    print(f"  {iso}: {n_combos:,} floor-aware combos "
-          f"({len(cf_additions)} CF × {len(sol_additions)} sol × {len(wnd_additions)} wnd "
-          f"× {len(osw_additions)} osw × {len(geo_additions)} geo{hybrid_str})")
-
-    # Build resource names matching the supply_matrix order:
-    # base 6D RESOURCE_TYPES + hybrid extensions
-    resource_names = list(RESOURCE_TYPES)  # ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
-    if include_hybrids:
-        resource_names.extend(s1.HYBRID_TYPES)  # + ['solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
-
-    has_geo = iso in GEOTHERMAL_ISOS
-
-    # Generate grid via meshgrid — chunk if too large
-    all_additions = [cf_additions, sol_additions, wnd_additions, osw_additions, geo_additions]
-    if include_hybrids:
-        all_additions.extend([sb4_additions, sb8_additions, wb4_additions, wb8_additions])
-
-    # OOM protection: if grid too large, increase hybrid step
-    if n_combos > 50_000_000 and include_hybrids:
-        print(f"  WARNING: {n_combos:,} combos too large. Increasing hybrid step to 20%.")
-        sb4_additions = np.arange(0, MAX_HYBRID_ADD + 20, 20, dtype=np.float64)
-        sb8_additions = np.arange(0, MAX_HYBRID_ADD + 20, 20, dtype=np.float64)
-        wb4_additions = np.arange(0, MAX_HYBRID_ADD + 20, 20, dtype=np.float64)
-        wb8_additions = np.arange(0, MAX_HYBRID_ADD + 20, 20, dtype=np.float64)
-        all_additions = [cf_additions, sol_additions, wnd_additions, osw_additions, geo_additions,
-                         sb4_additions, sb8_additions, wb4_additions, wb8_additions]
-        n_combos = 1
-        for a in all_additions:
-            n_combos *= len(a)
-        print(f"  → Reduced to {n_combos:,} combos with 20% hybrid step")
-
-    grids = np.meshgrid(*all_additions, indexing='ij')
-    flat = [g.ravel() for g in grids]
-    cf_vals = floor_cf + flat[0]
-    sol_vals = floor_sol + flat[1]
-    wnd_vals = floor_wnd + flat[2]
-    osw_vals = flat[3]  # offshore wind is all new-build (no existing)
-    geo_vals = flat[4]  # geothermal is all new-build
-
-    # Hybrid values (0 if not in hybrid mode)
-    sb4_vals = flat[5] if include_hybrids else np.zeros_like(cf_vals)
-    sb8_vals = flat[6] if include_hybrids else np.zeros_like(cf_vals)
-    wb4_vals = flat[7] if include_hybrids else np.zeros_like(cf_vals)
-    wb8_vals = flat[8] if include_hybrids else np.zeros_like(cf_vals)
-
-    # CCS residual: implicit (100 - sum of explicit resources including hybrids)
-    explicit_sum = (cf_vals + sol_vals + wnd_vals + hydro_val + osw_vals + geo_vals +
-                    sb4_vals + sb8_vals + wb4_vals + wb8_vals)
+    explicit_sum = cf_vals + sol_vals + wnd_vals + hydro_val + osw_vals + geo_vals
     ccs_vals = np.maximum(0, 100.0 - explicit_sum)
-
-    # Filter: total procurement < 350% (same as step1a)
-    total = explicit_sum
-    mask = total <= 350.0
-    # Also filter: at least some generation
-    mask &= total > 0.1
-
-    # Family cap constraints for hybrids
-    if include_hybrids:
-        solar_fam_cap = s1.SOLAR_FAMILY_CAP.get(iso, 100)
-        wind_fam_cap = s1.WIND_FAMILY_CAP.get(iso, 100)
-        solar_family = sol_vals + sb4_vals + sb8_vals
-        wind_family = wnd_vals + wb4_vals + wb8_vals
-        mask &= solar_family <= solar_fam_cap
-        mask &= wind_family <= wind_fam_cap
-
-    cf_vals = cf_vals[mask]
-    sol_vals = sol_vals[mask]
-    wnd_vals = wnd_vals[mask]
-    osw_vals = osw_vals[mask]
-    geo_vals = geo_vals[mask]
-    ccs_vals = ccs_vals[mask]
-    sb4_vals = sb4_vals[mask]
-    sb8_vals = sb8_vals[mask]
-    wb4_vals = wb4_vals[mask]
-    wb8_vals = wb8_vals[mask]
 
     N = len(cf_vals)
     print(f"  → {N:,} mixes after filtering")
 
-    # Build mix_batch matching resource_names order from get_resource_types()
+    resource_names = list(RESOURCE_TYPES)
     mix_batch = np.zeros((N, len(resource_names)), dtype=np.float64)
-    # Map resource values to their column positions
-    res_vals = {
-        'clean_firm': cf_vals, 'solar': sol_vals, 'wind': wnd_vals,
-        'offshore_wind': osw_vals, 'ccs_ccgt': ccs_vals, 'hydro': np.full(N, hydro_val),
-        'geothermal': geo_vals,
-        'solar_batt4': sb4_vals, 'solar_batt8': sb8_vals,
-        'wind_batt4': wb4_vals, 'wind_batt8': wb8_vals,
-    }
-    for i, rt in enumerate(resource_names):
-        if rt in res_vals:
-            mix_batch[:, i] = res_vals[rt]
+    mix_batch[:, 0] = cf_vals
+    mix_batch[:, 1] = sol_vals
+    mix_batch[:, 2] = wnd_vals
+    mix_batch[:, 3] = osw_vals
+    mix_batch[:, 4] = ccs_vals
+    mix_batch[:, 5] = hydro_val
 
-    # For geothermal scoring: add to clean_firm (both flat baseload profiles)
     if has_geo and geo_vals.max() > 0:
-        cf_idx = resource_names.index('clean_firm')
-        mix_batch[:, cf_idx] = cf_vals + geo_vals
+        mix_batch[:, 0] = cf_vals + geo_vals
 
-    # Store original component values for output
-    raw_components = {
-        'clean_firm': cf_vals.copy(),
-        'solar': sol_vals,
-        'wind': wnd_vals,
-        'hydro': np.full(N, hydro_val),
-        'offshore_wind': osw_vals,
-        'geothermal': geo_vals.copy(),
-        'ccs_ccgt': ccs_vals,
+    return mix_batch, resource_names, {
+        'clean_firm': cf_vals.copy(), 'solar': sol_vals, 'wind': wnd_vals,
+        'hydro': np.full(N, hydro_val), 'offshore_wind': osw_vals,
+        'geothermal': geo_vals.copy(), 'ccs_ccgt': ccs_vals,
     }
-    if include_hybrids:
-        raw_components['solar_batt4'] = sb4_vals
-        raw_components['solar_batt8'] = sb8_vals
-        raw_components['wind_batt4'] = wb4_vals
-        raw_components['wind_batt8'] = wb8_vals
 
-    return mix_batch, resource_names, raw_components
+
+def _process_hybrid_chunked(iso, demand_arr, supply_matrix):
+    """Generate, score, and filter hybrid mixes in memory-bounded chunks.
+
+    Instead of building the full 9D Cartesian grid (which would OOM on CI for
+    most ISOs), this function:
+      1. Builds the base 5D grid as usual (~247K combos)
+      2. Pre-computes + pre-filters the hybrid combo grid
+      3. For each chunk of base mixes, expands with hybrid combos, applies
+         family-budget pruning, scores, and keeps only threshold-relevant results
+      4. Concatenates only the small set of kept results at the end
+
+    Peak memory: MAX_CHUNK_ROWS (4M) × 10 cols × 8 bytes ≈ 320 MB for grid +
+    scoring intermediates. Well under CI's 7 GB limit.
+
+    Returns (scores, raw_components) matching the assign_and_save interface.
+    """
+    cf_base, sol_base, wnd_base, osw_base, geo_base, hydro_val, has_geo = _build_base_grid(iso)
+    n_base = len(cf_base)
+    print(f"  → {n_base:,} base mixes, expanding with hybrids in chunks...")
+
+    sol_cap = s1.SOLAR_FAMILY_CAP.get(iso, 100)
+    wnd_cap = s1.WIND_FAMILY_CAP.get(iso, 100)
+    hybrid_range = np.arange(0, MAX_HYBRID_ADD + HYBRID_STEP, HYBRID_STEP, dtype=np.float64)
+    n_hv = len(hybrid_range)
+
+    # Pre-compute hybrid combo grid (sb4 × sb8 × wb4 × wb8) and pre-filter
+    hg = np.meshgrid(hybrid_range, hybrid_range, hybrid_range, hybrid_range, indexing='ij')
+    h_sb4, h_sb8, h_wb4, h_wb8 = hg[0].ravel(), hg[1].ravel(), hg[2].ravel(), hg[3].ravel()
+    h_mask = ((h_sb4 + h_sb8) <= sol_cap) & ((h_wb4 + h_wb8) <= wnd_cap)
+    h_sb4, h_sb8, h_wb4, h_wb8 = h_sb4[h_mask], h_sb8[h_mask], h_wb4[h_mask], h_wb8[h_mask]
+    n_h = len(h_sb4)
+    print(f"    Hybrid grid: {n_hv}^4 = {n_hv**4:,} → {n_h:,} after pre-filter")
+
+    resource_names = list(RESOURCE_TYPES) + list(s1.HYBRID_TYPES)
+    col_map = {rt: i for i, rt in enumerate(resource_names)}
+    n_cols = len(resource_names)
+
+    all_thresholds = FLOOR_THRESHOLDS + NEAR_MISS_THRESHOLDS
+    min_score = min(all_thresholds) - 2.0
+    max_score = max(all_thresholds) + 5.0
+
+    # Accumulators — only threshold-relevant results are kept
+    comp_keys = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind',
+                 'geothermal', 'ccs_ccgt', 'solar_batt4', 'solar_batt8',
+                 'wind_batt4', 'wind_batt8']
+    kept = {k: [] for k in comp_keys}
+    kept_scores = []
+    total_expanded = 0
+    total_kept = 0
+
+    base_chunk = max(1, MAX_CHUNK_ROWS // max(1, n_h))
+
+    for cs in range(0, n_base, base_chunk):
+        ce = min(cs + base_chunk, n_base)
+        cn = ce - cs
+
+        # Expand: each base mix × each hybrid combo via repeat/tile
+        c_cf  = np.repeat(cf_base[cs:ce], n_h)
+        c_sol = np.repeat(sol_base[cs:ce], n_h)
+        c_wnd = np.repeat(wnd_base[cs:ce], n_h)
+        c_osw = np.repeat(osw_base[cs:ce], n_h)
+        c_geo = np.repeat(geo_base[cs:ce], n_h)
+        c_sb4 = np.tile(h_sb4, cn)
+        c_sb8 = np.tile(h_sb8, cn)
+        c_wb4 = np.tile(h_wb4, cn)
+        c_wb8 = np.tile(h_wb8, cn)
+
+        # Family-budget pruning + procurement cap
+        mask = ((c_sol + c_sb4 + c_sb8) <= sol_cap)
+        mask &= ((c_wnd + c_wb4 + c_wb8) <= wnd_cap)
+        total = c_cf + c_sol + c_wnd + c_osw + c_geo + hydro_val + c_sb4 + c_sb8 + c_wb4 + c_wb8
+        mask &= (total <= 350.0) & (total > 0.1)
+
+        if mask.sum() == 0:
+            continue
+
+        cf = c_cf[mask]; sol = c_sol[mask]; wnd = c_wnd[mask]
+        osw = c_osw[mask]; geo = c_geo[mask]
+        sb4 = c_sb4[mask]; sb8 = c_sb8[mask]
+        wb4 = c_wb4[mask]; wb8 = c_wb8[mask]
+
+        explicit = cf + sol + wnd + hydro_val + osw + geo + sb4 + sb8 + wb4 + wb8
+        ccs = np.maximum(0, 100.0 - explicit)
+
+        N = len(cf)
+        mix_batch = np.zeros((N, n_cols), dtype=np.float64)
+        mix_batch[:, col_map['clean_firm']] = (cf + geo) if has_geo else cf
+        mix_batch[:, col_map['solar']] = sol
+        mix_batch[:, col_map['wind']] = wnd
+        mix_batch[:, col_map['offshore_wind']] = osw
+        mix_batch[:, col_map['ccs_ccgt']] = ccs
+        mix_batch[:, col_map['hydro']] = hydro_val
+        mix_batch[:, col_map['solar_batt4']] = sb4
+        mix_batch[:, col_map['solar_batt8']] = sb8
+        mix_batch[:, col_map['wind_batt4']] = wb4
+        mix_batch[:, col_map['wind_batt8']] = wb8
+
+        scores = score_mixes(mix_batch, demand_arr, supply_matrix)
+        total_expanded += N
+
+        keep = (scores >= min_score) & (scores <= max_score)
+        nk = keep.sum()
+        if nk > 0:
+            kept['clean_firm'].append(cf[keep])
+            kept['solar'].append(sol[keep])
+            kept['wind'].append(wnd[keep])
+            kept['hydro'].append(np.full(nk, hydro_val))
+            kept['offshore_wind'].append(osw[keep])
+            kept['geothermal'].append(geo[keep])
+            kept['ccs_ccgt'].append(ccs[keep])
+            kept['solar_batt4'].append(sb4[keep])
+            kept['solar_batt8'].append(sb8[keep])
+            kept['wind_batt4'].append(wb4[keep])
+            kept['wind_batt8'].append(wb8[keep])
+            kept_scores.append(scores[keep])
+            total_kept += nk
+
+        if cs == 0 or (cs // base_chunk) % 5 == 0:
+            print(f"    Chunk {cs:,}-{ce:,}/{n_base:,}: "
+                  f"{N:,} valid → {nk:,} in threshold range (total kept: {total_kept:,})")
+
+        del mix_batch, scores
+        gc.collect()
+
+    print(f"  Expanded {total_expanded:,} → {total_kept:,} in threshold range")
+
+    if total_kept == 0:
+        return np.array([]), {}
+
+    raw = {k: np.concatenate(v) for k, v in kept.items() if v}
+    return np.concatenate(kept_scores), raw
 
 
 # ============================================================================
@@ -494,11 +540,9 @@ def process_iso(iso, demand_data, gen_profiles, include_hybrids=False):
     supply_matrix = build_supply_matrix(supply_profiles)
 
     # Extend supply matrix with hybrid profiles if needed
-    hybrid_profiles = None
     if include_hybrids:
         hybrid_profiles = s1.load_hybrid_profiles(iso)
         print(f"  Loaded hybrid profiles: {list(hybrid_profiles.keys())}")
-        # Append hybrid profile rows to supply matrix
         hybrid_rows = np.stack([
             np.asarray(hybrid_profiles[ht][:H], dtype=np.float64)
             for ht in s1.HYBRID_TYPES
@@ -506,32 +550,34 @@ def process_iso(iso, demand_data, gen_profiles, include_hybrids=False):
         supply_matrix = np.vstack([supply_matrix, hybrid_rows])
 
     demand_arr = demand_norm
-
-    # Generate floor-aware grid
     t0 = time.time()
-    mix_batch, resource_names, raw_components = generate_floor_aware_grid(
-        iso, include_hybrids=include_hybrids)
 
-    # Score all mixes
-    print(f"  Scoring {len(mix_batch):,} mixes...")
-    scores = score_mixes(mix_batch, demand_arr, supply_matrix)
+    if include_hybrids:
+        # Chunked hybrid path: generate → score → filter per chunk to bound memory
+        scores, raw_components = _process_hybrid_chunked(
+            iso, demand_arr, supply_matrix)
+
+        if len(scores) == 0:
+            print(f"  No mixes in threshold range for {iso}")
+            return 0
+    else:
+        # Original non-hybrid path: single meshgrid
+        mix_batch, resource_names, raw_components = generate_floor_aware_grid(iso)
+        print(f"  Scoring {len(mix_batch):,} mixes...")
+        scores = score_mixes(mix_batch, demand_arr, supply_matrix)
 
     score_time = time.time() - t0
     print(f"  Scored in {score_time:.1f}s")
     print(f"  Score range: {scores.min():.1f}% - {scores.max():.1f}%")
-    print(f"  Score mean: {scores.mean():.1f}%, median: {np.median(scores):.1f}%")
 
-    # Distribution across thresholds
     for t in FLOOR_THRESHOLDS:
         in_range = ((scores >= t - 0.5) & (scores <= t + 5.0)).sum()
         print(f"    t{t:g}: {in_range:,} feasible")
 
-    # Assign to thresholds and save PFS parquets
     saved = assign_and_save(iso, scores, raw_components, OUTPUT_DIR,
                             include_hybrids=include_hybrids)
     print(f"  Total saved: {saved:,} mixes")
 
-    # Write near-miss mixes to shared cache for step1c
     save_near_miss_cache(iso, scores, raw_components)
 
     gc.collect()
