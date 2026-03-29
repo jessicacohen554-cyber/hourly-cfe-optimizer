@@ -106,6 +106,9 @@ WRIGHT_CUMULATIVE_GW_2025 = {
     'nuclear': 2.0, 'ccs': 0.3, 'ldes': 0.01, 'h2': 0.1,
     'geothermal': 0.05, 'battery': 50.0, 'battery8': 50.0,
     'solar': 150.0, 'wind': 150.0, 'offshore_wind': 5.0,
+    # Hybrid co-located (LBNL interconnection queue data, 2024)
+    'solar_batt4': 15.0, 'solar_batt8': 3.0,
+    'wind_batt4': 8.0, 'wind_batt8': 2.0,
 }
 
 # Learning rate = cost reduction per doubling of cumulative capacity
@@ -132,6 +135,11 @@ WRIGHT_LEARNING_RATE = {
     'solar':         {'Fast': 0.0, 'Slow': 0.0},   # Mature tech — no further learning
     'wind':          {'Fast': 0.0, 'Slow': 0.0},   # Mature tech — no further learning
     'offshore_wind': {'Fast': 0.12, 'Slow': 0.08},
+    # Hybrid learning dominated by battery component
+    'solar_batt4':   {'Fast': 0.18, 'Slow': 0.15},
+    'solar_batt8':   {'Fast': 0.18, 'Slow': 0.15},
+    'wind_batt4':    {'Fast': 0.15, 'Slow': 0.12},
+    'wind_batt8':    {'Fast': 0.15, 'Slow': 0.12},
 }
 
 # Background learning (exogenous rest-of-world GW by 2035 and 2050)
@@ -146,6 +154,11 @@ WRIGHT_BACKGROUND_GW = {
     'solar':         {'Fast': (500, 2000), 'Slow': (200, 800)},
     'wind':          {'Fast': (300, 1200), 'Slow': (100, 500)},
     'offshore_wind': {'Fast': (40, 150),  'Slow': (10, 50)},
+    # Hybrid co-located background deployment
+    'solar_batt4':   {'Fast': (80, 350),  'Slow': (25, 100)},
+    'solar_batt8':   {'Fast': (20, 100),  'Slow': (5, 25)},
+    'wind_batt4':    {'Fast': (40, 180),  'Slow': (10, 50)},
+    'wind_batt8':    {'Fast': (10, 60),   'Slow': (3, 15)},
 }
 
 # 45U existing nuclear PTC
@@ -238,7 +251,8 @@ CES_ISOS = {'NYISO', 'NEISO', 'CAISO'}
 # NEISO: CT CCEF for Millstone
 # CAISO: SB 100 counts all zero-carbon
 
-REC_ELIGIBLE = {'solar', 'wind', 'offshore_wind', 'hydro', 'geothermal'}
+REC_ELIGIBLE = {'solar', 'wind', 'offshore_wind', 'hydro', 'geothermal',
+                'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8'}
 CES_ELIGIBLE = REC_ELIGIBLE | {'clean_firm', 'ccs_ccgt'}
 CES_DISCOUNT_FACTOR = 0.60  # ZEC/Tier 3 = ~60% of Tier 1 REC price
 
@@ -270,6 +284,9 @@ RESOURCE_TO_TECH = {
     'offshore_wind': 'offshore_wind', 'ccs_ccgt': 'ccs', 'hydro': 'hydro',
     'battery': 'battery', 'battery8': 'battery8', 'ldes': 'ldes', 'h2': 'h2',
     'geothermal': 'geothermal',
+    # Hybrid co-located — parent tech for Wright's Law + storage learning curve
+    'solar_batt4': 'solar_batt4', 'solar_batt8': 'solar_batt8',
+    'wind_batt4': 'wind_batt4', 'wind_batt8': 'wind_batt8',
 }
 
 
@@ -940,6 +957,33 @@ def get_resource_lcoe(res, iso, lcoe_level, cumulative_gw, learning_speed, year,
             cost = max(noak_val, cost * (1.0 - IRA_ITC_BATTERY_PCT))
         return cost
 
+    elif res in ('solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8'):
+        # Hybrid co-located: component-additive LCOE from pipeline_config
+        # Use the price sensitivity mapping to get ren/batt levels
+        from pipeline_config import get_hybrid_lcoe as _get_hybrid_lcoe
+        # Map lcoe_level (Low/Medium/High) to ren/batt levels
+        # Hybrids use ren_level for the renewable component, same level for battery
+        base_lcoe = _get_hybrid_lcoe(res, lcoe_level, lcoe_level, iso)
+        # Apply Wright's Law learning for the battery component
+        batt_tech = 'battery' if '4' in res else 'battery8'
+        parent_tech = 'solar' if res.startswith('solar') else 'wind'
+        batt_lr = WRIGHT_LEARNING_RATE.get(batt_tech, {}).get(learning_speed, 0.18)
+        batt_ref_gw = WRIGHT_CUMULATIVE_GW_2025.get(batt_tech, 50.0)
+        batt_eff_gw = get_effective_cumulative_gw(batt_tech, cumulative_gw.get(batt_tech, 0),
+                                                   learning_speed, year)
+        # Scale only the battery portion (roughly 30-40% of hybrid LCOE)
+        batt_fraction = 0.35
+        ren_portion = base_lcoe * (1 - batt_fraction)
+        batt_portion = base_lcoe * batt_fraction
+        batt_learned = wright_cost(batt_portion * 1.5, batt_portion * 0.7,
+                                    batt_eff_gw, batt_ref_gw, batt_lr)
+        cost = ren_portion + batt_learned
+        # IRA: solar/wind PTC on renewable component + ITC on battery component
+        if ira_policy == 'on':
+            ptc = IRA_PTC_SOLAR if res.startswith('solar') else IRA_PTC_WIND
+            cost = max(cost * 0.5, cost - ptc * (1 - batt_fraction) - batt_portion * IRA_ITC_BATTERY_PCT)
+        return cost
+
     else:
         return 50  # Fallback
 
@@ -983,7 +1027,8 @@ def _get_ppa_discount(res, ppa_level, iso=None):
         return 0.0
 
     # Map resource to PPA category
-    if res in ('solar', 'wind', 'offshore_wind'):
+    if res in ('solar', 'wind', 'offshore_wind',
+               'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8'):
         category = 'VRE'
     elif res in ('clean_firm', 'ccs_ccgt', 'geothermal', 'ldes', 'h2'):
         category = 'Firm'
@@ -1026,6 +1071,10 @@ def compute_zone_cost(iso, delta_resources, lcoe_level, cumulative_gw,
         # Add transmission for applicable resources
         if res in ('solar', 'wind', 'clean_firm', 'offshore_wind'):
             tx = get_tx(res if res != 'clean_firm' else 'clean_firm', tx_level, iso)
+            lcoe += tx
+        elif res in ('solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8'):
+            from pipeline_config import get_hybrid_tx as _get_hybrid_tx
+            tx = _get_hybrid_tx(res, tx_level, iso)
             lcoe += tx
 
         # Apply PPA discount (reduces developer's required return), scaled by region
@@ -1081,6 +1130,11 @@ def load_step3_data():
                 'ccs_ccgt': float(row.get('mix_ccs_ccgt', 0)),
                 'hydro': float(row.get('mix_hydro', 0)),
             }
+            # Add hybrid resources if present in EF data
+            for ht in ['solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']:
+                val = float(row.get(f'mix_{ht}', row.get(ht, 0)) or 0)
+                if val > 0:
+                    resource_pcts[ht] = val
 
             iso_data[t] = {
                 'resource_pcts': resource_pcts,
@@ -2018,7 +2072,8 @@ def save_results(results, scenario_id):
             }
             # Add resource mix columns
             for res in ['clean_firm', 'solar', 'wind', 'offshore_wind',
-                        'ccs_ccgt', 'hydro', 'battery', 'ldes']:
+                        'ccs_ccgt', 'hydro', 'battery', 'ldes',
+                        'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']:
                 row[f'mix_{res}_twh'] = yr['resource_mix_twh'].get(res, 0)
             rows.append(row)
 
@@ -2284,7 +2339,8 @@ def main():
                     }
                     # Resource mix columns
                     for res in ['clean_firm', 'solar', 'wind', 'offshore_wind',
-                                'ccs_ccgt', 'hydro', 'battery', 'ldes']:
+                                'ccs_ccgt', 'hydro', 'battery', 'ldes',
+                                'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']:
                         row[f'mix_{res}_twh'] = yr['resource_mix_twh'].get(res, 0)
                     all_rows.append(row)
 
