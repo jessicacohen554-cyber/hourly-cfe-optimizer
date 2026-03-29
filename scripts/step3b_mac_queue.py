@@ -247,10 +247,11 @@ def load_pfs_for_threshold(iso, threshold):
     # Also load coarse cache (has mixes across ALL thresholds, useful for interpolation)
     # Coarse cache has different schema: 'score' instead of 'hourly_match_score',
     # no storage columns, no 'iso'/'threshold' columns
-    coarse_file = os.path.join(PFS_DIRS[0], f'{iso}_coarse_cache.parquet')
-    if os.path.isfile(coarse_file):
+    # Supports multi-part cache files via s1.read_coarse_cache_table()
+    coarse_table = s1.read_coarse_cache_table(iso)
+    if coarse_table is not None:
         try:
-            coarse_df = pd.read_parquet(coarse_file)
+            coarse_df = coarse_table.to_pandas()
             # Rename score → hourly_match_score
             if 'score' in coarse_df.columns and 'hourly_match_score' not in coarse_df.columns:
                 coarse_df = coarse_df.rename(columns={'score': 'hourly_match_score'})
