@@ -63,13 +63,24 @@ ZONE_RESOURCE_BUFFER = 5
 # Fine grid step size (percentage points)
 FINE_STEP = 1
 
-# Fine grid radius around boundary archetypes when prior windows unavailable
+# Fine grid radius around boundary archetypes when prior windows unavailable.
+# For D dimensions with radius R, each archetype produces (2R+1)^D combos.
+# 4D: R=4 → 9^4 =  6,561/arch   (×2000 archetypes ≈ 13M → fine)
+# 5D: R=2 → 5^5 =  3,125/arch   (× 500 archetypes ≈  1.6M → fine)
+# 8D: R=2 → 5^8 = 390,625/arch  (× 500 archetypes ≈ 195M → OOM!)
+# 9D: R=2 → 5^9 =  ~2M/arch     (× 500 archetypes ≈  1B  → OOM!)
+# Fix: use R=1 for ≥8D (3^9 = 19,683/arch → × 200 archetypes ≈ 4M → safe)
 FINE_RADIUS_DEFAULT = 4
-FINE_RADIUS_5D = 2  # tighter for CAISO 5D to control combinatorial blowup
+FINE_RADIUS_5D = 2   # 5–7D (CAISO etc.)
+FINE_RADIUS_8D = 1   # 8–9D (ISOs with offshore_wind + 4 hybrids)
 
-# Max fine archetypes per zone (safety cap for 5D ISOs)
+# Max fine archetypes per zone (safety cap by dimensionality)
 MAX_FINE_ARCHETYPES = 2000
 MAX_FINE_ARCHETYPES_5D = 500
+MAX_FINE_ARCHETYPES_8D = 200  # tighter for high-D to keep memory < 2GB
+
+# Hard cap on total combos from archetype expansion (safety net for OOM)
+MAX_ARCHETYPE_TOTAL_COMBOS = 5_000_000
 
 # Scoring chunk size (mixes per batch for batch_hourly_scores)
 SCORE_CHUNK_SIZE = 20000
@@ -331,9 +342,26 @@ def generate_fine_grid(bounds, step=1):
 
 
 def generate_archetype_fine_grid(iso, boundary_mixes, n_res, include_hybrids=False):
-    """Generate fine mixes around boundary archetypes (fallback when no prior windows)."""
-    radius = FINE_RADIUS_5D if n_res >= 5 else FINE_RADIUS_DEFAULT
-    max_arch = MAX_FINE_ARCHETYPES_5D if n_res >= 5 else MAX_FINE_ARCHETYPES
+    """Generate fine mixes around boundary archetypes (fallback when no prior windows).
+
+    Dimension-aware radius and archetype caps prevent OOM on high-D ISOs:
+      4D: radius=4, 2000 archetypes  →  ~13M combos max
+      5-7D: radius=2, 500 archetypes →  ~1.6M combos max
+      8-9D: radius=1, 200 archetypes →  ~4M combos max
+    """
+    if n_res >= 8:
+        radius = FINE_RADIUS_8D
+        max_arch = MAX_FINE_ARCHETYPES_8D
+    elif n_res >= 5:
+        radius = FINE_RADIUS_5D
+        max_arch = MAX_FINE_ARCHETYPES_5D
+    else:
+        radius = FINE_RADIUS_DEFAULT
+        max_arch = MAX_FINE_ARCHETYPES
+
+    per_arch_estimate = (2 * radius + 1) ** n_res
+    print(f"    Archetype grid: {n_res}D, radius={radius}, "
+          f"~{per_arch_estimate:,}/arch, max_arch={max_arch}")
 
     # Vectorized dedup of boundary mixes to integer archetypes
     int_mixes = boundary_mixes.astype(np.int64)
@@ -351,18 +379,31 @@ def generate_archetype_fine_grid(iso, boundary_mixes, n_res, include_hybrids=Fal
         step_size = max(1, len(unique_archetypes) // max_arch)
         unique_archetypes = unique_archetypes[::step_size][:max_arch]
 
-    # Generate fine grid around each archetype
+    print(f"    Using {len(unique_archetypes)} archetypes from "
+          f"{len(int_mixes):,} boundary mixes")
+
+    # Generate fine grid around each archetype, with early-exit on total cap
     parts = []
+    total_combos = 0
     for i in range(len(unique_archetypes)):
         base = unique_archetypes[i].astype(np.float64)
-        fine = s1.generate_resource_combos_around(base, iso, step=FINE_STEP, radius=radius, include_hybrids=include_hybrids)
+        fine = s1.generate_resource_combos_around(
+            base, iso, step=FINE_STEP, radius=radius,
+            include_hybrids=include_hybrids)
         if len(fine) > 0:
             parts.append(fine)
+            total_combos += len(fine)
+        if total_combos >= MAX_ARCHETYPE_TOTAL_COMBOS:
+            print(f"    Hit {MAX_ARCHETYPE_TOTAL_COMBOS:,} combo cap at "
+                  f"archetype {i+1}/{len(unique_archetypes)}")
+            break
 
     if not parts:
         return np.empty((0, n_res), dtype=np.float64)
 
     combos = np.unique(np.vstack(parts), axis=0)
+    print(f"    Archetype grid: {len(combos):,} unique combos "
+          f"(from {total_combos:,} raw)")
     return combos
 
 
@@ -445,12 +486,8 @@ def dominance_filter_arrays(combos, scores, storage_pcts=None):
 # SAVE / COMMIT HELPERS
 # ══════════════════════════════════════════════════════════════════════════════
 
-def save_threshold_pfs(iso, threshold, combos, scores, rtypes):
-    """Save feasible mixes for one threshold as parquet."""
-    if len(combos) == 0:
-        return
-
-    os.makedirs(s1.STEP1_RAW_PFS_PARQUET_DIR, exist_ok=True)
+def _build_pfs_table(iso, threshold, combos, scores, rtypes):
+    """Build a pyarrow Table for PFS mixes (shared by save and batch-save)."""
     data = {
         'iso': [iso] * len(combos),
         'threshold': [float(threshold)] * len(combos),
@@ -463,11 +500,39 @@ def save_threshold_pfs(iso, threshold, combos, scores, rtypes):
     data['ldes_dispatch_pct'] = np.zeros(len(combos), dtype=np.float64)
     data['h2_dispatch_pct'] = np.zeros(len(combos), dtype=np.float64)
     data['hourly_match_score'] = np.round(scores * 100, 2)
+    return pa.table(data)
 
-    table = pa.table(data)
+
+def save_threshold_pfs(iso, threshold, combos, scores, rtypes):
+    """Save feasible mixes for one threshold as parquet."""
+    if len(combos) == 0:
+        return
+
+    os.makedirs(s1.STEP1_RAW_PFS_PARQUET_DIR, exist_ok=True)
+    table = _build_pfs_table(iso, threshold, combos, scores, rtypes)
     t_str = s1._normalize_threshold_str(threshold)
     out_path = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
                             f'{iso}_t{t_str}_raw_pfs.parquet')
+    pq.write_table(table, out_path, compression='snappy')
+    return out_path
+
+
+def save_threshold_pfs_batch(iso, threshold, combos, scores, rtypes,
+                              batch_idx):
+    """Save feasible mixes as a batch file: {ISO}_t{XX}_raw_pfs_b{N}.parquet.
+
+    Step 2.1 already handles this naming pattern and merges batches per
+    ISO/threshold. Each zone's results get their own batch number so
+    partial results survive timeouts.
+    """
+    if len(combos) == 0:
+        return None
+
+    os.makedirs(s1.STEP1_RAW_PFS_PARQUET_DIR, exist_ok=True)
+    table = _build_pfs_table(iso, threshold, combos, scores, rtypes)
+    t_str = s1._normalize_threshold_str(threshold)
+    out_path = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
+                            f'{iso}_t{t_str}_raw_pfs_b{batch_idx}.parquet')
     pq.write_table(table, out_path, compression='snappy')
     return out_path
 
@@ -680,6 +745,23 @@ def _collect_near_miss_indices(combos, scores, thresholds):
     return np.array(sorted(all_nm), dtype=np.int64)
 
 
+def _cleanup_batch_files(iso):
+    """Remove batch files after canonical files have been written.
+
+    When all zones complete, canonical {ISO}_t{XX}_raw_pfs.parquet files
+    contain the full dominance-filtered results. The intermediate batch
+    files (_raw_pfs_b{N}.parquet) are no longer needed.
+    """
+    import glob as globmod
+    pattern = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
+                           f'{iso}_t*_raw_pfs_b*.parquet')
+    batch_files = globmod.glob(pattern)
+    if batch_files:
+        for f in batch_files:
+            os.remove(f)
+        print(f"  Cleaned up {len(batch_files)} batch files")
+
+
 def save_near_miss_interim(iso, all_combos_lists, all_scores_lists, rtypes,
                            thresholds_to_use):
     """Save near-miss parquet from accumulated scored mixes so far.
@@ -882,6 +964,10 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None,
     # ── Process zones ──
     os.makedirs(s1.STEP1_RAW_PFS_PARQUET_DIR, exist_ok=True)
 
+    # Zone batch index for incremental parquet saves.
+    # Maps zone_name → int so each zone's results get a unique batch file.
+    zone_batch_map = {'A': 0, 'B': 1, 'C': 2}
+
     for zone_name, z_score_low, z_score_high, z_thresholds in ZONES:
         # Skip zone if caller requested specific zones and this isn't one of them
         if zones_filter and zone_name not in zones_filter:
@@ -951,6 +1037,26 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None,
             all_combos_list.append(fine_combos)
             all_scores_list.append(fine_scores)
 
+        # 5. Save per-threshold batch files immediately (survive timeouts).
+        #    Each zone writes _raw_pfs_b{N}.parquet per threshold.
+        #    Step 2.1 merges all batch files for a given ISO/threshold.
+        batch_idx = zone_batch_map.get(zone_name, 0)
+        zone_combos = np.vstack(all_combos_list)
+        zone_scores = np.concatenate(all_scores_list)
+        zone_feas, zone_nm = assign_to_thresholds_vectorized(
+            zone_combos, zone_scores, active_thresholds)
+        n_saved = 0
+        for t in active_thresholds:
+            feas_i = zone_feas[t]
+            if len(feas_i) == 0:
+                continue
+            t_combos = zone_combos[feas_i]
+            t_scores = zone_scores[feas_i]
+            save_threshold_pfs_batch(iso, t, t_combos, t_scores, rtypes,
+                                     batch_idx)
+            n_saved += 1
+        print(f"    Saved batch b{batch_idx} for {n_saved} thresholds")
+
         zone_elapsed = time.time() - zone_start
         print(f"    Zone {zone_name} complete: {zone_elapsed:.1f}s")
 
@@ -971,7 +1077,7 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None,
     all_scores = np.concatenate(all_scores_list)
     print(f"  Total unique scored mixes: {len(all_combos):,}")
 
-    # ── Assign to thresholds + save ──
+    # ── Assign to thresholds + save final canonical files ──
     all_thresholds = LOW_THRESHOLDS + ACTIVE_THRESHOLDS
     print(f"\n  Assigning to {len(active_thresholds)} thresholds "
           f"(of {len(all_thresholds)} total)...")
@@ -993,7 +1099,8 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None,
                        demand_arr=demand_arr, supply_matrix=supply_matrix,
                        full_filter=True)
 
-    # Per-threshold: dominance filter + save
+    # Per-threshold: dominance filter + save canonical files.
+    # These overwrite the batch files when all zones complete successfully.
     for t in active_thresholds:
         if t in thresholds_done:
             print(f"    {iso} t{t}%: skipped (already done)")
@@ -1026,6 +1133,9 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None,
 
         thresholds_done.add(t)
         _save_manifest(iso, code_hash, zones_done, thresholds_done)
+
+    # Clean up batch files now that canonical files exist
+    _cleanup_batch_files(iso)
 
     iso_elapsed = time.time() - iso_start
     print(f"\n{'=' * 70}")
