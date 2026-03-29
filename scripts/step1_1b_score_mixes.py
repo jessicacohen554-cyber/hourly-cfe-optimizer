@@ -60,6 +60,12 @@ def _hybrid_cache_path(iso):
     return os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR, f'{iso}_coarse_cache.parquet')
 
 
+def _hybrid_cache_part_path(iso, part_idx):
+    """Path for a numbered part file of the hybrid scored cache."""
+    return os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
+                        f'{iso}_coarse_cache_part{part_idx:03d}.parquet')
+
+
 def load_mixes(iso):
     """Load mixes from step1a parquet, or generate on-the-fly as fallback."""
     rtypes = s1.get_resource_types(iso)
@@ -97,12 +103,19 @@ def load_hybrid_mixes(iso):
     return combos
 
 
-def score_and_save_hybrid_streaming(iso, demand_arr, supply_matrix, chunk_size=20000):
+def score_and_save_hybrid_streaming(iso, demand_arr, supply_matrix,
+                                    chunk_size=20000, max_file_mb=45):
     """Score hybrid mixes in streaming chunks and write directly to parquet.
 
     For large ISOs (NEISO 28M, CAISO 87M), loading all mixes into RAM + scoring
     exceeds the 7 GB GitHub Actions limit. This function reads parquet row groups,
     scores each chunk, and streams scored results to the output parquet.
+
+    When max_file_mb > 0 and a single output file would exceed the limit,
+    output is split into numbered part files:
+      {ISO}_coarse_cache_part001.parquet, _part002.parquet, ...
+    Small ISOs that fit in one file still produce the standard single file:
+      {ISO}_coarse_cache.parquet
 
     Peak memory: chunk_size × 8760 × 8 bytes (scoring) + chunk_size × n_res × 8 (mixes).
     At chunk_size=20000: ~1.4 GB scoring + ~1.6 MB mixes = ~1.4 GB peak.
@@ -110,13 +123,21 @@ def score_and_save_hybrid_streaming(iso, demand_arr, supply_matrix, chunk_size=2
     rtypes = s1.get_resource_types(iso, include_hybrids=True)
     n_res = len(rtypes)
     in_path = _hybrid_mixes_path(iso)
-    out_path = _hybrid_cache_path(iso)
 
     if not os.path.exists(in_path):
         print(f"  ERROR: {in_path} not found. Run step1_1a --hybrid first.")
         sys.exit(1)
 
-    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    os.makedirs(s1.STEP1_RAW_PFS_PARQUET_DIR, exist_ok=True)
+
+    # Clean up any existing part files for this ISO
+    import glob as _glob
+    for old in _glob.glob(os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
+                                       f'{iso}_coarse_cache_part*.parquet')):
+        os.remove(old)
+    single_path = _hybrid_cache_path(iso)
+    if os.path.exists(single_path):
+        os.remove(single_path)
 
     # Read parquet metadata to get total rows
     pf = pq.ParquetFile(in_path)
@@ -131,7 +152,14 @@ def score_and_save_hybrid_streaming(iso, demand_arr, supply_matrix, chunk_size=2
     # Output schema: resource columns + score
     out_schema = pa.schema([(rt, pa.float64()) for rt in rtypes] +
                            [('score', pa.float64())])
-    writer = pq.ParquetWriter(out_path, out_schema, compression='snappy')
+
+    max_file_bytes = max_file_mb * 1024 * 1024 if max_file_mb > 0 else float('inf')
+    part_idx = 1
+    current_path = _hybrid_cache_part_path(iso, part_idx)
+    writer = pq.ParquetWriter(current_path, out_schema, compression='snappy')
+    part_paths = [current_path]
+    part_rows = 0  # rows in current part
+    bytes_per_row = None  # estimated after first part closes
 
     total_scored = 0
 
@@ -150,15 +178,49 @@ def score_and_save_hybrid_streaming(iso, demand_arr, supply_matrix, chunk_size=2
         writer.write_table(pa.table(out_data, schema=out_schema))
 
         total_scored += n_rg
+        part_rows += n_rg
         print(f"    Row group {rg_idx + 1}/{n_row_groups}: "
               f"{n_rg:,} scored ({total_scored:,} total)", flush=True)
+
+        # Estimate whether current part exceeds size limit
+        # Use bytes_per_row from previous parts if available, else estimate
+        # conservatively (~7 bytes/cell with snappy compression on float64)
+        est_bytes_per_row = bytes_per_row if bytes_per_row else (n_res + 1) * 7
+        est_size = part_rows * est_bytes_per_row
+
+        if est_size >= max_file_bytes and rg_idx < n_row_groups - 1:
+            # Close current part and start a new one
+            writer.close()
+            actual_size = os.path.getsize(current_path)
+            bytes_per_row = actual_size / part_rows  # calibrate for next part
+            size_mb = actual_size / (1024 * 1024)
+            print(f"    Part {part_idx}: {size_mb:.1f} MB ({part_rows:,} rows) "
+                  f"— rotating to next part", flush=True)
+            part_idx += 1
+            current_path = _hybrid_cache_part_path(iso, part_idx)
+            part_paths.append(current_path)
+            writer = pq.ParquetWriter(current_path, out_schema, compression='snappy')
+            part_rows = 0
 
         # Free memory
         del rg_table, rg_combos, rg_scores, out_data
 
     writer.close()
-    size_mb = os.path.getsize(out_path) / (1024 * 1024)
-    print(f"  {iso}: Hybrid scored database → {out_path} ({size_mb:.1f} MB)")
+
+    # If only one part and it's small enough, rename to single-file format
+    if len(part_paths) == 1:
+        final_path = _hybrid_cache_path(iso)
+        os.rename(part_paths[0], final_path)
+        size_mb = os.path.getsize(final_path) / (1024 * 1024)
+        print(f"  {iso}: Hybrid scored database → {final_path} ({size_mb:.1f} MB)")
+    else:
+        total_mb = sum(os.path.getsize(p) / (1024 * 1024) for p in part_paths)
+        print(f"  {iso}: Hybrid scored database → {len(part_paths)} parts "
+              f"({total_mb:.1f} MB total)")
+        for p in part_paths:
+            sz = os.path.getsize(p) / (1024 * 1024)
+            print(f"    {os.path.basename(p)}: {sz:.1f} MB")
+
     return total_scored
 
 
@@ -213,6 +275,10 @@ def main():
     parser.add_argument(
         "--hybrid", action="store_true",
         help="Score hybrid mixes (from step1a --hybrid output)",
+    )
+    parser.add_argument(
+        "--max-file-mb", type=int, default=45,
+        help="Max output file size in MB before splitting into parts (default 45, 0=unlimited)",
     )
     args = parser.parse_args()
 
@@ -275,7 +341,8 @@ def main():
 
             # Use streaming scorer for hybrid (avoids loading all mixes into RAM)
             score_and_save_hybrid_streaming(
-                iso, demand_arr, supply_matrix, chunk_size=args.chunk_size)
+                iso, demand_arr, supply_matrix,
+                chunk_size=args.chunk_size, max_file_mb=args.max_file_mb)
         else:
             demand_arr, supply_matrix = s1.prepare_numpy_profiles(
                 iso, demand_norm, supply_profiles)
