@@ -56,8 +56,11 @@ on:
         default: 'master'
         type: string
 
+env:
+  PYTHONUNBUFFERED: "1"
+
 jobs:
-  generate-hybrid-mixes:
+  build-scored-database:
     runs-on: ubuntu-latest
     timeout-minutes: 180
 
@@ -71,6 +74,19 @@ jobs:
         ref: ${{ inputs.branch || 'master' }}
         fetch-depth: 0
 
+    - name: Create output branch
+      run: |
+        TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+        ISO_LABEL="${{ inputs.iso }}"
+        SCRIPT_LABEL="${{ inputs.script }}"
+        TARGET_BRANCH="auto/${TIMESTAMP}-step1-1-scored-db-${SCRIPT_LABEL}-${ISO_LABEL}"
+        echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config http.postBuffer 524288000
+        git checkout -b "$TARGET_BRANCH"
+        echo "Working on branch: $TARGET_BRANCH"
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -83,7 +99,7 @@ jobs:
       run: mkdir -p data/step1-pfs
 
     - name: "Stage 1a: Generate mix combinations"
-      if: ${{ inputs.script == 'ALL' || inputs.script == 'generate-mixes' }}
+      if: inputs.script == 'ALL' || inputs.script == 'generate-mixes'
       run: |
         ISO="${{ inputs.iso }}"
         FLAGS="--hybrid"
@@ -101,7 +117,7 @@ jobs:
         fi
 
     - name: "Stage 1b: Score mix combinations"
-      if: ${{ inputs.dry_run != 'true' && (inputs.script == 'ALL' || inputs.script == 'score-mixes') }}
+      if: inputs.dry_run != true && (inputs.script == 'ALL' || inputs.script == 'score-mixes')
       run: |
         ISO="${{ inputs.iso }}"
         CHUNK="${{ inputs.chunk_size || '50000' }}"
@@ -119,7 +135,7 @@ jobs:
         fi
 
     - name: Report output sizes
-      if: ${{ inputs.dry_run != 'true' }}
+      if: inputs.dry_run != true
       run: |
         echo "=== Mix parquet files ==="
         ls -lh data/step1-pfs/*_mixes.parquet 2>/dev/null || echo "No mix files"
@@ -127,44 +143,15 @@ jobs:
         echo "=== Scored cache files ==="
         ls -lh data/step1-pfs/*_coarse_cache.parquet 2>/dev/null || echo "No scored files"
 
-    - name: Commit and push scored database (batched by ISO)
-      if: ${{ inputs.dry_run != 'true' }}
+    - name: Commit results
+      if: inputs.dry_run != true && always()
       run: |
-        set -euo pipefail
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git config http.postBuffer 524288000
-        git config push.default current
-
-        TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
         ISO_LABEL="${{ inputs.iso }}"
-        SCRIPT_LABEL="${{ inputs.script }}"
-        TARGET_BRANCH="auto/${TIMESTAMP}-step1a-scored-db-${SCRIPT_LABEL}-${ISO_LABEL}"
-        git checkout -b "$TARGET_BRANCH"
-
         if [ "$ISO_LABEL" = "ALL" ]; then
           ISOS="CAISO ERCOT PJM NYISO NEISO MISO SPP"
         else
           ISOS="$ISO_LABEL"
         fi
-
-        push_with_retry() {
-          local label="$1"
-          local MAX_RETRIES=4
-          for i in $(seq 1 $MAX_RETRIES); do
-            echo "  Push attempt $i/$MAX_RETRIES for ${label}..."
-            git push -u origin "$TARGET_BRANCH" 2>&1 && return 0
-            if [ "$i" -eq "$MAX_RETRIES" ]; then
-              echo "  ERROR: Push failed for ${label} after $MAX_RETRIES attempts"
-              return 1
-            fi
-            BACKOFF=$((2 ** i))
-            echo "  Retrying in ${BACKOFF}s..."
-            sleep "$BACKOFF"
-          done
-        }
-
-        PUSHED=false
 
         for iso in $ISOS; do
           echo ""
@@ -185,14 +172,19 @@ jobs:
           BATCH_MB=$(du -cm $FILES | tail -1 | cut -f1)
           echo "  Staging ~${BATCH_MB} MB for $iso"
           git commit -m "Step 1.1: ${iso} scored mixes + cache — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-
-          if push_with_retry "$iso"; then
-            PUSHED=true
-          fi
         done
 
-        if [ "$PUSHED" = true ]; then
-          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
-        else
-          echo "No changes were pushed"
-        fi
+    - name: Push results
+      if: inputs.dry_run != true && always()
+      run: |
+        # Push with retry (exponential backoff)
+        for i in 1 2 3 4; do
+          git push -u origin "$TARGET_BRANCH" && break
+          echo "Push attempt $i failed, retrying in $((2**i))s..."
+          sleep $((2**i))
+        done
+        echo ""
+        echo "════════════════════════════════════════════════════"
+        echo "  Branch: $TARGET_BRANCH"
+        echo "  Merge into master to bank the scored database."
+        echo "════════════════════════════════════════════════════"
