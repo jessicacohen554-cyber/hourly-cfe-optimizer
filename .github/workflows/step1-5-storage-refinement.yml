@@ -179,7 +179,7 @@ jobs:
         SIZE=$(du -h "$NM" | cut -f1)
         echo "OK: $ISO near-miss ($ROWS rows, $SIZE)"
         if [ "$ROWS" -eq 0 ]; then
-          echo "ERROR: Near-miss file is empty (0 rows). Re-run Step 1B."
+          echo "ERROR: Near-miss file is empty (0 rows). Re-run Steps 1.2-1.4."
           exit 1
         fi
 
@@ -202,7 +202,7 @@ jobs:
           echo "label=mid-85-95" >> "$GITHUB_OUTPUT"
         fi
 
-    - name: "Run Step 1C — ${{ matrix.iso }} / ${{ matrix.band }}"
+    - name: "Run Step 1.5 — ${{ matrix.iso }} / ${{ matrix.band }}"
       timeout-minutes: 180
       run: |
         echo "═══════════════════════════════════════════════════════════"
@@ -213,7 +213,7 @@ jobs:
         echo "Running: python scripts/step1_5_storage_refinement.py $ARGS"
         eval python scripts/step1_5_storage_refinement.py $ARGS
 
-    - name: Commit and push results
+    - name: Commit results
       if: always()
       run: |
         ISO="${{ matrix.iso }}"
@@ -233,22 +233,14 @@ jobs:
           echo "No new results to commit (files already match HEAD)."
         fi
 
-        # Push with retry (exponential backoff)
-        PUSH_OK=false
+    - name: Push results
+      if: always()
+      run: |
         for i in 1 2 3 4; do
-          if git push -u origin "$TARGET_BRANCH"; then
-            PUSH_OK=true
-            break
-          fi
+          git push -u origin "$TARGET_BRANCH" && break
           echo "Push attempt $i failed, retrying in $((2**i))s..."
           sleep $((2**i))
         done
-
-        if [ "$PUSH_OK" != "true" ]; then
-          echo "ERROR: Push failed after 4 attempts."
-          exit 1
-        fi
-
         echo "════════════════════════════════════════════════════"
         echo "  Branch: $TARGET_BRANCH"
         echo "  Merge into master to bank the storage results."
@@ -322,14 +314,14 @@ jobs:
         SIZE=$(du -h "$NM" | cut -f1)
         echo "OK: $ISO near-miss ($ROWS rows, $SIZE)"
         if [ "$ROWS" -eq 0 ]; then
-          echo "ERROR: Near-miss file is empty (0 rows). Re-run Step 1B."
+          echo "ERROR: Near-miss file is empty (0 rows). Re-run Steps 1.2-1.4."
           exit 1
         fi
 
     - name: Ensure output directory
       run: mkdir -p data/step1-pfs
 
-    - name: "Run Step 1C — ${{ matrix.iso }} / t${{ matrix.threshold }}%"
+    - name: "Run Step 1.5 — ${{ matrix.iso }} / t${{ matrix.threshold }}%"
       timeout-minutes: 180
       run: |
         echo "═══════════════════════════════════════════════════════════"
@@ -343,7 +335,7 @@ jobs:
         echo "Running: python scripts/step1_5_storage_refinement.py $ARGS"
         eval python scripts/step1_5_storage_refinement.py $ARGS
 
-    - name: Commit and push remaining results
+    - name: Commit remaining results
       if: always()
       run: |
         ISO="${{ matrix.iso }}"
@@ -360,22 +352,14 @@ jobs:
           echo "No additional results to commit (all banked by auto-commit)."
         fi
 
-        # Push with retry (exponential backoff)
-        PUSH_OK=false
+    - name: Push results
+      if: always()
+      run: |
         for i in 1 2 3 4; do
-          if git push -u origin "$TARGET_BRANCH"; then
-            PUSH_OK=true
-            break
-          fi
+          git push -u origin "$TARGET_BRANCH" && break
           echo "Push attempt $i failed, retrying in $((2**i))s..."
           sleep $((2**i))
         done
-
-        if [ "$PUSH_OK" != "true" ]; then
-          echo "ERROR: Push failed after 4 attempts."
-          exit 1
-        fi
-
         echo "════════════════════════════════════════════════════"
         echo "  Branch: $TARGET_BRANCH"
         echo "  Merge into master to bank the storage results."

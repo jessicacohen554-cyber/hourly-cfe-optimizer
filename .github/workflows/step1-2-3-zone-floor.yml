@@ -160,7 +160,7 @@ jobs:
         if [ ! -f "$CACHE" ]; then
           echo "ERROR: Missing scored database for $ISO"
           echo "  Expected: $CACHE"
-          echo "  Run Step 1A (Scored Database) first."
+          echo "  Run Step 1.1 (Scored Database) first."
           exit 1
         fi
         SIZE=$(du -h "$CACHE" | cut -f1)
@@ -203,7 +203,7 @@ jobs:
           git commit -m "Step 1.2 Zone Search: ${ISO} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         fi
 
-    # ── Floor-Aware PFS (1B2) ─────────────────────────────────────────
+    # ── Floor-Aware PFS (1.3) ─────────────────────────────────────────
     - name: "Run Floor-Aware PFS — ${{ matrix.iso }}"
       if: inputs.script == 'All' || inputs.script == 'Floor-Aware (1.3)'
       timeout-minutes: 90
@@ -222,7 +222,7 @@ jobs:
           git commit -m "Step 1.3 Floor-Aware PFS: ${ISO} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         fi
 
-    # ── Fine-Grid PFS (1B3) ───────────────────────────────────────────
+    # ── Fine-Grid PFS (1.4) ───────────────────────────────────────────
     - name: "Run Fine-Grid PFS — ${{ matrix.iso }}"
       if: inputs.script == 'All' || inputs.script == 'Fine-Grid (1.4)'
       timeout-minutes: 150
