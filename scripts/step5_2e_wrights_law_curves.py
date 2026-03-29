@@ -41,6 +41,7 @@ from pipeline_config import (
     ISOS, REGIONAL_DEMAND_TWH, THRESHOLD_TARGET_YEARS,
     DEMAND_GROWTH_RATES as _DEMAND_GROWTH_RATES_PC,
     OFFSHORE_ISOS, ACTIVE_THRESHOLDS, OUTPUT_THRESHOLDS,
+    HYBRID_TYPES,
 )
 sys.path.insert(0, os.path.dirname(SCRIPT_DIR))  # repo root for parquet_io
 
@@ -70,6 +71,11 @@ LEARNING_PARAMS = {
     # Offshore wind (floating): 0.3 GW global base, ~11.5% learning rate.
     # CAISO only. No US commercial experience; first projects ~2030.
     'offshore_wind_float': {'L': (2029, 2037), 'M': (2031, 2042), 'H': (2035, 2050)},
+    # Hybrid co-located (solar+battery, wind+battery): Learning dominated by battery
+    # component — solar/wind already at scale. Battery storage learning rate ~18% for
+    # solar hybrids, ~15% for wind hybrids (weighted by storage share of hybrid LCOE).
+    'solar_storage': {'L': (2026, 2032), 'M': (2027, 2035), 'H': (2029, 2040)},
+    'wind_storage':  {'L': (2026, 2033), 'M': (2027, 2036), 'H': (2029, 2041)},
 }
 LEARNING_EXPONENT = 0.6
 
@@ -145,6 +151,10 @@ FIRST_DOUBLING_GW = {
     'geo':     2.0,           # ~2 GW of enhanced geothermal (CAISO only)
     'offshore_wind_fixed': 10.0,  # ~10 GW US fixed-bottom (83 GW global base, US ramp-up)
     'offshore_wind_float': 2.0,   # ~2 GW floating (only 0.3 GW global, earlier doubling)
+    # Hybrid co-located: battery component already has ~50 GW global base; learning is
+    # incremental. First doubling threshold tracks co-located configurations specifically.
+    'solar_storage': 15.0,    # ~15 GW solar+storage co-located (already ~10 GW US pipeline)
+    'wind_storage':  5.0,     # ~5 GW wind+storage co-located (earlier market, fewer projects)
 }
 
 # Capacity factor assumptions for converting TWh → GW
@@ -156,6 +166,10 @@ CAPACITY_FACTORS = {
     'offshore_wind': {  # Per-ISO CFs (from NREL NOW-23 profiles)
         'CAISO': 0.43, 'PJM': 0.48, 'NYISO': 0.49, 'NEISO': 0.51,
     },
+    # Hybrid CFs: net output after internal battery dispatch. Higher than standalone
+    # VRE because battery smooths output and captures clipped energy.
+    'solar_storage': 0.30,  # Solar (~25%) + battery firming → ~30% net CF
+    'wind_storage':  0.38,  # Wind (~35%) + battery firming → ~38% net CF
 }
 
 
