@@ -77,6 +77,12 @@ body {
     --fossil-coal: #374151;
     --fossil-oil: #92400E;
 
+    /* Hybrid co-located resources (darker shades of parent renewable) */
+    --solar-batt4: #E6890B;
+    --solar-batt8: #CC7A0A;
+    --wind-batt4: #1AA34E;
+    --wind-batt8: #158F42;
+
     /* Transparent variants (55% opacity for chart fills) */
     --solar-t: rgba(245, 158, 11, 0.55);
     --wind-t: rgba(34, 197, 94, 0.55);
@@ -94,6 +100,12 @@ body {
     --storage-t: rgba(239, 68, 68, 0.55);
     --gap-t: rgba(209, 213, 219, 0.55);
 
+    /* Hybrid co-located transparent variants */
+    --solar-batt4-t: rgba(230, 137, 11, 0.55);
+    --solar-batt8-t: rgba(204, 122, 10, 0.55);
+    --wind-batt4-t: rgba(26, 163, 78, 0.55);
+    --wind-batt8-t: rgba(21, 143, 66, 0.55);
+
     /* Light tint variants (for backgrounds, 8-12% opacity) */
     --solar-bg: rgba(245, 158, 11, 0.08);
     --wind-bg: rgba(34, 197, 94, 0.08);
@@ -105,6 +117,10 @@ body {
     --battery4-bg: rgba(6, 182, 212, 0.08);
     --battery8-bg: rgba(8, 145, 178, 0.08);
     --ldes-bg: rgba(233, 30, 99, 0.08);
+    --solar-batt4-bg: rgba(230, 137, 11, 0.08);
+    --solar-batt8-bg: rgba(204, 122, 10, 0.08);
+    --wind-batt4-bg: rgba(26, 163, 78, 0.08);
+    --wind-batt8-bg: rgba(21, 143, 66, 0.08);
     --storage-bg: rgba(239, 68, 68, 0.08);
 
     /* WCAG AA text-safe variants (4.5:1+ on white) - use for text-color on light backgrounds */
