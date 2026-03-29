@@ -1303,6 +1303,8 @@ def generate_resource_combos_around(base_combo, iso, step=1, radius=4, include_h
             caps.append(GEO_CAP_PCT)
         elif rt == 'offshore_wind':
             caps.append(int(OFFSHORE_WIND_CAP_PCT.get(iso, 0)))
+        elif rt in HYBRID_TYPES:
+            caps.append(HYBRID_MAX_PER_TYPE)
         else:
             caps.append(RESOURCE_CAPS[rt])
 
