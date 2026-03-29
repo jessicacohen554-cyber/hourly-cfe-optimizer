@@ -519,10 +519,9 @@ def save_near_miss_cache(iso, scores, raw_components):
 
 def process_iso(iso, demand_data, gen_profiles, include_hybrids=False):
     """Run fine-grid PFS generation for a single ISO."""
-    # Auto-detect hybrid mode from coarse cache
-    coarse_path = os.path.join(OUTPUT_DIR, f'{iso}_coarse_cache.parquet')
-    if not include_hybrids and HAS_PYARROW and os.path.exists(coarse_path):
-        coarse_schema = pq.read_schema(coarse_path)
+    # Auto-detect hybrid mode from coarse cache (supports multi-part files)
+    coarse_schema = s1.read_coarse_cache_schema(iso)
+    if not include_hybrids and coarse_schema is not None:
         if 'solar_batt4' in coarse_schema.names:
             include_hybrids = True
             print(f"  Auto-detected hybrid columns in coarse cache")
