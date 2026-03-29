@@ -49,7 +49,8 @@ from pipeline_config import (
 )
 
 from dispatch_utils import (
-    H, ISOS, RESOURCE_TYPES, CCS_RESIDUAL_EMISSION_RATE,
+    H, ISOS, RESOURCE_TYPES, RESOURCE_TYPES_HYBRID, HYBRID_TYPES,
+    CCS_RESIDUAL_EMISSION_RATE,
     GRID_MIX_SHARES, BASE_DEMAND_TWH,
     load_common_data, get_supply_profiles, get_demand_profile,
     build_supply_matrix,
@@ -100,7 +101,8 @@ def compute_capacity_market_revenue(iso, threshold, resource_mix):
     # Per-resource capacity revenue ($/MWh of that resource's generation)
     per_res = {}
     for res in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt',
-                'hydro', 'battery', 'battery8', 'ldes', 'h2', 'geothermal']:
+                'hydro', 'battery', 'battery8', 'ldes', 'h2', 'geothermal',
+                'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']:
         elcc = PEAK_CAPACITY_CREDITS.get(res, 0)
         cf = RESOURCE_CAPACITY_FACTORS.get(res, {}).get(iso, 0.30)
         if cf > 0 and elcc > 0:
@@ -110,7 +112,8 @@ def compute_capacity_market_revenue(iso, threshold, resource_mix):
 
     # Category aggregation (weighted by resource share within category)
     clean_firm_res = ['clean_firm', 'geothermal']
-    vre_res = ['solar', 'wind', 'offshore_wind']
+    vre_res = ['solar', 'wind', 'offshore_wind',
+               'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
     storage_res = ['battery', 'battery8', 'ldes', 'h2']
     ccs_res = ['ccs_ccgt']
 
@@ -239,6 +242,17 @@ def run_fossil_dispatch_for_iso(iso, demand_data, gen_profiles, emission_rates,
                     'battery8_dispatch_pct', 'ldes_dispatch_pct']
         h2_col = 'h2_dispatch_pct' if 'h2_dispatch_pct' in df.columns else None
 
+        # Detect hybrid columns in parquet schema
+        avail_cols = set(df.columns)
+        hybrid_col_map = {}  # ht -> actual column name
+        for ht in HYBRID_TYPES:
+            if f'mix_{ht}' in avail_cols:
+                hybrid_col_map[ht] = f'mix_{ht}'
+                mix_cols.append(f'mix_{ht}')
+            elif ht in avail_cols:
+                hybrid_col_map[ht] = ht
+                mix_cols.append(ht)
+
         for _, row in df.drop_duplicates(subset=mix_cols + ['threshold', 'scenario']).iterrows():
             rp = {
                 'clean_firm': float(row['mix_clean_firm']),
@@ -248,6 +262,9 @@ def run_fossil_dispatch_for_iso(iso, demand_data, gen_profiles, emission_rates,
                 'ccs_ccgt': float(row['mix_ccs_ccgt']),
                 'hydro': float(row['mix_hydro']),
             }
+            # Add hybrid resources if present
+            for ht, col in hybrid_col_map.items():
+                rp[ht] = float(row.get(col, 0))
             scenarios.append({
                 'resource_mix': rp,
                 'threshold': float(row['threshold']),
@@ -314,13 +331,18 @@ def run_fossil_dispatch_for_iso(iso, demand_data, gen_profiles, emission_rates,
 
             seen_archetypes[dedup_key] = (co2, lmp_stats)
 
-        co2_results.append({
+        co2_entry = {
             'iso': iso,
             'threshold': threshold,
             'scenario': sc['scenario'],
             'archetype_key': key,
             **co2,
-        })
+        }
+        # Include hybrid resource shares in CO2 output for downstream analysis
+        for ht in HYBRID_TYPES:
+            if rp.get(ht, 0) > 0:
+                co2_entry[f'mix_{ht}'] = rp[ht]
+        co2_results.append(co2_entry)
 
         lmp_results.append({
             'iso': iso,
