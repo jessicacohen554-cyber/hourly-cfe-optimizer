@@ -50,7 +50,8 @@ def extract_scenario_data(parquet_path, scenario_code):
 
         # Add resource mix data
         mix_cols = ['mix_clean_firm_twh', 'mix_solar_twh', 'mix_wind_twh', 'mix_offshore_wind_twh',
-                    'mix_ccs_ccgt_twh', 'mix_hydro_twh', 'mix_battery_twh', 'mix_ldes_twh']
+                    'mix_ccs_ccgt_twh', 'mix_hydro_twh', 'mix_battery_twh', 'mix_ldes_twh',
+                    'mix_solar_batt4_twh', 'mix_solar_batt8_twh', 'mix_wind_batt4_twh', 'mix_wind_batt8_twh']
         for col in mix_cols:
             if col in iso_df.columns:
                 data[col] = iso_df[col].round(2).tolist()
@@ -130,7 +131,8 @@ def extract_at_from_sweep(sweep_type, condition_filter):
 
         # Resource mix (P50)
         mix_cols = ['mix_clean_firm_twh', 'mix_solar_twh', 'mix_wind_twh', 'mix_offshore_wind_twh',
-                    'mix_ccs_ccgt_twh', 'mix_hydro_twh', 'mix_battery_twh', 'mix_ldes_twh']
+                    'mix_ccs_ccgt_twh', 'mix_hydro_twh', 'mix_battery_twh', 'mix_ldes_twh',
+                    'mix_solar_batt4_twh', 'mix_solar_batt8_twh', 'mix_wind_batt4_twh', 'mix_wind_batt8_twh']
         for col in mix_cols:
             if col in df.columns:
                 vals = []
