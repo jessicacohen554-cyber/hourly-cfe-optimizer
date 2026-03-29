@@ -1,9 +1,9 @@
-name: "Step 1.2-1.3: Zone Search + Floor PFS"
+name: "Step 1.2–1.4: Zone Search + Floor-Aware + Fine Grid"
 
-# Unified workflow for all Step 1B scripts:
-#   - Zone Search (1B): Score-band zone search, fine 1% mixes per zone
-#   - Floor-Aware (1B2): Floor-aware PFS for 50-70% thresholds (2% step)
-#   - Fine-Grid (1B3): Fine-grid PFS for 40-70% thresholds (1% step)
+# Unified workflow for Steps 1.2, 1.3, and 1.4:
+#   - Zone Search (1.2): Score-band zone search, fine 1% mixes per zone
+#   - Floor-Aware (1.3): Floor-aware PFS for 50-70% thresholds (2% step)
+#   - Fine-Grid (1.4): Fine-grid PFS for 40-70% thresholds (1% step)
 #
 # Use the "script" dropdown to run one script, or "All" to run all three
 # sequentially per ISO.
@@ -15,15 +15,15 @@ on:
   workflow_dispatch:
     inputs:
       script:
-        description: 'Which Step 1B script(s) to run'
+        description: 'Which step to run'
         required: true
         default: 'All'
         type: choice
         options:
           - All
-          - Zone Search (1B)
-          - Floor-Aware (1B2)
-          - Fine-Grid (1B3)
+          - Zone Search (1.2)
+          - Floor-Aware (1.3)
+          - Fine-Grid (1.4)
       iso:
         description: 'ISO region to run'
         required: true
@@ -81,13 +81,13 @@ jobs:
         run: |
           SCRIPT="${{ inputs.script }}"
           case "$SCRIPT" in
-            "All"|"Zone Search (1B)")
+            "All"|"Zone Search (1.2)")
               echo "timeout=360" >> "$GITHUB_OUTPUT"
               ;;
-            "Fine-Grid (1B3)")
+            "Fine-Grid (1.4)")
               echo "timeout=180" >> "$GITHUB_OUTPUT"
               ;;
-            "Floor-Aware (1B2)")
+            "Floor-Aware (1.3)")
               echo "timeout=120" >> "$GITHUB_OUTPUT"
               ;;
             *)
@@ -124,11 +124,11 @@ jobs:
         # Short label for branch name
         SCRIPT="${{ inputs.script }}"
         case "$SCRIPT" in
-          "All")                LABEL="step1b-all" ;;
-          "Zone Search (1B)")   LABEL="step1b-zone-search" ;;
-          "Floor-Aware (1B2)")  LABEL="step1b2-floor-pfs" ;;
-          "Fine-Grid (1B3)")    LABEL="step1b3-fine-grid" ;;
-          *)                    LABEL="step1b" ;;
+          "All")                LABEL="step1-2-3-4-all" ;;
+          "Zone Search (1.2)")  LABEL="step1-2-zone-search" ;;
+          "Floor-Aware (1.3)")  LABEL="step1-3-floor-pfs" ;;
+          "Fine-Grid (1.4)")    LABEL="step1-4-fine-grid" ;;
+          *)                    LABEL="step1-2-3-4" ;;
         esac
         TARGET_BRANCH="auto/${TIMESTAMP}-${LABEL}-${ISO_LOWER}"
         echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
@@ -151,9 +151,9 @@ jobs:
     - name: Ensure output directory
       run: mkdir -p data/step1-pfs
 
-    # ── Zone Search (1B) ──────────────────────────────────────────────
+    # ── Zone Search (1.2) ──────────────────────────────────────────────
     - name: Verify scored database (Zone Search)
-      if: inputs.script == 'All' || inputs.script == 'Zone Search (1B)'
+      if: inputs.script == 'All' || inputs.script == 'Zone Search (1.2)'
       run: |
         ISO="${{ matrix.iso }}"
         CACHE="data/step1-pfs/${ISO}_coarse_cache.parquet"
@@ -167,13 +167,13 @@ jobs:
         echo "OK: $ISO scored database ($SIZE)"
 
     - name: "Compute prior windows (Zone Search)"
-      if: inputs.script == 'All' || inputs.script == 'Zone Search (1B)'
+      if: inputs.script == 'All' || inputs.script == 'Zone Search (1.2)'
       continue-on-error: true
       run: |
         python scripts/step1_prior_windows.py --iso "${{ matrix.iso }}"
 
     - name: "Run Zone Search — ${{ matrix.iso }}"
-      if: inputs.script == 'All' || inputs.script == 'Zone Search (1B)'
+      if: inputs.script == 'All' || inputs.script == 'Zone Search (1.2)'
       run: |
         ISO="${{ matrix.iso }}"
         ARGS="--iso $ISO --auto-commit"
@@ -195,17 +195,17 @@ jobs:
         eval python scripts/step1_2_zone_search.py $ARGS
 
     - name: "Commit Zone Search results"
-      if: (inputs.script == 'All' || inputs.script == 'Zone Search (1B)') && always()
+      if: (inputs.script == 'All' || inputs.script == 'Zone Search (1.2)') && always()
       run: |
         ISO="${{ matrix.iso }}"
         git add -f data/step1-pfs/"${ISO}"_*.parquet 2>/dev/null || true
         if ! git diff --cached --quiet; then
-          git commit -m "Step 1B Zone Search: ${ISO} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "Step 1.2 Zone Search: ${ISO} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         fi
 
     # ── Floor-Aware PFS (1B2) ─────────────────────────────────────────
     - name: "Run Floor-Aware PFS — ${{ matrix.iso }}"
-      if: inputs.script == 'All' || inputs.script == 'Floor-Aware (1B2)'
+      if: inputs.script == 'All' || inputs.script == 'Floor-Aware (1.3)'
       timeout-minutes: 90
       run: |
         echo "═══════════════════════════════════════════════════════════"
@@ -214,17 +214,17 @@ jobs:
         python scripts/step1_3_floor_aware_pfs.py --iso ${{ matrix.iso }}
 
     - name: "Commit Floor-Aware results"
-      if: (inputs.script == 'All' || inputs.script == 'Floor-Aware (1B2)') && always()
+      if: (inputs.script == 'All' || inputs.script == 'Floor-Aware (1.3)') && always()
       run: |
         ISO="${{ matrix.iso }}"
         git add -f data/step1-pfs/"${ISO}"_*.parquet 2>/dev/null || true
         if ! git diff --cached --quiet; then
-          git commit -m "Step 1B2 Floor-Aware PFS: ${ISO} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "Step 1.3 Floor-Aware PFS: ${ISO} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         fi
 
     # ── Fine-Grid PFS (1B3) ───────────────────────────────────────────
     - name: "Run Fine-Grid PFS — ${{ matrix.iso }}"
-      if: inputs.script == 'All' || inputs.script == 'Fine-Grid (1B3)'
+      if: inputs.script == 'All' || inputs.script == 'Fine-Grid (1.4)'
       timeout-minutes: 150
       run: |
         echo "═══════════════════════════════════════════════════════════"
@@ -233,12 +233,12 @@ jobs:
         python scripts/step1_4_fine_grid_pfs.py --iso ${{ matrix.iso }}
 
     - name: "Commit Fine-Grid results"
-      if: (inputs.script == 'All' || inputs.script == 'Fine-Grid (1B3)') && always()
+      if: (inputs.script == 'All' || inputs.script == 'Fine-Grid (1.4)') && always()
       run: |
         ISO="${{ matrix.iso }}"
         git add -f data/step1-pfs/"${ISO}"_*.parquet 2>/dev/null || true
         if ! git diff --cached --quiet; then
-          git commit -m "Step 1B3 Fine-Grid PFS: ${ISO} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "Step 1.4 Fine-Grid PFS: ${ISO} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
         fi
 
     # ── Final push ────────────────────────────────────────────────────
