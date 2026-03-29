@@ -69,6 +69,7 @@ from pipeline_config import (
     ACTIVE_THRESHOLDS,
     ISOS,
     OFFSHORE_ISOS,
+    HYBRID_TYPES,
     DEMAND_GROWTH_RATES as _DEMAND_GROWTH_RATES_PC,
     THRESHOLD_TARGET_YEARS as _THRESHOLD_TARGET_YEARS_PC,
     REGIONAL_DEMAND_TWH as _REGIONAL_DEMAND_TWH_PC,
@@ -109,7 +110,7 @@ except ImportError:
 
 # Single source of truth: pipeline_config
 THRESHOLDS = ACTIVE_THRESHOLDS
-RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes', 'h2']
+RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes', 'h2'] + list(HYBRID_TYPES)
 
 WHOLESALE_PRICES = {
     'CAISO': 30, 'ERCOT': 27, 'PJM': 34, 'NYISO': 42,
@@ -425,7 +426,7 @@ def load_parquet_mixes():
     ef_dir = base_dir / 'data' / 'step2.1-ef'
 
     result = {}
-    mix_resources = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro']
+    mix_resources = ['clean_firm', 'solar', 'wind', 'ccs_ccgt', 'hydro'] + list(HYBRID_TYPES)
     storage_resources = ['battery', 'battery8', 'ldes', 'h2']
 
     for iso in ISOS:
@@ -487,10 +488,14 @@ def load_parquet_mixes():
                 ef_path = ef_dir / f'step2_ef_{iso}_t{t_str}.parquet'
                 if ef_path.exists():
                     try:
-                        ef_df = pd.read_parquet(ef_path,
-                            columns=['clean_firm', 'solar', 'wind', 'hydro',
+                        ef_cols = ['clean_firm', 'solar', 'wind', 'hydro',
                                      'offshore_wind', 'battery_dispatch_pct',
-                                     'ldes_dispatch_pct', 'h2_dispatch_pct'])
+                                     'ldes_dispatch_pct', 'h2_dispatch_pct'] + list(HYBRID_TYPES)
+                        # Only read columns that exist in the parquet
+                        import pyarrow.parquet as _pq
+                        schema_cols = {f.name for f in _pq.read_schema(ef_path)}
+                        ef_cols = [c for c in ef_cols if c in schema_cols]
+                        ef_df = pd.read_parquet(ef_path, columns=ef_cols)
 
                         # Match EF row to step3 winner on resource composition
                         cf_val = iso_mixes['clean_firm'][i]
@@ -510,6 +515,12 @@ def load_parquet_mixes():
                             # take the median — that's the most representative
                             osw = int(round(match['offshore_wind'].median()))
                             iso_mixes['offshore_wind'][i] = osw
+                            # Extract hybrid resources from EF match
+                            for ht in HYBRID_TYPES:
+                                if ht in match.columns:
+                                    ht_val = int(round(match[ht].median()))
+                                    if ht_val > 0:
+                                        iso_mixes[ht][i] = ht_val
                         # else: leave at 0 (no match found)
                     except Exception as e:
                         pass  # Silently fall back to 0
@@ -518,9 +529,11 @@ def load_parquet_mixes():
         # Summary
         osw_nonzero = sum(1 for v in iso_mixes['offshore_wind'] if v > 0)
         h2_nonzero = sum(1 for v in iso_mixes['h2'] if v > 0)
+        hybrid_nonzero = sum(1 for ht in HYBRID_TYPES if any(v > 0 for v in iso_mixes[ht]))
         print(f"  {iso}: loaded mixes from parquets "
               f"(offshore_wind>0 at {osw_nonzero} thresholds, "
-              f"h2>0 at {h2_nonzero} thresholds)")
+              f"h2>0 at {h2_nonzero} thresholds, "
+              f"{hybrid_nonzero} hybrid types active)")
 
     _PARQUET_MIXES = result if result else None
     return result
