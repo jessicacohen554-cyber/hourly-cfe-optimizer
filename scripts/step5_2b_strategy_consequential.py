@@ -44,8 +44,9 @@ from procurement_utils import (
     get_existing_clean_twh, get_sss_twh,
     make_strategy_result, build_25yr_trajectory,
     save_results_json, save_js_data,
-    UPRATE_CAP_TWH,
+    UPRATE_CAP_TWH, get_resource_ppa_price,
 )
+from pipeline_config import HYBRID_TYPES
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # LOAD CONSEQUENTIAL QUEUE (SINGLE SOURCE OF TRUTH FOR DEPLOYMENT ORDERING)
@@ -68,6 +69,11 @@ _RESOURCE_TO_PPA = {
     'hydro': None,         # Existing-only, no PPA
     'battery': None,       # Storage, no generation PPA
     'ldes': None,          # Storage, no generation PPA
+    # Hybrid co-located — PPA covers bundled generation+storage
+    'solar_batt4': 'solar_batt4',
+    'solar_batt8': 'solar_batt8',
+    'wind_batt4': 'wind_batt4',
+    'wind_batt8': 'wind_batt8',
 }
 
 
@@ -182,8 +188,13 @@ def find_cheapest_clean_sources(threshold, scenario='A', level='Medium', ppa_lev
                 continue  # Storage, hydro — no generation PPA
 
             # PPA price for this resource in this ISO (buyer's cost)
-            ppa_price = get_learning_adjusted_ppa(
-                ppa_resource, iso, threshold, scenario, level, ppa_level)
+            if resource in HYBRID_TYPES:
+                # Hybrid PPA pricing via component-additive LCOE
+                ppa_price = get_resource_ppa_price(
+                    resource, iso, threshold, BASE_YEAR, scenario, level, ppa_level)
+            else:
+                ppa_price = get_learning_adjusted_ppa(
+                    ppa_resource, iso, threshold, scenario, level, ppa_level)
             sources.append((iso, ppa_resource, ppa_price, delta_twh))
 
     # If queue didn't provide enough sources, supplement with price-based fallback

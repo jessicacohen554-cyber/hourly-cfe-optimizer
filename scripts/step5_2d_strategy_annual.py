@@ -44,6 +44,7 @@ from procurement_utils import (
     save_results_json, compute_dispatch_hms,
     UPRATE_CAP_TWH, EXISTING_EAC_PRICE,
 )
+from pipeline_config import HYBRID_TYPES
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # ANNUAL MATCHING: NO OVER-PROCUREMENT PENALTY
@@ -257,6 +258,11 @@ def compute_strategy_3b(iso, year, threshold, participation_pct,
         nuc = get_learning_adjusted_ppa('nuclear_newbuild', iso, threshold, scenario, level, ppa_level)
         local_sources.append((iso, 'firm', nuc, BASE_DEMAND_TWH[iso] * 0.10 * buyer_share))
 
+    # Hybrid co-located resources — available at all thresholds
+    for ht in HYBRID_TYPES:
+        ht_price = get_resource_ppa_price(ht, iso, threshold, year, scenario, level, ppa_level)
+        local_sources.append((iso, ht, ht_price, BASE_DEMAND_TWH[iso] * 0.05 * buyer_share))
+
     local_sources.sort(key=lambda s: s[2])
 
     total_cost = 0.0
@@ -289,6 +295,11 @@ def compute_strategy_3b(iso, year, threshold, participation_pct,
 
             w_ppa = get_learning_adjusted_ppa('wind', src_iso, threshold, scenario, level, ppa_level)
             cross_sources.append((src_iso, 'wind', w_ppa, BASE_DEMAND_TWH[src_iso] * 0.12 * src_buyer_share))
+
+            # Hybrid co-located resources
+            for ht in HYBRID_TYPES:
+                ht_price = get_resource_ppa_price(ht, src_iso, threshold, year, scenario, level, ppa_level)
+                cross_sources.append((src_iso, ht, ht_price, BASE_DEMAND_TWH[src_iso] * 0.04 * src_buyer_share))
 
             u_twh = UPRATE_CAP_TWH.get(src_iso, 0)
             if u_twh > 0:
@@ -588,6 +599,11 @@ def compute_strategy_3d(iso, year, threshold, participation_pct,
             src_demand = BASE_DEMAND_TWH[src_iso]
             nb_sources.append((src_iso, 'solar', solar, src_demand * 0.30 * buyer_share))
             nb_sources.append((src_iso, 'wind', wind, src_demand * 0.25 * buyer_share))
+
+            # Hybrid co-located resources
+            for ht in HYBRID_TYPES:
+                ht_price = get_resource_ppa_price(ht, src_iso, threshold, year, scenario, level, ppa_level)
+                nb_sources.append((src_iso, ht, ht_price, src_demand * 0.05 * buyer_share))
 
             if threshold >= 85:
                 firm_price = get_resource_ppa_price('clean_firm', src_iso, threshold, year, scenario, level, ppa_level)
