@@ -82,6 +82,16 @@ jobs:
         if: ${{ inputs.script == 'export-tracks-only' }}
         run: python scripts/step4_1e_export_tracks.py
 
+      - name: "Commit export results (intermittent)"
+        if: ${{ inputs.script == 'export-tracks-only' || inputs.script == 'ALL' }}
+        run: |
+          git add -f dashboard/track_results.json 2>/dev/null || true
+          git add -f data/step4-analysis/ 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "Step 5E Tracks: export — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "  Committed export results"
+          fi
+
       - name: "Analyze Tracks"
         if: ${{ inputs.script == 'analyze-tracks-only' }}
         run: python scripts/step4_2c_analyze_tracks.py
