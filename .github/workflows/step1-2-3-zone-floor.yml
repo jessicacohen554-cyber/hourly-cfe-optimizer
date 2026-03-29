@@ -166,6 +166,20 @@ jobs:
         SIZE=$(du -h "$CACHE" | cut -f1)
         echo "OK: $ISO scored database ($SIZE)"
 
+    - name: "Check hybrid columns in scored database"
+      if: inputs.script == 'All' || inputs.script == 'Zone Search (1.2)'
+      run: |
+        ISO="${{ matrix.iso }}"
+        CACHE="data/step1-pfs/${ISO}_coarse_cache.parquet"
+        python3 -c "
+        import pyarrow.parquet as pq
+        s = pq.read_schema('$CACHE')
+        hyb = 'solar_batt4' in s.names
+        cols = [c for c in s.names if 'batt' in c]
+        print(f'Hybrid mode: {hyb}')
+        if cols: print(f'Hybrid columns: {cols}')
+        "
+
     - name: "Compute prior windows (Zone Search)"
       if: inputs.script == 'All' || inputs.script == 'Zone Search (1.2)'
       continue-on-error: true
