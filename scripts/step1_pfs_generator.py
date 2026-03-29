@@ -1285,14 +1285,14 @@ def generate_resource_combos(iso, step=5):
     return combos
 
 
-def generate_resource_combos_around(base_combo, iso, step=1, radius=4):
+def generate_resource_combos_around(base_combo, iso, step=1, radius=4, include_hybrids=False):
     """Generate fine combos in neighborhood of base_combo.
 
     Each resource varies ±radius*step from its base value, clamped to
     valid range. Returns deduplicated array.
     """
     hydro_cap = HYDRO_CAPS[iso] + HYDRO_ADDER_PCT
-    rtypes = get_resource_types(iso)
+    rtypes = get_resource_types(iso, include_hybrids=include_hybrids)
     n_res = len(rtypes)
 
     caps = []
