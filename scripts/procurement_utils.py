@@ -1548,13 +1548,129 @@ def build_25yr_trajectory(iso, strategy_fn, participation_pct=0.10,
 
 
 def save_results_json(results, filename):
-    """Save results to JSON in the post-processing directory."""
+    """Save results to JSON in the post-processing directory.
+
+    Uses compact separators (no indent) to keep file sizes under 50MB for GitHub.
+    """
     os.makedirs(PP_DIR, exist_ok=True)
     path = os.path.join(PP_DIR, filename)
     with open(path, 'w') as f:
-        json.dump(results, f, indent=2, default=str)
-    print(f"  Saved {path} ({len(results) if isinstance(results, list) else 'dict'} entries)")
+        json.dump(results, f, separators=(',', ':'), default=str)
+    size_mb = os.path.getsize(path) / 1e6
+    print(f"  Saved {path} ({size_mb:.1f}MB, {len(results) if isinstance(results, list) else 'dict'} entries)")
     return path
+
+
+def _flatten_strategy_results(results):
+    """Flatten nested strategy dict into a flat list of records for parquet.
+
+    Input structure: {strategy_key: {iso: {cost_level: {pct_key: [records]}}}}
+    Output: list of flat dicts with strategy_key, iso, cost_level, pct_key as columns,
+            resource_mix and metadata serialized as JSON strings.
+    """
+    rows = []
+    for strat_key, strat_data in results.items():
+        for iso, iso_data in strat_data.items():
+            for cost_level, cost_data in iso_data.items():
+                for pct_key, records in cost_data.items():
+                    if not isinstance(records, list):
+                        continue
+                    for rec in records:
+                        row = {
+                            'strategy_key': strat_key,
+                            'iso': iso,
+                            'cost_level': cost_level,
+                            'pct_key': pct_key,
+                        }
+                        for k, v in rec.items():
+                            if k in ('resource_mix', 'metadata'):
+                                row[k] = json.dumps(v, separators=(',', ':'), default=str) if v else '{}'
+                            else:
+                                row[k] = v
+                        rows.append(row)
+    return rows
+
+
+def _unflatten_strategy_results(rows):
+    """Reconstruct nested strategy dict from flat parquet rows.
+
+    Inverse of _flatten_strategy_results.
+    """
+    import pyarrow as pa
+    results = {}
+    for row in rows:
+        strat_key = row['strategy_key']
+        iso = row['iso']
+        cost_level = row['cost_level']
+        pct_key = row['pct_key']
+
+        if strat_key not in results:
+            results[strat_key] = {}
+        if iso not in results[strat_key]:
+            results[strat_key][iso] = {}
+        if cost_level not in results[strat_key][iso]:
+            results[strat_key][iso][cost_level] = {}
+        if pct_key not in results[strat_key][iso][cost_level]:
+            results[strat_key][iso][cost_level][pct_key] = []
+
+        rec = {}
+        for k, v in row.items():
+            if k in ('strategy_key', 'iso', 'cost_level', 'pct_key'):
+                continue
+            if k in ('resource_mix', 'metadata'):
+                rec[k] = json.loads(v) if isinstance(v, str) else (v if v is not None else {})
+            else:
+                # Convert pyarrow scalars to Python types
+                if isinstance(v, (pa.Scalar,)):
+                    v = v.as_py()
+                rec[k] = v
+        results[strat_key][iso][cost_level][pct_key].append(rec)
+    return results
+
+
+def save_results_parquet(results, filename):
+    """Save strategy results as parquet (compact, <50MB for GitHub).
+
+    Flattens the nested strategy dict into a flat table. resource_mix and metadata
+    are stored as JSON strings to handle their variable schemas.
+    """
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    os.makedirs(PP_DIR, exist_ok=True)
+    rows = _flatten_strategy_results(results)
+
+    if not rows:
+        print(f"  WARNING: No rows to save for {filename}")
+        return None
+
+    table = pa.Table.from_pylist(rows)
+    path = os.path.join(PP_DIR, filename)
+    pq.write_table(table, path, compression='zstd')
+    size_mb = os.path.getsize(path) / 1e6
+    print(f"  Saved {path} ({size_mb:.1f}MB, {len(rows):,} rows)")
+    return path
+
+
+def load_results_parquet(filename):
+    """Load strategy results from parquet, reconstructing the original nested dict.
+
+    Returns the same structure as the old JSON: {strategy: {iso: {cost: {pct: [records]}}}}
+    """
+    import pyarrow.parquet as pq
+
+    path = os.path.join(PP_DIR, filename)
+    if not os.path.exists(path):
+        # Check legacy data dir
+        legacy_path = os.path.join(os.path.dirname(PP_DIR), 'post-processing', filename)
+        if os.path.exists(legacy_path):
+            path = legacy_path
+        else:
+            return None
+
+    table = pq.read_table(path)
+    rows = table.to_pylist()
+    return _unflatten_strategy_results(rows)
 
 
 def save_js_data(results, filename='procurement-strategy-data.js', var_name='PROCUREMENT_DATA'):

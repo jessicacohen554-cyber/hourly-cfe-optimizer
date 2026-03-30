@@ -465,10 +465,10 @@ def save_near_miss_cache(iso, scores, raw_components):
         for col in existing.column_names:
             if col in new_table.column_names:
                 aligned_arrays[col] = pa.concat_arrays(
-                    [existing.column(col), new_table.column(col)])
+                    [existing.column(col).combine_chunks(), new_table.column(col).combine_chunks()])
             else:
                 aligned_arrays[col] = pa.concat_arrays(
-                    [existing.column(col),
+                    [existing.column(col).combine_chunks(),
                      pa.array(np.zeros(len(nm_indices), dtype=np.float64))])
         # Add any new columns not in existing
         n_existing = len(existing)
@@ -476,7 +476,7 @@ def save_near_miss_cache(iso, scores, raw_components):
             if col not in aligned_arrays:
                 aligned_arrays[col] = pa.concat_arrays(
                     [pa.array(np.zeros(n_existing, dtype=np.float64)),
-                     new_table.column(col)])
+                     new_table.column(col).combine_chunks()])
         combined = pa.table(aligned_arrays)
         print(f"  Near-miss cache: {len(nm_indices):,} new + {n_existing:,} existing")
     else:
