@@ -20,7 +20,9 @@ Run these in sequence. Steps at the same level with A/B suffixes can run in para
 | 0 | `step0-fetch-lmp-data.yml` | **Step 0: Fetch Actual LMP Data** | Fetches actual DA hourly LMP from ISO APIs via gridstatus. | ISO, year, force |
 | 0 | `step0-fetch-offshore-wind.yml` | **Step 0: Fetch Offshore Wind** | Fetches offshore wind profiles from NREL Wind Toolkit API. | — |
 | 1.1 | `step1-1-scored-database.yml` | **Step 1.1: Build Scored Mix Database (Hybrid)** | Generates hybrid resource fraction combos and scores them. | ISO, script, chunk_size, force, dry_run |
-| 1.2–1.4 | `step1-2-3-zone-floor.yml` | **Step 1.2–1.4: Zone Search + Floor-Aware + Fine Grid** | Zone search (1.2), floor-aware PFS (1.3), fine-grid PFS (1.4). Dropdown selects individual step or all. | script, ISO, thresholds, zones |
+| 1.2 | `step1-2-zone-search.yml` | **Step 1.2: Zone Search** | Zone search per (ISO × zone) matrix job. Each zone runs separately to stay within runner memory. | ISO, zones, thresholds |
+| 1.3 | `step1-3-floor-aware.yml` | **Step 1.3: Floor-Aware PFS** | Floor-aware PFS augmentation (50-70%, 2% step). Per-ISO parallel jobs. | ISO |
+| 1.4 | `step1-4-fine-grid.yml` | **Step 1.4: Fine-Grid PFS** | Fine-grid PFS (40-75%, 1% step). Per-ISO parallel jobs. | ISO |
 | 1.5 | `step1-5-storage-refinement.yml` | **Step 1.5: Storage Refinement** | Storage dispatch refinement across threshold bands (LOW/MID/HIGH). HIGH band splits into per-threshold jobs for resume support. | ISO, threshold_band, custom_thresholds |
 | 2.1 | `step2-1-efficient-frontier.yml` | **Step 2.1: Efficient Frontier** | EF filter. | ISO, target_mixes, dry_run |
 | 2.2 | `step2-2-cost-optimization.yml` | **Step 2.2: Cost Optimization** | Vectorized cost optimization (5,832 combos × 3 tracks). | ISO, track, sensitivity_mode |
@@ -107,7 +109,7 @@ Step 2.2 → Step 3 → Step 4 (parallel) → Step 5+6 → Step 7
 
 ### "Full pipeline from scratch"
 ```
-Step 0 → Step 1.1 → 1.2–1.4 → 1.5 → Step 2.1 → 2.2 → Step 3A ∥ 3B → Step 4 → Step 5+6 → Step 7
+Step 0 → Step 1.1 → 1.2 → 1.3 ∥ 1.4 → 1.5 → Step 2.1 → 2.2 → Step 3A ∥ 3B → Step 4 → Step 5+6 → Step 7
 ```
 
 ### "I want to clear data directories before re-running a pipeline step"
