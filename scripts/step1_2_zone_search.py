@@ -763,26 +763,41 @@ def _cleanup_batch_files(iso):
 
 
 def save_near_miss_interim(iso, all_combos_lists, all_scores_lists, rtypes,
-                           thresholds_to_use):
+                           thresholds_to_use,
+                           coarse_nm_combos=None, coarse_nm_scores=None):
     """Save near-miss parquet from accumulated scored mixes so far.
 
     Called after each zone so step1c has a valid near-miss file even if the
     job times out before all zones complete. Skips the curtailment filter —
     it's wasted work since the final save applies a stricter max-storage
     filter that subsumes it.
+
+    coarse_nm_combos/scores: pre-computed coarse near-miss (passed through
+    to avoid re-vstacking the full coarse cache which causes OOM).
     """
-    if not all_combos_lists:
+    parts_c, parts_s = [], []
+
+    # Include pre-computed coarse near-miss
+    if coarse_nm_combos is not None and len(coarse_nm_combos) > 0:
+        parts_c.append(coarse_nm_combos)
+        parts_s.append(coarse_nm_scores)
+
+    # Compute fine near-miss
+    if all_combos_lists:
+        fine_combos = np.vstack(all_combos_lists)
+        fine_scores = np.concatenate(all_scores_lists)
+        nm_arr = _collect_near_miss_indices(
+            fine_combos, fine_scores, thresholds_to_use)
+        if len(nm_arr) > 0:
+            parts_c.append(fine_combos[nm_arr])
+            parts_s.append(fine_scores[nm_arr])
+
+    if not parts_c:
         return
-    interim_combos = np.vstack(all_combos_lists)
-    interim_scores = np.concatenate(all_scores_lists)
 
-    nm_arr = _collect_near_miss_indices(
-        interim_combos, interim_scores, thresholds_to_use)
-
-    if len(nm_arr) == 0:
-        return
-
-    save_near_miss(iso, interim_combos[nm_arr], interim_scores[nm_arr], rtypes)
+    all_nm_combos = np.vstack(parts_c)
+    all_nm_scores = np.concatenate(parts_s)
+    save_near_miss(iso, all_nm_combos, all_nm_scores, rtypes)
 
 
 # NOTE: Auto-commit to git removed — all outputs are written locally.
@@ -953,13 +968,25 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None,
     # Vectorized dedup keys (collision-free int64 hash per row)
     global_scored_keys = _hash_mixes(coarse_combos)
 
-    # Accumulate ALL scored mixes (coarse + fine) with their scores
-    all_combos_list = [coarse_combos]
-    all_scores_list = [coarse_scores]
+    # Accumulate only FINE scored mixes (coarse stays separate to avoid OOM
+    # on large caches like NEISO 28M+ rows — every np.vstack copies the full
+    # array, and 3 copies of 2.3 GB exceeds the 7 GB GitHub runner limit).
+    all_combos_list = []
+    all_scores_list = []
 
     # ── Determine which thresholds / zones to run ──
     all_thresholds = LOW_THRESHOLDS + ACTIVE_THRESHOLDS
     active_thresholds = thresholds_filter if thresholds_filter else all_thresholds
+
+    # Pre-compute coarse near-miss before the zone loop so interim saves
+    # (which survive timeouts) include coarse near-miss for step1c.
+    print(f"  Pre-computing coarse near-miss indices...")
+    coarse_nm_idx = _collect_near_miss_indices(
+        coarse_combos, coarse_scores, active_thresholds)
+    coarse_nm_combos = coarse_combos[coarse_nm_idx] if len(coarse_nm_idx) > 0 else np.empty((0, n_res), dtype=np.float64)
+    coarse_nm_scores = coarse_scores[coarse_nm_idx] if len(coarse_nm_idx) > 0 else np.empty(0, dtype=np.float64)
+    del coarse_nm_idx
+    print(f"  Coarse near-miss: {len(coarse_nm_combos):,} mixes")
 
     # ── Process zones ──
     os.makedirs(s1.STEP1_RAW_PFS_PARQUET_DIR, exist_ok=True)
@@ -1067,37 +1094,61 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None,
         # this job times out before all zones complete.
         print(f"    Saving interim near-miss parquet...")
         save_near_miss_interim(iso, all_combos_list, all_scores_list,
-                               rtypes, active_thresholds)
+                               rtypes, active_thresholds,
+                               coarse_nm_combos=coarse_nm_combos,
+                               coarse_nm_scores=coarse_nm_scores)
 
         gc.collect()
 
-    # ── Combine all scored mixes ──
-    print(f"\n  Combining all scored mixes...")
-    all_combos = np.vstack(all_combos_list)
-    all_scores = np.concatenate(all_scores_list)
-    print(f"  Total unique scored mixes: {len(all_combos):,}")
+    # ── Free coarse arrays (no longer needed — saves ~2 GB for large ISOs) ──
+    del coarse_combos, coarse_scores, global_scored_keys
+    gc.collect()
+
+    # ── Combine fine scored mixes ──
+    print(f"\n  Combining fine scored mixes...")
+    if all_combos_list:
+        all_combos = np.vstack(all_combos_list)
+        all_scores = np.concatenate(all_scores_list)
+    else:
+        all_combos = np.empty((0, n_res), dtype=np.float64)
+        all_scores = np.empty(0, dtype=np.float64)
+    del all_combos_list, all_scores_list
+    print(f"  Total fine scored mixes: {len(all_combos):,}")
 
     # ── Assign to thresholds + save final canonical files ──
     all_thresholds = LOW_THRESHOLDS + ACTIVE_THRESHOLDS
     print(f"\n  Assigning to {len(active_thresholds)} thresholds "
           f"(of {len(all_thresholds)} total)...")
 
-    # Vectorized assignment (use active_thresholds for targeted runs)
+    # Vectorized assignment on fine mixes only (coarse already saved by step1.1)
     feasible_idx, near_miss_idx = assign_to_thresholds_vectorized(
         all_combos, all_scores, active_thresholds)
 
-    # Collect union of near-miss mixes (unique, for step1c) — final authoritative save
-    all_nm_indices = _collect_near_miss_indices(
+    # Collect fine near-miss, merge with pre-computed coarse near-miss
+    fine_nm_indices = _collect_near_miss_indices(
         all_combos, all_scores, active_thresholds)
+
+    nm_parts_c, nm_parts_s = [], []
+    if len(coarse_nm_combos) > 0:
+        nm_parts_c.append(coarse_nm_combos)
+        nm_parts_s.append(coarse_nm_scores)
+    if len(fine_nm_indices) > 0:
+        nm_parts_c.append(all_combos[fine_nm_indices])
+        nm_parts_s.append(all_scores[fine_nm_indices])
 
     # Save near-miss union (final authoritative version overwrites interim)
     # full_filter=True: compute max-storage scores and persist as column,
     # so step1c can skip its Pass 0 recomputation.
-    if len(all_nm_indices) > 0:
-        save_near_miss(iso, all_combos[all_nm_indices],
-                       all_scores[all_nm_indices], rtypes,
+    if nm_parts_c:
+        all_nm_combos = np.vstack(nm_parts_c)
+        all_nm_scores = np.concatenate(nm_parts_s)
+        save_near_miss(iso, all_nm_combos, all_nm_scores, rtypes,
                        demand_arr=demand_arr, supply_matrix=supply_matrix,
                        full_filter=True)
+        n_total_nm = len(all_nm_combos)
+        del all_nm_combos, all_nm_scores, nm_parts_c, nm_parts_s
+    else:
+        n_total_nm = 0
 
     # Per-threshold: dominance filter + save canonical files.
     # These overwrite the batch files when all zones complete successfully.
@@ -1139,8 +1190,8 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None,
 
     iso_elapsed = time.time() - iso_start
     print(f"\n{'=' * 70}")
-    print(f"  {iso} COMPLETE — {len(all_combos):,} total scored mixes, "
-          f"{len(all_nm_indices):,} near-miss for step1c")
+    print(f"  {iso} COMPLETE — {len(all_combos):,} fine scored mixes, "
+          f"{n_total_nm:,} near-miss for step1c")
     print(f"  Elapsed: {iso_elapsed:.1f}s")
     print(f"{'=' * 70}")
 
