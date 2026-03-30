@@ -41,7 +41,7 @@ from procurement_utils import (
     get_existing_clean_twh, get_sss_twh, get_merchant_clean_twh,
     build_newbuild_only_tranches, get_resource_ppa_price,
     make_strategy_result, build_25yr_trajectory,
-    save_results_json, compute_dispatch_hms,
+    save_results_json, save_results_parquet, compute_dispatch_hms,
     UPRATE_CAP_TWH, EXISTING_EAC_PRICE,
 )
 from pipeline_config import HYBRID_TYPES
@@ -777,13 +777,13 @@ def main():
         nuclear_policy='stable',
     )
 
-    save_results_json(results, 'strategy3_annual.json')
+    save_results_parquet(results, 'strategy3_annual.parquet')
 
     # ── Dispatch-based 8760 hourly match scoring ──
     try:
         compute_dispatch_hms(results, ['strategy3A', 'strategy3B', 'strategy3C', 'strategy3D'], isos)
         # Re-save with dispatch scores
-        save_results_json(results, 'strategy3_annual.json')
+        save_results_parquet(results, 'strategy3_annual.parquet')
     except Exception as e:
         print(f"  WARNING: Dispatch scoring failed: {e}")
         import traceback; traceback.print_exc()
@@ -804,7 +804,7 @@ def main():
     results['strategy3D_rolloff'] = rolloff_results.get('strategy3D', {})
 
     # Re-save with rolloff variants included
-    save_results_json(results, 'strategy3_annual.json')
+    save_results_parquet(results, 'strategy3_annual.parquet')
 
     # Summary
     print("\n" + "=" * 70)
