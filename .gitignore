@@ -35,11 +35,15 @@ data/checkpoints/
 data/checkpoints_v4/
 dashboard/physics_results_v4.json
 
-# Large JSON results (>100MB, exceed GitHub limit) — use parquet versions instead
-# JSON versions are regenerated locally from parquets via convert_parquet_to_json.py
+# Large JSON results — use parquet versions instead
 dashboard/overprocure_results.json
 dashboard/demand_growth_results.json
 dashboard/track_results.json
+
+# Strategy results stored as parquet (JSON versions are 50-65MB, parquet is 1-3MB)
+data/step5-scenarios/strategy1_consequential.json
+data/step5-scenarios/strategy2_hourly.json
+data/step5-scenarios/strategy3_annual.json
 
 # Track analysis intermediates
 data/track_checkpoint.json

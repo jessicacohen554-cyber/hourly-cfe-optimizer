@@ -11,8 +11,10 @@ import json
 import os
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scripts'))
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, SCRIPT_DIR)
 from pipeline_config import ISOS
+from procurement_utils import load_results_parquet
 
 DATA_DIR = "data/step5-scenarios"
 WRIGHTS_DIR = "data/step5-wrights"
@@ -42,8 +44,13 @@ ISO_CONTEXT = {
 
 
 def load_data():
-    with open(os.path.join(DATA_DIR, "strategy2_hourly.json")) as f:
-        strategy_data = json.load(f)
+    strategy_data = load_results_parquet('strategy2_hourly.parquet')
+    if strategy_data is None:
+        # Fallback to legacy JSON
+        json_path = os.path.join(DATA_DIR, "strategy2_hourly.json")
+        if os.path.exists(json_path):
+            with open(json_path) as f:
+                strategy_data = json.load(f)
 
     wrights_path = os.path.join(WRIGHTS_DIR, "wrights_law_curves.json")
     wrights_data = None

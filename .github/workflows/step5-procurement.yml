@@ -163,30 +163,45 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install dependencies
+        run: pip install pyarrow
+
       - name: "Merge per-ISO results"
         run: |
           python3 -c "
-          import json, os, glob
+          import json, os, sys, glob
+
+          sys.path.insert(0, 'scripts')
+          from procurement_utils import save_results_parquet
 
           artifact_dirs = sorted(glob.glob('artifacts/procurement-*'))
           pp_dir = 'data/step5-scenarios'
           os.makedirs(pp_dir, exist_ok=True)
 
           strategy_files = [
-              'strategy1_consequential.json',
-              'strategy2_hourly.json',
-              'strategy3_annual.json',
+              'strategy1_consequential',
+              'strategy2_hourly',
+              'strategy3_annual',
           ]
 
           for sf in strategy_files:
               combined = {}
               loaded_from = []
               for ad in artifact_dirs:
-                  path = os.path.join(ad, sf)
-                  if not os.path.exists(path):
+                  # Check for parquet first, then JSON fallback
+                  pq_path = os.path.join(ad, sf + '.parquet')
+                  json_path = os.path.join(ad, sf + '.json')
+                  if os.path.exists(pq_path):
+                      import pyarrow.parquet as pq
+                      sys.path.insert(0, 'scripts')
+                      from procurement_utils import load_results_parquet, _unflatten_strategy_results
+                      table = pq.read_table(pq_path)
+                      data = _unflatten_strategy_results(table.to_pylist())
+                  elif os.path.exists(json_path):
+                      with open(json_path) as fh:
+                          data = json.load(fh)
+                  else:
                       continue
-                  with open(path) as fh:
-                      data = json.load(fh)
                   iso_name = os.path.basename(ad).replace('procurement-', '')
                   loaded_from.append(iso_name)
                   # Deep merge: strategy variant -> ISO data
@@ -196,9 +211,7 @@ jobs:
                       if isinstance(iso_dict, dict):
                           combined[strategy_key].update(iso_dict)
               if combined:
-                  out_path = os.path.join(pp_dir, sf)
-                  with open(out_path, 'w') as fh:
-                      json.dump(combined, fh, indent=2, default=str)
+                  save_results_parquet(combined, sf + '.parquet')
                   print(f'  Merged {sf}: {len(combined)} strategies from {loaded_from}')
               else:
                   print(f'  No data found for {sf}')
@@ -209,17 +222,17 @@ jobs:
         run: |
           mkdir -p dashboard/js
           python -c "
-          import json, os
+          import json, os, sys
 
-          pp_dir = 'data/step5-scenarios'
+          sys.path.insert(0, 'scripts')
+          from procurement_utils import load_results_parquet
+
           raw = {}
 
-          for f in ['strategy1_consequential.json', 'strategy2_hourly.json', 'strategy3_annual.json']:
-              path = os.path.join(pp_dir, f)
-              if os.path.exists(path):
-                  with open(path) as fh:
-                      data = json.load(fh)
-                      raw.update(data)
+          for f in ['strategy1_consequential.parquet', 'strategy2_hourly.parquet', 'strategy3_annual.parquet']:
+              data = load_results_parquet(f)
+              if data:
+                  raw.update(data)
                   print(f'  Loaded {f}: {len(data)} strategy groups')
 
           if not raw:
