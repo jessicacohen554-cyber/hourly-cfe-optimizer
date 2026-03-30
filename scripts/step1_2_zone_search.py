@@ -137,18 +137,21 @@ def _hash_mixes(combos):
 
     For >7 dimensions, uses two independent hash lanes (split at dim 6)
     to stay within int64 range while remaining collision-free.
-    Returns (N,) int64 for ≤7 dims, or (N, 2) int64 for >7 dims.
-    Callers that use np.isin handle both shapes via set membership.
+    Returns (N,) int64 array.
+
+    Memory-optimised: avoids a full int64 copy of the combos array by
+    computing lane hashes from column slices, keeping peak memory at
+    ~N×8 bytes instead of ~N×dims×8 bytes (saves ~2 GB for 28M×9 caches).
     """
     n_res = combos.shape[1]
-    int_combos = combos.astype(np.int64)
     if n_res <= 7:
-        return int_combos @ _HASH_BASES[:n_res]
-    # Two-lane hash: pack into single int64 using modular arithmetic
+        return combos.astype(np.int64) @ _HASH_BASES[:n_res]
+    # Two-lane hash: compute directly from column slices to avoid
+    # materialising a full (N, dims) int64 copy.
     # Lane A: dims 0-5 (351^6 ≈ 1.87e15, safe)
+    lane_a = combos[:, :6].astype(np.int64) @ _HASH_BASES[:6]
     # Lane B: dims 6+ (≤5 dims, 351^5 ≈ 5.3e12, safe)
-    lane_a = int_combos[:, :6] @ _HASH_BASES[:6]
-    lane_b = int_combos[:, 6:] @ _HASH_BASES[:n_res - 6]
+    lane_b = combos[:, 6:].astype(np.int64) @ _HASH_BASES[:n_res - 6]
     # Combine: lane_a fits in ~51 bits, lane_b in ~43 bits
     # Use XOR with shifted lane_b for collision-free combination in int64
     return lane_a ^ (lane_b << np.int64(20))
@@ -735,14 +738,22 @@ def save_near_miss(iso, combos, scores, rtypes,
 
 
 def _collect_near_miss_indices(combos, scores, thresholds):
-    """Return sorted unique near-miss index array across all thresholds."""
-    _, nm_idx_dict = assign_to_thresholds_vectorized(combos, scores, thresholds)
-    all_nm = set()
+    """Return sorted unique near-miss index array across all thresholds.
+
+    Memory-efficient: uses a single boolean mask union instead of
+    materializing per-threshold index arrays (which OOM on 28M+ row
+    caches in 7 GB GitHub runners).
+    """
+    n = len(scores)
+    nm_union = np.zeros(n, dtype=bool)
     for t in thresholds:
-        all_nm.update(nm_idx_dict[t].tolist())
-    if not all_nm:
-        return np.empty(0, dtype=np.int64)
-    return np.array(sorted(all_nm), dtype=np.int64)
+        target = t / 100.0
+        nm_width = get_near_miss_width(t)
+        nm_floor = max(target - nm_width, 0.50)
+        # near-miss = below target but above floor
+        nm_mask = (scores < target) & (scores >= nm_floor)
+        nm_union |= nm_mask
+    return np.where(nm_union)[0]
 
 
 def _cleanup_batch_files(iso):
