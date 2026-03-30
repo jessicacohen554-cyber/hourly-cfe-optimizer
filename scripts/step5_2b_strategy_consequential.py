@@ -43,7 +43,7 @@ from procurement_utils import (
     get_emission_rate, compute_co2_abated,
     get_existing_clean_twh, get_sss_twh,
     make_strategy_result, build_25yr_trajectory,
-    save_results_json, save_js_data,
+    save_results_json, save_results_parquet, save_js_data,
     UPRATE_CAP_TWH, get_resource_ppa_price,
 )
 from pipeline_config import HYBRID_TYPES
@@ -552,7 +552,7 @@ def main():
     )
 
     # Save results
-    save_results_json(results, 'strategy1_consequential.json')
+    save_results_parquet(results, 'strategy1_consequential.parquet')
 
     # Print summary for Medium growth, 10% participation
     print("\n" + "=" * 70)

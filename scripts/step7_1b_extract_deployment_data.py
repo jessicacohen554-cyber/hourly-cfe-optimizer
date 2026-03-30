@@ -25,7 +25,7 @@ DATA_DIR = os.path.join(ROOT_DIR, 'data', 'step5-scenarios')
 LEGACY_DATA_DIR = os.path.join(ROOT_DIR, 'data', 'step4-analysis')
 JS_DIR = os.path.join(ROOT_DIR, 'dashboard', 'js')
 
-from procurement_utils import compute_endogenous_cost
+from procurement_utils import compute_endogenous_cost, load_results_parquet
 from pipeline_config import ISOS
 
 # Canonical resource names for normalization
@@ -260,31 +260,35 @@ EXTRACTORS = {
 
 # Map strategy IDs to their JSON files and keys
 STRATEGY_SOURCES = {
-    '1A': ('strategy1_consequential.json', 'strategy1A'),
-    '1B': ('strategy1_consequential.json', 'strategy1B'),
-    '2A': ('strategy2_hourly.json', 'strategy2A'),
-    '2B': ('strategy2_hourly.json', 'strategy2B'),
-    '2C': ('strategy2_hourly.json', 'strategy2C'),
-    '2C_rolloff': ('strategy2_hourly.json', 'strategy2C_rolloff'),
-    '3A': ('strategy3_annual.json', 'strategy3A'),
-    '3B': ('strategy3_annual.json', 'strategy3B'),
-    '3C': ('strategy3_annual.json', 'strategy3C'),
-    '3C_rolloff': ('strategy3_annual.json', 'strategy3C_rolloff'),
-    '3D': ('strategy3_annual.json', 'strategy3D'),
-    '3D_rolloff': ('strategy3_annual.json', 'strategy3D_rolloff'),
+    '1A': ('strategy1_consequential.parquet', 'strategy1A'),
+    '1B': ('strategy1_consequential.parquet', 'strategy1B'),
+    '2A': ('strategy2_hourly.parquet', 'strategy2A'),
+    '2B': ('strategy2_hourly.parquet', 'strategy2B'),
+    '2C': ('strategy2_hourly.parquet', 'strategy2C'),
+    '2C_rolloff': ('strategy2_hourly.parquet', 'strategy2C_rolloff'),
+    '3A': ('strategy3_annual.parquet', 'strategy3A'),
+    '3B': ('strategy3_annual.parquet', 'strategy3B'),
+    '3C': ('strategy3_annual.parquet', 'strategy3C'),
+    '3C_rolloff': ('strategy3_annual.parquet', 'strategy3C_rolloff'),
+    '3D': ('strategy3_annual.parquet', 'strategy3D'),
+    '3D_rolloff': ('strategy3_annual.parquet', 'strategy3D_rolloff'),
 }
 
 
-def load_json(filename):
-    # Prefer current Step 5 outputs, but keep backward compatibility.
+def load_strategy(filename):
+    """Load strategy results from parquet, with JSON fallback for legacy data."""
+    data = load_results_parquet(filename)
+    if data is not None:
+        return data
+    # Fallback: try legacy JSON
+    json_name = filename.replace('.parquet', '.json')
     for base_dir in (DATA_DIR, LEGACY_DATA_DIR):
-        path = os.path.join(base_dir, filename)
+        path = os.path.join(base_dir, json_name)
         if os.path.exists(path):
             with open(path) as f:
                 return json.load(f)
     print(
-        f"  WARNING: {os.path.join(DATA_DIR, filename)} and "
-        f"{os.path.join(LEGACY_DATA_DIR, filename)} not found, skipping"
+        f"  WARNING: {filename} not found (checked parquet and JSON), skipping"
     )
     return None
 
@@ -303,7 +307,7 @@ def main():
     loaded = {}
     for filename in set(src[0] for src in STRATEGY_SOURCES.values()):
         print(f"\nLoading {filename}...")
-        data = load_json(filename)
+        data = load_strategy(filename)
         if data:
             loaded[filename] = data
             print(f"  OK — keys: {list(data.keys())}")
