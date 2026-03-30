@@ -17,8 +17,10 @@ ROOT = os.path.dirname(SCRIPT_DIR)
 sys.path.insert(0, SCRIPT_DIR)
 
 from pipeline_config import ISOS
+from procurement_utils import load_results_parquet
 
-INPUT_FILE = os.path.join(ROOT, 'data', 'step5-scenarios', 'strategy2_hourly.json')
+INPUT_PARQUET = 'strategy2_hourly.parquet'
+INPUT_JSON_FALLBACK = os.path.join(ROOT, 'data', 'step5-scenarios', 'strategy2_hourly.json')
 OUTPUT_FILE = os.path.join(ROOT, 'dashboard', 'js', 'hourly-comparison-data.js')
 STRATEGIES = ['strategy2A', 'strategy2B', 'strategy2C', 'strategy2C_rolloff']
 GROWTH = 'Medium'  # Static pages use all-Medium
@@ -68,9 +70,13 @@ def extract_entry(entry):
 
 
 def main():
-    print(f"Loading {INPUT_FILE}...")
-    with open(INPUT_FILE) as f:
-        raw = json.load(f)
+    print(f"Loading strategy2_hourly data...")
+    raw = load_results_parquet(INPUT_PARQUET)
+    if raw is None:
+        # Fallback to legacy JSON
+        print(f"  Parquet not found, falling back to {INPUT_JSON_FALLBACK}")
+        with open(INPUT_JSON_FALLBACK) as f:
+            raw = json.load(f)
 
     result = {}
 
