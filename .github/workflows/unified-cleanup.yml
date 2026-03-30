@@ -4,48 +4,89 @@ name: "Cleanup: Unified Data Directory Cleanup"
 # independently, optionally filter by ISO, and preview with dry_run before
 # committing deletions. Directory folders are preserved — only files are removed.
 #
-# Replaces the individual clear-step1c-storage, clear-step2-ef,
-# cleanup-old-step1c-files and cleanup-step1c-branches workflows.
+# Directory map (toggle → actual path → file patterns):
+#   clear_step1_pfs         → data/step1-pfs/       {ISO}_*.parquet, {ISO}_*.json
+#   clear_step1_storage     → data/step1-pfs/       *_storage*.parquet, *_storage_manifest.json
+#   clear_step2_ef          → data/step2.1-ef/       step2_ef_*.parquet
+#   clear_step2_cost        → data/step2.2-cost/     step_2_2a_CO_*.parquet (cross-opt)
+#   clear_step2_dg          → data/step2.2-cost/     step_2_2a_DG_*.parquet (demand growth)
+#   clear_step3_dispatch    → data/step3-dispatch/   *.parquet, *.npz
+#   clear_step4_top         → data/step4-analysis/   top-level *.json, *.parquet
+#   clear_step4_co2         → data/step4-analysis/co2_results/
+#   clear_step4_lmp         → data/step4-analysis/lmp/
+#   clear_step4_density     → data/step4-analysis/resource-density/
+#   clear_step5_scenarios   → data/step5-scenarios/  *.parquet, *.json
+#   clear_step5_wrights     → data/step5-wrights/    *.json, *.parquet
+#   clear_step6_smartargets → data/step6-smartargets/ *.parquet, *.json
 
 on:
   workflow_dispatch:
     inputs:
-      clear_step1:
-        description: 'Clear data/step1-pfs/ (PFS mixes, coarse cache, near-miss)'
+      # ── Step 1: Physics Feasible Space ──
+      clear_step1_pfs:
+        description: 'Step 1 PFS: data/step1-pfs/ (mixes, coarse cache, near-miss, raw/floor PFS)'
         default: false
         type: boolean
-      clear_step1c_storage:
-        description: 'Clear storage files from data/step1-pfs/ (*_storage*.parquet)'
+      clear_step1_storage:
+        description: 'Step 1 Storage only: data/step1-pfs/ (*_storage*.parquet only)'
         default: false
         type: boolean
-      clear_step2:
-        description: 'Clear data/step2.1-ef/ (efficient frontier)'
+
+      # ── Step 2: Optimization ──
+      clear_step2_ef:
+        description: 'Step 2.1 EF: data/step2.1-ef/ (efficient frontier)'
         default: false
         type: boolean
-      clear_step3:
-        description: 'Clear data/step2.2-cost/ (cost optimization)'
+      clear_step2_cost:
+        description: 'Step 2.2 Cross-opt: data/step2.2-cost/ (step_2_2a_CO_*.parquet)'
         default: false
         type: boolean
-      clear_step5:
-        description: 'Clear data/step4-analysis/ (top-level files only)'
+      clear_step2_dg:
+        description: 'Step 2.2 Demand Growth: data/step2.2-cost/ (step_2_2a_DG_*.parquet — 147 files)'
         default: false
         type: boolean
-      clear_step5_co2:
-        description: 'Clear data/step4-analysis/co2_results/'
+
+      # ── Step 3: Caches ──
+      clear_step3_dispatch:
+        description: 'Step 3 Dispatch cache: data/step3-dispatch/'
         default: false
         type: boolean
-      clear_step5_dispatch:
-        description: 'Clear data/step3-dispatch/ (dispatch cache)'
+
+      # ── Step 4: Analysis ──
+      clear_step4_top:
+        description: 'Step 4 Analysis (top-level): data/step4-analysis/*.{json,parquet}'
         default: false
         type: boolean
-      clear_step5_lmp:
-        description: 'Clear data/step4-analysis/lmp/'
+      clear_step4_co2:
+        description: 'Step 4 CO₂: data/step4-analysis/co2_results/'
         default: false
         type: boolean
-      clear_step8:
-        description: 'Clear data/step5-wrights/'
+      clear_step4_lmp:
+        description: 'Step 4 LMP: data/step4-analysis/lmp/'
         default: false
         type: boolean
+      clear_step4_density:
+        description: 'Step 4 Resource density: data/step4-analysis/resource-density/'
+        default: false
+        type: boolean
+
+      # ── Step 5: Scenarios & Procurement ──
+      clear_step5_scenarios:
+        description: 'Step 5 Scenarios: data/step5-scenarios/ (strategy parquets + JSONs)'
+        default: false
+        type: boolean
+      clear_step5_wrights:
+        description: "Step 5 Wright's Law: data/step5-wrights/"
+        default: false
+        type: boolean
+
+      # ── Step 6: Policy ──
+      clear_step6_smartargets:
+        description: 'Step 6 SMARTargets: data/step6-smartargets/'
+        default: false
+        type: boolean
+
+      # ── Options ──
       iso:
         description: 'ISO to clear (or ALL for everything)'
         default: 'ALL'
@@ -79,13 +120,15 @@ jobs:
     steps:
       - name: Validate inputs
         run: |
-          # At least one directory must be selected
           ANY_SELECTED="false"
-          for toggle in "${{ inputs.clear_step1 }}" "${{ inputs.clear_step1c_storage }}" \
-                        "${{ inputs.clear_step2 }}" "${{ inputs.clear_step3 }}" \
-                        "${{ inputs.clear_step4 }}" "${{ inputs.clear_step5 }}" \
-                        "${{ inputs.clear_step5_co2 }}" "${{ inputs.clear_step5_dispatch }}" \
-                        "${{ inputs.clear_step5_lmp }}" "${{ inputs.clear_step8 }}"; do
+          for toggle in \
+            "${{ inputs.clear_step1_pfs }}" "${{ inputs.clear_step1_storage }}" \
+            "${{ inputs.clear_step2_ef }}" "${{ inputs.clear_step2_cost }}" \
+            "${{ inputs.clear_step2_dg }}" "${{ inputs.clear_step3_dispatch }}" \
+            "${{ inputs.clear_step4_top }}" "${{ inputs.clear_step4_co2 }}" \
+            "${{ inputs.clear_step4_lmp }}" "${{ inputs.clear_step4_density }}" \
+            "${{ inputs.clear_step5_scenarios }}" "${{ inputs.clear_step5_wrights }}" \
+            "${{ inputs.clear_step6_smartargets }}"; do
             [ "$toggle" = "true" ] && ANY_SELECTED="true"
           done
 
@@ -126,7 +169,7 @@ jobs:
           }
 
           # ── Step 1: PFS parquets ──
-          if [ "${{ inputs.clear_step1 }}" = "true" ]; then
+          if [ "${{ inputs.clear_step1_pfs }}" = "true" ]; then
             DIR="data/step1-pfs"
             if [ "$ISO" = "ALL" ]; then
               add_files "$DIR" 1 "*.parquet" "*.json"
@@ -135,8 +178,8 @@ jobs:
             fi
           fi
 
-          # ── Step 1C: storage parquets (in step1-pfs/) ──
-          if [ "${{ inputs.clear_step1c_storage }}" = "true" ]; then
+          # ── Step 1: storage parquets only (in step1-pfs/) ──
+          if [ "${{ inputs.clear_step1_storage }}" = "true" ]; then
             DIR="data/step1-pfs"
             if [ "$ISO" = "ALL" ]; then
               add_files "$DIR" 1 "*_storage*.parquet" "*_storage_manifest.json"
@@ -145,72 +188,107 @@ jobs:
             fi
           fi
 
-          # ── Step 2: efficient frontier ──
-          if [ "${{ inputs.clear_step2 }}" = "true" ]; then
+          # ── Step 2.1: efficient frontier ──
+          if [ "${{ inputs.clear_step2_ef }}" = "true" ]; then
             DIR="data/step2.1-ef"
             if [ "$ISO" = "ALL" ]; then
-              add_files "$DIR" 1 "step2_ef_*.parquet"
+              add_files "$DIR" 1 "*.parquet"
             else
-              add_files "$DIR" 1 "step2_ef_${ISO}_*.parquet"
+              add_files "$DIR" 1 "*_${ISO}*.parquet" "*_${ISO}_*.parquet"
             fi
           fi
 
-          # ── Step 3: cost optimization ──
-          if [ "${{ inputs.clear_step3 }}" = "true" ]; then
+          # ── Step 2.2: cross-optimization (CO) parquets ──
+          if [ "${{ inputs.clear_step2_cost }}" = "true" ]; then
             DIR="data/step2.2-cost"
             if [ "$ISO" = "ALL" ]; then
-              add_files "$DIR" 1 "step3_*.parquet"
+              add_files "$DIR" 1 "step_2_2a_CO_*.parquet" "empirical_resource_caps.json"
             else
-              add_files "$DIR" 1 "step3_co_${ISO}.parquet" "step3_dg_${ISO}_*.parquet"
+              add_files "$DIR" 1 "step_2_2a_CO_${ISO}.parquet"
             fi
           fi
 
-          # ── Step 5-8: post-processing (top-level files only) ──
-          if [ "${{ inputs.clear_step5 }}" = "true" ]; then
+          # ── Step 2.2: demand growth (DG) parquets ──
+          if [ "${{ inputs.clear_step2_dg }}" = "true" ]; then
+            DIR="data/step2.2-cost"
+            if [ "$ISO" = "ALL" ]; then
+              add_files "$DIR" 1 "step_2_2a_DG_*.parquet"
+            else
+              add_files "$DIR" 1 "step_2_2a_DG_${ISO}_*.parquet"
+            fi
+          fi
+
+          # ── Step 3: dispatch cache ──
+          if [ "${{ inputs.clear_step3_dispatch }}" = "true" ]; then
+            DIR="data/step3-dispatch"
+            if [ "$ISO" = "ALL" ]; then
+              add_files "$DIR" 1 "*.parquet" "*.npz" "*.json"
+            else
+              add_files "$DIR" 1 "${ISO}_*.parquet" "${ISO}_*.npz"
+            fi
+          fi
+
+          # ── Step 4: analysis top-level ──
+          if [ "${{ inputs.clear_step4_top }}" = "true" ]; then
             DIR="data/step4-analysis"
             if [ "$ISO" = "ALL" ]; then
               add_files "$DIR" 1 "*.json" "*.parquet"
             else
-              # ISO-specific files: scenario_a_{ISO}.json, scenario_b_{ISO}.json
-              add_files "$DIR" 1 "*_${ISO}.json" "*_${ISO}.parquet"
+              add_files "$DIR" 1 "*_${ISO}.json" "*_${ISO}.parquet" "*${ISO}*.json" "*${ISO}*.parquet"
             fi
           fi
 
-          # ── Step 5A: CO2 results ──
-          if [ "${{ inputs.clear_step5_co2 }}" = "true" ]; then
+          # ── Step 4: CO2 results ──
+          if [ "${{ inputs.clear_step4_co2 }}" = "true" ]; then
             DIR="data/step4-analysis/co2_results"
             if [ "$ISO" = "ALL" ]; then
               add_files "$DIR" 1 "*.parquet" "*.json"
             else
-              add_files "$DIR" 1 "co2_${ISO}.parquet"
+              add_files "$DIR" 1 "co2_${ISO}.parquet" "*${ISO}*.json"
             fi
           fi
 
-          # ── Step 4: dispatch cache ──
-          if [ "${{ inputs.clear_step5_dispatch }}" = "true" ]; then
-            DIR="data/step3-dispatch"
-            if [ "$ISO" = "ALL" ]; then
-              add_files "$DIR" 1 "*.parquet" "*.npz"
-            else
-              add_files "$DIR" 1 "${ISO}_dispatch_cache.parquet" "${ISO}_*.npz"
-            fi
-          fi
-
-          # ── Step 5B: LMP ──
-          if [ "${{ inputs.clear_step5_lmp }}" = "true" ]; then
+          # ── Step 4: LMP ──
+          if [ "${{ inputs.clear_step4_lmp }}" = "true" ]; then
             DIR="data/step4-analysis/lmp"
             if [ "$ISO" = "ALL" ]; then
               add_files "$DIR" 1 "*.parquet" "*.json"
             else
-              add_files "$DIR" 1 "${ISO}_lmp.parquet" "${ISO}_calibration.json"
+              add_files "$DIR" 1 "${ISO}_*.parquet" "${ISO}_*.json"
             fi
           fi
 
-          # ── Step 8D: Wright's Law ──
-          if [ "${{ inputs.clear_step8 }}" = "true" ]; then
+          # ── Step 4: resource density ──
+          if [ "${{ inputs.clear_step4_density }}" = "true" ]; then
+            DIR="data/step4-analysis/resource-density"
+            if [ "$ISO" = "ALL" ]; then
+              add_files "$DIR" 1 "*.json" "*.parquet"
+            else
+              add_files "$DIR" 1 "*${ISO}*.json" "*${ISO}*.parquet"
+            fi
+          fi
+
+          # ── Step 5: scenarios / procurement ──
+          if [ "${{ inputs.clear_step5_scenarios }}" = "true" ]; then
+            DIR="data/step5-scenarios"
+            # No ISO dimension — strategy files span all ISOs
+            add_files "$DIR" 1 "*.parquet" "*.json"
+          fi
+
+          # ── Step 5: Wright's Law ──
+          if [ "${{ inputs.clear_step5_wrights }}" = "true" ]; then
             DIR="data/step5-wrights"
-            # No ISO dimension — always clear all files
             add_files "$DIR" 1 "*.json" "*.parquet"
+          fi
+
+          # ── Step 6: SMARTargets ──
+          if [ "${{ inputs.clear_step6_smartargets }}" = "true" ]; then
+            DIR="data/step6-smartargets"
+            if [ "$ISO" = "ALL" ]; then
+              add_files "$DIR" 1 "*.parquet" "*.json"
+            else
+              add_files "$DIR" 1 "*${ISO}*.parquet" "*${ISO}*.json"
+            fi
           fi
 
           # ── Deduplicate and sort ──
@@ -234,12 +312,17 @@ jobs:
           echo ""
 
           # Group by directory
-          for dir in data/step1-pfs data/step1-pfs \
-                     data/step2.1-ef data/step2.2-cost \
+          for dir in data/step1-pfs data/step2.1-ef data/step2.2-cost \
                      data/step3-dispatch data/step4-analysis \
                      data/step4-analysis/co2_results \
-                     data/step4-analysis/lmp data/step5-wrights; do
-            matched=$(grep "^${dir}/" "$FILES" 2>/dev/null || true)
+                     data/step4-analysis/lmp data/step4-analysis/resource-density \
+                     data/step5-scenarios data/step5-wrights \
+                     data/step6-smartargets; do
+            matched=$(grep "^${dir}/" "$FILES" 2>/dev/null | grep -v "^${dir}/.*/" || true)
+            # For subdirectories, get their specific files
+            if echo "$dir" | grep -q "/co2_results\|/lmp\|/resource-density"; then
+              matched=$(grep "^${dir}/" "$FILES" 2>/dev/null || true)
+            fi
             if [ -n "$matched" ]; then
               count=$(echo "$matched" | wc -l)
               size=0
@@ -283,10 +366,10 @@ jobs:
           done < "$FILES"
 
           # Stage deletions — git add -u on each affected directory
-          for dir in data/step1-pfs data/step1-pfs \
-                     data/step2.1-ef data/step2.2-cost \
+          for dir in data/step1-pfs data/step2.1-ef data/step2.2-cost \
                      data/step3-dispatch data/step4-analysis \
-                     data/step5-wrights; do
+                     data/step5-scenarios data/step5-wrights \
+                     data/step6-smartargets; do
             git add -u "$dir/" 2>/dev/null || true
           done
 
@@ -299,16 +382,20 @@ jobs:
 
           # Build directory list for commit message
           DIRS=""
-          [ "${{ inputs.clear_step1 }}" = "true" ] && DIRS="${DIRS} step1-pfs"
-          [ "${{ inputs.clear_step1c_storage }}" = "true" ] && DIRS="${DIRS} step1c-storage"
-          [ "${{ inputs.clear_step2 }}" = "true" ] && DIRS="${DIRS} step2-ef"
-          [ "${{ inputs.clear_step3 }}" = "true" ] && DIRS="${DIRS} step3-cost"
-          [ "${{ inputs.clear_step5 }}" = "true" ] && DIRS="${DIRS} step5-top"
-          [ "${{ inputs.clear_step5_co2 }}" = "true" ] && DIRS="${DIRS} step5-co2"
-          [ "${{ inputs.clear_step5_dispatch }}" = "true" ] && DIRS="${DIRS} step5-dispatch"
-          [ "${{ inputs.clear_step5_lmp }}" = "true" ] && DIRS="${DIRS} step5-lmp"
-          [ "${{ inputs.clear_step8 }}" = "true" ] && DIRS="${DIRS} step8-wrights"
-          DIRS=$(echo "$DIRS" | xargs)  # trim whitespace
+          [ "${{ inputs.clear_step1_pfs }}" = "true" ]         && DIRS="${DIRS} step1-pfs"
+          [ "${{ inputs.clear_step1_storage }}" = "true" ]     && DIRS="${DIRS} step1-storage"
+          [ "${{ inputs.clear_step2_ef }}" = "true" ]          && DIRS="${DIRS} step2.1-ef"
+          [ "${{ inputs.clear_step2_cost }}" = "true" ]        && DIRS="${DIRS} step2.2-CO"
+          [ "${{ inputs.clear_step2_dg }}" = "true" ]          && DIRS="${DIRS} step2.2-DG"
+          [ "${{ inputs.clear_step3_dispatch }}" = "true" ]    && DIRS="${DIRS} step3-dispatch"
+          [ "${{ inputs.clear_step4_top }}" = "true" ]         && DIRS="${DIRS} step4-top"
+          [ "${{ inputs.clear_step4_co2 }}" = "true" ]         && DIRS="${DIRS} step4-co2"
+          [ "${{ inputs.clear_step4_lmp }}" = "true" ]         && DIRS="${DIRS} step4-lmp"
+          [ "${{ inputs.clear_step4_density }}" = "true" ]     && DIRS="${DIRS} step4-density"
+          [ "${{ inputs.clear_step5_scenarios }}" = "true" ]   && DIRS="${DIRS} step5-scenarios"
+          [ "${{ inputs.clear_step5_wrights }}" = "true" ]     && DIRS="${DIRS} step5-wrights"
+          [ "${{ inputs.clear_step6_smartargets }}" = "true" ] && DIRS="${DIRS} step6-smartargets"
+          DIRS=$(echo "$DIRS" | xargs)
 
           git commit -m "Unified cleanup ($ISO): $COUNT files removed
 
@@ -340,15 +427,19 @@ jobs:
           echo "  Dry run:     ${{ inputs.dry_run }}"
           echo ""
           echo "  Directories selected:"
-          [ "${{ inputs.clear_step1 }}" = "true" ]          && echo "    ✓ data/step1-pfs/"
-          [ "${{ inputs.clear_step1c_storage }}" = "true" ]         && echo "    ✓ data/step1-pfs/"
-          [ "${{ inputs.clear_step2 }}" = "true" ]          && echo "    ✓ data/step2.1-ef/"
-          [ "${{ inputs.clear_step3 }}" = "true" ]          && echo "    ✓ data/step2.2-cost/"
-          [ "${{ inputs.clear_step5 }}" = "true" ]          && echo "    ✓ data/step4-analysis/ (top-level)"
-          [ "${{ inputs.clear_step5_co2 }}" = "true" ]      && echo "    ✓ data/step4-analysis/co2_results/"
-          [ "${{ inputs.clear_step5_dispatch }}" = "true" ]  && echo "    ✓ data/step3-dispatch/ (dispatch cache)"
-          [ "${{ inputs.clear_step5_lmp }}" = "true" ]      && echo "    ✓ data/step4-analysis/lmp/"
-          [ "${{ inputs.clear_step8 }}" = "true" ]          && echo "    ✓ data/step5-wrights/"
+          [ "${{ inputs.clear_step1_pfs }}" = "true" ]         && echo "    ✓ data/step1-pfs/ (full PFS)"
+          [ "${{ inputs.clear_step1_storage }}" = "true" ]     && echo "    ✓ data/step1-pfs/ (storage only)"
+          [ "${{ inputs.clear_step2_ef }}" = "true" ]          && echo "    ✓ data/step2.1-ef/ (efficient frontier)"
+          [ "${{ inputs.clear_step2_cost }}" = "true" ]        && echo "    ✓ data/step2.2-cost/ (cross-opt CO)"
+          [ "${{ inputs.clear_step2_dg }}" = "true" ]          && echo "    ✓ data/step2.2-cost/ (demand growth DG — 147 files)"
+          [ "${{ inputs.clear_step3_dispatch }}" = "true" ]    && echo "    ✓ data/step3-dispatch/"
+          [ "${{ inputs.clear_step4_top }}" = "true" ]         && echo "    ✓ data/step4-analysis/ (top-level)"
+          [ "${{ inputs.clear_step4_co2 }}" = "true" ]         && echo "    ✓ data/step4-analysis/co2_results/"
+          [ "${{ inputs.clear_step4_lmp }}" = "true" ]         && echo "    ✓ data/step4-analysis/lmp/"
+          [ "${{ inputs.clear_step4_density }}" = "true" ]     && echo "    ✓ data/step4-analysis/resource-density/"
+          [ "${{ inputs.clear_step5_scenarios }}" = "true" ]   && echo "    ✓ data/step5-scenarios/"
+          [ "${{ inputs.clear_step5_wrights }}" = "true" ]     && echo "    ✓ data/step5-wrights/"
+          [ "${{ inputs.clear_step6_smartargets }}" = "true" ] && echo "    ✓ data/step6-smartargets/"
           echo ""
           if [ "${{ inputs.dry_run }}" = "true" ] && [ "${{ steps.enumerate.outputs.count }}" != "0" ]; then
             echo "  Re-run with dry_run=false to execute."
