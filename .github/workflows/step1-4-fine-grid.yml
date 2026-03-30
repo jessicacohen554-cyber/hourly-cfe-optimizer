@@ -1,0 +1,120 @@
+name: "Step 1.4: Fine-Grid PFS"
+
+# Fine-grid PFS for 40-75% thresholds (1% step).
+# Each ISO runs on its own runner in parallel.
+#
+# Output: data/step1-pfs/{ISO}_*.parquet
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      branch:
+        description: 'Source branch to checkout code from'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Build ISO matrix
+        id: set-matrix
+        run: |
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            echo 'matrix={"iso":["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]}' >> "$GITHUB_OUTPUT"
+          else
+            echo 'matrix={"iso":["${{ inputs.iso }}"]}' >> "$GITHUB_OUTPUT"
+          fi
+
+  fine-grid:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch || 'master' }}
+        fetch-depth: 0
+
+    - name: Create output branch
+      run: |
+        TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+        ISO_LOWER=$(echo "${{ matrix.iso }}" | tr '[:upper:]' '[:lower:]')
+        TARGET_BRANCH="auto/${TIMESTAMP}-step1-4-fine-grid-${ISO_LOWER}"
+        echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config http.postBuffer 524288000
+        git checkout -b "$TARGET_BRANCH"
+        echo "Working on branch: $TARGET_BRANCH"
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        pip install numpy numba pyarrow pandas
+        python -c "from numba import njit; print('Numba OK')"
+
+    - name: Ensure output directory
+      run: mkdir -p data/step1-pfs
+
+    - name: "Run Fine-Grid PFS — ${{ matrix.iso }}"
+      run: |
+        echo "═══════════════════════════════════════════════════════════"
+        echo "  ISO: ${{ matrix.iso }}  |  Fine-Grid PFS (40-75%, 1% step)"
+        echo "═══════════════════════════════════════════════════════════"
+        python scripts/step1_4_fine_grid_pfs.py --iso ${{ matrix.iso }}
+
+    - name: Commit results
+      if: always()
+      run: |
+        ISO="${{ matrix.iso }}"
+        git add -f data/step1-pfs/"${ISO}"_*.parquet 2>/dev/null || true
+        if ! git diff --cached --quiet; then
+          git commit -m "Step 1.4 Fine-Grid PFS: ${ISO} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        else
+          echo "No new results"
+        fi
+
+    - name: Push results
+      if: always()
+      run: |
+        for i in 1 2 3 4; do
+          git push -u origin "$TARGET_BRANCH" && break
+          echo "Push attempt $i failed, retrying in $((2**i))s..."
+          sleep $((2**i))
+        done
+        echo "Branch: $TARGET_BRANCH"
+        echo "Merge this branch into master to bank the PFS results."
