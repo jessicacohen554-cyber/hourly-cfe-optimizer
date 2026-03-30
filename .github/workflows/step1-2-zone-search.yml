@@ -123,20 +123,31 @@ jobs:
     - name: Verify scored database
       run: |
         ISO="${{ matrix.iso }}"
-        CACHE="data/step1-pfs/${ISO}_coarse_cache.parquet"
-        if [ ! -f "$CACHE" ]; then
+        SINGLE="data/step1-pfs/${ISO}_coarse_cache.parquet"
+        MULTI="data/step1-pfs/${ISO}_coarse_cache_part001.parquet"
+        if [ -f "$SINGLE" ]; then
+          CACHE="$SINGLE"
+        elif [ -f "$MULTI" ]; then
+          CACHE="$MULTI"
+        else
           echo "ERROR: Missing scored database for $ISO"
-          echo "  Expected: $CACHE"
+          echo "  Expected: $SINGLE"
+          echo "  Or multi-part: ${ISO}_coarse_cache_part*.parquet"
           echo "  Run Step 1.1 (Scored Database) first."
           exit 1
         fi
-        SIZE=$(du -h "$CACHE" | cut -f1)
-        echo "OK: $ISO scored database ($SIZE)"
+        SIZE=$(du -ch data/step1-pfs/${ISO}_coarse_cache*.parquet 2>/dev/null | tail -1 | cut -f1)
+        NFILES=$(ls data/step1-pfs/${ISO}_coarse_cache*.parquet 2>/dev/null | wc -l)
+        echo "OK: $ISO scored database ($NFILES file(s), $SIZE total)"
 
     - name: Check hybrid columns
       run: |
         ISO="${{ matrix.iso }}"
+        # Find first available cache file (single or multi-part)
         CACHE="data/step1-pfs/${ISO}_coarse_cache.parquet"
+        if [ ! -f "$CACHE" ]; then
+          CACHE="data/step1-pfs/${ISO}_coarse_cache_part001.parquet"
+        fi
         python3 -c "
         import pyarrow.parquet as pq
         s = pq.read_schema('$CACHE')
