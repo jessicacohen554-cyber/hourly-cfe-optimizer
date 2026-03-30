@@ -375,6 +375,11 @@ def load_shared_data():
 
 def load_strategy_data():
     """Load strategy 2C results for spend breakdown validation."""
+    from procurement_utils import load_results_parquet
+    data = load_results_parquet('strategy2_hourly.parquet')
+    if data is not None:
+        return data
+    # Fallback to legacy JSON
     path = os.path.join(PP_DIR, 'strategy2_hourly.json')
     if os.path.exists(path):
         with open(path) as f:
