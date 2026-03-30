@@ -45,7 +45,7 @@ from procurement_utils import (
     build_procurement_tranches, build_newbuild_only_tranches,
     load_ef_resource_mix, get_resource_ppa_price,
     make_strategy_result, build_25yr_trajectory,
-    save_results_json, compute_dispatch_hms,
+    save_results_json, save_results_parquet, compute_dispatch_hms,
     UPRATE_CAP_TWH, EXISTING_EAC_PRICE,
 )
 
@@ -745,13 +745,13 @@ def main():
         nuclear_policy='stable',
     )
 
-    save_results_json(results, 'strategy2_hourly.json')
+    save_results_parquet(results, 'strategy2_hourly.parquet')
 
     # ── Dispatch-based 8760 hourly match scoring ──
     try:
         compute_dispatch_hms(results, ['strategy2A', 'strategy2B', 'strategy2C'], isos)
         # Re-save with dispatch scores
-        save_results_json(results, 'strategy2_hourly.json')
+        save_results_parquet(results, 'strategy2_hourly.parquet')
     except Exception as e:
         print(f"  WARNING: Dispatch scoring failed: {e}")
         import traceback; traceback.print_exc()
@@ -772,7 +772,7 @@ def main():
     results['strategy2C_rolloff'] = rolloff_results.get('strategy2C', {})
 
     # Re-save with rolloff variant included
-    save_results_json(results, 'strategy2_hourly.json')
+    save_results_parquet(results, 'strategy2_hourly.parquet')
 
     # Summary
     print("\n" + "=" * 70)
