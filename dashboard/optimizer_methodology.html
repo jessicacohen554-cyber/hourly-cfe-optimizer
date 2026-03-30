@@ -640,6 +640,12 @@
         All toggles use a <strong>Low / Medium / High</strong> framework grounded in published
         cost ranges from NREL, Lazard, and LBNL.
     </p>
+    <p>
+        The model evaluates <strong>8&ndash;10 resource dimensions</strong> per ISO: 4&ndash;6 base
+        resources (solar, wind, clean firm, hydro, CCS, offshore wind/geothermal where applicable)
+        plus 4 hybrid co-located types (solar+battery 4hr/8hr, wind+battery 4hr/8hr). Storage
+        dispatch (standalone battery, LDES) adds additional sweep dimensions.
+    </p>
 
     <!-- ================================================================ -->
     <!-- SECTION 3: RESOURCES MODELED                                     -->
@@ -688,6 +694,22 @@
             <div class="resource-dot" style="background: var(--geothermal);"></div>
             <div><strong>Geothermal</strong> &mdash; CAISO-only, flat year-round</div>
         </div>
+        <div class="resource-item">
+            <div class="resource-dot" style="background: var(--solar-batt4);"></div>
+            <div><strong>Solar + Battery (4hr)</strong> &mdash; Co-located solar with 4-hour battery; clipping recovery + peak shifting</div>
+        </div>
+        <div class="resource-item">
+            <div class="resource-dot" style="background: var(--solar-batt8);"></div>
+            <div><strong>Solar + Battery (8hr)</strong> &mdash; Co-located solar with 8-hour battery; extended temporal shifting</div>
+        </div>
+        <div class="resource-item">
+            <div class="resource-dot" style="background: var(--wind-batt4);"></div>
+            <div><strong>Wind + Battery (4hr)</strong> &mdash; Co-located wind with 4-hour battery; short temporal shifting</div>
+        </div>
+        <div class="resource-item">
+            <div class="resource-dot" style="background: var(--wind-batt8);"></div>
+            <div><strong>Wind + Battery (8hr)</strong> &mdash; Co-located wind with 8-hour battery; deep overnight-to-peak shifting</div>
+        </div>
     </div>
 
     <p>
@@ -702,6 +724,95 @@
         regionalized levelized costs plus applicable transmission). This two-tier approach reflects the
         reality that procurement up to the existing clean share of the grid is fundamentally cheaper
         than building new dedicated capacity.
+    </p>
+
+    <h3 id="hybrid-resources">Hybrid Co-Located Resources</h3>
+
+    <p>
+        The optimizer includes four <strong>hybrid co-located</strong> resource types that combine
+        renewable generation with on-site battery storage at a single point of interconnection.
+        These differ fundamentally from standalone renewables + grid-connected storage:
+    </p>
+
+    <ul>
+        <li><strong>Single interconnection</strong> &mdash; shared grid connection (IQ position, TX adder)</li>
+        <li><strong>No grid charging</strong> &mdash; battery only charges from co-located generation (ITC-qualifying)</li>
+        <li><strong>Combined output capped</strong> at the AC interconnection rating</li>
+        <li><strong>Pre-computed 8760-hour profiles</strong> &mdash; co-located battery dispatch is resolved into the generation shape before optimization</li>
+    </ul>
+
+    <h4>Solar Hybrids (solar_batt4, solar_batt8)</h4>
+
+    <p>
+        Solar panels are installed at a DC:AC ratio exceeding 1.0 (1.35&ndash;2.0 depending on ISO
+        and battery duration). During peak sun, generation exceeding the AC interconnection limit is
+        &ldquo;clipped&rdquo; and charges the co-located battery. The battery discharges during net-peak hours,
+        shifting solar energy to when it&rsquo;s most valuable.
+    </p>
+
+    <table class="data-table" style="max-width: 600px;">
+        <thead>
+            <tr>
+                <th>Parameter</th><th>solar_batt4</th><th>solar_batt8</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Battery duration</td><td>4 hours</td><td>8 hours</td></tr>
+            <tr><td>Round-trip efficiency</td><td>85%</td><td>85%</td></tr>
+            <tr><td>DC:AC ratio (CAISO)</td><td>1.35</td><td>1.70</td></tr>
+            <tr><td>DC:AC ratio (others)</td><td>1.50</td><td>2.00</td></tr>
+            <tr><td>Grid charging</td><td>None</td><td>None</td></tr>
+            <tr><td>Discharge trigger</td><td>Top 4 net-peak hours/day</td><td>Top 8 net-peak hours/day</td></tr>
+        </tbody>
+    </table>
+
+    <h4>Wind Hybrids (wind_batt4, wind_batt8)</h4>
+
+    <p>
+        Wind turbines produce AC power with no clipping dynamic. The co-located battery charges
+        from off-peak wind surplus (when generation exceeds demand share) and discharges during
+        net-peak hours. The value proposition is temporal shifting &mdash; moving wind generation
+        from low-value overnight hours to high-value peak hours.
+    </p>
+
+    <table class="data-table" style="max-width: 600px;">
+        <thead>
+            <tr>
+                <th>Parameter</th><th>wind_batt4</th><th>wind_batt8</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>Battery duration</td><td>4 hours</td><td>8 hours</td></tr>
+            <tr><td>Round-trip efficiency</td><td>85%</td><td>85%</td></tr>
+            <tr><td>Battery:wind MW ratio</td><td>25&ndash;40%</td><td>25&ndash;40%</td></tr>
+            <tr><td>Grid charging</td><td>None</td><td>None</td></tr>
+            <tr><td>Discharge trigger</td><td>Top 4 net-peak hours/day</td><td>Top 8 net-peak hours/day</td></tr>
+        </tbody>
+    </table>
+
+    <h4>Hybrid LCOE Model</h4>
+
+    <p>
+        Hybrid LCOE uses a <strong>component-additive</strong> formula:
+    </p>
+
+    <pre style="background: #f1f5f9; padding: 16px; border-radius: 8px; font-family: var(--font-mono); font-size: 0.85rem; line-height: 1.6; overflow-x: auto;">
+hybrid_lcoe = adjusted_renewable_lcoe + battery_lcos &times; (1 &minus; ITC_rate) + AC_adjusted_tx
+
+Where:
+  adjusted_renewable_lcoe = parent LCOE / DC:AC ratio  (solar hybrids)
+                          = parent LCOE                 (wind hybrids)
+  battery_lcos = co-located battery $/MWh discharged (NREL ATB 2024)
+  ITC_rate = 0.30 (IRA &sect;48/&sect;48E, both solar and wind hybrids qualify)
+  AC_adjusted_tx = parent TX adder / DC:AC ratio  (solar hybrids)
+                 = parent TX adder                 (wind hybrids)</pre>
+
+    <p>
+        The 30% ITC applies to both solar+storage and wind+storage co-located facilities under
+        the IRA expansion of energy storage ITC to all qualified clean energy facilities. The
+        DC:AC ratio adjustment for solar reflects that overbuilding DC capacity proportionally
+        increases capacity factor, lowering the effective $/MWh. Wind turbines are AC machines
+        with no overbuild dynamic, so no DC:AC adjustment applies.
     </p>
 
     <!-- ================================================================ -->
@@ -743,6 +854,12 @@
             7-day rolling windows for LDES, 30-day windows for H&#8322;. Storage grids are swept
             independently per base mix to find optimal dispatch allocation.</li>
     </ol>
+    <p>
+        With hybrid resources, the grid search operates in 8&ndash;10 dimensions: base resources
+        plus four hybrid co-located types. Empirical resource caps constrain each dimension to
+        proven-useful ranges (existing max + buffer), preventing combinatorial explosion while
+        ensuring the optimizer explores hybrid-inclusive frontiers.
+    </p>
 
     <h3>Phase 2: Efficient Frontier Extraction</h3>
     <p>

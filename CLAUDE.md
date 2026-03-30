@@ -311,7 +311,7 @@ When facing compute vs. rigor tradeoffs:
 ### Naming & Terminology
 - ALL toggles: Low / Medium / High (NEVER "Base", "Baseline", or "Mid")
 - Transmission toggle also has "None" option: None / Low / Medium / High
-- Resources: Clean Firm, Solar, Wind, CCS-CCGT, Hydro, Battery, LDES
+- Resources: Clean Firm, Solar, Wind, CCS-CCGT, Hydro, Battery, LDES, Solar+Batt4, Solar+Batt8, Wind+Batt4, Wind+Batt8
 
 ### Visual & UX
 - Banner goes ABOVE intro text on main page (not below)
@@ -378,6 +378,10 @@ The SVG waveform overlay (energy curves + heartbeat/EKG lines) is auto-injected 
 | Fossil Gas | `--fossil-gas` | `#6B7280` | `RESOURCE_COLORS.fossilGas` |
 | Fossil Coal | `--fossil-coal` | `#374151` | `RESOURCE_COLORS.fossilCoal` |
 | Fossil Oil | `--fossil-oil` | `#92400E` | `RESOURCE_COLORS.fossilOil` |
+| Solar+Batt 4hr | `--solar-batt4` | `#E6890B` | `RESOURCE_COLORS.solarBatt4` |
+| Solar+Batt 8hr | `--solar-batt8` | `#CC7A0A` | `RESOURCE_COLORS.solarBatt8` |
+| Wind+Batt 4hr | `--wind-batt4` | `#1AA34E` | `RESOURCE_COLORS.windBatt4` |
+| Wind+Batt 8hr | `--wind-batt8` | `#158F42` | `RESOURCE_COLORS.windBatt8` |
 
 #### Canonical ISO Colors
 | ISO | CSS Variable | Hex | Chart.js Constant |
