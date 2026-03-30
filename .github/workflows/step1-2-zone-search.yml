@@ -1,0 +1,193 @@
+name: "Step 1.2: Zone Search"
+
+# Zone search around promising regions from the coarse scored database.
+# Each (ISO × zone) pair runs as a separate matrix job to keep memory usage
+# within the 7 GB limit of standard GitHub runners.
+#
+# Output: data/step1-pfs/{ISO}_*.parquet  (merged into existing PFS)
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso:
+        description: 'ISO region'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - CAISO
+          - ERCOT
+          - PJM
+          - NYISO
+          - NEISO
+          - MISO
+          - SPP
+      zones:
+        description: 'Zones to run: A (50-75%), B (75-90%), C (90-99.99%). Blank = all.'
+        required: false
+        default: ''
+        type: string
+      thresholds:
+        description: 'Comma-separated thresholds (e.g. "90,95,99"). Blank = all in zone.'
+        required: false
+        default: ''
+        type: string
+      branch:
+        description: 'Source branch to checkout code from'
+        required: false
+        default: 'master'
+        type: string
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  # ════════════════════════════════════════════════════════════════════════
+  # Build the (ISO × zone) matrix
+  # ════════════════════════════════════════════════════════════════════════
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.build.outputs.matrix }}
+    steps:
+      - name: Build matrix
+        id: build
+        run: |
+          # ISOs
+          if [ "${{ inputs.iso }}" = "ALL" ]; then
+            ISOS='["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]'
+          else
+            ISOS='["${{ inputs.iso }}"]'
+          fi
+
+          # Zones
+          REQUESTED="${{ inputs.zones }}"
+          if [ -n "$REQUESTED" ]; then
+            # Convert comma-separated to JSON array: "A,B" → ["A","B"]
+            ZONES=$(echo "$REQUESTED" | tr -d ' ' | sed 's/,/","/g' | sed 's/^/["/' | sed 's/$/"]/')
+          else
+            ZONES='["A","B","C"]'
+          fi
+
+          echo "matrix={\"iso\":$ISOS,\"zone\":$ZONES}" >> "$GITHUB_OUTPUT"
+          echo "Matrix: iso=$ISOS zone=$ZONES"
+
+  # ════════════════════════════════════════════════════════════════════════
+  # Per (ISO × zone) job — one zone at a time keeps memory bounded
+  # ════════════════════════════════════════════════════════════════════════
+  zone-search:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    strategy:
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.branch || 'master' }}
+        fetch-depth: 0
+
+    - name: Create output branch
+      run: |
+        TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+        ISO_LOWER=$(echo "${{ matrix.iso }}" | tr '[:upper:]' '[:lower:]')
+        TARGET_BRANCH="auto/${TIMESTAMP}-step1-2-zone${{ matrix.zone }}-${ISO_LOWER}"
+        echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config http.postBuffer 524288000
+        git checkout -b "$TARGET_BRANCH"
+        echo "Working on branch: $TARGET_BRANCH"
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        pip install numpy numba pyarrow pandas
+        python -c "from numba import njit; print('Numba OK')"
+
+    - name: Ensure output directory
+      run: mkdir -p data/step1-pfs
+
+    - name: Verify scored database
+      run: |
+        ISO="${{ matrix.iso }}"
+        CACHE="data/step1-pfs/${ISO}_coarse_cache.parquet"
+        if [ ! -f "$CACHE" ]; then
+          echo "ERROR: Missing scored database for $ISO"
+          echo "  Expected: $CACHE"
+          echo "  Run Step 1.1 (Scored Database) first."
+          exit 1
+        fi
+        SIZE=$(du -h "$CACHE" | cut -f1)
+        echo "OK: $ISO scored database ($SIZE)"
+
+    - name: Check hybrid columns
+      run: |
+        ISO="${{ matrix.iso }}"
+        CACHE="data/step1-pfs/${ISO}_coarse_cache.parquet"
+        python3 -c "
+        import pyarrow.parquet as pq
+        s = pq.read_schema('$CACHE')
+        hyb = 'solar_batt4' in s.names
+        cols = [c for c in s.names if 'batt' in c]
+        print(f'Hybrid mode: {hyb}')
+        if cols: print(f'Hybrid columns: {cols}')
+        "
+
+    - name: Compute prior windows
+      continue-on-error: true
+      run: |
+        python scripts/step1_prior_windows.py --iso "${{ matrix.iso }}"
+
+    - name: "Run Zone Search — ${{ matrix.iso }} Zone ${{ matrix.zone }}"
+      run: |
+        ISO="${{ matrix.iso }}"
+        ZONE="${{ matrix.zone }}"
+        ARGS="--iso $ISO --zones $ZONE"
+
+        THRESHOLDS="${{ inputs.thresholds }}"
+        if [ -n "$THRESHOLDS" ]; then
+          ARGS="$ARGS --thresholds \"$THRESHOLDS\""
+          echo "Threshold filter: $THRESHOLDS"
+        fi
+
+        echo ""
+        echo "========================================="
+        echo "  Zone $ZONE — $ISO"
+        echo "========================================="
+        echo "Command: python scripts/step1_2_zone_search.py $ARGS"
+        eval python scripts/step1_2_zone_search.py $ARGS
+
+    - name: Commit results
+      if: always()
+      run: |
+        ISO="${{ matrix.iso }}"
+        git add -f data/step1-pfs/"${ISO}"_*.parquet 2>/dev/null || true
+        if ! git diff --cached --quiet; then
+          git commit -m "Step 1.2 Zone Search (Zone ${{ matrix.zone }}): ${ISO} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        else
+          echo "No new results"
+        fi
+
+    - name: Push results
+      if: always()
+      run: |
+        for i in 1 2 3 4; do
+          git push -u origin "$TARGET_BRANCH" && break
+          echo "Push attempt $i failed, retrying in $((2**i))s..."
+          sleep $((2**i))
+        done
+        echo "Branch: $TARGET_BRANCH"
+        echo "Merge this branch into master to bank the PFS results."
