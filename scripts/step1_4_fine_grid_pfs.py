@@ -63,6 +63,7 @@ from dispatch_utils import (
     RESOURCE_TYPES,
 )
 import step1_pfs_generator as s1
+from parquet_utils import write_parquet_chunked
 
 try:
     import pyarrow as pa
@@ -403,13 +404,14 @@ def assign_and_save(iso, scores, raw_components, output_dir, include_hybrids=Fal
         if iso in GEOTHERMAL_ISOS and 'geothermal' not in rows:
             rows['geothermal'] = raw_components['geothermal'][indices]
 
-        # Save as parquet
+        # Save as parquet (chunked if >45 MB)
         if HAS_PYARROW:
             arrays = {k: pa.array(v) for k, v in rows.items()}
             table = pa.table(arrays)
             out_path = os.path.join(output_dir, f'{iso}_t{threshold:g}_fine_pfs.parquet')
-            pq.write_table(table, out_path)
-            print(f"    t{threshold:g}: {len(indices):,} mixes → {out_path}")
+            written = write_parquet_chunked(table, out_path, max_mb=45,
+                                            compression='snappy')
+            print(f"    t{threshold:g}: {len(indices):,} mixes → {len(written)} file(s)")
             saved_count += len(indices)
         else:
             print(f"    t{threshold:g}: {len(indices):,} mixes (pyarrow not available, skipping save)")
@@ -462,8 +464,9 @@ def save_near_miss_cache(iso, scores, raw_components):
     out_path = os.path.join(OUTPUT_DIR, f'{iso}_near_miss.parquet')
     new_table = pa.table(data)
 
-    if os.path.exists(out_path):
-        existing = pq.read_table(out_path)
+    existing_table = read_parquet_parts(out_path)
+    if existing_table is not None:
+        existing = existing_table
         # Align columns: new table may have different columns than existing
         aligned_arrays = {}
         for col in existing.column_names:
@@ -508,9 +511,10 @@ def save_near_miss_cache(iso, scores, raw_components):
         combined = combined.take(top_idx)
         print(f"  Near-miss cache: capped at {MAX_NEAR_MISS:,}")
 
-    pq.write_table(combined, out_path, compression='snappy')
-    size_mb = os.path.getsize(out_path) / (1024 * 1024)
-    print(f"  Near-miss cache: {len(combined):,} total → {out_path} ({size_mb:.1f} MB)")
+    written = write_parquet_chunked(combined, out_path, max_mb=45,
+                                    compression='snappy')
+    total_mb = sum(os.path.getsize(p) / (1024*1024) for p in written)
+    print(f"  Near-miss cache: {len(combined):,} total → {len(written)} file(s) ({total_mb:.1f} MB)")
 
 
 # ============================================================================
