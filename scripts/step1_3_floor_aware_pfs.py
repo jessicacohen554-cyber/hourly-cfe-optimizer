@@ -351,10 +351,13 @@ def score_mixes(mix_batch, demand_arr, supply_matrix):
     return scores * 100.0  # Convert to percentage
 
 
-def assign_and_save(iso, scores, raw_components, output_dir, include_hybrids=False):
+def assign_and_save(iso, scores, raw_components, output_dir, include_hybrids=False,
+                    thresholds_filter=None):
     """Assign scored mixes to thresholds and save parquets."""
     N = len(scores)
     all_thresholds = FLOOR_THRESHOLDS + NEAR_MISS_THRESHOLDS
+    if thresholds_filter:
+        all_thresholds = [t for t in all_thresholds if t in thresholds_filter]
 
     # Output columns: base resource types (excluding ccs_ccgt which is implicit)
     # plus geothermal and hybrids as applicable
@@ -517,7 +520,8 @@ def save_near_miss_cache(iso, scores, raw_components):
 # MAIN
 # ============================================================================
 
-def process_iso(iso, demand_data, gen_profiles, include_hybrids=False):
+def process_iso(iso, demand_data, gen_profiles, include_hybrids=False,
+                thresholds_filter=None):
     """Run floor-aware PFS generation for a single ISO."""
     # Auto-detect hybrid mode from coarse cache (supports multi-part files)
     coarse_schema = s1.read_coarse_cache_schema(iso)
@@ -574,7 +578,8 @@ def process_iso(iso, demand_data, gen_profiles, include_hybrids=False):
         print(f"    t{t:g}: {in_range:,} feasible")
 
     saved = assign_and_save(iso, scores, raw_components, OUTPUT_DIR,
-                            include_hybrids=include_hybrids)
+                            include_hybrids=include_hybrids,
+                            thresholds_filter=thresholds_filter)
     print(f"  Total saved: {saved:,} mixes")
 
     save_near_miss_cache(iso, scores, raw_components)
@@ -583,15 +588,41 @@ def process_iso(iso, demand_data, gen_profiles, include_hybrids=False):
     return saved
 
 
+def _parse_thresholds(raw):
+    """Parse comma-separated threshold list, return list of floats or None."""
+    if not raw or raw.strip().upper() in ('', 'ALL'):
+        return None
+    parts = [p.strip() for p in raw.split(',') if p.strip()]
+    result = []
+    for p in parts:
+        try:
+            result.append(float(p))
+        except ValueError:
+            print(f"WARNING: Ignoring invalid threshold '{p}'")
+    return sorted(set(result)) if result else None
+
+
 def main():
-    parser = argparse.ArgumentParser(description='Floor-Aware PFS Generator (50-70%)')
+    parser = argparse.ArgumentParser(description='Floor-Aware PFS Generator (50-80%)')
     parser.add_argument('--iso', type=str, default='ALL',
                         help='ISO to process (default: ALL)')
     parser.add_argument('--hybrid', action='store_true',
                         help='Enable hybrid resource types (solar+batt, wind+batt)')
+    parser.add_argument('--thresholds', type=str, default='',
+                        help='Comma-separated thresholds to process '
+                             '(e.g. "55,60,65"). Default: all (50-80).')
     args = parser.parse_args()
 
     isos = ISOS if args.iso == 'ALL' else [args.iso]
+
+    thresholds_filter = _parse_thresholds(args.thresholds)
+    if thresholds_filter:
+        valid = set(FLOOR_THRESHOLDS + NEAR_MISS_THRESHOLDS)
+        bad = [t for t in thresholds_filter if t not in valid]
+        if bad:
+            print(f"WARNING: Thresholds {bad} not in {sorted(valid)} — ignoring")
+            thresholds_filter = [t for t in thresholds_filter if t in valid]
+        print(f"Threshold filter: {thresholds_filter}")
 
     if args.hybrid:
         print("Hybrid mode: enabled (CLI flag)")
@@ -605,7 +636,8 @@ def main():
     total_saved = 0
     for iso in isos:
         saved = process_iso(iso, demand_data, gen_profiles,
-                            include_hybrids=args.hybrid)
+                            include_hybrids=args.hybrid,
+                            thresholds_filter=thresholds_filter)
         total_saved += saved
 
     elapsed = time.time() - t0
