@@ -42,7 +42,7 @@ EF_DIR = os.path.join(DATA_DIR, 'step2.1-ef')
 OUTPUT_DIR = os.path.join(DATA_DIR, 'validation')
 
 # Thresholds to bucket results into (match pipeline thresholds)
-THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
+THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9]
 
 
 def load_ef_mixes(iso):

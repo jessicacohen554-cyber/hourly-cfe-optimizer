@@ -268,7 +268,7 @@ SBTI_MILESTONES = [
     {'year': 2035, 'threshold': 70,    'label': 'SBTi ~70%'},
     {'year': 2040, 'threshold': 90,    'label': 'SBTi 90%'},
     {'year': 2045, 'threshold': 95,    'label': 'SBTi ~95%'},
-    {'year': 2050, 'threshold': 99.99, 'label': 'Net-zero'},
+    {'year': 2050, 'threshold': 99.9, 'label': 'Net-zero'},
 ]
 
 # Single source of truth: pipeline_config

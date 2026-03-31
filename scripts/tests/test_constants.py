@@ -167,9 +167,9 @@ class TestThresholds:
         assert THRESHOLDS == sorted(THRESHOLDS), "Thresholds not sorted ascending"
 
     def test_thresholds_range(self):
-        """Thresholds should span 10% to 99.99%."""
+        """Thresholds should span 10% to 99.9%."""
         assert THRESHOLDS[0] == 10.0
-        assert THRESHOLDS[-1] == 99.99
+        assert THRESHOLDS[-1] == 99.9
 
     def test_active_starts_at_50(self):
         """Active thresholds start at 50%."""

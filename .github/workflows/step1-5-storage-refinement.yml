@@ -11,7 +11,7 @@ name: "Step 1.5: Storage Refinement"
 # Threshold bands:
 #   LOW  — 55, 60, 65, 70, 75, 80
 #   MID  — 85, 87.5, 90, 92.5, 95
-#   HIGH — 97.5, 99, 99.5, 99.9, 99.99 (split into per-threshold jobs)
+#   HIGH — 97.5, 99, 99.5, 99.9 (split into per-threshold jobs)
 #
 # Storage grids are the union of V1 (near-term) and V2 (2050-oriented) caps.
 # Floor/fine mix augmentation is always on.
@@ -62,7 +62,7 @@ env:
   # Threshold bands for matrix expansion
   THRESHOLDS_LOW:  "55,60,65,70,75,80"
   THRESHOLDS_MID:  "85,87.5,90,92.5,95"
-  THRESHOLDS_HIGH: "97.5,99,99.5,99.9,99.99"
+  THRESHOLDS_HIGH: "97.5,99,99.5,99.9"
 
 jobs:
   # ════════════════════════════════════════════════════════════════════════
@@ -111,7 +111,7 @@ jobs:
           echo "matrix={\"iso\":${ISOS},\"band\":${BANDS}}" >> "$GITHUB_OUTPUT"
 
           # HIGH matrix (per-threshold jobs for better resume)
-          echo "high_matrix={\"iso\":${ISOS},\"threshold\":[\"97.5\",\"99\",\"99.5\",\"99.9\",\"99.99\"]}" >> "$GITHUB_OUTPUT"
+          echo "high_matrix={\"iso\":${ISOS},\"threshold\":[\"97.5\",\"99\",\"99.5\",\"99.9\"]}" >> "$GITHUB_OUTPUT"
 
           echo "run_low_mid=${RUN_LOW_MID}" >> "$GITHUB_OUTPUT"
           echo "run_high=${RUN_HIGH}" >> "$GITHUB_OUTPUT"
