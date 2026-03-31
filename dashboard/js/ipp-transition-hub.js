@@ -111,7 +111,7 @@
 
     const FUEL_ORDER = ['nuclear', 'hydro', 'geothermal', 'wind', 'solar', 'battery', 'gas_ccgt', 'gas_peaker', 'coal', 'oil'];
 
-    // Cumulative MAC ($/tCO₂) at 99.99% CFE threshold per ISO - from step5d MAC queue
+    // Cumulative MAC ($/tCO₂) at 99.9% CFE threshold per ISO - from step5d MAC queue
     const ISO_MAC_FULL = {
         ERCOT: 356, PJM: 254, CAISO: 482, NEISO: 468, NYISO: 492, MISO: 357, SPP: 253
     };

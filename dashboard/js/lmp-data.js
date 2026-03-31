@@ -14,7 +14,7 @@ var CAL = {
 
 // PJM actual computed data (from LMP model)
 var PJM_RAW = {
-    thresholds: [50,55,60,65,70,75,80,85,87.5,90,92.5,95,97.5,99,99.99],
+    thresholds: [50,55,60,65,70,75,80,85,87.5,90,92.5,95,97.5,99,99.9],
     envelope: {
         p10: [28.15,25.56,19.6,17.63,16.09,15.41,13.66,12.93,12.35,10.89,9.1,5.43,-7.38],
         p25: [28.16,25.97,19.6,18.71,17.07,15.87,16.74,16.82,14.58,12.83,10.11,7.47,-7.33],
@@ -47,7 +47,7 @@ var PJM_RAW = {
         spreadP50:  [14.92,14.52,12.85,12.9,13.12,13.4,15.12,15.93,13.25,14.56,15.31,8.0,10.35]
     },
     variance: {
-        thresholds: [50,70,80,90,95,99.99],
+        thresholds: [50,70,80,90,95,99.9],
         fuel_level: [100,95.6,87.6,87.9,97.8,14.4],
         renewable:  [0,1.1,3.1,3.4,0.2,13.9],
         firm:       [0,0.7,1.9,1.7,0.1,4.5],
@@ -187,8 +187,8 @@ var ISO_PARAMS = {
         scenarioCount: '151,944', source: 'PJM IMM State of the Market 2024',
         zeroContext: 'Roughly 3% of the time, typically overnight with must-run nuclear surplus. ',
         scarcityExtra: '',
-        sect1Extra: 'This is the structural break in the wholesale market. Everything that mattered before \u226599.99% stops mattering.',
-        peakInsight: 'The median spread between peak and off-peak actually <em>widens</em> from 80% to 97.5% before collapsing only at \u226599.99%.',
+        sect1Extra: 'This is the structural break in the wholesale market. Everything that mattered before \u226599.9% stops mattering.',
+        peakInsight: 'The median spread between peak and off-peak actually <em>widens</em> from 80% to 97.5% before collapsing only at \u226599.9%.',
         nucTag: 'PJM Nuclear Economics', nucFleet: '32 GW', nucName: 'PJM\u2019s 32 GW existing nuclear fleet',
         nucTitle: 'The Clean Energy Paradox: Decarbonization Destroys the Price Signal That Keeps Nuclear Alive',
         nucIntro: 'PJM\u2019s 32 GW existing nuclear fleet is the cheapest firm clean energy on the grid at $34/MWh wholesale. But the very renewable buildout needed to decarbonize the grid collapses wholesale prices below nuclear\u2019s all-in costs \u2014 not just cash operating costs, but the capital expenditures, decommissioning reserves, and profit margin needed to justify continued investment.',
@@ -387,7 +387,7 @@ var REGION_META = {};
             kicker: name + ' Wholesale Market Analysis',
             heroTitle: p.heroTitle,
             heroDesc1: p.heroDesc1,
-            heroDesc2: 'Fuel prices explain nearly everything until \u226599.99% clean, where the rules change entirely and renewable costs, transmission, and policy levers take over.',
+            heroDesc2: 'Fuel prices explain nearly everything until \u226599.9% clean, where the rules change entirely and renewable costs, transmission, and policy levers take over.',
             heroStats: [
                 { value: '\u2212' + decline + '%', label: 'Median wholesale price decline, 2030 (50%) \u2192 2045 (95%)', color: 'green' },
                 { value: '$' + spread75 + '/MWh', label: 'Peak uncertainty band (P10\u2013P90) at 75\u201380% clean', color: 'amber' },
@@ -402,19 +402,19 @@ var REGION_META = {};
                     '<p>The gap between Low and High fuel scenarios in ' + name + ': at 80% clean, Low fuel yields $' + lowAt80 + '/MWh while High fuel yields $' + highAt80 + '/MWh \u2014 a ' + ratio80 + '\u00d7 difference.</p>',
                     'stat-badge-blue', 'Low fuel: $' + lowAt80 + '/MWh at 80% \u00b7 High fuel: $' + highAt80 + '/MWh at 80%') +
                 nc(null, null, null,
-                    'At \u226599.99% clean, the game changes completely',
-                    '<p>When clean energy reaches \u226599.99%, fuel prices become irrelevant. Variance fragments across renewable costs, transmission, 45Q policy, and CO\u2082 price.</p><p>' + p.sect1Extra + '</p>',
-                    'stat-badge-amber', 'At \u226599.99%: No single factor explains >15% of price variance'),
+                    'At \u226599.9% clean, the game changes completely',
+                    '<p>When clean energy reaches \u226599.9%, fuel prices become irrelevant. Variance fragments across renewable costs, transmission, 45Q policy, and CO\u2082 price.</p><p>' + p.sect1Extra + '</p>',
+                    'stat-badge-amber', 'At \u226599.9%: No single factor explains >15% of price variance'),
             sect2HTML:
                 nc('Market Structure', 'rgba(34,197,94,0.08)', '#4ade80',
                     name + ' zero-price hours surge from ' + z0.toLocaleString() + ' to ' + zEnd.toLocaleString(),
                     '<p>At 50% clean, ' + name + ' sees about ' + z0.toLocaleString() + ' zero-or-negative-price hours per year. ' + p.zeroContext +
-                    'By 95%, that figure hits <strong>' + z95.toLocaleString() + ' hours</strong>. At \u226599.99%, it\u2019s <strong>' + zEnd.toLocaleString() + ' hours</strong>.</p>' +
+                    'By 95%, that figure hits <strong>' + z95.toLocaleString() + ' hours</strong>. At \u226599.9%, it\u2019s <strong>' + zEnd.toLocaleString() + ' hours</strong>.</p>' +
                     '<p>The curve accelerates sharply past 75%, as each incremental percentage of clean energy adds more zero-marginal-cost generation.</p>',
                     'stat-badge-green', z0.toLocaleString() + ' \u2192 ' + zEnd.toLocaleString() + ' zero-price hours: a ' + zMult + '\u00d7 increase') +
                 nc(null, null, null,
                     'Scarcity events decline but never disappear',
-                    '<p>Hours above $200/MWh drop from a median of ' + sc0 + ' at 50% clean to ' + scEnd + ' at \u226599.99%. Clean firm generation and storage smooth the worst supply crunches, but extreme weather still produces scarcity pricing.</p>',
+                    '<p>Hours above $200/MWh drop from a median of ' + sc0 + ' at 50% clean to ' + scEnd + ' at \u226599.9%. Clean firm generation and storage smooth the worst supply crunches, but extreme weather still produces scarcity pricing.</p>',
                     'stat-badge-red', 'Scarcity hours: ' + sc0 + ' \u2192 ' + scEnd + ' median'),
             sect3HTML:
                 nc('Price Structure', 'rgba(245,158,11,0.08)', '#fbbf24',
@@ -424,8 +424,8 @@ var REGION_META = {};
                     'stat-badge-amber', 'Peak $' + pk0 + ' \u2192 $' + pk95 + ' \u00b7 Off-peak $' + op0 + ' \u2192 $' + op95 + ' at 95%') +
                 nc(null, null, null,
                     (iso === 'SPP' ? 'Wind overgeneration defines the price structure' : 'Off-peak prices go negative first'),
-                    '<p>At \u226599.99% clean, ' + (iso === 'SPP' ? 'peak' : 'off-peak') + ' median is <strong>$' + (iso === 'SPP' ? pkE : opE) + '/MWh</strong> while ' + (iso === 'SPP' ? 'off-peak' : 'peak') + ' is <strong>$' + (iso === 'SPP' ? opE : pkE) + '/MWh</strong>. Even in a fully decarbonized grid, timing mismatch creates a spread.</p>',
-                    'stat-badge-blue', 'At \u226599.99%: peak $' + pkE + ', off-peak $' + opE),
+                    '<p>At \u226599.9% clean, ' + (iso === 'SPP' ? 'peak' : 'off-peak') + ' median is <strong>$' + (iso === 'SPP' ? pkE : opE) + '/MWh</strong> while ' + (iso === 'SPP' ? 'off-peak' : 'peak') + ' is <strong>$' + (iso === 'SPP' ? opE : pkE) + '/MWh</strong>. Even in a fully decarbonized grid, timing mismatch creates a spread.</p>',
+                    'stat-badge-blue', 'At \u226599.9%: peak $' + pkE + ', off-peak $' + opE),
             nuclearHeaderTag: p.nucTag,
             nuclearHeaderTitle: p.nucTitle,
             nuclearHeaderBody: p.nucIntro,
@@ -446,7 +446,7 @@ var REGION_META = {};
                 '<div class="synthesis-card"><h3>Three eras of the ' + name + ' wholesale market</h3>' +
                 '<p><strong>Era 1: 50\u201375% (2030\u2013~2034)</strong> \u2014 Fossil sets the price. Markets function as today.</p>' +
                 '<p><strong>Era 2: 75\u201395% (~2034\u20132045)</strong> \u2014 The transition zone. Uncertainty peaks. Zero-price hours become structural.</p>' +
-                '<p><strong>Era 3: 95\u2013\u226599.99% (2045\u20132050)</strong> \u2014 The structural break. Revenue for all generators collapses.</p>' +
+                '<p><strong>Era 3: 95\u2013\u226599.9% (2045\u20132050)</strong> \u2014 The structural break. Revenue for all generators collapses.</p>' +
                 '<span class="stat-badge stat-badge-green">2030\u20132034: business as usual \u00b7 2034\u20132045: transition \u00b7 2045+: new paradigm</span></div>',
             footerNote: 'All analysis on this page is ' + name + ' \u00b7 ' + p.scenarioCount + ' simulated scenarios \u00b7 Synthetic LMP model calibrated to ' + p.source
         };

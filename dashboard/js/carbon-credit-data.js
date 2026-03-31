@@ -1073,7 +1073,7 @@ const CARBON_CREDIT_DATA = {
     99,
     99.5,
     99.9,
-    99.99
+    99.9
   ],
   "optimal_targets": {
     "CAISO": {
@@ -6103,7 +6103,7 @@ const CARBON_CREDIT_DATA = {
         "quality_premium": 197.8
       },
       {
-        "threshold": 99.99,
+        "threshold": 99.9,
         "hourly_mac": 498.3,
         "annual_mac_est": 299.0,
         "quality_premium": 199.3
@@ -6207,7 +6207,7 @@ const CARBON_CREDIT_DATA = {
         "quality_premium": 85.8
       },
       {
-        "threshold": 99.99,
+        "threshold": 99.9,
         "hourly_mac": 230.2,
         "annual_mac_est": 138.1,
         "quality_premium": 92.1
@@ -6311,7 +6311,7 @@ const CARBON_CREDIT_DATA = {
         "quality_premium": 97.7
       },
       {
-        "threshold": 99.99,
+        "threshold": 99.9,
         "hourly_mac": 244.1,
         "annual_mac_est": 146.5,
         "quality_premium": 97.6
@@ -6421,7 +6421,7 @@ const CARBON_CREDIT_DATA = {
         "quality_premium": 166.2
       },
       {
-        "threshold": 99.99,
+        "threshold": 99.9,
         "hourly_mac": 428.9,
         "annual_mac_est": 257.3,
         "quality_premium": 171.6
@@ -6531,7 +6531,7 @@ const CARBON_CREDIT_DATA = {
         "quality_premium": 182.2
       },
       {
-        "threshold": 99.99,
+        "threshold": 99.9,
         "hourly_mac": 466.1,
         "annual_mac_est": 279.7,
         "quality_premium": 186.4
@@ -6641,7 +6641,7 @@ const CARBON_CREDIT_DATA = {
         "quality_premium": 90.0
       },
       {
-        "threshold": 99.99,
+        "threshold": 99.9,
         "hourly_mac": 229.0,
         "annual_mac_est": 137.4,
         "quality_premium": 91.6
@@ -6745,7 +6745,7 @@ const CARBON_CREDIT_DATA = {
         "quality_premium": 89.1
       },
       {
-        "threshold": 99.99,
+        "threshold": 99.9,
         "hourly_mac": 233.9,
         "annual_mac_est": 140.3,
         "quality_premium": 93.6

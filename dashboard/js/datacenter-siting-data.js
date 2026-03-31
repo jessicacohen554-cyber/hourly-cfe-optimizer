@@ -53,8 +53,8 @@ const DATACENTER_SITING_DATA = {
         "cost_p50": 90.05,
         "cost_p90": 112.0
       },
-      "99.99": {
-        "threshold": 99.99,
+      "99.9": {
+        "threshold": 99.9,
         "cost_total": 89.96,
         "cost_incremental": 64.96,
         "mix": {
@@ -123,8 +123,8 @@ const DATACENTER_SITING_DATA = {
         "cost_p50": 50.76,
         "cost_p90": 62.79
       },
-      "99.99": {
-        "threshold": 99.99,
+      "99.9": {
+        "threshold": 99.9,
         "cost_total": 61.66,
         "cost_incremental": 41.66,
         "mix": {
@@ -193,8 +193,8 @@ const DATACENTER_SITING_DATA = {
         "cost_p50": 81.39,
         "cost_p90": 105.85
       },
-      "99.99": {
-        "threshold": 99.99,
+      "99.9": {
+        "threshold": 99.9,
         "cost_total": 76.14,
         "cost_incremental": 48.14,
         "mix": {
@@ -263,8 +263,8 @@ const DATACENTER_SITING_DATA = {
         "cost_p50": 94.27,
         "cost_p90": 135.41
       },
-      "99.99": {
-        "threshold": 99.99,
+      "99.9": {
+        "threshold": 99.9,
         "cost_total": 106.29,
         "cost_incremental": 68.3,
         "mix": {
@@ -333,8 +333,8 @@ const DATACENTER_SITING_DATA = {
         "cost_p50": 102.28,
         "cost_p90": 138.28
       },
-      "99.99": {
-        "threshold": 99.99,
+      "99.9": {
+        "threshold": 99.9,
         "cost_total": 119.45,
         "cost_incremental": 78.45,
         "mix": {
@@ -403,8 +403,8 @@ const DATACENTER_SITING_DATA = {
         "cost_p50": 69.95,
         "cost_p90": 92.48
       },
-      "99.99": {
-        "threshold": 99.99,
+      "99.9": {
+        "threshold": 99.9,
         "cost_total": 80.32,
         "cost_incremental": 56.32,
         "mix": {
@@ -473,8 +473,8 @@ const DATACENTER_SITING_DATA = {
         "cost_p50": 49.02,
         "cost_p90": 62.41
       },
-      "99.99": {
-        "threshold": 99.99,
+      "99.9": {
+        "threshold": 99.9,
         "cost_total": 63.87,
         "cost_incremental": 45.87,
         "mix": {
@@ -575,7 +575,7 @@ const DATACENTER_SITING_DATA = {
         "cost": 88.43
       },
       {
-        "t": 99.99,
+        "t": 99.9,
         "cost": 89.96
       }
     ],
@@ -661,7 +661,7 @@ const DATACENTER_SITING_DATA = {
         "cost": 56.63
       },
       {
-        "t": 99.99,
+        "t": 99.9,
         "cost": 61.66
       }
     ],
@@ -747,7 +747,7 @@ const DATACENTER_SITING_DATA = {
         "cost": 76.14
       },
       {
-        "t": 99.99,
+        "t": 99.9,
         "cost": 76.14
       }
     ],
@@ -833,7 +833,7 @@ const DATACENTER_SITING_DATA = {
         "cost": 102.75
       },
       {
-        "t": 99.99,
+        "t": 99.9,
         "cost": 106.29
       }
     ],
@@ -919,7 +919,7 @@ const DATACENTER_SITING_DATA = {
         "cost": 117.27
       },
       {
-        "t": 99.99,
+        "t": 99.9,
         "cost": 119.45
       }
     ],
@@ -1005,7 +1005,7 @@ const DATACENTER_SITING_DATA = {
         "cost": 79.14
       },
       {
-        "t": 99.99,
+        "t": 99.9,
         "cost": 80.32
       }
     ],
@@ -1091,7 +1091,7 @@ const DATACENTER_SITING_DATA = {
         "cost": 59.43
       },
       {
-        "t": 99.99,
+        "t": 99.9,
         "cost": 63.87
       }
     ]

@@ -55,14 +55,14 @@ from pipeline_config import (
 
 PHASE1_CONFIG = {
     'isos': ['CAISO', 'ERCOT'],  # 6D and 4D representative
-    'thresholds': [50.0, 90.0, 99.99],
+    'thresholds': [50.0, 90.0, 99.9],
     'max_mixes_per_threshold': 30,
     'description': 'Coarse directional test (2 ISOs, 3 thresholds)',
 }
 
 PHASE2_CONFIG = {
     'isos': ISOS,  # All 7
-    'thresholds': [50.0, 75.0, 90.0, 95.0, 99.99],
+    'thresholds': [50.0, 75.0, 90.0, 95.0, 99.9],
     'max_mixes_per_threshold': 150,
     'description': 'Full N test (7 ISOs, 5 thresholds)',
 }
@@ -705,7 +705,7 @@ def validate_physical_sanity(results, isos):
 
         # 4. At high thresholds, costs should be significantly higher
         low_thr = df[df['threshold'] == 50.0]
-        high_thr = df[df['threshold'] == 99.99]
+        high_thr = df[df['threshold'] == 99.9]
         if len(low_thr) > 0 and len(high_thr) > 0:
             med_key = 'MMMM_M_M_M1_M' if iso == 'CAISO' else 'MMMM_M_M_M1_X'
             low_med = low_thr[low_thr['scenario'] == med_key]
@@ -715,11 +715,11 @@ def validate_physical_sanity(results, isos):
                 high_cost = high_med['cost_effective_cost'].iloc[0]
                 if high_cost <= low_cost:
                     issues.append(
-                        f't99.99 cost (${high_cost:.1f}) <= t50 cost (${low_cost:.1f})')
+                        f't99.9 cost (${high_cost:.1f}) <= t50 cost (${low_cost:.1f})')
                 else:
                     ratio = high_cost / low_cost
                     results.record(f'Physics {iso} cost escalation', True,
-                                  f't50=${low_cost:.1f} → t99.99=${high_cost:.1f} '
+                                  f't50=${low_cost:.1f} → t99.9=${high_cost:.1f} '
                                   f'({ratio:.1f}× escalation)')
 
         # 5. Existing clean should be priced at $0

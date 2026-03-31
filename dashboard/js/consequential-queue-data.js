@@ -22,7 +22,7 @@ const CQ_DATA = {
       "97.5\u219299%",
       "99\u219299.5%",
       "99.5\u219299.9%",
-      "99.9\u219299.99%"
+      "99.9\u219299.9%"
     ],
     "thresholds": [
       50.0,
@@ -41,7 +41,7 @@ const CQ_DATA = {
       99.0,
       99.5,
       99.9,
-      99.99
+      99.9
     ],
     "isos": [
       "CAISO",
@@ -91,7 +91,7 @@ const CQ_DATA = {
       "99": 2049,
       "99.5": 2049,
       "99.9": 2050,
-      "99.99": 2050
+      "99.9": 2050
     }
   },
   "dispatch_stacks": {
@@ -4145,9 +4145,9 @@ const CQ_DATA = {
     {
       "iso": "SPP",
       "zone_idx": 16,
-      "zone_label": "99.9\u2192\u226599.99%",
+      "zone_label": "99.9\u2192\u226599.9%",
       "threshold_start": 99.9,
-      "threshold_end": 99.99,
+      "threshold_end": 99.9,
       "year_start": 2050,
       "year_end": 2050,
       "marginal_mac": 141.2,
@@ -6749,9 +6749,9 @@ const CQ_DATA = {
     {
       "iso": "NYISO",
       "zone_idx": 17,
-      "zone_label": "99.9\u2192\u226599.99%",
+      "zone_label": "99.9\u2192\u226599.9%",
       "threshold_start": 99.9,
-      "threshold_end": 99.99,
+      "threshold_end": 99.9,
       "year_start": 2050,
       "year_end": 2050,
       "marginal_mac": 253.3,
@@ -6935,9 +6935,9 @@ const CQ_DATA = {
     {
       "iso": "NEISO",
       "zone_idx": 17,
-      "zone_label": "99.9\u2192\u226599.99%",
+      "zone_label": "99.9\u2192\u226599.9%",
       "threshold_start": 99.9,
-      "threshold_end": 99.99,
+      "threshold_end": 99.9,
       "year_start": 2050,
       "year_end": 2050,
       "marginal_mac": 271.7,
@@ -8762,7 +8762,7 @@ const CQ_DATA = {
     {
       "queue_position": 64,
       "iso": "SPP",
-      "zone_label": "99.9\u2192\u226599.99%",
+      "zone_label": "99.9\u2192\u226599.9%",
       "marginal_mac": 141.2,
       "cumulative_co2_mt": 778.12,
       "cumulative_cost_bn": 158.73,
@@ -8783,7 +8783,7 @@ const CQ_DATA = {
         "NYISO": 50,
         "NEISO": 50,
         "MISO": 99.0,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -8810,7 +8810,7 @@ const CQ_DATA = {
         "NYISO": 50,
         "NEISO": 50,
         "MISO": 99.0,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -8837,7 +8837,7 @@ const CQ_DATA = {
         "NYISO": 50,
         "NEISO": 50,
         "MISO": 99.5,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -8864,7 +8864,7 @@ const CQ_DATA = {
         "NYISO": 50,
         "NEISO": 50,
         "MISO": 99.5,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -8891,7 +8891,7 @@ const CQ_DATA = {
         "NYISO": 50,
         "NEISO": 50,
         "MISO": 99.5,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -8918,7 +8918,7 @@ const CQ_DATA = {
         "NYISO": 50,
         "NEISO": 50,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -8945,7 +8945,7 @@ const CQ_DATA = {
         "NYISO": 50,
         "NEISO": 50,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -8972,7 +8972,7 @@ const CQ_DATA = {
         "NYISO": 87.5,
         "NEISO": 50,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -8999,7 +8999,7 @@ const CQ_DATA = {
         "NYISO": 90.0,
         "NEISO": 50,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9026,7 +9026,7 @@ const CQ_DATA = {
         "NYISO": 85.0,
         "NEISO": 50,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9053,7 +9053,7 @@ const CQ_DATA = {
         "NYISO": 85.0,
         "NEISO": 87.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9080,7 +9080,7 @@ const CQ_DATA = {
         "NYISO": 80.0,
         "NEISO": 87.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9107,7 +9107,7 @@ const CQ_DATA = {
         "NYISO": 92.5,
         "NEISO": 87.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9134,7 +9134,7 @@ const CQ_DATA = {
         "NYISO": 92.5,
         "NEISO": 90.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9161,7 +9161,7 @@ const CQ_DATA = {
         "NYISO": 92.5,
         "NEISO": 90.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9188,7 +9188,7 @@ const CQ_DATA = {
         "NYISO": 95.0,
         "NEISO": 90.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9215,7 +9215,7 @@ const CQ_DATA = {
         "NYISO": 95.0,
         "NEISO": 92.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9242,7 +9242,7 @@ const CQ_DATA = {
         "NYISO": 95.0,
         "NEISO": 92.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9269,7 +9269,7 @@ const CQ_DATA = {
         "NYISO": 97.5,
         "NEISO": 92.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9296,7 +9296,7 @@ const CQ_DATA = {
         "NYISO": 97.5,
         "NEISO": 95.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9323,7 +9323,7 @@ const CQ_DATA = {
         "NYISO": 97.5,
         "NEISO": 95.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9350,7 +9350,7 @@ const CQ_DATA = {
         "NYISO": 97.5,
         "NEISO": 50.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9377,7 +9377,7 @@ const CQ_DATA = {
         "NYISO": 97.5,
         "NEISO": 55.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9404,7 +9404,7 @@ const CQ_DATA = {
         "NYISO": 97.5,
         "NEISO": 60.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9431,7 +9431,7 @@ const CQ_DATA = {
         "NYISO": 97.5,
         "NEISO": 65.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9458,7 +9458,7 @@ const CQ_DATA = {
         "NYISO": 97.5,
         "NEISO": 70.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9485,7 +9485,7 @@ const CQ_DATA = {
         "NYISO": 97.5,
         "NEISO": 75.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9512,7 +9512,7 @@ const CQ_DATA = {
         "NYISO": 97.5,
         "NEISO": 80.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9539,7 +9539,7 @@ const CQ_DATA = {
         "NYISO": 97.5,
         "NEISO": 85.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9566,7 +9566,7 @@ const CQ_DATA = {
         "NYISO": 99.0,
         "NEISO": 85.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9593,7 +9593,7 @@ const CQ_DATA = {
         "NYISO": 99.0,
         "NEISO": 97.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9620,7 +9620,7 @@ const CQ_DATA = {
         "NYISO": 99.0,
         "NEISO": 97.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9647,7 +9647,7 @@ const CQ_DATA = {
         "NYISO": 99.0,
         "NEISO": 97.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9674,7 +9674,7 @@ const CQ_DATA = {
         "NYISO": 99.5,
         "NEISO": 97.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9701,7 +9701,7 @@ const CQ_DATA = {
         "NYISO": 50.0,
         "NEISO": 97.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9728,7 +9728,7 @@ const CQ_DATA = {
         "NYISO": 55.0,
         "NEISO": 97.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9755,7 +9755,7 @@ const CQ_DATA = {
         "NYISO": 60.0,
         "NEISO": 97.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9782,7 +9782,7 @@ const CQ_DATA = {
         "NYISO": 65.0,
         "NEISO": 97.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9809,7 +9809,7 @@ const CQ_DATA = {
         "NYISO": 70.0,
         "NEISO": 97.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9836,7 +9836,7 @@ const CQ_DATA = {
         "NYISO": 75.0,
         "NEISO": 97.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9863,7 +9863,7 @@ const CQ_DATA = {
         "NYISO": 75.0,
         "NEISO": 99.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9890,13 +9890,13 @@ const CQ_DATA = {
         "NYISO": 99.9,
         "NEISO": 99.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
       "queue_position": 106,
       "iso": "NYISO",
-      "zone_label": "99.9\u2192\u226599.99%",
+      "zone_label": "99.9\u2192\u226599.9%",
       "marginal_mac": 253.3,
       "cumulative_co2_mt": 846.78,
       "cumulative_cost_bn": 208.61,
@@ -9914,10 +9914,10 @@ const CQ_DATA = {
         "CAISO": 99.9,
         "ERCOT": 99.9,
         "PJM": 99.9,
-        "NYISO": 99.99,
+        "NYISO": 99.9,
         "NEISO": 99.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9941,10 +9941,10 @@ const CQ_DATA = {
         "CAISO": 99.9,
         "ERCOT": 99.9,
         "PJM": 99.9,
-        "NYISO": 99.99,
+        "NYISO": 99.9,
         "NEISO": 99.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -9968,16 +9968,16 @@ const CQ_DATA = {
         "CAISO": 99.9,
         "ERCOT": 99.9,
         "PJM": 99.9,
-        "NYISO": 99.99,
+        "NYISO": 99.9,
         "NEISO": 99.9,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
       "queue_position": 109,
       "iso": "NEISO",
-      "zone_label": "99.9\u2192\u226599.99%",
+      "zone_label": "99.9\u2192\u226599.9%",
       "marginal_mac": 271.7,
       "cumulative_co2_mt": 846.78,
       "cumulative_cost_bn": 210.18,
@@ -9995,10 +9995,10 @@ const CQ_DATA = {
         "CAISO": 99.9,
         "ERCOT": 99.9,
         "PJM": 99.9,
-        "NYISO": 99.99,
-        "NEISO": 99.99,
+        "NYISO": 99.9,
+        "NEISO": 99.9,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -10022,10 +10022,10 @@ const CQ_DATA = {
         "CAISO": 55.0,
         "ERCOT": 99.9,
         "PJM": 99.9,
-        "NYISO": 99.99,
-        "NEISO": 99.99,
+        "NYISO": 99.9,
+        "NEISO": 99.9,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     }
   ],
@@ -11734,7 +11734,7 @@ const CQ_DATA = {
     {
       "queue_position": 64,
       "iso": "SPP",
-      "zone_label": "99.9\u2192\u226599.99%",
+      "zone_label": "99.9\u2192\u226599.9%",
       "marginal_mac": 141.2,
       "cumulative_co2_mt": 778.12,
       "cumulative_cost_bn": 158.73,
@@ -11755,7 +11755,7 @@ const CQ_DATA = {
         "NYISO": 50,
         "NEISO": 50,
         "MISO": 99.0,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -11782,7 +11782,7 @@ const CQ_DATA = {
         "NYISO": 50,
         "NEISO": 50,
         "MISO": 99.0,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -11809,7 +11809,7 @@ const CQ_DATA = {
         "NYISO": 50,
         "NEISO": 50,
         "MISO": 99.5,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -11836,7 +11836,7 @@ const CQ_DATA = {
         "NYISO": 50,
         "NEISO": 50,
         "MISO": 99.5,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -11863,7 +11863,7 @@ const CQ_DATA = {
         "NYISO": 50,
         "NEISO": 50,
         "MISO": 99.5,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -11890,7 +11890,7 @@ const CQ_DATA = {
         "NYISO": 50,
         "NEISO": 50,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -11917,7 +11917,7 @@ const CQ_DATA = {
         "NYISO": 50,
         "NEISO": 50,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -11944,7 +11944,7 @@ const CQ_DATA = {
         "NYISO": 87.5,
         "NEISO": 50,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -11971,7 +11971,7 @@ const CQ_DATA = {
         "NYISO": 90.0,
         "NEISO": 50,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -11998,7 +11998,7 @@ const CQ_DATA = {
         "NYISO": 85.0,
         "NEISO": 50,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12025,7 +12025,7 @@ const CQ_DATA = {
         "NYISO": 85.0,
         "NEISO": 87.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12052,7 +12052,7 @@ const CQ_DATA = {
         "NYISO": 80.0,
         "NEISO": 87.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12079,7 +12079,7 @@ const CQ_DATA = {
         "NYISO": 92.5,
         "NEISO": 87.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12106,7 +12106,7 @@ const CQ_DATA = {
         "NYISO": 92.5,
         "NEISO": 90.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12133,7 +12133,7 @@ const CQ_DATA = {
         "NYISO": 92.5,
         "NEISO": 90.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12160,7 +12160,7 @@ const CQ_DATA = {
         "NYISO": 95.0,
         "NEISO": 90.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12187,7 +12187,7 @@ const CQ_DATA = {
         "NYISO": 95.0,
         "NEISO": 92.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12214,7 +12214,7 @@ const CQ_DATA = {
         "NYISO": 95.0,
         "NEISO": 92.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12241,7 +12241,7 @@ const CQ_DATA = {
         "NYISO": 97.5,
         "NEISO": 92.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12268,7 +12268,7 @@ const CQ_DATA = {
         "NYISO": 97.5,
         "NEISO": 95.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12295,7 +12295,7 @@ const CQ_DATA = {
         "NYISO": 97.5,
         "NEISO": 95.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12322,7 +12322,7 @@ const CQ_DATA = {
         "NYISO": 97.5,
         "NEISO": 50.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12349,7 +12349,7 @@ const CQ_DATA = {
         "NYISO": 97.5,
         "NEISO": 55.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12376,7 +12376,7 @@ const CQ_DATA = {
         "NYISO": 97.5,
         "NEISO": 60.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12403,7 +12403,7 @@ const CQ_DATA = {
         "NYISO": 97.5,
         "NEISO": 65.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12430,7 +12430,7 @@ const CQ_DATA = {
         "NYISO": 97.5,
         "NEISO": 70.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12457,7 +12457,7 @@ const CQ_DATA = {
         "NYISO": 97.5,
         "NEISO": 75.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12484,7 +12484,7 @@ const CQ_DATA = {
         "NYISO": 97.5,
         "NEISO": 80.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12511,7 +12511,7 @@ const CQ_DATA = {
         "NYISO": 97.5,
         "NEISO": 85.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12538,7 +12538,7 @@ const CQ_DATA = {
         "NYISO": 99.0,
         "NEISO": 85.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12565,7 +12565,7 @@ const CQ_DATA = {
         "NYISO": 99.0,
         "NEISO": 97.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12592,7 +12592,7 @@ const CQ_DATA = {
         "NYISO": 99.0,
         "NEISO": 97.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12619,7 +12619,7 @@ const CQ_DATA = {
         "NYISO": 99.0,
         "NEISO": 97.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12646,7 +12646,7 @@ const CQ_DATA = {
         "NYISO": 99.5,
         "NEISO": 97.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12673,7 +12673,7 @@ const CQ_DATA = {
         "NYISO": 50.0,
         "NEISO": 97.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12700,7 +12700,7 @@ const CQ_DATA = {
         "NYISO": 55.0,
         "NEISO": 97.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12727,7 +12727,7 @@ const CQ_DATA = {
         "NYISO": 60.0,
         "NEISO": 97.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12754,7 +12754,7 @@ const CQ_DATA = {
         "NYISO": 65.0,
         "NEISO": 97.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12781,7 +12781,7 @@ const CQ_DATA = {
         "NYISO": 70.0,
         "NEISO": 97.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12808,7 +12808,7 @@ const CQ_DATA = {
         "NYISO": 75.0,
         "NEISO": 97.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12835,7 +12835,7 @@ const CQ_DATA = {
         "NYISO": 75.0,
         "NEISO": 99.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12862,13 +12862,13 @@ const CQ_DATA = {
         "NYISO": 99.9,
         "NEISO": 99.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
       "queue_position": 106,
       "iso": "NYISO",
-      "zone_label": "99.9\u2192\u226599.99%",
+      "zone_label": "99.9\u2192\u226599.9%",
       "marginal_mac": 253.3,
       "cumulative_co2_mt": 846.78,
       "cumulative_cost_bn": 208.61,
@@ -12886,10 +12886,10 @@ const CQ_DATA = {
         "CAISO": 99.9,
         "ERCOT": 99.9,
         "PJM": 99.9,
-        "NYISO": 99.99,
+        "NYISO": 99.9,
         "NEISO": 99.0,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12913,10 +12913,10 @@ const CQ_DATA = {
         "CAISO": 99.9,
         "ERCOT": 99.9,
         "PJM": 99.9,
-        "NYISO": 99.99,
+        "NYISO": 99.9,
         "NEISO": 99.5,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12940,16 +12940,16 @@ const CQ_DATA = {
         "CAISO": 99.9,
         "ERCOT": 99.9,
         "PJM": 99.9,
-        "NYISO": 99.99,
+        "NYISO": 99.9,
         "NEISO": 99.9,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
       "queue_position": 109,
       "iso": "NEISO",
-      "zone_label": "99.9\u2192\u226599.99%",
+      "zone_label": "99.9\u2192\u226599.9%",
       "marginal_mac": 271.7,
       "cumulative_co2_mt": 846.78,
       "cumulative_cost_bn": 210.18,
@@ -12967,10 +12967,10 @@ const CQ_DATA = {
         "CAISO": 99.9,
         "ERCOT": 99.9,
         "PJM": 99.9,
-        "NYISO": 99.99,
-        "NEISO": 99.99,
+        "NYISO": 99.9,
+        "NEISO": 99.9,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     },
     {
@@ -12994,10 +12994,10 @@ const CQ_DATA = {
         "CAISO": 55.0,
         "ERCOT": 99.9,
         "PJM": 99.9,
-        "NYISO": 99.99,
-        "NEISO": 99.99,
+        "NYISO": 99.9,
+        "NEISO": 99.9,
         "MISO": 99.9,
-        "SPP": 99.99
+        "SPP": 99.9
       }
     }
   ],
@@ -13172,14 +13172,14 @@ const CQ_DATA = {
   "iso_cfe_progress": {
     "CAISO": {
       "start_cfe_pct": 48.5,
-      "end_cfe_pct": 99.99,
+      "end_cfe_pct": 99.9,
       "delta_cfe_pct": 51.489999999999995,
       "new_gas_mw_at_start": 0.0,
       "new_gas_mw_at_end": 0.0
     },
     "ERCOT": {
       "start_cfe_pct": 46.1,
-      "end_cfe_pct": 99.99,
+      "end_cfe_pct": 99.9,
       "delta_cfe_pct": 53.88999999999999,
       "new_gas_mw_at_start": 0.0,
       "new_gas_mw_at_end": 0.0
@@ -13193,21 +13193,21 @@ const CQ_DATA = {
     },
     "NYISO": {
       "start_cfe_pct": 39.0,
-      "end_cfe_pct": 99.99,
+      "end_cfe_pct": 99.9,
       "delta_cfe_pct": 60.989999999999995,
       "new_gas_mw_at_start": 0.0,
       "new_gas_mw_at_end": 0.0
     },
     "NEISO": {
       "start_cfe_pct": 33.5,
-      "end_cfe_pct": 99.99,
+      "end_cfe_pct": 99.9,
       "delta_cfe_pct": 66.49,
       "new_gas_mw_at_start": 0.0,
       "new_gas_mw_at_end": 0.0
     },
     "MISO": {
       "start_cfe_pct": 31.3,
-      "end_cfe_pct": 99.99,
+      "end_cfe_pct": 99.9,
       "delta_cfe_pct": 68.69,
       "new_gas_mw_at_start": 0.0,
       "new_gas_mw_at_end": 0.0
@@ -13246,7 +13246,7 @@ const CQ_DATA = {
           "99.0": 134.4,
           "99.5": 168.0,
           "99.9": 190.4,
-          "99.99": 190.4
+          "99.9": 190.4
         }
       },
       "solar": {
@@ -13273,7 +13273,7 @@ const CQ_DATA = {
           "99.0": 56.0,
           "99.5": 56.0,
           "99.9": 78.4,
-          "99.99": 78.4
+          "99.9": 78.4
         }
       },
       "wind": {
@@ -13300,7 +13300,7 @@ const CQ_DATA = {
           "99.0": 78.4,
           "99.5": 67.2,
           "99.9": 22.4,
-          "99.99": 22.4
+          "99.9": 22.4
         }
       },
       "offshore_wind": {
@@ -13327,7 +13327,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       },
       "ccs_ccgt": {
@@ -13354,7 +13354,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       },
       "hydro": {
@@ -13381,7 +13381,7 @@ const CQ_DATA = {
           "99.0": 22.4,
           "99.5": 22.4,
           "99.9": 22.4,
-          "99.99": 22.4
+          "99.9": 22.4
         }
       },
       "battery": {
@@ -13408,7 +13408,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.1,
-          "99.99": 0.1
+          "99.9": 0.1
         }
       },
       "ldes": {
@@ -13435,7 +13435,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       }
     },
@@ -13464,7 +13464,7 @@ const CQ_DATA = {
           "99.0": 229.4,
           "99.5": 297.7,
           "99.9": 424.6,
-          "99.99": 424.6
+          "99.9": 424.6
         }
       },
       "solar": {
@@ -13491,7 +13491,7 @@ const CQ_DATA = {
           "99.0": 92.7,
           "99.5": 78.1,
           "99.9": 92.7,
-          "99.99": 92.7
+          "99.9": 92.7
         }
       },
       "wind": {
@@ -13518,7 +13518,7 @@ const CQ_DATA = {
           "99.0": 390.4,
           "99.5": 361.1,
           "99.9": 209.8,
-          "99.99": 209.8
+          "99.9": 209.8
         }
       },
       "offshore_wind": {
@@ -13545,7 +13545,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       },
       "ccs_ccgt": {
@@ -13572,7 +13572,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       },
       "hydro": {
@@ -13599,7 +13599,7 @@ const CQ_DATA = {
           "99.0": 4.9,
           "99.5": 4.9,
           "99.9": 4.9,
-          "99.99": 4.9
+          "99.9": 4.9
         }
       },
       "battery": {
@@ -13626,7 +13626,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       },
       "ldes": {
@@ -13653,7 +13653,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       }
     },
@@ -13682,7 +13682,7 @@ const CQ_DATA = {
           "99.0": 953.0,
           "99.5": 953.0,
           "99.9": 953.0,
-          "99.99": 953.0
+          "99.9": 953.0
         }
       },
       "solar": {
@@ -13709,7 +13709,7 @@ const CQ_DATA = {
           "99.0": 25.3,
           "99.5": 42.2,
           "99.9": 59.0,
-          "99.99": 59.0
+          "99.9": 59.0
         }
       },
       "wind": {
@@ -13736,7 +13736,7 @@ const CQ_DATA = {
           "99.0": 67.5,
           "99.5": 67.5,
           "99.9": 75.9,
-          "99.99": 75.9
+          "99.9": 75.9
         }
       },
       "offshore_wind": {
@@ -13763,7 +13763,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       },
       "ccs_ccgt": {
@@ -13790,7 +13790,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       },
       "hydro": {
@@ -13817,7 +13817,7 @@ const CQ_DATA = {
           "99.0": 8.4,
           "99.5": 16.9,
           "99.9": 16.9,
-          "99.99": 16.9
+          "99.9": 16.9
         }
       },
       "battery": {
@@ -13844,7 +13844,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.2,
-          "99.99": 0.2
+          "99.9": 0.2
         }
       },
       "ldes": {
@@ -13871,14 +13871,14 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       }
     },
     "NYISO": {
       "clean_firm": {
         "peak_twh": 174.3,
-        "peak_threshold": 99.99,
+        "peak_threshold": 99.9,
         "final_twh": 128.9,
         "final_threshold": 99,
         "stranding_ratio": 1.35,
@@ -13900,7 +13900,7 @@ const CQ_DATA = {
           "99.0": 128.9,
           "99.5": 136.4,
           "99.9": 159.2,
-          "99.99": 174.3
+          "99.9": 174.3
         }
       },
       "solar": {
@@ -13927,7 +13927,7 @@ const CQ_DATA = {
           "99.0": 15.2,
           "99.5": 15.2,
           "99.9": 15.2,
-          "99.99": 7.6
+          "99.9": 7.6
         }
       },
       "wind": {
@@ -13954,7 +13954,7 @@ const CQ_DATA = {
           "99.0": 22.7,
           "99.5": 22.7,
           "99.9": 7.6,
-          "99.99": 7.6
+          "99.9": 7.6
         }
       },
       "offshore_wind": {
@@ -13981,7 +13981,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       },
       "ccs_ccgt": {
@@ -14008,7 +14008,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       },
       "hydro": {
@@ -14035,7 +14035,7 @@ const CQ_DATA = {
           "99.0": 22.7,
           "99.5": 22.7,
           "99.9": 22.7,
-          "99.99": 22.7
+          "99.9": 22.7
         }
       },
       "battery": {
@@ -14062,7 +14062,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       },
       "ldes": {
@@ -14089,7 +14089,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       }
     },
@@ -14118,7 +14118,7 @@ const CQ_DATA = {
           "99.0": 121.1,
           "99.5": 138.4,
           "99.9": 115.3,
-          "99.99": 126.9
+          "99.9": 126.9
         }
       },
       "solar": {
@@ -14145,7 +14145,7 @@ const CQ_DATA = {
           "99.0": 5.8,
           "99.5": 5.8,
           "99.9": 28.8,
-          "99.99": 23.1
+          "99.9": 23.1
         }
       },
       "wind": {
@@ -14172,7 +14172,7 @@ const CQ_DATA = {
           "99.0": 17.3,
           "99.5": 5.8,
           "99.9": 11.5,
-          "99.99": 5.8
+          "99.9": 5.8
         }
       },
       "offshore_wind": {
@@ -14199,7 +14199,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       },
       "ccs_ccgt": {
@@ -14226,7 +14226,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       },
       "hydro": {
@@ -14253,7 +14253,7 @@ const CQ_DATA = {
           "99.0": 5.8,
           "99.5": 5.8,
           "99.9": 5.8,
-          "99.99": 5.8
+          "99.9": 5.8
         }
       },
       "battery": {
@@ -14280,7 +14280,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       },
       "ldes": {
@@ -14307,7 +14307,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       }
     },
@@ -14336,7 +14336,7 @@ const CQ_DATA = {
           "99.0": 627.0,
           "99.5": 653.4,
           "99.9": 633.6,
-          "99.99": 633.6
+          "99.9": 633.6
         }
       },
       "solar": {
@@ -14363,7 +14363,7 @@ const CQ_DATA = {
           "99.0": 59.4,
           "99.5": 46.2,
           "99.9": 79.2,
-          "99.99": 79.2
+          "99.9": 79.2
         }
       },
       "wind": {
@@ -14390,7 +14390,7 @@ const CQ_DATA = {
           "99.0": 112.2,
           "99.5": 158.4,
           "99.9": 151.8,
-          "99.99": 151.8
+          "99.9": 151.8
         }
       },
       "offshore_wind": {
@@ -14417,7 +14417,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       },
       "ccs_ccgt": {
@@ -14444,7 +14444,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       },
       "hydro": {
@@ -14471,7 +14471,7 @@ const CQ_DATA = {
           "99.0": 13.2,
           "99.5": 13.2,
           "99.9": 6.6,
-          "99.99": 6.6
+          "99.9": 6.6
         }
       },
       "battery": {
@@ -14498,7 +14498,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.1,
-          "99.99": 0.1
+          "99.9": 0.1
         }
       },
       "ldes": {
@@ -14525,7 +14525,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.3,
-          "99.99": 0.3
+          "99.9": 0.3
         }
       }
     },
@@ -14554,12 +14554,12 @@ const CQ_DATA = {
           "99.0": 29.6,
           "99.5": 47.4,
           "99.9": 168.7,
-          "99.99": 168.7
+          "99.9": 168.7
         }
       },
       "solar": {
         "peak_twh": 65.1,
-        "peak_threshold": 99.99,
+        "peak_threshold": 99.9,
         "final_twh": 59.2,
         "final_threshold": 99,
         "stranding_ratio": 1.1,
@@ -14581,7 +14581,7 @@ const CQ_DATA = {
           "99.0": 59.2,
           "99.5": 59.2,
           "99.9": 62.2,
-          "99.99": 65.1
+          "99.9": 65.1
         }
       },
       "wind": {
@@ -14608,7 +14608,7 @@ const CQ_DATA = {
           "99.0": 340.4,
           "99.5": 358.2,
           "99.9": 171.7,
-          "99.99": 171.7
+          "99.9": 171.7
         }
       },
       "offshore_wind": {
@@ -14635,7 +14635,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       },
       "ccs_ccgt": {
@@ -14662,7 +14662,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       },
       "hydro": {
@@ -14689,7 +14689,7 @@ const CQ_DATA = {
           "99.0": 14.8,
           "99.5": 14.8,
           "99.9": 14.8,
-          "99.99": 14.8
+          "99.9": 14.8
         }
       },
       "battery": {
@@ -14716,7 +14716,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.1,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       },
       "ldes": {
@@ -14743,7 +14743,7 @@ const CQ_DATA = {
           "99.0": 0.0,
           "99.5": 0.0,
           "99.9": 0.0,
-          "99.99": 0.0
+          "99.9": 0.0
         }
       }
     }
@@ -14978,7 +14978,7 @@ const CQ_DATA = {
       {
         "threshold": 99.9,
         "eff_cost": 87.75,
-        "match_score": 99.99,
+        "match_score": 99.9,
         "clean_firm_twh": 190.4,
         "solar_twh": 78.4,
         "wind_twh": 22.4,
@@ -14991,9 +14991,9 @@ const CQ_DATA = {
         "new_gas_mw": 0.0
       },
       {
-        "threshold": 99.99,
+        "threshold": 99.9,
         "eff_cost": 87.75,
-        "match_score": 99.99,
+        "match_score": 99.9,
         "clean_firm_twh": 190.4,
         "solar_twh": 78.4,
         "wind_twh": 22.4,
@@ -15235,7 +15235,7 @@ const CQ_DATA = {
       {
         "threshold": 99.9,
         "eff_cost": 72.47,
-        "match_score": 99.99,
+        "match_score": 99.9,
         "clean_firm_twh": 424.6,
         "solar_twh": 92.7,
         "wind_twh": 209.8,
@@ -15248,9 +15248,9 @@ const CQ_DATA = {
         "new_gas_mw": 0.0
       },
       {
-        "threshold": 99.99,
+        "threshold": 99.9,
         "eff_cost": 72.47,
-        "match_score": 99.99,
+        "match_score": 99.9,
         "clean_firm_twh": 424.6,
         "solar_twh": 92.7,
         "wind_twh": 209.8,
@@ -15505,7 +15505,7 @@ const CQ_DATA = {
         "new_gas_mw": 0.0
       },
       {
-        "threshold": 99.99,
+        "threshold": 99.9,
         "eff_cost": 72.77,
         "match_score": 100.0,
         "clean_firm_twh": 953.0,
@@ -15762,9 +15762,9 @@ const CQ_DATA = {
         "new_gas_mw": 0.0
       },
       {
-        "threshold": 99.99,
+        "threshold": 99.9,
         "eff_cost": 105.07,
-        "match_score": 99.99,
+        "match_score": 99.9,
         "clean_firm_twh": 174.3,
         "solar_twh": 7.6,
         "wind_twh": 7.6,
@@ -16019,9 +16019,9 @@ const CQ_DATA = {
         "new_gas_mw": 0.0
       },
       {
-        "threshold": 99.99,
+        "threshold": 99.9,
         "eff_cost": 106.36,
-        "match_score": 99.99,
+        "match_score": 99.9,
         "clean_firm_twh": 126.9,
         "solar_twh": 23.1,
         "wind_twh": 5.8,
@@ -16263,7 +16263,7 @@ const CQ_DATA = {
       {
         "threshold": 99.9,
         "eff_cost": 79.34,
-        "match_score": 99.99,
+        "match_score": 99.9,
         "clean_firm_twh": 633.6,
         "solar_twh": 79.2,
         "wind_twh": 151.8,
@@ -16276,9 +16276,9 @@ const CQ_DATA = {
         "new_gas_mw": 0.0
       },
       {
-        "threshold": 99.99,
+        "threshold": 99.9,
         "eff_cost": 79.34,
-        "match_score": 99.99,
+        "match_score": 99.9,
         "clean_firm_twh": 633.6,
         "solar_twh": 79.2,
         "wind_twh": 151.8,
@@ -16533,7 +16533,7 @@ const CQ_DATA = {
         "new_gas_mw": 0.0
       },
       {
-        "threshold": 99.99,
+        "threshold": 99.9,
         "eff_cost": 68.12,
         "match_score": 100.0,
         "clean_firm_twh": 168.7,
@@ -16964,7 +16964,7 @@ const CQ_DATA = {
         "methodology": "dispatch_cache_hourly"
       },
       {
-        "threshold": 99.99,
+        "threshold": 99.9,
         "displaced_rate": 0.3922,
         "coal_displaced_twh": 0.0,
         "oil_displaced_twh": 0.6,
@@ -17119,7 +17119,7 @@ const CQ_DATA = {
         "methodology": "dispatch_cache_hourly"
       },
       {
-        "threshold": 99.99,
+        "threshold": 99.9,
         "displaced_rate": 0.4852,
         "coal_displaced_twh": 67.58,
         "oil_displaced_twh": 0.0,
@@ -17274,7 +17274,7 @@ const CQ_DATA = {
         "methodology": "dispatch_cache_hourly"
       },
       {
-        "threshold": 99.99,
+        "threshold": 99.9,
         "displaced_rate": 0.4971,
         "coal_displaced_twh": 139.09,
         "oil_displaced_twh": 4.59,
@@ -17429,7 +17429,7 @@ const CQ_DATA = {
         "methodology": "dispatch_cache_hourly"
       },
       {
-        "threshold": 99.99,
+        "threshold": 99.9,
         "displaced_rate": 0.4148,
         "coal_displaced_twh": 0.0,
         "oil_displaced_twh": 0.15,
@@ -17584,7 +17584,7 @@ const CQ_DATA = {
         "methodology": "dispatch_cache_hourly"
       },
       {
-        "threshold": 99.99,
+        "threshold": 99.9,
         "displaced_rate": 0.3914,
         "coal_displaced_twh": 0.31,
         "oil_displaced_twh": 1.29,
@@ -17739,7 +17739,7 @@ const CQ_DATA = {
         "methodology": "dispatch_cache_hourly"
       },
       {
-        "threshold": 99.99,
+        "threshold": 99.9,
         "displaced_rate": 0.5126,
         "coal_displaced_twh": 125.0,
         "oil_displaced_twh": 0.5,
@@ -17894,7 +17894,7 @@ const CQ_DATA = {
         "methodology": "dispatch_cache_hourly"
       },
       {
-        "threshold": 99.99,
+        "threshold": 99.9,
         "displaced_rate": 0.4823,
         "coal_displaced_twh": 42.0,
         "oil_displaced_twh": 0.2,
@@ -17924,7 +17924,7 @@ const CQ_DATA = {
           "built_in_cheap_zone_twh": 0,
           "at_75pct_twh": 76.2,
           "at_deep_twh": 78.4,
-          "deep_threshold": 99.99,
+          "deep_threshold": 99.9,
           "stranded_twh": 0,
           "stranding_pct": 0.0
         },
@@ -17932,7 +17932,7 @@ const CQ_DATA = {
           "built_in_cheap_zone_twh": 40.3,
           "at_75pct_twh": 60.5,
           "at_deep_twh": 22.4,
-          "deep_threshold": 99.99,
+          "deep_threshold": 99.9,
           "stranded_twh": 38.1,
           "stranding_pct": 63.0
         }
@@ -18067,7 +18067,7 @@ const CQ_DATA = {
           "solar_twh": 78.4
         },
         {
-          "threshold": 99.99,
+          "threshold": 99.9,
           "gas_backup_mw": 0,
           "new_gas_mw": 0,
           "clean_firm_twh": 190.4,
@@ -18080,7 +18080,7 @@ const CQ_DATA = {
         "gas_at_75_mw": 0,
         "gas_at_90_mw": 0,
         "gas_at_deep_mw": 0,
-        "deep_threshold": 99.99,
+        "deep_threshold": 99.9,
         "gas_delta_50_to_75_mw": 0,
         "gas_delta_75_to_deep_mw": 0,
         "clean_firm_at_75_twh": 53.8,
@@ -18095,7 +18095,7 @@ const CQ_DATA = {
       "stranded_cost_bn": 28.6,
       "gas_lockin_cost_bn": 0.0,
       "total_hidden_cost_bn": 28.6,
-      "deep_threshold": 99.99
+      "deep_threshold": 99.9
     },
     "ERCOT": {
       "strategy": "mixed",
@@ -18116,7 +18116,7 @@ const CQ_DATA = {
           "built_in_cheap_zone_twh": 0,
           "at_75pct_twh": 68.3,
           "at_deep_twh": 92.7,
-          "deep_threshold": 99.99,
+          "deep_threshold": 99.9,
           "stranded_twh": 0,
           "stranding_pct": 0.0
         },
@@ -18124,7 +18124,7 @@ const CQ_DATA = {
           "built_in_cheap_zone_twh": 0,
           "at_75pct_twh": 370.9,
           "at_deep_twh": 209.8,
-          "deep_threshold": 99.99,
+          "deep_threshold": 99.9,
           "stranded_twh": 161.0,
           "stranding_pct": 43.4
         }
@@ -18259,7 +18259,7 @@ const CQ_DATA = {
           "solar_twh": 92.7
         },
         {
-          "threshold": 99.99,
+          "threshold": 99.9,
           "gas_backup_mw": 0,
           "new_gas_mw": 0,
           "clean_firm_twh": 424.6,
@@ -18272,7 +18272,7 @@ const CQ_DATA = {
         "gas_at_75_mw": 0,
         "gas_at_90_mw": 0,
         "gas_at_deep_mw": 0,
-        "deep_threshold": 99.99,
+        "deep_threshold": 99.9,
         "gas_delta_50_to_75_mw": 0,
         "gas_delta_75_to_deep_mw": 0,
         "clean_firm_at_75_twh": 43.9,
@@ -18287,7 +18287,7 @@ const CQ_DATA = {
       "stranded_cost_bn": 120.8,
       "gas_lockin_cost_bn": 0.0,
       "total_hidden_cost_bn": 120.8,
-      "deep_threshold": 99.99
+      "deep_threshold": 99.9
     },
     "PJM": {
       "strategy": "wind_first",
@@ -18308,7 +18308,7 @@ const CQ_DATA = {
           "built_in_cheap_zone_twh": 0,
           "at_75pct_twh": 328.9,
           "at_deep_twh": 59.0,
-          "deep_threshold": 99.99,
+          "deep_threshold": 99.9,
           "stranded_twh": 269.9,
           "stranding_pct": 82.1
         },
@@ -18316,7 +18316,7 @@ const CQ_DATA = {
           "built_in_cheap_zone_twh": 151.8,
           "at_75pct_twh": 185.5,
           "at_deep_twh": 75.9,
-          "deep_threshold": 99.99,
+          "deep_threshold": 99.9,
           "stranded_twh": 109.6,
           "stranding_pct": 59.1
         }
@@ -18451,7 +18451,7 @@ const CQ_DATA = {
           "solar_twh": 59.0
         },
         {
-          "threshold": 99.99,
+          "threshold": 99.9,
           "gas_backup_mw": 0,
           "new_gas_mw": 0,
           "clean_firm_twh": 953.0,
@@ -18464,7 +18464,7 @@ const CQ_DATA = {
         "gas_at_75_mw": 0,
         "gas_at_90_mw": 0,
         "gas_at_deep_mw": 0,
-        "deep_threshold": 99.99,
+        "deep_threshold": 99.9,
         "gas_delta_50_to_75_mw": 0,
         "gas_delta_75_to_deep_mw": 0,
         "clean_firm_at_75_twh": 303.6,
@@ -18479,7 +18479,7 @@ const CQ_DATA = {
       "stranded_cost_bn": 250.9,
       "gas_lockin_cost_bn": 0.0,
       "total_hidden_cost_bn": 250.9,
-      "deep_threshold": 99.99
+      "deep_threshold": 99.9
     },
     "NYISO": {
       "strategy": "mixed",
@@ -18500,7 +18500,7 @@ const CQ_DATA = {
           "built_in_cheap_zone_twh": 0,
           "at_75pct_twh": 0.0,
           "at_deep_twh": 7.6,
-          "deep_threshold": 99.99,
+          "deep_threshold": 99.9,
           "stranded_twh": 0,
           "stranding_pct": 0
         },
@@ -18508,7 +18508,7 @@ const CQ_DATA = {
           "built_in_cheap_zone_twh": 0,
           "at_75pct_twh": 95.5,
           "at_deep_twh": 7.6,
-          "deep_threshold": 99.99,
+          "deep_threshold": 99.9,
           "stranded_twh": 87.9,
           "stranding_pct": 92.1
         }
@@ -18643,7 +18643,7 @@ const CQ_DATA = {
           "solar_twh": 15.2
         },
         {
-          "threshold": 99.99,
+          "threshold": 99.9,
           "gas_backup_mw": 0,
           "new_gas_mw": 0,
           "clean_firm_twh": 174.3,
@@ -18656,7 +18656,7 @@ const CQ_DATA = {
         "gas_at_75_mw": 0,
         "gas_at_90_mw": 0,
         "gas_at_deep_mw": 0,
-        "deep_threshold": 99.99,
+        "deep_threshold": 99.9,
         "gas_delta_50_to_75_mw": 0,
         "gas_delta_75_to_deep_mw": 0,
         "clean_firm_at_75_twh": 30.3,
@@ -18671,7 +18671,7 @@ const CQ_DATA = {
       "stranded_cost_bn": 65.9,
       "gas_lockin_cost_bn": 0.0,
       "total_hidden_cost_bn": 65.9,
-      "deep_threshold": 99.99
+      "deep_threshold": 99.9
     },
     "NEISO": {
       "strategy": "mixed",
@@ -18692,7 +18692,7 @@ const CQ_DATA = {
           "built_in_cheap_zone_twh": 0,
           "at_75pct_twh": 5.8,
           "at_deep_twh": 23.1,
-          "deep_threshold": 99.99,
+          "deep_threshold": 99.9,
           "stranded_twh": 0,
           "stranding_pct": 0.0
         },
@@ -18700,7 +18700,7 @@ const CQ_DATA = {
           "built_in_cheap_zone_twh": 0,
           "at_75pct_twh": 75.0,
           "at_deep_twh": 5.8,
-          "deep_threshold": 99.99,
+          "deep_threshold": 99.9,
           "stranded_twh": 69.2,
           "stranding_pct": 92.3
         }
@@ -18835,7 +18835,7 @@ const CQ_DATA = {
           "solar_twh": 28.8
         },
         {
-          "threshold": 99.99,
+          "threshold": 99.9,
           "gas_backup_mw": 0,
           "new_gas_mw": 0,
           "clean_firm_twh": 126.9,
@@ -18848,7 +18848,7 @@ const CQ_DATA = {
         "gas_at_75_mw": 0,
         "gas_at_90_mw": 0,
         "gas_at_deep_mw": 0,
-        "deep_threshold": 99.99,
+        "deep_threshold": 99.9,
         "gas_delta_50_to_75_mw": 0,
         "gas_delta_75_to_deep_mw": 0,
         "clean_firm_at_75_twh": 28.8,
@@ -18863,7 +18863,7 @@ const CQ_DATA = {
       "stranded_cost_bn": 51.9,
       "gas_lockin_cost_bn": 0.0,
       "total_hidden_cost_bn": 51.9,
-      "deep_threshold": 99.99
+      "deep_threshold": 99.9
     },
     "MISO": {
       "strategy": "mixed",
@@ -18884,7 +18884,7 @@ const CQ_DATA = {
           "built_in_cheap_zone_twh": 0,
           "at_75pct_twh": 13.2,
           "at_deep_twh": 79.2,
-          "deep_threshold": 99.99,
+          "deep_threshold": 99.9,
           "stranded_twh": 0,
           "stranding_pct": 0.0
         },
@@ -18892,7 +18892,7 @@ const CQ_DATA = {
           "built_in_cheap_zone_twh": 0,
           "at_75pct_twh": 528.0,
           "at_deep_twh": 151.8,
-          "deep_threshold": 99.99,
+          "deep_threshold": 99.9,
           "stranded_twh": 376.2,
           "stranding_pct": 71.2
         }
@@ -19027,7 +19027,7 @@ const CQ_DATA = {
           "solar_twh": 79.2
         },
         {
-          "threshold": 99.99,
+          "threshold": 99.9,
           "gas_backup_mw": 0,
           "new_gas_mw": 0,
           "clean_firm_twh": 633.6,
@@ -19040,7 +19040,7 @@ const CQ_DATA = {
         "gas_at_75_mw": 0,
         "gas_at_90_mw": 0,
         "gas_at_deep_mw": 0,
-        "deep_threshold": 99.99,
+        "deep_threshold": 99.9,
         "gas_delta_50_to_75_mw": 0,
         "gas_delta_75_to_deep_mw": 0,
         "clean_firm_at_75_twh": 99.0,
@@ -19055,7 +19055,7 @@ const CQ_DATA = {
       "stranded_cost_bn": 282.1,
       "gas_lockin_cost_bn": 0.0,
       "total_hidden_cost_bn": 282.1,
-      "deep_threshold": 99.99
+      "deep_threshold": 99.9
     },
     "SPP": {
       "strategy": "mixed",
@@ -19076,7 +19076,7 @@ const CQ_DATA = {
           "built_in_cheap_zone_twh": 0,
           "at_75pct_twh": 5.9,
           "at_deep_twh": 65.1,
-          "deep_threshold": 99.99,
+          "deep_threshold": 99.9,
           "stranded_twh": 0,
           "stranding_pct": 0.0
         },
@@ -19084,7 +19084,7 @@ const CQ_DATA = {
           "built_in_cheap_zone_twh": 0,
           "at_75pct_twh": 260.5,
           "at_deep_twh": 171.7,
-          "deep_threshold": 99.99,
+          "deep_threshold": 99.9,
           "stranded_twh": 88.8,
           "stranding_pct": 34.1
         }
@@ -19219,7 +19219,7 @@ const CQ_DATA = {
           "solar_twh": 62.2
         },
         {
-          "threshold": 99.99,
+          "threshold": 99.9,
           "gas_backup_mw": 0,
           "new_gas_mw": 0,
           "clean_firm_twh": 168.7,
@@ -19232,7 +19232,7 @@ const CQ_DATA = {
         "gas_at_75_mw": 0,
         "gas_at_90_mw": 0,
         "gas_at_deep_mw": 0,
-        "deep_threshold": 99.99,
+        "deep_threshold": 99.9,
         "gas_delta_50_to_75_mw": 0,
         "gas_delta_75_to_deep_mw": 0,
         "clean_firm_at_75_twh": 14.8,
@@ -19247,7 +19247,7 @@ const CQ_DATA = {
       "stranded_cost_bn": 66.6,
       "gas_lockin_cost_bn": 0.0,
       "total_hidden_cost_bn": 66.6,
-      "deep_threshold": 99.99
+      "deep_threshold": 99.9
     }
   }
 };

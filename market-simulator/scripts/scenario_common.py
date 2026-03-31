@@ -90,7 +90,7 @@ def build_zones(iso=None, thresholds=None, min_threshold=None):
     for i in range(len(sorted_t) - 1):
         s, e = sorted_t[i], sorted_t[i + 1]
         s_str = str(int(s)) if s == int(s) else str(s)
-        e_str = '≥99.99' if e >= 99.99 else (str(int(e)) if e == int(e) else str(e))
+        e_str = '≥99.9' if e >= 99.9 else (str(int(e)) if e == int(e) else str(e))
         zones.append({'label': f'{s_str}→{e_str}%', 'start': s, 'end': e})
     return zones
 

@@ -14,7 +14,7 @@ var SBTI = [
     { year: 2035, threshold: 70, label: '2035' },
     { year: 2040, threshold: 90, label: '2040' },
     { year: 2045, threshold: 95, label: '2045' },
-    { year: 2050, threshold: 99.99, label: '2050' }
+    { year: 2050, threshold: 99.9, label: '2050' }
 ];
 
 function sbtiAnnotations() {
@@ -41,8 +41,8 @@ function baseScales(yLabel, yMin, yMax) {
             type: 'linear', min: 48, max: 100.5,
             title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.65)', font: { size: 11 } },
             grid: { color: 'rgba(0,0,0,0.025)' },
-            ticks: { callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; }, color: 'rgba(15,23,42,0.63)', font: { size: 10 } },
-            afterBuildTicks: function(axis) { axis.ticks = [50,60,70,80,90,95,99.99].map(function(v) { return { value: v }; }); }
+            ticks: { callback: function(v) { return v === 99.9 ? '\u226599.9%' : v + '%'; }, color: 'rgba(15,23,42,0.63)', font: { size: 10 } },
+            afterBuildTicks: function(axis) { axis.ticks = [50,60,70,80,90,95,99.9].map(function(v) { return { value: v }; }); }
         },
         y: {
             title: { display: true, text: yLabel, color: 'rgba(15,23,42,0.65)', font: { size: 11 } },
@@ -228,8 +228,8 @@ function buildCannibalizationChart(D, accent) {
                     type: 'linear', min: 48, max: 100.5,
                     title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.65)', font: { size: 11 } },
                     grid: { color: 'rgba(0,0,0,0.025)' },
-                    ticks: { callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; }, color: 'rgba(15,23,42,0.63)', font: { size: 10 } },
-                    afterBuildTicks: function(axis) { axis.ticks = [50,60,70,80,90,95,99.99].map(function(v) { return { value: v }; }); }
+                    ticks: { callback: function(v) { return v === 99.9 ? '\u226599.9%' : v + '%'; }, color: 'rgba(15,23,42,0.63)', font: { size: 10 } },
+                    afterBuildTicks: function(axis) { axis.ticks = [50,60,70,80,90,95,99.9].map(function(v) { return { value: v }; }); }
                 },
                 y: {
                     position: 'left',
@@ -274,8 +274,8 @@ function buildStorageArbitrageChart(D, iso) {
     var T = D.thresholds, P = D.peak;
 
     // Storage dispatch data from RESOURCE_MIX_DATA (21 thresholds)
-    // Map to LMP thresholds (15 points: 50,55,...,99,99.99)
-    var lmpThresholds = T; // [50,55,60,...,99,99.99]
+    // Map to LMP thresholds (15 points: 50,55,...,99,99.9)
+    var lmpThresholds = T; // [50,55,60,...,99,99.9]
     var fullThresholds = typeof THRESHOLDS !== 'undefined' ? THRESHOLDS : null;
     var mix = typeof RESOURCE_MIX_DATA !== 'undefined' ? RESOURCE_MIX_DATA[iso] : null;
 
@@ -283,7 +283,7 @@ function buildStorageArbitrageChart(D, iso) {
     function mapToLmpThresholds(arr21) {
         if (!arr21 || !fullThresholds) return lmpThresholds.map(function() { return 0; });
         return lmpThresholds.map(function(t) {
-            var tVal = t >= 99.99 ? 99.99 : t;
+            var tVal = t >= 99.9 ? 99.9 : t;
             var idx = -1;
             for (var i = 0; i < fullThresholds.length; i++) {
                 if (Math.abs(fullThresholds[i] - tVal) < 0.01) { idx = i; break; }
@@ -326,8 +326,8 @@ function buildStorageArbitrageChart(D, iso) {
                     type: 'linear', min: 48, max: 100.5,
                     title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.65)', font: { size: 11 } },
                     grid: { color: 'rgba(0,0,0,0.025)' },
-                    ticks: { callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; }, color: 'rgba(15,23,42,0.63)', font: { size: 10 } },
-                    afterBuildTicks: function(axis) { axis.ticks = [50,60,70,80,90,95,99.99].map(function(v) { return { value: v }; }); }
+                    ticks: { callback: function(v) { return v === 99.9 ? '\u226599.9%' : v + '%'; }, color: 'rgba(15,23,42,0.63)', font: { size: 10 } },
+                    afterBuildTicks: function(axis) { axis.ticks = [50,60,70,80,90,95,99.9].map(function(v) { return { value: v }; }); }
                 },
                 y: {
                     position: 'left',
@@ -391,16 +391,16 @@ function buildGasStrandingChart(iso) {
         type: 'line',
         data: { datasets: [
             // Installed gas fleet baseline - horizontal reference
-            { label: '2025 installed gas fleet', data: T.map(function(t) { return { x: t >= 99.99 ? 99.99 : t, y: baselineGas }; }),
+            { label: '2025 installed gas fleet', data: T.map(function(t) { return { x: t >= 99.9 ? 99.9 : t, y: baselineGas }; }),
               borderColor: GAS_COLOR + '50', backgroundColor: 'transparent',
               borderWidth: 1.5, borderDash: [6, 4], pointRadius: 0, fill: false,
               tension: 0, order: 5 },
             // Stranded capacity area (fill between baseline and needed)
-            { label: 'Stranded capacity', data: T.map(function(t, i) { return { x: t >= 99.99 ? 99.99 : t, y: baselineGas }; }),
+            { label: 'Stranded capacity', data: T.map(function(t, i) { return { x: t >= 99.9 ? 99.9 : t, y: baselineGas }; }),
               borderColor: 'transparent', backgroundColor: 'rgba(239,68,68,0.12)',
               borderWidth: 0, pointRadius: 0, fill: '+1', tension: 0.35, order: 10, _type: 'band' },
             // Gas capacity required line
-            { label: 'Gas capacity required (GW)', data: T.map(function(t, i) { return { x: t >= 99.99 ? 99.99 : t, y: gasNeeded[i] }; }),
+            { label: 'Gas capacity required (GW)', data: T.map(function(t, i) { return { x: t >= 99.9 ? 99.9 : t, y: gasNeeded[i] }; }),
               borderColor: GAS_COLOR, backgroundColor: hexToRgba(GAS_COLOR, 0.08),
               borderWidth: 2.5, pointRadius: 3, pointBackgroundColor: GAS_COLOR,
               fill: 'origin', tension: 0.35, order: 3 }
@@ -413,8 +413,8 @@ function buildGasStrandingChart(iso) {
                     type: 'linear', min: 48, max: 100.5,
                     title: { display: true, text: 'Clean Energy Threshold (%)', color: 'rgba(15,23,42,0.65)', font: { size: 11 } },
                     grid: { color: 'rgba(0,0,0,0.025)' },
-                    ticks: { callback: function(v) { return v === 99.99 ? '\u226599.99%' : v + '%'; }, color: 'rgba(15,23,42,0.63)', font: { size: 10 } },
-                    afterBuildTicks: function(axis) { axis.ticks = [50,60,70,80,90,95,99.99].map(function(v) { return { value: v }; }); }
+                    ticks: { callback: function(v) { return v === 99.9 ? '\u226599.9%' : v + '%'; }, color: 'rgba(15,23,42,0.63)', font: { size: 10 } },
+                    afterBuildTicks: function(axis) { axis.ticks = [50,60,70,80,90,95,99.9].map(function(v) { return { value: v }; }); }
                 },
                 y: {
                     title: { display: true, text: 'Gas Capacity (GW)', color: 'rgba(15,23,42,0.65)', font: { size: 11 } },
@@ -432,7 +432,7 @@ function buildGasStrandingChart(iso) {
                     titleFont: { weight: '700', size: 12 }, bodyFont: { size: 11 },
                     filter: function(item) { return item.dataset._type !== 'band'; },
                     callbacks: {
-                        title: function(items) { return items[0] ? (items[0].raw.x >= 99.99 ? '\u226599.99' : items[0].raw.x) + '% Clean Energy' : ''; },
+                        title: function(items) { return items[0] ? (items[0].raw.x >= 99.9 ? '\u226599.9' : items[0].raw.x) + '% Clean Energy' : ''; },
                         label: function(item) {
                             if (item.dataset._type === 'band') return null;
                             return item.dataset.label + ': ' + item.raw.y.toFixed(1) + ' GW';
@@ -646,7 +646,7 @@ function buildRefCaseChart(iso, accent) {
     var ctx = document.getElementById('refCaseChart');
     if (!ctx) return;
 
-    var T = lmpAll.thresholds; // clean% thresholds (50, 55, 60, ..., 99.99)
+    var T = lmpAll.thresholds; // clean% thresholds (50, 55, 60, ..., 99.9)
 
     var datasets = [];
 

@@ -131,7 +131,7 @@ body { background: var(--bg-page-white); }
 
     <div class="card" style="margin-bottom: var(--space-lg);">
         <p style="font-size: 1.02rem; line-height: 1.75; margin-bottom: var(--space-md);">
-            The <strong>8,760 Problem Optimizer</strong> is a 2025-snapshot energy system model that co-optimizes resource mix and incremental cost for hourly clean energy procurement across 7 U.S. Independent System Operators (ISOs). It evaluates every hour of the year (8,760 hours) to determine which combinations of clean resources - solar, wind, nuclear, CCS, hydro, battery storage, and long-duration storage - can match electricity demand at each target threshold, from 50% to &ge;99.99% hourly clean energy.
+            The <strong>8,760 Problem Optimizer</strong> is a 2025-snapshot energy system model that co-optimizes resource mix and incremental cost for hourly clean energy procurement across 7 U.S. Independent System Operators (ISOs). It evaluates every hour of the year (8,760 hours) to determine which combinations of clean resources - solar, wind, nuclear, CCS, hydro, battery storage, and long-duration storage - can match electricity demand at each target threshold, from 50% to &ge;99.9% hourly clean energy.
         </p>
         <p style="font-size: 0.95rem; line-height: 1.7; color: #4b5563;">
             <strong>What the model claims:</strong> Given a target hourly clean energy percentage, what is the least-cost resource portfolio to achieve it, and how does that cost change under different technology cost and policy assumptions?
@@ -721,13 +721,13 @@ body { background: var(--bg-page-white); }
                 <li><strong>10–40%:</strong> Coarse 10% steps - existing fleet handles most of this range, costs are near-zero</li>
                 <li><strong>50–80%:</strong> 5% steps - the "buildout zone" where new resources start being needed</li>
                 <li><strong>85–97.5%:</strong> 2.5% steps - the "inflection zone" where costs accelerate nonlinearly</li>
-                <li><strong>99–99.99%:</strong> Fine steps - the "last mile" where costs explode due to extreme reliability requirements</li>
+                <li><strong>99–99.9%:</strong> Fine steps - the "last mile" where costs explode due to extreme reliability requirements</li>
             </ul>
         </div>
 
         <div style="margin-bottom: var(--space-lg);">
-            <h3>10.4 Why &ge;99.99% Instead of 100%?</h3>
-            <p>True 100% hourly matching is physically unreachable with variable renewables - achieving it would require infinite storage or curtailment. The top threshold is ≥99.99% (8,759.1 of 8,760 hours matched), which represents the practical ceiling. Displaying "100%" would be scientifically misleading.</p>
+            <h3>10.4 Why &ge;99.9% Instead of 100%?</h3>
+            <p>True 100% hourly matching is physically unreachable with variable renewables - achieving it would require infinite storage or curtailment. The top threshold is ≥99.9% (8,759.1 of 8,760 hours matched), which represents the practical ceiling. Displaying "100%" would be scientifically misleading.</p>
         </div>
 
         <div style="margin-bottom: var(--space-lg);">

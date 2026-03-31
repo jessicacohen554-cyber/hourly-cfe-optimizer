@@ -6,7 +6,7 @@ const STRATEGIES = ['1B','2C','2C_rolloff'];
 const CORE_STRATEGIES = ['1B','2C'];
 const ROLLOFF_PAIRS = { '2C': '2C_rolloff' };
 const ISOS = ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'];
-const THRESHOLDS = [90, 92.5, 95, 97.5, 99.5, 99.99];
+const THRESHOLDS = [90, 92.5, 95, 97.5, 99.5, 99.9];
 const PARTICIPATION_LEVELS = [5, 10, 15, 20, 25, 50, 75];
 
 const STRATEGY_LABELS = {
@@ -596,7 +596,7 @@ function buildRiskCharts() {
 
 // ─── Slider Helpers ──────────────────────────────────────────────────────────
 
-const SLIDER_THRESHOLDS = [90, 92.5, 95, 97.5, 99.5, 99.99];
+const SLIDER_THRESHOLDS = [90, 92.5, 95, 97.5, 99.5, 99.9];
 
 function sliderToThreshold(val) {
     return SLIDER_THRESHOLDS[Math.min(Math.max(0, val), SLIDER_THRESHOLDS.length - 1)];

@@ -26,9 +26,9 @@ DASH_JS = os.path.join(ROOT, "dashboard", "js")
 
 sys.path.insert(0, SCRIPT_DIR)
 from pipeline_config import ISOS
-KEY_THRESHOLDS = [50, 75, 85, 90, 95, 97.5, 99, 99.5, 99.9, 99.99]
+KEY_THRESHOLDS = [50, 75, 85, 90, 95, 97.5, 99, 99.5, 99.9]
 ALL_THRESHOLDS = [10, 20, 30, 40, 50, 55, 60, 65, 70, 75, 80, 85, 87.5,
-                  90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
+                  90, 92.5, 95, 97.5, 99, 99.5, 99.9]
 
 # Scenario code structure: ABCD_E_F_G_H
 # A=Renewable, B=Firm, C=Storage, D=LDES, E=CCS, F=45Q(N/Y), G=Fuel+TX, H=Geo(X=none)
@@ -305,7 +305,7 @@ def extract_datacenter_siting():
                 },
             }
 
-            if t in [90, 95, 99, 99.99]:
+            if t in [90, 95, 99, 99.9]:
                 iso_data[str(t)] = entry
 
             cost_curve.append({"t": t, "cost": entry["cost_total"]})
