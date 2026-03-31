@@ -83,7 +83,10 @@ MAX_FINE_ARCHETYPES_8D = 200  # tighter for high-D to keep memory < 2GB
 MAX_ARCHETYPE_TOTAL_COMBOS = 5_000_000
 
 # Scoring chunk size (mixes per batch for batch_hourly_scores)
+# High-D ISOs (≥8D) use smaller chunks to reduce peak memory during scoring:
+# 20K × 8760 × 8 bytes = 1.4 GB per chunk — too much when coarse cache is large.
 SCORE_CHUNK_SIZE = 20000
+SCORE_CHUNK_SIZE_HIGH_D = 5000
 
 # Max fine grid combos before falling back to archetype-based search.
 # 10M keeps Zone A feasible for 4D ISOs (~11-14M after procurement cap)
@@ -385,18 +388,30 @@ def generate_archetype_fine_grid(iso, boundary_mixes, n_res, include_hybrids=Fal
     print(f"    Using {len(unique_archetypes)} archetypes from "
           f"{len(int_mixes):,} boundary mixes")
 
-    # Generate fine grid around each archetype, with early-exit on total cap
+    # Generate fine grid around each archetype, with streaming dedup.
+    # Previous approach: vstack all parts then np.unique — OOM on large arrays
+    # (4M × 9 float64 = 288 MB data + ~600 MB sort temp).
+    # New approach: hash-based dedup per archetype, no global sort needed.
     parts = []
-    total_combos = 0
+    seen_hashes = set()
+    total_raw = 0
+    total_unique = 0
     for i in range(len(unique_archetypes)):
         base = unique_archetypes[i].astype(np.float64)
         fine = s1.generate_resource_combos_around(
             base, iso, step=FINE_STEP, radius=radius,
             include_hybrids=include_hybrids)
         if len(fine) > 0:
-            parts.append(fine)
-            total_combos += len(fine)
-        if total_combos >= MAX_ARCHETYPE_TOTAL_COMBOS:
+            total_raw += len(fine)
+            # Streaming dedup: hash each batch and keep only unseen
+            hashes = _hash_mixes(fine)
+            new_mask = np.array([h not in seen_hashes for h in hashes],
+                                dtype=bool)
+            if np.any(new_mask):
+                seen_hashes.update(hashes[new_mask].tolist())
+                parts.append(fine[new_mask])
+                total_unique += int(new_mask.sum())
+        if total_unique >= MAX_ARCHETYPE_TOTAL_COMBOS:
             print(f"    Hit {MAX_ARCHETYPE_TOTAL_COMBOS:,} combo cap at "
                   f"archetype {i+1}/{len(unique_archetypes)}")
             break
@@ -404,9 +419,10 @@ def generate_archetype_fine_grid(iso, boundary_mixes, n_res, include_hybrids=Fal
     if not parts:
         return np.empty((0, n_res), dtype=np.float64)
 
-    combos = np.unique(np.vstack(parts), axis=0)
+    combos = np.vstack(parts)
+    del parts, seen_hashes
     print(f"    Archetype grid: {len(combos):,} unique combos "
-          f"(from {total_combos:,} raw)")
+          f"(from {total_raw:,} raw)")
     return combos
 
 
@@ -540,7 +556,7 @@ def save_threshold_pfs_batch(iso, threshold, combos, scores, rtypes,
     return out_path
 
 
-def _has_curtailment_mask(combos, demand_arr, supply_matrix, chunk_size=10000):
+def _has_curtailment_mask(combos, demand_arr, supply_matrix, chunk_size=5000):
     """Vectorized curtailment check: True if any hour has supply > demand.
 
     Processes in chunks to limit peak memory (combos × 8760 can be large).
@@ -1052,6 +1068,21 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None,
 
         print(f"    Raw fine grid: {len(fine_combos):,} combos")
 
+        # 2b. Free coarse arrays after archetype generation to reclaim memory.
+        #     For high-D ISOs (≥8D), the coarse cache alone is ~1.3 GB.
+        #     Only safe when this is the LAST zone to process (otherwise later
+        #     zones need coarse data for bounds + archetype selection).
+        remaining_zones = [z[0] for z in ZONES
+                           if z[0] not in zones_done and z[0] != zone_name
+                           and (not zones_filter or z[0] in zones_filter)]
+        if n_res >= 8 and coarse_combos is not None and not remaining_zones:
+            coarse_mem_mb = coarse_combos.nbytes / (1024 * 1024)
+            del coarse_combos, coarse_scores
+            coarse_combos = None
+            coarse_scores = None
+            gc.collect()
+            print(f"    Freed coarse arrays ({coarse_mem_mb:.0f} MB) — last zone, reducing peak memory")
+
         # 3. Dedup against global keys (vectorized — no Python loop)
         if len(fine_combos) > 0:
             fine_keys = _hash_mixes(fine_combos)
@@ -1066,9 +1097,10 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None,
         # 4. Score new mixes in chunks (vectorized — NO Python loop over mixes)
         if len(fine_combos) > 0:
             score_start = time.time()
+            chunk_sz = SCORE_CHUNK_SIZE_HIGH_D if n_res >= 8 else SCORE_CHUNK_SIZE
             fine_scores = s1.batch_hourly_scores(
                 demand_arr, supply_matrix, fine_combos,
-                chunk_size=SCORE_CHUNK_SIZE)
+                chunk_size=chunk_sz)
             score_elapsed = time.time() - score_start
             print(f"    Scored {len(fine_combos):,} mixes in {score_elapsed:.1f}s")
 
@@ -1112,7 +1144,10 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None,
         gc.collect()
 
     # ── Free coarse arrays (no longer needed — saves ~2 GB for large ISOs) ──
-    del coarse_combos, coarse_scores, global_scored_keys
+    # May already be freed for high-D ISOs (freed after archetype generation)
+    if coarse_combos is not None:
+        del coarse_combos, coarse_scores
+    del global_scored_keys
     gc.collect()
 
     # ── Combine fine scored mixes ──
