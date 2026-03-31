@@ -954,8 +954,11 @@ def _stream_coarse_cache(iso, rtypes, zones, active_thresholds):
                         n_replace += 1
                 if n_replace > 0:
                     # Pick n_replace random rows from this batch and
-                    # random positions in the sample to replace
-                    src_idx = np.random.choice(n_in, size=min(n_replace, n_in),
+                    # random positions in the sample to replace.
+                    # Cap at min(n_replace, n_in, cap) — can't replace
+                    # more positions than exist in the sample.
+                    actual_replace = min(n_replace, n_in, cap)
+                    src_idx = np.random.choice(n_in, size=actual_replace,
                                                replace=False)
                     # Materialize current sample for replacement
                     if len(zone_sample_c[zone_name]) > 1:
