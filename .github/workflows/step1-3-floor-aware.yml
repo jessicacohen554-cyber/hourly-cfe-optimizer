@@ -142,15 +142,25 @@ jobs:
         fi
         eval python scripts/step1_3_floor_aware_pfs.py $ARGS
 
-    - name: Commit results
+    - name: Commit results (per-file to stay under 50 MB)
       if: always()
       run: |
         ISO="${{ matrix.iso }}"
-        git add -f data/step1-pfs/"${ISO}"_*.parquet 2>/dev/null || true
-        if ! git diff --cached --quiet; then
-          git commit -m "Step 1.3 Floor-Aware PFS: ${ISO} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-        else
+        COMMITTED=0
+        for f in data/step1-pfs/"${ISO}"_*.parquet; do
+          [ -f "$f" ] || continue
+          SIZE_MB=$(du -m "$f" | cut -f1)
+          git add -f "$f"
+          if ! git diff --cached --quiet; then
+            FNAME=$(basename "$f")
+            git commit -m "Step 1.3 Floor: ${ISO} ${FNAME} (${SIZE_MB}MB) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            COMMITTED=$((COMMITTED + 1))
+          fi
+        done
+        if [ "$COMMITTED" -eq 0 ]; then
           echo "No new results"
+        else
+          echo "Committed $COMMITTED file(s)"
         fi
 
     - name: Push results

@@ -70,6 +70,7 @@ if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
 import step1_pfs_generator as s1
+from parquet_utils import write_parquet_chunked
 
 try:
     from numba import njit, prange
@@ -421,10 +422,9 @@ def load_near_miss(iso):
     """
     path = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
                         f'{iso}_near_miss.parquet')
-    if not os.path.exists(path):
+    table = read_parquet_parts(path)
+    if table is None:
         return None, None, None
-
-    table = pq.read_table(path)
     has_hybrids = _detect_hybrids(table)
     rtypes = s1.get_resource_types(iso, include_hybrids=has_hybrids)
     combos = np.column_stack([table.column(rt).to_numpy() for rt in rtypes])
@@ -1010,9 +1010,9 @@ def save_storage_results(iso, threshold, nm_combos, results, rtypes,
     else:
         fname = f'{iso}_t{t_str}_storage.parquet'
     out_path = os.path.join(STEP1D_OUTPUT_DIR, fname)
-    pq.write_table(table, out_path, compression='snappy')
-    size_mb = os.path.getsize(out_path) / (1024 * 1024)
-    return out_path
+    written = write_parquet_chunked(table, out_path, max_mb=45,
+                                    compression='snappy')
+    return written[0] if len(written) == 1 else written
 
 
 def git_commit_threshold(iso, threshold, phase_label, auto_commit,
