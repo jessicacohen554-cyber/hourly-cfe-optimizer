@@ -102,7 +102,7 @@ STEP1D_OUTPUT_DIR = os.path.join(DATA_DIR, 'step1-pfs')
 
 # Thresholds for storage refinement
 STORAGE_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5,
-                      90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
+                      90, 92.5, 95, 97.5, 99, 99.5, 99.9]
 
 # Pass 0: Maximum storage levels (ceiling screen) — % of annual demand
 # Physical reference: CAISO 224 TWh → 0.01% = 22,400 MWh / 5,600 MW (4hr)
@@ -1212,7 +1212,7 @@ def process_iso(iso, thresholds_filter=None):
     # the Numba kernel is called ONCE per batch and scores are reused for all
     # thresholds.  The old per-threshold loop re-evaluated overlapping mixes
     # for each threshold, causing ~4× redundant kernel evaluations on ERCOT
-    # (6.4M near-miss mixes, heavily overlapping eligible sets across t85–t99.99).
+    # (6.4M near-miss mixes, heavily overlapping eligible sets across t85–t99.9).
 
     # Determine which thresholds need Pass 1 (coarse sweep)
     pass1_needed = [t for t in active_thresholds if t not in pass1_thresholds]

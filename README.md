@@ -1,6 +1,6 @@
 # Hourly CFE Cost Optimizer
 
-An optimization engine and interactive dashboard for analyzing **hourly clean energy procurement strategies** across seven US ISO regions. The optimizer finds the least-cost mix of clean firm (nuclear/geothermal), solar, wind, hydro, CCS-CCGT, battery, and LDES to meet hourly demand at various Clean Energy Matching (CEM) targets (50%–≥99.99%), then visualizes results in a scrollytelling dashboard with 20+ interactive pages.
+An optimization engine and interactive dashboard for analyzing **hourly clean energy procurement strategies** across seven US ISO regions. The optimizer finds the least-cost mix of clean firm (nuclear/geothermal), solar, wind, hydro, CCS-CCGT, battery, and LDES to meet hourly demand at various Clean Energy Matching (CEM) targets (50%–≥99.9%), then visualizes results in a scrollytelling dashboard with 20+ interactive pages.
 
 ## Regions Covered
 

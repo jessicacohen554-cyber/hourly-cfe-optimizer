@@ -327,7 +327,7 @@ def main():
     KEY_PARTICIPATION = {'0pct', '5pct', '10pct', '15pct', '20pct', '25pct',
                           '30pct', '40pct', '50pct', '60pct', '70pct', '80pct', '90pct', '100pct'}
     # Key thresholds — skip fine gradations to reduce size
-    KEY_THRESHOLDS = {50, 60, 70, 75, 80, 85, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99}
+    KEY_THRESHOLDS = {50, 60, 70, 75, 80, 85, 90, 92.5, 95, 97.5, 99, 99.5, 99.9}
 
     total_entries = 0
     skipped = 0
