@@ -22,6 +22,20 @@ on:
           - NEISO
           - MISO
           - SPP
+      threshold_band:
+        description: 'Threshold band to run (ignored if custom_thresholds set)'
+        required: true
+        default: 'ALL'
+        type: choice
+        options:
+          - ALL
+          - FLOOR
+          - NEAR_MISS
+      custom_thresholds:
+        description: 'Custom thresholds (e.g. "55,60,70"). Overrides threshold_band.'
+        required: false
+        default: ''
+        type: string
       branch:
         description: 'Source branch to checkout code from'
         required: false
@@ -30,12 +44,16 @@ on:
 
 env:
   PYTHONUNBUFFERED: "1"
+  # Threshold bands for matrix expansion
+  THRESHOLDS_FLOOR: "50,55,60,65,70"
+  THRESHOLDS_NEAR_MISS: "75,80"
 
 jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      thresholds: ${{ steps.resolve-thresholds.outputs.thresholds }}
     steps:
       - name: Build ISO matrix
         id: set-matrix
@@ -44,6 +62,23 @@ jobs:
             echo 'matrix={"iso":["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]}' >> "$GITHUB_OUTPUT"
           else
             echo 'matrix={"iso":["${{ inputs.iso }}"]}' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Resolve thresholds
+        id: resolve-thresholds
+        run: |
+          CUSTOM="${{ inputs.custom_thresholds }}"
+          BAND="${{ inputs.threshold_band }}"
+
+          if [ -n "$CUSTOM" ]; then
+            echo "Using custom thresholds: $CUSTOM"
+            echo "thresholds=$CUSTOM" >> "$GITHUB_OUTPUT"
+          elif [ "$BAND" = "FLOOR" ]; then
+            echo "thresholds=$THRESHOLDS_FLOOR" >> "$GITHUB_OUTPUT"
+          elif [ "$BAND" = "NEAR_MISS" ]; then
+            echo "thresholds=$THRESHOLDS_NEAR_MISS" >> "$GITHUB_OUTPUT"
+          else
+            echo "thresholds=" >> "$GITHUB_OUTPUT"
           fi
 
   floor-aware:
@@ -92,10 +127,20 @@ jobs:
 
     - name: "Run Floor-Aware PFS — ${{ matrix.iso }}"
       run: |
+        THRESHOLDS="${{ needs.prepare.outputs.thresholds }}"
         echo "═══════════════════════════════════════════════════════════"
-        echo "  ISO: ${{ matrix.iso }}  |  Floor-Aware PFS (50-70%)"
+        if [ -n "$THRESHOLDS" ]; then
+          echo "  ISO: ${{ matrix.iso }}  |  Floor-Aware PFS  |  Thresholds: $THRESHOLDS"
+        else
+          echo "  ISO: ${{ matrix.iso }}  |  Floor-Aware PFS (50-80%, all)"
+        fi
         echo "═══════════════════════════════════════════════════════════"
-        python scripts/step1_3_floor_aware_pfs.py --iso ${{ matrix.iso }}
+
+        ARGS="--iso ${{ matrix.iso }}"
+        if [ -n "$THRESHOLDS" ]; then
+          ARGS="$ARGS --thresholds $THRESHOLDS"
+        fi
+        eval python scripts/step1_3_floor_aware_pfs.py $ARGS
 
     - name: Commit results
       if: always()
