@@ -189,7 +189,7 @@ def build_document():
     doc.add_paragraph(
         'The Hourly CFE Optimizer is a computational model that determines the least-cost portfolio '
         'of clean energy resources required to achieve any specified level of hourly clean energy '
-        'matching (10%–99.99%) across seven major U.S. ISO/RTO regions. Unlike traditional annual '
+        'matching (10%–99.9%) across seven major U.S. ISO/RTO regions. Unlike traditional annual '
         'procurement models, this optimizer evaluates resource mixes against 8,760 hours of actual '
         'demand and generation data, capturing the temporal mismatch between variable renewable '
         'generation and load that drives procurement costs at high clean energy targets.'

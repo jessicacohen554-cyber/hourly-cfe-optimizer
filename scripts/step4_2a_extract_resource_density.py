@@ -99,11 +99,11 @@ def get_crossover_thresholds(ot_data, iso):
         cc = iso_data.get("crossover_central", {})
         central = cc.get("threshold", 90)
         lower = max(50, central - 15)
-        upper = min(99.99, central + 5)
+        upper = min(99.9, central + 5)
 
     # Expand to include a few thresholds around the range for context
     lower = max(50, lower - 5)
-    upper = min(99.99, upper + 2.5)
+    upper = min(99.9, upper + 2.5)
 
     return [t for t in ALL_THRESHOLDS if lower <= t <= upper]
 

@@ -954,7 +954,7 @@ def main():
     valid_cm = {k: v for k, v in cm_data.items() if v is not None}
     if valid_cm:
         print(f"\n  Critical mass by threshold:")
-        for thr in ['50.0', '70.0', '90.0', '95.0', '99.99']:
+        for thr in ['50.0', '70.0', '90.0', '95.0', '99.9']:
             if thr in valid_cm:
                 print(f"    {thr}% CFE: {valid_cm[thr]*100:.0f}% participation")
 

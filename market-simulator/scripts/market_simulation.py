@@ -2120,7 +2120,7 @@ def compute_unified_deployment(
                 max_deploy_gw = remaining_gw
             max_deploy_twh = max_deploy_gw * cf * 8.760 if cf > 0 else 0
 
-            max_clean_headroom_twh = (99.99 - clean_pct) / 100.0 * demand_twh
+            max_clean_headroom_twh = (99.9 - clean_pct) / 100.0 * demand_twh
             deploy_twh = min(max_deploy_twh, entry['max_twh'], max_clean_headroom_twh)
 
             if deploy_twh <= 0:
@@ -3709,7 +3709,7 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
         max_deploy_twh = max_deploy_gw * cf * 8.760 if cf > 0 else 0
 
         # Constrain by resource cap and remaining demand headroom
-        max_clean_headroom_twh = (99.99 - clean_pct) / 100.0 * demand_twh
+        max_clean_headroom_twh = (99.9 - clean_pct) / 100.0 * demand_twh
         deploy_twh = min(max_deploy_twh, entry['max_twh'], max_clean_headroom_twh)
 
         if deploy_twh <= 0:

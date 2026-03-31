@@ -154,7 +154,7 @@ Data: Load from lmp-data.js:
 - Peak vs. off-peak spread by threshold
 If lmp-data.js doesn't export directly, check lmp-capacity-data.js or fleet-scenarios.js.
 
-Visual: Chart.js line chart with filled P10-P90 band. X-axis: clean energy % (50→99.99).
+Visual: Chart.js line chart with filled P10-P90 band. X-axis: clean energy % (50→99.9).
 Y-axis: wholesale LMP ($/MWh).
 - P10-P90 band filled at 12% alpha in --fossil-gas color
 - P50 median line: 2px solid
@@ -202,7 +202,7 @@ Also load from optimal-target-data.js:
 - SCC references: EPA $51/ton, Rennert $185/ton, EU ETS $60-100/ton
 
 Visual: Chart.js line chart with stacked fill bands.
-X-axis: CFE target % (50→99.99). Y-axis: $/tCO₂ (log scale or linear, whichever reads better).
+X-axis: CFE target % (50→99.9). Y-axis: $/tCO₂ (log scale or linear, whichever reads better).
 - P10-P90 band: lightest fill (12% alpha)
 - P25-P75 band: medium fill (25% alpha)
 - P50 line: 2px solid

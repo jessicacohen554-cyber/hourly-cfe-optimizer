@@ -76,7 +76,6 @@ OVER_PROCUREMENT_RATIO = {
     99:    2.20,   # Extreme — last few % require massive overbuild
     99.5:  2.50,   # Last-mile: exponential capacity growth
     99.9:  2.80,   # Near-physical limit
-    99.99: 3.00,   # Physical limit — need 3× capacity to cover every hour
 }
 
 
@@ -118,7 +117,6 @@ HOURLY_MIX_TEMPLATE = {
     99:    {'solar': 0.12, 'wind': 0.12, 'firm': 0.33, 'battery': 0.09, 'ldes': 0.12, 'uprate': 0.05, 'solar_batt4': 0.09, 'wind_batt4': 0.08},
     99.5:  {'solar': 0.11, 'wind': 0.11, 'firm': 0.34, 'battery': 0.09, 'ldes': 0.13, 'uprate': 0.05, 'solar_batt4': 0.09, 'wind_batt4': 0.08},
     99.9:  {'solar': 0.10, 'wind': 0.10, 'firm': 0.35, 'battery': 0.09, 'ldes': 0.14, 'uprate': 0.05, 'solar_batt4': 0.09, 'wind_batt4': 0.08},
-    99.99: {'solar': 0.09, 'wind': 0.09, 'firm': 0.36, 'battery': 0.09, 'ldes': 0.15, 'uprate': 0.05, 'solar_batt4': 0.09, 'wind_batt4': 0.08},
 }
 
 

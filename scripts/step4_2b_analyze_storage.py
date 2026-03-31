@@ -49,7 +49,7 @@ from scripts.dispatch_utils import (
 
 # Single source of truth: pipeline_config
 THRESHOLDS = ACTIVE_THRESHOLDS
-THRESHOLD_LABELS = [str(int(t)) if t == int(t) else str(t) for t in THRESHOLDS[:-1]] + ['≥99.99']
+THRESHOLD_LABELS = [str(int(t)) if t == int(t) else str(t) for t in THRESHOLDS[:-1]] + ['≥99.9']
 
 # Shared-data.js threshold array (superset — includes sub-50 thresholds)
 SD_THRESHOLDS = ALL_THRESHOLDS

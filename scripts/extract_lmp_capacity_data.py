@@ -20,7 +20,7 @@ OUTPUT_JS = os.path.join(ROOT_DIR, 'dashboard', 'js', 'lmp-capacity-data.js')
 ALL_ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 
 # Active thresholds matching lmp-data.js
-ACTIVE_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.99]
+ACTIVE_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.9]
 
 
 def extract_capacity_data():

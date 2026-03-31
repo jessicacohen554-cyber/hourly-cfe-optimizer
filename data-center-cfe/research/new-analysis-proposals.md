@@ -159,7 +159,7 @@ Proposed analyses leveraging the hourly-cfe-optimizer pipeline infrastructure + 
 **Data inputs needed:**
 - Colocation consumption data from `vreresearch.md`: Digital Realty 11.1 TWh, Equinix 8.56 TWh, CyrusOne 4.2 TWh, QTS 2.6 TWh, Vantage 2.6 TWh, Iron Mountain ~2 TWh (est.)
 - Clean energy coverage percentages from vreresearch.md: Equinix 96%, Digital Realty 75%, CyrusOne ~99% (EU), QTS ~100% (via RECs), Vantage <50%, Iron Mountain 100% (annual)
-- Over-procurement ratios from `step5_2c_strategy_hourly.py` (1.05x at 50% → 3.0x at 99.99%)
+- Over-procurement ratios from `step5_2c_strategy_hourly.py` (1.05x at 50% → 2.8x at 99.9%)
 - PPA pricing from Step 5 results or pipeline_config LCOE tables
 - Geographic distribution assumptions: PJM ~40% of US colo load (Northern Virginia), ERCOT ~20%, CAISO ~15%, other ~25%
 
