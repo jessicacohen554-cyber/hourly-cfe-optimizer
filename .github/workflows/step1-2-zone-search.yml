@@ -61,11 +61,39 @@ jobs:
             ISOS='["${{ inputs.iso }}"]'
           fi
 
-          # Zones
+          # Zones — if explicit zones requested, use those.
+          # Otherwise, if thresholds are specified, auto-select only the
+          # zones that contain those thresholds (saves wasted runner time).
+          # Zone mapping:
+          #   A: 50, 55, 60, 65, 70, 75
+          #   B: 75, 80, 85, 87.5, 90
+          #   C: 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99
           REQUESTED="${{ inputs.zones }}"
+          THRESHOLDS="${{ inputs.thresholds }}"
+
           if [ -n "$REQUESTED" ]; then
-            # Convert comma-separated to JSON array: "A,B" → ["A","B"]
+            # Explicit zones — use as-is
             ZONES=$(echo "$REQUESTED" | tr -d ' ' | sed 's/,/","/g' | sed 's/^/["/' | sed 's/$/"]/')
+          elif [ -n "$THRESHOLDS" ]; then
+            # Auto-select zones from thresholds
+            NEED_A=false
+            NEED_B=false
+            NEED_C=false
+            for t in $(echo "$THRESHOLDS" | tr ',' ' '); do
+              # Compare as integers (multiply by 10 to handle decimals like 87.5)
+              t10=$(echo "$t * 10" | bc | cut -d. -f1)
+              if [ "$t10" -le 750 ]; then NEED_A=true; fi
+              if [ "$t10" -ge 750 ] && [ "$t10" -le 900 ]; then NEED_B=true; fi
+              if [ "$t10" -ge 900 ]; then NEED_C=true; fi
+            done
+            ZONE_LIST=""
+            if $NEED_A; then ZONE_LIST="${ZONE_LIST}\"A\","; fi
+            if $NEED_B; then ZONE_LIST="${ZONE_LIST}\"B\","; fi
+            if $NEED_C; then ZONE_LIST="${ZONE_LIST}\"C\","; fi
+            # Remove trailing comma and wrap in brackets
+            ZONE_LIST=$(echo "$ZONE_LIST" | sed 's/,$//')
+            ZONES="[${ZONE_LIST}]"
+            echo "Auto-selected zones from thresholds $THRESHOLDS: $ZONES"
           else
             ZONES='["A","B","C"]'
           fi
