@@ -68,7 +68,7 @@ STEP2_EF_OUTPUT_DIR = os.path.join(PFS_DIR, 'step2.1-ef')
 
 # Target thresholds — 10-40 added for Track 2/3 greenfield, 50-100 for all tracks
 # Must match Step 1 THRESHOLDS and Step 3 OUTPUT_THRESHOLDS
-TARGET_THRESHOLDS = [10.0, 20.0, 30.0, 40.0, 50.0, 55.0, 60.0, 65.0, 70.0, 75.0, 80.0, 85.0, 87.5, 90.0, 92.5, 95.0, 97.5, 99.0, 99.5, 99.9, 99.99]
+TARGET_THRESHOLDS = [10.0, 20.0, 30.0, 40.0, 50.0, 55.0, 60.0, 65.0, 70.0, 75.0, 80.0, 85.0, 87.5, 90.0, 92.5, 95.0, 97.5, 99.0, 99.5, 99.9]
 TARGET_THRESHOLD_SET = set(TARGET_THRESHOLDS)
 
 # Storage dispatch columns (always present)
@@ -814,7 +814,7 @@ def merge_batch_outputs(iso):
 THRESHOLD_BATCHES = {
     'low':  [10.0, 20.0, 30.0, 40.0, 50.0, 55.0, 60.0, 65.0, 70.0, 75.0],
     'mid':  [80.0, 85.0, 87.5, 90.0, 92.5, 95.0],
-    'high': [97.5, 99.0, 99.5, 99.9, 99.99],
+    'high': [97.5, 99.0, 99.5, 99.9],
 }
 
 

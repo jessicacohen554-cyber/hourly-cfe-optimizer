@@ -1747,13 +1747,8 @@ OUTPUT_DIR = Path('data/step2.2-cost')
 
 
 def effective_gate(thr):
-    """Map nominal threshold to effective gate for score comparison.
-
-    The ≥99.99% threshold is practically unreachable due to float precision —
-    Step 1 caps hourly match at ~99.9%, so the best mixes score ~99.5-99.95%.
-    We gate 99.99% at 99.5% to include those near-perfect mixes.
-    """
-    return 99.5 if thr == 99.99 else float(thr)
+    """Map nominal threshold to effective gate for score comparison."""
+    return float(thr)
 
 
 def precompute_threshold_indices(scores, thresholds):
