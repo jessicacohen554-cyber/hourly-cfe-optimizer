@@ -1152,7 +1152,7 @@ const TIPPING_POINT_DATA = {
         }
       ]
     },
-    "99.99": {
+    "99.9": {
       "transitions": [
         {
           "toggle": "firm",
@@ -2880,7 +2880,7 @@ const TIPPING_POINT_DATA = {
         }
       ]
     },
-    "99.99": {
+    "99.9": {
       "transitions": [
         {
           "toggle": "renewable",
@@ -4601,7 +4601,7 @@ const TIPPING_POINT_DATA = {
         }
       ]
     },
-    "99.99": {
+    "99.9": {
       "transitions": [],
       "n_unique_mixes": 3,
       "mixes": [
@@ -6625,7 +6625,7 @@ const TIPPING_POINT_DATA = {
         }
       ]
     },
-    "99.99": {
+    "99.9": {
       "transitions": [
         {
           "toggle": "firm",
@@ -7741,7 +7741,7 @@ const TIPPING_POINT_DATA = {
         }
       ]
     },
-    "99.99": {
+    "99.9": {
       "transitions": [
         {
           "toggle": "firm",
@@ -9473,7 +9473,7 @@ const TIPPING_POINT_DATA = {
         }
       ]
     },
-    "99.99": {
+    "99.9": {
       "transitions": [
         {
           "toggle": "firm",
@@ -10708,7 +10708,7 @@ const TIPPING_POINT_DATA = {
         }
       ]
     },
-    "99.99": {
+    "99.9": {
       "transitions": [
         {
           "toggle": "renewable",

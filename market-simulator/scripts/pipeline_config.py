@@ -385,18 +385,18 @@ def get_resource_cols(iso):
 # THRESHOLDS
 # ============================================================================
 
-# All 21 thresholds used across the pipeline
+# All 20 thresholds used across the pipeline
 THRESHOLDS = [
     10.0, 20.0, 30.0, 40.0,          # Coarse range (no step1c, no fine zone)
     50.0, 55.0, 60.0, 65.0,          # Mid range (5% steps)
     70.0, 75.0, 80.0,                # Upper-mid range
     85.0, 87.5, 90.0, 92.5,          # Inflection zone (2.5% steps)
     95.0, 97.5,                       # High range
-    99.0, 99.5, 99.9, 99.99,         # Last mile
+    99.0, 99.5, 99.9,                   # Last mile
 ]
 
 # Active thresholds (full pipeline coverage with step1c storage refinement)
-ACTIVE_THRESHOLDS = [t for t in THRESHOLDS if t >= 50.0]  # 17 thresholds
+ACTIVE_THRESHOLDS = [t for t in THRESHOLDS if t >= 50.0]  # 16 thresholds
 
 # Coarse-only thresholds (no step1c, no fine zone search)
 COARSE_THRESHOLDS = [t for t in THRESHOLDS if t < 50.0]   # 4 thresholds
@@ -1277,7 +1277,7 @@ EXPECTED_COST_RANGES_MEDIUM = {
     90: (25, 75),
     95: (28, 100),
     99: (30, 120),
-    99.99: (30, 150),
+    99.9: (30, 150),
 }
 
 
@@ -1714,7 +1714,7 @@ THRESHOLD_TARGET_YEARS = {
     50: 2030, 55: 2031, 60: 2033, 65: 2034,
     70: 2035, 75: 2036, 80: 2037, 85: 2038, 87.5: 2039,
     90: 2040, 92.5: 2043,
-    95: 2045, 97.5: 2048, 99: 2049, 99.5: 2049, 99.9: 2050, 99.99: 2050,
+    95: 2045, 97.5: 2048, 99: 2049, 99.5: 2049, 99.9: 2050,
 }
 
 # Unique DG years (for efficient batching — group thresholds that share a year)

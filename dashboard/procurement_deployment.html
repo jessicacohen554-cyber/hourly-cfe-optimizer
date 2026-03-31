@@ -694,7 +694,7 @@
         <strong>How to read this page</strong>
         <p style="margin:8px 0 6px;">This is a <strong>cost optimization model for corporate voluntary procurement</strong>, not a market simulation. It shows what happens in a vacuum when different procurement strategies are applied at varying participation levels, based purely on LCOE and capital costs.</p>
         <p style="margin:6px 0;">In reality, market dynamics drive a broader mix of new generation - we explore those trajectories in the supply-side regional climate transition analysis. Here, the goal is to isolate the demand-pull signal: which resources do these strategies incentivize - <span class="em-solar">solar</span>, <span class="em-wind">wind</span>, <span class="em-nuclear">nuclear</span>, <span class="em-ccs">CCS</span>, <span class="em-battery">battery</span> - where, and at what cost?</p>
-        <p style="margin:6px 0 0;"><strong>Demand grows with ambition.</strong> Each CFE target maps to an SBTi-aligned deployment year (50%&nbsp;→&nbsp;2030, 90%&nbsp;→&nbsp;2040, ≥99.99%&nbsp;→&nbsp;2050). Demand scales at ISO-specific growth rates from a 2025 baseline. Higher targets = later years = more demand to serve.</p>
+        <p style="margin:6px 0 0;"><strong>Demand grows with ambition.</strong> Each CFE target maps to an SBTi-aligned deployment year (50%&nbsp;→&nbsp;2030, 90%&nbsp;→&nbsp;2040, ≥99.9%&nbsp;→&nbsp;2050). Demand scales at ISO-specific growth rates from a 2025 baseline. Higher targets = later years = more demand to serve.</p>
     </div>
 </div>
 
@@ -1002,7 +1002,7 @@
     // ═════════════════════════════════════════════════════════════════════════
 
     const PARTICIPATION_LEVELS = [0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100];
-    const THRESHOLDS = [50, 60, 70, 75, 80, 85, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99];
+    const THRESHOLDS = [50, 60, 70, 75, 80, 85, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.9];
 
     const partSlider = document.getElementById('participationSlider');
     const partValue = document.getElementById('participationValue');
@@ -1044,7 +1044,7 @@
     });
     thrSlider.addEventListener('input', () => {
         const t = getThreshold();
-        thrValue.textContent = t >= 99.99 ? '≥99.99%' : t + '% CO₂';
+        thrValue.textContent = t >= 99.9 ? '≥99.9%' : t + '% CO₂';
         grid.setThreshold(t);
         updateCharts();
     });
@@ -1066,7 +1066,7 @@
         // Set initial slider display
         partValue.textContent = getParticipation() + '%';
         const t0 = getThreshold();
-        thrValue.textContent = t0 >= 99.99 ? '≥99.99%' : t0 + '% CO₂';
+        thrValue.textContent = t0 >= 99.9 ? '≥99.9%' : t0 + '% CO₂';
     }
 
     // Nuclear Policy toggle
@@ -1446,7 +1446,7 @@
     // Update section header text when threshold changes
     function updateSectionHeader() {
         const t = getThreshold();
-        const label = t >= 99.99 ? '≥99.99' : t;
+        const label = t >= 99.9 ? '≥99.9' : t;
         document.getElementById('participationSectionHeader').textContent =
             `At ${label}% CO₂ reduction target: Implications of each strategy at varying participation levels`;
     }
@@ -1749,7 +1749,7 @@
     // ═════════════════════════════════════════════════════════════════════════
 
     // Cap participation when the WORST-performing active strategy (slowest to
-    // reach 100% clean) has all ISOs at ≥99.99% grid clean. Above this point,
+    // reach 100% clean) has all ISOs at ≥99.9% grid clean. Above this point,
     // every strategy has fully decarbonized every grid - further participation
     // just adds curtailment with no analytical value.
     function computeParticipationCap() {
@@ -1760,13 +1760,13 @@
         for (let pi = 0; pi < PARTICIPATION_LEVELS.length; pi++) {
             const part = PARTICIPATION_LEVELS[pi];
 
-            // Check: does EVERY active strategy have ALL ISOs at ≥99.99%?
+            // Check: does EVERY active strategy have ALL ISOs at ≥99.9%?
             let allStrategiesMaxed = true;
             for (const strat of active) {
                 let thisStratAllIsos = true;
                 for (const iso of CROSSOVER_ISOS) {
                     const gcp = getGridCleanAtPart(strat, iso, part, threshold);
-                    if (gcp === null || gcp < 99.99) {
+                    if (gcp === null || gcp < 99.9) {
                         thisStratAllIsos = false;
                         break;
                     }

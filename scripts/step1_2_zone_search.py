@@ -118,7 +118,7 @@ CHUNK_CANDIDATE_LIMIT = 500_000
 
 # All active thresholds
 ACTIVE_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5,
-                     90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
+                     90, 92.5, 95, 97.5, 99, 99.5, 99.9]
 
 # Low thresholds (coarse only, no fine refinement)
 LOW_THRESHOLDS = [10, 20, 30, 40]

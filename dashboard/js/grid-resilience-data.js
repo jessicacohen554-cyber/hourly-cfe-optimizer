@@ -430,7 +430,7 @@ const GRID_RESILIENCE_DATA = {
         }
       }
     },
-    "99.99": {
+    "99.9": {
       "baseline_cfe": 99.9,
       "mix": {
         "clean_firm": 92.0,
@@ -887,7 +887,7 @@ const GRID_RESILIENCE_DATA = {
         }
       }
     },
-    "99.99": {
+    "99.9": {
       "baseline_cfe": 99.6,
       "mix": {
         "clean_firm": 50.0,
@@ -1355,7 +1355,7 @@ const GRID_RESILIENCE_DATA = {
         }
       }
     },
-    "99.99": {
+    "99.9": {
       "baseline_cfe": 99.7,
       "mix": {
         "clean_firm": 63.0,
@@ -1825,7 +1825,7 @@ const GRID_RESILIENCE_DATA = {
         }
       }
     },
-    "99.99": {
+    "99.9": {
       "baseline_cfe": 99.7,
       "mix": {
         "clean_firm": 85.0,
@@ -2299,7 +2299,7 @@ const GRID_RESILIENCE_DATA = {
         }
       }
     },
-    "99.99": {
+    "99.9": {
       "baseline_cfe": 99.8,
       "mix": {
         "clean_firm": 83.0,
@@ -2765,7 +2765,7 @@ const GRID_RESILIENCE_DATA = {
         }
       }
     },
-    "99.99": {
+    "99.9": {
       "baseline_cfe": 99.9,
       "mix": {
         "clean_firm": 84.0,
@@ -3230,7 +3230,7 @@ const GRID_RESILIENCE_DATA = {
         }
       }
     },
-    "99.99": {
+    "99.9": {
       "baseline_cfe": 99.2,
       "mix": {
         "clean_firm": 26.0,

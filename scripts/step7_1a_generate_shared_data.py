@@ -211,16 +211,16 @@ for iso in ISOS:
 # ============================================================================
 # EXTRACT MARGINAL_MAC_DATA (6-zone stepwise — medium/low/high)
 # ============================================================================
-# With 17 active thresholds [50,55,60,65,70,75,80,85,87.5,90,92.5,95,97.5,99,99.5,99.9,≥99.99]:
+# With 16 active thresholds [50,55,60,65,70,75,80,85,87.5,90,92.5,95,97.5,99,99.5,99.9]:
 #   stepwise_envelope indices: 0=None, 1=50→55, 2=55→60, 3=60→65,
 #     4=65→70, 5=70→75, 6=75→80, 7=80→85, 8=85→87.5, 9=87.5→90,
 #     10=90→92.5, 11=92.5→95, 12=95→97.5, 13=97.5→99, 14=99→99.5,
-#     15=99.5→99.9, 16=99.9→≥99.99
+#     15=99.5→99.9
 # Zones:
 #   Zone 0: 50→75%  (aggregate steps 1-5)
 #   Zone 1: 75→90%  (aggregate steps 6-9)
 #   Zone 2-5: 90→92.5, 92.5→95, 95→97.5, 97.5→99 (steps 10-13)
-#   Zone 6-8: 99→99.5, 99.5→99.9, 99.9→≥99.99 (steps 14-16, last-mile)
+#   Zone 6-7: 99→99.5, 99.5→99.9 (steps 14-15, last-mile)
 
 print("\nExtracting MARGINAL_MAC_DATA...")
 marginal_mac_data = {'medium': {}, 'low': {}, 'high': {}}
@@ -239,8 +239,8 @@ for iso in ISOS:
     zone_entry = aggregate_zone(sw_env, 1, 6)   # 50→75% (steps 1-5)
     zone_backbone = aggregate_zone(sw_env, 6, 10)  # 75→90% (steps 6-9)
     zones = [zone_entry, zone_backbone]
-    # Zones 2-8: granular steps 90→92.5, 92.5→95, 95→97.5, 97.5→99, 99→99.5, 99.5→99.9, 99.9→≥99.99
-    for step_idx in range(10, 17):
+    # Zones 2-7: granular steps 90→92.5, 92.5→95, 95→97.5, 97.5→99, 99→99.5, 99.5→99.9
+    for step_idx in range(10, 16):
         v = sw_env[step_idx] if step_idx < len(sw_env) else None
         zones.append(min(round(v), MAC_CAP) if v is not None else None)
     marginal_mac_data['medium'][iso] = zones
@@ -955,13 +955,13 @@ lines.append('];')
 lines.append('')
 
 # MARGINAL_MAC_LABELS + MARGINAL_MAC_DATA
-lines.append("// --- Nine-Zone Marginal MAC ($/ton CO2) ---")
+lines.append("// --- Eight-Zone Marginal MAC ($/ton CO2) ---")
 lines.append("// Zone 0 (50→75%): entry-level aggregate MAC")
 lines.append("// Zone 1 (75→90%): backbone aggregate MAC")
 lines.append("// Zones 2-5 (90→99%): granular steps with monotonicity enforcement")
-lines.append("// Zones 6-8 (99→99.99%): last-mile steps")
+lines.append("// Zones 6-7 (99→99.9%): last-mile steps")
 lines.append("// Cap: $1000/ton (NREL literature max)")
-lines.append("const MARGINAL_MAC_LABELS = ['50→75%', '75→90%', '90→92.5%', '92.5→95%', '95→97.5%', '97.5→99%', '99→99.5%', '99.5→99.9%', '99.9→99.99%'];")
+lines.append("const MARGINAL_MAC_LABELS = ['50→75%', '75→90%', '90→92.5%', '92.5→95%', '95→97.5%', '97.5→99%', '99→99.5%', '99.5→99.9%'];")
 lines.append('')
 lines.append('const MARGINAL_MAC_DATA = {')
 for sens in ['medium', 'low', 'high']:
@@ -1049,7 +1049,7 @@ lines.append('        if (regionMarginals[i] !== null && regionMarginals[i] > co
 lines.append('            return MARGINAL_THRESHOLDS[i];')
 lines.append('        }')
 lines.append('    }')
-lines.append("    return '>99.99';")
+lines.append("    return '>99.9';")
 lines.append('}')
 lines.append('')
 lines.append('function cellClass(val) {')
@@ -1459,7 +1459,7 @@ SBTI_MILESTONES = [
     {'year': 2035, 'threshold': 70,  'label': 'SBTi ~70%'},
     {'year': 2040, 'threshold': 90,  'label': 'SBTi 90%'},
     {'year': 2045, 'threshold': 95,  'label': 'SBTi ~95%'},
-    {'year': 2050, 'threshold': 99.99, 'label': 'Net-Zero'},
+    {'year': 2050, 'threshold': 99.9, 'label': 'Net-Zero'},
 ]
 
 # DAC cost projections: anchored to 2025 actuals ($600-$1,500/tCO₂)
@@ -1490,9 +1490,9 @@ for ms in SBTI_MILESTONES:
 lines.append('];')
 lines.append('')
 
-# Full threshold → year mapping (all 17 active thresholds, SBTi-interpolated)
-lines.append('// Full threshold-year mapping: each of 17 active thresholds paired with its target year')
-lines.append('// Interpolated between SBTi anchors (50%→2030, 70%→2035, 90%→2040, 95%→2045, ≥99.99%→2050)')
+# Full threshold → year mapping (all 16 active thresholds, SBTi-interpolated)
+lines.append('// Full threshold-year mapping: each of 16 active thresholds paired with its target year')
+lines.append('// Interpolated between SBTi anchors (50%→2030, 70%→2035, 90%→2040, 95%→2045, ≥99.9%→2050)')
 lines.append('const THRESHOLD_TARGET_YEARS = {')
 for t in THRESHOLDS_NUM:
     year = THRESHOLD_TARGET_YEARS.get(t, 2050)
@@ -1775,7 +1775,7 @@ print("Extracting FEASIBLE_MIXES from Step 3 feasible-mix parquets...")
 # up to 500 EF-sampled mixes per threshold plus all archetype winners.  These are
 # the candidate set the dashboard needs for client-side repricing.
 #
-# For t=99.99: practically unreachable — we use mixes from the feasible set
+# For t=99.9: practically the highest target — we use mixes from the feasible set
 # that score >=99.5% (matching Step 3's effective_gate logic).
 
 import numpy as np
@@ -1790,7 +1790,7 @@ MIX_FIELDS = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro
 lines.append('// --- Feasible Mixes per (ISO, threshold) for client-side repricing ---')
 lines.append('// Each mix: [clean_firm%, solar%, wind%, offshore_wind%, ccs_ccgt%, hydro%, match%, battery%, battery8%, ldes%, h2%]')
 lines.append('// Source: step3_feasible_{ISO}.parquet — ~500 EF-sampled mixes + archetype winners per threshold.')
-lines.append('// t=99.99 uses mixes scoring >=99.5% from the feasible set (effective gate).')
+lines.append('// t=99.9 uses mixes scoring >=99.5% from the feasible set (effective gate).')
 lines.append('const FEASIBLE_MIXES = {')
 total_fm = 0
 for iso_idx, iso in enumerate(ISOS):
@@ -1814,8 +1814,8 @@ for iso_idx, iso in enumerate(ISOS):
     for t_idx, t in enumerate(THRESHOLDS):
         t_num = float(t)
 
-        if t_num == 99.99:
-            # t=99.99: use mixes from t=99 feasible set that score >=99.5%
+        if t_num == 99.9:
+            # t=99.9: use mixes from t=99 feasible set that score >=99.5%
             if len(feas_df) > 0:
                 # Combined filter: threshold==99 AND score>=99.5 in one pass
                 sub = feas_df[(feas_df['threshold'] == 99.0) & (feas_df['hourly_match_score'] >= 99.5)]

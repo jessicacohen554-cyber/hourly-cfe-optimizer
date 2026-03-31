@@ -3250,7 +3250,7 @@ const MAC_DEMAND_GROWTH = {
                 "n_scenarios": 17496
             }
         },
-        "99.99": {
+        "99.9": {
             "High": {
                 "mac_p10": 301.3,
                 "mac_p50": 383.4,
@@ -3756,7 +3756,7 @@ const MAC_DEMAND_GROWTH = {
                 "n_scenarios": 5832
             }
         },
-        "99.99": {
+        "99.9": {
             "High": {
                 "mac_p10": 183.4,
                 "mac_p50": 230.5,
@@ -4280,7 +4280,7 @@ const MAC_DEMAND_GROWTH = {
                 "n_scenarios": 5832
             }
         },
-        "99.99": {
+        "99.9": {
             "High": {
                 "mac_p10": 221.2,
                 "mac_p50": 289.6,
@@ -4804,7 +4804,7 @@ const MAC_DEMAND_GROWTH = {
                 "n_scenarios": 5832
             }
         },
-        "99.99": {
+        "99.9": {
             "High": {
                 "mac_p10": 252.6,
                 "mac_p50": 341.8,
@@ -5328,7 +5328,7 @@ const MAC_DEMAND_GROWTH = {
                 "n_scenarios": 5832
             }
         },
-        "99.99": {
+        "99.9": {
             "High": {
                 "mac_p10": 293.1,
                 "mac_p50": 403.0,
@@ -5872,7 +5872,7 @@ const MAC_DEMAND_GROWTH = {
                 "n_scenarios": 5832
             }
         },
-        "99.99": {
+        "99.9": {
             "High": {
                 "mac_p10": 205.7,
                 "mac_p50": 261.8,
@@ -6367,7 +6367,7 @@ const MAC_DEMAND_GROWTH = {
                 "n_scenarios": 5832
             }
         },
-        "99.99": {
+        "99.9": {
             "High": {
                 "mac_p10": 179.9,
                 "mac_p50": 224.4,

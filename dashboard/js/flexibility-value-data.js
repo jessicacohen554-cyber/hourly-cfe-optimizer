@@ -900,7 +900,7 @@ const FLEXIBILITY_VALUE_DATA = {
         }
       }
     },
-    "99.99": {
+    "99.9": {
       "baseline_cost": 89.96,
       "storage_value": {
         "battery_4hr": {
@@ -1851,7 +1851,7 @@ const FLEXIBILITY_VALUE_DATA = {
         }
       }
     },
-    "99.99": {
+    "99.9": {
       "baseline_cost": 61.66,
       "storage_value": {
         "battery_4hr": {
@@ -2796,7 +2796,7 @@ const FLEXIBILITY_VALUE_DATA = {
         }
       }
     },
-    "99.99": {
+    "99.9": {
       "baseline_cost": 76.14,
       "storage_value": {
         "battery_4hr": {
@@ -3745,7 +3745,7 @@ const FLEXIBILITY_VALUE_DATA = {
         }
       }
     },
-    "99.99": {
+    "99.9": {
       "baseline_cost": 106.29,
       "storage_value": {
         "battery_4hr": {
@@ -4693,7 +4693,7 @@ const FLEXIBILITY_VALUE_DATA = {
         }
       }
     },
-    "99.99": {
+    "99.9": {
       "baseline_cost": 119.45,
       "storage_value": {
         "battery_4hr": {
@@ -5639,7 +5639,7 @@ const FLEXIBILITY_VALUE_DATA = {
         }
       }
     },
-    "99.99": {
+    "99.9": {
       "baseline_cost": 80.32,
       "storage_value": {
         "battery_4hr": {
@@ -6585,7 +6585,7 @@ const FLEXIBILITY_VALUE_DATA = {
         }
       }
     },
-    "99.99": {
+    "99.9": {
       "baseline_cost": 63.87,
       "storage_value": {
         "battery_4hr": {

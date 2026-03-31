@@ -641,7 +641,7 @@ const INTER_ISO_TRADING_DATA = {
       "pool_avg": 66.59,
       "savings_pct": 12.1
     },
-    "99.99": {
+    "99.9": {
       "island_costs": {
         "CAISO": 89.96,
         "ERCOT": 61.66,
@@ -696,7 +696,7 @@ const INTER_ISO_TRADING_DATA = {
       "99": "importer",
       "99.5": "importer",
       "99.9": "importer",
-      "99.99": "importer"
+      "99.9": "importer"
     },
     "ERCOT": {
       "10": "neutral",
@@ -719,7 +719,7 @@ const INTER_ISO_TRADING_DATA = {
       "99": "neutral",
       "99.5": "neutral",
       "99.9": "exporter",
-      "99.99": "exporter"
+      "99.9": "exporter"
     },
     "PJM": {
       "10": "importer",
@@ -742,7 +742,7 @@ const INTER_ISO_TRADING_DATA = {
       "99": "importer",
       "99.5": "importer",
       "99.9": "importer",
-      "99.99": "neutral"
+      "99.9": "neutral"
     },
     "NYISO": {
       "10": "exporter",
@@ -765,7 +765,7 @@ const INTER_ISO_TRADING_DATA = {
       "99": "importer",
       "99.5": "importer",
       "99.9": "importer",
-      "99.99": "importer"
+      "99.9": "importer"
     },
     "NEISO": {
       "10": "importer",
@@ -788,7 +788,7 @@ const INTER_ISO_TRADING_DATA = {
       "99": "importer",
       "99.5": "importer",
       "99.9": "importer",
-      "99.99": "importer"
+      "99.9": "importer"
     },
     "MISO": {
       "10": "neutral",
@@ -811,7 +811,7 @@ const INTER_ISO_TRADING_DATA = {
       "99": "importer",
       "99.5": "importer",
       "99.9": "importer",
-      "99.99": "importer"
+      "99.9": "importer"
     },
     "SPP": {
       "10": "exporter",
@@ -834,7 +834,7 @@ const INTER_ISO_TRADING_DATA = {
       "99": "exporter",
       "99.5": "exporter",
       "99.9": "exporter",
-      "99.99": "exporter"
+      "99.9": "exporter"
     }
   },
   "trading_pairs": {

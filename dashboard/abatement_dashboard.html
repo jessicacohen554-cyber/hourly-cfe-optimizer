@@ -234,7 +234,7 @@ html, body {
     <div class="methodology-inner">
 
         <h3>Marginal Abatement Cost (MAC) Calculation</h3>
-        <p>The MAC curve answers: <em>how much does each additional ton of CO&#8322; abatement cost via clean energy procurement?</em> We compute it from the cumulative cost and CO&#8322; abatement data produced by the hourly matching optimizer across 21 decarbonization thresholds (10% to &ge;99.99%).</p>
+        <p>The MAC curve answers: <em>how much does each additional ton of CO&#8322; abatement cost via clean energy procurement?</em> We compute it from the cumulative cost and CO&#8322; abatement data produced by the hourly matching optimizer across 20 decarbonization thresholds (10% to &ge;99.9%).</p>
 
         <p><strong>Step 1 &mdash; Cumulative supply curve.</strong> At each threshold, the optimizer identifies the least-cost portfolio of clean resources (<span class="em-solar">solar</span>, <span class="em-wind">wind</span>, clean firm, <span class="em-ccs">CCS</span>, <span class="em-battery">battery</span>, <span class="em-ldes">LDES</span>) that achieves hourly carbon-free energy matching. Two cumulative quantities define the abatement supply curve:</p>
         <ul>
@@ -600,7 +600,7 @@ function computeCrossover(iso) {
 
     var validThresholds = crossovers.filter(function(c) { return c.threshold != null; }).map(function(c) { return c.threshold; });
     var lower = validThresholds.length > 0 ? Math.min.apply(null, validThresholds) : null;
-    var upper = validThresholds.length > 0 ? Math.max.apply(null, validThresholds) : 99.99;
+    var upper = validThresholds.length > 0 ? Math.max.apply(null, validThresholds) : 99.9;
 
     var result = {
         lower: lower,
@@ -628,7 +628,7 @@ function getNoRegretsFromMixData(iso, crossover) {
 
     // Get thresholds in the crossover range
     var lower = crossover.lower || 50;
-    var upper = crossover.upper || 99.99;
+    var upper = crossover.upper || 99.9;
     var rangeThresholds = THRESHOLDS.filter(function(t) { return t >= lower && t <= upper; });
     if (rangeThresholds.length === 0) rangeThresholds = THRESHOLDS.slice(-3);
 
@@ -706,7 +706,7 @@ function populateTiles() {
         var rangeText = '\u2014';
         if (crossover) {
             if (crossover.gridAlwaysWins) {
-                rangeText = '\u226599.99%';
+                rangeText = '\u226599.9%';
             } else if (crossover.lower != null && crossover.upper != null) {
                 if (crossover.lower === crossover.upper) {
                     rangeText = crossover.lower + '%';
@@ -894,10 +894,10 @@ function buildHeroChart() {
             },
             scales: {
                 x: {
-                    type: 'linear', min: 48, max: 99.99,
-                    afterBuildTicks: function(axis) { axis.ticks = [50, 60, 70, 80, 90, 95, 99.99].map(function(v) { return { value: v }; }); },
+                    type: 'linear', min: 48, max: 99.9,
+                    afterBuildTicks: function(axis) { axis.ticks = [50, 60, 70, 80, 90, 95, 99.9].map(function(v) { return { value: v }; }); },
                     ticks: {
-                        callback: function(v) { var ym = { 50:"'30", 60:"'32", 70:"'35", 80:"'37", 90:"'40", 95:"'45", 99.99:"'50" }; return [v === 99.99 ? '≥99.99%' : v+'%', ym[v]||'']; },
+                        callback: function(v) { var ym = { 50:"'30", 60:"'32", 70:"'35", 80:"'37", 90:"'40", 95:"'45", 99.9:"'50" }; return [v === 99.9 ? '≥99.9%' : v+'%', ym[v]||'']; },
                         font: { size: 9 }, color: '#64748B' /* contrast-fix: was rgba(15,23,42,0.45), now #64748B, ratio 4.66:1 on bg white */, maxRotation: 0
                     },
                     grid: { color: 'rgba(0,0,0,0.025)' },
@@ -1068,10 +1068,10 @@ function buildDeepDiveChart(iso) {
             animation: { duration: 1000, easing: 'easeOutQuart' },
             scales: {
                 x: {
-                    type: 'linear', min: 48, max: 99.99,
-                    afterBuildTicks: function(axis) { axis.ticks = [50, 60, 70, 80, 90, 95, 99.99].map(function(v) { return { value: v }; }); },
+                    type: 'linear', min: 48, max: 99.9,
+                    afterBuildTicks: function(axis) { axis.ticks = [50, 60, 70, 80, 90, 95, 99.9].map(function(v) { return { value: v }; }); },
                     ticks: {
-                        callback: function(v) { var ym = { 50:"'30", 60:"'32", 70:"'35", 80:"'37", 90:"'40", 95:"'45", 99.99:"'50" }; return [v === 99.99 ? '≥99.99%' : v+'%', ym[v]||'']; },
+                        callback: function(v) { var ym = { 50:"'30", 60:"'32", 70:"'35", 80:"'37", 90:"'40", 95:"'45", 99.9:"'50" }; return [v === 99.9 ? '≥99.9%' : v+'%', ym[v]||'']; },
                         font: { size: 9 }, color: '#64748B' /* contrast-fix: was rgba(15,23,42,0.5), now #64748B, ratio 4.66:1 on bg white */, maxRotation: 0
                     },
                     grid: { color: 'rgba(0,0,0,0.07)' },
@@ -1362,7 +1362,7 @@ function updateNarrative(iso) {
     var centralMac = '\u2014';
     if (crossover) {
         if (crossover.gridAlwaysWins) {
-            rangeLabel = '\u226599.99%';
+            rangeLabel = '\u226599.9%';
         } else if (crossover.lower != null && crossover.upper != null) {
             rangeLabel = crossover.lower + '\u2013' + crossover.upper + '%';
         }

@@ -1673,7 +1673,7 @@ const CURTAILMENT_ECONOMICS_DATA = {
         }
       }
     },
-    "99.99": {
+    "99.9": {
       "curtailment_twh": 69.375,
       "curtailment_pct": 23.7,
       "peak_mw": 32725.0,
@@ -3421,7 +3421,7 @@ const CURTAILMENT_ECONOMICS_DATA = {
         }
       }
     },
-    "99.99": {
+    "99.9": {
       "curtailment_twh": 195.791,
       "curtailment_pct": 28.7,
       "peak_mw": 72548.0,
@@ -5169,7 +5169,7 @@ const CURTAILMENT_ECONOMICS_DATA = {
         }
       }
     },
-    "99.99": {
+    "99.9": {
       "curtailment_twh": 417.829,
       "curtailment_pct": 33.2,
       "peak_mw": 243793.0,
@@ -6921,7 +6921,7 @@ const CURTAILMENT_ECONOMICS_DATA = {
         }
       }
     },
-    "99.99": {
+    "99.9": {
       "curtailment_twh": 48.467,
       "curtailment_pct": 24.3,
       "peak_mw": 38425.0,
@@ -8708,7 +8708,7 @@ const CURTAILMENT_ECONOMICS_DATA = {
         }
       }
     },
-    "99.99": {
+    "99.9": {
       "curtailment_twh": 48.515,
       "curtailment_pct": 29.7,
       "peak_mw": 31071.0,
@@ -10456,7 +10456,7 @@ const CURTAILMENT_ECONOMICS_DATA = {
         }
       }
     },
-    "99.99": {
+    "99.9": {
       "curtailment_twh": 220.795,
       "curtailment_pct": 25.0,
       "peak_mw": 86308.0,
@@ -12201,7 +12201,7 @@ const CURTAILMENT_ECONOMICS_DATA = {
         }
       }
     },
-    "99.99": {
+    "99.9": {
       "curtailment_twh": 206.378,
       "curtailment_pct": 41.0,
       "peak_mw": 66089.0,

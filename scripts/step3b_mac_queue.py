@@ -126,7 +126,7 @@ _HYBRID_PARENT_FAMILY = {
 _FAMILY_CAPS = {'solar': SOLAR_FAMILY_CAP, 'wind': WIND_FAMILY_CAP}
 
 # Active thresholds for the MAC queue (50%+ only — coarse thresholds excluded)
-MAC_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
+MAC_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9]
 
 # Hydro cap in TWh (existing only, derived from HYDRO_CAP_PCT × base demand)
 HYDRO_CAP_TWH = {iso: HYDRO_CAP_PCT[iso] / 100.0 * REGIONAL_DEMAND_TWH[iso]
@@ -1266,7 +1266,7 @@ def batch_score_mixes(filtered_df, iso, sens, demand_twh, target_year,
     scores = np.maximum(0, scores - hydro_excess)
 
     # --- CO2 avoided (vectorized) ---
-    cand_clean_pct = np.minimum(scores, 99.99)
+    cand_clean_pct = np.minimum(scores, 99.9)
     remaining_rates = _vectorized_remaining_co2_rate(
         cand_clean_pct, iso, emission_rates, growth_factor)
     fossil_twh_after = np.maximum(0, demand_twh * (100.0 - cand_clean_pct) / 100.0)
@@ -1365,7 +1365,7 @@ def optimize_threshold(iso, threshold, floor_twh, deployed_twh, cumulative_caps,
         baseline_effective_clean_pct = prev_threshold
     else:
         baseline_effective_clean_pct = existing_clean_hourly_pct if existing_clean_hourly_pct else sum(GRID_MIX_SHARES[iso].values())
-    baseline_effective_clean_pct = min(baseline_effective_clean_pct, 99.99)
+    baseline_effective_clean_pct = min(baseline_effective_clean_pct, 99.9)
 
     _, retirement_info = compute_fossil_retirement(
         iso, baseline_effective_clean_pct, emission_rates, {},
@@ -1444,7 +1444,7 @@ def optimize_threshold(iso, threshold, floor_twh, deployed_twh, cumulative_caps,
         cap_hydro_in_mix(mix_pct, iso)
 
         # Full scalar cost with tranching
-        candidate_clean_pct = min(mix_pct.get('hourly_match_score', 0), 99.99)
+        candidate_clean_pct = min(mix_pct.get('hourly_match_score', 0), 99.9)
         _, cand_info = compute_fossil_retirement(
             iso, candidate_clean_pct, emission_rates, {},
             demand_growth_factor=growth_factor)
@@ -1496,7 +1496,7 @@ def optimize_threshold(iso, threshold, floor_twh, deployed_twh, cumulative_caps,
                         row = phase2_df.iloc[pidx]
                         mix_pct = mix_row_to_pct(row)
                         cap_hydro_in_mix(mix_pct, iso)
-                        ccp = min(mix_pct.get('hourly_match_score', 0), 99.99)
+                        ccp = min(mix_pct.get('hourly_match_score', 0), 99.9)
                         _, ci = compute_fossil_retirement(
                             iso, ccp, emission_rates, {}, demand_growth_factor=growth_factor)
                         crr = ci.get('remaining_rate_tco2_mwh', 0.3911)
@@ -1547,7 +1547,7 @@ def optimize_threshold(iso, threshold, floor_twh, deployed_twh, cumulative_caps,
                 iso, dispatch_result, emission_rates, demand_twh * 1e6)
 
             # Marginal CO2 via scalar retirement (consistent with Phase 2)
-            ccp_d = min(mix_pct.get('hourly_match_score', 0), 99.99)
+            ccp_d = min(mix_pct.get('hourly_match_score', 0), 99.9)
             _, ci_d = compute_fossil_retirement(
                 iso, ccp_d, emission_rates, {}, demand_growth_factor=growth_factor)
             crr_d = ci_d.get('remaining_rate_tco2_mwh', 0.3911)

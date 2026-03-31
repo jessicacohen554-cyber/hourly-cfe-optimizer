@@ -589,7 +589,7 @@ Based solely on the code's capabilities (not documentation claims), this tool co
 
 ### 12.1 Corporate Clean Energy Procurement
 
-The simulator models hourly clean energy matching, annual matching, and consequential matching strategies with Wright's Law cost trajectories. The SBTi milestone timeline (2025→0% to 2050→99.99%) and procurement strategy comparison (Consequential, Hourly, Annual — each with 3–4 variants) suggests this is designed for corporations setting science-based clean energy targets. The 1,215-scenario sweep provides uncertainty bands on procurement costs.
+The simulator models hourly clean energy matching, annual matching, and consequential matching strategies with Wright's Law cost trajectories. The SBTi milestone timeline (2025→0% to 2050→99.9%) and procurement strategy comparison (Consequential, Hourly, Annual — each with 3–4 variants) suggests this is designed for corporations setting science-based clean energy targets. The 1,215-scenario sweep provides uncertainty bands on procurement costs.
 
 ### 12.2 IPP / Generator Fleet Strategy
 
