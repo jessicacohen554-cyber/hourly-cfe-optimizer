@@ -43,6 +43,7 @@ if SCRIPT_DIR not in sys.path:
 
 import step1_pfs_generator as s1
 from step1_prior_windows import load_prior_windows, ZONES
+from parquet_utils import write_parquet_chunked
 
 try:
     import pyarrow as pa
@@ -537,8 +538,8 @@ def _build_pfs_table(iso, threshold, combos, scores, rtypes):
     return pa.table(data)
 
 
-def save_threshold_pfs(iso, threshold, combos, scores, rtypes):
-    """Save feasible mixes for one threshold as parquet."""
+def save_threshold_pfs(iso, threshold, combos, scores, rtypes, max_file_mb=45):
+    """Save feasible mixes for one threshold as parquet (chunked if >max_file_mb)."""
     if len(combos) == 0:
         return
 
@@ -547,12 +548,13 @@ def save_threshold_pfs(iso, threshold, combos, scores, rtypes):
     t_str = s1._normalize_threshold_str(threshold)
     out_path = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
                             f'{iso}_t{t_str}_raw_pfs.parquet')
-    pq.write_table(table, out_path, compression='snappy')
-    return out_path
+    written = write_parquet_chunked(table, out_path, max_mb=max_file_mb,
+                                    compression='snappy')
+    return written[0] if len(written) == 1 else written
 
 
 def save_threshold_pfs_batch(iso, threshold, combos, scores, rtypes,
-                              batch_idx):
+                              batch_idx, max_file_mb=45):
     """Save feasible mixes as a batch file: {ISO}_t{XX}_raw_pfs_b{N}.parquet.
 
     Step 2.1 already handles this naming pattern and merges batches per
@@ -567,8 +569,9 @@ def save_threshold_pfs_batch(iso, threshold, combos, scores, rtypes,
     t_str = s1._normalize_threshold_str(threshold)
     out_path = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
                             f'{iso}_t{t_str}_raw_pfs_b{batch_idx}.parquet')
-    pq.write_table(table, out_path, compression='snappy')
-    return out_path
+    written = write_parquet_chunked(table, out_path, max_mb=max_file_mb,
+                                    compression='snappy')
+    return written[0] if len(written) == 1 else written
 
 
 def _has_curtailment_mask(combos, demand_arr, supply_matrix, chunk_size=5000):
@@ -761,11 +764,12 @@ def save_near_miss(iso, combos, scores, rtypes,
     table = pa.table(data)
     out_path = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
                             f'{iso}_near_miss.parquet')
-    pq.write_table(table, out_path, compression='snappy')
-    size_mb = os.path.getsize(out_path) / (1024 * 1024)
+    written = write_parquet_chunked(table, out_path, max_mb=45,
+                                    compression='snappy')
+    total_mb = sum(os.path.getsize(p) / (1024*1024) for p in written)
     print(f"  Near-miss union: {len(combos):,} mixes → "
-          f"{out_path} ({size_mb:.1f} MB)")
-    return out_path
+          f"{len(written)} file(s) ({total_mb:.1f} MB)")
+    return written[0] if len(written) == 1 else written
 
 
 def _collect_near_miss_indices(combos, scores, thresholds):
