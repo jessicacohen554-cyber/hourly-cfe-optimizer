@@ -98,6 +98,10 @@ MAX_GRID_COMBOS_BEFORE_FALLBACK = 10_000_000
 # Maximum near-miss mixes per ISO (union across all thresholds)
 MAX_NEAR_MISS = 100_000
 
+# Memory cap for full coarse cache load (bytes). If estimated memory exceeds
+# this, use streaming mode that loads one part file at a time.
+MAX_COARSE_LOAD_BYTES = 5_000_000_000  # 5 GB
+
 # Flush candidates to disk above this count
 CHUNK_CANDIDATE_LIMIT = 500_000
 
@@ -831,6 +835,132 @@ def save_near_miss_interim(iso, all_combos_lists, all_scores_lists, rtypes,
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# STREAMING COARSE CACHE LOADER (for caches that exceed memory)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _estimate_coarse_memory(iso):
+    """Estimate memory (bytes) needed to load full coarse cache as float64."""
+    paths = s1.coarse_cache_paths(iso)
+    if not paths:
+        return 0
+    total_rows = 0
+    n_cols = 0
+    for p in paths:
+        pf = pq.ParquetFile(p)
+        total_rows += pf.metadata.num_rows
+        n_cols = len(pf.schema_arrow.names)
+    return total_rows * n_cols * 8
+
+
+def _stream_coarse_cache(iso, rtypes, zones, active_thresholds):
+    """Stream coarse cache part-by-part, extracting only what's needed.
+
+    Instead of loading the full 87M×11 array (7+ GB for CAISO), processes
+    each parquet part independently and accumulates only:
+      1. Global dedup hash keys (int64, ~700 MB for 87M rows)
+      2. Per-zone boundary mixes (rows within zone score bands)
+      3. Coarse near-miss mixes (rows near any threshold)
+      4. A few rows for JIT warmup
+
+    Returns:
+        dict with keys:
+          'global_keys': int64 array of all coarse hashes
+          'zone_boundary': dict[zone_name] → (combos, scores) arrays
+          'zone_bounds': dict[zone_name] → list of (lo, hi) per resource
+          'coarse_nm_combos': near-miss combos array
+          'coarse_nm_scores': near-miss scores array
+          'warmup_rows': 2-row combo array for JIT warmup
+          'total_rows': total row count
+    """
+    paths = s1.coarse_cache_paths(iso)
+    if not paths:
+        return None
+
+    n_res = len(rtypes)
+
+    # Accumulate per-zone boundary mixes and near-miss
+    zone_parts = {z[0]: ([], []) for z in zones}  # name → (combos_list, scores_list)
+    nm_parts_c, nm_parts_s = [], []
+    hash_parts = []
+    warmup_rows = None
+    total_rows = 0
+
+    print(f"    Streaming {len(paths)} part files...")
+    for pi, path in enumerate(paths):
+        table = pq.read_table(path)
+        combos = np.column_stack([table.column(rt).to_numpy() for rt in rtypes])
+        scores = table.column('score').to_numpy()
+        total_rows += len(combos)
+
+        # Warmup rows (just need 2)
+        if warmup_rows is None and len(combos) >= 2:
+            warmup_rows = combos[:2].copy()
+
+        # Hash keys for global dedup
+        hash_parts.append(_hash_mixes(combos))
+
+        # Per-zone boundary mixes
+        for zone_name, z_lo, z_hi, _ in zones:
+            mask = (scores >= z_lo) & (scores <= z_hi)
+            n_in = int(mask.sum())
+            if n_in > 0:
+                zone_parts[zone_name][0].append(combos[mask])
+                zone_parts[zone_name][1].append(scores[mask])
+
+        # Near-miss mixes
+        nm_mask = np.zeros(len(scores), dtype=bool)
+        for t in active_thresholds:
+            target = t / 100.0
+            nm_width = get_near_miss_width(t)
+            nm_floor = max(target - nm_width, 0.50)
+            nm_mask |= (scores < target) & (scores >= nm_floor)
+        if nm_mask.any():
+            nm_parts_c.append(combos[nm_mask])
+            nm_parts_s.append(scores[nm_mask])
+
+        # Free this part's full arrays
+        del table, combos, scores
+        gc.collect()
+        print(f"      Part {pi+1}/{len(paths)}: {total_rows:,} rows processed")
+
+    # Assemble results
+    global_keys = np.concatenate(hash_parts)
+    del hash_parts
+
+    zone_boundary = {}
+    for zone_name in zone_parts:
+        cl, sl = zone_parts[zone_name]
+        if cl:
+            zone_boundary[zone_name] = (np.vstack(cl), np.concatenate(sl))
+        else:
+            zone_boundary[zone_name] = (np.empty((0, n_res), dtype=np.float64),
+                                         np.empty(0, dtype=np.float64))
+    del zone_parts
+
+    if nm_parts_c:
+        coarse_nm_combos = np.vstack(nm_parts_c)
+        coarse_nm_scores = np.concatenate(nm_parts_s)
+    else:
+        coarse_nm_combos = np.empty((0, n_res), dtype=np.float64)
+        coarse_nm_scores = np.empty(0, dtype=np.float64)
+    del nm_parts_c, nm_parts_s
+
+    gc.collect()
+    print(f"    Streaming complete: {total_rows:,} rows, "
+          f"{len(global_keys)*8/(1024**2):.0f} MB hash keys, "
+          f"{len(coarse_nm_combos):,} near-miss")
+
+    return {
+        'global_keys': global_keys,
+        'zone_boundary': zone_boundary,
+        'coarse_nm_combos': coarse_nm_combos,
+        'coarse_nm_scores': coarse_nm_scores,
+        'warmup_rows': warmup_rows if warmup_rows is not None else np.zeros((2, n_res)),
+        'total_rows': total_rows,
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # MANIFEST (resume support)
 # ══════════════════════════════════════════════════════════════════════════════
 
@@ -922,28 +1052,9 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None,
     if zones_done:
         print(f"  Resuming — zones done: {sorted(zones_done)}")
 
-    # ── Load coarse cache (supports multi-part files) ──
-    print(f"\n  Loading coarse cache...")
-    if include_hybrids:
-        # Manual load with hybrid resource types
-        table = s1.read_coarse_cache_table(iso)
-        if table is None:
-            print(f"  ERROR: No coarse cache for {iso}. Run step1b first.")
-            return
-        coarse_combos = np.column_stack([
-            table.column(rt).to_numpy() for rt in rtypes
-        ])
-        coarse_scores = table.column('score').to_numpy()
-        n_parts = len(s1.coarse_cache_paths(iso))
-        parts_note = f" ({n_parts} parts)" if n_parts > 1 else ""
-        print(f"    {iso}: Coarse cache loaded ({len(coarse_combos):,} combos{parts_note})")
-    else:
-        cached = s1.load_coarse_cache(iso)
-        if cached is None:
-            print(f"  ERROR: No coarse cache for {iso}. Run step1b first.")
-            return
-        coarse_combos, coarse_scores = cached
-    print(f"  Coarse cache: {len(coarse_combos):,} mixes")
+    # ── Determine which thresholds / zones to run ──
+    all_thresholds = LOW_THRESHOLDS + ACTIVE_THRESHOLDS
+    active_thresholds = thresholds_filter if thresholds_filter else all_thresholds
 
     # ── Load EIA data for scoring fine mixes ──
     print(f"  Loading EIA data...")
@@ -969,11 +1080,66 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None,
     else:
         print(f"  No prior windows — using coarse-derived bounds")
 
+    # ── Load coarse cache — streaming or full depending on memory ──
+    est_mem = _estimate_coarse_memory(iso)
+    use_streaming = est_mem > MAX_COARSE_LOAD_BYTES
+    print(f"\n  Coarse cache estimated memory: {est_mem / (1024**3):.2f} GB"
+          f" → {'STREAMING' if use_streaming else 'full load'} mode")
+
+    if use_streaming:
+        # ── STREAMING MODE: never load full cache into memory ──
+        stream = _stream_coarse_cache(iso, rtypes, ZONES, active_thresholds)
+        if stream is None:
+            print(f"  ERROR: No coarse cache for {iso}. Run step1b first.")
+            return
+
+        global_scored_keys = stream['global_keys']
+        coarse_nm_combos = stream['coarse_nm_combos']
+        coarse_nm_scores = stream['coarse_nm_scores']
+        warmup_rows = stream['warmup_rows']
+        zone_boundary = stream['zone_boundary']
+        coarse_combos = None  # not loaded in streaming mode
+        coarse_scores = None
+        print(f"  Coarse cache: {stream['total_rows']:,} mixes (streamed)")
+        print(f"  Coarse near-miss: {len(coarse_nm_combos):,} mixes")
+    else:
+        # ── FULL LOAD MODE: fits in memory ──
+        print(f"  Loading coarse cache...")
+        if include_hybrids:
+            table = s1.read_coarse_cache_table(iso)
+            if table is None:
+                print(f"  ERROR: No coarse cache for {iso}. Run step1b first.")
+                return
+            coarse_combos = np.column_stack([
+                table.column(rt).to_numpy() for rt in rtypes
+            ])
+            coarse_scores = table.column('score').to_numpy()
+            del table
+        else:
+            cached = s1.load_coarse_cache(iso)
+            if cached is None:
+                print(f"  ERROR: No coarse cache for {iso}. Run step1b first.")
+                return
+            coarse_combos, coarse_scores = cached
+        print(f"  Coarse cache: {len(coarse_combos):,} mixes")
+
+        global_scored_keys = _hash_mixes(coarse_combos)
+        warmup_rows = coarse_combos[:2]
+        zone_boundary = None  # will use coarse_combos directly
+
+        # Pre-compute coarse near-miss
+        print(f"  Pre-computing coarse near-miss indices...")
+        coarse_nm_idx = _collect_near_miss_indices(
+            coarse_combos, coarse_scores, active_thresholds)
+        coarse_nm_combos = coarse_combos[coarse_nm_idx] if len(coarse_nm_idx) > 0 else np.empty((0, n_res), dtype=np.float64)
+        coarse_nm_scores = coarse_scores[coarse_nm_idx] if len(coarse_nm_idx) > 0 else np.empty(0, dtype=np.float64)
+        del coarse_nm_idx
+        print(f"  Coarse near-miss: {len(coarse_nm_combos):,} mixes")
+
     # ── JIT warmup ──
     if s1.HAS_NUMBA:
         print(f"  Warming up Numba JIT...")
-        _ = s1.batch_hourly_scores(demand_arr, supply_matrix,
-                                   coarse_combos[:2])
+        _ = s1.batch_hourly_scores(demand_arr, supply_matrix, warmup_rows)
         # Warmup storage kernel for final max-storage pre-filter
         dummy_supply = np.ones((1, s1.H), dtype=np.float64)
         dummy_b = np.array([0.0, 1.0], dtype=np.float64)
@@ -990,30 +1156,13 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None,
             dummy_h, 1, s1.H2_EFFICIENCY,
             float(s1.H2_DURATION_HOURS), s1.H2_WINDOW_DAYS * 24)
         print(f"  JIT ready (scoring + storage kernels)")
-
-    # ── Global tracking ──
-    # Vectorized dedup keys (collision-free int64 hash per row)
-    global_scored_keys = _hash_mixes(coarse_combos)
+    del warmup_rows
 
     # Accumulate only FINE scored mixes (coarse stays separate to avoid OOM
     # on large caches like NEISO 28M+ rows — every np.vstack copies the full
     # array, and 3 copies of 2.3 GB exceeds the 7 GB GitHub runner limit).
     all_combos_list = []
     all_scores_list = []
-
-    # ── Determine which thresholds / zones to run ──
-    all_thresholds = LOW_THRESHOLDS + ACTIVE_THRESHOLDS
-    active_thresholds = thresholds_filter if thresholds_filter else all_thresholds
-
-    # Pre-compute coarse near-miss before the zone loop so interim saves
-    # (which survive timeouts) include coarse near-miss for step1c.
-    print(f"  Pre-computing coarse near-miss indices...")
-    coarse_nm_idx = _collect_near_miss_indices(
-        coarse_combos, coarse_scores, active_thresholds)
-    coarse_nm_combos = coarse_combos[coarse_nm_idx] if len(coarse_nm_idx) > 0 else np.empty((0, n_res), dtype=np.float64)
-    coarse_nm_scores = coarse_scores[coarse_nm_idx] if len(coarse_nm_idx) > 0 else np.empty(0, dtype=np.float64)
-    del coarse_nm_idx
-    print(f"  Coarse near-miss: {len(coarse_nm_combos):,} mixes")
 
     # ── Process zones ──
     os.makedirs(s1.STEP1_RAW_PFS_PARQUET_DIR, exist_ok=True)
@@ -1042,10 +1191,18 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None,
         if prior_windows and prior_zone_key in prior_windows:
             pzb = prior_windows[prior_zone_key].get('bounds')
 
-        bounds = compute_zone_resource_bounds(
-            iso, coarse_combos, coarse_scores,
-            z_score_low, z_score_high, pzb,
-            include_hybrids=include_hybrids)
+        if use_streaming:
+            # Streaming mode: use pre-extracted zone boundary mixes
+            z_combos, z_scores = zone_boundary[zone_name]
+            bounds = compute_zone_resource_bounds(
+                iso, z_combos, z_scores,
+                z_score_low, z_score_high, pzb,
+                include_hybrids=include_hybrids)
+        else:
+            bounds = compute_zone_resource_bounds(
+                iso, coarse_combos, coarse_scores,
+                z_score_low, z_score_high, pzb,
+                include_hybrids=include_hybrids)
 
         bounds_str = ', '.join(f"{rtypes[i]}=[{lo},{hi}]"
                                for i, (lo, hi) in enumerate(bounds))
@@ -1061,9 +1218,12 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None,
 
         if fine_combos is None:
             # Either no prior windows or grid too large — archetype-based fallback
-            zone_mask = ((coarse_scores >= z_score_low) &
-                         (coarse_scores <= z_score_high))
-            boundary_mixes = coarse_combos[zone_mask]
+            if use_streaming:
+                boundary_mixes = zone_boundary[zone_name][0]
+            else:
+                zone_mask = ((coarse_scores >= z_score_low) &
+                             (coarse_scores <= z_score_high))
+                boundary_mixes = coarse_combos[zone_mask]
             fine_combos = generate_archetype_fine_grid(iso, boundary_mixes, n_res, include_hybrids=include_hybrids)
 
         print(f"    Raw fine grid: {len(fine_combos):,} combos")
@@ -1072,10 +1232,16 @@ def process_iso(iso, thresholds_filter=None, zones_filter=None,
         #     For high-D ISOs (≥8D), the coarse cache alone is ~1.3 GB.
         #     Only safe when this is the LAST zone to process (otherwise later
         #     zones need coarse data for bounds + archetype selection).
+        #     In streaming mode, free zone_boundary entries instead.
         remaining_zones = [z[0] for z in ZONES
                            if z[0] not in zones_done and z[0] != zone_name
                            and (not zones_filter or z[0] in zones_filter)]
-        if n_res >= 8 and coarse_combos is not None and not remaining_zones:
+        if use_streaming and not remaining_zones:
+            del zone_boundary
+            zone_boundary = None
+            gc.collect()
+            print(f"    Freed zone boundary data — last zone")
+        elif n_res >= 8 and coarse_combos is not None and not remaining_zones:
             coarse_mem_mb = coarse_combos.nbytes / (1024 * 1024)
             del coarse_combos, coarse_scores
             coarse_combos = None
