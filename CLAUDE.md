@@ -284,7 +284,7 @@
 - All new features layered on top of existing — never remove existing visuals or controls
 - **COST DRIVES RESOURCE MIX** — cost and resource mix are co-optimized for every scenario. Different cost assumptions produce different optimal resource mixes. This is the core scientific contribution of the project. Never decouple cost from mix optimization or treat cost as a secondary overlay.
 - **8 toggle groups**: 5 paired (Renewable Gen, Firm Gen, Storage, Fossil Fuel, Transmission) + CCS (L/M/H) + 45Q (On/Off) + Geothermal (CAISO-only, L/M/H)
-- **21 thresholds** (10, 20, 30, 40 [coarse only], 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, ≥99.99) — 10% steps in coarse low range, 5% in mid range, 2.5% in inflection zone, 0.5%/0.1% in the last mile. Top threshold is ≥99.99% (not 100%) — true 100% hourly matching is physically unreachable. Thresholds 10–40 are coarse-grid only (no fine zone search, no storage refinement). Thresholds 50–≥99.99 are the 17 active thresholds with full pipeline coverage.
+- **20 thresholds** (10, 20, 30, 40 [coarse only], 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9) — 10% steps in coarse low range, 5% in mid range, 2.5% in inflection zone, 0.5%/0.1% in the last mile. Top threshold is ≥99.9% (not 100%) — labeled "effectively 100%" (8.76 unmatched hours/year). Thresholds 10–40 are coarse-grid only (no fine zone search, no storage refinement). Thresholds 50–99.9 are the 16 active thresholds with full pipeline coverage.
 - **5,832 cost scenarios per region/threshold** (3×3×3×3×2×3×4 = non-CAISO; 17,496 for CAISO with geothermal toggle)
 - Resource mix optimization at Medium costs; sensitivity toggles recalculate costs on cached physics
 - Hydro is always existing-only, wholesale-priced, $0 transmission
@@ -302,7 +302,7 @@ When facing compute vs. rigor tradeoffs:
 1. **Always discuss the tradeoff with the user first** — don't unilaterally choose minimal compute
 2. **Find the best middle ground** that balances rigor with feasibility
 3. **Pairing variables** (e.g., 5 paired toggles vs. 10 individual) is an acceptable rigor-compute tradeoff because it reflects real-world cost correlations
-4. **21 thresholds** preserves inflection points while covering the full range — 10/20/30/40 coarse low range, 5% steps 50–80, 2.5% steps 85–97.5, last-mile 99/99.5/99.9/≥99.99
+4. **20 thresholds** preserves inflection points while covering the full range — 10/20/30/40 coarse low range, 5% steps 50–80, 2.5% steps 85–97.5, last-mile 99/99.5/99.9
 5. **Never decouple cost from optimization** — the co-optimization of cost + resource mix is the whole point
 6. **Never re-rank cached results as a shortcut** when full optimization is needed — if costs change the cost function, the optimization must use that cost function
 
@@ -456,7 +456,7 @@ Each color has transparent variants: CSS `--iso-caiso-t` (12% opacity) / JS `ISO
 
 ### Figure & Chart Standards (QA/QC Sweep Checklist)
 - **Adequate height/spacing on mobile**: Charts must not be compressed or unreadable on small screens. Set min-height for chart containers (e.g., 300px mobile, 400px desktop)
-- **Threshold label spacing**: Don't label every threshold point. Space labels to avoid crowding — show 75, 90, 95, ≥99.99 (skip intermediate values) on scrollytell figures. Dashboard charts can use tooltips for unlabeled points
+- **Threshold label spacing**: Don't label every threshold point. Space labels to avoid crowding — show 75, 90, 95, ≥99.9 (skip intermediate values) on scrollytell figures. Dashboard charts can use tooltips for unlabeled points
 - **Data-driven but clean**: Scrollytell figures pull from actual optimizer results but should be illustrative — clean axes, clear legends, readable font sizes (min 12px on mobile)
 - **Dashboard tooltips**: Interactive dashboard charts should have hover tooltips showing exact values at all threshold points, so labeled points can be sparse without losing precision
 - **Consistent color palette**: Use `RESOURCE_COLORS.*` from `chart-colors.js` and CSS variables from `shared.css`. See "Dashboard CSS/HTML Standards" section above for the canonical color table. NEVER hardcode hex values in Chart.js datasets.
