@@ -20,7 +20,7 @@ Pipeline position: Step 1 of 7
 
 Key features:
   - 4D interior / 5D offshore / 6D CAISO: independent resource fractions
-  - 21 thresholds: 10..99.99 with finer resolution at inflection zone
+  - 20 thresholds: 10..99.9 with finer resolution at inflection zone
   - Coarse 5% → Fine 1% adaptive grid (±4% radius around archetypes)
   - Numba JIT-compiled scoring functions
   - Inter-ISO parallel execution via multiprocessing.Pool (--workers N)
@@ -201,7 +201,7 @@ OFFSHORE_WIND_CAP_PCT = {
 # Resource caps: max % of demand for each resource in coarse grid search
 # Each resource varies independently — no sum-to-100 constraint.
 # Caps informed by step 3 cost-optimal analysis across all ISOs/scenarios:
-#   - CF: 120% hit by MISO/PJM at 99.99% threshold (keep)
+#   - CF: 120% hit by MISO/PJM at 99.9% threshold (keep)
 #   - Solar: max observed 81% (MISO 99.9%); cap at 100% (+23% buffer)
 #   - Wind: max observed 242% (MISO 99.9%); keep at 250% (+3% buffer)
 # Additionally, per-ISO caps applied in generate_resource_combos() for
@@ -253,7 +253,7 @@ HYDRO_FIXED = {
 
 # 21 thresholds (10-40 added for Track 2/3 greenfield analysis)
 # Step 1 explores physics feasible space — exempt from pipeline_config dependency
-THRESHOLDS = [10, 20, 30, 40, 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
+THRESHOLDS = [10, 20, 30, 40, 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9]
 
 # Nuclear seasonal derate — CAISO now pure nuclear (geothermal is separate 5th dim)
 NUCLEAR_SHARE_OF_CLEAN_FIRM = {

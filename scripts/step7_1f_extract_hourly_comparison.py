@@ -29,7 +29,7 @@ GROWTH = 'Medium'  # Static pages use all-Medium
 PARTICIPATION_LEVELS = [5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100]
 
 # Active thresholds (skip coarse below 50)
-ACTIVE_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9, 99.99]
+ACTIVE_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9]
 
 RESOURCE_KEYS = ['solar', 'wind', 'clean_firm', 'nuclear_uprate', 'battery', 'ldes',
                  'green_h2', 'geothermal', 'existing_merchant', 'sss_allocation',
