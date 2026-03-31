@@ -279,8 +279,8 @@ jobs:
             echo "No output from batch MID"
           fi
 
-      # ── Batch 3: high thresholds (97.5-99.99%) ────────────────────────
-      - name: "Batch HIGH: thresholds 97.5-99.99% (${{ matrix.iso }})"
+      # ── Batch 3: high thresholds (97.5-99.9%) ─────────────────────────
+      - name: "Batch HIGH: thresholds 97.5-99.9% (${{ matrix.iso }})"
         if: ${{ inputs.thresholds == '' }}
         timeout-minutes: 45
         run: python scripts/step2_1_efficient_frontier.py --iso ${{ matrix.iso }} --batch high

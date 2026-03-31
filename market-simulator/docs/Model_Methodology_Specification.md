@@ -334,7 +334,7 @@ Storage dispatch follows a 4-phase priority order:
 
 Each phase operates on the residual surplus/deficit after prior phases. Surplus clean energy charges storage; deficit hours discharge. The discharge capacity is bounded by SOC × RTE / duration_hours.
 
-The resulting PFS contains millions of scored resource mixes per ISO, covering 21 thresholds (10%, 20%, 30%, 40%, 50%, 55%, 60%, 65%, 70%, 75%, 80%, 85%, 87.5%, 90%, 92.5%, 95%, 97.5%, 99%, 99.5%, 99.9%, ≥99.99%).
+The resulting PFS contains millions of scored resource mixes per ISO, covering 20 thresholds (10%, 20%, 30%, 40%, 50%, 55%, 60%, 65%, 70%, 75%, 80%, 85%, 87.5%, 90%, 92.5%, 95%, 97.5%, 99%, 99.5%, 99.9%).
 
 ### 3.2 Efficient Frontier (EF) — Cost-Optimized Resource Portfolios
 
