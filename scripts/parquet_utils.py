@@ -59,8 +59,10 @@ def write_parquet_chunked(
 
     # ── Need to split ────────────────────────────────────────────────────
     os.remove(path)
-    n_parts = math.ceil(file_size / max_bytes)
-    # Add a small margin so parts don't land right at the boundary
+    # Use 80% of max_bytes as target to leave margin for compression
+    # variation across row subsets (different rows compress differently).
+    target_bytes = int(max_bytes * 0.80)
+    n_parts = math.ceil(file_size / target_bytes)
     n_parts = max(n_parts, 2)
     rows_per_part = math.ceil(table.num_rows / n_parts)
 
@@ -75,10 +77,61 @@ def write_parquet_chunked(
         part_path = f"{base}_part{i + 1:03d}.parquet"
         pq.write_table(table.slice(start, length), part_path, compression=compression)
         part_size = os.path.getsize(part_path)
-        written.append(part_path)
-        print(f"  wrote {os.path.basename(part_path)}: {part_size / 1024 / 1024:.1f} MB ({length:,} rows)")
+
+        # If a part still exceeds max_bytes, re-split it recursively
+        if part_size > max_bytes:
+            os.remove(part_path)
+            sub_table = table.slice(start, length)
+            sub_parts = _split_oversized(
+                sub_table, base, i + 1, n_parts, max_bytes, compression
+            )
+            written.extend(sub_parts)
+        else:
+            written.append(part_path)
+            print(f"  wrote {os.path.basename(part_path)}: {part_size / 1024 / 1024:.1f} MB ({length:,} rows)")
 
     print(f"  split {os.path.basename(path)} → {len(written)} parts (original {file_size / 1024 / 1024:.1f} MB)")
+    return written
+
+
+def _split_oversized(
+    table: pa.Table,
+    base: str,
+    part_idx: int,
+    total_parts: int,
+    max_bytes: int,
+    compression: str,
+) -> List[str]:
+    """Re-split a part that still exceeds max_bytes after the first split.
+
+    Uses sub-part naming: ``_part{NNN}a``, ``_part{NNN}b``, etc.
+    """
+    # Write to temp to measure actual size
+    import tempfile
+    with tempfile.NamedTemporaryFile(suffix=".parquet", delete=False) as tmp:
+        tmp_path = tmp.name
+    pq.write_table(table, tmp_path, compression=compression)
+    actual_size = os.path.getsize(tmp_path)
+    os.remove(tmp_path)
+
+    # Compute sub-parts with generous margin
+    n_sub = math.ceil(actual_size / (max_bytes * 0.75))
+    n_sub = max(n_sub, 2)
+    rows_per_sub = math.ceil(table.num_rows / n_sub)
+
+    written: List[str] = []
+    for j in range(n_sub):
+        start = j * rows_per_sub
+        length = min(rows_per_sub, table.num_rows - start)
+        if length <= 0:
+            break
+        suffix = chr(ord('a') + j)
+        sub_path = f"{base}_part{part_idx:03d}{suffix}.parquet"
+        pq.write_table(table.slice(start, length), sub_path, compression=compression)
+        sub_size = os.path.getsize(sub_path)
+        written.append(sub_path)
+        print(f"  wrote {os.path.basename(sub_path)}: {sub_size / 1024 / 1024:.1f} MB ({length:,} rows) [re-split]")
+
     return written
 
 
