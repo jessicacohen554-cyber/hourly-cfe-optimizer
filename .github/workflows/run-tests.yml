@@ -32,11 +32,11 @@ jobs:
       - name: Run existing e2e validation (schema-only)
         working-directory: scripts
         run: |
-          python -c "
+          python3 << 'PYEOF'
           import sys
           sys.path.insert(0, '.')
           from pipeline_config import ISOS, THRESHOLDS, ACTIVE_THRESHOLDS
           print(f'Pipeline config loaded: {len(ISOS)} ISOs, {len(THRESHOLDS)} thresholds')
           print(f'Active thresholds: {ACTIVE_THRESHOLDS}')
           print('Config validation passed')
-          "
+          PYEOF
