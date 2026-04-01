@@ -356,10 +356,13 @@ def score_mixes(mix_batch, demand_arr, supply_matrix):
     return scores * 100.0  # Convert to percentage
 
 
-def assign_and_save(iso, scores, raw_components, output_dir, include_hybrids=False):
+def assign_and_save(iso, scores, raw_components, output_dir, include_hybrids=False,
+                    thresholds_filter=None):
     """Assign scored mixes to thresholds and save parquets."""
     N = len(scores)
     all_thresholds = FINE_THRESHOLDS + NEAR_MISS_THRESHOLDS
+    if thresholds_filter:
+        all_thresholds = [t for t in all_thresholds if t in thresholds_filter]
 
     # Output columns: base resource types (excluding ccs_ccgt which is implicit)
     # plus geothermal and hybrids as applicable
@@ -518,10 +521,82 @@ def save_near_miss_cache(iso, scores, raw_components):
 
 
 # ============================================================================
+# CHECKPOINT / RESUME
+# ============================================================================
+
+def _completed_thresholds(iso, output_dir):
+    """Return set of thresholds that already have fine_pfs parquet files."""
+    import glob as _glob
+    pattern = os.path.join(output_dir, f'{iso}_t*_fine_pfs*.parquet')
+    done = set()
+    for path in _glob.glob(pattern):
+        fname = os.path.basename(path)
+        # Parse threshold from filename: {ISO}_t{threshold}_fine_pfs.parquet
+        # or {ISO}_t{threshold}_fine_pfs_part001.parquet
+        try:
+            after_t = fname.split('_t', 1)[1]
+            t_str = after_t.split('_fine_pfs', 1)[0]
+            done.add(float(t_str))
+        except (IndexError, ValueError):
+            continue
+    return done
+
+
+def _parse_thresholds(raw):
+    """Parse comma-separated threshold list, return list of floats or None."""
+    if not raw or raw.strip().upper() in ('', 'ALL'):
+        return None
+    parts = [p.strip() for p in raw.split(',') if p.strip()]
+    result = []
+    for p in parts:
+        try:
+            result.append(float(p))
+        except ValueError:
+            print(f"WARNING: Ignoring invalid threshold '{p}'")
+    return sorted(set(result)) if result else None
+
+
+# ============================================================================
+# GIT COMMIT HELPER (for mid-run commits on CI)
+# ============================================================================
+
+def _git_commit_threshold(iso, threshold, output_dir):
+    """Commit a single threshold's parquet file(s) to git. No-op if not in CI."""
+    import glob as _glob
+    import subprocess
+
+    if not os.environ.get('GITHUB_ACTIONS'):
+        return
+
+    pattern = os.path.join(output_dir, f'{iso}_t{threshold:g}_fine_pfs*.parquet')
+    files = sorted(_glob.glob(pattern))
+    if not files:
+        return
+
+    try:
+        for f in files:
+            subprocess.run(['git', 'add', '-f', f], check=True,
+                           capture_output=True, timeout=30)
+        # Check if there's anything staged
+        result = subprocess.run(['git', 'diff', '--cached', '--quiet'],
+                                capture_output=True, timeout=10)
+        if result.returncode != 0:  # There are staged changes
+            size_mb = sum(os.path.getsize(f) for f in files) / (1024 * 1024)
+            msg = (f"Step 1.4 Fine: {iso} t{threshold:g} "
+                   f"({size_mb:.1f}MB, {len(files)} file(s)) — mid-run commit")
+            subprocess.run(['git', 'commit', '-m', msg], check=True,
+                           capture_output=True, timeout=60)
+            print(f"    [git] Committed t{threshold:g}")
+    except (subprocess.SubprocessError, OSError) as e:
+        print(f"    [git] Commit failed for t{threshold:g}: {e}")
+
+
+# ============================================================================
 # MAIN
 # ============================================================================
 
-def process_iso(iso, demand_data, gen_profiles, include_hybrids=False):
+def process_iso(iso, demand_data, gen_profiles, include_hybrids=False,
+                thresholds_filter=None, resume=False):
     """Run fine-grid PFS generation for a single ISO."""
     # Auto-detect hybrid mode from coarse cache (supports multi-part files)
     coarse_schema = s1.read_coarse_cache_schema(iso)
@@ -530,9 +605,24 @@ def process_iso(iso, demand_data, gen_profiles, include_hybrids=False):
             include_hybrids = True
             print(f"  Auto-detected hybrid columns in coarse cache")
 
+    # Checkpoint/resume: skip thresholds that already have output files
+    if resume:
+        done = _completed_thresholds(iso, OUTPUT_DIR)
+        all_target = set(thresholds_filter) if thresholds_filter else set(FINE_THRESHOLDS + NEAR_MISS_THRESHOLDS)
+        already_done = done & all_target
+        if already_done:
+            print(f"  Resume: skipping already-completed thresholds {sorted(already_done)}")
+            remaining = sorted(all_target - done)
+            if not remaining:
+                print(f"  Resume: all thresholds complete for {iso}, skipping")
+                return 0
+            thresholds_filter = remaining
+
     hybrid_str = " [HYBRID]" if include_hybrids else ""
     print(f"\n{'='*60}")
     print(f"  {iso}: Fine-grid PFS (40-70%){hybrid_str}")
+    if thresholds_filter:
+        print(f"  Thresholds: {thresholds_filter}")
     print(f"{'='*60}")
 
     # Load profiles
@@ -573,13 +663,24 @@ def process_iso(iso, demand_data, gen_profiles, include_hybrids=False):
     print(f"  Scored in {score_time:.1f}s")
     print(f"  Score range: {scores.min():.1f}% - {scores.max():.1f}%")
 
-    for t in FINE_THRESHOLDS:
-        in_range = ((scores >= t - 0.5) & (scores <= t + 5.0)).sum()
+    # Print feasible counts only for thresholds we're actually saving
+    active_thresholds = thresholds_filter if thresholds_filter else FINE_THRESHOLDS
+    for t in active_thresholds:
+        if t in FINE_THRESHOLDS:
+            in_range = ((scores >= t - 0.5) & (scores <= t + 5.0)).sum()
+        else:
+            in_range = ((scores >= t - 2.0) & (scores <= t + 3.0)).sum()
         print(f"    t{t:g}: {in_range:,} feasible")
 
     saved = assign_and_save(iso, scores, raw_components, OUTPUT_DIR,
-                            include_hybrids=include_hybrids)
+                            include_hybrids=include_hybrids,
+                            thresholds_filter=thresholds_filter)
     print(f"  Total saved: {saved:,} mixes")
+
+    # Mid-run git commits: commit each threshold's parquet immediately
+    commit_thresholds = thresholds_filter if thresholds_filter else (FINE_THRESHOLDS + NEAR_MISS_THRESHOLDS)
+    for t in commit_thresholds:
+        _git_commit_threshold(iso, t, OUTPUT_DIR)
 
     save_near_miss_cache(iso, scores, raw_components)
 
@@ -593,12 +694,28 @@ def main():
                         help='ISO to process (default: ALL)')
     parser.add_argument('--hybrid', action='store_true',
                         help='Enable hybrid resource types (solar+batt, wind+batt)')
+    parser.add_argument('--thresholds', type=str, default='',
+                        help='Comma-separated thresholds to process '
+                             '(e.g. "55,60,65"). Default: all (40-75).')
+    parser.add_argument('--resume', action='store_true',
+                        help='Skip thresholds that already have output files')
     args = parser.parse_args()
 
     isos = ISOS if args.iso == 'ALL' else [args.iso]
 
+    thresholds_filter = _parse_thresholds(args.thresholds)
+    if thresholds_filter:
+        valid = set(FINE_THRESHOLDS + NEAR_MISS_THRESHOLDS)
+        bad = [t for t in thresholds_filter if t not in valid]
+        if bad:
+            print(f"WARNING: Thresholds {bad} not in {sorted(valid)} — ignoring")
+            thresholds_filter = [t for t in thresholds_filter if t in valid]
+        print(f"Threshold filter: {thresholds_filter}")
+
     if args.hybrid:
         print("Hybrid mode: enabled (CLI flag)")
+    if args.resume:
+        print("Resume mode: will skip completed thresholds")
 
     print("Loading common data...")
     demand_data, gen_profiles, _, _ = load_common_data()
@@ -609,7 +726,9 @@ def main():
     total_saved = 0
     for iso in isos:
         saved = process_iso(iso, demand_data, gen_profiles,
-                            include_hybrids=args.hybrid)
+                            include_hybrids=args.hybrid,
+                            thresholds_filter=thresholds_filter,
+                            resume=args.resume)
         total_saved += saved
 
     elapsed = time.time() - t0
