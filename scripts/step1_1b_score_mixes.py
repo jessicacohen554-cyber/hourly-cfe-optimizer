@@ -156,56 +156,92 @@ def score_and_save_hybrid_streaming(iso, demand_arr, supply_matrix,
     max_file_bytes = max_file_mb * 1024 * 1024 if max_file_mb > 0 else float('inf')
     part_idx = 1
     current_path = _hybrid_cache_part_path(iso, part_idx)
-    writer = pq.ParquetWriter(current_path, out_schema, compression='snappy')
     part_paths = [current_path]
     part_rows = 0  # rows in current part
     bytes_per_row = None  # estimated after first part closes
+    # Defer writer creation until first write — pq.ParquetWriter() immediately
+    # writes a 4-byte PAR1 magic header to disk. If the process OOMs or times out
+    # before writer.close(), the file is left as a 4-byte corrupted stub.
+    writer = None
 
     total_scored = 0
 
-    for rg_idx in range(n_row_groups):
-        rg_table = pf.read_row_group(rg_idx, columns=rtypes)
-        rg_combos = np.column_stack([rg_table.column(rt).to_numpy() for rt in rtypes])
-        n_rg = len(rg_combos)
+    try:
+        for rg_idx in range(n_row_groups):
+            rg_table = pf.read_row_group(rg_idx, columns=rtypes)
+            rg_combos = np.column_stack([rg_table.column(rt).to_numpy() for rt in rtypes])
+            n_rg = len(rg_combos)
 
-        # Score this row group in sub-chunks
-        rg_scores = s1.batch_hourly_scores(demand_arr, supply_matrix, rg_combos,
-                                           chunk_size=chunk_size)
+            # Score this row group in sub-chunks
+            rg_scores = s1.batch_hourly_scores(demand_arr, supply_matrix, rg_combos,
+                                               chunk_size=chunk_size)
 
-        # Build output table for this row group
-        out_data = {rt: rg_combos[:, i] for i, rt in enumerate(rtypes)}
-        out_data['score'] = rg_scores
-        writer.write_table(pa.table(out_data, schema=out_schema))
+            # Build output table for this row group
+            out_data = {rt: rg_combos[:, i] for i, rt in enumerate(rtypes)}
+            out_data['score'] = rg_scores
 
-        total_scored += n_rg
-        part_rows += n_rg
-        print(f"    Row group {rg_idx + 1}/{n_row_groups}: "
-              f"{n_rg:,} scored ({total_scored:,} total)", flush=True)
+            # Create writer on first write (deferred to avoid 4-byte stubs on crash)
+            if writer is None:
+                writer = pq.ParquetWriter(current_path, out_schema, compression='snappy')
+            writer.write_table(pa.table(out_data, schema=out_schema))
 
-        # Estimate whether current part exceeds size limit
-        # Use bytes_per_row from previous parts if available, else estimate
-        # conservatively (~7 bytes/cell with snappy compression on float64)
-        est_bytes_per_row = bytes_per_row if bytes_per_row else (n_res + 1) * 7
-        est_size = part_rows * est_bytes_per_row
+            total_scored += n_rg
+            part_rows += n_rg
+            print(f"    Row group {rg_idx + 1}/{n_row_groups}: "
+                  f"{n_rg:,} scored ({total_scored:,} total)", flush=True)
 
-        if est_size >= max_file_bytes and rg_idx < n_row_groups - 1:
-            # Close current part and start a new one
+            # Estimate whether current part exceeds size limit
+            # Use bytes_per_row from previous parts if available, else estimate
+            # conservatively (~7 bytes/cell with snappy compression on float64)
+            est_bytes_per_row = bytes_per_row if bytes_per_row else (n_res + 1) * 7
+            est_size = part_rows * est_bytes_per_row
+
+            if est_size >= max_file_bytes and rg_idx < n_row_groups - 1:
+                # Close current part and start a new one
+                writer.close()
+                writer = None  # mark closed — next part's writer deferred
+                actual_size = os.path.getsize(current_path)
+                bytes_per_row = actual_size / part_rows  # calibrate for next part
+                size_mb = actual_size / (1024 * 1024)
+                print(f"    Part {part_idx}: {size_mb:.1f} MB ({part_rows:,} rows) "
+                      f"— rotating to next part", flush=True)
+                part_idx += 1
+                current_path = _hybrid_cache_part_path(iso, part_idx)
+                part_paths.append(current_path)
+                # Writer creation deferred to next iteration's write
+                part_rows = 0
+
+            # Free memory
+            del rg_table, rg_combos, rg_scores, out_data
+
+        if writer is not None:
             writer.close()
-            actual_size = os.path.getsize(current_path)
-            bytes_per_row = actual_size / part_rows  # calibrate for next part
-            size_mb = actual_size / (1024 * 1024)
-            print(f"    Part {part_idx}: {size_mb:.1f} MB ({part_rows:,} rows) "
-                  f"— rotating to next part", flush=True)
-            part_idx += 1
-            current_path = _hybrid_cache_part_path(iso, part_idx)
-            part_paths.append(current_path)
-            writer = pq.ParquetWriter(current_path, out_schema, compression='snappy')
-            part_rows = 0
+            writer = None
+    finally:
+        # Ensure writer is closed on any exception (OOM, timeout, etc.)
+        if writer is not None:
+            try:
+                writer.close()
+            except Exception:
+                pass
 
-        # Free memory
-        del rg_table, rg_combos, rg_scores, out_data
+    # Validate all part files — remove any corrupted stubs
+    MIN_VALID_PARQUET_BYTES = 100
+    valid_paths = []
+    for p in part_paths:
+        if not os.path.exists(p):
+            print(f"  WARNING: Expected part {os.path.basename(p)} does not exist — skipped")
+            continue
+        sz = os.path.getsize(p)
+        if sz < MIN_VALID_PARQUET_BYTES:
+            print(f"  WARNING: Removing corrupt part {os.path.basename(p)} ({sz} bytes)")
+            os.remove(p)
+            continue
+        valid_paths.append(p)
+    part_paths = valid_paths
 
-    writer.close()
+    if not part_paths:
+        raise RuntimeError(f"{iso}: All part files are missing or corrupt — scoring failed")
 
     # If only one part and it's small enough, rename to single-file format
     if len(part_paths) == 1:
