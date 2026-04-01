@@ -92,6 +92,7 @@ jobs:
 
     permissions:
       contents: write
+      workflows: write
 
     steps:
     - name: Checkout repo
@@ -142,6 +143,28 @@ jobs:
         fi
         eval python scripts/step1_3_floor_aware_pfs.py $ARGS
 
+    - name: Split any oversized parquets (safety net)
+      if: always()
+      run: |
+        ISO="${{ matrix.iso }}"
+        MAX_MB=45
+        for f in data/step1-pfs/"${ISO}"_*.parquet; do
+          [ -f "$f" ] || continue
+          SIZE_MB=$(du -m "$f" | cut -f1)
+          if [ "$SIZE_MB" -gt "$MAX_MB" ]; then
+            echo "⚠ $f is ${SIZE_MB}MB (>${MAX_MB}MB), re-splitting..."
+            python3 -c "
+import sys; sys.path.insert(0, 'scripts')
+from parquet_utils import write_parquet_chunked
+import pyarrow.parquet as pq, os
+t = pq.read_table('$f')
+os.remove('$f')
+parts = write_parquet_chunked(t, '$f', max_mb=$MAX_MB)
+print(f'Re-split into {len(parts)} parts')
+"
+          fi
+        done
+
     - name: Commit results (per-file to stay under 50 MB)
       if: always()
       run: |
@@ -150,6 +173,10 @@ jobs:
         for f in data/step1-pfs/"${ISO}"_*.parquet; do
           [ -f "$f" ] || continue
           SIZE_MB=$(du -m "$f" | cut -f1)
+          if [ "$SIZE_MB" -gt 49 ]; then
+            echo "ERROR: $f is ${SIZE_MB}MB — still over limit after splitting, skipping"
+            continue
+          fi
           git add -f "$f"
           if ! git diff --cached --quiet; then
             FNAME=$(basename "$f")
