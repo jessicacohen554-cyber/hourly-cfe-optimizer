@@ -107,7 +107,7 @@ except ImportError:
 # STEP3-SPECIFIC CONSTANTS (cost tables imported from pipeline_config above)
 # ============================================================================
 
-RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
+RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro'] + list(HYBRID_TYPES)
 
 
 
