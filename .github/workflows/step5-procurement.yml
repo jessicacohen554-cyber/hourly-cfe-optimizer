@@ -168,7 +168,7 @@ jobs:
 
       - name: "Merge per-ISO results"
         run: |
-          python3 -c "
+          python3 << 'PYEOF'
           import json, os, sys, glob
 
           sys.path.insert(0, 'scripts')
@@ -188,7 +188,6 @@ jobs:
               combined = {}
               loaded_from = []
               for ad in artifact_dirs:
-                  # Check for parquet first, then JSON fallback
                   pq_path = os.path.join(ad, sf + '.parquet')
                   json_path = os.path.join(ad, sf + '.json')
                   if os.path.exists(pq_path):
@@ -204,7 +203,6 @@ jobs:
                       continue
                   iso_name = os.path.basename(ad).replace('procurement-', '')
                   loaded_from.append(iso_name)
-                  # Deep merge: strategy variant -> ISO data
                   for strategy_key, iso_dict in data.items():
                       if strategy_key not in combined:
                           combined[strategy_key] = {}
@@ -215,13 +213,13 @@ jobs:
                   print(f'  Merged {sf}: {len(combined)} strategies from {loaded_from}')
               else:
                   print(f'  No data found for {sf}')
-          "
+          PYEOF
 
       - name: "Combine results into dashboard JS"
         if: inputs.generate_js == true
         run: |
           mkdir -p dashboard/js
-          python -c "
+          python3 << 'PYEOF'
           import json, os, sys
 
           sys.path.insert(0, 'scripts')
@@ -270,7 +268,7 @@ jobs:
                                   elif isinstance(v, dict) and 'twh' in v:
                                       if v['twh'] > 0.01:
                                           rm[k] = {'t': round(v['twh'], 2)}
-                                          if v.get('cost_m', 0) > 0: rm[k]['\$'] = round(v['cost_m'], 1)
+                                          if v.get('cost_m', 0) > 0: rm[k]['$'] = round(v['cost_m'], 1)
                               if rm: se['rm'] = rm
                               meta = e.get('metadata', {})
                               if isinstance(meta, dict) and meta.get('lmp_impact'):
@@ -288,7 +286,7 @@ jobs:
               fh.write(f'const PROCUREMENT_DATA = {js_str};\n')
           sz_mb = os.path.getsize(js_path) / 1024 / 1024
           print(f'  Generated {js_path}: {sz_mb:.1f} MB, {entry_count} entries')
-          "
+          PYEOF
 
       - name: Batched commit and push (per-ISO)
         run: |
