@@ -77,18 +77,18 @@ jobs:
           if [ "${{ inputs.scenario }}" = "all" ]; then
             python grid_viz/fetch/fetch_cems_hourly.py $NO_PUDL_FLAG
           else
-            python -c "
-          import sys, os
-          sys.path.insert(0, 'grid_viz')
-          from fetch.fetch_cems_hourly import fetch_all_scenarios, fetch_pudl_cems, extract_scenario_from_pudl, load_ercot_oris_codes
-          from config import SCENARIO_DAYS, CEMS_DIR
+            python3 << 'PYEOF'
+            import sys, os
+            sys.path.insert(0, 'grid_viz')
+            from fetch.fetch_cems_hourly import fetch_all_scenarios, fetch_pudl_cems, extract_scenario_from_pudl, load_ercot_oris_codes
+            from config import SCENARIO_DAYS, CEMS_DIR
 
-          os.makedirs(CEMS_DIR, exist_ok=True)
-          use_pudl = '${{ inputs.source }}' != 'api'
-          results = fetch_all_scenarios(use_pudl=use_pudl)
-          for sid, df in results.items():
-              print(f'{sid}: {len(df)} records')
-          "
+            os.makedirs(CEMS_DIR, exist_ok=True)
+            use_pudl = '${{ inputs.source }}' != 'api'
+            results = fetch_all_scenarios(use_pudl=use_pudl)
+            for sid, df in results.items():
+                print(f'{sid}: {len(df)} records')
+            PYEOF
           fi
 
       - name: Show results
