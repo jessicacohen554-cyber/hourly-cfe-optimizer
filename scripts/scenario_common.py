@@ -38,6 +38,7 @@ from pipeline_config import (
     RESOURCE_ADEQUACY_MARGIN,
     THRESHOLD_TARGET_YEARS, OUTPUT_THRESHOLDS,
     DEMAND_GROWTH_RATES as _DEMAND_GROWTH_RATES_LMH,
+    HYBRID_TYPES,
 )
 
 # Import dispatch utilities
@@ -56,6 +57,7 @@ from dispatch_utils import (
 THRESHOLDS = OUTPUT_THRESHOLDS  # Alias for backward compat
 
 RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']
+RESOURCES_WITH_HYBRIDS = RESOURCES + list(HYBRID_TYPES)
 
 # Backward compatibility alias
 BASE_DEMAND_TWH = REGIONAL_DEMAND_TWH
@@ -502,6 +504,8 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
     eff_cost = total_cost / match_frac if match_frac > 0 else 0
     incremental = eff_cost - wholesale
     resource_twh = {}
+    # Base resources only: positional zip with explicit cost params. Hybrid TWh
+    # is computed separately via hybrid LCOE paths and not part of this zip.
     for res, pct in zip(RESOURCES, [cf_pct, sol_pct, wnd_pct, osw_pct, ccs_pct, hyd_pct]):
         if res == 'hydro':
             resource_twh[res] = hydro_twh_capped
@@ -1390,7 +1394,7 @@ def build_augmented_result(best_result, best_mix, floor_twh, deployed,
         aug['effective_cost'] - best_result['wholesale'], 2)
 
     # Augmented resource TWh
-    aug['resource_twh'] = {res: augmented.get(res, 0) for res in RESOURCES}
+    aug['resource_twh'] = {res: augmented.get(res, 0) for res in RESOURCES_WITH_HYBRIDS}
     # Split battery TWh into 4hr and 8hr from dispatch percentages
     if len(best_mix) >= 11:
         bat4_pct, bat8_pct = float(best_mix[7]), float(best_mix[8])
@@ -1649,7 +1653,7 @@ def build_consequential_queue(scenario_results, egrid, fossil_mix=None, cfr_fn=N
 
             # ── Resource deltas ──
             delta_resources = {}
-            for res in RESOURCES:
+            for res in RESOURCES_WITH_HYBRIDS:
                 r_start = start_data.get('resource_twh', {}).get(res, 0)
                 r_end = end_data.get('resource_twh', {}).get(res, 0)
                 if abs(r_end - r_start) > 0.5:
@@ -1728,12 +1732,12 @@ def compute_stranding(scenario_results):
         if not iso_data:
             continue
         iso_stranding = {}
-        for res in RESOURCES + ['battery', 'ldes']:
+        for res in RESOURCES_WITH_HYBRIDS + ['battery', 'ldes']:
             values = []
             for t in THRESHOLDS:
                 if t not in iso_data:
                     continue
-                if res in RESOURCES:
+                if res in RESOURCES_WITH_HYBRIDS:
                     val = iso_data[t]['resource_twh'].get(res, 0)
                 elif res == 'battery':
                     val = iso_data[t].get('battery_twh', 0) + iso_data[t].get('battery8_twh', 0)
