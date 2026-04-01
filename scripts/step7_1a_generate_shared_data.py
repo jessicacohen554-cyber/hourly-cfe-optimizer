@@ -525,7 +525,7 @@ for iso in ISOS:
 
                 bat_disp = bat8_disp = ldes_disp = h2_disp = 0.0
                 if manifest is not None:
-                    rp = {k: rm.get(k, 0) for k in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']}
+                    rp = {k: rm.get(k, 0) for k in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro', 'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']}
                     akey = _archetype_key(iso, rp, 100, bat_cap, bat8_cap, ldes_cap)
                     if akey in manifest.index:
                         mrow = manifest.loc[akey]
