@@ -176,16 +176,31 @@ jobs:
           fi
 
           # Commit cache: single file or part-by-part
+          # Validate file sizes first — skip any corrupted stubs (<100 bytes).
+          # pq.ParquetWriter writes a 4-byte PAR1 header on creation; if the
+          # process OOMs before close(), the file is left as a tiny stub.
           if [ -n "$CACHE_SINGLE" ]; then
-            git add -f $CACHE_SINGLE
-            if ! git diff --cached --quiet; then
-              BATCH_MB=$(du -cm $CACHE_SINGLE | tail -1 | cut -f1)
-              echo "  Staging cache: ~${BATCH_MB} MB"
-              git commit -m "Step 1.1: ${iso} scored cache — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            CACHE_SIZE=$(stat -c%s "$CACHE_SINGLE" 2>/dev/null || echo "0")
+            if [ "$CACHE_SIZE" -lt 100 ]; then
+              echo "  SKIPPING corrupt cache $CACHE_SINGLE ($CACHE_SIZE bytes)"
+              rm -f "$CACHE_SINGLE"
+            else
+              git add -f $CACHE_SINGLE
+              if ! git diff --cached --quiet; then
+                BATCH_MB=$(du -cm $CACHE_SINGLE | tail -1 | cut -f1)
+                echo "  Staging cache: ~${BATCH_MB} MB"
+                git commit -m "Step 1.1: ${iso} scored cache — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              fi
             fi
           elif [ -n "$CACHE_PARTS" ]; then
             # Commit each part file individually to stay under push limits
             for part in $CACHE_PARTS; do
+              PART_SIZE=$(stat -c%s "$part" 2>/dev/null || echo "0")
+              if [ "$PART_SIZE" -lt 100 ]; then
+                echo "  SKIPPING corrupt part $(basename "$part") ($PART_SIZE bytes)"
+                rm -f "$part"
+                continue
+              fi
               git add -f "$part"
               if ! git diff --cached --quiet; then
                 PART_MB=$(du -m "$part" | cut -f1)
