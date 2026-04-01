@@ -498,9 +498,11 @@ def save_near_miss_cache(iso, scores, raw_components):
         res_data = np.column_stack([combined.column(c).to_numpy() for c in res_cols])
         rounded = np.round(res_data).astype(np.int64)
         n_res = rounded.shape[1]
-        multipliers = np.array([301**i for i in range(n_res)], dtype=np.int64)
-        keys = (rounded * multipliers).sum(axis=1)
-        _, unique_idx = np.unique(keys, return_index=True)
+        # Use structured row view for dedup (handles any number of columns)
+        row_view = np.ascontiguousarray(rounded).view(
+            np.dtype((np.void, rounded.dtype.itemsize * n_res))
+        ).ravel()
+        _, unique_idx = np.unique(row_view, return_index=True)
         unique_idx.sort()
 
         if len(unique_idx) < len(combined):
