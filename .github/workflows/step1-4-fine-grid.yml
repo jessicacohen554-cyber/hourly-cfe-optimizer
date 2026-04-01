@@ -2,6 +2,7 @@ name: "Step 1.4: Fine-Grid PFS"
 
 # Fine-grid PFS for 40-75% thresholds (1% step).
 # Each ISO runs on its own runner in parallel.
+# Supports threshold filtering, resume mode, and mid-run commits.
 #
 # Output: data/step1-pfs/{ISO}_*.parquet
 
@@ -22,6 +23,16 @@ on:
           - NEISO
           - MISO
           - SPP
+      custom_thresholds:
+        description: 'Custom thresholds (e.g. "55,60,70"). Default: all (40-75).'
+        required: false
+        default: ''
+        type: string
+      resume:
+        description: 'Skip thresholds that already have output files'
+        required: false
+        default: true
+        type: boolean
       branch:
         description: 'Source branch to checkout code from'
         required: false
@@ -36,6 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      thresholds: ${{ steps.resolve-thresholds.outputs.thresholds }}
     steps:
       - name: Build ISO matrix
         id: set-matrix
@@ -44,6 +56,17 @@ jobs:
             echo 'matrix={"iso":["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]}' >> "$GITHUB_OUTPUT"
           else
             echo 'matrix={"iso":["${{ inputs.iso }}"]}' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Resolve thresholds
+        id: resolve-thresholds
+        run: |
+          CUSTOM="${{ inputs.custom_thresholds }}"
+          if [ -n "$CUSTOM" ]; then
+            echo "Using custom thresholds: $CUSTOM"
+            echo "thresholds=$CUSTOM" >> "$GITHUB_OUTPUT"
+          else
+            echo "thresholds=" >> "$GITHUB_OUTPUT"
           fi
 
   fine-grid:
@@ -92,18 +115,38 @@ jobs:
 
     - name: "Run Fine-Grid PFS — ${{ matrix.iso }}"
       run: |
+        THRESHOLDS="${{ needs.prepare.outputs.thresholds }}"
+        RESUME="${{ inputs.resume }}"
         echo "═══════════════════════════════════════════════════════════"
-        echo "  ISO: ${{ matrix.iso }}  |  Fine-Grid PFS (40-75%, 1% step)"
+        if [ -n "$THRESHOLDS" ]; then
+          echo "  ISO: ${{ matrix.iso }}  |  Fine-Grid PFS  |  Thresholds: $THRESHOLDS"
+        else
+          echo "  ISO: ${{ matrix.iso }}  |  Fine-Grid PFS (40-75%, all)"
+        fi
+        if [ "$RESUME" = "true" ]; then
+          echo "  Resume mode: ON (skipping completed thresholds)"
+        fi
         echo "═══════════════════════════════════════════════════════════"
-        python scripts/step1_4_fine_grid_pfs.py --iso ${{ matrix.iso }}
 
-    - name: Commit results (per-file to stay under 50 MB)
+        ARGS="--iso ${{ matrix.iso }}"
+        if [ -n "$THRESHOLDS" ]; then
+          ARGS="$ARGS --thresholds $THRESHOLDS"
+        fi
+        if [ "$RESUME" = "true" ]; then
+          ARGS="$ARGS --resume"
+        fi
+        eval python scripts/step1_4_fine_grid_pfs.py $ARGS
+
+    - name: Commit any remaining results
       if: always()
       run: |
         ISO="${{ matrix.iso }}"
         COMMITTED=0
-        for f in data/step1-pfs/"${ISO}"_*.parquet; do
+        for f in data/step1-pfs/"${ISO}"_*fine_pfs*.parquet; do
           [ -f "$f" ] || continue
+          # Skip files already committed by mid-run commits
+          git diff --cached --quiet -- "$f" 2>/dev/null
+          git status --porcelain "$f" | grep -q . || continue
           SIZE_MB=$(du -m "$f" | cut -f1)
           git add -f "$f"
           if ! git diff --cached --quiet; then
@@ -112,19 +155,33 @@ jobs:
             COMMITTED=$((COMMITTED + 1))
           fi
         done
+        # Also commit near_miss updates
+        NM="data/step1-pfs/${ISO}_near_miss.parquet"
+        if [ -f "$NM" ]; then
+          git add -f "$NM"
+          if ! git diff --cached --quiet; then
+            git commit -m "Step 1.4 Fine: ${ISO} near_miss update — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            COMMITTED=$((COMMITTED + 1))
+          fi
+        fi
         if [ "$COMMITTED" -eq 0 ]; then
-          echo "No new results"
+          echo "No new uncommitted results"
         else
-          echo "Committed $COMMITTED file(s)"
+          echo "Committed $COMMITTED remaining file(s)"
         fi
 
     - name: Push results
       if: always()
       run: |
-        for i in 1 2 3 4; do
-          git push -u origin "$TARGET_BRANCH" && break
-          echo "Push attempt $i failed, retrying in $((2**i))s..."
-          sleep $((2**i))
-        done
-        echo "Branch: $TARGET_BRANCH"
-        echo "Merge this branch into master to bank the PFS results."
+        # Check if there are any commits to push
+        if git log --oneline origin/${{ inputs.branch || 'master' }}..HEAD 2>/dev/null | grep -q .; then
+          for i in 1 2 3 4; do
+            git push -u origin "$TARGET_BRANCH" && break
+            echo "Push attempt $i failed, retrying in $((2**i))s..."
+            sleep $((2**i))
+          done
+          echo "Branch: $TARGET_BRANCH"
+          echo "Merge this branch into master to bank the PFS results."
+        else
+          echo "No commits to push"
+        fi
