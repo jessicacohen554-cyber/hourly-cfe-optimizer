@@ -224,15 +224,7 @@ jobs:
           SIZE_MB=$(du -m "$f" | cut -f1)
           if [ "$SIZE_MB" -gt "$MAX_MB" ]; then
             echo "⚠ $f is ${SIZE_MB}MB (>${MAX_MB}MB), re-splitting..."
-            python3 -c "
-import sys; sys.path.insert(0, 'scripts')
-from parquet_utils import write_parquet_chunked
-import pyarrow.parquet as pq, os
-t = pq.read_table('$f')
-os.remove('$f')
-parts = write_parquet_chunked(t, '$f', max_mb=$MAX_MB)
-print(f'Re-split into {len(parts)} parts')
-"
+            python3 -c "import sys; sys.path.insert(0, 'scripts'); from parquet_utils import write_parquet_chunked; import pyarrow.parquet as pq; import os; t=pq.read_table('$f'); os.remove('$f'); parts=write_parquet_chunked(t, '$f', max_mb=$MAX_MB); print(f'Re-split into {len(parts)} parts')"
           fi
         done
 
@@ -378,15 +370,7 @@ print(f'Re-split into {len(parts)} parts')
           SIZE_MB=$(du -m "$f" | cut -f1)
           if [ "$SIZE_MB" -gt "$MAX_MB" ]; then
             echo "⚠ $f is ${SIZE_MB}MB (>${MAX_MB}MB), re-splitting..."
-            python3 -c "
-import sys; sys.path.insert(0, 'scripts')
-from parquet_utils import write_parquet_chunked
-import pyarrow.parquet as pq, os
-t = pq.read_table('$f')
-os.remove('$f')
-parts = write_parquet_chunked(t, '$f', max_mb=$MAX_MB)
-print(f'Re-split into {len(parts)} parts')
-"
+            python3 -c "import sys; sys.path.insert(0, 'scripts'); from parquet_utils import write_parquet_chunked; import pyarrow.parquet as pq; import os; t=pq.read_table('$f'); os.remove('$f'); parts=write_parquet_chunked(t, '$f', max_mb=$MAX_MB); print(f'Re-split into {len(parts)} parts')"
           fi
         done
 
