@@ -64,7 +64,7 @@ from dispatch_utils import (
     RESOURCE_TYPES,
 )
 import step1_pfs_generator as s1
-from parquet_utils import write_parquet_chunked
+from parquet_utils import write_parquet_chunked, read_parquet_parts
 
 try:
     import pyarrow as pa
