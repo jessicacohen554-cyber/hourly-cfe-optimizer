@@ -70,7 +70,7 @@ jobs:
 
       - name: Validate output
         run: |
-          python3 -c "
+          python3 << 'PYEOF'
           import json, numpy as np
           with open('data/offshore_wind_profiles.json') as f:
               d = json.load(f)
@@ -85,7 +85,7 @@ jobs:
                   assert 0.30 < cf < 0.60, f'{iso}/{yr}: CF={cf:.3f} out of range'
                   print(f'  {iso}/{yr}: CF={cf:.3f} OK')
           print('All validations passed')
-          "
+          PYEOF
 
       - name: Create branch and commit
         run: |
