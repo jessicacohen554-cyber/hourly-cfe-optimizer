@@ -99,6 +99,12 @@ MAX_GRID_COMBOS_BEFORE_FALLBACK = 10_000_000
 # Maximum near-miss mixes per ISO (union across all thresholds)
 MAX_NEAR_MISS = 100_000
 
+# Streaming near-miss reservoir cap. Large enough to preserve diversity
+# across score bands for downstream stratified pruning (save_near_miss
+# prunes to MAX_NEAR_MISS), small enough to avoid OOM on 7 GB runners.
+# 2M × 10 cols × 8 bytes = 160 MB.
+MAX_NEAR_MISS_STREAMING = 2_000_000
+
 # Memory cap for full coarse cache load (bytes). If estimated memory exceeds
 # this, use streaming mode that loads one part file at a time.
 MAX_COARSE_LOAD_BYTES = 5_000_000_000  # 5 GB
@@ -911,7 +917,11 @@ def _stream_coarse_cache(iso, rtypes, zones, active_thresholds):
     zone_sample_s = {z[0]: [] for z in zones}  # scores parts
     zone_sample_n = {z[0]: 0 for z in zones}   # total seen per zone
 
-    nm_parts_c, nm_parts_s = [], []
+    # Reservoir-sampled near-miss (fixed size, never exceeds MAX_NEAR_MISS_STREAMING)
+    nm_reservoir_c = None   # (MAX_NEAR_MISS_STREAMING, n_res) array
+    nm_reservoir_s = None   # (MAX_NEAR_MISS_STREAMING,) scores
+    nm_filled = 0           # rows filled so far (≤ MAX_NEAR_MISS_STREAMING)
+    nm_seen = 0             # total near-miss rows seen across all parts
     warmup_rows = None
     total_rows = 0
 
@@ -990,16 +1000,50 @@ def _stream_coarse_cache(iso, rtypes, zones, active_thresholds):
 
             del z_combos, z_scores
 
-        # Near-miss mixes
+        # Near-miss mixes — reservoir sampling (fixed MAX_NEAR_MISS_STREAMING
+        # cap = 2M rows ≈ 160 MB). CAISO t99 window [0.79, 0.99) matches ~20%
+        # of 134M rows; unbounded accumulation would allocate ~2 GB and OOM on
+        # 7 GB runners. Downstream save_near_miss() does stratified archetype
+        # pruning from 2M → 100K, so we preserve diversity here.
         nm_mask = np.zeros(n_part, dtype=bool)
         for t in active_thresholds:
             target = t / 100.0
             nm_width = get_near_miss_width(t)
             nm_floor = max(target - nm_width, 0.50)
             nm_mask |= (scores < target) & (scores >= nm_floor)
-        if nm_mask.any():
-            nm_parts_c.append(combos[nm_mask])
-            nm_parts_s.append(scores[nm_mask])
+        n_nm = int(nm_mask.sum())
+        if n_nm > 0:
+            nm_c = combos[nm_mask]
+            nm_s = scores[nm_mask]
+            cap = MAX_NEAR_MISS_STREAMING
+            # Lazy-init reservoir arrays
+            if nm_reservoir_c is None:
+                nm_reservoir_c = np.empty((cap, n_res), dtype=np.float64)
+                nm_reservoir_s = np.empty(cap, dtype=np.float64)
+            if nm_filled < cap:
+                # Still filling — take up to remaining capacity
+                take = min(n_nm, cap - nm_filled)
+                nm_reservoir_c[nm_filled:nm_filled + take] = nm_c[:take]
+                nm_reservoir_s[nm_filled:nm_filled + take] = nm_s[:take]
+                nm_filled += take
+                start_replace = take
+            else:
+                start_replace = 0
+            # Vectorized reservoir replacement for rows beyond capacity.
+            # Each row k has probability cap/(nm_seen+k+1) of inclusion.
+            if start_replace < n_nm:
+                remaining = n_nm - start_replace
+                # Generate random indices: if rand < cap, replace that slot
+                rand_j = np.array([np.random.randint(0, nm_seen + start_replace + k + 1)
+                                   for k in range(remaining)])
+                replace_mask = rand_j < cap
+                if replace_mask.any():
+                    src_idx = np.where(replace_mask)[0] + start_replace
+                    slots = rand_j[replace_mask]
+                    nm_reservoir_c[slots] = nm_c[src_idx]
+                    nm_reservoir_s[slots] = nm_s[src_idx]
+            nm_seen += n_nm
+            del nm_c, nm_s
 
         # Free this part's full arrays
         del table, combos, scores
@@ -1045,20 +1089,21 @@ def _stream_coarse_cache(iso, rtypes, zones, active_thresholds):
                                            np.empty(0, dtype=np.float64))
     del zone_sample_c, zone_sample_s, zone_sample_n
 
-    if nm_parts_c:
-        coarse_nm_combos = np.vstack(nm_parts_c)
-        coarse_nm_scores = np.concatenate(nm_parts_s)
+    if nm_filled > 0:
+        coarse_nm_combos = nm_reservoir_c[:nm_filled].copy()
+        coarse_nm_scores = nm_reservoir_s[:nm_filled].copy()
     else:
         coarse_nm_combos = np.empty((0, n_res), dtype=np.float64)
         coarse_nm_scores = np.empty(0, dtype=np.float64)
-    del nm_parts_c, nm_parts_s
+    del nm_reservoir_c, nm_reservoir_s
 
     gc.collect()
     nm_mb = coarse_nm_combos.nbytes / (1024**2) if len(coarse_nm_combos) > 0 else 0
     arch_total = sum(len(v[0]) for v in zone_archetypes.values())
+    nm_sampled = f" (reservoir-sampled from {nm_seen:,})" if nm_seen > nm_filled else ""
     print(f"    Streaming complete: {total_rows:,} rows, "
           f"{arch_total:,} archetype samples, "
-          f"{len(coarse_nm_combos):,} near-miss ({nm_mb:.0f} MB)")
+          f"{len(coarse_nm_combos):,} near-miss ({nm_mb:.0f} MB){nm_sampled}")
 
     return {
         'zone_bounds': zone_bounds,
