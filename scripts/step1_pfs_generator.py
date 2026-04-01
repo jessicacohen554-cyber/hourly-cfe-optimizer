@@ -1478,16 +1478,32 @@ def coarse_cache_paths(iso):
       - Single: {ISO}_coarse_cache.parquet
       - Multi:  {ISO}_coarse_cache_part001.parquet, ...
 
-    Returns sorted list of paths that exist on disk.
+    Returns sorted list of valid paths that exist on disk.
+    Filters out corrupted stubs (<100 bytes) — these are typically 4-byte
+    PAR1 magic headers left behind when pq.ParquetWriter was opened but
+    the process OOM'd or timed out before writer.close().
     """
     import glob as _glob
+    MIN_VALID_BYTES = 100
     single = _coarse_cache_path(iso)
     if os.path.exists(single):
+        if os.path.getsize(single) < MIN_VALID_BYTES:
+            print(f"  WARNING: Skipping corrupt coarse cache {os.path.basename(single)} "
+                  f"({os.path.getsize(single)} bytes)", flush=True)
+            return []
         return [single]
     pattern = os.path.join(STEP1_RAW_PFS_PARQUET_DIR,
                            f'{iso}_coarse_cache_part*.parquet')
     parts = sorted(_glob.glob(pattern))
-    return parts
+    valid = []
+    for p in parts:
+        sz = os.path.getsize(p)
+        if sz < MIN_VALID_BYTES:
+            print(f"  WARNING: Skipping corrupt part {os.path.basename(p)} "
+                  f"({sz} bytes)", flush=True)
+            continue
+        valid.append(p)
+    return valid
 
 
 def read_coarse_cache_table(iso):

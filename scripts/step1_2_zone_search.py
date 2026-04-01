@@ -861,6 +861,11 @@ def _estimate_coarse_memory(iso):
     total_rows = 0
     n_cols = 0
     for p in paths:
+        # Skip corrupted part files (e.g., 4-byte PAR1 stubs from OOM crashes)
+        if os.path.getsize(p) < 100:
+            print(f"  WARNING: Skipping corrupt file {os.path.basename(p)} "
+                  f"({os.path.getsize(p)} bytes)", flush=True)
+            continue
         pf = pq.ParquetFile(p)
         total_rows += pf.metadata.num_rows
         n_cols = len(pf.schema_arrow.names)
@@ -909,6 +914,11 @@ def _stream_coarse_cache(iso, rtypes, zones, active_thresholds):
     nm_parts_c, nm_parts_s = [], []
     warmup_rows = None
     total_rows = 0
+
+    # Filter out corrupted part files (e.g., 4-byte PAR1 stubs from OOM crashes)
+    paths = [p for p in paths if os.path.getsize(p) >= 100]
+    if not paths:
+        return None
 
     print(f"    Streaming {len(paths)} part files...")
     for pi, path in enumerate(paths):
