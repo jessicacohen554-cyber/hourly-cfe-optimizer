@@ -190,6 +190,10 @@ def flatten_dg_rows(iso, track_name, dg_dict, arrays=None):
         arr_hyd = arrays['hydro']
         arr_osw = arrays.get('offshore_wind', np.zeros(len(arr_cf), dtype=np.int64))
         arr_geo = arrays.get('geothermal', np.zeros(len(arr_cf), dtype=np.int64))
+        arr_sb4 = arrays.get('solar_batt4', np.zeros(len(arr_cf), dtype=np.int64))
+        arr_sb8 = arrays.get('solar_batt8', np.zeros(len(arr_cf), dtype=np.int64))
+        arr_wb4 = arrays.get('wind_batt4', np.zeros(len(arr_cf), dtype=np.int64))
+        arr_wb8 = arrays.get('wind_batt8', np.zeros(len(arr_cf), dtype=np.int64))
         arr_score = arrays['hourly_match_score']
         arr_bat = arrays.get('battery_dispatch_pct', np.zeros(1))
         arr_bat8 = arrays.get('battery8_dispatch_pct', np.zeros(1))
@@ -214,6 +218,10 @@ def flatten_dg_rows(iso, track_name, dg_dict, arrays=None):
                     hyd_batch = arr_hyd[idxs].astype(int)
                     osw_batch = arr_osw[idxs].astype(int)
                     geo_batch = arr_geo[idxs].astype(int)
+                    sb4_batch = arr_sb4[idxs].astype(int)
+                    sb8_batch = arr_sb8[idxs].astype(int)
+                    wb4_batch = arr_wb4[idxs].astype(int)
+                    wb8_batch = arr_wb8[idxs].astype(int)
                     score_batch = arr_score[idxs]
                     bat_batch = np.round(arr_bat[idxs].astype(np.float64), 4)
                     bat8_batch = np.round(arr_bat8[idxs].astype(np.float64), 4)
@@ -225,6 +233,9 @@ def flatten_dg_rows(iso, track_name, dg_dict, arrays=None):
                             int(cf_batch[i]), int(sol_batch[i]),
                             int(wnd_batch[i]), int(hyd_batch[i]), int(osw_batch[i]),
                             int(geo_batch[i]))
+                        sb4, sb8, wb4, wb8 = (
+                            int(sb4_batch[i]), int(sb8_batch[i]),
+                            int(wb4_batch[i]), int(wb8_batch[i]))
                         rows.append({
                             'iso': iso, 'track': track_name,
                             'threshold': thr_float, 'scenario': sc_key,
@@ -237,7 +248,9 @@ def flatten_dg_rows(iso, track_name, dg_dict, arrays=None):
                             'mix_clean_firm': cf, 'mix_solar': sol,
                             'mix_wind': wnd, 'mix_offshore_wind': osw,
                             'mix_geothermal': geo,
-                            'mix_ccs_ccgt': max(0, 100 - (cf + sol + wnd + hyd + osw + geo)),
+                            'mix_solar_batt4': sb4, 'mix_solar_batt8': sb8,
+                            'mix_wind_batt4': wb4, 'mix_wind_batt8': wb8,
+                            'mix_ccs_ccgt': max(0, 100 - (cf + sol + wnd + hyd + osw + geo + sb4 + sb8 + wb4 + wb8)),
                             'mix_hydro': hyd,
                             'hourly_match_score': float(score_batch[i]),
                             'battery_dispatch_pct': float(bat_batch[i]),
@@ -265,12 +278,20 @@ def flatten_dg_rows(iso, track_name, dg_dict, arrays=None):
                             hyd = int(arr_hyd[mix_idx])
                             osw = int(arr_osw[mix_idx])
                             geo = int(arr_geo[mix_idx])
+                            sb4 = int(arr_sb4[mix_idx])
+                            sb8 = int(arr_sb8[mix_idx])
+                            wb4 = int(arr_wb4[mix_idx])
+                            wb8 = int(arr_wb8[mix_idx])
                             row['mix_clean_firm'] = cf
                             row['mix_solar'] = sol
                             row['mix_wind'] = wnd
                             row['mix_offshore_wind'] = osw
                             row['mix_geothermal'] = geo
-                            row['mix_ccs_ccgt'] = max(0, 100 - (cf + sol + wnd + hyd + osw + geo))
+                            row['mix_solar_batt4'] = sb4
+                            row['mix_solar_batt8'] = sb8
+                            row['mix_wind_batt4'] = wb4
+                            row['mix_wind_batt8'] = wb8
+                            row['mix_ccs_ccgt'] = max(0, 100 - (cf + sol + wnd + hyd + osw + geo + sb4 + sb8 + wb4 + wb8))
                             row['mix_hydro'] = hyd
                             row['hourly_match_score'] = float(arr_score[mix_idx])
                             row['battery_dispatch_pct'] = round(float(arr_bat[mix_idx]), 4)
