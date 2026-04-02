@@ -431,10 +431,15 @@ def _process_hybrid_chunked(iso, demand_arr, supply_matrix):
     print(f"  Expanded {total_expanded:,} → {total_kept:,} in threshold range")
 
     if total_kept == 0:
-        return np.array([]), {}
+        return np.array([]), {}, 0
+
+    # After incremental flushes, buffers may be empty (data already on disk).
+    # Only concatenate if there are un-flushed results remaining.
+    if not kept_scores:
+        return np.array([]), {}, total_kept
 
     raw = {k: np.concatenate(v) for k, v in kept.items() if v}
-    return np.concatenate(kept_scores), raw
+    return np.concatenate(kept_scores), raw, total_kept
 
 
 # ============================================================================
@@ -745,22 +750,24 @@ def process_iso(iso, demand_data, gen_profiles, include_hybrids=False,
         # Chunked hybrid path: generate → score → filter per chunk to bound memory.
         # _process_hybrid_chunked now does incremental flushes to disk, so
         # partial runs (CI timeout) still produce usable parquets.
-        scores, raw_components = _process_hybrid_chunked(
+        scores, raw_components, total_flushed = _process_hybrid_chunked(
             iso, demand_arr, supply_matrix)
 
         score_time = time.time() - t0
-        if len(scores) == 0:
+        if total_flushed == 0 and len(scores) == 0:
             print(f"  No mixes in threshold range for {iso} (completed in {score_time:.1f}s)")
             return 0
 
-        print(f"  Scored in {score_time:.1f}s")
-        print(f"  Score range: {scores.min():.1f}% - {scores.max():.1f}%")
+        # Data may already be fully flushed to disk with empty in-memory buffers
+        if len(scores) > 0:
+            print(f"  Scored in {score_time:.1f}s")
+            print(f"  Score range: {scores.min():.1f}% - {scores.max():.1f}%")
 
-        # Hybrid path already saved via incremental flush — just count final totals
-        saved = len(scores)
+        saved = total_flushed
         print(f"  Total saved (incremental): {saved:,} mixes")
 
-        save_near_miss_cache(iso, scores, raw_components)
+        if len(scores) > 0:
+            save_near_miss_cache(iso, scores, raw_components)
     else:
         # Original non-hybrid path: single meshgrid
         mix_batch, resource_names, raw_components = generate_fine_grid(iso)
