@@ -86,11 +86,11 @@ NEAR_MISS_THRESHOLDS = [75]  # Also capture mixes that nearly reach 75%
 # Near-miss cache constants (matching step1b_zone_search conventions)
 MAX_NEAR_MISS = 100_000  # Max near-miss mixes per ISO
 
-# Grid parameters — 1% step for main resources
-RESOURCE_STEP = 1     # 1% step for solar/wind
-FIRM_STEP = 1         # 1% step for clean firm
-OSW_STEP = 2          # 2% step for offshore wind
-GEO_STEP = 3          # 3% step for geothermal
+# Grid parameters — 2% step for main resources (balances density vs CI time)
+RESOURCE_STEP = 2     # 2% step for solar/wind
+FIRM_STEP = 2         # 2% step for clean firm
+OSW_STEP = 3          # 3% step for offshore wind
+GEO_STEP = 4          # 4% step for geothermal
 
 # Max additions above existing (% of demand)
 MAX_SOLAR_ADD = 60
@@ -100,8 +100,8 @@ MAX_OSW_ADD = 20
 MAX_GEO_ADD = 15
 
 # Hybrid resource parameters
-HYBRID_STEP = 5         # 5% step for hybrids in fine grid
-MAX_HYBRID_ADD = 30     # Each hybrid type ≤ 30% (tighter than floor-aware)
+HYBRID_STEP = 7         # 7% step for hybrids in fine grid
+MAX_HYBRID_ADD = 28     # Each hybrid type ≤ 28% (tighter than floor-aware)
 
 # Memory safety: max rows per generate-score-filter chunk.
 # 4M rows × 10 cols × 8 bytes = 320 MB — well within CI's 7 GB RAM.
@@ -213,6 +213,78 @@ def generate_fine_grid(iso, include_hybrids=False):
     }
 
 
+def _incremental_flush(iso, kept, kept_scores, hydro_val, has_geo,
+                       all_thresholds, output_dir, include_hybrids=False):
+    """Flush accumulated results to disk per-threshold (append mode).
+
+    This ensures partial runs always produce usable parquets. Each flush
+    appends new mixes to existing fine_pfs files and clears the in-memory
+    buffers to free RAM.
+    """
+    if not HAS_PYARROW or not kept_scores:
+        return
+
+    scores = np.concatenate(kept_scores)
+    raw = {k: np.concatenate(v) for k, v in kept.items() if v}
+
+    if len(scores) == 0:
+        return
+
+    output_cols = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind']
+    if iso in GEOTHERMAL_ISOS:
+        output_cols.append('geothermal')
+    if include_hybrids:
+        output_cols.extend(s1.HYBRID_TYPES)
+
+    flushed = 0
+    for threshold in all_thresholds:
+        if threshold in FINE_THRESHOLDS:
+            mask = (scores >= threshold - 0.5) & (scores <= threshold + 5.0)
+        else:
+            mask = (scores >= threshold - 2.0) & (scores <= threshold + 3.0)
+
+        indices = np.where(mask)[0]
+        if len(indices) == 0:
+            continue
+
+        rows = {
+            'iso': [iso] * len(indices),
+            'threshold': [float(threshold)] * len(indices),
+        }
+        for rt in output_cols:
+            rows[rt] = raw[rt][indices] if rt in raw else np.zeros(len(indices))
+        rows['battery_dispatch_pct'] = np.zeros(len(indices))
+        rows['battery8_dispatch_pct'] = np.zeros(len(indices))
+        rows['ldes_dispatch_pct'] = np.zeros(len(indices))
+        rows['h2_dispatch_pct'] = np.zeros(len(indices))
+        rows['hourly_match_score'] = scores[indices]
+
+        arrays = {k: pa.array(v) for k, v in rows.items()}
+        new_table = pa.table(arrays)
+
+        out_path = os.path.join(output_dir, f'{iso}_t{threshold:g}_fine_pfs.parquet')
+
+        # Append to existing file if present
+        existing = read_parquet_parts(out_path)
+        if existing is not None:
+            new_table = pa.concat_tables([existing, new_table])
+
+        written = write_parquet_chunked(new_table, out_path, max_mb=45,
+                                         compression='snappy')
+        flushed += len(indices)
+
+    # Clear buffers after flush
+    for k in kept:
+        kept[k].clear()
+    kept_scores.clear()
+
+    print(f"    [flush] Saved {flushed:,} mixes to disk (incremental)")
+
+    # Git commit the flushed files on CI
+    for threshold in all_thresholds:
+        _git_commit_threshold(iso, threshold, output_dir)
+
+
 def _process_hybrid_chunked(iso, demand_arr, supply_matrix):
     """Generate, score, and filter hybrid mixes in memory-bounded chunks.
 
@@ -262,6 +334,11 @@ def _process_hybrid_chunked(iso, demand_arr, supply_matrix):
     total_expanded = 0
     total_kept = 0
 
+    # Incremental save interval: flush results to disk every N chunks so
+    # partial runs (CI timeout) still produce usable parquets.
+    FLUSH_INTERVAL_CHUNKS = 20  # ~20 chunks ≈ 30-40 min of work
+    chunks_since_flush = 0
+
     base_chunk = max(1, MAX_CHUNK_ROWS // max(1, n_h))
 
     for cs in range(0, n_base, base_chunk):
@@ -284,6 +361,7 @@ def _process_hybrid_chunked(iso, demand_arr, supply_matrix):
         mask &= (total <= 350.0) & (total > 0.1)
 
         if mask.sum() == 0:
+            chunks_since_flush += 1
             continue
 
         cf = c_cf[mask]; sol = c_sol[mask]; wnd = c_wnd[mask]
@@ -327,12 +405,28 @@ def _process_hybrid_chunked(iso, demand_arr, supply_matrix):
             kept_scores.append(scores[keep])
             total_kept += nk
 
+        chunks_since_flush += 1
+
         if cs == 0 or (cs // base_chunk) % 5 == 0:
-            print(f"    Chunk {cs:,}-{ce:,}/{n_base:,}: "
+            pct_done = ce / n_base * 100
+            print(f"    Chunk {cs:,}-{ce:,}/{n_base:,} ({pct_done:.0f}%): "
                   f"{N:,} valid → {nk:,} in threshold range (total kept: {total_kept:,})")
 
         del mix_batch, scores
         gc.collect()
+
+        # --- Incremental flush: save accumulated results to disk periodically ---
+        if chunks_since_flush >= FLUSH_INTERVAL_CHUNKS and total_kept > 0:
+            _incremental_flush(iso, kept, kept_scores, hydro_val, has_geo,
+                               all_thresholds, output_dir=OUTPUT_DIR,
+                               include_hybrids=True)
+            chunks_since_flush = 0
+
+    # Final flush for any remaining results
+    if total_kept > 0:
+        _incremental_flush(iso, kept, kept_scores, hydro_val, has_geo,
+                           all_thresholds, output_dir=OUTPUT_DIR,
+                           include_hybrids=True)
 
     print(f"  Expanded {total_expanded:,} → {total_kept:,} in threshold range")
 
@@ -648,43 +742,55 @@ def process_iso(iso, demand_data, gen_profiles, include_hybrids=False,
     t0 = time.time()
 
     if include_hybrids:
-        # Chunked hybrid path: generate → score → filter per chunk to bound memory
+        # Chunked hybrid path: generate → score → filter per chunk to bound memory.
+        # _process_hybrid_chunked now does incremental flushes to disk, so
+        # partial runs (CI timeout) still produce usable parquets.
         scores, raw_components = _process_hybrid_chunked(
             iso, demand_arr, supply_matrix)
 
+        score_time = time.time() - t0
         if len(scores) == 0:
-            print(f"  No mixes in threshold range for {iso}")
+            print(f"  No mixes in threshold range for {iso} (completed in {score_time:.1f}s)")
             return 0
+
+        print(f"  Scored in {score_time:.1f}s")
+        print(f"  Score range: {scores.min():.1f}% - {scores.max():.1f}%")
+
+        # Hybrid path already saved via incremental flush — just count final totals
+        saved = len(scores)
+        print(f"  Total saved (incremental): {saved:,} mixes")
+
+        save_near_miss_cache(iso, scores, raw_components)
     else:
         # Original non-hybrid path: single meshgrid
         mix_batch, resource_names, raw_components = generate_fine_grid(iso)
         print(f"  Scoring {len(mix_batch):,} mixes...")
         scores = score_mixes(mix_batch, demand_arr, supply_matrix)
 
-    score_time = time.time() - t0
-    print(f"  Scored in {score_time:.1f}s")
-    print(f"  Score range: {scores.min():.1f}% - {scores.max():.1f}%")
+        score_time = time.time() - t0
+        print(f"  Scored in {score_time:.1f}s")
+        print(f"  Score range: {scores.min():.1f}% - {scores.max():.1f}%")
 
-    # Print feasible counts only for thresholds we're actually saving
-    active_thresholds = thresholds_filter if thresholds_filter else FINE_THRESHOLDS
-    for t in active_thresholds:
-        if t in FINE_THRESHOLDS:
-            in_range = ((scores >= t - 0.5) & (scores <= t + 5.0)).sum()
-        else:
-            in_range = ((scores >= t - 2.0) & (scores <= t + 3.0)).sum()
-        print(f"    t{t:g}: {in_range:,} feasible")
+        # Print feasible counts only for thresholds we're actually saving
+        active_thresholds = thresholds_filter if thresholds_filter else FINE_THRESHOLDS
+        for t in active_thresholds:
+            if t in FINE_THRESHOLDS:
+                in_range = ((scores >= t - 0.5) & (scores <= t + 5.0)).sum()
+            else:
+                in_range = ((scores >= t - 2.0) & (scores <= t + 3.0)).sum()
+            print(f"    t{t:g}: {in_range:,} feasible")
 
-    saved = assign_and_save(iso, scores, raw_components, OUTPUT_DIR,
-                            include_hybrids=include_hybrids,
-                            thresholds_filter=thresholds_filter)
-    print(f"  Total saved: {saved:,} mixes")
+        saved = assign_and_save(iso, scores, raw_components, OUTPUT_DIR,
+                                include_hybrids=include_hybrids,
+                                thresholds_filter=thresholds_filter)
+        print(f"  Total saved: {saved:,} mixes")
 
-    # Mid-run git commits: commit each threshold's parquet immediately
-    commit_thresholds = thresholds_filter if thresholds_filter else (FINE_THRESHOLDS + NEAR_MISS_THRESHOLDS)
-    for t in commit_thresholds:
-        _git_commit_threshold(iso, t, OUTPUT_DIR)
+        # Mid-run git commits: commit each threshold's parquet immediately
+        commit_thresholds = thresholds_filter if thresholds_filter else (FINE_THRESHOLDS + NEAR_MISS_THRESHOLDS)
+        for t in commit_thresholds:
+            _git_commit_threshold(iso, t, OUTPUT_DIR)
 
-    save_near_miss_cache(iso, scores, raw_components)
+        save_near_miss_cache(iso, scores, raw_components)
 
     gc.collect()
     return saved
