@@ -150,6 +150,12 @@ N_KEEP = 10
 # Storage sweep floor
 STORAGE_SWEEP_FLOOR = 0.50
 
+# Max coarse-cache fallback mixes per threshold (prioritize smallest gap).
+# Without this cap, ISOs with huge coarse caches (CAISO 135M) pull millions
+# of mixes at low thresholds — most too far from the threshold to cross with
+# storage. 100K keeps the top candidates while cutting CAISO t75% from 2.3M→100K.
+COARSE_FALLBACK_CAP = 100_000
+
 # Progress save interval
 PROGRESS_INTERVAL = 25   # save every N batches
 
@@ -442,24 +448,57 @@ def load_near_miss(iso):
     return combos, scores, max_storage_scores
 
 
-def load_coarse_cache(iso):
-    """Load coarse cache mixes from step1b output.
+def load_coarse_cache(iso, score_floor=None, score_ceil=None):
+    """Load coarse cache mixes from step1b output with optional score filtering.
+
+    Reads part-by-part and filters rows before concatenating to avoid OOM
+    on large caches (CAISO 135M rows). Only rows with score_floor <= score < score_ceil
+    are kept.
 
     Used as fallback when the near-miss file has no eligible mixes at low
     thresholds (e.g., ERCOT 50-75% where all near-miss mixes score >80%).
-    The coarse cache contains mixes at all score levels.
-
-    Supports both single-file and multi-part cache layouts.
     """
-    table = s1.read_coarse_cache_table(iso)
-    if table is None:
+    paths = s1.coarse_cache_paths(iso)
+    if not paths:
         return None, None
 
-    has_hybrids = _detect_hybrids(table)
-    rtypes = s1.get_resource_types(iso, include_hybrids=has_hybrids)
-    combos = np.column_stack([table.column(rt).to_numpy() for rt in rtypes])
-    scores = table.column('score').to_numpy()
-    return combos, scores
+    combo_parts = []
+    score_parts = []
+    has_hybrids = None
+
+    for p in paths:
+        table = pq.read_table(p)
+        if has_hybrids is None:
+            has_hybrids = _detect_hybrids(table)
+        scores = table.column('score').to_numpy()
+
+        # Apply score filter before extracting combos (saves memory)
+        if score_floor is not None or score_ceil is not None:
+            mask = np.ones(len(scores), dtype=bool)
+            if score_floor is not None:
+                mask &= scores >= score_floor
+            if score_ceil is not None:
+                mask &= scores < score_ceil
+            if not mask.any():
+                del table, scores
+                continue
+            scores = scores[mask]
+            rtypes = s1.get_resource_types(iso, include_hybrids=has_hybrids)
+            combos = np.column_stack([
+                table.column(rt).to_numpy()[mask] for rt in rtypes])
+        else:
+            rtypes = s1.get_resource_types(iso, include_hybrids=has_hybrids)
+            combos = np.column_stack([
+                table.column(rt).to_numpy() for rt in rtypes])
+
+        combo_parts.append(combos)
+        score_parts.append(scores)
+        del table  # free Arrow table memory before next part
+
+    if not combo_parts:
+        return None, None
+
+    return np.vstack(combo_parts), np.concatenate(score_parts)
 
 
 def load_mixes_with_coarse_fallback(iso, active_thresholds):
@@ -486,11 +525,22 @@ def load_mixes_with_coarse_fallback(iso, active_thresholds):
         # Near-miss has eligible mixes for all thresholds — no fallback needed
         return nm_combos, nm_scores, nm_max_scores
 
-    # Need coarse fallback: near-miss has no mixes below lowest threshold
-    cc_combos, cc_scores = load_coarse_cache(iso)
+    # Need coarse fallback: near-miss has no mixes below lowest threshold.
+    # Only load coarse mixes in the score range the near-miss doesn't cover.
+    # The near-miss starts at nm_scores.min(), so we cap the coarse window
+    # there — no point loading coarse mixes the near-miss already has.
+    nm_min = float(nm_scores.min())
+    global_floor = get_near_miss_floor(min(active_thresholds))
+    # Only need coarse mixes below where near-miss begins (+ small overlap margin)
+    score_ceil = min(nm_min + 0.01, max(active_thresholds) / 100.0)
+    cc_combos, cc_scores = load_coarse_cache(iso,
+                                              score_floor=global_floor,
+                                              score_ceil=score_ceil)
     if cc_combos is None:
         print(f"  WARNING: No coarse cache for {iso}, cannot augment near-miss")
         return nm_combos, nm_scores, nm_max_scores
+    print(f"  Coarse cache: loaded {len(cc_combos):,} mixes in score window "
+          f"[{global_floor:.2f}, {score_ceil:.4f})")
 
     # Only add coarse mixes that are in the near-miss window for any threshold
     # and aren't already in the near-miss file (vectorized np.isin)
@@ -498,13 +548,35 @@ def load_mixes_with_coarse_fallback(iso, active_thresholds):
     cc_keys = _mix_keys(cc_combos)
     new_mask = ~np.isin(cc_keys, nm_keys)
 
-    # Filter to mixes in the near-miss window for at least one active threshold
+    # Only use coarse mixes for thresholds the near-miss doesn't cover.
+    # The near-miss already has mixes for higher thresholds — no need to
+    # duplicate those from the coarse cache.
+    fallback_thresholds = [t for t in active_thresholds
+                           if int(np.sum(nm_scores < t / 100.0)) == 0]
+
+    # Filter to mixes in the near-miss window for fallback thresholds only.
+    # Cap per-threshold contribution to COARSE_FALLBACK_CAP mixes, prioritizing
+    # those closest to the threshold (smallest gap = most likely to cross with
+    # storage). Without this cap, large coarse caches (CAISO 135M) can pull in
+    # millions of mixes at low thresholds, causing step1.5 to take hours.
     nm_eligible = np.zeros(len(cc_combos), dtype=bool)
-    for t in active_thresholds:
+    for t in fallback_thresholds:
         target = t / 100.0
         nm_floor = get_near_miss_floor(t)
-        t_mask = (cc_scores < target) & (cc_scores >= nm_floor)
-        nm_eligible |= t_mask
+        t_mask = (cc_scores < target) & (cc_scores >= nm_floor) & new_mask
+        n_t = int(t_mask.sum())
+        if n_t > COARSE_FALLBACK_CAP:
+            # Keep only the mixes closest to the threshold (smallest gap)
+            t_indices = np.where(t_mask)[0]
+            gaps = target - cc_scores[t_indices]
+            top_k = np.argpartition(gaps, COARSE_FALLBACK_CAP)[:COARSE_FALLBACK_CAP]
+            capped_mask = np.zeros(len(cc_combos), dtype=bool)
+            capped_mask[t_indices[top_k]] = True
+            print(f"    t{t}%: {n_t:,} eligible → capped to {COARSE_FALLBACK_CAP:,} "
+                  f"(max gap {gaps[top_k].max()*100:.1f}pp)")
+            nm_eligible |= capped_mask
+        else:
+            nm_eligible |= t_mask
 
     add_mask = new_mask & nm_eligible
     n_add = int(add_mask.sum())
