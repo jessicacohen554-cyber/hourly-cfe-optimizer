@@ -72,8 +72,12 @@ CHUNK_SIZE = 20000
 
 
 def find_thin_bands(target_isos=None, min_ef=THIN_THRESHOLD):
-    """Scan EF directory and return [(iso, threshold, current_count), ...]."""
+    """Scan EF directory and return [(iso, threshold, current_count), ...].
+
+    Also detects completely missing thresholds (0 mixes, no EF file).
+    """
     thin = []
+    existing = set()
     for f in sorted(glob.glob(os.path.join(EF_DIR, 'step_2_1_EF_*.parquet'))):
         if '_batch_' in os.path.basename(f):
             continue
@@ -88,9 +92,18 @@ def find_thin_bands(target_isos=None, min_ef=THIN_THRESHOLD):
             thresh = float(thresh_str)
         except ValueError:
             continue
+        existing.add((iso, thresh))
         n = pq.read_metadata(f).num_rows
         if n < min_ef:
             thin.append((iso, thresh, n))
+
+    # Detect completely missing thresholds (0 mixes = no EF file)
+    check_isos = target_isos if target_isos else set(ISOS)
+    for iso in check_isos:
+        for thresh in ALL_THRESHOLDS:
+            if (iso, thresh) not in existing:
+                thin.append((iso, thresh, 0))
+
     return sorted(thin)
 
 
@@ -397,12 +410,16 @@ def main():
                         help=f'Augment bands with fewer than this many EF mixes (default: {THIN_THRESHOLD})')
     parser.add_argument('--min-target', type=int, default=MIX_TARGET,
                         help=f'Target mix count per band (default: {MIX_TARGET})')
+    parser.add_argument('--min-thresh', type=float, default=0,
+                        help='Skip thresholds below this value (default: 0)')
     parser.add_argument('--dry-run', action='store_true',
                         help='Just list thin bands, don\'t generate')
     args = parser.parse_args()
 
     target_isos = {args.iso} if args.iso else None
     thin_bands = find_thin_bands(target_isos, args.min_ef)
+    if args.min_thresh > 0:
+        thin_bands = [(iso, t, n) for iso, t, n in thin_bands if t >= args.min_thresh]
 
     if not thin_bands:
         print("No thin bands found — all ISO/threshold pairs have >= "
@@ -435,6 +452,10 @@ def main():
         rtypes = s1.get_resource_types(iso, include_hybrids=True)
         demand_norm = get_demand_profile(iso, demand_data)
         supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
+
+        # CAISO: add geothermal as flat year-round profile (matches step1_pfs_generator)
+        if iso == 'CAISO':
+            supply_profiles['geothermal'] = np.full(H, 1.0 / H, dtype=np.float64)
 
         # prepare_numpy_profiles returns (demand_arr, supply_matrix)
         # matching rtypes column ordering
