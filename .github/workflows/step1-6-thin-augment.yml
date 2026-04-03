@@ -103,7 +103,7 @@ jobs:
         echo "  ISO: ${{ matrix.iso }}  |  Step 1.6 Augmentation  |  min-ef: ${MIN_EF:-100}"
         echo "═══════════════════════════════════════════════════════════"
 
-        ARGS="--iso ${{ matrix.iso }}"
+        ARGS="--iso ${{ matrix.iso }} --min-thresh 50"
         if [ -n "$MIN_EF" ]; then
           ARGS="$ARGS --min-ef $MIN_EF"
         fi
@@ -146,7 +146,7 @@ jobs:
         if [ "$COMMITTED" -eq 0 ]; then
           echo "No new results to commit (ISO may have no thin bands)"
         else
-          echo "Committed $COMMITTED file(s)"
+          echo "Committed $COMMITTED file(s). Run Step 2.1 separately to rebuild EF."
         fi
 
     - name: Push results
