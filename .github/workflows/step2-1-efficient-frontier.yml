@@ -138,7 +138,7 @@ jobs:
         run: |
           git config http.postBuffer 524288000
 
-          git add -f data/step2.1-ef/step2_ef_${{ matrix.iso }}_t*.parquet 2>/dev/null || true
+          git add -f data/step2.1-ef/step_2_1_EF_${{ matrix.iso }}_*.parquet 2>/dev/null || true
 
           if git diff --cached --quiet; then
             echo "No changes to commit for ${{ matrix.iso }}"
@@ -232,7 +232,7 @@ jobs:
         if: ${{ inputs.thresholds != '' }}
         run: |
           git config http.postBuffer 524288000
-          git add -f data/step2.1-ef/step2_ef_${{ matrix.iso }}_t*.parquet 2>/dev/null || true
+          git add -f data/step2.1-ef/step_2_1_EF_${{ matrix.iso }}_*.parquet 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "Step 2 EF: ${{ matrix.iso }} thresholds=${{ inputs.thresholds }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             git push -u origin "$TARGET_BRANCH" 2>&1 || true
@@ -251,7 +251,7 @@ jobs:
         if: ${{ inputs.thresholds == '' }}
         run: |
           git config http.postBuffer 524288000
-          git add -f data/step2.1-ef/step2_ef_${{ matrix.iso }}_t*_batch_low.parquet 2>/dev/null || true
+          git add -f data/step2.1-ef/step_2_1_EF_${{ matrix.iso }}_*_batch_low.parquet 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "Step 2 EF batch LOW: ${{ matrix.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             git push -u origin "$TARGET_BRANCH" 2>&1 || true
@@ -270,7 +270,7 @@ jobs:
         if: ${{ inputs.thresholds == '' }}
         run: |
           git config http.postBuffer 524288000
-          git add -f data/step2.1-ef/step2_ef_${{ matrix.iso }}_t*_batch_mid.parquet 2>/dev/null || true
+          git add -f data/step2.1-ef/step_2_1_EF_${{ matrix.iso }}_*_batch_mid.parquet 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "Step 2 EF batch MID: ${{ matrix.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             git push origin "$TARGET_BRANCH" 2>&1 || true
@@ -289,7 +289,7 @@ jobs:
         if: ${{ inputs.thresholds == '' }}
         run: |
           git config http.postBuffer 524288000
-          git add -f data/step2.1-ef/step2_ef_${{ matrix.iso }}_t*_batch_high.parquet 2>/dev/null || true
+          git add -f data/step2.1-ef/step_2_1_EF_${{ matrix.iso }}_*_batch_high.parquet 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "Step 2 EF batch HIGH: ${{ matrix.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             git push origin "$TARGET_BRANCH" 2>&1 || true
@@ -307,7 +307,7 @@ jobs:
       - name: "Commit final EF and push (${{ matrix.iso }})"
         run: |
           git config http.postBuffer 524288000
-          git add -f data/step2.1-ef/step2_ef_${{ matrix.iso }}_t*.parquet 2>/dev/null || true
+          git add -f data/step2.1-ef/step_2_1_EF_${{ matrix.iso }}_*.parquet 2>/dev/null || true
           # Remove batch files from git (merge_batch_outputs deletes them from disk)
           git add -u data/step2.1-ef/ 2>/dev/null || true
 
