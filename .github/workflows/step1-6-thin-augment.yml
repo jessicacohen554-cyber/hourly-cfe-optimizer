@@ -130,12 +130,12 @@ jobs:
         COMMITTED=0
         for f in data/step1-pfs/"${ISO}"_*augment*.parquet; do
           [ -f "$f" ] || continue
-          git status --porcelain "$f" | grep -q . || continue
           SIZE_MB=$(du -m "$f" | cut -f1)
           if [ "$SIZE_MB" -gt 49 ]; then
             echo "ERROR: $f is ${SIZE_MB}MB — over limit, skipping"
             continue
           fi
+          # -f required: augment parquets are gitignored
           git add -f "$f"
           if ! git diff --cached --quiet; then
             FNAME=$(basename "$f")
