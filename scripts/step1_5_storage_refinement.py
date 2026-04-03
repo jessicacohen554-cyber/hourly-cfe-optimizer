@@ -150,10 +150,10 @@ N_KEEP = 10
 # Storage sweep floor
 STORAGE_SWEEP_FLOOR = 0.50
 
-# Max coarse-cache fallback mixes per threshold (prioritize smallest gap).
+# Max coarse-cache fallback mixes TOTAL across all fallback thresholds.
 # Without this cap, ISOs with huge coarse caches (CAISO 135M) pull millions
 # of mixes at low thresholds — most too far from the threshold to cross with
-# storage. 100K keeps the top candidates while cutting CAISO t75% from 2.3M→100K.
+# storage. 100K total keeps the top candidates across all thresholds combined.
 COARSE_FALLBACK_CAP = 100_000
 
 # Progress save interval
@@ -554,29 +554,38 @@ def load_mixes_with_coarse_fallback(iso, active_thresholds):
     fallback_thresholds = [t for t in active_thresholds
                            if int(np.sum(nm_scores < t / 100.0)) == 0]
 
-    # Filter to mixes in the near-miss window for fallback thresholds only.
-    # Cap per-threshold contribution to COARSE_FALLBACK_CAP mixes, prioritizing
-    # those closest to the threshold (smallest gap = most likely to cross with
-    # storage). Without this cap, large coarse caches (CAISO 135M) can pull in
-    # millions of mixes at low thresholds, causing step1.5 to take hours.
+    # Build union eligible mask across all fallback thresholds, then cap the
+    # TOTAL to COARSE_FALLBACK_CAP. Prioritize mixes closest to ANY threshold
+    # they could serve. This gives a single 100K pool shared across all
+    # fallback thresholds instead of 100K per threshold (which summed to 500K+).
     nm_eligible = np.zeros(len(cc_combos), dtype=bool)
     for t in fallback_thresholds:
         target = t / 100.0
         nm_floor = get_near_miss_floor(t)
         t_mask = (cc_scores < target) & (cc_scores >= nm_floor) & new_mask
-        n_t = int(t_mask.sum())
-        if n_t > COARSE_FALLBACK_CAP:
-            # Keep only the mixes closest to the threshold (smallest gap)
-            t_indices = np.where(t_mask)[0]
-            gaps = target - cc_scores[t_indices]
-            top_k = np.argpartition(gaps, COARSE_FALLBACK_CAP)[:COARSE_FALLBACK_CAP]
-            capped_mask = np.zeros(len(cc_combos), dtype=bool)
-            capped_mask[t_indices[top_k]] = True
-            print(f"    t{t}%: {n_t:,} eligible → capped to {COARSE_FALLBACK_CAP:,} "
-                  f"(max gap {gaps[top_k].max()*100:.1f}pp)")
-            nm_eligible |= capped_mask
-        else:
-            nm_eligible |= t_mask
+        nm_eligible |= t_mask
+
+    n_union = int(nm_eligible.sum())
+    if n_union == 0:
+        return nm_combos, nm_scores, nm_max_scores
+
+    if n_union > COARSE_FALLBACK_CAP:
+        # Prioritize by minimum gap to the closest fallback threshold
+        eligible_idx = np.where(nm_eligible)[0]
+        min_gaps = np.full(len(eligible_idx), 999.0)
+        for t in fallback_thresholds:
+            target = t / 100.0
+            gaps = np.abs(target - cc_scores[eligible_idx])
+            min_gaps = np.minimum(min_gaps, gaps)
+        top_k = np.argpartition(min_gaps, COARSE_FALLBACK_CAP)[:COARSE_FALLBACK_CAP]
+        nm_eligible[:] = False
+        nm_eligible[eligible_idx[top_k]] = True
+        print(f"    Union: {n_union:,} eligible across {len(fallback_thresholds)} "
+              f"thresholds → capped to {COARSE_FALLBACK_CAP:,} "
+              f"(max gap {min_gaps[top_k].max()*100:.1f}pp)")
+    else:
+        print(f"    Union: {n_union:,} eligible across {len(fallback_thresholds)} "
+              f"thresholds (under cap, keeping all)")
 
     add_mask = new_mask & nm_eligible
     n_add = int(add_mask.sum())
