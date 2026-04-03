@@ -111,8 +111,7 @@ STORAGE_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5,
 MAX_BAT4 = np.array([0.10], dtype=np.float64)
 MAX_BAT8 = np.array([0.15], dtype=np.float64)
 MAX_LDES = np.array([1.0], dtype=np.float64)
-MAX_H2 = np.array([1.0], dtype=np.float64)
-NO_H2 = np.array([0.0], dtype=np.float64)
+NO_H2 = np.array([0.0], dtype=np.float64)  # H2 disabled in step1.5 — passed as default to kernel
 
 # Pass 1: Coarse grids in % of annual demand (energy capacity as fraction of annual demand).
 # CAISO: 0.01% = 22.4 GWh / 5.6 GW (comparable to real 10 GW / 40 GWh fleet).
@@ -120,7 +119,6 @@ NO_H2 = np.array([0.0], dtype=np.float64)
 FULL_BAT4 = np.array([0, 0.002, 0.005, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.10], dtype=np.float64)
 FULL_BAT8 = np.array([0, 0.005, 0.01, 0.02, 0.03, 0.04, 0.06, 0.08, 0.10, 0.15], dtype=np.float64)
 FULL_LDES = np.array([0, 0.02, 0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0], dtype=np.float64)
-FULL_H2 = np.array([0, 0.3, 1.0], dtype=np.float64)
 
 # Gap bucket boundaries (in percentage points).
 # Mixes are grouped by how far their base score is from the threshold.
@@ -526,12 +524,9 @@ def load_mixes_with_coarse_fallback(iso, active_thresholds):
         return nm_combos, nm_scores, nm_max_scores
 
     # Need coarse fallback: near-miss has no mixes below lowest threshold.
-    # Only load coarse mixes in the score range the near-miss doesn't cover.
-    # The near-miss starts at nm_scores.min(), so we cap the coarse window
-    # there — no point loading coarse mixes the near-miss already has.
+    # Load coarse mixes in the score range the near-miss doesn't cover.
     nm_min = float(nm_scores.min())
     global_floor = get_near_miss_floor(min(active_thresholds))
-    # Only need coarse mixes below where near-miss begins (+ small overlap margin)
     score_ceil = min(nm_min + 0.01, max(active_thresholds) / 100.0)
     cc_combos, cc_scores = load_coarse_cache(iso,
                                               score_floor=global_floor,
@@ -542,50 +537,35 @@ def load_mixes_with_coarse_fallback(iso, active_thresholds):
     print(f"  Coarse cache: loaded {len(cc_combos):,} mixes in score window "
           f"[{global_floor:.2f}, {score_ceil:.4f})")
 
-    # Only add coarse mixes that are in the near-miss window for any threshold
-    # and aren't already in the near-miss file (vectorized np.isin)
+    # Deduplicate against near-miss
     nm_keys = _mix_keys(nm_combos)
     cc_keys = _mix_keys(cc_combos)
     new_mask = ~np.isin(cc_keys, nm_keys)
 
     # Only use coarse mixes for thresholds the near-miss doesn't cover.
-    # The near-miss already has mixes for higher thresholds — no need to
-    # duplicate those from the coarse cache.
     fallback_thresholds = [t for t in active_thresholds
                            if int(np.sum(nm_scores < t / 100.0)) == 0]
 
-    # Build union eligible mask across all fallback thresholds, then cap the
-    # TOTAL to COARSE_FALLBACK_CAP. Prioritize mixes closest to ANY threshold
-    # they could serve. This gives a single 100K pool shared across all
-    # fallback thresholds instead of 100K per threshold (which summed to 500K+).
+    # For each fallback threshold, sample up to COARSE_FALLBACK_CAP diverse
+    # mixes from the eligible window. Random sampling from the uniform coarse
+    # grid naturally produces diverse resource archetypes — both near-miss
+    # candidates and high-curtailment mixes that could bridge with storage.
+    # Take the union across thresholds as the final fallback pool.
     nm_eligible = np.zeros(len(cc_combos), dtype=bool)
+    rng = np.random.default_rng(42)  # reproducible sampling
     for t in fallback_thresholds:
         target = t / 100.0
         nm_floor = get_near_miss_floor(t)
         t_mask = (cc_scores < target) & (cc_scores >= nm_floor) & new_mask
-        nm_eligible |= t_mask
-
-    n_union = int(nm_eligible.sum())
-    if n_union == 0:
-        return nm_combos, nm_scores, nm_max_scores
-
-    if n_union > COARSE_FALLBACK_CAP:
-        # Prioritize by minimum gap to the closest fallback threshold
-        eligible_idx = np.where(nm_eligible)[0]
-        min_gaps = np.full(len(eligible_idx), 999.0)
-        for t in fallback_thresholds:
-            target = t / 100.0
-            gaps = np.abs(target - cc_scores[eligible_idx])
-            min_gaps = np.minimum(min_gaps, gaps)
-        top_k = np.argpartition(min_gaps, COARSE_FALLBACK_CAP)[:COARSE_FALLBACK_CAP]
-        nm_eligible[:] = False
-        nm_eligible[eligible_idx[top_k]] = True
-        print(f"    Union: {n_union:,} eligible across {len(fallback_thresholds)} "
-              f"thresholds → capped to {COARSE_FALLBACK_CAP:,} "
-              f"(max gap {min_gaps[top_k].max()*100:.1f}pp)")
-    else:
-        print(f"    Union: {n_union:,} eligible across {len(fallback_thresholds)} "
-              f"thresholds (under cap, keeping all)")
+        n_t = int(t_mask.sum())
+        if n_t <= COARSE_FALLBACK_CAP:
+            nm_eligible |= t_mask
+            print(f"    t{t}%: {n_t:,} eligible (under cap, keeping all)")
+        else:
+            t_indices = np.where(t_mask)[0]
+            sample = rng.choice(t_indices, size=COARSE_FALLBACK_CAP, replace=False)
+            nm_eligible[sample] = True
+            print(f"    t{t}%: {n_t:,} eligible → sampled {COARSE_FALLBACK_CAP:,}")
 
     add_mask = new_mask & nm_eligible
     n_add = int(add_mask.sum())
@@ -617,16 +597,13 @@ def _get_storage_constants():
         ldes_dur=s1.LDES_DURATION_HOURS,
         ldes_window=s1.LDES_WINDOW_DAYS * 24,
         batt8_window=48,
-        h2_eff=s1.H2_EFFICIENCY,
-        h2_dur=float(s1.H2_DURATION_HOURS),
-        h2_window=s1.H2_WINDOW_DAYS * 24,
     )
 
 
-def _build_bucket_grid(max_gap_pp, include_h2):
+def _build_bucket_grid(max_gap_pp):
     """Build storage grid sized to the gap bucket.
 
-    Returns (bat4_arr, bat8_arr, ldes_arr, h2_arr) numpy arrays.
+    Returns (bat4_arr, bat8_arr, ldes_arr) numpy arrays.
     Grid values are in % of annual demand (bat4 up to 0.06, bat8 up to 0.08,
     LDES up to 0.5). The full grid is compact — always used in full.
     The gap-bucket cap (in pp) is kept for future-proofing but always
@@ -634,8 +611,6 @@ def _build_bucket_grid(max_gap_pp, include_h2):
     """
     cap = max_gap_pp * 3.0
 
-    # Floor values match grid maxes to ensure full grid is always used.
-    # cap (in pp) >> grid max (% of annual demand), so floor dominates.
     bat4 = FULL_BAT4[FULL_BAT4 <= max(cap, 0.06)]
     if len(bat4) < 2:
         bat4 = FULL_BAT4[:2]
@@ -648,9 +623,7 @@ def _build_bucket_grid(max_gap_pp, include_h2):
     if len(ldes) < 2:
         ldes = FULL_LDES[:2]
 
-    h2 = FULL_H2 if include_h2 else NO_H2
-
-    return bat4, bat8, ldes, h2
+    return bat4, bat8, ldes
 
 
 def run_max_screen(nm_combos, nm_base_scores, demand_arr, supply_matrix,
@@ -662,11 +635,8 @@ def run_max_screen(nm_combos, nm_base_scores, demand_arr, supply_matrix,
     are guaranteed to be unreachable and can be eliminated.
     """
     n_mixes = len(nm_combos)
-    include_h2 = any(t >= 95 for t in active_thresholds)
-    h2_arr = MAX_H2 if include_h2 else NO_H2
 
-    print(f"\n  Pass 0 — Max-storage screen: {n_mixes:,} mixes "
-          f"(H2={'yes' if include_h2 else 'no'})")
+    print(f"\n  Pass 0 — Max-storage screen: {n_mixes:,} mixes")
 
     max_scores = np.empty(n_mixes, dtype=np.float64)
     batch_size = MAX_MIX_BATCH
@@ -684,8 +654,7 @@ def run_max_screen(nm_combos, nm_base_scores, demand_arr, supply_matrix,
             1, 1, 1,
             sc['batt_eff'], sc['batt8_eff'], sc['ldes_eff'],
             sc['batt4_dur'], sc['batt8_dur'], sc['ldes_dur'],
-            sc['ldes_window'], sc['batt8_window'],
-            h2_arr, len(h2_arr), sc['h2_eff'], sc['h2_dur'], sc['h2_window'])
+            sc['ldes_window'], sc['batt8_window'])
 
         max_scores[cs:ce] = result[:, 0]
 
@@ -712,11 +681,10 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
             after each bucket completes. Used for auto-flush to batch files.
 
     Returns per-threshold feasible lists:
-        results[threshold] = list of (mix_idx, bat4, bat8, ldes, h2, score)
+        results[threshold] = list of (mix_idx, bat4, bat8, ldes, score)
     """
     n_mixes = len(nm_combos)
     batch_size = CAISO_MIX_BATCH if iso == 'CAISO' else MAX_MIX_BATCH
-    include_h2 = any(t >= 95 for t in active_thresholds)
 
     # Compute curtailment flags and surplus days (needed for bucketing/gating)
     print(f"\n  Pass 1 — Adaptive coarse sweep")
@@ -762,29 +730,26 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
         if len(bucket_idx) == 0:
             continue
 
-        # Build grid for this bucket
-        b4_grid, b8_grid, ldes_grid, h2_grid = _build_bucket_grid(
-            hi_pp, include_h2)
-        n_combos = len(b4_grid) * len(b8_grid) * len(ldes_grid) * len(h2_grid)
-        n_b4, n_b8, n_l, n_h2 = (len(b4_grid), len(b8_grid),
-                                   len(ldes_grid), len(h2_grid))
+        # Build grid for this bucket (3D: bat4 × bat8 × LDES, no H2)
+        b4_grid, b8_grid, ldes_grid = _build_bucket_grid(hi_pp)
+        n_combos = len(b4_grid) * len(b8_grid) * len(ldes_grid)
+        n_b4, n_b8, n_l = len(b4_grid), len(b8_grid), len(ldes_grid)
 
         print(f"    Bucket {lo_pp}-{hi_pp}pp: {len(bucket_idx):,} mixes × "
               f"{n_combos:,} combos "
-              f"(b4={n_b4} b8={n_b8} ldes={n_l} h2={n_h2})")
+              f"(b4={n_b4} b8={n_b8} ldes={n_l})")
 
         # Pre-sort combo indices by total storage (ascending) — vectorized meshgrid.
-        mg_b4i, mg_b8i, mg_li, mg_h2i = np.meshgrid(
-            np.arange(n_b4), np.arange(n_b8), np.arange(n_l), np.arange(n_h2),
+        mg_b4i, mg_b8i, mg_li = np.meshgrid(
+            np.arange(n_b4), np.arange(n_b8), np.arange(n_l),
             indexing='ij')
         all_bp = b4_grid[mg_b4i.ravel()]
         all_b8p = b8_grid[mg_b8i.ravel()]
         all_lp = ldes_grid[mg_li.ravel()]
-        all_h2p = h2_grid[mg_h2i.ravel()]
-        all_flat = (mg_b4i.ravel() * n_b8 * n_l * n_h2 +
-                    mg_b8i.ravel() * n_l * n_h2 +
-                    mg_li.ravel() * n_h2 + mg_h2i.ravel())
-        all_total = all_bp + all_b8p + all_lp + all_h2p
+        all_flat = (mg_b4i.ravel() * n_b8 * n_l +
+                    mg_b8i.ravel() * n_l +
+                    mg_li.ravel())
+        all_total = all_bp + all_b8p + all_lp
 
         # Filter out all-zero combo, sort by total storage
         nonzero = all_total > 0
@@ -794,18 +759,17 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
         sc_bp = all_bp[nonzero][sort_idx]
         sc_b8p = all_b8p[nonzero][sort_idx]
         sc_lp = all_lp[nonzero][sort_idx]
-        sc_h2p = all_h2p[nonzero][sort_idx]
+        # H2 disabled — pass zeros to dominance filter
+        sc_h2p = np.zeros(n_sorted, dtype=np.float64)
 
         sc_has_battery = (sc_bp > 0) | (sc_b8p > 0)
 
         # Precompute static dominance matrix: dom[i,j] = True means combo i
-        # dominates combo j (i has ≤ values in ALL 4 storage dims).
-        # This is a property of the grid, not the mixes — compute once per bucket.
+        # dominates combo j (i has ≤ values in ALL 3 storage dims).
         dom = ((sc_bp[:, np.newaxis] <= sc_bp[np.newaxis, :]) &
                (sc_b8p[:, np.newaxis] <= sc_b8p[np.newaxis, :]) &
-               (sc_lp[:, np.newaxis] <= sc_lp[np.newaxis, :]) &
-               (sc_h2p[:, np.newaxis] <= sc_h2p[np.newaxis, :]))
-        np.fill_diagonal(dom, False)  # combo doesn't dominate itself
+               (sc_lp[:, np.newaxis] <= sc_lp[np.newaxis, :]))
+        np.fill_diagonal(dom, False)
 
         # Process in batches — fully vectorized across mixes
         for batch_start in range(0, len(bucket_idx), batch_size):
@@ -822,8 +786,7 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
                 n_b4, n_b8, n_l,
                 sc['batt_eff'], sc['batt8_eff'], sc['ldes_eff'],
                 sc['batt4_dur'], sc['batt8_dur'], sc['ldes_dur'],
-                sc['ldes_window'], sc['batt8_window'],
-                h2_grid, n_h2, sc['h2_eff'], sc['h2_dur'], sc['h2_window'])
+                sc['ldes_window'], sc['batt8_window'])
 
             total_kernel_evals += n_batch * n_combos
 
@@ -855,12 +818,10 @@ def run_adaptive_coarse(iso, nm_combos, nm_base_scores, max_scores,
                     combo_bp = sc_bp[r_combo]
                     combo_b8p = sc_b8p[r_combo]
                     combo_lp = sc_lp[r_combo]
-                    combo_h2p = sc_h2p[r_combo]
 
                     results[t].extend(
                         [(int(mis[k]), float(combo_bp[k]), float(combo_b8p[k]),
-                          float(combo_lp[k]), float(combo_h2p[k]),
-                          float(score_pcts[k]))
+                          float(combo_lp[k]), float(score_pcts[k]))
                          for k in range(n_res)])
                     total_feasible += n_res
 
@@ -890,11 +851,11 @@ def _fine_range(center, step, half_width, cap_lo, cap_hi):
     return np.array(vals, dtype=np.float64)
 
 
-def _vectorized_dominance_filter(b4_vals, b8_vals, l_vals, h2_vals, scores,
+def _vectorized_dominance_filter(b4_vals, b8_vals, l_vals, scores,
                                   target, n_keep):
     """Vectorized dominance filter for feasible storage combos.
 
-    Returns list of (b4, b8, ldes, h2, score) tuples — non-dominated,
+    Returns list of (b4, b8, ldes, score) tuples — non-dominated,
     sorted by ascending total storage, capped at n_keep.
     """
     # Filter to feasible
@@ -905,29 +866,28 @@ def _vectorized_dominance_filter(b4_vals, b8_vals, l_vals, h2_vals, scores,
     fb4 = b4_vals[feasible_mask]
     fb8 = b8_vals[feasible_mask]
     fl = l_vals[feasible_mask]
-    fh2 = h2_vals[feasible_mask]
     fsc = scores[feasible_mask]
-    total_s = fb4 + fb8 + fl + fh2
+    total_s = fb4 + fb8 + fl
 
     # Sort ascending by total storage
     sort_idx = np.argsort(total_s)
-    fb4, fb8, fl, fh2, fsc = (fb4[sort_idx], fb8[sort_idx],
-                               fl[sort_idx], fh2[sort_idx], fsc[sort_idx])
+    fb4, fb8, fl, fsc = (fb4[sort_idx], fb8[sort_idx],
+                          fl[sort_idx], fsc[sort_idx])
 
     # Greedy dominance filter (small N after feasibility filter, fast enough)
     recorded = []
     results = []
     for i in range(len(fb4)):
-        b4v, b8v, lv, h2v = fb4[i], fb8[i], fl[i], fh2[i]
+        b4v, b8v, lv = fb4[i], fb8[i], fl[i]
         dominated = False
-        for rb4, rb8, rld, rh2 in recorded:
-            if rb4 <= b4v and rb8 <= b8v and rld <= lv and rh2 <= h2v:
+        for rb4, rb8, rld in recorded:
+            if rb4 <= b4v and rb8 <= b8v and rld <= lv:
                 dominated = True
                 break
         if dominated:
             continue
-        recorded.append((b4v, b8v, lv, h2v))
-        results.append((float(b4v), float(b8v), float(lv), float(h2v),
+        recorded.append((b4v, b8v, lv))
+        results.append((float(b4v), float(b8v), float(lv),
                         float(fsc[i])))
         if len(recorded) >= n_keep:
             break
@@ -942,7 +902,7 @@ def run_fine_storage(iso, threshold, nm_combos, coarse_results,
     enabling prange parallelism across mixes within each group.
     Vectorized combo extraction replaces 4-deep nested loops.
 
-    Returns list of (mix_idx, bat4, bat8, ldes, h2, score).
+    Returns list of (mix_idx, bat4, bat8, ldes, score).
     """
     target = threshold / 100.0
     batch_size = CAISO_MIX_BATCH if iso == 'CAISO' else MAX_MIX_BATCH
@@ -954,31 +914,29 @@ def run_fine_storage(iso, threshold, nm_combos, coarse_results,
         return []
 
     # Find boundary mixes: score within [target-2pp, target+1pp] in coarse results
-    boundary_mixes = {}  # mix_idx → best (bat4, bat8, ldes, h2, score)
+    boundary_mixes = {}  # mix_idx → best (bat4, bat8, ldes, score)
     low_bound = (target - BOUNDARY_MARGIN_LOW / 100.0) * 100
     high_bound = (target + BOUNDARY_MARGIN_HIGH / 100.0) * 100
 
-    for (mi, bp, b8p, lp, h2p, score_pct) in coarse_results:
+    for (mi, bp, b8p, lp, score_pct) in coarse_results:
         if low_bound <= score_pct <= high_bound:
             if mi not in boundary_mixes or score_pct > boundary_mixes[mi][-1]:
-                boundary_mixes[mi] = (bp, b8p, lp, h2p, score_pct)
+                boundary_mixes[mi] = (bp, b8p, lp, score_pct)
 
     if not boundary_mixes:
         return []
 
     # ── Group boundary mixes by coarse winner → batch kernel calls ──
-    # Mixes with the same coarse winner get the same fine grid, so they
-    # can share a single kernel call with N>1 (enabling Numba prange).
-    winner_groups = {}  # (best_b4, best_b8, best_l, best_h2) → [mix_idx, ...]
-    for mi, (best_b4, best_b8, best_l, best_h2, _) in boundary_mixes.items():
-        key = (best_b4, best_b8, best_l, best_h2)
+    winner_groups = {}  # (best_b4, best_b8, best_l) → [mix_idx, ...]
+    for mi, (best_b4, best_b8, best_l, _) in boundary_mixes.items():
+        key = (best_b4, best_b8, best_l)
         if key not in winner_groups:
             winner_groups[key] = []
         winner_groups[key].append(mi)
 
     fine_results = []
 
-    for (best_b4, best_b8, best_l, best_h2), mix_indices in winner_groups.items():
+    for (best_b4, best_b8, best_l), mix_indices in winner_groups.items():
         # Generate fine ranges around this coarse winner
         fine_b4 = _fine_range(best_b4, FINE_STEP, FINE_HALF_WIDTH,
                               0, float(FULL_BAT4[-1]))
@@ -987,32 +945,22 @@ def run_fine_storage(iso, threshold, nm_combos, coarse_results,
         fine_l = _fine_range(best_l, FINE_STEP, FINE_HALF_WIDTH,
                              0, float(FULL_LDES[-1]))
 
-        if threshold >= 95 and best_h2 > 0:
-            fine_h2 = _fine_range(best_h2, FINE_STEP * 10,
-                                  FINE_HALF_WIDTH * 5, 0, 25)
-        else:
-            fine_h2 = np.array([0.0], dtype=np.float64)
-
         # Check if cross-product exceeds limit
-        n_combos = len(fine_b4) * len(fine_b8) * len(fine_l) * len(fine_h2)
+        n_combos = len(fine_b4) * len(fine_b8) * len(fine_l)
         if n_combos > MAX_FINE_COMBOS:
             fine_b8 = np.array([best_b8], dtype=np.float64)
-            fine_h2 = np.array([best_h2 if best_h2 > 0 else 0.0],
-                               dtype=np.float64)
-            n_combos = len(fine_b4) * len(fine_b8) * len(fine_l) * len(fine_h2)
+            n_combos = len(fine_b4) * len(fine_b8) * len(fine_l)
 
         n_b4 = len(fine_b4)
         n_b8 = len(fine_b8)
         n_l = len(fine_l)
-        n_h2 = len(fine_h2)
 
         # Pre-compute combo value arrays (vectorized meshgrid)
-        mg_b4, mg_b8, mg_l, mg_h2 = np.meshgrid(
-            fine_b4, fine_b8, fine_l, fine_h2, indexing='ij')
+        mg_b4, mg_b8, mg_l = np.meshgrid(
+            fine_b4, fine_b8, fine_l, indexing='ij')
         combo_b4 = mg_b4.ravel()
         combo_b8 = mg_b8.ravel()
         combo_l = mg_l.ravel()
-        combo_h2 = mg_h2.ravel()
 
         # Process in batches to limit memory
         for bs in range(0, len(mix_indices), batch_size):
@@ -1020,32 +968,28 @@ def run_fine_storage(iso, threshold, nm_combos, coarse_results,
             batch_mis = mix_indices[bs:be]
             n_batch = len(batch_mis)
 
-            # Build batched supply profiles → (n_batch, 8760)
             batch_fracs = nm_combos[batch_mis].astype(np.float64) / 100.0
             batch_supply = batch_fracs @ supply_matrix
 
-            # Single batched kernel call — Numba prange across n_batch mixes
             batch_scores = s1._batch_mixes_storage_screen(
                 demand_arr, batch_supply, 1.0, n_batch,
                 fine_b4, fine_b8, fine_l,
                 n_b4, n_b8, n_l,
                 sc['batt_eff'], sc['batt8_eff'], sc['ldes_eff'],
                 sc['batt4_dur'], sc['batt8_dur'], sc['ldes_dur'],
-                sc['ldes_window'], sc['batt8_window'],
-                fine_h2, n_h2, sc['h2_eff'], sc['h2_dur'], sc['h2_window'])
+                sc['ldes_window'], sc['batt8_window'])
 
-            # Extract results per mix (vectorized combo extraction + dominance)
             for local_i in range(n_batch):
                 mi = batch_mis[local_i]
-                scores_flat = batch_scores[local_i]  # (n_combos,)
+                scores_flat = batch_scores[local_i]
 
                 non_dom = _vectorized_dominance_filter(
-                    combo_b4, combo_b8, combo_l, combo_h2,
+                    combo_b4, combo_b8, combo_l,
                     scores_flat, target, N_KEEP)
 
-                for b4v, b8v, lv, h2v, sc_val in non_dom:
+                for b4v, b8v, lv, sc_val in non_dom:
                     fine_results.append(
-                        (int(mi), b4v, b8v, lv, h2v,
+                        (int(mi), b4v, b8v, lv,
                          round(sc_val * 100, 2)))
 
     return fine_results
@@ -1069,7 +1013,7 @@ def save_storage_results(iso, threshold, nm_combos, results, rtypes,
 
     n = len(results)
     # Convert results to structured numpy array for vectorized column extraction
-    result_arr = np.array(results, dtype=np.float64)  # (N, 6)
+    result_arr = np.array(results, dtype=np.float64)  # (N, 5): mix_idx, b4, b8, ldes, score
     result_indices = result_arr[:, 0].astype(np.intp)
 
     data = {
@@ -1081,8 +1025,7 @@ def save_storage_results(iso, threshold, nm_combos, results, rtypes,
     data['battery_dispatch_pct'] = result_arr[:, 1]
     data['battery8_dispatch_pct'] = result_arr[:, 2]
     data['ldes_dispatch_pct'] = result_arr[:, 3]
-    data['h2_dispatch_pct'] = result_arr[:, 4]
-    data['hourly_match_score'] = result_arr[:, 5]
+    data['hourly_match_score'] = result_arr[:, 4]
 
     table = pa.table(data)
     t_str = s1._normalize_threshold_str(threshold)
@@ -1369,45 +1312,21 @@ def process_iso(iso, thresholds_filter=None):
                 pass1_thresholds.add(t)
             _save_manifest(iso, code_hash, pass1_thresholds, pass2_done)
         else:
-            # Split thresholds by H2 requirement to avoid grid inflation.
-            # Thresholds < 95% use a 150-combo grid (no H2);
-            # thresholds >= 95% use 900 combos (with H2). Running them
-            # together forces the 900-combo grid on sub-95% mixes — 6× waste.
-            non_h2_thresholds = [t for t in real_needed if t < 95]
-            h2_thresholds = [t for t in real_needed if t >= 95]
-            groups = []
-            if non_h2_thresholds:
-                groups.append(('non-H2', non_h2_thresholds))
-            if h2_thresholds:
-                groups.append(('H2', h2_thresholds))
+            # Single pass — no H2/non-H2 split needed (H2 removed from step1.5)
+            group_mask = union_mask
+            n_group = n_union
+            print(f"\n    All thresholds: {len(real_needed)} thresholds, "
+                  f"{n_group:,} union mixes")
 
-            for group_label, group_thresholds in groups:
-                # Build union mask for this group's thresholds only
-                group_mask = np.zeros(len(nm_combos), dtype=bool)
-                for t in group_thresholds:
-                    target = t / 100.0
-                    t_mask = (max_scores >= target) & (nm_base_scores < target)
-                    group_mask |= t_mask
+            group_full_idx = np.where(group_mask)[0]
+            group_coarse = run_adaptive_coarse(
+                iso, nm_combos[group_mask], nm_base_scores[group_mask],
+                max_scores[group_mask],
+                demand_arr, supply_matrix, real_needed, sc,
+                global_idx_map=group_full_idx,
+                on_bucket_done=_auto_flush)
 
-                n_group = int(group_mask.sum())
-                combos_est = 900 if group_label == 'H2' else 150
-                print(f"\n    Group {group_label}: {len(group_thresholds)} thresholds, "
-                      f"{n_group:,} union mixes, ~{combos_est} combos/mix")
-
-                # Pass global_idx_map so results use full nm_combos indices
-                # (no post-hoc remapping needed). Pass _auto_flush callback
-                # so results get committed to batch files during processing.
-                group_full_idx = np.where(group_mask)[0]
-                group_coarse = run_adaptive_coarse(
-                    iso, nm_combos[group_mask], nm_base_scores[group_mask],
-                    max_scores[group_mask],
-                    demand_arr, supply_matrix, group_thresholds, sc,
-                    global_idx_map=group_full_idx,
-                    on_bucket_done=_auto_flush)
-
-                # Results already use full indices — no remapping needed.
-                # Flush remaining unflushed results for each threshold.
-                for t in group_thresholds:
+            for t in real_needed:
                     remaining = group_coarse.get(t, [])
                     if remaining:
                         pass2_coarse[t].extend(remaining)
@@ -1477,7 +1396,6 @@ def process_iso(iso, thresholds_filter=None):
                 bat4 = table.column('battery_dispatch_pct').to_numpy()
                 bat8 = table.column('battery8_dispatch_pct').to_numpy()
                 ldes = table.column('ldes_dispatch_pct').to_numpy()
-                h2_col = table.column('h2_dispatch_pct').to_numpy()
                 score = table.column('hourly_match_score').to_numpy()
 
                 # Vectorized key lookup via searchsorted
@@ -1486,12 +1404,12 @@ def process_iso(iso, thresholds_filter=None):
                 matched = sorted_keys[insert_pos] == row_keys
                 mis = sort_order[insert_pos]
 
-                # Bulk collect matched rows
+                # Bulk collect matched rows (5-tuple: mix_idx, b4, b8, ldes, score)
                 valid_idx = np.where(matched)[0]
                 if len(valid_idx) > 0:
                     coarse_results[t].extend(
                         [(int(mis[i]), float(bat4[i]), float(bat8[i]),
-                          float(ldes[i]), float(h2_col[i]), float(score[i]))
+                          float(ldes[i]), float(score[i]))
                          for i in valid_idx])
             # Also populate pass2_coarse for cached thresholds
             pass2_coarse[t] = coarse_results[t]
