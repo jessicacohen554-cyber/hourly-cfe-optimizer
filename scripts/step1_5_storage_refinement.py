@@ -1461,8 +1461,8 @@ def process_iso(iso, thresholds_filter=None):
             seen = {}
             for r in all_results:
                 key = (r[0], round(r[1], 4), round(r[2], 4),
-                       round(r[3], 4), round(r[4], 4))
-                if key not in seen or r[5] > seen[key][5]:
+                       round(r[3], 4))
+                if key not in seen or r[4] > seen[key][4]:
                     seen[key] = r
             deduped = list(seen.values())
 
