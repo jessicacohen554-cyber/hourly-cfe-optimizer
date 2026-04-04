@@ -693,11 +693,410 @@ def _git_commit_threshold(iso, threshold, output_dir):
 
 
 # ============================================================================
+# THIN-BAND AUGMENTATION (merged from step 1.6)
+# ============================================================================
+
+# All active thresholds that might need augmentation (50-99.9)
+AUGMENT_THRESHOLDS = [50, 55, 60, 65, 70, 75, 80, 85, 87.5,
+                      90, 92.5, 95, 97.5, 99, 99.5, 99.9]
+AUGMENT_THIN_THRESHOLD = 100  # Bands with fewer PFS mixes get augmented
+AUGMENT_MAX_OUTPUT = 50_000   # Max diverse archetypes per band
+
+
+def _count_pfs_mixes_per_threshold(iso):
+    """Count raw PFS mixes per threshold from existing parquet files.
+
+    Scans all PFS parquets (coarse, floor, fine, storage, near_miss) for
+    this ISO and counts how many mixes fall in each threshold band.
+    Returns dict: {threshold: count}.
+    """
+    import glob as _glob
+    counts = {t: 0 for t in AUGMENT_THRESHOLDS}
+
+    pattern = os.path.join(OUTPUT_DIR, f'{iso}_*.parquet')
+    files = sorted(_glob.glob(pattern))
+    for fpath in files:
+        # Skip augment files (we're computing whether augmentation is needed)
+        if '_augment' in os.path.basename(fpath):
+            continue
+        try:
+            table = pq.read_table(fpath, columns=['hourly_match_score'])
+            if table.num_rows == 0:
+                continue
+            scores = table.column('hourly_match_score').to_numpy()
+            for t in AUGMENT_THRESHOLDS:
+                # Same band window as step 1.6
+                idx = AUGMENT_THRESHOLDS.index(t)
+                if idx + 1 < len(AUGMENT_THRESHOLDS):
+                    band_ceil = AUGMENT_THRESHOLDS[idx + 1]
+                else:
+                    band_ceil = t + 5.0
+                band_floor = t - 0.5
+                in_band = ((scores >= band_floor) & (scores < band_ceil + 0.5)).sum()
+                counts[t] += int(in_band)
+        except Exception:
+            continue
+
+    return counts
+
+
+def _augment_score_mixes(mix_batch, demand_arr, supply_matrix):
+    """Score mixes → percentage match (0-100). Same physics as Step 1."""
+    scores = s1.batch_hourly_scores(demand_arr, supply_matrix, mix_batch, CHUNK_SIZE)
+    total_demand = demand_arr.sum()
+    if total_demand > 0:
+        scores = scores / total_demand
+    return scores * 100.0
+
+
+def _augment_get_band_window(target_thresh):
+    """Return (band_floor, band_ceil) for the target threshold band."""
+    idx = AUGMENT_THRESHOLDS.index(target_thresh) if target_thresh in AUGMENT_THRESHOLDS else -1
+    if 0 <= idx < len(AUGMENT_THRESHOLDS) - 1:
+        band_ceil = AUGMENT_THRESHOLDS[idx + 1]
+    else:
+        band_ceil = target_thresh + 5.0
+    return target_thresh - 0.5, band_ceil + 0.5
+
+
+def _augment_filter_results(scores, mask, raw, hybrid_raw):
+    """Filter base results to band and add zero hybrid columns."""
+    filtered = {k: v[mask] for k, v in raw.items()}
+    n = int(mask.sum())
+    for ht in s1.HYBRID_TYPES:
+        filtered[ht] = hybrid_raw.get(ht, np.zeros(n))
+    return scores[mask], filtered
+
+
+def _sample_diverse_archetypes(scores, raw, max_n=AUGMENT_MAX_OUTPUT):
+    """Downsample to max_n mixes preserving diversity across resource dimensions.
+
+    Bins each resource dimension into quantiles, then stratified-samples so the
+    output covers the full mix space rather than clustering in the densest region.
+    """
+    N = len(scores)
+    if N <= max_n:
+        return scores, raw
+
+    resource_keys = [k for k in ('clean_firm', 'solar', 'wind', 'hydro',
+                                  'offshore_wind', 'geothermal',
+                                  'solar_batt4', 'solar_batt8',
+                                  'wind_batt4', 'wind_batt8') if k in raw]
+    mat = np.column_stack([raw[k] for k in resource_keys])
+
+    n_bins = 5
+    bin_ids = np.zeros(N, dtype=np.int64)
+    multiplier = 1
+    active_dims = 0
+    for col_idx in range(mat.shape[1]):
+        col = mat[:, col_idx]
+        if col.max() - col.min() < 0.01:
+            continue
+        edges = np.percentile(col, np.linspace(0, 100, n_bins + 1))
+        edges[-1] += 1
+        col_bins = np.clip(np.searchsorted(edges[:-1], col, side='right') - 1, 0, n_bins - 1)
+        bin_ids += col_bins * multiplier
+        multiplier *= n_bins
+        active_dims += 1
+
+    if active_dims == 0:
+        idx = np.arange(min(N, max_n))
+    else:
+        rng = np.random.default_rng(42)
+        unique_cells = np.unique(bin_ids)
+        per_cell = max(1, max_n // len(unique_cells))
+
+        selected = []
+        for cell in unique_cells:
+            cell_idx = np.where(bin_ids == cell)[0]
+            n_take = min(per_cell, len(cell_idx))
+            chosen = rng.choice(cell_idx, size=n_take, replace=False) if n_take < len(cell_idx) else cell_idx
+            selected.append(chosen)
+
+        idx = np.concatenate(selected)
+        if len(idx) > max_n:
+            idx = rng.choice(idx, size=max_n, replace=False)
+        elif len(idx) < max_n:
+            remaining = np.setdiff1d(np.arange(N), idx)
+            n_fill = min(max_n - len(idx), len(remaining))
+            if n_fill > 0:
+                idx = np.concatenate([idx, rng.choice(remaining, size=n_fill, replace=False)])
+        idx.sort()
+
+    print(f"    Sampled {len(idx):,} diverse archetypes from {N:,} "
+          f"({active_dims} active dims, {len(np.unique(bin_ids))} cells)")
+    return scores[idx], {k: v[idx] for k, v in raw.items()}
+
+
+def _generate_augmentation_mixes(iso, target_thresh, demand_arr, supply_matrix, rtypes):
+    """Generate a fine grid of resource mixes targeted at a specific threshold band.
+
+    Uses 1% steps for base resources and 5% steps for hybrids. Returns
+    (scores, raw_dict) for mixes in the target band.
+    """
+    from pipeline_config import (
+        GRID_MIX_SHARES, HYDRO_CAP_PCT, OFFSHORE_WIND_CAP_TWH,
+        GEOTHERMAL_CAP_TWH, REGIONAL_DEMAND_TWH,
+        OFFSHORE_ISOS, GEOTHERMAL_ISOS,
+        SOLAR_FAMILY_CAP, WIND_FAMILY_CAP, HYBRID_MAX_PER_TYPE,
+    )
+
+    existing = GRID_MIX_SHARES[iso]
+    hydro_val = min(existing.get('hydro', 0), HYDRO_CAP_PCT.get(iso, 50))
+    has_geo = iso in GEOTHERMAL_ISOS
+    has_osw = iso in OFFSHORE_ISOS
+    include_hybrids = any(ht in rtypes for ht in s1.HYBRID_TYPES)
+
+    col_map = {rt: i for i, rt in enumerate(rtypes)}
+    n_cols = len(rtypes)
+
+    # Grid parameters by threshold
+    if target_thresh <= 55:
+        step, firm_step, max_sol, max_wnd, max_cf = 1, 1, 30, 30, 20
+    elif target_thresh <= 70:
+        step, firm_step, max_sol, max_wnd, max_cf = 1, 1, 50, 50, 25
+    else:
+        step, firm_step, max_sol, max_wnd, max_cf = 1, 1, 60, 60, 30
+
+    cf_add = np.arange(0, max_cf + firm_step, firm_step, dtype=np.float64)
+    sol_add = np.arange(0, max_sol + step, step, dtype=np.float64)
+    wnd_add = np.arange(0, max_wnd + step, step, dtype=np.float64)
+
+    hydro_step = max(1, int(hydro_val / 8)) if hydro_val > 2 else 1
+    if hydro_val < 1:
+        hydro_range = np.array([0.0, hydro_val]) if hydro_val > 0 else np.array([0.0])
+    else:
+        hydro_range = np.unique(np.clip(
+            np.arange(0, hydro_val + hydro_step, hydro_step, dtype=np.float64), 0, hydro_val))
+
+    if has_osw:
+        osw_cap_pct = OFFSHORE_WIND_CAP_TWH.get(iso, 0) / REGIONAL_DEMAND_TWH[iso] * 100
+        osw_step = 2 if target_thresh > 55 else 3
+        osw_add = np.arange(0, min(20, osw_cap_pct + 5) + osw_step, osw_step, dtype=np.float64)
+    else:
+        osw_add = np.array([0.0])
+
+    if has_geo:
+        geo_cap_pct = GEOTHERMAL_CAP_TWH / REGIONAL_DEMAND_TWH[iso] * 100
+        geo_add = np.arange(0, min(15, geo_cap_pct + 2) + 3, 3, dtype=np.float64)
+    else:
+        geo_add = np.array([0.0])
+
+    n_base = len(cf_add) * len(sol_add) * len(wnd_add) * len(hydro_range) * len(osw_add) * len(geo_add)
+    MAX_BASE = 20_000_000
+    while n_base > MAX_BASE and step < 5:
+        step += 1
+        sol_add = np.arange(0, max_sol + step, step, dtype=np.float64)
+        wnd_add = np.arange(0, max_wnd + step, step, dtype=np.float64)
+        n_base = len(cf_add) * len(sol_add) * len(wnd_add) * len(hydro_range) * len(osw_add) * len(geo_add)
+
+    print(f"    Base grid: {n_base:,} combos")
+
+    grids = np.meshgrid(cf_add, sol_add, wnd_add, hydro_range, osw_add, geo_add, indexing='ij')
+    cf, sol, wnd, hyd, osw, geo = [g.ravel() for g in grids]
+
+    total = cf + sol + wnd + hyd + osw + geo
+    mask = (total <= 350.0) & (total > 0.1)
+    cf, sol, wnd, hyd, osw, geo = cf[mask], sol[mask], wnd[mask], hyd[mask], osw[mask], geo[mask]
+    N = len(cf)
+    print(f"    {N:,} mixes after cap filter")
+
+    mix_batch = np.zeros((N, n_cols), dtype=np.float64)
+    mix_batch[:, col_map['clean_firm']] = (cf + geo) if has_geo else cf
+    mix_batch[:, col_map['solar']] = sol
+    mix_batch[:, col_map['wind']] = wnd
+    mix_batch[:, col_map['hydro']] = hyd
+    if 'offshore_wind' in col_map:
+        mix_batch[:, col_map['offshore_wind']] = osw
+    if 'geothermal' in col_map:
+        mix_batch[:, col_map['geothermal']] = geo
+
+    scores = _augment_score_mixes(mix_batch, demand_arr, supply_matrix)
+    band_floor, band_ceil = _augment_get_band_window(target_thresh)
+    band_mask = (scores >= band_floor) & (scores < band_ceil)
+    print(f"    {band_mask.sum():,} base mixes in band [{band_floor:.1f}, {band_ceil:.1f})")
+
+    raw = {'clean_firm': cf, 'solar': sol, 'wind': wnd,
+           'hydro': hyd, 'offshore_wind': osw, 'geothermal': geo}
+
+    MIX_TARGET = 250
+    if band_mask.sum() >= MIX_TARGET * 3:
+        return _augment_filter_results(scores, band_mask, raw, {})
+
+    if not include_hybrids:
+        return _augment_filter_results(scores, band_mask, raw, {})
+
+    # Expand with hybrids
+    print(f"    Expanding with hybrids...")
+    hybrid_step = 5
+    max_hybrid = min(HYBRID_MAX_PER_TYPE, 30)
+    h_range = np.arange(0, max_hybrid + hybrid_step, hybrid_step, dtype=np.float64)
+    sol_cap = SOLAR_FAMILY_CAP.get(iso, 100)
+    wnd_cap = WIND_FAMILY_CAP.get(iso, 100)
+
+    hg = np.meshgrid(h_range, h_range, h_range, h_range, indexing='ij')
+    h_sb4, h_sb8, h_wb4, h_wb8 = [g.ravel() for g in hg]
+    h_mask = ((h_sb4 + h_sb8) <= sol_cap) & ((h_wb4 + h_wb8) <= wnd_cap)
+    h_sb4, h_sb8, h_wb4, h_wb8 = h_sb4[h_mask], h_sb8[h_mask], h_wb4[h_mask], h_wb8[h_mask]
+    n_h = len(h_sb4)
+
+    near_mask = (scores >= target_thresh - 15) & (scores < band_ceil + 10)
+    near_idx = np.where(near_mask)[0]
+    if len(near_idx) == 0:
+        return _augment_filter_results(scores, band_mask, raw, {})
+
+    MAX_EXPAND = 10_000_000
+    if len(near_idx) * n_h > MAX_EXPAND:
+        rng = np.random.default_rng(42)
+        near_idx = rng.choice(near_idx, size=MAX_EXPAND // n_h, replace=False)
+        near_idx.sort()
+
+    print(f"    Expanding {len(near_idx):,} near-band × {n_h:,} hybrid combos")
+    all_scores = [scores[band_mask]]
+    all_raw = {k: [v[band_mask]] for k, v in raw.items()}
+    for ht in s1.HYBRID_TYPES:
+        all_raw[ht] = [np.zeros(int(band_mask.sum()))]
+
+    CHUNK = max(1, MAX_EXPAND // n_h)
+    for cs in range(0, len(near_idx), CHUNK):
+        ce = min(cs + CHUNK, len(near_idx))
+        idx_chunk = near_idx[cs:ce]
+        cn = len(idx_chunk)
+
+        c_cf = np.repeat(cf[idx_chunk], n_h)
+        c_sol = np.repeat(sol[idx_chunk], n_h)
+        c_wnd = np.repeat(wnd[idx_chunk], n_h)
+        c_hyd = np.repeat(hyd[idx_chunk], n_h)
+        c_osw = np.repeat(osw[idx_chunk], n_h)
+        c_geo = np.repeat(geo[idx_chunk], n_h)
+        c_sb4, c_sb8 = np.tile(h_sb4, cn), np.tile(h_sb8, cn)
+        c_wb4, c_wb8 = np.tile(h_wb4, cn), np.tile(h_wb8, cn)
+
+        fmask = ((c_sol + c_sb4 + c_sb8) <= sol_cap) & ((c_wnd + c_wb4 + c_wb8) <= wnd_cap)
+        total_h = c_cf + c_sol + c_wnd + c_hyd + c_osw + c_geo + c_sb4 + c_sb8 + c_wb4 + c_wb8
+        fmask &= (total_h <= 350.0)
+        if fmask.sum() == 0:
+            continue
+
+        c_cf, c_sol, c_wnd = c_cf[fmask], c_sol[fmask], c_wnd[fmask]
+        c_hyd, c_osw, c_geo = c_hyd[fmask], c_osw[fmask], c_geo[fmask]
+        c_sb4, c_sb8, c_wb4, c_wb8 = c_sb4[fmask], c_sb8[fmask], c_wb4[fmask], c_wb8[fmask]
+
+        M = len(c_cf)
+        mb = np.zeros((M, n_cols), dtype=np.float64)
+        mb[:, col_map['clean_firm']] = (c_cf + c_geo) if has_geo else c_cf
+        mb[:, col_map['solar']] = c_sol
+        mb[:, col_map['wind']] = c_wnd
+        mb[:, col_map['hydro']] = c_hyd
+        if 'offshore_wind' in col_map: mb[:, col_map['offshore_wind']] = c_osw
+        if 'geothermal' in col_map: mb[:, col_map['geothermal']] = c_geo
+        for ht_col, arr in [('solar_batt4', c_sb4), ('solar_batt8', c_sb8),
+                             ('wind_batt4', c_wb4), ('wind_batt8', c_wb8)]:
+            if ht_col in col_map: mb[:, col_map[ht_col]] = arr
+
+        h_scores = _augment_score_mixes(mb, demand_arr, supply_matrix)
+        h_band = (h_scores >= band_floor) & (h_scores < band_ceil)
+        if h_band.sum() > 0:
+            all_scores.append(h_scores[h_band])
+            for k, arr in [('clean_firm', c_cf), ('solar', c_sol), ('wind', c_wnd),
+                           ('hydro', c_hyd), ('offshore_wind', c_osw), ('geothermal', c_geo),
+                           ('solar_batt4', c_sb4), ('solar_batt8', c_sb8),
+                           ('wind_batt4', c_wb4), ('wind_batt8', c_wb8)]:
+                all_raw[k].append(arr[h_band])
+
+        del mb, h_scores
+        gc.collect()
+
+    final_scores = np.concatenate(all_scores)
+    final_raw = {k: np.concatenate(v) for k, v in all_raw.items()}
+    print(f"    Total mixes in band: {len(final_scores):,}")
+    return final_scores, final_raw
+
+
+def _save_augment_parquet(iso, thresh, scores, raw):
+    """Save augmentation mixes to {ISO}_t{T}_augment.parquet."""
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    N = len(scores)
+
+    output_cols = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind']
+    if iso in GEOTHERMAL_ISOS:
+        output_cols.append('geothermal')
+    output_cols.extend(s1.HYBRID_TYPES)
+
+    rows = {
+        'iso': [iso] * N,
+        'threshold': [float(thresh)] * N,
+    }
+    for col in output_cols:
+        rows[col] = raw.get(col, np.zeros(N))
+    rows['battery_dispatch_pct'] = np.zeros(N)
+    rows['battery8_dispatch_pct'] = np.zeros(N)
+    rows['ldes_dispatch_pct'] = np.zeros(N)
+    rows['h2_dispatch_pct'] = np.zeros(N)
+    rows['hourly_match_score'] = scores
+
+    table = pa.table({k: pa.array(v) for k, v in rows.items()})
+    thresh_str = f'{thresh:g}'
+    out_path = os.path.join(OUTPUT_DIR, f'{iso}_t{thresh_str}_augment.parquet')
+    written = write_parquet_chunked(table, out_path, max_mb=45, compression='snappy')
+    total_kb = sum(os.path.getsize(f) for f in written) / 1024
+    if len(written) == 1:
+        print(f"    Saved {out_path} ({N:,} mixes, {total_kb:.0f} KB)")
+    else:
+        print(f"    Saved {len(written)} parts ({N:,} mixes, {total_kb:.0f} KB total)")
+    return written
+
+
+def run_augmentation(iso, demand_arr, supply_matrix, include_hybrids=False):
+    """Run thin-band augmentation for an ISO across all active thresholds.
+
+    Identifies threshold bands with <AUGMENT_THIN_THRESHOLD raw PFS mixes
+    and generates targeted augmentation mixes capped at AUGMENT_MAX_OUTPUT.
+    Saves as {ISO}_t{T}_augment.parquet.
+
+    Returns total mixes saved.
+    """
+    counts = _count_pfs_mixes_per_threshold(iso)
+    thin_bands = [(t, n) for t, n in counts.items() if n < AUGMENT_THIN_THRESHOLD]
+
+    if not thin_bands:
+        print(f"  Augmentation: all thresholds have >= {AUGMENT_THIN_THRESHOLD} PFS mixes")
+        return 0
+
+    print(f"\n  Augmentation: {len(thin_bands)} thin bands found:")
+    for t, n in sorted(thin_bands):
+        print(f"    t={t:5.1f}: {n:5d} existing PFS mixes")
+
+    rtypes = s1.get_resource_types(iso, include_hybrids=include_hybrids)
+
+    total_saved = 0
+    for thresh, current_n in sorted(thin_bands):
+        print(f"\n  --- Augmenting {iso} t={thresh} (current: {current_n} PFS mixes) ---")
+        t0 = time.time()
+
+        scores, raw = _generate_augmentation_mixes(
+            iso, thresh, demand_arr, supply_matrix, rtypes)
+
+        if len(scores) == 0:
+            print(f"    No mixes found in target band — skipping")
+            continue
+
+        # Apply 50K diverse archetype cap
+        scores, raw = _sample_diverse_archetypes(scores, raw, max_n=AUGMENT_MAX_OUTPUT)
+
+        _save_augment_parquet(iso, thresh, scores, raw)
+        total_saved += len(scores)
+        print(f"    Done in {time.time() - t0:.1f}s")
+
+    return total_saved
+
+
+# ============================================================================
 # MAIN
 # ============================================================================
 
 def process_iso(iso, demand_data, gen_profiles, include_hybrids=False,
-                thresholds_filter=None, resume=False):
+                thresholds_filter=None, resume=False, augment=False):
     """Run fine-grid PFS generation for a single ISO."""
     # Auto-detect hybrid mode from coarse cache (supports multi-part files)
     coarse_schema = s1.read_coarse_cache_schema(iso)
@@ -799,12 +1198,18 @@ def process_iso(iso, demand_data, gen_profiles, include_hybrids=False,
 
         save_near_miss_cache(iso, scores, raw_components)
 
+    # Phase 2: Thin-band augmentation (if enabled)
+    if augment:
+        augment_saved = run_augmentation(iso, demand_arr, supply_matrix,
+                                          include_hybrids=include_hybrids)
+        saved += augment_saved
+
     gc.collect()
     return saved
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Fine-Grid PFS Generator (40-70%)')
+    parser = argparse.ArgumentParser(description='Fine-Grid PFS Generator (40-75%) + Augmentation')
     parser.add_argument('--iso', type=str, default='ALL',
                         help='ISO to process (default: ALL)')
     parser.add_argument('--hybrid', action='store_true',
@@ -814,6 +1219,9 @@ def main():
                              '(e.g. "55,60,65"). Default: all (40-75).')
     parser.add_argument('--resume', action='store_true',
                         help='Skip thresholds that already have output files')
+    parser.add_argument('--augment', action='store_true',
+                        help='After fine-grid, augment thin threshold bands '
+                             '(50-99.9%%) with up to 50K diverse mixes each')
     args = parser.parse_args()
 
     isos = ISOS if args.iso == 'ALL' else [args.iso]
@@ -831,6 +1239,8 @@ def main():
         print("Hybrid mode: enabled (CLI flag)")
     if args.resume:
         print("Resume mode: will skip completed thresholds")
+    if args.augment:
+        print("Augment mode: will fill thin bands (50-99.9%) after fine-grid")
 
     print("Loading common data...")
     demand_data, gen_profiles, _, _ = load_common_data()
@@ -843,7 +1253,8 @@ def main():
         saved = process_iso(iso, demand_data, gen_profiles,
                             include_hybrids=args.hybrid,
                             thresholds_filter=thresholds_filter,
-                            resume=args.resume)
+                            resume=args.resume,
+                            augment=args.augment)
         total_saved += saved
 
     elapsed = time.time() - t0
