@@ -52,9 +52,12 @@ from step2_2a_cost_optimization import (
 
 from step2_2a_cost_optimization import (
     _N_COEFFS, _COL_WHOLESALE, _COL_SOL_NEW, _COL_WND_NEW, _COL_OSW_NEW,
-    _COL_CCS_NEW, _COL_UPRATE, _COL_GEO, _COL_REMAINING, _COL_BAT4,
-    _COL_BAT8, _COL_LDES, _COL_H2, OFFSHORE_ISOS,
+    _COL_CCS_NEW, _COL_UPRATE, _COL_GEO, _COL_REMAINING, _COL_REMAINING_NUC,
+    _COL_BAT4, _COL_BAT8, _COL_LDES, _COL_H2,
+    _COL_SB4, _COL_SB8, _COL_WB4, _COL_WB8, OFFSHORE_ISOS,
 )
+
+from pipeline_config import CCS_CAP_TWH
 
 # Additional constants needed for DG coefficient computation
 from step2_2a_cost_optimization import (
@@ -73,10 +76,21 @@ _THR_STR = {thr: str(thr) for thr in OUTPUT_THRESHOLDS}
 _YEAR_STR = {yr: str(yr) for yr in DG_UNIQUE_YEARS}
 
 # Pareto pruning price bounds (module-level constant, avoid per-call allocation)
-# Cols: wholesale, sol_new, wnd_new, osw_new, ccs_new, uprate, geo, remaining, remaining_nuc, bat4, bat8, ldes, h2
+# Cols (17): wholesale, sol_new, wnd_new, osw_new, ccs_new, uprate, geo, remaining,
+#            remaining_nuc, bat4, bat8, ldes, h2, sb4, sb8, wb4, wb8
 # Values derived from actual price matrix ranges across all ISOs (precompute_all_prices output)
-_PARETO_MIN_PRICES = np.array([25, 45, 47, 0, 59, 15, 0, 59, 70, 0, 6200, 1700, 16300], dtype=np.float64)
-_PARETO_MAX_PRICES = np.array([45, 94, 109, 235, 148, 40, 116, 146, 166, 21200, 30300, 7800, 35800], dtype=np.float64)
+_PARETO_MIN_PRICES = np.array([
+    25, 45, 47, 0, 59, 15, 0, 59,   # 0-7: wholesale..remaining
+    59,                               # 8: remaining_nuc (nuclear price floor)
+    70, 0, 6200, 1700,              # 9-12: bat4, bat8, ldes, h2
+    45, 45, 47, 47,                  # 13-16: sb4, sb8, wb4, wb8
+], dtype=np.float64)
+_PARETO_MAX_PRICES = np.array([
+    45, 94, 109, 235, 148, 40, 116, 146,  # 0-7: wholesale..remaining
+    148,                                    # 8: remaining_nuc (nuclear price ceiling)
+    166, 21200, 30300, 7800,               # 9-12: bat4, bat8, ldes, h2
+    220, 240, 200, 220,                    # 13-16: sb4, sb8, wb4, wb8
+], dtype=np.float64)
 
 # Per-ISO EF parquet directory (Step 2 output)
 EF_ISO_DIR = os.path.join(SCRIPT_DIR, 'data', 'step2.1-ef')
@@ -466,6 +480,21 @@ def load_iso_ef_parquet(iso):
                             if 'h2_dispatch_pct' in sub.column_names
                             else np.zeros(n, dtype=np.int64)),
         'hourly_match_score': sub.column('hourly_match_score').to_numpy(),
+        'geothermal': (sub.column('geothermal').to_numpy()
+                       if 'geothermal' in sub.column_names
+                       else np.zeros(n, dtype=np.int64)),
+        'solar_batt4': (sub.column('solar_batt4').to_numpy()
+                        if 'solar_batt4' in sub.column_names
+                        else np.zeros(n, dtype=np.int64)),
+        'solar_batt8': (sub.column('solar_batt8').to_numpy()
+                        if 'solar_batt8' in sub.column_names
+                        else np.zeros(n, dtype=np.int64)),
+        'wind_batt4': (sub.column('wind_batt4').to_numpy()
+                       if 'wind_batt4' in sub.column_names
+                       else np.zeros(n, dtype=np.int64)),
+        'wind_batt8': (sub.column('wind_batt8').to_numpy()
+                       if 'wind_batt8' in sub.column_names
+                       else np.zeros(n, dtype=np.int64)),
     }
     del sub  # Free Arrow table immediately (~3GB for large ISOs)
     gc.collect()
@@ -721,7 +750,13 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
     hyd_pct = arch_arrays['hydro']
     osw_pct = arch_arrays.get('offshore_wind', np.zeros(N, dtype=np.float64))
     geo_pct = arch_arrays.get('geothermal', np.zeros(N, dtype=np.float64))
-    ccs_pct = np.maximum(0.0, 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct + osw_pct + geo_pct))
+    sb4_pct = arch_arrays.get('solar_batt4', np.zeros(N, dtype=np.float64))
+    sb8_pct = arch_arrays.get('solar_batt8', np.zeros(N, dtype=np.float64))
+    wb4_pct = arch_arrays.get('wind_batt4', np.zeros(N, dtype=np.float64))
+    wb8_pct = arch_arrays.get('wind_batt8', np.zeros(N, dtype=np.float64))
+    # Hybrids displace CCS in the residual calculation (matches step2_2a)
+    ccs_pct = np.maximum(0.0, 100.0 - (cf_pct + sol_pct + wnd_pct + hyd_pct + osw_pct + geo_pct
+                                         + sb4_pct + sb8_pct + wb4_pct + wb8_pct))
     bat_pct = arch_arrays['battery_dispatch_pct']
     bat8_pct = arch_arrays.get('battery8_dispatch_pct', np.zeros(N, dtype=np.float64))
     ldes_pct = arch_arrays['ldes_dispatch_pct']
@@ -730,11 +765,17 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
     # Offshore wind coefficient (all new-build, no existing fleet)
     osw_coeff = osw_pct / 100.0
 
-    # Storage coefficients are fully growth-invariant (columns 8-11)
+    # Storage coefficients are fully growth-invariant
     bat4_coeff = bat_pct / 100.0
     bat8_coeff = bat8_pct / 100.0
     ldes_coeff = ldes_pct / 100.0
     h2_coeff = h2_pct / 100.0
+
+    # Hybrid coefficients are fully growth-invariant (all new-build)
+    sb4_coeff = sb4_pct / 100.0
+    sb8_coeff = sb8_pct / 100.0
+    wb4_coeff = wb4_pct / 100.0
+    wb8_coeff = wb8_pct / 100.0
 
     # Uprate cap and geo cap are per-ISO constants
     uprate_cap = UPRATE_CAP_TWH[iso] if uprate_cap_override is None else uprate_cap_override
@@ -763,7 +804,11 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
         bat_pct / 100.0 * (8760.0 / 4.0) * PEAK_CAPACITY_CREDITS['battery'] +
         bat8_pct / 100.0 * (8760.0 / 8.0) * PEAK_CAPACITY_CREDITS['battery8'] +
         ldes_pct / 100.0 * (8760.0 / 100.0) * PEAK_CAPACITY_CREDITS['ldes'] +
-        h2_pct / 100.0 * (8760.0 / 1000.0) * PEAK_CAPACITY_CREDITS['h2']
+        h2_pct / 100.0 * (8760.0 / 1000.0) * PEAK_CAPACITY_CREDITS['h2'] +
+        sb4_pct / 100.0 * PEAK_CAPACITY_CREDITS['solar_batt4'] +
+        sb8_pct / 100.0 * PEAK_CAPACITY_CREDITS['solar_batt8'] +
+        wb4_pct / 100.0 * PEAK_CAPACITY_CREDITS['wind_batt4'] +
+        wb8_pct / 100.0 * PEAK_CAPACITY_CREDITS['wind_batt8']
     )
 
     # Base existing shares (before scaling)
@@ -834,7 +879,12 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
                 new_gas_mw * new_ccgt_cost
             ) / demand_grown_mwh
 
-            # Build coefficient matrix (N, 12)
+            # CCS cap enforcement: split remaining into CCS-eligible + nuclear overflow
+            ccs_cap = CCS_CAP_TWH.get(iso, 9999.0)
+            ccs_eligible_twh = np.minimum(remaining_after_geo, ccs_cap)
+            nuc_overflow_twh = np.maximum(0, remaining_after_geo - ccs_cap)
+
+            # Build coefficient matrix (N, 17)
             coeff_matrix = np.empty((N, _N_COEFFS), dtype=np.float64)
             coeff_matrix[:, _COL_WHOLESALE] = (sol_existing_pct + wnd_existing_pct +
                                                 hyd_pct + ccs_existing_pct +
@@ -845,11 +895,16 @@ def _precompute_dg_coefficients(iso, arch_arrays, demand_twh,
             coeff_matrix[:, _COL_CCS_NEW] = ccs_new_pct / 100.0
             coeff_matrix[:, _COL_UPRATE] = uprate_twh / demand_grown
             coeff_matrix[:, _COL_GEO] = total_new_geo_twh / demand_grown
-            coeff_matrix[:, _COL_REMAINING] = remaining_after_geo / demand_grown
+            coeff_matrix[:, _COL_REMAINING] = ccs_eligible_twh / demand_grown
+            coeff_matrix[:, _COL_REMAINING_NUC] = nuc_overflow_twh / demand_grown
             coeff_matrix[:, _COL_BAT4] = bat4_coeff
             coeff_matrix[:, _COL_BAT8] = bat8_coeff
             coeff_matrix[:, _COL_LDES] = ldes_coeff
             coeff_matrix[:, _COL_H2] = h2_coeff
+            coeff_matrix[:, _COL_SB4] = sb4_coeff
+            coeff_matrix[:, _COL_SB8] = sb8_coeff
+            coeff_matrix[:, _COL_WB4] = wb4_coeff
+            coeff_matrix[:, _COL_WB8] = wb8_coeff
 
             dg_coeffs[(year, g_level)] = (coeff_matrix, constant, match_frac)
             dg_meta[(year, g_level)] = (gf, demand_grown_mwh)
