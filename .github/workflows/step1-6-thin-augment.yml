@@ -5,6 +5,9 @@ name: "Step 1.6: Thin-Threshold Augmentation"
 # Each ISO runs on its own runner in parallel.
 #
 # Output: data/step1-pfs/{ISO}_t{T}_augment.parquet
+#
+# Commit/push strategy: each file is committed and pushed individually
+# to stay under GitHub's 50 MB file limit and avoid large-push failures.
 
 on:
   workflow_dispatch:
@@ -63,6 +66,7 @@ jobs:
 
     permissions:
       contents: write
+      workflows: write
 
     steps:
     - name: Checkout repo
@@ -119,75 +123,65 @@ jobs:
           SIZE_MB=$(du -m "$f" | cut -f1)
           if [ "$SIZE_MB" -gt "$MAX_MB" ]; then
             echo "⚠ $f is ${SIZE_MB}MB (>${MAX_MB}MB), re-splitting..."
-            python3 -c "import sys; sys.path.insert(0, 'scripts'); from parquet_utils import write_parquet_chunked; import pyarrow.parquet as pq; import os; t=pq.read_table('$f'); os.remove('$f'); parts=write_parquet_chunked(t, '$f', max_mb=$MAX_MB); print(f'Re-split into {len(parts)} parts')"
+            python3 -c "
+import sys; sys.path.insert(0, 'scripts')
+from parquet_utils import write_parquet_chunked
+import pyarrow.parquet as pq
+import os
+t = pq.read_table('$f')
+os.remove('$f')
+parts = write_parquet_chunked(t, '$f', max_mb=$MAX_MB)
+print(f'Re-split into {len(parts)} parts')
+"
           fi
         done
 
-    - name: Commit results in batches (≤45 MB per commit)
+    - name: Commit and push each file individually (≤45 MB per push)
       if: always()
       run: |
         ISO="${{ matrix.iso }}"
-        MAX_COMMIT_MB=45
-        COMMITTED=0
-        BATCH_MB=0
-        BATCH_FILES=()
+        PUSHED=0
+        SOURCE_BRANCH="${{ inputs.branch || 'master' }}"
+
+        # Push the branch first (empty, just to create the remote ref)
+        git push -u origin "$TARGET_BRANCH" 2>/dev/null || true
 
         for f in $(ls -1S data/step1-pfs/"${ISO}"_*augment*.parquet 2>/dev/null); do
           [ -f "$f" ] || continue
           SIZE_MB=$(du -m "$f" | cut -f1)
+          FNAME=$(basename "$f")
+
           if [ "$SIZE_MB" -gt 49 ]; then
-            echo "ERROR: $f is ${SIZE_MB}MB — over GitHub limit, skipping"
+            echo "ERROR: $FNAME is ${SIZE_MB}MB — still over limit after split, skipping"
             continue
           fi
 
-          # If adding this file would exceed batch limit, commit current batch first
-          NEW_TOTAL=$((BATCH_MB + SIZE_MB))
-          if [ ${#BATCH_FILES[@]} -gt 0 ] && [ "$NEW_TOTAL" -gt "$MAX_COMMIT_MB" ]; then
-            echo "Committing batch: ${#BATCH_FILES[@]} files, ~${BATCH_MB}MB"
-            for bf in "${BATCH_FILES[@]}"; do
-              git add -f "$bf"
-            done
-            if ! git diff --cached --quiet; then
-              git commit -m "Step 1.6 Augment: ${ISO} batch $((COMMITTED+1)) (~${BATCH_MB}MB) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-              COMMITTED=$((COMMITTED + 1))
-            fi
-            BATCH_FILES=()
-            BATCH_MB=0
-          fi
+          echo "── ${FNAME} (${SIZE_MB}MB) ──"
 
-          BATCH_FILES+=("$f")
-          BATCH_MB=$((BATCH_MB + SIZE_MB))
+          # Commit this single file
+          git add -f "$f"
+          if git diff --cached --quiet; then
+            echo "  (no changes, skipping)"
+            continue
+          fi
+          git commit -m "Step 1.6 Augment: ${ISO} ${FNAME} (${SIZE_MB}MB) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          # Push immediately after each commit (retry with backoff)
+          for attempt in 1 2 3 4; do
+            if git push origin "$TARGET_BRANCH"; then
+              echo "  ✓ pushed successfully"
+              PUSHED=$((PUSHED + 1))
+              break
+            fi
+            echo "  Push attempt $attempt failed, retrying in $((2**attempt))s..."
+            sleep $((2**attempt))
+          done
         done
 
-        # Commit remaining batch
-        if [ ${#BATCH_FILES[@]} -gt 0 ]; then
-          echo "Committing final batch: ${#BATCH_FILES[@]} files, ~${BATCH_MB}MB"
-          for bf in "${BATCH_FILES[@]}"; do
-            git add -f "$bf"
-          done
-          if ! git diff --cached --quiet; then
-            git commit -m "Step 1.6 Augment: ${ISO} batch $((COMMITTED+1)) (~${BATCH_MB}MB) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            COMMITTED=$((COMMITTED + 1))
-          fi
-        fi
-
-        if [ "$COMMITTED" -eq 0 ]; then
-          echo "No new results to commit (ISO may have no thin bands)"
+        if [ "$PUSHED" -eq 0 ]; then
+          echo "No new results pushed (ISO may have no thin bands)"
         else
-          echo "Committed $COMMITTED batch(es). Run Step 2.1 separately to rebuild EF."
-        fi
-
-    - name: Push results
-      if: always()
-      run: |
-        if git log --oneline origin/${{ inputs.branch || 'master' }}..HEAD 2>/dev/null | grep -q .; then
-          for i in 1 2 3 4; do
-            git push -u origin "$TARGET_BRANCH" && break
-            echo "Push attempt $i failed, retrying in $((2**i))s..."
-            sleep $((2**i))
-          done
+          echo "Pushed $PUSHED file(s) individually. Run Step 2.1 separately to rebuild EF."
           echo "Branch: $TARGET_BRANCH"
-          echo "Merge this branch into master to bank augmented PFS results."
-        else
-          echo "No commits to push (no thin bands for this ISO)"
+          echo "Merge this branch into ${SOURCE_BRANCH} to bank augmented PFS results."
         fi
