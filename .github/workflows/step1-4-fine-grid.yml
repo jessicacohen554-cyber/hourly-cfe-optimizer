@@ -165,13 +165,23 @@ jobs:
           fi
         done
 
-    - name: Commit results (per-file to stay under 50 MB)
+    - name: Commit and push results (per-file ≤45 MB)
       if: always()
       run: |
         ISO="${{ matrix.iso }}"
         THRESHOLDS="${{ needs.prepare.outputs.thresholds }}"
         [ -n "$THRESHOLDS" ] && LABEL="custom($THRESHOLDS)" || LABEL="40-75"
         COMMITTED=0
+
+        push_with_retry() {
+          for attempt in 1 2 3 4; do
+            git push -u origin "$TARGET_BRANCH" 2>&1 && return 0
+            echo "  Push attempt $attempt failed, retrying in $((2**attempt))s..."
+            sleep $((2**attempt))
+          done
+          echo "::error::Push failed after 4 attempts"
+          return 1
+        }
 
         for f in data/step1-pfs/"${ISO}"_*fine_pfs*.parquet data/step1-pfs/"${ISO}"_*augment*.parquet data/step1-pfs/"${ISO}"_near_miss*.parquet; do
           [ -f "$f" ] || continue
@@ -185,22 +195,15 @@ jobs:
             FNAME=$(basename "$f")
             git commit -m "Step 1.4 Fine-Grid: ${ISO} ${LABEL} ${FNAME} (${SIZE_MB}MB) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             COMMITTED=$((COMMITTED + 1))
+            echo "  Pushing ${FNAME}..."
+            push_with_retry
           fi
         done
         if [ "$COMMITTED" -eq 0 ]; then
           echo "No new results to commit (files already match HEAD)."
         else
-          echo "Committed $COMMITTED file(s)"
+          echo "Committed and pushed $COMMITTED file(s)"
         fi
-
-    - name: Push results
-      if: always()
-      run: |
-        for i in 1 2 3 4; do
-          git push -u origin "$TARGET_BRANCH" && break
-          echo "Push attempt $i failed, retrying in $((2**i))s..."
-          sleep $((2**i))
-        done
         echo "════════════════════════════════════════════════════"
         echo "  Branch: $TARGET_BRANCH"
         echo "  Merge into master to bank the fine-grid results."
