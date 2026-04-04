@@ -255,12 +255,16 @@ jobs:
           # Force-add gitignored data directories that pipeline steps committed
           # via "git add -f" on their auto branches. After git reset --soft master,
           # these files are in the index but gitignore would block re-adding if
-          # they were somehow dropped. Force-add all known pipeline data dirs.
+          # they were somehow dropped. Only re-add files that still exist on disk
+          # (respects prior cleanup deletions — won't resurrect deleted files).
           for data_dir in data/step1-pfs data/step2.1-ef data/step2.2-cost \
                           data/step3-dispatch data/step4-analysis \
                           data/step5-scenarios data/step5-wrights \
                           data/step6-smartargets; do
-            git add -f "$data_dir/" 2>/dev/null || true
+            if [ -d "$data_dir" ]; then
+              find "$data_dir" -type f ! -name ".gitkeep" -print0 2>/dev/null \
+                | xargs -0 git add -f 2>/dev/null || true
+            fi
           done
 
           # Check that we actually have changes to commit
