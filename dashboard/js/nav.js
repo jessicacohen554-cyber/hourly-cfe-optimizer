@@ -235,7 +235,8 @@
                 { label: 'Clean Firm', href: 'clean_firm_case.html' },
                 { label: 'Wholesale Market Dynamics', href: 'lmp_trends.html' },
                 { label: 'Nuclear Retirement Risk', href: 'ref-nuclear-retirement.html' },
-                { label: 'Gas Lock-In & Buyer Influence', href: 'gas_lockin_buyer_influence.html' }
+                { label: 'Gas Lock-In & Buyer Influence', href: 'gas_lockin_buyer_influence.html' },
+                { label: 'Solar/Wind Hybrids', href: 'hybrid_analysis.html' }
             ]
         },
         {
