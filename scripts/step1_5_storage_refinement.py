@@ -266,7 +266,7 @@ def _dominance_filter_batch(sorted_scores, sc_flat_idx, sc_h2p,
 
 
 def _load_floor_fine_mixes(iso):
-    """Load floor_pfs and fine_pfs parquets for an ISO.
+    """Load floor_pfs, fine_pfs, and augment parquets for an ISO.
 
     Returns (combos, scores) numpy arrays, or (None, None) if no files found.
     Extracts resource columns matching near-miss schema and uses
@@ -277,11 +277,14 @@ def _load_floor_fine_mixes(iso):
     all_scores = []
     rtypes = None  # will be set from first non-empty file
 
-    for suffix in ('floor_pfs', 'fine_pfs'):
+    for suffix in ('floor_pfs', 'fine_pfs', 'augment'):
+        import glob as _glob
         pattern = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
                                f'{iso}_t*_{suffix}.parquet')
-        import glob as _glob
-        files = sorted(_glob.glob(pattern))
+        # Also match split part files (e.g. _augment_part001.parquet)
+        part_pattern = os.path.join(s1.STEP1_RAW_PFS_PARQUET_DIR,
+                                    f'{iso}_t*_{suffix}_part*.parquet')
+        files = sorted(set(_glob.glob(pattern) + _glob.glob(part_pattern)))
         for fpath in files:
             table = pq.read_table(fpath)
             if table.num_rows == 0:
