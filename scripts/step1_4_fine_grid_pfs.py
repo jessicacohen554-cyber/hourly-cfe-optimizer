@@ -188,9 +188,6 @@ def generate_fine_grid(iso, include_hybrids=False):
     """
     cf_vals, sol_vals, wnd_vals, osw_vals, geo_vals, hydro_val, has_geo = _build_base_grid(iso)
 
-    explicit_sum = cf_vals + sol_vals + wnd_vals + hydro_val + osw_vals + geo_vals
-    ccs_vals = np.maximum(0, 100.0 - explicit_sum)
-
     N = len(cf_vals)
     print(f"  → {N:,} mixes after filtering")
 
@@ -200,7 +197,7 @@ def generate_fine_grid(iso, include_hybrids=False):
     mix_batch[:, 1] = sol_vals
     mix_batch[:, 2] = wnd_vals
     mix_batch[:, 3] = osw_vals
-    mix_batch[:, 4] = ccs_vals
+    # ccs_ccgt (index 4) left at zero — score on explicit clean resources only
     mix_batch[:, 5] = hydro_val
 
     if has_geo and geo_vals.max() > 0:
@@ -209,7 +206,7 @@ def generate_fine_grid(iso, include_hybrids=False):
     return mix_batch, resource_names, {
         'clean_firm': cf_vals.copy(), 'solar': sol_vals, 'wind': wnd_vals,
         'hydro': np.full(N, hydro_val), 'offshore_wind': osw_vals,
-        'geothermal': geo_vals.copy(), 'ccs_ccgt': ccs_vals,
+        'geothermal': geo_vals.copy(),
     }
 
 
@@ -327,7 +324,7 @@ def _process_hybrid_chunked(iso, demand_arr, supply_matrix):
     max_score = max(all_thresholds) + 5.0
 
     comp_keys = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind',
-                 'geothermal', 'ccs_ccgt', 'solar_batt4', 'solar_batt8',
+                 'geothermal', 'solar_batt4', 'solar_batt8',
                  'wind_batt4', 'wind_batt8']
     kept = {k: [] for k in comp_keys}
     kept_scores = []
@@ -369,16 +366,13 @@ def _process_hybrid_chunked(iso, demand_arr, supply_matrix):
         sb4 = c_sb4[mask]; sb8 = c_sb8[mask]
         wb4 = c_wb4[mask]; wb8 = c_wb8[mask]
 
-        explicit = cf + sol + wnd + hydro_val + osw + geo + sb4 + sb8 + wb4 + wb8
-        ccs = np.maximum(0, 100.0 - explicit)
-
         N = len(cf)
         mix_batch = np.zeros((N, n_cols), dtype=np.float64)
         mix_batch[:, col_map['clean_firm']] = (cf + geo) if has_geo else cf
         mix_batch[:, col_map['solar']] = sol
         mix_batch[:, col_map['wind']] = wnd
         mix_batch[:, col_map['offshore_wind']] = osw
-        mix_batch[:, col_map['ccs_ccgt']] = ccs
+        # ccs_ccgt left at zero — score on explicit clean resources only
         mix_batch[:, col_map['hydro']] = hydro_val
         mix_batch[:, col_map['solar_batt4']] = sb4
         mix_batch[:, col_map['solar_batt8']] = sb8
@@ -397,7 +391,6 @@ def _process_hybrid_chunked(iso, demand_arr, supply_matrix):
             kept['hydro'].append(np.full(nk, hydro_val))
             kept['offshore_wind'].append(osw[keep])
             kept['geothermal'].append(geo[keep])
-            kept['ccs_ccgt'].append(ccs[keep])
             kept['solar_batt4'].append(sb4[keep])
             kept['solar_batt8'].append(sb8[keep])
             kept['wind_batt4'].append(wb4[keep])
@@ -463,7 +456,7 @@ def assign_and_save(iso, scores, raw_components, output_dir, include_hybrids=Fal
     if thresholds_filter:
         all_thresholds = [t for t in all_thresholds if t in thresholds_filter]
 
-    # Output columns: base resource types (excluding ccs_ccgt which is implicit)
+    # Output columns: base resource types
     # plus geothermal and hybrids as applicable
     output_cols = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind']
     if iso in GEOTHERMAL_ISOS:
@@ -1129,7 +1122,7 @@ def process_iso(iso, demand_data, gen_profiles, include_hybrids=False,
     demand_norm, total_mwh = get_demand_profile(iso, demand_data)
     supply_profiles = get_supply_profiles(iso, gen_profiles)
 
-    # Build supply matrix — base 6D (RESOURCE_TYPES including ccs_ccgt)
+    # Build supply matrix — base 6D (RESOURCE_TYPES)
     supply_matrix = build_supply_matrix(supply_profiles)
 
     # Extend supply matrix with hybrid profiles if needed
