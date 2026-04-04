@@ -82,6 +82,66 @@ SOLAR_CAP = 100       # Max solar as % of demand
 TOTAL_PROCUREMENT_CAP = 350  # Max sum of all resources as % of demand
 
 
+MAX_PARQUET_SIZE_MB = 45  # Split files larger than this to stay under GitHub's 50 MB limit
+
+
+def split_large_parquets(directory, iso=None, max_mb=MAX_PARQUET_SIZE_MB):
+    """Split any parquet files larger than max_mb into smaller parts.
+
+    Files are split by rows into roughly equal parts, each under max_mb.
+    Original file is replaced with _part0, _part1, ... files.
+    Batch files (_batch_*) are skipped — they're transient.
+
+    Downstream readers use glob step_2_1_EF_{iso}_*.parquet (excluding _batch_),
+    so _partN files are picked up automatically.
+    """
+    import glob as globmod
+
+    if iso:
+        pattern = os.path.join(directory, f'step_2_1_EF_{iso}_*.parquet')
+    else:
+        pattern = os.path.join(directory, 'step_2_1_EF_*.parquet')
+
+    files = sorted(globmod.glob(pattern))
+    # Skip batch files and already-split part files
+    files = [f for f in files if '_batch_' not in os.path.basename(f)
+             and '_part' not in os.path.basename(f)]
+
+    split_count = 0
+    for fpath in files:
+        size_mb = os.path.getsize(fpath) / (1024 * 1024)
+        if size_mb <= max_mb:
+            continue
+
+        table = pq.read_table(fpath)
+        n_parts = int(size_mb / max_mb) + 1
+        rows_per_part = max(1, table.num_rows // n_parts)
+
+        base = os.path.basename(fpath)
+        stem = base.replace('.parquet', '')
+        print(f"  Splitting {base} ({size_mb:.1f} MB, {table.num_rows:,} rows) into {n_parts} parts...")
+
+        for p in range(n_parts):
+            start = p * rows_per_part
+            end = table.num_rows if p == n_parts - 1 else (p + 1) * rows_per_part
+            part_table = table.slice(start, end - start)
+            part_path = os.path.join(directory, f'{stem}_part{p}.parquet')
+            pq.write_table(part_table, part_path, compression='snappy')
+            part_size = os.path.getsize(part_path) / (1024 * 1024)
+            print(f"    {os.path.basename(part_path)}: {part_table.num_rows:,} rows, {part_size:.1f} MB")
+
+        # Remove original oversized file
+        os.remove(fpath)
+        print(f"    Removed original: {base}")
+        split_count += 1
+        del table
+        gc.collect()
+
+    if split_count > 0:
+        print(f"  Split {split_count} oversized file(s)")
+    return split_count
+
+
 def _detect_hybrids_in_schema(schema_names):
     """Check if any hybrid columns are present in a parquet schema."""
     return any(h in schema_names for h in HYBRID_TYPES)
@@ -620,6 +680,11 @@ def write_per_iso_threshold_outputs(results_by_iso, thresholds, batch_label=None
         total_files += iso_files
 
     print(f"  Total: {total_files} files written")
+
+    # Split any files that exceed GitHub's size limit
+    for iso in results_by_iso:
+        split_large_parquets(STEP2_EF_OUTPUT_DIR, iso=iso)
+
     return written
 
 
@@ -792,6 +857,9 @@ def merge_batch_outputs(iso):
 
     del bands
     gc.collect()
+
+    # Split any files that exceed GitHub's size limit
+    split_large_parquets(STEP2_EF_OUTPUT_DIR, iso=iso)
 
     # Clean up batch files after successful merge
     for bf in batch_files:
