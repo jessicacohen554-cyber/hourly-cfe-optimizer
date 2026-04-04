@@ -48,35 +48,16 @@ jobs:
           echo "::error::You must type 'REWRITE-HISTORY' to confirm. Aborting."
           exit 1
 
-      - name: Detect default branch
-        id: default_branch
-        run: |
-          # Query the GitHub API for the default branch name (don't hardcode master/main)
-          DEFAULT=$(gh api repos/${{ github.repository }} --jq '.default_branch' 2>/dev/null || echo "")
-          if [ -z "$DEFAULT" ]; then
-            # Fallback: parse the symbolic ref from origin/HEAD
-            DEFAULT=$(git ls-remote --symref origin HEAD 2>/dev/null | awk '/^ref:/{gsub("refs/heads/","",$2); print $2}')
-          fi
-          if [ -z "$DEFAULT" ]; then
-            echo "::error::Could not detect default branch. Aborting."
-            exit 1
-          fi
-          echo "default_branch=$DEFAULT" >> "$GITHUB_OUTPUT"
-          echo "Default branch: $DEFAULT"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Checkout full history
         uses: actions/checkout@v4
         with:
-          ref: ${{ steps.default_branch.outputs.default_branch }}
+          ref: master
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Fetch all branches and create local tracking branches
         run: |
           set -euo pipefail
-          DEFAULT_BRANCH="${{ steps.default_branch.outputs.default_branch }}"
 
           # Fetch everything including all remote branches and tags
           git fetch origin --force --tags --prune
@@ -109,13 +90,13 @@ jobs:
             exit 1
           fi
 
-          # Ensure default branch is at the absolute latest remote tip
-          git checkout "$DEFAULT_BRANCH"
-          git reset --hard "origin/$DEFAULT_BRANCH"
+          # Ensure master is at the absolute latest remote tip
+          git checkout master
+          git reset --hard origin/master
 
           total=$(git for-each-ref --format='%(refname:short)' refs/heads/ | wc -l)
           echo "Local branches: $total ($created newly created, $skipped already existed)"
-          echo "$DEFAULT_BRANCH HEAD: $(git log -1 --oneline)"
+          echo "Master HEAD: $(git log -1 --oneline)"
 
           # Sanity check
           if ! git diff --quiet; then
@@ -174,16 +155,10 @@ jobs:
           echo ""
           echo "Protected: $protected_count unique blob SHAs from $branch_count branches + $tag_count tags"
 
-          # Default-branch-specific values for summary
-          default_branch="${{ steps.default_branch.outputs.default_branch }}"
-          safe_default="${default_branch//\//__}"
-          default_manifest="$MANIFEST_DIR/${safe_default}.manifest"
-          if [ ! -f "$default_manifest" ]; then
-            echo "::error::Manifest for default branch '$default_branch' not found! Protected set may be incomplete."
-            exit 1
-          fi
-          head_file_count=$(wc -l < "$default_manifest")
-          head_manifest_hash=$(sha256sum "$default_manifest" | awk '{print $1}')
+          # Master-specific values for summary
+          master_manifest="$MANIFEST_DIR/master.manifest"
+          head_file_count=$(wc -l < "$master_manifest")
+          head_manifest_hash=$(sha256sum "$master_manifest" | awk '{print $1}')
 
           echo "manifest_dir=$MANIFEST_DIR" >> "$GITHUB_OUTPUT"
           echo "protected_blobs=$PROTECTED_BLOBS" >> "$GITHUB_OUTPUT"
@@ -193,7 +168,7 @@ jobs:
 
           # Show protected data/ breakdown
           echo ""
-          echo "--- Protected data/ files (default branch HEAD) ---"
+          echo "--- Protected data/ files (master HEAD) ---"
           for dir in data/eia-930 data/step1-pfs \
                      data/step2.1-ef data/step2.2-cost \
                      data/step3-dispatch data/step4-analysis \
