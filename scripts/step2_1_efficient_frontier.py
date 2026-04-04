@@ -523,9 +523,8 @@ def resource_cap_filter(table, iso, include_hybrids=False):
         total += table.column(col).to_numpy()
     mask &= total <= TOTAL_PROCUREMENT_CAP
 
-    # Hydro cap: existing share only — floor() to match integer PFS grid
-    import math
-    hydro_existing_pct = math.floor(GRID_MIX_SHARES[iso].get('hydro', 0))
+    # Hydro cap: existing share only — use raw float to avoid rounding errors
+    hydro_existing_pct = GRID_MIX_SHARES[iso].get('hydro', 0)
     hydro = table.column('hydro').to_numpy()
     mask &= hydro <= hydro_existing_pct
 
