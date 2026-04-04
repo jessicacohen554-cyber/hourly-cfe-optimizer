@@ -5,19 +5,18 @@ name: "Cleanup: Unified Data Directory Cleanup"
 # committing deletions. Directory folders are preserved — only files are removed.
 #
 # Directory map (toggle → actual path → file patterns):
-#   clear_step1_pfs         → data/step1-pfs/       {ISO}_*.parquet, {ISO}_*.json
-#   clear_step1_storage     → data/step1-pfs/       *_storage*.parquet, *_storage_manifest.json
-#   clear_step2_ef          → data/step2.1-ef/       step2_ef_*.parquet
-#   clear_step2_cost        → data/step2.2-cost/     step_2_2a_CO_*.parquet (cross-opt)
-#   clear_step2_dg          → data/step2.2-cost/     step_2_2a_DG_*.parquet (demand growth)
-#   clear_step3_dispatch    → data/step3-dispatch/   *.parquet, *.npz
-#   clear_step4_top         → data/step4-analysis/   top-level *.json, *.parquet
+#   clear_step1_pfs         → data/step1-pfs/           {ISO}_*.parquet, {ISO}_*.json
+#   clear_step1_storage     → data/step1-pfs/           *_storage*.parquet, *_storage_manifest.json
+#   clear_step2_ef          → data/step2.1-ef/           step_2_1_EF_{ISO}_*.parquet
+#   clear_step2_cost        → data/step2.2-cost/         step_2_2a_feasible_{ISO}.parquet + pre-hybrid/
+#   clear_step3_dispatch    → data/step3-dispatch/       mac_queue/{ISO}_*.parquet, *.json, *.npz
+#   clear_step4_top         → data/step4-analysis/       top-level *.json, *.parquet
 #   clear_step4_co2         → data/step4-analysis/co2_results/
 #   clear_step4_lmp         → data/step4-analysis/lmp/
 #   clear_step4_density     → data/step4-analysis/resource-density/
-#   clear_step5_scenarios   → data/step5-scenarios/  *.parquet, *.json
-#   clear_step5_wrights     → data/step5-wrights/    *.json, *.parquet
-#   clear_step6_smartargets → data/step6-smartargets/ *.parquet, *.json
+#   clear_step5_scenarios   → data/step5-scenarios/      *{ISO}*.parquet, *.json
+#   clear_step5_wrights     → data/step5-wrights/        *{ISO}*.json, *.parquet
+#   clear_step6_smartargets → data/step6-smartargets/    *{ISO}*.parquet, *.json
 
 on:
   workflow_dispatch:
@@ -38,11 +37,7 @@ on:
         default: false
         type: boolean
       clear_step2_cost:
-        description: 'Step 2.2 Cross-opt: data/step2.2-cost/ (step_2_2a_CO_*.parquet)'
-        default: false
-        type: boolean
-      clear_step2_dg:
-        description: 'Step 2.2 Demand Growth: data/step2.2-cost/ (step_2_2a_DG_*.parquet — 147 files)'
+        description: 'Step 2.2 Cost: data/step2.2-cost/ (feasible parquets + pre-hybrid/ + meta)'
         default: false
         type: boolean
 
@@ -124,7 +119,7 @@ jobs:
           for toggle in \
             "${{ inputs.clear_step1_pfs }}" "${{ inputs.clear_step1_storage }}" \
             "${{ inputs.clear_step2_ef }}" "${{ inputs.clear_step2_cost }}" \
-            "${{ inputs.clear_step2_dg }}" "${{ inputs.clear_step3_dispatch }}" \
+            "${{ inputs.clear_step3_dispatch }}" \
             "${{ inputs.clear_step4_top }}" "${{ inputs.clear_step4_co2 }}" \
             "${{ inputs.clear_step4_lmp }}" "${{ inputs.clear_step4_density }}" \
             "${{ inputs.clear_step5_scenarios }}" "${{ inputs.clear_step5_wrights }}" \
@@ -198,33 +193,27 @@ jobs:
             fi
           fi
 
-          # ── Step 2.2: cross-optimization (CO) parquets ──
+          # ── Step 2.2: cost optimization (feasible parquets + pre-hybrid + meta) ──
           if [ "${{ inputs.clear_step2_cost }}" = "true" ]; then
             DIR="data/step2.2-cost"
             if [ "$ISO" = "ALL" ]; then
-              add_files "$DIR" 1 "step_2_2a_CO_*.parquet" "empirical_resource_caps.json"
+              add_files "$DIR" 1 "step_2_2a_feasible_*.parquet" "step_2_2a_meta.json" "empirical_resource_caps.json"
+              add_files "$DIR/pre-hybrid" 1 "step_2_2a_feasible_*.parquet"
             else
-              add_files "$DIR" 1 "step_2_2a_CO_${ISO}.parquet"
+              add_files "$DIR" 1 "step_2_2a_feasible_${ISO}.parquet"
+              add_files "$DIR/pre-hybrid" 1 "step_2_2a_feasible_${ISO}.parquet"
             fi
           fi
 
-          # ── Step 2.2: demand growth (DG) parquets ──
-          if [ "${{ inputs.clear_step2_dg }}" = "true" ]; then
-            DIR="data/step2.2-cost"
-            if [ "$ISO" = "ALL" ]; then
-              add_files "$DIR" 1 "step_2_2a_DG_*.parquet"
-            else
-              add_files "$DIR" 1 "step_2_2a_DG_${ISO}_*.parquet"
-            fi
-          fi
-
-          # ── Step 3: dispatch cache ──
+          # ── Step 3: dispatch cache (top-level + mac_queue/) ──
           if [ "${{ inputs.clear_step3_dispatch }}" = "true" ]; then
             DIR="data/step3-dispatch"
             if [ "$ISO" = "ALL" ]; then
               add_files "$DIR" 1 "*.parquet" "*.npz" "*.json"
+              add_files "$DIR/mac_queue" 1 "*.parquet" "*.json"
             else
-              add_files "$DIR" 1 "${ISO}_*.parquet" "${ISO}_*.npz"
+              add_files "$DIR" 1 "${ISO}_*.parquet" "${ISO}_*.npz" "${ISO}_*.json"
+              add_files "$DIR/mac_queue" 1 "mac_queue_${ISO}.parquet" "scenario_a_${ISO}.json"
             fi
           fi
 
@@ -271,14 +260,21 @@ jobs:
           # ── Step 5: scenarios / procurement ──
           if [ "${{ inputs.clear_step5_scenarios }}" = "true" ]; then
             DIR="data/step5-scenarios"
-            # No ISO dimension — strategy files span all ISOs
-            add_files "$DIR" 1 "*.parquet" "*.json"
+            if [ "$ISO" = "ALL" ]; then
+              add_files "$DIR" 1 "*.parquet" "*.json"
+            else
+              add_files "$DIR" 1 "*${ISO}*.parquet" "*${ISO}*.json"
+            fi
           fi
 
           # ── Step 5: Wright's Law ──
           if [ "${{ inputs.clear_step5_wrights }}" = "true" ]; then
             DIR="data/step5-wrights"
-            add_files "$DIR" 1 "*.json" "*.parquet"
+            if [ "$ISO" = "ALL" ]; then
+              add_files "$DIR" 1 "*.json" "*.parquet"
+            else
+              add_files "$DIR" 1 "*${ISO}*.json" "*${ISO}*.parquet"
+            fi
           fi
 
           # ── Step 6: SMARTargets ──
@@ -313,14 +309,16 @@ jobs:
 
           # Group by directory
           for dir in data/step1-pfs data/step2.1-ef data/step2.2-cost \
-                     data/step3-dispatch data/step4-analysis \
+                     data/step2.2-cost/pre-hybrid \
+                     data/step3-dispatch data/step3-dispatch/mac_queue \
+                     data/step4-analysis \
                      data/step4-analysis/co2_results \
                      data/step4-analysis/lmp data/step4-analysis/resource-density \
                      data/step5-scenarios data/step5-wrights \
                      data/step6-smartargets; do
             matched=$(grep "^${dir}/" "$FILES" 2>/dev/null | grep -v "^${dir}/.*/" || true)
             # For subdirectories, get their specific files
-            if echo "$dir" | grep -q "/co2_results\|/lmp\|/resource-density"; then
+            if echo "$dir" | grep -q "/co2_results\|/lmp\|/resource-density\|/pre-hybrid\|/mac_queue"; then
               matched=$(grep "^${dir}/" "$FILES" 2>/dev/null || true)
             fi
             if [ -n "$matched" ]; then
@@ -385,8 +383,7 @@ jobs:
           [ "${{ inputs.clear_step1_pfs }}" = "true" ]         && DIRS="${DIRS} step1-pfs"
           [ "${{ inputs.clear_step1_storage }}" = "true" ]     && DIRS="${DIRS} step1-storage"
           [ "${{ inputs.clear_step2_ef }}" = "true" ]          && DIRS="${DIRS} step2.1-ef"
-          [ "${{ inputs.clear_step2_cost }}" = "true" ]        && DIRS="${DIRS} step2.2-CO"
-          [ "${{ inputs.clear_step2_dg }}" = "true" ]          && DIRS="${DIRS} step2.2-DG"
+          [ "${{ inputs.clear_step2_cost }}" = "true" ]        && DIRS="${DIRS} step2.2-cost"
           [ "${{ inputs.clear_step3_dispatch }}" = "true" ]    && DIRS="${DIRS} step3-dispatch"
           [ "${{ inputs.clear_step4_top }}" = "true" ]         && DIRS="${DIRS} step4-top"
           [ "${{ inputs.clear_step4_co2 }}" = "true" ]         && DIRS="${DIRS} step4-co2"
@@ -430,8 +427,7 @@ jobs:
           [ "${{ inputs.clear_step1_pfs }}" = "true" ]         && echo "    ✓ data/step1-pfs/ (full PFS)"
           [ "${{ inputs.clear_step1_storage }}" = "true" ]     && echo "    ✓ data/step1-pfs/ (storage only)"
           [ "${{ inputs.clear_step2_ef }}" = "true" ]          && echo "    ✓ data/step2.1-ef/ (efficient frontier)"
-          [ "${{ inputs.clear_step2_cost }}" = "true" ]        && echo "    ✓ data/step2.2-cost/ (cross-opt CO)"
-          [ "${{ inputs.clear_step2_dg }}" = "true" ]          && echo "    ✓ data/step2.2-cost/ (demand growth DG — 147 files)"
+          [ "${{ inputs.clear_step2_cost }}" = "true" ]        && echo "    ✓ data/step2.2-cost/ (feasible + pre-hybrid + meta)"
           [ "${{ inputs.clear_step3_dispatch }}" = "true" ]    && echo "    ✓ data/step3-dispatch/"
           [ "${{ inputs.clear_step4_top }}" = "true" ]         && echo "    ✓ data/step4-analysis/ (top-level)"
           [ "${{ inputs.clear_step4_co2 }}" = "true" ]         && echo "    ✓ data/step4-analysis/co2_results/"
