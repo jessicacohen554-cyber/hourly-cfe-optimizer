@@ -111,8 +111,8 @@ on:
           - MISO
           - SPP
       dry_run:
-        description: 'Preview only — list files that would be deleted without changing anything'
-        default: true
+        description: 'Preview only — list files without deleting. Set to false to actually delete.'
+        default: false
         type: boolean
       branch:
         description: 'Branch to commit the deletion to'
