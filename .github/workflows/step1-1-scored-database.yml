@@ -146,7 +146,7 @@ jobs:
         echo "=== Scored cache files (parts) ==="
         ls -lh data/step1-pfs/*_coarse_cache_part*.parquet 2>/dev/null || echo "No part files"
 
-    - name: Commit results
+    - name: Commit and push results (per-file ≤45 MB)
       if: inputs.dry_run != true && always()
       run: |
         ISO_LABEL="${{ inputs.iso }}"
@@ -155,6 +155,17 @@ jobs:
         else
           ISOS="$ISO_LABEL"
         fi
+
+        # Helper: push with retry (exponential backoff)
+        push_with_retry() {
+          for attempt in 1 2 3 4; do
+            git push -u origin "$TARGET_BRANCH" 2>&1 && return 0
+            echo "  Push attempt $attempt failed, retrying in $((2**attempt))s..."
+            sleep $((2**attempt))
+          done
+          echo "::error::Push failed after 4 attempts"
+          return 1
+        }
 
         for iso in $ISOS; do
           echo ""
@@ -172,6 +183,8 @@ jobs:
               BATCH_MB=$(du -cm $MIXES | tail -1 | cut -f1)
               echo "  Staging mixes: ~${BATCH_MB} MB"
               git commit -m "Step 1.1: ${iso} mixes — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              echo "  Pushing ${iso} mixes..."
+              push_with_retry
             fi
           fi
 
@@ -190,10 +203,12 @@ jobs:
                 BATCH_MB=$(du -cm $CACHE_SINGLE | tail -1 | cut -f1)
                 echo "  Staging cache: ~${BATCH_MB} MB"
                 git commit -m "Step 1.1: ${iso} scored cache — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                echo "  Pushing ${iso} cache..."
+                push_with_retry
               fi
             fi
           elif [ -n "$CACHE_PARTS" ]; then
-            # Commit each part file individually to stay under push limits
+            # Commit + push each part file individually to stay under push limits
             for part in $CACHE_PARTS; do
               PART_SIZE=$(stat -c%s "$part" 2>/dev/null || echo "0")
               if [ "$PART_SIZE" -lt 100 ]; then
@@ -207,6 +222,8 @@ jobs:
                 PART_NAME=$(basename "$part")
                 echo "  Staging $PART_NAME: ~${PART_MB} MB"
                 git commit -m "Step 1.1: ${iso} scored cache ${PART_NAME} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                echo "  Pushing ${PART_NAME}..."
+                push_with_retry
               fi
             done
           else
@@ -214,15 +231,6 @@ jobs:
           fi
         done
 
-    - name: Push results
-      if: inputs.dry_run != true && always()
-      run: |
-        # Push with retry (exponential backoff)
-        for i in 1 2 3 4; do
-          git push -u origin "$TARGET_BRANCH" && break
-          echo "Push attempt $i failed, retrying in $((2**i))s..."
-          sleep $((2**i))
-        done
         echo ""
         echo "════════════════════════════════════════════════════"
         echo "  Branch: $TARGET_BRANCH"
