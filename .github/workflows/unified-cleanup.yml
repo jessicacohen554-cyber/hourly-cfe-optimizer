@@ -5,8 +5,11 @@ name: "Cleanup: Unified Data Directory Cleanup"
 # committing deletions. Directory folders are preserved — only files are removed.
 #
 # Directory map (toggle → actual path → file patterns):
-#   clear_step1_pfs         → data/step1-pfs/           {ISO}_*.parquet, {ISO}_*.json
-#   clear_step1_storage     → data/step1-pfs/           *_storage*.parquet, *_storage_manifest.json
+#   clear_step1_pfs         → data/step1-pfs/           ALL files (mixes + raw + floor + fine + storage)
+#   clear_step1_raw         → data/step1-pfs/           *_raw_pfs*, *_coarse_cache*, *_mixes*, *_near_miss*  (Step 1.1/1.2)
+#   clear_step1_floor       → data/step1-pfs/           *_floor_pfs*  (Step 1.3)
+#   clear_step1_fine        → data/step1-pfs/           *_fine_pfs*   (Step 1.4)
+#   clear_step1_storage     → data/step1-pfs/           *_storage*.parquet, *_storage_manifest.json  (Step 1.5)
 #   clear_step2_ef          → data/step2.1-ef/           step_2_1_EF_{ISO}_*.parquet
 #   clear_step2_cost        → data/step2.2-cost/         step_2_2a_feasible_{ISO}.parquet + pre-hybrid/
 #   clear_step3_dispatch    → data/step3-dispatch/       mac_queue/{ISO}_*.parquet, *.json, *.npz
@@ -23,11 +26,23 @@ on:
     inputs:
       # ── Step 1: Physics Feasible Space ──
       clear_step1_pfs:
-        description: 'Step 1 PFS: data/step1-pfs/ (mixes, coarse cache, near-miss, raw/floor PFS)'
+        description: 'Step 1 ALL: data/step1-pfs/ (everything — raw, floor, fine, storage, caches)'
+        default: false
+        type: boolean
+      clear_step1_raw:
+        description: 'Step 1.1/1.2 Raw PFS: *_raw_pfs*, *_coarse_cache*, *_mixes*, *_near_miss*'
+        default: false
+        type: boolean
+      clear_step1_floor:
+        description: 'Step 1.3 Floor PFS: *_floor_pfs*'
+        default: false
+        type: boolean
+      clear_step1_fine:
+        description: 'Step 1.4 Fine PFS: *_fine_pfs*'
         default: false
         type: boolean
       clear_step1_storage:
-        description: 'Step 1 Storage only: data/step1-pfs/ (*_storage*.parquet only)'
+        description: 'Step 1.5 Storage: *_storage*.parquet, *_storage_manifest.json'
         default: false
         type: boolean
 
@@ -117,7 +132,9 @@ jobs:
         run: |
           ANY_SELECTED="false"
           for toggle in \
-            "${{ inputs.clear_step1_pfs }}" "${{ inputs.clear_step1_storage }}" \
+            "${{ inputs.clear_step1_pfs }}" "${{ inputs.clear_step1_raw }}" \
+            "${{ inputs.clear_step1_floor }}" "${{ inputs.clear_step1_fine }}" \
+            "${{ inputs.clear_step1_storage }}" \
             "${{ inputs.clear_step2_ef }}" "${{ inputs.clear_step2_cost }}" \
             "${{ inputs.clear_step3_dispatch }}" \
             "${{ inputs.clear_step4_top }}" "${{ inputs.clear_step4_co2 }}" \
@@ -163,7 +180,7 @@ jobs:
             done
           }
 
-          # ── Step 1: PFS parquets ──
+          # ── Step 1: ALL PFS parquets ──
           if [ "${{ inputs.clear_step1_pfs }}" = "true" ]; then
             DIR="data/step1-pfs"
             if [ "$ISO" = "ALL" ]; then
@@ -173,7 +190,37 @@ jobs:
             fi
           fi
 
-          # ── Step 1: storage parquets only (in step1-pfs/) ──
+          # ── Step 1.1/1.2: raw PFS + zone search + coarse caches ──
+          if [ "${{ inputs.clear_step1_raw }}" = "true" ]; then
+            DIR="data/step1-pfs"
+            if [ "$ISO" = "ALL" ]; then
+              add_files "$DIR" 1 "*_raw_pfs*.parquet" "*_coarse_cache*" "*_mixes*" "*_near_miss*"
+            else
+              add_files "$DIR" 1 "${ISO}_*_raw_pfs*.parquet" "${ISO}_*coarse_cache*" "${ISO}_*mixes*" "${ISO}_*near_miss*"
+            fi
+          fi
+
+          # ── Step 1.3: floor-aware PFS ──
+          if [ "${{ inputs.clear_step1_floor }}" = "true" ]; then
+            DIR="data/step1-pfs"
+            if [ "$ISO" = "ALL" ]; then
+              add_files "$DIR" 1 "*_floor_pfs*.parquet"
+            else
+              add_files "$DIR" 1 "${ISO}_*_floor_pfs*.parquet"
+            fi
+          fi
+
+          # ── Step 1.4: fine-grid PFS ──
+          if [ "${{ inputs.clear_step1_fine }}" = "true" ]; then
+            DIR="data/step1-pfs"
+            if [ "$ISO" = "ALL" ]; then
+              add_files "$DIR" 1 "*_fine_pfs*.parquet"
+            else
+              add_files "$DIR" 1 "${ISO}_*_fine_pfs*.parquet"
+            fi
+          fi
+
+          # ── Step 1.5: storage parquets only (in step1-pfs/) ──
           if [ "${{ inputs.clear_step1_storage }}" = "true" ]; then
             DIR="data/step1-pfs"
             if [ "$ISO" = "ALL" ]; then
@@ -380,8 +427,11 @@ jobs:
 
           # Build directory list for commit message
           DIRS=""
-          [ "${{ inputs.clear_step1_pfs }}" = "true" ]         && DIRS="${DIRS} step1-pfs"
-          [ "${{ inputs.clear_step1_storage }}" = "true" ]     && DIRS="${DIRS} step1-storage"
+          [ "${{ inputs.clear_step1_pfs }}" = "true" ]         && DIRS="${DIRS} step1-pfs(all)"
+          [ "${{ inputs.clear_step1_raw }}" = "true" ]         && DIRS="${DIRS} step1-raw(1.1/1.2)"
+          [ "${{ inputs.clear_step1_floor }}" = "true" ]       && DIRS="${DIRS} step1-floor(1.3)"
+          [ "${{ inputs.clear_step1_fine }}" = "true" ]        && DIRS="${DIRS} step1-fine(1.4)"
+          [ "${{ inputs.clear_step1_storage }}" = "true" ]     && DIRS="${DIRS} step1-storage(1.5)"
           [ "${{ inputs.clear_step2_ef }}" = "true" ]          && DIRS="${DIRS} step2.1-ef"
           [ "${{ inputs.clear_step2_cost }}" = "true" ]        && DIRS="${DIRS} step2.2-cost"
           [ "${{ inputs.clear_step3_dispatch }}" = "true" ]    && DIRS="${DIRS} step3-dispatch"
@@ -424,8 +474,11 @@ jobs:
           echo "  Dry run:     ${{ inputs.dry_run }}"
           echo ""
           echo "  Directories selected:"
-          [ "${{ inputs.clear_step1_pfs }}" = "true" ]         && echo "    ✓ data/step1-pfs/ (full PFS)"
-          [ "${{ inputs.clear_step1_storage }}" = "true" ]     && echo "    ✓ data/step1-pfs/ (storage only)"
+          [ "${{ inputs.clear_step1_pfs }}" = "true" ]         && echo "    ✓ data/step1-pfs/ (ALL — raw, floor, fine, storage, caches)"
+          [ "${{ inputs.clear_step1_raw }}" = "true" ]         && echo "    ✓ data/step1-pfs/ (Step 1.1/1.2 — raw PFS, coarse cache, mixes, near-miss)"
+          [ "${{ inputs.clear_step1_floor }}" = "true" ]       && echo "    ✓ data/step1-pfs/ (Step 1.3 — floor PFS)"
+          [ "${{ inputs.clear_step1_fine }}" = "true" ]        && echo "    ✓ data/step1-pfs/ (Step 1.4 — fine PFS)"
+          [ "${{ inputs.clear_step1_storage }}" = "true" ]     && echo "    ✓ data/step1-pfs/ (Step 1.5 — storage only)"
           [ "${{ inputs.clear_step2_ef }}" = "true" ]          && echo "    ✓ data/step2.1-ef/ (efficient frontier)"
           [ "${{ inputs.clear_step2_cost }}" = "true" ]        && echo "    ✓ data/step2.2-cost/ (feasible + pre-hybrid + meta)"
           [ "${{ inputs.clear_step3_dispatch }}" = "true" ]    && echo "    ✓ data/step3-dispatch/"
