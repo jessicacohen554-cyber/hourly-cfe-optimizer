@@ -697,38 +697,82 @@ AUGMENT_MAX_OUTPUT = 50_000   # Max diverse archetypes per band
 
 
 def _count_pfs_mixes_per_threshold(iso):
-    """Count raw PFS mixes per threshold from existing parquet files.
+    """Count UNIQUE PFS mixes per threshold band from existing parquet files.
 
     Scans all PFS parquets (coarse, floor, fine, storage, near_miss) for
-    this ISO and counts how many mixes fall in each threshold band.
+    this ISO, deduplicates by (resource + storage dispatch) key keeping
+    max score, then counts how many unique mixes fall in each threshold band.
+
+    Dedup is critical because batch files (b0/b1/b2) contain the same
+    resource combos at different storage dispatch levels. Without dedup,
+    the count is inflated 3-4x, causing thin bands to appear healthy and
+    skipping augmentation that's actually needed.
+
     Returns dict: {threshold: count}.
     """
     import glob as _glob
-    counts = {t: 0 for t in AUGMENT_THRESHOLDS}
+    import pandas as pd
+
+    # Resource columns present in PFS files (superset across file types)
+    RESOURCE_COLS = ['clean_firm', 'solar', 'wind', 'hydro', 'offshore_wind',
+                     'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
+    STORAGE_DISPATCH_COLS = ['battery_dispatch_pct', 'battery8_dispatch_pct',
+                             'ldes_dispatch_pct', 'h2_dispatch_pct']
+    LOAD_COLS = RESOURCE_COLS + STORAGE_DISPATCH_COLS + ['hourly_match_score']
 
     pattern = os.path.join(OUTPUT_DIR, f'{iso}_*.parquet')
     files = sorted(_glob.glob(pattern))
+
+    all_chunks = []
     for fpath in files:
-        # Skip augment files (we're computing whether augmentation is needed)
         if '_augment' in os.path.basename(fpath):
             continue
         try:
-            table = pq.read_table(fpath, columns=['hourly_match_score'])
+            schema = pq.read_schema(fpath)
+            available = [c for c in LOAD_COLS if c in schema.names]
+            table = pq.read_table(fpath, columns=available)
             if table.num_rows == 0:
                 continue
-            scores = table.column('hourly_match_score').to_numpy()
-            for t in AUGMENT_THRESHOLDS:
-                # Same band window as step 1.6
-                idx = AUGMENT_THRESHOLDS.index(t)
-                if idx + 1 < len(AUGMENT_THRESHOLDS):
-                    band_ceil = AUGMENT_THRESHOLDS[idx + 1]
-                else:
-                    band_ceil = t + 5.0
-                band_floor = t - 0.5
-                in_band = ((scores >= band_floor) & (scores < band_ceil + 0.5)).sum()
-                counts[t] += int(in_band)
+            df = table.to_pandas()
+            # Fill missing columns with 0
+            for c in LOAD_COLS:
+                if c not in df.columns:
+                    df[c] = 0.0
+            all_chunks.append(df[LOAD_COLS])
         except Exception:
             continue
+
+    counts = {t: 0 for t in AUGMENT_THRESHOLDS}
+    if not all_chunks:
+        return counts
+
+    combined = pd.concat(all_chunks, ignore_index=True)
+    del all_chunks
+
+    # Round resources to int and scale storage dispatch to match Step 2.1 dedup
+    key_cols = []
+    for c in RESOURCE_COLS:
+        col_name = f'_k_{c}'
+        combined[col_name] = combined[c].round().astype(np.int32)
+        key_cols.append(col_name)
+    STORAGE_SCALE = 20
+    for c in STORAGE_DISPATCH_COLS:
+        col_name = f'_k_{c}'
+        combined[col_name] = (combined[c] * STORAGE_SCALE).round().astype(np.int32)
+        key_cols.append(col_name)
+
+    # Dedup: keep max score per unique (resource + storage) key
+    deduped = combined.groupby(key_cols, sort=False)['hourly_match_score'].max().reset_index()
+    scores = deduped['hourly_match_score'].to_numpy()
+    del combined, deduped
+
+    # Count per threshold band (same logic as partition_by_threshold_band)
+    sorted_thrs = sorted(AUGMENT_THRESHOLDS)
+    band_indices = np.searchsorted(sorted_thrs, scores, side='right') - 1
+    band_indices = np.clip(band_indices, 0, len(sorted_thrs) - 1)
+
+    for i, t in enumerate(sorted_thrs):
+        counts[t] = int((band_indices == i).sum())
 
     return counts
 
@@ -1089,7 +1133,7 @@ def run_augmentation(iso, demand_arr, supply_matrix, include_hybrids=False):
 # ============================================================================
 
 def process_iso(iso, demand_data, gen_profiles, include_hybrids=False,
-                thresholds_filter=None, resume=False, augment=False):
+                thresholds_filter=None, resume=False, augment=True):
     """Run fine-grid PFS generation for a single ISO."""
     # Auto-detect hybrid mode from coarse cache (supports multi-part files)
     coarse_schema = s1.read_coarse_cache_schema(iso)
