@@ -175,7 +175,7 @@ jobs:
                      data/step5-scenarios data/step5-wrights \
                      data/step6-smartargets; do
             count=$(git ls-tree -r HEAD -- "$dir" 2>/dev/null | wc -l)
-            [ "$count" -gt 0 ] && echo "  ${dir}/  →  ${count} live files"
+            if [ "$count" -gt 0 ]; then echo "  ${dir}/  →  ${count} live files"; fi
           done
 
       - name: Enumerate and classify historical blobs
