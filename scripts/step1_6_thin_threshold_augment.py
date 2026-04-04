@@ -56,6 +56,8 @@ except ImportError:
     print("ERROR: pyarrow required. pip install pyarrow")
     sys.exit(1)
 
+from parquet_utils import write_parquet_chunked
+
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 PFS_DIR = os.path.join(PROJECT_ROOT, 'data', 'step1-pfs')
 EF_DIR = os.path.join(PROJECT_ROOT, 'data', 'step2.1-ef')
@@ -396,10 +398,13 @@ def save_augment_parquet(iso, thresh, scores, raw):
 
     thresh_str = f'{thresh:g}'
     out_path = os.path.join(PFS_DIR, f'{iso}_t{thresh_str}_augment.parquet')
-    pq.write_table(table, out_path, compression='snappy')
-    size_kb = os.path.getsize(out_path) / 1024
-    print(f"    Saved {out_path} ({N:,} mixes, {size_kb:.0f} KB)")
-    return out_path
+    written = write_parquet_chunked(table, out_path, max_mb=45, compression='snappy')
+    total_kb = sum(os.path.getsize(f) for f in written) / 1024
+    if len(written) == 1:
+        print(f"    Saved {out_path} ({N:,} mixes, {total_kb:.0f} KB)")
+    else:
+        print(f"    Saved {len(written)} parts ({N:,} mixes, {total_kb:.0f} KB total)")
+    return written
 
 
 def main():
