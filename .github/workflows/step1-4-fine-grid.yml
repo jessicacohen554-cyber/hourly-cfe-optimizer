@@ -1,10 +1,14 @@
-name: "Step 1.4: Fine-Grid PFS"
+name: "Step 1.4: Fine-Grid PFS + Augmentation"
 
-# Fine-grid PFS for 40-75% thresholds (1% step).
+# Fine-grid PFS for 40-75% thresholds (1% step), plus thin-band augmentation
+# for 50-99.9% thresholds (merged from former step 1.6).
 # Each ISO runs on its own runner in parallel.
 # Supports threshold filtering, resume mode, and mid-run commits.
 #
-# Output: data/step1-pfs/{ISO}_*.parquet
+# Output: data/step1-pfs/{ISO}_*fine_pfs.parquet + {ISO}_*augment.parquet
+#
+# Commit/push strategy: each file is committed and pushed individually
+# to stay under GitHub's 50 MB limit and avoid large-push failures.
 
 on:
   workflow_dispatch:
@@ -28,6 +32,11 @@ on:
         required: false
         default: ''
         type: string
+      augment:
+        description: 'After fine-grid, augment thin bands (50-99.9%) with 50K diverse mixes'
+        required: false
+        default: true
+        type: boolean
       resume:
         description: 'Skip thresholds that already have output files'
         required: false
@@ -80,7 +89,6 @@ jobs:
 
     permissions:
       contents: write
-      workflows: write
 
     steps:
     - name: Checkout repo
@@ -114,10 +122,11 @@ jobs:
     - name: Ensure output directory
       run: mkdir -p data/step1-pfs
 
-    - name: "Run Fine-Grid PFS — ${{ matrix.iso }}"
+    - name: "Run Fine-Grid PFS + Augmentation — ${{ matrix.iso }}"
       run: |
         THRESHOLDS="${{ needs.prepare.outputs.thresholds }}"
         RESUME="${{ inputs.resume }}"
+        AUGMENT="${{ inputs.augment }}"
         echo "═══════════════════════════════════════════════════════════"
         if [ -n "$THRESHOLDS" ]; then
           echo "  ISO: ${{ matrix.iso }}  |  Fine-Grid PFS  |  Thresholds: $THRESHOLDS"
@@ -126,6 +135,9 @@ jobs:
         fi
         if [ "$RESUME" = "true" ]; then
           echo "  Resume mode: ON (skipping completed thresholds)"
+        fi
+        if [ "$AUGMENT" = "true" ]; then
+          echo "  Augment mode: ON (fill thin bands 50-99.9%)"
         fi
         echo "═══════════════════════════════════════════════════════════"
 
@@ -136,6 +148,9 @@ jobs:
         if [ "$RESUME" = "true" ]; then
           ARGS="$ARGS --resume"
         fi
+        if [ "$AUGMENT" = "true" ]; then
+          ARGS="$ARGS --augment"
+        fi
         eval python scripts/step1_4_fine_grid_pfs.py $ARGS
 
     - name: Split any oversized parquets (safety net)
@@ -143,64 +158,84 @@ jobs:
       run: |
         ISO="${{ matrix.iso }}"
         MAX_MB=45
-        for f in data/step1-pfs/"${ISO}"_*fine_pfs*.parquet; do
+        for f in data/step1-pfs/"${ISO}"_*.parquet; do
           [ -f "$f" ] || continue
+          # Skip part files (already split)
+          echo "$f" | grep -q '_part[0-9]' && continue
           SIZE_MB=$(du -m "$f" | cut -f1)
           if [ "$SIZE_MB" -gt "$MAX_MB" ]; then
             echo "⚠ $f is ${SIZE_MB}MB (>${MAX_MB}MB), re-splitting..."
-            python3 -c "import sys; sys.path.insert(0, 'scripts'); from parquet_utils import write_parquet_chunked; import pyarrow.parquet as pq; import os; t=pq.read_table('$f'); os.remove('$f'); parts=write_parquet_chunked(t, '$f', max_mb=$MAX_MB); print(f'Re-split into {len(parts)} parts')"
+            python3 -c "
+import sys; sys.path.insert(0, 'scripts')
+from parquet_utils import write_parquet_chunked
+import pyarrow.parquet as pq
+import os
+t = pq.read_table('$f')
+os.remove('$f')
+parts = write_parquet_chunked(t, '$f', max_mb=$MAX_MB)
+print(f'Re-split into {len(parts)} parts')
+"
           fi
         done
 
-    - name: Commit any remaining results
+    - name: Commit and push each file individually (≤45 MB per push)
       if: always()
       run: |
         ISO="${{ matrix.iso }}"
-        COMMITTED=0
-        for f in data/step1-pfs/"${ISO}"_*fine_pfs*.parquet; do
+        SOURCE_BRANCH="${{ inputs.branch || 'master' }}"
+        PUSHED=0
+
+        # Push branch first to create remote ref
+        git push -u origin "$TARGET_BRANCH" 2>/dev/null || true
+
+        # Commit and push each parquet file individually
+        for f in $(ls -1S data/step1-pfs/"${ISO}"_*.parquet 2>/dev/null); do
           [ -f "$f" ] || continue
+
           # Skip files already committed by mid-run commits
-          git diff --cached --quiet -- "$f" 2>/dev/null
-          git status --porcelain "$f" | grep -q . || continue
+          git status --porcelain "$f" 2>/dev/null | grep -q . || continue
+
           SIZE_MB=$(du -m "$f" | cut -f1)
+          FNAME=$(basename "$f")
+
           if [ "$SIZE_MB" -gt 49 ]; then
-            echo "ERROR: $f is ${SIZE_MB}MB — still over limit after splitting, skipping"
+            echo "ERROR: $FNAME is ${SIZE_MB}MB — over limit, skipping"
             continue
           fi
+
+          echo "── ${FNAME} (${SIZE_MB}MB) ──"
+
           git add -f "$f"
-          if ! git diff --cached --quiet; then
-            FNAME=$(basename "$f")
-            git commit -m "Step 1.4 Fine: ${ISO} ${FNAME} (${SIZE_MB}MB) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            COMMITTED=$((COMMITTED + 1))
+          if git diff --cached --quiet; then
+            echo "  (no changes, skipping)"
+            continue
           fi
+          git commit -m "Step 1.4: ${ISO} ${FNAME} (${SIZE_MB}MB) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          # Push immediately after each commit
+          for attempt in 1 2 3 4; do
+            if git push origin "$TARGET_BRANCH"; then
+              echo "  ✓ pushed"
+              PUSHED=$((PUSHED + 1))
+              break
+            fi
+            echo "  Push attempt $attempt failed, retrying in $((2**attempt))s..."
+            sleep $((2**attempt))
+          done
         done
-        # Also commit near_miss updates
-        NM="data/step1-pfs/${ISO}_near_miss.parquet"
-        if [ -f "$NM" ]; then
-          git add -f "$NM"
-          if ! git diff --cached --quiet; then
-            git commit -m "Step 1.4 Fine: ${ISO} near_miss update — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            COMMITTED=$((COMMITTED + 1))
-          fi
-        fi
-        if [ "$COMMITTED" -eq 0 ]; then
-          echo "No new uncommitted results"
-        else
-          echo "Committed $COMMITTED remaining file(s)"
+
+        # Also push any mid-run commits that weren't pushed yet
+        if git log --oneline "origin/$TARGET_BRANCH..HEAD" 2>/dev/null | grep -q .; then
+          echo "Pushing remaining mid-run commits..."
+          for attempt in 1 2 3 4; do
+            git push origin "$TARGET_BRANCH" && break
+            sleep $((2**attempt))
+          done
         fi
 
-    - name: Push results
-      if: always()
-      run: |
-        # Check if there are any commits to push
-        if git log --oneline origin/${{ inputs.branch || 'master' }}..HEAD 2>/dev/null | grep -q .; then
-          for i in 1 2 3 4; do
-            git push -u origin "$TARGET_BRANCH" && break
-            echo "Push attempt $i failed, retrying in $((2**i))s..."
-            sleep $((2**i))
-          done
-          echo "Branch: $TARGET_BRANCH"
-          echo "Merge this branch into master to bank the PFS results."
+        if [ "$PUSHED" -eq 0 ]; then
+          echo "No new results to push"
         else
-          echo "No commits to push"
+          echo "Pushed $PUSHED file(s). Branch: $TARGET_BRANCH"
+          echo "Merge into ${SOURCE_BRANCH} to bank PFS results."
         fi

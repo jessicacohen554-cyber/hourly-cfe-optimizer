@@ -86,7 +86,6 @@ jobs:
 
     permissions:
       contents: write
-      workflows: write
 
     steps:
       - name: Checkout repo
@@ -116,7 +115,7 @@ jobs:
           TOTAL=$(ls data/step1-pfs/${ISO}_t* 2>/dev/null | wc -l)
           echo "Found PFS parquets for ${ISO}: ${TOTAL} files (${RAW_COUNT} raw, ${AUG_COUNT} augment)"
           if [ "$AUG_COUNT" -eq 0 ]; then
-            echo "::warning::No augment parquets found for ${ISO}. Run Step 1.6 first to supplement thin threshold bands, or EF may be sparse at lower thresholds."
+            echo "::warning::No augment parquets found for ${ISO}. Run Step 1.4 with --augment to supplement thin threshold bands, or EF may be sparse at lower thresholds."
           fi
 
       - name: Set up Python
@@ -214,7 +213,6 @@ jobs:
 
     permissions:
       contents: write
-      workflows: write
 
     steps:
       - name: Checkout repo
@@ -244,7 +242,7 @@ jobs:
           TOTAL=$(ls data/step1-pfs/${ISO}_t* 2>/dev/null | wc -l)
           echo "Found PFS parquets for ${ISO}: ${TOTAL} files (${RAW_COUNT} raw, ${AUG_COUNT} augment)"
           if [ "$AUG_COUNT" -eq 0 ]; then
-            echo "::warning::No augment parquets found for ${ISO}. Run Step 1.6 first to supplement thin threshold bands, or EF may be sparse at lower thresholds."
+            echo "::warning::No augment parquets found for ${ISO}. Run Step 1.4 with --augment to supplement thin threshold bands, or EF may be sparse at lower thresholds."
           fi
           STORAGE_COUNT=$(ls data/step1-pfs/${{ matrix.iso }}_*_storage*.parquet 2>/dev/null | wc -l)
           echo "Storage files: $STORAGE_COUNT"
