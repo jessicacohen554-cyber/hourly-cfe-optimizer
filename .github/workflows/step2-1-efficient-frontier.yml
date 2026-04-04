@@ -139,6 +139,36 @@ jobs:
           fi
           python scripts/step2_1_efficient_frontier.py $ARGS
 
+      - name: Split oversized parquets
+        run: |
+          python -c "
+          import os, pyarrow.parquet as pq, glob as g
+          MAX_MB = 45
+          iso = '${{ matrix.iso }}'
+          d = 'data/step2.1-ef'
+          for f in sorted(g.glob(os.path.join(d, f'step_2_1_EF_{iso}_*.parquet'))):
+              b = os.path.basename(f)
+              if '_batch_' in b or '_part' in b:
+                  continue
+              sz = os.path.getsize(f) / (1024*1024)
+              if sz <= MAX_MB:
+                  continue
+              t = pq.read_table(f)
+              n = int(sz / MAX_MB) + 1
+              rpp = max(1, t.num_rows // n)
+              stem = b.replace('.parquet','')
+              print(f'Splitting {b} ({sz:.1f} MB) into {n} parts')
+              for p in range(n):
+                  s = p * rpp
+                  e = t.num_rows if p == n-1 else (p+1)*rpp
+                  pt = t.slice(s, e-s)
+                  pp = os.path.join(d, f'{stem}_part{p}.parquet')
+                  pq.write_table(pt, pp, compression='snappy')
+                  print(f'  {os.path.basename(pp)}: {pt.num_rows:,} rows, {os.path.getsize(pp)/(1024*1024):.1f} MB')
+              os.remove(f)
+              print(f'  Removed original: {b}')
+          "
+
       - name: Commit and push
         run: |
           git config http.postBuffer 524288000
@@ -313,6 +343,36 @@ jobs:
         if: ${{ inputs.thresholds == '' }}
         timeout-minutes: 30
         run: python scripts/step2_1_efficient_frontier.py --iso ${{ matrix.iso }} --merge
+
+      - name: "Split oversized parquets (${{ matrix.iso }})"
+        run: |
+          python -c "
+          import os, pyarrow.parquet as pq, glob as g
+          MAX_MB = 45
+          iso = '${{ matrix.iso }}'
+          d = 'data/step2.1-ef'
+          for f in sorted(g.glob(os.path.join(d, f'step_2_1_EF_{iso}_*.parquet'))):
+              b = os.path.basename(f)
+              if '_batch_' in b or '_part' in b:
+                  continue
+              sz = os.path.getsize(f) / (1024*1024)
+              if sz <= MAX_MB:
+                  continue
+              t = pq.read_table(f)
+              n = int(sz / MAX_MB) + 1
+              rpp = max(1, t.num_rows // n)
+              stem = b.replace('.parquet','')
+              print(f'Splitting {b} ({sz:.1f} MB) into {n} parts')
+              for p in range(n):
+                  s = p * rpp
+                  e = t.num_rows if p == n-1 else (p+1)*rpp
+                  pt = t.slice(s, e-s)
+                  pp = os.path.join(d, f'{stem}_part{p}.parquet')
+                  pq.write_table(pt, pp, compression='snappy')
+                  print(f'  {os.path.basename(pp)}: {pt.num_rows:,} rows, {os.path.getsize(pp)/(1024*1024):.1f} MB')
+              os.remove(f)
+              print(f'  Removed original: {b}')
+          "
 
       - name: "Commit final EF and push (${{ matrix.iso }})"
         run: |
