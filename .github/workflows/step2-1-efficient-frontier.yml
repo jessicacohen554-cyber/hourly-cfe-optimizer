@@ -105,13 +105,18 @@ jobs:
 
       - name: Verify PFS parquets exist
         run: |
-          if [ ! -d "data/step1-pfs" ] || ! ls data/step1-pfs/${{ matrix.iso }}_t*_raw_pfs.parquet >/dev/null 2>&1; then
-            echo "ERROR: PFS parquets not found for ${{ matrix.iso }}. Run Step 1A first."
+          ISO="${{ matrix.iso }}"
+          if [ ! -d "data/step1-pfs" ] || ! ls data/step1-pfs/${ISO}_t*_raw_pfs.parquet >/dev/null 2>&1; then
+            echo "ERROR: PFS parquets not found for ${ISO}. Run Step 1A first."
             exit 1
           fi
-          echo "Found PFS parquets for ${{ matrix.iso }}:"
-          ls -lh data/step1-pfs/${{ matrix.iso }}_t* | wc -l
-          echo "files"
+          RAW_COUNT=$(ls data/step1-pfs/${ISO}_t*_raw_pfs.parquet 2>/dev/null | wc -l)
+          AUG_COUNT=$(ls data/step1-pfs/${ISO}_t*_augment.parquet 2>/dev/null | wc -l)
+          TOTAL=$(ls data/step1-pfs/${ISO}_t* 2>/dev/null | wc -l)
+          echo "Found PFS parquets for ${ISO}: ${TOTAL} files (${RAW_COUNT} raw, ${AUG_COUNT} augment)"
+          if [ "$AUG_COUNT" -eq 0 ]; then
+            echo "::warning::No augment parquets found for ${ISO}. Run Step 1.6 first to supplement thin threshold bands, or EF may be sparse at lower thresholds."
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -197,13 +202,18 @@ jobs:
 
       - name: Verify PFS parquets exist
         run: |
-          if [ ! -d "data/step1-pfs" ] || ! ls data/step1-pfs/${{ matrix.iso }}_t*_raw_pfs.parquet >/dev/null 2>&1; then
-            echo "ERROR: PFS parquets not found for ${{ matrix.iso }}. Run Step 1A first."
+          ISO="${{ matrix.iso }}"
+          if [ ! -d "data/step1-pfs" ] || ! ls data/step1-pfs/${ISO}_t*_raw_pfs.parquet >/dev/null 2>&1; then
+            echo "ERROR: PFS parquets not found for ${ISO}. Run Step 1A first."
             exit 1
           fi
-          echo "Found PFS parquets for ${{ matrix.iso }}:"
-          ls -lh data/step1-pfs/${{ matrix.iso }}_t* | wc -l
-          echo "files"
+          RAW_COUNT=$(ls data/step1-pfs/${ISO}_t*_raw_pfs.parquet 2>/dev/null | wc -l)
+          AUG_COUNT=$(ls data/step1-pfs/${ISO}_t*_augment.parquet 2>/dev/null | wc -l)
+          TOTAL=$(ls data/step1-pfs/${ISO}_t* 2>/dev/null | wc -l)
+          echo "Found PFS parquets for ${ISO}: ${TOTAL} files (${RAW_COUNT} raw, ${AUG_COUNT} augment)"
+          if [ "$AUG_COUNT" -eq 0 ]; then
+            echo "::warning::No augment parquets found for ${ISO}. Run Step 1.6 first to supplement thin threshold bands, or EF may be sparse at lower thresholds."
+          fi
           STORAGE_COUNT=$(ls data/step1-pfs/${{ matrix.iso }}_*_storage*.parquet 2>/dev/null | wc -l)
           echo "Storage files: $STORAGE_COUNT"
 
