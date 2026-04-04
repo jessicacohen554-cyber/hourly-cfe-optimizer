@@ -134,6 +134,7 @@ jobs:
 
     permissions:
       contents: write    # needed for commit + push
+      workflows: write
 
     steps:
     - name: Checkout repo
