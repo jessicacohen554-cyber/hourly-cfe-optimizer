@@ -1,11 +1,10 @@
-name: "Step 1.4: Fine-Grid PFS + Augmentation"
+name: "Step 1.4.1: Thin-Band Augmentation"
 
-# Fine-grid PFS for 40-75% thresholds (1% step), plus thin-band augmentation
-# for 50-99.9% thresholds (merged from former step 1.6).
-# Each ISO runs on its own runner in parallel.
-# Supports threshold filtering, resume mode, and mid-run commits.
+# Augment-only step: fills thin threshold bands (50-99.9%) with up to 50K
+# diverse mixes each. Runs AFTER step 1.4 fine-grid has completed.
+# Requires existing PFS files in data/step1-pfs/.
 #
-# Output: data/step1-pfs/{ISO}_*fine_pfs.parquet + {ISO}_*augment.parquet
+# Output: data/step1-pfs/{ISO}_t{T}_augment.parquet
 
 on:
   workflow_dispatch:
@@ -24,21 +23,6 @@ on:
           - NEISO
           - MISO
           - SPP
-      custom_thresholds:
-        description: 'Custom thresholds (e.g. "55,60,70"). Default: all (40-75).'
-        required: false
-        default: ''
-        type: string
-      augment:
-        description: 'After fine-grid, augment thin bands (50-99.9%) with 50K diverse mixes'
-        required: false
-        default: false
-        type: boolean
-      resume:
-        description: 'Skip thresholds that already have output files'
-        required: false
-        default: true
-        type: boolean
       branch:
         description: 'Source branch to checkout code from'
         required: false
@@ -53,7 +37,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
-      thresholds: ${{ steps.resolve-thresholds.outputs.thresholds }}
     steps:
       - name: Build ISO matrix
         id: set-matrix
@@ -64,28 +47,17 @@ jobs:
             echo 'matrix={"iso":["${{ inputs.iso }}"]}' >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Resolve thresholds
-        id: resolve-thresholds
-        run: |
-          CUSTOM="${{ inputs.custom_thresholds }}"
-          if [ -n "$CUSTOM" ]; then
-            echo "Using custom thresholds: $CUSTOM"
-            echo "thresholds=$CUSTOM" >> "$GITHUB_OUTPUT"
-          else
-            echo "thresholds=" >> "$GITHUB_OUTPUT"
-          fi
-
-  fine-grid:
+  augment:
     needs: prepare
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 120
 
     strategy:
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
       fail-fast: false
 
     permissions:
-      contents: write    # needed for commit + push
+      contents: write
 
     steps:
     - name: Checkout repo
@@ -98,7 +70,7 @@ jobs:
       run: |
         TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
         ISO_LOWER=$(echo "${{ matrix.iso }}" | tr '[:upper:]' '[:lower:]')
-        TARGET_BRANCH="auto/${TIMESTAMP}-step1-4-fine-grid-${ISO_LOWER}"
+        TARGET_BRANCH="auto/${TIMESTAMP}-step1-4-1-augment-${ISO_LOWER}"
         echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -119,43 +91,19 @@ jobs:
     - name: Ensure output directory
       run: mkdir -p data/step1-pfs
 
-    - name: "Run Fine-Grid PFS + Augmentation — ${{ matrix.iso }}"
+    - name: "Run Thin-Band Augmentation — ${{ matrix.iso }}"
       run: |
-        THRESHOLDS="${{ needs.prepare.outputs.thresholds }}"
-        RESUME="${{ inputs.resume }}"
-        AUGMENT="${{ inputs.augment }}"
         echo "═══════════════════════════════════════════════════════════"
-        if [ -n "$THRESHOLDS" ]; then
-          echo "  ISO: ${{ matrix.iso }}  |  Fine-Grid PFS  |  Thresholds: $THRESHOLDS"
-        else
-          echo "  ISO: ${{ matrix.iso }}  |  Fine-Grid PFS (40-75%, all)"
-        fi
-        if [ "$RESUME" = "true" ]; then
-          echo "  Resume mode: ON (skipping completed thresholds)"
-        fi
-        if [ "$AUGMENT" = "true" ]; then
-          echo "  Augment mode: ON (fill thin bands 50-99.9%)"
-        fi
+        echo "  ISO: ${{ matrix.iso }}  |  Augment-Only (thin bands 50-99.9%)"
         echo "═══════════════════════════════════════════════════════════"
-
-        ARGS="--iso ${{ matrix.iso }}"
-        if [ -n "$THRESHOLDS" ]; then
-          ARGS="$ARGS --thresholds $THRESHOLDS"
-        fi
-        if [ "$RESUME" = "true" ]; then
-          ARGS="$ARGS --resume"
-        fi
-        if [ "$AUGMENT" = "true" ]; then
-          ARGS="$ARGS --augment"
-        fi
-        eval python scripts/step1_4_fine_grid_pfs.py $ARGS
+        python scripts/step1_4_fine_grid_pfs.py --iso ${{ matrix.iso }} --augment-only
 
     - name: Split any oversized parquets (safety net)
       if: always()
       run: |
         ISO="${{ matrix.iso }}"
         MAX_MB=45
-        for f in data/step1-pfs/"${ISO}"_*.parquet; do
+        for f in data/step1-pfs/"${ISO}"_*augment*.parquet; do
           [ -f "$f" ] || continue
           echo "$f" | grep -q '_part[0-9]' && continue
           SIZE_MB=$(du -m "$f" | cut -f1)
@@ -165,12 +113,10 @@ jobs:
           fi
         done
 
-    - name: Commit and push results (per-file ≤45 MB)
+    - name: Commit and push results
       if: always()
       run: |
         ISO="${{ matrix.iso }}"
-        THRESHOLDS="${{ needs.prepare.outputs.thresholds }}"
-        [ -n "$THRESHOLDS" ] && LABEL="custom($THRESHOLDS)" || LABEL="40-75"
         COMMITTED=0
 
         push_with_retry() {
@@ -183,7 +129,7 @@ jobs:
           return 1
         }
 
-        for f in data/step1-pfs/"${ISO}"_*fine_pfs*.parquet data/step1-pfs/"${ISO}"_*augment*.parquet data/step1-pfs/"${ISO}"_near_miss*.parquet; do
+        for f in data/step1-pfs/"${ISO}"_*augment*.parquet; do
           [ -f "$f" ] || continue
           SIZE_MB=$(du -m "$f" | cut -f1)
           if [ "$SIZE_MB" -gt 49 ]; then
@@ -193,27 +139,27 @@ jobs:
           git add -f "$f"
           if ! git diff --cached --quiet; then
             FNAME=$(basename "$f")
-            git commit -m "Step 1.4 Fine-Grid: ${ISO} ${LABEL} ${FNAME} (${SIZE_MB}MB) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git commit -m "Step 1.4.1 Augment: ${ISO} ${FNAME} (${SIZE_MB}MB) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             COMMITTED=$((COMMITTED + 1))
             echo "  Pushing ${FNAME}..."
             push_with_retry
           fi
         done
         if [ "$COMMITTED" -eq 0 ]; then
-          echo "No new results to commit (files already match HEAD)."
+          echo "No new augment results to commit."
         else
           echo "Committed and pushed $COMMITTED file(s)"
         fi
         echo "════════════════════════════════════════════════════"
         echo "  Branch: $TARGET_BRANCH"
-        echo "  Merge into master to bank the fine-grid results."
+        echo "  Merge into master to bank the augment results."
         echo "════════════════════════════════════════════════════"
 
     - name: Upload results as artifact
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: step1-4-fine-grid-${{ matrix.iso }}
-        path: data/step1-pfs/${{ matrix.iso }}_*.parquet
+        name: step1-4-1-augment-${{ matrix.iso }}
+        path: data/step1-pfs/${{ matrix.iso }}_*augment*.parquet
         retention-days: 30
         if-no-files-found: warn

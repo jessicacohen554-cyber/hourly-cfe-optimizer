@@ -1259,6 +1259,9 @@ def main():
     parser.add_argument('--augment', action='store_true',
                         help='After fine-grid, augment thin threshold bands '
                              '(50-99.9%%) with up to 50K diverse mixes each')
+    parser.add_argument('--augment-only', action='store_true',
+                        help='Skip fine-grid, run ONLY thin-band augmentation '
+                             '(requires existing PFS files)')
     args = parser.parse_args()
 
     isos = ISOS if args.iso == 'ALL' else [args.iso]
@@ -1278,6 +1281,8 @@ def main():
         print("Resume mode: will skip completed thresholds")
     if args.augment:
         print("Augment mode: will fill thin bands (50-99.9%) after fine-grid")
+    if args.augment_only:
+        print("Augment-only mode: skipping fine-grid, running augmentation only")
 
     print("Loading common data...")
     demand_data, gen_profiles, _, _ = load_common_data()
@@ -1286,13 +1291,44 @@ def main():
 
     t0 = time.time()
     total_saved = 0
-    for iso in isos:
-        saved = process_iso(iso, demand_data, gen_profiles,
-                            include_hybrids=args.hybrid,
-                            thresholds_filter=thresholds_filter,
-                            resume=args.resume,
-                            augment=args.augment)
-        total_saved += saved
+
+    if args.augment_only:
+        # Skip fine-grid entirely — just run augmentation on existing PFS
+        for iso in isos:
+            # Auto-detect hybrid mode from coarse cache
+            include_hybrids = args.hybrid
+            if not include_hybrids:
+                coarse_schema = s1.read_coarse_cache_schema(iso)
+                if coarse_schema is not None and 'solar_batt4' in coarse_schema.names:
+                    include_hybrids = True
+                    print(f"  Auto-detected hybrid columns in coarse cache")
+
+            demand_norm, _ = get_demand_profile(iso, demand_data)
+            supply_profiles = get_supply_profiles(iso, gen_profiles)
+            supply_matrix = build_supply_matrix(supply_profiles)
+
+            if include_hybrids:
+                hybrid_profiles = s1.load_hybrid_profiles(iso)
+                print(f"  Loaded hybrid profiles: {list(hybrid_profiles.keys())}")
+                hybrid_rows = np.stack([
+                    np.asarray(hybrid_profiles[ht][:H], dtype=np.float64)
+                    for ht in s1.HYBRID_TYPES
+                ])
+                supply_matrix = np.vstack([supply_matrix, hybrid_rows])
+
+            saved = run_augmentation(iso, demand_norm, supply_matrix,
+                                     include_hybrids=include_hybrids)
+            total_saved += saved
+            print(f"  {iso}: augmented {saved:,} mixes")
+            gc.collect()
+    else:
+        for iso in isos:
+            saved = process_iso(iso, demand_data, gen_profiles,
+                                include_hybrids=args.hybrid,
+                                thresholds_filter=thresholds_filter,
+                                resume=args.resume,
+                                augment=args.augment)
+            total_saved += saved
 
     elapsed = time.time() - t0
     print(f"\nDone. {total_saved:,} total mixes saved in {elapsed:.1f}s")
