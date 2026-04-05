@@ -129,6 +129,15 @@ jobs:
           return 1
         }
 
+        # Push any mid-run script commits first
+        SCRIPT_COMMITS=$(git log --oneline origin/${{ inputs.branch || 'master' }}..HEAD 2>/dev/null | wc -l)
+        if [ "$SCRIPT_COMMITS" -gt 0 ]; then
+          echo "  Found $SCRIPT_COMMITS mid-run commit(s) from script — pushing..."
+          push_with_retry
+          COMMITTED=$SCRIPT_COMMITS
+        fi
+
+        # Also commit any files the script wrote but didn't commit
         for f in data/step1-pfs/"${ISO}"_*augment*.parquet; do
           [ -f "$f" ] || continue
           SIZE_MB=$(du -m "$f" | cut -f1)
@@ -146,9 +155,9 @@ jobs:
           fi
         done
         if [ "$COMMITTED" -eq 0 ]; then
-          echo "No new augment results to commit."
+          echo "No new results to commit or push."
         else
-          echo "Committed and pushed $COMMITTED file(s)"
+          echo "Committed/pushed $COMMITTED total"
         fi
         echo "════════════════════════════════════════════════════"
         echo "  Branch: $TARGET_BRANCH"
