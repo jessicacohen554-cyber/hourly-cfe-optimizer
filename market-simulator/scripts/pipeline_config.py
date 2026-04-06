@@ -900,11 +900,25 @@ FIRM_IMPORT_MW = {
     'SPP': 3000,     # MISO/ERCOT interchange
 }
 
+HYBRID_TYPES = ['solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
+
+SOLAR_FAMILY_CAP = {
+    'CAISO': 120, 'ERCOT': 110, 'PJM': 100, 'NYISO': 120,
+    'NEISO': 110, 'MISO':  70, 'SPP':  60,
+}
+WIND_FAMILY_CAP = {
+    'CAISO': 140, 'ERCOT': 200, 'PJM': 110, 'NYISO':  80,
+    'NEISO':  90, 'MISO': 210, 'SPP': 190,
+}
+HYBRID_MAX_PER_TYPE = 40
+
 PEAK_CAPACITY_CREDITS = {
     'clean_firm': 1.0, 'solar': 0.30, 'wind': 0.10,
     'ccs_ccgt': 0.90, 'hydro': 0.50, 'battery': 0.95,
     'battery8': 0.95, 'ldes': 0.90, 'h2': 0.85,
     'offshore_wind': 0.25,
+    'solar_batt4': 0.70, 'solar_batt8': 0.85,
+    'wind_batt4': 0.50, 'wind_batt8': 0.65,
 }
 
 RESOURCE_CAPACITY_FACTORS = {
@@ -914,6 +928,10 @@ RESOURCE_CAPACITY_FACTORS = {
     'ccs_ccgt':   {'CAISO': 0.85, 'ERCOT': 0.85, 'PJM': 0.85, 'NYISO': 0.85, 'NEISO': 0.85, 'MISO': 0.85, 'SPP': 0.85},
     'hydro':      {'CAISO': 0.40, 'ERCOT': 0.30, 'PJM': 0.35, 'NYISO': 0.40, 'NEISO': 0.40, 'MISO': 0.35, 'SPP': 0.30},
     'offshore_wind': {'CAISO': 0.43, 'ERCOT': 0.35, 'PJM': 0.48, 'NYISO': 0.49, 'NEISO': 0.51, 'MISO': 0.35, 'SPP': 0.35},
+    'solar_batt4': {'CAISO': 0.250, 'ERCOT': 0.315, 'PJM': 0.310, 'NYISO': 0.275, 'NEISO': 0.246, 'MISO': 0.349, 'SPP': 0.355},
+    'solar_batt8': {'CAISO': 0.309, 'ERCOT': 0.410, 'PJM': 0.404, 'NYISO': 0.360, 'NEISO': 0.321, 'MISO': 0.456, 'SPP': 0.462},
+    'wind_batt4':  {'CAISO': 0.385, 'ERCOT': 0.460, 'PJM': 0.363, 'NYISO': 0.339, 'NEISO': 0.325, 'MISO': 0.434, 'SPP': 0.524},
+    'wind_batt8':  {'CAISO': 0.384, 'ERCOT': 0.458, 'PJM': 0.362, 'NYISO': 0.337, 'NEISO': 0.324, 'MISO': 0.432, 'SPP': 0.521},
 }
 
 # ============================================================================
@@ -1421,6 +1439,59 @@ def get_tx(rtype, tx_name, iso):
     if isinstance(entry, dict):
         return entry.get(iso, 0)
     return entry
+
+
+# ---------------------------------------------------------------------------
+# Hybrid resource LCOE infrastructure
+# ---------------------------------------------------------------------------
+
+HYBRID_DC_AC_RATIOS = {
+    'solar_batt4': {'CAISO': 1.35, 'ERCOT': 1.50, 'PJM': 1.50, 'NYISO': 1.50, 'NEISO': 1.50, 'MISO': 1.50, 'SPP': 1.50},
+    'solar_batt8': {'CAISO': 1.70, 'ERCOT': 2.00, 'PJM': 2.00, 'NYISO': 2.00, 'NEISO': 2.00, 'MISO': 2.00, 'SPP': 2.00},
+}
+ITC_STORAGE_RATE = 0.30
+
+HYBRID_BATTERY_LCOS = {
+    'battery4': {
+        'Low':    {'CAISO': 109.1, 'ERCOT': 98.1, 'PJM': 104.5, 'NYISO': 115.3, 'NEISO': 111.9, 'MISO': 102.5, 'SPP': 99.5},
+        'Medium': {'CAISO': 134.1, 'ERCOT': 120.6, 'PJM': 128.5, 'NYISO': 141.7, 'NEISO': 137.5, 'MISO': 125.9, 'SPP': 122.3},
+        'High':   {'CAISO': 170.5, 'ERCOT': 153.3, 'PJM': 163.3, 'NYISO': 180.2, 'NEISO': 174.8, 'MISO': 160.1, 'SPP': 155.4},
+    },
+    'battery8': {
+        'Low':    {'CAISO': 93.2, 'ERCOT': 83.8, 'PJM': 89.3, 'NYISO': 98.5, 'NEISO': 95.6, 'MISO': 87.5, 'SPP': 85.0},
+        'Medium': {'CAISO': 115.0, 'ERCOT': 103.4, 'PJM': 110.2, 'NYISO': 121.6, 'NEISO': 117.9, 'MISO': 108.0, 'SPP': 104.9},
+        'High':   {'CAISO': 146.8, 'ERCOT': 132.0, 'PJM': 140.7, 'NYISO': 155.2, 'NEISO': 150.6, 'MISO': 137.9, 'SPP': 133.9},
+    },
+}
+
+_HYBRID_BATT_KEY = {
+    'solar_batt4': 'battery4', 'solar_batt8': 'battery8',
+    'wind_batt4': 'battery4', 'wind_batt8': 'battery8',
+}
+_HYBRID_PARENT_REN = {
+    'solar_batt4': 'solar', 'solar_batt8': 'solar',
+    'wind_batt4': 'wind', 'wind_batt8': 'wind',
+}
+
+
+def get_hybrid_tx(hybrid_type, tx_level, iso):
+    """Transmission adder for hybrid resources, adjusted by DC:AC ratio."""
+    parent = _HYBRID_PARENT_REN[hybrid_type]
+    parent_tx = get_tx(parent, tx_level, iso)
+    if hybrid_type in HYBRID_DC_AC_RATIOS:
+        return parent_tx / HYBRID_DC_AC_RATIOS[hybrid_type][iso]
+    return parent_tx
+
+
+def get_hybrid_lcoe(hybrid_type, ren_level, batt_level, iso):
+    """Blended LCOE for hybrid resource = renewable LCOE (DC:AC adjusted) + battery LCOS (ITC adjusted)."""
+    parent = _HYBRID_PARENT_REN[hybrid_type]
+    ren_lcoe = LCOE_TABLES[parent][ren_level][iso]
+    if hybrid_type in HYBRID_DC_AC_RATIOS:
+        ren_lcoe = ren_lcoe / HYBRID_DC_AC_RATIOS[hybrid_type][iso]
+    batt_key = _HYBRID_BATT_KEY[hybrid_type]
+    batt_lcos = HYBRID_BATTERY_LCOS[batt_key][batt_level][iso]
+    return ren_lcoe + batt_lcos * (1.0 - ITC_STORAGE_RATE)
 
 
 # Nuclear uprate LCOE ($/MWh)
