@@ -185,6 +185,81 @@ MAX_ARCHETYPES = 5000
 PHASE2_PERTURBATIONS = 2000
 MAX_OVERSHOOT = 0.5  # percentage points — tight target adherence
 
+# Per-ISO cache for coarse cache and near-miss data.
+# Loaded once per ISO in run_iso(), passed to load_pfs_for_threshold().
+# Prevents repeated 500MB+ loads that OOM GitHub Actions runners.
+_iso_pfs_cache = {}  # {iso: {'coarse': DataFrame|None, 'near_miss': DataFrame|None}}
+
+
+def _load_iso_shared_pfs(iso):
+    """Load coarse cache and near-miss data once for an ISO.
+
+    Returns dict with 'coarse' and 'near_miss' DataFrames (or None).
+    """
+    if iso in _iso_pfs_cache:
+        return _iso_pfs_cache[iso]
+
+    cache = {'coarse': None, 'near_miss': None}
+
+    # Load coarse cache
+    coarse_table = s1.read_coarse_cache_table(iso)
+    if coarse_table is not None:
+        try:
+            coarse_df = coarse_table.to_pandas()
+            del coarse_table  # Free pyarrow table immediately
+            # Rename score → hourly_match_score
+            if 'score' in coarse_df.columns and 'hourly_match_score' not in coarse_df.columns:
+                coarse_df = coarse_df.rename(columns={'score': 'hourly_match_score'})
+            # Add missing storage columns as 0
+            for col in STORAGE_COLS:
+                if col not in coarse_df.columns:
+                    coarse_df[col] = 0.0
+            # Keep only MIX_COLS to minimize memory
+            keep_cols = [c for c in MIX_COLS if c in coarse_df.columns]
+            coarse_df = coarse_df[keep_cols].copy()
+            cache['coarse'] = coarse_df
+            print(f"    {iso}: Loaded coarse cache ({len(coarse_df):,} rows, "
+                  f"{coarse_df.memory_usage(deep=True).sum() / 1e6:.0f} MB)")
+        except Exception as e:
+            print(f"    {iso}: WARNING: Could not load coarse cache: {e}")
+
+    # Load near-miss file(s)
+    nm_dfs = []
+    # Support multi-part near-miss files
+    nm_single = os.path.join(PFS_DIRS[0], f'{iso}_near_miss.parquet')
+    if os.path.isfile(nm_single):
+        nm_dfs.append(nm_single)
+    nm_parts = sorted(globmod.glob(os.path.join(PFS_DIRS[0], f'{iso}_near_miss_part*.parquet')))
+    nm_dfs.extend(nm_parts)
+
+    if nm_dfs:
+        try:
+            parts = []
+            for f in nm_dfs:
+                parts.append(pd.read_parquet(f))
+            nm_df = pd.concat(parts, ignore_index=True) if len(parts) > 1 else parts[0]
+            if 'score' in nm_df.columns and 'hourly_match_score' not in nm_df.columns:
+                nm_df = nm_df.rename(columns={'score': 'hourly_match_score'})
+            for col in STORAGE_COLS:
+                if col not in nm_df.columns:
+                    nm_df[col] = 0.0
+            keep_cols = [c for c in MIX_COLS if c in nm_df.columns]
+            nm_df = nm_df[keep_cols].copy()
+            cache['near_miss'] = nm_df
+            print(f"    {iso}: Loaded near-miss ({len(nm_df):,} rows)")
+        except Exception as e:
+            print(f"    {iso}: WARNING: Could not load near-miss: {e}")
+
+    _iso_pfs_cache[iso] = cache
+    return cache
+
+
+def _clear_iso_pfs_cache(iso):
+    """Free cached PFS data for an ISO after processing is complete."""
+    if iso in _iso_pfs_cache:
+        del _iso_pfs_cache[iso]
+        gc.collect()
+
 
 # ============================================================================
 # PFS LOADING
@@ -232,6 +307,8 @@ def load_pfs_for_threshold(iso, threshold):
     cache/near-miss files) provides mixes closer to the floor that need less new build.
 
     Handles batch files (_b1, _b2, etc.) and deduplicates.
+    Uses per-ISO cached coarse cache and near-miss data (loaded once via
+    _load_iso_shared_pfs) to avoid repeated 500MB+ loads that OOM CI runners.
     """
     dfs = []
 
@@ -244,50 +321,31 @@ def load_pfs_for_threshold(iso, threshold):
         lower_t = MAC_THRESHOLDS[idx - 1]
         dfs.extend(_load_pfs_files(iso, lower_t))
 
-    # Also load coarse cache (has mixes across ALL thresholds, useful for interpolation)
-    # Coarse cache has different schema: 'score' instead of 'hourly_match_score',
-    # no storage columns, no 'iso'/'threshold' columns
-    # Supports multi-part cache files via s1.read_coarse_cache_table()
-    coarse_table = s1.read_coarse_cache_table(iso)
-    if coarse_table is not None:
+    # Use cached coarse cache (loaded once per ISO in run_iso)
+    iso_cache = _load_iso_shared_pfs(iso)
+
+    coarse_df = iso_cache.get('coarse')
+    if coarse_df is not None:
         try:
-            coarse_df = coarse_table.to_pandas()
-            # Rename score → hourly_match_score
-            if 'score' in coarse_df.columns and 'hourly_match_score' not in coarse_df.columns:
-                coarse_df = coarse_df.rename(columns={'score': 'hourly_match_score'})
-            # Add missing storage columns as 0
-            for col in STORAGE_COLS:
-                if col not in coarse_df.columns:
-                    coarse_df[col] = 0.0
-            # Filter to relevant match score range before adding (avoid huge concat)
             score_min = threshold - 2.0
             score_max = threshold + MAX_OVERSHOOT + 1.0
-            coarse_df = coarse_df[
-                (coarse_df['hourly_match_score'] >= score_min) &
-                (coarse_df['hourly_match_score'] <= score_max)
-            ]
-            if len(coarse_df) > 0:
-                dfs.append(coarse_df[MIX_COLS] if all(c in coarse_df.columns for c in MIX_COLS) else coarse_df)
+            scores = coarse_df['hourly_match_score'].values
+            mask = (scores >= score_min) & (scores <= score_max)
+            filtered_coarse = coarse_df.loc[mask]
+            if len(filtered_coarse) > 0:
+                dfs.append(filtered_coarse)
         except Exception:
             pass
 
-    # Also load near-miss file (mixes that barely missed various thresholds)
-    near_miss_file = os.path.join(PFS_DIRS[0], f'{iso}_near_miss.parquet')
-    if os.path.isfile(near_miss_file):
+    # Use cached near-miss data (loaded once per ISO in run_iso)
+    nm_df = iso_cache.get('near_miss')
+    if nm_df is not None:
         try:
-            nm_df = pd.read_parquet(near_miss_file)
-            if 'score' in nm_df.columns and 'hourly_match_score' not in nm_df.columns:
-                nm_df = nm_df.rename(columns={'score': 'hourly_match_score'})
-            for col in STORAGE_COLS:
-                if col not in nm_df.columns:
-                    nm_df[col] = 0.0
-            # Filter to relevant range
-            nm_df = nm_df[
-                (nm_df['hourly_match_score'] >= threshold - 2.0) &
-                (nm_df['hourly_match_score'] <= threshold + MAX_OVERSHOOT + 1.0)
-            ]
-            if len(nm_df) > 0:
-                dfs.append(nm_df[[c for c in MIX_COLS if c in nm_df.columns]])
+            scores = nm_df['hourly_match_score'].values
+            mask = (scores >= threshold - 2.0) & (scores <= threshold + MAX_OVERSHOOT + 1.0)
+            filtered_nm = nm_df.loc[mask]
+            if len(filtered_nm) > 0:
+                dfs.append(filtered_nm)
         except Exception:
             pass
 
@@ -1747,6 +1805,11 @@ def run_iso(iso, demand_data, gen_profiles, emission_rates):
     print(f"  Processing {iso}")
     print(f"{'='*60}")
 
+    # Pre-load coarse cache and near-miss data once for this ISO.
+    # This prevents repeated 500MB+ loads (16 thresholds × 15 pathways = 240 loads)
+    # that cause OOM on CI runners with 7GB RAM (CAISO, NEISO).
+    _load_iso_shared_pfs(iso)
+
     # Load profiles (include hybrids for dispatch scoring)
     demand_norm, total_mwh = get_demand_profile(iso, demand_data)
     supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
@@ -1764,6 +1827,9 @@ def run_iso(iso, demand_data, gen_profiles, emission_rates):
                 demand_norm, supply_profiles, supply_matrix, emission_rates)
 
             all_results.extend(pathway_results)
+
+    # Free cached PFS data for this ISO
+    _clear_iso_pfs_cache(iso)
 
     return all_results
 
