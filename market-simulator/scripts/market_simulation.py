@@ -3646,6 +3646,17 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
             else:
                 effective_lcoe = float('inf')
             cf = effective_cf  # Use derated CF for capacity calcs too
+        elif res in HYBRID_TYPES and curtailment_rate > 0:
+            # Hybrids partially mitigate curtailment via co-located storage
+            dc_ac = HYBRID_DC_AC_RATIOS.get(res, {}).get(iso, 1.3)
+            mitigation = 1.0 / dc_ac  # battery absorbs proportional to oversize
+            effective_curt = curtailment_rate * mitigation
+            effective_cf = cf * (1.0 - effective_curt)
+            if effective_cf > 0:
+                effective_lcoe = lcoe / (1.0 - effective_curt)
+            else:
+                effective_lcoe = float('inf')
+            cf = effective_cf
 
         # Resource-specific revenue adjustments
         capacity_rev = 0
