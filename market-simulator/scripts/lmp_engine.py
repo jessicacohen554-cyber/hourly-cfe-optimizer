@@ -41,7 +41,7 @@ except ImportError:
 from pipeline_config import MUST_RUN_PCT, ORDC_PARAMS, SCARCITY_MODE
 
 from dispatch_utils import (
-    H, ISOS, RESOURCE_TYPES,
+    H, ISOS, RESOURCE_TYPES, HYBRID_TYPES, _detect_hybrids_in_schema,
     GRID_MIX_SHARES, BASE_DEMAND_TWH,
     WHOLESALE_PRICES, FUEL_ADJUSTMENTS,
     COAL_OIL_RETIREMENT_THRESHOLD, COAL_CAP_TWH, OIL_CAP_TWH,
@@ -1782,7 +1782,12 @@ def run_lmp_for_iso(iso, scenarios, demand_data, gen_profiles,
         results: list of dicts with LMP stats per (threshold, scenario)
     """
     demand_norm, total_mwh = get_demand_profile(iso, demand_data)
-    supply_profiles = get_supply_profiles(iso, gen_profiles)
+    # Detect if any scenario contains hybrid resource keys
+    _any_hybrids = any(
+        any(h in sc.get('resource_mix', {}) for h in HYBRID_TYPES)
+        for sc in scenarios
+    )
+    supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=_any_hybrids)
 
     # Convert normalized demand to MW profile
     demand_mw_profile = demand_norm * total_mwh

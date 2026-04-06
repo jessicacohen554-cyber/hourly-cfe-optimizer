@@ -102,7 +102,8 @@ from dispatch_utils import (
     load_common_data, get_demand_profile, get_supply_profiles,
     reconstruct_hourly_dispatch, compute_fossil_retirement,
     COAL_CAP_TWH, OIL_CAP_TWH,
-    RESOURCE_TYPES, H,
+    RESOURCE_TYPES, HYBRID_TYPES, RESOURCE_TYPES_HYBRID,
+    _detect_hybrids_in_schema, H,
 )
 from lmp_engine import (
     build_merit_order_stack, build_plant_level_merit_order,
@@ -3895,6 +3896,9 @@ def _load_ef_fallback(iso):
         best_idx = df['hourly_match_score'].idxmax()
         row = df.loc[best_idx]
 
+        # Detect hybrid columns in the parquet schema
+        has_hybrids = _detect_hybrids_in_schema(df.columns)
+
         resource_pcts = {
             'clean_firm': float(row.get('clean_firm', 0)),
             'solar': float(row.get('solar', 0)),
@@ -3903,9 +3907,13 @@ def _load_ef_fallback(iso):
             'ccs_ccgt': float(row.get('ccs_ccgt', 0)),
             'hydro': float(row.get('hydro', 0)),
         }
+        if has_hybrids:
+            for h in HYBRID_TYPES:
+                resource_pcts[h] = float(row.get(h, 0))
 
         iso_data[threshold] = {
             'resource_pcts': resource_pcts,
+            'include_hybrids': has_hybrids,
             'total_cost': 0.0,  # No cost data in EF parquets
             'hourly_match_score': float(row.get('hourly_match_score', 0)),
             'battery_pct': float(row.get('battery_dispatch_pct', 0)),
@@ -3962,6 +3970,7 @@ def load_step3_data():
 
         print(f"  Loaded {os.path.basename(path)} for {iso}")
         df = pd.read_parquet(path)
+        has_hybrids = _detect_hybrids_in_schema(df.columns)
         iso_data = {}
         for t_val, grp in df.groupby('threshold'):
             t = float(t_val)
@@ -3976,9 +3985,13 @@ def load_step3_data():
                 'ccs_ccgt': float(row.get('mix_ccs_ccgt', 0)),
                 'hydro': float(row.get('mix_hydro', 0)),
             }
+            if has_hybrids:
+                for h in HYBRID_TYPES:
+                    resource_pcts[h] = float(row.get(f'mix_{h}', 0))
 
             iso_data[t] = {
                 'resource_pcts': resource_pcts,
+                'include_hybrids': has_hybrids,
                 'total_cost': float(row.get('cost_total_cost', 0)),
                 'hourly_match_score': float(row.get('hourly_match_score', 0)),
                 'battery_pct': float(row.get('battery_dispatch_pct', 0)),
@@ -4701,7 +4714,14 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             demand_total_mwh = demand_twh * 1e6
 
             demand_norm, total_mwh_base = get_demand_profile(iso, demand_data, weather_year=weather_year)
-            supply_profiles_iso = get_supply_profiles(iso, gen_profiles, weather_year=weather_year)
+            # Include hybrid supply profiles when any deployed resource is a hybrid type
+            iso_has_hybrids = any(
+                h in state.get('deployed_twh', {}) for h in HYBRID_TYPES
+            )
+            supply_profiles_iso = get_supply_profiles(
+                iso, gen_profiles, weather_year=weather_year,
+                include_hybrids=iso_has_hybrids,
+            )
 
             growth_factor = demand_twh / REGIONAL_DEMAND_TWH[iso]
             demand_mw_profile = np.array(demand_norm, dtype=np.float64) * total_mwh_base * growth_factor
@@ -4750,7 +4770,8 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             # resource_pcts must represent the ACTUAL share of total demand each
             # resource serves, so the dispatch model's residual demand curve
             # is consistent with the tracked clean_pct.
-            resource_pcts = {r: 0 for r in RESOURCE_TYPES}
+            rtypes = RESOURCE_TYPES_HYBRID if iso_has_hybrids else RESOURCE_TYPES
+            resource_pcts = {r: 0 for r in rtypes}
             # Start with baseline grid mix (% of total demand) — includes hydro
             for r, pct in GRID_MIX_SHARES.get(iso, {}).items():
                 if r in resource_pcts:
