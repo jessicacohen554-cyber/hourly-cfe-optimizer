@@ -60,6 +60,7 @@ from pipeline_config import (
     RGGI_ISOS, RGGI_PRICE_PER_TON,
     STATE_RPS_FLOORS, get_rps_floor,
     DAC_COST_PER_TON, get_dac_cost_per_ton,
+    HYBRID_TYPES,
 )
 from dispatch_utils import (
     load_common_data, get_demand_profile, get_supply_profiles,
@@ -251,8 +252,7 @@ CES_ISOS = {'NYISO', 'NEISO', 'CAISO'}
 # NEISO: CT CCEF for Millstone
 # CAISO: SB 100 counts all zero-carbon
 
-REC_ELIGIBLE = {'solar', 'wind', 'offshore_wind', 'hydro', 'geothermal',
-                'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8'}
+REC_ELIGIBLE = {'solar', 'wind', 'offshore_wind', 'hydro', 'geothermal'} | set(HYBRID_TYPES)
 CES_ELIGIBLE = REC_ELIGIBLE | {'clean_firm', 'ccs_ccgt'}
 CES_DISCOUNT_FACTOR = 0.60  # ZEC/Tier 3 = ~60% of Tier 1 REC price
 
@@ -1027,8 +1027,7 @@ def _get_ppa_discount(res, ppa_level, iso=None):
         return 0.0
 
     # Map resource to PPA category
-    if res in ('solar', 'wind', 'offshore_wind',
-               'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8'):
+    if res in ('solar', 'wind', 'offshore_wind') or res in HYBRID_TYPES:
         category = 'VRE'
     elif res in ('clean_firm', 'ccs_ccgt', 'geothermal', 'ldes', 'h2'):
         category = 'Firm'
@@ -1131,7 +1130,7 @@ def load_step3_data():
                 'hydro': float(row.get('mix_hydro', 0)),
             }
             # Add hybrid resources if present in EF data
-            for ht in ['solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']:
+            for ht in HYBRID_TYPES:
                 val = float(row.get(f'mix_{ht}', row.get(ht, 0)) or 0)
                 if val > 0:
                     resource_pcts[ht] = val
@@ -2072,8 +2071,7 @@ def save_results(results, scenario_id):
             }
             # Add resource mix columns
             for res in ['clean_firm', 'solar', 'wind', 'offshore_wind',
-                        'ccs_ccgt', 'hydro', 'battery', 'ldes',
-                        'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']:
+                        'ccs_ccgt', 'hydro', 'battery', 'ldes'] + HYBRID_TYPES:
                 row[f'mix_{res}_twh'] = yr['resource_mix_twh'].get(res, 0)
             rows.append(row)
 
@@ -2339,8 +2337,7 @@ def main():
                     }
                     # Resource mix columns
                     for res in ['clean_firm', 'solar', 'wind', 'offshore_wind',
-                                'ccs_ccgt', 'hydro', 'battery', 'ldes',
-                                'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']:
+                                'ccs_ccgt', 'hydro', 'battery', 'ldes'] + HYBRID_TYPES:
                         row[f'mix_{res}_twh'] = yr['resource_mix_twh'].get(res, 0)
                     all_rows.append(row)
 
