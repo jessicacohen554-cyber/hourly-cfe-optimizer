@@ -1799,10 +1799,18 @@ def run_pathway(iso, price_sens_name, growth_level, demand_norm, supply_profiles
     return results
 
 
-def run_iso(iso, demand_data, gen_profiles, emission_rates):
-    """Run all 15 pathways for a single ISO."""
+def run_iso(iso, demand_data, gen_profiles, emission_rates,
+            filter_sensitivity=None, filter_growth=None):
+    """Run pathways for a single ISO, optionally filtered by sensitivity/growth.
+
+    Args:
+        filter_sensitivity: If set, run only this price sensitivity (must be key in PRICE_SENSITIVITIES)
+        filter_growth: If set, run only this demand growth level ('Low', 'Medium', or 'High')
+    """
     print(f"\n{'='*60}")
     print(f"  Processing {iso}")
+    if filter_sensitivity or filter_growth:
+        print(f"  Filters: sensitivity={filter_sensitivity or 'all'}, growth={filter_growth or 'all'}")
     print(f"{'='*60}")
 
     # Pre-load coarse cache and near-miss data once for this ISO.
@@ -1817,8 +1825,11 @@ def run_iso(iso, demand_data, gen_profiles, emission_rates):
 
     all_results = []
 
-    for growth_level in DEMAND_GROWTH_LEVELS:
-        for price_sens_name in PRICE_SENSITIVITIES:
+    growth_levels = [filter_growth] if filter_growth else DEMAND_GROWTH_LEVELS
+    sens_keys = [filter_sensitivity] if filter_sensitivity else list(PRICE_SENSITIVITIES.keys())
+
+    for growth_level in growth_levels:
+        for price_sens_name in sens_keys:
             print(f"\n  {iso} | {price_sens_name} | {growth_level} growth")
             print(f"  {'-'*50}")
 
@@ -2315,9 +2326,20 @@ def main():
     isos = [args.iso] if args.iso else ISOS
     t0 = time.time()
 
+    # Validate sensitivity/growth filters
+    if args.sensitivity and args.sensitivity not in PRICE_SENSITIVITIES:
+        print(f"ERROR: Unknown sensitivity '{args.sensitivity}'. "
+              f"Valid: {list(PRICE_SENSITIVITIES.keys())}")
+        sys.exit(1)
+    if args.growth and args.growth not in DEMAND_GROWTH_LEVELS:
+        print(f"ERROR: Unknown growth '{args.growth}'. Valid: {DEMAND_GROWTH_LEVELS}")
+        sys.exit(1)
+
     all_results = []
     for iso in isos:
-        iso_results = run_iso(iso, demand_data, gen_profiles, emission_rates)
+        iso_results = run_iso(iso, demand_data, gen_profiles, emission_rates,
+                              filter_sensitivity=args.sensitivity,
+                              filter_growth=args.growth)
         all_results.extend(iso_results)
 
         # Save per-ISO parquet
