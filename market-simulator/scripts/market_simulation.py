@@ -284,47 +284,47 @@ QUEUE_CAP_GW = {
 # Per-tech caps sum to approximately the uniform QUEUE_CAP_GW for backward compatibility.
 TECH_QUEUE_CAP_GW = {
     'Medium': {
-        'CAISO':  {'solar': 2.5, 'wind': 0.8, 'offshore_wind': 0.3, 'clean_firm': 0.2, 'ccs_ccgt': 0.4, 'geothermal': 0.3},
-        'ERCOT':  {'solar': 4.0, 'wind': 2.5, 'offshore_wind': 0.2, 'clean_firm': 0.2, 'ccs_ccgt': 0.5, 'geothermal': 0.0},
-        'PJM':    {'solar': 2.5, 'wind': 1.2, 'offshore_wind': 0.5, 'clean_firm': 0.3, 'ccs_ccgt': 0.5, 'geothermal': 0.0},
-        'NYISO':  {'solar': 1.0, 'wind': 0.6, 'offshore_wind': 0.5, 'clean_firm': 0.2, 'ccs_ccgt': 0.2, 'geothermal': 0.0},
-        'NEISO':  {'solar': 0.8, 'wind': 0.8, 'offshore_wind': 0.7, 'clean_firm': 0.2, 'ccs_ccgt': 0.3, 'geothermal': 0.0},
-        'MISO':   {'solar': 2.0, 'wind': 1.5, 'offshore_wind': 0.0, 'clean_firm': 0.2, 'ccs_ccgt': 0.5, 'geothermal': 0.0},
-        'SPP':    {'solar': 1.8, 'wind': 1.5, 'offshore_wind': 0.0, 'clean_firm': 0.1, 'ccs_ccgt': 0.3, 'geothermal': 0.0},
+        'CAISO':  {'solar': 2.5, 'wind': 0.8, 'offshore_wind': 0.3, 'clean_firm': 0.2, 'ccs_ccgt': 0.4, 'geothermal': 0.3, 'solar_batt4': 0.8, 'solar_batt8': 0.4, 'wind_batt4': 0.4, 'wind_batt8': 0.2},
+        'ERCOT':  {'solar': 4.0, 'wind': 2.5, 'offshore_wind': 0.2, 'clean_firm': 0.2, 'ccs_ccgt': 0.5, 'geothermal': 0.0, 'solar_batt4': 1.5, 'solar_batt8': 0.8, 'wind_batt4': 1.0, 'wind_batt8': 0.5},
+        'PJM':    {'solar': 2.5, 'wind': 1.2, 'offshore_wind': 0.5, 'clean_firm': 0.3, 'ccs_ccgt': 0.5, 'geothermal': 0.0, 'solar_batt4': 1.0, 'solar_batt8': 0.5, 'wind_batt4': 0.5, 'wind_batt8': 0.3},
+        'NYISO':  {'solar': 1.0, 'wind': 0.6, 'offshore_wind': 0.5, 'clean_firm': 0.2, 'ccs_ccgt': 0.2, 'geothermal': 0.0, 'solar_batt4': 0.4, 'solar_batt8': 0.2, 'wind_batt4': 0.2, 'wind_batt8': 0.1},
+        'NEISO':  {'solar': 0.8, 'wind': 0.8, 'offshore_wind': 0.7, 'clean_firm': 0.2, 'ccs_ccgt': 0.3, 'geothermal': 0.0, 'solar_batt4': 0.3, 'solar_batt8': 0.2, 'wind_batt4': 0.3, 'wind_batt8': 0.2},
+        'MISO':   {'solar': 2.0, 'wind': 1.5, 'offshore_wind': 0.0, 'clean_firm': 0.2, 'ccs_ccgt': 0.5, 'geothermal': 0.0, 'solar_batt4': 0.8, 'solar_batt8': 0.4, 'wind_batt4': 0.6, 'wind_batt8': 0.3},
+        'SPP':    {'solar': 1.8, 'wind': 1.5, 'offshore_wind': 0.0, 'clean_firm': 0.1, 'ccs_ccgt': 0.3, 'geothermal': 0.0, 'solar_batt4': 0.7, 'solar_batt8': 0.3, 'wind_batt4': 0.6, 'wind_batt8': 0.3},
     },
     'Low': {  # ~50% of Medium (status quo permitting)
-        'CAISO':  {'solar': 1.3, 'wind': 0.4, 'offshore_wind': 0.15, 'clean_firm': 0.1, 'ccs_ccgt': 0.2, 'geothermal': 0.15},
-        'ERCOT':  {'solar': 2.0, 'wind': 1.3, 'offshore_wind': 0.1, 'clean_firm': 0.1, 'ccs_ccgt': 0.25, 'geothermal': 0.0},
-        'PJM':    {'solar': 1.3, 'wind': 0.6, 'offshore_wind': 0.25, 'clean_firm': 0.15, 'ccs_ccgt': 0.25, 'geothermal': 0.0},
-        'NYISO':  {'solar': 0.5, 'wind': 0.3, 'offshore_wind': 0.25, 'clean_firm': 0.1, 'ccs_ccgt': 0.1, 'geothermal': 0.0},
-        'NEISO':  {'solar': 0.4, 'wind': 0.4, 'offshore_wind': 0.35, 'clean_firm': 0.1, 'ccs_ccgt': 0.15, 'geothermal': 0.0},
-        'MISO':   {'solar': 1.0, 'wind': 0.8, 'offshore_wind': 0.0, 'clean_firm': 0.1, 'ccs_ccgt': 0.25, 'geothermal': 0.0},
-        'SPP':    {'solar': 0.9, 'wind': 0.8, 'offshore_wind': 0.0, 'clean_firm': 0.05, 'ccs_ccgt': 0.15, 'geothermal': 0.0},
+        'CAISO':  {'solar': 1.3, 'wind': 0.4, 'offshore_wind': 0.15, 'clean_firm': 0.1, 'ccs_ccgt': 0.2, 'geothermal': 0.15, 'solar_batt4': 0.4, 'solar_batt8': 0.2, 'wind_batt4': 0.2, 'wind_batt8': 0.1},
+        'ERCOT':  {'solar': 2.0, 'wind': 1.3, 'offshore_wind': 0.1, 'clean_firm': 0.1, 'ccs_ccgt': 0.25, 'geothermal': 0.0, 'solar_batt4': 0.75, 'solar_batt8': 0.4, 'wind_batt4': 0.5, 'wind_batt8': 0.25},
+        'PJM':    {'solar': 1.3, 'wind': 0.6, 'offshore_wind': 0.25, 'clean_firm': 0.15, 'ccs_ccgt': 0.25, 'geothermal': 0.0, 'solar_batt4': 0.5, 'solar_batt8': 0.25, 'wind_batt4': 0.25, 'wind_batt8': 0.15},
+        'NYISO':  {'solar': 0.5, 'wind': 0.3, 'offshore_wind': 0.25, 'clean_firm': 0.1, 'ccs_ccgt': 0.1, 'geothermal': 0.0, 'solar_batt4': 0.2, 'solar_batt8': 0.1, 'wind_batt4': 0.1, 'wind_batt8': 0.05},
+        'NEISO':  {'solar': 0.4, 'wind': 0.4, 'offshore_wind': 0.35, 'clean_firm': 0.1, 'ccs_ccgt': 0.15, 'geothermal': 0.0, 'solar_batt4': 0.15, 'solar_batt8': 0.1, 'wind_batt4': 0.15, 'wind_batt8': 0.1},
+        'MISO':   {'solar': 1.0, 'wind': 0.8, 'offshore_wind': 0.0, 'clean_firm': 0.1, 'ccs_ccgt': 0.25, 'geothermal': 0.0, 'solar_batt4': 0.4, 'solar_batt8': 0.2, 'wind_batt4': 0.3, 'wind_batt8': 0.15},
+        'SPP':    {'solar': 0.9, 'wind': 0.8, 'offshore_wind': 0.0, 'clean_firm': 0.05, 'ccs_ccgt': 0.15, 'geothermal': 0.0, 'solar_batt4': 0.35, 'solar_batt8': 0.15, 'wind_batt4': 0.3, 'wind_batt8': 0.15},
     },
     'High': {  # ~133% of Medium (FERC Order 2023 reforms)
-        'CAISO':  {'solar': 3.3, 'wind': 1.1, 'offshore_wind': 0.4, 'clean_firm': 0.3, 'ccs_ccgt': 0.5, 'geothermal': 0.4},
-        'ERCOT':  {'solar': 5.3, 'wind': 3.3, 'offshore_wind': 0.3, 'clean_firm': 0.3, 'ccs_ccgt': 0.7, 'geothermal': 0.0},
-        'PJM':    {'solar': 3.3, 'wind': 1.6, 'offshore_wind': 0.7, 'clean_firm': 0.4, 'ccs_ccgt': 0.7, 'geothermal': 0.0},
-        'NYISO':  {'solar': 1.3, 'wind': 0.8, 'offshore_wind': 0.7, 'clean_firm': 0.3, 'ccs_ccgt': 0.3, 'geothermal': 0.0},
-        'NEISO':  {'solar': 1.1, 'wind': 1.1, 'offshore_wind': 0.9, 'clean_firm': 0.3, 'ccs_ccgt': 0.4, 'geothermal': 0.0},
-        'MISO':   {'solar': 2.7, 'wind': 2.0, 'offshore_wind': 0.0, 'clean_firm': 0.3, 'ccs_ccgt': 0.7, 'geothermal': 0.0},
-        'SPP':    {'solar': 2.4, 'wind': 2.0, 'offshore_wind': 0.0, 'clean_firm': 0.15, 'ccs_ccgt': 0.4, 'geothermal': 0.0},
+        'CAISO':  {'solar': 3.3, 'wind': 1.1, 'offshore_wind': 0.4, 'clean_firm': 0.3, 'ccs_ccgt': 0.5, 'geothermal': 0.4, 'solar_batt4': 1.1, 'solar_batt8': 0.5, 'wind_batt4': 0.5, 'wind_batt8': 0.3},
+        'ERCOT':  {'solar': 5.3, 'wind': 3.3, 'offshore_wind': 0.3, 'clean_firm': 0.3, 'ccs_ccgt': 0.7, 'geothermal': 0.0, 'solar_batt4': 2.0, 'solar_batt8': 1.1, 'wind_batt4': 1.3, 'wind_batt8': 0.7},
+        'PJM':    {'solar': 3.3, 'wind': 1.6, 'offshore_wind': 0.7, 'clean_firm': 0.4, 'ccs_ccgt': 0.7, 'geothermal': 0.0, 'solar_batt4': 1.3, 'solar_batt8': 0.7, 'wind_batt4': 0.7, 'wind_batt8': 0.4},
+        'NYISO':  {'solar': 1.3, 'wind': 0.8, 'offshore_wind': 0.7, 'clean_firm': 0.3, 'ccs_ccgt': 0.3, 'geothermal': 0.0, 'solar_batt4': 0.5, 'solar_batt8': 0.3, 'wind_batt4': 0.3, 'wind_batt8': 0.1},
+        'NEISO':  {'solar': 1.1, 'wind': 1.1, 'offshore_wind': 0.9, 'clean_firm': 0.3, 'ccs_ccgt': 0.4, 'geothermal': 0.0, 'solar_batt4': 0.4, 'solar_batt8': 0.3, 'wind_batt4': 0.4, 'wind_batt8': 0.3},
+        'MISO':   {'solar': 2.7, 'wind': 2.0, 'offshore_wind': 0.0, 'clean_firm': 0.3, 'ccs_ccgt': 0.7, 'geothermal': 0.0, 'solar_batt4': 1.1, 'solar_batt8': 0.5, 'wind_batt4': 0.8, 'wind_batt8': 0.4},
+        'SPP':    {'solar': 2.4, 'wind': 2.0, 'offshore_wind': 0.0, 'clean_firm': 0.15, 'ccs_ccgt': 0.4, 'geothermal': 0.0, 'solar_batt4': 0.9, 'solar_batt8': 0.4, 'wind_batt4': 0.8, 'wind_batt8': 0.4},
     },
 }
 TECH_DIFFERENTIATED_QUEUE = True   # Set False to use legacy uniform QUEUE_CAP_GW
 QUEUE_FLEX_FRACTION = 0.20         # 20% of total cap available as flex pool across techs
 
-# Validate per-tech caps sum to within 50% of the uniform cap (catch config errors).
-# Tech caps are intentionally lower than uniform — LBNL completion rates reflect real
-# bottlenecks. The flex pool (QUEUE_FLEX_FRACTION) compensates for the difference.
+# Validate per-tech caps sum to within 75% of the uniform cap (catch config errors).
+# Tech caps include hybrid resources (solar+batt, wind+batt) which push sums above uniform.
+# The flex pool (QUEUE_FLEX_FRACTION) compensates for the difference.
 for _level in TECH_QUEUE_CAP_GW:
     for _iso in TECH_QUEUE_CAP_GW[_level]:
         _tech_sum = sum(TECH_QUEUE_CAP_GW[_level][_iso].values())
         _uniform = QUEUE_CAP_GW.get(_level, {}).get(_iso, 0)
-        if _uniform > 0 and abs(_tech_sum - _uniform) / _uniform > 0.50:
+        if _uniform > 0 and abs(_tech_sum - _uniform) / _uniform > 0.75:
             import warnings as _w
             _w.warn(f"TECH_QUEUE_CAP_GW[{_level}][{_iso}] sums to {_tech_sum:.1f} GW "
-                    f"but uniform QUEUE_CAP_GW is {_uniform:.1f} GW (>50% difference)")
+                    f"but uniform QUEUE_CAP_GW is {_uniform:.1f} GW (>75% difference)")
 
 # Wright's Law — deployment-based learning
 WRIGHT_CUMULATIVE_GW_2025 = {
@@ -398,6 +398,8 @@ RESOURCE_TO_TECH = {
     'offshore_wind': 'offshore_wind', 'ccs_ccgt': 'ccs', 'hydro': 'hydro',
     'battery': 'battery', 'battery8': 'battery8', 'ldes': 'ldes', 'h2': 'h2',
     'geothermal': 'geothermal',
+    'solar_batt4': 'solar', 'solar_batt8': 'solar',
+    'wind_batt4': 'wind', 'wind_batt8': 'wind',
 }
 
 # Gas friction levels
@@ -462,7 +464,8 @@ REC_SCARCITY_K = {
 }
 REC_SURPLUS_DECAY_K = 0.20
 CES_ISOS = {'NYISO', 'NEISO', 'CAISO'}
-REC_ELIGIBLE = {'solar', 'wind', 'offshore_wind', 'hydro', 'geothermal'}
+REC_ELIGIBLE = {'solar', 'wind', 'offshore_wind', 'hydro', 'geothermal',
+                'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8'}
 CES_ELIGIBLE = REC_ELIGIBLE | {'clean_firm', 'ccs_ccgt'}
 CES_DISCOUNT_FACTOR = 0.60
 
@@ -3017,6 +3020,7 @@ def compute_ccs_retrofit_breakeven(iso, fuel_level='Medium', conditions=None, ye
 # Deployable clean resource types and their typical capacity factors by ISO
 DEPLOYABLE_RESOURCES = [
     'solar', 'wind', 'offshore_wind', 'clean_firm', 'ccs_ccgt', 'geothermal',
+    'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8',
 ]
 
 # Maximum capacity per resource type (TWh/yr per ISO) — physical/permitting limits
