@@ -43,6 +43,7 @@ from pipeline_config import (
 from dispatch_utils import (
     compute_fossil_retirement, compute_co2_from_dispatch,
     COAL_CAP_TWH, OIL_CAP_TWH, COAL_OIL_RETIREMENT_THRESHOLD,
+    HYBRID_TYPES, _detect_hybrids_in_schema,
     load_common_data, get_supply_profiles, get_demand_profile,
     build_supply_matrix, reconstruct_hourly_dispatch,
     _archetype_key, load_dispatch_cache, get_or_compute_dispatch,
@@ -1459,7 +1460,8 @@ def _get_dispatch_co2_for_mix(iso, mix_result, egrid, demand_data, gen_profiles,
     bat8_pct = mix_result.get('battery8_dispatch_pct', 0)
     ldes_pct = mix_result.get('ldes_dispatch_pct', 0)
     h2_pct = mix_result.get('h2_dispatch_pct', 0)
-    supply_profiles = get_supply_profiles(iso, gen_profiles)
+    has_hybrids = any(h in resource_pcts for h in HYBRID_TYPES)
+    supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=has_hybrids)
     demand_norm, _ = get_demand_profile(iso, demand_data)
     cache = dispatch_caches.get(iso, {})
     dispatch_result, _ = get_or_compute_dispatch(

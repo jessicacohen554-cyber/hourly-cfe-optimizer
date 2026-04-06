@@ -87,6 +87,18 @@ RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'h
 HYBRID_TYPES = ['solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
 RESOURCE_TYPES_HYBRID = RESOURCE_TYPES + HYBRID_TYPES
 
+
+def _detect_hybrids_in_schema(schema_names):
+    """Return True if any hybrid resource column is present in *schema_names*.
+
+    Works with parquet column lists, DataFrame column names, or any iterable
+    of strings.  Checks for both raw names (e.g. 'solar_batt4') and the
+    ``mix_`` prefix used in Step 2.2 cost parquets (e.g. 'mix_solar_batt4').
+    """
+    names_set = set(schema_names)
+    return any(h in names_set or f'mix_{h}' in names_set for h in HYBRID_TYPES)
+
+
 # Alias for backward compatibility
 BASE_DEMAND_TWH = REGIONAL_DEMAND_TWH
 
