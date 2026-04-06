@@ -3614,6 +3614,9 @@ def compute_market_deployment(iso, year, demand_twh, current_clean_pct,
             else:
                 tx = get_tx(res if res != 'clean_firm' else 'clean_firm', tx_level, iso)
             lcoe += tx
+        elif res in HYBRID_TYPES:
+            tx = get_hybrid_tx(res, tx_level, iso)
+            lcoe += tx
 
         # Apply PPA discount
         if ppa_level is not None:
