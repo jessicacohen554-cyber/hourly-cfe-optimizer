@@ -13,7 +13,7 @@ import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, SCRIPT_DIR)
-from pipeline_config import ISOS
+from pipeline_config import ISOS, HYBRID_TYPES
 from procurement_utils import load_results_parquet
 
 DATA_DIR = "data/step5-scenarios"
@@ -93,7 +93,7 @@ def categorize_resources(resource_mix):
         # Normalize resource names
         rname = k.lower().replace("-", "_")
 
-        if rname in ("solar", "wind", "offshore_wind"):
+        if rname in ("solar", "wind", "offshore_wind") or rname in HYBRID_TYPES:
             vre_twh += twh
         elif rname in ("clean_firm", "ccs", "nuclear_uprate", "geothermal"):
             firm_twh += twh
