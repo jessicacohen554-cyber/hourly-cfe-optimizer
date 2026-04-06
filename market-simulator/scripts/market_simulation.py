@@ -2863,7 +2863,8 @@ def get_resource_lcoe(res, iso, lcoe_level, cumulative_gw, learning_speed, year,
         # ren and batt levels are bundled in sweep price sensitivities
         ps = (conditions or {}).get('_price_sens', {})
         vre_level = ps.get('ren', lcoe_level)  # fallback for non-sweep callers
-        base = get_hybrid_lcoe(res, vre_level, vre_level, iso)
+        batt_level = ps.get('batt', lcoe_level)
+        base = get_hybrid_lcoe(res, vre_level, batt_level, iso)
         # PTC delta adjustment for renewable component
         if conditions:
             parent = _HYBRID_PARENT_REN[res]
@@ -4469,7 +4470,7 @@ def estimate_new_gw_from_delta(delta_resources_twh, iso):
 _PIPELINE_CONFIG_PATH = os.path.join(SCRIPT_DIR, 'pipeline_config.py')
 
 
-def build_provenance_metadata(input_params: dict) -> ProvenanceMetadata:
+def build_provenance_metadata(input_params: dict):
     """Build provenance metadata capturing code version, config, and inputs.
 
     Args:
@@ -4503,15 +4504,18 @@ def build_provenance_metadata(input_params: dict) -> ProvenanceMetadata:
     except Exception:
         config_hash = 'unknown'
 
-    return ProvenanceMetadata(
-        model_version=PIPELINE_VERSION,
-        git_sha=git_sha,
-        git_branch=git_branch,
-        config_hash=config_hash,
-        run_timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        python_version=sys.version,
-        input_snapshot=input_params,
-    )
+    fields = {
+        'model_version': PIPELINE_VERSION,
+        'git_sha': git_sha,
+        'git_branch': git_branch,
+        'config_hash': config_hash,
+        'run_timestamp': datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        'python_version': sys.version,
+        'input_snapshot': input_params,
+    }
+    if ProvenanceMetadata is not None:
+        return ProvenanceMetadata(**fields)
+    return fields
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -4761,13 +4765,11 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             demand_total_mwh = demand_twh * 1e6
 
             demand_norm, total_mwh_base = get_demand_profile(iso, demand_data, weather_year=weather_year)
-            # Include hybrid supply profiles when any deployed resource is a hybrid type
-            iso_has_hybrids = any(
-                h in state.get('deployed_twh', {}) for h in HYBRID_TYPES
-            )
+            # Always include hybrid profiles — hybrids are in DEPLOYABLE_RESOURCES
+            # and profiles must be available before first deployment decision.
             supply_profiles_iso = get_supply_profiles(
                 iso, gen_profiles, weather_year=weather_year,
-                include_hybrids=iso_has_hybrids,
+                include_hybrids=True,
             )
 
             growth_factor = demand_twh / REGIONAL_DEMAND_TWH[iso]
@@ -4817,7 +4819,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             # resource_pcts must represent the ACTUAL share of total demand each
             # resource serves, so the dispatch model's residual demand curve
             # is consistent with the tracked clean_pct.
-            rtypes = RESOURCE_TYPES_HYBRID if iso_has_hybrids else RESOURCE_TYPES
+            rtypes = RESOURCE_TYPES_HYBRID
             resource_pcts = {r: 0 for r in rtypes}
             # Start with baseline grid mix (% of total demand) — includes hydro
             for r, pct in GRID_MIX_SHARES.get(iso, {}).items():
@@ -5133,9 +5135,13 @@ def run_market_simulation(scenario_id, conditions, isos=None,
             ccs_breakeven = compute_ccs_retrofit_breakeven(iso, conditions['fuel_level'], conditions=conditions)
 
             # Resource mix in TWh — built from deployed resources + existing mix
+            # Initialize all deployable resources (including hybrids) to ensure
+            # consistent columns in output even when deployment is zero.
             existing_mix_twh = {r: p / 100.0 * demand_twh
                                 for r, p in GRID_MIX_SHARES.get(iso, {}).items()}
             resource_mix_twh = dict(existing_mix_twh)
+            for res in DEPLOYABLE_RESOURCES:
+                resource_mix_twh.setdefault(res, 0.0)
             for res, twh in deployed.items():
                 resource_mix_twh[res] = resource_mix_twh.get(res, 0) + twh
 
@@ -5242,7 +5248,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
 
             results[iso].append(year_result)
 
-    results['_provenance'] = provenance.model_dump()
+    results['_provenance'] = provenance.model_dump() if hasattr(provenance, 'model_dump') else provenance
     return results
 
 
@@ -5340,7 +5346,7 @@ def run_full_sweep(isos=None, nuclear_retirement_threshold=None,
         'weather_years': weather_years,
         'total_scenarios': total_runs,
     })
-    all_results['_provenance'] = sweep_provenance.model_dump()
+    all_results['_provenance'] = sweep_provenance.model_dump() if hasattr(sweep_provenance, 'model_dump') else sweep_provenance
 
     return all_results
 
@@ -5457,7 +5463,7 @@ def run_correlated_scenarios(iso, scenario_names=None,
         'scenarios': scenario_names,
         'snapshot_mode': snapshot_mode,
     })
-    results['_provenance'] = provenance.model_dump()
+    results['_provenance'] = provenance.model_dump() if hasattr(provenance, 'model_dump') else provenance
 
     return results
 
