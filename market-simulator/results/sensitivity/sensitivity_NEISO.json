@@ -78,59 +78,59 @@
     },
     "emissions_mt": {
       "demand_growth": {
-        "mu_star": 25.452469,
-        "sigma": 9.541616,
-        "mu": 25.215407,
+        "mu_star": 25.382136,
+        "sigma": 8.93114,
+        "mu": 25.232432,
         "n_effects": 810
       },
       "price_sensitivity": {
-        "mu_star": 3.495648,
-        "sigma": 9.474419,
-        "mu": 1.22466,
+        "mu_star": 2.940874,
+        "sigma": 8.508184,
+        "mu": 0.944167,
         "n_effects": 972
       },
       "ppa_level": {
-        "mu_star": 3.357383,
-        "sigma": 12.273245,
-        "mu": 2.845877,
+        "mu_star": 3.471444,
+        "sigma": 12.165174,
+        "mu": 2.894506,
         "n_effects": 810
       },
       "gas_friction": {
-        "mu_star": 3.266259,
-        "sigma": 12.118182,
-        "mu": 3.266259,
+        "mu_star": 3.207025,
+        "sigma": 12.019865,
+        "mu": 3.207025,
         "n_effects": 810
       },
       "queue_capacity": {
-        "mu_star": 5.130901,
-        "sigma": 11.109753,
-        "mu": -2.123148,
+        "mu_star": 5.000741,
+        "sigma": 10.393108,
+        "mu": -1.24837,
         "n_effects": 810
       },
       "new_fossil_cost": {
-        "mu_star": 3.819123,
-        "sigma": 8.658668,
-        "mu": 0.573444,
+        "mu_star": 4.205938,
+        "sigma": 8.331118,
+        "mu": 0.547568,
         "n_effects": 810
       }
     },
     "avg_lmp": {
       "demand_growth": {
-        "mu_star": 1.087037,
-        "sigma": 0.669671,
-        "mu": 1.011481,
+        "mu_star": 1.056296,
+        "sigma": 0.647915,
+        "mu": 0.956296,
         "n_effects": 810
       },
       "price_sensitivity": {
-        "mu_star": 2.609259,
-        "sigma": 3.120331,
-        "mu": 0.472222,
+        "mu_star": 2.601543,
+        "sigma": 3.094449,
+        "mu": 0.491667,
         "n_effects": 972
       },
       "ppa_level": {
-        "mu_star": 0.005926,
-        "sigma": 0.054824,
-        "mu": -0.005926,
+        "mu_star": 0.060741,
+        "sigma": 0.391251,
+        "mu": 0.000741,
         "n_effects": 810
       },
       "gas_friction": {
@@ -140,15 +140,15 @@
         "n_effects": 810
       },
       "queue_capacity": {
-        "mu_star": 0.156667,
-        "sigma": 0.493254,
-        "mu": 0.021111,
+        "mu_star": 0.251852,
+        "sigma": 0.708259,
+        "mu": 0.132593,
         "n_effects": 810
       },
       "new_fossil_cost": {
-        "mu_star": 2.242593,
-        "sigma": 0.581419,
-        "mu": 2.242593,
+        "mu_star": 2.171111,
+        "sigma": 0.953398,
+        "mu": 2.125926,
         "n_effects": 810
       }
     }
@@ -256,77 +256,77 @@
     ],
     "emissions_mt": [
       {
-        "x": 25.452469,
-        "y": 9.541616,
+        "x": 25.382136,
+        "y": 8.93114,
         "label": "Demand Growth",
         "dimension": "demand_growth",
-        "mu": 25.215407,
+        "mu": 25.232432,
         "n_effects": 810
       },
       {
-        "x": 3.495648,
-        "y": 9.474419,
+        "x": 2.940874,
+        "y": 8.508184,
         "label": "Price Sensitivity (Renewable/Firm LCOE)",
         "dimension": "price_sensitivity",
-        "mu": 1.22466,
+        "mu": 0.944167,
         "n_effects": 972
       },
       {
-        "x": 3.357383,
-        "y": 12.273245,
+        "x": 3.471444,
+        "y": 12.165174,
         "label": "PPA Premium Level",
         "dimension": "ppa_level",
-        "mu": 2.845877,
+        "mu": 2.894506,
         "n_effects": 810
       },
       {
-        "x": 3.266259,
-        "y": 12.118182,
+        "x": 3.207025,
+        "y": 12.019865,
         "label": "Gas Friction (Permitting/Pipeline)",
         "dimension": "gas_friction",
-        "mu": 3.266259,
+        "mu": 3.207025,
         "n_effects": 810
       },
       {
-        "x": 5.130901,
-        "y": 11.109753,
+        "x": 5.000741,
+        "y": 10.393108,
         "label": "Interconnection Queue Capacity",
         "dimension": "queue_capacity",
-        "mu": -2.123148,
+        "mu": -1.24837,
         "n_effects": 810
       },
       {
-        "x": 3.819123,
-        "y": 8.658668,
+        "x": 4.205938,
+        "y": 8.331118,
         "label": "New Fossil Build Cost",
         "dimension": "new_fossil_cost",
-        "mu": 0.573444,
+        "mu": 0.547568,
         "n_effects": 810
       }
     ],
     "avg_lmp": [
       {
-        "x": 1.087037,
-        "y": 0.669671,
+        "x": 1.056296,
+        "y": 0.647915,
         "label": "Demand Growth",
         "dimension": "demand_growth",
-        "mu": 1.011481,
+        "mu": 0.956296,
         "n_effects": 810
       },
       {
-        "x": 2.609259,
-        "y": 3.120331,
+        "x": 2.601543,
+        "y": 3.094449,
         "label": "Price Sensitivity (Renewable/Firm LCOE)",
         "dimension": "price_sensitivity",
-        "mu": 0.472222,
+        "mu": 0.491667,
         "n_effects": 972
       },
       {
-        "x": 0.005926,
-        "y": 0.054824,
+        "x": 0.060741,
+        "y": 0.391251,
         "label": "PPA Premium Level",
         "dimension": "ppa_level",
-        "mu": -0.005926,
+        "mu": 0.000741,
         "n_effects": 810
       },
       {
@@ -338,19 +338,19 @@
         "n_effects": 810
       },
       {
-        "x": 0.156667,
-        "y": 0.493254,
+        "x": 0.251852,
+        "y": 0.708259,
         "label": "Interconnection Queue Capacity",
         "dimension": "queue_capacity",
-        "mu": 0.021111,
+        "mu": 0.132593,
         "n_effects": 810
       },
       {
-        "x": 2.242593,
-        "y": 0.581419,
+        "x": 2.171111,
+        "y": 0.953398,
         "label": "New Fossil Build Cost",
         "dimension": "new_fossil_cost",
-        "mu": 2.242593,
+        "mu": 2.125926,
         "n_effects": 810
       }
     ]
@@ -375,22 +375,22 @@
       "_total_variance": 0.0
     },
     "emissions_mt": {
-      "demand_growth": 0.788144,
-      "price_sensitivity": 0.006481,
-      "ppa_level": 0.014397,
-      "gas_friction": 0.017275,
-      "queue_capacity": 0.005499,
-      "new_fossil_cost": 0.001746,
-      "_total_variance": 548.9446
+      "demand_growth": 0.795074,
+      "price_sensitivity": 0.005852,
+      "ppa_level": 0.014442,
+      "gas_friction": 0.01679,
+      "queue_capacity": 0.004087,
+      "new_fossil_cost": 0.002526,
+      "_total_variance": 544.5131
     },
     "avg_lmp": {
-      "demand_growth": 0.083059,
-      "price_sensitivity": 0.487533,
-      "ppa_level": 4e-06,
+      "demand_growth": 0.076536,
+      "price_sensitivity": 0.503504,
+      "ppa_level": 2e-06,
       "gas_friction": 0.0,
-      "queue_capacity": 7.8e-05,
-      "new_fossil_cost": 0.411166,
-      "_total_variance": 8.236
+      "queue_capacity": 0.001843,
+      "new_fossil_cost": 0.383489,
+      "_total_variance": 8.0301
     }
   },
   "tornado": {
@@ -462,59 +462,59 @@
       {
         "dimension": "demand_growth",
         "label": "Demand Growth",
-        "variance_fraction": 0.788144
+        "variance_fraction": 0.795074
       },
       {
         "dimension": "gas_friction",
         "label": "Gas Friction (Permitting/Pipeline)",
-        "variance_fraction": 0.017275
+        "variance_fraction": 0.01679
       },
       {
         "dimension": "ppa_level",
         "label": "PPA Premium Level",
-        "variance_fraction": 0.014397
+        "variance_fraction": 0.014442
       },
       {
         "dimension": "price_sensitivity",
         "label": "Price Sensitivity (Renewable/Firm LCOE)",
-        "variance_fraction": 0.006481
+        "variance_fraction": 0.005852
       },
       {
         "dimension": "queue_capacity",
         "label": "Interconnection Queue Capacity",
-        "variance_fraction": 0.005499
+        "variance_fraction": 0.004087
       },
       {
         "dimension": "new_fossil_cost",
         "label": "New Fossil Build Cost",
-        "variance_fraction": 0.001746
+        "variance_fraction": 0.002526
       }
     ],
     "avg_lmp": [
       {
         "dimension": "price_sensitivity",
         "label": "Price Sensitivity (Renewable/Firm LCOE)",
-        "variance_fraction": 0.487533
+        "variance_fraction": 0.503504
       },
       {
         "dimension": "new_fossil_cost",
         "label": "New Fossil Build Cost",
-        "variance_fraction": 0.411166
+        "variance_fraction": 0.383489
       },
       {
         "dimension": "demand_growth",
         "label": "Demand Growth",
-        "variance_fraction": 0.083059
+        "variance_fraction": 0.076536
       },
       {
         "dimension": "queue_capacity",
         "label": "Interconnection Queue Capacity",
-        "variance_fraction": 7.8e-05
+        "variance_fraction": 0.001843
       },
       {
         "dimension": "ppa_level",
         "label": "PPA Premium Level",
-        "variance_fraction": 4e-06
+        "variance_fraction": 2e-06
       },
       {
         "dimension": "gas_friction",
@@ -614,89 +614,89 @@
     },
     "emissions_mt": {
       "demand_growth": {
-        "low": 63.5709,
-        "high": 114.0017,
-        "range": 50.4308,
-        "baseline": 86.6923,
+        "low": 62.4615,
+        "high": 112.9264,
+        "range": 50.4649,
+        "baseline": 85.6351,
         "label": "Demand Growth"
       },
       "price_sensitivity": {
-        "low": 84.408,
-        "high": 89.3067,
-        "range": 4.8986,
-        "baseline": 86.6923,
+        "low": 83.902,
+        "high": 87.8936,
+        "range": 3.9916,
+        "baseline": 85.6351,
         "label": "Price Sensitivity (Renewable/Firm LCOE)"
       },
       "ppa_level": {
-        "low": 82.7275,
-        "high": 88.9301,
-        "range": 6.2026,
-        "baseline": 86.6923,
+        "low": 81.6733,
+        "high": 87.7697,
+        "range": 6.0964,
+        "baseline": 85.6351,
         "label": "PPA Premium Level"
       },
       "gas_friction": {
-        "low": 82.3373,
-        "high": 88.8698,
-        "range": 6.5325,
-        "baseline": 86.6923,
+        "low": 81.3591,
+        "high": 87.7731,
+        "range": 6.414,
+        "baseline": 85.6351,
         "label": "Gas Friction (Permitting/Pipeline)"
       },
       "queue_capacity": {
-        "low": 84.6516,
-        "high": 88.8979,
-        "range": 4.2463,
-        "baseline": 86.6923,
+        "low": 84.0945,
+        "high": 87.6538,
+        "range": 3.5592,
+        "baseline": 85.6351,
         "label": "Interconnection Queue Capacity"
       },
       "new_fossil_cost": {
-        "low": 85.4763,
-        "high": 87.8738,
-        "range": 2.3974,
-        "baseline": 86.6923,
+        "low": 84.1018,
+        "high": 86.9493,
+        "range": 2.8475,
+        "baseline": 85.6351,
         "label": "New Fossil Build Cost"
       }
     },
     "avg_lmp": {
       "demand_growth": {
-        "low": 41.837,
-        "high": 43.86,
-        "range": 2.023,
-        "baseline": 42.8168,
+        "low": 41.9511,
+        "high": 43.8637,
+        "range": 1.9126,
+        "baseline": 42.8578,
         "label": "Demand Growth"
       },
       "price_sensitivity": {
-        "low": 40.4852,
+        "low": 40.4049,
         "high": 46.5556,
-        "range": 6.0704,
-        "baseline": 42.8168,
+        "range": 6.1506,
+        "baseline": 42.8578,
         "label": "Price Sensitivity (Renewable/Firm LCOE)"
       },
       "ppa_level": {
-        "low": 42.8089,
-        "high": 42.8207,
-        "range": 0.0119,
-        "baseline": 42.8168,
+        "low": 42.8519,
+        "high": 42.8615,
+        "range": 0.0096,
+        "baseline": 42.8578,
         "label": "PPA Premium Level"
       },
       "gas_friction": {
-        "low": 42.8168,
-        "high": 42.8168,
+        "low": 42.8578,
+        "high": 42.8578,
         "range": 0.0,
-        "baseline": 42.8168,
+        "baseline": 42.8578,
         "label": "Gas Friction (Permitting/Pipeline)"
       },
       "queue_capacity": {
-        "low": 42.7904,
-        "high": 42.8511,
-        "range": 0.0607,
-        "baseline": 42.8168,
+        "low": 42.7644,
+        "high": 43.0296,
+        "range": 0.2652,
+        "baseline": 42.8578,
         "label": "Interconnection Queue Capacity"
       },
       "new_fossil_cost": {
-        "low": 40.7037,
-        "high": 45.1889,
-        "range": 4.4852,
-        "baseline": 42.8168,
+        "low": 40.9141,
+        "high": 45.1659,
+        "range": 4.2519,
+        "baseline": 42.8578,
         "label": "New Fossil Build Cost"
       }
     }
