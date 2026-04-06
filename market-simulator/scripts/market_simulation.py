@@ -97,6 +97,8 @@ from pipeline_config import (
     VRE_PRIMARY_ZONE,
     ENDOGENOUS_LEARNING,
     CORRELATED_SCENARIOS,
+    get_hybrid_lcoe, get_hybrid_tx,
+    HYBRID_DC_AC_RATIOS, _HYBRID_PARENT_REN,
 )
 from dispatch_utils import (
     load_common_data, get_demand_profile, get_supply_profiles,
@@ -1908,6 +1910,9 @@ def compute_unified_deployment(
             else:
                 tx = get_tx(res if res != 'clean_firm' else 'clean_firm', tx_level, iso)
             lcoe += tx
+        elif res in HYBRID_TYPES:
+            tx = get_hybrid_tx(res, tx_level, iso)
+            lcoe += tx
 
         # PPA discount
         if ppa_level is not None:
@@ -1929,6 +1934,17 @@ def compute_unified_deployment(
             effective_cf = cf * (1.0 - curtailment_rate)
             if effective_cf > 0:
                 effective_lcoe = lcoe / (1.0 - curtailment_rate)
+            else:
+                effective_lcoe = float('inf')
+            cf = effective_cf
+        elif res in HYBRID_TYPES and curtailment_rate > 0:
+            # Hybrids partially mitigate curtailment via co-located storage
+            dc_ac = HYBRID_DC_AC_RATIOS.get(res, {}).get(iso, 1.3)
+            mitigation = 1.0 / dc_ac  # battery absorbs proportional to oversize
+            effective_curt = curtailment_rate * mitigation
+            effective_cf = cf * (1.0 - effective_curt)
+            if effective_cf > 0:
+                effective_lcoe = lcoe / (1.0 - effective_curt)
             else:
                 effective_lcoe = float('inf')
             cf = effective_cf
@@ -2842,6 +2858,20 @@ def get_resource_lcoe(res, iso, lcoe_level, cumulative_gw, learning_speed, year,
             return conditions['wholesale_price_override']
         return WHOLESALE_PRICES.get(iso, 30)
 
+    elif res in HYBRID_TYPES:
+        # Hybrid LCOE = (renewable LCOE / DC:AC) + battery LCOS * (1 - ITC)
+        # ren and batt levels are bundled in sweep price sensitivities
+        ps = (conditions or {}).get('_price_sens', {})
+        vre_level = ps.get('ren', lcoe_level)  # fallback for non-sweep callers
+        base = get_hybrid_lcoe(res, vre_level, vre_level, iso)
+        # PTC delta adjustment for renewable component
+        if conditions:
+            parent = _HYBRID_PARENT_REN[res]
+            user_ptc = conditions.get(f'ptc_{parent}', BASELINE_PTC_IN_LCOE.get(parent, 26.0))
+            delta = user_ptc - BASELINE_PTC_IN_LCOE.get(parent, 26.0)
+            base -= delta
+        return max(0, base)
+
     else:
         tables = LCOE_TABLES.get(res, {})
         base = tables.get(lcoe_level, {}).get(iso, 50)
@@ -2893,8 +2923,11 @@ def compute_lcoe_snapshot(iso, cumulative_gw, lcoe_level, learning_speed, year,
             continue
         lcoe = get_resource_lcoe(res, iso, lcoe_level, cumulative_gw,
                                   learning_speed, year, conditions=conditions)
-        tech = RESOURCE_TO_TECH.get(res, res)
-        snapshot[tech] = round(lcoe, 2)
+        if res in HYBRID_TYPES:
+            snapshot[res] = round(lcoe, 2)  # Keep hybrid as separate key
+        else:
+            tech = RESOURCE_TO_TECH.get(res, res)
+            snapshot[tech] = round(lcoe, 2)
     # Also include storage techs that have learning curves
     for storage_res in ('battery', 'battery8', 'ldes'):
         lcoe = get_resource_lcoe(storage_res, iso, lcoe_level, cumulative_gw,

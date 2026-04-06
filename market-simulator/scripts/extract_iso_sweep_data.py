@@ -34,6 +34,8 @@ ENVELOPE_METRICS = [
     # Resource mix
     "mix_solar_twh", "mix_wind_twh", "mix_offshore_wind_twh",
     "mix_ccs_ccgt_twh", "mix_hydro_twh", "mix_clean_firm_twh",
+    "mix_solar_batt4_twh", "mix_solar_batt8_twh",
+    "mix_wind_batt4_twh", "mix_wind_batt8_twh",
     # Generator economics — fleet aggregate
     "ge_gas_ccgt_cf", "ge_gas_ccgt_margin_mwh", "ge_gas_ccgt_capacity_mw",
     "ge_gas_ct_cf", "ge_gas_ct_margin_mwh", "ge_gas_ct_capacity_mw",
