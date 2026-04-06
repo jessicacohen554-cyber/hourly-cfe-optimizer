@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.join(ROOT_DIR, 'scripts'))
 from pipeline_config import (
     CAPACITY_MARKET_PRICES, CAPACITY_DEGRADATION_ALPHA,
     PEAK_CAPACITY_CREDITS, RESOURCE_CAPACITY_FACTORS,
+    HYBRID_TYPES,
 )
 
 LMP_DIR = os.path.join(ROOT_DIR, 'data', 'step4-analysis', 'lmp')
@@ -30,8 +31,7 @@ ALL_ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 
 # Resource → category mapping
 CLEAN_FIRM_RES = ['clean_firm', 'geothermal']
-VRE_RES = ['solar', 'wind', 'offshore_wind',
-           'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
+VRE_RES = ['solar', 'wind', 'offshore_wind'] + list(HYBRID_TYPES)
 STORAGE_RES = ['battery', 'battery8', 'ldes', 'h2']
 CCS_RES = ['ccs_ccgt']
 
