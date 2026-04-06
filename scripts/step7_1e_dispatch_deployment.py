@@ -290,6 +290,11 @@ def _map_resource(res):
         'cross_regional_recs': 'wind',
         'new_build_vre': 'wind',
         'green_h2': 'clean_firm',  # approximate for dispatch
+        # Hybrid co-located types — identity mappings (dispatch_utils handles natively)
+        'solar_batt4': 'solar_batt4',
+        'solar_batt8': 'solar_batt8',
+        'wind_batt4': 'wind_batt4',
+        'wind_batt8': 'wind_batt8',
     }
     return mapping.get(res, res)
 
