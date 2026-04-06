@@ -13,11 +13,14 @@ HYBRID_TYPES = ['solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
 
 ## Executive Summary
 
-**The pipeline is broadly compatible.** Hybrid integration was done comprehensively across 27+ scripts. Three categories of remaining work:
+**The pipeline is broadly compatible.** Hybrid integration was done comprehensively across 27+ scripts. Four categories of remaining work:
 
 1. **One confirmed bug**: `step4_2c_analyze_tracks.py` loads hybrid data but silently drops it from report output
-2. **One missing integration**: `step7_1h_extract_strategy_comparison.py` has zero hybrid references -- VRE totals are understated in strategy comparison dashboard
+2. **Two missing integrations**:
+   - `step7_1h_extract_strategy_comparison.py` has zero hybrid references -- VRE totals are understated in strategy comparison dashboard
+   - `procurement_utils.py` `build_newbuild_only_tranches()` has no hybrid tranches -- Strategies 3A & 3C in step5_2d underprice hybrids by routing them through generic VRE tranche
 3. **Hardcoded resource lists in 5 scripts** create maintenance risk for future hybrid type additions
+4. **One fragile passthrough**: `step7_1e_dispatch_deployment.py` `_map_resource()` has no explicit hybrid mappings (currently works via fallthrough but is brittle)
 
 ---
 
@@ -38,9 +41,9 @@ HYBRID_TYPES = ['solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
 | `step4_2c_analyze_tracks.py` | 4.2C | **BUG** | **Critical** | Data loaded but NOT printed (lines 278-290) |
 | `step5_2b_strategy_consequential.py` | 5.2B | OK | None | HYBRID_TYPES import |
 | `step5_2c_strategy_hourly.py` | 5.2C | OK | Low | Inline fallback fractions include hybrids |
-| `step5_2d_strategy_annual.py` | 5.2D | OK | None | HYBRID_TYPES iteration |
+| `step5_2d_strategy_annual.py` | 5.2D | **ASYMMETRIC** | **Critical** | 3B/3D handle hybrids; 3A/3C missing hybrid tranches |
 | `step5_2e_wrights_law_curves.py` | 5.2E | OK | None | HYBRID_TYPES import |
-| `procurement_utils.py` | Shared | OK | None | get_hybrid_lcoe/tx integration |
+| `procurement_utils.py` | Shared | **PARTIAL** | **Critical** | get_hybrid_lcoe/tx OK; `build_newbuild_only_tranches()` missing hybrids |
 | `step6_1_smartargets.py` | 6.1 | OK | **Maintenance** | Hardcoded in 5 locations |
 | `step6_1b_dashboard_data.py` | 6.1B | OK | None | Dynamic column extraction |
 | `step6_2a_ipp_smartargets.py` | 6.2A | OK | None | Detailed hybrid parameters |
@@ -48,7 +51,7 @@ HYBRID_TYPES = ['solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
 | `step7_1a_generate_shared_data.py` | 7.1A | OK | None | Very explicit: labels, colors, caps |
 | `step7_1b_extract_deployment_data.py` | 7.1B | OK | None | Hybrid type mapping |
 | `step7_1c_generate_foak_noak.py` | 7.1C | OK | None | HYBRID_TECHS with FOAK/NOAK |
-| `step7_1e_dispatch_deployment.py` | 7.1E | OK | None | Hybrid CF + capacity credits |
+| `step7_1e_dispatch_deployment.py` | 7.1E | **FRAGILE** | Low | Hybrid CF + capacity credits OK; `_map_resource()` missing explicit mappings |
 | `step7_1f_extract_hourly_comparison.py` | 7.1F | OK | None | Resources list includes all 4 |
 | `step7_1g_extract_use_case_data.py` | 7.1G | OK | None | Mix columns with defaults |
 | `step7_1h_extract_hybrid_data.py` | 7.1H | DEDICATED | None | Entire script for hybrid dashboard |
@@ -62,11 +65,12 @@ HYBRID_TYPES = ['solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
 | Priority | Session | Effort | Impact |
 |----------|---------|--------|--------|
 | 1 (Critical) | Session 1: Strategy comparison hybrid gap | Small | VRE totals wrong in dashboard |
-| 2 (Critical) | Session 2: Track analysis report bug | Small | Report output incomplete |
-| 3 (Medium) | Session 3: E2E data flow verification | Medium | Pipeline correctness confidence |
-| 4 (Medium) | Session 4: Step 4 hardcoded lists | Small | Maintenance risk reduction |
-| 5 (Medium) | Session 5: Step 6 hardcoded lists | Small | Maintenance risk reduction |
-| 6 (Low) | Session 6: Dashboard rendering audit | Medium | UI correctness verification |
+| 2 (Critical) | Session 2: Procurement tranches missing hybrids | Medium | Strategies 3A/3C underprice hybrids |
+| 3 (Critical) | Session 3: Track analysis report bug | Small | Report output incomplete |
+| 4 (Medium) | Session 4: E2E data flow verification | Medium | Pipeline correctness confidence |
+| 5 (Medium) | Session 5: Step 4 hardcoded lists | Small | Maintenance risk reduction |
+| 6 (Medium) | Session 6: Step 6 hardcoded lists | Small | Maintenance risk reduction |
+| 7 (Low) | Session 7: Dashboard rendering audit + step7_1e mapping | Medium | UI correctness verification |
 
 ---
 
@@ -110,7 +114,50 @@ before and after to confirm coverage. Commit to branch.
 
 ---
 
-### Session 2: Fix step4_2c Report Output Bug
+### Session 2: Add Hybrid Tranches to Procurement Utils (Strategies 3A/3C)
+
+**Goal**: Fix missing hybrid resource tranches in `build_newbuild_only_tranches()` and `build_procurement_tranches()`. Without this, Strategies 3A and 3C in step5_2d underprice hybrids by routing them through the generic `new_build_vre` tranche (priced at min of solar/wind PPA), ignoring the battery cost component.
+
+**Prompt**:
+
+```
+Read scripts/procurement_utils.py. Two functions are missing hybrid resource tranches:
+
+1. build_newbuild_only_tranches() (~lines 934-988):
+   - Currently builds tranches: uprate -> new_build_vre (solar+wind averaged) -> new_build_firm
+   - Missing: dedicated tranches for solar_batt4, solar_batt8, wind_batt4, wind_batt8
+   - Hybrids have HIGHER costs than base solar/wind (include battery LCOS component)
+   - They should NOT be lumped into the generic VRE tranche
+
+2. build_procurement_tranches() (~lines 847-928):
+   - Same issue -- check if hybrid tranches are needed here too
+
+Contrast with correct handling:
+- step5_2d_strategy_annual.py Strategies 3B (line ~221) and 3D (line ~495) MANUALLY iterate
+  over HYBRID_TYPES to build proper hybrid tranches. Strategies 3A and 3C use the tranche
+  builder functions and thus miss hybrids.
+- get_resource_ppa_price() (~lines 1091-1134) already correctly handles hybrid pricing
+  via get_hybrid_lcoe() + get_hybrid_tx()
+
+Fix:
+1. Import HYBRID_TYPES from pipeline_config (if not already imported).
+2. In build_newbuild_only_tranches(), after the VRE tranche, add one tranche per hybrid type
+   priced via get_resource_ppa_price(). Insert in merit order (cheapest first).
+3. Apply same pattern to build_procurement_tranches() if applicable.
+4. Verify step5_2d Strategies 3A and 3C will now pick up hybrid tranches automatically.
+
+Verify: Run a dry comparison -- print the tranche list before and after for one ISO/scenario
+to confirm hybrids appear at correct price points. Commit to branch.
+```
+
+**Key files**:
+- `scripts/procurement_utils.py` -- `build_newbuild_only_tranches()` lines 934-988, `build_procurement_tranches()` lines 847-928
+- `scripts/step5_2d_strategy_annual.py` -- Strategies 3B/3D as reference for correct handling
+- `scripts/pipeline_config.py` -- `get_hybrid_lcoe()`, `get_hybrid_tx()`
+
+---
+
+### Session 3: Fix step4_2c Report Output Bug
 
 **Goal**: Fix confirmed bug where hybrid resource data is loaded into RESOURCES but excluded from the printed report output.
 
@@ -140,7 +187,7 @@ Commit to branch.
 
 ---
 
-### Session 3: End-to-End Data Flow Verification
+### Session 4: End-to-End Data Flow Verification
 
 **Goal**: Trace hybrid data from step 3 dispatch cache through step 7 dashboard output. Verify no silent data loss at handoff boundaries.
 
@@ -183,7 +230,7 @@ Report findings as a compatibility table with PASS/FAIL/WARN per check.
 
 ---
 
-### Session 4: Consolidate Hardcoded Lists in Step 4
+### Session 5: Consolidate Hardcoded Lists in Step 4
 
 **Goal**: Replace hardcoded hybrid resource lists with HYBRID_TYPES imports in 3 step-4 scripts to reduce maintenance risk.
 
@@ -223,7 +270,7 @@ Commit to branch.
 
 ---
 
-### Session 5: Consolidate Hardcoded Lists in Step 6 (SMARTargets)
+### Session 6: Consolidate Hardcoded Lists in Step 6 (SMARTargets)
 
 **Goal**: Replace 5 inline hybrid type lists in step6_1_smartargets.py with HYBRID_TYPES references.
 
@@ -258,14 +305,16 @@ Commit to branch.
 
 ---
 
-### Session 6: Dashboard-Side Hybrid Rendering Audit
+### Session 7: Dashboard-Side Hybrid Rendering Audit + step7_1e Mapping
 
-**Goal**: Verify dashboard HTML/JS correctly consumes and renders hybrid data from step 7 outputs.
+**Goal**: Verify dashboard HTML/JS correctly consumes and renders hybrid data from step 7 outputs. Also fix the fragile `_map_resource()` passthrough in step7_1e.
 
 **Prompt**:
 
 ```
-Audit the dashboard consumer side for hybrid resource rendering. READ-ONLY verification.
+Two tasks in this session:
+
+TASK A: Audit the dashboard consumer side for hybrid resource rendering. READ-ONLY verification.
 
 1. Check dashboard/js/chart-colors.js for hybrid resource color definitions:
    - RESOURCE_COLORS.solarBatt4, solarBatt8, windBatt4, windBatt8 should exist
@@ -288,6 +337,19 @@ Audit the dashboard consumer side for hybrid resource rendering. READ-ONLY verif
    confirm the JS is syntactically valid and consumed by a dashboard page.
 
 Report: which dashboard pages properly render hybrid data, which might truncate or ignore it.
+
+TASK B: Fix step7_1e_dispatch_deployment.py _map_resource() fragile passthrough.
+
+Read scripts/step7_1e_dispatch_deployment.py. The _map_resource() function (~lines 280-294) maps
+deployment resource names to dispatch utility names. It has no explicit entries for hybrid types
+(solar_batt4, solar_batt8, wind_batt4, wind_batt8). They currently fall through to the default
+passthrough (line ~294), which happens to work but is fragile.
+
+Fix: Add explicit mappings for all 4 hybrid types. Check whether dispatch_utils.py handles
+'solar_batt4' natively (it does -- they're in RESOURCE_TYPES_HYBRID). So the mapping should be
+identity: 'solar_batt4' -> 'solar_batt4'. Add them explicitly for documentation and safety.
+
+Verify: grep for _map_resource in the file and confirm all resource types have explicit entries.
 ```
 
 **Key files**:
@@ -297,6 +359,7 @@ Report: which dashboard pages properly render hybrid data, which might truncate 
 - `dashboard/dashboard.html` -- main optimizer dashboard
 - `dashboard/js/hybrid-analysis-data.js` -- hybrid-specific dashboard data
 - `step7_1h_extract_hybrid_data.py` -- hybrid data extractor (repo root)
+- `scripts/step7_1e_dispatch_deployment.py` -- `_map_resource()` at lines 280-294
 
 ---
 
@@ -308,7 +371,10 @@ Report: which dashboard pages properly render hybrid data, which might truncate 
 | `scripts/dispatch_utils.py` | Core dispatch with hybrid support (RESOURCE_TYPES_HYBRID) |
 | `scripts/scenario_common.py` | RESOURCES_WITH_HYBRIDS shared constant |
 | `scripts/step7_1h_extract_strategy_comparison.py` | **Zero hybrid refs -- Session 1** |
-| `scripts/step4_2c_analyze_tracks.py` | **Report output bug -- Session 2** |
-| `scripts/step6_1_smartargets.py` | 5 hardcoded locations -- Session 5 |
-| `scripts/step4_2b_analyze_storage.py` | Hardcoded lists -- Session 4 |
-| `scripts/step4_1a_augment_capacity_rev.py` | Hardcoded VRE_RES -- Session 4 |
+| `scripts/procurement_utils.py` | **Missing hybrid tranches in tranche builders -- Session 2** |
+| `scripts/step5_2d_strategy_annual.py` | Strategies 3A/3C affected by Session 2 fix |
+| `scripts/step4_2c_analyze_tracks.py` | **Report output bug -- Session 3** |
+| `scripts/step6_1_smartargets.py` | 5 hardcoded locations -- Session 6 |
+| `scripts/step4_2b_analyze_storage.py` | Hardcoded lists -- Session 5 |
+| `scripts/step4_1a_augment_capacity_rev.py` | Hardcoded VRE_RES -- Session 5 |
+| `scripts/step7_1e_dispatch_deployment.py` | Fragile _map_resource() -- Session 7 |
