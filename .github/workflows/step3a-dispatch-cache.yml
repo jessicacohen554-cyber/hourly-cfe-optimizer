@@ -69,7 +69,7 @@ jobs:
       - name: Verify upstream data
         run: |
           if [ ! -d "data/step2.2-cost" ] || ! ls data/step2.2-cost/*.parquet >/dev/null 2>&1; then
-            echo "ERROR: No step-3 parquets found."
+            echo "ERROR: No step 2.2 cost parquets found. Run Step 2.2 first."
             exit 1
           fi
 
@@ -79,7 +79,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install numpy numba pyarrow pandas
+        run: pip install numpy numba pyarrow pandas scipy
 
       - name: Ensure output directories
         run: mkdir -p data/step3-dispatch
@@ -143,7 +143,7 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Step 4 Dispatch Cache: ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git commit -m "Step 3A Dispatch Cache: ${{ inputs.iso }} — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
           MAX_RETRIES=4
           for i in $(seq 1 $MAX_RETRIES); do

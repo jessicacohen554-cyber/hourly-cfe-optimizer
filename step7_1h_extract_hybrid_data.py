@@ -23,7 +23,7 @@ import sys
 import numpy as np
 import pandas as pd
 
-ISOS = ['CAISO', 'ERCOT', 'PJM', 'NEISO', 'MISO', 'SPP']
+ISOS = ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
 HYBRID_COLS = ['mix_solar_batt4', 'mix_solar_batt8', 'mix_wind_batt4', 'mix_wind_batt8']
 MIX_COLS = ['mix_clean_firm', 'mix_solar', 'mix_wind', 'mix_offshore_wind',
             'mix_geothermal', 'mix_ccs_ccgt', 'mix_hydro'] + HYBRID_COLS
