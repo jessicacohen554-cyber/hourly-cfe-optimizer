@@ -26,10 +26,9 @@ TRACK_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'track_results.json')
 BASELINE_PATH = os.path.join(SCRIPT_DIR, 'dashboard', 'overprocure_results.json')
 CO2_BATCH_DIR = os.path.join(SCRIPT_DIR, 'data', 'step4-analysis', 'co2_results')
 
-from pipeline_config import OUTPUT_THRESHOLDS as THRESHOLDS, ISOS
+from pipeline_config import OUTPUT_THRESHOLDS as THRESHOLDS, ISOS, HYBRID_TYPES
 THRESHOLDS_STR = [str(t) for t in THRESHOLDS]
-RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro',
-             'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']
+RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro'] + list(HYBRID_TYPES)
 
 
 def load_from_co2_parquets(batch_dir):
@@ -250,8 +249,8 @@ def main():
 
     for iso in ISOS:
         print(f"\n  {iso}")
-        print(f"  {'Thr':>6} | {'':>8} | {'CF':>5} {'Sol':>5} {'Wnd':>5} {'OSW':>5} {'CCS':>5} {'Hyd':>5}")
-        print(f"  {'-'*6}-+-{'-'*8}-+-{'-'*5}-{'-'*5}-{'-'*5}-{'-'*5}-{'-'*5}-{'-'*5}")
+        print(f"  {'Thr':>6} | {'':>8} | {'CF':>5} {'Sol':>5} {'Wnd':>5} {'OSW':>5} {'CCS':>5} {'Hyd':>5} {'SB4':>5} {'SB8':>5} {'WB4':>5} {'WB8':>5}")
+        print(f"  {'-'*6}-+-{'-'*8}-+-{'-'*5}-{'-'*5}-{'-'*5}-{'-'*5}-{'-'*5}-{'-'*5}-{'-'*5}-{'-'*5}-{'-'*5}-{'-'*5}")
 
         # Extract ISO-level data once
         iso_bl_thresholds = baseline.get('results', {}).get(iso, {}).get('thresholds', {})
@@ -278,16 +277,22 @@ def main():
             print(f"  {thr:>5}% | {'baseline':>8} | "
                   f"{bl_mix.get('clean_firm',0):>5} {bl_mix.get('solar',0):>5} "
                   f"{bl_mix.get('wind',0):>5} {bl_mix.get('offshore_wind',0):>5} "
-                  f"{bl_mix.get('ccs_ccgt',0):>5} {bl_mix.get('hydro',0):>5}")
+                  f"{bl_mix.get('ccs_ccgt',0):>5} {bl_mix.get('hydro',0):>5} "
+                  f"{bl_mix.get('solar_batt4',0):>5} {bl_mix.get('solar_batt8',0):>5} "
+                  f"{bl_mix.get('wind_batt4',0):>5} {bl_mix.get('wind_batt8',0):>5}")
             print(f"  {'':>6} | {'newbuild':>8} | "
                   f"{nb_mix.get('clean_firm',0):>5} {nb_mix.get('solar',0):>5} "
                   f"{nb_mix.get('wind',0):>5} {nb_mix.get('offshore_wind',0):>5} "
-                  f"{nb_mix.get('ccs_ccgt',0):>5} {nb_mix.get('hydro',0):>5}")
+                  f"{nb_mix.get('ccs_ccgt',0):>5} {nb_mix.get('hydro',0):>5} "
+                  f"{nb_mix.get('solar_batt4',0):>5} {nb_mix.get('solar_batt8',0):>5} "
+                  f"{nb_mix.get('wind_batt4',0):>5} {nb_mix.get('wind_batt8',0):>5}")
             d = {r: nb_mix.get(r,0) - bl_mix.get(r,0) for r in RESOURCES}
             print(f"  {'':>6} | {'Δ':>8} | "
                   f"{d['clean_firm']:>+5} {d['solar']:>+5} "
                   f"{d['wind']:>+5} {d['offshore_wind']:>+5} "
-                  f"{d['ccs_ccgt']:>+5} {d['hydro']:>+5}")
+                  f"{d['ccs_ccgt']:>+5} {d['hydro']:>+5} "
+                  f"{d['solar_batt4']:>+5} {d['solar_batt8']:>+5} "
+                  f"{d['wind_batt4']:>+5} {d['wind_batt8']:>+5}")
 
     # ================================================================
     # 3. REPLACEMENT PREMIUM — Cost delta distributions
