@@ -30,6 +30,7 @@ from dispatch_utils import (
     ISOS, H, BASE_DEMAND_TWH, GRID_MIX_SHARES,
     WHOLESALE_PRICES, FUEL_ADJUSTMENTS,
     HYDRO_CAPS, NUCLEAR_SHARE_OF_CLEAN_FIRM,
+    HYBRID_TYPES, _detect_hybrids_in_schema,
     NUCLEAR_MONTHLY_CF, get_demand_profile, get_supply_profiles,
     load_common_data,
 )
@@ -1349,9 +1350,23 @@ def compute_dispatch_hms(results, variant_keys, isos):
             if not growth_data:
                 continue
 
-            # Pre-build supply matrix for this ISO
+            # Pre-build supply matrix for this ISO (include hybrids if EF data has them)
             demand_norm, total_mwh = get_demand_profile(iso, demand_data)
-            supply_profiles = get_supply_profiles(iso, gen_profiles)
+            # Scan growth entries for hybrid resource keys to decide profile mode
+            _iso_hybrids = False
+            for _gl, _ge in growth_data.items():
+                if isinstance(_ge, dict):
+                    for _pk, _traj in _ge.items():
+                        if isinstance(_traj, list):
+                            for _e in _traj:
+                                if any(h in _e.get('resource_mix', {}) for h in HYBRID_TYPES):
+                                    _iso_hybrids = True
+                                    break
+                        if _iso_hybrids:
+                            break
+                if _iso_hybrids:
+                    break
+            supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=_iso_hybrids)
             supply_matrix = build_supply_matrix(supply_profiles)
 
             for growth_level, growth_entries in growth_data.items():
@@ -1383,6 +1398,11 @@ def compute_dispatch_hms(results, variant_keys, isos):
                                 'ccs_ccgt': ef['mix_ccs_ccgt'],
                                 'hydro': ef['mix_hydro'],
                             }
+                            # Include hybrid resources if present in EF data
+                            for h in HYBRID_TYPES:
+                                hval = ef.get(f'mix_{h}', ef.get(h, 0))
+                                if hval:
+                                    resource_pcts[h] = hval
                             batt_pct = ef['battery_dispatch_pct']
                             batt8_pct = ef['battery8_dispatch_pct']
                             ldes_pct = ef['ldes_dispatch_pct']
