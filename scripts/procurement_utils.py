@@ -900,7 +900,7 @@ def build_procurement_tranches(iso, threshold, year, scenario='B',
             'category': 'existing',
         })
 
-    # --- Tranche 4: New-build VRE ---
+    # --- Tranche 4: New-build VRE (base solar/wind) ---
     total_demand = get_demand_twh_at_year(iso, year, growth_level)
     new_vre_cap = total_demand * 1.50  # Large cap to avoid fallback at high thresholds
     solar_ppa = get_learning_adjusted_ppa('solar', iso, threshold, scenario, level, ppa_level)
@@ -912,6 +912,19 @@ def build_procurement_tranches(iso, threshold, year, scenario='B',
         'available_twh': new_vre_cap,
         'category': 'new_build',
     })
+
+    # --- Tranche 4b: Hybrid co-located resources (solar+batt, wind+batt) ---
+    # Priced via get_resource_ppa_price which uses get_hybrid_lcoe() + get_hybrid_tx()
+    # Higher cost than base VRE due to battery LCOS component
+    for ht in HYBRID_TYPES:
+        ht_price = get_resource_ppa_price(ht, iso, threshold, year, scenario, level, ppa_level)
+        ht_cap = total_demand * 0.05
+        tranches.append({
+            'source': f'new_build_{ht}',
+            'price': ht_price,
+            'available_twh': ht_cap,
+            'category': 'new_build',
+        })
 
     # --- Tranche 5: New-build clean firm ---
     nuc_ppa = get_learning_adjusted_ppa('nuclear_newbuild', iso, threshold, scenario, level, ppa_level)
@@ -959,7 +972,7 @@ def build_newbuild_only_tranches(iso, threshold, year, scenario='B',
             'category': 'new_build',
         })
 
-    # --- New-build VRE ---
+    # --- New-build VRE (base solar/wind) ---
     # Cap at 150% of demand to ensure no fallback at high thresholds with over-procurement
     new_vre_cap = total_demand * 1.50
     solar_ppa = get_learning_adjusted_ppa('solar', iso, threshold, scenario, level, ppa_level)
@@ -971,6 +984,20 @@ def build_newbuild_only_tranches(iso, threshold, year, scenario='B',
         'available_twh': new_vre_cap,
         'category': 'new_build',
     })
+
+    # --- Hybrid co-located resources (solar+batt, wind+batt) ---
+    # Priced via get_resource_ppa_price which uses get_hybrid_lcoe() + get_hybrid_tx()
+    # Higher cost than base VRE due to battery LCOS component — must NOT be lumped into VRE tranche
+    for ht in HYBRID_TYPES:
+        ht_price = get_resource_ppa_price(ht, iso, threshold, year, scenario, level, ppa_level)
+        # Each hybrid type gets 5% of demand as available capacity
+        ht_cap = total_demand * 0.05
+        tranches.append({
+            'source': f'new_build_{ht}',
+            'price': ht_price,
+            'available_twh': ht_cap,
+            'category': 'new_build',
+        })
 
     # --- New-build clean firm ---
     nuc_ppa = get_learning_adjusted_ppa('nuclear_newbuild', iso, threshold, scenario, level, ppa_level)
