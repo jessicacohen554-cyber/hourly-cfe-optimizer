@@ -110,7 +110,8 @@ except ImportError:
 
 # Single source of truth: pipeline_config
 THRESHOLDS = ACTIVE_THRESHOLDS
-RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro', 'battery', 'battery8', 'ldes', 'h2'] + list(HYBRID_TYPES)
+RESOURCES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro',
+             'battery', 'battery8', 'ldes', 'h2'] + list(HYBRID_TYPES)
 
 WHOLESALE_PRICES = {
     'CAISO': 30, 'ERCOT': 27, 'PJM': 34, 'NYISO': 42,
