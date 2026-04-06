@@ -913,6 +913,20 @@ def build_procurement_tranches(iso, threshold, year, scenario='B',
         'category': 'new_build',
     })
 
+    # --- Tranche 4b: New-build hybrid co-located (VRE + battery) ---
+    # Hybrids cost MORE than base VRE (include battery LCOS component) and must
+    # NOT be lumped into the generic VRE tranche.  One tranche per hybrid type,
+    # priced via get_resource_ppa_price which uses get_hybrid_lcoe + get_hybrid_tx.
+    for ht in HYBRID_TYPES:
+        ht_price = get_resource_ppa_price(ht, iso, threshold, year, scenario,
+                                          level, ppa_level)
+        tranches.append({
+            'source': f'new_build_{ht}',
+            'price': ht_price,
+            'available_twh': total_demand * 0.25,  # 25% of demand cap per hybrid type
+            'category': 'new_build',
+        })
+
     # --- Tranche 5: New-build clean firm ---
     nuc_ppa = get_learning_adjusted_ppa('nuclear_newbuild', iso, threshold, scenario, level, ppa_level)
     ccs_ppa = get_learning_adjusted_ppa('ccs_45q_on', iso, threshold, scenario, level, ppa_level)
@@ -971,6 +985,20 @@ def build_newbuild_only_tranches(iso, threshold, year, scenario='B',
         'available_twh': new_vre_cap,
         'category': 'new_build',
     })
+
+    # --- New-build hybrid co-located (VRE + battery) ---
+    # Hybrids cost MORE than base VRE (include battery LCOS component) and must
+    # NOT be lumped into the generic VRE tranche.  One tranche per hybrid type,
+    # priced via get_resource_ppa_price which uses get_hybrid_lcoe + get_hybrid_tx.
+    for ht in HYBRID_TYPES:
+        ht_price = get_resource_ppa_price(ht, iso, threshold, year, scenario,
+                                          level, ppa_level)
+        tranches.append({
+            'source': f'new_build_{ht}',
+            'price': ht_price,
+            'available_twh': total_demand * 0.25,  # 25% of demand cap per hybrid type
+            'category': 'new_build',
+        })
 
     # --- New-build clean firm ---
     nuc_ppa = get_learning_adjusted_ppa('nuclear_newbuild', iso, threshold, scenario, level, ppa_level)
