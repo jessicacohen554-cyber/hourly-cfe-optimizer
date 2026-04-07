@@ -1496,14 +1496,42 @@ def coarse_cache_paths(iso):
                            f'{iso}_coarse_cache_part*.parquet')
     parts = sorted(_glob.glob(pattern))
     valid = []
+    # Track which base parts exist (e.g., part003) so we skip sub-parts
+    # (e.g., part003_part001) that are just splits of the same data.
+    base_parts = set()
     for p in parts:
+        bn = os.path.basename(p)
         sz = os.path.getsize(p)
         if sz < MIN_VALID_BYTES:
             print(f"  WARNING: Skipping corrupt part {os.path.basename(p)} "
                   f"({sz} bytes)", flush=True)
             continue
-        valid.append(p)
-    return valid
+        # Detect sub-part pattern: e.g., CAISO_coarse_cache_part003_part001.parquet
+        # vs base part: CAISO_coarse_cache_part003.parquet
+        import re
+        m = re.match(rf'{re.escape(iso)}_coarse_cache_(part\d+)_(part\d+)\.parquet$', bn)
+        if m:
+            parent_part = m.group(1)
+            if parent_part in base_parts:
+                # Parent exists — skip this sub-part (it's a duplicate split)
+                continue
+            # Parent not in valid list yet — we'll add sub-parts only if parent missing
+            valid.append(p)
+        else:
+            # Base part — register it
+            m2 = re.match(rf'{re.escape(iso)}_coarse_cache_(part\d+)\.parquet$', bn)
+            if m2:
+                base_parts.add(m2.group(1))
+            valid.append(p)
+    # Second pass: remove sub-parts whose parent base part was added
+    final = []
+    for p in valid:
+        bn = os.path.basename(p)
+        m = re.match(rf'{re.escape(iso)}_coarse_cache_(part\d+)_(part\d+)\.parquet$', bn)
+        if m and m.group(1) in base_parts:
+            continue  # skip sub-part, parent base part exists
+        final.append(p)
+    return final
 
 
 def read_coarse_cache_table(iso):
