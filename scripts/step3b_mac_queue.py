@@ -185,57 +185,52 @@ MAX_ARCHETYPES = 5000
 PHASE2_PERTURBATIONS = 2000
 MAX_OVERSHOOT = 0.5  # percentage points — tight target adherence
 
-# Per-ISO cache for coarse cache and near-miss data.
-# Loaded once per ISO in run_iso(), passed to load_pfs_for_threshold().
-# Prevents repeated 500MB+ loads that OOM GitHub Actions runners.
-_iso_pfs_cache = {}  # {iso: {'coarse': DataFrame|None, 'near_miss': DataFrame|None}}
+# Per-ISO cache for coarse cache paths and near-miss data.
+# Coarse cache: stored as file paths only (lazy), filtered via pyarrow predicate
+# pushdown at query time to avoid OOM on large ISOs (CAISO = 87M rows, ~7.6GB).
+# Near-miss: small enough to load into memory.
+_iso_pfs_cache = {}  # {iso: {'coarse_paths': list|None, 'coarse_score_col': str|None, 'near_miss': DataFrame|None}}
 
 
 def _load_iso_shared_pfs(iso):
-    """Load coarse cache and near-miss data once for an ISO.
+    """Prepare coarse cache paths and load near-miss data for an ISO.
 
-    Returns dict with 'coarse' and 'near_miss' DataFrames (or None).
+    Coarse cache is NOT loaded into memory — paths are stored for lazy
+    filtered reads via _read_coarse_cache_filtered().
+    Near-miss is small enough to load fully.
+
+    Returns dict with 'coarse_paths', 'coarse_score_col', 'near_miss'.
     """
     if iso in _iso_pfs_cache:
         return _iso_pfs_cache[iso]
 
-    cache = {'coarse': None, 'near_miss': None}
+    cache = {'coarse_paths': None, 'coarse_score_col': None, 'near_miss': None}
 
-    # Load coarse cache
-    coarse_table = s1.read_coarse_cache_table(iso)
-    if coarse_table is not None:
-        try:
-            coarse_df = coarse_table.to_pandas()
-            del coarse_table  # Free pyarrow table immediately
-            # Rename score → hourly_match_score
-            if 'score' in coarse_df.columns and 'hourly_match_score' not in coarse_df.columns:
-                coarse_df = coarse_df.rename(columns={'score': 'hourly_match_score'})
-            # Add missing storage columns as 0
-            for col in STORAGE_COLS:
-                if col not in coarse_df.columns:
-                    coarse_df[col] = 0.0
-            # Keep only MIX_COLS to minimize memory
-            keep_cols = [c for c in MIX_COLS if c in coarse_df.columns]
-            coarse_df = coarse_df[keep_cols].copy()
-            cache['coarse'] = coarse_df
-            print(f"    {iso}: Loaded coarse cache ({len(coarse_df):,} rows, "
-                  f"{coarse_df.memory_usage(deep=True).sum() / 1e6:.0f} MB)")
-        except Exception as e:
-            print(f"    {iso}: WARNING: Could not load coarse cache: {e}")
+    # Store coarse cache file paths (lazy — no data loaded)
+    coarse_paths = s1.coarse_cache_paths(iso)
+    if coarse_paths:
+        # Detect score column name from schema
+        schema = pq.read_schema(coarse_paths[0])
+        score_col = 'hourly_match_score' if 'hourly_match_score' in schema.names else (
+            'score' if 'score' in schema.names else None)
+        cache['coarse_paths'] = coarse_paths
+        cache['coarse_score_col'] = score_col
+        total_rows = sum(pq.read_metadata(p).num_rows for p in coarse_paths)
+        print(f"    {iso}: Coarse cache registered ({len(coarse_paths)} files, "
+              f"{total_rows:,} rows — lazy, not loaded into memory)")
 
-    # Load near-miss file(s)
-    nm_dfs = []
-    # Support multi-part near-miss files
+    # Load near-miss file(s) — small enough for memory
+    nm_files = []
     nm_single = os.path.join(PFS_DIRS[0], f'{iso}_near_miss.parquet')
     if os.path.isfile(nm_single):
-        nm_dfs.append(nm_single)
+        nm_files.append(nm_single)
     nm_parts = sorted(globmod.glob(os.path.join(PFS_DIRS[0], f'{iso}_near_miss_part*.parquet')))
-    nm_dfs.extend(nm_parts)
+    nm_files.extend(nm_parts)
 
-    if nm_dfs:
+    if nm_files:
         try:
             parts = []
-            for f in nm_dfs:
+            for f in nm_files:
                 parts.append(pd.read_parquet(f))
             nm_df = pd.concat(parts, ignore_index=True) if len(parts) > 1 else parts[0]
             if 'score' in nm_df.columns and 'hourly_match_score' not in nm_df.columns:
@@ -252,6 +247,56 @@ def _load_iso_shared_pfs(iso):
 
     _iso_pfs_cache[iso] = cache
     return cache
+
+
+def _read_coarse_cache_filtered(iso_cache, score_min, score_max):
+    """Read coarse cache with pyarrow predicate pushdown — only matching rows loaded.
+
+    Uses row-group statistics to skip irrelevant data, keeping memory minimal.
+    Returns filtered DataFrame or None.
+    """
+    paths = iso_cache.get('coarse_paths')
+    score_col = iso_cache.get('coarse_score_col')
+    if not paths or not score_col:
+        return None
+
+    try:
+        # Read only needed columns with predicate filter
+        keep_cols = [c for c in MIX_COLS if c != 'hourly_match_score']
+        # Build pyarrow filter
+        filt = (pa.compute.field(score_col) >= score_min) & (pa.compute.field(score_col) <= score_max)
+
+        parts = []
+        for p in paths:
+            schema = pq.read_schema(p)
+            available = [c for c in ([score_col] + keep_cols) if c in schema.names]
+            table = pq.read_table(p, columns=available, filters=[
+                (score_col, '>=', score_min),
+                (score_col, '<=', score_max),
+            ])
+            if table.num_rows > 0:
+                parts.append(table)
+
+        if not parts:
+            return None
+
+        combined = pa.concat_tables(parts) if len(parts) > 1 else parts[0]
+        df = combined.to_pandas()
+        del combined, parts
+
+        # Normalize column name
+        if score_col == 'score' and 'hourly_match_score' not in df.columns:
+            df = df.rename(columns={'score': 'hourly_match_score'})
+        # Add missing storage columns
+        for col in STORAGE_COLS:
+            if col not in df.columns:
+                df[col] = 0.0
+        keep = [c for c in MIX_COLS if c in df.columns]
+        return df[keep]
+
+    except Exception as e:
+        print(f"    WARNING: Coarse cache filtered read failed: {e}")
+        return None
 
 
 def _clear_iso_pfs_cache(iso):
@@ -321,21 +366,15 @@ def load_pfs_for_threshold(iso, threshold):
         lower_t = MAC_THRESHOLDS[idx - 1]
         dfs.extend(_load_pfs_files(iso, lower_t))
 
-    # Use cached coarse cache (loaded once per ISO in run_iso)
+    # Use lazy coarse cache — filtered read via pyarrow predicate pushdown
+    # (never loads full cache into memory, prevents OOM on CAISO 87M rows)
     iso_cache = _load_iso_shared_pfs(iso)
 
-    coarse_df = iso_cache.get('coarse')
-    if coarse_df is not None:
-        try:
-            score_min = threshold - 2.0
-            score_max = threshold + MAX_OVERSHOOT + 1.0
-            scores = coarse_df['hourly_match_score'].values
-            mask = (scores >= score_min) & (scores <= score_max)
-            filtered_coarse = coarse_df.loc[mask]
-            if len(filtered_coarse) > 0:
-                dfs.append(filtered_coarse)
-        except Exception:
-            pass
+    score_min = threshold - 2.0
+    score_max = threshold + MAX_OVERSHOOT + 1.0
+    filtered_coarse = _read_coarse_cache_filtered(iso_cache, score_min, score_max)
+    if filtered_coarse is not None and len(filtered_coarse) > 0:
+        dfs.append(filtered_coarse)
 
     # Use cached near-miss data (loaded once per ISO in run_iso)
     nm_df = iso_cache.get('near_miss')
