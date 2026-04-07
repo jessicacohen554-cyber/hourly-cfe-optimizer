@@ -1259,6 +1259,50 @@ Storage costs expressed as installed $/kW-yr:
 
 Storage revenue credits offset costs: capacity market payments (degraded by clean share), arbitrage revenue (daily/weekly price spreads), and ancillary service rates (regulation/spinning reserve).
 
+### 5.3.1 Hybrid Co-Located Resource LCOE
+
+Solar+Battery and Wind+Battery hybrids use a **component-additive** LCOE model:
+
+```
+hybrid_lcoe = adjusted_renewable_lcoe + battery_lcos × (1 - ITC_rate) + AC_adjusted_tx
+```
+
+- **Solar hybrids**: renewable LCOE ÷ DC:AC ratio (overbuild lowers effective $/MWh)
+- **Wind hybrids**: renewable LCOE unchanged (wind turbines are AC machines)
+- **ITC**: 30% on co-located storage per IRA §48/§48E
+- **DC:AC ratios**: solar_batt4 = 1.35 (CAISO) / 1.50 (others); solar_batt8 = 1.70 / 2.00
+- **Battery LCOS**: CAPEX × 0.1269 (CRF + FOM) / (365 cycles × 0.85 RTE), regionalized
+
+**Computed Hybrid LCOEs (Medium sensitivity, with ITC, excl. transmission):**
+
+| Type | ERCOT | SPP | MISO | PJM | CAISO | NEISO | NYISO |
+|---|---|---|---|---|---|---|---|
+| solar_batt4 | $120 | $124 | $130 | $133 | $138 | $151 | $161 |
+| solar_batt8 | $99 | $102 | $107 | $110 | $116 | $124 | $131 |
+| wind_batt4 | $124 | $123 | $131 | $152 | $167 | $169 | $180 |
+| wind_batt8 | $112 | $110 | $119 | $139 | $154 | $156 | $166 |
+
+#### Validation Against Published Benchmarks
+
+| Benchmark Source | Solar+Storage Range | Wind+Storage Range | Battery LCOS (4hr) |
+|---|---|---|---|
+| **Lazard LCOE+ 2025** (unsub.) | $50–131/MWh | — | $115–254/MWh |
+| **Lazard LCOE+ 2024** (unsub.) | $60–210/MWh | $45–133/MWh | $170–296/MWh |
+| **NREL ATB 2024** | PV+Batt (4hr, DC-coupled) | Not modeled | CAPEX: $295/kWh (Moderate) |
+| **IRENA 2024** (US empirical) | $79/MWh avg (17 projects) | — | — |
+| **LBNL 2024** (PPA prices) | $45–70/MWh (recent contracts) | — | — |
+| **BNEF 2025** | ~$57/MWh (global, China-weighted) | — | $78/MWh (global record low) |
+
+**Audit findings:**
+
+1. **Battery CAPEX** ($240/$295/$375 per kWh for 4hr L/M/H) matches NREL ATB 2024 exactly (Energy $210 + Power $340/4 = $295/kWh Moderate).
+2. **Best-resource ISOs** (ERCOT, SPP, MISO) fall within Lazard published ranges.
+3. **Northeast ISOs** (NYISO, NEISO) run 15–25% above Lazard's national high end, reflecting legitimate regional cost premiums (labor, siting, permitting).
+4. **Conservative bias** is intentional: 365 cycles/year (some hybrids achieve 1.2–1.5×), 8% WACC (some projects achieve 6–7%), and component-additive structure (vs. integrated system synergies). This is appropriate for corporate procurement cost modeling.
+5. **PPA prices** (LBNL $45–70/MWh) are lower than modeled LCOE because PPAs reflect merchant competition, tax equity optimization, and below-market WACC — not comparable to LCOE.
+
+*Sources: Lazard LCOE+ 2024–2025, NREL ATB 2024, LBNL Utility-Scale Solar 2024, IRENA RPGC 2024, BloombergNEF 2024–2025.*
+
 ### 5.4 Transmission Adders ($/MWh)
 
 Source: LBNL "Queued Up" 2025, ISO interconnection study aggregates.
