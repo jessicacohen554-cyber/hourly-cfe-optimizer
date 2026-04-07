@@ -325,3 +325,116 @@ Each section below is a **self-contained prompt** that can be given to an AI cod
 > 5. Verify `include_hybrids` is `true` in the response
 
 ---
+
+## Prompt 5: Surface Hybrid Resources in Frontend Results
+
+> **Objective:** Update the results page JavaScript to display hybrid solar+battery and wind+battery resources in charts and tables when present in the API response.
+>
+> **Files to modify:**
+> - `market-simulator/frontend/js/results.js`
+>
+> **Current state:**
+> - `chart-colors.js` already defines hybrid colors: `solarBatt4` (#E6890B), `solarBatt8` (#CC7A0A), `windBatt4` (#1AA34E), `windBatt8` (#158F42) — plus transparent and background variants
+> - `results.js` line 33-43: `CLEAN_COLORS` dict has only 9 base resource colors — no hybrids
+> - `results.js` line 46-53: `ALL_RESOURCE_COLORS` spreads `CLEAN_COLORS` + fossil colors — no hybrids
+> - Supply stack chart (line 791+): iterates over `resources` from API response — will show hybrids IF they're in the data AND have a color mapping
+> - "What Gets Built" donut (line 1185+): same pattern — iterates API keys, maps to `CLEAN_COLORS`
+> - Without color mappings, hybrid resources render as gray (#9CA3AF fallback)
+>
+> **Required changes:**
+>
+> 1. **Add hybrid colors to `CLEAN_COLORS`** (line 33-43):
+>    ```javascript
+>    const CLEAN_COLORS = {
+>        solar: '#FBB254',
+>        wind: '#6BA543',
+>        offshore_wind: '#007FA4',
+>        nuclear: '#2372B9',
+>        ccs_ccgt: '#7F8F97',
+>        hydro: '#007FA4',
+>        battery: '#CADB2E',
+>        ldes: '#F47B27',
+>        geothermal: '#9B6B3A',
+>        // Hybrid solar+battery and wind+battery
+>        solar_batt4: '#E6890B',
+>        solar_batt8: '#CC7A0A',
+>        wind_batt4: '#1AA34E',
+>        wind_batt8: '#158F42',
+>    };
+>    ```
+>
+> 2. **Add human-readable labels** for hybrid resources wherever `r.replace(/_/g, ' ')` is used for display. The raw names `solar batt4` aren't user-friendly. Add a label map:
+>    ```javascript
+>    const RESOURCE_LABELS = {
+>        solar_batt4: 'Solar + 4hr Battery',
+>        solar_batt8: 'Solar + 8hr Battery',
+>        wind_batt4: 'Wind + 4hr Battery',
+>        wind_batt8: 'Wind + 8hr Battery',
+>        clean_firm: 'Clean Firm',
+>        ccs_ccgt: 'CCS Gas',
+>        offshore_wind: 'Offshore Wind',
+>    };
+>    function resourceLabel(key) {
+>        return RESOURCE_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+>    }
+>    ```
+>    Then replace `r.replace(/_/g, ' ')` calls (lines ~879, 1195, and elsewhere) with `resourceLabel(r)`.
+>
+> 3. **Supply stack chart** (line 791+): No structural changes needed — it already iterates API keys. The color mapping fix (step 1) makes hybrids render correctly. Verify that the stacked bar chart doesn't overflow with 10+ resource types on small screens.
+>
+> 4. **"What Gets Built" donut** (line 1185+): Same — color mapping fix enables it. Verify the donut legend doesn't overflow.
+>
+> 5. **Resource Economics table** (line 317-326): If this table shows per-resource capture rates, add hybrid rows. Check the API response structure for `resource_economics` or similar keys.
+>
+> **Verification:**
+> 1. Start server with synthetic data (Prompt 4 must be implemented first)
+> 2. Run a simulation for CAISO at 90% threshold
+> 3. Verify supply stack chart shows hybrid slices in correct colors (amber/green variants)
+> 4. Verify "What Gets Built" donut includes hybrid slices with readable labels
+> 5. Verify no gray (#9CA3AF) fallback colors appear for recognized resource types
+> 6. Check mobile viewport (375px) — charts should not overflow
+
+---
+
+## Prompt 6: Include Hybrid Resources in Sweep Runner
+
+> **Objective:** Add hybrid solar+battery and wind+battery resource deployment to the 1,215-scenario parametric sweep so that sweep-dependent charts and analysis show hybrid resources.
+>
+> **Files to modify:**
+> - `market-simulator/scripts/run_sweep_1215.py`
+> - `market-simulator/scripts/market_simulation.py` (deployment logic used by sweep)
+>
+> **Context:**
+> - The sweep runs `market_simulation.run_full_sweep()` which calls `apply_economic_deployment()` for each scenario
+> - `apply_economic_deployment()` has queue caps for all 4 hybrid types (lines 290-314 of `market_simulation.py`)
+> - But the function currently only deploys base resources (solar, wind, clean_firm, etc.)
+> - Hybrid deployment requires: (a) checking if hybrid profiles are available, (b) allocating capacity from the parent resource's queue to hybrids based on economic merit
+>
+> **This is the largest change in the audit.** It touches the core simulation loop. Approach:
+>
+> 1. **In `apply_economic_deployment()`**: After deploying standalone solar and wind, check if hybrid profiles are loaded. If so, split a fraction of remaining queue capacity into hybrid deployment:
+>    - `solar_batt4` and `solar_batt8` draw from the solar queue
+>    - `wind_batt4` and `wind_batt8` draw from the wind queue
+>    - Economic decision: hybrid if `hybrid_lcoe < standalone_lcoe + battery_value_of_shifting` (simplified: deploy hybrids when standalone renewable curtailment exceeds a threshold)
+>
+> 2. **In `run_sweep_1215.py`**: Ensure the sweep output parquet schema includes hybrid columns. If the sweep aggregation functions (groupby, mean, etc.) don't expect hybrids, they'll silently drop them.
+>
+> 3. **Hybrid deployment fraction heuristic** (if full economic dispatch is too complex for the sweep):
+>    ```python
+>    # Simplified: at high clean %, more curtailment → more hybrid value
+>    hybrid_fraction = min(0.4, max(0.0, (clean_pct - 60) / 100))
+>    solar_batt4_gw = solar_deployed_gw * hybrid_fraction * 0.5
+>    solar_batt8_gw = solar_deployed_gw * hybrid_fraction * 0.3
+>    wind_batt4_gw = wind_deployed_gw * hybrid_fraction * 0.4
+>    wind_batt8_gw = wind_deployed_gw * hybrid_fraction * 0.2
+>    ```
+>
+> 4. **Risk note:** This prompt changes simulation results. All sweep caches will need to be regenerated after implementation. Test on a single ISO (e.g., CAISO) before running the full 7-ISO sweep.
+>
+> **Verification:**
+> 1. Run single-ISO sweep: `python scripts/run_sweep_1215.py --output-dir results/sweep_test --isos CAISO`
+> 2. Load the output parquet and verify hybrid columns exist with non-zero values
+> 3. Compare total clean % with and without hybrids — should be higher with hybrids (hybrids shift energy to match demand better)
+> 4. Verify sweep aggregation (mean, P10, P90) includes hybrid columns
+
+---
