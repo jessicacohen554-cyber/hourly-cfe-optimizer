@@ -119,6 +119,7 @@ MarketSimulator/
 │       ├── backend/             ← FastAPI app + models
 │       └── data/                ← Bundled defaults only:
 │           ├── profiles/        ←   synthetic demand/gen/fossil/interchange
+│           ├── hybrid_profiles/ ←   7 ISO NPZ files (solar+batt/wind+batt 8760 dispatch shapes)
 │           ├── CEG_fleet_rosetta.csv
 │           ├── constellation_fleet.json
 │           ├── cv_reference_results.json
@@ -130,6 +131,8 @@ MarketSimulator/
     │   ├── eia-923/             ← USER DROPS IN: state/month JSON files
     │   ├── epa-campd/           ← USER DROPS IN: state/month JSON files
     │   ├── profiles/            ← Copied from bundle on first run
+    │   ├── step2.1-ef/           ← OPTIONAL: efficient frontier parquets (enhances resource mix accuracy)
+    │   ├── step2.2-cost/         ← OPTIONAL: cost-optimized parquets (full cost scenario analysis)
     │   ├── plant_heat_rates.json  ← Auto-cached; regenerated when source data changes
     │   ├── constellation_fleet.json
     │   └── CEG_fleet_rosetta.csv
@@ -216,6 +219,44 @@ def resolve_data_path(relative_path):
 
 ---
 
+## 3b. Data Tiers
+
+The market simulator operates at different quality levels depending on
+available data. Each tier adds accuracy:
+
+| Tier | Data Required | What It Adds |
+|------|--------------|--------------|
+| 0 — Synthetic | None (ships with app) | Approximate resource mixes, synthetic LMP, illustrative results |
+| 1 — EF Physics | `step2.1-ef/` parquets | Physics-optimal resource mixes with hybrid resources |
+| 2 — Cost-Optimized | `step2.2-cost/` parquets | Full cost-optimized results across 5,832 scenarios |
+| 3 — Plant-Level | `eia-860/`, `eia-923/`, `epa-campd/` | Plant-specific heat rates, emissions, fleet dispatch |
+
+Tier 0 works out of the box. Users drop parquet files into
+`app_data/data/step2.1-ef/` or `app_data/data/step2.2-cost/` to upgrade.
+The app auto-detects which tier is available per ISO.
+
+---
+
+## 3c. First-Run Startup Sequence
+
+The launcher scripts (`run.bat` / `run.sh`) and `desktop_app.py` perform a
+7-step startup sequence on first run. Steps are skipped if their outputs
+already exist:
+
+1. **Install dependencies** — `pip install -r app-startup/requirements.txt`
+2. **Generate synthetic profiles** (if missing) — `scripts/generate_synthetic_profiles.py` creates demand/gen/fossil profiles in `data/profiles/`
+3. **Generate plant heat rates** (if missing) — `scripts/generate_plant_heat_rates.py` builds `data/plant_heat_rates.json` from EIA-923/EPA-CAMPD data (or synthetic fallback)
+4. **Generate interchange profiles** (if missing) — re-runs `generate_synthetic_profiles.py` for `data/profiles/eia_interchange_profiles.json`
+5. **Run 1,215-scenario parametric sweep** (if missing) — one-time, 10-30 min. `scripts/run_sweep_1215.py` generates `results/sweep_1215/sweep_1215_flat.parquet` (3 demand × 5 price × 3 PPA × 3 gas × 3 queue × 3 fossil cost × 7 ISOs × 6 years = 51,030 simulations)
+6. **Build fleet scenario data** (if missing) — `scripts/build_fleet_scenario_data.py` generates `frontend/data/fleet_scenario_results_sample.json`
+7. **Generate constellation scenarios + extract ISO sweep data** (if missing) — `scripts/generate_constellation_scenarios.py` + `scripts/extract_iso_sweep_data.py`
+
+The desktop app (`desktop_app.py`) currently handles steps 2–4 in
+`first_run_setup()`. Steps 5–7 should also be added to `desktop_app.py`
+or triggered by the backend on first request.
+
+---
+
 ## 4. PyInstaller Spec: `market_simulator.spec`
 
 ```python
@@ -240,6 +281,7 @@ a = Analysis(
         ('scripts', 'market-simulator/scripts'),
         # Bundled default data (NOT EIA/CAMPD — just synthetic + fleet)
         ('data/profiles', 'market-simulator/data/profiles'),
+        ('data/hybrid_profiles', 'market-simulator/data/hybrid_profiles'),
         ('data/CEG_fleet_rosetta.csv', 'market-simulator/data'),
         ('data/constellation_fleet.json', 'market-simulator/data'),
         ('data/cv_reference_results.json', 'market-simulator/data'),
