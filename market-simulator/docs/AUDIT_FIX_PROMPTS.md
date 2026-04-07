@@ -214,3 +214,53 @@ Each section below is a **self-contained prompt** that can be given to an AI cod
 > **Verification:** Run `python app-startup/start.py` from `market-simulator/`. All 7 startup steps should execute with progress messages. Server starts even if optional steps fail.
 
 ---
+
+## Prompt 3: Fix run.bat Minor Issues
+
+> **Objective:** Fix error handling and path issues in `market-simulator/run.bat`.
+>
+> **File to modify:** `market-simulator/run.bat`
+>
+> **Issues and fixes:**
+>
+> 1. **Line 31 — pip install has no error check:**
+>    Current: `%PYTHON% -m pip install -r app-startup\requirements.txt --quiet 2>nul`
+>    Problem: If pip fails (no network, corrupted env), the script silently continues and crashes later on import.
+>    Fix: Add error check:
+>    ```bat
+>    %PYTHON% -m pip install -r app-startup\requirements.txt --quiet 2>nul
+>    if errorlevel 1 (
+>        echo WARNING: Dependency installation may have failed. Some features may not work.
+>    )
+>    ```
+>
+> 2. **Lines 38, 54 — `2>nul` suppresses all stderr on data generation scripts:**
+>    Current: `%PYTHON% scripts\generate_synthetic_profiles.py 2>nul`
+>    Problem: Real errors (missing modules, file permission issues) are silently swallowed. If generation fails, the script says "[OK]" anyway.
+>    Fix: Remove `2>nul` and add error check:
+>    ```bat
+>    %PYTHON% scripts\generate_synthetic_profiles.py
+>    if errorlevel 1 (
+>        echo WARNING: Synthetic profile generation failed.
+>    )
+>    ```
+>    Apply same pattern to line 54 (interchange profiles).
+>
+> 3. **Line 54 — Clarify interchange reuse:**
+>    Current: Runs `generate_synthetic_profiles.py` again to generate interchange profiles.
+>    Fix: Add comment explaining the reuse:
+>    ```bat
+>    REM generate_synthetic_profiles.py also produces interchange profiles
+>    %PYTHON% scripts\generate_synthetic_profiles.py
+>    ```
+>
+> 4. **Lines 37, 68 — PYTHONPATH trailing backslash:**
+>    Current: `set PYTHONPATH=%~dp0;%~dp0backend;%~dp0scripts`
+>    `%~dp0` expands to a path WITH trailing backslash (e.g., `C:\Users\foo\market-simulator\`).
+>    This means PYTHONPATH includes `C:\Users\foo\market-simulator\;C:\Users\foo\market-simulator\backend;...`
+>    The trailing backslash is usually harmless on Windows but could cause issues with some Python path resolution.
+>    Fix: Strip trailing backslash or verify behavior. Low priority — note in comments if not fixed.
+>
+> **Verification:** On Windows, delete `data/profiles/eia_demand_profiles.json` and run `run.bat`. Verify that generation succeeds with visible output (not suppressed). Verify that if pip install fails (e.g., with `--dry-run` flag), a warning is printed.
+
+---
