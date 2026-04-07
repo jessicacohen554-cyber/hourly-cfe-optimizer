@@ -264,3 +264,64 @@ Each section below is a **self-contained prompt** that can be given to an AI cod
 > **Verification:** On Windows, delete `data/profiles/eia_demand_profiles.json` and run `run.bat`. Verify that generation succeeds with visible output (not suppressed). Verify that if pip install fails (e.g., with `--dry-run` flag), a warning is printed.
 
 ---
+
+## Prompt 4: Add Hybrid Resources to Synthetic Data Fallback
+
+> **Objective:** Update `_generate_synthetic_step3_data()` in `market_simulation.py` to include hybrid solar+battery and wind+battery resource allocations. Without this, standalone deployments without EF parquets show zero hybrid resources.
+>
+> **File to modify:** `market-simulator/scripts/market_simulation.py`
+> **Function:** `_generate_synthetic_step3_data()` starting at line 4188
+>
+> **Current state:**
+> The function generates synthetic resource mixes for standalone operation. It produces `resource_pcts` with only 6 base types: `clean_firm`, `solar`, `wind`, `offshore_wind`, `ccs_ccgt`, `hydro`. No hybrid resources. The result dict also lacks the `'include_hybrids'` flag.
+>
+> **Context — hybrid types and constraints** (from `pipeline_config.py`):
+> - 4 hybrid types: `solar_batt4`, `solar_batt8`, `wind_batt4`, `wind_batt8`
+> - `HYBRID_MAX_PER_TYPE = 40` (max 40% of demand per individual hybrid type)
+> - Solar family cap: solar + solar_batt4 + solar_batt8 combined ≤ `SOLAR_FAMILY_CAP[iso]` (120% typical)
+> - Wind family cap: wind + wind_batt4 + wind_batt8 combined ≤ `WIND_FAMILY_CAP[iso]` (80-210% depending on ISO)
+> - Queue caps for hybrids already defined in `market_simulation.py` lines 290-314 (GW/year by ISO)
+>
+> **Required changes:**
+>
+> 1. **Import hybrid constants** at top of function:
+>    ```python
+>    from pipeline_config import HYBRID_TYPES, HYBRID_MAX_PER_TYPE
+>    ```
+>
+> 2. **Add hybrid ramps** after the base resource allocation (after line 4257, after `resource_pcts` dict is built):
+>    ```python
+>    # Hybrid solar+battery and wind+battery — fraction of parent resource
+>    # Hybrids ramp slower than standalone: new tech, requires co-siting
+>    solar_total = resource_pcts['solar']
+>    wind_total = resource_pcts['wind']
+>
+>    sb4 = min(HYBRID_MAX_PER_TYPE, round(solar_total * 0.25 * progress, 2))
+>    sb8 = min(HYBRID_MAX_PER_TYPE, round(solar_total * 0.12 * max(0, progress - 0.3) / 0.7, 2))
+>    wb4 = min(HYBRID_MAX_PER_TYPE, round(wind_total * 0.18 * progress, 2))
+>    wb8 = min(HYBRID_MAX_PER_TYPE, round(wind_total * 0.08 * max(0, progress - 0.3) / 0.7, 2))
+>
+>    resource_pcts['solar_batt4'] = sb4
+>    resource_pcts['solar_batt8'] = sb8
+>    resource_pcts['wind_batt4'] = wb4
+>    resource_pcts['wind_batt8'] = wb8
+>    ```
+>
+> 3. **Set `include_hybrids` flag** in the result dict (line 4265-4276):
+>    Add `'include_hybrids': True,` to the `iso_data[t]` dict.
+>
+> 4. **Rationale for ramp fractions:**
+>    - `solar_batt4`: 25% of solar at full progress — 4hr battery is mature, common co-location
+>    - `solar_batt8`: 12% of solar, delayed onset (progress > 0.3) — 8hr is newer, higher cost
+>    - `wind_batt4`: 18% of wind — less common than solar+batt but growing
+>    - `wind_batt8`: 8% of wind, delayed onset — niche application
+>    - All capped at `HYBRID_MAX_PER_TYPE` (40%) per pipeline_config constraints
+>
+> **Verification:**
+> 1. Temporarily rename/remove any `data/step2.1-ef/` and `data/step2.2-cost/` directories
+> 2. Start the server: `python -m uvicorn backend.main:app`
+> 3. Call `GET /api/simulate` with default params for CAISO at 90% threshold
+> 4. Verify the response includes `solar_batt4`, `solar_batt8`, `wind_batt4`, `wind_batt8` in `resource_pcts` with non-zero values
+> 5. Verify `include_hybrids` is `true` in the response
+
+---
