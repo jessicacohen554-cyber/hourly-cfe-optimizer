@@ -104,7 +104,7 @@ from dispatch_utils import (
     load_common_data, get_demand_profile, get_supply_profiles,
     reconstruct_hourly_dispatch, compute_fossil_retirement,
     COAL_CAP_TWH, OIL_CAP_TWH,
-    RESOURCE_TYPES, HYBRID_TYPES, RESOURCE_TYPES_HYBRID,
+    RESOURCE_TYPES, HYBRID_TYPES, HYBRID_MAX_PER_TYPE, RESOURCE_TYPES_HYBRID,
     _detect_hybrids_in_schema, H,
 )
 from lmp_engine import (
@@ -4256,6 +4256,21 @@ def _generate_synthetic_step3_data():
                 'hydro': round(hydro, 2),
             }
 
+            # Hybrid solar+battery and wind+battery — fraction of parent resource
+            # Hybrids ramp slower than standalone: new tech, requires co-siting
+            solar_total = resource_pcts['solar']
+            wind_total = resource_pcts['wind']
+
+            sb4 = min(HYBRID_MAX_PER_TYPE, round(solar_total * 0.25 * progress, 2))
+            sb8 = min(HYBRID_MAX_PER_TYPE, round(solar_total * 0.12 * max(0, progress - 0.3) / 0.7, 2)) if progress > 0.3 else 0
+            wb4 = min(HYBRID_MAX_PER_TYPE, round(wind_total * 0.18 * progress, 2))
+            wb8 = min(HYBRID_MAX_PER_TYPE, round(wind_total * 0.08 * max(0, progress - 0.3) / 0.7, 2)) if progress > 0.3 else 0
+
+            resource_pcts['solar_batt4'] = sb4
+            resource_pcts['solar_batt8'] = sb8
+            resource_pcts['wind_batt4'] = wb4
+            resource_pcts['wind_batt8'] = wb8
+
             # Storage ramps with clean % (more needed at high targets)
             bat_pct = min(15, progress * 12)
             bat8_pct = min(8, max(0, progress - 0.3) * 10)
@@ -4264,6 +4279,7 @@ def _generate_synthetic_step3_data():
 
             iso_data[t] = {
                 'resource_pcts': resource_pcts,
+                'include_hybrids': True,
                 'total_cost': 0,  # no cost data without parquets
                 'hourly_match_score': t / 100.0,
                 'battery_pct': round(bat_pct, 1),
