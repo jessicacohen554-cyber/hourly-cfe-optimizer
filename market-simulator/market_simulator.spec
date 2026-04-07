@@ -26,6 +26,7 @@ a = Analysis(
         ('scripts', 'market-simulator/scripts'),
         # Bundled default data (NOT EIA/CAMPD — just synthetic + fleet)
         ('data/profiles', 'market-simulator/data/profiles'),
+        ('data/hybrid_profiles', 'market-simulator/data/hybrid_profiles'),
         ('data/CEG_fleet_rosetta.csv', 'market-simulator/data'),
         ('data/constellation_fleet.json', 'market-simulator/data'),
         ('data/cv_reference_results.json', 'market-simulator/data'),
