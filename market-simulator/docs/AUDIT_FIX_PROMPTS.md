@@ -438,3 +438,138 @@ Each section below is a **self-contained prompt** that can be given to an AI cod
 > 4. Verify sweep aggregation (mean, P10, P90) includes hybrid columns
 
 ---
+
+## Prompt 7: Update PyInstaller Spec to Bundle Hybrid Profiles
+
+> **Objective:** Add hybrid profile NPZ files to the PyInstaller bundle so the packaged desktop app can dispatch hybrid resources.
+>
+> **File to modify:** `market-simulator/market_simulator.spec`
+>
+> **Current state (line 28):**
+> ```python
+> ('data/profiles', 'market-simulator/data/profiles'),
+> ```
+> The spec bundles `data/profiles/` (synthetic demand/gen/fossil/interchange JSON files) but does NOT bundle `data/hybrid_profiles/` (7 NPZ files, one per ISO, required for hybrid dispatch).
+>
+> **Required change — add one line** after line 28:
+> ```python
+> ('data/hybrid_profiles', 'market-simulator/data/hybrid_profiles'),
+> ```
+>
+> **Full datas section after fix:**
+> ```python
+> datas=[
+>     # Frontend (HTML, CSS, JS, images)
+>     ('frontend', 'market-simulator/frontend'),
+>     # Backend (FastAPI app)
+>     ('backend', 'market-simulator/backend'),
+>     # Scripts (simulation engine)
+>     ('scripts', 'market-simulator/scripts'),
+>     # Bundled default data (NOT EIA/CAMPD — just synthetic + fleet)
+>     ('data/profiles', 'market-simulator/data/profiles'),
+>     ('data/hybrid_profiles', 'market-simulator/data/hybrid_profiles'),  # ← NEW
+>     ('data/CEG_fleet_rosetta.csv', 'market-simulator/data'),
+>     ('data/constellation_fleet.json', 'market-simulator/data'),
+>     ('data/cv_reference_results.json', 'market-simulator/data'),
+>     ('data/cv_comparison_report.json', 'market-simulator/data'),
+>     ('data/DATA_README.md', 'market-simulator/data'),
+>     # Custom user input templates
+>     ('custom-user-inputs', 'market-simulator/custom-user-inputs'),
+>     # Pre-computed results
+>     ('results/sweep_1215', 'market-simulator/results/sweep_1215'),
+>     ('results/fleet_results.json', 'market-simulator/results'),
+>     ('results/fleet_scenario_results.json', 'market-simulator/results'),
+> ] + pyarrow_datas,
+> ```
+>
+> **Why this matters:** Without bundling `hybrid_profiles/`, the packaged `.exe`/`.app` cannot load hybrid dispatch shapes. `dispatch_utils._load_hybrid_profiles()` will print "WARNING: No hybrid profiles at ..." and return empty dicts. Hybrid resources will show 0% contribution even when EF parquets or synthetic data include them.
+>
+> **Verification:**
+> 1. Run `pyinstaller market_simulator.spec`
+> 2. Check `dist/MarketSimulator/_internal/market-simulator/data/hybrid_profiles/` exists
+> 3. Verify all 7 NPZ files are present: `CAISO_hybrid_profiles.npz`, `ERCOT_hybrid_profiles.npz`, etc.
+
+---
+
+## Prompt 8: Update PACKAGING_PLAN.md
+
+> **Objective:** Update packaging documentation to reflect hybrid resources, full startup sequence, and data tier model.
+>
+> **File to modify:** `market-simulator/PACKAGING_PLAN.md`
+>
+> **Changes:**
+>
+> 1. **Section 2 (Directory Layout):** Add `hybrid_profiles/` and optional EF data to the `_internal/market-simulator/data/` tree. Current layout shows:
+>    ```
+>    │       └── data/                ← Bundled defaults only:
+>    │           ├── profiles/        ←   synthetic demand/gen/fossil/interchange
+>    │           ├── CEG_fleet_rosetta.csv
+>    │           ├── constellation_fleet.json
+>    │           ├── cv_reference_results.json
+>    │           └── cv_comparison_report.json
+>    ```
+>    Updated layout:
+>    ```
+>    │       └── data/                ← Bundled defaults only:
+>    │           ├── profiles/        ←   synthetic demand/gen/fossil/interchange
+>    │           ├── hybrid_profiles/ ←   7 ISO NPZ files (solar+batt/wind+batt 8760 dispatch shapes)
+>    │           ├── CEG_fleet_rosetta.csv
+>    │           ├── constellation_fleet.json
+>    │           ├── cv_reference_results.json
+>    │           └── cv_comparison_report.json
+>    ```
+>    Also add to `app_data/data/`:
+>    ```
+>    │   ├── step2.1-ef/             ← OPTIONAL: efficient frontier parquets (enhances resource mix accuracy)
+>    │   ├── step2.2-cost/           ← OPTIONAL: cost-optimized parquets (full cost scenario analysis)
+>    ```
+>
+> 2. **Section 4 (PyInstaller Spec):** Add the hybrid_profiles data line to match the actual spec (Prompt 7).
+>
+> 3. **Add new section: "Data Tiers"** (after section 3). Document the 4 data tiers that control result quality:
+>
+>    ```markdown
+>    ## 3b. Data Tiers
+>
+>    The market simulator operates at different quality levels depending on
+>    available data. Each tier adds accuracy:
+>
+>    | Tier | Data Required | What It Adds |
+>    |------|--------------|--------------|
+>    | 0 — Synthetic | None (ships with app) | Approximate resource mixes, synthetic LMP, illustrative results |
+>    | 1 — EF Physics | `step2.1-ef/` parquets | Physics-optimal resource mixes with hybrid resources |
+>    | 2 — Cost-Optimized | `step2.2-cost/` parquets | Full cost-optimized results across 5,832 scenarios |
+>    | 3 — Plant-Level | `eia-860/`, `eia-923/`, `epa-campd/` | Plant-specific heat rates, emissions, fleet dispatch |
+>
+>    Tier 0 works out of the box. Users drop parquet files into
+>    `app_data/data/step2.1-ef/` or `app_data/data/step2.2-cost/` to upgrade.
+>    The app auto-detects which tier is available per ISO.
+>    ```
+>
+> 4. **Section on first-run startup sequence:** Document the full 7-step startup that `run.bat`/`run.sh`/`start.py` perform:
+>    1. Install dependencies
+>    2. Generate synthetic profiles (if missing)
+>    3. Generate plant heat rates (if missing)
+>    4. Generate interchange profiles (if missing)
+>    5. Run 1,215-scenario parametric sweep (if missing) — one-time, 10-30 min
+>    6. Build fleet scenario data (if missing)
+>    7. Generate constellation scenarios + extract ISO sweep data (if missing)
+>
+>    Note that the desktop app (`desktop_app.py`) handles steps 2-4 in `first_run_setup()`. Steps 5-7 should also be added to `desktop_app.py` or triggered by the backend on first request.
+>
+> **Verification:** Read the updated PACKAGING_PLAN.md and verify:
+> 1. Directory layout includes `hybrid_profiles/`
+> 2. Data tiers table is accurate
+> 3. Startup sequence matches run.bat
+> 4. PyInstaller spec section references hybrid_profiles
+
+---
+
+## Priority Order
+
+1. **Prompts 1-3** (launcher fixes) — critical for standalone usability on Mac/Linux
+2. **Prompt 4** (synthetic hybrid data) — makes hybrids appear in default mode
+3. **Prompt 7** (PyInstaller spec) — one-line fix, high impact for packaged app
+4. **Prompt 8** (PACKAGING_PLAN.md) — documentation alignment
+5. **Prompt 5** (frontend) — surfaces hybrid data to users in charts
+6. **Prompt 6** (sweep) — largest change, lowest urgency, changes simulation results
