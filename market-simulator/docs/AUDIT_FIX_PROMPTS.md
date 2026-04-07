@@ -132,3 +132,85 @@ Each section below is a **self-contained prompt** that can be given to an AI cod
 > **Verification:** Run `bash run.sh` from the `market-simulator/` directory. All steps should execute in order. If any optional step fails, the script should print a warning and continue to server startup.
 
 ---
+
+## Prompt 2: Fix start.py to Match run.bat
+
+> **Objective:** Update `market-simulator/app-startup/start.py` to include the full startup sequence matching `run.bat`. Currently it handles profiles, heat rates, and interchange, but is missing the sweep, fleet data, constellation, and ISO sweep steps.
+>
+> **File to modify:** `market-simulator/app-startup/start.py`
+>
+> **Current state** (see `app-startup/start.py`, 102 lines):
+> - `ensure_data()` handles 3 checks: demand profiles, plant heat rates, interchange profiles
+> - Missing: sweep generation, fleet scenario data, constellation scenarios, ISO sweep extraction
+> - Error handling uses `capture_output=True` which silently swallows errors
+>
+> **Required changes:**
+>
+> 1. **Add sweep generation** to `ensure_data()` (after interchange profiles):
+>    ```python
+>    # 1,215-scenario parametric sweep (one-time, may take 10-30 min)
+>    sweep_file = ROOT / "results" / "sweep_1215" / "sweep_1215_flat.parquet"
+>    if not sweep_file.exists():
+>        print("\n" + "=" * 60)
+>        print("  Sweep cache not found. Running 1,215-scenario parametric sweep.")
+>        print("  This is a one-time operation and may take a while...")
+>        print("  (3 demand x 5 price x 3 PPA x 3 gas x 3 queue x 3 fossil cost)")
+>        print("  x 7 ISOs x 6 years = 51,030 simulations")
+>        print("=" * 60 + "\n")
+>        result = subprocess.run(
+>            [sys.executable, str(ROOT / "scripts" / "run_sweep_1215.py"),
+>             "--output-dir", str(ROOT / "results" / "sweep_1215")],
+>            env=env,
+>        )
+>        if result.returncode != 0:
+>            print("  WARNING: Sweep generation failed. Sweep features unavailable.")
+>    print("✓ Sweep cache ready")
+>    ```
+>
+> 2. **Add fleet scenario data build**:
+>    ```python
+>    fleet_file = ROOT / "frontend" / "data" / "fleet_scenario_results_sample.json"
+>    if not fleet_file.exists():
+>        print("Building fleet scenario data...")
+>        result = subprocess.run(
+>            [sys.executable, str(ROOT / "scripts" / "build_fleet_scenario_data.py")],
+>            env=env, capture_output=True,
+>        )
+>        if result.returncode != 0:
+>            print("  WARNING: Fleet scenario data build failed.")
+>    print("✓ Fleet scenario data ready")
+>    ```
+>
+> 3. **Add constellation scenarios**:
+>    ```python
+>    constellation_file = ROOT / "frontend" / "data" / "constellation_scenarios.json"
+>    if not constellation_file.exists():
+>        print("Generating constellation scenarios...")
+>        result = subprocess.run(
+>            [sys.executable, str(ROOT / "scripts" / "generate_constellation_scenarios.py")],
+>            env=env, capture_output=True,
+>        )
+>        if result.returncode != 0:
+>            print("  WARNING: Constellation scenario generation failed.")
+>    print("✓ Constellation scenarios ready")
+>    ```
+>
+> 4. **Add ISO sweep data extraction**:
+>    ```python
+>    sweep_dispatch = ROOT / "frontend" / "data" / "sweep_dispatch_data.json"
+>    if not sweep_dispatch.exists():
+>        print("Extracting ISO sweep data for dashboard...")
+>        result = subprocess.run(
+>            [sys.executable, str(ROOT / "scripts" / "extract_iso_sweep_data.py")],
+>            env=env, capture_output=True,
+>        )
+>        if result.returncode != 0:
+>            print("  WARNING: ISO sweep data extraction failed.")
+>    print("✓ ISO sweep data ready")
+>    ```
+>
+> 5. **Fix error reporting** for existing 3 steps: Add return code checking after each `subprocess.run` call. Print warnings on failure instead of silently continuing.
+>
+> **Verification:** Run `python app-startup/start.py` from `market-simulator/`. All 7 startup steps should execute with progress messages. Server starts even if optional steps fail.
+
+---
