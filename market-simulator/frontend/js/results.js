@@ -40,6 +40,10 @@ const CLEAN_COLORS = {
     battery: '#CADB2E',
     ldes: '#F47B27',
     geothermal: '#9B6B3A',
+    solar_batt4: '#E6890B',
+    solar_batt8: '#CC7A0A',
+    wind_batt4: '#1AA34E',
+    wind_batt8: '#158F42',
 };
 
 // Combined resource colors (clean + fossil)
@@ -51,6 +55,24 @@ const ALL_RESOURCE_COLORS = {
     oil_ct: '#9B6B3A',
     fossil: '#6B7280',
 };
+
+const RESOURCE_LABELS = {
+    solar_batt4: 'Solar + 4hr Battery',
+    solar_batt8: 'Solar + 8hr Battery',
+    wind_batt4: 'Wind + 4hr Battery',
+    wind_batt8: 'Wind + 8hr Battery',
+    clean_firm: 'Clean Firm',
+    ccs_ccgt: 'CCS Gas',
+    offshore_wind: 'Offshore Wind',
+    gas_ccgt: 'Gas CCGT',
+    gas_ct: 'Gas CT',
+    oil_ct: 'Oil CT',
+    coal_steam: 'Coal Steam',
+};
+
+function resourceLabel(key) {
+    return RESOURCE_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
 
 const PLOTLY_LAYOUT_BASE = {
     font: { family: "'Source Sans Pro', Calibri, Arial, sans-serif", color: '#1A232F' },
@@ -812,10 +834,10 @@ function renderSupplyStack(data) {
             traces.push({
                 x: displayYears.map(String),
                 y: displayResults.map(yr => (yr.resource_mix_twh || {})[res] || 0),
-                name: res.replace(/_/g, ' '),
+                name: resourceLabel(res),
                 type: 'bar',
                 marker: { color: ALL_RESOURCE_COLORS[res] || '#9CA3AF' },
-                hovertemplate: `${res.replace(/_/g, ' ')}: %{y:.1f} TWh<extra></extra>`,
+                hovertemplate: `${resourceLabel(res)}: %{y:.1f} TWh<extra></extra>`,
             });
         }
 
@@ -852,7 +874,7 @@ function renderSupplyStack(data) {
             const tbody = document.getElementById('supplyStackTableBody');
             thead.innerHTML = `<tr><th>Resource</th>${displayYears.map(y => `<th>${y}</th>`).join('')}</tr>`;
             tbody.innerHTML = resList.map(res =>
-                `<tr><td style="font-weight:600;">${res.replace(/_/g, ' ')}</td>${displayResults.map(yr =>
+                `<tr><td style="font-weight:600;">${resourceLabel(res)}</td>${displayResults.map(yr =>
                     `<td>${fmtNum((yr.resource_mix_twh || {})[res] || 0, 1)}</td>`
                 ).join('')}</tr>`
             ).join('');
@@ -876,7 +898,7 @@ function renderSupplyStack(data) {
         const colors = resources.map(r => ALL_RESOURCE_COLORS[r] || '#9CA3AF');
 
         Plotly.newPlot(container, [{
-            x: resources.map(r => r.replace(/_/g, ' ')),
+            x: resources.map(r => resourceLabel(r)),
             y: values,
             type: 'bar',
             marker: { color: colors },
@@ -930,7 +952,7 @@ function renderEmissionsByYear(data) {
         traces.push({
             x: years,
             y: eData[fuel],
-            name: FUEL_EMISSION_LABELS[fuel] || fuel.replace(/_/g, ' '),
+            name: FUEL_EMISSION_LABELS[fuel] || resourceLabel(fuel),
             type: 'scatter',
             mode: 'lines',
             stackgroup: 'emissions',
@@ -996,7 +1018,7 @@ function renderFuelBinTable(data) {
     if (bins.length > 0) {
         tbody.innerHTML = bins.map(row => `
             <tr>
-                <td style="font-weight: 600;">${row.fuel_type.replace(/_/g, ' ')}</td>
+                <td style="font-weight: 600;">${resourceLabel(row.fuel_type)}</td>
                 <td>${row.heat_rate_bin || '—'}</td>
                 <td>${fmtNum(row.capacity_gw, 1)}</td>
                 <td>${fmtPct((row.capacity_factor || 0) * 100)}</td>
@@ -1016,7 +1038,7 @@ function renderFuelBinTable(data) {
                 const genTWh = capGW * cf * 8.76; // GW × CF × 8760h / 1000
                 return `
                     <tr>
-                        <td style="font-weight: 600;">${g.unit_type.replace(/_/g, ' ')}</td>
+                        <td style="font-weight: 600;">${resourceLabel(g.unit_type)}</td>
                         <td>—</td>
                         <td>${fmtNum(capGW, 1)}</td>
                         <td>${fmtPct(cf * 100)}</td>
@@ -1084,7 +1106,7 @@ function renderMeritOrder(data) {
                     return key === bin ? sum + (b.capacity_gw || (b.capacity_mw || 0) / 1000) : sum;
                 }, 0);
             }),
-            name: bin.replace(/_/g, ' '),
+            name: resourceLabel(bin),
             type: 'bar',
             marker: { color: HEAT_RATE_BIN_COLORS[bin] || defaultColors[idx % defaultColors.length] },
         }));
@@ -1104,7 +1126,7 @@ function renderMeritOrder(data) {
             const tbody = document.getElementById('meritOrderTableBody');
             thead.innerHTML = `<tr><th>Fuel / Heat Rate Bin</th>${displayYears.map(y => `<th>${y} (GW)</th>`).join('')}</tr>`;
             tbody.innerHTML = binList.map(bin => {
-                return `<tr><td style="font-weight:600;">${bin.replace(/_/g, ' ')}</td>${displayResults.map(yr => {
+                return `<tr><td style="font-weight:600;">${resourceLabel(bin)}</td>${displayResults.map(yr => {
                     const bins = yr.fuel_bin_table || yr.generator_economics || [];
                     const val = bins.reduce((sum, b) => {
                         const key = b.heat_rate_bin && b.heat_rate_bin !== '—'
@@ -1124,7 +1146,7 @@ function renderMeritOrder(data) {
 
         const sorted = [...gens].sort((a, b) => a.marginal_cost - b.marginal_cost);
         Plotly.newPlot(container, [{
-            x: sorted.map(g => (g.unit_type || '').replace(/_/g, ' ')),
+            x: sorted.map(g => resourceLabel(g.unit_type || '')),
             y: sorted.map(g => (g.capacity_mw || 0) / 1000),
             marker: { color: sorted.map(g => UNIT_COLORS[g.unit_type] || '#9CA3AF') },
             type: 'bar',
@@ -1192,7 +1214,7 @@ function renderWhatBuilt(data) {
     const colors = resources.map(r => CLEAN_COLORS[r] || '#9CA3AF');
 
     Plotly.newPlot('chartWhatBuilt', [{
-        labels: resources.map(r => r.replace(/_/g, ' ')),
+        labels: resources.map(r => resourceLabel(r)),
         values: values,
         type: 'pie',
         hole: 0.45,
@@ -1254,7 +1276,7 @@ function renderCaptureRates(data) {
     }
 
     function formatRes(r) {
-        return r.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        return resourceLabel(r);
     }
 
     let html = '<table style="width:100%;border-collapse:collapse;font-size:0.9rem;">';
@@ -1354,7 +1376,7 @@ function renderGeneratorTable(data) {
 
     tbody.innerHTML = gens.map(g => `
         <tr>
-            <td>${g.unit_type.replace(/_/g, ' ')}</td>
+            <td>${resourceLabel(g.unit_type)}</td>
             <td>${fmtNum((g.capacity_mw || 0) / 1000, 1)}</td>
             <td>$${fmtNum(g.marginal_cost)}</td>
             <td>${fmtNum(g.dispatch_hours, 0)}</td>
