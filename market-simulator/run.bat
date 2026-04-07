@@ -29,13 +29,21 @@ echo [OK] Found Python
 REM ── Install dependencies ───────────────────────────────────────────────
 echo Installing dependencies...
 %PYTHON% -m pip install -r app-startup\requirements.txt --quiet 2>nul
-echo [OK] Dependencies installed
+if errorlevel 1 (
+    echo WARNING: Dependency installation may have failed. Some features may not work.
+) else (
+    echo [OK] Dependencies installed
+)
 
 REM ── Generate synthetic data if needed ──────────────────────────────────
 if not exist "data\profiles\eia_demand_profiles.json" (
     echo Generating synthetic data profiles...
+    REM Note: %~dp0 includes trailing backslash; harmless on Windows but noted for awareness
     set PYTHONPATH=%~dp0;%~dp0backend;%~dp0scripts
-    %PYTHON% scripts\generate_synthetic_profiles.py 2>nul
+    %PYTHON% scripts\generate_synthetic_profiles.py
+    if errorlevel 1 (
+        echo WARNING: Synthetic profile generation failed.
+    )
 )
 echo [OK] Data profiles ready
 
@@ -43,15 +51,22 @@ REM ── Generate plant heat rates if needed ───────────
 if not exist "data\plant_heat_rates.json" (
     echo Generating plant-specific heat rates...
     set PYTHONPATH=%~dp0;%~dp0backend;%~dp0scripts
-    %PYTHON% scripts\generate_plant_heat_rates.py 2>nul
+    %PYTHON% scripts\generate_plant_heat_rates.py
+    if errorlevel 1 (
+        echo WARNING: Plant heat rate generation failed.
+    )
 )
 echo [OK] Plant heat rates ready
 
 REM ── Generate interchange profiles if needed ────────────────────────
 if not exist "data\profiles\eia_interchange_profiles.json" (
     echo Generating inter-regional interchange profiles...
+    REM generate_synthetic_profiles.py also produces interchange profiles
     set PYTHONPATH=%~dp0;%~dp0backend;%~dp0scripts
-    %PYTHON% scripts\generate_synthetic_profiles.py 2>nul
+    %PYTHON% scripts\generate_synthetic_profiles.py
+    if errorlevel 1 (
+        echo WARNING: Interchange profile generation failed.
+    )
 )
 echo [OK] Interchange profiles ready
 
