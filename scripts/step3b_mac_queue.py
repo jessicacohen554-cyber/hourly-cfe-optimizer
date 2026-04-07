@@ -219,31 +219,31 @@ def _load_iso_shared_pfs(iso):
         print(f"    {iso}: Coarse cache registered ({len(coarse_paths)} files, "
               f"{total_rows:,} rows — lazy, not loaded into memory)")
 
-    # Load near-miss file(s) — small enough for memory
+    # Load near-miss file(s) — use lazy approach (paths only) like coarse cache
+    # to avoid holding 5M rows in memory for CAISO.
     nm_files = []
     nm_single = os.path.join(PFS_DIRS[0], f'{iso}_near_miss.parquet')
     if os.path.isfile(nm_single):
         nm_files.append(nm_single)
-    nm_parts = sorted(globmod.glob(os.path.join(PFS_DIRS[0], f'{iso}_near_miss_part*.parquet')))
-    nm_files.extend(nm_parts)
+    # Only load parts if single file doesn't exist (parts are splits of same data)
+    if not nm_files:
+        nm_parts = sorted(globmod.glob(os.path.join(PFS_DIRS[0], f'{iso}_near_miss_part*.parquet')))
+        nm_files.extend(nm_parts)
 
     if nm_files:
-        try:
-            parts = []
-            for f in nm_files:
-                parts.append(pd.read_parquet(f))
-            nm_df = pd.concat(parts, ignore_index=True) if len(parts) > 1 else parts[0]
-            if 'score' in nm_df.columns and 'hourly_match_score' not in nm_df.columns:
-                nm_df = nm_df.rename(columns={'score': 'hourly_match_score'})
-            for col in STORAGE_COLS:
-                if col not in nm_df.columns:
-                    nm_df[col] = 0.0
-            keep_cols = [c for c in MIX_COLS if c in nm_df.columns]
-            nm_df = nm_df[keep_cols].copy()
-            cache['near_miss'] = nm_df
-            print(f"    {iso}: Loaded near-miss ({len(nm_df):,} rows)")
-        except Exception as e:
-            print(f"    {iso}: WARNING: Could not load near-miss: {e}")
+        # Store paths for lazy filtered reads (same approach as coarse cache)
+        schema = pq.read_schema(nm_files[0])
+        nm_score_col = 'hourly_match_score' if 'hourly_match_score' in schema.names else (
+            'score' if 'score' in schema.names else (
+            'base_score' if 'base_score' in schema.names else None))
+        cache['near_miss_paths'] = nm_files
+        cache['near_miss_score_col'] = nm_score_col
+        total_nm = sum(pq.read_metadata(f).num_rows for f in nm_files)
+        print(f"    {iso}: Near-miss registered ({len(nm_files)} files, "
+              f"{total_nm:,} rows — lazy)")
+    else:
+        cache['near_miss_paths'] = None
+        cache['near_miss_score_col'] = None
 
     _iso_pfs_cache[iso] = cache
     return cache
@@ -296,6 +296,48 @@ def _read_coarse_cache_filtered(iso_cache, score_min, score_max):
 
     except Exception as e:
         print(f"    WARNING: Coarse cache filtered read failed: {e}")
+        return None
+
+
+def _read_near_miss_filtered(iso_cache, score_min, score_max):
+    """Read near-miss with pyarrow predicate pushdown — only matching rows loaded."""
+    paths = iso_cache.get('near_miss_paths')
+    score_col = iso_cache.get('near_miss_score_col')
+    if not paths or not score_col:
+        return None
+
+    try:
+        parts = []
+        for p in paths:
+            schema = pq.read_schema(p)
+            available = [c for c in MIX_COLS if c in schema.names]
+            if score_col not in available:
+                available.append(score_col)
+            table = pq.read_table(p, columns=available, filters=[
+                (score_col, '>=', score_min),
+                (score_col, '<=', score_max),
+            ])
+            if table.num_rows > 0:
+                parts.append(table)
+
+        if not parts:
+            return None
+
+        combined = pa.concat_tables(parts) if len(parts) > 1 else parts[0]
+        df = combined.to_pandas()
+        del combined, parts
+
+        # Normalize score column
+        if score_col != 'hourly_match_score' and score_col in df.columns:
+            df = df.rename(columns={score_col: 'hourly_match_score'})
+        for col in STORAGE_COLS:
+            if col not in df.columns:
+                df[col] = 0.0
+        keep = [c for c in MIX_COLS if c in df.columns]
+        return df[keep]
+
+    except Exception as e:
+        print(f"    WARNING: Near-miss filtered read failed: {e}")
         return None
 
 
@@ -376,35 +418,39 @@ def load_pfs_for_threshold(iso, threshold):
     if filtered_coarse is not None and len(filtered_coarse) > 0:
         dfs.append(filtered_coarse)
 
-    # Use cached near-miss data (loaded once per ISO in run_iso)
-    nm_df = iso_cache.get('near_miss')
-    if nm_df is not None:
-        try:
-            scores = nm_df['hourly_match_score'].values
-            mask = (scores >= threshold - 2.0) & (scores <= threshold + MAX_OVERSHOOT + 1.0)
-            filtered_nm = nm_df.loc[mask]
-            if len(filtered_nm) > 0:
-                dfs.append(filtered_nm)
-        except Exception:
-            pass
+    # Use lazy near-miss — filtered read via pyarrow predicate pushdown
+    filtered_nm = _read_near_miss_filtered(iso_cache, score_min, score_max)
+    if filtered_nm is not None and len(filtered_nm) > 0:
+        dfs.append(filtered_nm)
 
     if not dfs:
         return pd.DataFrame(columns=MIX_COLS)
 
     combined = pd.concat(dfs, ignore_index=True)
+    del dfs  # Free source DataFrames immediately
 
     # Fill missing columns with 0
     for col in MIX_COLS:
         if col not in combined.columns:
             combined[col] = 0.0
 
-    # Deduplicate by resource composition (including hybrids)
-    dedup_cols = RESOURCE_COLS + HYBRID_COLS + STORAGE_COLS
-    combined_rounded = combined.copy()
+    # Deduplicate by resource composition (including hybrids) — in-place to save memory
+    dedup_cols = [c for c in (RESOURCE_COLS + HYBRID_COLS + STORAGE_COLS) if c in combined.columns]
+    # Round in-place for dedup
     for c in dedup_cols:
-        if c in combined_rounded.columns:
-            combined_rounded[c] = combined_rounded[c].round(3)
-    combined = combined.loc[combined_rounded.drop_duplicates(subset=dedup_cols).index]
+        combined[c] = combined[c].round(3)
+    combined = combined.drop_duplicates(subset=dedup_cols).reset_index(drop=True)
+
+    # Memory guard: if still too large after dedup, sample down to MAX_ARCHETYPES × 4
+    # (the scoring step only keeps top MAX_ARCHETYPES anyway)
+    max_rows = MAX_ARCHETYPES * 4  # 20,000
+    if len(combined) > max_rows:
+        # Keep the rows closest to threshold target (best hourly_match_score)
+        if 'hourly_match_score' in combined.columns:
+            combined['_score_dist'] = abs(combined['hourly_match_score'] - threshold)
+            combined = combined.nsmallest(max_rows, '_score_dist').drop(columns=['_score_dist'])
+        else:
+            combined = combined.sample(n=max_rows, random_state=42)
 
     return combined.reset_index(drop=True)
 
