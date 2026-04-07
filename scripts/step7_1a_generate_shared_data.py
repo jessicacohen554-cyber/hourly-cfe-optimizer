@@ -36,6 +36,12 @@ from pipeline_config import (
     REGIONAL_DEMAND_TWH as _REGIONAL_DEMAND_TWH,
     DEMAND_GROWTH_RATES as _DEMAND_GROWTH_RATES,
     THRESHOLD_TARGET_YEARS as _THRESHOLD_TARGET_YEARS,
+    HYBRID_TYPES as _HYBRID_TYPES,
+    HYBRID_DC_AC_RATIOS as _HYBRID_DC_AC_RATIOS,
+    HYBRID_BATTERY_LCOS as _HYBRID_BATTERY_LCOS,
+    ITC_STORAGE_RATE as _ITC_STORAGE_RATE,
+    _HYBRID_BATT_KEY,
+    _HYBRID_PARENT_REN,
 )
 THRESHOLDS_NUM = _OUTPUT_THRESHOLDS
 THRESHOLDS = [str(int(t)) if t == int(t) else str(t) for t in THRESHOLDS_NUM]
@@ -1350,6 +1356,45 @@ for res_idx, res in enumerate(tx_resources):
 lines.append('};')
 lines.append('')
 
+# Hybrid cost tables for client-side repricing
+lines.append('// --- Hybrid Resource Cost Tables ---')
+lines.append('const HYBRID_DC_AC_RATIOS = {')
+for ht_idx, ht in enumerate(_HYBRID_DC_AC_RATIOS.keys()):
+    vals = _HYBRID_DC_AC_RATIOS[ht]
+    parts = [f'{iso}: {vals.get(iso, 1.0)}' for iso in ISOS]
+    comma = ',' if ht_idx < len(_HYBRID_DC_AC_RATIOS) - 1 else ''
+    lines.append(f'    {ht}: {{ {", ".join(parts)} }}{comma}')
+lines.append('};')
+lines.append('')
+lines.append(f'const ITC_STORAGE_RATE = {_ITC_STORAGE_RATE};')
+lines.append('')
+lines.append('const HYBRID_BATTERY_LCOS = {')
+batt_keys = list(_HYBRID_BATTERY_LCOS.keys())
+for bk_idx, bk in enumerate(batt_keys):
+    lines.append(f'    {bk}: {{')
+    for lev_idx, lev in enumerate(['Low', 'Medium', 'High']):
+        vals = _HYBRID_BATTERY_LCOS[bk].get(lev, {})
+        parts = [f'{iso}: {vals.get(iso, 0)}' for iso in ISOS]
+        comma = ',' if lev_idx < 2 else ''
+        lines.append(f'        {lev}: {{ {", ".join(parts)} }}{comma}')
+    bk_comma = ',' if bk_idx < len(batt_keys) - 1 else ''
+    lines.append(f'    }}{bk_comma}')
+lines.append('};')
+lines.append('')
+# Hybrid mapping tables
+lines.append('const HYBRID_BATT_KEY = {')
+for ht_idx, (ht, bk) in enumerate(_HYBRID_BATT_KEY.items()):
+    comma = ',' if ht_idx < len(_HYBRID_BATT_KEY) - 1 else ''
+    lines.append(f"    {ht}: '{bk}'{comma}")
+lines.append('};')
+lines.append('')
+lines.append('const HYBRID_PARENT_REN = {')
+for ht_idx, (ht, pr) in enumerate(_HYBRID_PARENT_REN.items()):
+    comma = ',' if ht_idx < len(_HYBRID_PARENT_REN) - 1 else ''
+    lines.append(f"    {ht}: '{pr}'{comma}")
+lines.append('};')
+lines.append('')
+
 # Nuclear new-build LCOE
 lines.append('// --- Nuclear New-Build LCOE ($/MWh) by firm gen toggle ---')
 lines.append('const NUCLEAR_NEWBUILD_LCOE = {')
@@ -1783,12 +1828,13 @@ import pandas as pd
 
 STEP3_DIR = os.path.join(SCRIPT_DIR, '..', 'data', 'step2.2-cost')
 MIX_FIELDS = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro',
+              'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8',
               'hourly_match_score',
               'battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct',
               'h2_dispatch_pct']
 
 lines.append('// --- Feasible Mixes per (ISO, threshold) for client-side repricing ---')
-lines.append('// Each mix: [clean_firm%, solar%, wind%, offshore_wind%, ccs_ccgt%, hydro%, match%, battery%, battery8%, ldes%, h2%]')
+lines.append('// Each mix: [clean_firm%, solar%, wind%, offshore_wind%, ccs_ccgt%, hydro%, solar_batt4%, solar_batt8%, wind_batt4%, wind_batt8%, match%, battery%, battery8%, ldes%, h2%]')
 lines.append('// Source: step3_feasible_{ISO}.parquet — ~500 EF-sampled mixes + archetype winners per threshold.')
 lines.append('// t=99.9 uses mixes scoring >=99.5% from the feasible set (effective gate).')
 lines.append('const FEASIBLE_MIXES = {')
@@ -1840,10 +1886,11 @@ for iso_idx, iso in enumerate(ISOS):
                 if _share_col in sub.columns:
                     sub[_cap_col] = sub[_share_col]
             mix_cols = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro',
+                        'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8',
                         'hourly_match_score', 'battery_dispatch_pct',
                         'battery8_dispatch_pct', 'ldes_dispatch_pct', 'h2_dispatch_pct']
             arr = sub[mix_cols].to_numpy(copy=False)
-            arr[:, 6] = np.round(arr[:, 6], 1)  # round hourly_match_score (col 6 now, was col 5)
+            arr[:, 10] = np.round(arr[:, 10], 1)  # round hourly_match_score (col 10 with hybrids)
             mix_rows = arr.tolist()
 
         total_fm += len(mix_rows)

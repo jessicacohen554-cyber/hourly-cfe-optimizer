@@ -618,6 +618,10 @@ const COLORS = {
     storage:       { base: RESOURCE_COLORS.storage,       alpha: withAlpha(RESOURCE_COLORS.storage, 0.15) },
     h2:            { base: RESOURCE_COLORS.greenH2,       alpha: withAlpha(RESOURCE_COLORS.greenH2, 0.15) },
     green_h2:      { base: RESOURCE_COLORS.greenH2,       alpha: withAlpha(RESOURCE_COLORS.greenH2, 0.15) },
+    solar_batt4:   { base: RESOURCE_COLORS.solarBatt4,    alpha: withAlpha(RESOURCE_COLORS.solarBatt4, 0.15) },
+    solar_batt8:   { base: RESOURCE_COLORS.solarBatt8,    alpha: withAlpha(RESOURCE_COLORS.solarBatt8, 0.15) },
+    wind_batt4:    { base: RESOURCE_COLORS.windBatt4,     alpha: withAlpha(RESOURCE_COLORS.windBatt4, 0.15) },
+    wind_batt8:    { base: RESOURCE_COLORS.windBatt8,     alpha: withAlpha(RESOURCE_COLORS.windBatt8, 0.15) },
     gap:           { base: RESOURCE_COLORS.gap,           alpha: withAlpha(RESOURCE_COLORS.gap, 0.15) }
 };
 
@@ -635,7 +639,11 @@ const RESOURCE_LABELS = {
     ldes: 'LDES (100hr)',
     storage: 'Storage',
     h2: 'Green H\u2082',
-    green_h2: 'Green H\u2082'
+    green_h2: 'Green H\u2082',
+    solar_batt4: 'Solar+Batt (4hr)',
+    solar_batt8: 'Solar+Batt (8hr)',
+    wind_batt4: 'Wind+Batt (4hr)',
+    wind_batt8: 'Wind+Batt (8hr)'
 };
 
 // ---- SBTi year ↔ threshold mapping ----
@@ -828,21 +836,34 @@ function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
     // Existing shares are % of 2025 demand - scale down to % of grown demand
     const existingScaleFactor = 1 / growthFactor;
 
-    const rm = { clean_firm: mixArr[0], solar: mixArr[1], wind: mixArr[2], offshore_wind: mixArr[3], ccs_ccgt: mixArr[4], hydro: mixArr[5] };
+    // mixArr layout: [cf, solar, wind, osw, ccs, hydro, sb4, sb8, wb4, wb8, match, bat4, bat8, ldes, h2]
+    // Backward compat: 11-element arrays (pre-hybrid) → hybrids default to 0
+    const isHybridFormat = mixArr.length >= 15;
+    const rm = {
+        clean_firm: mixArr[0], solar: mixArr[1], wind: mixArr[2],
+        offshore_wind: mixArr[3], ccs_ccgt: mixArr[4], hydro: mixArr[5],
+        solar_batt4: isHybridFormat ? (mixArr[6] || 0) : 0,
+        solar_batt8: isHybridFormat ? (mixArr[7] || 0) : 0,
+        wind_batt4: isHybridFormat ? (mixArr[8] || 0) : 0,
+        wind_batt8: isHybridFormat ? (mixArr[9] || 0) : 0,
+    };
     // Procurement = sum of all generation resources as % of demand
-    const proc = (rm.clean_firm + rm.solar + rm.wind + rm.offshore_wind + rm.ccs_ccgt + rm.hydro) / 100.0;
-    const matchFrac = mixArr[6] / 100.0;
-    const batPct = mixArr[7] || 0;
-    const bat8Pct = mixArr[8] || 0;
-    const ldesPct = mixArr[9] || 0;
-    const h2Pct = mixArr[10] || 0;
+    const proc = (rm.clean_firm + rm.solar + rm.wind + rm.offshore_wind + rm.ccs_ccgt + rm.hydro
+                  + rm.solar_batt4 + rm.solar_batt8 + rm.wind_batt4 + rm.wind_batt8) / 100.0;
+    const matchIdx = isHybridFormat ? 10 : 6;
+    const matchFrac = mixArr[matchIdx] / 100.0;
+    const batPct = mixArr[matchIdx + 1] || 0;
+    const bat8Pct = mixArr[matchIdx + 2] || 0;
+    const ldesPct = mixArr[matchIdx + 3] || 0;
+    const h2Pct = mixArr[matchIdx + 4] || 0;
 
     const baseExisting = GRID_MIX_SHARES[iso] || {};
     let wholesale = WHOLESALE_PRICES[iso] || 30;
 
     let totalCost = 0;
     const resourceCosts = {};
-    const RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro'];
+    const RESOURCE_TYPES = ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro',
+                            'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8'];
 
     for (const rtype of RESOURCE_TYPES) {
         const pct = rm[rtype] || 0;
@@ -927,8 +948,30 @@ function priceMix(iso, mixArr, baseDemandTwh, targetYear, growthRate) {
             costPerDemand = (existingPct / 100.0) * wholesale + (newPct / 100.0) * (lcoe + txAdd);
             resourceCosts[rtype] = { existing_pct: existingPct, new_pct: newPct, cost_per_demand_mwh: costPerDemand };
 
+        } else if (rtype.includes('_batt') && typeof HYBRID_PARENT_REN !== 'undefined') {
+            // Hybrid co-located resources: parent renewable LCOE + battery LCOS (after ITC)
+            const renName = { L: 'Low', M: 'Medium', H: 'High' }[ren] || 'Medium';
+            const battName = { L: 'Low', M: 'Medium', H: 'High' }[battLevel] || 'Medium';
+            const parent = HYBRID_PARENT_REN[rtype] || 'solar';
+            const parentLcoe = ((LCOE_TABLES[parent] || {})[renName] || {})[iso] || 60;
+            // Solar hybrids: LCOE / DC:AC ratio (overbuild lowers cost)
+            const dcac = ((HYBRID_DC_AC_RATIOS || {})[rtype] || {})[iso] || 1.0;
+            const adjLcoe = parentLcoe / dcac;
+            // Battery LCOS with ITC
+            const battKey = (HYBRID_BATT_KEY || {})[rtype] || 'battery4';
+            const battLcos = (((HYBRID_BATTERY_LCOS || {})[battKey] || {})[battName] || {})[iso] || 120;
+            const itcRate = (typeof ITC_STORAGE_RATE !== 'undefined') ? ITC_STORAGE_RATE : 0.30;
+            const effBattLcos = battLcos * (1.0 - itcRate);
+            // Transmission: parent TX / DC:AC for solar, parent TX for wind
+            const parentTx = ((TX_TABLES[parent] || {})[tx] || {})[iso] || 0;
+            const txAdd = dcac > 1.0 ? parentTx / dcac : parentTx;
+            const hybridLcoe = adjLcoe + effBattLcos + txAdd;
+            // Hybrids are always new-build (no existing grid capacity)
+            costPerDemand = (newPct / 100.0) * hybridLcoe;
+            resourceCosts[rtype] = { existing_pct: 0, new_pct: newPct, cost_per_demand_mwh: costPerDemand };
+
         } else {
-            // Solar, wind
+            // Solar, wind, offshore wind
             const renName = { L: 'Low', M: 'Medium', H: 'High' }[ren] || 'Medium';
             const lcoe = ((LCOE_TABLES[rtype] || {})[renName] || {})[iso] || 60;
             const txAdd = ((TX_TABLES[rtype] || {})[tx] || {})[iso] || 0;
@@ -1330,7 +1373,8 @@ function buildDashboardData() {
             battery_efficiency: 0.85,
             ldes_duration: '100h',
             ldes_efficiency: 0.5,
-            resource_types: ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro'],
+            resource_types: ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro',
+                            'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8'],
             grid_mix_shares: typeof GRID_MIX_SHARES !== 'undefined' ? GRID_MIX_SHARES : {},
             hydro_caps: {}
         }
@@ -1693,7 +1737,7 @@ function updateDonut(entry) {
     const h2Pct = entry.h2_dispatch_pct || 0;
 
     // All 5 generation resources from resource_mix
-    const genResources = ['clean_firm', 'ccs_ccgt', 'offshore_wind', 'solar', 'wind', 'hydro'];
+    const genResources = ['clean_firm', 'ccs_ccgt', 'offshore_wind', 'solar', 'solar_batt4', 'solar_batt8', 'wind', 'wind_batt4', 'wind_batt8', 'hydro'];
     const mixTotal = genResources.reduce((s, r) => s + (mix[r] || 0), 0) || 100;
 
     // Storage dispatch contributes to match score but isn't in resource_mix
@@ -2421,7 +2465,7 @@ function updateCostPanel(entry) {
     const adj = cfAdjust(entry, iso);
     const rc = costs.resource_costs;
     // Generation resources then storage types
-    const genResources = ['clean_firm', 'ccs_ccgt', 'offshore_wind', 'solar', 'wind', 'hydro'];
+    const genResources = ['clean_firm', 'ccs_ccgt', 'offshore_wind', 'solar', 'solar_batt4', 'solar_batt8', 'wind', 'wind_batt4', 'wind_batt8', 'hydro'];
     const storageResources = ['battery', 'battery8', 'ldes', 'h2'];
 
     let rows = '';
@@ -3518,8 +3562,8 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
         ? ['nuclear', 'geothermal', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar']
         : ['nuclear', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar'];
     const NEW_ORDER = wynHasGeo
-        ? ['nuclear', 'geothermal', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar', 'battery', 'battery8', 'ldes', 'h2']
-        : ['nuclear', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'solar', 'battery', 'battery8', 'ldes', 'h2'];
+        ? ['nuclear', 'geothermal', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'wind_batt4', 'wind_batt8', 'solar', 'solar_batt4', 'solar_batt8', 'battery', 'battery8', 'ldes', 'h2']
+        : ['nuclear', 'ccs_ccgt', 'hydro', 'offshore_wind', 'wind', 'wind_batt4', 'wind_batt8', 'solar', 'solar_batt4', 'solar_batt8', 'battery', 'battery8', 'ldes', 'h2'];
     const datasets = [];
 
     // Existing portion datasets (saturated fill for existing clean energy)
@@ -3583,8 +3627,8 @@ function updateWhatYouNeedPanel(region, entry, threshold) {
     // Add curtailment datasets above the demand line using cross-hatch pattern
     // Curtailment stack order bottom→top: solar, onshore wind, offshore wind, hydro, CCS-CCGT, geothermal, nuclear
     const CURTAIL_ORDER = wynHasGeo
-        ? ['solar', 'wind', 'offshore_wind', 'hydro', 'ccs_ccgt', 'geothermal', 'nuclear']
-        : ['solar', 'wind', 'offshore_wind', 'hydro', 'ccs_ccgt', 'nuclear'];
+        ? ['solar', 'solar_batt4', 'solar_batt8', 'wind', 'wind_batt4', 'wind_batt8', 'offshore_wind', 'hydro', 'ccs_ccgt', 'geothermal', 'nuclear']
+        : ['solar', 'solar_batt4', 'solar_batt8', 'wind', 'wind_batt4', 'wind_batt8', 'offshore_wind', 'hydro', 'ccs_ccgt', 'nuclear'];
 
     // Compute per-resource curtailment proportionally: curtailment allocated in reverse stack order
     // (solar curtailed first, nuclear last)
