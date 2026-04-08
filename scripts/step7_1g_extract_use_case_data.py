@@ -477,7 +477,7 @@ def extract_grid_resilience():
     # Import dispatch utilities
     sys.path.insert(0, SCRIPT_DIR)
     from dispatch_utils import load_common_data, get_demand_profile, get_supply_profiles
-    from dispatch_utils import build_supply_matrix, reconstruct_hourly_dispatch
+    from dispatch_utils import build_supply_matrix, reconstruct_hourly_dispatch, RESOURCE_TYPES_HYBRID
 
     demand_data, gen_profiles, _, _ = load_common_data()
 
@@ -497,8 +497,8 @@ def extract_grid_resilience():
             continue
 
         demand_norm, total_mwh = get_demand_profile(iso, demand_data)
-        supply_profiles = get_supply_profiles(iso, gen_profiles)
-        supply_matrix = build_supply_matrix(supply_profiles)
+        supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
+        supply_matrix = build_supply_matrix(supply_profiles, resource_types=RESOURCE_TYPES_HYBRID)
 
         # Extract solar and wind profiles as arrays
         solar_arr = np.array(supply_profiles.get("solar", [0.0] * 8760)[:8760], dtype=np.float64)
@@ -539,7 +539,8 @@ def extract_grid_resilience():
                 demand_norm, supply_profiles, resource_pcts,
                 battery_dispatch_pct=battery_pct, battery8_dispatch_pct=battery8_pct,
                 ldes_dispatch_pct=ldes_pct, h2_dispatch_pct=h2_pct,
-                supply_matrix=supply_matrix
+                supply_matrix=supply_matrix,
+                resource_types=RESOURCE_TYPES_HYBRID,
             )
             baseline_match = demand_norm.copy()
             baseline_match[demand_norm > 0] = np.minimum(
@@ -556,13 +557,14 @@ def extract_grid_resilience():
                 stressed_profiles = dict(supply_profiles)
                 stressed_profiles["solar"] = stressed_s.tolist()
                 stressed_profiles["wind"] = stressed_w.tolist()
-                stressed_matrix = build_supply_matrix(stressed_profiles)
+                stressed_matrix = build_supply_matrix(stressed_profiles, resource_types=RESOURCE_TYPES_HYBRID)
 
                 result = reconstruct_hourly_dispatch(
                     stressed_d, stressed_profiles, resource_pcts,
                     battery_dispatch_pct=battery_pct, battery8_dispatch_pct=battery8_pct,
                     ldes_dispatch_pct=ldes_pct, h2_dispatch_pct=h2_pct,
-                    supply_matrix=stressed_matrix
+                    supply_matrix=stressed_matrix,
+                    resource_types=RESOURCE_TYPES_HYBRID,
                 )
 
                 # Compute metrics
@@ -624,7 +626,7 @@ def extract_curtailment_economics():
 
     sys.path.insert(0, SCRIPT_DIR)
     from dispatch_utils import load_common_data, get_demand_profile, get_supply_profiles
-    from dispatch_utils import build_supply_matrix, reconstruct_hourly_dispatch
+    from dispatch_utils import build_supply_matrix, reconstruct_hourly_dispatch, RESOURCE_TYPES_HYBRID
     from pipeline_config import REGIONAL_DEMAND_TWH
 
     demand_data, gen_profiles, _, _ = load_common_data()
@@ -645,8 +647,8 @@ def extract_curtailment_economics():
             continue
 
         demand_norm, total_mwh = get_demand_profile(iso, demand_data)
-        supply_profiles = get_supply_profiles(iso, gen_profiles)
-        supply_matrix = build_supply_matrix(supply_profiles)
+        supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
+        supply_matrix = build_supply_matrix(supply_profiles, resource_types=RESOURCE_TYPES_HYBRID)
         demand_twh = REGIONAL_DEMAND_TWH.get(iso, total_mwh / 1e6)
 
         iso_results = {}
@@ -680,7 +682,8 @@ def extract_curtailment_economics():
                 battery8_dispatch_pct=float(best.get("battery8_dispatch_pct", 0)),
                 ldes_dispatch_pct=float(best.get("ldes_dispatch_pct", 0)),
                 h2_dispatch_pct=float(best.get("h2_dispatch_pct", 0)),
-                supply_matrix=supply_matrix, detailed=True
+                supply_matrix=supply_matrix, detailed=True,
+                resource_types=RESOURCE_TYPES_HYBRID,
             )
 
             # Curtailed energy per hour (normalized)

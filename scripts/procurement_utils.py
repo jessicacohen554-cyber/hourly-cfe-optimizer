@@ -545,7 +545,7 @@ def get_merchant_hourly_shape(iso, gen_profiles):
 
     Returns normalized 8760 profile (sums to 1.0).
     """
-    profiles = get_supply_profiles(iso, gen_profiles)
+    profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
     gm = GRID_MIX_SHARES[iso]
     base = BASE_DEMAND_TWH[iso]
 
@@ -632,7 +632,7 @@ def get_sss_hourly_shape(iso, gen_profiles):
     nuclear (flat baseload with seasonal derate), solar (daytime),
     hydro (seasonal), wind (stochastic).
     """
-    profiles = get_supply_profiles(iso, gen_profiles)
+    profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
     sss_fixed = SSS_FIXED_FLEET_TWH[iso]
 
     # SSS is predominantly nuclear + hydro (the fixed fleet)
@@ -678,7 +678,7 @@ def get_existing_clean_hourly_shape(iso, gen_profiles):
     Follows the actual 8760 shape of existing resources:
     nuclear (seasonal derate), solar (daytime), wind (stochastic), hydro.
     """
-    profiles = get_supply_profiles(iso, gen_profiles)
+    profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
     gm = GRID_MIX_SHARES[iso]
 
     # Weights by resource share in existing clean
@@ -1362,7 +1362,8 @@ def compute_dispatch_hms(results, variant_keys, isos):
     try:
         from dispatch_utils import (
             load_common_data, get_demand_profile, get_supply_profiles,
-            reconstruct_hourly_dispatch, build_supply_matrix
+            reconstruct_hourly_dispatch, build_supply_matrix,
+            RESOURCE_TYPES_HYBRID,
         )
     except ImportError:
         print("  WARNING: dispatch_utils not available — skipping HMS scoring")
@@ -1386,8 +1387,8 @@ def compute_dispatch_hms(results, variant_keys, isos):
 
             # Pre-build supply matrix for this ISO
             demand_norm, total_mwh = get_demand_profile(iso, demand_data)
-            supply_profiles = get_supply_profiles(iso, gen_profiles)
-            supply_matrix = build_supply_matrix(supply_profiles)
+            supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
+            supply_matrix = build_supply_matrix(supply_profiles, resource_types=RESOURCE_TYPES_HYBRID)
 
             for growth_level, growth_entries in growth_data.items():
                 if not isinstance(growth_entries, dict):
@@ -1472,6 +1473,7 @@ def compute_dispatch_hms(results, variant_keys, isos):
                                 ldes_dispatch_pct=ldes_pct,
                                 supply_matrix=supply_matrix,
                                 h2_dispatch_pct=h2_pct,
+                                resource_types=RESOURCE_TYPES_HYBRID,
                             )
                             demand_arr = np.array(demand_norm[:8760])
                             total_clean = result['total_clean']

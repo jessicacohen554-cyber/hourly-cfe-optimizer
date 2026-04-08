@@ -27,6 +27,7 @@ from dispatch_utils import (
     load_common_data, get_demand_profile, get_supply_profiles,
     build_supply_matrix, reconstruct_hourly_dispatch, H,
     compute_co2_from_dispatch, COAL_CAP_TWH, OIL_CAP_TWH,
+    RESOURCE_TYPES_HYBRID,
 )
 from pipeline_config import (
     ISOS,
@@ -113,6 +114,7 @@ def compute_grid_baseline(iso_dispatch=None, emission_rates=None):
                         battery_dispatch_pct=0,
                         ldes_dispatch_pct=0,
                         supply_matrix=dd['supply_matrix'],
+                        resource_types=RESOURCE_TYPES_HYBRID,
                     )
                     # Fossil CO2 = residual demand × emission rate
                     residual = result.get('residual_demand', np.zeros(H))
@@ -172,6 +174,7 @@ def compute_dispatch_metrics(iso, resource_pcts, demand_norm, supply_profiles,
         battery_dispatch_pct=battery_pct,
         ldes_dispatch_pct=ldes_pct,
         supply_matrix=supply_matrix,
+        resource_types=RESOURCE_TYPES_HYBRID,
     )
 
     total_clean = result['total_clean']  # (8760,) normalized
@@ -324,7 +327,7 @@ def main():
     for iso in ISOS:
         demand_norm, total_mwh = get_demand_profile(iso, demand_data)
         supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
-        supply_matrix = build_supply_matrix(supply_profiles)
+        supply_matrix = build_supply_matrix(supply_profiles, resource_types=RESOURCE_TYPES_HYBRID)
         iso_dispatch[iso] = {
             'demand_norm': demand_norm,
             'total_mwh': total_mwh,

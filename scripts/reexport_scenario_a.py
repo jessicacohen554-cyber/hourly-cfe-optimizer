@@ -36,7 +36,7 @@ from pipeline_config import (
 )
 from dispatch_utils import (
     load_common_data, get_supply_profiles, get_demand_profile,
-    build_supply_matrix,
+    build_supply_matrix, RESOURCE_TYPES_HYBRID,
 )
 
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)),
@@ -68,7 +68,7 @@ def reexport(isos, sensitivity='high_firm_low_vre', growth='Medium'):
         # Load dispatch data
         demand_norm, _ = get_demand_profile(iso, demand_data)
         supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
-        supply_matrix = build_supply_matrix(supply_profiles)
+        supply_matrix = build_supply_matrix(supply_profiles, resource_types=RESOURCE_TYPES_HYBRID)
 
         iso_data = {}
         sens_toggles = SCENARIO_A['toggles']

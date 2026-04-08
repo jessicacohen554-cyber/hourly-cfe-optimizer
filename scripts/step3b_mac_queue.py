@@ -720,9 +720,15 @@ def compute_co2_at_mix(iso, mix_pct, demand_twh, demand_norm, supply_profiles,
         'ccs_ccgt': 0,  # CCS is implicit residual, handled separately
         'hydro': mix_pct.get('hydro', 0),
     }
+    # Include hybrid resources in dispatch
+    for ht in HYBRID_COLS:
+        resource_pcts[ht] = mix_pct.get(ht, 0)
 
-    # CCS implicit residual
-    explicit_sum = sum(resource_pcts.values()) + mix_pct.get('geothermal', 0)
+    # CCS implicit residual: 100% minus all explicit generation (base + hybrids + geothermal)
+    explicit_sum = (resource_pcts.get('clean_firm', 0) + resource_pcts.get('solar', 0) +
+                    resource_pcts.get('wind', 0) + resource_pcts.get('offshore_wind', 0) +
+                    resource_pcts.get('hydro', 0) + mix_pct.get('geothermal', 0) +
+                    sum(resource_pcts.get(ht, 0) for ht in HYBRID_COLS))
     ccs_pct = max(0, 100.0 - explicit_sum)
     resource_pcts['ccs_ccgt'] = ccs_pct
 
@@ -739,6 +745,7 @@ def compute_co2_at_mix(iso, mix_pct, demand_twh, demand_norm, supply_profiles,
         ldes_dispatch_pct=ldes_pct,
         h2_dispatch_pct=h2_pct,
         supply_matrix=supply_matrix,
+        resource_types=RESOURCE_TYPES_HYBRID,
     )
 
     co2_info = compute_co2_from_dispatch(iso, dispatch, emission_rates, demand_mwh)
@@ -1969,7 +1976,7 @@ def _build_consequential_queue(all_results, demand_data=None, gen_profiles=None,
             try:
                 demand_norm, _ = get_demand_profile(iso, demand_data)
                 supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
-                supply_matrix = build_supply_matrix(supply_profiles)
+                supply_matrix = build_supply_matrix(supply_profiles, resource_types=RESOURCE_TYPES_HYBRID)
             except Exception as e:
                 print(f"  WARNING: Could not load dispatch data for {iso}: {e}")
                 has_dispatch = False
@@ -2116,12 +2123,16 @@ def _compute_baseline_net_peak(iso, demand_norm, supply_profiles, supply_matrix)
         return _BASELINE_NET_PEAK_CACHE[iso]
 
     baseline_pcts = {k: v for k, v in GRID_MIX_SHARES[iso].items()}
+    # Ensure hybrid keys present (zero for baseline) so resource_types matches supply_matrix shape
+    for ht in HYBRID_COLS:
+        baseline_pcts.setdefault(ht, 0)
     result = reconstruct_hourly_dispatch(
         demand_norm, supply_profiles, baseline_pcts,
         procurement_pct=100,
         battery_dispatch_pct=0, battery8_dispatch_pct=0,
         ldes_dispatch_pct=0, h2_dispatch_pct=0,
         supply_matrix=supply_matrix,
+        resource_types=RESOURCE_TYPES_HYBRID,
     )
     # residual_demand is in fraction-of-annual-energy units; multiply by
     # total annual MWh to get MW (since each value = 1 hour)
@@ -2143,7 +2154,7 @@ def _compute_gas_backup(iso, mix_pcts, demand_twh, growth_factor,
     """
     demand_mwh = demand_twh * 1e6
 
-    # Build resource_pcts dict for dispatch (generation resources only)
+    # Build resource_pcts dict for dispatch (generation + hybrid resources)
     resource_pcts = {
         'clean_firm': mix_pcts.get('clean_firm', 0),
         'solar': mix_pcts.get('solar', 0),
@@ -2152,6 +2163,9 @@ def _compute_gas_backup(iso, mix_pcts, demand_twh, growth_factor,
         'ccs_ccgt': mix_pcts.get('ccs_ccgt', 0),
         'hydro': mix_pcts.get('hydro', 0),
     }
+    # Include hybrid resources so dispatch accounts for their generation
+    for ht in HYBRID_COLS:
+        resource_pcts[ht] = mix_pcts.get(ht, 0)
 
     bat4_pct = mix_pcts.get('battery_dispatch_pct', 0)
     bat8_pct = mix_pcts.get('battery8_dispatch_pct', 0)
@@ -2167,6 +2181,7 @@ def _compute_gas_backup(iso, mix_pcts, demand_twh, growth_factor,
         ldes_dispatch_pct=ldes_pct,
         h2_dispatch_pct=h2_pct,
         supply_matrix=supply_matrix,
+        resource_types=RESOURCE_TYPES_HYBRID,
     )
 
     # residual_demand is in fraction-of-annual-energy units; multiply by
@@ -2238,7 +2253,7 @@ def _export_scenario_a(all_results, isos_processed, demand_data, gen_profiles,
         # accounts for hybrid generation in residual peak / gas backup)
         demand_norm, _ = get_demand_profile(iso, demand_data)
         supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
-        supply_matrix = build_supply_matrix(supply_profiles)
+        supply_matrix = build_supply_matrix(supply_profiles, resource_types=RESOURCE_TYPES_HYBRID)
 
         # Track first clean firm deployment year for deployment-gated learning
         first_cf_deployment_year = None
