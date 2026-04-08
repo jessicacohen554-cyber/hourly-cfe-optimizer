@@ -3,377 +3,377 @@ const INTER_ISO_TRADING_DATA = {
   "island_vs_pool": {
     "10": {
       "island_costs": {
-        "CAISO": 13.95,
-        "ERCOT": 3.18,
-        "PJM": 9.79,
-        "NYISO": 4.85,
-        "NEISO": 16.06,
-        "MISO": 4.51,
-        "SPP": 1.76
+        "CAISO": 15.25,
+        "ERCOT": 0.38,
+        "PJM": 22.39,
+        "NYISO": 11.58,
+        "NEISO": 13.85,
+        "MISO": 9.07,
+        "SPP": 1.44
       },
       "pool_costs": {
-        "CAISO": 13.76,
-        "ERCOT": 3.18,
-        "PJM": 8.85,
-        "NYISO": 4.85,
-        "NEISO": 7.85,
-        "MISO": 4.51,
-        "SPP": 1.76
+        "CAISO": 13.44,
+        "ERCOT": 0.38,
+        "PJM": 15.44,
+        "NYISO": 11.58,
+        "NEISO": 13.85,
+        "MISO": 6.44,
+        "SPP": 1.44
       },
       "pool_sources": {
         "CAISO": "SPP",
         "ERCOT": "ERCOT",
-        "PJM": "NYISO",
+        "PJM": "SPP",
         "NYISO": "NYISO",
-        "NEISO": "NYISO",
-        "MISO": "MISO",
+        "NEISO": "NEISO",
+        "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 6.84,
-      "pool_avg": 6.2,
-      "savings_pct": 9.4
+      "island_avg": 11.59,
+      "pool_avg": 8.71,
+      "savings_pct": 24.8
     },
     "20": {
       "island_costs": {
-        "CAISO": 13.95,
-        "ERCOT": 3.18,
-        "PJM": 9.79,
-        "NYISO": 4.85,
-        "NEISO": 16.06,
-        "MISO": 4.51,
-        "SPP": 1.76
+        "CAISO": 15.25,
+        "ERCOT": 0.38,
+        "PJM": 22.39,
+        "NYISO": 11.58,
+        "NEISO": 13.85,
+        "MISO": 9.07,
+        "SPP": 1.44
       },
       "pool_costs": {
-        "CAISO": 13.76,
-        "ERCOT": 3.18,
-        "PJM": 8.85,
-        "NYISO": 4.85,
-        "NEISO": 7.85,
-        "MISO": 4.51,
-        "SPP": 1.76
+        "CAISO": 13.44,
+        "ERCOT": 0.38,
+        "PJM": 15.44,
+        "NYISO": 11.58,
+        "NEISO": 13.85,
+        "MISO": 6.44,
+        "SPP": 1.44
       },
       "pool_sources": {
         "CAISO": "SPP",
         "ERCOT": "ERCOT",
-        "PJM": "NYISO",
+        "PJM": "SPP",
         "NYISO": "NYISO",
-        "NEISO": "NYISO",
-        "MISO": "MISO",
+        "NEISO": "NEISO",
+        "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 6.84,
-      "pool_avg": 6.2,
-      "savings_pct": 9.4
+      "island_avg": 11.59,
+      "pool_avg": 8.71,
+      "savings_pct": 24.8
     },
     "30": {
       "island_costs": {
-        "CAISO": 13.95,
-        "ERCOT": 3.18,
-        "PJM": 9.79,
-        "NYISO": 4.85,
-        "NEISO": 16.06,
-        "MISO": 4.51,
-        "SPP": 1.76
+        "CAISO": 15.25,
+        "ERCOT": 0.38,
+        "PJM": 22.39,
+        "NYISO": 11.58,
+        "NEISO": 13.85,
+        "MISO": 9.07,
+        "SPP": 1.44
       },
       "pool_costs": {
-        "CAISO": 13.76,
-        "ERCOT": 3.18,
-        "PJM": 8.85,
-        "NYISO": 4.85,
-        "NEISO": 7.85,
-        "MISO": 4.51,
-        "SPP": 1.76
+        "CAISO": 13.44,
+        "ERCOT": 0.38,
+        "PJM": 15.44,
+        "NYISO": 11.58,
+        "NEISO": 13.85,
+        "MISO": 6.44,
+        "SPP": 1.44
       },
       "pool_sources": {
         "CAISO": "SPP",
         "ERCOT": "ERCOT",
-        "PJM": "NYISO",
+        "PJM": "SPP",
         "NYISO": "NYISO",
-        "NEISO": "NYISO",
-        "MISO": "MISO",
+        "NEISO": "NEISO",
+        "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 6.84,
-      "pool_avg": 6.2,
-      "savings_pct": 9.4
+      "island_avg": 11.59,
+      "pool_avg": 8.71,
+      "savings_pct": 24.8
     },
     "40": {
       "island_costs": {
-        "CAISO": 13.95,
-        "ERCOT": 3.18,
-        "PJM": 9.79,
-        "NYISO": 4.85,
-        "NEISO": 16.06,
-        "MISO": 4.51,
-        "SPP": 1.76
+        "CAISO": 15.25,
+        "ERCOT": 0.38,
+        "PJM": 22.39,
+        "NYISO": 11.58,
+        "NEISO": 13.85,
+        "MISO": 9.07,
+        "SPP": 1.44
       },
       "pool_costs": {
-        "CAISO": 13.76,
-        "ERCOT": 3.18,
-        "PJM": 8.85,
-        "NYISO": 4.85,
-        "NEISO": 7.85,
-        "MISO": 4.51,
-        "SPP": 1.76
+        "CAISO": 13.44,
+        "ERCOT": 0.38,
+        "PJM": 15.44,
+        "NYISO": 11.58,
+        "NEISO": 13.85,
+        "MISO": 6.44,
+        "SPP": 1.44
       },
       "pool_sources": {
         "CAISO": "SPP",
         "ERCOT": "ERCOT",
-        "PJM": "NYISO",
+        "PJM": "SPP",
         "NYISO": "NYISO",
-        "NEISO": "NYISO",
-        "MISO": "MISO",
+        "NEISO": "NEISO",
+        "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 6.84,
-      "pool_avg": 6.2,
-      "savings_pct": 9.4
+      "island_avg": 11.59,
+      "pool_avg": 8.71,
+      "savings_pct": 24.8
     },
     "50": {
       "island_costs": {
-        "CAISO": 13.95,
-        "ERCOT": 3.18,
-        "PJM": 9.79,
-        "NYISO": 12.95,
-        "NEISO": 16.06,
-        "MISO": 8.81,
-        "SPP": 1.76
+        "CAISO": 15.25,
+        "ERCOT": 3.32,
+        "PJM": 22.39,
+        "NYISO": 11.58,
+        "NEISO": 13.85,
+        "MISO": 9.12,
+        "SPP": 1.44
       },
       "pool_costs": {
-        "CAISO": 13.76,
-        "ERCOT": 3.18,
-        "PJM": 9.79,
-        "NYISO": 12.95,
-        "NEISO": 15.79,
-        "MISO": 6.76,
-        "SPP": 1.76
+        "CAISO": 13.44,
+        "ERCOT": 3.32,
+        "PJM": 15.44,
+        "NYISO": 11.58,
+        "NEISO": 13.85,
+        "MISO": 6.44,
+        "SPP": 1.44
+      },
+      "pool_sources": {
+        "CAISO": "SPP",
+        "ERCOT": "ERCOT",
+        "PJM": "SPP",
+        "NYISO": "NYISO",
+        "NEISO": "NEISO",
+        "MISO": "SPP",
+        "SPP": "SPP"
+      },
+      "island_avg": 12.12,
+      "pool_avg": 9.23,
+      "savings_pct": 23.8
+    },
+    "55": {
+      "island_costs": {
+        "CAISO": 18.64,
+        "ERCOT": 5.98,
+        "PJM": 22.39,
+        "NYISO": 70.2,
+        "NEISO": 16.92,
+        "MISO": 12.62,
+        "SPP": 3.66
+      },
+      "pool_costs": {
+        "CAISO": 15.66,
+        "ERCOT": 5.98,
+        "PJM": 17.66,
+        "NYISO": 19.66,
+        "NEISO": 16.92,
+        "MISO": 8.66,
+        "SPP": 3.66
+      },
+      "pool_sources": {
+        "CAISO": "SPP",
+        "ERCOT": "ERCOT",
+        "PJM": "SPP",
+        "NYISO": "SPP",
+        "NEISO": "NEISO",
+        "MISO": "SPP",
+        "SPP": "SPP"
+      },
+      "island_avg": 17.25,
+      "pool_avg": 11.88,
+      "savings_pct": 31.1
+    },
+    "60": {
+      "island_costs": {
+        "CAISO": 18.64,
+        "ERCOT": 7.58,
+        "PJM": 22.39,
+        "NYISO": 70.2,
+        "NEISO": 21.15,
+        "MISO": 15.72,
+        "SPP": 5.14
+      },
+      "pool_costs": {
+        "CAISO": 17.14,
+        "ERCOT": 7.58,
+        "PJM": 19.14,
+        "NYISO": 21.14,
+        "NEISO": 21.15,
+        "MISO": 10.14,
+        "SPP": 5.14
+      },
+      "pool_sources": {
+        "CAISO": "SPP",
+        "ERCOT": "ERCOT",
+        "PJM": "SPP",
+        "NYISO": "SPP",
+        "NEISO": "NEISO",
+        "MISO": "SPP",
+        "SPP": "SPP"
+      },
+      "island_avg": 18.6,
+      "pool_avg": 13.5,
+      "savings_pct": 27.4
+    },
+    "65": {
+      "island_costs": {
+        "CAISO": 21.09,
+        "ERCOT": 9.98,
+        "PJM": 22.39,
+        "NYISO": 70.2,
+        "NEISO": 22.76,
+        "MISO": 16.49,
+        "SPP": 7.36
+      },
+      "pool_costs": {
+        "CAISO": 19.36,
+        "ERCOT": 9.98,
+        "PJM": 21.36,
+        "NYISO": 23.36,
+        "NEISO": 22.76,
+        "MISO": 12.36,
+        "SPP": 7.36
+      },
+      "pool_sources": {
+        "CAISO": "SPP",
+        "ERCOT": "ERCOT",
+        "PJM": "SPP",
+        "NYISO": "SPP",
+        "NEISO": "NEISO",
+        "MISO": "SPP",
+        "SPP": "SPP"
+      },
+      "island_avg": 19.71,
+      "pool_avg": 15.72,
+      "savings_pct": 20.2
+    },
+    "70": {
+      "island_costs": {
+        "CAISO": 24.2,
+        "ERCOT": 13.18,
+        "PJM": 24.12,
+        "NYISO": 70.2,
+        "NEISO": 22.76,
+        "MISO": 20.15,
+        "SPP": 10.17
+      },
+      "pool_costs": {
+        "CAISO": 22.17,
+        "ERCOT": 13.18,
+        "PJM": 24.12,
+        "NYISO": 25.76,
+        "NEISO": 22.76,
+        "MISO": 15.17,
+        "SPP": 10.17
       },
       "pool_sources": {
         "CAISO": "SPP",
         "ERCOT": "ERCOT",
         "PJM": "PJM",
-        "NYISO": "NYISO",
-        "NEISO": "PJM",
+        "NYISO": "NEISO",
+        "NEISO": "NEISO",
         "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 8.3,
-      "pool_avg": 7.79,
-      "savings_pct": 6.2
+      "island_avg": 22.21,
+      "pool_avg": 18.45,
+      "savings_pct": 17.0
     },
-    "55": {
+    "75": {
       "island_costs": {
-        "CAISO": 14.6,
-        "ERCOT": 5.18,
-        "PJM": 11.22,
-        "NYISO": 17.0,
-        "NEISO": 16.2,
-        "MISO": 10.96,
-        "SPP": 3.61
+        "CAISO": 24.2,
+        "ERCOT": 14.42,
+        "PJM": 28.1,
+        "NYISO": 70.2,
+        "NEISO": 22.76,
+        "MISO": 24.29,
+        "SPP": 13.28
       },
       "pool_costs": {
-        "CAISO": 14.6,
-        "ERCOT": 5.18,
-        "PJM": 11.22,
-        "NYISO": 15.22,
-        "NEISO": 16.2,
-        "MISO": 8.61,
-        "SPP": 3.61
+        "CAISO": 24.2,
+        "ERCOT": 14.42,
+        "PJM": 27.28,
+        "NYISO": 25.76,
+        "NEISO": 22.76,
+        "MISO": 18.28,
+        "SPP": 13.28
       },
       "pool_sources": {
         "CAISO": "CAISO",
         "ERCOT": "ERCOT",
-        "PJM": "PJM",
-        "NYISO": "PJM",
-        "NEISO": "NEISO",
-        "MISO": "SPP",
-        "SPP": "SPP"
-      },
-      "island_avg": 10.07,
-      "pool_avg": 9.42,
-      "savings_pct": 6.5
-    },
-    "60": {
-      "island_costs": {
-        "CAISO": 18.25,
-        "ERCOT": 7.18,
-        "PJM": 14.25,
-        "NYISO": 19.43,
-        "NEISO": 16.2,
-        "MISO": 13.12,
-        "SPP": 5.46
-      },
-      "pool_costs": {
-        "CAISO": 17.46,
-        "ERCOT": 7.18,
-        "PJM": 14.25,
-        "NYISO": 18.25,
-        "NEISO": 16.2,
-        "MISO": 10.46,
-        "SPP": 5.46
-      },
-      "pool_sources": {
-        "CAISO": "SPP",
-        "ERCOT": "ERCOT",
-        "PJM": "PJM",
-        "NYISO": "PJM",
-        "NEISO": "NEISO",
-        "MISO": "SPP",
-        "SPP": "SPP"
-      },
-      "island_avg": 12.48,
-      "pool_avg": 11.72,
-      "savings_pct": 6.1
-    },
-    "65": {
-      "island_costs": {
-        "CAISO": 21.3,
-        "ERCOT": 9.18,
-        "PJM": 17.44,
-        "NYISO": 23.59,
-        "NEISO": 16.2,
-        "MISO": 15.49,
-        "SPP": 7.68
-      },
-      "pool_costs": {
-        "CAISO": 19.68,
-        "ERCOT": 9.18,
-        "PJM": 17.44,
-        "NYISO": 19.2,
-        "NEISO": 16.2,
-        "MISO": 12.68,
-        "SPP": 7.68
-      },
-      "pool_sources": {
-        "CAISO": "SPP",
-        "ERCOT": "ERCOT",
-        "PJM": "PJM",
+        "PJM": "SPP",
         "NYISO": "NEISO",
         "NEISO": "NEISO",
         "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 15.07,
-      "pool_avg": 14.03,
-      "savings_pct": 6.9
-    },
-    "70": {
-      "island_costs": {
-        "CAISO": 25.09,
-        "ERCOT": 10.1,
-        "PJM": 20.94,
-        "NYISO": 28.61,
-        "NEISO": 16.2,
-        "MISO": 17.64,
-        "SPP": 9.53
-      },
-      "pool_costs": {
-        "CAISO": 21.53,
-        "ERCOT": 10.1,
-        "PJM": 20.94,
-        "NYISO": 19.2,
-        "NEISO": 16.2,
-        "MISO": 14.53,
-        "SPP": 9.53
-      },
-      "pool_sources": {
-        "CAISO": "SPP",
-        "ERCOT": "ERCOT",
-        "PJM": "PJM",
-        "NYISO": "NEISO",
-        "NEISO": "NEISO",
-        "MISO": "SPP",
-        "SPP": "SPP"
-      },
-      "island_avg": 17.58,
-      "pool_avg": 16.04,
-      "savings_pct": 8.8
-    },
-    "75": {
-      "island_costs": {
-        "CAISO": 26.87,
-        "ERCOT": 10.1,
-        "PJM": 23.55,
-        "NYISO": 33.75,
-        "NEISO": 16.2,
-        "MISO": 20.54,
-        "SPP": 11.75
-      },
-      "pool_costs": {
-        "CAISO": 23.75,
-        "ERCOT": 10.1,
-        "PJM": 22.2,
-        "NYISO": 19.2,
-        "NEISO": 16.2,
-        "MISO": 16.75,
-        "SPP": 11.75
-      },
-      "pool_sources": {
-        "CAISO": "SPP",
-        "ERCOT": "ERCOT",
-        "PJM": "NEISO",
-        "NYISO": "NEISO",
-        "NEISO": "NEISO",
-        "MISO": "SPP",
-        "SPP": "SPP"
-      },
-      "island_avg": 19.72,
-      "pool_avg": 17.37,
-      "savings_pct": 11.9
+      "island_avg": 24.96,
+      "pool_avg": 20.86,
+      "savings_pct": 16.4
     },
     "80": {
       "island_costs": {
-        "CAISO": 31.86,
-        "ERCOT": 10.1,
-        "PJM": 27.59,
-        "NYISO": 39.19,
-        "NEISO": 16.2,
-        "MISO": 23.85,
-        "SPP": 14.54
+        "CAISO": 24.2,
+        "ERCOT": 21.19,
+        "PJM": 31.75,
+        "NYISO": 70.2,
+        "NEISO": 39.88,
+        "MISO": 30.68,
+        "SPP": 17.52
       },
       "pool_costs": {
-        "CAISO": 25.1,
-        "ERCOT": 10.1,
-        "PJM": 22.2,
-        "NYISO": 19.2,
-        "NEISO": 16.2,
-        "MISO": 19.54,
-        "SPP": 14.54
+        "CAISO": 24.2,
+        "ERCOT": 21.19,
+        "PJM": 31.52,
+        "NYISO": 33.52,
+        "NEISO": 34.52,
+        "MISO": 22.52,
+        "SPP": 17.52
       },
       "pool_sources": {
-        "CAISO": "ERCOT",
+        "CAISO": "CAISO",
         "ERCOT": "ERCOT",
-        "PJM": "NEISO",
-        "NYISO": "NEISO",
-        "NEISO": "NEISO",
+        "PJM": "SPP",
+        "NYISO": "SPP",
+        "NEISO": "SPP",
         "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 22.73,
-      "pool_avg": 18.44,
-      "savings_pct": 18.9
+      "island_avg": 29.94,
+      "pool_avg": 25.7,
+      "savings_pct": 14.1
     },
     "85": {
       "island_costs": {
-        "CAISO": 41.71,
-        "ERCOT": 20.38,
-        "PJM": 32.78,
-        "NYISO": 46.14,
-        "NEISO": 47.29,
-        "MISO": 28.42,
-        "SPP": 18.02
+        "CAISO": 24.97,
+        "ERCOT": 24.29,
+        "PJM": 38.25,
+        "NYISO": 74.09,
+        "NEISO": 47.04,
+        "MISO": 30.68,
+        "SPP": 19.66
       },
       "pool_costs": {
-        "CAISO": 30.02,
-        "ERCOT": 20.38,
-        "PJM": 32.02,
-        "NYISO": 34.02,
-        "NEISO": 35.02,
-        "MISO": 23.02,
-        "SPP": 18.02
+        "CAISO": 24.97,
+        "ERCOT": 24.29,
+        "PJM": 33.66,
+        "NYISO": 35.66,
+        "NEISO": 36.66,
+        "MISO": 24.66,
+        "SPP": 19.66
       },
       "pool_sources": {
-        "CAISO": "SPP",
+        "CAISO": "CAISO",
         "ERCOT": "ERCOT",
         "PJM": "SPP",
         "NYISO": "SPP",
@@ -381,297 +381,265 @@ const INTER_ISO_TRADING_DATA = {
         "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 30.03,
-      "pool_avg": 26.4,
-      "savings_pct": 12.1
+      "island_avg": 33.25,
+      "pool_avg": 27.9,
+      "savings_pct": 16.1
     },
     "87.5": {
       "island_costs": {
-        "CAISO": 45.66,
-        "ERCOT": 22.52,
-        "PJM": 36.14,
-        "NYISO": 50.04,
-        "NEISO": 52.16,
-        "MISO": 31.23,
-        "SPP": 20.12
+        "CAISO": 28.33,
+        "ERCOT": 24.29,
+        "PJM": 43.77,
+        "NYISO": 74.09,
+        "NEISO": 52.01,
+        "MISO": 36.13,
+        "SPP": 34.48
       },
       "pool_costs": {
-        "CAISO": 32.12,
-        "ERCOT": 22.52,
-        "PJM": 34.12,
-        "NYISO": 36.12,
-        "NEISO": 37.12,
-        "MISO": 25.12,
-        "SPP": 20.12
+        "CAISO": 28.33,
+        "ERCOT": 24.29,
+        "PJM": 40.29,
+        "NYISO": 42.29,
+        "NEISO": 43.29,
+        "MISO": 34.29,
+        "SPP": 30.29
       },
       "pool_sources": {
-        "CAISO": "SPP",
-        "ERCOT": "ERCOT",
-        "PJM": "SPP",
-        "NYISO": "SPP",
-        "NEISO": "SPP",
-        "MISO": "SPP",
-        "SPP": "SPP"
-      },
-      "island_avg": 33.05,
-      "pool_avg": 28.51,
-      "savings_pct": 13.7
-    },
-    "90": {
-      "island_costs": {
-        "CAISO": 49.5,
-        "ERCOT": 25.32,
-        "PJM": 40.28,
-        "NYISO": 54.76,
-        "NEISO": 58.32,
-        "MISO": 34.43,
-        "SPP": 22.57
-      },
-      "pool_costs": {
-        "CAISO": 34.57,
-        "ERCOT": 25.32,
-        "PJM": 36.57,
-        "NYISO": 38.57,
-        "NEISO": 39.57,
-        "MISO": 27.57,
-        "SPP": 22.57
-      },
-      "pool_sources": {
-        "CAISO": "SPP",
-        "ERCOT": "ERCOT",
-        "PJM": "SPP",
-        "NYISO": "SPP",
-        "NEISO": "SPP",
-        "MISO": "SPP",
-        "SPP": "SPP"
-      },
-      "island_avg": 36.64,
-      "pool_avg": 31.02,
-      "savings_pct": 15.3
-    },
-    "92.5": {
-      "island_costs": {
-        "CAISO": 57.54,
-        "ERCOT": 28.66,
-        "PJM": 45.44,
-        "NYISO": 60.09,
-        "NEISO": 64.16,
-        "MISO": 37.88,
-        "SPP": 25.56
-      },
-      "pool_costs": {
-        "CAISO": 37.56,
-        "ERCOT": 28.66,
-        "PJM": 39.56,
-        "NYISO": 41.56,
-        "NEISO": 42.56,
-        "MISO": 30.56,
-        "SPP": 25.56
-      },
-      "pool_sources": {
-        "CAISO": "SPP",
-        "ERCOT": "ERCOT",
-        "PJM": "SPP",
-        "NYISO": "SPP",
-        "NEISO": "SPP",
-        "MISO": "SPP",
-        "SPP": "SPP"
-      },
-      "island_avg": 41.11,
-      "pool_avg": 34.07,
-      "savings_pct": 17.1
-    },
-    "95": {
-      "island_costs": {
-        "CAISO": 67.53,
-        "ERCOT": 33.21,
-        "PJM": 59.09,
-        "NYISO": 70.85,
-        "NEISO": 74.37,
-        "MISO": 42.56,
-        "SPP": 29.3
-      },
-      "pool_costs": {
-        "CAISO": 41.3,
-        "ERCOT": 33.21,
-        "PJM": 43.3,
-        "NYISO": 45.3,
-        "NEISO": 46.3,
-        "MISO": 34.3,
-        "SPP": 29.3
-      },
-      "pool_sources": {
-        "CAISO": "SPP",
-        "ERCOT": "ERCOT",
-        "PJM": "SPP",
-        "NYISO": "SPP",
-        "NEISO": "SPP",
-        "MISO": "SPP",
-        "SPP": "SPP"
-      },
-      "island_avg": 49.36,
-      "pool_avg": 37.95,
-      "savings_pct": 23.1
-    },
-    "97.5": {
-      "island_costs": {
-        "CAISO": 69.18,
-        "ERCOT": 39.51,
-        "PJM": 68.33,
-        "NYISO": 80.61,
-        "NEISO": 86.94,
-        "MISO": 50.68,
-        "SPP": 35.28
-      },
-      "pool_costs": {
-        "CAISO": 47.28,
-        "ERCOT": 39.51,
-        "PJM": 49.28,
-        "NYISO": 51.28,
-        "NEISO": 52.28,
-        "MISO": 40.28,
-        "SPP": 35.28
-      },
-      "pool_sources": {
-        "CAISO": "SPP",
-        "ERCOT": "ERCOT",
-        "PJM": "SPP",
-        "NYISO": "SPP",
-        "NEISO": "SPP",
-        "MISO": "SPP",
-        "SPP": "SPP"
-      },
-      "island_avg": 57.03,
-      "pool_avg": 43.99,
-      "savings_pct": 22.9
-    },
-    "99": {
-      "island_costs": {
-        "CAISO": 78.37,
-        "ERCOT": 45.29,
-        "PJM": 76.14,
-        "NYISO": 89.55,
-        "NEISO": 97.19,
-        "MISO": 64.03,
-        "SPP": 42.63
-      },
-      "pool_costs": {
-        "CAISO": 54.63,
-        "ERCOT": 45.29,
-        "PJM": 56.63,
-        "NYISO": 58.63,
-        "NEISO": 59.63,
-        "MISO": 47.63,
-        "SPP": 42.63
-      },
-      "pool_sources": {
-        "CAISO": "SPP",
-        "ERCOT": "ERCOT",
-        "PJM": "SPP",
-        "NYISO": "SPP",
-        "NEISO": "SPP",
-        "MISO": "SPP",
-        "SPP": "SPP"
-      },
-      "island_avg": 66.02,
-      "pool_avg": 51.06,
-      "savings_pct": 22.7
-    },
-    "99.5": {
-      "island_costs": {
-        "CAISO": 88.43,
-        "ERCOT": 48.66,
-        "PJM": 76.14,
-        "NYISO": 95.1,
-        "NEISO": 105.75,
-        "MISO": 72.97,
-        "SPP": 48.34
-      },
-      "pool_costs": {
-        "CAISO": 60.34,
-        "ERCOT": 48.66,
-        "PJM": 62.34,
-        "NYISO": 64.34,
-        "NEISO": 65.34,
-        "MISO": 53.34,
-        "SPP": 48.34
-      },
-      "pool_sources": {
-        "CAISO": "SPP",
-        "ERCOT": "ERCOT",
-        "PJM": "SPP",
-        "NYISO": "SPP",
-        "NEISO": "SPP",
-        "MISO": "SPP",
-        "SPP": "SPP"
-      },
-      "island_avg": 70.83,
-      "pool_avg": 56.36,
-      "savings_pct": 20.4
-    },
-    "99.9": {
-      "island_costs": {
-        "CAISO": 88.43,
-        "ERCOT": 56.63,
-        "PJM": 76.14,
-        "NYISO": 102.75,
-        "NEISO": 117.27,
-        "MISO": 79.14,
-        "SPP": 59.43
-      },
-      "pool_costs": {
-        "CAISO": 71.43,
-        "ERCOT": 56.63,
-        "PJM": 72.63,
-        "NYISO": 74.63,
-        "NEISO": 75.63,
-        "MISO": 64.43,
-        "SPP": 59.43
-      },
-      "pool_sources": {
-        "CAISO": "SPP",
+        "CAISO": "CAISO",
         "ERCOT": "ERCOT",
         "PJM": "ERCOT",
         "NYISO": "ERCOT",
         "NEISO": "ERCOT",
-        "MISO": "SPP",
-        "SPP": "SPP"
+        "MISO": "ERCOT",
+        "SPP": "ERCOT"
       },
-      "island_avg": 75.78,
-      "pool_avg": 66.59,
-      "savings_pct": 12.1
+      "island_avg": 38.29,
+      "pool_avg": 34.25,
+      "savings_pct": 10.5
     },
-    "99.9": {
+    "90": {
       "island_costs": {
-        "CAISO": 89.96,
-        "ERCOT": 61.66,
-        "PJM": 76.14,
-        "NYISO": 106.29,
-        "NEISO": 119.45,
-        "MISO": 80.32,
-        "SPP": 63.87
+        "CAISO": 33.15,
+        "ERCOT": 35.0,
+        "PJM": 76.86,
+        "NYISO": 74.09,
+        "NEISO": 61.25,
+        "MISO": 36.13,
+        "SPP": 48.97
       },
       "pool_costs": {
-        "CAISO": 75.87,
-        "ERCOT": 61.66,
-        "PJM": 76.14,
-        "NYISO": 79.66,
-        "NEISO": 80.66,
-        "MISO": 68.87,
-        "SPP": 63.87
+        "CAISO": 33.15,
+        "ERCOT": 35.0,
+        "PJM": 44.13,
+        "NYISO": 46.13,
+        "NEISO": 48.13,
+        "MISO": 36.13,
+        "SPP": 41.0
+      },
+      "pool_sources": {
+        "CAISO": "CAISO",
+        "ERCOT": "ERCOT",
+        "PJM": "MISO",
+        "NYISO": "MISO",
+        "NEISO": "MISO",
+        "MISO": "MISO",
+        "SPP": "ERCOT"
+      },
+      "island_avg": 52.51,
+      "pool_avg": 39.68,
+      "savings_pct": 24.4
+    },
+    "92.5": {
+      "island_costs": {
+        "CAISO": 74.24,
+        "ERCOT": 46.68,
+        "PJM": 81.17,
+        "NYISO": 74.09,
+        "NEISO": 70.64,
+        "MISO": 45.98,
+        "SPP": 48.97
+      },
+      "pool_costs": {
+        "CAISO": 60.97,
+        "ERCOT": 46.68,
+        "PJM": 53.98,
+        "NYISO": 55.98,
+        "NEISO": 57.98,
+        "MISO": 45.98,
+        "SPP": 48.97
       },
       "pool_sources": {
         "CAISO": "SPP",
         "ERCOT": "ERCOT",
-        "PJM": "PJM",
-        "NYISO": "ERCOT",
-        "NEISO": "ERCOT",
+        "PJM": "MISO",
+        "NYISO": "MISO",
+        "NEISO": "MISO",
+        "MISO": "MISO",
+        "SPP": "SPP"
+      },
+      "island_avg": 61.9,
+      "pool_avg": 51.09,
+      "savings_pct": 17.5
+    },
+    "95": {
+      "island_costs": {
+        "CAISO": 74.24,
+        "ERCOT": 68.91,
+        "PJM": 81.17,
+        "NYISO": 83.79,
+        "NEISO": 82.22,
+        "MISO": 78.73,
+        "SPP": 52.74
+      },
+      "pool_costs": {
+        "CAISO": 64.74,
+        "ERCOT": 58.74,
+        "PJM": 66.74,
+        "NYISO": 68.74,
+        "NEISO": 69.74,
+        "MISO": 57.74,
+        "SPP": 52.74
+      },
+      "pool_sources": {
+        "CAISO": "SPP",
+        "ERCOT": "SPP",
+        "PJM": "SPP",
+        "NYISO": "SPP",
+        "NEISO": "SPP",
         "MISO": "SPP",
         "SPP": "SPP"
       },
-      "island_avg": 77.82,
-      "pool_avg": 70.91,
-      "savings_pct": 8.9
+      "island_avg": 75.01,
+      "pool_avg": 61.76,
+      "savings_pct": 17.7
+    },
+    "97.5": {
+      "island_costs": {
+        "CAISO": 74.24,
+        "ERCOT": 84.69,
+        "PJM": 81.79,
+        "NYISO": 87.2,
+        "NEISO": 89.33,
+        "MISO": 85.78,
+        "SPP": 59.2
+      },
+      "pool_costs": {
+        "CAISO": 71.2,
+        "ERCOT": 65.2,
+        "PJM": 73.2,
+        "NYISO": 75.2,
+        "NEISO": 76.2,
+        "MISO": 64.2,
+        "SPP": 59.2
+      },
+      "pool_sources": {
+        "CAISO": "SPP",
+        "ERCOT": "SPP",
+        "PJM": "SPP",
+        "NYISO": "SPP",
+        "NEISO": "SPP",
+        "MISO": "SPP",
+        "SPP": "SPP"
+      },
+      "island_avg": 80.82,
+      "pool_avg": 68.22,
+      "savings_pct": 15.6
+    },
+    "99": {
+      "island_costs": {
+        "CAISO": 74.88,
+        "ERCOT": 84.69,
+        "PJM": 84.78,
+        "NYISO": 90.41,
+        "NEISO": 97.83,
+        "MISO": 89.57,
+        "SPP": 68.24
+      },
+      "pool_costs": {
+        "CAISO": 74.88,
+        "ERCOT": 74.24,
+        "PJM": 82.24,
+        "NYISO": 84.24,
+        "NEISO": 85.24,
+        "MISO": 73.24,
+        "SPP": 68.24
+      },
+      "pool_sources": {
+        "CAISO": "CAISO",
+        "ERCOT": "SPP",
+        "PJM": "SPP",
+        "NYISO": "SPP",
+        "NEISO": "SPP",
+        "MISO": "SPP",
+        "SPP": "SPP"
+      },
+      "island_avg": 84.18,
+      "pool_avg": 76.83,
+      "savings_pct": 8.7
+    },
+    "99.5": {
+      "island_costs": {
+        "CAISO": 84.01,
+        "ERCOT": 84.69,
+        "PJM": 87.53,
+        "NYISO": 93.59,
+        "NEISO": 98.81,
+        "MISO": 90.08,
+        "SPP": 73.01
+      },
+      "pool_costs": {
+        "CAISO": 84.01,
+        "ERCOT": 79.01,
+        "PJM": 87.01,
+        "NYISO": 89.01,
+        "NEISO": 90.01,
+        "MISO": 78.01,
+        "SPP": 73.01
+      },
+      "pool_sources": {
+        "CAISO": "CAISO",
+        "ERCOT": "SPP",
+        "PJM": "SPP",
+        "NYISO": "SPP",
+        "NEISO": "SPP",
+        "MISO": "SPP",
+        "SPP": "SPP"
+      },
+      "island_avg": 86.59,
+      "pool_avg": 81.95,
+      "savings_pct": 5.4
+    },
+    "99.9": {
+      "island_costs": {
+        "CAISO": 88.21,
+        "ERCOT": 85.55,
+        "PJM": 87.53,
+        "NYISO": 97.15,
+        "NEISO": 110.03,
+        "MISO": 92.73,
+        "SPP": 78.5
+      },
+      "pool_costs": {
+        "CAISO": 88.21,
+        "ERCOT": 84.5,
+        "PJM": 87.53,
+        "NYISO": 91.53,
+        "NEISO": 93.53,
+        "MISO": 83.5,
+        "SPP": 78.5
+      },
+      "pool_sources": {
+        "CAISO": "CAISO",
+        "ERCOT": "SPP",
+        "PJM": "PJM",
+        "NYISO": "PJM",
+        "NEISO": "PJM",
+        "MISO": "SPP",
+        "SPP": "SPP"
+      },
+      "island_avg": 88.96,
+      "pool_avg": 85.59,
+      "savings_pct": 3.8
     }
   },
   "net_position": {
@@ -681,22 +649,21 @@ const INTER_ISO_TRADING_DATA = {
       "30": "importer",
       "40": "importer",
       "50": "importer",
-      "55": "neutral",
+      "55": "importer",
       "60": "importer",
       "65": "importer",
       "70": "importer",
-      "75": "importer",
-      "80": "importer",
-      "85": "importer",
-      "87.5": "importer",
-      "90": "importer",
+      "75": "neutral",
+      "80": "neutral",
+      "85": "neutral",
+      "87.5": "neutral",
+      "90": "neutral",
       "92.5": "importer",
       "95": "importer",
       "97.5": "importer",
-      "99": "importer",
-      "99.5": "importer",
-      "99.9": "importer",
-      "99.9": "importer"
+      "99": "neutral",
+      "99.5": "neutral",
+      "99.9": "neutral"
     },
     "ERCOT": {
       "10": "neutral",
@@ -709,27 +676,26 @@ const INTER_ISO_TRADING_DATA = {
       "65": "neutral",
       "70": "neutral",
       "75": "neutral",
-      "80": "exporter",
+      "80": "neutral",
       "85": "neutral",
-      "87.5": "neutral",
-      "90": "neutral",
+      "87.5": "exporter",
+      "90": "exporter",
       "92.5": "neutral",
-      "95": "neutral",
-      "97.5": "neutral",
-      "99": "neutral",
-      "99.5": "neutral",
-      "99.9": "exporter",
-      "99.9": "exporter"
+      "95": "importer",
+      "97.5": "importer",
+      "99": "importer",
+      "99.5": "importer",
+      "99.9": "importer"
     },
     "PJM": {
       "10": "importer",
       "20": "importer",
       "30": "importer",
       "40": "importer",
-      "50": "exporter",
-      "55": "exporter",
-      "60": "exporter",
-      "65": "neutral",
+      "50": "importer",
+      "55": "importer",
+      "60": "importer",
+      "65": "importer",
       "70": "neutral",
       "75": "importer",
       "80": "importer",
@@ -741,14 +707,13 @@ const INTER_ISO_TRADING_DATA = {
       "97.5": "importer",
       "99": "importer",
       "99.5": "importer",
-      "99.9": "importer",
-      "99.9": "neutral"
+      "99.9": "exporter"
     },
     "NYISO": {
-      "10": "exporter",
-      "20": "exporter",
-      "30": "exporter",
-      "40": "exporter",
+      "10": "neutral",
+      "20": "neutral",
+      "30": "neutral",
+      "40": "neutral",
       "50": "neutral",
       "55": "importer",
       "60": "importer",
@@ -764,43 +729,19 @@ const INTER_ISO_TRADING_DATA = {
       "97.5": "importer",
       "99": "importer",
       "99.5": "importer",
-      "99.9": "importer",
       "99.9": "importer"
     },
     "NEISO": {
-      "10": "importer",
-      "20": "importer",
-      "30": "importer",
-      "40": "importer",
-      "50": "importer",
-      "55": "neutral",
-      "60": "neutral",
-      "65": "exporter",
-      "70": "exporter",
-      "75": "exporter",
-      "80": "exporter",
-      "85": "importer",
-      "87.5": "importer",
-      "90": "importer",
-      "92.5": "importer",
-      "95": "importer",
-      "97.5": "importer",
-      "99": "importer",
-      "99.5": "importer",
-      "99.9": "importer",
-      "99.9": "importer"
-    },
-    "MISO": {
       "10": "neutral",
       "20": "neutral",
       "30": "neutral",
       "40": "neutral",
-      "50": "importer",
-      "55": "importer",
-      "60": "importer",
-      "65": "importer",
-      "70": "importer",
-      "75": "importer",
+      "50": "neutral",
+      "55": "neutral",
+      "60": "neutral",
+      "65": "neutral",
+      "70": "exporter",
+      "75": "exporter",
       "80": "importer",
       "85": "importer",
       "87.5": "importer",
@@ -810,7 +751,28 @@ const INTER_ISO_TRADING_DATA = {
       "97.5": "importer",
       "99": "importer",
       "99.5": "importer",
-      "99.9": "importer",
+      "99.9": "importer"
+    },
+    "MISO": {
+      "10": "importer",
+      "20": "importer",
+      "30": "importer",
+      "40": "importer",
+      "50": "importer",
+      "55": "importer",
+      "60": "importer",
+      "65": "importer",
+      "70": "importer",
+      "75": "importer",
+      "80": "importer",
+      "85": "importer",
+      "87.5": "importer",
+      "90": "exporter",
+      "92.5": "exporter",
+      "95": "importer",
+      "97.5": "importer",
+      "99": "importer",
+      "99.5": "importer",
       "99.9": "importer"
     },
     "SPP": {
@@ -826,156 +788,155 @@ const INTER_ISO_TRADING_DATA = {
       "75": "exporter",
       "80": "exporter",
       "85": "exporter",
-      "87.5": "exporter",
-      "90": "exporter",
+      "87.5": "importer",
+      "90": "importer",
       "92.5": "exporter",
       "95": "exporter",
       "97.5": "exporter",
       "99": "exporter",
       "99.5": "exporter",
-      "99.9": "exporter",
       "99.9": "exporter"
     }
   },
   "trading_pairs": {
     "CAISO_ERCOT": {
-      "avg_value": 7.29,
-      "max_value": 24.77,
+      "avg_value": 0.63,
+      "max_value": 12.56,
       "tx_cost": 15,
-      "cheaper_iso": "ERCOT"
+      "cheaper_iso": "CAISO"
     },
     "CAISO_PJM": {
-      "avg_value": 0.0,
-      "max_value": 0.0,
+      "avg_value": 1.09,
+      "max_value": 21.71,
       "tx_cost": 22,
-      "cheaper_iso": "PJM"
+      "cheaper_iso": "CAISO"
     },
     "CAISO_NYISO": {
-      "avg_value": 0.0,
-      "max_value": 0.0,
+      "avg_value": 10.5,
+      "max_value": 27.56,
       "tx_cost": 24,
       "cheaper_iso": "CAISO"
     },
     "CAISO_NEISO": {
-      "avg_value": 0.4,
-      "max_value": 4.49,
+      "avg_value": 0.16,
+      "max_value": 3.1,
       "tx_cost": 25,
       "cheaper_iso": "CAISO"
     },
     "CAISO_MISO": {
-      "avg_value": 0.43,
-      "max_value": 6.97,
+      "avg_value": 0.51,
+      "max_value": 10.26,
       "tx_cost": 18,
-      "cheaper_iso": "MISO"
+      "cheaper_iso": "CAISO"
     },
     "CAISO_SPP": {
-      "avg_value": 9.84,
-      "max_value": 28.09,
+      "avg_value": 2.35,
+      "max_value": 13.27,
       "tx_cost": 12,
-      "cheaper_iso": "SPP"
+      "cheaper_iso": "CAISO"
     },
     "ERCOT_PJM": {
-      "avg_value": 2.61,
-      "max_value": 14.85,
+      "avg_value": 3.77,
+      "max_value": 25.86,
       "tx_cost": 16,
       "cheaper_iso": "ERCOT"
     },
     "ERCOT_NYISO": {
-      "avg_value": 10.08,
-      "max_value": 28.44,
+      "avg_value": 16.75,
+      "max_value": 46.22,
       "tx_cost": 18,
       "cheaper_iso": "ERCOT"
     },
     "ERCOT_NEISO": {
-      "avg_value": 11.96,
-      "max_value": 41.64,
+      "avg_value": 1.51,
+      "max_value": 8.72,
       "tx_cost": 19,
       "cheaper_iso": "ERCOT"
     },
     "ERCOT_MISO": {
-      "avg_value": 2.36,
-      "max_value": 14.31,
+      "avg_value": 0.09,
+      "max_value": 1.84,
       "tx_cost": 10,
       "cheaper_iso": "ERCOT"
     },
     "ERCOT_SPP": {
-      "avg_value": 0.0,
-      "max_value": 0.0,
+      "avg_value": 2.95,
+      "max_value": 19.49,
       "tx_cost": 6,
-      "cheaper_iso": "SPP"
+      "cheaper_iso": "ERCOT"
     },
     "PJM_NYISO": {
-      "avg_value": 7.42,
-      "max_value": 26.15,
+      "avg_value": 17.6,
+      "max_value": 43.81,
       "tx_cost": 4,
-      "cheaper_iso": "PJM"
+      "cheaper_iso": "NYISO"
     },
     "PJM_NEISO": {
-      "avg_value": 8.78,
-      "max_value": 37.31,
+      "avg_value": 3.22,
+      "max_value": 16.5,
       "tx_cost": 6,
-      "cheaper_iso": "PJM"
+      "cheaper_iso": "NEISO"
     },
     "PJM_MISO": {
-      "avg_value": 1.06,
-      "max_value": 9.65,
+      "avg_value": 4.41,
+      "max_value": 32.73,
       "tx_cost": 8,
       "cheaper_iso": "MISO"
     },
     "PJM_SPP": {
-      "avg_value": 3.96,
-      "max_value": 19.51,
+      "avg_value": 5.38,
+      "max_value": 18.2,
       "tx_cost": 14,
       "cheaper_iso": "SPP"
     },
     "NYISO_NEISO": {
-      "avg_value": 5.76,
-      "max_value": 19.99,
+      "avg_value": 16.35,
+      "max_value": 50.28,
       "tx_cost": 3,
-      "cheaper_iso": "NYISO"
+      "cheaper_iso": "NEISO"
     },
     "NYISO_MISO": {
-      "avg_value": 6.86,
-      "max_value": 19.93,
+      "avg_value": 17.43,
+      "max_value": 47.58,
       "tx_cost": 10,
       "cheaper_iso": "MISO"
     },
     "NYISO_SPP": {
-      "avg_value": 11.85,
-      "max_value": 30.92,
+      "avg_value": 19.44,
+      "max_value": 50.54,
       "tx_cost": 16,
       "cheaper_iso": "SPP"
     },
     "NEISO_MISO": {
-      "avg_value": 8.63,
-      "max_value": 27.13,
+      "avg_value": 1.97,
+      "max_value": 13.12,
       "tx_cost": 12,
       "cheaper_iso": "MISO"
     },
     "NEISO_SPP": {
-      "avg_value": 13.7,
-      "max_value": 40.84,
+      "avg_value": 4.12,
+      "max_value": 14.53,
       "tx_cost": 17,
       "cheaper_iso": "SPP"
     },
     "MISO_SPP": {
-      "avg_value": 6.08,
-      "max_value": 19.63,
+      "avg_value": 7.0,
+      "max_value": 21.58,
       "tx_cost": 5,
-      "cheaper_iso": "SPP"
+      "cheaper_iso": "MISO"
     }
   },
   "tx_sensitivity": {
     "low": {
-      "avg_savings_pct": 25.4,
+      "avg_savings_pct": 34.0,
       "tx_multiplier": 0.5
     },
     "medium": {
-      "avg_savings_pct": 12.9,
+      "avg_savings_pct": 18.5,
       "tx_multiplier": 1.0
     },
     "high": {
-      "avg_savings_pct": 3.9,
+      "avg_savings_pct": 8.1,
       "tx_multiplier": 2.0
     }
   }

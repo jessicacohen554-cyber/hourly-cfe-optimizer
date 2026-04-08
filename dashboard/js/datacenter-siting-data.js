@@ -4,491 +4,603 @@ const DATACENTER_SITING_DATA = {
     "CAISO": {
       "90": {
         "threshold": 90,
-        "cost_total": 49.5,
-        "cost_incremental": 29.89,
+        "cost_total": 33.15,
+        "cost_incremental": 11.75,
         "mix": {
-          "clean_firm": 22.0,
-          "solar": 23.0,
-          "wind": 50.0
+          "clean_firm": 29.0,
+          "solar": 22.0,
+          "wind": 24.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
         },
         "storage": {
           "battery": 0.0,
           "ldes": 0.0
         },
-        "cost_p10": 46.47,
-        "cost_p50": 58.98,
-        "cost_p90": 70.96
+        "cost_p10": 34.51,
+        "cost_p50": 41.4,
+        "cost_p90": 48.89
       },
       "95": {
         "threshold": 95,
-        "cost_total": 67.53,
-        "cost_incremental": 46.01,
-        "mix": {
-          "clean_firm": 68.0,
-          "solar": 33.0,
-          "wind": 21.0
-        },
-        "storage": {
-          "battery": 0.0,
-          "ldes": 0.0
-        },
-        "cost_p10": 64.22,
-        "cost_p50": 78.38,
-        "cost_p90": 97.8
-      },
-      "99": {
-        "threshold": 99,
-        "cost_total": 78.37,
-        "cost_incremental": 54.16,
-        "mix": {
-          "clean_firm": 54.0,
-          "solar": 22.0,
-          "wind": 47.0
-        },
-        "storage": {
-          "battery": 0.0,
-          "ldes": 0.0
-        },
-        "cost_p10": 74.48,
-        "cost_p50": 90.05,
-        "cost_p90": 112.0
-      },
-      "99.9": {
-        "threshold": 99.9,
-        "cost_total": 89.96,
-        "cost_incremental": 64.96,
-        "mix": {
-          "clean_firm": 92.0,
-          "solar": 22.0,
-          "wind": 18.0
-        },
-        "storage": {
-          "battery": 0.02,
-          "ldes": 0.0
-        },
-        "cost_p10": 80.59,
-        "cost_p50": 100.91,
-        "cost_p90": 132.49
-      }
-    },
-    "ERCOT": {
-      "90": {
-        "threshold": 90,
-        "cost_total": 25.32,
-        "cost_incremental": 8.11,
-        "mix": {
-          "clean_firm": 10.0,
-          "solar": 14.0,
-          "wind": 85.0
-        },
-        "storage": {
-          "battery": 0.0,
-          "ldes": 0.0
-        },
-        "cost_p10": 20.75,
-        "cost_p50": 28.02,
-        "cost_p90": 36.49
-      },
-      "95": {
-        "threshold": 95,
-        "cost_total": 33.21,
-        "cost_incremental": 14.96,
-        "mix": {
-          "clean_firm": 15.0,
-          "solar": 17.0,
-          "wind": 94.0
-        },
-        "storage": {
-          "battery": 0.0,
-          "ldes": 0.0
-        },
-        "cost_p10": 27.35,
-        "cost_p50": 36.23,
-        "cost_p90": 47.48
-      },
-      "99": {
-        "threshold": 99,
-        "cost_total": 45.29,
-        "cost_incremental": 25.73,
+        "cost_total": 74.24,
+        "cost_incremental": 51.13,
         "mix": {
           "clean_firm": 40.0,
-          "solar": 20.0,
-          "wind": 75.0
-        },
-        "storage": {
-          "battery": 0.02,
-          "ldes": 0.0
-        },
-        "cost_p10": 39.38,
-        "cost_p50": 50.76,
-        "cost_p90": 62.79
-      },
-      "99.9": {
-        "threshold": 99.9,
-        "cost_total": 61.66,
-        "cost_incremental": 41.66,
-        "mix": {
-          "clean_firm": 50.0,
-          "solar": 25.0,
-          "wind": 70.0
-        },
-        "storage": {
-          "battery": 0.01,
-          "ldes": 0.5
-        },
-        "cost_p10": 59.95,
-        "cost_p50": 69.89,
-        "cost_p90": 87.53
-      }
-    },
-    "PJM": {
-      "90": {
-        "threshold": 90,
-        "cost_total": 40.28,
-        "cost_incremental": 16.69,
-        "mix": {
-          "clean_firm": 49.0,
-          "solar": 5.0,
-          "wind": 48.0
+          "solar": 30.0,
+          "wind": 40.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
         },
         "storage": {
           "battery": 0.0,
-          "ldes": 0.0
+          "ldes": 0.1
         },
-        "cost_p10": 36.23,
-        "cost_p50": 44.88,
-        "cost_p90": 57.64
-      },
-      "95": {
-        "threshold": 95,
-        "cost_total": 59.09,
-        "cost_incremental": 34.16,
-        "mix": {
-          "clean_firm": 37.0,
-          "solar": 18.0,
-          "wind": 77.0
-        },
-        "storage": {
-          "battery": 0.0,
-          "ldes": 0.0
-        },
-        "cost_p10": 49.52,
-        "cost_p50": 61.39,
-        "cost_p90": 82.14
+        "cost_p10": 69.66,
+        "cost_p50": 83.25,
+        "cost_p90": 101.79
       },
       "99": {
         "threshold": 99,
-        "cost_total": 76.14,
-        "cost_incremental": 48.14,
+        "cost_total": 74.88,
+        "cost_incremental": 50.6,
         "mix": {
-          "clean_firm": 63.0,
-          "solar": 48.0,
-          "wind": 40.0
-        },
-        "storage": {
-          "battery": 0.07,
-          "ldes": 0.0
-        },
-        "cost_p10": 60.37,
-        "cost_p50": 81.39,
-        "cost_p90": 105.85
-      },
-      "99.9": {
-        "threshold": 99.9,
-        "cost_total": 76.14,
-        "cost_incremental": 48.14,
-        "mix": {
-          "clean_firm": 63.0,
-          "solar": 48.0,
-          "wind": 40.0
-        },
-        "storage": {
-          "battery": 0.07,
-          "ldes": 0.0
-        },
-        "cost_p10": 64.87,
-        "cost_p50": 82.28,
-        "cost_p90": 105.85
-      }
-    },
-    "NYISO": {
-      "90": {
-        "threshold": 90,
-        "cost_total": 54.76,
-        "cost_incremental": 22.76,
-        "mix": {
-          "clean_firm": 20.0,
-          "solar": 20.0,
-          "wind": 40.0
+          "clean_firm": 40.0,
+          "solar": 30.0,
+          "wind": 40.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
         },
         "storage": {
           "battery": 0.03,
           "ldes": 0.0
         },
-        "cost_p10": 42.94,
-        "cost_p50": 51.15,
-        "cost_p90": 72.36
-      },
-      "95": {
-        "threshold": 95,
-        "cost_total": 70.85,
-        "cost_incremental": 36.54,
-        "mix": {
-          "clean_firm": 55.0,
-          "solar": 10.0,
-          "wind": 15.0
-        },
-        "storage": {
-          "battery": 0.0,
-          "ldes": 0.0
-        },
-        "cost_p10": 53.17,
-        "cost_p50": 69.09,
-        "cost_p90": 96.7
-      },
-      "99": {
-        "threshold": 99,
-        "cost_total": 89.55,
-        "cost_incremental": 52.43,
-        "mix": {
-          "clean_firm": 80.0,
-          "solar": 10.0,
-          "wind": 10.0
-        },
-        "storage": {
-          "battery": 0.0,
-          "ldes": 0.0
-        },
-        "cost_p10": 66.67,
-        "cost_p50": 94.27,
-        "cost_p90": 135.41
+        "cost_p10": 71.46,
+        "cost_p50": 85.72,
+        "cost_p90": 103.55
       },
       "99.9": {
         "threshold": 99.9,
-        "cost_total": 106.29,
-        "cost_incremental": 68.3,
+        "cost_total": 88.21,
+        "cost_incremental": 63.29,
         "mix": {
-          "clean_firm": 85.0,
-          "solar": 30.0,
-          "wind": 5.0
+          "clean_firm": 60.0,
+          "solar": 40.0,
+          "wind": 10.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 10.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
+        },
+        "storage": {
+          "battery": 0.05,
+          "ldes": 0.05
+        },
+        "cost_p10": 83.25,
+        "cost_p50": 99.53,
+        "cost_p90": 122.8
+      }
+    },
+    "ERCOT": {
+      "90": {
+        "threshold": 90,
+        "cost_total": 35.0,
+        "cost_incremental": 18.88,
+        "mix": {
+          "clean_firm": 50.0,
+          "solar": 20.0,
+          "wind": 30.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
+        },
+        "storage": {
+          "battery": 0.03,
+          "ldes": 0.0
+        },
+        "cost_p10": 30.2,
+        "cost_p50": 37.99,
+        "cost_p90": 46.88
+      },
+      "95": {
+        "threshold": 95,
+        "cost_total": 68.91,
+        "cost_incremental": 52.54,
+        "mix": {
+          "clean_firm": 30.0,
+          "solar": 23.0,
+          "wind": 60.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 10.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 25.0
+        },
+        "storage": {
+          "battery": 0.0,
+          "ldes": 0.0
+        },
+        "cost_p10": 64.96,
+        "cost_p50": 78.28,
+        "cost_p90": 91.75
+      },
+      "99": {
+        "threshold": 99,
+        "cost_total": 84.69,
+        "cost_incremental": 65.1,
+        "mix": {
+          "clean_firm": 61.0,
+          "solar": 29.0,
+          "wind": 60.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 29.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 1.0
+        },
+        "storage": {
+          "battery": 0.0,
+          "ldes": 0.0
+        },
+        "cost_p10": 77.49,
+        "cost_p50": 93.55,
+        "cost_p90": 110.71
+      },
+      "99.9": {
+        "threshold": 99.9,
+        "cost_total": 85.55,
+        "cost_incremental": 65.6,
+        "mix": {
+          "clean_firm": 49.0,
+          "solar": 19.0,
+          "wind": 99.0,
+          "solar_batt4": 9.0,
+          "solar_batt8": 9.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 9.0
+        },
+        "storage": {
+          "battery": 0.005,
+          "ldes": 0.0
+        },
+        "cost_p10": 80.51,
+        "cost_p50": 96.46,
+        "cost_p90": 113.82
+      }
+    },
+    "PJM": {
+      "90": {
+        "threshold": 90,
+        "cost_total": 76.86,
+        "cost_incremental": 57.26,
+        "mix": {
+          "clean_firm": 51.0,
+          "solar": 39.0,
+          "wind": 11.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 9.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 19.0
+        },
+        "storage": {
+          "battery": 0.0,
+          "ldes": 0.0
+        },
+        "cost_p10": 71.1,
+        "cost_p50": 85.65,
+        "cost_p90": 101.93
+      },
+      "95": {
+        "threshold": 95,
+        "cost_total": 81.17,
+        "cost_incremental": 56.9,
+        "mix": {
+          "clean_firm": 41.0,
+          "solar": 40.0,
+          "wind": 10.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 11.0,
+          "wind_batt8": 21.0
+        },
+        "storage": {
+          "battery": 0.04,
+          "ldes": 0.0
+        },
+        "cost_p10": 72.18,
+        "cost_p50": 89.74,
+        "cost_p90": 107.68
+      },
+      "99": {
+        "threshold": 99,
+        "cost_total": 84.78,
+        "cost_incremental": 57.62,
+        "mix": {
+          "clean_firm": 41.0,
+          "solar": 20.0,
+          "wind": 31.0,
+          "solar_batt4": 10.0,
+          "solar_batt8": 9.0,
+          "wind_batt4": 19.0,
+          "wind_batt8": 0.0
+        },
+        "storage": {
+          "battery": 0.1,
+          "ldes": 0.0
+        },
+        "cost_p10": 75.68,
+        "cost_p50": 93.19,
+        "cost_p90": 112.95
+      },
+      "99.9": {
+        "threshold": 99.9,
+        "cost_total": 87.53,
+        "cost_incremental": 59.61,
+        "mix": {
+          "clean_firm": 61.0,
+          "solar": 41.0,
+          "wind": 21.0,
+          "solar_batt4": 1.0,
+          "solar_batt8": 21.0,
+          "wind_batt4": 1.0,
+          "wind_batt8": 1.0
+        },
+        "storage": {
+          "battery": 0.06,
+          "ldes": 0.0
+        },
+        "cost_p10": 76.21,
+        "cost_p50": 95.68,
+        "cost_p90": 116.31
+      }
+    },
+    "NYISO": {
+      "90": {
+        "threshold": 90,
+        "cost_total": 74.09,
+        "cost_incremental": 41.88,
+        "mix": {
+          "clean_firm": 40.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 9.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
+        },
+        "storage": {
+          "battery": 0.0,
+          "ldes": 0.0
+        },
+        "cost_p10": 63.43,
+        "cost_p50": 79.28,
+        "cost_p90": 99.36
+      },
+      "95": {
+        "threshold": 95,
+        "cost_total": 83.79,
+        "cost_incremental": 49.21,
+        "mix": {
+          "clean_firm": 20.0,
+          "solar": 40.0,
+          "wind": 60.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
         },
         "storage": {
           "battery": 0.02,
           "ldes": 0.0
         },
-        "cost_p10": 77.92,
-        "cost_p50": 108.5,
-        "cost_p90": 156.57
+        "cost_p10": 67.37,
+        "cost_p50": 85.26,
+        "cost_p90": 109.14
+      },
+      "99": {
+        "threshold": 99,
+        "cost_total": 90.41,
+        "cost_incremental": 53.3,
+        "mix": {
+          "clean_firm": 20.0,
+          "solar": 40.0,
+          "wind": 60.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
+        },
+        "storage": {
+          "battery": 0.06,
+          "ldes": 0.05
+        },
+        "cost_p10": 74.7,
+        "cost_p50": 94.63,
+        "cost_p90": 118.36
+      },
+      "99.9": {
+        "threshold": 99.9,
+        "cost_total": 97.15,
+        "cost_incremental": 59.19,
+        "mix": {
+          "clean_firm": 30.0,
+          "solar": 50.0,
+          "wind": 20.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
+        },
+        "storage": {
+          "battery": 0.1,
+          "ldes": 0.0
+        },
+        "cost_p10": 80.14,
+        "cost_p50": 99.92,
+        "cost_p90": 127.15
       }
     },
     "NEISO": {
       "90": {
         "threshold": 90,
-        "cost_total": 58.32,
-        "cost_incremental": 23.78,
+        "cost_total": 61.25,
+        "cost_incremental": 27.06,
         "mix": {
-          "clean_firm": 33.0,
-          "solar": 2.0,
-          "wind": 31.0
+          "clean_firm": 26.0,
+          "solar": 23.0,
+          "wind": 50.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
         },
         "storage": {
-          "battery": 0.0,
-          "ldes": 0.0
+          "battery": 0.04,
+          "ldes": 0.05
         },
-        "cost_p10": 46.18,
-        "cost_p50": 58.62,
-        "cost_p90": 78.47
+        "cost_p10": 48.65,
+        "cost_p50": 62.92,
+        "cost_p90": 80.68
       },
       "95": {
         "threshold": 95,
-        "cost_total": 74.37,
-        "cost_incremental": 37.28,
+        "cost_total": 82.22,
+        "cost_incremental": 45.53,
         "mix": {
-          "clean_firm": 70.0,
-          "solar": 5.0,
-          "wind": 22.0
+          "clean_firm": 26.0,
+          "solar": 47.0,
+          "wind": 44.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
         },
         "storage": {
-          "battery": 0.0,
+          "battery": 0.07,
           "ldes": 0.0
         },
-        "cost_p10": 58.34,
-        "cost_p50": 78.72,
-        "cost_p90": 108.92
+        "cost_p10": 66.76,
+        "cost_p50": 86.44,
+        "cost_p90": 107.37
       },
       "99": {
         "threshold": 99,
-        "cost_total": 97.19,
-        "cost_incremental": 57.16,
+        "cost_total": 97.83,
+        "cost_incremental": 57.76,
         "mix": {
-          "clean_firm": 91.0,
-          "solar": 2.0,
-          "wind": 12.0
-        },
-        "storage": {
-          "battery": 0.0,
-          "ldes": 0.0
-        },
-        "cost_p10": 74.17,
-        "cost_p50": 102.28,
-        "cost_p90": 138.28
-      },
-      "99.9": {
-        "threshold": 99.9,
-        "cost_total": 119.45,
-        "cost_incremental": 78.45,
-        "mix": {
-          "clean_firm": 83.0,
-          "solar": 38.0,
-          "wind": 13.0
+          "clean_firm": 40.0,
+          "solar": 20.0,
+          "wind": 20.0,
+          "solar_batt4": 10.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
         },
         "storage": {
           "battery": 0.05,
-          "ldes": 0.0
+          "ldes": 0.05
         },
-        "cost_p10": 90.08,
-        "cost_p50": 122.64,
-        "cost_p90": 166.9
+        "cost_p10": 80.34,
+        "cost_p50": 99.99,
+        "cost_p90": 125.39
+      },
+      "99.9": {
+        "threshold": 99.9,
+        "cost_total": 110.03,
+        "cost_incremental": 69.13,
+        "mix": {
+          "clean_firm": 50.0,
+          "solar": 40.0,
+          "wind": 20.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
+        },
+        "storage": {
+          "battery": 0.07,
+          "ldes": 0.05
+        },
+        "cost_p10": 90.15,
+        "cost_p50": 112.78,
+        "cost_p90": 143.23
       }
     },
     "MISO": {
       "90": {
         "threshold": 90,
-        "cost_total": 34.43,
-        "cost_incremental": 14.26,
+        "cost_total": 36.13,
+        "cost_incremental": 16.06,
         "mix": {
-          "clean_firm": 22.0,
-          "solar": 13.0,
-          "wind": 68.0
+          "clean_firm": 30.0,
+          "solar": 10.0,
+          "wind": 60.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
         },
         "storage": {
-          "battery": 0.0,
+          "battery": 0.01,
           "ldes": 0.0
         },
-        "cost_p10": 29.96,
-        "cost_p50": 38.25,
-        "cost_p90": 48.98
+        "cost_p10": 34.75,
+        "cost_p50": 43.53,
+        "cost_p90": 53.74
       },
       "95": {
         "threshold": 95,
-        "cost_total": 42.56,
-        "cost_incremental": 20.77,
+        "cost_total": 78.73,
+        "cost_incremental": 58.83,
         "mix": {
-          "clean_firm": 44.0,
-          "solar": 13.0,
-          "wind": 58.0
+          "clean_firm": 30.0,
+          "solar": 12.0,
+          "wind": 60.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 30.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 10.0
         },
         "storage": {
           "battery": 0.0,
           "ldes": 0.0
         },
-        "cost_p10": 39.18,
-        "cost_p50": 49.73,
-        "cost_p90": 63.47
+        "cost_p10": 74.4,
+        "cost_p50": 89.12,
+        "cost_p90": 105.5
       },
       "99": {
         "threshold": 99,
-        "cost_total": 64.03,
-        "cost_incremental": 40.68,
+        "cost_total": 89.57,
+        "cost_incremental": 66.33,
         "mix": {
-          "clean_firm": 42.0,
-          "solar": 12.0,
-          "wind": 112.0
+          "clean_firm": 41.0,
+          "solar": 9.0,
+          "wind": 30.0,
+          "solar_batt4": 9.0,
+          "solar_batt8": 19.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 21.0
         },
         "storage": {
-          "battery": 0.0,
-          "ldes": 0.0
+          "battery": 0.005,
+          "ldes": 0.2
         },
-        "cost_p10": 58.87,
-        "cost_p50": 69.95,
-        "cost_p90": 92.48
+        "cost_p10": 80.89,
+        "cost_p50": 98.3,
+        "cost_p90": 119.18
       },
       "99.9": {
         "threshold": 99.9,
-        "cost_total": 80.32,
-        "cost_incremental": 56.32,
+        "cost_total": 92.73,
+        "cost_incremental": 68.77,
         "mix": {
-          "clean_firm": 84.0,
-          "solar": 19.0,
-          "wind": 33.0
+          "clean_firm": 49.0,
+          "solar": 49.0,
+          "wind": 100.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
         },
         "storage": {
           "battery": 0.02,
           "ldes": 0.0
         },
-        "cost_p10": 71.67,
-        "cost_p50": 89.22,
-        "cost_p90": 114.31
+        "cost_p10": 84.86,
+        "cost_p50": 103.3,
+        "cost_p90": 124.54
       }
     },
     "SPP": {
       "90": {
         "threshold": 90,
-        "cost_total": 22.57,
-        "cost_incremental": 7.07,
+        "cost_total": 48.97,
+        "cost_incremental": 34.74,
         "mix": {
-          "clean_firm": 6.0,
-          "solar": 7.0,
-          "wind": 87.0
+          "clean_firm": 11.0,
+          "solar": 31.0,
+          "wind": 51.0,
+          "solar_batt4": 1.0,
+          "solar_batt8": 9.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 10.0
         },
         "storage": {
-          "battery": 0.0,
-          "ldes": 0.0
+          "battery": 0.002,
+          "ldes": 0.05
         },
-        "cost_p10": 19.21,
-        "cost_p50": 25.5,
-        "cost_p90": 32.99
+        "cost_p10": 44.66,
+        "cost_p50": 54.28,
+        "cost_p90": 64.96
       },
       "95": {
         "threshold": 95,
-        "cost_total": 29.3,
-        "cost_incremental": 12.84,
+        "cost_total": 52.74,
+        "cost_incremental": 37.52,
         "mix": {
-          "clean_firm": 7.0,
-          "solar": 14.0,
-          "wind": 93.0
+          "clean_firm": 11.0,
+          "solar": 31.0,
+          "wind": 51.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 10.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 10.0
         },
         "storage": {
-          "battery": 0.0,
-          "ldes": 0.0
+          "battery": 0.01,
+          "ldes": 0.05
         },
-        "cost_p10": 24.77,
-        "cost_p50": 32.74,
-        "cost_p90": 42.57
+        "cost_p10": 46.93,
+        "cost_p50": 57.26,
+        "cost_p90": 68.7
       },
       "99": {
         "threshold": 99,
-        "cost_total": 42.63,
-        "cost_incremental": 25.05,
+        "cost_total": 68.24,
+        "cost_incremental": 50.9,
         "mix": {
-          "clean_firm": 22.0,
-          "solar": 18.0,
-          "wind": 102.0
+          "clean_firm": 31.0,
+          "solar": 41.0,
+          "wind": 41.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 9.0,
+          "wind_batt4": 1.0,
+          "wind_batt8": 1.0
+        },
+        "storage": {
+          "battery": 0.04,
+          "ldes": 0.1
+        },
+        "cost_p10": 64.84,
+        "cost_p50": 76.6,
+        "cost_p90": 89.19
+      },
+      "99.9": {
+        "threshold": 99.9,
+        "cost_total": 78.5,
+        "cost_incremental": 60.57,
+        "mix": {
+          "clean_firm": 49.0,
+          "solar": 0.0,
+          "wind": 129.0,
+          "solar_batt4": 9.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
         },
         "storage": {
           "battery": 0.0,
           "ldes": 0.0
         },
-        "cost_p10": 38.05,
-        "cost_p50": 49.02,
-        "cost_p90": 62.41
-      },
-      "99.9": {
-        "threshold": 99.9,
-        "cost_total": 63.87,
-        "cost_incremental": 45.87,
-        "mix": {
-          "clean_firm": 26.0,
-          "solar": 27.0,
-          "wind": 115.0
-        },
-        "storage": {
-          "battery": 0.02,
-          "ldes": 0.05
-        },
-        "cost_p10": 57.54,
-        "cost_p50": 69.3,
-        "cost_p90": 86.4
+        "cost_p10": 73.98,
+        "cost_p50": 91.42,
+        "cost_p90": 110.15
       }
     }
   },
@@ -496,799 +608,855 @@ const DATACENTER_SITING_DATA = {
     "CAISO": [
       {
         "t": 10,
-        "cost": 13.95
+        "cost": 15.25
       },
       {
         "t": 20,
-        "cost": 13.95
+        "cost": 15.25
       },
       {
         "t": 30,
-        "cost": 13.95
+        "cost": 15.25
       },
       {
         "t": 40,
-        "cost": 13.95
+        "cost": 15.25
       },
       {
         "t": 50,
-        "cost": 13.95
+        "cost": 15.25
       },
       {
         "t": 55,
-        "cost": 14.6
+        "cost": 18.64
       },
       {
         "t": 60,
-        "cost": 18.25
+        "cost": 18.64
       },
       {
         "t": 65,
-        "cost": 21.3
+        "cost": 21.09
       },
       {
         "t": 70,
-        "cost": 25.09
+        "cost": 24.2
       },
       {
         "t": 75,
-        "cost": 26.87
+        "cost": 24.2
       },
       {
         "t": 80,
-        "cost": 31.86
+        "cost": 24.2
       },
       {
         "t": 85,
-        "cost": 41.71
+        "cost": 24.97
       },
       {
         "t": 87.5,
-        "cost": 45.66
+        "cost": 28.33
       },
       {
         "t": 90,
-        "cost": 49.5
+        "cost": 33.15
       },
       {
         "t": 92.5,
-        "cost": 57.54
+        "cost": 74.24
       },
       {
         "t": 95,
-        "cost": 67.53
+        "cost": 74.24
       },
       {
         "t": 97.5,
-        "cost": 69.18
+        "cost": 74.24
       },
       {
         "t": 99,
-        "cost": 78.37
+        "cost": 74.88
       },
       {
         "t": 99.5,
-        "cost": 88.43
+        "cost": 84.01
       },
       {
         "t": 99.9,
-        "cost": 88.43
-      },
-      {
-        "t": 99.9,
-        "cost": 89.96
+        "cost": 88.21
       }
     ],
     "ERCOT": [
       {
         "t": 10,
-        "cost": 3.18
+        "cost": 0.38
       },
       {
         "t": 20,
-        "cost": 3.18
+        "cost": 0.38
       },
       {
         "t": 30,
-        "cost": 3.18
+        "cost": 0.38
       },
       {
         "t": 40,
-        "cost": 3.18
+        "cost": 0.38
       },
       {
         "t": 50,
-        "cost": 3.18
+        "cost": 3.32
       },
       {
         "t": 55,
-        "cost": 5.18
+        "cost": 5.98
       },
       {
         "t": 60,
-        "cost": 7.18
+        "cost": 7.58
       },
       {
         "t": 65,
-        "cost": 9.18
+        "cost": 9.98
       },
       {
         "t": 70,
-        "cost": 10.1
+        "cost": 13.18
       },
       {
         "t": 75,
-        "cost": 10.1
+        "cost": 14.42
       },
       {
         "t": 80,
-        "cost": 10.1
+        "cost": 21.19
       },
       {
         "t": 85,
-        "cost": 20.38
+        "cost": 24.29
       },
       {
         "t": 87.5,
-        "cost": 22.52
+        "cost": 24.29
       },
       {
         "t": 90,
-        "cost": 25.32
+        "cost": 35.0
       },
       {
         "t": 92.5,
-        "cost": 28.66
+        "cost": 46.68
       },
       {
         "t": 95,
-        "cost": 33.21
+        "cost": 68.91
       },
       {
         "t": 97.5,
-        "cost": 39.51
+        "cost": 84.69
       },
       {
         "t": 99,
-        "cost": 45.29
+        "cost": 84.69
       },
       {
         "t": 99.5,
-        "cost": 48.66
+        "cost": 84.69
       },
       {
         "t": 99.9,
-        "cost": 56.63
-      },
-      {
-        "t": 99.9,
-        "cost": 61.66
+        "cost": 85.55
       }
     ],
     "PJM": [
       {
         "t": 10,
-        "cost": 9.79
+        "cost": 22.39
       },
       {
         "t": 20,
-        "cost": 9.79
+        "cost": 22.39
       },
       {
         "t": 30,
-        "cost": 9.79
+        "cost": 22.39
       },
       {
         "t": 40,
-        "cost": 9.79
+        "cost": 22.39
       },
       {
         "t": 50,
-        "cost": 9.79
+        "cost": 22.39
       },
       {
         "t": 55,
-        "cost": 11.22
+        "cost": 22.39
       },
       {
         "t": 60,
-        "cost": 14.25
+        "cost": 22.39
       },
       {
         "t": 65,
-        "cost": 17.44
+        "cost": 22.39
       },
       {
         "t": 70,
-        "cost": 20.94
+        "cost": 24.12
       },
       {
         "t": 75,
-        "cost": 23.55
+        "cost": 28.1
       },
       {
         "t": 80,
-        "cost": 27.59
+        "cost": 31.75
       },
       {
         "t": 85,
-        "cost": 32.78
+        "cost": 38.25
       },
       {
         "t": 87.5,
-        "cost": 36.14
+        "cost": 43.77
       },
       {
         "t": 90,
-        "cost": 40.28
+        "cost": 76.86
       },
       {
         "t": 92.5,
-        "cost": 45.44
+        "cost": 81.17
       },
       {
         "t": 95,
-        "cost": 59.09
+        "cost": 81.17
       },
       {
         "t": 97.5,
-        "cost": 68.33
+        "cost": 81.79
       },
       {
         "t": 99,
-        "cost": 76.14
+        "cost": 84.78
       },
       {
         "t": 99.5,
-        "cost": 76.14
+        "cost": 87.53
       },
       {
         "t": 99.9,
-        "cost": 76.14
-      },
-      {
-        "t": 99.9,
-        "cost": 76.14
+        "cost": 87.53
       }
     ],
     "NYISO": [
       {
         "t": 10,
-        "cost": 4.85
+        "cost": 11.58
       },
       {
         "t": 20,
-        "cost": 4.85
+        "cost": 11.58
       },
       {
         "t": 30,
-        "cost": 4.85
+        "cost": 11.58
       },
       {
         "t": 40,
-        "cost": 4.85
+        "cost": 11.58
       },
       {
         "t": 50,
-        "cost": 12.95
+        "cost": 11.58
       },
       {
         "t": 55,
-        "cost": 17.0
+        "cost": 70.2
       },
       {
         "t": 60,
-        "cost": 19.43
+        "cost": 70.2
       },
       {
         "t": 65,
-        "cost": 23.59
+        "cost": 70.2
       },
       {
         "t": 70,
-        "cost": 28.61
+        "cost": 70.2
       },
       {
         "t": 75,
-        "cost": 33.75
+        "cost": 70.2
       },
       {
         "t": 80,
-        "cost": 39.19
+        "cost": 70.2
       },
       {
         "t": 85,
-        "cost": 46.14
+        "cost": 74.09
       },
       {
         "t": 87.5,
-        "cost": 50.04
+        "cost": 74.09
       },
       {
         "t": 90,
-        "cost": 54.76
+        "cost": 74.09
       },
       {
         "t": 92.5,
-        "cost": 60.09
+        "cost": 74.09
       },
       {
         "t": 95,
-        "cost": 70.85
+        "cost": 83.79
       },
       {
         "t": 97.5,
-        "cost": 80.61
+        "cost": 87.2
       },
       {
         "t": 99,
-        "cost": 89.55
+        "cost": 90.41
       },
       {
         "t": 99.5,
-        "cost": 95.1
+        "cost": 93.59
       },
       {
         "t": 99.9,
-        "cost": 102.75
-      },
-      {
-        "t": 99.9,
-        "cost": 106.29
+        "cost": 97.15
       }
     ],
     "NEISO": [
       {
         "t": 10,
-        "cost": 16.06
+        "cost": 13.85
       },
       {
         "t": 20,
-        "cost": 16.06
+        "cost": 13.85
       },
       {
         "t": 30,
-        "cost": 16.06
+        "cost": 13.85
       },
       {
         "t": 40,
-        "cost": 16.06
+        "cost": 13.85
       },
       {
         "t": 50,
-        "cost": 16.06
+        "cost": 13.85
       },
       {
         "t": 55,
-        "cost": 16.2
+        "cost": 16.92
       },
       {
         "t": 60,
-        "cost": 16.2
+        "cost": 21.15
       },
       {
         "t": 65,
-        "cost": 16.2
+        "cost": 22.76
       },
       {
         "t": 70,
-        "cost": 16.2
+        "cost": 22.76
       },
       {
         "t": 75,
-        "cost": 16.2
+        "cost": 22.76
       },
       {
         "t": 80,
-        "cost": 16.2
+        "cost": 39.88
       },
       {
         "t": 85,
-        "cost": 47.29
+        "cost": 47.04
       },
       {
         "t": 87.5,
-        "cost": 52.16
+        "cost": 52.01
       },
       {
         "t": 90,
-        "cost": 58.32
+        "cost": 61.25
       },
       {
         "t": 92.5,
-        "cost": 64.16
+        "cost": 70.64
       },
       {
         "t": 95,
-        "cost": 74.37
+        "cost": 82.22
       },
       {
         "t": 97.5,
-        "cost": 86.94
+        "cost": 89.33
       },
       {
         "t": 99,
-        "cost": 97.19
+        "cost": 97.83
       },
       {
         "t": 99.5,
-        "cost": 105.75
+        "cost": 98.81
       },
       {
         "t": 99.9,
-        "cost": 117.27
-      },
-      {
-        "t": 99.9,
-        "cost": 119.45
+        "cost": 110.03
       }
     ],
     "MISO": [
       {
         "t": 10,
-        "cost": 4.51
+        "cost": 9.07
       },
       {
         "t": 20,
-        "cost": 4.51
+        "cost": 9.07
       },
       {
         "t": 30,
-        "cost": 4.51
+        "cost": 9.07
       },
       {
         "t": 40,
-        "cost": 4.51
+        "cost": 9.07
       },
       {
         "t": 50,
-        "cost": 8.81
+        "cost": 9.12
       },
       {
         "t": 55,
-        "cost": 10.96
+        "cost": 12.62
       },
       {
         "t": 60,
-        "cost": 13.12
+        "cost": 15.72
       },
       {
         "t": 65,
-        "cost": 15.49
+        "cost": 16.49
       },
       {
         "t": 70,
-        "cost": 17.64
+        "cost": 20.15
       },
       {
         "t": 75,
-        "cost": 20.54
+        "cost": 24.29
       },
       {
         "t": 80,
-        "cost": 23.85
+        "cost": 30.68
       },
       {
         "t": 85,
-        "cost": 28.42
+        "cost": 30.68
       },
       {
         "t": 87.5,
-        "cost": 31.23
+        "cost": 36.13
       },
       {
         "t": 90,
-        "cost": 34.43
+        "cost": 36.13
       },
       {
         "t": 92.5,
-        "cost": 37.88
+        "cost": 45.98
       },
       {
         "t": 95,
-        "cost": 42.56
+        "cost": 78.73
       },
       {
         "t": 97.5,
-        "cost": 50.68
+        "cost": 85.78
       },
       {
         "t": 99,
-        "cost": 64.03
+        "cost": 89.57
       },
       {
         "t": 99.5,
-        "cost": 72.97
+        "cost": 90.08
       },
       {
         "t": 99.9,
-        "cost": 79.14
-      },
-      {
-        "t": 99.9,
-        "cost": 80.32
+        "cost": 92.73
       }
     ],
     "SPP": [
       {
         "t": 10,
-        "cost": 1.76
+        "cost": 1.44
       },
       {
         "t": 20,
-        "cost": 1.76
+        "cost": 1.44
       },
       {
         "t": 30,
-        "cost": 1.76
+        "cost": 1.44
       },
       {
         "t": 40,
-        "cost": 1.76
+        "cost": 1.44
       },
       {
         "t": 50,
-        "cost": 1.76
+        "cost": 1.44
       },
       {
         "t": 55,
-        "cost": 3.61
+        "cost": 3.66
       },
       {
         "t": 60,
-        "cost": 5.46
+        "cost": 5.14
       },
       {
         "t": 65,
-        "cost": 7.68
+        "cost": 7.36
       },
       {
         "t": 70,
-        "cost": 9.53
+        "cost": 10.17
       },
       {
         "t": 75,
-        "cost": 11.75
+        "cost": 13.28
       },
       {
         "t": 80,
-        "cost": 14.54
+        "cost": 17.52
       },
       {
         "t": 85,
-        "cost": 18.02
+        "cost": 19.66
       },
       {
         "t": 87.5,
-        "cost": 20.12
+        "cost": 34.48
       },
       {
         "t": 90,
-        "cost": 22.57
+        "cost": 48.97
       },
       {
         "t": 92.5,
-        "cost": 25.56
+        "cost": 48.97
       },
       {
         "t": 95,
-        "cost": 29.3
+        "cost": 52.74
       },
       {
         "t": 97.5,
-        "cost": 35.28
+        "cost": 59.2
       },
       {
         "t": 99,
-        "cost": 42.63
+        "cost": 68.24
       },
       {
         "t": 99.5,
-        "cost": 48.34
+        "cost": 73.01
       },
       {
         "t": 99.9,
-        "cost": 59.43
-      },
-      {
-        "t": 99.9,
-        "cost": 63.87
+        "cost": 78.5
       }
     ]
   },
   "rankings": {
     "90": [
       {
-        "iso": "SPP",
-        "cost": 22.57,
+        "iso": "CAISO",
+        "cost": 33.15,
         "mix": {
-          "clean_firm": 6.0,
-          "solar": 7.0,
-          "wind": 87.0
+          "clean_firm": 29.0,
+          "solar": 22.0,
+          "wind": 24.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
         }
       },
       {
         "iso": "ERCOT",
-        "cost": 25.32,
+        "cost": 35.0,
         "mix": {
-          "clean_firm": 10.0,
-          "solar": 14.0,
-          "wind": 85.0
+          "clean_firm": 50.0,
+          "solar": 20.0,
+          "wind": 30.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
         }
       },
       {
         "iso": "MISO",
-        "cost": 34.43,
+        "cost": 36.13,
         "mix": {
-          "clean_firm": 22.0,
-          "solar": 13.0,
-          "wind": 68.0
+          "clean_firm": 30.0,
+          "solar": 10.0,
+          "wind": 60.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
         }
       },
       {
-        "iso": "PJM",
-        "cost": 40.28,
+        "iso": "SPP",
+        "cost": 48.97,
         "mix": {
-          "clean_firm": 49.0,
-          "solar": 5.0,
-          "wind": 48.0
-        }
-      },
-      {
-        "iso": "CAISO",
-        "cost": 49.5,
-        "mix": {
-          "clean_firm": 22.0,
-          "solar": 23.0,
-          "wind": 50.0
-        }
-      },
-      {
-        "iso": "NYISO",
-        "cost": 54.76,
-        "mix": {
-          "clean_firm": 20.0,
-          "solar": 20.0,
-          "wind": 40.0
+          "clean_firm": 11.0,
+          "solar": 31.0,
+          "wind": 51.0,
+          "solar_batt4": 1.0,
+          "solar_batt8": 9.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 10.0
         }
       },
       {
         "iso": "NEISO",
-        "cost": 58.32,
+        "cost": 61.25,
         "mix": {
-          "clean_firm": 33.0,
-          "solar": 2.0,
-          "wind": 31.0
+          "clean_firm": 26.0,
+          "solar": 23.0,
+          "wind": 50.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
+        }
+      },
+      {
+        "iso": "NYISO",
+        "cost": 74.09,
+        "mix": {
+          "clean_firm": 40.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 9.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
+        }
+      },
+      {
+        "iso": "PJM",
+        "cost": 76.86,
+        "mix": {
+          "clean_firm": 51.0,
+          "solar": 39.0,
+          "wind": 11.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 9.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 19.0
         }
       }
     ],
     "95": [
       {
         "iso": "SPP",
-        "cost": 29.3,
+        "cost": 52.74,
         "mix": {
-          "clean_firm": 7.0,
-          "solar": 14.0,
-          "wind": 93.0
+          "clean_firm": 11.0,
+          "solar": 31.0,
+          "wind": 51.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 10.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 10.0
         }
       },
       {
         "iso": "ERCOT",
-        "cost": 33.21,
+        "cost": 68.91,
         "mix": {
-          "clean_firm": 15.0,
-          "solar": 17.0,
-          "wind": 94.0
-        }
-      },
-      {
-        "iso": "MISO",
-        "cost": 42.56,
-        "mix": {
-          "clean_firm": 44.0,
-          "solar": 13.0,
-          "wind": 58.0
-        }
-      },
-      {
-        "iso": "PJM",
-        "cost": 59.09,
-        "mix": {
-          "clean_firm": 37.0,
-          "solar": 18.0,
-          "wind": 77.0
+          "clean_firm": 30.0,
+          "solar": 23.0,
+          "wind": 60.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 10.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 25.0
         }
       },
       {
         "iso": "CAISO",
-        "cost": 67.53,
+        "cost": 74.24,
         "mix": {
-          "clean_firm": 68.0,
-          "solar": 33.0,
-          "wind": 21.0
+          "clean_firm": 40.0,
+          "solar": 30.0,
+          "wind": 40.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
         }
       },
       {
-        "iso": "NYISO",
-        "cost": 70.85,
+        "iso": "MISO",
+        "cost": 78.73,
         "mix": {
-          "clean_firm": 55.0,
-          "solar": 10.0,
-          "wind": 15.0
+          "clean_firm": 30.0,
+          "solar": 12.0,
+          "wind": 60.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 30.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 10.0
+        }
+      },
+      {
+        "iso": "PJM",
+        "cost": 81.17,
+        "mix": {
+          "clean_firm": 41.0,
+          "solar": 40.0,
+          "wind": 10.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 11.0,
+          "wind_batt8": 21.0
         }
       },
       {
         "iso": "NEISO",
-        "cost": 74.37,
+        "cost": 82.22,
         "mix": {
-          "clean_firm": 70.0,
-          "solar": 5.0,
-          "wind": 22.0
+          "clean_firm": 26.0,
+          "solar": 47.0,
+          "wind": 44.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
+        }
+      },
+      {
+        "iso": "NYISO",
+        "cost": 83.79,
+        "mix": {
+          "clean_firm": 20.0,
+          "solar": 40.0,
+          "wind": 60.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
         }
       }
     ],
     "99": [
       {
         "iso": "SPP",
-        "cost": 42.63,
+        "cost": 68.24,
         "mix": {
-          "clean_firm": 22.0,
-          "solar": 18.0,
-          "wind": 102.0
-        }
-      },
-      {
-        "iso": "ERCOT",
-        "cost": 45.29,
-        "mix": {
-          "clean_firm": 40.0,
-          "solar": 20.0,
-          "wind": 75.0
-        }
-      },
-      {
-        "iso": "MISO",
-        "cost": 64.03,
-        "mix": {
-          "clean_firm": 42.0,
-          "solar": 12.0,
-          "wind": 112.0
-        }
-      },
-      {
-        "iso": "PJM",
-        "cost": 76.14,
-        "mix": {
-          "clean_firm": 63.0,
-          "solar": 48.0,
-          "wind": 40.0
+          "clean_firm": 31.0,
+          "solar": 41.0,
+          "wind": 41.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 9.0,
+          "wind_batt4": 1.0,
+          "wind_batt8": 1.0
         }
       },
       {
         "iso": "CAISO",
-        "cost": 78.37,
+        "cost": 74.88,
         "mix": {
-          "clean_firm": 54.0,
-          "solar": 22.0,
-          "wind": 47.0
+          "clean_firm": 40.0,
+          "solar": 30.0,
+          "wind": 40.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
+        }
+      },
+      {
+        "iso": "ERCOT",
+        "cost": 84.69,
+        "mix": {
+          "clean_firm": 61.0,
+          "solar": 29.0,
+          "wind": 60.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 29.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 1.0
+        }
+      },
+      {
+        "iso": "PJM",
+        "cost": 84.78,
+        "mix": {
+          "clean_firm": 41.0,
+          "solar": 20.0,
+          "wind": 31.0,
+          "solar_batt4": 10.0,
+          "solar_batt8": 9.0,
+          "wind_batt4": 19.0,
+          "wind_batt8": 0.0
+        }
+      },
+      {
+        "iso": "MISO",
+        "cost": 89.57,
+        "mix": {
+          "clean_firm": 41.0,
+          "solar": 9.0,
+          "wind": 30.0,
+          "solar_batt4": 9.0,
+          "solar_batt8": 19.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 21.0
         }
       },
       {
         "iso": "NYISO",
-        "cost": 89.55,
+        "cost": 90.41,
         "mix": {
-          "clean_firm": 80.0,
-          "solar": 10.0,
-          "wind": 10.0
+          "clean_firm": 20.0,
+          "solar": 40.0,
+          "wind": 60.0,
+          "solar_batt4": 0.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
         }
       },
       {
         "iso": "NEISO",
-        "cost": 97.19,
+        "cost": 97.83,
         "mix": {
-          "clean_firm": 91.0,
-          "solar": 2.0,
-          "wind": 12.0
+          "clean_firm": 40.0,
+          "solar": 20.0,
+          "wind": 20.0,
+          "solar_batt4": 10.0,
+          "solar_batt8": 0.0,
+          "wind_batt4": 0.0,
+          "wind_batt8": 0.0
         }
       }
     ]
