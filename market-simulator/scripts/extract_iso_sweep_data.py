@@ -19,7 +19,8 @@ import pandas as pd
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PARQUET = ROOT / "results" / "sweep_1215" / "sweep_1215_flat.parquet"
+SWEEP_DIR = ROOT / "results" / "sweep_1215"
+PARQUET_COMBINED = SWEEP_DIR / "sweep_1215_flat.parquet"
 FLEET_JSON = ROOT / "frontend" / "data" / "constellation_scenarios.json"
 OUTPUT = ROOT.parent / "dashboard" / "js" / "iso-sweep-data.js"
 
@@ -475,12 +476,26 @@ def main():
     print("CEG ISO Market Sweep Data Extraction")
     print("=" * 60)
 
-    if not PARQUET.exists():
-        print(f"ERROR: Parquet not found at {PARQUET}")
-        sys.exit(1)
+    # Read per-ISO parquets first (preferred — avoids stale combined file).
+    # Fall back to combined parquet if no per-ISO files exist.
+    per_iso_files = sorted(SWEEP_DIR.glob("sweep_1215_*.parquet"))
+    # Exclude the combined file from the per-ISO list
+    per_iso_files = [f for f in per_iso_files if f.name != "sweep_1215_flat.parquet"]
 
-    print(f"\nLoading {PARQUET}...")
-    df = pd.read_parquet(PARQUET)
+    if per_iso_files:
+        print(f"\nLoading {len(per_iso_files)} per-ISO parquets from {SWEEP_DIR}:")
+        dfs = []
+        for f in per_iso_files:
+            iso_df = pd.read_parquet(f)
+            print(f"  {f.name}: {len(iso_df)} rows")
+            dfs.append(iso_df)
+        df = pd.concat(dfs, ignore_index=True)
+    elif PARQUET_COMBINED.exists():
+        print(f"\nNo per-ISO parquets found; falling back to {PARQUET_COMBINED}")
+        df = pd.read_parquet(PARQUET_COMBINED)
+    else:
+        print(f"ERROR: No parquet files found in {SWEEP_DIR}")
+        sys.exit(1)
     print(f"  Shape: {df.shape}")
     print(f"  ISOs: {sorted(df.iso.unique())}")
     print(f"  Years: {sorted(df.year.unique())}")

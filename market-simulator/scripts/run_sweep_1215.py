@@ -253,18 +253,6 @@ def main():
     # ── Save aggregates (small JSON, ~1 MB) ──
     print("Computing aggregates...")
     aggregates = aggregate_sweep_percentiles(all_results)
-    agg_path = os.path.join(output_dir, 'sweep_1215_aggregates.json')
-
-    # Merge with existing aggregates so per-ISO runs don't clobber other ISOs
-    if os.path.exists(agg_path):
-        with open(agg_path) as f:
-            existing_agg = json.load(f)
-        # Keep ISOs not in this run, overwrite those that are
-        for k, v in existing_agg.items():
-            if k not in aggregates:
-                aggregates[k] = v
-        print(f"  Merged aggregates: added {len(existing_agg)} existing ISO(s), "
-              f"total now {len(aggregates)}")
 
     class _SafeEncoder(json.JSONEncoder):
         """Replace inf/NaN with null; stringify non-serializable types."""
@@ -283,9 +271,27 @@ def main():
                 return [self._clean(v) for v in o]
             return o
 
+    # Write per-ISO aggregate JSON files so individual ISO runs
+    # never overwrite results from other ISOs
+    for iso_name in isos_in_df:
+        if iso_name in aggregates:
+            iso_agg_path = os.path.join(output_dir, f'sweep_1215_aggregates_{iso_name}.json')
+            with open(iso_agg_path, 'w') as f:
+                json.dump({iso_name: aggregates[iso_name]}, f, indent=2, cls=_SafeEncoder)
+            print(f"  Per-ISO aggregates: {iso_agg_path}")
+
+    # Build combined aggregates by reading all per-ISO JSON files
+    combined_agg = {}
+    for fname in sorted(os.listdir(output_dir)):
+        if fname.startswith('sweep_1215_aggregates_') and fname.endswith('.json'):
+            fpath = os.path.join(output_dir, fname)
+            with open(fpath) as f:
+                combined_agg.update(json.load(f))
+
+    agg_path = os.path.join(output_dir, 'sweep_1215_aggregates.json')
     with open(agg_path, 'w') as f:
-        json.dump(aggregates, f, indent=2, cls=_SafeEncoder)
-    print(f"Aggregates saved: {agg_path} ({len(aggregates)} ISOs)")
+        json.dump(combined_agg, f, indent=2, cls=_SafeEncoder)
+    print(f"Combined aggregates saved: {agg_path} ({len(combined_agg)} ISOs)")
 
     print(f"\nDone. Total time: {time.time() - t0:.1f}s")
 
