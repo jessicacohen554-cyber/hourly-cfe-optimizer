@@ -224,8 +224,16 @@ def main():
         iso_df.to_parquet(iso_parquet_path, index=False, engine='pyarrow')
         print(f"  Per-ISO parquet: {iso_parquet_path} ({len(iso_df)} rows)")
 
-    # Also write combined parquet for backward compatibility
+    # Merge with existing combined parquet so per-ISO runs don't clobber
+    # results from prior ISOs
     parquet_path = os.path.join(output_dir, 'sweep_1215_flat.parquet')
+    if os.path.exists(parquet_path):
+        existing_df = pd.read_parquet(parquet_path, engine='pyarrow')
+        # Drop ISOs we're replacing, keep the rest
+        existing_df = existing_df[~existing_df['iso'].isin(isos_in_df)]
+        if len(existing_df) > 0:
+            df = pd.concat([existing_df, df], ignore_index=True)
+            print(f"  Merged with existing data: kept {len(existing_df)} rows from other ISOs")
     df.to_parquet(parquet_path, index=False, engine='pyarrow')
     print(f"Combined parquet saved: {parquet_path}")
     print(f"  Shape: {df.shape[0]} rows × {df.shape[1]} columns")
@@ -247,6 +255,17 @@ def main():
     aggregates = aggregate_sweep_percentiles(all_results)
     agg_path = os.path.join(output_dir, 'sweep_1215_aggregates.json')
 
+    # Merge with existing aggregates so per-ISO runs don't clobber other ISOs
+    if os.path.exists(agg_path):
+        with open(agg_path) as f:
+            existing_agg = json.load(f)
+        # Keep ISOs not in this run, overwrite those that are
+        for k, v in existing_agg.items():
+            if k not in aggregates:
+                aggregates[k] = v
+        print(f"  Merged aggregates: added {len(existing_agg)} existing ISO(s), "
+              f"total now {len(aggregates)}")
+
     class _SafeEncoder(json.JSONEncoder):
         """Replace inf/NaN with null; stringify non-serializable types."""
         def default(self, obj):
@@ -266,7 +285,7 @@ def main():
 
     with open(agg_path, 'w') as f:
         json.dump(aggregates, f, indent=2, cls=_SafeEncoder)
-    print(f"Aggregates saved: {agg_path}")
+    print(f"Aggregates saved: {agg_path} ({len(aggregates)} ISOs)")
 
     print(f"\nDone. Total time: {time.time() - t0:.1f}s")
 
