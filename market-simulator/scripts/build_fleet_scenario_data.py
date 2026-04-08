@@ -249,6 +249,8 @@ def load_sweep_cf_percentiles():
             result[iso][year_int] = {}
             # Aggregate fuel-type CFs (backward compat)
             for fuel, col in SWEEP_CF_COLS.items():
+                if col not in yr_df.columns:
+                    continue
                 vals = yr_df[col].dropna()
                 if len(vals) > 10:
                     result[iso][year_int][fuel] = {
