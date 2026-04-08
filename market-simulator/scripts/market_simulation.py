@@ -663,6 +663,7 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
     # double-attenuation. Previously procurement_pct=clean_pct caused
     # supply = (clean_pct/100) × (resource_pcts/100) which under-counted
     # clean energy and over-dispatched fossil.
+    _has_hybrids = any(resource_pcts.get(ht, 0) > 0 for ht in HYBRID_TYPES)
     dispatch = reconstruct_hourly_dispatch(
         demand_norm, supply_profiles, resource_pcts,
         procurement_pct=100,
@@ -671,6 +672,7 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
         ldes_dispatch_pct=ldes_pct,
         h2_dispatch_pct=h2_pct,
         interchange_norm=interchange_norm,
+        include_hybrids=_has_hybrids,
     )
 
     price_model = PriceModel(iso, fuel_level)
@@ -4943,6 +4945,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                     plant_stack = [p for p in plant_stack
                                    if p.get('plant_id') not in prior_retired_ids]
                     _stor = state.get('storage_deployed', {})
+                    _has_hybrids = any(resource_pcts.get(ht, 0) > 0 for ht in HYBRID_TYPES)
                     _dispatch = reconstruct_hourly_dispatch(
                         demand_norm, supply_profiles_iso, resource_pcts,
                         procurement_pct=100,
@@ -4950,6 +4953,7 @@ def run_market_simulation(scenario_id, conditions, isos=None,
                         battery8_dispatch_pct=_stor.get('battery8', 0),
                         ldes_dispatch_pct=_stor.get('ldes', 0),
                         h2_dispatch_pct=_stor.get('h2', 0),
+                        include_hybrids=_has_hybrids,
                     )
                     _plant_economics = compute_plant_level_economics(
                         plant_stack, hourly_lmp, _dispatch,

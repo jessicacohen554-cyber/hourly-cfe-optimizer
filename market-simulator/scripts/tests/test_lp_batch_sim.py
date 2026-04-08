@@ -87,7 +87,7 @@ def run_batch_test(iso='PJM', max_mixes=20):
     # Extract demand profile for ISO
     from dispatch_utils import get_demand_profile
     demand_norm, _ = get_demand_profile(iso, demand_data)
-    supply_profiles = get_supply_profiles(iso, gen_profiles)
+    supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
     supply_matrix = build_supply_matrix(supply_profiles)
 
     # Load EF mixes

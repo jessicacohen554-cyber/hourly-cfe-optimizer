@@ -26,7 +26,7 @@ growth_level = 'High'
 print("Loading data...")
 demand_data, gen_profiles, _, _ = load_common_data()
 demand_norm, total_mwh_base = get_demand_profile(iso, demand_data)
-supply_profiles = get_supply_profiles(iso, gen_profiles)
+supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
 
 demand_twh = get_demand_at_year(iso, year, growth_level)
 growth_factor = demand_twh / REGIONAL_DEMAND_TWH[iso]

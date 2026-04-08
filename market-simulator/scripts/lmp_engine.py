@@ -371,6 +371,11 @@ def _compute_clean_peak_mw(iso, resource_mix, battery_pct=0,
         resource_mix.get('offshore_wind', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS.get('offshore_wind', 0.25) +
         resource_mix.get('ccs_ccgt', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
         resource_mix.get('hydro', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['hydro'] +
+        # Hybrid co-located resources: battery shifts generation to peak → higher ELCC than standalone
+        resource_mix.get('solar_batt4', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS.get('solar_batt4', 0.70) +
+        resource_mix.get('solar_batt8', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS.get('solar_batt8', 0.85) +
+        resource_mix.get('wind_batt4', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS.get('wind_batt4', 0.50) +
+        resource_mix.get('wind_batt8', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS.get('wind_batt8', 0.65) +
         battery_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery'] +
         battery8_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery8'] +
         ldes_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes'] +
@@ -1827,10 +1832,12 @@ def run_lmp_for_iso(iso, scenarios, demand_data, gen_profiles,
             continue
         seen_archetypes.add(akey)
 
+        _has_hybrids = any(resource_mix.get(ht, 0) > 0 for ht in HYBRID_TYPES)
         dispatch, cache_hit = get_or_compute_dispatch(
             iso, demand_norm, supply_profiles, resource_mix,
             battery_dispatch_pct=batt4, battery8_dispatch_pct=batt8,
-            ldes_dispatch_pct=ldes, cache=dispatch_cache)
+            ldes_dispatch_pct=ldes, cache=dispatch_cache,
+            include_hybrids=_has_hybrids)
 
         if cache_hit:
             cache_hits += 1
@@ -1902,7 +1909,7 @@ def run_test_cases(iso='PJM'):
 
     demand_data, gen_profiles, emission_rates, fossil_mix = load_common_data()
     demand_norm, total_mwh = get_demand_profile(iso, demand_data)
-    supply_profiles = get_supply_profiles(iso, gen_profiles)
+    supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
     demand_mw_profile = demand_norm * total_mwh
 
     baseline_clean = sum(GRID_MIX_SHARES.get(iso, {}).values())
@@ -1952,12 +1959,14 @@ def run_test_cases(iso='PJM'):
               f"LDES: {sc.get('ldes_dispatch_pct', 0)}%, "
               f"H2: {sc.get('h2_dispatch_pct', 0)}%")
 
+        _has_hybrids = any(resource_mix.get(ht, 0) > 0 for ht in HYBRID_TYPES)
         dispatch = reconstruct_hourly_dispatch(
             demand_norm, supply_profiles, resource_mix,
             battery_dispatch_pct=sc.get('battery_dispatch_pct', 0),
             battery8_dispatch_pct=sc.get('battery8_dispatch_pct', 0),
             ldes_dispatch_pct=sc.get('ldes_dispatch_pct', 0),
-            h2_dispatch_pct=sc.get('h2_dispatch_pct', 0))
+            h2_dispatch_pct=sc.get('h2_dispatch_pct', 0),
+            include_hybrids=_has_hybrids)
 
         # Merit-order stack (RA + GAF aware)
         batt4_pct = sc.get('battery_dispatch_pct', 0)

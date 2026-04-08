@@ -69,7 +69,7 @@ def test_scarcity_reduction():
     demand_data = load_demand_profiles()
     gen_profiles = load_generation_profiles()
     demand_norm, total_mwh_base = get_demand_profile(iso, demand_data)
-    supply_profiles = get_supply_profiles(iso, gen_profiles)
+    supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
 
     baseline_clean = sum(GRID_MIX_SHARES[iso].values())
     resource_pcts = dict(GRID_MIX_SHARES[iso])
