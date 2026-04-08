@@ -1592,15 +1592,58 @@ def main():
     }
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+    dashboard_data_dir = os.path.join(SCRIPT_DIR, '..', '..', 'dashboard', 'data')
+
+    # ── Write per-ISO fleet result files ──
+    # Extract unique ISOs from plant data and write filtered per-ISO JSONs
+    # so fleet_scenarios.html can load individual ISOs independently.
+    all_isos = sorted({p.get('iso', 'NA') for p in plants if p.get('iso')})
+    for iso_name in all_isos:
+        iso_plants_set = {p.get('name') for p in plants if p.get('iso') == iso_name}
+        # Filter plant_detail within each scenario to this ISO's plants
+        iso_scenarios = {}
+        for skey, sdata in scenarios.items():
+            iso_plant_detail = {}
+            for yr_str, yr_plants in sdata.get('plant_detail', {}).items():
+                iso_plant_detail[yr_str] = [
+                    p for p in yr_plants if p.get('name') in iso_plants_set
+                ]
+            iso_plant_percentiles = {}
+            for yr_str, yr_plants in sdata.get('plant_percentiles', {}).items():
+                iso_plant_percentiles[yr_str] = [
+                    p for p in yr_plants if p.get('name') in iso_plants_set
+                ]
+            iso_scenarios[skey] = {
+                'description': sdata.get('description', ''),
+                'color': sdata.get('color', '#888'),
+                'envelope': sdata.get('envelope', {}),
+                'envelope_by_fossil_cost': sdata.get('envelope_by_fossil_cost', {}),
+                'plant_detail': iso_plant_detail,
+                'plant_percentiles': iso_plant_percentiles,
+                'generation_by_fuel': sdata.get('generation_by_fuel', {}),
+                'emissions_by_fuel': sdata.get('emissions_by_fuel', {}),
+            }
+        iso_output = {
+            'scenarios': iso_scenarios,
+            'targets': targets,
+            'metadata': dict(output['metadata'], iso=iso_name),
+        }
+        iso_filename = f'fleet_scenario_results_{iso_name}.json'
+        for out_dir in [OUTPUT_DIR, dashboard_data_dir]:
+            if os.path.isdir(out_dir):
+                iso_path = os.path.join(out_dir, iso_filename)
+                with open(iso_path, 'w') as f:
+                    json.dump(iso_output, f, indent=2)
+                print(f"  Per-ISO: {iso_path}")
+
+    # ── Write combined fleet result file (backward compat) ──
     output_path = os.path.join(OUTPUT_DIR, 'fleet_scenario_results_sample.json')
     with open(output_path, 'w') as f:
         json.dump(output, f, indent=2)
 
-    print(f"\nOutput written to: {output_path}")
+    print(f"\nCombined output: {output_path}")
     print(f"File size: {os.path.getsize(output_path):,} bytes")
 
-    # Also copy to dashboard/data/ for fleet_scenarios.html
-    dashboard_data_dir = os.path.join(SCRIPT_DIR, '..', '..', 'dashboard', 'data')
     if os.path.isdir(dashboard_data_dir):
         dashboard_path = os.path.join(dashboard_data_dir,
                                        'fleet_scenario_results_sample.json')
