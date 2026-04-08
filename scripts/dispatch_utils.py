@@ -1170,15 +1170,19 @@ def save_dispatch_cache(iso, cache, version=None):
 def get_or_compute_dispatch(iso, demand_norm, supply_profiles, resource_pcts,
                              procurement_pct=100, battery_dispatch_pct=0,
                              battery8_dispatch_pct=0, ldes_dispatch_pct=0,
-                             cache=None, supply_matrix=None):
+                             cache=None, supply_matrix=None,
+                             h2_dispatch_pct=0, resource_types=None):
     """Get dispatch from cache or compute and add to cache.
 
     Args:
         cache: mutable dict (load_dispatch_cache output). If provided, checks cache
                first and adds new results. Caller is responsible for calling
                save_dispatch_cache() when done with a batch.
-        supply_matrix: optional pre-built (5, H) numpy array from build_supply_matrix().
+        supply_matrix: optional pre-built numpy array from build_supply_matrix().
             Avoids repeated list→array conversion on cache misses.
+        h2_dispatch_pct: green H2 seasonal storage capacity as % of demand.
+        resource_types: list of resource types matching supply_matrix rows.
+            Pass RESOURCE_TYPES_HYBRID when hybrid profiles are loaded.
 
     Returns:
         dispatch result dict (same as reconstruct_hourly_dispatch)
@@ -1196,7 +1200,9 @@ def get_or_compute_dispatch(iso, demand_norm, supply_profiles, resource_pcts,
         demand_norm, supply_profiles, resource_pcts,
         procurement_pct, battery_dispatch_pct,
         battery8_dispatch_pct, ldes_dispatch_pct,
-        supply_matrix=supply_matrix)
+        supply_matrix=supply_matrix,
+        h2_dispatch_pct=h2_dispatch_pct,
+        resource_types=resource_types)
 
     if cache is not None:
         cache[key] = {k: v for k, v in result.items()}
