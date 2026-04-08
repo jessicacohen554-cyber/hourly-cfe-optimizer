@@ -442,7 +442,7 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
         # Dispatch-based gas backup: actual net peak hour from 8760 dispatch
         from dispatch_utils import reconstruct_hourly_dispatch, build_supply_matrix as _bsm
         if supply_matrix is None:
-            supply_matrix = _bsm(supply_profiles)
+            supply_matrix = _bsm(supply_profiles, include_hybrids=has_hybrids)
         resource_pcts = {
             'clean_firm': cf_pct, 'solar': sol_pct, 'wind': wnd_pct,
             'offshore_wind': osw_pct, 'ccs_ccgt': ccs_pct, 'hydro': hyd_pct,
@@ -1520,7 +1520,9 @@ def build_augmented_result(best_result, best_mix, floor_twh, deployed,
         aug['effective_cost'] - best_result['wholesale'], 2)
 
     # Augmented resource TWh
-    aug['resource_twh'] = {res: augmented.get(res, 0) for res in RESOURCES}
+    aug['resource_twh'] = {res: augmented.get(res, 0)
+                           for res in RESOURCES + list(HYBRID_TYPES)
+                           if augmented.get(res, 0) > 0 or res in RESOURCES}
     # Split battery TWh into 4hr and 8hr from dispatch percentages
     if len(best_mix) >= 11:
         bat4_pct, bat8_pct = float(best_mix[7]), float(best_mix[8])
@@ -1781,7 +1783,7 @@ def build_consequential_queue(scenario_results, egrid, fossil_mix=None, cfr_fn=N
 
             # ── Resource deltas ──
             delta_resources = {}
-            for res in RESOURCES:
+            for res in RESOURCES + list(HYBRID_TYPES):
                 r_start = start_data.get('resource_twh', {}).get(res, 0)
                 r_end = end_data.get('resource_twh', {}).get(res, 0)
                 if abs(r_end - r_start) > 0.5:
@@ -1860,7 +1862,7 @@ def compute_stranding(scenario_results):
         if not iso_data:
             continue
         iso_stranding = {}
-        for res in RESOURCES + ['battery', 'ldes']:
+        for res in RESOURCES + list(HYBRID_TYPES) + ['battery', 'ldes']:
             values = []
             for t in THRESHOLDS:
                 if t not in iso_data:

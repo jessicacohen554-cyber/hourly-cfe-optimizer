@@ -964,28 +964,36 @@ def _per_resource_dispatch_njit(demand_arr, supply_matrix, resource_pcts_arr,
 
 
 def _compute_per_resource_dispatch(demand_arr, supply_profiles, resource_pcts,
-                                    procurement_factor, supply_matrix=None):
+                                    procurement_factor, supply_matrix=None,
+                                    include_hybrids=False):
     """Merit-order dispatch per resource: CF -> CCS -> hydro -> wind -> solar.
 
     Thin wrapper that converts dicts to arrays, calls the @njit inner function,
     and converts results back to dicts.
 
+    Args:
+        include_hybrids: If True, include hybrid co-located resources in dispatch.
+
     Returns:
         matched: dict {resource: np.array(H)} -- dispatched to demand
         surplus: dict {resource: np.array(H)} -- excess above demand
     """
-    if supply_matrix is None:
-        supply_matrix = build_supply_matrix(supply_profiles)
+    rtypes = RESOURCE_TYPES_HYBRID if include_hybrids else RESOURCE_TYPES
 
-    resource_pcts_arr = np.array([resource_pcts.get(rt, 0) for rt in RESOURCE_TYPES],
+    if supply_matrix is None:
+        supply_matrix = build_supply_matrix(supply_profiles, include_hybrids=include_hybrids)
+
+    resource_pcts_arr = np.array([resource_pcts.get(rt, 0) for rt in rtypes],
                                   dtype=np.float64)
+
+    dispatch_indices = _get_dispatch_order_indices(rtypes) if include_hybrids else _DISPATCH_ORDER_INDICES
 
     matched_arr, surplus_arr = _per_resource_dispatch_njit(
         demand_arr, supply_matrix, resource_pcts_arr,
-        procurement_factor, _DISPATCH_ORDER_INDICES)
+        procurement_factor, dispatch_indices)
 
-    matched = {RESOURCE_TYPES[i]: matched_arr[i] for i in range(len(RESOURCE_TYPES))}
-    surplus = {RESOURCE_TYPES[i]: surplus_arr[i] for i in range(len(RESOURCE_TYPES))}
+    matched = {rtypes[i]: matched_arr[i] for i in range(len(rtypes))}
+    surplus = {rtypes[i]: surplus_arr[i] for i in range(len(rtypes))}
     return matched, surplus
 
 
@@ -1024,14 +1032,20 @@ def _dispatch_ldes(residual_surplus, residual_gap, dispatch_pct, demand_arr):
                       window_hours, H)
 
 
-def build_supply_matrix(supply_profiles):
+def build_supply_matrix(supply_profiles, include_hybrids=False):
     """Pre-convert supply profile dict → (N_RESOURCES, H) numpy matrix.
 
     Call once per ISO. Pass the matrix to reconstruct_hourly_dispatch via
     supply_matrix kwarg for ~3x speedup on repeated dispatches.
+
+    Args:
+        include_hybrids: If True, build a 10-row matrix (base + hybrid types)
+            instead of the default 6-row matrix. Must match the include_hybrids
+            flag passed to reconstruct_hourly_dispatch.
     """
-    matrix = np.zeros((len(RESOURCE_TYPES), H), dtype=np.float64)
-    for i, rtype in enumerate(RESOURCE_TYPES):
+    rtypes = RESOURCE_TYPES_HYBRID if include_hybrids else RESOURCE_TYPES
+    matrix = np.zeros((len(rtypes), H), dtype=np.float64)
+    for i, rtype in enumerate(rtypes):
         p = supply_profiles.get(rtype, [0.0] * H)
         matrix[i, :] = np.array(p[:H], dtype=np.float64)
     return matrix
@@ -1195,7 +1209,8 @@ def reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts,
 
     if detailed:
         matched, surplus = _compute_per_resource_dispatch(
-            demand_arr, supply_profiles, resource_pcts, procurement_factor, supply_matrix)
+            demand_arr, supply_profiles, resource_pcts, procurement_factor,
+            supply_matrix, include_hybrids=include_hybrids)
         for rtype in rtypes:
             if rtype in matched:
                 result[f'matched_{rtype}'] = matched[rtype]

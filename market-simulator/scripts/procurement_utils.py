@@ -1367,7 +1367,7 @@ def compute_dispatch_hms(results, variant_keys, isos):
                 if _iso_hybrids:
                     break
             supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=_iso_hybrids)
-            supply_matrix = build_supply_matrix(supply_profiles)
+            supply_matrix = build_supply_matrix(supply_profiles, include_hybrids=_iso_hybrids)
 
             for growth_level, growth_entries in growth_data.items():
                 if not isinstance(growth_entries, dict):
