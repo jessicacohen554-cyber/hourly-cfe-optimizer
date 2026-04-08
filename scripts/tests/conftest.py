@@ -99,6 +99,71 @@ def small_mix():
 
 
 @pytest.fixture
+def synthetic_hybrid_profiles(synthetic_profiles, synthetic_solar, synthetic_wind):
+    """Supply profiles dict including 4 hybrid co-located resources.
+
+    Hybrid profiles are derived from their parent renewables with battery smoothing:
+    solar_batt4/8 extend solar generation into evening hours,
+    wind_batt4/8 smooth wind variability into overnight gaps.
+    Each profile is normalized to sum = 1.0.
+    """
+    profiles = dict(synthetic_profiles)  # copy base 6
+
+    # --- Solar+Battery hybrids: solar shape with evening tail ---
+    solar_arr = np.array(synthetic_solar, dtype=np.float64)
+    for suffix, shift_hours in [('solar_batt4', 3), ('solar_batt8', 5)]:
+        hybrid = np.zeros(H, dtype=np.float64)
+        for h in range(H):
+            hod = h % 24
+            if 6 <= hod <= 18:
+                # Reduced midday (battery absorbs some), shifted peak later
+                hybrid[h] = np.sin(np.pi * (hod - 6) / 12) * 0.7
+            elif 18 < hod <= 18 + shift_hours:
+                # Evening discharge tail
+                hybrid[h] = 0.4 * (1.0 - (hod - 18) / (shift_hours + 1))
+        total = hybrid.sum()
+        if total > 0:
+            hybrid /= total
+        profiles[suffix] = hybrid.tolist()
+
+    # --- Wind+Battery hybrids: wind shape with smoothed overnight ---
+    for suffix, smooth_factor in [('wind_batt4', 0.3), ('wind_batt8', 0.5)]:
+        hybrid = np.zeros(H, dtype=np.float64)
+        for h in range(H):
+            hod = h % 24
+            base_wind = 0.5 + 0.5 * np.cos(np.pi * (hod - 3) / 12)
+            # Smooth: reduce peaks, fill troughs
+            hybrid[h] = base_wind * (1.0 - smooth_factor) + smooth_factor * 0.5
+        total = hybrid.sum()
+        if total > 0:
+            hybrid /= total
+        profiles[suffix] = hybrid.tolist()
+
+    return profiles
+
+
+@pytest.fixture
+def hybrid_mix():
+    """A resource mix including hybrid co-located resources.
+
+    30% clean_firm, 15% solar, 15% wind, 0% offshore_wind, 0% CCS,
+    10% hydro, 15% solar_batt4, 15% wind_batt4 = 100% total.
+    """
+    return {
+        'clean_firm': 30.0,
+        'solar': 15.0,
+        'wind': 15.0,
+        'offshore_wind': 0.0,
+        'ccs_ccgt': 0.0,
+        'hydro': 10.0,
+        'solar_batt4': 15.0,
+        'solar_batt8': 0.0,
+        'wind_batt4': 15.0,
+        'wind_batt8': 0.0,
+    }
+
+
+@pytest.fixture
 def emission_rates():
     """Synthetic emission rates matching eGRID structure (7 ISOs)."""
     return {

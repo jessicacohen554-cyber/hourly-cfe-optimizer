@@ -32,6 +32,7 @@ from pipeline_config import (
     N_SCENARIOS_BASE, N_SCENARIOS_CAISO,
     DISPATCH_ORDER, H,
     OFFSHORE_ISOS, GEOTHERMAL_ISOS,
+    HYBRID_TYPES,
     # Dispatch-specific constants (migrated from dispatch_utils)
     HYDRO_CAPS, COAL_CAP_TWH, OIL_CAP_TWH,
     NUCLEAR_SHARE_OF_CLEAN_FIRM, NUCLEAR_MONTHLY_CF,
@@ -41,6 +42,7 @@ from pipeline_config import (
     learning_fraction, threshold_learning_fraction,
     LEARNING_PARAMS, LEARNING_EXPONENT, THRESHOLD_TARGET_YEARS,
 )
+from dispatch_utils import RESOURCE_TYPES_HYBRID
 
 
 class TestISOCompleteness:
@@ -573,3 +575,24 @@ class TestThresholdLearningFraction:
             t2, y2 = sorted_thresholds[i]
             assert y2 >= y1, \
                 f"Threshold {t2}→{y2} earlier than {t1}→{y1}"
+
+
+class TestHybridConstants:
+    """Validation of hybrid co-located resource constants."""
+
+    def test_hybrid_types_in_peak_capacity_credits(self):
+        """All 4 HYBRID_TYPES must exist in PEAK_CAPACITY_CREDITS with valid values."""
+        for ht in HYBRID_TYPES:
+            assert ht in PEAK_CAPACITY_CREDITS, \
+                f"Hybrid type '{ht}' missing from PEAK_CAPACITY_CREDITS"
+            credit = PEAK_CAPACITY_CREDITS[ht]
+            assert 0 <= credit <= 1, \
+                f"PEAK_CAPACITY_CREDITS['{ht}'] = {credit} not in [0, 1]"
+
+    def test_resource_types_hybrid_length(self):
+        """RESOURCE_TYPES_HYBRID must have exactly 10 elements and include all HYBRID_TYPES."""
+        assert len(RESOURCE_TYPES_HYBRID) == 10, \
+            f"Expected 10 resource types, got {len(RESOURCE_TYPES_HYBRID)}"
+        for ht in HYBRID_TYPES:
+            assert ht in RESOURCE_TYPES_HYBRID, \
+                f"Hybrid type '{ht}' missing from RESOURCE_TYPES_HYBRID"

@@ -22,6 +22,7 @@ from dispatch_utils import (
     BATTERY8_EFFICIENCY, BATTERY8_DURATION_HOURS,
     LDES_EFFICIENCY, LDES_DURATION_HOURS,
     H2_EFFICIENCY, H2_DURATION_HOURS,
+    RESOURCE_TYPES_HYBRID,
 )
 
 H = 8760
@@ -219,3 +220,54 @@ class TestMatchScoreConsistency:
         assert score_from_displaced == pytest.approx(score_from_residual, abs=0.01), \
             f"Score inconsistency: displaced-based={score_from_displaced:.4f}%, " \
             f"residual-based={score_from_residual:.4f}%"
+
+
+class TestHybridEnergyConservation:
+    """Energy conservation tests with hybrid co-located resources."""
+
+    @pytest.mark.parametrize("battery_pct,ldes_pct", [
+        (0.0, 0.0),
+        (0.2, 0.0),
+        (0.0, 1.0),
+        (0.2, 1.0),
+    ])
+    def test_hybrid_total_clean_equals_components(self, synthetic_demand,
+                                                   synthetic_hybrid_profiles,
+                                                   hybrid_mix,
+                                                   battery_pct, ldes_pct):
+        """supply_total + storage = total_clean must hold with hybrid resources."""
+        result = reconstruct_hourly_dispatch(
+            synthetic_demand, synthetic_hybrid_profiles, hybrid_mix,
+            procurement_pct=100,
+            battery_dispatch_pct=battery_pct,
+            ldes_dispatch_pct=ldes_pct,
+            resource_types=RESOURCE_TYPES_HYBRID,
+        )
+
+        storage_sum = (result['battery4_profile']
+                       + result['battery8_profile']
+                       + result['ldes_profile']
+                       + result['h2_profile'])
+
+        np.testing.assert_allclose(
+            result['supply_total'] + storage_sum,
+            result['total_clean'],
+            atol=1e-10,
+            err_msg=f"Energy conservation violated (batt={battery_pct}, ldes={ldes_pct})"
+        )
+
+    def test_hybrid_no_negative_residuals(self, synthetic_demand,
+                                           synthetic_hybrid_profiles, hybrid_mix):
+        """Residual demand should never go negative with hybrid resources."""
+        result = reconstruct_hourly_dispatch(
+            synthetic_demand, synthetic_hybrid_profiles, hybrid_mix,
+            procurement_pct=100,
+            battery_dispatch_pct=0.3,
+            ldes_dispatch_pct=1.0,
+            resource_types=RESOURCE_TYPES_HYBRID,
+        )
+
+        assert np.all(result['residual_demand'] >= -1e-12), \
+            f"Negative residual: min={result['residual_demand'].min():.2e}"
+        assert np.all(result['curtailed'] >= -1e-12), \
+            f"Negative curtailed: min={result['curtailed'].min():.2e}"
