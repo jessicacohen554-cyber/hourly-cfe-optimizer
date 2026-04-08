@@ -67,7 +67,7 @@ def reexport(isos, sensitivity='high_firm_low_vre', growth='Medium'):
 
         # Load dispatch data
         demand_norm, _ = get_demand_profile(iso, demand_data)
-        supply_profiles = get_supply_profiles(iso, gen_profiles)
+        supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
         supply_matrix = build_supply_matrix(supply_profiles)
 
         iso_data = {}
@@ -108,6 +108,13 @@ def reexport(isos, sensitivity='high_firm_low_vre', growth='Medium'):
             bat8_pct = r.get('winner_battery8_dispatch_pct', 0)
             ldes_pct = r.get('winner_ldes_dispatch_pct', 0)
             h2_pct = r.get('winner_h2_dispatch_pct', 0)
+
+            # Extract hybrid resource percentages for gas backup calculation
+            hybrid_pcts = {}
+            for ht in ['solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']:
+                hv = r.get(f'winner_{ht}_pct', 0)
+                if hv > 0:
+                    hybrid_pcts[ht] = hv
 
             hydro_cap = HYDRO_CAP_TWH.get(iso, hyd_pct / 100.0 * demand_twh)
             hydro_twh = min(hyd_pct / 100.0 * demand_twh, hydro_cap)
@@ -157,6 +164,7 @@ def reexport(isos, sensitivity='high_firm_low_vre', growth='Medium'):
                 demand_norm=demand_norm,
                 supply_profiles=supply_profiles,
                 supply_matrix=supply_matrix,
+                hybrid_pcts=hybrid_pcts or None,
             )
 
             result = {

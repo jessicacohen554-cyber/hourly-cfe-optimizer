@@ -1968,7 +1968,7 @@ def _build_consequential_queue(all_results, demand_data=None, gen_profiles=None,
         if has_dispatch:
             try:
                 demand_norm, _ = get_demand_profile(iso, demand_data)
-                supply_profiles = get_supply_profiles(iso, gen_profiles)
+                supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
                 supply_matrix = build_supply_matrix(supply_profiles)
             except Exception as e:
                 print(f"  WARNING: Could not load dispatch data for {iso}: {e}")
@@ -2234,9 +2234,10 @@ def _export_scenario_a(all_results, isos_processed, demand_data, gen_profiles,
 
         iso_data = {}
 
-        # Load dispatch data for this ISO
+        # Load dispatch data for this ISO (include_hybrids=True so dispatch
+        # accounts for hybrid generation in residual peak / gas backup)
         demand_norm, _ = get_demand_profile(iso, demand_data)
-        supply_profiles = get_supply_profiles(iso, gen_profiles)
+        supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
         supply_matrix = build_supply_matrix(supply_profiles)
 
         # Track first clean firm deployment year for deployment-gated learning
@@ -2279,6 +2280,13 @@ def _export_scenario_a(all_results, isos_processed, demand_data, gen_profiles,
             bat8_pct = r.get('winner_battery8_dispatch_pct', 0)
             ldes_pct = r.get('winner_ldes_dispatch_pct', 0)
             h2_pct = r.get('winner_h2_dispatch_pct', 0)
+
+            # Extract hybrid resource percentages for gas backup calculation
+            hybrid_pcts = {}
+            for ht in HYBRID_COLS:
+                hv = r.get(f'winner_{ht}_pct', 0)
+                if hv > 0:
+                    hybrid_pcts[ht] = hv
 
             hydro_cap = HYDRO_CAP_TWH.get(iso, hyd_pct / 100.0 * demand_twh)
             hydro_twh = min(hyd_pct / 100.0 * demand_twh, hydro_cap)
@@ -2331,6 +2339,7 @@ def _export_scenario_a(all_results, isos_processed, demand_data, gen_profiles,
                 demand_norm=demand_norm,
                 supply_profiles=supply_profiles,
                 supply_matrix=supply_matrix,
+                hybrid_pcts=hybrid_pcts or None,
             )
 
             result = {
