@@ -28,6 +28,7 @@ from dispatch_utils import (
     load_common_data,
     H,
     BATTERY_EFFICIENCY, BATTERY8_EFFICIENCY, LDES_EFFICIENCY, H2_EFFICIENCY,
+    HYBRID_TYPES,
 )
 from pipeline_config import ISOS, REGIONAL_DEMAND_TWH
 
@@ -61,8 +62,8 @@ def load_ef_mixes(iso, max_mixes=20):
                         'ldes_pct': row.get('ldes_pct', 0) or 0,
                         'h2_pct': row.get('h2_pct', 0) or 0,
                     }
-                    # Extract resource percentages
-                    for col in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro']:
+                    # Extract resource percentages (base + hybrid types)
+                    for col in ['clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro'] + HYBRID_TYPES:
                         if col in row.index:
                             mix['resource_pcts'][col] = row[col]
                     mixes.append(mix)
@@ -128,6 +129,9 @@ def run_batch_test(iso='PJM', max_mixes=20):
         ldes = mix['ldes_pct']
         h2 = mix['h2_pct']
 
+        # Detect if this mix has hybrid resources
+        has_hybrids = any(rp.get(ht, 0) > 0 for ht in HYBRID_TYPES)
+
         # Greedy
         t0 = time.time()
         r_greedy = reconstruct_hourly_dispatch(
@@ -140,6 +144,7 @@ def run_batch_test(iso='PJM', max_mixes=20):
             detailed=True,
             h2_dispatch_pct=h2,
             dispatch_mode='greedy',
+            include_hybrids=has_hybrids,
         )
         greedy_times.append(time.time() - t0)
         greedy_results.append(r_greedy)
@@ -156,6 +161,7 @@ def run_batch_test(iso='PJM', max_mixes=20):
             detailed=True,
             h2_dispatch_pct=h2,
             dispatch_mode='lp',
+            include_hybrids=has_hybrids,
         )
         lp_times.append(time.time() - t0)
         lp_results.append(r_lp)
