@@ -274,29 +274,49 @@ jobs:
           out_dir = os.path.join(os.getcwd(), '..', 'results', 'sweep_1215')
           os.makedirs(out_dir, exist_ok=True)
 
-          # Merge parquet files from all ISOs
-          dfs = []
+          import numpy as np
+
+          # Collect per-ISO dataframes from artifacts
+          iso_dfs = {}  # iso_name -> DataFrame
           for iso_dir in sorted(os.listdir(artifact_root)):
               iso_path = os.path.join(artifact_root, iso_dir)
               for root, dirs, files in os.walk(iso_path):
                   for f in files:
                       if f.endswith('.parquet'):
                           df = pd.read_parquet(os.path.join(root, f))
-                          dfs.append(df)
-                          print(f"  Loaded {iso_dir}: {len(df)} rows")
-          if dfs:
-              combined_df = pd.concat(dfs, ignore_index=True)
-              parquet_path = os.path.join(out_dir, 'sweep_1215_flat.parquet')
-              combined_df.to_parquet(parquet_path, index=False)
-              print(f"Combined parquet: {len(combined_df)} rows × {len(combined_df.columns)} cols")
-              size_mb = os.path.getsize(parquet_path) / 1e6
-              print(f"  Size: {size_mb:.1f} MB")
-          else:
+                          # Identify ISO from data
+                          isos_found = df['iso'].dropna().unique()
+                          for iso_name in isos_found:
+                              iso_slice = df[df['iso'] == iso_name]
+                              if iso_name in iso_dfs:
+                                  iso_dfs[iso_name] = pd.concat(
+                                      [iso_dfs[iso_name], iso_slice], ignore_index=True)
+                              else:
+                                  iso_dfs[iso_name] = iso_slice.copy()
+                          print(f"  Loaded {iso_dir}/{f}: {len(df)} rows")
+
+          if not iso_dfs:
               print("ERROR: No parquet files found in artifacts")
               sys.exit(1)
 
+          # Write per-ISO parquets (primary output — downstream reads these)
+          for iso_name, iso_df in sorted(iso_dfs.items()):
+              # Replace inf/-inf with NaN for pyarrow
+              numeric_cols = iso_df.select_dtypes(include=[np.number]).columns
+              iso_df[numeric_cols] = iso_df[numeric_cols].replace([np.inf, -np.inf], np.nan)
+              iso_parquet = os.path.join(out_dir, f'sweep_1215_{iso_name}.parquet')
+              iso_df.to_parquet(iso_parquet, index=False)
+              print(f"  Per-ISO parquet: {iso_parquet} ({len(iso_df)} rows)")
+
+          # Write combined parquet (backward-compat for sensitivity_analysis.py etc.)
+          combined_df = pd.concat(list(iso_dfs.values()), ignore_index=True)
+          parquet_path = os.path.join(out_dir, 'sweep_1215_flat.parquet')
+          combined_df.to_parquet(parquet_path, index=False)
+          print(f"Combined parquet: {len(combined_df)} rows x {len(combined_df.columns)} cols")
+          size_mb = os.path.getsize(parquet_path) / 1e6
+          print(f"  Size: {size_mb:.1f} MB")
+
           # Compute aggregates from the combined parquet
-          # (lightweight: just percentile bands on scalar columns)
           print("Computing P10/P50/P90 aggregates from parquet...")
           agg_cols = [
               'avg_lmp', 'lmp_p90', 'emissions_mt', 'emission_rate_tco2_mwh',
@@ -309,7 +329,7 @@ jobs:
           aggregates = {}
           for iso in sorted(combined_df['iso'].dropna().unique()):
               iso_df = combined_df[combined_df['iso'] == iso]
-              aggregates[iso] = {}
+              iso_agg = {}
               for year in sorted(iso_df['year'].dropna().unique()):
                   yr_df = iso_df[iso_df['year'] == year]
                   yr_agg = {}
@@ -322,12 +342,20 @@ jobs:
                               'p90': round(float(vals.quantile(0.9)), 4),
                               'mean': round(float(vals.mean()), 4),
                           }
-                  aggregates[iso][str(int(year))] = yr_agg
+                  iso_agg[str(int(year))] = yr_agg
+              aggregates[iso] = iso_agg
 
+              # Write per-ISO aggregate JSON
+              iso_agg_path = os.path.join(out_dir, f'sweep_1215_aggregates_{iso}.json')
+              with open(iso_agg_path, 'w') as f:
+                  json.dump({iso: iso_agg}, f, indent=2)
+              print(f"  Per-ISO aggregates: {iso_agg_path}")
+
+          # Write combined aggregates JSON
           agg_path = os.path.join(out_dir, 'sweep_1215_aggregates.json')
           with open(agg_path, 'w') as f:
               json.dump(aggregates, f, indent=2)
-          print(f"Aggregates saved: {agg_path} ({len(aggregates)} ISOs)")
+          print(f"Combined aggregates: {agg_path} ({len(aggregates)} ISOs)")
           PYEOF
 
       - name: Run sensitivity analysis (Morris + ANOVA)
