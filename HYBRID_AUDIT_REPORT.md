@@ -141,7 +141,15 @@ All 8 files from the fix commit verified. Each call site checked for 7 criteria.
 | 1 | `lmp_engine.py:1442` | `run_lmp_for_iso()` — supply_profiles loaded with `include_hybrids=True` at line 1402, but `get_or_compute_dispatch` dispatches base-only | **MODERATE** — LMP calculations don't account for hybrid generation in dispatch residual. Hybrid energy appears as 0, inflating residual demand and LMP. Affects step4 LMP outputs. |
 | 2 | `scenario_common.py:1533` | `_get_dispatch_co2_for_mix()` — supply_profiles loaded with `include_hybrids=True` at line 1530, but `get_or_compute_dispatch` dispatches base-only | **MODERATE** — CO2 displacement calculations ignore hybrid generation. Affects step2.2 CO2 outputs. |
 
-**Compound issue at `scenario_common.py:549-550`:** `compute_mix_cost()` returns `resource_pct` with only base 6 keys (no hybrids). When `_get_dispatch_co2_for_mix` reads this at line 1523, even if `get_or_compute_dispatch` supported `resource_types`, the hybrid percentages wouldn't be there.
+#### NEW BUG FOUND: `load_scenarios()` omits hybrid keys from `resource_mix`
+
+**`scripts/lmp_engine.py:1358-1365`** — `load_scenarios()` builds `resource_mix` dict with only base 6 keys, omitting `mix_solar_batt4`, `mix_solar_batt8`, `mix_wind_batt4`, `mix_wind_batt8` columns even though they exist in step2.2 parquets. This means hybrid resource percentages never reach `run_lmp_for_iso()` dispatch or `_compute_clean_peak_mw()`.
+
+**Severity: MODERATE** — Upstream data loading side of the `get_or_compute_dispatch` bug. Even if `get_or_compute_dispatch` were fixed, hybrid percentages would still be 0 because they're not loaded from the parquet.
+
+#### NEW BUG FOUND: `compute_mix_cost` `resource_pct` missing hybrid keys
+
+**`scripts/scenario_common.py:549-550`** — `compute_mix_cost()` returns `resource_pct` with only base 6 keys (no hybrids). When `_get_dispatch_co2_for_mix` reads this at line 1523, even if `get_or_compute_dispatch` supported `resource_types`, the hybrid percentages wouldn't be there.
 
 **Severity: MODERATE** — Affects LMP and CO2 analysis outputs (Step 4 secondary analysis), NOT the core cost optimization or resource mix selection (which correctly uses `resource_types=RESOURCE_TYPES_HYBRID` in `compute_mix_cost`).
 
@@ -257,6 +265,7 @@ The **entire hybrid dispatch code path** — from profile loading to matrix cons
 | Fixed files verified clean | 8/8 | — |
 | Remaining unhybridized calls (safe) | 8 | N/A (all safe) |
 | **NEW: `get_or_compute_dispatch` missing `resource_types`** | **1 function, 2 callers** | **Moderate** |
+| **NEW: `load_scenarios` omits hybrid keys from `resource_mix`** | **1** | **Moderate** |
 | **NEW: `compute_mix_cost` `resource_pct` missing hybrid keys** | **1** | **Moderate** |
 | Shape mismatches | 0 | — |
 | Test coverage gaps | 10 | Low (no correctness risk, but no regression safety net) |
@@ -272,13 +281,14 @@ The **entire hybrid dispatch code path** — from profile loading to matrix cons
 ### Total Remaining Bugs Found
 
 - **Critical (data corruption / crash risk):** 2 (market-simulator shape mismatches)
-- **Moderate (incorrect results):** 4 (1× `get_or_compute_dispatch` + 1× `resource_pct` in scripts/; 1× oversized fossil + 1× latent in market-simulator)
+- **Moderate (incorrect results):** 5 (1× `get_or_compute_dispatch` + 1× `load_scenarios` + 1× `resource_pct` in scripts/; 1× oversized fossil + 1× latent in market-simulator)
 - **Low (test gaps, no immediate impact):** 10 test coverage gaps
 
 ### Recommended Fixes (Priority Order)
 
 1. **`dispatch_utils.py:get_or_compute_dispatch`** — Add `resource_types=None` and `h2_dispatch_pct=0` parameters, pass through to `reconstruct_hourly_dispatch`.
-2. **`scenario_common.py:549-550`** — Add hybrid keys to `resource_pct` dict (same pattern as `resource_pcts.update(hybrid_pcts)` at line 436).
-3. **`market-simulator/scripts/dispatch_utils.py:build_supply_matrix`** — Add `resource_types=None` parameter matching the scripts/ API.
-4. **`market-simulator/scripts/scenario_common.py:1523`** — Use `RESOURCES_WITH_HYBRIDS` instead of `RESOURCES`.
-5. **Test coverage** — Add hybrid dispatch test fixtures and tests (lower priority, but needed for regression safety).
+2. **`lmp_engine.py:1358-1365`** — Add hybrid keys (`solar_batt4`, `solar_batt8`, `wind_batt4`, `wind_batt8`) to the `resource_mix` dict in `load_scenarios()`.
+3. **`scenario_common.py:549-550`** — Add hybrid keys to `resource_pct` dict (same pattern as `resource_pcts.update(hybrid_pcts)` at line 436).
+4. **`market-simulator/scripts/dispatch_utils.py:build_supply_matrix`** — Add `resource_types=None` parameter matching the scripts/ API.
+5. **`market-simulator/scripts/scenario_common.py:1523`** — Use `RESOURCES_WITH_HYBRIDS` instead of `RESOURCES`.
+6. **Test coverage** — Add hybrid dispatch test fixtures and tests (lower priority, but needed for regression safety).
