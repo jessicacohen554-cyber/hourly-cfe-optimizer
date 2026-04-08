@@ -44,7 +44,7 @@ print(f"  Peak demand MW: {demand_mw_profile.max():.0f}")
 print(f"  Baseline clean: {baseline_clean:.1f}%")
 
 # Build dispatch (no new builds, first year)
-dispatch = reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts, procurement_pct=100)
+dispatch = reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts, procurement_pct=100, include_hybrids=False)
 residual_mw = dispatch['residual_demand'] * total_annual_mwh
 
 # Build merit stack (no new builds, baseline growth)

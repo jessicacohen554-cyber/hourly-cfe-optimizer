@@ -90,7 +90,7 @@ def test_scarcity_reduction():
     stack_old, fossil_old = build_merit_order_stack(
         iso, baseline_clean, demand_growth_factor=1.0, new_fossil_builds=None)
     from dispatch_utils import reconstruct_hourly_dispatch
-    dispatch = reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts, procurement_pct=100)
+    dispatch = reconstruct_hourly_dispatch(demand_norm, supply_profiles, resource_pcts, procurement_pct=100, include_hybrids=False)
     residual_mw = dispatch['residual_demand'] * total_annual_mwh
     reserves_old = np.maximum(fossil_old - residual_mw, 0.0)
     from lmp_engine import PriceModel
