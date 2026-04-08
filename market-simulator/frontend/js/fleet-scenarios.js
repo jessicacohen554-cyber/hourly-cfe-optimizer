@@ -138,10 +138,45 @@
     }
 
     function loadData() {
-        fetch('data/fleet_scenario_results_sample.json')
-            .then(function (r) { if (r.ok) return r.json(); throw new Error('No data'); })
-            .then(onDataLoaded)
-            .catch(showError);
+        // Try per-ISO fleet result files first, fall back to combined
+        var ALL_FLEET_ISOS = ['CAISO', 'ERCOT', 'MISO', 'NEISO', 'NYISO', 'PJM', 'SPP'];
+        var perIsoFetches = ALL_FLEET_ISOS.map(function (iso) {
+            return fetch('data/fleet_scenario_results_' + iso + '.json')
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .catch(function () { return null; });
+        });
+        Promise.all(perIsoFetches).then(function (results) {
+            var loaded = results.filter(function (r) { return r !== null; });
+            if (loaded.length > 0) {
+                // Merge per-ISO results: combine plant_detail and plant_percentiles
+                var merged = JSON.parse(JSON.stringify(loaded[0]));
+                for (var i = 1; i < loaded.length; i++) {
+                    var isoData = loaded[i];
+                    Object.keys(isoData.scenarios || {}).forEach(function (skey) {
+                        var src = isoData.scenarios[skey];
+                        var dst = merged.scenarios[skey];
+                        if (!dst) { merged.scenarios[skey] = src; return; }
+                        // Merge plant_detail arrays per year
+                        Object.keys(src.plant_detail || {}).forEach(function (yr) {
+                            if (!dst.plant_detail[yr]) dst.plant_detail[yr] = [];
+                            dst.plant_detail[yr] = dst.plant_detail[yr].concat(src.plant_detail[yr] || []);
+                        });
+                        // Merge plant_percentiles arrays per year
+                        Object.keys(src.plant_percentiles || {}).forEach(function (yr) {
+                            if (!dst.plant_percentiles[yr]) dst.plant_percentiles[yr] = [];
+                            dst.plant_percentiles[yr] = dst.plant_percentiles[yr].concat(src.plant_percentiles[yr] || []);
+                        });
+                    });
+                }
+                onDataLoaded(merged);
+            } else {
+                // Fall back to combined file
+                fetch('data/fleet_scenario_results_sample.json')
+                    .then(function (r) { if (r.ok) return r.json(); throw new Error('No data'); })
+                    .then(onDataLoaded)
+                    .catch(showError);
+            }
+        }).catch(showError);
     }
 
     function showError() {

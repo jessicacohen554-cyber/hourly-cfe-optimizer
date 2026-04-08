@@ -164,19 +164,46 @@ var FleetSidebar = (function () {
                 if (sweepLoaded) onAllLoaded();
             });
 
-        // 2. Sweep dispatch data
-        fetch('data/sweep_dispatch_data.json')
-            .then(function (r) { if (r.ok) return r.json(); throw new Error('No sweep data'); })
-            .then(function (data) {
-                sweepData = data;
+        // 2. Sweep dispatch data — try per-ISO files first, fall back to combined
+        var ALL_SWEEP_ISOS = ['CAISO', 'ERCOT', 'MISO', 'NEISO', 'NYISO', 'PJM', 'SPP'];
+        var perIsoFetches = ALL_SWEEP_ISOS.map(function (iso) {
+            return fetch('data/sweep_dispatch_data_' + iso + '.json')
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .catch(function () { return null; });
+        });
+        Promise.all(perIsoFetches).then(function (results) {
+            var loaded = results.filter(function (r) { return r !== null; });
+            if (loaded.length > 0) {
+                // Merge per-ISO results into a single sweepData object
+                var merged = Object.assign({}, loaded[0]);
+                merged.data = {};
+                merged.isos = [];
+                loaded.forEach(function (isoData) {
+                    var isoKeys = Object.keys(isoData.data || {});
+                    isoKeys.forEach(function (k) {
+                        merged.data[k] = isoData.data[k];
+                        if (merged.isos.indexOf(k) === -1) merged.isos.push(k);
+                    });
+                });
+                merged.isos.sort();
+                sweepData = merged;
                 sweepLoaded = true;
                 if (fleetLoaded) onAllLoaded();
-            })
-            .catch(function (err) {
-                console.warn('Sweep dispatch data not available:', err);
-                sweepLoaded = true;
-                if (fleetLoaded) onAllLoaded();
-            });
+            } else {
+                // Fall back to combined file
+                return fetch('data/sweep_dispatch_data.json')
+                    .then(function (r) { if (r.ok) return r.json(); throw new Error('No sweep data'); })
+                    .then(function (data) {
+                        sweepData = data;
+                        sweepLoaded = true;
+                        if (fleetLoaded) onAllLoaded();
+                    });
+            }
+        }).catch(function (err) {
+            console.warn('Sweep dispatch data not available:', err);
+            sweepLoaded = true;
+            if (fleetLoaded) onAllLoaded();
+        });
 
         // Load saved scenarios from localStorage
         try {

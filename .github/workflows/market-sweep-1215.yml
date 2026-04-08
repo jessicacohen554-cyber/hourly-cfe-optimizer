@@ -379,16 +379,35 @@ jobs:
         working-directory: market-simulator/scripts
         run: python extract_iso_sweep_data.py
 
+      - name: Export sweep dispatch data (per-ISO + combined JSON)
+        working-directory: market-simulator/scripts
+        run: python export_sweep_dispatch_data.py
+
       - name: Build fleet scenario data
         working-directory: market-simulator/scripts
         run: python build_fleet_scenario_data.py
 
       - name: Sync fleet data to dashboard
         run: |
-          # fleet_scenario_results_sample.json → dashboard/data/
           mkdir -p dashboard/data
+
+          # Combined fleet + sweep JSON files → dashboard/data/
           cp -v market-simulator/frontend/data/fleet_scenario_results_sample.json \
                 dashboard/data/fleet_scenario_results_sample.json
+
+          # Per-ISO fleet result JSONs → dashboard/data/
+          for f in market-simulator/frontend/data/fleet_scenario_results_*.json; do
+            if [ -f "$f" ]; then
+              cp -v "$f" "dashboard/data/$(basename $f)"
+            fi
+          done
+
+          # Per-ISO + combined sweep dispatch JSONs → dashboard/data/
+          for f in market-simulator/frontend/data/sweep_dispatch_data*.json; do
+            if [ -f "$f" ]; then
+              cp -v "$f" "dashboard/data/$(basename $f)"
+            fi
+          done
 
           # constellation_scenarios.json → dashboard/data/
           cp -v market-simulator/fleet_scenarios/constellation_scenarios.json \
@@ -402,7 +421,8 @@ jobs:
           done
 
           echo "Fleet data synced to dashboard/"
-          ls -la dashboard/data/fleet_scenario_results_sample.json
+          ls -la dashboard/data/fleet_scenario_results_*.json
+          ls -la dashboard/data/sweep_dispatch_data*.json
           ls -la dashboard/data/constellation_scenarios.json
 
       - name: Create output branch and commit
@@ -418,10 +438,12 @@ jobs:
           git add -f market-simulator/results/sweep_1215/
           git add -f market-simulator/results/sensitivity/
 
-          # Fleet scenario data (both locations)
-          git add -f market-simulator/frontend/data/fleet_scenario_results_sample.json
+          # Fleet scenario data — per-ISO + combined (both locations)
+          git add -f market-simulator/frontend/data/fleet_scenario_results_*.json
+          git add -f market-simulator/frontend/data/sweep_dispatch_data*.json
           git add -f market-simulator/fleet_scenarios/constellation_scenarios.json
-          git add -f dashboard/data/fleet_scenario_results_sample.json
+          git add -f dashboard/data/fleet_scenario_results_*.json
+          git add -f dashboard/data/sweep_dispatch_data*.json
           git add -f dashboard/data/constellation_scenarios.json
 
           # Dashboard JS exports
