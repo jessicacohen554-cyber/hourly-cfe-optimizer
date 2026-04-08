@@ -39,6 +39,7 @@ from pipeline_config import (
     THRESHOLD_TARGET_YEARS, OUTPUT_THRESHOLDS,
     DEMAND_GROWTH_RATES as _DEMAND_GROWTH_RATES_LMH,
     HYBRID_TYPES,
+    RESOURCE_CAPACITY_FACTORS, HYBRID_DC_AC_RATIOS, _HYBRID_PARENT_REN,
 )
 
 # Import dispatch utilities
@@ -325,11 +326,17 @@ def _resource_new_build_lcoe(res, sens, iso):
 
 
 def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1.0,
-                     demand_norm=None, supply_profiles=None, supply_matrix=None):
+                     demand_norm=None, supply_profiles=None, supply_matrix=None,
+                     hybrid_pcts=None):
     """Compute total system cost per MWh for a single mix under a sensitivity scenario.
 
     Mix format: [cf, sol, wnd, osw, ccs, hyd, score, bat4, bat8, ldes, h2] (11 elements)
     Backward compat: 10-element mixes treated as [cf, sol, wnd, ccs, hyd, score, bat4, bat8, ldes, h2]
+
+    Args:
+        hybrid_pcts: optional dict of hybrid resource percentages, e.g.
+            {'solar_batt4': 5.0, 'wind_batt8': 3.0}. When provided, these are
+            included in the gas backup calculation (dispatch-based and static ELCC).
 
     When demand_norm/supply_profiles/supply_matrix are provided, uses dispatch-based
     gas backup (actual net peak hour from 8760 dispatch) instead of static ELCCs.
@@ -422,6 +429,10 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
             'clean_firm': cf_pct, 'solar': sol_pct, 'wind': wnd_pct,
             'offshore_wind': osw_pct, 'ccs_ccgt': ccs_pct, 'hydro': hyd_pct,
         }
+        # Include hybrid resources in dispatch so residual peak demand reflects
+        # their generation and battery-shifted capacity contribution
+        if hybrid_pcts:
+            resource_pcts.update(hybrid_pcts)
         disp = reconstruct_hourly_dispatch(
             demand_norm, supply_profiles, resource_pcts,
             procurement_pct=100,
@@ -465,6 +476,18 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
             bat8_pct / 100 * demand_mwh / 8.0 * PEAK_CAPACITY_CREDITS['battery8'] +
             ldes_pct / 100 * demand_mwh / 100.0 * PEAK_CAPACITY_CREDITS['ldes']
         )
+        # Hybrid peak capacity: energy fraction → installed MW → peak MW
+        # Matches step2_2a methodology (capacity factor conversion + PCC)
+        if hybrid_pcts:
+            for htype, hpct in hybrid_pcts.items():
+                if hpct > 0 and htype in PEAK_CAPACITY_CREDITS:
+                    parent = _HYBRID_PARENT_REN[htype]
+                    cf_r = RESOURCE_CAPACITY_FACTORS[parent][iso]
+                    if htype in HYBRID_DC_AC_RATIOS:
+                        cf_r = min(cf_r * HYBRID_DC_AC_RATIOS[htype][iso], 1.0)
+                    h_avg_mw = hpct / 100.0 * avg_demand_mw
+                    h_installed = h_avg_mw / cf_r
+                    clean_peak_mw += h_installed * PEAK_CAPACITY_CREDITS[htype]
         gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw) / gaf
         existing_gas_used_mw = min(gas_needed_mw, existing_gas_mw)
         new_gas_mw = max(0, gas_needed_mw - existing_gas_used_mw)
@@ -805,6 +828,17 @@ def _precompute_cost_params(sens, iso, demand_twh, overrides=None, growth_factor
         existing.get('offshore_wind', 0),    # 33: exist_osw_pct
         osw_price,                           # 34: offshore wind price (LCOE+TX)
         pcc.get('offshore_wind', 0),         # 35: offshore wind capacity credit
+        # Hybrid capacity credits (for gas backup when hybrids are in mix columns 11-14)
+        pcc.get('solar_batt4', 0),           # 36: solar_batt4 capacity credit
+        pcc.get('solar_batt8', 0),           # 37: solar_batt8 capacity credit
+        pcc.get('wind_batt4', 0),            # 38: wind_batt4 capacity credit
+        pcc.get('wind_batt8', 0),            # 39: wind_batt8 capacity credit
+        # Hybrid installed-MW conversion factors: CF of parent × DC:AC ratio
+        # Used to convert energy fraction → installed MW → peak MW
+        min(RESOURCE_CAPACITY_FACTORS['solar'][iso] * HYBRID_DC_AC_RATIOS.get('solar_batt4', {}).get(iso, 1.0), 1.0),  # 40: sb4_cf
+        min(RESOURCE_CAPACITY_FACTORS['solar'][iso] * HYBRID_DC_AC_RATIOS.get('solar_batt8', {}).get(iso, 1.0), 1.0),  # 41: sb8_cf
+        RESOURCE_CAPACITY_FACTORS['wind'][iso],   # 42: wb4_cf (no DC:AC for wind hybrids)
+        RESOURCE_CAPACITY_FACTORS['wind'][iso],   # 43: wb8_cf (no DC:AC for wind hybrids)
     ], dtype=np.float64)
 
     return params
@@ -814,8 +848,9 @@ def _batch_costs_numpy(mixes, params):
     """Vectorized cost computation using pure numpy.
 
     Args:
-        mixes: (N, 11) float64 array — [cf, sol, wnd, osw, ccs, hyd, match, bat4, bat8, ldes, h2]
-        params: float64[36] from _precompute_cost_params
+        mixes: (N, 11+) float64 array — [cf, sol, wnd, osw, ccs, hyd, match, bat4, bat8, ldes, h2,
+               sb4, sb8, wb4, wb8] (columns 11-14 optional: hybrid resource %)
+        params: float64[44] from _precompute_cost_params
 
     Returns: (N,) array of total_cost per MWh
     """
@@ -828,6 +863,12 @@ def _batch_costs_numpy(mixes, params):
     bat4 = mixes[:, 7]
     bat8 = mixes[:, 8]
     ldes = mixes[:, 9]
+    # Hybrid columns (optional — zero if not present)
+    N = mixes.shape[0]
+    sb4 = mixes[:, 11] if mixes.shape[1] > 11 else np.zeros(N, dtype=np.float64)
+    sb8 = mixes[:, 12] if mixes.shape[1] > 12 else np.zeros(N, dtype=np.float64)
+    wb4 = mixes[:, 13] if mixes.shape[1] > 13 else np.zeros(N, dtype=np.float64)
+    wb8 = mixes[:, 14] if mixes.shape[1] > 14 else np.zeros(N, dtype=np.float64)
 
     p = params  # alias
     dt = p[4]   # demand_twh
@@ -859,7 +900,12 @@ def _batch_costs_numpy(mixes, params):
         hydro_avg_mw * p[24] +
         bat4 / 100.0 * p[17] / 4.0 * p[25] +
         bat8 / 100.0 * p[17] / 8.0 * p[26] +
-        ldes / 100.0 * p[17] / 100.0 * p[27]
+        ldes / 100.0 * p[17] / 100.0 * p[27] +
+        # Hybrid peak capacity: energy fraction → installed MW → peak MW
+        sb4 / 100.0 * p[18] / p[40] * p[36] +
+        sb8 / 100.0 * p[18] / p[41] * p[37] +
+        wb4 / 100.0 * p[18] / p[42] * p[38] +
+        wb8 / 100.0 * p[18] / p[43] * p[39]
     )
 
     gas_needed_mw = np.maximum(0.0, p[19] - clean_peak_mw) / p[28]
@@ -891,6 +937,7 @@ def _make_numba_kernel():
     @njit(cache=True)
     def _kernel(mixes, params):
         N = mixes.shape[0]
+        ncols = mixes.shape[1]
         costs = np.empty(N)
         for i in range(N):
             cf   = mixes[i, 0]
@@ -902,6 +949,11 @@ def _make_numba_kernel():
             bat4 = mixes[i, 7]
             bat8 = mixes[i, 8]
             ld   = mixes[i, 9]
+            # Hybrid columns (optional)
+            sb4 = mixes[i, 11] if ncols > 11 else 0.0
+            sb8 = mixes[i, 12] if ncols > 12 else 0.0
+            wb4 = mixes[i, 13] if ncols > 13 else 0.0
+            wb8 = mixes[i, 14] if ncols > 14 else 0.0
 
             dt = params[4]
 
@@ -929,7 +981,12 @@ def _make_numba_kernel():
                 hyd_avg_mw * params[24] +
                 bat4 / 100.0 * params[17] / 4.0 * params[25] +
                 bat8 / 100.0 * params[17] / 8.0 * params[26] +
-                ld   / 100.0 * params[17] / 100.0 * params[27]
+                ld   / 100.0 * params[17] / 100.0 * params[27] +
+                # Hybrid peak capacity: energy fraction → installed MW → peak MW
+                sb4 / 100.0 * params[18] / params[40] * params[36] +
+                sb8 / 100.0 * params[18] / params[41] * params[37] +
+                wb4 / 100.0 * params[18] / params[42] * params[38] +
+                wb8 / 100.0 * params[18] / params[43] * params[39]
             )
 
             gas_needed = max(0.0, params[19] - clean_peak) / params[28]
@@ -962,8 +1019,9 @@ def batch_compute_total_costs(mixes_arr, params):
     """Compute total_cost for all mixes. Uses Numba if available, else numpy.
 
     Args:
-        mixes_arr: (N, 11) float64 array — [cf, sol, wnd, osw, ccs, hyd, match, bat4, bat8, ldes, h2]
-        params: float64[36] from _precompute_cost_params
+        mixes_arr: (N, 11+) float64 array — [cf, sol, wnd, osw, ccs, hyd, match, bat4, bat8, ldes, h2,
+                   sb4, sb8, wb4, wb8] (columns 11-14 optional: hybrid resource %)
+        params: float64[44] from _precompute_cost_params
 
     Returns: (N,) float64 array of total_cost per MWh
     """
