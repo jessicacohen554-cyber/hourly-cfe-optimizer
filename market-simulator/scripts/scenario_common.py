@@ -37,6 +37,8 @@ from pipeline_config import (
     RESOURCE_ADEQUACY_MARGIN,
     THRESHOLD_TARGET_YEARS, OUTPUT_THRESHOLDS,
     DEMAND_GROWTH_RATES as _DEMAND_GROWTH_RATES_LMH,
+    get_hybrid_lcoe, get_hybrid_tx,
+    HYBRID_MAX_PER_TYPE,
 )
 
 # Import dispatch utilities
@@ -327,17 +329,32 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
     """Compute total system cost per MWh for a single mix under a sensitivity scenario.
 
     Mix format: [cf, sol, wnd, osw, ccs, hyd, score, bat4, bat8, ldes, h2] (11 elements)
+    Extended:   [cf, sol, wnd, osw, ccs, hyd, score, bat4, bat8, ldes, h2, sb4, sb8, wb4, wb8] (15 elements)
     Backward compat: 10-element mixes treated as [cf, sol, wnd, ccs, hyd, score, bat4, bat8, ldes, h2]
+
+    Hybrid resource percentages (solar_batt4/8, wind_batt4/8) can be provided via:
+      1. Extended 15-element mix format (positions 11-14)
+      2. overrides['hybrid_pcts'] dict, e.g. {'solar_batt4': 5.0, ...}
+    Hybrids reduce residual peak demand in the gas backup calculation.
 
     When demand_norm/supply_profiles/supply_matrix are provided, uses dispatch-based
     gas backup (actual net peak hour from 8760 dispatch) instead of static ELCCs.
     """
-    if len(mix) >= 11:
+    if len(mix) >= 15:
+        cf_pct, sol_pct, wnd_pct, osw_pct = mix[0], mix[1], mix[2], mix[3]
+        ccs_pct, hyd_pct = mix[4], mix[5]
+        match_score = mix[6]
+        bat4_pct, bat8_pct, ldes_pct = mix[7], mix[8], mix[9]
+        h2_pct = mix[10]
+        sb4_pct, sb8_pct = mix[11], mix[12]
+        wb4_pct, wb8_pct = mix[13], mix[14]
+    elif len(mix) >= 11:
         cf_pct, sol_pct, wnd_pct, osw_pct = mix[0], mix[1], mix[2], mix[3]
         ccs_pct, hyd_pct = mix[4], mix[5]
         match_score = mix[6]
         bat4_pct, bat8_pct, ldes_pct = mix[7], mix[8], mix[9]
         h2_pct = mix[10] if len(mix) > 10 else 0
+        sb4_pct = sb8_pct = wb4_pct = wb8_pct = 0.0
     else:
         # Legacy 10-element format (no offshore wind)
         cf_pct, sol_pct, wnd_pct, ccs_pct, hyd_pct = mix[0], mix[1], mix[2], mix[3], mix[4]
@@ -345,6 +362,16 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
         match_score = mix[5]
         bat4_pct, bat8_pct, ldes_pct = mix[6], mix[7], mix[8]
         h2_pct = mix[9] if len(mix) > 9 else 0
+        sb4_pct = sb8_pct = wb4_pct = wb8_pct = 0.0
+
+    # Override hybrid pcts from overrides dict if provided (takes precedence over mix)
+    if overrides and 'hybrid_pcts' in overrides:
+        hp = overrides['hybrid_pcts']
+        sb4_pct = hp.get('solar_batt4', sb4_pct)
+        sb8_pct = hp.get('solar_batt8', sb8_pct)
+        wb4_pct = hp.get('wind_batt4', wb4_pct)
+        wb8_pct = hp.get('wind_batt8', wb8_pct)
+    has_hybrids = (sb4_pct + sb8_pct + wb4_pct + wb8_pct) > 0
     match_frac = match_score / 100.0
     ren_name = LEVEL_NAME[sens['ren']]
     batt_name = LEVEL_NAME[sens['batt']]
@@ -420,12 +447,20 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
             'clean_firm': cf_pct, 'solar': sol_pct, 'wind': wnd_pct,
             'offshore_wind': osw_pct, 'ccs_ccgt': ccs_pct, 'hydro': hyd_pct,
         }
+        # Include hybrid resources in dispatch when present — they reduce
+        # residual peak demand and shrink the required fossil fleet.
+        if has_hybrids:
+            resource_pcts['solar_batt4'] = sb4_pct
+            resource_pcts['solar_batt8'] = sb8_pct
+            resource_pcts['wind_batt4'] = wb4_pct
+            resource_pcts['wind_batt8'] = wb8_pct
         disp = reconstruct_hourly_dispatch(
             demand_norm, supply_profiles, resource_pcts,
             procurement_pct=100,
             battery_dispatch_pct=bat4_pct, battery8_dispatch_pct=bat8_pct,
             ldes_dispatch_pct=ldes_pct, h2_dispatch_pct=h2_pct,
             supply_matrix=supply_matrix,
+            include_hybrids=has_hybrids,
         )
         # residual_demand is in fraction-of-annual-energy units;
         # multiply by total annual MWh to get MW (each value = 1 hour)
@@ -461,7 +496,11 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
             hydro_avg_mw * PEAK_CAPACITY_CREDITS['hydro'] +
             bat4_pct / 100 * demand_mwh / 4.0 * PEAK_CAPACITY_CREDITS['battery'] +
             bat8_pct / 100 * demand_mwh / 8.0 * PEAK_CAPACITY_CREDITS['battery8'] +
-            ldes_pct / 100 * demand_mwh / 100.0 * PEAK_CAPACITY_CREDITS['ldes']
+            ldes_pct / 100 * demand_mwh / 100.0 * PEAK_CAPACITY_CREDITS['ldes'] +
+            sb4_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS.get('solar_batt4', 0) +
+            sb8_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS.get('solar_batt8', 0) +
+            wb4_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS.get('wind_batt4', 0) +
+            wb8_pct / 100 * avg_demand_mw * PEAK_CAPACITY_CREDITS.get('wind_batt8', 0)
         )
         gas_needed_mw = max(0, ra_peak_mw - clean_peak_mw) / gaf
         existing_gas_used_mw = min(gas_needed_mw, existing_gas_mw)
@@ -479,6 +518,15 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
     # Offshore wind cost (0 for non-offshore ISOs since osw_new=0 and LCOE=0)
     osw_lcoe = LCOE_TABLES['offshore_wind'][ren_name].get(iso, 0)
     osw_tx = get_tx('offshore_wind', tx_name, iso)
+    # Hybrid resource costs (blended LCOE + transmission)
+    hybrid_cost = 0.0
+    if has_hybrids:
+        for h_type, h_pct in [('solar_batt4', sb4_pct), ('solar_batt8', sb8_pct),
+                               ('wind_batt4', wb4_pct), ('wind_batt8', wb8_pct)]:
+            if h_pct > 0:
+                h_lcoe = get_hybrid_lcoe(h_type, ren_name, batt_name, iso)
+                h_tx = get_hybrid_tx(h_type, tx_name, iso)
+                hybrid_cost += h_pct / 100.0 * (h_lcoe + h_tx)
     total_cost = (
         sol_new / 100.0 * (LCOE_TABLES['solar'][ren_name][iso] + get_tx('solar', tx_name, iso)) +
         wnd_new / 100.0 * (LCOE_TABLES['wind'][ren_name][iso] + get_tx('wind', tx_name, iso)) +
@@ -490,6 +538,7 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
         bat4_pct / 100.0 * max(0, LCOE_TABLES['battery'][batt_name][iso] + get_tx('battery', tx_name, iso) - STORAGE_REVENUE_CREDITS['battery'][iso]) +
         bat8_pct / 100.0 * max(0, LCOE_TABLES['battery8'][batt_name][iso] + get_tx('battery8', tx_name, iso) - STORAGE_REVENUE_CREDITS['battery8'][iso]) +
         ldes_pct / 100.0 * max(0, ldes_price - STORAGE_REVENUE_CREDITS['ldes'][iso]) +
+        hybrid_cost +
         gas_cost
     )
     new_build_per_mwh = total_cost - gas_cost
@@ -507,6 +556,14 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
             resource_twh[res] = hydro_twh_capped
         else:
             resource_twh[res] = pct / 100.0 * demand_twh
+    resource_pct = {'clean_firm': cf_pct, 'solar': sol_pct, 'wind': wnd_pct,
+                    'offshore_wind': osw_pct, 'ccs_ccgt': ccs_pct, 'hydro': hyd_pct}
+    # Include hybrid resources in resource_pct when present
+    if has_hybrids:
+        resource_pct['solar_batt4'] = sb4_pct
+        resource_pct['solar_batt8'] = sb8_pct
+        resource_pct['wind_batt4'] = wb4_pct
+        resource_pct['wind_batt8'] = wb8_pct
     return {
         'total_cost': round(total_cost, 2),
         'effective_cost': round(eff_cost, 2),
@@ -514,13 +571,16 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
         'wholesale': wholesale,
         'gas_cost': round(gas_cost, 4),
         'resource_twh': resource_twh,
-        'resource_pct': {'clean_firm': cf_pct, 'solar': sol_pct, 'wind': wnd_pct,
-                         'offshore_wind': osw_pct, 'ccs_ccgt': ccs_pct, 'hydro': hyd_pct},
+        'resource_pct': resource_pct,
         'match_score': match_score,
         'battery_twh': bat4_pct / 100.0 * demand_twh,
         'battery8_twh': bat8_pct / 100.0 * demand_twh,
         'ldes_twh': ldes_pct / 100.0 * demand_twh,
         'h2_twh': h2_pct / 100.0 * demand_twh,
+        'solar_batt4_twh': sb4_pct / 100.0 * demand_twh,
+        'solar_batt8_twh': sb8_pct / 100.0 * demand_twh,
+        'wind_batt4_twh': wb4_pct / 100.0 * demand_twh,
+        'wind_batt8_twh': wb8_pct / 100.0 * demand_twh,
         'gas_backup_mw': round(gas_needed_mw),
         'new_gas_mw': round(new_gas_mw),
         'existing_gas_used_mw': round(existing_gas_used_mw),
@@ -660,9 +720,10 @@ except ImportError:
     _HAS_NUMBA = False
 
 def _to_mix_array(mixes):
-    """Convert list-of-lists mixes to (N, 11) float64 array.
+    """Convert list-of-lists mixes to (N, 11) or (N, 15) float64 array.
 
-    Mix format: [cf, sol, wnd, osw, ccs, hyd, score, bat4, bat8, ldes, h2]
+    Mix format: [cf, sol, wnd, osw, ccs, hyd, score, bat4, bat8, ldes, h2] (11 elements)
+    Extended:   [cf, sol, wnd, osw, ccs, hyd, score, bat4, bat8, ldes, h2, sb4, sb8, wb4, wb8] (15 elements)
     Backward compat: 10-element mixes (no osw) auto-padded with osw=0 at index 3.
     """
     if isinstance(mixes, np.ndarray):
@@ -676,15 +737,18 @@ def _to_mix_array(mixes):
             padded[:, 3] = 0.0                   # osw = 0
             padded[:, 4:] = mixes[:, 3:]         # ccs, hyd, score, bat4, bat8, ldes, h2
             return padded
-    arr = np.zeros((len(mixes), 11), dtype=np.float64)
+    # Determine target width from first mix
+    first_len = len(mixes[0]) if mixes else 11
+    ncols = 15 if first_len >= 15 else 11
+    arr = np.zeros((len(mixes), ncols), dtype=np.float64)
     for i, m in enumerate(mixes):
         if len(m) == 10:
             # Old format — insert osw=0 at index 3
             arr[i, :3] = m[:3]
             arr[i, 3] = 0.0
-            arr[i, 4:] = m[3:]
+            arr[i, 4:11] = m[3:]
         else:
-            n = min(len(m), 11)
+            n = min(len(m), ncols)
             for j in range(n):
                 arr[i, j] = m[j]
     return arr
@@ -693,7 +757,7 @@ def _to_mix_array(mixes):
 def _precompute_cost_params(sens, iso, demand_twh, overrides=None, growth_factor=1.0):
     """Pack all scalar cost parameters into a flat float64 array for the batch kernel.
 
-    Returns (params, is_caiso) where params is float64[36].
+    Returns params as float64[44] (slots 0-35 = base, 36-43 = hybrid LCOE + PCC).
     Column layout documented in _batch_costs_numpy / _batch_costs_numba.
     """
     ren_name = LEVEL_NAME[sens['ren']]
@@ -764,6 +828,12 @@ def _precompute_cost_params(sens, iso, demand_twh, overrides=None, growth_factor
     ra_peak_mw = peak_mw * (1 + RESOURCE_ADEQUACY_MARGIN)
 
     pcc = PEAK_CAPACITY_CREDITS
+    # Hybrid LCOEs (blended renewable + storage + transmission)
+    sb4_price = get_hybrid_lcoe('solar_batt4', ren_name, batt_name, iso) + get_hybrid_tx('solar_batt4', tx_name, iso)
+    sb8_price = get_hybrid_lcoe('solar_batt8', ren_name, batt_name, iso) + get_hybrid_tx('solar_batt8', tx_name, iso)
+    wb4_price = get_hybrid_lcoe('wind_batt4', ren_name, batt_name, iso) + get_hybrid_tx('wind_batt4', tx_name, iso)
+    wb8_price = get_hybrid_lcoe('wind_batt8', ren_name, batt_name, iso) + get_hybrid_tx('wind_batt8', tx_name, iso)
+
     params = np.array([
         existing.get('clean_firm', 0),       # 0: exist_cf_pct
         existing.get('solar', 0),            # 1: exist_sol_pct
@@ -801,6 +871,15 @@ def _precompute_cost_params(sens, iso, demand_twh, overrides=None, growth_factor
         existing.get('offshore_wind', 0),    # 33: exist_osw_pct
         osw_price,                           # 34: offshore wind price (LCOE+TX)
         pcc.get('offshore_wind', 0),         # 35: offshore wind capacity credit
+        # Hybrid params (slots 36-43)
+        sb4_price,                           # 36: solar_batt4 LCOE+TX
+        sb8_price,                           # 37: solar_batt8 LCOE+TX
+        wb4_price,                           # 38: wind_batt4 LCOE+TX
+        wb8_price,                           # 39: wind_batt8 LCOE+TX
+        pcc.get('solar_batt4', 0),           # 40: solar_batt4 capacity credit
+        pcc.get('solar_batt8', 0),           # 41: solar_batt8 capacity credit
+        pcc.get('wind_batt4', 0),            # 42: wind_batt4 capacity credit
+        pcc.get('wind_batt8', 0),            # 43: wind_batt8 capacity credit
     ], dtype=np.float64)
 
     return params
@@ -810,8 +889,10 @@ def _batch_costs_numpy(mixes, params):
     """Vectorized cost computation using pure numpy.
 
     Args:
-        mixes: (N, 11) float64 array — [cf, sol, wnd, osw, ccs, hyd, match, bat4, bat8, ldes, h2]
-        params: float64[36] from _precompute_cost_params
+        mixes: (N, 11) or (N, 15) float64 array
+               11-col: [cf, sol, wnd, osw, ccs, hyd, match, bat4, bat8, ldes, h2]
+               15-col: [cf, sol, wnd, osw, ccs, hyd, match, bat4, bat8, ldes, h2, sb4, sb8, wb4, wb8]
+        params: float64[44] from _precompute_cost_params
 
     Returns: (N,) array of total_cost per MWh
     """
@@ -824,6 +905,16 @@ def _batch_costs_numpy(mixes, params):
     bat4 = mixes[:, 7]
     bat8 = mixes[:, 8]
     ldes = mixes[:, 9]
+
+    # Hybrid columns (0 if mix array is 11-col)
+    N = mixes.shape[0]
+    if mixes.shape[1] >= 15:
+        sb4 = mixes[:, 11]
+        sb8 = mixes[:, 12]
+        wb4 = mixes[:, 13]
+        wb8 = mixes[:, 14]
+    else:
+        sb4 = sb8 = wb4 = wb8 = np.zeros(N, dtype=np.float64)
 
     p = params  # alias
     dt = p[4]   # demand_twh
@@ -842,7 +933,7 @@ def _batch_costs_numpy(mixes, params):
     geo_twh = np.minimum(remaining_twh, p[11])       # 0 for non-CAISO
     remaining_twh = np.maximum(0.0, remaining_twh - geo_twh)
 
-    # Gas backup
+    # Gas backup (ELCC-based)
     hydro_twh_capped = np.minimum(hyd / 100.0 * dt, p[5])
     hydro_avg_mw = hydro_twh_capped * 1e6 / 8760.0
 
@@ -855,7 +946,11 @@ def _batch_costs_numpy(mixes, params):
         hydro_avg_mw * p[24] +
         bat4 / 100.0 * p[17] / 4.0 * p[25] +
         bat8 / 100.0 * p[17] / 8.0 * p[26] +
-        ldes / 100.0 * p[17] / 100.0 * p[27]
+        ldes / 100.0 * p[17] / 100.0 * p[27] +
+        sb4  / 100.0 * p[18] * p[40] +
+        sb8  / 100.0 * p[18] * p[41] +
+        wb4  / 100.0 * p[18] * p[42] +
+        wb8  / 100.0 * p[18] * p[43]
     )
 
     gas_needed_mw = np.maximum(0.0, p[19] - clean_peak_mw) / p[28]
@@ -876,6 +971,10 @@ def _batch_costs_numpy(mixes, params):
         bat4 / 100.0 * p[14] +
         bat8 / 100.0 * p[15] +
         ldes / 100.0 * p[16] +
+        sb4  / 100.0 * p[36] +
+        sb8  / 100.0 * p[37] +
+        wb4  / 100.0 * p[38] +
+        wb8  / 100.0 * p[39] +
         gas_cost
     )
 
@@ -887,6 +986,7 @@ def _make_numba_kernel():
     @njit(cache=True)
     def _kernel(mixes, params):
         N = mixes.shape[0]
+        ncols = mixes.shape[1]
         costs = np.empty(N)
         for i in range(N):
             cf   = mixes[i, 0]
@@ -898,6 +998,18 @@ def _make_numba_kernel():
             bat4 = mixes[i, 7]
             bat8 = mixes[i, 8]
             ld   = mixes[i, 9]
+
+            # Hybrid columns (0 if 11-col mix)
+            if ncols >= 15:
+                sb4 = mixes[i, 11]
+                sb8 = mixes[i, 12]
+                wb4 = mixes[i, 13]
+                wb8 = mixes[i, 14]
+            else:
+                sb4 = 0.0
+                sb8 = 0.0
+                wb4 = 0.0
+                wb8 = 0.0
 
             dt = params[4]
 
@@ -925,7 +1037,11 @@ def _make_numba_kernel():
                 hyd_avg_mw * params[24] +
                 bat4 / 100.0 * params[17] / 4.0 * params[25] +
                 bat8 / 100.0 * params[17] / 8.0 * params[26] +
-                ld   / 100.0 * params[17] / 100.0 * params[27]
+                ld   / 100.0 * params[17] / 100.0 * params[27] +
+                sb4  / 100.0 * params[18] * params[40] +
+                sb8  / 100.0 * params[18] * params[41] +
+                wb4  / 100.0 * params[18] * params[42] +
+                wb8  / 100.0 * params[18] * params[43]
             )
 
             gas_needed = max(0.0, params[19] - clean_peak) / params[28]
@@ -945,6 +1061,10 @@ def _make_numba_kernel():
                 bat4 / 100.0 * params[14] +
                 bat8 / 100.0 * params[15] +
                 ld / 100.0 * params[16] +
+                sb4 / 100.0 * params[36] +
+                sb8 / 100.0 * params[37] +
+                wb4 / 100.0 * params[38] +
+                wb8 / 100.0 * params[39] +
                 gas_cost
             )
         return costs
@@ -958,8 +1078,8 @@ def batch_compute_total_costs(mixes_arr, params):
     """Compute total_cost for all mixes. Uses Numba if available, else numpy.
 
     Args:
-        mixes_arr: (N, 11) float64 array — [cf, sol, wnd, osw, ccs, hyd, match, bat4, bat8, ldes, h2]
-        params: float64[36] from _precompute_cost_params
+        mixes_arr: (N, 11) or (N, 15) float64 array
+        params: float64[44] from _precompute_cost_params
 
     Returns: (N,) float64 array of total_cost per MWh
     """
@@ -1090,7 +1210,7 @@ def find_cheapest_mix(mixes, floor_twh, existing_twh, demand_twh, iso,
             if result['total_cost'] < best: ...
 
     Args:
-        mixes: list of mix arrays or (N, 10) ndarray
+        mixes: list of mix arrays or (N, 11/15) ndarray
         floor_twh: per-resource floor TWh dict (for excess penalty)
         existing_twh: per-resource existing TWh dict
         demand_twh: scalar
@@ -1105,10 +1225,10 @@ def find_cheapest_mix(mixes, floor_twh, existing_twh, demand_twh, iso,
         best_idx: index into mixes_arr of cheapest mix
         best_total_with_excess: total_cost + excess_penalty of cheapest
         costs_arr: (N,) array of total_cost per MWh
-        mixes_arr: (N, 10) float64 array
+        mixes_arr: (N, 11) or (N, 15) float64 array
     """
     if not mixes:
-        return -1, float('inf'), np.array([]), np.array([]).reshape(0, 10)
+        return -1, float('inf'), np.array([]), np.array([]).reshape(0, 11)
 
     mixes_arr = _to_mix_array(mixes)
     params = _precompute_cost_params(sens, iso, demand_twh, overrides, growth_factor)
@@ -1137,18 +1257,23 @@ def find_cheapest_mix(mixes, floor_twh, existing_twh, demand_twh, iso,
 def _load_pfs_mixes(iso, threshold):
     """Load PFS mixes for a single ISO/threshold from step1 parquets.
 
-    Returns (N, 11) numpy array: [cf, sol, wnd, osw, ccs, hyd, match, bat4, bat8, ldes, h2].
+    Returns (N, 15) numpy array when hybrid columns present, else (N, 11):
+      11-col: [cf, sol, wnd, osw, ccs, hyd, match, bat4, bat8, ldes, h2]
+      15-col: [cf, sol, wnd, osw, ccs, hyd, match, bat4, bat8, ldes, h2, sb4, sb8, wb4, wb8]
     Uses vectorized column extraction — no iterrows().
     """
     t_str = str(int(threshold)) if threshold == int(threshold) else str(threshold)
     pfs_path = Path(f'data/step1-pfs/{iso}_t{t_str}_raw_pfs.parquet')
     if not pfs_path.exists():
-        return np.empty((0, 11), dtype=np.float64)
+        return np.empty((0, 15), dtype=np.float64)
     df = pd.read_parquet(pfs_path)
     if df.empty:
-        return np.empty((0, 11), dtype=np.float64)
+        return np.empty((0, 15), dtype=np.float64)
     N = len(df)
-    arr = np.zeros((N, 11), dtype=np.float64)
+    # Detect hybrid columns in parquet
+    has_hybrids = any(h in df.columns for h in HYBRID_TYPES)
+    ncols = 15 if has_hybrids else 11
+    arr = np.zeros((N, ncols), dtype=np.float64)
     arr[:, 0] = df['clean_firm'].values if 'clean_firm' in df.columns else 0
     arr[:, 1] = df['solar'].values if 'solar' in df.columns else 0
     arr[:, 2] = df['wind'].values if 'wind' in df.columns else 0
@@ -1160,6 +1285,11 @@ def _load_pfs_mixes(iso, threshold):
     arr[:, 8] = df['battery8_dispatch_pct'].values if 'battery8_dispatch_pct' in df.columns else 0
     arr[:, 9] = df['ldes_dispatch_pct'].values if 'ldes_dispatch_pct' in df.columns else 0
     arr[:, 10] = df['h2_dispatch_pct'].values if 'h2_dispatch_pct' in df.columns else 0
+    if has_hybrids:
+        arr[:, 11] = df['solar_batt4'].values if 'solar_batt4' in df.columns else 0
+        arr[:, 12] = df['solar_batt8'].values if 'solar_batt8' in df.columns else 0
+        arr[:, 13] = df['wind_batt4'].values if 'wind_batt4' in df.columns else 0
+        arr[:, 14] = df['wind_batt8'].values if 'wind_batt8' in df.columns else 0
     return arr
 
 
