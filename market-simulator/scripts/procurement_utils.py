@@ -1444,6 +1444,7 @@ def compute_dispatch_hms(results, variant_keys, isos):
                                     resource_pcts[r] = resource_pcts.get(r, 0) + grid_pct_of_buyer * share
 
                         try:
+                            _has_hybrids = any(resource_pcts.get(ht, 0) > 0 for ht in HYBRID_TYPES)
                             result = reconstruct_hourly_dispatch(
                                 demand_norm, supply_profiles, resource_pcts,
                                 procurement_pct=100,
@@ -1452,6 +1453,7 @@ def compute_dispatch_hms(results, variant_keys, isos):
                                 ldes_dispatch_pct=ldes_pct,
                                 supply_matrix=supply_matrix,
                                 h2_dispatch_pct=h2_pct,
+                                include_hybrids=_has_hybrids,
                             )
                             demand_arr = np.array(demand_norm[:8760])
                             total_clean = result['total_clean']

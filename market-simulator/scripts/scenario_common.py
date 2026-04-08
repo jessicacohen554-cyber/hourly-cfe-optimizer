@@ -1467,7 +1467,8 @@ def _get_dispatch_co2_for_mix(iso, mix_result, egrid, demand_data, gen_profiles,
     dispatch_result, _ = get_or_compute_dispatch(
         iso, demand_norm, supply_profiles, resource_pcts,
         battery_dispatch_pct=bat_pct, battery8_dispatch_pct=bat8_pct,
-        ldes_dispatch_pct=ldes_pct, cache=cache)
+        ldes_dispatch_pct=ldes_pct, cache=cache,
+        include_hybrids=has_hybrids)
     dispatch_caches[iso] = cache
     demand_mwh = mix_result.get('demand_mwh', 0)
     if demand_mwh <= 0:
