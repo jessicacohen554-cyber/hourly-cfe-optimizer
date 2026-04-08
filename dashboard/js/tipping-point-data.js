@@ -3,334 +3,189 @@ const TIPPING_POINT_DATA = {
   "CAISO": {
     "10": {
       "transitions": [],
-      "n_unique_mixes": 2,
+      "n_unique_mixes": 1,
       "mixes": [
         {
-          "clean_firm": 7.0,
-          "solar": 23.0,
-          "wind": 15.0,
-          "min_cost": 10.3,
-          "max_cost": 21.4
-        },
-        {
-          "clean_firm": 13.0,
-          "solar": 23.0,
-          "wind": 18.0,
-          "min_cost": 18.2,
-          "max_cost": 21.0
+          "clean_firm": 10.0,
+          "solar": 40.0,
+          "wind": 10.0,
+          "min_cost": 12.0,
+          "max_cost": 22.7
         }
       ]
     },
     "20": {
       "transitions": [],
-      "n_unique_mixes": 2,
+      "n_unique_mixes": 1,
       "mixes": [
         {
-          "clean_firm": 7.0,
-          "solar": 23.0,
-          "wind": 15.0,
-          "min_cost": 10.3,
-          "max_cost": 21.4
-        },
-        {
-          "clean_firm": 13.0,
-          "solar": 23.0,
-          "wind": 18.0,
-          "min_cost": 18.2,
-          "max_cost": 21.0
+          "clean_firm": 10.0,
+          "solar": 40.0,
+          "wind": 10.0,
+          "min_cost": 12.0,
+          "max_cost": 22.7
         }
       ]
     },
     "30": {
       "transitions": [],
-      "n_unique_mixes": 2,
+      "n_unique_mixes": 1,
       "mixes": [
         {
-          "clean_firm": 7.0,
-          "solar": 23.0,
-          "wind": 15.0,
-          "min_cost": 10.3,
-          "max_cost": 21.4
-        },
-        {
-          "clean_firm": 13.0,
-          "solar": 23.0,
-          "wind": 18.0,
-          "min_cost": 18.2,
-          "max_cost": 21.0
+          "clean_firm": 10.0,
+          "solar": 40.0,
+          "wind": 10.0,
+          "min_cost": 12.0,
+          "max_cost": 22.7
         }
       ]
     },
     "40": {
       "transitions": [],
-      "n_unique_mixes": 2,
+      "n_unique_mixes": 1,
       "mixes": [
         {
-          "clean_firm": 7.0,
-          "solar": 23.0,
-          "wind": 15.0,
-          "min_cost": 10.3,
-          "max_cost": 21.4
-        },
-        {
-          "clean_firm": 13.0,
-          "solar": 23.0,
-          "wind": 18.0,
-          "min_cost": 18.2,
-          "max_cost": 21.0
+          "clean_firm": 10.0,
+          "solar": 40.0,
+          "wind": 10.0,
+          "min_cost": 12.0,
+          "max_cost": 22.7
         }
       ]
     },
     "50": {
       "transitions": [],
-      "n_unique_mixes": 2,
+      "n_unique_mixes": 1,
       "mixes": [
         {
-          "clean_firm": 7.0,
-          "solar": 23.0,
-          "wind": 15.0,
-          "min_cost": 10.3,
-          "max_cost": 21.4
-        },
-        {
-          "clean_firm": 13.0,
-          "solar": 23.0,
-          "wind": 18.0,
-          "min_cost": 18.2,
-          "max_cost": 21.0
+          "clean_firm": 10.0,
+          "solar": 40.0,
+          "wind": 10.0,
+          "min_cost": 12.0,
+          "max_cost": 22.7
         }
       ]
     },
     "55": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "wind",
-          "to_dominant": "solar",
-          "from_cost": 11.1,
-          "to_cost": 14.5,
-          "from_mix": {
-            "clean_firm": 8.0,
-            "solar": 22.0,
-            "wind": 23.0
-          },
-          "to_mix": {
-            "clean_firm": 13.0,
-            "solar": 23.0,
-            "wind": 18.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "solar",
-          "from_cost": 11.1,
-          "to_cost": 18.2,
-          "from_mix": {
-            "clean_firm": 8.0,
-            "solar": 22.0,
-            "wind": 23.0
-          },
-          "to_mix": {
-            "clean_firm": 13.0,
-            "solar": 23.0,
-            "wind": 18.0
-          }
-        }
-      ],
-      "n_unique_mixes": 2,
+      "transitions": [],
+      "n_unique_mixes": 6,
       "mixes": [
         {
-          "clean_firm": 8.0,
-          "solar": 22.0,
-          "wind": 23.0,
-          "min_cost": 11.1,
-          "max_cost": 22.6
+          "clean_firm": 10.0,
+          "solar": 40.0,
+          "wind": 10.0,
+          "min_cost": 15.6,
+          "max_cost": 30.5
         },
         {
-          "clean_firm": 13.0,
-          "solar": 23.0,
-          "wind": 18.0,
-          "min_cost": 14.5,
-          "max_cost": 22.1
+          "clean_firm": 10.0,
+          "solar": 50.0,
+          "wind": 10.0,
+          "min_cost": 16.2,
+          "max_cost": 21.0
+        },
+        {
+          "clean_firm": 10.0,
+          "solar": 30.0,
+          "wind": 10.0,
+          "min_cost": 16.6,
+          "max_cost": 28.3
+        },
+        {
+          "clean_firm": 10.0,
+          "solar": 30.0,
+          "wind": 10.0,
+          "min_cost": 16.6,
+          "max_cost": 28.3
+        },
+        {
+          "clean_firm": 10.0,
+          "solar": 40.0,
+          "wind": 20.0,
+          "min_cost": 16.7,
+          "max_cost": 26.9
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 30.0,
+          "wind": 10.0,
+          "min_cost": 17.5,
+          "max_cost": 28.4
         }
       ]
     },
     "60": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "solar",
-          "to_dominant": "clean_firm",
-          "from_cost": 18.2,
-          "to_cost": 20.8,
-          "from_mix": {
-            "clean_firm": 23.0,
-            "solar": 24.0,
-            "wind": 13.0
-          },
-          "to_mix": {
-            "clean_firm": 23.0,
-            "solar": 23.0,
-            "wind": 13.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "solar",
-          "to_dominant": "clean_firm",
-          "from_cost": 15.0,
-          "to_cost": 20.8,
-          "from_mix": {
-            "clean_firm": 15.0,
-            "solar": 23.0,
-            "wind": 22.0
-          },
-          "to_mix": {
-            "clean_firm": 23.0,
-            "solar": 23.0,
-            "wind": 13.0
-          }
-        }
-      ],
+      "transitions": [],
       "n_unique_mixes": 6,
       "mixes": [
         {
-          "clean_firm": 15.0,
-          "solar": 23.0,
-          "wind": 22.0,
-          "min_cost": 15.0,
-          "max_cost": 29.8
+          "clean_firm": 20.0,
+          "solar": 30.0,
+          "wind": 10.0,
+          "min_cost": 16.9,
+          "max_cost": 32.2
         },
         {
-          "clean_firm": 13.0,
-          "solar": 24.0,
-          "wind": 22.0,
-          "min_cost": 16.4,
-          "max_cost": 22.8
+          "clean_firm": 20.0,
+          "solar": 30.0,
+          "wind": 20.0,
+          "min_cost": 17.8,
+          "max_cost": 29.9
         },
         {
-          "clean_firm": 8.0,
-          "solar": 23.0,
-          "wind": 34.0,
-          "min_cost": 17.5,
-          "max_cost": 17.5
+          "clean_firm": 10.0,
+          "solar": 40.0,
+          "wind": 10.0,
+          "min_cost": 18.3,
+          "max_cost": 20.0
         },
         {
-          "clean_firm": 23.0,
-          "solar": 24.0,
-          "wind": 13.0,
-          "min_cost": 18.2,
-          "max_cost": 27.5
+          "clean_firm": 10.0,
+          "solar": 40.0,
+          "wind": 20.0,
+          "min_cost": 19.3,
+          "max_cost": 28.9
         },
         {
-          "clean_firm": 16.0,
-          "solar": 23.0,
-          "wind": 21.0,
-          "min_cost": 18.4,
-          "max_cost": 18.5
+          "clean_firm": 10.0,
+          "solar": 30.0,
+          "wind": 10.0,
+          "min_cost": 25.0,
+          "max_cost": 30.5
         },
         {
-          "clean_firm": 23.0,
-          "solar": 23.0,
-          "wind": 13.0,
-          "min_cost": 20.8,
-          "max_cost": 23.6
+          "clean_firm": 10.0,
+          "solar": 30.0,
+          "wind": 20.0,
+          "min_cost": 26.3,
+          "max_cost": 27.6
         }
       ]
     },
     "65": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 17.3,
-          "to_cost": 21.2,
-          "from_mix": {
-            "clean_firm": 9.0,
-            "solar": 23.0,
-            "wind": 33.0
-          },
-          "to_mix": {
-            "clean_firm": 25.0,
-            "solar": 23.0,
-            "wind": 13.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 17.3,
-          "to_cost": 23.8,
-          "from_mix": {
-            "clean_firm": 9.0,
-            "solar": 23.0,
-            "wind": 33.0
-          },
-          "to_mix": {
-            "clean_firm": 25.0,
-            "solar": 23.0,
-            "wind": 13.0
-          }
-        }
-      ],
-      "n_unique_mixes": 6,
+      "transitions": [],
+      "n_unique_mixes": 3,
       "mixes": [
         {
-          "clean_firm": 9.0,
-          "solar": 23.0,
-          "wind": 33.0,
-          "min_cost": 17.3,
-          "max_cost": 34.8
+          "clean_firm": 20.0,
+          "solar": 30.0,
+          "wind": 20.0,
+          "min_cost": 18.7,
+          "max_cost": 36.3
         },
         {
-          "clean_firm": 8.0,
-          "solar": 23.0,
-          "wind": 34.0,
-          "min_cost": 17.5,
-          "max_cost": 22.1
+          "clean_firm": 20.0,
+          "solar": 30.0,
+          "wind": 10.0,
+          "min_cost": 20.2,
+          "max_cost": 35.9
         },
         {
-          "clean_firm": 25.0,
-          "solar": 23.0,
-          "wind": 13.0,
-          "min_cost": 21.2,
-          "max_cost": 32.5
-        },
-        {
-          "clean_firm": 23.0,
-          "solar": 23.0,
-          "wind": 17.0,
-          "min_cost": 21.8,
-          "max_cost": 32.9
-        },
-        {
-          "clean_firm": 23.0,
-          "solar": 23.0,
-          "wind": 16.0,
-          "min_cost": 25.1,
-          "max_cost": 28.6
-        },
-        {
-          "clean_firm": 23.0,
-          "solar": 23.0,
-          "wind": 15.0,
-          "min_cost": 29.5,
-          "max_cost": 29.5
+          "clean_firm": 10.0,
+          "solar": 40.0,
+          "wind": 30.0,
+          "min_cost": 21.4,
+          "max_cost": 28.4
         }
       ]
     },
@@ -340,159 +195,397 @@ const TIPPING_POINT_DATA = {
           "toggle": "renewable",
           "from_level": "L",
           "to_level": "M",
-          "from_dominant": "wind",
+          "from_dominant": "solar",
           "to_dominant": "clean_firm",
-          "from_cost": 21.2,
-          "to_cost": 24.9,
+          "from_cost": 21.8,
+          "to_cost": 23.9,
           "from_mix": {
-            "clean_firm": 11.0,
-            "solar": 24.0,
-            "wind": 37.0
+            "clean_firm": 10.0,
+            "solar": 30.0,
+            "wind": 20.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 34.0,
+            "clean_firm": 30.0,
             "solar": 22.0,
-            "wind": 11.0
+            "wind": 12.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         },
         {
           "toggle": "renewable",
           "from_level": "L",
           "to_level": "H",
-          "from_dominant": "wind",
+          "from_dominant": "solar",
           "to_dominant": "clean_firm",
-          "from_cost": 21.2,
-          "to_cost": 26.9,
+          "from_cost": 21.8,
+          "to_cost": 24.6,
           "from_mix": {
-            "clean_firm": 11.0,
-            "solar": 24.0,
-            "wind": 37.0
+            "clean_firm": 10.0,
+            "solar": 30.0,
+            "wind": 20.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 34.0,
+            "clean_firm": 30.0,
             "solar": 22.0,
-            "wind": 11.0
+            "wind": 12.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 12,
+      "mixes": [
+        {
+          "clean_firm": 10.0,
+          "solar": 30.0,
+          "wind": 20.0,
+          "min_cost": 21.8,
+          "max_cost": 42.6
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 22.0,
+          "wind": 22.0,
+          "min_cost": 22.3,
+          "max_cost": 38.2
+        },
+        {
+          "clean_firm": 15.0,
+          "solar": 22.0,
+          "wind": 28.0,
+          "min_cost": 22.8,
+          "max_cost": 22.8
+        },
+        {
+          "clean_firm": 12.0,
+          "solar": 22.0,
+          "wind": 32.0,
+          "min_cost": 23.1,
+          "max_cost": 31.4
+        },
+        {
+          "clean_firm": 24.0,
+          "solar": 22.0,
+          "wind": 18.0,
+          "min_cost": 23.9,
+          "max_cost": 40.2
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 22.0,
+          "wind": 12.0,
+          "min_cost": 23.9,
+          "max_cost": 40.7
+        },
+        {
+          "clean_firm": 10.0,
+          "solar": 30.0,
+          "wind": 40.0,
+          "min_cost": 24.7,
+          "max_cost": 37.6
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 22.0,
+          "wind": 16.0,
+          "min_cost": 26.1,
+          "max_cost": 33.5
+        },
+        {
+          "clean_firm": 9.0,
+          "solar": 22.0,
+          "wind": 36.0,
+          "min_cost": 26.6,
+          "max_cost": 37.1
+        },
+        {
+          "clean_firm": 10.0,
+          "solar": 40.0,
+          "wind": 40.0,
+          "min_cost": 28.0,
+          "max_cost": 34.0
+        },
+        {
+          "clean_firm": 28.0,
+          "solar": 22.0,
+          "wind": 14.0,
+          "min_cost": 30.4,
+          "max_cost": 37.4
+        },
+        {
+          "clean_firm": 22.0,
+          "solar": 22.0,
+          "wind": 20.0,
+          "min_cost": 34.4,
+          "max_cost": 34.4
+        }
+      ]
+    },
+    "75": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 22.3,
+          "to_cost": 23.9,
+          "from_mix": {
+            "clean_firm": 20.0,
+            "solar": 22.0,
+            "wind": 22.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 30.0,
+            "solar": 22.0,
+            "wind": 12.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 22.3,
+          "to_cost": 24.6,
+          "from_mix": {
+            "clean_firm": 20.0,
+            "solar": 22.0,
+            "wind": 22.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 30.0,
+            "solar": 22.0,
+            "wind": 12.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 10,
+      "mixes": [
+        {
+          "clean_firm": 20.0,
+          "solar": 22.0,
+          "wind": 22.0,
+          "min_cost": 22.3,
+          "max_cost": 42.9
+        },
+        {
+          "clean_firm": 15.0,
+          "solar": 22.0,
+          "wind": 28.0,
+          "min_cost": 22.8,
+          "max_cost": 43.8
+        },
+        {
+          "clean_firm": 12.0,
+          "solar": 22.0,
+          "wind": 32.0,
+          "min_cost": 23.1,
+          "max_cost": 40.0
+        },
+        {
+          "clean_firm": 24.0,
+          "solar": 22.0,
+          "wind": 18.0,
+          "min_cost": 23.9,
+          "max_cost": 40.2
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 22.0,
+          "wind": 12.0,
+          "min_cost": 23.9,
+          "max_cost": 40.7
+        },
+        {
+          "clean_firm": 10.0,
+          "solar": 30.0,
+          "wind": 40.0,
+          "min_cost": 24.7,
+          "max_cost": 37.6
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 22.0,
+          "wind": 16.0,
+          "min_cost": 26.1,
+          "max_cost": 33.5
+        },
+        {
+          "clean_firm": 9.0,
+          "solar": 22.0,
+          "wind": 36.0,
+          "min_cost": 26.6,
+          "max_cost": 39.1
+        },
+        {
+          "clean_firm": 28.0,
+          "solar": 22.0,
+          "wind": 14.0,
+          "min_cost": 30.4,
+          "max_cost": 37.4
+        },
+        {
+          "clean_firm": 22.0,
+          "solar": 22.0,
+          "wind": 20.0,
+          "min_cost": 34.4,
+          "max_cost": 34.4
+        }
+      ]
+    },
+    "80": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 22.3,
+          "to_cost": 23.9,
+          "from_mix": {
+            "clean_firm": 20.0,
+            "solar": 22.0,
+            "wind": 22.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 30.0,
+            "solar": 22.0,
+            "wind": 12.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 22.3,
+          "to_cost": 24.6,
+          "from_mix": {
+            "clean_firm": 20.0,
+            "solar": 22.0,
+            "wind": 22.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 30.0,
+            "solar": 22.0,
+            "wind": 12.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         }
       ],
       "n_unique_mixes": 9,
       "mixes": [
         {
-          "clean_firm": 11.0,
-          "solar": 24.0,
-          "wind": 37.0,
-          "min_cost": 21.2,
-          "max_cost": 42.3
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 23.0,
-          "wind": 37.0,
-          "min_cost": 21.6,
-          "max_cost": 32.0
-        },
-        {
-          "clean_firm": 9.0,
-          "solar": 23.0,
-          "wind": 37.0,
-          "min_cost": 21.9,
-          "max_cost": 22.1
-        },
-        {
-          "clean_firm": 34.0,
+          "clean_firm": 20.0,
           "solar": 22.0,
-          "wind": 11.0,
-          "min_cost": 24.9,
-          "max_cost": 41.5
+          "wind": 22.0,
+          "min_cost": 22.3,
+          "max_cost": 42.9
         },
         {
-          "clean_firm": 33.0,
+          "clean_firm": 15.0,
           "solar": 22.0,
-          "wind": 12.0,
-          "min_cost": 25.1,
-          "max_cost": 42.0
-        },
-        {
-          "clean_firm": 28.0,
-          "solar": 28.0,
-          "wind": 18.0,
-          "min_cost": 26.3,
-          "max_cost": 40.6
-        },
-        {
-          "clean_firm": 13.0,
-          "solar": 22.0,
-          "wind": 29.0,
-          "min_cost": 27.3,
-          "max_cost": 41.1
-        },
-        {
-          "clean_firm": 13.0,
-          "solar": 23.0,
-          "wind": 31.0,
-          "min_cost": 27.6,
-          "max_cost": 39.2
+          "wind": 28.0,
+          "min_cost": 22.8,
+          "max_cost": 43.8
         },
         {
           "clean_firm": 12.0,
-          "solar": 24.0,
-          "wind": 36.0,
-          "min_cost": 36.5,
-          "max_cost": 37.9
-        }
-      ]
-    },
-    "75": {
-      "transitions": [],
-      "n_unique_mixes": 4,
-      "mixes": [
-        {
-          "clean_firm": 13.0,
           "solar": 22.0,
-          "wind": 29.0,
-          "min_cost": 23.2,
-          "max_cost": 44.5
-        },
-        {
-          "clean_firm": 13.0,
-          "solar": 23.0,
           "wind": 32.0,
-          "min_cost": 23.3,
-          "max_cost": 44.8
+          "min_cost": 23.1,
+          "max_cost": 40.0
         },
         {
-          "clean_firm": 7.0,
-          "solar": 23.0,
-          "wind": 45.0,
-          "min_cost": 25.2,
-          "max_cost": 38.5
+          "clean_firm": 24.0,
+          "solar": 22.0,
+          "wind": 18.0,
+          "min_cost": 23.9,
+          "max_cost": 40.2
         },
         {
-          "clean_firm": 13.0,
-          "solar": 23.0,
-          "wind": 31.0,
-          "min_cost": 27.6,
-          "max_cost": 39.2
-        }
-      ]
-    },
-    "80": {
-      "transitions": [],
-      "n_unique_mixes": 2,
-      "mixes": [
-        {
-          "clean_firm": 17.0,
-          "solar": 23.0,
-          "wind": 32.0,
-          "min_cost": 27.5,
-          "max_cost": 54.6
+          "clean_firm": 30.0,
+          "solar": 22.0,
+          "wind": 12.0,
+          "min_cost": 23.9,
+          "max_cost": 40.7
         },
         {
-          "clean_firm": 7.0,
-          "solar": 23.0,
-          "wind": 47.0,
-          "min_cost": 28.5,
-          "max_cost": 49.4
+          "clean_firm": 26.0,
+          "solar": 22.0,
+          "wind": 16.0,
+          "min_cost": 26.1,
+          "max_cost": 33.5
+        },
+        {
+          "clean_firm": 9.0,
+          "solar": 22.0,
+          "wind": 36.0,
+          "min_cost": 26.6,
+          "max_cost": 39.1
+        },
+        {
+          "clean_firm": 28.0,
+          "solar": 22.0,
+          "wind": 14.0,
+          "min_cost": 30.4,
+          "max_cost": 37.4
+        },
+        {
+          "clean_firm": 22.0,
+          "solar": 22.0,
+          "wind": 20.0,
+          "min_cost": 34.4,
+          "max_cost": 34.4
         }
       ]
     },
@@ -504,17 +597,25 @@ const TIPPING_POINT_DATA = {
           "to_level": "M",
           "from_dominant": "wind",
           "to_dominant": "clean_firm",
-          "from_cost": 34.8,
-          "to_cost": 41.6,
+          "from_cost": 22.8,
+          "to_cost": 23.9,
           "from_mix": {
-            "clean_firm": 18.0,
-            "solar": 23.0,
-            "wind": 48.0
+            "clean_firm": 19.0,
+            "solar": 22.0,
+            "wind": 24.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 37.0,
-            "solar": 28.0,
-            "wind": 37.0
+            "clean_firm": 30.0,
+            "solar": 22.0,
+            "wind": 12.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         },
         {
@@ -523,343 +624,621 @@ const TIPPING_POINT_DATA = {
           "to_level": "H",
           "from_dominant": "wind",
           "to_dominant": "clean_firm",
-          "from_cost": 34.8,
-          "to_cost": 44.8,
+          "from_cost": 22.8,
+          "to_cost": 24.6,
           "from_mix": {
-            "clean_firm": 18.0,
-            "solar": 23.0,
-            "wind": 48.0
+            "clean_firm": 19.0,
+            "solar": 22.0,
+            "wind": 24.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 42.0,
-            "solar": 33.0,
-            "wind": 12.0
+            "clean_firm": 30.0,
+            "solar": 22.0,
+            "wind": 12.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         }
       ],
-      "n_unique_mixes": 3,
+      "n_unique_mixes": 8,
       "mixes": [
         {
-          "clean_firm": 18.0,
-          "solar": 23.0,
-          "wind": 48.0,
-          "min_cost": 34.8,
-          "max_cost": 68.1
+          "clean_firm": 19.0,
+          "solar": 22.0,
+          "wind": 24.0,
+          "min_cost": 22.8,
+          "max_cost": 43.9
         },
         {
-          "clean_firm": 37.0,
-          "solar": 28.0,
-          "wind": 37.0,
-          "min_cost": 38.9,
-          "max_cost": 66.1
+          "clean_firm": 11.0,
+          "solar": 22.0,
+          "wind": 34.0,
+          "min_cost": 23.5,
+          "max_cost": 45.2
         },
         {
-          "clean_firm": 42.0,
-          "solar": 33.0,
+          "clean_firm": 30.0,
+          "solar": 22.0,
           "wind": 12.0,
-          "min_cost": 43.0,
-          "max_cost": 66.9
+          "min_cost": 23.9,
+          "max_cost": 40.7
+        },
+        {
+          "clean_firm": 23.0,
+          "solar": 22.0,
+          "wind": 20.0,
+          "min_cost": 24.7,
+          "max_cost": 40.1
+        },
+        {
+          "clean_firm": 25.0,
+          "solar": 22.0,
+          "wind": 18.0,
+          "min_cost": 25.0,
+          "max_cost": 41.4
+        },
+        {
+          "clean_firm": 13.0,
+          "solar": 22.0,
+          "wind": 32.0,
+          "min_cost": 28.0,
+          "max_cost": 39.7
+        },
+        {
+          "clean_firm": 9.0,
+          "solar": 22.0,
+          "wind": 34.0,
+          "min_cost": 30.6,
+          "max_cost": 30.7
+        },
+        {
+          "clean_firm": 16.0,
+          "solar": 22.0,
+          "wind": 28.0,
+          "min_cost": 32.2,
+          "max_cost": 41.5
         }
       ]
     },
     "87.5": {
       "transitions": [
         {
-          "toggle": "renewable",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 45.6,
-          "to_cost": 55.0,
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 25.6,
+          "to_cost": 25.8,
           "from_mix": {
-            "clean_firm": 18.0,
-            "solar": 23.0,
-            "wind": 48.0
+            "clean_firm": 27.0,
+            "solar": 22.0,
+            "wind": 20.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 53.0,
-            "solar": 38.0,
-            "wind": 23.0
+            "clean_firm": 22.0,
+            "solar": 22.0,
+            "wind": 26.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         },
         {
-          "toggle": "renewable",
+          "toggle": "firm",
           "from_level": "L",
           "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 37.2,
-          "to_cost": 55.0,
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 25.6,
+          "to_cost": 25.9,
           "from_mix": {
-            "clean_firm": 18.0,
-            "solar": 23.0,
-            "wind": 48.0
+            "clean_firm": 27.0,
+            "solar": 22.0,
+            "wind": 20.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 53.0,
-            "solar": 38.0,
-            "wind": 23.0
+            "clean_firm": 22.0,
+            "solar": 22.0,
+            "wind": 26.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         }
       ],
-      "n_unique_mixes": 4,
+      "n_unique_mixes": 9,
       "mixes": [
         {
-          "clean_firm": 18.0,
-          "solar": 23.0,
-          "wind": 48.0,
-          "min_cost": 37.2,
-          "max_cost": 73.3
+          "clean_firm": 27.0,
+          "solar": 22.0,
+          "wind": 20.0,
+          "min_cost": 25.6,
+          "max_cost": 46.5
         },
         {
-          "clean_firm": 18.0,
-          "solar": 23.0,
-          "wind": 52.0,
-          "min_cost": 37.7,
-          "max_cost": 65.5
+          "clean_firm": 22.0,
+          "solar": 22.0,
+          "wind": 26.0,
+          "min_cost": 25.8,
+          "max_cost": 49.6
         },
         {
-          "clean_firm": 18.0,
-          "solar": 23.0,
-          "wind": 51.0,
-          "min_cost": 46.8,
-          "max_cost": 54.8
+          "clean_firm": 15.0,
+          "solar": 22.0,
+          "wind": 36.0,
+          "min_cost": 27.6,
+          "max_cost": 46.6
         },
         {
-          "clean_firm": 53.0,
-          "solar": 38.0,
-          "wind": 23.0,
-          "min_cost": 55.0,
-          "max_cost": 70.0
+          "clean_firm": 29.0,
+          "solar": 22.0,
+          "wind": 18.0,
+          "min_cost": 27.6,
+          "max_cost": 46.2
+        },
+        {
+          "clean_firm": 24.0,
+          "solar": 22.0,
+          "wind": 24.0,
+          "min_cost": 27.8,
+          "max_cost": 44.1
+        },
+        {
+          "clean_firm": 13.0,
+          "solar": 24.0,
+          "wind": 38.0,
+          "min_cost": 27.9,
+          "max_cost": 39.0
+        },
+        {
+          "clean_firm": 19.0,
+          "solar": 22.0,
+          "wind": 30.0,
+          "min_cost": 28.8,
+          "max_cost": 51.8
+        },
+        {
+          "clean_firm": 11.0,
+          "solar": 22.0,
+          "wind": 42.0,
+          "min_cost": 31.7,
+          "max_cost": 44.2
+        },
+        {
+          "clean_firm": 9.0,
+          "solar": 22.0,
+          "wind": 42.0,
+          "min_cost": 35.0,
+          "max_cost": 35.1
         }
       ]
     },
     "90": {
       "transitions": [
         {
-          "toggle": "renewable",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 49.4,
-          "to_cost": 58.5,
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 29.2,
+          "to_cost": 29.6,
           "from_mix": {
-            "clean_firm": 22.0,
-            "solar": 23.0,
-            "wind": 50.0
+            "clean_firm": 29.0,
+            "solar": 22.0,
+            "wind": 24.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 54.0,
-            "solar": 38.0,
-            "wind": 23.0
+            "clean_firm": 23.0,
+            "solar": 22.0,
+            "wind": 32.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         },
         {
-          "toggle": "renewable",
+          "toggle": "firm",
           "from_level": "L",
           "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 40.6,
-          "to_cost": 58.5,
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 29.2,
+          "to_cost": 29.7,
           "from_mix": {
-            "clean_firm": 20.0,
-            "solar": 23.0,
-            "wind": 52.0
+            "clean_firm": 29.0,
+            "solar": 22.0,
+            "wind": 24.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 54.0,
-            "solar": 38.0,
-            "wind": 23.0
+            "clean_firm": 23.0,
+            "solar": 22.0,
+            "wind": 32.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         }
       ],
-      "n_unique_mixes": 4,
+      "n_unique_mixes": 8,
       "mixes": [
         {
-          "clean_firm": 20.0,
-          "solar": 23.0,
-          "wind": 52.0,
-          "min_cost": 40.6,
-          "max_cost": 80.5
+          "clean_firm": 29.0,
+          "solar": 22.0,
+          "wind": 24.0,
+          "min_cost": 29.2,
+          "max_cost": 52.8
+        },
+        {
+          "clean_firm": 23.0,
+          "solar": 22.0,
+          "wind": 32.0,
+          "min_cost": 29.6,
+          "max_cost": 59.9
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 22.0,
+          "wind": 28.0,
+          "min_cost": 30.8,
+          "max_cost": 57.0
+        },
+        {
+          "clean_firm": 18.0,
+          "solar": 22.0,
+          "wind": 40.0,
+          "min_cost": 32.7,
+          "max_cost": 54.4
+        },
+        {
+          "clean_firm": 14.0,
+          "solar": 24.0,
+          "wind": 46.0,
+          "min_cost": 33.2,
+          "max_cost": 44.7
         },
         {
           "clean_firm": 13.0,
+          "solar": 24.0,
+          "wind": 48.0,
+          "min_cost": 33.4,
+          "max_cost": 33.4
+        },
+        {
+          "clean_firm": 11.0,
+          "solar": 22.0,
+          "wind": 52.0,
+          "min_cost": 37.3,
+          "max_cost": 48.4
+        },
+        {
+          "clean_firm": 9.0,
           "solar": 22.0,
           "wind": 56.0,
-          "min_cost": 42.3,
-          "max_cost": 62.9
-        },
-        {
-          "clean_firm": 22.0,
-          "solar": 23.0,
-          "wind": 50.0,
-          "min_cost": 45.3,
-          "max_cost": 78.6
-        },
-        {
-          "clean_firm": 54.0,
-          "solar": 38.0,
-          "wind": 23.0,
-          "min_cost": 58.5,
-          "max_cost": 73.8
+          "min_cost": 40.5,
+          "max_cost": 40.6
         }
       ]
     },
     "92.5": {
       "transitions": [
         {
-          "toggle": "renewable",
+          "toggle": "firm",
           "from_level": "L",
           "to_level": "M",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 46.4,
-          "to_cost": 56.1,
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 58.6,
+          "to_cost": 62.4,
           "from_mix": {
-            "clean_firm": 16.0,
-            "solar": 22.0,
-            "wind": 55.0
+            "clean_firm": 40.0,
+            "solar": 30.0,
+            "wind": 40.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 57.0,
-            "solar": 38.0,
-            "wind": 25.0
+            "clean_firm": 20.0,
+            "solar": 50.0,
+            "wind": 70.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         },
         {
-          "toggle": "renewable",
+          "toggle": "firm",
           "from_level": "L",
           "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 46.4,
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 58.6,
           "to_cost": 62.5,
           "from_mix": {
-            "clean_firm": 16.0,
-            "solar": 22.0,
-            "wind": 55.0
+            "clean_firm": 40.0,
+            "solar": 30.0,
+            "wind": 40.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 57.0,
-            "solar": 38.0,
-            "wind": 25.0
+            "clean_firm": 20.0,
+            "solar": 50.0,
+            "wind": 70.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         }
       ],
-      "n_unique_mixes": 3,
+      "n_unique_mixes": 5,
       "mixes": [
         {
-          "clean_firm": 16.0,
-          "solar": 22.0,
-          "wind": 55.0,
-          "min_cost": 46.4,
-          "max_cost": 92.6
+          "clean_firm": 40.0,
+          "solar": 30.0,
+          "wind": 40.0,
+          "min_cost": 58.6,
+          "max_cost": 121.0
         },
         {
-          "clean_firm": 57.0,
-          "solar": 38.0,
-          "wind": 25.0,
-          "min_cost": 56.1,
-          "max_cost": 87.2
+          "clean_firm": 20.0,
+          "solar": 50.0,
+          "wind": 70.0,
+          "min_cost": 62.4,
+          "max_cost": 124.1
         },
         {
-          "clean_firm": 55.0,
-          "solar": 38.0,
-          "wind": 27.0,
-          "min_cost": 68.7,
-          "max_cost": 80.0
+          "clean_firm": 60.0,
+          "solar": 50.0,
+          "wind": 30.0,
+          "min_cost": 63.3,
+          "max_cost": 121.8
+        },
+        {
+          "clean_firm": 60.0,
+          "solar": 30.0,
+          "wind": 30.0,
+          "min_cost": 66.6,
+          "max_cost": 120.5
+        },
+        {
+          "clean_firm": 10.0,
+          "solar": 30.0,
+          "wind": 130.0,
+          "min_cost": 75.7,
+          "max_cost": 75.7
         }
       ]
     },
     "95": {
-      "transitions": [],
-      "n_unique_mixes": 7,
+      "transitions": [
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 58.6,
+          "to_cost": 62.4,
+          "from_mix": {
+            "clean_firm": 40.0,
+            "solar": 30.0,
+            "wind": 40.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 20.0,
+            "solar": 50.0,
+            "wind": 70.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 58.6,
+          "to_cost": 62.5,
+          "from_mix": {
+            "clean_firm": 40.0,
+            "solar": 30.0,
+            "wind": 40.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 20.0,
+            "solar": 50.0,
+            "wind": 70.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 5,
       "mixes": [
         {
-          "clean_firm": 68.0,
-          "solar": 33.0,
-          "wind": 21.0,
-          "min_cost": 54.6,
-          "max_cost": 112.1
+          "clean_firm": 40.0,
+          "solar": 30.0,
+          "wind": 40.0,
+          "min_cost": 58.6,
+          "max_cost": 121.0
         },
         {
-          "clean_firm": 68.0,
-          "solar": 33.0,
-          "wind": 18.0,
-          "min_cost": 59.5,
-          "max_cost": 88.7
+          "clean_firm": 20.0,
+          "solar": 50.0,
+          "wind": 70.0,
+          "min_cost": 62.4,
+          "max_cost": 124.1
         },
         {
-          "clean_firm": 69.0,
-          "solar": 33.0,
-          "wind": 18.0,
-          "min_cost": 60.9,
-          "max_cost": 92.5
+          "clean_firm": 60.0,
+          "solar": 50.0,
+          "wind": 30.0,
+          "min_cost": 63.3,
+          "max_cost": 121.8
         },
         {
-          "clean_firm": 68.0,
-          "solar": 33.0,
-          "wind": 20.0,
-          "min_cost": 76.7,
-          "max_cost": 85.0
+          "clean_firm": 60.0,
+          "solar": 30.0,
+          "wind": 30.0,
+          "min_cost": 66.6,
+          "max_cost": 120.5
         },
         {
-          "clean_firm": 69.0,
-          "solar": 33.0,
-          "wind": 19.0,
-          "min_cost": 84.9,
-          "max_cost": 84.9
-        },
-        {
-          "clean_firm": 26.0,
-          "solar": 58.0,
-          "wind": 104.0,
-          "min_cost": 85.2,
-          "max_cost": 89.6
-        },
-        {
-          "clean_firm": 12.0,
-          "solar": 53.0,
-          "wind": 132.0,
-          "min_cost": 91.1,
-          "max_cost": 91.1
+          "clean_firm": 10.0,
+          "solar": 30.0,
+          "wind": 130.0,
+          "min_cost": 75.7,
+          "max_cost": 75.7
         }
       ]
     },
     "97.5": {
-      "transitions": [],
-      "n_unique_mixes": 4,
+      "transitions": [
+        {
+          "toggle": "firm",
+          "from_level": "M",
+          "to_level": "H",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 62.6,
+          "to_cost": 63.4,
+          "from_mix": {
+            "clean_firm": 40.0,
+            "solar": 30.0,
+            "wind": 40.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 20.0,
+            "solar": 50.0,
+            "wind": 70.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 58.6,
+          "to_cost": 63.4,
+          "from_mix": {
+            "clean_firm": 40.0,
+            "solar": 30.0,
+            "wind": 40.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 20.0,
+            "solar": 50.0,
+            "wind": 70.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 6,
       "mixes": [
         {
+          "clean_firm": 40.0,
+          "solar": 30.0,
+          "wind": 40.0,
+          "min_cost": 58.6,
+          "max_cost": 123.2
+        },
+        {
           "clean_firm": 60.0,
-          "solar": 22.0,
+          "solar": 50.0,
           "wind": 30.0,
-          "min_cost": 55.8,
-          "max_cost": 115.3
+          "min_cost": 63.3,
+          "max_cost": 124.6
         },
         {
-          "clean_firm": 61.0,
-          "solar": 22.0,
-          "wind": 32.0,
-          "min_cost": 77.5,
-          "max_cost": 103.1
+          "clean_firm": 20.0,
+          "solar": 50.0,
+          "wind": 70.0,
+          "min_cost": 63.4,
+          "max_cost": 109.9
         },
         {
-          "clean_firm": 26.0,
-          "solar": 58.0,
-          "wind": 104.0,
-          "min_cost": 85.2,
-          "max_cost": 89.6
+          "clean_firm": 60.0,
+          "solar": 30.0,
+          "wind": 30.0,
+          "min_cost": 66.6,
+          "max_cost": 120.5
         },
         {
-          "clean_firm": 12.0,
-          "solar": 53.0,
-          "wind": 132.0,
-          "min_cost": 91.1,
-          "max_cost": 91.1
+          "clean_firm": 30.0,
+          "solar": 40.0,
+          "wind": 90.0,
+          "min_cost": 70.7,
+          "max_cost": 94.7
+        },
+        {
+          "clean_firm": 10.0,
+          "solar": 30.0,
+          "wind": 130.0,
+          "min_cost": 75.7,
+          "max_cost": 89.5
         }
       ]
     },
@@ -871,17 +1250,25 @@ const TIPPING_POINT_DATA = {
           "to_level": "H",
           "from_dominant": "clean_firm",
           "to_dominant": "wind",
-          "from_cost": 71.5,
-          "to_cost": 80.7,
+          "from_cost": 62.6,
+          "to_cost": 63.4,
           "from_mix": {
-            "clean_firm": 54.0,
-            "solar": 22.0,
-            "wind": 47.0
+            "clean_firm": 40.0,
+            "solar": 30.0,
+            "wind": 40.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 27.0,
-            "solar": 23.0,
-            "wind": 113.0
+            "clean_firm": 20.0,
+            "solar": 50.0,
+            "wind": 70.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         },
         {
@@ -890,84 +1277,64 @@ const TIPPING_POINT_DATA = {
           "to_level": "H",
           "from_dominant": "clean_firm",
           "to_dominant": "wind",
-          "from_cost": 62.9,
-          "to_cost": 80.7,
+          "from_cost": 58.6,
+          "to_cost": 63.4,
           "from_mix": {
-            "clean_firm": 54.0,
-            "solar": 22.0,
-            "wind": 47.0
+            "clean_firm": 40.0,
+            "solar": 30.0,
+            "wind": 40.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 27.0,
-            "solar": 23.0,
-            "wind": 113.0
+            "clean_firm": 20.0,
+            "solar": 50.0,
+            "wind": 70.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         }
       ],
-      "n_unique_mixes": 9,
+      "n_unique_mixes": 5,
       "mixes": [
         {
-          "clean_firm": 54.0,
-          "solar": 22.0,
-          "wind": 47.0,
-          "min_cost": 62.9,
-          "max_cost": 128.7
+          "clean_firm": 40.0,
+          "solar": 30.0,
+          "wind": 40.0,
+          "min_cost": 58.6,
+          "max_cost": 125.0
         },
         {
-          "clean_firm": 91.0,
-          "solar": 22.0,
-          "wind": 18.0,
-          "min_cost": 76.6,
-          "max_cost": 95.3
+          "clean_firm": 20.0,
+          "solar": 50.0,
+          "wind": 70.0,
+          "min_cost": 63.4,
+          "max_cost": 103.8
         },
         {
-          "clean_firm": 89.0,
-          "solar": 22.0,
-          "wind": 21.0,
-          "min_cost": 77.9,
-          "max_cost": 95.8
+          "clean_firm": 60.0,
+          "solar": 30.0,
+          "wind": 30.0,
+          "min_cost": 66.6,
+          "max_cost": 120.5
         },
         {
-          "clean_firm": 27.0,
-          "solar": 23.0,
-          "wind": 113.0,
-          "min_cost": 80.7,
-          "max_cost": 91.9
+          "clean_firm": 10.0,
+          "solar": 30.0,
+          "wind": 130.0,
+          "min_cost": 75.7,
+          "max_cost": 101.0
         },
         {
-          "clean_firm": 27.0,
-          "solar": 23.0,
-          "wind": 117.0,
-          "min_cost": 85.6,
-          "max_cost": 99.9
-        },
-        {
-          "clean_firm": 26.0,
-          "solar": 23.0,
-          "wind": 113.0,
-          "min_cost": 86.6,
-          "max_cost": 94.9
-        },
-        {
-          "clean_firm": 24.0,
-          "solar": 23.0,
-          "wind": 116.0,
-          "min_cost": 89.0,
-          "max_cost": 97.1
-        },
-        {
-          "clean_firm": 33.0,
-          "solar": 23.0,
-          "wind": 83.0,
-          "min_cost": 90.0,
-          "max_cost": 107.2
-        },
-        {
-          "clean_firm": 26.0,
-          "solar": 23.0,
-          "wind": 117.0,
-          "min_cost": 94.0,
-          "max_cost": 102.2
+          "clean_firm": 10.0,
+          "solar": 30.0,
+          "wind": 100.0,
+          "min_cost": 75.9,
+          "max_cost": 100.8
         }
       ]
     },
@@ -979,17 +1346,25 @@ const TIPPING_POINT_DATA = {
           "to_level": "H",
           "from_dominant": "clean_firm",
           "to_dominant": "wind",
-          "from_cost": 84.6,
-          "to_cost": 92.7,
+          "from_cost": 68.2,
+          "to_cost": 73.7,
           "from_mix": {
-            "clean_firm": 89.0,
-            "solar": 22.0,
-            "wind": 21.0
+            "clean_firm": 60.0,
+            "solar": 50.0,
+            "wind": 30.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 37.0,
-            "solar": 23.0,
-            "wind": 84.0
+            "clean_firm": 40.0,
+            "solar": 30.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         },
         {
@@ -998,244 +1373,277 @@ const TIPPING_POINT_DATA = {
           "to_level": "H",
           "from_dominant": "clean_firm",
           "to_dominant": "wind",
-          "from_cost": 70.0,
-          "to_cost": 92.7,
+          "from_cost": 61.8,
+          "to_cost": 73.7,
           "from_mix": {
-            "clean_firm": 89.0,
-            "solar": 22.0,
-            "wind": 21.0
+            "clean_firm": 60.0,
+            "solar": 50.0,
+            "wind": 30.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 37.0,
-            "solar": 23.0,
-            "wind": 84.0
+            "clean_firm": 40.0,
+            "solar": 30.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 61.8,
+          "to_cost": 68.5,
+          "from_mix": {
+            "clean_firm": 60.0,
+            "solar": 50.0,
+            "wind": 30.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 40.0,
+            "solar": 30.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 61.8,
+          "to_cost": 71.8,
+          "from_mix": {
+            "clean_firm": 60.0,
+            "solar": 50.0,
+            "wind": 30.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 40.0,
+            "solar": 30.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         }
       ],
-      "n_unique_mixes": 7,
+      "n_unique_mixes": 10,
       "mixes": [
         {
-          "clean_firm": 89.0,
-          "solar": 22.0,
-          "wind": 21.0,
-          "min_cost": 70.0,
-          "max_cost": 147.5
+          "clean_firm": 60.0,
+          "solar": 50.0,
+          "wind": 30.0,
+          "min_cost": 61.8,
+          "max_cost": 130.3
         },
         {
-          "clean_firm": 92.0,
-          "solar": 22.0,
-          "wind": 18.0,
-          "min_cost": 70.0,
-          "max_cost": 146.5
+          "clean_firm": 40.0,
+          "solar": 30.0,
+          "wind": 60.0,
+          "min_cost": 68.5,
+          "max_cost": 139.5
         },
         {
-          "clean_firm": 91.0,
-          "solar": 22.0,
-          "wind": 18.0,
-          "min_cost": 73.1,
-          "max_cost": 113.8
+          "clean_firm": 10.0,
+          "solar": 30.0,
+          "wind": 100.0,
+          "min_cost": 74.2,
+          "max_cost": 108.3
         },
         {
-          "clean_firm": 92.0,
-          "solar": 22.0,
-          "wind": 19.0,
-          "min_cost": 77.8,
-          "max_cost": 85.1
+          "clean_firm": 10.0,
+          "solar": 30.0,
+          "wind": 130.0,
+          "min_cost": 77.5,
+          "max_cost": 101.3
         },
         {
-          "clean_firm": 37.0,
-          "solar": 23.0,
-          "wind": 84.0,
+          "clean_firm": 60.0,
+          "solar": 30.0,
+          "wind": 30.0,
+          "min_cost": 78.8,
+          "max_cost": 121.2
+        },
+        {
+          "clean_firm": 60.0,
+          "solar": 40.0,
+          "wind": 10.0,
+          "min_cost": 86.3,
+          "max_cost": 123.2
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 30.0,
+          "wind": 40.0,
+          "min_cost": 86.6,
+          "max_cost": 103.7
+        },
+        {
+          "clean_firm": 70.0,
+          "solar": 70.0,
+          "wind": 10.0,
+          "min_cost": 88.4,
+          "max_cost": 104.8
+        },
+        {
+          "clean_firm": 60.0,
+          "solar": 30.0,
+          "wind": 10.0,
+          "min_cost": 88.8,
+          "max_cost": 103.4
+        },
+        {
+          "clean_firm": 80.0,
+          "solar": 30.0,
+          "wind": 20.0,
+          "min_cost": 92.7,
+          "max_cost": 110.3
+        }
+      ]
+    },
+    "99.9": {
+      "transitions": [
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 68.1,
+          "to_cost": 73.5,
+          "from_mix": {
+            "clean_firm": 60.0,
+            "solar": 40.0,
+            "wind": 10.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 10.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 40.0,
+            "solar": 30.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 68.1,
+          "to_cost": 78.3,
+          "from_mix": {
+            "clean_firm": 60.0,
+            "solar": 40.0,
+            "wind": 10.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 10.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 40.0,
+            "solar": 30.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 9,
+      "mixes": [
+        {
+          "clean_firm": 60.0,
+          "solar": 40.0,
+          "wind": 10.0,
+          "min_cost": 68.1,
+          "max_cost": 146.2
+        },
+        {
+          "clean_firm": 70.0,
+          "solar": 70.0,
+          "wind": 10.0,
+          "min_cost": 69.5,
+          "max_cost": 117.8
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 30.0,
+          "wind": 60.0,
+          "min_cost": 73.5,
+          "max_cost": 131.7
+        },
+        {
+          "clean_firm": 60.0,
+          "solar": 40.0,
+          "wind": 50.0,
+          "min_cost": 80.5,
+          "max_cost": 103.1
+        },
+        {
+          "clean_firm": 10.0,
+          "solar": 30.0,
+          "wind": 100.0,
           "min_cost": 84.8,
-          "max_cost": 110.0
+          "max_cost": 132.6
         },
         {
-          "clean_firm": 56.0,
-          "solar": 83.0,
-          "wind": 12.0,
-          "min_cost": 86.7,
-          "max_cost": 138.0
+          "clean_firm": 80.0,
+          "solar": 30.0,
+          "wind": 20.0,
+          "min_cost": 88.2,
+          "max_cost": 110.3
         },
         {
-          "clean_firm": 37.0,
-          "solar": 23.0,
-          "wind": 86.0,
-          "min_cost": 89.1,
-          "max_cost": 142.8
-        }
-      ]
-    },
-    "99.9": {
-      "transitions": [
-        {
-          "toggle": "firm",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "solar",
-          "from_cost": 84.6,
-          "to_cost": 100.8,
-          "from_mix": {
-            "clean_firm": 89.0,
-            "solar": 22.0,
-            "wind": 21.0
-          },
-          "to_mix": {
-            "clean_firm": 47.0,
-            "solar": 76.0,
-            "wind": 30.0
-          }
+          "clean_firm": 10.0,
+          "solar": 30.0,
+          "wind": 130.0,
+          "min_cost": 96.2,
+          "max_cost": 106.7
         },
         {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "solar",
-          "from_cost": 70.0,
-          "to_cost": 100.8,
-          "from_mix": {
-            "clean_firm": 89.0,
-            "solar": 22.0,
-            "wind": 21.0
-          },
-          "to_mix": {
-            "clean_firm": 47.0,
-            "solar": 76.0,
-            "wind": 30.0
-          }
-        }
-      ],
-      "n_unique_mixes": 6,
-      "mixes": [
-        {
-          "clean_firm": 89.0,
-          "solar": 22.0,
-          "wind": 21.0,
-          "min_cost": 70.0,
-          "max_cost": 147.5
+          "clean_firm": 30.0,
+          "solar": 30.0,
+          "wind": 100.0,
+          "min_cost": 100.2,
+          "max_cost": 125.9
         },
         {
-          "clean_firm": 92.0,
-          "solar": 22.0,
-          "wind": 18.0,
-          "min_cost": 70.0,
-          "max_cost": 146.5
-        },
-        {
-          "clean_firm": 91.0,
-          "solar": 22.0,
-          "wind": 18.0,
-          "min_cost": 73.1,
-          "max_cost": 113.8
-        },
-        {
-          "clean_firm": 92.0,
-          "solar": 22.0,
-          "wind": 19.0,
-          "min_cost": 77.8,
-          "max_cost": 85.1
-        },
-        {
-          "clean_firm": 56.0,
-          "solar": 83.0,
-          "wind": 12.0,
-          "min_cost": 86.7,
-          "max_cost": 138.0
-        },
-        {
-          "clean_firm": 47.0,
-          "solar": 76.0,
-          "wind": 30.0,
-          "min_cost": 100.8,
-          "max_cost": 139.6
-        }
-      ]
-    },
-    "99.9": {
-      "transitions": [
-        {
-          "toggle": "firm",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "solar",
-          "from_cost": 85.1,
-          "to_cost": 100.8,
-          "from_mix": {
-            "clean_firm": 92.0,
-            "solar": 22.0,
-            "wind": 18.0
-          },
-          "to_mix": {
-            "clean_firm": 47.0,
-            "solar": 76.0,
-            "wind": 30.0
-          }
-        },
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "solar",
-          "from_cost": 70.0,
-          "to_cost": 100.8,
-          "from_mix": {
-            "clean_firm": 92.0,
-            "solar": 22.0,
-            "wind": 18.0
-          },
-          "to_mix": {
-            "clean_firm": 47.0,
-            "solar": 76.0,
-            "wind": 30.0
-          }
-        }
-      ],
-      "n_unique_mixes": 6,
-      "mixes": [
-        {
-          "clean_firm": 92.0,
-          "solar": 22.0,
-          "wind": 18.0,
-          "min_cost": 70.0,
-          "max_cost": 148.8
-        },
-        {
-          "clean_firm": 91.0,
-          "solar": 22.0,
-          "wind": 18.0,
-          "min_cost": 73.1,
-          "max_cost": 116.1
-        },
-        {
-          "clean_firm": 92.0,
-          "solar": 22.0,
-          "wind": 19.0,
-          "min_cost": 77.8,
-          "max_cost": 87.3
-        },
-        {
-          "clean_firm": 56.0,
-          "solar": 83.0,
-          "wind": 12.0,
-          "min_cost": 86.7,
-          "max_cost": 138.0
-        },
-        {
-          "clean_firm": 47.0,
-          "solar": 76.0,
-          "wind": 30.0,
-          "min_cost": 100.8,
-          "max_cost": 139.6
-        },
-        {
-          "clean_firm": 89.0,
-          "solar": 22.0,
-          "wind": 21.0,
-          "min_cost": 119.4,
-          "max_cost": 148.7
+          "clean_firm": 40.0,
+          "solar": 30.0,
+          "wind": 40.0,
+          "min_cost": 110.5,
+          "max_cost": 127.6
         }
       ]
     }
@@ -1243,93 +1651,72 @@ const TIPPING_POINT_DATA = {
   "ERCOT": {
     "10": {
       "transitions": [],
-      "n_unique_mixes": 2,
+      "n_unique_mixes": 1,
       "mixes": [
         {
           "clean_firm": 9.0,
           "solar": 14.0,
-          "wind": 31.0,
-          "min_cost": 2.4,
-          "max_cost": 4.9
-        },
-        {
-          "clean_firm": 16.0,
-          "solar": 14.0,
           "wind": 24.0,
-          "min_cost": 4.3,
-          "max_cost": 4.5
+          "min_cost": 0.3,
+          "max_cost": 0.6
         }
       ]
     },
     "20": {
       "transitions": [],
-      "n_unique_mixes": 2,
+      "n_unique_mixes": 1,
       "mixes": [
         {
           "clean_firm": 9.0,
           "solar": 14.0,
-          "wind": 31.0,
-          "min_cost": 2.4,
-          "max_cost": 4.9
-        },
-        {
-          "clean_firm": 16.0,
-          "solar": 14.0,
           "wind": 24.0,
-          "min_cost": 4.3,
-          "max_cost": 4.5
+          "min_cost": 0.3,
+          "max_cost": 0.6
         }
       ]
     },
     "30": {
       "transitions": [],
-      "n_unique_mixes": 2,
+      "n_unique_mixes": 1,
       "mixes": [
         {
           "clean_firm": 9.0,
           "solar": 14.0,
-          "wind": 31.0,
-          "min_cost": 2.4,
-          "max_cost": 4.9
-        },
-        {
-          "clean_firm": 16.0,
-          "solar": 14.0,
           "wind": 24.0,
-          "min_cost": 4.3,
-          "max_cost": 4.5
+          "min_cost": 0.3,
+          "max_cost": 0.6
         }
       ]
     },
     "40": {
       "transitions": [],
-      "n_unique_mixes": 2,
+      "n_unique_mixes": 1,
       "mixes": [
         {
           "clean_firm": 9.0,
           "solar": 14.0,
-          "wind": 31.0,
-          "min_cost": 2.4,
-          "max_cost": 4.9
-        },
-        {
-          "clean_firm": 16.0,
-          "solar": 14.0,
           "wind": 24.0,
-          "min_cost": 4.3,
-          "max_cost": 4.5
+          "min_cost": 0.3,
+          "max_cost": 0.6
         }
       ]
     },
     "50": {
       "transitions": [],
-      "n_unique_mixes": 2,
+      "n_unique_mixes": 3,
       "mixes": [
         {
           "clean_firm": 9.0,
+          "solar": 15.0,
+          "wind": 30.0,
+          "min_cost": 2.5,
+          "max_cost": 5.1
+        },
+        {
+          "clean_firm": 10.0,
           "solar": 14.0,
-          "wind": 31.0,
-          "min_cost": 2.4,
+          "wind": 30.0,
+          "min_cost": 3.3,
           "max_cost": 4.9
         },
         {
@@ -1343,14 +1730,28 @@ const TIPPING_POINT_DATA = {
     },
     "55": {
       "transitions": [],
-      "n_unique_mixes": 2,
+      "n_unique_mixes": 5,
       "mixes": [
         {
           "clean_firm": 9.0,
           "solar": 14.0,
-          "wind": 36.0,
-          "min_cost": 3.9,
-          "max_cost": 8.0
+          "wind": 38.0,
+          "min_cost": 4.5,
+          "max_cost": 9.3
+        },
+        {
+          "clean_firm": 9.0,
+          "solar": 21.0,
+          "wind": 30.0,
+          "min_cost": 5.9,
+          "max_cost": 6.0
+        },
+        {
+          "clean_firm": 15.0,
+          "solar": 14.0,
+          "wind": 30.0,
+          "min_cost": 6.2,
+          "max_cost": 8.5
         },
         {
           "clean_firm": 18.0,
@@ -1358,73 +1759,94 @@ const TIPPING_POINT_DATA = {
           "wind": 27.0,
           "min_cost": 7.0,
           "max_cost": 7.5
+        },
+        {
+          "clean_firm": 13.0,
+          "solar": 16.0,
+          "wind": 30.0,
+          "min_cost": 8.2,
+          "max_cost": 9.2
         }
       ]
     },
     "60": {
+      "transitions": [],
+      "n_unique_mixes": 3,
+      "mixes": [
+        {
+          "clean_firm": 9.0,
+          "solar": 14.0,
+          "wind": 42.0,
+          "min_cost": 5.7,
+          "max_cost": 11.8
+        },
+        {
+          "clean_firm": 15.0,
+          "solar": 14.0,
+          "wind": 36.0,
+          "min_cost": 10.3,
+          "max_cost": 10.8
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 15.0,
+          "wind": 30.0,
+          "min_cost": 11.2,
+          "max_cost": 11.2
+        }
+      ]
+    },
+    "65": {
       "transitions": [],
       "n_unique_mixes": 2,
       "mixes": [
         {
           "clean_firm": 9.0,
           "solar": 14.0,
-          "wind": 41.0,
-          "min_cost": 5.4,
-          "max_cost": 11.1
+          "wind": 48.0,
+          "min_cost": 7.5,
+          "max_cost": 15.5
         },
         {
-          "clean_firm": 18.0,
+          "clean_firm": 27.0,
           "solar": 14.0,
-          "wind": 32.0,
-          "min_cost": 9.8,
-          "max_cost": 10.6
+          "wind": 30.0,
+          "min_cost": 13.6,
+          "max_cost": 14.5
         }
       ]
     },
-    "65": {
+    "70": {
       "transitions": [],
       "n_unique_mixes": 4,
       "mixes": [
         {
           "clean_firm": 9.0,
           "solar": 14.0,
-          "wind": 46.0,
-          "min_cost": 6.9,
-          "max_cost": 13.3
+          "wind": 56.0,
+          "min_cost": 9.9,
+          "max_cost": 19.1
         },
         {
           "clean_firm": 9.0,
-          "solar": 32.0,
+          "solar": 40.0,
           "wind": 24.0,
-          "min_cost": 8.1,
-          "max_cost": 14.1
+          "min_cost": 11.5,
+          "max_cost": 20.1
         },
         {
-          "clean_firm": 17.0,
+          "clean_firm": 25.0,
           "solar": 14.0,
           "wind": 38.0,
-          "min_cost": 12.5,
-          "max_cost": 13.1
+          "min_cost": 16.3,
+          "max_cost": 16.4
         },
         {
-          "clean_firm": 30.0,
+          "clean_firm": 35.0,
           "solar": 14.0,
-          "wind": 26.0,
-          "min_cost": 13.6,
-          "max_cost": 13.7
-        }
-      ]
-    },
-    "70": {
-      "transitions": [],
-      "n_unique_mixes": 1,
-      "mixes": [
-        {
-          "clean_firm": 9.0,
-          "solar": 32.0,
-          "wind": 24.0,
-          "min_cost": 7.5,
-          "max_cost": 14.1
+          "wind": 28.0,
+          "min_cost": 16.8,
+          "max_cost": 17.7
         }
       ]
     },
@@ -1434,105 +1856,188 @@ const TIPPING_POINT_DATA = {
       "mixes": [
         {
           "clean_firm": 9.0,
-          "solar": 32.0,
+          "solar": 40.0,
           "wind": 24.0,
-          "min_cost": 7.5,
-          "max_cost": 14.1
+          "min_cost": 10.7,
+          "max_cost": 20.1
         }
       ]
     },
     "80": {
-      "transitions": [],
-      "n_unique_mixes": 1,
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "M",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 21.2,
+          "to_cost": 23.8,
+          "from_mix": {
+            "clean_firm": 15.0,
+            "solar": 14.0,
+            "wind": 68.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 39.0,
+            "solar": 14.0,
+            "wind": 38.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 16.1,
+          "to_cost": 23.8,
+          "from_mix": {
+            "clean_firm": 9.0,
+            "solar": 16.0,
+            "wind": 74.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 39.0,
+            "solar": 14.0,
+            "wind": 38.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 8,
       "mixes": [
         {
           "clean_firm": 9.0,
-          "solar": 32.0,
-          "wind": 24.0,
-          "min_cost": 7.5,
-          "max_cost": 14.1
+          "solar": 16.0,
+          "wind": 74.0,
+          "min_cost": 16.1,
+          "max_cost": 33.1
+        },
+        {
+          "clean_firm": 13.0,
+          "solar": 18.0,
+          "wind": 66.0,
+          "min_cost": 21.2,
+          "max_cost": 21.3
+        },
+        {
+          "clean_firm": 15.0,
+          "solar": 14.0,
+          "wind": 68.0,
+          "min_cost": 21.2,
+          "max_cost": 32.9
+        },
+        {
+          "clean_firm": 21.0,
+          "solar": 14.0,
+          "wind": 60.0,
+          "min_cost": 22.4,
+          "max_cost": 30.4
+        },
+        {
+          "clean_firm": 29.0,
+          "solar": 14.0,
+          "wind": 50.0,
+          "min_cost": 23.4,
+          "max_cost": 29.6
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 14.0,
+          "wind": 38.0,
+          "min_cost": 23.8,
+          "max_cost": 30.8
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 14.0,
+          "wind": 28.0,
+          "min_cost": 24.4,
+          "max_cost": 25.6
+        },
+        {
+          "clean_firm": 27.0,
+          "solar": 16.0,
+          "wind": 50.0,
+          "min_cost": 31.7,
+          "max_cost": 31.8
         }
       ]
     },
     "85": {
       "transitions": [],
-      "n_unique_mixes": 5,
+      "n_unique_mixes": 4,
       "mixes": [
         {
-          "clean_firm": 9.0,
-          "solar": 14.0,
-          "wind": 74.0,
-          "min_cost": 15.3,
-          "max_cost": 31.6
+          "clean_firm": 10.0,
+          "solar": 20.0,
+          "wind": 70.0,
+          "min_cost": 18.6,
+          "max_cost": 37.7
         },
         {
-          "clean_firm": 13.0,
-          "solar": 14.0,
-          "wind": 69.0,
-          "min_cost": 23.3,
-          "max_cost": 31.5
+          "clean_firm": 10.0,
+          "solar": 30.0,
+          "wind": 60.0,
+          "min_cost": 19.3,
+          "max_cost": 37.9
         },
         {
-          "clean_firm": 24.0,
-          "solar": 14.0,
-          "wind": 57.0,
+          "clean_firm": 20.0,
+          "solar": 20.0,
+          "wind": 60.0,
           "min_cost": 25.6,
-          "max_cost": 25.7
+          "max_cost": 37.0
         },
         {
-          "clean_firm": 49.0,
-          "solar": 14.0,
-          "wind": 32.0,
-          "min_cost": 26.6,
-          "max_cost": 28.1
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 14.0,
-          "wind": 31.0,
-          "min_cost": 27.3,
-          "max_cost": 28.0
+          "clean_firm": 30.0,
+          "solar": 20.0,
+          "wind": 50.0,
+          "min_cost": 31.4,
+          "max_cost": 34.8
         }
       ]
     },
     "87.5": {
       "transitions": [],
-      "n_unique_mixes": 5,
+      "n_unique_mixes": 3,
       "mixes": [
         {
-          "clean_firm": 9.0,
-          "solar": 15.0,
-          "wind": 78.0,
-          "min_cost": 16.9,
+          "clean_firm": 10.0,
+          "solar": 20.0,
+          "wind": 70.0,
+          "min_cost": 18.6,
+          "max_cost": 38.3
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 20.0,
+          "wind": 60.0,
+          "min_cost": 25.4,
+          "max_cost": 37.4
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 20.0,
+          "wind": 50.0,
+          "min_cost": 31.4,
           "max_cost": 34.8
-        },
-        {
-          "clean_firm": 34.0,
-          "solar": 14.0,
-          "wind": 51.0,
-          "min_cost": 27.8,
-          "max_cost": 27.9
-        },
-        {
-          "clean_firm": 16.0,
-          "solar": 14.0,
-          "wind": 71.0,
-          "min_cost": 27.9,
-          "max_cost": 34.7
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 14.0,
-          "wind": 36.0,
-          "min_cost": 28.8,
-          "max_cost": 30.6
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 14.0,
-          "wind": 35.0,
-          "min_cost": 29.6,
-          "max_cost": 30.5
         }
       ]
     },
@@ -1540,21 +2045,29 @@ const TIPPING_POINT_DATA = {
       "transitions": [
         {
           "toggle": "renewable",
-          "from_level": "M",
-          "to_level": "H",
+          "from_level": "L",
+          "to_level": "M",
           "from_dominant": "wind",
           "to_dominant": "clean_firm",
-          "from_cost": 25.3,
-          "to_cost": 30.1,
+          "from_cost": 27.2,
+          "to_cost": 32.9,
           "from_mix": {
             "clean_firm": 10.0,
-            "solar": 14.0,
-            "wind": 85.0
+            "solar": 40.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 49.0,
-            "solar": 14.0,
-            "wind": 40.0
+            "clean_firm": 50.0,
+            "solar": 20.0,
+            "wind": 30.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         },
         {
@@ -1563,349 +2076,132 @@ const TIPPING_POINT_DATA = {
           "to_level": "H",
           "from_dominant": "wind",
           "to_dominant": "clean_firm",
-          "from_cost": 19.0,
-          "to_cost": 30.1,
+          "from_cost": 27.2,
+          "to_cost": 34.6,
           "from_mix": {
-            "clean_firm": 9.0,
-            "solar": 18.0,
-            "wind": 81.0
+            "clean_firm": 10.0,
+            "solar": 40.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 49.0,
-            "solar": 14.0,
-            "wind": 40.0
+            "clean_firm": 50.0,
+            "solar": 20.0,
+            "wind": 30.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         }
       ],
-      "n_unique_mixes": 7,
+      "n_unique_mixes": 4,
       "mixes": [
         {
-          "clean_firm": 9.0,
-          "solar": 18.0,
-          "wind": 81.0,
-          "min_cost": 19.0,
-          "max_cost": 38.9
-        },
-        {
           "clean_firm": 10.0,
-          "solar": 14.0,
-          "wind": 85.0,
-          "min_cost": 25.3,
-          "max_cost": 32.8
-        },
-        {
-          "clean_firm": 11.0,
-          "solar": 16.0,
-          "wind": 81.0,
-          "min_cost": 27.1,
-          "max_cost": 36.4
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 14.0,
-          "wind": 40.0,
-          "min_cost": 30.1,
-          "max_cost": 33.1
-        },
-        {
-          "clean_firm": 38.0,
-          "solar": 14.0,
-          "wind": 52.0,
-          "min_cost": 30.8,
-          "max_cost": 30.9
+          "solar": 40.0,
+          "wind": 60.0,
+          "min_cost": 27.2,
+          "max_cost": 53.9
         },
         {
           "clean_firm": 50.0,
-          "solar": 14.0,
-          "wind": 39.0,
-          "min_cost": 31.9,
-          "max_cost": 33.0
+          "solar": 20.0,
+          "wind": 30.0,
+          "min_cost": 32.9,
+          "max_cost": 53.4
         },
         {
-          "clean_firm": 23.0,
-          "solar": 15.0,
-          "wind": 68.0,
-          "min_cost": 38.6,
-          "max_cost": 38.6
+          "clean_firm": 20.0,
+          "solar": 20.0,
+          "wind": 50.0,
+          "min_cost": 35.0,
+          "max_cost": 49.8
+        },
+        {
+          "clean_firm": 10.0,
+          "solar": 20.0,
+          "wind": 60.0,
+          "min_cost": 38.0,
+          "max_cost": 50.5
         }
       ]
     },
     "92.5": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 28.6,
-          "to_cost": 33.3,
-          "from_mix": {
-            "clean_firm": 9.0,
-            "solar": 16.0,
-            "wind": 92.0
-          },
-          "to_mix": {
-            "clean_firm": 50.0,
-            "solar": 14.0,
-            "wind": 45.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 21.5,
-          "to_cost": 33.3,
-          "from_mix": {
-            "clean_firm": 9.0,
-            "solar": 19.0,
-            "wind": 88.0
-          },
-          "to_mix": {
-            "clean_firm": 50.0,
-            "solar": 14.0,
-            "wind": 45.0
-          }
-        }
-      ],
-      "n_unique_mixes": 10,
+      "transitions": [],
+      "n_unique_mixes": 4,
       "mixes": [
         {
+          "clean_firm": 30.0,
+          "solar": 40.0,
+          "wind": 40.0,
+          "min_cost": 37.9,
+          "max_cost": 75.8
+        },
+        {
           "clean_firm": 9.0,
+          "solar": 49.0,
+          "wind": 70.0,
+          "min_cost": 43.1,
+          "max_cost": 67.3
+        },
+        {
+          "clean_firm": 19.0,
           "solar": 19.0,
-          "wind": 88.0,
-          "min_cost": 21.5,
-          "max_cost": 44.0
+          "wind": 51.0,
+          "min_cost": 63.4,
+          "max_cost": 63.4
         },
         {
-          "clean_firm": 9.0,
-          "solar": 16.0,
-          "wind": 92.0,
-          "min_cost": 28.6,
-          "max_cost": 37.3
-        },
-        {
-          "clean_firm": 11.0,
-          "solar": 17.0,
-          "wind": 88.0,
-          "min_cost": 30.6,
-          "max_cost": 39.2
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 16.0,
-          "wind": 72.0,
-          "min_cost": 32.5,
-          "max_cost": 32.6
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 14.0,
-          "wind": 45.0,
-          "min_cost": 33.3,
-          "max_cost": 36.8
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 15.0,
-          "wind": 45.0,
-          "min_cost": 34.1,
-          "max_cost": 34.2
-        },
-        {
-          "clean_firm": 37.0,
-          "solar": 14.0,
-          "wind": 60.0,
-          "min_cost": 41.0,
-          "max_cost": 41.0
-        },
-        {
-          "clean_firm": 43.0,
-          "solar": 14.0,
-          "wind": 53.0,
-          "min_cost": 43.0,
-          "max_cost": 43.0
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 20.0,
-          "wind": 80.0,
-          "min_cost": 43.8,
-          "max_cost": 43.9
-        },
-        {
-          "clean_firm": 23.0,
-          "solar": 18.0,
-          "wind": 72.0,
-          "min_cost": 43.9,
-          "max_cost": 43.9
+          "clean_firm": 21.0,
+          "solar": 19.0,
+          "wind": 51.0,
+          "min_cost": 64.8,
+          "max_cost": 68.3
         }
       ]
     },
     "95": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 33.2,
-          "to_cost": 37.9,
-          "from_mix": {
-            "clean_firm": 11.0,
-            "solar": 18.0,
-            "wind": 98.0
-          },
-          "to_mix": {
-            "clean_firm": 50.0,
-            "solar": 15.0,
-            "wind": 50.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 25.0,
-          "to_cost": 37.9,
-          "from_mix": {
-            "clean_firm": 9.0,
-            "solar": 18.0,
-            "wind": 101.0
-          },
-          "to_mix": {
-            "clean_firm": 50.0,
-            "solar": 15.0,
-            "wind": 50.0
-          }
-        }
-      ],
-      "n_unique_mixes": 17,
+      "transitions": [],
+      "n_unique_mixes": 5,
       "mixes": [
         {
-          "clean_firm": 9.0,
-          "solar": 18.0,
-          "wind": 101.0,
-          "min_cost": 25.0,
-          "max_cost": 51.3
-        },
-        {
-          "clean_firm": 15.0,
-          "solar": 20.0,
-          "wind": 90.0,
-          "min_cost": 32.8,
-          "max_cost": 51.0
-        },
-        {
-          "clean_firm": 11.0,
-          "solar": 18.0,
-          "wind": 98.0,
-          "min_cost": 33.2,
-          "max_cost": 48.1
-        },
-        {
-          "clean_firm": 15.0,
-          "solar": 17.0,
-          "wind": 94.0,
-          "min_cost": 33.2,
-          "max_cost": 33.3
-        },
-        {
-          "clean_firm": 23.0,
-          "solar": 18.0,
-          "wind": 82.0,
-          "min_cost": 35.1,
-          "max_cost": 42.9
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 16.0,
-          "wind": 57.0,
-          "min_cost": 36.7,
-          "max_cost": 46.3
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 15.0,
-          "wind": 50.0,
-          "min_cost": 37.9,
-          "max_cost": 49.7
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 17.0,
-          "wind": 51.0,
-          "min_cost": 38.0,
-          "max_cost": 42.2
-        },
-        {
-          "clean_firm": 62.0,
-          "solar": 14.0,
-          "wind": 39.0,
-          "min_cost": 40.3,
-          "max_cost": 48.0
-        },
-        {
-          "clean_firm": 15.0,
-          "solar": 20.0,
-          "wind": 85.0,
-          "min_cost": 40.9,
-          "max_cost": 51.0
+          "clean_firm": 30.0,
+          "solar": 23.0,
+          "wind": 60.0,
+          "min_cost": 56.0,
+          "max_cost": 107.3
         },
         {
           "clean_firm": 10.0,
-          "solar": 20.0,
-          "wind": 90.0,
-          "min_cost": 41.0,
-          "max_cost": 51.2
+          "solar": 100.0,
+          "wind": 30.0,
+          "min_cost": 63.5,
+          "max_cost": 77.6
         },
         {
-          "clean_firm": 25.0,
+          "clean_firm": 30.0,
           "solar": 15.0,
-          "wind": 80.0,
-          "min_cost": 42.8,
-          "max_cost": 42.8
+          "wind": 60.0,
+          "min_cost": 64.0,
+          "max_cost": 99.8
         },
         {
-          "clean_firm": 25.0,
-          "solar": 20.0,
-          "wind": 75.0,
-          "min_cost": 44.6,
-          "max_cost": 44.6
+          "clean_firm": 10.0,
+          "solar": 60.0,
+          "wind": 30.0,
+          "min_cost": 76.8,
+          "max_cost": 92.2
         },
         {
-          "clean_firm": 29.0,
-          "solar": 16.0,
-          "wind": 77.0,
-          "min_cost": 44.8,
-          "max_cost": 44.8
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 15.0,
-          "wind": 55.0,
-          "min_cost": 46.0,
-          "max_cost": 49.4
-        },
-        {
-          "clean_firm": 22.0,
-          "solar": 19.0,
-          "wind": 82.0,
-          "min_cost": 47.5,
-          "max_cost": 47.5
-        },
-        {
-          "clean_firm": 44.0,
-          "solar": 17.0,
-          "wind": 57.0,
-          "min_cost": 49.7,
-          "max_cost": 49.7
+          "clean_firm": 9.0,
+          "solar": 39.0,
+          "wind": 139.0,
+          "min_cost": 79.4,
+          "max_cost": 83.5
         }
       ]
     },
@@ -1917,17 +2213,4663 @@ const TIPPING_POINT_DATA = {
           "to_level": "H",
           "from_dominant": "wind",
           "to_dominant": "clean_firm",
-          "from_cost": 38.5,
-          "to_cost": 44.2,
+          "from_cost": 78.0,
+          "to_cost": 87.3,
           "from_mix": {
-            "clean_firm": 15.0,
-            "solar": 20.0,
-            "wind": 95.0
+            "clean_firm": 39.0,
+            "solar": 29.0,
+            "wind": 49.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 9.0,
+            "wind_batt8": 19.0
           },
           "to_mix": {
-            "clean_firm": 55.0,
+            "clean_firm": 61.0,
+            "solar": 29.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 29.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 1.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 69.3,
+          "to_cost": 87.3,
+          "from_mix": {
+            "clean_firm": 9.0,
+            "solar": 39.0,
+            "wind": 139.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 9.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 61.0,
+            "solar": 29.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 29.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 1.0
+          }
+        }
+      ],
+      "n_unique_mixes": 8,
+      "mixes": [
+        {
+          "clean_firm": 9.0,
+          "solar": 39.0,
+          "wind": 139.0,
+          "min_cost": 69.3,
+          "max_cost": 131.7
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 29.0,
+          "wind": 49.0,
+          "min_cost": 71.8,
+          "max_cost": 131.6
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 29.0,
+          "wind": 49.0,
+          "min_cost": 71.8,
+          "max_cost": 131.6
+        },
+        {
+          "clean_firm": 61.0,
+          "solar": 29.0,
+          "wind": 60.0,
+          "min_cost": 76.3,
+          "max_cost": 122.2
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 19.0,
+          "wind": 99.0,
+          "min_cost": 81.3,
+          "max_cost": 104.4
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 30.0,
+          "wind": 49.0,
+          "min_cost": 84.3,
+          "max_cost": 117.0
+        },
+        {
+          "clean_firm": 50.0,
+          "solar": 19.0,
+          "wind": 100.0,
+          "min_cost": 87.4,
+          "max_cost": 91.8
+        },
+        {
+          "clean_firm": 9.0,
+          "solar": 49.0,
+          "wind": 29.0,
+          "min_cost": 93.6,
+          "max_cost": 121.7
+        }
+      ]
+    },
+    "99": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "M",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 78.0,
+          "to_cost": 87.3,
+          "from_mix": {
+            "clean_firm": 39.0,
+            "solar": 29.0,
+            "wind": 49.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 9.0,
+            "wind_batt8": 19.0
+          },
+          "to_mix": {
+            "clean_firm": 61.0,
+            "solar": 29.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 29.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 1.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 69.3,
+          "to_cost": 87.3,
+          "from_mix": {
+            "clean_firm": 9.0,
+            "solar": 39.0,
+            "wind": 139.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 9.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 61.0,
+            "solar": 29.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 29.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 1.0
+          }
+        }
+      ],
+      "n_unique_mixes": 7,
+      "mixes": [
+        {
+          "clean_firm": 9.0,
+          "solar": 39.0,
+          "wind": 139.0,
+          "min_cost": 69.3,
+          "max_cost": 131.7
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 29.0,
+          "wind": 49.0,
+          "min_cost": 71.8,
+          "max_cost": 131.6
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 29.0,
+          "wind": 49.0,
+          "min_cost": 71.8,
+          "max_cost": 131.6
+        },
+        {
+          "clean_firm": 61.0,
+          "solar": 29.0,
+          "wind": 60.0,
+          "min_cost": 76.3,
+          "max_cost": 122.2
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 19.0,
+          "wind": 99.0,
+          "min_cost": 81.3,
+          "max_cost": 104.4
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 30.0,
+          "wind": 49.0,
+          "min_cost": 84.3,
+          "max_cost": 117.0
+        },
+        {
+          "clean_firm": 50.0,
+          "solar": 19.0,
+          "wind": 100.0,
+          "min_cost": 87.4,
+          "max_cost": 91.8
+        }
+      ]
+    },
+    "99.5": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "M",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 78.0,
+          "to_cost": 87.3,
+          "from_mix": {
+            "clean_firm": 39.0,
+            "solar": 29.0,
+            "wind": 49.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 9.0,
+            "wind_batt8": 19.0
+          },
+          "to_mix": {
+            "clean_firm": 61.0,
+            "solar": 29.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 29.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 1.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 69.3,
+          "to_cost": 87.3,
+          "from_mix": {
+            "clean_firm": 9.0,
+            "solar": 39.0,
+            "wind": 139.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 9.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 61.0,
+            "solar": 29.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 29.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 1.0
+          }
+        }
+      ],
+      "n_unique_mixes": 6,
+      "mixes": [
+        {
+          "clean_firm": 9.0,
+          "solar": 39.0,
+          "wind": 139.0,
+          "min_cost": 69.3,
+          "max_cost": 131.7
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 29.0,
+          "wind": 49.0,
+          "min_cost": 71.8,
+          "max_cost": 131.6
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 29.0,
+          "wind": 49.0,
+          "min_cost": 71.8,
+          "max_cost": 131.6
+        },
+        {
+          "clean_firm": 61.0,
+          "solar": 29.0,
+          "wind": 60.0,
+          "min_cost": 76.3,
+          "max_cost": 122.2
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 19.0,
+          "wind": 99.0,
+          "min_cost": 81.3,
+          "max_cost": 104.4
+        },
+        {
+          "clean_firm": 50.0,
+          "solar": 19.0,
+          "wind": 100.0,
+          "min_cost": 87.4,
+          "max_cost": 91.8
+        }
+      ]
+    },
+    "99.9": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 70.6,
+          "to_cost": 78.7,
+          "from_mix": {
+            "clean_firm": 49.0,
+            "solar": 19.0,
+            "wind": 99.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 9.0
+          },
+          "to_mix": {
+            "clean_firm": 59.0,
+            "solar": 29.0,
+            "wind": 59.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 29.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 70.6,
+          "to_cost": 87.7,
+          "from_mix": {
+            "clean_firm": 49.0,
+            "solar": 19.0,
+            "wind": 99.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 9.0
+          },
+          "to_mix": {
+            "clean_firm": 59.0,
+            "solar": 29.0,
+            "wind": 59.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 29.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 7,
+      "mixes": [
+        {
+          "clean_firm": 49.0,
+          "solar": 19.0,
+          "wind": 99.0,
+          "min_cost": 70.6,
+          "max_cost": 129.4
+        },
+        {
+          "clean_firm": 59.0,
+          "solar": 29.0,
+          "wind": 59.0,
+          "min_cost": 72.8,
+          "max_cost": 132.7
+        },
+        {
+          "clean_firm": 10.0,
+          "solar": 39.0,
+          "wind": 139.0,
+          "min_cost": 73.3,
+          "max_cost": 139.7
+        },
+        {
+          "clean_firm": 60.0,
+          "solar": 29.0,
+          "wind": 60.0,
+          "min_cost": 80.3,
+          "max_cost": 101.8
+        },
+        {
+          "clean_firm": 50.0,
+          "solar": 19.0,
+          "wind": 100.0,
+          "min_cost": 80.9,
+          "max_cost": 94.8
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 30.0,
+          "wind": 49.0,
+          "min_cost": 86.8,
+          "max_cost": 129.2
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 30.0,
+          "wind": 49.0,
+          "min_cost": 86.8,
+          "max_cost": 129.2
+        }
+      ]
+    }
+  },
+  "PJM": {
+    "10": {
+      "transitions": [],
+      "n_unique_mixes": 6,
+      "mixes": [
+        {
+          "clean_firm": 39.0,
+          "solar": 10.0,
+          "wind": 11.0,
+          "min_cost": 18.0,
+          "max_cost": 34.0
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 19.0,
+          "wind": 10.0,
+          "min_cost": 20.5,
+          "max_cost": 25.3
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 9.0,
+          "wind": 11.0,
+          "min_cost": 20.8,
+          "max_cost": 22.8
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 9.0,
+          "wind": 10.0,
+          "min_cost": 21.4,
+          "max_cost": 29.7
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 10.0,
+          "wind": 9.0,
+          "min_cost": 22.2,
+          "max_cost": 32.1
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 20.0,
+          "wind": 9.0,
+          "min_cost": 22.4,
+          "max_cost": 24.4
+        }
+      ]
+    },
+    "20": {
+      "transitions": [],
+      "n_unique_mixes": 6,
+      "mixes": [
+        {
+          "clean_firm": 39.0,
+          "solar": 10.0,
+          "wind": 11.0,
+          "min_cost": 18.0,
+          "max_cost": 34.0
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 19.0,
+          "wind": 10.0,
+          "min_cost": 20.5,
+          "max_cost": 25.3
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 9.0,
+          "wind": 11.0,
+          "min_cost": 20.8,
+          "max_cost": 22.8
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 9.0,
+          "wind": 10.0,
+          "min_cost": 21.4,
+          "max_cost": 29.7
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 10.0,
+          "wind": 9.0,
+          "min_cost": 22.2,
+          "max_cost": 32.1
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 20.0,
+          "wind": 9.0,
+          "min_cost": 22.4,
+          "max_cost": 24.4
+        }
+      ]
+    },
+    "30": {
+      "transitions": [],
+      "n_unique_mixes": 6,
+      "mixes": [
+        {
+          "clean_firm": 39.0,
+          "solar": 10.0,
+          "wind": 11.0,
+          "min_cost": 18.0,
+          "max_cost": 34.0
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 19.0,
+          "wind": 10.0,
+          "min_cost": 20.5,
+          "max_cost": 25.3
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 9.0,
+          "wind": 11.0,
+          "min_cost": 20.8,
+          "max_cost": 22.8
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 9.0,
+          "wind": 10.0,
+          "min_cost": 21.4,
+          "max_cost": 29.7
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 10.0,
+          "wind": 9.0,
+          "min_cost": 22.2,
+          "max_cost": 32.1
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 20.0,
+          "wind": 9.0,
+          "min_cost": 22.4,
+          "max_cost": 24.4
+        }
+      ]
+    },
+    "40": {
+      "transitions": [],
+      "n_unique_mixes": 6,
+      "mixes": [
+        {
+          "clean_firm": 39.0,
+          "solar": 10.0,
+          "wind": 11.0,
+          "min_cost": 18.0,
+          "max_cost": 34.0
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 19.0,
+          "wind": 10.0,
+          "min_cost": 20.5,
+          "max_cost": 25.3
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 9.0,
+          "wind": 11.0,
+          "min_cost": 20.8,
+          "max_cost": 22.8
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 9.0,
+          "wind": 10.0,
+          "min_cost": 21.4,
+          "max_cost": 29.7
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 10.0,
+          "wind": 9.0,
+          "min_cost": 22.2,
+          "max_cost": 32.1
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 20.0,
+          "wind": 9.0,
+          "min_cost": 22.4,
+          "max_cost": 24.4
+        }
+      ]
+    },
+    "50": {
+      "transitions": [],
+      "n_unique_mixes": 6,
+      "mixes": [
+        {
+          "clean_firm": 39.0,
+          "solar": 10.0,
+          "wind": 11.0,
+          "min_cost": 18.0,
+          "max_cost": 34.0
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 19.0,
+          "wind": 10.0,
+          "min_cost": 20.5,
+          "max_cost": 25.3
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 9.0,
+          "wind": 11.0,
+          "min_cost": 20.8,
+          "max_cost": 22.8
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 9.0,
+          "wind": 10.0,
+          "min_cost": 21.4,
+          "max_cost": 29.7
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 10.0,
+          "wind": 9.0,
+          "min_cost": 22.2,
+          "max_cost": 32.1
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 20.0,
+          "wind": 9.0,
+          "min_cost": 22.4,
+          "max_cost": 24.4
+        }
+      ]
+    },
+    "55": {
+      "transitions": [],
+      "n_unique_mixes": 6,
+      "mixes": [
+        {
+          "clean_firm": 39.0,
+          "solar": 10.0,
+          "wind": 11.0,
+          "min_cost": 18.0,
+          "max_cost": 34.0
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 19.0,
+          "wind": 10.0,
+          "min_cost": 20.5,
+          "max_cost": 25.3
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 9.0,
+          "wind": 11.0,
+          "min_cost": 20.8,
+          "max_cost": 22.8
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 9.0,
+          "wind": 10.0,
+          "min_cost": 21.4,
+          "max_cost": 29.7
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 10.0,
+          "wind": 9.0,
+          "min_cost": 22.2,
+          "max_cost": 32.1
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 20.0,
+          "wind": 9.0,
+          "min_cost": 22.4,
+          "max_cost": 24.4
+        }
+      ]
+    },
+    "60": {
+      "transitions": [],
+      "n_unique_mixes": 6,
+      "mixes": [
+        {
+          "clean_firm": 39.0,
+          "solar": 10.0,
+          "wind": 11.0,
+          "min_cost": 18.0,
+          "max_cost": 34.0
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 19.0,
+          "wind": 10.0,
+          "min_cost": 20.5,
+          "max_cost": 25.3
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 9.0,
+          "wind": 11.0,
+          "min_cost": 20.8,
+          "max_cost": 22.8
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 9.0,
+          "wind": 10.0,
+          "min_cost": 21.4,
+          "max_cost": 29.7
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 10.0,
+          "wind": 9.0,
+          "min_cost": 22.2,
+          "max_cost": 32.1
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 20.0,
+          "wind": 9.0,
+          "min_cost": 22.4,
+          "max_cost": 24.4
+        }
+      ]
+    },
+    "65": {
+      "transitions": [],
+      "n_unique_mixes": 6,
+      "mixes": [
+        {
+          "clean_firm": 39.0,
+          "solar": 10.0,
+          "wind": 11.0,
+          "min_cost": 18.0,
+          "max_cost": 34.0
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 19.0,
+          "wind": 10.0,
+          "min_cost": 20.5,
+          "max_cost": 25.3
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 9.0,
+          "wind": 11.0,
+          "min_cost": 20.8,
+          "max_cost": 22.8
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 9.0,
+          "wind": 10.0,
+          "min_cost": 21.4,
+          "max_cost": 29.7
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 10.0,
+          "wind": 9.0,
+          "min_cost": 22.2,
+          "max_cost": 32.1
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 20.0,
+          "wind": 9.0,
+          "min_cost": 22.4,
+          "max_cost": 24.4
+        }
+      ]
+    },
+    "70": {
+      "transitions": [],
+      "n_unique_mixes": 6,
+      "mixes": [
+        {
+          "clean_firm": 49.0,
+          "solar": 19.0,
+          "wind": 10.0,
+          "min_cost": 20.5,
+          "max_cost": 39.5
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 20.0,
+          "wind": 9.0,
+          "min_cost": 22.4,
+          "max_cost": 41.9
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 30.0,
+          "wind": 10.0,
+          "min_cost": 22.7,
+          "max_cost": 36.9
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 20.0,
+          "wind": 20.0,
+          "min_cost": 25.5,
+          "max_cost": 36.0
+        },
+        {
+          "clean_firm": 50.0,
+          "solar": 19.0,
+          "wind": 9.0,
+          "min_cost": 28.2,
+          "max_cost": 32.7
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 10.0,
+          "wind": 11.0,
+          "min_cost": 29.0,
+          "max_cost": 40.3
+        }
+      ]
+    },
+    "75": {
+      "transitions": [],
+      "n_unique_mixes": 6,
+      "mixes": [
+        {
+          "clean_firm": 40.0,
+          "solar": 30.0,
+          "wind": 10.0,
+          "min_cost": 22.3,
+          "max_cost": 44.0
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 20.0,
+          "wind": 20.0,
+          "min_cost": 23.1,
+          "max_cost": 45.6
+        },
+        {
+          "clean_firm": 50.0,
+          "solar": 10.0,
+          "wind": 10.0,
+          "min_cost": 31.9,
+          "max_cost": 41.0
+        },
+        {
+          "clean_firm": 51.0,
+          "solar": 19.0,
+          "wind": 11.0,
+          "min_cost": 33.7,
+          "max_cost": 42.1
+        },
+        {
+          "clean_firm": 50.0,
+          "solar": 20.0,
+          "wind": 10.0,
+          "min_cost": 34.2,
+          "max_cost": 42.1
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 10.0,
+          "wind": 20.0,
+          "min_cost": 34.6,
+          "max_cost": 42.7
+        }
+      ]
+    },
+    "80": {
+      "transitions": [],
+      "n_unique_mixes": 6,
+      "mixes": [
+        {
+          "clean_firm": 40.0,
+          "solar": 30.0,
+          "wind": 20.0,
+          "min_cost": 25.0,
+          "max_cost": 50.0
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 20.0,
+          "wind": 30.0,
+          "min_cost": 25.8,
+          "max_cost": 51.6
+        },
+        {
+          "clean_firm": 50.0,
+          "solar": 20.0,
+          "wind": 20.0,
+          "min_cost": 32.3,
+          "max_cost": 49.3
+        },
+        {
+          "clean_firm": 50.0,
+          "solar": 30.0,
+          "wind": 10.0,
+          "min_cost": 32.7,
+          "max_cost": 47.2
+        },
+        {
+          "clean_firm": 60.0,
+          "solar": 20.0,
+          "wind": 10.0,
+          "min_cost": 37.4,
+          "max_cost": 43.7
+        },
+        {
+          "clean_firm": 79.0,
+          "solar": 2.0,
+          "wind": 9.0,
+          "min_cost": 39.0,
+          "max_cost": 44.3
+        }
+      ]
+    },
+    "85": {
+      "transitions": [],
+      "n_unique_mixes": 9,
+      "mixes": [
+        {
+          "clean_firm": 40.0,
+          "solar": 40.0,
+          "wind": 20.0,
+          "min_cost": 30.0,
+          "max_cost": 52.1
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 50.0,
+          "wind": 10.0,
+          "min_cost": 33.5,
+          "max_cost": 48.3
+        },
+        {
+          "clean_firm": 79.0,
+          "solar": 2.0,
+          "wind": 9.0,
+          "min_cost": 37.0,
+          "max_cost": 59.2
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 20.0,
+          "wind": 20.0,
+          "min_cost": 37.3,
+          "max_cost": 61.6
+        },
+        {
+          "clean_firm": 79.0,
+          "solar": 2.0,
+          "wind": 11.0,
+          "min_cost": 37.3,
+          "max_cost": 38.6
+        },
+        {
+          "clean_firm": 50.0,
+          "solar": 20.0,
+          "wind": 10.0,
+          "min_cost": 40.3,
+          "max_cost": 58.0
+        },
+        {
+          "clean_firm": 50.0,
+          "solar": 40.0,
+          "wind": 10.0,
+          "min_cost": 41.6,
+          "max_cost": 47.9
+        },
+        {
+          "clean_firm": 67.0,
+          "solar": 7.0,
+          "wind": 14.0,
+          "min_cost": 48.9,
+          "max_cost": 53.0
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 10.0,
+          "wind": 20.0,
+          "min_cost": 50.3,
+          "max_cost": 54.9
+        }
+      ]
+    },
+    "87.5": {
+      "transitions": [],
+      "n_unique_mixes": 10,
+      "mixes": [
+        {
+          "clean_firm": 40.0,
+          "solar": 40.0,
+          "wind": 20.0,
+          "min_cost": 34.3,
+          "max_cost": 73.7
+        },
+        {
+          "clean_firm": 67.0,
+          "solar": 7.0,
+          "wind": 14.0,
+          "min_cost": 34.5,
+          "max_cost": 74.0
+        },
+        {
+          "clean_firm": 79.0,
+          "solar": 2.0,
+          "wind": 11.0,
+          "min_cost": 36.8,
+          "max_cost": 39.4
+        },
+        {
+          "clean_firm": 79.0,
+          "solar": 2.0,
+          "wind": 9.0,
+          "min_cost": 37.0,
+          "max_cost": 59.2
+        },
+        {
+          "clean_firm": 32.0,
+          "solar": 70.0,
+          "wind": 10.0,
+          "min_cost": 38.4,
+          "max_cost": 64.2
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 40.0,
+          "wind": 10.0,
+          "min_cost": 38.4,
+          "max_cost": 67.9
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 40.0,
+          "wind": 10.0,
+          "min_cost": 38.4,
+          "max_cost": 67.9
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 30.0,
+          "wind": 10.0,
+          "min_cost": 39.9,
+          "max_cost": 60.2
+        },
+        {
+          "clean_firm": 47.0,
+          "solar": 20.0,
+          "wind": 7.0,
+          "min_cost": 58.6,
+          "max_cost": 70.7
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 30.0,
+          "wind": 10.0,
+          "min_cost": 62.1,
+          "max_cost": 65.7
+        }
+      ]
+    },
+    "90": {
+      "transitions": [],
+      "n_unique_mixes": 5,
+      "mixes": [
+        {
+          "clean_firm": 51.0,
+          "solar": 39.0,
+          "wind": 11.0,
+          "min_cost": 61.8,
+          "max_cost": 116.9
+        },
+        {
+          "clean_firm": 50.0,
+          "solar": 39.0,
+          "wind": 11.0,
+          "min_cost": 63.3,
+          "max_cost": 102.7
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 65.7,
+          "max_cost": 110.0
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 40.0,
+          "wind": 10.0,
+          "min_cost": 71.4,
+          "max_cost": 83.6
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 41.0,
+          "wind": 11.0,
+          "min_cost": 71.8,
+          "max_cost": 80.0
+        }
+      ]
+    },
+    "92.5": {
+      "transitions": [],
+      "n_unique_mixes": 9,
+      "mixes": [
+        {
+          "clean_firm": 41.0,
+          "solar": 40.0,
+          "wind": 10.0,
+          "min_cost": 64.1,
+          "max_cost": 103.5
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 65.3,
+          "max_cost": 120.0
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 41.0,
+          "wind": 11.0,
+          "min_cost": 71.8,
+          "max_cost": 80.0
+        },
+        {
+          "clean_firm": 51.0,
+          "solar": 11.0,
+          "wind": 21.0,
+          "min_cost": 88.0,
+          "max_cost": 100.7
+        },
+        {
+          "clean_firm": 51.0,
+          "solar": 9.0,
+          "wind": 19.0,
+          "min_cost": 88.3,
+          "max_cost": 101.7
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 10.0,
+          "wind": 19.0,
+          "min_cost": 89.1,
+          "max_cost": 108.4
+        },
+        {
+          "clean_firm": 60.0,
+          "solar": 19.0,
+          "wind": 9.0,
+          "min_cost": 91.2,
+          "max_cost": 113.7
+        },
+        {
+          "clean_firm": 51.0,
+          "solar": 11.0,
+          "wind": 20.0,
+          "min_cost": 93.1,
+          "max_cost": 106.9
+        },
+        {
+          "clean_firm": 51.0,
+          "solar": 20.0,
+          "wind": 11.0,
+          "min_cost": 103.5,
+          "max_cost": 116.3
+        }
+      ]
+    },
+    "95": {
+      "transitions": [],
+      "n_unique_mixes": 5,
+      "mixes": [
+        {
+          "clean_firm": 41.0,
+          "solar": 40.0,
+          "wind": 10.0,
+          "min_cost": 64.1,
+          "max_cost": 103.5
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 65.3,
+          "max_cost": 120.0
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 41.0,
+          "wind": 11.0,
+          "min_cost": 71.8,
+          "max_cost": 80.0
+        },
+        {
+          "clean_firm": 51.0,
+          "solar": 11.0,
+          "wind": 21.0,
+          "min_cost": 88.0,
+          "max_cost": 100.7
+        },
+        {
+          "clean_firm": 51.0,
+          "solar": 11.0,
+          "wind": 20.0,
+          "min_cost": 93.1,
+          "max_cost": 116.5
+        }
+      ]
+    },
+    "97.5": {
+      "transitions": [
+        {
+          "toggle": "storage",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "clean_firm",
+          "to_dominant": "solar",
+          "from_cost": 64.4,
+          "to_cost": 69.4,
+          "from_mix": {
+            "clean_firm": 41.0,
+            "solar": 40.0,
+            "wind": 10.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 11.0,
+            "wind_batt8": 21.0
+          },
+          "to_mix": {
+            "clean_firm": 40.0,
+            "solar": 41.0,
+            "wind": 11.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 11.0,
+            "wind_batt8": 21.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "M",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 69.4,
+          "to_cost": 81.6,
+          "from_mix": {
+            "clean_firm": 40.0,
+            "solar": 41.0,
+            "wind": 11.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 11.0,
+            "wind_batt8": 21.0
+          },
+          "to_mix": {
+            "clean_firm": 61.0,
+            "solar": 41.0,
+            "wind": 21.0,
+            "solar_batt4": 1.0,
+            "solar_batt8": 21.0,
+            "wind_batt4": 1.0,
+            "wind_batt8": 1.0
+          }
+        }
+      ],
+      "n_unique_mixes": 9,
+      "mixes": [
+        {
+          "clean_firm": 41.0,
+          "solar": 40.0,
+          "wind": 10.0,
+          "min_cost": 64.4,
+          "max_cost": 94.3
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 41.0,
+          "wind": 11.0,
+          "min_cost": 64.9,
+          "max_cost": 95.9
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 75.0,
+          "max_cost": 122.7
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 19.0,
+          "wind": 30.0,
+          "min_cost": 76.1,
+          "max_cost": 121.7
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 19.0,
+          "wind": 29.0,
+          "min_cost": 79.0,
+          "max_cost": 120.7
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 40.0,
+          "wind": 11.0,
+          "min_cost": 81.5,
+          "max_cost": 82.2
+        },
+        {
+          "clean_firm": 61.0,
+          "solar": 41.0,
+          "wind": 21.0,
+          "min_cost": 81.6,
+          "max_cost": 118.1
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 41.0,
+          "wind": 10.0,
+          "min_cost": 82.3,
+          "max_cost": 95.0
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 21.0,
+          "wind": 30.0,
+          "min_cost": 84.9,
+          "max_cost": 89.5
+        }
+      ]
+    },
+    "99": {
+      "transitions": [],
+      "n_unique_mixes": 11,
+      "mixes": [
+        {
+          "clean_firm": 40.0,
+          "solar": 21.0,
+          "wind": 30.0,
+          "min_cost": 67.0,
+          "max_cost": 129.7
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 21.0,
+          "wind": 30.0,
+          "min_cost": 67.0,
+          "max_cost": 129.7
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 21.0,
+          "wind": 31.0,
+          "min_cost": 69.5,
+          "max_cost": 103.3
+        },
+        {
+          "clean_firm": 61.0,
+          "solar": 41.0,
+          "wind": 21.0,
+          "min_cost": 72.6,
+          "max_cost": 127.1
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 40.0,
+          "wind": 39.0,
+          "min_cost": 75.6,
+          "max_cost": 109.7
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 20.0,
+          "wind": 31.0,
+          "min_cost": 78.3,
+          "max_cost": 106.9
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 19.0,
+          "wind": 29.0,
+          "min_cost": 81.2,
+          "max_cost": 111.8
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 21.0,
+          "wind": 29.0,
+          "min_cost": 91.0,
+          "max_cost": 96.2
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 39.0,
+          "wind": 39.0,
+          "min_cost": 98.0,
+          "max_cost": 102.5
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 21.0,
+          "wind": 30.0,
+          "min_cost": 105.9,
+          "max_cost": 128.2
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 19.0,
+          "wind": 29.0,
+          "min_cost": 106.5,
+          "max_cost": 108.2
+        }
+      ]
+    },
+    "99.5": {
+      "transitions": [
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "clean_firm",
+          "to_dominant": "solar",
+          "from_cost": 69.0,
+          "to_cost": 69.3,
+          "from_mix": {
+            "clean_firm": 61.0,
+            "solar": 41.0,
+            "wind": 21.0,
+            "solar_batt4": 1.0,
+            "solar_batt8": 21.0,
+            "wind_batt4": 1.0,
+            "wind_batt8": 1.0
+          },
+          "to_mix": {
+            "clean_firm": 39.0,
+            "solar": 40.0,
+            "wind": 39.0,
+            "solar_batt4": 19.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 9.0
+          }
+        },
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "clean_firm",
+          "to_dominant": "solar",
+          "from_cost": 69.0,
+          "to_cost": 69.7,
+          "from_mix": {
+            "clean_firm": 61.0,
+            "solar": 41.0,
+            "wind": 21.0,
+            "solar_batt4": 1.0,
+            "solar_batt8": 21.0,
+            "wind_batt4": 1.0,
+            "wind_batt8": 1.0
+          },
+          "to_mix": {
+            "clean_firm": 39.0,
+            "solar": 40.0,
+            "wind": 39.0,
+            "solar_batt4": 19.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 9.0
+          }
+        }
+      ],
+      "n_unique_mixes": 6,
+      "mixes": [
+        {
+          "clean_firm": 61.0,
+          "solar": 41.0,
+          "wind": 21.0,
+          "min_cost": 69.0,
+          "max_cost": 131.6
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 40.0,
+          "wind": 39.0,
+          "min_cost": 69.3,
+          "max_cost": 134.0
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 29.0,
+          "wind": 29.0,
+          "min_cost": 81.7,
+          "max_cost": 120.3
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 39.0,
+          "wind": 39.0,
+          "min_cost": 87.0,
+          "max_cost": 132.7
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 21.0,
+          "wind": 29.0,
+          "min_cost": 98.0,
+          "max_cost": 112.5
+        },
+        {
+          "clean_firm": 51.0,
+          "solar": 30.0,
+          "wind": 11.0,
+          "min_cost": 117.0,
+          "max_cost": 117.0
+        }
+      ]
+    },
+    "99.9": {
+      "transitions": [
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "clean_firm",
+          "to_dominant": "solar",
+          "from_cost": 69.0,
+          "to_cost": 69.3,
+          "from_mix": {
+            "clean_firm": 61.0,
+            "solar": 41.0,
+            "wind": 21.0,
+            "solar_batt4": 1.0,
+            "solar_batt8": 21.0,
+            "wind_batt4": 1.0,
+            "wind_batt8": 1.0
+          },
+          "to_mix": {
+            "clean_firm": 39.0,
+            "solar": 40.0,
+            "wind": 39.0,
+            "solar_batt4": 19.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 9.0
+          }
+        },
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "clean_firm",
+          "to_dominant": "solar",
+          "from_cost": 69.0,
+          "to_cost": 69.7,
+          "from_mix": {
+            "clean_firm": 61.0,
+            "solar": 41.0,
+            "wind": 21.0,
+            "solar_batt4": 1.0,
+            "solar_batt8": 21.0,
+            "wind_batt4": 1.0,
+            "wind_batt8": 1.0
+          },
+          "to_mix": {
+            "clean_firm": 39.0,
+            "solar": 40.0,
+            "wind": 39.0,
+            "solar_batt4": 19.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 9.0
+          }
+        }
+      ],
+      "n_unique_mixes": 4,
+      "mixes": [
+        {
+          "clean_firm": 61.0,
+          "solar": 41.0,
+          "wind": 21.0,
+          "min_cost": 69.0,
+          "max_cost": 134.2
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 40.0,
+          "wind": 39.0,
+          "min_cost": 69.3,
+          "max_cost": 136.0
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 39.0,
+          "wind": 39.0,
+          "min_cost": 82.1,
+          "max_cost": 121.7
+        },
+        {
+          "clean_firm": 51.0,
+          "solar": 30.0,
+          "wind": 11.0,
+          "min_cost": 114.0,
+          "max_cost": 114.0
+        }
+      ]
+    }
+  },
+  "NYISO": {
+    "10": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 8.7,
+          "to_cost": 11.1,
+          "from_mix": {
+            "clean_firm": 18.0,
+            "solar": 0.0,
+            "wind": 19.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 34.0,
+            "solar": 0.0,
+            "wind": 5.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 8.7,
+          "to_cost": 11.2,
+          "from_mix": {
+            "clean_firm": 18.0,
+            "solar": 0.0,
+            "wind": 19.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 34.0,
+            "solar": 0.0,
+            "wind": 5.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 7,
+      "mixes": [
+        {
+          "clean_firm": 18.0,
+          "solar": 0.0,
+          "wind": 19.0,
+          "min_cost": 8.7,
+          "max_cost": 18.2
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 0.0,
+          "wind": 15.0,
+          "min_cost": 10.7,
+          "max_cost": 10.7
+        },
+        {
+          "clean_firm": 34.0,
+          "solar": 0.0,
+          "wind": 5.0,
+          "min_cost": 11.1,
+          "max_cost": 17.6
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 10.0,
+          "wind": 5.0,
+          "min_cost": 11.7,
+          "max_cost": 11.7
+        },
+        {
+          "clean_firm": 18.0,
+          "solar": 2.0,
+          "wind": 17.0,
+          "min_cost": 11.8,
+          "max_cost": 11.8
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 0.0,
+          "wind": 9.0,
+          "min_cost": 16.8,
+          "max_cost": 16.8
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 0.0,
+          "wind": 5.0,
+          "min_cost": 17.5,
+          "max_cost": 17.5
+        }
+      ]
+    },
+    "20": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 8.7,
+          "to_cost": 11.1,
+          "from_mix": {
+            "clean_firm": 18.0,
+            "solar": 0.0,
+            "wind": 19.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 34.0,
+            "solar": 0.0,
+            "wind": 5.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 8.7,
+          "to_cost": 11.2,
+          "from_mix": {
+            "clean_firm": 18.0,
+            "solar": 0.0,
+            "wind": 19.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 34.0,
+            "solar": 0.0,
+            "wind": 5.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 7,
+      "mixes": [
+        {
+          "clean_firm": 18.0,
+          "solar": 0.0,
+          "wind": 19.0,
+          "min_cost": 8.7,
+          "max_cost": 18.2
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 0.0,
+          "wind": 15.0,
+          "min_cost": 10.7,
+          "max_cost": 10.7
+        },
+        {
+          "clean_firm": 34.0,
+          "solar": 0.0,
+          "wind": 5.0,
+          "min_cost": 11.1,
+          "max_cost": 17.6
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 10.0,
+          "wind": 5.0,
+          "min_cost": 11.7,
+          "max_cost": 11.7
+        },
+        {
+          "clean_firm": 18.0,
+          "solar": 2.0,
+          "wind": 17.0,
+          "min_cost": 11.8,
+          "max_cost": 11.8
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 0.0,
+          "wind": 9.0,
+          "min_cost": 16.8,
+          "max_cost": 16.8
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 0.0,
+          "wind": 5.0,
+          "min_cost": 17.5,
+          "max_cost": 17.5
+        }
+      ]
+    },
+    "30": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 8.7,
+          "to_cost": 11.1,
+          "from_mix": {
+            "clean_firm": 18.0,
+            "solar": 0.0,
+            "wind": 19.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 34.0,
+            "solar": 0.0,
+            "wind": 5.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 8.7,
+          "to_cost": 11.2,
+          "from_mix": {
+            "clean_firm": 18.0,
+            "solar": 0.0,
+            "wind": 19.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 34.0,
+            "solar": 0.0,
+            "wind": 5.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 7,
+      "mixes": [
+        {
+          "clean_firm": 18.0,
+          "solar": 0.0,
+          "wind": 19.0,
+          "min_cost": 8.7,
+          "max_cost": 18.2
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 0.0,
+          "wind": 15.0,
+          "min_cost": 10.7,
+          "max_cost": 10.7
+        },
+        {
+          "clean_firm": 34.0,
+          "solar": 0.0,
+          "wind": 5.0,
+          "min_cost": 11.1,
+          "max_cost": 17.6
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 10.0,
+          "wind": 5.0,
+          "min_cost": 11.7,
+          "max_cost": 11.7
+        },
+        {
+          "clean_firm": 18.0,
+          "solar": 2.0,
+          "wind": 17.0,
+          "min_cost": 11.8,
+          "max_cost": 11.8
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 0.0,
+          "wind": 9.0,
+          "min_cost": 16.8,
+          "max_cost": 16.8
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 0.0,
+          "wind": 5.0,
+          "min_cost": 17.5,
+          "max_cost": 17.5
+        }
+      ]
+    },
+    "40": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 8.7,
+          "to_cost": 11.1,
+          "from_mix": {
+            "clean_firm": 18.0,
+            "solar": 0.0,
+            "wind": 19.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 34.0,
+            "solar": 0.0,
+            "wind": 5.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 8.7,
+          "to_cost": 11.2,
+          "from_mix": {
+            "clean_firm": 18.0,
+            "solar": 0.0,
+            "wind": 19.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 34.0,
+            "solar": 0.0,
+            "wind": 5.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 7,
+      "mixes": [
+        {
+          "clean_firm": 18.0,
+          "solar": 0.0,
+          "wind": 19.0,
+          "min_cost": 8.7,
+          "max_cost": 18.2
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 0.0,
+          "wind": 15.0,
+          "min_cost": 10.7,
+          "max_cost": 10.7
+        },
+        {
+          "clean_firm": 34.0,
+          "solar": 0.0,
+          "wind": 5.0,
+          "min_cost": 11.1,
+          "max_cost": 17.6
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 10.0,
+          "wind": 5.0,
+          "min_cost": 11.7,
+          "max_cost": 11.7
+        },
+        {
+          "clean_firm": 18.0,
+          "solar": 2.0,
+          "wind": 17.0,
+          "min_cost": 11.8,
+          "max_cost": 11.8
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 0.0,
+          "wind": 9.0,
+          "min_cost": 16.8,
+          "max_cost": 16.8
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 0.0,
+          "wind": 5.0,
+          "min_cost": 17.5,
+          "max_cost": 17.5
+        }
+      ]
+    },
+    "50": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 8.7,
+          "to_cost": 11.1,
+          "from_mix": {
+            "clean_firm": 18.0,
+            "solar": 0.0,
+            "wind": 19.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 34.0,
+            "solar": 0.0,
+            "wind": 5.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 8.7,
+          "to_cost": 11.2,
+          "from_mix": {
+            "clean_firm": 18.0,
+            "solar": 0.0,
+            "wind": 19.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 34.0,
+            "solar": 0.0,
+            "wind": 5.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 7,
+      "mixes": [
+        {
+          "clean_firm": 18.0,
+          "solar": 0.0,
+          "wind": 19.0,
+          "min_cost": 8.7,
+          "max_cost": 18.2
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 0.0,
+          "wind": 15.0,
+          "min_cost": 10.7,
+          "max_cost": 10.7
+        },
+        {
+          "clean_firm": 34.0,
+          "solar": 0.0,
+          "wind": 5.0,
+          "min_cost": 11.1,
+          "max_cost": 17.6
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 10.0,
+          "wind": 5.0,
+          "min_cost": 11.7,
+          "max_cost": 11.7
+        },
+        {
+          "clean_firm": 18.0,
+          "solar": 2.0,
+          "wind": 17.0,
+          "min_cost": 11.8,
+          "max_cost": 11.8
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 0.0,
+          "wind": 9.0,
+          "min_cost": 16.8,
+          "max_cost": 16.8
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 0.0,
+          "wind": 5.0,
+          "min_cost": 17.5,
+          "max_cost": 17.5
+        }
+      ]
+    },
+    "55": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 65.2,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 41.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 78.1,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 41.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 56.2,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 40.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 58.3,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 40.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 4,
+      "mixes": [
+        {
+          "clean_firm": 21.0,
+          "solar": 29.0,
+          "wind": 11.0,
+          "min_cost": 54.0,
+          "max_cost": 100.8
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 29.0,
+          "wind": 11.0,
+          "min_cost": 55.1,
+          "max_cost": 77.2
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 56.2,
+          "max_cost": 58.3
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 59.2,
+          "max_cost": 99.8
+        }
+      ]
+    },
+    "60": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 65.2,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 41.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 78.1,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 41.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 56.2,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 40.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 58.3,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 40.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 4,
+      "mixes": [
+        {
+          "clean_firm": 21.0,
+          "solar": 29.0,
+          "wind": 11.0,
+          "min_cost": 54.0,
+          "max_cost": 100.8
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 29.0,
+          "wind": 11.0,
+          "min_cost": 55.1,
+          "max_cost": 77.2
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 56.2,
+          "max_cost": 58.3
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 59.2,
+          "max_cost": 99.8
+        }
+      ]
+    },
+    "65": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 65.2,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 41.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 78.1,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 41.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 56.2,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 40.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 58.3,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 40.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 4,
+      "mixes": [
+        {
+          "clean_firm": 21.0,
+          "solar": 29.0,
+          "wind": 11.0,
+          "min_cost": 54.0,
+          "max_cost": 100.8
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 29.0,
+          "wind": 11.0,
+          "min_cost": 55.1,
+          "max_cost": 77.2
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 56.2,
+          "max_cost": 58.3
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 59.2,
+          "max_cost": 99.8
+        }
+      ]
+    },
+    "70": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 65.2,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 41.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 78.1,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 41.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 56.2,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 40.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 58.3,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 40.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 4,
+      "mixes": [
+        {
+          "clean_firm": 21.0,
+          "solar": 29.0,
+          "wind": 11.0,
+          "min_cost": 54.0,
+          "max_cost": 100.8
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 29.0,
+          "wind": 11.0,
+          "min_cost": 55.1,
+          "max_cost": 77.2
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 56.2,
+          "max_cost": 58.3
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 59.2,
+          "max_cost": 99.8
+        }
+      ]
+    },
+    "75": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 65.2,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 41.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 78.1,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 41.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 56.2,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 40.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 58.3,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 40.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 4,
+      "mixes": [
+        {
+          "clean_firm": 21.0,
+          "solar": 29.0,
+          "wind": 11.0,
+          "min_cost": 54.0,
+          "max_cost": 100.8
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 29.0,
+          "wind": 11.0,
+          "min_cost": 55.1,
+          "max_cost": 77.2
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 56.2,
+          "max_cost": 58.3
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 59.2,
+          "max_cost": 99.8
+        }
+      ]
+    },
+    "80": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 65.2,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 41.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 78.1,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 41.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 56.2,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 40.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 54.0,
+          "to_cost": 58.3,
+          "from_mix": {
+            "clean_firm": 21.0,
+            "solar": 29.0,
+            "wind": 11.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 10.0
+          },
+          "to_mix": {
+            "clean_firm": 40.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 4,
+      "mixes": [
+        {
+          "clean_firm": 21.0,
+          "solar": 29.0,
+          "wind": 11.0,
+          "min_cost": 54.0,
+          "max_cost": 100.8
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 29.0,
+          "wind": 11.0,
+          "min_cost": 55.1,
+          "max_cost": 77.2
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 56.2,
+          "max_cost": 58.3
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 59.2,
+          "max_cost": 99.8
+        }
+      ]
+    },
+    "85": {
+      "transitions": [
+        {
+          "toggle": "firm",
+          "from_level": "M",
+          "to_level": "H",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 61.9,
+          "to_cost": 62.6,
+          "from_mix": {
+            "clean_firm": 39.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 10.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 20.0,
+            "solar": 40.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 54.8,
+          "to_cost": 62.6,
+          "from_mix": {
+            "clean_firm": 40.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 20.0,
+            "solar": 40.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 6,
+      "mixes": [
+        {
+          "clean_firm": 40.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 54.8,
+          "max_cost": 82.7
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 57.8,
+          "max_cost": 99.8
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 61.9,
+          "max_cost": 112.3
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 40.0,
+          "wind": 60.0,
+          "min_cost": 62.6,
+          "max_cost": 90.9
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 0.0,
+          "wind": 49.0,
+          "min_cost": 72.4,
+          "max_cost": 101.6
+        },
+        {
+          "clean_firm": 29.0,
+          "solar": 0.0,
+          "wind": 20.0,
+          "min_cost": 105.7,
+          "max_cost": 105.7
+        }
+      ]
+    },
+    "87.5": {
+      "transitions": [
+        {
+          "toggle": "firm",
+          "from_level": "M",
+          "to_level": "H",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 61.9,
+          "to_cost": 62.6,
+          "from_mix": {
+            "clean_firm": 39.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 10.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 20.0,
+            "solar": 40.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 54.8,
+          "to_cost": 62.6,
+          "from_mix": {
+            "clean_firm": 40.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 20.0,
+            "solar": 40.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 6,
+      "mixes": [
+        {
+          "clean_firm": 40.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 54.8,
+          "max_cost": 82.7
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 57.8,
+          "max_cost": 99.8
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 61.9,
+          "max_cost": 112.3
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 40.0,
+          "wind": 60.0,
+          "min_cost": 62.6,
+          "max_cost": 90.9
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 0.0,
+          "wind": 49.0,
+          "min_cost": 72.4,
+          "max_cost": 101.6
+        },
+        {
+          "clean_firm": 29.0,
+          "solar": 0.0,
+          "wind": 20.0,
+          "min_cost": 105.7,
+          "max_cost": 105.7
+        }
+      ]
+    },
+    "90": {
+      "transitions": [
+        {
+          "toggle": "firm",
+          "from_level": "M",
+          "to_level": "H",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 61.9,
+          "to_cost": 62.6,
+          "from_mix": {
+            "clean_firm": 39.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 10.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 20.0,
+            "solar": 40.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 54.8,
+          "to_cost": 62.6,
+          "from_mix": {
+            "clean_firm": 40.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 20.0,
+            "solar": 40.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 5,
+      "mixes": [
+        {
+          "clean_firm": 40.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 54.8,
+          "max_cost": 82.7
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 57.8,
+          "max_cost": 99.8
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 61.9,
+          "max_cost": 112.3
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 40.0,
+          "wind": 60.0,
+          "min_cost": 62.6,
+          "max_cost": 90.9
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 0.0,
+          "wind": 49.0,
+          "min_cost": 72.4,
+          "max_cost": 106.1
+        }
+      ]
+    },
+    "92.5": {
+      "transitions": [
+        {
+          "toggle": "firm",
+          "from_level": "M",
+          "to_level": "H",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 61.9,
+          "to_cost": 62.6,
+          "from_mix": {
+            "clean_firm": 39.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 10.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 20.0,
+            "solar": 40.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 54.8,
+          "to_cost": 62.6,
+          "from_mix": {
+            "clean_firm": 40.0,
+            "solar": 19.0,
+            "wind": 31.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 20.0,
+            "solar": 40.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 4,
+      "mixes": [
+        {
+          "clean_firm": 40.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 54.8,
+          "max_cost": 82.7
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 57.8,
+          "max_cost": 99.8
+        },
+        {
+          "clean_firm": 39.0,
+          "solar": 19.0,
+          "wind": 31.0,
+          "min_cost": 61.9,
+          "max_cost": 112.3
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 40.0,
+          "wind": 60.0,
+          "min_cost": 62.6,
+          "max_cost": 90.9
+        }
+      ]
+    },
+    "95": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 62.1,
+          "to_cost": 71.1,
+          "from_mix": {
+            "clean_firm": 20.0,
+            "solar": 40.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 60.0,
+            "solar": 0.0,
+            "wind": 40.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 10.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 62.1,
+          "to_cost": 81.0,
+          "from_mix": {
+            "clean_firm": 20.0,
+            "solar": 40.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 60.0,
+            "solar": 0.0,
+            "wind": 40.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 10.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 4,
+      "mixes": [
+        {
+          "clean_firm": 20.0,
+          "solar": 40.0,
+          "wind": 60.0,
+          "min_cost": 62.1,
+          "max_cost": 128.0
+        },
+        {
+          "clean_firm": 60.0,
+          "solar": 0.0,
+          "wind": 40.0,
+          "min_cost": 66.4,
+          "max_cost": 112.0
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 0.0,
+          "wind": 10.0,
+          "min_cost": 86.6,
+          "max_cost": 114.2
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 0.0,
+          "wind": 30.0,
+          "min_cost": 118.7,
+          "max_cost": 122.7
+        }
+      ]
+    },
+    "97.5": {
+      "transitions": [
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 63.0,
+          "to_cost": 64.9,
+          "from_mix": {
+            "clean_firm": 60.0,
+            "solar": 0.0,
+            "wind": 40.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 10.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 20.0,
+            "solar": 40.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 63.0,
+          "to_cost": 65.2,
+          "from_mix": {
+            "clean_firm": 60.0,
+            "solar": 0.0,
+            "wind": 40.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 10.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 20.0,
+            "solar": 40.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 7,
+      "mixes": [
+        {
+          "clean_firm": 60.0,
+          "solar": 0.0,
+          "wind": 40.0,
+          "min_cost": 63.0,
+          "max_cost": 136.3
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 40.0,
+          "wind": 60.0,
+          "min_cost": 64.9,
+          "max_cost": 135.0
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 40.0,
+          "wind": 70.0,
+          "min_cost": 75.5,
+          "max_cost": 75.8
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 30.0,
+          "wind": 20.0,
+          "min_cost": 84.8,
+          "max_cost": 88.7
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 30.0,
+          "wind": 20.0,
+          "min_cost": 101.5,
+          "max_cost": 101.5
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 0.0,
+          "wind": 30.0,
+          "min_cost": 106.4,
+          "max_cost": 117.1
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 10.0,
+          "wind": 20.0,
+          "min_cost": 123.9,
+          "max_cost": 128.8
+        }
+      ]
+    },
+    "99": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 64.7,
+          "to_cost": 78.0,
+          "from_mix": {
+            "clean_firm": 20.0,
+            "solar": 40.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 50.0,
             "solar": 20.0,
-            "wind": 45.0
+            "wind": 30.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 10.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 64.7,
+          "to_cost": 86.6,
+          "from_mix": {
+            "clean_firm": 20.0,
+            "solar": 40.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 60.0,
+            "solar": 10.0,
+            "wind": 10.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 30.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "M",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 70.3,
+          "to_cost": 77.6,
+          "from_mix": {
+            "clean_firm": 20.0,
+            "solar": 40.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 50.0,
+            "solar": 20.0,
+            "wind": 30.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 10.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 64.7,
+          "to_cost": 77.6,
+          "from_mix": {
+            "clean_firm": 20.0,
+            "solar": 40.0,
+            "wind": 60.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 50.0,
+            "solar": 20.0,
+            "wind": 30.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 10.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 7,
+      "mixes": [
+        {
+          "clean_firm": 20.0,
+          "solar": 40.0,
+          "wind": 60.0,
+          "min_cost": 64.7,
+          "max_cost": 142.2
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 30.0,
+          "wind": 20.0,
+          "min_cost": 69.3,
+          "max_cost": 98.4
+        },
+        {
+          "clean_firm": 50.0,
+          "solar": 20.0,
+          "wind": 30.0,
+          "min_cost": 74.7,
+          "max_cost": 127.8
+        },
+        {
+          "clean_firm": 60.0,
+          "solar": 10.0,
+          "wind": 10.0,
+          "min_cost": 80.2,
+          "max_cost": 118.4
+        },
+        {
+          "clean_firm": 70.0,
+          "solar": 20.0,
+          "wind": 20.0,
+          "min_cost": 93.0,
+          "max_cost": 111.7
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 10.0,
+          "wind": 20.0,
+          "min_cost": 107.6,
+          "max_cost": 120.0
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 10.0,
+          "wind": 20.0,
+          "min_cost": 131.3,
+          "max_cost": 132.6
+        }
+      ]
+    },
+    "99.5": {
+      "transitions": [
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 65.3,
+          "to_cost": 68.4,
+          "from_mix": {
+            "clean_firm": 30.0,
+            "solar": 30.0,
+            "wind": 20.0,
+            "solar_batt4": 10.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 20.0,
+            "solar": 40.0,
+            "wind": 70.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 65.3,
+          "to_cost": 68.7,
+          "from_mix": {
+            "clean_firm": 30.0,
+            "solar": 30.0,
+            "wind": 20.0,
+            "solar_batt4": 10.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 20.0,
+            "solar": 40.0,
+            "wind": 70.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 7,
+      "mixes": [
+        {
+          "clean_firm": 30.0,
+          "solar": 30.0,
+          "wind": 20.0,
+          "min_cost": 65.3,
+          "max_cost": 145.8
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 40.0,
+          "wind": 70.0,
+          "min_cost": 68.4,
+          "max_cost": 116.5
+        },
+        {
+          "clean_firm": 50.0,
+          "solar": 20.0,
+          "wind": 30.0,
+          "min_cost": 71.2,
+          "max_cost": 146.1
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 30.0,
+          "wind": 50.0,
+          "min_cost": 79.9,
+          "max_cost": 109.3
+        },
+        {
+          "clean_firm": 60.0,
+          "solar": 10.0,
+          "wind": 10.0,
+          "min_cost": 80.2,
+          "max_cost": 118.4
+        },
+        {
+          "clean_firm": 70.0,
+          "solar": 20.0,
+          "wind": 20.0,
+          "min_cost": 93.0,
+          "max_cost": 111.7
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 20.0,
+          "wind": 20.0,
+          "min_cost": 124.9,
+          "max_cost": 134.2
+        }
+      ]
+    },
+    "99.9": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 66.6,
+          "to_cost": 80.1,
+          "from_mix": {
+            "clean_firm": 30.0,
+            "solar": 50.0,
+            "wind": 20.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 70.0,
+            "solar": 20.0,
+            "wind": 20.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 10.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 66.6,
+          "to_cost": 90.8,
+          "from_mix": {
+            "clean_firm": 30.0,
+            "solar": 50.0,
+            "wind": 20.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 70.0,
+            "solar": 20.0,
+            "wind": 20.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 10.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "M",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 74.8,
+          "to_cost": 81.6,
+          "from_mix": {
+            "clean_firm": 30.0,
+            "solar": 50.0,
+            "wind": 20.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 70.0,
+            "solar": 20.0,
+            "wind": 20.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 10.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 66.6,
+          "to_cost": 81.6,
+          "from_mix": {
+            "clean_firm": 30.0,
+            "solar": 50.0,
+            "wind": 20.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 70.0,
+            "solar": 20.0,
+            "wind": 20.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 10.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 6,
+      "mixes": [
+        {
+          "clean_firm": 30.0,
+          "solar": 50.0,
+          "wind": 20.0,
+          "min_cost": 66.6,
+          "max_cost": 154.3
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 50.0,
+          "wind": 50.0,
+          "min_cost": 74.3,
+          "max_cost": 100.3
+        },
+        {
+          "clean_firm": 70.0,
+          "solar": 20.0,
+          "wind": 20.0,
+          "min_cost": 78.5,
+          "max_cost": 129.4
+        },
+        {
+          "clean_firm": 60.0,
+          "solar": 10.0,
+          "wind": 10.0,
+          "min_cost": 96.4,
+          "max_cost": 113.9
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 10.0,
+          "wind": 20.0,
+          "min_cost": 118.8,
+          "max_cost": 131.1
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 10.0,
+          "wind": 20.0,
+          "min_cost": 127.5,
+          "max_cost": 132.3
+        }
+      ]
+    }
+  },
+  "NEISO": {
+    "10": {
+      "transitions": [],
+      "n_unique_mixes": 6,
+      "mixes": [
+        {
+          "clean_firm": 26.0,
+          "solar": 3.0,
+          "wind": 20.0,
+          "min_cost": 10.3,
+          "max_cost": 21.6
+        },
+        {
+          "clean_firm": 24.0,
+          "solar": 3.0,
+          "wind": 22.0,
+          "min_cost": 11.0,
+          "max_cost": 11.0
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 9.0,
+          "wind": 14.0,
+          "min_cost": 13.6,
+          "max_cost": 17.6
+        },
+        {
+          "clean_firm": 44.0,
+          "solar": 1.0,
+          "wind": 4.0,
+          "min_cost": 13.7,
+          "max_cost": 15.0
+        },
+        {
+          "clean_firm": 42.0,
+          "solar": 3.0,
+          "wind": 4.0,
+          "min_cost": 13.9,
+          "max_cost": 14.9
+        },
+        {
+          "clean_firm": 28.0,
+          "solar": 3.0,
+          "wind": 18.0,
+          "min_cost": 21.2,
+          "max_cost": 21.2
+        }
+      ]
+    },
+    "20": {
+      "transitions": [],
+      "n_unique_mixes": 6,
+      "mixes": [
+        {
+          "clean_firm": 26.0,
+          "solar": 3.0,
+          "wind": 20.0,
+          "min_cost": 10.3,
+          "max_cost": 21.6
+        },
+        {
+          "clean_firm": 24.0,
+          "solar": 3.0,
+          "wind": 22.0,
+          "min_cost": 11.0,
+          "max_cost": 11.0
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 9.0,
+          "wind": 14.0,
+          "min_cost": 13.6,
+          "max_cost": 17.6
+        },
+        {
+          "clean_firm": 44.0,
+          "solar": 1.0,
+          "wind": 4.0,
+          "min_cost": 13.7,
+          "max_cost": 15.0
+        },
+        {
+          "clean_firm": 42.0,
+          "solar": 3.0,
+          "wind": 4.0,
+          "min_cost": 13.9,
+          "max_cost": 14.9
+        },
+        {
+          "clean_firm": 28.0,
+          "solar": 3.0,
+          "wind": 18.0,
+          "min_cost": 21.2,
+          "max_cost": 21.2
+        }
+      ]
+    },
+    "30": {
+      "transitions": [],
+      "n_unique_mixes": 6,
+      "mixes": [
+        {
+          "clean_firm": 26.0,
+          "solar": 3.0,
+          "wind": 20.0,
+          "min_cost": 10.3,
+          "max_cost": 21.6
+        },
+        {
+          "clean_firm": 24.0,
+          "solar": 3.0,
+          "wind": 22.0,
+          "min_cost": 11.0,
+          "max_cost": 11.0
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 9.0,
+          "wind": 14.0,
+          "min_cost": 13.6,
+          "max_cost": 17.6
+        },
+        {
+          "clean_firm": 44.0,
+          "solar": 1.0,
+          "wind": 4.0,
+          "min_cost": 13.7,
+          "max_cost": 15.0
+        },
+        {
+          "clean_firm": 42.0,
+          "solar": 3.0,
+          "wind": 4.0,
+          "min_cost": 13.9,
+          "max_cost": 14.9
+        },
+        {
+          "clean_firm": 28.0,
+          "solar": 3.0,
+          "wind": 18.0,
+          "min_cost": 21.2,
+          "max_cost": 21.2
+        }
+      ]
+    },
+    "40": {
+      "transitions": [],
+      "n_unique_mixes": 6,
+      "mixes": [
+        {
+          "clean_firm": 26.0,
+          "solar": 3.0,
+          "wind": 20.0,
+          "min_cost": 10.3,
+          "max_cost": 21.6
+        },
+        {
+          "clean_firm": 24.0,
+          "solar": 3.0,
+          "wind": 22.0,
+          "min_cost": 11.0,
+          "max_cost": 11.0
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 9.0,
+          "wind": 14.0,
+          "min_cost": 13.6,
+          "max_cost": 17.6
+        },
+        {
+          "clean_firm": 44.0,
+          "solar": 1.0,
+          "wind": 4.0,
+          "min_cost": 13.7,
+          "max_cost": 15.0
+        },
+        {
+          "clean_firm": 42.0,
+          "solar": 3.0,
+          "wind": 4.0,
+          "min_cost": 13.9,
+          "max_cost": 14.9
+        },
+        {
+          "clean_firm": 28.0,
+          "solar": 3.0,
+          "wind": 18.0,
+          "min_cost": 21.2,
+          "max_cost": 21.2
+        }
+      ]
+    },
+    "50": {
+      "transitions": [],
+      "n_unique_mixes": 6,
+      "mixes": [
+        {
+          "clean_firm": 26.0,
+          "solar": 3.0,
+          "wind": 20.0,
+          "min_cost": 10.3,
+          "max_cost": 21.6
+        },
+        {
+          "clean_firm": 24.0,
+          "solar": 3.0,
+          "wind": 22.0,
+          "min_cost": 11.0,
+          "max_cost": 11.0
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 7.0,
+          "wind": 16.0,
+          "min_cost": 13.6,
+          "max_cost": 17.7
+        },
+        {
+          "clean_firm": 38.0,
+          "solar": 3.0,
+          "wind": 8.0,
+          "min_cost": 14.1,
+          "max_cost": 14.1
+        },
+        {
+          "clean_firm": 42.0,
+          "solar": 1.0,
+          "wind": 6.0,
+          "min_cost": 14.2,
+          "max_cost": 15.7
+        },
+        {
+          "clean_firm": 28.0,
+          "solar": 3.0,
+          "wind": 18.0,
+          "min_cost": 21.2,
+          "max_cost": 21.2
+        }
+      ]
+    },
+    "55": {
+      "transitions": [
+        {
+          "toggle": "firm",
+          "from_level": "M",
+          "to_level": "H",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 12.9,
+          "to_cost": 13.3,
+          "from_mix": {
+            "clean_firm": 26.0,
+            "solar": 1.0,
+            "wind": 26.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 24.0,
+            "solar": 1.0,
+            "wind": 28.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 12.7,
+          "to_cost": 13.3,
+          "from_mix": {
+            "clean_firm": 26.0,
+            "solar": 1.0,
+            "wind": 26.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 24.0,
+            "solar": 1.0,
+            "wind": 28.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 4,
+      "mixes": [
+        {
+          "clean_firm": 26.0,
+          "solar": 1.0,
+          "wind": 26.0,
+          "min_cost": 12.7,
+          "max_cost": 26.7
+        },
+        {
+          "clean_firm": 24.0,
+          "solar": 1.0,
+          "wind": 28.0,
+          "min_cost": 13.3,
+          "max_cost": 13.3
+        },
+        {
+          "clean_firm": 50.0,
+          "solar": 1.0,
+          "wind": 4.0,
+          "min_cost": 18.1,
+          "max_cost": 19.8
+        },
+        {
+          "clean_firm": 48.0,
+          "solar": 3.0,
+          "wind": 4.0,
+          "min_cost": 18.9,
+          "max_cost": 19.7
+        }
+      ]
+    },
+    "60": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 15.8,
+          "to_cost": 20.9,
+          "from_mix": {
+            "clean_firm": 26.0,
+            "solar": 3.0,
+            "wind": 30.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 32.0,
+            "solar": 3.0,
+            "wind": 24.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 15.8,
+          "to_cost": 22.5,
+          "from_mix": {
+            "clean_firm": 26.0,
+            "solar": 3.0,
+            "wind": 30.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 56.0,
+            "solar": 1.0,
+            "wind": 4.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 7,
+      "mixes": [
+        {
+          "clean_firm": 26.0,
+          "solar": 3.0,
+          "wind": 30.0,
+          "min_cost": 15.8,
+          "max_cost": 31.0
+        },
+        {
+          "clean_firm": 24.0,
+          "solar": 3.0,
+          "wind": 32.0,
+          "min_cost": 16.5,
+          "max_cost": 16.5
+        },
+        {
+          "clean_firm": 24.0,
+          "solar": 29.0,
+          "wind": 4.0,
+          "min_cost": 18.1,
+          "max_cost": 32.5
+        },
+        {
+          "clean_firm": 32.0,
+          "solar": 3.0,
+          "wind": 24.0,
+          "min_cost": 20.9,
+          "max_cost": 20.9
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 1.0,
+          "wind": 18.0,
+          "min_cost": 22.1,
+          "max_cost": 23.3
+        },
+        {
+          "clean_firm": 56.0,
+          "solar": 1.0,
+          "wind": 4.0,
+          "min_cost": 22.5,
+          "max_cost": 24.6
+        },
+        {
+          "clean_firm": 54.0,
+          "solar": 3.0,
+          "wind": 4.0,
+          "min_cost": 24.5,
+          "max_cost": 24.5
+        }
+      ]
+    },
+    "65": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "M",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 22.7,
+          "to_cost": 26.9,
+          "from_mix": {
+            "clean_firm": 24.0,
+            "solar": 29.0,
+            "wind": 4.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 62.0,
+            "solar": 1.0,
+            "wind": 4.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 17.2,
+          "to_cost": 26.9,
+          "from_mix": {
+            "clean_firm": 24.0,
+            "solar": 29.0,
+            "wind": 4.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 62.0,
+            "solar": 1.0,
+            "wind": 4.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 2,
+      "mixes": [
+        {
+          "clean_firm": 24.0,
+          "solar": 29.0,
+          "wind": 4.0,
+          "min_cost": 17.2,
+          "max_cost": 32.5
+        },
+        {
+          "clean_firm": 62.0,
+          "solar": 1.0,
+          "wind": 4.0,
+          "min_cost": 26.9,
+          "max_cost": 29.4
+        }
+      ]
+    },
+    "70": {
+      "transitions": [],
+      "n_unique_mixes": 1,
+      "mixes": [
+        {
+          "clean_firm": 24.0,
+          "solar": 29.0,
+          "wind": 4.0,
+          "min_cost": 17.2,
+          "max_cost": 32.5
+        }
+      ]
+    },
+    "75": {
+      "transitions": [],
+      "n_unique_mixes": 1,
+      "mixes": [
+        {
+          "clean_firm": 24.0,
+          "solar": 29.0,
+          "wind": 4.0,
+          "min_cost": 17.2,
+          "max_cost": 32.5
+        }
+      ]
+    },
+    "80": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 29.8,
+          "to_cost": 37.5,
+          "from_mix": {
+            "clean_firm": 26.0,
+            "solar": 3.0,
+            "wind": 42.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 44.0,
+            "solar": 3.0,
+            "wind": 34.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         },
         {
@@ -1937,185 +6879,130 @@ const TIPPING_POINT_DATA = {
           "from_dominant": "wind",
           "to_dominant": "clean_firm",
           "from_cost": 29.8,
-          "to_cost": 44.2,
+          "to_cost": 40.7,
           "from_mix": {
-            "clean_firm": 10.0,
-            "solar": 25.0,
-            "wind": 95.0
+            "clean_firm": 26.0,
+            "solar": 3.0,
+            "wind": 42.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 55.0,
-            "solar": 20.0,
-            "wind": 45.0
+            "clean_firm": 62.0,
+            "solar": 1.0,
+            "wind": 18.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         }
       ],
-      "n_unique_mixes": 23,
+      "n_unique_mixes": 14,
       "mixes": [
         {
-          "clean_firm": 10.0,
-          "solar": 25.0,
-          "wind": 95.0,
+          "clean_firm": 26.0,
+          "solar": 3.0,
+          "wind": 42.0,
           "min_cost": 29.8,
-          "max_cost": 60.8
+          "max_cost": 58.3
         },
         {
-          "clean_firm": 10.0,
-          "solar": 20.0,
-          "wind": 110.0,
-          "min_cost": 30.8,
-          "max_cost": 41.0
-        },
-        {
-          "clean_firm": 9.0,
-          "solar": 19.0,
-          "wind": 119.0,
-          "min_cost": 30.8,
-          "max_cost": 47.0
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 25.0,
-          "wind": 105.0,
-          "min_cost": 30.8,
-          "max_cost": 43.9
-        },
-        {
-          "clean_firm": 15.0,
-          "solar": 20.0,
-          "wind": 95.0,
-          "min_cost": 38.5,
-          "max_cost": 51.2
-        },
-        {
-          "clean_firm": 15.0,
-          "solar": 20.0,
-          "wind": 100.0,
-          "min_cost": 39.4,
-          "max_cost": 53.5
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 20.0,
-          "wind": 90.0,
-          "min_cost": 39.5,
-          "max_cost": 55.0
-        },
-        {
-          "clean_firm": 48.0,
-          "solar": 16.0,
-          "wind": 67.0,
-          "min_cost": 39.5,
-          "max_cost": 39.6
-        },
-        {
-          "clean_firm": 34.0,
-          "solar": 19.0,
-          "wind": 82.0,
-          "min_cost": 39.9,
-          "max_cost": 52.3
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 18.0,
-          "wind": 63.0,
-          "min_cost": 41.1,
-          "max_cost": 58.0
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 20.0,
-          "wind": 60.0,
-          "min_cost": 42.4,
-          "max_cost": 57.5
-        },
-        {
-          "clean_firm": 35.0,
-          "solar": 20.0,
-          "wind": 70.0,
-          "min_cost": 42.7,
-          "max_cost": 42.8
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 17.0,
-          "wind": 63.0,
-          "min_cost": 42.8,
-          "max_cost": 50.2
-        },
-        {
-          "clean_firm": 55.0,
-          "solar": 20.0,
-          "wind": 45.0,
-          "min_cost": 44.2,
-          "max_cost": 54.4
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 25.0,
+          "clean_firm": 24.0,
+          "solar": 3.0,
           "wind": 50.0,
-          "min_cost": 44.4,
-          "max_cost": 56.2
+          "min_cost": 30.4,
+          "max_cost": 34.5
+        },
+        {
+          "clean_firm": 44.0,
+          "solar": 3.0,
+          "wind": 34.0,
+          "min_cost": 37.5,
+          "max_cost": 40.1
+        },
+        {
+          "clean_firm": 52.0,
+          "solar": 1.0,
+          "wind": 28.0,
+          "min_cost": 37.6,
+          "max_cost": 38.1
+        },
+        {
+          "clean_firm": 42.0,
+          "solar": 3.0,
+          "wind": 36.0,
+          "min_cost": 39.1,
+          "max_cost": 59.5
+        },
+        {
+          "clean_firm": 62.0,
+          "solar": 1.0,
+          "wind": 18.0,
+          "min_cost": 39.2,
+          "max_cost": 47.1
         },
         {
           "clean_firm": 60.0,
-          "solar": 15.0,
-          "wind": 50.0,
-          "min_cost": 44.6,
-          "max_cost": 53.1
+          "solar": 1.0,
+          "wind": 20.0,
+          "min_cost": 39.3,
+          "max_cost": 40.9
         },
         {
-          "clean_firm": 50.0,
-          "solar": 20.0,
-          "wind": 55.0,
-          "min_cost": 44.6,
-          "max_cost": 50.1
+          "clean_firm": 26.0,
+          "solar": 9.0,
+          "wind": 48.0,
+          "min_cost": 39.9,
+          "max_cost": 62.4
         },
         {
-          "clean_firm": 51.0,
-          "solar": 16.0,
-          "wind": 63.0,
-          "min_cost": 44.7,
-          "max_cost": 50.7
+          "clean_firm": 64.0,
+          "solar": 1.0,
+          "wind": 18.0,
+          "min_cost": 40.1,
+          "max_cost": 44.9
         },
         {
-          "clean_firm": 70.0,
-          "solar": 15.0,
-          "wind": 40.0,
-          "min_cost": 46.1,
-          "max_cost": 55.1
+          "clean_firm": 26.0,
+          "solar": 3.0,
+          "wind": 54.0,
+          "min_cost": 40.4,
+          "max_cost": 58.4
         },
         {
-          "clean_firm": 50.0,
-          "solar": 20.0,
-          "wind": 50.0,
-          "min_cost": 47.7,
-          "max_cost": 49.4
-        },
-        {
-          "clean_firm": 30.0,
-          "solar": 20.0,
-          "wind": 80.0,
+          "clean_firm": 36.0,
+          "solar": 3.0,
+          "wind": 42.0,
           "min_cost": 50.6,
           "max_cost": 50.6
         },
         {
-          "clean_firm": 46.0,
-          "solar": 18.0,
-          "wind": 67.0,
-          "min_cost": 54.2,
-          "max_cost": 54.2
+          "clean_firm": 40.0,
+          "solar": 1.0,
+          "wind": 40.0,
+          "min_cost": 51.6,
+          "max_cost": 51.6
         },
         {
-          "clean_firm": 30.0,
-          "solar": 25.0,
-          "wind": 70.0,
-          "min_cost": 57.8,
-          "max_cost": 57.9
+          "clean_firm": 54.0,
+          "solar": 1.0,
+          "wind": 26.0,
+          "min_cost": 59.0,
+          "max_cost": 59.4
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 9.0,
+          "wind": 46.0,
+          "min_cost": 61.4,
+          "max_cost": 61.4
         }
       ]
     },
-    "99": {
+    "85": {
       "transitions": [
         {
           "toggle": "renewable",
@@ -2124,16 +7011,24 @@ const TIPPING_POINT_DATA = {
           "from_dominant": "wind",
           "to_dominant": "clean_firm",
           "from_cost": 43.9,
-          "to_cost": 49.4,
+          "to_cost": 52.0,
           "from_mix": {
             "clean_firm": 40.0,
-            "solar": 20.0,
-            "wind": 75.0
+            "solar": 3.0,
+            "wind": 46.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 55.0,
-            "solar": 20.0,
-            "wind": 55.0
+            "clean_firm": 64.0,
+            "solar": 15.0,
+            "wind": 10.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         },
         {
@@ -2143,4916 +7038,224 @@ const TIPPING_POINT_DATA = {
           "from_dominant": "wind",
           "to_dominant": "clean_firm",
           "from_cost": 35.1,
-          "to_cost": 49.4,
+          "to_cost": 52.0,
           "from_mix": {
-            "clean_firm": 10.0,
-            "solar": 25.0,
-            "wind": 110.0
+            "clean_firm": 28.0,
+            "solar": 5.0,
+            "wind": 58.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 55.0,
-            "solar": 20.0,
-            "wind": 55.0
+            "clean_firm": 64.0,
+            "solar": 15.0,
+            "wind": 10.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         }
       ],
       "n_unique_mixes": 28,
       "mixes": [
         {
-          "clean_firm": 10.0,
-          "solar": 25.0,
-          "wind": 110.0,
+          "clean_firm": 28.0,
+          "solar": 5.0,
+          "wind": 58.0,
           "min_cost": 35.1,
-          "max_cost": 71.8
+          "max_cost": 73.0
         },
         {
-          "clean_firm": 10.0,
-          "solar": 20.0,
-          "wind": 130.0,
-          "min_cost": 37.5,
-          "max_cost": 49.9
-        },
-        {
-          "clean_firm": 15.0,
-          "solar": 25.0,
-          "wind": 105.0,
-          "min_cost": 38.9,
-          "max_cost": 71.4
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 20.0,
-          "wind": 125.0,
-          "min_cost": 39.2,
-          "max_cost": 39.9
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 25.0,
-          "wind": 115.0,
-          "min_cost": 39.4,
-          "max_cost": 48.9
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 20.0,
-          "wind": 100.0,
-          "min_cost": 43.8,
-          "max_cost": 43.8
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 30.0,
-          "wind": 80.0,
-          "min_cost": 43.9,
-          "max_cost": 65.7
-        },
-        {
-          "clean_firm": 40.0,
-          "solar": 20.0,
-          "wind": 75.0,
-          "min_cost": 43.9,
-          "max_cost": 69.5
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 25.0,
-          "wind": 90.0,
-          "min_cost": 45.4,
-          "max_cost": 66.9
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 15.0,
-          "wind": 75.0,
-          "min_cost": 45.8,
-          "max_cost": 54.2
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 17.0,
-          "wind": 80.0,
-          "min_cost": 46.3,
-          "max_cost": 53.7
-        },
-        {
-          "clean_firm": 35.0,
-          "solar": 20.0,
-          "wind": 85.0,
-          "min_cost": 46.7,
-          "max_cost": 57.8
-        },
-        {
-          "clean_firm": 55.0,
-          "solar": 20.0,
-          "wind": 55.0,
-          "min_cost": 47.6,
-          "max_cost": 66.6
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 20.0,
-          "wind": 60.0,
-          "min_cost": 47.7,
-          "max_cost": 57.6
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 20.0,
-          "wind": 105.0,
-          "min_cost": 49.2,
-          "max_cost": 61.5
-        },
-        {
-          "clean_firm": 80.0,
-          "solar": 15.0,
-          "wind": 30.0,
-          "min_cost": 50.8,
-          "max_cost": 62.8
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 15.0,
-          "wind": 70.0,
-          "min_cost": 51.7,
-          "max_cost": 59.8
-        },
-        {
-          "clean_firm": 65.0,
-          "solar": 15.0,
-          "wind": 55.0,
-          "min_cost": 51.9,
-          "max_cost": 57.9
-        },
-        {
-          "clean_firm": 74.0,
-          "solar": 14.0,
+          "clean_firm": 32.0,
+          "solar": 3.0,
           "wind": 50.0,
-          "min_cost": 52.2,
-          "max_cost": 61.0
+          "min_cost": 35.6,
+          "max_cost": 60.2
         },
         {
-          "clean_firm": 85.0,
-          "solar": 15.0,
-          "wind": 30.0,
-          "min_cost": 52.9,
-          "max_cost": 62.5
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 20.0,
-          "wind": 65.0,
-          "min_cost": 53.2,
-          "max_cost": 59.3
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 20.0,
-          "wind": 70.0,
-          "min_cost": 59.8,
-          "max_cost": 68.9
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 25.0,
-          "wind": 95.0,
-          "min_cost": 60.5,
-          "max_cost": 64.8
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 25.0,
+          "clean_firm": 26.0,
+          "solar": 1.0,
           "wind": 60.0,
-          "min_cost": 60.8,
-          "max_cost": 67.3
-        },
-        {
-          "clean_firm": 40.0,
-          "solar": 30.0,
-          "wind": 60.0,
-          "min_cost": 63.2,
-          "max_cost": 63.2
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 30.0,
-          "wind": 100.0,
-          "min_cost": 63.4,
-          "max_cost": 69.2
-        },
-        {
-          "clean_firm": 30.0,
-          "solar": 20.0,
-          "wind": 90.0,
-          "min_cost": 64.0,
-          "max_cost": 66.4
-        },
-        {
-          "clean_firm": 15.0,
-          "solar": 30.0,
-          "wind": 95.0,
-          "min_cost": 67.1,
-          "max_cost": 67.1
-        }
-      ]
-    },
-    "99.5": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 47.2,
-          "to_cost": 52.5,
-          "from_mix": {
-            "clean_firm": 50.0,
-            "solar": 20.0,
-            "wind": 70.0
-          },
-          "to_mix": {
-            "clean_firm": 80.0,
-            "solar": 15.0,
-            "wind": 35.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 39.3,
-          "to_cost": 52.5,
-          "from_mix": {
-            "clean_firm": 15.0,
-            "solar": 25.0,
-            "wind": 115.0
-          },
-          "to_mix": {
-            "clean_firm": 80.0,
-            "solar": 15.0,
-            "wind": 35.0
-          }
-        }
-      ],
-      "n_unique_mixes": 22,
-      "mixes": [
-        {
-          "clean_firm": 15.0,
-          "solar": 25.0,
-          "wind": 115.0,
-          "min_cost": 39.3,
-          "max_cost": 75.9
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 30.0,
-          "wind": 115.0,
-          "min_cost": 39.6,
-          "max_cost": 80.3
-        },
-        {
-          "clean_firm": 15.0,
-          "solar": 35.0,
-          "wind": 100.0,
-          "min_cost": 42.2,
-          "max_cost": 79.7
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 25.0,
-          "wind": 125.0,
-          "min_cost": 42.2,
-          "max_cost": 79.4
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 25.0,
-          "wind": 110.0,
-          "min_cost": 43.1,
-          "max_cost": 61.2
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 25.0,
-          "wind": 130.0,
-          "min_cost": 43.9,
-          "max_cost": 56.7
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 30.0,
-          "wind": 90.0,
-          "min_cost": 44.8,
-          "max_cost": 79.0
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 25.0,
-          "wind": 105.0,
-          "min_cost": 45.3,
-          "max_cost": 45.4
-        },
-        {
-          "clean_firm": 30.0,
-          "solar": 25.0,
-          "wind": 90.0,
-          "min_cost": 46.4,
-          "max_cost": 78.9
-        },
-        {
-          "clean_firm": 30.0,
-          "solar": 30.0,
-          "wind": 85.0,
-          "min_cost": 46.7,
-          "max_cost": 78.5
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 20.0,
-          "wind": 70.0,
-          "min_cost": 47.2,
-          "max_cost": 74.8
-        },
-        {
-          "clean_firm": 35.0,
-          "solar": 30.0,
-          "wind": 75.0,
-          "min_cost": 47.6,
-          "max_cost": 68.3
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 20.0,
-          "wind": 80.0,
-          "min_cost": 47.6,
-          "max_cost": 71.9
-        },
-        {
-          "clean_firm": 40.0,
-          "solar": 20.0,
-          "wind": 85.0,
-          "min_cost": 48.8,
-          "max_cost": 68.3
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 35.0,
-          "wind": 105.0,
-          "min_cost": 49.6,
-          "max_cost": 77.2
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 25.0,
-          "wind": 60.0,
-          "min_cost": 50.9,
-          "max_cost": 72.7
-        },
-        {
-          "clean_firm": 55.0,
-          "solar": 20.0,
-          "wind": 65.0,
-          "min_cost": 51.7,
-          "max_cost": 74.2
-        },
-        {
-          "clean_firm": 80.0,
-          "solar": 15.0,
-          "wind": 35.0,
-          "min_cost": 52.5,
-          "max_cost": 65.9
-        },
-        {
-          "clean_firm": 70.0,
-          "solar": 25.0,
-          "wind": 35.0,
-          "min_cost": 54.6,
-          "max_cost": 63.0
-        },
-        {
-          "clean_firm": 90.0,
-          "solar": 15.0,
-          "wind": 25.0,
-          "min_cost": 55.0,
-          "max_cost": 65.8
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 25.0,
-          "wind": 100.0,
-          "min_cost": 56.9,
-          "max_cost": 74.7
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 30.0,
-          "wind": 100.0,
-          "min_cost": 58.6,
-          "max_cost": 79.0
-        }
-      ]
-    },
-    "99.9": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 48.0,
-          "to_cost": 54.7,
-          "from_mix": {
-            "clean_firm": 50.0,
-            "solar": 25.0,
-            "wind": 80.0
-          },
-          "to_mix": {
-            "clean_firm": 65.0,
-            "solar": 20.0,
-            "wind": 60.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 48.0,
-          "to_cost": 56.7,
-          "from_mix": {
-            "clean_firm": 50.0,
-            "solar": 25.0,
-            "wind": 80.0
-          },
-          "to_mix": {
-            "clean_firm": 90.0,
-            "solar": 15.0,
-            "wind": 30.0
-          }
-        }
-      ],
-      "n_unique_mixes": 40,
-      "mixes": [
-        {
-          "clean_firm": 50.0,
-          "solar": 25.0,
-          "wind": 80.0,
-          "min_cost": 48.0,
-          "max_cost": 94.7
-        },
-        {
-          "clean_firm": 40.0,
-          "solar": 30.0,
-          "wind": 90.0,
-          "min_cost": 48.0,
-          "max_cost": 89.2
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 35.0,
-          "wind": 140.0,
-          "min_cost": 49.1,
-          "max_cost": 94.5
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 20.0,
-          "wind": 90.0,
-          "min_cost": 49.3,
-          "max_cost": 78.2
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 25.0,
-          "wind": 85.0,
-          "min_cost": 49.6,
-          "max_cost": 88.2
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 20.0,
-          "wind": 100.0,
-          "min_cost": 49.8,
-          "max_cost": 85.7
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 30.0,
-          "wind": 75.0,
-          "min_cost": 50.2,
-          "max_cost": 94.9
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 30.0,
-          "wind": 150.0,
-          "min_cost": 51.1,
-          "max_cost": 61.9
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 20.0,
-          "wind": 95.0,
-          "min_cost": 51.5,
-          "max_cost": 51.6
-        },
-        {
-          "clean_firm": 65.0,
-          "solar": 20.0,
-          "wind": 60.0,
-          "min_cost": 54.7,
-          "max_cost": 81.5
-        },
-        {
-          "clean_firm": 70.0,
-          "solar": 20.0,
-          "wind": 55.0,
-          "min_cost": 54.8,
-          "max_cost": 83.2
-        },
-        {
-          "clean_firm": 60.0,
-          "solar": 35.0,
-          "wind": 45.0,
-          "min_cost": 55.1,
-          "max_cost": 81.5
-        },
-        {
-          "clean_firm": 75.0,
-          "solar": 25.0,
-          "wind": 40.0,
-          "min_cost": 56.2,
-          "max_cost": 87.5
-        },
-        {
-          "clean_firm": 55.0,
-          "solar": 25.0,
-          "wind": 75.0,
-          "min_cost": 56.4,
-          "max_cost": 56.4
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 35.0,
-          "wind": 120.0,
-          "min_cost": 56.5,
-          "max_cost": 89.4
-        },
-        {
-          "clean_firm": 90.0,
-          "solar": 15.0,
-          "wind": 30.0,
-          "min_cost": 56.7,
-          "max_cost": 70.0
-        },
-        {
-          "clean_firm": 60.0,
-          "solar": 20.0,
-          "wind": 75.0,
-          "min_cost": 56.9,
-          "max_cost": 62.9
-        },
-        {
-          "clean_firm": 80.0,
-          "solar": 25.0,
-          "wind": 30.0,
-          "min_cost": 57.5,
-          "max_cost": 85.2
-        },
-        {
-          "clean_firm": 95.0,
-          "solar": 15.0,
-          "wind": 25.0,
-          "min_cost": 57.8,
-          "max_cost": 69.3
-        },
-        {
-          "clean_firm": 85.0,
-          "solar": 15.0,
-          "wind": 40.0,
-          "min_cost": 58.5,
-          "max_cost": 86.8
-        },
-        {
-          "clean_firm": 60.0,
-          "solar": 30.0,
-          "wind": 60.0,
-          "min_cost": 59.0,
-          "max_cost": 65.4
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 30.0,
-          "wind": 70.0,
-          "min_cost": 59.7,
-          "max_cost": 89.0
-        },
-        {
-          "clean_firm": 85.0,
-          "solar": 25.0,
-          "wind": 25.0,
-          "min_cost": 60.5,
-          "max_cost": 68.8
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 55.0,
-          "wind": 105.0,
-          "min_cost": 62.0,
-          "max_cost": 62.4
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 35.0,
-          "wind": 60.0,
-          "min_cost": 62.3,
-          "max_cost": 84.2
-        },
-        {
-          "clean_firm": 30.0,
-          "solar": 30.0,
-          "wind": 110.0,
-          "min_cost": 63.0,
-          "max_cost": 89.3
-        },
-        {
-          "clean_firm": 55.0,
-          "solar": 25.0,
-          "wind": 70.0,
-          "min_cost": 63.5,
-          "max_cost": 78.5
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 35.0,
-          "wind": 75.0,
-          "min_cost": 65.3,
-          "max_cost": 92.1
-        },
-        {
-          "clean_firm": 55.0,
-          "solar": 20.0,
-          "wind": 80.0,
-          "min_cost": 66.2,
-          "max_cost": 81.1
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 30.0,
-          "wind": 125.0,
-          "min_cost": 66.5,
-          "max_cost": 94.2
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 40.0,
-          "wind": 100.0,
-          "min_cost": 67.5,
-          "max_cost": 90.5
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 25.0,
-          "wind": 130.0,
-          "min_cost": 67.9,
-          "max_cost": 89.7
-        },
-        {
-          "clean_firm": 80.0,
-          "solar": 15.0,
-          "wind": 45.0,
-          "min_cost": 69.7,
-          "max_cost": 84.6
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 45.0,
-          "wind": 45.0,
-          "min_cost": 70.0,
-          "max_cost": 89.0
-        },
-        {
-          "clean_firm": 15.0,
-          "solar": 45.0,
-          "wind": 110.0,
-          "min_cost": 71.4,
-          "max_cost": 96.3
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 30.0,
-          "wind": 80.0,
-          "min_cost": 72.4,
-          "max_cost": 93.6
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 65.0,
-          "wind": 80.0,
-          "min_cost": 76.1,
-          "max_cost": 88.0
-        },
-        {
-          "clean_firm": 35.0,
-          "solar": 40.0,
-          "wind": 80.0,
-          "min_cost": 86.8,
-          "max_cost": 86.8
-        },
-        {
-          "clean_firm": 15.0,
-          "solar": 65.0,
-          "wind": 70.0,
-          "min_cost": 91.3,
-          "max_cost": 91.3
-        },
-        {
-          "clean_firm": 15.0,
-          "solar": 35.0,
-          "wind": 130.0,
-          "min_cost": 99.6,
-          "max_cost": 99.6
-        }
-      ]
-    },
-    "99.9": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 52.9,
-          "to_cost": 59.0,
-          "from_mix": {
-            "clean_firm": 50.0,
-            "solar": 25.0,
-            "wind": 95.0
-          },
-          "to_mix": {
-            "clean_firm": 85.0,
-            "solar": 20.0,
-            "wind": 40.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 52.9,
-          "to_cost": 60.1,
-          "from_mix": {
-            "clean_firm": 50.0,
-            "solar": 25.0,
-            "wind": 95.0
-          },
-          "to_mix": {
-            "clean_firm": 95.0,
-            "solar": 15.0,
-            "wind": 30.0
-          }
-        }
-      ],
-      "n_unique_mixes": 45,
-      "mixes": [
-        {
-          "clean_firm": 50.0,
-          "solar": 25.0,
-          "wind": 95.0,
-          "min_cost": 52.9,
-          "max_cost": 113.8
-        },
-        {
-          "clean_firm": 30.0,
-          "solar": 20.0,
-          "wind": 110.0,
-          "min_cost": 53.5,
-          "max_cost": 103.5
-        },
-        {
-          "clean_firm": 60.0,
-          "solar": 25.0,
-          "wind": 80.0,
-          "min_cost": 54.9,
-          "max_cost": 83.7
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 25.0,
-          "wind": 130.0,
-          "min_cost": 55.2,
-          "max_cost": 102.6
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 30.0,
-          "wind": 125.0,
-          "min_cost": 55.4,
-          "max_cost": 107.0
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 25.0,
-          "wind": 105.0,
-          "min_cost": 57.7,
-          "max_cost": 60.7
-        },
-        {
-          "clean_firm": 65.0,
-          "solar": 25.0,
-          "wind": 65.0,
-          "min_cost": 58.0,
-          "max_cost": 64.0
-        },
-        {
-          "clean_firm": 15.0,
-          "solar": 35.0,
-          "wind": 145.0,
-          "min_cost": 58.1,
-          "max_cost": 106.4
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 40.0,
-          "wind": 155.0,
-          "min_cost": 58.3,
-          "max_cost": 97.8
-        },
-        {
-          "clean_firm": 85.0,
-          "solar": 20.0,
-          "wind": 40.0,
-          "min_cost": 59.0,
-          "max_cost": 89.4
-        },
-        {
-          "clean_firm": 70.0,
-          "solar": 25.0,
-          "wind": 60.0,
-          "min_cost": 59.5,
-          "max_cost": 89.0
-        },
-        {
-          "clean_firm": 75.0,
-          "solar": 30.0,
-          "wind": 40.0,
-          "min_cost": 60.0,
-          "max_cost": 87.0
-        },
-        {
-          "clean_firm": 30.0,
-          "solar": 25.0,
-          "wind": 145.0,
-          "min_cost": 60.0,
-          "max_cost": 90.5
-        },
-        {
-          "clean_firm": 95.0,
-          "solar": 15.0,
-          "wind": 30.0,
-          "min_cost": 60.1,
-          "max_cost": 92.6
-        },
-        {
-          "clean_firm": 75.0,
-          "solar": 15.0,
-          "wind": 50.0,
-          "min_cost": 60.1,
-          "max_cost": 90.4
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 25.0,
-          "wind": 185.0,
-          "min_cost": 60.8,
-          "max_cost": 82.1
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 25.0,
-          "wind": 70.0,
-          "min_cost": 61.0,
-          "max_cost": 102.1
-        },
-        {
-          "clean_firm": 100.0,
-          "solar": 15.0,
-          "wind": 25.0,
-          "min_cost": 61.2,
-          "max_cost": 72.9
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 50.0,
-          "wind": 50.0,
-          "min_cost": 61.7,
-          "max_cost": 94.8
-        },
-        {
-          "clean_firm": 55.0,
-          "solar": 20.0,
-          "wind": 70.0,
-          "min_cost": 62.5,
-          "max_cost": 82.5
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 40.0,
-          "wind": 145.0,
-          "min_cost": 62.6,
-          "max_cost": 105.7
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 25.0,
-          "wind": 195.0,
-          "min_cost": 63.5,
-          "max_cost": 69.3
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 35.0,
-          "wind": 165.0,
-          "min_cost": 65.7,
-          "max_cost": 66.1
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 35.0,
-          "wind": 110.0,
-          "min_cost": 65.9,
-          "max_cost": 106.2
-        },
-        {
-          "clean_firm": 60.0,
-          "solar": 30.0,
-          "wind": 65.0,
-          "min_cost": 67.0,
-          "max_cost": 67.0
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 30.0,
-          "wind": 85.0,
-          "min_cost": 67.0,
-          "max_cost": 102.0
-        },
-        {
-          "clean_firm": 65.0,
-          "solar": 15.0,
-          "wind": 65.0,
-          "min_cost": 68.2,
-          "max_cost": 79.4
-        },
-        {
-          "clean_firm": 60.0,
-          "solar": 50.0,
-          "wind": 30.0,
-          "min_cost": 68.8,
-          "max_cost": 80.1
-        },
-        {
-          "clean_firm": 80.0,
-          "solar": 25.0,
-          "wind": 35.0,
-          "min_cost": 70.6,
-          "max_cost": 85.6
-        },
-        {
-          "clean_firm": 15.0,
-          "solar": 70.0,
-          "wind": 85.0,
-          "min_cost": 71.5,
-          "max_cost": 71.6
-        },
-        {
-          "clean_firm": 90.0,
-          "solar": 20.0,
-          "wind": 25.0,
-          "min_cost": 71.6,
-          "max_cost": 88.4
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 75.0,
-          "wind": 90.0,
-          "min_cost": 71.7,
-          "max_cost": 72.0
-        },
-        {
-          "clean_firm": 35.0,
-          "solar": 25.0,
-          "wind": 90.0,
-          "min_cost": 72.3,
-          "max_cost": 90.8
-        },
-        {
-          "clean_firm": 15.0,
-          "solar": 35.0,
-          "wind": 160.0,
-          "min_cost": 73.9,
-          "max_cost": 80.5
-        },
-        {
-          "clean_firm": 55.0,
-          "solar": 30.0,
-          "wind": 75.0,
-          "min_cost": 74.8,
-          "max_cost": 78.2
-        },
-        {
-          "clean_firm": 40.0,
-          "solar": 30.0,
-          "wind": 110.0,
-          "min_cost": 75.0,
-          "max_cost": 75.1
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 30.0,
-          "wind": 170.0,
-          "min_cost": 78.3,
-          "max_cost": 91.6
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 20.0,
-          "wind": 120.0,
-          "min_cost": 80.0,
-          "max_cost": 86.9
-        },
-        {
-          "clean_firm": 40.0,
-          "solar": 45.0,
-          "wind": 75.0,
-          "min_cost": 81.6,
-          "max_cost": 110.3
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 20.0,
-          "wind": 115.0,
-          "min_cost": 81.7,
-          "max_cost": 91.5
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 55.0,
-          "wind": 115.0,
-          "min_cost": 82.5,
-          "max_cost": 87.2
-        },
-        {
-          "clean_firm": 40.0,
-          "solar": 65.0,
-          "wind": 40.0,
-          "min_cost": 84.2,
-          "max_cost": 97.2
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 65.0,
-          "wind": 70.0,
-          "min_cost": 86.6,
-          "max_cost": 103.7
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 40.0,
-          "wind": 75.0,
-          "min_cost": 93.3,
-          "max_cost": 93.3
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 50.0,
-          "wind": 120.0,
-          "min_cost": 93.4,
-          "max_cost": 100.3
-        }
-      ]
-    }
-  },
-  "PJM": {
-    "10": {
-      "transitions": [],
-      "n_unique_mixes": 5,
-      "mixes": [
-        {
-          "clean_firm": 32.0,
-          "solar": 13.0,
-          "wind": 9.0,
-          "min_cost": 7.5,
-          "max_cost": 13.3
-        },
-        {
-          "clean_firm": 32.0,
-          "solar": 14.0,
-          "wind": 8.0,
-          "min_cost": 8.5,
-          "max_cost": 14.6
-        },
-        {
-          "clean_firm": 51.0,
-          "solar": 3.0,
-          "wind": 4.0,
-          "min_cost": 11.2,
-          "max_cost": 13.5
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 3.0,
-          "wind": 6.0,
-          "min_cost": 11.7,
-          "max_cost": 12.3
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 5.0,
-          "wind": 4.0,
-          "min_cost": 12.3,
-          "max_cost": 13.1
-        }
-      ]
-    },
-    "20": {
-      "transitions": [],
-      "n_unique_mixes": 5,
-      "mixes": [
-        {
-          "clean_firm": 32.0,
-          "solar": 13.0,
-          "wind": 9.0,
-          "min_cost": 7.5,
-          "max_cost": 13.3
-        },
-        {
-          "clean_firm": 32.0,
-          "solar": 14.0,
-          "wind": 8.0,
-          "min_cost": 8.5,
-          "max_cost": 14.6
-        },
-        {
-          "clean_firm": 51.0,
-          "solar": 3.0,
-          "wind": 4.0,
-          "min_cost": 11.2,
-          "max_cost": 13.5
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 3.0,
-          "wind": 6.0,
-          "min_cost": 11.7,
-          "max_cost": 12.3
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 5.0,
-          "wind": 4.0,
-          "min_cost": 12.3,
-          "max_cost": 13.1
-        }
-      ]
-    },
-    "30": {
-      "transitions": [],
-      "n_unique_mixes": 5,
-      "mixes": [
-        {
-          "clean_firm": 32.0,
-          "solar": 13.0,
-          "wind": 9.0,
-          "min_cost": 7.5,
-          "max_cost": 13.3
-        },
-        {
-          "clean_firm": 32.0,
-          "solar": 14.0,
-          "wind": 8.0,
-          "min_cost": 8.5,
-          "max_cost": 14.6
-        },
-        {
-          "clean_firm": 51.0,
-          "solar": 3.0,
-          "wind": 4.0,
-          "min_cost": 11.2,
-          "max_cost": 13.5
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 3.0,
-          "wind": 6.0,
-          "min_cost": 11.7,
-          "max_cost": 12.3
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 5.0,
-          "wind": 4.0,
-          "min_cost": 12.3,
-          "max_cost": 13.1
-        }
-      ]
-    },
-    "40": {
-      "transitions": [],
-      "n_unique_mixes": 5,
-      "mixes": [
-        {
-          "clean_firm": 32.0,
-          "solar": 13.0,
-          "wind": 9.0,
-          "min_cost": 7.5,
-          "max_cost": 13.3
-        },
-        {
-          "clean_firm": 32.0,
-          "solar": 14.0,
-          "wind": 8.0,
-          "min_cost": 8.5,
-          "max_cost": 14.6
-        },
-        {
-          "clean_firm": 51.0,
-          "solar": 3.0,
-          "wind": 4.0,
-          "min_cost": 11.2,
-          "max_cost": 13.5
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 3.0,
-          "wind": 6.0,
-          "min_cost": 11.7,
-          "max_cost": 12.3
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 5.0,
-          "wind": 4.0,
-          "min_cost": 12.3,
-          "max_cost": 13.1
-        }
-      ]
-    },
-    "50": {
-      "transitions": [],
-      "n_unique_mixes": 5,
-      "mixes": [
-        {
-          "clean_firm": 32.0,
-          "solar": 13.0,
-          "wind": 9.0,
-          "min_cost": 7.5,
-          "max_cost": 13.3
-        },
-        {
-          "clean_firm": 32.0,
-          "solar": 14.0,
-          "wind": 8.0,
-          "min_cost": 8.5,
-          "max_cost": 14.6
-        },
-        {
-          "clean_firm": 51.0,
-          "solar": 3.0,
-          "wind": 4.0,
-          "min_cost": 11.2,
-          "max_cost": 13.5
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 3.0,
-          "wind": 6.0,
-          "min_cost": 11.7,
-          "max_cost": 12.3
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 5.0,
-          "wind": 4.0,
-          "min_cost": 12.3,
-          "max_cost": 13.1
-        }
-      ]
-    },
-    "55": {
-      "transitions": [],
-      "n_unique_mixes": 8,
-      "mixes": [
-        {
-          "clean_firm": 43.0,
-          "solar": 8.0,
-          "wind": 7.0,
-          "min_cost": 9.8,
-          "max_cost": 18.5
-        },
-        {
-          "clean_firm": 32.0,
-          "solar": 15.0,
-          "wind": 12.0,
-          "min_cost": 9.9,
-          "max_cost": 17.6
-        },
-        {
-          "clean_firm": 48.0,
-          "solar": 3.0,
-          "wind": 7.0,
-          "min_cost": 11.0,
-          "max_cost": 11.6
-        },
-        {
-          "clean_firm": 51.0,
-          "solar": 3.0,
-          "wind": 4.0,
-          "min_cost": 11.2,
-          "max_cost": 13.5
-        },
-        {
-          "clean_firm": 32.0,
-          "solar": 16.0,
-          "wind": 11.0,
-          "min_cost": 11.3,
-          "max_cost": 19.4
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 3.0,
-          "wind": 6.0,
-          "min_cost": 11.3,
-          "max_cost": 14.8
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 5.0,
-          "wind": 4.0,
-          "min_cost": 11.6,
-          "max_cost": 15.5
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 8.0,
-          "wind": 5.0,
-          "min_cost": 13.3,
-          "max_cost": 17.0
-        }
-      ]
-    },
-    "60": {
-      "transitions": [],
-      "n_unique_mixes": 10,
-      "mixes": [
-        {
-          "clean_firm": 32.0,
-          "solar": 2.0,
-          "wind": 28.0,
-          "min_cost": 11.4,
-          "max_cost": 24.0
-        },
-        {
-          "clean_firm": 43.0,
-          "solar": 7.0,
-          "wind": 13.0,
-          "min_cost": 13.5,
-          "max_cost": 23.5
-        },
-        {
-          "clean_firm": 43.0,
-          "solar": 3.0,
-          "wind": 17.0,
-          "min_cost": 14.0,
-          "max_cost": 20.2
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 6.0,
-          "wind": 7.0,
-          "min_cost": 14.6,
-          "max_cost": 21.7
-        },
-        {
-          "clean_firm": 47.0,
-          "solar": 3.0,
-          "wind": 13.0,
-          "min_cost": 14.9,
-          "max_cost": 19.9
-        },
-        {
-          "clean_firm": 52.0,
-          "solar": 4.0,
-          "wind": 7.0,
-          "min_cost": 15.2,
-          "max_cost": 16.9
-        },
-        {
-          "clean_firm": 43.0,
-          "solar": 4.0,
-          "wind": 16.0,
-          "min_cost": 15.5,
-          "max_cost": 15.5
-        },
-        {
-          "clean_firm": 51.0,
-          "solar": 6.0,
-          "wind": 6.0,
-          "min_cost": 15.9,
-          "max_cost": 17.3
-        },
-        {
-          "clean_firm": 52.0,
-          "solar": 5.0,
-          "wind": 6.0,
-          "min_cost": 16.1,
-          "max_cost": 18.2
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 6.0,
-          "wind": 7.0,
-          "min_cost": 16.8,
-          "max_cost": 20.7
-        }
-      ]
-    },
-    "65": {
-      "transitions": [],
-      "n_unique_mixes": 5,
-      "mixes": [
-        {
-          "clean_firm": 32.0,
-          "solar": 2.0,
-          "wind": 32.0,
-          "min_cost": 13.9,
-          "max_cost": 29.2
-        },
-        {
-          "clean_firm": 44.0,
-          "solar": 7.0,
-          "wind": 17.0,
-          "min_cost": 16.5,
-          "max_cost": 28.6
-        },
-        {
-          "clean_firm": 47.0,
-          "solar": 4.0,
-          "wind": 17.0,
-          "min_cost": 17.2,
-          "max_cost": 23.5
-        },
-        {
-          "clean_firm": 47.0,
-          "solar": 5.0,
-          "wind": 16.0,
-          "min_cost": 18.0,
-          "max_cost": 18.6
-        },
-        {
-          "clean_firm": 47.0,
-          "solar": 7.0,
-          "wind": 14.0,
-          "min_cost": 18.9,
-          "max_cost": 26.9
-        }
-      ]
-    },
-    "70": {
-      "transitions": [],
-      "n_unique_mixes": 5,
-      "mixes": [
-        {
-          "clean_firm": 35.0,
-          "solar": 8.0,
-          "wind": 28.0,
-          "min_cost": 15.9,
-          "max_cost": 33.0
-        },
-        {
-          "clean_firm": 34.0,
-          "solar": 8.0,
-          "wind": 29.0,
-          "min_cost": 16.2,
-          "max_cost": 29.2
-        },
-        {
-          "clean_firm": 57.0,
-          "solar": 13.0,
-          "wind": 5.0,
-          "min_cost": 24.9,
-          "max_cost": 28.6
-        },
-        {
-          "clean_firm": 55.0,
-          "solar": 13.0,
-          "wind": 7.0,
-          "min_cost": 27.7,
-          "max_cost": 32.2
-        },
-        {
-          "clean_firm": 53.0,
-          "solar": 13.0,
-          "wind": 7.0,
-          "min_cost": 32.5,
-          "max_cost": 32.5
-        }
-      ]
-    },
-    "75": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 18.5,
-          "to_cost": 23.3,
-          "from_mix": {
-            "clean_firm": 35.0,
-            "solar": 2.0,
-            "wind": 39.0
-          },
-          "to_mix": {
-            "clean_firm": 43.0,
-            "solar": 3.0,
-            "wind": 32.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 18.5,
-          "to_cost": 27.3,
-          "from_mix": {
-            "clean_firm": 35.0,
-            "solar": 2.0,
-            "wind": 39.0
-          },
-          "to_mix": {
-            "clean_firm": 52.0,
-            "solar": 3.0,
-            "wind": 23.0
-          }
-        }
-      ],
-      "n_unique_mixes": 13,
-      "mixes": [
-        {
-          "clean_firm": 35.0,
-          "solar": 2.0,
-          "wind": 39.0,
-          "min_cost": 18.5,
-          "max_cost": 39.1
-        },
-        {
-          "clean_firm": 34.0,
-          "solar": 2.0,
-          "wind": 40.0,
-          "min_cost": 18.8,
-          "max_cost": 34.2
-        },
-        {
-          "clean_firm": 43.0,
-          "solar": 4.0,
-          "wind": 31.0,
-          "min_cost": 22.1,
-          "max_cost": 38.5
-        },
-        {
-          "clean_firm": 43.0,
-          "solar": 3.0,
-          "wind": 32.0,
-          "min_cost": 23.3,
-          "max_cost": 33.1
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 4.0,
-          "wind": 25.0,
-          "min_cost": 24.7,
-          "max_cost": 36.9
-        },
-        {
-          "clean_firm": 36.0,
-          "solar": 9.0,
-          "wind": 32.0,
-          "min_cost": 25.1,
-          "max_cost": 31.5
-        },
-        {
-          "clean_firm": 35.0,
-          "solar": 9.0,
-          "wind": 32.0,
-          "min_cost": 25.4,
-          "max_cost": 31.7
-        },
-        {
-          "clean_firm": 34.0,
-          "solar": 10.0,
-          "wind": 31.0,
-          "min_cost": 25.9,
-          "max_cost": 25.9
-        },
-        {
-          "clean_firm": 52.0,
-          "solar": 3.0,
-          "wind": 23.0,
-          "min_cost": 27.3,
-          "max_cost": 28.6
-        },
-        {
-          "clean_firm": 69.0,
-          "solar": 2.0,
-          "wind": 8.0,
-          "min_cost": 27.9,
-          "max_cost": 31.4
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 3.0,
-          "wind": 26.0,
-          "min_cost": 27.9,
-          "max_cost": 32.0
-        },
-        {
-          "clean_firm": 51.0,
-          "solar": 4.0,
-          "wind": 23.0,
-          "min_cost": 28.0,
-          "max_cost": 29.4
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 4.0,
-          "wind": 24.0,
-          "min_cost": 32.5,
-          "max_cost": 32.5
-        }
-      ]
-    },
-    "80": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 22.3,
-          "to_cost": 27.4,
-          "from_mix": {
-            "clean_firm": 35.0,
-            "solar": 13.0,
-            "wind": 39.0
-          },
-          "to_mix": {
-            "clean_firm": 47.0,
-            "solar": 4.0,
-            "wind": 32.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 22.3,
-          "to_cost": 31.1,
-          "from_mix": {
-            "clean_firm": 35.0,
-            "solar": 13.0,
-            "wind": 39.0
-          },
-          "to_mix": {
-            "clean_firm": 72.0,
-            "solar": 2.0,
-            "wind": 10.0
-          }
-        }
-      ],
-      "n_unique_mixes": 6,
-      "mixes": [
-        {
-          "clean_firm": 35.0,
-          "solar": 13.0,
-          "wind": 39.0,
-          "min_cost": 22.3,
-          "max_cost": 46.0
-        },
-        {
-          "clean_firm": 34.0,
-          "solar": 13.0,
-          "wind": 40.0,
-          "min_cost": 22.5,
-          "max_cost": 40.7
-        },
-        {
-          "clean_firm": 47.0,
-          "solar": 4.0,
-          "wind": 32.0,
-          "min_cost": 26.1,
-          "max_cost": 45.3
-        },
-        {
-          "clean_firm": 52.0,
-          "solar": 5.0,
-          "wind": 27.0,
-          "min_cost": 28.8,
-          "max_cost": 42.8
-        },
-        {
-          "clean_firm": 72.0,
-          "solar": 2.0,
-          "wind": 10.0,
-          "min_cost": 31.1,
-          "max_cost": 35.8
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 6.0,
-          "wind": 26.0,
-          "min_cost": 39.7,
-          "max_cost": 39.7
-        }
-      ]
-    },
-    "85": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 26.3,
-          "to_cost": 32.5,
-          "from_mix": {
-            "clean_firm": 36.0,
-            "solar": 4.0,
-            "wind": 53.0
-          },
-          "to_mix": {
-            "clean_firm": 47.0,
-            "solar": 4.0,
-            "wind": 39.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 26.3,
-          "to_cost": 36.3,
-          "from_mix": {
-            "clean_firm": 36.0,
-            "solar": 4.0,
-            "wind": 53.0
-          },
-          "to_mix": {
-            "clean_firm": 67.0,
-            "solar": 3.0,
-            "wind": 18.0
-          }
-        }
-      ],
-      "n_unique_mixes": 10,
-      "mixes": [
-        {
-          "clean_firm": 36.0,
-          "solar": 4.0,
-          "wind": 53.0,
-          "min_cost": 26.3,
-          "max_cost": 45.6
-        },
-        {
-          "clean_firm": 34.0,
-          "solar": 13.0,
-          "wind": 49.0,
-          "min_cost": 26.8,
-          "max_cost": 48.4
-        },
-        {
-          "clean_firm": 47.0,
-          "solar": 4.0,
-          "wind": 39.0,
-          "min_cost": 28.7,
+          "min_cost": 35.6,
           "max_cost": 47.6
         },
         {
-          "clean_firm": 35.0,
-          "solar": 13.0,
-          "wind": 48.0,
-          "min_cost": 29.0,
-          "max_cost": 54.9
-        },
-        {
-          "clean_firm": 47.0,
+          "clean_firm": 30.0,
           "solar": 5.0,
-          "wind": 38.0,
-          "min_cost": 30.8,
-          "max_cost": 53.5
-        },
-        {
-          "clean_firm": 63.0,
-          "solar": 3.0,
-          "wind": 22.0,
-          "min_cost": 34.0,
-          "max_cost": 35.2
-        },
-        {
-          "clean_firm": 63.0,
-          "solar": 5.0,
-          "wind": 20.0,
-          "min_cost": 35.5,
-          "max_cost": 52.9
-        },
-        {
-          "clean_firm": 67.0,
-          "solar": 3.0,
-          "wind": 18.0,
-          "min_cost": 36.3,
-          "max_cost": 42.5
-        },
-        {
-          "clean_firm": 64.0,
-          "solar": 6.0,
-          "wind": 18.0,
-          "min_cost": 37.7,
-          "max_cost": 39.1
-        },
-        {
-          "clean_firm": 43.0,
-          "solar": 6.0,
-          "wind": 42.0,
-          "min_cost": 48.1,
-          "max_cost": 48.1
-        }
-      ]
-    },
-    "87.5": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 29.2,
-          "to_cost": 34.9,
-          "from_mix": {
-            "clean_firm": 37.0,
-            "solar": 13.0,
-            "wind": 51.0
-          },
-          "to_mix": {
-            "clean_firm": 67.0,
-            "solar": 3.0,
-            "wind": 21.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 29.2,
-          "to_cost": 38.8,
-          "from_mix": {
-            "clean_firm": 37.0,
-            "solar": 13.0,
-            "wind": 51.0
-          },
-          "to_mix": {
-            "clean_firm": 67.0,
-            "solar": 3.0,
-            "wind": 21.0
-          }
-        }
-      ],
-      "n_unique_mixes": 10,
-      "mixes": [
-        {
-          "clean_firm": 37.0,
-          "solar": 13.0,
-          "wind": 51.0,
-          "min_cost": 29.2,
-          "max_cost": 50.5
-        },
-        {
-          "clean_firm": 35.0,
-          "solar": 7.0,
           "wind": 56.0,
-          "min_cost": 29.3,
-          "max_cost": 30.0
+          "min_cost": 35.7,
+          "max_cost": 59.8
         },
         {
-          "clean_firm": 34.0,
-          "solar": 15.0,
-          "wind": 52.0,
-          "min_cost": 30.1,
-          "max_cost": 32.8
-        },
-        {
-          "clean_firm": 47.0,
-          "solar": 5.0,
-          "wind": 42.0,
-          "min_cost": 31.5,
-          "max_cost": 52.8
-        },
-        {
-          "clean_firm": 35.0,
-          "solar": 13.0,
-          "wind": 51.0,
-          "min_cost": 31.9,
-          "max_cost": 60.5
-        },
-        {
-          "clean_firm": 47.0,
-          "solar": 7.0,
-          "wind": 40.0,
-          "min_cost": 33.8,
-          "max_cost": 58.7
-        },
-        {
-          "clean_firm": 37.0,
-          "solar": 14.0,
-          "wind": 50.0,
-          "min_cost": 34.7,
-          "max_cost": 44.4
-        },
-        {
-          "clean_firm": 67.0,
+          "clean_firm": 24.0,
           "solar": 3.0,
-          "wind": 21.0,
-          "min_cost": 34.9,
-          "max_cost": 56.4
-        },
-        {
-          "clean_firm": 63.0,
-          "solar": 7.0,
-          "wind": 22.0,
-          "min_cost": 37.1,
-          "max_cost": 38.5
-        },
-        {
-          "clean_firm": 71.0,
-          "solar": 8.0,
-          "wind": 13.0,
-          "min_cost": 43.9,
-          "max_cost": 45.3
-        }
-      ]
-    },
-    "90": {
-      "transitions": [],
-      "n_unique_mixes": 6,
-      "mixes": [
-        {
-          "clean_firm": 48.0,
-          "solar": 6.0,
-          "wind": 48.0,
-          "min_cost": 32.6,
-          "max_cost": 68.6
-        },
-        {
-          "clean_firm": 38.0,
-          "solar": 18.0,
-          "wind": 53.0,
-          "min_cost": 33.6,
-          "max_cost": 64.0
-        },
-        {
-          "clean_firm": 67.0,
-          "solar": 7.0,
-          "wind": 22.0,
-          "min_cost": 37.6,
-          "max_cost": 61.1
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 5.0,
-          "wind": 48.0,
-          "min_cost": 40.3,
-          "max_cost": 61.7
-        },
-        {
-          "clean_firm": 75.0,
-          "solar": 2.0,
-          "wind": 18.0,
-          "min_cost": 42.0,
-          "max_cost": 48.6
-        },
-        {
-          "clean_firm": 72.0,
-          "solar": 9.0,
-          "wind": 15.0,
-          "min_cost": 43.7,
-          "max_cost": 45.1
-        }
-      ]
-    },
-    "92.5": {
-      "transitions": [
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "clean_firm",
-          "to_dominant": "wind",
-          "from_cost": 36.6,
-          "to_cost": 37.0,
-          "from_mix": {
-            "clean_firm": 50.0,
-            "solar": 7.0,
-            "wind": 50.0
-          },
-          "to_mix": {
-            "clean_firm": 49.0,
-            "solar": 7.0,
-            "wind": 56.0
-          }
-        },
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "wind",
-          "from_cost": 36.6,
-          "to_cost": 37.4,
-          "from_mix": {
-            "clean_firm": 50.0,
-            "solar": 7.0,
-            "wind": 50.0
-          },
-          "to_mix": {
-            "clean_firm": 49.0,
-            "solar": 7.0,
-            "wind": 56.0
-          }
-        }
-      ],
-      "n_unique_mixes": 10,
-      "mixes": [
-        {
-          "clean_firm": 50.0,
-          "solar": 7.0,
-          "wind": 50.0,
-          "min_cost": 36.6,
-          "max_cost": 77.0
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 7.0,
-          "wind": 56.0,
-          "min_cost": 37.0,
-          "max_cost": 52.9
-        },
-        {
-          "clean_firm": 35.0,
-          "solar": 18.0,
-          "wind": 66.0,
-          "min_cost": 38.4,
-          "max_cost": 58.0
-        },
-        {
-          "clean_firm": 34.0,
-          "solar": 18.0,
-          "wind": 66.0,
-          "min_cost": 38.6,
-          "max_cost": 51.8
-        },
-        {
-          "clean_firm": 72.0,
-          "solar": 10.0,
-          "wind": 17.0,
-          "min_cost": 41.7,
-          "max_cost": 45.7
-        },
-        {
-          "clean_firm": 38.0,
-          "solar": 18.0,
-          "wind": 57.0,
-          "min_cost": 41.8,
-          "max_cost": 69.2
-        },
-        {
-          "clean_firm": 77.0,
-          "solar": 2.0,
-          "wind": 18.0,
-          "min_cost": 41.9,
-          "max_cost": 67.0
-        },
-        {
-          "clean_firm": 40.0,
-          "solar": 18.0,
-          "wind": 54.0,
-          "min_cost": 45.2,
-          "max_cost": 72.5
-        },
-        {
-          "clean_firm": 49.0,
-          "solar": 7.0,
-          "wind": 52.0,
-          "min_cost": 48.0,
-          "max_cost": 50.4
-        },
-        {
-          "clean_firm": 76.0,
-          "solar": 2.0,
-          "wind": 22.0,
-          "min_cost": 55.0,
-          "max_cost": 61.2
-        }
-      ]
-    },
-    "95": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 45.2,
-          "to_cost": 55.3,
-          "from_mix": {
-            "clean_firm": 37.0,
-            "solar": 18.0,
-            "wind": 77.0
-          },
-          "to_mix": {
-            "clean_firm": 93.0,
-            "solar": 18.0,
-            "wind": 8.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 45.2,
-          "to_cost": 59.1,
-          "from_mix": {
-            "clean_firm": 37.0,
-            "solar": 18.0,
-            "wind": 77.0
-          },
-          "to_mix": {
-            "clean_firm": 113.0,
-            "solar": 3.0,
-            "wind": 8.0
-          }
-        }
-      ],
-      "n_unique_mixes": 7,
-      "mixes": [
-        {
-          "clean_firm": 37.0,
-          "solar": 18.0,
-          "wind": 77.0,
-          "min_cost": 45.2,
-          "max_cost": 82.7
-        },
-        {
-          "clean_firm": 36.0,
-          "solar": 20.0,
-          "wind": 77.0,
-          "min_cost": 46.4,
-          "max_cost": 62.3
-        },
-        {
-          "clean_firm": 37.0,
-          "solar": 19.0,
-          "wind": 76.0,
-          "min_cost": 53.5,
-          "max_cost": 93.6
-        },
-        {
-          "clean_firm": 93.0,
-          "solar": 18.0,
-          "wind": 8.0,
-          "min_cost": 55.3,
-          "max_cost": 62.6
-        },
-        {
-          "clean_firm": 82.0,
-          "solar": 28.0,
-          "wind": 12.0,
-          "min_cost": 57.0,
-          "max_cost": 86.3
-        },
-        {
-          "clean_firm": 113.0,
-          "solar": 3.0,
-          "wind": 8.0,
-          "min_cost": 59.1,
-          "max_cost": 65.8
-        },
-        {
-          "clean_firm": 81.0,
-          "solar": 28.0,
-          "wind": 12.0,
-          "min_cost": 73.1,
-          "max_cost": 73.1
-        }
-      ]
-    },
-    "97.5": {
-      "transitions": [
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "clean_firm",
-          "to_dominant": "wind",
-          "from_cost": 52.0,
-          "to_cost": 55.0,
-          "from_mix": {
-            "clean_firm": 93.0,
-            "solar": 18.0,
-            "wind": 8.0
-          },
-          "to_mix": {
-            "clean_firm": 52.0,
-            "solar": 18.0,
-            "wind": 72.0
-          }
-        },
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "wind",
-          "from_cost": 52.0,
-          "to_cost": 56.8,
-          "from_mix": {
-            "clean_firm": 93.0,
-            "solar": 18.0,
-            "wind": 8.0
-          },
-          "to_mix": {
-            "clean_firm": 47.0,
-            "solar": 14.0,
-            "wind": 94.0
-          }
-        }
-      ],
-      "n_unique_mixes": 9,
-      "mixes": [
-        {
-          "clean_firm": 93.0,
-          "solar": 18.0,
-          "wind": 8.0,
-          "min_cost": 52.0,
-          "max_cost": 86.5
-        },
-        {
-          "clean_firm": 52.0,
-          "solar": 18.0,
-          "wind": 72.0,
-          "min_cost": 55.0,
-          "max_cost": 112.5
-        },
-        {
-          "clean_firm": 47.0,
-          "solar": 14.0,
-          "wind": 94.0,
-          "min_cost": 56.8,
-          "max_cost": 56.8
-        },
-        {
-          "clean_firm": 46.0,
-          "solar": 15.0,
-          "wind": 93.0,
-          "min_cost": 58.8,
-          "max_cost": 64.9
-        },
-        {
-          "clean_firm": 113.0,
-          "solar": 3.0,
-          "wind": 8.0,
-          "min_cost": 59.1,
-          "max_cost": 65.8
-        },
-        {
-          "clean_firm": 43.0,
-          "solar": 16.0,
-          "wind": 97.0,
-          "min_cost": 61.2,
-          "max_cost": 68.9
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 16.0,
-          "wind": 94.0,
-          "min_cost": 66.4,
-          "max_cost": 80.0
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 17.0,
-          "wind": 93.0,
-          "min_cost": 72.0,
-          "max_cost": 72.0
-        },
-        {
-          "clean_firm": 43.0,
-          "solar": 17.0,
-          "wind": 96.0,
-          "min_cost": 74.2,
-          "max_cost": 74.2
-        }
-      ]
-    },
-    "99": {
-      "transitions": [],
-      "n_unique_mixes": 7,
-      "mixes": [
-        {
-          "clean_firm": 97.0,
-          "solar": 18.0,
-          "wind": 11.0,
-          "min_cost": 57.6,
-          "max_cost": 91.0
-        },
-        {
-          "clean_firm": 113.0,
-          "solar": 3.0,
-          "wind": 8.0,
-          "min_cost": 58.3,
-          "max_cost": 92.0
-        },
-        {
-          "clean_firm": 63.0,
-          "solar": 48.0,
-          "wind": 40.0,
-          "min_cost": 63.9,
-          "max_cost": 126.6
-        },
-        {
-          "clean_firm": 63.0,
-          "solar": 48.0,
-          "wind": 39.0,
-          "min_cost": 68.0,
-          "max_cost": 98.5
-        },
-        {
-          "clean_firm": 52.0,
-          "solar": 15.0,
-          "wind": 112.0,
-          "min_cost": 74.2,
-          "max_cost": 80.8
-        },
-        {
-          "clean_firm": 32.0,
-          "solar": 73.0,
-          "wind": 93.0,
-          "min_cost": 78.9,
-          "max_cost": 78.9
-        },
-        {
-          "clean_firm": 36.0,
-          "solar": 23.0,
-          "wind": 147.0,
-          "min_cost": 82.9,
-          "max_cost": 82.9
-        }
-      ]
-    },
-    "99.5": {
-      "transitions": [],
-      "n_unique_mixes": 4,
-      "mixes": [
-        {
-          "clean_firm": 63.0,
-          "solar": 48.0,
-          "wind": 40.0,
-          "min_cost": 59.2,
-          "max_cost": 126.6
-        },
-        {
-          "clean_firm": 113.0,
-          "solar": 7.0,
-          "wind": 8.0,
-          "min_cost": 59.6,
-          "max_cost": 95.8
-        },
-        {
-          "clean_firm": 116.0,
-          "solar": 4.0,
-          "wind": 8.0,
-          "min_cost": 62.1,
-          "max_cost": 69.1
-        },
-        {
-          "clean_firm": 32.0,
-          "solar": 73.0,
-          "wind": 93.0,
-          "min_cost": 78.9,
-          "max_cost": 83.4
-        }
-      ]
-    },
-    "99.9": {
-      "transitions": [],
-      "n_unique_mixes": 3,
-      "mixes": [
-        {
-          "clean_firm": 63.0,
-          "solar": 48.0,
-          "wind": 40.0,
-          "min_cost": 59.2,
-          "max_cost": 126.6
-        },
-        {
-          "clean_firm": 114.0,
-          "solar": 7.0,
-          "wind": 8.0,
-          "min_cost": 62.2,
-          "max_cost": 99.5
-        },
-        {
-          "clean_firm": 32.0,
-          "solar": 73.0,
-          "wind": 93.0,
-          "min_cost": 78.9,
-          "max_cost": 83.4
-        }
-      ]
-    },
-    "99.9": {
-      "transitions": [],
-      "n_unique_mixes": 3,
-      "mixes": [
-        {
-          "clean_firm": 63.0,
-          "solar": 48.0,
-          "wind": 40.0,
-          "min_cost": 59.2,
-          "max_cost": 126.6
-        },
-        {
-          "clean_firm": 114.0,
-          "solar": 7.0,
-          "wind": 8.0,
-          "min_cost": 62.2,
-          "max_cost": 99.5
-        },
-        {
-          "clean_firm": 32.0,
-          "solar": 73.0,
-          "wind": 93.0,
-          "min_cost": 78.9,
-          "max_cost": 85.4
-        }
-      ]
-    }
-  },
-  "NYISO": {
-    "10": {
-      "transitions": [],
-      "n_unique_mixes": 3,
-      "mixes": [
-        {
-          "clean_firm": 20.0,
-          "solar": 0.0,
-          "wind": 10.0,
-          "min_cost": 3.6,
-          "max_cost": 7.6
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 0.0,
-          "wind": 5.0,
-          "min_cost": 4.3,
-          "max_cost": 6.9
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 5.0,
-          "wind": 5.0,
-          "min_cost": 4.7,
-          "max_cost": 5.2
-        }
-      ]
-    },
-    "20": {
-      "transitions": [],
-      "n_unique_mixes": 3,
-      "mixes": [
-        {
-          "clean_firm": 20.0,
-          "solar": 0.0,
-          "wind": 10.0,
-          "min_cost": 3.6,
-          "max_cost": 7.6
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 0.0,
-          "wind": 5.0,
-          "min_cost": 4.3,
-          "max_cost": 6.9
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 5.0,
-          "wind": 5.0,
-          "min_cost": 4.7,
-          "max_cost": 5.2
-        }
-      ]
-    },
-    "30": {
-      "transitions": [],
-      "n_unique_mixes": 3,
-      "mixes": [
-        {
-          "clean_firm": 20.0,
-          "solar": 0.0,
-          "wind": 10.0,
-          "min_cost": 3.6,
-          "max_cost": 7.6
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 0.0,
-          "wind": 5.0,
-          "min_cost": 4.3,
-          "max_cost": 6.9
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 5.0,
-          "wind": 5.0,
-          "min_cost": 4.7,
-          "max_cost": 5.2
-        }
-      ]
-    },
-    "40": {
-      "transitions": [],
-      "n_unique_mixes": 3,
-      "mixes": [
-        {
-          "clean_firm": 20.0,
-          "solar": 0.0,
-          "wind": 10.0,
-          "min_cost": 3.6,
-          "max_cost": 7.6
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 0.0,
-          "wind": 5.0,
-          "min_cost": 4.3,
-          "max_cost": 6.9
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 5.0,
-          "wind": 5.0,
-          "min_cost": 4.7,
-          "max_cost": 5.2
-        }
-      ]
-    },
-    "50": {
-      "transitions": [],
-      "n_unique_mixes": 3,
-      "mixes": [
-        {
-          "clean_firm": 20.0,
-          "solar": 0.0,
-          "wind": 20.0,
-          "min_cost": 9.7,
-          "max_cost": 20.3
-        },
-        {
-          "clean_firm": 35.0,
-          "solar": 0.0,
-          "wind": 5.0,
-          "min_cost": 11.8,
-          "max_cost": 18.8
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 15.0,
-          "wind": 5.0,
-          "min_cost": 12.9,
-          "max_cost": 13.4
-        }
-      ]
-    },
-    "55": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 12.7,
-          "to_cost": 15.6,
-          "from_mix": {
-            "clean_firm": 20.0,
-            "solar": 0.0,
-            "wind": 25.0
-          },
-          "to_mix": {
-            "clean_firm": 40.0,
-            "solar": 0.0,
-            "wind": 5.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 12.7,
-          "to_cost": 15.7,
-          "from_mix": {
-            "clean_firm": 20.0,
-            "solar": 0.0,
-            "wind": 25.0
-          },
-          "to_mix": {
-            "clean_firm": 40.0,
-            "solar": 0.0,
-            "wind": 5.0
-          }
-        }
-      ],
-      "n_unique_mixes": 4,
-      "mixes": [
-        {
-          "clean_firm": 20.0,
-          "solar": 0.0,
-          "wind": 25.0,
-          "min_cost": 12.7,
-          "max_cost": 26.7
-        },
-        {
-          "clean_firm": 40.0,
-          "solar": 0.0,
-          "wind": 5.0,
-          "min_cost": 15.6,
-          "max_cost": 24.8
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 20.0,
-          "wind": 5.0,
-          "min_cost": 17.0,
-          "max_cost": 17.6
-        },
-        {
-          "clean_firm": 35.0,
-          "solar": 0.0,
-          "wind": 10.0,
-          "min_cost": 23.3,
-          "max_cost": 23.3
-        }
-      ]
-    },
-    "60": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 19.2,
-          "to_cost": 19.4,
-          "from_mix": {
-            "clean_firm": 20.0,
-            "solar": 0.0,
-            "wind": 28.0
-          },
-          "to_mix": {
-            "clean_firm": 45.0,
-            "solar": 0.0,
-            "wind": 5.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 14.6,
-          "to_cost": 19.4,
-          "from_mix": {
-            "clean_firm": 20.0,
-            "solar": 0.0,
-            "wind": 28.0
-          },
-          "to_mix": {
-            "clean_firm": 45.0,
-            "solar": 0.0,
-            "wind": 5.0
-          }
-        }
-      ],
-      "n_unique_mixes": 3,
-      "mixes": [
-        {
-          "clean_firm": 20.0,
-          "solar": 0.0,
-          "wind": 28.0,
-          "min_cost": 14.6,
-          "max_cost": 30.5
-        },
-        {
-          "clean_firm": 19.0,
-          "solar": 0.0,
-          "wind": 29.0,
-          "min_cost": 15.1,
-          "max_cost": 15.1
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 0.0,
-          "wind": 5.0,
-          "min_cost": 19.4,
-          "max_cost": 21.8
-        }
-      ]
-    },
-    "65": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 23.1,
-          "to_cost": 24.7,
-          "from_mix": {
-            "clean_firm": 22.0,
-            "solar": 0.0,
-            "wind": 31.0
-          },
-          "to_mix": {
-            "clean_firm": 45.0,
-            "solar": 0.0,
-            "wind": 10.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 17.7,
-          "to_cost": 24.7,
-          "from_mix": {
-            "clean_firm": 20.0,
-            "solar": 1.0,
-            "wind": 32.0
-          },
-          "to_mix": {
-            "clean_firm": 45.0,
-            "solar": 0.0,
-            "wind": 10.0
-          }
-        }
-      ],
-      "n_unique_mixes": 5,
-      "mixes": [
-        {
-          "clean_firm": 20.0,
-          "solar": 1.0,
-          "wind": 32.0,
-          "min_cost": 17.7,
+          "wind": 60.0,
+          "min_cost": 35.9,
           "max_cost": 36.9
         },
         {
-          "clean_firm": 22.0,
-          "solar": 0.0,
-          "wind": 31.0,
-          "min_cost": 23.1,
-          "max_cost": 36.4
+          "clean_firm": 26.0,
+          "solar": 3.0,
+          "wind": 64.0,
+          "min_cost": 36.2,
+          "max_cost": 69.1
         },
         {
-          "clean_firm": 20.0,
-          "solar": 2.0,
-          "wind": 31.0,
-          "min_cost": 23.8,
-          "max_cost": 24.4
+          "clean_firm": 24.0,
+          "solar": 3.0,
+          "wind": 66.0,
+          "min_cost": 36.6,
+          "max_cost": 36.6
         },
         {
-          "clean_firm": 45.0,
-          "solar": 0.0,
-          "wind": 10.0,
-          "min_cost": 24.3,
-          "max_cost": 28.1
-        },
-        {
-          "clean_firm": 21.0,
-          "solar": 0.0,
-          "wind": 32.0,
-          "min_cost": 30.3,
-          "max_cost": 32.3
-        }
-      ]
-    },
-    "70": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 21.3,
-          "to_cost": 27.4,
-          "from_mix": {
-            "clean_firm": 22.0,
-            "solar": 2.0,
-            "wind": 32.0
-          },
-          "to_mix": {
-            "clean_firm": 45.0,
-            "solar": 0.0,
-            "wind": 15.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 21.3,
-          "to_cost": 29.9,
-          "from_mix": {
-            "clean_firm": 22.0,
-            "solar": 2.0,
-            "wind": 32.0
-          },
-          "to_mix": {
-            "clean_firm": 45.0,
-            "solar": 0.0,
-            "wind": 15.0
-          }
-        }
-      ],
-      "n_unique_mixes": 6,
-      "mixes": [
-        {
-          "clean_firm": 22.0,
-          "solar": 2.0,
-          "wind": 32.0,
-          "min_cost": 21.3,
-          "max_cost": 44.8
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 0.0,
-          "wind": 40.0,
-          "min_cost": 22.1,
-          "max_cost": 34.4
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 0.0,
-          "wind": 15.0,
-          "min_cost": 27.4,
-          "max_cost": 32.6
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 35.0,
-          "wind": 5.0,
-          "min_cost": 29.9,
-          "max_cost": 29.9
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 15.0,
-          "wind": 25.0,
-          "min_cost": 30.1,
-          "max_cost": 30.1
-        },
-        {
-          "clean_firm": 60.0,
-          "solar": 0.0,
-          "wind": 5.0,
-          "min_cost": 34.4,
-          "max_cost": 34.4
-        }
-      ]
-    },
-    "75": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 25.4,
-          "to_cost": 31.8,
-          "from_mix": {
-            "clean_firm": 20.0,
-            "solar": 5.0,
-            "wind": 40.0
-          },
-          "to_mix": {
-            "clean_firm": 40.0,
-            "solar": 0.0,
-            "wind": 25.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 25.4,
-          "to_cost": 34.4,
-          "from_mix": {
-            "clean_firm": 20.0,
-            "solar": 5.0,
-            "wind": 40.0
-          },
-          "to_mix": {
-            "clean_firm": 65.0,
-            "solar": 0.0,
-            "wind": 5.0
-          }
-        }
-      ],
-      "n_unique_mixes": 10,
-      "mixes": [
-        {
-          "clean_firm": 20.0,
+          "clean_firm": 32.0,
           "solar": 5.0,
-          "wind": 40.0,
-          "min_cost": 25.4,
-          "max_cost": 52.3
+          "wind": 54.0,
+          "min_cost": 38.5,
+          "max_cost": 63.5
         },
         {
-          "clean_firm": 18.0,
-          "solar": 8.0,
-          "wind": 38.0,
-          "min_cost": 25.9,
-          "max_cost": 31.1
-        },
-        {
-          "clean_firm": 40.0,
-          "solar": 0.0,
-          "wind": 25.0,
-          "min_cost": 31.8,
-          "max_cost": 50.2
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 40.0,
-          "wind": 5.0,
-          "min_cost": 33.4,
-          "max_cost": 34.0
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 0.0,
-          "wind": 17.0,
-          "min_cost": 33.5,
-          "max_cost": 37.6
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 15.0,
-          "wind": 30.0,
-          "min_cost": 33.7,
-          "max_cost": 34.2
-        },
-        {
-          "clean_firm": 65.0,
-          "solar": 0.0,
-          "wind": 5.0,
-          "min_cost": 34.4,
-          "max_cost": 38.5
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 0.0,
-          "wind": 40.0,
-          "min_cost": 43.1,
-          "max_cost": 43.1
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 0.0,
-          "wind": 45.0,
-          "min_cost": 43.9,
-          "max_cost": 43.9
-        },
-        {
-          "clean_firm": 30.0,
-          "solar": 0.0,
-          "wind": 35.0,
-          "min_cost": 45.7,
-          "max_cost": 45.7
-        }
-      ]
-    },
-    "80": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 28.4,
-          "to_cost": 36.1,
-          "from_mix": {
-            "clean_firm": 20.0,
-            "solar": 5.0,
-            "wind": 45.0
-          },
-          "to_mix": {
-            "clean_firm": 35.0,
-            "solar": 0.0,
-            "wind": 35.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 28.4,
-          "to_cost": 38.2,
-          "from_mix": {
-            "clean_firm": 20.0,
-            "solar": 5.0,
-            "wind": 45.0
-          },
-          "to_mix": {
-            "clean_firm": 70.0,
-            "solar": 0.0,
-            "wind": 5.0
-          }
-        }
-      ],
-      "n_unique_mixes": 13,
-      "mixes": [
-        {
-          "clean_firm": 20.0,
+          "clean_firm": 26.0,
           "solar": 5.0,
-          "wind": 45.0,
-          "min_cost": 28.4,
-          "max_cost": 58.7
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 9.0,
-          "wind": 41.0,
-          "min_cost": 29.5,
-          "max_cost": 60.4
-        },
-        {
-          "clean_firm": 19.0,
-          "solar": 8.0,
-          "wind": 42.0,
-          "min_cost": 30.0,
-          "max_cost": 30.0
-        },
-        {
-          "clean_firm": 22.0,
-          "solar": 9.0,
-          "wind": 40.0,
-          "min_cost": 35.4,
-          "max_cost": 50.6
-        },
-        {
-          "clean_firm": 35.0,
-          "solar": 0.0,
-          "wind": 35.0,
-          "min_cost": 36.1,
-          "max_cost": 56.9
-        },
-        {
-          "clean_firm": 40.0,
-          "solar": 5.0,
-          "wind": 20.0,
-          "min_cost": 37.1,
-          "max_cost": 57.9
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 35.0,
-          "wind": 15.0,
-          "min_cost": 37.6,
-          "max_cost": 38.1
-        },
-        {
-          "clean_firm": 59.0,
-          "solar": 8.0,
-          "wind": 5.0,
-          "min_cost": 38.2,
-          "max_cost": 41.8
-        },
-        {
-          "clean_firm": 70.0,
-          "solar": 0.0,
-          "wind": 5.0,
-          "min_cost": 38.2,
-          "max_cost": 42.8
-        },
-        {
-          "clean_firm": 22.0,
-          "solar": 10.0,
-          "wind": 39.0,
-          "min_cost": 38.7,
-          "max_cost": 38.7
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 11.0,
-          "wind": 39.0,
-          "min_cost": 39.0,
-          "max_cost": 39.4
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 5.0,
-          "wind": 40.0,
-          "min_cost": 51.0,
-          "max_cost": 51.0
-        },
-        {
-          "clean_firm": 35.0,
-          "solar": 5.0,
-          "wind": 25.0,
-          "min_cost": 52.9,
-          "max_cost": 52.9
-        }
-      ]
-    },
-    "85": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 33.3,
-          "to_cost": 41.8,
-          "from_mix": {
-            "clean_firm": 20.0,
-            "solar": 25.0,
-            "wind": 30.0
-          },
-          "to_mix": {
-            "clean_firm": 35.0,
-            "solar": 10.0,
-            "wind": 30.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 33.3,
-          "to_cost": 41.9,
-          "from_mix": {
-            "clean_firm": 20.0,
-            "solar": 25.0,
-            "wind": 30.0
-          },
-          "to_mix": {
-            "clean_firm": 75.0,
-            "solar": 0.0,
-            "wind": 5.0
-          }
-        }
-      ],
-      "n_unique_mixes": 16,
-      "mixes": [
-        {
-          "clean_firm": 20.0,
-          "solar": 25.0,
-          "wind": 30.0,
-          "min_cost": 33.3,
-          "max_cost": 66.0
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 10.0,
-          "wind": 30.0,
-          "min_cost": 35.2,
+          "wind": 60.0,
+          "min_cost": 39.3,
           "max_cost": 72.8
         },
         {
-          "clean_firm": 20.0,
-          "solar": 10.0,
-          "wind": 45.0,
-          "min_cost": 35.5,
-          "max_cost": 68.5
-        },
-        {
-          "clean_firm": 33.0,
-          "solar": 6.0,
-          "wind": 40.0,
-          "min_cost": 38.8,
-          "max_cost": 41.9
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 15.0,
-          "wind": 25.0,
-          "min_cost": 41.5,
-          "max_cost": 41.5
-        },
-        {
-          "clean_firm": 35.0,
-          "solar": 10.0,
-          "wind": 30.0,
-          "min_cost": 41.8,
-          "max_cost": 64.8
-        },
-        {
-          "clean_firm": 75.0,
-          "solar": 0.0,
-          "wind": 5.0,
-          "min_cost": 41.8,
-          "max_cost": 47.0
-        },
-        {
-          "clean_firm": 61.0,
-          "solar": 10.0,
-          "wind": 7.0,
-          "min_cost": 44.9,
-          "max_cost": 44.9
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 15.0,
-          "wind": 25.0,
-          "min_cost": 45.9,
-          "max_cost": 46.2
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 15.0,
-          "wind": 30.0,
-          "min_cost": 56.6,
-          "max_cost": 56.6
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 20.0,
-          "wind": 30.0,
-          "min_cost": 56.6,
-          "max_cost": 65.1
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 15.0,
-          "wind": 40.0,
-          "min_cost": 57.1,
-          "max_cost": 57.1
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 10.0,
-          "wind": 45.0,
-          "min_cost": 58.4,
-          "max_cost": 58.4
-        },
-        {
-          "clean_firm": 36.0,
-          "solar": 4.0,
-          "wind": 39.0,
-          "min_cost": 59.0,
-          "max_cost": 59.0
-        },
-        {
-          "clean_firm": 62.0,
-          "solar": 9.0,
-          "wind": 7.0,
-          "min_cost": 61.2,
-          "max_cost": 65.4
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 20.0,
-          "wind": 30.0,
-          "min_cost": 70.2,
-          "max_cost": 70.2
-        }
-      ]
-    },
-    "87.5": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 35.9,
-          "to_cost": 42.4,
-          "from_mix": {
-            "clean_firm": 20.0,
-            "solar": 20.0,
-            "wind": 40.0
-          },
-          "to_mix": {
-            "clean_firm": 65.0,
-            "solar": 0.0,
-            "wind": 15.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 35.9,
-          "to_cost": 44.9,
-          "from_mix": {
-            "clean_firm": 20.0,
-            "solar": 20.0,
-            "wind": 40.0
-          },
-          "to_mix": {
-            "clean_firm": 65.0,
-            "solar": 0.0,
-            "wind": 15.0
-          }
-        },
-        {
-          "toggle": "storage",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 38.0,
-          "to_cost": 38.8,
-          "from_mix": {
-            "clean_firm": 20.0,
-            "solar": 10.0,
-            "wind": 30.0
-          },
-          "to_mix": {
-            "clean_firm": 35.0,
-            "solar": 5.0,
-            "wind": 20.0
-          }
-        },
-        {
-          "toggle": "storage",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 35.9,
-          "to_cost": 38.8,
-          "from_mix": {
-            "clean_firm": 20.0,
-            "solar": 20.0,
-            "wind": 40.0
-          },
-          "to_mix": {
-            "clean_firm": 35.0,
-            "solar": 5.0,
-            "wind": 20.0
-          }
-        }
-      ],
-      "n_unique_mixes": 19,
-      "mixes": [
-        {
-          "clean_firm": 20.0,
-          "solar": 20.0,
-          "wind": 40.0,
-          "min_cost": 35.9,
-          "max_cost": 75.4
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 10.0,
-          "wind": 30.0,
-          "min_cost": 38.0,
-          "max_cost": 73.7
-        },
-        {
-          "clean_firm": 35.0,
+          "clean_firm": 24.0,
           "solar": 5.0,
-          "wind": 20.0,
-          "min_cost": 38.8,
-          "max_cost": 38.8
+          "wind": 64.0,
+          "min_cost": 39.6,
+          "max_cost": 40.6
         },
         {
-          "clean_firm": 20.0,
-          "solar": 10.0,
-          "wind": 25.0,
-          "min_cost": 39.2,
-          "max_cost": 51.6
+          "clean_firm": 38.0,
+          "solar": 5.0,
+          "wind": 46.0,
+          "min_cost": 41.5,
+          "max_cost": 62.4
         },
         {
-          "clean_firm": 20.0,
-          "solar": 15.0,
-          "wind": 45.0,
-          "min_cost": 39.2,
-          "max_cost": 51.5
+          "clean_firm": 26.0,
+          "solar": 13.0,
+          "wind": 54.0,
+          "min_cost": 42.8,
+          "max_cost": 74.0
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 3.0,
+          "wind": 46.0,
+          "min_cost": 43.9,
+          "max_cost": 70.3
+        },
+        {
+          "clean_firm": 38.0,
+          "solar": 3.0,
+          "wind": 48.0,
+          "min_cost": 45.5,
+          "max_cost": 70.0
         },
         {
           "clean_firm": 30.0,
+          "solar": 9.0,
+          "wind": 52.0,
+          "min_cost": 46.6,
+          "max_cost": 58.5
+        },
+        {
+          "clean_firm": 32.0,
+          "solar": 9.0,
+          "wind": 50.0,
+          "min_cost": 46.9,
+          "max_cost": 59.1
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 13.0,
+          "wind": 50.0,
+          "min_cost": 47.1,
+          "max_cost": 58.2
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 3.0,
+          "wind": 62.0,
+          "min_cost": 47.2,
+          "max_cost": 47.2
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 13.0,
+          "wind": 48.0,
+          "min_cost": 47.7,
+          "max_cost": 48.7
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 11.0,
+          "wind": 54.0,
+          "min_cost": 48.1,
+          "max_cost": 59.5
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 9.0,
+          "wind": 54.0,
+          "min_cost": 50.7,
+          "max_cost": 71.2
+        },
+        {
+          "clean_firm": 64.0,
           "solar": 15.0,
-          "wind": 35.0,
-          "min_cost": 41.2,
-          "max_cost": 60.9
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 5.0,
-          "wind": 20.0,
-          "min_cost": 41.7,
-          "max_cost": 41.7
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 15.0,
-          "wind": 35.0,
-          "min_cost": 41.8,
-          "max_cost": 78.2
-        },
-        {
-          "clean_firm": 65.0,
-          "solar": 0.0,
-          "wind": 15.0,
-          "min_cost": 42.4,
-          "max_cost": 67.2
-        },
-        {
-          "clean_firm": 65.0,
-          "solar": 0.0,
           "wind": 10.0,
-          "min_cost": 44.0,
-          "max_cost": 50.5
+          "min_cost": 52.0,
+          "max_cost": 59.6
         },
         {
           "clean_firm": 60.0,
-          "solar": 5.0,
-          "wind": 10.0,
-          "min_cost": 44.0,
-          "max_cost": 69.0
+          "solar": 15.0,
+          "wind": 14.0,
+          "min_cost": 52.5,
+          "max_cost": 52.5
         },
         {
-          "clean_firm": 55.0,
-          "solar": 5.0,
-          "wind": 20.0,
-          "min_cost": 44.1,
-          "max_cost": 68.7
+          "clean_firm": 62.0,
+          "solar": 15.0,
+          "wind": 12.0,
+          "min_cost": 54.1,
+          "max_cost": 57.4
         },
         {
-          "clean_firm": 55.0,
-          "solar": 5.0,
-          "wind": 15.0,
-          "min_cost": 44.3,
-          "max_cost": 62.1
-        },
-        {
-          "clean_firm": 80.0,
-          "solar": 0.0,
-          "wind": 5.0,
-          "min_cost": 45.7,
-          "max_cost": 51.1
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 40.0,
-          "wind": 20.0,
-          "min_cost": 45.9,
-          "max_cost": 46.4
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 10.0,
-          "wind": 25.0,
+          "clean_firm": 28.0,
+          "solar": 7.0,
+          "wind": 50.0,
           "min_cost": 58.5,
           "max_cost": 58.5
         },
         {
-          "clean_firm": 55.0,
-          "solar": 0.0,
-          "wind": 25.0,
-          "min_cost": 60.4,
-          "max_cost": 62.5
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 15.0,
-          "wind": 40.0,
-          "min_cost": 61.3,
-          "max_cost": 71.4
-        },
-        {
-          "clean_firm": 30.0,
-          "solar": 10.0,
-          "wind": 25.0,
-          "min_cost": 62.8,
-          "max_cost": 62.8
-        }
-      ]
-    },
-    "90": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 38.9,
-          "to_cost": 45.6,
-          "from_mix": {
-            "clean_firm": 20.0,
-            "solar": 20.0,
-            "wind": 45.0
-          },
-          "to_mix": {
-            "clean_firm": 80.0,
-            "solar": 0.0,
-            "wind": 5.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 38.9,
-          "to_cost": 45.7,
-          "from_mix": {
-            "clean_firm": 20.0,
-            "solar": 20.0,
-            "wind": 45.0
-          },
-          "to_mix": {
-            "clean_firm": 80.0,
-            "solar": 0.0,
-            "wind": 5.0
-          }
-        },
-        {
-          "toggle": "storage",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 41.8,
-          "to_cost": 42.3,
-          "from_mix": {
-            "clean_firm": 25.0,
-            "solar": 10.0,
-            "wind": 30.0
-          },
-          "to_mix": {
-            "clean_firm": 35.0,
-            "solar": 10.0,
-            "wind": 20.0
-          }
-        },
-        {
-          "toggle": "storage",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 38.9,
-          "to_cost": 42.3,
-          "from_mix": {
-            "clean_firm": 20.0,
-            "solar": 20.0,
-            "wind": 45.0
-          },
-          "to_mix": {
-            "clean_firm": 35.0,
-            "solar": 10.0,
-            "wind": 20.0
-          }
-        }
-      ],
-      "n_unique_mixes": 20,
-      "mixes": [
-        {
-          "clean_firm": 20.0,
-          "solar": 20.0,
-          "wind": 45.0,
-          "min_cost": 38.9,
-          "max_cost": 78.5
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 10.0,
-          "wind": 30.0,
-          "min_cost": 41.8,
-          "max_cost": 41.8
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 15.0,
-          "wind": 35.0,
-          "min_cost": 42.0,
-          "max_cost": 85.0
-        },
-        {
-          "clean_firm": 35.0,
-          "solar": 10.0,
-          "wind": 20.0,
-          "min_cost": 42.3,
-          "max_cost": 42.3
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 10.0,
-          "wind": 45.0,
-          "min_cost": 42.9,
-          "max_cost": 47.6
-        },
-        {
-          "clean_firm": 55.0,
-          "solar": 10.0,
-          "wind": 20.0,
-          "min_cost": 45.0,
-          "max_cost": 68.4
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 20.0,
-          "wind": 40.0,
-          "min_cost": 45.6,
-          "max_cost": 85.7
-        },
-        {
-          "clean_firm": 80.0,
-          "solar": 0.0,
-          "wind": 5.0,
-          "min_cost": 45.6,
-          "max_cost": 72.4
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 45.0,
-          "wind": 20.0,
-          "min_cost": 50.0,
-          "max_cost": 50.5
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 15.0,
-          "wind": 25.0,
-          "min_cost": 51.1,
-          "max_cost": 73.5
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 25.0,
-          "wind": 35.0,
-          "min_cost": 53.5,
-          "max_cost": 53.9
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 10.0,
-          "wind": 30.0,
-          "min_cost": 56.3,
-          "max_cost": 56.6
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 10.0,
-          "wind": 25.0,
-          "min_cost": 56.5,
-          "max_cost": 64.0
-        },
-        {
-          "clean_firm": 30.0,
-          "solar": 10.0,
-          "wind": 30.0,
-          "min_cost": 63.8,
-          "max_cost": 63.8
-        },
-        {
-          "clean_firm": 40.0,
-          "solar": 5.0,
-          "wind": 40.0,
-          "min_cost": 65.6,
-          "max_cost": 65.6
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 20.0,
-          "wind": 40.0,
-          "min_cost": 66.1,
-          "max_cost": 66.1
-        },
-        {
-          "clean_firm": 65.0,
-          "solar": 0.0,
-          "wind": 20.0,
-          "min_cost": 66.5,
-          "max_cost": 66.5
-        },
-        {
-          "clean_firm": 75.0,
-          "solar": 0.0,
-          "wind": 10.0,
-          "min_cost": 66.6,
-          "max_cost": 66.6
-        },
-        {
-          "clean_firm": 40.0,
-          "solar": 10.0,
-          "wind": 30.0,
-          "min_cost": 68.1,
-          "max_cost": 68.1
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 25.0,
-          "wind": 40.0,
-          "min_cost": 82.0,
-          "max_cost": 82.0
-        }
-      ]
-    },
-    "92.5": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 42.5,
-          "to_cost": 49.3,
-          "from_mix": {
-            "clean_firm": 20.0,
-            "solar": 20.0,
-            "wind": 45.0
-          },
-          "to_mix": {
-            "clean_firm": 85.0,
-            "solar": 0.0,
-            "wind": 5.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 42.5,
-          "to_cost": 49.4,
-          "from_mix": {
-            "clean_firm": 20.0,
-            "solar": 20.0,
-            "wind": 45.0
-          },
-          "to_mix": {
-            "clean_firm": 85.0,
-            "solar": 0.0,
-            "wind": 5.0
-          }
-        },
-        {
-          "toggle": "storage",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 45.7,
-          "to_cost": 46.2,
-          "from_mix": {
-            "clean_firm": 30.0,
-            "solar": 15.0,
-            "wind": 35.0
-          },
-          "to_mix": {
-            "clean_firm": 45.0,
-            "solar": 10.0,
-            "wind": 20.0
-          }
-        },
-        {
-          "toggle": "storage",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 42.5,
-          "to_cost": 46.2,
-          "from_mix": {
-            "clean_firm": 20.0,
-            "solar": 20.0,
-            "wind": 45.0
-          },
-          "to_mix": {
-            "clean_firm": 45.0,
-            "solar": 10.0,
-            "wind": 20.0
-          }
-        }
-      ],
-      "n_unique_mixes": 19,
-      "mixes": [
-        {
-          "clean_firm": 20.0,
-          "solar": 20.0,
-          "wind": 45.0,
-          "min_cost": 42.5,
-          "max_cost": 77.3
-        },
-        {
-          "clean_firm": 30.0,
-          "solar": 15.0,
-          "wind": 35.0,
-          "min_cost": 45.7,
-          "max_cost": 45.7
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 20.0,
-          "wind": 30.0,
-          "min_cost": 46.0,
-          "max_cost": 93.5
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 10.0,
-          "wind": 20.0,
-          "min_cost": 46.2,
-          "max_cost": 70.2
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 30.0,
-          "wind": 40.0,
-          "min_cost": 46.3,
-          "max_cost": 90.2
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 15.0,
-          "wind": 40.0,
-          "min_cost": 48.0,
-          "max_cost": 48.3
-        },
-        {
-          "clean_firm": 60.0,
-          "solar": 10.0,
-          "wind": 20.0,
-          "min_cost": 48.9,
-          "max_cost": 74.3
-        },
-        {
-          "clean_firm": 40.0,
-          "solar": 15.0,
-          "wind": 10.0,
-          "min_cost": 49.3,
-          "max_cost": 53.3
-        },
-        {
-          "clean_firm": 85.0,
-          "solar": 0.0,
-          "wind": 5.0,
-          "min_cost": 49.3,
-          "max_cost": 78.3
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 45.0,
-          "wind": 25.0,
-          "min_cost": 54.3,
-          "max_cost": 54.6
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 25.0,
-          "wind": 35.0,
-          "min_cost": 67.8,
-          "max_cost": 67.8
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 10.0,
-          "wind": 30.0,
-          "min_cost": 70.0,
-          "max_cost": 70.0
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 10.0,
-          "wind": 5.0,
-          "min_cost": 70.9,
-          "max_cost": 73.4
-        },
-        {
-          "clean_firm": 75.0,
-          "solar": 0.0,
-          "wind": 15.0,
-          "min_cost": 71.9,
-          "max_cost": 71.9
-        },
-        {
-          "clean_firm": 30.0,
-          "solar": 25.0,
-          "wind": 35.0,
-          "min_cost": 72.1,
-          "max_cost": 72.1
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 25.0,
-          "wind": 40.0,
-          "min_cost": 73.4,
-          "max_cost": 85.8
-        },
-        {
-          "clean_firm": 80.0,
-          "solar": 0.0,
-          "wind": 10.0,
-          "min_cost": 73.7,
-          "max_cost": 73.7
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 10.0,
-          "wind": 30.0,
-          "min_cost": 74.0,
-          "max_cost": 74.0
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 20.0,
-          "wind": 35.0,
-          "min_cost": 77.9,
-          "max_cost": 81.8
-        }
-      ]
-    },
-    "95": {
-      "transitions": [
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "clean_firm",
-          "to_dominant": "wind",
-          "from_cost": 50.4,
-          "to_cost": 56.1,
-          "from_mix": {
-            "clean_firm": 63.0,
-            "solar": 9.0,
-            "wind": 20.0
-          },
-          "to_mix": {
-            "clean_firm": 20.0,
-            "solar": 15.0,
-            "wind": 55.0
-          }
-        },
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "wind",
-          "from_cost": 50.4,
-          "to_cost": 56.5,
-          "from_mix": {
-            "clean_firm": 63.0,
-            "solar": 9.0,
-            "wind": 20.0
-          },
-          "to_mix": {
-            "clean_firm": 20.0,
-            "solar": 15.0,
-            "wind": 55.0
-          }
-        }
-      ],
-      "n_unique_mixes": 8,
-      "mixes": [
-        {
-          "clean_firm": 63.0,
+          "clean_firm": 26.0,
           "solar": 9.0,
-          "wind": 20.0,
-          "min_cost": 50.4,
-          "max_cost": 80.5
-        },
-        {
-          "clean_firm": 90.0,
-          "solar": 0.0,
-          "wind": 5.0,
-          "min_cost": 53.1,
-          "max_cost": 84.3
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 15.0,
-          "wind": 55.0,
-          "min_cost": 56.1,
-          "max_cost": 102.3
-        },
-        {
-          "clean_firm": 70.0,
-          "solar": 10.0,
-          "wind": 15.0,
-          "min_cost": 59.1,
-          "max_cost": 59.1
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 75.0,
-          "wind": 15.0,
-          "min_cost": 66.0,
-          "max_cost": 89.5
-        },
-        {
-          "clean_firm": 55.0,
-          "solar": 10.0,
-          "wind": 15.0,
-          "min_cost": 70.8,
-          "max_cost": 73.8
-        },
-        {
-          "clean_firm": 40.0,
-          "solar": 15.0,
-          "wind": 25.0,
-          "min_cost": 72.9,
-          "max_cost": 72.9
-        },
-        {
-          "clean_firm": 40.0,
-          "solar": 10.0,
-          "wind": 30.0,
-          "min_cost": 106.7,
-          "max_cost": 112.0
-        }
-      ]
-    },
-    "97.5": {
-      "transitions": [
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "clean_firm",
-          "to_dominant": "wind",
-          "from_cost": 56.1,
-          "to_cost": 70.7,
-          "from_mix": {
-            "clean_firm": 80.0,
-            "solar": 10.0,
-            "wind": 5.0
-          },
-          "to_mix": {
-            "clean_firm": 30.0,
-            "solar": 15.0,
-            "wind": 55.0
-          }
-        },
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "wind",
-          "from_cost": 56.1,
-          "to_cost": 72.3,
-          "from_mix": {
-            "clean_firm": 80.0,
-            "solar": 10.0,
-            "wind": 5.0
-          },
-          "to_mix": {
-            "clean_firm": 20.0,
-            "solar": 15.0,
-            "wind": 75.0
-          }
-        }
-      ],
-      "n_unique_mixes": 9,
-      "mixes": [
-        {
-          "clean_firm": 80.0,
-          "solar": 10.0,
-          "wind": 5.0,
-          "min_cost": 56.1,
-          "max_cost": 85.2
-        },
-        {
-          "clean_firm": 90.0,
-          "solar": 5.0,
-          "wind": 5.0,
-          "min_cost": 57.7,
-          "max_cost": 90.9
-        },
-        {
-          "clean_firm": 85.0,
-          "solar": 10.0,
-          "wind": 5.0,
-          "min_cost": 57.9,
-          "max_cost": 88.6
-        },
-        {
-          "clean_firm": 30.0,
-          "solar": 15.0,
-          "wind": 55.0,
-          "min_cost": 70.7,
-          "max_cost": 108.5
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 15.0,
-          "wind": 75.0,
-          "min_cost": 72.3,
-          "max_cost": 95.8
-        },
-        {
-          "clean_firm": 50.0,
-          "solar": 10.0,
-          "wind": 25.0,
-          "min_cost": 75.3,
-          "max_cost": 116.5
-        },
-        {
-          "clean_firm": 60.0,
-          "solar": 10.0,
-          "wind": 15.0,
-          "min_cost": 79.4,
-          "max_cost": 123.8
-        },
-        {
-          "clean_firm": 67.0,
-          "solar": 11.0,
-          "wind": 19.0,
-          "min_cost": 80.6,
-          "max_cost": 128.2
-        },
-        {
-          "clean_firm": 67.0,
-          "solar": 12.0,
-          "wind": 18.0,
-          "min_cost": 84.2,
-          "max_cost": 84.2
-        }
-      ]
-    },
-    "99": {
-      "transitions": [
-        {
-          "toggle": "firm",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "solar",
-          "from_cost": 83.2,
-          "to_cost": 91.8,
-          "from_mix": {
-            "clean_firm": 70.0,
-            "solar": 10.0,
-            "wind": 15.0
-          },
-          "to_mix": {
-            "clean_firm": 25.0,
-            "solar": 70.0,
-            "wind": 30.0
-          }
-        },
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "solar",
-          "from_cost": 62.4,
-          "to_cost": 91.8,
-          "from_mix": {
-            "clean_firm": 85.0,
-            "solar": 10.0,
-            "wind": 15.0
-          },
-          "to_mix": {
-            "clean_firm": 25.0,
-            "solar": 70.0,
-            "wind": 30.0
-          }
-        }
-      ],
-      "n_unique_mixes": 9,
-      "mixes": [
-        {
-          "clean_firm": 85.0,
-          "solar": 10.0,
-          "wind": 15.0,
-          "min_cost": 62.4,
-          "max_cost": 98.9
-        },
-        {
-          "clean_firm": 100.0,
-          "solar": 5.0,
-          "wind": 5.0,
-          "min_cost": 65.2,
-          "max_cost": 102.8
-        },
-        {
-          "clean_firm": 70.0,
-          "solar": 10.0,
-          "wind": 15.0,
-          "min_cost": 83.2,
-          "max_cost": 135.4
-        },
-        {
-          "clean_firm": 80.0,
-          "solar": 10.0,
-          "wind": 10.0,
-          "min_cost": 86.7,
-          "max_cost": 143.2
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 70.0,
-          "wind": 30.0,
-          "min_cost": 91.8,
-          "max_cost": 124.0
-        },
-        {
-          "clean_firm": 95.0,
-          "solar": 5.0,
-          "wind": 10.0,
-          "min_cost": 94.6,
-          "max_cost": 96.7
-        },
-        {
-          "clean_firm": 35.0,
-          "solar": 15.0,
-          "wind": 80.0,
-          "min_cost": 100.8,
-          "max_cost": 108.8
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 15.0,
-          "wind": 55.0,
-          "min_cost": 115.7,
-          "max_cost": 124.0
-        },
-        {
-          "clean_firm": 48.0,
-          "solar": 13.0,
-          "wind": 53.0,
-          "min_cost": 121.4,
-          "max_cost": 121.4
-        }
-      ]
-    },
-    "99.5": {
-      "transitions": [
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "clean_firm",
-          "to_dominant": "solar",
-          "from_cost": 66.1,
-          "to_cost": 88.5,
-          "from_mix": {
-            "clean_firm": 90.0,
-            "solar": 10.0,
-            "wind": 15.0
-          },
-          "to_mix": {
-            "clean_firm": 25.0,
-            "solar": 70.0,
-            "wind": 30.0
-          }
-        },
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "solar",
-          "from_cost": 66.1,
-          "to_cost": 91.8,
-          "from_mix": {
-            "clean_firm": 90.0,
-            "solar": 10.0,
-            "wind": 15.0
-          },
-          "to_mix": {
-            "clean_firm": 25.0,
-            "solar": 70.0,
-            "wind": 30.0
-          }
-        }
-      ],
-      "n_unique_mixes": 6,
-      "mixes": [
-        {
-          "clean_firm": 90.0,
-          "solar": 10.0,
-          "wind": 15.0,
-          "min_cost": 66.1,
-          "max_cost": 152.5
-        },
-        {
-          "clean_firm": 100.0,
-          "solar": 5.0,
-          "wind": 10.0,
-          "min_cost": 69.2,
-          "max_cost": 109.1
-        },
-        {
-          "clean_firm": 115.0,
-          "solar": 0.0,
-          "wind": 5.0,
-          "min_cost": 71.9,
-          "max_cost": 80.5
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 70.0,
-          "wind": 30.0,
-          "min_cost": 88.5,
-          "max_cost": 144.4
-        },
-        {
-          "clean_firm": 85.0,
-          "solar": 10.0,
-          "wind": 5.0,
-          "min_cost": 90.0,
-          "max_cost": 146.0
-        },
-        {
-          "clean_firm": 80.0,
-          "solar": 10.0,
-          "wind": 20.0,
-          "min_cost": 137.3,
-          "max_cost": 141.3
-        }
-      ]
-    },
-    "99.9": {
-      "transitions": [
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "clean_firm",
-          "to_dominant": "solar",
-          "from_cost": 71.1,
-          "to_cost": 88.5,
-          "from_mix": {
-            "clean_firm": 100.0,
-            "solar": 10.0,
-            "wind": 5.0
-          },
-          "to_mix": {
-            "clean_firm": 25.0,
-            "solar": 70.0,
-            "wind": 30.0
-          }
-        },
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "solar",
-          "from_cost": 71.1,
-          "to_cost": 91.8,
-          "from_mix": {
-            "clean_firm": 100.0,
-            "solar": 10.0,
-            "wind": 5.0
-          },
-          "to_mix": {
-            "clean_firm": 25.0,
-            "solar": 70.0,
-            "wind": 30.0
-          }
-        }
-      ],
-      "n_unique_mixes": 6,
-      "mixes": [
-        {
-          "clean_firm": 100.0,
-          "solar": 10.0,
-          "wind": 5.0,
-          "min_cost": 71.1,
-          "max_cost": 165.2
-        },
-        {
-          "clean_firm": 110.0,
-          "solar": 5.0,
-          "wind": 5.0,
-          "min_cost": 72.7,
-          "max_cost": 114.7
-        },
-        {
-          "clean_firm": 105.0,
-          "solar": 10.0,
-          "wind": 5.0,
-          "min_cost": 73.3,
-          "max_cost": 112.4
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 70.0,
-          "wind": 30.0,
-          "min_cost": 88.5,
-          "max_cost": 152.8
-        },
-        {
-          "clean_firm": 75.0,
-          "solar": 35.0,
-          "wind": 5.0,
-          "min_cost": 98.4,
-          "max_cost": 163.4
-        },
-        {
-          "clean_firm": 80.0,
-          "solar": 30.0,
-          "wind": 5.0,
-          "min_cost": 99.0,
-          "max_cost": 99.0
-        }
-      ]
-    },
-    "99.9": {
-      "transitions": [
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "clean_firm",
-          "to_dominant": "solar",
-          "from_cost": 73.9,
-          "to_cost": 93.5,
-          "from_mix": {
-            "clean_firm": 85.0,
-            "solar": 30.0,
-            "wind": 5.0
-          },
-          "to_mix": {
-            "clean_firm": 20.0,
-            "solar": 85.0,
-            "wind": 30.0
-          }
-        },
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "solar",
-          "from_cost": 73.9,
-          "to_cost": 93.8,
-          "from_mix": {
-            "clean_firm": 85.0,
-            "solar": 30.0,
-            "wind": 5.0
-          },
-          "to_mix": {
-            "clean_firm": 20.0,
-            "solar": 85.0,
-            "wind": 30.0
-          }
-        }
-      ],
-      "n_unique_mixes": 4,
-      "mixes": [
-        {
-          "clean_firm": 85.0,
-          "solar": 30.0,
-          "wind": 5.0,
-          "min_cost": 73.9,
-          "max_cost": 168.8
-        },
-        {
-          "clean_firm": 115.0,
-          "solar": 5.0,
-          "wind": 5.0,
-          "min_cost": 75.3,
-          "max_cost": 120.6
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 85.0,
-          "wind": 30.0,
-          "min_cost": 93.5,
-          "max_cost": 145.4
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 65.0,
-          "wind": 20.0,
-          "min_cost": 98.4,
-          "max_cost": 152.1
-        }
-      ]
-    }
-  },
-  "NEISO": {
-    "10": {
-      "transitions": [],
-      "n_unique_mixes": 4,
-      "mixes": [
-        {
-          "clean_firm": 26.0,
-          "solar": 3.0,
-          "wind": 7.0,
-          "min_cost": 12.0,
-          "max_cost": 16.1
-        },
-        {
-          "clean_firm": 24.0,
-          "solar": 21.0,
-          "wind": 4.0,
-          "min_cost": 12.3,
-          "max_cost": 23.1
-        },
-        {
-          "clean_firm": 38.0,
-          "solar": 3.0,
-          "wind": 9.0,
-          "min_cost": 14.3,
-          "max_cost": 21.5
-        },
-        {
-          "clean_firm": 39.0,
-          "solar": 3.0,
-          "wind": 8.0,
-          "min_cost": 14.8,
-          "max_cost": 22.3
-        }
-      ]
-    },
-    "20": {
-      "transitions": [],
-      "n_unique_mixes": 4,
-      "mixes": [
-        {
-          "clean_firm": 26.0,
-          "solar": 3.0,
-          "wind": 7.0,
-          "min_cost": 12.0,
-          "max_cost": 16.1
-        },
-        {
-          "clean_firm": 24.0,
-          "solar": 21.0,
-          "wind": 4.0,
-          "min_cost": 12.3,
-          "max_cost": 23.1
-        },
-        {
-          "clean_firm": 38.0,
-          "solar": 3.0,
-          "wind": 9.0,
-          "min_cost": 14.3,
-          "max_cost": 21.5
-        },
-        {
-          "clean_firm": 39.0,
-          "solar": 3.0,
-          "wind": 8.0,
-          "min_cost": 14.8,
-          "max_cost": 22.3
-        }
-      ]
-    },
-    "30": {
-      "transitions": [],
-      "n_unique_mixes": 4,
-      "mixes": [
-        {
-          "clean_firm": 26.0,
-          "solar": 3.0,
-          "wind": 7.0,
-          "min_cost": 12.0,
-          "max_cost": 16.1
-        },
-        {
-          "clean_firm": 24.0,
-          "solar": 21.0,
-          "wind": 4.0,
-          "min_cost": 12.3,
-          "max_cost": 23.1
-        },
-        {
-          "clean_firm": 38.0,
-          "solar": 3.0,
-          "wind": 9.0,
-          "min_cost": 14.3,
-          "max_cost": 21.5
-        },
-        {
-          "clean_firm": 39.0,
-          "solar": 3.0,
-          "wind": 8.0,
-          "min_cost": 14.8,
-          "max_cost": 22.3
-        }
-      ]
-    },
-    "40": {
-      "transitions": [],
-      "n_unique_mixes": 4,
-      "mixes": [
-        {
-          "clean_firm": 26.0,
-          "solar": 3.0,
-          "wind": 7.0,
-          "min_cost": 12.0,
-          "max_cost": 16.1
-        },
-        {
-          "clean_firm": 24.0,
-          "solar": 21.0,
-          "wind": 4.0,
-          "min_cost": 12.3,
-          "max_cost": 23.1
-        },
-        {
-          "clean_firm": 38.0,
-          "solar": 3.0,
-          "wind": 9.0,
-          "min_cost": 14.3,
-          "max_cost": 21.5
-        },
-        {
-          "clean_firm": 39.0,
-          "solar": 3.0,
-          "wind": 8.0,
-          "min_cost": 14.8,
-          "max_cost": 22.3
-        }
-      ]
-    },
-    "50": {
-      "transitions": [],
-      "n_unique_mixes": 4,
-      "mixes": [
-        {
-          "clean_firm": 26.0,
-          "solar": 3.0,
-          "wind": 7.0,
-          "min_cost": 12.0,
-          "max_cost": 16.1
-        },
-        {
-          "clean_firm": 24.0,
-          "solar": 21.0,
-          "wind": 4.0,
-          "min_cost": 12.3,
-          "max_cost": 23.1
-        },
-        {
-          "clean_firm": 38.0,
-          "solar": 3.0,
-          "wind": 9.0,
-          "min_cost": 14.3,
-          "max_cost": 21.5
-        },
-        {
-          "clean_firm": 39.0,
-          "solar": 3.0,
-          "wind": 8.0,
-          "min_cost": 14.8,
-          "max_cost": 22.3
-        }
-      ]
-    },
-    "55": {
-      "transitions": [],
-      "n_unique_mixes": 2,
-      "mixes": [
-        {
-          "clean_firm": 24.0,
-          "solar": 21.0,
-          "wind": 4.0,
-          "min_cost": 12.2,
-          "max_cost": 23.1
-        },
-        {
-          "clean_firm": 42.0,
-          "solar": 3.0,
-          "wind": 10.0,
-          "min_cost": 19.7,
-          "max_cost": 22.2
-        }
-      ]
-    },
-    "60": {
-      "transitions": [],
-      "n_unique_mixes": 1,
-      "mixes": [
-        {
-          "clean_firm": 24.0,
-          "solar": 21.0,
-          "wind": 4.0,
-          "min_cost": 12.2,
-          "max_cost": 23.1
-        }
-      ]
-    },
-    "65": {
-      "transitions": [],
-      "n_unique_mixes": 1,
-      "mixes": [
-        {
-          "clean_firm": 24.0,
-          "solar": 21.0,
-          "wind": 4.0,
-          "min_cost": 12.2,
-          "max_cost": 23.1
-        }
-      ]
-    },
-    "70": {
-      "transitions": [],
-      "n_unique_mixes": 1,
-      "mixes": [
-        {
-          "clean_firm": 24.0,
-          "solar": 21.0,
-          "wind": 4.0,
-          "min_cost": 12.2,
-          "max_cost": 23.1
-        }
-      ]
-    },
-    "75": {
-      "transitions": [],
-      "n_unique_mixes": 1,
-      "mixes": [
-        {
-          "clean_firm": 24.0,
-          "solar": 21.0,
-          "wind": 4.0,
-          "min_cost": 12.2,
-          "max_cost": 23.1
-        }
-      ]
-    },
-    "80": {
-      "transitions": [],
-      "n_unique_mixes": 1,
-      "mixes": [
-        {
-          "clean_firm": 24.0,
-          "solar": 21.0,
-          "wind": 4.0,
-          "min_cost": 12.2,
-          "max_cost": 23.1
-        }
-      ]
-    },
-    "85": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 35.4,
-          "to_cost": 45.0,
-          "from_mix": {
-            "clean_firm": 28.0,
-            "solar": 8.0,
-            "wind": 56.0
-          },
-          "to_mix": {
-            "clean_firm": 39.0,
-            "solar": 3.0,
-            "wind": 34.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 35.4,
-          "to_cost": 51.1,
-          "from_mix": {
-            "clean_firm": 28.0,
-            "solar": 8.0,
-            "wind": 56.0
-          },
-          "to_mix": {
-            "clean_firm": 73.0,
-            "solar": 13.0,
-            "wind": 8.0
-          }
-        }
-      ],
-      "n_unique_mixes": 8,
-      "mixes": [
-        {
-          "clean_firm": 28.0,
-          "solar": 8.0,
           "wind": 56.0,
-          "min_cost": 35.4,
-          "max_cost": 73.7
+          "min_cost": 59.0,
+          "max_cost": 59.0
         },
         {
-          "clean_firm": 38.0,
-          "solar": 3.0,
-          "wind": 35.0,
-          "min_cost": 42.2,
-          "max_cost": 70.4
-        },
-        {
-          "clean_firm": 39.0,
-          "solar": 3.0,
-          "wind": 34.0,
-          "min_cost": 45.0,
-          "max_cost": 45.0
-        },
-        {
-          "clean_firm": 38.0,
-          "solar": 4.0,
-          "wind": 34.0,
-          "min_cost": 46.3,
-          "max_cost": 46.3
-        },
-        {
-          "clean_firm": 28.0,
-          "solar": 9.0,
-          "wind": 55.0,
-          "min_cost": 47.8,
-          "max_cost": 60.3
-        },
-        {
-          "clean_firm": 40.0,
-          "solar": 3.0,
-          "wind": 33.0,
-          "min_cost": 48.0,
-          "max_cost": 48.0
-        },
-        {
-          "clean_firm": 73.0,
-          "solar": 13.0,
-          "wind": 8.0,
-          "min_cost": 50.4,
-          "max_cost": 56.4
-        },
-        {
-          "clean_firm": 37.0,
-          "solar": 2.0,
-          "wind": 47.0,
+          "clean_firm": 64.0,
+          "solar": 15.0,
+          "wind": 6.0,
           "min_cost": 60.1,
-          "max_cost": 63.3
+          "max_cost": 62.4
+        },
+        {
+          "clean_firm": 44.0,
+          "solar": 3.0,
+          "wind": 40.0,
+          "min_cost": 68.3,
+          "max_cost": 68.3
         }
       ]
     },
@@ -7064,17 +7267,25 @@ const TIPPING_POINT_DATA = {
           "to_level": "M",
           "from_dominant": "wind",
           "to_dominant": "clean_firm",
-          "from_cost": 38.8,
-          "to_cost": 47.1,
+          "from_cost": 38.5,
+          "to_cost": 48.3,
           "from_mix": {
-            "clean_firm": 31.0,
-            "solar": 8.0,
-            "wind": 57.0
+            "clean_firm": 26.0,
+            "solar": 11.0,
+            "wind": 58.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 59.0,
-            "solar": 2.0,
-            "wind": 18.0
+            "clean_firm": 51.0,
+            "solar": 1.0,
+            "wind": 21.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         },
         {
@@ -7083,582 +7294,136 @@ const TIPPING_POINT_DATA = {
           "to_level": "H",
           "from_dominant": "wind",
           "to_dominant": "clean_firm",
-          "from_cost": 38.8,
-          "to_cost": 53.3,
+          "from_cost": 38.5,
+          "to_cost": 57.4,
           "from_mix": {
-            "clean_firm": 31.0,
-            "solar": 8.0,
-            "wind": 57.0
-          },
-          "to_mix": {
-            "clean_firm": 76.0,
-            "solar": 13.0,
-            "wind": 8.0
-          }
-        }
-      ],
-      "n_unique_mixes": 7,
-      "mixes": [
-        {
-          "clean_firm": 31.0,
-          "solar": 8.0,
-          "wind": 57.0,
-          "min_cost": 38.8,
-          "max_cost": 81.4
-        },
-        {
-          "clean_firm": 29.0,
-          "solar": 11.0,
-          "wind": 57.0,
-          "min_cost": 40.5,
-          "max_cost": 72.9
-        },
-        {
-          "clean_firm": 38.0,
-          "solar": 6.0,
-          "wind": 37.0,
-          "min_cost": 45.6,
-          "max_cost": 65.5
-        },
-        {
-          "clean_firm": 59.0,
-          "solar": 2.0,
-          "wind": 18.0,
-          "min_cost": 47.1,
-          "max_cost": 51.8
-        },
-        {
-          "clean_firm": 58.0,
-          "solar": 2.0,
-          "wind": 19.0,
-          "min_cost": 49.6,
-          "max_cost": 73.9
-        },
-        {
-          "clean_firm": 29.0,
-          "solar": 12.0,
-          "wind": 56.0,
-          "min_cost": 52.8,
-          "max_cost": 66.9
-        },
-        {
-          "clean_firm": 76.0,
-          "solar": 13.0,
-          "wind": 8.0,
-          "min_cost": 53.3,
-          "max_cost": 58.8
-        }
-      ]
-    },
-    "90": {
-      "transitions": [
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "clean_firm",
-          "to_dominant": "wind",
-          "from_cost": 42.7,
-          "to_cost": 44.6,
-          "from_mix": {
-            "clean_firm": 40.0,
-            "solar": 5.0,
-            "wind": 37.0
-          },
-          "to_mix": {
-            "clean_firm": 25.0,
-            "solar": 13.0,
-            "wind": 33.0
-          }
-        },
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "wind",
-          "from_cost": 42.7,
-          "to_cost": 44.8,
-          "from_mix": {
-            "clean_firm": 40.0,
-            "solar": 5.0,
-            "wind": 37.0
-          },
-          "to_mix": {
-            "clean_firm": 25.0,
-            "solar": 13.0,
-            "wind": 33.0
-          }
-        }
-      ],
-      "n_unique_mixes": 7,
-      "mixes": [
-        {
-          "clean_firm": 40.0,
-          "solar": 5.0,
-          "wind": 37.0,
-          "min_cost": 42.7,
-          "max_cost": 65.3
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 13.0,
-          "wind": 33.0,
-          "min_cost": 44.6,
-          "max_cost": 90.9
-        },
-        {
-          "clean_firm": 42.0,
-          "solar": 6.0,
-          "wind": 37.0,
-          "min_cost": 46.2,
-          "max_cost": 69.9
-        },
-        {
-          "clean_firm": 60.0,
-          "solar": 2.0,
-          "wind": 21.0,
-          "min_cost": 49.1,
-          "max_cost": 74.9
-        },
-        {
-          "clean_firm": 62.0,
-          "solar": 2.0,
-          "wind": 19.0,
-          "min_cost": 52.5,
-          "max_cost": 78.5
-        },
-        {
-          "clean_firm": 77.0,
-          "solar": 13.0,
-          "wind": 11.0,
-          "min_cost": 56.9,
-          "max_cost": 63.0
-        },
-        {
-          "clean_firm": 33.0,
-          "solar": 2.0,
-          "wind": 31.0,
-          "min_cost": 58.3,
-          "max_cost": 58.3
-        }
-      ]
-    },
-    "92.5": {
-      "transitions": [
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "clean_firm",
-          "to_dominant": "wind",
-          "from_cost": 47.7,
-          "to_cost": 48.6,
-          "from_mix": {
-            "clean_firm": 68.0,
-            "solar": 3.0,
-            "wind": 21.0
-          },
-          "to_mix": {
             "clean_firm": 26.0,
-            "solar": 13.0,
-            "wind": 37.0
-          }
-        },
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "wind",
-          "from_cost": 47.7,
-          "to_cost": 49.1,
-          "from_mix": {
-            "clean_firm": 68.0,
-            "solar": 3.0,
-            "wind": 21.0
+            "solar": 11.0,
+            "wind": 58.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 26.0,
-            "solar": 13.0,
-            "wind": 37.0
-          }
-        }
-      ],
-      "n_unique_mixes": 6,
-      "mixes": [
-        {
-          "clean_firm": 68.0,
-          "solar": 3.0,
-          "wind": 21.0,
-          "min_cost": 47.7,
-          "max_cost": 76.6
-        },
-        {
-          "clean_firm": 26.0,
-          "solar": 13.0,
-          "wind": 37.0,
-          "min_cost": 48.6,
-          "max_cost": 99.1
-        },
-        {
-          "clean_firm": 69.0,
-          "solar": 3.0,
-          "wind": 21.0,
-          "min_cost": 52.6,
-          "max_cost": 83.0
-        },
-        {
-          "clean_firm": 70.0,
-          "solar": 3.0,
-          "wind": 20.0,
-          "min_cost": 52.9,
-          "max_cost": 52.9
-        },
-        {
-          "clean_firm": 72.0,
-          "solar": 3.0,
-          "wind": 18.0,
-          "min_cost": 55.3,
-          "max_cost": 66.6
-        },
-        {
-          "clean_firm": 41.0,
-          "solar": 12.0,
-          "wind": 37.0,
-          "min_cost": 72.6,
-          "max_cost": 72.6
-        }
-      ]
-    },
-    "95": {
-      "transitions": [
-        {
-          "toggle": "firm",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "solar",
-          "from_cost": 67.7,
-          "to_cost": 87.6,
-          "from_mix": {
-            "clean_firm": 68.0,
-            "solar": 7.0,
-            "wind": 22.0
-          },
-          "to_mix": {
-            "clean_firm": 25.0,
-            "solar": 73.0,
-            "wind": 47.0
-          }
-        },
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "solar",
-          "from_cost": 52.3,
-          "to_cost": 87.6,
-          "from_mix": {
-            "clean_firm": 70.0,
-            "solar": 5.0,
-            "wind": 22.0
-          },
-          "to_mix": {
-            "clean_firm": 25.0,
-            "solar": 73.0,
-            "wind": 47.0
-          }
-        }
-      ],
-      "n_unique_mixes": 5,
-      "mixes": [
-        {
-          "clean_firm": 70.0,
-          "solar": 5.0,
-          "wind": 22.0,
-          "min_cost": 52.3,
-          "max_cost": 117.4
-        },
-        {
-          "clean_firm": 72.0,
-          "solar": 5.0,
-          "wind": 22.0,
-          "min_cost": 57.8,
-          "max_cost": 91.3
-        },
-        {
-          "clean_firm": 72.0,
-          "solar": 6.0,
-          "wind": 21.0,
-          "min_cost": 61.5,
-          "max_cost": 67.5
-        },
-        {
-          "clean_firm": 68.0,
-          "solar": 7.0,
-          "wind": 22.0,
-          "min_cost": 67.7,
-          "max_cost": 108.9
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 73.0,
-          "wind": 47.0,
-          "min_cost": 87.6,
-          "max_cost": 94.3
-        }
-      ]
-    },
-    "97.5": {
-      "transitions": [],
-      "n_unique_mixes": 2,
-      "mixes": [
-        {
-          "clean_firm": 88.0,
-          "solar": 1.0,
-          "wind": 8.0,
-          "min_cost": 60.2,
-          "max_cost": 137.8
-        },
-        {
-          "clean_firm": 53.0,
-          "solar": 38.0,
-          "wind": 26.0,
-          "min_cost": 101.0,
-          "max_cost": 124.0
-        }
-      ]
-    },
-    "99": {
-      "transitions": [
-        {
-          "toggle": "firm",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "solar",
-          "from_cost": 85.3,
-          "to_cost": 108.6,
-          "from_mix": {
-            "clean_firm": 68.0,
-            "solar": 8.0,
-            "wind": 33.0
-          },
-          "to_mix": {
-            "clean_firm": 33.0,
-            "solar": 81.0,
-            "wind": 71.0
-          }
-        },
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "solar",
-          "from_cost": 67.7,
-          "to_cost": 108.6,
-          "from_mix": {
-            "clean_firm": 91.0,
-            "solar": 2.0,
-            "wind": 12.0
-          },
-          "to_mix": {
-            "clean_firm": 33.0,
-            "solar": 81.0,
-            "wind": 71.0
-          }
-        }
-      ],
-      "n_unique_mixes": 6,
-      "mixes": [
-        {
-          "clean_firm": 91.0,
-          "solar": 2.0,
-          "wind": 12.0,
-          "min_cost": 67.7,
-          "max_cost": 153.9
-        },
-        {
-          "clean_firm": 92.0,
-          "solar": 2.0,
-          "wind": 12.0,
-          "min_cost": 74.0,
-          "max_cost": 116.1
-        },
-        {
-          "clean_firm": 68.0,
-          "solar": 8.0,
-          "wind": 33.0,
-          "min_cost": 85.3,
-          "max_cost": 147.5
-        },
-        {
-          "clean_firm": 33.0,
-          "solar": 81.0,
-          "wind": 71.0,
-          "min_cost": 108.6,
-          "max_cost": 108.6
-        },
-        {
-          "clean_firm": 33.0,
-          "solar": 79.0,
-          "wind": 72.0,
-          "min_cost": 109.1,
-          "max_cost": 109.1
-        },
-        {
-          "clean_firm": 28.0,
-          "solar": 73.0,
-          "wind": 80.0,
-          "min_cost": 109.2,
-          "max_cost": 109.2
-        }
-      ]
-    },
-    "99.5": {
-      "transitions": [
-        {
-          "toggle": "firm",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "wind",
-          "from_cost": 91.8,
-          "to_cost": 109.1,
-          "from_mix": {
-            "clean_firm": 70.0,
-            "solar": 8.0,
-            "wind": 36.0
-          },
-          "to_mix": {
-            "clean_firm": 28.0,
-            "solar": 73.0,
-            "wind": 81.0
-          }
-        },
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "wind",
-          "from_cost": 75.8,
-          "to_cost": 109.1,
-          "from_mix": {
-            "clean_firm": 72.0,
-            "solar": 8.0,
-            "wind": 34.0
-          },
-          "to_mix": {
-            "clean_firm": 28.0,
-            "solar": 73.0,
-            "wind": 81.0
+            "clean_firm": 51.0,
+            "solar": 1.0,
+            "wind": 21.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         }
       ],
       "n_unique_mixes": 11,
       "mixes": [
         {
-          "clean_firm": 72.0,
-          "solar": 8.0,
-          "wind": 34.0,
-          "min_cost": 75.8,
-          "max_cost": 166.1
-        },
-        {
-          "clean_firm": 120.0,
-          "solar": 2.0,
-          "wind": 4.0,
-          "min_cost": 84.1,
-          "max_cost": 132.1
-        },
-        {
-          "clean_firm": 70.0,
-          "solar": 8.0,
-          "wind": 36.0,
-          "min_cost": 91.8,
-          "max_cost": 154.4
-        },
-        {
-          "clean_firm": 72.0,
-          "solar": 9.0,
-          "wind": 33.0,
-          "min_cost": 108.9,
-          "max_cost": 122.5
-        },
-        {
-          "clean_firm": 28.0,
-          "solar": 73.0,
-          "wind": 81.0,
-          "min_cost": 109.1,
-          "max_cost": 109.5
-        },
-        {
-          "clean_firm": 28.0,
-          "solar": 73.0,
-          "wind": 78.0,
-          "min_cost": 111.2,
-          "max_cost": 119.3
-        },
-        {
-          "clean_firm": 28.0,
-          "solar": 73.0,
-          "wind": 82.0,
-          "min_cost": 111.9,
-          "max_cost": 120.2
-        },
-        {
-          "clean_firm": 33.0,
-          "solar": 78.0,
-          "wind": 72.0,
-          "min_cost": 116.4,
-          "max_cost": 133.8
-        },
-        {
-          "clean_firm": 68.0,
+          "clean_firm": 26.0,
           "solar": 11.0,
-          "wind": 37.0,
-          "min_cost": 121.8,
-          "max_cost": 134.0
+          "wind": 58.0,
+          "min_cost": 38.5,
+          "max_cost": 80.9
         },
         {
-          "clean_firm": 69.0,
-          "solar": 9.0,
-          "wind": 37.0,
-          "min_cost": 136.7,
-          "max_cost": 136.7
+          "clean_firm": 26.0,
+          "solar": 1.0,
+          "wind": 72.0,
+          "min_cost": 40.7,
+          "max_cost": 53.7
         },
         {
-          "clean_firm": 70.0,
-          "solar": 9.0,
-          "wind": 35.0,
-          "min_cost": 148.7,
-          "max_cost": 148.7
+          "clean_firm": 49.0,
+          "solar": 1.0,
+          "wind": 21.0,
+          "min_cost": 41.0,
+          "max_cost": 43.9
+        },
+        {
+          "clean_firm": 24.0,
+          "solar": 1.0,
+          "wind": 76.0,
+          "min_cost": 41.1,
+          "max_cost": 46.6
+        },
+        {
+          "clean_firm": 24.0,
+          "solar": 3.0,
+          "wind": 72.0,
+          "min_cost": 45.4,
+          "max_cost": 49.6
+        },
+        {
+          "clean_firm": 51.0,
+          "solar": 1.0,
+          "wind": 21.0,
+          "min_cost": 46.6,
+          "max_cost": 75.8
+        },
+        {
+          "clean_firm": 32.0,
+          "solar": 15.0,
+          "wind": 46.0,
+          "min_cost": 50.1,
+          "max_cost": 75.5
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 15.0,
+          "wind": 54.0,
+          "min_cost": 50.5,
+          "max_cost": 66.5
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 13.0,
+          "wind": 56.0,
+          "min_cost": 54.1,
+          "max_cost": 66.2
+        },
+        {
+          "clean_firm": 64.0,
+          "solar": 19.0,
+          "wind": 10.0,
+          "min_cost": 57.3,
+          "max_cost": 66.2
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 7.0,
+          "wind": 62.0,
+          "min_cost": 57.3,
+          "max_cost": 80.5
         }
       ]
     },
-    "99.9": {
+    "90": {
       "transitions": [
         {
           "toggle": "firm",
-          "from_level": "M",
-          "to_level": "H",
+          "from_level": "L",
+          "to_level": "M",
           "from_dominant": "clean_firm",
-          "to_dominant": "solar",
-          "from_cost": 103.9,
-          "to_cost": 110.5,
+          "to_dominant": "wind",
+          "from_cost": 44.6,
+          "to_cost": 45.2,
           "from_mix": {
-            "clean_firm": 83.0,
-            "solar": 38.0,
-            "wind": 13.0
+            "clean_firm": 51.0,
+            "solar": 1.0,
+            "wind": 21.0,
+            "solar_batt4": 1.0,
+            "solar_batt8": 1.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 33.0,
-            "solar": 78.0,
-            "wind": 72.0
+            "clean_firm": 26.0,
+            "solar": 23.0,
+            "wind": 50.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         },
         {
@@ -7666,100 +7431,507 @@ const TIPPING_POINT_DATA = {
           "from_level": "L",
           "to_level": "H",
           "from_dominant": "clean_firm",
-          "to_dominant": "solar",
-          "from_cost": 80.4,
-          "to_cost": 110.5,
+          "to_dominant": "wind",
+          "from_cost": 44.6,
+          "to_cost": 45.7,
           "from_mix": {
-            "clean_firm": 120.0,
-            "solar": 2.0,
-            "wind": 4.0
+            "clean_firm": 51.0,
+            "solar": 1.0,
+            "wind": 21.0,
+            "solar_batt4": 1.0,
+            "solar_batt8": 1.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 33.0,
-            "solar": 78.0,
-            "wind": 72.0
+            "clean_firm": 26.0,
+            "solar": 23.0,
+            "wind": 50.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         }
       ],
-      "n_unique_mixes": 8,
+      "n_unique_mixes": 6,
       "mixes": [
         {
-          "clean_firm": 120.0,
-          "solar": 2.0,
-          "wind": 4.0,
-          "min_cost": 80.4,
-          "max_cost": 132.1
+          "clean_firm": 51.0,
+          "solar": 1.0,
+          "wind": 21.0,
+          "min_cost": 44.6,
+          "max_cost": 82.3
         },
         {
-          "clean_firm": 83.0,
-          "solar": 38.0,
-          "wind": 13.0,
-          "min_cost": 103.9,
-          "max_cost": 178.3
+          "clean_firm": 26.0,
+          "solar": 23.0,
+          "wind": 50.0,
+          "min_cost": 45.2,
+          "max_cost": 93.3
         },
         {
-          "clean_firm": 84.0,
-          "solar": 38.0,
-          "wind": 17.0,
-          "min_cost": 106.5,
-          "max_cost": 182.6
+          "clean_firm": 26.0,
+          "solar": 29.0,
+          "wind": 48.0,
+          "min_cost": 47.9,
+          "max_cost": 93.5
         },
         {
-          "clean_firm": 33.0,
-          "solar": 78.0,
-          "wind": 72.0,
-          "min_cost": 110.5,
-          "max_cost": 153.6
+          "clean_firm": 24.0,
+          "solar": 29.0,
+          "wind": 50.0,
+          "min_cost": 48.3,
+          "max_cost": 51.8
         },
         {
-          "clean_firm": 86.0,
-          "solar": 38.0,
-          "wind": 14.0,
-          "min_cost": 113.9,
-          "max_cost": 182.3
+          "clean_firm": 24.0,
+          "solar": 25.0,
+          "wind": 52.0,
+          "min_cost": 65.2,
+          "max_cost": 85.3
         },
         {
-          "clean_firm": 28.0,
-          "solar": 73.0,
-          "wind": 81.0,
-          "min_cost": 116.0,
-          "max_cost": 137.8
-        },
-        {
-          "clean_firm": 86.0,
-          "solar": 38.0,
-          "wind": 13.0,
-          "min_cost": 121.8,
-          "max_cost": 181.1
-        },
-        {
-          "clean_firm": 28.0,
-          "solar": 75.0,
-          "wind": 80.0,
-          "min_cost": 124.0,
-          "max_cost": 124.0
+          "clean_firm": 64.0,
+          "solar": 27.0,
+          "wind": 8.0,
+          "min_cost": 71.3,
+          "max_cost": 71.3
         }
       ]
     },
-    "99.9": {
+    "92.5": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 51.3,
+          "to_cost": 64.0,
+          "from_mix": {
+            "clean_firm": 26.0,
+            "solar": 35.0,
+            "wind": 46.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 62.0,
+            "solar": 33.0,
+            "wind": 10.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 51.3,
+          "to_cost": 72.8,
+          "from_mix": {
+            "clean_firm": 26.0,
+            "solar": 35.0,
+            "wind": 46.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 64.0,
+            "solar": 33.0,
+            "wind": 8.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 14,
+      "mixes": [
+        {
+          "clean_firm": 26.0,
+          "solar": 35.0,
+          "wind": 46.0,
+          "min_cost": 51.3,
+          "max_cost": 107.5
+        },
+        {
+          "clean_firm": 24.0,
+          "solar": 33.0,
+          "wind": 50.0,
+          "min_cost": 51.9,
+          "max_cost": 60.3
+        },
+        {
+          "clean_firm": 28.0,
+          "solar": 35.0,
+          "wind": 44.0,
+          "min_cost": 55.9,
+          "max_cost": 107.0
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 41.0,
+          "wind": 46.0,
+          "min_cost": 62.2,
+          "max_cost": 75.1
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 39.0,
+          "wind": 46.0,
+          "min_cost": 62.4,
+          "max_cost": 75.4
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 33.0,
+          "wind": 42.0,
+          "min_cost": 63.0,
+          "max_cost": 89.7
+        },
+        {
+          "clean_firm": 24.0,
+          "solar": 39.0,
+          "wind": 48.0,
+          "min_cost": 63.1,
+          "max_cost": 63.1
+        },
+        {
+          "clean_firm": 62.0,
+          "solar": 33.0,
+          "wind": 10.0,
+          "min_cost": 64.0,
+          "max_cost": 64.0
+        },
+        {
+          "clean_firm": 64.0,
+          "solar": 33.0,
+          "wind": 8.0,
+          "min_cost": 65.9,
+          "max_cost": 97.8
+        },
+        {
+          "clean_firm": 62.0,
+          "solar": 35.0,
+          "wind": 10.0,
+          "min_cost": 67.7,
+          "max_cost": 101.1
+        },
+        {
+          "clean_firm": 64.0,
+          "solar": 35.0,
+          "wind": 8.0,
+          "min_cost": 68.4,
+          "max_cost": 104.0
+        },
+        {
+          "clean_firm": 32.0,
+          "solar": 33.0,
+          "wind": 40.0,
+          "min_cost": 94.8,
+          "max_cost": 94.8
+        },
+        {
+          "clean_firm": 60.0,
+          "solar": 33.0,
+          "wind": 12.0,
+          "min_cost": 94.8,
+          "max_cost": 94.8
+        },
+        {
+          "clean_firm": 31.0,
+          "solar": 9.0,
+          "wind": 41.0,
+          "min_cost": 94.9,
+          "max_cost": 94.9
+        }
+      ]
+    },
+    "95": {
+      "transitions": [
+        {
+          "toggle": "renewable",
+          "from_level": "M",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 73.5,
+          "to_cost": 87.0,
+          "from_mix": {
+            "clean_firm": 44.0,
+            "solar": 45.0,
+            "wind": 26.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 60.0,
+            "solar": 43.0,
+            "wind": 10.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "renewable",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 59.5,
+          "to_cost": 87.0,
+          "from_mix": {
+            "clean_firm": 30.0,
+            "solar": 47.0,
+            "wind": 40.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 60.0,
+            "solar": 43.0,
+            "wind": 10.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "solar",
+          "to_dominant": "wind",
+          "from_cost": 59.5,
+          "to_cost": 59.9,
+          "from_mix": {
+            "clean_firm": 30.0,
+            "solar": 47.0,
+            "wind": 40.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 26.0,
+            "solar": 41.0,
+            "wind": 46.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "wind",
+          "from_cost": 59.5,
+          "to_cost": 60.4,
+          "from_mix": {
+            "clean_firm": 30.0,
+            "solar": 47.0,
+            "wind": 40.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 26.0,
+            "solar": 41.0,
+            "wind": 46.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 59.5,
+          "to_cost": 62.6,
+          "from_mix": {
+            "clean_firm": 30.0,
+            "solar": 47.0,
+            "wind": 40.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 60.0,
+            "solar": 30.0,
+            "wind": 30.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "clean_firm",
+          "from_cost": 59.5,
+          "to_cost": 62.8,
+          "from_mix": {
+            "clean_firm": 30.0,
+            "solar": 47.0,
+            "wind": 40.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 60.0,
+            "solar": 30.0,
+            "wind": 30.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 11,
+      "mixes": [
+        {
+          "clean_firm": 30.0,
+          "solar": 47.0,
+          "wind": 40.0,
+          "min_cost": 59.5,
+          "max_cost": 94.4
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 41.0,
+          "wind": 46.0,
+          "min_cost": 59.9,
+          "max_cost": 115.3
+        },
+        {
+          "clean_firm": 60.0,
+          "solar": 30.0,
+          "wind": 30.0,
+          "min_cost": 62.6,
+          "max_cost": 115.3
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 49.0,
+          "wind": 44.0,
+          "min_cost": 65.8,
+          "max_cost": 98.9
+        },
+        {
+          "clean_firm": 24.0,
+          "solar": 43.0,
+          "wind": 48.0,
+          "min_cost": 66.3,
+          "max_cost": 119.1
+        },
+        {
+          "clean_firm": 26.0,
+          "solar": 47.0,
+          "wind": 44.0,
+          "min_cost": 69.7,
+          "max_cost": 124.2
+        },
+        {
+          "clean_firm": 44.0,
+          "solar": 45.0,
+          "wind": 26.0,
+          "min_cost": 70.9,
+          "max_cost": 111.4
+        },
+        {
+          "clean_firm": 48.0,
+          "solar": 45.0,
+          "wind": 22.0,
+          "min_cost": 76.3,
+          "max_cost": 88.6
+        },
+        {
+          "clean_firm": 58.0,
+          "solar": 43.0,
+          "wind": 8.0,
+          "min_cost": 82.7,
+          "max_cost": 82.7
+        },
+        {
+          "clean_firm": 60.0,
+          "solar": 43.0,
+          "wind": 10.0,
+          "min_cost": 87.0,
+          "max_cost": 94.8
+        },
+        {
+          "clean_firm": 62.0,
+          "solar": 47.0,
+          "wind": 8.0,
+          "min_cost": 97.6,
+          "max_cost": 100.9
+        }
+      ]
+    },
+    "97.5": {
       "transitions": [
         {
           "toggle": "firm",
-          "from_level": "M",
-          "to_level": "H",
+          "from_level": "L",
+          "to_level": "M",
           "from_dominant": "clean_firm",
-          "to_dominant": "wind",
-          "from_cost": 103.9,
-          "to_cost": 112.6,
+          "to_dominant": "solar",
+          "from_cost": 63.6,
+          "to_cost": 70.9,
           "from_mix": {
-            "clean_firm": 83.0,
-            "solar": 38.0,
-            "wind": 13.0
+            "clean_firm": 60.0,
+            "solar": 30.0,
+            "wind": 30.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 28.0,
-            "solar": 73.0,
-            "wind": 78.0
+            "clean_firm": 26.0,
+            "solar": 59.0,
+            "wind": 44.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         },
         {
@@ -7767,71 +7939,395 @@ const TIPPING_POINT_DATA = {
           "from_level": "L",
           "to_level": "H",
           "from_dominant": "clean_firm",
-          "to_dominant": "wind",
-          "from_cost": 82.5,
-          "to_cost": 112.6,
+          "to_dominant": "solar",
+          "from_cost": 63.6,
+          "to_cost": 71.3,
           "from_mix": {
-            "clean_firm": 119.0,
-            "solar": 2.0,
-            "wind": 5.0
+            "clean_firm": 60.0,
+            "solar": 30.0,
+            "wind": 30.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 28.0,
-            "solar": 73.0,
-            "wind": 78.0
+            "clean_firm": 26.0,
+            "solar": 59.0,
+            "wind": 44.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         }
       ],
       "n_unique_mixes": 7,
       "mixes": [
         {
-          "clean_firm": 119.0,
-          "solar": 2.0,
-          "wind": 5.0,
-          "min_cost": 82.5,
-          "max_cost": 138.3
+          "clean_firm": 60.0,
+          "solar": 30.0,
+          "wind": 30.0,
+          "min_cost": 63.6,
+          "max_cost": 137.9
         },
         {
-          "clean_firm": 119.0,
-          "solar": 2.0,
-          "wind": 7.0,
-          "min_cost": 84.0,
-          "max_cost": 137.5
+          "clean_firm": 26.0,
+          "solar": 59.0,
+          "wind": 44.0,
+          "min_cost": 70.9,
+          "max_cost": 127.1
         },
         {
-          "clean_firm": 83.0,
-          "solar": 38.0,
-          "wind": 13.0,
-          "min_cost": 103.9,
-          "max_cost": 184.8
+          "clean_firm": 30.0,
+          "solar": 40.0,
+          "wind": 80.0,
+          "min_cost": 75.7,
+          "max_cost": 114.4
         },
         {
-          "clean_firm": 84.0,
-          "solar": 38.0,
-          "wind": 17.0,
-          "min_cost": 107.8,
-          "max_cost": 172.7
+          "clean_firm": 70.0,
+          "solar": 30.0,
+          "wind": 10.0,
+          "min_cost": 83.4,
+          "max_cost": 104.6
         },
         {
-          "clean_firm": 28.0,
-          "solar": 73.0,
-          "wind": 78.0,
-          "min_cost": 112.6,
-          "max_cost": 153.3
+          "clean_firm": 40.0,
+          "solar": 20.0,
+          "wind": 40.0,
+          "min_cost": 119.4,
+          "max_cost": 129.6
         },
         {
-          "clean_firm": 86.0,
-          "solar": 38.0,
-          "wind": 14.0,
-          "min_cost": 127.5,
-          "max_cost": 127.5
+          "clean_firm": 26.0,
+          "solar": 57.0,
+          "wind": 44.0,
+          "min_cost": 127.1,
+          "max_cost": 127.1
         },
         {
-          "clean_firm": 33.0,
-          "solar": 78.0,
-          "wind": 72.0,
-          "min_cost": 127.9,
-          "max_cost": 150.0
+          "clean_firm": 40.0,
+          "solar": 20.0,
+          "wind": 20.0,
+          "min_cost": 133.3,
+          "max_cost": 133.3
+        }
+      ]
+    },
+    "99": {
+      "transitions": [],
+      "n_unique_mixes": 7,
+      "mixes": [
+        {
+          "clean_firm": 70.0,
+          "solar": 30.0,
+          "wind": 10.0,
+          "min_cost": 69.6,
+          "max_cost": 126.2
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 20.0,
+          "wind": 20.0,
+          "min_cost": 76.9,
+          "max_cost": 149.0
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 20.0,
+          "wind": 30.0,
+          "min_cost": 80.5,
+          "max_cost": 131.1
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 40.0,
+          "wind": 80.0,
+          "min_cost": 81.3,
+          "max_cost": 123.3
+        },
+        {
+          "clean_firm": 50.0,
+          "solar": 40.0,
+          "wind": 10.0,
+          "min_cost": 99.0,
+          "max_cost": 99.0
+        },
+        {
+          "clean_firm": 50.0,
+          "solar": 10.0,
+          "wind": 10.0,
+          "min_cost": 99.5,
+          "max_cost": 118.5
+        },
+        {
+          "clean_firm": 70.0,
+          "solar": 20.0,
+          "wind": 10.0,
+          "min_cost": 102.8,
+          "max_cost": 102.8
+        }
+      ]
+    },
+    "99.5": {
+      "transitions": [
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 69.6,
+          "to_cost": 79.8,
+          "from_mix": {
+            "clean_firm": 70.0,
+            "solar": 30.0,
+            "wind": 10.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 30.0,
+            "solar": 40.0,
+            "wind": 80.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 69.6,
+          "to_cost": 82.5,
+          "from_mix": {
+            "clean_firm": 70.0,
+            "solar": 30.0,
+            "wind": 10.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 30.0,
+            "solar": 40.0,
+            "wind": 80.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 6,
+      "mixes": [
+        {
+          "clean_firm": 70.0,
+          "solar": 30.0,
+          "wind": 10.0,
+          "min_cost": 69.6,
+          "max_cost": 153.9
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 40.0,
+          "wind": 80.0,
+          "min_cost": 79.8,
+          "max_cost": 124.3
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 20.0,
+          "wind": 20.0,
+          "min_cost": 90.5,
+          "max_cost": 132.8
+        },
+        {
+          "clean_firm": 70.0,
+          "solar": 20.0,
+          "wind": 10.0,
+          "min_cost": 102.8,
+          "max_cost": 118.5
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 20.0,
+          "wind": 30.0,
+          "min_cost": 128.0,
+          "max_cost": 146.5
+        },
+        {
+          "clean_firm": 50.0,
+          "solar": 10.0,
+          "wind": 10.0,
+          "min_cost": 138.1,
+          "max_cost": 138.1
+        }
+      ]
+    },
+    "99.9": {
+      "transitions": [
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "clean_firm",
+          "to_dominant": "solar",
+          "from_cost": 78.0,
+          "to_cost": 85.4,
+          "from_mix": {
+            "clean_firm": 70.0,
+            "solar": 20.0,
+            "wind": 10.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 10.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 40.0,
+            "solar": 50.0,
+            "wind": 30.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "firm",
+          "from_level": "M",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "wind",
+          "from_cost": 85.4,
+          "to_cost": 88.5,
+          "from_mix": {
+            "clean_firm": 40.0,
+            "solar": 50.0,
+            "wind": 30.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 30.0,
+            "solar": 40.0,
+            "wind": 50.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 10.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 78.0,
+          "to_cost": 88.5,
+          "from_mix": {
+            "clean_firm": 70.0,
+            "solar": 20.0,
+            "wind": 10.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 10.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          },
+          "to_mix": {
+            "clean_firm": 30.0,
+            "solar": 40.0,
+            "wind": 50.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 10.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        }
+      ],
+      "n_unique_mixes": 10,
+      "mixes": [
+        {
+          "clean_firm": 70.0,
+          "solar": 20.0,
+          "wind": 10.0,
+          "min_cost": 78.0,
+          "max_cost": 168.8
+        },
+        {
+          "clean_firm": 70.0,
+          "solar": 30.0,
+          "wind": 10.0,
+          "min_cost": 84.9,
+          "max_cost": 130.8
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 50.0,
+          "wind": 30.0,
+          "min_cost": 85.4,
+          "max_cost": 155.7
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 40.0,
+          "wind": 50.0,
+          "min_cost": 88.5,
+          "max_cost": 143.5
+        },
+        {
+          "clean_firm": 60.0,
+          "solar": 20.0,
+          "wind": 20.0,
+          "min_cost": 91.8,
+          "max_cost": 123.0
+        },
+        {
+          "clean_firm": 50.0,
+          "solar": 40.0,
+          "wind": 20.0,
+          "min_cost": 102.4,
+          "max_cost": 167.8
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 40.0,
+          "wind": 80.0,
+          "min_cost": 107.0,
+          "max_cost": 140.0
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 50.0,
+          "wind": 40.0,
+          "min_cost": 111.9,
+          "max_cost": 111.9
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 10.0,
+          "wind": 20.0,
+          "min_cost": 132.7,
+          "max_cost": 145.9
+        },
+        {
+          "clean_firm": 50.0,
+          "solar": 30.0,
+          "wind": 10.0,
+          "min_cost": 153.1,
+          "max_cost": 153.1
         }
       ]
     }
@@ -7839,108 +8335,199 @@ const TIPPING_POINT_DATA = {
   "MISO": {
     "10": {
       "transitions": [],
-      "n_unique_mixes": 2,
+      "n_unique_mixes": 5,
       "mixes": [
         {
-          "clean_firm": 13.0,
-          "solar": 2.0,
-          "wind": 25.0,
-          "min_cost": 3.5,
-          "max_cost": 7.6
+          "clean_firm": 15.0,
+          "solar": 5.0,
+          "wind": 30.0,
+          "min_cost": 7.1,
+          "max_cost": 15.0
         },
         {
-          "clean_firm": 24.0,
+          "clean_firm": 14.0,
+          "solar": 6.0,
+          "wind": 30.0,
+          "min_cost": 7.1,
+          "max_cost": 15.0
+        },
+        {
+          "clean_firm": 17.0,
+          "solar": 3.0,
+          "wind": 30.0,
+          "min_cost": 8.9,
+          "max_cost": 14.8
+        },
+        {
+          "clean_firm": 18.0,
           "solar": 2.0,
-          "wind": 15.0,
-          "min_cost": 6.1,
-          "max_cost": 6.7
+          "wind": 30.0,
+          "min_cost": 9.8,
+          "max_cost": 14.6
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 2.0,
+          "wind": 28.0,
+          "min_cost": 11.7,
+          "max_cost": 13.7
         }
       ]
     },
     "20": {
       "transitions": [],
-      "n_unique_mixes": 2,
+      "n_unique_mixes": 5,
       "mixes": [
         {
-          "clean_firm": 13.0,
-          "solar": 2.0,
-          "wind": 25.0,
-          "min_cost": 3.5,
-          "max_cost": 7.6
+          "clean_firm": 15.0,
+          "solar": 5.0,
+          "wind": 30.0,
+          "min_cost": 7.1,
+          "max_cost": 15.0
         },
         {
-          "clean_firm": 24.0,
+          "clean_firm": 14.0,
+          "solar": 6.0,
+          "wind": 30.0,
+          "min_cost": 7.1,
+          "max_cost": 15.0
+        },
+        {
+          "clean_firm": 17.0,
+          "solar": 3.0,
+          "wind": 30.0,
+          "min_cost": 8.9,
+          "max_cost": 14.8
+        },
+        {
+          "clean_firm": 18.0,
           "solar": 2.0,
-          "wind": 15.0,
-          "min_cost": 6.1,
-          "max_cost": 6.7
+          "wind": 30.0,
+          "min_cost": 9.8,
+          "max_cost": 14.6
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 2.0,
+          "wind": 28.0,
+          "min_cost": 11.7,
+          "max_cost": 13.7
         }
       ]
     },
     "30": {
       "transitions": [],
-      "n_unique_mixes": 2,
+      "n_unique_mixes": 5,
       "mixes": [
         {
-          "clean_firm": 13.0,
-          "solar": 2.0,
-          "wind": 25.0,
-          "min_cost": 3.5,
-          "max_cost": 7.6
+          "clean_firm": 15.0,
+          "solar": 5.0,
+          "wind": 30.0,
+          "min_cost": 7.1,
+          "max_cost": 15.0
         },
         {
-          "clean_firm": 24.0,
+          "clean_firm": 14.0,
+          "solar": 6.0,
+          "wind": 30.0,
+          "min_cost": 7.1,
+          "max_cost": 15.0
+        },
+        {
+          "clean_firm": 17.0,
+          "solar": 3.0,
+          "wind": 30.0,
+          "min_cost": 8.9,
+          "max_cost": 14.8
+        },
+        {
+          "clean_firm": 18.0,
           "solar": 2.0,
-          "wind": 15.0,
-          "min_cost": 6.1,
-          "max_cost": 6.7
+          "wind": 30.0,
+          "min_cost": 9.8,
+          "max_cost": 14.6
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 2.0,
+          "wind": 28.0,
+          "min_cost": 11.7,
+          "max_cost": 13.7
         }
       ]
     },
     "40": {
       "transitions": [],
-      "n_unique_mixes": 2,
+      "n_unique_mixes": 5,
       "mixes": [
         {
-          "clean_firm": 13.0,
-          "solar": 2.0,
-          "wind": 25.0,
-          "min_cost": 3.5,
-          "max_cost": 7.6
+          "clean_firm": 15.0,
+          "solar": 5.0,
+          "wind": 30.0,
+          "min_cost": 7.1,
+          "max_cost": 15.0
         },
         {
-          "clean_firm": 24.0,
+          "clean_firm": 14.0,
+          "solar": 6.0,
+          "wind": 30.0,
+          "min_cost": 7.1,
+          "max_cost": 15.0
+        },
+        {
+          "clean_firm": 17.0,
+          "solar": 3.0,
+          "wind": 30.0,
+          "min_cost": 8.9,
+          "max_cost": 14.8
+        },
+        {
+          "clean_firm": 18.0,
           "solar": 2.0,
-          "wind": 15.0,
-          "min_cost": 6.1,
-          "max_cost": 6.7
+          "wind": 30.0,
+          "min_cost": 9.8,
+          "max_cost": 14.6
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 2.0,
+          "wind": 28.0,
+          "min_cost": 11.7,
+          "max_cost": 13.7
         }
       ]
     },
     "50": {
       "transitions": [],
-      "n_unique_mixes": 3,
+      "n_unique_mixes": 4,
       "mixes": [
         {
-          "clean_firm": 13.0,
-          "solar": 2.0,
-          "wind": 35.0,
-          "min_cost": 6.8,
-          "max_cost": 14.8
+          "clean_firm": 15.0,
+          "solar": 5.0,
+          "wind": 30.0,
+          "min_cost": 7.1,
+          "max_cost": 15.0
         },
         {
-          "clean_firm": 27.0,
-          "solar": 2.0,
-          "wind": 22.0,
-          "min_cost": 12.1,
-          "max_cost": 12.8
+          "clean_firm": 14.0,
+          "solar": 6.0,
+          "wind": 30.0,
+          "min_cost": 7.1,
+          "max_cost": 15.0
         },
         {
-          "clean_firm": 35.0,
+          "clean_firm": 16.0,
+          "solar": 4.0,
+          "wind": 30.0,
+          "min_cost": 9.0,
+          "max_cost": 14.9
+        },
+        {
+          "clean_firm": 20.0,
           "solar": 2.0,
-          "wind": 15.0,
-          "min_cost": 13.1,
-          "max_cost": 13.4
+          "wind": 29.0,
+          "min_cost": 14.1,
+          "max_cost": 14.4
         }
       ]
     },
@@ -7949,52 +8536,66 @@ const TIPPING_POINT_DATA = {
       "n_unique_mixes": 3,
       "mixes": [
         {
-          "clean_firm": 13.0,
-          "solar": 2.0,
-          "wind": 40.0,
-          "min_cost": 8.4,
-          "max_cost": 18.4
+          "clean_firm": 15.0,
+          "solar": 11.0,
+          "wind": 30.0,
+          "min_cost": 10.0,
+          "max_cost": 20.4
         },
         {
-          "clean_firm": 27.0,
-          "solar": 2.0,
-          "wind": 27.0,
-          "min_cost": 15.1,
-          "max_cost": 15.4
+          "clean_firm": 14.0,
+          "solar": 12.0,
+          "wind": 30.0,
+          "min_cost": 10.0,
+          "max_cost": 20.4
         },
         {
-          "clean_firm": 40.0,
-          "solar": 2.0,
-          "wind": 15.0,
-          "min_cost": 15.6,
-          "max_cost": 16.4
+          "clean_firm": 20.0,
+          "solar": 6.0,
+          "wind": 30.0,
+          "min_cost": 12.5,
+          "max_cost": 20.2
         }
       ]
     },
     "60": {
       "transitions": [],
-      "n_unique_mixes": 3,
+      "n_unique_mixes": 5,
       "mixes": [
         {
-          "clean_firm": 13.0,
-          "solar": 2.0,
-          "wind": 45.0,
-          "min_cost": 10.1,
-          "max_cost": 22.0
+          "clean_firm": 14.0,
+          "solar": 3.0,
+          "wind": 50.0,
+          "min_cost": 12.3,
+          "max_cost": 21.0
         },
         {
-          "clean_firm": 27.0,
-          "solar": 2.0,
-          "wind": 32.0,
-          "min_cost": 18.2,
-          "max_cost": 18.5
+          "clean_firm": 15.0,
+          "solar": 16.0,
+          "wind": 30.0,
+          "min_cost": 13.4,
+          "max_cost": 24.9
         },
         {
-          "clean_firm": 41.0,
+          "clean_firm": 14.0,
+          "solar": 17.0,
+          "wind": 30.0,
+          "min_cost": 13.5,
+          "max_cost": 24.9
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 11.0,
+          "wind": 30.0,
+          "min_cost": 15.6,
+          "max_cost": 24.7
+        },
+        {
+          "clean_firm": 15.0,
           "solar": 2.0,
-          "wind": 19.0,
-          "min_cost": 18.8,
-          "max_cost": 19.9
+          "wind": 50.0,
+          "min_cost": 20.8,
+          "max_cost": 21.0
         }
       ]
     },
@@ -8003,1002 +8604,545 @@ const TIPPING_POINT_DATA = {
       "n_unique_mixes": 5,
       "mixes": [
         {
-          "clean_firm": 14.0,
-          "solar": 2.0,
-          "wind": 50.0,
-          "min_cost": 11.8,
-          "max_cost": 25.9
-        },
-        {
-          "clean_firm": 13.0,
-          "solar": 2.0,
-          "wind": 51.0,
-          "min_cost": 12.0,
-          "max_cost": 12.0
-        },
-        {
           "clean_firm": 15.0,
-          "solar": 2.0,
-          "wind": 49.0,
-          "min_cost": 17.2,
-          "max_cost": 25.9
+          "solar": 5.0,
+          "wind": 47.0,
+          "min_cost": 12.7,
+          "max_cost": 27.2
         },
         {
-          "clean_firm": 27.0,
-          "solar": 2.0,
-          "wind": 37.0,
-          "min_cost": 21.2,
-          "max_cost": 21.5
+          "clean_firm": 14.0,
+          "solar": 6.0,
+          "wind": 47.0,
+          "min_cost": 12.7,
+          "max_cost": 27.3
         },
         {
-          "clean_firm": 41.0,
+          "clean_firm": 19.0,
+          "solar": 3.0,
+          "wind": 45.0,
+          "min_cost": 19.4,
+          "max_cost": 27.0
+        },
+        {
+          "clean_firm": 21.0,
           "solar": 2.0,
-          "wind": 24.0,
-          "min_cost": 22.0,
-          "max_cost": 23.5
+          "wind": 44.0,
+          "min_cost": 20.5,
+          "max_cost": 26.5
+        },
+        {
+          "clean_firm": 25.0,
+          "solar": 2.0,
+          "wind": 40.0,
+          "min_cost": 21.9,
+          "max_cost": 25.3
         }
       ]
     },
     "70": {
       "transitions": [],
-      "n_unique_mixes": 5,
+      "n_unique_mixes": 7,
       "mixes": [
         {
-          "clean_firm": 14.0,
-          "solar": 2.0,
-          "wind": 55.0,
-          "min_cost": 13.5,
-          "max_cost": 29.5
-        },
-        {
-          "clean_firm": 13.0,
-          "solar": 2.0,
-          "wind": 56.0,
-          "min_cost": 13.7,
-          "max_cost": 13.7
-        },
-        {
           "clean_firm": 15.0,
-          "solar": 2.0,
-          "wind": 54.0,
-          "min_cost": 19.6,
-          "max_cost": 29.5
+          "solar": 9.0,
+          "wind": 50.0,
+          "min_cost": 15.6,
+          "max_cost": 33.0
         },
         {
-          "clean_firm": 24.0,
+          "clean_firm": 14.0,
+          "solar": 10.0,
+          "wind": 50.0,
+          "min_cost": 15.6,
+          "max_cost": 33.0
+        },
+        {
+          "clean_firm": 17.0,
+          "solar": 7.0,
+          "wind": 50.0,
+          "min_cost": 20.0,
+          "max_cost": 32.9
+        },
+        {
+          "clean_firm": 18.0,
+          "solar": 11.0,
+          "wind": 44.0,
+          "min_cost": 21.9,
+          "max_cost": 22.2
+        },
+        {
+          "clean_firm": 23.0,
+          "solar": 3.0,
+          "wind": 48.0,
+          "min_cost": 21.9,
+          "max_cost": 29.8
+        },
+        {
+          "clean_firm": 25.0,
+          "solar": 5.0,
+          "wind": 43.0,
+          "min_cost": 23.2,
+          "max_cost": 32.1
+        },
+        {
+          "clean_firm": 25.0,
           "solar": 2.0,
-          "wind": 45.0,
+          "wind": 47.0,
           "min_cost": 24.4,
           "max_cost": 24.7
-        },
-        {
-          "clean_firm": 41.0,
-          "solar": 2.0,
-          "wind": 29.0,
-          "min_cost": 25.2,
-          "max_cost": 27.1
         }
       ]
     },
     "75": {
       "transitions": [],
-      "n_unique_mixes": 7,
+      "n_unique_mixes": 6,
       "mixes": [
         {
+          "clean_firm": 18.0,
+          "solar": 14.0,
+          "wind": 49.0,
+          "min_cost": 19.4,
+          "max_cost": 40.0
+        },
+        {
           "clean_firm": 14.0,
-          "solar": 4.0,
-          "wind": 59.0,
-          "min_cost": 15.7,
-          "max_cost": 34.1
+          "solar": 18.0,
+          "wind": 50.0,
+          "min_cost": 19.5,
+          "max_cost": 40.2
         },
         {
-          "clean_firm": 13.0,
-          "solar": 4.0,
-          "wind": 60.0,
-          "min_cost": 15.9,
-          "max_cost": 15.9
+          "clean_firm": 24.0,
+          "solar": 8.0,
+          "wind": 49.0,
+          "min_cost": 24.2,
+          "max_cost": 35.5
         },
         {
-          "clean_firm": 16.0,
-          "solar": 3.0,
-          "wind": 58.0,
-          "min_cost": 20.4,
-          "max_cost": 34.0
+          "clean_firm": 25.0,
+          "solar": 11.0,
+          "wind": 44.0,
+          "min_cost": 27.7,
+          "max_cost": 39.2
         },
         {
-          "clean_firm": 21.0,
-          "solar": 2.0,
-          "wind": 54.0,
-          "min_cost": 26.1,
-          "max_cost": 26.4
+          "clean_firm": 25.0,
+          "solar": 8.0,
+          "wind": 48.0,
+          "min_cost": 31.8,
+          "max_cost": 32.0
         },
         {
-          "clean_firm": 37.0,
-          "solar": 2.0,
-          "wind": 38.0,
-          "min_cost": 27.6,
-          "max_cost": 29.1
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 2.0,
-          "wind": 31.0,
-          "min_cost": 30.8,
-          "max_cost": 30.8
-        },
-        {
-          "clean_firm": 44.0,
-          "solar": 2.0,
-          "wind": 32.0,
-          "min_cost": 30.9,
-          "max_cost": 31.1
+          "clean_firm": 17.0,
+          "solar": 16.0,
+          "wind": 48.0,
+          "min_cost": 32.2,
+          "max_cost": 32.4
         }
       ]
     },
     "80": {
       "transitions": [],
-      "n_unique_mixes": 8,
+      "n_unique_mixes": 2,
       "mixes": [
         {
-          "clean_firm": 15.0,
-          "solar": 3.0,
-          "wind": 67.0,
-          "min_cost": 18.4,
-          "max_cost": 36.0
+          "clean_firm": 20.0,
+          "solar": 10.0,
+          "wind": 60.0,
+          "min_cost": 25.6,
+          "max_cost": 54.8
         },
         {
-          "clean_firm": 14.0,
-          "solar": 4.0,
-          "wind": 67.0,
-          "min_cost": 18.4,
-          "max_cost": 34.0
-        },
-        {
-          "clean_firm": 13.0,
-          "solar": 4.0,
-          "wind": 68.0,
-          "min_cost": 18.6,
-          "max_cost": 18.6
-        },
-        {
-          "clean_firm": 14.0,
-          "solar": 7.0,
-          "wind": 63.0,
-          "min_cost": 21.0,
-          "max_cost": 39.7
-        },
-        {
-          "clean_firm": 18.0,
-          "solar": 5.0,
-          "wind": 61.0,
-          "min_cost": 28.5,
-          "max_cost": 39.5
-        },
-        {
-          "clean_firm": 38.0,
-          "solar": 3.0,
-          "wind": 42.0,
-          "min_cost": 29.7,
-          "max_cost": 38.6
-        },
-        {
-          "clean_firm": 44.0,
-          "solar": 3.0,
-          "wind": 36.0,
-          "min_cost": 31.1,
-          "max_cost": 34.8
-        },
-        {
-          "clean_firm": 16.0,
-          "solar": 6.0,
-          "wind": 62.0,
-          "min_cost": 39.5,
-          "max_cost": 39.5
+          "clean_firm": 30.0,
+          "solar": 10.0,
+          "wind": 50.0,
+          "min_cost": 25.6,
+          "max_cost": 51.8
         }
       ]
     },
     "85": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 28.3,
-          "to_cost": 33.9,
-          "from_mix": {
-            "clean_firm": 15.0,
-            "solar": 9.0,
-            "wind": 69.0
-          },
-          "to_mix": {
-            "clean_firm": 44.0,
-            "solar": 4.0,
-            "wind": 42.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 21.8,
-          "to_cost": 33.9,
-          "from_mix": {
-            "clean_firm": 14.0,
-            "solar": 7.0,
-            "wind": 73.0
-          },
-          "to_mix": {
-            "clean_firm": 44.0,
-            "solar": 4.0,
-            "wind": 42.0
-          }
-        }
-      ],
-      "n_unique_mixes": 10,
+      "transitions": [],
+      "n_unique_mixes": 2,
       "mixes": [
         {
-          "clean_firm": 14.0,
-          "solar": 7.0,
-          "wind": 73.0,
-          "min_cost": 21.8,
-          "max_cost": 40.2
-        },
-        {
-          "clean_firm": 15.0,
-          "solar": 9.0,
-          "wind": 69.0,
-          "min_cost": 24.8,
-          "max_cost": 46.7
-        },
-        {
-          "clean_firm": 14.0,
+          "clean_firm": 20.0,
           "solar": 10.0,
-          "wind": 69.0,
-          "min_cost": 24.8,
-          "max_cost": 46.7
+          "wind": 60.0,
+          "min_cost": 25.6,
+          "max_cost": 54.8
         },
         {
-          "clean_firm": 15.0,
-          "solar": 13.0,
-          "wind": 64.0,
-          "min_cost": 27.1,
-          "max_cost": 38.0
-        },
-        {
-          "clean_firm": 18.0,
+          "clean_firm": 30.0,
           "solar": 10.0,
-          "wind": 64.0,
-          "min_cost": 31.1,
-          "max_cost": 46.5
-        },
-        {
-          "clean_firm": 41.0,
-          "solar": 5.0,
-          "wind": 44.0,
-          "min_cost": 33.1,
-          "max_cost": 45.6
-        },
-        {
-          "clean_firm": 44.0,
-          "solar": 4.0,
-          "wind": 42.0,
-          "min_cost": 33.9,
-          "max_cost": 40.0
-        },
-        {
-          "clean_firm": 47.0,
-          "solar": 3.0,
-          "wind": 40.0,
-          "min_cost": 37.1,
-          "max_cost": 37.1
-        },
-        {
-          "clean_firm": 31.0,
-          "solar": 6.0,
-          "wind": 54.0,
-          "min_cost": 39.4,
-          "max_cost": 39.4
-        },
-        {
-          "clean_firm": 55.0,
-          "solar": 5.0,
-          "wind": 29.0,
-          "min_cost": 39.4,
-          "max_cost": 43.8
+          "wind": 50.0,
+          "min_cost": 25.6,
+          "max_cost": 51.8
         }
       ]
     },
     "87.5": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 31.1,
-          "to_cost": 36.7,
-          "from_mix": {
-            "clean_firm": 17.0,
-            "solar": 11.0,
-            "wind": 70.0
-          },
-          "to_mix": {
-            "clean_firm": 46.0,
-            "solar": 5.0,
-            "wind": 43.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 24.0,
-          "to_cost": 36.7,
-          "from_mix": {
-            "clean_firm": 14.0,
-            "solar": 13.0,
-            "wind": 71.0
-          },
-          "to_mix": {
-            "clean_firm": 46.0,
-            "solar": 5.0,
-            "wind": 43.0
-          }
-        }
-      ],
-      "n_unique_mixes": 13,
+      "transitions": [],
+      "n_unique_mixes": 7,
       "mixes": [
         {
-          "clean_firm": 14.0,
-          "solar": 13.0,
-          "wind": 71.0,
-          "min_cost": 24.0,
-          "max_cost": 50.9
-        },
-        {
-          "clean_firm": 17.0,
-          "solar": 11.0,
-          "wind": 70.0,
-          "min_cost": 31.1,
-          "max_cost": 31.4
-        },
-        {
-          "clean_firm": 17.0,
-          "solar": 15.0,
-          "wind": 65.0,
-          "min_cost": 33.8,
-          "max_cost": 41.1
-        },
-        {
-          "clean_firm": 34.0,
-          "solar": 8.0,
-          "wind": 53.0,
-          "min_cost": 33.8,
-          "max_cost": 45.9
-        },
-        {
-          "clean_firm": 44.0,
-          "solar": 6.0,
-          "wind": 44.0,
-          "min_cost": 35.5,
-          "max_cost": 48.9
-        },
-        {
-          "clean_firm": 46.0,
-          "solar": 5.0,
-          "wind": 43.0,
-          "min_cost": 36.7,
-          "max_cost": 36.7
-        },
-        {
-          "clean_firm": 48.0,
-          "solar": 4.0,
-          "wind": 42.0,
-          "min_cost": 38.4,
-          "max_cost": 42.5
-        },
-        {
-          "clean_firm": 53.0,
-          "solar": 5.0,
-          "wind": 35.0,
-          "min_cost": 39.9,
-          "max_cost": 44.3
-        },
-        {
-          "clean_firm": 22.0,
+          "clean_firm": 30.0,
           "solar": 10.0,
-          "wind": 65.0,
-          "min_cost": 40.4,
-          "max_cost": 43.8
-        },
-        {
-          "clean_firm": 15.0,
-          "solar": 8.0,
-          "wind": 77.0,
-          "min_cost": 40.7,
-          "max_cost": 40.9
-        },
-        {
-          "clean_firm": 59.0,
-          "solar": 3.0,
-          "wind": 31.0,
-          "min_cost": 42.1,
-          "max_cost": 42.1
-        },
-        {
-          "clean_firm": 62.0,
-          "solar": 2.0,
-          "wind": 29.0,
-          "min_cost": 46.4,
-          "max_cost": 46.4
-        },
-        {
-          "clean_firm": 25.0,
-          "solar": 11.0,
           "wind": 60.0,
-          "min_cost": 50.5,
-          "max_cost": 50.7
+          "min_cost": 29.6,
+          "max_cost": 60.7
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 20.0,
+          "wind": 60.0,
+          "min_cost": 31.1,
+          "max_cost": 63.9
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 20.0,
+          "wind": 50.0,
+          "min_cost": 33.0,
+          "max_cost": 50.1
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 20.0,
+          "wind": 40.0,
+          "min_cost": 45.1,
+          "max_cost": 52.3
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 10.0,
+          "wind": 60.0,
+          "min_cost": 49.5,
+          "max_cost": 60.4
+        },
+        {
+          "clean_firm": 50.0,
+          "solar": 20.0,
+          "wind": 30.0,
+          "min_cost": 50.9,
+          "max_cost": 51.7
+        },
+        {
+          "clean_firm": 60.0,
+          "solar": 20.0,
+          "wind": 20.0,
+          "min_cost": 51.5,
+          "max_cost": 51.5
         }
       ]
     },
     "90": {
       "transitions": [],
-      "n_unique_mixes": 15,
+      "n_unique_mixes": 7,
       "mixes": [
         {
-          "clean_firm": 15.0,
-          "solar": 14.0,
-          "wind": 76.0,
-          "min_cost": 26.6,
-          "max_cost": 56.2
+          "clean_firm": 30.0,
+          "solar": 10.0,
+          "wind": 60.0,
+          "min_cost": 29.6,
+          "max_cost": 60.7
         },
         {
-          "clean_firm": 14.0,
-          "solar": 15.0,
-          "wind": 76.0,
-          "min_cost": 26.6,
-          "max_cost": 56.2
+          "clean_firm": 20.0,
+          "solar": 20.0,
+          "wind": 60.0,
+          "min_cost": 31.1,
+          "max_cost": 63.9
         },
         {
-          "clean_firm": 22.0,
-          "solar": 13.0,
-          "wind": 68.0,
-          "min_cost": 34.3,
-          "max_cost": 34.6
+          "clean_firm": 30.0,
+          "solar": 20.0,
+          "wind": 50.0,
+          "min_cost": 33.0,
+          "max_cost": 50.1
         },
         {
-          "clean_firm": 42.0,
-          "solar": 9.0,
-          "wind": 48.0,
-          "min_cost": 36.6,
-          "max_cost": 55.2
-        },
-        {
-          "clean_firm": 33.0,
-          "solar": 14.0,
-          "wind": 53.0,
-          "min_cost": 37.0,
-          "max_cost": 37.3
-        },
-        {
-          "clean_firm": 44.0,
-          "solar": 8.0,
-          "wind": 47.0,
-          "min_cost": 38.4,
-          "max_cost": 52.8
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 7.0,
-          "wind": 47.0,
-          "min_cost": 39.9,
-          "max_cost": 47.0
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 11.0,
-          "wind": 42.0,
-          "min_cost": 41.3,
-          "max_cost": 41.3
-        },
-        {
-          "clean_firm": 61.0,
-          "solar": 4.0,
-          "wind": 32.0,
-          "min_cost": 41.6,
-          "max_cost": 45.6
-        },
-        {
-          "clean_firm": 69.0,
-          "solar": 4.0,
-          "wind": 23.0,
-          "min_cost": 42.9,
-          "max_cost": 47.3
-        },
-        {
-          "clean_firm": 72.0,
-          "solar": 3.0,
-          "wind": 21.0,
-          "min_cost": 44.6,
-          "max_cost": 49.0
-        },
-        {
-          "clean_firm": 16.0,
-          "solar": 13.0,
-          "wind": 76.0,
-          "min_cost": 45.0,
-          "max_cost": 45.2
-        },
-        {
-          "clean_firm": 21.0,
-          "solar": 14.0,
-          "wind": 68.0,
+          "clean_firm": 40.0,
+          "solar": 20.0,
+          "wind": 40.0,
           "min_cost": 45.1,
-          "max_cost": 51.3
+          "max_cost": 52.3
         },
         {
-          "clean_firm": 17.0,
-          "solar": 15.0,
-          "wind": 72.0,
-          "min_cost": 45.4,
-          "max_cost": 45.6
+          "clean_firm": 20.0,
+          "solar": 10.0,
+          "wind": 60.0,
+          "min_cost": 49.5,
+          "max_cost": 60.4
         },
         {
-          "clean_firm": 38.0,
-          "solar": 9.0,
-          "wind": 53.0,
-          "min_cost": 47.7,
-          "max_cost": 47.9
+          "clean_firm": 50.0,
+          "solar": 20.0,
+          "wind": 30.0,
+          "min_cost": 50.9,
+          "max_cost": 51.7
+        },
+        {
+          "clean_firm": 60.0,
+          "solar": 20.0,
+          "wind": 20.0,
+          "min_cost": 51.5,
+          "max_cost": 51.5
         }
       ]
     },
     "92.5": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 37.8,
-          "to_cost": 43.6,
-          "from_mix": {
-            "clean_firm": 44.0,
-            "solar": 11.0,
-            "wind": 50.0
-          },
-          "to_mix": {
-            "clean_firm": 62.0,
-            "solar": 6.0,
-            "wind": 34.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 29.9,
-          "to_cost": 43.6,
-          "from_mix": {
-            "clean_firm": 14.0,
-            "solar": 15.0,
-            "wind": 86.0
-          },
-          "to_mix": {
-            "clean_firm": 62.0,
-            "solar": 6.0,
-            "wind": 34.0
-          }
-        }
-      ],
-      "n_unique_mixes": 15,
+      "transitions": [],
+      "n_unique_mixes": 5,
       "mixes": [
         {
-          "clean_firm": 14.0,
-          "solar": 15.0,
-          "wind": 86.0,
-          "min_cost": 29.9,
-          "max_cost": 54.8
+          "clean_firm": 21.0,
+          "solar": 20.0,
+          "wind": 61.0,
+          "min_cost": 36.5,
+          "max_cost": 73.2
         },
         {
-          "clean_firm": 15.0,
-          "solar": 17.0,
-          "wind": 82.0,
-          "min_cost": 33.7,
-          "max_cost": 57.9
-        },
-        {
-          "clean_firm": 14.0,
-          "solar": 18.0,
-          "wind": 82.0,
-          "min_cost": 33.7,
-          "max_cost": 63.3
+          "clean_firm": 19.0,
+          "solar": 19.0,
+          "wind": 61.0,
+          "min_cost": 41.2,
+          "max_cost": 54.6
         },
         {
           "clean_firm": 20.0,
-          "solar": 16.0,
-          "wind": 76.0,
-          "min_cost": 36.6,
-          "max_cost": 63.1
+          "solar": 20.0,
+          "wind": 61.0,
+          "min_cost": 42.9,
+          "max_cost": 42.9
         },
         {
-          "clean_firm": 44.0,
-          "solar": 11.0,
-          "wind": 50.0,
-          "min_cost": 37.8,
-          "max_cost": 60.2
-        },
-        {
-          "clean_firm": 43.0,
-          "solar": 12.0,
-          "wind": 50.0,
-          "min_cost": 40.5,
-          "max_cost": 56.8
-        },
-        {
-          "clean_firm": 16.0,
+          "clean_firm": 20.0,
           "solar": 19.0,
-          "wind": 78.0,
-          "min_cost": 42.1,
-          "max_cost": 51.3
+          "wind": 61.0,
+          "min_cost": 58.9,
+          "max_cost": 65.3
         },
         {
-          "clean_firm": 17.0,
-          "solar": 17.0,
-          "wind": 79.0,
-          "min_cost": 42.6,
-          "max_cost": 63.3
-        },
-        {
-          "clean_firm": 62.0,
-          "solar": 6.0,
-          "wind": 34.0,
-          "min_cost": 43.6,
-          "max_cost": 47.7
-        },
-        {
-          "clean_firm": 72.0,
-          "solar": 6.0,
-          "wind": 22.0,
-          "min_cost": 45.0,
-          "max_cost": 49.0
-        },
-        {
-          "clean_firm": 47.0,
-          "solar": 12.0,
-          "wind": 45.0,
-          "min_cost": 45.3,
-          "max_cost": 45.3
-        },
-        {
-          "clean_firm": 79.0,
-          "solar": 3.0,
-          "wind": 18.0,
-          "min_cost": 46.1,
-          "max_cost": 52.1
-        },
-        {
-          "clean_firm": 38.0,
-          "solar": 11.0,
-          "wind": 58.0,
-          "min_cost": 49.9,
-          "max_cost": 50.0
-        },
-        {
-          "clean_firm": 22.0,
-          "solar": 17.0,
-          "wind": 72.0,
-          "min_cost": 50.8,
-          "max_cost": 51.0
-        },
-        {
-          "clean_firm": 33.0,
-          "solar": 13.0,
-          "wind": 62.0,
-          "min_cost": 54.4,
-          "max_cost": 54.5
+          "clean_firm": 21.0,
+          "solar": 19.0,
+          "wind": 61.0,
+          "min_cost": 60.4,
+          "max_cost": 69.5
         }
       ]
     },
     "95": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 42.5,
-          "to_cost": 47.9,
-          "from_mix": {
-            "clean_firm": 44.0,
-            "solar": 13.0,
-            "wind": 58.0
-          },
-          "to_mix": {
-            "clean_firm": 80.0,
-            "solar": 6.0,
-            "wind": 19.0
-          }
-        },
-        {
-          "toggle": "renewable",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 34.8,
-          "to_cost": 47.9,
-          "from_mix": {
-            "clean_firm": 17.0,
-            "solar": 17.0,
-            "wind": 93.0
-          },
-          "to_mix": {
-            "clean_firm": 80.0,
-            "solar": 6.0,
-            "wind": 19.0
-          }
-        }
-      ],
-      "n_unique_mixes": 14,
+      "transitions": [],
+      "n_unique_mixes": 8,
       "mixes": [
         {
-          "clean_firm": 17.0,
-          "solar": 17.0,
-          "wind": 93.0,
-          "min_cost": 34.8,
-          "max_cost": 67.2
+          "clean_firm": 30.0,
+          "solar": 12.0,
+          "wind": 60.0,
+          "min_cost": 63.8,
+          "max_cost": 109.6
         },
         {
-          "clean_firm": 14.0,
-          "solar": 19.0,
-          "wind": 95.0,
-          "min_cost": 34.8,
-          "max_cost": 73.5
-        },
-        {
-          "clean_firm": 26.0,
-          "solar": 17.0,
-          "wind": 79.0,
-          "min_cost": 38.9,
-          "max_cost": 66.9
-        },
-        {
-          "clean_firm": 44.0,
-          "solar": 16.0,
-          "wind": 54.0,
-          "min_cost": 41.4,
-          "max_cost": 67.6
-        },
-        {
-          "clean_firm": 44.0,
-          "solar": 13.0,
-          "wind": 58.0,
-          "min_cost": 42.5,
-          "max_cost": 58.9
-        },
-        {
-          "clean_firm": 48.0,
-          "solar": 13.0,
-          "wind": 52.0,
-          "min_cost": 45.0,
-          "max_cost": 67.4
-        },
-        {
-          "clean_firm": 80.0,
-          "solar": 6.0,
-          "wind": 19.0,
-          "min_cost": 47.9,
-          "max_cost": 51.9
-        },
-        {
-          "clean_firm": 82.0,
-          "solar": 5.0,
-          "wind": 18.0,
-          "min_cost": 48.8,
-          "max_cost": 54.4
-        },
-        {
-          "clean_firm": 16.0,
-          "solar": 19.0,
-          "wind": 92.0,
-          "min_cost": 48.9,
-          "max_cost": 49.1
-        },
-        {
-          "clean_firm": 39.0,
-          "solar": 16.0,
-          "wind": 61.0,
-          "min_cost": 49.0,
-          "max_cost": 72.3
-        },
-        {
-          "clean_firm": 65.0,
-          "solar": 9.0,
-          "wind": 34.0,
-          "min_cost": 50.2,
-          "max_cost": 54.6
-        },
-        {
-          "clean_firm": 85.0,
+          "clean_firm": 30.0,
           "solar": 4.0,
-          "wind": 16.0,
-          "min_cost": 51.7,
-          "max_cost": 56.0
-        },
-        {
-          "clean_firm": 28.0,
-          "solar": 17.0,
-          "wind": 76.0,
-          "min_cost": 52.8,
-          "max_cost": 72.9
-        },
-        {
-          "clean_firm": 43.0,
-          "solar": 14.0,
           "wind": 58.0,
-          "min_cost": 61.3,
-          "max_cost": 61.4
+          "min_cost": 72.3,
+          "max_cost": 121.5
+        },
+        {
+          "clean_firm": 29.0,
+          "solar": 22.0,
+          "wind": 60.0,
+          "min_cost": 72.7,
+          "max_cost": 97.8
+        },
+        {
+          "clean_firm": 50.0,
+          "solar": 49.0,
+          "wind": 100.0,
+          "min_cost": 73.2,
+          "max_cost": 83.5
+        },
+        {
+          "clean_firm": 51.0,
+          "solar": 49.0,
+          "wind": 100.0,
+          "min_cost": 75.2,
+          "max_cost": 80.8
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 33.0,
+          "wind": 60.0,
+          "min_cost": 77.0,
+          "max_cost": 79.0
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 22.0,
+          "wind": 58.0,
+          "min_cost": 81.0,
+          "max_cost": 87.4
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 19.0,
+          "wind": 121.0,
+          "min_cost": 86.8,
+          "max_cost": 86.8
         }
       ]
     },
     "97.5": {
       "transitions": [
         {
-          "toggle": "renewable",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 50.4,
-          "to_cost": 53.7,
+          "toggle": "storage",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 71.4,
+          "to_cost": 73.2,
           "from_mix": {
-            "clean_firm": 49.0,
-            "solar": 14.0,
-            "wind": 67.0
+            "clean_firm": 41.0,
+            "solar": 9.0,
+            "wind": 30.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 19.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 21.0
           },
           "to_mix": {
-            "clean_firm": 88.0,
-            "solar": 7.0,
-            "wind": 18.0
+            "clean_firm": 50.0,
+            "solar": 49.0,
+            "wind": 100.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         },
         {
-          "toggle": "renewable",
+          "toggle": "storage",
           "from_level": "L",
           "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 42.8,
-          "to_cost": 53.7,
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 71.4,
+          "to_cost": 73.2,
           "from_mix": {
             "clean_firm": 41.0,
-            "solar": 15.0,
-            "wind": 79.0
+            "solar": 9.0,
+            "wind": 30.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 19.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 21.0
           },
           "to_mix": {
-            "clean_firm": 88.0,
-            "solar": 7.0,
-            "wind": 18.0
+            "clean_firm": 50.0,
+            "solar": 49.0,
+            "wind": 100.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "ldes",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 71.4,
+          "to_cost": 72.2,
+          "from_mix": {
+            "clean_firm": 41.0,
+            "solar": 9.0,
+            "wind": 30.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 19.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 21.0
+          },
+          "to_mix": {
+            "clean_firm": 20.0,
+            "solar": 19.0,
+            "wind": 121.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 19.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "ldes",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "clean_firm",
+          "to_dominant": "wind",
+          "from_cost": 71.4,
+          "to_cost": 72.2,
+          "from_mix": {
+            "clean_firm": 41.0,
+            "solar": 9.0,
+            "wind": 30.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 19.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 21.0
+          },
+          "to_mix": {
+            "clean_firm": 20.0,
+            "solar": 19.0,
+            "wind": 121.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 19.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         }
       ],
-      "n_unique_mixes": 15,
+      "n_unique_mixes": 5,
       "mixes": [
         {
           "clean_firm": 41.0,
-          "solar": 15.0,
-          "wind": 79.0,
-          "min_cost": 42.8,
-          "max_cost": 78.5
+          "solar": 9.0,
+          "wind": 30.0,
+          "min_cost": 71.4,
+          "max_cost": 135.7
         },
         {
-          "clean_firm": 22.0,
-          "solar": 18.0,
-          "wind": 108.0,
-          "min_cost": 44.1,
-          "max_cost": 92.1
+          "clean_firm": 20.0,
+          "solar": 19.0,
+          "wind": 121.0,
+          "min_cost": 72.2,
+          "max_cost": 128.3
         },
         {
-          "clean_firm": 19.0,
-          "solar": 22.0,
-          "wind": 109.0,
-          "min_cost": 44.6,
-          "max_cost": 76.3
+          "clean_firm": 50.0,
+          "solar": 49.0,
+          "wind": 100.0,
+          "min_cost": 73.2,
+          "max_cost": 109.7
         },
         {
-          "clean_firm": 13.0,
-          "solar": 11.0,
-          "wind": 141.0,
-          "min_cost": 46.0,
-          "max_cost": 46.0
-        },
-        {
-          "clean_firm": 44.0,
-          "solar": 15.0,
-          "wind": 74.0,
-          "min_cost": 46.3,
-          "max_cost": 86.8
-        },
-        {
-          "clean_firm": 45.0,
-          "solar": 16.0,
-          "wind": 71.0,
-          "min_cost": 49.2,
-          "max_cost": 72.9
+          "clean_firm": 51.0,
+          "solar": 49.0,
+          "wind": 100.0,
+          "min_cost": 74.8,
+          "max_cost": 105.3
         },
         {
           "clean_firm": 49.0,
-          "solar": 14.0,
-          "wind": 67.0,
-          "min_cost": 50.4,
-          "max_cost": 80.5
-        },
-        {
-          "clean_firm": 76.0,
-          "solar": 11.0,
-          "wind": 29.0,
-          "min_cost": 52.6,
-          "max_cost": 83.6
-        },
-        {
-          "clean_firm": 23.0,
-          "solar": 19.0,
-          "wind": 105.0,
-          "min_cost": 53.4,
-          "max_cost": 75.0
-        },
-        {
-          "clean_firm": 88.0,
-          "solar": 7.0,
-          "wind": 18.0,
-          "min_cost": 53.7,
-          "max_cost": 60.5
-        },
-        {
-          "clean_firm": 57.0,
-          "solar": 16.0,
-          "wind": 52.0,
-          "min_cost": 54.0,
-          "max_cost": 58.4
-        },
-        {
-          "clean_firm": 85.0,
-          "solar": 9.0,
-          "wind": 19.0,
-          "min_cost": 56.4,
-          "max_cost": 60.7
-        },
-        {
-          "clean_firm": 91.0,
-          "solar": 6.0,
-          "wind": 16.0,
-          "min_cost": 58.0,
-          "max_cost": 62.3
-        },
-        {
-          "clean_firm": 42.0,
-          "solar": 16.0,
-          "wind": 76.0,
-          "min_cost": 60.3,
-          "max_cost": 65.5
-        },
-        {
-          "clean_firm": 46.0,
-          "solar": 14.0,
-          "wind": 72.0,
-          "min_cost": 60.9,
-          "max_cost": 66.6
+          "solar": 50.0,
+          "wind": 99.0,
+          "min_cost": 78.0,
+          "max_cost": 104.5
         }
       ]
     },
@@ -9010,17 +9154,25 @@ const TIPPING_POINT_DATA = {
           "to_level": "M",
           "from_dominant": "wind",
           "to_dominant": "clean_firm",
-          "from_cost": 52.7,
-          "to_cost": 58.9,
+          "from_cost": 72.2,
+          "to_cost": 81.0,
           "from_mix": {
-            "clean_firm": 39.0,
-            "solar": 16.0,
-            "wind": 111.0
+            "clean_firm": 20.0,
+            "solar": 19.0,
+            "wind": 121.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 19.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 88.0,
-            "solar": 10.0,
-            "wind": 29.0
+            "clean_firm": 39.0,
+            "solar": 9.0,
+            "wind": 31.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 19.0,
+            "wind_batt4": 1.0,
+            "wind_batt8": 21.0
           }
         },
         {
@@ -9029,140 +9181,92 @@ const TIPPING_POINT_DATA = {
           "to_level": "H",
           "from_dominant": "wind",
           "to_dominant": "clean_firm",
-          "from_cost": 52.7,
-          "to_cost": 60.8,
+          "from_cost": 72.2,
+          "to_cost": 90.5,
           "from_mix": {
-            "clean_firm": 39.0,
-            "solar": 16.0,
-            "wind": 111.0
+            "clean_firm": 20.0,
+            "solar": 19.0,
+            "wind": 121.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 19.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 97.0,
-            "solar": 8.0,
-            "wind": 18.0
+            "clean_firm": 39.0,
+            "solar": 9.0,
+            "wind": 31.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 19.0,
+            "wind_batt4": 1.0,
+            "wind_batt8": 21.0
           }
         }
       ],
-      "n_unique_mixes": 17,
+      "n_unique_mixes": 9,
       "mixes": [
         {
-          "clean_firm": 39.0,
-          "solar": 16.0,
-          "wind": 111.0,
-          "min_cost": 52.7,
-          "max_cost": 114.4
-        },
-        {
-          "clean_firm": 30.0,
-          "solar": 17.0,
-          "wind": 128.0,
-          "min_cost": 55.8,
-          "max_cost": 80.2
-        },
-        {
-          "clean_firm": 14.0,
-          "solar": 18.0,
-          "wind": 161.0,
-          "min_cost": 56.2,
-          "max_cost": 87.0
-        },
-        {
-          "clean_firm": 78.0,
-          "solar": 12.0,
-          "wind": 43.0,
-          "min_cost": 57.1,
-          "max_cost": 91.0
-        },
-        {
-          "clean_firm": 88.0,
-          "solar": 10.0,
-          "wind": 29.0,
-          "min_cost": 58.9,
-          "max_cost": 92.5
-        },
-        {
-          "clean_firm": 96.0,
-          "solar": 9.0,
-          "wind": 18.0,
-          "min_cost": 60.2,
-          "max_cost": 94.9
-        },
-        {
-          "clean_firm": 97.0,
-          "solar": 8.0,
-          "wind": 18.0,
-          "min_cost": 60.8,
-          "max_cost": 64.9
-        },
-        {
-          "clean_firm": 99.0,
-          "solar": 7.0,
-          "wind": 17.0,
-          "min_cost": 61.9,
-          "max_cost": 70.0
-        },
-        {
-          "clean_firm": 34.0,
-          "solar": 16.0,
+          "clean_firm": 20.0,
+          "solar": 19.0,
           "wind": 121.0,
-          "min_cost": 62.8,
-          "max_cost": 102.0
+          "min_cost": 72.2,
+          "max_cost": 133.3
         },
         {
-          "clean_firm": 18.0,
-          "solar": 21.0,
-          "wind": 148.0,
-          "min_cost": 63.7,
-          "max_cost": 80.5
+          "clean_firm": 50.0,
+          "solar": 49.0,
+          "wind": 100.0,
+          "min_cost": 73.2,
+          "max_cost": 118.8
         },
         {
-          "clean_firm": 42.0,
-          "solar": 12.0,
-          "wind": 112.0,
-          "min_cost": 64.0,
-          "max_cost": 104.0
+          "clean_firm": 51.0,
+          "solar": 49.0,
+          "wind": 100.0,
+          "min_cost": 74.8,
+          "max_cost": 115.3
         },
         {
-          "clean_firm": 17.0,
-          "solar": 22.0,
-          "wind": 149.0,
-          "min_cost": 69.9,
-          "max_cost": 97.3
+          "clean_firm": 39.0,
+          "solar": 9.0,
+          "wind": 31.0,
+          "min_cost": 76.7,
+          "max_cost": 140.9
         },
         {
-          "clean_firm": 17.0,
-          "solar": 17.0,
-          "wind": 156.0,
-          "min_cost": 73.1,
-          "max_cost": 95.4
-        },
-        {
-          "clean_firm": 66.0,
-          "solar": 16.0,
-          "wind": 61.0,
-          "min_cost": 73.5,
-          "max_cost": 73.5
-        },
-        {
-          "clean_firm": 44.0,
-          "solar": 11.0,
-          "wind": 111.0,
-          "min_cost": 73.9,
-          "max_cost": 101.6
-        },
-        {
-          "clean_firm": 79.0,
-          "solar": 10.0,
-          "wind": 44.0,
-          "min_cost": 74.9,
-          "max_cost": 88.0
+          "clean_firm": 49.0,
+          "solar": 50.0,
+          "wind": 99.0,
+          "min_cost": 78.0,
+          "max_cost": 109.3
         },
         {
           "clean_firm": 41.0,
-          "solar": 13.0,
-          "wind": 112.0,
-          "min_cost": 86.5,
-          "max_cost": 96.2
+          "solar": 10.0,
+          "wind": 31.0,
+          "min_cost": 81.2,
+          "max_cost": 85.5
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 9.0,
+          "wind": 30.0,
+          "min_cost": 83.4,
+          "max_cost": 137.1
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 9.0,
+          "wind": 29.0,
+          "min_cost": 93.1,
+          "max_cost": 123.7
+        },
+        {
+          "clean_firm": 61.0,
+          "solar": 19.0,
+          "wind": 59.0,
+          "min_cost": 116.6,
+          "max_cost": 120.6
         }
       ]
     },
@@ -9174,17 +9278,25 @@ const TIPPING_POINT_DATA = {
           "to_level": "M",
           "from_dominant": "wind",
           "to_dominant": "clean_firm",
-          "from_cost": 59.5,
-          "to_cost": 64.1,
+          "from_cost": 72.2,
+          "to_cost": 82.9,
           "from_mix": {
-            "clean_firm": 60.0,
-            "solar": 12.0,
-            "wind": 95.0
+            "clean_firm": 20.0,
+            "solar": 19.0,
+            "wind": 121.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 19.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 96.0,
-            "solar": 8.0,
-            "wind": 31.0
+            "clean_firm": 41.0,
+            "solar": 10.0,
+            "wind": 31.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 19.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 20.0
           }
         },
         {
@@ -9193,412 +9305,209 @@ const TIPPING_POINT_DATA = {
           "to_level": "H",
           "from_dominant": "wind",
           "to_dominant": "clean_firm",
-          "from_cost": 59.5,
-          "to_cost": 67.2,
+          "from_cost": 72.2,
+          "to_cost": 92.3,
           "from_mix": {
-            "clean_firm": 60.0,
-            "solar": 12.0,
-            "wind": 95.0
+            "clean_firm": 20.0,
+            "solar": 19.0,
+            "wind": 121.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 19.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 99.0,
-            "solar": 10.0,
-            "wind": 24.0
+            "clean_firm": 40.0,
+            "solar": 9.0,
+            "wind": 30.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 19.0,
+            "wind_batt4": 1.0,
+            "wind_batt8": 21.0
           }
         }
       ],
-      "n_unique_mixes": 18,
+      "n_unique_mixes": 9,
       "mixes": [
         {
-          "clean_firm": 60.0,
-          "solar": 12.0,
-          "wind": 95.0,
-          "min_cost": 59.5,
-          "max_cost": 63.5
-        },
-        {
-          "clean_firm": 44.0,
-          "solar": 15.0,
-          "wind": 126.0,
-          "min_cost": 60.1,
-          "max_cost": 121.8
-        },
-        {
-          "clean_firm": 86.0,
-          "solar": 9.0,
-          "wind": 47.0,
-          "min_cost": 62.9,
-          "max_cost": 99.6
-        },
-        {
-          "clean_firm": 96.0,
-          "solar": 8.0,
-          "wind": 31.0,
-          "min_cost": 64.1,
-          "max_cost": 100.3
-        },
-        {
           "clean_firm": 20.0,
-          "solar": 21.0,
-          "wind": 174.0,
-          "min_cost": 66.8,
-          "max_cost": 103.2
-        },
-        {
-          "clean_firm": 99.0,
-          "solar": 10.0,
-          "wind": 24.0,
-          "min_cost": 67.2,
-          "max_cost": 103.2
-        },
-        {
-          "clean_firm": 14.0,
-          "solar": 14.0,
-          "wind": 203.0,
-          "min_cost": 68.3,
-          "max_cost": 68.3
-        },
-        {
-          "clean_firm": 46.0,
-          "solar": 14.0,
-          "wind": 123.0,
-          "min_cost": 73.0,
-          "max_cost": 78.7
-        },
-        {
-          "clean_firm": 111.0,
-          "solar": 6.0,
-          "wind": 16.0,
-          "min_cost": 73.0,
-          "max_cost": 77.3
-        },
-        {
-          "clean_firm": 69.0,
-          "solar": 12.0,
-          "wind": 76.0,
-          "min_cost": 78.3,
-          "max_cost": 91.5
-        },
-        {
-          "clean_firm": 57.0,
-          "solar": 13.0,
-          "wind": 100.0,
-          "min_cost": 79.8,
-          "max_cost": 93.2
-        },
-        {
-          "clean_firm": 74.0,
-          "solar": 12.0,
-          "wind": 66.0,
-          "min_cost": 81.7,
-          "max_cost": 95.2
-        },
-        {
-          "clean_firm": 48.0,
-          "solar": 15.0,
-          "wind": 117.0,
-          "min_cost": 85.5,
-          "max_cost": 130.5
-        },
-        {
-          "clean_firm": 84.0,
           "solar": 19.0,
-          "wind": 33.0,
-          "min_cost": 85.9,
-          "max_cost": 99.3
+          "wind": 121.0,
+          "min_cost": 72.2,
+          "max_cost": 142.2
         },
         {
-          "clean_firm": 25.0,
-          "solar": 18.0,
-          "wind": 166.0,
-          "min_cost": 86.5,
-          "max_cost": 86.5
+          "clean_firm": 50.0,
+          "solar": 49.0,
+          "wind": 100.0,
+          "min_cost": 73.2,
+          "max_cost": 125.4
         },
         {
-          "clean_firm": 56.0,
-          "solar": 14.0,
-          "wind": 101.0,
-          "min_cost": 88.1,
-          "max_cost": 92.1
+          "clean_firm": 51.0,
+          "solar": 49.0,
+          "wind": 100.0,
+          "min_cost": 74.8,
+          "max_cost": 115.3
         },
         {
-          "clean_firm": 42.0,
-          "solar": 17.0,
-          "wind": 128.0,
-          "min_cost": 94.1,
-          "max_cost": 94.1
+          "clean_firm": 49.0,
+          "solar": 50.0,
+          "wind": 99.0,
+          "min_cost": 78.0,
+          "max_cost": 118.8
         },
         {
-          "clean_firm": 45.0,
-          "solar": 15.0,
-          "wind": 124.0,
-          "min_cost": 96.4,
-          "max_cost": 107.1
+          "clean_firm": 41.0,
+          "solar": 10.0,
+          "wind": 31.0,
+          "min_cost": 80.8,
+          "max_cost": 141.5
+        },
+        {
+          "clean_firm": 41.0,
+          "solar": 9.0,
+          "wind": 30.0,
+          "min_cost": 83.4,
+          "max_cost": 129.9
+        },
+        {
+          "clean_firm": 40.0,
+          "solar": 9.0,
+          "wind": 30.0,
+          "min_cost": 86.4,
+          "max_cost": 129.6
+        },
+        {
+          "clean_firm": 61.0,
+          "solar": 19.0,
+          "wind": 59.0,
+          "min_cost": 116.6,
+          "max_cost": 124.5
+        },
+        {
+          "clean_firm": 59.0,
+          "solar": 19.0,
+          "wind": 60.0,
+          "min_cost": 119.9,
+          "max_cost": 124.2
         }
       ]
     },
     "99.9": {
       "transitions": [
         {
-          "toggle": "firm",
+          "toggle": "renewable",
           "from_level": "L",
           "to_level": "M",
-          "from_dominant": "clean_firm",
-          "to_dominant": "wind",
-          "from_cost": 62.2,
-          "to_cost": 68.7,
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 74.6,
+          "to_cost": 86.8,
           "from_mix": {
-            "clean_firm": 84.0,
-            "solar": 19.0,
-            "wind": 33.0
-          },
-          "to_mix": {
-            "clean_firm": 51.0,
-            "solar": 35.0,
-            "wind": 90.0
-          }
-        },
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "wind",
-          "from_cost": 62.2,
-          "to_cost": 71.1,
-          "from_mix": {
-            "clean_firm": 84.0,
-            "solar": 19.0,
-            "wind": 33.0
+            "clean_firm": 49.0,
+            "solar": 49.0,
+            "wind": 100.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
             "clean_firm": 41.0,
-            "solar": 43.0,
-            "wind": 108.0
-          }
-        }
-      ],
-      "n_unique_mixes": 13,
-      "mixes": [
-        {
-          "clean_firm": 84.0,
-          "solar": 19.0,
-          "wind": 33.0,
-          "min_cost": 62.2,
-          "max_cost": 138.3
-        },
-        {
-          "clean_firm": 96.0,
-          "solar": 12.0,
-          "wind": 23.0,
-          "min_cost": 66.2,
-          "max_cost": 108.2
-        },
-        {
-          "clean_firm": 51.0,
-          "solar": 35.0,
-          "wind": 90.0,
-          "min_cost": 68.7,
-          "max_cost": 131.7
-        },
-        {
-          "clean_firm": 51.0,
-          "solar": 33.0,
-          "wind": 90.0,
-          "min_cost": 68.9,
-          "max_cost": 132.3
-        },
-        {
-          "clean_firm": 41.0,
-          "solar": 43.0,
-          "wind": 108.0,
-          "min_cost": 71.1,
-          "max_cost": 79.2
-        },
-        {
-          "clean_firm": 41.0,
-          "solar": 44.0,
-          "wind": 106.0,
-          "min_cost": 71.7,
-          "max_cost": 89.3
-        },
-        {
-          "clean_firm": 118.0,
-          "solar": 4.0,
-          "wind": 17.0,
-          "min_cost": 71.7,
-          "max_cost": 75.8
-        },
-        {
-          "clean_firm": 120.0,
-          "solar": 3.0,
-          "wind": 16.0,
-          "min_cost": 72.9,
-          "max_cost": 81.4
-        },
-        {
-          "clean_firm": 26.0,
-          "solar": 46.0,
-          "wind": 132.0,
-          "min_cost": 73.8,
-          "max_cost": 125.0
-        },
-        {
-          "clean_firm": 16.0,
-          "solar": 47.0,
-          "wind": 152.0,
-          "min_cost": 74.1,
-          "max_cost": 125.9
-        },
-        {
-          "clean_firm": 16.0,
-          "solar": 47.0,
-          "wind": 151.0,
-          "min_cost": 74.2,
-          "max_cost": 114.4
-        },
-        {
-          "clean_firm": 42.0,
-          "solar": 26.0,
-          "wind": 141.0,
-          "min_cost": 76.4,
-          "max_cost": 76.4
-        },
-        {
-          "clean_firm": 26.0,
-          "solar": 46.0,
-          "wind": 135.0,
-          "min_cost": 78.8,
-          "max_cost": 107.4
-        }
-      ]
-    },
-    "99.9": {
-      "transitions": [
-        {
-          "toggle": "firm",
-          "from_level": "L",
-          "to_level": "M",
-          "from_dominant": "clean_firm",
-          "to_dominant": "wind",
-          "from_cost": 62.6,
-          "to_cost": 68.9,
-          "from_mix": {
-            "clean_firm": 84.0,
-            "solar": 19.0,
-            "wind": 33.0
-          },
-          "to_mix": {
-            "clean_firm": 51.0,
-            "solar": 33.0,
-            "wind": 90.0
+            "solar": 11.0,
+            "wind": 31.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 20.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 19.0
           }
         },
         {
-          "toggle": "firm",
+          "toggle": "renewable",
           "from_level": "L",
           "to_level": "H",
-          "from_dominant": "clean_firm",
-          "to_dominant": "wind",
-          "from_cost": 62.6,
-          "to_cost": 72.7,
+          "from_dominant": "wind",
+          "to_dominant": "clean_firm",
+          "from_cost": 74.6,
+          "to_cost": 96.4,
           "from_mix": {
-            "clean_firm": 84.0,
-            "solar": 19.0,
-            "wind": 33.0
+            "clean_firm": 49.0,
+            "solar": 49.0,
+            "wind": 100.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           },
           "to_mix": {
-            "clean_firm": 51.0,
-            "solar": 33.0,
-            "wind": 90.0
+            "clean_firm": 41.0,
+            "solar": 11.0,
+            "wind": 31.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 20.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 19.0
           }
         }
       ],
-      "n_unique_mixes": 12,
+      "n_unique_mixes": 8,
       "mixes": [
         {
-          "clean_firm": 84.0,
+          "clean_firm": 49.0,
+          "solar": 49.0,
+          "wind": 100.0,
+          "min_cost": 74.6,
+          "max_cost": 136.7
+        },
+        {
+          "clean_firm": 19.0,
           "solar": 19.0,
-          "wind": 33.0,
-          "min_cost": 62.6,
-          "max_cost": 138.3
+          "wind": 119.0,
+          "min_cost": 76.5,
+          "max_cost": 150.0
         },
         {
-          "clean_firm": 96.0,
-          "solar": 12.0,
-          "wind": 23.0,
-          "min_cost": 65.7,
-          "max_cost": 108.2
+          "clean_firm": 20.0,
+          "solar": 19.0,
+          "wind": 120.0,
+          "min_cost": 83.7,
+          "max_cost": 89.7
         },
         {
-          "clean_firm": 51.0,
-          "solar": 33.0,
-          "wind": 90.0,
-          "min_cost": 68.9,
-          "max_cost": 132.3
+          "clean_firm": 41.0,
+          "solar": 11.0,
+          "wind": 31.0,
+          "min_cost": 84.5,
+          "max_cost": 146.0
         },
         {
-          "clean_firm": 114.0,
-          "solar": 7.0,
-          "wind": 16.0,
-          "min_cost": 72.6,
-          "max_cost": 82.2
+          "clean_firm": 19.0,
+          "solar": 40.0,
+          "wind": 209.0,
+          "min_cost": 90.4,
+          "max_cost": 92.3
         },
         {
-          "clean_firm": 42.0,
-          "solar": 26.0,
-          "wind": 141.0,
-          "min_cost": 74.3,
-          "max_cost": 91.1
+          "clean_firm": 59.0,
+          "solar": 19.0,
+          "wind": 60.0,
+          "min_cost": 96.2,
+          "max_cost": 144.0
         },
         {
-          "clean_firm": 26.0,
-          "solar": 39.0,
-          "wind": 147.0,
-          "min_cost": 77.7,
-          "max_cost": 108.2
+          "clean_firm": 61.0,
+          "solar": 19.0,
+          "wind": 59.0,
+          "min_cost": 100.7,
+          "max_cost": 144.9
         },
         {
-          "clean_firm": 16.0,
-          "solar": 46.0,
-          "wind": 158.0,
-          "min_cost": 79.1,
-          "max_cost": 112.0
-        },
-        {
-          "clean_firm": 16.0,
-          "solar": 47.0,
-          "wind": 152.0,
-          "min_cost": 82.8,
-          "max_cost": 114.2
-        },
-        {
-          "clean_firm": 26.0,
-          "solar": 46.0,
-          "wind": 132.0,
-          "min_cost": 85.8,
-          "max_cost": 97.4
-        },
-        {
-          "clean_firm": 16.0,
-          "solar": 37.0,
-          "wind": 187.0,
-          "min_cost": 86.3,
-          "max_cost": 96.3
-        },
-        {
-          "clean_firm": 16.0,
-          "solar": 47.0,
-          "wind": 151.0,
-          "min_cost": 94.4,
-          "max_cost": 110.0
-        },
-        {
-          "clean_firm": 26.0,
-          "solar": 36.0,
-          "wind": 159.0,
-          "min_cost": 94.5,
-          "max_cost": 108.9
+          "clean_firm": 41.0,
+          "solar": 10.0,
+          "wind": 31.0,
+          "min_cost": 133.2,
+          "max_cost": 145.7
         }
       ]
     }
@@ -9606,457 +9515,478 @@ const TIPPING_POINT_DATA = {
   "SPP": {
     "10": {
       "transitions": [],
-      "n_unique_mixes": 3,
+      "n_unique_mixes": 4,
       "mixes": [
         {
           "clean_firm": 5.0,
-          "solar": 1.0,
+          "solar": 0.0,
           "wind": 41.0,
-          "min_cost": 1.4,
-          "max_cost": 2.8
+          "min_cost": 1.1,
+          "max_cost": 2.3
         },
         {
-          "clean_firm": 6.0,
-          "solar": 1.0,
-          "wind": 40.0,
-          "min_cost": 1.6,
-          "max_cost": 2.8
+          "clean_firm": 5.0,
+          "solar": 2.0,
+          "wind": 39.0,
+          "min_cost": 1.5,
+          "max_cost": 1.5
         },
         {
           "clean_firm": 7.0,
-          "solar": 1.0,
+          "solar": 0.0,
           "wind": 39.0,
-          "min_cost": 2.4,
-          "max_cost": 2.6
+          "min_cost": 1.7,
+          "max_cost": 2.3
+        },
+        {
+          "clean_firm": 9.0,
+          "solar": 0.0,
+          "wind": 37.0,
+          "min_cost": 2.0,
+          "max_cost": 2.0
         }
       ]
     },
     "20": {
       "transitions": [],
-      "n_unique_mixes": 3,
+      "n_unique_mixes": 4,
       "mixes": [
         {
           "clean_firm": 5.0,
-          "solar": 1.0,
+          "solar": 0.0,
           "wind": 41.0,
-          "min_cost": 1.4,
-          "max_cost": 2.8
+          "min_cost": 1.1,
+          "max_cost": 2.3
         },
         {
-          "clean_firm": 6.0,
-          "solar": 1.0,
-          "wind": 40.0,
-          "min_cost": 1.6,
-          "max_cost": 2.8
+          "clean_firm": 5.0,
+          "solar": 2.0,
+          "wind": 39.0,
+          "min_cost": 1.5,
+          "max_cost": 1.5
         },
         {
           "clean_firm": 7.0,
-          "solar": 1.0,
+          "solar": 0.0,
           "wind": 39.0,
-          "min_cost": 2.4,
-          "max_cost": 2.6
+          "min_cost": 1.7,
+          "max_cost": 2.3
+        },
+        {
+          "clean_firm": 9.0,
+          "solar": 0.0,
+          "wind": 37.0,
+          "min_cost": 2.0,
+          "max_cost": 2.0
         }
       ]
     },
     "30": {
       "transitions": [],
-      "n_unique_mixes": 3,
+      "n_unique_mixes": 4,
       "mixes": [
         {
           "clean_firm": 5.0,
-          "solar": 1.0,
+          "solar": 0.0,
           "wind": 41.0,
-          "min_cost": 1.4,
-          "max_cost": 2.8
+          "min_cost": 1.1,
+          "max_cost": 2.3
         },
         {
-          "clean_firm": 6.0,
-          "solar": 1.0,
-          "wind": 40.0,
-          "min_cost": 1.6,
-          "max_cost": 2.8
+          "clean_firm": 5.0,
+          "solar": 2.0,
+          "wind": 39.0,
+          "min_cost": 1.5,
+          "max_cost": 1.5
         },
         {
           "clean_firm": 7.0,
-          "solar": 1.0,
+          "solar": 0.0,
           "wind": 39.0,
-          "min_cost": 2.4,
-          "max_cost": 2.6
+          "min_cost": 1.7,
+          "max_cost": 2.3
+        },
+        {
+          "clean_firm": 9.0,
+          "solar": 0.0,
+          "wind": 37.0,
+          "min_cost": 2.0,
+          "max_cost": 2.0
         }
       ]
     },
     "40": {
       "transitions": [],
-      "n_unique_mixes": 3,
+      "n_unique_mixes": 4,
       "mixes": [
         {
           "clean_firm": 5.0,
-          "solar": 1.0,
+          "solar": 0.0,
           "wind": 41.0,
-          "min_cost": 1.4,
-          "max_cost": 2.8
+          "min_cost": 1.1,
+          "max_cost": 2.3
         },
         {
-          "clean_firm": 6.0,
-          "solar": 1.0,
-          "wind": 40.0,
-          "min_cost": 1.6,
-          "max_cost": 2.8
+          "clean_firm": 5.0,
+          "solar": 2.0,
+          "wind": 39.0,
+          "min_cost": 1.5,
+          "max_cost": 1.5
         },
         {
           "clean_firm": 7.0,
-          "solar": 1.0,
+          "solar": 0.0,
           "wind": 39.0,
-          "min_cost": 2.4,
-          "max_cost": 2.6
+          "min_cost": 1.7,
+          "max_cost": 2.3
+        },
+        {
+          "clean_firm": 9.0,
+          "solar": 0.0,
+          "wind": 37.0,
+          "min_cost": 2.0,
+          "max_cost": 2.0
         }
       ]
     },
     "50": {
       "transitions": [],
-      "n_unique_mixes": 3,
+      "n_unique_mixes": 4,
       "mixes": [
         {
           "clean_firm": 5.0,
-          "solar": 1.0,
+          "solar": 0.0,
           "wind": 41.0,
-          "min_cost": 1.4,
-          "max_cost": 2.8
+          "min_cost": 1.1,
+          "max_cost": 2.3
         },
         {
-          "clean_firm": 6.0,
-          "solar": 1.0,
-          "wind": 40.0,
-          "min_cost": 1.6,
-          "max_cost": 2.8
+          "clean_firm": 5.0,
+          "solar": 2.0,
+          "wind": 39.0,
+          "min_cost": 1.5,
+          "max_cost": 1.5
         },
         {
           "clean_firm": 7.0,
-          "solar": 1.0,
+          "solar": 0.0,
           "wind": 39.0,
-          "min_cost": 2.4,
-          "max_cost": 2.6
+          "min_cost": 1.7,
+          "max_cost": 2.3
+        },
+        {
+          "clean_firm": 9.0,
+          "solar": 0.0,
+          "wind": 37.0,
+          "min_cost": 2.0,
+          "max_cost": 2.0
         }
       ]
     },
     "55": {
       "transitions": [],
-      "n_unique_mixes": 3,
+      "n_unique_mixes": 5,
       "mixes": [
         {
           "clean_firm": 5.0,
-          "solar": 1.0,
-          "wind": 46.0,
+          "solar": 0.0,
+          "wind": 47.0,
           "min_cost": 2.8,
-          "max_cost": 5.8
+          "max_cost": 5.9
         },
         {
-          "clean_firm": 6.0,
-          "solar": 1.0,
+          "clean_firm": 5.0,
+          "solar": 2.0,
           "wind": 45.0,
-          "min_cost": 3.4,
-          "max_cost": 5.8
+          "min_cost": 3.9,
+          "max_cost": 3.9
         },
         {
           "clean_firm": 7.0,
-          "solar": 1.0,
-          "wind": 44.0,
+          "solar": 0.0,
+          "wind": 45.0,
+          "min_cost": 4.3,
+          "max_cost": 5.9
+        },
+        {
+          "clean_firm": 13.0,
+          "solar": 0.0,
+          "wind": 39.0,
           "min_cost": 5.1,
-          "max_cost": 5.6
+          "max_cost": 5.2
+        },
+        {
+          "clean_firm": 15.0,
+          "solar": 0.0,
+          "wind": 37.0,
+          "min_cost": 5.2,
+          "max_cost": 5.3
         }
       ]
     },
     "60": {
       "transitions": [],
-      "n_unique_mixes": 3,
+      "n_unique_mixes": 4,
       "mixes": [
         {
           "clean_firm": 5.0,
-          "solar": 1.0,
+          "solar": 0.0,
           "wind": 51.0,
-          "min_cost": 4.2,
-          "max_cost": 8.8
+          "min_cost": 3.9,
+          "max_cost": 8.3
         },
         {
-          "clean_firm": 6.0,
-          "solar": 1.0,
-          "wind": 50.0,
-          "min_cost": 5.1,
-          "max_cost": 8.8
+          "clean_firm": 5.0,
+          "solar": 2.0,
+          "wind": 49.0,
+          "min_cost": 5.5,
+          "max_cost": 5.5
         },
         {
-          "clean_firm": 18.0,
-          "solar": 1.0,
-          "wind": 39.0,
-          "min_cost": 8.5,
-          "max_cost": 8.6
+          "clean_firm": 7.0,
+          "solar": 0.0,
+          "wind": 49.0,
+          "min_cost": 6.1,
+          "max_cost": 8.3
+        },
+        {
+          "clean_firm": 9.0,
+          "solar": 0.0,
+          "wind": 47.0,
+          "min_cost": 7.4,
+          "max_cost": 8.0
         }
       ]
     },
     "65": {
       "transitions": [],
-      "n_unique_mixes": 3,
+      "n_unique_mixes": 4,
       "mixes": [
         {
-          "clean_firm": 6.0,
-          "solar": 1.0,
-          "wind": 56.0,
-          "min_cost": 5.9,
-          "max_cost": 12.6
+          "clean_firm": 5.0,
+          "solar": 0.0,
+          "wind": 57.0,
+          "min_cost": 5.6,
+          "max_cost": 11.9
         },
         {
           "clean_firm": 5.0,
           "solar": 2.0,
-          "wind": 56.0,
-          "min_cost": 6.0,
-          "max_cost": 10.3
+          "wind": 55.0,
+          "min_cost": 7.9,
+          "max_cost": 7.9
         },
         {
-          "clean_firm": 17.0,
-          "solar": 1.0,
-          "wind": 45.0,
-          "min_cost": 11.0,
-          "max_cost": 11.6
+          "clean_firm": 7.0,
+          "solar": 0.0,
+          "wind": 55.0,
+          "min_cost": 8.7,
+          "max_cost": 11.9
+        },
+        {
+          "clean_firm": 21.0,
+          "solar": 0.0,
+          "wind": 41.0,
+          "min_cost": 10.5,
+          "max_cost": 10.9
         }
       ]
     },
     "70": {
       "transitions": [],
-      "n_unique_mixes": 3,
+      "n_unique_mixes": 6,
       "mixes": [
         {
           "clean_firm": 5.0,
-          "solar": 1.0,
-          "wind": 62.0,
-          "min_cost": 7.2,
-          "max_cost": 15.4
+          "solar": 0.0,
+          "wind": 65.0,
+          "min_cost": 7.8,
+          "max_cost": 14.5
         },
         {
-          "clean_firm": 6.0,
-          "solar": 1.0,
-          "wind": 61.0,
-          "min_cost": 9.0,
-          "max_cost": 15.4
+          "clean_firm": 7.0,
+          "solar": 4.0,
+          "wind": 57.0,
+          "min_cost": 8.8,
+          "max_cost": 16.4
         },
         {
-          "clean_firm": 13.0,
-          "solar": 1.0,
-          "wind": 54.0,
+          "clean_firm": 5.0,
+          "solar": 6.0,
+          "wind": 57.0,
+          "min_cost": 8.8,
+          "max_cost": 16.4
+        },
+        {
+          "clean_firm": 9.0,
+          "solar": 2.0,
+          "wind": 57.0,
+          "min_cost": 10.1,
+          "max_cost": 15.9
+        },
+        {
+          "clean_firm": 11.0,
+          "solar": 0.0,
+          "wind": 57.0,
+          "min_cost": 12.4,
+          "max_cost": 13.4
+        },
+        {
+          "clean_firm": 21.0,
+          "solar": 0.0,
+          "wind": 47.0,
           "min_cost": 13.8,
-          "max_cost": 14.8
+          "max_cost": 14.5
         }
       ]
     },
     "75": {
       "transitions": [],
-      "n_unique_mixes": 3,
+      "n_unique_mixes": 6,
       "mixes": [
         {
           "clean_firm": 5.0,
-          "solar": 1.0,
-          "wind": 68.0,
-          "min_cost": 8.9,
-          "max_cost": 19.0
+          "solar": 0.0,
+          "wind": 73.0,
+          "min_cost": 10.1,
+          "max_cost": 18.7
         },
         {
-          "clean_firm": 6.0,
-          "solar": 1.0,
-          "wind": 67.0,
-          "min_cost": 11.1,
-          "max_cost": 19.0
+          "clean_firm": 5.0,
+          "solar": 6.0,
+          "wind": 65.0,
+          "min_cost": 11.4,
+          "max_cost": 21.2
         },
         {
-          "clean_firm": 19.0,
-          "solar": 1.0,
-          "wind": 54.0,
-          "min_cost": 17.0,
-          "max_cost": 18.1
+          "clean_firm": 11.0,
+          "solar": 2.0,
+          "wind": 63.0,
+          "min_cost": 14.5,
+          "max_cost": 20.9
+        },
+        {
+          "clean_firm": 15.0,
+          "solar": 0.0,
+          "wind": 61.0,
+          "min_cost": 16.4,
+          "max_cost": 17.5
+        },
+        {
+          "clean_firm": 21.0,
+          "solar": 0.0,
+          "wind": 55.0,
+          "min_cost": 18.2,
+          "max_cost": 19.3
+        },
+        {
+          "clean_firm": 31.0,
+          "solar": 2.0,
+          "wind": 41.0,
+          "min_cost": 19.1,
+          "max_cost": 19.1
         }
       ]
     },
     "80": {
       "transitions": [],
-      "n_unique_mixes": 4,
+      "n_unique_mixes": 10,
       "mixes": [
         {
           "clean_firm": 5.0,
-          "solar": 2.0,
-          "wind": 74.0,
-          "min_cost": 11.0,
-          "max_cost": 23.4
+          "solar": 4.0,
+          "wind": 79.0,
+          "min_cost": 13.3,
+          "max_cost": 25.8
         },
         {
-          "clean_firm": 6.0,
-          "solar": 2.0,
-          "wind": 73.0,
-          "min_cost": 13.6,
-          "max_cost": 23.4
-        },
-        {
-          "clean_firm": 9.0,
-          "solar": 1.0,
+          "clean_firm": 7.0,
+          "solar": 8.0,
           "wind": 71.0,
-          "min_cost": 18.6,
-          "max_cost": 20.0
+          "min_cost": 16.2,
+          "max_cost": 28.0
         },
         {
-          "clean_firm": 22.0,
-          "solar": 1.0,
-          "wind": 58.0,
-          "min_cost": 20.9,
-          "max_cost": 22.1
+          "clean_firm": 5.0,
+          "solar": 10.0,
+          "wind": 71.0,
+          "min_cost": 16.3,
+          "max_cost": 28.0
+        },
+        {
+          "clean_firm": 11.0,
+          "solar": 4.0,
+          "wind": 71.0,
+          "min_cost": 17.5,
+          "max_cost": 25.5
+        },
+        {
+          "clean_firm": 11.0,
+          "solar": 10.0,
+          "wind": 63.0,
+          "min_cost": 18.1,
+          "max_cost": 18.2
+        },
+        {
+          "clean_firm": 15.0,
+          "solar": 6.0,
+          "wind": 63.0,
+          "min_cost": 18.9,
+          "max_cost": 25.3
+        },
+        {
+          "clean_firm": 21.0,
+          "solar": 2.0,
+          "wind": 61.0,
+          "min_cost": 19.8,
+          "max_cost": 27.0
+        },
+        {
+          "clean_firm": 10.0,
+          "solar": 0.0,
+          "wind": 70.0,
+          "min_cost": 22.0,
+          "max_cost": 27.9
+        },
+        {
+          "clean_firm": 27.0,
+          "solar": 4.0,
+          "wind": 51.0,
+          "min_cost": 23.9,
+          "max_cost": 26.8
+        },
+        {
+          "clean_firm": 20.0,
+          "solar": 0.0,
+          "wind": 60.0,
+          "min_cost": 25.2,
+          "max_cost": 26.8
         }
       ]
     },
     "85": {
       "transitions": [],
-      "n_unique_mixes": 11,
+      "n_unique_mixes": 1,
       "mixes": [
         {
-          "clean_firm": 5.0,
-          "solar": 1.0,
-          "wind": 85.0,
-          "min_cost": 13.7,
-          "max_cost": 23.4
-        },
-        {
-          "clean_firm": 5.0,
-          "solar": 5.0,
-          "wind": 79.0,
-          "min_cost": 15.4,
-          "max_cost": 28.8
-        },
-        {
-          "clean_firm": 6.0,
-          "solar": 5.0,
-          "wind": 78.0,
-          "min_cost": 16.8,
-          "max_cost": 28.8
-        },
-        {
-          "clean_firm": 7.0,
-          "solar": 2.0,
-          "wind": 81.0,
-          "min_cost": 18.0,
-          "max_cost": 23.4
-        },
-        {
-          "clean_firm": 6.0,
-          "solar": 9.0,
-          "wind": 73.0,
-          "min_cost": 18.9,
-          "max_cost": 19.0
-        },
-        {
-          "clean_firm": 5.0,
-          "solar": 9.0,
-          "wind": 74.0,
-          "min_cost": 19.0,
-          "max_cost": 19.0
-        },
-        {
-          "clean_firm": 21.0,
-          "solar": 1.0,
-          "wind": 67.0,
-          "min_cost": 22.8,
-          "max_cost": 24.3
-        },
-        {
-          "clean_firm": 8.0,
-          "solar": 4.0,
-          "wind": 77.0,
-          "min_cost": 23.2,
-          "max_cost": 23.3
-        },
-        {
-          "clean_firm": 22.0,
-          "solar": 1.0,
-          "wind": 66.0,
-          "min_cost": 25.2,
-          "max_cost": 25.3
-        },
-        {
-          "clean_firm": 23.0,
-          "solar": 3.0,
-          "wind": 62.0,
-          "min_cost": 26.8,
-          "max_cost": 26.8
-        },
-        {
-          "clean_firm": 22.0,
-          "solar": 4.0,
-          "wind": 62.0,
-          "min_cost": 26.9,
-          "max_cost": 26.9
+          "clean_firm": 10.0,
+          "solar": 0.0,
+          "wind": 80.0,
+          "min_cost": 15.6,
+          "max_cost": 33.2
         }
       ]
     },
     "87.5": {
       "transitions": [],
-      "n_unique_mixes": 9,
+      "n_unique_mixes": 1,
       "mixes": [
         {
-          "clean_firm": 6.0,
-          "solar": 4.0,
-          "wind": 85.0,
-          "min_cost": 15.3,
-          "max_cost": 26.3
-        },
-        {
           "clean_firm": 5.0,
-          "solar": 3.0,
-          "wind": 88.0,
-          "min_cost": 15.4,
-          "max_cost": 26.4
-        },
-        {
-          "clean_firm": 6.0,
-          "solar": 6.0,
-          "wind": 82.0,
-          "min_cost": 17.2,
-          "max_cost": 32.0
-        },
-        {
-          "clean_firm": 5.0,
-          "solar": 9.0,
-          "wind": 79.0,
-          "min_cost": 17.2,
-          "max_cost": 32.0
-        },
-        {
-          "clean_firm": 6.0,
-          "solar": 9.0,
-          "wind": 78.0,
-          "min_cost": 18.6,
-          "max_cost": 32.0
-        },
-        {
-          "clean_firm": 7.0,
-          "solar": 8.0,
-          "wind": 78.0,
-          "min_cost": 23.4,
-          "max_cost": 31.8
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 2.0,
-          "wind": 72.0,
-          "min_cost": 25.5,
-          "max_cost": 25.5
-        },
-        {
-          "clean_firm": 23.0,
-          "solar": 3.0,
-          "wind": 67.0,
-          "min_cost": 26.9,
-          "max_cost": 26.9
-        },
-        {
-          "clean_firm": 22.0,
-          "solar": 6.0,
-          "wind": 64.0,
-          "min_cost": 26.9,
-          "max_cost": 29.7
+          "solar": 12.0,
+          "wind": 60.0,
+          "min_cost": 26.8,
+          "max_cost": 49.8
         }
       ]
     },
@@ -10065,845 +9995,648 @@ const TIPPING_POINT_DATA = {
       "n_unique_mixes": 9,
       "mixes": [
         {
-          "clean_firm": 6.0,
-          "solar": 7.0,
-          "wind": 87.0,
-          "min_cost": 17.1,
-          "max_cost": 29.5
+          "clean_firm": 11.0,
+          "solar": 31.0,
+          "wind": 51.0,
+          "min_cost": 38.8,
+          "max_cost": 73.2
         },
         {
-          "clean_firm": 5.0,
-          "solar": 6.0,
-          "wind": 90.0,
-          "min_cost": 17.2,
-          "max_cost": 29.5
+          "clean_firm": 11.0,
+          "solar": 31.0,
+          "wind": 51.0,
+          "min_cost": 38.8,
+          "max_cost": 73.2
         },
         {
-          "clean_firm": 6.0,
-          "solar": 9.0,
-          "wind": 84.0,
-          "min_cost": 19.1,
-          "max_cost": 35.8
+          "clean_firm": 10.0,
+          "solar": 31.0,
+          "wind": 51.0,
+          "min_cost": 40.3,
+          "max_cost": 68.8
         },
         {
-          "clean_firm": 5.0,
-          "solar": 8.0,
-          "wind": 87.0,
-          "min_cost": 19.3,
-          "max_cost": 26.5
-        },
-        {
-          "clean_firm": 6.0,
-          "solar": 12.0,
-          "wind": 80.0,
-          "min_cost": 20.7,
-          "max_cost": 29.1
-        },
-        {
-          "clean_firm": 5.0,
-          "solar": 14.0,
-          "wind": 79.0,
-          "min_cost": 20.9,
-          "max_cost": 23.4
+          "clean_firm": 9.0,
+          "solar": 31.0,
+          "wind": 51.0,
+          "min_cost": 41.9,
+          "max_cost": 56.9
         },
         {
           "clean_firm": 21.0,
-          "solar": 8.0,
-          "wind": 68.0,
-          "min_cost": 28.4,
-          "max_cost": 30.0
+          "solar": 39.0,
+          "wind": 41.0,
+          "min_cost": 44.0,
+          "max_cost": 68.7
         },
         {
-          "clean_firm": 21.0,
-          "solar": 4.0,
-          "wind": 74.0,
-          "min_cost": 28.4,
-          "max_cost": 28.5
+          "clean_firm": 31.0,
+          "solar": 40.0,
+          "wind": 41.0,
+          "min_cost": 46.0,
+          "max_cost": 69.0
         },
         {
-          "clean_firm": 22.0,
-          "solar": 8.0,
-          "wind": 67.0,
-          "min_cost": 31.2,
-          "max_cost": 33.1
+          "clean_firm": 31.0,
+          "solar": 40.0,
+          "wind": 41.0,
+          "min_cost": 46.0,
+          "max_cost": 69.0
+        },
+        {
+          "clean_firm": 31.0,
+          "solar": 1.0,
+          "wind": 41.0,
+          "min_cost": 54.8,
+          "max_cost": 62.0
+        },
+        {
+          "clean_firm": 5.0,
+          "solar": 0.0,
+          "wind": 55.0,
+          "min_cost": 58.5,
+          "max_cost": 65.6
         }
       ]
     },
     "92.5": {
       "transitions": [],
-      "n_unique_mixes": 9,
+      "n_unique_mixes": 5,
       "mixes": [
         {
-          "clean_firm": 5.0,
-          "solar": 11.0,
-          "wind": 90.0,
-          "min_cost": 19.4,
-          "max_cost": 33.2
-        },
-        {
-          "clean_firm": 5.0,
-          "solar": 13.0,
-          "wind": 87.0,
-          "min_cost": 21.5,
-          "max_cost": 40.0
-        },
-        {
-          "clean_firm": 6.0,
-          "solar": 13.0,
-          "wind": 86.0,
-          "min_cost": 23.2,
-          "max_cost": 40.0
-        },
-        {
-          "clean_firm": 6.0,
-          "solar": 9.0,
-          "wind": 92.0,
-          "min_cost": 25.5,
-          "max_cost": 33.2
-        },
-        {
-          "clean_firm": 6.0,
-          "solar": 17.0,
-          "wind": 81.0,
-          "min_cost": 26.0,
-          "max_cost": 26.1
-        },
-        {
-          "clean_firm": 7.0,
-          "solar": 12.0,
-          "wind": 86.0,
-          "min_cost": 27.6,
-          "max_cost": 37.0
-        },
-        {
-          "clean_firm": 22.0,
-          "solar": 10.0,
-          "wind": 71.0,
-          "min_cost": 31.7,
-          "max_cost": 37.1
-        },
-        {
-          "clean_firm": 22.0,
-          "solar": 8.0,
-          "wind": 74.0,
-          "min_cost": 31.9,
-          "max_cost": 32.0
+          "clean_firm": 11.0,
+          "solar": 31.0,
+          "wind": 51.0,
+          "min_cost": 38.8,
+          "max_cost": 73.2
         },
         {
           "clean_firm": 10.0,
-          "solar": 13.0,
-          "wind": 81.0,
-          "min_cost": 39.7,
-          "max_cost": 39.8
+          "solar": 31.0,
+          "wind": 51.0,
+          "min_cost": 40.3,
+          "max_cost": 68.8
+        },
+        {
+          "clean_firm": 9.0,
+          "solar": 31.0,
+          "wind": 51.0,
+          "min_cost": 41.9,
+          "max_cost": 56.9
+        },
+        {
+          "clean_firm": 31.0,
+          "solar": 1.0,
+          "wind": 41.0,
+          "min_cost": 54.8,
+          "max_cost": 64.6
+        },
+        {
+          "clean_firm": 31.0,
+          "solar": 39.0,
+          "wind": 41.0,
+          "min_cost": 64.7,
+          "max_cost": 69.0
         }
       ]
     },
     "95": {
       "transitions": [],
-      "n_unique_mixes": 12,
+      "n_unique_mixes": 9,
       "mixes": [
         {
-          "clean_firm": 6.0,
-          "solar": 13.0,
-          "wind": 96.0,
-          "min_cost": 22.2,
-          "max_cost": 42.9
+          "clean_firm": 11.0,
+          "solar": 31.0,
+          "wind": 51.0,
+          "min_cost": 41.7,
+          "max_cost": 76.7
         },
         {
-          "clean_firm": 5.0,
-          "solar": 14.0,
-          "wind": 96.0,
-          "min_cost": 22.3,
-          "max_cost": 38.3
+          "clean_firm": 11.0,
+          "solar": 31.0,
+          "wind": 51.0,
+          "min_cost": 41.7,
+          "max_cost": 76.7
         },
         {
-          "clean_firm": 6.0,
-          "solar": 18.0,
-          "wind": 89.0,
-          "min_cost": 24.7,
-          "max_cost": 46.0
+          "clean_firm": 11.0,
+          "solar": 31.0,
+          "wind": 51.0,
+          "min_cost": 41.7,
+          "max_cost": 76.7
         },
         {
-          "clean_firm": 7.0,
-          "solar": 14.0,
-          "wind": 93.0,
-          "min_cost": 29.3,
-          "max_cost": 42.6
+          "clean_firm": 10.0,
+          "solar": 31.0,
+          "wind": 51.0,
+          "min_cost": 43.8,
+          "max_cost": 66.3
         },
         {
           "clean_firm": 9.0,
-          "solar": 15.0,
-          "wind": 89.0,
-          "min_cost": 31.6,
-          "max_cost": 42.3
+          "solar": 31.0,
+          "wind": 51.0,
+          "min_cost": 44.9,
+          "max_cost": 57.5
         },
         {
-          "clean_firm": 19.0,
-          "solar": 14.0,
-          "wind": 78.0,
-          "min_cost": 33.4,
-          "max_cost": 45.3
+          "clean_firm": 9.0,
+          "solar": 31.0,
+          "wind": 51.0,
+          "min_cost": 44.9,
+          "max_cost": 57.5
         },
         {
-          "clean_firm": 23.0,
-          "solar": 14.0,
-          "wind": 73.0,
-          "min_cost": 35.9,
-          "max_cost": 42.4
+          "clean_firm": 31.0,
+          "solar": 1.0,
+          "wind": 41.0,
+          "min_cost": 54.8,
+          "max_cost": 72.6
         },
         {
-          "clean_firm": 21.0,
-          "solar": 13.0,
-          "wind": 77.0,
-          "min_cost": 36.0,
-          "max_cost": 38.5
+          "clean_firm": 31.0,
+          "solar": 1.0,
+          "wind": 41.0,
+          "min_cost": 54.8,
+          "max_cost": 72.6
         },
         {
-          "clean_firm": 23.0,
-          "solar": 12.0,
-          "wind": 76.0,
-          "min_cost": 36.5,
-          "max_cost": 36.5
-        },
-        {
-          "clean_firm": 22.0,
-          "solar": 11.0,
-          "wind": 79.0,
-          "min_cost": 36.5,
-          "max_cost": 36.6
-        },
-        {
-          "clean_firm": 22.0,
-          "solar": 13.0,
-          "wind": 76.0,
-          "min_cost": 40.0,
-          "max_cost": 42.5
-        },
-        {
-          "clean_firm": 38.0,
-          "solar": 11.0,
-          "wind": 59.0,
-          "min_cost": 42.2,
-          "max_cost": 45.1
+          "clean_firm": 31.0,
+          "solar": 41.0,
+          "wind": 41.0,
+          "min_cost": 64.1,
+          "max_cost": 72.3
         }
       ]
     },
     "97.5": {
       "transitions": [],
-      "n_unique_mixes": 8,
+      "n_unique_mixes": 7,
       "mixes": [
         {
-          "clean_firm": 6.0,
-          "solar": 17.0,
-          "wind": 106.0,
-          "min_cost": 26.8,
-          "max_cost": 46.0
+          "clean_firm": 29.0,
+          "solar": 1.0,
+          "wind": 99.0,
+          "min_cost": 47.5,
+          "max_cost": 85.0
         },
         {
-          "clean_firm": 5.0,
-          "solar": 18.0,
-          "wind": 106.0,
-          "min_cost": 26.9,
-          "max_cost": 46.1
+          "clean_firm": 11.0,
+          "solar": 31.0,
+          "wind": 51.0,
+          "min_cost": 48.0,
+          "max_cost": 89.0
         },
         {
-          "clean_firm": 6.0,
-          "solar": 19.0,
-          "wind": 103.0,
-          "min_cost": 29.6,
-          "max_cost": 55.2
+          "clean_firm": 11.0,
+          "solar": 31.0,
+          "wind": 51.0,
+          "min_cost": 48.0,
+          "max_cost": 89.0
         },
         {
-          "clean_firm": 7.0,
-          "solar": 18.0,
-          "wind": 103.0,
-          "min_cost": 35.2,
-          "max_cost": 48.7
+          "clean_firm": 10.0,
+          "solar": 31.0,
+          "wind": 51.0,
+          "min_cost": 51.0,
+          "max_cost": 73.5
         },
         {
-          "clean_firm": 22.0,
-          "solar": 18.0,
-          "wind": 83.0,
-          "min_cost": 37.8,
-          "max_cost": 53.7
+          "clean_firm": 9.0,
+          "solar": 31.0,
+          "wind": 51.0,
+          "min_cost": 52.2,
+          "max_cost": 59.5
         },
         {
-          "clean_firm": 24.0,
-          "solar": 16.0,
-          "wind": 83.0,
-          "min_cost": 43.5,
-          "max_cost": 48.4
+          "clean_firm": 31.0,
+          "solar": 39.0,
+          "wind": 41.0,
+          "min_cost": 55.8,
+          "max_cost": 85.3
         },
         {
-          "clean_firm": 34.0,
-          "solar": 16.0,
-          "wind": 70.0,
-          "min_cost": 47.4,
-          "max_cost": 50.1
-        },
-        {
-          "clean_firm": 58.0,
-          "solar": 13.0,
-          "wind": 44.0,
-          "min_cost": 49.2,
-          "max_cost": 52.1
+          "clean_firm": 31.0,
+          "solar": 41.0,
+          "wind": 41.0,
+          "min_cost": 59.1,
+          "max_cost": 86.7
         }
       ]
     },
     "99": {
-      "transitions": [],
-      "n_unique_mixes": 8,
+      "transitions": [
+        {
+          "toggle": "firm",
+          "from_level": "M",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "solar",
+          "from_cost": 56.8,
+          "to_cost": 61.1,
+          "from_mix": {
+            "clean_firm": 31.0,
+            "solar": 40.0,
+            "wind": 41.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 11.0,
+            "wind_batt4": 1.0,
+            "wind_batt8": 1.0
+          },
+          "to_mix": {
+            "clean_firm": 29.0,
+            "solar": 41.0,
+            "wind": 41.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 11.0,
+            "wind_batt4": 1.0,
+            "wind_batt8": 1.0
+          }
+        },
+        {
+          "toggle": "firm",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "solar",
+          "from_cost": 54.7,
+          "to_cost": 61.1,
+          "from_mix": {
+            "clean_firm": 31.0,
+            "solar": 40.0,
+            "wind": 41.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 11.0,
+            "wind_batt4": 1.0,
+            "wind_batt8": 1.0
+          },
+          "to_mix": {
+            "clean_firm": 29.0,
+            "solar": 41.0,
+            "wind": 41.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 11.0,
+            "wind_batt4": 1.0,
+            "wind_batt8": 1.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "wind",
+          "to_dominant": "solar",
+          "from_cost": 54.7,
+          "to_cost": 59.2,
+          "from_mix": {
+            "clean_firm": 31.0,
+            "solar": 40.0,
+            "wind": 41.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 11.0,
+            "wind_batt4": 1.0,
+            "wind_batt8": 1.0
+          },
+          "to_mix": {
+            "clean_firm": 31.0,
+            "solar": 41.0,
+            "wind": 41.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 1.0,
+            "wind_batt8": 1.0
+          }
+        },
+        {
+          "toggle": "storage",
+          "from_level": "M",
+          "to_level": "H",
+          "from_dominant": "solar",
+          "to_dominant": "wind",
+          "from_cost": 59.2,
+          "to_cost": 65.0,
+          "from_mix": {
+            "clean_firm": 31.0,
+            "solar": 41.0,
+            "wind": 41.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 1.0,
+            "wind_batt8": 1.0
+          },
+          "to_mix": {
+            "clean_firm": 49.0,
+            "solar": 0.0,
+            "wind": 129.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "ldes",
+          "from_level": "M",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "solar",
+          "from_cost": 55.6,
+          "to_cost": 55.8,
+          "from_mix": {
+            "clean_firm": 31.0,
+            "solar": 40.0,
+            "wind": 41.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 11.0,
+            "wind_batt4": 1.0,
+            "wind_batt8": 1.0
+          },
+          "to_mix": {
+            "clean_firm": 31.0,
+            "solar": 41.0,
+            "wind": 41.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 1.0
+          }
+        },
+        {
+          "toggle": "ldes",
+          "from_level": "L",
+          "to_level": "H",
+          "from_dominant": "wind",
+          "to_dominant": "solar",
+          "from_cost": 54.7,
+          "to_cost": 55.8,
+          "from_mix": {
+            "clean_firm": 31.0,
+            "solar": 40.0,
+            "wind": 41.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 11.0,
+            "wind_batt4": 1.0,
+            "wind_batt8": 1.0
+          },
+          "to_mix": {
+            "clean_firm": 31.0,
+            "solar": 41.0,
+            "wind": 41.0,
+            "solar_batt4": 0.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 1.0
+          }
+        }
+      ],
+      "n_unique_mixes": 12,
       "mixes": [
         {
-          "clean_firm": 6.0,
-          "solar": 14.0,
-          "wind": 136.0,
-          "min_cost": 33.9,
-          "max_cost": 71.0
+          "clean_firm": 31.0,
+          "solar": 40.0,
+          "wind": 41.0,
+          "min_cost": 54.7,
+          "max_cost": 105.3
         },
         {
-          "clean_firm": 5.0,
-          "solar": 15.0,
-          "wind": 136.0,
-          "min_cost": 34.0,
-          "max_cost": 58.3
+          "clean_firm": 31.0,
+          "solar": 41.0,
+          "wind": 41.0,
+          "min_cost": 55.8,
+          "max_cost": 102.4
         },
         {
-          "clean_firm": 21.0,
-          "solar": 19.0,
-          "wind": 102.0,
-          "min_cost": 37.1,
-          "max_cost": 69.5
+          "clean_firm": 31.0,
+          "solar": 41.0,
+          "wind": 41.0,
+          "min_cost": 55.8,
+          "max_cost": 102.4
         },
         {
-          "clean_firm": 22.0,
-          "solar": 18.0,
-          "wind": 102.0,
-          "min_cost": 42.6,
-          "max_cost": 65.1
+          "clean_firm": 29.0,
+          "solar": 41.0,
+          "wind": 41.0,
+          "min_cost": 61.1,
+          "max_cost": 72.9
         },
         {
-          "clean_firm": 11.0,
-          "solar": 26.0,
-          "wind": 111.0,
-          "min_cost": 46.1,
-          "max_cost": 57.6
+          "clean_firm": 30.0,
+          "solar": 41.0,
+          "wind": 41.0,
+          "min_cost": 61.8,
+          "max_cost": 89.4
         },
         {
-          "clean_firm": 36.0,
-          "solar": 15.0,
-          "wind": 86.0,
-          "min_cost": 52.3,
-          "max_cost": 59.6
+          "clean_firm": 31.0,
+          "solar": 39.0,
+          "wind": 41.0,
+          "min_cost": 62.5,
+          "max_cost": 97.6
         },
         {
-          "clean_firm": 21.0,
-          "solar": 17.0,
-          "wind": 105.0,
-          "min_cost": 57.2,
-          "max_cost": 57.3
+          "clean_firm": 49.0,
+          "solar": 0.0,
+          "wind": 129.0,
+          "min_cost": 65.0,
+          "max_cost": 67.8
         },
         {
           "clean_firm": 49.0,
           "solar": 19.0,
-          "wind": 64.0,
-          "min_cost": 59.5,
-          "max_cost": 62.4
+          "wind": 59.0,
+          "min_cost": 67.6,
+          "max_cost": 89.2
+        },
+        {
+          "clean_firm": 9.0,
+          "solar": 49.0,
+          "wind": 41.0,
+          "min_cost": 68.9,
+          "max_cost": 79.4
+        },
+        {
+          "clean_firm": 9.0,
+          "solar": 49.0,
+          "wind": 41.0,
+          "min_cost": 68.9,
+          "max_cost": 79.4
+        },
+        {
+          "clean_firm": 30.0,
+          "solar": 40.0,
+          "wind": 41.0,
+          "min_cost": 72.2,
+          "max_cost": 83.2
+        },
+        {
+          "clean_firm": 9.0,
+          "solar": 50.0,
+          "wind": 40.0,
+          "min_cost": 73.0,
+          "max_cost": 75.8
         }
       ]
     },
     "99.5": {
-      "transitions": [],
-      "n_unique_mixes": 12,
-      "mixes": [
-        {
-          "clean_firm": 9.0,
-          "solar": 19.0,
-          "wind": 136.0,
-          "min_cost": 37.5,
-          "max_cost": 77.9
-        },
-        {
-          "clean_firm": 5.0,
-          "solar": 19.0,
-          "wind": 143.0,
-          "min_cost": 37.6,
-          "max_cost": 78.4
-        },
-        {
-          "clean_firm": 12.0,
-          "solar": 19.0,
-          "wind": 131.0,
-          "min_cost": 41.7,
-          "max_cost": 77.6
-        },
-        {
-          "clean_firm": 17.0,
-          "solar": 19.0,
-          "wind": 123.0,
-          "min_cost": 44.8,
-          "max_cost": 77.2
-        },
-        {
-          "clean_firm": 18.0,
-          "solar": 18.0,
-          "wind": 123.0,
-          "min_cost": 48.3,
-          "max_cost": 69.9
-        },
-        {
-          "clean_firm": 26.0,
-          "solar": 19.0,
-          "wind": 109.0,
-          "min_cost": 49.8,
-          "max_cost": 69.5
-        },
-        {
-          "clean_firm": 28.0,
-          "solar": 18.0,
-          "wind": 107.0,
-          "min_cost": 51.7,
-          "max_cost": 77.2
-        },
-        {
-          "clean_firm": 21.0,
-          "solar": 16.0,
-          "wind": 122.0,
-          "min_cost": 55.1,
-          "max_cost": 74.8
-        },
-        {
-          "clean_firm": 44.0,
-          "solar": 15.0,
-          "wind": 87.0,
-          "min_cost": 58.2,
-          "max_cost": 61.0
-        },
-        {
-          "clean_firm": 43.0,
-          "solar": 16.0,
-          "wind": 87.0,
-          "min_cost": 58.4,
-          "max_cost": 61.4
-        },
-        {
-          "clean_firm": 81.0,
-          "solar": 8.0,
-          "wind": 46.0,
-          "min_cost": 59.7,
-          "max_cost": 65.8
-        },
-        {
-          "clean_firm": 22.0,
-          "solar": 16.0,
-          "wind": 121.0,
-          "min_cost": 67.1,
-          "max_cost": 71.9
-        }
-      ]
-    },
-    "99.9": {
       "transitions": [
         {
           "toggle": "renewable",
           "from_level": "M",
           "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 57.0,
-          "to_cost": 63.1,
+          "from_dominant": "solar",
+          "to_dominant": "wind",
+          "from_cost": 64.9,
+          "to_cost": 72.5,
           "from_mix": {
-            "clean_firm": 56.0,
-            "solar": 17.0,
-            "wind": 73.0
+            "clean_firm": 31.0,
+            "solar": 41.0,
+            "wind": 41.0,
+            "solar_batt4": 1.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 1.0,
+            "wind_batt8": 1.0
           },
           "to_mix": {
-            "clean_firm": 85.0,
-            "solar": 7.0,
-            "wind": 46.0
+            "clean_firm": 49.0,
+            "solar": 19.0,
+            "wind": 59.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 9.0,
+            "wind_batt8": 0.0
           }
         },
         {
           "toggle": "renewable",
           "from_level": "L",
           "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 47.1,
-          "to_cost": 63.1,
+          "from_dominant": "solar",
+          "to_dominant": "wind",
+          "from_cost": 58.0,
+          "to_cost": 72.5,
           "from_mix": {
-            "clean_firm": 19.0,
-            "solar": 29.0,
-            "wind": 127.0
+            "clean_firm": 31.0,
+            "solar": 41.0,
+            "wind": 41.0,
+            "solar_batt4": 1.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 1.0,
+            "wind_batt8": 1.0
           },
           "to_mix": {
-            "clean_firm": 85.0,
-            "solar": 7.0,
-            "wind": 46.0
-          }
-        }
-      ],
-      "n_unique_mixes": 23,
-      "mixes": [
-        {
-          "clean_firm": 19.0,
-          "solar": 29.0,
-          "wind": 127.0,
-          "min_cost": 47.1,
-          "max_cost": 81.0
-        },
-        {
-          "clean_firm": 18.0,
-          "solar": 36.0,
-          "wind": 110.0,
-          "min_cost": 47.1,
-          "max_cost": 82.0
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 41.0,
-          "wind": 119.0,
-          "min_cost": 48.4,
-          "max_cost": 95.5
-        },
-        {
-          "clean_firm": 14.0,
-          "solar": 19.0,
-          "wind": 166.0,
-          "min_cost": 48.5,
-          "max_cost": 64.3
-        },
-        {
-          "clean_firm": 5.0,
-          "solar": 21.0,
-          "wind": 181.0,
-          "min_cost": 49.1,
-          "max_cost": 65.0
-        },
-        {
-          "clean_firm": 18.0,
-          "solar": 38.0,
-          "wind": 107.0,
-          "min_cost": 50.4,
-          "max_cost": 93.0
-        },
-        {
-          "clean_firm": 6.0,
-          "solar": 44.0,
-          "wind": 121.0,
-          "min_cost": 53.0,
-          "max_cost": 93.4
-        },
-        {
-          "clean_firm": 7.0,
-          "solar": 46.0,
-          "wind": 117.0,
-          "min_cost": 53.2,
-          "max_cost": 75.9
-        },
-        {
-          "clean_firm": 21.0,
-          "solar": 40.0,
-          "wind": 96.0,
-          "min_cost": 53.3,
-          "max_cost": 91.9
-        },
-        {
-          "clean_firm": 24.0,
-          "solar": 21.0,
-          "wind": 144.0,
-          "min_cost": 53.4,
-          "max_cost": 61.7
-        },
-        {
-          "clean_firm": 9.0,
-          "solar": 41.0,
-          "wind": 122.0,
-          "min_cost": 53.5,
-          "max_cost": 63.8
-        },
-        {
-          "clean_firm": 23.0,
-          "solar": 23.0,
-          "wind": 144.0,
-          "min_cost": 53.8,
-          "max_cost": 53.8
-        },
-        {
-          "clean_firm": 23.0,
-          "solar": 33.0,
-          "wind": 106.0,
-          "min_cost": 54.6,
-          "max_cost": 89.8
-        },
-        {
-          "clean_firm": 8.0,
-          "solar": 19.0,
-          "wind": 178.0,
-          "min_cost": 55.1,
-          "max_cost": 64.8
-        },
-        {
-          "clean_firm": 15.0,
-          "solar": 38.0,
-          "wind": 114.0,
-          "min_cost": 56.8,
-          "max_cost": 94.7
-        },
-        {
-          "clean_firm": 56.0,
-          "solar": 17.0,
-          "wind": 73.0,
-          "min_cost": 57.0,
-          "max_cost": 89.3
-        },
-        {
-          "clean_firm": 29.0,
-          "solar": 35.0,
-          "wind": 88.0,
-          "min_cost": 58.8,
-          "max_cost": 80.8
-        },
-        {
-          "clean_firm": 85.0,
-          "solar": 7.0,
-          "wind": 46.0,
-          "min_cost": 63.1,
-          "max_cost": 72.4
-        },
-        {
-          "clean_firm": 57.0,
-          "solar": 23.0,
-          "wind": 58.0,
-          "min_cost": 63.3,
-          "max_cost": 87.3
-        },
-        {
-          "clean_firm": 81.0,
-          "solar": 8.0,
-          "wind": 47.0,
-          "min_cost": 63.9,
-          "max_cost": 72.7
-        },
-        {
-          "clean_firm": 11.0,
-          "solar": 36.0,
-          "wind": 126.0,
-          "min_cost": 65.0,
-          "max_cost": 69.1
-        },
-        {
-          "clean_firm": 92.0,
-          "solar": 8.0,
-          "wind": 46.0,
-          "min_cost": 66.0,
-          "max_cost": 73.8
-        },
-        {
-          "clean_firm": 8.0,
-          "solar": 41.0,
-          "wind": 121.0,
-          "min_cost": 79.6,
-          "max_cost": 83.3
-        }
-      ]
-    },
-    "99.9": {
-      "transitions": [
-        {
-          "toggle": "renewable",
-          "from_level": "M",
-          "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 59.2,
-          "to_cost": 63.9,
-          "from_mix": {
-            "clean_firm": 57.0,
-            "solar": 23.0,
-            "wind": 58.0
-          },
-          "to_mix": {
-            "clean_firm": 81.0,
-            "solar": 8.0,
-            "wind": 47.0
+            "clean_firm": 49.0,
+            "solar": 19.0,
+            "wind": 59.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 9.0,
+            "wind_batt8": 0.0
           }
         },
         {
-          "toggle": "renewable",
+          "toggle": "storage",
+          "from_level": "L",
+          "to_level": "M",
+          "from_dominant": "solar",
+          "to_dominant": "wind",
+          "from_cost": 58.0,
+          "to_cost": 61.5,
+          "from_mix": {
+            "clean_firm": 31.0,
+            "solar": 41.0,
+            "wind": 41.0,
+            "solar_batt4": 1.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 1.0,
+            "wind_batt8": 1.0
+          },
+          "to_mix": {
+            "clean_firm": 49.0,
+            "solar": 19.0,
+            "wind": 59.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 9.0,
+            "wind_batt8": 0.0
+          }
+        },
+        {
+          "toggle": "storage",
           "from_level": "L",
           "to_level": "H",
-          "from_dominant": "wind",
-          "to_dominant": "clean_firm",
-          "from_cost": 50.8,
-          "to_cost": 63.9,
+          "from_dominant": "solar",
+          "to_dominant": "wind",
+          "from_cost": 58.0,
+          "to_cost": 65.0,
           "from_mix": {
-            "clean_firm": 26.0,
-            "solar": 27.0,
-            "wind": 115.0
+            "clean_firm": 31.0,
+            "solar": 41.0,
+            "wind": 41.0,
+            "solar_batt4": 1.0,
+            "solar_batt8": 9.0,
+            "wind_batt4": 1.0,
+            "wind_batt8": 1.0
           },
           "to_mix": {
-            "clean_firm": 81.0,
-            "solar": 8.0,
-            "wind": 47.0
+            "clean_firm": 49.0,
+            "solar": 0.0,
+            "wind": 129.0,
+            "solar_batt4": 9.0,
+            "solar_batt8": 0.0,
+            "wind_batt4": 0.0,
+            "wind_batt8": 0.0
           }
         }
       ],
-      "n_unique_mixes": 22,
+      "n_unique_mixes": 5,
       "mixes": [
         {
-          "clean_firm": 26.0,
-          "solar": 27.0,
-          "wind": 115.0,
-          "min_cost": 50.8,
-          "max_cost": 104.4
+          "clean_firm": 31.0,
+          "solar": 41.0,
+          "wind": 41.0,
+          "min_cost": 58.0,
+          "max_cost": 109.6
         },
         {
-          "clean_firm": 22.0,
-          "solar": 26.0,
-          "wind": 127.0,
-          "min_cost": 50.8,
-          "max_cost": 101.3
-        },
-        {
-          "clean_firm": 6.0,
-          "solar": 29.0,
-          "wind": 154.0,
-          "min_cost": 52.6,
-          "max_cost": 99.0
-        },
-        {
-          "clean_firm": 21.0,
-          "solar": 21.0,
-          "wind": 144.0,
-          "min_cost": 53.8,
-          "max_cost": 53.8
-        },
-        {
-          "clean_firm": 14.0,
-          "solar": 22.0,
-          "wind": 155.0,
-          "min_cost": 54.4,
-          "max_cost": 56.7
-        },
-        {
-          "clean_firm": 37.0,
-          "solar": 23.0,
-          "wind": 102.0,
-          "min_cost": 54.6,
-          "max_cost": 84.7
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 26.0,
-          "wind": 136.0,
-          "min_cost": 54.6,
-          "max_cost": 71.1
-        },
-        {
-          "clean_firm": 8.0,
-          "solar": 19.0,
-          "wind": 176.0,
-          "min_cost": 56.3,
-          "max_cost": 56.6
-        },
-        {
-          "clean_firm": 37.0,
-          "solar": 26.0,
-          "wind": 93.0,
-          "min_cost": 57.0,
-          "max_cost": 84.5
-        },
-        {
-          "clean_firm": 20.0,
-          "solar": 26.0,
-          "wind": 130.0,
-          "min_cost": 58.4,
-          "max_cost": 95.0
-        },
-        {
-          "clean_firm": 57.0,
-          "solar": 23.0,
-          "wind": 58.0,
-          "min_cost": 59.2,
-          "max_cost": 90.8
-        },
-        {
-          "clean_firm": 56.0,
-          "solar": 17.0,
-          "wind": 73.0,
-          "min_cost": 59.3,
-          "max_cost": 91.8
-        },
-        {
-          "clean_firm": 19.0,
-          "solar": 29.0,
-          "wind": 129.0,
-          "min_cost": 59.3,
-          "max_cost": 68.8
+          "clean_firm": 31.0,
+          "solar": 41.0,
+          "wind": 41.0,
+          "min_cost": 58.0,
+          "max_cost": 109.6
         },
         {
           "clean_firm": 49.0,
-          "solar": 17.0,
-          "wind": 88.0,
-          "min_cost": 60.1,
-          "max_cost": 83.8
+          "solar": 19.0,
+          "wind": 59.0,
+          "min_cost": 61.5,
+          "max_cost": 99.7
+        },
+        {
+          "clean_firm": 49.0,
+          "solar": 0.0,
+          "wind": 129.0,
+          "min_cost": 65.0,
+          "max_cost": 78.2
         },
         {
           "clean_firm": 11.0,
-          "solar": 36.0,
-          "wind": 126.0,
-          "min_cost": 61.1,
-          "max_cost": 96.9
-        },
+          "solar": 49.0,
+          "wind": 41.0,
+          "min_cost": 74.8,
+          "max_cost": 74.8
+        }
+      ]
+    },
+    "99.9": {
+      "transitions": [],
+      "n_unique_mixes": 1,
+      "mixes": [
         {
-          "clean_firm": 23.0,
-          "solar": 33.0,
-          "wind": 106.0,
-          "min_cost": 63.1,
-          "max_cost": 97.7
-        },
-        {
-          "clean_firm": 21.0,
-          "solar": 40.0,
-          "wind": 96.0,
-          "min_cost": 63.5,
-          "max_cost": 97.7
-        },
-        {
-          "clean_firm": 81.0,
-          "solar": 8.0,
-          "wind": 47.0,
-          "min_cost": 63.9,
-          "max_cost": 72.8
-        },
-        {
-          "clean_firm": 17.0,
-          "solar": 36.0,
-          "wind": 114.0,
-          "min_cost": 66.2,
-          "max_cost": 104.6
-        },
-        {
-          "clean_firm": 86.0,
-          "solar": 11.0,
-          "wind": 43.0,
-          "min_cost": 66.9,
-          "max_cost": 74.2
-        },
-        {
-          "clean_firm": 8.0,
-          "solar": 41.0,
-          "wind": 121.0,
-          "min_cost": 67.9,
-          "max_cost": 92.5
-        },
-        {
-          "clean_firm": 10.0,
-          "solar": 41.0,
-          "wind": 119.0,
-          "min_cost": 84.5,
-          "max_cost": 84.5
+          "clean_firm": 49.0,
+          "solar": 0.0,
+          "wind": 129.0,
+          "min_cost": 61.5,
+          "max_cost": 128.5
         }
       ]
     }
