@@ -1380,7 +1380,8 @@ DISPATCH_CACHE_DIR = os.path.join(DATA_DIR, 'step3-dispatch')
 
 
 def _archetype_key(iso, resource_pcts, procurement_pct=100, battery_dispatch_pct=0,
-                   battery8_dispatch_pct=0, ldes_dispatch_pct=0):
+                   battery8_dispatch_pct=0, ldes_dispatch_pct=0,
+                   include_hybrids=False):
     """Deterministic hash key for a unique dispatch archetype."""
     parts = [
         iso,
@@ -1395,6 +1396,13 @@ def _archetype_key(iso, resource_pcts, procurement_pct=100, battery_dispatch_pct
         str(float(battery8_dispatch_pct)),
         str(float(ldes_dispatch_pct)),
     ]
+    if include_hybrids:
+        parts.extend([
+            str(float(resource_pcts.get('solar_batt4', 0))),
+            str(float(resource_pcts.get('solar_batt8', 0))),
+            str(float(resource_pcts.get('wind_batt4', 0))),
+            str(float(resource_pcts.get('wind_batt8', 0))),
+        ])
     key_str = '|'.join(parts)
     return hashlib.md5(key_str.encode()).hexdigest()[:16]
 
@@ -1550,7 +1558,8 @@ def get_or_compute_dispatch(iso, demand_norm, supply_profiles, resource_pcts,
     """
     key = _archetype_key(iso, resource_pcts, procurement_pct,
                          battery_dispatch_pct, battery8_dispatch_pct,
-                         ldes_dispatch_pct)
+                         ldes_dispatch_pct,
+                         include_hybrids=include_hybrids)
 
     if cache is not None and key in cache:
         cached = cache[key]

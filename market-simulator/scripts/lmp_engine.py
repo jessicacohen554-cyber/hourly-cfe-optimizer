@@ -1171,6 +1171,8 @@ def archetype_key(mix, fuel_level, threshold):
     mix_tuple = (
         mix.get('clean_firm', 0), mix.get('solar', 0), mix.get('wind', 0),
         mix.get('offshore_wind', 0), mix.get('ccs_ccgt', 0), mix.get('hydro', 0),
+        mix.get('solar_batt4', 0), mix.get('solar_batt8', 0),
+        mix.get('wind_batt4', 0), mix.get('wind_batt8', 0),
     )
     return f"{mix_tuple}_{fuel_level}_{threshold}"
 
