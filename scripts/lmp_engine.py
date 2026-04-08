@@ -316,6 +316,11 @@ def _compute_clean_peak_mw(iso, resource_mix, battery_pct=0,
         resource_mix.get('offshore_wind', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS.get('offshore_wind', 0.25) +
         resource_mix.get('ccs_ccgt', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ccs_ccgt'] +
         resource_mix.get('hydro', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['hydro'] +
+        # Hybrid co-located resources: battery shifts generation to peak → higher ELCC than standalone
+        resource_mix.get('solar_batt4', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS.get('solar_batt4', 0.70) +
+        resource_mix.get('solar_batt8', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS.get('solar_batt8', 0.85) +
+        resource_mix.get('wind_batt4', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS.get('wind_batt4', 0.50) +
+        resource_mix.get('wind_batt8', 0) / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS.get('wind_batt8', 0.65) +
         battery_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery'] +
         battery8_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['battery8'] +
         ldes_pct / 100.0 * avg_demand_mw * PEAK_CAPACITY_CREDITS['ldes'] +
