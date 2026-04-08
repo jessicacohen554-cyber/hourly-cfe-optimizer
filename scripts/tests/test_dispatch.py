@@ -21,11 +21,12 @@ from dispatch_utils import (
     _dispatch_battery_detailed, _dispatch_ldes_detailed,
     reconstruct_hourly_dispatch, build_supply_matrix,
     _compute_per_resource_dispatch,
+    _get_dispatch_order_indices,
     BATTERY_EFFICIENCY, BATTERY_DURATION_HOURS,
     BATTERY8_EFFICIENCY, BATTERY8_DURATION_HOURS,
     LDES_EFFICIENCY, LDES_DURATION_HOURS, LDES_WINDOW_DAYS,
     H2_EFFICIENCY, H2_DURATION_HOURS, H2_WINDOW_DAYS,
-    RESOURCE_TYPES, DISPATCH_ORDER,
+    RESOURCE_TYPES, RESOURCE_TYPES_HYBRID, DISPATCH_ORDER,
 )
 
 H = 8760
@@ -375,3 +376,126 @@ class TestFullDispatchEnergyBalance:
 
         assert result['fossil_displaced'].sum() == pytest.approx(0.0, abs=1e-12), \
             "Zero supply produced non-zero match"
+
+
+class TestHybridDispatch:
+    """Tests for hybrid co-located resource dispatch (solar+batt, wind+batt)."""
+
+    def test_hybrid_build_supply_matrix_shape(self, synthetic_hybrid_profiles):
+        """build_supply_matrix with RESOURCE_TYPES_HYBRID returns (10, 8760)."""
+        matrix = build_supply_matrix(
+            synthetic_hybrid_profiles, resource_types=RESOURCE_TYPES_HYBRID
+        )
+        assert matrix.shape == (10, H), \
+            f"Expected (10, {H}), got {matrix.shape}"
+
+    def test_hybrid_dispatch_energy_balance(self, synthetic_demand,
+                                            synthetic_hybrid_profiles, hybrid_mix):
+        """Energy balance: supply_total + storage = total_clean with hybrid resources."""
+        result = reconstruct_hourly_dispatch(
+            synthetic_demand, synthetic_hybrid_profiles, hybrid_mix,
+            procurement_pct=100,
+            battery_dispatch_pct=0.2,
+            battery8_dispatch_pct=0.1,
+            ldes_dispatch_pct=0.5,
+            resource_types=RESOURCE_TYPES_HYBRID,
+        )
+
+        storage_total = (result['battery4_profile']
+                         + result['battery8_profile']
+                         + result['ldes_profile']
+                         + result['h2_profile'])
+        reconstructed = result['supply_total'] + storage_total
+
+        np.testing.assert_allclose(
+            reconstructed, result['total_clean'], atol=1e-10,
+            err_msg="Energy balance violated: supply_total + storage != total_clean"
+        )
+
+    def test_hybrid_dispatch_reduces_residual(self, synthetic_demand,
+                                               synthetic_hybrid_profiles):
+        """Hybrid mix should have lower residual than base-only mix with same total %."""
+        # Base-only: 30% CF + 30% solar + 30% wind + 10% hydro = 100%
+        base_pcts = {
+            'clean_firm': 30.0, 'solar': 30.0, 'wind': 30.0,
+            'offshore_wind': 0.0, 'ccs_ccgt': 0.0, 'hydro': 10.0,
+        }
+        base_result = reconstruct_hourly_dispatch(
+            synthetic_demand, synthetic_hybrid_profiles, base_pcts,
+            procurement_pct=100,
+            resource_types=RESOURCE_TYPES_HYBRID,
+        )
+
+        # Hybrid: shift 15% solar → solar_batt4, 15% wind → wind_batt4
+        hybrid_pcts = {
+            'clean_firm': 30.0, 'solar': 15.0, 'wind': 15.0,
+            'offshore_wind': 0.0, 'ccs_ccgt': 0.0, 'hydro': 10.0,
+            'solar_batt4': 15.0, 'solar_batt8': 0.0,
+            'wind_batt4': 15.0, 'wind_batt8': 0.0,
+        }
+        hybrid_result = reconstruct_hourly_dispatch(
+            synthetic_demand, synthetic_hybrid_profiles, hybrid_pcts,
+            procurement_pct=100,
+            resource_types=RESOURCE_TYPES_HYBRID,
+        )
+
+        base_residual = base_result['residual_demand'].sum()
+        hybrid_residual = hybrid_result['residual_demand'].sum()
+
+        assert hybrid_residual <= base_residual + 1e-10, \
+            f"Hybrid residual ({hybrid_residual:.6f}) > base residual ({base_residual:.6f})"
+
+    def test_hybrid_zero_pcts_matches_base(self, synthetic_demand,
+                                            synthetic_hybrid_profiles, small_mix):
+        """Hybrid dispatch with all hybrid keys=0 should match base-only dispatch."""
+        # Base dispatch (6 resource types)
+        base_result = reconstruct_hourly_dispatch(
+            synthetic_demand, synthetic_hybrid_profiles, small_mix,
+            procurement_pct=100,
+        )
+
+        # Hybrid dispatch with zero hybrid pcts
+        hybrid_pcts = dict(small_mix)
+        for ht in ['solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8']:
+            hybrid_pcts[ht] = 0.0
+
+        hybrid_result = reconstruct_hourly_dispatch(
+            synthetic_demand, synthetic_hybrid_profiles, hybrid_pcts,
+            procurement_pct=100,
+            resource_types=RESOURCE_TYPES_HYBRID,
+        )
+
+        np.testing.assert_allclose(
+            hybrid_result['supply_total'], base_result['supply_total'], atol=1e-12,
+            err_msg="Hybrid dispatch with zero hybrid pcts differs from base dispatch"
+        )
+        np.testing.assert_allclose(
+            hybrid_result['total_clean'], base_result['total_clean'], atol=1e-12,
+            err_msg="total_clean differs between base and zero-hybrid dispatch"
+        )
+
+    def test_hybrid_dispatch_order(self):
+        """Dispatch order indices are valid and hybrids follow their parent renewable."""
+        indices = _get_dispatch_order_indices(RESOURCE_TYPES_HYBRID)
+
+        # All 10 resource types must have an index
+        assert len(indices) == len(RESOURCE_TYPES_HYBRID), \
+            f"Expected {len(RESOURCE_TYPES_HYBRID)} indices, got {len(indices)}"
+
+        # All indices must be valid
+        assert all(0 <= idx < len(RESOURCE_TYPES_HYBRID) for idx in indices), \
+            "Invalid index in dispatch order"
+
+        # No duplicate indices
+        assert len(set(indices)) == len(indices), "Duplicate indices in dispatch order"
+
+        # Convert indices back to names for ordering checks
+        order_names = [RESOURCE_TYPES_HYBRID[i] for i in indices]
+
+        # wind_batt4 must come after wind
+        assert order_names.index('wind_batt4') > order_names.index('wind'), \
+            "wind_batt4 should be dispatched after wind"
+
+        # solar_batt4 must come after solar
+        assert order_names.index('solar_batt4') > order_names.index('solar'), \
+            "solar_batt4 should be dispatched after solar"
