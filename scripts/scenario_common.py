@@ -49,6 +49,7 @@ from dispatch_utils import (
     load_common_data, get_supply_profiles, get_demand_profile,
     build_supply_matrix, reconstruct_hourly_dispatch,
     _archetype_key, load_dispatch_cache, get_or_compute_dispatch,
+    RESOURCE_TYPES_HYBRID,
 )
 
 # ============================================================================
@@ -424,7 +425,7 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
         # Dispatch-based gas backup: actual net peak hour from 8760 dispatch
         from dispatch_utils import reconstruct_hourly_dispatch, build_supply_matrix as _bsm
         if supply_matrix is None:
-            supply_matrix = _bsm(supply_profiles)
+            supply_matrix = _bsm(supply_profiles, resource_types=RESOURCE_TYPES_HYBRID)
         resource_pcts = {
             'clean_firm': cf_pct, 'solar': sol_pct, 'wind': wnd_pct,
             'offshore_wind': osw_pct, 'ccs_ccgt': ccs_pct, 'hydro': hyd_pct,
@@ -439,6 +440,7 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
             battery_dispatch_pct=bat4_pct, battery8_dispatch_pct=bat8_pct,
             ldes_dispatch_pct=ldes_pct, h2_dispatch_pct=h2_pct,
             supply_matrix=supply_matrix,
+            resource_types=RESOURCE_TYPES_HYBRID,
         )
         # residual_demand is in fraction-of-annual-energy units;
         # multiply by total annual MWh to get MW (each value = 1 hour)
@@ -448,9 +450,12 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
 
         # Baseline dispatch for delta calibration
         baseline_pcts = {k: v for k, v in GRID_MIX_SHARES[iso].items()}
+        for _ht in HYBRID_TYPES:
+            baseline_pcts.setdefault(_ht, 0)
         disp_base = reconstruct_hourly_dispatch(
             demand_norm, supply_profiles, baseline_pcts,
             procurement_pct=100, supply_matrix=supply_matrix,
+            resource_types=RESOURCE_TYPES_HYBRID,
         )
         baseline_peak = float(np.max(disp_base['residual_demand'])) * (BASE_DEMAND_TWH[iso] * 1e6)
         baseline_gas_raw = baseline_peak * (1 + RESOURCE_ADEQUACY_MARGIN) / gaf
@@ -1522,7 +1527,7 @@ def _get_dispatch_co2_for_mix(iso, mix_result, egrid, demand_data, gen_profiles,
     bat8_pct = mix_result.get('battery8_dispatch_pct', 0)
     ldes_pct = mix_result.get('ldes_dispatch_pct', 0)
     h2_pct = mix_result.get('h2_dispatch_pct', 0)
-    supply_profiles = get_supply_profiles(iso, gen_profiles)
+    supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
     demand_norm, _ = get_demand_profile(iso, demand_data)
     cache = dispatch_caches.get(iso, {})
     dispatch_result, _ = get_or_compute_dispatch(

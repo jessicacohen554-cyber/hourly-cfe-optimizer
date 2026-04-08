@@ -36,7 +36,7 @@ sys.path.insert(0, SCRIPT_DIR)
 from dispatch_utils import (
     H, GRID_MIX_SHARES, BASE_DEMAND_TWH,
     load_common_data, get_demand_profile, get_supply_profiles,
-    reconstruct_hourly_dispatch,
+    reconstruct_hourly_dispatch, RESOURCE_TYPES_HYBRID,
 )
 from lmp_engine import (
     build_merit_order_stack, get_price_model,
@@ -199,7 +199,7 @@ def run_synthetic_lmp_for_calibration(iso='PJM', fuel_level='Medium'):
     """
     demand_data, gen_profiles, emission_rates, fossil_mix = load_common_data()
     demand_norm, total_mwh = get_demand_profile(iso, demand_data)
-    supply_profiles = get_supply_profiles(iso, gen_profiles)
+    supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
     demand_mw_profile = demand_norm * total_mwh
 
     baseline_clean = sum(GRID_MIX_SHARES.get(iso, {}).values())
@@ -218,7 +218,8 @@ def run_synthetic_lmp_for_calibration(iso='PJM', fuel_level='Medium'):
         100,  # procurement always 100 in v5.0
         0,  # battery
         0,  # battery8
-        0)  # ldes
+        0,  # ldes
+        resource_types=RESOURCE_TYPES_HYBRID)
 
     # Merit-order stack (RA + GAF aware)
     stack, fossil_mw = build_merit_order_stack(

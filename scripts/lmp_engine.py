@@ -24,7 +24,7 @@ SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, SCRIPT_DIR)
 
 from dispatch_utils import (
-    H, ISOS, RESOURCE_TYPES,
+    H, ISOS, RESOURCE_TYPES, RESOURCE_TYPES_HYBRID,
     GRID_MIX_SHARES, BASE_DEMAND_TWH,
     WHOLESALE_PRICES, FUEL_ADJUSTMENTS,
     COAL_OIL_RETIREMENT_THRESHOLD, COAL_CAP_TWH, OIL_CAP_TWH,
@@ -1399,7 +1399,7 @@ def run_lmp_for_iso(iso, scenarios, demand_data, gen_profiles,
         results: list of dicts with LMP stats per (threshold, scenario)
     """
     demand_norm, total_mwh = get_demand_profile(iso, demand_data)
-    supply_profiles = get_supply_profiles(iso, gen_profiles)
+    supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
 
     # Convert normalized demand to MW profile
     demand_mw_profile = demand_norm * total_mwh
@@ -1514,7 +1514,7 @@ def run_test_cases(iso='PJM'):
 
     demand_data, gen_profiles, emission_rates, fossil_mix = load_common_data()
     demand_norm, total_mwh = get_demand_profile(iso, demand_data)
-    supply_profiles = get_supply_profiles(iso, gen_profiles)
+    supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
     demand_mw_profile = demand_norm * total_mwh
 
     baseline_clean = sum(GRID_MIX_SHARES.get(iso, {}).values())
@@ -1569,7 +1569,8 @@ def run_test_cases(iso='PJM'):
             battery_dispatch_pct=sc.get('battery_dispatch_pct', 0),
             battery8_dispatch_pct=sc.get('battery8_dispatch_pct', 0),
             ldes_dispatch_pct=sc.get('ldes_dispatch_pct', 0),
-            h2_dispatch_pct=sc.get('h2_dispatch_pct', 0))
+            h2_dispatch_pct=sc.get('h2_dispatch_pct', 0),
+            resource_types=RESOURCE_TYPES_HYBRID)
 
         # Merit-order stack (RA + GAF aware)
         batt4_pct = sc.get('battery_dispatch_pct', 0)
