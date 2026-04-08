@@ -1362,6 +1362,10 @@ def load_scenarios(iso=None, threshold=None):
             'offshore_wind': row.get('mix_offshore_wind', 0),
             'ccs_ccgt': row.get('mix_ccs_ccgt', 0),
             'hydro': row.get('mix_hydro', 0),
+            'solar_batt4': row.get('mix_solar_batt4', 0),
+            'solar_batt8': row.get('mix_solar_batt8', 0),
+            'wind_batt4': row.get('mix_wind_batt4', 0),
+            'wind_batt8': row.get('mix_wind_batt8', 0),
         }
         rows.append(row)
 
@@ -1442,7 +1446,8 @@ def run_lmp_for_iso(iso, scenarios, demand_data, gen_profiles,
         dispatch, cache_hit = get_or_compute_dispatch(
             iso, demand_norm, supply_profiles, resource_mix,
             battery_dispatch_pct=batt4, battery8_dispatch_pct=batt8,
-            ldes_dispatch_pct=ldes, cache=dispatch_cache)
+            ldes_dispatch_pct=ldes, cache=dispatch_cache,
+            h2_dispatch_pct=h2, resource_types=RESOURCE_TYPES_HYBRID)
 
         if cache_hit:
             cache_hits += 1

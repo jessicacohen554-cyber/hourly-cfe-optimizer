@@ -546,8 +546,9 @@ def compute_mix_cost(mix, sens, iso, demand_twh, overrides=None, growth_factor=1
         'wholesale': wholesale,
         'gas_cost': round(gas_cost, 4),
         'resource_twh': resource_twh,
-        'resource_pct': {'clean_firm': cf_pct, 'solar': sol_pct, 'wind': wnd_pct,
+        'resource_pct': dict({'clean_firm': cf_pct, 'solar': sol_pct, 'wind': wnd_pct,
                          'offshore_wind': osw_pct, 'ccs_ccgt': ccs_pct, 'hydro': hyd_pct},
+                         **(hybrid_pcts or {})),
         'match_score': match_score,
         'battery_twh': bat4_pct / 100.0 * demand_twh,
         'battery8_twh': bat8_pct / 100.0 * demand_twh,
@@ -1533,7 +1534,8 @@ def _get_dispatch_co2_for_mix(iso, mix_result, egrid, demand_data, gen_profiles,
     dispatch_result, _ = get_or_compute_dispatch(
         iso, demand_norm, supply_profiles, resource_pcts,
         battery_dispatch_pct=bat_pct, battery8_dispatch_pct=bat8_pct,
-        ldes_dispatch_pct=ldes_pct, cache=cache)
+        ldes_dispatch_pct=ldes_pct, cache=cache,
+        h2_dispatch_pct=h2_pct, resource_types=RESOURCE_TYPES_HYBRID)
     dispatch_caches[iso] = cache
     demand_mwh = mix_result.get('demand_mwh', 0)
     if demand_mwh <= 0:
