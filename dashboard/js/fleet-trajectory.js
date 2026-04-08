@@ -113,16 +113,79 @@
     }
 
     function loadAllData() {
-        var p1 = fetch('data/fleet_scenario_results_sample.json').then(function (r) { return r.json(); });
-        var p2 = fetch('data/constellation_scenarios.json').then(function (r) { return r.json(); });
-        var p3 = fetch('data/sweep_dispatch_data.json').then(function (r) { return r.json(); });
+        var ALL_ISOS = ['CAISO', 'ERCOT', 'MISO', 'NEISO', 'NYISO', 'PJM', 'SPP'];
 
         // Load smartargets from global
         if (typeof IPP_SMARTARGETS_DATA !== 'undefined' && IPP_SMARTARGETS_DATA.companies) {
             smartargets = IPP_SMARTARGETS_DATA.companies.constellation || null;
         }
 
-        Promise.all([p1, p2, p3]).then(function (results) {
+        // 1. Constellation config (single file, no per-ISO variant)
+        var pConfig = fetch('data/constellation_scenarios.json')
+            .then(function (r) { return r.json(); });
+
+        // 2. Fleet scenario results — try per-ISO files first, fall back to combined
+        var pFleet = (function () {
+            var perIsoFetches = ALL_ISOS.map(function (iso) {
+                return fetch('data/fleet_scenario_results_' + iso + '.json')
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .catch(function () { return null; });
+            });
+            return Promise.all(perIsoFetches).then(function (results) {
+                var loaded = results.filter(function (r) { return r !== null; });
+                if (loaded.length > 0) {
+                    var merged = JSON.parse(JSON.stringify(loaded[0]));
+                    for (var i = 1; i < loaded.length; i++) {
+                        var isoData = loaded[i];
+                        Object.keys(isoData.scenarios || {}).forEach(function (skey) {
+                            var src = isoData.scenarios[skey];
+                            var dst = merged.scenarios[skey];
+                            if (!dst) { merged.scenarios[skey] = src; return; }
+                            Object.keys(src.plant_detail || {}).forEach(function (yr) {
+                                if (!dst.plant_detail[yr]) dst.plant_detail[yr] = [];
+                                dst.plant_detail[yr] = dst.plant_detail[yr].concat(src.plant_detail[yr] || []);
+                            });
+                            Object.keys(src.plant_percentiles || {}).forEach(function (yr) {
+                                if (!dst.plant_percentiles[yr]) dst.plant_percentiles[yr] = [];
+                                dst.plant_percentiles[yr] = dst.plant_percentiles[yr].concat(src.plant_percentiles[yr] || []);
+                            });
+                        });
+                    }
+                    return merged;
+                }
+                return fetch('data/fleet_scenario_results_sample.json')
+                    .then(function (r) { if (r.ok) return r.json(); throw new Error('No fleet data'); });
+            });
+        })();
+
+        // 3. Sweep dispatch data — try per-ISO files first, fall back to combined
+        var pSweep = (function () {
+            var perIsoFetches = ALL_ISOS.map(function (iso) {
+                return fetch('data/sweep_dispatch_data_' + iso + '.json')
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .catch(function () { return null; });
+            });
+            return Promise.all(perIsoFetches).then(function (results) {
+                var loaded = results.filter(function (r) { return r !== null; });
+                if (loaded.length > 0) {
+                    var merged = Object.assign({}, loaded[0]);
+                    merged.data = {};
+                    merged.isos = [];
+                    loaded.forEach(function (isoData) {
+                        Object.keys(isoData.data || {}).forEach(function (k) {
+                            merged.data[k] = isoData.data[k];
+                            if (merged.isos.indexOf(k) === -1) merged.isos.push(k);
+                        });
+                    });
+                    merged.isos.sort();
+                    return merged;
+                }
+                return fetch('data/sweep_dispatch_data.json')
+                    .then(function (r) { if (r.ok) return r.json(); throw new Error('No sweep data'); });
+            });
+        })();
+
+        Promise.all([pFleet, pConfig, pSweep]).then(function (results) {
             fleetData = results[0];
             fleetConfig = results[1];
             sweepData = results[2];
