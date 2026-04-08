@@ -66,6 +66,7 @@ from dispatch_utils import (
     load_common_data, get_demand_profile, get_supply_profiles,
     reconstruct_hourly_dispatch, compute_fossil_retirement,
     COAL_CAP_TWH, OIL_CAP_TWH,
+    RESOURCE_TYPES_HYBRID,
 )
 from scenario_common import (
     build_zones, THRESHOLDS,
@@ -682,6 +683,8 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
     )
 
     # Reconstruct dispatch — uses NORMALIZED demand profile
+    # Use hybrid-aware resource list when mix contains hybrid co-located resources
+    _has_hybrids = any(resource_pcts.get(ht, 0) > 0 for ht in HYBRID_TYPES)
     dispatch = reconstruct_hourly_dispatch(
         demand_norm, supply_profiles, resource_pcts,
         procurement_pct=clean_pct,
@@ -689,6 +692,7 @@ def compute_lmp_at_threshold(iso, clean_pct, fuel_level, demand_norm,
         battery8_dispatch_pct=battery8_pct,
         ldes_dispatch_pct=ldes_pct,
         h2_dispatch_pct=h2_pct,
+        resource_types=RESOURCE_TYPES_HYBRID if _has_hybrids else None,
     )
 
     # Compute LMP — uses MW demand profile
@@ -1380,7 +1384,7 @@ def run_market_simulation(scenario_id, conditions, isos=None, reduction_target=1
 
             # Get demand and supply profiles
             demand_norm, total_mwh_base = get_demand_profile(iso, demand_data)
-            supply_profiles_iso = get_supply_profiles(iso, gen_profiles)
+            supply_profiles_iso = get_supply_profiles(iso, gen_profiles, include_hybrids=True)
 
             # demand_mw_profile = demand_norm × total_annual_mwh (MW units)
             # per step5b pattern (line 1159): demand_mw_profile = demand_norm * total_mwh
