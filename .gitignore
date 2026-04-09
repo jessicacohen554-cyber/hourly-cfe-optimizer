@@ -109,6 +109,9 @@ data/step3_winning_mixes.csv
 # Archives — local comparison snapshots, not tracked in git
 data/archive_*/
 
+# Run logs — per-session execution output, not tracked in git
+logs/
+
 # Old Step 6 V1 parquets (R1/R2/AT/QT individual scenarios) — superseded by parametric sweep
 data/step6-smartargets/v1_archived/
 # Old combined sweep parquet — replaced by per-ISO parquets (sweep_{type}_{ISO}.parquet)
