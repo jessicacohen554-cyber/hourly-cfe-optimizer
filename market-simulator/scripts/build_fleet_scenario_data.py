@@ -1608,11 +1608,10 @@ def main():
                 iso_plant_detail[yr_str] = [
                     p for p in yr_plants if p.get('name') in iso_plants_set
                 ]
-            iso_plant_percentiles = {}
-            for yr_str, yr_plants in sdata.get('plant_percentiles', {}).items():
-                iso_plant_percentiles[yr_str] = [
-                    p for p in yr_plants if p.get('name') in iso_plants_set
-                ]
+            iso_plant_percentiles = {
+                orispl: pdata for orispl, pdata in sdata.get('plant_percentiles', {}).items()
+                if pdata.get('name') in iso_plants_set
+            }
             iso_scenarios[skey] = {
                 'description': sdata.get('description', ''),
                 'color': sdata.get('color', '#888'),
