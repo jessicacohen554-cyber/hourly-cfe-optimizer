@@ -1,0 +1,2978 @@
+{
+  "scenarios": {
+    "baseline": {
+      "description": "Status quo \u2014 no CCS, no early retirements. Natural market-driven decline only.",
+      "color": "#7E8083",
+      "envelope": {
+        "2023": {
+          "p10": 48.6,
+          "p50": 48.6,
+          "p90": 48.6
+        },
+        "2024": {
+          "p10": 47.9,
+          "p50": 47.9,
+          "p90": 47.9
+        },
+        "2025": {
+          "p10": 44.9,
+          "p50": 44.9,
+          "p90": 44.9
+        },
+        "2026": {
+          "p10": 35.0,
+          "p50": 44.4,
+          "p90": 48.0
+        },
+        "2027": {
+          "p10": 33.8,
+          "p50": 43.1,
+          "p90": 48.1
+        },
+        "2028": {
+          "p10": 33.1,
+          "p50": 42.9,
+          "p90": 48.1
+        },
+        "2029": {
+          "p10": 32.5,
+          "p50": 42.0,
+          "p90": 47.9
+        },
+        "2030": {
+          "p10": 31.7,
+          "p50": 41.3,
+          "p90": 47.7
+        },
+        "2031": {
+          "p10": 30.6,
+          "p50": 38.9,
+          "p90": 46.1
+        },
+        "2032": {
+          "p10": 31.3,
+          "p50": 39.4,
+          "p90": 46.0
+        },
+        "2033": {
+          "p10": 30.0,
+          "p50": 37.5,
+          "p90": 44.0
+        },
+        "2034": {
+          "p10": 29.2,
+          "p50": 35.1,
+          "p90": 43.4
+        },
+        "2035": {
+          "p10": 29.1,
+          "p50": 34.5,
+          "p90": 42.3
+        },
+        "2036": {
+          "p10": 28.9,
+          "p50": 34.3,
+          "p90": 41.7
+        },
+        "2037": {
+          "p10": 28.7,
+          "p50": 33.8,
+          "p90": 40.9
+        },
+        "2038": {
+          "p10": 28.9,
+          "p50": 33.9,
+          "p90": 40.6
+        },
+        "2039": {
+          "p10": 29.0,
+          "p50": 34.0,
+          "p90": 40.7
+        },
+        "2040": {
+          "p10": 28.9,
+          "p50": 33.9,
+          "p90": 40.2
+        },
+        "2041": {
+          "p10": 28.6,
+          "p50": 33.7,
+          "p90": 39.8
+        },
+        "2042": {
+          "p10": 28.5,
+          "p50": 33.4,
+          "p90": 39.7
+        },
+        "2043": {
+          "p10": 28.3,
+          "p50": 33.0,
+          "p90": 39.3
+        },
+        "2044": {
+          "p10": 27.9,
+          "p50": 32.8,
+          "p90": 39.5
+        },
+        "2045": {
+          "p10": 27.7,
+          "p50": 32.5,
+          "p90": 39.2
+        },
+        "2046": {
+          "p10": 27.6,
+          "p50": 32.4,
+          "p90": 38.8
+        },
+        "2047": {
+          "p10": 27.3,
+          "p50": 32.1,
+          "p90": 38.6
+        },
+        "2048": {
+          "p10": 27.1,
+          "p50": 32.1,
+          "p90": 38.7
+        },
+        "2049": {
+          "p10": 26.9,
+          "p50": 31.7,
+          "p90": 38.8
+        },
+        "2050": {
+          "p10": 26.8,
+          "p50": 31.5,
+          "p90": 38.6
+        }
+      },
+      "envelope_by_fossil_cost": {
+        "Low": {
+          "2023": {
+            "p10": 46.2,
+            "p50": 46.2,
+            "p90": 46.2
+          },
+          "2024": {
+            "p10": 45.5,
+            "p50": 45.5,
+            "p90": 45.5
+          },
+          "2025": {
+            "p10": 42.7,
+            "p50": 42.7,
+            "p90": 42.7
+          },
+          "2026": {
+            "p10": 33.2,
+            "p50": 42.2,
+            "p90": 45.6
+          },
+          "2027": {
+            "p10": 32.1,
+            "p50": 40.9,
+            "p90": 45.7
+          },
+          "2028": {
+            "p10": 31.4,
+            "p50": 40.8,
+            "p90": 45.7
+          },
+          "2029": {
+            "p10": 30.9,
+            "p50": 39.9,
+            "p90": 45.5
+          },
+          "2030": {
+            "p10": 30.1,
+            "p50": 39.2,
+            "p90": 45.3
+          },
+          "2031": {
+            "p10": 29.1,
+            "p50": 37.0,
+            "p90": 43.8
+          },
+          "2032": {
+            "p10": 29.7,
+            "p50": 37.4,
+            "p90": 43.7
+          },
+          "2033": {
+            "p10": 28.5,
+            "p50": 35.6,
+            "p90": 41.8
+          },
+          "2034": {
+            "p10": 27.7,
+            "p50": 33.3,
+            "p90": 41.2
+          },
+          "2035": {
+            "p10": 27.6,
+            "p50": 32.8,
+            "p90": 40.2
+          },
+          "2036": {
+            "p10": 27.5,
+            "p50": 32.6,
+            "p90": 39.6
+          },
+          "2037": {
+            "p10": 27.3,
+            "p50": 32.1,
+            "p90": 38.9
+          },
+          "2038": {
+            "p10": 27.5,
+            "p50": 32.2,
+            "p90": 38.6
+          },
+          "2039": {
+            "p10": 27.5,
+            "p50": 32.3,
+            "p90": 38.7
+          },
+          "2040": {
+            "p10": 27.5,
+            "p50": 32.2,
+            "p90": 38.2
+          },
+          "2041": {
+            "p10": 27.2,
+            "p50": 32.0,
+            "p90": 37.8
+          },
+          "2042": {
+            "p10": 27.1,
+            "p50": 31.7,
+            "p90": 37.7
+          },
+          "2043": {
+            "p10": 26.9,
+            "p50": 31.3,
+            "p90": 37.3
+          },
+          "2044": {
+            "p10": 26.5,
+            "p50": 31.2,
+            "p90": 37.5
+          },
+          "2045": {
+            "p10": 26.3,
+            "p50": 30.9,
+            "p90": 37.2
+          },
+          "2046": {
+            "p10": 26.2,
+            "p50": 30.8,
+            "p90": 36.9
+          },
+          "2047": {
+            "p10": 25.9,
+            "p50": 30.5,
+            "p90": 36.7
+          },
+          "2048": {
+            "p10": 25.7,
+            "p50": 30.5,
+            "p90": 36.8
+          },
+          "2049": {
+            "p10": 25.6,
+            "p50": 30.1,
+            "p90": 36.9
+          },
+          "2050": {
+            "p10": 25.5,
+            "p50": 29.9,
+            "p90": 36.7
+          }
+        },
+        "Medium": {
+          "2023": {
+            "p10": 48.6,
+            "p50": 48.6,
+            "p90": 48.6
+          },
+          "2024": {
+            "p10": 47.9,
+            "p50": 47.9,
+            "p90": 47.9
+          },
+          "2025": {
+            "p10": 44.9,
+            "p50": 44.9,
+            "p90": 44.9
+          },
+          "2026": {
+            "p10": 35.0,
+            "p50": 44.4,
+            "p90": 48.0
+          },
+          "2027": {
+            "p10": 33.8,
+            "p50": 43.1,
+            "p90": 48.1
+          },
+          "2028": {
+            "p10": 33.1,
+            "p50": 42.9,
+            "p90": 48.1
+          },
+          "2029": {
+            "p10": 32.5,
+            "p50": 42.0,
+            "p90": 47.9
+          },
+          "2030": {
+            "p10": 31.7,
+            "p50": 41.3,
+            "p90": 47.7
+          },
+          "2031": {
+            "p10": 30.6,
+            "p50": 38.9,
+            "p90": 46.1
+          },
+          "2032": {
+            "p10": 31.3,
+            "p50": 39.4,
+            "p90": 46.0
+          },
+          "2033": {
+            "p10": 30.0,
+            "p50": 37.5,
+            "p90": 44.0
+          },
+          "2034": {
+            "p10": 29.2,
+            "p50": 35.1,
+            "p90": 43.4
+          },
+          "2035": {
+            "p10": 29.1,
+            "p50": 34.5,
+            "p90": 42.3
+          },
+          "2036": {
+            "p10": 28.9,
+            "p50": 34.3,
+            "p90": 41.7
+          },
+          "2037": {
+            "p10": 28.7,
+            "p50": 33.8,
+            "p90": 40.9
+          },
+          "2038": {
+            "p10": 28.9,
+            "p50": 33.9,
+            "p90": 40.6
+          },
+          "2039": {
+            "p10": 29.0,
+            "p50": 34.0,
+            "p90": 40.7
+          },
+          "2040": {
+            "p10": 28.9,
+            "p50": 33.9,
+            "p90": 40.2
+          },
+          "2041": {
+            "p10": 28.6,
+            "p50": 33.7,
+            "p90": 39.8
+          },
+          "2042": {
+            "p10": 28.5,
+            "p50": 33.4,
+            "p90": 39.7
+          },
+          "2043": {
+            "p10": 28.3,
+            "p50": 33.0,
+            "p90": 39.3
+          },
+          "2044": {
+            "p10": 27.9,
+            "p50": 32.8,
+            "p90": 39.5
+          },
+          "2045": {
+            "p10": 27.7,
+            "p50": 32.5,
+            "p90": 39.2
+          },
+          "2046": {
+            "p10": 27.6,
+            "p50": 32.4,
+            "p90": 38.8
+          },
+          "2047": {
+            "p10": 27.3,
+            "p50": 32.1,
+            "p90": 38.6
+          },
+          "2048": {
+            "p10": 27.1,
+            "p50": 32.1,
+            "p90": 38.7
+          },
+          "2049": {
+            "p10": 26.9,
+            "p50": 31.7,
+            "p90": 38.8
+          },
+          "2050": {
+            "p10": 26.8,
+            "p50": 31.5,
+            "p90": 38.6
+          }
+        },
+        "High": {
+          "2023": {
+            "p10": 51.0,
+            "p50": 51.0,
+            "p90": 51.0
+          },
+          "2024": {
+            "p10": 50.3,
+            "p50": 50.3,
+            "p90": 50.3
+          },
+          "2025": {
+            "p10": 47.1,
+            "p50": 47.1,
+            "p90": 47.1
+          },
+          "2026": {
+            "p10": 36.8,
+            "p50": 46.6,
+            "p90": 50.4
+          },
+          "2027": {
+            "p10": 35.5,
+            "p50": 45.3,
+            "p90": 50.5
+          },
+          "2028": {
+            "p10": 34.8,
+            "p50": 45.0,
+            "p90": 50.5
+          },
+          "2029": {
+            "p10": 34.1,
+            "p50": 44.1,
+            "p90": 50.3
+          },
+          "2030": {
+            "p10": 33.3,
+            "p50": 43.4,
+            "p90": 50.1
+          },
+          "2031": {
+            "p10": 32.1,
+            "p50": 40.8,
+            "p90": 48.4
+          },
+          "2032": {
+            "p10": 32.9,
+            "p50": 41.4,
+            "p90": 48.3
+          },
+          "2033": {
+            "p10": 31.5,
+            "p50": 39.4,
+            "p90": 46.2
+          },
+          "2034": {
+            "p10": 30.7,
+            "p50": 36.9,
+            "p90": 45.6
+          },
+          "2035": {
+            "p10": 30.6,
+            "p50": 36.2,
+            "p90": 44.4
+          },
+          "2036": {
+            "p10": 30.3,
+            "p50": 36.0,
+            "p90": 43.8
+          },
+          "2037": {
+            "p10": 30.1,
+            "p50": 35.5,
+            "p90": 42.9
+          },
+          "2038": {
+            "p10": 30.3,
+            "p50": 35.6,
+            "p90": 42.6
+          },
+          "2039": {
+            "p10": 30.5,
+            "p50": 35.7,
+            "p90": 42.7
+          },
+          "2040": {
+            "p10": 30.3,
+            "p50": 35.6,
+            "p90": 42.2
+          },
+          "2041": {
+            "p10": 30.0,
+            "p50": 35.4,
+            "p90": 41.8
+          },
+          "2042": {
+            "p10": 29.9,
+            "p50": 35.1,
+            "p90": 41.7
+          },
+          "2043": {
+            "p10": 29.7,
+            "p50": 34.6,
+            "p90": 41.3
+          },
+          "2044": {
+            "p10": 29.3,
+            "p50": 34.4,
+            "p90": 41.5
+          },
+          "2045": {
+            "p10": 29.1,
+            "p50": 34.1,
+            "p90": 41.2
+          },
+          "2046": {
+            "p10": 29.0,
+            "p50": 34.0,
+            "p90": 40.7
+          },
+          "2047": {
+            "p10": 28.7,
+            "p50": 33.7,
+            "p90": 40.5
+          },
+          "2048": {
+            "p10": 28.5,
+            "p50": 33.7,
+            "p90": 40.6
+          },
+          "2049": {
+            "p10": 28.2,
+            "p50": 33.3,
+            "p90": 40.7
+          },
+          "2050": {
+            "p10": 28.1,
+            "p50": 33.1,
+            "p90": 40.5
+          }
+        }
+      },
+      "plant_detail": {
+        "2023": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.648,
+            "emissions_mt": 0.657,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 8.102,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.374,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2024": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.457,
+            "emissions_mt": 0.586,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2025": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.63,
+            "emissions_mt": 0.603,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2026": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.434,
+            "emissions_mt": 0.571,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2027": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.422,
+            "emissions_mt": 0.566,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2028": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.41,
+            "emissions_mt": 0.562,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2029": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.399,
+            "emissions_mt": 0.557,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2030": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.387,
+            "emissions_mt": 0.553,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2031": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.375,
+            "emissions_mt": 0.548,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2032": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.364,
+            "emissions_mt": 0.543,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2033": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.352,
+            "emissions_mt": 0.539,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2034": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.34,
+            "emissions_mt": 0.534,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2035": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.329,
+            "emissions_mt": 0.529,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2036": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.317,
+            "emissions_mt": 0.525,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2037": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.305,
+            "emissions_mt": 0.52,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2038": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.294,
+            "emissions_mt": 0.515,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2039": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.282,
+            "emissions_mt": 0.511,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2040": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.27,
+            "emissions_mt": 0.506,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2041": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.259,
+            "emissions_mt": 0.501,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2042": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.247,
+            "emissions_mt": 0.497,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2043": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.236,
+            "emissions_mt": 0.492,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2044": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.224,
+            "emissions_mt": 0.488,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2045": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.212,
+            "emissions_mt": 0.483,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2046": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.201,
+            "emissions_mt": 0.478,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2047": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.189,
+            "emissions_mt": 0.474,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2048": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.177,
+            "emissions_mt": 0.469,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2049": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.166,
+            "emissions_mt": 0.464,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ],
+        "2050": [
+          {
+            "name": "Pine Bluff Energy Center",
+            "orispl": 55075,
+            "fuel_type": "gas_ccgt",
+            "heat_rate_tier": "very_high",
+            "year_built": 2001,
+            "capacity_mw": 202.0,
+            "ccs_capacity_mw": 202.0,
+            "gen_twh": 1.154,
+            "emissions_mt": 0.46,
+            "status": "operating"
+          },
+          {
+            "name": "Clinton Power Station",
+            "orispl": 75857,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1060.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 9.549,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          },
+          {
+            "name": "Quad Cities",
+            "orispl": 53241,
+            "fuel_type": "nuclear",
+            "capacity_mw": 1405.5,
+            "ccs_capacity_mw": 0.0,
+            "gen_twh": 11.67,
+            "emissions_mt": 0.0,
+            "status": "operating"
+          }
+        ]
+      },
+      "plant_percentiles": {
+        "55075": {
+          "name": "Pine Bluff Energy Center",
+          "fuel_type": "gas_ccgt",
+          "capacity_mw": 202.0,
+          "gen_gwh": {
+            "2023": {
+              "p10": 1450.2,
+              "p50": 1648.0,
+              "p90": 1845.8
+            },
+            "2024": {
+              "p10": 1282.2,
+              "p50": 1457.0,
+              "p90": 1631.8
+            },
+            "2025": {
+              "p10": 1434.4,
+              "p50": 1630.0,
+              "p90": 1825.6
+            },
+            "2026": {
+              "p10": 1261.9,
+              "p50": 1434.0,
+              "p90": 1606.1
+            },
+            "2027": {
+              "p10": 1251.4,
+              "p50": 1422.0,
+              "p90": 1592.6
+            },
+            "2028": {
+              "p10": 1240.8,
+              "p50": 1410.0,
+              "p90": 1579.2
+            },
+            "2029": {
+              "p10": 1231.1,
+              "p50": 1399.0,
+              "p90": 1566.9
+            },
+            "2030": {
+              "p10": 1220.6,
+              "p50": 1387.0,
+              "p90": 1553.4
+            },
+            "2031": {
+              "p10": 1210.0,
+              "p50": 1375.0,
+              "p90": 1540.0
+            },
+            "2032": {
+              "p10": 1200.3,
+              "p50": 1364.0,
+              "p90": 1527.7
+            },
+            "2033": {
+              "p10": 1189.8,
+              "p50": 1352.0,
+              "p90": 1514.2
+            },
+            "2034": {
+              "p10": 1179.2,
+              "p50": 1340.0,
+              "p90": 1500.8
+            },
+            "2035": {
+              "p10": 1169.5,
+              "p50": 1329.0,
+              "p90": 1488.5
+            },
+            "2036": {
+              "p10": 1159.0,
+              "p50": 1317.0,
+              "p90": 1475.0
+            },
+            "2037": {
+              "p10": 1148.4,
+              "p50": 1305.0,
+              "p90": 1461.6
+            },
+            "2038": {
+              "p10": 1138.7,
+              "p50": 1294.0,
+              "p90": 1449.3
+            },
+            "2039": {
+              "p10": 1128.2,
+              "p50": 1282.0,
+              "p90": 1435.8
+            },
+            "2040": {
+              "p10": 1117.6,
+              "p50": 1270.0,
+              "p90": 1422.4
+            },
+            "2041": {
+              "p10": 1107.9,
+              "p50": 1259.0,
+              "p90": 1410.1
+            },
+            "2042": {
+              "p10": 1097.4,
+              "p50": 1247.0,
+              "p90": 1396.6
+            },
+            "2043": {
+              "p10": 1087.7,
+              "p50": 1236.0,
+              "p90": 1384.3
+            },
+            "2044": {
+              "p10": 1077.1,
+              "p50": 1224.0,
+              "p90": 1370.9
+            },
+            "2045": {
+              "p10": 1066.6,
+              "p50": 1212.0,
+              "p90": 1357.4
+            },
+            "2046": {
+              "p10": 1056.9,
+              "p50": 1201.0,
+              "p90": 1345.1
+            },
+            "2047": {
+              "p10": 1046.3,
+              "p50": 1189.0,
+              "p90": 1331.7
+            },
+            "2048": {
+              "p10": 1035.8,
+              "p50": 1177.0,
+              "p90": 1318.2
+            },
+            "2049": {
+              "p10": 1026.1,
+              "p50": 1166.0,
+              "p90": 1305.9
+            },
+            "2050": {
+              "p10": 1015.5,
+              "p50": 1154.0,
+              "p90": 1292.5
+            }
+          },
+          "emissions_t": {
+            "2023": {
+              "p10": 578160,
+              "p50": 657000,
+              "p90": 735840
+            },
+            "2024": {
+              "p10": 515680,
+              "p50": 586000,
+              "p90": 656320
+            },
+            "2025": {
+              "p10": 530640,
+              "p50": 603000,
+              "p90": 675360
+            },
+            "2026": {
+              "p10": 502480,
+              "p50": 571000,
+              "p90": 639520
+            },
+            "2027": {
+              "p10": 498080,
+              "p50": 566000,
+              "p90": 633920
+            },
+            "2028": {
+              "p10": 494560,
+              "p50": 562000,
+              "p90": 629440
+            },
+            "2029": {
+              "p10": 490160,
+              "p50": 557000,
+              "p90": 623840
+            },
+            "2030": {
+              "p10": 486640,
+              "p50": 553000,
+              "p90": 619360
+            },
+            "2031": {
+              "p10": 482240,
+              "p50": 548000,
+              "p90": 613760
+            },
+            "2032": {
+              "p10": 477840,
+              "p50": 543000,
+              "p90": 608160
+            },
+            "2033": {
+              "p10": 474320,
+              "p50": 539000,
+              "p90": 603680
+            },
+            "2034": {
+              "p10": 469920,
+              "p50": 534000,
+              "p90": 598080
+            },
+            "2035": {
+              "p10": 465520,
+              "p50": 529000,
+              "p90": 592480
+            },
+            "2036": {
+              "p10": 462000,
+              "p50": 525000,
+              "p90": 588000
+            },
+            "2037": {
+              "p10": 457600,
+              "p50": 520000,
+              "p90": 582400
+            },
+            "2038": {
+              "p10": 453200,
+              "p50": 515000,
+              "p90": 576800
+            },
+            "2039": {
+              "p10": 449680,
+              "p50": 511000,
+              "p90": 572320
+            },
+            "2040": {
+              "p10": 445280,
+              "p50": 506000,
+              "p90": 566720
+            },
+            "2041": {
+              "p10": 440880,
+              "p50": 501000,
+              "p90": 561120
+            },
+            "2042": {
+              "p10": 437360,
+              "p50": 497000,
+              "p90": 556640
+            },
+            "2043": {
+              "p10": 432960,
+              "p50": 492000,
+              "p90": 551040
+            },
+            "2044": {
+              "p10": 429440,
+              "p50": 488000,
+              "p90": 546560
+            },
+            "2045": {
+              "p10": 425040,
+              "p50": 483000,
+              "p90": 540960
+            },
+            "2046": {
+              "p10": 420640,
+              "p50": 478000,
+              "p90": 535360
+            },
+            "2047": {
+              "p10": 417120,
+              "p50": 474000,
+              "p90": 530880
+            },
+            "2048": {
+              "p10": 412720,
+              "p50": 469000,
+              "p90": 525280
+            },
+            "2049": {
+              "p10": 408320,
+              "p50": 464000,
+              "p90": 519680
+            },
+            "2050": {
+              "p10": 404800,
+              "p50": 460000,
+              "p90": 515200
+            }
+          }
+        },
+        "75857": {
+          "name": "Clinton Power Station",
+          "fuel_type": "nuclear",
+          "capacity_mw": 1060.5,
+          "gen_gwh": {
+            "2023": {
+              "p10": 7129.8,
+              "p50": 8102.0,
+              "p90": 9074.2
+            },
+            "2024": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2025": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2026": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2027": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2028": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2029": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2030": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2031": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2032": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2033": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2034": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2035": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2036": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2037": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2038": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2039": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2040": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2041": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2042": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2043": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2044": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2045": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2046": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2047": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2048": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2049": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            },
+            "2050": {
+              "p10": 8403.1,
+              "p50": 9549.0,
+              "p90": 10694.9
+            }
+          },
+          "emissions_t": {
+            "2023": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2024": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2025": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2026": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2027": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2028": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2029": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2030": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2031": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2032": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2033": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2034": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2035": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2036": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2037": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2038": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2039": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2040": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2041": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2042": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2043": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2044": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2045": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2046": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2047": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2048": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2049": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2050": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            }
+          }
+        },
+        "53241": {
+          "name": "Quad Cities",
+          "fuel_type": "nuclear",
+          "capacity_mw": 1405.5,
+          "gen_gwh": {
+            "2023": {
+              "p10": 10009.1,
+              "p50": 11374.0,
+              "p90": 12738.9
+            },
+            "2024": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2025": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2026": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2027": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2028": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2029": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2030": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2031": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2032": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2033": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2034": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2035": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2036": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2037": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2038": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2039": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2040": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2041": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2042": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2043": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2044": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2045": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2046": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2047": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2048": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2049": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            },
+            "2050": {
+              "p10": 10269.6,
+              "p50": 11670.0,
+              "p90": 13070.4
+            }
+          },
+          "emissions_t": {
+            "2023": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2024": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2025": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2026": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2027": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2028": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2029": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2030": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2031": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2032": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2033": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2034": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2035": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2036": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2037": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2038": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2039": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2040": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2041": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2042": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2043": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2044": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2045": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2046": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2047": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2048": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2049": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            },
+            "2050": {
+              "p10": 0,
+              "p50": 0,
+              "p90": 0
+            }
+          }
+        }
+      },
+      "generation_by_fuel": {
+        "2023": {
+          "nuclear": 174.0,
+          "geothermal": 5.5,
+          "wind": 1.8,
+          "solar": 0.6,
+          "gas_ccgt": 109.9,
+          "gas_ct": 2.8,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.4,
+          "ccs_ccgt": 0.0
+        },
+        "2024": {
+          "nuclear": 181.8,
+          "geothermal": 5.6,
+          "wind": 1.8,
+          "solar": 0.0,
+          "gas_ccgt": 107.5,
+          "gas_ct": 1.9,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.4,
+          "ccs_ccgt": 0.0
+        },
+        "2025": {
+          "nuclear": 181.8,
+          "geothermal": 5.6,
+          "wind": 2.9,
+          "solar": 0.6,
+          "gas_ccgt": 106.6,
+          "gas_ct": 2.4,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.5,
+          "ccs_ccgt": 0.0
+        },
+        "2026": {
+          "nuclear": 181.8,
+          "geothermal": 5.6,
+          "wind": 3.0,
+          "solar": 0.6,
+          "gas_ccgt": 104.0,
+          "gas_ct": 1.5,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2027": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 3.1,
+          "solar": 0.6,
+          "gas_ccgt": 102.8,
+          "gas_ct": 1.6,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2028": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 3.2,
+          "solar": 0.6,
+          "gas_ccgt": 102.5,
+          "gas_ct": 1.6,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2029": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 3.2,
+          "solar": 0.6,
+          "gas_ccgt": 102.1,
+          "gas_ct": 1.4,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2030": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 3.3,
+          "solar": 0.6,
+          "gas_ccgt": 101.0,
+          "gas_ct": 1.4,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2031": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 3.3,
+          "solar": 0.7,
+          "gas_ccgt": 99.8,
+          "gas_ct": 1.2,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2032": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 3.4,
+          "solar": 0.7,
+          "gas_ccgt": 98.7,
+          "gas_ct": 1.5,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2033": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 3.5,
+          "solar": 0.7,
+          "gas_ccgt": 95.1,
+          "gas_ct": 1.4,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2034": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 3.5,
+          "solar": 0.7,
+          "gas_ccgt": 93.2,
+          "gas_ct": 1.3,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2035": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 3.6,
+          "solar": 0.7,
+          "gas_ccgt": 91.2,
+          "gas_ct": 1.3,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2036": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 3.6,
+          "solar": 0.7,
+          "gas_ccgt": 90.9,
+          "gas_ct": 1.2,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2037": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 3.7,
+          "solar": 0.7,
+          "gas_ccgt": 89.7,
+          "gas_ct": 1.2,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2038": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 3.8,
+          "solar": 0.7,
+          "gas_ccgt": 90.2,
+          "gas_ct": 1.2,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2039": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 3.8,
+          "solar": 0.7,
+          "gas_ccgt": 90.7,
+          "gas_ct": 1.4,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2040": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 3.9,
+          "solar": 0.8,
+          "gas_ccgt": 91.1,
+          "gas_ct": 1.4,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2041": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 3.9,
+          "solar": 0.8,
+          "gas_ccgt": 90.8,
+          "gas_ct": 1.4,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2042": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 4.0,
+          "solar": 0.8,
+          "gas_ccgt": 90.5,
+          "gas_ct": 1.4,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2043": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 4.0,
+          "solar": 0.8,
+          "gas_ccgt": 90.1,
+          "gas_ct": 1.3,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2044": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 4.1,
+          "solar": 0.8,
+          "gas_ccgt": 89.8,
+          "gas_ct": 1.4,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2045": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 4.2,
+          "solar": 0.8,
+          "gas_ccgt": 90.2,
+          "gas_ct": 1.3,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2046": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 4.2,
+          "solar": 0.8,
+          "gas_ccgt": 90.7,
+          "gas_ct": 1.4,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2047": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 4.3,
+          "solar": 0.8,
+          "gas_ccgt": 90.4,
+          "gas_ct": 1.3,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2048": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 4.3,
+          "solar": 0.8,
+          "gas_ccgt": 90.8,
+          "gas_ct": 1.3,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2049": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 4.4,
+          "solar": 0.9,
+          "gas_ccgt": 91.3,
+          "gas_ct": 1.3,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        },
+        "2050": {
+          "nuclear": 188.5,
+          "geothermal": 5.6,
+          "wind": 4.5,
+          "solar": 0.9,
+          "gas_ccgt": 91.0,
+          "gas_ct": 1.3,
+          "oil_ct": 0.0,
+          "gas_oil_ct": 0.3,
+          "ccs_ccgt": 0.0
+        }
+      },
+      "emissions_by_fuel": {
+        "2023": {
+          "gas_ccgt": 46.24,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 1.83,
+          "gas_oil_ct": 0.33,
+          "ccs_ccgt": 0.0
+        },
+        "2024": {
+          "gas_ccgt": 45.51,
+          "geothermal": 0.47,
+          "oil_ct": 0.19,
+          "gas_ct": 1.27,
+          "gas_oil_ct": 0.44,
+          "ccs_ccgt": 0.0
+        },
+        "2025": {
+          "gas_ccgt": 42.52,
+          "geothermal": 0.35,
+          "oil_ct": 0.05,
+          "gas_ct": 1.51,
+          "gas_oil_ct": 0.44,
+          "ccs_ccgt": 0.0
+        },
+        "2026": {
+          "gas_ccgt": 44.01,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 1.04,
+          "gas_oil_ct": 0.44,
+          "ccs_ccgt": 0.0
+        },
+        "2027": {
+          "gas_ccgt": 43.52,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 1.1,
+          "gas_oil_ct": 0.43,
+          "ccs_ccgt": 0.0
+        },
+        "2028": {
+          "gas_ccgt": 43.38,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 1.09,
+          "gas_oil_ct": 0.43,
+          "ccs_ccgt": 0.0
+        },
+        "2029": {
+          "gas_ccgt": 43.23,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 0.96,
+          "gas_oil_ct": 0.43,
+          "ccs_ccgt": 0.0
+        },
+        "2030": {
+          "gas_ccgt": 42.75,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 0.95,
+          "gas_oil_ct": 0.42,
+          "ccs_ccgt": 0.0
+        },
+        "2031": {
+          "gas_ccgt": 42.26,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 0.82,
+          "gas_oil_ct": 0.42,
+          "ccs_ccgt": 0.0
+        },
+        "2032": {
+          "gas_ccgt": 41.78,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 1.01,
+          "gas_oil_ct": 0.42,
+          "ccs_ccgt": 0.0
+        },
+        "2033": {
+          "gas_ccgt": 40.27,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 0.94,
+          "gas_oil_ct": 0.41,
+          "ccs_ccgt": 0.0
+        },
+        "2034": {
+          "gas_ccgt": 39.44,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 0.87,
+          "gas_oil_ct": 0.41,
+          "ccs_ccgt": 0.0
+        },
+        "2035": {
+          "gas_ccgt": 38.61,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 0.86,
+          "gas_oil_ct": 0.41,
+          "ccs_ccgt": 0.0
+        },
+        "2036": {
+          "gas_ccgt": 38.47,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 0.86,
+          "gas_oil_ct": 0.4,
+          "ccs_ccgt": 0.0
+        },
+        "2037": {
+          "gas_ccgt": 37.98,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 0.85,
+          "gas_oil_ct": 0.4,
+          "ccs_ccgt": 0.0
+        },
+        "2038": {
+          "gas_ccgt": 38.18,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 0.84,
+          "gas_oil_ct": 0.4,
+          "ccs_ccgt": 0.0
+        },
+        "2039": {
+          "gas_ccgt": 38.38,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 0.96,
+          "gas_oil_ct": 0.39,
+          "ccs_ccgt": 0.0
+        },
+        "2040": {
+          "gas_ccgt": 38.57,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 0.96,
+          "gas_oil_ct": 0.39,
+          "ccs_ccgt": 0.0
+        },
+        "2041": {
+          "gas_ccgt": 38.43,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 0.95,
+          "gas_oil_ct": 0.38,
+          "ccs_ccgt": 0.0
+        },
+        "2042": {
+          "gas_ccgt": 38.29,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 0.95,
+          "gas_oil_ct": 0.38,
+          "ccs_ccgt": 0.0
+        },
+        "2043": {
+          "gas_ccgt": 38.14,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 0.88,
+          "gas_oil_ct": 0.38,
+          "ccs_ccgt": 0.0
+        },
+        "2044": {
+          "gas_ccgt": 38.0,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 0.93,
+          "gas_oil_ct": 0.37,
+          "ccs_ccgt": 0.0
+        },
+        "2045": {
+          "gas_ccgt": 38.2,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 0.87,
+          "gas_oil_ct": 0.37,
+          "ccs_ccgt": 0.0
+        },
+        "2046": {
+          "gas_ccgt": 38.39,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 0.92,
+          "gas_oil_ct": 0.37,
+          "ccs_ccgt": 0.0
+        },
+        "2047": {
+          "gas_ccgt": 38.25,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 0.92,
+          "gas_oil_ct": 0.36,
+          "ccs_ccgt": 0.0
+        },
+        "2048": {
+          "gas_ccgt": 38.45,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 0.91,
+          "gas_oil_ct": 0.36,
+          "ccs_ccgt": 0.0
+        },
+        "2049": {
+          "gas_ccgt": 38.64,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 0.91,
+          "gas_oil_ct": 0.36,
+          "ccs_ccgt": 0.0
+        },
+        "2050": {
+          "gas_ccgt": 38.5,
+          "geothermal": 0.22,
+          "oil_ct": 0.02,
+          "gas_ct": 0.9,
+          "gas_oil_ct": 0.35,
+          "ccs_ccgt": 0.0
+        }
+      }
+    }
+  },
+  "targets": {
+    "sbti_15": {
+      "label": "SBTi 1.5\u00b0C (Power Sector v2)",
+      "trajectory": {
+        "2023": 48.6,
+        "2024": 45.0,
+        "2025": 41.3,
+        "2030": 24.3,
+        "2035": 12.2,
+        "2040": 0.0,
+        "2045": 0.0,
+        "2050": 0.0
+      }
+    },
+    "at_power_nz": {
+      "label": "AT Power NZ",
+      "trajectory": {
+        "2023": 48.6,
+        "2024": 45.7,
+        "2025": 42.8,
+        "2030": 31.6,
+        "2035": 17.0,
+        "2040": 2.4,
+        "2045": 0.0,
+        "2050": 0.0
+      }
+    }
+  },
+  "metadata": {
+    "fleet_name": "Constellation Energy",
+    "source": "CEG_fleet_rosetta.csv",
+    "capacity_source": "Constellation Owned Capacity (MW) \u2014 equity-weighted from Rosetta",
+    "sweep_count": 1215,
+    "generated_at": "2026-04-09T05:44:46Z",
+    "total_plants": 151,
+    "total_capacity_mw": 59500.1,
+    "fossil_plants": 81,
+    "fossil_capacity_mw": 33226.5,
+    "notes": "Rebuilt from Rosetta CSV (2023/2024 actuals) + CAMPD 2025. Nuclear: 23,067 MW, Gas CCGT: 26,218 MW, Total fleet: 59,500 MW. Envelope P10/P90 derived from 1,215-scenario market sweep CF percentiles.",
+    "iso": "MISO"
+  }
+}
