@@ -1,0 +1,34 @@
+======================================================================
+Step 5.2E — Wright's Law Learning Curves & Critical Mass Threshold
+======================================================================
+  Extracting cf_tranche_data from step2.2 cost parquets...
+  Successfully loaded tranche data from step2.2 parquets
+[Step 5.2E] Computed 15 participation levels × 20 thresholds × 7 ISOs
+[Step 5.2E] Parquet: /home/user/hourly-cfe-optimizer/data/step5-wrights/wrights_law_curves.parquet (4.7 KB, 300 rows)
+[Step 5.2E] JSON:    /home/user/hourly-cfe-optimizer/data/step5-wrights/wrights_law_curves.json (12.1 KB)
+
+──────────────────────────────────────────────────
+FIGURE 8 Summary (90% CFE threshold):
+  Critical mass threshold: 25.0% participation
+  2C blended at 5%:  $47.5/MWh
+  2C blended at 30%: $45.3/MWh
+  2C blended at 80%: $45.3/MWh
+  2C NOAK at 80%:    $45.3/MWh
+
+  Critical mass by threshold:
+    70.0% CFE: 50% participation
+    90.0% CFE: 25% participation
+    95.0% CFE: 25% participation
+    99.9% CFE: 15% participation
+
+  ISO spend decomposition at 90% CFE, 20% participation:
+    CAISO: existing=$71M, newbuild=$1087M, premium_share=6.1%
+    ERCOT: existing=$168M, newbuild=$126M, premium_share=57.2%
+    PJM: existing=$1083M, newbuild=$3252M, premium_share=25.0%
+    NYISO: existing=$112M, newbuild=$720M, premium_share=13.4%
+    NEISO: existing=$110M, newbuild=$740M, premium_share=12.9%
+    MISO: existing=$348M, newbuild=$2131M, premium_share=14.0%
+    SPP: existing=$62M, newbuild=$306M, premium_share=16.9%
+
+======================================================================
+Done.

@@ -1,0 +1,248 @@
+======================================================================
+Step 5.2D — Strategy 3: Annual Matching
+======================================================================
+ISOs: ['CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP']
+Participation levels: ['5%', '10%', '15%', '20%', '25%', '30%', '40%', '50%', '60%', '70%', '80%', '90%', '100%']
+Growth levels: ['Low', 'Medium', 'High']
+Variants: 3A (same-ISO new), 3B (cross new), 3C (same-ISO any), 3D (cross any)
+Scenario: A (delayed learning curve)
+
+
+── Nuclear Policy: STABLE ──
+  [50/1092] 3A ERCOT Low part=80%
+  [100/1092] 3A PJM Medium part=60%
+  [150/1092] 3A NYISO High part=40%
+  [200/1092] 3A MISO Low part=25%
+  [250/1092] 3A SPP Medium part=15%
+  [300/1092] 3B CAISO High part=5%
+  [350/1092] 3B ERCOT High part=90%
+  [400/1092] 3B NYISO Low part=70%
+  [450/1092] 3B NEISO Medium part=50%
+  [500/1092] 3B MISO High part=30%
+  [550/1092] 3C CAISO Low part=20%
+  [600/1092] 3C ERCOT Medium part=10%
+  [650/1092] 3C PJM Medium part=100%
+  [700/1092] 3C NYISO High part=80%
+  [750/1092] 3C MISO Low part=60%
+  [800/1092] 3C SPP Medium part=40%
+  [850/1092] 3D CAISO High part=25%
+  [900/1092] 3D PJM Low part=15%
+  [950/1092] 3D NYISO Medium part=5%
+  [1000/1092] 3D NEISO Medium part=90%
+  [1050/1092] 3D MISO High part=70%
+  Saved /home/user/hourly-cfe-optimizer/data/step5-scenarios/strategy3_annual.parquet (1.1MB, 28,392 rows)
+
+Computing 8760 dispatch-based hourly match scores...
+  Loaded 0 EF storage entries
+  Computed 26754 dispatch scores
+  Saved /home/user/hourly-cfe-optimizer/data/step5-scenarios/strategy3_annual.parquet (1.6MB, 28,392 rows)
+
+── Nuclear Policy: ROLLOFF (ZEC/CMC expiration) ──
+  [50/1092] 3A ERCOT Low part=80%
+  [100/1092] 3A PJM Medium part=60%
+  [150/1092] 3A NYISO High part=40%
+  [200/1092] 3A MISO Low part=25%
+  [250/1092] 3A SPP Medium part=15%
+  [300/1092] 3B CAISO High part=5%
+  [350/1092] 3B ERCOT High part=90%
+  [400/1092] 3B NYISO Low part=70%
+  [450/1092] 3B NEISO Medium part=50%
+  [500/1092] 3B MISO High part=30%
+  [550/1092] 3C CAISO Low part=20%
+  [600/1092] 3C ERCOT Medium part=10%
+  [650/1092] 3C PJM Medium part=100%
+  [700/1092] 3C NYISO High part=80%
+  [750/1092] 3C MISO Low part=60%
+  [800/1092] 3C SPP Medium part=40%
+  [850/1092] 3D CAISO High part=25%
+  [900/1092] 3D PJM Low part=15%
+  [950/1092] 3D NYISO Medium part=5%
+  [1000/1092] 3D NEISO Medium part=90%
+  [1050/1092] 3D MISO High part=70%
+  Saved /home/user/hourly-cfe-optimizer/data/step5-scenarios/strategy3_annual.parquet (2.1MB, 42,588 rows)
+
+======================================================================
+SUMMARY: Strategy 3 at 10% participation, Medium growth
+======================================================================
+
+--- STRATEGY3A ---
+  CAISO 2030: $66.8/MWh, 1.693 MtCO₂, threshold=50%
+  CAISO 2035: $66.9/MWh, 1.981 MtCO₂, threshold=70%
+  CAISO 2040: $67.0/MWh, 2.248 MtCO₂, threshold=90%
+  CAISO 2050: $67.1/MWh, 2.750 MtCO₂, threshold=100%
+  ERCOT 2030: $44.7/MWh, 5.403 MtCO₂, threshold=50%
+  ERCOT 2035: $44.8/MWh, 6.869 MtCO₂, threshold=70%
+  ERCOT 2040: $44.8/MWh, 8.402 MtCO₂, threshold=90%
+  ERCOT 2050: $44.8/MWh, 12.009 MtCO₂, threshold=100%
+  PJM 2030: $67.8/MWh, 10.867 MtCO₂, threshold=50%
+  PJM 2035: $68.4/MWh, 13.148 MtCO₂, threshold=70%
+  PJM 2040: $68.7/MWh, 15.346 MtCO₂, threshold=90%
+  PJM 2050: $69.0/MWh, 19.702 MtCO₂, threshold=100%
+  NYISO 2030: $89.2/MWh, 1.418 MtCO₂, threshold=50%
+  NYISO 2035: $89.7/MWh, 1.731 MtCO₂, threshold=70%
+  NYISO 2040: $90.0/MWh, 2.033 MtCO₂, threshold=90%
+  NYISO 2050: $90.2/MWh, 2.550 MtCO₂, threshold=100%
+  NEISO 2030: $80.0/MWh, 0.828 MtCO₂, threshold=50%
+  NEISO 2035: $80.6/MWh, 0.987 MtCO₂, threshold=70%
+  NEISO 2040: $80.9/MWh, 1.139 MtCO₂, threshold=90%
+  NEISO 2050: $81.2/MWh, 1.397 MtCO₂, threshold=100%
+  MISO 2030: $47.8/MWh, 10.602 MtCO₂, threshold=50%
+  MISO 2035: $47.9/MWh, 12.848 MtCO₂, threshold=70%
+  MISO 2040: $48.0/MWh, 14.934 MtCO₂, threshold=90%
+  MISO 2050: $48.0/MWh, 18.872 MtCO₂, threshold=100%
+  SPP 2030: $41.4/MWh, 4.120 MtCO₂, threshold=50%
+  SPP 2035: $41.4/MWh, 5.008 MtCO₂, threshold=70%
+  SPP 2040: $41.4/MWh, 5.798 MtCO₂, threshold=90%
+  SPP 2050: $41.4/MWh, 7.097 MtCO₂, threshold=100%
+
+--- STRATEGY3B ---
+  CAISO 2030: $73.2/MWh, 1.669 MtCO₂, threshold=50%
+  CAISO 2035: $90.8/MWh, 1.955 MtCO₂, threshold=70%
+  CAISO 2040: $85.5/MWh, 2.222 MtCO₂, threshold=90%
+  CAISO 2050: $73.8/MWh, 2.724 MtCO₂, threshold=100%
+  ERCOT 2030: $57.3/MWh, 5.378 MtCO₂, threshold=50%
+  ERCOT 2035: $66.2/MWh, 6.840 MtCO₂, threshold=70%
+  ERCOT 2040: $72.1/MWh, 8.372 MtCO₂, threshold=90%
+  ERCOT 2050: $83.2/MWh, 11.980 MtCO₂, threshold=100%
+  PJM 2030: $69.5/MWh, 10.521 MtCO₂, threshold=50%
+  PJM 2035: $85.6/MWh, 12.762 MtCO₂, threshold=70%
+  PJM 2040: $87.0/MWh, 14.952 MtCO₂, threshold=90%
+  PJM 2050: $102.4/MWh, 19.308 MtCO₂, threshold=100%
+  NYISO 2030: $95.6/MWh, 1.395 MtCO₂, threshold=50%
+  NYISO 2035: $110.7/MWh, 1.706 MtCO₂, threshold=70%
+  NYISO 2040: $100.9/MWh, 2.007 MtCO₂, threshold=90%
+  NYISO 2050: $83.6/MWh, 2.524 MtCO₂, threshold=100%
+  NEISO 2030: $85.1/MWh, 0.798 MtCO₂, threshold=50%
+  NEISO 2035: $102.7/MWh, 0.956 MtCO₂, threshold=70%
+  NEISO 2040: $94.8/MWh, 1.107 MtCO₂, threshold=90%
+  NEISO 2050: $79.6/MWh, 1.365 MtCO₂, threshold=100%
+  MISO 2030: $59.1/MWh, 10.480 MtCO₂, threshold=50%
+  MISO 2035: $75.5/MWh, 12.709 MtCO₂, threshold=70%
+  MISO 2040: $80.3/MWh, 14.789 MtCO₂, threshold=90%
+  MISO 2050: $82.3/MWh, 18.727 MtCO₂, threshold=100%
+  SPP 2030: $53.4/MWh, 4.111 MtCO₂, threshold=50%
+  SPP 2035: $70.2/MWh, 4.995 MtCO₂, threshold=70%
+  SPP 2040: $72.5/MWh, 5.785 MtCO₂, threshold=90%
+  SPP 2050: $67.5/MWh, 7.084 MtCO₂, threshold=100%
+
+--- STRATEGY3C ---
+  CAISO 2030: $2.4/MWh, 0.000 MtCO₂, threshold=50%
+  CAISO 2035: $2.6/MWh, 0.000 MtCO₂, threshold=70%
+  CAISO 2040: $2.7/MWh, 0.000 MtCO₂, threshold=90%
+  CAISO 2050: $43.1/MWh, 2.701 MtCO₂, threshold=100%
+  ERCOT 2030: $4.0/MWh, 0.000 MtCO₂, threshold=50%
+  ERCOT 2035: $4.0/MWh, 0.000 MtCO₂, threshold=70%
+  ERCOT 2040: $4.0/MWh, 0.000 MtCO₂, threshold=90%
+  ERCOT 2050: $4.0/MWh, 0.000 MtCO₂, threshold=100%
+  PJM 2030: $3.2/MWh, 0.000 MtCO₂, threshold=50%
+  PJM 2035: $3.4/MWh, 0.000 MtCO₂, threshold=70%
+  PJM 2040: $3.3/MWh, 0.000 MtCO₂, threshold=90%
+  PJM 2050: $49.5/MWh, 20.165 MtCO₂, threshold=100%
+  NYISO 2030: $16.9/MWh, 0.366 MtCO₂, threshold=50%
+  NYISO 2035: $34.4/MWh, 1.031 MtCO₂, threshold=70%
+  NYISO 2040: $44.6/MWh, 1.603 MtCO₂, threshold=90%
+  NYISO 2050: $48.9/MWh, 2.206 MtCO₂, threshold=100%
+  NEISO 2030: $2.3/MWh, 0.000 MtCO₂, threshold=50%
+  NEISO 2035: $34.4/MWh, 0.745 MtCO₂, threshold=70%
+  NEISO 2040: $50.7/MWh, 1.168 MtCO₂, threshold=90%
+  NEISO 2050: $47.6/MWh, 1.470 MtCO₂, threshold=100%
+  MISO 2030: $3.7/MWh, 0.000 MtCO₂, threshold=50%
+  MISO 2035: $3.8/MWh, 0.000 MtCO₂, threshold=70%
+  MISO 2040: $3.6/MWh, 0.000 MtCO₂, threshold=90%
+  MISO 2050: $40.2/MWh, 19.010 MtCO₂, threshold=100%
+  SPP 2030: $3.9/MWh, 0.000 MtCO₂, threshold=50%
+  SPP 2035: $3.9/MWh, 0.000 MtCO₂, threshold=70%
+  SPP 2040: $3.9/MWh, 0.000 MtCO₂, threshold=90%
+  SPP 2050: $4.0/MWh, 0.000 MtCO₂, threshold=100%
+
+--- STRATEGY3C_ROLLOFF ---
+  CAISO 2030: $2.4/MWh, 0.000 MtCO₂, threshold=50%
+  CAISO 2035: $2.6/MWh, 0.000 MtCO₂, threshold=70%
+  CAISO 2040: $2.7/MWh, 0.000 MtCO₂, threshold=90%
+  CAISO 2050: $43.1/MWh, 6.510 MtCO₂, threshold=100%
+  ERCOT 2030: $4.0/MWh, 0.000 MtCO₂, threshold=50%
+  ERCOT 2035: $4.0/MWh, 0.000 MtCO₂, threshold=70%
+  ERCOT 2040: $4.0/MWh, 0.000 MtCO₂, threshold=90%
+  ERCOT 2050: $4.0/MWh, 0.000 MtCO₂, threshold=100%
+  PJM 2030: $3.8/MWh, 0.000 MtCO₂, threshold=50%
+  PJM 2035: $3.8/MWh, 0.000 MtCO₂, threshold=70%
+  PJM 2040: $3.5/MWh, 0.000 MtCO₂, threshold=90%
+  PJM 2050: $52.3/MWh, 40.651 MtCO₂, threshold=100%
+  NYISO 2030: $16.9/MWh, 0.384 MtCO₂, threshold=50%
+  NYISO 2035: $34.4/MWh, 1.170 MtCO₂, threshold=70%
+  NYISO 2040: $44.6/MWh, 2.177 MtCO₂, threshold=90%
+  NYISO 2050: $48.9/MWh, 3.333 MtCO₂, threshold=100%
+  NEISO 2030: $2.3/MWh, 0.000 MtCO₂, threshold=50%
+  NEISO 2035: $34.4/MWh, 0.954 MtCO₂, threshold=70%
+  NEISO 2040: $50.7/MWh, 2.033 MtCO₂, threshold=90%
+  NEISO 2050: $47.6/MWh, 2.630 MtCO₂, threshold=100%
+  MISO 2030: $3.7/MWh, 0.000 MtCO₂, threshold=50%
+  MISO 2035: $3.8/MWh, 0.000 MtCO₂, threshold=70%
+  MISO 2040: $3.6/MWh, 0.000 MtCO₂, threshold=90%
+  MISO 2050: $40.2/MWh, 37.068 MtCO₂, threshold=100%
+  SPP 2030: $3.9/MWh, 0.000 MtCO₂, threshold=50%
+  SPP 2035: $3.9/MWh, 0.000 MtCO₂, threshold=70%
+  SPP 2040: $3.9/MWh, 0.000 MtCO₂, threshold=90%
+  SPP 2050: $4.0/MWh, 0.000 MtCO₂, threshold=100%
+
+--- STRATEGY3D ---
+  CAISO 2030: $2.4/MWh, 0.000 MtCO₂, threshold=50%
+  CAISO 2035: $2.6/MWh, 0.000 MtCO₂, threshold=70%
+  CAISO 2040: $2.7/MWh, 0.000 MtCO₂, threshold=90%
+  CAISO 2050: $2.6/MWh, 0.000 MtCO₂, threshold=100%
+  ERCOT 2030: $4.0/MWh, 0.000 MtCO₂, threshold=50%
+  ERCOT 2035: $4.0/MWh, 0.000 MtCO₂, threshold=70%
+  ERCOT 2040: $4.0/MWh, 0.000 MtCO₂, threshold=90%
+  ERCOT 2050: $4.0/MWh, 0.000 MtCO₂, threshold=100%
+  PJM 2030: $3.2/MWh, 0.000 MtCO₂, threshold=50%
+  PJM 2035: $3.4/MWh, 0.000 MtCO₂, threshold=70%
+  PJM 2040: $3.3/MWh, 0.000 MtCO₂, threshold=90%
+  PJM 2050: $2.9/MWh, 0.000 MtCO₂, threshold=100%
+  NYISO 2030: $0.9/MWh, 0.000 MtCO₂, threshold=50%
+  NYISO 2035: $1.6/MWh, 0.000 MtCO₂, threshold=70%
+  NYISO 2040: $2.0/MWh, 0.000 MtCO₂, threshold=90%
+  NYISO 2050: $2.2/MWh, 0.000 MtCO₂, threshold=100%
+  NEISO 2030: $2.3/MWh, 0.000 MtCO₂, threshold=50%
+  NEISO 2035: $2.4/MWh, 0.000 MtCO₂, threshold=70%
+  NEISO 2040: $2.6/MWh, 0.000 MtCO₂, threshold=90%
+  NEISO 2050: $2.4/MWh, 0.000 MtCO₂, threshold=100%
+  MISO 2030: $3.7/MWh, 0.000 MtCO₂, threshold=50%
+  MISO 2035: $3.8/MWh, 0.000 MtCO₂, threshold=70%
+  MISO 2040: $3.6/MWh, 0.000 MtCO₂, threshold=90%
+  MISO 2050: $3.4/MWh, 0.000 MtCO₂, threshold=100%
+  SPP 2030: $3.9/MWh, 0.000 MtCO₂, threshold=50%
+  SPP 2035: $3.9/MWh, 0.000 MtCO₂, threshold=70%
+  SPP 2040: $3.9/MWh, 0.000 MtCO₂, threshold=90%
+  SPP 2050: $4.0/MWh, 0.000 MtCO₂, threshold=100%
+
+--- STRATEGY3D_ROLLOFF ---
+  CAISO 2030: $2.4/MWh, 0.000 MtCO₂, threshold=50%
+  CAISO 2035: $2.6/MWh, 0.000 MtCO₂, threshold=70%
+  CAISO 2040: $2.7/MWh, 0.000 MtCO₂, threshold=90%
+  CAISO 2050: $2.6/MWh, 0.000 MtCO₂, threshold=100%
+  ERCOT 2030: $4.0/MWh, 0.000 MtCO₂, threshold=50%
+  ERCOT 2035: $4.0/MWh, 0.000 MtCO₂, threshold=70%
+  ERCOT 2040: $4.0/MWh, 0.000 MtCO₂, threshold=90%
+  ERCOT 2050: $4.0/MWh, 0.000 MtCO₂, threshold=100%
+  PJM 2030: $3.8/MWh, 0.000 MtCO₂, threshold=50%
+  PJM 2035: $3.8/MWh, 0.000 MtCO₂, threshold=70%
+  PJM 2040: $3.5/MWh, 0.000 MtCO₂, threshold=90%
+  PJM 2050: $3.1/MWh, 0.000 MtCO₂, threshold=100%
+  NYISO 2030: $0.9/MWh, 0.000 MtCO₂, threshold=50%
+  NYISO 2035: $1.6/MWh, 0.000 MtCO₂, threshold=70%
+  NYISO 2040: $2.0/MWh, 0.000 MtCO₂, threshold=90%
+  NYISO 2050: $2.2/MWh, 0.000 MtCO₂, threshold=100%
+  NEISO 2030: $2.3/MWh, 0.000 MtCO₂, threshold=50%
+  NEISO 2035: $2.4/MWh, 0.000 MtCO₂, threshold=70%
+  NEISO 2040: $2.6/MWh, 0.000 MtCO₂, threshold=90%
+  NEISO 2050: $2.4/MWh, 0.000 MtCO₂, threshold=100%
+  MISO 2030: $3.7/MWh, 0.000 MtCO₂, threshold=50%
+  MISO 2035: $3.8/MWh, 0.000 MtCO₂, threshold=70%
+  MISO 2040: $3.6/MWh, 0.000 MtCO₂, threshold=90%
+  MISO 2050: $3.4/MWh, 0.000 MtCO₂, threshold=100%
+  SPP 2030: $3.9/MWh, 0.000 MtCO₂, threshold=50%
+  SPP 2035: $3.9/MWh, 0.000 MtCO₂, threshold=70%
+  SPP 2040: $3.9/MWh, 0.000 MtCO₂, threshold=90%
+  SPP 2050: $4.0/MWh, 0.000 MtCO₂, threshold=100%
+
+Done.
