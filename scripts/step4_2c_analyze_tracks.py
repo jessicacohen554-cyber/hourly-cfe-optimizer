@@ -80,7 +80,10 @@ def load_from_co2_parquets(batch_dir):
             mix_arrs = {}
             for r in RESOURCES:
                 col = f'mix_{r}'
-                mix_arrs[r] = thr_group[col].values if col in thr_group.columns else np.zeros(len(thr_group), dtype=int)
+                if col in thr_group.columns:
+                    mix_arrs[r] = np.nan_to_num(thr_group[col].values, nan=0.0)
+                else:
+                    mix_arrs[r] = np.zeros(len(thr_group))
 
             for i, sc_key in enumerate(sc_keys):
                 scenarios[sc_key] = {
