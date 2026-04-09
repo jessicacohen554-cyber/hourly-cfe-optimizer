@@ -384,7 +384,7 @@ const GRID_RESILIENCE_DATA = {
       }
     },
     "99.9": {
-      "baseline_cfe": 95.6,
+      "baseline_cfe": 97.3,
       "mix": {
         "clean_firm": 60.0,
         "solar": 40.0,
@@ -395,39 +395,39 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 95.4,
-          "resilience_ratio": 0.998,
-          "max_gap_hours": 1,
-          "worst_week_cfe": 79.1,
-          "hours_below_50pct": 4
+          "stressed_cfe": 97.2,
+          "resilience_ratio": 0.999,
+          "max_gap_hours": 0,
+          "worst_week_cfe": 82.3,
+          "hours_below_50pct": 0
         },
         "winter_freeze": {
-          "stressed_cfe": 95.2,
-          "resilience_ratio": 0.996,
-          "max_gap_hours": 1,
-          "worst_week_cfe": 77.9,
-          "hours_below_50pct": 4
+          "stressed_cfe": 97.0,
+          "resilience_ratio": 0.997,
+          "max_gap_hours": 0,
+          "worst_week_cfe": 82.3,
+          "hours_below_50pct": 0
         },
         "low_wind": {
-          "stressed_cfe": 95.6,
+          "stressed_cfe": 97.3,
           "resilience_ratio": 1.0,
-          "max_gap_hours": 1,
-          "worst_week_cfe": 79.1,
-          "hours_below_50pct": 4
+          "max_gap_hours": 0,
+          "worst_week_cfe": 82.3,
+          "hours_below_50pct": 0
         },
         "low_solar": {
-          "stressed_cfe": 95.3,
-          "resilience_ratio": 0.997,
-          "max_gap_hours": 1,
-          "worst_week_cfe": 79.1,
-          "hours_below_50pct": 4
+          "stressed_cfe": 97.2,
+          "resilience_ratio": 0.998,
+          "max_gap_hours": 0,
+          "worst_week_cfe": 82.3,
+          "hours_below_50pct": 0
         },
         "compound": {
-          "stressed_cfe": 95.4,
-          "resilience_ratio": 0.998,
-          "max_gap_hours": 2,
-          "worst_week_cfe": 79.1,
-          "hours_below_50pct": 8
+          "stressed_cfe": 97.3,
+          "resilience_ratio": 0.999,
+          "max_gap_hours": 0,
+          "worst_week_cfe": 82.3,
+          "hours_below_50pct": 0
         }
       }
     }
@@ -616,7 +616,7 @@ const GRID_RESILIENCE_DATA = {
       }
     },
     "95": {
-      "baseline_cfe": 88.6,
+      "baseline_cfe": 95.0,
       "mix": {
         "clean_firm": 30.0,
         "solar": 23.0,
@@ -626,44 +626,44 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 88.1,
-          "resilience_ratio": 0.995,
-          "max_gap_hours": 15,
-          "worst_week_cfe": 61.0,
-          "hours_below_50pct": 433
+          "stressed_cfe": 94.7,
+          "resilience_ratio": 0.997,
+          "max_gap_hours": 11,
+          "worst_week_cfe": 74.8,
+          "hours_below_50pct": 144
         },
         "winter_freeze": {
-          "stressed_cfe": 88.3,
-          "resilience_ratio": 0.997,
-          "max_gap_hours": 29,
-          "worst_week_cfe": 61.0,
-          "hours_below_50pct": 431
+          "stressed_cfe": 94.8,
+          "resilience_ratio": 0.998,
+          "max_gap_hours": 11,
+          "worst_week_cfe": 74.8,
+          "hours_below_50pct": 145
         },
         "low_wind": {
-          "stressed_cfe": 88.2,
-          "resilience_ratio": 0.996,
-          "max_gap_hours": 15,
-          "worst_week_cfe": 61.0,
-          "hours_below_50pct": 410
+          "stressed_cfe": 94.9,
+          "resilience_ratio": 1.0,
+          "max_gap_hours": 11,
+          "worst_week_cfe": 74.8,
+          "hours_below_50pct": 134
         },
         "low_solar": {
-          "stressed_cfe": 88.5,
-          "resilience_ratio": 0.999,
-          "max_gap_hours": 15,
-          "worst_week_cfe": 61.0,
-          "hours_below_50pct": 398
+          "stressed_cfe": 95.0,
+          "resilience_ratio": 1.0,
+          "max_gap_hours": 11,
+          "worst_week_cfe": 74.8,
+          "hours_below_50pct": 133
         },
         "compound": {
-          "stressed_cfe": 88.2,
-          "resilience_ratio": 0.996,
-          "max_gap_hours": 15,
-          "worst_week_cfe": 61.0,
-          "hours_below_50pct": 423
+          "stressed_cfe": 94.8,
+          "resilience_ratio": 0.998,
+          "max_gap_hours": 11,
+          "worst_week_cfe": 74.8,
+          "hours_below_50pct": 136
         }
       }
     },
     "97.5": {
-      "baseline_cfe": 97.4,
+      "baseline_cfe": 98.3,
       "mix": {
         "clean_firm": 61.0,
         "solar": 29.0,
@@ -673,44 +673,44 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 97.2,
-          "resilience_ratio": 0.997,
+          "stressed_cfe": 98.1,
+          "resilience_ratio": 0.998,
           "max_gap_hours": 0,
-          "worst_week_cfe": 84.0,
+          "worst_week_cfe": 89.5,
           "hours_below_50pct": 0
         },
         "winter_freeze": {
-          "stressed_cfe": 97.3,
-          "resilience_ratio": 0.998,
+          "stressed_cfe": 98.2,
+          "resilience_ratio": 0.999,
           "max_gap_hours": 0,
-          "worst_week_cfe": 84.0,
+          "worst_week_cfe": 88.5,
           "hours_below_50pct": 0
         },
         "low_wind": {
-          "stressed_cfe": 97.4,
+          "stressed_cfe": 98.3,
           "resilience_ratio": 1.0,
           "max_gap_hours": 0,
-          "worst_week_cfe": 84.0,
+          "worst_week_cfe": 89.5,
           "hours_below_50pct": 0
         },
         "low_solar": {
-          "stressed_cfe": 97.4,
+          "stressed_cfe": 98.3,
           "resilience_ratio": 1.0,
           "max_gap_hours": 0,
-          "worst_week_cfe": 84.0,
+          "worst_week_cfe": 89.5,
           "hours_below_50pct": 0
         },
         "compound": {
-          "stressed_cfe": 97.2,
-          "resilience_ratio": 0.998,
+          "stressed_cfe": 98.2,
+          "resilience_ratio": 0.999,
           "max_gap_hours": 0,
-          "worst_week_cfe": 84.0,
+          "worst_week_cfe": 89.5,
           "hours_below_50pct": 0
         }
       }
     },
     "99": {
-      "baseline_cfe": 97.4,
+      "baseline_cfe": 98.3,
       "mix": {
         "clean_firm": 61.0,
         "solar": 29.0,
@@ -720,44 +720,44 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 97.2,
-          "resilience_ratio": 0.997,
+          "stressed_cfe": 98.1,
+          "resilience_ratio": 0.998,
           "max_gap_hours": 0,
-          "worst_week_cfe": 84.0,
+          "worst_week_cfe": 89.5,
           "hours_below_50pct": 0
         },
         "winter_freeze": {
-          "stressed_cfe": 97.3,
-          "resilience_ratio": 0.998,
+          "stressed_cfe": 98.2,
+          "resilience_ratio": 0.999,
           "max_gap_hours": 0,
-          "worst_week_cfe": 84.0,
+          "worst_week_cfe": 88.5,
           "hours_below_50pct": 0
         },
         "low_wind": {
-          "stressed_cfe": 97.4,
+          "stressed_cfe": 98.3,
           "resilience_ratio": 1.0,
           "max_gap_hours": 0,
-          "worst_week_cfe": 84.0,
+          "worst_week_cfe": 89.5,
           "hours_below_50pct": 0
         },
         "low_solar": {
-          "stressed_cfe": 97.4,
+          "stressed_cfe": 98.3,
           "resilience_ratio": 1.0,
           "max_gap_hours": 0,
-          "worst_week_cfe": 84.0,
+          "worst_week_cfe": 89.5,
           "hours_below_50pct": 0
         },
         "compound": {
-          "stressed_cfe": 97.2,
-          "resilience_ratio": 0.998,
+          "stressed_cfe": 98.2,
+          "resilience_ratio": 0.999,
           "max_gap_hours": 0,
-          "worst_week_cfe": 84.0,
+          "worst_week_cfe": 89.5,
           "hours_below_50pct": 0
         }
       }
     },
     "99.5": {
-      "baseline_cfe": 97.4,
+      "baseline_cfe": 98.3,
       "mix": {
         "clean_firm": 61.0,
         "solar": 29.0,
@@ -767,44 +767,44 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 97.2,
-          "resilience_ratio": 0.997,
+          "stressed_cfe": 98.1,
+          "resilience_ratio": 0.998,
           "max_gap_hours": 0,
-          "worst_week_cfe": 84.0,
+          "worst_week_cfe": 89.5,
           "hours_below_50pct": 0
         },
         "winter_freeze": {
-          "stressed_cfe": 97.3,
-          "resilience_ratio": 0.998,
+          "stressed_cfe": 98.2,
+          "resilience_ratio": 0.999,
           "max_gap_hours": 0,
-          "worst_week_cfe": 84.0,
+          "worst_week_cfe": 88.5,
           "hours_below_50pct": 0
         },
         "low_wind": {
-          "stressed_cfe": 97.4,
+          "stressed_cfe": 98.3,
           "resilience_ratio": 1.0,
           "max_gap_hours": 0,
-          "worst_week_cfe": 84.0,
+          "worst_week_cfe": 89.5,
           "hours_below_50pct": 0
         },
         "low_solar": {
-          "stressed_cfe": 97.4,
+          "stressed_cfe": 98.3,
           "resilience_ratio": 1.0,
           "max_gap_hours": 0,
-          "worst_week_cfe": 84.0,
+          "worst_week_cfe": 89.5,
           "hours_below_50pct": 0
         },
         "compound": {
-          "stressed_cfe": 97.2,
-          "resilience_ratio": 0.998,
+          "stressed_cfe": 98.2,
+          "resilience_ratio": 0.999,
           "max_gap_hours": 0,
-          "worst_week_cfe": 84.0,
+          "worst_week_cfe": 89.5,
           "hours_below_50pct": 0
         }
       }
     },
     "99.9": {
-      "baseline_cfe": 98.3,
+      "baseline_cfe": 99.1,
       "mix": {
         "clean_firm": 49.0,
         "solar": 19.0,
@@ -815,46 +815,46 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 98.1,
-          "resilience_ratio": 0.998,
-          "max_gap_hours": 2,
-          "worst_week_cfe": 82.8,
-          "hours_below_50pct": 11
+          "stressed_cfe": 99.0,
+          "resilience_ratio": 0.999,
+          "max_gap_hours": 1,
+          "worst_week_cfe": 89.7,
+          "hours_below_50pct": 3
         },
         "winter_freeze": {
-          "stressed_cfe": 98.1,
-          "resilience_ratio": 0.998,
-          "max_gap_hours": 2,
-          "worst_week_cfe": 82.8,
-          "hours_below_50pct": 12
+          "stressed_cfe": 99.0,
+          "resilience_ratio": 0.999,
+          "max_gap_hours": 1,
+          "worst_week_cfe": 89.7,
+          "hours_below_50pct": 3
         },
         "low_wind": {
-          "stressed_cfe": 98.2,
+          "stressed_cfe": 99.1,
           "resilience_ratio": 1.0,
-          "max_gap_hours": 2,
-          "worst_week_cfe": 82.8,
-          "hours_below_50pct": 11
+          "max_gap_hours": 1,
+          "worst_week_cfe": 89.7,
+          "hours_below_50pct": 3
         },
         "low_solar": {
-          "stressed_cfe": 98.3,
+          "stressed_cfe": 99.1,
           "resilience_ratio": 1.0,
-          "max_gap_hours": 2,
-          "worst_week_cfe": 82.8,
-          "hours_below_50pct": 11
+          "max_gap_hours": 1,
+          "worst_week_cfe": 89.7,
+          "hours_below_50pct": 3
         },
         "compound": {
-          "stressed_cfe": 98.1,
-          "resilience_ratio": 0.998,
+          "stressed_cfe": 99.0,
+          "resilience_ratio": 0.999,
           "max_gap_hours": 2,
-          "worst_week_cfe": 82.8,
-          "hours_below_50pct": 13
+          "worst_week_cfe": 89.7,
+          "hours_below_50pct": 5
         }
       }
     }
   },
   "PJM": {
     "50": {
-      "baseline_cfe": 86.4,
+      "baseline_cfe": 89.9,
       "mix": {
         "clean_firm": 40.0,
         "solar": 9.0,
@@ -865,39 +865,39 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 86.1,
+          "stressed_cfe": 89.5,
           "resilience_ratio": 0.996,
-          "max_gap_hours": 2,
-          "worst_week_cfe": 61.3,
-          "hours_below_50pct": 7
+          "max_gap_hours": 1,
+          "worst_week_cfe": 69.7,
+          "hours_below_50pct": 2
         },
         "winter_freeze": {
-          "stressed_cfe": 86.2,
+          "stressed_cfe": 89.6,
           "resilience_ratio": 0.997,
-          "max_gap_hours": 2,
-          "worst_week_cfe": 62.1,
-          "hours_below_50pct": 2
+          "max_gap_hours": 0,
+          "worst_week_cfe": 65.3,
+          "hours_below_50pct": 0
         },
         "low_wind": {
-          "stressed_cfe": 86.3,
-          "resilience_ratio": 0.998,
-          "max_gap_hours": 2,
-          "worst_week_cfe": 67.7,
-          "hours_below_50pct": 2
+          "stressed_cfe": 89.8,
+          "resilience_ratio": 0.999,
+          "max_gap_hours": 0,
+          "worst_week_cfe": 74.5,
+          "hours_below_50pct": 0
         },
         "low_solar": {
-          "stressed_cfe": 86.4,
-          "resilience_ratio": 0.999,
-          "max_gap_hours": 2,
-          "worst_week_cfe": 67.7,
-          "hours_below_50pct": 2
+          "stressed_cfe": 89.9,
+          "resilience_ratio": 1.0,
+          "max_gap_hours": 0,
+          "worst_week_cfe": 73.9,
+          "hours_below_50pct": 0
         },
         "compound": {
-          "stressed_cfe": 86.2,
-          "resilience_ratio": 0.997,
-          "max_gap_hours": 2,
-          "worst_week_cfe": 67.7,
-          "hours_below_50pct": 2
+          "stressed_cfe": 89.7,
+          "resilience_ratio": 0.998,
+          "max_gap_hours": 0,
+          "worst_week_cfe": 74.5,
+          "hours_below_50pct": 0
         }
       }
     },
@@ -996,7 +996,7 @@ const GRID_RESILIENCE_DATA = {
       }
     },
     "90": {
-      "baseline_cfe": 77.6,
+      "baseline_cfe": 90.0,
       "mix": {
         "clean_firm": 51.0,
         "solar": 39.0,
@@ -1008,44 +1008,44 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 77.4,
+          "stressed_cfe": 89.8,
           "resilience_ratio": 0.998,
-          "max_gap_hours": 14,
-          "worst_week_cfe": 63.4,
-          "hours_below_50pct": 483
+          "max_gap_hours": 8,
+          "worst_week_cfe": 73.2,
+          "hours_below_50pct": 101
         },
         "winter_freeze": {
-          "stressed_cfe": 77.3,
+          "stressed_cfe": 89.8,
           "resilience_ratio": 0.997,
-          "max_gap_hours": 18,
-          "worst_week_cfe": 56.0,
-          "hours_below_50pct": 467
+          "max_gap_hours": 6,
+          "worst_week_cfe": 72.3,
+          "hours_below_50pct": 82
         },
         "low_wind": {
-          "stressed_cfe": 77.3,
-          "resilience_ratio": 0.997,
-          "max_gap_hours": 13,
-          "worst_week_cfe": 63.4,
-          "hours_below_50pct": 391
+          "stressed_cfe": 90.0,
+          "resilience_ratio": 0.999,
+          "max_gap_hours": 5,
+          "worst_week_cfe": 77.3,
+          "hours_below_50pct": 70
         },
         "low_solar": {
-          "stressed_cfe": 77.5,
-          "resilience_ratio": 0.999,
-          "max_gap_hours": 13,
-          "worst_week_cfe": 62.0,
-          "hours_below_50pct": 392
+          "stressed_cfe": 90.0,
+          "resilience_ratio": 1.0,
+          "max_gap_hours": 5,
+          "worst_week_cfe": 77.3,
+          "hours_below_50pct": 70
         },
         "compound": {
-          "stressed_cfe": 77.4,
-          "resilience_ratio": 0.998,
-          "max_gap_hours": 14,
-          "worst_week_cfe": 63.4,
-          "hours_below_50pct": 420
+          "stressed_cfe": 89.9,
+          "resilience_ratio": 0.999,
+          "max_gap_hours": 5,
+          "worst_week_cfe": 77.3,
+          "hours_below_50pct": 81
         }
       }
     },
     "95": {
-      "baseline_cfe": 81.9,
+      "baseline_cfe": 95.3,
       "mix": {
         "clean_firm": 41.0,
         "solar": 40.0,
@@ -1057,44 +1057,44 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 81.5,
+          "stressed_cfe": 94.9,
           "resilience_ratio": 0.996,
-          "max_gap_hours": 23,
-          "worst_week_cfe": 58.3,
-          "hours_below_50pct": 1338
+          "max_gap_hours": 10,
+          "worst_week_cfe": 73.4,
+          "hours_below_50pct": 273
         },
         "winter_freeze": {
-          "stressed_cfe": 81.6,
-          "resilience_ratio": 0.996,
-          "max_gap_hours": 23,
-          "worst_week_cfe": 50.3,
-          "hours_below_50pct": 1358
+          "stressed_cfe": 95.0,
+          "resilience_ratio": 0.998,
+          "max_gap_hours": 10,
+          "worst_week_cfe": 77.0,
+          "hours_below_50pct": 243
         },
         "low_wind": {
-          "stressed_cfe": 81.6,
-          "resilience_ratio": 0.997,
-          "max_gap_hours": 23,
-          "worst_week_cfe": 58.3,
-          "hours_below_50pct": 1309
+          "stressed_cfe": 95.2,
+          "resilience_ratio": 1.0,
+          "max_gap_hours": 10,
+          "worst_week_cfe": 82.1,
+          "hours_below_50pct": 232
         },
         "low_solar": {
-          "stressed_cfe": 81.5,
-          "resilience_ratio": 0.996,
-          "max_gap_hours": 23,
-          "worst_week_cfe": 55.2,
-          "hours_below_50pct": 1302
+          "stressed_cfe": 95.2,
+          "resilience_ratio": 0.999,
+          "max_gap_hours": 10,
+          "worst_week_cfe": 82.1,
+          "hours_below_50pct": 232
         },
         "compound": {
-          "stressed_cfe": 81.6,
+          "stressed_cfe": 95.0,
           "resilience_ratio": 0.997,
-          "max_gap_hours": 23,
-          "worst_week_cfe": 58.3,
-          "hours_below_50pct": 1332
+          "max_gap_hours": 14,
+          "worst_week_cfe": 78.4,
+          "hours_below_50pct": 253
         }
       }
     },
     "97.5": {
-      "baseline_cfe": 86.0,
+      "baseline_cfe": 97.0,
       "mix": {
         "clean_firm": 41.0,
         "solar": 40.0,
@@ -1106,44 +1106,44 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 85.6,
-          "resilience_ratio": 0.995,
-          "max_gap_hours": 18,
-          "worst_week_cfe": 59.2,
-          "hours_below_50pct": 1042
+          "stressed_cfe": 96.6,
+          "resilience_ratio": 0.996,
+          "max_gap_hours": 10,
+          "worst_week_cfe": 73.6,
+          "hours_below_50pct": 218
         },
         "winter_freeze": {
-          "stressed_cfe": 85.7,
-          "resilience_ratio": 0.997,
-          "max_gap_hours": 20,
-          "worst_week_cfe": 51.1,
-          "hours_below_50pct": 1062
+          "stressed_cfe": 96.7,
+          "resilience_ratio": 0.998,
+          "max_gap_hours": 10,
+          "worst_week_cfe": 80.1,
+          "hours_below_50pct": 182
         },
         "low_wind": {
-          "stressed_cfe": 85.9,
-          "resilience_ratio": 0.999,
-          "max_gap_hours": 18,
-          "worst_week_cfe": 59.2,
-          "hours_below_50pct": 999
+          "stressed_cfe": 97.0,
+          "resilience_ratio": 1.0,
+          "max_gap_hours": 10,
+          "worst_week_cfe": 83.4,
+          "hours_below_50pct": 172
         },
         "low_solar": {
-          "stressed_cfe": 85.7,
-          "resilience_ratio": 0.996,
-          "max_gap_hours": 18,
-          "worst_week_cfe": 56.1,
-          "hours_below_50pct": 1002
+          "stressed_cfe": 96.9,
+          "resilience_ratio": 0.999,
+          "max_gap_hours": 10,
+          "worst_week_cfe": 83.4,
+          "hours_below_50pct": 172
         },
         "compound": {
-          "stressed_cfe": 85.7,
-          "resilience_ratio": 0.996,
-          "max_gap_hours": 18,
-          "worst_week_cfe": 59.2,
-          "hours_below_50pct": 1039
+          "stressed_cfe": 96.7,
+          "resilience_ratio": 0.997,
+          "max_gap_hours": 14,
+          "worst_week_cfe": 79.8,
+          "hours_below_50pct": 192
         }
       }
     },
     "99": {
-      "baseline_cfe": 85.7,
+      "baseline_cfe": 97.4,
       "mix": {
         "clean_firm": 41.0,
         "solar": 20.0,
@@ -1155,44 +1155,44 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 85.3,
+          "stressed_cfe": 97.0,
           "resilience_ratio": 0.996,
-          "max_gap_hours": 18,
-          "worst_week_cfe": 52.7,
-          "hours_below_50pct": 691
+          "max_gap_hours": 16,
+          "worst_week_cfe": 73.7,
+          "hours_below_50pct": 187
         },
         "winter_freeze": {
-          "stressed_cfe": 85.3,
-          "resilience_ratio": 0.996,
-          "max_gap_hours": 18,
-          "worst_week_cfe": 59.5,
-          "hours_below_50pct": 676
+          "stressed_cfe": 97.2,
+          "resilience_ratio": 0.998,
+          "max_gap_hours": 16,
+          "worst_week_cfe": 82.6,
+          "hours_below_50pct": 160
         },
         "low_wind": {
-          "stressed_cfe": 85.4,
-          "resilience_ratio": 0.997,
-          "max_gap_hours": 18,
-          "worst_week_cfe": 60.2,
-          "hours_below_50pct": 650
+          "stressed_cfe": 97.4,
+          "resilience_ratio": 1.0,
+          "max_gap_hours": 16,
+          "worst_week_cfe": 84.1,
+          "hours_below_50pct": 150
         },
         "low_solar": {
-          "stressed_cfe": 85.5,
-          "resilience_ratio": 0.998,
-          "max_gap_hours": 18,
-          "worst_week_cfe": 60.2,
-          "hours_below_50pct": 631
+          "stressed_cfe": 97.4,
+          "resilience_ratio": 1.0,
+          "max_gap_hours": 16,
+          "worst_week_cfe": 84.1,
+          "hours_below_50pct": 150
         },
         "compound": {
-          "stressed_cfe": 85.4,
-          "resilience_ratio": 0.997,
-          "max_gap_hours": 18,
-          "worst_week_cfe": 57.9,
-          "hours_below_50pct": 669
+          "stressed_cfe": 97.2,
+          "resilience_ratio": 0.998,
+          "max_gap_hours": 16,
+          "worst_week_cfe": 84.1,
+          "hours_below_50pct": 170
         }
       }
     },
     "99.5": {
-      "baseline_cfe": 97.9,
+      "baseline_cfe": 99.2,
       "mix": {
         "clean_firm": 61.0,
         "solar": 41.0,
@@ -1206,44 +1206,44 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 97.6,
-          "resilience_ratio": 0.996,
-          "max_gap_hours": 3,
-          "worst_week_cfe": 85.1,
-          "hours_below_50pct": 26
+          "stressed_cfe": 99.1,
+          "resilience_ratio": 0.999,
+          "max_gap_hours": 2,
+          "worst_week_cfe": 92.5,
+          "hours_below_50pct": 6
         },
         "winter_freeze": {
-          "stressed_cfe": 97.6,
-          "resilience_ratio": 0.996,
-          "max_gap_hours": 3,
-          "worst_week_cfe": 73.6,
-          "hours_below_50pct": 7
+          "stressed_cfe": 99.0,
+          "resilience_ratio": 0.997,
+          "max_gap_hours": 0,
+          "worst_week_cfe": 82.5,
+          "hours_below_50pct": 0
         },
         "low_wind": {
-          "stressed_cfe": 97.9,
+          "stressed_cfe": 99.2,
           "resilience_ratio": 1.0,
-          "max_gap_hours": 3,
-          "worst_week_cfe": 85.9,
-          "hours_below_50pct": 5
+          "max_gap_hours": 0,
+          "worst_week_cfe": 92.5,
+          "hours_below_50pct": 0
         },
         "low_solar": {
-          "stressed_cfe": 97.8,
+          "stressed_cfe": 99.2,
           "resilience_ratio": 0.999,
-          "max_gap_hours": 3,
-          "worst_week_cfe": 82.7,
-          "hours_below_50pct": 5
+          "max_gap_hours": 0,
+          "worst_week_cfe": 90.8,
+          "hours_below_50pct": 0
         },
         "compound": {
-          "stressed_cfe": 97.7,
-          "resilience_ratio": 0.998,
-          "max_gap_hours": 3,
-          "worst_week_cfe": 85.9,
-          "hours_below_50pct": 8
+          "stressed_cfe": 99.2,
+          "resilience_ratio": 1.0,
+          "max_gap_hours": 1,
+          "worst_week_cfe": 92.5,
+          "hours_below_50pct": 1
         }
       }
     },
     "99.9": {
-      "baseline_cfe": 97.9,
+      "baseline_cfe": 99.2,
       "mix": {
         "clean_firm": 61.0,
         "solar": 41.0,
@@ -1257,39 +1257,39 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 97.6,
-          "resilience_ratio": 0.996,
-          "max_gap_hours": 3,
-          "worst_week_cfe": 85.1,
-          "hours_below_50pct": 26
+          "stressed_cfe": 99.1,
+          "resilience_ratio": 0.999,
+          "max_gap_hours": 2,
+          "worst_week_cfe": 92.5,
+          "hours_below_50pct": 6
         },
         "winter_freeze": {
-          "stressed_cfe": 97.6,
-          "resilience_ratio": 0.996,
-          "max_gap_hours": 3,
-          "worst_week_cfe": 73.6,
-          "hours_below_50pct": 7
+          "stressed_cfe": 99.0,
+          "resilience_ratio": 0.997,
+          "max_gap_hours": 0,
+          "worst_week_cfe": 82.5,
+          "hours_below_50pct": 0
         },
         "low_wind": {
-          "stressed_cfe": 97.9,
+          "stressed_cfe": 99.2,
           "resilience_ratio": 1.0,
-          "max_gap_hours": 3,
-          "worst_week_cfe": 85.9,
-          "hours_below_50pct": 5
+          "max_gap_hours": 0,
+          "worst_week_cfe": 92.5,
+          "hours_below_50pct": 0
         },
         "low_solar": {
-          "stressed_cfe": 97.8,
+          "stressed_cfe": 99.2,
           "resilience_ratio": 0.999,
-          "max_gap_hours": 3,
-          "worst_week_cfe": 82.7,
-          "hours_below_50pct": 5
+          "max_gap_hours": 0,
+          "worst_week_cfe": 90.8,
+          "hours_below_50pct": 0
         },
         "compound": {
-          "stressed_cfe": 97.7,
-          "resilience_ratio": 0.998,
-          "max_gap_hours": 3,
-          "worst_week_cfe": 85.9,
-          "hours_below_50pct": 8
+          "stressed_cfe": 99.2,
+          "resilience_ratio": 1.0,
+          "max_gap_hours": 1,
+          "worst_week_cfe": 92.5,
+          "hours_below_50pct": 1
         }
       }
     }
@@ -1342,7 +1342,7 @@ const GRID_RESILIENCE_DATA = {
       }
     },
     "75": {
-      "baseline_cfe": 69.0,
+      "baseline_cfe": 78.1,
       "mix": {
         "clean_firm": 21.0,
         "solar": 29.0,
@@ -1354,44 +1354,44 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 68.8,
-          "resilience_ratio": 0.996,
-          "max_gap_hours": 38,
-          "worst_week_cfe": 47.5,
-          "hours_below_50pct": 2196
+          "stressed_cfe": 77.8,
+          "resilience_ratio": 0.997,
+          "max_gap_hours": 17,
+          "worst_week_cfe": 54.2,
+          "hours_below_50pct": 1237
         },
         "winter_freeze": {
-          "stressed_cfe": 68.8,
-          "resilience_ratio": 0.996,
-          "max_gap_hours": 38,
-          "worst_week_cfe": 53.4,
-          "hours_below_50pct": 2246
+          "stressed_cfe": 77.8,
+          "resilience_ratio": 0.997,
+          "max_gap_hours": 17,
+          "worst_week_cfe": 60.5,
+          "hours_below_50pct": 1220
         },
         "low_wind": {
-          "stressed_cfe": 68.7,
-          "resilience_ratio": 0.996,
-          "max_gap_hours": 38,
-          "worst_week_cfe": 54.0,
-          "hours_below_50pct": 2213
+          "stressed_cfe": 77.9,
+          "resilience_ratio": 0.998,
+          "max_gap_hours": 17,
+          "worst_week_cfe": 60.5,
+          "hours_below_50pct": 1200
         },
         "low_solar": {
-          "stressed_cfe": 68.8,
-          "resilience_ratio": 0.997,
-          "max_gap_hours": 38,
-          "worst_week_cfe": 51.5,
-          "hours_below_50pct": 2182
+          "stressed_cfe": 78.0,
+          "resilience_ratio": 0.999,
+          "max_gap_hours": 17,
+          "worst_week_cfe": 60.5,
+          "hours_below_50pct": 1195
         },
         "compound": {
-          "stressed_cfe": 68.9,
-          "resilience_ratio": 0.998,
-          "max_gap_hours": 38,
-          "worst_week_cfe": 54.0,
-          "hours_below_50pct": 2191
+          "stressed_cfe": 78.0,
+          "resilience_ratio": 0.999,
+          "max_gap_hours": 17,
+          "worst_week_cfe": 60.5,
+          "hours_below_50pct": 1206
         }
       }
     },
     "85": {
-      "baseline_cfe": 87.3,
+      "baseline_cfe": 89.4,
       "mix": {
         "clean_firm": 40.0,
         "solar": 19.0,
@@ -1402,44 +1402,44 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 87.0,
+          "stressed_cfe": 89.1,
           "resilience_ratio": 0.996,
-          "max_gap_hours": 15,
-          "worst_week_cfe": 53.9,
-          "hours_below_50pct": 172
+          "max_gap_hours": 13,
+          "worst_week_cfe": 59.9,
+          "hours_below_50pct": 119
         },
         "winter_freeze": {
-          "stressed_cfe": 87.1,
-          "resilience_ratio": 0.997,
+          "stressed_cfe": 89.2,
+          "resilience_ratio": 0.998,
           "max_gap_hours": 12,
-          "worst_week_cfe": 62.6,
-          "hours_below_50pct": 153
+          "worst_week_cfe": 68.4,
+          "hours_below_50pct": 107
         },
         "low_wind": {
-          "stressed_cfe": 87.1,
-          "resilience_ratio": 0.997,
+          "stressed_cfe": 89.2,
+          "resilience_ratio": 0.998,
           "max_gap_hours": 12,
-          "worst_week_cfe": 62.6,
-          "hours_below_50pct": 141
+          "worst_week_cfe": 68.4,
+          "hours_below_50pct": 95
         },
         "low_solar": {
-          "stressed_cfe": 87.3,
-          "resilience_ratio": 0.999,
+          "stressed_cfe": 89.4,
+          "resilience_ratio": 1.0,
           "max_gap_hours": 12,
-          "worst_week_cfe": 62.6,
-          "hours_below_50pct": 141
+          "worst_week_cfe": 68.4,
+          "hours_below_50pct": 95
         },
         "compound": {
-          "stressed_cfe": 87.1,
-          "resilience_ratio": 0.997,
-          "max_gap_hours": 13,
-          "worst_week_cfe": 62.6,
-          "hours_below_50pct": 170
+          "stressed_cfe": 89.2,
+          "resilience_ratio": 0.998,
+          "max_gap_hours": 12,
+          "worst_week_cfe": 68.4,
+          "hours_below_50pct": 114
         }
       }
     },
     "90": {
-      "baseline_cfe": 87.3,
+      "baseline_cfe": 89.4,
       "mix": {
         "clean_firm": 40.0,
         "solar": 19.0,
@@ -1450,39 +1450,39 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 87.0,
+          "stressed_cfe": 89.1,
           "resilience_ratio": 0.996,
-          "max_gap_hours": 15,
-          "worst_week_cfe": 53.9,
-          "hours_below_50pct": 172
+          "max_gap_hours": 13,
+          "worst_week_cfe": 59.9,
+          "hours_below_50pct": 119
         },
         "winter_freeze": {
-          "stressed_cfe": 87.1,
-          "resilience_ratio": 0.997,
+          "stressed_cfe": 89.2,
+          "resilience_ratio": 0.998,
           "max_gap_hours": 12,
-          "worst_week_cfe": 62.6,
-          "hours_below_50pct": 153
+          "worst_week_cfe": 68.4,
+          "hours_below_50pct": 107
         },
         "low_wind": {
-          "stressed_cfe": 87.1,
-          "resilience_ratio": 0.997,
+          "stressed_cfe": 89.2,
+          "resilience_ratio": 0.998,
           "max_gap_hours": 12,
-          "worst_week_cfe": 62.6,
-          "hours_below_50pct": 141
+          "worst_week_cfe": 68.4,
+          "hours_below_50pct": 95
         },
         "low_solar": {
-          "stressed_cfe": 87.3,
-          "resilience_ratio": 0.999,
+          "stressed_cfe": 89.4,
+          "resilience_ratio": 1.0,
           "max_gap_hours": 12,
-          "worst_week_cfe": 62.6,
-          "hours_below_50pct": 141
+          "worst_week_cfe": 68.4,
+          "hours_below_50pct": 95
         },
         "compound": {
-          "stressed_cfe": 87.1,
-          "resilience_ratio": 0.997,
-          "max_gap_hours": 13,
-          "worst_week_cfe": 62.6,
-          "hours_below_50pct": 170
+          "stressed_cfe": 89.2,
+          "resilience_ratio": 0.998,
+          "max_gap_hours": 12,
+          "worst_week_cfe": 68.4,
+          "hours_below_50pct": 114
         }
       }
     },
@@ -1625,7 +1625,7 @@ const GRID_RESILIENCE_DATA = {
       }
     },
     "99.5": {
-      "baseline_cfe": 97.0,
+      "baseline_cfe": 98.4,
       "mix": {
         "clean_firm": 50.0,
         "solar": 20.0,
@@ -1636,39 +1636,39 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 96.5,
-          "resilience_ratio": 0.995,
-          "max_gap_hours": 12,
-          "worst_week_cfe": 63.2,
-          "hours_below_50pct": 42
+          "stressed_cfe": 98.0,
+          "resilience_ratio": 0.997,
+          "max_gap_hours": 11,
+          "worst_week_cfe": 70.0,
+          "hours_below_50pct": 34
         },
         "winter_freeze": {
-          "stressed_cfe": 96.8,
-          "resilience_ratio": 0.998,
+          "stressed_cfe": 98.2,
+          "resilience_ratio": 0.999,
           "max_gap_hours": 2,
-          "worst_week_cfe": 73.3,
-          "hours_below_50pct": 6
+          "worst_week_cfe": 81.8,
+          "hours_below_50pct": 4
         },
         "low_wind": {
-          "stressed_cfe": 96.9,
-          "resilience_ratio": 0.999,
+          "stressed_cfe": 98.4,
+          "resilience_ratio": 1.0,
           "max_gap_hours": 2,
-          "worst_week_cfe": 73.3,
-          "hours_below_50pct": 6
+          "worst_week_cfe": 81.8,
+          "hours_below_50pct": 4
         },
         "low_solar": {
-          "stressed_cfe": 96.9,
-          "resilience_ratio": 0.999,
+          "stressed_cfe": 98.4,
+          "resilience_ratio": 1.0,
           "max_gap_hours": 2,
-          "worst_week_cfe": 73.3,
-          "hours_below_50pct": 6
+          "worst_week_cfe": 81.8,
+          "hours_below_50pct": 4
         },
         "compound": {
-          "stressed_cfe": 96.7,
-          "resilience_ratio": 0.997,
+          "stressed_cfe": 98.2,
+          "resilience_ratio": 0.998,
           "max_gap_hours": 2,
-          "worst_week_cfe": 73.3,
-          "hours_below_50pct": 6
+          "worst_week_cfe": 81.8,
+          "hours_below_50pct": 4
         }
       }
     },
@@ -2002,7 +2002,7 @@ const GRID_RESILIENCE_DATA = {
       }
     },
     "99": {
-      "baseline_cfe": 96.7,
+      "baseline_cfe": 98.0,
       "mix": {
         "clean_firm": 40.0,
         "solar": 20.0,
@@ -2013,39 +2013,39 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 96.3,
+          "stressed_cfe": 97.6,
           "resilience_ratio": 0.996,
-          "max_gap_hours": 15,
-          "worst_week_cfe": 66.8,
-          "hours_below_50pct": 67
+          "max_gap_hours": 14,
+          "worst_week_cfe": 74.9,
+          "hours_below_50pct": 52
         },
         "winter_freeze": {
-          "stressed_cfe": 96.4,
+          "stressed_cfe": 97.7,
           "resilience_ratio": 0.997,
-          "max_gap_hours": 4,
-          "worst_week_cfe": 77.3,
-          "hours_below_50pct": 35
+          "max_gap_hours": 3,
+          "worst_week_cfe": 83.2,
+          "hours_below_50pct": 21
         },
         "low_wind": {
-          "stressed_cfe": 96.7,
+          "stressed_cfe": 98.0,
           "resilience_ratio": 1.0,
-          "max_gap_hours": 4,
-          "worst_week_cfe": 77.3,
-          "hours_below_50pct": 33
+          "max_gap_hours": 3,
+          "worst_week_cfe": 85.2,
+          "hours_below_50pct": 19
         },
         "low_solar": {
-          "stressed_cfe": 96.6,
+          "stressed_cfe": 97.9,
           "resilience_ratio": 0.999,
-          "max_gap_hours": 4,
-          "worst_week_cfe": 77.3,
-          "hours_below_50pct": 34
+          "max_gap_hours": 3,
+          "worst_week_cfe": 85.2,
+          "hours_below_50pct": 19
         },
         "compound": {
-          "stressed_cfe": 96.4,
-          "resilience_ratio": 0.997,
-          "max_gap_hours": 4,
-          "worst_week_cfe": 77.3,
-          "hours_below_50pct": 38
+          "stressed_cfe": 97.9,
+          "resilience_ratio": 0.999,
+          "max_gap_hours": 3,
+          "worst_week_cfe": 85.2,
+          "hours_below_50pct": 23
         }
       }
     },
@@ -2333,7 +2333,7 @@ const GRID_RESILIENCE_DATA = {
       }
     },
     "95": {
-      "baseline_cfe": 86.2,
+      "baseline_cfe": 95.0,
       "mix": {
         "clean_firm": 30.0,
         "solar": 12.0,
@@ -2344,44 +2344,44 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 85.8,
-          "resilience_ratio": 0.995,
-          "max_gap_hours": 20,
-          "worst_week_cfe": 51.1,
-          "hours_below_50pct": 464
+          "stressed_cfe": 94.8,
+          "resilience_ratio": 0.998,
+          "max_gap_hours": 10,
+          "worst_week_cfe": 77.9,
+          "hours_below_50pct": 128
         },
         "winter_freeze": {
-          "stressed_cfe": 85.9,
-          "resilience_ratio": 0.996,
-          "max_gap_hours": 15,
-          "worst_week_cfe": 57.7,
-          "hours_below_50pct": 434
+          "stressed_cfe": 94.8,
+          "resilience_ratio": 0.998,
+          "max_gap_hours": 10,
+          "worst_week_cfe": 77.9,
+          "hours_below_50pct": 120
         },
         "low_wind": {
-          "stressed_cfe": 85.8,
-          "resilience_ratio": 0.996,
-          "max_gap_hours": 15,
-          "worst_week_cfe": 57.7,
-          "hours_below_50pct": 424
+          "stressed_cfe": 94.9,
+          "resilience_ratio": 0.999,
+          "max_gap_hours": 10,
+          "worst_week_cfe": 77.9,
+          "hours_below_50pct": 116
         },
         "low_solar": {
-          "stressed_cfe": 86.2,
+          "stressed_cfe": 95.0,
           "resilience_ratio": 1.0,
-          "max_gap_hours": 15,
-          "worst_week_cfe": 57.7,
-          "hours_below_50pct": 417
+          "max_gap_hours": 10,
+          "worst_week_cfe": 77.9,
+          "hours_below_50pct": 114
         },
         "compound": {
-          "stressed_cfe": 85.9,
-          "resilience_ratio": 0.996,
-          "max_gap_hours": 15,
-          "worst_week_cfe": 56.3,
-          "hours_below_50pct": 447
+          "stressed_cfe": 94.9,
+          "resilience_ratio": 0.999,
+          "max_gap_hours": 10,
+          "worst_week_cfe": 77.9,
+          "hours_below_50pct": 116
         }
       }
     },
     "97.5": {
-      "baseline_cfe": 78.6,
+      "baseline_cfe": 95.9,
       "mix": {
         "clean_firm": 41.0,
         "solar": 9.0,
@@ -2393,44 +2393,44 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 78.2,
-          "resilience_ratio": 0.996,
-          "max_gap_hours": 20,
-          "worst_week_cfe": 48.5,
-          "hours_below_50pct": 521
+          "stressed_cfe": 95.6,
+          "resilience_ratio": 0.997,
+          "max_gap_hours": 7,
+          "worst_week_cfe": 79.7,
+          "hours_below_50pct": 15
         },
         "winter_freeze": {
-          "stressed_cfe": 78.3,
-          "resilience_ratio": 0.996,
-          "max_gap_hours": 24,
-          "worst_week_cfe": 55.5,
-          "hours_below_50pct": 497
+          "stressed_cfe": 95.7,
+          "resilience_ratio": 0.998,
+          "max_gap_hours": 2,
+          "worst_week_cfe": 79.8,
+          "hours_below_50pct": 5
         },
         "low_wind": {
-          "stressed_cfe": 77.8,
-          "resilience_ratio": 0.99,
-          "max_gap_hours": 17,
-          "worst_week_cfe": 55.5,
-          "hours_below_50pct": 449
+          "stressed_cfe": 95.9,
+          "resilience_ratio": 1.0,
+          "max_gap_hours": 2,
+          "worst_week_cfe": 80.8,
+          "hours_below_50pct": 5
         },
         "low_solar": {
-          "stressed_cfe": 78.5,
-          "resilience_ratio": 0.999,
-          "max_gap_hours": 17,
-          "worst_week_cfe": 55.5,
-          "hours_below_50pct": 443
+          "stressed_cfe": 95.9,
+          "resilience_ratio": 1.0,
+          "max_gap_hours": 2,
+          "worst_week_cfe": 80.8,
+          "hours_below_50pct": 5
         },
         "compound": {
-          "stressed_cfe": 78.3,
-          "resilience_ratio": 0.997,
-          "max_gap_hours": 17,
-          "worst_week_cfe": 51.9,
-          "hours_below_50pct": 492
+          "stressed_cfe": 95.8,
+          "resilience_ratio": 0.998,
+          "max_gap_hours": 2,
+          "worst_week_cfe": 80.8,
+          "hours_below_50pct": 5
         }
       }
     },
     "99": {
-      "baseline_cfe": 79.0,
+      "baseline_cfe": 97.9,
       "mix": {
         "clean_firm": 41.0,
         "solar": 9.0,
@@ -2442,39 +2442,39 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 78.7,
+          "stressed_cfe": 97.6,
           "resilience_ratio": 0.996,
-          "max_gap_hours": 20,
-          "worst_week_cfe": 48.5,
-          "hours_below_50pct": 518
+          "max_gap_hours": 7,
+          "worst_week_cfe": 80.8,
+          "hours_below_50pct": 14
         },
         "winter_freeze": {
-          "stressed_cfe": 78.7,
-          "resilience_ratio": 0.996,
-          "max_gap_hours": 24,
-          "worst_week_cfe": 55.5,
-          "hours_below_50pct": 494
+          "stressed_cfe": 97.7,
+          "resilience_ratio": 0.998,
+          "max_gap_hours": 3,
+          "worst_week_cfe": 81.3,
+          "hours_below_50pct": 6
         },
         "low_wind": {
-          "stressed_cfe": 78.2,
-          "resilience_ratio": 0.989,
-          "max_gap_hours": 17,
-          "worst_week_cfe": 55.5,
-          "hours_below_50pct": 448
+          "stressed_cfe": 97.9,
+          "resilience_ratio": 1.0,
+          "max_gap_hours": 3,
+          "worst_week_cfe": 86.6,
+          "hours_below_50pct": 5
         },
         "low_solar": {
-          "stressed_cfe": 79.0,
-          "resilience_ratio": 0.999,
-          "max_gap_hours": 17,
-          "worst_week_cfe": 55.5,
-          "hours_below_50pct": 440
+          "stressed_cfe": 97.9,
+          "resilience_ratio": 1.0,
+          "max_gap_hours": 3,
+          "worst_week_cfe": 86.6,
+          "hours_below_50pct": 5
         },
         "compound": {
-          "stressed_cfe": 78.8,
-          "resilience_ratio": 0.997,
-          "max_gap_hours": 17,
-          "worst_week_cfe": 51.9,
-          "hours_below_50pct": 489
+          "stressed_cfe": 97.7,
+          "resilience_ratio": 0.998,
+          "max_gap_hours": 3,
+          "worst_week_cfe": 86.6,
+          "hours_below_50pct": 5
         }
       }
     },
@@ -2711,7 +2711,7 @@ const GRID_RESILIENCE_DATA = {
       }
     },
     "90": {
-      "baseline_cfe": 83.0,
+      "baseline_cfe": 90.1,
       "mix": {
         "clean_firm": 11.0,
         "solar": 31.0,
@@ -2723,44 +2723,44 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 82.6,
-          "resilience_ratio": 0.995,
-          "max_gap_hours": 23,
-          "worst_week_cfe": 59.9,
-          "hours_below_50pct": 968
-        },
-        "winter_freeze": {
-          "stressed_cfe": 82.6,
-          "resilience_ratio": 0.995,
-          "max_gap_hours": 21,
-          "worst_week_cfe": 51.6,
-          "hours_below_50pct": 971
-        },
-        "low_wind": {
-          "stressed_cfe": 82.0,
-          "resilience_ratio": 0.988,
-          "max_gap_hours": 21,
-          "worst_week_cfe": 59.9,
-          "hours_below_50pct": 953
-        },
-        "low_solar": {
-          "stressed_cfe": 82.7,
-          "resilience_ratio": 0.997,
-          "max_gap_hours": 30,
-          "worst_week_cfe": 57.0,
-          "hours_below_50pct": 949
-        },
-        "compound": {
-          "stressed_cfe": 82.6,
+          "stressed_cfe": 89.8,
           "resilience_ratio": 0.996,
           "max_gap_hours": 21,
-          "worst_week_cfe": 59.9,
-          "hours_below_50pct": 963
+          "worst_week_cfe": 69.7,
+          "hours_below_50pct": 445
+        },
+        "winter_freeze": {
+          "stressed_cfe": 89.8,
+          "resilience_ratio": 0.996,
+          "max_gap_hours": 17,
+          "worst_week_cfe": 62.6,
+          "hours_below_50pct": 441
+        },
+        "low_wind": {
+          "stressed_cfe": 89.6,
+          "resilience_ratio": 0.994,
+          "max_gap_hours": 17,
+          "worst_week_cfe": 69.7,
+          "hours_below_50pct": 416
+        },
+        "low_solar": {
+          "stressed_cfe": 90.0,
+          "resilience_ratio": 0.998,
+          "max_gap_hours": 18,
+          "worst_week_cfe": 67.9,
+          "hours_below_50pct": 417
+        },
+        "compound": {
+          "stressed_cfe": 89.9,
+          "resilience_ratio": 0.997,
+          "max_gap_hours": 17,
+          "worst_week_cfe": 69.7,
+          "hours_below_50pct": 431
         }
       }
     },
     "95": {
-      "baseline_cfe": 84.8,
+      "baseline_cfe": 92.0,
       "mix": {
         "clean_firm": 11.0,
         "solar": 31.0,
@@ -2771,44 +2771,44 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 84.3,
-          "resilience_ratio": 0.995,
-          "max_gap_hours": 23,
-          "worst_week_cfe": 59.7,
-          "hours_below_50pct": 847
+          "stressed_cfe": 91.6,
+          "resilience_ratio": 0.996,
+          "max_gap_hours": 17,
+          "worst_week_cfe": 70.7,
+          "hours_below_50pct": 376
         },
         "winter_freeze": {
-          "stressed_cfe": 84.4,
-          "resilience_ratio": 0.995,
-          "max_gap_hours": 21,
-          "worst_week_cfe": 51.6,
-          "hours_below_50pct": 845
+          "stressed_cfe": 91.6,
+          "resilience_ratio": 0.996,
+          "max_gap_hours": 17,
+          "worst_week_cfe": 62.7,
+          "hours_below_50pct": 373
         },
         "low_wind": {
-          "stressed_cfe": 83.8,
-          "resilience_ratio": 0.989,
-          "max_gap_hours": 21,
-          "worst_week_cfe": 59.7,
-          "hours_below_50pct": 824
+          "stressed_cfe": 91.7,
+          "resilience_ratio": 0.996,
+          "max_gap_hours": 17,
+          "worst_week_cfe": 70.7,
+          "hours_below_50pct": 348
         },
         "low_solar": {
-          "stressed_cfe": 84.5,
-          "resilience_ratio": 0.997,
-          "max_gap_hours": 30,
-          "worst_week_cfe": 56.9,
-          "hours_below_50pct": 826
+          "stressed_cfe": 91.8,
+          "resilience_ratio": 0.998,
+          "max_gap_hours": 18,
+          "worst_week_cfe": 68.2,
+          "hours_below_50pct": 350
         },
         "compound": {
-          "stressed_cfe": 84.4,
-          "resilience_ratio": 0.995,
-          "max_gap_hours": 21,
-          "worst_week_cfe": 59.7,
-          "hours_below_50pct": 844
+          "stressed_cfe": 91.8,
+          "resilience_ratio": 0.997,
+          "max_gap_hours": 17,
+          "worst_week_cfe": 70.7,
+          "hours_below_50pct": 363
         }
       }
     },
     "97.5": {
-      "baseline_cfe": 92.7,
+      "baseline_cfe": 95.0,
       "mix": {
         "clean_firm": 29.0,
         "solar": 1.0,
@@ -2818,44 +2818,44 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 92.4,
+          "stressed_cfe": 94.7,
           "resilience_ratio": 0.997,
-          "max_gap_hours": 16,
-          "worst_week_cfe": 69.4,
-          "hours_below_50pct": 239
+          "max_gap_hours": 12,
+          "worst_week_cfe": 75.0,
+          "hours_below_50pct": 152
         },
         "winter_freeze": {
-          "stressed_cfe": 92.6,
-          "resilience_ratio": 0.998,
-          "max_gap_hours": 15,
-          "worst_week_cfe": 69.4,
-          "hours_below_50pct": 205
+          "stressed_cfe": 94.9,
+          "resilience_ratio": 0.999,
+          "max_gap_hours": 12,
+          "worst_week_cfe": 75.0,
+          "hours_below_50pct": 129
         },
         "low_wind": {
-          "stressed_cfe": 92.6,
-          "resilience_ratio": 0.998,
-          "max_gap_hours": 15,
-          "worst_week_cfe": 69.4,
-          "hours_below_50pct": 198
+          "stressed_cfe": 94.9,
+          "resilience_ratio": 0.999,
+          "max_gap_hours": 12,
+          "worst_week_cfe": 75.0,
+          "hours_below_50pct": 129
         },
         "low_solar": {
-          "stressed_cfe": 92.7,
+          "stressed_cfe": 95.0,
           "resilience_ratio": 1.0,
-          "max_gap_hours": 15,
-          "worst_week_cfe": 69.4,
-          "hours_below_50pct": 198
+          "max_gap_hours": 12,
+          "worst_week_cfe": 75.0,
+          "hours_below_50pct": 129
         },
         "compound": {
-          "stressed_cfe": 92.5,
-          "resilience_ratio": 0.998,
-          "max_gap_hours": 15,
-          "worst_week_cfe": 69.4,
-          "hours_below_50pct": 205
+          "stressed_cfe": 94.9,
+          "resilience_ratio": 0.999,
+          "max_gap_hours": 12,
+          "worst_week_cfe": 75.0,
+          "hours_below_50pct": 132
         }
       }
     },
     "99": {
-      "baseline_cfe": 95.3,
+      "baseline_cfe": 97.2,
       "mix": {
         "clean_firm": 31.0,
         "solar": 41.0,
@@ -2867,44 +2867,44 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 94.9,
-          "resilience_ratio": 0.995,
-          "max_gap_hours": 16,
-          "worst_week_cfe": 73.7,
-          "hours_below_50pct": 145
+          "stressed_cfe": 96.9,
+          "resilience_ratio": 0.997,
+          "max_gap_hours": 15,
+          "worst_week_cfe": 78.2,
+          "hours_below_50pct": 72
         },
         "winter_freeze": {
-          "stressed_cfe": 94.9,
+          "stressed_cfe": 96.8,
           "resilience_ratio": 0.996,
           "max_gap_hours": 16,
-          "worst_week_cfe": 63.1,
-          "hours_below_50pct": 136
+          "worst_week_cfe": 67.5,
+          "hours_below_50pct": 76
         },
         "low_wind": {
-          "stressed_cfe": 95.2,
+          "stressed_cfe": 97.1,
           "resilience_ratio": 0.999,
-          "max_gap_hours": 16,
-          "worst_week_cfe": 73.7,
-          "hours_below_50pct": 105
+          "max_gap_hours": 15,
+          "worst_week_cfe": 78.2,
+          "hours_below_50pct": 49
         },
         "low_solar": {
-          "stressed_cfe": 95.0,
+          "stressed_cfe": 97.0,
           "resilience_ratio": 0.997,
           "max_gap_hours": 16,
-          "worst_week_cfe": 70.2,
-          "hours_below_50pct": 109
+          "worst_week_cfe": 74.8,
+          "hours_below_50pct": 57
         },
         "compound": {
-          "stressed_cfe": 95.0,
-          "resilience_ratio": 0.997,
-          "max_gap_hours": 16,
-          "worst_week_cfe": 73.7,
-          "hours_below_50pct": 117
+          "stressed_cfe": 97.1,
+          "resilience_ratio": 0.998,
+          "max_gap_hours": 15,
+          "worst_week_cfe": 78.2,
+          "hours_below_50pct": 52
         }
       }
     },
     "99.5": {
-      "baseline_cfe": 95.9,
+      "baseline_cfe": 97.9,
       "mix": {
         "clean_firm": 31.0,
         "solar": 41.0,
@@ -2917,44 +2917,44 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 95.4,
-          "resilience_ratio": 0.995,
-          "max_gap_hours": 16,
-          "worst_week_cfe": 73.7,
-          "hours_below_50pct": 156
+          "stressed_cfe": 97.5,
+          "resilience_ratio": 0.996,
+          "max_gap_hours": 15,
+          "worst_week_cfe": 78.3,
+          "hours_below_50pct": 88
         },
         "winter_freeze": {
-          "stressed_cfe": 95.5,
+          "stressed_cfe": 97.5,
           "resilience_ratio": 0.996,
           "max_gap_hours": 16,
-          "worst_week_cfe": 63.1,
-          "hours_below_50pct": 141
+          "worst_week_cfe": 67.8,
+          "hours_below_50pct": 96
         },
         "low_wind": {
-          "stressed_cfe": 95.8,
-          "resilience_ratio": 0.998,
-          "max_gap_hours": 16,
-          "worst_week_cfe": 73.7,
-          "hours_below_50pct": 110
+          "stressed_cfe": 97.8,
+          "resilience_ratio": 1.0,
+          "max_gap_hours": 15,
+          "worst_week_cfe": 78.3,
+          "hours_below_50pct": 70
         },
         "low_solar": {
-          "stressed_cfe": 95.5,
-          "resilience_ratio": 0.996,
-          "max_gap_hours": 16,
-          "worst_week_cfe": 70.2,
-          "hours_below_50pct": 115
-        },
-        "compound": {
-          "stressed_cfe": 95.6,
+          "stressed_cfe": 97.6,
           "resilience_ratio": 0.997,
           "max_gap_hours": 16,
-          "worst_week_cfe": 73.7,
-          "hours_below_50pct": 122
+          "worst_week_cfe": 75.1,
+          "hours_below_50pct": 74
+        },
+        "compound": {
+          "stressed_cfe": 97.8,
+          "resilience_ratio": 0.999,
+          "max_gap_hours": 15,
+          "worst_week_cfe": 78.3,
+          "hours_below_50pct": 73
         }
       }
     },
     "99.9": {
-      "baseline_cfe": 98.0,
+      "baseline_cfe": 99.2,
       "mix": {
         "clean_firm": 49.0,
         "wind": 129.0,
@@ -2963,39 +2963,39 @@ const GRID_RESILIENCE_DATA = {
       },
       "scenarios": {
         "summer_heat": {
-          "stressed_cfe": 97.8,
+          "stressed_cfe": 99.0,
           "resilience_ratio": 0.998,
-          "max_gap_hours": 7,
-          "worst_week_cfe": 84.1,
-          "hours_below_50pct": 28
+          "max_gap_hours": 0,
+          "worst_week_cfe": 89.6,
+          "hours_below_50pct": 0
         },
         "winter_freeze": {
-          "stressed_cfe": 98.0,
-          "resilience_ratio": 0.999,
-          "max_gap_hours": 6,
-          "worst_week_cfe": 86.5,
-          "hours_below_50pct": 14
+          "stressed_cfe": 99.1,
+          "resilience_ratio": 1.0,
+          "max_gap_hours": 0,
+          "worst_week_cfe": 92.7,
+          "hours_below_50pct": 0
         },
         "low_wind": {
-          "stressed_cfe": 98.0,
+          "stressed_cfe": 99.2,
           "resilience_ratio": 1.0,
-          "max_gap_hours": 6,
-          "worst_week_cfe": 86.5,
-          "hours_below_50pct": 14
+          "max_gap_hours": 0,
+          "worst_week_cfe": 92.7,
+          "hours_below_50pct": 0
         },
         "low_solar": {
-          "stressed_cfe": 98.0,
+          "stressed_cfe": 99.2,
           "resilience_ratio": 1.0,
-          "max_gap_hours": 6,
-          "worst_week_cfe": 86.5,
-          "hours_below_50pct": 14
+          "max_gap_hours": 0,
+          "worst_week_cfe": 92.7,
+          "hours_below_50pct": 0
         },
         "compound": {
-          "stressed_cfe": 97.9,
-          "resilience_ratio": 0.999,
-          "max_gap_hours": 6,
-          "worst_week_cfe": 86.5,
-          "hours_below_50pct": 17
+          "stressed_cfe": 99.1,
+          "resilience_ratio": 1.0,
+          "max_gap_hours": 0,
+          "worst_week_cfe": 92.7,
+          "hours_below_50pct": 0
         }
       }
     }
