@@ -1,0 +1,50 @@
+[
+  {
+    "iso": "ERCOT",
+    "cost_level": "Medium",
+    "target": 0.9,
+    "score": 0.9077697791810065,
+    "total_cost": 66.42242127012669,
+    "total_re_pct": 109.25333010156643,
+    "resources": {
+      "wind": {
+        "alloc_pct": 72.53488548871294,
+        "cost_per_mwh": 33.36604732480795
+      },
+      "solar": {
+        "alloc_pct": 9.017592279987486,
+        "cost_per_mwh": 5.140027599592867
+      },
+      "clean_firm": {
+        "alloc_pct": 5.312528548072609,
+        "cost_per_mwh": 4.887526264226801
+      },
+      "ccs_ccgt": {
+        "alloc_pct": 22.338829283274247,
+        "cost_per_mwh": 16.642427816039316
+      },
+      "hydro": {
+        "alloc_pct": 0.049494501519173534,
+        "cost_per_mwh": 0.013363515410176854
+      },
+      "battery4": {
+        "cap_pct": 0.009604720213229542,
+        "cost_per_mwh": 3.5926648051989365
+      },
+      "battery8": {
+        "cap_pct": 0.00016524748944306278,
+        "cost_per_mwh": 0.05298098907527701
+      },
+      "ldes": {
+        "cap_pct": 0.01637941166988538,
+        "cost_per_mwh": 0.774811689632258
+      },
+      "h2": {
+        "cap_pct": 0.008706885283529114,
+        "cost_per_mwh": 1.952571266143105
+      }
+    },
+    "converged": false,
+    "de_message": "Maximum number of iterations has been exceeded."
+  }
+]
