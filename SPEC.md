@@ -5894,3 +5894,38 @@ Three changes keep Step 1 tractable with 4 new hybrid dimensions:
   (LDES cost per pp is negligible) but in **unlocking cheaper resource mixes** that
   wouldn't qualify without storage. This means adequate coverage of the near-miss
   mix space is more important than fine LDES granularity.
+
+---
+
+## 24. Reliability Tax (Sub-Project)
+
+A sub-project quantifying the cost gradient of pushing CFE matching from ~90% to 99.9% over 2025–2050 across the 7 ISOs, comparing four deployment pathways. **Authoritative documentation lives in `reliability_tax/README.md`** — this SPEC section captures only the locked invariants so they survive session handoff. Methodology, pathway implementation, stranding math, and results are TBD in Prompt 1B+ and will be documented here as decisions are made.
+
+### 24.1 Locked Invariants (Prompt 1A)
+
+These are load-bearing for every script, figure, and writeup in the sub-project. Any change requires an explicit user decision and an update both here and in `reliability_tax/README.md`.
+
+1. **Endpoint targets**: CFE ≥ 90%, 95%, 97.5%, 99%, 99.9% by 2050.
+2. **Planning horizon**: 2025–2050 (25 years; 26 year-indices including the 2025 baseline).
+3. **Pathways**:
+   - (1) VRE + batteries only
+   - (2a) Behavioral pivot at the 90% CFE plateau
+   - (2b) Economic pivot when marginal `$/CFE%` > clean firm LCOE
+   - (3) Clean firm proactive from year 1
+4. **Clean firm bucket**: Nuclear + CCGT+CCS + geothermal, subject to existing regional constraints (`CCS_CAP_TWH`, `GEOTHERMAL_ISOS = ['CAISO']`). **Offshore wind is NOT clean firm** — it is VRE, available to all pathways.
+5. **Cost basis**: Real 2025 USD. No inflation adjustment.
+6. **Cost reporting**: Undiscounted cumulative 2025–2050 plus NPV@5%, 7%, 9% real. **Objective = NPV@7%.**
+7. **ISO scope**: Fully ISO-parametric. Smoke-test on a single ISO, then run all 7.
+8. **Stranding scope and thresholds**:
+   - Stranded fossil = **new-build gas only** with capacity factor <20% in 2050. Existing fleet is out of scope.
+   - VRE stranding = curtailment >30% in 2050.
+   - Transmission stranding = underutilized new-build transmission (definition to be refined in 1B).
+9. **Demand growth sensitivity**: Section 2 only, reusing the existing L/M/H values from `pipeline_config.DEMAND_GROWTH_RATES`. No new growth rates are invented.
+
+### 24.2 Reusable infrastructure
+
+The sub-project layers on top of the existing 8-step pipeline and reuses (without modifying) `scripts/pipeline_config.py`, `scripts/procurement_utils.py::build_25yr_trajectory`, `data/step2.1-ef/`, `data/step2.2-cost/`, `data/step3-dispatch/`, and `data/step5-wrights/`. See `reliability_tax/README.md` for the full map with file paths and per-asset usage notes.
+
+### 24.3 Status
+
+Prompt 1A (discovery + README) complete. Prompts 1B+ will lock methodology and begin implementation. No scripts, no results, no dashboard page exist yet for this sub-project.
