@@ -74,3 +74,75 @@ Forked into `reliability_tax/scripts/` and modified. Each entry explains *what c
 - **Modification**: Instead of returning a single threshold band, loads **all bands at or above `target_threshold`** and concatenates them. Step 2.1 partitions mixes into non-overlapping bands where each mix lives in the highest band satisfying `T ≤ score` (see `partition_by_threshold_band` lines 617–642). To recover the full set of mixes qualifying for a target `T*`, a consumer must read bands `T*, next_T_above, …, 99.9`. The function then applies `pathway_cap_filter(..., pathway_id, year, ...)` before returning, so the pathway iterator never sees mixes that violate pathway constraints. Uses `TARGET_THRESHOLDS` (imported unchanged) to enumerate the bands to load.
 - **Rationale**: The existing `load_ef_parquet` is single-band by design — Step 2.1b only ever augments one band at a time. The Reliability Tax pathway iterator asks "give me every mix that meets CFE ≥ 95% in 2040 under the behavioral-pivot rules", which requires a union-of-bands read plus pathway filtering in one call. Building this as a modified clone of `load_ef_parquet` (rather than a wrapper) means the pathway code can request the same return shape — a single concatenated, deduplicated pandas DataFrame — regardless of how many bands were read under the hood.
 - **Must track upstream**: Any change to `step_2_1_EF_{ISO}_{T}.parquet` filename conventions, the `_partN` split strategy (`split_large_parquets` lines 88–142), or the band-partitioning scheme (`partition_by_threshold_band` lines 617–642) must be mirrored here. A filename-format regression test is cheap insurance.
+
+### Written fresh (near Step 2.1's domain)
+
+New functions with no upstream analog, but logically part of the EF-consumer layer. They live in `reliability_tax/scripts/ef_loader.py` (planned in Prompt 1C) so the pathway iterator has one place to import from.
+
+#### `resolve_target_threshold(year, iso)`
+
+- **Purpose**: Maps a calendar year ∈ [2025, 2050] to the canonical `TARGET_THRESHOLDS` ladder entry that the pathway must meet that year.
+- **Logic**: Reads `pipeline_config.THRESHOLD_TARGET_YEARS` (SBTi milestone ladder: 2030→50%, 2035→70%, 2040→90%, 2045→95%, 2050→99.9%), linearly interpolates between milestone years, then snaps to the nearest `TARGET_THRESHOLDS` entry. The snap rule is *"floor to the highest ladder entry ≤ interpolated target"* so the pathway never claims credit for a band it has not actually reached.
+- **Why it belongs here**: The SBTi ladder and the EF threshold ladder are two different discretizations of "CFE%". Every call to `load_ef_band_union` needs this resolution, and it's a pure function of the two constants — it should not be reinvented inside the pathway iterator.
+
+#### `check_hydro_floor(df, iso)`
+
+- **Purpose**: Returns a boolean mask keeping only mixes where `hydro == ceil(GRID_MIX_SHARES[iso]['hydro'])`. The main pipeline's `resource_cap_filter` only enforces a ceiling (hydro ≤ existing share) because the physics search explored +10pp hydro-adder mixes. Reliability Tax additionally enforces a *floor* — pathways never retire existing hydro, so hydro stays pinned at its existing share.
+- **Why it belongs here**: The main pipeline is agnostic about whether existing hydro can be retired (retirement is a Step 4 fossil-only concern). Reliability Tax takes a firm stance per the locked invariants: hydro is existing-only and never contracts. This must be a consumer-side filter because the EF parquets do contain mixes with `hydro < existing_share` (Step 1 explores the full grid, including sub-existing hydro mixes).
+- **Question surfaced** — see DECISION_CARDS Q2.
+
+#### `tag_pathway_eligible(df, pathway_id, iso, year)`
+
+- **Purpose**: Adds a boolean column `pathway_eligible` to a loaded EF DataFrame without dropping rows, so the pathway iterator can score ineligible mixes at infinity-cost rather than silently dropping them. This preserves the candidate-pool cardinality across pathways and makes debugging easier (you can see *why* a mix was excluded).
+- **Logic**: Wraps `pathway_cap_filter` but returns a mask rather than a filtered table, plus a string `pathway_exclusion_reason` column (`'clean_firm>0 in vre_only'`, `'clean_firm>0 before pivot year'`, etc.).
+- **Why it belongs here**: Sits between the loader and the pathway iterator. Ensures the iterator can emit audit reports on why mixes were filtered — a reviewer-facing concern that upstream Step 2.1 doesn't need.
+
+#### `load_ef_manifest()`
+
+- **Purpose**: Scans `data/step2.1-ef/` once at pathway-iterator startup and returns a dict `{(iso, threshold): [list_of_file_paths]}` covering every `.parquet` (including `_partN` splits, excluding `_batch_` transients). Used to fail fast if any `(iso, threshold)` the pathway will need is missing on disk, before spending compute on a 25-year iteration.
+- **Logic**: Glob `step_2_1_EF_*.parquet`, parse filenames with `_extract_threshold_from_filename`, skip `_batch_` files, group by ISO + threshold. Cross-check against `ISOS × TARGET_THRESHOLDS` from `pipeline_config` and raise `FileNotFoundError` listing every missing combination.
+- **Why it belongs here**: The equivalent build-side scanner `scan_iso_files` (lines 215–295 of the main script) scans the **Step 1 PFS** directory, not the **Step 2.1 EF** directory, and its output contract is "raw/fine/floor/storage PFS filenames grouped by ISO" — wrong shape for a consumer. Building fresh is cleaner than contorting the upstream function.
+
+---
+
+## Step 2.2 — Cost Optimization
+
+*To be populated in Prompt 1B-ii. Do not edit in this prompt.*
+
+---
+
+## Step 6 — Market / Policy Model
+
+*To be populated in Prompt 1B-iii. Do not edit in this prompt.*
+
+---
+
+## Cross-cutting / written fresh
+
+*To be populated in Prompt 1B-iii. Covers: pathway iterator scaffolding, stranding bookkeeping, NPV discounting, Wright's Law integration into the 25-year loop, reliability-tax-specific output schemas.*
+
+---
+
+## Questions for DECISION_CARDS
+
+Accumulated across Prompts 1B-i / ii / iii. Each question must be resolved before DECISION_CARDS.md is written (in Prompt 1B-iii) and before any Reliability Tax scripts are written.
+
+### From Step 2.1 (Prompt 1B-i)
+
+1. **Dedup provenance loss.** Step 2.1's `deduplicate_mixes` (lines 561–609) keeps max `hourly_match_score` per unique physical configuration and drops the threshold column. After dedup, Reliability Tax cannot recover *which Step 1 threshold run* produced a given mix. Is the final score alone sufficient for pathway ranking, or does the pathway iterator need the originating threshold (e.g., for audit reports, or to discount mixes that came from the floor-aware augmentation pass)?
+
+2. **Hydro floor vs. ceiling.** The main pipeline's `resource_cap_filter` (lines 500–558) enforces `hydro ≤ ceil(existing share)` but allows `hydro < existing share`. Locked invariant 8 states existing fleet is out of scope for stranding — this implies existing hydro cannot be retired in a pathway. Should Reliability Tax enforce `hydro == existing share` (floor + ceiling) via `check_hydro_floor`, or allow pathways to under-procure hydro when cheaper resources dominate? Affects every pathway's VRE build-out ratio.
+
+3. **Offshore wind in the VRE bucket.** Locked invariant 4 says offshore wind is VRE, not clean firm. NEISO and NYISO are the only `OFFSHORE_ISOS` with the `offshore_wind` resource column in their EF parquets. Does `pathway_cap_filter` treat `offshore_wind` identically to `wind` (subject to `WIND_FAMILY_CAP`), or as a distinct bucket with its own cap? If distinct, where does the cap come from — a new constant in `pipeline_config` or a Reliability-Tax-specific override?
+
+4. **CAISO geothermal under VRE-only pathway.** Locked invariant 4 says geothermal is in the clean firm bucket, CAISO-only. Under Pathway 1 (VRE + batteries only), geothermal must be zeroed — but CAISO's EF parquets already contain mixes with `geothermal > 0`. Confirm that `pathway_cap_filter(iso='CAISO', pathway_id='vre_only')` drops all such mixes (reducing the CAISO candidate pool substantially). This is the expected behavior per the invariant, but it should be an explicit decision since it materially affects CAISO's Pathway 1 feasibility.
+
+5. **Band-union vs. single-band reads.** Step 2.1 stores each mix in exactly one band (highest `T ≤ score`). Recovering "all mixes qualifying for CFE ≥ T*" requires loading bands `[T*, next_T, …, 99.9]` and concatenating. For target thresholds near the tails (10–40% or 99.5–99.9%) this is cheap; near the densest point (~75–90%) it may pull 10M+ rows into memory per ISO. Does the pathway iterator need a chunked reader, or is in-memory union acceptable (pathway iteration is per-ISO, and the Reliability Tax target set is ≤90% so the worst case is bands [90, 92.5, 95, 97.5, 99, 99.5, 99.9])?
+
+6. **Pareto pre-filtering under fixed objective.** Step 2.1 intentionally skips cross-mix dominance removal because different LCOE assumptions reshuffle the cost ranking. Reliability Tax uses a *fixed* objective (NPV@7% real, 2025 USD, no inflation — invariants 5–6). Under a fixed objective, much of the EF is dominated and could be dropped upfront to shrink the candidate pool. Should Reliability Tax run a pathway-specific dominance filter at load time (post `pathway_cap_filter`), or carry the full pool through and let downstream cost minimization handle it?
+
+7. **`pareto_type='augmented'` mixes.** Step 2.1b fills thin bands with perturbed/interpolated candidates and tags them `pareto_type='augmented'`. They are physically valid (scored through the same Numba kernel as native mixes) but have no Step 1 provenance. Should Reliability Tax treat augmented mixes as first-class candidates, filter them out (physics-only provenance), or down-weight them (e.g., only use them as tie-breakers)? Affects the size of the thin-band candidate pools, which are exactly the ones pathways are most likely to query.
+
+8. **Storage dispatch granularity.** Storage dispatch columns are stored at 0.05% resolution (20×-scaled int32 dedup keys, lines 586–597). Reliability Tax pathway iteration may want to evaluate finer storage sweeps across years as Wright's Law brings storage cost down. Is 0.05% sufficient, or does the new step need its own higher-resolution storage sweep (and if so, does it live in this inheritance plan or a fresh Step 1.5 clone)?
+
+*Questions from Step 2.2 will be added in Prompt 1B-ii. Questions from Step 6 and cross-cutting will be added in Prompt 1B-iii.*
