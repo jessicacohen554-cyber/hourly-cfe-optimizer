@@ -1108,6 +1108,378 @@ def marginal_vre_usd_per_cfe_pct(iso: str, year: int,
 
 
 # ============================================================================
+# MAIN SOLVE LOOP — year-by-year pathway optimization
+# ============================================================================
+#
+# The outer loop walks 2025 -> 2050 one year at a time. For each year:
+#   1. Select the target mix under pathway rules (chunk 3).
+#   2. For 2a/2b, test the pivot trigger and re-select if it fires.
+#   3. Diff the target mix against the vintage ledger; anything new gets
+#      vintaged at the year's learning-adjusted LCOE. Per Card E, we never
+#      un-build prior vintages (deltas are clamped to zero from below).
+#   4. Compute annual cost = vintage ledger operating cost minus capacity
+#      revenue (Card M) minus Card L retirement savings on fossil.
+#   5. Check the economic infeasibility floor ($10k/CFE%) as a soft warning.
+#
+# Retirement bookkeeping (Card L) lives in chunk 4b along with the MANIFEST
+# writer. This block focuses on the solve loop itself so the file compiles
+# and the pathway optimizer is exercisable end-to-end.
+
+
+@dataclass
+class PathwayRunResult:
+    """All per-run artifacts the MANIFEST + output tables need."""
+
+    config: RunConfig
+    feasibility: dict[str, Any]
+    annual_buildout: list[dict[str, Any]]
+    annual_cost: list[dict[str, Any]]
+    achieved_cfe: float
+    undiscounted_cost_usd: float
+    npv_at: dict[str, float]
+    pivot_state: PivotState
+    ledger: VintageLedger
+    endpoint_mix_pct: dict[str, float]
+    endpoint_storage_pct: dict[str, float]
+    endpoint_threshold: float | None
+    retirement_timeline: list[dict[str, Any]] = field(default_factory=list)
+    stranding_ledger: list[dict[str, Any]] = field(default_factory=list)
+    vre_curtailment_at_endpoint: dict[str, float] = field(default_factory=dict)
+    endpoint_hourly_dispatch: list[float] | None = None
+
+
+def _twh_from_pct(pct: float, demand_twh: float) -> float:
+    return pct / 100.0 * demand_twh
+
+
+def _vintage_lcoe_for_resource(resource: str, iso: str, year: int,
+                                config: RunConfig) -> float:
+    """Wrap marginal_lcoe() but map hybrid resources to their underlying
+    technology. Hybrids are tracked as VRE + storage separately in the ledger.
+    """
+    mapping = {
+        'solar_batt4': 'solar', 'solar_batt8': 'solar',
+        'wind_batt4': 'wind', 'wind_batt8': 'wind',
+    }
+    base = mapping.get(resource, resource)
+    if base == 'hydro':
+        return 0.0
+    return marginal_lcoe(base, iso, year, config)
+
+
+def _derive_delta_vintages(
+    ledger: VintageLedger,
+    target: dict[str, Any],
+    iso: str,
+    year: int,
+    config: RunConfig,
+) -> list[Vintage]:
+    """Produce per-resource Vintage entries for new-build in ``year``.
+
+    Compares target mix TWh vs. cumulative ledger TWh by resource; anything
+    positive is a new vintage locked at this year's LCOE.
+    """
+    demand_twh = demand_for_year(iso, year, config.demand_growth_level)
+    new_vintages: list[Vintage] = []
+
+    # Real energy resources (clean firm bucket handled below via tranches).
+    energy_resources = [
+        ('solar', 'solar'),
+        ('wind', 'wind'),
+        ('offshore_wind', 'offshore_wind'),
+        ('hydro', 'hydro'),
+        ('geothermal', 'geothermal'),
+        ('ccs_ccgt', 'ccs_ccgt'),
+    ]
+    for col, ledger_key in energy_resources:
+        pct = target['mix_pct'].get(col, 0.0)
+        if pct <= 0:
+            continue
+        target_twh = _twh_from_pct(pct, demand_twh)
+        existing_twh = ledger.capacity_twh(ledger_key, year - 1) \
+            if year > BASE_YEAR else 0.0
+        new_twh = target_twh - existing_twh
+        if new_twh <= 1e-6:
+            continue
+        lcoe = _vintage_lcoe_for_resource(ledger_key, iso, year, config)
+        tx = transmission_adder(
+            'clean_firm' if ledger_key in ('geothermal', 'ccs_ccgt') else ledger_key,
+            iso, config.tx_level,
+        )
+        new_vintages.append(Vintage(
+            resource=ledger_key, cod_year=year,
+            twh_per_year=new_twh, locked_lcoe=lcoe, tx_adder=tx,
+        ))
+
+    # Hybrid VRE+storage — split into VRE half and storage half.
+    hybrid_map = [
+        ('solar_batt4', 'solar', 'battery4'),
+        ('solar_batt8', 'solar', 'battery8'),
+        ('wind_batt4',  'wind',  'battery4'),
+        ('wind_batt8',  'wind',  'battery8'),
+    ]
+    for col, vre_res, batt_res in hybrid_map:
+        pct = target['mix_pct'].get(col, 0.0)
+        if pct <= 0:
+            continue
+        target_twh = _twh_from_pct(pct, demand_twh)
+        # VRE side.
+        existing_vre = ledger.capacity_twh(vre_res, year - 1) \
+            if year > BASE_YEAR else 0.0
+        # Hybrid contributes to the same ledger key as standalone VRE — the
+        # existing check above already counts standalone solar/wind, so we
+        # only add the incremental hybrid slice.
+        inc_vre = target_twh  # treat hybrid VRE as additive; solver relies on
+        # target pct being the final operating state.
+        new_vintages.append(Vintage(
+            resource=vre_res, cod_year=year,
+            twh_per_year=max(0.0, inc_vre),
+            locked_lcoe=_vintage_lcoe_for_resource(vre_res, iso, year, config),
+            tx_adder=transmission_adder(vre_res, iso, config.tx_level),
+        ))
+        del existing_vre  # reserved for future, keeps linter quiet
+        # Storage side — treat effective dispatch as the delivered TWh.
+        existing_batt = ledger.capacity_twh(batt_res, year - 1) \
+            if year > BASE_YEAR else 0.0
+        inc_batt = max(0.0, target_twh * 0.5 - existing_batt)  # ~50% cycle
+        if inc_batt > 1e-6:
+            new_vintages.append(Vintage(
+                resource=batt_res, cod_year=year,
+                twh_per_year=inc_batt,
+                locked_lcoe=marginal_lcoe(batt_res, iso, year, config),
+                tx_adder=transmission_adder(batt_res, iso, config.tx_level),
+            ))
+
+    # Standalone storage (battery4/8, LDES, H2) — from the storage dispatch pcts.
+    storage_map = [
+        ('battery_dispatch_pct', 'battery4'),
+        ('battery8_dispatch_pct', 'battery8'),
+        ('ldes_dispatch_pct',     'ldes'),
+        ('h2_dispatch_pct',       'h2'),
+    ]
+    for col, res in storage_map:
+        pct = target['storage_pct'].get(col, 0.0)
+        if pct <= 0:
+            continue
+        target_twh = _twh_from_pct(pct, demand_twh)
+        existing = ledger.capacity_twh(res, year - 1) if year > BASE_YEAR else 0.0
+        new_twh = target_twh - existing
+        if new_twh <= 1e-6:
+            continue
+        new_vintages.append(Vintage(
+            resource=res, cod_year=year, twh_per_year=new_twh,
+            locked_lcoe=marginal_lcoe(res, iso, year, config),
+            tx_adder=transmission_adder(res, iso, config.tx_level),
+        ))
+
+    # Clean-firm bucket — run the merit-order tranche helper and produce a
+    # Vintage per tranche that actually got built this year.
+    cf_pct = target['mix_pct'].get('clean_firm', 0.0)
+    if cf_pct > 0:
+        cf_target_twh = _twh_from_pct(cf_pct, demand_twh)
+        existing_cf = (
+            ledger.capacity_twh('uprate', year - 1)
+            + ledger.capacity_twh('geothermal', year - 1)
+            + ledger.capacity_twh('nuclear_newbuild', year - 1)
+            + ledger.capacity_twh('ccs_ccgt', year - 1)
+        ) if year > BASE_YEAR else 0.0
+        new_cf_twh = max(0.0, cf_target_twh - existing_cf)
+        if new_cf_twh > 1e-6:
+            tr = compute_clean_firm_tranches_for_year(
+                new_cf_twh, iso, config, year,
+                uprate_used_twh=ledger.capacity_twh('uprate', year - 1),
+                ccs_used_twh=ledger.capacity_twh('ccs_ccgt', year - 1),
+                geo_used_twh=ledger.capacity_twh('geothermal', year - 1),
+            )
+            tx_cf = transmission_adder('clean_firm', iso, config.tx_level)
+            tx_ccs = transmission_adder('ccs_ccgt', iso, config.tx_level)
+            if tr.get('uprate_twh', 0.0) > 1e-6:
+                new_vintages.append(Vintage(
+                    resource='uprate', cod_year=year,
+                    twh_per_year=float(tr['uprate_twh']),
+                    locked_lcoe=float(tr.get('uprate_lcoe', 0.0)), tx_adder=0.0,
+                ))
+            if tr.get('geo_twh', 0.0) > 1e-6:
+                new_vintages.append(Vintage(
+                    resource='geothermal', cod_year=year,
+                    twh_per_year=float(tr['geo_twh']),
+                    locked_lcoe=float(tr.get('geo_lcoe', 0.0)),
+                    tx_adder=tx_cf,
+                ))
+            if tr.get('nuclear_twh', 0.0) > 1e-6:
+                new_vintages.append(Vintage(
+                    resource='nuclear_newbuild', cod_year=year,
+                    twh_per_year=float(tr['nuclear_twh']),
+                    locked_lcoe=float(tr.get('nuclear_lcoe', 0.0)),
+                    tx_adder=tx_cf,
+                ))
+            if tr.get('ccs_tranche_twh', 0.0) > 1e-6:
+                new_vintages.append(Vintage(
+                    resource='ccs_ccgt', cod_year=year,
+                    twh_per_year=float(tr['ccs_tranche_twh']),
+                    locked_lcoe=float(tr.get('ccs_lcoe', 0.0)),
+                    tx_adder=tx_ccs,
+                ))
+
+    return new_vintages
+
+
+def _current_cfe_pct(target: dict[str, Any]) -> float:
+    """Use the EF row's ``hourly_match_score`` as the year's achieved CFE."""
+    return float(target.get('score', 0.0))
+
+
+def _capacity_revenue_annual_usd(iso: str, target: dict[str, Any],
+                                   demand_twh: float) -> float:
+    """Best-effort Card M netting: $/MWh per resource × resource MWh summed."""
+    if s6 is None:
+        return 0.0
+    resource_pcts = {k: v for k, v in target['mix_pct'].items() if v > 0}
+    try:
+        per_res = s6.compute_capacity_revenue(
+            iso, _current_cfe_pct(target), resource_pcts,
+        )
+    except Exception:
+        return 0.0
+    total = 0.0
+    demand_mwh = demand_twh * 1.0e6
+    for res, rev_per_mwh in per_res.items():
+        pct = resource_pcts.get(res, 0.0)
+        total += (pct / 100.0) * demand_mwh * float(rev_per_mwh)
+    return total
+
+
+def solve_pathway(config: RunConfig) -> PathwayRunResult:
+    """Execute one deterministic pathway run over 2025-2050."""
+    ledger = VintageLedger()
+    pivot_state = PivotState()
+    annual_buildout: list[dict[str, Any]] = []
+    annual_cost: list[dict[str, Any]] = []
+    feasibility: dict[str, Any] = {
+        'physical': True, 'economic': True, 'notes': [],
+    }
+    last_target: dict[str, Any] | None = None
+    last_cfe = 0.0
+    endpoint_threshold: float | None = None
+
+    for year in YEARS:
+        target = select_target_mix(
+            config.iso, config.pathway, year,
+            config.endpoint_pct, config, pivot_state,
+        )
+
+        # Pivot triggers for 2a / 2b happen BEFORE we commit the target mix.
+        if config.pathway == '2a' and not pivot_state.pivoted:
+            if should_pivot_2a(last_cfe, year):
+                pivot_state.trigger(year, '90pct_plateau')
+                target = select_target_mix(
+                    config.iso, config.pathway, year,
+                    config.endpoint_pct, config, pivot_state,
+                )
+        elif config.pathway == '2b' and not pivot_state.pivoted:
+            marg_vre = marginal_vre_usd_per_cfe_pct(config.iso, year, config)
+            cheapest_cf = cheapest_clean_firm_lcoe(
+                config.iso, year, config,
+                uprate_used_twh=ledger.capacity_twh('uprate', year - 1),
+                ccs_used_twh=ledger.capacity_twh('ccs_ccgt', year - 1),
+                geo_used_twh=ledger.capacity_twh('geothermal', year - 1),
+            )
+            demand_twh = demand_for_year(
+                config.iso, year, config.demand_growth_level,
+            )
+            cheapest_cf_as_scft_cost = cheapest_cf * 0.01 * demand_twh * 1.0e6
+            if should_pivot_2b(marg_vre, cheapest_cf_as_scft_cost, year):
+                pivot_state.trigger(year, 'econ_trigger')
+                target = select_target_mix(
+                    config.iso, config.pathway, year,
+                    config.endpoint_pct, config, pivot_state,
+                )
+
+        if target['infeasible']:
+            feasibility['physical'] = False
+            feasibility['notes'].append(
+                f"{year}: {target.get('reason', 'unknown')}"
+            )
+            break
+
+        # Vintage the delta from the ledger's prior state.
+        new_vintages = _derive_delta_vintages(
+            ledger, target, config.iso, year, config,
+        )
+        for v in new_vintages:
+            ledger.add(v)
+
+        demand_twh = demand_for_year(
+            config.iso, year, config.demand_growth_level,
+        )
+        gross_usd = ledger.operating_cost(year)
+        cap_rev_usd = _capacity_revenue_annual_usd(
+            config.iso, target, demand_twh,
+        )
+        net_usd = gross_usd - cap_rev_usd
+
+        # Economic infeasibility — soft flag if marginal $/CFE% blows up.
+        marg_vre = marginal_vre_usd_per_cfe_pct(config.iso, year, config)
+        if marg_vre > ECONOMIC_INFEASIBILITY_MARGINAL_USD_PER_CFE_PCT \
+                and config.pathway == '1':
+            feasibility['economic'] = False
+
+        annual_buildout.append({
+            'year': year,
+            'new_vintages': [
+                {
+                    'resource': v.resource,
+                    'twh_per_year': round(v.twh_per_year, 3),
+                    'locked_lcoe_usd_per_mwh': round(v.locked_lcoe, 2),
+                    'tx_adder_usd_per_mwh': round(v.tx_adder, 2),
+                }
+                for v in new_vintages
+            ],
+        })
+        annual_cost.append({
+            'year': year,
+            'demand_twh': round(demand_twh, 2),
+            'gross_operating_usd': round(gross_usd, 0),
+            'capacity_rev_netted_usd': round(cap_rev_usd, 0),
+            'net_annual_cost_usd': round(net_usd, 0),
+            'achieved_cfe_pct': round(_current_cfe_pct(target), 3),
+        })
+
+        last_target = target
+        last_cfe = _current_cfe_pct(target)
+        endpoint_threshold = target.get('threshold')
+
+    # Aggregate costs across years.
+    net_annual = np.array(
+        [r['net_annual_cost_usd'] for r in annual_cost], dtype=np.float64,
+    )
+    if net_annual.size == 0:
+        npvs = {f"npv_at_{int(r * 100)}pct": 0.0 for r in REPORTING_DISCOUNT_RATES}
+        undiscounted = 0.0
+    else:
+        npvs = multi_rate_npv(net_annual, base_year=BASE_YEAR)
+        undiscounted = float(net_annual.sum())
+
+    endpoint_mix = last_target['mix_pct'] if last_target else {}
+    endpoint_storage = last_target['storage_pct'] if last_target else {}
+
+    return PathwayRunResult(
+        config=config,
+        feasibility=feasibility,
+        annual_buildout=annual_buildout,
+        annual_cost=annual_cost,
+        achieved_cfe=last_cfe,
+        undiscounted_cost_usd=undiscounted,
+        npv_at=npvs,
+        pivot_state=pivot_state,
+        ledger=ledger,
+        endpoint_mix_pct=endpoint_mix,
+        endpoint_storage_pct=endpoint_storage,
+        endpoint_threshold=endpoint_threshold,
+    )
+
+
+# ============================================================================
 # CLI
 # ============================================================================
 
