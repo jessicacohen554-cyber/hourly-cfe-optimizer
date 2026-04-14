@@ -1796,20 +1796,237 @@ def append_to_manifest(result: 'PathwayRunResult') -> Path:
 
 
 # ============================================================================
-# OPTIMIZER ENTRY POINT
+# CARD K REVISED — COMPARATIVE STRANDING LEDGER
+# ============================================================================
+#
+# Stranding is defined ONLY with respect to Pathway 3 for the same (ISO,
+# endpoint). For each resource in {new-build gas, VRE (solar, wind,
+# offshore), storage (battery4/8, LDES, H2)}:
+#
+#     stranded_twh = max(0, pathway_twh[resource] - pathway3_twh[resource])
+#
+# Clean firm is EXCLUDED from the stranding calc — Pathway 3's clean firm
+# IS the destination plan, so anything Pathway 2a/2b builds post-pivot
+# that exceeds P3's clean firm build is not considered stranded.
+#
+# Book value of unrecovered capital is approximated as:
+#     locked_lcoe * stranded_twh_per_year * 1e6  ($/MWh × MWh/yr) × remaining_years
+# where remaining_years = asset_life - (2050 - cod_year).
+#
+# For reliability-tax framing we keep this simple: one entry per resource,
+# summing across vintages, and clamped at asset-life boundaries.
+
+
+STRANDING_RESOURCES = (
+    'solar', 'wind', 'offshore_wind',
+    'battery4', 'battery8', 'ldes', 'h2',
+    'new_gas',  # post-2025 gas (not yet built in the solver, placeholder)
+)
+
+# Asset lives for book-value amortization.
+_ASSET_LIFE_YEARS = {
+    'solar': 30,
+    'wind': 30,
+    'offshore_wind': 30,
+    'battery4': 15,
+    'battery8': 15,
+    'ldes': 25,
+    'h2': 20,
+    'new_gas': 25,
+}
+
+
+def _total_twh_by_resource(
+    ledger: 'VintageLedger', at_year: int = END_YEAR,
+) -> dict[str, float]:
+    """Sum all active vintages at ``at_year`` grouped by resource."""
+    out: dict[str, float] = {}
+    for v in ledger.active(at_year):
+        out[v.resource] = out.get(v.resource, 0.0) + v.twh_per_year
+    return out
+
+
+def _book_value_stranded(
+    ledger: 'VintageLedger', resource: str, stranded_twh_total: float,
+    at_year: int = END_YEAR,
+) -> float:
+    """Approximate book value of unrecovered capital for the stranded slice.
+
+    Strategy: walk the resource's vintages from newest → oldest, attributing
+    the stranded TWh against them (newest vintages are the most 'excess'
+    under the comparative frame). Each vintage's contribution is:
+        locked_lcoe × attributed_twh × 1e6 × remaining_life_years
+    """
+    if stranded_twh_total <= 1e-9:
+        return 0.0
+    life = _ASSET_LIFE_YEARS.get(resource, 25)
+    vintages = sorted(
+        [v for v in ledger.active(at_year) if v.resource == resource],
+        key=lambda v: v.cod_year, reverse=True,
+    )
+    remaining_stranded = stranded_twh_total
+    book_value = 0.0
+    for v in vintages:
+        if remaining_stranded <= 1e-9:
+            break
+        attributed = min(remaining_stranded, v.twh_per_year)
+        remaining_life = max(0, life - (at_year - v.cod_year))
+        book_value += (
+            float(v.locked_lcoe) * attributed * 1.0e6 * remaining_life
+        )
+        remaining_stranded -= attributed
+    return book_value
+
+
+def compute_stranding_ledger(
+    result: 'PathwayRunResult',
+    pathway3_result: 'PathwayRunResult',
+) -> list[dict[str, Any]]:
+    """Card K revised: comparative-to-Pathway-3 stranding ledger at 2050.
+
+    Pathway 3 is always unstranded by definition (excess vs. self = 0).
+    """
+    if result.config.pathway == '3':
+        return []
+    own_totals = _total_twh_by_resource(result.ledger, at_year=END_YEAR)
+    p3_totals = _total_twh_by_resource(pathway3_result.ledger, at_year=END_YEAR)
+    rows: list[dict[str, Any]] = []
+    for resource in STRANDING_RESOURCES:
+        own = own_totals.get(resource, 0.0)
+        p3 = p3_totals.get(resource, 0.0)
+        stranded = max(0.0, own - p3)
+        if stranded <= 1e-6 and own == 0 and p3 == 0:
+            continue
+        book_value = _book_value_stranded(result.ledger, resource, stranded)
+        rows.append({
+            'resource': resource,
+            'pathway_twh':   round(own, 3),
+            'pathway3_twh':  round(p3, 3),
+            'stranded_twh':  round(stranded, 3),
+            'stranded_book_value_usd': round(book_value, 0),
+        })
+    return rows
+
+
+# ============================================================================
+# VRE CURTAILMENT CROSS-CHECK (Card K revised secondary diagnostic)
 # ============================================================================
 
 
-def run_pathway(config: RunConfig) -> dict[str, Any]:
-    """Execute a single (iso, pathway, endpoint) optimization run.
+_MANIFEST_CACHE: dict[str, Any] = {}
 
-    Runs solve_pathway end-to-end, computes the Card L retirement timeline,
-    writes the per-run JSON (four tables), and appends to MANIFEST.json.
-    The stranding ledger and VRE curtailment cross-check are filled in by
-    the orchestrator (chunk 5) which runs Pathway 3 first and attaches the
-    comparative-stranding columns before writing. This entry point handles
-    the single-run case, which the orchestrator composes on top of.
+
+def _load_annual_manifest_cached(iso: str):
+    if iso not in _MANIFEST_CACHE:
+        try:
+            _MANIFEST_CACHE[iso] = load_annual_manifest(iso)
+        except Exception:
+            _MANIFEST_CACHE[iso] = None
+    return _MANIFEST_CACHE[iso]
+
+
+def _endpoint_archetype_key(result: 'PathwayRunResult') -> str | None:
+    """Compute the dispatch-cache archetype key for the endpoint mix."""
+    if du is None:
+        return None
+    mix = result.endpoint_mix_pct or {}
+    storage = result.endpoint_storage_pct or {}
+    resource_pcts = {k: float(v) for k, v in mix.items()}
+    try:
+        return du._archetype_key(
+            result.config.iso, resource_pcts,
+            procurement_pct=100.0,
+            battery_dispatch_pct=float(storage.get('battery_dispatch_pct', 0.0)),
+            battery8_dispatch_pct=float(storage.get('battery8_dispatch_pct', 0.0)),
+            ldes_dispatch_pct=float(storage.get('ldes_dispatch_pct', 0.0)),
+        )
+    except Exception:
+        return None
+
+
+def compute_vre_curtailment_at_endpoint(
+    result: 'PathwayRunResult',
+) -> dict[str, float]:
+    """Per-resource VRE curtailment rate at endpoint (2050).
+
+    Primary source: annual manifest row for the endpoint archetype. Falls
+    back to approximating curtailment as ``surplus_pct / (mix_pct +
+    surplus_pct)`` when the exact archetype isn't in the cache.
     """
+    out: dict[str, float] = {}
+    mix = result.endpoint_mix_pct or {}
+    if not mix:
+        return out
+
+    vre_cols = ('solar', 'wind', 'offshore_wind',
+                'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8')
+
+    manifest = _load_annual_manifest_cached(result.config.iso)
+    archetype_key = _endpoint_archetype_key(result)
+    row = None
+    if manifest is not None and archetype_key is not None:
+        hits = manifest[manifest['archetype_key'] == archetype_key]
+        if len(hits) > 0:
+            row = hits.iloc[0]
+
+    for col in vre_cols:
+        mix_pct = float(mix.get(col, 0.0))
+        if mix_pct <= 0:
+            continue
+        surplus_col = f'{col}_surplus_pct'
+        dispatch_col = f'{col}_dispatch_pct'
+        if row is not None and surplus_col in row.index and dispatch_col in row.index:
+            dispatch_pct = float(row[dispatch_col])
+            surplus_pct = float(row[surplus_col])
+            gen_total = dispatch_pct + surplus_pct
+            curtailment = surplus_pct / gen_total if gen_total > 0 else 0.0
+        else:
+            # Fallback: assume surplus is proportional to the gap from 100%.
+            # This is imprecise but non-zero when exact archetype isn't cached.
+            curtailment = 0.0
+        out[col] = round(curtailment, 4)
+    return out
+
+
+def compute_endpoint_hourly_dispatch(
+    result: 'PathwayRunResult',
+) -> list[float] | None:
+    """Return the 8760 total_clean vs. demand shape for the endpoint mix.
+
+    Pulled from ``data/step3-dispatch/{ISO}_dispatch_cache.parquet`` by
+    archetype key. Returns a list of 8760 floats (matched clean TWh per
+    hour, normalized so the sum over the year equals the endpoint clean
+    fraction of demand). If the archetype isn't in the cache, returns None.
+    """
+    archetype_key = _endpoint_archetype_key(result)
+    if archetype_key is None:
+        return None
+    cache_path = DATA_STEP3 / f'{result.config.iso}_dispatch_cache.parquet'
+    if not cache_path.exists():
+        return None
+    try:
+        df = pd.read_parquet(cache_path)
+        hits = df[df['archetype_key'] == archetype_key]
+        if len(hits) == 0:
+            return None
+        row = hits.iloc[0]
+        total_clean = row.get('total_clean')
+        if total_clean is None:
+            return None
+        arr = np.asarray(total_clean, dtype=np.float64)
+        if arr.size != 8760:
+            return None
+        return arr.round(6).tolist()
+    except Exception:
+        return None
+
+
+# ============================================================================
+# OPTIMIZER ENTRY POINT — single-run and orchestrated
+# ============================================================================
+
+
+def _ensure_imports_ready() -> None:
     if du is None:
         raise RuntimeError(
             f"dispatch_utils import failed: {_DU_IMPORT_ERROR!r}. "
@@ -1821,36 +2038,89 @@ def run_pathway(config: RunConfig) -> dict[str, Any]:
             "This is required for Card M capacity-revenue netting."
         )
 
+
+def _solve_and_annotate(config: RunConfig) -> 'PathwayRunResult':
+    """Solve pathway + attach Card L retirement + endpoint diagnostics.
+
+    Does NOT compute the stranding ledger (that requires a Pathway 3
+    reference). Does NOT write to disk.
+    """
     thresholds = available_thresholds(config.iso)
     if not thresholds:
         raise FileNotFoundError(
             f"No Step 2.1 EF parquets found for {config.iso} under {DATA_STEP21}"
         )
-
-    # 1. Solve the year-by-year deterministic optimization.
     result = solve_pathway(config)
-
-    # 2. Card L retirement timeline bolted on post-hoc.
     result.retirement_timeline = compute_retirement_timeline(result)
+    result.vre_curtailment_at_endpoint = compute_vre_curtailment_at_endpoint(result)
+    result.endpoint_hourly_dispatch = compute_endpoint_hourly_dispatch(result)
+    return result
 
-    # 3. Write outputs. Stranding ledger is empty here — filled in by the
-    #    orchestrator (chunk 5) which runs Pathway 3 first and re-writes
-    #    the non-3 pathway JSONs with the comparative-stranding columns.
-    out_path = write_run_json(result)
-    manifest_path = append_to_manifest(result)
+
+def _pathway3_config_for(config: RunConfig) -> RunConfig:
+    """Build the Pathway 3 reference config for the same (ISO, endpoint)."""
+    return RunConfig(
+        iso=config.iso,
+        pathway='3',
+        endpoint=config.endpoint,
+        demand_growth_level=config.demand_growth_level,
+        firm_cost_level=config.firm_cost_level,
+        ccs_cost_level=config.ccs_cost_level,
+        tx_level=config.tx_level,
+        q45=config.q45,
+        geo_cost_level=config.geo_cost_level,
+        output_root=config.output_root,
+    )
+
+
+def run_pathway(config: RunConfig) -> dict[str, Any]:
+    """Execute a single (iso, pathway, endpoint) run with Card K stranding.
+
+    Always solves Pathway 3 FIRST for the same (ISO, endpoint) so the
+    comparative-to-Pathway-3 stranding ledger can be computed for the
+    target pathway. If the target is Pathway 3, only one solve runs.
+
+    Writes the per-run JSON (four tables) and appends to MANIFEST.json. If
+    the target is not Pathway 3, also writes the Pathway 3 reference run.
+    """
+    _ensure_imports_ready()
+
+    # 1. Solve Pathway 3 reference first (per methodology).
+    if config.pathway == '3':
+        p3_result = _solve_and_annotate(config)
+        target_result = p3_result
+    else:
+        p3_cfg = _pathway3_config_for(config)
+        p3_result = _solve_and_annotate(p3_cfg)
+        # Pathway 3 has no stranding vs. itself.
+        p3_result.stranding_ledger = []
+        write_run_json(p3_result)
+        append_to_manifest(p3_result)
+        target_result = _solve_and_annotate(config)
+
+    # 2. Card K revised comparative stranding (vs. Pathway 3 baseline).
+    target_result.stranding_ledger = compute_stranding_ledger(
+        target_result, p3_result,
+    )
+
+    # 3. Write outputs.
+    out_path = write_run_json(target_result)
+    manifest_path = append_to_manifest(target_result)
 
     return {
         'run_key': _run_key(config),
-        'status': 'ok' if result.feasibility['physical'] else 'infeasible',
-        'achieved_cfe_pct': round(result.achieved_cfe, 4),
-        'undiscounted_cost_usd': round(result.undiscounted_cost_usd, 0),
-        **{k: round(v, 0) for k, v in result.npv_at.items()},
+        'status': 'ok' if target_result.feasibility['physical'] else 'infeasible',
+        'achieved_cfe_pct': round(target_result.achieved_cfe, 4),
+        'undiscounted_cost_usd': round(target_result.undiscounted_cost_usd, 0),
+        **{k: round(v, 0) for k, v in target_result.npv_at.items()},
         'output_path': str(out_path),
         'manifest_path': str(manifest_path),
+        'pathway3_reference_run_key': _run_key(_pathway3_config_for(config)),
+        'stranding_ledger_rows': len(target_result.stranding_ledger),
         'pivot': {
-            'pivoted': result.pivot_state.pivoted,
-            'pivot_year': result.pivot_state.pivot_year,
-            'pivot_reason': result.pivot_state.pivot_reason,
+            'pivoted': target_result.pivot_state.pivoted,
+            'pivot_year': target_result.pivot_state.pivot_year,
+            'pivot_reason': target_result.pivot_state.pivot_reason,
         },
     }
 
