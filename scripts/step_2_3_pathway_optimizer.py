@@ -1535,17 +1535,280 @@ def config_from_args(args: argparse.Namespace) -> RunConfig:
 
 
 # ============================================================================
-# OPTIMIZER ENTRY POINT (scaffold — filled in later chunks)
+# CARD L — RETIREMENT TIMELINE
+# ============================================================================
+#
+# Methodology says "existing gas retires when it stops clearing capacity
+# markets." The pipeline's closest proxy is `compute_fossil_retirement()`,
+# which returns a displacement-based coal→oil→gas merit order under each
+# year's clean_pct. We call it per year with the year's demand growth factor
+# to produce a per-year GW-retired-by-resource ledger. This is not a
+# capacity-market clearing model; it's an endogenous economic retirement
+# proxy that the rest of the pipeline already uses, which is adequate for
+# the reliability-tax comparative framing.
+
+
+# Typical coal/oil/gas capacity factors for GW ↔ TWh conversion in the
+# retirement ledger. These mirror how the rest of the pipeline reports
+# nameplate GW from dispatched TWh.
+_FOSSIL_CAPACITY_FACTORS = {
+    'coal': 0.55,
+    'oil':  0.20,
+    'gas':  0.45,
+}
+
+
+_EMISSION_RATES_CACHE: dict[str, Any] | None = None
+
+
+def _load_emission_rates() -> dict[str, Any]:
+    global _EMISSION_RATES_CACHE
+    if _EMISSION_RATES_CACHE is not None:
+        return _EMISSION_RATES_CACHE
+    path = REPO_ROOT / 'data' / 'egrid_emission_rates.json'
+    if not path.exists():
+        raise FileNotFoundError(f"egrid_emission_rates.json missing at {path}")
+    with open(path) as fh:
+        _EMISSION_RATES_CACHE = json.load(fh)
+    return _EMISSION_RATES_CACHE
+
+
+def _twh_to_gw(twh_per_year: float, capacity_factor: float) -> float:
+    """Convert annual TWh into equivalent nameplate GW at the given CF."""
+    if capacity_factor <= 0:
+        return 0.0
+    return twh_per_year / (capacity_factor * 8760.0) * 1000.0
+
+
+def compute_retirement_timeline(
+    run_result: 'PathwayRunResult',
+) -> list[dict[str, Any]]:
+    """Card L retirement ledger: year-by-year GW retired by fossil resource.
+
+    For each year with an annual_cost row, we call the pipeline's
+    `compute_fossil_retirement()` with that year's clean_pct and growth
+    factor, convert the displaced TWh into GW at typical CFs, and write one
+    row per year. We report cumulative GW retired from the 2025 baseline.
+    """
+    if du is None:
+        return []
+    iso = run_result.config.iso
+    try:
+        emission_rates = _load_emission_rates()
+        fossil_mix = load_fossil_mix(iso)
+    except Exception:
+        return []
+
+    baseline_twh = {
+        'coal': float(getattr(du, 'COAL_CAP_TWH', {}).get(iso, 0.0)),
+        'oil':  float(getattr(du, 'OIL_CAP_TWH',  {}).get(iso, 0.0)),
+        'gas':  float(
+            getattr(du, 'BASE_DEMAND_TWH', {}).get(iso, 0.0)
+        ) * (1.0 - sum(
+            getattr(du, 'GRID_MIX_SHARES', {}).get(iso, {}).values()
+        ) / 100.0) - (
+            float(getattr(du, 'COAL_CAP_TWH', {}).get(iso, 0.0))
+            + float(getattr(du, 'OIL_CAP_TWH', {}).get(iso, 0.0))
+        ),
+    }
+    baseline_twh['gas'] = max(0.0, baseline_twh['gas'])
+
+    timeline: list[dict[str, Any]] = []
+    cumulative_gw: dict[str, float] = {'coal': 0.0, 'oil': 0.0, 'gas': 0.0}
+
+    for cost_row in run_result.annual_cost:
+        year = int(cost_row['year'])
+        clean_pct = float(cost_row.get('achieved_cfe_pct', 0.0))
+        gf = growth_factor(
+            iso, year, run_result.config.demand_growth_level,
+        )
+        try:
+            _, info = du.compute_fossil_retirement(
+                iso, clean_pct, emission_rates, fossil_mix,
+                demand_growth_factor=gf, year=year,
+            )
+        except Exception:
+            continue
+        coal_remaining = float(info.get('coal_remaining_twh',
+                                         info.get('coal_displaced_twh', 0.0)))
+        oil_remaining = float(info.get('oil_remaining_twh',
+                                        info.get('oil_displaced_twh', 0.0)))
+        gas_remaining = float(info.get('gas_remaining_twh',
+                                        info.get('gas_displaced_twh', 0.0)))
+        # Retired = baseline - remaining (clamped at zero).
+        retired_twh = {
+            'coal': max(0.0, baseline_twh['coal'] - coal_remaining),
+            'oil':  max(0.0, baseline_twh['oil']  - oil_remaining),
+            'gas':  max(0.0, baseline_twh['gas']  - gas_remaining),
+        }
+        gw = {
+            r: _twh_to_gw(retired_twh[r], _FOSSIL_CAPACITY_FACTORS[r])
+            for r in ('coal', 'oil', 'gas')
+        }
+        cumulative_gw = gw  # cumulative (the function already returns
+                            # total displacement under that year's clean_pct).
+        timeline.append({
+            'year': year,
+            'clean_pct': round(clean_pct, 3),
+            'coal_retired_gw':   round(gw['coal'], 3),
+            'oil_retired_gw':    round(gw['oil'], 3),
+            'gas_retired_gw':    round(gw['gas'], 3),
+            'coal_retired_twh':  round(retired_twh['coal'], 2),
+            'oil_retired_twh':   round(retired_twh['oil'], 2),
+            'gas_retired_twh':   round(retired_twh['gas'], 2),
+        })
+    return timeline
+
+
+# ============================================================================
+# OUTPUT WRITERS — per-run JSON + MANIFEST.json append
+# ============================================================================
+
+
+MANIFEST_FILENAME = 'MANIFEST.json'
+
+
+def _run_key(config: RunConfig) -> str:
+    endpoint_tag = f"{config.endpoint_pct:g}".replace('.', 'p')
+    return f"{config.iso}__pathway{config.pathway}__ep{endpoint_tag}"
+
+
+def _serialize_run_result(
+    result: 'PathwayRunResult',
+) -> dict[str, Any]:
+    """Shape a PathwayRunResult into the per-run JSON with four tables."""
+    cfg = result.config
+    return {
+        'schema_version': 1,
+        'run_key': _run_key(cfg),
+        'config': {
+            'iso': cfg.iso,
+            'pathway': cfg.pathway,
+            'endpoint': cfg.endpoint,
+            'endpoint_pct': cfg.endpoint_pct,
+            'demand_growth_level': cfg.demand_growth_level,
+            'firm_cost_level': cfg.firm_cost_level,
+            'ccs_cost_level': cfg.ccs_cost_level,
+            'tx_level': cfg.tx_level,
+            'q45': cfg.q45,
+            'geo_cost_level': cfg.geo_cost_level,
+        },
+        'feasibility': result.feasibility,
+        'headline': {
+            'achieved_cfe_pct': round(result.achieved_cfe, 4),
+            'undiscounted_cost_usd': round(result.undiscounted_cost_usd, 0),
+            **{k: round(v, 0) for k, v in result.npv_at.items()},
+            'endpoint_threshold': result.endpoint_threshold,
+            'pivot': {
+                'pivoted': result.pivot_state.pivoted,
+                'pivot_year': result.pivot_state.pivot_year,
+                'pivot_reason': result.pivot_state.pivot_reason,
+            },
+        },
+        'tables': {
+            'annual_buildout': result.annual_buildout,
+            'annual_cost': result.annual_cost,
+            'endpoint_hourly_dispatch': result.endpoint_hourly_dispatch,
+            'stranding_ledger': result.stranding_ledger,
+        },
+        'retirement_timeline': result.retirement_timeline,
+        'vre_curtailment_at_endpoint': result.vre_curtailment_at_endpoint,
+        'endpoint_mix_pct': result.endpoint_mix_pct,
+        'endpoint_storage_pct': result.endpoint_storage_pct,
+    }
+
+
+def write_run_json(result: 'PathwayRunResult') -> Path:
+    """Write the per-run JSON with the four tables and ledger metadata."""
+    out_path = result.config.output_path
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = _serialize_run_result(result)
+    tmp = out_path.with_suffix(out_path.suffix + '.tmp')
+    with open(tmp, 'w') as fh:
+        json.dump(payload, fh, indent=2, default=str)
+    os.replace(tmp, out_path)
+    return out_path
+
+
+def _manifest_entry(result: 'PathwayRunResult') -> dict[str, Any]:
+    """One MANIFEST.json row per run. Required fields from methodology."""
+    cfg = result.config
+    stranding_totals = {
+        'gw_by_resource': {},
+        'usd_by_resource': {},
+    }
+    for row in result.stranding_ledger:
+        res = row.get('resource')
+        if res is None:
+            continue
+        stranding_totals['gw_by_resource'][res] = float(
+            row.get('stranded_twh', 0.0)
+        )
+        stranding_totals['usd_by_resource'][res] = float(
+            row.get('stranded_book_value_usd', 0.0)
+        )
+    return {
+        'run_key': _run_key(cfg),
+        'iso': cfg.iso,
+        'pathway': cfg.pathway,
+        'endpoint': cfg.endpoint,
+        'feasibility': result.feasibility,
+        'achieved_cfe_pct': round(result.achieved_cfe, 4),
+        'undiscounted_cost_usd': round(result.undiscounted_cost_usd, 0),
+        **{k: round(v, 0) for k, v in result.npv_at.items()},
+        'retirement_timeline': result.retirement_timeline,
+        'comparative_stranding': stranding_totals,
+        'vre_curtailment_at_endpoint': result.vre_curtailment_at_endpoint,
+        'output_path': str(cfg.output_path),
+    }
+
+
+def append_to_manifest(result: 'PathwayRunResult') -> Path:
+    """Append (or update) the run entry in MANIFEST.json.
+
+    MANIFEST.json lives at ``<output_root>/MANIFEST.json`` and is keyed by
+    ``_run_key(config)``. Re-running the same run updates its entry in place
+    rather than creating duplicates.
+    """
+    root = result.config.output_root
+    root.mkdir(parents=True, exist_ok=True)
+    manifest_path = root / MANIFEST_FILENAME
+    if manifest_path.exists():
+        try:
+            with open(manifest_path) as fh:
+                manifest = json.load(fh)
+        except Exception:
+            manifest = {}
+    else:
+        manifest = {}
+    if 'runs' not in manifest or not isinstance(manifest.get('runs'), dict):
+        manifest['runs'] = {}
+    manifest.setdefault('schema_version', 1)
+    manifest.setdefault('description',
+        'Reliability Tax pathway optimizer manifest (4 pathways × 5 endpoints × 7 ISOs).')
+    key = _run_key(result.config)
+    manifest['runs'][key] = _manifest_entry(result)
+    tmp = manifest_path.with_suffix('.json.tmp')
+    with open(tmp, 'w') as fh:
+        json.dump(manifest, fh, indent=2, default=str)
+    os.replace(tmp, manifest_path)
+    return manifest_path
+
+
+# ============================================================================
+# OPTIMIZER ENTRY POINT
 # ============================================================================
 
 
 def run_pathway(config: RunConfig) -> dict[str, Any]:
     """Execute a single (iso, pathway, endpoint) optimization run.
 
-    Chunk 1 scaffold: validates config, pre-loads reference parquets, and
-    returns a placeholder result. Chunks 2–5 will add the deterministic cost
-    kernel, pathway strategies, endogenous retirement, and the stranding
-    ledger.
+    Runs solve_pathway end-to-end, computes the Card L retirement timeline,
+    writes the per-run JSON (four tables), and appends to MANIFEST.json.
+    The stranding ledger and VRE curtailment cross-check are filled in by
+    the orchestrator (chunk 5) which runs Pathway 3 first and attaches the
+    comparative-stranding columns before writing. This entry point handles
+    the single-run case, which the orchestrator composes on top of.
     """
     if du is None:
         raise RuntimeError(
@@ -1558,25 +1821,38 @@ def run_pathway(config: RunConfig) -> dict[str, Any]:
             "This is required for Card M capacity-revenue netting."
         )
 
-    # Sanity: confirm the ISO has EF parquets on disk.
     thresholds = available_thresholds(config.iso)
     if not thresholds:
         raise FileNotFoundError(
             f"No Step 2.1 EF parquets found for {config.iso} under {DATA_STEP21}"
         )
 
-    config.output_path.parent.mkdir(parents=True, exist_ok=True)
+    # 1. Solve the year-by-year deterministic optimization.
+    result = solve_pathway(config)
 
-    placeholder = {
-        'iso': config.iso,
-        'pathway': config.pathway,
-        'endpoint': config.endpoint,
-        'status': 'scaffold',
-        'note': 'Chunk 1 scaffold — cost kernel and pathway strategies not yet implemented.',
-        'available_thresholds': thresholds,
-        'output_path': str(config.output_path),
+    # 2. Card L retirement timeline bolted on post-hoc.
+    result.retirement_timeline = compute_retirement_timeline(result)
+
+    # 3. Write outputs. Stranding ledger is empty here — filled in by the
+    #    orchestrator (chunk 5) which runs Pathway 3 first and re-writes
+    #    the non-3 pathway JSONs with the comparative-stranding columns.
+    out_path = write_run_json(result)
+    manifest_path = append_to_manifest(result)
+
+    return {
+        'run_key': _run_key(config),
+        'status': 'ok' if result.feasibility['physical'] else 'infeasible',
+        'achieved_cfe_pct': round(result.achieved_cfe, 4),
+        'undiscounted_cost_usd': round(result.undiscounted_cost_usd, 0),
+        **{k: round(v, 0) for k, v in result.npv_at.items()},
+        'output_path': str(out_path),
+        'manifest_path': str(manifest_path),
+        'pivot': {
+            'pivoted': result.pivot_state.pivoted,
+            'pivot_year': result.pivot_state.pivot_year,
+            'pivot_reason': result.pivot_state.pivot_reason,
+        },
     }
-    return placeholder
 
 
 def main(argv: list[str] | None = None) -> int:
