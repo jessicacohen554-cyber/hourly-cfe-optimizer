@@ -554,16 +554,16 @@
             for (const dimKey of Object.keys(dims)) {
                 const values = Object.keys(dims[dimKey]);
                 if (values.length < 2) continue;
-                const p50s = values.map(v => dims[dimKey][v].emissions ? dims[dimKey][v].emissions.p50[5] : 0).filter(Boolean);
+                const p50s = values.map(v => { const e = dims[dimKey][v].emissions; return e ? e.p50[e.p50.length - 1] : 0; }).filter(Boolean);
                 const spread = Math.max(...p50s) - Math.min(...p50s);
                 if (spread > maxSpread) { maxSpread = spread; maxDim = dimKey; }
             }
         }
 
-        const ratio2050 = spreadRatio(emissions.p10[5], emissions.p50[5], emissions.p90[5]);
+        const ratio2050 = spreadRatio(emissions.p10[emissions.p10.length - 1], emissions.p50[emissions.p50.length - 1], emissions.p90[emissions.p90.length - 1]);
         const ratio2035 = spreadRatio(emissions.p10[2], emissions.p50[2], emissions.p90[2]);
         const baseEmissions = emissions.p50[0];
-        const p50_2050 = emissions.p50[5];
+        const p50_2050 = emissions.p50[emissions.p50.length - 1];
         const pctReduction = Math.abs(pctChange(baseEmissions, p50_2050));
 
         const dimLabel = (DIMENSION_LABELS[maxDim] || {}).label || maxDim;
@@ -734,14 +734,14 @@
 
         const fb = co.fan_bands.reference;
         const profitBase = fb.profit ? fb.profit.p50[0] : 1;
-        const profit2050_p10 = fb.profit ? fb.profit.p10[5] : 0;
-        const profit2050_p50 = fb.profit ? fb.profit.p50[5] : 0;
-        const profit2050_p90 = fb.profit ? fb.profit.p90[5] : 0;
+        const profit2050_p10 = fb.profit ? fb.profit.p10[fb.profit.p10.length - 1] : 0;
+        const profit2050_p50 = fb.profit ? fb.profit.p50[fb.profit.p50.length - 1] : 0;
+        const profit2050_p90 = fb.profit ? fb.profit.p90[fb.profit.p90.length - 1] : 0;
         const pctGrowth_p10 = ((profit2050_p10 - profitBase) / Math.abs(profitBase) * 100);
         const pctGrowth_p50 = ((profit2050_p50 - profitBase) / Math.abs(profitBase) * 100);
         const pctGrowth_p90 = ((profit2050_p90 - profitBase) / Math.abs(profitBase) * 100);
-        const stranded2050 = fb.stranded_mw ? fb.stranded_mw.p50[5] : 0;
-        const operating2050 = fb.operating_mw ? fb.operating_mw.p50[5] : 0;
+        const stranded2050 = fb.stranded_mw ? fb.stranded_mw.p50[fb.stranded_mw.p50.length - 1] : 0;
+        const operating2050 = fb.operating_mw ? fb.operating_mw.p50[fb.operating_mw.p50.length - 1] : 0;
 
         const byFuel = getFleetByFuel();
         const hasCoal = byFuel.coal && byFuel.coal.gen_twh > 0;
@@ -883,7 +883,7 @@
         const target2030 = emissions.p50[1];
         const target2035 = emissions.p50[2];
         const target2040 = emissions.p50[3];
-        const target2050 = emissions.p50[5];
+        const target2050 = emissions.p50[emissions.p50.length - 1];
         const psV2_local = powerSectorV2Trajectory(baseline);
         const at_local = atTrajectory(baseline);
         const gap2040_ps = target2040 - psV2_local[3]; // gap to NZ 2040
@@ -1452,15 +1452,15 @@
                     <div class="stat-label">Scenarios Profitable</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">$${fmt(fb.profit ? fb.profit.p10[5] : 0)}M</div>
+                    <div class="stat-value">$${fmt(fb.profit ? fb.profit.p10[fb.profit.p10.length - 1] : 0)}M</div>
                     <div class="stat-label">Worst-Case Profit (2050)</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">$${fmt(fb.profit ? fb.profit.p90[5] : 0)}M</div>
+                    <div class="stat-value">$${fmt(fb.profit ? fb.profit.p90[fb.profit.p90.length - 1] : 0)}M</div>
                     <div class="stat-label">Best-Case Profit (2050)</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value">${fmt(fb.stranded_mw ? fb.stranded_mw.p50[5] : 0)}</div>
+                    <div class="stat-value">${fmt(fb.stranded_mw ? fb.stranded_mw.p50[fb.stranded_mw.p50.length - 1] : 0)}</div>
                     <div class="stat-label">MW Stranded (P50, 2050)</div>
                 </div>
             </div>

@@ -1650,7 +1650,18 @@ def main():
             json.dump(output, f, indent=2)
         print(f"Dashboard copy: {dashboard_path}")
     else:
-        print(f"  WARNING: dashboard/data/ not found — skipping dashboard copy")
+        import sys
+        print(
+            f"\n{'='*60}\n"
+            f"  ERROR: dashboard/data/ not found at:\n"
+            f"    {dashboard_data_dir}\n"
+            f"  The market-simulator and dashboard data are now OUT OF SYNC.\n"
+            f"  Dashboard will show STALE fleet scenario results.\n"
+            f"  Fix: ensure the full repo is present (not just market-simulator/)\n"
+            f"       then re-run this script from the market-simulator/ directory.\n"
+            f"{'='*60}\n",
+            file=sys.stderr
+        )
 
 
 if __name__ == '__main__':
