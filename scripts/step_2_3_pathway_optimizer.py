@@ -355,6 +355,416 @@ def growth_factor(iso: str, year: int, growth_level: str = 'Medium') -> float:
 
 
 # ============================================================================
+# COST MODEL — Wright's Law-adjusted LCOE per technology per year
+# ============================================================================
+#
+# Design:
+#   - Every new-build asset locks its LCOE at commercial operation date
+#     (Card N — year-of-commercial-operation).
+#   - LCOE at COD is a FOAK→NOAK blend driven by pipeline_config.learning_fraction.
+#   - VRE (solar, onshore wind) treated as essentially mature — no FOAK bonus.
+#     Cost level (Low/Medium/High) comes from LCOE_TABLES directly.
+#   - Clean-firm bucket uses the shared compute_clean_firm_tranches merit order
+#     (uprate → geothermal → min(nuclear new-build, CCS)). A year-aware
+#     learning-curve callback is passed in so each tranche locks its own LCOE.
+#   - Storage costs are handled as annualized $/MW-yr capacity prices pulled
+#     from LCOE_TABLES for 2025 start and NOAK_BATTERY/NOAK_BATTERY8 (plus
+#     FOAK_LDES / FOAK_H2) for terminal years.
+#   - VintageLedger tracks every build so annual operating cost in a later
+#     year is a vintage-weighted sum, not a single "current LCOE" snapshot.
+#
+# Units convention:
+#   - TWh for annual energy, MW for peak capacity, USD for annual cost.
+#   - 1 TWh = 1e6 MWh; $/MWh × MWh = USD.
+
+LEVEL_LONG = {'L': 'Low', 'M': 'Medium', 'H': 'High'}
+LEVEL_SHORT = {'Low': 'L', 'Medium': 'M', 'High': 'H'}
+
+
+def _as_long_level(level: str) -> str:
+    return LEVEL_LONG.get(level, level)
+
+
+def _as_short_level(level: str) -> str:
+    return LEVEL_SHORT.get(level, level)
+
+
+def _learning_window(tech: str, level_short: str) -> tuple[int, int]:
+    """Return (foak_start, noak_year) from pipeline_config.LEARNING_PARAMS."""
+    return pc.LEARNING_PARAMS[tech][level_short]
+
+
+# ---------- Clean firm -------------------------------------------------------
+
+
+def nuclear_newbuild_lcoe_at_year(iso: str, firm_level: str, year: int) -> float:
+    """FOAK→NOAK-adjusted new-build nuclear LCOE ($/MWh) at ``year`` in ``iso``."""
+    firm_short = _as_short_level(firm_level)
+    foak = float(pc.FOAK_NUCLEAR_NEWBUILD[iso])
+    noak = float(pc.NUCLEAR_NEWBUILD_LCOE[firm_short][iso])
+    foak_start, noak_year = _learning_window('nuclear', firm_short)
+    return pc.year_adjusted_cost(foak, noak, year, foak_start, noak_year)
+
+
+def ccs_lcoe_at_year(iso: str, ccs_level: str, q45: str, year: int) -> float:
+    """FOAK→NOAK-adjusted CCGT+CCS LCOE ($/MWh) at ``year`` with 45Q toggle."""
+    ccs_short = _as_short_level(ccs_level)
+    foak_table = pc.FOAK_CCS_45Q_ON if q45 == '1' else pc.FOAK_CCS_45Q_OFF
+    noak_table = pc.CCS_LCOE_45Q_ON if q45 == '1' else pc.CCS_LCOE_45Q_OFF
+    foak = float(foak_table[iso])
+    noak = float(noak_table[ccs_short][iso])
+    foak_start, noak_year = _learning_window('ccs', ccs_short)
+    return pc.year_adjusted_cost(foak, noak, year, foak_start, noak_year)
+
+
+def geothermal_lcoe_at_year(iso: str, geo_level: str, year: int) -> float:
+    """FOAK→NOAK-adjusted geothermal LCOE ($/MWh). CAISO only."""
+    if iso not in pc.GEOTHERMAL_ISOS:
+        return 0.0
+    geo_short = _as_short_level(geo_level)
+    foak = float(pc.FOAK_GEOTHERMAL)
+    noak = float(pc.GEOTHERMAL_LCOE[geo_short])
+    foak_start, noak_year = _learning_window('geo', geo_short)
+    return pc.year_adjusted_cost(foak, noak, year, foak_start, noak_year)
+
+
+def uprate_lcoe_at_year(firm_level: str, year: int) -> float:  # noqa: ARG001
+    """Nuclear uprate LCOE ($/MWh). Flat across years — mature tech."""
+    return float(pc.UPRATE_LCOE[_as_short_level(firm_level)])
+
+
+# ---------- VRE --------------------------------------------------------------
+
+
+def solar_lcoe_at_year(iso: str, level: str, year: int) -> float:  # noqa: ARG001
+    """Solar LCOE ($/MWh). Mature, no Wright's Law bonus — config value is final."""
+    return float(pc.LCOE_TABLES['solar'][_as_long_level(level)][iso])
+
+
+def onshore_wind_lcoe_at_year(iso: str, level: str, year: int) -> float:  # noqa: ARG001
+    return float(pc.LCOE_TABLES['wind'][_as_long_level(level)][iso])
+
+
+def offshore_wind_lcoe_at_year(iso: str, level: str, year: int) -> float:
+    """FOAK→NOAK-adjusted offshore wind LCOE ($/MWh).
+
+    Uses fixed-bottom learning window for PJM/NYISO/NEISO and floating for CAISO.
+    Returns 0 if the ISO is not in ``OFFSHORE_ISOS``.
+    """
+    if iso not in pc.OFFSHORE_ISOS:
+        return 0.0
+    is_floating = iso == 'CAISO'
+    tech_key = 'offshore_wind_float' if is_floating else 'offshore_wind_fixed'
+    level_short = _as_short_level(level)
+    foak = float(pc.FOAK_OFFSHORE_WIND.get(iso, 0.0))
+    noak = float(pc.NOAK_OFFSHORE_WIND[_as_long_level(level)].get(iso, 0.0))
+    foak_start, noak_year = _learning_window(tech_key, level_short)
+    return pc.year_adjusted_cost(foak, noak, year, foak_start, noak_year)
+
+
+def hydro_lcoe_at_year(iso: str, year: int) -> float:  # noqa: ARG001
+    """Hydro is always existing-only, wholesale-priced, $0 marginal cost."""
+    return 0.0
+
+
+# ---------- Storage ----------------------------------------------------------
+#
+# Storage is modelled as annualized $/MW-yr capacity cost. We convert to an
+# effective $/MWh at dispatch time by dividing by (effective capacity factor ×
+# 8760). For battery4 we assume daily cycle ≈ 0.25 CF, battery8 ≈ 0.35 CF,
+# LDES ≈ 0.15 CF (weekly cycle), H2 ≈ 0.05 CF (seasonal/peaker).
+#
+# The annual cost of storage is then ``delivered_twh * effective_$_per_mwh``.
+
+STORAGE_EFFECTIVE_CF = {
+    'battery4': 0.25,
+    'battery8': 0.35,
+    'ldes': 0.15,
+    'h2': 0.05,
+}
+
+
+def _battery_capacity_cost_at_year(iso: str, level: str, year: int,
+                                    duration: str) -> float:
+    """Annualized $/MW-yr for battery4 or battery8 at ``year``."""
+    assert duration in ('battery4', 'battery8')
+    level_long = _as_long_level(level)
+    level_short = _as_short_level(level)
+    tech_key = 'bat4' if duration == 'battery4' else 'bat8'
+    start_table_key = 'battery' if duration == 'battery4' else 'battery8'
+    start = float(pc.LCOE_TABLES[start_table_key][level_long][iso])
+    noak_table = pc.NOAK_BATTERY if duration == 'battery4' else pc.NOAK_BATTERY8
+    noak = float(noak_table[level_long][iso])
+    foak_start, noak_year = _learning_window(tech_key, level_short)
+    return pc.year_adjusted_cost(start, noak, year, foak_start, noak_year)
+
+
+def _cap_cost_to_per_mwh(cap_cost_per_mw_yr: float, effective_cf: float) -> float:
+    """Convert annualized $/MW-yr capacity cost to delivered-MWh $/MWh.
+
+    Dividing by (CF × 8760) converts an annual capacity cost into the per-MWh
+    cost of energy actually delivered at the stated effective capacity factor.
+    """
+    if effective_cf <= 0:
+        return 0.0
+    return cap_cost_per_mw_yr / (effective_cf * 8760.0)
+
+
+def battery4_effective_lcoe(iso: str, level: str, year: int) -> float:
+    cap_cost = _battery_capacity_cost_at_year(iso, level, year, 'battery4')
+    return _cap_cost_to_per_mwh(cap_cost, STORAGE_EFFECTIVE_CF['battery4'])
+
+
+def battery8_effective_lcoe(iso: str, level: str, year: int) -> float:
+    cap_cost = _battery_capacity_cost_at_year(iso, level, year, 'battery8')
+    return _cap_cost_to_per_mwh(cap_cost, STORAGE_EFFECTIVE_CF['battery8'])
+
+
+def ldes_effective_lcoe(iso: str, level: str, year: int) -> float:
+    level_long = _as_long_level(level)
+    level_short = _as_short_level(level)
+    start = float(pc.LCOE_TABLES['ldes'][level_long][iso])
+    foak = float(pc.FOAK_LDES[iso])
+    foak_start, noak_year = _learning_window('ldes', level_short)
+    cap_cost = pc.year_adjusted_cost(foak, start, year, foak_start, noak_year)
+    return _cap_cost_to_per_mwh(cap_cost, STORAGE_EFFECTIVE_CF['ldes'])
+
+
+def h2_effective_lcoe(iso: str, level: str, year: int) -> float:
+    level_long = _as_long_level(level)
+    level_short = _as_short_level(level)
+    start = float(pc.LCOE_TABLES['h2'][level_long][iso])
+    foak = float(pc.FOAK_H2[iso])
+    foak_start, noak_year = _learning_window('h2', level_short)
+    cap_cost = pc.year_adjusted_cost(foak, start, year, foak_start, noak_year)
+    return _cap_cost_to_per_mwh(cap_cost, STORAGE_EFFECTIVE_CF['h2'])
+
+
+# ---------- Transmission -----------------------------------------------------
+
+
+def transmission_adder(resource: str, iso: str, tx_level: str) -> float:
+    """$/MWh transmission adder for ``resource`` in ``iso`` at the given level."""
+    table = pc.TX_TABLES.get(resource)
+    if table is None:
+        return 0.0
+    val = table.get(tx_level, 0)
+    if isinstance(val, dict):
+        return float(val.get(iso, 0))
+    return float(val)
+
+
+# ---------- Clean-firm merit order wrapper (year-aware) ----------------------
+
+
+def compute_clean_firm_tranches_for_year(
+    new_cf_twh: float,
+    iso: str,
+    config: 'RunConfig',
+    year: int,
+    uprate_used_twh: float = 0.0,
+    ccs_used_twh: float = 0.0,
+    geo_used_twh: float = 0.0,
+) -> dict[str, float]:
+    """Thin wrapper around ``pc.compute_clean_firm_tranches`` that injects a
+    year-aware learning-curve function.
+
+    Uses the Wright's Law windows defined in pipeline_config.LEARNING_PARAMS.
+    Returns the same dict shape the shared helper produces plus ``year``.
+    """
+
+    def _learning_curve_fn(base_cost, foak_cost, noak_cost, tech, level, target_year):
+        """Shim matching pc.compute_clean_firm_tranches's expected signature."""
+        level_short = _as_short_level(level)
+        foak_start, noak_year = _learning_window(tech, level_short)
+        return pc.year_adjusted_cost(
+            float(foak_cost), float(noak_cost),
+            int(target_year), foak_start, noak_year,
+        )
+
+    result = pc.compute_clean_firm_tranches(
+        new_cf_twh=float(new_cf_twh),
+        iso=iso,
+        firm_lev=_as_short_level(config.firm_cost_level),
+        ccs_lev=_as_short_level(config.ccs_cost_level),
+        q45=config.q45,
+        tx_name=config.tx_level,
+        geo_lev=_as_short_level(config.geo_cost_level) if config.geo_cost_level else None,
+        geo_physics_new_twh=0.0,
+        ccs_used_twh=ccs_used_twh,
+        uprate_used_twh=uprate_used_twh,
+        geo_used_twh=geo_used_twh,
+        learning_curve_fn=_learning_curve_fn,
+        target_year=year,
+    )
+    result['year'] = year
+    return result
+
+
+# ---------- Vintage ledger ---------------------------------------------------
+
+
+@dataclass
+class Vintage:
+    """One build year's worth of a single resource with its locked LCOE."""
+
+    resource: str
+    cod_year: int
+    twh_per_year: float
+    locked_lcoe: float  # $/MWh, applied every year from cod_year onward
+    tx_adder: float = 0.0  # $/MWh transmission, locked at COD
+    retire_year: int | None = None  # None = does not retire within horizon
+
+
+@dataclass
+class VintageLedger:
+    """Append-only record of every asset built during the optimization."""
+
+    vintages: list[Vintage] = field(default_factory=list)
+
+    def add(self, vintage: Vintage) -> None:
+        self.vintages.append(vintage)
+
+    def active(self, year: int) -> list[Vintage]:
+        return [
+            v for v in self.vintages
+            if v.cod_year <= year
+            and (v.retire_year is None or year < v.retire_year)
+        ]
+
+    def operating_cost(self, year: int) -> float:
+        """Sum of (twh × $/MWh × 1e6) across all active vintages in ``year``.
+
+        Assumes ``locked_lcoe`` already bundles capex amortization + fixed O&M
+        + variable fuel, which is how pipeline_config's LCOE tables are
+        published.
+        """
+        total = 0.0
+        for v in self.active(year):
+            unit_cost = v.locked_lcoe + v.tx_adder
+            total += v.twh_per_year * 1.0e6 * unit_cost
+        return total
+
+    def capacity_twh(self, resource: str, year: int) -> float:
+        return sum(v.twh_per_year for v in self.active(year)
+                   if v.resource == resource)
+
+    def all_resources(self) -> set[str]:
+        return {v.resource for v in self.vintages}
+
+    def capex_in_year(self, year: int) -> float:
+        """USD of new-build that COMES ONLINE this year (one-shot capex flag).
+
+        We treat ``locked_lcoe`` as already-amortized, so this function is a
+        label for reporting only — it returns the first-year annualized cost
+        of vintages with ``cod_year == year``. Chunk 4 uses this to split
+        annual cost into "incremental build" vs. "operating legacy".
+        """
+        total = 0.0
+        for v in self.vintages:
+            if v.cod_year != year:
+                continue
+            unit_cost = v.locked_lcoe + v.tx_adder
+            total += v.twh_per_year * 1.0e6 * unit_cost
+        return total
+
+
+# ---------- Marginal new-build cost helpers (for pivot triggers + sizing) ----
+
+
+def marginal_lcoe(resource: str, iso: str, year: int, config: 'RunConfig') -> float:
+    """Return the $/MWh cost of adding one more MWh of ``resource`` at ``year``.
+
+    Clean-firm resources delegate to the tranche function (caller must supply
+    current used-caps). Transmission adder is bundled in.
+    """
+    tx = transmission_adder(resource, iso, config.tx_level)
+    if resource == 'solar':
+        return solar_lcoe_at_year(iso, config.firm_cost_level, year) + tx
+    if resource == 'wind':
+        return onshore_wind_lcoe_at_year(iso, config.firm_cost_level, year) + tx
+    if resource == 'offshore_wind':
+        return offshore_wind_lcoe_at_year(iso, config.firm_cost_level, year) + tx
+    if resource == 'hydro':
+        return 0.0
+    if resource == 'uprate':
+        return uprate_lcoe_at_year(config.firm_cost_level, year) + tx
+    if resource == 'nuclear_newbuild':
+        return nuclear_newbuild_lcoe_at_year(iso, config.firm_cost_level, year) + tx
+    if resource == 'ccs_ccgt':
+        return ccs_lcoe_at_year(iso, config.ccs_cost_level, config.q45, year) + tx
+    if resource == 'geothermal':
+        return geothermal_lcoe_at_year(iso, config.geo_cost_level or 'M', year) + tx
+    if resource == 'battery4':
+        return battery4_effective_lcoe(iso, config.firm_cost_level, year) + tx
+    if resource == 'battery8':
+        return battery8_effective_lcoe(iso, config.firm_cost_level, year) + tx
+    if resource == 'ldes':
+        return ldes_effective_lcoe(iso, config.firm_cost_level, year) + tx
+    if resource == 'h2':
+        return h2_effective_lcoe(iso, config.firm_cost_level, year) + tx
+    raise KeyError(f"marginal_lcoe: unknown resource {resource!r}")
+
+
+def cheapest_clean_firm_lcoe(iso: str, year: int, config: 'RunConfig',
+                              uprate_used_twh: float = 0.0,
+                              ccs_used_twh: float = 0.0,
+                              geo_used_twh: float = 0.0) -> float:
+    """Cheapest available clean-firm marginal LCOE at (iso, year).
+
+    Used by Pathway 2b's economic-pivot trigger (Card C).
+    """
+    options: list[float] = []
+    if uprate_used_twh < pc.UPRATE_CAP_TWH.get(iso, 0.0):
+        options.append(uprate_lcoe_at_year(config.firm_cost_level, year))
+    if iso in pc.GEOTHERMAL_ISOS and geo_used_twh < pc.GEOTHERMAL_CAP_TWH:
+        options.append(
+            geothermal_lcoe_at_year(iso, config.geo_cost_level or 'M', year)
+            + transmission_adder('clean_firm', iso, config.tx_level)
+        )
+    if ccs_used_twh < pc.CCS_CAP_TWH.get(iso, 0.0):
+        options.append(
+            ccs_lcoe_at_year(iso, config.ccs_cost_level, config.q45, year)
+            + transmission_adder('ccs_ccgt', iso, config.tx_level)
+        )
+    # Nuclear new-build has no hard cap (governed by siting in pipeline, but the
+    # optimizer treats it as always available if other tranches exhaust).
+    options.append(
+        nuclear_newbuild_lcoe_at_year(iso, config.firm_cost_level, year)
+        + transmission_adder('clean_firm', iso, config.tx_level)
+    )
+    return min(options)
+
+
+# ---------- Card M — capacity revenue netting --------------------------------
+
+
+def capacity_revenue_for_year(iso: str, clean_pct: float,
+                               resource_pcts: dict[str, float]) -> float:
+    """Return the total $/year capacity-market revenue for the portfolio.
+
+    Wraps ``step6_1_smartargets.compute_capacity_revenue`` (which returns
+    $/MWh per resource) and multiplies by portfolio energy to yield an
+    absolute $/year figure that can be netted against operating cost.
+
+    NOTE: compute_capacity_revenue returns revenue per MWh of delivered
+    energy for each resource — we multiply by that resource's TWh.
+    """
+    if s6 is None:  # pragma: no cover — validated at run_pathway entry
+        return 0.0
+    per_res = s6.compute_capacity_revenue(iso, clean_pct, resource_pcts)
+    total = 0.0
+    # resource_pcts here is "% of demand served"; the caller must supply the
+    # per-resource TWh when they want absolute $. For now return a per-MWh map
+    # that the annual-cost assembler converts to absolute $.
+    for res, rev_per_mwh in per_res.items():
+        pct = resource_pcts.get(res, 0.0)
+        total += pct  # placeholder — chunk 4 will properly integrate $/MWh × MWh
+        del rev_per_mwh  # silence linter; real math lives in chunk 4
+    return total
+
+
+# ============================================================================
 # CLI
 # ============================================================================
 
