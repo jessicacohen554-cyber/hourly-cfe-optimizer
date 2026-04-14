@@ -765,6 +765,349 @@ def capacity_revenue_for_year(iso: str, clean_pct: float,
 
 
 # ============================================================================
+# PATHWAY STRATEGIES — target-mix selection under pathway constraints
+# ============================================================================
+#
+# Each pathway is a rule that, given (config, year, endpoint, ledger, state),
+# picks the resource mix the optimizer should try to have OPERATING by the end
+# of ``year``. Chunk 4 (main solve loop) diffs that target mix against the
+# vintage ledger, locks LCOEs at year Y for the delta, and advances.
+#
+# The EF parquets produced by Step 2.1 already contain the physics-feasible
+# efficient frontier per (iso, threshold) — every row is a mix that meets
+# that threshold's hourly-match score. Chunk 3 picks the cheapest EF row per
+# year subject to pathway availability rules.
+#
+# Pathways (methodology Cards + README):
+#   1  — VRE + batteries only. clean_firm == 0 at all times. May become
+#        physically or economically infeasible beyond 90-ish percent CFE;
+#        the solver flags and stops advancing (Card J).
+#   2a — Behavioural pivot. Before Pathway 1 hits the 90% plateau, uses the
+#        same VRE-only logic as Pathway 1. At the plateau year the pivot
+#        unlocks clean firm with a FOAK reset (Card P); from then on the
+#        post-pivot trajectory is re-optimized freeze-and-forward (Card E).
+#   2b — Economic pivot. Same as 2a, but the pivot trigger is marginal
+#        $/CFE% of the next VRE+battery addition exceeding the cheapest
+#        available clean-firm LCOE for that year and ISO (Card C).
+#   3  — Proactive clean firm. Available year 1 on the standard Wright's Law
+#        curve. Optimizer uses the full EF from the start.
+#
+# Run sequence: Pathway 3 runs FIRST for each (iso, endpoint) so Cards K/L
+# comparative-stranding and capacity-retirement reference data are ready
+# when pathways 1/2a/2b run.
+
+# SBTi calendar used to schedule the endpoint ramp.
+_SBTI_TARGETS: tuple[tuple[int, float], ...] = (
+    (2025, 0.0),
+    (2030, 50.0),
+    (2035, 70.0),
+    (2040, 90.0),
+    (2045, 95.0),
+    (2050, 99.9),
+)
+
+
+def sbti_target_for_year(year: int, endpoint_pct: float) -> float:
+    """Linear-interpolated CFE% target for year Y, clipped to endpoint.
+
+    Pathways 1/2a/2b follow this ladder exactly — Pathway 3 is allowed to
+    front-load (it uses the same ladder but may build clean firm earlier).
+    """
+    if year <= _SBTI_TARGETS[0][0]:
+        return 0.0
+    if year >= _SBTI_TARGETS[-1][0]:
+        return min(_SBTI_TARGETS[-1][1], endpoint_pct)
+
+    for (y0, t0), (y1, t1) in zip(_SBTI_TARGETS, _SBTI_TARGETS[1:]):
+        if y0 <= year <= y1:
+            span = y1 - y0
+            frac = 0.0 if span == 0 else (year - y0) / span
+            interp = t0 + (t1 - t0) * frac
+            return min(interp, endpoint_pct)
+    return min(_SBTI_TARGETS[-1][1], endpoint_pct)
+
+
+def first_year_reaching(endpoint_pct: float) -> int:
+    """Earliest SBTi-calendar year at which CFE% >= endpoint_pct."""
+    for y in range(BASE_YEAR, END_YEAR + 1):
+        if sbti_target_for_year(y, endpoint_pct) >= endpoint_pct - 1e-9:
+            return y
+    return END_YEAR
+
+
+# ---------- EF mix representation + cost scoring ----------------------------
+
+
+# Columns in an EF parquet row that are interpretable as "% of demand" per
+# resource. Not every ISO exposes every column (e.g. no geothermal / offshore
+# wind for ERCOT) — load_ef_mixes pads missing columns with zeros so we can
+# index unconditionally.
+_EF_RESOURCE_COLS: tuple[str, ...] = (
+    'clean_firm', 'solar', 'wind', 'hydro',
+    'offshore_wind', 'geothermal', 'ccs_ccgt',
+    'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8',
+)
+_EF_STORAGE_DISPATCH_COLS: tuple[str, ...] = (
+    'battery_dispatch_pct', 'battery8_dispatch_pct',
+    'ldes_dispatch_pct', 'h2_dispatch_pct',
+)
+
+
+def _row_as_mix_pct(row: pd.Series) -> dict[str, float]:
+    """Extract a resource→% dict from an EF parquet row (always padded)."""
+    return {col: float(row.get(col, 0.0)) for col in _EF_RESOURCE_COLS}
+
+
+def _row_as_storage_pct(row: pd.Series) -> dict[str, float]:
+    return {col: float(row.get(col, 0.0)) for col in _EF_STORAGE_DISPATCH_COLS}
+
+
+def score_ef_row_cost(row: pd.Series, iso: str, year: int,
+                       config: 'RunConfig') -> float:
+    """Return the marginal-LCOE-weighted annual cost for an EF mix row.
+
+    Used to rank candidate EF rows when picking the cheapest mix for a given
+    (year, pathway). This is a quick scoring function — the real vintage
+    accounting happens in chunk 4's main solve loop. All resources are
+    priced at the YEAR's learning-adjusted marginal LCOE regardless of
+    vintage (because chunk 3 is comparing candidate end-states, not
+    tracking incremental builds).
+    """
+    demand_twh = demand_for_year(iso, year, config.demand_growth_level)
+    mix = _row_as_mix_pct(row)
+    storage = _row_as_storage_pct(row)
+
+    total = 0.0
+
+    # VRE (solar, onshore wind, hydro)
+    total += mix['solar'] / 100.0 * demand_twh * 1.0e6 * \
+        marginal_lcoe('solar', iso, year, config)
+    total += mix['wind'] / 100.0 * demand_twh * 1.0e6 * \
+        marginal_lcoe('wind', iso, year, config)
+    # Hydro is $0 by Card convention — still counted in mix but not costed.
+
+    # Offshore wind
+    if mix['offshore_wind'] > 0 and iso in pc.OFFSHORE_ISOS:
+        total += mix['offshore_wind'] / 100.0 * demand_twh * 1.0e6 * \
+            marginal_lcoe('offshore_wind', iso, year, config)
+
+    # Hybrid batteries — treat the VRE portion as VRE and the battery portion
+    # as effective battery LCOE weighted by dispatch pct.
+    for hybrid_col, base_res, batt_key in (
+        ('solar_batt4', 'solar', 'battery4'),
+        ('solar_batt8', 'solar', 'battery8'),
+        ('wind_batt4', 'wind', 'battery4'),
+        ('wind_batt8', 'wind', 'battery8'),
+    ):
+        hybrid_pct = mix[hybrid_col]
+        if hybrid_pct <= 0:
+            continue
+        total += hybrid_pct / 100.0 * demand_twh * 1.0e6 * \
+            marginal_lcoe(base_res, iso, year, config)
+        total += hybrid_pct / 100.0 * demand_twh * 1.0e6 * \
+            marginal_lcoe(batt_key, iso, year, config) * 0.5  # ~half-utilization
+
+    # Clean-firm bucket — dispatched through the shared tranche helper so the
+    # merit order matches Step 2.2a exactly.
+    cf_pct = mix['clean_firm']
+    if cf_pct > 0:
+        cf_twh = cf_pct / 100.0 * demand_twh
+        tranche = compute_clean_firm_tranches_for_year(cf_twh, iso, config, year)
+        total += float(tranche.get('total_cost', 0.0)) * 1.0e6  # tranche cost is in $M
+
+    # CCS explicit column (independent of clean-firm bucket) — rare, but
+    # preserved for safety.
+    if mix['ccs_ccgt'] > 0:
+        total += mix['ccs_ccgt'] / 100.0 * demand_twh * 1.0e6 * \
+            marginal_lcoe('ccs_ccgt', iso, year, config)
+
+    # Geothermal direct
+    if mix['geothermal'] > 0 and iso in pc.GEOTHERMAL_ISOS:
+        total += mix['geothermal'] / 100.0 * demand_twh * 1.0e6 * \
+            marginal_lcoe('geothermal', iso, year, config)
+
+    # Storage — dispatch pct × demand × effective LCOE
+    for col, res in (
+        ('battery_dispatch_pct', 'battery4'),
+        ('battery8_dispatch_pct', 'battery8'),
+        ('ldes_dispatch_pct', 'ldes'),
+        ('h2_dispatch_pct', 'h2'),
+    ):
+        pct = storage[col]
+        if pct <= 0:
+            continue
+        total += pct / 100.0 * demand_twh * 1.0e6 * \
+            marginal_lcoe(res, iso, year, config)
+
+    return total
+
+
+# ---------- Pathway availability filters ------------------------------------
+
+
+def _filter_pathway_1(df: pd.DataFrame) -> pd.DataFrame:
+    """Pathway 1: VRE + batteries only. clean_firm == 0 AND ccs == 0."""
+    if df.empty:
+        return df
+    mask = (df['clean_firm'] == 0) & (df['ccs_ccgt'] == 0)
+    if 'geothermal' in df.columns:
+        mask &= (df['geothermal'] == 0)
+    return df.loc[mask].reset_index(drop=True)
+
+
+def _filter_pathway_3(df: pd.DataFrame) -> pd.DataFrame:
+    """Pathway 3: full EF — no filter."""
+    return df
+
+
+# ---------- Pivot state for pathways 2a / 2b --------------------------------
+
+
+@dataclass
+class PivotState:
+    """Tracks whether a 2a/2b run has pivoted to clean-firm yet."""
+
+    pivoted: bool = False
+    pivot_year: int | None = None
+    pivot_reason: str | None = None  # '90pct_plateau' or 'econ_trigger'
+
+    def trigger(self, year: int, reason: str) -> None:
+        if not self.pivoted:
+            self.pivoted = True
+            self.pivot_year = year
+            self.pivot_reason = reason
+
+
+def should_pivot_2a(current_cfe_pct: float, year: int) -> bool:
+    """Card E — Pathway 2a pivots once VRE-only reaches the 90% plateau.
+
+    Implementation: pivot when the achievable VRE-only CFE is at or above the
+    SBTi 90% milestone AND year >= 2040 (the SBTi 90% target year). Reading
+    both signals avoids pivoting too early if a very VRE-rich ISO could hit
+    90% on VRE alone before the methodology's intended pivot window.
+    """
+    return current_cfe_pct >= 90.0 - 1e-6 and year >= 2040
+
+
+def should_pivot_2b(marginal_vre_usd_per_cfe_pct: float,
+                     cheapest_clean_firm_lcoe_val: float,
+                     year: int) -> bool:  # noqa: ARG001
+    """Card C — Pathway 2b pivots when marginal $/CFE% of next VRE addition
+    exceeds the cheapest available clean-firm LCOE for that year and ISO.
+
+    The comparator is tech-specific LCOE at the margin (Card C). Clean-firm
+    LCOE is roughly $/MWh which maps to ~$/CFE% via an ISO's demand_mwh /
+    100. The helper accepts the two pre-computed scalars and returns bool.
+    """
+    return marginal_vre_usd_per_cfe_pct > cheapest_clean_firm_lcoe_val
+
+
+# ---------- Target-mix selection per pathway --------------------------------
+
+
+def _closest_available_threshold(iso: str, target_pct: float) -> float | None:
+    """Pick the smallest available EF threshold that meets ``target_pct``.
+
+    Returns None if no threshold matches (e.g. Pathway 1 at 99.9% for an ISO
+    whose pure-VRE EF caps out at 90%).
+    """
+    thresholds = available_thresholds(iso)
+    if not thresholds:
+        return None
+    feasible = [t for t in thresholds if t >= target_pct - 1e-6]
+    if feasible:
+        return min(feasible)
+    return max(thresholds)  # best effort when below target — caller checks
+
+
+def select_target_mix(
+    iso: str,
+    pathway: str,
+    year: int,
+    endpoint_pct: float,
+    config: 'RunConfig',
+    pivot_state: PivotState | None = None,
+) -> dict[str, Any]:
+    """Pick the cheapest EF mix that meets this pathway's rules at ``year``.
+
+    Returns a dict with keys:
+        threshold     : float — the EF band used (may exceed SBTi target)
+        mix_pct       : dict[resource -> % of demand]
+        storage_pct   : dict[storage_col -> % of demand]
+        score         : float — hourly_match_score for the chosen row
+        cost_usd      : float — marginal-LCOE-weighted annual cost at ``year``
+        infeasible    : bool — True if no row meets the target
+        reason        : str | None — populated on infeasibility
+    """
+    target = sbti_target_for_year(year, endpoint_pct)
+    # Beyond the plateau year, enforce the endpoint itself so we don't coast.
+    if year >= first_year_reaching(endpoint_pct):
+        target = endpoint_pct
+
+    threshold = _closest_available_threshold(iso, target)
+    if threshold is None:
+        return {'infeasible': True, 'reason': 'no_ef_parquets', 'threshold': None,
+                'mix_pct': {}, 'storage_pct': {}, 'score': 0.0, 'cost_usd': 0.0}
+
+    ef = load_ef_mixes(iso, threshold)
+
+    if pathway == '1':
+        ef = _filter_pathway_1(ef)
+    elif pathway in ('2a', '2b'):
+        if pivot_state is None or not pivot_state.pivoted:
+            ef = _filter_pathway_1(ef)
+        # else: full EF available post-pivot (clean firm unlocked)
+    elif pathway == '3':
+        ef = _filter_pathway_3(ef)
+    else:
+        raise ValueError(f"select_target_mix: unknown pathway {pathway!r}")
+
+    if ef.empty:
+        return {'infeasible': True, 'reason': f'pathway_{pathway}_filter_empty',
+                'threshold': threshold, 'mix_pct': {}, 'storage_pct': {},
+                'score': 0.0, 'cost_usd': 0.0}
+
+    # Score every candidate row and pick the min.
+    costs = np.fromiter(
+        (score_ef_row_cost(row, iso, year, config) for _, row in ef.iterrows()),
+        dtype=np.float64, count=len(ef),
+    )
+    if costs.size == 0 or not np.isfinite(costs).any():
+        return {'infeasible': True, 'reason': 'no_finite_cost',
+                'threshold': threshold, 'mix_pct': {}, 'storage_pct': {},
+                'score': 0.0, 'cost_usd': 0.0}
+    best_idx = int(np.nanargmin(costs))
+    winner = ef.iloc[best_idx]
+
+    return {
+        'infeasible': False,
+        'reason': None,
+        'threshold': float(threshold),
+        'mix_pct': _row_as_mix_pct(winner),
+        'storage_pct': _row_as_storage_pct(winner),
+        'score': float(winner.get('hourly_match_score', 0.0)),
+        'cost_usd': float(costs[best_idx]),
+    }
+
+
+def marginal_vre_usd_per_cfe_pct(iso: str, year: int,
+                                   config: 'RunConfig') -> float:
+    """Approximate $/CFE% for the next VRE+battery addition at year Y.
+
+    Uses solar + battery4 at the year's marginal LCOE and amortizes over the
+    year's demand. The methodology's Card C comparator is tech-specific and
+    this captures the dominant term — chunk 4 refines this with an actual
+    EF-row delta comparison.
+    """
+    demand_twh = demand_for_year(iso, year, config.demand_growth_level)
+    solar_cost = marginal_lcoe('solar', iso, year, config)
+    bat_cost = marginal_lcoe('battery4', iso, year, config)
+    # Adding 1% of demand as solar+battery4 shaves ~1% of CFE at the margin.
+    # Cost = 1% * demand_mwh * (solar_lcoe + bat_lcoe * 0.5_util)
+    return (solar_cost + 0.5 * bat_cost) * (0.01 * demand_twh * 1.0e6)
+
+
+# ============================================================================
 # CLI
 # ============================================================================
 
