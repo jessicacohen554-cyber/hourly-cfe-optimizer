@@ -1566,8 +1566,21 @@ def _derive_delta_vintages(
 
     # Clean-firm bucket — run the merit-order tranche helper and produce a
     # Vintage per tranche that actually got built this year.
+    #
+    # Pathway 1 and pre-pivot 2a/2b: existing clean firm (nuclear, hydro) is
+    # INHERITED FLEET — already operating, no new build.  The EF's clean_firm
+    # column contributes to CFE-score feasibility but generates no new vintages.
+    # Only VRE + storage are new builds under these pathways.  Skipping here
+    # ensures compute_clean_firm_tranches never allocates uprates or CCS into
+    # P1/pre-pivot runs, which was the root cause of P1 incorrectly appearing
+    # to build clean firm (uprates + CCS via the tranche merit order).
+    #
+    # Post-pivot 2a/2b and Pathway 3: nuclear_cap_twh == inf → full tranche
+    # allocation runs normally, building new nuclear/CCS/uprates as optimal.
+    _is_existing_fleet_only = nuclear_cap_twh < float('inf')
+
     cf_pct = target['mix_pct'].get('clean_firm', 0.0)
-    if cf_pct > 0:
+    if cf_pct > 0 and not _is_existing_fleet_only:
         # EF encodes clean_firm as % of base-year demand.  For Pathway 1 /
         # pre-pivot 2a/2b, nuclear_cap_twh is the absolute existing-fleet cap.
         # min() prevents the cost model from implying new nuclear when demand_twh
