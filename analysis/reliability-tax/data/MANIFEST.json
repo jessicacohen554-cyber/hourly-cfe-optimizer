@@ -19883,6 +19883,3346 @@
         "wind_batt4": 0.0
       },
       "output_path": "/home/user/hourly-cfe-optimizer/analysis/reliability-tax/data/NYISO/pathway2b_ep99p9.json"
+    },
+    "NEISO__pathway3__ep90": {
+      "run_key": "NEISO__pathway3__ep90",
+      "iso": "NEISO",
+      "pathway": "3",
+      "endpoint": 0.9,
+      "feasibility": {
+        "physical": true,
+        "economic": true,
+        "notes": []
+      },
+      "achieved_cfe_pct": 90.03,
+      "undiscounted_cost_usd": 682515447013.0,
+      "npv_at_5pct": 347963885866.0,
+      "npv_at_7pct": 276498087022.0,
+      "npv_at_9pct": 224302566466.0,
+      "retirement_timeline": [
+        {
+          "year": 2025,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.766,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 18.79
+        },
+        {
+          "year": 2026,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.51,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 17.78
+        },
+        {
+          "year": 2027,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.249,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 16.75
+        },
+        {
+          "year": 2028,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 3.982,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 15.7
+        },
+        {
+          "year": 2029,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 3.711,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 14.63
+        },
+        {
+          "year": 2030,
+          "clean_pct": 50.18,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 8.45,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 33.31
+        },
+        {
+          "year": 2031,
+          "clean_pct": 55.093,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 11.458,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 45.17
+        },
+        {
+          "year": 2032,
+          "clean_pct": 60.233,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 14.731,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 58.07
+        },
+        {
+          "year": 2033,
+          "clean_pct": 65.058,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 17.909,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 70.6
+        },
+        {
+          "year": 2034,
+          "clean_pct": 74.788,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2035,
+          "clean_pct": 74.788,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2036,
+          "clean_pct": 77.395,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2037,
+          "clean_pct": 80.01,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2038,
+          "clean_pct": 85.01,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2039,
+          "clean_pct": 87.51,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2040,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2041,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2042,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2043,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2044,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2045,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2046,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2047,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2048,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2049,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2050,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        }
+      ],
+      "comparative_stranding": {
+        "gw_by_resource": {},
+        "usd_by_resource": {}
+      },
+      "vre_curtailment_at_endpoint": {
+        "solar": 0.0,
+        "wind": 0.0,
+        "offshore_wind": 0.0,
+        "solar_batt8": 0.0,
+        "wind_batt8": 0.0
+      },
+      "output_path": "/home/user/hourly-cfe-optimizer/analysis/reliability-tax/data/NEISO/pathway3_ep90.json"
+    },
+    "NEISO__pathway1__ep90": {
+      "run_key": "NEISO__pathway1__ep90",
+      "iso": "NEISO",
+      "pathway": "1",
+      "endpoint": 0.9,
+      "feasibility": {
+        "physical": false,
+        "economic": true,
+        "notes": [
+          "2025: pathway_1_filter_empty"
+        ]
+      },
+      "achieved_cfe_pct": 0.0,
+      "undiscounted_cost_usd": 0.0,
+      "npv_at_5pct": 0.0,
+      "npv_at_7pct": 0.0,
+      "npv_at_9pct": 0.0,
+      "retirement_timeline": [],
+      "comparative_stranding": {
+        "gw_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        },
+        "usd_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        }
+      },
+      "vre_curtailment_at_endpoint": {},
+      "output_path": "/home/user/hourly-cfe-optimizer/analysis/reliability-tax/data/NEISO/pathway1_ep90.json"
+    },
+    "NEISO__pathway2a__ep90": {
+      "run_key": "NEISO__pathway2a__ep90",
+      "iso": "NEISO",
+      "pathway": "2a",
+      "endpoint": 0.9,
+      "feasibility": {
+        "physical": false,
+        "economic": true,
+        "notes": [
+          "2025: pathway_2a_filter_empty"
+        ]
+      },
+      "achieved_cfe_pct": 0.0,
+      "undiscounted_cost_usd": 0.0,
+      "npv_at_5pct": 0.0,
+      "npv_at_7pct": 0.0,
+      "npv_at_9pct": 0.0,
+      "retirement_timeline": [],
+      "comparative_stranding": {
+        "gw_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        },
+        "usd_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        }
+      },
+      "vre_curtailment_at_endpoint": {},
+      "output_path": "/home/user/hourly-cfe-optimizer/analysis/reliability-tax/data/NEISO/pathway2a_ep90.json"
+    },
+    "NEISO__pathway2b__ep90": {
+      "run_key": "NEISO__pathway2b__ep90",
+      "iso": "NEISO",
+      "pathway": "2b",
+      "endpoint": 0.9,
+      "feasibility": {
+        "physical": true,
+        "economic": true,
+        "notes": []
+      },
+      "achieved_cfe_pct": 90.03,
+      "undiscounted_cost_usd": 682515447013.0,
+      "npv_at_5pct": 347963885866.0,
+      "npv_at_7pct": 276498087022.0,
+      "npv_at_9pct": 224302566466.0,
+      "retirement_timeline": [
+        {
+          "year": 2025,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.766,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 18.79
+        },
+        {
+          "year": 2026,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.51,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 17.78
+        },
+        {
+          "year": 2027,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.249,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 16.75
+        },
+        {
+          "year": 2028,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 3.982,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 15.7
+        },
+        {
+          "year": 2029,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 3.711,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 14.63
+        },
+        {
+          "year": 2030,
+          "clean_pct": 50.18,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 8.45,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 33.31
+        },
+        {
+          "year": 2031,
+          "clean_pct": 55.093,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 11.458,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 45.17
+        },
+        {
+          "year": 2032,
+          "clean_pct": 60.233,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 14.731,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 58.07
+        },
+        {
+          "year": 2033,
+          "clean_pct": 65.058,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 17.909,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 70.6
+        },
+        {
+          "year": 2034,
+          "clean_pct": 74.788,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2035,
+          "clean_pct": 74.788,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2036,
+          "clean_pct": 77.395,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2037,
+          "clean_pct": 80.01,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2038,
+          "clean_pct": 85.01,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2039,
+          "clean_pct": 87.51,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2040,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2041,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2042,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2043,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2044,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2045,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2046,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2047,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2048,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2049,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2050,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        }
+      ],
+      "comparative_stranding": {
+        "gw_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        },
+        "usd_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        }
+      },
+      "vre_curtailment_at_endpoint": {
+        "solar": 0.0,
+        "wind": 0.0,
+        "offshore_wind": 0.0,
+        "solar_batt8": 0.0,
+        "wind_batt8": 0.0
+      },
+      "output_path": "/home/user/hourly-cfe-optimizer/analysis/reliability-tax/data/NEISO/pathway2b_ep90.json"
+    },
+    "NEISO__pathway3__ep95": {
+      "run_key": "NEISO__pathway3__ep95",
+      "iso": "NEISO",
+      "pathway": "3",
+      "endpoint": 0.95,
+      "feasibility": {
+        "physical": true,
+        "economic": true,
+        "notes": []
+      },
+      "achieved_cfe_pct": 95.0,
+      "undiscounted_cost_usd": 664966972103.0,
+      "npv_at_5pct": 342117854465.0,
+      "npv_at_7pct": 272667042373.0,
+      "npv_at_9pct": 221768840933.0,
+      "retirement_timeline": [
+        {
+          "year": 2025,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.766,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 18.79
+        },
+        {
+          "year": 2026,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.51,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 17.78
+        },
+        {
+          "year": 2027,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.249,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 16.75
+        },
+        {
+          "year": 2028,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 3.982,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 15.7
+        },
+        {
+          "year": 2029,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 3.711,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 14.63
+        },
+        {
+          "year": 2030,
+          "clean_pct": 50.18,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 8.45,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 33.31
+        },
+        {
+          "year": 2031,
+          "clean_pct": 55.093,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 11.458,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 45.17
+        },
+        {
+          "year": 2032,
+          "clean_pct": 60.233,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 14.731,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 58.07
+        },
+        {
+          "year": 2033,
+          "clean_pct": 65.058,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 17.909,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 70.6
+        },
+        {
+          "year": 2034,
+          "clean_pct": 74.788,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2035,
+          "clean_pct": 74.788,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2036,
+          "clean_pct": 77.395,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2037,
+          "clean_pct": 80.01,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2038,
+          "clean_pct": 85.01,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2039,
+          "clean_pct": 87.51,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2040,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2041,
+          "clean_pct": 92.5,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2042,
+          "clean_pct": 92.5,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2043,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2044,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2045,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2046,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2047,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2048,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2049,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2050,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        }
+      ],
+      "comparative_stranding": {
+        "gw_by_resource": {},
+        "usd_by_resource": {}
+      },
+      "vre_curtailment_at_endpoint": {
+        "solar": 0.0,
+        "wind": 0.0,
+        "offshore_wind": 0.0
+      },
+      "output_path": "/home/user/hourly-cfe-optimizer/analysis/reliability-tax/data/NEISO/pathway3_ep95.json"
+    },
+    "NEISO__pathway1__ep95": {
+      "run_key": "NEISO__pathway1__ep95",
+      "iso": "NEISO",
+      "pathway": "1",
+      "endpoint": 0.95,
+      "feasibility": {
+        "physical": false,
+        "economic": true,
+        "notes": [
+          "2025: pathway_1_filter_empty"
+        ]
+      },
+      "achieved_cfe_pct": 0.0,
+      "undiscounted_cost_usd": 0.0,
+      "npv_at_5pct": 0.0,
+      "npv_at_7pct": 0.0,
+      "npv_at_9pct": 0.0,
+      "retirement_timeline": [],
+      "comparative_stranding": {
+        "gw_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        },
+        "usd_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        }
+      },
+      "vre_curtailment_at_endpoint": {},
+      "output_path": "/home/user/hourly-cfe-optimizer/analysis/reliability-tax/data/NEISO/pathway1_ep95.json"
+    },
+    "NEISO__pathway2a__ep95": {
+      "run_key": "NEISO__pathway2a__ep95",
+      "iso": "NEISO",
+      "pathway": "2a",
+      "endpoint": 0.95,
+      "feasibility": {
+        "physical": false,
+        "economic": true,
+        "notes": [
+          "2025: pathway_2a_filter_empty"
+        ]
+      },
+      "achieved_cfe_pct": 0.0,
+      "undiscounted_cost_usd": 0.0,
+      "npv_at_5pct": 0.0,
+      "npv_at_7pct": 0.0,
+      "npv_at_9pct": 0.0,
+      "retirement_timeline": [],
+      "comparative_stranding": {
+        "gw_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        },
+        "usd_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        }
+      },
+      "vre_curtailment_at_endpoint": {},
+      "output_path": "/home/user/hourly-cfe-optimizer/analysis/reliability-tax/data/NEISO/pathway2a_ep95.json"
+    },
+    "NEISO__pathway2b__ep95": {
+      "run_key": "NEISO__pathway2b__ep95",
+      "iso": "NEISO",
+      "pathway": "2b",
+      "endpoint": 0.95,
+      "feasibility": {
+        "physical": true,
+        "economic": true,
+        "notes": []
+      },
+      "achieved_cfe_pct": 95.0,
+      "undiscounted_cost_usd": 664966972103.0,
+      "npv_at_5pct": 342117854465.0,
+      "npv_at_7pct": 272667042373.0,
+      "npv_at_9pct": 221768840933.0,
+      "retirement_timeline": [
+        {
+          "year": 2025,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.766,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 18.79
+        },
+        {
+          "year": 2026,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.51,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 17.78
+        },
+        {
+          "year": 2027,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.249,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 16.75
+        },
+        {
+          "year": 2028,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 3.982,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 15.7
+        },
+        {
+          "year": 2029,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 3.711,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 14.63
+        },
+        {
+          "year": 2030,
+          "clean_pct": 50.18,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 8.45,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 33.31
+        },
+        {
+          "year": 2031,
+          "clean_pct": 55.093,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 11.458,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 45.17
+        },
+        {
+          "year": 2032,
+          "clean_pct": 60.233,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 14.731,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 58.07
+        },
+        {
+          "year": 2033,
+          "clean_pct": 65.058,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 17.909,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 70.6
+        },
+        {
+          "year": 2034,
+          "clean_pct": 74.788,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2035,
+          "clean_pct": 74.788,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2036,
+          "clean_pct": 77.395,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2037,
+          "clean_pct": 80.01,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2038,
+          "clean_pct": 85.01,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2039,
+          "clean_pct": 87.51,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2040,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2041,
+          "clean_pct": 92.5,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2042,
+          "clean_pct": 92.5,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2043,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2044,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2045,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2046,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2047,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2048,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2049,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2050,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        }
+      ],
+      "comparative_stranding": {
+        "gw_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        },
+        "usd_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        }
+      },
+      "vre_curtailment_at_endpoint": {
+        "solar": 0.0,
+        "wind": 0.0,
+        "offshore_wind": 0.0
+      },
+      "output_path": "/home/user/hourly-cfe-optimizer/analysis/reliability-tax/data/NEISO/pathway2b_ep95.json"
+    },
+    "NEISO__pathway3__ep97p5": {
+      "run_key": "NEISO__pathway3__ep97p5",
+      "iso": "NEISO",
+      "pathway": "3",
+      "endpoint": 0.975,
+      "feasibility": {
+        "physical": true,
+        "economic": true,
+        "notes": []
+      },
+      "achieved_cfe_pct": 97.58,
+      "undiscounted_cost_usd": 739290222162.0,
+      "npv_at_5pct": 365815399420.0,
+      "npv_at_7pct": 287915542999.0,
+      "npv_at_9pct": 231667438663.0,
+      "retirement_timeline": [
+        {
+          "year": 2025,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.766,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 18.79
+        },
+        {
+          "year": 2026,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.51,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 17.78
+        },
+        {
+          "year": 2027,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.249,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 16.75
+        },
+        {
+          "year": 2028,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 3.982,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 15.7
+        },
+        {
+          "year": 2029,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 3.711,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 14.63
+        },
+        {
+          "year": 2030,
+          "clean_pct": 50.18,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 8.45,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 33.31
+        },
+        {
+          "year": 2031,
+          "clean_pct": 55.093,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 11.458,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 45.17
+        },
+        {
+          "year": 2032,
+          "clean_pct": 60.233,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 14.731,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 58.07
+        },
+        {
+          "year": 2033,
+          "clean_pct": 65.058,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 17.909,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 70.6
+        },
+        {
+          "year": 2034,
+          "clean_pct": 74.788,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2035,
+          "clean_pct": 74.788,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2036,
+          "clean_pct": 77.395,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2037,
+          "clean_pct": 80.01,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2038,
+          "clean_pct": 85.01,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2039,
+          "clean_pct": 87.51,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2040,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2041,
+          "clean_pct": 92.5,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2042,
+          "clean_pct": 92.5,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2043,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2044,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2045,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2046,
+          "clean_pct": 97.58,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2047,
+          "clean_pct": 97.58,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2048,
+          "clean_pct": 97.58,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2049,
+          "clean_pct": 97.58,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2050,
+          "clean_pct": 97.58,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        }
+      ],
+      "comparative_stranding": {
+        "gw_by_resource": {},
+        "usd_by_resource": {}
+      },
+      "vre_curtailment_at_endpoint": {
+        "wind": 0.0,
+        "solar_batt8": 0.0,
+        "wind_batt4": 0.0
+      },
+      "output_path": "/home/user/hourly-cfe-optimizer/analysis/reliability-tax/data/NEISO/pathway3_ep97p5.json"
+    },
+    "NEISO__pathway1__ep97p5": {
+      "run_key": "NEISO__pathway1__ep97p5",
+      "iso": "NEISO",
+      "pathway": "1",
+      "endpoint": 0.975,
+      "feasibility": {
+        "physical": false,
+        "economic": true,
+        "notes": [
+          "2025: pathway_1_filter_empty"
+        ]
+      },
+      "achieved_cfe_pct": 0.0,
+      "undiscounted_cost_usd": 0.0,
+      "npv_at_5pct": 0.0,
+      "npv_at_7pct": 0.0,
+      "npv_at_9pct": 0.0,
+      "retirement_timeline": [],
+      "comparative_stranding": {
+        "gw_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        },
+        "usd_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        }
+      },
+      "vre_curtailment_at_endpoint": {},
+      "output_path": "/home/user/hourly-cfe-optimizer/analysis/reliability-tax/data/NEISO/pathway1_ep97p5.json"
+    },
+    "NEISO__pathway2a__ep97p5": {
+      "run_key": "NEISO__pathway2a__ep97p5",
+      "iso": "NEISO",
+      "pathway": "2a",
+      "endpoint": 0.975,
+      "feasibility": {
+        "physical": false,
+        "economic": true,
+        "notes": [
+          "2025: pathway_2a_filter_empty"
+        ]
+      },
+      "achieved_cfe_pct": 0.0,
+      "undiscounted_cost_usd": 0.0,
+      "npv_at_5pct": 0.0,
+      "npv_at_7pct": 0.0,
+      "npv_at_9pct": 0.0,
+      "retirement_timeline": [],
+      "comparative_stranding": {
+        "gw_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        },
+        "usd_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        }
+      },
+      "vre_curtailment_at_endpoint": {},
+      "output_path": "/home/user/hourly-cfe-optimizer/analysis/reliability-tax/data/NEISO/pathway2a_ep97p5.json"
+    },
+    "NEISO__pathway2b__ep97p5": {
+      "run_key": "NEISO__pathway2b__ep97p5",
+      "iso": "NEISO",
+      "pathway": "2b",
+      "endpoint": 0.975,
+      "feasibility": {
+        "physical": true,
+        "economic": true,
+        "notes": []
+      },
+      "achieved_cfe_pct": 97.58,
+      "undiscounted_cost_usd": 739290222162.0,
+      "npv_at_5pct": 365815399420.0,
+      "npv_at_7pct": 287915542999.0,
+      "npv_at_9pct": 231667438663.0,
+      "retirement_timeline": [
+        {
+          "year": 2025,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.766,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 18.79
+        },
+        {
+          "year": 2026,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.51,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 17.78
+        },
+        {
+          "year": 2027,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.249,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 16.75
+        },
+        {
+          "year": 2028,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 3.982,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 15.7
+        },
+        {
+          "year": 2029,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 3.711,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 14.63
+        },
+        {
+          "year": 2030,
+          "clean_pct": 50.18,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 8.45,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 33.31
+        },
+        {
+          "year": 2031,
+          "clean_pct": 55.093,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 11.458,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 45.17
+        },
+        {
+          "year": 2032,
+          "clean_pct": 60.233,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 14.731,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 58.07
+        },
+        {
+          "year": 2033,
+          "clean_pct": 65.058,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 17.909,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 70.6
+        },
+        {
+          "year": 2034,
+          "clean_pct": 74.788,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2035,
+          "clean_pct": 74.788,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2036,
+          "clean_pct": 77.395,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2037,
+          "clean_pct": 80.01,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2038,
+          "clean_pct": 85.01,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2039,
+          "clean_pct": 87.51,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2040,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2041,
+          "clean_pct": 92.5,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2042,
+          "clean_pct": 92.5,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2043,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2044,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2045,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2046,
+          "clean_pct": 97.58,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2047,
+          "clean_pct": 97.58,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2048,
+          "clean_pct": 97.58,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2049,
+          "clean_pct": 97.58,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2050,
+          "clean_pct": 97.58,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        }
+      ],
+      "comparative_stranding": {
+        "gw_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        },
+        "usd_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        }
+      },
+      "vre_curtailment_at_endpoint": {
+        "wind": 0.0,
+        "solar_batt8": 0.0,
+        "wind_batt4": 0.0
+      },
+      "output_path": "/home/user/hourly-cfe-optimizer/analysis/reliability-tax/data/NEISO/pathway2b_ep97p5.json"
+    },
+    "NEISO__pathway3__ep99": {
+      "run_key": "NEISO__pathway3__ep99",
+      "iso": "NEISO",
+      "pathway": "3",
+      "endpoint": 0.99,
+      "feasibility": {
+        "physical": true,
+        "economic": true,
+        "notes": []
+      },
+      "achieved_cfe_pct": 99.16,
+      "undiscounted_cost_usd": 729216773156.0,
+      "npv_at_5pct": 362741861778.0,
+      "npv_at_7pct": 285972777273.0,
+      "npv_at_9pct": 230428707779.0,
+      "retirement_timeline": [
+        {
+          "year": 2025,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.766,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 18.79
+        },
+        {
+          "year": 2026,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.51,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 17.78
+        },
+        {
+          "year": 2027,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.249,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 16.75
+        },
+        {
+          "year": 2028,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 3.982,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 15.7
+        },
+        {
+          "year": 2029,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 3.711,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 14.63
+        },
+        {
+          "year": 2030,
+          "clean_pct": 50.18,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 8.45,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 33.31
+        },
+        {
+          "year": 2031,
+          "clean_pct": 55.093,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 11.458,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 45.17
+        },
+        {
+          "year": 2032,
+          "clean_pct": 60.233,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 14.731,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 58.07
+        },
+        {
+          "year": 2033,
+          "clean_pct": 65.058,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 17.909,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 70.6
+        },
+        {
+          "year": 2034,
+          "clean_pct": 74.788,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2035,
+          "clean_pct": 74.788,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2036,
+          "clean_pct": 77.395,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2037,
+          "clean_pct": 80.01,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2038,
+          "clean_pct": 85.01,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2039,
+          "clean_pct": 87.51,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2040,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2041,
+          "clean_pct": 92.5,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2042,
+          "clean_pct": 92.5,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2043,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2044,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2045,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2046,
+          "clean_pct": 97.58,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2047,
+          "clean_pct": 97.58,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2048,
+          "clean_pct": 99.16,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2049,
+          "clean_pct": 99.16,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2050,
+          "clean_pct": 99.16,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        }
+      ],
+      "comparative_stranding": {
+        "gw_by_resource": {},
+        "usd_by_resource": {}
+      },
+      "vre_curtailment_at_endpoint": {
+        "offshore_wind": 0.0,
+        "solar_batt8": 0.0
+      },
+      "output_path": "/home/user/hourly-cfe-optimizer/analysis/reliability-tax/data/NEISO/pathway3_ep99.json"
+    },
+    "NEISO__pathway1__ep99": {
+      "run_key": "NEISO__pathway1__ep99",
+      "iso": "NEISO",
+      "pathway": "1",
+      "endpoint": 0.99,
+      "feasibility": {
+        "physical": false,
+        "economic": true,
+        "notes": [
+          "2025: pathway_1_filter_empty"
+        ]
+      },
+      "achieved_cfe_pct": 0.0,
+      "undiscounted_cost_usd": 0.0,
+      "npv_at_5pct": 0.0,
+      "npv_at_7pct": 0.0,
+      "npv_at_9pct": 0.0,
+      "retirement_timeline": [],
+      "comparative_stranding": {
+        "gw_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        },
+        "usd_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        }
+      },
+      "vre_curtailment_at_endpoint": {},
+      "output_path": "/home/user/hourly-cfe-optimizer/analysis/reliability-tax/data/NEISO/pathway1_ep99.json"
+    },
+    "NEISO__pathway2a__ep99": {
+      "run_key": "NEISO__pathway2a__ep99",
+      "iso": "NEISO",
+      "pathway": "2a",
+      "endpoint": 0.99,
+      "feasibility": {
+        "physical": false,
+        "economic": true,
+        "notes": [
+          "2025: pathway_2a_filter_empty"
+        ]
+      },
+      "achieved_cfe_pct": 0.0,
+      "undiscounted_cost_usd": 0.0,
+      "npv_at_5pct": 0.0,
+      "npv_at_7pct": 0.0,
+      "npv_at_9pct": 0.0,
+      "retirement_timeline": [],
+      "comparative_stranding": {
+        "gw_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        },
+        "usd_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        }
+      },
+      "vre_curtailment_at_endpoint": {},
+      "output_path": "/home/user/hourly-cfe-optimizer/analysis/reliability-tax/data/NEISO/pathway2a_ep99.json"
+    },
+    "NEISO__pathway2b__ep99": {
+      "run_key": "NEISO__pathway2b__ep99",
+      "iso": "NEISO",
+      "pathway": "2b",
+      "endpoint": 0.99,
+      "feasibility": {
+        "physical": true,
+        "economic": true,
+        "notes": []
+      },
+      "achieved_cfe_pct": 99.16,
+      "undiscounted_cost_usd": 729216773156.0,
+      "npv_at_5pct": 362741861778.0,
+      "npv_at_7pct": 285972777273.0,
+      "npv_at_9pct": 230428707779.0,
+      "retirement_timeline": [
+        {
+          "year": 2025,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.766,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 18.79
+        },
+        {
+          "year": 2026,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.51,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 17.78
+        },
+        {
+          "year": 2027,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.249,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 16.75
+        },
+        {
+          "year": 2028,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 3.982,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 15.7
+        },
+        {
+          "year": 2029,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 3.711,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 14.63
+        },
+        {
+          "year": 2030,
+          "clean_pct": 50.18,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 8.45,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 33.31
+        },
+        {
+          "year": 2031,
+          "clean_pct": 55.093,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 11.458,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 45.17
+        },
+        {
+          "year": 2032,
+          "clean_pct": 60.233,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 14.731,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 58.07
+        },
+        {
+          "year": 2033,
+          "clean_pct": 65.058,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 17.909,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 70.6
+        },
+        {
+          "year": 2034,
+          "clean_pct": 74.788,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2035,
+          "clean_pct": 74.788,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2036,
+          "clean_pct": 77.395,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2037,
+          "clean_pct": 80.01,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2038,
+          "clean_pct": 85.01,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2039,
+          "clean_pct": 87.51,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2040,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2041,
+          "clean_pct": 92.5,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2042,
+          "clean_pct": 92.5,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2043,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2044,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2045,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2046,
+          "clean_pct": 97.58,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2047,
+          "clean_pct": 97.58,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2048,
+          "clean_pct": 99.16,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2049,
+          "clean_pct": 99.16,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2050,
+          "clean_pct": 99.16,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        }
+      ],
+      "comparative_stranding": {
+        "gw_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        },
+        "usd_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        }
+      },
+      "vre_curtailment_at_endpoint": {
+        "offshore_wind": 0.0,
+        "solar_batt8": 0.0
+      },
+      "output_path": "/home/user/hourly-cfe-optimizer/analysis/reliability-tax/data/NEISO/pathway2b_ep99.json"
+    },
+    "NEISO__pathway3__ep99p9": {
+      "run_key": "NEISO__pathway3__ep99p9",
+      "iso": "NEISO",
+      "pathway": "3",
+      "endpoint": 0.999,
+      "feasibility": {
+        "physical": true,
+        "economic": true,
+        "notes": []
+      },
+      "achieved_cfe_pct": 99.91,
+      "undiscounted_cost_usd": 729220711085.0,
+      "npv_at_5pct": 362743024659.0,
+      "npv_at_7pct": 285973502833.0,
+      "npv_at_9pct": 230429164452.0,
+      "retirement_timeline": [
+        {
+          "year": 2025,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.766,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 18.79
+        },
+        {
+          "year": 2026,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.51,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 17.78
+        },
+        {
+          "year": 2027,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.249,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 16.75
+        },
+        {
+          "year": 2028,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 3.982,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 15.7
+        },
+        {
+          "year": 2029,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 3.711,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 14.63
+        },
+        {
+          "year": 2030,
+          "clean_pct": 50.18,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 8.45,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 33.31
+        },
+        {
+          "year": 2031,
+          "clean_pct": 55.093,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 11.458,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 45.17
+        },
+        {
+          "year": 2032,
+          "clean_pct": 60.233,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 14.731,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 58.07
+        },
+        {
+          "year": 2033,
+          "clean_pct": 65.058,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 17.909,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 70.6
+        },
+        {
+          "year": 2034,
+          "clean_pct": 74.788,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2035,
+          "clean_pct": 74.788,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2036,
+          "clean_pct": 77.395,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2037,
+          "clean_pct": 80.01,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2038,
+          "clean_pct": 85.01,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2039,
+          "clean_pct": 87.51,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2040,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2041,
+          "clean_pct": 92.5,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2042,
+          "clean_pct": 92.5,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2043,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2044,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2045,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2046,
+          "clean_pct": 97.58,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2047,
+          "clean_pct": 97.58,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2048,
+          "clean_pct": 99.16,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2049,
+          "clean_pct": 99.16,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2050,
+          "clean_pct": 99.91,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        }
+      ],
+      "comparative_stranding": {
+        "gw_by_resource": {},
+        "usd_by_resource": {}
+      },
+      "vre_curtailment_at_endpoint": {
+        "offshore_wind": 0.0,
+        "solar_batt8": 0.0
+      },
+      "output_path": "/home/user/hourly-cfe-optimizer/analysis/reliability-tax/data/NEISO/pathway3_ep99p9.json"
+    },
+    "NEISO__pathway1__ep99p9": {
+      "run_key": "NEISO__pathway1__ep99p9",
+      "iso": "NEISO",
+      "pathway": "1",
+      "endpoint": 0.999,
+      "feasibility": {
+        "physical": false,
+        "economic": true,
+        "notes": [
+          "2025: pathway_1_filter_empty"
+        ]
+      },
+      "achieved_cfe_pct": 0.0,
+      "undiscounted_cost_usd": 0.0,
+      "npv_at_5pct": 0.0,
+      "npv_at_7pct": 0.0,
+      "npv_at_9pct": 0.0,
+      "retirement_timeline": [],
+      "comparative_stranding": {
+        "gw_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        },
+        "usd_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        }
+      },
+      "vre_curtailment_at_endpoint": {},
+      "output_path": "/home/user/hourly-cfe-optimizer/analysis/reliability-tax/data/NEISO/pathway1_ep99p9.json"
+    },
+    "NEISO__pathway2a__ep99p9": {
+      "run_key": "NEISO__pathway2a__ep99p9",
+      "iso": "NEISO",
+      "pathway": "2a",
+      "endpoint": 0.999,
+      "feasibility": {
+        "physical": false,
+        "economic": true,
+        "notes": [
+          "2025: pathway_2a_filter_empty"
+        ]
+      },
+      "achieved_cfe_pct": 0.0,
+      "undiscounted_cost_usd": 0.0,
+      "npv_at_5pct": 0.0,
+      "npv_at_7pct": 0.0,
+      "npv_at_9pct": 0.0,
+      "retirement_timeline": [],
+      "comparative_stranding": {
+        "gw_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        },
+        "usd_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        }
+      },
+      "vre_curtailment_at_endpoint": {},
+      "output_path": "/home/user/hourly-cfe-optimizer/analysis/reliability-tax/data/NEISO/pathway2a_ep99p9.json"
+    },
+    "NEISO__pathway2b__ep99p9": {
+      "run_key": "NEISO__pathway2b__ep99p9",
+      "iso": "NEISO",
+      "pathway": "2b",
+      "endpoint": 0.999,
+      "feasibility": {
+        "physical": true,
+        "economic": true,
+        "notes": []
+      },
+      "achieved_cfe_pct": 99.91,
+      "undiscounted_cost_usd": 729220711085.0,
+      "npv_at_5pct": 362743024659.0,
+      "npv_at_7pct": 285973502833.0,
+      "npv_at_9pct": 230429164452.0,
+      "retirement_timeline": [
+        {
+          "year": 2025,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.766,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 18.79
+        },
+        {
+          "year": 2026,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.51,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 17.78
+        },
+        {
+          "year": 2027,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 4.249,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 16.75
+        },
+        {
+          "year": 2028,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 3.982,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 15.7
+        },
+        {
+          "year": 2029,
+          "clean_pct": 42.34,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 3.711,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 14.63
+        },
+        {
+          "year": 2030,
+          "clean_pct": 50.18,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 8.45,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 33.31
+        },
+        {
+          "year": 2031,
+          "clean_pct": 55.093,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 11.458,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 45.17
+        },
+        {
+          "year": 2032,
+          "clean_pct": 60.233,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 14.731,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 58.07
+        },
+        {
+          "year": 2033,
+          "clean_pct": 65.058,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 17.909,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 70.6
+        },
+        {
+          "year": 2034,
+          "clean_pct": 74.788,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2035,
+          "clean_pct": 74.788,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2036,
+          "clean_pct": 77.395,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2037,
+          "clean_pct": 80.01,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2038,
+          "clean_pct": 85.01,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2039,
+          "clean_pct": 87.51,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2040,
+          "clean_pct": 90.03,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2041,
+          "clean_pct": 92.5,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2042,
+          "clean_pct": 92.5,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2043,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2044,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2045,
+          "clean_pct": 95.0,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2046,
+          "clean_pct": 97.58,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2047,
+          "clean_pct": 97.58,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2048,
+          "clean_pct": 99.16,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2049,
+          "clean_pct": 99.16,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        },
+        {
+          "year": 2050,
+          "clean_pct": 99.91,
+          "coal_retired_gw": 0.064,
+          "oil_retired_gw": 0.736,
+          "gas_retired_gw": 19.051,
+          "coal_retired_twh": 0.31,
+          "oil_retired_twh": 1.29,
+          "gas_retired_twh": 75.1
+        }
+      ],
+      "comparative_stranding": {
+        "gw_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        },
+        "usd_by_resource": {
+          "solar": 0.0,
+          "wind": 0.0,
+          "offshore_wind": 0.0,
+          "battery4": 0.0,
+          "battery8": 0.0,
+          "ldes": 0.0
+        }
+      },
+      "vre_curtailment_at_endpoint": {
+        "offshore_wind": 0.0,
+        "solar_batt8": 0.0
+      },
+      "output_path": "/home/user/hourly-cfe-optimizer/analysis/reliability-tax/data/NEISO/pathway2b_ep99p9.json"
     }
   },
   "schema_version": 1,

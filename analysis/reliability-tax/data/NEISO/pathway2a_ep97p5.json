@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "run_key": "NEISO__pathway2a__ep97p5",
+  "config": {
+    "iso": "NEISO",
+    "pathway": "2a",
+    "endpoint": 0.975,
+    "endpoint_pct": 97.5,
+    "demand_growth_level": "Medium",
+    "firm_cost_level": "M",
+    "ccs_cost_level": "M",
+    "tx_level": "Medium",
+    "q45": "1",
+    "geo_cost_level": null
+  },
+  "feasibility": {
+    "physical": false,
+    "economic": true,
+    "notes": [
+      "2025: pathway_2a_filter_empty"
+    ]
+  },
+  "headline": {
+    "achieved_cfe_pct": 0.0,
+    "undiscounted_cost_usd": 0.0,
+    "npv_at_5pct": 0.0,
+    "npv_at_7pct": 0.0,
+    "npv_at_9pct": 0.0,
+    "endpoint_threshold": null,
+    "pivot": {
+      "pivoted": false,
+      "pivot_year": null,
+      "pivot_reason": null
+    }
+  },
+  "tables": {
+    "annual_buildout": [],
+    "annual_cost": [],
+    "endpoint_hourly_dispatch": null,
+    "stranding_ledger": [
+      {
+        "resource": "solar",
+        "pathway_twh": 0.0,
+        "pathway3_twh": 214.653,
+        "stranded_twh": 0.0,
+        "stranded_book_value_usd": 0.0
+      },
+      {
+        "resource": "wind",
+        "pathway_twh": 0.0,
+        "pathway3_twh": 159.526,
+        "stranded_twh": 0.0,
+        "stranded_book_value_usd": 0.0
+      },
+      {
+        "resource": "offshore_wind",
+        "pathway_twh": 0.0,
+        "pathway3_twh": 46.86,
+        "stranded_twh": 0.0,
+        "stranded_book_value_usd": 0.0
+      },
+      {
+        "resource": "battery4",
+        "pathway_twh": 0.0,
+        "pathway3_twh": 11.767,
+        "stranded_twh": 0.0,
+        "stranded_book_value_usd": 0.0
+      },
+      {
+        "resource": "battery8",
+        "pathway_twh": 0.0,
+        "pathway3_twh": 9.008,
+        "stranded_twh": 0.0,
+        "stranded_book_value_usd": 0.0
+      },
+      {
+        "resource": "ldes",
+        "pathway_twh": 0.0,
+        "pathway3_twh": 1.648,
+        "stranded_twh": 0.0,
+        "stranded_book_value_usd": 0.0
+      }
+    ]
+  },
+  "retirement_timeline": [],
+  "vre_curtailment_at_endpoint": {},
+  "endpoint_mix_pct": {},
+  "endpoint_storage_pct": {}
+}
