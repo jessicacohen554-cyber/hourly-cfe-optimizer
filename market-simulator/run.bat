@@ -105,6 +105,18 @@ if not exist "frontend\data\fleet_scenario_results_sample.json" (
     )
 ) else (
     echo [OK] Fleet scenario data ready
+    REM ── Sanity-check data: 2050 reduction must be at least 35%% of 2023 ─────
+    %PYTHON% -c "import json,sys; d=json.load(open('frontend\\data\\fleet_scenario_results_sample.json')); e=d['scenarios']['baseline']['envelope']; b=e['2023']['p50']; e50=e['2050']['p50']; redux=(b-e50)/b*100; sys.exit(0 if redux >= 35 else 1)" 2>nul
+    if errorlevel 1 (
+        echo   WARNING: Fleet scenario data failed sanity check ^(2050 reduction ^< 35%%^). Rebuilding...
+        set PYTHONPATH=%~dp0;%~dp0backend;%~dp0scripts
+        %PYTHON% scripts\build_fleet_scenario_data.py
+        if errorlevel 1 (
+            echo WARNING: Rebuild also failed. Check sweep data integrity.
+        ) else (
+            echo [OK] Fleet scenario data rebuilt successfully
+        )
+    )
 )
 
 REM ── Generate constellation scenarios if missing ──────────────────────────

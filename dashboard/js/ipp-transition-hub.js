@@ -209,9 +209,10 @@
                 `<span class="iso-badge" style="background:${ISO_COLOR_MAP[iso] || '#6B7280'}">${iso}</span>`
             ).join('');
 
-            // P50 emission reduction by 2050
+            // P50 emission reduction by 2050 (use last element — robust to any array length)
             const fb = co.fan_bands.all.emissions;
-            const reduction = fb.p50[0] > 0 ? ((fb.p50[0] - fb.p50[5]) / fb.p50[0] * 100).toFixed(0) : ' - ';
+            const fb_last = fb.p50[fb.p50.length - 1];
+            const reduction = fb.p50[0] > 0 ? ((fb.p50[0] - fb_last) / fb.p50[0] * 100).toFixed(0) : ' - ';
             const companyColor = COMPANY_COLORS[idx % COMPANY_COLORS.length];
 
             return `
@@ -306,7 +307,7 @@
         }
 
         // All companies remain profitable
-        const allProfitable = companies.every(c => c.fan_bands.all.profit && c.fan_bands.all.profit.p10[5] > 0);
+        const allProfitable = companies.every(c => c.fan_bands.all.profit && (() => { const p = c.fan_bands.all.profit.p10; return p[p.length - 1] > 0; })());
         if (allProfitable) {
             consistent.push(`<strong>Universal profitability:</strong> All 7 companies remain profitable even in worst-case (P10) scenarios through 2050.`);
         }
@@ -314,7 +315,8 @@
         // Where they diverge
         const emissionReductions = companies.map(c => {
             const fb = c.fan_bands.all.emissions;
-            return { name: c.shortName, reduction: fb.p50[0] > 0 ? ((fb.p50[0] - fb.p50[5]) / fb.p50[0] * 100) : 100 };
+            const last = fb.p50[fb.p50.length - 1];
+            return { name: c.shortName, reduction: fb.p50[0] > 0 ? ((fb.p50[0] - last) / fb.p50[0] * 100) : 100 };
         }).sort((a, b) => b.reduction - a.reduction);
 
         divergent.push(`<strong>Decarbonization pace:</strong> ${emissionReductions[0].name} achieves the deepest reduction (${emissionReductions[0].reduction.toFixed(0)}% by 2050) while ${emissionReductions[emissionReductions.length-1].name} shows the least (${emissionReductions[emissionReductions.length-1].reduction.toFixed(0)}%).`);
@@ -409,8 +411,10 @@
     function renderProfitResilience() {
         // Horizontal bar: P10/P50/P90 profit margin % growth at 2050 vs 2023
         const sorted = [...companies].sort((a, b) => {
-            const pa = a.fan_bands.all.profit ? a.fan_bands.all.profit.p50[5] : 0;
-            const pb = b.fan_bands.all.profit ? b.fan_bands.all.profit.p50[5] : 0;
+            const paArr = a.fan_bands.all.profit ? a.fan_bands.all.profit.p50 : null;
+            const pbArr = b.fan_bands.all.profit ? b.fan_bands.all.profit.p50 : null;
+            const pa = paArr ? paArr[paArr.length - 1] : 0;
+            const pb = pbArr ? pbArr[pbArr.length - 1] : 0;
             return pb - pa;
         });
 
@@ -551,7 +555,7 @@
 
             const pcts = fb.p50.map(v => baseline > 0 ? ((baseline - v) / baseline * 100).toFixed(0) + '%' : ' - ');
             const gapPS = fb.p50[3] - psV2_2040;
-            const gapAT = fb.p50[5] - at_2050;
+            const gapAT = fb.p50[fb.p50.length - 1] - at_2050;
 
             html += `<tr>
                 <td><a href="ipp_${co.id}.html" style="color:var(--accent);font-weight:600">${co.shortName}</a></td>
