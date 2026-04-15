@@ -1,0 +1,146 @@
+{
+  "section_title": "The Worst Hours: What the Grid Faces When VRE Runs Low",
+  "page_intro": "The hourly CFE matching problem becomes clear when you look at the worst hours of the year. Every grid has hours where solar is dark, wind is calm, and demand is high. At low CFE targets, existing gas fills the gap cheaply. At high CFE targets, the options narrow: either overbuild VRE and storage to serve those hours on clean energy, or build dispatchable clean firm capacity that shows up whenever needed. Pathway 1 takes the first approach \u2014 and the cost of serving the last few percent of hours is what we call the reliability tax.",
+  "worst_hours_chart_caption": "Each bar represents one of the 100 hours in 2050 with the highest residual load (demand minus VRE generation) under Pathway 1 at 95% CFE. Stacked segments show how each hour is served: wind (green), storage (cyan), gas (gray). Gas dispatch occurs when storage is depleted during sustained low-VRE events.",
+  "per_iso": {
+    "CAISO": {
+      "headline": "In California's solar-heavy grid, 8 GW of gas capacity remains online at 95% CFE \u2014 present for reliability, rarely dispatched.",
+      "body": "California's solar-heavy grid serves 359 TWh annually by 2050 under medium demand growth. Under Pathway 1, solar and battery storage dominate the 2050 mix; wind is modest. Summer afternoon peaks expose solar's daily gap. Moving from 95% to 99% CFE adds an estimated $0.02T in undiscounted cumulative system cost through 2050.",
+      "data_callouts": [
+        "Gas remaining at 95% CFE: 7.9 GW (vs. 37 GW existing in 2025)",
+        "Gas remaining at 99% CFE: 7.9 GW",
+        "Cost step from 95%\u219299%: $0.02T undiscounted"
+      ],
+      "iso_resource_character": "solar and battery storage dominate the 2050 mix; wind is modest. Summer afternoon peaks expose solar's daily gap.",
+      "stats": {
+        "achieved_cfe_at_ep95": 95.1,
+        "achieved_cfe_at_ep99": 99.0,
+        "gas_remaining_gw_at_ep95": 7.9,
+        "gas_remaining_gw_at_ep99": 7.9,
+        "cost_delta_95_to_99_trillion_usd": 0.023,
+        "demand_2050_twh": 359.0
+      },
+      "note": "PLACEHOLDER \u2014 human-editable narrative. Data callouts are derived from run results."
+    },
+    "ERCOT": {
+      "headline": "In Texas's wind-dominated isolated system, 5 GW of gas capacity remains online at 95% CFE \u2014 present for reliability, rarely dispatched.",
+      "body": "Texas's wind-dominated isolated system serves 1153 TWh annually by 2050 under medium demand growth. Under Pathway 1, wind provides the foundation with solar as secondary. Wind volatility during low-pressure systems creates the worst-hour stress. Moving from 95% to 99% CFE adds an estimated $0.01T in undiscounted cumulative system cost through 2050.",
+      "data_callouts": [
+        "Gas remaining at 95% CFE: 5.4 GW (vs. 55 GW existing in 2025)",
+        "Gas remaining at 99% CFE: 5.4 GW",
+        "Cost step from 95%\u219299%: $0.01T undiscounted"
+      ],
+      "iso_resource_character": "wind provides the foundation with solar as secondary. Wind volatility during low-pressure systems creates the worst-hour stress.",
+      "stats": {
+        "achieved_cfe_at_ep95": 95.2,
+        "achieved_cfe_at_ep99": 99.0,
+        "gas_remaining_gw_at_ep95": 5.4,
+        "gas_remaining_gw_at_ep99": 5.4,
+        "cost_delta_95_to_99_trillion_usd": 0.012,
+        "demand_2050_twh": 1153.0
+      },
+      "note": "PLACEHOLDER \u2014 human-editable narrative. Data callouts are derived from run results."
+    },
+    "MISO": {
+      "headline": "In the Midwest's sprawling coal-to-wind transition, existing gas is fully retired by 96% CFE \u2014 storage and VRE overbuild replace the gas reliability buffer entirely.",
+      "body": "The midwest's sprawling coal-to-wind transition serves 1144 TWh annually by 2050 under medium demand growth. Under Pathway 1, solar and wind share the load roughly equally. Winter cold snaps with low wind are the critical stress event. Moving from 96% to 99% CFE adds an estimated $0.00T in undiscounted cumulative system cost through 2050.",
+      "data_callouts": [
+        "Gas remaining at 96% CFE: 0.0 GW (vs. 68 GW existing in 2025)",
+        "Gas remaining at 99% CFE: 0.0 GW",
+        "Cost step from 96%\u219299%: $0.00T undiscounted"
+      ],
+      "iso_resource_character": "solar and wind share the load roughly equally. Winter cold snaps with low wind are the critical stress event.",
+      "stats": {
+        "achieved_cfe_at_ep95": 95.8,
+        "achieved_cfe_at_ep99": 99.0,
+        "gas_remaining_gw_at_ep95": 0.0,
+        "gas_remaining_gw_at_ep99": 0.0,
+        "cost_delta_95_to_99_trillion_usd": 0.0,
+        "demand_2050_twh": 1144.0
+      },
+      "note": "PLACEHOLDER \u2014 human-editable narrative. Data callouts are derived from run results."
+    },
+    "NEISO": {
+      "headline": "In New England's constrained winter-peaking system, existing gas is fully retired by 95% CFE \u2014 storage and VRE overbuild replace the gas reliability buffer entirely.",
+      "body": "New england's constrained winter-peaking system serves 180 TWh annually by 2050 under medium demand growth. Under Pathway 1, offshore wind and solar fill most of the gap, but winter gas pipeline constraints historically drive worst-hour scarcity. Moving from 95% to 99% CFE adds an estimated $0.04T in undiscounted cumulative system cost through 2050.",
+      "data_callouts": [
+        "Gas remaining at 95% CFE: 0.0 GW (vs. 14 GW existing in 2025)",
+        "Gas remaining at 99% CFE: 0.0 GW",
+        "Cost step from 95%\u219299%: $0.04T undiscounted"
+      ],
+      "iso_resource_character": "offshore wind and solar fill most of the gap, but winter gas pipeline constraints historically drive worst-hour scarcity.",
+      "stats": {
+        "achieved_cfe_at_ep95": 95.1,
+        "achieved_cfe_at_ep99": 99.0,
+        "gas_remaining_gw_at_ep95": 0.0,
+        "gas_remaining_gw_at_ep99": 0.0,
+        "cost_delta_95_to_99_trillion_usd": 0.042,
+        "demand_2050_twh": 180.0
+      },
+      "note": "PLACEHOLDER \u2014 human-editable narrative. Data callouts are derived from run results."
+    },
+    "NYISO": {
+      "headline": "In New York's hydro-and-offshore-wind corridor, existing gas is fully retired by 95% CFE \u2014 storage and VRE overbuild replace the gas reliability buffer entirely.",
+      "body": "New york's hydro-and-offshore-wind corridor serves 249 TWh annually by 2050 under medium demand growth. Under Pathway 1, hydro provides a firm backbone; offshore wind drives the CFE gains. Winter demand peaks stress the offshore wind resource. Moving from 95% to 99% CFE adds an estimated $0.06T in undiscounted cumulative system cost through 2050.",
+      "data_callouts": [
+        "Gas remaining at 95% CFE: 0.0 GW (vs. 18 GW existing in 2025)",
+        "Gas remaining at 99% CFE: 0.0 GW",
+        "Cost step from 95%\u219299%: $0.06T undiscounted"
+      ],
+      "iso_resource_character": "hydro provides a firm backbone; offshore wind drives the CFE gains. Winter demand peaks stress the offshore wind resource.",
+      "stats": {
+        "achieved_cfe_at_ep95": 95.0,
+        "achieved_cfe_at_ep99": 99.0,
+        "gas_remaining_gw_at_ep95": 0.0,
+        "gas_remaining_gw_at_ep99": 0.0,
+        "cost_delta_95_to_99_trillion_usd": 0.055,
+        "demand_2050_twh": 249.0
+      },
+      "note": "PLACEHOLDER \u2014 human-editable narrative. Data callouts are derived from run results."
+    },
+    "PJM": {
+      "headline": "In the largest US electricity market, existing gas is fully retired by 95% CFE \u2014 storage and VRE overbuild replace the gas reliability buffer entirely.",
+      "body": "The largest us electricity market serves 1526 TWh annually by 2050 under medium demand growth. Under Pathway 1, solar is the dominant new resource with substantial wind. Winter polar vortex events with cloud cover define the worst hours. Moving from 95% to 99% CFE adds an estimated $0.24T in undiscounted cumulative system cost through 2050.",
+      "data_callouts": [
+        "Gas remaining at 95% CFE: 0.0 GW (vs. 75 GW existing in 2025)",
+        "Gas remaining at 99% CFE: 0.0 GW",
+        "Cost step from 95%\u219299%: $0.24T undiscounted"
+      ],
+      "iso_resource_character": "solar is the dominant new resource with substantial wind. Winter polar vortex events with cloud cover define the worst hours.",
+      "stats": {
+        "achieved_cfe_at_ep95": 95.0,
+        "achieved_cfe_at_ep99": 99.0,
+        "gas_remaining_gw_at_ep95": 0.0,
+        "gas_remaining_gw_at_ep99": 0.0,
+        "cost_delta_95_to_99_trillion_usd": 0.235,
+        "demand_2050_twh": 1526.0
+      },
+      "note": "PLACEHOLDER \u2014 human-editable narrative. Data callouts are derived from run results."
+    },
+    "SPP": {
+      "headline": "In the Southern Plains' wind-rich corridor, the last 2.4 GW of gas carries the grid through the worst 95%-CFE stress events.",
+      "body": "The southern plains' wind-rich corridor serves 468 TWh annually by 2050 under medium demand growth. Under Pathway 1, wind is the workhorse, providing 40-plus percent of annual generation. Summer high-pressure systems (calm, hot) produce the worst hours. Moving from 95% to 99% CFE adds an estimated $0.09T in undiscounted cumulative system cost through 2050.",
+      "data_callouts": [
+        "Gas remaining at 95% CFE: 2.4 GW (vs. 32 GW existing in 2025)",
+        "Gas remaining at 99% CFE: 2.4 GW",
+        "Cost step from 95%\u219299%: $0.09T undiscounted"
+      ],
+      "iso_resource_character": "wind is the workhorse, providing 40-plus percent of annual generation. Summer high-pressure systems (calm, hot) produce the worst hours.",
+      "stats": {
+        "achieved_cfe_at_ep95": 95.0,
+        "achieved_cfe_at_ep99": 99.0,
+        "gas_remaining_gw_at_ep95": 2.4,
+        "gas_remaining_gw_at_ep99": 2.4,
+        "cost_delta_95_to_99_trillion_usd": 0.089,
+        "demand_2050_twh": 468.0
+      },
+      "note": "PLACEHOLDER \u2014 human-editable narrative. Data callouts are derived from run results."
+    }
+  },
+  "meta": {
+    "payload_id": "section1_narratives",
+    "data_driven": true,
+    "note": "All text is auto-generated from run results and intended as a starting point for human editorial. Stats are from MANIFEST.json + per-run JSONs. Pathway 1, endpoint 95% and 99% used for comparisons.",
+    "version": "1.0"
+  }
+}
