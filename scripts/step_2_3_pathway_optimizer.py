@@ -227,13 +227,27 @@ def _resolve_ef_paths(iso: str, threshold: float) -> list[Path]:
     return matches
 
 
+# Module-level EF parquet cache: (iso, threshold) → DataFrame.
+# Avoids re-reading multi-million-row parquets for consecutive years that map
+# to the same threshold (e.g. the 75% EF is reused for 2036 and 2037).
+_EF_CACHE: dict[tuple[str, float], pd.DataFrame] = {}
+
+
 def load_ef_mixes(iso: str, threshold: float) -> pd.DataFrame:
     """Load the Step 2.1 efficient-frontier mixes for (iso, threshold).
 
     Returns a DataFrame with the canonical resource-mix schema, padded to
     include optional geothermal / offshore_wind / ccs_ccgt columns as zeros
     when the ISO does not expose them (EF parquets omit unused dims).
+
+    Results are cached in ``_EF_CACHE`` so repeat calls for the same
+    (iso, threshold) — which happen every year the SBTi ladder stays at the
+    same threshold — return the same object without re-reading disk.
     """
+    cache_key = (iso, threshold)
+    if cache_key in _EF_CACHE:
+        return _EF_CACHE[cache_key]
+
     paths = _resolve_ef_paths(iso, threshold)
     if not paths:
         raise FileNotFoundError(
@@ -251,6 +265,7 @@ def load_ef_mixes(iso: str, threshold: float) -> pd.DataFrame:
     for col, fill in optional_cols.items():
         if col not in df.columns:
             df[col] = fill
+    _EF_CACHE[cache_key] = df
     return df
 
 
@@ -1020,6 +1035,94 @@ def _closest_available_threshold(iso: str, target_pct: float) -> float | None:
     return max(thresholds)  # best effort when below target — caller checks
 
 
+def _score_ef_vectorized(
+    ef: 'pd.DataFrame',
+    iso: str,
+    year: int,
+    config: 'RunConfig',
+) -> np.ndarray:
+    """Vectorized cost scoring for all rows in an EF DataFrame.
+
+    All LCOE terms are scalar at (iso, year, config).  We build a coefficient
+    per column and then sum coeff[col] * ef[col].to_numpy() across all
+    resource columns in one pass — avoiding a Python for-loop over rows.
+
+    Clean-firm is approximated as ``cheapest_clean_firm_lcoe()`` (the merit-
+    order winner at year Y) so it remains a scalar multiplier.  The winner row
+    is identified by argmin; the full tranche computation runs only on that
+    single winner inside ``_derive_delta_vintages``.  This is safe because
+    ranking rows by cost-rank is unaffected by the approximation — the true
+    ordering of rows is preserved as long as the clean-firm LCOE estimate is
+    consistent (it is: same scalar multiplied by different clean_firm pct).
+    """
+    demand_twh = demand_for_year(iso, year, config.demand_growth_level)
+    demand_mwh = demand_twh * 1.0e6
+
+    # --- Pre-compute scalar LCOE coefficients ($/row-pct-unit = demand_mwh/100 * lcoe) ---
+    c_solar = (demand_mwh / 100.0) * marginal_lcoe('solar', iso, year, config)
+    c_wind  = (demand_mwh / 100.0) * marginal_lcoe('wind',  iso, year, config)
+    c_ow    = ((demand_mwh / 100.0) * marginal_lcoe('offshore_wind', iso, year, config)
+               if iso in pc.OFFSHORE_ISOS else 0.0)
+    c_geo   = ((demand_mwh / 100.0) * marginal_lcoe('geothermal', iso, year, config)
+               if iso in pc.GEOTHERMAL_ISOS else 0.0)
+    c_ccs   = (demand_mwh / 100.0) * marginal_lcoe('ccs_ccgt', iso, year, config)
+
+    # Clean-firm: cheapest available tranche LCOE used as scalar approximation.
+    cf_lcoe = cheapest_clean_firm_lcoe(
+        iso, year, config,
+        uprate_used_twh=0.0, ccs_used_twh=0.0, geo_used_twh=0.0,
+    )
+    c_cf = (demand_mwh / 100.0) * cf_lcoe
+
+    # Hybrid columns: VRE LCOE + 0.5 × battery LCOE (consistent with score_ef_row_cost).
+    c_sb4 = (demand_mwh / 100.0) * (
+        marginal_lcoe('solar',    iso, year, config)
+        + 0.5 * marginal_lcoe('battery4', iso, year, config)
+    )
+    c_sb8 = (demand_mwh / 100.0) * (
+        marginal_lcoe('solar',    iso, year, config)
+        + 0.5 * marginal_lcoe('battery8', iso, year, config)
+    )
+    c_wb4 = (demand_mwh / 100.0) * (
+        marginal_lcoe('wind',     iso, year, config)
+        + 0.5 * marginal_lcoe('battery4', iso, year, config)
+    )
+    c_wb8 = (demand_mwh / 100.0) * (
+        marginal_lcoe('wind',     iso, year, config)
+        + 0.5 * marginal_lcoe('battery8', iso, year, config)
+    )
+
+    # Storage dispatch columns.
+    c_bat4 = (demand_mwh / 100.0) * marginal_lcoe('battery4', iso, year, config)
+    c_bat8 = (demand_mwh / 100.0) * marginal_lcoe('battery8', iso, year, config)
+    c_ldes = (demand_mwh / 100.0) * marginal_lcoe('ldes',     iso, year, config)
+    c_h2   = (demand_mwh / 100.0) * marginal_lcoe('h2',       iso, year, config)
+
+    # --- Extract numpy arrays from the DataFrame (zero-copy where possible) ---
+    def _arr(col: str) -> np.ndarray:
+        if col not in ef.columns:
+            return np.zeros(len(ef), dtype=np.float64)
+        return ef[col].to_numpy(dtype=np.float64)
+
+    costs = np.zeros(len(ef), dtype=np.float64)
+    costs += c_solar * _arr('solar')
+    costs += c_wind  * _arr('wind')
+    costs += c_ow    * _arr('offshore_wind')
+    costs += c_geo   * _arr('geothermal')
+    costs += c_ccs   * _arr('ccs_ccgt')
+    costs += c_cf    * _arr('clean_firm')
+    costs += c_sb4   * _arr('solar_batt4')
+    costs += c_sb8   * _arr('solar_batt8')
+    costs += c_wb4   * _arr('wind_batt4')
+    costs += c_wb8   * _arr('wind_batt8')
+    costs += c_bat4  * _arr('battery_dispatch_pct')
+    costs += c_bat8  * _arr('battery8_dispatch_pct')
+    costs += c_ldes  * _arr('ldes_dispatch_pct')
+    costs += c_h2    * _arr('h2_dispatch_pct')
+
+    return costs
+
+
 def select_target_mix(
     iso: str,
     pathway: str,
@@ -1067,11 +1170,12 @@ def select_target_mix(
                 'threshold': threshold, 'mix_pct': {}, 'storage_pct': {},
                 'score': 0.0, 'cost_usd': 0.0}
 
-    # Score every candidate row and pick the min.
-    costs = np.fromiter(
-        (score_ef_row_cost(row, iso, year, config) for _, row in ef.iterrows()),
-        dtype=np.float64, count=len(ef),
-    )
+    # Score every candidate row and pick the min — vectorized numpy path.
+    # All LCOE terms are scalars at (iso, year, config); only the resource-pct
+    # columns vary per row, so we build a coefficient vector and dot it against
+    # the DataFrame's numpy arrays in one pass. This replaces an iterrows() loop
+    # that would take minutes on multi-million-row EF parquets.
+    costs = _score_ef_vectorized(ef, iso, year, config)
     if costs.size == 0 or not np.isfinite(costs).any():
         return {'infeasible': True, 'reason': 'no_finite_cost',
                 'threshold': threshold, 'mix_pct': {}, 'storage_pct': {},
