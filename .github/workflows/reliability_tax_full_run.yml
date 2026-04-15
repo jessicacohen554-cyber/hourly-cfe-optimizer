@@ -1,0 +1,469 @@
+name: "Reliability Tax: Full Pathway Sweep"
+
+# Runs step_2_3_pathway_optimizer.py across all requested ISOs via parallel
+# matrix jobs, then commits outputs to a dedicated branch and opens a draft PR.
+#
+# Trigger modes
+# -------------
+#   iso_scope=all_remaining_6  — CAISO, PJM, NYISO, NEISO, MISO, SPP
+#                                (ERCOT already completed in Prompt 2B smoke test)
+#   iso_scope=all_7            — all seven ISOs including ERCOT
+#   iso_scope=single           — single ISO specified via iso_name input
+#
+# Pathway sequencing
+# ------------------
+# Pathway 3 always runs first per (iso, endpoint) combo — comparative stranding
+# (Card K) requires Pathway 3's buildout as a reference for 1/2a/2b.
+# run_pathway_sweep.py enforces this regardless of the pathways input order.
+#
+# Demand sensitivity
+# ------------------
+# When include_demand_sensitivity=true, a second pass re-runs all requested
+# (ISO, endpoint, pathway) combos at Low and High demand growth (Medium is the
+# primary run). These write to analysis/reliability-tax/data-demand-sensitivity/
+# so they don't clobber the canonical MANIFEST.
+#
+# Output
+# ------
+#   Branch:    reliability-tax/run-<TIMESTAMP>
+#   Data:      analysis/reliability-tax/data/          (Medium growth)
+#              analysis/reliability-tax/data-demand-sensitivity/  (L/H growth)
+#   MANIFEST:  analysis/reliability-tax/data/MANIFEST.json
+#   Artifacts: 90-day retention, uploaded after each ISO regardless of failures
+#
+# Resumption
+# ----------
+# Re-triggering with the same inputs safely skips already-completed runs
+# (MANIFEST keyed by iso+pathway+endpoint). Pass force=true to re-run everything.
+#
+# Splitting a run that times out
+# ------------------------------
+# If all ISOs don't fit in one invocation, re-trigger with iso_scope=single for
+# any ISO that didn't finish. The MANIFEST skip-logic avoids re-running completed
+# combos automatically (unless force=true).
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso_scope:
+        description: 'Which ISOs to run'
+        required: true
+        default: 'all_remaining_6'
+        type: choice
+        options:
+          - all_remaining_6
+          - single
+          - all_7
+      iso_name:
+        description: 'ISO identifier — used only when iso_scope = single'
+        required: false
+        default: ''
+        type: string
+      include_demand_sensitivity:
+        description: 'Run L/H demand growth subset after main runs complete'
+        required: false
+        default: true
+        type: boolean
+      endpoints:
+        description: 'Comma-separated target endpoints (default: all five)'
+        required: false
+        default: '0.90,0.95,0.975,0.99,0.999'
+        type: string
+      pathways:
+        description: 'Comma-separated pathways to run (Pathway 3 always runs first)'
+        required: false
+        default: '3,1,2a,2b'
+        type: string
+      force:
+        description: 'Force re-run even if MANIFEST shows run already complete'
+        required: false
+        default: false
+        type: boolean
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'master'
+        type: string
+
+# Queue rather than cancel concurrent runs so multiple ISO-scope invocations
+# don't clobber each other's branch commits.
+concurrency:
+  group: reliability-tax-full-run
+  cancel-in-progress: false
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  # ============================================================================
+  # Phase 0: Build ISO matrix
+  # ============================================================================
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Build ISO matrix
+        id: set-matrix
+        run: |
+          if [ "${{ inputs.iso_scope }}" = "all_7" ]; then
+            echo 'matrix=["CAISO","ERCOT","PJM","NYISO","NEISO","MISO","SPP"]' >> "$GITHUB_OUTPUT"
+          elif [ "${{ inputs.iso_scope }}" = "single" ]; then
+            ISO="${{ inputs.iso_name }}"
+            if [ -z "$ISO" ]; then
+              echo "ERROR: iso_name is required when iso_scope=single"
+              exit 1
+            fi
+            echo "matrix=[\"${ISO}\"]" >> "$GITHUB_OUTPUT"
+          else
+            # all_remaining_6: ERCOT excluded (completed in Prompt 2B smoke test)
+            echo 'matrix=["CAISO","PJM","NYISO","NEISO","MISO","SPP"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  # ============================================================================
+  # Phase 1: Main runs (Medium demand growth) — parallel per ISO
+  # ============================================================================
+  run-iso:
+    name: "Run — ${{ matrix.iso }}"
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      matrix:
+        iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
+      fail-fast: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow pandas scipy
+
+      - name: Verify Numba JIT
+        run: python3 -c "from numba import njit; print('Numba JIT OK')"
+
+      - name: Ensure output directories
+        run: |
+          mkdir -p analysis/reliability-tax/data/${{ matrix.iso }}
+          mkdir -p analysis/reliability-tax/data-demand-sensitivity/${{ matrix.iso }}
+
+      - name: Validate planned runs (dry run)
+        run: |
+          python scripts/run_pathway_sweep.py \
+            --iso "${{ matrix.iso }}" \
+            --endpoints "${{ inputs.endpoints }}" \
+            --pathways "${{ inputs.pathways }}" \
+            --dry-run
+
+      - name: Run pathway sweep — ${{ matrix.iso }} (Medium growth)
+        run: |
+          FORCE_FLAG=""
+          if [ "${{ inputs.force }}" = "true" ]; then FORCE_FLAG="--force"; fi
+          python scripts/run_pathway_sweep.py \
+            --iso "${{ matrix.iso }}" \
+            --endpoints "${{ inputs.endpoints }}" \
+            --pathways "${{ inputs.pathways }}" \
+            $FORCE_FLAG
+
+      - name: Report output sizes
+        if: always()
+        run: |
+          echo "=== Per-run JSON outputs ==="
+          ls -lh analysis/reliability-tax/data/${{ matrix.iso }}/*.json 2>/dev/null || echo "  (none)"
+          echo ""
+          echo "=== MANIFEST state ==="
+          if [ -f analysis/reliability-tax/data/MANIFEST.json ]; then
+            python3 -c "
+          import json
+          with open('analysis/reliability-tax/data/MANIFEST.json') as f:
+              m = json.load(f)
+          runs = m.get('runs', {})
+          iso_runs = {k: v for k, v in runs.items() if k.startswith('${{ matrix.iso }}__')}
+          print(f'  Runs in MANIFEST for ${{ matrix.iso }}: {len(iso_runs)}')
+          feasible = sum(1 for r in iso_runs.values() if r.get('feasibility') == 'feasible')
+          infeasible = sum(1 for r in iso_runs.values() if r.get('feasibility') != 'feasible')
+          print(f'  Feasible: {feasible} | Infeasible/economic-floor: {infeasible}')
+          "
+          else
+            echo "  No MANIFEST yet"
+          fi
+
+      - name: Upload ISO artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reliability-tax-medium-${{ matrix.iso }}
+          path: analysis/reliability-tax/data/
+          retention-days: 90
+
+  # ============================================================================
+  # Phase 2: Demand sensitivity (Low and High growth) — parallel per ISO × growth
+  # ============================================================================
+  demand-sensitivity:
+    name: "Demand sensitivity — ${{ matrix.iso }} (${{ matrix.growth }})"
+    needs: [prepare, run-iso]
+    if: ${{ inputs.include_demand_sensitivity == true }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    strategy:
+      matrix:
+        iso: ${{ fromJson(needs.prepare.outputs.matrix) }}
+        growth: [Low, High]
+      fail-fast: false
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install numpy numba pyarrow pandas scipy
+
+      - name: Verify Numba JIT
+        run: python3 -c "from numba import njit; print('Numba JIT OK')"
+
+      - name: Ensure output directories
+        run: |
+          mkdir -p analysis/reliability-tax/data-demand-sensitivity/${{ matrix.iso }}
+
+      - name: Validate planned runs (dry run)
+        run: |
+          python scripts/run_pathway_sweep.py \
+            --iso "${{ matrix.iso }}" \
+            --endpoints "${{ inputs.endpoints }}" \
+            --pathways "${{ inputs.pathways }}" \
+            --growth "${{ matrix.growth }}" \
+            --output-root analysis/reliability-tax/data-demand-sensitivity \
+            --dry-run
+
+      - name: Run demand sensitivity — ${{ matrix.iso }} (${{ matrix.growth }})
+        run: |
+          FORCE_FLAG=""
+          if [ "${{ inputs.force }}" = "true" ]; then FORCE_FLAG="--force"; fi
+          python scripts/run_pathway_sweep.py \
+            --iso "${{ matrix.iso }}" \
+            --endpoints "${{ inputs.endpoints }}" \
+            --pathways "${{ inputs.pathways }}" \
+            --growth "${{ matrix.growth }}" \
+            --output-root analysis/reliability-tax/data-demand-sensitivity \
+            $FORCE_FLAG
+
+      - name: Upload demand-sensitivity artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reliability-tax-${{ matrix.growth }}-${{ matrix.iso }}
+          path: analysis/reliability-tax/data-demand-sensitivity/
+          retention-days: 90
+
+  # ============================================================================
+  # Phase 3: Commit outputs to branch + open draft PR
+  # Runs regardless of upstream success/failure so partial results are banked.
+  # ============================================================================
+  commit-and-pr:
+    name: "Commit outputs and open draft PR"
+    needs: [prepare, run-iso, demand-sensitivity]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch || 'master' }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Create output branch
+        run: |
+          TIMESTAMP=$(date -u +%Y%m%dT%H%M%S)
+          TARGET_BRANCH="reliability-tax/run-${TIMESTAMP}"
+          echo "TARGET_BRANCH=${TARGET_BRANCH}" >> "$GITHUB_ENV"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config http.postBuffer 524288000
+          git checkout -b "${TARGET_BRANCH}"
+          echo "Output branch: ${TARGET_BRANCH}"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: reliability-tax-*
+          path: ./artifact-tmp/
+          merge-multiple: false
+
+      - name: Place artifacts into repo paths
+        run: |
+          # Medium-growth outputs → analysis/reliability-tax/data/
+          for iso_dir in artifact-tmp/reliability-tax-medium-*/; do
+            if [ -d "$iso_dir" ]; then
+              echo "Placing medium-growth outputs from: $iso_dir"
+              cp -rf "${iso_dir}/." analysis/reliability-tax/data/ 2>/dev/null || true
+            fi
+          done
+
+          # Demand-sensitivity outputs → analysis/reliability-tax/data-demand-sensitivity/
+          for sensitivity_dir in artifact-tmp/reliability-tax-Low-* artifact-tmp/reliability-tax-High-*; do
+            if [ -d "$sensitivity_dir" ]; then
+              echo "Placing demand-sensitivity outputs from: $sensitivity_dir"
+              mkdir -p analysis/reliability-tax/data-demand-sensitivity
+              cp -rf "${sensitivity_dir}/." analysis/reliability-tax/data-demand-sensitivity/ 2>/dev/null || true
+            fi
+          done
+
+      - name: Generate PR summary from MANIFEST
+        id: pr-summary
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, sys
+          from pathlib import Path
+
+          manifest_path = Path('analysis/reliability-tax/data/MANIFEST.json')
+          sens_manifest_path = Path('analysis/reliability-tax/data-demand-sensitivity/MANIFEST.json')
+
+          def summarise(manifest_path, label):
+              if not manifest_path.exists():
+                  return f"### {label}\nNo MANIFEST found — no runs completed.\n"
+              with open(manifest_path) as f:
+                  m = json.load(f)
+              runs = m.get('runs', {})
+              if not runs:
+                  return f"### {label}\n0 runs in MANIFEST.\n"
+              isos = sorted({v['iso'] for v in runs.values()})
+              lines = [f"### {label}", f"**Total runs:** {len(runs)}", ""]
+              for iso in isos:
+                  iso_runs = {k: v for k, v in runs.items() if v.get('iso') == iso}
+                  feasible = [v for v in iso_runs.values() if v.get('feasibility') == 'feasible']
+                  infeasible = [v for v in iso_runs.values() if v.get('feasibility') != 'feasible']
+                  lines.append(f"**{iso}** — {len(iso_runs)} runs | {len(feasible)} feasible | {len(infeasible)} infeasible/floor")
+                  for pathway in ('3', '1', '2a', '2b'):
+                      pw_runs = [v for v in iso_runs.values() if v.get('pathway') == pathway]
+                      if pw_runs:
+                          npvs = [v.get('npv_at_0.07', v.get('undiscounted_cost_usd', 0)) for v in pw_runs]
+                          npv_str = ' | '.join(f"ep{v.get('endpoint', '?'):.3g}→${n/1e9:.2f}B" for v, n in zip(pw_runs, npvs) if n)
+                          feas_str = ', '.join(v.get('feasibility', '?') for v in pw_runs)
+                          lines.append(f"  - Pathway {pathway}: {npv_str or feas_str}")
+              return '\n'.join(lines)
+
+          medium_summary = summarise(manifest_path, 'Medium Growth (primary runs)')
+          sens_summary = summarise(sens_manifest_path, 'Demand Sensitivity (Low/High growth)')
+
+          pr_body = f"""## Reliability Tax — Full Pathway Sweep
+
+          Triggered by `workflow_dispatch` on `${{ github.ref_name }}`.
+          Run ID: `${{ github.run_id }}` | Workflow: `${{ github.workflow }}`
+
+          ---
+
+          {medium_summary}
+
+          ---
+
+          {sens_summary}
+
+          ---
+
+          ## How to review
+
+          1. Check MANIFEST for feasibility flags — any `economic-floor` entries signal the optimizer
+             hit the Card J infeasibility threshold at that (iso, endpoint).
+          2. Per-run JSON is at `analysis/reliability-tax/data/<ISO>/pathway<N>_ep<ep>.json`.
+          3. Demand sensitivity outputs are at `analysis/reliability-tax/data-demand-sensitivity/`.
+          4. Artifacts are retained for 90 days in the Actions run for this invocation.
+
+          ## Merge checklist
+
+          - [ ] All expected ISOs present in MANIFEST
+          - [ ] No unexpected infeasibility flags at 0.90/0.95
+          - [ ] NPV ordering plausible (Pathway 1 typically highest at last-mile endpoints)
+          - [ ] Demand sensitivity L/H bands are consistent with medium baseline
+          """
+
+          output_file = os.environ.get('GITHUB_ENV', '/dev/null')
+          # Write to a temp file then read back as GitHub env multiline
+          with open('pr_body.txt', 'w') as f:
+              f.write(pr_body)
+          print("PR summary written to pr_body.txt")
+          print("--- MANIFEST summary ---")
+          print(medium_summary)
+          PYEOF
+
+      - name: Commit and push results
+        run: |
+          push_with_retry() {
+            local MAX_RETRIES=4
+            for i in $(seq 1 $MAX_RETRIES); do
+              echo "  Push attempt $i/$MAX_RETRIES..."
+              git push -u origin "${TARGET_BRANCH}" 2>&1 && return 0
+              if [ "$i" -eq "$MAX_RETRIES" ]; then
+                echo "  ERROR: Push failed after $MAX_RETRIES attempts"
+                return 1
+              fi
+              BACKOFF=$((2 ** i))
+              echo "  Retrying in ${BACKOFF}s..."
+              sleep "$BACKOFF"
+            done
+          }
+
+          git add -f analysis/reliability-tax/ 2>/dev/null || true
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit — all runs may have been pre-existing."
+            exit 0
+          fi
+
+          MANIFEST_RUNS=$(python3 -c "
+          import json; from pathlib import Path
+          p = Path('analysis/reliability-tax/data/MANIFEST.json')
+          m = json.load(open(p)) if p.exists() else {}
+          print(len(m.get('runs', {})))
+          " 2>/dev/null || echo "?")
+
+          git commit -m "Reliability tax sweep: ${MANIFEST_RUNS} runs — $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          iso_scope=${{ inputs.iso_scope }} endpoints=${{ inputs.endpoints }}
+          pathways=${{ inputs.pathways }} demand_sensitivity=${{ inputs.include_demand_sensitivity }}"
+
+          push_with_retry
+
+      - name: Open draft PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! git diff --quiet HEAD origin/${{ inputs.branch || 'master' }} -- 2>/dev/null; then
+            PR_BODY=$(cat pr_body.txt 2>/dev/null || echo "Reliability tax sweep run. See MANIFEST.json for details.")
+            gh pr create \
+              --title "Reliability Tax sweep: ${{ inputs.iso_scope }} — $(date -u +%Y-%m-%d)" \
+              --body "$PR_BODY" \
+              --base "${{ inputs.branch || 'master' }}" \
+              --head "${TARGET_BRANCH}" \
+              --draft \
+            || echo "PR creation skipped (no changes pushed or PR already exists)"
+          else
+            echo "Branch has no new commits relative to base — skipping PR creation."
+          fi
