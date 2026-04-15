@@ -20,10 +20,10 @@
   },
   "headline": {
     "achieved_cfe_pct": 90.1583,
-    "undiscounted_cost_usd": 2406933696644.0,
-    "npv_at_5pct": 1125143249585.0,
-    "npv_at_7pct": 860001126423.0,
-    "npv_at_9pct": 670214220857.0,
+    "undiscounted_cost_usd": 1859013242574.0,
+    "npv_at_5pct": 898755785950.0,
+    "npv_at_7pct": 697252735744.0,
+    "npv_at_9pct": 551740039451.0,
     "endpoint_threshold": 90.0,
     "pivot": {
       "pivoted": true,
@@ -293,21 +293,21 @@
         "new_vintages": [
           {
             "resource": "hydro",
-            "twh_per_year": 0.445,
+            "twh_per_year": 3.099,
             "locked_lcoe_usd_per_mwh": 0.0,
             "tx_adder_usd_per_mwh": 0.0
           },
           {
-            "resource": "solar",
-            "twh_per_year": 106.158,
-            "locked_lcoe_usd_per_mwh": 63.0,
-            "tx_adder_usd_per_mwh": 3.0
+            "resource": "uprate",
+            "twh_per_year": 1.451,
+            "locked_lcoe_usd_per_mwh": 25.0,
+            "tx_adder_usd_per_mwh": 0.0
           },
           {
-            "resource": "battery8",
-            "twh_per_year": 0.99,
-            "locked_lcoe_usd_per_mwh": 8.52,
-            "tx_adder_usd_per_mwh": 0.0
+            "resource": "geothermal",
+            "twh_per_year": 16.248,
+            "locked_lcoe_usd_per_mwh": 102.79,
+            "tx_adder_usd_per_mwh": 3.0
           }
         ]
       },
@@ -316,20 +316,8 @@
         "new_vintages": [
           {
             "resource": "hydro",
-            "twh_per_year": 0.454,
+            "twh_per_year": 0.504,
             "locked_lcoe_usd_per_mwh": 0.0,
-            "tx_adder_usd_per_mwh": 0.0
-          },
-          {
-            "resource": "solar",
-            "twh_per_year": 108.175,
-            "locked_lcoe_usd_per_mwh": 63.0,
-            "tx_adder_usd_per_mwh": 3.0
-          },
-          {
-            "resource": "battery8",
-            "twh_per_year": 1.008,
-            "locked_lcoe_usd_per_mwh": 8.32,
             "tx_adder_usd_per_mwh": 0.0
           }
         ]
@@ -339,32 +327,8 @@
         "new_vintages": [
           {
             "resource": "hydro",
-            "twh_per_year": 0.462,
+            "twh_per_year": 0.514,
             "locked_lcoe_usd_per_mwh": 0.0,
-            "tx_adder_usd_per_mwh": 0.0
-          },
-          {
-            "resource": "solar",
-            "twh_per_year": 110.23,
-            "locked_lcoe_usd_per_mwh": 63.0,
-            "tx_adder_usd_per_mwh": 3.0
-          },
-          {
-            "resource": "battery8",
-            "twh_per_year": 1.028,
-            "locked_lcoe_usd_per_mwh": 8.13,
-            "tx_adder_usd_per_mwh": 0.0
-          },
-          {
-            "resource": "wind",
-            "twh_per_year": 27.557,
-            "locked_lcoe_usd_per_mwh": 81.0,
-            "tx_adder_usd_per_mwh": 8.0
-          },
-          {
-            "resource": "ldes",
-            "twh_per_year": 0.827,
-            "locked_lcoe_usd_per_mwh": 5.56,
             "tx_adder_usd_per_mwh": 0.0
           }
         ]
@@ -372,12 +336,6 @@
       {
         "year": 2037,
         "new_vintages": [
-          {
-            "resource": "hydro",
-            "twh_per_year": 0.471,
-            "locked_lcoe_usd_per_mwh": 0.0,
-            "tx_adder_usd_per_mwh": 0.0
-          },
           {
             "resource": "solar",
             "twh_per_year": 56.162,
@@ -398,13 +356,13 @@
           },
           {
             "resource": "battery8",
-            "twh_per_year": 1.047,
+            "twh_per_year": 4.073,
             "locked_lcoe_usd_per_mwh": 7.94,
             "tx_adder_usd_per_mwh": 0.0
           },
           {
             "resource": "ldes",
-            "twh_per_year": 0.577,
+            "twh_per_year": 1.404,
             "locked_lcoe_usd_per_mwh": 5.19,
             "tx_adder_usd_per_mwh": 0.0
           }
@@ -413,12 +371,6 @@
       {
         "year": 2038,
         "new_vintages": [
-          {
-            "resource": "hydro",
-            "twh_per_year": 0.48,
-            "locked_lcoe_usd_per_mwh": 0.0,
-            "tx_adder_usd_per_mwh": 0.0
-          },
           {
             "resource": "solar",
             "twh_per_year": 85.844,
@@ -455,12 +407,6 @@
             "tx_adder_usd_per_mwh": 20.0
           },
           {
-            "resource": "hydro",
-            "twh_per_year": 0.489,
-            "locked_lcoe_usd_per_mwh": 0.0,
-            "tx_adder_usd_per_mwh": 0.0
-          },
-          {
             "resource": "solar",
             "twh_per_year": 116.633,
             "locked_lcoe_usd_per_mwh": 63.0,
@@ -485,45 +431,9 @@
         "new_vintages": [
           {
             "resource": "hydro",
-            "twh_per_year": 3.47,
+            "twh_per_year": 2.155,
             "locked_lcoe_usd_per_mwh": 0.0,
             "tx_adder_usd_per_mwh": 0.0
-          },
-          {
-            "resource": "solar",
-            "twh_per_year": 26.741,
-            "locked_lcoe_usd_per_mwh": 63.0,
-            "tx_adder_usd_per_mwh": 3.0
-          },
-          {
-            "resource": "solar",
-            "twh_per_year": 26.741,
-            "locked_lcoe_usd_per_mwh": 63.0,
-            "tx_adder_usd_per_mwh": 3.0
-          },
-          {
-            "resource": "wind",
-            "twh_per_year": 115.878,
-            "locked_lcoe_usd_per_mwh": 81.0,
-            "tx_adder_usd_per_mwh": 8.0
-          },
-          {
-            "resource": "wind",
-            "twh_per_year": 26.741,
-            "locked_lcoe_usd_per_mwh": 81.0,
-            "tx_adder_usd_per_mwh": 8.0
-          },
-          {
-            "resource": "uprate",
-            "twh_per_year": 1.451,
-            "locked_lcoe_usd_per_mwh": 25.0,
-            "tx_adder_usd_per_mwh": 0.0
-          },
-          {
-            "resource": "geothermal",
-            "twh_per_year": 1.52,
-            "locked_lcoe_usd_per_mwh": 66.0,
-            "tx_adder_usd_per_mwh": 3.0
           }
         ]
       },
@@ -544,13 +454,13 @@
           },
           {
             "resource": "geothermal",
-            "twh_per_year": 43.895,
+            "twh_per_year": 29.167,
             "locked_lcoe_usd_per_mwh": 88.0,
             "tx_adder_usd_per_mwh": 3.0
           },
           {
             "resource": "geothermal",
-            "twh_per_year": 37.48,
+            "twh_per_year": 22.752,
             "locked_lcoe_usd_per_mwh": 66.0,
             "tx_adder_usd_per_mwh": 3.0
           },
@@ -798,137 +708,137 @@
       {
         "year": 2034,
         "demand_twh": 265.39,
-        "gross_operating_usd": 65652558867.0,
-        "capacity_rev_netted_usd": 2289823734.0,
-        "net_annual_cost_usd": 63362735133.0,
-        "achieved_cfe_pct": 70.04
+        "gross_operating_usd": 60392943466.0,
+        "capacity_rev_netted_usd": 1053402202.0,
+        "net_annual_cost_usd": 59339541264.0,
+        "achieved_cfe_pct": 73.6
       },
       {
         "year": 2035,
         "demand_twh": 270.44,
-        "gross_operating_usd": 72800478981.0,
-        "capacity_rev_netted_usd": 2333330385.0,
-        "net_annual_cost_usd": 70467148596.0,
-        "achieved_cfe_pct": 70.04
+        "gross_operating_usd": 60392943466.0,
+        "capacity_rev_netted_usd": 1073416844.0,
+        "net_annual_cost_usd": 59319526622.0,
+        "achieved_cfe_pct": 73.6
       },
       {
         "year": 2036,
         "demand_twh": 275.57,
-        "gross_operating_usd": 82541220480.0,
-        "capacity_rev_netted_usd": 2414601467.0,
-        "net_annual_cost_usd": 80126619013.0,
-        "achieved_cfe_pct": 75.01
+        "gross_operating_usd": 60392943466.0,
+        "capacity_rev_netted_usd": 962690404.0,
+        "net_annual_cost_usd": 59430253062.0,
+        "achieved_cfe_pct": 77.908
       },
       {
         "year": 2037,
         "demand_twh": 280.81,
-        "gross_operating_usd": 93740990008.0,
+        "gross_operating_usd": 71621041315.0,
         "capacity_rev_netted_usd": 3028746231.0,
-        "net_annual_cost_usd": 90712243778.0,
+        "net_annual_cost_usd": 68592295084.0,
         "achieved_cfe_pct": 80.02
       },
       {
         "year": 2038,
         "demand_twh": 286.15,
-        "gross_operating_usd": 105272889920.0,
+        "gross_operating_usd": 83152941227.0,
         "capacity_rev_netted_usd": 3067572387.0,
-        "net_annual_cost_usd": 102205317533.0,
+        "net_annual_cost_usd": 80085368840.0,
         "achieved_cfe_pct": 85.05
       },
       {
         "year": 2039,
         "demand_twh": 291.58,
-        "gross_operating_usd": 118426377191.0,
+        "gross_operating_usd": 96306428498.0,
         "capacity_rev_netted_usd": 2781422598.0,
-        "net_annual_cost_usd": 115644954593.0,
+        "net_annual_cost_usd": 93525005900.0,
         "achieved_cfe_pct": 87.5
       },
       {
         "year": 2040,
         "demand_twh": 297.12,
-        "gross_operating_usd": 134790468181.0,
-        "capacity_rev_netted_usd": 2756380357.0,
-        "net_annual_cost_usd": 132034087824.0,
-        "achieved_cfe_pct": 90.1
+        "gross_operating_usd": 96306428498.0,
+        "capacity_rev_netted_usd": 1560809688.0,
+        "net_annual_cost_usd": 94745618810.0,
+        "achieved_cfe_pct": 90.01
       },
       {
         "year": 2041,
         "demand_twh": 302.77,
-        "gross_operating_usd": 146472659056.0,
+        "gross_operating_usd": 105632163338.0,
         "capacity_rev_netted_usd": 1017811765.0,
-        "net_annual_cost_usd": 145454847291.0,
+        "net_annual_cost_usd": 104614351573.0,
         "achieved_cfe_pct": 90.006
       },
       {
         "year": 2042,
         "demand_twh": 308.52,
-        "gross_operating_usd": 147241061076.0,
+        "gross_operating_usd": 106400565358.0,
         "capacity_rev_netted_usd": 1064966839.0,
-        "net_annual_cost_usd": 146176094237.0,
+        "net_annual_cost_usd": 105335598519.0,
         "achieved_cfe_pct": 90.158
       },
       {
         "year": 2043,
         "demand_twh": 314.38,
-        "gross_operating_usd": 147332975657.0,
+        "gross_operating_usd": 106492479939.0,
         "capacity_rev_netted_usd": 1085201209.0,
-        "net_annual_cost_usd": 146247774448.0,
+        "net_annual_cost_usd": 105407278730.0,
         "achieved_cfe_pct": 90.158
       },
       {
         "year": 2044,
         "demand_twh": 320.36,
-        "gross_operating_usd": 147426636615.0,
+        "gross_operating_usd": 106586140897.0,
         "capacity_rev_netted_usd": 1105820032.0,
-        "net_annual_cost_usd": 146320816584.0,
+        "net_annual_cost_usd": 105480320865.0,
         "achieved_cfe_pct": 90.158
       },
       {
         "year": 2045,
         "demand_twh": 326.44,
-        "gross_operating_usd": 147522077132.0,
+        "gross_operating_usd": 106681581414.0,
         "capacity_rev_netted_usd": 1126830612.0,
-        "net_annual_cost_usd": 146395246520.0,
+        "net_annual_cost_usd": 105554750801.0,
         "achieved_cfe_pct": 90.158
       },
       {
         "year": 2046,
         "demand_twh": 332.65,
-        "gross_operating_usd": 147619331018.0,
+        "gross_operating_usd": 106778835300.0,
         "capacity_rev_netted_usd": 1148240394.0,
-        "net_annual_cost_usd": 146471090624.0,
+        "net_annual_cost_usd": 105630594906.0,
         "achieved_cfe_pct": 90.158
       },
       {
         "year": 2047,
         "demand_twh": 338.97,
-        "gross_operating_usd": 147718432728.0,
+        "gross_operating_usd": 106877937010.0,
         "capacity_rev_netted_usd": 1170056962.0,
-        "net_annual_cost_usd": 146548375767.0,
+        "net_annual_cost_usd": 105707880049.0,
         "achieved_cfe_pct": 90.158
       },
       {
         "year": 2048,
         "demand_twh": 345.41,
-        "gross_operating_usd": 147819417371.0,
+        "gross_operating_usd": 106978921653.0,
         "capacity_rev_netted_usd": 1192288044.0,
-        "net_annual_cost_usd": 146627129327.0,
+        "net_annual_cost_usd": 105786633609.0,
         "achieved_cfe_pct": 90.158
       },
       {
         "year": 2049,
         "demand_twh": 351.97,
-        "gross_operating_usd": 147922320722.0,
+        "gross_operating_usd": 107081825004.0,
         "capacity_rev_netted_usd": 1214941517.0,
-        "net_annual_cost_usd": 146707379205.0,
+        "net_annual_cost_usd": 105866883487.0,
         "achieved_cfe_pct": 90.158
       },
       {
         "year": 2050,
         "demand_twh": 358.66,
-        "gross_operating_usd": 148027179236.0,
+        "gross_operating_usd": 107186683518.0,
         "capacity_rev_netted_usd": 1238025405.0,
-        "net_annual_cost_usd": 146789153831.0,
+        "net_annual_cost_usd": 105948658113.0,
         "achieved_cfe_pct": 90.158
       }
     ],
@@ -936,17 +846,17 @@
     "stranding_ledger": [
       {
         "resource": "solar",
-        "pathway_twh": 1439.651,
+        "pathway_twh": 1061.607,
         "pathway3_twh": 769.686,
-        "stranded_twh": 669.965,
-        "stranded_book_value_usd": 747325731373.0
+        "stranded_twh": 291.92,
+        "stranded_book_value_usd": 340222473240.0
       },
       {
         "resource": "wind",
-        "pathway_twh": 391.257,
+        "pathway_twh": 221.08,
         "pathway3_twh": 221.08,
-        "stranded_twh": 170.177,
-        "stranded_book_value_usd": 266757411865.0
+        "stranded_twh": 0.0,
+        "stranded_book_value_usd": 0.0
       },
       {
         "resource": "offshore_wind",
@@ -974,7 +884,7 @@
         "pathway_twh": 2.861,
         "pathway3_twh": 0.0,
         "stranded_twh": 2.861,
-        "stranded_book_value_usd": 178228596.0
+        "stranded_book_value_usd": 179188940.0
       }
     ]
   },
@@ -1071,27 +981,27 @@
     },
     {
       "year": 2034,
-      "clean_pct": 70.04,
+      "clean_pct": 73.6,
       "coal_retired_gw": 0.0,
       "oil_retired_gw": 0.342,
-      "gas_retired_gw": 23.448,
+      "gas_retired_gw": 28.242,
       "coal_retired_twh": 0.0,
       "oil_retired_twh": 0.6,
-      "gas_retired_twh": 92.43
+      "gas_retired_twh": 111.33
     },
     {
       "year": 2035,
-      "clean_pct": 70.04,
+      "clean_pct": 73.6,
       "coal_retired_gw": 0.0,
       "oil_retired_gw": 0.342,
-      "gas_retired_gw": 23.341,
+      "gas_retired_gw": 28.224,
       "coal_retired_twh": 0.0,
       "oil_retired_twh": 0.6,
-      "gas_retired_twh": 92.01
+      "gas_retired_twh": 111.26
     },
     {
       "year": 2036,
-      "clean_pct": 75.01,
+      "clean_pct": 77.908,
       "coal_retired_gw": 0.0,
       "oil_retired_gw": 0.342,
       "gas_retired_gw": 29.117,
@@ -1131,7 +1041,7 @@
     },
     {
       "year": 2040,
-      "clean_pct": 90.1,
+      "clean_pct": 90.01,
       "coal_retired_gw": 0.0,
       "oil_retired_gw": 0.342,
       "gas_retired_gw": 29.117,
