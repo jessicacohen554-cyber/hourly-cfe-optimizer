@@ -1035,6 +1035,9 @@ def _closest_available_threshold(iso: str, target_pct: float) -> float | None:
     return max(thresholds)  # best effort when below target — caller checks
 
 
+_CLEAN_FIRM_BATCH_CHUNK = 400_000  # rows per chunk — keeps peak alloc ~130 MiB/chunk
+
+
 def _clean_firm_total_cost_batch(
     cf_twh_array: np.ndarray,
     iso: str,
@@ -1050,6 +1053,11 @@ def _clean_firm_total_cost_batch(
     same learning-curve injection but passes arrays straight through,
     returning an ndarray of ``total_cost`` values (in $M, same convention
     as the scalar path used by ``score_ef_row_cost``).
+
+    Large EF bands (e.g. CAISO 70% with 4.5M rows) can exhaust process
+    memory when all column arrays are live simultaneously. Chunks of
+    ``_CLEAN_FIRM_BATCH_CHUNK`` rows are processed sequentially and results
+    concatenated. Per-row computation is independent so chunking is exact.
     """
 
     def _learning_curve_fn(base_cost, foak_cost, noak_cost, tech, level, target_year):
@@ -1060,23 +1068,36 @@ def _clean_firm_total_cost_batch(
             int(target_year), foak_start, noak_year,
         )
 
-    result = pc.compute_clean_firm_tranches(
-        new_cf_twh=cf_twh_array,
-        iso=iso,
-        firm_lev=_as_short_level(config.firm_cost_level),
-        ccs_lev=_as_short_level(config.ccs_cost_level),
-        q45=config.q45,
-        tx_name=config.tx_level,
-        geo_lev=_as_short_level(config.geo_cost_level) if config.geo_cost_level else None,
-        geo_physics_new_twh=0.0,
-        ccs_used_twh=0.0,
-        uprate_used_twh=0.0,
-        geo_used_twh=0.0,
-        learning_curve_fn=_learning_curve_fn,
-        target_year=year,
-    )
-    total_cost = result['total_cost']
-    return np.asarray(total_cost, dtype=np.float64)
+    def _call_tranche(chunk: np.ndarray) -> np.ndarray:
+        result = pc.compute_clean_firm_tranches(
+            new_cf_twh=chunk,
+            iso=iso,
+            firm_lev=_as_short_level(config.firm_cost_level),
+            ccs_lev=_as_short_level(config.ccs_cost_level),
+            q45=config.q45,
+            tx_name=config.tx_level,
+            geo_lev=_as_short_level(config.geo_cost_level) if config.geo_cost_level else None,
+            geo_physics_new_twh=0.0,
+            ccs_used_twh=0.0,
+            uprate_used_twh=0.0,
+            geo_used_twh=0.0,
+            learning_curve_fn=_learning_curve_fn,
+            target_year=year,
+        )
+        return np.asarray(result['total_cost'], dtype=np.float64)
+
+    n = len(cf_twh_array)
+    if n <= _CLEAN_FIRM_BATCH_CHUNK:
+        return _call_tranche(cf_twh_array)
+
+    # Chunked path for large EF bands.
+    parts = []
+    for start in range(0, n, _CLEAN_FIRM_BATCH_CHUNK):
+        parts.append(_call_tranche(cf_twh_array[start:start + _CLEAN_FIRM_BATCH_CHUNK]))
+    return np.concatenate(parts)
+
+
+_SCORE_EF_CHUNK = 300_000  # rows per chunk — keeps peak column-array alloc ~35 MiB/chunk
 
 
 def score_ef_batch(
@@ -1104,6 +1125,13 @@ def score_ef_batch(
     already scalar at fixed (iso, year, config); those are precomputed once
     and folded as vectorized multiply-adds.
 
+    Large EF bands (e.g. CAISO 70% with 4.5M rows) allocate ~14 column
+    arrays simultaneously; at 4.5M × float64 each that is ~485 MiB peak.
+    When the EF exceeds ``_SCORE_EF_CHUNK`` rows the function recurses on
+    chunks and concatenates, bounding peak column-array memory to ~35 MiB
+    per chunk regardless of EF size. Per-row scoring is independent so
+    chunking is numerically exact.
+
     Verified against ``score_ef_row_cost`` on ERCOT threshold 50 (all 3,405
     rows exact, argmin agrees) and ERCOT threshold 90 (2,000 random sample
     of 776k, max relative diff 3.4e-16 = float64 noise).
@@ -1111,6 +1139,15 @@ def score_ef_batch(
     n_rows = len(ef)
     if n_rows == 0:
         return np.empty(0, dtype=np.float64)
+
+    # Chunked dispatch for large EF bands — avoids simultaneous allocation of
+    # 14 × N float64 column arrays when N is in the millions.
+    if n_rows > _SCORE_EF_CHUNK:
+        parts = []
+        for start in range(0, n_rows, _SCORE_EF_CHUNK):
+            chunk = ef.iloc[start:start + _SCORE_EF_CHUNK]
+            parts.append(score_ef_batch(chunk, iso, year, config))
+        return np.concatenate(parts)
 
     demand_twh = demand_for_year(iso, year, config.demand_growth_level)
     demand_mwh = demand_twh * 1.0e6
