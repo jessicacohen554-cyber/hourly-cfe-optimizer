@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "run_key": "NEISO__pathway1__ep99p9",
+  "config": {
+    "iso": "NEISO",
+    "pathway": "1",
+    "endpoint": 0.999,
+    "endpoint_pct": 99.9,
+    "demand_growth_level": "High",
+    "firm_cost_level": "M",
+    "ccs_cost_level": "M",
+    "tx_level": "Medium",
+    "q45": "1",
+    "geo_cost_level": null
+  },
+  "feasibility": {
+    "physical": false,
+    "economic": true,
+    "notes": [
+      "2025: pathway_1_filter_empty"
+    ]
+  },
+  "headline": {
+    "achieved_cfe_pct": 0.0,
+    "undiscounted_cost_usd": 0.0,
+    "npv_at_5pct": 0.0,
+    "npv_at_7pct": 0.0,
+    "npv_at_9pct": 0.0,
+    "endpoint_threshold": null,
+    "pivot": {
+      "pivoted": false,
+      "pivot_year": null,
+      "pivot_reason": null
+    }
+  },
+  "tables": {
+    "annual_buildout": [],
+    "annual_cost": [],
+    "endpoint_hourly_dispatch": null,
+    "stranding_ledger": [
+      {
+        "resource": "solar",
+        "pathway_twh": 0.0,
+        "pathway3_twh": 242.577,
+        "stranded_twh": 0.0,
+        "stranded_book_value_usd": 0.0
+      },
+      {
+        "resource": "wind",
+        "pathway_twh": 0.0,
+        "pathway3_twh": 127.034,
+        "stranded_twh": 0.0,
+        "stranded_book_value_usd": 0.0
+      },
+      {
+        "resource": "offshore_wind",
+        "pathway_twh": 0.0,
+        "pathway3_twh": 58.924,
+        "stranded_twh": 0.0,
+        "stranded_book_value_usd": 0.0
+      },
+      {
+        "resource": "battery4",
+        "pathway_twh": 0.0,
+        "pathway3_twh": 12.284,
+        "stranded_twh": 0.0,
+        "stranded_book_value_usd": 0.0
+      },
+      {
+        "resource": "battery8",
+        "pathway_twh": 0.0,
+        "pathway3_twh": 11.785,
+        "stranded_twh": 0.0,
+        "stranded_book_value_usd": 0.0
+      },
+      {
+        "resource": "ldes",
+        "pathway_twh": 0.0,
+        "pathway3_twh": 2.043,
+        "stranded_twh": 0.0,
+        "stranded_book_value_usd": 0.0
+      }
+    ]
+  },
+  "retirement_timeline": [],
+  "vre_curtailment_at_endpoint": {},
+  "endpoint_mix_pct": {},
+  "endpoint_storage_pct": {}
+}
