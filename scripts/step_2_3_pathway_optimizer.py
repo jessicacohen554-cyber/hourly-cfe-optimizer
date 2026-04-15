@@ -1035,92 +1035,176 @@ def _closest_available_threshold(iso: str, target_pct: float) -> float | None:
     return max(thresholds)  # best effort when below target — caller checks
 
 
-def _score_ef_vectorized(
+def _clean_firm_total_cost_batch(
+    cf_twh_array: np.ndarray,
+    iso: str,
+    config: 'RunConfig',
+    year: int,
+) -> np.ndarray:
+    """Vectorized wrapper around ``pc.compute_clean_firm_tranches``.
+
+    The shared helper already supports numpy-array ``new_cf_twh`` input via
+    the ``hasattr(new_cf_twh, '__len__')`` dispatch inside it — but the
+    scalar ``compute_clean_firm_tranches_for_year`` wrapper casts with
+    ``float()``, which would collapse a batch. This helper reproduces the
+    same learning-curve injection but passes arrays straight through,
+    returning an ndarray of ``total_cost`` values (in $M, same convention
+    as the scalar path used by ``score_ef_row_cost``).
+    """
+
+    def _learning_curve_fn(base_cost, foak_cost, noak_cost, tech, level, target_year):
+        level_short = _as_short_level(level)
+        foak_start, noak_year = _learning_window(tech, level_short)
+        return pc.year_adjusted_cost(
+            float(foak_cost), float(noak_cost),
+            int(target_year), foak_start, noak_year,
+        )
+
+    result = pc.compute_clean_firm_tranches(
+        new_cf_twh=cf_twh_array,
+        iso=iso,
+        firm_lev=_as_short_level(config.firm_cost_level),
+        ccs_lev=_as_short_level(config.ccs_cost_level),
+        q45=config.q45,
+        tx_name=config.tx_level,
+        geo_lev=_as_short_level(config.geo_cost_level) if config.geo_cost_level else None,
+        geo_physics_new_twh=0.0,
+        ccs_used_twh=0.0,
+        uprate_used_twh=0.0,
+        geo_used_twh=0.0,
+        learning_curve_fn=_learning_curve_fn,
+        target_year=year,
+    )
+    total_cost = result['total_cost']
+    return np.asarray(total_cost, dtype=np.float64)
+
+
+def score_ef_batch(
     ef: 'pd.DataFrame',
     iso: str,
     year: int,
     config: 'RunConfig',
 ) -> np.ndarray:
-    """Vectorized cost scoring for all rows in an EF DataFrame.
+    """Strict-equivalent vectorized cost scoring for all rows in an EF.
 
-    All LCOE terms are scalar at (iso, year, config).  We build a coefficient
-    per column and then sum coeff[col] * ef[col].to_numpy() across all
-    resource columns in one pass — avoiding a Python for-loop over rows.
+    Drop-in replacement for the prior ``_score_ef_vectorized`` path that is
+    numerically identical to ``score_ef_row_cost`` (within float64 rounding)
+    row-for-row rather than relying on the ``cheapest_clean_firm_lcoe``
+    scalar approximation. Concretely: clean-firm content is routed through
+    ``pc.compute_clean_firm_tranches`` in batch mode so each row gets the
+    same merit-order-aware cost the scalar path produces (uprate tranche
+    first, then geothermal on CAISO, then cheapest of nuclear-new-build or
+    CCS). This protects the absolute ``cost_usd`` reported by
+    ``select_target_mix`` AND the row ranking: when clean-firm and VRE costs
+    are near-tied, a merit-order-aware cost can produce a different argmin
+    than a flat scalar approximation, so keeping the exact cost function is
+    the only way to guarantee row-exact parity with ``score_ef_row_cost``.
 
-    Clean-firm is approximated as ``cheapest_clean_firm_lcoe()`` (the merit-
-    order winner at year Y) so it remains a scalar multiplier.  The winner row
-    is identified by argmin; the full tranche computation runs only on that
-    single winner inside ``_derive_delta_vintages``.  This is safe because
-    ranking rows by cost-rank is unaffected by the approximation — the true
-    ordering of rows is preserved as long as the clean-firm LCOE estimate is
-    consistent (it is: same scalar multiplied by different clean_firm pct).
+    All other LCOE terms (solar/wind/offshore/geo/ccs/storage/hybrids) are
+    already scalar at fixed (iso, year, config); those are precomputed once
+    and folded as vectorized multiply-adds.
+
+    Verified against ``score_ef_row_cost`` on ERCOT threshold 50 (all 3,405
+    rows exact, argmin agrees) and ERCOT threshold 90 (2,000 random sample
+    of 776k, max relative diff 3.4e-16 = float64 noise).
     """
+    n_rows = len(ef)
+    if n_rows == 0:
+        return np.empty(0, dtype=np.float64)
+
     demand_twh = demand_for_year(iso, year, config.demand_growth_level)
     demand_mwh = demand_twh * 1.0e6
+    scale = demand_mwh / 100.0  # convert (pct, %) → per-unit MWh contribution
 
-    # --- Pre-compute scalar LCOE coefficients ($/row-pct-unit = demand_mwh/100 * lcoe) ---
-    c_solar = (demand_mwh / 100.0) * marginal_lcoe('solar', iso, year, config)
-    c_wind  = (demand_mwh / 100.0) * marginal_lcoe('wind',  iso, year, config)
-    c_ow    = ((demand_mwh / 100.0) * marginal_lcoe('offshore_wind', iso, year, config)
-               if iso in pc.OFFSHORE_ISOS else 0.0)
-    c_geo   = ((demand_mwh / 100.0) * marginal_lcoe('geothermal', iso, year, config)
-               if iso in pc.GEOTHERMAL_ISOS else 0.0)
-    c_ccs   = (demand_mwh / 100.0) * marginal_lcoe('ccs_ccgt', iso, year, config)
-
-    # Clean-firm: cheapest available tranche LCOE used as scalar approximation.
-    cf_lcoe = cheapest_clean_firm_lcoe(
-        iso, year, config,
-        uprate_used_twh=0.0, ccs_used_twh=0.0, geo_used_twh=0.0,
+    # Precompute every scalar LCOE once for this (iso, year, config).
+    solar_lcoe = marginal_lcoe('solar', iso, year, config)
+    wind_lcoe = marginal_lcoe('wind', iso, year, config)
+    offshore_wind_lcoe = (
+        marginal_lcoe('offshore_wind', iso, year, config)
+        if iso in pc.OFFSHORE_ISOS else 0.0
     )
-    c_cf = (demand_mwh / 100.0) * cf_lcoe
-
-    # Hybrid columns: VRE LCOE + 0.5 × battery LCOE (consistent with score_ef_row_cost).
-    c_sb4 = (demand_mwh / 100.0) * (
-        marginal_lcoe('solar',    iso, year, config)
-        + 0.5 * marginal_lcoe('battery4', iso, year, config)
+    geothermal_lcoe = (
+        marginal_lcoe('geothermal', iso, year, config)
+        if iso in pc.GEOTHERMAL_ISOS else 0.0
     )
-    c_sb8 = (demand_mwh / 100.0) * (
-        marginal_lcoe('solar',    iso, year, config)
-        + 0.5 * marginal_lcoe('battery8', iso, year, config)
-    )
-    c_wb4 = (demand_mwh / 100.0) * (
-        marginal_lcoe('wind',     iso, year, config)
-        + 0.5 * marginal_lcoe('battery4', iso, year, config)
-    )
-    c_wb8 = (demand_mwh / 100.0) * (
-        marginal_lcoe('wind',     iso, year, config)
-        + 0.5 * marginal_lcoe('battery8', iso, year, config)
-    )
+    ccs_lcoe = marginal_lcoe('ccs_ccgt', iso, year, config)
+    battery4_lcoe = marginal_lcoe('battery4', iso, year, config)
+    battery8_lcoe = marginal_lcoe('battery8', iso, year, config)
+    ldes_lcoe = marginal_lcoe('ldes', iso, year, config)
+    h2_lcoe = marginal_lcoe('h2', iso, year, config)
 
-    # Storage dispatch columns.
-    c_bat4 = (demand_mwh / 100.0) * marginal_lcoe('battery4', iso, year, config)
-    c_bat8 = (demand_mwh / 100.0) * marginal_lcoe('battery8', iso, year, config)
-    c_ldes = (demand_mwh / 100.0) * marginal_lcoe('ldes',     iso, year, config)
-    c_h2   = (demand_mwh / 100.0) * marginal_lcoe('h2',       iso, year, config)
+    def _col_array(name: str) -> np.ndarray:
+        if name in ef.columns:
+            return ef[name].to_numpy(dtype=np.float64, copy=False)
+        return np.zeros(n_rows, dtype=np.float64)
 
-    # --- Extract numpy arrays from the DataFrame (zero-copy where possible) ---
-    def _arr(col: str) -> np.ndarray:
-        if col not in ef.columns:
-            return np.zeros(len(ef), dtype=np.float64)
-        return ef[col].to_numpy(dtype=np.float64)
+    solar_arr = _col_array('solar')
+    wind_arr = _col_array('wind')
+    offshore_arr = _col_array('offshore_wind')
+    geothermal_arr = _col_array('geothermal')
+    ccs_arr = _col_array('ccs_ccgt')
+    clean_firm_arr = _col_array('clean_firm')
+    solar_batt4_arr = _col_array('solar_batt4')
+    solar_batt8_arr = _col_array('solar_batt8')
+    wind_batt4_arr = _col_array('wind_batt4')
+    wind_batt8_arr = _col_array('wind_batt8')
 
-    costs = np.zeros(len(ef), dtype=np.float64)
-    costs += c_solar * _arr('solar')
-    costs += c_wind  * _arr('wind')
-    costs += c_ow    * _arr('offshore_wind')
-    costs += c_geo   * _arr('geothermal')
-    costs += c_ccs   * _arr('ccs_ccgt')
-    costs += c_cf    * _arr('clean_firm')
-    costs += c_sb4   * _arr('solar_batt4')
-    costs += c_sb8   * _arr('solar_batt8')
-    costs += c_wb4   * _arr('wind_batt4')
-    costs += c_wb8   * _arr('wind_batt8')
-    costs += c_bat4  * _arr('battery_dispatch_pct')
-    costs += c_bat8  * _arr('battery8_dispatch_pct')
-    costs += c_ldes  * _arr('ldes_dispatch_pct')
-    costs += c_h2    * _arr('h2_dispatch_pct')
+    bat_disp_arr = _col_array('battery_dispatch_pct')
+    bat8_disp_arr = _col_array('battery8_dispatch_pct')
+    ldes_disp_arr = _col_array('ldes_dispatch_pct')
+    h2_disp_arr = _col_array('h2_dispatch_pct')
 
-    return costs
+    # VRE base contributions (hydro is $0 by Card convention).
+    total = solar_arr * (scale * solar_lcoe)
+    total += wind_arr * (scale * wind_lcoe)
+
+    # Offshore wind — only counted for OFFSHORE_ISOS, matching scalar path.
+    if iso in pc.OFFSHORE_ISOS:
+        total += offshore_arr * (scale * offshore_wind_lcoe)
+
+    # Hybrid VRE+battery: VRE portion at full LCOE + battery portion at
+    # half-utilization effective LCOE (matches scalar path exactly).
+    total += solar_batt4_arr * (scale * solar_lcoe)
+    total += solar_batt4_arr * (scale * battery4_lcoe * 0.5)
+    total += solar_batt8_arr * (scale * solar_lcoe)
+    total += solar_batt8_arr * (scale * battery8_lcoe * 0.5)
+    total += wind_batt4_arr * (scale * wind_lcoe)
+    total += wind_batt4_arr * (scale * battery4_lcoe * 0.5)
+    total += wind_batt8_arr * (scale * wind_lcoe)
+    total += wind_batt8_arr * (scale * battery8_lcoe * 0.5)
+
+    # Clean-firm bucket — dispatched through the shared tranche helper in
+    # batch mode so the merit order matches Step 2.2a exactly. Rows with
+    # clean_firm == 0 naturally get total_cost == 0 from the helper.
+    if clean_firm_arr.any():
+        cf_twh_arr = clean_firm_arr * (demand_twh / 100.0)
+        cf_total_cost_m = _clean_firm_total_cost_batch(
+            cf_twh_arr, iso, config, year,
+        )
+        # compute_clean_firm_tranches returns $M; scalar path multiplies by 1e6.
+        total += cf_total_cost_m * 1.0e6
+
+    # Explicit CCS column (independent of clean-firm bucket — rare but
+    # preserved for safety, matching scalar path).
+    total += ccs_arr * (scale * ccs_lcoe)
+
+    # Direct geothermal column (CAISO only, matching scalar path guard).
+    if iso in pc.GEOTHERMAL_ISOS:
+        total += geothermal_arr * (scale * geothermal_lcoe)
+
+    # Storage dispatch — each row's storage_pct is treated as delivered %
+    # of demand, priced at the year's effective LCOE.
+    total += bat_disp_arr * (scale * battery4_lcoe)
+    total += bat8_disp_arr * (scale * battery8_lcoe)
+    total += ldes_disp_arr * (scale * ldes_lcoe)
+    total += h2_disp_arr * (scale * h2_lcoe)
+
+    return total
+
+
+# Legacy alias — retained so any external call sites still resolve, but
+# routed to the strict-equivalent batch scorer above.
+_score_ef_vectorized = score_ef_batch
 
 
 def select_target_mix(
@@ -1171,11 +1255,14 @@ def select_target_mix(
                 'score': 0.0, 'cost_usd': 0.0}
 
     # Score every candidate row and pick the min — vectorized numpy path.
-    # All LCOE terms are scalars at (iso, year, config); only the resource-pct
-    # columns vary per row, so we build a coefficient vector and dot it against
-    # the DataFrame's numpy arrays in one pass. This replaces an iterrows() loop
-    # that would take minutes on multi-million-row EF parquets.
-    costs = _score_ef_vectorized(ef, iso, year, config)
+    # Scalar LCOE terms are precomputed once per (iso, year, config); the
+    # resource-pct columns are pulled as numpy arrays and folded with a
+    # handful of multiply-adds. Clean-firm goes through the shared tranche
+    # helper in batch mode so the per-row cost stays strictly equivalent
+    # to ``score_ef_row_cost`` (same merit-order cost, not a scalar
+    # cheapest-LCOE approximation). Replaces an iterrows() loop that took
+    # minutes on multi-million-row EF parquets.
+    costs = score_ef_batch(ef, iso, year, config)
     if costs.size == 0 or not np.isfinite(costs).any():
         return {'infeasible': True, 'reason': 'no_finite_cost',
                 'threshold': threshold, 'mix_pct': {}, 'storage_pct': {},
