@@ -960,11 +960,55 @@ def score_ef_row_cost(row: pd.Series, iso: str, year: int,
 # ---------- Pathway availability filters ------------------------------------
 
 
-def _filter_pathway_1(df: pd.DataFrame) -> pd.DataFrame:
-    """Pathway 1: VRE + batteries only. clean_firm == 0 AND ccs == 0."""
+def _filter_pathway_1(
+    df: pd.DataFrame,
+    iso: str | None = None,
+    year: int | None = None,
+    demand_growth_level: str = 'Medium',
+) -> pd.DataFrame:
+    """Pathway 1: VRE + batteries only — no NEW clean firm beyond existing fleet.
+
+    The ceiling for clean_firm is the existing nuclear/clean-firm share of
+    demand *at that year*, which declines over time as demand grows:
+
+        ceiling_pct(year) = existing_cf_twh / demand_for_year(iso, year, growth)
+
+    where existing_cf_twh = dispatch_utils.BASE_DEMAND_TWH[iso] * dispatch_utils.GRID_MIX_SHARES[iso]['clean_firm'] / 100
+    (fixed absolute TWh from today's nuclear fleet, locked — no new builds).
+
+    When iso/year are not supplied (legacy call sites, tests) falls back to
+    clean_firm == 0, which is conservative and never breaks callers.
+
+    CCS and geothermal remain hard-zero (always new-build only).
+    """
     if df.empty:
         return df
-    mask = (df['clean_firm'] == 0) & (df['ccs_ccgt'] == 0)
+
+    if iso is not None and year is not None:
+        # dispatch_utils holds BASE_DEMAND_TWH and GRID_MIX_SHARES;
+        # import lazily to mirror how the rest of this module uses du.
+        try:
+            import dispatch_utils as _du
+        except ImportError:
+            _du = None  # type: ignore[assignment]
+        base_demand = float(getattr(_du, 'BASE_DEMAND_TWH', {}).get(iso, 0.0))
+        existing_cf_pct = float(
+            getattr(_du, 'GRID_MIX_SHARES', {}).get(iso, {}).get('clean_firm', 0.0)
+        )
+        existing_cf_twh = base_demand * existing_cf_pct / 100.0
+        demand_t = demand_for_year(iso, year, demand_growth_level)
+        # ceiling = existing absolute TWh expressed as % of year-t demand.
+        # floor() so that an exact integer ceiling N means clean_firm <= N-1,
+        # i.e. the allowed band is strictly below any new-build contribution.
+        # For a float ceiling like 23.8, floor gives 23 — same effect as <=.
+        import math as _math
+        raw_ceiling = (existing_cf_twh / demand_t * 100.0) if demand_t > 0 else 0.0
+        ceiling_pct = _math.floor(raw_ceiling)
+        mask = (df['clean_firm'] <= ceiling_pct) & (df['ccs_ccgt'] == 0)
+    else:
+        # Legacy fallback: strict zero filter
+        mask = (df['clean_firm'] == 0) & (df['ccs_ccgt'] == 0)
+
     if 'geothermal' in df.columns:
         mask &= (df['geothermal'] == 0)
     return df.loc[mask].reset_index(drop=True)
@@ -1276,10 +1320,12 @@ def select_target_mix(
     ef = load_ef_mixes(iso, threshold)
 
     if pathway == '1':
-        ef = _filter_pathway_1(ef)
+        ef = _filter_pathway_1(ef, iso=iso, year=year,
+                               demand_growth_level=config.demand_growth_level)
     elif pathway in ('2a', '2b'):
         if pivot_state is None or not pivot_state.pivoted:
-            ef = _filter_pathway_1(ef)
+            ef = _filter_pathway_1(ef, iso=iso, year=year,
+                                   demand_growth_level=config.demand_growth_level)
         # else: full EF available post-pivot (clean firm unlocked)
     elif pathway == '3':
         ef = _filter_pathway_3(ef)
