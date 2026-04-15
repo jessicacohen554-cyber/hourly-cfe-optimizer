@@ -93,6 +93,7 @@ class PlannedRun(NamedTuple):
     endpoint: float
     growth: str
     output_root: Path
+    seed_run_path: Path | None = None  # Prior-endpoint JSON for floor-ratchet seed
 
     @property
     def run_key(self) -> str:
@@ -102,8 +103,16 @@ class PlannedRun(NamedTuple):
         return f"{self.iso}__pathway{self.pathway}__ep{ep_tag}"
 
     @property
+    def output_path(self) -> Path:
+        """Expected JSON output path for this run (mirrors optimizer RunConfig.output_path)."""
+        ep_pct = self.endpoint * 100.0
+        ep_tag = f"{ep_pct:g}".replace('.', 'p')
+        return self.output_root / self.iso / f"pathway{self.pathway}_ep{ep_tag}.json"
+
+    @property
     def label(self) -> str:
-        return f"{self.iso} pathway={self.pathway} endpoint={self.endpoint:.3g} growth={self.growth}"
+        seed_str = f" seed={self.seed_run_path.name}" if self.seed_run_path else ""
+        return f"{self.iso} pathway={self.pathway} endpoint={self.endpoint:.3g} growth={self.growth}{seed_str}"
 
 
 def _parse_endpoints(raw: str) -> list[float]:
@@ -153,13 +162,19 @@ def build_run_plan(
 ) -> list[PlannedRun]:
     """Build the ordered run list for one ISO.
 
-    For each endpoint, Pathway 3 is scheduled first (if present), followed by
-    the remaining pathways in the supplied order. This ensures Card K
-    comparative stranding is always computed before 1/2a/2b.
+    Loop order: pathway (outer) → endpoint (inner, ascending). This enables
+    the cross-endpoint floor ratchet: each endpoint run can be seeded from
+    the previous endpoint run of the same pathway. Pathway 3 is always moved
+    to the front by _parse_pathways(), so all P3 endpoints complete before P1
+    begins. When P1@ep runs, the P3@ep JSON is already on disk and the
+    optimizer loads it instead of re-solving (preserving the seeded P3).
+
+    Seed paths are NOT set here — sweep() injects them dynamically as each
+    run completes so it can track the actual output path written to disk.
     """
     runs: list[PlannedRun] = []
-    for endpoint in endpoints:
-        for pathway in pathways:
+    for pathway in pathways:
+        for endpoint in endpoints:
             runs.append(PlannedRun(
                 iso=iso,
                 pathway=pathway,
@@ -206,6 +221,9 @@ def run_one(run: PlannedRun, dry_run: bool = False) -> bool:
         '--growth', run.growth,
         '--output-root', str(run.output_root),
     ]
+    # Floor-ratchet: pass prior endpoint's JSON as seed if available.
+    if run.seed_run_path is not None and run.seed_run_path.exists():
+        cmd.extend(['--seed-run', str(run.seed_run_path)])
     if dry_run:
         print(f"  [dry-run] Would execute: {' '.join(cmd)}")
         return True
@@ -239,7 +257,12 @@ def sweep(
     dry_run: bool,
     force: bool,
 ) -> None:
-    """Run all (pathway, endpoint) combos for the given ISO, skipping completed runs."""
+    """Run all (pathway, endpoint) combos for the given ISO, skipping completed runs.
+
+    Run order: pathway (outer) → endpoint (inner, ascending). The terminal
+    ledger from each completed run is passed as --seed-run to the next
+    endpoint in the same pathway (cross-endpoint floor ratchet).
+    """
     output_root.mkdir(parents=True, exist_ok=True)
 
     plan = build_run_plan(iso, endpoints, pathways, growth, output_root)
@@ -247,7 +270,7 @@ def sweep(
     total = len(plan)
     print(f"\n{'='*60}")
     print(f"ISO: {iso}  growth: {growth}  output-root: {output_root}")
-    print(f"Planned runs: {total}  (endpoints={endpoints}  pathways={pathways})")
+    print(f"Planned runs: {total}  (pathways={pathways}  endpoints={endpoints})")
     print(f"dry-run: {dry_run}  force: {force}")
     print(f"{'='*60}\n")
 
@@ -255,8 +278,15 @@ def sweep(
     succeeded = 0
     failed = 0
 
+    # Track the most recent successful output path per pathway for seed chaining.
+    last_output: dict[str, Path | None] = {pw: None for pw in pathways}
+
     for i, run in enumerate(plan, start=1):
-        print(f"\n[{i}/{total}] {run.label}")
+        # Inject seed from previous endpoint of the same pathway.
+        seed_path = last_output.get(run.pathway)
+        seeded_run = run._replace(seed_run_path=seed_path)
+
+        print(f"\n[{i}/{total}] {seeded_run.label}")
 
         if not force and not dry_run:
             # Reload MANIFEST before each run to catch in-process writes.
@@ -264,15 +294,21 @@ def sweep(
             if is_completed(manifest, run):
                 print(f"  SKIP — already in MANIFEST (key: {run.run_key}). Pass --force to re-run.")
                 skipped += 1
+                # Still update seed tracker so subsequent endpoint runs can chain.
+                if seeded_run.output_path.exists():
+                    last_output[run.pathway] = seeded_run.output_path
                 continue
 
-        ok = run_one(run, dry_run=dry_run)
+        ok = run_one(seeded_run, dry_run=dry_run)
         if dry_run:
             continue
         if ok:
             succeeded += 1
+            # Record output path so next endpoint of same pathway can seed from it.
+            last_output[run.pathway] = seeded_run.output_path
         else:
             failed += 1
+            # Don't update seed tracker on failure — next endpoint starts fresh.
             # Continue rather than abort — partial results are still valuable.
             print(f"  Continuing to next run despite failure.")
 

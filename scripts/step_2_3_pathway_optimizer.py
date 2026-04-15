@@ -684,6 +684,59 @@ class VintageLedger:
         return total
 
 
+# ---------- Ledger serialization (cross-endpoint floor ratchet) --------------
+
+
+def ledger_to_json(ledger: VintageLedger) -> list[dict]:
+    """Serialize a VintageLedger to a JSON-safe list of vintage dicts.
+
+    Used to persist the terminal ledger from one endpoint run so the next
+    endpoint run can load it as a starting-floor ratchet seed.
+    """
+    return [
+        {
+            'resource': v.resource,
+            'cod_year': v.cod_year,
+            'twh_per_year': v.twh_per_year,
+            'locked_lcoe': v.locked_lcoe,
+            'tx_adder': v.tx_adder,
+            'retire_year': v.retire_year,
+        }
+        for v in ledger.vintages
+    ]
+
+
+def ledger_from_json(data: list[dict]) -> VintageLedger:
+    """Deserialize a VintageLedger from a JSON-safe list produced by ledger_to_json."""
+    ledger = VintageLedger()
+    for item in data:
+        ledger.add(Vintage(
+            resource=str(item['resource']),
+            cod_year=int(item['cod_year']),
+            twh_per_year=float(item['twh_per_year']),
+            locked_lcoe=float(item['locked_lcoe']),
+            tx_adder=float(item.get('tx_adder', 0.0)),
+            retire_year=item.get('retire_year'),
+        ))
+    return ledger
+
+
+def _load_ledger_from_json(path: Path) -> VintageLedger | None:
+    """Load the terminal ledger from an existing per-run JSON file.
+
+    Returns None on any read/parse error so callers can degrade gracefully.
+    """
+    try:
+        with open(path) as fh:
+            data = json.load(fh)
+        raw = data.get('terminal_ledger')
+        if raw is None:
+            return None
+        return ledger_from_json(raw)
+    except Exception:
+        return None
+
+
 # ---------- Marginal new-build cost helpers (for pivot triggers + sizing) ----
 
 
@@ -1488,8 +1541,11 @@ def _derive_delta_vintages(
         if pct <= 0:
             continue
         target_twh = _twh_from_pct(pct, demand_twh)
-        existing_twh = ledger.capacity_twh(ledger_key, year - 1) \
-            if year > BASE_YEAR else 0.0
+        # Floor ratchet: use same-year capacity_twh so seed vintages (cod_year==year)
+        # are visible. In the normal (unseeded) case this equals year-1 capacity since
+        # the current-year vintage hasn't been appended yet. In the seeded case it
+        # correctly sees prior-endpoint builds and prevents double-building.
+        existing_twh = ledger.capacity_twh(ledger_key, year)
         new_twh = target_twh - existing_twh
         if new_twh <= 1e-6:
             continue
@@ -1515,9 +1571,8 @@ def _derive_delta_vintages(
         if pct <= 0:
             continue
         target_twh = _twh_from_pct(pct, demand_twh)
-        # VRE side.
-        existing_vre = ledger.capacity_twh(vre_res, year - 1) \
-            if year > BASE_YEAR else 0.0
+        # VRE side — same-year floor ratchet (see energy_resources block above).
+        existing_vre = ledger.capacity_twh(vre_res, year)
         # Hybrid contributes to the same ledger key as standalone VRE — the
         # existing check above already counts standalone solar/wind, so we
         # only add the incremental hybrid slice.
@@ -1530,9 +1585,8 @@ def _derive_delta_vintages(
             tx_adder=transmission_adder(vre_res, iso, config.tx_level),
         ))
         del existing_vre  # reserved for future, keeps linter quiet
-        # Storage side — treat effective dispatch as the delivered TWh.
-        existing_batt = ledger.capacity_twh(batt_res, year - 1) \
-            if year > BASE_YEAR else 0.0
+        # Storage side — same-year floor ratchet.
+        existing_batt = ledger.capacity_twh(batt_res, year)
         inc_batt = max(0.0, target_twh * 0.5 - existing_batt)  # ~50% cycle
         if inc_batt > 1e-6:
             new_vintages.append(Vintage(
@@ -1554,7 +1608,7 @@ def _derive_delta_vintages(
         if pct <= 0:
             continue
         target_twh = _twh_from_pct(pct, demand_twh)
-        existing = ledger.capacity_twh(res, year - 1) if year > BASE_YEAR else 0.0
+        existing = ledger.capacity_twh(res, year)  # same-year floor ratchet
         new_twh = target_twh - existing
         if new_twh <= 1e-6:
             continue
@@ -1566,8 +1620,21 @@ def _derive_delta_vintages(
 
     # Clean-firm bucket — run the merit-order tranche helper and produce a
     # Vintage per tranche that actually got built this year.
+    #
+    # Pathway 1 and pre-pivot 2a/2b: existing clean firm (nuclear, hydro) is
+    # INHERITED FLEET — already operating, no new build.  The EF's clean_firm
+    # column contributes to CFE-score feasibility but generates no new vintages.
+    # Only VRE + storage are new builds under these pathways.  Skipping here
+    # ensures compute_clean_firm_tranches never allocates uprates or CCS into
+    # P1/pre-pivot runs, which was the root cause of P1 incorrectly appearing
+    # to build clean firm (uprates + CCS via the tranche merit order).
+    #
+    # Post-pivot 2a/2b and Pathway 3: nuclear_cap_twh == inf → full tranche
+    # allocation runs normally, building new nuclear/CCS/uprates as optimal.
+    _is_existing_fleet_only = nuclear_cap_twh < float('inf')
+
     cf_pct = target['mix_pct'].get('clean_firm', 0.0)
-    if cf_pct > 0:
+    if cf_pct > 0 and not _is_existing_fleet_only:
         # EF encodes clean_firm as % of base-year demand.  For Pathway 1 /
         # pre-pivot 2a/2b, nuclear_cap_twh is the absolute existing-fleet cap.
         # min() prevents the cost model from implying new nuclear when demand_twh
@@ -1576,12 +1643,13 @@ def _derive_delta_vintages(
             _twh_from_pct(cf_pct, demand_twh),
             nuclear_cap_twh,
         )
+        # Same-year floor ratchet: see seed vintage at cod_year==year.
         existing_cf = (
-            ledger.capacity_twh('uprate', year - 1)
-            + ledger.capacity_twh('geothermal', year - 1)
-            + ledger.capacity_twh('nuclear_newbuild', year - 1)
-            + ledger.capacity_twh('ccs_ccgt', year - 1)
-        ) if year > BASE_YEAR else 0.0
+            ledger.capacity_twh('uprate', year)
+            + ledger.capacity_twh('geothermal', year)
+            + ledger.capacity_twh('nuclear_newbuild', year)
+            + ledger.capacity_twh('ccs_ccgt', year)
+        )
         new_cf_twh = max(0.0, cf_target_twh - existing_cf)
         if new_cf_twh > 1e-6:
             tr = compute_clean_firm_tranches_for_year(
@@ -1648,9 +1716,29 @@ def _capacity_revenue_annual_usd(iso: str, target: dict[str, Any],
     return total
 
 
-def solve_pathway(config: RunConfig) -> PathwayRunResult:
-    """Execute one deterministic pathway run over 2025-2050."""
+def solve_pathway(
+    config: RunConfig,
+    initial_ledger: VintageLedger | None = None,
+) -> PathwayRunResult:
+    """Execute one deterministic pathway run over 2025-2050.
+
+    Parameters
+    ----------
+    initial_ledger : VintageLedger | None
+        If provided, the run inherits all vintages from ``initial_ledger`` as
+        a capacity floor (cross-endpoint ratchet). This is the terminal ledger
+        produced by the same pathway at the prior CFE endpoint. The within-run
+        delta logic in _derive_delta_vintages uses same-year capacity_twh()
+        checks, so seed vintages are visible to the ratchet for all years
+        including BASE_YEAR.
+    """
     ledger = VintageLedger()
+    if initial_ledger is not None:
+        # Copy all seed vintages into the starting ledger.
+        for v in initial_ledger.vintages:
+            ledger.add(v)
+    # Pivot state always starts fresh: the trigger re-evaluates naturally as
+    # last_cfe accumulates from the inherited VRE builds.
     pivot_state = PivotState()
     # Absolute TWh cap for existing-fleet resources (nuclear, hydro).
     # Applied in _derive_delta_vintages for Pathway 1 and pre-pivot 2a/2b.
@@ -1824,6 +1912,15 @@ def build_argparser() -> argparse.ArgumentParser:
                     help='Geothermal-cost level (CAISO only).')
     ap.add_argument('--output-root', default=str(DEFAULT_OUTPUT_ROOT),
                     help='Root directory for per-run JSON output.')
+    ap.add_argument(
+        '--seed-run', default=None,
+        help=(
+            'Path to a prior-endpoint run JSON to use as a floor-ratchet seed. '
+            'The terminal_ledger from that file is loaded as initial_ledger so '
+            'this run starts with the prior endpoint\'s builds already in place. '
+            'Used by run_pathway_sweep.py to chain endpoint runs sequentially.'
+        ),
+    )
     return ap
 
 
@@ -2023,6 +2120,10 @@ def _serialize_run_result(
         'vre_curtailment_at_endpoint': result.vre_curtailment_at_endpoint,
         'endpoint_mix_pct': result.endpoint_mix_pct,
         'endpoint_storage_pct': result.endpoint_storage_pct,
+        # Terminal ledger — all active vintages at end of run. Used as the
+        # initial_ledger seed for the next endpoint run in the same pathway
+        # (cross-endpoint floor ratchet). Loaded by _load_ledger_from_json().
+        'terminal_ledger': ledger_to_json(result.ledger),
     }
 
 
@@ -2188,16 +2289,27 @@ def _book_value_stranded(
 
 def compute_stranding_ledger(
     result: 'PathwayRunResult',
-    pathway3_result: 'PathwayRunResult',
+    pathway3_result: 'PathwayRunResult | None' = None,
+    pathway3_ledger: VintageLedger | None = None,
 ) -> list[dict[str, Any]]:
     """Card K revised: comparative-to-Pathway-3 stranding ledger at 2050.
 
     Pathway 3 is always unstranded by definition (excess vs. self = 0).
+
+    Accepts either a full ``pathway3_result`` or a bare ``pathway3_ledger``
+    (loaded from disk when the seeded P3 run already exists and we want to
+    avoid re-solving it).
     """
     if result.config.pathway == '3':
         return []
+    p3_ledger = (
+        pathway3_result.ledger if pathway3_result is not None
+        else pathway3_ledger
+    )
+    if p3_ledger is None:
+        return []
     own_totals = _total_twh_by_resource(result.ledger, at_year=END_YEAR)
-    p3_totals = _total_twh_by_resource(pathway3_result.ledger, at_year=END_YEAR)
+    p3_totals = _total_twh_by_resource(p3_ledger, at_year=END_YEAR)
     rows: list[dict[str, Any]] = []
     for resource in STRANDING_RESOURCES:
         own = own_totals.get(resource, 0.0)
@@ -2347,7 +2459,10 @@ def _ensure_imports_ready() -> None:
         )
 
 
-def _solve_and_annotate(config: RunConfig) -> 'PathwayRunResult':
+def _solve_and_annotate(
+    config: RunConfig,
+    initial_ledger: VintageLedger | None = None,
+) -> 'PathwayRunResult':
     """Solve pathway + attach Card L retirement + endpoint diagnostics.
 
     Does NOT compute the stranding ledger (that requires a Pathway 3
@@ -2358,7 +2473,7 @@ def _solve_and_annotate(config: RunConfig) -> 'PathwayRunResult':
         raise FileNotFoundError(
             f"No Step 2.1 EF parquets found for {config.iso} under {DATA_STEP21}"
         )
-    result = solve_pathway(config)
+    result = solve_pathway(config, initial_ledger=initial_ledger)
     result.retirement_timeline = compute_retirement_timeline(result)
     result.vre_curtailment_at_endpoint = compute_vre_curtailment_at_endpoint(result)
     result.endpoint_hourly_dispatch = compute_endpoint_hourly_dispatch(result)
@@ -2381,7 +2496,10 @@ def _pathway3_config_for(config: RunConfig) -> RunConfig:
     )
 
 
-def run_pathway(config: RunConfig) -> dict[str, Any]:
+def run_pathway(
+    config: RunConfig,
+    initial_ledger: VintageLedger | None = None,
+) -> dict[str, Any]:
     """Execute a single (iso, pathway, endpoint) run with Card K stranding.
 
     Always solves Pathway 3 FIRST for the same (ISO, endpoint) so the
@@ -2389,26 +2507,43 @@ def run_pathway(config: RunConfig) -> dict[str, Any]:
     target pathway. If the target is Pathway 3, only one solve runs.
 
     Writes the per-run JSON (four tables) and appends to MANIFEST.json. If
-    the target is not Pathway 3, also writes the Pathway 3 reference run.
+    the target is not Pathway 3, also writes the Pathway 3 reference run
+    (unless the P3 JSON already exists on disk, in which case the seeded P3
+    result is loaded to avoid overwriting it).
+
+    Parameters
+    ----------
+    initial_ledger : VintageLedger | None
+        Cross-endpoint floor-ratchet seed: terminal ledger from the same
+        pathway's prior-endpoint run. None = start from scratch (normal).
     """
     _ensure_imports_ready()
 
-    # 1. Solve Pathway 3 reference first (per methodology).
+    # 1. Pathway 3 reference.
     if config.pathway == '3':
-        p3_result = _solve_and_annotate(config)
+        p3_result = _solve_and_annotate(config, initial_ledger=initial_ledger)
         target_result = p3_result
+        p3_ledger_for_stranding = p3_result.ledger
     else:
         p3_cfg = _pathway3_config_for(config)
-        p3_result = _solve_and_annotate(p3_cfg)
-        # Pathway 3 has no stranding vs. itself.
-        p3_result.stranding_ledger = []
-        write_run_json(p3_result)
-        append_to_manifest(p3_result)
-        target_result = _solve_and_annotate(config)
+        p3_out = p3_cfg.output_path
+        if p3_out.exists():
+            # Seeded P3 already on disk — load its terminal ledger for stranding
+            # instead of re-solving (which would overwrite the seeded result).
+            p3_ledger_for_stranding = _load_ledger_from_json(p3_out)
+        else:
+            # P3 not yet computed — solve from scratch and write.
+            p3_result = _solve_and_annotate(p3_cfg)
+            p3_result.stranding_ledger = []
+            write_run_json(p3_result)
+            append_to_manifest(p3_result)
+            p3_ledger_for_stranding = p3_result.ledger
+        target_result = _solve_and_annotate(config, initial_ledger=initial_ledger)
 
     # 2. Card K revised comparative stranding (vs. Pathway 3 baseline).
     target_result.stranding_ledger = compute_stranding_ledger(
-        target_result, p3_result,
+        target_result,
+        pathway3_ledger=p3_ledger_for_stranding,
     )
 
     # 3. Write outputs.
@@ -2436,7 +2571,25 @@ def run_pathway(config: RunConfig) -> dict[str, Any]:
 def main(argv: list[str] | None = None) -> int:
     args = build_argparser().parse_args(argv)
     config = config_from_args(args)
-    result = run_pathway(config)
+    initial_ledger: VintageLedger | None = None
+    if args.seed_run:
+        seed_path = Path(args.seed_run)
+        if seed_path.exists():
+            initial_ledger = _load_ledger_from_json(seed_path)
+            if initial_ledger is None:
+                print(
+                    f"[optimizer] WARNING: --seed-run {seed_path} exists but "
+                    "terminal_ledger could not be loaded (missing key or parse "
+                    "error). Starting from empty ledger.",
+                    file=sys.stderr,
+                )
+        else:
+            print(
+                f"[optimizer] WARNING: --seed-run path {seed_path} does not "
+                "exist. Starting from empty ledger.",
+                file=sys.stderr,
+            )
+    result = run_pathway(config, initial_ledger=initial_ledger)
     print(json.dumps(result, indent=2, default=str))
     return 0
 
