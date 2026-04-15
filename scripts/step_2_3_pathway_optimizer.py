@@ -960,48 +960,67 @@ def score_ef_row_cost(row: pd.Series, iso: str, year: int,
 # ---------- Pathway availability filters ------------------------------------
 
 
+def _existing_resource_twh(iso: str, resource: str = 'clean_firm') -> float:
+    """Return the absolute existing TWh for a non-scalable fleet resource.
+
+    For resources that cannot be new-built in Pathway 1 (nuclear, hydro), the
+    ceiling is the fixed TWh the existing fleet produces — not a proportion of
+    year-t demand, which grows over time.  Call sites convert this to an EF
+    percentage using BASE_DEMAND_TWH[iso] as the denominator (matching EF units).
+    """
+    try:
+        import dispatch_utils as _du
+    except ImportError:
+        return 0.0
+    base_demand = float(getattr(_du, 'BASE_DEMAND_TWH', {}).get(iso, 0.0))
+    pct = float(getattr(_du, 'GRID_MIX_SHARES', {}).get(iso, {}).get(resource, 0.0))
+    return base_demand * pct / 100.0
+
+
+def _existing_resource_ceiling_pct(iso: str, resource: str = 'clean_firm') -> int:
+    """Return the EF-compatible integer ceiling for an existing fleet resource.
+
+    EF mixes encode resource shares as % of BASE-YEAR demand.  This converts
+    the existing absolute TWh back to that same percentage, rounding so that
+    e.g. PJM 32.1 % → 32, MISO 13.1 % → 13, NEISO 23.8 % → 24.
+    """
+    try:
+        import dispatch_utils as _du
+    except ImportError:
+        return 0
+    pct = float(getattr(_du, 'GRID_MIX_SHARES', {}).get(iso, {}).get(resource, 0.0))
+    return round(pct)
+
+
 def _filter_pathway_1(
     df: pd.DataFrame,
     iso: str | None = None,
-    year: int | None = None,
-    demand_growth_level: str = 'Medium',
+    year: int | None = None,       # kept for backwards-compat; not used
+    demand_growth_level: str = 'Medium',  # kept for backwards-compat; not used
 ) -> pd.DataFrame:
     """Pathway 1: VRE + batteries — no NEW clean firm beyond the existing fleet.
 
-    Ceiling = existing fleet's BASE-YEAR share of demand (constant across years):
+    Absolute-TWh semantics (correct):
+        existing_cf_twh  = BASE_DEMAND_TWH[iso] × GRID_MIX_SHARES[iso]['clean_firm'] / 100
+        allowed if: clean_firm_pct × BASE_DEMAND_TWH / 100  ≤  existing_cf_twh
+        ↔  clean_firm_pct  ≤  GRID_MIX_SHARES[iso]['clean_firm']  (i.e. the base-year %)
 
-        ceiling_pct = round(GRID_MIX_SHARES[iso]['clean_firm'])
+    The EF stores clean_firm as a percentage of BASE-YEAR demand.  Existing
+    nuclear produces a fixed absolute TWh regardless of year, so the ceiling
+    must be expressed in those same base-year units — NOT as a shrinking fraction
+    of growing year-t demand.  Using demand_t as the denominator caused PJM/NEISO
+    to be incorrectly infeasible at 90 %+ (ceiling fell below EF minimum of 29 %
+    even though 29 % × 843 = 245 TWh < 270 TWh existing fleet).
 
-    The EF encodes resource percentages relative to base-year demand.  Existing
-    nuclear produces a fixed absolute TWh (it doesn't grow), so the correct
-    no-new-build ceiling is that same base-year fraction — NOT the shrinking
-    year-t fraction (existing_cf_twh / demand_t).  Using the year-t denominator
-    caused PJM/NEISO to be incorrectly marked infeasible at 90 %+ because the
-    ceiling fell below the EF minimum (29 %) even though those EF mixes only
-    require ~245 TWh of nuclear (well within the 270 TWh existing fleet).
-
-    When iso is not supplied (legacy call sites, tests) falls back to
-    clean_firm == 0.
-
-    CCS and geothermal remain hard-zero (always new-build only).
+    CCS and geothermal are always hard-zero (new-build only, never existing).
     """
     if df.empty:
         return df
 
     if iso is not None:
-        try:
-            import dispatch_utils as _du
-        except ImportError:
-            _du = None  # type: ignore[assignment]
-        existing_cf_pct = float(
-            getattr(_du, 'GRID_MIX_SHARES', {}).get(iso, {}).get('clean_firm', 0.0)
-        )
-        # Constant ceiling: base-year percentage (same units as EF clean_firm).
-        # round() maps 7.9→8, 13.1→13, 18.4→18, 23.8→24, 32.1→32, etc.
-        ceiling_pct = round(existing_cf_pct)
+        ceiling_pct = _existing_resource_ceiling_pct(iso, 'clean_firm')
         mask = (df['clean_firm'] <= ceiling_pct) & (df['ccs_ccgt'] == 0)
     else:
-        # Legacy fallback: strict zero filter
         mask = (df['clean_firm'] == 0) & (df['ccs_ccgt'] == 0)
 
     if 'geothermal' in df.columns:
@@ -1440,11 +1459,17 @@ def _derive_delta_vintages(
     iso: str,
     year: int,
     config: RunConfig,
+    nuclear_cap_twh: float = float('inf'),
 ) -> list[Vintage]:
     """Produce per-resource Vintage entries for new-build in ``year``.
 
     Compares target mix TWh vs. cumulative ledger TWh by resource; anything
     positive is a new vintage locked at this year's LCOE.
+
+    nuclear_cap_twh: if finite, caps the clean-firm target TWh at this value.
+        Set to existing_cf_twh for Pathway 1 and pre-pivot Pathway 2a/2b so
+        that the cost model never credits more nuclear than the existing fleet
+        produces — regardless of demand growth scaling.
     """
     demand_twh = demand_for_year(iso, year, config.demand_growth_level)
     new_vintages: list[Vintage] = []
@@ -1543,7 +1568,14 @@ def _derive_delta_vintages(
     # Vintage per tranche that actually got built this year.
     cf_pct = target['mix_pct'].get('clean_firm', 0.0)
     if cf_pct > 0:
-        cf_target_twh = _twh_from_pct(cf_pct, demand_twh)
+        # EF encodes clean_firm as % of base-year demand.  For Pathway 1 /
+        # pre-pivot 2a/2b, nuclear_cap_twh is the absolute existing-fleet cap.
+        # min() prevents the cost model from implying new nuclear when demand_twh
+        # grows beyond base demand (e.g. 29 % × 1204 = 349 > 270 TWh for PJM).
+        cf_target_twh = min(
+            _twh_from_pct(cf_pct, demand_twh),
+            nuclear_cap_twh,
+        )
         existing_cf = (
             ledger.capacity_twh('uprate', year - 1)
             + ledger.capacity_twh('geothermal', year - 1)
@@ -1620,6 +1652,9 @@ def solve_pathway(config: RunConfig) -> PathwayRunResult:
     """Execute one deterministic pathway run over 2025-2050."""
     ledger = VintageLedger()
     pivot_state = PivotState()
+    # Absolute TWh cap for existing-fleet resources (nuclear, hydro).
+    # Applied in _derive_delta_vintages for Pathway 1 and pre-pivot 2a/2b.
+    _existing_nuclear_cap_twh: float = _existing_resource_twh(config.iso, 'clean_firm')
     annual_buildout: list[dict[str, Any]] = []
     annual_cost: list[dict[str, Any]] = []
     feasibility: dict[str, Any] = {
@@ -1670,8 +1705,14 @@ def solve_pathway(config: RunConfig) -> PathwayRunResult:
             break
 
         # Vintage the delta from the ledger's prior state.
+        # For Pathway 1 and pre-pivot 2a/2b: cap nuclear at existing fleet TWh.
+        _no_new_nuclear = (
+            config.pathway == '1'
+            or (config.pathway in ('2a', '2b') and not pivot_state.pivoted)
+        )
         new_vintages = _derive_delta_vintages(
             ledger, target, config.iso, year, config,
+            nuclear_cap_twh=_existing_nuclear_cap_twh if _no_new_nuclear else float('inf'),
         )
         for v in new_vintages:
             ledger.add(v)
