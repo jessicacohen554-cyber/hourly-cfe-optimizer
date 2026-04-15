@@ -966,44 +966,39 @@ def _filter_pathway_1(
     year: int | None = None,
     demand_growth_level: str = 'Medium',
 ) -> pd.DataFrame:
-    """Pathway 1: VRE + batteries only — no NEW clean firm beyond existing fleet.
+    """Pathway 1: VRE + batteries — no NEW clean firm beyond the existing fleet.
 
-    The ceiling for clean_firm is the existing nuclear/clean-firm share of
-    demand *at that year*, which declines over time as demand grows:
+    Ceiling = existing fleet's BASE-YEAR share of demand (constant across years):
 
-        ceiling_pct(year) = existing_cf_twh / demand_for_year(iso, year, growth)
+        ceiling_pct = round(GRID_MIX_SHARES[iso]['clean_firm'])
 
-    where existing_cf_twh = dispatch_utils.BASE_DEMAND_TWH[iso] * dispatch_utils.GRID_MIX_SHARES[iso]['clean_firm'] / 100
-    (fixed absolute TWh from today's nuclear fleet, locked — no new builds).
+    The EF encodes resource percentages relative to base-year demand.  Existing
+    nuclear produces a fixed absolute TWh (it doesn't grow), so the correct
+    no-new-build ceiling is that same base-year fraction — NOT the shrinking
+    year-t fraction (existing_cf_twh / demand_t).  Using the year-t denominator
+    caused PJM/NEISO to be incorrectly marked infeasible at 90 %+ because the
+    ceiling fell below the EF minimum (29 %) even though those EF mixes only
+    require ~245 TWh of nuclear (well within the 270 TWh existing fleet).
 
-    When iso/year are not supplied (legacy call sites, tests) falls back to
-    clean_firm == 0, which is conservative and never breaks callers.
+    When iso is not supplied (legacy call sites, tests) falls back to
+    clean_firm == 0.
 
     CCS and geothermal remain hard-zero (always new-build only).
     """
     if df.empty:
         return df
 
-    if iso is not None and year is not None:
-        # dispatch_utils holds BASE_DEMAND_TWH and GRID_MIX_SHARES;
-        # import lazily to mirror how the rest of this module uses du.
+    if iso is not None:
         try:
             import dispatch_utils as _du
         except ImportError:
             _du = None  # type: ignore[assignment]
-        base_demand = float(getattr(_du, 'BASE_DEMAND_TWH', {}).get(iso, 0.0))
         existing_cf_pct = float(
             getattr(_du, 'GRID_MIX_SHARES', {}).get(iso, {}).get('clean_firm', 0.0)
         )
-        existing_cf_twh = base_demand * existing_cf_pct / 100.0
-        demand_t = demand_for_year(iso, year, demand_growth_level)
-        # ceiling = existing absolute TWh expressed as % of year-t demand.
-        # floor() so that an exact integer ceiling N means clean_firm <= N-1,
-        # i.e. the allowed band is strictly below any new-build contribution.
-        # For a float ceiling like 23.8, floor gives 23 — same effect as <=.
-        import math as _math
-        raw_ceiling = (existing_cf_twh / demand_t * 100.0) if demand_t > 0 else 0.0
-        ceiling_pct = _math.floor(raw_ceiling)
+        # Constant ceiling: base-year percentage (same units as EF clean_firm).
+        # round() maps 7.9→8, 13.1→13, 18.4→18, 23.8→24, 32.1→32, etc.
+        ceiling_pct = round(existing_cf_pct)
         mask = (df['clean_firm'] <= ceiling_pct) & (df['ccs_ccgt'] == 0)
     else:
         # Legacy fallback: strict zero filter
@@ -1320,12 +1315,10 @@ def select_target_mix(
     ef = load_ef_mixes(iso, threshold)
 
     if pathway == '1':
-        ef = _filter_pathway_1(ef, iso=iso, year=year,
-                               demand_growth_level=config.demand_growth_level)
+        ef = _filter_pathway_1(ef, iso=iso)
     elif pathway in ('2a', '2b'):
         if pivot_state is None or not pivot_state.pivoted:
-            ef = _filter_pathway_1(ef, iso=iso, year=year,
-                                   demand_growth_level=config.demand_growth_level)
+            ef = _filter_pathway_1(ef, iso=iso)
         # else: full EF available post-pivot (clean firm unlocked)
     elif pathway == '3':
         ef = _filter_pathway_3(ef)
