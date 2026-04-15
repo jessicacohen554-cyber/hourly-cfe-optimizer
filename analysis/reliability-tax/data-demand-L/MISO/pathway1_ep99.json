@@ -15,18 +15,18 @@
   },
   "feasibility": {
     "physical": false,
-    "economic": true,
+    "economic": false,
     "notes": [
-      "2025: pathway_1_filter_empty"
+      "2026: pathway_1_filter_empty"
     ]
   },
   "headline": {
-    "achieved_cfe_pct": 0.0,
-    "undiscounted_cost_usd": 0.0,
-    "npv_at_5pct": 0.0,
-    "npv_at_7pct": 0.0,
-    "npv_at_9pct": 0.0,
-    "endpoint_threshold": null,
+    "achieved_cfe_pct": 39.5066,
+    "undiscounted_cost_usd": 19386604164.0,
+    "npv_at_5pct": 19386604164.0,
+    "npv_at_7pct": 19386604164.0,
+    "npv_at_9pct": 19386604164.0,
+    "endpoint_threshold": 30.0,
     "pivot": {
       "pivoted": false,
       "pivot_year": null,
@@ -34,20 +34,77 @@
     }
   },
   "tables": {
-    "annual_buildout": [],
-    "annual_cost": [],
+    "annual_buildout": [
+      {
+        "year": 2025,
+        "new_vintages": [
+          {
+            "resource": "solar",
+            "twh_per_year": 13.275,
+            "locked_lcoe_usd_per_mwh": 66.0,
+            "tx_adder_usd_per_mwh": 4.0
+          },
+          {
+            "resource": "wind",
+            "twh_per_year": 106.203,
+            "locked_lcoe_usd_per_mwh": 52.0,
+            "tx_adder_usd_per_mwh": 9.0
+          },
+          {
+            "resource": "hydro",
+            "twh_per_year": 13.275,
+            "locked_lcoe_usd_per_mwh": 0.0,
+            "tx_adder_usd_per_mwh": 0.0
+          },
+          {
+            "resource": "wind",
+            "twh_per_year": 46.464,
+            "locked_lcoe_usd_per_mwh": 52.0,
+            "tx_adder_usd_per_mwh": 9.0
+          },
+          {
+            "resource": "battery8",
+            "twh_per_year": 23.232,
+            "locked_lcoe_usd_per_mwh": 10.89,
+            "tx_adder_usd_per_mwh": 0.0
+          },
+          {
+            "resource": "uprate",
+            "twh_per_year": 7.569,
+            "locked_lcoe_usd_per_mwh": 25.0,
+            "tx_adder_usd_per_mwh": 0.0
+          },
+          {
+            "resource": "ccs_ccgt",
+            "twh_per_year": 78.721,
+            "locked_lcoe_usd_per_mwh": 117.0,
+            "tx_adder_usd_per_mwh": 2.0
+          }
+        ]
+      }
+    ],
+    "annual_cost": [
+      {
+        "year": 2025,
+        "demand_twh": 663.77,
+        "gross_operating_usd": 20051934651.0,
+        "capacity_rev_netted_usd": 665330487.0,
+        "net_annual_cost_usd": 19386604164.0,
+        "achieved_cfe_pct": 39.507
+      }
+    ],
     "endpoint_hourly_dispatch": null,
     "stranding_ledger": [
       {
         "resource": "solar",
-        "pathway_twh": 0.0,
+        "pathway_twh": 13.275,
         "pathway3_twh": 1353.673,
         "stranded_twh": 0.0,
         "stranded_book_value_usd": 0.0
       },
       {
         "resource": "wind",
-        "pathway_twh": 0.0,
+        "pathway_twh": 152.667,
         "pathway3_twh": 3892.284,
         "stranded_twh": 0.0,
         "stranded_book_value_usd": 0.0
@@ -61,7 +118,7 @@
       },
       {
         "resource": "battery8",
-        "pathway_twh": 0.0,
+        "pathway_twh": 23.232,
         "pathway3_twh": 108.236,
         "stranded_twh": 0.0,
         "stranded_book_value_usd": 0.0
@@ -75,8 +132,40 @@
       }
     ]
   },
-  "retirement_timeline": [],
-  "vre_curtailment_at_endpoint": {},
-  "endpoint_mix_pct": {},
-  "endpoint_storage_pct": {}
+  "retirement_timeline": [
+    {
+      "year": 2025,
+      "clean_pct": 39.507,
+      "coal_retired_gw": 13.126,
+      "oil_retired_gw": 0.0,
+      "gas_retired_gw": 11.598,
+      "coal_retired_twh": 63.24,
+      "oil_retired_twh": 0.0,
+      "gas_retired_twh": 45.72
+    }
+  ],
+  "vre_curtailment_at_endpoint": {
+    "solar": 0.0,
+    "wind": 0.0,
+    "wind_batt8": 0.0
+  },
+  "endpoint_mix_pct": {
+    "clean_firm": 13.0,
+    "solar": 2.0,
+    "wind": 16.0,
+    "hydro": 2.0,
+    "offshore_wind": 0.0,
+    "geothermal": 0.0,
+    "ccs_ccgt": 0.0,
+    "solar_batt4": 0.0,
+    "solar_batt8": 0.0,
+    "wind_batt4": 0.0,
+    "wind_batt8": 7.0
+  },
+  "endpoint_storage_pct": {
+    "battery_dispatch_pct": 0.0,
+    "battery8_dispatch_pct": 0.0,
+    "ldes_dispatch_pct": 0.0,
+    "h2_dispatch_pct": 0.0
+  }
 }
