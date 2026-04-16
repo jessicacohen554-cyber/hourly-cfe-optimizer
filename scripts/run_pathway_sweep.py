@@ -73,7 +73,9 @@ from typing import NamedTuple
 
 ALL_ISOS = ('CAISO', 'ERCOT', 'PJM', 'NYISO', 'NEISO', 'MISO', 'SPP')
 ALL_PATHWAYS = ('1', '1a', '1b', '2a', '2b', '3')
-ALL_ENDPOINTS = (0.90, 0.95, 0.975, 0.99, 0.999)
+# Card S — 10 endpoints: 60/70/75/80/85 added alongside the original 5 so the
+# gas-peaker hump at medium thresholds is visible in the reliability tax.
+ALL_ENDPOINTS = (0.60, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 0.975, 0.99, 0.999)
 DEMAND_GROWTH_LEVELS = ('Low', 'Medium', 'High')
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
