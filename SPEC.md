@@ -5977,3 +5977,45 @@ The sub-project layers on top of the existing 8-step pipeline and reuses (withou
 ### 24.3 Status
 
 Prompt 1A (discovery + README) complete. Prompts 1B+ will lock methodology and begin implementation. No scripts, no results, no dashboard page exist yet for this sub-project.
+
+### 24.4 Methodology Rewrite (Apr 16, 2026)
+
+Mid-project audit revealed the original methodology (Cards M, F, K) was landing on the wrong story. The existing optimizer (`scripts/step_2_3_pathway_optimizer.py`) never builds new gas in any pathway — it only adds clean resources and lets existing gas retire endogenously. Result: at high CFE targets, P1a (VRE-only) produces absurd VRE+storage overbuild (e.g., MISO P1a ep99.9 = 5,280 GW new-build for 237 GW peak demand = 22×) rather than the intended "stranded peaker" story. The published JSON payloads additionally carry bugs (zeroed costs, `achieved_cfe_pct=0`, mislabeled capacity) from generator scripts that read the wrong fields. Raw optimizer run JSONs are structurally valid (`analysis/reliability-tax/data/<ISO>/pathway*_ep*.json` — verified ERCOT P1a ep95 has achieved_cfe=95.25% and real cost/buildout data).
+
+The rewrite reframes "reliability tax" as **absolute ratepayer cost under each pathway**, computed gross (not netted against capacity payments), with the comparative story told through the delta between P1a and P3.
+
+**Card M' — Capacity market treatment (SUPERSEDES Card M).** Remove capacity-market-revenue netting entirely. Reliability tax is a gross ratepayer-cost metric. Capacity payments are a transfer within the ratepayer–developer system, not a cost reduction. ERCOT and SPP (energy-only ISOs) are no longer awkward exceptions. Any existing `capacity_rev_netted_usd` fields stay in the raw run JSON but are NOT consumed by the reliability-tax metric or the dashboard payloads.
+
+**Card U (NEW) — New-build gas in the build menu.** The pathway optimizer is extended to allow new-build gas (CCGT only, for simplicity) as a reliability resource. Clean resources build first subject to a VRE floor ratchet (capacity year-over-year cannot decrease); any residual reliability gap after clean dispatch is filled by new-build CCGT sized to match peak-net-of-clean. Per-vintage tracking: year built, initial MW, annual CF, retirement year, cumulative recovered revenue. Cost inputs reused from `pipeline_config.py`: `NEW_CCGT_COST_KW_YR` (annualized capex+FOM by ISO, range $88–$114/kW-yr) and `EXISTING_GAS_FOM_KW_YR` ($13–$17/kW-yr). Fuel cost comes from the existing fossil-dispatch logic. Step 2.2A (`scripts/step2_2a_cost_optimization.py`) already embeds the sizing formula (residual-demand → new-gas MW) and cost application — the pathway optimizer must port this pattern, NOT duplicate constants.
+
+**Card F' — Stranding value calc (SUPERSEDES Card F).** For every new-build gas vintage, accumulate dispatch revenue + (existing-fleet) FOM recovery year over year. If annual CF falls below 15% for two consecutive years, the vintage is marked stranded and the unrecovered portion of its book value is written off. Stranded capex for a vintage = `overnight_capex × (1 − cumulative_recovered_revenue / (capex + required_return_over_life))`. Primary reporting metric is undiscounted cumulative stranded capex 2025–2050; NPV@7% is the secondary metric. The 15% CF threshold is the developer-breakeven rule of thumb and is the single defensible knob; it must be documented on the page and sensitivity-tested against 10% and 20%.
+
+**Card K' — Stranding definition (SUPERSEDES Card K).** Absolute, not comparative. A new-gas vintage is stranded per the Card F' CF-based test applied to its own pathway, independent of other pathways. The P1a-vs-P3 comparison survives as the **headline narrative device** (delta in reliability tax $/MWh) but not as the definition of stranding itself. Every pathway has some reliability tax; P3 has a small one (it still builds some peakers to handle tails), P1a has a large one. Existing clean firm in P2a/P2b/P3 is never stranded — it serves real load across the horizon.
+
+**Reliability Tax formula (locked):**
+```
+reliability_tax_$_per_MWh[pathway, ISO]
+  = [Σ_years annualized_new_gas_capex
+     + Σ_years new_gas_FOM
+     + Σ_years existing_gas_FOM_carried_forward
+     + Σ_years priced_VRE_curtailment
+     + Σ_years annualized_VRE_storage_overbuild_capex]
+    ÷ Σ_years demand_MWh
+```
+Each component is reported separately in stacked-bar visualizations. "Overbuild" for VRE+storage = capacity whose energetic contribution (dispatched MWh) is below some CF threshold (same 15% default) — otherwise it is serving real load. Curtailment is priced at the weighted-average VRE LCOE.
+
+**Card S (NEW) — Extended endpoint coverage.** Add 5 lower endpoint targets (60%, 70%, 75%, 80%, 85%) to the run set so the "hump" of new-gas builds at medium thresholds is visible. Full set: 60/70/75/80/85/90/95/97.5/99/99.9 = 10 endpoints × 5 pathways × 7 ISOs = 350 runs. Per-run wall-clock has been reported by the user as "~90 seconds" — budget ~8–9 hours for the full re-run. P1a ep99.9 is the single most informative run (climbs through every intermediate CFE target on the way up); if compute is tight, its year-by-year trajectory is a cheap proxy for the full endpoint sweep.
+
+**Downstream implications:**
+- `scripts/step_2_3_pathway_optimizer.py` is rewritten to implement Card U (new-gas build logic ported from step2_2a). All 5 pathways inherit the capability, but P1a/P1b still forbid new clean firm per the original Card R.
+- `scripts/run_pathway_sweep.py` is extended to include the 5 new endpoints (Card S).
+- `analysis/reliability-tax/data/` is regenerated end-to-end. Old MANIFEST is preserved in `analysis/reliability-tax/data-archive-2026-04-16/` for reference.
+- `reliability_tax/charts/data_loader.py` is updated with the new endpoint list; `gen_section2_overbuild.py` and `gen_section3_reliability_tax.py` are rewritten against the new schema (new-gas vintages + stranding ledger); `gen_sankey.py` and `gen_four_journeys.py` are updated for Card K' framing.
+- `dashboard/reliability-tax.html` narrative, charts, and section structure are rewritten against Cards M', F', K', U, S. Capacity-market references are deleted. ERCOT-specific callout acknowledges energy-only scarcity-price recovery.
+- `research_paper.html`, `optimizer_methodology.html`, and any homepage mention of reliability tax / stranding are brought in line.
+
+**Verification gate (before declaring done):**
+- ERCOT P1a ep95: new-gas build nonzero in at least one year between 2030–2045, and at least some portion is CF<15% by 2050 (i.e., the hump+strand pattern appears).
+- No JSON payload contains `capacity_rev_netted_usd`, `net_fom_million_usd`, or any "net of capacity" language.
+- `total_new_build_gw / peak_demand_gw` for any pathway does not exceed 5× (sanity ceiling; current MISO 22× indicates model failure).
+- Headline tax for P1a > headline tax for P3 in every ISO (directionally, the delta is the whole story).
