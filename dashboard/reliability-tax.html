@@ -1,0 +1,1538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Reliability Tax | The 8,760 Problem</title>
+    <meta name="description" content="What you pay when reliability is treated as a residual rather than a design objective. Four decarbonization pathways across seven US ISOs, five endpoints.">
+    <meta property="og:title" content="The Reliability Tax">
+    <meta property="og:description" content="Planning for clean and affordable without designing for reliability builds a second grid — the gas fleet you still need but no longer use.">
+    <meta property="og:type" content="article">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/article.css">
+    <link rel="stylesheet" href="styles/scrollytell.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="js/nav.js"></script>
+    <script src="js/chart-colors.js"></script>
+    <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
+    <script src="js/shared-footer.js"></script>
+    <style>
+        /* ===== Page-local scaffolding only — all components use shared classes ===== */
+
+        /* Reading progress bar (scroll indicator, above nav) */
+        .reading-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            width: 0%;
+            background: linear-gradient(90deg, var(--navy), var(--hydro) 25%, var(--wind) 50%, var(--solar) 75%, var(--red));
+            z-index: 10000;
+            transition: width 0.1s linear;
+            pointer-events: none;
+        }
+
+        /* Hero intro lead paragraph */
+        .tax-hero-lead {
+            max-width: 820px;
+            margin: 0 auto var(--space-xl);
+            font-size: 1.08rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            text-align: center;
+        }
+        .tax-hero-definition {
+            max-width: 820px;
+            margin: 0 auto;
+            padding: 18px 24px;
+            background: rgba(255,255,255,0.85);
+            border-left: 3px solid var(--red);
+            border-radius: 8px;
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .tax-hero-definition strong {
+            color: var(--navy);
+            font-weight: 700;
+        }
+
+        /* Section-anchor placeholders (visible during scaffolding build-out) */
+        .section-stub {
+            max-width: 940px;
+            margin: 0 auto;
+            padding: 48px 24px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.88rem;
+            border: 1px dashed rgba(0,0,0,0.12);
+            border-radius: 12px;
+            background: rgba(255,255,255,0.5);
+        }
+        .section-stub strong {
+            display: block;
+            font-family: var(--font-heading);
+            font-size: 1rem;
+            color: var(--navy);
+            margin-bottom: 6px;
+        }
+
+        /* ===== Act 1: Trilemma click-to-advance ===== */
+        .trilemma-wrap {
+            max-width: 940px;
+            margin: 0 auto;
+        }
+        .trilemma-stage {
+            position: relative;
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-xl);
+            padding: 28px 24px 20px;
+            box-shadow: var(--shadow-md);
+            min-height: 520px;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            overflow: hidden;
+        }
+        .trilemma-svg-wrap {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            min-height: 360px;
+        }
+        .trilemma-svg {
+            width: 100%;
+            max-width: 640px;
+            height: auto;
+            display: block;
+        }
+        .trilemma-axis { transition: opacity 0.7s ease, stroke 0.7s ease; }
+        .trilemma-axis-label { transition: opacity 0.7s ease, fill 0.7s ease; }
+        .trilemma-axis.is-faded,
+        .trilemma-axis-label.is-faded { opacity: 0.22; }
+
+        .trilemma-dot {
+            transition: cx 0.8s cubic-bezier(0.4,0,0.2,1),
+                        cy 0.8s cubic-bezier(0.4,0,0.2,1),
+                        r 0.5s ease,
+                        opacity 0.5s ease,
+                        fill 0.5s ease;
+        }
+        .trilemma-dot-label { transition: opacity 0.5s ease, transform 0.8s cubic-bezier(0.4,0,0.2,1); }
+
+        .trilemma-caption {
+            margin-top: var(--space-md);
+            padding: 16px 20px;
+            background: var(--bg-alt);
+            border-left: 3px solid var(--hydro);
+            border-radius: 0 8px 8px 0;
+            min-height: 78px;
+        }
+        .trilemma-caption.state-2 { border-left-color: var(--wind); }
+        .trilemma-caption.state-3 { border-left-color: var(--red); }
+        .trilemma-caption-eyebrow {
+            font-family: var(--font-heading);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .trilemma-caption-title {
+            font-family: var(--font-heading);
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+        .trilemma-caption-body {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .trilemma-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: var(--space-md);
+            flex-wrap: wrap;
+        }
+        .trilemma-steps {
+            display: flex;
+            gap: 6px;
+        }
+        .trilemma-step-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.15);
+            transition: background 0.3s, transform 0.3s;
+        }
+        .trilemma-step-dot.active { background: var(--navy); transform: scale(1.25); }
+
+        .trilemma-advance {
+            font-family: var(--font-heading);
+            font-size: 0.88rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            color: #FFFFFF;
+            background: var(--navy);
+            border: none;
+            border-radius: var(--radius-pill);
+            padding: 10px 22px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+            min-height: 44px;
+        }
+        .trilemma-advance:hover {
+            background: var(--red);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(239,68,68,0.3);
+        }
+        .trilemma-advance[disabled] {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .trilemma-reset {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 8px 14px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            border-radius: var(--radius-pill);
+            cursor: pointer;
+            font-family: var(--font-heading);
+            min-height: 44px;
+        }
+        .trilemma-reset:hover {
+            background: var(--bg-alt-warm);
+            border-color: var(--navy);
+            color: var(--navy);
+        }
+        .trilemma-closing {
+            max-width: 820px;
+            margin: var(--space-lg) auto 0;
+            padding: 18px 24px;
+            background: rgba(255,255,255,0.85);
+            border-left: 3px solid var(--red);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(12px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .trilemma-closing.visible { opacity: 1; transform: translateY(0); }
+        .trilemma-closing strong { color: var(--navy); font-weight: 700; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .trilemma-dot, .trilemma-dot-label,
+            .trilemma-axis, .trilemma-axis-label {
+                transition: none !important;
+            }
+        }
+
+        /* ===== Hook: You Already Built a Second Grid ===== */
+        .hook-wrap {
+            max-width: 1080px;
+            margin: 0 auto;
+        }
+        .hook-grid {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: var(--space-xl);
+            align-items: center;
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-xl);
+            padding: 32px;
+            box-shadow: var(--shadow-md);
+        }
+        .hook-cell {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: var(--space-sm);
+        }
+        .hook-cell-title {
+            font-family: var(--font-heading);
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        /* --- Gauge --- */
+        .hook-gauge-svg {
+            width: 240px;
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        .hook-gauge-value {
+            font-family: var(--font-heading);
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--navy);
+            line-height: 1.1;
+            margin-top: 4px;
+        }
+        .hook-gauge-value .unit {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-left: 4px;
+        }
+        .hook-gauge-caption {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+            max-width: 280px;
+        }
+        .hook-gauge-emph {
+            font-family: var(--font-heading);
+            font-weight: 700;
+            color: var(--red-text);
+            margin-top: 6px;
+            font-size: 0.92rem;
+        }
+        .hook-gauge-needle {
+            transform-origin: 120px 130px;
+            transform: rotate(-90deg);
+            transition: transform 1.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .hook-gauge-needle.animate {
+            transform: rotate(var(--needle-angle, -76deg));
+        }
+
+        /* --- Center Reliability Tax label + headline --- */
+        .hook-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 10px;
+            min-width: 180px;
+        }
+        .hook-center-label {
+            font-family: var(--font-heading);
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            color: var(--red-text);
+            padding: 6px 14px;
+            border: 1.5px solid var(--red-text);
+            border-radius: var(--radius-pill);
+            background: rgba(239, 68, 68, 0.06);
+        }
+        .hook-center-value {
+            font-family: var(--font-heading);
+            font-size: 2.8rem;
+            font-weight: 800;
+            color: var(--red-text);
+            line-height: 1;
+        }
+        .hook-center-subunit {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+        .hook-center-caption {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+            max-width: 200px;
+        }
+
+        /* --- Ghost grid map --- */
+        .hook-map-svg {
+            width: 320px;
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        .hook-map-caption {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+            max-width: 320px;
+        }
+        .hook-map-emph {
+            font-family: var(--font-heading);
+            font-weight: 700;
+            color: var(--navy);
+            font-size: 0.92rem;
+            margin-top: 6px;
+        }
+        .hook-map-ghost {
+            opacity: 0;
+            transition: opacity 1.2s ease 0.4s, transform 1.2s ease 0.4s;
+            transform: translate(12px, 10px);
+        }
+        .hook-map-ghost.animate { opacity: 1; transform: translate(12px, 10px); }
+
+        /* Footnote under hook */
+        .hook-footnote {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: var(--space-md);
+            line-height: 1.6;
+            max-width: 820px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .hook-gauge-needle, .hook-map-ghost { transition: none !important; }
+            .hook-gauge-needle { transform: rotate(var(--needle-angle, -76deg)); }
+            .hook-map-ghost { opacity: 1; }
+        }
+
+        /* ─────────────────────────────────────────────────────────────
+           Section 1 — The Wall
+           ───────────────────────────────────────────────────────────── */
+        .wall-wrap {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 32px 28px;
+            box-shadow: var(--shadow-md);
+            margin-top: var(--space-xl);
+        }
+        .wall-iso-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: var(--space-lg);
+        }
+        .wall-iso-btn {
+            font-family: var(--font-body);
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: var(--radius-pill);
+            border: 1.5px solid var(--border-light);
+            background: #FFFFFF;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-height: 36px;
+        }
+        .wall-iso-btn:hover {
+            border-color: var(--navy);
+            color: var(--navy);
+        }
+        .wall-iso-btn.active {
+            background: var(--navy);
+            border-color: var(--navy);
+            color: #FFFFFF;
+        }
+        .wall-iso-btn[data-iso="CAISO"].active { background: var(--iso-caiso); border-color: var(--iso-caiso); color: #1A2744; }
+        .wall-iso-btn[data-iso="ERCOT"].active { background: var(--iso-ercot); border-color: var(--iso-ercot); color: #FFFFFF; }
+        .wall-iso-btn[data-iso="MISO"].active  { background: var(--iso-miso);  border-color: var(--iso-miso);  color: #FFFFFF; }
+        .wall-iso-btn[data-iso="NEISO"].active { background: var(--iso-neiso); border-color: var(--iso-neiso); color: #FFFFFF; }
+        .wall-iso-btn[data-iso="NYISO"].active { background: var(--iso-nyiso); border-color: var(--iso-nyiso); color: #FFFFFF; }
+        .wall-iso-btn[data-iso="PJM"].active   { background: var(--iso-pjm);   border-color: var(--iso-pjm);   color: #FFFFFF; }
+        .wall-iso-btn[data-iso="SPP"].active   { background: var(--iso-spp);   border-color: var(--iso-spp);   color: #FFFFFF; }
+
+        .wall-grid {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: var(--space-xl);
+            align-items: start;
+        }
+        .wall-chart-cell {
+            min-width: 0;
+        }
+        .wall-chart-title {
+            font-family: var(--font-heading);
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 4px;
+        }
+        .wall-chart-sub {
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: var(--space-md);
+        }
+        .wall-chart-canvas {
+            position: relative;
+            height: 340px;
+            min-height: 300px;
+        }
+        .wall-chart-caption {
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: var(--space-sm);
+            line-height: 1.5;
+            font-style: italic;
+        }
+
+        .wall-narrative-cell {
+            background: var(--bg-surface);
+            border-left: 3px solid var(--iso-caiso);
+            border-radius: var(--radius-md);
+            padding: 20px 22px;
+            transition: border-left-color 0.3s ease;
+        }
+        .wall-narrative-eyebrow {
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .wall-narrative-headline {
+            font-family: var(--font-heading);
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1.35;
+            margin-bottom: var(--space-sm);
+        }
+        .wall-narrative-body {
+            font-family: var(--font-body);
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: var(--space-sm);
+        }
+        .wall-narrative-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: var(--space-md);
+        }
+        .wall-stat {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+        }
+        .wall-stat-label {
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+        .wall-stat-value {
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--navy);
+        }
+        .wall-stat-sub {
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .wall-worsthours-wrap {
+            margin-top: var(--space-xl);
+            padding-top: var(--space-xl);
+            border-top: 1px dashed var(--border-light);
+        }
+        .wall-worsthours-title {
+            font-family: var(--font-heading);
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 4px;
+        }
+        .wall-worsthours-sub {
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: var(--space-md);
+            line-height: 1.5;
+        }
+        .wall-worsthours-canvas {
+            position: relative;
+            height: 380px;
+            min-height: 320px;
+        }
+        .wall-worsthours-caption {
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: var(--space-sm);
+            line-height: 1.5;
+            font-style: italic;
+        }
+        .wall-worsthours-hidden {
+            display: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .hook-grid {
+                grid-template-columns: 1fr;
+                gap: var(--space-lg);
+                padding: 24px 20px;
+            }
+            .hook-center-value { font-size: 2.4rem; }
+            .wall-grid { grid-template-columns: 1fr; gap: var(--space-lg); }
+            .wall-narrative-stats { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 768px) {
+            .tax-hero-lead { font-size: 1rem; }
+            .trilemma-stage { padding: 20px 16px 16px; min-height: 460px; }
+            .trilemma-svg-wrap { min-height: 300px; }
+            .hook-gauge-svg { width: 200px; }
+            .hook-map-svg { width: 280px; }
+            .wall-wrap { padding: 22px 18px; }
+            .wall-chart-canvas { height: 300px; }
+            .wall-worsthours-canvas { height: 320px; }
+            .wall-iso-btn { font-size: 0.78rem; padding: 7px 11px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="reading-progress" id="readingProgress" aria-hidden="true"></div>
+    <nav id="topNav"></nav>
+
+    <div class="header" id="pageHeader">
+        <h1>The Reliability Tax</h1>
+        <div class="subtitle">What you pay when reliability is treated as a residual, not a design objective.</div>
+        <div class="header-accent"></div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Hero Intro                                                             -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <section class="content-section" id="hero">
+        <p class="tax-hero-lead fade-in">
+            Grids can be clean, affordable, and reliable &mdash; but only if all three are designed for. When planning optimizes for clean and affordable and assumes reliability will just happen, reliability is paid for implicitly through a redundant fossil fleet that has to stay online to cover the hours solar, wind, and storage can&rsquo;t economically serve. This analysis puts a number on that hidden cost across seven US ISOs and five 2050 CFE endpoints.
+        </p>
+        <div class="tax-hero-definition fade-in">
+            <strong>The reliability tax</strong> = the fixed costs of the gas fleet that must remain online to fill hours VRE and storage cannot economically serve, net of capacity market revenues, expressed as $/MWh of total consumption.
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Act 1: The Trilemma  (click-to-advance infographic)                    -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">A1</div>
+        <h2>The Trilemma</h2>
+        <p>Every grid faces the same three objectives &mdash; the pathways differ in which one they sacrifice first.</p>
+    </div>
+    <section class="content-section" id="act1-section">
+        <div class="trilemma-wrap">
+            <div class="trilemma-stage">
+                <div class="trilemma-svg-wrap">
+                    <svg class="trilemma-svg" viewBox="0 0 640 380" xmlns="http://www.w3.org/2000/svg"
+                         role="img" aria-labelledby="trilemmaTitle trilemmaDesc">
+                        <title id="trilemmaTitle">Energy trilemma</title>
+                        <desc id="trilemmaDesc">Three-state infographic: affordable + reliable, then adding clean as a third axis, then the clean-affordable plane treated as if reliability were automatic.</desc>
+
+                        <defs>
+                            <marker id="arrowHead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                                <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+                            </marker>
+                        </defs>
+
+                        <!-- Central origin -->
+                        <g id="trilemmaOrigin" transform="translate(320, 220)">
+                            <!-- Affordable axis (horizontal, right) -->
+                            <g id="axisAffordable" class="trilemma-axis" style="color: #1E293B;">
+                                <line x1="0" y1="0" x2="220" y2="0"
+                                      stroke="currentColor" stroke-width="2"
+                                      marker-end="url(#arrowHead)"/>
+                            </g>
+                            <text id="labelAffordable" class="trilemma-axis-label"
+                                  x="228" y="5"
+                                  font-family="Plus Jakarta Sans, DM Sans, sans-serif"
+                                  font-size="14" font-weight="700" fill="#1E293B">
+                                Affordable
+                            </text>
+
+                            <!-- Reliable axis (horizontal, left — mirrored) -->
+                            <g id="axisReliable" class="trilemma-axis" style="color: #1E293B;">
+                                <line x1="0" y1="0" x2="-220" y2="0"
+                                      stroke="currentColor" stroke-width="2"
+                                      marker-end="url(#arrowHead)"/>
+                            </g>
+                            <text id="labelReliable" class="trilemma-axis-label"
+                                  x="-228" y="5" text-anchor="end"
+                                  font-family="Plus Jakarta Sans, DM Sans, sans-serif"
+                                  font-size="14" font-weight="700" fill="#1E293B">
+                                Reliable
+                            </text>
+
+                            <!-- Clean axis (diagonal up, 120° from +x in screen coords => -sin(60)*r, -cos(60)*r approx) -->
+                            <!-- Using (cos 110° * 220, sin 110° * -220) simplified: point up-left at ~60° above horizontal -->
+                            <g id="axisClean" class="trilemma-axis is-faded" style="color: #16A34A;">
+                                <line x1="0" y1="0" x2="0" y2="-200"
+                                      stroke="currentColor" stroke-width="2"
+                                      stroke-dasharray="6 5"
+                                      marker-end="url(#arrowHead)"/>
+                            </g>
+                            <text id="labelClean" class="trilemma-axis-label is-faded"
+                                  x="0" y="-212" text-anchor="middle"
+                                  font-family="Plus Jakarta Sans, DM Sans, sans-serif"
+                                  font-size="14" font-weight="700" fill="#16A34A">
+                                Clean
+                            </text>
+
+                            <!-- Origin marker -->
+                            <circle cx="0" cy="0" r="3" fill="#64748B"/>
+                            <text x="0" y="18" text-anchor="middle"
+                                  font-family="DM Sans, sans-serif"
+                                  font-size="10" fill="#64748B" letter-spacing="1">
+                                ORIGIN
+                            </text>
+
+                            <!-- System dot (starts at fossil optimum on affordable+reliable plane) -->
+                            <g>
+                                <circle id="trilemmaDot" class="trilemma-dot"
+                                        cx="150" cy="0" r="11"
+                                        fill="#64748B"
+                                        stroke="#FFFFFF" stroke-width="2.5"/>
+                                <text id="trilemmaDotLabel" class="trilemma-dot-label"
+                                      x="150" y="-18" text-anchor="middle"
+                                      font-family="DM Sans, sans-serif"
+                                      font-size="11" font-weight="600" fill="#1E293B">
+                                    fossil grid
+                                </text>
+                            </g>
+                        </g>
+                    </svg>
+                </div>
+
+                <div class="trilemma-caption state-1" id="trilemmaCaption">
+                    <div class="trilemma-caption-eyebrow" id="trilemmaStepLabel">State 1 of 3</div>
+                    <div class="trilemma-caption-title" id="trilemmaTitleText">Reliable &amp; affordable.</div>
+                    <div class="trilemma-caption-body" id="trilemmaBody">Two axes. The fossil grid sits at the optimum. This is the 20th-century planning problem: deliver power when customers need it, at the lowest cost.</div>
+                </div>
+
+                <div class="trilemma-controls">
+                    <button type="button" class="trilemma-reset" id="trilemmaReset">Reset</button>
+                    <div class="trilemma-steps" aria-hidden="true">
+                        <div class="trilemma-step-dot active" data-step="1"></div>
+                        <div class="trilemma-step-dot" data-step="2"></div>
+                        <div class="trilemma-step-dot" data-step="3"></div>
+                    </div>
+                    <button type="button" class="trilemma-advance" id="trilemmaAdvance" aria-controls="trilemmaCaption">
+                        Next <span aria-hidden="true">&rarr;</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="trilemma-closing" id="trilemmaClosing">
+                It&rsquo;s not. Here&rsquo;s the story of <strong>the reliability tax</strong>.
+            </div>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Hook: You Already Built a Second Grid                                  -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">H</div>
+        <h2>You Already Built a Second Grid</h2>
+        <p>At 95% CFE under a VRE-only pathway, a gas fleet stays online doing almost nothing &mdash; and you pay its full fixed costs.</p>
+    </div>
+    <section class="content-section" id="hook-section">
+        <div class="hook-wrap">
+            <div class="hook-grid">
+                <!-- LEFT: Gas capacity-factor gauge -->
+                <div class="hook-cell" id="hookGaugeCell">
+                    <div class="hook-cell-title">Gas fleet utilization at 2050, Pathway 1, 95% CFE</div>
+                    <svg class="hook-gauge-svg" viewBox="0 0 240 160" xmlns="http://www.w3.org/2000/svg"
+                         role="img" aria-label="Gauge showing average gas fleet utilization of 4.82% across seven ISOs">
+                        <!-- Gauge arc -->
+                        <defs>
+                            <linearGradient id="gaugeGrad" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stop-color="#0EA5E9"/>
+                                <stop offset="40%" stop-color="#22C55E"/>
+                                <stop offset="70%" stop-color="#F59E0B"/>
+                                <stop offset="100%" stop-color="#EF4444"/>
+                            </linearGradient>
+                        </defs>
+                        <!-- Background arc -->
+                        <path d="M 20 130 A 100 100 0 0 1 220 130"
+                              fill="none" stroke="#E5E7EB" stroke-width="18" stroke-linecap="round"/>
+                        <!-- Colored arc -->
+                        <path d="M 20 130 A 100 100 0 0 1 220 130"
+                              fill="none" stroke="url(#gaugeGrad)" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
+
+                        <!-- Tick labels -->
+                        <text x="20"  y="150" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="11" fill="#566370" font-weight="600">0%</text>
+                        <text x="70"  y="44"  text-anchor="middle" font-family="DM Sans, sans-serif" font-size="10" fill="#566370">25%</text>
+                        <text x="120" y="28"  text-anchor="middle" font-family="DM Sans, sans-serif" font-size="10" fill="#566370">50%</text>
+                        <text x="170" y="44"  text-anchor="middle" font-family="DM Sans, sans-serif" font-size="10" fill="#566370">75%</text>
+                        <text x="220" y="150" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="11" fill="#566370" font-weight="600">100%</text>
+
+                        <!-- Needle pivot -->
+                        <g class="hook-gauge-needle" id="hookGaugeNeedle">
+                            <line x1="120" y1="130" x2="120" y2="48"
+                                  stroke="#1A2744" stroke-width="3" stroke-linecap="round"/>
+                            <circle cx="120" cy="130" r="6" fill="#1A2744"/>
+                            <circle cx="120" cy="130" r="2.5" fill="#FFFFFF"/>
+                        </g>
+                    </svg>
+                    <div class="hook-gauge-value">4.82<span class="unit">% of load</span></div>
+                    <div class="hook-gauge-caption">
+                        Average gas share of 2050 demand across seven ISOs under Pathway 1, at a 95% CFE endpoint.
+                    </div>
+                    <div class="hook-gauge-emph">But you&rsquo;re paying 100% of its fixed costs.</div>
+                </div>
+
+                <!-- CENTER: Reliability Tax label + cumulative headline -->
+                <div class="hook-center">
+                    <div class="hook-center-label">The Reliability Tax</div>
+                    <div class="hook-center-value" id="hookCenterValue">+$2.84T</div>
+                    <div class="hook-center-subunit">extra, 2025&ndash;2050</div>
+                    <div class="hook-center-caption">
+                        Undiscounted cumulative system cost, Pathway 1 vs. Pathway 3 at 95% CFE, summed across seven ISOs.
+                    </div>
+                </div>
+
+                <!-- RIGHT: Ghost grid map -->
+                <div class="hook-cell" id="hookMapCell">
+                    <div class="hook-cell-title">Your grid &mdash; and the one you keep online anyway</div>
+                    <svg class="hook-map-svg" viewBox="0 0 320 200" xmlns="http://www.w3.org/2000/svg"
+                         role="img" aria-label="Stylized US grid with a faded duplicate gas-fleet overlay labeled the second grid you are paying for">
+                        <!-- Ghost (duplicate) fleet — rendered first so it sits behind -->
+                        <g class="hook-map-ghost" id="hookMapGhost">
+                            <!-- Ghost ISO shapes, offset and faded -->
+                            <path d="M 30 80 L 70 60 L 90 90 L 60 130 L 30 110 Z"     fill="rgba(107,114,128,0.25)" stroke="rgba(107,114,128,0.55)" stroke-width="1" stroke-dasharray="4 3"/>
+                            <path d="M 95 110 L 140 100 L 150 150 L 100 160 Z"         fill="rgba(107,114,128,0.25)" stroke="rgba(107,114,128,0.55)" stroke-width="1" stroke-dasharray="4 3"/>
+                            <path d="M 115 55 L 170 50 L 175 100 L 120 100 Z"          fill="rgba(107,114,128,0.25)" stroke="rgba(107,114,128,0.55)" stroke-width="1" stroke-dasharray="4 3"/>
+                            <path d="M 180 75 L 230 70 L 240 120 L 195 135 L 180 110 Z" fill="rgba(107,114,128,0.25)" stroke="rgba(107,114,128,0.55)" stroke-width="1" stroke-dasharray="4 3"/>
+                            <path d="M 250 60 L 290 55 L 295 100 L 260 105 Z"          fill="rgba(107,114,128,0.25)" stroke="rgba(107,114,128,0.55)" stroke-width="1" stroke-dasharray="4 3"/>
+                            <path d="M 245 115 L 290 110 L 285 155 L 250 155 Z"        fill="rgba(107,114,128,0.25)" stroke="rgba(107,114,128,0.55)" stroke-width="1" stroke-dasharray="4 3"/>
+                            <path d="M 255 160 L 285 158 L 280 185 L 258 185 Z"        fill="rgba(107,114,128,0.25)" stroke="rgba(107,114,128,0.55)" stroke-width="1" stroke-dasharray="4 3"/>
+                        </g>
+
+                        <!-- Real grid — ISO-colored shapes using canonical colors -->
+                        <g>
+                            <!-- CAISO -->
+                            <path d="M 18 70 L 58 50 L 78 80 L 48 120 L 18 100 Z"  fill="rgba(245,158,11,0.75)" stroke="#B45309" stroke-width="1.2"/>
+                            <text x="46" y="88"  text-anchor="middle" font-family="DM Sans, sans-serif" font-size="10" font-weight="700" fill="#FFFFFF">CAISO</text>
+                            <!-- ERCOT -->
+                            <path d="M 83 100 L 128 90 L 138 140 L 88 150 Z"       fill="rgba(34,197,94,0.75)"  stroke="#15803D" stroke-width="1.2"/>
+                            <text x="112" y="122" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="10" font-weight="700" fill="#FFFFFF">ERCOT</text>
+                            <!-- MISO -->
+                            <path d="M 103 45 L 158 40 L 163 90 L 108 90 Z"        fill="rgba(249,115,22,0.75)" stroke="#C2410C" stroke-width="1.2"/>
+                            <text x="132" y="70"  text-anchor="middle" font-family="DM Sans, sans-serif" font-size="10" font-weight="700" fill="#FFFFFF">MISO</text>
+                            <!-- PJM -->
+                            <path d="M 168 65 L 218 60 L 228 110 L 183 125 L 168 100 Z" fill="rgba(14,165,233,0.75)" stroke="#0369A1" stroke-width="1.2"/>
+                            <text x="198" y="92"  text-anchor="middle" font-family="DM Sans, sans-serif" font-size="10" font-weight="700" fill="#FFFFFF">PJM</text>
+                            <!-- NYISO -->
+                            <path d="M 238 50 L 278 45 L 283 90 L 248 95 Z"        fill="rgba(233,30,99,0.75)"  stroke="#BE185D" stroke-width="1.2"/>
+                            <text x="260" y="72"  text-anchor="middle" font-family="DM Sans, sans-serif" font-size="9" font-weight="700" fill="#FFFFFF">NYISO</text>
+                            <!-- NEISO -->
+                            <path d="M 233 105 L 278 100 L 273 145 L 238 145 Z"    fill="rgba(156,39,176,0.75)" stroke="#7C3AED" stroke-width="1.2"/>
+                            <text x="255" y="125" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="9" font-weight="700" fill="#FFFFFF">NEISO</text>
+                            <!-- SPP -->
+                            <path d="M 143 60 L 173 58 L 168 105 L 146 105 Z"      fill="rgba(20,184,166,0.75)" stroke="#0D9488" stroke-width="1.2"/>
+                            <text x="158" y="85"  text-anchor="middle" font-family="DM Sans, sans-serif" font-size="10" font-weight="700" fill="#FFFFFF">SPP</text>
+                        </g>
+
+                        <!-- Ghost label arrow + text -->
+                        <g>
+                            <path d="M 140 180 Q 160 175 175 165" fill="none" stroke="#566370" stroke-width="1" stroke-dasharray="3 3"/>
+                            <text x="138" y="190" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="9.5" font-style="italic" fill="#566370">
+                                &larr; the second grid you&rsquo;re paying for
+                            </text>
+                        </g>
+                    </svg>
+                    <div class="hook-map-caption">
+                        The real grid runs on clean sources for 95% of hours. The faded overlay is the gas fleet you still keep online, fully financed, to fill the last 5%.
+                    </div>
+                </div>
+            </div>
+            <div class="hook-footnote">
+                Pathway 1 = VRE + batteries + existing nuclear, no new clean firm. Totals sum Pathway 1 costs across seven feasible ISOs and compare to Pathway 3 (clean firm proactive) at the same 95% endpoint. Source: MANIFEST.json / hook_reliability_tax.json.
+            </div>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 1: The Wall                                                    -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">1</div>
+        <h2>The Wall</h2>
+        <p>Every ISO hits a cost wall somewhere between 90% and 99.9% CFE. The shape of that wall differs &mdash; and tells you how expensive each grid&rsquo;s last mile is when you don&rsquo;t plan for firm clean.</p>
+    </div>
+    <section class="content-section" id="section1">
+        <div class="wall-wrap fade-in">
+            <!-- ISO toggle bar -->
+            <div class="wall-iso-bar" role="tablist" aria-label="Select ISO">
+                <button type="button" class="wall-iso-btn active" data-iso="ALL"   role="tab" aria-selected="true">All ISOs</button>
+                <button type="button" class="wall-iso-btn"        data-iso="CAISO" role="tab" aria-selected="false">CAISO</button>
+                <button type="button" class="wall-iso-btn"        data-iso="ERCOT" role="tab" aria-selected="false">ERCOT</button>
+                <button type="button" class="wall-iso-btn"        data-iso="MISO"  role="tab" aria-selected="false">MISO</button>
+                <button type="button" class="wall-iso-btn"        data-iso="NEISO" role="tab" aria-selected="false">NEISO</button>
+                <button type="button" class="wall-iso-btn"        data-iso="NYISO" role="tab" aria-selected="false">NYISO</button>
+                <button type="button" class="wall-iso-btn"        data-iso="PJM"   role="tab" aria-selected="false">PJM</button>
+                <button type="button" class="wall-iso-btn"        data-iso="SPP"   role="tab" aria-selected="false">SPP</button>
+            </div>
+
+            <!-- Hockey stick + narrative grid -->
+            <div class="wall-grid">
+                <!-- LEFT: Hockey stick chart -->
+                <div class="wall-chart-cell">
+                    <div class="wall-chart-title" id="wallChartTitle">The hockey stick: marginal cost of the last mile</div>
+                    <div class="wall-chart-sub" id="wallChartSub">Marginal $ per CFE percentage point, Pathway 1, 2025&ndash;2050 undiscounted.</div>
+                    <div class="wall-chart-canvas">
+                        <canvas id="wallHockeyChart" aria-label="Marginal cost per CFE percentage point, by ISO"></canvas>
+                    </div>
+                    <div class="wall-chart-caption">
+                        Each point is the undiscounted marginal cost of the next CFE percentage point under Pathway 1
+                        (VRE + batteries + existing nuclear). Values near zero indicate a plateau &mdash;
+                        additional percentage points are physically unreachable. Negative values mean moving to the
+                        higher endpoint is actually cheaper because the optimizer restructures the mix.
+                    </div>
+                </div>
+
+                <!-- RIGHT: Narrative panel -->
+                <aside class="wall-narrative-cell" id="wallNarrativeCell" aria-live="polite">
+                    <div class="wall-narrative-eyebrow" id="wallNarrativeEyebrow">Across seven ISOs</div>
+                    <div class="wall-narrative-headline" id="wallNarrativeHeadline">
+                        Every grid hits a wall &mdash; but the wall looks different in every region.
+                    </div>
+                    <div class="wall-narrative-body" id="wallNarrativeBody">
+                        Under Pathway 1, seven ISOs reach 95% CFE at widely different costs, and only a
+                        subset can climb further. Solar-heavy CAISO and wind-heavy ERCOT/MISO hit their
+                        walls early; hydro- and offshore-wind-backed NEISO and NYISO coast further on
+                        existing clean capacity. The shape of each curve is the signature of the
+                        underlying resource mix.
+                    </div>
+                    <div class="wall-narrative-stats" id="wallNarrativeStats">
+                        <div class="wall-stat">
+                            <div class="wall-stat-label">Gas fleet at 95% CFE</div>
+                            <div class="wall-stat-value" id="wallStatGasGw">15.7 GW</div>
+                            <div class="wall-stat-sub">vs. 299 GW existing in 2025</div>
+                        </div>
+                        <div class="wall-stat">
+                            <div class="wall-stat-label">2050 demand served</div>
+                            <div class="wall-stat-value" id="wallStatDemandTwh">5,079 TWh</div>
+                            <div class="wall-stat-sub">medium demand growth</div>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- Worst-100-hour dispatch stack (per-ISO only) -->
+            <div class="wall-worsthours-wrap" id="wallWorstHoursWrap">
+                <div class="wall-worsthours-title" id="wallWorstHoursTitle">The 100 worst hours of 2050 &mdash; select an ISO above</div>
+                <div class="wall-worsthours-sub" id="wallWorstHoursSub">
+                    Pick a single ISO to reveal the hourly dispatch stack of the 100 hours with the highest residual load
+                    (demand minus VRE) under Pathway 1 at a 95% CFE endpoint. These are the hours the gas fleet is kept
+                    online to serve.
+                </div>
+                <div class="wall-worsthours-canvas wall-worsthours-hidden" id="wallWorstHoursCanvasWrap">
+                    <canvas id="wallWorstHoursChart" aria-label="Worst-100-hour dispatch stack for selected ISO"></canvas>
+                </div>
+                <div class="wall-worsthours-caption" id="wallWorstHoursCaption">
+                    Each bar = one of the 100 worst residual-load hours in 2050. Stack shows dispatch by resource (wind,
+                    solar, battery, LDES, clean firm, gas). Gas appears when storage is depleted during sustained
+                    low-VRE events.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Sections 2–6 (placeholders — built in Prompt 5B)                       -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <section class="content-section" id="section2">
+        <div class="section-stub"><strong>Section 2: Overbuild</strong>Built in Prompt 5B.</div>
+    </section>
+    <section class="content-section" id="section3">
+        <div class="section-stub"><strong>Section 3: The Tax</strong>Built in Prompt 5B.</div>
+    </section>
+    <section class="content-section" id="section4">
+        <div class="section-stub"><strong>Section 4: Four Journeys</strong>Built in Prompt 5B.</div>
+    </section>
+    <section class="content-section" id="section5">
+        <div class="section-stub"><strong>Section 5: Stranding</strong>Built in Prompt 5B.</div>
+    </section>
+    <section class="content-section" id="section6">
+        <div class="section-stub"><strong>Section 6: Cost of Waiting</strong>Built in Prompt 5B.</div>
+    </section>
+    <section class="content-section" id="closing">
+        <div class="section-stub"><strong>Closing synthesis</strong>Built in Prompt 5B.</div>
+    </section>
+
+    <footer id="siteFooter" data-footer-note="The Reliability Tax — analysis of four decarbonization pathways across 7 US ISOs and 5 CFE endpoints."></footer>
+
+    <script>
+    (function() {
+        'use strict';
+
+        // ===== Reading progress bar =====
+        (function initReadingProgress() {
+            var bar = document.getElementById('readingProgress');
+            if (!bar) return;
+            var ticking = false;
+            function update() {
+                var scrollY = window.scrollY || window.pageYOffset;
+                var docH = document.documentElement.scrollHeight - window.innerHeight;
+                var pct = docH > 0 ? Math.min(100, Math.max(0, (scrollY / docH) * 100)) : 0;
+                bar.style.width = pct + '%';
+                ticking = false;
+            }
+            window.addEventListener('scroll', function() {
+                if (!ticking) {
+                    requestAnimationFrame(update);
+                    ticking = true;
+                }
+            }, { passive: true });
+            update();
+        })();
+
+        // ===== Act 1: Trilemma click-to-advance =====
+        (function initTrilemma() {
+            var stage = document.getElementById('act1-section');
+            var dot = document.getElementById('trilemmaDot');
+            var dotLabel = document.getElementById('trilemmaDotLabel');
+            var axisClean = document.getElementById('axisClean');
+            var labelClean = document.getElementById('labelClean');
+            var axisReliable = document.getElementById('axisReliable');
+            var labelReliable = document.getElementById('labelReliable');
+            var caption = document.getElementById('trilemmaCaption');
+            var stepLabel = document.getElementById('trilemmaStepLabel');
+            var titleText = document.getElementById('trilemmaTitleText');
+            var bodyText = document.getElementById('trilemmaBody');
+            var advanceBtn = document.getElementById('trilemmaAdvance');
+            var resetBtn = document.getElementById('trilemmaReset');
+            var stepDots = stage ? stage.querySelectorAll('.trilemma-step-dot') : [];
+            var closing = document.getElementById('trilemmaClosing');
+            if (!dot || !advanceBtn) return;
+
+            // State definitions — colors pulled from shared.css palette
+            // State 1: fossil grid on affordable+reliable axis (clean axis faded)
+            // State 2: third axis (clean) extrudes; fossil stays off clean axis
+            // State 3: reliable axis fades; new VRE-only point on clean-affordable face
+            var STATES = [
+                {
+                    step: 1,
+                    eyebrow: 'State 1 of 3',
+                    title: 'Reliable & affordable.',
+                    body: 'Two axes. The fossil grid sits at the optimum. This is the 20th-century planning problem: deliver power when customers need it, at the lowest cost.',
+                    captionClass: 'state-1',
+                    dot: { cx: 150, cy: 0, r: 11, fill: '#64748B', label: 'fossil grid', labelX: 150, labelY: -18 },
+                    cleanFaded: true,
+                    reliableFaded: false
+                },
+                {
+                    step: 2,
+                    eyebrow: 'State 2 of 3',
+                    title: 'Reliable, affordable & clean.',
+                    body: 'A third axis extrudes. Decarbonization becomes an explicit objective. The fossil grid scores zero on it — it sits off the clean axis entirely.',
+                    captionClass: 'state-2',
+                    dot: { cx: 150, cy: 0, r: 11, fill: '#64748B', label: 'fossil grid (no clean)', labelX: 150, labelY: -18 },
+                    cleanFaded: false,
+                    reliableFaded: false
+                },
+                {
+                    step: 3,
+                    eyebrow: 'State 3 of 3',
+                    title: 'But we\u2019re trying to solve it using just affordable and clean, assuming reliability is a guaranteed outcome.',
+                    body: 'The reliable axis fades. A new point lands on the clean-affordable face — VRE + storage, optimized against only two of three objectives. Reliability is treated as something the system delivers on its own.',
+                    captionClass: 'state-3',
+                    // Place the new point in the clean-affordable plane (right + up)
+                    dot: { cx: 110, cy: -140, r: 11, fill: '#EF4444', label: 'VRE + storage only', labelX: 110, labelY: -158 },
+                    cleanFaded: false,
+                    reliableFaded: true
+                }
+            ];
+
+            var currentStep = 0;
+
+            function applyState(idx) {
+                var s = STATES[idx];
+                if (!s) return;
+
+                // Dot
+                dot.setAttribute('cx', s.dot.cx);
+                dot.setAttribute('cy', s.dot.cy);
+                dot.setAttribute('r', s.dot.r);
+                dot.setAttribute('fill', s.dot.fill);
+                if (dotLabel) {
+                    dotLabel.setAttribute('x', s.dot.labelX);
+                    dotLabel.setAttribute('y', s.dot.labelY);
+                    dotLabel.textContent = s.dot.label;
+                }
+
+                // Axes fade
+                if (axisClean) axisClean.classList.toggle('is-faded', !!s.cleanFaded);
+                if (labelClean) labelClean.classList.toggle('is-faded', !!s.cleanFaded);
+                if (axisReliable) axisReliable.classList.toggle('is-faded', !!s.reliableFaded);
+                if (labelReliable) labelReliable.classList.toggle('is-faded', !!s.reliableFaded);
+
+                // Caption
+                caption.classList.remove('state-1', 'state-2', 'state-3');
+                caption.classList.add(s.captionClass);
+                stepLabel.textContent = s.eyebrow;
+                titleText.textContent = s.title;
+                bodyText.textContent = s.body;
+
+                // Step dots
+                stepDots.forEach(function(d, i) {
+                    d.classList.toggle('active', i === idx);
+                });
+
+                // Advance button state + closing
+                var isLast = idx === STATES.length - 1;
+                advanceBtn.disabled = isLast;
+                advanceBtn.innerHTML = isLast
+                    ? 'End'
+                    : 'Next <span aria-hidden="true">&rarr;</span>';
+                if (closing) closing.classList.toggle('visible', isLast);
+            }
+
+            function advance() {
+                if (currentStep < STATES.length - 1) {
+                    currentStep += 1;
+                    applyState(currentStep);
+                }
+            }
+
+            function reset() {
+                currentStep = 0;
+                applyState(0);
+            }
+
+            advanceBtn.addEventListener('click', advance);
+            resetBtn.addEventListener('click', reset);
+
+            // Also allow clicking anywhere on the SVG/stage to advance
+            var stageEl = stage ? stage.querySelector('.trilemma-stage') : null;
+            if (stageEl) {
+                stageEl.addEventListener('click', function(e) {
+                    // Don't double-handle the reset/advance buttons
+                    if (e.target.closest('button')) return;
+                    advance();
+                });
+            }
+
+            // Keyboard: left/right advances/resets when focus is on advance btn
+            advanceBtn.addEventListener('keydown', function(e) {
+                if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); advance(); }
+                if (e.key === 'ArrowLeft') { e.preventDefault(); if (currentStep > 0) { currentStep -= 1; applyState(currentStep); } }
+            });
+
+            // Init
+            applyState(0);
+        })();
+
+        // ===== Section 1: The Wall =====
+        (function initSection1Wall() {
+            if (typeof Chart === 'undefined') return;
+            var wrap = document.getElementById('section1');
+            if (!wrap) return;
+
+            // Canonical ISO colors (shared.css --iso-*)
+            var ISO_COLORS = {
+                CAISO: '#F59E0B',
+                ERCOT: '#22C55E',
+                MISO:  '#F97316',
+                NEISO: '#9C27B0',
+                NYISO: '#E91E63',
+                PJM:   '#0EA5E9',
+                SPP:   '#14B8A6'
+            };
+            // Canonical resource colors for the worst-hours stack
+            var RES_COLORS = {
+                wind:      '#22C55E',
+                solar:     '#F59E0B',
+                battery:   '#06B6D4',
+                ldes:      '#E91E63',
+                cleanFirm: '#6366F1',
+                gas:       '#6B7280'
+            };
+
+            var ISOS = ['CAISO','ERCOT','MISO','NEISO','NYISO','PJM','SPP'];
+
+            // Character blurbs from section1_narratives.json (clean fields only — the
+            // narrative file's "headline"/stats.achieved_cfe/cost_delta fields are
+            // stubs at 0; we do NOT render those.)
+            var CHARACTER = {
+                CAISO: "solar and battery storage dominate the 2050 mix; wind is modest. Summer afternoon peaks expose solar's daily gap.",
+                ERCOT: "wind provides the foundation with solar as secondary. Wind volatility during low-pressure systems creates the worst-hour stress.",
+                MISO:  "solar and wind share the load roughly equally. Winter cold snaps with low wind are the critical stress event.",
+                NEISO: "offshore wind and solar fill most of the gap, but winter gas pipeline constraints historically drive worst-hour scarcity.",
+                NYISO: "hydro provides a firm backbone; offshore wind drives the CFE gains. Winter demand peaks stress the offshore wind resource.",
+                PJM:   "solar is the dominant new resource with substantial wind. Winter polar vortex events with cloud cover define the worst hours.",
+                SPP:   "wind is the workhorse, providing 40-plus percent of annual generation. Summer high-pressure systems (calm, hot) produce the worst hours."
+            };
+
+            // ISO-level stats for the narrative panel (from hook_reliability_tax.json gas % of load + section1 gas_gw)
+            var ISO_STATS = {
+                CAISO: { gasGw: 7.9,  demandTwh: 359,  peakGw: 74.4,  achievedCfe: 95.07 },
+                ERCOT: { gasGw: 5.4,  demandTwh: 1153, peakGw: null,  achievedCfe: 95.25 },
+                MISO:  { gasGw: 0.0,  demandTwh: 1144, peakGw: null,  achievedCfe: 95.85 },
+                NEISO: { gasGw: 0.0,  demandTwh: 180,  peakGw: null,  achievedCfe: 95.07 },
+                NYISO: { gasGw: 0.0,  demandTwh: 249,  peakGw: null,  achievedCfe: 95.03 },
+                PJM:   { gasGw: 0.0,  demandTwh: 1526, peakGw: null,  achievedCfe: 95.01 },
+                SPP:   { gasGw: 2.4,  demandTwh: 468,  peakGw: null,  achievedCfe: 95.00 }
+            };
+
+            // Hockey-stick segments (from section1_hockey_stick.json, all 7 ISOs × 4 endpoint steps).
+            // y = marginal USD per CFE% (plot in $B/pt)
+            var HOCKEY = {
+                CAISO: [{x:95.07,y:125469564303.56},{x:97.61,y:157704998.03},{x:99.02,y:15746068487.23},{x:99.91,y:-11093595112.36}],
+                ERCOT: [{x:95.25,y:311831103307.24},{x:97.50,y:0.0},         {x:99.00,y:8126727346.67},  {x:99.90,y:-6217396824.44}],
+                MISO:  [{x:95.85,y:543924724070.55},{x:97.77,y:0.0},         {x:99.04,y:0.0},             {x:99.91,y:0.0}],
+                NEISO: [{x:95.07,y:-902271682.61},  {x:97.52,y:-268334523.27},{x:99.01,y:28407656443.62}, {x:99.92,y:-1343949113.19}],
+                NYISO: [{x:95.03,y:4664907581.91},  {x:97.54,y:3851585851.79},{x:99.03,y:30594474006.04}, {x:99.92,y:6127650496.63}],
+                PJM:   [{x:95.01,y:-223910947655.41},{x:97.50,y:133023395079.52},{x:99.02,y:-63175553044.08},{x:99.91,y:-706036953.93}],
+                SPP:   [{x:95.00,y:-20185447882.40},{x:97.57,y:4703534350.19},{x:99.00,y:53558414293.01}, {x:99.91,y:-14332075136.26}]
+            };
+
+            // Worst-100-hour dispatch (compact from section1_worst_hours.json)
+            // Each entry: {r:rank, d:demand, s:solar, w:wind, b:battery, l:ldes, cf:cleanFirm, g:gas}
+            var WORST = {"per_iso":{"CAISO":{"demand_twh":358.7,"peak_gw":74.4,"gas_gw":7.9,"hours":[{"r":1,"d":72.51,"s":1.57,"w":9.32,"b":12.97,"l":0.0,"cf":0.0,"g":7.88},{"r":2,"d":71.18,"s":0.54,"w":10.57,"b":30.94,"l":0.0,"cf":0.0,"g":7.88},{"r":3,"d":69.79,"s":2.88,"w":7.36,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":4,"d":71.8,"s":6.58,"w":6.2,"b":30.94,"l":0.0,"cf":0.0,"g":7.88},{"r":5,"d":66.87,"s":1.95,"w":5.98,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":6,"d":69.86,"s":0.01,"w":11.56,"b":30.94,"l":0.0,"cf":0.0,"g":7.88},{"r":7,"d":72.43,"s":5.32,"w":8.86,"b":30.94,"l":0.0,"cf":0.0,"g":7.88},{"r":8,"d":72.7,"s":1.86,"w":13.53,"b":30.94,"l":0.0,"cf":0.0,"g":7.88},{"r":9,"d":71.06,"s":7.21,"w":6.9,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":10,"d":66.84,"s":0.69,"w":11.38,"b":30.94,"l":0.0,"cf":0.0,"g":7.88},{"r":11,"d":70.76,"s":7.91,"w":8.21,"b":12.97,"l":0.0,"cf":0.0,"g":7.88},{"r":12,"d":66.24,"s":2.59,"w":9.56,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":13,"d":69.2,"s":7.29,"w":8.16,"b":12.97,"l":0.0,"cf":0.0,"g":7.88},{"r":14,"d":71.33,"s":11.78,"w":6.05,"b":12.97,"l":0.0,"cf":0.0,"g":7.88},{"r":15,"d":68.75,"s":4.31,"w":11.31,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":16,"d":70.14,"s":2.75,"w":14.6,"b":12.97,"l":0.0,"cf":0.0,"g":7.88},{"r":17,"d":70.94,"s":14.0,"w":5.19,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":18,"d":65.43,"s":1.36,"w":12.72,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":19,"d":73.45,"s":4.37,"w":19.45,"b":30.94,"l":0.0,"cf":0.0,"g":7.88},{"r":20,"d":67.02,"s":4.58,"w":13.11,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":21,"d":70.52,"s":0.14,"w":21.25,"b":12.97,"l":0.0,"cf":0.0,"g":7.88},{"r":22,"d":68.44,"s":9.03,"w":10.64,"b":30.94,"l":0.0,"cf":0.0,"g":7.88},{"r":23,"d":62.78,"s":6.2,"w":8.15,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":24,"d":68.4,"s":0.25,"w":20.3,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":25,"d":62.48,"s":2.16,"w":12.89,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":26,"d":65.85,"s":2.39,"w":16.05,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":27,"d":68.58,"s":4.72,"w":16.9,"b":12.97,"l":0.0,"cf":0.0,"g":7.88},{"r":28,"d":71.83,"s":6.74,"w":18.23,"b":12.97,"l":0.0,"cf":0.0,"g":7.88},{"r":29,"d":68.07,"s":1.48,"w":20.34,"b":12.97,"l":0.0,"cf":0.0,"g":7.88},{"r":30,"d":66.48,"s":4.54,"w":15.89,"b":8.57,"l":0.0,"cf":0.0,"g":7.88},{"r":31,"d":70.08,"s":8.11,"w":16.15,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":32,"d":66.02,"s":8.62,"w":11.86,"b":30.94,"l":0.0,"cf":0.0,"g":7.88},{"r":33,"d":64.75,"s":4.68,"w":15.21,"b":30.94,"l":0.0,"cf":0.0,"g":7.88},{"r":34,"d":71.84,"s":20.28,"w":6.76,"b":12.97,"l":0.0,"cf":0.0,"g":7.88},{"r":35,"d":71.16,"s":18.17,"w":8.38,"b":12.97,"l":0.0,"cf":0.0,"g":7.88},{"r":36,"d":74.31,"s":13.7,"w":16.24,"b":30.94,"l":0.0,"cf":0.0,"g":7.88},{"r":37,"d":69.13,"s":6.41,"w":18.39,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":38,"d":63.71,"s":11.28,"w":8.12,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":39,"d":66.04,"s":15.09,"w":6.71,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":40,"d":65.8,"s":5.28,"w":16.33,"b":12.97,"l":0.0,"cf":0.0,"g":7.88},{"r":41,"d":66.16,"s":5.65,"w":16.38,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":42,"d":66.55,"s":11.5,"w":11.91,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":43,"d":63.05,"s":1.52,"w":18.49,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":44,"d":70.64,"s":13.92,"w":13.85,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":45,"d":66.21,"s":15.38,"w":8.15,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":46,"d":64.38,"s":12.6,"w":9.67,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":47,"d":64.39,"s":4.26,"w":18.12,"b":12.97,"l":0.0,"cf":0.0,"g":7.88},{"r":48,"d":65.39,"s":16.02,"w":7.69,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":49,"d":69.21,"s":12.5,"w":15.56,"b":30.94,"l":0.0,"cf":0.0,"g":7.88},{"r":50,"d":66.27,"s":15.37,"w":9.89,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":51,"d":68.04,"s":18.12,"w":9.16,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":52,"d":67.13,"s":6.77,"w":20.17,"b":30.94,"l":0.0,"cf":0.0,"g":7.88},{"r":53,"d":62.44,"s":11.85,"w":10.52,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":54,"d":72.28,"s":11.55,"w":20.71,"b":30.94,"l":0.0,"cf":0.0,"g":7.88},{"r":55,"d":66.93,"s":8.48,"w":18.55,"b":30.94,"l":0.0,"cf":0.0,"g":7.88},{"r":56,"d":67.92,"s":5.68,"w":22.6,"b":12.97,"l":0.0,"cf":0.0,"g":7.88},{"r":57,"d":66.84,"s":4.52,"w":24.01,"b":30.94,"l":0.0,"cf":0.0,"g":7.37},{"r":58,"d":69.04,"s":15.63,"w":15.83,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":59,"d":70.0,"s":15.07,"w":17.35,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":60,"d":65.46,"s":13.17,"w":15.5,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":61,"d":66.28,"s":4.7,"w":25.11,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":62,"d":61.15,"s":5.1,"w":20.76,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":63,"d":66.14,"s":20.14,"w":11.51,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":64,"d":69.9,"s":11.33,"w":24.58,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":65,"d":64.45,"s":16.79,"w":14.19,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":66,"d":67.28,"s":19.58,"w":14.27,"b":12.97,"l":0.0,"cf":0.0,"g":7.88},{"r":67,"d":68.5,"s":13.24,"w":22.38,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":68,"d":71.98,"s":14.42,"w":24.85,"b":30.94,"l":0.0,"cf":0.0,"g":1.78},{"r":69,"d":67.13,"s":15.77,"w":18.66,"b":30.94,"l":0.0,"cf":0.0,"g":1.76},{"r":70,"d":66.35,"s":19.77,"w":13.95,"b":12.97,"l":0.0,"cf":0.0,"g":7.88},{"r":71,"d":71.23,"s":18.05,"w":20.65,"b":30.94,"l":0.0,"cf":0.0,"g":1.58},{"r":72,"d":65.39,"s":10.77,"w":24.46,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":73,"d":63.03,"s":8.12,"w":24.87,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":74,"d":64.8,"s":9.81,"w":25.13,"b":12.97,"l":0.0,"cf":0.0,"g":7.88},{"r":75,"d":65.44,"s":12.52,"w":23.11,"b":12.97,"l":0.0,"cf":0.0,"g":7.88},{"r":76,"d":72.16,"s":17.9,"w":24.54,"b":12.97,"l":0.0,"cf":0.0,"g":7.88},{"r":77,"d":63.13,"s":13.44,"w":20.98,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":78,"d":62.06,"s":21.43,"w":12.4,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":79,"d":63.35,"s":18.15,"w":17.19,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":80,"d":66.21,"s":24.35,"w":14.08,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":81,"d":61.99,"s":8.19,"w":26.89,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":82,"d":61.53,"s":25.93,"w":9.67,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":83,"d":63.69,"s":20.74,"w":17.45,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":84,"d":65.8,"s":19.98,"w":22.77,"b":12.97,"l":0.0,"cf":0.0,"g":7.88},{"r":85,"d":64.84,"s":29.1,"w":13.01,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":86,"d":64.99,"s":19.9,"w":22.72,"b":22.37,"l":0.0,"cf":0.0,"g":0.0},{"r":87,"d":65.14,"s":24.91,"w":17.96,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":88,"d":65.44,"s":20.5,"w":25.07,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":89,"d":65.6,"s":27.87,"w":18.17,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":90,"d":62.79,"s":19.39,"w":23.85,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":91,"d":64.57,"s":20.83,"w":24.6,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":92,"d":61.62,"s":16.42,"w":27.66,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":93,"d":66.99,"s":34.7,"w":15.57,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":94,"d":64.41,"s":34.45,"w":13.39,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":95,"d":61.42,"s":23.45,"w":22.4,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":96,"d":61.49,"s":18.63,"w":27.48,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":97,"d":62.73,"s":30.48,"w":19.72,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":98,"d":63.96,"s":25.78,"w":25.68,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":99,"d":59.33,"s":23.02,"w":28.1,"b":0.0,"l":0.0,"cf":0.0,"g":7.88},{"r":100,"d":61.24,"s":34.14,"w":22.79,"b":0.0,"l":0.0,"cf":0.0,"g":4.31}]},"ERCOT":{"demand_twh":1153.3,"peak_gw":239.4,"gas_gw":5.4,"hours":[{"r":1,"d":226.27,"s":3.9,"w":53.36,"b":169.0,"l":0.0,"cf":0.0,"g":0.0},{"r":2,"d":204.84,"s":2.16,"w":38.08,"b":54.8,"l":0.0,"cf":0.0,"g":5.41},{"r":3,"d":215.81,"s":18.68,"w":35.58,"b":161.55,"l":0.0,"cf":0.0,"g":0.0},{"r":4,"d":234.21,"s":25.42,"w":50.63,"b":158.16,"l":0.0,"cf":0.0,"g":0.0},{"r":5,"d":224.43,"s":10.65,"w":58.68,"b":63.11,"l":0.0,"cf":0.0,"g":5.41},{"r":6,"d":225.68,"s":21.67,"w":50.27,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":7,"d":224.58,"s":5.81,"w":66.37,"b":152.41,"l":0.0,"cf":0.0,"g":0.0},{"r":8,"d":213.34,"s":7.79,"w":53.34,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":9,"d":229.52,"s":13.03,"w":69.84,"b":146.66,"l":0.0,"cf":0.0,"g":0.0},{"r":10,"d":222.58,"s":16.59,"w":62.83,"b":143.15,"l":0.0,"cf":0.0,"g":0.0},{"r":11,"d":231.87,"s":23.69,"w":65.04,"b":143.14,"l":0.0,"cf":0.0,"g":0.0},{"r":12,"d":213.96,"s":0.01,"w":75.91,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":13,"d":221.6,"s":0.16,"w":85.08,"b":136.37,"l":0.0,"cf":0.0,"g":0.0},{"r":14,"d":218.73,"s":0.76,"w":82.87,"b":135.1,"l":0.0,"cf":0.0,"g":0.0},{"r":15,"d":202.99,"s":16.94,"w":54.53,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":16,"d":229.3,"s":2.81,"w":95.45,"b":131.04,"l":0.0,"cf":0.0,"g":0.0},{"r":17,"d":224.78,"s":16.22,"w":77.89,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":18,"d":209.47,"s":11.65,"w":70.86,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":19,"d":213.86,"s":1.32,"w":88.94,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":20,"d":227.35,"s":17.67,"w":86.84,"b":122.84,"l":0.0,"cf":0.0,"g":0.0},{"r":21,"d":204.35,"s":2.04,"w":81.04,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":22,"d":226.16,"s":9.15,"w":95.91,"b":121.11,"l":0.0,"cf":0.0,"g":0.0},{"r":23,"d":213.57,"s":13.33,"w":83.59,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":24,"d":205.18,"s":20.96,"w":72.82,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":25,"d":214.91,"s":25.02,"w":79.43,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":26,"d":211.62,"s":8.15,"w":93.08,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":27,"d":194.36,"s":10.6,"w":74.4,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":28,"d":207.37,"s":17.5,"w":82.03,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":29,"d":212.56,"s":12.74,"w":96.92,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":30,"d":224.62,"s":19.59,"w":102.45,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":31,"d":231.6,"s":8.27,"w":121.05,"b":102.29,"l":0.0,"cf":0.0,"g":0.0},{"r":32,"d":217.84,"s":25.48,"w":90.71,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":33,"d":202.93,"s":19.41,"w":82.31,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":34,"d":196.56,"s":5.09,"w":92.36,"b":25.15,"l":0.0,"cf":0.0,"g":5.41},{"r":35,"d":224.24,"s":10.15,"w":116.86,"b":97.23,"l":0.0,"cf":0.0,"g":0.0},{"r":36,"d":230.17,"s":10.71,"w":123.09,"b":96.37,"l":0.0,"cf":0.0,"g":0.0},{"r":37,"d":211.47,"s":26.35,"w":90.12,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":38,"d":207.03,"s":24.13,"w":91.09,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":39,"d":206.86,"s":37.92,"w":78.16,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":40,"d":217.38,"s":3.36,"w":123.32,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":41,"d":212.49,"s":8.28,"w":114.18,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":42,"d":210.36,"s":28.03,"w":92.67,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":43,"d":235.82,"s":10.45,"w":136.43,"b":88.93,"l":0.0,"cf":0.0,"g":0.0},{"r":44,"d":220.48,"s":19.7,"w":112.56,"b":88.23,"l":0.0,"cf":0.0,"g":0.0},{"r":45,"d":212.51,"s":30.9,"w":93.61,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":46,"d":227.22,"s":0.15,"w":141.51,"b":85.56,"l":0.0,"cf":0.0,"g":0.0},{"r":47,"d":233.7,"s":14.19,"w":137.06,"b":82.46,"l":0.0,"cf":0.0,"g":0.0},{"r":48,"d":204.04,"s":21.52,"w":100.42,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":49,"d":218.71,"s":13.74,"w":123.95,"b":26.14,"l":0.0,"cf":0.0,"g":5.41},{"r":50,"d":215.04,"s":21.88,"w":112.8,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":51,"d":210.0,"s":39.97,"w":90.88,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":52,"d":204.05,"s":10.38,"w":115.14,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":53,"d":211.41,"s":25.24,"w":108.57,"b":77.6,"l":0.0,"cf":0.0,"g":0.0},{"r":54,"d":196.92,"s":20.41,"w":101.77,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":55,"d":206.12,"s":6.51,"w":125.5,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":56,"d":226.83,"s":16.14,"w":137.03,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":57,"d":199.38,"s":2.23,"w":124.12,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":58,"d":203.18,"s":8.42,"w":122.31,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":59,"d":206.45,"s":46.06,"w":88.65,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":60,"d":203.01,"s":48.74,"w":82.75,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":61,"d":210.35,"s":8.22,"w":131.11,"b":71.03,"l":0.0,"cf":0.0,"g":0.0},{"r":62,"d":236.64,"s":14.38,"w":153.34,"b":68.93,"l":0.0,"cf":0.0,"g":0.0},{"r":63,"d":219.44,"s":11.47,"w":139.09,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":64,"d":222.27,"s":7.03,"w":146.66,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":65,"d":225.3,"s":7.12,"w":149.61,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":66,"d":209.66,"s":18.2,"w":124.02,"b":67.44,"l":0.0,"cf":0.0,"g":0.0},{"r":67,"d":209.64,"s":15.28,"w":127.9,"b":23.59,"l":0.0,"cf":0.0,"g":5.41},{"r":68,"d":217.07,"s":21.12,"w":129.72,"b":59.03,"l":0.0,"cf":0.0,"g":5.41},{"r":69,"d":213.48,"s":2.71,"w":145.64,"b":65.14,"l":0.0,"cf":0.0,"g":0.0},{"r":70,"d":227.55,"s":16.75,"w":152.5,"b":58.3,"l":0.0,"cf":0.0,"g":0.0},{"r":71,"d":212.73,"s":24.78,"w":131.1,"b":56.85,"l":0.0,"cf":0.0,"g":0.0},{"r":72,"d":213.29,"s":20.58,"w":138.09,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":73,"d":205.91,"s":8.61,"w":142.97,"b":54.34,"l":0.0,"cf":0.0,"g":0.0},{"r":74,"d":213.1,"s":22.34,"w":137.1,"b":53.65,"l":0.0,"cf":0.0,"g":0.0},{"r":75,"d":201.35,"s":12.24,"w":137.54,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":76,"d":230.36,"s":21.36,"w":159.96,"b":49.04,"l":0.0,"cf":0.0,"g":0.0},{"r":77,"d":216.61,"s":7.07,"w":161.06,"b":48.48,"l":0.0,"cf":0.0,"g":0.0},{"r":78,"d":226.73,"s":21.14,"w":157.5,"b":48.09,"l":0.0,"cf":0.0,"g":0.0},{"r":79,"d":217.33,"s":23.69,"w":147.9,"b":45.75,"l":0.0,"cf":0.0,"g":0.0},{"r":80,"d":230.69,"s":15.69,"w":169.66,"b":45.34,"l":0.0,"cf":0.0,"g":0.0},{"r":81,"d":218.12,"s":2.28,"w":170.59,"b":8.99,"l":0.0,"cf":0.0,"g":5.41},{"r":82,"d":206.81,"s":6.57,"w":155.28,"b":44.97,"l":0.0,"cf":0.0,"g":0.0},{"r":83,"d":222.22,"s":3.19,"w":174.44,"b":44.6,"l":0.0,"cf":0.0,"g":0.0},{"r":84,"d":198.55,"s":6.09,"w":149.36,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":85,"d":231.16,"s":22.49,"w":170.14,"b":38.53,"l":0.0,"cf":0.0,"g":0.0},{"r":86,"d":209.38,"s":19.81,"w":152.96,"b":36.6,"l":0.0,"cf":0.0,"g":0.0},{"r":87,"d":197.56,"s":29.21,"w":133.89,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":88,"d":209.33,"s":20.35,"w":155.56,"b":33.42,"l":0.0,"cf":0.0,"g":0.0},{"r":89,"d":208.66,"s":24.5,"w":157.58,"b":26.58,"l":0.0,"cf":0.0,"g":0.0},{"r":90,"d":208.57,"s":23.75,"w":158.49,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":91,"d":210.55,"s":15.42,"w":172.26,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":92,"d":202.02,"s":22.98,"w":156.73,"b":22.31,"l":0.0,"cf":0.0,"g":0.0},{"r":93,"d":203.83,"s":7.34,"w":176.86,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":94,"d":202.7,"s":43.6,"w":149.73,"b":0.0,"l":0.0,"cf":0.0,"g":5.41},{"r":95,"d":197.54,"s":18.76,"w":174.65,"b":0.0,"l":0.0,"cf":0.0,"g":4.13},{"r":96,"d":210.77,"s":17.12,"w":195.26,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":97,"d":217.08,"s":24.47,"w":203.23,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":98,"d":208.74,"s":48.92,"w":180.69,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":99,"d":200.61,"s":42.96,"w":166.29,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":100,"d":197.84,"s":26.62,"w":206.49,"b":0.0,"l":0.0,"cf":0.0,"g":0.0}]},"MISO":{"demand_twh":1143.6,"peak_gw":237.4,"gas_gw":0.0,"hours":[{"r":1,"d":225.78,"s":17.03,"w":41.65,"b":167.1,"l":0.0,"cf":0.0,"g":0.0},{"r":2,"d":205.92,"s":10.98,"w":46.65,"b":148.29,"l":0.0,"cf":0.0,"g":0.0},{"r":3,"d":221.32,"s":31.07,"w":48.97,"b":141.28,"l":0.0,"cf":0.0,"g":0.0},{"r":4,"d":216.19,"s":4.51,"w":70.45,"b":141.23,"l":0.0,"cf":0.0,"g":0.0},{"r":5,"d":204.92,"s":12.17,"w":53.03,"b":139.72,"l":0.0,"cf":0.0,"g":0.0},{"r":6,"d":222.07,"s":17.12,"w":71.96,"b":132.99,"l":0.0,"cf":0.0,"g":0.0},{"r":7,"d":227.09,"s":55.12,"w":41.03,"b":130.94,"l":0.0,"cf":0.0,"g":0.0},{"r":8,"d":210.79,"s":20.33,"w":62.95,"b":127.51,"l":0.0,"cf":0.0,"g":0.0},{"r":9,"d":210.91,"s":26.11,"w":62.8,"b":122.0,"l":0.0,"cf":0.0,"g":0.0},{"r":10,"d":220.67,"s":50.1,"w":49.23,"b":121.34,"l":0.0,"cf":0.0,"g":0.0},{"r":11,"d":200.13,"s":12.26,"w":68.52,"b":105.75,"l":0.0,"cf":0.0,"g":0.0},{"r":12,"d":224.9,"s":33.15,"w":76.49,"b":115.26,"l":0.0,"cf":0.0,"g":0.0},{"r":13,"d":207.62,"s":16.05,"w":77.9,"b":113.67,"l":0.0,"cf":0.0,"g":0.0},{"r":14,"d":216.2,"s":36.13,"w":69.4,"b":110.68,"l":0.0,"cf":0.0,"g":0.0},{"r":15,"d":214.48,"s":28.74,"w":81.01,"b":104.73,"l":0.0,"cf":0.0,"g":0.0},{"r":16,"d":215.21,"s":48.15,"w":62.45,"b":104.61,"l":0.0,"cf":0.0,"g":0.0},{"r":17,"d":234.47,"s":15.4,"w":114.99,"b":104.08,"l":0.0,"cf":0.0,"g":0.0},{"r":18,"d":229.12,"s":14.26,"w":110.87,"b":103.99,"l":0.0,"cf":0.0,"g":0.0},{"r":19,"d":213.78,"s":50.07,"w":60.27,"b":103.44,"l":0.0,"cf":0.0,"g":0.0},{"r":20,"d":229.28,"s":54.59,"w":75.52,"b":99.17,"l":0.0,"cf":0.0,"g":0.0},{"r":21,"d":230.31,"s":11.47,"w":119.88,"b":98.97,"l":0.0,"cf":0.0,"g":0.0},{"r":22,"d":213.95,"s":9.39,"w":113.17,"b":91.39,"l":0.0,"cf":0.0,"g":0.0},{"r":23,"d":202.83,"s":57.67,"w":56.42,"b":88.74,"l":0.0,"cf":0.0,"g":0.0},{"r":24,"d":212.0,"s":43.71,"w":79.82,"b":88.47,"l":0.0,"cf":0.0,"g":0.0},{"r":25,"d":209.71,"s":9.2,"w":112.1,"b":88.41,"l":0.0,"cf":0.0,"g":0.0},{"r":26,"d":216.68,"s":51.84,"w":76.47,"b":88.37,"l":0.0,"cf":0.0,"g":0.0},{"r":27,"d":232.37,"s":19.29,"w":125.0,"b":88.08,"l":0.0,"cf":0.0,"g":0.0},{"r":28,"d":201.18,"s":0.89,"w":112.53,"b":59.52,"l":0.0,"cf":0.0,"g":0.0},{"r":29,"d":231.39,"s":47.18,"w":98.16,"b":86.06,"l":0.0,"cf":0.0,"g":0.0},{"r":30,"d":211.1,"s":9.98,"w":115.41,"b":85.7,"l":0.0,"cf":0.0,"g":0.0},{"r":31,"d":215.51,"s":47.13,"w":83.35,"b":85.03,"l":0.0,"cf":0.0,"g":0.0},{"r":32,"d":206.3,"s":2.34,"w":124.11,"b":79.85,"l":0.0,"cf":0.0,"g":0.0},{"r":33,"d":220.97,"s":29.9,"w":112.07,"b":79.0,"l":0.0,"cf":0.0,"g":0.0},{"r":34,"d":204.5,"s":43.62,"w":83.86,"b":59.52,"l":0.0,"cf":0.0,"g":0.0},{"r":35,"d":202.91,"s":52.47,"w":73.89,"b":76.56,"l":0.0,"cf":0.0,"g":0.0},{"r":36,"d":214.42,"s":12.86,"w":125.46,"b":76.1,"l":0.0,"cf":0.0,"g":0.0},{"r":37,"d":201.81,"s":50.3,"w":77.98,"b":73.54,"l":0.0,"cf":0.0,"g":0.0},{"r":38,"d":217.15,"s":2.76,"w":142.75,"b":71.64,"l":0.0,"cf":0.0,"g":0.0},{"r":39,"d":225.18,"s":20.84,"w":135.43,"b":68.92,"l":0.0,"cf":0.0,"g":0.0},{"r":40,"d":227.0,"s":29.73,"w":129.37,"b":67.9,"l":0.0,"cf":0.0,"g":0.0},{"r":41,"d":214.12,"s":51.26,"w":96.66,"b":66.19,"l":0.0,"cf":0.0,"g":0.0},{"r":42,"d":208.39,"s":13.33,"w":130.65,"b":64.4,"l":0.0,"cf":0.0,"g":0.0},{"r":43,"d":232.62,"s":31.49,"w":138.72,"b":62.41,"l":0.0,"cf":0.0,"g":0.0},{"r":44,"d":208.9,"s":34.87,"w":113.86,"b":60.17,"l":0.0,"cf":0.0,"g":0.0},{"r":45,"d":211.42,"s":72.7,"w":78.8,"b":59.52,"l":0.0,"cf":0.0,"g":0.0},{"r":46,"d":211.35,"s":45.49,"w":105.99,"b":59.86,"l":0.0,"cf":0.0,"g":0.0},{"r":47,"d":212.26,"s":21.06,"w":132.05,"b":59.15,"l":0.0,"cf":0.0,"g":0.0},{"r":48,"d":217.54,"s":20.01,"w":139.02,"b":58.51,"l":0.0,"cf":0.0,"g":0.0},{"r":49,"d":214.08,"s":58.99,"w":96.89,"b":58.21,"l":0.0,"cf":0.0,"g":0.0},{"r":50,"d":229.36,"s":43.63,"w":128.57,"b":57.16,"l":0.0,"cf":0.0,"g":0.0},{"r":51,"d":207.43,"s":14.62,"w":137.33,"b":55.48,"l":0.0,"cf":0.0,"g":0.0},{"r":52,"d":217.49,"s":28.69,"w":134.52,"b":54.28,"l":0.0,"cf":0.0,"g":0.0},{"r":53,"d":207.22,"s":61.3,"w":93.88,"b":52.04,"l":0.0,"cf":0.0,"g":0.0},{"r":54,"d":200.63,"s":28.46,"w":121.09,"b":51.07,"l":0.0,"cf":0.0,"g":0.0},{"r":55,"d":216.54,"s":58.24,"w":108.81,"b":49.48,"l":0.0,"cf":0.0,"g":0.0},{"r":56,"d":222.29,"s":17.27,"w":155.67,"b":49.35,"l":0.0,"cf":0.0,"g":0.0},{"r":57,"d":222.29,"s":49.77,"w":125.58,"b":46.94,"l":0.0,"cf":0.0,"g":0.0},{"r":58,"d":218.56,"s":43.76,"w":129.13,"b":45.66,"l":0.0,"cf":0.0,"g":0.0},{"r":59,"d":205.29,"s":66.57,"w":94.96,"b":43.77,"l":0.0,"cf":0.0,"g":0.0},{"r":60,"d":211.23,"s":48.3,"w":122.89,"b":40.04,"l":0.0,"cf":0.0,"g":0.0},{"r":61,"d":217.69,"s":27.68,"w":152.23,"b":37.78,"l":0.0,"cf":0.0,"g":0.0},{"r":62,"d":205.4,"s":30.59,"w":139.86,"b":34.94,"l":0.0,"cf":0.0,"g":0.0},{"r":63,"d":212.77,"s":7.98,"w":171.27,"b":33.51,"l":0.0,"cf":0.0,"g":0.0},{"r":64,"d":218.42,"s":27.97,"w":159.32,"b":31.13,"l":0.0,"cf":0.0,"g":0.0},{"r":65,"d":212.6,"s":92.33,"w":90.41,"b":29.86,"l":0.0,"cf":0.0,"g":0.0},{"r":66,"d":225.63,"s":26.22,"w":169.95,"b":29.47,"l":0.0,"cf":0.0,"g":0.0},{"r":67,"d":224.95,"s":19.2,"w":178.51,"b":27.24,"l":0.0,"cf":0.0,"g":0.0},{"r":68,"d":204.97,"s":47.79,"w":131.01,"b":26.17,"l":0.0,"cf":0.0,"g":0.0},{"r":69,"d":202.64,"s":61.56,"w":120.67,"b":20.41,"l":0.0,"cf":0.0,"g":0.0},{"r":70,"d":201.35,"s":47.32,"w":133.71,"b":20.32,"l":0.0,"cf":0.0,"g":0.0},{"r":71,"d":199.76,"s":23.65,"w":156.24,"b":19.88,"l":0.0,"cf":0.0,"g":0.0},{"r":72,"d":199.55,"s":55.02,"w":124.81,"b":19.72,"l":0.0,"cf":0.0,"g":0.0},{"r":73,"d":232.01,"s":53.85,"w":159.2,"b":18.96,"l":0.0,"cf":0.0,"g":0.0},{"r":74,"d":211.28,"s":62.43,"w":130.26,"b":18.59,"l":0.0,"cf":0.0,"g":0.0},{"r":75,"d":206.18,"s":55.14,"w":134.41,"b":16.64,"l":0.0,"cf":0.0,"g":0.0},{"r":76,"d":197.39,"s":41.6,"w":141.84,"b":13.96,"l":0.0,"cf":0.0,"g":0.0},{"r":77,"d":202.63,"s":64.82,"w":128.36,"b":9.45,"l":0.0,"cf":0.0,"g":0.0},{"r":78,"d":200.2,"s":83.54,"w":109.48,"b":7.18,"l":0.0,"cf":0.0,"g":0.0},{"r":79,"d":213.8,"s":43.85,"w":165.53,"b":4.42,"l":0.0,"cf":0.0,"g":0.0},{"r":80,"d":205.36,"s":40.04,"w":161.1,"b":4.22,"l":0.0,"cf":0.0,"g":0.0},{"r":81,"d":220.62,"s":46.76,"w":171.86,"b":2.0,"l":0.0,"cf":0.0,"g":0.0},{"r":82,"d":192.49,"s":91.05,"w":131.34,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":83,"d":209.84,"s":40.92,"w":171.62,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":84,"d":209.39,"s":91.15,"w":134.61,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":85,"d":211.51,"s":60.77,"w":155.84,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":86,"d":224.17,"s":60.07,"w":179.32,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":87,"d":208.44,"s":59.72,"w":152.63,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":88,"d":195.38,"s":77.28,"w":144.78,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":89,"d":204.43,"s":53.27,"w":210.56,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":90,"d":209.81,"s":37.08,"w":179.23,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":91,"d":211.87,"s":51.85,"w":187.4,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":92,"d":207.67,"s":70.74,"w":182.86,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":93,"d":208.84,"s":73.29,"w":162.13,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":94,"d":193.05,"s":92.84,"w":212.64,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":95,"d":206.64,"s":39.88,"w":168.04,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":96,"d":194.54,"s":50.84,"w":175.97,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":97,"d":201.26,"s":52.92,"w":149.1,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":98,"d":202.21,"s":47.39,"w":184.09,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":99,"d":195.27,"s":71.69,"w":137.51,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":100,"d":195.18,"s":99.31,"w":156.04,"b":0.0,"l":0.0,"cf":0.0,"g":0.0}]},"NEISO":{"demand_twh":180.2,"peak_gw":37.4,"gas_gw":0.0,"hours":[{"r":1,"d":37.37,"s":0.1,"w":0.5,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":2,"d":36.95,"s":0.03,"w":0.2,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":3,"d":36.46,"s":0.07,"w":0.13,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":4,"d":36.26,"s":0.07,"w":0.27,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":5,"d":35.91,"s":0.03,"w":0.14,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":6,"d":36.03,"s":0.18,"w":0.14,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":7,"d":35.88,"s":0.29,"w":0.22,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":8,"d":35.93,"s":0.19,"w":0.43,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":9,"d":35.69,"s":0.09,"w":0.33,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":10,"d":35.63,"s":0.24,"w":0.12,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":11,"d":35.6,"s":0.04,"w":0.28,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":12,"d":35.55,"s":0.08,"w":0.23,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":13,"d":35.58,"s":0.19,"w":0.24,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":14,"d":35.16,"s":0.01,"w":0.11,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":15,"d":35.21,"s":0.04,"w":0.28,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":16,"d":35.22,"s":0.09,"w":0.37,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":17,"d":35.32,"s":0.26,"w":0.33,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":18,"d":35.39,"s":0.2,"w":0.47,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":19,"d":34.95,"s":0.17,"w":0.15,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":20,"d":34.94,"s":0.07,"w":0.24,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":21,"d":34.77,"s":0.13,"w":0.14,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":22,"d":35.1,"s":0.16,"w":0.47,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":23,"d":34.88,"s":0.23,"w":0.37,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":24,"d":34.47,"s":0.01,"w":0.26,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":25,"d":34.83,"s":0.28,"w":0.39,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":26,"d":34.48,"s":0.18,"w":0.23,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":27,"d":34.61,"s":0.28,"w":0.31,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":28,"d":34.48,"s":0.21,"w":0.25,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":29,"d":34.38,"s":0.1,"w":0.28,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":30,"d":34.36,"s":0.03,"w":0.39,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":31,"d":34.21,"s":0.14,"w":0.21,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":32,"d":34.0,"s":0.0,"w":0.22,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":33,"d":34.48,"s":0.24,"w":0.48,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":34,"d":34.27,"s":0.12,"w":0.39,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":35,"d":34.21,"s":0.05,"w":0.47,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":36,"d":33.92,"s":0.24,"w":0.14,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":37,"d":34.04,"s":0.24,"w":0.29,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":38,"d":33.97,"s":0.24,"w":0.27,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":39,"d":34.27,"s":0.36,"w":0.46,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":40,"d":34.02,"s":0.2,"w":0.39,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":41,"d":34.16,"s":0.27,"w":0.51,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":42,"d":33.88,"s":0.05,"w":0.48,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":43,"d":33.84,"s":0.07,"w":0.45,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":44,"d":33.73,"s":0.07,"w":0.37,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":45,"d":33.59,"s":0.3,"w":0.12,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":46,"d":34.14,"s":0.47,"w":0.5,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":47,"d":33.78,"s":0.23,"w":0.43,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":48,"d":33.63,"s":0.21,"w":0.35,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":49,"d":33.25,"s":0.16,"w":0.14,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":50,"d":33.51,"s":0.26,"w":0.35,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":51,"d":33.23,"s":0.24,"w":0.16,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":52,"d":32.99,"s":0.08,"w":0.17,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":53,"d":33.5,"s":0.42,"w":0.35,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":54,"d":33.04,"s":0.03,"w":0.3,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":55,"d":33.09,"s":0.3,"w":0.13,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":56,"d":33.04,"s":0.31,"w":0.13,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":57,"d":33.16,"s":0.32,"w":0.24,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":58,"d":32.99,"s":0.22,"w":0.3,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":59,"d":32.96,"s":0.13,"w":0.38,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":60,"d":33.18,"s":0.29,"w":0.44,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":61,"d":32.83,"s":0.31,"w":0.11,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":62,"d":32.83,"s":0.29,"w":0.15,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":63,"d":33.16,"s":0.62,"w":0.24,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":64,"d":32.88,"s":0.32,"w":0.28,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":65,"d":32.68,"s":0.02,"w":0.4,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":66,"d":32.65,"s":0.05,"w":0.35,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":67,"d":32.75,"s":0.35,"w":0.19,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":68,"d":32.6,"s":0.28,"w":0.16,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":69,"d":32.87,"s":0.27,"w":0.44,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":70,"d":32.52,"s":0.24,"w":0.17,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":71,"d":32.49,"s":0.0,"w":0.4,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":72,"d":32.69,"s":0.28,"w":0.33,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":73,"d":32.91,"s":0.55,"w":0.29,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":74,"d":32.66,"s":0.27,"w":0.45,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":75,"d":32.17,"s":0.04,"w":0.2,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":76,"d":32.49,"s":0.25,"w":0.33,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":77,"d":32.5,"s":0.14,"w":0.49,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":78,"d":32.1,"s":0.06,"w":0.2,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":79,"d":32.82,"s":0.52,"w":0.46,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":80,"d":32.29,"s":0.11,"w":0.37,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":81,"d":32.05,"s":0.03,"w":0.44,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":82,"d":31.83,"s":0.2,"w":0.19,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":83,"d":31.98,"s":0.36,"w":0.22,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":84,"d":31.85,"s":0.27,"w":0.31,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":85,"d":32.08,"s":0.34,"w":0.52,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":86,"d":31.68,"s":0.12,"w":0.39,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":87,"d":31.96,"s":0.47,"w":0.48,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":88,"d":31.59,"s":0.2,"w":0.37,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":89,"d":31.66,"s":0.17,"w":0.49,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":90,"d":31.38,"s":0.27,"w":0.18,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":91,"d":31.62,"s":0.4,"w":0.38,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":92,"d":31.38,"s":0.14,"w":0.45,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":93,"d":31.44,"s":0.5,"w":0.2,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":94,"d":30.95,"s":0.2,"w":0.16,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":95,"d":30.91,"s":0.28,"w":0.15,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":96,"d":30.92,"s":0.31,"w":0.2,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":97,"d":31.28,"s":0.5,"w":0.44,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":98,"d":30.55,"s":0.3,"w":0.48,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":99,"d":30.52,"s":0.3,"w":0.5,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":100,"d":30.36,"s":0.53,"w":0.22,"b":0.0,"l":0.0,"cf":0.0,"g":0.0}]},"NYISO":{"demand_twh":248.7,"peak_gw":51.6,"gas_gw":0.0,"hours":[{"r":1,"d":50.58,"s":0.54,"w":0.34,"b":0.06,"l":0.0,"cf":0.0,"g":0.0},{"r":2,"d":51.17,"s":0.51,"w":1.06,"b":0.06,"l":0.0,"cf":0.0,"g":0.0},{"r":3,"d":50.64,"s":0.15,"w":0.99,"b":0.06,"l":0.0,"cf":0.0,"g":0.0},{"r":4,"d":50.72,"s":0.21,"w":1.14,"b":0.06,"l":0.0,"cf":0.0,"g":0.0},{"r":5,"d":50.06,"s":0.08,"w":0.63,"b":0.06,"l":0.0,"cf":0.0,"g":0.0},{"r":6,"d":50.24,"s":0.33,"w":0.59,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":7,"d":50.04,"s":0.42,"w":0.46,"b":0.06,"l":0.0,"cf":0.0,"g":0.0},{"r":8,"d":50.0,"s":0.21,"w":1.15,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":9,"d":49.03,"s":0.27,"w":0.3,"b":0.06,"l":0.0,"cf":0.0,"g":0.0},{"r":10,"d":49.43,"s":0.49,"w":0.49,"b":0.06,"l":0.0,"cf":0.0,"g":0.0},{"r":11,"d":49.19,"s":0.28,"w":0.63,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":12,"d":49.22,"s":0.49,"w":0.57,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":13,"d":48.79,"s":0.39,"w":0.37,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":14,"d":49.47,"s":0.38,"w":1.25,"b":0.06,"l":0.0,"cf":0.0,"g":0.0},{"r":15,"d":48.57,"s":0.12,"w":0.71,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":16,"d":48.87,"s":0.3,"w":0.88,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":17,"d":48.41,"s":0.24,"w":0.66,"b":0.06,"l":0.0,"cf":0.0,"g":0.0},{"r":18,"d":48.36,"s":0.4,"w":0.5,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":19,"d":48.05,"s":0.1,"w":0.59,"b":0.06,"l":0.0,"cf":0.0,"g":0.0},{"r":20,"d":48.53,"s":0.2,"w":0.98,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":21,"d":48.54,"s":0.27,"w":0.92,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":22,"d":48.48,"s":0.52,"w":0.69,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":23,"d":48.14,"s":0.19,"w":0.74,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":24,"d":47.97,"s":0.38,"w":0.47,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":25,"d":48.56,"s":0.22,"w":1.41,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":26,"d":47.84,"s":0.07,"w":0.89,"b":0.06,"l":0.0,"cf":0.0,"g":0.0},{"r":27,"d":48.32,"s":0.31,"w":1.24,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":28,"d":47.69,"s":0.49,"w":0.46,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":29,"d":47.92,"s":0.34,"w":0.84,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":30,"d":48.19,"s":0.3,"w":1.18,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":31,"d":47.76,"s":0.54,"w":0.75,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":32,"d":47.04,"s":0.2,"w":0.49,"b":0.06,"l":0.0,"cf":0.0,"g":0.0},{"r":33,"d":47.26,"s":0.46,"w":0.45,"b":0.06,"l":0.0,"cf":0.0,"g":0.0},{"r":34,"d":47.59,"s":0.44,"w":0.92,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":35,"d":47.4,"s":0.27,"w":0.91,"b":0.06,"l":0.0,"cf":0.0,"g":0.0},{"r":36,"d":47.86,"s":0.27,"w":1.38,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":37,"d":47.22,"s":0.33,"w":0.72,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":38,"d":47.89,"s":0.4,"w":1.36,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":39,"d":46.89,"s":0.01,"w":0.9,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":40,"d":46.52,"s":0.03,"w":0.53,"b":0.06,"l":0.0,"cf":0.0,"g":0.0},{"r":41,"d":46.34,"s":0.04,"w":0.42,"b":0.06,"l":0.0,"cf":0.0,"g":0.0},{"r":42,"d":47.26,"s":0.1,"w":1.27,"b":0.06,"l":0.0,"cf":0.0,"g":0.0},{"r":43,"d":46.92,"s":0.05,"w":1.0,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":44,"d":47.16,"s":0.25,"w":1.09,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":45,"d":47.0,"s":0.24,"w":1.0,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":46,"d":47.13,"s":0.17,"w":1.28,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":47,"d":46.51,"s":0.15,"w":0.78,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":48,"d":46.74,"s":0.2,"w":1.0,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":49,"d":47.04,"s":0.49,"w":1.13,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":50,"d":47.0,"s":0.45,"w":1.19,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":51,"d":46.77,"s":0.05,"w":1.44,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":52,"d":46.67,"s":0.83,"w":0.64,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":53,"d":46.49,"s":0.47,"w":0.84,"b":0.06,"l":0.0,"cf":0.0,"g":0.0},{"r":54,"d":46.84,"s":1.03,"w":0.65,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":55,"d":46.65,"s":0.52,"w":1.07,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":56,"d":46.55,"s":0.05,"w":1.44,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":57,"d":46.46,"s":0.38,"w":1.03,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":58,"d":46.31,"s":0.07,"w":1.36,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":59,"d":45.71,"s":0.27,"w":0.63,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":60,"d":45.46,"s":0.23,"w":0.63,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":61,"d":45.67,"s":0.49,"w":0.85,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":62,"d":45.67,"s":0.06,"w":1.33,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":63,"d":46.37,"s":0.73,"w":1.51,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":64,"d":45.34,"s":0.47,"w":0.83,"b":0.06,"l":0.0,"cf":0.0,"g":0.0},{"r":65,"d":45.45,"s":0.26,"w":1.24,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":66,"d":44.71,"s":0.17,"w":0.65,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":67,"d":45.67,"s":0.9,"w":0.95,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":68,"d":44.93,"s":0.12,"w":1.0,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":69,"d":45.02,"s":0.39,"w":0.93,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":70,"d":44.56,"s":0.09,"w":0.8,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":71,"d":45.83,"s":0.67,"w":1.51,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":72,"d":45.38,"s":0.32,"w":1.43,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":73,"d":44.98,"s":0.16,"w":1.28,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":74,"d":44.38,"s":0.41,"w":0.63,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":75,"d":44.02,"s":0.27,"w":0.45,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":76,"d":44.75,"s":0.57,"w":0.9,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":77,"d":44.05,"s":0.03,"w":0.94,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":78,"d":44.1,"s":0.51,"w":0.55,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":79,"d":44.27,"s":0.72,"w":0.73,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":80,"d":44.75,"s":0.8,"w":1.16,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":81,"d":43.84,"s":0.37,"w":0.68,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":82,"d":44.33,"s":0.22,"w":1.34,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":83,"d":44.7,"s":0.39,"w":1.58,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":84,"d":44.1,"s":0.25,"w":1.23,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":85,"d":44.14,"s":0.39,"w":1.32,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":86,"d":43.56,"s":0.55,"w":0.6,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":87,"d":43.97,"s":0.21,"w":1.43,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":88,"d":44.67,"s":0.83,"w":1.55,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":89,"d":43.08,"s":0.27,"w":0.65,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":90,"d":43.78,"s":0.18,"w":1.5,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":91,"d":44.17,"s":0.64,"w":1.45,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":92,"d":43.55,"s":0.91,"w":0.84,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":93,"d":43.22,"s":0.16,"w":1.4,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":94,"d":42.85,"s":0.32,"w":0.94,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":95,"d":42.69,"s":0.4,"w":0.74,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":96,"d":43.5,"s":0.75,"w":1.25,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":97,"d":42.6,"s":0.54,"w":0.65,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":98,"d":42.76,"s":0.88,"w":1.09,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":99,"d":41.62,"s":0.76,"w":0.84,"b":0.0,"l":0.0,"cf":0.0,"g":0.0},{"r":100,"d":41.34,"s":0.94,"w":1.56,"b":0.0,"l":0.0,"cf":0.0,"g":0.0}]},"PJM":{"demand_twh":1525.8,"peak_gw":316.7,"gas_gw":0.0,"hours":[{"r":1,"d":314.7,"s":6.89,"w":66.48,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":2,"d":300.28,"s":7.91,"w":51.34,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":3,"d":302.34,"s":0.56,"w":67.45,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":4,"d":303.59,"s":0.63,"w":69.95,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":5,"d":299.66,"s":6.2,"w":60.61,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":6,"d":288.55,"s":0.74,"w":55.86,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":7,"d":294.08,"s":4.51,"w":60.89,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":8,"d":304.52,"s":9.65,"w":70.8,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":9,"d":286.35,"s":6.97,"w":56.63,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":10,"d":292.69,"s":3.18,"w":76.28,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":11,"d":286.18,"s":5.58,"w":67.63,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":12,"d":294.37,"s":6.18,"w":79.72,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":13,"d":292.45,"s":4.9,"w":81.84,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":14,"d":301.47,"s":3.01,"w":97.16,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":15,"d":297.07,"s":8.57,"w":90.24,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":16,"d":297.86,"s":7.74,"w":95.49,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":17,"d":305.53,"s":3.47,"w":108.93,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":18,"d":297.56,"s":1.62,"w":104.09,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":19,"d":285.01,"s":6.58,"w":90.06,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":20,"d":281.56,"s":6.23,"w":89.82,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":21,"d":276.54,"s":5.65,"w":85.6,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":22,"d":282.1,"s":4.72,"w":93.28,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":23,"d":281.67,"s":5.69,"w":92.25,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":24,"d":278.03,"s":0.98,"w":97.38,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":25,"d":278.54,"s":9.79,"w":90.61,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":26,"d":283.98,"s":7.18,"w":99.1,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":27,"d":266.57,"s":9.54,"w":79.62,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":28,"d":298.41,"s":9.61,"w":112.12,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":29,"d":289.88,"s":6.89,"w":107.17,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":30,"d":292.93,"s":8.15,"w":110.94,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":31,"d":273.13,"s":1.67,"w":103.23,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":32,"d":273.41,"s":1.39,"w":105.1,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":33,"d":284.81,"s":8.56,"w":109.43,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":34,"d":272.24,"s":7.14,"w":102.21,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":35,"d":278.44,"s":7.88,"w":111.1,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":36,"d":284.45,"s":6.99,"w":119.04,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":37,"d":276.56,"s":13.58,"w":105.5,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":38,"d":300.0,"s":5.81,"w":140.5,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":39,"d":258.42,"s":15.6,"w":90.36,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":40,"d":272.7,"s":6.29,"w":115.09,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":41,"d":277.04,"s":9.79,"w":123.05,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":42,"d":281.26,"s":5.21,"w":134.97,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":43,"d":280.54,"s":5.16,"w":135.21,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":44,"d":258.91,"s":15.73,"w":105.64,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":45,"d":304.26,"s":7.9,"w":160.39,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":46,"d":267.91,"s":7.23,"w":127.78,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":47,"d":267.77,"s":8.64,"w":126.55,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":48,"d":275.07,"s":9.28,"w":133.61,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":49,"d":288.81,"s":6.63,"w":150.17,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":50,"d":272.79,"s":5.4,"w":135.66,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":51,"d":273.1,"s":7.45,"w":135.02,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":52,"d":298.79,"s":7.3,"w":161.03,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":53,"d":288.85,"s":5.74,"w":154.14,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":54,"d":287.85,"s":3.32,"w":155.57,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":55,"d":287.8,"s":4.63,"w":154.35,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":56,"d":276.57,"s":3.75,"w":146.31,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":57,"d":271.66,"s":0.51,"w":147.79,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":58,"d":292.66,"s":3.73,"w":166.52,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":59,"d":297.05,"s":8.15,"w":168.54,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":60,"d":312.6,"s":3.99,"w":188.35,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":61,"d":297.23,"s":3.17,"w":174.55,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":62,"d":282.28,"s":3.29,"w":164.44,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":63,"d":271.47,"s":0.66,"w":156.31,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":64,"d":275.17,"s":11.11,"w":149.78,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":65,"d":271.87,"s":5.13,"w":158.46,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":66,"d":282.47,"s":7.3,"w":167.66,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":67,"d":277.28,"s":9.85,"w":160.85,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":68,"d":289.0,"s":10.12,"w":174.65,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":69,"d":271.74,"s":1.23,"w":167.03,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":70,"d":296.98,"s":5.91,"w":188.69,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":71,"d":285.62,"s":3.17,"w":182.62,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":72,"d":256.0,"s":10.32,"w":148.93,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":73,"d":287.21,"s":9.51,"w":181.15,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":74,"d":306.61,"s":9.32,"w":202.4,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":75,"d":295.69,"s":7.79,"w":193.48,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":76,"d":276.8,"s":4.26,"w":185.49,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":77,"d":289.13,"s":8.62,"w":193.65,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":78,"d":273.48,"s":10.03,"w":178.33,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":79,"d":285.08,"s":5.85,"w":195.38,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":80,"d":277.02,"s":3.41,"w":194.37,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":81,"d":268.02,"s":14.07,"w":175.4,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":82,"d":275.89,"s":9.46,"w":188.44,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":83,"d":291.9,"s":3.5,"w":214.67,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":84,"d":277.69,"s":8.99,"w":196.6,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":85,"d":300.47,"s":8.72,"w":220.88,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":86,"d":287.41,"s":5.71,"w":214.1,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":87,"d":257.39,"s":2.99,"w":187.73,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":88,"d":275.96,"s":9.79,"w":199.71,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":89,"d":266.27,"s":11.65,"w":188.42,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":90,"d":274.07,"s":9.93,"w":199.34,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":91,"d":288.82,"s":8.99,"w":215.17,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":92,"d":273.0,"s":0.23,"w":215.45,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":93,"d":285.69,"s":12.43,"w":216.55,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":94,"d":272.4,"s":12.58,"w":213.12,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":95,"d":275.6,"s":4.52,"w":224.67,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":96,"d":275.06,"s":11.66,"w":217.11,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":97,"d":271.27,"s":13.86,"w":237.25,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":98,"d":277.16,"s":7.92,"w":256.54,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":99,"d":262.03,"s":10.52,"w":247.05,"b":0.0,"l":2.33,"cf":0.0,"g":0.0},{"r":100,"d":273.79,"s":13.06,"w":264.82,"b":0.0,"l":0.0,"cf":0.0,"g":0.0}]},"SPP":{"demand_twh":468.3,"peak_gw":97.2,"gas_gw":2.4,"hours":[{"r":1,"d":95.18,"s":0.82,"w":14.57,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":2,"d":94.7,"s":1.48,"w":13.8,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":3,"d":91.73,"s":1.01,"w":13.09,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":4,"d":90.83,"s":1.1,"w":13.5,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":5,"d":92.88,"s":0.29,"w":16.9,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":6,"d":87.91,"s":0.35,"w":12.59,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":7,"d":87.28,"s":1.15,"w":11.31,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":8,"d":93.87,"s":0.76,"w":19.44,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":9,"d":89.9,"s":1.14,"w":15.16,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":10,"d":92.57,"s":1.39,"w":18.95,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":11,"d":84.34,"s":0.55,"w":13.57,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":12,"d":86.6,"s":0.48,"w":17.01,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":13,"d":89.33,"s":0.37,"w":20.21,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":14,"d":88.42,"s":0.39,"w":22.1,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":15,"d":89.97,"s":0.35,"w":23.81,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":16,"d":93.53,"s":0.05,"w":28.5,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":17,"d":94.0,"s":1.15,"w":27.94,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":18,"d":80.51,"s":0.9,"w":15.46,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":19,"d":84.97,"s":0.97,"w":20.29,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":20,"d":90.22,"s":1.38,"w":25.22,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":21,"d":88.3,"s":0.74,"w":24.02,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":22,"d":88.27,"s":1.94,"w":23.81,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":23,"d":88.23,"s":1.25,"w":24.6,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":24,"d":91.84,"s":0.99,"w":29.29,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":25,"d":94.18,"s":0.09,"w":32.61,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":26,"d":94.97,"s":0.72,"w":33.02,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":27,"d":82.83,"s":0.23,"w":22.1,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":28,"d":86.78,"s":1.04,"w":25.86,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":29,"d":90.41,"s":0.09,"w":30.82,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":30,"d":93.58,"s":0.01,"w":34.62,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":31,"d":90.17,"s":0.92,"w":30.5,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":32,"d":93.95,"s":1.15,"w":34.99,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":33,"d":84.97,"s":0.24,"w":27.1,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":34,"d":93.24,"s":0.14,"w":35.65,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":35,"d":91.27,"s":0.6,"w":33.9,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":36,"d":93.63,"s":1.18,"w":35.83,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":37,"d":84.67,"s":0.61,"w":27.81,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":38,"d":89.02,"s":0.13,"w":33.38,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":39,"d":84.31,"s":0.49,"w":28.35,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":40,"d":94.36,"s":0.51,"w":38.75,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":41,"d":86.74,"s":1.61,"w":31.08,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":42,"d":86.14,"s":0.41,"w":33.0,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":43,"d":83.36,"s":1.37,"w":29.43,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":44,"d":87.51,"s":0.66,"w":34.57,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":45,"d":88.84,"s":0.38,"w":36.96,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":46,"d":81.35,"s":0.95,"w":29.23,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":47,"d":93.27,"s":0.08,"w":42.85,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":48,"d":84.38,"s":1.03,"w":33.12,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":49,"d":81.2,"s":0.52,"w":30.49,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":50,"d":86.71,"s":0.05,"w":36.67,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":51,"d":79.62,"s":2.45,"w":27.87,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":52,"d":85.28,"s":1.45,"w":34.7,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":53,"d":84.92,"s":0.66,"w":35.15,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":54,"d":82.36,"s":0.85,"w":33.69,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":55,"d":88.58,"s":1.81,"w":40.15,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":56,"d":86.71,"s":0.12,"w":40.09,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":57,"d":87.02,"s":0.95,"w":39.91,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":58,"d":88.2,"s":1.42,"w":41.25,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":59,"d":85.57,"s":0.85,"w":39.54,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":60,"d":85.42,"s":1.08,"w":39.44,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":61,"d":95.25,"s":0.02,"w":51.35,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":62,"d":87.13,"s":1.29,"w":42.46,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":63,"d":88.11,"s":0.79,"w":44.0,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":64,"d":92.34,"s":0.28,"w":48.98,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":65,"d":94.93,"s":0.65,"w":51.26,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":66,"d":79.9,"s":0.65,"w":37.16,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":67,"d":91.44,"s":1.47,"w":48.74,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":68,"d":94.82,"s":0.19,"w":54.05,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":69,"d":82.74,"s":0.24,"w":43.16,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":70,"d":79.36,"s":1.26,"w":39.17,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":71,"d":88.2,"s":0.75,"w":49.18,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":72,"d":83.57,"s":1.73,"w":44.25,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":73,"d":82.36,"s":0.39,"w":45.09,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":74,"d":91.2,"s":1.21,"w":53.14,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":75,"d":79.8,"s":0.47,"w":43.19,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":76,"d":88.57,"s":1.15,"w":51.33,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":77,"d":90.7,"s":0.45,"w":55.22,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":78,"d":85.6,"s":0.19,"w":50.44,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":79,"d":89.35,"s":0.67,"w":53.76,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":80,"d":86.46,"s":1.33,"w":50.37,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":81,"d":85.95,"s":1.38,"w":50.04,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":82,"d":87.23,"s":0.16,"w":53.26,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":83,"d":86.96,"s":1.2,"w":52.08,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":84,"d":86.75,"s":1.54,"w":51.55,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":85,"d":86.83,"s":1.34,"w":51.89,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":86,"d":85.66,"s":0.79,"w":51.33,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":87,"d":84.99,"s":0.84,"w":51.3,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":88,"d":82.81,"s":1.12,"w":48.92,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":89,"d":82.8,"s":1.5,"w":48.87,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":90,"d":86.04,"s":0.8,"w":52.84,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":91,"d":86.43,"s":1.85,"w":53.69,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":92,"d":86.23,"s":2.09,"w":53.31,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":93,"d":88.99,"s":0.89,"w":57.55,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":94,"d":85.44,"s":0.78,"w":54.66,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":95,"d":81.01,"s":1.09,"w":50.79,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":96,"d":83.65,"s":1.46,"w":53.95,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":97,"d":79.42,"s":2.01,"w":51.31,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":98,"d":85.01,"s":2.36,"w":61.83,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":99,"d":80.44,"s":1.82,"w":58.82,"b":0.0,"l":4.68,"cf":0.0,"g":2.39},{"r":100,"d":79.26,"s":2.94,"w":60.97,"b":0.0,"l":4.68,"cf":0.0,"g":2.39}]}}};
+
+            // ─── Element refs ───
+            var btns = Array.prototype.slice.call(wrap.querySelectorAll('.wall-iso-btn'));
+            var chartTitleEl = document.getElementById('wallChartTitle');
+            var chartSubEl   = document.getElementById('wallChartSub');
+            var narrCell     = document.getElementById('wallNarrativeCell');
+            var narrEyebrow  = document.getElementById('wallNarrativeEyebrow');
+            var narrHead     = document.getElementById('wallNarrativeHeadline');
+            var narrBody     = document.getElementById('wallNarrativeBody');
+            var statGasGw    = document.getElementById('wallStatGasGw');
+            var statDemand   = document.getElementById('wallStatDemandTwh');
+            var whWrap       = document.getElementById('wallWorstHoursCanvasWrap');
+            var whTitle      = document.getElementById('wallWorstHoursTitle');
+            var whSub        = document.getElementById('wallWorstHoursSub');
+            var whCaption    = document.getElementById('wallWorstHoursCaption');
+
+            var hockeyCtx = document.getElementById('wallHockeyChart').getContext('2d');
+            var whCtx     = document.getElementById('wallWorstHoursChart').getContext('2d');
+            var hockeyChart = null;
+            var whChart = null;
+
+            // ─── Builders ───
+            function hockeyDatasets(selectedIso) {
+                var list = selectedIso === 'ALL' ? ISOS : [selectedIso];
+                return list.map(function(iso) {
+                    var color = ISO_COLORS[iso];
+                    return {
+                        label: iso,
+                        data: HOCKEY[iso].map(function(pt) {
+                            return { x: pt.x, y: pt.y / 1e9 }; // convert USD → $B/pt
+                        }),
+                        borderColor: color,
+                        backgroundColor: color,
+                        borderWidth: selectedIso === 'ALL' ? 2.2 : 3,
+                        pointRadius: selectedIso === 'ALL' ? 3.5 : 5,
+                        pointHoverRadius: selectedIso === 'ALL' ? 5 : 7,
+                        tension: 0.2,
+                        fill: false
+                    };
+                });
+            }
+
+            function renderHockey(selectedIso) {
+                if (hockeyChart) { hockeyChart.destroy(); hockeyChart = null; }
+                hockeyChart = new Chart(hockeyCtx, {
+                    type: 'line',
+                    data: { datasets: hockeyDatasets(selectedIso) },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'nearest', intersect: false },
+                        plugins: {
+                            legend: {
+                                display: selectedIso === 'ALL',
+                                position: 'bottom',
+                                labels: { boxWidth: 12, font: { family: 'DM Sans, sans-serif', size: 11 } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    title: function(items) {
+                                        if (!items || !items.length) return '';
+                                        return 'Endpoint: ' + items[0].parsed.x.toFixed(2) + '% CFE';
+                                    },
+                                    label: function(item) {
+                                        var v = item.parsed.y;
+                                        var sign = v >= 0 ? '+' : '';
+                                        return item.dataset.label + ': ' + sign + v.toFixed(2) + ' \u0024B/CFE%';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: 'linear',
+                                min: 94,
+                                max: 100,
+                                title: { display: true, text: 'CFE endpoint (%)', font: { family: 'DM Sans, sans-serif', size: 11, weight: '600' } },
+                                grid: { color: 'rgba(100,116,139,0.1)' },
+                                ticks: {
+                                    stepSize: 1,
+                                    font: { family: 'DM Sans, sans-serif', size: 11 },
+                                    callback: function(v) { return v + '%'; }
+                                }
+                            },
+                            y: {
+                                title: { display: true, text: 'Marginal cost ($B per CFE%)', font: { family: 'DM Sans, sans-serif', size: 11, weight: '600' } },
+                                grid: { color: function(ctx) { return ctx.tick.value === 0 ? 'rgba(26,39,68,0.5)' : 'rgba(100,116,139,0.1)'; } },
+                                ticks: {
+                                    font: { family: 'DM Sans, sans-serif', size: 11 },
+                                    callback: function(v) {
+                                        var s = v >= 0 ? '+\u0024' : '-\u0024';
+                                        return s + Math.abs(v).toFixed(0) + 'B';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            function renderWorstHours(iso) {
+                if (whChart) { whChart.destroy(); whChart = null; }
+                var payload = WORST.per_iso[iso];
+                if (!payload) return;
+                var hours = payload.hours; // 100 entries, already rank-sorted
+                var labels = hours.map(function(h) { return h.r; });
+
+                whChart = new Chart(whCtx, {
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            { type: 'bar', label: 'Wind',       data: hours.map(function(h){return h.w;}),  backgroundColor: RES_COLORS.wind,      stack: 's', order: 6 },
+                            { type: 'bar', label: 'Solar',      data: hours.map(function(h){return h.s;}),  backgroundColor: RES_COLORS.solar,     stack: 's', order: 5 },
+                            { type: 'bar', label: 'Battery',    data: hours.map(function(h){return h.b;}),  backgroundColor: RES_COLORS.battery,   stack: 's', order: 4 },
+                            { type: 'bar', label: 'LDES',       data: hours.map(function(h){return h.l;}),  backgroundColor: RES_COLORS.ldes,      stack: 's', order: 3 },
+                            { type: 'bar', label: 'Clean firm', data: hours.map(function(h){return h.cf;}), backgroundColor: RES_COLORS.cleanFirm, stack: 's', order: 2 },
+                            { type: 'bar', label: 'Gas',        data: hours.map(function(h){return h.g;}),  backgroundColor: RES_COLORS.gas,       stack: 's', order: 1 },
+                            {
+                                type: 'line',
+                                label: 'Demand',
+                                data: hours.map(function(h){return h.d;}),
+                                borderColor: '#1A2744',
+                                backgroundColor: 'rgba(26,39,68,0.15)',
+                                borderWidth: 1.8,
+                                borderDash: [5, 4],
+                                pointRadius: 0,
+                                pointHoverRadius: 4,
+                                tension: 0.1,
+                                fill: false,
+                                order: 0
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { boxWidth: 12, font: { family: 'DM Sans, sans-serif', size: 11 } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    title: function(items) { return 'Hour rank ' + (items && items[0] ? items[0].label : ''); },
+                                    label: function(item) {
+                                        return item.dataset.label + ': ' + item.parsed.y.toFixed(1) + ' GW';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                stacked: true,
+                                title: { display: true, text: 'Rank by residual load (1 = worst hour)', font: { family: 'DM Sans, sans-serif', size: 11, weight: '600' } },
+                                grid: { display: false },
+                                ticks: {
+                                    autoSkip: true,
+                                    maxTicksLimit: 10,
+                                    font: { family: 'DM Sans, sans-serif', size: 10 }
+                                }
+                            },
+                            y: {
+                                stacked: true,
+                                title: { display: true, text: 'GW dispatched', font: { family: 'DM Sans, sans-serif', size: 11, weight: '600' } },
+                                grid: { color: 'rgba(100,116,139,0.1)' },
+                                ticks: { font: { family: 'DM Sans, sans-serif', size: 11 } }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // ─── ISO switch handler ───
+            function selectIso(iso) {
+                // Toggle button state
+                btns.forEach(function(b) {
+                    var active = b.getAttribute('data-iso') === iso;
+                    b.classList.toggle('active', active);
+                    b.setAttribute('aria-selected', active ? 'true' : 'false');
+                });
+
+                // Chart title / sub
+                if (iso === 'ALL') {
+                    chartTitleEl.textContent = 'The hockey stick: seven ISOs, seven shapes';
+                    chartSubEl.innerHTML = 'Marginal \u0024/CFE percentage point, Pathway 1, 2025\u20132050 undiscounted. Each color is one ISO.';
+                } else {
+                    chartTitleEl.textContent = iso + ' \u2014 the marginal cost of each next percentage point';
+                    chartSubEl.innerHTML = 'Marginal \u0024/CFE percentage point, Pathway 1, 2025\u20132050 undiscounted.';
+                }
+
+                // Narrative panel
+                if (iso === 'ALL') {
+                    narrCell.style.borderLeftColor = 'var(--navy)';
+                    narrEyebrow.textContent = 'Across seven ISOs';
+                    narrHead.innerHTML = 'Every grid hits a wall &mdash; but the wall looks different in every region.';
+                    narrBody.innerHTML =
+                        'Under Pathway 1, seven ISOs reach 95% CFE at widely different costs, and only a subset can climb further. ' +
+                        'Solar-heavy CAISO and wind-heavy ERCOT / MISO hit steep walls at 95%. Hydro- and offshore-wind-backed NEISO and NYISO coast further on existing clean capacity. ' +
+                        'PJM&rsquo;s curve falls between 90% and 95% because the optimizer restructures the mix, then climbs at 97.5%. ' +
+                        'The shape of each curve is the signature of the underlying resource mix.';
+                    statGasGw.textContent  = '15.7 GW';
+                    statDemand.textContent = '5,079 TWh';
+                    statGasGw.nextElementSibling.textContent   = 'summed across seven ISOs';
+                    statDemand.nextElementSibling.textContent  = 'summed 2050 demand (medium growth)';
+                } else {
+                    narrCell.style.borderLeftColor = ISO_COLORS[iso];
+                    narrEyebrow.textContent = iso;
+                    var stat = ISO_STATS[iso];
+                    var character = CHARACTER[iso];
+                    // Build a clean, data-driven headline using the gas_gw_95 field ONLY
+                    // (the source file's "headline" / achieved CFE / cost delta fields are stubs at 0)
+                    var gw = stat.gasGw;
+                    var head;
+                    if (gw < 0.05) {
+                        head = 'At 95% CFE, <strong>' + iso + '</strong> retires its existing gas fleet entirely &mdash; storage and VRE overbuild replace the gas reliability buffer.';
+                    } else {
+                        head = 'At 95% CFE, <strong>' + iso + '</strong> still relies on <strong>' + gw.toFixed(1) + ' GW</strong> of legacy gas &mdash; present for reliability, barely dispatched.';
+                    }
+                    narrHead.innerHTML = head;
+                    narrBody.innerHTML = 'Resource character: ' + character;
+                    statGasGw.textContent  = gw.toFixed(1) + ' GW';
+                    statDemand.textContent = stat.demandTwh.toLocaleString() + ' TWh';
+                    statGasGw.nextElementSibling.textContent   = 'at 95% CFE endpoint, Pathway 1';
+                    statDemand.nextElementSibling.textContent  = '2050 demand (medium growth)';
+                }
+
+                // Hockey chart
+                renderHockey(iso);
+
+                // Worst hours chart — per-ISO only
+                if (iso === 'ALL') {
+                    whWrap.classList.add('wall-worsthours-hidden');
+                    whTitle.innerHTML = 'The 100 worst hours of 2050 &mdash; select an ISO above';
+                    whSub.innerHTML = 'Pick a single ISO to reveal the hourly dispatch stack of the 100 hours with the highest residual load (demand minus VRE) under Pathway 1 at a 95% CFE endpoint. These are the hours the gas fleet is kept online to serve.';
+                    if (whChart) { whChart.destroy(); whChart = null; }
+                } else {
+                    whWrap.classList.remove('wall-worsthours-hidden');
+                    whTitle.innerHTML = iso + ' \u2014 the 100 worst hours of 2050';
+                    whSub.innerHTML = 'Hourly dispatch of the 100 hours with the highest residual load under Pathway 1 at 95% CFE. Bars stack wind / solar / battery / LDES / clean firm / gas. Dashed line = demand. Gas appears when storage is depleted during sustained low-VRE events.';
+                    renderWorstHours(iso);
+                }
+            }
+
+            // Wire up clicks
+            btns.forEach(function(b) {
+                b.addEventListener('click', function() {
+                    selectIso(b.getAttribute('data-iso'));
+                });
+            });
+
+            // Init
+            selectIso('ALL');
+        })();
+
+        // ===== Hook: animate gauge needle + ghost-grid when in view =====
+        (function initHookAnimations() {
+            var needle = document.getElementById('hookGaugeNeedle');
+            var ghost  = document.getElementById('hookMapGhost');
+            if (!needle && !ghost) return;
+
+            // Arc sweeps 180°: 0% at -90°, 50% at 0°, 100% at +90°.
+            // Gas CF (average feasible ISOs) = 4.82%  =>  -90 + (4.82/100)*180 ≈ -81.32°
+            var gasPct = 4.82;
+            var angle = -90 + (gasPct / 100) * 180;
+            if (needle) {
+                needle.style.setProperty('--needle-angle', angle.toFixed(2) + 'deg');
+            }
+
+            var prefersReduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (prefersReduce) {
+                if (needle) needle.classList.add('animate');
+                if (ghost)  ghost.classList.add('animate');
+                return;
+            }
+
+            if (!('IntersectionObserver' in window)) {
+                if (needle) needle.classList.add('animate');
+                if (ghost)  ghost.classList.add('animate');
+                return;
+            }
+
+            var seen = false;
+            var trigger = document.getElementById('hook') || document.querySelector('.hook-wrap');
+            if (!trigger) {
+                if (needle) needle.classList.add('animate');
+                if (ghost)  ghost.classList.add('animate');
+                return;
+            }
+            var io = new IntersectionObserver(function(entries) {
+                entries.forEach(function(e) {
+                    if (e.isIntersecting && !seen) {
+                        seen = true;
+                        if (needle) needle.classList.add('animate');
+                        if (ghost)  ghost.classList.add('animate');
+                        io.disconnect();
+                    }
+                });
+            }, { threshold: 0.25 });
+            io.observe(trigger);
+        })();
+    })();
+    </script>
+</body>
+</html>
