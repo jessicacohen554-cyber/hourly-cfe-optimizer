@@ -185,6 +185,8 @@ def _get_worst_hour_state(iso):
         'cache': cache,
         'demand_data': None,
         'gen_profiles': None,
+        'demand_norm': None,            # (8760,) normalized demand shape
+        'demand_margin_norm': None,     # (8760,) demand × (1 + RA_margin)
         'total_mwh_2025': float(REGIONAL_DEMAND_TWH[iso]) * 1.0e6,
         'gas_raw_2025_norm': None,
     }
@@ -193,13 +195,16 @@ def _get_worst_hour_state(iso):
 
 
 def _ensure_common_data(iso):
-    """Lazily populate demand/gen profiles for an ISO on cache miss."""
+    """Lazily populate demand/gen profiles + margin-inclusive demand shape."""
     state = _get_worst_hour_state(iso)
     if state['demand_data'] is None or state['gen_profiles'] is None:
         import dispatch_utils as _du
         dd, gp, _, _ = _du.load_common_data()
         state['demand_data'] = dd
         state['gen_profiles'] = gp
+        demand_norm, _ = _du.get_demand_profile(iso, dd)
+        state['demand_norm'] = np.asarray(demand_norm, dtype=np.float64)
+        state['demand_margin_norm'] = state['demand_norm'] * (1.0 + RESOURCE_ADEQUACY_MARGIN)
     return state
 
 
@@ -220,12 +225,14 @@ def _expand_missing_archetypes(iso, missing_mix_infos):
 
 
 def _gas_raw_2025_worst_hour(iso):
-    """2025-baseline gas_raw under the worst-hour formula.
+    """2025-baseline gas_raw under the worst-hour, margin-on-demand formula.
 
     Computed from the existing-grid mix defined by ``GRID_MIX_SHARES[iso]``
-    (no storage). Memoized per ISO. Used to keep the delta-RA calibration
-    ``gas_needed = EXISTING_GAS + (gas_raw - gas_raw_2025)`` consistent with
-    the actual 2025 fleet size.
+    (no storage). Memoized per ISO. The 2025 calibration uses the same
+    per-hour arithmetic as every scenario: ``residual[h] =
+    max(0, demand[h] × (1+RA) − total_clean[h])`` then 99.97th percentile.
+    Used to keep the delta-RA calibration ``gas_needed = EXISTING_GAS +
+    (gas_raw - gas_raw_2025)`` consistent with the actual 2025 fleet size.
     """
     state = _get_worst_hour_state(iso)
     if state['gas_raw_2025_norm'] is not None:
@@ -247,7 +254,7 @@ def _gas_raw_2025_worst_hour(iso):
             'h2_dispatch_pct': 0,
         }
         _expand_missing_archetypes(iso, [mix_info])
-        # Reload — the expansion wrote the archetype under the canonical key.
+        _ensure_common_data(iso)  # populate demand_margin_norm
         import dispatch_utils as _du
         key = _du._archetype_key(iso, mix_info['resource_pcts'], 100, 0, 0, 0)
         cache = state['cache']
@@ -257,28 +264,34 @@ def _gas_raw_2025_worst_hour(iso):
                 f"GAS_RAW_2025 archetype missing after expansion for {iso} (key={key}). "
                 "Dispatch cache is out of sync — check step3a expand_cache_for_mixes."
             )
-        resid = np.asarray(entry['residual_demand'], dtype=np.float64)
-        norm = float(np.percentile(resid, WORST_HOUR_PERCENTILE))
+        total_clean = np.asarray(entry['total_clean'], dtype=np.float64)
+        margin_resid = np.maximum(0.0, state['demand_margin_norm'] - total_clean)
+        norm = float(np.percentile(margin_resid, WORST_HOUR_PERCENTILE))
         state['gas_raw_2025_norm'] = norm
 
     demand_mwh_2025 = state['total_mwh_2025']
     gap_mw = norm * demand_mwh_2025
-    ra = 1.0 + RESOURCE_ADEQUACY_MARGIN
-    return max(0.0, gap_mw * ra) / GAS_AVAILABILITY_FACTOR[iso]
+    return gap_mw / GAS_AVAILABILITY_FACTOR[iso]
 
 
 def _worst_hour_residual_norm(iso, arrays):
-    """Per-mix 99.97th-percentile normalized residual gap.
+    """Per-mix 99.97th-percentile normalized margin-inclusive residual gap.
+
+    Implements the locked margin-on-demand convention (SPEC.md §24.5):
+    per-hour residual is ``max(0, demand[h] × (1 + RA_margin) − total_clean[h])``
+    — the 15% reserve margin is absorbed into demand before subtracting
+    clean supply. This matches NERC/PJM/MISO RA-planning tradition and
+    makes the result a strict physical upgrade over the legacy ELCC formula.
 
     Vectorized over all N candidate mixes for a given (ISO, threshold):
       1. Compute archetype keys for every mix.
       2. Identify keys missing from the dispatch cache.
       3. Batch-call step3a ``expand_cache_for_mixes`` for the missing set.
-      4. Build per-archetype percentile array, then index per mix.
+      4. Build per-archetype margin-inclusive percentile array, then index per mix.
 
     Returns a ``(N,)`` float64 numpy array. Values are fractions of annual
-    demand (unitless) — multiply by ``demand_mwh`` to get MW at the sizing
-    hour. Always ≥ 0 (residual_demand is already clipped).
+    demand (unitless) — multiply by ``demand_mwh`` to get the gap MW. Always
+    ≥ 0.
     """
     N = len(arrays['clean_firm'])
     if N == 0:
@@ -344,8 +357,11 @@ def _worst_hour_residual_norm(iso, arrays):
         _expand_missing_archetypes(iso, missing_mix_infos)
         cache = state['cache']
 
-    # Compute percentile per unique key. Any archetype still missing after
-    # expansion is a hard error — per SPEC.md §24.5 we never fall back to ELCC.
+    # Compute margin-inclusive residual percentile per unique key. Any
+    # archetype still missing after expansion is a hard error — per SPEC.md
+    # §24.5 we never fall back to ELCC.
+    _ensure_common_data(iso)
+    demand_margin = state['demand_margin_norm']
     p = WORST_HOUR_PERCENTILE
     unique_norm = np.empty(len(unique_keys), dtype=np.float64)
     for i, k in enumerate(unique_keys):
@@ -356,8 +372,9 @@ def _worst_hour_residual_norm(iso, arrays):
                 f"for ISO {iso}. Expected on-demand cache population in "
                 "step3a.expand_cache_for_mixes."
             )
-        resid = np.asarray(entry['residual_demand'], dtype=np.float64)
-        unique_norm[i] = np.percentile(resid, p)
+        total_clean = np.asarray(entry['total_clean'], dtype=np.float64)
+        margin_resid = np.maximum(0.0, demand_margin - total_clean)
+        unique_norm[i] = np.percentile(margin_resid, p)
 
     return unique_norm[inverse]
 
@@ -455,13 +472,14 @@ def worst_hour_gas_sizing(iso, mix_pct, storage_pct, demand_twh, gf):
     for ht in HYBRID_TYPES:
         arrays[ht] = _arr(ht)
 
+    # resid_norm is already margin-inclusive per SPEC.md §24.5.
     resid_norm = _worst_hour_residual_norm(iso, arrays)
     demand_mwh_grown = demand_twh * 1.0e6 * gf
     gap_mw = float(resid_norm[0]) * demand_mwh_grown
 
     gaf = GAS_AVAILABILITY_FACTOR[iso]
     ra = 1.0 + RESOURCE_ADEQUACY_MARGIN
-    gas_raw = max(0.0, gap_mw * ra) / gaf
+    gas_raw = gap_mw / gaf
     gas_raw_2025 = _gas_raw_2025_worst_hour(iso)
     existing_gas = float(EXISTING_GAS_CAPACITY_MW[iso])
     gas_needed = max(0.0, existing_gas + (gas_raw - gas_raw_2025))
@@ -728,14 +746,17 @@ def price_mix_batch(iso, arrays, sens, demand_twh, target_year=None, growth_rate
     peak_grown = PEAK_DEMAND_MW[iso] * gf
     ra_peak_grown = peak_grown * (1 + RESOURCE_ADEQUACY_MARGIN)
 
+    # resid_norm is already the margin-inclusive residual percentile
+    # (demand × (1+RA) − clean). No external × (1+RA) multiplier.
     resid_norm = _worst_hour_residual_norm(iso, arrays)
     gap_mw = resid_norm * demand_mwh
-    gas_raw = np.maximum(0.0, gap_mw * (1 + RESOURCE_ADEQUACY_MARGIN)) / gaf
+    gas_raw = gap_mw / gaf
     gas_delta = gas_raw - _gas_raw_2025_worst_hour(iso)
     gas_needed_mw = np.maximum(0, EXISTING_GAS_CAPACITY_MW[iso] + gas_delta)
-    # Diagnostic peak-MW view (residual-subtracted from grown demand peak);
-    # reported as "clean_peak_mw" for continuity with the prior column.
-    total_clean_peak = np.maximum(0.0, peak_grown - gap_mw)
+    # Diagnostic peak-MW view (margin-inclusive residual subtracted from the
+    # grown RA peak); reported as "clean_peak_mw" for continuity with the
+    # prior column.
+    total_clean_peak = np.maximum(0.0, ra_peak_grown - gap_mw)
 
     existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
     existing_gas_used_mw = np.minimum(gas_needed_mw, existing_gas_mw)
@@ -1011,12 +1032,13 @@ def precompute_base_year_coefficients(iso, arrays, demand_twh, uprate_cap_overri
     peak_grown = PEAK_DEMAND_MW[iso] * _gf
     ra_peak_grown = peak_grown * (1 + RESOURCE_ADEQUACY_MARGIN)
 
+    # resid_norm already encodes max(0, demand × (1+RA) − clean) per SPEC.md §24.5.
     resid_norm = _worst_hour_residual_norm(iso, arrays)
     gap_mw = resid_norm * demand_mwh
-    gas_raw = np.maximum(0.0, gap_mw * (1 + RESOURCE_ADEQUACY_MARGIN)) / gaf
+    gas_raw = gap_mw / gaf
     gas_delta = gas_raw - _gas_raw_2025_worst_hour(iso)
     gas_needed_mw = np.maximum(0, EXISTING_GAS_CAPACITY_MW[iso] + gas_delta)
-    total_clean_peak = np.maximum(0.0, peak_grown - gap_mw)
+    total_clean_peak = np.maximum(0.0, ra_peak_grown - gap_mw)
 
     existing_gas_mw = EXISTING_GAS_CAPACITY_MW[iso]
     existing_gas_used_mw = np.minimum(gas_needed_mw, existing_gas_mw)

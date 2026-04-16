@@ -69,11 +69,12 @@ def _arrays_from_mix(mix, storage):
 
 def _worst_hour_gas_needed(iso, mix, storage, gf=1.0):
     arrays = _arrays_from_mix(mix, storage)
+    # resid_norm already encodes demand × (1+RA) − clean per SPEC.md §24.5.
     resid_norm = _worst_hour_residual_norm(iso, arrays)[0]
     demand_mwh = float(REGIONAL_DEMAND_TWH[iso]) * 1.0e6 * gf
     gap_mw = resid_norm * demand_mwh
     gaf = GAS_AVAILABILITY_FACTOR[iso]
-    gas_raw = max(0.0, gap_mw * (1.0 + RESOURCE_ADEQUACY_MARGIN)) / gaf
+    gas_raw = gap_mw / gaf
     gas_raw_2025 = _gas_raw_2025_worst_hour(iso)
     return max(0.0, EXISTING_GAS_CAPACITY_MW[iso] + (gas_raw - gas_raw_2025))
 
