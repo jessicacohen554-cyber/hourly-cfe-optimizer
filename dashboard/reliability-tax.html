@@ -1311,6 +1311,182 @@
             .journey-canvas-wrap { height: 240px; }
         }
 
+        /* ─────────────────────────────────────────────────────────────
+           Section 5 — The Stranding Ledger
+           ───────────────────────────────────────────────────────────── */
+        .stranding-wrap {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 32px 28px;
+            box-shadow: var(--shadow-md);
+            margin-top: var(--space-xl);
+        }
+        .stranding-defn-box {
+            background: var(--bg-alt);
+            border-left: 3px solid var(--red);
+            border-radius: 0 var(--radius-md) var(--radius-md) 0;
+            padding: 14px 18px;
+            margin-bottom: var(--space-lg);
+            font-family: var(--font-body);
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        .stranding-defn-box strong {
+            font-family: var(--font-heading);
+            color: var(--navy);
+            font-weight: 700;
+        }
+        .stranding-sankey-wrap {
+            position: relative;
+            width: 100%;
+            min-height: 420px;
+            background: var(--bg-surface);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            margin-bottom: var(--space-lg);
+        }
+        .stranding-sankey-svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .stranding-sankey-node {
+            font-family: var(--font-heading);
+            font-size: 12px;
+            font-weight: 700;
+            fill: var(--navy);
+        }
+        .stranding-sankey-sub {
+            font-family: var(--font-body);
+            font-size: 10.5px;
+            fill: var(--text-muted);
+        }
+        .stranding-flow {
+            transition: opacity 0.25s ease;
+            cursor: pointer;
+        }
+        .stranding-flow:hover { opacity: 0.78; }
+
+        .stranding-resource-break {
+            margin-top: var(--space-md);
+        }
+        .stranding-resource-title {
+            font-family: var(--font-heading);
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: var(--space-sm);
+        }
+        .stranding-resource-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: var(--space-sm);
+        }
+        .stranding-resource-card {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-left: 3px solid var(--navy);
+            border-radius: var(--radius-md);
+            padding: 10px 12px;
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+        }
+        .stranding-resource-card-label {
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+        .stranding-resource-card-value {
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--navy);
+        }
+
+        .stranding-totals-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: var(--space-sm);
+            margin-top: var(--space-md);
+        }
+        .stranding-total-card {
+            background: var(--bg-surface);
+            border-radius: var(--radius-md);
+            padding: 14px 16px;
+            border-left: 3px solid var(--navy);
+        }
+        .stranding-total-card.delivered { border-left-color: var(--wind); }
+        .stranding-total-card.stranded { border-left-color: var(--red); }
+        .stranding-total-label {
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        .stranding-total-value {
+            font-family: var(--font-heading);
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1.1;
+        }
+        .stranding-total-card.stranded .stranding-total-value { color: var(--red-text); }
+        .stranding-total-card.delivered .stranding-total-value { color: var(--wind); }
+        .stranding-total-sub {
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .stranding-crosscheck {
+            margin-top: var(--space-lg);
+            padding: 16px 18px;
+            background: var(--bg-alt);
+            border-radius: var(--radius-md);
+            border-left: 3px solid var(--hydro);
+        }
+        .stranding-crosscheck-title {
+            font-family: var(--font-heading);
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--navy);
+            margin-bottom: 6px;
+        }
+        .stranding-crosscheck-body {
+            font-family: var(--font-body);
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+        }
+        .stranding-caption {
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: var(--space-md);
+            line-height: 1.55;
+            font-style: italic;
+            border-top: 1px dashed var(--border-light);
+            padding-top: var(--space-sm);
+        }
+
+        @media (max-width: 768px) {
+            .stranding-wrap { padding: 22px 18px; }
+            .stranding-sankey-wrap { padding: 12px; min-height: 360px; }
+        }
+
     </style>
 </head>
 <body>
@@ -1936,8 +2112,42 @@
             </div>
         </div>
     </section>
+    <div class="section-header fade-in">
+        <div class="section-number">5</div>
+        <h2>The Stranding Ledger</h2>
+        <p>What it costs to get the same destination by the wrong route. Pathways 1, 2a, and 2b carry capital that Pathway 3 wouldn&rsquo;t have needed to reach the same 95% CFE target.</p>
+    </div>
     <section class="content-section" id="section5">
-        <div class="section-stub"><strong>Section 5: Stranding</strong>Built in Prompt 5B.</div>
+        <div class="stranding-wrap fade-in">
+            <div class="stranding-defn-box">
+                <strong>&ldquo;Stranded&rdquo; here means</strong> capital spent on capacity that a destination-optimized plan wouldn&rsquo;t have required to reach the same CFE target. The stranding ledger compares each pathway&rsquo;s build to Pathway 3&rsquo;s build at the same endpoint, per resource and per ISO (Card K revised). Transmission and clean firm are excluded by construction.
+            </div>
+
+            <div class="stranding-sankey-wrap">
+                <svg id="strandingSankey" class="stranding-sankey-svg"
+                     viewBox="0 0 920 460"
+                     xmlns="http://www.w3.org/2000/svg"
+                     role="img" aria-label="Stranding ledger Sankey: pathways on the left flow to delivered-value and stranded-capital buckets on the right">
+                    <!-- Drawn by JS -->
+                </svg>
+            </div>
+
+            <div class="stranding-totals-row" id="strandingTotalsRow"></div>
+
+            <div class="stranding-resource-break">
+                <div class="stranding-resource-title">Stranded capital by resource type (aggregate across all pathways)</div>
+                <div class="stranding-resource-grid" id="strandingResourceGrid"></div>
+            </div>
+
+            <div class="stranding-crosscheck" id="strandingCrosscheck" style="display:none;">
+                <div class="stranding-crosscheck-title">VRE curtailment cross-check</div>
+                <div class="stranding-crosscheck-body" id="strandingCrosscheckBody"></div>
+            </div>
+
+            <div class="stranding-caption">
+                Flow widths in the Sankey are proportional to book value of unrecovered capital at 2050 (primary metric per Card F). NPV through end-of-life tracked as a secondary metric in the underlying data. Clean firm built post-pivot in Pathways 2a/2b is NOT counted as stranded &mdash; Pathway 3&rsquo;s clean firm is the destination plan. This chart reflects the Sankey payload as generated; see the source file for per-ISO flows.
+            </div>
+        </div>
     </section>
     <section class="content-section" id="section6">
         <div class="section-stub"><strong>Section 6: Cost of Waiting</strong>Built in Prompt 5B.</div>
@@ -3283,6 +3493,357 @@
                 .catch(function(err) {
                     var ann = document.getElementById('journeysAnnotations');
                     if (ann) ann.innerHTML = '<div class="journey-annotation"><strong>Load error</strong>Could not load section 4 payload: ' + err.message + '</div>';
+                });
+        })();
+
+        // ===== Section 5: The Stranding Ledger (custom SVG Sankey) =====
+        (function initSection5Stranding() {
+            var svg = document.getElementById('strandingSankey');
+            if (!svg) return;
+
+            var PATHWAY_LABELS = {
+                'pathway_1':  'Pathway 1',
+                'pathway_2a': 'Pathway 2a',
+                'pathway_2b': 'Pathway 2b'
+            };
+            var PATHWAY_SUBS = {
+                'pathway_1':  'VRE + storage, no firm clean',
+                'pathway_2a': 'Behavioral pivot',
+                'pathway_2b': 'Economic pivot'
+            };
+            var FATE_LABELS = {
+                'delivered_value': 'Delivered value',
+                'stranded':        'Stranded (excess over P3)'
+            };
+            var FATE_SUBS = {
+                'delivered_value': 'Capital that matches Pathway 3',
+                'stranded':        'Capital P3 wouldn\u2019t have needed'
+            };
+            var FATE_COLORS = {
+                'delivered_value': '#22C55E',
+                'stranded':        '#EF4444'
+            };
+            var PATHWAY_COLORS = {
+                'pathway_1':  '#EF4444',
+                'pathway_2a': '#F97316',
+                'pathway_2b': '#F59E0B'
+            };
+
+            var RES_COLORS = {
+                solar: '#F59E0B', wind: '#22C55E', offshore_wind: '#009688',
+                battery4: '#06B6D4', battery8: '#0891B2', ldes: '#E91E63',
+                h2: '#10B981', greenh2: '#10B981', all: '#94A3B8'
+            };
+            var RES_LABELS = {
+                solar: 'Solar', wind: 'Onshore wind', offshore_wind: 'Offshore wind',
+                battery4: 'Battery 4-hr', battery8: 'Battery 8-hr', ldes: 'LDES',
+                h2: 'Green H\u2082', greenh2: 'Green H\u2082'
+            };
+
+            function fmtT(usd) {
+                if (usd == null || !isFinite(usd) || usd === 0) return '$0';
+                var t = usd / 1e12;
+                if (Math.abs(t) >= 1) return '$' + t.toFixed(2) + 'T';
+                var b = usd / 1e9;
+                if (Math.abs(b) >= 1) return '$' + b.toFixed(1) + 'B';
+                return '$' + (usd / 1e6).toFixed(0) + 'M';
+            }
+
+            function renderSankey(payload) {
+                var sources = (payload.nodes && payload.nodes.sources) || [];
+                var fates   = (payload.nodes && payload.nodes.fates) || [];
+                var flows   = payload.flows || [];
+
+                // Aggregate: for each source, split into delivered vs stranded totals
+                // The payload has explicit flows; aggregate by source+fate.
+                var grouped = {};
+                sources.forEach(function(s) {
+                    grouped[s.id] = { delivered_value: 0, stranded: 0, total: s.total_cost_usd || 0 };
+                });
+                flows.forEach(function(f) {
+                    var srcId = 'pathway_' + (f.source_pathway || '');
+                    if (!grouped[srcId]) return;
+                    grouped[srcId][f.fate] = (grouped[srcId][f.fate] || 0) + (f.book_value_usd || 0);
+                });
+
+                // Layout
+                var W = 920, H = 460;
+                var padX = 20, padY = 40;
+                var srcX = padX + 20;
+                var srcW = 14;
+                var fateX = W - padX - 14;
+                var fateW = 14;
+
+                // Compute total flow magnitude (sum of delivered + stranded across all sources)
+                var totalFlow = 0;
+                Object.keys(grouped).forEach(function(k) {
+                    totalFlow += (grouped[k].delivered_value + grouped[k].stranded);
+                });
+                if (totalFlow <= 0) totalFlow = 1; // avoid div/0
+
+                var usableH = H - padY * 2 - (sources.length - 1) * 18; // gap between source stacks
+                var srcHeights = {};
+                sources.forEach(function(s) {
+                    var flowSum = grouped[s.id].delivered_value + grouped[s.id].stranded;
+                    srcHeights[s.id] = Math.max(30, (flowSum / totalFlow) * usableH);
+                });
+
+                var fateTotals = { delivered_value: 0, stranded: 0 };
+                flows.forEach(function(f) {
+                    fateTotals[f.fate] = (fateTotals[f.fate] || 0) + (f.book_value_usd || 0);
+                });
+                var fateTotalAll = fateTotals.delivered_value + fateTotals.stranded;
+                if (fateTotalAll <= 0) fateTotalAll = 1;
+                var fateHeights = {
+                    delivered_value: (fateTotals.delivered_value / fateTotalAll) * (H - padY * 2 - 18),
+                    stranded:        (fateTotals.stranded        / fateTotalAll) * (H - padY * 2 - 18)
+                };
+                fateHeights.delivered_value = Math.max(30, fateHeights.delivered_value);
+                fateHeights.stranded        = Math.max(30, fateHeights.stranded);
+
+                // Position source nodes vertically
+                var cursorY = padY;
+                var srcPos = {};
+                sources.forEach(function(s) {
+                    srcPos[s.id] = { y: cursorY, h: srcHeights[s.id] };
+                    cursorY += srcHeights[s.id] + 18;
+                });
+
+                var fatePos = {};
+                var fCursorY = padY;
+                ['delivered_value', 'stranded'].forEach(function(fid) {
+                    fatePos[fid] = { y: fCursorY, h: fateHeights[fid] };
+                    fCursorY += fateHeights[fid] + 18;
+                });
+
+                // Track offsets into each source/fate band as flows are drawn
+                var srcOffsets = {};
+                Object.keys(srcPos).forEach(function(k) { srcOffsets[k] = 0; });
+                var fateOffsets = { delivered_value: 0, stranded: 0 };
+
+                // Clear and redraw
+                while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+                var ns = 'http://www.w3.org/2000/svg';
+
+                // Draw source nodes
+                sources.forEach(function(s) {
+                    var p = srcPos[s.id];
+                    var rect = document.createElementNS(ns, 'rect');
+                    rect.setAttribute('x', srcX);
+                    rect.setAttribute('y', p.y);
+                    rect.setAttribute('width', srcW);
+                    rect.setAttribute('height', p.h);
+                    rect.setAttribute('fill', PATHWAY_COLORS[s.id] || '#64748B');
+                    rect.setAttribute('rx', 3);
+                    svg.appendChild(rect);
+
+                    // Labels
+                    var labelX = srcX + srcW + 10;
+                    var tl = document.createElementNS(ns, 'text');
+                    tl.setAttribute('class', 'stranding-sankey-node');
+                    tl.setAttribute('x', labelX);
+                    tl.setAttribute('y', p.y + 14);
+                    tl.textContent = PATHWAY_LABELS[s.id] || s.id;
+                    svg.appendChild(tl);
+
+                    var ts = document.createElementNS(ns, 'text');
+                    ts.setAttribute('class', 'stranding-sankey-sub');
+                    ts.setAttribute('x', labelX);
+                    ts.setAttribute('y', p.y + 28);
+                    ts.textContent = PATHWAY_SUBS[s.id] || '';
+                    svg.appendChild(ts);
+
+                    var tv = document.createElementNS(ns, 'text');
+                    tv.setAttribute('class', 'stranding-sankey-sub');
+                    tv.setAttribute('x', labelX);
+                    tv.setAttribute('y', p.y + p.h + 14);
+                    tv.setAttribute('font-weight', '700');
+                    var total = grouped[s.id].delivered_value + grouped[s.id].stranded;
+                    tv.textContent = 'Book: ' + fmtT(total);
+                    svg.appendChild(tv);
+                });
+
+                // Draw fate nodes
+                ['delivered_value', 'stranded'].forEach(function(fid) {
+                    var p = fatePos[fid];
+                    var rect = document.createElementNS(ns, 'rect');
+                    rect.setAttribute('x', fateX);
+                    rect.setAttribute('y', p.y);
+                    rect.setAttribute('width', fateW);
+                    rect.setAttribute('height', p.h);
+                    rect.setAttribute('fill', FATE_COLORS[fid]);
+                    rect.setAttribute('rx', 3);
+                    svg.appendChild(rect);
+
+                    var labelX = fateX - 10;
+                    var tl = document.createElementNS(ns, 'text');
+                    tl.setAttribute('class', 'stranding-sankey-node');
+                    tl.setAttribute('x', labelX);
+                    tl.setAttribute('y', p.y + 14);
+                    tl.setAttribute('text-anchor', 'end');
+                    tl.setAttribute('fill', fid === 'stranded' ? '#991B1B' : '#166534');
+                    tl.textContent = FATE_LABELS[fid];
+                    svg.appendChild(tl);
+
+                    var ts = document.createElementNS(ns, 'text');
+                    ts.setAttribute('class', 'stranding-sankey-sub');
+                    ts.setAttribute('x', labelX);
+                    ts.setAttribute('y', p.y + 28);
+                    ts.setAttribute('text-anchor', 'end');
+                    ts.textContent = FATE_SUBS[fid];
+                    svg.appendChild(ts);
+
+                    var tv = document.createElementNS(ns, 'text');
+                    tv.setAttribute('class', 'stranding-sankey-sub');
+                    tv.setAttribute('x', labelX);
+                    tv.setAttribute('y', p.y + p.h + 14);
+                    tv.setAttribute('text-anchor', 'end');
+                    tv.setAttribute('font-weight', '700');
+                    tv.setAttribute('fill', fid === 'stranded' ? '#991B1B' : '#166534');
+                    tv.textContent = fmtT(fateTotals[fid]);
+                    svg.appendChild(tv);
+                });
+
+                // Draw flows (one ribbon per source-fate combo)
+                sources.forEach(function(s) {
+                    ['delivered_value', 'stranded'].forEach(function(fid) {
+                        var flowVal = grouped[s.id][fid];
+                        if (flowVal <= 0) return;
+
+                        var sp = srcPos[s.id];
+                        var fp = fatePos[fid];
+                        var srcBand = (flowVal / (grouped[s.id].delivered_value + grouped[s.id].stranded)) * sp.h;
+                        var fateBand = (flowVal / fateTotals[fid]) * fp.h;
+
+                        var y0 = sp.y + srcOffsets[s.id];
+                        var y1 = sp.y + srcOffsets[s.id] + srcBand;
+                        var y2 = fp.y + fateOffsets[fid];
+                        var y3 = fp.y + fateOffsets[fid] + fateBand;
+
+                        srcOffsets[s.id] += srcBand;
+                        fateOffsets[fid] += fateBand;
+
+                        var xA = srcX + srcW;
+                        var xB = fateX;
+                        var midX = (xA + xB) / 2;
+
+                        // Two cubic Béziers forming a ribbon
+                        var dTop = 'M ' + xA + ' ' + y0 +
+                                   ' C ' + midX + ' ' + y0 + ', ' + midX + ' ' + y2 + ', ' + xB + ' ' + y2;
+                        var dBot = ' L ' + xB + ' ' + y3 +
+                                   ' C ' + midX + ' ' + y3 + ', ' + midX + ' ' + y1 + ', ' + xA + ' ' + y1 + ' Z';
+
+                        var path = document.createElementNS(ns, 'path');
+                        path.setAttribute('d', dTop + dBot);
+                        path.setAttribute('fill', FATE_COLORS[fid]);
+                        path.setAttribute('fill-opacity', fid === 'stranded' ? 0.32 : 0.28);
+                        path.setAttribute('stroke', FATE_COLORS[fid]);
+                        path.setAttribute('stroke-opacity', 0.5);
+                        path.setAttribute('stroke-width', 0.6);
+                        path.setAttribute('class', 'stranding-flow');
+                        path.setAttribute('data-source', s.id);
+                        path.setAttribute('data-fate', fid);
+
+                        var title = document.createElementNS(ns, 'title');
+                        title.textContent = (PATHWAY_LABELS[s.id] || s.id) + ' \u2192 ' +
+                                           FATE_LABELS[fid] + ': ' + fmtT(flowVal);
+                        path.appendChild(title);
+                        svg.appendChild(path);
+                    });
+                });
+
+                // Totals row
+                var totalsEl = document.getElementById('strandingTotalsRow');
+                if (totalsEl) {
+                    totalsEl.innerHTML = '';
+                    var cards = [
+                        { cls: 'delivered', label: 'Total delivered value',
+                          value: fmtT(fateTotals.delivered_value),
+                          sub: 'Capital across P1, P2a, P2b that matches Pathway 3 build' },
+                        { cls: 'stranded', label: 'Total stranded capital',
+                          value: fmtT(fateTotals.stranded),
+                          sub: 'Book value of capacity beyond what P3 would need' }
+                    ];
+                    cards.forEach(function(c) {
+                        var el = document.createElement('div');
+                        el.className = 'stranding-total-card ' + c.cls;
+                        el.innerHTML =
+                            '<div class="stranding-total-label">' + c.label + '</div>' +
+                            '<div class="stranding-total-value">' + c.value + '</div>' +
+                            '<div class="stranding-total-sub">' + c.sub + '</div>';
+                        totalsEl.appendChild(el);
+                    });
+
+                    // Per-pathway stranded share from pathway_totals
+                    var pwTotals = payload.pathway_totals || {};
+                    ['1','2a','2b'].forEach(function(pw) {
+                        var t = pwTotals[pw];
+                        if (!t) return;
+                        var el = document.createElement('div');
+                        el.className = 'stranding-total-card stranded';
+                        el.innerHTML =
+                            '<div class="stranding-total-label">Pathway ' + pw + ' stranded share</div>' +
+                            '<div class="stranding-total-value">' + (t.stranded_share_pct != null ? t.stranded_share_pct.toFixed(1) + '%' : '\u2014') + '</div>' +
+                            '<div class="stranding-total-sub">' + fmtT(t.total_stranded_book_value_usd) + ' of ' + fmtT(t.total_pathway_cost_usd) + ' total pathway capital</div>';
+                        totalsEl.appendChild(el);
+                    });
+                }
+
+                // Resource breakdown cards
+                var resEl = document.getElementById('strandingResourceGrid');
+                if (resEl) {
+                    resEl.innerHTML = '';
+                    var resAgg = payload.resource_stranding_aggregate || {};
+                    var keys = Object.keys(resAgg).sort(function(a, b) { return (resAgg[b] || 0) - (resAgg[a] || 0); });
+                    keys.forEach(function(res) {
+                        var v = resAgg[res];
+                        var card = document.createElement('div');
+                        card.className = 'stranding-resource-card';
+                        card.style.borderLeftColor = RES_COLORS[res] || '#94A3B8';
+                        card.innerHTML =
+                            '<div class="stranding-resource-card-label">' + (RES_LABELS[res] || res) + '</div>' +
+                            '<div class="stranding-resource-card-value">' + fmtT(v) + '</div>';
+                        resEl.appendChild(card);
+                    });
+                }
+
+                // VRE curtailment cross-check
+                var vre = payload.vre_curtailment_crosscheck || {};
+                var hasCurtail = false;
+                Object.keys(vre).forEach(function(k) {
+                    if (vre[k] && Object.keys(vre[k]).length > 0) hasCurtail = true;
+                });
+                var ccEl = document.getElementById('strandingCrosscheck');
+                var ccBodyEl = document.getElementById('strandingCrosscheckBody');
+                if (ccEl && ccBodyEl) {
+                    if (hasCurtail) {
+                        ccEl.style.display = 'block';
+                        var lines = [];
+                        Object.keys(vre).forEach(function(pw) {
+                            var inner = vre[pw] || {};
+                            var resLines = Object.keys(inner).map(function(res) {
+                                return (RES_LABELS[res] || res) + ': ' + (inner[res].toFixed ? inner[res].toFixed(1) : inner[res]) + '%';
+                            });
+                            if (resLines.length) lines.push('Pathway ' + pw + ' \u2014 ' + resLines.join(', '));
+                        });
+                        ccBodyEl.innerHTML = lines.join('<br>') ||
+                            'Per-pathway VRE curtailment rates available in the underlying data for resources showing &gt;50% curtailment at 2050.';
+                    } else {
+                        ccEl.style.display = 'block';
+                        ccBodyEl.innerHTML = 'VRE curtailment cross-check is available in the source payload as a secondary diagnostic (not primary flow). ' +
+                            'No per-resource VRE asset in the current Sankey run shows &gt;50% curtailment above what comparative-to-P3 stranding already flags.';
+                    }
+                }
+            }
+
+            fetch('js/reliability-tax/section5_stranding_sankey.json')
+                .then(function(r) { return r.json(); })
+                .then(renderSankey)
+                .catch(function(err) {
+                    var g = document.getElementById('strandingResourceGrid');
+                    if (g) g.innerHTML = '<div class="stranding-resource-card"><div class="stranding-resource-card-label">Load error</div><div class="stranding-resource-card-value">\u2014</div></div>';
+                    console.error('[Section 5] Failed to load payload:', err);
                 });
         })();
 
