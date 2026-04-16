@@ -1487,6 +1487,231 @@
             .stranding-sankey-wrap { padding: 12px; min-height: 360px; }
         }
 
+        /* ===== Section 6: Cost of Waiting ===== */
+        .waiting-wrap {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 28px 24px;
+            box-shadow: var(--shadow-sm);
+        }
+        .waiting-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-lg);
+            align-items: flex-end;
+            margin-bottom: var(--space-lg);
+        }
+        .waiting-control {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .waiting-control-label {
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .waiting-control .toggle-btn-group { display: inline-flex; gap: 4px; }
+        .waiting-panels {
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+            gap: var(--space-lg);
+            margin-top: var(--space-md);
+        }
+        .waiting-panel {
+            background: var(--bg-page-white);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: 18px 16px 14px 16px;
+            min-height: 360px;
+            display: flex;
+            flex-direction: column;
+        }
+        .waiting-panel-title {
+            font-family: var(--font-heading);
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin: 0 0 4px 0;
+        }
+        .waiting-panel-sub {
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin: 0 0 10px 0;
+            line-height: 1.5;
+        }
+        .waiting-chart-host {
+            position: relative;
+            flex: 1 1 auto;
+            min-height: 280px;
+        }
+        .waiting-meta-box {
+            background: var(--bg-tint-navy);
+            border-left: 3px solid var(--navy);
+            border-radius: var(--radius-sm);
+            padding: 10px 14px;
+            margin-top: var(--space-md);
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+        }
+        .waiting-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--space-sm);
+            margin-top: var(--space-md);
+        }
+        .waiting-card {
+            background: var(--bg-page-white);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+        }
+        .waiting-card-label {
+            font-family: var(--font-body);
+            font-size: 0.68rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+        .waiting-card-value {
+            font-family: var(--font-data);
+            font-size: 1.12rem;
+            font-weight: 700;
+            color: var(--navy);
+        }
+        .waiting-card-sub {
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        @media (max-width: 900px) {
+            .waiting-panels { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .waiting-wrap { padding: 22px 18px; }
+        }
+
+        /* ===== Closing synthesis table ===== */
+        .synth-wrap {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 28px 24px;
+            box-shadow: var(--shadow-sm);
+        }
+        .synth-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-md);
+            align-items: center;
+            margin-bottom: var(--space-md);
+        }
+        .synth-controls label {
+            font-family: var(--font-body);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .synth-controls select,
+        .synth-controls input[type="search"] {
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            padding: 6px 10px;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            background: var(--bg-page-white);
+            color: var(--text-primary);
+        }
+        .synth-table-scroll {
+            width: 100%;
+            overflow-x: auto;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            background: var(--bg-page-white);
+        }
+        .synth-table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 1100px;
+            font-family: var(--font-data);
+            font-size: 0.78rem;
+        }
+        .synth-table thead th {
+            position: sticky;
+            top: 0;
+            background: var(--navy);
+            color: #fff;
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 8px 10px;
+            text-align: right;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+            border-right: 1px solid rgba(255,255,255,0.08);
+        }
+        .synth-table thead th.col-left { text-align: left; }
+        .synth-table thead th .sort-caret {
+            opacity: 0.55;
+            font-size: 0.65rem;
+            margin-left: 4px;
+        }
+        .synth-table thead th.sorted .sort-caret { opacity: 1; color: var(--gold, #FFC857); }
+        .synth-table tbody td {
+            padding: 6px 10px;
+            text-align: right;
+            border-bottom: 1px solid var(--border-light);
+            white-space: nowrap;
+            color: var(--text-primary);
+        }
+        .synth-table tbody td.col-left { text-align: left; }
+        .synth-table tbody tr:hover td { background: var(--bg-tint-navy); }
+        .synth-table tbody tr.row-infeasible td { color: var(--text-muted); background: #fafaf7; }
+        .synth-table tbody tr.row-infeasible td.col-left { font-style: italic; }
+        .synth-badge {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 999px;
+            font-family: var(--font-body);
+            font-size: 0.66rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .synth-badge-ok { background: rgba(34, 197, 94, 0.14); color: #14532d; }
+        .synth-badge-warn { background: rgba(245, 158, 11, 0.18); color: #7c2d12; }
+        .synth-badge-bad { background: rgba(239, 68, 68, 0.15); color: #7f1d1d; }
+        .synth-badge-iso {
+            background: var(--bg-tint-navy);
+            color: var(--navy);
+            border: 1px solid var(--border-light);
+        }
+        .synth-summary {
+            font-family: var(--font-body);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: var(--space-sm);
+        }
+        @media (max-width: 768px) {
+            .synth-wrap { padding: 22px 16px; }
+            .synth-controls { gap: var(--space-sm); }
+        }
+
     </style>
 </head>
 <body>
@@ -2149,11 +2374,92 @@
             </div>
         </div>
     </section>
+    <div class="section-header">
+        <h2 class="section-title">The cost of waiting</h2>
+        <p class="section-subtitle">Delay a clean-firm commitment by five years and Pathway 3&rsquo;s advantage shrinks. Delay by fifteen and the reactive pathways catch up &mdash; but only after paying the stranded-capital penalty baked into the stranding ledger. The left panel shows cumulative 2025&ndash;2050 cost as a function of the year clean firm first becomes available; the right panel decomposes the penalty versus the destination-oriented Pathway 3 anchor.</p>
+    </div>
     <section class="content-section" id="section6">
-        <div class="section-stub"><strong>Section 6: Cost of Waiting</strong>Built in Prompt 5B.</div>
+        <div class="waiting-wrap">
+            <div class="waiting-controls">
+                <div class="waiting-control">
+                    <div class="waiting-control-label">ISO</div>
+                    <div class="iso-selector" id="waitingIsoSel"></div>
+                </div>
+                <div class="waiting-control">
+                    <div class="waiting-control-label">CFE endpoint</div>
+                    <div class="toggle-btn-group" id="waitingEpSel"></div>
+                </div>
+            </div>
+
+            <div class="waiting-panels">
+                <div class="waiting-panel">
+                    <div class="waiting-panel-title">Cumulative 2025&ndash;2050 cost vs. commitment year</div>
+                    <div class="waiting-panel-sub">Primary line: total actual cost ($T) allocated via linear interpolation between P3 (2025), P2a (pivot year), and P1 (2050) anchors. Horizontal reference: Pathway 3 baseline (destination-oriented).</div>
+                    <div class="waiting-chart-host">
+                        <canvas id="waitingCurveChart" aria-label="Cumulative cost vs commitment year"></canvas>
+                    </div>
+                </div>
+
+                <div class="waiting-panel">
+                    <div class="waiting-panel-title">Penalty vs. Pathway 3 by commitment year</div>
+                    <div class="waiting-panel-sub">Additional cost paid (over P3 destination-oriented baseline) as a function of when clean firm commitment is made. Stacked where decomposition is available; single bar otherwise.</div>
+                    <div class="waiting-chart-host">
+                        <canvas id="waitingPenaltyChart" aria-label="Penalty vs Pathway 3 by commitment year"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="waiting-cards" id="waitingCards"></div>
+
+            <div class="waiting-meta-box" id="waitingMeta">
+                Commitment-year curves are interpolated between the three optimizer-anchored points (Pathway 3 at 2025, Pathway 2a at its pivot year, and Pathway 1 at 2050). No per-year-of-commitment optimizer runs exist &mdash; every point on the curve is read off that linear interpolation. Penalty decomposition into stranded assets / FOAK premium / foregone learning is indicative only, drawn from the stranding-ledger book value &times; 50% NPV factor with FOAK/learning estimated as 30/70 of the remainder.
+            </div>
+        </div>
     </section>
+
+    <div class="section-header">
+        <h2 class="section-title">Synthesis: 7 ISOs &times; 5 pathways &times; 5 CFE endpoints</h2>
+        <p class="section-subtitle">175 rows, one per (ISO, pathway, endpoint). Undiscounted cumulative cost is the primary metric (Card S); NPV @5/7/9% are carried as secondary columns. Infeasibility &mdash; physical (resource-cap blown) or economic (cost ceiling exceeded) &mdash; is marked distinctly. Stranded new gas and cumulative existing-fleet retirements are pulled straight from the stranding ledger and retirement tracker.</p>
+    </div>
     <section class="content-section" id="closing">
-        <div class="section-stub"><strong>Closing synthesis</strong>Built in Prompt 5B.</div>
+        <div class="synth-wrap">
+            <div class="synth-controls">
+                <label>ISO
+                    <select id="synthIsoFilter"><option value="all">All</option></select>
+                </label>
+                <label>Pathway
+                    <select id="synthPathwayFilter"><option value="all">All</option></select>
+                </label>
+                <label>Endpoint
+                    <select id="synthEpFilter"><option value="all">All</option></select>
+                </label>
+                <label>Feasibility
+                    <select id="synthFeasFilter">
+                        <option value="all">All</option>
+                        <option value="feasible">Feasible only</option>
+                        <option value="infeasible">Infeasible only</option>
+                    </select>
+                </label>
+                <label>Search
+                    <input type="search" id="synthSearch" placeholder="Filter by run_key&hellip;" />
+                </label>
+            </div>
+
+            <div class="synth-table-scroll">
+                <table class="synth-table" id="synthTable">
+                    <thead>
+                        <tr id="synthHead"></tr>
+                    </thead>
+                    <tbody id="synthBody"></tbody>
+                </table>
+            </div>
+
+            <div class="synth-summary" id="synthSummary"></div>
+
+            <div class="waiting-meta-box">
+                Primary headline metric per row is <strong>undiscounted 2025&ndash;2050 cumulative cost</strong> (Card S). NPV @7% is shown alongside; @5% and @9% brackets are carried in the underlying payload for sensitivity but hidden here to keep the table legible. Cells tagged as infeasible are shaded and italicised &mdash; the underlying optimizer did not find a physically or economically feasible solution at that (ISO, pathway, endpoint) triple. Stranded new gas, total stranded book value, and cumulative existing-fleet retirements are drawn verbatim from the stranding ledger and retirement tracker.
+            </div>
+        </div>
     </section>
 
     <footer id="siteFooter" data-footer-note="The Reliability Tax — analysis of four decarbonization pathways across 7 US ISOs and 5 CFE endpoints."></footer>
@@ -3844,6 +4150,519 @@
                     var g = document.getElementById('strandingResourceGrid');
                     if (g) g.innerHTML = '<div class="stranding-resource-card"><div class="stranding-resource-card-label">Load error</div><div class="stranding-resource-card-value">\u2014</div></div>';
                     console.error('[Section 5] Failed to load payload:', err);
+                });
+        })();
+
+        // ===== Section 6: Cost of Waiting =====
+        (function initSection6Waiting() {
+            var host = document.getElementById('waitingCurveChart');
+            if (!host) return;
+
+            var ISOS  = ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'];
+            var EP_LIST = ['ep90','ep95','ep97p5','ep99','ep99p9'];
+            var EP_LABEL = { ep90:'90%', ep95:'95%', ep97p5:'97.5%', ep99:'99%', ep99p9:'99.9%' };
+
+            var state = { iso: 'ERCOT', ep: 'ep95', data: null };
+            var curveChart = null, penaltyChart = null;
+
+            function cssVar(name, fallback) {
+                var v = getComputedStyle(document.documentElement).getPropertyValue(name);
+                return (v && v.trim()) ? v.trim() : fallback;
+            }
+            var C_NAVY      = cssVar('--navy', '#0B2545');
+            var C_RED       = cssVar('--red',  '#EF4444');
+            var C_CLEANFIRM = cssVar('--clean-firm', '#6366F1');
+            var C_GOLD      = cssVar('--gold', '#FFC857');
+            var C_BORDER    = cssVar('--border-light', '#E5E7EB');
+            var C_MUTED     = cssVar('--text-muted', '#6B7280');
+            var C_TEXT      = cssVar('--text-primary', '#111827');
+
+            function buildSelectors() {
+                var isoSel = document.getElementById('waitingIsoSel');
+                isoSel.innerHTML = '';
+                ISOS.forEach(function(iso) {
+                    var b = document.createElement('button');
+                    b.className = 'iso-btn' + (iso === state.iso ? ' active' : '');
+                    b.textContent = iso;
+                    b.setAttribute('data-iso', iso);
+                    b.addEventListener('click', function() {
+                        state.iso = iso;
+                        isoSel.querySelectorAll('.iso-btn').forEach(function(x) { x.classList.remove('active'); });
+                        b.classList.add('active');
+                        render();
+                    });
+                    isoSel.appendChild(b);
+                });
+
+                var epSel = document.getElementById('waitingEpSel');
+                epSel.innerHTML = '';
+                EP_LIST.forEach(function(ep) {
+                    var b = document.createElement('button');
+                    b.className = 'toggle-btn' + (ep === state.ep ? ' active' : '');
+                    b.textContent = EP_LABEL[ep];
+                    b.setAttribute('data-ep', ep);
+                    b.addEventListener('click', function() {
+                        state.ep = ep;
+                        epSel.querySelectorAll('.toggle-btn').forEach(function(x) { x.classList.remove('active'); });
+                        b.classList.add('active');
+                        render();
+                    });
+                    epSel.appendChild(b);
+                });
+            }
+
+            function fmtT(v) {
+                if (v === null || v === undefined || !isFinite(v)) return '\u2014';
+                if (Math.abs(v) >= 1) return '$' + v.toFixed(2) + 'T';
+                if (Math.abs(v) >= 0.01) return '$' + v.toFixed(3) + 'T';
+                return '$' + (v * 1000).toFixed(1) + 'B';
+            }
+
+            function render() {
+                if (!state.data) return;
+                var isoNode = state.data.per_iso[state.iso];
+                if (!isoNode) return;
+                var epNode = isoNode.by_endpoint[state.ep];
+                if (!epNode) return;
+
+                var curve = epNode.commitment_curve || [];
+                var xs = curve.map(function(r) { return r.commit_year; });
+                var actual     = curve.map(function(r) { return +r.total_actual_cost_trillion || 0; });
+                var undiscVals = curve.map(function(r) { return +r.undiscounted_cumulative_trillion || 0; });
+                var npv7Vals   = curve.map(function(r) { return +r.npv_7pct_trillion || 0; });
+                var npv5Vals   = curve.map(function(r) { return +r.npv_5pct_trillion || 0; });
+                var npv9Vals   = curve.map(function(r) { return +r.npv_9pct_trillion || 0; });
+
+                var anyNpv = npv7Vals.some(function(v) { return v !== 0; }) ||
+                             undiscVals.some(function(v) { return v !== 0; });
+
+                var p3 = epNode.reference_p3 || {};
+                var p3Line = xs.map(function() { return +p3.total_actual_cost_trillion || 0; });
+
+                var datasets = [
+                    {
+                        label: 'Total actual cost ($T, undiscounted)',
+                        data: actual,
+                        borderColor: C_NAVY,
+                        backgroundColor: 'rgba(11, 37, 69, 0.12)',
+                        borderWidth: 2.5,
+                        tension: 0.25,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        fill: false,
+                        spanGaps: true
+                    },
+                    {
+                        label: 'Pathway 3 reference (destination-oriented)',
+                        data: p3Line,
+                        borderColor: C_CLEANFIRM,
+                        borderDash: [6, 5],
+                        borderWidth: 1.8,
+                        pointRadius: 0,
+                        fill: false
+                    }
+                ];
+
+                if (anyNpv) {
+                    datasets.push({
+                        label: 'NPV @ 7%',
+                        data: npv7Vals,
+                        borderColor: C_RED,
+                        backgroundColor: 'rgba(239, 68, 68, 0.14)',
+                        borderWidth: 2,
+                        borderDash: [3, 3],
+                        tension: 0.25,
+                        pointRadius: 3,
+                        fill: {
+                            target: '+1',
+                            above: 'rgba(239, 68, 68, 0.08)',
+                            below: 'rgba(239, 68, 68, 0.08)'
+                        }
+                    });
+                    datasets.push({
+                        label: 'NPV @ 5% (upper band)',
+                        data: npv5Vals,
+                        borderColor: 'rgba(239, 68, 68, 0.35)',
+                        borderWidth: 1,
+                        borderDash: [2, 2],
+                        pointRadius: 0,
+                        fill: false
+                    });
+                    datasets.push({
+                        label: 'NPV @ 9% (lower band)',
+                        data: npv9Vals,
+                        borderColor: 'rgba(239, 68, 68, 0.35)',
+                        borderWidth: 1,
+                        borderDash: [2, 2],
+                        pointRadius: 0,
+                        fill: false
+                    });
+                }
+
+                if (curveChart) curveChart.destroy();
+                curveChart = new Chart(host.getContext('2d'), {
+                    type: 'line',
+                    data: { labels: xs, datasets: datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 400 },
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { boxWidth: 14, font: { family: 'DM Sans', size: 11 }, color: C_TEXT }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) {
+                                        return ctx.dataset.label + ': ' + fmtT(ctx.parsed.y);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: { display: true, text: 'Commitment year', color: C_MUTED, font: { family: 'DM Sans', size: 11 } },
+                                grid: { color: C_BORDER, display: false },
+                                ticks: { color: C_MUTED, font: { family: 'DM Sans', size: 11 } }
+                            },
+                            y: {
+                                title: { display: true, text: 'Cumulative 2025\u20132050 cost ($T)', color: C_MUTED, font: { family: 'DM Sans', size: 11 } },
+                                grid: { color: C_BORDER },
+                                ticks: {
+                                    color: C_MUTED,
+                                    font: { family: 'DM Sans', size: 11 },
+                                    callback: function(v) { return fmtT(v); }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Right panel: penalty composition
+                var penalty    = curve.map(function(r) { return +r.penalty_vs_p3_actual_trillion || 0; });
+                var stranded   = curve.map(function(r) { return +(r.penalty_composition || {}).stranded_assets_trillion || 0; });
+                var foakPrem   = curve.map(function(r) { return +(r.penalty_composition || {}).foak_premium_trillion || 0; });
+                var foregone   = curve.map(function(r) { return +(r.penalty_composition || {}).foregone_learning_trillion || 0; });
+                var anyComp = stranded.some(function(v) { return v !== 0; }) ||
+                              foakPrem.some(function(v) { return v !== 0; }) ||
+                              foregone.some(function(v) { return v !== 0; });
+
+                var pDatasets;
+                if (anyComp) {
+                    pDatasets = [
+                        { label: 'Stranded assets',   data: stranded, backgroundColor: C_RED,       stack: 's' },
+                        { label: 'FOAK premium',      data: foakPrem, backgroundColor: C_GOLD,      stack: 's' },
+                        { label: 'Foregone learning', data: foregone, backgroundColor: C_CLEANFIRM, stack: 's' }
+                    ];
+                } else {
+                    pDatasets = [{
+                        label: 'Penalty vs P3 (actual $T)',
+                        data: penalty,
+                        backgroundColor: penalty.map(function(v) { return v >= 0 ? 'rgba(239,68,68,0.78)' : 'rgba(34,197,94,0.78)'; }),
+                        borderColor: penalty.map(function(v) { return v >= 0 ? C_RED : '#16A34A'; }),
+                        borderWidth: 1
+                    }];
+                }
+
+                var pHost = document.getElementById('waitingPenaltyChart');
+                if (penaltyChart) penaltyChart.destroy();
+                penaltyChart = new Chart(pHost.getContext('2d'), {
+                    type: 'bar',
+                    data: { labels: xs, datasets: pDatasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 400 },
+                        plugins: {
+                            legend: {
+                                display: anyComp,
+                                position: 'bottom',
+                                labels: { boxWidth: 14, font: { family: 'DM Sans', size: 11 }, color: C_TEXT }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) { return ctx.dataset.label + ': ' + fmtT(ctx.parsed.y); }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                stacked: anyComp,
+                                title: { display: true, text: 'Commitment year', color: C_MUTED, font: { family: 'DM Sans', size: 11 } },
+                                grid: { display: false },
+                                ticks: { color: C_MUTED, font: { family: 'DM Sans', size: 11 } }
+                            },
+                            y: {
+                                stacked: anyComp,
+                                title: { display: true, text: 'Penalty vs. P3 ($T)', color: C_MUTED, font: { family: 'DM Sans', size: 11 } },
+                                grid: { color: C_BORDER },
+                                ticks: {
+                                    color: C_MUTED,
+                                    font: { family: 'DM Sans', size: 11 },
+                                    callback: function(v) { return fmtT(v); }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Summary cards
+                var cards = document.getElementById('waitingCards');
+                var anchorP2a = epNode.anchor_p2a || {};
+                var anchorP1  = epNode.anchor_p1  || {};
+                var p2aPivot = anchorP2a.pivot_year || isoNode.pivot_year_2a || '\u2014';
+                var maxPenalty = penalty.length ? Math.max.apply(null, penalty) : 0;
+                var maxPenIdx  = penalty.indexOf(maxPenalty);
+                var maxPenYear = (maxPenIdx >= 0) ? xs[maxPenIdx] : '\u2014';
+
+                cards.innerHTML = '' +
+                    '<div class="waiting-card">' +
+                        '<div class="waiting-card-label">P3 anchor (2025)</div>' +
+                        '<div class="waiting-card-value">' + fmtT(p3.total_actual_cost_trillion) + '</div>' +
+                        '<div class="waiting-card-sub">Destination-oriented, committed now</div>' +
+                    '</div>' +
+                    '<div class="waiting-card">' +
+                        '<div class="waiting-card-label">P2a pivot year</div>' +
+                        '<div class="waiting-card-value">' + p2aPivot + '</div>' +
+                        '<div class="waiting-card-sub">Actual cost ' + fmtT(anchorP2a.total_actual_cost_trillion) + '</div>' +
+                    '</div>' +
+                    '<div class="waiting-card">' +
+                        '<div class="waiting-card-label">P1 anchor (2050)</div>' +
+                        '<div class="waiting-card-value">' + fmtT(anchorP1.total_actual_cost_trillion) + '</div>' +
+                        '<div class="waiting-card-sub">Never commit to new clean firm</div>' +
+                    '</div>' +
+                    '<div class="waiting-card">' +
+                        '<div class="waiting-card-label">Worst-year penalty</div>' +
+                        '<div class="waiting-card-value">' + fmtT(maxPenalty) + '</div>' +
+                        '<div class="waiting-card-sub">At commitment year ' + maxPenYear + '</div>' +
+                    '</div>';
+            }
+
+            buildSelectors();
+            fetch('js/reliability-tax/section6_cost_of_waiting.json')
+                .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+                .then(function(json) { state.data = json; render(); })
+                .catch(function(err) {
+                    console.error('[Section 6] Failed to load payload:', err);
+                    var cards = document.getElementById('waitingCards');
+                    if (cards) cards.innerHTML = '<div class="waiting-card"><div class="waiting-card-label">Load error</div><div class="waiting-card-value">\u2014</div></div>';
+                });
+        })();
+
+        // ===== Closing synthesis table =====
+        (function initClosingTable() {
+            var head = document.getElementById('synthHead');
+            if (!head) return;
+
+            var COLS = [
+                { key: 'iso',                          label: 'ISO',         type: 'text',  align: 'left', fmt: function(v) { return '<span class="synth-badge synth-badge-iso">' + v + '</span>'; } },
+                { key: 'pathway',                      label: 'Pathway',     type: 'text',  align: 'left' },
+                { key: 'endpoint',                     label: 'CFE',         type: 'text',  align: 'left' },
+                { key: 'feasibility_badge',            label: 'Feasible?',   type: 'text',  align: 'left', fmt: function(v) { return v; } },
+                { key: 'undiscounted_cost_trillion',   label: 'Undisc. cost ($T)', type: 'num', digits: 2 },
+                { key: 'total_actual_cost_trillion',   label: 'Actual cost ($T)',  type: 'num', digits: 2 },
+                { key: 'npv_7pct_trillion',            label: 'NPV@7% ($T)',       type: 'num', digits: 2 },
+                { key: 'total_stranded_billion_usd',   label: 'Stranded ($B)',     type: 'num', digits: 1 },
+                { key: 'new_gas_stranded_gw',          label: 'New gas stranded (GW)', type: 'num', digits: 1 },
+                { key: 'gas_retired_cumulative_gw',    label: 'Gas retired (GW)',  type: 'num', digits: 1 },
+                { key: 'achieved_cfe_pct',             label: 'Achieved CFE (%)',  type: 'num', digits: 1 },
+                { key: 'gas_fleet_cf_pct',             label: 'Gas CF (%)',        type: 'num', digits: 1 },
+                { key: 'vre_curtailment_pct',          label: 'VRE curt. (%)',     type: 'num', digits: 1 },
+                { key: 'physical_ceiling_note',        label: 'Physical ceiling',  type: 'text', align: 'left' },
+                { key: 'economic_ceiling_note',        label: 'Economic ceiling',  type: 'text', align: 'left' }
+            ];
+
+            var state = { rows: [], filtered: [], sortKey: 'iso', sortDir: 1 };
+
+            function pickNum(row) {
+                for (var i = 1; i < arguments.length; i++) {
+                    var k = arguments[i];
+                    if (row[k] !== undefined && row[k] !== null && row[k] !== '' && isFinite(+row[k])) return +row[k];
+                }
+                return null;
+            }
+
+            function pickText(row) {
+                for (var i = 1; i < arguments.length; i++) {
+                    var k = arguments[i];
+                    if (row[k] !== undefined && row[k] !== null && row[k] !== '') return row[k];
+                }
+                return '';
+            }
+
+            function normalise(raw) {
+                return raw.map(function(r) {
+                    var phys = r.feasible_physical;
+                    var econ = r.feasible_economic;
+                    var feasible = (phys !== false) && (econ !== false);
+                    var badge;
+                    if (phys === false && econ === false) badge = '<span class="synth-badge synth-badge-bad">infeasible</span>';
+                    else if (phys === false) badge = '<span class="synth-badge synth-badge-bad">physical</span>';
+                    else if (econ === false) badge = '<span class="synth-badge synth-badge-warn">economic</span>';
+                    else badge = '<span class="synth-badge synth-badge-ok">ok</span>';
+
+                    var epRaw = (r.endpoint_pct != null) ? r.endpoint_pct :
+                                (typeof r.endpoint === 'number' ? r.endpoint * 100 : null);
+                    var epDisplay;
+                    if (epRaw === null) {
+                        epDisplay = (r.endpoint || '').toString();
+                    } else {
+                        epDisplay = (Math.abs(epRaw - Math.round(epRaw)) < 0.05) ?
+                                    Math.round(epRaw) + '%' : epRaw.toFixed(1) + '%';
+                    }
+                    return {
+                        _raw: r,
+                        _feasible: feasible,
+                        _epNum: epRaw,
+                        iso: r.iso || '',
+                        pathway: r.pathway || '',
+                        endpoint: epDisplay,
+                        feasibility_badge: badge,
+                        undiscounted_cost_trillion: pickNum(r, 'undiscounted_cost_trillion', 'undiscounted_cumulative_trillion'),
+                        total_actual_cost_trillion: pickNum(r, 'total_actual_cost_trillion'),
+                        npv_7pct_trillion:          pickNum(r, 'npv_7pct_trillion'),
+                        total_stranded_billion_usd: pickNum(r, 'total_stranded_billion_usd', 'stranded_value_billion'),
+                        new_gas_stranded_gw:        pickNum(r, 'new_gas_stranded_gw'),
+                        gas_retired_cumulative_gw:  pickNum(r, 'gas_retired_cumulative_gw'),
+                        achieved_cfe_pct:           pickNum(r, 'achieved_cfe_pct', 'cfe_achieved_pct'),
+                        gas_fleet_cf_pct:           pickNum(r, 'gas_fleet_cf_pct', 'gas_cf_pct'),
+                        vre_curtailment_pct:        pickNum(r, 'vre_curtailment_pct', 'vre_curtailment_solar_pct'),
+                        physical_ceiling_note:      pickText(r, 'physical_ceiling_note'),
+                        economic_ceiling_note:      pickText(r, 'economic_ceiling_note'),
+                        run_key:                    r.run_key || (r.iso + '|' + r.pathway + '|' + r.endpoint)
+                    };
+                });
+            }
+
+            function buildHeader() {
+                head.innerHTML = '';
+                COLS.forEach(function(col) {
+                    var th = document.createElement('th');
+                    th.className = col.align === 'left' ? 'col-left' : '';
+                    th.setAttribute('data-key', col.key);
+                    th.innerHTML = col.label + '<span class="sort-caret">\u25B2\u25BC</span>';
+                    th.addEventListener('click', function() {
+                        if (state.sortKey === col.key) state.sortDir *= -1;
+                        else { state.sortKey = col.key; state.sortDir = 1; }
+                        render();
+                    });
+                    head.appendChild(th);
+                });
+            }
+
+            function sortRows(rows) {
+                var key = state.sortKey, dir = state.sortDir;
+                var col = COLS.find(function(c) { return c.key === key; });
+                var t = col ? col.type : 'text';
+                return rows.slice().sort(function(a, b) {
+                    var va = a[key], vb = b[key];
+                    if (t === 'num') {
+                        if (va === null && vb === null) return 0;
+                        if (va === null) return 1;
+                        if (vb === null) return -1;
+                        return (va - vb) * dir;
+                    }
+                    va = (va || '').toString();
+                    vb = (vb || '').toString();
+                    return va.localeCompare(vb) * dir;
+                });
+            }
+
+            function fmtCell(row, col) {
+                var v = row[col.key];
+                if (col.type === 'num') {
+                    if (v === null || v === undefined || !isFinite(v)) return '\u2014';
+                    return (+v).toFixed(col.digits != null ? col.digits : 2);
+                }
+                if (typeof col.fmt === 'function') return col.fmt(v);
+                return (v === null || v === undefined || v === '') ? '\u2014' : v;
+            }
+
+            function render() {
+                head.querySelectorAll('th').forEach(function(th) {
+                    th.classList.toggle('sorted', th.getAttribute('data-key') === state.sortKey);
+                });
+                var sorted = sortRows(state.filtered);
+                var body = document.getElementById('synthBody');
+                var html = sorted.map(function(row) {
+                    var cls = row._feasible ? '' : ' class="row-infeasible"';
+                    var cells = COLS.map(function(col) {
+                        var align = col.align === 'left' ? ' class="col-left"' : '';
+                        return '<td' + align + '>' + fmtCell(row, col) + '</td>';
+                    }).join('');
+                    return '<tr' + cls + '>' + cells + '</tr>';
+                }).join('');
+                body.innerHTML = html || '<tr><td colspan="' + COLS.length + '" style="text-align:center;padding:20px;color:var(--text-muted)">No rows match current filters.</td></tr>';
+
+                var total = state.rows.length;
+                var shown = sorted.length;
+                var infeas = sorted.filter(function(r) { return !r._feasible; }).length;
+                document.getElementById('synthSummary').textContent =
+                    'Showing ' + shown + ' of ' + total + ' rows (' + infeas + ' infeasible). Click column headers to sort.';
+            }
+
+            function populateFilter(id, values, all) {
+                var sel = document.getElementById(id);
+                sel.innerHTML = '<option value="all">' + all + '</option>';
+                values.forEach(function(v) {
+                    var o = document.createElement('option');
+                    o.value = v; o.textContent = v;
+                    sel.appendChild(o);
+                });
+            }
+
+            function applyFilters() {
+                var iso = document.getElementById('synthIsoFilter').value;
+                var pw  = document.getElementById('synthPathwayFilter').value;
+                var ep  = document.getElementById('synthEpFilter').value;
+                var fs  = document.getElementById('synthFeasFilter').value;
+                var q   = (document.getElementById('synthSearch').value || '').trim().toLowerCase();
+
+                state.filtered = state.rows.filter(function(r) {
+                    if (iso !== 'all' && r.iso !== iso) return false;
+                    if (pw  !== 'all' && r.pathway !== pw) return false;
+                    if (ep  !== 'all' && r.endpoint !== ep) return false;
+                    if (fs === 'feasible' && !r._feasible) return false;
+                    if (fs === 'infeasible' && r._feasible) return false;
+                    if (q && (r.run_key || '').toLowerCase().indexOf(q) === -1) return false;
+                    return true;
+                });
+                render();
+            }
+
+            function init(json) {
+                var raw = Array.isArray(json) ? json : (json.rows || json.data || []);
+                if (!raw.length) {
+                    document.getElementById('synthBody').innerHTML =
+                        '<tr><td colspan="' + COLS.length + '" style="text-align:center;padding:20px;color:var(--text-muted)">Empty payload.</td></tr>';
+                    return;
+                }
+                state.rows = normalise(raw);
+                state.filtered = state.rows.slice();
+
+                var uniq = function(arr) { var s = {}; arr.forEach(function(v) { if (v) s[v] = 1; }); return Object.keys(s).sort(); };
+                populateFilter('synthIsoFilter',      uniq(state.rows.map(function(r){return r.iso;})),      'All ISOs');
+                populateFilter('synthPathwayFilter',  uniq(state.rows.map(function(r){return r.pathway;})),  'All pathways');
+                populateFilter('synthEpFilter',       uniq(state.rows.map(function(r){return r.endpoint;})), 'All endpoints');
+
+                ['synthIsoFilter','synthPathwayFilter','synthEpFilter','synthFeasFilter'].forEach(function(id) {
+                    document.getElementById(id).addEventListener('change', applyFilters);
+                });
+                document.getElementById('synthSearch').addEventListener('input', applyFilters);
+
+                buildHeader();
+                render();
+            }
+
+            fetch('js/reliability-tax/closing_summary_table.json')
+                .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+                .then(init)
+                .catch(function(err) {
+                    console.error('[Closing table] Failed to load payload:', err);
+                    var body = document.getElementById('synthBody');
+                    if (body) body.innerHTML = '<tr><td colspan="' + COLS.length + '" style="text-align:center;padding:20px;color:var(--text-muted)">Failed to load synthesis table.</td></tr>';
                 });
         })();
 
