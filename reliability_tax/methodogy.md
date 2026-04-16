@@ -1,11 +1,28 @@
 # METHODOLOGY — The Reliability Tax
 
-Last updated: [today's date]
-Status: Pre-implementation. All 17 decision cards approved.
+Last updated: 2026-04-16
+Status: **v2 methodology rewrite in progress.** Cards M', F', K', U, S approved and documented. Optimizer rewrite, data regeneration, and page rewrite pending (handoff prompts live in `reliability_tax/HANDOFF.md`).
+
+## v2 Rewrite Summary (read first)
+
+The original methodology produced the wrong story. The pathway optimizer never built new gas — it only added clean resources and let existing gas retire endogenously. Result: at high CFE, P1a produced 22× peak-demand VRE+storage overbuild instead of the intended "stranded peaker" pattern. Published JSON payloads additionally had bugs (zeroed costs, achieved_cfe=0, mislabeled capacity). Raw optimizer JSONs are fine; the issue is model scope + generator fidelity.
+
+The v2 methodology:
+- **Adds new-build CCGT to the pathway optimizer's build menu** (Card U). Clean resources build first under a VRE floor ratchet; residual reliability gap is filled by new-build gas, sized to peak-net-of-clean.
+- **Drops capacity-market-revenue netting** entirely (Card M'). Reliability tax is gross ratepayer cost. Cap payments are transfers, not cost reductions.
+- **Computes stranding at the vintage level** via CF-threshold test (Card F'): if annual CF falls below 15% for two consecutive years, write off unrecovered book value. Absolute (per pathway), not comparative (Card K').
+- **Extends endpoint coverage** to 60/70/75/80/85 in addition to 90/95/97.5/99/99.9 (Card S) so the gas-peaker hump at medium thresholds is visible.
+- **Reliability tax formula** (locked): `(annualized new-gas capex + new-gas FOM + carried existing-gas FOM + priced VRE curtailment + annualized VRE/storage overbuild capex) ÷ total demand MWh`. Reported as a stacked bar. P1a's tax > P3's tax in every ISO; the delta is the story.
+
+Cards M, F, K from v1 are superseded. Cards A–E, G–J, L, N–R, and the original 24.1 invariants (endpoints, pathways, cost basis, ISO scope, etc.) carry forward unchanged, with one amendment: endpoints now include 60/70/75/80/85 per Card S.
+
+Full v2 card text lives in SPEC.md §24.4. This file keeps the original v1 cards below for historical reference; do not implement against them.
+
+---
 
 ## Project overview
 
-Analysis of cost and buildout consequences across four decarbonization pathways that target five different hourly CFE endpoints by 2050. The central argument: when planning optimizes for "clean + affordable" without explicitly designing for reliability, the reliability axis is paid for implicitly through a redundant fossil system — the reliability tax.
+Analysis of cost and buildout consequences across four decarbonization pathways that target **ten** different hourly CFE endpoints by 2050 (v2: extended from 5). The central argument: when planning optimizes for "clean + affordable" without explicitly designing for reliability, the reliability axis is paid for implicitly through a redundant fossil system — the reliability tax. Under v2, that redundancy shows up as new-build gas peakers at medium CFE thresholds that strand as the grid pushes past ~90%, plus existing-fleet FOM carried forward, plus VRE/storage capacity built beyond what dispatched energy justifies.
 
 ## Shared invariants (locked)
 
@@ -56,7 +73,7 @@ Match objective function. Internal build-order ranking uses NPV@7% real. One dis
 ### Card E — Pathway 2 pivot re-optimization
 Freeze-and-forward. Pre-pivot decisions are locked. Only the post-pivot trajectory is re-optimized once clean firm unlocks. No retroactive cancellation of already-built assets. Early retirement of pre-pivot builds is not allowed in the base case.
 
-### Card F — Stranding value calculation
+### Card F — Stranding value calculation  *(SUPERSEDED by Card F' — see v2 summary at top and SPEC.md §24.4)*
 Report both. Headline metric is book value of unrecovered capital at 2050 (used in Section 5 Sankey width and closing summary). Secondary metric is NPV of unrecovered capital through asset end-of-life, tracked in the stranding ledger for any reader who asks about rigor.
 
 ### Card G — Smoke test ISO
@@ -71,7 +88,7 @@ EXCLUDED. Bubble-node model does not support detailed transmission attribution. 
 ### Card J — Infeasibility detection
 Hybrid. Primary: physical floor — optimizer declares infeasible when no physically feasible addition can improve CFE score (regional constraints exhausted, no additional siteable capacity). Secondary diagnostic: economic floor — flag when marginal $/CFE% exceeds $10,000 per percentage point, even if physically feasible. Both reported in the manifest so readers can see physical vs. economic ceilings separately.
 
-### Card K (revised) — Stranding definition
+### Card K (revised) — Stranding definition  *(SUPERSEDED by Card K' — see v2 summary at top and SPEC.md §24.4)*
 **Comparative-to-Pathway-3 stranding with VRE curtailment cross-check.** An asset is stranded if it represents capacity built by a given pathway beyond what Pathway 3 builds to reach the same CFE target in the same ISO. The stranding ledger is computed as:
 
 `stranded_capacity[pathway, resource] = max(0, capacity[pathway, resource] - capacity[Pathway 3, resource])`
@@ -89,7 +106,7 @@ This comparative definition applies to: new-build gas, VRE (solar, onshore wind,
 ### Card L (revised) — Existing gas fleet retirement
 Endogenous economic retirement. Existing gas retires when it stops clearing capacity markets under each pathway's dispatch and capacity dynamics. Every pathway's output tracks existing-fleet retirement timelines explicitly in MANIFEST.json, so Section 4 and closing synthesis can show how much cost delta comes from new-build decisions vs. retirement dynamics.
 
-### Card M — Capacity market revenue treatment
+### Card M — Capacity market revenue treatment  *(SUPERSEDED by Card M' — see v2 summary at top and SPEC.md §24.4)*
 Netted against fixed costs. Reliability tax is net of capacity payment revenue — the true cost to customers after accounting for market payments. Applies consistently across all pathways.
 
 ### Card N — Learning curve cost year
