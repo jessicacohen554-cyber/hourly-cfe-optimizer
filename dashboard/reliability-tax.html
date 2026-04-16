@@ -412,6 +412,191 @@
             .hook-map-ghost { opacity: 1; }
         }
 
+        /* ─────────────────────────────────────────────────────────────
+           Section 1 — The Wall
+           ───────────────────────────────────────────────────────────── */
+        .wall-wrap {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 32px 28px;
+            box-shadow: var(--shadow-md);
+            margin-top: var(--space-xl);
+        }
+        .wall-iso-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: var(--space-lg);
+        }
+        .wall-iso-btn {
+            font-family: var(--font-body);
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: var(--radius-pill);
+            border: 1.5px solid var(--border-light);
+            background: #FFFFFF;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-height: 36px;
+        }
+        .wall-iso-btn:hover {
+            border-color: var(--navy);
+            color: var(--navy);
+        }
+        .wall-iso-btn.active {
+            background: var(--navy);
+            border-color: var(--navy);
+            color: #FFFFFF;
+        }
+        .wall-iso-btn[data-iso="CAISO"].active { background: var(--iso-caiso); border-color: var(--iso-caiso); color: #1A2744; }
+        .wall-iso-btn[data-iso="ERCOT"].active { background: var(--iso-ercot); border-color: var(--iso-ercot); color: #FFFFFF; }
+        .wall-iso-btn[data-iso="MISO"].active  { background: var(--iso-miso);  border-color: var(--iso-miso);  color: #FFFFFF; }
+        .wall-iso-btn[data-iso="NEISO"].active { background: var(--iso-neiso); border-color: var(--iso-neiso); color: #FFFFFF; }
+        .wall-iso-btn[data-iso="NYISO"].active { background: var(--iso-nyiso); border-color: var(--iso-nyiso); color: #FFFFFF; }
+        .wall-iso-btn[data-iso="PJM"].active   { background: var(--iso-pjm);   border-color: var(--iso-pjm);   color: #FFFFFF; }
+        .wall-iso-btn[data-iso="SPP"].active   { background: var(--iso-spp);   border-color: var(--iso-spp);   color: #FFFFFF; }
+
+        .wall-grid {
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: var(--space-xl);
+            align-items: start;
+        }
+        .wall-chart-cell {
+            min-width: 0;
+        }
+        .wall-chart-title {
+            font-family: var(--font-heading);
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 4px;
+        }
+        .wall-chart-sub {
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: var(--space-md);
+        }
+        .wall-chart-canvas {
+            position: relative;
+            height: 340px;
+            min-height: 300px;
+        }
+        .wall-chart-caption {
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: var(--space-sm);
+            line-height: 1.5;
+            font-style: italic;
+        }
+
+        .wall-narrative-cell {
+            background: var(--bg-surface);
+            border-left: 3px solid var(--iso-caiso);
+            border-radius: var(--radius-md);
+            padding: 20px 22px;
+            transition: border-left-color 0.3s ease;
+        }
+        .wall-narrative-eyebrow {
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .wall-narrative-headline {
+            font-family: var(--font-heading);
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1.35;
+            margin-bottom: var(--space-sm);
+        }
+        .wall-narrative-body {
+            font-family: var(--font-body);
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: var(--space-sm);
+        }
+        .wall-narrative-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: var(--space-md);
+        }
+        .wall-stat {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+        }
+        .wall-stat-label {
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+        .wall-stat-value {
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--navy);
+        }
+        .wall-stat-sub {
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .wall-worsthours-wrap {
+            margin-top: var(--space-xl);
+            padding-top: var(--space-xl);
+            border-top: 1px dashed var(--border-light);
+        }
+        .wall-worsthours-title {
+            font-family: var(--font-heading);
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 4px;
+        }
+        .wall-worsthours-sub {
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: var(--space-md);
+            line-height: 1.5;
+        }
+        .wall-worsthours-canvas {
+            position: relative;
+            height: 380px;
+            min-height: 320px;
+        }
+        .wall-worsthours-caption {
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: var(--space-sm);
+            line-height: 1.5;
+            font-style: italic;
+        }
+        .wall-worsthours-hidden {
+            display: none;
+        }
+
         /* Responsive */
         @media (max-width: 900px) {
             .hook-grid {
@@ -420,6 +605,8 @@
                 padding: 24px 20px;
             }
             .hook-center-value { font-size: 2.4rem; }
+            .wall-grid { grid-template-columns: 1fr; gap: var(--space-lg); }
+            .wall-narrative-stats { grid-template-columns: 1fr 1fr; }
         }
         @media (max-width: 768px) {
             .tax-hero-lead { font-size: 1rem; }
@@ -427,6 +614,10 @@
             .trilemma-svg-wrap { min-height: 300px; }
             .hook-gauge-svg { width: 200px; }
             .hook-map-svg { width: 280px; }
+            .wall-wrap { padding: 22px 18px; }
+            .wall-chart-canvas { height: 300px; }
+            .wall-worsthours-canvas { height: 320px; }
+            .wall-iso-btn { font-size: 0.78rem; padding: 7px 11px; }
         }
     </style>
 </head>
@@ -708,7 +899,82 @@
         <p>Every ISO hits a cost wall somewhere between 90% and 99.9% CFE. The shape of that wall differs &mdash; and tells you how expensive each grid&rsquo;s last mile is when you don&rsquo;t plan for firm clean.</p>
     </div>
     <section class="content-section" id="section1">
-        <div class="section-stub"><strong>Section 1: The Wall</strong>ISO toggle + hockey-stick + narrative panel + worst-100-hour dispatch stack mount here next.</div>
+        <div class="wall-wrap fade-in">
+            <!-- ISO toggle bar -->
+            <div class="wall-iso-bar" role="tablist" aria-label="Select ISO">
+                <button type="button" class="wall-iso-btn active" data-iso="ALL"   role="tab" aria-selected="true">All ISOs</button>
+                <button type="button" class="wall-iso-btn"        data-iso="CAISO" role="tab" aria-selected="false">CAISO</button>
+                <button type="button" class="wall-iso-btn"        data-iso="ERCOT" role="tab" aria-selected="false">ERCOT</button>
+                <button type="button" class="wall-iso-btn"        data-iso="MISO"  role="tab" aria-selected="false">MISO</button>
+                <button type="button" class="wall-iso-btn"        data-iso="NEISO" role="tab" aria-selected="false">NEISO</button>
+                <button type="button" class="wall-iso-btn"        data-iso="NYISO" role="tab" aria-selected="false">NYISO</button>
+                <button type="button" class="wall-iso-btn"        data-iso="PJM"   role="tab" aria-selected="false">PJM</button>
+                <button type="button" class="wall-iso-btn"        data-iso="SPP"   role="tab" aria-selected="false">SPP</button>
+            </div>
+
+            <!-- Hockey stick + narrative grid -->
+            <div class="wall-grid">
+                <!-- LEFT: Hockey stick chart -->
+                <div class="wall-chart-cell">
+                    <div class="wall-chart-title" id="wallChartTitle">The hockey stick: marginal cost of the last mile</div>
+                    <div class="wall-chart-sub" id="wallChartSub">Marginal $ per CFE percentage point, Pathway 1, 2025&ndash;2050 undiscounted.</div>
+                    <div class="wall-chart-canvas">
+                        <canvas id="wallHockeyChart" aria-label="Marginal cost per CFE percentage point, by ISO"></canvas>
+                    </div>
+                    <div class="wall-chart-caption">
+                        Each point is the undiscounted marginal cost of the next CFE percentage point under Pathway 1
+                        (VRE + batteries + existing nuclear). Values near zero indicate a plateau &mdash;
+                        additional percentage points are physically unreachable. Negative values mean moving to the
+                        higher endpoint is actually cheaper because the optimizer restructures the mix.
+                    </div>
+                </div>
+
+                <!-- RIGHT: Narrative panel -->
+                <aside class="wall-narrative-cell" id="wallNarrativeCell" aria-live="polite">
+                    <div class="wall-narrative-eyebrow" id="wallNarrativeEyebrow">Across seven ISOs</div>
+                    <div class="wall-narrative-headline" id="wallNarrativeHeadline">
+                        Every grid hits a wall &mdash; but the wall looks different in every region.
+                    </div>
+                    <div class="wall-narrative-body" id="wallNarrativeBody">
+                        Under Pathway 1, seven ISOs reach 95% CFE at widely different costs, and only a
+                        subset can climb further. Solar-heavy CAISO and wind-heavy ERCOT/MISO hit their
+                        walls early; hydro- and offshore-wind-backed NEISO and NYISO coast further on
+                        existing clean capacity. The shape of each curve is the signature of the
+                        underlying resource mix.
+                    </div>
+                    <div class="wall-narrative-stats" id="wallNarrativeStats">
+                        <div class="wall-stat">
+                            <div class="wall-stat-label">Gas fleet at 95% CFE</div>
+                            <div class="wall-stat-value" id="wallStatGasGw">15.7 GW</div>
+                            <div class="wall-stat-sub">vs. 299 GW existing in 2025</div>
+                        </div>
+                        <div class="wall-stat">
+                            <div class="wall-stat-label">2050 demand served</div>
+                            <div class="wall-stat-value" id="wallStatDemandTwh">5,079 TWh</div>
+                            <div class="wall-stat-sub">medium demand growth</div>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- Worst-100-hour dispatch stack (per-ISO only) -->
+            <div class="wall-worsthours-wrap" id="wallWorstHoursWrap">
+                <div class="wall-worsthours-title" id="wallWorstHoursTitle">The 100 worst hours of 2050 &mdash; select an ISO above</div>
+                <div class="wall-worsthours-sub" id="wallWorstHoursSub">
+                    Pick a single ISO to reveal the hourly dispatch stack of the 100 hours with the highest residual load
+                    (demand minus VRE) under Pathway 1 at a 95% CFE endpoint. These are the hours the gas fleet is kept
+                    online to serve.
+                </div>
+                <div class="wall-worsthours-canvas wall-worsthours-hidden" id="wallWorstHoursCanvasWrap">
+                    <canvas id="wallWorstHoursChart" aria-label="Worst-100-hour dispatch stack for selected ISO"></canvas>
+                </div>
+                <div class="wall-worsthours-caption" id="wallWorstHoursCaption">
+                    Each bar = one of the 100 worst residual-load hours in 2050. Stack shows dispatch by resource (wind,
+                    solar, battery, LDES, clean firm, gas). Gas appears when storage is depleted during sustained
+                    low-VRE events.
+                </div>
+            </div>
+        </div>
     </section>
 
     <div class="energy-divider"></div>
