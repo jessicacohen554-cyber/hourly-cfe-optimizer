@@ -73,6 +73,30 @@ COMMITMENT_YEARS = [2026, 2030, 2035, 2040, 2045]
 FOAK_FRACTION = 0.30   # 30% of non-stranded penalty = FOAK premium
 LEARNING_FRACTION = 0.70  # remainder = foregone learning benefit
 
+# Card S: new-build gas stranding parameters
+CCS_CCGT_CF_STRAND = 0.85
+CCS_CCGT_CAPITAL_PER_GW = 2.2e9   # $2,200/kW = $2.2B/GW (NREL ATB 2024 moderate)
+CCS_CCGT_USEFUL_LIFE = 25
+MODEL_ENDPOINT_YEAR = 2050
+
+
+def _new_gas_stranding(run: dict) -> float:
+    """Return stranded book value (USD) for new CCS-CCGT not fully amortized by 2050."""
+    bo = run.get("tables", {}).get("annual_buildout", [])
+    total_usd = 0.0
+    for yr_row in bo:
+        yr = yr_row.get("year", MODEL_ENDPOINT_YEAR)
+        for v in yr_row.get("new_vintages", []):
+            if v.get("resource") != "ccs_ccgt":
+                continue
+            twh = v.get("twh_per_year", 0.0)
+            if twh <= 0:
+                continue
+            gw = twh / (8.76 * CCS_CCGT_CF_STRAND)
+            frac = max(0.0, (yr + CCS_CCGT_USEFUL_LIFE - MODEL_ENDPOINT_YEAR) / CCS_CCGT_USEFUL_LIFE)
+            total_usd += gw * CCS_CCGT_CAPITAL_PER_GW * frac
+    return total_usd
+
 
 def _interpolate_cost(
     commit_year: int,
@@ -105,7 +129,7 @@ def _compute_per_ep(iso: str, ep: float) -> dict:
     """Compute cost-of-waiting curve for one ISO × endpoint."""
     # Get all four pathway runs
     runs: dict[str, dict] = {}
-    for path in ["1", "2a", "2b", "3"]:
+    for path in ["1a", "2a", "2b", "3"]:
         try:
             runs[path] = DL_BASE.get_run(iso, path, ep)
         except (KeyError, FileNotFoundError):
@@ -113,36 +137,43 @@ def _compute_per_ep(iso: str, ep: float) -> dict:
 
     r3 = runs.get("3", {})
     r2a = runs.get("2a", {})
-    r1 = runs.get("1", {})
+    r1 = runs.get("1a", {})  # P1a = true "never commit" VRE-only upper bound
 
     # Reference P3 (baseline, zero penalty)
     p3_undiscounted = r3.get("undiscounted_cost_usd", 0.0) / 1e12
     p3_npv7 = r3.get("npv_at_7pct", 0.0) / 1e12
     p3_npv5 = r3.get("npv_at_5pct", 0.0) / 1e12
     p3_npv9 = r3.get("npv_at_9pct", 0.0) / 1e12
+    # Card S: P3 actual cost = undiscounted + new-gas stranding (P3 builds clean firm proactively, no gas stranding)
+    p3_total_actual = p3_undiscounted + _new_gas_stranding(r3) / 1e12
 
     # P2a anchor (late pivot)
     p2a_undiscounted = r2a.get("undiscounted_cost_usd", 0.0) / 1e12
     p2a_npv7 = r2a.get("npv_at_7pct", 0.0) / 1e12
     p2a_npv5 = r2a.get("npv_at_5pct", 0.0) / 1e12
     p2a_npv9 = r2a.get("npv_at_9pct", 0.0) / 1e12
+    # Card S: P2a actual cost includes stranded new gas built before pivot
+    p2a_ng_stranded_usd = _new_gas_stranding(r2a)
+    p2a_total_actual = p2a_undiscounted + p2a_ng_stranded_usd / 1e12
     pivot_info = get_pivot_info(r2a)
     pivot_year = pivot_info.get("pivot_year") or 2041
 
-    # P1 upper bound (maximum delay)
+    # P1 upper bound (maximum delay) — P1a doesn't build new gas, so no gas stranding
     p1_undiscounted = r1.get("undiscounted_cost_usd", 0.0) / 1e12
     p1_npv7 = r1.get("npv_at_7pct", 0.0) / 1e12
     p1_npv5 = r1.get("npv_at_5pct", 0.0) / 1e12
     p1_npv9 = r1.get("npv_at_9pct", 0.0) / 1e12
+    p1_total_actual = p1_undiscounted  # P1a: no new gas builds
 
     # Stranding data for P2a (for penalty decomposition)
     strand_2a = get_pathway_stranding(iso, "2a", ep)
-    stranded_2a_usd = strand_2a["total_stranded_usd"]  # book value
+    stranded_2a_usd = strand_2a["total_stranded_usd"]  # comparative (VRE) stranding
 
-    # Estimate NPV-equivalent stranded: scale by P2a/P3 NPV ratio heuristic
-    # Stranded book value × discount factor (approximate NPV equivalent)
-    # Use a simple 50% recovery factor (stranded assets have some residual value)
-    stranded_npv_approx = stranded_2a_usd * 0.50 / 1e12  # trillion
+    # Card S: total P2a stranding = VRE comparative stranding + new gas book value
+    total_p2a_stranding_usd = stranded_2a_usd + p2a_ng_stranded_usd
+
+    # NPV-equivalent stranded for penalty decomposition (50% recovery heuristic)
+    stranded_npv_approx = total_p2a_stranding_usd * 0.50 / 1e12  # trillion
 
     # Build commitment curve for 5 years
     commitment_curve = []
@@ -150,11 +181,14 @@ def _compute_per_ep(iso: str, ep: float) -> dict:
         interp_weight = min(1.0, max(0.0, (commit_year - 2025) / max(pivot_year - 2025, 1)))
 
         undiscounted = _interpolate_cost(commit_year, pivot_year, p3_undiscounted, p2a_undiscounted, p1_undiscounted)
+        # Card S: primary cost = total actual (undiscounted + new gas stranding), interpolated
+        total_actual = _interpolate_cost(commit_year, pivot_year, p3_total_actual, p2a_total_actual, p1_total_actual)
         npv7 = _interpolate_cost(commit_year, pivot_year, p3_npv7, p2a_npv7, p1_npv7)
         npv5 = _interpolate_cost(commit_year, pivot_year, p3_npv5, p2a_npv5, p1_npv5)
         npv9 = _interpolate_cost(commit_year, pivot_year, p3_npv9, p2a_npv9, p1_npv9)
 
         penalty_npv7 = npv7 - p3_npv7  # can be negative if P1/P2a < P3
+        penalty_actual = total_actual - p3_total_actual  # Card S: primary penalty
 
         # Penalty decomposition (indicative, not independently computed)
         # Only decompose if penalty is positive
@@ -173,7 +207,12 @@ def _compute_per_ep(iso: str, ep: float) -> dict:
             "commit_year": commit_year,
             "interpolation_basis": "linear between P3 (2025) and P2a (pivot_year) and P1 (2050)",
             "interpolation_weight": round(interp_weight, 3),
+            # Primary cost metrics (Card S)
+            "total_actual_cost_trillion": round(total_actual, 4),
+            "penalty_vs_p3_actual_trillion": round(penalty_actual, 4),
+            # Secondary: undiscounted operating cost only
             "undiscounted_cumulative_trillion": round(undiscounted, 4),
+            # Secondary: NPV
             "npv_7pct_trillion": round(npv7, 4),
             "npv_5pct_trillion": round(npv5, 4),
             "npv_9pct_trillion": round(npv9, 4),
@@ -195,30 +234,38 @@ def _compute_per_ep(iso: str, ep: float) -> dict:
         abs(r2a.get("npv_at_7pct", 0) - r3.get("npv_at_7pct", 0)),
         abs(r1.get("npv_at_7pct", 0) - r3.get("npv_at_7pct", 0)),
     ) / 1e12
-    max_penalty_pathway = "1" if abs(r1.get("npv_at_7pct", 0) - r3.get("npv_at_7pct", 0)) >= abs(r2a.get("npv_at_7pct", 0) - r3.get("npv_at_7pct", 0)) else "2a"
+    max_penalty_pathway = "1a" if abs(r1.get("npv_at_7pct", 0) - r3.get("npv_at_7pct", 0)) >= abs(r2a.get("npv_at_7pct", 0) - r3.get("npv_at_7pct", 0)) else "2a"
 
     return {
         "commitment_curve": commitment_curve,
         "reference_p3": {
+            # Card S: primary = total actual cost (undiscounted + new gas stranding)
+            "total_actual_cost_trillion": round(p3_total_actual, 4),
             "undiscounted_trillion": round(p3_undiscounted, 4),
             "npv_7pct_trillion": round(p3_npv7, 4),
             "npv_5pct_trillion": round(p3_npv5, 4),
             "npv_9pct_trillion": round(p3_npv9, 4),
         },
         "anchor_p2a": {
+            "total_actual_cost_trillion": round(p2a_total_actual, 4),
+            "new_gas_stranded_billion": round(p2a_ng_stranded_usd / 1e9, 2),
             "undiscounted_trillion": round(p2a_undiscounted, 4),
             "npv_7pct_trillion": round(p2a_npv7, 4),
             "pivot_year": pivot_year,
+            "penalty_vs_p3_actual_trillion": round(p2a_total_actual - p3_total_actual, 4),
             "penalty_vs_p3_npv7_trillion": round(p2a_npv7 - p3_npv7, 4),
         },
         "anchor_p1": {
+            "total_actual_cost_trillion": round(p1_total_actual, 4),
             "undiscounted_trillion": round(p1_undiscounted, 4),
             "npv_7pct_trillion": round(p1_npv7, 4),
+            "penalty_vs_p3_actual_trillion": round(p1_total_actual - p3_total_actual, 4),
             "penalty_vs_p3_npv7_trillion": round(p1_npv7 - p3_npv7, 4),
         },
         "max_penalty_trillion": round(max_penalty, 4),
         "max_penalty_pathway": max_penalty_pathway,
-        "p2a_stranded_book_value_trillion": round(stranded_2a_usd / 1e12, 4),
+        "p2a_stranded_book_value_trillion": round(total_p2a_stranding_usd / 1e12, 4),
+        "p2a_new_gas_stranded_book_value_trillion": round(p2a_ng_stranded_usd / 1e12, 4),
     }
 
 

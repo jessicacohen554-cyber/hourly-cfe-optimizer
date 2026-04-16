@@ -59,7 +59,7 @@ _EP_LABEL: dict[float, str] = {
 
 # Canonical ordering used for iteration
 ENDPOINTS: list[float] = [0.90, 0.95, 0.975, 0.99, 0.999]
-PATHWAYS: list[str]    = ["1", "2a", "2b", "3"]
+PATHWAYS: list[str]    = ["1a", "1b", "2a", "2b", "3"]
 ISOS: list[str]        = ["CAISO", "ERCOT", "MISO", "NEISO", "NYISO", "PJM", "SPP"]
 
 # Fossil capacity factors (from optimizer, _FOSSIL_CAPACITY_FACTORS)

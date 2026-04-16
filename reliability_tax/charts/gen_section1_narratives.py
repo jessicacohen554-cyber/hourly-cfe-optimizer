@@ -67,8 +67,8 @@ def _gas_remaining_gw(run: dict, iso: str) -> float:
 
 def _build_iso_narrative(iso: str) -> dict:
     """Build per-ISO narrative block from run data at ep95."""
-    run_95 = get_run(iso, "1", 0.95)
-    run_99 = get_run(iso, "1", 0.99)
+    run_95 = get_run(iso, "1a", 0.95)
+    run_99 = get_run(iso, "1a", 0.99)
 
     # Core stats
     cfe_95 = run_95.get("achieved_cfe_pct", 95.0)

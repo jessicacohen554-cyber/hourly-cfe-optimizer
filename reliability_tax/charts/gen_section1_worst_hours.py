@@ -96,25 +96,31 @@ PEAK_DEMAND_MW_2025 = {
 RANDOM_SEED = 42
 
 
-def _installed_gw_from_stranding(sl: list[dict], iso: str) -> dict[str, float]:
+def _installed_gw_from_buildout(bo: list[dict], iso: str) -> dict[str, float]:
     """
-    Convert stranding_ledger pathway_twh → installed GW using capacity factors.
+    Convert annual_buildout cumulative TWh → installed GW using capacity factors.
+
+    Sums all vintage TWh across all years (gives total installed capacity at 2050).
+    This is the correct source for P1a/P1b where stranding_ledger only contains
+    resources where the pathway exceeds P3 (sparse/empty for low-stress ISOs).
     """
+    totals: dict[str, float] = {}
+    for yr_row in bo:
+        for v in yr_row.get("new_vintages", []):
+            r = v["resource"]
+            totals[r] = totals.get(r, 0.0) + v.get("twh_per_year", 0.0)
+
     gw: dict[str, float] = {}
-    for row in sl:
-        r = row["resource"]
-        twh = row.get("pathway_twh", 0.0)
+    for r, twh in totals.items():
+        if twh <= 0:
+            continue
         if r == "solar":
-            cf = SOLAR_CF.get(iso, 0.20)
-            gw["solar"] = twh / (8.76 * cf)
-        elif r == "wind":
-            cf = WIND_CF.get(iso, 0.35)
-            gw["wind"] = twh / (8.76 * cf)
+            gw["solar"] = twh / (8.76 * SOLAR_CF.get(iso, 0.20))
+        elif r in ("wind", "onshore_wind"):
+            gw["wind"] = twh / (8.76 * WIND_CF.get(iso, 0.35))
         elif r == "offshore_wind":
-            cf = OFFSHORE_WIND_CF.get(iso, 0.40)
-            gw["offshore_wind"] = twh / (8.76 * cf)
+            gw["offshore_wind"] = twh / (8.76 * OFFSHORE_WIND_CF.get(iso, 0.40))
         elif r == "battery4":
-            # twh (TWh/yr) × 1000 → GWh/yr; ÷ dispatch_h/yr → GW
             gw["battery4"] = twh * 1000.0 / BATTERY4_DISPATCH_H_YR
         elif r == "battery8":
             gw["battery8"] = twh * 1000.0 / BATTERY8_DISPATCH_H_YR
@@ -282,7 +288,7 @@ def main() -> None:
         # At ep99.9, storage overbuild eclipses gas entirely, obscuring the story.
         TARGET_EP = 0.95
         best_ep = TARGET_EP
-        best_run = get_run(iso, "1", TARGET_EP)
+        best_run = get_run(iso, "1a", TARGET_EP)
 
         if best_run is None:
             per_iso[iso] = {
@@ -303,9 +309,9 @@ def main() -> None:
         gas_retired_gw = rt[-1]["gas_retired_gw"] if rt else 0.0
         gas_remaining_gw = max(0.0, EXISTING_GAS_GW.get(iso, 0.0) - gas_retired_gw)
 
-        # Installed GW
-        sl = best_run.get("tables", {}).get("stranding_ledger", [])
-        installed_gw = _installed_gw_from_stranding(sl, iso)
+        # Installed GW from annual_buildout (stranding_ledger is sparse for low-overbuild ISOs)
+        bo = best_run.get("tables", {}).get("annual_buildout", [])
+        installed_gw = _installed_gw_from_buildout(bo, iso)
 
         # Peak demand
         peak_gw = _peak_demand_gw(demand_2050, iso)
@@ -337,7 +343,7 @@ def main() -> None:
         "per_iso": per_iso,
         "meta": {
             "payload_id": "section1_worst_hours",
-            "pathway": "1",
+            "pathway": "1a",
             "note": (
                 "SYNTHETIC worst-hour profiles. "
                 "endpoint_hourly_dispatch is None in schema_version=1 runs. "
@@ -357,7 +363,7 @@ def main() -> None:
                 "sort": "descending by residual_load = demand - solar - wind",
             },
             "capacity_derivation": {
-                "solar_wind": "stranding_ledger.pathway_twh / (8760h × CF)",
+                "solar_wind": "annual_buildout cumulative TWh / (8760h × CF)",
                 "battery4_rated_gw": f"dispatch_twh / {BATTERY4_DISPATCH_H_YR} h/yr",
                 "battery8_rated_gw": f"dispatch_twh / {BATTERY8_DISPATCH_H_YR} h/yr",
                 "ldes_rated_gw": f"dispatch_twh / {LDES_DISPATCH_H_YR} h/yr",

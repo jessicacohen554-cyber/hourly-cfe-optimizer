@@ -170,7 +170,7 @@ def main() -> None:
 
         for ep in ENDPOINTS:
             ep_label = _EP_LABEL[ep]
-            p1 = by_endpoint[ep_label].get("1", {})
+            p1 = by_endpoint[ep_label].get("1a", {})
             p3 = by_endpoint[ep_label].get("3", {})
 
             if p1.get("available"):
@@ -257,7 +257,7 @@ def main() -> None:
         print(f"\n  {iso}:")
         for ep in ENDPOINTS:
             ep_label = _EP_LABEL[ep]
-            p1 = per_iso[iso]["by_endpoint"][ep_label].get("1", {})
+            p1 = per_iso[iso]["by_endpoint"][ep_label].get("1a", {})
             if not p1.get("available"):
                 continue
             print(

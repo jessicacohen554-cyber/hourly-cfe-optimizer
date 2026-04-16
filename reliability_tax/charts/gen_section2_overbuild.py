@@ -69,6 +69,12 @@ EXISTING_GAS_GW = {
     "CAISO": 37.0, "ERCOT": 55.0, "PJM": 75.0,
     "NYISO": 18.0, "NEISO": 14.0, "MISO": 68.0, "SPP": 32.0,
 }
+# Card S: new-build gas stranding parameters
+CCS_CCGT_CF_STRAND = 0.85
+CCS_CCGT_CAPITAL_PER_GW = 2.2e9   # $2,200/kW = $2.2B/GW (NREL ATB 2024 moderate)
+CCS_CCGT_USEFUL_LIFE = 25
+MODEL_ENDPOINT_YEAR = 2050
+
 SOLAR_CF = {"CAISO":0.28,"ERCOT":0.24,"PJM":0.17,"NYISO":0.15,"NEISO":0.15,"MISO":0.19,"SPP":0.22}
 WIND_CF = {"CAISO":0.25,"ERCOT":0.38,"PJM":0.30,"NYISO":0.28,"NEISO":0.30,"MISO":0.36,"SPP":0.42}
 OFFSHORE_WIND_CF = 0.40
@@ -108,6 +114,26 @@ def _twh_to_gw(resource: str, twh: float, iso: str) -> float:
     else:
         # Unknown resource — skip
         return 0.0
+
+
+def _new_gas_stranding(run: dict) -> tuple[float, float]:
+    """Return (stranded_gw, stranded_usd) for new CCS-CCGT built and not amortized by 2050."""
+    bo = run.get("tables", {}).get("annual_buildout", [])
+    total_gw = 0.0
+    total_usd = 0.0
+    for yr_row in bo:
+        yr = yr_row.get("year", MODEL_ENDPOINT_YEAR)
+        for v in yr_row.get("new_vintages", []):
+            if v.get("resource") != "ccs_ccgt":
+                continue
+            twh = v.get("twh_per_year", 0.0)
+            if twh <= 0:
+                continue
+            gw = twh / (8.76 * CCS_CCGT_CF_STRAND)
+            frac = max(0.0, (yr + CCS_CCGT_USEFUL_LIFE - MODEL_ENDPOINT_YEAR) / CCS_CCGT_USEFUL_LIFE)
+            total_gw += gw * frac
+            total_usd += gw * CCS_CCGT_CAPITAL_PER_GW * frac
+    return round(total_gw, 2), round(total_usd, 0)
 
 
 def _buildout_totals(bo: list[dict]) -> dict[str, float]:
@@ -176,6 +202,11 @@ def _compute_overbuild(iso: str, pathway: str, ep: float, dl: Any) -> dict:
     overbuild_ratio = round(total_with_gas_gw / peak_gw, 2) if peak_gw > 0 else None
     gas_pct_of_peak = round(gas_remaining_gw / peak_gw * 100, 1) if peak_gw > 0 else None
 
+    # Card S: new-build gas stranding
+    ng_stranded_gw, ng_stranded_usd = _new_gas_stranding(run)
+    undiscounted_t = run.get("undiscounted_cost_usd", 0.0) / 1e12
+    total_actual_cost_t = undiscounted_t + ng_stranded_usd / 1e12
+
     return {
         "available": True,
         "achieved_cfe_pct": round(run.get("achieved_cfe_pct", 0.0), 1),
@@ -188,7 +219,12 @@ def _compute_overbuild(iso: str, pathway: str, ep: float, dl: Any) -> dict:
         "gas_pct_of_peak": gas_pct_of_peak,
         "new_build_clean_firm_gw": round(clean_firm_gw, 1),
         "gw_by_resource": gw_by_resource,
-        "undiscounted_cost_trillion_usd": round(run.get("undiscounted_cost_usd", 0.0) / 1e12, 3),
+        # Primary cost metric (Card S)
+        "undiscounted_cost_trillion_usd": round(undiscounted_t, 3),
+        "new_gas_stranded_gw": ng_stranded_gw,
+        "new_gas_stranded_billion_usd": round(ng_stranded_usd / 1e9, 2),
+        "total_actual_cost_trillion_usd": round(total_actual_cost_t, 3),
+        # Secondary cost metric
         "npv_7pct_trillion_usd": round(run.get("npv_at_7pct", 0.0) / 1e12, 3),
     }
 
@@ -255,11 +291,11 @@ def main() -> None:
     print(f"Wrote {OUT_PATH}")
 
     # Quick summary: ERCOT and PJM at key endpoints, P1 and P3
-    print("\n--- section2_overbuild quick summary (ERCOT + PJM, P1 vs P3, M demand) ---")
+    print("\n--- section2_overbuild quick summary (ERCOT + PJM, P1a/P1b vs P3, M demand) ---")
     for iso in ["ERCOT", "PJM"]:
         for ep in ENDPOINTS:
             ep_label = _EP_LABEL[ep]
-            for path in ["1", "3"]:
+            for path in ["1a", "1b", "3"]:
                 d = per_iso[iso][ep_label][path]["base"]
                 if not d.get("available"):
                     continue
@@ -276,7 +312,7 @@ def main() -> None:
     print("\n--- ERCOT P1 ep95 demand sensitivity (L/M/H) ---")
     ep_label = _EP_LABEL[0.95]
     for d_label in ["L", "M", "H"]:
-        d = per_iso["ERCOT"][ep_label]["1"]["per_demand_variant"][d_label]
+        d = per_iso["ERCOT"][ep_label]["1a"]["per_demand_variant"][d_label]
         if d.get("available"):
             print(
                 f"  {d_label}: demand={d['demand_2050_twh']:.0f}TWh, "

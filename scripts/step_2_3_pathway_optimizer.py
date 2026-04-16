@@ -101,7 +101,7 @@ else:
 # CONFIG CONSTANTS
 # ============================================================================
 
-PATHWAYS = ('1', '2a', '2b', '3')
+PATHWAYS = ('1', '1a', '1b', '2a', '2b', '3')
 ENDPOINTS = (0.90, 0.95, 0.975, 0.99, 0.999)
 ISOS = tuple(pc.ISOS)
 
@@ -1081,6 +1081,37 @@ def _filter_pathway_1(
     return df.loc[mask].reset_index(drop=True)
 
 
+def _filter_pathway_1a(
+    df: pd.DataFrame,
+    iso: str | None = None,
+) -> pd.DataFrame:
+    """Pathway 1a: onshore VRE + storage only — no offshore wind, no new clean firm.
+
+    Identical to _filter_pathway_1 but also hard-zeros offshore_wind.
+    This is the true 'no planning commitment' baseline (Card R):
+    no offshore wind (requires long permitting/supply-chain commitment),
+    no nuclear_newbuild (prevented by nuclear_cap in _derive_delta_vintages),
+    only existing uprates + onshore VRE + batteries.
+    """
+    if df.empty:
+        return df
+
+    if iso is not None:
+        ceiling_pct = _existing_resource_ceiling_pct(iso, 'clean_firm')
+        mask = (df['clean_firm'] <= ceiling_pct) & (df['ccs_ccgt'] == 0)
+    else:
+        mask = (df['clean_firm'] == 0) & (df['ccs_ccgt'] == 0)
+
+    if 'geothermal' in df.columns:
+        mask &= (df['geothermal'] == 0)
+
+    # Hard-zero offshore wind — not available in P1a (Card R).
+    if 'offshore_wind' in df.columns:
+        mask &= (df['offshore_wind'] == 0)
+
+    return df.loc[mask].reset_index(drop=True)
+
+
 def _filter_pathway_3(df: pd.DataFrame) -> pd.DataFrame:
     """Pathway 3: full EF — no filter."""
     return df
@@ -1386,7 +1417,11 @@ def select_target_mix(
 
     ef = load_ef_mixes(iso, threshold)
 
-    if pathway == '1':
+    if pathway == '1a':
+        ef = _filter_pathway_1a(ef, iso=iso)
+    elif pathway in ('1', '1b'):
+        # P1b = current P1 filter (offshore wind allowed, no new nuclear via cap).
+        # Original '1' runs also use this filter; re-runs will be clean.
         ef = _filter_pathway_1(ef, iso=iso)
     elif pathway in ('2a', '2b'):
         if pivot_state is None or not pivot_state.pivoted:
@@ -1795,7 +1830,7 @@ def solve_pathway(
         # Vintage the delta from the ledger's prior state.
         # For Pathway 1 and pre-pivot 2a/2b: cap nuclear at existing fleet TWh.
         _no_new_nuclear = (
-            config.pathway == '1'
+            config.pathway in ('1', '1a', '1b')
             or (config.pathway in ('2a', '2b') and not pivot_state.pivoted)
         )
         new_vintages = _derive_delta_vintages(
@@ -1817,7 +1852,7 @@ def solve_pathway(
         # Economic infeasibility — soft flag if marginal $/CFE% blows up.
         marg_vre = marginal_vre_usd_per_cfe_pct(config.iso, year, config)
         if marg_vre > ECONOMIC_INFEASIBILITY_MARGINAL_USD_PER_CFE_PCT \
-                and config.pathway == '1':
+                and config.pathway in ('1', '1a', '1b'):
             feasibility['economic'] = False
 
         annual_buildout.append({
