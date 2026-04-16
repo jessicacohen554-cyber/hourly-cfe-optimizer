@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Reliability Tax | The 8,760 Problem</title>
+    <meta name="description" content="What you pay when reliability is treated as a residual rather than a design objective. Four decarbonization pathways across seven US ISOs, five endpoints.">
+    <meta property="og:title" content="The Reliability Tax">
+    <meta property="og:description" content="Planning for clean and affordable without designing for reliability builds a second grid — the gas fleet you still need but no longer use.">
+    <meta property="og:type" content="article">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles/shared.css">
+    <link rel="stylesheet" href="styles/article.css">
+    <link rel="stylesheet" href="styles/scrollytell.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="js/nav.js"></script>
+    <script src="js/chart-colors.js"></script>
+    <script src="js/shared-header.js"></script>
+    <script src="js/scroll-observer.js"></script>
+    <script src="js/shared-footer.js"></script>
+    <style>
+        /* ===== Page-local scaffolding only — all components use shared classes ===== */
+
+        /* Reading progress bar (scroll indicator, above nav) */
+        .reading-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            width: 0%;
+            background: linear-gradient(90deg, var(--navy), var(--hydro) 25%, var(--wind) 50%, var(--solar) 75%, var(--red));
+            z-index: 10000;
+            transition: width 0.1s linear;
+            pointer-events: none;
+        }
+
+        /* Hero intro lead paragraph */
+        .tax-hero-lead {
+            max-width: 820px;
+            margin: 0 auto var(--space-xl);
+            font-size: 1.08rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            text-align: center;
+        }
+        .tax-hero-definition {
+            max-width: 820px;
+            margin: 0 auto;
+            padding: 18px 24px;
+            background: rgba(255,255,255,0.85);
+            border-left: 3px solid var(--red);
+            border-radius: 8px;
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .tax-hero-definition strong {
+            color: var(--navy);
+            font-weight: 700;
+        }
+
+        /* Section-anchor placeholders (visible during scaffolding build-out) */
+        .section-stub {
+            max-width: 940px;
+            margin: 0 auto;
+            padding: 48px 24px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.88rem;
+            border: 1px dashed rgba(0,0,0,0.12);
+            border-radius: 12px;
+            background: rgba(255,255,255,0.5);
+        }
+        .section-stub strong {
+            display: block;
+            font-family: var(--font-heading);
+            font-size: 1rem;
+            color: var(--navy);
+            margin-bottom: 6px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .tax-hero-lead { font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="reading-progress" id="readingProgress" aria-hidden="true"></div>
+    <nav id="topNav"></nav>
+
+    <div class="header" id="pageHeader">
+        <h1>The Reliability Tax</h1>
+        <div class="subtitle">What you pay when reliability is treated as a residual, not a design objective.</div>
+        <div class="header-accent"></div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Hero Intro                                                             -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <section class="content-section" id="hero">
+        <p class="tax-hero-lead fade-in">
+            Grids can be clean, affordable, and reliable &mdash; but only if all three are designed for. When planning optimizes for clean and affordable and assumes reliability will just happen, reliability is paid for implicitly through a redundant fossil fleet that has to stay online to cover the hours solar, wind, and storage can&rsquo;t economically serve. This analysis puts a number on that hidden cost across seven US ISOs and five 2050 CFE endpoints.
+        </p>
+        <div class="tax-hero-definition fade-in">
+            <strong>The reliability tax</strong> = the fixed costs of the gas fleet that must remain online to fill hours VRE and storage cannot economically serve, net of capacity market revenues, expressed as $/MWh of total consumption.
+        </div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Act 1: The Trilemma  (click-to-advance infographic)                    -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">A1</div>
+        <h2>The Trilemma</h2>
+        <p>Every grid faces the same three objectives &mdash; the pathways differ in which one they sacrifice first.</p>
+    </div>
+    <section class="content-section" id="act1-section">
+        <div class="section-stub"><strong>Act 1 infographic</strong>Click-to-advance trilemma visual mounts here in the next build step.</div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Hook: You Already Built a Second Grid                                  -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">H</div>
+        <h2>You Already Built a Second Grid</h2>
+        <p>At 95% CFE under a VRE-only pathway, a gas fleet stays online doing almost nothing &mdash; and you pay its full fixed costs.</p>
+    </div>
+    <section class="content-section" id="hook-section">
+        <div class="section-stub"><strong>Hook visual</strong>Gas CF gauge + ghost-grid map + cumulative $ headline mount here next.</div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Section 1: The Wall                                                    -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">1</div>
+        <h2>The Wall</h2>
+        <p>Every ISO hits a cost wall somewhere between 90% and 99.9% CFE. The shape of that wall differs &mdash; and tells you how expensive each grid&rsquo;s last mile is when you don&rsquo;t plan for firm clean.</p>
+    </div>
+    <section class="content-section" id="section1">
+        <div class="section-stub"><strong>Section 1: The Wall</strong>ISO toggle + hockey-stick + narrative panel + worst-100-hour dispatch stack mount here next.</div>
+    </section>
+
+    <div class="energy-divider"></div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- Sections 2–6 (placeholders — built in Prompt 5B)                       -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <section class="content-section" id="section2">
+        <div class="section-stub"><strong>Section 2: Overbuild</strong>Built in Prompt 5B.</div>
+    </section>
+    <section class="content-section" id="section3">
+        <div class="section-stub"><strong>Section 3: The Tax</strong>Built in Prompt 5B.</div>
+    </section>
+    <section class="content-section" id="section4">
+        <div class="section-stub"><strong>Section 4: Four Journeys</strong>Built in Prompt 5B.</div>
+    </section>
+    <section class="content-section" id="section5">
+        <div class="section-stub"><strong>Section 5: Stranding</strong>Built in Prompt 5B.</div>
+    </section>
+    <section class="content-section" id="section6">
+        <div class="section-stub"><strong>Section 6: Cost of Waiting</strong>Built in Prompt 5B.</div>
+    </section>
+    <section class="content-section" id="closing">
+        <div class="section-stub"><strong>Closing synthesis</strong>Built in Prompt 5B.</div>
+    </section>
+
+    <footer id="siteFooter" data-footer-note="The Reliability Tax — analysis of four decarbonization pathways across 7 US ISOs and 5 CFE endpoints."></footer>
+
+    <script>
+    (function() {
+        'use strict';
+
+        // ===== Reading progress bar =====
+        (function initReadingProgress() {
+            var bar = document.getElementById('readingProgress');
+            if (!bar) return;
+            var ticking = false;
+            function update() {
+                var scrollY = window.scrollY || window.pageYOffset;
+                var docH = document.documentElement.scrollHeight - window.innerHeight;
+                var pct = docH > 0 ? Math.min(100, Math.max(0, (scrollY / docH) * 100)) : 0;
+                bar.style.width = pct + '%';
+                ticking = false;
+            }
+            window.addEventListener('scroll', function() {
+                if (!ticking) {
+                    requestAnimationFrame(update);
+                    ticking = true;
+                }
+            }, { passive: true });
+            update();
+        })();
+    })();
+    </script>
+</body>
+</html>
