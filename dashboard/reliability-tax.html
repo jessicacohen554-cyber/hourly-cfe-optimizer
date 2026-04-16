@@ -619,6 +619,1099 @@
             .wall-worsthours-canvas { height: 320px; }
             .wall-iso-btn { font-size: 0.78rem; padding: 7px 11px; }
         }
+
+        /* ─────────────────────────────────────────────────────────────
+           Section 2 — The Overbuild Trap
+           ───────────────────────────────────────────────────────────── */
+        .overbuild-wrap {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 32px 28px;
+            box-shadow: var(--shadow-md);
+            margin-top: var(--space-xl);
+        }
+        .overbuild-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-md);
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: var(--space-lg);
+            padding-bottom: var(--space-md);
+            border-bottom: 1px solid var(--border-light);
+        }
+        .overbuild-control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 220px;
+        }
+        .overbuild-control-label {
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+        .overbuild-control-label .hint {
+            font-weight: 500;
+            text-transform: none;
+            letter-spacing: 0;
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            margin-left: 6px;
+        }
+        .overbuild-btn-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .overbuild-btn {
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 7px 12px;
+            border-radius: var(--radius-pill);
+            border: 1.5px solid var(--border-light);
+            background: #FFFFFF;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-height: 36px;
+        }
+        .overbuild-btn:hover {
+            border-color: var(--navy);
+            color: var(--navy);
+        }
+        .overbuild-btn.active {
+            background: var(--navy);
+            border-color: var(--navy);
+            color: #FFFFFF;
+        }
+        .overbuild-btn[disabled] {
+            opacity: 0.38;
+            cursor: not-allowed;
+            background: var(--bg-alt);
+        }
+        .overbuild-iso-btn.active[data-iso="CAISO"] { background: var(--iso-caiso); border-color: var(--iso-caiso); color: #1A2744; }
+        .overbuild-iso-btn.active[data-iso="ERCOT"] { background: var(--iso-ercot); border-color: var(--iso-ercot); color: #FFFFFF; }
+        .overbuild-iso-btn.active[data-iso="MISO"]  { background: var(--iso-miso);  border-color: var(--iso-miso);  color: #FFFFFF; }
+        .overbuild-iso-btn.active[data-iso="NEISO"] { background: var(--iso-neiso); border-color: var(--iso-neiso); color: #FFFFFF; }
+        .overbuild-iso-btn.active[data-iso="NYISO"] { background: var(--iso-nyiso); border-color: var(--iso-nyiso); color: #FFFFFF; }
+        .overbuild-iso-btn.active[data-iso="PJM"]   { background: var(--iso-pjm);   border-color: var(--iso-pjm);   color: #FFFFFF; }
+        .overbuild-iso-btn.active[data-iso="SPP"]   { background: var(--iso-spp);   border-color: var(--iso-spp);   color: #FFFFFF; }
+
+        .overbuild-chart-title {
+            font-family: var(--font-heading);
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 4px;
+        }
+        .overbuild-chart-sub {
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: var(--space-md);
+            line-height: 1.5;
+        }
+        .overbuild-chart-canvas {
+            position: relative;
+            height: 420px;
+            min-height: 360px;
+        }
+        .overbuild-callouts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: var(--space-sm);
+            margin-top: var(--space-md);
+        }
+        .overbuild-callout {
+            background: var(--bg-surface);
+            border-left: 3px solid var(--navy);
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+        }
+        .overbuild-callout-label {
+            font-family: var(--font-body);
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        .overbuild-callout-value {
+            font-family: var(--font-heading);
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1.1;
+        }
+        .overbuild-callout-sub {
+            font-family: var(--font-body);
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        .overbuild-callout.red { border-left-color: var(--red); }
+        .overbuild-callout.red .overbuild-callout-value { color: var(--red-text); }
+        .overbuild-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 16px;
+            margin-top: var(--space-md);
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+        .overbuild-legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .overbuild-legend-swatch {
+            display: inline-block;
+            width: 16px;
+            height: 10px;
+            border-radius: 2px;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        .overbuild-caption {
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: var(--space-md);
+            line-height: 1.55;
+            font-style: italic;
+            border-top: 1px dashed var(--border-light);
+            padding-top: var(--space-sm);
+        }
+        .overbuild-infeasible {
+            padding: 20px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.88rem;
+            font-style: italic;
+        }
+        @media (max-width: 768px) {
+            .overbuild-wrap { padding: 22px 18px; }
+            .overbuild-chart-canvas { height: 480px; min-height: 400px; }
+            .overbuild-btn { font-size: 0.76rem; padding: 6px 10px; }
+        }
+
+        /* ─────────────────────────────────────────────────────────────
+           Section 3 — The Reliability Tax
+           ───────────────────────────────────────────────────────────── */
+        .tax-wrap {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 32px 28px;
+            box-shadow: var(--shadow-md);
+            margin-top: var(--space-xl);
+        }
+        .tax-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-md);
+            margin-bottom: var(--space-lg);
+            padding-bottom: var(--space-md);
+            border-bottom: 1px solid var(--border-light);
+        }
+        .tax-control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 200px;
+        }
+        .tax-control-label {
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+        .tax-btn-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .tax-btn {
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 7px 12px;
+            border-radius: var(--radius-pill);
+            border: 1.5px solid var(--border-light);
+            background: #FFFFFF;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-height: 36px;
+        }
+        .tax-btn:hover { border-color: var(--navy); color: var(--navy); }
+        .tax-btn.active {
+            background: var(--navy);
+            border-color: var(--navy);
+            color: #FFFFFF;
+        }
+        .tax-iso-btn.active[data-iso="CAISO"] { background: var(--iso-caiso); border-color: var(--iso-caiso); color: #1A2744; }
+        .tax-iso-btn.active[data-iso="ERCOT"] { background: var(--iso-ercot); border-color: var(--iso-ercot); color: #FFFFFF; }
+        .tax-iso-btn.active[data-iso="MISO"]  { background: var(--iso-miso);  border-color: var(--iso-miso);  color: #FFFFFF; }
+        .tax-iso-btn.active[data-iso="NEISO"] { background: var(--iso-neiso); border-color: var(--iso-neiso); color: #FFFFFF; }
+        .tax-iso-btn.active[data-iso="NYISO"] { background: var(--iso-nyiso); border-color: var(--iso-nyiso); color: #FFFFFF; }
+        .tax-iso-btn.active[data-iso="PJM"]   { background: var(--iso-pjm);   border-color: var(--iso-pjm);   color: #FFFFFF; }
+        .tax-iso-btn.active[data-iso="SPP"]   { background: var(--iso-spp);   border-color: var(--iso-spp);   color: #FFFFFF; }
+
+        /* Scrubber */
+        .tax-scrub-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex: 1 1 320px;
+            min-width: 260px;
+        }
+        .tax-scrub-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 6px;
+            background: linear-gradient(90deg, #22C55E 0%, #F59E0B 60%, #EF4444 100%);
+            outline: none;
+            cursor: pointer;
+        }
+        .tax-scrub-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--navy);
+            border: 3px solid #FFFFFF;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+            cursor: pointer;
+        }
+        .tax-scrub-slider::-moz-range-thumb {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--navy);
+            border: 3px solid #FFFFFF;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+            cursor: pointer;
+        }
+        .tax-scrub-ticks {
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            padding: 0 2px;
+        }
+        .tax-scrub-current {
+            font-family: var(--font-heading);
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--navy);
+        }
+        .tax-scrub-current .tax-pct {
+            color: var(--red-text);
+            font-size: 1.05rem;
+        }
+
+        /* Stage: gauge + cost bar side by side */
+        .tax-stage {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-xl);
+            align-items: stretch;
+            margin-top: var(--space-lg);
+        }
+        .tax-panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 24px 22px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .tax-panel-title {
+            font-family: var(--font-heading);
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: var(--space-sm);
+        }
+        .tax-panel-sub {
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            margin-bottom: var(--space-md);
+            line-height: 1.5;
+            max-width: 320px;
+        }
+
+        /* Gauge */
+        .tax-gauge-svg {
+            width: 280px;
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        .tax-gauge-needle {
+            transform-origin: 140px 155px;
+            transition: transform 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .tax-gauge-value {
+            font-family: var(--font-heading);
+            font-size: 2.4rem;
+            font-weight: 800;
+            color: var(--navy);
+            line-height: 1.1;
+            margin-top: 4px;
+        }
+        .tax-gauge-value .unit {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-left: 4px;
+        }
+        .tax-gauge-caption {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+            max-width: 320px;
+            margin-top: var(--space-xs);
+        }
+
+        /* Cost bar (fillable vertical or horizontal bar visualization) */
+        .tax-bar-wrap {
+            width: 100%;
+            max-width: 360px;
+            margin: 0 auto;
+        }
+        .tax-bar-outer {
+            position: relative;
+            width: 100%;
+            height: 44px;
+            background: var(--bg-alt);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            border: 1px solid var(--border-light);
+            margin-bottom: 10px;
+        }
+        .tax-bar-fill {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, #F59E0B, #EF4444);
+            transition: width 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: var(--radius-md) 0 0 var(--radius-md);
+        }
+        .tax-bar-fill.negative {
+            background: linear-gradient(90deg, #22C55E, #0EA5E9);
+        }
+        .tax-bar-zero {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: rgba(0,0,0,0.25);
+        }
+        .tax-bar-ticks {
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            padding: 0 2px;
+        }
+        .tax-bar-value {
+            font-family: var(--font-heading);
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--navy);
+            line-height: 1.1;
+            margin-top: 4px;
+        }
+        .tax-bar-value.negative { color: var(--wind); }
+        .tax-bar-value .unit {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-left: 4px;
+        }
+        .tax-bar-breakdown {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: var(--space-md);
+            width: 100%;
+            max-width: 320px;
+            font-family: var(--font-body);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .tax-bar-break-row {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dashed var(--border-light);
+            padding: 4px 0;
+        }
+        .tax-bar-break-row.total {
+            font-family: var(--font-heading);
+            font-weight: 700;
+            color: var(--navy);
+            border-bottom: none;
+        }
+
+        /* Pathway comparison callouts */
+        .tax-pathway-comparison {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: var(--space-sm);
+            margin-top: var(--space-lg);
+        }
+        .tax-pathway-card {
+            background: var(--bg-surface);
+            border-left: 3px solid var(--navy);
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+        }
+        .tax-pathway-card.red { border-left-color: var(--red); }
+        .tax-pathway-card.green { border-left-color: var(--wind); }
+        .tax-pathway-card-label {
+            font-family: var(--font-body);
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        .tax-pathway-card-value {
+            font-family: var(--font-heading);
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1.1;
+        }
+        .tax-pathway-card.red .tax-pathway-card-value { color: var(--red-text); }
+        .tax-pathway-card.green .tax-pathway-card-value { color: var(--wind); }
+        .tax-pathway-card-sub {
+            font-family: var(--font-body);
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .tax-caption {
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: var(--space-md);
+            line-height: 1.55;
+            font-style: italic;
+            border-top: 1px dashed var(--border-light);
+            padding-top: var(--space-sm);
+        }
+        @media (max-width: 900px) {
+            .tax-stage { grid-template-columns: 1fr; gap: var(--space-lg); }
+        }
+        @media (max-width: 768px) {
+            .tax-wrap { padding: 22px 18px; }
+            .tax-gauge-svg { width: 220px; }
+            .tax-gauge-value { font-size: 2rem; }
+            .tax-bar-value { font-size: 1.6rem; }
+        }
+
+        /* ─────────────────────────────────────────────────────────────
+           Section 4 — Four Journeys, One Destination
+           ───────────────────────────────────────────────────────────── */
+        .journeys-wrap {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 32px 28px;
+            box-shadow: var(--shadow-md);
+            margin-top: var(--space-xl);
+        }
+        .journeys-context {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-md);
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: var(--space-md);
+            border-bottom: 1px solid var(--border-light);
+            margin-bottom: var(--space-lg);
+        }
+        .journeys-meta {
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+        }
+        .journeys-meta strong {
+            font-family: var(--font-heading);
+            color: var(--navy);
+        }
+        .journeys-note {
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-style: italic;
+            max-width: 420px;
+            line-height: 1.55;
+        }
+        .journeys-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: var(--space-md);
+        }
+        .journey-panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: 18px 16px;
+            display: flex;
+            flex-direction: column;
+        }
+        .journey-panel.pathway-1 { border-top: 3px solid var(--red); }
+        .journey-panel.pathway-2a { border-top: 3px solid #F97316; }
+        .journey-panel.pathway-2b { border-top: 3px solid #F59E0B; }
+        .journey-panel.pathway-3 { border-top: 3px solid var(--wind); }
+        .journey-pw-eyebrow {
+            font-family: var(--font-heading);
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+        .journey-pw-title {
+            font-family: var(--font-heading);
+            font-size: 1.02rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 2px;
+        }
+        .journey-pw-sub {
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: var(--space-sm);
+            min-height: 2.3em;
+        }
+        .journey-canvas-wrap {
+            position: relative;
+            height: 280px;
+            min-height: 240px;
+        }
+        .journey-headline {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            margin-top: var(--space-sm);
+            padding-top: var(--space-sm);
+            border-top: 1px dashed var(--border-light);
+        }
+        .journey-headline-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+        .journey-headline-row strong {
+            font-family: var(--font-heading);
+            color: var(--navy);
+            font-size: 0.95rem;
+        }
+        .journey-pivot-badge {
+            display: inline-block;
+            font-family: var(--font-heading);
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: var(--radius-pill);
+            background: #FEE2E2;
+            color: #991B1B;
+            margin-top: 2px;
+            width: fit-content;
+        }
+        .journey-pivot-badge.none {
+            background: var(--bg-alt);
+            color: var(--text-muted);
+        }
+        .journeys-annotations {
+            margin-top: var(--space-lg);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: var(--space-sm);
+        }
+        .journey-annotation {
+            background: var(--bg-surface);
+            border-left: 3px solid var(--navy);
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+            font-family: var(--font-body);
+            font-size: 0.84rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        .journey-annotation strong {
+            font-family: var(--font-heading);
+            color: var(--navy);
+            display: block;
+            margin-bottom: 2px;
+            font-size: 0.82rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .journeys-caption {
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: var(--space-md);
+            line-height: 1.55;
+            font-style: italic;
+            border-top: 1px dashed var(--border-light);
+            padding-top: var(--space-sm);
+        }
+        .journeys-shared-scale-note {
+            text-align: center;
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: var(--space-sm);
+        }
+
+        @media (max-width: 1200px) {
+            .journeys-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (max-width: 640px) {
+            .journeys-grid { grid-template-columns: 1fr; }
+            .journeys-wrap { padding: 22px 18px; }
+            .journey-canvas-wrap { height: 240px; }
+        }
+
+        /* ─────────────────────────────────────────────────────────────
+           Section 5 — The Stranding Ledger
+           ───────────────────────────────────────────────────────────── */
+        .stranding-wrap {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 32px 28px;
+            box-shadow: var(--shadow-md);
+            margin-top: var(--space-xl);
+        }
+        .stranding-defn-box {
+            background: var(--bg-alt);
+            border-left: 3px solid var(--red);
+            border-radius: 0 var(--radius-md) var(--radius-md) 0;
+            padding: 14px 18px;
+            margin-bottom: var(--space-lg);
+            font-family: var(--font-body);
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        .stranding-defn-box strong {
+            font-family: var(--font-heading);
+            color: var(--navy);
+            font-weight: 700;
+        }
+        .stranding-sankey-wrap {
+            position: relative;
+            width: 100%;
+            min-height: 420px;
+            background: var(--bg-surface);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            margin-bottom: var(--space-lg);
+        }
+        .stranding-sankey-svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .stranding-sankey-node {
+            font-family: var(--font-heading);
+            font-size: 12px;
+            font-weight: 700;
+            fill: var(--navy);
+        }
+        .stranding-sankey-sub {
+            font-family: var(--font-body);
+            font-size: 10.5px;
+            fill: var(--text-muted);
+        }
+        .stranding-flow {
+            transition: opacity 0.25s ease;
+            cursor: pointer;
+        }
+        .stranding-flow:hover { opacity: 0.78; }
+
+        .stranding-resource-break {
+            margin-top: var(--space-md);
+        }
+        .stranding-resource-title {
+            font-family: var(--font-heading);
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: var(--space-sm);
+        }
+        .stranding-resource-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: var(--space-sm);
+        }
+        .stranding-resource-card {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-left: 3px solid var(--navy);
+            border-radius: var(--radius-md);
+            padding: 10px 12px;
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+        }
+        .stranding-resource-card-label {
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+        .stranding-resource-card-value {
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--navy);
+        }
+
+        .stranding-totals-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: var(--space-sm);
+            margin-top: var(--space-md);
+        }
+        .stranding-total-card {
+            background: var(--bg-surface);
+            border-radius: var(--radius-md);
+            padding: 14px 16px;
+            border-left: 3px solid var(--navy);
+        }
+        .stranding-total-card.delivered { border-left-color: var(--wind); }
+        .stranding-total-card.stranded { border-left-color: var(--red); }
+        .stranding-total-label {
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        .stranding-total-value {
+            font-family: var(--font-heading);
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1.1;
+        }
+        .stranding-total-card.stranded .stranding-total-value { color: var(--red-text); }
+        .stranding-total-card.delivered .stranding-total-value { color: var(--wind); }
+        .stranding-total-sub {
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .stranding-crosscheck {
+            margin-top: var(--space-lg);
+            padding: 16px 18px;
+            background: var(--bg-alt);
+            border-radius: var(--radius-md);
+            border-left: 3px solid var(--hydro);
+        }
+        .stranding-crosscheck-title {
+            font-family: var(--font-heading);
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--navy);
+            margin-bottom: 6px;
+        }
+        .stranding-crosscheck-body {
+            font-family: var(--font-body);
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+        }
+        .stranding-caption {
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: var(--space-md);
+            line-height: 1.55;
+            font-style: italic;
+            border-top: 1px dashed var(--border-light);
+            padding-top: var(--space-sm);
+        }
+
+        @media (max-width: 768px) {
+            .stranding-wrap { padding: 22px 18px; }
+            .stranding-sankey-wrap { padding: 12px; min-height: 360px; }
+        }
+
+        /* ===== Section 6: Cost of Waiting ===== */
+        .waiting-wrap {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 28px 24px;
+            box-shadow: var(--shadow-sm);
+        }
+        .waiting-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-lg);
+            align-items: flex-end;
+            margin-bottom: var(--space-lg);
+        }
+        .waiting-control {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .waiting-control-label {
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .waiting-control .toggle-btn-group { display: inline-flex; gap: 4px; }
+        .waiting-panels {
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+            gap: var(--space-lg);
+            margin-top: var(--space-md);
+        }
+        .waiting-panel {
+            background: var(--bg-page-white);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: 18px 16px 14px 16px;
+            min-height: 360px;
+            display: flex;
+            flex-direction: column;
+        }
+        .waiting-panel-title {
+            font-family: var(--font-heading);
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin: 0 0 4px 0;
+        }
+        .waiting-panel-sub {
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin: 0 0 10px 0;
+            line-height: 1.5;
+        }
+        .waiting-chart-host {
+            position: relative;
+            flex: 1 1 auto;
+            min-height: 280px;
+        }
+        .waiting-meta-box {
+            background: var(--bg-tint-navy);
+            border-left: 3px solid var(--navy);
+            border-radius: var(--radius-sm);
+            padding: 10px 14px;
+            margin-top: var(--space-md);
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+        }
+        .waiting-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: var(--space-sm);
+            margin-top: var(--space-md);
+        }
+        .waiting-card {
+            background: var(--bg-page-white);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+        }
+        .waiting-card-label {
+            font-family: var(--font-body);
+            font-size: 0.68rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+        .waiting-card-value {
+            font-family: var(--font-data);
+            font-size: 1.12rem;
+            font-weight: 700;
+            color: var(--navy);
+        }
+        .waiting-card-sub {
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        @media (max-width: 900px) {
+            .waiting-panels { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .waiting-wrap { padding: 22px 18px; }
+        }
+
+        /* ===== Closing synthesis table ===== */
+        .synth-wrap {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 28px 24px;
+            box-shadow: var(--shadow-sm);
+        }
+        .synth-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-md);
+            align-items: center;
+            margin-bottom: var(--space-md);
+        }
+        .synth-controls label {
+            font-family: var(--font-body);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .synth-controls select,
+        .synth-controls input[type="search"] {
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            padding: 6px 10px;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            background: var(--bg-page-white);
+            color: var(--text-primary);
+        }
+        .synth-table-scroll {
+            width: 100%;
+            overflow-x: auto;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            background: var(--bg-page-white);
+        }
+        .synth-table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 1100px;
+            font-family: var(--font-data);
+            font-size: 0.78rem;
+        }
+        .synth-table thead th {
+            position: sticky;
+            top: 0;
+            background: var(--navy);
+            color: #fff;
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 8px 10px;
+            text-align: right;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+            border-right: 1px solid rgba(255,255,255,0.08);
+        }
+        .synth-table thead th.col-left { text-align: left; }
+        .synth-table thead th .sort-caret {
+            opacity: 0.55;
+            font-size: 0.65rem;
+            margin-left: 4px;
+        }
+        .synth-table thead th.sorted .sort-caret { opacity: 1; color: var(--gold, #FFC857); }
+        .synth-table tbody td {
+            padding: 6px 10px;
+            text-align: right;
+            border-bottom: 1px solid var(--border-light);
+            white-space: nowrap;
+            color: var(--text-primary);
+        }
+        .synth-table tbody td.col-left { text-align: left; }
+        .synth-table tbody tr:hover td { background: var(--bg-tint-navy); }
+        .synth-table tbody tr.row-infeasible td { color: var(--text-muted); background: #fafaf7; }
+        .synth-table tbody tr.row-infeasible td.col-left { font-style: italic; }
+        .synth-badge {
+            display: inline-block;
+            padding: 1px 6px;
+            border-radius: 999px;
+            font-family: var(--font-body);
+            font-size: 0.66rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .synth-badge-ok { background: rgba(34, 197, 94, 0.14); color: #14532d; }
+        .synth-badge-warn { background: rgba(245, 158, 11, 0.18); color: #7c2d12; }
+        .synth-badge-bad { background: rgba(239, 68, 68, 0.15); color: #7f1d1d; }
+        .synth-badge-iso {
+            background: var(--bg-tint-navy);
+            color: var(--navy);
+            border: 1px solid var(--border-light);
+        }
+        .synth-summary {
+            font-family: var(--font-body);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: var(--space-sm);
+        }
+        @media (max-width: 768px) {
+            .synth-wrap { padding: 22px 16px; }
+            .synth-controls { gap: var(--space-sm); }
+        }
+
     </style>
 </head>
 <body>
@@ -982,23 +2075,391 @@
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- Sections 2–6 (placeholders — built in Prompt 5B)                       -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">2</div>
+        <h2>The Overbuild Trap</h2>
+        <p>Without firm clean resources, hitting a high CFE target requires building multiples of peak load in variable generation and storage &mdash; and you still keep the gas fleet around for the hours that math can&rsquo;t cover.</p>
+    </div>
     <section class="content-section" id="section2">
-        <div class="section-stub"><strong>Section 2: Overbuild</strong>Built in Prompt 5B.</div>
+        <div class="overbuild-wrap fade-in">
+            <!-- Controls -->
+            <div class="overbuild-controls">
+                <div class="overbuild-control-group">
+                    <div class="overbuild-control-label">ISO</div>
+                    <div class="overbuild-btn-row" id="overbuildIsoRow" role="tablist" aria-label="Select ISO for overbuild chart">
+                        <button type="button" class="overbuild-btn overbuild-iso-btn active" data-iso="CAISO" role="tab" aria-selected="true">CAISO</button>
+                        <button type="button" class="overbuild-btn overbuild-iso-btn" data-iso="ERCOT" role="tab" aria-selected="false">ERCOT</button>
+                        <button type="button" class="overbuild-btn overbuild-iso-btn" data-iso="MISO"  role="tab" aria-selected="false">MISO</button>
+                        <button type="button" class="overbuild-btn overbuild-iso-btn" data-iso="NEISO" role="tab" aria-selected="false">NEISO</button>
+                        <button type="button" class="overbuild-btn overbuild-iso-btn" data-iso="NYISO" role="tab" aria-selected="false">NYISO</button>
+                        <button type="button" class="overbuild-btn overbuild-iso-btn" data-iso="PJM"   role="tab" aria-selected="false">PJM</button>
+                        <button type="button" class="overbuild-btn overbuild-iso-btn" data-iso="SPP"   role="tab" aria-selected="false">SPP</button>
+                    </div>
+                </div>
+                <div class="overbuild-control-group">
+                    <div class="overbuild-control-label">CFE endpoint</div>
+                    <div class="overbuild-btn-row" id="overbuildEndpointRow" role="tablist" aria-label="Select 2050 CFE endpoint">
+                        <button type="button" class="overbuild-btn overbuild-ep-btn" data-ep="ep90" role="tab">90%</button>
+                        <button type="button" class="overbuild-btn overbuild-ep-btn active" data-ep="ep95" role="tab">95%</button>
+                        <button type="button" class="overbuild-btn overbuild-ep-btn" data-ep="ep97p5" role="tab">97.5%</button>
+                        <button type="button" class="overbuild-btn overbuild-ep-btn" data-ep="ep99" role="tab">99%</button>
+                        <button type="button" class="overbuild-btn overbuild-ep-btn" data-ep="ep99p9" role="tab">99.9%</button>
+                    </div>
+                </div>
+                <div class="overbuild-control-group">
+                    <div class="overbuild-control-label">Demand growth <span class="hint">(pipeline-configured)</span></div>
+                    <div class="overbuild-btn-row" id="overbuildDemandRow" role="tablist" aria-label="Select demand growth variant">
+                        <button type="button" class="overbuild-btn overbuild-dem-btn" data-dem="L" role="tab">Low</button>
+                        <button type="button" class="overbuild-btn overbuild-dem-btn active" data-dem="M" role="tab">Medium</button>
+                        <button type="button" class="overbuild-btn overbuild-dem-btn" data-dem="H" role="tab">High</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overbuild-chart-title" id="overbuildChartTitle">GW of capacity built per GW of 2050 peak load</div>
+            <div class="overbuild-chart-sub" id="overbuildChartSub">Horizontal bars, one per pathway. Stacked by resource. Existing gas fleet remaining at 2050 shown as a separate segment.</div>
+
+            <div class="overbuild-chart-canvas">
+                <canvas id="overbuildChart" aria-label="Overbuild multiplier by pathway"></canvas>
+                <div class="overbuild-infeasible" id="overbuildInfeasibleMsg" style="display:none;"></div>
+            </div>
+
+            <div class="overbuild-legend" id="overbuildLegend"></div>
+
+            <div class="overbuild-callouts" id="overbuildCallouts"></div>
+
+            <div class="overbuild-caption" id="overbuildCaption">
+                Overbuild multiplier = (new-build GW + existing gas remaining at 2050) &divide; 2050 peak demand GW. Pathway 1a = onshore VRE + storage only (no offshore wind, no clean firm). Pathway 1b = adds offshore wind where regionally available. Pathways 2a/2b pivot to clean firm after VRE-only reaches its plateau or its marginal-cost trigger. Pathway 3 is destination-optimized with clean firm available from year 1.
+            </div>
+        </div>
     </section>
+    <div class="section-header fade-in">
+        <div class="section-number">3</div>
+        <h2>The Reliability Tax</h2>
+        <p>When you climb the CFE ladder without firm clean, the gas fleet runs less and less each year &mdash; and you pay its full fixed costs anyway. Scrub the threshold: the needle drops, the bill holds.</p>
+    </div>
     <section class="content-section" id="section3">
-        <div class="section-stub"><strong>Section 3: The Tax</strong>Built in Prompt 5B.</div>
+        <div class="tax-wrap fade-in">
+            <!-- Controls: ISO + CFE scrubber -->
+            <div class="tax-controls">
+                <div class="tax-control-group" style="flex: 0 0 auto;">
+                    <div class="tax-control-label">ISO</div>
+                    <div class="tax-btn-row" id="taxIsoRow" role="tablist" aria-label="Select ISO for reliability tax view">
+                        <button type="button" class="tax-btn tax-iso-btn active" data-iso="CAISO" role="tab" aria-selected="true">CAISO</button>
+                        <button type="button" class="tax-btn tax-iso-btn" data-iso="ERCOT" role="tab">ERCOT</button>
+                        <button type="button" class="tax-btn tax-iso-btn" data-iso="MISO"  role="tab">MISO</button>
+                        <button type="button" class="tax-btn tax-iso-btn" data-iso="NEISO" role="tab">NEISO</button>
+                        <button type="button" class="tax-btn tax-iso-btn" data-iso="NYISO" role="tab">NYISO</button>
+                        <button type="button" class="tax-btn tax-iso-btn" data-iso="PJM"   role="tab">PJM</button>
+                        <button type="button" class="tax-btn tax-iso-btn" data-iso="SPP"   role="tab">SPP</button>
+                    </div>
+                </div>
+                <div class="tax-scrub-wrap">
+                    <div class="tax-control-label">CFE threshold scrubber <span id="taxScrubCurrent" class="tax-scrub-current">&mdash; <span class="tax-pct">95%</span></span></div>
+                    <input type="range" id="taxScrub" class="tax-scrub-slider"
+                           min="0" max="4" step="1" value="1"
+                           aria-label="CFE endpoint scrubber">
+                    <div class="tax-scrub-ticks">
+                        <span>90%</span>
+                        <span>95%</span>
+                        <span>97.5%</span>
+                        <span>99%</span>
+                        <span>99.9%</span>
+                    </div>
+                </div>
+                <div class="tax-control-group" style="flex: 0 0 auto;">
+                    <div class="tax-control-label">Pathway lens</div>
+                    <div class="tax-btn-row" id="taxPathwayRow" role="tablist" aria-label="Select pathway">
+                        <button type="button" class="tax-btn tax-pw-btn active" data-pw="1a" role="tab">1a</button>
+                        <button type="button" class="tax-btn tax-pw-btn" data-pw="1b" role="tab">1b</button>
+                        <button type="button" class="tax-btn tax-pw-btn" data-pw="2a" role="tab">2a</button>
+                        <button type="button" class="tax-btn tax-pw-btn" data-pw="2b" role="tab">2b</button>
+                        <button type="button" class="tax-btn tax-pw-btn" data-pw="3"  role="tab">3</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tax-stage">
+                <!-- LEFT PANEL: Gas-fleet CF gauge -->
+                <div class="tax-panel">
+                    <div class="tax-panel-title">Gas fleet capacity factor</div>
+                    <div class="tax-panel-sub">
+                        Fleet-level utilization: share of the existing gas fleet&rsquo;s annual energy potential actually dispatched. As the CFE threshold rises, the gas fleet runs less.
+                    </div>
+                    <svg class="tax-gauge-svg" viewBox="0 0 280 190" xmlns="http://www.w3.org/2000/svg"
+                         role="img" aria-label="Gauge showing gas-fleet capacity factor">
+                        <defs>
+                            <linearGradient id="taxGaugeGrad" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%"  stop-color="#0EA5E9"/>
+                                <stop offset="40%" stop-color="#22C55E"/>
+                                <stop offset="70%" stop-color="#F59E0B"/>
+                                <stop offset="100%" stop-color="#EF4444"/>
+                            </linearGradient>
+                        </defs>
+                        <!-- Background arc -->
+                        <path d="M 30 155 A 110 110 0 0 1 250 155"
+                              fill="none" stroke="#E5E7EB" stroke-width="20" stroke-linecap="round"/>
+                        <!-- Colored arc -->
+                        <path d="M 30 155 A 110 110 0 0 1 250 155"
+                              fill="none" stroke="url(#taxGaugeGrad)" stroke-width="20" stroke-linecap="round" opacity="0.88"/>
+                        <!-- Tick labels (0 / 25 / 50 / 75 / 100%) -->
+                        <text x="30"  y="178" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="11" fill="#566370" font-weight="600">0%</text>
+                        <text x="84"  y="55"  text-anchor="middle" font-family="DM Sans, sans-serif" font-size="10" fill="#566370">25%</text>
+                        <text x="140" y="38"  text-anchor="middle" font-family="DM Sans, sans-serif" font-size="10" fill="#566370">50%</text>
+                        <text x="196" y="55"  text-anchor="middle" font-family="DM Sans, sans-serif" font-size="10" fill="#566370">75%</text>
+                        <text x="250" y="178" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="11" fill="#566370" font-weight="600">100%</text>
+                        <!-- Needle -->
+                        <g id="taxGaugeNeedle" class="tax-gauge-needle" style="transform: rotate(-90deg);">
+                            <line x1="140" y1="155" x2="140" y2="60"
+                                  stroke="#1A2744" stroke-width="3.5" stroke-linecap="round"/>
+                            <circle cx="140" cy="155" r="7" fill="#1A2744"/>
+                            <circle cx="140" cy="155" r="3" fill="#FFFFFF"/>
+                        </g>
+                    </svg>
+                    <div class="tax-gauge-value" id="taxGaugeValue">&mdash;<span class="unit">fleet CF</span></div>
+                    <div class="tax-gauge-caption" id="taxGaugeCaption">
+                        Fleet CF collapses as the CFE target rises &mdash; fewer hours left for gas to serve.
+                    </div>
+                </div>
+
+                <!-- RIGHT PANEL: Reliability Tax cost bar -->
+                <div class="tax-panel">
+                    <div class="tax-panel-title">Reliability tax &mdash; $/MWh delivered</div>
+                    <div class="tax-panel-sub">
+                        Net fixed operating costs of the existing gas fleet, after capacity-market revenues per Card M, spread over total 2050 demand. The green zone means capacity payments exceed FOM (net credit to customers); red means FOM exceeds capacity revenue.
+                    </div>
+                    <div class="tax-bar-wrap">
+                        <div class="tax-bar-outer" aria-hidden="true">
+                            <div class="tax-bar-zero" id="taxBarZero"></div>
+                            <div class="tax-bar-fill" id="taxBarFill" style="width:0%; left:50%;"></div>
+                        </div>
+                        <div class="tax-bar-ticks">
+                            <span>&minus;$15</span>
+                            <span>0</span>
+                            <span>+$15</span>
+                        </div>
+                    </div>
+                    <div class="tax-bar-value" id="taxBarValue">&mdash;<span class="unit">per MWh</span></div>
+                    <div class="tax-bar-breakdown" id="taxBarBreakdown">
+                        <div class="tax-bar-break-row"><span>Gas FOM (annual)</span><span id="taxBreakFom">&mdash;</span></div>
+                        <div class="tax-bar-break-row"><span>Capacity revenue (credit)</span><span id="taxBreakCap">&mdash;</span></div>
+                        <div class="tax-bar-break-row total"><span>Net FOM on customers</span><span id="taxBreakNet">&mdash;</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pathway-by-pathway comparison at the current endpoint -->
+            <div class="tax-pathway-comparison" id="taxPathwayComparison"></div>
+
+            <div class="tax-caption" id="taxCaption">
+                Gas fleet CF = annual gas generation &divide; (existing gas capacity &times; 8,760 h). Reliability tax = (gas FOM &minus; capacity revenue) &divide; 2050 demand in MWh. FOM &amp; capacity values sourced from pipeline config; capacity revenue netted per Card M.
+            </div>
+        </div>
     </section>
+    <div class="section-header fade-in">
+        <div class="section-number">4</div>
+        <h2>Four Journeys, One Destination</h2>
+        <p>Four pathways, same 95% endpoint, 2025&ndash;2050. The resource stacks look different because the objective function that produces each stack is different &mdash; but the destination is the same.</p>
+    </div>
     <section class="content-section" id="section4">
-        <div class="section-stub"><strong>Section 4: Four Journeys</strong>Built in Prompt 5B.</div>
+        <div class="journeys-wrap fade-in">
+            <div class="journeys-context">
+                <div class="journeys-meta">
+                    <strong id="journeysIsoLabel">ERCOT</strong>
+                    &nbsp;&middot;&nbsp; 95% CFE endpoint
+                    &nbsp;&middot;&nbsp; Annual TWh buildout by resource, 2025&ndash;2050
+                </div>
+                <div class="journeys-note">
+                    Smoke-test region per Card G. Pipeline expansion to all seven ISOs is downstream work; this page renders whatever is in the payload.
+                </div>
+            </div>
+
+            <div class="journeys-shared-scale-note" id="journeysSharedScaleNote">Shared y-axis across all four panels for honest comparison.</div>
+
+            <div class="journeys-grid">
+                <div class="journey-panel pathway-1" data-pw="1">
+                    <div class="journey-pw-eyebrow">Pathway 1</div>
+                    <div class="journey-pw-title">VRE + batteries only</div>
+                    <div class="journey-pw-sub">Optimizing the wrong objective function.</div>
+                    <div class="journey-canvas-wrap"><canvas id="journeyChart_1" aria-label="Pathway 1 annual buildout 2025-2050"></canvas></div>
+                    <div class="journey-headline" id="journeyHead_1">
+                        <div class="journey-headline-row"><span>Undiscounted cumulative</span><strong id="journeyCost_1">&mdash;</strong></div>
+                        <div class="journey-headline-row"><span>Achieved CFE 2050</span><strong id="journeyCfe_1">&mdash;</strong></div>
+                        <div class="journey-headline-row"><span>Existing gas retired</span><strong id="journeyRet_1">&mdash;</strong></div>
+                        <span class="journey-pivot-badge none" id="journeyPivot_1">no pivot</span>
+                    </div>
+                </div>
+
+                <div class="journey-panel pathway-2a" data-pw="2a">
+                    <div class="journey-pw-eyebrow">Pathway 2a</div>
+                    <div class="journey-pw-title">Behavioral reactive pivot</div>
+                    <div class="journey-pw-sub">Pivots to clean firm when VRE-only hits 90% plateau.</div>
+                    <div class="journey-canvas-wrap"><canvas id="journeyChart_2a" aria-label="Pathway 2a annual buildout 2025-2050"></canvas></div>
+                    <div class="journey-headline" id="journeyHead_2a">
+                        <div class="journey-headline-row"><span>Undiscounted cumulative</span><strong id="journeyCost_2a">&mdash;</strong></div>
+                        <div class="journey-headline-row"><span>Achieved CFE 2050</span><strong id="journeyCfe_2a">&mdash;</strong></div>
+                        <div class="journey-headline-row"><span>Existing gas retired</span><strong id="journeyRet_2a">&mdash;</strong></div>
+                        <span class="journey-pivot-badge" id="journeyPivot_2a">pivot &mdash;</span>
+                    </div>
+                </div>
+
+                <div class="journey-panel pathway-2b" data-pw="2b">
+                    <div class="journey-pw-eyebrow">Pathway 2b</div>
+                    <div class="journey-pw-title">Economic reactive pivot</div>
+                    <div class="journey-pw-sub">Pivots when next-VRE $/CFE% exceeds firm-clean LCOE.</div>
+                    <div class="journey-canvas-wrap"><canvas id="journeyChart_2b" aria-label="Pathway 2b annual buildout 2025-2050"></canvas></div>
+                    <div class="journey-headline" id="journeyHead_2b">
+                        <div class="journey-headline-row"><span>Undiscounted cumulative</span><strong id="journeyCost_2b">&mdash;</strong></div>
+                        <div class="journey-headline-row"><span>Achieved CFE 2050</span><strong id="journeyCfe_2b">&mdash;</strong></div>
+                        <div class="journey-headline-row"><span>Existing gas retired</span><strong id="journeyRet_2b">&mdash;</strong></div>
+                        <span class="journey-pivot-badge" id="journeyPivot_2b">pivot &mdash;</span>
+                    </div>
+                </div>
+
+                <div class="journey-panel pathway-3" data-pw="3">
+                    <div class="journey-pw-eyebrow">Pathway 3</div>
+                    <div class="journey-pw-title">Clean firm proactive</div>
+                    <div class="journey-pw-sub">Destination-oriented from year 1.</div>
+                    <div class="journey-canvas-wrap"><canvas id="journeyChart_3" aria-label="Pathway 3 annual buildout 2025-2050"></canvas></div>
+                    <div class="journey-headline" id="journeyHead_3">
+                        <div class="journey-headline-row"><span>Undiscounted cumulative</span><strong id="journeyCost_3">&mdash;</strong></div>
+                        <div class="journey-headline-row"><span>Achieved CFE 2050</span><strong id="journeyCfe_3">&mdash;</strong></div>
+                        <div class="journey-headline-row"><span>Existing gas retired</span><strong id="journeyRet_3">&mdash;</strong></div>
+                        <span class="journey-pivot-badge none" id="journeyPivot_3">no pivot needed</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="journeys-annotations" id="journeysAnnotations"></div>
+
+            <div class="journeys-caption">
+                Each panel shows a pathway&rsquo;s annual TWh buildout by resource (stacked areas) with a dashed cumulative-cost line (right axis, $T undiscounted real 2025&#36;). The existing-fleet retirement overlay shows cumulative GW of gas and coal displaced. Pivot badges mark the year each pathway switches from VRE-only to including firm clean, per Card E (freeze-and-forward).
+            </div>
+        </div>
     </section>
+    <div class="section-header fade-in">
+        <div class="section-number">5</div>
+        <h2>The Stranding Ledger</h2>
+        <p>What it costs to get the same destination by the wrong route. Pathways 1, 2a, and 2b carry capital that Pathway 3 wouldn&rsquo;t have needed to reach the same 95% CFE target.</p>
+    </div>
     <section class="content-section" id="section5">
-        <div class="section-stub"><strong>Section 5: Stranding</strong>Built in Prompt 5B.</div>
+        <div class="stranding-wrap fade-in">
+            <div class="stranding-defn-box">
+                <strong>&ldquo;Stranded&rdquo; here means</strong> capital spent on capacity that a destination-optimized plan wouldn&rsquo;t have required to reach the same CFE target. The stranding ledger compares each pathway&rsquo;s build to Pathway 3&rsquo;s build at the same endpoint, per resource and per ISO (Card K revised). Transmission and clean firm are excluded by construction.
+            </div>
+
+            <div class="stranding-sankey-wrap">
+                <svg id="strandingSankey" class="stranding-sankey-svg"
+                     viewBox="0 0 920 460"
+                     xmlns="http://www.w3.org/2000/svg"
+                     role="img" aria-label="Stranding ledger Sankey: pathways on the left flow to delivered-value and stranded-capital buckets on the right">
+                    <!-- Drawn by JS -->
+                </svg>
+            </div>
+
+            <div class="stranding-totals-row" id="strandingTotalsRow"></div>
+
+            <div class="stranding-resource-break">
+                <div class="stranding-resource-title">Stranded capital by resource type (aggregate across all pathways)</div>
+                <div class="stranding-resource-grid" id="strandingResourceGrid"></div>
+            </div>
+
+            <div class="stranding-crosscheck" id="strandingCrosscheck" style="display:none;">
+                <div class="stranding-crosscheck-title">VRE curtailment cross-check</div>
+                <div class="stranding-crosscheck-body" id="strandingCrosscheckBody"></div>
+            </div>
+
+            <div class="stranding-caption">
+                Flow widths in the Sankey are proportional to book value of unrecovered capital at 2050 (primary metric per Card F). NPV through end-of-life tracked as a secondary metric in the underlying data. Clean firm built post-pivot in Pathways 2a/2b is NOT counted as stranded &mdash; Pathway 3&rsquo;s clean firm is the destination plan. This chart reflects the Sankey payload as generated; see the source file for per-ISO flows.
+            </div>
+        </div>
     </section>
+    <div class="section-header">
+        <h2 class="section-title">The cost of waiting</h2>
+        <p class="section-subtitle">Delay a clean-firm commitment by five years and Pathway 3&rsquo;s advantage shrinks. Delay by fifteen and the reactive pathways catch up &mdash; but only after paying the stranded-capital penalty baked into the stranding ledger. The left panel shows cumulative 2025&ndash;2050 cost as a function of the year clean firm first becomes available; the right panel decomposes the penalty versus the destination-oriented Pathway 3 anchor.</p>
+    </div>
     <section class="content-section" id="section6">
-        <div class="section-stub"><strong>Section 6: Cost of Waiting</strong>Built in Prompt 5B.</div>
+        <div class="waiting-wrap">
+            <div class="waiting-controls">
+                <div class="waiting-control">
+                    <div class="waiting-control-label">ISO</div>
+                    <div class="iso-selector" id="waitingIsoSel"></div>
+                </div>
+                <div class="waiting-control">
+                    <div class="waiting-control-label">CFE endpoint</div>
+                    <div class="toggle-btn-group" id="waitingEpSel"></div>
+                </div>
+            </div>
+
+            <div class="waiting-panels">
+                <div class="waiting-panel">
+                    <div class="waiting-panel-title">Cumulative 2025&ndash;2050 cost vs. commitment year</div>
+                    <div class="waiting-panel-sub">Primary line: total actual cost ($T) allocated via linear interpolation between P3 (2025), P2a (pivot year), and P1 (2050) anchors. Horizontal reference: Pathway 3 baseline (destination-oriented).</div>
+                    <div class="waiting-chart-host">
+                        <canvas id="waitingCurveChart" aria-label="Cumulative cost vs commitment year"></canvas>
+                    </div>
+                </div>
+
+                <div class="waiting-panel">
+                    <div class="waiting-panel-title">Penalty vs. Pathway 3 by commitment year</div>
+                    <div class="waiting-panel-sub">Additional cost paid (over P3 destination-oriented baseline) as a function of when clean firm commitment is made. Stacked where decomposition is available; single bar otherwise.</div>
+                    <div class="waiting-chart-host">
+                        <canvas id="waitingPenaltyChart" aria-label="Penalty vs Pathway 3 by commitment year"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="waiting-cards" id="waitingCards"></div>
+
+            <div class="waiting-meta-box" id="waitingMeta">
+                Commitment-year curves are interpolated between the three optimizer-anchored points (Pathway 3 at 2025, Pathway 2a at its pivot year, and Pathway 1 at 2050). No per-year-of-commitment optimizer runs exist &mdash; every point on the curve is read off that linear interpolation. Penalty decomposition into stranded assets / FOAK premium / foregone learning is indicative only, drawn from the stranding-ledger book value &times; 50% NPV factor with FOAK/learning estimated as 30/70 of the remainder.
+            </div>
+        </div>
     </section>
+
+    <div class="section-header">
+        <h2 class="section-title">Synthesis: 7 ISOs &times; 5 pathways &times; 5 CFE endpoints</h2>
+        <p class="section-subtitle">175 rows, one per (ISO, pathway, endpoint). Undiscounted cumulative cost is the primary metric (Card S); NPV @5/7/9% are carried as secondary columns. Infeasibility &mdash; physical (resource-cap blown) or economic (cost ceiling exceeded) &mdash; is marked distinctly. Stranded new gas and cumulative existing-fleet retirements are pulled straight from the stranding ledger and retirement tracker.</p>
+    </div>
     <section class="content-section" id="closing">
-        <div class="section-stub"><strong>Closing synthesis</strong>Built in Prompt 5B.</div>
+        <div class="synth-wrap">
+            <div class="synth-controls">
+                <label>ISO
+                    <select id="synthIsoFilter"><option value="all">All</option></select>
+                </label>
+                <label>Pathway
+                    <select id="synthPathwayFilter"><option value="all">All</option></select>
+                </label>
+                <label>Endpoint
+                    <select id="synthEpFilter"><option value="all">All</option></select>
+                </label>
+                <label>Feasibility
+                    <select id="synthFeasFilter">
+                        <option value="all">All</option>
+                        <option value="feasible">Feasible only</option>
+                        <option value="infeasible">Infeasible only</option>
+                    </select>
+                </label>
+                <label>Search
+                    <input type="search" id="synthSearch" placeholder="Filter by run_key&hellip;" />
+                </label>
+            </div>
+
+            <div class="synth-table-scroll">
+                <table class="synth-table" id="synthTable">
+                    <thead>
+                        <tr id="synthHead"></tr>
+                    </thead>
+                    <tbody id="synthBody"></tbody>
+                </table>
+            </div>
+
+            <div class="synth-summary" id="synthSummary"></div>
+
+            <div class="waiting-meta-box">
+                Primary headline metric per row is <strong>undiscounted 2025&ndash;2050 cumulative cost</strong> (Card S). NPV @7% is shown alongside; @5% and @9% brackets are carried in the underlying payload for sensitivity but hidden here to keep the table legible. Cells tagged as infeasible are shaded and italicised &mdash; the underlying optimizer did not find a physically or economically feasible solution at that (ISO, pathway, endpoint) triple. Stranded new gas, total stranded book value, and cumulative existing-fleet retirements are drawn verbatim from the stranding ledger and retirement tracker.
+            </div>
+        </div>
     </section>
 
     <footer id="siteFooter" data-footer-note="The Reliability Tax — analysis of four decarbonization pathways across 7 US ISOs and 5 CFE endpoints."></footer>
@@ -1484,6 +2945,1725 @@
 
             // Init
             selectIso('ALL');
+        })();
+
+        // ===== Section 2: The Overbuild Trap =====
+        (function initSection2Overbuild() {
+            var wrap = document.getElementById('section2');
+            if (!wrap) return;
+
+            // Canonical palette — MUST match shared.css resource tokens
+            var RES_COLORS = {
+                solar:         '#F59E0B',
+                wind:          '#22C55E',
+                offshore_wind: '#009688',
+                hydro:         '#0EA5E9',
+                battery4:      '#06B6D4',
+                battery8:      '#0891B2',
+                ldes:          '#E91E63',
+                h2:            '#10B981',
+                greenh2:       '#10B981',
+                uprate:        '#6366F1',
+                ccs_ccgt:      '#64748B',
+                geothermal:    '#D97706',
+                nuclear:       '#6366F1',
+                nuclear_newbuild: '#4F46E5',
+                clean_firm:    '#6366F1',
+                existing_gas:  '#9CA3AF'
+            };
+
+            var RES_LABELS = {
+                solar:         'Solar',
+                wind:          'Onshore wind',
+                offshore_wind: 'Offshore wind',
+                hydro:         'Hydro (existing)',
+                battery4:      'Battery 4-hr',
+                battery8:      'Battery 8-hr',
+                ldes:          'LDES (100-hr)',
+                h2:            'Green H\u2082',
+                greenh2:       'Green H\u2082',
+                uprate:        'Nuclear uprate',
+                ccs_ccgt:      'CCS-CCGT',
+                geothermal:    'Geothermal',
+                nuclear:       'Nuclear newbuild',
+                nuclear_newbuild: 'Nuclear newbuild',
+                clean_firm:    'Clean firm',
+                existing_gas:  'Existing gas remaining'
+            };
+
+            // Display order for stacking
+            var RES_ORDER = [
+                'uprate','nuclear_newbuild','nuclear','ccs_ccgt','geothermal','clean_firm',
+                'hydro','offshore_wind','wind','solar',
+                'battery4','battery8','ldes','h2','greenh2',
+                'existing_gas'
+            ];
+
+            var PATHWAY_LABELS = {
+                '1a': 'Pathway 1a',
+                '1b': 'Pathway 1b',
+                '2a': 'Pathway 2a',
+                '2b': 'Pathway 2b',
+                '3':  'Pathway 3'
+            };
+            var PATHWAY_SUBLABELS = {
+                '1a': 'VRE + storage only',
+                '1b': '+ offshore wind',
+                '2a': 'Behavioral pivot',
+                '2b': 'Economic pivot',
+                '3':  'Destination-optimized'
+            };
+            var PATHWAY_ORDER = ['1a','1b','2a','2b','3'];
+
+            var isoBtns = wrap.querySelectorAll('.overbuild-iso-btn');
+            var epBtns  = wrap.querySelectorAll('.overbuild-ep-btn');
+            var demBtns = wrap.querySelectorAll('.overbuild-dem-btn');
+            var titleEl = document.getElementById('overbuildChartTitle');
+            var subEl   = document.getElementById('overbuildChartSub');
+            var canvasEl = document.getElementById('overbuildChart');
+            var calloutsEl = document.getElementById('overbuildCallouts');
+            var legendEl = document.getElementById('overbuildLegend');
+            var infeasibleEl = document.getElementById('overbuildInfeasibleMsg');
+
+            var data = null;
+            var chart = null;
+            var currentIso = 'CAISO';
+            var currentEp  = 'ep95';
+            var currentDem = 'M';
+
+            function fmtGw(v) { return (v == null || isNaN(v)) ? '\u2014' : (Math.round(v*10)/10).toLocaleString() + ' GW'; }
+            function fmtPct(v) { return (v == null || isNaN(v)) ? '\u2014' : (Math.round(v*10)/10).toFixed(1) + '%'; }
+            function fmtMult(v) { return (v == null || isNaN(v)) ? '\u2014' : (Math.round(v*100)/100).toFixed(2) + '\u00d7'; }
+            function fmtTrill(v) { return (v == null || isNaN(v) || v === 0) ? '\u2014' : '$' + (Math.round(v*100)/100).toFixed(2) + 'T'; }
+
+            function getCell(iso, ep, pathway, dem) {
+                if (!data || !data.per_iso || !data.per_iso[iso]) return null;
+                var ep_node = data.per_iso[iso][ep];
+                if (!ep_node || !ep_node[pathway]) return null;
+                var pw_node = ep_node[pathway];
+                var cell = (pw_node.per_demand_variant && pw_node.per_demand_variant[dem]) || pw_node.base;
+                if (!cell || cell.available === false) return null;
+                return cell;
+            }
+
+            function buildDatasets(iso, ep, dem) {
+                // For each pathway in order, get its cell and collect resource stack
+                // Strategy: one horizontal stacked-bar chart. Each bar = 1 pathway. Segments = resources in RES_ORDER.
+                var present = {};
+                PATHWAY_ORDER.forEach(function(pw) {
+                    var cell = getCell(iso, ep, pw, dem);
+                    if (!cell) return;
+                    var gwMap = cell.gw_by_resource || {};
+                    Object.keys(gwMap).forEach(function(k) {
+                        if (gwMap[k] > 0.01) present[k] = true;
+                    });
+                    if (cell.gas_remaining_gw > 0.01) present.existing_gas = true;
+                });
+
+                // Sort present resources by RES_ORDER
+                var resKeys = RES_ORDER.filter(function(k) { return present[k]; });
+                // Add any present keys we didn't pre-order
+                Object.keys(present).forEach(function(k) {
+                    if (resKeys.indexOf(k) === -1) resKeys.push(k);
+                });
+
+                var datasets = resKeys.map(function(res) {
+                    var color = RES_COLORS[res] || '#9CA3AF';
+                    var label = RES_LABELS[res] || res;
+                    var vals = PATHWAY_ORDER.map(function(pw) {
+                        var cell = getCell(iso, ep, pw, dem);
+                        if (!cell) return null;
+                        if (res === 'existing_gas') {
+                            return cell.gas_remaining_gw || 0;
+                        }
+                        return (cell.gw_by_resource && cell.gw_by_resource[res]) || 0;
+                    });
+                    return {
+                        label: label,
+                        data: vals,
+                        backgroundColor: color,
+                        borderColor: '#FFFFFF',
+                        borderWidth: 1.5,
+                        borderSkipped: false,
+                        resourceKey: res
+                    };
+                });
+
+                return { datasets: datasets, resKeys: resKeys };
+            }
+
+            function renderLegend(resKeys) {
+                legendEl.innerHTML = '';
+                resKeys.forEach(function(res) {
+                    var item = document.createElement('div');
+                    item.className = 'overbuild-legend-item';
+                    item.innerHTML = '<span class="overbuild-legend-swatch" style="background:' +
+                        (RES_COLORS[res] || '#9CA3AF') + '"></span>' + (RES_LABELS[res] || res);
+                    legendEl.appendChild(item);
+                });
+            }
+
+            function renderCallouts(iso, ep, dem) {
+                calloutsEl.innerHTML = '';
+                // Pick Pathway 1a and Pathway 3 to feature
+                var cards = [];
+                PATHWAY_ORDER.forEach(function(pw) {
+                    var cell = getCell(iso, ep, pw, dem);
+                    if (!cell) {
+                        cards.push({
+                            pw: pw,
+                            available: false
+                        });
+                        return;
+                    }
+                    cards.push({
+                        pw: pw,
+                        available: true,
+                        achieved: cell.achieved_cfe_pct,
+                        peak: cell.peak_demand_gw_2050,
+                        total_nb: cell.total_new_build_gw,
+                        gas_remain: cell.gas_remaining_gw,
+                        gas_pct: cell.gas_pct_of_peak,
+                        multiplier: cell.gw_per_gw_peak,
+                        clean_firm: cell.new_build_clean_firm_gw,
+                        total_cost: cell.total_actual_cost_trillion_usd,
+                        undiscounted: cell.undiscounted_cost_trillion_usd
+                    });
+                });
+
+                cards.forEach(function(c) {
+                    var div = document.createElement('div');
+                    div.className = 'overbuild-callout';
+                    if (c.pw === '1a' || c.pw === '1b') div.className += ' red';
+                    if (!c.available) {
+                        div.innerHTML =
+                            '<div class="overbuild-callout-label">' + PATHWAY_LABELS[c.pw] + '</div>' +
+                            '<div class="overbuild-callout-value" style="font-size:1rem;color:var(--text-muted);">Infeasible</div>' +
+                            '<div class="overbuild-callout-sub">no feasible mix under this demand variant</div>';
+                    } else {
+                        var peakStr = (c.peak == null) ? '' : ' of ' + (Math.round(c.peak*10)/10).toFixed(1) + ' GW peak';
+                        div.innerHTML =
+                            '<div class="overbuild-callout-label">' + PATHWAY_LABELS[c.pw] + ' \u00b7 ' + PATHWAY_SUBLABELS[c.pw] + '</div>' +
+                            '<div class="overbuild-callout-value">' + fmtMult(c.multiplier) + ' <span style="font-size:0.8rem;font-weight:600;color:var(--text-muted);">GW built per GW peak</span></div>' +
+                            '<div class="overbuild-callout-sub">' +
+                                fmtGw(c.total_nb) + ' new build' + peakStr + ' \u00b7 ' +
+                                'existing gas remaining ' + fmtGw(c.gas_remain) + ' (' + fmtPct(c.gas_pct) + ')' +
+                            '</div>';
+                    }
+                    calloutsEl.appendChild(div);
+                });
+            }
+
+            function renderChart() {
+                if (!data) return;
+                var iso = currentIso, ep = currentEp, dem = currentDem;
+
+                var built = buildDatasets(iso, ep, dem);
+
+                // Check if any pathway is feasible
+                var anyFeasible = PATHWAY_ORDER.some(function(pw) { return getCell(iso, ep, pw, dem) !== null; });
+                if (!anyFeasible) {
+                    if (chart) { chart.destroy(); chart = null; }
+                    canvasEl.style.display = 'none';
+                    infeasibleEl.style.display = 'block';
+                    infeasibleEl.textContent = 'No feasible results for ' + iso + ' at this endpoint under ' + ({L:'low',M:'medium',H:'high'}[dem]) + ' demand growth.';
+                    renderCallouts(iso, ep, dem);
+                    renderLegend([]);
+                    return;
+                }
+                canvasEl.style.display = '';
+                infeasibleEl.style.display = 'none';
+
+                var labels = PATHWAY_ORDER.map(function(pw) { return PATHWAY_LABELS[pw]; });
+                var peakLine = null;
+                // Pull a peak demand to display as a reference vertical line (use pathway 3 or first available)
+                for (var i = 0; i < PATHWAY_ORDER.length; i++) {
+                    var cell = getCell(iso, ep, PATHWAY_ORDER[i], dem);
+                    if (cell && cell.peak_demand_gw_2050) { peakLine = cell.peak_demand_gw_2050; break; }
+                }
+
+                if (chart) chart.destroy();
+
+                chart = new Chart(canvasEl.getContext('2d'), {
+                    type: 'bar',
+                    data: { labels: labels, datasets: built.datasets },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 700 },
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    title: function(items) { return items[0].label; },
+                                    label: function(ctx) {
+                                        var v = ctx.parsed.x;
+                                        if (v == null || v === 0) return null;
+                                        return ctx.dataset.label + ': ' + (Math.round(v*10)/10).toFixed(1) + ' GW';
+                                    },
+                                    footer: function(items) {
+                                        if (!items.length) return '';
+                                        var total = 0;
+                                        items.forEach(function(i) { total += (i.parsed.x || 0); });
+                                        var footer = 'Total stack: ' + (Math.round(total*10)/10).toFixed(1) + ' GW';
+                                        if (peakLine) footer += '  \u00b7  ' + (total/peakLine).toFixed(2) + '\u00d7 peak (' + peakLine.toFixed(1) + ' GW)';
+                                        return footer;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                stacked: true,
+                                title: { display: true, text: 'GW installed at 2050', font: { family: 'DM Sans, sans-serif', size: 12, weight: '600' } },
+                                grid: { color: 'rgba(0,0,0,0.05)' },
+                                ticks: { font: { family: 'DM Sans, sans-serif', size: 11 } }
+                            },
+                            y: {
+                                stacked: true,
+                                grid: { display: false },
+                                ticks: { font: { family: 'Plus Jakarta Sans, sans-serif', size: 12, weight: '600' } }
+                            }
+                        }
+                    }
+                });
+
+                titleEl.textContent = iso + ' \u2014 GW built per GW of 2050 peak at ' +
+                    ({ep90:'90%',ep95:'95%',ep97p5:'97.5%',ep99:'99%',ep99p9:'99.9%'}[ep]) + ' CFE';
+                var demLabel = {L:'low',M:'medium',H:'high'}[dem];
+                subEl.textContent = 'Horizontal stacked bars, one per pathway. ' + demLabel.charAt(0).toUpperCase() + demLabel.slice(1) +
+                    ' demand growth variant from pipeline config. Existing-gas segment = gas fleet still operating at 2050 after endogenous retirement.';
+
+                renderLegend(built.resKeys);
+                renderCallouts(iso, ep, dem);
+            }
+
+            function onBtnClick(rowSel, attr, setter) {
+                var btns = wrap.querySelectorAll(rowSel + ' button');
+                btns.forEach(function(b) {
+                    b.addEventListener('click', function() {
+                        btns.forEach(function(x) { x.classList.remove('active'); x.setAttribute('aria-selected','false'); });
+                        b.classList.add('active');
+                        b.setAttribute('aria-selected','true');
+                        setter(b.getAttribute(attr));
+                        renderChart();
+                    });
+                });
+            }
+
+            onBtnClick('#overbuildIsoRow',      'data-iso', function(v) { currentIso = v; });
+            onBtnClick('#overbuildEndpointRow', 'data-ep',  function(v) { currentEp = v; });
+            onBtnClick('#overbuildDemandRow',   'data-dem', function(v) { currentDem = v; });
+
+            fetch('js/reliability-tax/section2_overbuild.json')
+                .then(function(r) { return r.json(); })
+                .then(function(payload) {
+                    data = payload;
+                    renderChart();
+                })
+                .catch(function(err) {
+                    infeasibleEl.style.display = 'block';
+                    infeasibleEl.textContent = 'Could not load section 2 data: ' + err.message;
+                    canvasEl.style.display = 'none';
+                });
+        })();
+
+        // ===== Section 3: The Reliability Tax =====
+        (function initSection3Tax() {
+            var wrap = document.getElementById('section3');
+            if (!wrap) return;
+
+            var EP_LIST = ['ep90','ep95','ep97p5','ep99','ep99p9'];
+            var EP_LABELS = {ep90:'90%', ep95:'95%', ep97p5:'97.5%', ep99:'99%', ep99p9:'99.9%'};
+            var PATHWAY_LABELS = {
+                '1a':'Pathway 1a', '1b':'Pathway 1b', '2a':'Pathway 2a', '2b':'Pathway 2b', '3':'Pathway 3'
+            };
+            var PATHWAY_SUBLABELS = {
+                '1a':'VRE + storage only',
+                '1b':'+ offshore wind',
+                '2a':'Behavioral pivot',
+                '2b':'Economic pivot',
+                '3':'Destination-optimized'
+            };
+
+            var isoBtns = wrap.querySelectorAll('.tax-iso-btn');
+            var pwBtns  = wrap.querySelectorAll('.tax-pw-btn');
+            var slider  = document.getElementById('taxScrub');
+            var scrubCurrent = document.getElementById('taxScrubCurrent');
+            var needle  = document.getElementById('taxGaugeNeedle');
+            var gaugeValue = document.getElementById('taxGaugeValue');
+            var gaugeCaption = document.getElementById('taxGaugeCaption');
+            var barFill = document.getElementById('taxBarFill');
+            var barZero = document.getElementById('taxBarZero');
+            var barValue = document.getElementById('taxBarValue');
+            var breakFom = document.getElementById('taxBreakFom');
+            var breakCap = document.getElementById('taxBreakCap');
+            var breakNet = document.getElementById('taxBreakNet');
+            var comparisonEl = document.getElementById('taxPathwayComparison');
+
+            var data = null;
+            var currentIso = 'CAISO';
+            var currentPw  = '1a';
+            var currentIdx = 1; // maps to EP_LIST[1] = ep95
+
+            function fmtPct(v) { return (v == null || isNaN(v)) ? '\u2014' : (Math.round(v*100)/100).toFixed(2) + '%'; }
+            function fmtMoneyMwh(v) {
+                if (v == null || isNaN(v)) return '\u2014';
+                var sign = v < 0 ? '\u2212' : '+';
+                return sign + '$' + Math.abs(v).toFixed(2);
+            }
+            function fmtMillion(v) {
+                if (v == null || isNaN(v)) return '\u2014';
+                var sign = v < 0 ? '\u2212' : '';
+                return sign + '$' + Math.abs(v).toFixed(0) + 'M';
+            }
+            function fmtKwYr(v) {
+                if (v == null || isNaN(v)) return '\u2014';
+                return '$' + v.toFixed(0) + '/kW-yr';
+            }
+
+            function getCell(iso, ep, pw) {
+                if (!data || !data.per_iso || !data.per_iso[iso]) return null;
+                var bye = data.per_iso[iso].by_endpoint;
+                if (!bye || !bye[ep] || !bye[ep][pw]) return null;
+                var c = bye[ep][pw];
+                if (c.available === false) return null;
+                return c;
+            }
+
+            function updateGauge(cfPct) {
+                // Map 0-100 to -90° (left) to +90° (right)
+                var clamped = Math.max(0, Math.min(100, cfPct || 0));
+                var angle = -90 + (clamped / 100) * 180;
+                needle.style.transform = 'rotate(' + angle.toFixed(2) + 'deg)';
+                gaugeValue.innerHTML = (Math.round(clamped*100)/100).toFixed(2) + '<span class="unit">% CF</span>';
+            }
+
+            function updateBar(tax) {
+                // tax = $/MWh (can be negative when capacity revenue > FOM)
+                // Bar axis: ±$15/MWh around 0
+                var maxAbs = 15;
+                var pct = Math.max(-1, Math.min(1, (tax || 0) / maxAbs));
+                // fill starts at 50% (zero point) and extends right for positive, left for negative
+                barZero.style.left = '50%';
+                if (tax >= 0) {
+                    barFill.classList.remove('negative');
+                    barFill.style.left = '50%';
+                    barFill.style.width = (pct * 50).toFixed(2) + '%';
+                    barFill.style.borderRadius = '0 var(--radius-md) var(--radius-md) 0';
+                } else {
+                    barFill.classList.add('negative');
+                    barFill.style.width = (Math.abs(pct) * 50).toFixed(2) + '%';
+                    barFill.style.left = (50 - Math.abs(pct) * 50).toFixed(2) + '%';
+                    barFill.style.borderRadius = 'var(--radius-md) 0 0 var(--radius-md)';
+                }
+                barValue.classList.toggle('negative', tax < 0);
+                if (tax == null || isNaN(tax)) {
+                    barValue.innerHTML = '\u2014<span class="unit">per MWh</span>';
+                } else {
+                    barValue.innerHTML = fmtMoneyMwh(tax) + '<span class="unit">per MWh</span>';
+                }
+            }
+
+            function updatePathwayComparison(ep) {
+                comparisonEl.innerHTML = '';
+                ['1a','1b','2a','2b','3'].forEach(function(pw) {
+                    var cell = getCell(currentIso, ep, pw);
+                    var card = document.createElement('div');
+                    card.className = 'tax-pathway-card';
+                    if (pw === '1a' || pw === '1b') card.className += ' red';
+                    if (pw === '3') card.className += ' green';
+                    if (!cell) {
+                        card.innerHTML =
+                            '<div class="tax-pathway-card-label">' + PATHWAY_LABELS[pw] + ' \u00b7 ' + PATHWAY_SUBLABELS[pw] + '</div>' +
+                            '<div class="tax-pathway-card-value" style="font-size:0.95rem;color:var(--text-muted);">Infeasible</div>';
+                    } else {
+                        var cf = cell.gas_fleet_cf_pct;
+                        var tax = cell.reliability_tax_usd_per_mwh;
+                        var fom_kwyr = data.per_iso[currentIso].existing_gas_fom_kw_yr;
+                        card.innerHTML =
+                            '<div class="tax-pathway-card-label">' + PATHWAY_LABELS[pw] + ' \u00b7 ' + PATHWAY_SUBLABELS[pw] + '</div>' +
+                            '<div class="tax-pathway-card-value">' + fmtMoneyMwh(tax) + ' <span style="font-size:0.78rem;font-weight:600;color:var(--text-muted);">/MWh</span></div>' +
+                            '<div class="tax-pathway-card-sub">' +
+                                'Gas CF ' + fmtPct(cf) + ' \u00b7 ' +
+                                fmtKwYr(fom_kwyr) + ' \u00b7 ' +
+                                (cell.gas_remaining_gw != null ? cell.gas_remaining_gw.toFixed(1) + ' GW remaining' : '\u2014') +
+                            '</div>';
+                    }
+                    comparisonEl.appendChild(card);
+                });
+            }
+
+            function render() {
+                if (!data) return;
+                var ep = EP_LIST[currentIdx];
+                if (scrubCurrent) {
+                    scrubCurrent.innerHTML = '&mdash; <span class="tax-pct">' + EP_LABELS[ep] + ' target</span>';
+                }
+
+                var cell = getCell(currentIso, ep, currentPw);
+                if (!cell) {
+                    updateGauge(0);
+                    barValue.innerHTML = 'Infeasible<span class="unit"></span>';
+                    barFill.style.width = '0%';
+                    breakFom.textContent = '\u2014';
+                    breakCap.textContent = '\u2014';
+                    breakNet.textContent = '\u2014';
+                    gaugeCaption.textContent = currentPw + ' is not feasible at ' + EP_LABELS[ep] + ' CFE for ' + currentIso + '.';
+                    updatePathwayComparison(ep);
+                    return;
+                }
+
+                updateGauge(cell.gas_fleet_cf_pct);
+                updateBar(cell.reliability_tax_usd_per_mwh);
+
+                breakFom.textContent = fmtMillion(cell.gas_fom_annual_million_usd);
+                breakCap.textContent = fmtMillion(-Math.abs(cell.capacity_rev_million_usd || 0));
+                breakNet.textContent = fmtMillion(cell.net_fom_million_usd);
+
+                gaugeCaption.innerHTML = 'At ' + EP_LABELS[ep] + ' CFE under ' + PATHWAY_LABELS[currentPw] + ', ' +
+                    cell.gas_remaining_gw.toFixed(1) + ' GW of existing gas remains online, dispatched across ' +
+                    cell.gas_gen_twh.toFixed(1) + ' TWh of the year.';
+
+                updatePathwayComparison(ep);
+            }
+
+            function setIso(iso) {
+                currentIso = iso;
+                isoBtns.forEach(function(b) {
+                    var a = b.getAttribute('data-iso') === iso;
+                    b.classList.toggle('active', a);
+                    b.setAttribute('aria-selected', a ? 'true' : 'false');
+                });
+                render();
+            }
+            function setPw(pw) {
+                currentPw = pw;
+                pwBtns.forEach(function(b) {
+                    var a = b.getAttribute('data-pw') === pw;
+                    b.classList.toggle('active', a);
+                    b.setAttribute('aria-selected', a ? 'true' : 'false');
+                });
+                render();
+            }
+
+            isoBtns.forEach(function(b) {
+                b.addEventListener('click', function() { setIso(b.getAttribute('data-iso')); });
+            });
+            pwBtns.forEach(function(b) {
+                b.addEventListener('click', function() { setPw(b.getAttribute('data-pw')); });
+            });
+
+            if (slider) {
+                slider.addEventListener('input', function() {
+                    currentIdx = parseInt(slider.value, 10) || 0;
+                    render();
+                });
+            }
+
+            fetch('js/reliability-tax/section3_reliability_tax.json')
+                .then(function(r) { return r.json(); })
+                .then(function(payload) {
+                    data = payload;
+                    render();
+                })
+                .catch(function(err) {
+                    barValue.innerHTML = 'Load error<span class="unit"></span>';
+                    console.error('[Section 3] Failed to load payload:', err);
+                });
+        })();
+
+        // ===== Section 4: Four Journeys, One Destination =====
+        (function initSection4Journeys() {
+            var wrap = document.getElementById('section4');
+            if (!wrap) return;
+
+            var RES_COLORS = {
+                solar:         '#F59E0B',
+                wind:          '#22C55E',
+                offshore_wind: '#009688',
+                hydro:         '#0EA5E9',
+                battery4:      '#06B6D4',
+                battery8:      '#0891B2',
+                ldes:          '#E91E63',
+                h2:            '#10B981',
+                greenh2:       '#10B981',
+                uprate:        '#6366F1',
+                ccs_ccgt:      '#64748B',
+                geothermal:    '#D97706',
+                nuclear:       '#4F46E5',
+                nuclear_newbuild: '#4F46E5'
+            };
+            var RES_LABELS = {
+                solar: 'Solar', wind: 'Onshore wind', offshore_wind: 'Offshore wind',
+                hydro: 'Hydro (existing)', battery4: 'Battery 4-hr', battery8: 'Battery 8-hr',
+                ldes: 'LDES (100-hr)', h2: 'Green H\u2082', greenh2: 'Green H\u2082',
+                uprate: 'Nuclear uprate', ccs_ccgt: 'CCS-CCGT', geothermal: 'Geothermal',
+                nuclear: 'Nuclear newbuild', nuclear_newbuild: 'Nuclear newbuild'
+            };
+            // Stacking order (bottom-up)
+            var STACK_ORDER = ['uprate','nuclear_newbuild','nuclear','ccs_ccgt','geothermal','hydro','offshore_wind','wind','solar','battery4','battery8','ldes','h2','greenh2'];
+
+            var charts = {};
+            var pathways = ['1','2a','2b','3'];
+
+            function fmtTrillion(usd) {
+                if (usd == null || isNaN(usd)) return '\u2014';
+                return '$' + (usd / 1e12).toFixed(2) + 'T';
+            }
+            function fmtPct(v) { return v == null ? '\u2014' : v.toFixed(2) + '%'; }
+            function fmtGw(v) { return v == null ? '\u2014' : v.toFixed(1) + ' GW'; }
+
+            function buildPathwayChart(pathway, payload, sharedYMax, sharedCostMax, isoLabel) {
+                var annual = payload.annual_buildout[pathway] || [];
+                var cumCost = payload.cumulative_cost[pathway] || [];
+                var retirements = payload.retirements[pathway] || [];
+
+                // Collect resources present across years
+                var presentRes = {};
+                annual.forEach(function(yr) {
+                    yr.resources.forEach(function(r) {
+                        if (r.twh_per_year > 0.01) presentRes[r.resource] = true;
+                    });
+                });
+                var resKeys = STACK_ORDER.filter(function(k) { return presentRes[k]; });
+                Object.keys(presentRes).forEach(function(k) {
+                    if (resKeys.indexOf(k) === -1) resKeys.push(k);
+                });
+
+                // Build year -> resource -> TWh map
+                var years = annual.map(function(y) { return y.year; });
+                var resDatasets = resKeys.map(function(res) {
+                    var data = annual.map(function(yr) {
+                        var row = yr.resources.find(function(r) { return r.resource === res; });
+                        return row ? row.twh_per_year : 0;
+                    });
+                    return {
+                        type: 'line',
+                        label: RES_LABELS[res] || res,
+                        data: data,
+                        backgroundColor: RES_COLORS[res] || '#9CA3AF',
+                        borderColor: RES_COLORS[res] || '#9CA3AF',
+                        borderWidth: 0.5,
+                        fill: true,
+                        pointRadius: 0,
+                        tension: 0.12,
+                        stack: 'resource',
+                        yAxisID: 'y'
+                    };
+                });
+
+                // Cumulative cost line (right axis)
+                var costByYear = {};
+                cumCost.forEach(function(r) { costByYear[r.year] = r.cumulative_usd / 1e12; });
+                var costLineData = years.map(function(y) { return costByYear[y] || null; });
+
+                // Retirement overlay (cumulative GW)
+                var retGasByYear = {};
+                var retCoalByYear = {};
+                var cumGas = 0, cumCoal = 0;
+                retirements.forEach(function(r) {
+                    cumGas += (r.gas_retired_gw || 0);
+                    cumCoal += (r.coal_retired_gw || 0);
+                    retGasByYear[r.year] = cumGas;
+                    retCoalByYear[r.year] = cumCoal;
+                });
+                var retLineGas = years.map(function(y) { return retGasByYear[y] || 0; });
+                var retLineCoal = years.map(function(y) { return retCoalByYear[y] || 0; });
+
+                var datasets = resDatasets.concat([
+                    {
+                        type: 'line',
+                        label: 'Cumulative cost ($T)',
+                        data: costLineData,
+                        backgroundColor: 'rgba(26,39,68,0.0)',
+                        borderColor: '#1A2744',
+                        borderWidth: 2,
+                        borderDash: [6, 4],
+                        fill: false,
+                        pointRadius: 0,
+                        tension: 0.18,
+                        yAxisID: 'yCost',
+                        order: -1
+                    },
+                    {
+                        type: 'line',
+                        label: 'Gas retired cum (GW)',
+                        data: retLineGas,
+                        backgroundColor: 'rgba(156,163,175,0)',
+                        borderColor: '#9CA3AF',
+                        borderWidth: 1.5,
+                        borderDash: [2, 3],
+                        fill: false,
+                        pointRadius: 0,
+                        tension: 0.12,
+                        yAxisID: 'yRet',
+                        order: -2,
+                        hidden: false
+                    },
+                    {
+                        type: 'line',
+                        label: 'Coal retired cum (GW)',
+                        data: retLineCoal,
+                        backgroundColor: 'rgba(55,65,81,0)',
+                        borderColor: '#374151',
+                        borderWidth: 1.5,
+                        borderDash: [2, 3],
+                        fill: false,
+                        pointRadius: 0,
+                        tension: 0.12,
+                        yAxisID: 'yRet',
+                        order: -2,
+                        hidden: false
+                    }
+                ]);
+
+                var canvas = document.getElementById('journeyChart_' + pathway);
+                if (!canvas) return;
+                if (charts[pathway]) charts[pathway].destroy();
+
+                charts[pathway] = new Chart(canvas.getContext('2d'), {
+                    type: 'line',
+                    data: { labels: years, datasets: datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 450 },
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) {
+                                        var v = ctx.parsed.y;
+                                        if (v == null) return null;
+                                        if (ctx.dataset.label === 'Cumulative cost ($T)') {
+                                            return 'Cumulative cost: $' + v.toFixed(2) + 'T';
+                                        }
+                                        if (ctx.dataset.yAxisID === 'yRet') {
+                                            return ctx.dataset.label + ': ' + v.toFixed(1) + ' GW';
+                                        }
+                                        if (v < 0.05) return null;
+                                        return ctx.dataset.label + ': ' + v.toFixed(1) + ' TWh/yr';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: {
+                                    maxTicksLimit: 6,
+                                    font: { family: 'DM Sans, sans-serif', size: 10 }
+                                }
+                            },
+                            y: {
+                                stacked: true,
+                                beginAtZero: true,
+                                max: sharedYMax,
+                                title: { display: true, text: 'TWh/yr (stacked)', font: { family: 'DM Sans, sans-serif', size: 10, weight: '600' } },
+                                grid: { color: 'rgba(0,0,0,0.04)' },
+                                ticks: { font: { family: 'DM Sans, sans-serif', size: 10 } }
+                            },
+                            yCost: {
+                                position: 'right',
+                                beginAtZero: true,
+                                max: sharedCostMax,
+                                grid: { display: false },
+                                title: { display: true, text: '$T cumulative', font: { family: 'DM Sans, sans-serif', size: 10, weight: '600' } },
+                                ticks: { font: { family: 'DM Sans, sans-serif', size: 10 } }
+                            },
+                            yRet: {
+                                display: false,
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+
+            function render(payload) {
+                // Compute shared y-axis max across all pathways
+                var sharedYMax = 0;
+                var sharedCostMax = 0;
+                pathways.forEach(function(pw) {
+                    var ab = payload.annual_buildout[pw] || [];
+                    ab.forEach(function(yr) {
+                        var total = yr.total_twh_per_year || 0;
+                        if (total > sharedYMax) sharedYMax = total;
+                    });
+                    var cc = payload.cumulative_cost[pw] || [];
+                    cc.forEach(function(r) {
+                        var t = r.cumulative_usd / 1e12;
+                        if (t > sharedCostMax) sharedCostMax = t;
+                    });
+                });
+                // Add padding
+                sharedYMax = Math.ceil(sharedYMax * 1.08);
+                sharedCostMax = Math.ceil(sharedCostMax * 1.08 * 100) / 100;
+
+                var headlineCosts = payload.headline_costs || {};
+                var pivotMarkers = payload.pivot_markers || {};
+
+                pathways.forEach(function(pw) {
+                    buildPathwayChart(pw, payload, sharedYMax, sharedCostMax, payload.meta && payload.meta.iso);
+                    // Headline fill
+                    var hc = headlineCosts[pw] || {};
+                    var costEl = document.getElementById('journeyCost_' + pw);
+                    var cfeEl  = document.getElementById('journeyCfe_' + pw);
+                    var retEl  = document.getElementById('journeyRet_' + pw);
+                    var pivEl  = document.getElementById('journeyPivot_' + pw);
+                    if (costEl) costEl.textContent = fmtTrillion(hc.undiscounted_usd);
+                    if (cfeEl)  cfeEl.textContent  = fmtPct(hc.achieved_cfe_pct);
+                    // Retirement at 2050 for this pathway (last entry, cumulative gas + coal)
+                    var retirements = payload.retirements[pw] || [];
+                    var cumGas = 0, cumCoal = 0;
+                    retirements.forEach(function(r) { cumGas += (r.gas_retired_gw || 0); cumCoal += (r.coal_retired_gw || 0); });
+                    if (retEl) retEl.textContent = fmtGw(cumGas) + ' gas' + (cumCoal > 0.01 ? ' + ' + fmtGw(cumCoal) + ' coal' : '');
+                    // Pivot badge
+                    var pm = pivotMarkers[pw] || {};
+                    if (pivEl) {
+                        if (pm.pivoted && pm.pivot_year) {
+                            var reasonLabel = pm.pivot_reason === '90pct_plateau' ? 'behavioral' :
+                                              (pm.pivot_reason === 'econ_trigger' ? 'economic' : pm.pivot_reason);
+                            pivEl.textContent = 'pivot ' + pm.pivot_year + ' \u00b7 ' + reasonLabel;
+                            pivEl.classList.remove('none');
+                        } else {
+                            pivEl.classList.add('none');
+                            if (pw === '1') pivEl.textContent = 'no pivot';
+                            else if (pw === '3') pivEl.textContent = 'no pivot needed';
+                        }
+                    }
+                });
+
+                // Annotations panel
+                var annEl = document.getElementById('journeysAnnotations');
+                if (annEl) {
+                    annEl.innerHTML = '';
+                    var iso = (payload.meta && payload.meta.iso) || 'ERCOT';
+                    var items = [];
+                    // Build callouts from the headline comparisons
+                    var p1 = headlineCosts['1'] || {};
+                    var p3 = headlineCosts['3'] || {};
+                    var p2a = headlineCosts['2a'] || {};
+                    var p2b = headlineCosts['2b'] || {};
+
+                    if (p1.undiscounted_usd && p3.undiscounted_usd) {
+                        var delta_p1_p3 = (p1.undiscounted_usd - p3.undiscounted_usd) / 1e12;
+                        items.push({
+                            title: 'Pathway 1 vs Pathway 3',
+                            body: iso + ' Pathway 1 cumulative cost is ' + fmtTrillion(p1.undiscounted_usd) +
+                                  ' vs Pathway 3 at ' + fmtTrillion(p3.undiscounted_usd) + '. Delta: ' +
+                                  (delta_p1_p3 >= 0 ? '+' : '\u2212') + '$' + Math.abs(delta_p1_p3).toFixed(2) + 'T undiscounted, same 95% endpoint.'
+                        });
+                    }
+                    if (pivotMarkers['2a'] && pivotMarkers['2a'].pivot_year) {
+                        items.push({
+                            title: 'Pathway 2a pivot dynamics',
+                            body: 'Behavioral pivot fires in ' + pivotMarkers['2a'].pivot_year +
+                                  ' when VRE-only hits its 90% plateau. Pre-pivot decisions are frozen (Card E); clean firm unlocks at FOAK starting point from that year forward.'
+                        });
+                    }
+                    if (pivotMarkers['2b'] && pivotMarkers['2b'].pivot_year) {
+                        items.push({
+                            title: 'Pathway 2b pivot dynamics',
+                            body: 'Economic pivot fires in ' + pivotMarkers['2b'].pivot_year +
+                                  ' when the next VRE+battery addition costs more per CFE% than the cheapest available firm-clean tech\u2019s marginal LCOE.'
+                        });
+                    }
+                    items.push({
+                        title: 'Existing-fleet retirement',
+                        body: 'All four pathways show substantial cumulative retirement of existing gas and coal by 2050 \u2014 fossil retirement is endogenous (Card L), driven by clearing economics rather than forced by the CFE constraint.'
+                    });
+
+                    items.forEach(function(it) {
+                        var d = document.createElement('div');
+                        d.className = 'journey-annotation';
+                        d.innerHTML = '<strong>' + it.title + '</strong>' + it.body;
+                        annEl.appendChild(d);
+                    });
+                }
+
+                // Update the ISO label from payload meta
+                var isoLabelEl = document.getElementById('journeysIsoLabel');
+                if (isoLabelEl && payload.meta && payload.meta.iso) {
+                    isoLabelEl.textContent = payload.meta.iso;
+                }
+            }
+
+            fetch('js/reliability-tax/section4_four_journeys.json')
+                .then(function(r) { return r.json(); })
+                .then(render)
+                .catch(function(err) {
+                    var ann = document.getElementById('journeysAnnotations');
+                    if (ann) ann.innerHTML = '<div class="journey-annotation"><strong>Load error</strong>Could not load section 4 payload: ' + err.message + '</div>';
+                });
+        })();
+
+        // ===== Section 5: The Stranding Ledger (custom SVG Sankey) =====
+        (function initSection5Stranding() {
+            var svg = document.getElementById('strandingSankey');
+            if (!svg) return;
+
+            var PATHWAY_LABELS = {
+                'pathway_1':  'Pathway 1',
+                'pathway_2a': 'Pathway 2a',
+                'pathway_2b': 'Pathway 2b'
+            };
+            var PATHWAY_SUBS = {
+                'pathway_1':  'VRE + storage, no firm clean',
+                'pathway_2a': 'Behavioral pivot',
+                'pathway_2b': 'Economic pivot'
+            };
+            var FATE_LABELS = {
+                'delivered_value': 'Delivered value',
+                'stranded':        'Stranded (excess over P3)'
+            };
+            var FATE_SUBS = {
+                'delivered_value': 'Capital that matches Pathway 3',
+                'stranded':        'Capital P3 wouldn\u2019t have needed'
+            };
+            var FATE_COLORS = {
+                'delivered_value': '#22C55E',
+                'stranded':        '#EF4444'
+            };
+            var PATHWAY_COLORS = {
+                'pathway_1':  '#EF4444',
+                'pathway_2a': '#F97316',
+                'pathway_2b': '#F59E0B'
+            };
+
+            var RES_COLORS = {
+                solar: '#F59E0B', wind: '#22C55E', offshore_wind: '#009688',
+                battery4: '#06B6D4', battery8: '#0891B2', ldes: '#E91E63',
+                h2: '#10B981', greenh2: '#10B981', all: '#94A3B8'
+            };
+            var RES_LABELS = {
+                solar: 'Solar', wind: 'Onshore wind', offshore_wind: 'Offshore wind',
+                battery4: 'Battery 4-hr', battery8: 'Battery 8-hr', ldes: 'LDES',
+                h2: 'Green H\u2082', greenh2: 'Green H\u2082'
+            };
+
+            function fmtT(usd) {
+                if (usd == null || !isFinite(usd) || usd === 0) return '$0';
+                var t = usd / 1e12;
+                if (Math.abs(t) >= 1) return '$' + t.toFixed(2) + 'T';
+                var b = usd / 1e9;
+                if (Math.abs(b) >= 1) return '$' + b.toFixed(1) + 'B';
+                return '$' + (usd / 1e6).toFixed(0) + 'M';
+            }
+
+            function renderSankey(payload) {
+                var sources = (payload.nodes && payload.nodes.sources) || [];
+                var fates   = (payload.nodes && payload.nodes.fates) || [];
+                var flows   = payload.flows || [];
+
+                // Aggregate: for each source, split into delivered vs stranded totals
+                // The payload has explicit flows; aggregate by source+fate.
+                var grouped = {};
+                sources.forEach(function(s) {
+                    grouped[s.id] = { delivered_value: 0, stranded: 0, total: s.total_cost_usd || 0 };
+                });
+                flows.forEach(function(f) {
+                    var srcId = 'pathway_' + (f.source_pathway || '');
+                    if (!grouped[srcId]) return;
+                    grouped[srcId][f.fate] = (grouped[srcId][f.fate] || 0) + (f.book_value_usd || 0);
+                });
+
+                // Layout
+                var W = 920, H = 460;
+                var padX = 20, padY = 40;
+                var srcX = padX + 20;
+                var srcW = 14;
+                var fateX = W - padX - 14;
+                var fateW = 14;
+
+                // Compute total flow magnitude (sum of delivered + stranded across all sources)
+                var totalFlow = 0;
+                Object.keys(grouped).forEach(function(k) {
+                    totalFlow += (grouped[k].delivered_value + grouped[k].stranded);
+                });
+                if (totalFlow <= 0) totalFlow = 1; // avoid div/0
+
+                var usableH = H - padY * 2 - (sources.length - 1) * 18; // gap between source stacks
+                var srcHeights = {};
+                sources.forEach(function(s) {
+                    var flowSum = grouped[s.id].delivered_value + grouped[s.id].stranded;
+                    srcHeights[s.id] = Math.max(30, (flowSum / totalFlow) * usableH);
+                });
+
+                var fateTotals = { delivered_value: 0, stranded: 0 };
+                flows.forEach(function(f) {
+                    fateTotals[f.fate] = (fateTotals[f.fate] || 0) + (f.book_value_usd || 0);
+                });
+                var fateTotalAll = fateTotals.delivered_value + fateTotals.stranded;
+                if (fateTotalAll <= 0) fateTotalAll = 1;
+                var fateHeights = {
+                    delivered_value: (fateTotals.delivered_value / fateTotalAll) * (H - padY * 2 - 18),
+                    stranded:        (fateTotals.stranded        / fateTotalAll) * (H - padY * 2 - 18)
+                };
+                fateHeights.delivered_value = Math.max(30, fateHeights.delivered_value);
+                fateHeights.stranded        = Math.max(30, fateHeights.stranded);
+
+                // Position source nodes vertically
+                var cursorY = padY;
+                var srcPos = {};
+                sources.forEach(function(s) {
+                    srcPos[s.id] = { y: cursorY, h: srcHeights[s.id] };
+                    cursorY += srcHeights[s.id] + 18;
+                });
+
+                var fatePos = {};
+                var fCursorY = padY;
+                ['delivered_value', 'stranded'].forEach(function(fid) {
+                    fatePos[fid] = { y: fCursorY, h: fateHeights[fid] };
+                    fCursorY += fateHeights[fid] + 18;
+                });
+
+                // Track offsets into each source/fate band as flows are drawn
+                var srcOffsets = {};
+                Object.keys(srcPos).forEach(function(k) { srcOffsets[k] = 0; });
+                var fateOffsets = { delivered_value: 0, stranded: 0 };
+
+                // Clear and redraw
+                while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+                var ns = 'http://www.w3.org/2000/svg';
+
+                // Draw source nodes
+                sources.forEach(function(s) {
+                    var p = srcPos[s.id];
+                    var rect = document.createElementNS(ns, 'rect');
+                    rect.setAttribute('x', srcX);
+                    rect.setAttribute('y', p.y);
+                    rect.setAttribute('width', srcW);
+                    rect.setAttribute('height', p.h);
+                    rect.setAttribute('fill', PATHWAY_COLORS[s.id] || '#64748B');
+                    rect.setAttribute('rx', 3);
+                    svg.appendChild(rect);
+
+                    // Labels
+                    var labelX = srcX + srcW + 10;
+                    var tl = document.createElementNS(ns, 'text');
+                    tl.setAttribute('class', 'stranding-sankey-node');
+                    tl.setAttribute('x', labelX);
+                    tl.setAttribute('y', p.y + 14);
+                    tl.textContent = PATHWAY_LABELS[s.id] || s.id;
+                    svg.appendChild(tl);
+
+                    var ts = document.createElementNS(ns, 'text');
+                    ts.setAttribute('class', 'stranding-sankey-sub');
+                    ts.setAttribute('x', labelX);
+                    ts.setAttribute('y', p.y + 28);
+                    ts.textContent = PATHWAY_SUBS[s.id] || '';
+                    svg.appendChild(ts);
+
+                    var tv = document.createElementNS(ns, 'text');
+                    tv.setAttribute('class', 'stranding-sankey-sub');
+                    tv.setAttribute('x', labelX);
+                    tv.setAttribute('y', p.y + p.h + 14);
+                    tv.setAttribute('font-weight', '700');
+                    var total = grouped[s.id].delivered_value + grouped[s.id].stranded;
+                    tv.textContent = 'Book: ' + fmtT(total);
+                    svg.appendChild(tv);
+                });
+
+                // Draw fate nodes
+                ['delivered_value', 'stranded'].forEach(function(fid) {
+                    var p = fatePos[fid];
+                    var rect = document.createElementNS(ns, 'rect');
+                    rect.setAttribute('x', fateX);
+                    rect.setAttribute('y', p.y);
+                    rect.setAttribute('width', fateW);
+                    rect.setAttribute('height', p.h);
+                    rect.setAttribute('fill', FATE_COLORS[fid]);
+                    rect.setAttribute('rx', 3);
+                    svg.appendChild(rect);
+
+                    var labelX = fateX - 10;
+                    var tl = document.createElementNS(ns, 'text');
+                    tl.setAttribute('class', 'stranding-sankey-node');
+                    tl.setAttribute('x', labelX);
+                    tl.setAttribute('y', p.y + 14);
+                    tl.setAttribute('text-anchor', 'end');
+                    tl.setAttribute('fill', fid === 'stranded' ? '#991B1B' : '#166534');
+                    tl.textContent = FATE_LABELS[fid];
+                    svg.appendChild(tl);
+
+                    var ts = document.createElementNS(ns, 'text');
+                    ts.setAttribute('class', 'stranding-sankey-sub');
+                    ts.setAttribute('x', labelX);
+                    ts.setAttribute('y', p.y + 28);
+                    ts.setAttribute('text-anchor', 'end');
+                    ts.textContent = FATE_SUBS[fid];
+                    svg.appendChild(ts);
+
+                    var tv = document.createElementNS(ns, 'text');
+                    tv.setAttribute('class', 'stranding-sankey-sub');
+                    tv.setAttribute('x', labelX);
+                    tv.setAttribute('y', p.y + p.h + 14);
+                    tv.setAttribute('text-anchor', 'end');
+                    tv.setAttribute('font-weight', '700');
+                    tv.setAttribute('fill', fid === 'stranded' ? '#991B1B' : '#166534');
+                    tv.textContent = fmtT(fateTotals[fid]);
+                    svg.appendChild(tv);
+                });
+
+                // Draw flows (one ribbon per source-fate combo)
+                sources.forEach(function(s) {
+                    ['delivered_value', 'stranded'].forEach(function(fid) {
+                        var flowVal = grouped[s.id][fid];
+                        if (flowVal <= 0) return;
+
+                        var sp = srcPos[s.id];
+                        var fp = fatePos[fid];
+                        var srcBand = (flowVal / (grouped[s.id].delivered_value + grouped[s.id].stranded)) * sp.h;
+                        var fateBand = (flowVal / fateTotals[fid]) * fp.h;
+
+                        var y0 = sp.y + srcOffsets[s.id];
+                        var y1 = sp.y + srcOffsets[s.id] + srcBand;
+                        var y2 = fp.y + fateOffsets[fid];
+                        var y3 = fp.y + fateOffsets[fid] + fateBand;
+
+                        srcOffsets[s.id] += srcBand;
+                        fateOffsets[fid] += fateBand;
+
+                        var xA = srcX + srcW;
+                        var xB = fateX;
+                        var midX = (xA + xB) / 2;
+
+                        // Two cubic Béziers forming a ribbon
+                        var dTop = 'M ' + xA + ' ' + y0 +
+                                   ' C ' + midX + ' ' + y0 + ', ' + midX + ' ' + y2 + ', ' + xB + ' ' + y2;
+                        var dBot = ' L ' + xB + ' ' + y3 +
+                                   ' C ' + midX + ' ' + y3 + ', ' + midX + ' ' + y1 + ', ' + xA + ' ' + y1 + ' Z';
+
+                        var path = document.createElementNS(ns, 'path');
+                        path.setAttribute('d', dTop + dBot);
+                        path.setAttribute('fill', FATE_COLORS[fid]);
+                        path.setAttribute('fill-opacity', fid === 'stranded' ? 0.32 : 0.28);
+                        path.setAttribute('stroke', FATE_COLORS[fid]);
+                        path.setAttribute('stroke-opacity', 0.5);
+                        path.setAttribute('stroke-width', 0.6);
+                        path.setAttribute('class', 'stranding-flow');
+                        path.setAttribute('data-source', s.id);
+                        path.setAttribute('data-fate', fid);
+
+                        var title = document.createElementNS(ns, 'title');
+                        title.textContent = (PATHWAY_LABELS[s.id] || s.id) + ' \u2192 ' +
+                                           FATE_LABELS[fid] + ': ' + fmtT(flowVal);
+                        path.appendChild(title);
+                        svg.appendChild(path);
+                    });
+                });
+
+                // Totals row
+                var totalsEl = document.getElementById('strandingTotalsRow');
+                if (totalsEl) {
+                    totalsEl.innerHTML = '';
+                    var cards = [
+                        { cls: 'delivered', label: 'Total delivered value',
+                          value: fmtT(fateTotals.delivered_value),
+                          sub: 'Capital across P1, P2a, P2b that matches Pathway 3 build' },
+                        { cls: 'stranded', label: 'Total stranded capital',
+                          value: fmtT(fateTotals.stranded),
+                          sub: 'Book value of capacity beyond what P3 would need' }
+                    ];
+                    cards.forEach(function(c) {
+                        var el = document.createElement('div');
+                        el.className = 'stranding-total-card ' + c.cls;
+                        el.innerHTML =
+                            '<div class="stranding-total-label">' + c.label + '</div>' +
+                            '<div class="stranding-total-value">' + c.value + '</div>' +
+                            '<div class="stranding-total-sub">' + c.sub + '</div>';
+                        totalsEl.appendChild(el);
+                    });
+
+                    // Per-pathway stranded share from pathway_totals
+                    var pwTotals = payload.pathway_totals || {};
+                    ['1','2a','2b'].forEach(function(pw) {
+                        var t = pwTotals[pw];
+                        if (!t) return;
+                        var el = document.createElement('div');
+                        el.className = 'stranding-total-card stranded';
+                        el.innerHTML =
+                            '<div class="stranding-total-label">Pathway ' + pw + ' stranded share</div>' +
+                            '<div class="stranding-total-value">' + (t.stranded_share_pct != null ? t.stranded_share_pct.toFixed(1) + '%' : '\u2014') + '</div>' +
+                            '<div class="stranding-total-sub">' + fmtT(t.total_stranded_book_value_usd) + ' of ' + fmtT(t.total_pathway_cost_usd) + ' total pathway capital</div>';
+                        totalsEl.appendChild(el);
+                    });
+                }
+
+                // Resource breakdown cards
+                var resEl = document.getElementById('strandingResourceGrid');
+                if (resEl) {
+                    resEl.innerHTML = '';
+                    var resAgg = payload.resource_stranding_aggregate || {};
+                    var keys = Object.keys(resAgg).sort(function(a, b) { return (resAgg[b] || 0) - (resAgg[a] || 0); });
+                    keys.forEach(function(res) {
+                        var v = resAgg[res];
+                        var card = document.createElement('div');
+                        card.className = 'stranding-resource-card';
+                        card.style.borderLeftColor = RES_COLORS[res] || '#94A3B8';
+                        card.innerHTML =
+                            '<div class="stranding-resource-card-label">' + (RES_LABELS[res] || res) + '</div>' +
+                            '<div class="stranding-resource-card-value">' + fmtT(v) + '</div>';
+                        resEl.appendChild(card);
+                    });
+                }
+
+                // VRE curtailment cross-check
+                var vre = payload.vre_curtailment_crosscheck || {};
+                var hasCurtail = false;
+                Object.keys(vre).forEach(function(k) {
+                    if (vre[k] && Object.keys(vre[k]).length > 0) hasCurtail = true;
+                });
+                var ccEl = document.getElementById('strandingCrosscheck');
+                var ccBodyEl = document.getElementById('strandingCrosscheckBody');
+                if (ccEl && ccBodyEl) {
+                    if (hasCurtail) {
+                        ccEl.style.display = 'block';
+                        var lines = [];
+                        Object.keys(vre).forEach(function(pw) {
+                            var inner = vre[pw] || {};
+                            var resLines = Object.keys(inner).map(function(res) {
+                                return (RES_LABELS[res] || res) + ': ' + (inner[res].toFixed ? inner[res].toFixed(1) : inner[res]) + '%';
+                            });
+                            if (resLines.length) lines.push('Pathway ' + pw + ' \u2014 ' + resLines.join(', '));
+                        });
+                        ccBodyEl.innerHTML = lines.join('<br>') ||
+                            'Per-pathway VRE curtailment rates available in the underlying data for resources showing &gt;50% curtailment at 2050.';
+                    } else {
+                        ccEl.style.display = 'block';
+                        ccBodyEl.innerHTML = 'VRE curtailment cross-check is available in the source payload as a secondary diagnostic (not primary flow). ' +
+                            'No per-resource VRE asset in the current Sankey run shows &gt;50% curtailment above what comparative-to-P3 stranding already flags.';
+                    }
+                }
+            }
+
+            fetch('js/reliability-tax/section5_stranding_sankey.json')
+                .then(function(r) { return r.json(); })
+                .then(renderSankey)
+                .catch(function(err) {
+                    var g = document.getElementById('strandingResourceGrid');
+                    if (g) g.innerHTML = '<div class="stranding-resource-card"><div class="stranding-resource-card-label">Load error</div><div class="stranding-resource-card-value">\u2014</div></div>';
+                    console.error('[Section 5] Failed to load payload:', err);
+                });
+        })();
+
+        // ===== Section 6: Cost of Waiting =====
+        (function initSection6Waiting() {
+            var host = document.getElementById('waitingCurveChart');
+            if (!host) return;
+
+            var ISOS  = ['CAISO','ERCOT','PJM','NYISO','NEISO','MISO','SPP'];
+            var EP_LIST = ['ep90','ep95','ep97p5','ep99','ep99p9'];
+            var EP_LABEL = { ep90:'90%', ep95:'95%', ep97p5:'97.5%', ep99:'99%', ep99p9:'99.9%' };
+
+            var state = { iso: 'ERCOT', ep: 'ep95', data: null };
+            var curveChart = null, penaltyChart = null;
+
+            function cssVar(name, fallback) {
+                var v = getComputedStyle(document.documentElement).getPropertyValue(name);
+                return (v && v.trim()) ? v.trim() : fallback;
+            }
+            var C_NAVY      = cssVar('--navy', '#0B2545');
+            var C_RED       = cssVar('--red',  '#EF4444');
+            var C_CLEANFIRM = cssVar('--clean-firm', '#6366F1');
+            var C_GOLD      = cssVar('--gold', '#FFC857');
+            var C_BORDER    = cssVar('--border-light', '#E5E7EB');
+            var C_MUTED     = cssVar('--text-muted', '#6B7280');
+            var C_TEXT      = cssVar('--text-primary', '#111827');
+
+            function buildSelectors() {
+                var isoSel = document.getElementById('waitingIsoSel');
+                isoSel.innerHTML = '';
+                ISOS.forEach(function(iso) {
+                    var b = document.createElement('button');
+                    b.className = 'iso-btn' + (iso === state.iso ? ' active' : '');
+                    b.textContent = iso;
+                    b.setAttribute('data-iso', iso);
+                    b.addEventListener('click', function() {
+                        state.iso = iso;
+                        isoSel.querySelectorAll('.iso-btn').forEach(function(x) { x.classList.remove('active'); });
+                        b.classList.add('active');
+                        render();
+                    });
+                    isoSel.appendChild(b);
+                });
+
+                var epSel = document.getElementById('waitingEpSel');
+                epSel.innerHTML = '';
+                EP_LIST.forEach(function(ep) {
+                    var b = document.createElement('button');
+                    b.className = 'toggle-btn' + (ep === state.ep ? ' active' : '');
+                    b.textContent = EP_LABEL[ep];
+                    b.setAttribute('data-ep', ep);
+                    b.addEventListener('click', function() {
+                        state.ep = ep;
+                        epSel.querySelectorAll('.toggle-btn').forEach(function(x) { x.classList.remove('active'); });
+                        b.classList.add('active');
+                        render();
+                    });
+                    epSel.appendChild(b);
+                });
+            }
+
+            function fmtT(v) {
+                if (v === null || v === undefined || !isFinite(v)) return '\u2014';
+                if (Math.abs(v) >= 1) return '$' + v.toFixed(2) + 'T';
+                if (Math.abs(v) >= 0.01) return '$' + v.toFixed(3) + 'T';
+                return '$' + (v * 1000).toFixed(1) + 'B';
+            }
+
+            function render() {
+                if (!state.data) return;
+                var isoNode = state.data.per_iso[state.iso];
+                if (!isoNode) return;
+                var epNode = isoNode.by_endpoint[state.ep];
+                if (!epNode) return;
+
+                var curve = epNode.commitment_curve || [];
+                var xs = curve.map(function(r) { return r.commit_year; });
+                var actual     = curve.map(function(r) { return +r.total_actual_cost_trillion || 0; });
+                var undiscVals = curve.map(function(r) { return +r.undiscounted_cumulative_trillion || 0; });
+                var npv7Vals   = curve.map(function(r) { return +r.npv_7pct_trillion || 0; });
+                var npv5Vals   = curve.map(function(r) { return +r.npv_5pct_trillion || 0; });
+                var npv9Vals   = curve.map(function(r) { return +r.npv_9pct_trillion || 0; });
+
+                var anyNpv = npv7Vals.some(function(v) { return v !== 0; }) ||
+                             undiscVals.some(function(v) { return v !== 0; });
+
+                var p3 = epNode.reference_p3 || {};
+                var p3Line = xs.map(function() { return +p3.total_actual_cost_trillion || 0; });
+
+                var datasets = [
+                    {
+                        label: 'Total actual cost ($T, undiscounted)',
+                        data: actual,
+                        borderColor: C_NAVY,
+                        backgroundColor: 'rgba(11, 37, 69, 0.12)',
+                        borderWidth: 2.5,
+                        tension: 0.25,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        fill: false,
+                        spanGaps: true
+                    },
+                    {
+                        label: 'Pathway 3 reference (destination-oriented)',
+                        data: p3Line,
+                        borderColor: C_CLEANFIRM,
+                        borderDash: [6, 5],
+                        borderWidth: 1.8,
+                        pointRadius: 0,
+                        fill: false
+                    }
+                ];
+
+                if (anyNpv) {
+                    datasets.push({
+                        label: 'NPV @ 7%',
+                        data: npv7Vals,
+                        borderColor: C_RED,
+                        backgroundColor: 'rgba(239, 68, 68, 0.14)',
+                        borderWidth: 2,
+                        borderDash: [3, 3],
+                        tension: 0.25,
+                        pointRadius: 3,
+                        fill: {
+                            target: '+1',
+                            above: 'rgba(239, 68, 68, 0.08)',
+                            below: 'rgba(239, 68, 68, 0.08)'
+                        }
+                    });
+                    datasets.push({
+                        label: 'NPV @ 5% (upper band)',
+                        data: npv5Vals,
+                        borderColor: 'rgba(239, 68, 68, 0.35)',
+                        borderWidth: 1,
+                        borderDash: [2, 2],
+                        pointRadius: 0,
+                        fill: false
+                    });
+                    datasets.push({
+                        label: 'NPV @ 9% (lower band)',
+                        data: npv9Vals,
+                        borderColor: 'rgba(239, 68, 68, 0.35)',
+                        borderWidth: 1,
+                        borderDash: [2, 2],
+                        pointRadius: 0,
+                        fill: false
+                    });
+                }
+
+                if (curveChart) curveChart.destroy();
+                curveChart = new Chart(host.getContext('2d'), {
+                    type: 'line',
+                    data: { labels: xs, datasets: datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 400 },
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { boxWidth: 14, font: { family: 'DM Sans', size: 11 }, color: C_TEXT }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) {
+                                        return ctx.dataset.label + ': ' + fmtT(ctx.parsed.y);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: { display: true, text: 'Commitment year', color: C_MUTED, font: { family: 'DM Sans', size: 11 } },
+                                grid: { color: C_BORDER, display: false },
+                                ticks: { color: C_MUTED, font: { family: 'DM Sans', size: 11 } }
+                            },
+                            y: {
+                                title: { display: true, text: 'Cumulative 2025\u20132050 cost ($T)', color: C_MUTED, font: { family: 'DM Sans', size: 11 } },
+                                grid: { color: C_BORDER },
+                                ticks: {
+                                    color: C_MUTED,
+                                    font: { family: 'DM Sans', size: 11 },
+                                    callback: function(v) { return fmtT(v); }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Right panel: penalty composition
+                var penalty    = curve.map(function(r) { return +r.penalty_vs_p3_actual_trillion || 0; });
+                var stranded   = curve.map(function(r) { return +(r.penalty_composition || {}).stranded_assets_trillion || 0; });
+                var foakPrem   = curve.map(function(r) { return +(r.penalty_composition || {}).foak_premium_trillion || 0; });
+                var foregone   = curve.map(function(r) { return +(r.penalty_composition || {}).foregone_learning_trillion || 0; });
+                var anyComp = stranded.some(function(v) { return v !== 0; }) ||
+                              foakPrem.some(function(v) { return v !== 0; }) ||
+                              foregone.some(function(v) { return v !== 0; });
+
+                var pDatasets;
+                if (anyComp) {
+                    pDatasets = [
+                        { label: 'Stranded assets',   data: stranded, backgroundColor: C_RED,       stack: 's' },
+                        { label: 'FOAK premium',      data: foakPrem, backgroundColor: C_GOLD,      stack: 's' },
+                        { label: 'Foregone learning', data: foregone, backgroundColor: C_CLEANFIRM, stack: 's' }
+                    ];
+                } else {
+                    pDatasets = [{
+                        label: 'Penalty vs P3 (actual $T)',
+                        data: penalty,
+                        backgroundColor: penalty.map(function(v) { return v >= 0 ? 'rgba(239,68,68,0.78)' : 'rgba(34,197,94,0.78)'; }),
+                        borderColor: penalty.map(function(v) { return v >= 0 ? C_RED : '#16A34A'; }),
+                        borderWidth: 1
+                    }];
+                }
+
+                var pHost = document.getElementById('waitingPenaltyChart');
+                if (penaltyChart) penaltyChart.destroy();
+                penaltyChart = new Chart(pHost.getContext('2d'), {
+                    type: 'bar',
+                    data: { labels: xs, datasets: pDatasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 400 },
+                        plugins: {
+                            legend: {
+                                display: anyComp,
+                                position: 'bottom',
+                                labels: { boxWidth: 14, font: { family: 'DM Sans', size: 11 }, color: C_TEXT }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) { return ctx.dataset.label + ': ' + fmtT(ctx.parsed.y); }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                stacked: anyComp,
+                                title: { display: true, text: 'Commitment year', color: C_MUTED, font: { family: 'DM Sans', size: 11 } },
+                                grid: { display: false },
+                                ticks: { color: C_MUTED, font: { family: 'DM Sans', size: 11 } }
+                            },
+                            y: {
+                                stacked: anyComp,
+                                title: { display: true, text: 'Penalty vs. P3 ($T)', color: C_MUTED, font: { family: 'DM Sans', size: 11 } },
+                                grid: { color: C_BORDER },
+                                ticks: {
+                                    color: C_MUTED,
+                                    font: { family: 'DM Sans', size: 11 },
+                                    callback: function(v) { return fmtT(v); }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Summary cards
+                var cards = document.getElementById('waitingCards');
+                var anchorP2a = epNode.anchor_p2a || {};
+                var anchorP1  = epNode.anchor_p1  || {};
+                var p2aPivot = anchorP2a.pivot_year || isoNode.pivot_year_2a || '\u2014';
+                var maxPenalty = penalty.length ? Math.max.apply(null, penalty) : 0;
+                var maxPenIdx  = penalty.indexOf(maxPenalty);
+                var maxPenYear = (maxPenIdx >= 0) ? xs[maxPenIdx] : '\u2014';
+
+                cards.innerHTML = '' +
+                    '<div class="waiting-card">' +
+                        '<div class="waiting-card-label">P3 anchor (2025)</div>' +
+                        '<div class="waiting-card-value">' + fmtT(p3.total_actual_cost_trillion) + '</div>' +
+                        '<div class="waiting-card-sub">Destination-oriented, committed now</div>' +
+                    '</div>' +
+                    '<div class="waiting-card">' +
+                        '<div class="waiting-card-label">P2a pivot year</div>' +
+                        '<div class="waiting-card-value">' + p2aPivot + '</div>' +
+                        '<div class="waiting-card-sub">Actual cost ' + fmtT(anchorP2a.total_actual_cost_trillion) + '</div>' +
+                    '</div>' +
+                    '<div class="waiting-card">' +
+                        '<div class="waiting-card-label">P1 anchor (2050)</div>' +
+                        '<div class="waiting-card-value">' + fmtT(anchorP1.total_actual_cost_trillion) + '</div>' +
+                        '<div class="waiting-card-sub">Never commit to new clean firm</div>' +
+                    '</div>' +
+                    '<div class="waiting-card">' +
+                        '<div class="waiting-card-label">Worst-year penalty</div>' +
+                        '<div class="waiting-card-value">' + fmtT(maxPenalty) + '</div>' +
+                        '<div class="waiting-card-sub">At commitment year ' + maxPenYear + '</div>' +
+                    '</div>';
+            }
+
+            buildSelectors();
+            fetch('js/reliability-tax/section6_cost_of_waiting.json')
+                .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+                .then(function(json) { state.data = json; render(); })
+                .catch(function(err) {
+                    console.error('[Section 6] Failed to load payload:', err);
+                    var cards = document.getElementById('waitingCards');
+                    if (cards) cards.innerHTML = '<div class="waiting-card"><div class="waiting-card-label">Load error</div><div class="waiting-card-value">\u2014</div></div>';
+                });
+        })();
+
+        // ===== Closing synthesis table =====
+        (function initClosingTable() {
+            var head = document.getElementById('synthHead');
+            if (!head) return;
+
+            var COLS = [
+                { key: 'iso',                          label: 'ISO',         type: 'text',  align: 'left', fmt: function(v) { return '<span class="synth-badge synth-badge-iso">' + v + '</span>'; } },
+                { key: 'pathway',                      label: 'Pathway',     type: 'text',  align: 'left' },
+                { key: 'endpoint',                     label: 'CFE',         type: 'text',  align: 'left' },
+                { key: 'feasibility_badge',            label: 'Feasible?',   type: 'text',  align: 'left', fmt: function(v) { return v; } },
+                { key: 'undiscounted_cost_trillion',   label: 'Undisc. cost ($T)', type: 'num', digits: 2 },
+                { key: 'total_actual_cost_trillion',   label: 'Actual cost ($T)',  type: 'num', digits: 2 },
+                { key: 'npv_7pct_trillion',            label: 'NPV@7% ($T)',       type: 'num', digits: 2 },
+                { key: 'total_stranded_billion_usd',   label: 'Stranded ($B)',     type: 'num', digits: 1 },
+                { key: 'new_gas_stranded_gw',          label: 'New gas stranded (GW)', type: 'num', digits: 1 },
+                { key: 'gas_retired_cumulative_gw',    label: 'Gas retired (GW)',  type: 'num', digits: 1 },
+                { key: 'achieved_cfe_pct',             label: 'Achieved CFE (%)',  type: 'num', digits: 1 },
+                { key: 'gas_fleet_cf_pct',             label: 'Gas CF (%)',        type: 'num', digits: 1 },
+                { key: 'vre_curtailment_pct',          label: 'VRE curt. (%)',     type: 'num', digits: 1 },
+                { key: 'physical_ceiling_note',        label: 'Physical ceiling',  type: 'text', align: 'left' },
+                { key: 'economic_ceiling_note',        label: 'Economic ceiling',  type: 'text', align: 'left' }
+            ];
+
+            var state = { rows: [], filtered: [], sortKey: 'iso', sortDir: 1 };
+
+            function pickNum(row) {
+                for (var i = 1; i < arguments.length; i++) {
+                    var k = arguments[i];
+                    if (row[k] !== undefined && row[k] !== null && row[k] !== '' && isFinite(+row[k])) return +row[k];
+                }
+                return null;
+            }
+
+            function pickText(row) {
+                for (var i = 1; i < arguments.length; i++) {
+                    var k = arguments[i];
+                    if (row[k] !== undefined && row[k] !== null && row[k] !== '') return row[k];
+                }
+                return '';
+            }
+
+            function normalise(raw) {
+                return raw.map(function(r) {
+                    var phys = r.feasible_physical;
+                    var econ = r.feasible_economic;
+                    var feasible = (phys !== false) && (econ !== false);
+                    var badge;
+                    if (phys === false && econ === false) badge = '<span class="synth-badge synth-badge-bad">infeasible</span>';
+                    else if (phys === false) badge = '<span class="synth-badge synth-badge-bad">physical</span>';
+                    else if (econ === false) badge = '<span class="synth-badge synth-badge-warn">economic</span>';
+                    else badge = '<span class="synth-badge synth-badge-ok">ok</span>';
+
+                    var epRaw = (r.endpoint_pct != null) ? r.endpoint_pct :
+                                (typeof r.endpoint === 'number' ? r.endpoint * 100 : null);
+                    var epDisplay;
+                    if (epRaw === null) {
+                        epDisplay = (r.endpoint || '').toString();
+                    } else {
+                        epDisplay = (Math.abs(epRaw - Math.round(epRaw)) < 0.05) ?
+                                    Math.round(epRaw) + '%' : epRaw.toFixed(1) + '%';
+                    }
+                    return {
+                        _raw: r,
+                        _feasible: feasible,
+                        _epNum: epRaw,
+                        iso: r.iso || '',
+                        pathway: r.pathway || '',
+                        endpoint: epDisplay,
+                        feasibility_badge: badge,
+                        undiscounted_cost_trillion: pickNum(r, 'undiscounted_cost_trillion', 'undiscounted_cumulative_trillion'),
+                        total_actual_cost_trillion: pickNum(r, 'total_actual_cost_trillion'),
+                        npv_7pct_trillion:          pickNum(r, 'npv_7pct_trillion'),
+                        total_stranded_billion_usd: pickNum(r, 'total_stranded_billion_usd', 'stranded_value_billion'),
+                        new_gas_stranded_gw:        pickNum(r, 'new_gas_stranded_gw'),
+                        gas_retired_cumulative_gw:  pickNum(r, 'gas_retired_cumulative_gw'),
+                        achieved_cfe_pct:           pickNum(r, 'achieved_cfe_pct', 'cfe_achieved_pct'),
+                        gas_fleet_cf_pct:           pickNum(r, 'gas_fleet_cf_pct', 'gas_cf_pct'),
+                        vre_curtailment_pct:        pickNum(r, 'vre_curtailment_pct', 'vre_curtailment_solar_pct'),
+                        physical_ceiling_note:      pickText(r, 'physical_ceiling_note'),
+                        economic_ceiling_note:      pickText(r, 'economic_ceiling_note'),
+                        run_key:                    r.run_key || (r.iso + '|' + r.pathway + '|' + r.endpoint)
+                    };
+                });
+            }
+
+            function buildHeader() {
+                head.innerHTML = '';
+                COLS.forEach(function(col) {
+                    var th = document.createElement('th');
+                    th.className = col.align === 'left' ? 'col-left' : '';
+                    th.setAttribute('data-key', col.key);
+                    th.innerHTML = col.label + '<span class="sort-caret">\u25B2\u25BC</span>';
+                    th.addEventListener('click', function() {
+                        if (state.sortKey === col.key) state.sortDir *= -1;
+                        else { state.sortKey = col.key; state.sortDir = 1; }
+                        render();
+                    });
+                    head.appendChild(th);
+                });
+            }
+
+            function sortRows(rows) {
+                var key = state.sortKey, dir = state.sortDir;
+                var col = COLS.find(function(c) { return c.key === key; });
+                var t = col ? col.type : 'text';
+                return rows.slice().sort(function(a, b) {
+                    var va = a[key], vb = b[key];
+                    if (t === 'num') {
+                        if (va === null && vb === null) return 0;
+                        if (va === null) return 1;
+                        if (vb === null) return -1;
+                        return (va - vb) * dir;
+                    }
+                    va = (va || '').toString();
+                    vb = (vb || '').toString();
+                    return va.localeCompare(vb) * dir;
+                });
+            }
+
+            function fmtCell(row, col) {
+                var v = row[col.key];
+                if (col.type === 'num') {
+                    if (v === null || v === undefined || !isFinite(v)) return '\u2014';
+                    return (+v).toFixed(col.digits != null ? col.digits : 2);
+                }
+                if (typeof col.fmt === 'function') return col.fmt(v);
+                return (v === null || v === undefined || v === '') ? '\u2014' : v;
+            }
+
+            function render() {
+                head.querySelectorAll('th').forEach(function(th) {
+                    th.classList.toggle('sorted', th.getAttribute('data-key') === state.sortKey);
+                });
+                var sorted = sortRows(state.filtered);
+                var body = document.getElementById('synthBody');
+                var html = sorted.map(function(row) {
+                    var cls = row._feasible ? '' : ' class="row-infeasible"';
+                    var cells = COLS.map(function(col) {
+                        var align = col.align === 'left' ? ' class="col-left"' : '';
+                        return '<td' + align + '>' + fmtCell(row, col) + '</td>';
+                    }).join('');
+                    return '<tr' + cls + '>' + cells + '</tr>';
+                }).join('');
+                body.innerHTML = html || '<tr><td colspan="' + COLS.length + '" style="text-align:center;padding:20px;color:var(--text-muted)">No rows match current filters.</td></tr>';
+
+                var total = state.rows.length;
+                var shown = sorted.length;
+                var infeas = sorted.filter(function(r) { return !r._feasible; }).length;
+                document.getElementById('synthSummary').textContent =
+                    'Showing ' + shown + ' of ' + total + ' rows (' + infeas + ' infeasible). Click column headers to sort.';
+            }
+
+            function populateFilter(id, values, all) {
+                var sel = document.getElementById(id);
+                sel.innerHTML = '<option value="all">' + all + '</option>';
+                values.forEach(function(v) {
+                    var o = document.createElement('option');
+                    o.value = v; o.textContent = v;
+                    sel.appendChild(o);
+                });
+            }
+
+            function applyFilters() {
+                var iso = document.getElementById('synthIsoFilter').value;
+                var pw  = document.getElementById('synthPathwayFilter').value;
+                var ep  = document.getElementById('synthEpFilter').value;
+                var fs  = document.getElementById('synthFeasFilter').value;
+                var q   = (document.getElementById('synthSearch').value || '').trim().toLowerCase();
+
+                state.filtered = state.rows.filter(function(r) {
+                    if (iso !== 'all' && r.iso !== iso) return false;
+                    if (pw  !== 'all' && r.pathway !== pw) return false;
+                    if (ep  !== 'all' && r.endpoint !== ep) return false;
+                    if (fs === 'feasible' && !r._feasible) return false;
+                    if (fs === 'infeasible' && r._feasible) return false;
+                    if (q && (r.run_key || '').toLowerCase().indexOf(q) === -1) return false;
+                    return true;
+                });
+                render();
+            }
+
+            function init(json) {
+                var raw = Array.isArray(json) ? json : (json.rows || json.data || []);
+                if (!raw.length) {
+                    document.getElementById('synthBody').innerHTML =
+                        '<tr><td colspan="' + COLS.length + '" style="text-align:center;padding:20px;color:var(--text-muted)">Empty payload.</td></tr>';
+                    return;
+                }
+                state.rows = normalise(raw);
+                state.filtered = state.rows.slice();
+
+                var uniq = function(arr) { var s = {}; arr.forEach(function(v) { if (v) s[v] = 1; }); return Object.keys(s).sort(); };
+                populateFilter('synthIsoFilter',      uniq(state.rows.map(function(r){return r.iso;})),      'All ISOs');
+                populateFilter('synthPathwayFilter',  uniq(state.rows.map(function(r){return r.pathway;})),  'All pathways');
+                populateFilter('synthEpFilter',       uniq(state.rows.map(function(r){return r.endpoint;})), 'All endpoints');
+
+                ['synthIsoFilter','synthPathwayFilter','synthEpFilter','synthFeasFilter'].forEach(function(id) {
+                    document.getElementById(id).addEventListener('change', applyFilters);
+                });
+                document.getElementById('synthSearch').addEventListener('input', applyFilters);
+
+                buildHeader();
+                render();
+            }
+
+            fetch('js/reliability-tax/closing_summary_table.json')
+                .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+                .then(init)
+                .catch(function(err) {
+                    console.error('[Closing table] Failed to load payload:', err);
+                    var body = document.getElementById('synthBody');
+                    if (body) body.innerHTML = '<tr><td colspan="' + COLS.length + '" style="text-align:center;padding:20px;color:var(--text-muted)">Failed to load synthesis table.</td></tr>';
+                });
         })();
 
         // ===== Hook: animate gauge needle + ghost-grid when in view =====

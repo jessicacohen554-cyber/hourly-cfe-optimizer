@@ -1,0 +1,485 @@
+{
+  "nodes": {
+    "sources": [
+      {
+        "id": "pathway_1",
+        "label": "Pathway 1",
+        "total_cost_usd": 18932897703612.0
+      },
+      {
+        "id": "pathway_2a",
+        "label": "Pathway 2a",
+        "total_cost_usd": 16727053387405.0
+      },
+      {
+        "id": "pathway_2b",
+        "label": "Pathway 2b",
+        "total_cost_usd": 16090884565751.0
+      }
+    ],
+    "fates": [
+      {
+        "id": "delivered_value",
+        "label": "Delivered value (matches Pathway 3 build)",
+        "total_usd": 37214751898207.0
+      },
+      {
+        "id": "stranded",
+        "label": "Stranded (excess over Pathway 3)",
+        "total_usd": 19962869754240.0,
+        "description": "'Stranded' here means capital spent on capacity that a destination-optimized plan wouldn't have required to reach the same CFE target."
+      }
+    ]
+  },
+  "flows": [
+    {
+      "source_pathway": "1",
+      "fate": "stranded",
+      "iso": "CAISO",
+      "resource": "solar",
+      "stranded_twh": 1367.45,
+      "book_value_usd": 2417306359387.0,
+      "note": "Exceeds Pathway 3 build \u2014 would not have been needed"
+    },
+    {
+      "source_pathway": "1",
+      "fate": "stranded",
+      "iso": "CAISO",
+      "resource": "battery4",
+      "stranded_twh": 43.65,
+      "book_value_usd": 2955751352.0,
+      "note": "Exceeds Pathway 3 build \u2014 would not have been needed"
+    },
+    {
+      "source_pathway": "1",
+      "fate": "stranded",
+      "iso": "CAISO",
+      "resource": "battery8",
+      "stranded_twh": 15.569,
+      "book_value_usd": 1071118566.0,
+      "note": "Exceeds Pathway 3 build \u2014 would not have been needed"
+    },
+    {
+      "source_pathway": "1",
+      "fate": "stranded",
+      "iso": "CAISO",
+      "resource": "ldes",
+      "stranded_twh": 0.702,
+      "book_value_usd": 44187948.0,
+      "note": "Exceeds Pathway 3 build \u2014 would not have been needed"
+    },
+    {
+      "source_pathway": "2a",
+      "fate": "delivered_value",
+      "iso": "CAISO",
+      "resource": "all",
+      "book_value_usd": 1720799742358.0,
+      "note": "Matches Pathway 3 destination build"
+    },
+    {
+      "source_pathway": "2a",
+      "fate": "stranded",
+      "iso": "CAISO",
+      "resource": "solar",
+      "stranded_twh": 291.92,
+      "book_value_usd": 541893270116.0,
+      "note": "Exceeds Pathway 3 build \u2014 would not have been needed"
+    },
+    {
+      "source_pathway": "2a",
+      "fate": "stranded",
+      "iso": "CAISO",
+      "resource": "battery4",
+      "stranded_twh": 30.236,
+      "book_value_usd": 1366330986.0,
+      "note": "Exceeds Pathway 3 build \u2014 would not have been needed"
+    },
+    {
+      "source_pathway": "2a",
+      "fate": "stranded",
+      "iso": "CAISO",
+      "resource": "ldes",
+      "stranded_twh": 0.702,
+      "book_value_usd": 44187948.0,
+      "note": "Exceeds Pathway 3 build \u2014 would not have been needed"
+    },
+    {
+      "source_pathway": "2b",
+      "fate": "delivered_value",
+      "iso": "CAISO",
+      "resource": "all",
+      "book_value_usd": 2063127434806.0,
+      "note": "Matches Pathway 3 destination build"
+    },
+    {
+      "source_pathway": "1",
+      "fate": "delivered_value",
+      "iso": "ERCOT",
+      "resource": "all",
+      "book_value_usd": 3363173188409.0,
+      "note": "Matches Pathway 3 destination build"
+    },
+    {
+      "source_pathway": "2a",
+      "fate": "delivered_value",
+      "iso": "ERCOT",
+      "resource": "all",
+      "book_value_usd": 3363173188409.0,
+      "note": "Matches Pathway 3 destination build"
+    },
+    {
+      "source_pathway": "2b",
+      "fate": "delivered_value",
+      "iso": "ERCOT",
+      "resource": "all",
+      "book_value_usd": 3395698202385.0,
+      "note": "Matches Pathway 3 destination build"
+    },
+    {
+      "source_pathway": "1",
+      "fate": "stranded",
+      "iso": "MISO",
+      "resource": "solar",
+      "stranded_twh": 4838.571,
+      "book_value_usd": 8519375071460.0,
+      "note": "Exceeds Pathway 3 build \u2014 would not have been needed"
+    },
+    {
+      "source_pathway": "1",
+      "fate": "stranded",
+      "iso": "MISO",
+      "resource": "wind",
+      "stranded_twh": 1061.981,
+      "book_value_usd": 1632392174855.0,
+      "note": "Exceeds Pathway 3 build \u2014 would not have been needed"
+    },
+    {
+      "source_pathway": "1",
+      "fate": "stranded",
+      "iso": "MISO",
+      "resource": "battery4",
+      "stranded_twh": 81.925,
+      "book_value_usd": 7234104767.0,
+      "note": "Exceeds Pathway 3 build \u2014 would not have been needed"
+    },
+    {
+      "source_pathway": "1",
+      "fate": "stranded",
+      "iso": "MISO",
+      "resource": "battery8",
+      "stranded_twh": 71.429,
+      "book_value_usd": 2941074934.0,
+      "note": "Exceeds Pathway 3 build \u2014 would not have been needed"
+    },
+    {
+      "source_pathway": "2a",
+      "fate": "delivered_value",
+      "iso": "MISO",
+      "resource": "all",
+      "book_value_usd": 3045176435792.0,
+      "note": "Matches Pathway 3 destination build"
+    },
+    {
+      "source_pathway": "2b",
+      "fate": "delivered_value",
+      "iso": "MISO",
+      "resource": "all",
+      "book_value_usd": 3078095876482.0,
+      "note": "Matches Pathway 3 destination build"
+    },
+    {
+      "source_pathway": "1",
+      "fate": "delivered_value",
+      "iso": "NEISO",
+      "resource": "all",
+      "book_value_usd": 587387125712.0,
+      "note": "Matches Pathway 3 destination build"
+    },
+    {
+      "source_pathway": "2a",
+      "fate": "delivered_value",
+      "iso": "NEISO",
+      "resource": "all",
+      "book_value_usd": 621956845395.0,
+      "note": "Matches Pathway 3 destination build"
+    },
+    {
+      "source_pathway": "2b",
+      "fate": "delivered_value",
+      "iso": "NEISO",
+      "resource": "all",
+      "book_value_usd": 664966972103.0,
+      "note": "Matches Pathway 3 destination build"
+    },
+    {
+      "source_pathway": "1",
+      "fate": "delivered_value",
+      "iso": "NYISO",
+      "resource": "all",
+      "book_value_usd": 477053666524.0,
+      "note": "Matches Pathway 3 destination build"
+    },
+    {
+      "source_pathway": "1",
+      "fate": "stranded",
+      "iso": "NYISO",
+      "resource": "solar",
+      "stranded_twh": 4.974,
+      "book_value_usd": 14393066565.0,
+      "note": "Exceeds Pathway 3 build \u2014 would not have been needed"
+    },
+    {
+      "source_pathway": "2a",
+      "fate": "delivered_value",
+      "iso": "NYISO",
+      "resource": "all",
+      "book_value_usd": 515878251056.0,
+      "note": "Matches Pathway 3 destination build"
+    },
+    {
+      "source_pathway": "2b",
+      "fate": "delivered_value",
+      "iso": "NYISO",
+      "resource": "all",
+      "book_value_usd": 534607256754.0,
+      "note": "Matches Pathway 3 destination build"
+    },
+    {
+      "source_pathway": "1",
+      "fate": "delivered_value",
+      "iso": "PJM",
+      "resource": "all",
+      "book_value_usd": 1370183198365.0,
+      "note": "Matches Pathway 3 destination build"
+    },
+    {
+      "source_pathway": "1",
+      "fate": "stranded",
+      "iso": "PJM",
+      "resource": "solar",
+      "stranded_twh": 1161.431,
+      "book_value_usd": 2333898946513.0,
+      "note": "Exceeds Pathway 3 build \u2014 would not have been needed"
+    },
+    {
+      "source_pathway": "1",
+      "fate": "stranded",
+      "iso": "PJM",
+      "resource": "wind",
+      "stranded_twh": 1191.993,
+      "book_value_usd": 2497886181995.0,
+      "note": "Exceeds Pathway 3 build \u2014 would not have been needed"
+    },
+    {
+      "source_pathway": "1",
+      "fate": "stranded",
+      "iso": "PJM",
+      "resource": "battery8",
+      "stranded_twh": 35.596,
+      "book_value_usd": 1263353359.0,
+      "note": "Exceeds Pathway 3 build \u2014 would not have been needed"
+    },
+    {
+      "source_pathway": "1",
+      "fate": "stranded",
+      "iso": "PJM",
+      "resource": "ldes",
+      "stranded_twh": 14.67,
+      "book_value_usd": 1068978199.0,
+      "note": "Exceeds Pathway 3 build \u2014 would not have been needed"
+    },
+    {
+      "source_pathway": "2a",
+      "fate": "delivered_value",
+      "iso": "PJM",
+      "resource": "all",
+      "book_value_usd": 4043127185564.0,
+      "note": "Matches Pathway 3 destination build"
+    },
+    {
+      "source_pathway": "2a",
+      "fate": "stranded",
+      "iso": "PJM",
+      "resource": "solar",
+      "stranded_twh": 324.983,
+      "book_value_usd": 680009413516.0,
+      "note": "Exceeds Pathway 3 build \u2014 would not have been needed"
+    },
+    {
+      "source_pathway": "2a",
+      "fate": "stranded",
+      "iso": "PJM",
+      "resource": "wind",
+      "stranded_twh": 493.493,
+      "book_value_usd": 1062272692874.0,
+      "note": "Exceeds Pathway 3 build \u2014 would not have been needed"
+    },
+    {
+      "source_pathway": "2a",
+      "fate": "stranded",
+      "iso": "PJM",
+      "resource": "battery8",
+      "stranded_twh": 35.596,
+      "book_value_usd": 1263353359.0,
+      "note": "Exceeds Pathway 3 build \u2014 would not have been needed"
+    },
+    {
+      "source_pathway": "2a",
+      "fate": "stranded",
+      "iso": "PJM",
+      "resource": "ldes",
+      "stranded_twh": 0.616,
+      "book_value_usd": 36339651.0,
+      "note": "Exceeds Pathway 3 build \u2014 would not have been needed"
+    },
+    {
+      "source_pathway": "2b",
+      "fate": "delivered_value",
+      "iso": "PJM",
+      "resource": "all",
+      "book_value_usd": 5196560989439.0,
+      "note": "Matches Pathway 3 destination build"
+    },
+    {
+      "source_pathway": "1",
+      "fate": "delivered_value",
+      "iso": "SPP",
+      "resource": "all",
+      "book_value_usd": 1007979252436.0,
+      "note": "Matches Pathway 3 destination build"
+    },
+    {
+      "source_pathway": "1",
+      "fate": "stranded",
+      "iso": "SPP",
+      "resource": "solar",
+      "stranded_twh": 90.117,
+      "book_value_usd": 122076897945.0,
+      "note": "Exceeds Pathway 3 build \u2014 would not have been needed"
+    },
+    {
+      "source_pathway": "2a",
+      "fate": "delivered_value",
+      "iso": "SPP",
+      "resource": "all",
+      "book_value_usd": 1007979252436.0,
+      "note": "Matches Pathway 3 destination build"
+    },
+    {
+      "source_pathway": "2a",
+      "fate": "stranded",
+      "iso": "SPP",
+      "resource": "solar",
+      "stranded_twh": 90.117,
+      "book_value_usd": 122076897945.0,
+      "note": "Exceeds Pathway 3 build \u2014 would not have been needed"
+    },
+    {
+      "source_pathway": "2b",
+      "fate": "delivered_value",
+      "iso": "SPP",
+      "resource": "all",
+      "book_value_usd": 1157827833782.0,
+      "note": "Matches Pathway 3 destination build"
+    }
+  ],
+  "pathway_totals": {
+    "1": {
+      "total_stranded_book_value_usd": 17553907267845.0,
+      "delivered_value_usd": 6805776431446.0,
+      "total_pathway_cost_usd": 18932897703612.0,
+      "resource_breakdown": {
+        "solar": 13407050341870.0,
+        "wind": 4130278356850.0,
+        "offshore_wind": 0.0,
+        "battery4": 10189856119.0,
+        "battery8": 5275546859.0,
+        "ldes": 1113166147.0
+      },
+      "iso_count": 7,
+      "feasible_isos": [
+        "CAISO",
+        "ERCOT",
+        "MISO",
+        "NEISO",
+        "NYISO",
+        "PJM",
+        "SPP"
+      ],
+      "stranded_share_pct": 92.7
+    },
+    "2a": {
+      "total_stranded_book_value_usd": 2408962486395.0,
+      "delivered_value_usd": 14318090901010.0,
+      "total_pathway_cost_usd": 16727053387405.0,
+      "resource_breakdown": {
+        "solar": 1343979581577.0,
+        "wind": 1062272692874.0,
+        "offshore_wind": 0.0,
+        "battery4": 1366330986.0,
+        "battery8": 1263353359.0,
+        "ldes": 80527599.0
+      },
+      "iso_count": 7,
+      "feasible_isos": [
+        "CAISO",
+        "ERCOT",
+        "MISO",
+        "NEISO",
+        "NYISO",
+        "PJM",
+        "SPP"
+      ],
+      "stranded_share_pct": 14.4
+    },
+    "2b": {
+      "total_stranded_book_value_usd": 0.0,
+      "delivered_value_usd": 16090884565751.0,
+      "total_pathway_cost_usd": 16090884565751.0,
+      "resource_breakdown": {
+        "solar": 0.0,
+        "wind": 0.0,
+        "offshore_wind": 0.0,
+        "battery4": 0.0,
+        "battery8": 0.0,
+        "ldes": 0.0
+      },
+      "iso_count": 7,
+      "feasible_isos": [
+        "CAISO",
+        "ERCOT",
+        "MISO",
+        "NEISO",
+        "NYISO",
+        "PJM",
+        "SPP"
+      ],
+      "stranded_share_pct": 0.0
+    }
+  },
+  "resource_stranding_aggregate": {
+    "solar": 14751029923447.0,
+    "wind": 5192551049724.0,
+    "offshore_wind": 0.0,
+    "battery4": 11556187105.0,
+    "battery8": 6538900218.0,
+    "ldes": 1193693746.0
+  },
+  "vre_curtailment_crosscheck": {
+    "1": {},
+    "2a": {},
+    "2b": {}
+  },
+  "framing_copy": "'Stranded' here means capital spent on capacity that a destination-optimized plan wouldn't have required to reach the same CFE target.",
+  "meta": {
+    "endpoint": 0.95,
+    "endpoint_pct": 95.0,
+    "reference_pathway": "3",
+    "stranding_definition": "Card K revised \u2014 comparative-to-Pathway-3",
+    "excluded": [
+      "clean_firm",
+      "transmission"
+    ],
+    "note": "Flow widths proportional to book value of unrecovered capital at 2050. Clean firm excluded from stranding per Card K. Transmission excluded per Card I."
+  }
+}
