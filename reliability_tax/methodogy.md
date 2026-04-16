@@ -104,6 +104,38 @@ FOAK resets. Post-pivot clean firm starts at FOAK and rides the Wright's Law cur
 ### Card Q — Section 6 "Cost of Waiting" commitment years
 2026, 2030, 2035, 2040, 2045. Five points of resolution on the penalty curve. 2026 anchors "even committing now costs you something" vs. an implicit 2025 baseline.
 
+### Card R — Pathway 1 resource scope / offshore wind classification
+**Approved amendment (April 2026).** Original methodology classified offshore wind as VRE available to all pathways. Post-run audit found NYISO, NEISO, and PJM Pathway 1 runs included offshore wind and nuclear_newbuild — violating the "VRE + batteries only, no clean firm" definition.
+
+**Resolution:**
+- **Pathway 1 is split into P1a and P1b.**
+  - **P1a (onshore VRE + storage):** solar, onshore wind, battery4, battery8, LDES, H2, existing hydro (wholesale-priced), existing nuclear uprates only. No offshore wind. No nuclear_newbuild. This is the true "no planning commitment" baseline.
+  - **P1b (VRE + offshore wind + storage):** P1a resources plus offshore wind where regionally available (NYISO, NEISO, PJM, CAISO). Still no nuclear_newbuild. Offshore wind requires long permitting and supply-chain commitment but not the same dispatchability as clean firm — it is VRE-category but requires a distinct policy commitment.
+- **Nuclear uprates (`uprate` resource):** Treated as existing-fleet operations (like hydro), available to all pathways including P1a. Not counted as new clean firm.
+- **Nuclear_newbuild:** Locked to P2a/P2b/P3 only (post-pivot or proactive). Never allowed in P1a or P1b.
+- **Offshore wind:** Locked to P1b and above (P2a, P2b, P3). Not in P1a.
+
+**Re-run scope:** All 7 ISOs × 5 endpoints re-run for both P1a and P1b to enforce these constraints cleanly. All downstream payloads updated to use P1a as the primary "VRE stress" baseline.
+
+**Downstream implications:**
+- All references to "Pathway 1" in Section 1 (worst hours), Section 2 (overbuild), Section 3 (reliability tax) now use P1a.
+- Section 2 and Section 3 can show P1a vs P1b comparison to illustrate the offshore wind effect for NYISO/NEISO/PJM.
+- Closing summary table adds P1a and P1b as separate pathway rows (140 rows becomes 175 rows: 7 ISO × 5 pathway × 5 endpoint).
+
+### Card S — Primary cost metric and new-build gas stranding
+**Approved amendment (April 2026).** The optimizer objective function minimizes NPV@7%, but NPV is not the right lens for customer rate impacts — customers pay actual annual costs, not discounted present values.
+
+**Resolution:**
+- **Primary cost metric: undiscounted cumulative cost (real 2025$).** This is `sum(net_annual_cost_usd, 2025–2050)` with no time discounting. It directly translates to what customers pay in rates over the planning period.
+- **Secondary cost metric: NPV@7%.** Retained for investment comparison purposes (captures time value of capital deployment), but not the headline figure.
+- **New-build gas stranding included in absolute actual cost.** When a pathway builds new CCS-CCGT capacity and that capacity is retired before the end of its 25-year useful life (i.e., stranded at the 2050 endpoint), the remaining undepreciated book value is added to absolute actual cost. This captures the real economic cost borne by ratepayers who funded the capital.
+  - Capital cost basis: $2,200/kW overnight (NREL ATB 2024 moderate, CCGT+CCS)
+  - Useful life: 25 years
+  - Stranded fraction: `max(0, (build_year + 25 − 2050) / 25)` — plants built in 2025 have 0 stranding (full 25-year life by 2050); plants built in 2032 have 28% stranding (7 of 25 years unused)
+  - `new_gas_stranded_billion_usd = Σ (stranded_gw_by_vintage × $2,200/kW × 1e6 × stranded_fraction)`
+  - `total_actual_cost_trillion = undiscounted_cost_trillion + new_gas_stranded_billion / 1000`
+- **Existing-gas fleet costs are already in `undiscounted_cost_usd`** (via gas generation × fuel+O&M). The stranding correction applies only to newly-built CCS-CCGT because those plants have committed capital that won't be fully amortized within the planning horizon.
+
 ## Downstream implications for page sections
 
 - **Section 4 (Four Journeys):** Annotation set must include existing-fleet retirement timelines as an overlay or secondary axis per Card L revised.
