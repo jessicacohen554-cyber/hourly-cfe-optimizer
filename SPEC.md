@@ -6019,3 +6019,32 @@ Each component is reported separately in stacked-bar visualizations. "Overbuild"
 - No JSON payload contains `capacity_rev_netted_usd`, `net_fom_million_usd`, or any "net of capacity" language.
 - `total_new_build_gw / peak_demand_gw` for any pathway does not exceed 5× (sanity ceiling; current MISO 22× indicates model failure).
 - Headline tax for P1a > headline tax for P3 in every ISO (directionally, the delta is the whole story).
+
+### 24.5 Worst-Hour Gas Sizing (Apr 16, 2026)
+
+**Decision (locked).** Replace the fixed-ELCC `total_clean_peak` formula in `scripts/step2_2a_cost_optimization.py` (scalar path ~385–431 and duplicate batch path ~707–746) and in `scripts/step_2_3_pathway_optimizer.py` (`size_required_gas_mw`, `_clean_peak_mw_from_mix`, `_existing_clean_peak_mw`) with a dispatch-driven sizing signal computed from the 8760 `total_clean` profile in `data/step3-dispatch/{ISO}_dispatch_cache.parquet`.
+
+**Percentile (locked — option B-i).** Gas is sized to the **99.97th percentile** of the residual-gap distribution:
+```
+residual[h]   = max(0, demand[h] − total_clean[h])        # per-hour gap, 8760 values
+gap_mw        = np.percentile(residual, 99.97)            # LOLE ≤ 2.6 h/yr
+gas_raw       = max(0, gap_mw × (1 + RESOURCE_ADEQUACY_MARGIN)) / GAS_AVAILABILITY_FACTOR[iso]
+```
+The 99.97th percentile leaves ≈2.6 h/yr of residual tail above the sized gap, consistent with the NERC / PJM "1-day-in-10-years" LOLE ≈ 2.4 h/yr benchmark. This is a single deterministic knob — sensitivity against A (1-hour maximum) and B-ii (99.94th ≈ 5 h/yr) can be run without structural code changes by flipping the `p` parameter.
+
+**Why not ELCC.** The fixed `PEAK_CAPACITY_CREDITS` (solar 0.30, wind 0.10, battery 0.95, etc.) are annual-average approximations. In VRE-heavy mixes the Σ-of-credits balloons past total peak demand (ERCOT ep99.9: `total_clean_peak` = 907 GW vs `ra_peak` = 227 GW, implying zero gas need) while the actual 8760 dispatch shows real residual gap. In winter-peaking ISOs, solar's average 0.30 credit overstates its peak-hour contribution (which is ≈0). Worst-hour dispatch is the truth; ELCC is a simplification that breaks at the extremes we care about.
+
+**ELCC retained — diagnostic only.** `_elcc_gas_mw(...)` stays in the codebase as a bug-detection helper invoked by `scripts/tmp_validate_worst_hour_sizing.py`. It is **not** used in any production sizing path. Invariant: for any mix, `worst_hour_gas_mw ≥ elcc_gas_mw`. A violation signals a dispatch-profile or archetype-lookup bug and is treated as a hard stop.
+
+**On-demand archetype expansion.** If a mix's archetype key is not present in the dispatch cache, the sizing helper calls into `scripts/step3a_build_dispatch_cache.py` to compute and persist the missing archetype's 8760 profile, then re-reads the cache. Missing archetypes are batched per ISO (single Step 3a call per batch, not per-mix) and the cache grows monotonically — subsequent hits on the same key are direct reads. No fallback to ELCC for missing archetypes. Cache expansions must be committed alongside any rerun so downstream sessions inherit the expanded cache.
+
+**Blast radius (documented for downstream sessions).**
+- `data/step2.2-cost/*.parquet` requires a full 27M-mix rerun (hours of compute; do NOT launch without explicit approval).
+- `analysis/reliability-tax/data/` 350-run sweep must be regenerated after step 2.2 lands.
+- `dashboard/js/shared-data.js` (Step 7) rebuilds propagate to `dashboard.html`, `abatement_dashboard.html`, `research_paper.html`, `lmp_trends.html`, `optimizer_methodology.html`, and `reliability-tax.html`.
+- Dispatch cache parquets grow; commit alongside results.
+
+**Verification gate (before any rerun).**
+- Temp script `scripts/tmp_validate_worst_hour_sizing.py` prints a 10-mix × 3-ISO (ERCOT, NYISO, CAISO) diff table of `{ELCC_mw, worst_hour_mw, delta_pct}`. Expected pattern: VRE-heavy mixes → worst-hour > ELCC; clean-firm-heavy mixes → approximately equal. Any `worst_hour < ELCC` is a hard stop.
+- Validation must exercise the on-demand archetype expansion path with ≥2 cache-miss mixes; the second read must hit the newly-written rows.
+- User-approved validation table is a prerequisite for step-2.2 rerun.
