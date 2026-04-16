@@ -48,8 +48,14 @@ DEFAULT_DATA_DIR = REPO_ROOT / "analysis" / "reliability-tax" / "data"
 DEMAND_H_DATA_DIR = REPO_ROOT / "analysis" / "reliability-tax" / "data-demand-H"
 DEMAND_L_DATA_DIR = REPO_ROOT / "analysis" / "reliability-tax" / "data-demand-L"
 
-# Endpoint label map — used to build file names
+# Endpoint label map — used to build file names.
+# Card S (v2 methodology) adds 60/70/75/80/85 alongside 90/95/97.5/99/99.9.
 _EP_LABEL: dict[float, str] = {
+    0.60:  "ep60",
+    0.70:  "ep70",
+    0.75:  "ep75",
+    0.80:  "ep80",
+    0.85:  "ep85",
     0.90:  "ep90",
     0.95:  "ep95",
     0.975: "ep97p5",
@@ -58,7 +64,9 @@ _EP_LABEL: dict[float, str] = {
 }
 
 # Canonical ordering used for iteration
-ENDPOINTS: list[float] = [0.90, 0.95, 0.975, 0.99, 0.999]
+ENDPOINTS: list[float] = [
+    0.60, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 0.975, 0.99, 0.999,
+]
 PATHWAYS: list[str]    = ["1a", "1b", "2a", "2b", "3"]
 ISOS: list[str]        = ["CAISO", "ERCOT", "MISO", "NEISO", "NYISO", "PJM", "SPP"]
 

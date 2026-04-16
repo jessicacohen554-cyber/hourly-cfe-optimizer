@@ -102,7 +102,8 @@ else:
 # ============================================================================
 
 PATHWAYS = ('1', '1a', '1b', '2a', '2b', '3')
-ENDPOINTS = (0.90, 0.95, 0.975, 0.99, 0.999)
+# Card S — 10 endpoints: 60/70/75/80/85 added alongside 90/95/97.5/99/99.9.
+ENDPOINTS = (0.60, 0.70, 0.75, 0.80, 0.85, 0.90, 0.95, 0.975, 0.99, 0.999)
 ISOS = tuple(pc.ISOS)
 
 BASE_YEAR = 2025
@@ -118,6 +119,28 @@ ECONOMIC_INFEASIBILITY_MARGINAL_USD_PER_CFE_PCT = 10_000.0
 
 # Card Q — Section 6 commitment years (for downstream Cost-of-Waiting work).
 COMMITMENT_YEARS = (2026, 2030, 2035, 2040, 2045)
+
+# ----------------------------------------------------------------------------
+# Card U / Card F' — new-build gas parameters
+# ----------------------------------------------------------------------------
+# CCGT overnight capex used for stranding write-offs. Plain CCGT (not CCS).
+# Source: NREL ATB 2024 moderate case — $1,200/kW overnight for advanced CCGT.
+CCGT_OVERNIGHT_CAPEX_USD_KW = 1200.0
+# Useful life over which capital recovery is expected.
+NEW_GAS_ASSET_LIFE_YEARS = 25
+# Real required return (for the recovery baseline in the stranding formula).
+NEW_GAS_REQUIRED_REAL_RETURN = 0.07
+# Card F' — the 15% two-consecutive-year CF test is the defensible knob.
+# Sensitivity knobs (documented in payload metadata; downstream can toggle).
+CF_STRANDING_THRESHOLD_DEFAULT = 0.15
+CF_STRANDING_THRESHOLDS_SENSITIVITY = (0.10, 0.15, 0.20)
+CF_STRANDING_CONSECUTIVE_YEARS = 2
+# Reference CF the $X/kW-yr annualized recovery expects — NEW_CCGT_COST_KW_YR is
+# quoted as a fixed annualized all-in, so the implicit capacity factor at which
+# an owner "breaks even" via energy+capacity revenue is taken here as 85%.
+NEW_GAS_REFERENCE_CF = 0.85
+# Hours in a year.
+HOURS_PER_YEAR = 8760.0
 
 # Repo-relative data roots.
 REPO_ROOT = _THIS_DIR.parent
@@ -721,6 +744,366 @@ def ledger_from_json(data: list[dict]) -> VintageLedger:
     return ledger
 
 
+# ============================================================================
+# CARD U — NEW-BUILD GAS FLEET (per-vintage tracking)
+# ============================================================================
+#
+# Clean resources build first under the VRE floor ratchet. After clean build,
+# the residual reliability gap (ra_peak_grown - total_clean_peak - existing gas
+# peak credit) is filled by new CCGT peakers. Each vintage is tracked with:
+#     year_built, initial_cap_mw, annual_cf[by_year], recovered_revenue_usd,
+#     retirement_year, stranded_flag
+# Stranding test (Card F') fires when CF < 15% for two consecutive years.
+#
+# Cost treatment:
+#   - Annualized capex+FOM recovered via NEW_CCGT_COST_KW_YR[iso] × mw × 1000.
+#   - Carried existing-gas FOM uses EXISTING_GAS_FOM_KW_YR[iso] × mw × 1000.
+#   - Fuel/variable cost is already in the existing-fossil merit-order model;
+#     this fleet-sizing block only layers in the capacity-side capex/FOM.
+#
+# Under Card M' (supersedes Card M): no capacity-market netting is applied.
+
+
+@dataclass
+class NewGasVintage:
+    """One build year's worth of new CCGT capacity, cost-recovered and tracked
+    year-over-year for Card F' stranding classification.
+    """
+
+    year_built: int
+    initial_cap_mw: float
+    annual_cf: list[float] = field(default_factory=list)
+    # Cumulative capacity-cost recovery in $/kW terms (year-by-year contribution
+    # is proportional to the year's CF relative to the reference 85% CF).
+    recovered_revenue_per_kw: float = 0.0
+    retirement_year: int | None = None
+    stranded_flag: bool = False
+    stranded_year: int | None = None
+    # Snapshot of unrecovered capex at the moment the stranding test fires.
+    stranded_capex_usd: float = 0.0
+    # Low-CF streak tracker. Reset when CF ≥ threshold, incremented otherwise.
+    _low_cf_streak: int = 0
+
+    @property
+    def active_mw(self) -> float:
+        return self.initial_cap_mw if self.retirement_year is None else 0.0
+
+
+@dataclass
+class NewGasFleet:
+    """Append-only record of every new CCGT build decision for a single run."""
+
+    iso: str
+    vintages: list[NewGasVintage] = field(default_factory=list)
+
+    def add(self, vintage: NewGasVintage) -> None:
+        self.vintages.append(vintage)
+
+    def active_mw_in_year(self, year: int) -> float:
+        return sum(
+            v.initial_cap_mw for v in self.vintages
+            if v.year_built <= year
+            and (v.retirement_year is None or year < v.retirement_year)
+        )
+
+    def active_vintages(self, year: int) -> list[NewGasVintage]:
+        return [
+            v for v in self.vintages
+            if v.year_built <= year
+            and (v.retirement_year is None or year < v.retirement_year)
+        ]
+
+    def total_stranded_capex_usd(self) -> float:
+        return float(sum(v.stranded_capex_usd for v in self.vintages))
+
+
+def _required_total_recovery_per_kw(iso: str) -> float:
+    """Total $/kW the new CCGT owner expects to recover over its life.
+
+    NEW_CCGT_COST_KW_YR is the annualized all-in (capex + FOM + required
+    return). Multiplying by the 25-year asset life gives the total recovery
+    target used in the Card F' stranding formula as ``capex + required_return``.
+    """
+    return float(pc.NEW_CCGT_COST_KW_YR[iso]) * float(NEW_GAS_ASSET_LIFE_YEARS)
+
+
+def _clean_peak_mw_from_mix(
+    iso: str,
+    target: dict[str, Any],
+    demand_twh: float,
+) -> float:
+    """Peak-capacity credit contributed by the target clean mix for ``iso``.
+
+    Port of step2_2a_cost_optimization._cost_kernel peak-build logic (lines
+    377-423): convert each resource's energy share (% of demand) to installed
+    MW via its capacity factor, then credit by its peak-capacity credit. Plus
+    storage duration-based peak credit, plus hybrids. CCS-CCGT share from the
+    mix is treated as a clean firm resource for peak-capacity purposes
+    (90% credit per PEAK_CAPACITY_CREDITS).
+
+    Returns absolute MW (not delta vs. base year). Caller adds
+    ``EXISTING_CLEAN_PEAK_MW`` conceptually but we compute that fresh here
+    from the base-year existing fleet so the function stands alone.
+    """
+    demand_mwh = demand_twh * 1.0e6
+    avg_demand_mw = demand_mwh / HOURS_PER_YEAR
+    mix = target.get('mix_pct', {}) or {}
+    storage = target.get('storage_pct', {}) or {}
+
+    peak_mw = 0.0
+    vre_energy_resources = (
+        ('clean_firm', 'clean_firm'),
+        ('solar', 'solar'),
+        ('wind', 'wind'),
+        ('offshore_wind', 'offshore_wind'),
+        ('hydro', 'hydro'),
+        ('ccs_ccgt', 'ccs_ccgt'),
+    )
+    for col, res in vre_energy_resources:
+        pct = float(mix.get(col, 0.0))
+        if pct <= 0:
+            continue
+        # Offshore wind only when regionally available.
+        if res == 'offshore_wind' and iso not in pc.OFFSHORE_ISOS:
+            continue
+        cf = float(pc.RESOURCE_CAPACITY_FACTORS[res][iso])
+        cc = float(pc.PEAK_CAPACITY_CREDITS[res])
+        if cf <= 0:
+            continue
+        res_avg_mw = pct / 100.0 * avg_demand_mw
+        res_installed_mw = res_avg_mw / cf
+        peak_mw += res_installed_mw * cc
+
+    # Geothermal (CAISO only).
+    geo_pct = float(mix.get('geothermal', 0.0))
+    if geo_pct > 0 and iso in pc.GEOTHERMAL_ISOS:
+        # Approximate as a clean-firm class resource (flat, high credit).
+        cf_geo = 0.85
+        cc_geo = float(pc.PEAK_CAPACITY_CREDITS.get('clean_firm', 1.0))
+        peak_mw += (geo_pct / 100.0 * avg_demand_mw / cf_geo) * cc_geo
+
+    # Hybrid VRE+storage: apply hybrid capacity credits directly.
+    hybrid_table = (
+        ('solar_batt4',  'solar'),
+        ('solar_batt8',  'solar'),
+        ('wind_batt4',   'wind'),
+        ('wind_batt8',   'wind'),
+    )
+    for col, parent in hybrid_table:
+        pct = float(mix.get(col, 0.0))
+        if pct <= 0:
+            continue
+        cf_parent = float(pc.RESOURCE_CAPACITY_FACTORS[parent][iso])
+        if cf_parent <= 0:
+            continue
+        cc = float(pc.PEAK_CAPACITY_CREDITS[col])
+        res_avg_mw = pct / 100.0 * avg_demand_mw
+        installed_mw = res_avg_mw / cf_parent
+        peak_mw += installed_mw * cc
+
+    # Standalone storage — duration-based MW conversion from energy share.
+    bat_pct = float(storage.get('battery_dispatch_pct', 0.0))
+    bat8_pct = float(storage.get('battery8_dispatch_pct', 0.0))
+    ldes_pct = float(storage.get('ldes_dispatch_pct', 0.0))
+    h2_pct = float(storage.get('h2_dispatch_pct', 0.0))
+    peak_mw += (
+        bat_pct / 100.0 * demand_mwh / 4.0 * float(pc.PEAK_CAPACITY_CREDITS['battery'])
+        + bat8_pct / 100.0 * demand_mwh / 8.0 * float(pc.PEAK_CAPACITY_CREDITS['battery8'])
+        + ldes_pct / 100.0 * demand_mwh / 100.0 * float(pc.PEAK_CAPACITY_CREDITS['ldes'])
+        + h2_pct / 100.0 * demand_mwh / 1000.0 * float(pc.PEAK_CAPACITY_CREDITS['h2'])
+    )
+    return float(peak_mw)
+
+
+def _existing_clean_peak_mw(iso: str) -> float:
+    """2025 existing-fleet peak contribution (MW).
+
+    Mirrors step2_2a._compute_existing_clean_peak_mw but is self-contained so
+    this module does not import step2_2a at top-level.
+    """
+    demand_twh = float(pc.REGIONAL_DEMAND_TWH[iso])
+    avg_demand_mw = demand_twh * 1.0e6 / HOURS_PER_YEAR
+    total_peak = 0.0
+    shares = pc.GRID_MIX_SHARES.get(iso, {})
+    for resource in ('clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro'):
+        share_pct = float(shares.get(resource, 0.0))
+        if share_pct <= 0:
+            continue
+        cf = float(pc.RESOURCE_CAPACITY_FACTORS[resource][iso])
+        if cf <= 0:
+            continue
+        cc = float(pc.PEAK_CAPACITY_CREDITS[resource])
+        installed = share_pct / 100.0 * avg_demand_mw / cf
+        total_peak += installed * cc
+    return total_peak
+
+
+def size_required_gas_mw(
+    iso: str,
+    target: dict[str, Any],
+    demand_twh: float,
+    gf: float,
+) -> dict[str, float]:
+    """Peak-adequacy-driven required gas capacity at ``demand_twh``, ``gf``.
+
+    Ports the step2_2a sizing pattern:
+        peak_grown   = PEAK_DEMAND_MW × gf
+        ra_peak      = peak_grown × (1 + RESOURCE_ADEQUACY_MARGIN)
+        total_clean  = EXISTING_CLEAN_PEAK_MW + new_clean_peak_mw(target)
+        gas_raw      = max(0, ra_peak - total_clean) / GAS_AVAILABILITY_FACTOR
+        gas_needed   = max(0, EXISTING_GAS_CAPACITY_MW + (gas_raw - GAS_RAW_2025))
+        existing_used= min(gas_needed, EXISTING_GAS_CAPACITY_MW)
+        new_needed   = max(0, gas_needed - EXISTING_GAS_CAPACITY_MW)
+
+    Returns a dict of the peak-capacity diagnostic values. Caller subtracts
+    already-built new-gas MW from ``new_needed`` to get the incremental build.
+    """
+    peak_grown = float(pc.PEAK_DEMAND_MW[iso]) * float(gf)
+    ra_peak = peak_grown * (1.0 + float(pc.RESOURCE_ADEQUACY_MARGIN))
+    existing_clean = _existing_clean_peak_mw(iso)
+    new_clean = _clean_peak_mw_from_mix(iso, target, demand_twh)
+    total_clean = existing_clean + new_clean
+
+    gaf = float(pc.GAS_AVAILABILITY_FACTOR[iso])
+    gas_raw = max(0.0, ra_peak - total_clean) / max(1e-9, gaf)
+    # Base-year baseline calibration — tracks step2_2a's GAS_RAW_2025.
+    existing_gas_mw = float(pc.EXISTING_GAS_CAPACITY_MW[iso])
+    gas_raw_2025 = max(0.0, (
+        float(pc.PEAK_DEMAND_MW[iso]) * (1.0 + float(pc.RESOURCE_ADEQUACY_MARGIN))
+        - existing_clean
+    ) / max(1e-9, gaf))
+    gas_delta = gas_raw - gas_raw_2025
+    gas_needed = max(0.0, existing_gas_mw + gas_delta)
+    existing_used = min(gas_needed, existing_gas_mw)
+    new_needed_cumulative = max(0.0, gas_needed - existing_gas_mw)
+
+    return {
+        'peak_demand_mw': peak_grown,
+        'ra_peak_mw': ra_peak,
+        'existing_clean_peak_mw': existing_clean,
+        'new_clean_peak_mw': new_clean,
+        'total_clean_peak_mw': total_clean,
+        'gas_raw_mw': gas_raw,
+        'gas_raw_2025_mw': gas_raw_2025,
+        'existing_gas_mw': existing_gas_mw,
+        'gas_needed_mw': gas_needed,
+        'existing_gas_used_mw': existing_used,
+        'new_gas_required_cumulative_mw': new_needed_cumulative,
+    }
+
+
+def compute_gas_fleet_cf(
+    iso: str,
+    achieved_cfe_pct: float,
+    demand_twh: float,
+    new_gas_active_mw: float,
+) -> float:
+    """Fleet-average capacity factor for gas during ``year``.
+
+    Simple energy-balance model: gas generation = (1 - clean_pct/100) × demand.
+    Divided by total active gas MW × 8760 to yield a fleet-average CF. The
+    denominator is the FULL existing gas fleet nameplate (``EXISTING_GAS_
+    CAPACITY_MW``) plus active new-build vintages — NOT the peak-credit-booked
+    subset, which shrinks as clean penetration grows and would falsely inflate
+    CF. As clean penetration climbs the new-build peakers run less and the
+    fleet-wide CF drops below the Card F' 15% threshold.
+
+    ``new_gas_active_mw`` is the live new-build MW fleet in this year.
+
+    If total gas MW is zero, returns 0.0.
+    """
+    existing_gas_mw = float(pc.EXISTING_GAS_CAPACITY_MW[iso])
+    total_gas_mw = existing_gas_mw + float(new_gas_active_mw)
+    if total_gas_mw <= 1e-6:
+        return 0.0
+    gas_gen_mwh = max(0.0, 1.0 - float(achieved_cfe_pct) / 100.0) * float(demand_twh) * 1.0e6
+    cf = gas_gen_mwh / (total_gas_mw * HOURS_PER_YEAR)
+    return min(1.0, max(0.0, cf))
+
+
+def _apply_stranding_test(
+    vintage: NewGasVintage,
+    cf: float,
+    year: int,
+    iso: str,
+    threshold: float = CF_STRANDING_THRESHOLD_DEFAULT,
+) -> None:
+    """Update a vintage's CF streak / stranded flag after the year's dispatch.
+
+    Card F' logic:
+      - Track cumulative recovered revenue as a $/kW fraction of required.
+      - Increment _low_cf_streak when CF < threshold; reset otherwise.
+      - When streak reaches CF_STRANDING_CONSECUTIVE_YEARS, set stranded_flag
+        and snapshot the unrecovered capex (in absolute USD for the vintage's
+        full initial MW).
+
+    Does NOT retire the vintage — retirement is a separate decision. Stranded
+    vintages continue to carry FOM until retired by the caller.
+    """
+    vintage.annual_cf.append(float(cf))
+    # Accumulate recovered revenue: one year at CF=ref recovers the full
+    # annualized $/kW; a year at CF<ref recovers proportionally less.
+    annualized_target_per_kw = float(pc.NEW_CCGT_COST_KW_YR[iso])
+    recovery_fraction = (cf / NEW_GAS_REFERENCE_CF) if NEW_GAS_REFERENCE_CF > 0 else 0.0
+    vintage.recovered_revenue_per_kw += annualized_target_per_kw * recovery_fraction
+
+    if cf < threshold:
+        vintage._low_cf_streak += 1
+    else:
+        vintage._low_cf_streak = 0
+
+    if (not vintage.stranded_flag
+            and vintage._low_cf_streak >= CF_STRANDING_CONSECUTIVE_YEARS):
+        vintage.stranded_flag = True
+        vintage.stranded_year = year
+        total_required_per_kw = _required_total_recovery_per_kw(iso)
+        unrecovered_fraction = max(
+            0.0,
+            1.0 - vintage.recovered_revenue_per_kw / max(1e-9, total_required_per_kw),
+        )
+        vintage.stranded_capex_usd = float(
+            CCGT_OVERNIGHT_CAPEX_USD_KW * unrecovered_fraction
+            * vintage.initial_cap_mw * 1000.0  # MW → kW
+        )
+
+
+def fleet_to_json(fleet: NewGasFleet) -> list[dict]:
+    """Serialize a NewGasFleet to a JSON-safe list of vintage dicts."""
+    out = []
+    for v in fleet.vintages:
+        out.append({
+            'year_built': v.year_built,
+            'initial_cap_mw': round(v.initial_cap_mw, 1),
+            'annual_cf': [round(x, 4) for x in v.annual_cf],
+            'recovered_revenue_per_kw': round(v.recovered_revenue_per_kw, 2),
+            'retirement_year': v.retirement_year,
+            'stranded_flag': v.stranded_flag,
+            'stranded_year': v.stranded_year,
+            'stranded_capex_usd': round(v.stranded_capex_usd, 0),
+        })
+    return out
+
+
+def fleet_from_json(data: list[dict]) -> NewGasFleet:
+    """Deserialize a NewGasFleet (used for cross-endpoint seeding)."""
+    fleet = NewGasFleet(iso='__seeded__')
+    if not data:
+        return fleet
+    for item in data:
+        v = NewGasVintage(
+            year_built=int(item['year_built']),
+            initial_cap_mw=float(item['initial_cap_mw']),
+            annual_cf=list(item.get('annual_cf', [])),
+            recovered_revenue_per_kw=float(item.get('recovered_revenue_per_kw', 0.0)),
+            retirement_year=item.get('retirement_year'),
+            stranded_flag=bool(item.get('stranded_flag', False)),
+            stranded_year=item.get('stranded_year'),
+            stranded_capex_usd=float(item.get('stranded_capex_usd', 0.0)),
+        )
+        fleet.add(v)
+    return fleet
+
+
 def _load_ledger_from_json(path: Path) -> VintageLedger | None:
     """Load the terminal ledger from an existing per-run JSON file.
 
@@ -733,6 +1116,21 @@ def _load_ledger_from_json(path: Path) -> VintageLedger | None:
         if raw is None:
             return None
         return ledger_from_json(raw)
+    except Exception:
+        return None
+
+
+def _load_fleet_from_json(path: Path, iso: str) -> NewGasFleet | None:
+    """Load the terminal new-gas fleet from an existing per-run JSON file."""
+    try:
+        with open(path) as fh:
+            data = json.load(fh)
+        raw = data.get('terminal_new_gas_fleet')
+        if raw is None:
+            return None
+        fleet = fleet_from_json(raw)
+        fleet.iso = iso
+        return fleet
     except Exception:
         return None
 
@@ -1520,6 +1918,10 @@ class PathwayRunResult:
     stranding_ledger: list[dict[str, Any]] = field(default_factory=list)
     vre_curtailment_at_endpoint: dict[str, float] = field(default_factory=dict)
     endpoint_hourly_dispatch: list[float] | None = None
+    # Card U / F' additions — new-gas fleet + reliability-tax components.
+    new_gas_fleet: NewGasFleet | None = None
+    reliability_tax: dict[str, Any] = field(default_factory=dict)
+    stranding_metadata: dict[str, Any] = field(default_factory=dict)
 
 
 def _twh_from_pct(pct: float, demand_twh: float) -> float:
@@ -1754,30 +2156,50 @@ def _capacity_revenue_annual_usd(iso: str, target: dict[str, Any],
 def solve_pathway(
     config: RunConfig,
     initial_ledger: VintageLedger | None = None,
+    initial_fleet: NewGasFleet | None = None,
 ) -> PathwayRunResult:
     """Execute one deterministic pathway run over 2025-2050.
+
+    Implements the Card U build-order lock:
+      (a) Dispatch existing clean + previously-built clean vintages.
+      (b) Add new clean per the pathway's strategy (target-mix selection).
+      (c) Compute residual reliability gap (ra_peak minus clean-firm-credited
+          clean capacity and ELCC-credited VRE/storage).
+      (d) Add new-build CCGT to close the gap (sized via size_required_gas_mw
+          and the existing-gas carry-forward). If existing gas already covers
+          the gap, zero new build.
+      (e) Dispatch to serve demand: clean first, then gas merit order (existing
+          → new vintages). Realized as a fleet-average CF energy balance.
+      (f) Update each new-gas vintage's annual_cf from the dispatch result.
+      (g) Apply Card F' stranding test (CF<15% two consecutive years).
 
     Parameters
     ----------
     initial_ledger : VintageLedger | None
         If provided, the run inherits all vintages from ``initial_ledger`` as
-        a capacity floor (cross-endpoint ratchet). This is the terminal ledger
-        produced by the same pathway at the prior CFE endpoint. The within-run
-        delta logic in _derive_delta_vintages uses same-year capacity_twh()
-        checks, so seed vintages are visible to the ratchet for all years
-        including BASE_YEAR.
+        a capacity floor (cross-endpoint ratchet).
+    initial_fleet : NewGasFleet | None
+        If provided, the run inherits prior-endpoint new-gas vintages as the
+        floor on already-built new-gas MW (per Card U: vintages don't
+        retroactively retire just because the endpoint moved).
     """
     ledger = VintageLedger()
     if initial_ledger is not None:
-        # Copy all seed vintages into the starting ledger.
         for v in initial_ledger.vintages:
             ledger.add(v)
     # Pivot state always starts fresh: the trigger re-evaluates naturally as
     # last_cfe accumulates from the inherited VRE builds.
     pivot_state = PivotState()
     # Absolute TWh cap for existing-fleet resources (nuclear, hydro).
-    # Applied in _derive_delta_vintages for Pathway 1 and pre-pivot 2a/2b.
     _existing_nuclear_cap_twh: float = _existing_resource_twh(config.iso, 'clean_firm')
+
+    # Card U — new-build gas fleet (capacity-side bookkeeping, carried FOM,
+    # and stranding tracker). Seeded with prior-endpoint vintages if supplied.
+    gas_fleet = NewGasFleet(iso=config.iso)
+    if initial_fleet is not None:
+        for v in initial_fleet.vintages:
+            gas_fleet.add(v)
+
     annual_buildout: list[dict[str, Any]] = []
     annual_cost: list[dict[str, Any]] = []
     feasibility: dict[str, Any] = {
@@ -1786,6 +2208,25 @@ def solve_pathway(
     last_target: dict[str, Any] | None = None
     last_cfe = 0.0
     endpoint_threshold: float | None = None
+
+    # Running totals for the reliability tax breakdown (annualized dollars).
+    tax_components_cumulative = {
+        'new_gas_capex_annualized_usd': 0.0,
+        'new_gas_fom_usd': 0.0,
+        'existing_gas_fom_carried_usd': 0.0,
+        'priced_vre_curtailment_usd': 0.0,
+        'vre_storage_overbuild_capex_usd': 0.0,
+    }
+    total_demand_mwh_cumulative = 0.0
+
+    # Card M' — no capacity-market netting. This scalar is retained at 0.0 in
+    # raw JSON for backwards-compat with downstream readers; nothing consumes
+    # it as a cost reducer.
+    cap_rev_usd_const = 0.0
+
+    new_gas_fom_kw_yr = float(pc.NEW_CCGT_COST_KW_YR[config.iso])
+    existing_gas_fom_kw_yr = float(pc.EXISTING_GAS_FOM_KW_YR[config.iso])
+    existing_gas_capacity_mw = float(pc.EXISTING_GAS_CAPACITY_MW[config.iso])
 
     for year in YEARS:
         target = select_target_mix(
@@ -1827,7 +2268,7 @@ def solve_pathway(
             )
             break
 
-        # Vintage the delta from the ledger's prior state.
+        # (a) + (b) — vintage the clean delta from the ledger's prior state.
         # For Pathway 1 and pre-pivot 2a/2b: cap nuclear at existing fleet TWh.
         _no_new_nuclear = (
             config.pathway in ('1', '1a', '1b')
@@ -1843,11 +2284,84 @@ def solve_pathway(
         demand_twh = demand_for_year(
             config.iso, year, config.demand_growth_level,
         )
-        gross_usd = ledger.operating_cost(year)
-        cap_rev_usd = _capacity_revenue_annual_usd(
-            config.iso, target, demand_twh,
+        gf = growth_factor(config.iso, year, config.demand_growth_level)
+
+        # (c) + (d) — size required gas and build any additional CCGT vintage.
+        sizing = size_required_gas_mw(config.iso, target, demand_twh, gf)
+        existing_gas_carry_mw = float(sizing['existing_gas_used_mw'])
+        new_gas_required_cumulative_mw = float(sizing['new_gas_required_cumulative_mw'])
+        already_built_new_mw = gas_fleet.active_mw_in_year(year)
+        incremental_new_gas_mw = max(
+            0.0, new_gas_required_cumulative_mw - already_built_new_mw
         )
-        net_usd = gross_usd - cap_rev_usd
+        new_vintage_gas: NewGasVintage | None = None
+        if incremental_new_gas_mw > 1e-3:
+            new_vintage_gas = NewGasVintage(
+                year_built=year,
+                initial_cap_mw=incremental_new_gas_mw,
+            )
+            gas_fleet.add(new_vintage_gas)
+
+        # (e) + (f) — dispatch fleet-average CF, update each active vintage.
+        cfe_this_year = _current_cfe_pct(target)
+        active_new_gas_mw = gas_fleet.active_mw_in_year(year)
+        gas_cf = compute_gas_fleet_cf(
+            config.iso, cfe_this_year, demand_twh,
+            active_new_gas_mw,
+        )
+
+        # (g) — Card F' stranding test applied vintage-by-vintage.
+        for v in gas_fleet.active_vintages(year):
+            _apply_stranding_test(v, gas_cf, year, config.iso)
+
+        # ---- Annual cost construction (Card M' — gross, no capacity netting).
+        gross_usd = ledger.operating_cost(year)
+
+        # New-gas annualized capex + FOM (Card U). All active vintages pay
+        # NEW_CCGT_COST_KW_YR each year they are operating. Stranded vintages
+        # have their remaining unrecovered capex booked as a one-time
+        # stranding ledger entry, not re-charged each year here.
+        active_new_gas_mw_for_cost = 0.0
+        for v in gas_fleet.active_vintages(year):
+            active_new_gas_mw_for_cost += v.initial_cap_mw
+        new_gas_annualized_usd = (
+            active_new_gas_mw_for_cost * new_gas_fom_kw_yr * 1000.0
+        )
+
+        # Carried existing-gas FOM (Card U / reliability tax formula).
+        existing_gas_fom_usd = (
+            existing_gas_capacity_mw * existing_gas_fom_kw_yr * 1000.0
+        )
+
+        # Fuel for the gas fleet — priced at wholesale proxy. This tracks the
+        # $/MWh energy cost applied to the (1-CFE) gas generation. Use the
+        # ISO's WHOLESALE_PRICES Medium as a simple gas-energy proxy; detailed
+        # merit-order fuel cost lives in the fossil dispatch engine.
+        gas_gen_mwh = max(0.0, 1.0 - cfe_this_year / 100.0) * demand_twh * 1.0e6
+        wholesale_price = 0.0
+        try:
+            wholesale_price = float(
+                pc.WHOLESALE_PRICES.get(config.iso, {}).get('Medium', 0.0)
+            )
+        except Exception:
+            wholesale_price = 0.0
+        gas_fuel_usd = gas_gen_mwh * wholesale_price
+
+        # Total gross (pre-netting) including new gas + existing FOM + fuel.
+        gross_incl_gas_usd = (
+            gross_usd + new_gas_annualized_usd + existing_gas_fom_usd + gas_fuel_usd
+        )
+
+        # Card M' — no netting. The "net_annual_cost_usd" is still a field in
+        # the JSON but by construction it equals gross_incl_gas_usd; any
+        # downstream reader that used to subtract capacity_rev_netted_usd now
+        # gets the same number (field is 0).
+        net_usd = gross_incl_gas_usd - cap_rev_usd_const
+
+        # Accumulate reliability-tax components (report separately).
+        tax_components_cumulative['new_gas_capex_annualized_usd'] += new_gas_annualized_usd
+        tax_components_cumulative['existing_gas_fom_carried_usd'] += existing_gas_fom_usd
+        total_demand_mwh_cumulative += demand_twh * 1.0e6
 
         # Economic infeasibility — soft flag if marginal $/CFE% blows up.
         marg_vre = marginal_vre_usd_per_cfe_pct(config.iso, year, config)
@@ -1855,29 +2369,52 @@ def solve_pathway(
                 and config.pathway in ('1', '1a', '1b'):
             feasibility['economic'] = False
 
+        new_vintages_out = [
+            {
+                'resource': v.resource,
+                'twh_per_year': round(v.twh_per_year, 3),
+                'locked_lcoe_usd_per_mwh': round(v.locked_lcoe, 2),
+                'tx_adder_usd_per_mwh': round(v.tx_adder, 2),
+            }
+            for v in new_vintages
+        ]
+        if new_vintage_gas is not None:
+            new_vintages_out.append({
+                'resource': 'new_gas_ccgt',
+                'new_gas_mw': round(new_vintage_gas.initial_cap_mw, 1),
+                'annualized_cost_usd_kw_yr': round(new_gas_fom_kw_yr, 2),
+            })
+
         annual_buildout.append({
             'year': year,
-            'new_vintages': [
-                {
-                    'resource': v.resource,
-                    'twh_per_year': round(v.twh_per_year, 3),
-                    'locked_lcoe_usd_per_mwh': round(v.locked_lcoe, 2),
-                    'tx_adder_usd_per_mwh': round(v.tx_adder, 2),
-                }
-                for v in new_vintages
-            ],
+            'new_vintages': new_vintages_out,
+            'gas_sizing': {
+                'peak_demand_mw': round(sizing['peak_demand_mw'], 0),
+                'ra_peak_mw': round(sizing['ra_peak_mw'], 0),
+                'total_clean_peak_mw': round(sizing['total_clean_peak_mw'], 0),
+                'existing_gas_used_mw': round(existing_gas_carry_mw, 0),
+                'new_gas_required_cumulative_mw': round(new_gas_required_cumulative_mw, 0),
+                'new_gas_built_this_year_mw':
+                    round(new_vintage_gas.initial_cap_mw, 1) if new_vintage_gas else 0.0,
+                'active_new_gas_fleet_mw': round(active_new_gas_mw_for_cost, 0),
+                'gas_fleet_cf': round(gas_cf, 4),
+            },
         })
         annual_cost.append({
             'year': year,
             'demand_twh': round(demand_twh, 2),
             'gross_operating_usd': round(gross_usd, 0),
-            'capacity_rev_netted_usd': round(cap_rev_usd, 0),
+            'new_gas_annualized_capex_fom_usd': round(new_gas_annualized_usd, 0),
+            'existing_gas_fom_carried_usd': round(existing_gas_fom_usd, 0),
+            'gas_fuel_usd': round(gas_fuel_usd, 0),
+            'capacity_rev_netted_usd': round(cap_rev_usd_const, 0),
             'net_annual_cost_usd': round(net_usd, 0),
-            'achieved_cfe_pct': round(_current_cfe_pct(target), 3),
+            'achieved_cfe_pct': round(cfe_this_year, 3),
+            'gas_fleet_cf': round(gas_cf, 4),
         })
 
         last_target = target
-        last_cfe = _current_cfe_pct(target)
+        last_cfe = cfe_this_year
         endpoint_threshold = target.get('threshold')
 
     # Aggregate costs across years.
@@ -1894,6 +2431,40 @@ def solve_pathway(
     endpoint_mix = last_target['mix_pct'] if last_target else {}
     endpoint_storage = last_target['storage_pct'] if last_target else {}
 
+    # Reliability-tax per-MWh blend across 2025-2050. Curtailment + overbuild
+    # capex are reported as zero from the solver — they are computed in the
+    # dashboard-chart layer from the endpoint mix. Gas components are the core
+    # new-v2 contribution the solver knows definitively.
+    reliability_tax_total_usd = float(sum(tax_components_cumulative.values()))
+    reliability_tax_usd_per_mwh = (
+        reliability_tax_total_usd / total_demand_mwh_cumulative
+        if total_demand_mwh_cumulative > 0 else 0.0
+    )
+    reliability_tax = {
+        'total_demand_mwh_2025_2050': round(total_demand_mwh_cumulative, 0),
+        'components_usd': {k: round(v, 0) for k, v in tax_components_cumulative.items()},
+        'total_usd': round(reliability_tax_total_usd, 0),
+        'usd_per_mwh': round(reliability_tax_usd_per_mwh, 4),
+    }
+
+    # Stranding metadata (Card F' knobs for downstream sensitivity).
+    stranding_metadata = {
+        'cf_threshold_default': CF_STRANDING_THRESHOLD_DEFAULT,
+        'cf_threshold_sensitivity': list(CF_STRANDING_THRESHOLDS_SENSITIVITY),
+        'consecutive_years': CF_STRANDING_CONSECUTIVE_YEARS,
+        'asset_life_years': NEW_GAS_ASSET_LIFE_YEARS,
+        'required_real_return': NEW_GAS_REQUIRED_REAL_RETURN,
+        'overnight_capex_usd_kw': CCGT_OVERNIGHT_CAPEX_USD_KW,
+        'reference_cf': NEW_GAS_REFERENCE_CF,
+        'total_new_gas_built_mw': round(
+            sum(v.initial_cap_mw for v in gas_fleet.vintages), 1
+        ),
+        'total_stranded_capex_usd': round(gas_fleet.total_stranded_capex_usd(), 0),
+        'stranded_vintage_count': sum(
+            1 for v in gas_fleet.vintages if v.stranded_flag
+        ),
+    }
+
     return PathwayRunResult(
         config=config,
         feasibility=feasibility,
@@ -1907,6 +2478,9 @@ def solve_pathway(
         endpoint_mix_pct=endpoint_mix,
         endpoint_storage_pct=endpoint_storage,
         endpoint_threshold=endpoint_threshold,
+        new_gas_fleet=gas_fleet,
+        reliability_tax=reliability_tax,
+        stranding_metadata=stranding_metadata,
     )
 
 
@@ -2150,7 +2724,14 @@ def _serialize_run_result(
             'annual_cost': result.annual_cost,
             'endpoint_hourly_dispatch': result.endpoint_hourly_dispatch,
             'stranding_ledger': result.stranding_ledger,
+            # Card U / F' — per-vintage new-gas fleet trajectory and tax.
+            'new_gas_fleet': (
+                fleet_to_json(result.new_gas_fleet)
+                if result.new_gas_fleet is not None else []
+            ),
         },
+        'reliability_tax': result.reliability_tax,
+        'stranding_metadata': result.stranding_metadata,
         'retirement_timeline': result.retirement_timeline,
         'vre_curtailment_at_endpoint': result.vre_curtailment_at_endpoint,
         'endpoint_mix_pct': result.endpoint_mix_pct,
@@ -2159,6 +2740,10 @@ def _serialize_run_result(
         # initial_ledger seed for the next endpoint run in the same pathway
         # (cross-endpoint floor ratchet). Loaded by _load_ledger_from_json().
         'terminal_ledger': ledger_to_json(result.ledger),
+        'terminal_new_gas_fleet': (
+            fleet_to_json(result.new_gas_fleet)
+            if result.new_gas_fleet is not None else []
+        ),
     }
 
 
@@ -2203,6 +2788,18 @@ def _manifest_entry(result: 'PathwayRunResult') -> dict[str, Any]:
         'retirement_timeline': result.retirement_timeline,
         'comparative_stranding': stranding_totals,
         'vre_curtailment_at_endpoint': result.vre_curtailment_at_endpoint,
+        'reliability_tax': result.reliability_tax,
+        'new_gas_summary': {
+            'total_new_gas_built_mw': result.stranding_metadata.get(
+                'total_new_gas_built_mw', 0.0,
+            ),
+            'total_stranded_capex_usd': result.stranding_metadata.get(
+                'total_stranded_capex_usd', 0.0,
+            ),
+            'stranded_vintage_count': result.stranding_metadata.get(
+                'stranded_vintage_count', 0,
+            ),
+        },
         'output_path': str(cfg.output_path),
     }
 
@@ -2497,6 +3094,7 @@ def _ensure_imports_ready() -> None:
 def _solve_and_annotate(
     config: RunConfig,
     initial_ledger: VintageLedger | None = None,
+    initial_fleet: NewGasFleet | None = None,
 ) -> 'PathwayRunResult':
     """Solve pathway + attach Card L retirement + endpoint diagnostics.
 
@@ -2508,7 +3106,11 @@ def _solve_and_annotate(
         raise FileNotFoundError(
             f"No Step 2.1 EF parquets found for {config.iso} under {DATA_STEP21}"
         )
-    result = solve_pathway(config, initial_ledger=initial_ledger)
+    result = solve_pathway(
+        config,
+        initial_ledger=initial_ledger,
+        initial_fleet=initial_fleet,
+    )
     result.retirement_timeline = compute_retirement_timeline(result)
     result.vre_curtailment_at_endpoint = compute_vre_curtailment_at_endpoint(result)
     result.endpoint_hourly_dispatch = compute_endpoint_hourly_dispatch(result)
@@ -2534,6 +3136,7 @@ def _pathway3_config_for(config: RunConfig) -> RunConfig:
 def run_pathway(
     config: RunConfig,
     initial_ledger: VintageLedger | None = None,
+    initial_fleet: NewGasFleet | None = None,
 ) -> dict[str, Any]:
     """Execute a single (iso, pathway, endpoint) run with Card K stranding.
 
@@ -2551,12 +3154,18 @@ def run_pathway(
     initial_ledger : VintageLedger | None
         Cross-endpoint floor-ratchet seed: terminal ledger from the same
         pathway's prior-endpoint run. None = start from scratch (normal).
+    initial_fleet : NewGasFleet | None
+        Cross-endpoint floor-ratchet seed for new-build gas vintages.
     """
     _ensure_imports_ready()
 
     # 1. Pathway 3 reference.
     if config.pathway == '3':
-        p3_result = _solve_and_annotate(config, initial_ledger=initial_ledger)
+        p3_result = _solve_and_annotate(
+            config,
+            initial_ledger=initial_ledger,
+            initial_fleet=initial_fleet,
+        )
         target_result = p3_result
         p3_ledger_for_stranding = p3_result.ledger
     else:
@@ -2573,7 +3182,11 @@ def run_pathway(
             write_run_json(p3_result)
             append_to_manifest(p3_result)
             p3_ledger_for_stranding = p3_result.ledger
-        target_result = _solve_and_annotate(config, initial_ledger=initial_ledger)
+        target_result = _solve_and_annotate(
+            config,
+            initial_ledger=initial_ledger,
+            initial_fleet=initial_fleet,
+        )
 
     # 2. Card K revised comparative stranding (vs. Pathway 3 baseline).
     target_result.stranding_ledger = compute_stranding_ledger(
@@ -2607,10 +3220,12 @@ def main(argv: list[str] | None = None) -> int:
     args = build_argparser().parse_args(argv)
     config = config_from_args(args)
     initial_ledger: VintageLedger | None = None
+    initial_fleet: NewGasFleet | None = None
     if args.seed_run:
         seed_path = Path(args.seed_run)
         if seed_path.exists():
             initial_ledger = _load_ledger_from_json(seed_path)
+            initial_fleet = _load_fleet_from_json(seed_path, config.iso)
             if initial_ledger is None:
                 print(
                     f"[optimizer] WARNING: --seed-run {seed_path} exists but "
@@ -2624,7 +3239,11 @@ def main(argv: list[str] | None = None) -> int:
                 "exist. Starting from empty ledger.",
                 file=sys.stderr,
             )
-    result = run_pathway(config, initial_ledger=initial_ledger)
+    result = run_pathway(
+        config,
+        initial_ledger=initial_ledger,
+        initial_fleet=initial_fleet,
+    )
     print(json.dumps(result, indent=2, default=str))
     return 0
 
