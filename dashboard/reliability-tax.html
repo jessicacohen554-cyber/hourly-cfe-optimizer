@@ -84,9 +84,178 @@
             margin-bottom: 6px;
         }
 
+        /* ===== Act 1: Trilemma click-to-advance ===== */
+        .trilemma-wrap {
+            max-width: 940px;
+            margin: 0 auto;
+        }
+        .trilemma-stage {
+            position: relative;
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-xl);
+            padding: 28px 24px 20px;
+            box-shadow: var(--shadow-md);
+            min-height: 520px;
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            overflow: hidden;
+        }
+        .trilemma-svg-wrap {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            min-height: 360px;
+        }
+        .trilemma-svg {
+            width: 100%;
+            max-width: 640px;
+            height: auto;
+            display: block;
+        }
+        .trilemma-axis { transition: opacity 0.7s ease, stroke 0.7s ease; }
+        .trilemma-axis-label { transition: opacity 0.7s ease, fill 0.7s ease; }
+        .trilemma-axis.is-faded,
+        .trilemma-axis-label.is-faded { opacity: 0.22; }
+
+        .trilemma-dot {
+            transition: cx 0.8s cubic-bezier(0.4,0,0.2,1),
+                        cy 0.8s cubic-bezier(0.4,0,0.2,1),
+                        r 0.5s ease,
+                        opacity 0.5s ease,
+                        fill 0.5s ease;
+        }
+        .trilemma-dot-label { transition: opacity 0.5s ease, transform 0.8s cubic-bezier(0.4,0,0.2,1); }
+
+        .trilemma-caption {
+            margin-top: var(--space-md);
+            padding: 16px 20px;
+            background: var(--bg-alt);
+            border-left: 3px solid var(--hydro);
+            border-radius: 0 8px 8px 0;
+            min-height: 78px;
+        }
+        .trilemma-caption.state-2 { border-left-color: var(--wind); }
+        .trilemma-caption.state-3 { border-left-color: var(--red); }
+        .trilemma-caption-eyebrow {
+            font-family: var(--font-heading);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+        .trilemma-caption-title {
+            font-family: var(--font-heading);
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+        .trilemma-caption-body {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .trilemma-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: var(--space-md);
+            flex-wrap: wrap;
+        }
+        .trilemma-steps {
+            display: flex;
+            gap: 6px;
+        }
+        .trilemma-step-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.15);
+            transition: background 0.3s, transform 0.3s;
+        }
+        .trilemma-step-dot.active { background: var(--navy); transform: scale(1.25); }
+
+        .trilemma-advance {
+            font-family: var(--font-heading);
+            font-size: 0.88rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            color: #FFFFFF;
+            background: var(--navy);
+            border: none;
+            border-radius: var(--radius-pill);
+            padding: 10px 22px;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+            min-height: 44px;
+        }
+        .trilemma-advance:hover {
+            background: var(--red);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(239,68,68,0.3);
+        }
+        .trilemma-advance[disabled] {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .trilemma-reset {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 8px 14px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            border-radius: var(--radius-pill);
+            cursor: pointer;
+            font-family: var(--font-heading);
+            min-height: 44px;
+        }
+        .trilemma-reset:hover {
+            background: var(--bg-alt-warm);
+            border-color: var(--navy);
+            color: var(--navy);
+        }
+        .trilemma-closing {
+            max-width: 820px;
+            margin: var(--space-lg) auto 0;
+            padding: 18px 24px;
+            background: rgba(255,255,255,0.85);
+            border-left: 3px solid var(--red);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(12px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .trilemma-closing.visible { opacity: 1; transform: translateY(0); }
+        .trilemma-closing strong { color: var(--navy); font-weight: 700; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .trilemma-dot, .trilemma-dot-label,
+            .trilemma-axis, .trilemma-axis-label {
+                transition: none !important;
+            }
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .tax-hero-lead { font-size: 1rem; }
+            .trilemma-stage { padding: 20px 16px 16px; min-height: 460px; }
+            .trilemma-svg-wrap { min-height: 300px; }
         }
     </style>
 </head>
@@ -123,7 +292,111 @@
         <p>Every grid faces the same three objectives &mdash; the pathways differ in which one they sacrifice first.</p>
     </div>
     <section class="content-section" id="act1-section">
-        <div class="section-stub"><strong>Act 1 infographic</strong>Click-to-advance trilemma visual mounts here in the next build step.</div>
+        <div class="trilemma-wrap">
+            <div class="trilemma-stage">
+                <div class="trilemma-svg-wrap">
+                    <svg class="trilemma-svg" viewBox="0 0 640 380" xmlns="http://www.w3.org/2000/svg"
+                         role="img" aria-labelledby="trilemmaTitle trilemmaDesc">
+                        <title id="trilemmaTitle">Energy trilemma</title>
+                        <desc id="trilemmaDesc">Three-state infographic: affordable + reliable, then adding clean as a third axis, then the clean-affordable plane treated as if reliability were automatic.</desc>
+
+                        <defs>
+                            <marker id="arrowHead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                                <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+                            </marker>
+                        </defs>
+
+                        <!-- Central origin -->
+                        <g id="trilemmaOrigin" transform="translate(320, 220)">
+                            <!-- Affordable axis (horizontal, right) -->
+                            <g id="axisAffordable" class="trilemma-axis" style="color: #1E293B;">
+                                <line x1="0" y1="0" x2="220" y2="0"
+                                      stroke="currentColor" stroke-width="2"
+                                      marker-end="url(#arrowHead)"/>
+                            </g>
+                            <text id="labelAffordable" class="trilemma-axis-label"
+                                  x="228" y="5"
+                                  font-family="Plus Jakarta Sans, DM Sans, sans-serif"
+                                  font-size="14" font-weight="700" fill="#1E293B">
+                                Affordable
+                            </text>
+
+                            <!-- Reliable axis (horizontal, left — mirrored) -->
+                            <g id="axisReliable" class="trilemma-axis" style="color: #1E293B;">
+                                <line x1="0" y1="0" x2="-220" y2="0"
+                                      stroke="currentColor" stroke-width="2"
+                                      marker-end="url(#arrowHead)"/>
+                            </g>
+                            <text id="labelReliable" class="trilemma-axis-label"
+                                  x="-228" y="5" text-anchor="end"
+                                  font-family="Plus Jakarta Sans, DM Sans, sans-serif"
+                                  font-size="14" font-weight="700" fill="#1E293B">
+                                Reliable
+                            </text>
+
+                            <!-- Clean axis (diagonal up, 120° from +x in screen coords => -sin(60)*r, -cos(60)*r approx) -->
+                            <!-- Using (cos 110° * 220, sin 110° * -220) simplified: point up-left at ~60° above horizontal -->
+                            <g id="axisClean" class="trilemma-axis is-faded" style="color: #16A34A;">
+                                <line x1="0" y1="0" x2="0" y2="-200"
+                                      stroke="currentColor" stroke-width="2"
+                                      stroke-dasharray="6 5"
+                                      marker-end="url(#arrowHead)"/>
+                            </g>
+                            <text id="labelClean" class="trilemma-axis-label is-faded"
+                                  x="0" y="-212" text-anchor="middle"
+                                  font-family="Plus Jakarta Sans, DM Sans, sans-serif"
+                                  font-size="14" font-weight="700" fill="#16A34A">
+                                Clean
+                            </text>
+
+                            <!-- Origin marker -->
+                            <circle cx="0" cy="0" r="3" fill="#64748B"/>
+                            <text x="0" y="18" text-anchor="middle"
+                                  font-family="DM Sans, sans-serif"
+                                  font-size="10" fill="#64748B" letter-spacing="1">
+                                ORIGIN
+                            </text>
+
+                            <!-- System dot (starts at fossil optimum on affordable+reliable plane) -->
+                            <g>
+                                <circle id="trilemmaDot" class="trilemma-dot"
+                                        cx="150" cy="0" r="11"
+                                        fill="#64748B"
+                                        stroke="#FFFFFF" stroke-width="2.5"/>
+                                <text id="trilemmaDotLabel" class="trilemma-dot-label"
+                                      x="150" y="-18" text-anchor="middle"
+                                      font-family="DM Sans, sans-serif"
+                                      font-size="11" font-weight="600" fill="#1E293B">
+                                    fossil grid
+                                </text>
+                            </g>
+                        </g>
+                    </svg>
+                </div>
+
+                <div class="trilemma-caption state-1" id="trilemmaCaption">
+                    <div class="trilemma-caption-eyebrow" id="trilemmaStepLabel">State 1 of 3</div>
+                    <div class="trilemma-caption-title" id="trilemmaTitleText">Reliable &amp; affordable.</div>
+                    <div class="trilemma-caption-body" id="trilemmaBody">Two axes. The fossil grid sits at the optimum. This is the 20th-century planning problem: deliver power when customers need it, at the lowest cost.</div>
+                </div>
+
+                <div class="trilemma-controls">
+                    <button type="button" class="trilemma-reset" id="trilemmaReset">Reset</button>
+                    <div class="trilemma-steps" aria-hidden="true">
+                        <div class="trilemma-step-dot active" data-step="1"></div>
+                        <div class="trilemma-step-dot" data-step="2"></div>
+                        <div class="trilemma-step-dot" data-step="3"></div>
+                    </div>
+                    <button type="button" class="trilemma-advance" id="trilemmaAdvance" aria-controls="trilemmaCaption">
+                        Next <span aria-hidden="true">&rarr;</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="trilemma-closing" id="trilemmaClosing">
+                It&rsquo;s not. Here&rsquo;s the story of <strong>the reliability tax</strong>.
+            </div>
+        </div>
     </section>
 
     <div class="energy-divider"></div>
@@ -203,6 +476,142 @@
                 }
             }, { passive: true });
             update();
+        })();
+
+        // ===== Act 1: Trilemma click-to-advance =====
+        (function initTrilemma() {
+            var stage = document.getElementById('act1-section');
+            var dot = document.getElementById('trilemmaDot');
+            var dotLabel = document.getElementById('trilemmaDotLabel');
+            var axisClean = document.getElementById('axisClean');
+            var labelClean = document.getElementById('labelClean');
+            var axisReliable = document.getElementById('axisReliable');
+            var labelReliable = document.getElementById('labelReliable');
+            var caption = document.getElementById('trilemmaCaption');
+            var stepLabel = document.getElementById('trilemmaStepLabel');
+            var titleText = document.getElementById('trilemmaTitleText');
+            var bodyText = document.getElementById('trilemmaBody');
+            var advanceBtn = document.getElementById('trilemmaAdvance');
+            var resetBtn = document.getElementById('trilemmaReset');
+            var stepDots = stage ? stage.querySelectorAll('.trilemma-step-dot') : [];
+            var closing = document.getElementById('trilemmaClosing');
+            if (!dot || !advanceBtn) return;
+
+            // State definitions — colors pulled from shared.css palette
+            // State 1: fossil grid on affordable+reliable axis (clean axis faded)
+            // State 2: third axis (clean) extrudes; fossil stays off clean axis
+            // State 3: reliable axis fades; new VRE-only point on clean-affordable face
+            var STATES = [
+                {
+                    step: 1,
+                    eyebrow: 'State 1 of 3',
+                    title: 'Reliable & affordable.',
+                    body: 'Two axes. The fossil grid sits at the optimum. This is the 20th-century planning problem: deliver power when customers need it, at the lowest cost.',
+                    captionClass: 'state-1',
+                    dot: { cx: 150, cy: 0, r: 11, fill: '#64748B', label: 'fossil grid', labelX: 150, labelY: -18 },
+                    cleanFaded: true,
+                    reliableFaded: false
+                },
+                {
+                    step: 2,
+                    eyebrow: 'State 2 of 3',
+                    title: 'Reliable, affordable & clean.',
+                    body: 'A third axis extrudes. Decarbonization becomes an explicit objective. The fossil grid scores zero on it — it sits off the clean axis entirely.',
+                    captionClass: 'state-2',
+                    dot: { cx: 150, cy: 0, r: 11, fill: '#64748B', label: 'fossil grid (no clean)', labelX: 150, labelY: -18 },
+                    cleanFaded: false,
+                    reliableFaded: false
+                },
+                {
+                    step: 3,
+                    eyebrow: 'State 3 of 3',
+                    title: 'But we\u2019re trying to solve it using just affordable and clean, assuming reliability is a guaranteed outcome.',
+                    body: 'The reliable axis fades. A new point lands on the clean-affordable face — VRE + storage, optimized against only two of three objectives. Reliability is treated as something the system delivers on its own.',
+                    captionClass: 'state-3',
+                    // Place the new point in the clean-affordable plane (right + up)
+                    dot: { cx: 110, cy: -140, r: 11, fill: '#EF4444', label: 'VRE + storage only', labelX: 110, labelY: -158 },
+                    cleanFaded: false,
+                    reliableFaded: true
+                }
+            ];
+
+            var currentStep = 0;
+
+            function applyState(idx) {
+                var s = STATES[idx];
+                if (!s) return;
+
+                // Dot
+                dot.setAttribute('cx', s.dot.cx);
+                dot.setAttribute('cy', s.dot.cy);
+                dot.setAttribute('r', s.dot.r);
+                dot.setAttribute('fill', s.dot.fill);
+                if (dotLabel) {
+                    dotLabel.setAttribute('x', s.dot.labelX);
+                    dotLabel.setAttribute('y', s.dot.labelY);
+                    dotLabel.textContent = s.dot.label;
+                }
+
+                // Axes fade
+                if (axisClean) axisClean.classList.toggle('is-faded', !!s.cleanFaded);
+                if (labelClean) labelClean.classList.toggle('is-faded', !!s.cleanFaded);
+                if (axisReliable) axisReliable.classList.toggle('is-faded', !!s.reliableFaded);
+                if (labelReliable) labelReliable.classList.toggle('is-faded', !!s.reliableFaded);
+
+                // Caption
+                caption.classList.remove('state-1', 'state-2', 'state-3');
+                caption.classList.add(s.captionClass);
+                stepLabel.textContent = s.eyebrow;
+                titleText.textContent = s.title;
+                bodyText.textContent = s.body;
+
+                // Step dots
+                stepDots.forEach(function(d, i) {
+                    d.classList.toggle('active', i === idx);
+                });
+
+                // Advance button state + closing
+                var isLast = idx === STATES.length - 1;
+                advanceBtn.disabled = isLast;
+                advanceBtn.innerHTML = isLast
+                    ? 'End'
+                    : 'Next <span aria-hidden="true">&rarr;</span>';
+                if (closing) closing.classList.toggle('visible', isLast);
+            }
+
+            function advance() {
+                if (currentStep < STATES.length - 1) {
+                    currentStep += 1;
+                    applyState(currentStep);
+                }
+            }
+
+            function reset() {
+                currentStep = 0;
+                applyState(0);
+            }
+
+            advanceBtn.addEventListener('click', advance);
+            resetBtn.addEventListener('click', reset);
+
+            // Also allow clicking anywhere on the SVG/stage to advance
+            var stageEl = stage ? stage.querySelector('.trilemma-stage') : null;
+            if (stageEl) {
+                stageEl.addEventListener('click', function(e) {
+                    // Don't double-handle the reset/advance buttons
+                    if (e.target.closest('button')) return;
+                    advance();
+                });
+            }
+
+            // Keyboard: left/right advances/resets when focus is on advance btn
+            advanceBtn.addEventListener('keydown', function(e) {
+                if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); advance(); }
+                if (e.key === 'ArrowLeft') { e.preventDefault(); if (currentStep > 0) { currentStep -= 1; applyState(currentStep); } }
+            });
+
+            // Init
+            applyState(0);
         })();
     })();
     </script>
