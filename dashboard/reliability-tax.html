@@ -1137,6 +1137,180 @@
             .tax-bar-value { font-size: 1.6rem; }
         }
 
+        /* ─────────────────────────────────────────────────────────────
+           Section 4 — Four Journeys, One Destination
+           ───────────────────────────────────────────────────────────── */
+        .journeys-wrap {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 32px 28px;
+            box-shadow: var(--shadow-md);
+            margin-top: var(--space-xl);
+        }
+        .journeys-context {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-md);
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: var(--space-md);
+            border-bottom: 1px solid var(--border-light);
+            margin-bottom: var(--space-lg);
+        }
+        .journeys-meta {
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+        }
+        .journeys-meta strong {
+            font-family: var(--font-heading);
+            color: var(--navy);
+        }
+        .journeys-note {
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-style: italic;
+            max-width: 420px;
+            line-height: 1.55;
+        }
+        .journeys-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: var(--space-md);
+        }
+        .journey-panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: 18px 16px;
+            display: flex;
+            flex-direction: column;
+        }
+        .journey-panel.pathway-1 { border-top: 3px solid var(--red); }
+        .journey-panel.pathway-2a { border-top: 3px solid #F97316; }
+        .journey-panel.pathway-2b { border-top: 3px solid #F59E0B; }
+        .journey-panel.pathway-3 { border-top: 3px solid var(--wind); }
+        .journey-pw-eyebrow {
+            font-family: var(--font-heading);
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+        .journey-pw-title {
+            font-family: var(--font-heading);
+            font-size: 1.02rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 2px;
+        }
+        .journey-pw-sub {
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: var(--space-sm);
+            min-height: 2.3em;
+        }
+        .journey-canvas-wrap {
+            position: relative;
+            height: 280px;
+            min-height: 240px;
+        }
+        .journey-headline {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            margin-top: var(--space-sm);
+            padding-top: var(--space-sm);
+            border-top: 1px dashed var(--border-light);
+        }
+        .journey-headline-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+        .journey-headline-row strong {
+            font-family: var(--font-heading);
+            color: var(--navy);
+            font-size: 0.95rem;
+        }
+        .journey-pivot-badge {
+            display: inline-block;
+            font-family: var(--font-heading);
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: var(--radius-pill);
+            background: #FEE2E2;
+            color: #991B1B;
+            margin-top: 2px;
+            width: fit-content;
+        }
+        .journey-pivot-badge.none {
+            background: var(--bg-alt);
+            color: var(--text-muted);
+        }
+        .journeys-annotations {
+            margin-top: var(--space-lg);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: var(--space-sm);
+        }
+        .journey-annotation {
+            background: var(--bg-surface);
+            border-left: 3px solid var(--navy);
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+            font-family: var(--font-body);
+            font-size: 0.84rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        .journey-annotation strong {
+            font-family: var(--font-heading);
+            color: var(--navy);
+            display: block;
+            margin-bottom: 2px;
+            font-size: 0.82rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .journeys-caption {
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: var(--space-md);
+            line-height: 1.55;
+            font-style: italic;
+            border-top: 1px dashed var(--border-light);
+            padding-top: var(--space-sm);
+        }
+        .journeys-shared-scale-note {
+            text-align: center;
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: var(--space-sm);
+        }
+
+        @media (max-width: 1200px) {
+            .journeys-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (max-width: 640px) {
+            .journeys-grid { grid-template-columns: 1fr; }
+            .journeys-wrap { padding: 22px 18px; }
+            .journey-canvas-wrap { height: 240px; }
+        }
+
     </style>
 </head>
 <body>
@@ -1681,8 +1855,86 @@
             </div>
         </div>
     </section>
+    <div class="section-header fade-in">
+        <div class="section-number">4</div>
+        <h2>Four Journeys, One Destination</h2>
+        <p>Four pathways, same 95% endpoint, 2025&ndash;2050. The resource stacks look different because the objective function that produces each stack is different &mdash; but the destination is the same.</p>
+    </div>
     <section class="content-section" id="section4">
-        <div class="section-stub"><strong>Section 4: Four Journeys</strong>Built in Prompt 5B.</div>
+        <div class="journeys-wrap fade-in">
+            <div class="journeys-context">
+                <div class="journeys-meta">
+                    <strong id="journeysIsoLabel">ERCOT</strong>
+                    &nbsp;&middot;&nbsp; 95% CFE endpoint
+                    &nbsp;&middot;&nbsp; Annual TWh buildout by resource, 2025&ndash;2050
+                </div>
+                <div class="journeys-note">
+                    Smoke-test region per Card G. Pipeline expansion to all seven ISOs is downstream work; this page renders whatever is in the payload.
+                </div>
+            </div>
+
+            <div class="journeys-shared-scale-note" id="journeysSharedScaleNote">Shared y-axis across all four panels for honest comparison.</div>
+
+            <div class="journeys-grid">
+                <div class="journey-panel pathway-1" data-pw="1">
+                    <div class="journey-pw-eyebrow">Pathway 1</div>
+                    <div class="journey-pw-title">VRE + batteries only</div>
+                    <div class="journey-pw-sub">Optimizing the wrong objective function.</div>
+                    <div class="journey-canvas-wrap"><canvas id="journeyChart_1" aria-label="Pathway 1 annual buildout 2025-2050"></canvas></div>
+                    <div class="journey-headline" id="journeyHead_1">
+                        <div class="journey-headline-row"><span>Undiscounted cumulative</span><strong id="journeyCost_1">&mdash;</strong></div>
+                        <div class="journey-headline-row"><span>Achieved CFE 2050</span><strong id="journeyCfe_1">&mdash;</strong></div>
+                        <div class="journey-headline-row"><span>Existing gas retired</span><strong id="journeyRet_1">&mdash;</strong></div>
+                        <span class="journey-pivot-badge none" id="journeyPivot_1">no pivot</span>
+                    </div>
+                </div>
+
+                <div class="journey-panel pathway-2a" data-pw="2a">
+                    <div class="journey-pw-eyebrow">Pathway 2a</div>
+                    <div class="journey-pw-title">Behavioral reactive pivot</div>
+                    <div class="journey-pw-sub">Pivots to clean firm when VRE-only hits 90% plateau.</div>
+                    <div class="journey-canvas-wrap"><canvas id="journeyChart_2a" aria-label="Pathway 2a annual buildout 2025-2050"></canvas></div>
+                    <div class="journey-headline" id="journeyHead_2a">
+                        <div class="journey-headline-row"><span>Undiscounted cumulative</span><strong id="journeyCost_2a">&mdash;</strong></div>
+                        <div class="journey-headline-row"><span>Achieved CFE 2050</span><strong id="journeyCfe_2a">&mdash;</strong></div>
+                        <div class="journey-headline-row"><span>Existing gas retired</span><strong id="journeyRet_2a">&mdash;</strong></div>
+                        <span class="journey-pivot-badge" id="journeyPivot_2a">pivot &mdash;</span>
+                    </div>
+                </div>
+
+                <div class="journey-panel pathway-2b" data-pw="2b">
+                    <div class="journey-pw-eyebrow">Pathway 2b</div>
+                    <div class="journey-pw-title">Economic reactive pivot</div>
+                    <div class="journey-pw-sub">Pivots when next-VRE $/CFE% exceeds firm-clean LCOE.</div>
+                    <div class="journey-canvas-wrap"><canvas id="journeyChart_2b" aria-label="Pathway 2b annual buildout 2025-2050"></canvas></div>
+                    <div class="journey-headline" id="journeyHead_2b">
+                        <div class="journey-headline-row"><span>Undiscounted cumulative</span><strong id="journeyCost_2b">&mdash;</strong></div>
+                        <div class="journey-headline-row"><span>Achieved CFE 2050</span><strong id="journeyCfe_2b">&mdash;</strong></div>
+                        <div class="journey-headline-row"><span>Existing gas retired</span><strong id="journeyRet_2b">&mdash;</strong></div>
+                        <span class="journey-pivot-badge" id="journeyPivot_2b">pivot &mdash;</span>
+                    </div>
+                </div>
+
+                <div class="journey-panel pathway-3" data-pw="3">
+                    <div class="journey-pw-eyebrow">Pathway 3</div>
+                    <div class="journey-pw-title">Clean firm proactive</div>
+                    <div class="journey-pw-sub">Destination-oriented from year 1.</div>
+                    <div class="journey-canvas-wrap"><canvas id="journeyChart_3" aria-label="Pathway 3 annual buildout 2025-2050"></canvas></div>
+                    <div class="journey-headline" id="journeyHead_3">
+                        <div class="journey-headline-row"><span>Undiscounted cumulative</span><strong id="journeyCost_3">&mdash;</strong></div>
+                        <div class="journey-headline-row"><span>Achieved CFE 2050</span><strong id="journeyCfe_3">&mdash;</strong></div>
+                        <div class="journey-headline-row"><span>Existing gas retired</span><strong id="journeyRet_3">&mdash;</strong></div>
+                        <span class="journey-pivot-badge none" id="journeyPivot_3">no pivot needed</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="journeys-annotations" id="journeysAnnotations"></div>
+
+            <div class="journeys-caption">
+                Each panel shows a pathway&rsquo;s annual TWh buildout by resource (stacked areas) with a dashed cumulative-cost line (right axis, $T undiscounted real 2025&#36;). The existing-fleet retirement overlay shows cumulative GW of gas and coal displaced. Pivot badges mark the year each pathway switches from VRE-only to including firm clean, per Card E (freeze-and-forward).
+            </div>
+        </div>
     </section>
     <section class="content-section" id="section5">
         <div class="section-stub"><strong>Section 5: Stranding</strong>Built in Prompt 5B.</div>
@@ -2704,6 +2956,333 @@
                 .catch(function(err) {
                     barValue.innerHTML = 'Load error<span class="unit"></span>';
                     console.error('[Section 3] Failed to load payload:', err);
+                });
+        })();
+
+        // ===== Section 4: Four Journeys, One Destination =====
+        (function initSection4Journeys() {
+            var wrap = document.getElementById('section4');
+            if (!wrap) return;
+
+            var RES_COLORS = {
+                solar:         '#F59E0B',
+                wind:          '#22C55E',
+                offshore_wind: '#009688',
+                hydro:         '#0EA5E9',
+                battery4:      '#06B6D4',
+                battery8:      '#0891B2',
+                ldes:          '#E91E63',
+                h2:            '#10B981',
+                greenh2:       '#10B981',
+                uprate:        '#6366F1',
+                ccs_ccgt:      '#64748B',
+                geothermal:    '#D97706',
+                nuclear:       '#4F46E5',
+                nuclear_newbuild: '#4F46E5'
+            };
+            var RES_LABELS = {
+                solar: 'Solar', wind: 'Onshore wind', offshore_wind: 'Offshore wind',
+                hydro: 'Hydro (existing)', battery4: 'Battery 4-hr', battery8: 'Battery 8-hr',
+                ldes: 'LDES (100-hr)', h2: 'Green H\u2082', greenh2: 'Green H\u2082',
+                uprate: 'Nuclear uprate', ccs_ccgt: 'CCS-CCGT', geothermal: 'Geothermal',
+                nuclear: 'Nuclear newbuild', nuclear_newbuild: 'Nuclear newbuild'
+            };
+            // Stacking order (bottom-up)
+            var STACK_ORDER = ['uprate','nuclear_newbuild','nuclear','ccs_ccgt','geothermal','hydro','offshore_wind','wind','solar','battery4','battery8','ldes','h2','greenh2'];
+
+            var charts = {};
+            var pathways = ['1','2a','2b','3'];
+
+            function fmtTrillion(usd) {
+                if (usd == null || isNaN(usd)) return '\u2014';
+                return '$' + (usd / 1e12).toFixed(2) + 'T';
+            }
+            function fmtPct(v) { return v == null ? '\u2014' : v.toFixed(2) + '%'; }
+            function fmtGw(v) { return v == null ? '\u2014' : v.toFixed(1) + ' GW'; }
+
+            function buildPathwayChart(pathway, payload, sharedYMax, sharedCostMax, isoLabel) {
+                var annual = payload.annual_buildout[pathway] || [];
+                var cumCost = payload.cumulative_cost[pathway] || [];
+                var retirements = payload.retirements[pathway] || [];
+
+                // Collect resources present across years
+                var presentRes = {};
+                annual.forEach(function(yr) {
+                    yr.resources.forEach(function(r) {
+                        if (r.twh_per_year > 0.01) presentRes[r.resource] = true;
+                    });
+                });
+                var resKeys = STACK_ORDER.filter(function(k) { return presentRes[k]; });
+                Object.keys(presentRes).forEach(function(k) {
+                    if (resKeys.indexOf(k) === -1) resKeys.push(k);
+                });
+
+                // Build year -> resource -> TWh map
+                var years = annual.map(function(y) { return y.year; });
+                var resDatasets = resKeys.map(function(res) {
+                    var data = annual.map(function(yr) {
+                        var row = yr.resources.find(function(r) { return r.resource === res; });
+                        return row ? row.twh_per_year : 0;
+                    });
+                    return {
+                        type: 'line',
+                        label: RES_LABELS[res] || res,
+                        data: data,
+                        backgroundColor: RES_COLORS[res] || '#9CA3AF',
+                        borderColor: RES_COLORS[res] || '#9CA3AF',
+                        borderWidth: 0.5,
+                        fill: true,
+                        pointRadius: 0,
+                        tension: 0.12,
+                        stack: 'resource',
+                        yAxisID: 'y'
+                    };
+                });
+
+                // Cumulative cost line (right axis)
+                var costByYear = {};
+                cumCost.forEach(function(r) { costByYear[r.year] = r.cumulative_usd / 1e12; });
+                var costLineData = years.map(function(y) { return costByYear[y] || null; });
+
+                // Retirement overlay (cumulative GW)
+                var retGasByYear = {};
+                var retCoalByYear = {};
+                var cumGas = 0, cumCoal = 0;
+                retirements.forEach(function(r) {
+                    cumGas += (r.gas_retired_gw || 0);
+                    cumCoal += (r.coal_retired_gw || 0);
+                    retGasByYear[r.year] = cumGas;
+                    retCoalByYear[r.year] = cumCoal;
+                });
+                var retLineGas = years.map(function(y) { return retGasByYear[y] || 0; });
+                var retLineCoal = years.map(function(y) { return retCoalByYear[y] || 0; });
+
+                var datasets = resDatasets.concat([
+                    {
+                        type: 'line',
+                        label: 'Cumulative cost ($T)',
+                        data: costLineData,
+                        backgroundColor: 'rgba(26,39,68,0.0)',
+                        borderColor: '#1A2744',
+                        borderWidth: 2,
+                        borderDash: [6, 4],
+                        fill: false,
+                        pointRadius: 0,
+                        tension: 0.18,
+                        yAxisID: 'yCost',
+                        order: -1
+                    },
+                    {
+                        type: 'line',
+                        label: 'Gas retired cum (GW)',
+                        data: retLineGas,
+                        backgroundColor: 'rgba(156,163,175,0)',
+                        borderColor: '#9CA3AF',
+                        borderWidth: 1.5,
+                        borderDash: [2, 3],
+                        fill: false,
+                        pointRadius: 0,
+                        tension: 0.12,
+                        yAxisID: 'yRet',
+                        order: -2,
+                        hidden: false
+                    },
+                    {
+                        type: 'line',
+                        label: 'Coal retired cum (GW)',
+                        data: retLineCoal,
+                        backgroundColor: 'rgba(55,65,81,0)',
+                        borderColor: '#374151',
+                        borderWidth: 1.5,
+                        borderDash: [2, 3],
+                        fill: false,
+                        pointRadius: 0,
+                        tension: 0.12,
+                        yAxisID: 'yRet',
+                        order: -2,
+                        hidden: false
+                    }
+                ]);
+
+                var canvas = document.getElementById('journeyChart_' + pathway);
+                if (!canvas) return;
+                if (charts[pathway]) charts[pathway].destroy();
+
+                charts[pathway] = new Chart(canvas.getContext('2d'), {
+                    type: 'line',
+                    data: { labels: years, datasets: datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 450 },
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) {
+                                        var v = ctx.parsed.y;
+                                        if (v == null) return null;
+                                        if (ctx.dataset.label === 'Cumulative cost ($T)') {
+                                            return 'Cumulative cost: $' + v.toFixed(2) + 'T';
+                                        }
+                                        if (ctx.dataset.yAxisID === 'yRet') {
+                                            return ctx.dataset.label + ': ' + v.toFixed(1) + ' GW';
+                                        }
+                                        if (v < 0.05) return null;
+                                        return ctx.dataset.label + ': ' + v.toFixed(1) + ' TWh/yr';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: {
+                                    maxTicksLimit: 6,
+                                    font: { family: 'DM Sans, sans-serif', size: 10 }
+                                }
+                            },
+                            y: {
+                                stacked: true,
+                                beginAtZero: true,
+                                max: sharedYMax,
+                                title: { display: true, text: 'TWh/yr (stacked)', font: { family: 'DM Sans, sans-serif', size: 10, weight: '600' } },
+                                grid: { color: 'rgba(0,0,0,0.04)' },
+                                ticks: { font: { family: 'DM Sans, sans-serif', size: 10 } }
+                            },
+                            yCost: {
+                                position: 'right',
+                                beginAtZero: true,
+                                max: sharedCostMax,
+                                grid: { display: false },
+                                title: { display: true, text: '$T cumulative', font: { family: 'DM Sans, sans-serif', size: 10, weight: '600' } },
+                                ticks: { font: { family: 'DM Sans, sans-serif', size: 10 } }
+                            },
+                            yRet: {
+                                display: false,
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+
+            function render(payload) {
+                // Compute shared y-axis max across all pathways
+                var sharedYMax = 0;
+                var sharedCostMax = 0;
+                pathways.forEach(function(pw) {
+                    var ab = payload.annual_buildout[pw] || [];
+                    ab.forEach(function(yr) {
+                        var total = yr.total_twh_per_year || 0;
+                        if (total > sharedYMax) sharedYMax = total;
+                    });
+                    var cc = payload.cumulative_cost[pw] || [];
+                    cc.forEach(function(r) {
+                        var t = r.cumulative_usd / 1e12;
+                        if (t > sharedCostMax) sharedCostMax = t;
+                    });
+                });
+                // Add padding
+                sharedYMax = Math.ceil(sharedYMax * 1.08);
+                sharedCostMax = Math.ceil(sharedCostMax * 1.08 * 100) / 100;
+
+                var headlineCosts = payload.headline_costs || {};
+                var pivotMarkers = payload.pivot_markers || {};
+
+                pathways.forEach(function(pw) {
+                    buildPathwayChart(pw, payload, sharedYMax, sharedCostMax, payload.meta && payload.meta.iso);
+                    // Headline fill
+                    var hc = headlineCosts[pw] || {};
+                    var costEl = document.getElementById('journeyCost_' + pw);
+                    var cfeEl  = document.getElementById('journeyCfe_' + pw);
+                    var retEl  = document.getElementById('journeyRet_' + pw);
+                    var pivEl  = document.getElementById('journeyPivot_' + pw);
+                    if (costEl) costEl.textContent = fmtTrillion(hc.undiscounted_usd);
+                    if (cfeEl)  cfeEl.textContent  = fmtPct(hc.achieved_cfe_pct);
+                    // Retirement at 2050 for this pathway (last entry, cumulative gas + coal)
+                    var retirements = payload.retirements[pw] || [];
+                    var cumGas = 0, cumCoal = 0;
+                    retirements.forEach(function(r) { cumGas += (r.gas_retired_gw || 0); cumCoal += (r.coal_retired_gw || 0); });
+                    if (retEl) retEl.textContent = fmtGw(cumGas) + ' gas' + (cumCoal > 0.01 ? ' + ' + fmtGw(cumCoal) + ' coal' : '');
+                    // Pivot badge
+                    var pm = pivotMarkers[pw] || {};
+                    if (pivEl) {
+                        if (pm.pivoted && pm.pivot_year) {
+                            var reasonLabel = pm.pivot_reason === '90pct_plateau' ? 'behavioral' :
+                                              (pm.pivot_reason === 'econ_trigger' ? 'economic' : pm.pivot_reason);
+                            pivEl.textContent = 'pivot ' + pm.pivot_year + ' \u00b7 ' + reasonLabel;
+                            pivEl.classList.remove('none');
+                        } else {
+                            pivEl.classList.add('none');
+                            if (pw === '1') pivEl.textContent = 'no pivot';
+                            else if (pw === '3') pivEl.textContent = 'no pivot needed';
+                        }
+                    }
+                });
+
+                // Annotations panel
+                var annEl = document.getElementById('journeysAnnotations');
+                if (annEl) {
+                    annEl.innerHTML = '';
+                    var iso = (payload.meta && payload.meta.iso) || 'ERCOT';
+                    var items = [];
+                    // Build callouts from the headline comparisons
+                    var p1 = headlineCosts['1'] || {};
+                    var p3 = headlineCosts['3'] || {};
+                    var p2a = headlineCosts['2a'] || {};
+                    var p2b = headlineCosts['2b'] || {};
+
+                    if (p1.undiscounted_usd && p3.undiscounted_usd) {
+                        var delta_p1_p3 = (p1.undiscounted_usd - p3.undiscounted_usd) / 1e12;
+                        items.push({
+                            title: 'Pathway 1 vs Pathway 3',
+                            body: iso + ' Pathway 1 cumulative cost is ' + fmtTrillion(p1.undiscounted_usd) +
+                                  ' vs Pathway 3 at ' + fmtTrillion(p3.undiscounted_usd) + '. Delta: ' +
+                                  (delta_p1_p3 >= 0 ? '+' : '\u2212') + '$' + Math.abs(delta_p1_p3).toFixed(2) + 'T undiscounted, same 95% endpoint.'
+                        });
+                    }
+                    if (pivotMarkers['2a'] && pivotMarkers['2a'].pivot_year) {
+                        items.push({
+                            title: 'Pathway 2a pivot dynamics',
+                            body: 'Behavioral pivot fires in ' + pivotMarkers['2a'].pivot_year +
+                                  ' when VRE-only hits its 90% plateau. Pre-pivot decisions are frozen (Card E); clean firm unlocks at FOAK starting point from that year forward.'
+                        });
+                    }
+                    if (pivotMarkers['2b'] && pivotMarkers['2b'].pivot_year) {
+                        items.push({
+                            title: 'Pathway 2b pivot dynamics',
+                            body: 'Economic pivot fires in ' + pivotMarkers['2b'].pivot_year +
+                                  ' when the next VRE+battery addition costs more per CFE% than the cheapest available firm-clean tech\u2019s marginal LCOE.'
+                        });
+                    }
+                    items.push({
+                        title: 'Existing-fleet retirement',
+                        body: 'All four pathways show substantial cumulative retirement of existing gas and coal by 2050 \u2014 fossil retirement is endogenous (Card L), driven by clearing economics rather than forced by the CFE constraint.'
+                    });
+
+                    items.forEach(function(it) {
+                        var d = document.createElement('div');
+                        d.className = 'journey-annotation';
+                        d.innerHTML = '<strong>' + it.title + '</strong>' + it.body;
+                        annEl.appendChild(d);
+                    });
+                }
+
+                // Update the ISO label from payload meta
+                var isoLabelEl = document.getElementById('journeysIsoLabel');
+                if (isoLabelEl && payload.meta && payload.meta.iso) {
+                    isoLabelEl.textContent = payload.meta.iso;
+                }
+            }
+
+            fetch('js/reliability-tax/section4_four_journeys.json')
+                .then(function(r) { return r.json(); })
+                .then(render)
+                .catch(function(err) {
+                    var ann = document.getElementById('journeysAnnotations');
+                    if (ann) ann.innerHTML = '<div class="journey-annotation"><strong>Load error</strong>Could not load section 4 payload: ' + err.message + '</div>';
                 });
         })();
 
