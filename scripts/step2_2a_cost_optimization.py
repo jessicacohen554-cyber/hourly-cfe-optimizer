@@ -488,28 +488,59 @@ def _apply_mask(arrays, mask, N):
     return filtered
 
 
-def apply_existing_clean_floor(arrays, iso):
-    """Filter PFS arrays to keep only mixes where each resource >= existing share.
+def compute_floor_mask(arrays, iso, existing_scale=1.0):
+    """Return boolean mask of mixes where each resource >= year-scaled existing share.
+
+    Track 1 ECF definition (SPEC.md Feb 24, 2026): existing clean TWh remain
+    constant across demand growth; share of year-t demand declines as demand grows.
+    The per-year floor is therefore `GRID_MIX_SHARES[iso][resource] × (1.0 / gf)`
+    where gf = (1 + growth_rate)^(year - 2025). Base year uses existing_scale=1.0.
+
+    Non-destructive: returns a mask so callers can disqualify sub-floor mixes from
+    argmin eval (e.g. by replacing their scores with -1) without reshuffling arrays
+    or invalidating cached indices.
 
     Args:
         arrays: dict of numpy arrays keyed by resource name + dispatch fields
         iso: region string
+        existing_scale: multiplicative scale on the existing-share floor
+            (1.0 = base year 2025, 1/gf for growth year t)
 
     Returns:
-        filtered_arrays: same structure, with sub-existing mixes removed
-        n_removed: count of mixes removed
+        mask: (N,) bool — True where the mix satisfies every resource's year-scaled floor
     """
     existing = GRID_MIX_SHARES[iso]
     N = len(arrays['clean_firm'])
 
     mask = np.ones(N, dtype=bool)
     for resource in ['clean_firm', 'solar', 'wind', 'hydro']:
-        floor_raw = existing.get(resource, 0)
+        floor_raw = existing.get(resource, 0) * existing_scale
         if floor_raw > 0:
             # PFS arrays use integer % (0-100); snap floor down to match grid
             floor = int(floor_raw)
             mask &= arrays[resource] >= floor
 
+    return mask
+
+
+def apply_existing_clean_floor(arrays, iso, existing_scale=1.0):
+    """Destructively filter PFS arrays to the year-scaled existing-share floor.
+
+    Thin wrapper around `compute_floor_mask` kept for any legacy callers that
+    expect a filtered array dict. Prefer `compute_floor_mask` in new code —
+    the non-destructive pattern lets Phase 2 apply per-year masks without
+    invalidating archetype indices.
+
+    Args:
+        arrays: dict of numpy arrays keyed by resource name + dispatch fields
+        iso: region string
+        existing_scale: multiplicative scale on the floor (1.0 = base year)
+
+    Returns:
+        filtered_arrays, n_removed
+    """
+    N = len(arrays['clean_firm'])
+    mask = compute_floor_mask(arrays, iso, existing_scale=existing_scale)
     n_removed = N - int(mask.sum())
     if n_removed == 0:
         return arrays, 0
@@ -2086,48 +2117,57 @@ def main():
     # Phase 2 demand growth, and Phase 2.5 track DG sweeps.
     iso_price_cache = {}  # iso → (price_matrix, wholesale_arr, nuclear_arr, ccs_arr)
 
-    # Cache Phase 1 filtered arrays per ISO (after clean floor + hydro cap).
-    # Phase 2 DG sweep must use the same filtered arrays as Phase 1 so archetype
-    # indices are consistent (they index into filtered arrays, not raw pfs[iso]).
-    phase1_arrays = {}  # iso → filtered arrays dict
+    # Cache Phase 1 hydro-capped arrays per ISO for Phase 2 DG re-selection.
+    # The existing-clean floor is NOT pre-filtered (Apr 16, 2026 fix) — it's
+    # applied as a non-destructive score mask per evaluation year so Phase 2
+    # can relax it proportionally to demand growth (Track 1 ECF: existing TWh
+    # constant, share declines as demand grows). See SPEC.md Apr 16 decision.
+    phase1_arrays = {}  # iso → hydro-capped arrays dict (no floor filter)
+    # Cache per-ISO base-year floor masks so Phase 2 can reuse them if needed.
+    phase1_base_masks = {}  # iso → (N,) bool mask at existing_scale=1.0
 
     for iso in run_isos:
         if iso not in pfs:
             continue
 
-        # Apply existing clean floor filter: mandate existing clean in every mix
         raw_arrays = pfs[iso]
-        arrays, n_filtered = apply_existing_clean_floor(raw_arrays, iso)
         N_raw = len(raw_arrays['clean_firm'])
-        N = len(arrays['clean_firm'])
-        if n_filtered > 0:
-            print(f"    {iso}: existing clean floor filter removed {n_filtered:,} / {N_raw:,} mixes "
-                  f"({n_filtered/N_raw*100:.1f}%) — {N:,} remaining")
 
         # Apply hydro cap: exclude mixes with hydro above existing ceiling.
         # PFS explores hydro +10% adder for physics experimentation; those mixes
         # stay in the EF for Track 2 but must not enter Track 1 baseline costing.
-        arrays, n_hydro_removed = apply_hydro_cap(arrays, iso)
+        # Hydro cap is a physical (not year-scaled) constraint — existing hydro
+        # can't grow — so it stays a destructive prefilter.
+        arrays, n_hydro_removed = apply_hydro_cap(raw_arrays, iso)
+        N = len(arrays['clean_firm'])
         if n_hydro_removed > 0:
-            print(f"    {iso}: hydro cap filter removed {n_hydro_removed:,} / {N:,} mixes "
-                  f"(hydro > {GRID_MIX_SHARES[iso].get('hydro', 0)}%) — "
-                  f"{len(arrays['clean_firm']):,} remaining")
-            N = len(arrays['clean_firm'])
+            print(f"    {iso}: hydro cap filter removed {n_hydro_removed:,} / {N_raw:,} mixes "
+                  f"(hydro > {GRID_MIX_SHARES[iso].get('hydro', 0)}%) — {N:,} remaining")
 
-        if n_filtered > 0 or n_hydro_removed > 0:
-            # Recompute threshold indices for filtered arrays (old indices pointed into raw)
-            # Sort+searchsorted: O(N log N + T log N) instead of O(N×T)
-            scores_filt = arrays['hourly_match_score']
-            filt_thr_idx = precompute_threshold_indices(scores_filt, OUTPUT_THRESHOLDS)
-            # Replace old indices, remove thresholds that no longer have qualifying mixes
-            for thr in OUTPUT_THRESHOLDS:
-                if thr in filt_thr_idx:
-                    thr_indices[(iso, thr)] = filt_thr_idx[thr]
-                elif (iso, thr) in thr_indices:
-                    del thr_indices[(iso, thr)]
+        # Compute non-destructive base-year floor mask (existing_scale=1.0).
+        # Sub-floor mixes will be disqualified from Phase 1 argmin by setting
+        # their scores to -1 before batch_eval_and_argmin_all. The underlying
+        # arrays are unchanged so Phase 2 can re-apply a year-scaled mask.
+        base_floor_mask = compute_floor_mask(arrays, iso, existing_scale=1.0)
+        n_below_floor = N - int(base_floor_mask.sum())
+        if n_below_floor > 0:
+            print(f"    {iso}: base-year floor mask disqualifies {n_below_floor:,} / {N:,} mixes "
+                  f"(existing_scale=1.0) — {N - n_below_floor:,} Phase 1 eligible")
 
-        # Cache filtered arrays for Phase 2 DG sweep (archetype indices are into these)
+        # Recompute thr_indices against Phase 1 (Track 1 / ECF baseline) eligibility:
+        # hydro-capped arrays + base-year floor mask. These indices feed feasible_mixes
+        # sampling for the Track 1 baseline only; NB/CTR tracks use their own raw pools.
+        scores_phase1 = np.where(base_floor_mask, arrays['hourly_match_score'], -1.0).astype(np.float64)
+        filt_thr_idx = precompute_threshold_indices(scores_phase1, OUTPUT_THRESHOLDS)
+        for thr in OUTPUT_THRESHOLDS:
+            if thr in filt_thr_idx:
+                thr_indices[(iso, thr)] = filt_thr_idx[thr]
+            elif (iso, thr) in thr_indices:
+                del thr_indices[(iso, thr)]
+
+        # Cache hydro-capped arrays + base-year mask for Phase 2 reuse
         phase1_arrays[iso] = arrays
+        phase1_base_masks[iso] = base_floor_mask
         demand_twh = REGIONAL_DEMAND_TWH[iso]
 
         output['results'][iso] = {
@@ -2141,11 +2181,17 @@ def main():
         # Already float64 from _table_to_arrays
         scores = arrays['hourly_match_score']
 
+        # Non-destructive floor enforcement: sub-floor mixes get score = -1
+        # so batch_eval_and_argmin_all disqualifies them from every threshold
+        # bucket (all thresholds ≥ 10). Underlying array data is preserved for
+        # Phase 2's per-year mask re-application.
+        scores_masked = np.where(base_floor_mask, scores, -1.0).astype(np.float64)
+
         all_combos = get_sensitivity_combos(iso)
         n_combos = len(all_combos)
 
         active_thresholds, thresholds_desc, thr_pos = prepare_threshold_metadata(
-            scores, OUTPUT_THRESHOLDS)
+            scores_masked, OUTPUT_THRESHOLDS)
 
         thr_data = {}
         thr_arch_sets = {}
@@ -2163,9 +2209,10 @@ def main():
         iso_price_cache[iso] = (price_matrix, wholesale_arr, nuclear_arr, ccs_arr)
         eval_start = time.time()
         all_best_idxs, all_best_vals = batch_eval_and_argmin_all(
-            coeff_matrix, constant, price_matrix, scores, thresholds_desc)
+            coeff_matrix, constant, price_matrix, scores_masked, thresholds_desc)
         eval_elapsed = time.time() - eval_start
-        print(f"    {iso}: batched eval {n_combos} combos × {N:,} mixes — {eval_elapsed:.1f}s")
+        print(f"    {iso}: batched eval {n_combos} combos × {N:,} mixes "
+              f"({n_below_floor:,} sub-floor masked) — {eval_elapsed:.1f}s")
 
         # Two-pass winner extraction:
         # Pass 1: Collect unique winning indices + archetype sets (fast, no array access)
@@ -2493,31 +2540,33 @@ def main():
     }
 
     for iso in run_isos:
-        if iso not in phase1_arrays or iso not in archetypes:
+        if iso not in phase1_arrays:
             continue
 
         dg_output['results'][iso] = {}
-        # Use Phase 1 filtered arrays (after clean floor + hydro cap) so archetype
-        # indices are consistent — they were computed against filtered arrays.
+        # Phase 2 DG re-selects winners per year from the FULL hydro-capped pool
+        # (not Phase 1 archetypes), applying a year-scaled floor mask each year.
+        # This is required so low-clean mixes that are sub-floor at 2025 but valid
+        # at 2050's shrunken existing-share floor can still win in growth years.
+        # (Apr 16, 2026 fix — see SPEC.md Phantom Clean Audit section.)
         arrays = phase1_arrays[iso]
+        N = len(arrays['clean_firm'])
         demand_twh = REGIONAL_DEMAND_TWH[iso]
         iso_rates = DEMAND_GROWTH_RATES[iso]
         all_combos = get_sensitivity_combos(iso)
+        n_combos = len(all_combos)
 
-        arch_indices = sorted(archetypes[iso])
-        n_arch = len(arch_indices)
-        if n_arch == 0:
+        # Full-pool scores; year-specific masking done inside the DG loop.
+        pool_scores = arrays['hourly_match_score']
+        pool_match_frac = pool_scores / 100.0
+
+        # Which thresholds are admissible at all (at least one mix reaches them)?
+        admissible_thr = precompute_threshold_indices(pool_scores, OUTPUT_THRESHOLDS)
+        if not admissible_thr:
             continue
 
-        # Extract archetype sub-arrays (evaluate only these in Phase 2)
-        arch_arrays = {k: arrays[k][arch_indices] for k in arrays}
-
-        # Pre-compute which archetypes qualify for each threshold (sort+searchsorted)
-        arch_scores = arch_arrays['hourly_match_score']
-        arch_thr_mask = precompute_threshold_indices(arch_scores, OUTPUT_THRESHOLDS)
-
         # Initialize per-threshold result dicts
-        thr_dg = {thr: {} for thr in arch_thr_mask}
+        thr_dg = {thr: {} for thr in admissible_thr}
 
         # Phase 1 wholesale prices (scenario-invariant, no learning curve)
         _, dg_ws_arr, _, _ = iso_price_cache[iso]
@@ -2529,18 +2578,13 @@ def main():
         for year in DG_UNIQUE_YEARS:
             dg_price_cache[year] = precompute_all_prices(iso, all_combos, target_year=year)
 
-        # Archetype scores for batched eval + effective cost
-        # Already float64 from _table_to_arrays — no .astype() needed
-        arch_scores_f64 = arch_scores
-        arch_match_frac = arch_scores_f64 / 100.0
-
         # Thresholds for batched eval (sorted descending)
         active_thr_dg, thresholds_desc_dg, thr_pos_dg = prepare_threshold_metadata(
-            arch_scores_f64, OUTPUT_THRESHOLDS)
+            pool_scores, OUTPUT_THRESHOLDS)
 
         # Pre-initialize result structure: thr → scenario_key → {year_str → {growth_level → vals}}
         for scenario_key, _ in all_combos:
-            for thr in arch_thr_mask:
+            for thr in admissible_thr:
                 thr_dg[thr][scenario_key] = {}
 
         # Batched demand growth: iterate unique DG years × 3 growth levels
@@ -2553,7 +2597,7 @@ def main():
             years_out = year - 2025
             # Which thresholds map to this year?
             matched_thresholds = [t for t in _DG_YEAR_TO_THRESHOLDS[year]
-                                  if t in arch_thr_mask]
+                                  if t in admissible_thr]
             if not matched_thresholds:
                 continue
 
@@ -2567,51 +2611,61 @@ def main():
                 existing_scale = 1.0 / gf
                 demand_grown_mwh = demand_grown * 1e6
 
-                # Scale existing shares for this growth factor
+                # Year-scaled existing shares: absolute existing MWh held constant,
+                # share shrinks proportionally as demand grows.
                 scaled_existing = {k: min(v * existing_scale, 100.0)
                                    for k, v in existing_base.items()}
 
-                # Pre-compute coefficients for this growth year (keep extras for tranche data)
-                cm_g, const_g, dg_extras = precompute_base_year_coefficients(
-                    iso, arch_arrays, demand_grown, existing_override=scaled_existing)
+                # Year-scaled floor mask: mix valid if every resource >= year-scaled
+                # existing share. Applied non-destructively via score masking.
+                year_floor_mask = compute_floor_mask(
+                    arrays, iso, existing_scale=existing_scale)
+                year_scores_masked = np.where(
+                    year_floor_mask, pool_scores, -1.0).astype(np.float64)
 
-                # Batch eval all combos at once using year-adjusted prices
+                # Pre-compute coefficients for this growth year over the FULL pool.
+                # scaled_existing controls the existing/new-build split inside pricing
+                # so credited existing MWh stays at 2025 absolute fleet levels.
+                cm_g, const_g, dg_extras = precompute_base_year_coefficients(
+                    iso, arrays, demand_grown, existing_override=scaled_existing)
+
+                # Batch eval all combos at once using year-adjusted prices + year mask
                 dg_best_idxs, dg_best_vals = batch_eval_and_argmin_all(
-                    cm_g, const_g, dg_price_matrix_yr, arch_scores_f64, thresholds_desc_dg)
+                    cm_g, const_g, dg_price_matrix_yr,
+                    year_scores_masked, thresholds_desc_dg)
 
                 # Extract winners — ONLY for thresholds that map to this year
                 yr_str = str(year)
-                for combo_i in range(len(all_combos)):
+                for combo_i in range(n_combos):
                     ws = float(dg_ws_arr[combo_i])
                     scenario_key = all_combos[combo_i][0]
                     for thr in matched_thresholds:
                         k = thr_pos_dg[float(thr)]
                         if dg_best_vals[combo_i, k] == np.inf:
                             continue
-                        best_local = int(dg_best_idxs[combo_i, k])
-                        full_idx = arch_indices[best_local]
+                        best_idx = int(dg_best_idxs[combo_i, k])
                         tc = float(dg_best_vals[combo_i, k])
-                        mf = float(arch_match_frac[best_local])
+                        mf = float(pool_match_frac[best_idx])
                         ec = tc / mf if mf > 0 else 0.0
 
                         # Extract tranche data for this winner from extras
                         tranche = {
-                            'cf_existing_twh': float(dg_extras['cf_existing_twh'][best_local]),
-                            'uprate_twh': float(dg_extras['uprate_twh'][best_local]),
-                            'geo_twh': float(dg_extras['geo_twh'][best_local]),
-                            'remaining_twh': float(dg_extras['remaining_twh'][best_local]),
-                            'ccs_eligible_twh': float(dg_extras['ccs_eligible_twh'][best_local]),
-                            'nuc_overflow_twh': float(dg_extras['nuc_overflow_twh'][best_local]),
-                            'new_cf_twh': float(dg_extras['new_cf_twh'][best_local]),
-                            'gas_needed_mw': float(dg_extras['gas_needed_mw'][best_local]),
-                            'existing_gas_mw': float(dg_extras['existing_gas_used_mw'][best_local]),
-                            'new_gas_mw': float(dg_extras['new_gas_mw'][best_local]),
+                            'cf_existing_twh': float(dg_extras['cf_existing_twh'][best_idx]),
+                            'uprate_twh': float(dg_extras['uprate_twh'][best_idx]),
+                            'geo_twh': float(dg_extras['geo_twh'][best_idx]),
+                            'remaining_twh': float(dg_extras['remaining_twh'][best_idx]),
+                            'ccs_eligible_twh': float(dg_extras['ccs_eligible_twh'][best_idx]),
+                            'nuc_overflow_twh': float(dg_extras['nuc_overflow_twh'][best_idx]),
+                            'new_cf_twh': float(dg_extras['new_cf_twh'][best_idx]),
+                            'gas_needed_mw': float(dg_extras['gas_needed_mw'][best_idx]),
+                            'existing_gas_mw': float(dg_extras['existing_gas_used_mw'][best_idx]),
+                            'new_gas_mw': float(dg_extras['new_gas_mw'][best_idx]),
                         }
 
                         if yr_str not in thr_dg[thr][scenario_key]:
                             thr_dg[thr][scenario_key][yr_str] = {}
                         thr_dg[thr][scenario_key][yr_str][g_level] = [
-                            full_idx, round(tc, 2), round(ec, 2), round(ec - ws, 2),
+                            best_idx, round(tc, 2), round(ec, 2), round(ec - ws, 2),
                             round(gf, 6), round(demand_grown_mwh, 0), tranche]
 
                 n_growth_evals += 1
@@ -2622,13 +2676,13 @@ def main():
                     print(f"    {iso}: {n_growth_evals}/{n_dg_evals} growth evals "
                           f"({elapsed:.0f}s, ~{remaining/rate:.0f}s left)")
 
-        for thr in arch_thr_mask:
+        for thr in admissible_thr:
             dg_output['results'][iso][str(thr)] = thr_dg[thr]
 
         dg_iso_elapsed = time.time() - dg_iso_start
-        print(f"  {iso:>6}: {n_arch} archetypes, "
-              f"{len(arch_thr_mask)} thresholds, "
-              f"{len(all_combos)} scenarios × {n_dg_evals} growth evals — {dg_iso_elapsed:.0f}s")
+        print(f"  {iso:>6}: full-pool {N:,} mixes (per-year mask), "
+              f"{len(admissible_thr)} thresholds, "
+              f"{n_combos} scenarios × {n_dg_evals} growth evals — {dg_iso_elapsed:.0f}s")
 
     phase2_elapsed = time.time() - phase2_start
     print(f"\nPhase 2 complete: {phase2_elapsed:.0f}s")

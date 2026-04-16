@@ -1,9 +1,57 @@
 # Advanced Sensitivity Model — Complete Specification
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Last updated: 2026-03-15.
+> Last updated: 2026-04-16.
 
-## Current Status (Mar 15, 2026)
+## Current Status (Apr 16, 2026)
+
+### Phantom Clean Audit + Year-Scaled Floor Fix (Added — Apr 16, 2026)
+
+**Branch:** `claude/fix-phantom-clean-generation-rPNpL`
+
+**Audit question**: Did the EF filter or cost optimization phantom-credit existing clean generation that doesn't actually exist in demand-growth years?
+
+**Audit findings (Step 2.1 + Step 2.2)**:
+1. **Step 2.1 (`step2_1_efficient_frontier.py:500-558`)** — `resource_cap_filter` applies only solar cap (≤100%), total cap (≤350%), hydro cap (≤ existing), and hybrid family caps. **No clean-firm/solar/wind floor.** Clean.
+2. **Step 2.2a pricing (`step2_2a_cost_optimization.py:247, 255, 285, 294, 642`)** — existing resources correctly scaled by `existing_scale = 1.0 / gf` in growth years, so credited existing MWh stays pinned to 2025 fleet absolute TWh. **No phantom MWh credit.**
+3. **Step 2.2b (`step2_2b_track_nb_ctr.py:828-845`)** — same `existing_scale` pattern in the DG loop. Clean.
+
+**Real issue identified**: The `apply_existing_clean_floor` filter (`step2_2a_cost_optimization.py:491-516`, called line 2100) uses **2025 base-year share as % of year-t demand** for every year. In PJM 2050 at 2.5% growth, this requires `clean_firm ≥ 32.1%` of ~1,725 TWh = 554 TWh, even though existing nuclear is only 270 TWh. The filter thus forces 284 TWh of new clean firm — artificially expensive overbuild — to hold a proportional 2025 share that the fixed fleet can't actually support.
+
+**Regression from prior decision**: SPEC.md line 2003 (Feb 24, 2026) explicitly defined Track 1 ECF as *"Existing clean TWh remain constant across all demand growth scenarios (absolute TWh steady; share of total generation declines over time as demand grows)"*. SPEC.md line 1970–1972 (Feb 20, 2026) also documented a decision to **remove the Phase 0 floor filter** ("kept as dead code for reference") to support below-floor mix recovery.
+
+**Regression timeline**:
+- **Feb 20, 2026**: Phase 0 floor filter marked for removal; below-floor mixes recovered via temp script and merged into `pfs_post_ef.parquet`.
+- **Feb 24, 2026**: Track 1 ECF formally defined with *declining share under demand growth*.
+- **Apr 7, 2026 (commit `ab8de61`, PR #3059)**: `step2_2a_cost_optimization.py` created from scratch as part of a ~50,000-line pipeline consolidation merge. The new file reintroduced `apply_existing_clean_floor` using fixed base-year shares, contradicting both Feb 20 (no filter) and Feb 24 (declining share) decisions.
+- **Apr 7 → Apr 16**: No commits touched `step2_2a_cost_optimization.py`. Every Track 1 baseline and DG-sweep parquet produced in this window carries the regression.
+- **Root cause**: cross-session context loss — the Apr 7 author did not re-read SPEC.md's Feb 20/24 floor-filter decisions before rewriting the cost optimizer.
+
+**Decision (Apr 16, 2026)**:
+- **Step 2.1 EF**: **NO floor filter** (already true in code). EF must remain unfiltered so Track 2 (New Build greenfield) and Track 3 (Cost-to-Replace) can analyze replacement scenarios without being constrained by existing-clean floors.
+- **Step 2.2a Track 1 (ECF baseline)**: Floor filter uses **year-scaled existing share**, proportional to demand growth. Each evaluation year's floor = `GRID_MIX_SHARES[iso][resource] × (1.0 / gf)` where `gf = (1 + growth_rate)^(year - 2025)` — i.e., `existing_TWh / year_t_demand × 100%`.
+  - Base year (2025, gf=1.0): floor = 32.1% clean_firm (PJM). Unchanged — equals existing-fleet share.
+  - 2040 at 2.5% growth (gf=1.491): floor = 21.5%.
+  - 2050 at 2.5% growth (gf=1.854): floor = 17.3%.
+  - Applies to `clean_firm`, `solar`, `wind`, `hydro`.
+- **Tracks 2/3** (already pull from unfiltered `pfs[iso]` at line 2313+): no change, continue to see the full EF.
+
+**Implementation**:
+- Modify `apply_existing_clean_floor(arrays, iso, existing_scale=1.0)` to accept year-scaling param.
+- Phase 1 base-year call uses `existing_scale=1.0` (unchanged behavior for 2025).
+- Phase 2 DG sweep: re-filter archetypes per-year using scaled floor (or re-select archetypes per-year from a permissively-prefiltered pool so low-clean mixes valid in later years aren't excluded by Phase 1's strict base-year filter).
+- `step2_2b_track_nb_ctr.py`: pricing already uses `existing_scale = 1/gf` correctly. No filter change needed unless a pre-filter is also present (to verify).
+
+**Rerun scope**:
+- ✅ **No Step 1 rerun** (PFS unchanged).
+- ✅ **No Step 2.1 rerun** (EF unchanged; filter lives in 2.2a).
+- 🔄 **Step 2.2a** — regenerate `data/step2.2-cost/step_2_2a_CO_*.parquet` (~30 min).
+- 🔄 **Step 2.2b** — regenerate track parquets (~10 min).
+- 🔄 **Steps 3–7** — cascade regeneration (dispatch cache, analysis, scenarios, SMARTargets, dashboard; ~2 hr total).
+
+**Files modified**: `scripts/step2_2a_cost_optimization.py`, `scripts/step2_2b_track_nb_ctr.py` (if applicable).
+
+---
 
 ### RPS Floor Fix: Renewable-Only Compliance for Non-CES ISOs (Added — Mar 15, 2026)
 
