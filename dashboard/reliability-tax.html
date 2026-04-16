@@ -802,6 +802,341 @@
             .overbuild-btn { font-size: 0.76rem; padding: 6px 10px; }
         }
 
+        /* ─────────────────────────────────────────────────────────────
+           Section 3 — The Reliability Tax
+           ───────────────────────────────────────────────────────────── */
+        .tax-wrap {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 32px 28px;
+            box-shadow: var(--shadow-md);
+            margin-top: var(--space-xl);
+        }
+        .tax-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-md);
+            margin-bottom: var(--space-lg);
+            padding-bottom: var(--space-md);
+            border-bottom: 1px solid var(--border-light);
+        }
+        .tax-control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 200px;
+        }
+        .tax-control-label {
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+        .tax-btn-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .tax-btn {
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 7px 12px;
+            border-radius: var(--radius-pill);
+            border: 1.5px solid var(--border-light);
+            background: #FFFFFF;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-height: 36px;
+        }
+        .tax-btn:hover { border-color: var(--navy); color: var(--navy); }
+        .tax-btn.active {
+            background: var(--navy);
+            border-color: var(--navy);
+            color: #FFFFFF;
+        }
+        .tax-iso-btn.active[data-iso="CAISO"] { background: var(--iso-caiso); border-color: var(--iso-caiso); color: #1A2744; }
+        .tax-iso-btn.active[data-iso="ERCOT"] { background: var(--iso-ercot); border-color: var(--iso-ercot); color: #FFFFFF; }
+        .tax-iso-btn.active[data-iso="MISO"]  { background: var(--iso-miso);  border-color: var(--iso-miso);  color: #FFFFFF; }
+        .tax-iso-btn.active[data-iso="NEISO"] { background: var(--iso-neiso); border-color: var(--iso-neiso); color: #FFFFFF; }
+        .tax-iso-btn.active[data-iso="NYISO"] { background: var(--iso-nyiso); border-color: var(--iso-nyiso); color: #FFFFFF; }
+        .tax-iso-btn.active[data-iso="PJM"]   { background: var(--iso-pjm);   border-color: var(--iso-pjm);   color: #FFFFFF; }
+        .tax-iso-btn.active[data-iso="SPP"]   { background: var(--iso-spp);   border-color: var(--iso-spp);   color: #FFFFFF; }
+
+        /* Scrubber */
+        .tax-scrub-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex: 1 1 320px;
+            min-width: 260px;
+        }
+        .tax-scrub-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 6px;
+            background: linear-gradient(90deg, #22C55E 0%, #F59E0B 60%, #EF4444 100%);
+            outline: none;
+            cursor: pointer;
+        }
+        .tax-scrub-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--navy);
+            border: 3px solid #FFFFFF;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+            cursor: pointer;
+        }
+        .tax-scrub-slider::-moz-range-thumb {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--navy);
+            border: 3px solid #FFFFFF;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.22);
+            cursor: pointer;
+        }
+        .tax-scrub-ticks {
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            padding: 0 2px;
+        }
+        .tax-scrub-current {
+            font-family: var(--font-heading);
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--navy);
+        }
+        .tax-scrub-current .tax-pct {
+            color: var(--red-text);
+            font-size: 1.05rem;
+        }
+
+        /* Stage: gauge + cost bar side by side */
+        .tax-stage {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-xl);
+            align-items: stretch;
+            margin-top: var(--space-lg);
+        }
+        .tax-panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 24px 22px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .tax-panel-title {
+            font-family: var(--font-heading);
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: var(--space-sm);
+        }
+        .tax-panel-sub {
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            margin-bottom: var(--space-md);
+            line-height: 1.5;
+            max-width: 320px;
+        }
+
+        /* Gauge */
+        .tax-gauge-svg {
+            width: 280px;
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        .tax-gauge-needle {
+            transform-origin: 140px 155px;
+            transition: transform 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .tax-gauge-value {
+            font-family: var(--font-heading);
+            font-size: 2.4rem;
+            font-weight: 800;
+            color: var(--navy);
+            line-height: 1.1;
+            margin-top: 4px;
+        }
+        .tax-gauge-value .unit {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-left: 4px;
+        }
+        .tax-gauge-caption {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+            max-width: 320px;
+            margin-top: var(--space-xs);
+        }
+
+        /* Cost bar (fillable vertical or horizontal bar visualization) */
+        .tax-bar-wrap {
+            width: 100%;
+            max-width: 360px;
+            margin: 0 auto;
+        }
+        .tax-bar-outer {
+            position: relative;
+            width: 100%;
+            height: 44px;
+            background: var(--bg-alt);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            border: 1px solid var(--border-light);
+            margin-bottom: 10px;
+        }
+        .tax-bar-fill {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, #F59E0B, #EF4444);
+            transition: width 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: var(--radius-md) 0 0 var(--radius-md);
+        }
+        .tax-bar-fill.negative {
+            background: linear-gradient(90deg, #22C55E, #0EA5E9);
+        }
+        .tax-bar-zero {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: rgba(0,0,0,0.25);
+        }
+        .tax-bar-ticks {
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            padding: 0 2px;
+        }
+        .tax-bar-value {
+            font-family: var(--font-heading);
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--navy);
+            line-height: 1.1;
+            margin-top: 4px;
+        }
+        .tax-bar-value.negative { color: var(--wind); }
+        .tax-bar-value .unit {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-left: 4px;
+        }
+        .tax-bar-breakdown {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: var(--space-md);
+            width: 100%;
+            max-width: 320px;
+            font-family: var(--font-body);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .tax-bar-break-row {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px dashed var(--border-light);
+            padding: 4px 0;
+        }
+        .tax-bar-break-row.total {
+            font-family: var(--font-heading);
+            font-weight: 700;
+            color: var(--navy);
+            border-bottom: none;
+        }
+
+        /* Pathway comparison callouts */
+        .tax-pathway-comparison {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: var(--space-sm);
+            margin-top: var(--space-lg);
+        }
+        .tax-pathway-card {
+            background: var(--bg-surface);
+            border-left: 3px solid var(--navy);
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+        }
+        .tax-pathway-card.red { border-left-color: var(--red); }
+        .tax-pathway-card.green { border-left-color: var(--wind); }
+        .tax-pathway-card-label {
+            font-family: var(--font-body);
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        .tax-pathway-card-value {
+            font-family: var(--font-heading);
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1.1;
+        }
+        .tax-pathway-card.red .tax-pathway-card-value { color: var(--red-text); }
+        .tax-pathway-card.green .tax-pathway-card-value { color: var(--wind); }
+        .tax-pathway-card-sub {
+            font-family: var(--font-body);
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .tax-caption {
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: var(--space-md);
+            line-height: 1.55;
+            font-style: italic;
+            border-top: 1px dashed var(--border-light);
+            padding-top: var(--space-sm);
+        }
+        @media (max-width: 900px) {
+            .tax-stage { grid-template-columns: 1fr; gap: var(--space-lg); }
+        }
+        @media (max-width: 768px) {
+            .tax-wrap { padding: 22px 18px; }
+            .tax-gauge-svg { width: 220px; }
+            .tax-gauge-value { font-size: 2rem; }
+            .tax-bar-value { font-size: 1.6rem; }
+        }
+
     </style>
 </head>
 <body>
@@ -1223,8 +1558,128 @@
             </div>
         </div>
     </section>
+    <div class="section-header fade-in">
+        <div class="section-number">3</div>
+        <h2>The Reliability Tax</h2>
+        <p>When you climb the CFE ladder without firm clean, the gas fleet runs less and less each year &mdash; and you pay its full fixed costs anyway. Scrub the threshold: the needle drops, the bill holds.</p>
+    </div>
     <section class="content-section" id="section3">
-        <div class="section-stub"><strong>Section 3: The Tax</strong>Built in Prompt 5B.</div>
+        <div class="tax-wrap fade-in">
+            <!-- Controls: ISO + CFE scrubber -->
+            <div class="tax-controls">
+                <div class="tax-control-group" style="flex: 0 0 auto;">
+                    <div class="tax-control-label">ISO</div>
+                    <div class="tax-btn-row" id="taxIsoRow" role="tablist" aria-label="Select ISO for reliability tax view">
+                        <button type="button" class="tax-btn tax-iso-btn active" data-iso="CAISO" role="tab" aria-selected="true">CAISO</button>
+                        <button type="button" class="tax-btn tax-iso-btn" data-iso="ERCOT" role="tab">ERCOT</button>
+                        <button type="button" class="tax-btn tax-iso-btn" data-iso="MISO"  role="tab">MISO</button>
+                        <button type="button" class="tax-btn tax-iso-btn" data-iso="NEISO" role="tab">NEISO</button>
+                        <button type="button" class="tax-btn tax-iso-btn" data-iso="NYISO" role="tab">NYISO</button>
+                        <button type="button" class="tax-btn tax-iso-btn" data-iso="PJM"   role="tab">PJM</button>
+                        <button type="button" class="tax-btn tax-iso-btn" data-iso="SPP"   role="tab">SPP</button>
+                    </div>
+                </div>
+                <div class="tax-scrub-wrap">
+                    <div class="tax-control-label">CFE threshold scrubber <span id="taxScrubCurrent" class="tax-scrub-current">&mdash; <span class="tax-pct">95%</span></span></div>
+                    <input type="range" id="taxScrub" class="tax-scrub-slider"
+                           min="0" max="4" step="1" value="1"
+                           aria-label="CFE endpoint scrubber">
+                    <div class="tax-scrub-ticks">
+                        <span>90%</span>
+                        <span>95%</span>
+                        <span>97.5%</span>
+                        <span>99%</span>
+                        <span>99.9%</span>
+                    </div>
+                </div>
+                <div class="tax-control-group" style="flex: 0 0 auto;">
+                    <div class="tax-control-label">Pathway lens</div>
+                    <div class="tax-btn-row" id="taxPathwayRow" role="tablist" aria-label="Select pathway">
+                        <button type="button" class="tax-btn tax-pw-btn active" data-pw="1a" role="tab">1a</button>
+                        <button type="button" class="tax-btn tax-pw-btn" data-pw="1b" role="tab">1b</button>
+                        <button type="button" class="tax-btn tax-pw-btn" data-pw="2a" role="tab">2a</button>
+                        <button type="button" class="tax-btn tax-pw-btn" data-pw="2b" role="tab">2b</button>
+                        <button type="button" class="tax-btn tax-pw-btn" data-pw="3"  role="tab">3</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tax-stage">
+                <!-- LEFT PANEL: Gas-fleet CF gauge -->
+                <div class="tax-panel">
+                    <div class="tax-panel-title">Gas fleet capacity factor</div>
+                    <div class="tax-panel-sub">
+                        Fleet-level utilization: share of the existing gas fleet&rsquo;s annual energy potential actually dispatched. As the CFE threshold rises, the gas fleet runs less.
+                    </div>
+                    <svg class="tax-gauge-svg" viewBox="0 0 280 190" xmlns="http://www.w3.org/2000/svg"
+                         role="img" aria-label="Gauge showing gas-fleet capacity factor">
+                        <defs>
+                            <linearGradient id="taxGaugeGrad" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%"  stop-color="#0EA5E9"/>
+                                <stop offset="40%" stop-color="#22C55E"/>
+                                <stop offset="70%" stop-color="#F59E0B"/>
+                                <stop offset="100%" stop-color="#EF4444"/>
+                            </linearGradient>
+                        </defs>
+                        <!-- Background arc -->
+                        <path d="M 30 155 A 110 110 0 0 1 250 155"
+                              fill="none" stroke="#E5E7EB" stroke-width="20" stroke-linecap="round"/>
+                        <!-- Colored arc -->
+                        <path d="M 30 155 A 110 110 0 0 1 250 155"
+                              fill="none" stroke="url(#taxGaugeGrad)" stroke-width="20" stroke-linecap="round" opacity="0.88"/>
+                        <!-- Tick labels (0 / 25 / 50 / 75 / 100%) -->
+                        <text x="30"  y="178" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="11" fill="#566370" font-weight="600">0%</text>
+                        <text x="84"  y="55"  text-anchor="middle" font-family="DM Sans, sans-serif" font-size="10" fill="#566370">25%</text>
+                        <text x="140" y="38"  text-anchor="middle" font-family="DM Sans, sans-serif" font-size="10" fill="#566370">50%</text>
+                        <text x="196" y="55"  text-anchor="middle" font-family="DM Sans, sans-serif" font-size="10" fill="#566370">75%</text>
+                        <text x="250" y="178" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="11" fill="#566370" font-weight="600">100%</text>
+                        <!-- Needle -->
+                        <g id="taxGaugeNeedle" class="tax-gauge-needle" style="transform: rotate(-90deg);">
+                            <line x1="140" y1="155" x2="140" y2="60"
+                                  stroke="#1A2744" stroke-width="3.5" stroke-linecap="round"/>
+                            <circle cx="140" cy="155" r="7" fill="#1A2744"/>
+                            <circle cx="140" cy="155" r="3" fill="#FFFFFF"/>
+                        </g>
+                    </svg>
+                    <div class="tax-gauge-value" id="taxGaugeValue">&mdash;<span class="unit">fleet CF</span></div>
+                    <div class="tax-gauge-caption" id="taxGaugeCaption">
+                        Fleet CF collapses as the CFE target rises &mdash; fewer hours left for gas to serve.
+                    </div>
+                </div>
+
+                <!-- RIGHT PANEL: Reliability Tax cost bar -->
+                <div class="tax-panel">
+                    <div class="tax-panel-title">Reliability tax &mdash; $/MWh delivered</div>
+                    <div class="tax-panel-sub">
+                        Net fixed operating costs of the existing gas fleet, after capacity-market revenues per Card M, spread over total 2050 demand. The green zone means capacity payments exceed FOM (net credit to customers); red means FOM exceeds capacity revenue.
+                    </div>
+                    <div class="tax-bar-wrap">
+                        <div class="tax-bar-outer" aria-hidden="true">
+                            <div class="tax-bar-zero" id="taxBarZero"></div>
+                            <div class="tax-bar-fill" id="taxBarFill" style="width:0%; left:50%;"></div>
+                        </div>
+                        <div class="tax-bar-ticks">
+                            <span>&minus;$15</span>
+                            <span>0</span>
+                            <span>+$15</span>
+                        </div>
+                    </div>
+                    <div class="tax-bar-value" id="taxBarValue">&mdash;<span class="unit">per MWh</span></div>
+                    <div class="tax-bar-breakdown" id="taxBarBreakdown">
+                        <div class="tax-bar-break-row"><span>Gas FOM (annual)</span><span id="taxBreakFom">&mdash;</span></div>
+                        <div class="tax-bar-break-row"><span>Capacity revenue (credit)</span><span id="taxBreakCap">&mdash;</span></div>
+                        <div class="tax-bar-break-row total"><span>Net FOM on customers</span><span id="taxBreakNet">&mdash;</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pathway-by-pathway comparison at the current endpoint -->
+            <div class="tax-pathway-comparison" id="taxPathwayComparison"></div>
+
+            <div class="tax-caption" id="taxCaption">
+                Gas fleet CF = annual gas generation &divide; (existing gas capacity &times; 8,760 h). Reliability tax = (gas FOM &minus; capacity revenue) &divide; 2050 demand in MWh. FOM &amp; capacity values sourced from pipeline config; capacity revenue netted per Card M.
+            </div>
+        </div>
     </section>
     <section class="content-section" id="section4">
         <div class="section-stub"><strong>Section 4: Four Journeys</strong>Built in Prompt 5B.</div>
@@ -2044,6 +2499,211 @@
                     infeasibleEl.style.display = 'block';
                     infeasibleEl.textContent = 'Could not load section 2 data: ' + err.message;
                     canvasEl.style.display = 'none';
+                });
+        })();
+
+        // ===== Section 3: The Reliability Tax =====
+        (function initSection3Tax() {
+            var wrap = document.getElementById('section3');
+            if (!wrap) return;
+
+            var EP_LIST = ['ep90','ep95','ep97p5','ep99','ep99p9'];
+            var EP_LABELS = {ep90:'90%', ep95:'95%', ep97p5:'97.5%', ep99:'99%', ep99p9:'99.9%'};
+            var PATHWAY_LABELS = {
+                '1a':'Pathway 1a', '1b':'Pathway 1b', '2a':'Pathway 2a', '2b':'Pathway 2b', '3':'Pathway 3'
+            };
+            var PATHWAY_SUBLABELS = {
+                '1a':'VRE + storage only',
+                '1b':'+ offshore wind',
+                '2a':'Behavioral pivot',
+                '2b':'Economic pivot',
+                '3':'Destination-optimized'
+            };
+
+            var isoBtns = wrap.querySelectorAll('.tax-iso-btn');
+            var pwBtns  = wrap.querySelectorAll('.tax-pw-btn');
+            var slider  = document.getElementById('taxScrub');
+            var scrubCurrent = document.getElementById('taxScrubCurrent');
+            var needle  = document.getElementById('taxGaugeNeedle');
+            var gaugeValue = document.getElementById('taxGaugeValue');
+            var gaugeCaption = document.getElementById('taxGaugeCaption');
+            var barFill = document.getElementById('taxBarFill');
+            var barZero = document.getElementById('taxBarZero');
+            var barValue = document.getElementById('taxBarValue');
+            var breakFom = document.getElementById('taxBreakFom');
+            var breakCap = document.getElementById('taxBreakCap');
+            var breakNet = document.getElementById('taxBreakNet');
+            var comparisonEl = document.getElementById('taxPathwayComparison');
+
+            var data = null;
+            var currentIso = 'CAISO';
+            var currentPw  = '1a';
+            var currentIdx = 1; // maps to EP_LIST[1] = ep95
+
+            function fmtPct(v) { return (v == null || isNaN(v)) ? '\u2014' : (Math.round(v*100)/100).toFixed(2) + '%'; }
+            function fmtMoneyMwh(v) {
+                if (v == null || isNaN(v)) return '\u2014';
+                var sign = v < 0 ? '\u2212' : '+';
+                return sign + '$' + Math.abs(v).toFixed(2);
+            }
+            function fmtMillion(v) {
+                if (v == null || isNaN(v)) return '\u2014';
+                var sign = v < 0 ? '\u2212' : '';
+                return sign + '$' + Math.abs(v).toFixed(0) + 'M';
+            }
+            function fmtKwYr(v) {
+                if (v == null || isNaN(v)) return '\u2014';
+                return '$' + v.toFixed(0) + '/kW-yr';
+            }
+
+            function getCell(iso, ep, pw) {
+                if (!data || !data.per_iso || !data.per_iso[iso]) return null;
+                var bye = data.per_iso[iso].by_endpoint;
+                if (!bye || !bye[ep] || !bye[ep][pw]) return null;
+                var c = bye[ep][pw];
+                if (c.available === false) return null;
+                return c;
+            }
+
+            function updateGauge(cfPct) {
+                // Map 0-100 to -90° (left) to +90° (right)
+                var clamped = Math.max(0, Math.min(100, cfPct || 0));
+                var angle = -90 + (clamped / 100) * 180;
+                needle.style.transform = 'rotate(' + angle.toFixed(2) + 'deg)';
+                gaugeValue.innerHTML = (Math.round(clamped*100)/100).toFixed(2) + '<span class="unit">% CF</span>';
+            }
+
+            function updateBar(tax) {
+                // tax = $/MWh (can be negative when capacity revenue > FOM)
+                // Bar axis: ±$15/MWh around 0
+                var maxAbs = 15;
+                var pct = Math.max(-1, Math.min(1, (tax || 0) / maxAbs));
+                // fill starts at 50% (zero point) and extends right for positive, left for negative
+                barZero.style.left = '50%';
+                if (tax >= 0) {
+                    barFill.classList.remove('negative');
+                    barFill.style.left = '50%';
+                    barFill.style.width = (pct * 50).toFixed(2) + '%';
+                    barFill.style.borderRadius = '0 var(--radius-md) var(--radius-md) 0';
+                } else {
+                    barFill.classList.add('negative');
+                    barFill.style.width = (Math.abs(pct) * 50).toFixed(2) + '%';
+                    barFill.style.left = (50 - Math.abs(pct) * 50).toFixed(2) + '%';
+                    barFill.style.borderRadius = 'var(--radius-md) 0 0 var(--radius-md)';
+                }
+                barValue.classList.toggle('negative', tax < 0);
+                if (tax == null || isNaN(tax)) {
+                    barValue.innerHTML = '\u2014<span class="unit">per MWh</span>';
+                } else {
+                    barValue.innerHTML = fmtMoneyMwh(tax) + '<span class="unit">per MWh</span>';
+                }
+            }
+
+            function updatePathwayComparison(ep) {
+                comparisonEl.innerHTML = '';
+                ['1a','1b','2a','2b','3'].forEach(function(pw) {
+                    var cell = getCell(currentIso, ep, pw);
+                    var card = document.createElement('div');
+                    card.className = 'tax-pathway-card';
+                    if (pw === '1a' || pw === '1b') card.className += ' red';
+                    if (pw === '3') card.className += ' green';
+                    if (!cell) {
+                        card.innerHTML =
+                            '<div class="tax-pathway-card-label">' + PATHWAY_LABELS[pw] + ' \u00b7 ' + PATHWAY_SUBLABELS[pw] + '</div>' +
+                            '<div class="tax-pathway-card-value" style="font-size:0.95rem;color:var(--text-muted);">Infeasible</div>';
+                    } else {
+                        var cf = cell.gas_fleet_cf_pct;
+                        var tax = cell.reliability_tax_usd_per_mwh;
+                        var fom_kwyr = data.per_iso[currentIso].existing_gas_fom_kw_yr;
+                        card.innerHTML =
+                            '<div class="tax-pathway-card-label">' + PATHWAY_LABELS[pw] + ' \u00b7 ' + PATHWAY_SUBLABELS[pw] + '</div>' +
+                            '<div class="tax-pathway-card-value">' + fmtMoneyMwh(tax) + ' <span style="font-size:0.78rem;font-weight:600;color:var(--text-muted);">/MWh</span></div>' +
+                            '<div class="tax-pathway-card-sub">' +
+                                'Gas CF ' + fmtPct(cf) + ' \u00b7 ' +
+                                fmtKwYr(fom_kwyr) + ' \u00b7 ' +
+                                (cell.gas_remaining_gw != null ? cell.gas_remaining_gw.toFixed(1) + ' GW remaining' : '\u2014') +
+                            '</div>';
+                    }
+                    comparisonEl.appendChild(card);
+                });
+            }
+
+            function render() {
+                if (!data) return;
+                var ep = EP_LIST[currentIdx];
+                if (scrubCurrent) {
+                    scrubCurrent.innerHTML = '&mdash; <span class="tax-pct">' + EP_LABELS[ep] + ' target</span>';
+                }
+
+                var cell = getCell(currentIso, ep, currentPw);
+                if (!cell) {
+                    updateGauge(0);
+                    barValue.innerHTML = 'Infeasible<span class="unit"></span>';
+                    barFill.style.width = '0%';
+                    breakFom.textContent = '\u2014';
+                    breakCap.textContent = '\u2014';
+                    breakNet.textContent = '\u2014';
+                    gaugeCaption.textContent = currentPw + ' is not feasible at ' + EP_LABELS[ep] + ' CFE for ' + currentIso + '.';
+                    updatePathwayComparison(ep);
+                    return;
+                }
+
+                updateGauge(cell.gas_fleet_cf_pct);
+                updateBar(cell.reliability_tax_usd_per_mwh);
+
+                breakFom.textContent = fmtMillion(cell.gas_fom_annual_million_usd);
+                breakCap.textContent = fmtMillion(-Math.abs(cell.capacity_rev_million_usd || 0));
+                breakNet.textContent = fmtMillion(cell.net_fom_million_usd);
+
+                gaugeCaption.innerHTML = 'At ' + EP_LABELS[ep] + ' CFE under ' + PATHWAY_LABELS[currentPw] + ', ' +
+                    cell.gas_remaining_gw.toFixed(1) + ' GW of existing gas remains online, dispatched across ' +
+                    cell.gas_gen_twh.toFixed(1) + ' TWh of the year.';
+
+                updatePathwayComparison(ep);
+            }
+
+            function setIso(iso) {
+                currentIso = iso;
+                isoBtns.forEach(function(b) {
+                    var a = b.getAttribute('data-iso') === iso;
+                    b.classList.toggle('active', a);
+                    b.setAttribute('aria-selected', a ? 'true' : 'false');
+                });
+                render();
+            }
+            function setPw(pw) {
+                currentPw = pw;
+                pwBtns.forEach(function(b) {
+                    var a = b.getAttribute('data-pw') === pw;
+                    b.classList.toggle('active', a);
+                    b.setAttribute('aria-selected', a ? 'true' : 'false');
+                });
+                render();
+            }
+
+            isoBtns.forEach(function(b) {
+                b.addEventListener('click', function() { setIso(b.getAttribute('data-iso')); });
+            });
+            pwBtns.forEach(function(b) {
+                b.addEventListener('click', function() { setPw(b.getAttribute('data-pw')); });
+            });
+
+            if (slider) {
+                slider.addEventListener('input', function() {
+                    currentIdx = parseInt(slider.value, 10) || 0;
+                    render();
+                });
+            }
+
+            fetch('js/reliability-tax/section3_reliability_tax.json')
+                .then(function(r) { return r.json(); })
+                .then(function(payload) {
+                    data = payload;
+                    render();
+                })
+                .catch(function(err) {
+                    barValue.innerHTML = 'Load error<span class="unit"></span>';
+                    console.error('[Section 3] Failed to load payload:', err);
                 });
         })();
 
