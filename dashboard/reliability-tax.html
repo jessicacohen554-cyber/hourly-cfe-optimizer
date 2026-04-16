@@ -619,6 +619,189 @@
             .wall-worsthours-canvas { height: 320px; }
             .wall-iso-btn { font-size: 0.78rem; padding: 7px 11px; }
         }
+
+        /* ─────────────────────────────────────────────────────────────
+           Section 2 — The Overbuild Trap
+           ───────────────────────────────────────────────────────────── */
+        .overbuild-wrap {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 32px 28px;
+            box-shadow: var(--shadow-md);
+            margin-top: var(--space-xl);
+        }
+        .overbuild-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-md);
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: var(--space-lg);
+            padding-bottom: var(--space-md);
+            border-bottom: 1px solid var(--border-light);
+        }
+        .overbuild-control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 220px;
+        }
+        .overbuild-control-label {
+            font-family: var(--font-body);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+        .overbuild-control-label .hint {
+            font-weight: 500;
+            text-transform: none;
+            letter-spacing: 0;
+            color: var(--text-muted);
+            font-size: 0.72rem;
+            margin-left: 6px;
+        }
+        .overbuild-btn-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .overbuild-btn {
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 7px 12px;
+            border-radius: var(--radius-pill);
+            border: 1.5px solid var(--border-light);
+            background: #FFFFFF;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-height: 36px;
+        }
+        .overbuild-btn:hover {
+            border-color: var(--navy);
+            color: var(--navy);
+        }
+        .overbuild-btn.active {
+            background: var(--navy);
+            border-color: var(--navy);
+            color: #FFFFFF;
+        }
+        .overbuild-btn[disabled] {
+            opacity: 0.38;
+            cursor: not-allowed;
+            background: var(--bg-alt);
+        }
+        .overbuild-iso-btn.active[data-iso="CAISO"] { background: var(--iso-caiso); border-color: var(--iso-caiso); color: #1A2744; }
+        .overbuild-iso-btn.active[data-iso="ERCOT"] { background: var(--iso-ercot); border-color: var(--iso-ercot); color: #FFFFFF; }
+        .overbuild-iso-btn.active[data-iso="MISO"]  { background: var(--iso-miso);  border-color: var(--iso-miso);  color: #FFFFFF; }
+        .overbuild-iso-btn.active[data-iso="NEISO"] { background: var(--iso-neiso); border-color: var(--iso-neiso); color: #FFFFFF; }
+        .overbuild-iso-btn.active[data-iso="NYISO"] { background: var(--iso-nyiso); border-color: var(--iso-nyiso); color: #FFFFFF; }
+        .overbuild-iso-btn.active[data-iso="PJM"]   { background: var(--iso-pjm);   border-color: var(--iso-pjm);   color: #FFFFFF; }
+        .overbuild-iso-btn.active[data-iso="SPP"]   { background: var(--iso-spp);   border-color: var(--iso-spp);   color: #FFFFFF; }
+
+        .overbuild-chart-title {
+            font-family: var(--font-heading);
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 4px;
+        }
+        .overbuild-chart-sub {
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: var(--space-md);
+            line-height: 1.5;
+        }
+        .overbuild-chart-canvas {
+            position: relative;
+            height: 420px;
+            min-height: 360px;
+        }
+        .overbuild-callouts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: var(--space-sm);
+            margin-top: var(--space-md);
+        }
+        .overbuild-callout {
+            background: var(--bg-surface);
+            border-left: 3px solid var(--navy);
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+        }
+        .overbuild-callout-label {
+            font-family: var(--font-body);
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+        .overbuild-callout-value {
+            font-family: var(--font-heading);
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1.1;
+        }
+        .overbuild-callout-sub {
+            font-family: var(--font-body);
+            font-size: 0.76rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        .overbuild-callout.red { border-left-color: var(--red); }
+        .overbuild-callout.red .overbuild-callout-value { color: var(--red-text); }
+        .overbuild-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 16px;
+            margin-top: var(--space-md);
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+        .overbuild-legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .overbuild-legend-swatch {
+            display: inline-block;
+            width: 16px;
+            height: 10px;
+            border-radius: 2px;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        .overbuild-caption {
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: var(--space-md);
+            line-height: 1.55;
+            font-style: italic;
+            border-top: 1px dashed var(--border-light);
+            padding-top: var(--space-sm);
+        }
+        .overbuild-infeasible {
+            padding: 20px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.88rem;
+            font-style: italic;
+        }
+        @media (max-width: 768px) {
+            .overbuild-wrap { padding: 22px 18px; }
+            .overbuild-chart-canvas { height: 480px; min-height: 400px; }
+            .overbuild-btn { font-size: 0.76rem; padding: 6px 10px; }
+        }
+
     </style>
 </head>
 <body>
@@ -982,8 +1165,63 @@
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- Sections 2–6 (placeholders — built in Prompt 5B)                       -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="section-header fade-in">
+        <div class="section-number">2</div>
+        <h2>The Overbuild Trap</h2>
+        <p>Without firm clean resources, hitting a high CFE target requires building multiples of peak load in variable generation and storage &mdash; and you still keep the gas fleet around for the hours that math can&rsquo;t cover.</p>
+    </div>
     <section class="content-section" id="section2">
-        <div class="section-stub"><strong>Section 2: Overbuild</strong>Built in Prompt 5B.</div>
+        <div class="overbuild-wrap fade-in">
+            <!-- Controls -->
+            <div class="overbuild-controls">
+                <div class="overbuild-control-group">
+                    <div class="overbuild-control-label">ISO</div>
+                    <div class="overbuild-btn-row" id="overbuildIsoRow" role="tablist" aria-label="Select ISO for overbuild chart">
+                        <button type="button" class="overbuild-btn overbuild-iso-btn active" data-iso="CAISO" role="tab" aria-selected="true">CAISO</button>
+                        <button type="button" class="overbuild-btn overbuild-iso-btn" data-iso="ERCOT" role="tab" aria-selected="false">ERCOT</button>
+                        <button type="button" class="overbuild-btn overbuild-iso-btn" data-iso="MISO"  role="tab" aria-selected="false">MISO</button>
+                        <button type="button" class="overbuild-btn overbuild-iso-btn" data-iso="NEISO" role="tab" aria-selected="false">NEISO</button>
+                        <button type="button" class="overbuild-btn overbuild-iso-btn" data-iso="NYISO" role="tab" aria-selected="false">NYISO</button>
+                        <button type="button" class="overbuild-btn overbuild-iso-btn" data-iso="PJM"   role="tab" aria-selected="false">PJM</button>
+                        <button type="button" class="overbuild-btn overbuild-iso-btn" data-iso="SPP"   role="tab" aria-selected="false">SPP</button>
+                    </div>
+                </div>
+                <div class="overbuild-control-group">
+                    <div class="overbuild-control-label">CFE endpoint</div>
+                    <div class="overbuild-btn-row" id="overbuildEndpointRow" role="tablist" aria-label="Select 2050 CFE endpoint">
+                        <button type="button" class="overbuild-btn overbuild-ep-btn" data-ep="ep90" role="tab">90%</button>
+                        <button type="button" class="overbuild-btn overbuild-ep-btn active" data-ep="ep95" role="tab">95%</button>
+                        <button type="button" class="overbuild-btn overbuild-ep-btn" data-ep="ep97p5" role="tab">97.5%</button>
+                        <button type="button" class="overbuild-btn overbuild-ep-btn" data-ep="ep99" role="tab">99%</button>
+                        <button type="button" class="overbuild-btn overbuild-ep-btn" data-ep="ep99p9" role="tab">99.9%</button>
+                    </div>
+                </div>
+                <div class="overbuild-control-group">
+                    <div class="overbuild-control-label">Demand growth <span class="hint">(pipeline-configured)</span></div>
+                    <div class="overbuild-btn-row" id="overbuildDemandRow" role="tablist" aria-label="Select demand growth variant">
+                        <button type="button" class="overbuild-btn overbuild-dem-btn" data-dem="L" role="tab">Low</button>
+                        <button type="button" class="overbuild-btn overbuild-dem-btn active" data-dem="M" role="tab">Medium</button>
+                        <button type="button" class="overbuild-btn overbuild-dem-btn" data-dem="H" role="tab">High</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overbuild-chart-title" id="overbuildChartTitle">GW of capacity built per GW of 2050 peak load</div>
+            <div class="overbuild-chart-sub" id="overbuildChartSub">Horizontal bars, one per pathway. Stacked by resource. Existing gas fleet remaining at 2050 shown as a separate segment.</div>
+
+            <div class="overbuild-chart-canvas">
+                <canvas id="overbuildChart" aria-label="Overbuild multiplier by pathway"></canvas>
+                <div class="overbuild-infeasible" id="overbuildInfeasibleMsg" style="display:none;"></div>
+            </div>
+
+            <div class="overbuild-legend" id="overbuildLegend"></div>
+
+            <div class="overbuild-callouts" id="overbuildCallouts"></div>
+
+            <div class="overbuild-caption" id="overbuildCaption">
+                Overbuild multiplier = (new-build GW + existing gas remaining at 2050) &divide; 2050 peak demand GW. Pathway 1a = onshore VRE + storage only (no offshore wind, no clean firm). Pathway 1b = adds offshore wind where regionally available. Pathways 2a/2b pivot to clean firm after VRE-only reaches its plateau or its marginal-cost trigger. Pathway 3 is destination-optimized with clean firm available from year 1.
+            </div>
+        </div>
     </section>
     <section class="content-section" id="section3">
         <div class="section-stub"><strong>Section 3: The Tax</strong>Built in Prompt 5B.</div>
@@ -1484,6 +1722,329 @@
 
             // Init
             selectIso('ALL');
+        })();
+
+        // ===== Section 2: The Overbuild Trap =====
+        (function initSection2Overbuild() {
+            var wrap = document.getElementById('section2');
+            if (!wrap) return;
+
+            // Canonical palette — MUST match shared.css resource tokens
+            var RES_COLORS = {
+                solar:         '#F59E0B',
+                wind:          '#22C55E',
+                offshore_wind: '#009688',
+                hydro:         '#0EA5E9',
+                battery4:      '#06B6D4',
+                battery8:      '#0891B2',
+                ldes:          '#E91E63',
+                h2:            '#10B981',
+                greenh2:       '#10B981',
+                uprate:        '#6366F1',
+                ccs_ccgt:      '#64748B',
+                geothermal:    '#D97706',
+                nuclear:       '#6366F1',
+                nuclear_newbuild: '#4F46E5',
+                clean_firm:    '#6366F1',
+                existing_gas:  '#9CA3AF'
+            };
+
+            var RES_LABELS = {
+                solar:         'Solar',
+                wind:          'Onshore wind',
+                offshore_wind: 'Offshore wind',
+                hydro:         'Hydro (existing)',
+                battery4:      'Battery 4-hr',
+                battery8:      'Battery 8-hr',
+                ldes:          'LDES (100-hr)',
+                h2:            'Green H\u2082',
+                greenh2:       'Green H\u2082',
+                uprate:        'Nuclear uprate',
+                ccs_ccgt:      'CCS-CCGT',
+                geothermal:    'Geothermal',
+                nuclear:       'Nuclear newbuild',
+                nuclear_newbuild: 'Nuclear newbuild',
+                clean_firm:    'Clean firm',
+                existing_gas:  'Existing gas remaining'
+            };
+
+            // Display order for stacking
+            var RES_ORDER = [
+                'uprate','nuclear_newbuild','nuclear','ccs_ccgt','geothermal','clean_firm',
+                'hydro','offshore_wind','wind','solar',
+                'battery4','battery8','ldes','h2','greenh2',
+                'existing_gas'
+            ];
+
+            var PATHWAY_LABELS = {
+                '1a': 'Pathway 1a',
+                '1b': 'Pathway 1b',
+                '2a': 'Pathway 2a',
+                '2b': 'Pathway 2b',
+                '3':  'Pathway 3'
+            };
+            var PATHWAY_SUBLABELS = {
+                '1a': 'VRE + storage only',
+                '1b': '+ offshore wind',
+                '2a': 'Behavioral pivot',
+                '2b': 'Economic pivot',
+                '3':  'Destination-optimized'
+            };
+            var PATHWAY_ORDER = ['1a','1b','2a','2b','3'];
+
+            var isoBtns = wrap.querySelectorAll('.overbuild-iso-btn');
+            var epBtns  = wrap.querySelectorAll('.overbuild-ep-btn');
+            var demBtns = wrap.querySelectorAll('.overbuild-dem-btn');
+            var titleEl = document.getElementById('overbuildChartTitle');
+            var subEl   = document.getElementById('overbuildChartSub');
+            var canvasEl = document.getElementById('overbuildChart');
+            var calloutsEl = document.getElementById('overbuildCallouts');
+            var legendEl = document.getElementById('overbuildLegend');
+            var infeasibleEl = document.getElementById('overbuildInfeasibleMsg');
+
+            var data = null;
+            var chart = null;
+            var currentIso = 'CAISO';
+            var currentEp  = 'ep95';
+            var currentDem = 'M';
+
+            function fmtGw(v) { return (v == null || isNaN(v)) ? '\u2014' : (Math.round(v*10)/10).toLocaleString() + ' GW'; }
+            function fmtPct(v) { return (v == null || isNaN(v)) ? '\u2014' : (Math.round(v*10)/10).toFixed(1) + '%'; }
+            function fmtMult(v) { return (v == null || isNaN(v)) ? '\u2014' : (Math.round(v*100)/100).toFixed(2) + '\u00d7'; }
+            function fmtTrill(v) { return (v == null || isNaN(v) || v === 0) ? '\u2014' : '$' + (Math.round(v*100)/100).toFixed(2) + 'T'; }
+
+            function getCell(iso, ep, pathway, dem) {
+                if (!data || !data.per_iso || !data.per_iso[iso]) return null;
+                var ep_node = data.per_iso[iso][ep];
+                if (!ep_node || !ep_node[pathway]) return null;
+                var pw_node = ep_node[pathway];
+                var cell = (pw_node.per_demand_variant && pw_node.per_demand_variant[dem]) || pw_node.base;
+                if (!cell || cell.available === false) return null;
+                return cell;
+            }
+
+            function buildDatasets(iso, ep, dem) {
+                // For each pathway in order, get its cell and collect resource stack
+                // Strategy: one horizontal stacked-bar chart. Each bar = 1 pathway. Segments = resources in RES_ORDER.
+                var present = {};
+                PATHWAY_ORDER.forEach(function(pw) {
+                    var cell = getCell(iso, ep, pw, dem);
+                    if (!cell) return;
+                    var gwMap = cell.gw_by_resource || {};
+                    Object.keys(gwMap).forEach(function(k) {
+                        if (gwMap[k] > 0.01) present[k] = true;
+                    });
+                    if (cell.gas_remaining_gw > 0.01) present.existing_gas = true;
+                });
+
+                // Sort present resources by RES_ORDER
+                var resKeys = RES_ORDER.filter(function(k) { return present[k]; });
+                // Add any present keys we didn't pre-order
+                Object.keys(present).forEach(function(k) {
+                    if (resKeys.indexOf(k) === -1) resKeys.push(k);
+                });
+
+                var datasets = resKeys.map(function(res) {
+                    var color = RES_COLORS[res] || '#9CA3AF';
+                    var label = RES_LABELS[res] || res;
+                    var vals = PATHWAY_ORDER.map(function(pw) {
+                        var cell = getCell(iso, ep, pw, dem);
+                        if (!cell) return null;
+                        if (res === 'existing_gas') {
+                            return cell.gas_remaining_gw || 0;
+                        }
+                        return (cell.gw_by_resource && cell.gw_by_resource[res]) || 0;
+                    });
+                    return {
+                        label: label,
+                        data: vals,
+                        backgroundColor: color,
+                        borderColor: '#FFFFFF',
+                        borderWidth: 1.5,
+                        borderSkipped: false,
+                        resourceKey: res
+                    };
+                });
+
+                return { datasets: datasets, resKeys: resKeys };
+            }
+
+            function renderLegend(resKeys) {
+                legendEl.innerHTML = '';
+                resKeys.forEach(function(res) {
+                    var item = document.createElement('div');
+                    item.className = 'overbuild-legend-item';
+                    item.innerHTML = '<span class="overbuild-legend-swatch" style="background:' +
+                        (RES_COLORS[res] || '#9CA3AF') + '"></span>' + (RES_LABELS[res] || res);
+                    legendEl.appendChild(item);
+                });
+            }
+
+            function renderCallouts(iso, ep, dem) {
+                calloutsEl.innerHTML = '';
+                // Pick Pathway 1a and Pathway 3 to feature
+                var cards = [];
+                PATHWAY_ORDER.forEach(function(pw) {
+                    var cell = getCell(iso, ep, pw, dem);
+                    if (!cell) {
+                        cards.push({
+                            pw: pw,
+                            available: false
+                        });
+                        return;
+                    }
+                    cards.push({
+                        pw: pw,
+                        available: true,
+                        achieved: cell.achieved_cfe_pct,
+                        peak: cell.peak_demand_gw_2050,
+                        total_nb: cell.total_new_build_gw,
+                        gas_remain: cell.gas_remaining_gw,
+                        gas_pct: cell.gas_pct_of_peak,
+                        multiplier: cell.gw_per_gw_peak,
+                        clean_firm: cell.new_build_clean_firm_gw,
+                        total_cost: cell.total_actual_cost_trillion_usd,
+                        undiscounted: cell.undiscounted_cost_trillion_usd
+                    });
+                });
+
+                cards.forEach(function(c) {
+                    var div = document.createElement('div');
+                    div.className = 'overbuild-callout';
+                    if (c.pw === '1a' || c.pw === '1b') div.className += ' red';
+                    if (!c.available) {
+                        div.innerHTML =
+                            '<div class="overbuild-callout-label">' + PATHWAY_LABELS[c.pw] + '</div>' +
+                            '<div class="overbuild-callout-value" style="font-size:1rem;color:var(--text-muted);">Infeasible</div>' +
+                            '<div class="overbuild-callout-sub">no feasible mix under this demand variant</div>';
+                    } else {
+                        var peakStr = (c.peak == null) ? '' : ' of ' + (Math.round(c.peak*10)/10).toFixed(1) + ' GW peak';
+                        div.innerHTML =
+                            '<div class="overbuild-callout-label">' + PATHWAY_LABELS[c.pw] + ' \u00b7 ' + PATHWAY_SUBLABELS[c.pw] + '</div>' +
+                            '<div class="overbuild-callout-value">' + fmtMult(c.multiplier) + ' <span style="font-size:0.8rem;font-weight:600;color:var(--text-muted);">GW built per GW peak</span></div>' +
+                            '<div class="overbuild-callout-sub">' +
+                                fmtGw(c.total_nb) + ' new build' + peakStr + ' \u00b7 ' +
+                                'existing gas remaining ' + fmtGw(c.gas_remain) + ' (' + fmtPct(c.gas_pct) + ')' +
+                            '</div>';
+                    }
+                    calloutsEl.appendChild(div);
+                });
+            }
+
+            function renderChart() {
+                if (!data) return;
+                var iso = currentIso, ep = currentEp, dem = currentDem;
+
+                var built = buildDatasets(iso, ep, dem);
+
+                // Check if any pathway is feasible
+                var anyFeasible = PATHWAY_ORDER.some(function(pw) { return getCell(iso, ep, pw, dem) !== null; });
+                if (!anyFeasible) {
+                    if (chart) { chart.destroy(); chart = null; }
+                    canvasEl.style.display = 'none';
+                    infeasibleEl.style.display = 'block';
+                    infeasibleEl.textContent = 'No feasible results for ' + iso + ' at this endpoint under ' + ({L:'low',M:'medium',H:'high'}[dem]) + ' demand growth.';
+                    renderCallouts(iso, ep, dem);
+                    renderLegend([]);
+                    return;
+                }
+                canvasEl.style.display = '';
+                infeasibleEl.style.display = 'none';
+
+                var labels = PATHWAY_ORDER.map(function(pw) { return PATHWAY_LABELS[pw]; });
+                var peakLine = null;
+                // Pull a peak demand to display as a reference vertical line (use pathway 3 or first available)
+                for (var i = 0; i < PATHWAY_ORDER.length; i++) {
+                    var cell = getCell(iso, ep, PATHWAY_ORDER[i], dem);
+                    if (cell && cell.peak_demand_gw_2050) { peakLine = cell.peak_demand_gw_2050; break; }
+                }
+
+                if (chart) chart.destroy();
+
+                chart = new Chart(canvasEl.getContext('2d'), {
+                    type: 'bar',
+                    data: { labels: labels, datasets: built.datasets },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 700 },
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    title: function(items) { return items[0].label; },
+                                    label: function(ctx) {
+                                        var v = ctx.parsed.x;
+                                        if (v == null || v === 0) return null;
+                                        return ctx.dataset.label + ': ' + (Math.round(v*10)/10).toFixed(1) + ' GW';
+                                    },
+                                    footer: function(items) {
+                                        if (!items.length) return '';
+                                        var total = 0;
+                                        items.forEach(function(i) { total += (i.parsed.x || 0); });
+                                        var footer = 'Total stack: ' + (Math.round(total*10)/10).toFixed(1) + ' GW';
+                                        if (peakLine) footer += '  \u00b7  ' + (total/peakLine).toFixed(2) + '\u00d7 peak (' + peakLine.toFixed(1) + ' GW)';
+                                        return footer;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                stacked: true,
+                                title: { display: true, text: 'GW installed at 2050', font: { family: 'DM Sans, sans-serif', size: 12, weight: '600' } },
+                                grid: { color: 'rgba(0,0,0,0.05)' },
+                                ticks: { font: { family: 'DM Sans, sans-serif', size: 11 } }
+                            },
+                            y: {
+                                stacked: true,
+                                grid: { display: false },
+                                ticks: { font: { family: 'Plus Jakarta Sans, sans-serif', size: 12, weight: '600' } }
+                            }
+                        }
+                    }
+                });
+
+                titleEl.textContent = iso + ' \u2014 GW built per GW of 2050 peak at ' +
+                    ({ep90:'90%',ep95:'95%',ep97p5:'97.5%',ep99:'99%',ep99p9:'99.9%'}[ep]) + ' CFE';
+                var demLabel = {L:'low',M:'medium',H:'high'}[dem];
+                subEl.textContent = 'Horizontal stacked bars, one per pathway. ' + demLabel.charAt(0).toUpperCase() + demLabel.slice(1) +
+                    ' demand growth variant from pipeline config. Existing-gas segment = gas fleet still operating at 2050 after endogenous retirement.';
+
+                renderLegend(built.resKeys);
+                renderCallouts(iso, ep, dem);
+            }
+
+            function onBtnClick(rowSel, attr, setter) {
+                var btns = wrap.querySelectorAll(rowSel + ' button');
+                btns.forEach(function(b) {
+                    b.addEventListener('click', function() {
+                        btns.forEach(function(x) { x.classList.remove('active'); x.setAttribute('aria-selected','false'); });
+                        b.classList.add('active');
+                        b.setAttribute('aria-selected','true');
+                        setter(b.getAttribute(attr));
+                        renderChart();
+                    });
+                });
+            }
+
+            onBtnClick('#overbuildIsoRow',      'data-iso', function(v) { currentIso = v; });
+            onBtnClick('#overbuildEndpointRow', 'data-ep',  function(v) { currentEp = v; });
+            onBtnClick('#overbuildDemandRow',   'data-dem', function(v) { currentDem = v; });
+
+            fetch('js/reliability-tax/section2_overbuild.json')
+                .then(function(r) { return r.json(); })
+                .then(function(payload) {
+                    data = payload;
+                    renderChart();
+                })
+                .catch(function(err) {
+                    infeasibleEl.style.display = 'block';
+                    infeasibleEl.textContent = 'Could not load section 2 data: ' + err.message;
+                    canvasEl.style.display = 'none';
+                });
         })();
 
         // ===== Hook: animate gauge needle + ghost-grid when in view =====
