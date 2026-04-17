@@ -37,6 +37,72 @@
             pointer-events: none;
         }
 
+        /* Section 1 — Duck-curve schematic */
+        .duck-wrap {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: var(--space-lg);
+            max-width: 940px;
+            margin: 0 auto var(--space-lg);
+        }
+        @media (max-width: 640px) {
+            .duck-wrap { grid-template-columns: 1fr; }
+        }
+        .duck-panel {
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            padding: 16px 18px 14px;
+            box-shadow: var(--shadow-sm);
+        }
+        .duck-panel-title {
+            font-family: var(--font-heading);
+            font-size: 0.88rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--navy);
+            margin-bottom: 4px;
+        }
+        .duck-panel-sub {
+            font-family: var(--font-body);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+        .duck-svg {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .duck-legend {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 14px 22px;
+            max-width: 940px;
+            margin: 0 auto var(--space-lg);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        .duck-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+        .duck-legend-swatch {
+            display: inline-block;
+            width: 18px;
+            height: 3px;
+            border-radius: 2px;
+        }
+        .duck-legend-swatch.demand { background: var(--navy); }
+        .duck-legend-swatch.gap    { height: 10px; background: rgba(107,114,128,0.35); border: 1px solid rgba(107,114,128,0.55); }
+        .section1-body {
+            max-width: 820px;
+            margin: 0 auto;
+            font-size: 0.98rem;
+            color: var(--text-secondary);
+            line-height: 1.75;
+        }
+        .section1-body strong { color: var(--navy); font-weight: 700; }
+
         /* Hero (Section 0) */
         .tax-hero-lead {
             max-width: 820px;
@@ -108,10 +174,87 @@
     <!-- Section 1 — The Setup                                                  -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <section class="content-section" id="section1">
-        <div class="section-stub">
-            <span class="todo-tag">A1 — this session</span>
-            <strong>Section 1: The Setup</strong>
-            Duck-curve schematic + residual-gap sizing explanation.
+        <h2 class="section-title fade-in" style="text-align:center;">The Setup</h2>
+        <p class="section-subtitle fade-in" style="text-align:center; margin-bottom: var(--space-lg);">Why hourly CFE with VRE+storage alone forces a redundant gas fleet.</p>
+
+        <!-- Duck-curve schematic: two small panels, 70% CFE → 95% CFE -->
+        <div class="duck-wrap fade-in" aria-hidden="false">
+            <div class="duck-panel">
+                <div class="duck-panel-title">70% CFE</div>
+                <div class="duck-panel-sub">Moderate solar. Shallow net-load duck. Short evening residual.</div>
+                <svg class="duck-svg" viewBox="0 0 280 180" xmlns="http://www.w3.org/2000/svg"
+                     role="img" aria-labelledby="duck70Title duck70Desc">
+                    <title id="duck70Title">70% CFE net-load schematic</title>
+                    <desc id="duck70Desc">Demand curve peaks in the evening; solar curve covers part of midday; residual gap (fossil gas territory) is shallow and smooth.</desc>
+                    <!-- axes -->
+                    <line x1="20" y1="30"  x2="20"  y2="150" stroke="rgba(0,0,0,0.25)" stroke-width="0.75"/>
+                    <line x1="20" y1="150" x2="260" y2="150" stroke="rgba(0,0,0,0.25)" stroke-width="0.75"/>
+                    <!-- x-axis tick labels -->
+                    <g font-family="var(--font-data)" font-size="8" fill="rgba(0,0,0,0.55)" text-anchor="middle">
+                        <text x="80"  y="164">6h</text>
+                        <text x="140" y="164">12h</text>
+                        <text x="200" y="164">18h</text>
+                    </g>
+                    <text x="8" y="38" font-family="var(--font-data)" font-size="8" fill="rgba(0,0,0,0.55)">MW</text>
+                    <!-- Gas-gap shaded band: demand - solar residual (schematic; fossilGas color) -->
+                    <path d="M 20 95 L 40 100 L 60 95 L 80 90 L 100 80 L 120 72 L 140 70 L 160 68 L 180 66 L 200 58 L 220 65 L 240 80 L 260 90 L 260 150 L 240 150 L 220 150 L 200 150 L 180 132 L 160 114 L 140 110 L 120 114 L 100 132 L 80 150 L 60 150 L 40 150 L 20 150 Z"
+                          fill="rgba(107,114,128,0.32)" stroke="none"/>
+                    <!-- Solar line (RESOURCE_COLORS.solar #F59E0B) -->
+                    <polyline fill="none" stroke="#F59E0B" stroke-width="1.75" stroke-linejoin="round"
+                              points="20,150 40,150 60,150 80,150 100,132 120,114 140,110 160,114 180,132 200,150 220,150 240,150 260,150"/>
+                    <!-- Demand line on top -->
+                    <polyline fill="none" stroke="var(--navy)" stroke-width="1.75" stroke-linejoin="round"
+                              points="20,95 40,100 60,95 80,90 100,80 120,72 140,70 160,68 180,66 200,58 220,65 240,80 260,90"/>
+                </svg>
+            </div>
+
+            <div class="duck-panel">
+                <div class="duck-panel-title">95% CFE</div>
+                <div class="duck-panel-sub">Massive solar overbuild. Midday goes to zero (curtailment). Evening peak unchanged.</div>
+                <svg class="duck-svg" viewBox="0 0 280 180" xmlns="http://www.w3.org/2000/svg"
+                     role="img" aria-labelledby="duck95Title duck95Desc">
+                    <title id="duck95Title">95% CFE net-load schematic</title>
+                    <desc id="duck95Desc">Solar is oversized enough to saturate midday load, forcing curtailment; the residual gap collapses to zero during the day but the sharp evening peak is unchanged and must still be covered by firm capacity.</desc>
+                    <line x1="20" y1="30"  x2="20"  y2="150" stroke="rgba(0,0,0,0.25)" stroke-width="0.75"/>
+                    <line x1="20" y1="150" x2="260" y2="150" stroke="rgba(0,0,0,0.25)" stroke-width="0.75"/>
+                    <g font-family="var(--font-data)" font-size="8" fill="rgba(0,0,0,0.55)" text-anchor="middle">
+                        <text x="80"  y="164">6h</text>
+                        <text x="140" y="164">12h</text>
+                        <text x="200" y="164">18h</text>
+                    </g>
+                    <text x="8" y="38" font-family="var(--font-data)" font-size="8" fill="rgba(0,0,0,0.55)">MW</text>
+                    <!-- Gas-gap band: midday collapses to zero, evening peak unchanged -->
+                    <path d="M 20 95 L 40 100 L 60 95 L 80 90 L 100 80 L 120 72 L 140 70 L 160 68 L 180 66 L 200 58 L 220 65 L 240 80 L 260 90 L 260 150 L 240 150 L 220 150 L 200 150 L 180 105 L 160 82 L 140 70 L 120 72 L 100 105 L 80 150 L 60 150 L 40 150 L 20 150 Z"
+                          fill="rgba(107,114,128,0.32)" stroke="none"/>
+                    <!-- Solar line (clipped to demand at midday — schematic curtailment) -->
+                    <polyline fill="none" stroke="#F59E0B" stroke-width="1.75" stroke-linejoin="round"
+                              points="20,150 40,150 60,150 80,150 100,105 120,72 140,70 160,82 180,105 200,150 220,150 240,150 260,150"/>
+                    <!-- Demand line -->
+                    <polyline fill="none" stroke="var(--navy)" stroke-width="1.75" stroke-linejoin="round"
+                              points="20,95 40,100 60,95 80,90 100,80 120,72 140,70 160,68 180,66 200,58 220,65 240,80 260,90"/>
+                    <!-- Evening-peak callout -->
+                    <g>
+                        <line x1="200" y1="58" x2="230" y2="42" stroke="var(--red)" stroke-width="0.9"/>
+                        <circle cx="200" cy="58" r="2.5" fill="var(--red)"/>
+                        <text x="232" y="40" font-family="var(--font-heading)" font-size="8" font-weight="700" fill="var(--red)">worst hour</text>
+                    </g>
+                </svg>
+            </div>
+        </div>
+
+        <div class="duck-legend fade-in">
+            <span class="duck-legend-item"><span class="duck-legend-swatch demand"></span>Demand (load)</span>
+            <span class="duck-legend-item"><span class="duck-legend-swatch" style="background:#F59E0B;"></span>Solar dispatched</span>
+            <span class="duck-legend-item"><span class="duck-legend-swatch gap"></span>Residual gap (gas territory)</span>
+        </div>
+
+        <div class="section1-body fade-in">
+            <p>
+                As CFE rises from 70% to 95%, solar and storage get added faster than the underlying load shape changes. Midday demand is covered &mdash; often oversupplied, forcing curtailment &mdash; but the evening peak moves barely at all. The residual gap doesn&rsquo;t shrink uniformly; it gets <strong>narrower and sharper</strong>. A few hundred hours a year still need firm capacity, and those hours are now concentrated in a tighter window.
+            </p>
+            <p>
+                The reliability tax sizes new-build gas against that sharper residual. Following <strong>SPEC &sect;24.5</strong>, we do not use ELCC credits &mdash; a fixed 0.30 solar credit or 0.95 battery credit averages across the year and systematically under-sizes the worst hour. Instead, gas is sized to the <strong>99.97th percentile of the hourly margin-on-demand residual</strong>, computed directly from the 8,760 dispatch. That percentile leaves roughly 2.6 hours a year of tail risk above the sized gap &mdash; consistent with the NERC / PJM 1-day-in-10-years LOLE benchmark. Every MW of gas on the page below was sized by that physical rule, not by a credit factor.
+            </p>
         </div>
     </section>
 
