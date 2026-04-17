@@ -11,7 +11,7 @@
 
 **Code + SPEC:** Complete. Worst-hour (99.97th percentile, margin-on-demand) gas sizing is locked in SPEC §24.5 and implemented in `scripts/step2_2a_cost_optimization.py` (scalar + batch paths), `scripts/step_2_3_pathway_optimizer.py`, and `scripts/step3a_build_dispatch_cache.py`. Validation (`scripts/tmp_validate_worst_hour_sizing.py`) passes for 10 mixes × 3 ISOs with `WH ≥ ELCC` strict invariant.
 
-**Step-2.2A rerun:** Launched `2026-04-16 ~23:57 UTC`. Process PID 2055, background, logging to `logs/step2_2a_worst_hour_rerun.log`. All 7 ISOs, baseline track, `--workers 1`. Totals across ISOs: 47,953,153 raw EF mixes (CAISO 21.2M + ERCOT 8.7M + PJM 3.1M + NYISO 2.1M + NEISO 5.2M + MISO 6.2M + SPP 1.5M). Expected wall-clock 6–12 hours.
+**Step-2.2A rerun:** Launched `2026-04-16 ~23:57 UTC`, **died silently around 23:58:30** (no OOM in dmesg, log ended cleanly mid-processing — likely session-cleanup SIGHUP'd the orphaned child). **Re-launched `2026-04-17 ~00:10 UTC` at PID 1656** via `nohup setsid python3 ... &` for full session detachment. All 7 ISOs, baseline track, `--workers 1`, logging to `logs/step2_2a_worst_hour_rerun.log`. Totals across ISOs: 47,953,153 raw EF mixes (CAISO 21.2M + ERCOT 8.7M + PJM 3.1M + NYISO 2.1M + NEISO 5.2M + MISO 6.2M + SPP 1.5M). Expected wall-clock 6–12 hours.
 
 **What's left:**
 - [ ] Step-2.2A baseline track completes for all 7 ISOs → `data/step2.2-cost/step_2_2a_CO_{ISO}.parquet`.
@@ -21,7 +21,7 @@
 - [ ] DOWNSTREAM (not this session per task brief): Step 3a cache rebuild, Step 4-7 analytics, reliability-tax 350-run sweep, dashboard JSONs.
 
 **Resume instructions for next session:**
-1. Check `ps -ef | grep step2_2a_cost_optimization` — if PID 2055 (or descendant) still running, do NOT launch a second instance. Tail `logs/step2_2a_worst_hour_rerun.log` to confirm progress.
+1. Check `ps -ef | grep step2_2a_cost_optimization` — if PID 1656 (or descendant) still running, do NOT launch a second instance. Tail `logs/step2_2a_worst_hour_rerun.log` to confirm progress. Relaunch if needed via `nohup setsid python3 scripts/step2_2a_cost_optimization.py --track baseline --workers 1 > logs/step2_2a_worst_hour_rerun.log 2>&1 &` (the nohup+setsid is load-bearing to survive session boundaries).
 2. If completed, inspect `data/step2.2-cost/*.parquet` timestamps vs launch time. New parquets should have `mtime > 23:57 UTC`. Confirm all 7 ISOs present.
 3. Run `python3 scripts/tmp_validate_worst_hour_sizing.py` — should still pass (no code changed).
 4. If optimizer crashed: read last 500 lines of the log, identify the failure, and restart per `CLAUDE.md` Optimizer Run Discipline ("automatically troubleshoot, debug, and retry").
