@@ -1,9 +1,21 @@
 # Advanced Sensitivity Model — Complete Specification
 
 > **Authoritative reference for all design decisions.** If a future session needs context, read this file first.
-> Last updated: 2026-04-16.
+> Last updated: 2026-04-17.
 
-## Current Status (Apr 16, 2026)
+## Current Status (Apr 17, 2026)
+
+### Reliability Tax v2 Dashboard Rewrite (Landed — Apr 17, 2026)
+
+**What was accomplished this session (A1–A4 + B1 + B2 + C):**
+- **A1–A4 — `dashboard/reliability-tax.html` rewritten against SPEC §24.4 v2 methodology (Cards M'/F'/K'/U/S).** 9 sections wired against the regenerated v2 JSON payloads for all 7 ISOs (CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP) across 10 CFE endpoints (60/70/75/80/85/90/95/97.5/99/99.9): (0) hero title + lead + definition card, (1) duck-curve schematic + residual-gap explainer, (2) THE HUMP headline chart (new-gas MW vs achieved CFE), (3) abandonment framing, (4) reliability-tax decomposition (stacked components per the §24.4 locked formula), (5) four-journey pathway cards, (6) stranding Sankey, (7) cost of waiting, (8) 175-row summary table + closing QA sweep.
+- **B1 — `optimizer_methodology.html`** updated to align with the v2 cards (capacity-market netting, developer-ROI, and comparative-to-P3 stranding framing removed; absolute gross-cost framing + CF<15% stranding test substituted).
+- **B2 — `index.html` Act 4** reframed so the stranded-asset narrative matches the v2 methodology rather than the pre-rewrite comparative story. `abatement_dashboard.html` touched for the same cross-page language consistency.
+- **ERCOT/SPP callout added** throughout: ratepayers in energy-only ISOs pay the reliability tax via scarcity-priced energy rather than capacity payments — no more "awkward exception" phrasing.
+- **C — SPEC.md updated**: §24.4 Status subsection appended (this session); Current Status rewritten (this block).
+- **Branch:** `claude/update-spec-reliability-tax-jd87x` — pushed to origin. Upstream v2 dashboard rewrite PRs (#3124–#3129) already merged to `master` before this session.
+
+**Next steps:** None required for this workstream. If a `research_paper.html` is authored in the future, its reliability-tax sections should follow the v2 cards (see SPEC §24.4 Status note).
 
 ### Worst-Hour Gas Sizing Rerun (In Progress — Apr 16, 2026)
 
@@ -6044,6 +6056,13 @@ Each component is reported separately in stacked-bar visualizations. "Overbuild"
 - No JSON payload contains `capacity_rev_netted_usd`, `net_fom_million_usd`, or any "net of capacity" language.
 - `total_new_build_gw / peak_demand_gw` for any pathway does not exceed 5× (sanity ceiling; current MISO 22× indicates model failure).
 - Headline tax for P1a > headline tax for P3 in every ISO (directionally, the delta is the whole story).
+
+**Status (Apr 17, 2026).**
+- `dashboard/reliability-tax.html` rewritten against v2 methodology (Cards M'/F'/K'/U/S). 9 sections: hero, setup, THE HUMP, abandonment, tax decomposition, journey cards, stranding Sankey, cost of waiting, 175-row summary table.
+- Capacity-market netting, developer-ROI framing, and comparative-to-P3 stranding language removed from all dashboard copy.
+- ERCOT/SPP callout added: ratepayers pay reliability tax via scarcity-priced energy rather than capacity payments.
+- `optimizer_methodology.html`, `index.html`, `abatement_dashboard.html` propagated to match the v2 framing.
+- Remaining work: `research_paper.html` does not exist in the repo; if/when authored, its reliability-tax sections should follow the v2 cards.
 
 ### 24.5 Worst-Hour Gas Sizing (Apr 16, 2026)
 
