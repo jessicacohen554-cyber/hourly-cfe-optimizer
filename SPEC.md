@@ -13,13 +13,17 @@
 
 **Planned 3-step fix (one commit per step):**
 1. **Step 1 (LANDED)** — Peak-year gas-fleet snapshot + drop cross-endpoint seeding + demand² scaling fix. See §24.6.
-2. **Step 2 (pending)** — VRE stranding priced as `Σ_years surplus_pct[r,y] × demand_mwh[y] × vintage_lcoe[r,y]`. `priced_vre_curtailment_usd` is currently hardcoded to zero in the reliability-tax ledger.
+2. **Step 2 (LANDED)** — VRE stranding priced as `Σ_years surplus_frac[r,y] × demand_mwh[y] × vintage_lcoe[r,y]`, with hybrid surplus priced at the underlying VRE's ledger key. See §24.7.
 3. **Step 3 (pending)** — Uniform pathway-specific Wright's Law NOAK years (P3 = 2035 proactive, P2b = 2040 behavioral pivot, P2a = 2045 late pivot) + Pathway 3 proactive clean-firm floor so P3 visibly diverges from P1 at every endpoint. Replaces the current endogenous economic/SBTi-plateau pivot triggers with exogenous deterministic cutovers per user direction.
 
 **Step 1 empirical results (ERCOT P1 Medium growth, medium costs):**
 - ep60: 53 GW new (was 250 GW) — peak-year 2050, 0 stranded.
 - ep90: 111 GW new (was 457 GW) — peak-year 2050, 0 stranded.
 - ep99.9: 73 GW new (was 457 GW) — peak-year 2039, 10 GW stranded by 2050, $6.7 B stranded capex. Gas CF collapses to <1 % by 2050 — the "hump + strand" story the v2 methodology is meant to show.
+
+**Step 2 empirical results (ERCOT P1 Medium growth, medium costs):**
+- ep60: $0.00 B priced VRE curtailment (low-CFE mix has no surplus).
+- ep99.9: $193.58 B priced VRE curtailment cumulative 2025–2050 (~5× the Step 1 gas components). Per-year priced curtailment ramps from $0 through 2027 to $25.2 B in 2050 as the VRE overbuild factor grows with the endpoint target. Reliability-tax $/MWh climbs from $2.51 (ep60) to $15.23 (ep99.9) — the "hump + strand" story now spans both generation stacks.
 
 **Pending user-decision knobs for Step 3:**
 - Pathway 3 clean-firm floor functional form. Working proposal: `clean_firm_min_pct = k · endpoint_pct` with `k ≈ 0.3`. Exact `k` TBD — pick so P3 visibly diverges from P1 at every endpoint without over-constraining the cheap VRE-heavy mixes at very low CFE targets.
@@ -6172,4 +6176,52 @@ At high CFE endpoints, gas CF collapses to <1 % by 2050 (73 GW fleet carrying fo
 - `EXISTING_GAS_FOM_KW_YR` carries existing-gas FOM on the full `EXISTING_GAS_CAPACITY_MW` nameplate every year (unchanged — that is the "we keep the plant on the grid for reliability" story).
 - `CCGT_OVERNIGHT_CAPEX_USD_KW` and `NEW_GAS_ASSET_LIFE_YEARS` are the stranding write-off inputs.
 
-**Scope boundary.** Step 1 (this section) fixes gas-fleet sizing only. VRE stranding (priced curtailed MWh × vintage LCOE) is Step 2 (pending). Pathway-specific Wright's Law NOAK years + Pathway 3 proactive clean-firm floor are Step 3 (pending). Both tracked in this session's Current Status.
+**Scope boundary.** Step 1 (this section) fixes gas-fleet sizing only. VRE stranding (priced curtailed MWh × vintage LCOE) is Step 2 (see §24.7). Pathway-specific Wright's Law NOAK years + Pathway 3 proactive clean-firm floor are Step 3 (pending). Both tracked in this session's Current Status.
+
+### 24.7 Priced VRE Curtailment (Apr 17, 2026 — Step 2)
+
+**Context.** Step 1 fixed gas-side reliability tax; the VRE side of the same ledger was still dark. `tax_components_cumulative['priced_vre_curtailment_usd']` was hardcoded to zero, so high-CFE VRE-only pathways appeared to have no stranded energetic cost even though those mixes curtail 40–60 % of their gross VRE generation. Step 2 prices that curtailment year by year against each resource's locked vintage LCOE, capturing the "build more VRE than the grid can absorb and pay the capex anyway" dynamic that is the VRE analog of the Card F' new-gas stranding story.
+
+**Locked formula (Step 2).**
+```
+priced_vre_curtailment_usd[y]
+  = Σ_r  surplus_frac[r, y] × demand_mwh[y] × vintage_lcoe[r, y]
+
+surplus_frac[r, y]    = sum of `surplus_<r>` 8760 profile from the dispatch
+                        cache entry keyed on (target_mix_pct, storage_pct)
+                        for year y's selected target.
+                        Cache is demand-normalized → sum is fraction of annual demand.
+vintage_lcoe[r, y]    = TWh-weighted average locked_lcoe across all VintageLedger
+                        entries with resource = r and cod_year ≤ y <
+                        retire_year. Weights are v.twh_per_year.
+
+r iterates over       : solar, wind, offshore_wind,
+                        solar_batt4, solar_batt8, wind_batt4, wind_batt8.
+                        Hybrid surplus (solar_batt4, etc.) is priced at the
+                        underlying VRE ledger key (solar or wind), NOT a
+                        hybrid-specific key — the battery did not produce the
+                        curtailed MWh, so battery capex is not part of the
+                        stranded energetic cost.
+
+priced_vre_curtailment_usd (cumulative)
+  = Σ_y priced_vre_curtailment_usd[y]   for y in 2025..2050.
+```
+
+**Why vintage-weighted LCOE (and not current-year marginal LCOE).** The $/MWh a developer "paid" to generate curtailed energy is locked at the year of commercial operation per Card N. A solar vintage built in 2029 carries 2029's LCOE for life; pricing its 2045 curtailment at 2045's Wright's-Law-discounted LCOE would understate the stranded capex by the full learning-curve delta. The ledger already records `locked_lcoe` per vintage, so the correct cost signal is available without additional state.
+
+**Implementation.** `scripts/step_2_3_pathway_optimizer.py` adds four helpers (`_vintage_weighted_lcoe`, `_dispatch_cache_entry`, `_archetype_key_for_target`, `_per_year_vre_curtailment_usd`) above `compute_vre_curtailment_at_endpoint`. The dispatch cache is populated on-demand by `size_required_gas_mw` during the first pass of `solve_pathway`; the second pass reads from the step2_2a in-memory cache (falling back to disk if absent). The per-year priced curtailment is accumulated into `tax_components_cumulative['priced_vre_curtailment_usd']` and mirrored per-row as `priced_vre_curtailment_usd_this_year` in `annual_cost` for diagnostics.
+
+**Edge-case behavior (locked).**
+- Archetype missing from cache after `size_required_gas_mw` expansion → year's priced curtailment = 0. Emits no warning; the cache expansion path is an invariant of Step 1. If this ever fires, it signals a Step 1 regression, not a Step 2 bug.
+- No active vintages for resource r in year y → vintage LCOE = 0 → priced curtailment for that slice = 0. Consistent with "no book cost to strand" — existing fleet that predates the ledger is intentionally not charged a stranding tax by Step 2 (it was treated as pre-paid sunk cost in every prior Card).
+- Target mix has resource r at 0 % → skipped. Avoids spurious lookups of surplus profiles that are structurally zero.
+- `surplus_<r>` absent from cache entry (older cache version) → resource skipped. Cache v2+ always includes these columns; older caches trigger the skip path silently.
+
+**Output schema change.** `annual_cost[]` rows now carry `priced_vre_curtailment_usd_this_year`. The `reliability_tax.components_usd['priced_vre_curtailment_usd']` field is unchanged in shape but now flows a non-zero value for VRE-heavy pathways. No legacy keys removed.
+
+**Empirical validation (ERCOT P1, Medium growth, medium costs — test suite).**
+- ep60: $0.00 B priced VRE curtailment (low-CFE VRE mix carries no surplus).
+- ep99.9: $193.58 B priced VRE curtailment, ramping year-over-year from $0 through 2027 → $25.2 B in 2050 as the CFE target climbs and the VRE overbuild factor grows. This is ~5× the cumulative Step 1 gas reliability-tax components ($94.97 B new-gas capex + $18.59 B existing-gas FOM), correctly placing the VRE-only pathway's dominant cost pressure on stranded VRE capex rather than on the small residual peaker fleet.
+- $/MWh reliability tax at ep99.9: $15.23, vs $2.51 at ep60 — the "hump + strand" story now spans both sides of the generation stack.
+
+**Scope boundary.** Storage overbuild capex (`vre_storage_overbuild_capex_usd`) remains at 0 in the solver and is still planned for a later step. Step 3 lands the pathway-specific Wright's-Law NOAK years and Pathway 3 clean-firm floor; tracked in the Current Status.
