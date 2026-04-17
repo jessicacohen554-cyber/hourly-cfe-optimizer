@@ -134,6 +134,35 @@
         }
         .tax-hero-lead strong { color: var(--navy); font-weight: 700; }
 
+        /* Section 3 — Abandonment / Section 4 — Tax shared controls */
+        .tax-controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: var(--space-md);
+        }
+        .tax-controls .ctrl-label {
+            font-family: var(--font-data);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-right: 8px;
+        }
+        .tax-controls .toggle-btn-group button,
+        .tax-controls .iso-btn {
+            min-height: 44px;
+        }
+
+        /* Section 4 — legend for tax stack components */
+        #taxLegend {
+            justify-content: center;
+            margin-top: var(--space-sm);
+        }
+
         /* Section-stub placeholders (A2/A3/A4 sessions will replace). */
         .section-stub {
             max-width: 940px;
@@ -313,17 +342,91 @@
     </section>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- Section 3 — Overbuild (A2 session)                                     -->
+    <!-- Section 3 — The Abandonment                                            -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <section class="content-section" id="section3">
-        <!-- TODO: A2 session will fill (overbuild: VRE+storage capacity beyond dispatched-energy justification). -->
+        <h2 class="section-title fade-in" style="text-align:center;">The Abandonment</h2>
+        <p class="section-subtitle fade-in" style="text-align:center; margin-bottom: var(--space-lg); max-width: 820px; margin-left:auto; margin-right:auto;">
+            Most of the gas built at medium CFE thresholds gets used less and less each year. When a vintage&rsquo;s capacity factor falls below 15% for two consecutive years (SPEC Card F&prime;), its unrecovered book value is written off as stranded capital.
+        </p>
+
+        <div class="chart-panel fade-in">
+            <div class="tax-controls">
+                <div class="iso-selector" id="abandonIsoSelector" role="tablist" aria-label="ISO selector">
+                    <button type="button" class="iso-btn" data-iso="ERCOT">ERCOT</button>
+                    <button type="button" class="iso-btn active" data-iso="CAISO">CAISO</button>
+                    <button type="button" class="iso-btn" data-iso="MISO">MISO</button>
+                    <button type="button" class="iso-btn" data-iso="NEISO">NEISO</button>
+                    <button type="button" class="iso-btn" data-iso="NYISO">NYISO</button>
+                    <button type="button" class="iso-btn" data-iso="PJM">PJM</button>
+                    <button type="button" class="iso-btn" data-iso="SPP">SPP</button>
+                </div>
+                <div style="font-family: var(--font-data); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted);">
+                    Pathway&nbsp;P1a &middot; peak vintage &middot; 2050 snapshot
+                </div>
+            </div>
+            <div class="chart-container-lg">
+                <canvas id="abandonmentChart"></canvas>
+            </div>
+            <div class="legend" style="justify-content:center; margin-top: var(--space-sm);">
+                <span class="legend-item"><span class="legend-dot" style="background: var(--fossil-gas, #6B7280);"></span>Still running (CF &ge; 15%)</span>
+                <span class="legend-item"><span class="legend-dot" style="background: #DC2626;"></span>Stranded (CF &lt; 15% for 2 consecutive years)</span>
+            </div>
+        </div>
+
+        <div class="insight-box fade-in" id="abandonmentInsight" style="max-width: 820px; margin: var(--space-lg) auto 0;" aria-live="polite">
+            &nbsp;
+        </div>
     </section>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- Section 4 — Reliability Tax stack (A2 session)                         -->
+    <!-- Section 4 — The Tax (main decomposition)                               -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <section class="content-section" id="section4">
-        <!-- TODO: A2 session will fill (stacked reliability-tax $/MWh by component, per pathway). -->
+        <h2 class="section-title fade-in" style="text-align:center;">The Tax</h2>
+        <p class="section-subtitle fade-in" style="text-align:center; margin-bottom: var(--space-lg); max-width: 820px; margin-left:auto; margin-right:auto;">
+            Five cost streams roll up into the reliability tax customers actually pay. P1a (VRE + storage only) next to P3 (VRE + storage + clean firm), side-by-side for every ISO.
+        </p>
+
+        <div class="chart-panel fade-in">
+            <div class="tax-controls">
+                <div class="iso-selector" id="taxIsoSelector" role="tablist" aria-label="ISO selector">
+                    <button type="button" class="iso-btn active" data-iso="ERCOT">ERCOT</button>
+                    <button type="button" class="iso-btn" data-iso="CAISO">CAISO</button>
+                    <button type="button" class="iso-btn" data-iso="MISO">MISO</button>
+                    <button type="button" class="iso-btn" data-iso="NEISO">NEISO</button>
+                    <button type="button" class="iso-btn" data-iso="NYISO">NYISO</button>
+                    <button type="button" class="iso-btn" data-iso="PJM">PJM</button>
+                    <button type="button" class="iso-btn" data-iso="SPP">SPP</button>
+                </div>
+                <div class="toggle-btn-group" id="taxThresholdToggle" role="tablist" aria-label="CFE endpoint">
+                    <button type="button" data-ep="ep90">90%</button>
+                    <button type="button" class="active" data-ep="ep95">95%</button>
+                    <button type="button" data-ep="ep97p5">97.5%</button>
+                    <button type="button" data-ep="ep99">99%</button>
+                    <button type="button" data-ep="ep99p9">&ge;99.9%</button>
+                </div>
+            </div>
+            <div class="chart-container-lg">
+                <canvas id="taxChart"></canvas>
+            </div>
+            <div class="legend" id="taxLegend">
+                <span class="legend-item"><span class="legend-dot" style="background:#6B7280;"></span>New-gas capex (annualized)</span>
+                <span class="legend-item"><span class="legend-dot" style="background:rgba(107,114,128,0.6);"></span>New-gas FOM</span>
+                <span class="legend-item"><span class="legend-dot" style="background:#374151;"></span>Existing-gas FOM carried</span>
+                <span class="legend-item"><span class="legend-dot" style="background:#F59E0B;"></span>Priced VRE curtailment</span>
+                <span class="legend-item"><span class="legend-dot" style="background:#EF4444;"></span>VRE / storage overbuild capex</span>
+            </div>
+        </div>
+
+        <div class="grid-2col fade-in" style="margin-top: var(--space-lg);">
+            <div class="insight-box" id="taxDeltaInsight" aria-live="polite">
+                &nbsp;
+            </div>
+            <div class="insight-box insight-warn">
+                <strong>ERCOT and SPP have no capacity markets.</strong> Ratepayers still pay the reliability tax &mdash; it&rsquo;s recovered through scarcity-priced energy during tight hours rather than through stable capacity payments. Either way, the total cost lands on customer bills.
+            </div>
+        </div>
     </section>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -559,6 +662,360 @@
                 .catch(function(err) {
                     var captionEl = document.getElementById('humpPeakCaption');
                     if (captionEl) captionEl.textContent = 'Data unavailable: ' + (err && err.message ? err.message : err);
+                });
+        })();
+
+        // ===== Shared helpers for Sections 3 & 4 =====
+        var ISO_LIST = ['ERCOT', 'CAISO', 'MISO', 'NEISO', 'NYISO', 'PJM', 'SPP'];
+
+        function fmtMWShared(v) {
+            if (v == null || !isFinite(v)) return '—';
+            if (Math.abs(v) >= 1000) return (v / 1000).toFixed(1) + ' GW';
+            return Math.round(v).toLocaleString() + ' MW';
+        }
+
+        function fmtUsdPerMwh(v) {
+            if (v == null || !isFinite(v)) return '—';
+            return '$' + v.toFixed(1) + '/MWh';
+        }
+
+        // ===== Section 3 — The Abandonment chart =====
+        (function initAbandonmentChart() {
+            var canvas = document.getElementById('abandonmentChart');
+            if (!canvas || typeof Chart === 'undefined') return;
+
+            var state = { iso: 'CAISO', data: null, chart: null };
+
+            var stillRunningColor = (typeof RESOURCE_COLORS !== 'undefined' && RESOURCE_COLORS.fossilGas) || '#6B7280';
+            var strandedColor     = (typeof SEMANTIC_COLORS !== 'undefined' && SEMANTIC_COLORS.negative) || '#DC2626';
+
+            function render() {
+                if (!state.data || !state.data.peaks_per_pathway) return;
+                var peaks = state.data.peaks_per_pathway;
+
+                var labels = ISO_LIST.slice();
+                var stillRunning = [];
+                var stranded     = [];
+                labels.forEach(function(iso) {
+                    var p = (peaks[iso] && peaks[iso]['1a']) || {};
+                    var total = p.cum_new_gas_mw || 0;
+                    var strand = p.cum_new_gas_stranded_mw || 0;
+                    stranded.push(strand);
+                    stillRunning.push(Math.max(0, total - strand));
+                });
+
+                var datasets = [
+                    {
+                        label: 'Stranded',
+                        data: stranded,
+                        backgroundColor: strandedColor,
+                        borderColor: strandedColor,
+                        borderWidth: 0,
+                        stack: 'gas'
+                    },
+                    {
+                        label: 'Still running',
+                        data: stillRunning,
+                        backgroundColor: stillRunningColor,
+                        borderColor: stillRunningColor,
+                        borderWidth: 0,
+                        stack: 'gas'
+                    }
+                ];
+
+                if (state.chart) {
+                    state.chart.data.labels = labels;
+                    state.chart.data.datasets = datasets;
+                    state.chart.update();
+                } else {
+                    state.chart = new Chart(canvas.getContext('2d'), {
+                        type: 'bar',
+                        data: { labels: labels, datasets: datasets },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(ctx) {
+                                            return ctx.dataset.label + ': ' + fmtMWShared(ctx.parsed.y);
+                                        },
+                                        footer: function(items) {
+                                            if (!items.length) return '';
+                                            var iso = items[0].label;
+                                            var p = (peaks[iso] && peaks[iso]['1a']) || {};
+                                            var total = p.cum_new_gas_mw || 0;
+                                            var strand = p.cum_new_gas_stranded_mw || 0;
+                                            var share = total > 0 ? Math.round(100 * strand / total) : 0;
+                                            return 'Total peak: ' + fmtMWShared(total) + '  (' + share + '% stranded)';
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    stacked: true,
+                                    ticks: { font: { family: 'Plus Jakarta Sans', size: 12, weight: '600' } },
+                                    grid: { display: false }
+                                },
+                                y: {
+                                    stacked: true,
+                                    beginAtZero: true,
+                                    title: { display: true, text: 'Peak P1a new-gas capacity (MW, by 2050)', font: { family: 'Plus Jakarta Sans', size: 12, weight: '600' } },
+                                    ticks: {
+                                        font: { family: 'DM Mono, monospace', size: 11 },
+                                        callback: function(v) { return (v >= 1000) ? (v / 1000) + 'k' : v; }
+                                    },
+                                    grid: { color: 'rgba(0,0,0,0.06)' }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                renderInsight();
+            }
+
+            function renderInsight() {
+                var el = document.getElementById('abandonmentInsight');
+                if (!el || !state.data) return;
+                var peaks = state.data.peaks_per_pathway || {};
+                var p = (peaks[state.iso] && peaks[state.iso]['1a']) || {};
+                var total = p.cum_new_gas_mw || 0;
+                var strand = p.cum_new_gas_stranded_mw || 0;
+                var share = total > 0 ? (100 * strand / total) : 0;
+
+                // Worst-case ISO across all
+                var worstIso = null, worstShare = -1;
+                ISO_LIST.forEach(function(iso) {
+                    var pp = (peaks[iso] && peaks[iso]['1a']) || {};
+                    var t = pp.cum_new_gas_mw || 0;
+                    var s = pp.cum_new_gas_stranded_mw || 0;
+                    var sh = t > 0 ? (100 * s / t) : 0;
+                    if (sh > worstShare) { worstShare = sh; worstIso = iso; }
+                });
+
+                if (total <= 0) {
+                    el.innerHTML = '<strong>' + state.iso + '</strong>: no P1a new-gas build at peak vintage.';
+                    return;
+                }
+
+                var worstNote = '';
+                if (worstIso && worstIso !== state.iso) {
+                    worstNote = ' Worst case across ISOs: <strong>' + worstIso + '</strong> at ~' + Math.round(worstShare) + '%.';
+                } else if (worstIso === state.iso) {
+                    worstNote = ' This is the worst case across ISOs.';
+                }
+
+                el.innerHTML =
+                    '<strong>' + state.iso + '</strong>: ~<strong>' + Math.round(share) + '%</strong> of P1a new-gas capacity ' +
+                    '(' + fmtMWShared(strand) + ' of ' + fmtMWShared(total) + ') ends up with CF below 15% by 2050.' +
+                    worstNote;
+            }
+
+            document.querySelectorAll('#abandonIsoSelector .iso-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('#abandonIsoSelector .iso-btn').forEach(function(b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    state.iso = btn.dataset.iso;
+                    renderInsight();
+                });
+            });
+
+            fetch('js/reliability-tax/section2_gas_hump.json', { cache: 'no-cache' })
+                .then(function(r) { return r.json(); })
+                .then(function(json) { state.data = json; render(); })
+                .catch(function(err) {
+                    var el = document.getElementById('abandonmentInsight');
+                    if (el) el.textContent = 'Data unavailable: ' + (err && err.message ? err.message : err);
+                });
+        })();
+
+        // ===== Section 4 — The Tax stacked decomposition =====
+        (function initTaxChart() {
+            var canvas = document.getElementById('taxChart');
+            if (!canvas || typeof Chart === 'undefined') return;
+
+            var state = { iso: 'ERCOT', endpoint: 'ep95', data: null, chart: null };
+
+            var alpha = (typeof withAlpha === 'function') ? withAlpha : function(h, a) { return h; };
+            var rc = (typeof RESOURCE_COLORS !== 'undefined') ? RESOURCE_COLORS : {};
+
+            var COMPONENT_DEFS = [
+                { key: 'new_gas_capex_annualized_usd',     label: 'New-gas capex (annualized)', color: rc.fossilGas  || '#6B7280' },
+                { key: 'new_gas_fom_usd',                  label: 'New-gas FOM',                color: alpha(rc.fossilGas || '#6B7280', 0.6) },
+                { key: 'existing_gas_fom_carried_usd',     label: 'Existing-gas FOM carried',   color: rc.fossilCoal || '#374151' },
+                { key: 'priced_vre_curtailment_usd',       label: 'Priced VRE curtailment',     color: rc.solar      || '#F59E0B' },
+                { key: 'vre_storage_overbuild_capex_usd',  label: 'VRE / storage overbuild capex', color: rc.storage || '#EF4444' }
+            ];
+
+            function getCell(iso, pathway, endpoint) {
+                var p = state.data && state.data.per_iso && state.data.per_iso[iso]
+                        && state.data.per_iso[iso].per_pathway && state.data.per_iso[iso].per_pathway[pathway];
+                return (p && p[endpoint]) || null;
+            }
+
+            function buildXLabels() {
+                // Two grouped columns per ISO — use two-line labels via array
+                var labels = [];
+                ISO_LIST.forEach(function(iso) {
+                    labels.push([iso, 'P1a']);
+                    labels.push([iso, 'P3']);
+                });
+                return labels;
+            }
+
+            function render() {
+                if (!state.data) return;
+                var labels = buildXLabels();
+
+                var datasets = COMPONENT_DEFS.map(function(def) {
+                    var data = [];
+                    ISO_LIST.forEach(function(iso) {
+                        ['1a', '3'].forEach(function(pw) {
+                            var cell = getCell(iso, pw, state.endpoint);
+                            var v = (cell && cell.components_usd_per_mwh && cell.components_usd_per_mwh[def.key]) || 0;
+                            data.push(v);
+                        });
+                    });
+                    return {
+                        label: def.label,
+                        data: data,
+                        backgroundColor: def.color,
+                        borderColor: def.color,
+                        borderWidth: 0,
+                        stack: 'tax'
+                    };
+                });
+
+                var axisMax = (state.data.global_axis_ranges
+                               && state.data.global_axis_ranges.tax_usd_per_mwh
+                               && state.data.global_axis_ranges.tax_usd_per_mwh.max) || undefined;
+
+                if (state.chart) {
+                    state.chart.data.labels = labels;
+                    state.chart.data.datasets = datasets;
+                    if (axisMax) state.chart.options.scales.y.max = axisMax;
+                    state.chart.update();
+                } else {
+                    state.chart = new Chart(canvas.getContext('2d'), {
+                        type: 'bar',
+                        data: { labels: labels, datasets: datasets },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        title: function(items) {
+                                            if (!items.length) return '';
+                                            var lbl = items[0].label;
+                                            if (Array.isArray(lbl)) return lbl.join(' ');
+                                            return String(lbl).replace(',', ' ');
+                                        },
+                                        label: function(ctx) {
+                                            return ctx.dataset.label + ': ' + fmtUsdPerMwh(ctx.parsed.y);
+                                        },
+                                        footer: function(items) {
+                                            if (!items.length) return '';
+                                            var total = items.reduce(function(s, i) { return s + (i.parsed.y || 0); }, 0);
+                                            return 'Total: ' + fmtUsdPerMwh(total);
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    stacked: true,
+                                    ticks: {
+                                        font: { family: 'Plus Jakarta Sans', size: 11, weight: '600' },
+                                        autoSkip: false,
+                                        maxRotation: 0,
+                                        minRotation: 0
+                                    },
+                                    grid: { display: false }
+                                },
+                                y: {
+                                    stacked: true,
+                                    beginAtZero: true,
+                                    max: axisMax,
+                                    title: { display: true, text: 'Reliability tax ($/MWh, 2025–2050)', font: { family: 'Plus Jakarta Sans', size: 12, weight: '600' } },
+                                    ticks: {
+                                        font: { family: 'DM Mono, monospace', size: 11 },
+                                        callback: function(v) { return '$' + v; }
+                                    },
+                                    grid: { color: 'rgba(0,0,0,0.06)' }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                renderDeltaInsight();
+            }
+
+            function epLabel(ep) {
+                var map = { ep60:'60%', ep70:'70%', ep75:'75%', ep80:'80%', ep85:'85%', ep90:'90%',
+                            ep95:'95%', ep97p5:'97.5%', ep99:'99%', ep99p9:'≥99.9%' };
+                return map[ep] || ep;
+            }
+
+            function renderDeltaInsight() {
+                var el = document.getElementById('taxDeltaInsight');
+                if (!el || !state.data) return;
+                var p1a = getCell(state.iso, '1a', state.endpoint);
+                var p3  = getCell(state.iso, '3',  state.endpoint);
+
+                if (!p1a || !p3 || p1a.available === false || p3.available === false) {
+                    el.innerHTML = '<strong>' + state.iso + '</strong> at ' + epLabel(state.endpoint) + ': data unavailable for one of the pathways at this endpoint.';
+                    return;
+                }
+
+                var t1 = p1a.total_reliability_tax_usd_per_mwh || 0;
+                var t3 = p3.total_reliability_tax_usd_per_mwh || 0;
+                var delta = t1 - t3;
+
+                var verdict;
+                if (delta > 0.5) {
+                    verdict = 'That $<strong>' + Math.abs(delta).toFixed(1) + '</strong>/MWh delta is the ratepayer penalty of locking in VRE-only planning.';
+                } else if (delta < -0.5) {
+                    verdict = 'At this endpoint, P3 carries a $' + Math.abs(delta).toFixed(1) + '/MWh premium over P1a — clean firm hasn\'t yet crossed in on cost at this threshold.';
+                } else {
+                    verdict = 'At this endpoint the two pathways land within ~$1/MWh of each other — P3\'s advantage opens up further up the CFE curve.';
+                }
+
+                el.innerHTML =
+                    'In <strong>' + state.iso + '</strong> at <strong>' + epLabel(state.endpoint) + '</strong> CFE, ' +
+                    'P1a&rsquo;s reliability tax is <strong>' + fmtUsdPerMwh(t1) + '</strong> vs ' +
+                    '<strong>' + fmtUsdPerMwh(t3) + '</strong> for P3. ' + verdict;
+            }
+
+            document.querySelectorAll('#taxIsoSelector .iso-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('#taxIsoSelector .iso-btn').forEach(function(b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    state.iso = btn.dataset.iso;
+                    renderDeltaInsight();
+                });
+            });
+
+            document.querySelectorAll('#taxThresholdToggle button').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('#taxThresholdToggle button').forEach(function(b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    state.endpoint = btn.dataset.ep;
+                    render();
+                });
+            });
+
+            fetch('js/reliability-tax/section3_reliability_tax.json', { cache: 'no-cache' })
+                .then(function(r) { return r.json(); })
+                .then(function(json) { state.data = json; render(); })
+                .catch(function(err) {
+                    var el = document.getElementById('taxDeltaInsight');
+                    if (el) el.textContent = 'Data unavailable: ' + (err && err.message ? err.message : err);
                 });
         })();
 
