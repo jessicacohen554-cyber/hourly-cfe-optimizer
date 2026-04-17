@@ -5,6 +5,30 @@
 
 ## Current Status (Apr 17, 2026)
 
+### Reliability Tax Sizing Bugs — Step 1 Complete (Apr 17, 2026)
+
+**Branch:** `claude/fix-ercot-gas-capacity-i6cZD`
+
+**Context.** User audit of `analysis/reliability-tax/data/ERCOT/pathway1_ep90.json` surfaced a 450+ GW new-build gas fleet vs. 69 GW of actual ERCOT gas today and 197 GW 2050 peak demand. Also: Pathways 1 and 3 producing identical results across every endpoint.
+
+**Planned 3-step fix (one commit per step):**
+1. **Step 1 (LANDED)** — Peak-year gas-fleet snapshot + drop cross-endpoint seeding + demand² scaling fix. See §24.6.
+2. **Step 2 (pending)** — VRE stranding priced as `Σ_years surplus_pct[r,y] × demand_mwh[y] × vintage_lcoe[r,y]`. `priced_vre_curtailment_usd` is currently hardcoded to zero in the reliability-tax ledger.
+3. **Step 3 (pending)** — Uniform pathway-specific Wright's Law NOAK years (P3 = 2035 proactive, P2b = 2040 behavioral pivot, P2a = 2045 late pivot) + Pathway 3 proactive clean-firm floor so P3 visibly diverges from P1 at every endpoint. Replaces the current endogenous economic/SBTi-plateau pivot triggers with exogenous deterministic cutovers per user direction.
+
+**Step 1 empirical results (ERCOT P1 Medium growth, medium costs):**
+- ep60: 53 GW new (was 250 GW) — peak-year 2050, 0 stranded.
+- ep90: 111 GW new (was 457 GW) — peak-year 2050, 0 stranded.
+- ep99.9: 73 GW new (was 457 GW) — peak-year 2039, 10 GW stranded by 2050, $6.7 B stranded capex. Gas CF collapses to <1 % by 2050 — the "hump + strand" story the v2 methodology is meant to show.
+
+**Pending user-decision knobs for Step 3:**
+- Pathway 3 clean-firm floor functional form. Working proposal: `clean_firm_min_pct = k · endpoint_pct` with `k ≈ 0.3`. Exact `k` TBD — pick so P3 visibly diverges from P1 at every endpoint without over-constraining the cheap VRE-heavy mixes at very low CFE targets.
+
+**Resume instructions for next session:**
+1. Read §24.6 for the peak-year-snapshot methodology that just landed.
+2. For Step 2, extend `compute_vre_curtailment_at_endpoint` (`scripts/step_2_3_pathway_optimizer.py` line ≈ 2872) from endpoint-only to per-year and populate `tax_components_cumulative['priced_vre_curtailment_usd']`. Lookup source: the annual manifest parquet already carries `{solar|wind|...}_surplus_pct` and `_dispatch_pct` per archetype. Use ledger vintage LCOE for the price — NOT current-year marginal LCOE.
+3. For Step 3: add per-pathway `NOAK_YEAR_BY_PATHWAY` dict (`{'3': 2035, '2b': 2040, '2a': 2045}`), thread it into `year_adjusted_cost` so the learning-curve window shifts per pathway. Then add a clean-firm floor to `_filter_pathway_3` that forces `clean_firm >= k · endpoint_pct`.
+
 ### Reliability Tax v2 Dashboard Rewrite (Landed — Apr 17, 2026)
 
 **What was accomplished this session (A1–A4 + B1 + B2 + C):**
@@ -6098,3 +6122,54 @@ RA-margin convention (locked Apr 16, 2026 — amended from initial "margin on ga
 - Temp script `scripts/tmp_validate_worst_hour_sizing.py` prints a 10-mix × 3-ISO (ERCOT, NYISO, CAISO) diff table of `{ELCC_mw, worst_hour_mw, delta_pct}`. Expected pattern: VRE-heavy mixes → worst-hour > ELCC; clean-firm-heavy mixes → approximately equal. Any `worst_hour < ELCC` is a hard stop.
 - Validation must exercise the on-demand archetype expansion path with ≥2 cache-miss mixes; the second read must hit the newly-written rows.
 - User-approved validation table is a prerequisite for step-2.2 rerun.
+
+### 24.6 Peak-Year Gas Fleet Snapshot (Apr 17, 2026)
+
+**Context.** Audit of `analysis/reliability-tax/data/ERCOT/pathway1_ep90.json` revealed the reported new-build gas fleet (457 GW) was ≈4× any physically defensible stock — ERCOT existing gas is 55 GW and 2050 peak demand under Medium growth is ≈197 GW. Three compounding bugs, two fixed in this section.
+
+**Bug 1 — Cross-endpoint fleet seeding (FIXED).** `scripts/run_pathway_sweep.py` chained endpoint runs per pathway via `--seed-run`, passing each terminal `new_gas_fleet` into the next endpoint's `initial_fleet`. Result: ep99.9's reported fleet was a UNION of every vintage ever built across ep60 → … → ep99.9. A standalone (pathway, endpoint, growth) scenario is a 2025–2050 trajectory — each runs independently. **Fix.** `PlannedRun.seed_run_path` removed, `run_pathway_sweep.sweep` no longer tracks `last_output`, `solve_pathway/_solve_and_annotate/run_pathway` accept `initial_fleet=None` for signature compatibility but ignore it (explicit `del initial_fleet`). The `--seed-run` CLI flag is retained as a no-op with a deprecation warning so old invocations don't crash.
+
+**Bug 2 — Cumulative build every year as demand grows (FIXED).** Old intra-run loop: if `sizing['new_gas_required_cumulative_mw'] > already_built_new_mw`, add a new vintage that year. Demand growth (3.5 %/yr in ERCOT, compounding 2.36× over 26 years) makes the requirement monotonically grow whenever CFE plateaus — producing a new vintage every single year. The fleet becomes the SUM of these annual increments instead of the maximum of the requirement trajectory. **Fix.** `solve_pathway` now runs in two phases:
+```
+Phase A (main loop, years 2025–2050):
+  compute target, sizing, CFE, new_gas_required_cumulative_mw[y]
+  (intra-run clean-resource ratchet via ledger is UNCHANGED)
+Phase B (post-loop aggregation):
+  fleet_size_mw   = max(new_gas_required_cumulative_mw[y])
+  peak_year       = argmax year
+  active_mw[y]    = running max through year y (monotonic ratchet up to peak, then flat)
+  new_gas_need_2050_mw = new_gas_required_cumulative_mw[2050]
+  stranded_mw_at_2050  = fleet_size_mw − new_gas_need_2050_mw
+  years_in_service_2050 = 2050 − peak_year
+  years_remaining_2050  = max(0, NEW_GAS_ASSET_LIFE_YEARS − years_in_service_2050)
+  stranded_capex_usd    = stranded_mw × 1000 × CCGT_OVERNIGHT_CAPEX_USD_KW × (years_remaining_2050 / NEW_GAS_ASSET_LIFE_YEARS)
+```
+A single consolidated vintage is booked at `peak_year` with `initial_cap_mw = fleet_size_mw`. Card F' CF-streak trigger is retained as a diagnostic (annual CF list) but is NO LONGER the stranding trigger — peak vs. 2050 need is the deterministic rule.
+
+**Bug 3 — Double-applied demand growth in the size_required_gas_mw call (FIXED).** `worst_hour_gas_sizing(iso, mix, storage, demand_twh, gf)` expects `demand_twh` to be BASE-year demand and applies `gf` internally (`demand_mwh_grown = demand_twh * 1e6 * gf`). The pathway optimizer was passing `demand_for_year(iso, year, growth)` — which is already grown — producing a `demand^2 × gf` scaling that inflated gas need by the growth factor again (≈2.36× for ERCOT 2050 Medium). **Fix.** Pathway optimizer now passes `pc.REGIONAL_DEMAND_TWH[iso]` (base) into `size_required_gas_mw`.
+
+**Output schema changes.** The per-run JSON `stranding_metadata` dict adds:
+- `methodology: "peak_year_snapshot_v2"`
+- `fleet_size_mw: <MW>`
+- `peak_year: <YYYY>`
+- `new_gas_need_2050_mw: <MW>`
+- `stranded_mw_at_2050: <MW>`
+Legacy keys (`cf_threshold_default`, `cf_threshold_sensitivity`, etc.) stay for back-compat with downstream readers. `tables.new_gas_fleet` is now a single-vintage list (year_built = peak year, stranded_capex_usd = peak-to-2050 write-off). Annual buildout `gas_sizing.new_gas_built_this_year_mw` is non-zero only at `peak_year`; `active_new_gas_fleet_mw[y]` is the running-max ratchet trajectory.
+
+**Empirical validation (ERCOT P1, Medium growth, medium costs).** New fleet sizes are now physically defensible:
+- ep60: 53 GW new (was 250 GW) — peak = 2050, stranded = 0.
+- ep90: 111 GW new (was 457 GW) — peak = 2050, stranded = 0.
+- ep99.9: 73 GW new (was 457 GW) — peak = 2039, stranded = 10 GW, stranded capex = $6.7 B.
+At high CFE endpoints, gas CF collapses to <1 % by 2050 (73 GW fleet carrying for reliability only), which is the "hump + strand" story the methodology is meant to show.
+
+**Downstream implications.**
+- `analysis/reliability-tax/data/` requires a full 350-run regeneration. Old `MANIFEST.json` preserved as `MANIFEST.stale-*.json`; the stale-ELCC backup from §24.5 is untouched.
+- `reliability_tax/charts/*.py` readers consume fields that still exist (`tables.new_gas_fleet[]`, `reliability_tax.components_usd`, `gas_sizing.active_new_gas_fleet_mw`, `gas_sizing.gas_fleet_cf`). No chart regenerator changes are required for Step 1; they will be re-run after all three steps land.
+- Each (pathway, endpoint) run is now idempotent — re-running ep90 alone does NOT depend on ep60 being fresh.
+
+**Future-work knobs left in place.**
+- `NEW_CCGT_COST_KW_YR` (per-ISO annualized capex+FOM) is still the capex recovery knob — single vintage pays `fleet_size × NEW_CCGT_COST_KW_YR × 1000` every year it is active.
+- `EXISTING_GAS_FOM_KW_YR` carries existing-gas FOM on the full `EXISTING_GAS_CAPACITY_MW` nameplate every year (unchanged — that is the "we keep the plant on the grid for reliability" story).
+- `CCGT_OVERNIGHT_CAPEX_USD_KW` and `NEW_GAS_ASSET_LIFE_YEARS` are the stranding write-off inputs.
+
+**Scope boundary.** Step 1 (this section) fixes gas-fleet sizing only. VRE stranding (priced curtailed MWh × vintage LCOE) is Step 2 (pending). Pathway-specific Wright's Law NOAK years + Pathway 3 proactive clean-firm floor are Step 3 (pending). Both tracked in this session's Current Status.
