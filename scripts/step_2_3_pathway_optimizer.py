@@ -1341,6 +1341,70 @@ def _existing_resource_ceiling_pct(iso: str, resource: str = 'clean_firm') -> in
     return round(pct)
 
 
+# Ledger key used for pre-seeded existing clean-firm fleet (nuclear etc.).
+# Distinct from the new-build keys (uprate, geothermal, nuclear_newbuild,
+# ccs_ccgt) so _derive_delta_vintages can recognize the sunk-cost fleet
+# separately from tranche-allocated new builds. Included in the clean-firm
+# ledger-capacity sum so the delta calc sees existing fleet as already-present.
+_EXISTING_CLEAN_FIRM_KEY = 'clean_firm_existing'
+
+# Mapping from GRID_MIX_SHARES resource → VintageLedger resource key used when
+# pre-seeding existing fleet. The ledger keys match the ones the rest of the
+# module already uses in the energy_resources / hybrid / clean-firm-subtraction
+# blocks, so ledger.capacity_twh(key, year) correctly returns the existing
+# fleet TWh without any code changes at the lookup sites (except for
+# clean_firm, which needs _EXISTING_CLEAN_FIRM_KEY added to its subtraction
+# sum — see _derive_delta_vintages).
+_EXISTING_FLEET_LEDGER_KEYS: tuple[tuple[str, str], ...] = (
+    ('clean_firm',    _EXISTING_CLEAN_FIRM_KEY),
+    ('solar',         'solar'),
+    ('wind',          'wind'),
+    ('offshore_wind', 'offshore_wind'),
+    ('hydro',         'hydro'),
+    ('ccs_ccgt',      'ccs_ccgt'),
+)
+
+
+def _seed_existing_fleet_vintages(iso: str) -> list['Vintage']:
+    """Construct zero-LCOE vintages for the existing-fleet resources in ``iso``.
+
+    SPEC §24.8 (Step 3 v2 accounting fix). Pre-seeding the VintageLedger makes
+    it a single source of truth for "physical assets this pathway operates":
+    existing fleet (sunk cost, locked_lcoe = 0) + new vintages booked during
+    the horizon (locked LCOE per Card N). The delta-vintage derivation then
+    naturally subtracts existing TWh before booking new builds, so identical
+    target mixes produce identical costs across pathways.
+
+    TWh per resource = BASE_DEMAND_TWH[iso] × GRID_MIX_SHARES[iso][resource] / 100.
+    cod_year = BASE_YEAR - 1 (2024) so ledger.active(y) sees it from year 1.
+    locked_lcoe = 0.0 (sunk capex), tx_adder = 0.0, retire_year = None (existing
+    fleet is assumed to persist over the 25-year horizon).
+    """
+    try:
+        import dispatch_utils as _du
+    except ImportError:
+        return []
+    base_demand = float(getattr(_du, 'BASE_DEMAND_TWH', {}).get(iso, 0.0))
+    if base_demand <= 0:
+        return []
+    shares = getattr(_du, 'GRID_MIX_SHARES', {}).get(iso, {}) or {}
+    seed: list[Vintage] = []
+    for share_key, ledger_key in _EXISTING_FLEET_LEDGER_KEYS:
+        pct = float(shares.get(share_key, 0.0))
+        if pct <= 0:
+            continue
+        twh = base_demand * pct / 100.0
+        seed.append(Vintage(
+            resource=ledger_key,
+            cod_year=BASE_YEAR - 1,
+            twh_per_year=twh,
+            locked_lcoe=0.0,
+            tx_adder=0.0,
+            retire_year=None,
+        ))
+    return seed
+
+
 def _filter_pathway_1(
     df: pd.DataFrame,
     iso: str | None = None,
@@ -1992,17 +2056,32 @@ def _derive_delta_vintages(
 
     cf_pct = target['mix_pct'].get('clean_firm', 0.0)
     if cf_pct > 0 and not _is_existing_fleet_only:
-        # EF encodes clean_firm as % of base-year demand.  For Pathway 1 /
-        # pre-pivot 2a/2b, nuclear_cap_twh is the absolute existing-fleet cap.
-        # min() prevents the cost model from implying new nuclear when demand_twh
-        # grows beyond base demand (e.g. 29 % × 1204 = 349 > 270 TWh for PJM).
+        # EF encodes clean_firm as % of BASE-year demand. Interpreting it as
+        # % of year-t grown demand would ratchet target_twh upward every year
+        # (ERCOT 2050 Medium growth: 9 % × 1153 = 104 TWh vs 9 % × 488 = 44 TWh)
+        # and book new clean-firm at nuclear-newbuild LCOE purely to maintain
+        # the share — an artifact of the EF-row encoding, not a physical target.
+        # SPEC §24.8 accounting fix: use BASE demand so the pre-seeded existing
+        # fleet (zero LCOE, sunk cost) fully covers the target when cf_pct is at
+        # or below the existing-fleet share. This restores P1 ≡ P3 when endpoint
+        # mixes are identical (ERCOT VRE-rich finding). The nuclear_cap_twh knob
+        # remains a soft cap for P1/1a/1b — it matches base × share exactly when
+        # cf_pct equals the existing-fleet share, and is stricter when cf_pct
+        # exceeds it; min() preserves that bound.
+        base_demand_const = float(pc.REGIONAL_DEMAND_TWH[iso])
         cf_target_twh = min(
-            _twh_from_pct(cf_pct, demand_twh),
+            _twh_from_pct(cf_pct, base_demand_const),
             nuclear_cap_twh,
         )
         # Same-year floor ratchet: see seed vintage at cod_year==year.
+        # _EXISTING_CLEAN_FIRM_KEY picks up the sunk-cost existing fleet
+        # pre-seeded in solve_pathway (SPEC §24.8 accounting fix) so all
+        # pathways subtract existing clean firm TWh before booking new
+        # tranches — prevents ERCOT P3 from double-booking the 42 TWh
+        # existing nuclear as new vintage at nuclear-newbuild LCOE.
         existing_cf = (
-            ledger.capacity_twh('uprate', year)
+            ledger.capacity_twh(_EXISTING_CLEAN_FIRM_KEY, year)
+            + ledger.capacity_twh('uprate', year)
             + ledger.capacity_twh('geothermal', year)
             + ledger.capacity_twh('nuclear_newbuild', year)
             + ledger.capacity_twh('ccs_ccgt', year)
@@ -2108,6 +2187,16 @@ def solve_pathway(
     """
     del initial_fleet  # Cross-endpoint gas-fleet seeding removed (§24.6).
     ledger = VintageLedger()
+    # SPEC §24.8 accounting fix — pre-seed existing-fleet vintages at
+    # zero locked_lcoe (sunk cost, cod_year = 2024) so every pathway
+    # operates the same physical baseline. _derive_delta_vintages then
+    # sees existing-fleet TWh in ledger.capacity_twh(...) and only books
+    # the incremental NEW build for each year. Without this seed, P2a/P2b/P3
+    # would book the entire existing clean-firm fleet as a new vintage at
+    # nuclear-newbuild LCOE in year 1, producing a spurious 3–15 % cost
+    # premium vs P1 even when endpoint mixes are identical.
+    for v in _seed_existing_fleet_vintages(config.iso):
+        ledger.add(v)
     if initial_ledger is not None:
         for v in initial_ledger.vintages:
             ledger.add(v)
