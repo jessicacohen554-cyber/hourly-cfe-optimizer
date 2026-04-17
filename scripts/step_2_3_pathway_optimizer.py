@@ -1408,34 +1408,27 @@ def _filter_pathway_1a(
     return df.loc[mask].reset_index(drop=True)
 
 
-# SPEC §24.8 — Pathway 3 proactive clean-firm floor. P3 represents a
-# deliberate bet on clean firm from year 1, so its EF candidate pool is
-# restricted to mixes carrying at least ``PATHWAY_3_CLEAN_FIRM_FLOOR_K ×
-# threshold_pct`` of clean firm. This ensures P3 visibly diverges from P1's
-# cheapest-VRE-only selection at every endpoint, per user direction. The
-# coefficient is pathway-specific policy, not a grid feasibility constraint.
-PATHWAY_3_CLEAN_FIRM_FLOOR_K = 0.30
+# SPEC §24.8 — Pathway 3 is differentiated from P1/P2 *solely* by the
+# exogenous NOAK year (``pc.NOAK_YEAR_BY_PATHWAY['3'] = 2035``). The
+# accelerated Wright's Law curve is the *assumed consequence* of proactive
+# clean-firm procurement; letting the optimizer pick the cost-minimal mix
+# under that curve — without a clean-firm floor — is the finding we want to
+# preserve. A floor was prototyped and rejected because it hard-wired the
+# outcome (P3 ≠ P1 by construction) and smothered the regional heterogeneity
+# that IS the scientific content: ERCOT (VRE-rich) organically converging
+# toward VRE+storage even under NOAK-2035 is a finding, not a bug; PJM /
+# NEISO / NYISO diverging sharply is the other half of that story.
 
 
 def _filter_pathway_3(
     df: pd.DataFrame,
-    threshold_pct: float | None = None,
+    threshold_pct: float | None = None,  # accepted for call-site compat
 ) -> pd.DataFrame:
-    """Pathway 3: enforce a clean-firm floor proportional to the endpoint.
-
-    Floor rule: ``clean_firm >= k × threshold_pct`` (units: both % of
-    base-year demand). Applied only when ``threshold_pct`` is supplied — the
-    default is a no-op to preserve behavior for any legacy call sites that
-    bypass the threshold.
+    """Pathway 3: full EF — no floor. Clean-firm share emerges organically
+    from cost optimization under ``pc.NOAK_YEAR_BY_PATHWAY['3'] = 2035``.
     """
-    if threshold_pct is None:
-        return df
-    k = PATHWAY_3_CLEAN_FIRM_FLOOR_K
-    floor_pct = float(k) * float(threshold_pct)
-    if floor_pct <= 0 or 'clean_firm' not in df.columns:
-        return df
-    mask = df['clean_firm'] >= (floor_pct - 1e-9)
-    return df.loc[mask].reset_index(drop=True)
+    del threshold_pct
+    return df
 
 
 # ---------- Pivot state for pathways 2a / 2b --------------------------------
@@ -1746,13 +1739,14 @@ def select_target_mix(
         # P1b = current P1 filter (offshore wind allowed, no new nuclear via cap).
         # Original '1' runs also use this filter; re-runs will be clean.
         ef = _filter_pathway_1(ef, iso=iso)
-    elif pathway in ('2a', '2b'):
-        if pivot_state is None or not pivot_state.pivoted:
-            ef = _filter_pathway_1(ef, iso=iso)
-        # else: full EF available post-pivot (clean firm unlocked)
-    elif pathway == '3':
-        # SPEC §24.8 — proactive clean-firm floor: clean_firm ≥ k × threshold.
-        ef = _filter_pathway_3(ef, threshold_pct=threshold)
+    elif pathway in ('2a', '2b', '3'):
+        # SPEC §24.8 — P2a / P2b / P3 all see the full EF from year 1. Their
+        # ONLY differentiation is the exogenous NOAK year in
+        # pc.NOAK_YEAR_BY_PATHWAY (P3=2035, P2b=2040, P2a=2045). No
+        # endogenous pivot gating; no clean-firm floor. The cost-optimal mix
+        # surfaces organically in response to the accelerated Wright's Law
+        # curve each pathway sees.
+        pass
     else:
         raise ValueError(f"select_target_mix: unknown pathway {pathway!r}")
 
@@ -2162,32 +2156,12 @@ def solve_pathway(
             config.endpoint_pct, config, pivot_state,
         )
 
-        # Pivot triggers for 2a / 2b happen BEFORE we commit the target mix.
-        if config.pathway == '2a' and not pivot_state.pivoted:
-            if should_pivot_2a(last_cfe, year):
-                pivot_state.trigger(year, '90pct_plateau')
-                target = select_target_mix(
-                    config.iso, config.pathway, year,
-                    config.endpoint_pct, config, pivot_state,
-                )
-        elif config.pathway == '2b' and not pivot_state.pivoted:
-            marg_vre = marginal_vre_usd_per_cfe_pct(config.iso, year, config)
-            cheapest_cf = cheapest_clean_firm_lcoe(
-                config.iso, year, config,
-                uprate_used_twh=ledger.capacity_twh('uprate', year - 1),
-                ccs_used_twh=ledger.capacity_twh('ccs_ccgt', year - 1),
-                geo_used_twh=ledger.capacity_twh('geothermal', year - 1),
-            )
-            demand_twh = demand_for_year(
-                config.iso, year, config.demand_growth_level,
-            )
-            cheapest_cf_as_scft_cost = cheapest_cf * 0.01 * demand_twh * 1.0e6
-            if should_pivot_2b(marg_vre, cheapest_cf_as_scft_cost, year):
-                pivot_state.trigger(year, 'econ_trigger')
-                target = select_target_mix(
-                    config.iso, config.pathway, year,
-                    config.endpoint_pct, config, pivot_state,
-                )
+        # SPEC §24.8 — P2a / P2b / P3 are now fully exogenous: pathway
+        # differentiation lives in pc.NOAK_YEAR_BY_PATHWAY (learning-curve
+        # speed), not in endogenous pivot triggers. PivotState is kept as a
+        # data type for JSON-schema compat but is never .trigger()'d — the
+        # should_pivot_2a / should_pivot_2b helpers are dead code under the
+        # exogenous-only methodology, retained for reference in the module.
 
         if target['infeasible']:
             feasibility['physical'] = False
@@ -2197,11 +2171,10 @@ def solve_pathway(
             break
 
         # (a) + (b) — vintage the clean delta from the ledger's prior state.
-        # For Pathway 1 and pre-pivot 2a/2b: cap nuclear at existing fleet TWh.
-        _no_new_nuclear = (
-            config.pathway in ('1', '1a', '1b')
-            or (config.pathway in ('2a', '2b') and not pivot_state.pivoted)
-        )
+        # Only Pathway 1 / 1a / 1b caps nuclear at the existing-fleet TWh;
+        # P2a, P2b, P3 can build new nuclear from year 1 (they differ only in
+        # the learning-curve NOAK year, not in build capability).
+        _no_new_nuclear = config.pathway in ('1', '1a', '1b')
         new_vintages = _derive_delta_vintages(
             ledger, target, config.iso, year, config,
             nuclear_cap_twh=_existing_nuclear_cap_twh if _no_new_nuclear else float('inf'),

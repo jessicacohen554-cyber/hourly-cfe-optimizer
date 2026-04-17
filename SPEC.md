@@ -12,37 +12,47 @@
 **Context.** User audit of `analysis/reliability-tax/data/ERCOT/pathway1_ep90.json` surfaced a 450+ GW new-build gas fleet vs. 69 GW of actual ERCOT gas today and 197 GW 2050 peak demand. Also: Pathways 1 and 3 producing identical results across every endpoint.
 
 **Planned 3-step fix (one commit per step):**
-1. **Step 1 (LANDED)** — Peak-year gas-fleet snapshot + drop cross-endpoint seeding + demand² scaling fix. See §24.6.
-2. **Step 2 (LANDED)** — VRE stranding priced as `Σ_years surplus_frac[r,y] × demand_mwh[y] × vintage_lcoe[r,y]`, with hybrid surplus priced at the underlying VRE's ledger key. See §24.7.
-3. **Step 3 (LANDED, k provisional)** — Exogenous per-pathway NOAK years (P3=2035, P2b=2040, P2a=2045) threaded through the clean-firm learning-curve helpers + P3 clean-firm floor `clean_firm ≥ k × threshold_pct` in `_filter_pathway_3` with `k = 0.30` awaiting user approval. See §24.8.
+1. **Step 1 (LANDED — commit 6081324)** — Peak-year gas-fleet snapshot + drop cross-endpoint seeding + demand² scaling fix. See §24.6.
+2. **Step 2 (LANDED — commit 9619b2c)** — VRE stranding priced as `Σ_years surplus_frac[r,y] × demand_mwh[y] × vintage_lcoe[r,y]`, with hybrid surplus priced at the underlying VRE's ledger key. See §24.7.
+3. **Step 3 v1 (LANDED — commit acf5bd7, then superseded)** — Shipped with per-pathway NOAK override AND a clean-firm floor `clean_firm ≥ 0.30 × threshold_pct` on P3. User rejected the floor as hard-wiring the finding and smothering regional heterogeneity.
+4. **Step 3 v2 (LANDED — commit 8f87a56)** — Floor removed. P2a/P2b/P3 all see the full EF from year 1. Pathway differentiation lives solely in `pc.NOAK_YEAR_BY_PATHWAY` (P3=2035, P2b=2040, P2a=2045). Cost-optimal mix surfaces organically under each pathway's accelerated Wright's-Law curve. See §24.8.
+5. **Step 3 v2 accounting fix (PENDING, next session)** — Under v2, ERCOT P1 vs P3 pick identical mixes at every endpoint (the intended VRE-rich finding) but P3 shows as +3–15 % more expensive because the VintageLedger starts empty for P3 and books the full existing-fleet clean-firm TWh as a new vintage at nuclear-new-build LCOE. P1 sidesteps this via its `_is_existing_fleet_only` shortcut in `_derive_delta_vintages`. Fix: seed the ledger with existing-fleet vintages OR subtract existing-fleet TWh before booking new vintages for P2a/P2b/P3. Then re-run smoke tests and verify ERCOT P1≈P3 when mixes are identical.
 
 **Step 1 empirical results (ERCOT P1 Medium growth, medium costs):**
-- ep60: 53 GW new (was 250 GW) — peak-year 2050, 0 stranded.
-- ep90: 111 GW new (was 457 GW) — peak-year 2050, 0 stranded.
-- ep99.9: 73 GW new (was 457 GW) — peak-year 2039, 10 GW stranded by 2050, $6.7 B stranded capex. Gas CF collapses to <1 % by 2050 — the "hump + strand" story the v2 methodology is meant to show.
+- ep60: 53 GW new gas — peak-year 2050, 0 stranded.
+- ep90: 111 GW new — peak-year 2050, 0 stranded.
+- ep99.9: 73 GW new — peak-year 2039, 10 GW stranded by 2050, $6.7 B stranded capex.
 
-**Step 2 empirical results (ERCOT P1 Medium growth, medium costs):**
-- ep60: $0.00 B priced VRE curtailment (low-CFE mix has no surplus).
-- ep99.9: $193.58 B priced VRE curtailment cumulative 2025–2050 (~5× the Step 1 gas components). Per-year priced curtailment ramps from $0 through 2027 to $25.2 B in 2050 as the VRE overbuild factor grows with the endpoint target. Reliability-tax $/MWh climbs from $2.51 (ep60) to $15.23 (ep99.9) — the "hump + strand" story now spans both generation stacks.
-
-**Step 2 empirical (ERCOT P1 Medium growth, medium costs, §24.7):**
+**Step 2 empirical (ERCOT P1 Medium growth, medium costs):**
 - ep60: $0.00 B priced VRE curtailment.
-- ep99.9: $193.58 B priced curtailment cumulative 2025–2050 (~5× Step 1 gas components). Per-year ramps $0 (pre-2028) → $25.2 B (2050). Reliability-tax $/MWh: $2.51 (ep60) → $15.23 (ep99.9).
+- ep99.9: $193.58 B cumulative priced curtailment (~5× Step 1 gas components). Per-year $0 → $25.2 B as CFE climbs. Reliability-tax $/MWh: $2.51 (ep60) → $15.23 (ep99.9).
 
-**Step 3 empirical (ERCOT Medium growth, medium costs, k=0.30, §24.8):**
-- ep60: P1=$786 B, P3=$884 B (+12.5 %), P3 clean_firm=18 % vs P1 9 %.
-- ep90: P1=$1,775 B, P3=$2,114 B (+19.1 %), P3 clean_firm=30 % vs P1 0 %.
-- ep99.9: P1=$3,407 B, P3=$2,952 B (**−13.4 %**), P3 clean_firm=39 % vs P1 9 %.
-- P3 now visibly diverges from P1 at every endpoint. At high-CFE P3 is cheaper because the NOAK-2035 clean-firm curve + the clean-firm floor avoid P1's VRE-overbuild curtailment tax.
-
-**Pending user-decision knob:**
-- `PATHWAY_3_CLEAN_FIRM_FLOOR_K` is at **0.30 (provisional)**. Approve, or choose a different value (e.g., 0.20 / 0.25 / 0.35 / 0.40). Single edit site: `scripts/step_2_3_pathway_optimizer.py` constant.
+**Step 3 v2 empirical (ERCOT + PJM Medium growth, medium costs, no floor, exogenous NOAK only):**
+```
+ISO    ep    P1 $B    P3 $B    Δ        P3 mix
+ERCOT  60    786      901      +14.6 %  cf=9  sol=14 wind=42  (identical to P1)
+ERCOT  90    1775     1823     +2.7  %  cf=0  sol=0  wind=90  (identical to P1)
+ERCOT  99.9  3407     3502     +2.8  %  cf=10 sol=0  wind=41  (~= P1)
+PJM    60    1530     1794     +17.3 %  cf=11 sol=9  wind=31  (identical to P1)
+PJM    90    7284     3386     −53.5 %  cf=79 sol=0  wind=10  <-- strong divergence
+PJM    99.9  6444     5234     −18.8 %  cf=41 sol=1  wind=1
+```
+- PJM is the intended methodology finding: VRE-constrained regions see cheap-clean-firm beat VRE+storage sharply under the NOAK-2035 curve; P3 at ep90 drops $278 B / $318 B of VRE-curtailment tax at ep90 / ep99.9 by building 79 % / 41 % clean firm instead.
+- ERCOT P1=P3 mix at every endpoint is *also* the intended finding: VRE-rich ISO stays VRE+storage even at NOAK-2035. The +3–15 % apparent P3 cost premium is the accounting bug flagged above, not a real divergence.
 
 **Resume instructions for next session:**
-1. Read §24.6–§24.8 for the three-step methodology just landed.
-2. Confirm or adjust `PATHWAY_3_CLEAN_FIRM_FLOOR_K` in the optimizer. Re-run ERCOT P1 vs P3 at ep60/90/99.9 to validate divergence with the chosen k.
-3. Launch the 350-run sweep only after k is locked — do NOT launch before approval.
-4. After sweep completes, bank `analysis/reliability-tax/data/` and regenerate downstream dashboard JSONs / chart scripts against the new schema (`priced_vre_curtailment_usd_this_year` in `annual_cost`, `components_usd.priced_vre_curtailment_usd` non-zero for VRE-heavy pathways).
+**Resume instructions for next session (Step 3 v2 accounting fix):**
+1. Read §24.6 (peak-year gas), §24.7 (priced VRE curtailment), §24.8 (exogenous NOAK).
+2. Implement the existing-fleet accounting fix. Bug reproduced below. Two acceptable fixes:
+   - **A.** Pre-seed `VintageLedger` in `solve_pathway` with one zero-LCOE `Vintage` per existing-fleet resource (nuclear / hydro / existing solar / existing wind per `GRID_MIX_SHARES`, TWh set to `BASE_DEMAND_TWH × share/100`, `cod_year=2024`, `locked_lcoe=0.0` since it's sunk cost).
+   - **B.** Subtract existing-fleet TWh before booking new vintages. In `_derive_delta_vintages`, for clean-firm and VRE blocks: compute `existing_fleet_twh = BASE_DEMAND_TWH × GRID_MIX_SHARES[iso][resource]/100`, and use `new_twh = max(0, target_twh - existing_fleet_twh - ledger.capacity_twh(r, year))`.
+   - **A is preferred** — it keeps the ledger as the single source of truth for "what physical assets does this pathway operate" and downstream analytics (curtailment pricing, stranding analysis) stay consistent.
+3. After fix, re-run the ERCOT + PJM smoke test matrix. Expected: ERCOT P1 ≈ P3 cost at all endpoints (because mixes are identical); PJM P3 strongly diverges at ep90 / ep99.9 (unchanged from the v2 commit). Success gate: `|P3 − P1| / P1 < 1 %` at every ERCOT endpoint.
+4. Once the smoke test passes, update SPEC §24.8 to reflect the final methodology (remove the "known accounting limitation" block).
+5. Launch the full 350-run sweep: `python3 scripts/run_pathway_sweep.py` across all 7 ISOs × 10 endpoints × 5 pathways. Expected wall clock ~8–9 hours.
+6. Bank `analysis/reliability-tax/data/` and regenerate downstream dashboard JSONs / chart scripts against the new schema (`priced_vre_curtailment_usd_this_year` in `annual_cost`, `components_usd.priced_vre_curtailment_usd` non-zero for VRE-heavy pathways).
+
+**Reproducer for the accounting bug:** `python3 scripts/step_2_3_pathway_optimizer.py --iso ERCOT --pathway 3 --endpoint 0.60 --growth Medium --output-root /tmp/rt-bug` and the corresponding P1 run. Compare `headline.undiscounted_cost_usd` — they differ by ~+14.6 % despite `endpoint_mix_pct` being identical.
 
 ### Reliability Tax v2 Dashboard Rewrite (Landed — Apr 17, 2026)
 
@@ -6254,27 +6264,29 @@ priced_vre_curtailment_usd (cumulative)
 
 **Implementation.** `pipeline_config.py` gains `NOAK_YEAR_BY_PATHWAY`, `PATHWAY_NOAK_TECHS`, and `get_pathway_noak_window(tech, level_short, pathway)` which returns `(foak_start, noak_year)` with the override applied when (a) pathway is in the override dict and (b) tech is in the scope set. `scripts/step_2_3_pathway_optimizer.py::_learning_window` accepts an optional `pathway` arg and delegates to the new pipeline_config helper. The three clean-firm LCOE helpers (`nuclear_newbuild_lcoe_at_year`, `ccs_lcoe_at_year`, `geothermal_lcoe_at_year`) accept and forward `pathway`; `marginal_lcoe`, `cheapest_clean_firm_lcoe`, `compute_clean_firm_tranches_for_year`, and `_clean_firm_total_cost_batch` pull it from `config.pathway` and thread it through. `foak_start` is never moved; only the NOAK terminal year shifts, so FOAK-era cost is identical across pathways by construction.
 
-**Decision 2 — Pathway 3 clean-firm floor (PROVISIONAL at k=0.30).** `_filter_pathway_3` now enforces `clean_firm ≥ k × threshold_pct` before cost-ranking, where `threshold_pct` is the EF band selected for that year's target and `k = PATHWAY_3_CLEAN_FIRM_FLOOR_K`. This ensures P3 visibly diverges from P1 at every endpoint. The coefficient is pathway-specific *policy*, not a feasibility constraint: it encodes the user's direction that P3 represents a deliberate bet on clean firm from year 1 and must therefore carry at least a fixed fraction of its energetic commitment in clean-firm form regardless of whether a cheaper VRE-dominant mix exists at that CFE level.
+**Decision 2 — Pathway 3 clean-firm floor (SUPERSEDED).** An initial Step 3 v1 commit (`acf5bd7`) shipped with a clean-firm floor `clean_firm ≥ k × threshold_pct` on P3 at `k = 0.30`. User rejected it immediately on methodology grounds: *"a floor hard-wires the finding (P3 ≠ P1 by construction) and smothers the regional heterogeneity that IS the scientific content — ERCOT (VRE-rich) legitimately converging toward VRE+storage even under NOAK-2035 is a finding, not a bug."* The floor was removed in Step 3 v2 (`8f87a56`); `_filter_pathway_3` is now a no-op and P2a/P2b/P3 all see the full EF from year 1.
 
-**Empirical validation (ERCOT, Medium growth, medium costs, k=0.30):**
+**Decision 2 v2 (LOCKED) — P2a/P2b/P3 are exogenous-NOAK-only.** P2a/P2b/P3 are differentiated *solely* by `pc.NOAK_YEAR_BY_PATHWAY` (Decision 1 above). All three see the full EF from year 1; none carry pre-pivot filters, clean-firm floors, or endogenous pivot triggers. The `PivotState` dataclass is retained for JSON-schema compat but is never `.trigger()`'d — `should_pivot_2a` / `should_pivot_2b` live in the module as dead code for reference. The cost-optimal mix surfaces organically in response to the accelerated Wright's Law curve each pathway sees; the sharpness of the P3-vs-P1 divergence in a given ISO is itself the finding.
 
-| endpoint | P1 undisc. cost | P3 undisc. cost | Δ (P3 vs P1) | P3 clean_firm % | P1 clean_firm % |
-|---|---:|---:|---:|---:|---:|
-| ep60 | $786 B | $884 B | **+12.5 %** | 18 % | 9 % (existing) |
-| ep90 | $1,775 B | $2,114 B | **+19.1 %** | 30 % | 0 % |
-| ep99.9 | $3,407 B | $2,952 B | **−13.4 %** | 39 % | 9 % |
+**Empirical validation (ERCOT + PJM, Medium growth, medium costs, no floor, exogenous NOAK only):**
 
-P3 visibly diverges from P1 at every endpoint (`clean_firm` column differs by ≥9 pp). At high-CFE (ep99.9), P3 becomes *cheaper* than P1 because the NOAK-2035 clean-firm curve plus the clean-firm floor avoid the massive VRE-overbuild curtailment that dominates P1's cost at that threshold — this is exactly the "P3 is a proactive bet that pays off in the tails" story the methodology is meant to show.
+| ISO | endpoint | P1 undisc. | P3 undisc. | Δ | P3 mix (cf / sol / wind) |
+|---|---|---:|---:|---:|---|
+| ERCOT | ep60 | $786 B | $901 B | +14.6 % | 9 / 14 / 42 (≡ P1) |
+| ERCOT | ep90 | $1,775 B | $1,823 B | +2.7 % | 0 / 0 / 90 (≡ P1) |
+| ERCOT | ep99.9 | $3,407 B | $3,502 B | +2.8 % | 10 / 0 / 41 (≈ P1) |
+| PJM | ep60 | $1,530 B | $1,794 B | +17.3 % | 11 / 9 / 31 (≡ P1) |
+| PJM | ep90 | $7,284 B | $3,386 B | **−53.5 %** | 79 / 0 / 10 (strong divergence) |
+| PJM | ep99.9 | $6,444 B | $5,234 B | **−18.8 %** | 41 / 1 / 1 |
 
-**Status of k (pending user decision).** `k = 0.30` is the task-brief starting value. Empirically it produces clear divergence with P3 clean_firm % = 18 / 30 / 39 across ep60 / ep90 / ep99.9 (floor is binding at all three). Alternatives under consideration:
-- `k = 0.20` → floors 12 / 18 / 20 %. Less aggressive; ep60 divergence from P1's 9 % is only 3 pp.
-- `k = 0.40` → floors 24 / 36 / 40 %. More aggressive; may over-constrain low-CFE P3 runs.
+- **PJM result** is the methodology's central finding: VRE-constrained ISOs with weak winter solar see cheap-clean-firm beat VRE+storage sharply under the NOAK-2035 curve. At ep90, P3 drops $278 B of VRE-curtailment tax by building 79 % clean firm vs P1's 29 %.
+- **ERCOT result** is the other half: VRE-rich regions stay VRE+storage even at NOAK-2035. P1 and P3 pick identical mixes at every endpoint — the intended finding, not forced.
 
-User will be asked to confirm or adjust `k` after Step 3 lands; the single constant `PATHWAY_3_CLEAN_FIRM_FLOOR_K` in `scripts/step_2_3_pathway_optimizer.py` is the only tuning knob.
+**Known accounting limitation (Step 3 v2 — pending follow-up commit).** When P2a/P2b/P3 pick a mix containing existing-fleet clean firm (e.g., ERCOT ep60 at 9 % clean_firm), `_derive_delta_vintages` books the entire TWh as a *new vintage* at nuclear-new-build LCOE because the `VintageLedger` starts empty in `solve_pathway`. P1 sidesteps this via `_is_existing_fleet_only` which skips the clean-firm tranche entirely. Result: when mixes are identical (the ERCOT rows above), P3 shows as +3–15 % more expensive than P1 purely from existing-fleet double-counting. Fix is to pre-seed the ledger with existing-fleet vintages at zero locked_lcoe (sunk cost) so all pathways see the same baseline. Next session's first task.
 
 **Downstream implications.**
-- `analysis/reliability-tax/data/` 350-run sweep must be regenerated after k is locked. Do NOT launch the sweep until the user has approved k.
+- `analysis/reliability-tax/data/` 350-run sweep must be regenerated after the accounting fix lands. Do NOT launch the sweep until then.
 - No Step 1 / Step 2 cache invalidation — the NOAK override affects only in-loop LCOE evaluation, which is recomputed per run.
 - No schema changes to `annual_cost`, `reliability_tax`, or `stranding_metadata` beyond Step 2's `priced_vre_curtailment_usd_this_year` field.
 
-**Scope boundary.** Step 3 completes the three-step reliability-tax fix tracked in this session's Current Status. Future methodology improvements (storage overbuild capex, additional pathway cards, alternative learning-curve shapes) are out of scope.
+**Scope boundary.** Step 3 v2 (`8f87a56`) is the final methodology for pathway differentiation. The accounting fix is a bug repair, not a methodology change — it restores the property that identical mixes produce identical costs across pathways.
