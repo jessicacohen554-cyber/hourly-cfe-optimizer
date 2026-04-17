@@ -163,6 +163,111 @@
             margin-top: var(--space-sm);
         }
 
+        /* Section 8 — Closing summary table */
+        .closing-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-md);
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-md);
+        }
+        .closing-filter-group {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+        .closing-filter-label {
+            font-family: var(--font-data);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-right: 4px;
+        }
+        .closing-filters .iso-btn,
+        .closing-filters .toggle-btn-group button {
+            min-height: 44px;
+        }
+        .closing-filters select {
+            min-height: 44px;
+            padding: 0 32px 0 12px;
+            font-family: var(--font-data);
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--navy);
+            background: #FFFFFF;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            appearance: none;
+            background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+                              linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+            background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%;
+            background-size: 5px 5px, 5px 5px;
+            background-repeat: no-repeat;
+        }
+        .closing-table-wrap {
+            max-height: 620px;
+            overflow: auto;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            background: #FFFFFF;
+            -webkit-overflow-scrolling: touch;
+        }
+        .closing-table {
+            min-width: 920px;
+            margin: 0;
+        }
+        .closing-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            background: #F8FAFC;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+        .closing-table thead th:focus-visible {
+            outline: 2px solid var(--navy);
+            outline-offset: -2px;
+        }
+        .closing-table thead th.sort-asc::after  { content: ' \25B2'; font-size: 0.75em; opacity: 0.75; }
+        .closing-table thead th.sort-desc::after { content: ' \25BC'; font-size: 0.75em; opacity: 0.75; }
+        .closing-table tbody td.num {
+            text-align: right;
+            white-space: nowrap;
+        }
+        .closing-table tbody td.italic-cost {
+            font-style: italic;
+            color: rgba(0, 0, 0, 0.55);
+        }
+        .warning-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #DC2626;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        .closing-table-caption {
+            margin-top: var(--space-sm);
+            font-family: var(--font-body);
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            text-align: center;
+        }
+        .closing-table-caption strong { color: var(--navy); font-weight: 700; }
+        @media (max-width: 640px) {
+            .closing-table { min-width: 880px; }
+            .closing-filters { gap: 10px; }
+            .closing-filter-label { width: 100%; margin-bottom: 2px; }
+        }
+
         /* Section-stub placeholders (A2/A3/A4 sessions will replace). */
         .section-stub {
             max-width: 940px;
@@ -530,10 +635,62 @@
     </section>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- Section 8 — Closing summary table (A4 session)                         -->
+    <!-- Section 8 — Closing summary table                                      -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <section class="content-section" id="section8">
-        <!-- TODO: A4 session will fill (closing summary table: ISO × pathway × endpoint cost/strand matrix). -->
+        <h2 class="section-title fade-in" style="text-align:center;">All 175 runs</h2>
+        <p class="section-subtitle fade-in" style="text-align:center; margin-bottom: var(--space-lg); max-width: 820px; margin-left:auto; margin-right:auto;">
+            Every ISO &times; every pathway &times; every endpoint. Filter the rows, click any column header to sort. The numbers below come straight from the run database &mdash; none of them is hand-edited.
+        </p>
+
+        <div class="chart-panel fade-in">
+            <div class="closing-filters" role="region" aria-label="Closing table filters">
+                <div class="closing-filter-group">
+                    <span class="closing-filter-label">ISO</span>
+                    <div class="iso-selector" id="closingIsoSelector" role="group" aria-label="ISO multi-select filter">
+                        <button type="button" class="iso-btn active" data-iso="CAISO" aria-pressed="true">CAISO</button>
+                        <button type="button" class="iso-btn active" data-iso="ERCOT" aria-pressed="true">ERCOT</button>
+                        <button type="button" class="iso-btn active" data-iso="MISO"  aria-pressed="true">MISO</button>
+                        <button type="button" class="iso-btn active" data-iso="NEISO" aria-pressed="true">NEISO</button>
+                        <button type="button" class="iso-btn active" data-iso="NYISO" aria-pressed="true">NYISO</button>
+                        <button type="button" class="iso-btn active" data-iso="PJM"   aria-pressed="true">PJM</button>
+                        <button type="button" class="iso-btn active" data-iso="SPP"   aria-pressed="true">SPP</button>
+                    </div>
+                </div>
+                <div class="closing-filter-group">
+                    <span class="closing-filter-label">Pathway</span>
+                    <div class="toggle-btn-group" id="closingPathwayToggle" role="group" aria-label="Pathway multi-select filter">
+                        <button type="button" class="active" data-pathway="1a" aria-pressed="true">P1a</button>
+                        <button type="button" class="active" data-pathway="1b" aria-pressed="true">P1b</button>
+                        <button type="button" class="active" data-pathway="2a" aria-pressed="true">P2a</button>
+                        <button type="button" class="active" data-pathway="2b" aria-pressed="true">P2b</button>
+                        <button type="button" class="active" data-pathway="3"  aria-pressed="true">P3</button>
+                    </div>
+                </div>
+                <div class="closing-filter-group">
+                    <span class="closing-filter-label">Endpoint</span>
+                    <select id="closingEndpointSelect" aria-label="CFE endpoint filter">
+                        <option value="">All endpoints</option>
+                        <option value="75.0%">75%</option>
+                        <option value="85.0%">85%</option>
+                        <option value="90.0%">90%</option>
+                        <option value="95.0%">95%</option>
+                        <option value="99.0%">99%</option>
+                    </select>
+                </div>
+            </div>
+            <div class="closing-table-wrap" tabindex="0">
+                <table class="data-table closing-table" id="closingTable" aria-describedby="closingTableCaption">
+                    <thead><tr id="closingTableHead"></tr></thead>
+                    <tbody id="closingTableBody"></tbody>
+                </table>
+            </div>
+            <div class="closing-table-caption" id="closingTableCaption" aria-live="polite">&nbsp;</div>
+        </div>
+
+        <div class="insight-box fade-in" style="max-width: 820px; margin: var(--space-lg) auto 0;">
+            <strong>How to read this table.</strong> A <span class="warning-dot" aria-hidden="true"></span> next to an ISO flags a run that is <strong>not physically feasible</strong> at that endpoint. <em>Italic cost cells</em> flag runs that breach the $10k/CFE% economic ceiling (Card&nbsp;J) &mdash; the pathway reaches the target on paper, but the dollar weight is off-scale. Everything on this page rolls up from those 175 rows.
+        </div>
     </section>
 
     <footer id="siteFooter" data-footer-note="The Reliability Tax — analysis of five decarbonization pathways across 7 US ISOs and 10 CFE endpoints. v2 methodology (SPEC §24.4)."></footer>
@@ -765,8 +922,8 @@
 
             var state = { iso: 'CAISO', data: null, chart: null };
 
-            var stillRunningColor = (typeof RESOURCE_COLORS !== 'undefined' && RESOURCE_COLORS.fossilGas) || '#6B7280';
-            var strandedColor     = (typeof SEMANTIC_COLORS !== 'undefined' && SEMANTIC_COLORS.negative) || '#DC2626';
+            var stillRunningColor = RESOURCE_COLORS.fossilGas;
+            var strandedColor     = SEMANTIC_COLORS.negative;
 
             function render() {
                 if (!state.data || !state.data.peaks_per_pathway) return;
@@ -922,11 +1079,11 @@
             var rc = (typeof RESOURCE_COLORS !== 'undefined') ? RESOURCE_COLORS : {};
 
             var COMPONENT_DEFS = [
-                { key: 'new_gas_capex_annualized_usd',     label: 'New-gas capex (annualized)', color: rc.fossilGas  || '#6B7280' },
-                { key: 'new_gas_fom_usd',                  label: 'New-gas FOM',                color: alpha(rc.fossilGas || '#6B7280', 0.6) },
-                { key: 'existing_gas_fom_carried_usd',     label: 'Existing-gas FOM carried',   color: rc.fossilCoal || '#374151' },
-                { key: 'priced_vre_curtailment_usd',       label: 'Priced VRE curtailment',     color: rc.solar      || '#F59E0B' },
-                { key: 'vre_storage_overbuild_capex_usd',  label: 'VRE / storage overbuild capex', color: rc.storage || '#EF4444' }
+                { key: 'new_gas_capex_annualized_usd',     label: 'New-gas capex (annualized)',    color: rc.fossilGas },
+                { key: 'new_gas_fom_usd',                  label: 'New-gas FOM',                   color: alpha(rc.fossilGas, 0.6) },
+                { key: 'existing_gas_fom_carried_usd',     label: 'Existing-gas FOM carried',      color: rc.fossilCoal },
+                { key: 'priced_vre_curtailment_usd',       label: 'Priced VRE curtailment',        color: rc.solar },
+                { key: 'vre_storage_overbuild_capex_usd',  label: 'VRE / storage overbuild capex', color: rc.storage }
             ];
 
             function getCell(iso, pathway, endpoint) {
@@ -1163,7 +1320,7 @@
                         '<div style="font-family: var(--font-heading); font-size: 1rem; font-weight: 700; color: var(--navy); margin-bottom: var(--space-sm); line-height: 1.3;">' + pw.name + '</div>' +
                         '<div style="font-family: var(--font-data); font-size: 1.6rem; font-weight: 800; color: var(--navy); line-height: 1.1;">' + taxStr + '</div>' +
                         '<div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; margin-bottom: var(--space-sm);">customers pay, $/MWh</div>' +
-                        '<div style="font-family: var(--font-data); font-size: 1.05rem; font-weight: 700; color: #DC2626; line-height: 1.1;">' + strandStr + '</div>' +
+                        '<div style="font-family: var(--font-data); font-size: 1.05rem; font-weight: 700; color: var(--red-dark); line-height: 1.1;">' + strandStr + '</div>' +
                         '<div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; margin-bottom: var(--space-sm);">new-build gas stranded</div>' +
                         '<div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.55;">' + pw.desc + '</div>';
                     container.appendChild(card);
@@ -1198,8 +1355,8 @@
 
             var state = { pathway: '1a', data: null, chart: null };
 
-            var gasColor    = (typeof RESOURCE_COLORS !== 'undefined' && RESOURCE_COLORS.fossilGas) || '#6B7280';
-            var sinkColor   = '#DC2626';
+            var gasColor  = RESOURCE_COLORS.fossilGas;
+            var sinkColor = SEMANTIC_COLORS.negative;
 
             function fmtBn(v) {
                 if (v == null || !isFinite(v)) return '\u2014';
@@ -1364,9 +1521,7 @@
                 cc.forEach(function(p) { byYear[p.commit_year] = p.rtax_usd_per_mwh; });
                 var vals = years.map(function(y) { var v = byYear[y]; return (v == null || !isFinite(v)) ? null : v; });
 
-                var isoColor = (typeof ISO_COLORS !== 'undefined' && ISO_COLORS[state.iso])
-                             || (typeof SEMANTIC_COLORS !== 'undefined' && SEMANTIC_COLORS.muted)
-                             || '#1F2937';
+                var isoColor = ISO_COLORS[state.iso] || SEMANTIC_COLORS.muted;
                 var fill     = (typeof withAlpha === 'function') ? withAlpha(isoColor, 0.14) : isoColor;
 
                 // Pivot-year markers
@@ -1409,8 +1564,8 @@
                     datasets.push({
                         label: 'Pathway 2 pivot years',
                         data: pivotPoints.map(function(p) { return { x: p.x, y: yAt(p.x), label: p.label }; }),
-                        borderColor: '#DC2626',
-                        backgroundColor: '#DC2626',
+                        borderColor: SEMANTIC_COLORS.negative,
+                        backgroundColor: SEMANTIC_COLORS.negative,
                         borderWidth: 0,
                         pointRadius: 7,
                         pointHoverRadius: 9,
@@ -1507,6 +1662,260 @@
                 .catch(function(err) {
                     var cap = document.getElementById('waitCaption');
                     if (cap) cap.textContent = 'Data unavailable: ' + (err && err.message ? err.message : err);
+                });
+        })();
+
+        // ===== Section 8 — Closing summary table (175 runs) =====
+        (function initClosingTable() {
+            var tableEl  = document.getElementById('closingTable');
+            var headRow  = document.getElementById('closingTableHead');
+            var body     = document.getElementById('closingTableBody');
+            var captionEl = document.getElementById('closingTableCaption');
+            if (!tableEl || !headRow || !body) return;
+
+            // Columns rendered (keys look up descriptive metadata in the payload's columns array).
+            var COL_DEFS = [
+                { key: 'iso',                              label: 'ISO',                   cls: 'text' },
+                { key: 'pathway',                          label: 'Pathway',               cls: 'text' },
+                { key: 'endpoint_pct',                     label: 'CFE target',            cls: 'text' },
+                { key: 'achieved_cfe_pct',                 label: 'Achieved CFE',          cls: 'num' },
+                { key: 'reliability_tax_usd_per_mwh',      label: 'Reliability tax $/MWh', cls: 'num', cost: true },
+                { key: 'stranded_new_gas_mw',              label: 'Stranded new-gas MW',   cls: 'num' },
+                { key: 'stranded_new_gas_capex_billion',   label: 'Stranded new-gas $B',   cls: 'num', cost: true },
+                { key: 'undiscounted_gross_cost_trillion', label: 'Undiscounted gross $T', cls: 'num', cost: true },
+                { key: 'npv_at_7pct_gross_trillion',       label: 'NPV@7% $T',             cls: 'num', cost: true }
+            ];
+            var PATH_ORDER = { '1a': 0, '1b': 1, '2a': 2, '2b': 3, '3': 4 };
+
+            var state = {
+                rows:       [],
+                columnMeta: {},
+                isoSet:     new Set(['CAISO', 'ERCOT', 'MISO', 'NEISO', 'NYISO', 'PJM', 'SPP']),
+                pathwaySet: new Set(['1a', '1b', '2a', '2b', '3']),
+                endpoint:   '',
+                sortKey:    null,
+                sortDir:    null
+            };
+
+            function pathOrder(p) { return (p in PATH_ORDER) ? PATH_ORDER[p] : 99; }
+
+            function fmtCell(col, row) {
+                var v = row[col.key];
+                if (v == null || (typeof v === 'number' && !isFinite(v))) return '\u2014';
+                switch (col.key) {
+                    case 'iso':                              return v;
+                    case 'pathway':                          return 'P' + v;
+                    case 'endpoint_pct':                     return String(v).replace('.0%', '%');
+                    case 'achieved_cfe_pct':                 return v.toFixed(1) + '%';
+                    case 'reliability_tax_usd_per_mwh':      return '$' + v.toFixed(1);
+                    case 'stranded_new_gas_mw':              return Math.round(v).toLocaleString();
+                    case 'stranded_new_gas_capex_billion':   return '$' + v.toFixed(1) + 'B';
+                    case 'undiscounted_gross_cost_trillion': return '$' + v.toFixed(2) + 'T';
+                    case 'npv_at_7pct_gross_trillion':       return '$' + v.toFixed(2) + 'T';
+                }
+                return String(v);
+            }
+
+            function compareRows(a, b, key, dir) {
+                var av = a[key], bv = b[key], cmp;
+                if (key === 'pathway') {
+                    cmp = pathOrder(av) - pathOrder(bv);
+                } else if (key === 'endpoint_pct') {
+                    cmp = parseFloat(av) - parseFloat(bv);
+                } else if (typeof av === 'number' && typeof bv === 'number') {
+                    cmp = av - bv;
+                } else {
+                    av = (av == null) ? '' : String(av);
+                    bv = (bv == null) ? '' : String(bv);
+                    cmp = av < bv ? -1 : (av > bv ? 1 : 0);
+                }
+                return dir === 'desc' ? -cmp : cmp;
+            }
+
+            function defaultSort(a, b) {
+                var c = a.iso < b.iso ? -1 : (a.iso > b.iso ? 1 : 0);
+                if (c !== 0) return c;
+                c = pathOrder(a.pathway) - pathOrder(b.pathway);
+                if (c !== 0) return c;
+                return (a.endpoint || 0) - (b.endpoint || 0);
+            }
+
+            function buildHeaderTooltip(col) {
+                var meta = state.columnMeta[col.key];
+                if (!meta) return col.label;
+                if (meta.description) return meta.description;
+                return col.label;
+            }
+
+            function renderHeader() {
+                headRow.innerHTML = '';
+                COL_DEFS.forEach(function(col) {
+                    var th = document.createElement('th');
+                    th.textContent = col.label;
+                    th.dataset.key = col.key;
+                    th.setAttribute('scope', 'col');
+                    th.setAttribute('role', 'columnheader');
+                    th.setAttribute('title', buildHeaderTooltip(col));
+                    th.tabIndex = 0;
+                    if (col.cls === 'num') th.style.textAlign = 'right';
+                    if (state.sortKey === col.key && state.sortDir) {
+                        th.classList.add('sort-' + state.sortDir);
+                        th.setAttribute('aria-sort', state.sortDir === 'asc' ? 'ascending' : 'descending');
+                    } else {
+                        th.setAttribute('aria-sort', 'none');
+                    }
+                    th.addEventListener('click', function() { toggleSort(col.key); });
+                    th.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSort(col.key); }
+                    });
+                    headRow.appendChild(th);
+                });
+            }
+
+            function toggleSort(key) {
+                if (state.sortKey !== key) {
+                    state.sortKey = key;
+                    state.sortDir = 'asc';
+                } else if (state.sortDir === 'asc') {
+                    state.sortDir = 'desc';
+                } else {
+                    state.sortKey = null;
+                    state.sortDir = null;
+                }
+                renderHeader();
+                renderBody();
+            }
+
+            function renderBody() {
+                var filtered = state.rows.filter(function(r) {
+                    if (!state.isoSet.has(r.iso)) return false;
+                    if (!state.pathwaySet.has(r.pathway)) return false;
+                    if (state.endpoint && r.endpoint_pct !== state.endpoint) return false;
+                    return true;
+                });
+
+                if (state.sortKey) {
+                    var key = state.sortKey, dir = state.sortDir;
+                    filtered.sort(function(a, b) { return compareRows(a, b, key, dir); });
+                } else {
+                    filtered.sort(defaultSort);
+                }
+
+                body.innerHTML = '';
+                var frag = document.createDocumentFragment();
+
+                if (!filtered.length) {
+                    var empty = document.createElement('tr');
+                    var td = document.createElement('td');
+                    td.colSpan = COL_DEFS.length;
+                    td.style.textAlign = 'center';
+                    td.style.padding = '28px 12px';
+                    td.style.color = 'var(--text-muted)';
+                    td.textContent = 'No runs match the current filters.';
+                    empty.appendChild(td);
+                    frag.appendChild(empty);
+                } else {
+                    filtered.forEach(function(r) {
+                        var tr = document.createElement('tr');
+                        COL_DEFS.forEach(function(col) {
+                            var td = document.createElement('td');
+                            if (col.cls === 'num') td.className = 'num';
+                            if (col.cost && r.feasible_economic === false) {
+                                td.classList.add('italic-cost');
+                            }
+                            if (col.key === 'iso' && r.feasible_physical === false) {
+                                var dot = document.createElement('span');
+                                dot.className = 'warning-dot';
+                                dot.setAttribute('role', 'img');
+                                dot.setAttribute('aria-label', 'Physically infeasible at this endpoint');
+                                dot.title = r.physical_ceiling_note || 'Physically infeasible at this endpoint';
+                                td.appendChild(dot);
+                                td.appendChild(document.createTextNode(fmtCell(col, r)));
+                            } else {
+                                td.textContent = fmtCell(col, r);
+                            }
+                            tr.appendChild(td);
+                        });
+                        frag.appendChild(tr);
+                    });
+                }
+
+                body.appendChild(frag);
+
+                if (captionEl) {
+                    var shown   = filtered.length;
+                    var total   = state.rows.length;
+                    var infEcon = 0, infPhy = 0;
+                    for (var i = 0; i < filtered.length; i++) {
+                        if (filtered[i].feasible_economic === false) infEcon++;
+                        if (filtered[i].feasible_physical === false) infPhy++;
+                    }
+                    var parts = ['Showing <strong>' + shown + '</strong> of ' + total + ' runs.'];
+                    if (infEcon) parts.push('<em>' + infEcon + '</em> above the economic ceiling.');
+                    if (infPhy)  parts.push(infPhy + ' physically infeasible.');
+                    captionEl.innerHTML = parts.join(' ');
+                }
+            }
+
+            // ISO multi-toggle (keep >=1 selected)
+            document.querySelectorAll('#closingIsoSelector .iso-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var iso = btn.dataset.iso;
+                    if (state.isoSet.has(iso)) {
+                        if (state.isoSet.size <= 1) return;
+                        state.isoSet.delete(iso);
+                        btn.classList.remove('active');
+                        btn.setAttribute('aria-pressed', 'false');
+                    } else {
+                        state.isoSet.add(iso);
+                        btn.classList.add('active');
+                        btn.setAttribute('aria-pressed', 'true');
+                    }
+                    renderBody();
+                });
+            });
+
+            // Pathway multi-toggle (keep >=1 selected)
+            document.querySelectorAll('#closingPathwayToggle button').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var pw = btn.dataset.pathway;
+                    if (state.pathwaySet.has(pw)) {
+                        if (state.pathwaySet.size <= 1) return;
+                        state.pathwaySet.delete(pw);
+                        btn.classList.remove('active');
+                        btn.setAttribute('aria-pressed', 'false');
+                    } else {
+                        state.pathwaySet.add(pw);
+                        btn.classList.add('active');
+                        btn.setAttribute('aria-pressed', 'true');
+                    }
+                    renderBody();
+                });
+            });
+
+            // Endpoint dropdown
+            var selEl = document.getElementById('closingEndpointSelect');
+            if (selEl) {
+                selEl.addEventListener('change', function() {
+                    state.endpoint = selEl.value;
+                    renderBody();
+                });
+            }
+
+            renderHeader();
+
+            fetch('js/reliability-tax/closing_summary_table.json', { cache: 'no-cache' })
+                .then(function(r) { return r.json(); })
+                .then(function(json) {
+                    state.rows = (json && json.rows) || [];
+                    // Index column metadata by name so header tooltips come from the payload itself.
+                    var cols = (json && json.columns) || [];
+                    cols.forEach(function(c) { if (c && c.name) state.columnMeta[c.name] = c; });
+                    renderHeader();
+                    renderBody();
+                })
+                .catch(function(err) {
+                    if (captionEl) captionEl.textContent = 'Data unavailable: ' + (err && err.message ? err.message : err);
                 });
         })();
 
