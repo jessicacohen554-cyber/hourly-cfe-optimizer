@@ -206,6 +206,90 @@ def build_cache_for_iso(iso, unique_mixes, demand_data, gen_profiles,
     return cache, computed, skipped
 
 
+def expand_cache_for_mixes(iso, mix_infos, existing_cache=None,
+                             demand_data=None, gen_profiles=None,
+                             has_hybrids=None, persist=True):
+    """On-demand archetype expansion — compute+persist dispatch for arbitrary mixes.
+
+    Used by step2_2a cost optimization to fill in archetypes that are not yet
+    in the dispatch cache. Per SPEC.md §24.5: worst-hour gas sizing must have
+    dispatch data for every candidate mix; missing archetypes are computed
+    here and written to disk so subsequent sessions inherit the expanded cache.
+
+    Args:
+        iso: ISO name.
+        mix_infos: iterable of dicts with keys
+            ``resource_pcts`` (dict), ``battery_dispatch_pct``,
+            ``battery8_dispatch_pct``, ``ldes_dispatch_pct``,
+            ``h2_dispatch_pct``. Keys whose archetype hash is already in the
+            cache are skipped (no recomputation).
+        existing_cache: optional pre-loaded cache dict. If None, loaded from disk.
+        demand_data, gen_profiles: optional pre-loaded common data. If None,
+            loaded via ``load_common_data``.
+        has_hybrids: if None, auto-detected from the first mix that contains a
+            positive hybrid pct.
+        persist: if True, save the expanded cache to disk at the end. Set
+            False when caller wants to batch several expansions before saving.
+
+    Returns:
+        dict ``{archetype_key: {field: 8760-array}}`` — the full expanded cache
+        for this ISO (existing entries + newly computed ones).
+    """
+    if demand_data is None or gen_profiles is None:
+        demand_data, gen_profiles, _, _ = load_common_data()
+
+    # Auto-detect hybrid mode if caller did not specify.
+    if has_hybrids is None:
+        has_hybrids = any(
+            any(mi['resource_pcts'].get(ht, 0) > 0 for ht in HYBRID_TYPES)
+            for mi in mix_infos
+        )
+
+    rtypes = RESOURCE_TYPES_HYBRID if has_hybrids else RESOURCE_TYPES
+    supply_profiles = get_supply_profiles(iso, gen_profiles, include_hybrids=has_hybrids)
+    supply_matrix = build_supply_matrix(supply_profiles, resource_types=rtypes)
+    demand_norm, _ = get_demand_profile(iso, demand_data)
+
+    if existing_cache is None:
+        existing_cache = load_dispatch_cache(iso, require_version=CACHE_VERSION) or {}
+
+    cache = dict(existing_cache)  # shallow copy — avoid mutating caller's dict
+    added = 0
+    seen = set()
+
+    for mix_info in mix_infos:
+        rp = mix_info['resource_pcts']
+        key = _archetype_key(
+            iso, rp,
+            100,  # procurement_pct pinned to 100 since cache v5
+            mix_info.get('battery_dispatch_pct', 0),
+            mix_info.get('battery8_dispatch_pct', 0),
+            mix_info.get('ldes_dispatch_pct', 0),
+        )
+        if key in cache or key in seen:
+            continue
+        seen.add(key)
+
+        result = reconstruct_hourly_dispatch(
+            demand_norm, supply_profiles, rp,
+            100,
+            mix_info.get('battery_dispatch_pct', 0),
+            mix_info.get('battery8_dispatch_pct', 0),
+            mix_info.get('ldes_dispatch_pct', 0),
+            supply_matrix=supply_matrix,
+            detailed=True,
+            h2_dispatch_pct=mix_info.get('h2_dispatch_pct', 0),
+            resource_types=rtypes,
+        )
+        cache[key] = {k: v for k, v in result.items()}
+        added += 1
+
+    if added and persist:
+        save_dispatch_cache(iso, cache, version=CACHE_VERSION)
+
+    return cache
+
+
 def enrich_parquets_with_dispatch_shares(iso, input_dir, cache, has_hybrids=False):
     """Add actual battery/LDES/hybrid dispatch share columns to step3 parquets.
 

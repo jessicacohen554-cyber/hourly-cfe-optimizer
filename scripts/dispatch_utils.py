@@ -1038,6 +1038,61 @@ def _archetype_key(iso, resource_pcts, procurement_pct=100, battery_dispatch_pct
     return hashlib.md5(key_str.encode()).hexdigest()[:16]
 
 
+def archetype_keys_from_arrays(iso, cf, solar, wind, osw, ccs, hydro,
+                                 bat, bat8, ldes,
+                                 hybrids=None):
+    """Vectorized archetype-key hashing for N candidate mixes.
+
+    Produces the same 16-char md5 prefix as ``_archetype_key`` for each row,
+    without Python-level per-row dict construction. Used by step2_2a's
+    worst-hour gas sizing to map per-mix arrays to dispatch cache entries.
+
+    Args:
+        iso: ISO name (string).
+        cf, solar, wind, osw, ccs, hydro: (N,) float arrays of resource shares
+            (% of demand).
+        bat, bat8, ldes: (N,) float arrays of storage dispatch parameters.
+        hybrids: optional dict {hybrid_type: (N,) array}. If any hybrid array
+            has a positive value, the per-row key includes the hybrid block
+            (matching ``_archetype_key``'s backward-compatible behaviour).
+
+    Returns:
+        (keys_arr, any_hybrids): ``keys_arr`` is a numpy array of 16-char
+        hex strings (dtype=<U16); ``any_hybrids`` is the per-row bool mask
+        used to decide whether the hybrid block was appended.
+    """
+    n = len(cf)
+    if hybrids is None:
+        hybrids = {}
+    # Per-row "any hybrid active?" mask — matches _archetype_key's
+    # ``any(resource_pcts.get(ht, 0) > 0 for ht in HYBRID_TYPES)``.
+    any_hybrids = np.zeros(n, dtype=bool)
+    for ht in HYBRID_TYPES:
+        arr = hybrids.get(ht)
+        if arr is not None:
+            any_hybrids |= (np.asarray(arr, dtype=np.float64) > 0)
+
+    def _f(v):
+        # Match python `str(float(x))` formatting used inside _archetype_key.
+        return str(float(v))
+
+    keys = np.empty(n, dtype='<U16')
+    for i in range(n):
+        parts = [
+            iso,
+            _f(cf[i]), _f(solar[i]), _f(wind[i]),
+            _f(osw[i]), _f(ccs[i]), _f(hydro[i]),
+        ]
+        if any_hybrids[i]:
+            for ht in HYBRID_TYPES:
+                arr = hybrids.get(ht)
+                val = arr[i] if arr is not None else 0.0
+                parts.append(_f(val))
+        parts.extend([_f(100), _f(bat[i]), _f(bat8[i]), _f(ldes[i])])
+        keys[i] = hashlib.md5('|'.join(parts).encode()).hexdigest()[:16]
+    return keys, any_hybrids
+
+
 def _cache_path(iso):
     """Per-ISO cache file path (parquet format)."""
     return os.path.join(DISPATCH_CACHE_DIR, f'{iso}_dispatch_cache.parquet')

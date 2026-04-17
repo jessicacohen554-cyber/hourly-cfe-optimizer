@@ -5,6 +5,31 @@
 
 ## Current Status (Apr 16, 2026)
 
+### Worst-Hour Gas Sizing Rerun (In Progress — Apr 16, 2026)
+
+**Branch:** `claude/worst-hour-gas-sizing-JH0wH` (commits `02b04a9`, `29137f1`)
+
+**Code + SPEC:** Complete. Worst-hour (99.97th percentile, margin-on-demand) gas sizing is locked in SPEC §24.5 and implemented in `scripts/step2_2a_cost_optimization.py` (scalar + batch paths), `scripts/step_2_3_pathway_optimizer.py`, and `scripts/step3a_build_dispatch_cache.py`. Validation (`scripts/tmp_validate_worst_hour_sizing.py`) passes for 10 mixes × 3 ISOs with `WH ≥ ELCC` strict invariant.
+
+**Step-2.2A rerun:** Launched `2026-04-16 ~23:57 UTC`, **died silently around 23:58:30** (no OOM in dmesg, log ended cleanly mid-processing — likely session-cleanup SIGHUP'd the orphaned child). **Re-launched `2026-04-17 ~00:10 UTC` at PID 1656** via `nohup setsid python3 ... &` for full session detachment. All 7 ISOs, baseline track, `--workers 1`, logging to `logs/step2_2a_worst_hour_rerun.log`. Totals across ISOs: 47,953,153 raw EF mixes (CAISO 21.2M + ERCOT 8.7M + PJM 3.1M + NYISO 2.1M + NEISO 5.2M + MISO 6.2M + SPP 1.5M). Expected wall-clock 6–12 hours.
+
+**What's left:**
+- [ ] Step-2.2A baseline track completes for all 7 ISOs → `data/step2.2-cost/step_2_2a_CO_{ISO}.parquet`.
+- [ ] Commit + push the new parquets alongside the expanded dispatch cache (`data/step3-dispatch/*`).
+- [ ] Step-2.2B (`step2_2b_track_nb_ctr.py`) — newbuild + cost-to-replace tracks. Runs fast on Step-2.2A output; launch after baseline lands.
+- [ ] Sanity audits on the new parquets: `gas_gas_backup_needed_mw` distributions, clean-firm-heavy vs VRE-heavy comparison, ERCOT baseline calibration.
+- [ ] DOWNSTREAM (not this session per task brief): Step 3a cache rebuild, Step 4-7 analytics, reliability-tax 350-run sweep, dashboard JSONs.
+
+**Resume instructions for next session:**
+1. Check `ps -ef | grep step2_2a_cost_optimization` — if PID 1656 (or descendant) still running, do NOT launch a second instance. Tail `logs/step2_2a_worst_hour_rerun.log` to confirm progress. Relaunch if needed via `nohup setsid python3 scripts/step2_2a_cost_optimization.py --track baseline --workers 1 > logs/step2_2a_worst_hour_rerun.log 2>&1 &` (the nohup+setsid is load-bearing to survive session boundaries).
+2. If completed, inspect `data/step2.2-cost/*.parquet` timestamps vs launch time. New parquets should have `mtime > 23:57 UTC`. Confirm all 7 ISOs present.
+3. Run `python3 scripts/tmp_validate_worst_hour_sizing.py` — should still pass (no code changed).
+4. If optimizer crashed: read last 500 lines of the log, identify the failure, and restart per `CLAUDE.md` Optimizer Run Discipline ("automatically troubleshoot, debug, and retry").
+5. Once Step-2.2A is confirmed complete, launch Step-2.2B: `python3 scripts/step2_2b_track_nb_ctr.py`. That's the new-build + cost-to-replace track.
+6. Commit results: `git add data/step2.2-cost/ data/step3-dispatch/ && git commit -m "Bank worst-hour step-2.2 results"`.
+
+**Open questions:** None — all design decisions locked in SPEC §24.5.
+
 ### Phantom Clean Audit + Year-Scaled Floor Fix (Added — Apr 16, 2026)
 
 **Branch:** `claude/fix-phantom-clean-generation-rPNpL`
@@ -6019,3 +6044,38 @@ Each component is reported separately in stacked-bar visualizations. "Overbuild"
 - No JSON payload contains `capacity_rev_netted_usd`, `net_fom_million_usd`, or any "net of capacity" language.
 - `total_new_build_gw / peak_demand_gw` for any pathway does not exceed 5× (sanity ceiling; current MISO 22× indicates model failure).
 - Headline tax for P1a > headline tax for P3 in every ISO (directionally, the delta is the whole story).
+
+### 24.5 Worst-Hour Gas Sizing (Apr 16, 2026)
+
+**Decision (locked).** Replace the fixed-ELCC `total_clean_peak` formula in `scripts/step2_2a_cost_optimization.py` (scalar path ~385–431 and duplicate batch path ~707–746) and in `scripts/step_2_3_pathway_optimizer.py` (`size_required_gas_mw`, `_clean_peak_mw_from_mix`, `_existing_clean_peak_mw`) with a dispatch-driven sizing signal computed from the 8760 `total_clean` profile in `data/step3-dispatch/{ISO}_dispatch_cache.parquet`.
+
+**Percentile (locked — option B-i).** Gas is sized to the **99.97th percentile** of the margin-inclusive residual-gap distribution:
+```
+residual[h]   = max(0, demand[h] × (1 + RESOURCE_ADEQUACY_MARGIN) − total_clean[h])
+gap_mw        = np.percentile(residual, 99.97)            # LOLE ≤ 2.6 h/yr
+gas_raw       = gap_mw / GAS_AVAILABILITY_FACTOR[iso]
+```
+RA-margin convention (locked Apr 16, 2026 — amended from initial "margin on gap" formulation after validation exposed a false-positive invariant violation in clean-firm-heavy mixes). The 15% reserve margin is applied to **demand** per-hour before subtracting clean supply — the NERC/PJM/MISO RA-planning tradition. Rationale: a reserve margin is a safety factor on the demand forecast, not on the post-subtraction residual; under this convention the 2025-baseline and every scenario use the same hourly arithmetic and the worst-hour sizing is a strict physical upgrade over the legacy ELCC formula (`WH_gas_needed ≥ ELCC_gas_needed` for every mix — no exceptions). The 99.97th percentile leaves ≈2.6 h/yr of residual tail above the sized gap, consistent with the NERC / PJM "1-day-in-10-years" LOLE ≈ 2.4 h/yr benchmark. This is a single deterministic knob — sensitivity against A (1-hour maximum) and B-ii (99.94th ≈ 5 h/yr) can be run without structural code changes by flipping the `p` parameter.
+
+**Why not ELCC.** The fixed `PEAK_CAPACITY_CREDITS` (solar 0.30, wind 0.10, battery 0.95, etc.) are annual-average approximations. In VRE-heavy mixes the Σ-of-credits balloons past total peak demand (ERCOT ep99.9: `total_clean_peak` = 907 GW vs `ra_peak` = 227 GW, implying zero gas need) while the actual 8760 dispatch shows real residual gap. In winter-peaking ISOs, solar's average 0.30 credit overstates its peak-hour contribution (which is ≈0). Worst-hour dispatch is the truth; ELCC is a simplification that breaks at the extremes we care about.
+
+**ELCC retained — diagnostic only.** `_elcc_gas_mw(...)` stays in the codebase as a bug-detection helper invoked by `scripts/tmp_validate_worst_hour_sizing.py`. It is **not** used in any production sizing path. Invariant under the amended margin-on-demand convention: for any mix, `worst_hour_gas_mw ≥ elcc_gas_mw`. VRE-heavy mixes should show large positive deltas (ELCC under-sizes because it over-credits variable resources); clean-firm-heavy mixes should show near-zero deltas (ELCC ≈ WH when both apply the RA margin on demand and clean supply is nearly flat). A strict violation signals a dispatch-profile or archetype-lookup bug and is treated as a hard stop.
+
+**On-demand archetype expansion.** If a mix's archetype key is not present in the dispatch cache, the sizing helper calls into `scripts/step3a_build_dispatch_cache.py` to compute and persist the missing archetype's 8760 profile, then re-reads the cache. Missing archetypes are batched per ISO (single Step 3a call per batch, not per-mix) and the cache grows monotonically — subsequent hits on the same key are direct reads. No fallback to ELCC for missing archetypes. Cache expansions must be committed alongside any rerun so downstream sessions inherit the expanded cache.
+
+**Architecture (locked Apr 17, 2026 after scalability audit).** Option A — **in-loop ELCC, post-process worst-hour on winners only.** The initial implementation tried to compute worst-hour sizing per candidate inside the step-2.2A pricing path. Audit surfaced that the EF candidate pool is 99.97% unique archetypes (CAISO ep95: 31,173 unique / 31,181 rows; all-thresholds: ~21 M unique / ISO), so the dispatch-cache amortization is broken at that layer — an O(N_unique × dispatch_time) work profile that balloons to >175 hours per ISO. Architecture change:
+- `scripts/step2_2a_cost_optimization.py` pricing paths (`price_mix_batch` and `precompute_base_year_coefficients`) retain the **vectorized ELCC formula** for the in-loop `gas_needed_mw` column (unchanged from the pre-worst-hour baseline — fast, per-candidate, scales to 21M mixes trivially).
+- Immediately after all of an ISO's parquets are written (baseline, tracks, DG per threshold, feasible), `_rewrite_gas_columns_worst_hour` overwrites the `gas_*` columns **row-by-row using the SPEC §24.5 worst-hour formula**, computed via the dispatch cache. Because only unique winners are in the output (hundreds to low-thousands of archetypes per ISO), on-demand archetype expansion and percentile lookup run in their intended regime (seconds per ISO). gas is not in the cost function, so optimizer cost-rankings are identical to the pre-worst-hour baseline.
+- `scripts/step_2_3_pathway_optimizer.py::size_required_gas_mw` continues to call the scalar worst-hour helper directly — N=1 per call, a few thousand unique mixes per full 350-run sweep, within cache regime. No post-process layer needed.
+- The dispatch-cache expansion policy is unchanged: missing archetypes are computed via step3a's `expand_cache_for_mixes` and persisted to disk, monotonic growth, commit alongside results.
+
+**Blast radius (documented for downstream sessions).**
+- `data/step2.2-cost/*.parquet` requires a full 27M-mix rerun (hours of compute; do NOT launch without explicit approval).
+- `analysis/reliability-tax/data/` 350-run sweep must be regenerated after step 2.2 lands.
+- `dashboard/js/shared-data.js` (Step 7) rebuilds propagate to `dashboard.html`, `abatement_dashboard.html`, `research_paper.html`, `lmp_trends.html`, `optimizer_methodology.html`, and `reliability-tax.html`.
+- Dispatch cache parquets grow; commit alongside results.
+
+**Verification gate (before any rerun).**
+- Temp script `scripts/tmp_validate_worst_hour_sizing.py` prints a 10-mix × 3-ISO (ERCOT, NYISO, CAISO) diff table of `{ELCC_mw, worst_hour_mw, delta_pct}`. Expected pattern: VRE-heavy mixes → worst-hour > ELCC; clean-firm-heavy mixes → approximately equal. Any `worst_hour < ELCC` is a hard stop.
+- Validation must exercise the on-demand archetype expansion path with ≥2 cache-miss mixes; the second read must hit the newly-written rows.
+- User-approved validation table is a prerequisite for step-2.2 rerun.

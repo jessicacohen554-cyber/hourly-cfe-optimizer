@@ -827,117 +827,6 @@ def _required_total_recovery_per_kw(iso: str) -> float:
     return float(pc.NEW_CCGT_COST_KW_YR[iso]) * float(NEW_GAS_ASSET_LIFE_YEARS)
 
 
-def _clean_peak_mw_from_mix(
-    iso: str,
-    target: dict[str, Any],
-    demand_twh: float,
-) -> float:
-    """Peak-capacity credit contributed by the target clean mix for ``iso``.
-
-    Port of step2_2a_cost_optimization._cost_kernel peak-build logic (lines
-    377-423): convert each resource's energy share (% of demand) to installed
-    MW via its capacity factor, then credit by its peak-capacity credit. Plus
-    storage duration-based peak credit, plus hybrids. CCS-CCGT share from the
-    mix is treated as a clean firm resource for peak-capacity purposes
-    (90% credit per PEAK_CAPACITY_CREDITS).
-
-    Returns absolute MW (not delta vs. base year). Caller adds
-    ``EXISTING_CLEAN_PEAK_MW`` conceptually but we compute that fresh here
-    from the base-year existing fleet so the function stands alone.
-    """
-    demand_mwh = demand_twh * 1.0e6
-    avg_demand_mw = demand_mwh / HOURS_PER_YEAR
-    mix = target.get('mix_pct', {}) or {}
-    storage = target.get('storage_pct', {}) or {}
-
-    peak_mw = 0.0
-    vre_energy_resources = (
-        ('clean_firm', 'clean_firm'),
-        ('solar', 'solar'),
-        ('wind', 'wind'),
-        ('offshore_wind', 'offshore_wind'),
-        ('hydro', 'hydro'),
-        ('ccs_ccgt', 'ccs_ccgt'),
-    )
-    for col, res in vre_energy_resources:
-        pct = float(mix.get(col, 0.0))
-        if pct <= 0:
-            continue
-        # Offshore wind only when regionally available.
-        if res == 'offshore_wind' and iso not in pc.OFFSHORE_ISOS:
-            continue
-        cf = float(pc.RESOURCE_CAPACITY_FACTORS[res][iso])
-        cc = float(pc.PEAK_CAPACITY_CREDITS[res])
-        if cf <= 0:
-            continue
-        res_avg_mw = pct / 100.0 * avg_demand_mw
-        res_installed_mw = res_avg_mw / cf
-        peak_mw += res_installed_mw * cc
-
-    # Geothermal (CAISO only).
-    geo_pct = float(mix.get('geothermal', 0.0))
-    if geo_pct > 0 and iso in pc.GEOTHERMAL_ISOS:
-        # Approximate as a clean-firm class resource (flat, high credit).
-        cf_geo = 0.85
-        cc_geo = float(pc.PEAK_CAPACITY_CREDITS.get('clean_firm', 1.0))
-        peak_mw += (geo_pct / 100.0 * avg_demand_mw / cf_geo) * cc_geo
-
-    # Hybrid VRE+storage: apply hybrid capacity credits directly.
-    hybrid_table = (
-        ('solar_batt4',  'solar'),
-        ('solar_batt8',  'solar'),
-        ('wind_batt4',   'wind'),
-        ('wind_batt8',   'wind'),
-    )
-    for col, parent in hybrid_table:
-        pct = float(mix.get(col, 0.0))
-        if pct <= 0:
-            continue
-        cf_parent = float(pc.RESOURCE_CAPACITY_FACTORS[parent][iso])
-        if cf_parent <= 0:
-            continue
-        cc = float(pc.PEAK_CAPACITY_CREDITS[col])
-        res_avg_mw = pct / 100.0 * avg_demand_mw
-        installed_mw = res_avg_mw / cf_parent
-        peak_mw += installed_mw * cc
-
-    # Standalone storage — duration-based MW conversion from energy share.
-    bat_pct = float(storage.get('battery_dispatch_pct', 0.0))
-    bat8_pct = float(storage.get('battery8_dispatch_pct', 0.0))
-    ldes_pct = float(storage.get('ldes_dispatch_pct', 0.0))
-    h2_pct = float(storage.get('h2_dispatch_pct', 0.0))
-    peak_mw += (
-        bat_pct / 100.0 * demand_mwh / 4.0 * float(pc.PEAK_CAPACITY_CREDITS['battery'])
-        + bat8_pct / 100.0 * demand_mwh / 8.0 * float(pc.PEAK_CAPACITY_CREDITS['battery8'])
-        + ldes_pct / 100.0 * demand_mwh / 100.0 * float(pc.PEAK_CAPACITY_CREDITS['ldes'])
-        + h2_pct / 100.0 * demand_mwh / 1000.0 * float(pc.PEAK_CAPACITY_CREDITS['h2'])
-    )
-    return float(peak_mw)
-
-
-def _existing_clean_peak_mw(iso: str) -> float:
-    """2025 existing-fleet peak contribution (MW).
-
-    Mirrors step2_2a._compute_existing_clean_peak_mw but is self-contained so
-    this module does not import step2_2a at top-level.
-    """
-    demand_twh = float(pc.REGIONAL_DEMAND_TWH[iso])
-    avg_demand_mw = demand_twh * 1.0e6 / HOURS_PER_YEAR
-    total_peak = 0.0
-    shares = pc.GRID_MIX_SHARES.get(iso, {})
-    for resource in ('clean_firm', 'solar', 'wind', 'offshore_wind', 'ccs_ccgt', 'hydro'):
-        share_pct = float(shares.get(resource, 0.0))
-        if share_pct <= 0:
-            continue
-        cf = float(pc.RESOURCE_CAPACITY_FACTORS[resource][iso])
-        if cf <= 0:
-            continue
-        cc = float(pc.PEAK_CAPACITY_CREDITS[resource])
-        installed = share_pct / 100.0 * avg_demand_mw / cf
-        total_peak += installed * cc
-    return total_peak
-
-
 def size_required_gas_mw(
     iso: str,
     target: dict[str, Any],
@@ -946,50 +835,34 @@ def size_required_gas_mw(
 ) -> dict[str, float]:
     """Peak-adequacy-driven required gas capacity at ``demand_twh``, ``gf``.
 
-    Ports the step2_2a sizing pattern:
-        peak_grown   = PEAK_DEMAND_MW × gf
-        ra_peak      = peak_grown × (1 + RESOURCE_ADEQUACY_MARGIN)
-        total_clean  = EXISTING_CLEAN_PEAK_MW + new_clean_peak_mw(target)
-        gas_raw      = max(0, ra_peak - total_clean) / GAS_AVAILABILITY_FACTOR
-        gas_needed   = max(0, EXISTING_GAS_CAPACITY_MW + (gas_raw - GAS_RAW_2025))
-        existing_used= min(gas_needed, EXISTING_GAS_CAPACITY_MW)
-        new_needed   = max(0, gas_needed - EXISTING_GAS_CAPACITY_MW)
+    Delegates to ``step2_2a_cost_optimization.worst_hour_gas_sizing`` per
+    SPEC.md §24.5 — a single code path owns worst-hour (99.97th-percentile
+    residual-gap) gas sizing for both the cost optimizer and the pathway
+    optimizer. ``demand_twh`` is the BASE-year demand; ``gf`` applies the
+    demand-growth multiplier.
 
-    Returns a dict of the peak-capacity diagnostic values. Caller subtracts
-    already-built new-gas MW from ``new_needed`` to get the incremental build.
+    Returns the same dict schema as before plus ``gap_mw`` (the 99.97th
+    percentile residual-gap MW used as the sizing signal). Legacy
+    ``existing_clean_peak_mw`` / ``new_clean_peak_mw`` / ``total_clean_peak_mw``
+    fields are preserved as diagnostic approximations (``total_clean_peak_mw``
+    = grown peak demand − gap_mw) so downstream serialization keeps working;
+    they are no longer the sizing signal.
     """
-    peak_grown = float(pc.PEAK_DEMAND_MW[iso]) * float(gf)
-    ra_peak = peak_grown * (1.0 + float(pc.RESOURCE_ADEQUACY_MARGIN))
-    existing_clean = _existing_clean_peak_mw(iso)
-    new_clean = _clean_peak_mw_from_mix(iso, target, demand_twh)
-    total_clean = existing_clean + new_clean
+    from step2_2a_cost_optimization import worst_hour_gas_sizing
+    mix = target.get('mix_pct', {}) or {}
+    storage = target.get('storage_pct', {}) or {}
+    result = worst_hour_gas_sizing(iso, mix, storage, float(demand_twh), float(gf))
 
-    gaf = float(pc.GAS_AVAILABILITY_FACTOR[iso])
-    gas_raw = max(0.0, ra_peak - total_clean) / max(1e-9, gaf)
-    # Base-year baseline calibration — tracks step2_2a's GAS_RAW_2025.
-    existing_gas_mw = float(pc.EXISTING_GAS_CAPACITY_MW[iso])
-    gas_raw_2025 = max(0.0, (
-        float(pc.PEAK_DEMAND_MW[iso]) * (1.0 + float(pc.RESOURCE_ADEQUACY_MARGIN))
-        - existing_clean
-    ) / max(1e-9, gaf))
-    gas_delta = gas_raw - gas_raw_2025
-    gas_needed = max(0.0, existing_gas_mw + gas_delta)
-    existing_used = min(gas_needed, existing_gas_mw)
-    new_needed_cumulative = max(0.0, gas_needed - existing_gas_mw)
-
-    return {
-        'peak_demand_mw': peak_grown,
-        'ra_peak_mw': ra_peak,
-        'existing_clean_peak_mw': existing_clean,
-        'new_clean_peak_mw': new_clean,
-        'total_clean_peak_mw': total_clean,
-        'gas_raw_mw': gas_raw,
-        'gas_raw_2025_mw': gas_raw_2025,
-        'existing_gas_mw': existing_gas_mw,
-        'gas_needed_mw': gas_needed,
-        'existing_gas_used_mw': existing_used,
-        'new_gas_required_cumulative_mw': new_needed_cumulative,
-    }
+    # Back-compat diagnostic fields. "total_clean_peak_mw" is defined here as
+    # the grown peak minus the worst-hour residual, so callers that log it
+    # continue to see a meaningful value.
+    peak_grown = result['peak_demand_mw']
+    gap_mw = result['gap_mw']
+    total_clean_peak = max(0.0, peak_grown - gap_mw)
+    result.setdefault('existing_clean_peak_mw', 0.0)
+    result.setdefault('new_clean_peak_mw', total_clean_peak)
+    result.setdefault('total_clean_peak_mw', total_clean_peak)
+    return result
 
 
 def compute_gas_fleet_cf(
