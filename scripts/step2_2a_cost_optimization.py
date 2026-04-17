@@ -652,18 +652,22 @@ def _rewrite_gas_columns_worst_hour(parquet_path, iso, verbose=True):
 
     _ensure_common_data(iso)
     demand_margin = state['demand_margin_norm']
-    p = WORST_HOUR_PERCENTILE
-    unique_norm = np.empty(len(unique_keys), dtype=np.float64)
-    for i, k in enumerate(unique_keys):
-        entry = cache.get(k)
-        if entry is None:
-            raise RuntimeError(
-                f"Worst-hour rewrite: archetype {k} missing for {iso} after "
-                "step3a expansion — check scripts/step3a_build_dispatch_cache.py."
-            )
-        total_clean = np.asarray(entry['total_clean'], dtype=np.float64)
-        margin_resid = np.maximum(0.0, demand_margin - total_clean)
-        unique_norm[i] = np.percentile(margin_resid, p)
+    # Vectorized per-archetype percentile: stack all unique archetypes'
+    # total_clean profiles into a (K, H) matrix, compute the margin-inclusive
+    # residual in one numpy broadcast, then percentile along axis=1.
+    total_clean_mat = np.stack([
+        np.asarray(cache[k]['total_clean'], dtype=np.float64)
+        for k in unique_keys
+    ], axis=0)  # (K, H)
+    missing_after = [k for k in unique_keys if cache.get(k) is None]
+    if missing_after:
+        raise RuntimeError(
+            f"Worst-hour rewrite: {len(missing_after)} archetype(s) still "
+            f"missing for {iso} after step3a expansion — check "
+            "scripts/step3a_build_dispatch_cache.py."
+        )
+    margin_resid_mat = np.maximum(0.0, demand_margin[None, :] - total_clean_mat)  # (K, H)
+    unique_norm = np.percentile(margin_resid_mat, WORST_HOUR_PERCENTILE, axis=1)  # (K,)
 
     resid_norm = unique_norm[inverse]  # (n_rows,)
 
