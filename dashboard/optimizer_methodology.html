@@ -1121,6 +1121,66 @@ Where:
         strategy shifts in real time.
     </p>
 
+    <h3>Reliability Tax &amp; Stranded Capital</h3>
+    <p>
+        The cost customers pay when VRE and storage are asked to cover the 99.97th-percentile
+        worst hour without clean firm generation behind them. Reported <strong>gross</strong>,
+        as an absolute ratepayer-cost metric &mdash; not netted against capacity-market
+        payments, which are transfers within the ratepayer&ndash;developer system, not a cost
+        reduction. ERCOT and SPP (energy-only) recover the same reliability cost through
+        scarcity-priced energy rather than capacity payments; the total still lands on bills.
+    </p>
+
+    <div class="insight-box" style="margin:var(--space-md) 0;">
+        <strong>Reliability tax formula (five components):</strong>
+        <span style="font-family:var(--font-data);">(annualized new-gas capex + new-gas FOM + carried existing-gas FOM + priced VRE curtailment + annualized VRE/storage overbuild capex) &divide; total demand MWh</span>,
+        summed across the 25-year horizon. Each component is reported separately. VRE/storage
+        overbuild is capacity whose dispatched energy falls below a 15% capacity-factor
+        threshold &mdash; otherwise it is serving real load. Curtailment is priced at the
+        weighted-average VRE LCOE.
+    </div>
+
+    <p>
+        <strong>Stranding is absolute, not comparative.</strong> A new-gas vintage is stranded
+        when its annual capacity factor falls below 15% for two consecutive years, triggering
+        a write-off of the unrecovered portion of book value: <span style="font-family:var(--font-data);">overnight_capex &times; (1 &minus; cumulative_recovered_revenue &divide; (capex + required_return_over_life))</span>.
+        The test is applied to each vintage in its own pathway; the P1a&ndash;vs&ndash;P3 delta
+        is the headline narrative, not the definition. Every pathway carries some reliability
+        tax; the question is how large.
+    </p>
+
+    <h4 style="margin-top:var(--space-lg);">Card-level methodology</h4>
+    <p style="font-size:0.92rem;color:var(--text-muted);margin-top:0;">
+        The reliability-tax analysis is governed by five locked methodology cards (SPEC &sect;24.4).
+    </p>
+
+    <div class="card">
+        <p><strong>Card M&prime; &mdash; Capacity-market treatment.</strong> Capacity-market
+        revenue is not netted against reliability tax. Capacity payments are transfers between
+        ratepayers and developers, not cost reductions. The metric is gross in every ISO.</p>
+
+        <p><strong>Card U &mdash; New-build gas in the build menu.</strong> The pathway
+        optimizer builds new CCGTs to fill any residual reliability gap left after clean
+        dispatch. Sizing follows SPEC &sect;24.5: the 99.97th percentile of the margin-on-demand
+        residual from the 8,760 dispatch. Each vintage tracks year built, initial MW, annual CF,
+        retirement year, and cumulative recovered revenue.</p>
+
+        <p><strong>Card F&prime; &mdash; Stranding trigger.</strong> When annual CF falls below
+        15% for two consecutive years, the vintage is marked stranded and its unrecovered book
+        value is written off. The 15% threshold is the developer-breakeven rule of thumb,
+        sensitivity-tested against 10% and 20%.</p>
+
+        <p><strong>Card K&prime; &mdash; Stranding definition.</strong> Absolute per-pathway,
+        not comparative. Existing clean firm in P2a/P2b/P3 is never stranded &mdash; it serves
+        real load. The P1a&ndash;vs&ndash;P3 delta in reliability tax $/MWh is the narrative
+        device, not the definition.</p>
+
+        <p><strong>Card S &mdash; Endpoint coverage.</strong> Ten CFE endpoints
+        (60/70/75/80/85/90/95/97.5/99/99.9%) &times; 5 pathways &times; 7 ISOs = 350 runs.
+        Lower endpoints expose the medium-CFE new-gas hump; upper endpoints expose the
+        abandonment pattern past 90%.</p>
+    </div>
+
     <h3>CO&#8322; Abatement Analysis</h3>
     <p>
         Marginal and average CO&#8322; abatement costs at each threshold, benchmarked against
