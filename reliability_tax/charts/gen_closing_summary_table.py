@@ -1,26 +1,23 @@
 """
 gen_closing_summary_table.py — Generate closing_summary_table.json
 
-Data lineage:
-  - analysis/reliability-tax/data/MANIFEST.json + per-run JSONs
-  - Per MANIFEST.json required fields (methodology.md):
-    ISO, pathway, endpoint,
-    feasibility (physical, economic), achieved_cfe_pct,
-    undiscounted_cost_usd, npv_at_5pct, npv_at_7pct, npv_at_9pct,
-    retirement_timeline (cumulative GW retired by resource, 2050),
-    comparative_stranding (GW and $ beyond Pathway 3),
-    vre_curtailment (per-resource rates at endpoint)
-  - Per Card J: physical_feasibility_ceiling and economic_feasibility_ceiling columns
-  - Per Card L revised: existing_fleet_retirement_cumulative_gw_2050 column
-  - Per Card K revised: comparative_stranding columns
+v2 (Apr 2026). 175 rows = 7 ISO × 5 pathway × 5 endpoint.
 
-Full table = 140 rows (7 ISO × 4 pathway × 5 endpoint).
+Endpoints chosen for the closing table are the five headline thresholds:
+  75%, 85%, 90%, 95%, 99% — spanning mid-CFE through the last-mile zone.
 
-Payload structure:
-  columns: list[column_definition]  — name, description, unit
-  rows: list[140 × dict]            — one row per run, all columns
-  aggregations: dict                — cross-cuts and summary stats
-  meta: ...
+All columns surface v2 methodology:
+  - Reliability tax ($/MWh) per SPEC §24.4 locked 5-component formula
+  - Absolute stranded new-build gas capex per Card K' (from new_gas_fleet)
+  - Worst-hour-sized gas fleet MW at 2050 per SPEC §24.5
+  - Retirement timeline (Card L')
+  - Gross cost only — no capacity-market netting (Card M')
+
+Dropped from v1:
+  - total_stranded_billion_usd (old Card K comparative framing)
+  - total_stranded_twh
+  - net_annual_cost / capacity_rev_netted surfaces
+  - Card S CCS-CCGT synthetic stranding proxy
 """
 from __future__ import annotations
 
@@ -31,90 +28,87 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "reliability_tax" / "charts"))
 from data_loader import (  # noqa: E402
-    DL_BASE,
-    get_run, get_pathway_stranding, get_pivot_info,
-    ISOS, PATHWAYS, ENDPOINTS, _EP_LABEL,
+    DL_BASE, get_pivot_info,
+    ISOS, PATHWAYS, _EP_LABEL,
 )
 
 OUT_PATH = Path(__file__).parent / "closing_summary_table.json"
+DASH_OUT = REPO_ROOT / "dashboard" / "js" / "reliability-tax" / "closing_summary_table.json"
+
+# Headline 5 endpoints for the closing table (out of 10 in the full sweep)
+CLOSING_ENDPOINTS = [0.75, 0.85, 0.90, 0.95, 0.99]
 
 EXISTING_GAS_GW = {
     "CAISO": 37.0, "ERCOT": 55.0, "PJM": 75.0,
     "NYISO": 18.0, "NEISO": 14.0, "MISO": 68.0, "SPP": 32.0,
 }
 
-# Card S: new-build gas stranding parameters
-CCS_CCGT_CF = 0.85
-CCS_CCGT_CAPITAL_PER_GW = 2.2e9   # $2,200/kW = $2.2B/GW (NREL ATB 2024 moderate)
-CCS_CCGT_USEFUL_LIFE = 25          # years
-MODEL_ENDPOINT_YEAR = 2050
-
-
-def _new_gas_stranding(run: dict) -> tuple[float, float]:
-    """
-    Return (stranded_gw, stranded_usd) for new CCS-CCGT built and not fully amortized by 2050.
-
-    For each vintage built in year Y: stranded_fraction = max(0, (Y + 25 - 2050) / 25).
-    Plants built 2025 have 0 stranding; plants built 2032 have 7/25 = 28% stranding.
-    Capital basis: $2,200/kW overnight (NREL ATB 2024 moderate).
-    """
-    bo = run.get("tables", {}).get("annual_buildout", [])
-    total_stranded_gw = 0.0
-    total_stranded_usd = 0.0
-    for yr_row in bo:
-        yr = yr_row.get("year", MODEL_ENDPOINT_YEAR)
-        for v in yr_row.get("new_vintages", []):
-            if v.get("resource") != "ccs_ccgt":
-                continue
-            twh = v.get("twh_per_year", 0.0)
-            if twh <= 0:
-                continue
-            gw = twh / (8.76 * CCS_CCGT_CF)
-            stranded_frac = max(0.0, (yr + CCS_CCGT_USEFUL_LIFE - MODEL_ENDPOINT_YEAR) / CCS_CCGT_USEFUL_LIFE)
-            total_stranded_gw += gw * stranded_frac
-            total_stranded_usd += gw * CCS_CCGT_CAPITAL_PER_GW * stranded_frac
-    return round(total_stranded_gw, 2), round(total_stranded_usd, 0)
-
 COLUMNS = [
     {"name": "run_key",            "description": "Unique run identifier", "unit": "string"},
     {"name": "iso",                "description": "ISO/RTO region", "unit": "string"},
-    {"name": "pathway",            "description": "Decarbonization pathway ID", "unit": "string"},
+    {"name": "pathway",            "description": "Decarbonization pathway (1a/1b/2a/2b/3)", "unit": "string"},
     {"name": "endpoint",           "description": "CFE target endpoint (fraction)", "unit": "fraction"},
     {"name": "endpoint_pct",       "description": "CFE target (% label)", "unit": "%"},
     {"name": "feasible_physical",  "description": "Physically achievable (Card J)", "unit": "bool"},
     {"name": "feasible_economic",  "description": "Below $10k/CFE% ceiling (Card J)", "unit": "bool"},
-    {"name": "achieved_cfe_pct",   "description": "Achieved hourly CFE at endpoint year (2050)", "unit": "%"},
-    # Primary cost metric: absolute actual cost (Card S)
-    {"name": "undiscounted_cost_trillion", "description": "PRIMARY: Cumulative system operating cost 2025–2050 (undiscounted, real 2025$)", "unit": "$T"},
-    {"name": "new_gas_stranded_gw",       "description": "New CCS-CCGT capacity with undepreciated book value at 2050 (Card S)", "unit": "GW"},
-    {"name": "new_gas_stranded_billion",  "description": "Stranded book value of new-build CCS-CCGT at 2050 (Card S, $2,200/kW capital)", "unit": "$B"},
-    {"name": "total_actual_cost_trillion","description": "PRIMARY TOTAL: undiscounted_cost + new_gas_stranded. Translates to customer rates (Card S)", "unit": "$T"},
-    # Secondary cost metrics: NPV (investment comparison)
-    {"name": "npv_5pct_trillion",  "description": "SECONDARY: NPV at 5% real discount rate", "unit": "$T"},
-    {"name": "npv_7pct_trillion",  "description": "SECONDARY: NPV at 7% real discount rate (optimizer objective)", "unit": "$T"},
-    {"name": "npv_9pct_trillion",  "description": "SECONDARY: NPV at 9% real discount rate", "unit": "$T"},
-    {"name": "pivoted",            "description": "Did clean firm unlock during planning period?", "unit": "bool"},
+    {"name": "achieved_cfe_pct",   "description": "Achieved hourly CFE at 2050 endpoint year", "unit": "%"},
+
+    # Reliability tax (SPEC §24.4 — primary metric)
+    {"name": "reliability_tax_usd_per_mwh",      "description": "PRIMARY: SPEC §24.4 5-component reliability tax divided by 2025-2050 demand MWh", "unit": "$/MWh"},
+    {"name": "reliability_tax_total_usd",        "description": "PRIMARY: SPEC §24.4 reliability tax total $ (gross, no cap-market netting)", "unit": "$"},
+    {"name": "rtax_new_gas_capex_usd",           "description": "§24.4 component 1: annualized new-gas capex × 26 yrs", "unit": "$"},
+    {"name": "rtax_new_gas_fom_usd",             "description": "§24.4 component 2: new-gas fixed O&M", "unit": "$"},
+    {"name": "rtax_existing_gas_fom_carried_usd","description": "§24.4 component 3: existing-gas FOM carried for reliability", "unit": "$"},
+    {"name": "rtax_priced_vre_curtailment_usd",  "description": "§24.4 component 4: priced VRE curtailment (chart layer)", "unit": "$"},
+    {"name": "rtax_vre_storage_overbuild_usd",   "description": "§24.4 component 5: annualized VRE+storage overbuild capex (chart layer)", "unit": "$"},
+
+    # Worst-hour sized gas fleet (SPEC §24.5)
+    {"name": "active_new_gas_fleet_mw_2050",     "description": "Worst-hour sized new-build gas fleet at 2050 (SPEC §24.5 99.97 pct residual gap, NOT ELCC)", "unit": "MW"},
+    {"name": "residual_gap_p99p97_mw_2050",      "description": "99.97 pct of (demand × RA margin − clean dispatch) at 2050", "unit": "MW"},
+    {"name": "existing_gas_carried_mw_2050",     "description": "Existing gas still needed on the worst hour at 2050", "unit": "MW"},
+
+    # Card K' absolute stranded new-build gas
+    {"name": "stranded_new_gas_mw",              "description": "Card K' — Σ initial_cap_mw of new-gas vintages with stranded_flag=True (CF<15% for 2 yrs, SPEC Card F')", "unit": "MW"},
+    {"name": "stranded_new_gas_capex_billion",   "description": "Card K' — absolute stranded capex on new-build gas at 2050", "unit": "$B"},
+    {"name": "stranded_new_gas_vintage_count",   "description": "Number of new-gas vintages that tripped the Card F' stranding trigger", "unit": "count"},
+
+    # Gross cost (Card M')
+    {"name": "undiscounted_gross_cost_trillion", "description": "Cumulative 2025-2050 gross ratepayer cost (no cap-market netting)", "unit": "$T"},
+    {"name": "npv_at_7pct_gross_trillion",       "description": "Gross ratepayer NPV @ 7% real discount rate", "unit": "$T"},
+    {"name": "npv_at_5pct_gross_trillion",       "description": "Gross ratepayer NPV @ 5% real discount rate", "unit": "$T"},
+    {"name": "npv_at_9pct_gross_trillion",       "description": "Gross ratepayer NPV @ 9% real discount rate", "unit": "$T"},
+
+    # Pivot (Pathway 2a/2b only)
+    {"name": "pivoted",            "description": "Did clean firm unlock during the planning period?", "unit": "bool"},
     {"name": "pivot_year",         "description": "Year clean firm unlocked (null if not pivoted)", "unit": "year"},
     {"name": "pivot_reason",       "description": "Pivot trigger: 90pct_plateau | econ_trigger | null", "unit": "string"},
+
+    # Demand + retirements (Card L')
     {"name": "demand_2050_twh",    "description": "Annual demand at 2050 endpoint year", "unit": "TWh/yr"},
-    # Retirement (Card L revised)
     {"name": "coal_retired_cumulative_gw", "description": "Cumulative coal capacity economically displaced by 2050", "unit": "GW"},
     {"name": "oil_retired_cumulative_gw",  "description": "Cumulative oil capacity economically displaced by 2050", "unit": "GW"},
     {"name": "gas_retired_cumulative_gw",  "description": "Cumulative gas capacity economically displaced by 2050", "unit": "GW"},
-    {"name": "gas_remaining_gw",   "description": "Existing gas fleet still active at 2050", "unit": "GW"},
-    # Stranding (Card K revised)
-    {"name": "total_stranded_twh",  "description": "Total stranded capacity (comparative-to-P3, TWh/yr generation equivalent)", "unit": "TWh/yr"},
-    {"name": "total_stranded_billion_usd", "description": "Book value of stranded capital at 2050", "unit": "$B"},
+    {"name": "gas_remaining_gw",   "description": "Existing gas fleet still active at 2050 (EXISTING_GAS − gas_retired)", "unit": "GW"},
+
+    # Curtailment diagnostic
     {"name": "vre_curtailment_solar_pct", "description": "Solar curtailment rate at endpoint", "unit": "%"},
     {"name": "vre_curtailment_wind_pct",  "description": "Wind curtailment rate at endpoint", "unit": "%"},
+
     # Feasibility ceilings (Card J)
     {"name": "physical_ceiling_note", "description": "Physical feasibility ceiling note", "unit": "string"},
     {"name": "economic_ceiling_note", "description": "Economic ceiling note ($10k/CFE% trigger)", "unit": "string"},
 ]
 
+COMPONENT_KEYS = [
+    "new_gas_capex_annualized_usd",
+    "new_gas_fom_usd",
+    "existing_gas_fom_carried_usd",
+    "priced_vre_curtailment_usd",
+    "vre_storage_overbuild_capex_usd",
+]
+
 
 def _build_row(iso: str, pathway: str, ep: float) -> dict:
-    """Build one summary table row."""
     ep_label = _EP_LABEL[ep]
     run_key = f"{iso}__pathway{pathway}__{ep_label}"
 
@@ -130,32 +124,51 @@ def _build_row(iso: str, pathway: str, ep: float) -> dict:
     feas = run.get("feasibility", {})
     phys = bool(feas.get("physical", False))
     econ = bool(feas.get("economic", False))
-    feas_notes = feas.get("notes", [])
+    feas_notes = feas.get("notes", []) or []
 
-    # Costs
-    undiscounted = run.get("undiscounted_cost_usd", 0.0) / 1e12
-    npv5 = run.get("npv_at_5pct", 0.0) / 1e12
-    npv7 = run.get("npv_at_7pct", 0.0) / 1e12
-    npv9 = run.get("npv_at_9pct", 0.0) / 1e12
+    # Gross cost columns (Card M') — all surface undiscounted_cost_usd and npv_at_Xpct
+    # which the solver reports gross already (capacity_rev_netted is 0 in v2).
+    undiscounted = float(run.get("undiscounted_cost_usd", 0.0)) / 1e12
+    npv5 = float(run.get("npv_at_5pct", 0.0)) / 1e12
+    npv7 = float(run.get("npv_at_7pct", 0.0)) / 1e12
+    npv9 = float(run.get("npv_at_9pct", 0.0)) / 1e12
 
-    # New-build gas stranding (Card S)
-    ng_stranded_gw, ng_stranded_usd = _new_gas_stranding(run)
-    total_actual_cost = undiscounted + ng_stranded_usd / 1e12
+    # Reliability tax (SPEC §24.4)
+    rt = run.get("reliability_tax", {}) or {}
+    rt_comps = rt.get("components_usd", {}) or {}
+    rtax_total = float(rt.get("total_usd", 0.0))
+    rtax_per_mwh = float(rt.get("usd_per_mwh", 0.0))
 
-    # Pivot info
+    # Worst-hour sized gas fleet from terminal annual_buildout row (SPEC §24.5)
+    bo = run.get("tables", {}).get("annual_buildout", []) or []
+    if bo:
+        terminal_gas = bo[-1].get("gas_sizing", {}) or {}
+        active_ng_mw = float(terminal_gas.get("active_new_gas_fleet_mw", 0.0))
+        residual_gap = float(terminal_gas.get("residual_gap_p99p97_mw", 0.0))
+        existing_carried = float(terminal_gas.get("existing_gas_carried_mw", 0.0))
+    else:
+        active_ng_mw = residual_gap = existing_carried = 0.0
+
+    # Card K' — absolute stranded new-gas capex
+    ngf = run.get("tables", {}).get("new_gas_fleet", []) or []
+    stranded_vintages = [v for v in ngf if v.get("stranded_flag")]
+    stranded_ng_mw = sum(float(v.get("initial_cap_mw", 0.0)) for v in stranded_vintages)
+    stranded_ng_capex = sum(float(v.get("stranded_capex_usd", 0.0)) for v in stranded_vintages)
+
+    # Pivot
     pivot = get_pivot_info(run)
 
-    # Demand 2050
-    cost_rows = run.get("tables", {}).get("annual_cost", [])
-    demand_2050 = cost_rows[-1]["demand_twh"] if cost_rows else None
+    # Demand
+    cost_rows = run.get("tables", {}).get("annual_cost", []) or []
+    demand_2050 = cost_rows[-1].get("demand_twh") if cost_rows else None
 
-    # Retirements (Card L revised)
-    rt = run.get("retirement_timeline", [])
-    if rt:
-        rt_2050 = rt[-1]
-        coal_retired = rt_2050.get("coal_retired_gw", 0.0)
-        oil_retired = rt_2050.get("oil_retired_gw", 0.0)
-        gas_retired = rt_2050.get("gas_retired_gw", 0.0)
+    # Retirements (Card L')
+    rt_tl = run.get("retirement_timeline", []) or []
+    if rt_tl:
+        rt_2050 = rt_tl[-1]
+        coal_retired = float(rt_2050.get("coal_retired_gw", 0.0))
+        oil_retired = float(rt_2050.get("oil_retired_gw", 0.0))
+        gas_retired = float(rt_2050.get("gas_retired_gw", 0.0))
     else:
         coal_retired = oil_retired = gas_retired = None
 
@@ -164,22 +177,24 @@ def _build_row(iso: str, pathway: str, ep: float) -> dict:
         if gas_retired is not None else None
     )
 
-    # Stranding (Card K revised)
-    strand = get_pathway_stranding(iso, pathway, ep)
-    total_stranded_usd = strand["total_stranded_usd"]
-    total_stranded_twh = strand["total_stranded_twh"]
-    curtailment = strand.get("vre_curtailment", {})
-    solar_curt = curtailment.get("solar", curtailment.get("solar_batt4", None))
-    wind_curt = curtailment.get("wind", curtailment.get("wind_batt4", None))
+    # Curtailment diagnostic
+    curtailment = run.get("vre_curtailment_at_endpoint", {}) or {}
+    solar_curt = curtailment.get("solar")
+    wind_curt = curtailment.get("wind")
+    if solar_curt is None:
+        solar_curt = curtailment.get("solar_batt4")
+    if wind_curt is None:
+        wind_curt = curtailment.get("wind_batt4")
 
-    # Physical and economic ceiling notes (Card J)
+    # Feasibility notes
     phys_note = None
     econ_note = None
     for note in feas_notes:
         if isinstance(note, str):
-            if "physical" in note.lower():
+            low = note.lower()
+            if "physical" in low and phys_note is None:
                 phys_note = note
-            elif "economic" in note.lower() or "10000" in note or "10k" in note.lower():
+            elif ("economic" in low or "10000" in note or "10k" in low) and econ_note is None:
                 econ_note = note
 
     return {
@@ -190,81 +205,89 @@ def _build_row(iso: str, pathway: str, ep: float) -> dict:
         "endpoint_pct": f"{ep * 100:.1f}%",
         "feasible_physical": phys,
         "feasible_economic": econ,
-        "achieved_cfe_pct": round(run.get("achieved_cfe_pct", 0.0), 2),
-        "undiscounted_cost_trillion": round(undiscounted, 4),
-        "new_gas_stranded_gw": ng_stranded_gw,
-        "new_gas_stranded_billion": round(ng_stranded_usd / 1e9, 2),
-        "total_actual_cost_trillion": round(total_actual_cost, 4),
-        "npv_5pct_trillion": round(npv5, 4),
-        "npv_7pct_trillion": round(npv7, 4),
-        "npv_9pct_trillion": round(npv9, 4),
+        "achieved_cfe_pct": round(float(run.get("achieved_cfe_pct", 0.0)), 2),
+
+        # Reliability tax
+        "reliability_tax_usd_per_mwh": round(rtax_per_mwh, 2),
+        "reliability_tax_total_usd": round(rtax_total, 0),
+        "rtax_new_gas_capex_usd": round(float(rt_comps.get("new_gas_capex_annualized_usd", 0.0)), 0),
+        "rtax_new_gas_fom_usd": round(float(rt_comps.get("new_gas_fom_usd", 0.0)), 0),
+        "rtax_existing_gas_fom_carried_usd": round(float(rt_comps.get("existing_gas_fom_carried_usd", 0.0)), 0),
+        "rtax_priced_vre_curtailment_usd": round(float(rt_comps.get("priced_vre_curtailment_usd", 0.0)), 0),
+        "rtax_vre_storage_overbuild_usd": round(float(rt_comps.get("vre_storage_overbuild_capex_usd", 0.0)), 0),
+
+        # Worst-hour gas fleet
+        "active_new_gas_fleet_mw_2050": round(active_ng_mw, 0),
+        "residual_gap_p99p97_mw_2050": round(residual_gap, 0),
+        "existing_gas_carried_mw_2050": round(existing_carried, 0),
+
+        # Card K' stranding
+        "stranded_new_gas_mw": round(stranded_ng_mw, 0),
+        "stranded_new_gas_capex_billion": round(stranded_ng_capex / 1e9, 2),
+        "stranded_new_gas_vintage_count": len(stranded_vintages),
+
+        # Gross cost
+        "undiscounted_gross_cost_trillion": round(undiscounted, 4),
+        "npv_at_7pct_gross_trillion": round(npv7, 4),
+        "npv_at_5pct_gross_trillion": round(npv5, 4),
+        "npv_at_9pct_gross_trillion": round(npv9, 4),
+
+        # Pivot
         "pivoted": pivot.get("pivoted", False),
         "pivot_year": pivot.get("pivot_year"),
         "pivot_reason": pivot.get("pivot_reason"),
+
+        # Demand + retirements
         "demand_2050_twh": round(demand_2050, 1) if demand_2050 is not None else None,
-        # Retirement (Card L)
         "coal_retired_cumulative_gw": round(coal_retired, 2) if coal_retired is not None else None,
         "oil_retired_cumulative_gw": round(oil_retired, 2) if oil_retired is not None else None,
         "gas_retired_cumulative_gw": round(gas_retired, 2) if gas_retired is not None else None,
         "gas_remaining_gw": gas_remaining,
-        # Stranding (Card K)
-        "total_stranded_twh": round(total_stranded_twh, 1),
-        "total_stranded_billion_usd": round(total_stranded_usd / 1e9, 2),
+
+        # Curtailment
         "vre_curtailment_solar_pct": round(solar_curt * 100, 1) if solar_curt is not None else None,
         "vre_curtailment_wind_pct": round(wind_curt * 100, 1) if wind_curt is not None else None,
-        # Feasibility ceilings (Card J)
+
+        # Feasibility ceilings
         "physical_ceiling_note": phys_note,
         "economic_ceiling_note": econ_note,
     }
 
 
 def _compute_aggregations(rows: list[dict]) -> dict:
-    """Compute cross-cut summary statistics."""
     feasible_rows = [r for r in rows if r.get("feasible_physical")]
 
-    # By ISO: best (P3) and worst (P1) NPV@7% at ep99
+    # Per-ISO at ep95: P1a vs P3 reliability tax delta
     iso_summary: dict[str, dict] = {}
     for iso in ISOS:
-        iso_rows = [r for r in feasible_rows if r["iso"] == iso and r["endpoint"] == 0.99]
-        if not iso_rows:
-            continue
-        p3_rows = [r for r in iso_rows if r["pathway"] == "3"]
-        p1_rows = [r for r in iso_rows if r["pathway"] == "1a"]
-        if p3_rows and p1_rows:
-            p3 = p3_rows[0]
-            p1 = p1_rows[0]
+        iso_rows = [r for r in feasible_rows if r["iso"] == iso and r["endpoint"] == 0.95]
+        p3 = next((r for r in iso_rows if r["pathway"] == "3"), None)
+        p1a = next((r for r in iso_rows if r["pathway"] == "1a"), None)
+        if p3 and p1a:
             iso_summary[iso] = {
-                "p3_npv7_trillion": p3["npv_7pct_trillion"],
-                "p1_npv7_trillion": p1["npv_7pct_trillion"],
-                "delta_p1_vs_p3_trillion": round(p1["npv_7pct_trillion"] - p3["npv_7pct_trillion"], 4),
-                "p1_total_stranded_billion": p1["total_stranded_billion_usd"],
-                "max_gas_retired_gw": max(
-                    (r["gas_retired_cumulative_gw"] or 0)
-                    for r in iso_rows
-                    if r.get("gas_retired_cumulative_gw") is not None
-                ),
+                "p3_rtax_usd_per_mwh": p3["reliability_tax_usd_per_mwh"],
+                "p1a_rtax_usd_per_mwh": p1a["reliability_tax_usd_per_mwh"],
+                "delta_p1a_vs_p3_usd_per_mwh": round(
+                    p1a["reliability_tax_usd_per_mwh"] - p3["reliability_tax_usd_per_mwh"], 2),
+                "p1a_stranded_new_gas_billion": p1a["stranded_new_gas_capex_billion"],
+                "p1a_active_new_gas_mw": p1a["active_new_gas_fleet_mw_2050"],
             }
 
-    # By pathway: average cost delta vs P3 across all ISOs at ep99
+    # Per-pathway sum of stranded new-gas capex at ep95 across feasible ISOs
     pathway_summary: dict[str, dict] = {}
     for path in PATHWAYS:
-        path_rows = [r for r in feasible_rows if r["pathway"] == path and r["endpoint"] == 0.99]
-        p3_by_iso = {r["iso"]: r["npv_7pct_trillion"]
-                     for r in feasible_rows if r["pathway"] == "3" and r["endpoint"] == 0.99}
+        path_rows = [r for r in feasible_rows if r["pathway"] == path and r["endpoint"] == 0.95]
         if path_rows:
-            deltas = [
-                r["npv_7pct_trillion"] - p3_by_iso.get(r["iso"], r["npv_7pct_trillion"])
-                for r in path_rows if r["iso"] in p3_by_iso
-            ]
             pathway_summary[path] = {
                 "count": len(path_rows),
-                "avg_npv7_delta_vs_p3_trillion": round(sum(deltas) / len(deltas), 4) if deltas else None,
-                "total_stranded_billion_sum": round(
-                    sum(r["total_stranded_billion_usd"] for r in path_rows), 1
-                ),
+                "avg_rtax_usd_per_mwh": round(
+                    sum(r["reliability_tax_usd_per_mwh"] for r in path_rows) / len(path_rows), 2),
+                "total_stranded_new_gas_billion": round(
+                    sum(r["stranded_new_gas_capex_billion"] for r in path_rows), 1),
+                "total_active_new_gas_gw": round(
+                    sum(r["active_new_gas_fleet_mw_2050"] for r in path_rows) / 1e3, 1),
             }
 
-    # Feasibility counts
     total_runs = len(rows)
     feas_count = sum(1 for r in rows if r.get("feasible_physical"))
     infeas_count = total_runs - feas_count
@@ -273,8 +296,8 @@ def _compute_aggregations(rows: list[dict]) -> dict:
         "total_runs": total_runs,
         "feasible_runs": feas_count,
         "infeasible_runs": infeas_count,
-        "by_iso_at_ep99": iso_summary,
-        "by_pathway_at_ep99": pathway_summary,
+        "by_iso_at_ep95": iso_summary,
+        "by_pathway_at_ep95": pathway_summary,
     }
 
 
@@ -282,50 +305,74 @@ def main() -> None:
     rows = []
     for iso in ISOS:
         for pathway in PATHWAYS:
-            for ep in ENDPOINTS:
-                row = _build_row(iso, pathway, ep)
-                rows.append(row)
+            for ep in CLOSING_ENDPOINTS:
+                rows.append(_build_row(iso, pathway, ep))
 
     agg = _compute_aggregations(rows)
 
     payload = {
         "columns": COLUMNS,
         "row_count": len(rows),
+        "endpoints": CLOSING_ENDPOINTS,
         "rows": rows,
         "aggregations": agg,
         "meta": {
             "payload_id": "closing_summary_table",
+            "schema_version": 2,
             "note": (
-                "Full cross-ISO × pathway × endpoint table. "
-                f"{len(rows)} rows (7 ISO × 5 pathway × 5 endpoint). "
-                "Pathways: 1a (onshore VRE+storage only, Card R), 1b (+offshore wind), 2a, 2b, 3. "
-                "All MANIFEST.json fields plus derived metrics per methodology.md. "
-                "Stranding per Card K revised (comparative-to-P3, VRE+storage+gas only). "
-                "Retirement per Card L revised (endogenous economic retirement cumulative GW). "
-                "Feasibility ceilings per Card J (physical + economic)."
+                f"Full cross-ISO × pathway × endpoint table. {len(rows)} rows "
+                f"(7 ISO × 5 pathway × {len(CLOSING_ENDPOINTS)} endpoint). "
+                "Pathways: 1a (onshore VRE+storage only), 1b (+offshore wind), 2a, 2b, 3. "
+                "Endpoints are the 5 headline thresholds out of the full 10-endpoint sweep."
             ),
-            "schema_version": "1.0",
+            "reliability_tax_formula": (
+                "SPEC §24.4 locked 5-component formula: "
+                "(annualized_new_gas_capex + new_gas_FOM + existing_gas_FOM_carried "
+                "+ priced_VRE_curtailment + annualized_VRE_storage_overbuild_capex) "
+                "÷ cumulative_demand_MWh_2025_2050. Gross; no capacity-market netting (Card M')."
+            ),
+            "gas_sizing_basis": (
+                "active_new_gas_fleet_mw is worst-hour sized per SPEC §24.5 "
+                "(99.97th percentile of margin-inclusive residual gap). NOT ELCC."
+            ),
+            "stranding_basis": (
+                "stranded_new_gas_* columns are ABSOLUTE per Card K' — "
+                "Σ initial_cap_mw / stranded_capex_usd for new-gas vintages where "
+                "stranded_flag=True (CF<15% for 2 consecutive years, SPEC Card F')."
+            ),
+            "dropped_columns_vs_v1": [
+                "total_stranded_billion_usd (old Card K comparative framing)",
+                "total_stranded_twh (old Card K comparative framing)",
+                "net_annual_cost_usd (Card M' — no cap-market netting)",
+                "capacity_rev_netted_usd (Card M' — no cap-market netting)",
+                "ccs_ccgt synthetic stranding proxy (replaced by Card K' ledger)",
+            ],
         },
     }
 
     OUT_PATH.write_text(json.dumps(payload, indent=2))
+    DASH_OUT.parent.mkdir(parents=True, exist_ok=True)
+    DASH_OUT.write_text(json.dumps(payload, indent=2))
     print(f"Wrote {OUT_PATH} ({len(rows)} rows)")
+    print(f"Wrote {DASH_OUT}")
 
     print("\n--- closing_summary_table quick summary ---")
     print(f"Total rows: {len(rows)}")
     print(f"Feasible: {agg['feasible_runs']} | Infeasible: {agg['infeasible_runs']}")
-    print("\nBy ISO at ep99% (P1 vs P3 NPV@7% delta):")
-    for iso, d in agg["by_iso_at_ep99"].items():
+    print("\nBy ISO at ep95 (P1a vs P3 reliability tax):")
+    for iso, d in agg["by_iso_at_ep95"].items():
         print(
-            f"  {iso}: P3=${d['p3_npv7_trillion']:.3f}T, P1=${d['p1_npv7_trillion']:.3f}T, "
-            f"Δ={d['delta_p1_vs_p3_trillion']:+.3f}T, stranded=${d['p1_total_stranded_billion']:.0f}B"
+            f"  {iso:6s}: P3=${d['p3_rtax_usd_per_mwh']:6.2f}/MWh, "
+            f"P1a=${d['p1a_rtax_usd_per_mwh']:6.2f}/MWh, "
+            f"Δ={d['delta_p1a_vs_p3_usd_per_mwh']:+6.2f}/MWh, "
+            f"P1a stranded=${d['p1a_stranded_new_gas_billion']:,.1f}B"
         )
-    print("\nBy pathway at ep99% (avg delta vs P3):")
-    for path, d in agg["by_pathway_at_ep99"].items():
-        avg_delta = d.get('avg_npv7_delta_vs_p3_trillion') or 0
+    print("\nBy pathway at ep95 (sum across feasible ISOs):")
+    for path, d in agg["by_pathway_at_ep95"].items():
         print(
-            f"  P{path}: avg_delta={avg_delta:+.3f}T, "
-            f"total_stranded=${d['total_stranded_billion_sum']:.0f}B"
+            f"  P{path}: avg=${d['avg_rtax_usd_per_mwh']:6.2f}/MWh, "
+            f"stranded=${d['total_stranded_new_gas_billion']:,.1f}B, "
+            f"active gas={d['total_active_new_gas_gw']:,.1f}GW"
         )
 
 
