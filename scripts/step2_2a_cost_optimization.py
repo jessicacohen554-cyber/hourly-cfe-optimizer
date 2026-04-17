@@ -549,188 +549,162 @@ _MIX_COLUMN_ALIASES = {
 }
 
 
-def _rewrite_gas_columns_worst_hour(parquet_path, iso, verbose=True):
-    """Overwrite ELCC gas_* columns with worst-hour (SPEC §24.5) values.
+# Per-ISO archetype-identity column ordering. Float values are rounded to 4
+# decimals (matches the precision of upstream EF / DG mix encodings) and packed
+# into a single contiguous (N, D) float64 matrix so np.unique on a structured
+# byte view dedupes rows in C without per-row Python overhead.
+_ARCHETYPE_MIX_COLS = (
+    'clean_firm', 'solar', 'wind', 'offshore_wind', 'hydro', 'geothermal',
+    'solar_batt4', 'solar_batt8', 'wind_batt4', 'wind_batt8',
+)
+_ARCHETYPE_STORAGE_COLS = (
+    'battery_dispatch_pct', 'battery8_dispatch_pct', 'ldes_dispatch_pct',
+    'h2_dispatch_pct',  # not in the cache key, but tracked for missing-info construction
+)
 
-    Reads ``parquet_path`` (a step_2_2a output parquet), finds the unique
-    archetype tuples, expands the dispatch cache for any missing archetypes
-    via step3a, computes the 99.97th-percentile margin-inclusive residual per
-    archetype, and writes the per-row gas_* columns back to the parquet.
 
-    Handles both baseline (``mix_*`` prefix) and track / feasible layouts
-    where mix columns appear without the ``mix_`` prefix. For demand-growth
-    parquets the row-specific ``annual_demand_mwh`` captures ``gf`` already,
-    so gas_needed_mw scales correctly per year/growth level.
+def _extract_mix_matrix(df):
+    """Return (N, D) float64 matrix of archetype-identity columns from ``df``.
 
-    No-op if the file is missing, empty, or has no gas columns.
+    Tolerates both ``mix_*`` and bare-name layouts. Missing columns default to 0.
+    Column order is deterministic per ``_ARCHETYPE_MIX_COLS`` + ``_ARCHETYPE_STORAGE_COLS``.
     """
-    import pyarrow.parquet as _pq
-    import pandas as _pd
+    n = len(df)
+    cols = _ARCHETYPE_MIX_COLS + _ARCHETYPE_STORAGE_COLS
+    out = np.zeros((n, len(cols)), dtype=np.float64)
+    for j, name in enumerate(cols):
+        for cand in _MIX_COLUMN_ALIASES.get(name, (name,)):
+            if cand in df.columns:
+                out[:, j] = df[cand].to_numpy(dtype=np.float64)
+                break
+    return out
 
-    parquet_path = str(parquet_path)
-    if not os.path.exists(parquet_path):
-        return
-    df = _pd.read_parquet(parquet_path)
-    n_rows = len(df)
-    if n_rows == 0:
-        return
 
-    gas_cols = [c for c in df.columns if c.lower().startswith('gas_') or 'gas_backup' in c.lower()]
-    if not gas_cols:
-        return
+def _unique_archetypes_via_view(matrix):
+    """Vectorized dedup of an (N, D) float64 matrix.
 
-    def _col(name, default=0.0):
-        for c in _MIX_COLUMN_ALIASES.get(name, [name]):
-            if c in df.columns:
-                return df[c].to_numpy(dtype=np.float64)
-        return np.full(n_rows, float(default), dtype=np.float64)
+    Returns ``(unique_matrix, inverse)`` where ``inverse[i]`` is the row index
+    in ``unique_matrix`` for input row ``i``. Uses a structured byte view so
+    np.unique runs entirely in C — no md5/Python per-row work.
+    """
+    rounded = np.ascontiguousarray(np.round(matrix, 4))
+    row_bytes = rounded.dtype.itemsize * rounded.shape[1]
+    view = rounded.view(np.dtype((np.void, row_bytes)))
+    _, first_idx, inverse = np.unique(view, return_index=True, return_inverse=True)
+    inverse = np.asarray(inverse, dtype=np.int64).reshape(-1)
+    unique_matrix = rounded[first_idx]
+    return unique_matrix, inverse
 
-    mix = {k: _col(k) for k in _MIX_COLUMN_ALIASES}
-    bat   = df['battery_dispatch_pct'].to_numpy(dtype=np.float64) \
-        if 'battery_dispatch_pct' in df.columns else np.zeros(n_rows)
-    bat8  = df['battery8_dispatch_pct'].to_numpy(dtype=np.float64) \
-        if 'battery8_dispatch_pct' in df.columns else np.zeros(n_rows)
-    ldes  = df['ldes_dispatch_pct'].to_numpy(dtype=np.float64) \
-        if 'ldes_dispatch_pct' in df.columns else np.zeros(n_rows)
-    h2    = df['h2_dispatch_pct'].to_numpy(dtype=np.float64) \
-        if 'h2_dispatch_pct' in df.columns else np.zeros(n_rows)
 
-    # Consistent archetype key: ccs uses the RESIDUAL (100 − explicit others),
-    # matching step3a's cache-key convention.
-    ccs_resid = np.maximum(0.0, 100.0 - (
-        mix['clean_firm'] + mix['solar'] + mix['wind'] + mix['offshore_wind']
-        + mix['hydro'] + mix['geothermal']
-        + mix['solar_batt4'] + mix['solar_batt8']
-        + mix['wind_batt4'] + mix['wind_batt8']
-    ))
+def _md5_keys_from_unique_matrix(iso, unique_matrix):
+    """Hash only the K unique archetype rows. K is in the hundreds-to-thousands
+    per ISO, so a Python loop here costs <50ms even at 10k rows.
 
+    Column order in ``unique_matrix`` matches ``_ARCHETYPE_MIX_COLS +
+    _ARCHETYPE_STORAGE_COLS``. ccs is computed as the residual (100 − explicit
+    others) to match step3a's cache-key convention.
+    """
     import dispatch_utils as _du
-    hybrid_arrs = {ht: mix[ht] for ht in _du.HYBRID_TYPES}
+    K = unique_matrix.shape[0]
+    cf  = unique_matrix[:, 0]; sol = unique_matrix[:, 1]; wnd = unique_matrix[:, 2]
+    osw = unique_matrix[:, 3]; hyd = unique_matrix[:, 4]; geo = unique_matrix[:, 5]
+    sb4 = unique_matrix[:, 6]; sb8 = unique_matrix[:, 7]
+    wb4 = unique_matrix[:, 8]; wb8 = unique_matrix[:, 9]
+    bat = unique_matrix[:, 10]; bat8 = unique_matrix[:, 11]
+    ldes = unique_matrix[:, 12]
+    ccs_resid = np.maximum(0.0, 100.0 - (cf + sol + wnd + osw + hyd + geo + sb4 + sb8 + wb4 + wb8))
+    hybrid_arrs = {
+        'solar_batt4': sb4, 'solar_batt8': sb8,
+        'wind_batt4':  wb4, 'wind_batt8':  wb8,
+    }
     keys, _ = _du.archetype_keys_from_arrays(
-        iso, mix['clean_firm'], mix['solar'], mix['wind'],
-        mix['offshore_wind'], ccs_resid, mix['hydro'],
-        bat, bat8, ldes, hybrids=hybrid_arrs,
+        iso, cf, sol, wnd, osw, ccs_resid, hyd, bat, bat8, ldes,
+        hybrids=hybrid_arrs,
     )
-    unique_keys, inverse = np.unique(keys, return_inverse=True)
+    return keys, ccs_resid
 
-    state = _get_worst_hour_state(iso)
-    cache = state['cache']
-    missing_mask = np.array([k not in cache for k in unique_keys])
-    if missing_mask.any():
-        # Pick a representative row per missing unique key — any row whose
-        # inverse maps to that index works (ccs_resid and hybrid pcts match).
-        # np.unique returns a sorted unique array; the first index in `inverse`
-        # that equals i is O(n_rows) to find via argmax; we batch that.
-        first_of = np.full(len(unique_keys), -1, dtype=np.int64)
-        for row_idx in range(n_rows):
-            u = inverse[row_idx]
-            if first_of[u] < 0:
-                first_of[u] = row_idx
-        missing_infos = []
-        for i in np.where(missing_mask)[0]:
-            r = int(first_of[i])
-            missing_infos.append({
-                'resource_pcts': {
-                    'clean_firm':    float(mix['clean_firm'][r]),
-                    'solar':         float(mix['solar'][r]),
-                    'wind':          float(mix['wind'][r]),
-                    'offshore_wind': float(mix['offshore_wind'][r]),
-                    'ccs_ccgt':      float(ccs_resid[r]),
-                    'hydro':         float(mix['hydro'][r]),
-                    'solar_batt4':   float(mix['solar_batt4'][r]),
-                    'solar_batt8':   float(mix['solar_batt8'][r]),
-                    'wind_batt4':    float(mix['wind_batt4'][r]),
-                    'wind_batt8':    float(mix['wind_batt8'][r]),
-                },
-                'battery_dispatch_pct':  float(bat[r]),
-                'battery8_dispatch_pct': float(bat8[r]),
-                'ldes_dispatch_pct':     float(ldes[r]),
-                'h2_dispatch_pct':       float(h2[r]),
-            })
-        _expand_missing_archetypes(iso, missing_infos)
-        cache = state['cache']
 
-    _ensure_common_data(iso)
-    demand_margin = state['demand_margin_norm']
-    # Vectorized per-archetype percentile: stack all unique archetypes'
-    # total_clean profiles into a (K, H) matrix, compute the margin-inclusive
-    # residual in one numpy broadcast, then percentile along axis=1.
-    total_clean_mat = np.stack([
-        np.asarray(cache[k]['total_clean'], dtype=np.float64)
-        for k in unique_keys
-    ], axis=0)  # (K, H)
-    missing_after = [k for k in unique_keys if cache.get(k) is None]
-    if missing_after:
-        raise RuntimeError(
-            f"Worst-hour rewrite: {len(missing_after)} archetype(s) still "
-            f"missing for {iso} after step3a expansion — check "
-            "scripts/step3a_build_dispatch_cache.py."
-        )
-    margin_resid_mat = np.maximum(0.0, demand_margin[None, :] - total_clean_mat)  # (K, H)
-    unique_norm = np.percentile(margin_resid_mat, WORST_HOUR_PERCENTILE, axis=1)  # (K,)
+def _build_missing_infos_from_unique(unique_matrix, ccs_resid, missing_idx):
+    """Construct per-archetype mix_info dicts for the missing subset, indexed
+    directly into the K-row unique matrix (no per-row Python loop over the
+    millions of input rows)."""
+    out = []
+    for i in missing_idx:
+        i = int(i)
+        out.append({
+            'resource_pcts': {
+                'clean_firm':    float(unique_matrix[i, 0]),
+                'solar':         float(unique_matrix[i, 1]),
+                'wind':          float(unique_matrix[i, 2]),
+                'offshore_wind': float(unique_matrix[i, 3]),
+                'hydro':         float(unique_matrix[i, 4]),
+                'geothermal':    float(unique_matrix[i, 5]),
+                'ccs_ccgt':      float(ccs_resid[i]),
+                'solar_batt4':   float(unique_matrix[i, 6]),
+                'solar_batt8':   float(unique_matrix[i, 7]),
+                'wind_batt4':    float(unique_matrix[i, 8]),
+                'wind_batt8':    float(unique_matrix[i, 9]),
+            },
+            'battery_dispatch_pct':  float(unique_matrix[i, 10]),
+            'battery8_dispatch_pct': float(unique_matrix[i, 11]),
+            'ldes_dispatch_pct':     float(unique_matrix[i, 12]),
+            'h2_dispatch_pct':       float(unique_matrix[i, 13]),
+        })
+    return out
 
-    resid_norm = unique_norm[inverse]  # (n_rows,)
 
-    # Row-specific annual_demand_mwh already reflects demand growth (gf) for
-    # DG rows. Baseline rows use the base-year value.
-    if 'annual_demand_mwh' in df.columns:
-        annual_mwh = df['annual_demand_mwh'].to_numpy(dtype=np.float64)
-    else:
-        annual_mwh = np.full(n_rows, float(REGIONAL_DEMAND_TWH[iso]) * 1e6)
+def _percentile_per_archetype_matrix(cache, unique_keys, demand_margin, percentile):
+    """Stack the K (8760,) total_clean profiles into a (K, 8760) matrix and
+    compute the worst-hour percentile in a single vectorized np.percentile call.
 
-    gaf = GAS_AVAILABILITY_FACTOR[iso]
-    existing_gas_mw = float(EXISTING_GAS_CAPACITY_MW[iso])
-    gap_mw = resid_norm * annual_mwh
-    gas_raw = gap_mw / gaf
-    gas_raw_2025 = _gas_raw_2025_worst_hour(iso)
-    gas_needed = np.maximum(0.0, existing_gas_mw + (gas_raw - gas_raw_2025))
-    existing_used = np.minimum(gas_needed, existing_gas_mw)
-    new_gas = np.maximum(0.0, gas_needed - existing_gas_mw)
-    gas_cost_per_mwh = np.where(
-        annual_mwh > 0,
-        (existing_used * EXISTING_GAS_FOM_KW_YR[iso] * 1000
-         + new_gas * NEW_CCGT_COST_KW_YR[iso] * 1000) / annual_mwh,
-        0.0,
-    )
-    base_annual_mwh = float(REGIONAL_DEMAND_TWH[iso]) * 1e6
-    gf_row = np.where(base_annual_mwh > 0, annual_mwh / base_annual_mwh, 1.0)
-    peak_grown = PEAK_DEMAND_MW[iso] * gf_row
-    ra_peak_grown = peak_grown * (1.0 + RESOURCE_ADEQUACY_MARGIN)
-    total_clean_peak = np.maximum(0.0, ra_peak_grown - gap_mw)
-
-    # Overwrite whichever gas_* column variants exist on disk.
-    for c in df.columns:
-        cl = c.lower()
-        if not (cl.startswith('gas_') or 'gas_backup' in cl or 'ra_gas' in cl):
-            continue
-        if 'backup_needed' in cl or cl.endswith('gas_needed_mw') or 'ra_gas_needed_mw' in cl:
-            df[c] = np.rint(gas_needed).astype(np.int64)
-        elif 'existing_gas_used' in cl:
-            df[c] = np.rint(existing_used).astype(np.int64)
-        elif 'new_gas_build' in cl or cl.endswith('new_gas_mw'):
-            df[c] = np.rint(new_gas).astype(np.int64)
-        elif 'gas_cost_per_mwh' in cl:
-            df[c] = np.round(gas_cost_per_mwh, 2)
-        elif 'clean_peak' in cl:
-            df[c] = np.rint(total_clean_peak).astype(np.int64)
-        elif 'ra_peak' in cl:
-            df[c] = np.rint(ra_peak_grown).astype(np.int64)
-
-    tmp = parquet_path + '.tmp'
-    df.to_parquet(tmp, index=False, compression='zstd')
-    os.replace(tmp, parquet_path)
-    if verbose:
-        print(f"    WH rewrite {os.path.basename(parquet_path)}: "
-              f"{n_rows:,} rows, {len(unique_keys):,} archetypes, "
-              f"gas_needed_mw {gas_needed.min():.0f}–{gas_needed.max():.0f} MW")
+    Equivalent to looping ``np.percentile(margin_resid_k, percentile)`` per
+    archetype but ~10–50× faster: one C-level pass over the (K, 8760) array.
+    """
+    K = len(unique_keys)
+    if K == 0:
+        return np.zeros(0, dtype=np.float64)
+    H = demand_margin.shape[0]
+    profiles = np.empty((K, H), dtype=np.float64)
+    for i, k in enumerate(unique_keys):
+        entry = cache.get(k)
+        if entry is None:
+            raise RuntimeError(
+                f"Worst-hour rewrite: archetype {k} missing after step3a "
+                "expansion — check scripts/step3a_build_dispatch_cache.py."
+            )
+        # NB: a Python loop of K cache lookups is unavoidable (cache is a dict
+        # keyed by hex string), but K is hundreds-to-thousands per ISO, so this
+        # is <100ms. The per-element work below stays C-level.
+        profiles[i, :] = np.asarray(entry['total_clean'], dtype=np.float64)
+    margin = np.maximum(0.0, demand_margin[None, :] - profiles)  # (K, H)
+    return np.percentile(margin, percentile, axis=1).astype(np.float64)  # (K,)
 
 
 def _rewrite_all_iso_outputs_worst_hour(iso, output_dir, verbose=True):
-    """Apply ``_rewrite_gas_columns_worst_hour`` to every step_2_2a parquet
-    produced for ``iso`` in ``output_dir``. Called once per ISO after all
-    that ISO's parquets have been written (baseline, tracks, DG per threshold,
-    feasible)."""
+    """Vectorized per-ISO post-process: rewrite ELCC gas_* columns on every
+    step_2_2a parquet for ``iso`` with SPEC.md §24.5 worst-hour values.
+
+    Architecture (replaces the per-file path that ran ~4 hr at production scale):
+      1. **Pass 1 — collect**: load all parquets for the ISO once, stack their
+         archetype-identity columns into a single (N_total, D) matrix.
+      2. **Dedup once**: ``_unique_archetypes_via_view`` → (K, D) unique matrix
+         + per-row ``inverse`` index. K ≈ hundreds-to-thousands per ISO; N_total
+         ≈ millions. Avoids the legacy per-row md5 and per-file rediscovery.
+      3. **Hash + cache check at the unique level only** (K md5 calls, not N).
+      4. **Batch-expand missing archetypes** via step3a in one call.
+      5. **Vectorized percentile**: stack the K total_clean profiles into
+         a (K, 8760) matrix, ``np.percentile(..., axis=1)`` in one C-level pass.
+      6. **Pass 2 — rewrite**: for each parquet, slice ``inverse`` to recover
+         per-row percentile, vectorize gas_* column writes, persist.
+
+    Order-of-magnitude wins: N×md5 → K×md5 (~500–1000× fewer hashes); per-file
+    percentile loop → one (K,8760) np.percentile call; per-file cache discovery
+    → single per-ISO discovery. Total per-ISO cost: seconds, not hours.
+    """
     import glob as _glob
+    import pandas as _pd
+    import time as _time
+
     patterns = [
         f'step_2_2a_CO_{iso}.parquet',
         f'step_2_2a_tracks_{iso}.parquet',
@@ -741,10 +715,149 @@ def _rewrite_all_iso_outputs_worst_hour(iso, output_dir, verbose=True):
     paths = []
     for pat in patterns:
         paths.extend(sorted(_glob.glob(os.path.join(str(output_dir), pat))))
-    if verbose and paths:
+    paths = [p for p in paths if os.path.exists(p)]
+    if not paths:
+        return
+    if verbose:
         print(f"  [worst-hour rewrite] {iso}: {len(paths)} parquet(s)")
+
+    t_total = _time.time()
+
+    # ── Pass 1: load every parquet once + extract per-file archetype matrices.
+    t = _time.time()
+    file_dfs = []         # list of pandas.DataFrame
+    file_matrices = []    # list of (n_i, D) np.float64 arrays
+    file_offsets = [0]
     for pth in paths:
-        _rewrite_gas_columns_worst_hour(pth, iso, verbose=verbose)
+        df = _pd.read_parquet(pth)
+        if len(df) == 0:
+            file_dfs.append(df); file_matrices.append(np.zeros((0, len(_ARCHETYPE_MIX_COLS)+len(_ARCHETYPE_STORAGE_COLS))))
+            file_offsets.append(file_offsets[-1])
+            continue
+        file_dfs.append(df)
+        m = _extract_mix_matrix(df)
+        file_matrices.append(m)
+        file_offsets.append(file_offsets[-1] + len(df))
+
+    n_total = file_offsets[-1]
+    if n_total == 0:
+        return
+
+    # Filter to non-empty matrices for the global stack.
+    nonempty = [m for m in file_matrices if m.shape[0] > 0]
+    global_matrix = np.vstack(nonempty)
+    if verbose:
+        print(f"    pass-1 load+stack: {n_total:,} rows from {len(paths)} files in {_time.time()-t:.1f}s")
+
+    # ── Dedup once (numpy structured-view; pure C).
+    t = _time.time()
+    unique_matrix, global_inverse = _unique_archetypes_via_view(global_matrix)
+    K = unique_matrix.shape[0]
+    if verbose:
+        print(f"    dedup → {K:,} unique archetypes ({_time.time()-t:.1f}s)")
+
+    # ── Hash unique archetypes only (K md5 calls).
+    t = _time.time()
+    unique_keys, ccs_resid = _md5_keys_from_unique_matrix(iso, unique_matrix)
+    if verbose:
+        print(f"    md5 hash {K:,} archetypes in {_time.time()-t:.2f}s")
+
+    # ── Cache check + batch expansion at unique level.
+    state = _get_worst_hour_state(iso)
+    cache = state['cache']
+    missing_mask = np.fromiter((k not in cache for k in unique_keys), dtype=bool, count=K)
+    if missing_mask.any():
+        missing_idx = np.where(missing_mask)[0]
+        if verbose:
+            print(f"    expanding {len(missing_idx):,} missing archetypes via step3a…")
+        t = _time.time()
+        missing_infos = _build_missing_infos_from_unique(unique_matrix, ccs_resid, missing_idx)
+        _expand_missing_archetypes(iso, missing_infos)
+        cache = state['cache']
+        if verbose:
+            print(f"    expansion done in {_time.time()-t:.1f}s")
+
+    # ── Vectorized per-archetype worst-hour percentile.
+    _ensure_common_data(iso)
+    demand_margin = state['demand_margin_norm']
+    t = _time.time()
+    unique_norm = _percentile_per_archetype_matrix(
+        cache, unique_keys, demand_margin, WORST_HOUR_PERCENTILE,
+    )
+    if verbose:
+        print(f"    percentile (K={K:,}, 8760h) in {_time.time()-t:.1f}s")
+
+    # Per-row resid_norm via inverse index (constant time, fully C-vectorized).
+    global_resid = unique_norm[global_inverse]  # (N_total,)
+
+    # Cache the 2025 baseline once; same across all files for this ISO.
+    gas_raw_2025 = _gas_raw_2025_worst_hour(iso)
+    gaf = GAS_AVAILABILITY_FACTOR[iso]
+    existing_gas_mw = float(EXISTING_GAS_CAPACITY_MW[iso])
+    base_annual_mwh = float(REGIONAL_DEMAND_TWH[iso]) * 1e6
+    peak_demand = float(PEAK_DEMAND_MW[iso])
+    ra_factor = 1.0 + RESOURCE_ADEQUACY_MARGIN
+    fom_kw_yr = EXISTING_GAS_FOM_KW_YR[iso] * 1000.0
+    new_kw_yr = NEW_CCGT_COST_KW_YR[iso] * 1000.0
+
+    # ── Pass 2: per-file vectorized column rewrite + persistence.
+    t = _time.time()
+    for i, pth in enumerate(paths):
+        df = file_dfs[i]
+        n_rows = len(df)
+        if n_rows == 0:
+            continue
+        s, e = file_offsets[i], file_offsets[i + 1]
+        resid_norm = global_resid[s:e]
+
+        if 'annual_demand_mwh' in df.columns:
+            annual_mwh = df['annual_demand_mwh'].to_numpy(dtype=np.float64)
+        else:
+            annual_mwh = np.full(n_rows, base_annual_mwh)
+
+        gap_mw = resid_norm * annual_mwh
+        gas_raw = gap_mw / gaf
+        gas_needed = np.maximum(0.0, existing_gas_mw + (gas_raw - gas_raw_2025))
+        existing_used = np.minimum(gas_needed, existing_gas_mw)
+        new_gas = np.maximum(0.0, gas_needed - existing_gas_mw)
+        gas_cost_per_mwh = np.where(
+            annual_mwh > 0,
+            (existing_used * fom_kw_yr + new_gas * new_kw_yr) / annual_mwh,
+            0.0,
+        )
+        gf_row = np.where(base_annual_mwh > 0, annual_mwh / base_annual_mwh, 1.0)
+        peak_grown = peak_demand * gf_row
+        ra_peak_grown = peak_grown * ra_factor
+        total_clean_peak = np.maximum(0.0, ra_peak_grown - gap_mw)
+
+        wrote_any = False
+        for c in df.columns:
+            cl = c.lower()
+            if not (cl.startswith('gas_') or 'gas_backup' in cl or 'ra_gas' in cl
+                    or 'clean_peak' in cl or 'ra_peak' in cl):
+                continue
+            if 'backup_needed' in cl or cl.endswith('gas_needed_mw') or 'ra_gas_needed_mw' in cl:
+                df[c] = np.rint(gas_needed).astype(np.int64); wrote_any = True
+            elif 'existing_gas_used' in cl or cl.endswith('ra_existing_gas_mw'):
+                df[c] = np.rint(existing_used).astype(np.int64); wrote_any = True
+            elif 'new_gas_build' in cl or cl.endswith('new_gas_mw') or cl.endswith('ra_new_gas_mw'):
+                df[c] = np.rint(new_gas).astype(np.int64); wrote_any = True
+            elif 'gas_cost_per_mwh' in cl:
+                df[c] = np.round(gas_cost_per_mwh, 2); wrote_any = True
+            elif 'clean_peak' in cl:
+                df[c] = np.rint(total_clean_peak).astype(np.int64); wrote_any = True
+            elif 'ra_peak' in cl:
+                df[c] = np.rint(ra_peak_grown).astype(np.int64); wrote_any = True
+
+        if not wrote_any:
+            continue
+
+        tmp = pth + '.tmp'
+        df.to_parquet(tmp, index=False, compression='zstd')
+        os.replace(tmp, pth)
+    if verbose:
+        print(f"    pass-2 rewrite+persist: {_time.time()-t:.1f}s")
+        print(f"  [worst-hour rewrite] {iso}: total {_time.time()-t_total:.1f}s")
 
 
 # ============================================================================
