@@ -430,24 +430,103 @@
     </section>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- Section 5 — Four Journeys (A3 session)                                 -->
+    <!-- Section 5 — Five pathways, five taxes                                  -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <section class="content-section" id="section5">
-        <!-- TODO: A3 session will fill (four pathway journeys: year-by-year build + strand trajectory). -->
+        <h2 class="section-title fade-in" style="text-align:center;">Five pathways, five taxes</h2>
+        <p class="section-subtitle fade-in" style="text-align:center; margin-bottom: var(--space-lg); max-width: 820px; margin-left:auto; margin-right:auto;">
+            Every pathway that reaches 95% CFE hands customers a reliability bill. The size of that bill &mdash; and the MW of new gas stranded getting there &mdash; depends entirely on when (and whether) clean firm shows up in the plan.
+        </p>
+
+        <div class="tax-controls fade-in" style="justify-content:center; margin-bottom: var(--space-lg);">
+            <div class="iso-selector" id="journeyIsoSelector" role="tablist" aria-label="ISO selector">
+                <button type="button" class="iso-btn active" data-iso="ERCOT">ERCOT</button>
+                <button type="button" class="iso-btn" data-iso="CAISO">CAISO</button>
+                <button type="button" class="iso-btn" data-iso="MISO">MISO</button>
+                <button type="button" class="iso-btn" data-iso="NEISO">NEISO</button>
+                <button type="button" class="iso-btn" data-iso="NYISO">NYISO</button>
+                <button type="button" class="iso-btn" data-iso="PJM">PJM</button>
+                <button type="button" class="iso-btn" data-iso="SPP">SPP</button>
+            </div>
+        </div>
+
+        <div class="grid-auto fade-in" id="journeyCards" aria-live="polite"></div>
+
+        <div class="insight-box fade-in" style="max-width: 820px; margin: var(--space-lg) auto 0;">
+            <strong>Reading this:</strong> The tax is what customers pay per MWh of electricity, reported gross. The MW line underneath is new-build gas that reached the Card F&prime; trigger &mdash; capacity factor below 15% for two consecutive years &mdash; before recovering its book value. Both numbers shrink as clean firm moves earlier in the plan, and collapse on P3.
+        </div>
     </section>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- Section 6 — Stranding Sankey (A3 session)                              -->
+    <!-- Section 6 — Stranding Sankey                                           -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <section class="content-section" id="section6">
-        <!-- TODO: A3 session will fill (stranding Sankey: capital flow → recovered vs stranded). -->
+        <h2 class="section-title fade-in" style="text-align:center;">Where the stranded capital goes</h2>
+        <p class="section-subtitle fade-in" style="text-align:center; margin-bottom: var(--space-lg); max-width: 820px; margin-left:auto; margin-right:auto;">
+            Every vintage year of new-build gas funnels into a single bucket: capital that never earns back its book value. Flip between pathways to see how much smaller the bucket is under a proactive clean-firm plan.
+        </p>
+
+        <div class="chart-panel fade-in">
+            <div class="tax-controls">
+                <div style="font-family: var(--font-data); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted);">
+                    95% CFE endpoint &middot; aggregate across all 7 ISOs &middot; 2031&ndash;2049 vintages
+                </div>
+                <div class="toggle-btn-group" id="sankeyPathwayToggle" role="tablist" aria-label="Pathway toggle">
+                    <button type="button" class="active" data-pathway="1a">P1a</button>
+                    <button type="button" data-pathway="1b">P1b</button>
+                    <button type="button" data-pathway="2a">P2a</button>
+                    <button type="button" data-pathway="2b">P2b</button>
+                    <button type="button" data-pathway="3">P3</button>
+                </div>
+            </div>
+            <div class="chart-container-lg">
+                <canvas id="sankeyChart"></canvas>
+            </div>
+            <div class="legend" style="justify-content:center; margin-top: var(--space-sm);">
+                <span class="legend-item"><span class="legend-dot" style="background: var(--fossil-gas, #6B7280);"></span>Vintage year stranded capex ($B)</span>
+                <span class="legend-item"><span class="legend-dot" style="background:#DC2626;"></span>Stranded capital bucket (flow total)</span>
+            </div>
+            <div class="hump-peak-caption" id="sankeyCaption" aria-live="polite">&nbsp;</div>
+        </div>
+
+        <div class="insight-box fade-in" style="max-width: 820px; margin: var(--space-lg) auto 0;">
+            Every dollar to the right of this diagram is capital that ratepayers put into new-build gas which the plant will never earn back. <strong>Trigger:</strong> Card F&prime; &mdash; two consecutive years of capacity factor below 15%, which locks recovery at the revenue earned to that date.
+        </div>
     </section>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- Section 7 — Cost of Waiting (A4 session)                               -->
+    <!-- Section 7 — The Cost of Waiting                                        -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <section class="content-section" id="section7">
-        <!-- TODO: A4 session will fill (P2a/P2b pivot timing: cost of waiting to unlock clean firm). -->
+        <h2 class="section-title fade-in" style="text-align:center;">The Cost of Waiting</h2>
+        <p class="section-subtitle fade-in" style="text-align:center; margin-bottom: var(--space-lg); max-width: 820px; margin-left:auto; margin-right:auto;">
+            If clean firm isn&rsquo;t committed up front, every year of delay adds to the bill. The curve below is the reliability tax a 2050 95%-CFE grid would carry, indexed to the year the clean-firm commitment is finally made.
+        </p>
+
+        <div class="chart-panel fade-in">
+            <div class="tax-controls">
+                <div class="iso-selector" id="waitIsoSelector" role="tablist" aria-label="ISO selector">
+                    <button type="button" class="iso-btn" data-iso="ERCOT">ERCOT</button>
+                    <button type="button" class="iso-btn active" data-iso="CAISO">CAISO</button>
+                    <button type="button" class="iso-btn" data-iso="MISO">MISO</button>
+                    <button type="button" class="iso-btn" data-iso="NEISO">NEISO</button>
+                    <button type="button" class="iso-btn" data-iso="NYISO">NYISO</button>
+                    <button type="button" class="iso-btn" data-iso="PJM">PJM</button>
+                    <button type="button" class="iso-btn" data-iso="SPP">SPP</button>
+                </div>
+                <div style="font-family: var(--font-data); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted);">
+                    95% CFE endpoint &middot; 2025&ndash;2050 ratepayer cost &middot; gross
+                </div>
+            </div>
+            <div class="chart-container-lg">
+                <canvas id="waitChart"></canvas>
+            </div>
+            <div class="hump-peak-caption" id="waitCaption" aria-live="polite">&nbsp;</div>
+        </div>
+
+        <div class="insight-box fade-in" style="max-width: 820px; margin: var(--space-lg) auto 0;">
+            Even committing in <strong>2026</strong> costs customers more than a 2025 clean-firm anchor. By <strong>2035</strong> the first gas vintages have already hit the Card&nbsp;F&prime; trigger and the penalty is locked in. By <strong>2045</strong> the pathway is effectively P1a regardless of intent &mdash; there is no way to pay down the stranding bill after the capital has been sunk.
+        </div>
     </section>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -1016,6 +1095,418 @@
                 .catch(function(err) {
                     var el = document.getElementById('taxDeltaInsight');
                     if (el) el.textContent = 'Data unavailable: ' + (err && err.message ? err.message : err);
+                });
+        })();
+
+        // ===== Section 5 — Journey cards (5 pathways side by side) =====
+        (function initJourneyCards() {
+            var container = document.getElementById('journeyCards');
+            if (!container) return;
+
+            var PATHWAYS = [
+                { id: '1a', label: 'P1a',  name: 'VRE + batteries only',                desc: 'No clean firm, no offshore wind. All reliability covered by new-build gas plus curtailed VRE.',  accent: 'var(--solar)' },
+                { id: '1b', label: 'P1b',  name: 'VRE + offshore wind + batteries',      desc: 'Offshore wind added where it\u2019s available. Still no clean firm \u2014 the peaker fleet barely shrinks.', accent: 'var(--offshore-wind)' },
+                { id: '2a', label: 'P2a',  name: 'Behavioral reactive pivot',            desc: 'Clean firm unlocks only after VRE hits a 90% wall. The pre-pivot gas is already stranded when it lands.', accent: 'var(--wind)' },
+                { id: '2b', label: 'P2b',  name: 'Economic reactive pivot',              desc: 'Clean firm unlocks when marginal $/CFE crosses firm LCOE. Less overshoot than P2a, still lots of stranded gas.', accent: 'var(--hydro)' },
+                { id: '3',  label: 'P3',   name: 'Clean firm proactive',                 desc: 'Firm capacity is built from year one. The reliability tax collapses to what P3 cannot avoid with clean firm alone.', accent: 'var(--clean-firm)' }
+            ];
+
+            var state = {
+                iso: 'ERCOT',
+                taxData: null,
+                strandData: null
+            };
+
+            function fmtUsd(v)  { return (v == null || !isFinite(v)) ? '\u2014' : '$' + v.toFixed(1); }
+            function fmtMWc(v) {
+                if (v == null || !isFinite(v)) return '\u2014';
+                if (Math.abs(v) >= 1000) return (v / 1000).toFixed(1) + ' GW';
+                return Math.round(v).toLocaleString() + ' MW';
+            }
+
+            function getTax(iso, pw) {
+                var p = state.taxData && state.taxData.per_iso && state.taxData.per_iso[iso]
+                        && state.taxData.per_iso[iso].per_pathway && state.taxData.per_iso[iso].per_pathway[pw];
+                return (p && p.ep95) || null;
+            }
+
+            function getStrandMw(iso, pw) {
+                var ng = state.strandData && state.strandData.per_iso_pathway
+                         && state.strandData.per_iso_pathway.new_gas_stranding;
+                var cell = ng && ng[iso] && ng[iso][pw];
+                if (!cell || cell.feasible === false) return null;
+                var vintages = cell.vintages || [];
+                var total = 0;
+                for (var i = 0; i < vintages.length; i++) {
+                    total += vintages[i].initial_cap_mw || 0;
+                }
+                return total;
+            }
+
+            function render() {
+                if (!state.taxData || !state.strandData) return;
+                container.innerHTML = '';
+                PATHWAYS.forEach(function(pw) {
+                    var tax = getTax(state.iso, pw.id);
+                    var strand = getStrandMw(state.iso, pw.id);
+                    var card = document.createElement('div');
+                    card.className = 'card';
+                    card.style.borderTop = '4px solid ' + pw.accent;
+
+                    var taxStr = (tax && tax.available !== false)
+                        ? fmtUsd(tax.total_reliability_tax_usd_per_mwh)
+                        : '\u2014';
+                    var strandStr = (strand == null) ? '\u2014' : fmtMWc(strand);
+
+                    card.innerHTML =
+                        '<div style="font-family: var(--font-data); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: ' + pw.accent + '; margin-bottom: 4px;">' + pw.label + '</div>' +
+                        '<div style="font-family: var(--font-heading); font-size: 1rem; font-weight: 700; color: var(--navy); margin-bottom: var(--space-sm); line-height: 1.3;">' + pw.name + '</div>' +
+                        '<div style="font-family: var(--font-data); font-size: 1.6rem; font-weight: 800; color: var(--navy); line-height: 1.1;">' + taxStr + '</div>' +
+                        '<div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; margin-bottom: var(--space-sm);">customers pay, $/MWh</div>' +
+                        '<div style="font-family: var(--font-data); font-size: 1.05rem; font-weight: 700; color: #DC2626; line-height: 1.1;">' + strandStr + '</div>' +
+                        '<div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; letter-spacing: 0.3px; text-transform: uppercase; margin-bottom: var(--space-sm);">new-build gas stranded</div>' +
+                        '<div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.55;">' + pw.desc + '</div>';
+                    container.appendChild(card);
+                });
+            }
+
+            document.querySelectorAll('#journeyIsoSelector .iso-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('#journeyIsoSelector .iso-btn').forEach(function(b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    state.iso = btn.dataset.iso;
+                    render();
+                });
+            });
+
+            Promise.all([
+                fetch('js/reliability-tax/section3_reliability_tax.json', { cache: 'no-cache' }).then(function(r) { return r.json(); }),
+                fetch('js/reliability-tax/section5_stranding_sankey.json', { cache: 'no-cache' }).then(function(r) { return r.json(); })
+            ]).then(function(results) {
+                state.taxData = results[0];
+                state.strandData = results[1];
+                render();
+            }).catch(function(err) {
+                container.innerHTML = '<div class="insight-box">Data unavailable: ' + (err && err.message ? err.message : err) + '</div>';
+            });
+        })();
+
+        // ===== Section 6 — Stranding Sankey (vintage-year bars → single sink) =====
+        (function initSankey() {
+            var canvas = document.getElementById('sankeyChart');
+            if (!canvas || typeof Chart === 'undefined') return;
+
+            var state = { pathway: '1a', data: null, chart: null };
+
+            var gasColor    = (typeof RESOURCE_COLORS !== 'undefined' && RESOURCE_COLORS.fossilGas) || '#6B7280';
+            var sinkColor   = '#DC2626';
+
+            function fmtBn(v) {
+                if (v == null || !isFinite(v)) return '\u2014';
+                if (Math.abs(v) >= 1000) return '$' + (v / 1000).toFixed(2) + 'T';
+                return '$' + v.toFixed(1) + 'B';
+            }
+            function fmtMWv(v) {
+                if (v == null || !isFinite(v)) return '\u2014';
+                if (Math.abs(v) >= 1000) return (v / 1000).toFixed(1) + ' GW';
+                return Math.round(v).toLocaleString() + ' MW';
+            }
+
+            function render() {
+                if (!state.data || !state.data.nodes) return;
+                var sources = (state.data.nodes.sources || []).filter(function(s) { return s.pathway === state.pathway; });
+                sources.sort(function(a, b) { return a.vintage_year - b.vintage_year; });
+
+                var labels = sources.map(function(s) { return String(s.vintage_year); });
+                labels.push('\u21D2  Stranded');
+
+                var yearBn = sources.map(function(s) { return (s.stranded_capex_usd || 0) / 1e9; });
+                var total = yearBn.reduce(function(a, b) { return a + b; }, 0);
+                // Stacked "flow" column: push total on to the right
+                var vintageSeries = yearBn.concat([null]);
+                var sinkSeries    = labels.map(function(_, i) { return i === labels.length - 1 ? total : null; });
+
+                var datasets = [
+                    {
+                        label: 'Vintage stranded capex',
+                        data: vintageSeries,
+                        backgroundColor: gasColor,
+                        borderColor: gasColor,
+                        borderWidth: 0,
+                        barPercentage: 0.88,
+                        categoryPercentage: 0.9
+                    },
+                    {
+                        label: 'Stranded capital bucket',
+                        data: sinkSeries,
+                        backgroundColor: sinkColor,
+                        borderColor: sinkColor,
+                        borderWidth: 0,
+                        barPercentage: 0.92,
+                        categoryPercentage: 0.9
+                    }
+                ];
+
+                if (state.chart) {
+                    state.chart.data.labels = labels;
+                    state.chart.data.datasets = datasets;
+                    state.chart.update();
+                } else {
+                    state.chart = new Chart(canvas.getContext('2d'), {
+                        type: 'bar',
+                        data: { labels: labels, datasets: datasets },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    callbacks: {
+                                        title: function(items) {
+                                            if (!items.length) return '';
+                                            return items[0].label;
+                                        },
+                                        label: function(ctx) {
+                                            var v = ctx.parsed.y;
+                                            if (v == null) return '';
+                                            if (ctx.dataset.label === 'Stranded capital bucket') {
+                                                var pt = state.data.pathway_totals && state.data.pathway_totals[state.pathway];
+                                                var mw = pt ? pt.new_gas_stranded_mw : null;
+                                                return 'Bucket: ' + fmtBn(v) + '  (' + fmtMWv(mw) + ')';
+                                            }
+                                            var idx = ctx.dataIndex;
+                                            var src = (state.data.nodes.sources || []).filter(function(s) { return s.pathway === state.pathway; });
+                                            src.sort(function(a, b) { return a.vintage_year - b.vintage_year; });
+                                            var row = src[idx];
+                                            if (!row) return fmtBn(v);
+                                            return row.vintage_year + ' vintage: ' + fmtBn(v) + '  (' + fmtMWv(row.stranded_mw) + ')';
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    stacked: false,
+                                    ticks: { font: { family: 'DM Mono, monospace', size: 10, weight: '600' }, autoSkip: false, maxRotation: 0, minRotation: 0 },
+                                    grid: { display: false }
+                                },
+                                y: {
+                                    stacked: false,
+                                    beginAtZero: true,
+                                    title: { display: true, text: 'Stranded capex ($B, 2025\u20132050)', font: { family: 'Plus Jakarta Sans', size: 12, weight: '600' } },
+                                    ticks: {
+                                        font: { family: 'DM Mono, monospace', size: 11 },
+                                        callback: function(v) { return '$' + (v >= 1000 ? (v/1000).toFixed(1) + 'T' : v + 'B'); }
+                                    },
+                                    grid: { color: 'rgba(0,0,0,0.06)' }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                var cap = document.getElementById('sankeyCaption');
+                if (cap) {
+                    var pt = state.data.pathway_totals && state.data.pathway_totals[state.pathway];
+                    if (pt) {
+                        cap.innerHTML =
+                            '<span class="hump-peak-iso">P' + state.pathway + '</span> aggregate: ' +
+                            '<strong>' + fmtBn((pt.new_gas_stranded_capex_usd || 0) / 1e9) + '</strong> of stranded capital on ' +
+                            '<strong>' + fmtMWv(pt.new_gas_stranded_mw) + '</strong> of new-build gas \u2014 ' +
+                            '<strong>' + (pt.stranded_share_of_new_gas_pct != null ? pt.stranded_share_of_new_gas_pct.toFixed(1) : '\u2014') +
+                            '%</strong> of every MW built.';
+                    }
+                }
+            }
+
+            document.querySelectorAll('#sankeyPathwayToggle button').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('#sankeyPathwayToggle button').forEach(function(b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    state.pathway = btn.dataset.pathway;
+                    render();
+                });
+            });
+
+            fetch('js/reliability-tax/section5_stranding_sankey.json', { cache: 'no-cache' })
+                .then(function(r) { return r.json(); })
+                .then(function(json) { state.data = json; render(); })
+                .catch(function(err) {
+                    var cap = document.getElementById('sankeyCaption');
+                    if (cap) cap.textContent = 'Data unavailable: ' + (err && err.message ? err.message : err);
+                });
+        })();
+
+        // ===== Section 7 — Cost of Waiting (commitment-year curve) =====
+        (function initWaitChart() {
+            var canvas = document.getElementById('waitChart');
+            if (!canvas || typeof Chart === 'undefined') return;
+
+            var state = { iso: 'CAISO', data: null, chart: null };
+
+            function fmtUsdM(v) {
+                if (v == null || !isFinite(v)) return '\u2014';
+                return '$' + v.toFixed(2);
+            }
+
+            function getCurve(iso) {
+                var p = state.data && state.data.per_iso && state.data.per_iso[iso];
+                return (p && p.by_endpoint && p.by_endpoint.ep95) || null;
+            }
+
+            function render() {
+                if (!state.data) return;
+                var years = (state.data.commitment_years || [2026, 2030, 2035, 2040, 2045]).slice();
+                var curve = getCurve(state.iso);
+                if (!curve) return;
+                var cc = curve.commitment_curve || [];
+                var byYear = {};
+                cc.forEach(function(p) { byYear[p.commit_year] = p.rtax_usd_per_mwh; });
+                var vals = years.map(function(y) { var v = byYear[y]; return (v == null || !isFinite(v)) ? null : v; });
+
+                var isoColor = (typeof ISO_COLORS !== 'undefined' && ISO_COLORS[state.iso])
+                             || (typeof SEMANTIC_COLORS !== 'undefined' && SEMANTIC_COLORS.muted)
+                             || '#1F2937';
+                var fill     = (typeof withAlpha === 'function') ? withAlpha(isoColor, 0.14) : isoColor;
+
+                // Pivot-year markers
+                var pivot2a = curve.pivot_year_2a || null;
+                var pivot2b = curve.pivot_year_2b || null;
+                var pivotPoints = [];
+                if (pivot2a != null) pivotPoints.push({ x: pivot2a, label: 'P2a pivot' });
+                if (pivot2b != null) pivotPoints.push({ x: pivot2b, label: 'P2b pivot' });
+
+                var datasets = [
+                    {
+                        label: state.iso + ' reliability tax',
+                        data: years.map(function(y, i) { return { x: y, y: vals[i] }; }),
+                        borderColor: isoColor,
+                        backgroundColor: fill,
+                        borderWidth: 2.5,
+                        fill: 'origin',
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        tension: 0.2
+                    }
+                ];
+
+                if (pivotPoints.length) {
+                    // Interpolate y-values at pivot years
+                    function yAt(x) {
+                        if (vals.length === 0) return null;
+                        if (x <= years[0]) return vals[0];
+                        if (x >= years[years.length - 1]) return vals[vals.length - 1];
+                        for (var i = 0; i < years.length - 1; i++) {
+                            if (x >= years[i] && x <= years[i+1]) {
+                                var a = vals[i], b = vals[i+1];
+                                if (a == null || b == null) return a == null ? b : a;
+                                var t = (x - years[i]) / (years[i+1] - years[i]);
+                                return a + t * (b - a);
+                            }
+                        }
+                        return null;
+                    }
+                    datasets.push({
+                        label: 'Pathway 2 pivot years',
+                        data: pivotPoints.map(function(p) { return { x: p.x, y: yAt(p.x), label: p.label }; }),
+                        borderColor: '#DC2626',
+                        backgroundColor: '#DC2626',
+                        borderWidth: 0,
+                        pointRadius: 7,
+                        pointHoverRadius: 9,
+                        pointStyle: 'triangle',
+                        showLine: false
+                    });
+                }
+
+                if (state.chart) {
+                    state.chart.data.datasets = datasets;
+                    state.chart.update();
+                } else {
+                    state.chart = new Chart(canvas.getContext('2d'), {
+                        type: 'line',
+                        data: { datasets: datasets },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: { mode: 'nearest', axis: 'x', intersect: false },
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: { usePointStyle: true, boxWidth: 10, font: { family: 'Plus Jakarta Sans', size: 12 } }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        title: function(items) {
+                                            if (!items.length) return '';
+                                            return 'Commit year ' + items[0].parsed.x;
+                                        },
+                                        label: function(ctx) {
+                                            var p = ctx.raw && ctx.raw.label;
+                                            if (p) return p + ' \u2014 ' + fmtUsdM(ctx.parsed.y) + '/MWh';
+                                            return ctx.dataset.label + ': ' + fmtUsdM(ctx.parsed.y) + '/MWh';
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    type: 'linear',
+                                    title: { display: true, text: 'Clean-firm commitment year', font: { family: 'Plus Jakarta Sans', size: 12, weight: '600' } },
+                                    min: 2025,
+                                    max: 2047,
+                                    ticks: {
+                                        font: { family: 'DM Mono, monospace', size: 11 },
+                                        stepSize: 5,
+                                        callback: function(v) { return v; }
+                                    },
+                                    grid: { color: 'rgba(0,0,0,0.06)' }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    title: { display: true, text: 'Reliability tax ($/MWh, 2025\u20132050)', font: { family: 'Plus Jakarta Sans', size: 12, weight: '600' } },
+                                    ticks: { font: { family: 'DM Mono, monospace', size: 11 }, callback: function(v) { return '$' + v; } },
+                                    grid: { color: 'rgba(0,0,0,0.06)' }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                var cap = document.getElementById('waitCaption');
+                if (cap) {
+                    var first = vals[0], last = vals[vals.length - 1];
+                    if (first != null && last != null) {
+                        var delta = last - first;
+                        var deltaTxt = delta >= 0.05
+                            ? 'rises $' + delta.toFixed(2) + '/MWh from 2026 to ' + years[years.length - 1]
+                            : (delta <= -0.05 ? 'falls $' + Math.abs(delta).toFixed(2) + '/MWh across the window' : 'is effectively flat across the window');
+                        var pivotTxt = '';
+                        if (pivot2a && pivot2b) pivotTxt = '  Pivots: P2a ' + pivot2a + ', P2b ' + pivot2b + '.';
+                        else if (pivot2a)       pivotTxt = '  P2a pivots in ' + pivot2a + '.';
+                        else if (pivot2b)       pivotTxt = '  P2b pivots in ' + pivot2b + '.';
+                        cap.innerHTML = '<span class="hump-peak-iso">' + state.iso + '</span>: reliability tax ' + deltaTxt + '.' + pivotTxt;
+                    } else {
+                        cap.textContent = state.iso + ': commitment-curve data unavailable at 95% CFE.';
+                    }
+                }
+            }
+
+            document.querySelectorAll('#waitIsoSelector .iso-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('#waitIsoSelector .iso-btn').forEach(function(b) { b.classList.remove('active'); });
+                    btn.classList.add('active');
+                    state.iso = btn.dataset.iso;
+                    render();
+                });
+            });
+
+            fetch('js/reliability-tax/section6_cost_of_waiting.json', { cache: 'no-cache' })
+                .then(function(r) { return r.json(); })
+                .then(function(json) { state.data = json; render(); })
+                .catch(function(err) {
+                    var cap = document.getElementById('waitCaption');
+                    if (cap) cap.textContent = 'Data unavailable: ' + (err && err.message ? err.message : err);
                 });
         })();
 
