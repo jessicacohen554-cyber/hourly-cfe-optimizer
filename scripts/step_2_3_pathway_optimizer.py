@@ -2288,6 +2288,14 @@ def solve_pathway(
         tax_components_cumulative['existing_gas_fom_carried_usd'] += existing_gas_fom_usd
         total_demand_mwh_cumulative += demand_twh * 1.0e6
 
+        # SPEC §24.7 — priced VRE curtailment for this year. Uses the dispatch
+        # cache populated upstream by size_required_gas_mw (first pass) and
+        # prices at the TWh-weighted locked vintage LCOE in the ledger.
+        priced_vre_curt_usd, _ = _per_year_vre_curtailment_usd(
+            config.iso, target, demand_twh, ledger, year,
+        )
+        tax_components_cumulative['priced_vre_curtailment_usd'] += priced_vre_curt_usd
+
         new_vintages_out = [
             {
                 'resource': v.resource,
@@ -2331,6 +2339,7 @@ def solve_pathway(
             'net_annual_cost_usd': round(net_usd, 0),
             'achieved_cfe_pct': round(cfe_this_year, 3),
             'gas_fleet_cf': round(gas_cf, 4),
+            'priced_vre_curtailment_usd_this_year': round(priced_vre_curt_usd, 0),
         })
 
     # Aggregate costs across years.
@@ -2347,10 +2356,11 @@ def solve_pathway(
     endpoint_mix = last_target['mix_pct'] if last_target else {}
     endpoint_storage = last_target['storage_pct'] if last_target else {}
 
-    # Reliability-tax per-MWh blend across 2025-2050. Curtailment + overbuild
-    # capex are reported as zero from the solver — they are computed in the
-    # dashboard-chart layer from the endpoint mix. Gas components are the core
-    # new-v2 contribution the solver knows definitively.
+    # Reliability-tax per-MWh blend across 2025-2050. Gas components are the
+    # core new-v2 contribution from Step 1 (§24.6). Priced VRE curtailment is
+    # Step 2 (§24.7): Σ_years surplus_pct[r,y] × demand_mwh[y] × vintage_lcoe[r,y]
+    # with hybrid surplus priced at its underlying VRE's vintage LCOE. Storage
+    # overbuild capex stays zero for now — computed in the dashboard layer.
     reliability_tax_total_usd = float(sum(tax_components_cumulative.values()))
     reliability_tax_usd_per_mwh = (
         reliability_tax_total_usd / total_demand_mwh_cumulative
@@ -2914,6 +2924,136 @@ def _endpoint_archetype_key(result: 'PathwayRunResult') -> str | None:
         )
     except Exception:
         return None
+
+
+# ----------------------------------------------------------------------------
+# SPEC §24.7 — Per-year VRE curtailment priced at locked vintage LCOE.
+# For each VRE/hybrid resource r with installed capacity in the year's target
+# mix, ``surplus_pct`` from the dispatch cache gives the curtailed fraction of
+# demand. Priced at the TWh-weighted locked LCOE for r across all active
+# VintageLedger vintages in that year. Hybrid surplus (e.g. solar_batt4) is
+# priced at the underlying VRE's ledger key — the battery didn't produce the
+# curtailed MWh, so battery capex isn't part of the stranded energetic cost.
+# ----------------------------------------------------------------------------
+
+_VRE_CURTAILMENT_RESOURCES: tuple[tuple[str, str], ...] = (
+    # (archetype column / cache field suffix, ledger resource key for LCOE lookup)
+    ('solar',         'solar'),
+    ('wind',          'wind'),
+    ('offshore_wind', 'offshore_wind'),
+    ('solar_batt4',   'solar'),
+    ('solar_batt8',   'solar'),
+    ('wind_batt4',    'wind'),
+    ('wind_batt8',    'wind'),
+)
+
+
+def _vintage_weighted_lcoe(
+    ledger: VintageLedger, resource: str, year: int,
+) -> float:
+    """TWh-weighted average ``locked_lcoe`` ($/MWh) across vintages active
+    in ``year`` whose resource matches. Returns 0.0 if no matching vintages
+    exist (curtailment is therefore unpriced — the model has no book cost to
+    strand)."""
+    numer = 0.0
+    denom = 0.0
+    for v in ledger.active(year):
+        if v.resource != resource:
+            continue
+        w = max(0.0, float(v.twh_per_year))
+        numer += w * float(v.locked_lcoe)
+        denom += w
+    if denom <= 0.0:
+        return 0.0
+    return numer / denom
+
+
+def _dispatch_cache_entry(iso: str, archetype_key: str | None):
+    """Lookup a dispatch-cache entry for ``archetype_key``.
+
+    Preferred path: the step2_2a worst-hour in-memory cache, which
+    ``size_required_gas_mw`` populates on-demand during the per-year loop.
+    Fallback: read the parquet from disk (covers cold runs and sweeps that
+    bypassed gas sizing).
+    """
+    if not archetype_key or du is None:
+        return None
+    try:
+        from step2_2a_cost_optimization import _get_worst_hour_state
+        cache = _get_worst_hour_state(iso).get('cache') or {}
+        entry = cache.get(archetype_key)
+        if entry is not None:
+            return entry
+    except Exception:
+        pass
+    try:
+        cache = du.load_dispatch_cache(iso, require_version=du.CACHE_VERSION) or {}
+    except Exception:
+        cache = {}
+    return cache.get(archetype_key)
+
+
+def _archetype_key_for_target(iso: str, target: dict[str, Any]) -> str | None:
+    """Compute the dispatch-cache archetype key for a per-year target mix."""
+    if du is None:
+        return None
+    mix = target.get('mix_pct', {}) or {}
+    storage = target.get('storage_pct', {}) or {}
+    resource_pcts = {k: float(v) for k, v in mix.items()}
+    try:
+        return du._archetype_key(
+            iso, resource_pcts, 100.0,
+            float(storage.get('battery_dispatch_pct', 0.0)),
+            float(storage.get('battery8_dispatch_pct', 0.0)),
+            float(storage.get('ldes_dispatch_pct', 0.0)),
+        )
+    except Exception:
+        return None
+
+
+def _per_year_vre_curtailment_usd(
+    iso: str,
+    target: dict[str, Any],
+    demand_twh: float,
+    ledger: VintageLedger,
+    year: int,
+) -> tuple[float, dict[str, float]]:
+    """Priced VRE curtailment $ for one year.
+
+    Returns (total_usd, per_resource_usd_breakdown). Curtailed MWh for each
+    VRE/hybrid resource = ``sum(surplus_<r>_profile) × demand_mwh``. Priced at
+    the TWh-weighted locked vintage LCOE for the mapped ledger key (hybrids
+    price at their underlying standalone VRE). Returns (0.0, {}) when the
+    archetype isn't in the dispatch cache, or when no vintages exist (the
+    model has nothing to strand).
+    """
+    if demand_twh <= 0:
+        return 0.0, {}
+    archetype_key = _archetype_key_for_target(iso, target)
+    entry = _dispatch_cache_entry(iso, archetype_key)
+    if entry is None:
+        return 0.0, {}
+    mix = target.get('mix_pct', {}) or {}
+    demand_mwh = demand_twh * 1.0e6
+    breakdown: dict[str, float] = {}
+    total_usd = 0.0
+    for col, ledger_key in _VRE_CURTAILMENT_RESOURCES:
+        if float(mix.get(col, 0.0)) <= 0:
+            continue
+        surplus_profile = entry.get(f'surplus_{col}')
+        if surplus_profile is None:
+            continue
+        surplus_frac = float(np.asarray(surplus_profile, dtype=np.float64).sum())
+        if surplus_frac <= 0:
+            continue
+        curtailed_mwh = surplus_frac * demand_mwh
+        lcoe = _vintage_weighted_lcoe(ledger, ledger_key, year)
+        if lcoe <= 0:
+            continue
+        usd = curtailed_mwh * lcoe
+        breakdown[col] = usd
+        total_usd += usd
+    return total_usd, breakdown
 
 
 def compute_vre_curtailment_at_endpoint(
