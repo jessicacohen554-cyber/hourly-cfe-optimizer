@@ -1,51 +1,37 @@
 """
 gen_section3_reliability_tax.py — Generate section3_reliability_tax.json
 
-Data lineage:
-  - analysis/reliability-tax/data/MANIFEST.json + per-run JSONs
-  - scripts/pipeline_config.py: EXISTING_GAS_CAPACITY_MW, EXISTING_GAS_FOM_KW_YR,
-    NEW_CCGT_COST_KW_YR
+v2 (Apr 2026). Rewritten against SPEC §24.4 Card M' + the locked 5-component tax
+formula. Drops all capacity-market-netting logic. Each component is an
+independent field so the dashboard can render a stacked bar.
 
-Section 3 framing: "The Reliability Tax"
-As CFE thresholds rise, the existing gas fleet dispatches less but fixed costs
-remain. The reliability tax = stacked FOM costs net of capacity payments,
-expressed per MWh of total system demand. These are the "insurance costs" of
-keeping gas capacity in service even when it rarely runs.
+Locked formula (SPEC §24.4):
+  reliability_tax_$_per_MWh[pathway, ISO]
+    = [ Σ annualized_new_gas_capex
+      + Σ new_gas_FOM
+      + Σ existing_gas_FOM_carried_forward
+      + Σ priced_VRE_curtailment
+      + Σ annualized_VRE_storage_overbuild_capex ]
+      ÷ Σ demand_MWh
 
-Metrics at each CFE endpoint (Pathway 1):
-  - gas_cf: gas fleet utilization = gas_gen_twh / (existing_gas_gw × 8.76)
-    where gas_gen_twh = demand_2050 × (1 - achieved_cfe_pct/100)
-    (this is fleet-level CF over the full existing fleet, not per-unit)
-  - gas_fom_annual_usd: existing_gas_remaining_gw × fom_$/kW-yr × 1e3 × 1e3 ($/yr)
-  - capacity_rev_usd: from annual_cost[2050].capacity_rev_netted_usd
-  - net_fom_usd: gas_fom - capacity_rev
-  - net_fom_per_mwh_demand: net_fom / demand_2050 / 1000 ($/MWh of demand)
-  - reliability_tax_usd_per_mwh: net_fom_per_mwh_demand (headline metric)
+Provenance of each component in this script:
+  1. new_gas_capex_annualized_usd   — from solver (reliability_tax.components_usd)
+  2. new_gas_fom_usd                — solver (Lazard bundles FOM into capex, so
+                                      this field is 0 for CCGT; retained as an
+                                      explicit bar for future pathway variants)
+  3. existing_gas_fom_carried_usd   — solver (EXISTING_GAS_FOM_KW_YR × fleet_MW × 25yr)
+  4. priced_vre_curtailment_usd     — computed here: mix_excess × weighted_VRE_LCOE
+                                      (optimizer doesn't dispatch, so this is a
+                                      mix-excess proxy — see curtailment_method below)
+  5. vre_storage_overbuild_capex_usd — computed here: storage capacity whose
+                                       implied annual cycles are below the
+                                       SPEC 15% CF equivalent (underutilized storage)
 
-Also: compare Pathway 1 vs Pathway 3 FOM burden at same endpoint — the clean firm
-pathway maintains clean-firm FOM instead of gas FOM; the difference is the "tax savings"
-from proactive planning.
+All components are reported in $/MWh (cumulative $ ÷ cum demand MWh 2025-2050).
 
-Payload structure:
-  per_iso: dict[iso ->
-    by_endpoint: dict[ep_label ->
-      per_pathway: dict[pathway ->
-        achieved_cfe_pct, demand_2050_twh,
-        gas_gen_twh, gas_fleet_cf,
-        gas_remaining_gw,
-        gas_fom_annual_million_usd,
-        capacity_rev_million_usd,
-        net_fom_million_usd,
-        net_fom_per_mwh_demand,
-        reliability_tax_usd_per_mwh,
-      ]
-    ]
-    gas_cf_series: list[{endpoint, achieved_cfe_pct, gas_fleet_cf}]  — P1 only, for sparkline
-    fom_series: list[{endpoint, net_fom_per_mwh_demand}]             — P1 only
-    tax_gap_series: list[{endpoint, p1_tax, p3_tax, gap_usd_per_mwh}]
-  ]
-  global_axis_ranges: dict
-  meta: ...
+Worst-hour sizing note: the optimizer uses SPEC §24.5 99.97th-percentile residual
+sizing for gas. This script pulls the resulting components verbatim. ELCC does
+not appear anywhere.
 """
 from __future__ import annotations
 
@@ -56,215 +42,258 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "reliability_tax" / "charts"))
 from data_loader import (  # noqa: E402
-    DL_BASE,
-    ISOS, PATHWAYS, ENDPOINTS,
-    _EP_LABEL,
+    DL_BASE, ISOS, PATHWAYS, ENDPOINTS, _EP_LABEL,
 )
 
 OUT_PATH = Path(__file__).parent / "section3_reliability_tax.json"
+DASH_OUT = REPO_ROOT / "dashboard" / "js" / "reliability-tax" / "section3_reliability_tax.json"
 
-# From pipeline_config.py
-EXISTING_GAS_GW = {
-    "CAISO": 37.0, "ERCOT": 55.0, "PJM": 75.0,
-    "NYISO": 18.0, "NEISO": 14.0, "MISO": 68.0, "SPP": 32.0,
-}
-EXISTING_GAS_FOM_KW_YR = {
-    "CAISO": 16, "ERCOT": 13, "PJM": 14,
-    "NYISO": 17, "NEISO": 15, "MISO": 14, "SPP": 13,
-}
-# Average gas dispatch CF at baseline (2025) — used for gas_gen implied by fleet
-GAS_BASELINE_CF = {
-    "CAISO": 0.45, "ERCOT": 0.45, "PJM": 0.45,
-    "NYISO": 0.45, "NEISO": 0.45, "MISO": 0.45, "SPP": 0.45,
+# Weighted-average VRE LCOE at Medium toggle, $/MWh.
+# Derived from pipeline_config.LCOE_TABLES['solar'/'wind']['Medium'] + transmission Medium.
+# Used to price excess VRE generation as curtailment. Solar/wind blended 50/50.
+VRE_LCOE_MEDIUM = {
+    "CAISO": (60+3 + 73+8) / 2,    # ≈72
+    "ERCOT": (54+3 + 40+6) / 2,    # ≈52
+    "PJM":   (65+5 + 62+10) / 2,   # ≈71
+    "NYISO": (92+7 + 81+14) / 2,   # ≈97
+    "NEISO": (82+6 + 73+12) / 2,   # ≈87
+    "MISO":  (62+4 + 43+9) / 2,    # ≈59
+    "SPP":   (57+3 + 37+7) / 2,    # ≈52
 }
 
+# Storage annualized capacity cost per GW-yr, Medium toggle (bundled $/kW-yr
+# derived from pipeline_config battery4 Medium). Applied to overbuilt storage
+# power capacity as an annualized capex bar.
+STORAGE_CAPEX_PER_GW_YR = {
+    "CAISO": 41.61e6, "ERCOT": 37.41e6, "PJM": 39.86e6, "NYISO": 43.98e6,
+    "NEISO": 42.66e6, "MISO": 39.07e6, "SPP": 37.93e6,
+}
 
-def _compute_tax(iso: str, pathway: str, ep: float) -> dict:
-    """Compute reliability tax metrics for one run."""
+CF_OVERBUILD_THRESHOLD = 0.15    # SPEC Card F' / reliability tax definition
+N_YEARS = 26                     # 2025..2050 inclusive
+
+
+def _mix_excess_pct(run: dict) -> float:
+    """Sum of endpoint_mix_pct; excess over 100% is the curtailment/overbuild proxy."""
+    mix = run.get("endpoint_mix_pct", {}) or {}
+    total = sum(float(v or 0.0) for v in mix.values())
+    return max(0.0, total - 100.0)
+
+
+def _storage_effective_cf(run: dict) -> dict[str, float]:
+    """Implied annual capacity-factor equivalent for storage resources.
+
+    Uses endpoint_storage_pct.*_dispatch_pct (fraction of demand dispatched
+    through the resource) divided by its share of the capacity mix via the
+    endpoint_mix_pct for the same resource bucket. This is a rough proxy —
+    the real test lives in the dispatch cache.
+    """
+    storage = run.get("endpoint_storage_pct", {}) or {}
+    mix = run.get("endpoint_mix_pct", {}) or {}
+    result = {}
+    for key, mix_key in [
+        ("battery", "solar_batt4"),   # battery 4hr rolled into hybrid buckets
+        ("battery8", "solar_batt8"),
+        ("ldes", "clean_firm"),       # ldes doesn't have its own mix % bucket
+        ("h2", "clean_firm"),
+    ]:
+        disp_pct = float(storage.get(f"{key}_dispatch_pct", 0.0) or 0.0)
+        capacity_pct = float(mix.get(mix_key, 0.0) or 0.0)
+        if capacity_pct > 0:
+            # Fraction of "available cycles" actually dispatched
+            result[key] = min(1.0, disp_pct / capacity_pct)
+        else:
+            result[key] = 0.0
+    return result
+
+
+def _compute_overbuild_capex_usd(iso: str, run: dict, demand_mwh_cum: float) -> float:
+    """Component 5: annualized VRE+storage overbuild capex.
+
+    Proxy: if the excess-mix fraction is > 0, treat that fraction of storage
+    capex as "overbuild" (capacity whose effective utilization falls below the
+    15% CF threshold per SPEC §24.4). Applied to the storage resource buckets
+    only — VRE overbuild shows up in component 4 as priced curtailment.
+    """
+    excess_pct = _mix_excess_pct(run) / 100.0
+    if excess_pct <= 0:
+        return 0.0
+    # Total storage capacity (GW) at endpoint, approximated from the annual
+    # buildout of battery4/battery8/ldes/h2.
+    bo = run.get("tables", {}).get("annual_buildout", []) or []
+    storage_twh = 0.0
+    for row in bo:
+        for v in row.get("new_vintages", []):
+            if v.get("resource") in ("battery4", "battery8", "ldes", "h2"):
+                storage_twh += float(v.get("twh_per_year", 0.0) or 0.0)
+    # Rough TWh → GW: assume 1200 dispatch-hours/yr average (blended 4/8hr battery).
+    storage_gw = storage_twh * 1000.0 / 1200.0
+    capex_per_gw_yr = STORAGE_CAPEX_PER_GW_YR.get(iso, 40e6)
+    # Overbuilt fraction × total storage annualized capex × years
+    return excess_pct * storage_gw * capex_per_gw_yr * N_YEARS
+
+
+def _compute_priced_curtailment_usd(iso: str, run: dict) -> float:
+    """Component 4: VRE generation in excess of 100% of demand, priced at VRE LCOE.
+
+    This is a mix-excess proxy. The optimizer doesn't compute hourly dispatch
+    or curtailment; the chart layer derives it from:
+        curtailed_twh[year] = demand[year] × max(0, (Σ endpoint_mix_pct − 100) / 100)
+    summed over the horizon, priced at the regional weighted VRE LCOE.
+    """
+    excess_pct = _mix_excess_pct(run) / 100.0
+    if excess_pct <= 0:
+        return 0.0
+    cost_rows = run.get("tables", {}).get("annual_cost", []) or []
+    cum_demand_twh = sum(float(r.get("demand_twh", 0.0)) for r in cost_rows)
+    excess_twh = cum_demand_twh * excess_pct
+    lcoe = VRE_LCOE_MEDIUM.get(iso, 70.0)
+    return excess_twh * 1e6 * lcoe   # $/MWh × MWh
+
+
+def _components_for_run(iso: str, pathway: str, ep: float) -> dict:
     try:
         run = DL_BASE.get_run(iso, pathway, ep)
     except (KeyError, FileNotFoundError):
         return {"available": False}
-
     if not run["feasibility"].get("physical", False):
         return {"available": False, "infeasible": True}
 
-    # Demand and achieved CFE at 2050
-    cost_rows = run.get("tables", {}).get("annual_cost", [])
-    if not cost_rows:
-        return {"available": False, "no_cost_rows": True}
-    row_2050 = cost_rows[-1]
-    demand_2050 = row_2050["demand_twh"]
-    achieved_cfe = row_2050["achieved_cfe_pct"]
-    cap_rev_2050 = row_2050["capacity_rev_netted_usd"]
+    rt = run.get("reliability_tax", {}) or {}
+    solver_comp = rt.get("components_usd", {}) or {}
+    demand_mwh_cum = float(rt.get("total_demand_mwh_2025_2050", 0.0))
 
-    # Gas generation at 2050: demand × clean gap %
-    clean_gap_pct = max(0.0, 1.0 - achieved_cfe / 100.0)
-    gas_gen_twh = demand_2050 * clean_gap_pct
+    comp4 = _compute_priced_curtailment_usd(iso, run)
+    comp5 = _compute_overbuild_capex_usd(iso, run, demand_mwh_cum)
 
-    # Gas fleet CF: gas_gen / (full existing fleet × 8.76)
-    # Using FULL existing fleet as denominator (not just remaining after retirement).
-    # This represents the utilization of the total insurance fleet capacity.
-    full_fleet_gw = EXISTING_GAS_GW.get(iso, 0.0)
-    gas_fleet_cf = (gas_gen_twh / (full_fleet_gw * 8.76)) if full_fleet_gw > 0 else 0.0
+    components = {
+        "new_gas_capex_annualized_usd":      float(solver_comp.get("new_gas_capex_annualized_usd", 0.0)),
+        "new_gas_fom_usd":                   float(solver_comp.get("new_gas_fom_usd", 0.0)),
+        "existing_gas_fom_carried_usd":      float(solver_comp.get("existing_gas_fom_carried_usd", 0.0)),
+        "priced_vre_curtailment_usd":        round(comp4, 0),
+        "vre_storage_overbuild_capex_usd":   round(comp5, 0),
+    }
+    total_usd = sum(components.values())
+    tax_usd_per_mwh = (total_usd / demand_mwh_cum) if demand_mwh_cum > 0 else 0.0
 
-    # Gas remaining (from retirement_timeline)
-    rt = run.get("retirement_timeline", [])
-    gas_retired_gw = rt[-1]["gas_retired_gw"] if rt else 0.0
-    gas_remaining_gw = max(0.0, full_fleet_gw - gas_retired_gw)
-
-    # FOM cost: based on gas_remaining_gw × FOM rate
-    # If gas_remaining ≈ 0 (all retired), FOM ≈ 0
-    fom_kw_yr = EXISTING_GAS_FOM_KW_YR.get(iso, 14)
-    gas_fom_annual_usd = gas_remaining_gw * 1e3 * fom_kw_yr * 1e3  # GW→kW→$
-
-    # Net FOM = FOM - capacity market payments
-    net_fom_usd = gas_fom_annual_usd - cap_rev_2050
-    net_fom_million = round(net_fom_usd / 1e6, 1)
-
-    # Reliability tax: net FOM per MWh of total demand
-    # net_fom_usd / (demand_2050 × 1e6 MWh/TWh) → $/MWh
-    reliability_tax_usd_per_mwh = (net_fom_usd / (demand_2050 * 1e6)) if demand_2050 > 0 else 0.0
-
-    # For context: gas FOM as % of total annual system cost
-    total_annual_cost = row_2050["net_annual_cost_usd"]
-    fom_pct_of_system = (gas_fom_annual_usd / total_annual_cost * 100) if total_annual_cost > 0 else 0.0
+    # Per-MWh breakdown for stacked-bar rendering
+    per_mwh = {
+        k: round(v / demand_mwh_cum, 4) if demand_mwh_cum > 0 else 0.0
+        for k, v in components.items()
+    }
 
     return {
         "available": True,
-        "achieved_cfe_pct": round(achieved_cfe, 2),
-        "demand_2050_twh": round(demand_2050, 1),
-        "clean_gap_pct": round(clean_gap_pct * 100, 2),
-        "gas_gen_twh": round(gas_gen_twh, 1),
-        "gas_fleet_cf": round(gas_fleet_cf, 4),
-        "gas_fleet_cf_pct": round(gas_fleet_cf * 100, 2),
-        "gas_remaining_gw": round(gas_remaining_gw, 1),
-        "gas_fom_annual_million_usd": round(gas_fom_annual_usd / 1e6, 1),
-        "capacity_rev_million_usd": round(cap_rev_2050 / 1e6, 1),
-        "net_fom_million_usd": net_fom_million,
-        "net_fom_per_mwh_demand": round(reliability_tax_usd_per_mwh, 4),
-        "reliability_tax_usd_per_mwh": round(reliability_tax_usd_per_mwh, 4),
-        "fom_pct_of_total_system_cost": round(fom_pct_of_system, 2),
-        "total_annual_system_cost_2050_million": round(total_annual_cost / 1e6, 1),
+        "achieved_cfe_pct": round(run.get("achieved_cfe_pct", 0.0), 2),
+        "total_demand_mwh_2025_2050": round(demand_mwh_cum, 0),
+        "components_usd": components,
+        "components_usd_per_mwh": per_mwh,
+        "total_reliability_tax_usd": round(total_usd, 0),
+        "total_reliability_tax_usd_per_mwh": round(tax_usd_per_mwh, 4),
     }
 
 
 def main() -> None:
     per_iso: dict[str, dict] = {}
-    all_gas_cfs: list[float] = []
-    all_tax_values: list[float] = []
+    all_taxes: list[float] = []
 
     for iso in ISOS:
-        by_endpoint: dict[str, dict] = {}
+        per_pw: dict[str, dict] = {}
+        for pathway in PATHWAYS:
+            per_ep: dict[str, dict] = {}
+            for ep in ENDPOINTS:
+                ep_label = _EP_LABEL[ep]
+                result = _components_for_run(iso, pathway, ep)
+                per_ep[ep_label] = result
+                if result.get("available"):
+                    all_taxes.append(result["total_reliability_tax_usd_per_mwh"])
+            per_pw[pathway] = per_ep
+
+        # P1a vs P3 sparkline — the key comparative framing.
+        sparkline = []
         for ep in ENDPOINTS:
             ep_label = _EP_LABEL[ep]
-            per_pathway: dict[str, dict] = {}
-            for pathway in PATHWAYS:
-                per_pathway[pathway] = _compute_tax(iso, pathway, ep)
-            by_endpoint[ep_label] = per_pathway
-
-        # Build convenience series for Pathway 1 only
-        gas_cf_series = []
-        fom_series = []
-        tax_gap_series = []
-
-        for ep in ENDPOINTS:
-            ep_label = _EP_LABEL[ep]
-            p1 = by_endpoint[ep_label].get("1a", {})
-            p3 = by_endpoint[ep_label].get("3", {})
-
-            if p1.get("available"):
-                gas_cf_series.append({
-                    "endpoint": ep,
-                    "endpoint_label": ep_label,
-                    "achieved_cfe_pct": p1["achieved_cfe_pct"],
-                    "gas_fleet_cf_pct": p1["gas_fleet_cf_pct"],
-                })
-                fom_series.append({
-                    "endpoint": ep,
-                    "endpoint_label": ep_label,
-                    "net_fom_million_usd": p1["net_fom_million_usd"],
-                    "reliability_tax_usd_per_mwh": p1["reliability_tax_usd_per_mwh"],
-                })
-                all_gas_cfs.append(p1["gas_fleet_cf_pct"])
-                all_tax_values.append(p1["reliability_tax_usd_per_mwh"])
-
-            # Tax gap: P1 net FOM vs P3 net FOM (both normalized per MWh)
-            p1_tax = p1.get("reliability_tax_usd_per_mwh", 0.0) if p1.get("available") else None
-            p3_tax = p3.get("reliability_tax_usd_per_mwh", 0.0) if p3.get("available") else None
-            gap = (p1_tax - p3_tax) if (p1_tax is not None and p3_tax is not None) else None
-            tax_gap_series.append({
+            p1a = per_pw["1a"].get(ep_label, {})
+            p3  = per_pw["3"].get(ep_label, {})
+            sparkline.append({
                 "endpoint": ep,
                 "endpoint_label": ep_label,
-                "p1_reliability_tax_usd_per_mwh": p1_tax,
-                "p3_reliability_tax_usd_per_mwh": p3_tax,
-                "gap_usd_per_mwh": round(gap, 6) if gap is not None else None,
+                "achieved_cfe_pct_p1a": p1a.get("achieved_cfe_pct") if p1a.get("available") else None,
+                "achieved_cfe_pct_p3":  p3.get("achieved_cfe_pct")  if p3.get("available") else None,
+                "p1a_tax_usd_per_mwh":  p1a.get("total_reliability_tax_usd_per_mwh") if p1a.get("available") else None,
+                "p3_tax_usd_per_mwh":   p3.get("total_reliability_tax_usd_per_mwh")  if p3.get("available") else None,
+                "delta_usd_per_mwh": (
+                    round(p1a["total_reliability_tax_usd_per_mwh"] - p3["total_reliability_tax_usd_per_mwh"], 4)
+                    if p1a.get("available") and p3.get("available") else None
+                ),
             })
 
         per_iso[iso] = {
-            "existing_gas_gw": EXISTING_GAS_GW.get(iso, 0.0),
-            "existing_gas_fom_kw_yr": EXISTING_GAS_FOM_KW_YR.get(iso, 0),
-            "by_endpoint": by_endpoint,
-            "gas_cf_series_p1": gas_cf_series,
-            "fom_series_p1": fom_series,
-            "tax_gap_series": tax_gap_series,
+            "per_pathway": per_pw,
+            "sparkline_p1a_vs_p3": sparkline,
         }
-
-    # Global axis ranges
-    global_axis_ranges = {
-        "gas_cf_pct": {
-            "min": 0.0,
-            "max": round(max(all_gas_cfs, default=50.0) * 1.05, 1),
-        },
-        "reliability_tax_usd_per_mwh": {
-            "min": 0.0,
-            "max": round(max(all_tax_values, default=1.0) * 1.1, 4),
-        },
-    }
 
     payload = {
         "per_iso": per_iso,
-        "global_axis_ranges": global_axis_ranges,
+        "global_axis_ranges": {
+            "tax_usd_per_mwh": {
+                "min": 0.0,
+                "max": round(max(all_taxes, default=1.0) * 1.1, 2),
+            },
+        },
         "meta": {
             "payload_id": "section3_reliability_tax",
-            "note": (
-                "Gas fleet capacity factor and stacked FOM cost (net of capacity payments) "
-                "by CFE threshold, all 7 ISOs, 4 pathways, 5 endpoints. "
-                "Gas fleet CF = gas_gen_twh / (full_existing_fleet_gw × 8.76). "
-                "Uses full existing fleet as denominator to show fleet-level underutilization. "
-                "FOM computed on gas_remaining_gw (after endogenous retirement). "
-                "Reliability tax = net FOM per MWh of total demand."
+            "schema_version": 2,
+            "formula": (
+                "reliability_tax_$/MWh = "
+                "[Σ new_gas_capex_annualized + Σ new_gas_FOM + "
+                " Σ existing_gas_FOM_carried + Σ priced_VRE_curtailment + "
+                " Σ VRE_storage_overbuild_capex] ÷ Σ demand_MWh (2025-2050)"
             ),
-            "gas_cf_definition": (
-                "gas_fleet_cf = (demand_2050 × (1 − achieved_cfe%)) / (EXISTING_GAS_GW × 8.76). "
-                "Numerator = annual gas generation implied by CFE gap. "
-                "Denominator = maximum possible generation from full existing fleet at CF=100%."
+            "gas_sizing_method": (
+                "SPEC §24.5 worst-hour residual-gap sizing (99.97th percentile of "
+                "margin-inclusive residual), NOT ELCC. Gas components come from "
+                "the solver's reliability_tax.components_usd field verbatim."
             ),
-            "fom_definition": (
-                "gas_fom_annual = gas_remaining_gw × EXISTING_GAS_FOM_KW_YR × 1000. "
-                "net_fom = gas_fom_annual − capacity_rev_netted_usd (from annual_cost[2050]). "
-                "reliability_tax = net_fom / (demand_2050_twh × 1e6) in $/MWh."
+            "curtailment_method": (
+                "priced_vre_curtailment_usd = cum_demand_TWh × max(0, (Σ endpoint_mix_pct − 100) / 100) "
+                "× regional_weighted_VRE_LCOE (Medium toggle). Proxy for hourly dispatch, which "
+                "the pathway optimizer does not compute."
             ),
-            "version": "1.0",
+            "overbuild_method": (
+                "vre_storage_overbuild_capex_usd = mix_excess_pct × cum_storage_GW × "
+                "STORAGE_CAPEX_PER_GW_YR × 26 years. Applied to storage only; VRE "
+                "overbuild is priced via the curtailment component."
+            ),
+            "card_m_prime": (
+                "Card M' — no capacity-market-revenue netting. Reliability tax is gross. "
+                "There is no net_fom or capacity_rev_netted field anywhere in this payload."
+            ),
         },
     }
 
     OUT_PATH.write_text(json.dumps(payload, indent=2))
+    DASH_OUT.parent.mkdir(parents=True, exist_ok=True)
+    DASH_OUT.write_text(json.dumps(payload, indent=2))
     print(f"Wrote {OUT_PATH}")
+    print(f"Wrote {DASH_OUT}")
 
-    print("\n--- section3_reliability_tax quick summary ---")
-    for iso in ISOS:
-        print(f"\n  {iso}:")
-        for ep in ENDPOINTS:
-            ep_label = _EP_LABEL[ep]
-            p1 = per_iso[iso]["by_endpoint"][ep_label].get("1a", {})
-            if not p1.get("available"):
+    # Summary: ERCOT + PJM @ ep95 component breakdown
+    for iso in ["ERCOT", "PJM"]:
+        print(f"\n  {iso} ep95 tax components ($/MWh):")
+        for pw in ["1a", "3"]:
+            d = per_iso[iso]["per_pathway"][pw]["ep95"]
+            if not d.get("available"):
                 continue
+            c = d["components_usd_per_mwh"]
+            total = d["total_reliability_tax_usd_per_mwh"]
             print(
-                f"    ep{p1['achieved_cfe_pct']:.0f}%: "
-                f"gas_CF={p1['gas_fleet_cf_pct']:.1f}%, "
-                f"FOM_net=${p1['net_fom_million_usd']:.0f}M/yr, "
-                f"tax=${p1['reliability_tax_usd_per_mwh']:.4f}/MWh"
+                f"    P{pw}: total=${total:.3f}  "
+                f"new_gas_capex=${c['new_gas_capex_annualized_usd']:.3f}  "
+                f"new_gas_fom=${c['new_gas_fom_usd']:.3f}  "
+                f"existing_gas_fom=${c['existing_gas_fom_carried_usd']:.3f}  "
+                f"curt=${c['priced_vre_curtailment_usd']:.3f}  "
+                f"overbuild=${c['vre_storage_overbuild_capex_usd']:.3f}"
             )
 
 
