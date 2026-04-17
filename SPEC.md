@@ -1735,7 +1735,7 @@ Charts on this page show *that* something is happening at a participation thresh
   - **Each bar split into:** Existing clean premium (gray/blue) vs. New-build capital (green/amber)
   - **At selected participation level** (linked to global slider)
   - **Key insight:** PJM's bar is 60-70% premium (keeping 32% nuclear fleet online). ERCOT's bar is 80%+ new-build (little existing clean to maintain). Both contribute to the same NOAK outcome.
-  - **Data source:** `track_results.json` — newbuild (2A) gives new-build costs; cost_to_replace (2C) gives total including premium. Delta = premium portion. **Available now for 5 ISOs** (CAISO, ERCOT, NEISO, NYISO, PJM). MISO, SPP from `shared-data.js` resource mix data.
+  - **Data source:** `track_results.json` — newbuild (2A) gives new-build costs; cost_to_replace (2C) gives total including premium. Delta = premium portion. **Available for all 7 ISOs** (CAISO, ERCOT, NEISO, NYISO, PJM, MISO, SPP).
   - **Callout box:** "PJM free-rides on the learning curve that ERCOT is paying for — and that's the system working as designed."
 
 ---
@@ -1846,7 +1846,7 @@ Cross-reference links to deep-dive pages:
 | Fig 6 (Resource mix) | 1 (trajectory), 2A, 2C, 3D (=nothing) | 2B, 3A, 3B, 3C |
 | Fig 7 (2ABC table) | All (static) | — |
 | Fig 8 (2C threshold) | 2C (track data + learning curve) | Critical mass exact point |
-| Fig 9 (Regional roles) | 2C (track data, 5 ISOs) | MISO, SPP |
+| Fig 9 (Regional roles) | 2C (track data, 7 ISOs) | — |
 | Fig 10 (FOAK→NOAK) | Both (learning_fraction + LCOEs) | — |
 | Fig 11 (Compounding table) | All (static + trajectory data) | — |
 | Fig 12 (Horse race: cost) | 1, 2A, 2C | 2B, 3A-D |
@@ -3239,8 +3239,8 @@ data/step4-analysis/lmp/                      # Output directory
 ## 4. Dashboard Controls (7 total — paired toggles)
 
 ### Preserved (2):
-1. **Region/ISO select** (CAISO, ERCOT, PJM, NYISO, NEISO)
-2. **Threshold select** (10 values: 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, ≥99.9)
+1. **Region/ISO select** (CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP — 7 ISOs)
+2. **Threshold select** (20 values: 10, 20, 30, 40 [coarse only], 50, 55, 60, 65, 70, 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, 99, 99.5, 99.9)
 
 ### Sensitivity toggles (7 toggles + 1 binary switch):
 
@@ -3284,7 +3284,7 @@ Cost sensitivities are organized into 7 graduated toggles (L/M/H) plus one binar
 
 ### 4.1 Warm-Start Optimization (Trifold Seed Strategy)
 
-**Problem**: Full 3-phase co-optimization (Phase 1 coarse grid → Phase 2 medium refinement → Phase 3 fine-tune) takes 5-10 minutes per scenario. With 44 representative scenarios per threshold × 10 thresholds × 5 ISOs, full Phase 1 for every scenario is prohibitively slow.
+**Problem**: Full 3-phase co-optimization (Phase 1 coarse grid → Phase 2 medium refinement → Phase 3 fine-tune) takes 5-10 minutes per scenario. With 44 representative scenarios per threshold × 20 thresholds × 7 ISOs, full Phase 1 for every scenario is prohibitively slow.
 
 **Solution**: Trifold warm-start seeding — run full 3-phase for 3 categories of scenarios, then warm-start the remainder with the discovered mix archetypes:
 
@@ -3320,7 +3320,7 @@ Cost sensitivities are organized into 7 graduated toggles (L/M/H) plus one binar
 
 ### 4.2 Scenario Pruning & Adaptive Resampling Pipeline
 
-**Problem**: 5,832 cost scenarios × 20 thresholds × 5 ISOs = 582,000 co-optimizations (16 active thresholds for full cost optimization, 4 coarse thresholds for coarse pass only). Even with warm-start, running all 5,832 per threshold is slow. Empirically, physics dominates at lower thresholds — only ~14 unique mixes serve all 5,832 scenarios.
+**Problem**: 5,832 cost scenarios × 20 thresholds × 7 ISOs = 816,480 co-optimizations (16 active thresholds for full cost optimization, 4 coarse thresholds for coarse pass only). Even with warm-start, running all 5,832 per threshold is slow. Empirically, physics dominates at lower thresholds — only ~14 unique mixes serve all 5,832 scenarios.
 
 **Solution**: 5-stage pipeline runs 44 representative scenarios, then fills the remaining ~5,788 via cross-pollination, with adaptive resampling as a safety net.
 
@@ -3989,7 +3989,7 @@ total_co2_abated = existing_grid_displacement + counterfactual_growth_emissions
 
 All values are 2024 USD, net tons CO₂ removed (accounting for 5–12% lifecycle emissions). Full DACCS (capture + transport + storage + MRV).
 
-### 7.2 Abatement Cost Curves (2 new charts)
+### 7.2b Abatement Cost Curves (2 new charts)
 - **Average Cost of Abatement**: Total incremental cost / Total CO2 abated = **$/ton CO2**
 - **Marginal Cost of Abatement**: (Cost_{X+1%} − Cost_{X%}) / (CO2_{X+1%} − CO2_{X%}) = **$/ton CO2**
 - **X-axis**: 75% to 100%, **linear numeric scale** (proportional spacing — distance from 85→90 equals 75→80)
@@ -4158,14 +4158,14 @@ For each resource:
 
 ### v4.0 Architecture (replaces v3.x sequential architecture)
 
-- **Parallel ISO processing (A+F)**: All 5 ISOs run in parallel on 16 cores (~3 cores/ISO). Shared memory for cross-ISO data coordination. Replaces sequential processing.
+- **Parallel ISO processing (A+F)**: All 7 ISOs run in parallel on 16 cores (~2 cores/ISO). Shared memory for cross-ISO data coordination. Replaces sequential processing.
 - **Vectorized storage dispatch (B)**: Battery and LDES scoring use NumPy reshape/vectorized ops instead of Python day-loops. `surplus.reshape(365, 24)` for battery, vectorized rolling windows for LDES.
 - **Batch mix evaluation (C)**: Grid search evaluates all combos in a single matrix multiply: `(N, 4) @ (4, 8760) = (N, 8760)`. Eliminates Python loop over individual mixes.
 - **Numba JIT with fallback (D)**: Storage scoring functions compiled to machine code via Numba. If Numba unavailable, falls back to B+C (vectorized NumPy).
 - **Checkpointing**: Saves after each threshold (20 per ISO); resumes from checkpoint on restart
 - **Score caching**: Matching scores cached across 5,832 cost scenarios per threshold (physics reuse — cost-independent)
 - **Cross-pollination**: After representative scenarios run per threshold, every unique mix re-evaluated against all scenarios
-- **20 thresholds × 5 regions × 5,832 scenarios** — incremental saves essential for reliability
+- **20 thresholds × 7 regions × 5,832 scenarios** — incremental saves essential for reliability
 
 ### 11.1 Direct Resource Fractions (v5.0 — replaces procurement multiplier)
 
@@ -4273,13 +4273,13 @@ The methodology page must include:
 
 ## 13. Regional Deep-Dive Pages (1 combined page)
 
-All 5 regions covered in a single scrollytelling page with region selector.
+All 7 regions covered in a single scrollytelling page with region selector.
 
 ### Structure
 - **Status**: DELETED (Feb 19, 2026). Regional deep-dive content consolidated into research paper and homepage scrollytell.
 
 ### Default Cost Scenario for Static Pages
-- **Homepage (index.html)** and **Regional Deep-Dive pages**: All figures and narrative use **Medium cost sensitivities** (all 5 toggle groups at Medium) unless a figure is explicitly designed to show Low/Medium/High ranges for comparison purposes.
+- **Homepage (index.html)** and **Regional Deep-Dive pages**: All figures and narrative use **Medium cost sensitivities** (all 8 toggle groups at Medium — Renewable Gen, Firm Gen, Storage, CCS, 45Q=On, Fossil Fuel, Transmission, Geothermal) unless a figure is explicitly designed to show Low/Medium/High ranges for comparison purposes.
 - **Dashboard (dashboard.html)**: Interactive — user controls sensitivities via toggles.
 - This ensures consistency across static narrative pages and reserves L/M/H range displays for intentional comparison figures (e.g., cost sensitivity deep-dive section #4 below).
 
@@ -4314,7 +4314,7 @@ All 5 regions covered in a single scrollytelling page with region selector.
 1. **Executive Summary** — key findings across all regions
 2. **Introduction** — hourly CFE matching problem, why annual matching isn't enough
 3. **Methodology** — full model description, all cost tables, algorithms, data sources
-4. **National Results** — overview across all 5 regions, comparison charts
+4. **National Results** — overview across all 7 regions, comparison charts
 5. **Regional Deep-Dives** (5 sections, one per region — content from deep-dive pages)
 6. **Sensitivity Analysis** — how key assumptions drive results
 7. **Policy Implications** — what this means for procurement strategy
@@ -4364,7 +4364,7 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 1. **The Grid Decarbonization Curve** — Our model's regional marginal abatement curves plotted together. Where does each region's curve cross the DAC line? The SAF line?
 
 2. **The Inflection Point Analysis** — For each region × sensitivity scenario, identify the % threshold where grid decarbonization costs exceed:
-   - The social cost of carbon ($51/ton EPA, $185/ton Rennert et al.)
+   - The social cost of carbon ($190/ton 2024 EPA central (3% SDR), $185/ton Rennert et al.)
    - DAC costs ($300-1,100/ton, trajectory-dependent)
    - SAF costs ($150-400/ton)
    - Voluntary carbon market prices ($10-150/ton)
@@ -4506,7 +4506,7 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 
 ---
 
-## 17. QA/QC Requirements
+## 18. QA/QC Requirements
 
 ### Optimizer Results QA (after first region completes)
 - Validate hourly match scores against expected ranges from existing research
@@ -4534,7 +4534,7 @@ A "Liebreich ladder for grid decarbonization" — analyzing when/where/under wha
 - Test at: 320px (small phone), 375px (iPhone), 768px (tablet)
 
 ### Pre-Push Checklist
-- [ ] Optimizer results QA passed for all 5 regions
+- [ ] Optimizer results QA passed for all 7 regions
 - [ ] All dashboard controls functional
 - [ ] All charts render correctly
 - [ ] Mobile compatibility verified
@@ -4711,7 +4711,7 @@ This section documents how our model compares to established capacity expansion 
 | **Solar/wind hourly profiles** | EIA 930 actual generation data, 5-year average | NREL ATB capacity factors, or NSRDB/WIND Toolkit | ✓ Comparable rigor; actual generation vs. modeled resource |
 | **Two-tier pricing** | Existing capacity at wholesale; new-build at LCOE + transmission | Standard in procurement models (LevelTen, 3Degrees) | ✓ Full alignment |
 | **Co-optimization of cost + mix** | Cost drives resource mix selection at every threshold | Standard in all capacity expansion models | ✓ Full alignment |
-| **Regional granularity** | 5 ISOs (CAISO, ERCOT, PJM, NYISO, NEISO) | GenX: zonal; ReEDS: 134 BAs; SWITCH: load zones | ✓ Comparable scope for procurement analysis |
+| **Regional granularity** | 7 ISOs (CAISO, ERCOT, PJM, NYISO, NEISO, MISO, SPP) | GenX: zonal; ReEDS: 134 BAs; SWITCH: load zones | ✓ Comparable scope for procurement analysis |
 
 ### 20.2 Deliberate Differentiations (with justification)
 
@@ -4805,7 +4805,7 @@ Any post-processing (cost overlays, BECCS, gas constraints, carbon pricing) oper
 - BECCS provides firm dispatchable generation (like CCS-CCGT) PLUS negative emissions
 - NEISO has significant forestry biomass resource (wood pellets, forestry residues)
 - Cost estimate: ~$120-180/MWh LCOE (NREL ATB) — higher than CCS-CCGT but with carbon-negative value
-- **Post-processing approach**: For scenarios with high CCS share (>25%), run a cost overlay replacing a fraction of CCS with BECCS pricing. Include negative emissions credit at SCC values ($51-185/tCO2). This avoids full re-optimization — just re-price cached mixes.
+- **Post-processing approach**: For scenarios with high CCS share (>25%), run a cost overlay replacing a fraction of CCS with BECCS pricing. Include negative emissions credit at SCC values ($185–190/tCO2 — Rennert et al. / 2024 EPA central). This avoids full re-optimization — just re-price cached mixes.
 
 **Decision**: Implemented in post-processing (Feb 15, 2026). See §22.
 
@@ -5081,7 +5081,7 @@ Applied to Step 3 cost optimization results via `step4_postprocess.py`. Correcte
 
 ### 22.1 CO₂ Monotonicity Enforcement
 
-**Problem**: CO₂ abatement is non-monotonic across thresholds in 4 of 5 ISOs. Higher hourly match targets can result in LESS CO₂ abated (up to -15.3M tons in ERCOT 90%→92.5%). Root cause: the optimizer minimizes cost, not CO₂. A cheaper mix at a higher threshold may procure less total clean energy (substituting storage for overprocurement), reducing total fossil displacement even as temporal matching improves.
+**Problem**: CO₂ abatement is non-monotonic across thresholds in most ISOs. Higher hourly match targets can result in LESS CO₂ abated (up to -15.3M tons in ERCOT 90%→92.5%). Root cause: the optimizer minimizes cost, not CO₂. A cheaper mix at a higher threshold may procure less total clean energy (substituting storage for overprocurement), reducing total fossil displacement even as temporal matching improves.
 
 **Fix**: Running-max constraint — `co2_corrected[t] = max(co2[t], co2[t-1])` across thresholds. Ensures abatement narrative never shows "paying more for less CO₂."
 
@@ -5216,7 +5216,7 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 
 5. **No-45Q mix bias** (documented limitation) — The no-45Q overlay reprices the same resource mix that was co-optimized WITH 45Q. This mix over-represents CCS, making the no-45Q cost a conservative upper bound. A true no-45Q re-optimization would substitute LDES/renewables for CCS, yielding lower costs.
 
-### 22.7 ≥99.9% Hourly Match Asymptote — Literature Review & Procurement Bounds
+### 22.10 ≥99.9% Hourly Match Asymptote — Literature Review & Procurement Bounds
 
 **Decision (Feb 2026):** Top threshold lowered from 100% to ≥99.9%. True 100% hourly matching is physically unreachable due to float precision and dispatch constraints. ≥99.9% is labeled "effectively 100%" (8.76 unmatched hours/year). This makes the threshold honest — we label what we can actually achieve.
 
@@ -5241,7 +5241,7 @@ gas_needed_mw = max(0, ra_peak - clean_peak) / GAF
 - Only 4–14 unique mixes per threshold (massive redundancy across 5,832 scenarios)
 - Cache comprehensively covers the feasible solution space — new constraint runs can seed from existing archetypes rather than cold-start
 
-### 22.9 Step 1 PFS Improvement Opportunities (Feb 21, 2026)
+### 22.11 Step 1 PFS Improvement Opportunities (Feb 21, 2026)
 
 **Constraint: No changes may sacrifice the ability to find the full PFS.** All improvements below are backward-compatible — they improve speed and/or coverage without changing the feasible space definition or dispatch physics.
 
