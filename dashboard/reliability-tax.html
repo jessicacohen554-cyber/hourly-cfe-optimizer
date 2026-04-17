@@ -37,6 +37,17 @@
             pointer-events: none;
         }
 
+        /* Hero (Section 0) */
+        .tax-hero-lead {
+            max-width: 820px;
+            margin: 0 auto var(--space-xl);
+            font-size: 1.08rem;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            text-align: center;
+        }
+        .tax-hero-lead strong { color: var(--navy); font-weight: 700; }
+
         /* Section-stub placeholders (A2/A3/A4 sessions will replace). */
         .section-stub {
             max-width: 940px;
@@ -85,10 +96,11 @@
     <!-- Section 0 — Hero                                                       -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <section class="content-section" id="section0">
-        <div class="section-stub">
-            <span class="todo-tag">A1 — this session</span>
-            <strong>Section 0: Hero</strong>
-            Title, lead paragraph, reliability-tax definition.
+        <p class="tax-hero-lead fade-in">
+            VRE and storage can deliver clean energy. They cannot, on their own, deliver reliability &mdash; not at the 99.97th-percentile worst hour that planners are obligated to cover. Something has to stand behind them for those hours, and absent new clean firm generation, that something is gas. The capex, fixed O&amp;M, and eventual stranding of that backup fleet land on customer bills. <strong>That is the reliability tax.</strong>
+        </p>
+        <div class="insight-box fade-in" style="max-width: 820px; margin: 0 auto;">
+            <strong>Reliability tax</strong> = <span style="font-family: var(--font-data);">(annualized new-gas capex&nbsp;+ new-gas FOM&nbsp;+ carried existing-gas FOM&nbsp;+ priced VRE curtailment&nbsp;+ annualized VRE/storage overbuild capex)&nbsp;&divide;&nbsp;total demand&nbsp;MWh</span>. Reported <strong>gross</strong> &mdash; capacity-market payments and similar transfers are internal to the ratepayer&ndash;developer system, not a cost reduction, and are not netted against this number.
         </div>
     </section>
 
