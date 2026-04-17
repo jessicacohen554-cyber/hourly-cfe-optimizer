@@ -1413,6 +1413,46 @@ def year_adjusted_cost(foak_cost, noak_cost, year, foak_start, noak_year):
     return foak_cost * (1.0 - frac) + noak_cost * frac
 
 
+# ----------------------------------------------------------------------------
+# SPEC §24.8 — Reliability Tax Step 3: exogenous per-pathway NOAK years.
+# Replaces the endogenous economic / SBTi-plateau pivot triggers with
+# deterministic cutovers reflecting each pathway's commitment timing to
+# clean-firm scale-up. Keys match RunConfig.pathway identifiers.
+#   P3  (proactive clean firm year 1)   → NOAK 2035
+#   P2b (economic-trigger pivot)        → NOAK 2040   (≈ default)
+#   P2a (behavioral SBTi-plateau pivot) → NOAK 2045
+# Pathways 1 / 1a / 1b have no override — they build no new clean firm, so
+# the learning curve is irrelevant to their optimizer cost and the default
+# LEARNING_PARAMS NOAK year applies.
+# ----------------------------------------------------------------------------
+NOAK_YEAR_BY_PATHWAY = {
+    '3':  2035,
+    '2b': 2040,
+    '2a': 2045,
+}
+
+# Which tech keys receive the pathway-specific NOAK override. Clean-firm only
+# (nuclear, CCGT+CCS, geothermal) — battery / VRE / LDES / H2 learning curves
+# are globally driven, not US-pathway-driven.
+PATHWAY_NOAK_TECHS = frozenset({'nuclear', 'ccs', 'geo'})
+
+
+def get_pathway_noak_window(tech, level_short, pathway=None):
+    """Return (foak_start, noak_year) for (tech, level, pathway), applying
+    the SPEC §24.8 pathway override when applicable. Falls back to the
+    LEARNING_PARAMS default when no override matches.
+    """
+    foak_start, default_noak = LEARNING_PARAMS[tech][level_short]
+    if pathway is None or tech not in PATHWAY_NOAK_TECHS:
+        return foak_start, default_noak
+    override = NOAK_YEAR_BY_PATHWAY.get(str(pathway))
+    if override is None:
+        return foak_start, default_noak
+    # Clamp to foak_start so we never produce a degenerate window (noak earlier
+    # than foak_start) — callers of year_adjusted_cost assume noak >= foak.
+    return foak_start, max(int(override), foak_start + 1)
+
+
 # ============================================================================
 # DEMAND GROWTH PARAMETERS
 # Sources: EIA AEO 2025 (Reference + High/Low Economic Growth cases),

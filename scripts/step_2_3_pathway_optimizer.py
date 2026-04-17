@@ -427,42 +427,51 @@ def _as_short_level(level: str) -> str:
     return LEVEL_SHORT.get(level, level)
 
 
-def _learning_window(tech: str, level_short: str) -> tuple[int, int]:
-    """Return (foak_start, noak_year) from pipeline_config.LEARNING_PARAMS."""
+def _learning_window(tech: str, level_short: str,
+                      pathway: str | None = None) -> tuple[int, int]:
+    """Return (foak_start, noak_year). Applies SPEC §24.8 per-pathway NOAK
+    override via ``pc.get_pathway_noak_window`` for clean-firm techs; plain
+    ``LEARNING_PARAMS`` lookup for all others.
+    """
+    if pathway is not None and hasattr(pc, 'get_pathway_noak_window'):
+        return pc.get_pathway_noak_window(tech, level_short, pathway)
     return pc.LEARNING_PARAMS[tech][level_short]
 
 
 # ---------- Clean firm -------------------------------------------------------
 
 
-def nuclear_newbuild_lcoe_at_year(iso: str, firm_level: str, year: int) -> float:
+def nuclear_newbuild_lcoe_at_year(iso: str, firm_level: str, year: int,
+                                    pathway: str | None = None) -> float:
     """FOAK→NOAK-adjusted new-build nuclear LCOE ($/MWh) at ``year`` in ``iso``."""
     firm_short = _as_short_level(firm_level)
     foak = float(pc.FOAK_NUCLEAR_NEWBUILD[iso])
     noak = float(pc.NUCLEAR_NEWBUILD_LCOE[firm_short][iso])
-    foak_start, noak_year = _learning_window('nuclear', firm_short)
+    foak_start, noak_year = _learning_window('nuclear', firm_short, pathway)
     return pc.year_adjusted_cost(foak, noak, year, foak_start, noak_year)
 
 
-def ccs_lcoe_at_year(iso: str, ccs_level: str, q45: str, year: int) -> float:
+def ccs_lcoe_at_year(iso: str, ccs_level: str, q45: str, year: int,
+                      pathway: str | None = None) -> float:
     """FOAK→NOAK-adjusted CCGT+CCS LCOE ($/MWh) at ``year`` with 45Q toggle."""
     ccs_short = _as_short_level(ccs_level)
     foak_table = pc.FOAK_CCS_45Q_ON if q45 == '1' else pc.FOAK_CCS_45Q_OFF
     noak_table = pc.CCS_LCOE_45Q_ON if q45 == '1' else pc.CCS_LCOE_45Q_OFF
     foak = float(foak_table[iso])
     noak = float(noak_table[ccs_short][iso])
-    foak_start, noak_year = _learning_window('ccs', ccs_short)
+    foak_start, noak_year = _learning_window('ccs', ccs_short, pathway)
     return pc.year_adjusted_cost(foak, noak, year, foak_start, noak_year)
 
 
-def geothermal_lcoe_at_year(iso: str, geo_level: str, year: int) -> float:
+def geothermal_lcoe_at_year(iso: str, geo_level: str, year: int,
+                              pathway: str | None = None) -> float:
     """FOAK→NOAK-adjusted geothermal LCOE ($/MWh). CAISO only."""
     if iso not in pc.GEOTHERMAL_ISOS:
         return 0.0
     geo_short = _as_short_level(geo_level)
     foak = float(pc.FOAK_GEOTHERMAL)
     noak = float(pc.GEOTHERMAL_LCOE[geo_short])
-    foak_start, noak_year = _learning_window('geo', geo_short)
+    foak_start, noak_year = _learning_window('geo', geo_short, pathway)
     return pc.year_adjusted_cost(foak, noak, year, foak_start, noak_year)
 
 
@@ -611,10 +620,12 @@ def compute_clean_firm_tranches_for_year(
     Returns the same dict shape the shared helper produces plus ``year``.
     """
 
+    pathway = getattr(config, 'pathway', None)
+
     def _learning_curve_fn(base_cost, foak_cost, noak_cost, tech, level, target_year):
         """Shim matching pc.compute_clean_firm_tranches's expected signature."""
         level_short = _as_short_level(level)
-        foak_start, noak_year = _learning_window(tech, level_short)
+        foak_start, noak_year = _learning_window(tech, level_short, pathway)
         return pc.year_adjusted_cost(
             float(foak_cost), float(noak_cost),
             int(target_year), foak_start, noak_year,
@@ -1018,6 +1029,7 @@ def marginal_lcoe(resource: str, iso: str, year: int, config: 'RunConfig') -> fl
     current used-caps). Transmission adder is bundled in.
     """
     tx = transmission_adder(resource, iso, config.tx_level)
+    pathway = getattr(config, 'pathway', None)
     if resource == 'solar':
         return solar_lcoe_at_year(iso, config.firm_cost_level, year) + tx
     if resource == 'wind':
@@ -1029,11 +1041,17 @@ def marginal_lcoe(resource: str, iso: str, year: int, config: 'RunConfig') -> fl
     if resource == 'uprate':
         return uprate_lcoe_at_year(config.firm_cost_level, year) + tx
     if resource == 'nuclear_newbuild':
-        return nuclear_newbuild_lcoe_at_year(iso, config.firm_cost_level, year) + tx
+        return nuclear_newbuild_lcoe_at_year(
+            iso, config.firm_cost_level, year, pathway=pathway,
+        ) + tx
     if resource == 'ccs_ccgt':
-        return ccs_lcoe_at_year(iso, config.ccs_cost_level, config.q45, year) + tx
+        return ccs_lcoe_at_year(
+            iso, config.ccs_cost_level, config.q45, year, pathway=pathway,
+        ) + tx
     if resource == 'geothermal':
-        return geothermal_lcoe_at_year(iso, config.geo_cost_level or 'M', year) + tx
+        return geothermal_lcoe_at_year(
+            iso, config.geo_cost_level or 'M', year, pathway=pathway,
+        ) + tx
     if resource == 'battery4':
         return battery4_effective_lcoe(iso, config.firm_cost_level, year) + tx
     if resource == 'battery8':
@@ -1053,23 +1071,30 @@ def cheapest_clean_firm_lcoe(iso: str, year: int, config: 'RunConfig',
 
     Used by Pathway 2b's economic-pivot trigger (Card C).
     """
+    pathway = getattr(config, 'pathway', None)
     options: list[float] = []
     if uprate_used_twh < pc.UPRATE_CAP_TWH.get(iso, 0.0):
         options.append(uprate_lcoe_at_year(config.firm_cost_level, year))
     if iso in pc.GEOTHERMAL_ISOS and geo_used_twh < pc.GEOTHERMAL_CAP_TWH:
         options.append(
-            geothermal_lcoe_at_year(iso, config.geo_cost_level or 'M', year)
+            geothermal_lcoe_at_year(
+                iso, config.geo_cost_level or 'M', year, pathway=pathway,
+            )
             + transmission_adder('clean_firm', iso, config.tx_level)
         )
     if ccs_used_twh < pc.CCS_CAP_TWH.get(iso, 0.0):
         options.append(
-            ccs_lcoe_at_year(iso, config.ccs_cost_level, config.q45, year)
+            ccs_lcoe_at_year(
+                iso, config.ccs_cost_level, config.q45, year, pathway=pathway,
+            )
             + transmission_adder('ccs_ccgt', iso, config.tx_level)
         )
     # Nuclear new-build has no hard cap (governed by siting in pipeline, but the
     # optimizer treats it as always available if other tranches exhaust).
     options.append(
-        nuclear_newbuild_lcoe_at_year(iso, config.firm_cost_level, year)
+        nuclear_newbuild_lcoe_at_year(
+            iso, config.firm_cost_level, year, pathway=pathway,
+        )
         + transmission_adder('clean_firm', iso, config.tx_level)
     )
     return min(options)
@@ -1383,9 +1408,34 @@ def _filter_pathway_1a(
     return df.loc[mask].reset_index(drop=True)
 
 
-def _filter_pathway_3(df: pd.DataFrame) -> pd.DataFrame:
-    """Pathway 3: full EF — no filter."""
-    return df
+# SPEC §24.8 — Pathway 3 proactive clean-firm floor. P3 represents a
+# deliberate bet on clean firm from year 1, so its EF candidate pool is
+# restricted to mixes carrying at least ``PATHWAY_3_CLEAN_FIRM_FLOOR_K ×
+# threshold_pct`` of clean firm. This ensures P3 visibly diverges from P1's
+# cheapest-VRE-only selection at every endpoint, per user direction. The
+# coefficient is pathway-specific policy, not a grid feasibility constraint.
+PATHWAY_3_CLEAN_FIRM_FLOOR_K = 0.30
+
+
+def _filter_pathway_3(
+    df: pd.DataFrame,
+    threshold_pct: float | None = None,
+) -> pd.DataFrame:
+    """Pathway 3: enforce a clean-firm floor proportional to the endpoint.
+
+    Floor rule: ``clean_firm >= k × threshold_pct`` (units: both % of
+    base-year demand). Applied only when ``threshold_pct`` is supplied — the
+    default is a no-op to preserve behavior for any legacy call sites that
+    bypass the threshold.
+    """
+    if threshold_pct is None:
+        return df
+    k = PATHWAY_3_CLEAN_FIRM_FLOOR_K
+    floor_pct = float(k) * float(threshold_pct)
+    if floor_pct <= 0 or 'clean_firm' not in df.columns:
+        return df
+    mask = df['clean_firm'] >= (floor_pct - 1e-9)
+    return df.loc[mask].reset_index(drop=True)
 
 
 # ---------- Pivot state for pathways 2a / 2b --------------------------------
@@ -1473,9 +1523,11 @@ def _clean_firm_total_cost_batch(
     concatenated. Per-row computation is independent so chunking is exact.
     """
 
+    pathway = getattr(config, 'pathway', None)
+
     def _learning_curve_fn(base_cost, foak_cost, noak_cost, tech, level, target_year):
         level_short = _as_short_level(level)
-        foak_start, noak_year = _learning_window(tech, level_short)
+        foak_start, noak_year = _learning_window(tech, level_short, pathway)
         return pc.year_adjusted_cost(
             float(foak_cost), float(noak_cost),
             int(target_year), foak_start, noak_year,
@@ -1699,7 +1751,8 @@ def select_target_mix(
             ef = _filter_pathway_1(ef, iso=iso)
         # else: full EF available post-pivot (clean firm unlocked)
     elif pathway == '3':
-        ef = _filter_pathway_3(ef)
+        # SPEC §24.8 — proactive clean-firm floor: clean_firm ≥ k × threshold.
+        ef = _filter_pathway_3(ef, threshold_pct=threshold)
     else:
         raise ValueError(f"select_target_mix: unknown pathway {pathway!r}")
 
