@@ -20,10 +20,10 @@
   },
   "headline": {
     "achieved_cfe_pct": 60.11,
-    "undiscounted_cost_usd": 2176152263109.0,
-    "npv_at_5pct": 1024004539919.0,
-    "npv_at_7pct": 787421130723.0,
-    "npv_at_9pct": 618375272616.0,
+    "undiscounted_cost_usd": 2224555946597.0,
+    "npv_at_5pct": 1043383825603.0,
+    "npv_at_7pct": 801222548044.0,
+    "npv_at_9pct": 628349132185.0,
     "endpoint_threshold": 60.0,
     "pivot": {
       "pivoted": false,
@@ -70,8 +70,8 @@
         "gas_sizing": {
           "peak_demand_mw": 43860.0,
           "ra_peak_mw": 50439.0,
-          "total_clean_peak_mw": 39320.0,
-          "existing_gas_used_mw": 6287.0,
+          "total_clean_peak_mw": 17813.0,
+          "existing_gas_used_mw": 22542.0,
           "new_gas_required_cumulative_mw": 0.0,
           "new_gas_built_this_year_mw": 0.0,
           "active_new_gas_fleet_mw": 0.0,
@@ -115,8 +115,8 @@
         "gas_sizing": {
           "peak_demand_mw": 44693.0,
           "ra_peak_mw": 51397.0,
-          "total_clean_peak_mw": 39834.0,
-          "existing_gas_used_mw": 6792.0,
+          "total_clean_peak_mw": 17648.0,
+          "existing_gas_used_mw": 23678.0,
           "new_gas_required_cumulative_mw": 0.0,
           "new_gas_built_this_year_mw": 0.0,
           "active_new_gas_fleet_mw": 0.0,
@@ -160,8 +160,8 @@
         "gas_sizing": {
           "peak_demand_mw": 45543.0,
           "ra_peak_mw": 52374.0,
-          "total_clean_peak_mw": 40357.0,
-          "existing_gas_used_mw": 7307.0,
+          "total_clean_peak_mw": 17459.0,
+          "existing_gas_used_mw": 24857.0,
           "new_gas_required_cumulative_mw": 0.0,
           "new_gas_built_this_year_mw": 0.0,
           "active_new_gas_fleet_mw": 0.0,
@@ -205,8 +205,8 @@
         "gas_sizing": {
           "peak_demand_mw": 46408.0,
           "ra_peak_mw": 53369.0,
-          "total_clean_peak_mw": 40890.0,
-          "existing_gas_used_mw": 7832.0,
+          "total_clean_peak_mw": 17247.0,
+          "existing_gas_used_mw": 26081.0,
           "new_gas_required_cumulative_mw": 0.0,
           "new_gas_built_this_year_mw": 0.0,
           "active_new_gas_fleet_mw": 0.0,
@@ -250,8 +250,8 @@
         "gas_sizing": {
           "peak_demand_mw": 47290.0,
           "ra_peak_mw": 54383.0,
-          "total_clean_peak_mw": 41434.0,
-          "existing_gas_used_mw": 8367.0,
+          "total_clean_peak_mw": 17010.0,
+          "existing_gas_used_mw": 27352.0,
           "new_gas_required_cumulative_mw": 0.0,
           "new_gas_built_this_year_mw": 0.0,
           "active_new_gas_fleet_mw": 0.0,
@@ -283,8 +283,8 @@
         "gas_sizing": {
           "peak_demand_mw": 48188.0,
           "ra_peak_mw": 55416.0,
-          "total_clean_peak_mw": 75969.0,
-          "existing_gas_used_mw": 0.0,
+          "total_clean_peak_mw": 10043.0,
+          "existing_gas_used_mw": 36290.0,
           "new_gas_required_cumulative_mw": 0.0,
           "new_gas_built_this_year_mw": 0.0,
           "active_new_gas_fleet_mw": 0.0,
@@ -310,8 +310,8 @@
         "gas_sizing": {
           "peak_demand_mw": 49104.0,
           "ra_peak_mw": 56469.0,
-          "total_clean_peak_mw": 49838.0,
-          "existing_gas_used_mw": 1187.0,
+          "total_clean_peak_mw": 12763.0,
+          "existing_gas_used_mw": 34240.0,
           "new_gas_required_cumulative_mw": 0.0,
           "new_gas_built_this_year_mw": 0.0,
           "active_new_gas_fleet_mw": 0.0,
@@ -332,17 +332,22 @@
             "twh_per_year": 76.677,
             "locked_lcoe_usd_per_mwh": 63.0,
             "tx_adder_usd_per_mwh": 3.0
+          },
+          {
+            "resource": "new_gas_ccgt",
+            "new_gas_mw": 2552.2,
+            "annualized_cost_usd_kw_yr": 112.0
           }
         ],
         "gas_sizing": {
           "peak_demand_mw": 50037.0,
           "ra_peak_mw": 57542.0,
-          "total_clean_peak_mw": 62783.0,
-          "existing_gas_used_mw": 0.0,
-          "new_gas_required_cumulative_mw": 0.0,
-          "new_gas_built_this_year_mw": 0.0,
-          "active_new_gas_fleet_mw": 0.0,
-          "gas_fleet_cf": 0.3146
+          "total_clean_peak_mw": 9021.0,
+          "existing_gas_used_mw": 37000.0,
+          "new_gas_required_cumulative_mw": 2552.0,
+          "new_gas_built_this_year_mw": 2552.2,
+          "active_new_gas_fleet_mw": 2552.0,
+          "gas_fleet_cf": 0.2943
         }
       },
       {
@@ -359,17 +364,22 @@
             "twh_per_year": 78.134,
             "locked_lcoe_usd_per_mwh": 63.0,
             "tx_adder_usd_per_mwh": 3.0
+          },
+          {
+            "resource": "new_gas_ccgt",
+            "new_gas_mw": 1787.9,
+            "annualized_cost_usd_kw_yr": 112.0
           }
         ],
         "gas_sizing": {
           "peak_demand_mw": 50987.0,
           "ra_peak_mw": 58635.0,
-          "total_clean_peak_mw": 63742.0,
-          "existing_gas_used_mw": 0.0,
-          "new_gas_required_cumulative_mw": 0.0,
-          "new_gas_built_this_year_mw": 0.0,
-          "active_new_gas_fleet_mw": 0.0,
-          "gas_fleet_cf": 0.3205
+          "total_clean_peak_mw": 8399.0,
+          "existing_gas_used_mw": 37000.0,
+          "new_gas_required_cumulative_mw": 4340.0,
+          "new_gas_built_this_year_mw": 1787.9,
+          "active_new_gas_fleet_mw": 4340.0,
+          "gas_fleet_cf": 0.2869
         }
       },
       {
@@ -386,17 +396,22 @@
             "twh_per_year": 79.618,
             "locked_lcoe_usd_per_mwh": 63.0,
             "tx_adder_usd_per_mwh": 3.0
+          },
+          {
+            "resource": "new_gas_ccgt",
+            "new_gas_mw": 1856.5,
+            "annualized_cost_usd_kw_yr": 112.0
           }
         ],
         "gas_sizing": {
           "peak_demand_mw": 51956.0,
           "ra_peak_mw": 59749.0,
-          "total_clean_peak_mw": 64720.0,
-          "existing_gas_used_mw": 0.0,
-          "new_gas_required_cumulative_mw": 0.0,
-          "new_gas_built_this_year_mw": 0.0,
-          "active_new_gas_fleet_mw": 0.0,
-          "gas_fleet_cf": 0.3266
+          "total_clean_peak_mw": 7734.0,
+          "existing_gas_used_mw": 37000.0,
+          "new_gas_required_cumulative_mw": 6197.0,
+          "new_gas_built_this_year_mw": 1856.5,
+          "active_new_gas_fleet_mw": 6197.0,
+          "gas_fleet_cf": 0.2798
         }
       },
       {
@@ -413,17 +428,22 @@
             "twh_per_year": 81.131,
             "locked_lcoe_usd_per_mwh": 63.0,
             "tx_adder_usd_per_mwh": 3.0
+          },
+          {
+            "resource": "new_gas_ccgt",
+            "new_gas_mw": 1927.7,
+            "annualized_cost_usd_kw_yr": 112.0
           }
         ],
         "gas_sizing": {
           "peak_demand_mw": 52943.0,
           "ra_peak_mw": 60885.0,
-          "total_clean_peak_mw": 65716.0,
-          "existing_gas_used_mw": 0.0,
-          "new_gas_required_cumulative_mw": 0.0,
-          "new_gas_built_this_year_mw": 0.0,
-          "active_new_gas_fleet_mw": 0.0,
-          "gas_fleet_cf": 0.3328
+          "total_clean_peak_mw": 7024.0,
+          "existing_gas_used_mw": 37000.0,
+          "new_gas_required_cumulative_mw": 8124.0,
+          "new_gas_built_this_year_mw": 1927.7,
+          "active_new_gas_fleet_mw": 8124.0,
+          "gas_fleet_cf": 0.2729
         }
       },
       {
@@ -440,17 +460,22 @@
             "twh_per_year": 82.672,
             "locked_lcoe_usd_per_mwh": 63.0,
             "tx_adder_usd_per_mwh": 3.0
+          },
+          {
+            "resource": "new_gas_ccgt",
+            "new_gas_mw": 2001.7,
+            "annualized_cost_usd_kw_yr": 112.0
           }
         ],
         "gas_sizing": {
           "peak_demand_mw": 53949.0,
           "ra_peak_mw": 62042.0,
-          "total_clean_peak_mw": 66731.0,
-          "existing_gas_used_mw": 0.0,
-          "new_gas_required_cumulative_mw": 0.0,
-          "new_gas_built_this_year_mw": 0.0,
-          "active_new_gas_fleet_mw": 0.0,
-          "gas_fleet_cf": 0.3392
+          "total_clean_peak_mw": 6269.0,
+          "existing_gas_used_mw": 37000.0,
+          "new_gas_required_cumulative_mw": 10126.0,
+          "new_gas_built_this_year_mw": 2001.7,
+          "active_new_gas_fleet_mw": 10126.0,
+          "gas_fleet_cf": 0.2663
         }
       },
       {
@@ -467,17 +492,22 @@
             "twh_per_year": 84.243,
             "locked_lcoe_usd_per_mwh": 63.0,
             "tx_adder_usd_per_mwh": 3.0
+          },
+          {
+            "resource": "new_gas_ccgt",
+            "new_gas_mw": 2078.5,
+            "annualized_cost_usd_kw_yr": 112.0
           }
         ],
         "gas_sizing": {
           "peak_demand_mw": 54974.0,
           "ra_peak_mw": 63220.0,
-          "total_clean_peak_mw": 67765.0,
-          "existing_gas_used_mw": 0.0,
-          "new_gas_required_cumulative_mw": 0.0,
-          "new_gas_built_this_year_mw": 0.0,
-          "active_new_gas_fleet_mw": 0.0,
-          "gas_fleet_cf": 0.3456
+          "total_clean_peak_mw": 5465.0,
+          "existing_gas_used_mw": 37000.0,
+          "new_gas_required_cumulative_mw": 12205.0,
+          "new_gas_built_this_year_mw": 2078.5,
+          "active_new_gas_fleet_mw": 12205.0,
+          "gas_fleet_cf": 0.2599
         }
       },
       {
@@ -494,17 +524,22 @@
             "twh_per_year": 85.844,
             "locked_lcoe_usd_per_mwh": 63.0,
             "tx_adder_usd_per_mwh": 3.0
+          },
+          {
+            "resource": "new_gas_ccgt",
+            "new_gas_mw": 2158.2,
+            "annualized_cost_usd_kw_yr": 112.0
           }
         ],
         "gas_sizing": {
           "peak_demand_mw": 56019.0,
           "ra_peak_mw": 64422.0,
-          "total_clean_peak_mw": 68819.0,
-          "existing_gas_used_mw": 0.0,
-          "new_gas_required_cumulative_mw": 0.0,
-          "new_gas_built_this_year_mw": 0.0,
-          "active_new_gas_fleet_mw": 0.0,
-          "gas_fleet_cf": 0.3522
+          "total_clean_peak_mw": 4610.0,
+          "existing_gas_used_mw": 37000.0,
+          "new_gas_required_cumulative_mw": 14363.0,
+          "new_gas_built_this_year_mw": 2158.2,
+          "active_new_gas_fleet_mw": 14363.0,
+          "gas_fleet_cf": 0.2537
         }
       },
       {
@@ -521,17 +556,22 @@
             "twh_per_year": 87.475,
             "locked_lcoe_usd_per_mwh": 63.0,
             "tx_adder_usd_per_mwh": 3.0
+          },
+          {
+            "resource": "new_gas_ccgt",
+            "new_gas_mw": 2241.0,
+            "annualized_cost_usd_kw_yr": 112.0
           }
         ],
         "gas_sizing": {
           "peak_demand_mw": 57083.0,
           "ra_peak_mw": 65646.0,
-          "total_clean_peak_mw": 69893.0,
-          "existing_gas_used_mw": 0.0,
-          "new_gas_required_cumulative_mw": 0.0,
-          "new_gas_built_this_year_mw": 0.0,
-          "active_new_gas_fleet_mw": 0.0,
-          "gas_fleet_cf": 0.3589
+          "total_clean_peak_mw": 3702.0,
+          "existing_gas_used_mw": 37000.0,
+          "new_gas_required_cumulative_mw": 16604.0,
+          "new_gas_built_this_year_mw": 2241.0,
+          "active_new_gas_fleet_mw": 16604.0,
+          "gas_fleet_cf": 0.2477
         }
       },
       {
@@ -548,17 +588,22 @@
             "twh_per_year": 89.137,
             "locked_lcoe_usd_per_mwh": 63.0,
             "tx_adder_usd_per_mwh": 3.0
+          },
+          {
+            "resource": "new_gas_ccgt",
+            "new_gas_mw": 2327.0,
+            "annualized_cost_usd_kw_yr": 112.0
           }
         ],
         "gas_sizing": {
           "peak_demand_mw": 58168.0,
           "ra_peak_mw": 66893.0,
-          "total_clean_peak_mw": 70988.0,
-          "existing_gas_used_mw": 0.0,
-          "new_gas_required_cumulative_mw": 0.0,
-          "new_gas_built_this_year_mw": 0.0,
-          "active_new_gas_fleet_mw": 0.0,
-          "gas_fleet_cf": 0.3657
+          "total_clean_peak_mw": 2739.0,
+          "existing_gas_used_mw": 37000.0,
+          "new_gas_required_cumulative_mw": 18931.0,
+          "new_gas_built_this_year_mw": 2327.0,
+          "active_new_gas_fleet_mw": 18931.0,
+          "gas_fleet_cf": 0.2419
         }
       },
       {
@@ -575,17 +620,22 @@
             "twh_per_year": 90.831,
             "locked_lcoe_usd_per_mwh": 63.0,
             "tx_adder_usd_per_mwh": 3.0
+          },
+          {
+            "resource": "new_gas_ccgt",
+            "new_gas_mw": 2416.2,
+            "annualized_cost_usd_kw_yr": 112.0
           }
         ],
         "gas_sizing": {
           "peak_demand_mw": 59273.0,
           "ra_peak_mw": 68164.0,
-          "total_clean_peak_mw": 72103.0,
-          "existing_gas_used_mw": 0.0,
-          "new_gas_required_cumulative_mw": 0.0,
-          "new_gas_built_this_year_mw": 0.0,
-          "active_new_gas_fleet_mw": 0.0,
-          "gas_fleet_cf": 0.3726
+          "total_clean_peak_mw": 1718.0,
+          "existing_gas_used_mw": 37000.0,
+          "new_gas_required_cumulative_mw": 21347.0,
+          "new_gas_built_this_year_mw": 2416.2,
+          "active_new_gas_fleet_mw": 21347.0,
+          "gas_fleet_cf": 0.2363
         }
       },
       {
@@ -602,17 +652,22 @@
             "twh_per_year": 92.556,
             "locked_lcoe_usd_per_mwh": 63.0,
             "tx_adder_usd_per_mwh": 3.0
+          },
+          {
+            "resource": "new_gas_ccgt",
+            "new_gas_mw": 2508.9,
+            "annualized_cost_usd_kw_yr": 112.0
           }
         ],
         "gas_sizing": {
           "peak_demand_mw": 60399.0,
           "ra_peak_mw": 69459.0,
-          "total_clean_peak_mw": 73239.0,
-          "existing_gas_used_mw": 0.0,
-          "new_gas_required_cumulative_mw": 0.0,
-          "new_gas_built_this_year_mw": 0.0,
-          "active_new_gas_fleet_mw": 0.0,
-          "gas_fleet_cf": 0.3797
+          "total_clean_peak_mw": 636.0,
+          "existing_gas_used_mw": 37000.0,
+          "new_gas_required_cumulative_mw": 23856.0,
+          "new_gas_built_this_year_mw": 2508.9,
+          "active_new_gas_fleet_mw": 23856.0,
+          "gas_fleet_cf": 0.2309
         }
       },
       {
@@ -629,17 +684,22 @@
             "twh_per_year": 94.315,
             "locked_lcoe_usd_per_mwh": 63.0,
             "tx_adder_usd_per_mwh": 3.0
+          },
+          {
+            "resource": "new_gas_ccgt",
+            "new_gas_mw": 2605.2,
+            "annualized_cost_usd_kw_yr": 112.0
           }
         ],
         "gas_sizing": {
           "peak_demand_mw": 61547.0,
           "ra_peak_mw": 70779.0,
-          "total_clean_peak_mw": 74397.0,
-          "existing_gas_used_mw": 0.0,
-          "new_gas_required_cumulative_mw": 0.0,
-          "new_gas_built_this_year_mw": 0.0,
-          "active_new_gas_fleet_mw": 0.0,
-          "gas_fleet_cf": 0.3869
+          "total_clean_peak_mw": 0.0,
+          "existing_gas_used_mw": 37000.0,
+          "new_gas_required_cumulative_mw": 26461.0,
+          "new_gas_built_this_year_mw": 2605.2,
+          "active_new_gas_fleet_mw": 26461.0,
+          "gas_fleet_cf": 0.2256
         }
       },
       {
@@ -656,17 +716,22 @@
             "twh_per_year": 96.107,
             "locked_lcoe_usd_per_mwh": 63.0,
             "tx_adder_usd_per_mwh": 3.0
+          },
+          {
+            "resource": "new_gas_ccgt",
+            "new_gas_mw": 2705.1,
+            "annualized_cost_usd_kw_yr": 112.0
           }
         ],
         "gas_sizing": {
           "peak_demand_mw": 62716.0,
           "ra_peak_mw": 72123.0,
-          "total_clean_peak_mw": 75577.0,
-          "existing_gas_used_mw": 0.0,
-          "new_gas_required_cumulative_mw": 0.0,
-          "new_gas_built_this_year_mw": 0.0,
-          "active_new_gas_fleet_mw": 0.0,
-          "gas_fleet_cf": 0.3943
+          "total_clean_peak_mw": 0.0,
+          "existing_gas_used_mw": 37000.0,
+          "new_gas_required_cumulative_mw": 29166.0,
+          "new_gas_built_this_year_mw": 2705.1,
+          "active_new_gas_fleet_mw": 29166.0,
+          "gas_fleet_cf": 0.2205
         }
       },
       {
@@ -683,17 +748,22 @@
             "twh_per_year": 97.933,
             "locked_lcoe_usd_per_mwh": 63.0,
             "tx_adder_usd_per_mwh": 3.0
+          },
+          {
+            "resource": "new_gas_ccgt",
+            "new_gas_mw": 2808.9,
+            "annualized_cost_usd_kw_yr": 112.0
           }
         ],
         "gas_sizing": {
           "peak_demand_mw": 63908.0,
           "ra_peak_mw": 73494.0,
-          "total_clean_peak_mw": 76780.0,
-          "existing_gas_used_mw": 0.0,
-          "new_gas_required_cumulative_mw": 0.0,
-          "new_gas_built_this_year_mw": 0.0,
-          "active_new_gas_fleet_mw": 0.0,
-          "gas_fleet_cf": 0.4018
+          "total_clean_peak_mw": 0.0,
+          "existing_gas_used_mw": 37000.0,
+          "new_gas_required_cumulative_mw": 31975.0,
+          "new_gas_built_this_year_mw": 2808.9,
+          "active_new_gas_fleet_mw": 31975.0,
+          "gas_fleet_cf": 0.2155
         }
       },
       {
@@ -716,17 +786,22 @@
             "twh_per_year": 0.667,
             "locked_lcoe_usd_per_mwh": 6.49,
             "tx_adder_usd_per_mwh": 0.0
+          },
+          {
+            "resource": "new_gas_ccgt",
+            "new_gas_mw": 2916.6,
+            "annualized_cost_usd_kw_yr": 112.0
           }
         ],
         "gas_sizing": {
           "peak_demand_mw": 65122.0,
           "ra_peak_mw": 74890.0,
-          "total_clean_peak_mw": 78005.0,
-          "existing_gas_used_mw": 0.0,
-          "new_gas_required_cumulative_mw": 0.0,
-          "new_gas_built_this_year_mw": 0.0,
-          "active_new_gas_fleet_mw": 0.0,
-          "gas_fleet_cf": 0.4094
+          "total_clean_peak_mw": 0.0,
+          "existing_gas_used_mw": 37000.0,
+          "new_gas_required_cumulative_mw": 34892.0,
+          "new_gas_built_this_year_mw": 2916.6,
+          "active_new_gas_fleet_mw": 34892.0,
+          "gas_fleet_cf": 0.2107
         }
       },
       {
@@ -749,17 +824,22 @@
             "twh_per_year": 0.948,
             "locked_lcoe_usd_per_mwh": 6.49,
             "tx_adder_usd_per_mwh": 0.0
+          },
+          {
+            "resource": "new_gas_ccgt",
+            "new_gas_mw": 3028.5,
+            "annualized_cost_usd_kw_yr": 112.0
           }
         ],
         "gas_sizing": {
           "peak_demand_mw": 66359.0,
           "ra_peak_mw": 76313.0,
-          "total_clean_peak_mw": 79253.0,
-          "existing_gas_used_mw": 0.0,
-          "new_gas_required_cumulative_mw": 0.0,
-          "new_gas_built_this_year_mw": 0.0,
-          "active_new_gas_fleet_mw": 0.0,
-          "gas_fleet_cf": 0.4172
+          "total_clean_peak_mw": 0.0,
+          "existing_gas_used_mw": 37000.0,
+          "new_gas_required_cumulative_mw": 37920.0,
+          "new_gas_built_this_year_mw": 3028.5,
+          "active_new_gas_fleet_mw": 37920.0,
+          "gas_fleet_cf": 0.206
         }
       },
       {
@@ -782,17 +862,22 @@
             "twh_per_year": 0.966,
             "locked_lcoe_usd_per_mwh": 6.49,
             "tx_adder_usd_per_mwh": 0.0
+          },
+          {
+            "resource": "new_gas_ccgt",
+            "new_gas_mw": 3144.7,
+            "annualized_cost_usd_kw_yr": 112.0
           }
         ],
         "gas_sizing": {
           "peak_demand_mw": 67620.0,
           "ra_peak_mw": 77763.0,
-          "total_clean_peak_mw": 80526.0,
-          "existing_gas_used_mw": 0.0,
-          "new_gas_required_cumulative_mw": 0.0,
-          "new_gas_built_this_year_mw": 0.0,
-          "active_new_gas_fleet_mw": 0.0,
-          "gas_fleet_cf": 0.4251
+          "total_clean_peak_mw": 0.0,
+          "existing_gas_used_mw": 37000.0,
+          "new_gas_required_cumulative_mw": 41065.0,
+          "new_gas_built_this_year_mw": 3144.7,
+          "active_new_gas_fleet_mw": 41065.0,
+          "gas_fleet_cf": 0.2015
         }
       },
       {
@@ -815,17 +900,22 @@
             "twh_per_year": 0.984,
             "locked_lcoe_usd_per_mwh": 6.49,
             "tx_adder_usd_per_mwh": 0.0
+          },
+          {
+            "resource": "new_gas_ccgt",
+            "new_gas_mw": 3265.3,
+            "annualized_cost_usd_kw_yr": 112.0
           }
         ],
         "gas_sizing": {
           "peak_demand_mw": 68905.0,
           "ra_peak_mw": 79240.0,
-          "total_clean_peak_mw": 81822.0,
-          "existing_gas_used_mw": 0.0,
-          "new_gas_required_cumulative_mw": 0.0,
-          "new_gas_built_this_year_mw": 0.0,
-          "active_new_gas_fleet_mw": 0.0,
-          "gas_fleet_cf": 0.4332
+          "total_clean_peak_mw": 0.0,
+          "existing_gas_used_mw": 37000.0,
+          "new_gas_required_cumulative_mw": 44330.0,
+          "new_gas_built_this_year_mw": 3265.3,
+          "active_new_gas_fleet_mw": 44330.0,
+          "gas_fleet_cf": 0.1971
         }
       },
       {
@@ -848,17 +938,22 @@
             "twh_per_year": 1.003,
             "locked_lcoe_usd_per_mwh": 6.49,
             "tx_adder_usd_per_mwh": 0.0
+          },
+          {
+            "resource": "new_gas_ccgt",
+            "new_gas_mw": 3390.6,
+            "annualized_cost_usd_kw_yr": 112.0
           }
         ],
         "gas_sizing": {
           "peak_demand_mw": 70214.0,
           "ra_peak_mw": 80746.0,
-          "total_clean_peak_mw": 83143.0,
-          "existing_gas_used_mw": 0.0,
-          "new_gas_required_cumulative_mw": 0.0,
-          "new_gas_built_this_year_mw": 0.0,
-          "active_new_gas_fleet_mw": 0.0,
-          "gas_fleet_cf": 0.4414
+          "total_clean_peak_mw": 0.0,
+          "existing_gas_used_mw": 37000.0,
+          "new_gas_required_cumulative_mw": 47721.0,
+          "new_gas_built_this_year_mw": 3390.6,
+          "active_new_gas_fleet_mw": 47721.0,
+          "gas_fleet_cf": 0.1928
         }
       }
     ],
@@ -951,229 +1046,229 @@
         "year": 2032,
         "demand_twh": 255.59,
         "gross_operating_usd": 51736977006.0,
-        "new_gas_annualized_capex_fom_usd": 0.0,
+        "new_gas_annualized_capex_fom_usd": 285845036.0,
         "existing_gas_fom_carried_usd": 592000000.0,
         "gas_fuel_usd": 0.0,
         "capacity_rev_netted_usd": 0.0,
-        "net_annual_cost_usd": 52328977006.0,
+        "net_annual_cost_usd": 52614822043.0,
         "achieved_cfe_pct": 60.11,
-        "gas_fleet_cf": 0.3146
+        "gas_fleet_cf": 0.2943
       },
       {
         "year": 2033,
         "demand_twh": 260.45,
         "gross_operating_usd": 56893800750.0,
-        "new_gas_annualized_capex_fom_usd": 0.0,
+        "new_gas_annualized_capex_fom_usd": 486094750.0,
         "existing_gas_fom_carried_usd": 592000000.0,
         "gas_fuel_usd": 0.0,
         "capacity_rev_netted_usd": 0.0,
-        "net_annual_cost_usd": 57485800750.0,
+        "net_annual_cost_usd": 57971895500.0,
         "achieved_cfe_pct": 60.11,
-        "gas_fleet_cf": 0.3205
+        "gas_fleet_cf": 0.2869
       },
       {
         "year": 2034,
         "demand_twh": 265.39,
         "gross_operating_usd": 62148604145.0,
-        "new_gas_annualized_capex_fom_usd": 0.0,
+        "new_gas_annualized_capex_fom_usd": 694026243.0,
         "existing_gas_fom_carried_usd": 592000000.0,
         "gas_fuel_usd": 0.0,
         "capacity_rev_netted_usd": 0.0,
-        "net_annual_cost_usd": 62740604145.0,
+        "net_annual_cost_usd": 63434630388.0,
         "achieved_cfe_pct": 60.11,
-        "gas_fleet_cf": 0.3266
+        "gas_fleet_cf": 0.2798
       },
       {
         "year": 2035,
         "demand_twh": 270.44,
         "gross_operating_usd": 67503248805.0,
-        "new_gas_annualized_capex_fom_usd": 0.0,
+        "new_gas_annualized_capex_fom_usd": 909934195.0,
         "existing_gas_fom_carried_usd": 592000000.0,
         "gas_fuel_usd": 0.0,
         "capacity_rev_netted_usd": 0.0,
-        "net_annual_cost_usd": 68095248805.0,
+        "net_annual_cost_usd": 69005183001.0,
         "achieved_cfe_pct": 60.11,
-        "gas_fleet_cf": 0.3328
+        "gas_fleet_cf": 0.2729
       },
       {
         "year": 2036,
         "demand_twh": 275.57,
         "gross_operating_usd": 72959631713.0,
-        "new_gas_annualized_capex_fom_usd": 0.0,
+        "new_gas_annualized_capex_fom_usd": 1134124593.0,
         "existing_gas_fom_carried_usd": 592000000.0,
         "gas_fuel_usd": 0.0,
         "capacity_rev_netted_usd": 0.0,
-        "net_annual_cost_usd": 73551631713.0,
+        "net_annual_cost_usd": 74685756306.0,
         "achieved_cfe_pct": 60.11,
-        "gas_fleet_cf": 0.3392
+        "gas_fleet_cf": 0.2663
       },
       {
         "year": 2037,
         "demand_twh": 280.81,
         "gross_operating_usd": 78519685897.0,
-        "new_gas_annualized_capex_fom_usd": 0.0,
+        "new_gas_annualized_capex_fom_usd": 1366915159.0,
         "existing_gas_fom_carried_usd": 592000000.0,
         "gas_fuel_usd": 0.0,
         "capacity_rev_netted_usd": 0.0,
-        "net_annual_cost_usd": 79111685897.0,
+        "net_annual_cost_usd": 80478601056.0,
         "achieved_cfe_pct": 60.11,
-        "gas_fleet_cf": 0.3456
+        "gas_fleet_cf": 0.2599
       },
       {
         "year": 2038,
         "demand_twh": 286.15,
         "gross_operating_usd": 84185381110.0,
-        "new_gas_annualized_capex_fom_usd": 0.0,
+        "new_gas_annualized_capex_fom_usd": 1608635803.0,
         "existing_gas_fom_carried_usd": 592000000.0,
         "gas_fuel_usd": 0.0,
         "capacity_rev_netted_usd": 0.0,
-        "net_annual_cost_usd": 84777381110.0,
+        "net_annual_cost_usd": 86386016913.0,
         "achieved_cfe_pct": 60.11,
-        "gas_fleet_cf": 0.3522
+        "gas_fleet_cf": 0.2537
       },
       {
         "year": 2039,
         "demand_twh": 291.58,
         "gross_operating_usd": 89958724532.0,
-        "new_gas_annualized_capex_fom_usd": 0.0,
+        "new_gas_annualized_capex_fom_usd": 1859629093.0,
         "existing_gas_fom_carried_usd": 592000000.0,
         "gas_fuel_usd": 0.0,
         "capacity_rev_netted_usd": 0.0,
-        "net_annual_cost_usd": 90550724532.0,
+        "net_annual_cost_usd": 92410353625.0,
         "achieved_cfe_pct": 60.11,
-        "gas_fleet_cf": 0.3589
+        "gas_fleet_cf": 0.2477
       },
       {
         "year": 2040,
         "demand_twh": 297.12,
         "gross_operating_usd": 95841761479.0,
-        "new_gas_annualized_capex_fom_usd": 0.0,
+        "new_gas_annualized_capex_fom_usd": 2120250737.0,
         "existing_gas_fom_carried_usd": 592000000.0,
         "gas_fuel_usd": 0.0,
         "capacity_rev_netted_usd": 0.0,
-        "net_annual_cost_usd": 96433761479.0,
+        "net_annual_cost_usd": 98554012216.0,
         "achieved_cfe_pct": 60.11,
-        "gas_fleet_cf": 0.3657
+        "gas_fleet_cf": 0.2419
       },
       {
         "year": 2041,
         "demand_twh": 302.77,
         "gross_operating_usd": 101836576128.0,
-        "new_gas_annualized_capex_fom_usd": 0.0,
+        "new_gas_annualized_capex_fom_usd": 2390870088.0,
         "existing_gas_fom_carried_usd": 592000000.0,
         "gas_fuel_usd": 0.0,
         "capacity_rev_netted_usd": 0.0,
-        "net_annual_cost_usd": 102428576128.0,
+        "net_annual_cost_usd": 104819446216.0,
         "achieved_cfe_pct": 60.11,
-        "gas_fleet_cf": 0.3726
+        "gas_fleet_cf": 0.2363
       },
       {
         "year": 2042,
         "demand_twh": 308.52,
         "gross_operating_usd": 107945292255.0,
-        "new_gas_annualized_capex_fom_usd": 0.0,
+        "new_gas_annualized_capex_fom_usd": 2671870667.0,
         "existing_gas_fom_carried_usd": 592000000.0,
         "gas_fuel_usd": 0.0,
         "capacity_rev_netted_usd": 0.0,
-        "net_annual_cost_usd": 108537292255.0,
+        "net_annual_cost_usd": 111209162922.0,
         "achieved_cfe_pct": 60.11,
-        "gas_fleet_cf": 0.3797
+        "gas_fleet_cf": 0.2309
       },
       {
         "year": 2043,
         "demand_twh": 314.38,
         "gross_operating_usd": 114170073989.0,
-        "new_gas_annualized_capex_fom_usd": 0.0,
+        "new_gas_annualized_capex_fom_usd": 2963650710.0,
         "existing_gas_fom_carried_usd": 592000000.0,
         "gas_fuel_usd": 0.0,
         "capacity_rev_netted_usd": 0.0,
-        "net_annual_cost_usd": 114762073989.0,
+        "net_annual_cost_usd": 117725724699.0,
         "achieved_cfe_pct": 60.11,
-        "gas_fleet_cf": 0.3869
+        "gas_fleet_cf": 0.2256
       },
       {
         "year": 2044,
         "demand_twh": 320.36,
         "gross_operating_usd": 120513126576.0,
-        "new_gas_annualized_capex_fom_usd": 0.0,
+        "new_gas_annualized_capex_fom_usd": 3266623727.0,
         "existing_gas_fom_carried_usd": 592000000.0,
         "gas_fuel_usd": 0.0,
         "capacity_rev_netted_usd": 0.0,
-        "net_annual_cost_usd": 121105126576.0,
+        "net_annual_cost_usd": 124371750303.0,
         "achieved_cfe_pct": 60.11,
-        "gas_fleet_cf": 0.3943
+        "gas_fleet_cf": 0.2205
       },
       {
         "year": 2045,
         "demand_twh": 326.44,
         "gross_operating_usd": 126976697162.0,
-        "new_gas_annualized_capex_fom_usd": 0.0,
+        "new_gas_annualized_capex_fom_usd": 3581219092.0,
         "existing_gas_fom_carried_usd": 592000000.0,
         "gas_fuel_usd": 0.0,
         "capacity_rev_netted_usd": 0.0,
-        "net_annual_cost_usd": 127568697162.0,
+        "net_annual_cost_usd": 131149916253.0,
         "achieved_cfe_pct": 60.11,
-        "gas_fleet_cf": 0.4018
+        "gas_fleet_cf": 0.2155
       },
       {
         "year": 2046,
         "demand_twh": 332.65,
         "gross_operating_usd": 133567404196.0,
-        "new_gas_annualized_capex_fom_usd": 0.0,
+        "new_gas_annualized_capex_fom_usd": 3907882649.0,
         "existing_gas_fom_carried_usd": 592000000.0,
         "gas_fuel_usd": 0.0,
         "capacity_rev_netted_usd": 0.0,
-        "net_annual_cost_usd": 134159404196.0,
+        "net_annual_cost_usd": 138067286845.0,
         "achieved_cfe_pct": 60.11,
-        "gas_fleet_cf": 0.4094
+        "gas_fleet_cf": 0.2107
       },
       {
         "year": 2047,
         "demand_twh": 338.97,
         "gross_operating_usd": 140285072525.0,
-        "new_gas_annualized_capex_fom_usd": 0.0,
+        "new_gas_annualized_capex_fom_usd": 4247077348.0,
         "existing_gas_fom_carried_usd": 592000000.0,
         "gas_fuel_usd": 0.0,
         "capacity_rev_netted_usd": 0.0,
-        "net_annual_cost_usd": 140877072525.0,
+        "net_annual_cost_usd": 145124149873.0,
         "achieved_cfe_pct": 60.11,
-        "gas_fleet_cf": 0.4172
+        "gas_fleet_cf": 0.206
       },
       {
         "year": 2048,
         "demand_twh": 345.41,
         "gross_operating_usd": 147130376553.0,
-        "new_gas_annualized_capex_fom_usd": 0.0,
+        "new_gas_annualized_capex_fom_usd": 4599283894.0,
         "existing_gas_fom_carried_usd": 592000000.0,
         "gas_fuel_usd": 0.0,
         "capacity_rev_netted_usd": 0.0,
-        "net_annual_cost_usd": 147722376553.0,
+        "net_annual_cost_usd": 152321660447.0,
         "achieved_cfe_pct": 60.11,
-        "gas_fleet_cf": 0.4251
+        "gas_fleet_cf": 0.2015
       },
       {
         "year": 2049,
         "demand_twh": 351.97,
         "gross_operating_usd": 154105741357.0,
-        "new_gas_annualized_capex_fom_usd": 0.0,
+        "new_gas_annualized_capex_fom_usd": 4965001435.0,
         "existing_gas_fom_carried_usd": 592000000.0,
         "gas_fuel_usd": 0.0,
         "capacity_rev_netted_usd": 0.0,
-        "net_annual_cost_usd": 154697741357.0,
+        "net_annual_cost_usd": 159662742792.0,
         "achieved_cfe_pct": 60.11,
-        "gas_fleet_cf": 0.4332
+        "gas_fleet_cf": 0.1971
       },
       {
         "year": 2050,
         "demand_twh": 358.66,
         "gross_operating_usd": 161213638092.0,
-        "new_gas_annualized_capex_fom_usd": 0.0,
+        "new_gas_annualized_capex_fom_usd": 5344748268.0,
         "existing_gas_fom_carried_usd": 592000000.0,
         "gas_fuel_usd": 0.0,
         "capacity_rev_netted_usd": 0.0,
-        "net_annual_cost_usd": 161805638092.0,
+        "net_annual_cost_usd": 167150386360.0,
         "achieved_cfe_pct": 60.11,
-        "gas_fleet_cf": 0.4414
+        "gas_fleet_cf": 0.1928
       }
     ],
     "endpoint_hourly_dispatch": null,
@@ -1207,19 +1302,419 @@
         "stranded_book_value_usd": 0.0
       }
     ],
-    "new_gas_fleet": []
+    "new_gas_fleet": [
+      {
+        "year_built": 2032,
+        "initial_cap_mw": 2552.2,
+        "annual_cf": [
+          0.2943,
+          0.2869,
+          0.2798,
+          0.2729,
+          0.2663,
+          0.2599,
+          0.2537,
+          0.2477,
+          0.2419,
+          0.2363,
+          0.2309,
+          0.2256,
+          0.2205,
+          0.2155,
+          0.2107,
+          0.206,
+          0.2015,
+          0.1971,
+          0.1928
+        ],
+        "recovered_revenue_per_kw": 598.22,
+        "retirement_year": null,
+        "stranded_flag": false,
+        "stranded_year": null,
+        "stranded_capex_usd": 0.0
+      },
+      {
+        "year_built": 2033,
+        "initial_cap_mw": 1787.9,
+        "annual_cf": [
+          0.2869,
+          0.2798,
+          0.2729,
+          0.2663,
+          0.2599,
+          0.2537,
+          0.2477,
+          0.2419,
+          0.2363,
+          0.2309,
+          0.2256,
+          0.2205,
+          0.2155,
+          0.2107,
+          0.206,
+          0.2015,
+          0.1971,
+          0.1928
+        ],
+        "recovered_revenue_per_kw": 559.44,
+        "retirement_year": null,
+        "stranded_flag": false,
+        "stranded_year": null,
+        "stranded_capex_usd": 0.0
+      },
+      {
+        "year_built": 2034,
+        "initial_cap_mw": 1856.5,
+        "annual_cf": [
+          0.2798,
+          0.2729,
+          0.2663,
+          0.2599,
+          0.2537,
+          0.2477,
+          0.2419,
+          0.2363,
+          0.2309,
+          0.2256,
+          0.2205,
+          0.2155,
+          0.2107,
+          0.206,
+          0.2015,
+          0.1971,
+          0.1928
+        ],
+        "recovered_revenue_per_kw": 521.64,
+        "retirement_year": null,
+        "stranded_flag": false,
+        "stranded_year": null,
+        "stranded_capex_usd": 0.0
+      },
+      {
+        "year_built": 2035,
+        "initial_cap_mw": 1927.7,
+        "annual_cf": [
+          0.2729,
+          0.2663,
+          0.2599,
+          0.2537,
+          0.2477,
+          0.2419,
+          0.2363,
+          0.2309,
+          0.2256,
+          0.2205,
+          0.2155,
+          0.2107,
+          0.206,
+          0.2015,
+          0.1971,
+          0.1928
+        ],
+        "recovered_revenue_per_kw": 484.78,
+        "retirement_year": null,
+        "stranded_flag": false,
+        "stranded_year": null,
+        "stranded_capex_usd": 0.0
+      },
+      {
+        "year_built": 2036,
+        "initial_cap_mw": 2001.7,
+        "annual_cf": [
+          0.2663,
+          0.2599,
+          0.2537,
+          0.2477,
+          0.2419,
+          0.2363,
+          0.2309,
+          0.2256,
+          0.2205,
+          0.2155,
+          0.2107,
+          0.206,
+          0.2015,
+          0.1971,
+          0.1928
+        ],
+        "recovered_revenue_per_kw": 448.82,
+        "retirement_year": null,
+        "stranded_flag": false,
+        "stranded_year": null,
+        "stranded_capex_usd": 0.0
+      },
+      {
+        "year_built": 2037,
+        "initial_cap_mw": 2078.5,
+        "annual_cf": [
+          0.2599,
+          0.2537,
+          0.2477,
+          0.2419,
+          0.2363,
+          0.2309,
+          0.2256,
+          0.2205,
+          0.2155,
+          0.2107,
+          0.206,
+          0.2015,
+          0.1971,
+          0.1928
+        ],
+        "recovered_revenue_per_kw": 413.73,
+        "retirement_year": null,
+        "stranded_flag": false,
+        "stranded_year": null,
+        "stranded_capex_usd": 0.0
+      },
+      {
+        "year_built": 2038,
+        "initial_cap_mw": 2158.2,
+        "annual_cf": [
+          0.2537,
+          0.2477,
+          0.2419,
+          0.2363,
+          0.2309,
+          0.2256,
+          0.2205,
+          0.2155,
+          0.2107,
+          0.206,
+          0.2015,
+          0.1971,
+          0.1928
+        ],
+        "recovered_revenue_per_kw": 379.49,
+        "retirement_year": null,
+        "stranded_flag": false,
+        "stranded_year": null,
+        "stranded_capex_usd": 0.0
+      },
+      {
+        "year_built": 2039,
+        "initial_cap_mw": 2241.0,
+        "annual_cf": [
+          0.2477,
+          0.2419,
+          0.2363,
+          0.2309,
+          0.2256,
+          0.2205,
+          0.2155,
+          0.2107,
+          0.206,
+          0.2015,
+          0.1971,
+          0.1928
+        ],
+        "recovered_revenue_per_kw": 346.06,
+        "retirement_year": null,
+        "stranded_flag": false,
+        "stranded_year": null,
+        "stranded_capex_usd": 0.0
+      },
+      {
+        "year_built": 2040,
+        "initial_cap_mw": 2327.0,
+        "annual_cf": [
+          0.2419,
+          0.2363,
+          0.2309,
+          0.2256,
+          0.2205,
+          0.2155,
+          0.2107,
+          0.206,
+          0.2015,
+          0.1971,
+          0.1928
+        ],
+        "recovered_revenue_per_kw": 313.42,
+        "retirement_year": null,
+        "stranded_flag": false,
+        "stranded_year": null,
+        "stranded_capex_usd": 0.0
+      },
+      {
+        "year_built": 2041,
+        "initial_cap_mw": 2416.2,
+        "annual_cf": [
+          0.2363,
+          0.2309,
+          0.2256,
+          0.2205,
+          0.2155,
+          0.2107,
+          0.206,
+          0.2015,
+          0.1971,
+          0.1928
+        ],
+        "recovered_revenue_per_kw": 281.55,
+        "retirement_year": null,
+        "stranded_flag": false,
+        "stranded_year": null,
+        "stranded_capex_usd": 0.0
+      },
+      {
+        "year_built": 2042,
+        "initial_cap_mw": 2508.9,
+        "annual_cf": [
+          0.2309,
+          0.2256,
+          0.2205,
+          0.2155,
+          0.2107,
+          0.206,
+          0.2015,
+          0.1971,
+          0.1928
+        ],
+        "recovered_revenue_per_kw": 250.41,
+        "retirement_year": null,
+        "stranded_flag": false,
+        "stranded_year": null,
+        "stranded_capex_usd": 0.0
+      },
+      {
+        "year_built": 2043,
+        "initial_cap_mw": 2605.2,
+        "annual_cf": [
+          0.2256,
+          0.2205,
+          0.2155,
+          0.2107,
+          0.206,
+          0.2015,
+          0.1971,
+          0.1928
+        ],
+        "recovered_revenue_per_kw": 220.0,
+        "retirement_year": null,
+        "stranded_flag": false,
+        "stranded_year": null,
+        "stranded_capex_usd": 0.0
+      },
+      {
+        "year_built": 2044,
+        "initial_cap_mw": 2705.1,
+        "annual_cf": [
+          0.2205,
+          0.2155,
+          0.2107,
+          0.206,
+          0.2015,
+          0.1971,
+          0.1928
+        ],
+        "recovered_revenue_per_kw": 190.27,
+        "retirement_year": null,
+        "stranded_flag": false,
+        "stranded_year": null,
+        "stranded_capex_usd": 0.0
+      },
+      {
+        "year_built": 2045,
+        "initial_cap_mw": 2808.9,
+        "annual_cf": [
+          0.2155,
+          0.2107,
+          0.206,
+          0.2015,
+          0.1971,
+          0.1928
+        ],
+        "recovered_revenue_per_kw": 161.22,
+        "retirement_year": null,
+        "stranded_flag": false,
+        "stranded_year": null,
+        "stranded_capex_usd": 0.0
+      },
+      {
+        "year_built": 2046,
+        "initial_cap_mw": 2916.6,
+        "annual_cf": [
+          0.2107,
+          0.206,
+          0.2015,
+          0.1971,
+          0.1928
+        ],
+        "recovered_revenue_per_kw": 132.82,
+        "retirement_year": null,
+        "stranded_flag": false,
+        "stranded_year": null,
+        "stranded_capex_usd": 0.0
+      },
+      {
+        "year_built": 2047,
+        "initial_cap_mw": 3028.5,
+        "annual_cf": [
+          0.206,
+          0.2015,
+          0.1971,
+          0.1928
+        ],
+        "recovered_revenue_per_kw": 105.06,
+        "retirement_year": null,
+        "stranded_flag": false,
+        "stranded_year": null,
+        "stranded_capex_usd": 0.0
+      },
+      {
+        "year_built": 2048,
+        "initial_cap_mw": 3144.7,
+        "annual_cf": [
+          0.2015,
+          0.1971,
+          0.1928
+        ],
+        "recovered_revenue_per_kw": 77.92,
+        "retirement_year": null,
+        "stranded_flag": false,
+        "stranded_year": null,
+        "stranded_capex_usd": 0.0
+      },
+      {
+        "year_built": 2049,
+        "initial_cap_mw": 3265.3,
+        "annual_cf": [
+          0.1971,
+          0.1928
+        ],
+        "recovered_revenue_per_kw": 51.37,
+        "retirement_year": null,
+        "stranded_flag": false,
+        "stranded_year": null,
+        "stranded_capex_usd": 0.0
+      },
+      {
+        "year_built": 2050,
+        "initial_cap_mw": 3390.6,
+        "annual_cf": [
+          0.1928
+        ],
+        "recovered_revenue_per_kw": 25.4,
+        "retirement_year": null,
+        "stranded_flag": false,
+        "stranded_year": null,
+        "stranded_capex_usd": 0.0
+      }
+    ]
   },
   "reliability_tax": {
     "total_demand_mwh_2025_2050": 7443766803.0,
     "components_usd": {
-      "new_gas_capex_annualized_usd": 0.0,
+      "new_gas_capex_annualized_usd": 48403683487.0,
       "new_gas_fom_usd": 0.0,
       "existing_gas_fom_carried_usd": 15392000000.0,
       "priced_vre_curtailment_usd": 0.0,
       "vre_storage_overbuild_capex_usd": 0.0
     },
-    "total_usd": 15392000000.0,
-    "usd_per_mwh": 2.0678
+    "total_usd": 63795683487.0,
+    "usd_per_mwh": 8.5703
   },
   "stranding_metadata": {
     "cf_threshold_default": 0.15,
@@ -1233,7 +1728,7 @@
     "required_real_return": 0.07,
     "overnight_capex_usd_kw": 1200.0,
     "reference_cf": 0.85,
-    "total_new_gas_built_mw": 0,
+    "total_new_gas_built_mw": 47721.0,
     "total_stranded_capex_usd": 0.0,
     "stranded_vintage_count": 0
   },
@@ -2109,5 +2604,405 @@
       "retire_year": null
     }
   ],
-  "terminal_new_gas_fleet": []
+  "terminal_new_gas_fleet": [
+    {
+      "year_built": 2032,
+      "initial_cap_mw": 2552.2,
+      "annual_cf": [
+        0.2943,
+        0.2869,
+        0.2798,
+        0.2729,
+        0.2663,
+        0.2599,
+        0.2537,
+        0.2477,
+        0.2419,
+        0.2363,
+        0.2309,
+        0.2256,
+        0.2205,
+        0.2155,
+        0.2107,
+        0.206,
+        0.2015,
+        0.1971,
+        0.1928
+      ],
+      "recovered_revenue_per_kw": 598.22,
+      "retirement_year": null,
+      "stranded_flag": false,
+      "stranded_year": null,
+      "stranded_capex_usd": 0.0
+    },
+    {
+      "year_built": 2033,
+      "initial_cap_mw": 1787.9,
+      "annual_cf": [
+        0.2869,
+        0.2798,
+        0.2729,
+        0.2663,
+        0.2599,
+        0.2537,
+        0.2477,
+        0.2419,
+        0.2363,
+        0.2309,
+        0.2256,
+        0.2205,
+        0.2155,
+        0.2107,
+        0.206,
+        0.2015,
+        0.1971,
+        0.1928
+      ],
+      "recovered_revenue_per_kw": 559.44,
+      "retirement_year": null,
+      "stranded_flag": false,
+      "stranded_year": null,
+      "stranded_capex_usd": 0.0
+    },
+    {
+      "year_built": 2034,
+      "initial_cap_mw": 1856.5,
+      "annual_cf": [
+        0.2798,
+        0.2729,
+        0.2663,
+        0.2599,
+        0.2537,
+        0.2477,
+        0.2419,
+        0.2363,
+        0.2309,
+        0.2256,
+        0.2205,
+        0.2155,
+        0.2107,
+        0.206,
+        0.2015,
+        0.1971,
+        0.1928
+      ],
+      "recovered_revenue_per_kw": 521.64,
+      "retirement_year": null,
+      "stranded_flag": false,
+      "stranded_year": null,
+      "stranded_capex_usd": 0.0
+    },
+    {
+      "year_built": 2035,
+      "initial_cap_mw": 1927.7,
+      "annual_cf": [
+        0.2729,
+        0.2663,
+        0.2599,
+        0.2537,
+        0.2477,
+        0.2419,
+        0.2363,
+        0.2309,
+        0.2256,
+        0.2205,
+        0.2155,
+        0.2107,
+        0.206,
+        0.2015,
+        0.1971,
+        0.1928
+      ],
+      "recovered_revenue_per_kw": 484.78,
+      "retirement_year": null,
+      "stranded_flag": false,
+      "stranded_year": null,
+      "stranded_capex_usd": 0.0
+    },
+    {
+      "year_built": 2036,
+      "initial_cap_mw": 2001.7,
+      "annual_cf": [
+        0.2663,
+        0.2599,
+        0.2537,
+        0.2477,
+        0.2419,
+        0.2363,
+        0.2309,
+        0.2256,
+        0.2205,
+        0.2155,
+        0.2107,
+        0.206,
+        0.2015,
+        0.1971,
+        0.1928
+      ],
+      "recovered_revenue_per_kw": 448.82,
+      "retirement_year": null,
+      "stranded_flag": false,
+      "stranded_year": null,
+      "stranded_capex_usd": 0.0
+    },
+    {
+      "year_built": 2037,
+      "initial_cap_mw": 2078.5,
+      "annual_cf": [
+        0.2599,
+        0.2537,
+        0.2477,
+        0.2419,
+        0.2363,
+        0.2309,
+        0.2256,
+        0.2205,
+        0.2155,
+        0.2107,
+        0.206,
+        0.2015,
+        0.1971,
+        0.1928
+      ],
+      "recovered_revenue_per_kw": 413.73,
+      "retirement_year": null,
+      "stranded_flag": false,
+      "stranded_year": null,
+      "stranded_capex_usd": 0.0
+    },
+    {
+      "year_built": 2038,
+      "initial_cap_mw": 2158.2,
+      "annual_cf": [
+        0.2537,
+        0.2477,
+        0.2419,
+        0.2363,
+        0.2309,
+        0.2256,
+        0.2205,
+        0.2155,
+        0.2107,
+        0.206,
+        0.2015,
+        0.1971,
+        0.1928
+      ],
+      "recovered_revenue_per_kw": 379.49,
+      "retirement_year": null,
+      "stranded_flag": false,
+      "stranded_year": null,
+      "stranded_capex_usd": 0.0
+    },
+    {
+      "year_built": 2039,
+      "initial_cap_mw": 2241.0,
+      "annual_cf": [
+        0.2477,
+        0.2419,
+        0.2363,
+        0.2309,
+        0.2256,
+        0.2205,
+        0.2155,
+        0.2107,
+        0.206,
+        0.2015,
+        0.1971,
+        0.1928
+      ],
+      "recovered_revenue_per_kw": 346.06,
+      "retirement_year": null,
+      "stranded_flag": false,
+      "stranded_year": null,
+      "stranded_capex_usd": 0.0
+    },
+    {
+      "year_built": 2040,
+      "initial_cap_mw": 2327.0,
+      "annual_cf": [
+        0.2419,
+        0.2363,
+        0.2309,
+        0.2256,
+        0.2205,
+        0.2155,
+        0.2107,
+        0.206,
+        0.2015,
+        0.1971,
+        0.1928
+      ],
+      "recovered_revenue_per_kw": 313.42,
+      "retirement_year": null,
+      "stranded_flag": false,
+      "stranded_year": null,
+      "stranded_capex_usd": 0.0
+    },
+    {
+      "year_built": 2041,
+      "initial_cap_mw": 2416.2,
+      "annual_cf": [
+        0.2363,
+        0.2309,
+        0.2256,
+        0.2205,
+        0.2155,
+        0.2107,
+        0.206,
+        0.2015,
+        0.1971,
+        0.1928
+      ],
+      "recovered_revenue_per_kw": 281.55,
+      "retirement_year": null,
+      "stranded_flag": false,
+      "stranded_year": null,
+      "stranded_capex_usd": 0.0
+    },
+    {
+      "year_built": 2042,
+      "initial_cap_mw": 2508.9,
+      "annual_cf": [
+        0.2309,
+        0.2256,
+        0.2205,
+        0.2155,
+        0.2107,
+        0.206,
+        0.2015,
+        0.1971,
+        0.1928
+      ],
+      "recovered_revenue_per_kw": 250.41,
+      "retirement_year": null,
+      "stranded_flag": false,
+      "stranded_year": null,
+      "stranded_capex_usd": 0.0
+    },
+    {
+      "year_built": 2043,
+      "initial_cap_mw": 2605.2,
+      "annual_cf": [
+        0.2256,
+        0.2205,
+        0.2155,
+        0.2107,
+        0.206,
+        0.2015,
+        0.1971,
+        0.1928
+      ],
+      "recovered_revenue_per_kw": 220.0,
+      "retirement_year": null,
+      "stranded_flag": false,
+      "stranded_year": null,
+      "stranded_capex_usd": 0.0
+    },
+    {
+      "year_built": 2044,
+      "initial_cap_mw": 2705.1,
+      "annual_cf": [
+        0.2205,
+        0.2155,
+        0.2107,
+        0.206,
+        0.2015,
+        0.1971,
+        0.1928
+      ],
+      "recovered_revenue_per_kw": 190.27,
+      "retirement_year": null,
+      "stranded_flag": false,
+      "stranded_year": null,
+      "stranded_capex_usd": 0.0
+    },
+    {
+      "year_built": 2045,
+      "initial_cap_mw": 2808.9,
+      "annual_cf": [
+        0.2155,
+        0.2107,
+        0.206,
+        0.2015,
+        0.1971,
+        0.1928
+      ],
+      "recovered_revenue_per_kw": 161.22,
+      "retirement_year": null,
+      "stranded_flag": false,
+      "stranded_year": null,
+      "stranded_capex_usd": 0.0
+    },
+    {
+      "year_built": 2046,
+      "initial_cap_mw": 2916.6,
+      "annual_cf": [
+        0.2107,
+        0.206,
+        0.2015,
+        0.1971,
+        0.1928
+      ],
+      "recovered_revenue_per_kw": 132.82,
+      "retirement_year": null,
+      "stranded_flag": false,
+      "stranded_year": null,
+      "stranded_capex_usd": 0.0
+    },
+    {
+      "year_built": 2047,
+      "initial_cap_mw": 3028.5,
+      "annual_cf": [
+        0.206,
+        0.2015,
+        0.1971,
+        0.1928
+      ],
+      "recovered_revenue_per_kw": 105.06,
+      "retirement_year": null,
+      "stranded_flag": false,
+      "stranded_year": null,
+      "stranded_capex_usd": 0.0
+    },
+    {
+      "year_built": 2048,
+      "initial_cap_mw": 3144.7,
+      "annual_cf": [
+        0.2015,
+        0.1971,
+        0.1928
+      ],
+      "recovered_revenue_per_kw": 77.92,
+      "retirement_year": null,
+      "stranded_flag": false,
+      "stranded_year": null,
+      "stranded_capex_usd": 0.0
+    },
+    {
+      "year_built": 2049,
+      "initial_cap_mw": 3265.3,
+      "annual_cf": [
+        0.1971,
+        0.1928
+      ],
+      "recovered_revenue_per_kw": 51.37,
+      "retirement_year": null,
+      "stranded_flag": false,
+      "stranded_year": null,
+      "stranded_capex_usd": 0.0
+    },
+    {
+      "year_built": 2050,
+      "initial_cap_mw": 3390.6,
+      "annual_cf": [
+        0.1928
+      ],
+      "recovered_revenue_per_kw": 25.4,
+      "retirement_year": null,
+      "stranded_flag": false,
+      "stranded_year": null,
+      "stranded_capex_usd": 0.0
+    }
+  ]
 }
